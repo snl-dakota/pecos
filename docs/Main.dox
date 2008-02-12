@@ -1,0 +1,78 @@
+namespace Pecos { // for some reason, this doesn't work with mainpage
+
+/** \mainpage PECOS Users Manual
+
+<!-- \image html logo_3d_halfsize.jpg -->
+
+\author Michael S. Eldred, Richard V. Field, Jr., Eric T. Phipps,
+Clayton G. Webster
+
+\htmlonly
+<b>Main Page Table of Contents</b>
+<ul>
+<li> <a href="index.html#DevIntro">Introduction</a> 
+<li> <a href="index.html#DevOverview">Overview of PECOS</a> 
+<li> <a href="index.html#DevServices">Services</a>
+<li> <a href="index.html#DevAddtnl">Additional Resources</a>
+</ul>
+\endhtmlonly
+
+
+\section DevIntro Introduction
+
+
+The PECOS (Parallel Environment for Creation Of Stochastics) library
+generates samples of random fields (RFs) and stochastic processes
+(SPs) from a set of user-defined power spectral densities (PSDs).  The
+RF/SP may be either Gaussian or non-Gaussian and either stationary or
+nonstationary, and the resulting sample is intended for run-time query
+by parallel finite element simulation codes.
+
+The Users Manual documents the class structures used by the PECOS
+library.  It derives directly from annotation of the source code.
+
+
+\section DevOverview Overview of PECOS
+
+
+In the PECOS system, the ...
+
+The use of class hierarchies provides a mechanism for extensibility in
+PECOS components.  In each of the various class hierarchies, adding a
+new capability typically involves deriving a new class and providing a
+small number of virtual function redefinitions.  These redefinitions
+define the coding portions specific to the new derived class, with the
+common portions already defined at the base class.  Thus, with a small
+amount of new code, the existing facilities can be extended, reused,
+and leveraged for new purposes.
+
+The software components are presented in the following sections using
+a top-down order.
+
+
+\section DevServices Services
+
+
+A variety of services are provided in PECOS for parallel computing,
+memory management, etc.  An overview of the classes and member
+functions involved in performing these services is included below.
+
+<ul> 
+
+<li> Memory management: PECOS employs the techniques of reference
+counting and representation sharing through the use of letter-envelope
+and handle-body idioms (Coplien, "Advanced C++").
+
+</ul>
+
+
+\section DevAddtnl Additional Resources
+
+
+Additional development resources include:
+
+\li Project web pages are maintained at http://www.cs.sandia.gov/PECOS
+
+*/
+
+} // namespace Pecos

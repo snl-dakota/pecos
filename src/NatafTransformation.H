@@ -1,0 +1,166 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2008, Sandia National Laboratories.
+    This software is distributed under the GNU General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
+//- Class:	 NatafTransformation
+//- Description: Class for Nataf nonlinear distribution transformation
+//- Owner:	 Mike Eldred
+//- Checked by:
+//- Version:
+
+#ifndef NATAF_TRANSFORMATION_H
+#define NATAF_TRANSFORMATION_H
+
+#include "Transformation.H"
+
+
+namespace Pecos {
+
+
+/// Class for Nataf nonlinear distribution transformation.
+
+/** The Nataf transformation occurs in two steps: (1) transformation
+    from the original correlated distributions (x-space) to correlated
+    standard normals (z-space) using CDF matching and from correlated
+    standard normals to uncorrelated standard normals (u-space) using
+    the inverse Cholesky factor of a modified correlation matrix. */
+
+class NatafTransformation: public Transformation
+{
+public:
+
+protected:
+
+  //
+  //- Heading: Constructors and destructor
+  //
+
+  NatafTransformation();  ///< constructor
+  ~NatafTransformation(); ///< destructor
+
+  //
+  //- Heading: Virtual member function redefinitions
+  //
+
+  //
+  //- Heading: Utility routines
+  //
+
+  /// Transformation routine from u-space of uncorrelated standard normal
+  /// variables to x-space of correlated random variables
+  void trans_U_to_X(const RealVector& u_vars, RealVector& x_vars);
+
+  /// Transformation routine from u-space of uncorrelated standard normal
+  /// variables to z-space of correlated standard normal variables
+  void trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars);
+
+  /// Transformation routine from z-space of correlated standard normal
+  /// variables to x-space of correlated random variables
+  void trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars);
+
+  /// Transformation routine from x-space of correlated random variables 
+  /// to u-space of uncorrelated standard normal variables
+  void trans_X_to_U(const RealVector& x_vars, RealVector& u_vars);
+
+  /// Transformation routine from x-space of correlated random variables
+  /// to z-space of correlated standard normal variables
+  void trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars);
+
+  /// Transformation routine from z-space of correlated standard normal
+  /// variables to u-space of uncorrelated standard normal variables
+  void trans_Z_to_U(RealVector& z_vars, RealVector& u_vars);
+
+  /// As part of the Nataf distribution model (Der Kiureghian & Liu, 1986),
+  /// this procedure modifies the user-specified correlation matrix
+  /// (corrMatrixX) to account for correlation warping from the nonlinear
+  /// X->Z transformation and performs a Cholesky factorization to create
+  /// corrCholeskyFactorZ.
+  void trans_correlations();
+
+  /// Transformation routine for gradient vector from x-space to u-space
+  void trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
+			 const RealVector& x_vars,    const IntArray& x_dvv);
+  /// Transformation routine for gradient vector from x-space to u-space
+  void trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
+			 const RealMatrix& jacobian_xu, const IntArray& x_dvv);
+
+  /// Transformation routine from x-space gradient vector to design space
+  void trans_grad_X_to_S(const RealVector& fn_grad_x,
+			 RealVector& fn_grad_s,
+			 const RealVector& x_vars,
+			 const IntArray& x_dvv);
+  /// Transformation routine from x-space gradient vector to design space
+  void trans_grad_X_to_S(const RealVector& fn_grad_x,  RealVector& fn_grad_s,
+			 const RealMatrix& jacobian_xs, const IntArray& x_dvv);
+
+  /// Transformation routine for gradient vector from u-space to x-space
+  void trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
+			 const RealVector& x_vars,    const IntArray& x_dvv);
+  /// Transformation routine for gradient vector from u-space to x-space
+  void trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
+			 const RealMatrix& jacobian_ux, const IntArray& x_dvv);
+
+  /// Transformation routine for Hessian matrix from x-space to u-space
+  void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+			 RealSymMatrix& fn_hess_u,    const RealVector& x_vars,
+			 const RealVector& fn_grad_x, const IntArray& x_dvv);
+  /// Transformation routine for Hessian matrix from x-space to u-space
+  void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
+			 RealSymMatrix& fn_hess_u,
+			 const RealMatrix& jacobian_xu,
+			 const RealSymMatrixArray& hessian_xu,
+			 const RealVector& fn_grad_x, const IntArray& x_dvv);
+
+private:
+
+  //
+  //- Heading: Utility routines
+  //
+
+  /// Jacobian of x(u) mapping obtained from dX/dZ dZ/dU
+  void jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu);
+
+  /// Jacobian of x(z) mapping obtained from differentiation of trans_Z_to_X()
+  void jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz);
+
+  /// Jacobian of u(x) mapping obtained from dU/dZ dZ/dX
+  void jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux);
+
+  /// Jacobian of z(x) mapping obtained from differentiation of trans_X_to_Z()
+  void jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx);
+
+  /// Design Jacobian of x(u,s) mapping obtained from differentiation of
+  /// trans_U_to_X() with respect to distribution parameters S
+  void jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs);
+
+  /// Computes numerical dx/ds and dz/ds Jacobians as requested by xs
+  /// and zs booleans
+  void numerical_design_jacobian(const RealVector& x_vars, 
+				 bool xs, RealMatrix& num_jacobian_xs,
+				 bool zs, RealMatrix& num_jacobian_zs);
+
+  /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
+  void hessian_d2X_dU2(const RealVector& x_vars,
+		       RealSymMatrixArray& hessian_xu);
+
+  /// Hessian of x(z) mapping obtained from differentiation of jacobian_dX_dZ()
+  void hessian_d2X_dZ2(const RealVector& x_vars,
+		       RealSymMatrixArray& hessian_xz);
+};
+
+
+inline NatafTransformation::NatafTransformation():
+  Transformation(BaseConstructor())
+{ }
+
+
+inline NatafTransformation::~NatafTransformation()
+{ }
+
+} // namespace Pecos
+
+#endif
