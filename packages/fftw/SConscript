@@ -1,0 +1,55 @@
+import os
+
+#fftw_env = Environment()
+Import('bas_env')
+
+fftw_env = bas_env.Clone()
+
+
+def configureAndMake(target, source, env):
+  # Whatever it takes to CONFIGURE and MAKE the TPL
+  # WJB: is is time to exploit commonality (i.e. autotools) for teuchos and fftw?
+  source_name = str(source[0])
+  assert source_name == "packages/fftw/configure.ac"
+
+  target_name = str(target[0])
+
+  (dir_name, target_filename) = os.path.split(target_name)
+  assert dir_name == "packages/fftw"
+  target_logfilename = os.path.splitext(target_filename)[0] + "Build.log"
+
+  if not os.path.exists(target_name):
+    print target_name, "does not exist; CONFIGURING, then MAKING..."
+
+  extra_flags_key = 'CCFLAGS'
+  ccflags = fftw_env.Dictionary()[extra_flags_key]
+
+  extra_config_setting = "%s=%s" % (extra_flags_key, ccflags)
+  print "xtraConfigSetting = ", extra_config_setting
+
+  cmd = 'cd ' + dir_name + ' && configure ' + extra_config_setting
+  cmd = cmd + ' --prefix=' + os.getcwd() + os.path.sep + dir_name
+  cmd = cmd + ' --with-gnumake'
+  cmd = cmd + ' --disable-fortran'
+  cmd = cmd + ' > ' + target_logfilename
+  cmd = cmd + ' ; gmake -j2     >> ' + target_logfilename
+  cmd = cmd + ' ; gmake install >> ' + target_logfilename
+
+  print "bldCmd = ", cmd
+
+  os.system(cmd)
+  return target_name
+
+
+def buildTPL(target, source, env):
+  target_name = configureAndMake(target, source, env)
+  Touch("$TARGET")
+  return 
+
+
+t = fftw_env.Command('#packages/fftw/fftw.pc',
+                     '#packages/fftw/configure.ac', buildTPL)
+
+fftw_env.Clean(t, '#packages/fftw/fftwBuild.log')
+#Clean('#packages/fftw/lib/libfftw3.a')
+
