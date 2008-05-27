@@ -12,6 +12,8 @@
 //- Checked by:
 //- Version:
 
+//#include "Transformation.H"
+
 //#include "Teuchos_SerialSpdDenseSolver.h"
 #ifdef PECOS_GSL
 #include "gsl/gsl_sf_gamma.h"
@@ -21,6 +23,10 @@ static const char rcsId[]="@(#) $Id: Transformation.C 4768 2007-12-17 17:49:32Z 
 
 namespace Pecos {
 
+// WJB: Use preprocessor to "comment out EVERYTHING" so that nothing more than
+//      a "library stub" is produced with the SCONS build system
+//
+#ifndef WJB_SCONS
 
 /** This constructor is the one which must build the base class data
     for all derived classes.  get_trans() instantiates a derived
@@ -1315,5 +1321,7 @@ distribution_parameter(const size_t& outer_cv_index, const Real& param)
   if (correlationFlagX)
     trans_correlations();
 }
+
+#endif  //POUNDifndef WJB_SCONS
 
 } // namespace Pecos

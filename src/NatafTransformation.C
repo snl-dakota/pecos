@@ -12,6 +12,8 @@
 //- Checked by:
 //- Version:
 
+//#include "NatafTransformation.H"
+
 //#include "Teuchos_SerialSpdDenseSolver.h"
 #ifdef PECOS_GSL
 #include "gsl/gsl_sf_gamma.h"
@@ -21,6 +23,10 @@ static const char rcsId[]="@(#) $Id: NatafTransformation.C 4768 2007-12-17 17:49
 
 namespace Pecos {
 
+// WJB: Use preprocessor to "comment out EVERYTHING" so that nothing more than
+//      a "library stub" is produced with the SCONS build system
+//      
+#ifndef WJB_SCONS
 
 /** This procedure performs the transformation from u to x space.
     u_vars is the vector of random variables in uncorrelated standard
@@ -2296,5 +2302,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
     }
   }
 }
+
+#endif  //POUNDifndef WJB_SCONS
 
 } // namespace Pecos
