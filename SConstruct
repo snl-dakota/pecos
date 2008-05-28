@@ -42,12 +42,12 @@ def buildTeuchosInflater(target, source, env):
   os.system('tar xvzf ' + source_name + ' > ' + target_name)
   return
 
-bas_env.Command('#packages/teuchos/fileList.log', '#packages/teuchos.tgz',
-                buildTeuchosInflater)
+#bas_env.Command('#packages/teuchos/fileList.log', '#packages/teuchos.tgz',
+                #buildTeuchosInflater)
 
 
 dict = bas_env.Dictionary()
-####for key in ['OBJSUFFIX', 'LIBSUFFIX', 'PLATFORM']COLON
+####for key in ['OBJSUFFIX', 'LIBSUFFIX', 'PLATFORM']:
 for key in ['CC', 'CPPPATH', 'CCFLAGS']:
   print "keyTOP = %s, value = %s" % (key, dict[key])
 

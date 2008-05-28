@@ -9,7 +9,7 @@ teuchos_env = bas_env.Clone()
 def configureAndMake(target, source, env):
   # Whatever it takes to CONFIGURE and MAKE the TPL
   source_name = str(source[0])
-  assert source_name == "packages/teuchos/fileList.log"
+  assert source_name == "packages/teuchos/configure.ac"
 
   target_name = str(target[0])
 
@@ -55,7 +55,7 @@ def buildTPL(target, source, env):
   return 
 
 teuchos_env.Command('#packages/teuchos/teuchosBuild.log',
-                    '#packages/teuchos/fileList.log', buildTPL)
+                    '#packages/teuchos/configure.ac', buildTPL)
 
 
 #dict = teuchos_env.Dictionary()
