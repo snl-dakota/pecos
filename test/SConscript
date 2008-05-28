@@ -7,5 +7,5 @@ test_env.Append(LIBPATH = ['#src'])
 test_env.Prepend(LIBS = ['pecos'])
 test_env.Append(LIBS  = ['lapack', 'm'])
 
-test_env.Program(target = 'sconsPecosTest', source = ['test.C'])
+test_env.Program(target = 'sconsPecosTest', source = ['test.cpp'])
 

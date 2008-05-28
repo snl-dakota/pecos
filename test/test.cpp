@@ -12,9 +12,8 @@
 //- Version:
 //- $Id$
 
-// WJB: wait for MikesLATEST vs. HACK something?? #include "Transformation.H"
-#include "Teuchos_SerialSymDenseMatrix.hpp"
-#include "Teuchos_SerialDenseVector.hpp"
+// WJB: Just HACK something until Mike puts his latest! #include "Transformation.hpp"
+#include "pecos_data_types.h"
 
 #include "fftw3.h"
 #include <cassert>
@@ -26,12 +25,13 @@
 
 int main(int, char** argv)
 {
-//std::cout << "Using " << FFTW_CONCAT(fftw_, version) << std::endl;
+  std::cout << "Using " << FFTW_CONCAT(fftw_, version) << std::endl;
 
   assert(   !strcmp(FFTW_CONCAT(fftw_, version), "fftw-3.1.2")
          && "Incorrect version of FFTW" );
 
   assert(0 == 1 && "helloPecosWorld");  // WJB ToDo: enable Teuchos testing
+                                        // unless Mike has Xforms ready
 
   // Creating a double-precision matrix can be done in several ways:
   // Create an empty matrix with no dimension

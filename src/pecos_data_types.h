@@ -9,8 +9,8 @@
 #ifndef PECOS_DATA_TYPES_H
 #define PECOS_DATA_TYPES_H
 
-#include "Teuchos_SerialDenseVector.h"
-#include "Teuchos_SerialDenseMatrix.h"
+#include "Teuchos_SerialDenseVector.hpp"
+#include "Teuchos_SerialDenseMatrix.hpp"
 
 
 namespace Pecos {
