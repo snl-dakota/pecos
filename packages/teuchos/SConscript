@@ -7,13 +7,16 @@ teuchos_env = bas_env.Clone()
 
 
 def configureAndMake(target, source, env):
-  # Whatever it takes to CONFIGURE and MAKE the TPL (teuchos, then fftw)
+  # Whatever it takes to CONFIGURE and MAKE the TPL
   source_name = str(source[0])
-
-  (dir_name, file_name) = os.path.split(source_name)
-  print dir_name       # packages/teuchos
+  assert source_name == "packages/teuchos/fileList.log"
 
   target_name = str(target[0])
+
+  (dir_name, target_filename) = os.path.split(target_name)
+  assert dir_name == "packages/teuchos"
+  #target_logfilename = os.path.splitext(target_filename)[0] + "Build.log"
+
   if not os.path.exists(target_name):
     print target_name, "does not exist! CONFIGURING, then MAKING..."
 
@@ -24,18 +27,17 @@ def configureAndMake(target, source, env):
   #      But for teuchos, it must be specified via CXXFLAGS, thus the
   #      flag_key/value substitution "trickery" in the next few lines
 
-  new_flag_key = 'CXXFLAGS'
-  extra_config_setting = "%s=%s" % (new_flag_key, ccflags)
+  cxx_flag_key = 'CXXFLAGS'
+  extra_config_setting = "%s=%s" % (cxx_flag_key, ccflags)
   print "xtraConfigSetting = ", extra_config_setting
 
   cmd = 'cd ' + dir_name + ' && configure ' + extra_config_setting
   cmd = cmd + ' --cache-file=config.cache --with-gnumake'
   cmd = cmd + ' --enable-teuchos'
   cmd = cmd + ' --disable-default-packages'
-  cmd = cmd + ' --disable-libcheck >  confAndMkTeuchos.log'
-  cmd = cmd + ' ; gmake -j2        >> confAndMkTeuchos.log'
-
-  #cmd = cmd + ' --disable-libcheck'
+  #cmd = cmd + ' --disable-libcheck >  confAndMkTeuchos.log'
+  cmd = cmd + ' > ' + target_filename
+  cmd = cmd + ' ; gmake -j2 >> ' + target_filename
 
   print "bldCmd = ", cmd
   os.system(cmd)
@@ -44,27 +46,15 @@ def configureAndMake(target, source, env):
 
 
 def buildTPL(target, source, env):
-  # Whatever it takes to build
-
   target_name = configureAndMake(target, source, env)
 
-  # WJB: fake SCons into thinking dependencies have been built?
-  ## WJB: pretty good-- os.system("touch " + dir_name + "/libteuchos.a")
+  # WJB: prefer a target that is a derivative of the .a file -- unfortunately
+  #      I have NOT had success in that area:  os.system("nm " + target_name + " > libteuchos_nm.txt")
 
-  os.system("touch " + target_name)
-
-  #Command("file.out", "file.in",
-          #[
-            #Copy("$TARGET", "$SOURCE"),
-            #Touch("$TARGET")
-          #])
-  #Touch(target_name)
-
-  #os.system("nm " + target_name + " > libteuchos_nm.txt")
-
+  Touch("$TARGET")
   return 
 
-teuchos_env.Command('#packages/teuchos/teuchos.o',
+teuchos_env.Command('#packages/teuchos/teuchosBuild.log',
                     '#packages/teuchos/fileList.log', buildTPL)
 
 
