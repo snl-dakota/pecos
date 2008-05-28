@@ -3,7 +3,7 @@
     PECOS: Parallel Environment for Creation Of Stochastics
     Copyright (c) 2008, Sandia National Laboratories.
     This software is distributed under the GNU General Public License.
-    For more information, see the README file in the top Dakota directory.
+    For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
 #ifndef PECOS_DATA_TYPES_H
@@ -11,6 +11,7 @@
 
 #include "Teuchos_SerialDenseVector.hpp"
 #include "Teuchos_SerialDenseMatrix.hpp"
+#include "Teuchos_SerialSymDenseMatrix.hpp"
 
 
 namespace Pecos {
@@ -39,7 +40,7 @@ typedef Teuchos::SerialSymDenseMatrix<size_t, Real> RealSymMatrix;
 // ---------------------------------------
 // Admin/bookkeeping arrays (serial only):
 // ---------------------------------------
-typedef std::deque<bool>           BoolDeque; // See Effective STL (Meyers), #18
+typedef std::deque<bool>           BoolDeque; // See Meyers' Effective STL, #18
 typedef std::vector<Real>          RealArray;
 typedef std::vector<int>           IntArray;
 typedef std::vector<short>         ShortArray;
