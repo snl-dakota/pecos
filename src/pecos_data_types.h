@@ -13,6 +13,7 @@
 #include "Teuchos_SerialDenseMatrix.hpp"
 #include "Teuchos_SerialSymDenseMatrix.hpp"
 
+#include <iostream>
 
 namespace Pecos {
 
@@ -65,6 +66,12 @@ typedef IntSet::const_iterator     ISCIter;
 typedef IntShortMap::iterator      IntShMIter;
 typedef IntIntMap::iterator        IntIntMIter;
 typedef IntIntMap::const_iterator  IntIntMCIter;
+
+// ----------------
+// Standard streams
+// ----------------
+#define Cout std::cout
+#define Cerr std::cerr
 
 } // namespace Pecos
 
