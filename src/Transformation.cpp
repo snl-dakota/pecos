@@ -12,10 +12,13 @@
 //- Checked by:
 //- Version:
 
-#include "Transformation.H"
+#include "Transformation.hpp"
+#include "NatafTransformation.hpp"
 #ifdef PECOS_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif
+
+const Pecos::Real Pecos::Transformation::Pi = 3.1415926535897932385;
 
 static const char rcsId[]="@(#) $Id: Transformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -30,7 +33,7 @@ namespace Pecos {
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~Transformation). */
 Transformation::Transformation(BaseConstructor):
-  extendedUSpace(false), correlationFlagX(false), Pi(3.1415926535897932385),
+  extendedUSpace(false), correlationFlagX(false),
   transRep(NULL), referenceCount(1)
 {
   const RealMatrix& uncertain_corr = model.uncertain_correlations();
@@ -47,7 +50,7 @@ Transformation::Transformation(BaseConstructor):
 
 #ifdef REFCOUNT_DEBUG
   Cout << "Transformation::Transformation(BaseConstructor) called to build "
-       << "base class for letter." << endl;
+       << "base class for letter." << std::endl;
 #endif
 }
 
@@ -59,7 +62,7 @@ Transformation::Transformation(): transRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
   Cout << "Transformation::Transformation() called to build empty "
-       << "transformation object." << endl;
+       << "transformation object." << std::endl;
 #endif
 }
 
@@ -72,7 +75,7 @@ Transformation::Transformation(const std::string& trans_type):
 {
 #ifdef REFCOUNT_DEBUG
   Cout << "Transformation::Transformation(ProblemDescDB&) called to "
-       << "instantiate envelope." << endl;
+       << "instantiate envelope." << std::endl;
 #endif
 
   // Set the rep pointer to the appropriate derived type
@@ -87,14 +90,14 @@ Transformation::Transformation(const std::string& trans_type):
 Transformation* Transformation::get_trans(const std::string& trans_type)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_trans(string&)." << endl;
+  Cout << "Envelope instantiating letter in get_trans(string&)." << std::endl;
 #endif
 
   if (trans_type == "nataf")
     return new NatafTransformation();
   else {
     Cerr << "Error: Transformation type " << trans_type << " not available."
-	 << endl;
+	 << std::endl;
     return NULL;
   }
 }
@@ -110,9 +113,9 @@ Transformation::Transformation(const Transformation& trans)
     transRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "Transformation::Transformation(Transformation&)" << endl;
+  Cout << "Transformation::Transformation(Transformation&)" << std::endl;
   if (transRep)
-    Cout << "transRep referenceCount = " << transRep->referenceCount << endl;
+    Cout << "transRep referenceCount = " << transRep->referenceCount << std::endl;
 #endif
 }
 
@@ -131,9 +134,9 @@ Transformation Transformation::operator=(const Transformation& trans)
     transRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "Transformation::operator=(Transformation&)" << endl;
+  Cout << "Transformation::operator=(Transformation&)" << std::endl;
   if (transRep)
-    Cout << "transRep referenceCount = " << transRep->referenceCount << endl;
+    Cout << "transRep referenceCount = " << transRep->referenceCount << std::endl;
 #endif
 
   return *this; // calls copy constructor since returned by value
@@ -149,11 +152,11 @@ Transformation::~Transformation()
     --transRep->referenceCount;
 #ifdef REFCOUNT_DEBUG
     Cout << "transRep referenceCount decremented to " 
-	 << transRep->referenceCount << endl;
+	 << transRep->referenceCount << std::endl;
 #endif
     if (transRep->referenceCount == 0) {
 #ifdef REFCOUNT_DEBUG
-      Cout << "deleting transRep" << endl;
+      Cout << "deleting transRep" << std::endl;
 #endif
       delete transRep;
     }
@@ -168,7 +171,7 @@ void Transformation::reshape_correlation_matrix()
   if (num_corr_vars != num_active_vars) {
     if (num_corr_vars != numUncertainVars) {
       Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
-	   << ") in Transformation::reshape_correlation_matrix()." << endl;
+	   << ") in Transformation::reshape_correlation_matrix()." << std::endl;
       abort_handler(-1);
     }
     RealSymMatrix old_corr_matrix(corrMatrixX);
@@ -629,7 +632,7 @@ Real Transformation::erf_inverse(const Real& p)
     z = pow(10., 150.); 
   else if (p_new < 0. || p_new > 1.) {
     Cerr << "Error: probability greater than 1 or less than 0 in erf_inverse()."
-         << endl;
+         << std::endl;
     abort_handler(-1);
   }
   // user erf instead of erfc

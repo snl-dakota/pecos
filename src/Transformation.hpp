@@ -155,7 +155,7 @@ protected:
   RealMatrix corrCholeskyFactorZ;
 
   /// the value for Pi used in several numerical routines
-  const Real Pi;
+  static const Real Pi;
 
 private:
 
