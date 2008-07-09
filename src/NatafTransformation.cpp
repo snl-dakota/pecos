@@ -12,9 +12,9 @@
 //- Checked by:
 //- Version:
 
-#include "NatafTransformation.H"
-#include "Teuchos_SerialDenseSolver.h"
-#include "Teuchos_SerialSpdDenseSolver.h"
+#include "pecos_global_defs.h"
+#include <cfloat>
+#include "NatafTransformation.hpp"
 #ifdef PECOS_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif
@@ -50,10 +50,11 @@ trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars)
 {
   // corrCholeskyFactorZ: the Cholesky factor of the modified correlation matrix
 
-  int u_len = u_vars.Length();
-  if (z_vars.Length() != u_len)
-    z_vars.Size(u_len);
-  z_vars.Multiply('N', 'N', 1., corrCholeskyFactorZ, u_vars, 0.);
+  int u_len = u_vars.length();
+  if (z_vars.length() != u_len)
+    z_vars.size(u_len);
+  z_vars.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1., corrCholeskyFactorZ,
+		  u_vars, 0.);
 }
 
 
@@ -73,9 +74,9 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
   // This routine performs an inverse Rackwitz-Fiessler transformation:
   //   X = F^{-1}[ Phi(Z) ]
 
-  int z_len = z_vars.Length();
-  if (x_vars.Length() != z_len)
-    x_vars.Size(z_len);
+  int z_len = z_vars.length();
+  if (x_vars.length() != z_len)
+    x_vars.size(z_len);
 
   for (int i=0; i<z_len; i++) {
     switch (ranVarTypesX[i]) {
@@ -292,9 +293,9 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
   // This routine performs a Rackwitz-Fiessler transformation:
   //   Z = Phi^{-1}[ F(X) ]
 
-  int x_len = x_vars.Length();
-  if (z_vars.Length() != x_len)
-    z_vars.Size(x_len);
+  int x_len = x_vars.length();
+  if (z_vars.length() != x_len)
+    z_vars.size(x_len);
 
   for (int i=0; i<x_len; i++) {
     switch (ranVarTypesX[i]) {
@@ -466,15 +467,15 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
 {
   // corrCholeskyFactorZ: the Cholesky factor of the modified correlation matrix
 
-  int z_len = z_vars.Length();
-  if (u_vars.Length() != z_len)
-    u_vars.Size(z_len);
+  int z_len = z_vars.length();
+  if (u_vars.length() != z_len)
+    u_vars.size(z_len);
 
-  Teuchos::SerialDenseSolver corr_solver;
-  corr_solver.SetMatrix(corrCholeskyFactorZ);
-  corr_solver.SetVectors(u_vars, z_vars);
-  corr_solver.SolveToRefinedSolution(true);
-  corr_solver.Solve();
+  RealSolver corr_solver;
+  corr_solver.setMatrix(corrCholeskyFactorZ);
+  corr_solver.setVectors(u_vars, z_vars);
+  corr_solver.solveToRefinedSolution(true);
+  corr_solver.solve();
 }
 
 
@@ -941,25 +942,25 @@ void NatafTransformation::trans_correlations()
   }
 
   // Cholesky decomposition for modified correlation matrix
-  Teuchos::SerialSpdDenseSolver corr_solver;
-  corr_solver.SetMatrix(mod_corr_matrix);
-  corr_solver.Factor(); // Cholesky factorization (LL^T) in place
+  RealSpdSolver corr_solver;
+  corr_solver.setMatrix(mod_corr_matrix);
+  corr_solver.factor(); // Cholesky factorization (LL^T) in place
   // Define corrCholeskyFactorZ to be L by assigning the lower triangle.
   size_t num_active_vars = numDesignVars + numUncertainVars + numStateVars;
-  if (corrCholeskyFactorZ.M() != num_active_vars ||
-      corrCholeskyFactorZ.N() != num_active_vars)
-    corrCholeskyFactorZ.Shape(num_active_vars, num_active_vars);
+  if (corrCholeskyFactorZ.numRows() != num_active_vars ||
+      corrCholeskyFactorZ.numCols() != num_active_vars)
+    corrCholeskyFactorZ.shape(num_active_vars, num_active_vars);
   for (i=0; i<num_active_vars; i++)
     for (j=0; j<=i; j++)
       corrCholeskyFactorZ(i, j) = mod_corr_matrix(i, j);
   //Cout << "\ncorrCholeskyFactorZ:" << corrCholeskyFactorZ;
 
   // could pre-compute L^-1 to avoid solving L u = z repeatedly for u
-  //corrCholeskyFactorZInv.Shape(num_active_vars, num_active_vars);
+  //corrCholeskyFactorZInv.shape(num_active_vars, num_active_vars);
   //corrCholeskyFactorZInv = corrCholeskyFactorZ; // copy
-  //Teuchos::SerialDenseSolver chol_solver;
-  //chol_solver.SetMatrix(corrCholeskyFactorZInv); 
-  //chol_solver.Invert();
+  //RealSolver chol_solver;
+  //chol_solver.setMatrix(corrCholeskyFactorZInv); 
+  //chol_solver.invert();
   //Cout << "\ncorrCholeskyFactorZInv:" << corrCholeskyFactorZInv;
 }
 
@@ -970,11 +971,12 @@ void NatafTransformation::trans_correlations()
     x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealVector& x_vars,    const IntArray& x_dvv)
+		  const RealVector& x_vars,    const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
   RealMatrix jacobian_xu;
   jacobian_dX_dU(x_vars, jacobian_xu);
-  trans_grad_X_to_U(fn_grad_x, fn_grad_u, jacobian_xu, x_dvv);
+  trans_grad_X_to_U(fn_grad_x, fn_grad_u, jacobian_xu, x_dvv, cv_ids);
 }
 
 
@@ -986,24 +988,25 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     pulled outside response function loops. */
 void NatafTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
-		  const RealMatrix& jacobian_xu, const IntArray& x_dvv)
+		  const RealMatrix& jacobian_xu, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
-  // Jacobian dimensions = length of ranVarTypesX/U = iteratedModel.cv()
-  int x_len = jacobian_xu.M();
-  const IntArray& cv_ids = iteratedModel.continuous_variable_ids();
+  // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
+  int x_len = jacobian_xu.numRows();
   if (x_dvv == cv_ids) { // standard DVV
-    if (fn_grad_x.Length() != x_len) {
+    if (fn_grad_x.length() != x_len) {
       Cerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
-	   << "trans_grad_X_to_U()." << endl;
+	   << "trans_grad_X_to_U()." << std::endl;
       abort_handler(-1);
     }
-    if (fn_grad_u.Length() != x_len)
-      fn_grad_u.Size(x_len);
-    fn_grad_u.Multiply('T', 'N', 1., jacobian_xu, fn_grad_x, 0.);
+    if (fn_grad_u.length() != x_len)
+      fn_grad_u.size(x_len);
+    fn_grad_u.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
+		       fn_grad_x, 0.);
   }
   else { // non-standard DVV
     RealVector fn_grad_x_trans(x_len), fn_grad_u_trans(x_len);
-    size_t i, dvv_index, num_deriv_vars = x_dvv.length();
+    size_t i, dvv_index, num_deriv_vars = x_dvv.size();
     SizetArray dvv_index_array(x_len);
     // extract relevant DVV components from fn_grad_x
     for (i=0; i<x_len; i++) {
@@ -1012,10 +1015,11 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
 	fn_grad_x_trans(i) = fn_grad_x(dvv_index);
     }
     // perform transformation using full Jacobian
-    fn_grad_u_trans.Multiply('T', 'N', 1., jacobian_xu, fn_grad_x_trans, 0.);
+    fn_grad_u_trans.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
+			     fn_grad_x_trans, 0.);
     // copy relevant DVV components into fn_grad_u
-    if (fn_grad_u.Length() != num_deriv_vars)
-      fn_grad_u.Size(num_deriv_vars);
+    if (fn_grad_u.length() != num_deriv_vars)
+      fn_grad_u.size(num_deriv_vars);
     for (i=0; i<x_len; i++) {
       dvv_index = dvv_index_array[i];
       if (dvv_index != _NPOS)
@@ -1030,11 +1034,12 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
     the Jacobian du/dx.  x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealVector& x_vars,    const IntArray& x_dvv)
+		  const RealVector& x_vars,    const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
   RealMatrix jacobian_ux;
   jacobian_dU_dX(x_vars, jacobian_ux);
-  trans_grad_U_to_X(fn_grad_u, fn_grad_x, jacobian_ux, x_dvv);
+  trans_grad_U_to_X(fn_grad_u, fn_grad_x, jacobian_ux, x_dvv, cv_ids);
 }
 
 
@@ -1045,24 +1050,25 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     function index and can be pulled outside response function loops. */
 void NatafTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
-		  const RealMatrix& jacobian_ux, const IntArray& x_dvv)
+		  const RealMatrix& jacobian_ux, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
-  // Jacobian dimensions = length of ranVarTypesX/U = iteratedModel.cv()
-  int u_len = jacobian_ux.M();
-  const IntArray& cv_ids = iteratedModel.continuous_variable_ids();
+  // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
+  int u_len = jacobian_ux.numRows();
   if (x_dvv == cv_ids) { // standard DVV
-    if (fn_grad_u.Length() != u_len) {
+    if (fn_grad_u.length() != u_len) {
       Cerr << "Error: bad fn_grad_u dimension in NatafTransformation::"
-	   << "trans_grad_U_to_X()." << endl;
+	   << "trans_grad_U_to_X()." << std::endl;
       abort_handler(-1);
     }
-    if (fn_grad_x.Length() != u_len)
-      fn_grad_x.Size(u_len);
-    fn_grad_x.Multiply('T', 'N', 1., jacobian_ux, fn_grad_u, 0.);
+    if (fn_grad_x.length() != u_len)
+      fn_grad_x.size(u_len);
+    fn_grad_x.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_ux,
+		       fn_grad_u, 0.);
   }
   else { // non-standard DVV
     RealVector fn_grad_u_trans(u_len), fn_grad_x_trans(u_len);
-    size_t dvv_index, num_deriv_vars = x_dvv.length();
+    size_t dvv_index, num_deriv_vars = x_dvv.size();
     SizetArray dvv_index_array(u_len);
     // extract relevant DVV components from fn_grad_u
     for (int i=0; i<u_len; i++) {
@@ -1071,10 +1077,11 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
 	fn_grad_u_trans(i) = fn_grad_u(dvv_index);
     }
     // perform transformation using full Jacobian
-    fn_grad_x_trans.Multiply('T', 'N', 1., jacobian_ux, fn_grad_u_trans, 0.);
+    fn_grad_x_trans.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_ux,
+			     fn_grad_u_trans, 0.);
     // copy relevant DVV components into fn_grad_x
-    if (fn_grad_x.Length() != num_deriv_vars)
-      fn_grad_x.Size(num_deriv_vars);
+    if (fn_grad_x.length() != num_deriv_vars)
+      fn_grad_x.size(num_deriv_vars);
     for (int i=0; i<u_len; i++) {
       dvv_index = dvv_index_array[i];
       if (dvv_index != _NPOS)
@@ -1092,11 +1099,12 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
 void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x,
 		  RealVector& fn_grad_s,
-		  const RealVector& x_vars, const IntArray& x_dvv)
+		  const RealVector& x_vars, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids, const UIntArray& acv_ids)
 {
   RealMatrix jacobian_xs;
-  jacobian_dX_dS(x_vars, jacobian_xs);
-  trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv);
+  jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids);
+  trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv, cv_ids, acv_ids);
 }
 
 
@@ -1109,34 +1117,33 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,
     outside response function loops. */
 void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
-		  const RealMatrix& jacobian_xs, const IntArray& x_dvv)
+		  const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids,      const UIntArray& acv_ids)
 {
   // Jacobian dim is x_len by s_len, where
-  // > x_len = length of ranVarTypesX/U        = inner model.cv()
-  // > s_len = primaryACVarMapIndices.length() = outer model.cv()
-  int x_len = jacobian_xs.M(), s_len = jacobian_xs.N();
+  // > x_len = length of ranVarTypesX/U      = inner model.cv()
+  // > s_len = primaryACVarMapIndices.size() = outer model.cv()
+  int x_len = jacobian_xs.numRows(), s_len = jacobian_xs.numCols();
   if (primaryACVarMapIndices.empty() || secondaryACVarMapTargets.empty()) {
     Cerr << "Error: NatafTransformation::trans_grad_X_to_S() requires primary "
-	 << "and secondary variable mappings to define S." << endl;
+	 << "and secondary variable mappings to define S." << std::endl;
     abort_handler(-1);
   }
 
-  const IntArray&  cv_ids = iteratedModel.continuous_variable_ids();
-  const IntArray& acv_ids = iteratedModel.all_continuous_variable_ids();
   bool std_dvv = (x_dvv == cv_ids);
   bool mixed_s = secondaryACVarMapTargets.contains(NO_TARGET);
   RealVector fn_grad_x_std, fn_grad_s_std;
 
   // manage size of fn_grad_x input
   if (std_dvv) { // standard x-space DVV
-    if (fn_grad_x.Length() != x_len) {
+    if (fn_grad_x.length() != x_len) {
       Cerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
-	   << "trans_grad_X_to_S()." << endl;
+	   << "trans_grad_X_to_S()." << std::endl;
       abort_handler(-1);
     }
   }
   else { // non-standard x-space DVV
-    fn_grad_x_std.Size(x_len);
+    fn_grad_x_std.size(x_len);
     // extract relevant DVV components from fn_grad_x
     size_t i, dvv_index;
     for (i=0; i<x_len; i++) {
@@ -1148,7 +1155,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
 
   // manage size of fn_grad_s output
   if (mixed_s || !std_dvv)
-    fn_grad_s_std.Size(s_len);
+    fn_grad_s_std.size(s_len);
   size_t i, final_s_len;
   if (std_dvv)
     final_s_len = s_len;
@@ -1158,15 +1165,16 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
       if (x_dvv.contains(acv_ids[primaryACVarMapIndices[i]]))
 	final_s_len++;
   }
-  if (fn_grad_s.Length() != final_s_len)
-    fn_grad_s.Size(final_s_len);
+  if (fn_grad_s.length() != final_s_len)
+    fn_grad_s.size(final_s_len);
 
   // perform transformation using full Jacobian
   const RealVector& fn_grad_x_trans
     = (std_dvv) ? fn_grad_x : fn_grad_x_std;
   RealVector& fn_grad_s_trans
     = (mixed_s || !std_dvv) ? fn_grad_s_std : fn_grad_s;
-  fn_grad_s_trans.Multiply('T', 'N', 1., jacobian_xs, fn_grad_x_trans, 0.);
+  fn_grad_s_trans.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xs,
+			   fn_grad_x_trans, 0.);
 
   // reassemble final fn_grad_s
   if (mixed_s || !std_dvv) {
@@ -1190,7 +1198,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
        << "\nfn_grad_x_trans:\n" << fn_grad_x_trans
        << "\njacobian_xs:\n"     << jacobian_xs
        << "\nfn_grad_s_trans:\n" << fn_grad_s_trans
-       << "\nfn_grad_s:\n"       << fn_grad_s << endl;
+       << "\nfn_grad_s:\n"       << fn_grad_s << std::endl;
 #endif
 }
 
@@ -1202,7 +1210,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
 void NatafTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealVector& x_vars,	  const RealVector& fn_grad_x,
-		  const IntArray& x_dvv)
+		  const UIntArray& x_dvv,	  const UIntArray&  cv_ids)
 {
   RealMatrix jacobian_xu;
   jacobian_dX_dU(x_vars, jacobian_xu);
@@ -1215,7 +1223,7 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     hessian_d2X_dU2(x_vars, hessian_xu); // nonlinear transformation has Hessian
 
   trans_hess_X_to_U(fn_hess_x, fn_hess_u, jacobian_xu, hessian_xu,
-		    fn_grad_x, x_dvv);
+		    fn_grad_x, x_dvv, cv_ids);
 }
 
 
@@ -1229,11 +1237,11 @@ void NatafTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealMatrix& jacobian_xu,
 		  const RealSymMatrixArray& hessian_xu,
-		  const RealVector& fn_grad_x,    const IntArray& x_dvv)
+		  const RealVector& fn_grad_x, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
-  // Jacobian dimensions = length of ranVarTypesX/U = iteratedModel.cv()
-  int x_len = jacobian_xu.M();
-  const IntArray& cv_ids = iteratedModel.continuous_variable_ids();
+  // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
+  int  x_len   = jacobian_xu.numRows();
   bool std_dvv = (x_dvv == cv_ids); // standard DVV
   bool nonlinear_vars_map = !hessian_xu.empty();
 
@@ -1241,31 +1249,31 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   RealVector fn_grad_x_std;
   SizetArray dvv_index_array;
   if (std_dvv) {
-    if (fn_hess_x.M() != x_len) {
+    if (fn_hess_x.numRows() != x_len) {
       Cerr << "Error: bad fn_hess_x dimension in NatafTransformation::"
-	   << "trans_hess_X_to_U()." << endl;
+	   << "trans_hess_X_to_U()." << std::endl;
       abort_handler(-1);
     }
     if ( nonlinear_vars_map &&
-	 ( fn_grad_x.Length() != x_len || hessian_xu.length() != x_len ) ) {
+	 ( fn_grad_x.length() != x_len || hessian_xu.size() != x_len ) ) {
       Cerr << "Error: bad dimension in NatafTransformation::"
-	   << "trans_hess_X_to_U()." << endl;
+	   << "trans_hess_X_to_U()." << std::endl;
       abort_handler(-1);
     }
-    if (fn_hess_u.M() != x_len)
-      fn_hess_u.Shape(x_len);
+    if (fn_hess_u.numRows() != x_len)
+      fn_hess_u.shape(x_len);
   }
   else { // extract relevant DVV components from fn_grad_x & fn_hess_x
-    fn_hess_x_std.Shape(x_len);
-    fn_hess_u_std.Shape(x_len);
+    fn_hess_x_std.shape(x_len);
+    fn_hess_u_std.shape(x_len);
     if (nonlinear_vars_map)
-      fn_grad_x_std.Size(x_len);
-    size_t i, j, dvv_index_i, dvv_index_j, num_deriv_vars = x_dvv.length();
-    dvv_index_array.reshape(x_len);
+      fn_grad_x_std.size(x_len);
+    size_t i, j, dvv_index_i, dvv_index_j, num_deriv_vars = x_dvv.size();
+    dvv_index_array.resize(x_len);
     for (i=0; i<x_len; i++)
       dvv_index_array[i] = dvv_index_i = x_dvv.index(cv_ids[i]);
-    if (fn_hess_u.M() != num_deriv_vars)
-      fn_hess_u.Shape(num_deriv_vars);
+    if (fn_hess_u.numRows() != num_deriv_vars)
+      fn_hess_u.shape(num_deriv_vars);
     // extract relevant DVV components from fn_hess_x
     for (i=0; i<x_len; i++) {
       dvv_index_i = dvv_index_array[i];
@@ -1288,8 +1296,10 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   // d^2G/dU^2 = dG/dX^T d^2X/dU^2 + dX/dU^T d^2G/dX^2 dX/dU
   // Note: G(u) may have curvature even if g(x) is linear due to first term.
   RealMatrix fn_hess_x_by_xu(x_len, x_len);
-  fn_hess_x_by_xu.Multiply('L',       1., fn_hess_x_trans, jacobian_xu, 0.);
-  fn_hess_u_trans.Multiply('T', 'N',  1., jacobian_xu, fn_hess_x_by_xu, 0.);
+  fn_hess_x_by_xu.multiply(Teuchos::LEFT_SIDE, 1., fn_hess_x_trans,
+			   jacobian_xu, 0.);
+  fn_hess_u_trans.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
+			   fn_hess_x_by_xu, 0.);
   //Cout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_u;
   //Cout << "\nfnGradX:" << fn_grad_x;
 
@@ -1334,10 +1344,11 @@ jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
     jacobian_dX_dZ(x_vars, jacobian_xz);
 
     // dX/dU = dX/dZ dZ/dU = dX/dZ L = dense if variables are correlated
-    int x_len = x_vars.Length();
-    if (jacobian_xu.M() != x_len || jacobian_xu.N() != x_len)
-      jacobian_xu.Shape(x_len, x_len);
-    jacobian_xu.Multiply('N', 'N', 1., jacobian_xz, corrCholeskyFactorZ, 0.);
+    int x_len = x_vars.length();
+    if (jacobian_xu.numRows() != x_len || jacobian_xu.numCols() != x_len)
+      jacobian_xu.shape(x_len, x_len);
+    jacobian_xu.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1., jacobian_xz,
+			 corrCholeskyFactorZ, 0.);
   }
   else // dX/dU = dX/dZ since dZ/dU = I
     jacobian_dX_dZ(x_vars, jacobian_xu);
@@ -1350,9 +1361,9 @@ jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
 void NatafTransformation::
 jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz) 
 {
-  int x_len = x_vars.Length();
-  if (jacobian_xz.M() != x_len || jacobian_xz.N() != x_len)
-    jacobian_xz.Shape(x_len, x_len);
+  int x_len = x_vars.length();
+  if (jacobian_xz.numRows() != x_len || jacobian_xz.numCols() != x_len)
+    jacobian_xz.shape(x_len, x_len);
 
   // Rackwitz-Fiessler: Phi(z) = F(x)
   // d/dz -> phi(z) = f(x) dx/dz
@@ -1530,14 +1541,14 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
 
     // dU/dX = dU/dZ dZ/dX = L^-1 dZ/dX = dense if variables are correlated
     // Solve as L dU/dX = dZ/dX
-    Teuchos::SerialDenseSolver corr_solver;
-    corr_solver.SetMatrix(corrCholeskyFactorZ);
-    int x_len = x_vars.Length();
-    if (jacobian_ux.M() != x_len || jacobian_ux.N() != x_len)
-      jacobian_ux.Shape(x_len, x_len);
-    corr_solver.SetVectors(jacobian_ux, jacobian_zx);
-    corr_solver.SolveToRefinedSolution(true);
-    corr_solver.Solve();
+    RealSolver corr_solver;
+    corr_solver.setMatrix(corrCholeskyFactorZ);
+    int x_len = x_vars.length();
+    if (jacobian_ux.numRows() != x_len || jacobian_ux.numCols() != x_len)
+      jacobian_ux.shape(x_len, x_len);
+    corr_solver.setVectors(jacobian_ux, jacobian_zx);
+    corr_solver.solveToRefinedSolution(true);
+    corr_solver.solve();
   }
   else // dU/dX = dZ/dX since dU/dZ = I
     jacobian_dZ_dX(x_vars, jacobian_ux);
@@ -1550,9 +1561,9 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
 void NatafTransformation::
 jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx) 
 {
-  int x_len = x_vars.Length();
-  if (jacobian_zx.M() != x_len || jacobian_zx.N() != x_len)
-    jacobian_zx.Shape(x_len, x_len);
+  int x_len = x_vars.length();
+  if (jacobian_zx.numRows() != x_len || jacobian_zx.numCols() != x_len)
+    jacobian_zx.shape(x_len, x_len);
 
   // Rackwitz-Fiessler: Phi(z) = F(x)
   // d/dx -> phi(z) dz/dx = f(x)
@@ -1720,15 +1731,16 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     This provides the design Jacobian of the transformation for use in
     computing statistical design sensitivities for OUU. */
 void NatafTransformation::
-jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
+jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
+	       const UIntArray&  cv_ids, const UIntArray& acv_ids)
 {
   // Rectangular Jacobian = Gradient^T = num_X by num_S where num_S is the total
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
-  size_t i, j, num_var_map_1c = primaryACVarMapIndices.length();
-  int x_len = x_vars.Length();
-  if (jacobian_xs.M() != x_len || jacobian_xs.N() != num_var_map_1c)
-    jacobian_xs.Shape(x_len, num_var_map_1c);
+  size_t i, j, num_var_map_1c = primaryACVarMapIndices.size();
+  int x_len = x_vars.length();
+  if (jacobian_xs.numRows() != x_len || jacobian_xs.numCols() != num_var_map_1c)
+    jacobian_xs.shape(x_len, num_var_map_1c);
 
   // dX/dS is derived by differentiating trans_Z_to_X with respect to S.
   // For the uncorrelated case, u and z are constants.  For the correlated
@@ -1774,8 +1786,6 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
     }
   }
 
-  const IntArray&  cv_ids = iteratedModel.continuous_variable_ids();
-  const IntArray& acv_ids = iteratedModel.all_continuous_variable_ids();
   for (i=0; i<num_var_map_1c; i++) { // loop over S
     size_t cv_index = cv_ids.index(acv_ids[primaryACVarMapIndices[i]]);
     // If x_dvv were passed, it would be possible to distinguish different
@@ -1802,7 +1812,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
 	      Cerr << "Error: secondary mapping failure for DESIGN in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -1825,7 +1835,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    //case N_LWR_BND: case N_UPR_BND: not supported
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for NORMAL in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -1865,7 +1875,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	      break;
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for BOUNDED_NORMAL in "
-		   << "NonD::jacobian_dX_dS()." << endl;
+		   << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -1886,7 +1896,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    case LN_MEAN: { // Deriv of Lognormal w.r.t. its Mean
 	      // x = exp(lamba + z zeta)
 	      const Real& mu = ranVarMeansX(j);
-	      if (ranVarAddtlParamsX[j].Length()) // mean, error factor spec
+	      if (ranVarAddtlParamsX[j].length()) // mean, error factor spec
 		jacobian_xs(j, i) = x/mu;
 	      else {                              // mean, std deviation spec
 		const Real& sigma = ranVarStdDevsX(j);
@@ -1913,7 +1923,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    //case LN_LWR_BND: case LN_UPR_BND: not supported
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for LOGNORMAL in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -1942,7 +1952,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    Real phi_ums = (upr < DBL_MAX) ? phi(ums) : 0.;
 	    Real dlambda_ds = 0., dzeta_ds = 0., dlwr_ds = 0., dupr_ds = 0.,
 	      mu_sq = mu*mu, var = sigma*sigma;
-	    bool ln_err_fact = ranVarAddtlParamsX[j].Length();
+	    bool ln_err_fact = ranVarAddtlParamsX[j].length();
 	    switch (target2) {
 	    case LN_MEAN: // Deriv of Bounded Lognormal w.r.t. its Mean
 	      if (ln_err_fact) // mean, error factor spec
@@ -1955,7 +1965,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    case LN_STD_DEV: // Deriv of Bounded LogN w.r.t. its Std Deviation
 	      if (ln_err_fact) {
 		Cerr << "Error: derivative with respect to LN_STD_DEV is "
-		     << "unsupported for error factor specifications." << endl;
+		     << "unsupported for error factor specifications."
+		     << std::endl;
 		abort_handler(-1);
 	      }
 	      dlambda_ds = -sigma/(mu_sq+var);
@@ -1964,7 +1975,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    case LN_ERR_FACT: // Deriv of Bounded LogN w.r.t. its Error Factor
 	      if (!ln_err_fact) {
 		Cerr << "Error: derivative with respect to LN_ERR_FACT is "
-		     << "unsupported for std deviation specifications." << endl;
+		     << "unsupported for std deviation specifications."
+		     << std::endl;
 		abort_handler(-1);
 	      }
 	      dzeta_ds   = 1./1.645/ranVarAddtlParamsX[j](0);
@@ -1976,7 +1988,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	      dupr_ds = 1.; break;
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for BOUNDED_LOGNORMAL "
-		   << "in NonD::jacobian_dX_dS()." << endl;
+		   << "in NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2016,7 +2028,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    // Uniform Std Deviation - TO DO
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for UNIFORM in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2054,7 +2066,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    // Loguniform Std Deviation - TO DO
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for LOGUNIFORM in "
-		   << "NonD::jacobian_dX_dS()." << endl;
+		   << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2120,7 +2132,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    }
 	    if (dist_error) {
 	      Cerr << "Error: secondary mapping failure for TRIANGULAR in "
-		   << "NonD::jacobian_dX_dS()." << endl;
+		   << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	    }
 	  }
@@ -2147,7 +2159,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    // Exponential Std Deviation - TO DO
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for EXPONENTIAL in "
-		   << "NonD::jacobian_dX_dS()." << endl;
+		   << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2228,7 +2240,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	      //break;
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for GUMBEL in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2261,7 +2273,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    // Frechet Std Deviation - TO DO
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for FRECHET in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2295,7 +2307,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	    // Weibull Std Deviation - TO DO
 	    case NO_TARGET: default:
 	      Cerr << "Error: secondary mapping failure for WEIBULL in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2320,7 +2332,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs)
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
 	      Cerr << "Error: secondary mapping failure for STATE in NonD::"
-		   << "jacobian_dX_dS()." << endl;
+		   << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2347,20 +2359,22 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
 {
   if (correlationFlagX) {
     // d^2X/dZ^2
-    int x_len = x_vars.Length();
+    int x_len = x_vars.length();
     RealSymMatrixArray hessian_xz(x_len);
     hessian_d2X_dZ2(x_vars, hessian_xz);
 
-    if (hessian_xu.length() != x_len)
-      hessian_xu.reshape(x_len);
+    if (hessian_xu.size() != x_len)
+      hessian_xu.resize(x_len);
     for (int i=0; i<x_len; i++) {
       // d^2X/dU^2 = dX/dZ^T d^2Z/dU^2 + dZ/dU^T d^2X/dZ^2 dZ/dU
       //           = L^T d^2X/dZ^2 L
       RealMatrix hess_xzi_L(x_len, x_len);
-      hess_xzi_L.Multiply('L', 1., hessian_xz[i], corrCholeskyFactorZ, 0.);
-      if (hessian_xu[i].M() != x_len)
-	hessian_xu[i].Shape(x_len);
-      hessian_xu[i].Multiply('T', 'N', 1., corrCholeskyFactorZ, hess_xzi_L, 0.);
+      hess_xzi_L.multiply(Teuchos::LEFT_SIDE, 1., hessian_xz[i],
+			  corrCholeskyFactorZ, 0.);
+      if (hessian_xu[i].numRows() != x_len)
+	hessian_xu[i].shape(x_len);
+      hessian_xu[i].multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1.,
+			     corrCholeskyFactorZ, hess_xzi_L, 0.);
     }
   }
   else // d^2X/dU^2 = d^2X/dZ^2 since dZ/dU = I
@@ -2387,9 +2401,9 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
   // below in closed form.  For cases with f'(x) = 0 (e.g., uniform), the
   // expression can be simplified to d^2x/dz^2 = -z dx/dz
 
-  int x_len = x_vars.Length();
-  if (hessian_xz.length() != x_len)
-    hessian_xz.reshape(x_len);
+  int x_len = x_vars.length();
+  if (hessian_xz.size() != x_len)
+    hessian_xz.resize(x_len);
 
   RealVector z_vars;
   if ( ranVarTypesX.contains(BOUNDED_NORMAL)    ||
@@ -2404,8 +2418,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
     trans_X_to_Z(x_vars, z_vars);
 
   for (int i=0; i<x_len; i++) {
-    if (hessian_xz[i].M() != x_len)
-      hessian_xz[i].Shape(x_len);
+    if (hessian_xz[i].numRows() != x_len)
+      hessian_xz[i].shape(x_len);
     // each d^2X_i/dZ^2 has a single entry on the diagonal as defined by
     // differentiation of jacobian_dX_dZ()
     switch (ranVarTypesX[i]) {

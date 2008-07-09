@@ -15,7 +15,7 @@
 #ifndef NATAF_TRANSFORMATION_H
 #define NATAF_TRANSFORMATION_H
 
-#include "Transformation.H"
+#include "Transformation.hpp"
 
 
 namespace Pecos {
@@ -83,37 +83,43 @@ protected:
 
   /// Transformation routine for gradient vector from x-space to u-space
   void trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-			 const RealVector& x_vars,    const IntArray& x_dvv);
+			 const RealVector& x_vars,    const UIntArray& x_dvv,
+			 const UIntArray&  cv_ids);
   /// Transformation routine for gradient vector from x-space to u-space
   void trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
-			 const RealMatrix& jacobian_xu, const IntArray& x_dvv);
+			 const RealMatrix& jacobian_xu, const UIntArray& x_dvv,
+			 const UIntArray&  cv_ids);
 
   /// Transformation routine from x-space gradient vector to design space
-  void trans_grad_X_to_S(const RealVector& fn_grad_x,
-			 RealVector& fn_grad_s,
-			 const RealVector& x_vars,
-			 const IntArray& x_dvv);
+  void trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
+			 const RealVector& x_vars, const UIntArray& x_dvv,
+			 const UIntArray&  cv_ids, const UIntArray& acv_ids);
   /// Transformation routine from x-space gradient vector to design space
-  void trans_grad_X_to_S(const RealVector& fn_grad_x,  RealVector& fn_grad_s,
-			 const RealMatrix& jacobian_xs, const IntArray& x_dvv);
+  void trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
+			 const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
+			 const UIntArray&  cv_ids, const UIntArray& acv_ids);
 
   /// Transformation routine for gradient vector from u-space to x-space
   void trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-			 const RealVector& x_vars,    const IntArray& x_dvv);
+			 const RealVector& x_vars,    const UIntArray& x_dvv,
+			 const UIntArray&  cv_ids);
   /// Transformation routine for gradient vector from u-space to x-space
   void trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
-			 const RealMatrix& jacobian_ux, const IntArray& x_dvv);
+			 const RealMatrix& jacobian_ux, const UIntArray& x_dvv,
+			 const UIntArray&  cv_ids);
 
   /// Transformation routine for Hessian matrix from x-space to u-space
   void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
 			 RealSymMatrix& fn_hess_u,    const RealVector& x_vars,
-			 const RealVector& fn_grad_x, const IntArray& x_dvv);
+			 const RealVector& fn_grad_x, const UIntArray&  x_dvv,
+			 const UIntArray&  cv_ids);
   /// Transformation routine for Hessian matrix from x-space to u-space
   void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
 			 RealSymMatrix& fn_hess_u,
 			 const RealMatrix& jacobian_xu,
 			 const RealSymMatrixArray& hessian_xu,
-			 const RealVector& fn_grad_x, const IntArray& x_dvv);
+			 const RealVector& fn_grad_x, const UIntArray& x_dvv,
+			 const UIntArray&  cv_ids);
 
 private:
 
@@ -135,7 +141,8 @@ private:
 
   /// Design Jacobian of x(u,s) mapping obtained from differentiation of
   /// trans_U_to_X() with respect to distribution parameters S
-  void jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs);
+  void jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
+		      const UIntArray&  cv_ids, const UIntArray& acv_ids);
 
   /// Computes numerical dx/ds and dz/ds Jacobians as requested by xs
   /// and zs booleans

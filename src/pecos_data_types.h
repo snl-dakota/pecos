@@ -10,10 +10,9 @@
 #define PECOS_DATA_TYPES_H
 
 #include "Teuchos_SerialDenseVector.hpp"
-#include "Teuchos_SerialDenseMatrix.hpp"
-#include "Teuchos_SerialSymDenseMatrix.hpp"
+#include "Teuchos_SerialDenseSolver.hpp"
+#include "Teuchos_SerialSpdDenseSolver.hpp"
 
-#include <iostream>
 
 namespace Pecos {
 
@@ -29,50 +28,53 @@ typedef double Real;
 typedef std::string String;
 
 
-// -----------------------------------
-// Numerical arrays (serial/parallel):
-// -----------------------------------
+// --------------------------------
+// Numerical arrays (serial dense):
+// --------------------------------
 typedef Teuchos::SerialDenseVector<size_t, Real>    RealVector;
 typedef Teuchos::SerialDenseVector<size_t, int>     IntVector;
 typedef Teuchos::SerialDenseMatrix<size_t, Real>    RealMatrix;
 typedef Teuchos::SerialSymDenseMatrix<size_t, Real> RealSymMatrix;
 
 
+// ---------------------------------
+// Numerical solvers (serial dense):
+// ---------------------------------
+typedef Teuchos::SerialDenseSolver<size_t, Real>    RealSolver;
+typedef Teuchos::SerialSpdDenseSolver<size_t, Real> RealSpdSolver;
+
+
 // ---------------------------------------
 // Admin/bookkeeping arrays (serial only):
 // ---------------------------------------
-typedef std::deque<bool>           BoolDeque; // See Meyers' Effective STL, #18
-typedef std::vector<Real>          RealArray;
-typedef std::vector<int>           IntArray;
-typedef std::vector<short>         ShortArray;
-typedef std::vector<size_t>        SizetArray;
-typedef std::vector<String>        StringArray;
-typedef std::vector<RealVector>    RealVectorArray;
-typedef std::vector<RealMatrix>    RealMatrixArray;
-typedef std::vector<RealSymMatrix> RealSymMatrixArray;
+typedef std::deque<bool>            BoolDeque; // See Meyers' Effective STL, #18
+typedef std::vector<Real>           RealArray;
+typedef std::vector<int>            IntArray;
+typedef std::vector<unsigned int>   UIntArray;
+typedef std::vector<short>          ShortArray;
+typedef std::vector<unsigned short> UShortArray;
+typedef std::vector<size_t>         SizetArray;
+typedef std::vector<String>         StringArray;
+typedef std::vector<RealVector>     RealVectorArray;
+typedef std::vector<RealMatrix>     RealMatrixArray;
+typedef std::vector<RealSymMatrix>  RealSymMatrixArray;
 
-typedef std::set<int>              IntSet;
-typedef std::set<Real>             RealSet;
-typedef std::map<int, short>       IntShortMap;
-typedef std::map<int, int>         IntIntMap;
-typedef std::map<int, RealVector>  IntRealVectorMap;
+typedef std::set<int>               IntSet;
+typedef std::set<Real>              RealSet;
+typedef std::map<int, short>        IntShortMap;
+typedef std::map<int, int>          IntIntMap;
+typedef std::map<int, RealVector>   IntRealVectorMap;
 
 
 // ---------
 // Iterators
 // ---------
-typedef IntSet::iterator           ISIter;
-typedef IntSet::const_iterator     ISCIter;
-typedef IntShortMap::iterator      IntShMIter;
-typedef IntIntMap::iterator        IntIntMIter;
-typedef IntIntMap::const_iterator  IntIntMCIter;
-
-// ----------------
-// Standard streams
-// ----------------
-#define Cout std::cout
-#define Cerr std::cerr
+typedef IntSet::iterator            ISIter;
+typedef IntSet::const_iterator      ISCIter;
+typedef IntShortMap::iterator       IntShMIter;
+typedef IntIntMap::iterator         IntIntMIter;
+typedef IntIntMap::const_iterator   IntIntMCIter;
 
 } // namespace Pecos
 
-#endif // DATA_TYPES_H
+#endif // PECOS_DATA_TYPES_H

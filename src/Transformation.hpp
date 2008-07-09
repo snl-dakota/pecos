@@ -24,10 +24,6 @@
 
 namespace Pecos {
 
-// define special values for ranVarTypesX/U
-enum { DESIGN, NORMAL, LOGNORMAL, UNIFORM, LOGUNIFORM, TRIANGULAR, EXPONENTIAL,
-       BETA, GAMMA, GUMBEL, FRECHET, WEIBULL, STATE };
-
 
 /// Base class for all nonlinear distribution transformations
 

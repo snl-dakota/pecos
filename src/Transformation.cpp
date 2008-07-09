@@ -12,7 +12,7 @@
 //- Checked by:
 //- Version:
 
-#include "Transformation.hpp"
+#include "pecos_global_defs.h"
 #include "NatafTransformation.hpp"
 #ifdef PECOS_GSL
 #include "gsl/gsl_sf_gamma.h"
