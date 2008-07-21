@@ -1,0 +1,40 @@
+## Process this file with automake to produce 'Makefile.in'.
+
+# AUTOMAKE_OPTIONS = readme-alpha
+
+## Need the config directory for its m4 files.
+# WJB: eventually support standalone build - ACLOCAL_AMFLAGS = -I .
+ACLOCAL_AMFLAGS = -I ../../m4
+
+## Source subdirectories to be recursed into during the build.
+## Convenience libraries to be built in each of the SUBDIRS.
+SUBDIRS = src
+#### WJB: unsure so hack something for now -- SUBLIBS = src/libpecos.la
+SUBLIBS = src/libpecos_sub.la
+
+## Set the Pecos library name.
+lib_LTLIBRARIES = libpecos.la
+
+## Pecos headers that need to be distributed
+#### WJB: ask Brian about how this macro defn behaves for 'make install'
+####      use pkginclude_HEADERS instead ??
+include_HEADERS = src/pecos_data_types.h	\
+		  src/NatafTransformation.hpp	\
+		  src/Transformation.hpp
+
+## No sources in this directory!
+
+## Combine the convenience libraries into the final product.
+libpecos_la_LIBADD = $(SUBLIBS)
+
+## Remove the Makefile.in when doing 'make maintainer-clean'.
+MAINTAINERCLEANFILES = aclocal.m4 config.guess config.sub configure \
+		       pecos_config.h.in install-sh ltmain.sh missing Makefile.in
+
+## make clean extension to handle compiler cache directories and the like.
+clean-local:
+	-rm -rf ii_files/ SunWS_cache/ so_locations
+
+## Other files which must be included in the distribution.
+#EXTRA_DIST = configure.ac README.pecos
+
