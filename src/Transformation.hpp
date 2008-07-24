@@ -163,6 +163,20 @@ private:
   /// transRep to the appropriate derived type.
   Transformation* get_trans(const String& trans_type);
 
+// WJB: ToDo - Confirm Mike REVIEW -- protected vs. private ?
+  /// As part of the Nataf distribution model (Der Kiureghian & Liu, 1986),
+  /// this procedure modifies the user-specified correlation matrix
+  /// (corrMatrixX) to account for correlation warping from the nonlinear
+  /// X->Z transformation and performs a Cholesky factorization to create
+  /// corrCholeskyFactorZ.
+  void trans_correlations();
+
+  /// Computes numerical dx/ds and dz/ds Jacobians as requested by xs
+  /// and zs booleans
+  void numerical_design_jacobian(const RealVector& x_vars,
+                                 bool xs, RealMatrix& num_jacobian_xs,
+                                 bool zs, RealMatrix& num_jacobian_zs);
+
 #ifdef PECOS_GSL
   /// Inverse of standard beta CDF (not supported by GSL)
   Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
@@ -194,8 +208,9 @@ private:
 };
 
 
-inline Transformation::~Transformation()
-{ }
+// WJB: ToDo - talk with Mike -- inline here vs. implement in the .cpp file?
+//inline Transformation::~Transformation()
+//{ }
 
 
 inline void Transformation::

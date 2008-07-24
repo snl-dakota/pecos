@@ -31,6 +31,9 @@ namespace Pecos {
 
 class NatafTransformation: public Transformation
 {
+
+  friend class Transformation;
+
 public:
 
 protected:

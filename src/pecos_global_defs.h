@@ -9,7 +9,9 @@
 #ifndef PECOS_GLOBAL_DEFS_H
 #define PECOS_GLOBAL_DEFS_H
 
+#include "pecos_data_types.h"
 #include <iostream>
+#include <cstdlib>
 
 
 namespace Pecos {
@@ -65,7 +67,7 @@ void abort_handler(int code);
 
 
 inline void abort_handler(int code)
-{ exit(code); } // for now, prior to use of MPI
+{ std::exit(code); } // for now, prior to use of MPI
 
 } // namespace Pecos
 

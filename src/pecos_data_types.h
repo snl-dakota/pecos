@@ -9,6 +9,10 @@
 #ifndef PECOS_DATA_TYPES_H
 #define PECOS_DATA_TYPES_H
 
+#ifdef HAVE_CONFIG_H
+#include "pecos_config.h"
+#endif /* HAVE_CONFIG_H */
+
 #include "Teuchos_SerialDenseVector.hpp"
 #include "Teuchos_SerialDenseSolver.hpp"
 #include "Teuchos_SerialSpdDenseSolver.hpp"
