@@ -12,8 +12,8 @@
 //- Checked by:
 //- Version:
 
-#ifndef NATAF_TRANSFORMATION_H
-#define NATAF_TRANSFORMATION_H
+#ifndef NATAF_TRANSFORMATION_HPP
+#define NATAF_TRANSFORMATION_HPP
 
 #include "Transformation.hpp"
 
@@ -31,12 +31,7 @@ namespace Pecos {
 
 class NatafTransformation: public Transformation
 {
-
-  friend class Transformation;
-
 public:
-
-protected:
 
   //
   //- Heading: Constructors and destructor
@@ -44,6 +39,8 @@ protected:
 
   NatafTransformation();  ///< constructor
   ~NatafTransformation(); ///< destructor
+
+protected:
 
   //
   //- Heading: Virtual member function redefinitions

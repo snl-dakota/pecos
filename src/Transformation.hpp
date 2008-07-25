@@ -12,8 +12,8 @@
 //- Checked by:
 //- Version:
 
-#ifndef TRANSFORMATION_H
-#define TRANSFORMATION_H
+#ifndef TRANSFORMATION_HPP
+#define TRANSFORMATION_HPP
 
 #include "pecos_data_types.h"
 #ifdef PECOS_GSL
@@ -163,7 +163,6 @@ private:
   /// transRep to the appropriate derived type.
   Transformation* get_trans(const String& trans_type);
 
-// WJB: ToDo - Confirm Mike REVIEW -- protected vs. private ?
   /// As part of the Nataf distribution model (Der Kiureghian & Liu, 1986),
   /// this procedure modifies the user-specified correlation matrix
   /// (corrMatrixX) to account for correlation warping from the nonlinear
@@ -206,11 +205,6 @@ private:
   /// number of objects sharing transRep
   int referenceCount;
 };
-
-
-// WJB: ToDo - talk with Mike -- inline here vs. implement in the .cpp file?
-//inline Transformation::~Transformation()
-//{ }
 
 
 inline void Transformation::
