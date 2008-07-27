@@ -472,8 +472,9 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
     u_vars.size(z_len);
 
   RealSolver corr_solver;
-  corr_solver.setMatrix(corrCholeskyFactorZ);
-  corr_solver.setVectors(u_vars, z_vars);
+  corr_solver.setMatrix( Teuchos::rcp(&corrCholeskyFactorZ, false) );
+  corr_solver.setVectors( Teuchos::rcp(&u_vars, false),
+                          Teuchos::rcp(&z_vars, false) );
   corr_solver.solveToRefinedSolution(true);
   corr_solver.solve();
 }
@@ -943,7 +944,7 @@ void NatafTransformation::trans_correlations()
 
   // Cholesky decomposition for modified correlation matrix
   RealSpdSolver corr_solver;
-  corr_solver.setMatrix(mod_corr_matrix);
+  corr_solver.setMatrix( Teuchos::rcp(&mod_corr_matrix, false) );
   corr_solver.factor(); // Cholesky factorization (LL^T) in place
   // Define corrCholeskyFactorZ to be L by assigning the lower triangle.
   size_t num_active_vars = numDesignVars + numUncertainVars + numStateVars;
@@ -1542,7 +1543,7 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
     // dU/dX = dU/dZ dZ/dX = L^-1 dZ/dX = dense if variables are correlated
     // Solve as L dU/dX = dZ/dX
     RealSolver corr_solver;
-    corr_solver.setMatrix(corrCholeskyFactorZ);
+    corr_solver.setMatrix( Teuchos::rcp(&corrCholeskyFactorZ, false) );
     int x_len = x_vars.length();
     if (jacobian_ux.numRows() != x_len || jacobian_ux.numCols() != x_len)
       jacobian_ux.shape(x_len, x_len);
