@@ -113,6 +113,11 @@ protected:
   void verify_design_jacobian(const RealVector& u0);
 #endif // DERIV_DEBUG
 
+#ifdef PECOS_GSL
+  /// Inverse of standard beta CDF (not supported by GSL)
+  Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
+#endif // PECOS_GSL
+
   //
   //- Heading: Data members
   //
@@ -176,10 +181,7 @@ private:
                                  bool xs, RealMatrix& num_jacobian_xs,
                                  bool zs, RealMatrix& num_jacobian_zs);
 
-#ifdef PECOS_GSL
-  /// Inverse of standard beta CDF (not supported by GSL)
-  Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
-#else
+#ifndef PECOS_GSL
   /// Inverse of error function used in Phi_inverse()
   Real erf_inverse(const Real& p);
 #endif // PECOS_GSL
