@@ -37,17 +37,15 @@ AC_CHECK_HEADERS([stdlib.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
-AC_CXX_HAVE_STD
-AC_CXX_NAMESPACES
+dnl WJB: will Pecos be supported on a platform that DOES NOT have -- AC_CXX_HAVE_STD
+dnl WJB: will Pecos be supported on a platform that DOES NOT have -- AC_CXX_NAMESPACES
 
 # Checks for library functions.
 ## WJB: later -- AC_CHECK_FUNCS([rand random])
 
-#### WJB: remove the macro below ASAP (get a clean compile!)
-# Macro to (temporarily ) disable problem areas in the Pecos source code
-AC_DEFINE([PECOS_DISABLE_TEUCHOS],[1],
-          [TEMPmacro to disable dependency on Teuchos during transition.])
 
+# PECOS-specific package checks.
+RAC_PATH_GSL
 
 # For now unconditionally build Pecos with Teuchos as a "sibling pkg" in Dakota
 ####AC_CONFIG_SUBDIRS([packages/teuchos])

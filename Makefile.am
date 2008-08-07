@@ -3,8 +3,8 @@
 # AUTOMAKE_OPTIONS = readme-alpha
 
 ## Need the config directory for its m4 files.
-# WJB: eventually support standalone build - ACLOCAL_AMFLAGS = -I .
-ACLOCAL_AMFLAGS = -I ../../m4
+ACLOCAL_AMFLAGS = -I ./m4
+#### if subsidiary pkg in Dakota tree -- ACLOCAL_AMFLAGS = -I ../../m4
 
 ## Source subdirectories to be recursed into during the build.
 ## Convenience libraries to be built in each of the SUBDIRS.
@@ -16,11 +16,10 @@ SUBLIBS = src/libpecos_sub.la
 lib_LTLIBRARIES = libpecos.la
 
 ## Pecos headers that need to be distributed
-#### WJB: ask Brian about how this macro defn behaves for 'make install'
-####      use pkginclude_HEADERS instead ??
-include_HEADERS = src/pecos_data_types.h	\
-		  src/NatafTransformation.hpp	\
-		  src/Transformation.hpp
+pkginclude_HEADERS = src/pecos_data_types.h	\
+		     src/pecos_global_defs.hpp	\
+		     src/NatafTransformation.hpp	\
+		     src/Transformation.hpp
 
 ## No sources in this directory!
 
