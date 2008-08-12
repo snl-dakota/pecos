@@ -51,10 +51,6 @@ public:
   //- Heading: Member functions
   //
 
-  /// initialize ranVarTypesX/U, ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
-  /// ranVarUpperBndsX, and ranVarAddtlParamsX based on distribution data from
-  /// iteratedModel (corrCholeskyFactorZ and correlationFlagX set separately)
-  void initialize_random_variables();
   /// set ranVarTypesX/U, ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
   /// ranVarUpperBndsX, ranVarAddtlParamsX, corrCholeskyFactorZ,
   /// correlationFlagX, and extendedUSpace based on incoming data
@@ -68,9 +64,20 @@ public:
 				   const RealSymMatrix& x_corr,
 				   const RealMatrix& z_chol_fact,
 				   bool x_corr_flag, bool ext_u_space);
-
-  /// set distParamDerivs
-  void distribution_parameter_derivatives(bool dist_param_derivs);
+  /// initializes ranVarTypesX and ranVarTypesU
+  void initialize_random_variable_types(const ShortArray& x_types,
+					const ShortArray& u_types);
+  /// initializes ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
+  /// ranVarUpperBndsX, and ranVarAddtlParamsX
+  void initialize_random_variable_parameters(const RealVector& x_means,
+					     const RealVector& x_std_devs,
+					     const RealVector& x_l_bnds,
+					     const RealVector& x_u_bnds,
+					     const RealVectorArray& x_addtl,
+					     const RealSymMatrix& x_corr,
+					     const RealMatrix& z_chol_fact,
+					     bool x_corr_flag,
+					     bool ext_u_space);
 
 protected:
 
@@ -87,14 +94,10 @@ protected:
   //- Heading: Member functions
   //
 
-  /// initializes ranVarTypesX and ranVarTypesU
-  void initialize_random_variable_types();
-  /// initializes ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
-  /// ranVarUpperBndsX, and ranVarAddtlParamsX
-  void initialize_random_variable_parameters();
-
   /// reshape corrMatrixX for an all_variables specification
-  void reshape_correlation_matrix();
+  void reshape_correlation_matrix(size_t num_design_vars,
+				  size_t num_uncertain_vars,
+				  size_t num_state_vars);
 
   /// Standard normal density function
   Real phi(const Real& beta);
@@ -179,39 +182,24 @@ private:
   /// and zs booleans
   void numerical_design_jacobian(const RealVector& x_vars,
                                  bool xs, RealMatrix& num_jacobian_xs,
-                                 bool zs, RealMatrix& num_jacobian_zs);
+                                 bool zs, RealMatrix& num_jacobian_zs,
+				 const UIntArray& cv_ids,
+				 const UIntArray& acv_ids);
 
 #ifndef PECOS_GSL
   /// Inverse of error function used in Phi_inverse()
   Real erf_inverse(const Real& p);
 #endif // PECOS_GSL
 
-  /// return a particular random variable distribution parameter
-  const Real& distribution_parameter(const size_t& outer_cv_index);
-  /// set a particular random variable distribution parameter and
-  /// update derived quantities
-  void distribution_parameter(const size_t& outer_cv_index, const Real& param);
-
   //
   //- Heading: Data members
   //
-
-  /// flags calculation of derivatives with respect to distribution
-  /// parameters s within resp_x_to_u_mapping() using the chain rule
-  /// df/dx dx/ds.  The default is to calculate derivatives with respect
-  /// to standard random variables u using the chain rule df/dx dx/du.
-  bool distParamDerivs;
 
   /// pointer to the letter (initialized only for the envelope)
   Transformation* transRep;
   /// number of objects sharing transRep
   int referenceCount;
 };
-
-
-inline void Transformation::
-distribution_parameter_derivatives(bool dist_param_derivs)
-{ distParamDerivs = dist_param_derivs; }
 
 
 inline Real Transformation::phi(const Real& beta)

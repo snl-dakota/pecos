@@ -164,265 +164,29 @@ Transformation::~Transformation()
 }
 
 
-void Transformation::reshape_correlation_matrix()
+void Transformation::
+reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
+			   size_t num_state_vars)
 {
   size_t i, j, offset, num_corr_vars = corrMatrixX.M(),
-    num_active_vars = numDesignVars + numUncertainVars + numStateVars;
+    num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
   if (num_corr_vars != num_active_vars) {
-    if (num_corr_vars != numUncertainVars) {
+    if (num_corr_vars != num_uncertain_vars) {
       Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
 	   << ") in Transformation::reshape_correlation_matrix()." << std::endl;
       abort_handler(-1);
     }
     RealSymMatrix old_corr_matrix(corrMatrixX);
     corrMatrixX.Shape(num_active_vars); // initializes to zero
-    for (i=0; i<numDesignVars; i++)
+    for (i=0; i<num_design_vars; i++)
       corrMatrixX(i,i) = 1.;
-    offset = numDesignVars;
-    for (i=0; i<numUncertainVars; i++)
-      for (j=0; j<numUncertainVars; j++)
+    offset = num_design_vars;
+    for (i=0; i<num_uncertain_vars; i++)
+      for (j=0; j<num_uncertain_vars; j++)
 	corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
-    offset += numUncertainVars;
-    for (i=0; i<numStateVars; i++)
+    offset += num_uncertain_vars;
+    for (i=0; i<num_state_vars; i++)
       corrMatrixX(i+offset,i+offset) = 1.;
-  }
-}
-
-
-/** Build ranVar arrays containing the uncertain variable distribution
-    types and their corresponding means/standard deviations.  This
-    function is used when the Model variables are in x-space. */
-void Transformation::initialize_random_variables()
-{
-  initialize_random_variable_types();
-  initialize_random_variable_parameters();
-}
-
-
-/** Build ranVar arrays containing the uncertain variable distribution
-    types and their corresponding means/standard deviations.  This
-    function is used when the Model variables are in x-space. */
-void Transformation::initialize_random_variable_types()
-{
-  if (ranVarTypesX.empty()) {
-    size_t num_active_vars = iteratedModel.cv();
-    ranVarTypesX.reshape(num_active_vars);
-    ranVarTypesU.reshape(num_active_vars);
-  }
-
-  size_t i, av_cntr = 0;
-  for (i=0; i<numDesignVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = DESIGN;
-    ranVarTypesU[av_cntr] = UNIFORM;
-  }
-  for (i=0; i<numNormalVars; i++, av_cntr++)
-    ranVarTypesX[av_cntr] = ranVarTypesU[av_cntr] = NORMAL;
-  for (i=0; i<numLognormalVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = LOGNORMAL;
-    ranVarTypesU[av_cntr] = NORMAL;
-  }
-  for (i=0; i<numUniformVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = UNIFORM;
-    ranVarTypesU[av_cntr] = (extendedUSpace) ? UNIFORM : NORMAL;
-  }
-  for (i=0; i<numLoguniformVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = LOGUNIFORM;
-    ranVarTypesU[av_cntr] = (extendedUSpace) ? UNIFORM : NORMAL;
-  }
-  for (i=0; i<numTriangularVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = TRIANGULAR;
-    ranVarTypesU[av_cntr] = NORMAL; // bounded: possibly UNIFORM or BETA
-  }
-  for (i=0; i<numExponentialVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = EXPONENTIAL;
-    ranVarTypesU[av_cntr] = (extendedUSpace) ? EXPONENTIAL : NORMAL;
-  }
-  for (i=0; i<numBetaVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = BETA;
-    ranVarTypesU[av_cntr] = (extendedUSpace) ? BETA : NORMAL;
-  }
-  for (i=0; i<numGammaVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = GAMMA;
-    ranVarTypesU[av_cntr] = (extendedUSpace) ? GAMMA : NORMAL;
-  }
-  for (i=0; i<numGumbelVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = GUMBEL;
-    ranVarTypesU[av_cntr] = NORMAL; // 2-sided
-  }
-  for (i=0; i<numFrechetVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = FRECHET;
-    ranVarTypesU[av_cntr] = NORMAL; // 1-sided: possibly EXPONENTIAL or GAMMA
-  }
-  for (i=0; i<numWeibullVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = WEIBULL;
-    ranVarTypesU[av_cntr] = NORMAL; // 1-sided: possibly EXPONENTIAL or GAMMA
-  }
-  for (i=0; i<numStateVars; i++, av_cntr++) {
-    ranVarTypesX[av_cntr] = STATE;
-    ranVarTypesU[av_cntr] = UNIFORM;
-  }
-}
-
-
-/** Build ranVar arrays containing the uncertain variable distribution
-    types and their corresponding means/standard deviations.  This
-    function is used when the Model variables are in x-space. */
-void Transformation::initialize_random_variable_parameters()
-{
-  if (!ranVarMeansX.Length()) {
-    size_t num_active_vars = iteratedModel.cv();
-    ranVarMeansX.Size(num_active_vars);
-    ranVarStdDevsX.Size(num_active_vars);
-    ranVarAddtlParamsX.reshape(num_active_vars);
-  }
-  copy_data(iteratedModel.continuous_lower_bounds(), ranVarLowerBndsX);
-  copy_data(iteratedModel.continuous_upper_bounds(), ranVarUpperBndsX);
-
-  size_t i, av_cntr = 0;
-  for (i=0; i<numDesignVars; i++, av_cntr++) {
-    const Real& lwr = ranVarLowerBndsX(av_cntr);
-    const Real& upr = ranVarUpperBndsX(av_cntr);
-    ranVarMeansX(av_cntr)   = (lwr + upr)/2.;
-    ranVarStdDevsX(av_cntr) = (upr - lwr)/sqrt(12.);
-  }
-  const RealVector& n_means    = iteratedModel.normal_means();
-  const RealVector& n_std_devs = iteratedModel.normal_std_deviations();
-  for (i=0; i<numNormalVars; i++, av_cntr++) {
-    ranVarMeansX(av_cntr)   = n_means[i];
-    ranVarStdDevsX(av_cntr) = n_std_devs[i];
-  }
-  const RealVector& ln_means     = iteratedModel.lognormal_means();
-  const RealVector& ln_std_devs  = iteratedModel.lognormal_std_deviations();
-  const RealVector& ln_err_facts = iteratedModel.lognormal_error_factors();
-  bool ln_s_d = !ln_std_devs.empty();
-  for (i=0; i<numLognormalVars; i++, av_cntr++) {
-    // PECOS/UQ is standardized on using the mean/std dev or mean/error factor 
-    // of the actual lognormal distribution.  It does not use the mean/std dev
-    // of the underlying normal distribution (see also NonDSampling.C for
-    // mappings for LHS lognormal inputs).
-    ranVarMeansX(av_cntr) = ln_means[i];
-    if (ln_s_d)
-      ranVarStdDevsX(av_cntr) = ln_std_devs[i];
-    else {
-      // Pre-process the error factors to compute the std dev of the lognormal
-      // distribution.  See LHS SAND Report #98-0210, pp. 39-41.
-      const Real& err_fact = ln_err_facts[i];
-      Real zeta = log(err_fact)/1.645;
-      ranVarStdDevsX(av_cntr) = ln_means[i]*sqrt(exp(zeta*zeta)-1.);
-      ranVarAddtlParamsX[av_cntr].Resize(1);
-      ranVarAddtlParamsX[av_cntr](0) = err_fact;
-    }
-  }
-  const RealVector& u_l_bnds = iteratedModel.uniform_lower_bounds();
-  const RealVector& u_u_bnds = iteratedModel.uniform_upper_bounds();
-  for (i=0; i<numUniformVars; i++, av_cntr++) {
-    const Real& lwr = u_l_bnds[i]; const Real& upr = u_u_bnds[i];
-    ranVarMeansX(av_cntr)   = (lwr + upr)/2.;
-    ranVarStdDevsX(av_cntr) = (upr - lwr)/sqrt(12.);
-  }
-  // see SAND98-0210 LHS manual, pp. 43-44
-  const RealVector& lu_l_bnds = iteratedModel.loguniform_lower_bounds();
-  const RealVector& lu_u_bnds = iteratedModel.loguniform_upper_bounds();
-  for (i=0; i<numLoguniformVars; i++, av_cntr++) {
-    const Real& lwr = lu_l_bnds[i]; const Real& upr = lu_u_bnds[i];
-    Real range = upr - lwr,         log_range = log(upr) - log(lwr);
-    ranVarMeansX(av_cntr) = range/log_range;
-    ranVarStdDevsX(av_cntr)
-      = sqrt(range*(log_range*(upr+lwr)-2.*range)/2.)/log_range;
-  }
-  // See Haldar and Mahadevan, p. 99
-  const RealVector& t_modes  = iteratedModel.triangular_modes();
-  const RealVector& t_l_bnds = iteratedModel.triangular_lower_bounds();
-  const RealVector& t_u_bnds = iteratedModel.triangular_upper_bounds();
-  for (i=0; i<numTriangularVars; i++, av_cntr++) {
-    const Real& mode = t_modes[i];
-    const Real& lwr = t_l_bnds[i]; const Real& upr = t_u_bnds[i];
-    ranVarMeansX(av_cntr) = (lwr + mode + upr)/3.;
-    ranVarStdDevsX(av_cntr)
-      = sqrt((lwr*(lwr - mode) + mode*(mode - upr) + upr*(upr - lwr))/18.);
-    ranVarAddtlParamsX[av_cntr].Resize(1);
-    ranVarAddtlParamsX[av_cntr](0) = mode;
-  }
-  // PECOS employs the 1/beta exp(-x/beta) definition, which differs from
-  // the lambda exp(-lambda x) LHS definition (lambda_LHS = 1/beta_PECOS).
-  const RealVector& e_betas = iteratedModel.exponential_betas();
-  for (i=0; i<numExponentialVars; i++, av_cntr++) {
-    const Real& beta = e_betas[i];
-    ranVarMeansX(av_cntr)   = beta;
-    ranVarStdDevsX(av_cntr) = beta;
-    ranVarAddtlParamsX[av_cntr].Resize(1);
-    ranVarAddtlParamsX[av_cntr](0) = beta;
-  }
-  // See Haldar and Mahadevan, p. 72
-  const RealVector& b_alphas = iteratedModel.beta_alphas();
-  const RealVector& b_betas  = iteratedModel.beta_betas();
-  const RealVector& b_l_bnds = iteratedModel.beta_lower_bounds();
-  const RealVector& b_u_bnds = iteratedModel.beta_upper_bounds();
-  for (i=0; i<numBetaVars; i++, av_cntr++) {
-    const Real& alpha = b_alphas[i]; const Real& beta = b_betas[i];
-    const Real& lwr   = b_l_bnds[i]; Real range = b_u_bnds[i] - lwr;
-    ranVarMeansX(av_cntr) = lwr + alpha/(alpha+beta)*range;
-    ranVarStdDevsX(av_cntr)
-      = sqrt(alpha*beta/(alpha+beta+1.))/(alpha+beta)*range;
-    ranVarAddtlParamsX[av_cntr].Resize(2);
-    ranVarAddtlParamsX[av_cntr](0) = alpha;
-    ranVarAddtlParamsX[av_cntr](1) = beta;
-  }
-  // This follows the Gamma(alpha,beta) definition in Law & Kelton, which
-  // differs from the LHS definition (beta_LK = 1/beta_LHS).
-  const RealVector& ga_alphas = iteratedModel.gamma_alphas();
-  const RealVector& ga_betas  = iteratedModel.gamma_betas();
-  for (i=0; i<numGammaVars; i++, av_cntr++) {
-    const Real& alpha = ga_alphas[i]; const Real& beta = ga_betas[i];
-    ranVarMeansX(av_cntr)   = alpha*beta;
-    ranVarStdDevsX(av_cntr) = sqrt(alpha)*beta;
-    ranVarAddtlParamsX[av_cntr].Resize(2);
-    ranVarAddtlParamsX[av_cntr](0) = alpha;
-    ranVarAddtlParamsX[av_cntr](1) = beta;
-  }
-  // See Haldar and Mahadevan, p. 90
-  const RealVector& gu_alphas = iteratedModel.gumbel_alphas();
-  const RealVector& gu_betas  = iteratedModel.gumbel_betas();
-  for (i=0; i<numGumbelVars; i++, av_cntr++) {
-    const Real& alpha = gu_alphas[i]; const Real& beta = gu_betas[i];
-    ranVarMeansX(av_cntr)   = beta + 0.5772/alpha;
-    ranVarStdDevsX(av_cntr) = Pi/sqrt(6.)/alpha;
-    ranVarAddtlParamsX[av_cntr].Resize(2);
-    ranVarAddtlParamsX[av_cntr](0) = alpha;
-    ranVarAddtlParamsX[av_cntr](1) = beta;
-  }
-#ifdef PECOS_GSL
-  // See Haldar and Mahadevan, pp. 91-92
-  const RealVector& f_alphas = iteratedModel.frechet_alphas();
-  const RealVector& f_betas  = iteratedModel.frechet_betas();
-  for (i=0; i<numFrechetVars; i++, av_cntr++) {
-    const Real& alpha = f_alphas[i]; const Real& beta = f_betas[i];
-    Real gam = gsl_sf_gamma(1.-1./alpha);
-    ranVarMeansX(av_cntr)   = beta*gam;
-    ranVarStdDevsX(av_cntr) = beta*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
-    ranVarAddtlParamsX[av_cntr].Resize(2);
-    ranVarAddtlParamsX[av_cntr](0) = alpha;
-    ranVarAddtlParamsX[av_cntr](1) = beta;
-  }
-  // See Haldar and Mahadevan, p. 97
-  const RealVector& w_alphas = iteratedModel.weibull_alphas();
-  const RealVector& w_betas  = iteratedModel.weibull_betas();
-  for (i=0; i<numWeibullVars; i++, av_cntr++) {
-    const Real& alpha  = w_alphas[i]; const Real& beta = w_betas[i];
-    Real gam = gsl_sf_gamma(1.+1./alpha),
-      cf_var = sqrt(gsl_sf_gamma(1.+2./alpha)/gam/gam - 1.);
-    ranVarMeansX(av_cntr)   = beta*gam;
-    ranVarStdDevsX(av_cntr) = cf_var*beta*gam;
-    ranVarAddtlParamsX[av_cntr].Resize(2);
-    ranVarAddtlParamsX[av_cntr](0) = alpha;
-    ranVarAddtlParamsX[av_cntr](1) = beta;
-  }
-#endif // PECOS_GSL
-  for (i=0; i<numStateVars; i++, av_cntr++) {
-    const Real& lwr = ranVarLowerBndsX(av_cntr);
-    const Real& upr = ranVarUpperBndsX(av_cntr);
-    ranVarMeansX(av_cntr)   = (lwr + upr)/2.;
-    ranVarStdDevsX(av_cntr) = (upr - lwr)/sqrt(12.);
   }
 }
 
@@ -444,8 +208,32 @@ initialize_random_variables(const ShortArray& x_types,
 			    const RealMatrix& z_chol_fact,
 			    bool x_corr_flag, bool ext_u_space)
 {
-  ranVarTypesX        = x_types;
-  ranVarTypesU        = u_types;
+  initialize_random_variables_types(x_types, u_types);
+  initialize_random_variables_parameters(x_means, x_std_devs, x_l_bnds,
+					 x_u_bnds, x_addtl, x_corr, z_chol_fact,
+					 x_corr_flag, ext_u_space);
+}
+
+
+void Transformation::
+initialize_random_variables_types(const ShortArray& x_types,
+				  const ShortArray& u_types)
+{
+  ranVarTypesX  = x_types;
+  ranVarTypesU  = u_types;
+}
+
+
+void Transformation::
+initialize_random_variables_parameters(const RealVector& x_means,
+				       const RealVector& x_std_devs,
+				       const RealVector& x_l_bnds,
+				       const RealVector& x_u_bnds,
+				       const RealVectorArray& x_addtl,
+				       const RealSymMatrix& x_corr,
+				       const RealMatrix& z_chol_fact,
+				       bool x_corr_flag, bool ext_u_space)
+{
   ranVarMeansX        = x_means;
   ranVarStdDevsX      = x_std_devs;
   ranVarLowerBndsX    = x_l_bnds;
@@ -455,9 +243,6 @@ initialize_random_variables(const ShortArray& x_types,
   corrCholeskyFactorZ = z_chol_fact;
   correlationFlagX    = x_corr_flag;
   extendedUSpace      = ext_u_space;
-
-  numDesignVars = ranVarTypesX.count(DESIGN);
-  numStateVars  = ranVarTypesX.count(STATE);
 }
 
 
@@ -471,7 +256,8 @@ initialize_random_variables(const ShortArray& x_types,
 void Transformation::
 numerical_design_jacobian(const RealVector& x_vars,
 			  bool xs, RealMatrix& num_jacobian_xs,
-			  bool zs, RealMatrix& num_jacobian_zs)
+			  bool zs, RealMatrix& num_jacobian_zs,
+			  const UIntArray& cv_ids, const UIntArray& acv_ids)
 {
   // For correlated vars, correlation matrix C = C(s) due to Nataf modifications
   //   z(s) = L(s) u  ->  dz/ds = dL/ds u  ->  need dL/ds
@@ -511,8 +297,6 @@ numerical_design_jacobian(const RealVector& x_vars,
   trans_X_to_U(x_vars, u_vars);
 
   Real fd_grad_ss = 1.e-4;
-  const IntArray&  cv_ids = iteratedModel.continuous_variable_ids();
-  const IntArray& acv_ids = iteratedModel.all_continuous_variable_ids();
   for (i=0; i<num_var_map_1c; i++) {
 
     size_t cv_index = cv_ids.index(acv_ids[primaryACVarMapIndices[i]]);
@@ -940,383 +724,5 @@ void Transformation::verify_design_jacobian(const RealVector& u0)
        << "\nAnalytic jacobian:"  << jacobian_xs;
 }
 #endif // DERIV_DEBUG
-
-
-/** This function accommodates the native Model space (X, Z, or U)
-    through the use of num[Distribution]Vars counts and
-    iteratedModel.some_distribution_parameter(), but is tied to
-    x-space through the VarMapIndices user specifications. */
-const Real& Transformation::distribution_parameter(const size_t& outer_cv_index)
-{
-  size_t inner_acv_index = primaryACVarMapIndices[outer_cv_index],
-    dist_index = inner_acv_index -
-    iteratedModel.all_continuous_variable_types().count("continuous_design");
-  switch (secondaryACVarMapTargets[outer_cv_index]) {
-  case CDV_LWR_BND: case CSV_LWR_BND:
-    return iteratedModel.all_continuous_lower_bounds()[inner_acv_index]; break;
-  case CDV_UPR_BND: case CSV_UPR_BND:
-    return iteratedModel.all_continuous_upper_bounds()[inner_acv_index]; break;
-  case N_MEAN:
-    return iteratedModel.normal_means()[dist_index]; break;
-  case N_STD_DEV:
-    return iteratedModel.normal_std_deviations()[dist_index]; break;
-  case N_LWR_BND:
-    return iteratedModel.normal_lower_bounds()[dist_index]; break;
-  case N_UPR_BND:
-    return iteratedModel.normal_upper_bounds()[dist_index]; break;
-  case LN_MEAN:
-    dist_index -= numNormalVars;
-    return iteratedModel.lognormal_means()[dist_index]; break;
-  case LN_STD_DEV:
-    dist_index -= numNormalVars;
-    return iteratedModel.lognormal_std_deviations()[dist_index]; break;
-  case LN_ERR_FACT:
-    dist_index -= numNormalVars;
-    return iteratedModel.lognormal_error_factors()[dist_index]; break;
-  case LN_LWR_BND:
-    dist_index -= numNormalVars;
-    return iteratedModel.lognormal_lower_bounds()[dist_index]; break;
-  case LN_UPR_BND:
-    dist_index -= numNormalVars;
-    return iteratedModel.lognormal_upper_bounds()[dist_index]; break;
-  case U_LWR_BND:
-    dist_index -= numNormalVars + numLognormalVars;
-    return iteratedModel.uniform_lower_bounds()[dist_index]; break;
-  case U_UPR_BND:
-    dist_index -= numNormalVars + numLognormalVars;
-    return iteratedModel.uniform_upper_bounds()[dist_index]; break;
-  case LU_LWR_BND:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
-    return iteratedModel.loguniform_lower_bounds()[dist_index]; break;
-  case LU_UPR_BND:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
-    return iteratedModel.loguniform_upper_bounds()[dist_index]; break;
-  case T_MODE:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    return iteratedModel.triangular_modes()[dist_index]; break;
-  case T_LWR_BND:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    return iteratedModel.triangular_lower_bounds()[dist_index]; break;
-  case T_UPR_BND:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    return iteratedModel.triangular_upper_bounds()[dist_index]; break;
-  case E_BETA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars;
-    return iteratedModel.exponential_betas()[dist_index]; break;
-  case B_ALPHA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    return iteratedModel.beta_alphas()[dist_index]; break;
-  case B_BETA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    return iteratedModel.beta_betas()[dist_index]; break;
-  case B_LWR_BND:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    return iteratedModel.beta_lower_bounds()[dist_index]; break;
-  case B_UPR_BND:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    return iteratedModel.beta_upper_bounds()[dist_index]; break;
-  case GA_ALPHA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
-    return iteratedModel.gamma_alphas()[dist_index]; break;
-  case GA_BETA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
-    return iteratedModel.gamma_betas()[dist_index]; break;
-  case GU_ALPHA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars;
-    return iteratedModel.gumbel_alphas()[dist_index]; break;
-  case GU_BETA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars;
-    return iteratedModel.gumbel_betas()[dist_index]; break;
-  case F_ALPHA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars;
-    return iteratedModel.frechet_alphas()[dist_index]; break;
-  case F_BETA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars;
-    return iteratedModel.frechet_betas()[dist_index]; break;
-  case W_ALPHA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars + numFrechetVars;
-    return iteratedModel.weibull_alphas()[dist_index]; break;
-  case W_BETA:
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars + numFrechetVars;
-    return iteratedModel.weibull_betas()[dist_index]; break;
-  }
-}
-
-
-/** This function accommodates the native Model space (X, Z, or U)
-    through the use of num[Distribution]Vars counts and
-    iteratedModel.some_distribution_parameter(), but is tied to
-    x-space through the VarMapIndices user specifications. */
-void Transformation::
-distribution_parameter(const size_t& outer_cv_index, const Real& param)
-{
-  size_t inner_acv_index = primaryACVarMapIndices[outer_cv_index],
-    dist_index = inner_acv_index -
-    iteratedModel.all_continuous_variable_types().count("continuous_design");
-  switch (secondaryACVarMapTargets[outer_cv_index]) {
-  case CDV_LWR_BND: case CSV_LWR_BND: {
-    RealVector a_c_l_bnds = iteratedModel.all_continuous_lower_bounds();
-    a_c_l_bnds[inner_acv_index] = param;
-    iteratedModel.all_continuous_lower_bounds(a_c_l_bnds);
-    break;
-  }
-  case CDV_UPR_BND: case CSV_UPR_BND: {
-    RealVector a_c_u_bnds = iteratedModel.all_continuous_upper_bounds();
-    a_c_u_bnds[inner_acv_index] = param;
-    iteratedModel.all_continuous_upper_bounds(a_c_u_bnds);
-    break;
-  }
-  case N_MEAN: {
-    RealVector n_means = iteratedModel.normal_means();
-    n_means[dist_index] = param;
-    iteratedModel.normal_means(n_means);   
-    break;
-  }
-  case N_STD_DEV: {
-    RealVector n_std_devs = iteratedModel.normal_std_deviations();
-    n_std_devs[dist_index] = param;
-    iteratedModel.normal_std_deviations(n_std_devs);
-    break;
-  }
-  case N_LWR_BND: {
-    RealVector n_lower_bnds = iteratedModel.normal_lower_bounds();
-    n_lower_bnds[dist_index] = param;
-    iteratedModel.normal_lower_bounds(n_lower_bnds);
-    break;
-  }
-  case N_UPR_BND: {
-    RealVector n_upper_bnds = iteratedModel.normal_upper_bounds();
-    n_upper_bnds[dist_index] = param;
-    iteratedModel.normal_upper_bounds(n_upper_bnds);
-    break;
-  }
-  case LN_MEAN: {
-    dist_index -= numNormalVars;
-    RealVector ln_means = iteratedModel.lognormal_means();
-    ln_means[dist_index] = param;
-    iteratedModel.lognormal_means(ln_means);
-    break;
-  }
-  case LN_STD_DEV: {
-    dist_index -= numNormalVars;
-    RealVector ln_std_devs = iteratedModel.lognormal_std_deviations();
-    ln_std_devs[dist_index] = param;
-    iteratedModel.lognormal_std_deviations(ln_std_devs);
-    break;
-  }
-  case LN_ERR_FACT: {
-    dist_index -= numNormalVars;
-    RealVector ln_err_facts = iteratedModel.lognormal_error_factors();
-    ln_err_facts[dist_index] = param;
-    iteratedModel.lognormal_error_factors(ln_err_facts);
-    break;
-  }
-  case LN_LWR_BND: {
-    dist_index -= numNormalVars;
-    RealVector ln_lower_bnds = iteratedModel.lognormal_lower_bounds();
-    ln_lower_bnds[dist_index] = param;
-    iteratedModel.lognormal_lower_bounds(ln_lower_bnds);
-    break;
-  }
-  case LN_UPR_BND: {
-    dist_index -= numNormalVars;
-    RealVector ln_upper_bnds = iteratedModel.lognormal_upper_bounds();
-    ln_upper_bnds[dist_index] = param;
-    iteratedModel.lognormal_upper_bounds(ln_upper_bnds);
-    break;
-  }
-  case U_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars;
-    RealVector u_lower_bnds = iteratedModel.uniform_lower_bounds();
-    u_lower_bnds[dist_index] = param;
-    iteratedModel.uniform_lower_bounds(u_lower_bnds);
-    break;
-  }
-  case U_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars;
-    RealVector u_upper_bnds = iteratedModel.uniform_upper_bounds();
-    u_upper_bnds[dist_index] = param;
-    iteratedModel.uniform_upper_bounds(u_upper_bnds);
-    break;
-  }
-  case LU_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
-    RealVector lu_lower_bnds = iteratedModel.loguniform_lower_bounds();
-    lu_lower_bnds[dist_index] = param;
-    iteratedModel.loguniform_lower_bounds(lu_lower_bnds);
-    break;
-  }
-  case LU_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
-    RealVector lu_upper_bnds = iteratedModel.loguniform_upper_bounds();
-    lu_upper_bnds[dist_index] = param;
-    iteratedModel.loguniform_upper_bounds(lu_upper_bnds);
-    break;
-  }
-  case T_MODE: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    RealVector t_modes = iteratedModel.triangular_modes();
-    t_modes[dist_index] = param;
-    iteratedModel.triangular_modes(t_modes);
-    break;
-  }
-  case T_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    RealVector t_lower_bnds = iteratedModel.triangular_lower_bounds();
-    t_lower_bnds[dist_index] = param;
-    iteratedModel.triangular_lower_bounds(t_lower_bnds);
-    break;
-  }
-  case T_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    RealVector t_upper_bnds = iteratedModel.triangular_upper_bounds();
-    t_upper_bnds[dist_index] = param;
-    iteratedModel.triangular_upper_bounds(t_upper_bnds);
-    break;
-  }
-  case E_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars;
-    RealVector e_betas = iteratedModel.exponential_betas();
-    e_betas[dist_index] = param;
-    iteratedModel.exponential_betas(e_betas);
-    break;
-  }
-  case B_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_alphas = iteratedModel.beta_alphas();
-    b_alphas[dist_index] = param;
-    iteratedModel.beta_alphas(b_alphas);
-    break;
-  }
-  case B_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_betas = iteratedModel.beta_betas();
-    b_betas[dist_index] = param;
-    iteratedModel.beta_betas(b_betas);
-    break;
-  }
-  case B_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_lower_bnds = iteratedModel.beta_lower_bounds();
-    b_lower_bnds[dist_index] = param;
-    iteratedModel.beta_lower_bounds(b_lower_bnds);
-    break;
-  }
-  case B_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_upper_bnds = iteratedModel.beta_upper_bounds();
-    b_upper_bnds[dist_index] = param;
-    iteratedModel.beta_upper_bounds(b_upper_bnds);
-    break;
-  }
-  case GA_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
-    RealVector ga_alphas = iteratedModel.gamma_alphas();
-    ga_alphas[dist_index] = param;
-    iteratedModel.gamma_alphas(ga_alphas);
-    break;
-  }
-  case GA_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
-    RealVector ga_betas = iteratedModel.gamma_betas();
-    ga_betas[dist_index] = param;
-    iteratedModel.gamma_betas(ga_betas);
-    break;
-  }
-  case GU_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars;
-    RealVector gu_alphas = iteratedModel.gumbel_alphas();
-    gu_alphas[dist_index] = param;
-    iteratedModel.gumbel_alphas(gu_alphas);
-    break;
-  }
-  case GU_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars;
-    RealVector gu_betas = iteratedModel.gumbel_betas();
-    gu_betas[dist_index] = param;
-    iteratedModel.gumbel_betas(gu_betas);
-    break;
-  }
-  case F_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars;
-    RealVector f_alphas = iteratedModel.frechet_alphas();
-    f_alphas[dist_index] = param;
-    iteratedModel.frechet_alphas(f_alphas);
-    break;
-  }
-  case F_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars;
-    RealVector f_betas = iteratedModel.frechet_betas();
-    f_betas[dist_index] = param;
-    iteratedModel.frechet_betas(f_betas);
-    break;
-  }
-  case W_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars + numFrechetVars;
-    RealVector w_alphas = iteratedModel.weibull_alphas();
-    w_alphas[dist_index] = param;
-    iteratedModel.weibull_alphas(w_alphas);
-    break;
-  }
-  case W_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars + numFrechetVars;
-    RealVector w_betas = iteratedModel.weibull_betas();
-    w_betas[dist_index] = param;
-    iteratedModel.weibull_betas(w_betas);
-    break;
-  }
-  }
-
-  // update ranVarMeans/ranVarStdDevs/ranVarLowerBndsX/ranVarUpperBndsX/
-  // ranVarAddtlParamsX for newly inserted distribution parameter
-  initialize_random_variable_parameters();
-  // update corrCholeskyFactorZ for new ranVarMeans/ranVarStdDevs
-  if (correlationFlagX)
-    trans_correlations();
-}
 
 } // namespace Pecos
