@@ -10,6 +10,7 @@
 #define PECOS_GLOBAL_DEFS_H
 
 #include "pecos_data_types.h"
+#include <algorithm>
 #include <iostream>
 #include <cstdlib>
 
@@ -68,6 +69,17 @@ void abort_handler(int code);
 
 inline void abort_handler(int code)
 { std::exit(code); } // for now, prior to use of MPI
+
+
+// WJB: just a temporary global function wrapper around std::count
+//      to make the transition to "Native-STL syntax" less painful
+template <typename PecosContainerType>
+inline typename PecosContainerType::difference_type
+count(const PecosContainerType& v,
+      const typename PecosContainerType::value_type& val)
+{
+  return std::count(v.begin(), v.end(), val);
+}
 
 } // namespace Pecos
 

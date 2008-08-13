@@ -1217,10 +1217,10 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   jacobian_dX_dU(x_vars, jacobian_xu);
 
   RealSymMatrixArray hessian_xu;
-  if ( (!extendedUSpace && numUncertainVars != ranVarTypesX.count(NORMAL)) ||
-       ( extendedUSpace && numUncertainVars != ranVarTypesX.count(NORMAL) +
-	 ranVarTypesX.count(UNIFORM) + ranVarTypesX.count(EXPONENTIAL) +
-	 ranVarTypesX.count(BETA)    + ranVarTypesX.count(GAMMA) ) )
+  if ( (!extendedUSpace && numUncertainVars != count(ranVarTypesX, NORMAL)) ||
+       ( extendedUSpace && numUncertainVars != count(ranVarTypesX, NORMAL) +
+	 count(ranVarTypesX, UNIFORM) + count(ranVarTypesX, EXPONENTIAL) +
+	 count(ranVarTypesX, BETA)    + count(ranVarTypesX, GAMMA) ) )
     hessian_d2X_dU2(x_vars, hessian_xu); // nonlinear transformation has Hessian
 
   trans_hess_X_to_U(fn_hess_x, fn_hess_u, jacobian_xu, hessian_xu,
