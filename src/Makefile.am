@@ -3,8 +3,8 @@
 ## Need the m4 directory for non-native macro tests. (WJB: even in this subdir?)
 #ACLOCAL_AMFLAGS = -I ../../../m4
 
-####AM_CPPFLAGS = -I${top_srcdir}/packages/teuchos/src
-AM_CPPFLAGS = @GSL_CPPFLAGS@ -I${top_srcdir}/../teuchos/src
+AM_CPPFLAGS  = @GSL_CPPFLAGS@ -I${top_builddir}/packages/gsl
+AM_CPPFLAGS += @TEUCHOS_CPPFLAGS@ -I${top_builddir}/packages/teuchos/src
 
 ## Suppress parallel behavior by gmake; other makes should ignore this.
 .NOTPARALLEL:

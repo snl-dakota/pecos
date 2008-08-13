@@ -46,9 +46,7 @@ dnl WJB: will Pecos be supported on a platform that DOES NOT have -- AC_CXX_NAME
 
 # PECOS-specific package checks.
 RAC_PATH_GSL
-
-# For now unconditionally build Pecos with Teuchos as a "sibling pkg" in Dakota
-####AC_CONFIG_SUBDIRS([packages/teuchos])
+RAC_PATH_TEUCHOS
 
 
 # Write the Makefiles and exit.
