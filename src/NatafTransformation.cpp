@@ -1011,7 +1011,7 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
     SizetArray dvv_index_array(x_len);
     // extract relevant DVV components from fn_grad_x
     for (i=0; i<x_len; i++) {
-      dvv_index_array[i] = dvv_index = x_dvv.index(cv_ids[i]);
+      dvv_index_array[i] = dvv_index = index(x_dvv, cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_x_trans(i) = fn_grad_x(dvv_index);
     }
@@ -1073,7 +1073,7 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
     SizetArray dvv_index_array(u_len);
     // extract relevant DVV components from fn_grad_u
     for (int i=0; i<u_len; i++) {
-      dvv_index_array[i] = dvv_index = x_dvv.index(cv_ids[i]);
+      dvv_index_array[i] = dvv_index = index(x_dvv, cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_u_trans(i) = fn_grad_u(dvv_index);
     }
@@ -1148,7 +1148,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
     // extract relevant DVV components from fn_grad_x
     size_t i, dvv_index;
     for (i=0; i<x_len; i++) {
-      dvv_index = x_dvv.index(cv_ids[i]);
+      dvv_index = index(x_dvv, cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_x_std(i) = fn_grad_x(dvv_index);
     }
@@ -1182,7 +1182,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
     size_t cntr = 0;
     for (i=0; i<s_len; i++) {
       int acv_id = acv_ids[primaryACVarMapIndices[i]];
-      size_t dvv_index = x_dvv.index(acv_id);
+      size_t dvv_index = index(x_dvv, acv_id);
       if (dvv_index != _NPOS)
 	fn_grad_s(cntr++) = (secondaryACVarMapTargets[i] == NO_TARGET) ?
 	  fn_grad_x(dvv_index) : // no distribution parameter: if the missing
@@ -1272,7 +1272,7 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     size_t i, j, dvv_index_i, dvv_index_j, num_deriv_vars = x_dvv.size();
     dvv_index_array.resize(x_len);
     for (i=0; i<x_len; i++)
-      dvv_index_array[i] = dvv_index_i = x_dvv.index(cv_ids[i]);
+      dvv_index_array[i] = dvv_index_i = index(x_dvv, cv_ids[i]);
     if (fn_hess_u.numRows() != num_deriv_vars)
       fn_hess_u.shape(num_deriv_vars);
     // extract relevant DVV components from fn_hess_x
@@ -1788,7 +1788,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   }
 
   for (i=0; i<num_var_map_1c; i++) { // loop over S
-    size_t cv_index = cv_ids.index(acv_ids[primaryACVarMapIndices[i]]);
+    size_t cv_index = index(cv_ids, acv_ids[primaryACVarMapIndices[i]]);
     // If x_dvv were passed, it would be possible to distinguish different
     // fn_grad_x components, allowing passthrough for computing fn_grad_s for
     // augmented design variables.  For now, this has to be handled spearately

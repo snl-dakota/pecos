@@ -299,7 +299,7 @@ numerical_design_jacobian(const RealVector& x_vars,
   Real fd_grad_ss = 1.e-4;
   for (i=0; i<num_var_map_1c; i++) {
 
-    size_t cv_index = cv_ids.index(acv_ids[primaryACVarMapIndices[i]]);
+    size_t cv_index = index(cv_ids, acv_ids[primaryACVarMapIndices[i]]);
     if (cv_index != _NPOS && secondaryACVarMapTargets[i] != NO_TARGET) {
 
       Real s0 = distribution_parameter(i);
