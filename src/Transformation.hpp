@@ -52,18 +52,9 @@ public:
   //
 
   /// set ranVarTypesX/U, ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
-  /// ranVarUpperBndsX, ranVarAddtlParamsX, corrCholeskyFactorZ,
-  /// correlationFlagX, and extendedUSpace based on incoming data
-  void initialize_random_variables(const ShortArray& x_types,
-				   const ShortArray& u_types,
-				   const RealVector& x_means,
-				   const RealVector& x_std_devs,
-				   const RealVector& x_l_bnds,
-				   const RealVector& x_u_bnds,
-				   const RealVectorArray& x_addtl,
-				   const RealSymMatrix& x_corr,
-				   const RealMatrix& z_chol_fact,
-				   bool x_corr_flag, bool ext_u_space);
+  /// ranVarUpperBndsX, ranVarAddtlParamsX, corrMatrixX, and correlationFlagX
+  /// based on incoming data
+  void initialize_random_variables(const Transformation& trans);
   /// initializes ranVarTypesX and ranVarTypesU
   void initialize_random_variable_types(const ShortArray& x_types,
 					const ShortArray& u_types);
@@ -73,11 +64,21 @@ public:
 					     const RealVector& x_std_devs,
 					     const RealVector& x_l_bnds,
 					     const RealVector& x_u_bnds,
-					     const RealVectorArray& x_addtl,
-					     const RealSymMatrix& x_corr,
-					     const RealMatrix& z_chol_fact,
-					     bool x_corr_flag,
-					     bool ext_u_space);
+					     const RealVectorArray& x_addtl);
+  /// initializes corrMatrixX and correlationFlagX
+  void initialize_random_variable_correlations(const RealSymMatrix& x_corr,
+					       bool x_corr_flag,
+					       bool ext_u_space);
+
+  /// return ranVarTypesX
+  const ShortArray& x_types() const;
+  /// return ranVarTypesU
+  const ShortArray& u_types() const;
+
+  /// return ranVarMeansX
+  const RealVector& x_means() const;
+  /// return ranVarStdDevsX
+  const RealVector& x_std_deviations() const;
 
 protected:
 
@@ -128,11 +129,6 @@ protected:
   // the following attributes are the required data for performing
   // transformations from X -> Z -> U and back.
 
-  /// Flag for extended u-space variable definitions.  If false
-  /// (reliability, AIS), then u-space is defined exclusively with std
-  /// normals.  If true (PCE), then u-space is defined by std normals,
-  /// std uniforms, std exponentials, std betas, and std gammas.
-  bool extendedUSpace;
   /// vector of indices indicating the type of each x-space uncertain variable
   ShortArray ranVarTypesX;
   /// vector of indices indicating the type of standard uncertain variable to
@@ -200,6 +196,22 @@ private:
   /// number of objects sharing transRep
   int referenceCount;
 };
+
+
+inline const ShortArray& Transformation::x_types() const
+{ return (transRep) ? transRep->ranVarTypesX : ranVarTypesX; }
+
+
+inline const ShortArray& Transformation::u_types() const
+{ return (transRep) ? transRep->ranVarTypesU : ranVarTypesU; }
+
+
+inline const RealVector& Transformation::x_means() const;
+{ return (transRep) ? transRep->ranVarMeansX : ranVarMeansX; }
+
+
+inline const RealVector& Transformation::x_std_deviations() const;
+{ return (transRep) ? transRep->ranVarStdDevsX : ranVarStdDevsX; }
 
 
 inline Real Transformation::phi(const Real& beta)

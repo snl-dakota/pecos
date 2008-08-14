@@ -18,8 +18,6 @@
 #include "gsl/gsl_sf_gamma.h"
 #endif
 
-const Pecos::Real Pecos::Transformation::Pi = 3.1415926535897932385;
-
 static const char rcsId[]="@(#) $Id: Transformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
 namespace Pecos {
@@ -33,8 +31,7 @@ namespace Pecos {
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~Transformation). */
 Transformation::Transformation(BaseConstructor):
-  extendedUSpace(false), correlationFlagX(false),
-  transRep(NULL), referenceCount(1)
+  correlationFlagX(false), transRep(NULL), referenceCount(1)
 {
   const RealMatrix& uncertain_corr = model.uncertain_correlations();
   if (!uncertain_corr.empty()) {
@@ -168,25 +165,31 @@ void Transformation::
 reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
 			   size_t num_state_vars)
 {
-  size_t i, j, offset, num_corr_vars = corrMatrixX.M(),
-    num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
-  if (num_corr_vars != num_active_vars) {
-    if (num_corr_vars != num_uncertain_vars) {
-      Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
-	   << ") in Transformation::reshape_correlation_matrix()." << std::endl;
-      abort_handler(-1);
+  if (transRep)
+    transRep->reshape_correlation_matrix(num_design_vars, num_uncertain_vars,
+					 num_state_vars);
+  else {
+    size_t i, j, offset, num_corr_vars = corrMatrixX.M(),
+      num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
+    if (num_corr_vars != num_active_vars) {
+      if (num_corr_vars != num_uncertain_vars) {
+	Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
+	     << ") in Transformation::reshape_correlation_matrix()."
+	     << std::endl;
+	abort_handler(-1);
+      }
+      RealSymMatrix old_corr_matrix(corrMatrixX);
+      corrMatrixX.Shape(num_active_vars); // initializes to zero
+      for (i=0; i<num_design_vars; i++)
+	corrMatrixX(i,i) = 1.;
+      offset = num_design_vars;
+      for (i=0; i<num_uncertain_vars; i++)
+	for (j=0; j<num_uncertain_vars; j++)
+	  corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
+      offset += num_uncertain_vars;
+      for (i=0; i<num_state_vars; i++)
+	corrMatrixX(i+offset,i+offset) = 1.;
     }
-    RealSymMatrix old_corr_matrix(corrMatrixX);
-    corrMatrixX.Shape(num_active_vars); // initializes to zero
-    for (i=0; i<num_design_vars; i++)
-      corrMatrixX(i,i) = 1.;
-    offset = num_design_vars;
-    for (i=0; i<num_uncertain_vars; i++)
-      for (j=0; j<num_uncertain_vars; j++)
-	corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
-    offset += num_uncertain_vars;
-    for (i=0; i<num_state_vars; i++)
-      corrMatrixX(i+offset,i+offset) = 1.;
   }
 }
 
@@ -196,53 +199,76 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
     ranVarTypes et al. may not be generated directly.  This allows for
     the use of inverse transformations to return the transformed space
     variables to their original states. */
-void Transformation::
-initialize_random_variables(const ShortArray& x_types,
-			    const ShortArray& u_types,
-			    const RealVector& x_means,
-			    const RealVector& x_std_devs,
-			    const RealVector& x_l_bnds,
-			    const RealVector& x_u_bnds,
-			    const RealVectorArray& x_addtl,
-			    const RealSymMatrix& x_corr,
-			    const RealMatrix& z_chol_fact,
-			    bool x_corr_flag, bool ext_u_space)
+void Transformation::initialize_random_variables(const Transformation& trans)
 {
-  initialize_random_variables_types(x_types, u_types);
-  initialize_random_variables_parameters(x_means, x_std_devs, x_l_bnds,
-					 x_u_bnds, x_addtl, x_corr, z_chol_fact,
-					 x_corr_flag, ext_u_space);
+  if (transRep)
+    transRep->initialize_random_variables(trans);
+  else {
+    ranVarTypesX        = trans.ranVarTypesX;
+    ranVarTypesU        = trans.ranVarTypesU;
+    ranVarMeansX        = trans.ranVarMeansX;
+    ranVarStdDevsX      = trans.ranVarStdDevsX;
+    ranVarLowerBndsX    = trans.ranVarLowerBndsX;
+    ranVarUpperBndsX    = trans.ranVarUpperBndsX;
+    ranVarAddtlParamsX  = trans.ranVarAddtlParamsX;
+    correlationFlagX    = trans.correlationFlagX;
+    corrMatrixX         = trans.corrMatrixX;
+    corrCholeskyFactorZ = trans.corrCholeskyFactorZ;
+  }
 }
 
 
 void Transformation::
-initialize_random_variables_types(const ShortArray& x_types,
-				  const ShortArray& u_types)
+initialize_random_variable_types(const ShortArray& x_types,
+				 const ShortArray& u_types)
 {
-  ranVarTypesX  = x_types;
-  ranVarTypesU  = u_types;
+  if (transRep) {
+    transRep->ranVarTypesX  = x_types;
+    transRep->ranVarTypesU  = u_types;
+  }
+  else {
+    ranVarTypesX  = x_types;
+    ranVarTypesU  = u_types;
+  }
 }
 
 
 void Transformation::
-initialize_random_variables_parameters(const RealVector& x_means,
-				       const RealVector& x_std_devs,
-				       const RealVector& x_l_bnds,
-				       const RealVector& x_u_bnds,
-				       const RealVectorArray& x_addtl,
-				       const RealSymMatrix& x_corr,
-				       const RealMatrix& z_chol_fact,
-				       bool x_corr_flag, bool ext_u_space)
+initialize_random_variable_parameters(const RealVector& x_means,
+				      const RealVector& x_std_devs,
+				      const RealVector& x_l_bnds,
+				      const RealVector& x_u_bnds,
+				      const RealVectorArray& x_addtl)
 {
-  ranVarMeansX        = x_means;
-  ranVarStdDevsX      = x_std_devs;
-  ranVarLowerBndsX    = x_l_bnds;
-  ranVarUpperBndsX    = x_u_bnds;
-  ranVarAddtlParamsX  = x_addtl;
-  corrMatrixX         = x_corr;
-  corrCholeskyFactorZ = z_chol_fact;
-  correlationFlagX    = x_corr_flag;
-  extendedUSpace      = ext_u_space;
+  if (transRep) {
+    transRep->ranVarMeansX       = x_means;
+    transRep->ranVarStdDevsX     = x_std_devs;
+    transRep->ranVarLowerBndsX   = x_l_bnds;
+    transRep->ranVarUpperBndsX   = x_u_bnds;
+    transRep->ranVarAddtlParamsX = x_addtl;
+  }
+  else {
+    ranVarMeansX       = x_means;
+    ranVarStdDevsX     = x_std_devs;
+    ranVarLowerBndsX   = x_l_bnds;
+    ranVarUpperBndsX   = x_u_bnds;
+    ranVarAddtlParamsX = x_addtl;
+  }
+}
+
+
+void Transformation::
+initialize_random_variable_correlations(const RealSymMatrix& x_corr,
+					bool x_corr_flag)
+{
+  if (transRep) {
+    transRep->corrMatrixX      = x_corr;
+    transRep->correlationFlagX = x_corr_flag;
+  }
+  else {
+    corrMatrixX      = x_corr;
+    correlationFlagX = x_corr_flag;
+  }
 }
 
 
@@ -420,7 +446,7 @@ Real Transformation::erf_inverse(const Real& p)
     abort_handler(-1);
   }
   // user erf instead of erfc
-
+  const Real Pi = 3.1415926535897932385;
   Real e = 0.5*(1. - erf(-z/sqrt(2.))) - p_new;
   Real u = e*sqrt(2.*Pi)*exp(z*z/2.);
   z = z - u/(1. + z*u/2.);
