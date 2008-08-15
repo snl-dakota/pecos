@@ -71,14 +71,11 @@ inline void abort_handler(int code)
 { std::exit(code); } // for now, prior to use of MPI
 
 
-// WJB: just some temporary global function wrappers around STL algs
-//      to make the transition to "Native-STL syntax" less painful
 template <typename PecosContainerType>
-inline typename PecosContainerType::difference_type
-count(const PecosContainerType& v,
-      const typename PecosContainerType::value_type& val)
+inline bool contains(const PecosContainerType& v,
+                     const typename PecosContainerType::value_type& val)
 {
-  return std::count(v.begin(), v.end(), val);
+  return std::find(v.begin(), v.end(), val) != v.end() ? true : false;
 }
 
 template <typename PecosContainerType>
@@ -86,15 +83,6 @@ inline typename PecosContainerType::difference_type
 index(const PecosContainerType& v,
       const typename PecosContainerType::value_type& val)
 {
-/* old school technique -- probably messy if "merged-in" at the index invocation site
-  size_t len = v.size();
-  for (size_t i=0; i<len; i++)
-    if (v[i] == val)
-      return i;
-  return _NPOS;
-*/
-  // WJB: can MSE implement this in a single line of code for easy integration
-  //      at the 'index' invocation site?
   typename PecosContainerType::const_iterator iter
     = std::find(v.begin(), v.end(), val);
   return iter != v.end() ? iter - v.begin() : _NPOS;
