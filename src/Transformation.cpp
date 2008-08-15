@@ -231,13 +231,10 @@ initialize_random_variable_parameters(const RealVector& x_means,
 				      const RealVector& x_u_bnds,
 				      const RealVectorArray& x_addtl)
 {
-  if (transRep) {
-    transRep->ranVarMeansX       = x_means;
-    transRep->ranVarStdDevsX     = x_std_devs;
-    transRep->ranVarLowerBndsX   = x_l_bnds;
-    transRep->ranVarUpperBndsX   = x_u_bnds;
-    transRep->ranVarAddtlParamsX = x_addtl;
-  }
+  if (transRep)
+    transRep->initialize_random_variable_parameters(x_means,  x_std_devs,
+						    x_l_bnds, x_u_bnds,
+						    x_addtl);
   else {
     ranVarMeansX       = x_means;
     ranVarStdDevsX     = x_std_devs;

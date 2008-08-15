@@ -93,11 +93,15 @@ protected:
   /// Transformation routine from x-space gradient vector to design space
   void trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 			 const RealVector& x_vars, const UIntArray& x_dvv,
-			 const UIntArray&  cv_ids, const UIntArray& acv_ids);
+			 const UIntArray&  cv_ids, const UIntArray& acv_ids,
+			 const SizetArray& acv_map1_indices,
+			 const ShortArray& acv_map2_targets);
   /// Transformation routine from x-space gradient vector to design space
   void trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 			 const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
-			 const UIntArray&  cv_ids, const UIntArray& acv_ids);
+			 const UIntArray&  cv_ids, const UIntArray& acv_ids,
+			 const SizetArray& acv_map1_indices,
+			 const ShortArray& acv_map2_targets);
 
   /// Transformation routine for gradient vector from u-space to x-space
   void trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
@@ -142,7 +146,9 @@ private:
   /// Design Jacobian of x(u,s) mapping obtained from differentiation of
   /// trans_U_to_X() with respect to distribution parameters S
   void jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
-		      const UIntArray&  cv_ids, const UIntArray& acv_ids);
+		      const UIntArray&  cv_ids, const UIntArray& acv_ids,
+		      const SizetArray& acv_map1_indices,
+		      const ShortArray& acv_map2_targets);
 
   /// Computes numerical dx/ds and dz/ds Jacobians as requested by xs
   /// and zs booleans

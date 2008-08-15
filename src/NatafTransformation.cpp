@@ -617,9 +617,13 @@ void NatafTransformation::trans_correlations()
 
   RealSymMatrix mod_corr_matrix(corrMatrixX); // copy
 
-  size_t i, j;
-  for (i=numDesignVars; i<numDesignVars+numUncertainVars; i++) {
-    for (j=numDesignVars; j<i; j++) {
+  size_t i, j,
+    num_cdv = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), DESIGN),
+    num_cdv_uv = ranVarTypesX.size()
+               - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), STATE);
+
+  for (i=num_cdv; i<num_cdv_uv; i++) {
+    for (j=num_cdv; j<i; j++) {
 
       if (ranVarTypesU[i] == NORMAL && ranVarTypesU[j] == NORMAL) {
 
@@ -1056,7 +1060,7 @@ void NatafTransformation::trans_correlations()
   corr_solver.setMatrix( Teuchos::rcp(&mod_corr_matrix, false) );
   corr_solver.factor(); // Cholesky factorization (LL^T) in place
   // Define corrCholeskyFactorZ to be L by assigning the lower triangle.
-  size_t num_active_vars = numDesignVars + numUncertainVars + numStateVars;
+  size_t num_active_vars = ranVarTypesX.size();
   if (corrCholeskyFactorZ.numRows() != num_active_vars ||
       corrCholeskyFactorZ.numCols() != num_active_vars)
     corrCholeskyFactorZ.shape(num_active_vars, num_active_vars);
@@ -1210,11 +1214,14 @@ void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x,
 		  RealVector& fn_grad_s,
 		  const RealVector& x_vars, const UIntArray& x_dvv,
-		  const UIntArray&  cv_ids, const UIntArray& acv_ids)
+		  const UIntArray&  cv_ids, const UIntArray& acv_ids,
+		  const SizetArray& acv_map1_indices,
+		  const ShortArray& acv_map2_targets)
 {
   RealMatrix jacobian_xs;
   jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids);
-  trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv, cv_ids, acv_ids);
+  trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv, cv_ids, acv_ids,
+		    acv_map1_indices, acv_map2_targets);
 }
 
 
@@ -1228,20 +1235,22 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,
 void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
 		  const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
-		  const UIntArray&  cv_ids,      const UIntArray& acv_ids)
+		  const UIntArray&  cv_ids,      const UIntArray& acv_ids,
+		  const SizetArray& acv_map1_indices,
+		  const ShortArray& acv_map2_targets)
 {
   // Jacobian dim is x_len by s_len, where
-  // > x_len = length of ranVarTypesX/U      = inner model.cv()
-  // > s_len = primaryACVarMapIndices.size() = outer model.cv()
+  // > x_len = length of ranVarTypesX/U = inner model.cv()
+  // > s_len = acv_map1_indices.size()  = outer model.cv()
   int x_len = jacobian_xs.numRows(), s_len = jacobian_xs.numCols();
-  if (primaryACVarMapIndices.empty() || secondaryACVarMapTargets.empty()) {
+  if (acv_map1_indices.empty() || acv_map2_targets.empty()) {
     Cerr << "Error: NatafTransformation::trans_grad_X_to_S() requires primary "
 	 << "and secondary variable mappings to define S." << std::endl;
     abort_handler(-1);
   }
 
   bool std_dvv = (x_dvv == cv_ids);
-  bool mixed_s = secondaryACVarMapTargets.contains(NO_TARGET);
+  bool mixed_s = acv_map2_targets.contains(NO_TARGET);
   RealVector fn_grad_x_std, fn_grad_s_std;
 
   // manage size of fn_grad_x input
@@ -1272,7 +1281,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   else {
     final_s_len = 0;
     for (i=0; i<s_len; i++)
-      if (x_dvv.contains(acv_ids[primaryACVarMapIndices[i]]))
+      if (x_dvv.contains(acv_ids[acv_map1_indices[i]]))
 	final_s_len++;
   }
   if (fn_grad_s.length() != final_s_len)
@@ -1290,10 +1299,10 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   if (mixed_s || !std_dvv) {
     size_t cntr = 0;
     for (i=0; i<s_len; i++) {
-      int acv_id = acv_ids[primaryACVarMapIndices[i]];
+      int acv_id = acv_ids[acv_map1_indices[i]];
       size_t dvv_index = index(x_dvv, acv_id);
       if (dvv_index != _NPOS)
-	fn_grad_s(cntr++) = (secondaryACVarMapTargets[i] == NO_TARGET) ?
+	fn_grad_s(cntr++) = (acv_map2_targets[i] == NO_TARGET) ?
 	  fn_grad_x(dvv_index) : // no distribution parameter: if the missing
 	  // fn_grad_s component is available in fn_grad_x, then use it; else it
 	  // must be updated separately (as in NonDLocalReliability::dg_ds_eval)
@@ -1941,12 +1950,14 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     computing statistical design sensitivities for OUU. */
 void NatafTransformation::
 jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
-	       const UIntArray&  cv_ids, const UIntArray& acv_ids)
+	       const UIntArray&  cv_ids, const UIntArray& acv_ids,
+	       const SizetArray& acv_map1_indices,
+	       const ShortArray& acv_map2_targets)
 {
   // Rectangular Jacobian = Gradient^T = num_X by num_S where num_S is the total
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
-  size_t i, j, num_var_map_1c = primaryACVarMapIndices.size();
+  size_t i, j, num_var_map_1c = acv_map1_indices.size();
   int x_len = x_vars.length();
   if (jacobian_xs.numRows() != x_len || jacobian_xs.numCols() != num_var_map_1c)
     jacobian_xs.shape(x_len, num_var_map_1c);
@@ -1966,22 +1977,26 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // then the beta/gamma distribution parameters do not have to be design
   // variables (dx/ds for beta/gamma x will include a dz/ds contribution).
   if (correlationFlagX) {
-    for (i=numDesignVars; i<numDesignVars+numUncertainVars; i++) {
+    size_t
+      num_cdv    = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), DESIGN),
+      num_cdv_uv = ranVarTypesX.size()
+                 - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), STATE);
+    for (i=num_cdv; i<num_cdv_uv; i++) {
       if ( (ranVarTypesX[i] == BETA || ranVarTypesX[i] == GAMMA) &&
 	    ranVarTypesX[i] != ranVarTypesU[i] ) {
 	beta_gamma_map = true;
-	for (j=numDesignVars; j<numDesignVars+numUncertainVars; j++)
+	for (j=num_cdv; j<num_cdv_uv; j++)
 	  if (i != j && fabs(corrMatrixX(i, j)) > 1.e-25)
 	    { need_xs = true; break; }
       }
     }
   }
-  if ( secondaryACVarMapTargets.contains(B_ALPHA)  ||
-       secondaryACVarMapTargets.contains(B_BETA)   ||
-       secondaryACVarMapTargets.contains(GA_ALPHA) ||
-       ( beta_gamma_map && ( secondaryACVarMapTargets.contains(B_LWR_BND) ||
-			     secondaryACVarMapTargets.contains(B_UPR_BND) ||
-			     secondaryACVarMapTargets.contains(GA_BETA) ) ) )
+  if ( acv_map2_targets.contains(B_ALPHA)  ||
+       acv_map2_targets.contains(B_BETA)   ||
+       acv_map2_targets.contains(GA_ALPHA) ||
+       ( beta_gamma_map && ( acv_map2_targets.contains(B_LWR_BND) ||
+			     acv_map2_targets.contains(B_UPR_BND) ||
+			     acv_map2_targets.contains(GA_BETA) ) ) )
     need_xs = true;
   // the entire numerical jacobian is computed, even though only the
   // beta/gamma rows are needed
@@ -2001,7 +2016,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   }
 
   for (i=0; i<num_var_map_1c; i++) { // loop over S
-    size_t cv_index = index(cv_ids, acv_ids[primaryACVarMapIndices[i]]);
+    size_t cv_index = index(cv_ids, acv_ids[acv_map1_indices[i]]);
     // If x_dvv were passed, it would be possible to distinguish different
     // fn_grad_x components, allowing passthrough for computing fn_grad_s for
     // augmented design variables.  For now, this has to be handled spearately
@@ -2010,7 +2025,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
     //  jacobian_xs(dvv_index, i) = 1.;
     //else {
     if (cv_index != _NPOS) {
-      short target2 = secondaryACVarMapTargets[i];
+      short target2 = acv_map2_targets[i];
       for (j=0; j<x_len; j++) {      // loop over X
 	// Jacobian row    = Z value = j
 	// Jacobian column = S value = i
