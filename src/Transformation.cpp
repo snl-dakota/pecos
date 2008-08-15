@@ -33,18 +33,6 @@ namespace Pecos {
 Transformation::Transformation(BaseConstructor):
   correlationFlagX(false), transRep(NULL), referenceCount(1)
 {
-  const RealMatrix& uncertain_corr = model.uncertain_correlations();
-  if (!uncertain_corr.empty()) {
-    // set correlationFlagX
-    for (size_t i=1; i<numUncertainVars; i++)
-      for (size_t j=0; j<i; j++)
-	if (fabs(uncertain_corr[i][j]) > 1.e-25)
-	  correlationFlagX = true;
-    // Copy the correlation matrix to a Teuchos array
-    if (correlationFlagX)
-      copy_data(uncertain_corr, corrMatrixX);
-  }
-
 #ifdef REFCOUNT_DEBUG
   Cout << "Transformation::Transformation(BaseConstructor) called to build "
        << "base class for letter." << std::endl;
@@ -169,6 +157,9 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
     transRep->reshape_correlation_matrix(num_design_vars, num_uncertain_vars,
 					 num_state_vars);
   else {
+    if (!correlationFlagX)
+      return;
+
     size_t i, j, offset, num_corr_vars = corrMatrixX.M(),
       num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
     if (num_corr_vars != num_active_vars) {
@@ -258,16 +249,18 @@ initialize_random_variable_parameters(const RealVector& x_means,
 
 
 void Transformation::
-initialize_random_variable_correlations(const RealSymMatrix& x_corr,
-					bool x_corr_flag)
+initialize_random_variable_correlations(const RealSymMatrix& x_corr)
 {
-  if (transRep) {
-    transRep->corrMatrixX      = x_corr;
-    transRep->correlationFlagX = x_corr_flag;
-  }
+  if (transRep)
+    transRep->initialize_random_variable_correlations(x_corr);
   else {
-    corrMatrixX      = x_corr;
-    correlationFlagX = x_corr_flag;
+    corrMatrixX = x_corr;
+    size_t num_ran_vars = x_corr.numRows();
+    correlationFlagX = false;
+    for (size_t i=1; i<num_ran_vars; i++)
+      for (size_t j=0; j<i; j++)
+	if (fabs(x_corr(i,j)) > 1.e-25)
+	  correlationFlagX = true;
   }
 }
 

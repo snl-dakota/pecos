@@ -66,9 +66,7 @@ public:
 					     const RealVector& x_u_bnds,
 					     const RealVectorArray& x_addtl);
   /// initializes corrMatrixX and correlationFlagX
-  void initialize_random_variable_correlations(const RealSymMatrix& x_corr,
-					       bool x_corr_flag,
-					       bool ext_u_space);
+  void initialize_random_variable_correlations(const RealSymMatrix& x_corr);
 
   /// return ranVarTypesX
   const ShortArray& x_types() const;
@@ -79,6 +77,9 @@ public:
   const RealVector& x_means() const;
   /// return ranVarStdDevsX
   const RealVector& x_std_deviations() const;
+
+  /// return correlationFlagX
+  bool x_correlation();
 
 protected:
 
@@ -148,7 +149,7 @@ protected:
   /// flag for indicating if correlation exists among the x-space
   /// uncertain variables
   bool correlationFlagX;
-  /// Epetra copy of Model::uncertainCorrelations
+  /// matrix of random variable correlation coefficients
   RealSymMatrix corrMatrixX;
   /// cholesky factor of a modified correlation matrix (#corrMatrixX
   /// is modified in trans_correlations() for use in z-space)
@@ -212,6 +213,10 @@ inline const RealVector& Transformation::x_means() const;
 
 inline const RealVector& Transformation::x_std_deviations() const;
 { return (transRep) ? transRep->ranVarStdDevsX : ranVarStdDevsX; }
+
+
+inline bool Transformation::x_correlation() const;
+{ return (transRep) ? transRep->correlationFlagX : correlationFlagX; }
 
 
 inline Real Transformation::phi(const Real& beta)
