@@ -307,7 +307,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
     }
     if (err_flag) {
       Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::trans_Z_to_X()" << endl;
+	   << " in NatafTransformation::trans_Z_to_X()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -558,7 +558,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
     }
     if (err_flag) {
       Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::trans_X_to_Z()" << endl;
+	   << " in NatafTransformation::trans_X_to_Z()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -1496,7 +1496,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
     case DESIGN: case STATE:
-      if (ranVarTypesU[i] == UNIFORM) {
+      if (ranVarTypesU[i] == UNIFORM)
 	jacobian_xz(i, i) = (ranVarUpperBndsX(i) - ranVarLowerBndsX(i))/2.;
       else
 	err_flag = true;
@@ -1682,7 +1682,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     }
     if (err_flag) {
       Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::jacobian_dX_dZ()" << endl;
+	   << " in NatafTransformation::jacobian_dX_dZ()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -1744,7 +1744,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
     case DESIGN: case STATE:
-      if (ranVarTypesU[i] == UNIFORM) {
+      if (ranVarTypesU[i] == UNIFORM)
 	jacobian_zx(i, i) = 2./(ranVarUpperBndsX(i) - ranVarLowerBndsX(i));
       else
 	err_flag = true;
@@ -1928,7 +1928,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     }
     if (err_flag) {
       Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::jacobian_dZ_dX()" << endl;
+	   << " in NatafTransformation::jacobian_dZ_dX()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -2666,7 +2666,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
     // differentiation of jacobian_dX_dZ()
     switch (ranVarTypesX[i]) {
     case DESIGN: case STATE:
-      if (ranVarTypesU[i] == UNIFORM) {
+      if (ranVarTypesU[i] == UNIFORM)
 	hessian_xz[i](i, i) = 0.;
       else
 	err_flag = true;
@@ -2917,7 +2917,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
     }
     if (err_flag) {
       Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::hessian_d2X_dZ2()" << endl;
+	   << " in NatafTransformation::hessian_d2X_dZ2()" << std::endl;
       abort_handler(-1);
     }
   }

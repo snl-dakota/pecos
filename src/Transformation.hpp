@@ -79,7 +79,7 @@ public:
   const RealVector& x_std_deviations() const;
 
   /// return correlationFlagX
-  bool x_correlation();
+  bool x_correlation() const;
 
 protected:
 
@@ -207,15 +207,15 @@ inline const ShortArray& Transformation::u_types() const
 { return (transRep) ? transRep->ranVarTypesU : ranVarTypesU; }
 
 
-inline const RealVector& Transformation::x_means() const;
+inline const RealVector& Transformation::x_means() const
 { return (transRep) ? transRep->ranVarMeansX : ranVarMeansX; }
 
 
-inline const RealVector& Transformation::x_std_deviations() const;
+inline const RealVector& Transformation::x_std_deviations() const
 { return (transRep) ? transRep->ranVarStdDevsX : ranVarStdDevsX; }
 
 
-inline bool Transformation::x_correlation() const;
+inline bool Transformation::x_correlation() const
 { return (transRep) ? transRep->correlationFlagX : correlationFlagX; }
 
 
