@@ -22,10 +22,7 @@ AC_DEFUN([RAC_PATH_GSL],[
   AC_MSG_RESULT([${want_gsl}])
 
   if test "x$want_gsl" = xyes; then
-    dnl In order to use this m4 across multiple projects, a generic naming
-    dnl convention needs to be established.  For now, the only user is PECOS.
-    dnl AC_DEFINE([TPL_GSL],[1],[Macro to handle code which depends on GSL.])
-    AC_DEFINE([PECOS_GSL],[1],[Macro to handle code which depends on GSL.])
+    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
     AC_MSG_CHECKING([for GSL directory])
 
     if test "$ac_gsl_path" != ""; then

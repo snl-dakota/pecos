@@ -33,12 +33,10 @@ AC_LANG_POP([C])
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h])
+AC_CHECK_HEADERS([cstdlib])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
-dnl WJB: will Pecos be supported on a platform that DOES NOT have -- AC_CXX_HAVE_STD
-dnl WJB: will Pecos be supported on a platform that DOES NOT have -- AC_CXX_NAMESPACES
 
 # Checks for library functions.
 ## WJB: later -- AC_CHECK_FUNCS([rand random])
@@ -50,6 +48,6 @@ RAC_PATH_TEUCHOS
 
 
 # Write the Makefiles and exit.
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile packages/Makefile src/Makefile])
 
 AC_OUTPUT

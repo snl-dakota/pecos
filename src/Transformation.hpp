@@ -16,10 +16,12 @@
 #define TRANSFORMATION_HPP
 
 #include "pecos_data_types.h"
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
 #include "gsl/gsl_randist.h"
 #include "gsl/gsl_cdf.h"
 #endif
+
+#include <cmath>
 
 
 namespace Pecos {
@@ -118,10 +120,10 @@ protected:
   void verify_design_jacobian(const RealVector& u0);
 #endif // DERIV_DEBUG
 
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
   /// Inverse of standard beta CDF (not supported by GSL)
   Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 
   //
   //- Heading: Data members
@@ -183,10 +185,10 @@ private:
 				 const UIntArray& cv_ids,
 				 const UIntArray& acv_ids);
 
-#ifndef PECOS_GSL
+#ifndef HAVE_GSL
   /// Inverse of error function used in Phi_inverse()
   Real erf_inverse(const Real& p);
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 
   //
   //- Heading: Data members
@@ -221,11 +223,11 @@ inline bool Transformation::x_correlation() const
 
 inline Real Transformation::phi(const Real& beta)
 {
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
   return gsl_ran_ugaussian_pdf(beta);
 #else
   return exp(-beta*beta/2.)/sqrt(2.*Pi);
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 }
 
 
@@ -233,11 +235,11 @@ inline Real Transformation::phi(const Real& beta)
     for positive beta. */
 inline Real Transformation::Phi(const Real& beta)
 {
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
   return gsl_cdf_ugaussian_P(beta);
 #else
   return .5 + .5*erf(beta/sqrt(2.));
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 }
 
 
@@ -245,11 +247,11 @@ inline Real Transformation::Phi(const Real& beta)
     probability > 0.5. */
 inline Real Transformation::Phi_inverse(const Real& p)
 {
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
   return gsl_cdf_ugaussian_Pinv(p);
 #else
   return sqrt(2.)*erf_inverse(2.*p - 1.);
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 }
 
 } // namespace Pecos

@@ -15,9 +15,10 @@
 #include "pecos_global_defs.h"
 #include <cfloat>
 #include "NatafTransformation.hpp"
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif
+#include <algorithm>
 
 static const char rcsId[]="@(#) $Id: NatafTransformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -227,7 +228,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       const Real& upr = ranVarUpperBndsX(i);
       if (ranVarTypesU[i] == BETA) // scale from [-1,1] to [L,U]
 	x_vars(i) = lwr + (upr - lwr)*(z_vars(i)+1.)/2.;
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // transform from std normal
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
@@ -238,7 +239,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	Real scaled_x = cdf_beta_Pinv(normcdf, alpha, beta);
 	x_vars(i) = lwr + (upr - lwr)*scaled_x;
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;
@@ -247,14 +248,14 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       const Real& beta = ranVarAddtlParamsX[i](1);
       if (ranVarTypesU[i] == GAMMA)
 	x_vars(i) = beta*z_vars(i); // x/beta = z
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) {
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	Real normcdf = Phi(z_vars(i));
 	// GSL gamma passes alpha followed by beta
 	x_vars(i) = gsl_cdf_gamma_Pinv(normcdf, alpha, beta);
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;
@@ -488,7 +489,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       const Real& upr = ranVarUpperBndsX(i);
       if (ranVarTypesU[i] == BETA) // scale to beta on [-1,1]
 	z_vars(i) = 2.*(x_vars(i) - lwr)/(upr - lwr) - 1.;
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // transform to std normal
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
@@ -497,7 +498,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	Real cdf = gsl_cdf_beta_P(scaled_x, alpha, beta);
 	z_vars(i) = Phi_inverse(cdf);
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;
@@ -506,14 +507,14 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       const Real& beta = ranVarAddtlParamsX[i](1);
       if (ranVarTypesU[i] == GAMMA) // scale to std gamma
 	z_vars(i) = x_vars(i)/beta;
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // transform to std normal
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	// GSL gamma passes alpha followed by beta
 	Real cdf  = gsl_cdf_gamma_P(x_vars(i), alpha, beta);
 	z_vars(i) = Phi_inverse(cdf);
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;
@@ -618,9 +619,9 @@ void NatafTransformation::trans_correlations()
   RealSymMatrix mod_corr_matrix(corrMatrixX); // copy
 
   size_t i, j,
-    num_cdv = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), DESIGN),
+    num_cdv = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)DESIGN),
     num_cdv_uv = ranVarTypesX.size()
-               - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), STATE);
+               - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)STATE);
 
   for (i=num_cdv; i<num_cdv_uv; i++) {
     for (j=num_cdv; j<i; j++) {
@@ -1250,7 +1251,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   }
 
   bool std_dvv = (x_dvv == cv_ids);
-  bool mixed_s = acv_map2_targets.contains(NO_TARGET);
+  bool mixed_s = std::find(acv_map2_target.begin(), acv_map2_targets.end(),
+                           (short)NO_TARGET) != acv_map2_targets.end() ? true : false;
   RealVector fn_grad_x_std, fn_grad_s_std;
 
   // manage size of fn_grad_x input
@@ -1281,7 +1283,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   else {
     final_s_len = 0;
     for (i=0; i<s_len; i++)
-      if (x_dvv.contains(acv_ids[acv_map1_indices[i]]))
+      if ( std::find(x_dvv.begin(), x_dvv.end(),
+                     acv_ids[acv_map1_indices[i]]) != x_dvv.end() )
 	final_s_len++;
   }
   if (fn_grad_s.length() != final_s_len)
@@ -1618,7 +1621,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       Real scale = upr - lwr;
       if (ranVarTypesU[i] == BETA) // linear scaling
 	jacobian_xz(i, i) = scale/2.;
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
@@ -1627,7 +1630,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	Real pdf = gsl_ran_beta_pdf(scaled_x, alpha, beta)/scale;
 	jacobian_xz(i, i) = phi(z_vars(i))/pdf;
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;
@@ -1636,14 +1639,14 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       const Real& beta = ranVarAddtlParamsX[i](1);
       if (ranVarTypesU[i] == GAMMA) // linear scaling
 	jacobian_xz(i, i) = beta;
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	// GSL gamma passes alpha followed by beta
 	Real pdf = gsl_ran_gamma_pdf(x_vars(i), alpha, beta);
 	jacobian_xz(i, i) = phi(z_vars(i))/pdf;
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;
@@ -1675,13 +1678,13 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
 	// GSL weibull passes beta followed by alpha
 	Real pdf = gsl_ran_weibull_pdf(x_vars(i), beta, alpha);
 #else
 	const Real& x = x_vars(i);
 	Real pdf = alpha/beta * pow(x/beta,alpha-1.) * exp(-pow(x/beta,alpha));
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 	jacobian_xz(i, i) = phi(z_vars(i))/pdf;
       }
       else
@@ -1860,7 +1863,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	err_flag = true;
       break;
     }
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
     case BETA: {
       const Real& lwr = ranVarLowerBndsX(i);
       const Real& upr = ranVarUpperBndsX(i);
@@ -1893,7 +1896,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	err_flag = true;
       break;
     }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
     case GUMBEL: {
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& alpha = ranVarAddtlParamsX[i](0);
@@ -1921,13 +1924,13 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
 	// GSL weibull passes beta followed by alpha
 	Real pdf = gsl_ran_weibull_pdf(x_vars(i), beta, alpha);
 #else
 	const Real& x = x_vars(i);
 	Real pdf = alpha/beta * pow(x/beta,alpha-1.) * exp(-pow(x/beta,alpha));
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 	jacobian_zx(i, i) = pdf/phi(z_vars(i));
       }
       else
@@ -1978,9 +1981,9 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // variables (dx/ds for beta/gamma x will include a dz/ds contribution).
   if (correlationFlagX) {
     size_t
-      num_cdv    = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), DESIGN),
+      num_cdv    = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)DESIGN),
       num_cdv_uv = ranVarTypesX.size()
-                 - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), STATE);
+                 - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)STATE);
     for (i=num_cdv; i<num_cdv_uv; i++) {
       if ( (ranVarTypesX[i] == BETA || ranVarTypesX[i] == GAMMA) &&
 	    ranVarTypesX[i] != ranVarTypesU[i] ) {
@@ -1991,12 +1994,18 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
       }
     }
   }
-  if ( acv_map2_targets.contains(B_ALPHA)  ||
-       acv_map2_targets.contains(B_BETA)   ||
-       acv_map2_targets.contains(GA_ALPHA) ||
-       ( beta_gamma_map && ( acv_map2_targets.contains(B_LWR_BND) ||
-			     acv_map2_targets.contains(B_UPR_BND) ||
-			     acv_map2_targets.contains(GA_BETA) ) ) )
+  if ( (std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
+                  (short)B_ALPHA) != acv_map2_targets.end())  ||
+       (std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
+                  (short)B_BETA) != acv_map2_targets.end())   ||
+       (std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
+                  (short)GA_ALPHA) != acv_map2_targets.end()) ||
+       ( beta_gamma_map && ( (std::find(acv_map2_targets.begin(),
+                                        acv_map2_targets.end(), (short)B_LWR_BND) != acv_map2_targets.end()) ||
+			     (std::find(acv_map2_targets.begin(),
+                                        acv_map2_targets.end(), (short)B_UPR_BND) != acv_map2_targets.end()) ||
+			     (std::find(acv_map2_targets.begin(),
+                                        acv_map2_targets.end(), (short)GA_BETA)   != acv_map2_targets.end()) ) ) )
     need_xs = true;
   // the entire numerical jacobian is computed, even though only the
   // beta/gamma rows are needed
@@ -2828,7 +2837,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       // f'(x) = f(x) ((alpha-1)/(x-lwr) - (beta-1)/(upr-x))
       if (ranVarTypesU[i] == BETA) // linear scaling
 	hessian_xz[i](i, i) = 0.0;
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
@@ -2842,7 +2851,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	Real dx_dz = phi(z)/pdf;
 	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;
@@ -2854,7 +2863,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       //                                       - x^(alpha-1) e^(-x/beta)/beta)
       if (ranVarTypesU[i] == GAMMA) // linear scaling
 	hessian_xz[i](i, i) = 0.0;
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
@@ -2867,7 +2876,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	Real dx_dz = phi(z)/pdf;
 	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
       }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
       else
 	err_flag = true;
       break;

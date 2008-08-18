@@ -72,13 +72,6 @@ inline void abort_handler(int code)
 
 
 template <typename PecosContainerType>
-inline bool contains(const PecosContainerType& v,
-                     const typename PecosContainerType::value_type& val)
-{
-  return std::find(v.begin(), v.end(), val) != v.end() ? true : false;
-}
-
-template <typename PecosContainerType>
 inline typename PecosContainerType::difference_type
 index(const PecosContainerType& v,
       const typename PecosContainerType::value_type& val)

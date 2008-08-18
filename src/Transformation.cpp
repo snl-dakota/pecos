@@ -14,7 +14,7 @@
 
 #include "pecos_global_defs.h"
 #include "NatafTransformation.hpp"
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif
 
@@ -372,7 +372,7 @@ numerical_design_jacobian(const RealVector& x_vars,
 }
 
 
-#ifndef PECOS_GSL
+#ifndef HAVE_GSL
 Real Transformation::erf_inverse(const Real& p)
 {
   // Adapted from ltqnorm.m see URL below for more info
@@ -445,10 +445,10 @@ Real Transformation::erf_inverse(const Real& p)
   z = 1/sqrt(2.)*z;
   return z;
 }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 
 
-#ifdef PECOS_GSL
+#ifdef HAVE_GSL
 /** Solve is performed in scaled space (for the standard beta distribution). */
 Real Transformation::
 cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
@@ -515,7 +515,7 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
   }
   return scaled_x;
 }
-#endif // PECOS_GSL
+#endif // HAVE_GSL
 
 
 #ifdef DERIV_DEBUG
