@@ -15,7 +15,7 @@
 #ifndef TRANSFORMATION_HPP
 #define TRANSFORMATION_HPP
 
-#include "pecos_data_types.h"
+#include "pecos_global_defs.h"
 #ifdef HAVE_GSL
 #include "gsl/gsl_randist.h"
 #include "gsl/gsl_cdf.h"

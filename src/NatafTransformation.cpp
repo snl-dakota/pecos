@@ -13,12 +13,15 @@
 //- Version:
 
 #include "pecos_global_defs.h"
-#include <cfloat>
 #include "NatafTransformation.hpp"
 #ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif
 #include <algorithm>
+#include <cfloat>
+#if defined(__sun) && defined(__sparc) && defined(__SUNPRO_CC)
+#include <math.h> /* for log1p */
+#endif
 
 static const char rcsId[]="@(#) $Id: NatafTransformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
