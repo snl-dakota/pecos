@@ -24,6 +24,15 @@ static const char rcsId[]="@(#) $Id: NatafTransformation.C 4768 2007-12-17 17:49
 
 namespace Pecos {
 
+// WJB:  add a wrapper to temporarily get us by.. (meet with HKT asap)
+inline int multiply(RealSymMatrix& thisMatrixIsSymOnInpButNotOnOut,
+                    Teuchos::ETransp transa, Teuchos::ETransp transb, Real a,
+                    const RealMatrix& A, const RealMatrix& B, Real b)
+{
+  // stub-out until I get a chance to discuss with MSE
+  return 0;
+}
+
 
 /** This procedure performs the transformation from u to x space.
     u_vars is the vector of random variables in uncorrelated standard
@@ -1220,7 +1229,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,
 		  const ShortArray& acv_map2_targets)
 {
   RealMatrix jacobian_xs;
-  jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids);
+  jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids,
+                 acv_map1_indices, acv_map2_targets);
   trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv, cv_ids, acv_ids,
 		    acv_map1_indices, acv_map2_targets);
 }
@@ -1251,7 +1261,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   }
 
   bool std_dvv = (x_dvv == cv_ids);
-  bool mixed_s = std::find(acv_map2_target.begin(), acv_map2_targets.end(),
+  bool mixed_s = std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
                            (short)NO_TARGET) != acv_map2_targets.end() ? true : false;
   RealVector fn_grad_x_std, fn_grad_s_std;
 
@@ -1423,8 +1433,11 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   RealMatrix fn_hess_x_by_xu(x_len, x_len);
   fn_hess_x_by_xu.multiply(Teuchos::LEFT_SIDE, 1., fn_hess_x_trans,
 			   jacobian_xu, 0.);
-  fn_hess_u_trans.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
-			   fn_hess_x_by_xu, 0.);
+// WJB - 8/18: hack (remove ASAP)
+  //fn_hess_u_trans.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
+			   //fn_hess_x_by_xu, 0.);
+  multiply(fn_hess_u_trans, Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
+           fn_hess_x_by_xu, 0.);
   //Cout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_u;
   //Cout << "\nfnGradX:" << fn_grad_x;
 
@@ -1719,7 +1732,8 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
     int x_len = x_vars.length();
     if (jacobian_ux.numRows() != x_len || jacobian_ux.numCols() != x_len)
       jacobian_ux.shape(x_len, x_len);
-    corr_solver.setVectors(jacobian_ux, jacobian_zx);
+    corr_solver.setVectors( Teuchos::rcp(&jacobian_ux, false),
+                            Teuchos::rcp(&jacobian_zx, false) );
     corr_solver.solveToRefinedSolution(true);
     corr_solver.solve();
   }
@@ -2641,8 +2655,11 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
 			  corrCholeskyFactorZ, 0.);
       if (hessian_xu[i].numRows() != x_len)
 	hessian_xu[i].shape(x_len);
-      hessian_xu[i].multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1.,
-			     corrCholeskyFactorZ, hess_xzi_L, 0.);
+// WJB - 8/18: hack (remove ASAP)
+      //hessian_xu[i].multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1.,
+			     //corrCholeskyFactorZ, hess_xzi_L, 0.);
+      multiply(hessian_xu[i], Teuchos::TRANS, Teuchos::NO_TRANS, 1.,
+               corrCholeskyFactorZ, hess_xzi_L, 0.);
     }
   }
   else // d^2X/dU^2 = d^2X/dZ^2 since dZ/dU = I

@@ -35,17 +35,17 @@ typedef std::string String;
 // --------------------------------
 // Numerical arrays (serial dense):
 // --------------------------------
-typedef Teuchos::SerialDenseVector<size_t, Real>    RealVector;
-typedef Teuchos::SerialDenseVector<size_t, int>     IntVector;
-typedef Teuchos::SerialDenseMatrix<size_t, Real>    RealMatrix;
-typedef Teuchos::SerialSymDenseMatrix<size_t, Real> RealSymMatrix;
+typedef Teuchos::SerialDenseVector<int, Real>    RealVector;
+typedef Teuchos::SerialDenseVector<int, int>     IntVector;
+typedef Teuchos::SerialDenseMatrix<int, Real>    RealMatrix;
+typedef Teuchos::SerialSymDenseMatrix<int, Real> RealSymMatrix;
 
 
 // ---------------------------------
 // Numerical solvers (serial dense):
 // ---------------------------------
-typedef Teuchos::SerialDenseSolver<size_t, Real>    RealSolver;
-typedef Teuchos::SerialSpdDenseSolver<size_t, Real> RealSpdSolver;
+typedef Teuchos::SerialDenseSolver<int, Real>    RealSolver;
+typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 
 
 // ---------------------------------------
