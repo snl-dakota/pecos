@@ -17,6 +17,7 @@
 #ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif
+#include <algorithm>
 
 static const char rcsId[]="@(#) $Id: Transformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -160,7 +161,7 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
     if (!correlationFlagX)
       return;
 
-    size_t i, j, offset, num_corr_vars = corrMatrixX.M(),
+    size_t i, j, offset, num_corr_vars = corrMatrixX.numRows(),
       num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
     if (num_corr_vars != num_active_vars) {
       if (num_corr_vars != num_uncertain_vars) {
@@ -170,7 +171,7 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
 	abort_handler(-1);
       }
       RealSymMatrix old_corr_matrix(corrMatrixX);
-      corrMatrixX.Shape(num_active_vars); // initializes to zero
+      corrMatrixX.shape(num_active_vars); // initializes to zero
       for (i=0; i<num_design_vars; i++)
 	corrMatrixX(i,i) = 1.;
       offset = num_design_vars;
@@ -291,22 +292,22 @@ numerical_design_jacobian(const RealVector& x_vars,
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
   size_t i, j, k, num_var_map_1c = primaryACVarMapIndices.length();
-  int x_len = x_vars.Length();
-  if (xs && (num_jacobian_xs.M() != x_len ||
-	     num_jacobian_xs.N() != num_var_map_1c) )
-    num_jacobian_xs.Shape(x_len, num_var_map_1c);
-  if (zs && (num_jacobian_zs.M() != x_len ||
-	     num_jacobian_zs.N() != num_var_map_1c) )
-    num_jacobian_zs.Shape(x_len, num_var_map_1c);
+  int x_len = x_vars.length();
+  if (xs && (num_jacobian_xs.numRows() != x_len ||
+	     num_jacobian_xs.numCols() != num_var_map_1c) )
+    num_jacobian_xs.shape(x_len, num_var_map_1c);
+  if (zs && (num_jacobian_zs.numRows() != x_len ||
+	     num_jacobian_zs.numCols() != num_var_map_1c) )
+    num_jacobian_zs.shape(x_len, num_var_map_1c);
 
   RealMatrix L_s_plus_h, dL_dsi;
   RealVector dz_dsi;
   //RealVector z_vars_s_plus_h, z_vars_s_minus_h;
   RealVector x_vars_s_plus_h, x_vars_s_minus_h;
   if (zs) {
-    L_s_plus_h.Shape(x_len, x_len);
-    dL_dsi.Shape(x_len, x_len);
-    dz_dsi.Size(x_len);
+    L_s_plus_h.shape(x_len, x_len);
+    dL_dsi.shape(x_len, x_len);
+    dz_dsi.size(x_len);
   }
 
   RealVector u_vars;
@@ -322,7 +323,7 @@ numerical_design_jacobian(const RealVector& x_vars,
 
       // Compute the offset for the ith gradient variable.
       // Enforce a minimum delta of fdgss*.01
-      Real h_mag = fd_grad_ss * max(fabs(s0), .01);
+      Real h_mag = fd_grad_ss * std::max(fabs(s0), .01);
       Real h = (s0 < 0.0) ? -h_mag : h_mag; // h has same sign as s0
 
       // -----------------------------------
