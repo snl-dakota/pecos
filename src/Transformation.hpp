@@ -183,7 +183,9 @@ private:
                                  bool xs, RealMatrix& num_jacobian_xs,
                                  bool zs, RealMatrix& num_jacobian_zs,
 				 const UIntArray& cv_ids,
-				 const UIntArray& acv_ids);
+				 const UIntArray& acv_ids,
+				 const SizetArray& acv_map1_indices,
+				 const ShortArray& acv_map2_targets);
 
 #ifndef HAVE_GSL
   /// Inverse of error function used in Phi_inverse()

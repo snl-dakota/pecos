@@ -274,7 +274,9 @@ void Transformation::
 numerical_design_jacobian(const RealVector& x_vars,
 			  bool xs, RealMatrix& num_jacobian_xs,
 			  bool zs, RealMatrix& num_jacobian_zs,
-			  const UIntArray& cv_ids, const UIntArray& acv_ids)
+			  const UIntArray& cv_ids, const UIntArray& acv_ids,
+			  const SizetArray& acv_map1_indices,
+			  const ShortArray& acv_map2_targets)
 {
   // For correlated vars, correlation matrix C = C(s) due to Nataf modifications
   //   z(s) = L(s) u  ->  dz/ds = dL/ds u  ->  need dL/ds
@@ -291,7 +293,7 @@ numerical_design_jacobian(const RealVector& x_vars,
   // Rectangular Jacobians = Gradient^T = num_Z x num_S where num_S is the total
   // number of active continuous vars flowed down from a higher iteration level.
   // The number of distribution parameter insertions is <= num_S.
-  size_t i, j, k, num_var_map_1c = primaryACVarMapIndices.length();
+  size_t i, j, k, num_var_map_1c = acv_map1_indices.size();
   int x_len = x_vars.length();
   if (xs && (num_jacobian_xs.numRows() != x_len ||
 	     num_jacobian_xs.numCols() != num_var_map_1c) )
@@ -316,8 +318,8 @@ numerical_design_jacobian(const RealVector& x_vars,
   Real fd_grad_ss = 1.e-4;
   for (i=0; i<num_var_map_1c; i++) {
 
-    size_t cv_index = index(cv_ids, acv_ids[primaryACVarMapIndices[i]]);
-    if (cv_index != _NPOS && secondaryACVarMapTargets[i] != NO_TARGET) {
+    size_t cv_index = index(cv_ids, acv_ids[acv_map1_indices[i]]);
+    if (cv_index != _NPOS && acv_map2_targets[i] != NO_TARGET) {
 
       Real s0 = distribution_parameter(i);
 
@@ -357,7 +359,8 @@ numerical_design_jacobian(const RealVector& x_vars,
 	for (j=0; j<x_len; j++)                            // dL/ds
 	  for (k=0; k<=j; k++)
 	    dL_dsi(j, k) = (L_s_plus_h(j, k) - corrCholeskyFactorZ(j, k))/2./h;
-	dz_dsi.Multiply('N', 'N', 1., dL_dsi, u_vars, 0.); // dz/ds
+	dz_dsi.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1., dL_dsi,
+			u_vars, 0.); // dz/ds
 	for (j=0; j<x_len; j++)
 	  num_jacobian_zs(j, i) = dz_dsi(j);
 	//for (j=0; j<x_len; j++)                          // dz/ds (alt)
