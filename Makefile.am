@@ -21,6 +21,9 @@ pkginclude_HEADERS = src/pecos_data_types.h	\
 		     src/NatafTransformation.hpp	\
 		     src/Transformation.hpp
 
+## No sources in this directory!
+libpecos_la_SOURCES = 
+
 ## Combine the convenience libraries into the final product.
 libpecos_la_LIBADD = $(SUBLIBS)
 
