@@ -1077,7 +1077,8 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
     Real delta_scaled_x;
     if (fabs(dres_dx) > DBL_MIN) {
       delta_scaled_x = -res/dres_dx; // full Newton step
-      if (fabs(delta_scaled_x) < convergenceTol)
+      // WJB: undo hardwiring of tol ASAP -- if (fabs(delta_scaled_x) < convergenceTol)
+      if (fabs(delta_scaled_x) < 1.e15*DBL_EPSILON)
 	converged = true; // but go ahead and take the step, if beneficial
     }
     else
