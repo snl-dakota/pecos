@@ -14,6 +14,7 @@
 
 #include "pecos_global_defs.h"
 #include "NatafTransformation.hpp"
+#include "Teuchos_SerialDenseHelpers.hpp"
 #ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif // HAVE_GSL
@@ -26,15 +27,6 @@
 static const char rcsId[]="@(#) $Id: NatafTransformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
 namespace Pecos {
-
-// WJB:  add a wrapper to temporarily get us by.. (meet with HKT asap)
-inline int multiply(RealSymMatrix& thisMatrixIsSymOnInpButNotOnOut,
-                    Teuchos::ETransp transa, Teuchos::ETransp transb, Real a,
-                    const RealMatrix& A, const RealMatrix& B, Real b)
-{
-  // stub-out until I get a chance to discuss with MSE
-  return 0;
-}
 
 
 /** This procedure performs the transformation from u to x space.
@@ -1433,14 +1425,8 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   // transform hess_x -> hess_u
   // d^2G/dU^2 = dG/dX^T d^2X/dU^2 + dX/dU^T d^2G/dX^2 dX/dU
   // Note: G(u) may have curvature even if g(x) is linear due to first term.
-  RealMatrix fn_hess_x_by_xu(x_len, x_len);
-  fn_hess_x_by_xu.multiply(Teuchos::LEFT_SIDE, 1., fn_hess_x_trans,
-			   jacobian_xu, 0.);
-// WJB - 8/18: hack (remove ASAP)
-  //fn_hess_u_trans.multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
-			   //fn_hess_x_by_xu, 0.);
-  multiply(fn_hess_u_trans, Teuchos::TRANS, Teuchos::NO_TRANS, 1., jacobian_xu,
-           fn_hess_x_by_xu, 0.);
+  Teuchos::symMatTripleProduct(Teuchos::TRANS, 1., fn_hess_x_trans,
+                               jacobian_xu, fn_hess_u_trans);
   //Cout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_u;
   //Cout << "\nfnGradX:" << fn_grad_x;
 
@@ -2657,16 +2643,10 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
     for (int i=0; i<x_len; i++) {
       // d^2X/dU^2 = dX/dZ^T d^2Z/dU^2 + dZ/dU^T d^2X/dZ^2 dZ/dU
       //           = L^T d^2X/dZ^2 L
-      RealMatrix hess_xzi_L(x_len, x_len);
-      hess_xzi_L.multiply(Teuchos::LEFT_SIDE, 1., hessian_xz[i],
-			  corrCholeskyFactorZ, 0.);
       if (hessian_xu[i].numRows() != x_len)
 	hessian_xu[i].shape(x_len);
-// WJB - 8/18: hack (remove ASAP)
-      //hessian_xu[i].multiply(Teuchos::TRANS, Teuchos::NO_TRANS, 1.,
-			     //corrCholeskyFactorZ, hess_xzi_L, 0.);
-      multiply(hessian_xu[i], Teuchos::TRANS, Teuchos::NO_TRANS, 1.,
-               corrCholeskyFactorZ, hess_xzi_L, 0.);
+      Teuchos::symMatTripleProduct(Teuchos::TRANS, 1., hessian_xz[i],
+                                   corrCholeskyFactorZ, hessian_xu[i]);
     }
   }
   else // d^2X/dU^2 = d^2X/dZ^2 since dZ/dU = I
