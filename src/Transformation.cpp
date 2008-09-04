@@ -660,7 +660,31 @@ distribution_parameter(size_t index, short target, const Real& param)
     moments_from_uniform_params(param, ranVarUpperBndsX[index],
 				ranVarMeansX[index], ranVarStdDevsX[index]);
     break;
-  case N_LWR_BND: case LN_LWR_BND:
+  case N_LWR_BND:
+    if (ranVarTypesX[index] != BOUNDED_NORMAL) { // protect this for now
+      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
+	   << std::endl;
+      abort_handler(-1);
+    }
+    //if (ranVarLowerBndsX[index] == -DBL_MAX && param != -DBL_MAX) {
+    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive lower bound "
+    //       << "is not allowed." << std::endl;
+    //  abort_handler(-1);
+    //}
+    //else
+    ranVarLowerBndsX[index] = param; break;
+  case LN_LWR_BND:
+    if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
+      Cerr << "Error: setting lognormal bounds only allowed for "
+	   << "BOUNDED_LOGNORMAL." << std::endl;
+      abort_handler(-1);
+    }
+    //if (ranVarLowerBndsX[index] == 0. && param != 0.) {
+    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive lower "
+    //       << "bound is not allowed." << std::endl;
+    //  abort_handler(-1);
+    //}
+    //else
     ranVarLowerBndsX[index] = param; break;
   case LU_LWR_BND:
     ranVarLowerBndsX[index] = param;
@@ -688,7 +712,31 @@ distribution_parameter(size_t index, short target, const Real& param)
     moments_from_uniform_params(ranVarLowerBndsX[index], param,
 				ranVarMeansX[index], ranVarStdDevsX[index]);
     break;
-  case N_UPR_BND: case LN_UPR_BND:
+  case N_UPR_BND:
+    if (ranVarTypesX[index] != BOUNDED_NORMAL) { // protect this for now
+      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
+	   << std::endl;
+      abort_handler(-1);
+    }
+    //if (ranVarUpperBndsX[index] == DBL_MAX && param != DBL_MAX) {
+    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive upper bound "
+    //       << "is not allowed." << std::endl;
+    //  abort_handler(-1);
+    //}
+    //else
+    ranVarUpperBndsX[index] = param; break;
+  case LN_UPR_BND:
+    if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
+      Cerr << "Error: setting lognormal bounds only allowed for "
+	   << "BOUNDED_LOGNORMAL." << std::endl;
+      abort_handler(-1);
+    }
+    //if (ranVarUpperBndsX[index] == DBL_MAX && param != DBL_MAX) {
+    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive upper "
+    //       << "bound is not allowed." << std::endl;
+    //  abort_handler(-1);
+    //}
+    //else
     ranVarUpperBndsX[index] = param; break;
   case LU_UPR_BND:
     ranVarUpperBndsX[index] = param;
@@ -784,83 +832,6 @@ distribution_parameter(size_t index, short target, const Real& param)
 				ranVarMeansX[index], ranVarStdDevsX[index]);
     break;
   }
-
-  /* TO DO
-  const Pecos::ShortArray& x_types = nondInstance->natafTransform.x_types();
-  switch (acv_map2_target) {
-
-  case N_LWR_BND: {
-    if (x_types[rvtx_index] != BOUNDED_NORMAL) { // protect this for now
-      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
-	   << endl;
-      abort_handler(-1);
-    }
-    RealVector n_lower_bnds = iteratedModel.normal_lower_bounds();
-    //if (n_lower_bnds[dist_index] == -DBL_MAX && param != -DBL_MAX) {
-    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive lower bound "
-    //       << "is not allowed." << endl;
-    //  abort_handler(-1);
-    //}
-    //else
-      n_lower_bnds[dist_index] = param;
-    iteratedModel.normal_lower_bounds(n_lower_bnds);
-    break;
-  }
-  case N_UPR_BND: {
-    if (x_types[rvtx_index] != BOUNDED_NORMAL) { // protect this for now
-      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
-	   << endl;
-      abort_handler(-1);
-    }
-    RealVector n_upper_bnds = iteratedModel.normal_upper_bounds();
-    //if (n_upper_bnds[dist_index] == DBL_MAX && param != DBL_MAX) {
-    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive upper bound "
-    //       << "is not allowed." << endl;
-    //  abort_handler(-1);
-    //}
-    //else
-      n_upper_bnds[dist_index] = param;
-    iteratedModel.normal_upper_bounds(n_upper_bnds);
-    break;
-  }
-  case LN_LWR_BND: {
-    if (x_types[rvtx_index] != BOUNDED_LOGNORMAL) { // protect this for now
-      Cerr << "Error: setting lognormal bounds only allowed for "
-	   << "BOUNDED_LOGNORMAL." << endl;
-      abort_handler(-1);
-    }
-    dist_index -= numNormalVars;
-    RealVector ln_lower_bnds = iteratedModel.lognormal_lower_bounds();
-    //if (ln_lower_bnds[dist_index] == 0. && param != 0.) {
-    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive lower "
-    //       << "bound is not allowed." << endl;
-    //  abort_handler(-1);
-    //}
-    //else
-      ln_lower_bnds[dist_index] = param;
-    iteratedModel.lognormal_lower_bounds(ln_lower_bnds);
-    break;
-  }
-  case LN_UPR_BND: {
-    if (x_types[rvtx_index] != BOUNDED_LOGNORMAL) { // protect this for now
-      Cerr << "Error: setting lognormal bounds only allowed for "
-	   << "BOUNDED_LOGNORMAL." << endl;
-      abort_handler(-1);
-    }
-    dist_index -= numNormalVars;
-    RealVector ln_upper_bnds = iteratedModel.lognormal_upper_bounds();
-    //if (ln_upper_bnds[dist_index] == DBL_MAX && param != DBL_MAX) {
-    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive upper "
-    //       << "bound is not allowed." << endl;
-    //  abort_handler(-1);
-    //}
-    //else
-      ln_upper_bnds[dist_index] = param;
-    iteratedModel.lognormal_upper_bounds(ln_upper_bnds);
-    break;
-  }
-  }
-  */
 
   // update corrCholeskyFactorZ for new ranVarMeans/ranVarStdDevs
   trans_correlations();
