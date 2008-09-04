@@ -5,7 +5,7 @@
 AC_PREREQ([2.60])
 AC_INIT([PECOS],[1.0],[pecos-developers@development.sandia.gov])
 
-AC_CONFIG_SRCDIR([src/pecos_data_types.h])
+AC_CONFIG_SRCDIR([src/pecos_data_types.hpp])
 AC_CONFIG_HEADER([pecos_config.h])
 
 AM_INIT_AUTOMAKE([1.9.6 foreign tar-ustar])
