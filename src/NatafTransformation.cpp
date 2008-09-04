@@ -16,7 +16,7 @@
 #include "NatafTransformation.hpp"
 #ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"
-#endif
+#endif // HAVE_GSL
 #include <algorithm>
 #include <cfloat>
 #if defined(__sun) && defined(__sparc) && defined(__SUNPRO_CC)
@@ -631,9 +631,9 @@ void NatafTransformation::trans_correlations()
   RealSymMatrix mod_corr_matrix(corrMatrixX); // copy
 
   size_t i, j,
-    num_cdv = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)DESIGN),
+    num_cdv = std::count(ranVarTypesX.begin(),ranVarTypesX.end(),(short)DESIGN),
     num_cdv_uv = ranVarTypesX.size()
-               - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)STATE);
+            - std::count(ranVarTypesX.begin(),ranVarTypesX.end(),(short)STATE);
 
   for (i=num_cdv; i<num_cdv_uv; i++) {
     for (j=num_cdv; j<i; j++) {
@@ -1997,10 +1997,10 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // then the beta/gamma distribution parameters do not have to be design
   // variables (dx/ds for beta/gamma x will include a dz/ds contribution).
   if (correlationFlagX) {
-    size_t
-      num_cdv    = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)DESIGN),
+    size_t num_cdv
+      = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)DESIGN),
       num_cdv_uv = ranVarTypesX.size()
-                 - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)STATE);
+      - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)STATE);
     for (i=num_cdv; i<num_cdv_uv; i++) {
       if ( (ranVarTypesX[i] == BETA || ranVarTypesX[i] == GAMMA) &&
 	    ranVarTypesX[i] != ranVarTypesU[i] ) {
@@ -2018,18 +2018,22 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
        (std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
                   (short)GA_ALPHA) != acv_map2_targets.end()) ||
        ( beta_gamma_map && ( (std::find(acv_map2_targets.begin(),
-                                        acv_map2_targets.end(), (short)B_LWR_BND) != acv_map2_targets.end()) ||
+                              acv_map2_targets.end(), (short)B_LWR_BND)
+			      != acv_map2_targets.end()) ||
 			     (std::find(acv_map2_targets.begin(),
-                                        acv_map2_targets.end(), (short)B_UPR_BND) != acv_map2_targets.end()) ||
+                              acv_map2_targets.end(), (short)B_UPR_BND)
+			      != acv_map2_targets.end()) ||
 			     (std::find(acv_map2_targets.begin(),
-                                        acv_map2_targets.end(), (short)GA_BETA)   != acv_map2_targets.end()) ) ) )
+                              acv_map2_targets.end(), (short)GA_BETA)
+			      != acv_map2_targets.end()) ) ) )
     need_xs = true;
   // the entire numerical jacobian is computed, even though only the
   // beta/gamma rows are needed
   RealMatrix num_dx_ds, num_dz_ds;
   if (need_xs || correlationFlagX)
     numerical_design_jacobian(x_vars, need_xs, num_dx_ds,
-			      correlationFlagX, num_dz_ds);
+			      correlationFlagX, num_dz_ds, cv_ids, acv_ids,
+			      acv_map1_indices, acv_map2_targets);
   if (need_xs) {
     for (j=0; j<x_len; j++) {            // loop over X
       switch (ranVarTypesX[j]) {

@@ -46,33 +46,13 @@ protected:
   //- Heading: Virtual member function redefinitions
   //
 
-  //
-  //- Heading: Utility routines
-  //
-
   /// Transformation routine from u-space of uncorrelated standard normal
   /// variables to x-space of correlated random variables
   void trans_U_to_X(const RealVector& u_vars, RealVector& x_vars);
 
-  /// Transformation routine from u-space of uncorrelated standard normal
-  /// variables to z-space of correlated standard normal variables
-  void trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars);
-
-  /// Transformation routine from z-space of correlated standard normal
-  /// variables to x-space of correlated random variables
-  void trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars);
-
   /// Transformation routine from x-space of correlated random variables 
   /// to u-space of uncorrelated standard normal variables
   void trans_X_to_U(const RealVector& x_vars, RealVector& u_vars);
-
-  /// Transformation routine from x-space of correlated random variables
-  /// to z-space of correlated standard normal variables
-  void trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars);
-
-  /// Transformation routine from z-space of correlated standard normal
-  /// variables to u-space of uncorrelated standard normal variables
-  void trans_Z_to_U(RealVector& z_vars, RealVector& u_vars);
 
   /// As part of the Nataf distribution model (Der Kiureghian & Liu, 1986),
   /// this procedure modifies the user-specified correlation matrix
@@ -125,23 +105,11 @@ protected:
 			 const RealVector& fn_grad_x, const UIntArray& x_dvv,
 			 const UIntArray&  cv_ids);
 
-private:
-
-  //
-  //- Heading: Utility routines
-  //
-
   /// Jacobian of x(u) mapping obtained from dX/dZ dZ/dU
   void jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu);
 
-  /// Jacobian of x(z) mapping obtained from differentiation of trans_Z_to_X()
-  void jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz);
-
   /// Jacobian of u(x) mapping obtained from dU/dZ dZ/dX
   void jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux);
-
-  /// Jacobian of z(x) mapping obtained from differentiation of trans_X_to_Z()
-  void jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx);
 
   /// Design Jacobian of x(u,s) mapping obtained from differentiation of
   /// trans_U_to_X() with respect to distribution parameters S
@@ -150,15 +118,37 @@ private:
 		      const SizetArray& acv_map1_indices,
 		      const ShortArray& acv_map2_targets);
 
-  /// Computes numerical dx/ds and dz/ds Jacobians as requested by xs
-  /// and zs booleans
-  void numerical_design_jacobian(const RealVector& x_vars, 
-				 bool xs, RealMatrix& num_jacobian_xs,
-				 bool zs, RealMatrix& num_jacobian_zs);
-
   /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
   void hessian_d2X_dU2(const RealVector& x_vars,
 		       RealSymMatrixArray& hessian_xu);
+
+private:
+
+  //
+  //- Heading: Utility routines
+  //
+
+  /// Transformation routine from u-space of uncorrelated standard normal
+  /// variables to z-space of correlated standard normal variables
+  void trans_U_to_Z(const RealVector& u_vars, RealVector& z_vars);
+
+  /// Transformation routine from z-space of correlated standard normal
+  /// variables to x-space of correlated random variables
+  void trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars);
+
+  /// Transformation routine from x-space of correlated random variables
+  /// to z-space of correlated standard normal variables
+  void trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars);
+
+  /// Transformation routine from z-space of correlated standard normal
+  /// variables to u-space of uncorrelated standard normal variables
+  void trans_Z_to_U(RealVector& z_vars, RealVector& u_vars);
+
+  /// Jacobian of x(z) mapping obtained from differentiation of trans_Z_to_X()
+  void jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz);
+
+  /// Jacobian of z(x) mapping obtained from differentiation of trans_X_to_Z()
+  void jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx);
 
   /// Hessian of x(z) mapping obtained from differentiation of jacobian_dX_dZ()
   void hessian_d2X_dZ2(const RealVector& x_vars,

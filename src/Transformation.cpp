@@ -150,42 +150,6 @@ Transformation::~Transformation()
 }
 
 
-void Transformation::
-reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
-			   size_t num_state_vars)
-{
-  if (transRep)
-    transRep->reshape_correlation_matrix(num_design_vars, num_uncertain_vars,
-					 num_state_vars);
-  else {
-    if (!correlationFlagX)
-      return;
-
-    size_t i, j, offset, num_corr_vars = corrMatrixX.numRows(),
-      num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
-    if (num_corr_vars != num_active_vars) {
-      if (num_corr_vars != num_uncertain_vars) {
-	Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
-	     << ") in Transformation::reshape_correlation_matrix()."
-	     << std::endl;
-	abort_handler(-1);
-      }
-      RealSymMatrix old_corr_matrix(corrMatrixX);
-      corrMatrixX.shape(num_active_vars); // initializes to zero
-      for (i=0; i<num_design_vars; i++)
-	corrMatrixX(i,i) = 1.;
-      offset = num_design_vars;
-      for (i=0; i<num_uncertain_vars; i++)
-	for (j=0; j<num_uncertain_vars; j++)
-	  corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
-      offset += num_uncertain_vars;
-      for (i=0; i<num_state_vars; i++)
-	corrMatrixX(i+offset,i+offset) = 1.;
-    }
-  }
-}
-
-
 /** This function is commonly used to publish tranformation data when
     the Model variables are in a transformed space (e.g., u-space) and
     ranVarTypes et al. may not be generated directly.  This allows for
@@ -193,7 +157,7 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
     variables to their original states. */
 void Transformation::initialize_random_variables(const Transformation& trans)
 {
-  if (transRep)
+  if (transRep) // envelope fwd to letter
     transRep->initialize_random_variables(trans);
   else {
     ranVarTypesX        = trans.ranVarTypesX;
@@ -232,7 +196,7 @@ initialize_random_variable_parameters(const RealVector& x_means,
 				      const RealVector& x_u_bnds,
 				      const RealVectorArray& x_addtl)
 {
-  if (transRep)
+  if (transRep) // envelope fwd to letter
     transRep->initialize_random_variable_parameters(x_means,  x_std_devs,
 						    x_l_bnds, x_u_bnds,
 						    x_addtl);
@@ -249,7 +213,7 @@ initialize_random_variable_parameters(const RealVector& x_means,
 void Transformation::
 initialize_random_variable_correlations(const RealSymMatrix& x_corr)
 {
-  if (transRep)
+  if (transRep) // envelope fwd to letter
     transRep->initialize_random_variable_correlations(x_corr);
   else {
     corrMatrixX = x_corr;
@@ -259,6 +223,280 @@ initialize_random_variable_correlations(const RealSymMatrix& x_corr)
       for (size_t j=0; j<i; j++)
 	if (fabs(x_corr(i,j)) > 1.e-25)
 	  correlationFlagX = true;
+  }
+}
+
+
+void Transformation::trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_U_to_X(u_vars, x_vars);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_U_to_X() virtual fn."
+	 << "\nNo default defined at Transformation base class.\n" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_X_to_U(x_vars, u_vars);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_X_to_U() virtual fn."
+	 << "\nNo default defined at Transformation base class.\n" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::trans_correlations()
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_correlations();
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_correlations() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
+		  const RealVector& x_vars,    const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, x_vars, x_dvv, cv_ids);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_grad_X_to_U() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
+		  const RealMatrix& jacobian_xu, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, jacobian_xu, x_dvv,
+				cv_ids);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_grad_X_to_U() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
+		  const RealVector& x_vars, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids, const UIntArray& acv_ids,
+		  const SizetArray& acv_map1_indices,
+		  const ShortArray& acv_map2_targets)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_grad_X_to_S(fn_grad_x, fn_grad_s, x_vars, x_dvv, cv_ids,
+				acv_ids, acv_map1_indices, acv_map2_targets);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_grad_X_to_S() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
+		  const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids, const UIntArray& acv_ids,
+		  const SizetArray& acv_map1_indices,
+		  const ShortArray& acv_map2_targets)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_grad_X_to_S(fn_grad_x, fn_grad_s, jacobian_xs, x_dvv,
+				cv_ids, acv_ids, acv_map1_indices,
+				acv_map2_targets);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_grad_X_to_S() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
+		  const RealVector& x_vars,    const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, x_vars, x_dvv, cv_ids);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_grad_U_to_X() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
+		  const RealMatrix& jacobian_ux, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, jacobian_ux, x_dvv,
+ cv_ids);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_grad_U_to_X() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
+		  const RealVector& x_vars,	  const RealVector& fn_grad_x,
+		  const UIntArray&  x_dvv,	  const UIntArray&  cv_ids)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, x_vars, fn_grad_x, x_dvv,
+				cv_ids);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_hess_X_to_U() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
+		  const RealMatrix& jacobian_xu,
+		  const RealSymMatrixArray& hessian_xu,
+		  const RealVector& fn_grad_x, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, jacobian_xu, hessian_xu,
+				fn_grad_x, x_dvv, cv_ids);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_hess_X_to_U() "
+         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->jacobian_dX_dU(x_vars, jacobian_xu);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine jacobian_dX_dU() virtual "
+         << "fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->jacobian_dU_dX(x_vars, jacobian_ux);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine jacobian_dU_dX() virtual "
+         << "fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
+	       const UIntArray&  cv_ids, const UIntArray& acv_ids,
+	       const SizetArray& acv_map1_indices,
+	       const ShortArray& acv_map2_targets)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids,
+			     acv_map1_indices, acv_map2_targets);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine jacobian_dX_dS() virtual "
+         << "fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->hessian_d2X_dU2(x_vars, hessian_xu);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine hessian_d2X_dU2() virtual "
+         << "fn.\nNo default defined at Transformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void Transformation::
+reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
+			   size_t num_state_vars)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->reshape_correlation_matrix(num_design_vars, num_uncertain_vars,
+					 num_state_vars);
+  else {
+    if (!correlationFlagX)
+      return;
+
+    size_t i, j, offset, num_corr_vars = corrMatrixX.numRows(),
+      num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
+    if (num_corr_vars != num_active_vars) {
+      if (num_corr_vars != num_uncertain_vars) {
+	Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
+	     << ") in Transformation::reshape_correlation_matrix()."
+	     << std::endl;
+	abort_handler(-1);
+      }
+      RealSymMatrix old_corr_matrix(corrMatrixX);
+      corrMatrixX.shape(num_active_vars); // initializes to zero
+      for (i=0; i<num_design_vars; i++)
+	corrMatrixX(i,i) = 1.;
+      offset = num_design_vars;
+      for (i=0; i<num_uncertain_vars; i++)
+	for (j=0; j<num_uncertain_vars; j++)
+	  corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
+      offset += num_uncertain_vars;
+      for (i=0; i<num_state_vars; i++)
+	corrMatrixX(i+offset,i+offset) = 1.;
+    }
   }
 }
 
@@ -318,10 +556,11 @@ numerical_design_jacobian(const RealVector& x_vars,
   Real fd_grad_ss = 1.e-4;
   for (i=0; i<num_var_map_1c; i++) {
 
-    size_t cv_index = index(cv_ids, acv_ids[acv_map1_indices[i]]);
-    if (cv_index != _NPOS && acv_map2_targets[i] != NO_TARGET) {
+    size_t cv_index        = index(cv_ids, acv_ids[acv_map1_indices[i]]);
+    short  acv_map2_target = acv_map2_targets[i];
+    if (cv_index != _NPOS && acv_map2_target != NO_TARGET) {
 
-      Real s0 = distribution_parameter(i);
+      Real s0 = distribution_parameter(cv_index, acv_map2_target);
 
       // Compute the offset for the ith gradient variable.
       // Enforce a minimum delta of fdgss*.01
@@ -332,7 +571,8 @@ numerical_design_jacobian(const RealVector& x_vars,
       // Evaluate (L/z_vars/x_vars)_s_plus_h
       // -----------------------------------
       Real s1 = s0 + h;
-      distribution_parameter(i, s1); // updates ranVars & corrCholeskyFactorZ
+      // updates ranVars & corrCholeskyFactorZ:
+      distribution_parameter(cv_index, acv_map2_target, s1);
       if (zs) {
 	L_s_plus_h = corrCholeskyFactorZ;        // L
 	//trans_U_to_Z(u_vars, z_vars_s_plus_h); // z
@@ -344,7 +584,8 @@ numerical_design_jacobian(const RealVector& x_vars,
       // Evaluate (L/z_vars/x_vars)_s_minus_h
       // ------------------------------------
       s1 = s0 - h;
-      distribution_parameter(i, s1); // updates ranVars & corrCholeskyFactorZ
+      // updates ranVars & corrCholeskyFactorZ:
+      distribution_parameter(cv_index, acv_map2_target, s1);
       //if (zs) {
         // utilize corrCholeskyFactorZ below      // L
         //trans_U_to_Z(u_vars, z_vars_s_minus_h); // z
@@ -370,9 +611,366 @@ numerical_design_jacobian(const RealVector& x_vars,
 	for (j=0; j<x_len; j++)                            // dx/ds
 	  num_jacobian_xs(j,i) = (x_vars_s_plus_h(j)-x_vars_s_minus_h(j))/2./h;
 
-      distribution_parameter(i, s0); // resets s0 (& corrCholeskyFactorZ!)
+      // resets s0 & corrCholeskyFactorZ:
+      distribution_parameter(cv_index, acv_map2_target, s0);
     }
   }
+}
+
+
+/** This function accommodates the native Model space (X, Z, or U)
+    through the use of num[Distribution]Vars counts and
+    iteratedModel.some_distribution_parameter(), but is tied to
+    x-space through the VarMapIndices user specifications. */
+const Real& Transformation::distribution_parameter(size_t index, short target)
+{
+  switch (target) {
+  case CDV_LWR_BND: case N_LWR_BND: case LN_LWR_BND: case   U_LWR_BND:
+  case  LU_LWR_BND: case T_LWR_BND: case  B_LWR_BND: case CSV_LWR_BND:
+    return ranVarLowerBndsX[index];      break;
+  case CDV_UPR_BND: case N_UPR_BND: case LN_UPR_BND: case   U_UPR_BND:
+  case  LU_UPR_BND: case T_UPR_BND: case  B_UPR_BND: case CSV_UPR_BND:
+    return ranVarUpperBndsX[index];      break;
+  case N_MEAN:      case LN_MEAN:
+    return ranVarMeansX(index);          break;
+  case N_STD_DEV:   case LN_STD_DEV:
+    return ranVarStdDevsX(index);        break;
+  case LN_ERR_FACT: case T_MODE:    case E_BETA:  case B_ALPHA: case GA_ALPHA:
+  case GU_ALPHA:    case F_ALPHA:   case W_ALPHA:
+    return ranVarAddtlParamsX[index](0); break;
+  case B_BETA:      case GA_BETA:   case GU_BETA: case F_BETA:  case W_BETA:
+    return ranVarAddtlParamsX[index](1); break;
+  }
+}
+
+
+/** This function accommodates the native Model space (X, Z, or U)
+    through the use of num[Distribution]Vars counts and
+    iteratedModel.some_distribution_parameter(), but is tied to
+    x-space through the VarMapIndices user specifications. */
+void Transformation::
+distribution_parameter(size_t index, short target, const Real& param)
+{
+  switch (target) {
+  case CDV_LWR_BND: case   U_LWR_BND: case LU_LWR_BND: case T_LWR_BND:
+  case   B_LWR_BND: case CSV_LWR_BND:
+    // TO DO: update mu/sigma
+    ranVarLowerBndsX[index] = param;      break;
+  case CDV_UPR_BND: case   U_UPR_BND: case LU_UPR_BND: case T_UPR_BND:
+  case   B_UPR_BND: case CSV_UPR_BND:
+    // TO DO: update mu/sigma
+    ranVarUpperBndsX[index] = param;      break;
+  case N_MEAN:    case LN_MEAN:
+    ranVarMeansX(index) = param;          break;
+  case N_STD_DEV: case LN_STD_DEV:
+    ranVarStdDevsX(index) = param;        break;
+  case N_LWR_BND: case LN_LWR_BND:
+    ranVarLowerBndsX[index] = param;      break;
+  case N_UPR_BND: case LN_UPR_BND:
+    ranVarUpperBndsX[index] = param;      break;
+  case LN_ERR_FACT: case T_MODE:    case E_BETA:  case B_ALPHA: case GA_ALPHA:
+  case GU_ALPHA:    case F_ALPHA:   case W_ALPHA:
+    // TO DO: update mu/sigma
+    ranVarAddtlParamsX[index](0) = param; break;
+  case B_BETA:      case GA_BETA:   case GU_BETA: case F_BETA: case W_BETA:
+    // TO DO: update mu/sigma
+    ranVarAddtlParamsX[index](1) = param; break;
+  }
+
+  /* TO DO
+  const StringArray& acv_types = iteratedModel.all_continuous_variable_types();
+  size_t num_dv_in_acv = acv_types.count("continuous_design") +
+    acv_types.count("discrete_design"); // can happen with MERGED views
+  size_t dist_index = acv_map1_index - num_dv_in_acv,
+    rvtx_index = (numDesignVars < num_dv_in_acv) ? dist_index : acv_map1_index;
+  const Pecos::ShortArray& x_types = nondInstance->natafTransform.x_types();
+  switch (acv_map2_target) {
+  case CDV_LWR_BND: case CSV_LWR_BND: {
+    RealVector a_c_l_bnds = iteratedModel.all_continuous_lower_bounds();
+    a_c_l_bnds[acv_map1_index] = param;
+    iteratedModel.all_continuous_lower_bounds(a_c_l_bnds);
+    break;
+  }
+  case CDV_UPR_BND: case CSV_UPR_BND: {
+    RealVector a_c_u_bnds = iteratedModel.all_continuous_upper_bounds();
+    a_c_u_bnds[acv_map1_index] = param;
+    iteratedModel.all_continuous_upper_bounds(a_c_u_bnds);
+    break;
+  }
+  case N_MEAN: {
+    RealVector n_means = iteratedModel.normal_means();
+    n_means[dist_index] = param;
+    iteratedModel.normal_means(n_means);   
+    break;
+  }
+  case N_STD_DEV: {
+    RealVector n_std_devs = iteratedModel.normal_std_deviations();
+    n_std_devs[dist_index] = param;
+    iteratedModel.normal_std_deviations(n_std_devs);
+    break;
+  }
+  case N_LWR_BND: {
+    if (x_types[rvtx_index] != BOUNDED_NORMAL) { // protect this for now
+      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
+	   << endl;
+      abort_handler(-1);
+    }
+    RealVector n_lower_bnds = iteratedModel.normal_lower_bounds();
+    //if (n_lower_bnds[dist_index] == -DBL_MAX && param != -DBL_MAX) {
+    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive lower bound "
+    //       << "is not allowed." << endl;
+    //  abort_handler(-1);
+    //}
+    //else
+      n_lower_bnds[dist_index] = param;
+    iteratedModel.normal_lower_bounds(n_lower_bnds);
+    break;
+  }
+  case N_UPR_BND: {
+    if (x_types[rvtx_index] != BOUNDED_NORMAL) { // protect this for now
+      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
+	   << endl;
+      abort_handler(-1);
+    }
+    RealVector n_upper_bnds = iteratedModel.normal_upper_bounds();
+    //if (n_upper_bnds[dist_index] == DBL_MAX && param != DBL_MAX) {
+    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive upper bound "
+    //       << "is not allowed." << endl;
+    //  abort_handler(-1);
+    //}
+    //else
+      n_upper_bnds[dist_index] = param;
+    iteratedModel.normal_upper_bounds(n_upper_bnds);
+    break;
+  }
+  case LN_MEAN: {
+    dist_index -= numNormalVars;
+    RealVector ln_means = iteratedModel.lognormal_means();
+    ln_means[dist_index] = param;
+    iteratedModel.lognormal_means(ln_means);
+    break;
+  }
+  case LN_STD_DEV: {
+    dist_index -= numNormalVars;
+    RealVector ln_std_devs = iteratedModel.lognormal_std_deviations();
+    ln_std_devs[dist_index] = param;
+    iteratedModel.lognormal_std_deviations(ln_std_devs);
+    break;
+  }
+  case LN_ERR_FACT: {
+    dist_index -= numNormalVars;
+    RealVector ln_err_facts = iteratedModel.lognormal_error_factors();
+    ln_err_facts[dist_index] = param;
+    iteratedModel.lognormal_error_factors(ln_err_facts);
+    break;
+  }
+  case LN_LWR_BND: {
+    if (x_types[rvtx_index] != BOUNDED_LOGNORMAL) { // protect this for now
+      Cerr << "Error: setting lognormal bounds only allowed for "
+	   << "BOUNDED_LOGNORMAL." << endl;
+      abort_handler(-1);
+    }
+    dist_index -= numNormalVars;
+    RealVector ln_lower_bnds = iteratedModel.lognormal_lower_bounds();
+    //if (ln_lower_bnds[dist_index] == 0. && param != 0.) {
+    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive lower "
+    //       << "bound is not allowed." << endl;
+    //  abort_handler(-1);
+    //}
+    //else
+      ln_lower_bnds[dist_index] = param;
+    iteratedModel.lognormal_lower_bounds(ln_lower_bnds);
+    break;
+  }
+  case LN_UPR_BND: {
+    if (x_types[rvtx_index] != BOUNDED_LOGNORMAL) { // protect this for now
+      Cerr << "Error: setting lognormal bounds only allowed for "
+	   << "BOUNDED_LOGNORMAL." << endl;
+      abort_handler(-1);
+    }
+    dist_index -= numNormalVars;
+    RealVector ln_upper_bnds = iteratedModel.lognormal_upper_bounds();
+    //if (ln_upper_bnds[dist_index] == DBL_MAX && param != DBL_MAX) {
+    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive upper "
+    //       << "bound is not allowed." << endl;
+    //  abort_handler(-1);
+    //}
+    //else
+      ln_upper_bnds[dist_index] = param;
+    iteratedModel.lognormal_upper_bounds(ln_upper_bnds);
+    break;
+  }
+  case U_LWR_BND: {
+    dist_index -= numNormalVars + numLognormalVars;
+    RealVector u_lower_bnds = iteratedModel.uniform_lower_bounds();
+    u_lower_bnds[dist_index] = param;
+    iteratedModel.uniform_lower_bounds(u_lower_bnds);
+    break;
+  }
+  case U_UPR_BND: {
+    dist_index -= numNormalVars + numLognormalVars;
+    RealVector u_upper_bnds = iteratedModel.uniform_upper_bounds();
+    u_upper_bnds[dist_index] = param;
+    iteratedModel.uniform_upper_bounds(u_upper_bnds);
+    break;
+  }
+  case LU_LWR_BND: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
+    RealVector lu_lower_bnds = iteratedModel.loguniform_lower_bounds();
+    lu_lower_bnds[dist_index] = param;
+    iteratedModel.loguniform_lower_bounds(lu_lower_bnds);
+    break;
+  }
+  case LU_UPR_BND: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
+    RealVector lu_upper_bnds = iteratedModel.loguniform_upper_bounds();
+    lu_upper_bnds[dist_index] = param;
+    iteratedModel.loguniform_upper_bounds(lu_upper_bnds);
+    break;
+  }
+  case T_MODE: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars;
+    RealVector t_modes = iteratedModel.triangular_modes();
+    t_modes[dist_index] = param;
+    iteratedModel.triangular_modes(t_modes);
+    break;
+  }
+  case T_LWR_BND: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars;
+    RealVector t_lower_bnds = iteratedModel.triangular_lower_bounds();
+    t_lower_bnds[dist_index] = param;
+    iteratedModel.triangular_lower_bounds(t_lower_bnds);
+    break;
+  }
+  case T_UPR_BND: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars;
+    RealVector t_upper_bnds = iteratedModel.triangular_upper_bounds();
+    t_upper_bnds[dist_index] = param;
+    iteratedModel.triangular_upper_bounds(t_upper_bnds);
+    break;
+  }
+  case E_BETA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars;
+    RealVector e_betas = iteratedModel.exponential_betas();
+    e_betas[dist_index] = param;
+    iteratedModel.exponential_betas(e_betas);
+    break;
+  }
+  case B_ALPHA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars;
+    RealVector b_alphas = iteratedModel.beta_alphas();
+    b_alphas[dist_index] = param;
+    iteratedModel.beta_alphas(b_alphas);
+    break;
+  }
+  case B_BETA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars;
+    RealVector b_betas = iteratedModel.beta_betas();
+    b_betas[dist_index] = param;
+    iteratedModel.beta_betas(b_betas);
+    break;
+  }
+  case B_LWR_BND: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars;
+    RealVector b_lower_bnds = iteratedModel.beta_lower_bounds();
+    b_lower_bnds[dist_index] = param;
+    iteratedModel.beta_lower_bounds(b_lower_bnds);
+    break;
+  }
+  case B_UPR_BND: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars;
+    RealVector b_upper_bnds = iteratedModel.beta_upper_bounds();
+    b_upper_bnds[dist_index] = param;
+    iteratedModel.beta_upper_bounds(b_upper_bnds);
+    break;
+  }
+  case GA_ALPHA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
+    RealVector ga_alphas = iteratedModel.gamma_alphas();
+    ga_alphas[dist_index] = param;
+    iteratedModel.gamma_alphas(ga_alphas);
+    break;
+  }
+  case GA_BETA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
+    RealVector ga_betas = iteratedModel.gamma_betas();
+    ga_betas[dist_index] = param;
+    iteratedModel.gamma_betas(ga_betas);
+    break;
+  }
+  case GU_ALPHA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
+      numGammaVars;
+    RealVector gu_alphas = iteratedModel.gumbel_alphas();
+    gu_alphas[dist_index] = param;
+    iteratedModel.gumbel_alphas(gu_alphas);
+    break;
+  }
+  case GU_BETA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
+      numGammaVars;
+    RealVector gu_betas = iteratedModel.gumbel_betas();
+    gu_betas[dist_index] = param;
+    iteratedModel.gumbel_betas(gu_betas);
+    break;
+  }
+  case F_ALPHA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
+      numGammaVars + numGumbelVars;
+    RealVector f_alphas = iteratedModel.frechet_alphas();
+    f_alphas[dist_index] = param;
+    iteratedModel.frechet_alphas(f_alphas);
+    break;
+  }
+  case F_BETA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
+      numGammaVars + numGumbelVars;
+    RealVector f_betas = iteratedModel.frechet_betas();
+    f_betas[dist_index] = param;
+    iteratedModel.frechet_betas(f_betas);
+    break;
+  }
+  case W_ALPHA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
+      numGammaVars + numGumbelVars + numFrechetVars;
+    RealVector w_alphas = iteratedModel.weibull_alphas();
+    w_alphas[dist_index] = param;
+    iteratedModel.weibull_alphas(w_alphas);
+    break;
+  }
+  case W_BETA: {
+    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
+      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
+      numGammaVars + numGumbelVars + numFrechetVars;
+    RealVector w_betas = iteratedModel.weibull_betas();
+    w_betas[dist_index] = param;
+    iteratedModel.weibull_betas(w_betas);
+    break;
+  }
+  }
+
+  // update Transformation::ranVarMeans/ranVarStdDevs/ranVarLowerBndsX/
+  // ranVarUpperBndsX/ranVarAddtlParamsX for newly inserted distrib parameter
+  initialize_random_variable_parameters();
+  */
+
+  // update corrCholeskyFactorZ for new ranVarMeans/ranVarStdDevs
+  trans_correlations();
 }
 
 
