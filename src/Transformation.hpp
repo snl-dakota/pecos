@@ -19,6 +19,7 @@
 #ifdef HAVE_GSL
 #include "gsl/gsl_randist.h"
 #include "gsl/gsl_cdf.h"
+#include "gsl/gsl_sf_gamma.h"
 #endif
 
 #include <cmath>
@@ -69,19 +70,6 @@ public:
 					     const RealVectorArray& x_addtl);
   /// initializes corrMatrixX and correlationFlagX
   void initialize_random_variable_correlations(const RealSymMatrix& x_corr);
-
-  /// return ranVarTypesX
-  const ShortArray& x_types() const;
-  /// return ranVarTypesU
-  const ShortArray& u_types() const;
-
-  /// return ranVarMeansX
-  const RealVector& x_means() const;
-  /// return ranVarStdDevsX
-  const RealVector& x_std_deviations() const;
-
-  /// return correlationFlagX
-  bool x_correlation() const;
 
   /// Transformation routine from u-space of uncorrelated standard normal
   /// variables to x-space of correlated random variables
@@ -158,6 +146,52 @@ public:
   /// Hessian of x(u) mapping obtained from dZ/dU^T d^2X/dZ^2 dZ/dU
   void hessian_d2X_dU2(const RealVector& x_vars,
 		       RealSymMatrixArray& hessian_xu);
+
+  /// return ranVarTypesX
+  const ShortArray& x_types() const;
+  /// return ranVarTypesU
+  const ShortArray& u_types() const;
+
+  /// return ranVarMeansX
+  const RealVector& x_means() const;
+  /// return ranVarStdDevsX
+  const RealVector& x_std_deviations() const;
+
+  /// return correlationFlagX
+  bool x_correlation() const;
+
+  /// compute std deviation from lognormal error factor specification
+  void moments_from_lognormal_params(const Real& mean, const Real& err_fact,
+				     Real& std_dev);
+  /// compute mean and std deviation from uniform bounds specification
+  void moments_from_uniform_params(const Real& lwr, const Real& upr, Real& mean,
+				   Real& std_dev);
+  /// compute mean and std deviation from loguniform bounds specification
+  void moments_from_loguniform_params(const Real& lwr, const Real& upr,
+				      Real& mean, Real& std_dev);
+  /// compute mean and std deviation from triangular mode/bounds specification
+  void moments_from_triangular_params(const Real& lwr, const Real& upr,
+				      const Real& mode, Real& mean,
+				      Real& std_dev);
+  /// compute mean and std deviation from exponential beta specification
+  void moments_from_exponential_params(const Real& beta, Real& mean,
+				       Real& std_dev);
+  /// compute mean and std deviation from beta parameter specification
+  void moments_from_beta_params(const Real& lwr, const Real& upr,
+				const Real& alpha, const Real& beta,
+				Real& mean, Real& std_dev);
+  /// compute mean and std deviation from gamma parameter specification
+  void moments_from_gamma_params(const Real& alpha, const Real& beta,
+				 Real& mean, Real& std_dev);
+  /// compute mean and std deviation from gumbel parameter specification
+  void moments_from_gumbel_params(const Real& alpha, const Real& beta,
+				  Real& mean, Real& std_dev);
+  /// compute mean and std deviation from frechet parameter specification
+  void moments_from_frechet_params(const Real& alpha, const Real& beta,
+				   Real& mean, Real& std_dev);
+  /// compute mean and std deviation from weibull parameter specification
+  void moments_from_weibull_params(const Real& alpha, const Real& beta,
+				   Real& mean, Real& std_dev);
 
 protected:
 
@@ -328,6 +362,102 @@ inline Real Transformation::Phi_inverse(const Real& p)
   return gsl_cdf_ugaussian_Pinv(p);
 #else
   return sqrt(2.)*erf_inverse(2.*p - 1.);
+#endif // HAVE_GSL
+}
+
+
+inline void Transformation::
+moments_from_lognormal_params(const Real& mean, const Real& err_fact,
+			      Real& std_dev)
+{
+  Real zeta = log(err_fact)/1.645;
+  std_dev   = mean*sqrt(exp(zeta*zeta)-1.);
+}
+
+
+inline void Transformation::
+moments_from_uniform_params(const Real& lwr, const Real& upr, Real& mean,
+			    Real& std_dev)
+{ mean = (lwr + upr)/2.; std_dev = (upr - lwr)/sqrt(12.); }
+
+
+inline void Transformation::
+moments_from_loguniform_params(const Real& lwr, const Real& upr, Real& mean,
+			       Real& std_dev)
+{
+  Real range = upr - lwr, log_range = log(upr) - log(lwr);
+  mean       = range/log_range;
+  std_dev    = sqrt(range*(log_range*(upr+lwr)-2.*range)/2.)/log_range;
+}
+
+
+inline void Transformation::
+moments_from_triangular_params(const Real& lwr, const Real& upr,
+			       const Real& mode, Real& mean, Real& std_dev)
+{
+  mean    = (lwr + mode + upr)/3.;
+  std_dev = sqrt((lwr*(lwr - mode) + mode*(mode - upr) + upr*(upr - lwr))/18.);
+}
+
+
+inline void Transformation::
+moments_from_exponential_params(const Real& beta, Real& mean, Real& std_dev)
+{ mean = beta; std_dev = beta; }
+
+
+inline void Transformation::
+moments_from_beta_params(const Real& lwr, const Real& upr, const Real& alpha,
+			 const Real& beta, Real& mean, Real& std_dev)
+{
+  Real range = upr - lwr;
+  mean       = lwr + alpha/(alpha+beta)*range;
+  std_dev    = sqrt(alpha*beta/(alpha+beta+1.))/(alpha+beta)*range;
+}
+
+
+inline void Transformation::
+moments_from_gamma_params(const Real& alpha, const Real& beta, Real& mean,
+			  Real& std_dev)
+{ mean = alpha*beta; std_dev = sqrt(alpha)*beta; }
+
+
+inline void Transformation::
+moments_from_gumbel_params(const Real& alpha, const Real& beta, Real& mean,
+			   Real& std_dev)
+{ mean = beta + 0.5772/alpha; std_dev = Pi/sqrt(6.)/alpha; }
+
+
+inline void Transformation::
+moments_from_frechet_params(const Real& alpha, const Real& beta, Real& mean,
+			    Real& std_dev)
+{
+#ifdef HAVE_GSL
+  // See Haldar and Mahadevan, pp. 91-92
+  Real gam = gsl_sf_gamma(1.-1./alpha);
+  mean     = beta*gam;
+  std_dev  = beta*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
+#else
+  Cerr << "Error: frechet distributions only suported in executables "
+       << "configured with the GSL library." << endl;
+  abort_handler(-1);
+#endif // HAVE_GSL
+}
+
+
+inline void Transformation::
+moments_from_weibull_params(const Real& alpha, const Real& beta, Real& mean,
+			    Real& std_dev)
+{
+#ifdef HAVE_GSL
+  // See Haldar and Mahadevan, p. 97
+  Real gam = gsl_sf_gamma(1.+1./alpha),
+    cf_var = sqrt(gsl_sf_gamma(1.+2./alpha)/gam/gam - 1.);
+  mean     = beta*gam;
+  std_dev  = cf_var*beta*gam;
+#else
+  Cerr << "Error: weibull distributions only suported in executables "
+       << "configured with the GSL library." << endl;
+  abort_handler(-1);
 #endif // HAVE_GSL
 }
 

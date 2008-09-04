@@ -632,14 +632,14 @@ const Real& Transformation::distribution_parameter(size_t index, short target)
   case  LU_UPR_BND: case T_UPR_BND: case  B_UPR_BND: case CSV_UPR_BND:
     return ranVarUpperBndsX[index];      break;
   case N_MEAN:      case LN_MEAN:
-    return ranVarMeansX(index);          break;
+    return ranVarMeansX[index];          break;
   case N_STD_DEV:   case LN_STD_DEV:
-    return ranVarStdDevsX(index);        break;
+    return ranVarStdDevsX[index];        break;
   case LN_ERR_FACT: case T_MODE:    case E_BETA:  case B_ALPHA: case GA_ALPHA:
   case GU_ALPHA:    case F_ALPHA:   case W_ALPHA:
-    return ranVarAddtlParamsX[index](0); break;
+    return ranVarAddtlParamsX[index][0]; break;
   case B_BETA:      case GA_BETA:   case GU_BETA: case F_BETA:  case W_BETA:
-    return ranVarAddtlParamsX[index](1); break;
+    return ranVarAddtlParamsX[index][1]; break;
   }
 }
 
@@ -652,63 +652,143 @@ void Transformation::
 distribution_parameter(size_t index, short target, const Real& param)
 {
   switch (target) {
-  case CDV_LWR_BND: case   U_LWR_BND: case LU_LWR_BND: case T_LWR_BND:
-  case   B_LWR_BND: case CSV_LWR_BND:
-    // TO DO: update mu/sigma
-    ranVarLowerBndsX[index] = param;      break;
-  case CDV_UPR_BND: case   U_UPR_BND: case LU_UPR_BND: case T_UPR_BND:
-  case   B_UPR_BND: case CSV_UPR_BND:
-    // TO DO: update mu/sigma
-    ranVarUpperBndsX[index] = param;      break;
-  case N_MEAN:    case LN_MEAN:
-    ranVarMeansX(index) = param;          break;
-  case N_STD_DEV: case LN_STD_DEV:
-    ranVarStdDevsX(index) = param;        break;
+  // -------------------------
+  // Distribution lower bounds
+  // -------------------------
+  case CDV_LWR_BND: case U_LWR_BND: case CSV_LWR_BND:
+    ranVarLowerBndsX[index] = param;
+    moments_from_uniform_params(param, ranVarUpperBndsX[index],
+				ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
   case N_LWR_BND: case LN_LWR_BND:
-    ranVarLowerBndsX[index] = param;      break;
+    ranVarLowerBndsX[index] = param; break;
+  case LU_LWR_BND:
+    ranVarLowerBndsX[index] = param;
+    moments_from_loguniform_params(param, ranVarUpperBndsX[index],
+				   ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case T_LWR_BND:
+    ranVarLowerBndsX[index] = param;
+    moments_from_triangular_params(param, ranVarUpperBndsX[index],
+				   ranVarAddtlParamsX[index][0],
+				   ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case B_LWR_BND:
+    ranVarLowerBndsX[index] = param;
+    moments_from_beta_params(param, ranVarUpperBndsX[index],
+			     ranVarAddtlParamsX[index][0],
+			     ranVarAddtlParamsX[index][1],
+			     ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  // -------------------------
+  // Distribution upper bounds
+  // -------------------------
+  case CDV_UPR_BND: case U_UPR_BND: case CSV_UPR_BND:
+    ranVarUpperBndsX[index] = param;
+    moments_from_uniform_params(ranVarLowerBndsX[index], param,
+				ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
   case N_UPR_BND: case LN_UPR_BND:
-    ranVarUpperBndsX[index] = param;      break;
-  case LN_ERR_FACT: case T_MODE:    case E_BETA:  case B_ALPHA: case GA_ALPHA:
-  case GU_ALPHA:    case F_ALPHA:   case W_ALPHA:
-    // TO DO: update mu/sigma
-    ranVarAddtlParamsX[index](0) = param; break;
-  case B_BETA:      case GA_BETA:   case GU_BETA: case F_BETA: case W_BETA:
-    // TO DO: update mu/sigma
-    ranVarAddtlParamsX[index](1) = param; break;
+    ranVarUpperBndsX[index] = param; break;
+  case LU_UPR_BND:
+    ranVarUpperBndsX[index] = param;
+    moments_from_loguniform_params(ranVarLowerBndsX[index], param,
+				   ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case T_UPR_BND:
+    ranVarUpperBndsX[index] = param;
+    moments_from_triangular_params(ranVarLowerBndsX[index], param,
+				   ranVarAddtlParamsX[index][0],
+				   ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case B_UPR_BND:
+    ranVarUpperBndsX[index] = param;
+    moments_from_beta_params(ranVarLowerBndsX[index], param,
+			     ranVarAddtlParamsX[index][0],
+			     ranVarAddtlParamsX[index][1],
+			     ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  // -------------------------
+  // Distribution shape params
+  // -------------------------
+  case N_MEAN:    case LN_MEAN:
+    ranVarMeansX[index] = param;   break;
+  case N_STD_DEV: case LN_STD_DEV:
+    ranVarStdDevsX[index] = param; break;
+  case LN_ERR_FACT:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_lognormal_params(ranVarMeansX[index], param,
+				  ranVarStdDevsX[index]);
+    break;
+  case T_MODE:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_triangular_params(ranVarLowerBndsX[index],
+				   ranVarUpperBndsX[index], param,
+				   ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case E_BETA:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_exponential_params(param, ranVarMeansX[index],
+				    ranVarStdDevsX[index]);
+    break;
+  case B_ALPHA:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_beta_params(ranVarLowerBndsX[index], ranVarUpperBndsX[index],
+			     param, ranVarAddtlParamsX[index][1],
+			     ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case GA_ALPHA:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_gamma_params(param, ranVarAddtlParamsX[index][1],
+			      ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case GU_ALPHA:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_gumbel_params(param, ranVarAddtlParamsX[index][1],
+			       ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case F_ALPHA:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_frechet_params(param, ranVarAddtlParamsX[index][1],
+				ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case W_ALPHA:
+    ranVarAddtlParamsX[index][0] = param;
+    moments_from_weibull_params(param, ranVarAddtlParamsX[index][1],
+				ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case B_BETA:
+    ranVarAddtlParamsX[index][1] = param;
+    moments_from_beta_params(ranVarLowerBndsX[index], ranVarUpperBndsX[index],
+			     ranVarAddtlParamsX[index][0], param,
+			     ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case GA_BETA:
+    ranVarAddtlParamsX[index][1] = param;
+    moments_from_gamma_params(ranVarAddtlParamsX[index][0], param,
+			      ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case GU_BETA:
+    ranVarAddtlParamsX[index][1] = param;
+    moments_from_gumbel_params(ranVarAddtlParamsX[index][0], param,
+			       ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case F_BETA:
+    ranVarAddtlParamsX[index][1] = param;
+    moments_from_frechet_params(ranVarAddtlParamsX[index][0], param,
+				ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
+  case W_BETA:
+    ranVarAddtlParamsX[index][1] = param;
+    moments_from_weibull_params(ranVarAddtlParamsX[index][0], param,
+				ranVarMeansX[index], ranVarStdDevsX[index]);
+    break;
   }
 
   /* TO DO
-  const StringArray& acv_types = iteratedModel.all_continuous_variable_types();
-  size_t num_dv_in_acv = acv_types.count("continuous_design") +
-    acv_types.count("discrete_design"); // can happen with MERGED views
-  size_t dist_index = acv_map1_index - num_dv_in_acv,
-    rvtx_index = (numDesignVars < num_dv_in_acv) ? dist_index : acv_map1_index;
   const Pecos::ShortArray& x_types = nondInstance->natafTransform.x_types();
   switch (acv_map2_target) {
-  case CDV_LWR_BND: case CSV_LWR_BND: {
-    RealVector a_c_l_bnds = iteratedModel.all_continuous_lower_bounds();
-    a_c_l_bnds[acv_map1_index] = param;
-    iteratedModel.all_continuous_lower_bounds(a_c_l_bnds);
-    break;
-  }
-  case CDV_UPR_BND: case CSV_UPR_BND: {
-    RealVector a_c_u_bnds = iteratedModel.all_continuous_upper_bounds();
-    a_c_u_bnds[acv_map1_index] = param;
-    iteratedModel.all_continuous_upper_bounds(a_c_u_bnds);
-    break;
-  }
-  case N_MEAN: {
-    RealVector n_means = iteratedModel.normal_means();
-    n_means[dist_index] = param;
-    iteratedModel.normal_means(n_means);   
-    break;
-  }
-  case N_STD_DEV: {
-    RealVector n_std_devs = iteratedModel.normal_std_deviations();
-    n_std_devs[dist_index] = param;
-    iteratedModel.normal_std_deviations(n_std_devs);
-    break;
-  }
+
   case N_LWR_BND: {
     if (x_types[rvtx_index] != BOUNDED_NORMAL) { // protect this for now
       Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
@@ -741,27 +821,6 @@ distribution_parameter(size_t index, short target, const Real& param)
     //else
       n_upper_bnds[dist_index] = param;
     iteratedModel.normal_upper_bounds(n_upper_bnds);
-    break;
-  }
-  case LN_MEAN: {
-    dist_index -= numNormalVars;
-    RealVector ln_means = iteratedModel.lognormal_means();
-    ln_means[dist_index] = param;
-    iteratedModel.lognormal_means(ln_means);
-    break;
-  }
-  case LN_STD_DEV: {
-    dist_index -= numNormalVars;
-    RealVector ln_std_devs = iteratedModel.lognormal_std_deviations();
-    ln_std_devs[dist_index] = param;
-    iteratedModel.lognormal_std_deviations(ln_std_devs);
-    break;
-  }
-  case LN_ERR_FACT: {
-    dist_index -= numNormalVars;
-    RealVector ln_err_facts = iteratedModel.lognormal_error_factors();
-    ln_err_facts[dist_index] = param;
-    iteratedModel.lognormal_error_factors(ln_err_facts);
     break;
   }
   case LN_LWR_BND: {
@@ -800,173 +859,7 @@ distribution_parameter(size_t index, short target, const Real& param)
     iteratedModel.lognormal_upper_bounds(ln_upper_bnds);
     break;
   }
-  case U_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars;
-    RealVector u_lower_bnds = iteratedModel.uniform_lower_bounds();
-    u_lower_bnds[dist_index] = param;
-    iteratedModel.uniform_lower_bounds(u_lower_bnds);
-    break;
   }
-  case U_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars;
-    RealVector u_upper_bnds = iteratedModel.uniform_upper_bounds();
-    u_upper_bnds[dist_index] = param;
-    iteratedModel.uniform_upper_bounds(u_upper_bnds);
-    break;
-  }
-  case LU_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
-    RealVector lu_lower_bnds = iteratedModel.loguniform_lower_bounds();
-    lu_lower_bnds[dist_index] = param;
-    iteratedModel.loguniform_lower_bounds(lu_lower_bnds);
-    break;
-  }
-  case LU_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars;
-    RealVector lu_upper_bnds = iteratedModel.loguniform_upper_bounds();
-    lu_upper_bnds[dist_index] = param;
-    iteratedModel.loguniform_upper_bounds(lu_upper_bnds);
-    break;
-  }
-  case T_MODE: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    RealVector t_modes = iteratedModel.triangular_modes();
-    t_modes[dist_index] = param;
-    iteratedModel.triangular_modes(t_modes);
-    break;
-  }
-  case T_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    RealVector t_lower_bnds = iteratedModel.triangular_lower_bounds();
-    t_lower_bnds[dist_index] = param;
-    iteratedModel.triangular_lower_bounds(t_lower_bnds);
-    break;
-  }
-  case T_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars;
-    RealVector t_upper_bnds = iteratedModel.triangular_upper_bounds();
-    t_upper_bnds[dist_index] = param;
-    iteratedModel.triangular_upper_bounds(t_upper_bnds);
-    break;
-  }
-  case E_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars;
-    RealVector e_betas = iteratedModel.exponential_betas();
-    e_betas[dist_index] = param;
-    iteratedModel.exponential_betas(e_betas);
-    break;
-  }
-  case B_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_alphas = iteratedModel.beta_alphas();
-    b_alphas[dist_index] = param;
-    iteratedModel.beta_alphas(b_alphas);
-    break;
-  }
-  case B_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_betas = iteratedModel.beta_betas();
-    b_betas[dist_index] = param;
-    iteratedModel.beta_betas(b_betas);
-    break;
-  }
-  case B_LWR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_lower_bnds = iteratedModel.beta_lower_bounds();
-    b_lower_bnds[dist_index] = param;
-    iteratedModel.beta_lower_bounds(b_lower_bnds);
-    break;
-  }
-  case B_UPR_BND: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars;
-    RealVector b_upper_bnds = iteratedModel.beta_upper_bounds();
-    b_upper_bnds[dist_index] = param;
-    iteratedModel.beta_upper_bounds(b_upper_bnds);
-    break;
-  }
-  case GA_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
-    RealVector ga_alphas = iteratedModel.gamma_alphas();
-    ga_alphas[dist_index] = param;
-    iteratedModel.gamma_alphas(ga_alphas);
-    break;
-  }
-  case GA_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars;
-    RealVector ga_betas = iteratedModel.gamma_betas();
-    ga_betas[dist_index] = param;
-    iteratedModel.gamma_betas(ga_betas);
-    break;
-  }
-  case GU_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars;
-    RealVector gu_alphas = iteratedModel.gumbel_alphas();
-    gu_alphas[dist_index] = param;
-    iteratedModel.gumbel_alphas(gu_alphas);
-    break;
-  }
-  case GU_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars;
-    RealVector gu_betas = iteratedModel.gumbel_betas();
-    gu_betas[dist_index] = param;
-    iteratedModel.gumbel_betas(gu_betas);
-    break;
-  }
-  case F_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars;
-    RealVector f_alphas = iteratedModel.frechet_alphas();
-    f_alphas[dist_index] = param;
-    iteratedModel.frechet_alphas(f_alphas);
-    break;
-  }
-  case F_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars;
-    RealVector f_betas = iteratedModel.frechet_betas();
-    f_betas[dist_index] = param;
-    iteratedModel.frechet_betas(f_betas);
-    break;
-  }
-  case W_ALPHA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars + numFrechetVars;
-    RealVector w_alphas = iteratedModel.weibull_alphas();
-    w_alphas[dist_index] = param;
-    iteratedModel.weibull_alphas(w_alphas);
-    break;
-  }
-  case W_BETA: {
-    dist_index -= numNormalVars + numLognormalVars + numUniformVars +
-      numLoguniformVars + numTriangularVars + numExponentialVars + numBetaVars +
-      numGammaVars + numGumbelVars + numFrechetVars;
-    RealVector w_betas = iteratedModel.weibull_betas();
-    w_betas[dist_index] = param;
-    iteratedModel.weibull_betas(w_betas);
-    break;
-  }
-  }
-
-  // update Transformation::ranVarMeans/ranVarStdDevs/ranVarLowerBndsX/
-  // ranVarUpperBndsX/ranVarAddtlParamsX for newly inserted distrib parameter
-  initialize_random_variable_parameters();
   */
 
   // update corrCholeskyFactorZ for new ranVarMeans/ranVarStdDevs
@@ -1068,6 +961,7 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
 
   size_t newton_iters = 0, max_iters = 20;
   bool converged = false, terminate = false;
+  Real convergence_tol = 1.e-4; // hardwired for now
   while (!terminate && !converged) {
 
     // evaluate residual derivative f(x)
@@ -1077,8 +971,7 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
     Real delta_scaled_x;
     if (fabs(dres_dx) > DBL_MIN) {
       delta_scaled_x = -res/dres_dx; // full Newton step
-      // WJB: undo hardwiring of tol ASAP -- if (fabs(delta_scaled_x) < convergenceTol)
-      if (fabs(delta_scaled_x) < 1.e15*DBL_EPSILON)
+      if (fabs(delta_scaled_x) < convergence_tol)
 	converged = true; // but go ahead and take the step, if beneficial
     }
     else
