@@ -12,6 +12,7 @@
 #include "pecos_data_types.h"
 #include <algorithm>
 #include <iostream>
+#include <cfloat>  // for DBL_MIN, DBL_MAX
 #include <cstdlib>
 
 
