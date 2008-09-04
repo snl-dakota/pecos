@@ -9,16 +9,15 @@ ACLOCAL_AMFLAGS = -I ./m4
 ## Source subdirectories to be recursed into during the build.
 ## Convenience libraries to be built in each of the SUBDIRS.
 SUBDIRS = packages src
-#### WJB: unsure so hack something for now -- SUBLIBS = src/libpecos.la
-SUBLIBS = src/libpecos_sub.la
+SUBLIBS = src/libpecos_src.la
 
 ## Set the Pecos library name.
 lib_LTLIBRARIES = libpecos.la
 
 ## Pecos headers that need to be distributed
-pkginclude_HEADERS = src/pecos_data_types.h	\
-		     src/pecos_global_defs.hpp	\
-		     src/NatafTransformation.hpp	\
+pkginclude_HEADERS = src/pecos_data_types.hpp	 \
+		     src/pecos_global_defs.hpp	 \
+		     src/NatafTransformation.hpp \
 		     src/Transformation.hpp
 
 ## No sources in this directory!

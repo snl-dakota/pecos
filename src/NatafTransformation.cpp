@@ -12,7 +12,6 @@
 //- Checked by:
 //- Version:
 
-#include "pecos_global_defs.h"
 #include "NatafTransformation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #ifdef HAVE_GSL

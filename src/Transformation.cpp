@@ -12,7 +12,6 @@
 //- Checked by:
 //- Version:
 
-#include "pecos_global_defs.h"
 #include "NatafTransformation.hpp"
 #ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"

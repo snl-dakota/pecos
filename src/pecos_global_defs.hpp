@@ -9,7 +9,7 @@
 #ifndef PECOS_GLOBAL_DEFS_H
 #define PECOS_GLOBAL_DEFS_H
 
-#include "pecos_data_types.h"
+#include "pecos_data_types.hpp"
 #include <algorithm>
 #include <iostream>
 #include <cfloat>  // for DBL_MIN, DBL_MAX
