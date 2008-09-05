@@ -20,6 +20,8 @@
 
 static const char rcsId[]="@(#) $Id: Transformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
+const Pecos::Real Pecos::Transformation::Pi = 3.1415926535897932385;
+
 namespace Pecos {
 
 

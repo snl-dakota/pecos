@@ -16,7 +16,7 @@ AC_LANG([C++])
 #AC_CONFIG_MACRO_DIR([../../m4])
 
 # Since we're using libtool, don't build shared libraries!
-dnl WJB: ASAP -- need to do some more build testing -- AC_DISABLE_SHARED
+AC_DISABLE_SHARED
 
 # Checks for programs.
 AC_PROG_AWK
