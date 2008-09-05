@@ -71,6 +71,11 @@ public:
   /// initializes corrMatrixX and correlationFlagX
   void initialize_random_variable_correlations(const RealSymMatrix& x_corr);
 
+  /// reshape corrMatrixX for an all_variables specification
+  void reshape_correlation_matrix(size_t num_design_vars,
+				  size_t num_uncertain_vars,
+				  size_t num_state_vars);
+
   /// Transformation routine from u-space of uncorrelated standard normal
   /// variables to x-space of correlated random variables
   void trans_U_to_X(const RealVector& u_vars, RealVector& x_vars);
@@ -168,6 +173,13 @@ public:
   /// return corrCholeskyFactorZ
   const RealMatrix& z_correlation_factor() const;
 
+  /// Standard normal density function
+  Real phi(const Real& beta);
+  /// Standard normal cumulative distribution function
+  Real Phi(const Real& beta);
+  /// Inverse of standard normal cumulative distribution function
+  Real Phi_inverse(const Real& p);
+
   /// compute std deviation from lognormal error factor specification
   void moments_from_lognormal_params(const Real& mean, const Real& err_fact,
 				     Real& std_dev);
@@ -215,20 +227,6 @@ protected:
   //
   //- Heading: Member functions
   //
-
-  /// reshape corrMatrixX for an all_variables specification
-  void reshape_correlation_matrix(size_t num_design_vars,
-				  size_t num_uncertain_vars,
-				  size_t num_state_vars);
-
-  /// Standard normal density function
-  Real phi(const Real& beta);
-
-  /// Standard normal cumulative distribution function
-  Real Phi(const Real& beta);
-
-  /// Inverse of standard normal cumulative distribution function
-  Real Phi_inverse(const Real& p);
 
   /// Computes numerical dx/ds and dz/ds Jacobians as requested by xs
   /// and zs booleans

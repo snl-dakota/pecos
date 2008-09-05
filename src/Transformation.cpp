@@ -226,6 +226,42 @@ initialize_random_variable_correlations(const RealSymMatrix& x_corr)
 }
 
 
+void Transformation::
+reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
+			   size_t num_state_vars)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->reshape_correlation_matrix(num_design_vars, num_uncertain_vars,
+					 num_state_vars);
+  else {
+    if (!correlationFlagX)
+      return;
+
+    size_t i, j, offset, num_corr_vars = corrMatrixX.numRows(),
+      num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
+    if (num_corr_vars != num_active_vars) {
+      if (num_corr_vars != num_uncertain_vars) {
+	Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
+	     << ") in Transformation::reshape_correlation_matrix()."
+	     << std::endl;
+	abort_handler(-1);
+      }
+      RealSymMatrix old_corr_matrix(corrMatrixX);
+      corrMatrixX.shape(num_active_vars); // initializes to zero
+      for (i=0; i<num_design_vars; i++)
+	corrMatrixX(i,i) = 1.;
+      offset = num_design_vars;
+      for (i=0; i<num_uncertain_vars; i++)
+	for (j=0; j<num_uncertain_vars; j++)
+	  corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
+      offset += num_uncertain_vars;
+      for (i=0; i<num_state_vars; i++)
+	corrMatrixX(i+offset,i+offset) = 1.;
+    }
+  }
+}
+
+
 void Transformation::trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
 {
   if (transRep) // envelope fwd to letter
@@ -460,42 +496,6 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
          << "fn.\nNo default defined at Transformation base class.\n"
 	 << std::endl;
     abort_handler(-1);
-  }
-}
-
-
-void Transformation::
-reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
-			   size_t num_state_vars)
-{
-  if (transRep) // envelope fwd to letter
-    transRep->reshape_correlation_matrix(num_design_vars, num_uncertain_vars,
-					 num_state_vars);
-  else {
-    if (!correlationFlagX)
-      return;
-
-    size_t i, j, offset, num_corr_vars = corrMatrixX.numRows(),
-      num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
-    if (num_corr_vars != num_active_vars) {
-      if (num_corr_vars != num_uncertain_vars) {
-	Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
-	     << ") in Transformation::reshape_correlation_matrix()."
-	     << std::endl;
-	abort_handler(-1);
-      }
-      RealSymMatrix old_corr_matrix(corrMatrixX);
-      corrMatrixX.shape(num_active_vars); // initializes to zero
-      for (i=0; i<num_design_vars; i++)
-	corrMatrixX(i,i) = 1.;
-      offset = num_design_vars;
-      for (i=0; i<num_uncertain_vars; i++)
-	for (j=0; j<num_uncertain_vars; j++)
-	  corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
-      offset += num_uncertain_vars;
-      for (i=0; i<num_state_vars; i++)
-	corrMatrixX(i+offset,i+offset) = 1.;
-    }
   }
 }
 
