@@ -151,14 +151,22 @@ public:
   const ShortArray& x_types() const;
   /// return ranVarTypesU
   const ShortArray& u_types() const;
-
   /// return ranVarMeansX
   const RealVector& x_means() const;
   /// return ranVarStdDevsX
   const RealVector& x_std_deviations() const;
-
+  /// return ranVarLowerBndsX
+  const RealVector& x_lower_bounds() const;
+  /// return ranVarUpperBndsX
+  const RealVector& x_upper_bounds() const;
+  /// return ranVarAddtlParamsX
+  const RealVectorArray& x_additional_parameters() const;
   /// return correlationFlagX
   bool x_correlation() const;
+  /// return corrMatrixX
+  const RealSymMatrix& x_correlation_matrix() const;
+  /// return corrCholeskyFactorZ
+  const RealMatrix& z_correlation_factor() const;
 
   /// compute std deviation from lognormal error factor specification
   void moments_from_lognormal_params(const Real& mean, const Real& err_fact,
@@ -328,8 +336,28 @@ inline const RealVector& Transformation::x_std_deviations() const
 { return (transRep) ? transRep->ranVarStdDevsX : ranVarStdDevsX; }
 
 
+inline const RealVector& Transformation::x_lower_bounds() const
+{ return (transRep) ? transRep->ranVarLowerBndsX : ranVarLowerBndsX; }
+
+
+inline const RealVector& Transformation::x_upper_bounds() const
+{ return (transRep) ? transRep->ranVarUpperBndsX : ranVarUpperBndsX; }
+
+
+inline const RealVectorArray& Transformation::x_additional_parameters() const
+{ return (transRep) ? transRep->ranVarAddtlParamsX : ranVarAddtlParamsX; }
+
+
 inline bool Transformation::x_correlation() const
 { return (transRep) ? transRep->correlationFlagX : correlationFlagX; }
+
+
+inline const RealSymMatrix& Transformation::x_correlation_matrix() const
+{ return (transRep) ? transRep->corrMatrixX : corrMatrixX; }
+
+
+inline const RealMatrix& Transformation::z_correlation_factor() const
+{ return (transRep) ? transRep->corrCholeskyFactorZ : corrCholeskyFactorZ; }
 
 
 inline Real Transformation::phi(const Real& beta)
