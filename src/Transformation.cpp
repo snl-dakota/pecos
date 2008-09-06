@@ -158,19 +158,33 @@ Transformation::~Transformation()
     variables to their original states. */
 void Transformation::initialize_random_variables(const Transformation& trans)
 {
-  if (transRep) // envelope fwd to letter
+  if (transRep) // target is envelope
     transRep->initialize_random_variables(trans);
   else {
-    ranVarTypesX        = trans.ranVarTypesX;
-    ranVarTypesU        = trans.ranVarTypesU;
-    ranVarMeansX        = trans.ranVarMeansX;
-    ranVarStdDevsX      = trans.ranVarStdDevsX;
-    ranVarLowerBndsX    = trans.ranVarLowerBndsX;
-    ranVarUpperBndsX    = trans.ranVarUpperBndsX;
-    ranVarAddtlParamsX  = trans.ranVarAddtlParamsX;
-    correlationFlagX    = trans.correlationFlagX;
-    corrMatrixX         = trans.corrMatrixX;
-    corrCholeskyFactorZ = trans.corrCholeskyFactorZ;
+    if (trans.transRep) { // source is envelope
+      ranVarTypesX        = trans.transRep->ranVarTypesX;
+      ranVarTypesU        = trans.transRep->ranVarTypesU;
+      ranVarMeansX        = trans.transRep->ranVarMeansX;
+      ranVarStdDevsX      = trans.transRep->ranVarStdDevsX;
+      ranVarLowerBndsX    = trans.transRep->ranVarLowerBndsX;
+      ranVarUpperBndsX    = trans.transRep->ranVarUpperBndsX;
+      ranVarAddtlParamsX  = trans.transRep->ranVarAddtlParamsX;
+      correlationFlagX    = trans.transRep->correlationFlagX;
+      corrMatrixX         = trans.transRep->corrMatrixX;
+      corrCholeskyFactorZ = trans.transRep->corrCholeskyFactorZ;
+    }
+    else { // source is letter
+      ranVarTypesX        = trans.ranVarTypesX;
+      ranVarTypesU        = trans.ranVarTypesU;
+      ranVarMeansX        = trans.ranVarMeansX;
+      ranVarStdDevsX      = trans.ranVarStdDevsX;
+      ranVarLowerBndsX    = trans.ranVarLowerBndsX;
+      ranVarUpperBndsX    = trans.ranVarUpperBndsX;
+      ranVarAddtlParamsX  = trans.ranVarAddtlParamsX;
+      correlationFlagX    = trans.correlationFlagX;
+      corrMatrixX         = trans.corrMatrixX;
+      corrCholeskyFactorZ = trans.corrCholeskyFactorZ;
+    }
   }
 }
 
