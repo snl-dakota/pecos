@@ -43,7 +43,7 @@ public:
 protected:
 
   //
-  //- Heading: Virtual member function redefinitions
+  //- Heading: Virtual function redefinitions
   //
 
   /// Transformation routine from u-space of uncorrelated standard normal
