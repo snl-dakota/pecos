@@ -22,7 +22,7 @@
 #include "gsl/gsl_sf_gamma.h"
 #endif
 
-#include <cmath>
+#include <math.h>
 
 
 namespace Pecos {
