@@ -4,14 +4,18 @@ namespace Pecos { // for some reason, this doesn't work with mainpage
 
 <!-- \image html logo_3d_halfsize.jpg -->
 
-\author Michael S. Eldred, Richard V. Field, Jr., Eric T. Phipps,
-Clayton G. Webster
+\author Michael S. Eldred, William J. Bohnhoff, Richard V. Field, Jr.
 
 \htmlonly
 <b>Main Page Table of Contents</b>
 <ul>
 <li> <a href="index.html#DevIntro">Introduction</a> 
 <li> <a href="index.html#DevOverview">Overview of PECOS</a> 
+  <ul>
+  <li> <a href="index.html#DevProbTrans">Probability Transformations</a>
+  <li> <a href="index.html#DevDataTrans">Data Transformations</a>
+  <li> <a href="index.html#DevBasisFns">Basis Functions</a>
+  </ul>
 <li> <a href="index.html#DevServices">Services</a>
 <li> <a href="index.html#DevAddtnl">Additional Resources</a>
 </ul>
@@ -35,7 +39,9 @@ library.  It derives directly from annotation of the source code.
 \section DevOverview Overview of PECOS
 
 
-In the PECOS system, the ...
+The PECOS library collects a variety of utilities for transformation
+of probability distributions, transformations between frequency and
+time domain data, and modeling using basis functions.
 
 The use of class hierarchies provides a mechanism for extensibility in
 PECOS components.  In each of the various class hierarchies, adding a
@@ -48,6 +54,83 @@ and leveraged for new purposes.
 
 The software components are presented in the following sections using
 a top-down order.
+
+\subsection DevDataTrans Data Transformations
+
+Class hierarchy: \ref Pecos::DataTransformation "DataTransformation".
+
+Data transformations provide a mechanism for moving data sets between
+the frequency domain and the time domain.  These transformations
+typically involve modeling through the use of scalar random variables
+(transformed to standardized probability distributions) and a set of
+spatial and/or temporal basis functions.  Thus the BasisFunction and
+ProbabilityTransformation capabilities are components of the
+DataTransformation capability.  Specific data transformations include:
+
+<ul> 
+<li> \ref Pecos::ForwardTransformation "ForwardTransformation": from
+time domain to frequency domain based on FFT.  A placeholder for now.
+
+<li> \ref Pecos::InverseTransformation "InverseTransformation":
+from frequency domain (PSD) to time domain.
+     <ul> 
+     <li> \ref Pecos::ForwardTransformation "iFFTInverseTransformation": from
+     frequency domain to time domain based on inverse fast Fourier transform.
+     This approach generates a complete time series all at once.
+     <li> \ref Pecos::InverseTransformation "KLInverseTransformation":
+     from frequency domain (PSD) to time domain based on Karhunen-Loeve.
+     This approach generates a complete time series all at once.
+     <li> \ref Pecos::InverseTransformation "SamplingInverseTransformation":
+     from frequency domain (PSD) to time domain based on random sampling.
+     This approach supports incremental generation of time series.
+     </ul>
+</ul>
+
+\subsection DevProbTrans Probability Transformations
+
+Class hierarchy: \ref Pecos::ProbabilityTransformation "ProbabilityTransformation".
+
+Probability transformations provide a mechanism for modifying an input
+probability space to have desired modeling characteristics.  In
+particular, by transforming from a given type of probability
+distribution to a standardized probability distribution, algorithms
+designed for these standard probability distributions can be applied.
+Specific transformations include:
+
+<ul> 
+<li> \ref Pecos::NatafTransformation "NatafTransformation": a
+nonlinear variable transformation from original, correlated
+probability distributions to uncorrelated standardized probability
+distributions.  The transformation is based on CDF equivalence and
+application of the Cholesky factor of a modified correlation matrix.
+Nataf is currently operational and in use by DAKOTA.
+
+<li> \ref Pecos::RosenblattTransformation "RosenblattTransformation":
+another nonlinear variable transformation from original, correlated
+probability distributions to uncorrelated standardized probability
+distributions.  Whereas Nataf operates on CDF marginal distributions,
+Rosenblatt operates on joint distributions and is the preferred
+approach when this level of data is known.  Rosenblatt is not yet
+supported but may be added in time.
+</ul>
+
+\subsection DevBasisFns Basis Functions
+
+Class hierarchy: \ref Pecos::BasisFunction "BasisFunction".
+
+This hierarchy provides sets of basis functions for spatial and/or
+time domains in support of DataTransformation capabilities.  Specific
+basis function sets include:
+
+<ul> 
+<li> \ref Pecos::FourierBasis "FourierBasis": Fourier basis functions
+which map frequencies to the time domain.
+<li> \ref Pecos::KLBasis "KLBasis": discrete Karhunen-Loeve
+eigenfunctions from SVD of covariance matrices.  
+<li> \ref Pecos::OrthogonalBasis "OrthogonalBasis": orthogonal polynomial
+basis functions corresponding to continuous probability distributions 
+(Hermite, Legendre, Laguerre, Jacobi, and generalized Laguerre).  
+</ul>
 
 
 \section DevServices Services
@@ -71,7 +154,8 @@ and handle-body idioms (Coplien, "Advanced C++").
 
 Additional development resources include:
 
-\li Project web pages are maintained at http://www.cs.sandia.gov/PECOS
+\li Project web pages will be maintained in the future at 
+http://www.cs.sandia.gov/PECOS.
 
 */
 
