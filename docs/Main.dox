@@ -1,6 +1,6 @@
 namespace Pecos { // for some reason, this doesn't work with mainpage
 
-/** \mainpage PECOS Users Manual
+/** \mainpage PECOS Developers Manual
 
 <!-- \image html logo_3d_halfsize.jpg -->
 
@@ -12,8 +12,8 @@ namespace Pecos { // for some reason, this doesn't work with mainpage
 <li> <a href="index.html#DevIntro">Introduction</a> 
 <li> <a href="index.html#DevOverview">Overview of PECOS</a> 
   <ul>
-  <li> <a href="index.html#DevProbTrans">Probability Transformations</a>
   <li> <a href="index.html#DevDataTrans">Data Transformations</a>
+  <li> <a href="index.html#DevProbTrans">Probability Transformations</a>
   <li> <a href="index.html#DevBasisFns">Basis Functions</a>
   </ul>
 <li> <a href="index.html#DevServices">Services</a>
@@ -32,7 +32,7 @@ RF/SP may be either Gaussian or non-Gaussian and either stationary or
 nonstationary, and the resulting sample is intended for run-time query
 by parallel finite element simulation codes.
 
-The Users Manual documents the class structures used by the PECOS
+The Developers Manual documents the class structures used by the PECOS
 library.  It derives directly from annotation of the source code.
 
 
@@ -82,13 +82,16 @@ from frequency domain (PSD) to time domain.
      This approach generates a complete time series all at once.
      <li> \ref Pecos::InverseTransformation "SamplingInverseTransformation":
      from frequency domain (PSD) to time domain based on random sampling.
-     This approach supports incremental generation of time series.
+     This approach supports incremental generation of time series.  This
+     approach will be adapted from the Salinas implementation by
+     Richard Koteras.
      </ul>
 </ul>
 
 \subsection DevProbTrans Probability Transformations
 
-Class hierarchy: \ref Pecos::ProbabilityTransformation "ProbabilityTransformation".
+<!-- Class hierarchy: \ref Pecos::ProbabilityTransformation "ProbabilityTransformation". -->
+Class hierarchy: \ref Pecos::Transformation "Transformation".
 
 Probability transformations provide a mechanism for modifying an input
 probability space to have desired modeling characteristics.  In
@@ -120,16 +123,19 @@ Class hierarchy: \ref Pecos::BasisFunction "BasisFunction".
 
 This hierarchy provides sets of basis functions for spatial and/or
 time domains in support of DataTransformation capabilities.  Specific
-basis function sets include:
+basis function sets may include:
 
 <ul> 
 <li> \ref Pecos::FourierBasis "FourierBasis": Fourier basis functions
 which map frequencies to the time domain.
 <li> \ref Pecos::KLBasis "KLBasis": discrete Karhunen-Loeve
-eigenfunctions from SVD of covariance matrices.  
-<li> \ref Pecos::OrthogonalBasis "OrthogonalBasis": orthogonal polynomial
-basis functions corresponding to continuous probability distributions 
-(Hermite, Legendre, Laguerre, Jacobi, and generalized Laguerre).  
+eigenfunctions from singular value decomposition of covariance matrices.  
+<li> \ref Pecos::OrthogonalBasis "OrthogonalBasis": polynomial basis
+functions which are orthogonal with respect to continuous probability
+distribution fuction weightings (Hermite, Legendre, Laguerre, Jacobi,
+and generalized Laguerre).
+<li> \ref Pecos::InterpolationBasis "InterpolationBasis": Lagrange 
+interpolation polynomial basis functions.
 </ul>
 
 
@@ -145,6 +151,11 @@ functions involved in performing these services is included below.
 <li> Memory management: PECOS employs the techniques of reference
 counting and representation sharing through the use of letter-envelope
 and handle-body idioms (Coplien, "Advanced C++").
+
+<li> Fast Fourier transform (FFT): Two FFT libraries will be supported.
+First, FFTW provides platform tuned and parallel FFT operations in C
+under a GNU GPL license.  Second, DFFTPACK provides a reference FFT
+implementation in F77 in the public domain.
 
 </ul>
 
