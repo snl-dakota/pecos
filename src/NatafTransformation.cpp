@@ -25,6 +25,9 @@
 
 static const char rcsId[]="@(#) $Id: NatafTransformation.C 4768 2007-12-17 17:49:32Z mseldre $";
 
+//#define DEBUG
+
+
 namespace Pecos {
 
 
@@ -42,6 +45,10 @@ trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
   }
   else // z_vars = u_vars
     trans_Z_to_X(u_vars, x_vars);
+
+#ifdef DEBUG
+  Cout << "Transforming u_vars:\n" << u_vars << "to x_vars:\n" << x_vars;
+#endif
 }
 
 
@@ -332,6 +339,10 @@ trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
   }
   else // z_vars = u_vars
     trans_X_to_Z(x_vars, u_vars);
+
+#ifdef DEBUG
+  Cout << "Transforming x_vars:\n" << x_vars << "to u_vars:\n" << u_vars;
+#endif
 }
 
 
@@ -1071,7 +1082,9 @@ void NatafTransformation::trans_correlations()
   for (i=0; i<num_active_vars; i++)
     for (j=0; j<=i; j++)
       corrCholeskyFactorZ(i, j) = mod_corr_matrix(i, j);
-  //Cout << "\ncorrCholeskyFactorZ:" << corrCholeskyFactorZ;
+#ifdef DEBUG
+  Cout << "corrCholeskyFactorZ:\n" << corrCholeskyFactorZ;
+#endif
 
   // could pre-compute L^-1 to avoid solving L u = z repeatedly for u
   //corrCholeskyFactorZInv.shape(num_active_vars, num_active_vars);
@@ -1144,6 +1157,11 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
 	fn_grad_u(dvv_index) = fn_grad_u_trans(i);
     }
   }
+
+#ifdef DEBUG
+  Cout << "Transformed fn_grad_x:\n" << fn_grad_x
+       << "to fn_grad_u:\n" << fn_grad_u;
+#endif
 }
 
 
@@ -1206,6 +1224,11 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
 	fn_grad_x(dvv_index) = fn_grad_x_trans(i);
     }
   }
+
+#ifdef DEBUG
+  Cout << "Transformed fn_grad_u:\n" << fn_grad_u
+       << "to fn_grad_x:\n" << fn_grad_x;
+#endif
 }
 
 
@@ -1426,19 +1449,23 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   // Note: G(u) may have curvature even if g(x) is linear due to first term.
   Teuchos::symMatTripleProduct(Teuchos::TRANS, 1., fn_hess_x_trans,
                                jacobian_xu, fn_hess_u_trans);
-  //Cout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_u;
-  //Cout << "\nfnGradX:" << fn_grad_x;
+#ifdef DEBUG
+  Cout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_u_trans;
+#endif
 
   if (nonlinear_vars_map) { // nonlinear transformation has Hessian
     for (int i=0; i<x_len; i++) {
-      //Cout << "\nhessian_xu[" << i << "]:" << hessian_xu[i];
       //hessian_xu[i].Scale(fn_grad_x(i));
       //fn_hess_u += hessian_xu[i];
-      const double&                      fn_grad_x_i  = fn_grad_x_trans(i);
+      const double&        fn_grad_x_i  = fn_grad_x_trans(i);
       const RealSymMatrix& hessian_xu_i = hessian_xu[i];
       for (int j=0; j<x_len; j++)
-	for (int k=0; k<x_len; k++)
+	for (int k=0; k<=j; k++)
 	  fn_hess_u_trans(j,k) += fn_grad_x_i * hessian_xu_i(j,k);
+#ifdef DEBUG
+      Cout << "\nhessian_xu[" << i << "]:\n" << hessian_xu_i
+	   << "fn_hess_u_trans increment:\n" << fn_hess_u_trans;
+#endif
     }
   }
 
@@ -1455,6 +1482,11 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
       }
     }
   }
+
+#ifdef DEBUG
+  Cout << "Transformed fn_hess_x:\n" << fn_hess_x
+       << "to fn_hess_u:\n" << fn_hess_u;
+#endif
 }
 
 
