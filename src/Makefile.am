@@ -10,7 +10,7 @@ AM_CPPFLAGS += @TEUCHOS_CPPFLAGS@ -I${top_builddir}/packages/teuchos/src
 noinst_LTLIBRARIES = libpecos_src.la
 
 ## Pecos library sources.
-libpecos_src_la_SOURCES = NatafTransformation.cpp Transformation.cpp
+libpecos_src_la_SOURCES = NatafTransformation.cpp ProbabilityTransformation.cpp
 
 ## Extra files to remove when doing 'make maintainer-clean'.
 MAINTAINERCLEANFILES = Makefile.in

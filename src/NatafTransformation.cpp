@@ -23,7 +23,7 @@
 #include <math.h> /* for log1p */
 #endif
 
-static const char rcsId[]="@(#) $Id: NatafTransformation.C 4768 2007-12-17 17:49:32Z mseldre $";
+static const char rcsId[]="@(#) $Id: NatafTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
 //#define DEBUG
 

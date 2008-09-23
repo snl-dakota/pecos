@@ -90,8 +90,7 @@ from frequency domain (PSD) to time domain.
 
 \subsection DevProbTrans Probability Transformations
 
-<!-- Class hierarchy: \ref Pecos::ProbabilityTransformation "ProbabilityTransformation". -->
-Class hierarchy: \ref Pecos::Transformation "Transformation".
+Class hierarchy: \ref Pecos::ProbabilityTransformation "ProbabilityTransformation".
 
 Probability transformations provide a mechanism for modifying an input
 probability space to have desired modeling characteristics.  In

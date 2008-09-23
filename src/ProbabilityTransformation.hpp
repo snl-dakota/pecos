@@ -6,14 +6,14 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 Transformation
+//- Class:	 ProbabilityTransformation
 //- Description: Base class for nonlinear distribution transformations
 //- Owner:	 Mike Eldred
 //- Checked by:
 //- Version:
 
-#ifndef TRANSFORMATION_HPP
-#define TRANSFORMATION_HPP
+#ifndef PROBABILITY_TRANSFORMATION_HPP
+#define PROBABILITY_TRANSFORMATION_HPP
 
 #include "pecos_global_defs.hpp"
 #ifdef HAVE_GSL
@@ -33,22 +33,22 @@ namespace Pecos {
 /** The base class for nonlinear distribution transformations,
     including Nataf, Rosenblatt, et al. */
 
-class Transformation
+class ProbabilityTransformation
 {
 public:
 
   /// default constructor
-  Transformation();
+  ProbabilityTransformation();
   /// standard constructor for envelope
-  Transformation(const String& trans_type);
+  ProbabilityTransformation(const String& trans_type);
   /// copy constructor
-  Transformation(const Transformation& trans);
+  ProbabilityTransformation(const ProbabilityTransformation& trans);
 
   /// destructor
-  virtual ~Transformation();
+  virtual ~ProbabilityTransformation();
 
   /// assignment operator
-  Transformation operator=(const Transformation& trans);
+  ProbabilityTransformation operator=(const ProbabilityTransformation& trans);
 
   //
   //- Heading: Virtual functions
@@ -156,7 +156,7 @@ public:
   /// set ranVarTypesX/U, ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
   /// ranVarUpperBndsX, ranVarAddtlParamsX, corrMatrixX, and correlationFlagX
   /// based on incoming data
-  void initialize_random_variables(const Transformation& trans);
+  void initialize_random_variables(const ProbabilityTransformation& trans);
   /// initializes ranVarTypesX and ranVarTypesU
   void initialize_random_variable_types(const ShortArray& x_types,
 					const ShortArray& u_types);
@@ -245,7 +245,7 @@ protected:
   /// constructor initializes the base class part of letter classes
   /// (BaseConstructor overloading avoids infinite recursion in the
   /// derived class constructors - Coplien, p. 139)
-  Transformation(BaseConstructor);
+  ProbabilityTransformation(BaseConstructor);
 
   //
   //- Heading: Member functions
@@ -323,7 +323,7 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// transRep to the appropriate derived type.
-  Transformation* get_trans(const String& trans_type);
+  ProbabilityTransformation* get_trans(const String& trans_type);
 
 #ifndef HAVE_GSL
   /// Inverse of error function used in Phi_inverse()
@@ -335,53 +335,55 @@ private:
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  Transformation* transRep;
+  ProbabilityTransformation* transRep;
   /// number of objects sharing transRep
   int referenceCount;
 };
 
 
-inline const ShortArray& Transformation::x_types() const
+inline const ShortArray& ProbabilityTransformation::x_types() const
 { return (transRep) ? transRep->ranVarTypesX : ranVarTypesX; }
 
 
-inline const ShortArray& Transformation::u_types() const
+inline const ShortArray& ProbabilityTransformation::u_types() const
 { return (transRep) ? transRep->ranVarTypesU : ranVarTypesU; }
 
 
-inline const RealVector& Transformation::x_means() const
+inline const RealVector& ProbabilityTransformation::x_means() const
 { return (transRep) ? transRep->ranVarMeansX : ranVarMeansX; }
 
 
-inline const RealVector& Transformation::x_std_deviations() const
+inline const RealVector& ProbabilityTransformation::x_std_deviations() const
 { return (transRep) ? transRep->ranVarStdDevsX : ranVarStdDevsX; }
 
 
-inline const RealVector& Transformation::x_lower_bounds() const
+inline const RealVector& ProbabilityTransformation::x_lower_bounds() const
 { return (transRep) ? transRep->ranVarLowerBndsX : ranVarLowerBndsX; }
 
 
-inline const RealVector& Transformation::x_upper_bounds() const
+inline const RealVector& ProbabilityTransformation::x_upper_bounds() const
 { return (transRep) ? transRep->ranVarUpperBndsX : ranVarUpperBndsX; }
 
 
-inline const RealVectorArray& Transformation::x_additional_parameters() const
+inline const RealVectorArray& ProbabilityTransformation::
+x_additional_parameters() const
 { return (transRep) ? transRep->ranVarAddtlParamsX : ranVarAddtlParamsX; }
 
 
-inline bool Transformation::x_correlation() const
+inline bool ProbabilityTransformation::x_correlation() const
 { return (transRep) ? transRep->correlationFlagX : correlationFlagX; }
 
 
-inline const RealSymMatrix& Transformation::x_correlation_matrix() const
+inline const RealSymMatrix& ProbabilityTransformation::
+x_correlation_matrix() const
 { return (transRep) ? transRep->corrMatrixX : corrMatrixX; }
 
 
-inline const RealMatrix& Transformation::z_correlation_factor() const
+inline const RealMatrix& ProbabilityTransformation::z_correlation_factor() const
 { return (transRep) ? transRep->corrCholeskyFactorZ : corrCholeskyFactorZ; }
 
 
-inline Real Transformation::phi(const Real& beta)
+inline Real ProbabilityTransformation::phi(const Real& beta)
 {
 #ifdef HAVE_GSL
   return gsl_ran_ugaussian_pdf(beta);
@@ -393,7 +395,7 @@ inline Real Transformation::phi(const Real& beta)
 
 /** returns a probability < 0.5 for negative beta and a probability > 0.5
     for positive beta. */
-inline Real Transformation::Phi(const Real& beta)
+inline Real ProbabilityTransformation::Phi(const Real& beta)
 {
 #ifdef HAVE_GSL
   return gsl_cdf_ugaussian_P(beta);
@@ -405,7 +407,7 @@ inline Real Transformation::Phi(const Real& beta)
 
 /** returns a negative beta for probability < 0.5 and a positive beta for
     probability > 0.5. */
-inline Real Transformation::Phi_inverse(const Real& p)
+inline Real ProbabilityTransformation::Phi_inverse(const Real& p)
 {
 #ifdef HAVE_GSL
   return gsl_cdf_ugaussian_Pinv(p);
@@ -415,7 +417,7 @@ inline Real Transformation::Phi_inverse(const Real& p)
 }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_lognormal_params(const Real& mean, const Real& err_fact,
 			      Real& std_dev)
 {
@@ -424,13 +426,13 @@ moments_from_lognormal_params(const Real& mean, const Real& err_fact,
 }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_uniform_params(const Real& lwr, const Real& upr, Real& mean,
 			    Real& std_dev)
 { mean = (lwr + upr)/2.; std_dev = (upr - lwr)/sqrt(12.); }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_loguniform_params(const Real& lwr, const Real& upr, Real& mean,
 			       Real& std_dev)
 {
@@ -440,7 +442,7 @@ moments_from_loguniform_params(const Real& lwr, const Real& upr, Real& mean,
 }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_triangular_params(const Real& lwr, const Real& upr,
 			       const Real& mode, Real& mean, Real& std_dev)
 {
@@ -449,12 +451,12 @@ moments_from_triangular_params(const Real& lwr, const Real& upr,
 }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_exponential_params(const Real& beta, Real& mean, Real& std_dev)
 { mean = beta; std_dev = beta; }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_beta_params(const Real& lwr, const Real& upr, const Real& alpha,
 			 const Real& beta, Real& mean, Real& std_dev)
 {
@@ -464,19 +466,19 @@ moments_from_beta_params(const Real& lwr, const Real& upr, const Real& alpha,
 }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_gamma_params(const Real& alpha, const Real& beta, Real& mean,
 			  Real& std_dev)
 { mean = alpha*beta; std_dev = sqrt(alpha)*beta; }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_gumbel_params(const Real& alpha, const Real& beta, Real& mean,
 			   Real& std_dev)
 { mean = beta + 0.5772/alpha; std_dev = Pi/sqrt(6.)/alpha; }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_frechet_params(const Real& alpha, const Real& beta, Real& mean,
 			    Real& std_dev)
 {
@@ -493,7 +495,7 @@ moments_from_frechet_params(const Real& alpha, const Real& beta, Real& mean,
 }
 
 
-inline void Transformation::
+inline void ProbabilityTransformation::
 moments_from_weibull_params(const Real& alpha, const Real& beta, Real& mean,
 			    Real& std_dev)
 {

@@ -18,7 +18,7 @@ lib_LTLIBRARIES = libpecos.la
 pkginclude_HEADERS = src/pecos_data_types.hpp	 \
 		     src/pecos_global_defs.hpp	 \
 		     src/NatafTransformation.hpp \
-		     src/Transformation.hpp
+		     src/ProbabilityTransformation.hpp
 
 ## No sources in this directory!
 libpecos_la_SOURCES = 

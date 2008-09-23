@@ -15,7 +15,7 @@
 #ifndef NATAF_TRANSFORMATION_HPP
 #define NATAF_TRANSFORMATION_HPP
 
-#include "Transformation.hpp"
+#include "ProbabilityTransformation.hpp"
 
 
 namespace Pecos {
@@ -29,7 +29,7 @@ namespace Pecos {
     standard normals to uncorrelated standard normals (u-space) using
     the inverse Cholesky factor of a modified correlation matrix. */
 
-class NatafTransformation: public Transformation
+class NatafTransformation: public ProbabilityTransformation
 {
 public:
 
@@ -157,7 +157,7 @@ private:
 
 
 inline NatafTransformation::NatafTransformation():
-  Transformation(BaseConstructor())
+  ProbabilityTransformation(BaseConstructor())
 { }
 
 

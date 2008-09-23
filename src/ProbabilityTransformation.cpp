@@ -6,7 +6,7 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 Transformation
+//- Class:	 ProbabilityTransformation
 //- Description: Base class for nonlinear distribution transformations
 //- Owner:       Mike Eldred
 //- Checked by:
@@ -18,11 +18,11 @@
 #endif
 #include <algorithm>
 
-static const char rcsId[]="@(#) $Id: Transformation.C 4768 2007-12-17 17:49:32Z mseldre $";
+static const char rcsId[]="@(#) $Id: ProbabilityTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
 namespace Pecos {
 
-const Real Transformation::Pi = 3.1415926535897932385;
+const Real ProbabilityTransformation::Pi = 3.1415926535897932385;
 
 
 /** This constructor is the one which must build the base class data
@@ -31,13 +31,13 @@ const Real Transformation::Pi = 3.1415926535897932385;
     constructor in its initialization list (to avoid recursion in the
     base class constructor calling get_trans() again).  Since the
     letter IS the representation, its rep pointer is set to NULL (an
-    uninitialized pointer causes problems in ~Transformation). */
-Transformation::Transformation(BaseConstructor):
+    uninitialized pointer causes problems in ~ProbabilityTransformation). */
+ProbabilityTransformation::ProbabilityTransformation(BaseConstructor):
   correlationFlagX(false), transRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "Transformation::Transformation(BaseConstructor) called to build "
-       << "base class for letter." << std::endl;
+  Cout << "ProbabilityTransformation::ProbabilityTransformation(Base"
+       << "Constructor) called to build base class for letter." << std::endl;
 #endif
 }
 
@@ -45,24 +45,26 @@ Transformation::Transformation(BaseConstructor):
 /** The default constructor: transRep is NULL in this case.  This
     makes it necessary to check for NULL in the copy constructor,
     assignment operator, and destructor. */
-Transformation::Transformation(): transRep(NULL), referenceCount(1)
+ProbabilityTransformation::ProbabilityTransformation():
+  transRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "Transformation::Transformation() called to build empty "
-       << "transformation object." << std::endl;
+  Cout << "ProbabilityTransformation::ProbabilityTransformation() called to "
+       << "build empty envelope." << std::endl;
 #endif
 }
 
 
 /** Envelope constructor only needs to extract enough data to properly
-    execute get_trans, since Transformation(BaseConstructor) builds
+    execute get_trans, since ProbabilityTransformation(BaseConstructor) builds
     the actual base class data for the derived transformations. */
-Transformation::Transformation(const std::string& trans_type):
+ProbabilityTransformation::
+ProbabilityTransformation(const std::string& trans_type):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "Transformation::Transformation(ProblemDescDB&) called to "
-       << "instantiate envelope." << std::endl;
+  Cout << "ProbabilityTransformation::ProbabilityTransformation(string&) "
+       << "called to instantiate envelope." << std::endl;
 #endif
 
   // Set the rep pointer to the appropriate derived type
@@ -74,7 +76,8 @@ Transformation::Transformation(const std::string& trans_type):
 
 /** Used only by the envelope constructor to initialize transRep to the 
     appropriate derived type. */
-Transformation* Transformation::get_trans(const std::string& trans_type)
+ProbabilityTransformation* ProbabilityTransformation::
+get_trans(const std::string& trans_type)
 {
 #ifdef REFCOUNT_DEBUG
   Cout << "Envelope instantiating letter in get_trans(string&)." << std::endl;
@@ -83,8 +86,8 @@ Transformation* Transformation::get_trans(const std::string& trans_type)
   if (trans_type == "nataf")
     return new NatafTransformation();
   else {
-    Cerr << "Error: Transformation type " << trans_type << " not available."
-	 << std::endl;
+    Cerr << "Error: ProbabilityTransformation type " << trans_type
+	 << " not available." << std::endl;
     return NULL;
   }
 }
@@ -92,7 +95,8 @@ Transformation* Transformation::get_trans(const std::string& trans_type)
 
 /** Copy constructor manages sharing of transRep and incrementing
     of referenceCount. */
-Transformation::Transformation(const Transformation& trans)
+ProbabilityTransformation::
+ProbabilityTransformation(const ProbabilityTransformation& trans)
 {
   // Increment new (no old to decrement)
   transRep = trans.transRep;
@@ -100,16 +104,19 @@ Transformation::Transformation(const Transformation& trans)
     transRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "Transformation::Transformation(Transformation&)" << std::endl;
+  Cout << "ProbabilityTransformation::ProbabilityTransformation("
+       << "ProbabilityTransformation&)" << std::endl;
   if (transRep)
-    Cout << "transRep referenceCount = " << transRep->referenceCount << std::endl;
+    Cout << "transRep referenceCount = " << transRep->referenceCount
+	 << std::endl;
 #endif
 }
 
 
 /** Assignment operator decrements referenceCount for old transRep, assigns
     new transRep, and increments referenceCount for new transRep. */
-Transformation Transformation::operator=(const Transformation& trans)
+ProbabilityTransformation ProbabilityTransformation::
+operator=(const ProbabilityTransformation& trans)
 {
   // Decrement old
   if (transRep) // Check for null pointer
@@ -121,9 +128,11 @@ Transformation Transformation::operator=(const Transformation& trans)
     transRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "Transformation::operator=(Transformation&)" << std::endl;
+  Cout << "ProbabilityTransformation::operator=(ProbabilityTransformation&)"
+       << std::endl;
   if (transRep)
-    Cout << "transRep referenceCount = " << transRep->referenceCount << std::endl;
+    Cout << "transRep referenceCount = " << transRep->referenceCount
+	 << std::endl;
 #endif
 
   return *this; // calls copy constructor since returned by value
@@ -132,7 +141,7 @@ Transformation Transformation::operator=(const Transformation& trans)
 
 /** Destructor decrements referenceCount and only deletes transRep
     when referenceCount reaches zero. */
-Transformation::~Transformation()
+ProbabilityTransformation::~ProbabilityTransformation()
 { 
   // Check for NULL pointer 
   if (transRep) {
@@ -156,7 +165,8 @@ Transformation::~Transformation()
     ranVarTypes et al. may not be generated directly.  This allows for
     the use of inverse transformations to return the transformed space
     variables to their original states. */
-void Transformation::initialize_random_variables(const Transformation& trans)
+void ProbabilityTransformation::
+initialize_random_variables(const ProbabilityTransformation& trans)
 {
   if (transRep) // target is envelope
     transRep->initialize_random_variables(trans);
@@ -189,7 +199,7 @@ void Transformation::initialize_random_variables(const Transformation& trans)
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 initialize_random_variable_types(const ShortArray& x_types,
 				 const ShortArray& u_types)
 {
@@ -204,7 +214,7 @@ initialize_random_variable_types(const ShortArray& x_types,
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 initialize_random_variable_parameters(const RealVector& x_means,
 				      const RealVector& x_std_devs,
 				      const RealVector& x_l_bnds,
@@ -225,7 +235,7 @@ initialize_random_variable_parameters(const RealVector& x_means,
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 initialize_random_variable_correlations(const RealSymMatrix& x_corr)
 {
   if (transRep) // envelope fwd to letter
@@ -242,7 +252,7 @@ initialize_random_variable_correlations(const RealSymMatrix& x_corr)
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
 			   size_t num_state_vars)
 {
@@ -258,7 +268,7 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
     if (num_corr_vars != num_active_vars) {
       if (num_corr_vars != num_uncertain_vars) {
 	Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
-	     << ") in Transformation::reshape_correlation_matrix()."
+	     << ") in ProbabilityTransformation::reshape_correlation_matrix()."
 	     << std::endl;
 	abort_handler(-1);
       }
@@ -278,44 +288,48 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
 }
 
 
-void Transformation::trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
+void ProbabilityTransformation::
+trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
 {
   if (transRep) // envelope fwd to letter
     transRep->trans_U_to_X(u_vars, x_vars);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_U_to_X() virtual fn."
-	 << "\nNo default defined at Transformation base class.\n" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void Transformation::trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
-{
-  if (transRep) // envelope fwd to letter
-    transRep->trans_X_to_U(x_vars, u_vars);
-  else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_X_to_U() virtual fn."
-	 << "\nNo default defined at Transformation base class.\n" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void Transformation::trans_correlations()
-{
-  if (transRep) // envelope fwd to letter
-    transRep->trans_correlations();
-  else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_correlations() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
+	 << "\nNo default defined at ProbabilityTransformation base class.\n"
 	 << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
+trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_X_to_U(x_vars, u_vars);
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_X_to_U() virtual fn."
+	 << "\nNo default defined at ProbabilityTransformation base class.\n"
+	 << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void ProbabilityTransformation::trans_correlations()
+{
+  if (transRep) // envelope fwd to letter
+    transRep->trans_correlations();
+  else { // letter lacking redefinition of virtual fn
+    Cerr << "Error: derived class does not redefine trans_correlations() "
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void ProbabilityTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
 		  const RealVector& x_vars,    const UIntArray& x_dvv,
 		  const UIntArray&  cv_ids)
@@ -324,14 +338,14 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     transRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, x_vars, x_dvv, cv_ids);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_grad_X_to_U() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
 		  const RealMatrix& jacobian_xu, const UIntArray& x_dvv,
 		  const UIntArray&  cv_ids)
@@ -341,14 +355,14 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
 				cv_ids);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_grad_X_to_U() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 		  const RealVector& x_vars, const UIntArray& x_dvv,
 		  const UIntArray&  cv_ids, const UIntArray& acv_ids,
@@ -360,14 +374,14 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 				acv_ids, acv_map1_indices, acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_grad_X_to_S() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 		  const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
 		  const UIntArray&  cv_ids, const UIntArray& acv_ids,
@@ -380,14 +394,14 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 				acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_grad_X_to_S() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
 		  const RealVector& x_vars,    const UIntArray& x_dvv,
 		  const UIntArray&  cv_ids)
@@ -396,14 +410,14 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     transRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, x_vars, x_dvv, cv_ids);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_grad_U_to_X() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
 		  const RealMatrix& jacobian_ux, const UIntArray& x_dvv,
 		  const UIntArray&  cv_ids)
@@ -413,14 +427,14 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
  cv_ids);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_grad_U_to_X() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealVector& x_vars,	  const RealVector& fn_grad_x,
 		  const UIntArray&  x_dvv,	  const UIntArray&  cv_ids)
@@ -430,14 +444,14 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 				cv_ids);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_hess_X_to_U() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealMatrix& jacobian_xu,
 		  const RealSymMatrixArray& hessian_xu,
@@ -449,42 +463,42 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 				fn_grad_x, x_dvv, cv_ids);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine trans_hess_X_to_U() "
-         << "virtual fn.\nNo default defined at Transformation base class.\n"
-	 << std::endl;
+         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
+	 << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
 {
   if (transRep) // envelope fwd to letter
     transRep->jacobian_dX_dU(x_vars, jacobian_xu);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine jacobian_dX_dU() virtual "
-         << "fn.\nNo default defined at Transformation base class.\n"
+         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
 	 << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
 {
   if (transRep) // envelope fwd to letter
     transRep->jacobian_dU_dX(x_vars, jacobian_ux);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine jacobian_dU_dX() virtual "
-         << "fn.\nNo default defined at Transformation base class.\n"
+         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
 	 << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	       const UIntArray&  cv_ids, const UIntArray& acv_ids,
 	       const SizetArray& acv_map1_indices,
@@ -495,21 +509,21 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 			     acv_map1_indices, acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine jacobian_dX_dS() virtual "
-         << "fn.\nNo default defined at Transformation base class.\n"
+         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
 	 << std::endl;
     abort_handler(-1);
   }
 }
 
 
-void Transformation::
+void ProbabilityTransformation::
 hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
 {
   if (transRep) // envelope fwd to letter
     transRep->hessian_d2X_dU2(x_vars, hessian_xu);
   else { // letter lacking redefinition of virtual fn
     Cerr << "Error: derived class does not redefine hessian_d2X_dU2() virtual "
-         << "fn.\nNo default defined at Transformation base class.\n"
+         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
 	 << std::endl;
     abort_handler(-1);
   }
@@ -523,7 +537,7 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
     semi-analytically for correlated variables.  Numerical dx/ds is needed for
     distributions lacking simple closed-form CDF expressions (beta and gamma
     distributions). */
-void Transformation::
+void ProbabilityTransformation::
 numerical_design_jacobian(const RealVector& x_vars,
 			  bool xs, RealMatrix& num_jacobian_xs,
 			  bool zs, RealMatrix& num_jacobian_zs,
@@ -637,7 +651,8 @@ numerical_design_jacobian(const RealVector& x_vars,
     through the use of num[Distribution]Vars counts and
     iteratedModel.some_distribution_parameter(), but is tied to
     x-space through the VarMapIndices user specifications. */
-const Real& Transformation::distribution_parameter(size_t index, short target)
+const Real& ProbabilityTransformation::
+distribution_parameter(size_t index, short target)
 {
   switch (target) {
   case CDV_LWR_BND: case N_LWR_BND: case LN_LWR_BND: case   U_LWR_BND:
@@ -663,7 +678,7 @@ const Real& Transformation::distribution_parameter(size_t index, short target)
     through the use of num[Distribution]Vars counts and
     iteratedModel.some_distribution_parameter(), but is tied to
     x-space through the VarMapIndices user specifications. */
-void Transformation::
+void ProbabilityTransformation::
 distribution_parameter(size_t index, short target, const Real& param)
 {
   switch (target) {
@@ -854,7 +869,7 @@ distribution_parameter(size_t index, short target, const Real& param)
 
 
 #ifndef HAVE_GSL
-Real Transformation::erf_inverse(const Real& p)
+Real ProbabilityTransformation::erf_inverse(const Real& p)
 {
   // Adapted from ltqnorm.m see URL below for more info
 
@@ -931,7 +946,7 @@ Real Transformation::erf_inverse(const Real& p)
 
 #ifdef HAVE_GSL
 /** Solve is performed in scaled space (for the standard beta distribution). */
-Real Transformation::
+Real ProbabilityTransformation::
 cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
 {
   // F(x) = Phi(z) = normcdf
@@ -1001,7 +1016,8 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
 
 
 #ifdef DERIV_DEBUG
-void Transformation::verify_trans_jacobian_hessian(const RealVector& v0)
+void ProbabilityTransformation::
+verify_trans_jacobian_hessian(const RealVector& v0)
 {
   size_t i, j, k;
   bool fd_grad_flag = true, fd_hess_flag = true, fd_hess_by_fn_flag = false,
@@ -1206,7 +1222,7 @@ void Transformation::verify_trans_jacobian_hessian(const RealVector& v0)
 }
 
 
-void Transformation::verify_design_jacobian(const RealVector& u0)
+void ProbabilityTransformation::verify_design_jacobian(const RealVector& u0)
 {
   RealVector x0;
   trans_U_to_X(u0, x0);
