@@ -6,12 +6,6 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 ProbabilityTransformation
-//- Description: Base class for nonlinear distribution transformations
-//- Owner:       Mike Eldred
-//- Checked by:
-//- Version:
-
 #include "NatafTransformation.hpp"
 #ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"

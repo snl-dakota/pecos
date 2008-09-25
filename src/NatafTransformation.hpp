@@ -6,12 +6,6 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 NatafTransformation
-//- Description: Class for Nataf nonlinear distribution transformation
-//- Owner:	 Mike Eldred
-//- Checked by:
-//- Version:
-
 #ifndef NATAF_TRANSFORMATION_HPP
 #define NATAF_TRANSFORMATION_HPP
 

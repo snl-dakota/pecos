@@ -6,12 +6,6 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 BasisFunction
-//- Description: Base class for basis functions
-//- Owner:       Mike Eldred
-//- Checked by:
-//- Version:
-
 #include "BasisFunction.hpp"
 
 static const char rcsId[]="@(#) $Id: BasisFunction.cpp 4768 2007-12-17 17:49:32Z mseldre $";

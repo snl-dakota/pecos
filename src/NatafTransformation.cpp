@@ -6,12 +6,6 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 NatafTransformation
-//- Description: Base class for nonlinear distribution transformations
-//- Owner:       Mike Eldred
-//- Checked by:
-//- Version:
-
 #include "NatafTransformation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #ifdef HAVE_GSL

@@ -6,13 +6,9 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 DataTransformation
-//- Description: Base class for time/frequency domain data transformations
-//- Owner:       Mike Eldred
-//- Checked by:
-//- Version:
-
-#include "DataTransformation.hpp"
+#include "FourierInverseTransformation.hpp"
+#include "KarhunenLoeveInverseTransformation.hpp"
+#include "SamplingInverseTransformation.hpp"
 
 static const char rcsId[]="@(#) $Id: DataTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -76,12 +72,12 @@ get_data_trans(const std::string& data_trans_type)
        << std::endl;
 #endif
 
-  if (data_trans_type == "inverse_spectral")
-    return NULL;//new iFFTInverseTransformation();
+  if (data_trans_type == "inverse_fourier")
+    return new FourierInverseTransformation();
   else if (data_trans_type == "inverse_kl")
-    return NULL;//new KLInverseTransformation();
+    return new KarhunenLoeveInverseTransformation();
   else if (data_trans_type == "inverse_sampling")
-    return NULL;//new SamplingInverseTransformation();
+    return new SamplingInverseTransformation();
   else {
     Cerr << "Error: DataTransformation type " << data_trans_type
 	 << " not available." << std::endl;

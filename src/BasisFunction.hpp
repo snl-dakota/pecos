@@ -6,12 +6,6 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 BasisFunction
-//- Description: Base class for basis functions
-//- Owner:	 Mike Eldred
-//- Checked by:
-//- Version:
-
 #ifndef BASIS_FUNCTION_HPP
 #define BASIS_FUNCTION_HPP
 

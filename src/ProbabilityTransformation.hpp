@@ -6,12 +6,6 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 ProbabilityTransformation
-//- Description: Base class for nonlinear distribution transformations
-//- Owner:	 Mike Eldred
-//- Checked by:
-//- Version:
-
 #ifndef PROBABILITY_TRANSFORMATION_HPP
 #define PROBABILITY_TRANSFORMATION_HPP
 

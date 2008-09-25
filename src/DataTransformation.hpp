@@ -6,12 +6,6 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 DataTransformation
-//- Description: Base class for nonlinear distribution transformations
-//- Owner:	 Mike Eldred
-//- Checked by:
-//- Version:
-
 #ifndef DATA_TRANSFORMATION_HPP
 #define DATA_TRANSFORMATION_HPP
 
