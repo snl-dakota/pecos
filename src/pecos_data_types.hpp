@@ -20,6 +20,10 @@
 
 namespace Pecos {
 
+// avoid problems with circular dependencies by using fwd declarations
+class BasisFunction;
+
+
 // -----------------------------------
 // Aliases for fundamental data types:
 // -----------------------------------
@@ -62,6 +66,7 @@ typedef std::vector<String>         StringArray;
 typedef std::vector<RealVector>     RealVectorArray;
 typedef std::vector<RealMatrix>     RealMatrixArray;
 typedef std::vector<RealSymMatrix>  RealSymMatrixArray;
+typedef std::vector<BasisFunction>  BasisFunctionArray;
 
 typedef std::set<int>               IntSet;
 typedef std::set<Real>              RealSet;

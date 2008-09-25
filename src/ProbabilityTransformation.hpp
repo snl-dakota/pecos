@@ -40,15 +40,16 @@ public:
   /// default constructor
   ProbabilityTransformation();
   /// standard constructor for envelope
-  ProbabilityTransformation(const String& trans_type);
+  ProbabilityTransformation(const String& prob_trans_type);
   /// copy constructor
-  ProbabilityTransformation(const ProbabilityTransformation& trans);
+  ProbabilityTransformation(const ProbabilityTransformation& prob_trans);
 
   /// destructor
   virtual ~ProbabilityTransformation();
 
   /// assignment operator
-  ProbabilityTransformation operator=(const ProbabilityTransformation& trans);
+  ProbabilityTransformation
+    operator=(const ProbabilityTransformation& prob_trans);
 
   //
   //- Heading: Virtual functions
@@ -156,7 +157,7 @@ public:
   /// set ranVarTypesX/U, ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
   /// ranVarUpperBndsX, ranVarAddtlParamsX, corrMatrixX, and correlationFlagX
   /// based on incoming data
-  void initialize_random_variables(const ProbabilityTransformation& trans);
+  void initialize_random_variables(const ProbabilityTransformation& prob_trans);
   /// initializes ranVarTypesX and ranVarTypesU
   void initialize_random_variable_types(const ShortArray& x_types,
 					const ShortArray& u_types);
@@ -322,8 +323,8 @@ private:
   void distribution_parameter(size_t index, short target, const Real& param);
 
   /// Used only by the standard envelope constructor to initialize
-  /// transRep to the appropriate derived type.
-  ProbabilityTransformation* get_trans(const String& trans_type);
+  /// probTransRep to the appropriate derived type.
+  ProbabilityTransformation* get_prob_trans(const String& prob_trans_type);
 
 #ifndef HAVE_GSL
   /// Inverse of error function used in Phi_inverse()
@@ -335,52 +336,57 @@ private:
   //
 
   /// pointer to the letter (initialized only for the envelope)
-  ProbabilityTransformation* transRep;
-  /// number of objects sharing transRep
+  ProbabilityTransformation* probTransRep;
+  /// number of objects sharing probTransRep
   int referenceCount;
 };
 
 
 inline const ShortArray& ProbabilityTransformation::x_types() const
-{ return (transRep) ? transRep->ranVarTypesX : ranVarTypesX; }
+{ return (probTransRep) ? probTransRep->ranVarTypesX : ranVarTypesX; }
 
 
 inline const ShortArray& ProbabilityTransformation::u_types() const
-{ return (transRep) ? transRep->ranVarTypesU : ranVarTypesU; }
+{ return (probTransRep) ? probTransRep->ranVarTypesU : ranVarTypesU; }
 
 
 inline const RealVector& ProbabilityTransformation::x_means() const
-{ return (transRep) ? transRep->ranVarMeansX : ranVarMeansX; }
+{ return (probTransRep) ? probTransRep->ranVarMeansX : ranVarMeansX; }
 
 
 inline const RealVector& ProbabilityTransformation::x_std_deviations() const
-{ return (transRep) ? transRep->ranVarStdDevsX : ranVarStdDevsX; }
+{ return (probTransRep) ? probTransRep->ranVarStdDevsX : ranVarStdDevsX; }
 
 
 inline const RealVector& ProbabilityTransformation::x_lower_bounds() const
-{ return (transRep) ? transRep->ranVarLowerBndsX : ranVarLowerBndsX; }
+{ return (probTransRep) ? probTransRep->ranVarLowerBndsX : ranVarLowerBndsX; }
 
 
 inline const RealVector& ProbabilityTransformation::x_upper_bounds() const
-{ return (transRep) ? transRep->ranVarUpperBndsX : ranVarUpperBndsX; }
+{ return (probTransRep) ? probTransRep->ranVarUpperBndsX : ranVarUpperBndsX; }
 
 
 inline const RealVectorArray& ProbabilityTransformation::
 x_additional_parameters() const
-{ return (transRep) ? transRep->ranVarAddtlParamsX : ranVarAddtlParamsX; }
+{
+  return (probTransRep) ? probTransRep->ranVarAddtlParamsX : ranVarAddtlParamsX;
+}
 
 
 inline bool ProbabilityTransformation::x_correlation() const
-{ return (transRep) ? transRep->correlationFlagX : correlationFlagX; }
+{ return (probTransRep) ? probTransRep->correlationFlagX : correlationFlagX; }
 
 
 inline const RealSymMatrix& ProbabilityTransformation::
 x_correlation_matrix() const
-{ return (transRep) ? transRep->corrMatrixX : corrMatrixX; }
+{ return (probTransRep) ? probTransRep->corrMatrixX : corrMatrixX; }
 
 
 inline const RealMatrix& ProbabilityTransformation::z_correlation_factor() const
-{ return (transRep) ? transRep->corrCholeskyFactorZ : corrCholeskyFactorZ; }
+{
+  return (probTransRep) ? probTransRep->corrCholeskyFactorZ :
+                          corrCholeskyFactorZ;
+}
 
 
 inline Real ProbabilityTransformation::phi(const Real& beta)

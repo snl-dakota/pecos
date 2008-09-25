@@ -15,9 +15,11 @@ SUBLIBS = src/libpecos_src.la
 lib_LTLIBRARIES = libpecos.la
 
 ## Pecos headers that need to be distributed
-pkginclude_HEADERS = src/pecos_data_types.hpp	 \
-		     src/pecos_global_defs.hpp	 \
-		     src/NatafTransformation.hpp \
+pkginclude_HEADERS = src/pecos_data_types.hpp		\
+		     src/pecos_global_defs.hpp		\
+		     src/BasisFunction.hpp		\
+		     src/DataTransformation.hpp		\
+		     src/NatafTransformation.hpp	\
 		     src/ProbabilityTransformation.hpp
 
 ## No sources in this directory!
