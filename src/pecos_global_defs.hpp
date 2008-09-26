@@ -43,8 +43,8 @@ enum { NO_TARGET, CDV_LWR_BND, CDV_UPR_BND, DDV_LWR_BND, DDV_UPR_BND,
 // ----------------
 // Standard streams
 // ----------------
-#define Cout std::cout
-#define Cerr std::cerr
+#define PCout std::cout
+#define PCerr std::cerr
 
 
 // --------------

@@ -24,8 +24,8 @@ BasisFunction::BasisFunction(BaseConstructor):
   basisFnRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "BasisFunction::BasisFunction(BaseConstructor) called to "
-       << "build base class for letter." << std::endl;
+  PCout << "BasisFunction::BasisFunction(BaseConstructor) called to "
+        << "build base class for letter." << std::endl;
 #endif
 }
 
@@ -36,8 +36,8 @@ BasisFunction::BasisFunction(BaseConstructor):
 BasisFunction::BasisFunction(): basisFnRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "BasisFunction::BasisFunction() called to build empty "
-       << "envelope." << std::endl;
+  PCout << "BasisFunction::BasisFunction() called to build empty "
+        << "envelope." << std::endl;
 #endif
 }
 
@@ -49,8 +49,8 @@ BasisFunction::BasisFunction(const std::string& basis_fn_type):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "BasisFunction::BasisFunction(string&) called to "
-       << "instantiate envelope." << std::endl;
+  PCout << "BasisFunction::BasisFunction(string&) called to "
+        << "instantiate envelope." << std::endl;
 #endif
 
   // Set the rep pointer to the appropriate derived type
@@ -65,8 +65,8 @@ BasisFunction::BasisFunction(const std::string& basis_fn_type):
 BasisFunction* BasisFunction::get_basis_fn(const std::string& basis_fn_type)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_basis_fn(string&)."
-       << std::endl;
+  PCout << "Envelope instantiating letter in get_basis_fn(string&)."
+        << std::endl;
 #endif
 
   if (basis_fn_type == "fourier")
@@ -76,8 +76,8 @@ BasisFunction* BasisFunction::get_basis_fn(const std::string& basis_fn_type)
   //else if (basis_fn_type == "orthogonal_polynomial")
   //  return new OrthogPolyBasisFunction();
   else {
-    Cerr << "Error: BasisFunction type " << basis_fn_type << " not available."
-	 << std::endl;
+    PCerr << "Error: BasisFunction type " << basis_fn_type << " not available."
+	  << std::endl;
     return NULL;
   }
 }
@@ -93,10 +93,10 @@ BasisFunction::BasisFunction(const BasisFunction& basis_fn)
     basisFnRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "BasisFunction::BasisFunction(BasisFunction&)" << std::endl;
+  PCout << "BasisFunction::BasisFunction(BasisFunction&)" << std::endl;
   if (basisFnRep)
-    Cout << "basisFnRep referenceCount = " << basisFnRep->referenceCount
-	 << std::endl;
+    PCout << "basisFnRep referenceCount = " << basisFnRep->referenceCount
+	  << std::endl;
 #endif
 }
 
@@ -116,10 +116,10 @@ BasisFunction BasisFunction::operator=(const BasisFunction& basis_fn)
     basisFnRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "BasisFunction::operator=(BasisFunction&)" << std::endl;
+  PCout << "BasisFunction::operator=(BasisFunction&)" << std::endl;
   if (basisFnRep)
-    Cout << "basisFnRep referenceCount = " << basisFnRep->referenceCount
-	 << std::endl;
+    PCout << "basisFnRep referenceCount = " << basisFnRep->referenceCount
+	  << std::endl;
 #endif
 
   return *this; // calls copy constructor since returned by value
@@ -134,12 +134,12 @@ BasisFunction::~BasisFunction()
   if (basisFnRep) {
     --basisFnRep->referenceCount;
 #ifdef REFCOUNT_DEBUG
-    Cout << "basisFnRep referenceCount decremented to "
-	 << basisFnRep->referenceCount << std::endl;
+    PCout << "basisFnRep referenceCount decremented to "
+	  << basisFnRep->referenceCount << std::endl;
 #endif
     if (basisFnRep->referenceCount == 0) {
 #ifdef REFCOUNT_DEBUG
-      Cout << "deleting basisFnRep" << std::endl;
+      PCout << "deleting basisFnRep" << std::endl;
 #endif
       delete basisFnRep;
     }

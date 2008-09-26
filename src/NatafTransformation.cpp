@@ -41,7 +41,7 @@ trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
     trans_Z_to_X(u_vars, x_vars);
 
 #ifdef DEBUG
-  Cout << "Transforming u_vars:\n" << u_vars << "to x_vars:\n" << x_vars;
+  PCout << "Transforming u_vars:\n" << u_vars << "to x_vars:\n" << x_vars;
 #endif
 }
 
@@ -311,8 +311,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
     }
     }
     if (err_flag) {
-      Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::trans_Z_to_X()" << std::endl;
+      PCerr << "Error: unsupported variable mapping for variable " << i
+	    << " in NatafTransformation::trans_Z_to_X()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -335,7 +335,7 @@ trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
     trans_X_to_Z(x_vars, u_vars);
 
 #ifdef DEBUG
-  Cout << "Transforming x_vars:\n" << x_vars << "to u_vars:\n" << u_vars;
+  PCout << "Transforming x_vars:\n" << x_vars << "to u_vars:\n" << u_vars;
 #endif
 }
 
@@ -566,8 +566,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
     }
     }
     if (err_flag) {
-      Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::trans_X_to_Z()" << std::endl;
+      PCerr << "Error: unsupported variable mapping for variable " << i
+	    << " in NatafTransformation::trans_X_to_Z()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -1077,7 +1077,7 @@ void NatafTransformation::trans_correlations()
     for (j=0; j<=i; j++)
       corrCholeskyFactorZ(i, j) = mod_corr_matrix(i, j);
 #ifdef DEBUG
-  Cout << "corrCholeskyFactorZ:\n" << corrCholeskyFactorZ;
+  PCout << "corrCholeskyFactorZ:\n" << corrCholeskyFactorZ;
 #endif
 
   // could pre-compute L^-1 to avoid solving L u = z repeatedly for u
@@ -1086,7 +1086,7 @@ void NatafTransformation::trans_correlations()
   //RealSolver chol_solver;
   //chol_solver.setMatrix(corrCholeskyFactorZInv); 
   //chol_solver.invert();
-  //Cout << "\ncorrCholeskyFactorZInv:" << corrCholeskyFactorZInv;
+  //PCout << "\ncorrCholeskyFactorZInv:" << corrCholeskyFactorZInv;
 }
 
 
@@ -1120,8 +1120,8 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
   int x_len = jacobian_xu.numRows();
   if (x_dvv == cv_ids) { // standard DVV
     if (fn_grad_x.length() != x_len) {
-      Cerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
-	   << "trans_grad_X_to_U()." << std::endl;
+      PCerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
+	    << "trans_grad_X_to_U()." << std::endl;
       abort_handler(-1);
     }
     if (fn_grad_u.length() != x_len)
@@ -1153,8 +1153,8 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
   }
 
 #ifdef DEBUG
-  Cout << "Transformed fn_grad_x:\n" << fn_grad_x
-       << "to fn_grad_u:\n" << fn_grad_u;
+  PCout << "Transformed fn_grad_x:\n" << fn_grad_x
+        << "to fn_grad_u:\n" << fn_grad_u;
 #endif
 }
 
@@ -1187,8 +1187,8 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
   int u_len = jacobian_ux.numRows();
   if (x_dvv == cv_ids) { // standard DVV
     if (fn_grad_u.length() != u_len) {
-      Cerr << "Error: bad fn_grad_u dimension in NatafTransformation::"
-	   << "trans_grad_U_to_X()." << std::endl;
+      PCerr << "Error: bad fn_grad_u dimension in NatafTransformation::"
+	    << "trans_grad_U_to_X()." << std::endl;
       abort_handler(-1);
     }
     if (fn_grad_x.length() != u_len)
@@ -1220,8 +1220,8 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
   }
 
 #ifdef DEBUG
-  Cout << "Transformed fn_grad_u:\n" << fn_grad_u
-       << "to fn_grad_x:\n" << fn_grad_x;
+  PCout << "Transformed fn_grad_u:\n" << fn_grad_u
+        << "to fn_grad_x:\n" << fn_grad_x;
 #endif
 }
 
@@ -1266,8 +1266,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   // > s_len = acv_map1_indices.size()  = outer model.cv()
   int x_len = jacobian_xs.numRows(), s_len = jacobian_xs.numCols();
   if (acv_map1_indices.empty() || acv_map2_targets.empty()) {
-    Cerr << "Error: NatafTransformation::trans_grad_X_to_S() requires primary "
-	 << "and secondary variable mappings to define S." << std::endl;
+    PCerr << "Error: NatafTransformation::trans_grad_X_to_S() requires primary "
+	  << "and secondary variable mappings to define S." << std::endl;
     abort_handler(-1);
   }
 
@@ -1279,8 +1279,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   // manage size of fn_grad_x input
   if (std_dvv) { // standard x-space DVV
     if (fn_grad_x.length() != x_len) {
-      Cerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
-	   << "trans_grad_X_to_S()." << std::endl;
+      PCerr << "Error: bad fn_grad_x dimension in NatafTransformation::"
+	    << "trans_grad_X_to_S()." << std::endl;
       abort_handler(-1);
     }
   }
@@ -1337,11 +1337,11 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
   }
 
 #ifdef DEBUG
-  Cout << "\nfn_grad_x:\n"       << fn_grad_x
-       << "\nfn_grad_x_trans:\n" << fn_grad_x_trans
-       << "\njacobian_xs:\n"     << jacobian_xs
-       << "\nfn_grad_s_trans:\n" << fn_grad_s_trans
-       << "\nfn_grad_s:\n"       << fn_grad_s << std::endl;
+  PCout << "\nfn_grad_x:\n"       << fn_grad_x
+        << "\nfn_grad_x_trans:\n" << fn_grad_x_trans
+        << "\njacobian_xs:\n"     << jacobian_xs
+        << "\nfn_grad_s_trans:\n" << fn_grad_s_trans
+        << "\nfn_grad_s:\n"       << fn_grad_s << std::endl;
 #endif
 }
 
@@ -1396,14 +1396,14 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   SizetArray dvv_index_array;
   if (std_dvv) {
     if (fn_hess_x.numRows() != x_len) {
-      Cerr << "Error: bad fn_hess_x dimension in NatafTransformation::"
-	   << "trans_hess_X_to_U()." << std::endl;
+      PCerr << "Error: bad fn_hess_x dimension in NatafTransformation::"
+	    << "trans_hess_X_to_U()." << std::endl;
       abort_handler(-1);
     }
     if ( nonlinear_vars_map &&
 	 ( fn_grad_x.length() != x_len || hessian_xu.size() != x_len ) ) {
-      Cerr << "Error: bad dimension in NatafTransformation::"
-	   << "trans_hess_X_to_U()." << std::endl;
+      PCerr << "Error: bad dimension in NatafTransformation::"
+	    << "trans_hess_X_to_U()." << std::endl;
       abort_handler(-1);
     }
     if (fn_hess_u.numRows() != x_len)
@@ -1444,7 +1444,7 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   Teuchos::symMatTripleProduct(Teuchos::TRANS, 1., fn_hess_x_trans,
                                jacobian_xu, fn_hess_u_trans);
 #ifdef DEBUG
-  Cout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_u_trans;
+  PCout << "\nfnHessU 1st term J^T H_x J:" << fn_hess_u_trans;
 #endif
 
   if (nonlinear_vars_map) { // nonlinear transformation has Hessian
@@ -1457,8 +1457,8 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 	for (int k=0; k<=j; k++)
 	  fn_hess_u_trans(j,k) += fn_grad_x_i * hessian_xu_i(j,k);
 #ifdef DEBUG
-      Cout << "\nhessian_xu[" << i << "]:\n" << hessian_xu_i
-	   << "fn_hess_u_trans increment:\n" << fn_hess_u_trans;
+      PCout << "\nhessian_xu[" << i << "]:\n" << hessian_xu_i
+	    << "fn_hess_u_trans increment:\n" << fn_hess_u_trans;
 #endif
     }
   }
@@ -1478,8 +1478,8 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   }
 
 #ifdef DEBUG
-  Cout << "Transformed fn_hess_x:\n" << fn_hess_x
-       << "to fn_hess_u:\n" << fn_hess_u;
+  PCout << "Transformed fn_hess_x:\n" << fn_hess_x
+        << "to fn_hess_u:\n" << fn_hess_u;
 #endif
 }
 
@@ -1720,8 +1720,8 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     }
     }
     if (err_flag) {
-      Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::jacobian_dX_dZ()" << std::endl;
+      PCerr << "Error: unsupported variable mapping for variable " << i
+	    << " in NatafTransformation::jacobian_dX_dZ()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -1967,8 +1967,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     }
     }
     if (err_flag) {
-      Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::jacobian_dZ_dX()" << std::endl;
+      PCerr << "Error: unsupported variable mapping for variable " << i
+	    << " in NatafTransformation::jacobian_dZ_dX()" << std::endl;
       abort_handler(-1);
     }
   }
@@ -2081,8 +2081,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    case NO_TARGET:   // can occur for all_variables Jacobians
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
-	      Cerr << "Error: secondary mapping failure for DESIGN in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for DESIGN in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2104,8 +2104,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      break;
 	    //case N_LWR_BND: case N_UPR_BND: not supported
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for NORMAL in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for NORMAL in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2144,8 +2144,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      jacobian_xs(j, i) = phi_ums/phi_x*Phi(z);
 	      break;
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for BOUNDED_NORMAL in "
-		   << "NonD::jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for BOUNDED_NORMAL in "
+		    << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2192,8 +2192,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    }
 	    //case LN_LWR_BND: case LN_UPR_BND: not supported
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for LOGNORMAL in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for LOGNORMAL in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2234,9 +2234,9 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      break;
 	    case LN_STD_DEV: // Deriv of Bounded LogN w.r.t. its Std Deviation
 	      if (ln_err_fact) {
-		Cerr << "Error: derivative with respect to LN_STD_DEV is "
-		     << "unsupported for error factor specifications."
-		     << std::endl;
+		PCerr << "Error: derivative with respect to LN_STD_DEV is "
+		      << "unsupported for error factor specifications."
+		      << std::endl;
 		abort_handler(-1);
 	      }
 	      dlambda_ds = -sigma/(mu_sq+var);
@@ -2244,9 +2244,9 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      break;
 	    case LN_ERR_FACT: // Deriv of Bounded LogN w.r.t. its Error Factor
 	      if (!ln_err_fact) {
-		Cerr << "Error: derivative with respect to LN_ERR_FACT is "
-		     << "unsupported for std deviation specifications."
-		     << std::endl;
+		PCerr << "Error: derivative with respect to LN_ERR_FACT is "
+		      << "unsupported for std deviation specifications."
+		      << std::endl;
 		abort_handler(-1);
 	      }
 	      dzeta_ds   = 1./1.645/ranVarAddtlParamsX[j](0);
@@ -2257,8 +2257,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    case LN_UPR_BND: // Deriv of Bounded LogN w.r.t. its Upper Bound
 	      dupr_ds = 1.; break;
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for BOUNDED_LOGNORMAL "
-		   << "in NonD::jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for BOUNDED_LOGNORMAL "
+		    << "in NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2300,8 +2300,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Uniform Mean          - TO DO
 	    // Uniform Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for UNIFORM in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for UNIFORM in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2345,8 +2345,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Loguniform Mean          - TO DO
 	    // Loguniform Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for LOGUNIFORM in "
-		   << "NonD::jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for LOGUNIFORM in "
+		    << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2428,8 +2428,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      }
 	    }
 	    if (dist_error) {
-	      Cerr << "Error: secondary mapping failure for TRIANGULAR in "
-		   << "NonD::jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for TRIANGULAR in "
+		    << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	    }
 	  }
@@ -2455,8 +2455,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Exponential Mean          - TO DO
 	    // Exponential Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for EXPONENTIAL in "
-		   << "NonD::jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for EXPONENTIAL in "
+		    << "NonD::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2539,8 +2539,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      //  = num*exp(num-exp(num))/ranVarStdDevsX(j)/phi(z);
 	      //break;
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for GUMBEL in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for GUMBEL in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2572,8 +2572,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Frechet Mean          - TO DO
 	    // Frechet Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for FRECHET in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for FRECHET in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2606,8 +2606,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Weibull Mean          - TO DO
 	    // Weibull Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      Cerr << "Error: secondary mapping failure for WEIBULL in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for WEIBULL in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2631,8 +2631,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    case NO_TARGET:   // can occur for all_variables Jacobians
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
-	      Cerr << "Error: secondary mapping failure for STATE in NonD::"
-		   << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for STATE in NonD::"
+		    << "jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2969,8 +2969,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
     }
     }
     if (err_flag) {
-      Cerr << "Error: unsupported variable mapping for variable " << i
-	   << " in NatafTransformation::hessian_d2X_dZ2()" << std::endl;
+      PCerr << "Error: unsupported variable mapping for variable " << i
+	    << " in NatafTransformation::hessian_d2X_dZ2()" << std::endl;
       abort_handler(-1);
     }
   }

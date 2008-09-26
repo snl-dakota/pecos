@@ -30,8 +30,8 @@ ProbabilityTransformation::ProbabilityTransformation(BaseConstructor):
   correlationFlagX(false), probTransRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "ProbabilityTransformation::ProbabilityTransformation(Base"
-       << "Constructor) called to build base class for letter." << std::endl;
+  PCout << "ProbabilityTransformation::ProbabilityTransformation(Base"
+        << "Constructor) called to build base class for letter." << std::endl;
 #endif
 }
 
@@ -43,8 +43,8 @@ ProbabilityTransformation::ProbabilityTransformation():
   probTransRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "ProbabilityTransformation::ProbabilityTransformation() called to "
-       << "build empty envelope." << std::endl;
+  PCout << "ProbabilityTransformation::ProbabilityTransformation() called to "
+        << "build empty envelope." << std::endl;
 #endif
 }
 
@@ -57,8 +57,8 @@ ProbabilityTransformation(const std::string& prob_trans_type):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "ProbabilityTransformation::ProbabilityTransformation(string&) "
-       << "called to instantiate envelope." << std::endl;
+  PCout << "ProbabilityTransformation::ProbabilityTransformation(string&) "
+        << "called to instantiate envelope." << std::endl;
 #endif
 
   // Set the rep pointer to the appropriate derived type
@@ -74,15 +74,15 @@ ProbabilityTransformation* ProbabilityTransformation::
 get_prob_trans(const std::string& prob_trans_type)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_prob_trans(string&)."
-       << std::endl;
+  PCout << "Envelope instantiating letter in get_prob_trans(string&)."
+        << std::endl;
 #endif
 
   if (prob_trans_type == "nataf")
     return new NatafTransformation();
   else {
-    Cerr << "Error: ProbabilityTransformation type " << prob_trans_type
-	 << " not available." << std::endl;
+    PCerr << "Error: ProbabilityTransformation type " << prob_trans_type
+	  << " not available." << std::endl;
     return NULL;
   }
 }
@@ -99,11 +99,11 @@ ProbabilityTransformation(const ProbabilityTransformation& prob_trans)
     probTransRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "ProbabilityTransformation::ProbabilityTransformation("
-       << "ProbabilityTransformation&)" << std::endl;
+  PCout << "ProbabilityTransformation::ProbabilityTransformation("
+        << "ProbabilityTransformation&)" << std::endl;
   if (probTransRep)
-    Cout << "probTransRep referenceCount = " << probTransRep->referenceCount
-	 << std::endl;
+    PCout << "probTransRep referenceCount = " << probTransRep->referenceCount
+	  << std::endl;
 #endif
 }
 
@@ -123,11 +123,11 @@ operator=(const ProbabilityTransformation& prob_trans)
     probTransRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "ProbabilityTransformation::operator=(ProbabilityTransformation&)"
-       << std::endl;
+  PCout << "ProbabilityTransformation::operator=(ProbabilityTransformation&)"
+        << std::endl;
   if (probTransRep)
-    Cout << "probTransRep referenceCount = " << probTransRep->referenceCount
-	 << std::endl;
+    PCout << "probTransRep referenceCount = " << probTransRep->referenceCount
+	  << std::endl;
 #endif
 
   return *this; // calls copy constructor since returned by value
@@ -142,12 +142,12 @@ ProbabilityTransformation::~ProbabilityTransformation()
   if (probTransRep) {
     --probTransRep->referenceCount;
 #ifdef REFCOUNT_DEBUG
-    Cout << "probTransRep referenceCount decremented to " 
-	 << probTransRep->referenceCount << std::endl;
+    PCout << "probTransRep referenceCount decremented to " 
+	  << probTransRep->referenceCount << std::endl;
 #endif
     if (probTransRep->referenceCount == 0) {
 #ifdef REFCOUNT_DEBUG
-      Cout << "deleting probTransRep" << std::endl;
+      PCout << "deleting probTransRep" << std::endl;
 #endif
       delete probTransRep;
     }
@@ -263,9 +263,9 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
       num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
     if (num_corr_vars != num_active_vars) {
       if (num_corr_vars != num_uncertain_vars) {
-	Cerr << "\nError: unknown symmetric matrix dimension (" << num_corr_vars
-	     << ") in ProbabilityTransformation::reshape_correlation_matrix()."
-	     << std::endl;
+	PCerr << "\nError: unknown symmetric matrix dim (" << num_corr_vars
+	      << ") in ProbabilityTransformation::reshape_correlation_matrix()."
+	      << std::endl;
 	abort_handler(-1);
       }
       RealSymMatrix old_corr_matrix(corrMatrixX);
@@ -290,9 +290,9 @@ trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_U_to_X(u_vars, x_vars);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_U_to_X() virtual fn."
-	 << "\nNo default defined at ProbabilityTransformation base class.\n"
-	 << std::endl;
+    PCerr << "Error: derived class does not redefine trans_U_to_X() virtual fn."
+	  << "\nNo default defined at ProbabilityTransformation base class.\n"
+	  << std::endl;
     abort_handler(-1);
   }
 }
@@ -304,9 +304,9 @@ trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_X_to_U(x_vars, u_vars);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_X_to_U() virtual fn."
-	 << "\nNo default defined at ProbabilityTransformation base class.\n"
-	 << std::endl;
+    PCerr << "Error: derived class does not redefine trans_X_to_U() virtual fn."
+	  << "\nNo default defined at ProbabilityTransformation base class.\n"
+	  << std::endl;
     abort_handler(-1);
   }
 }
@@ -317,9 +317,9 @@ void ProbabilityTransformation::trans_correlations()
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_correlations();
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_correlations() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_correlations() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -334,9 +334,9 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     probTransRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, x_vars, x_dvv,
 				    cv_ids);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_grad_X_to_U() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_grad_X_to_U() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -351,9 +351,9 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
     probTransRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, jacobian_xu, x_dvv,
 				    cv_ids);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_grad_X_to_U() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_grad_X_to_U() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -371,9 +371,9 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 				    acv_ids, acv_map1_indices,
 				    acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_grad_X_to_S() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_grad_X_to_S() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << "class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -391,9 +391,9 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 				    cv_ids, acv_ids, acv_map1_indices,
 				    acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_grad_X_to_S() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_grad_X_to_S() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -408,9 +408,9 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     probTransRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, x_vars, x_dvv,
 				    cv_ids);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_grad_U_to_X() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_grad_U_to_X() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -425,9 +425,9 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
     probTransRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, jacobian_ux, x_dvv,
 				    cv_ids);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_grad_U_to_X() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_grad_U_to_X() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -442,9 +442,9 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     probTransRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, x_vars, fn_grad_x,
 				    x_dvv, cv_ids);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_hess_X_to_U() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_hess_X_to_U() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -461,9 +461,9 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     probTransRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, jacobian_xu,
 				    hessian_xu, fn_grad_x, x_dvv, cv_ids);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine trans_hess_X_to_U() "
-         << "virtual fn.\nNo default defined at ProbabilityTransformation base "
-	 << "class.\n" << std::endl;
+    PCerr << "Error: derived class does not redefine trans_hess_X_to_U() "
+          << "virtual fn.\nNo default defined at ProbabilityTransformation base"
+	  << " class.\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -475,9 +475,9 @@ jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
   if (probTransRep) // envelope fwd to letter
     probTransRep->jacobian_dX_dU(x_vars, jacobian_xu);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine jacobian_dX_dU() virtual "
-         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
-	 << std::endl;
+    PCerr << "Error: derived class does not redefine jacobian_dX_dU() virtual "
+          << "fn.\nNo default defined at ProbabilityTransformation base class."
+	  << "\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -489,9 +489,9 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
   if (probTransRep) // envelope fwd to letter
     probTransRep->jacobian_dU_dX(x_vars, jacobian_ux);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine jacobian_dU_dX() virtual "
-         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
-	 << std::endl;
+    PCerr << "Error: derived class does not redefine jacobian_dU_dX() virtual "
+          << "fn.\nNo default defined at ProbabilityTransformation base class."
+	  << "\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -507,9 +507,9 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
     probTransRep->jacobian_dX_dS(x_vars, jacobian_xs, cv_ids, acv_ids,
 				 acv_map1_indices, acv_map2_targets);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine jacobian_dX_dS() virtual "
-         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
-	 << std::endl;
+    PCerr << "Error: derived class does not redefine jacobian_dX_dS() virtual "
+          << "fn.\nNo default defined at ProbabilityTransformation base class."
+	  << "\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -521,9 +521,9 @@ hessian_d2X_dU2(const RealVector& x_vars, RealSymMatrixArray& hessian_xu)
   if (probTransRep) // envelope fwd to letter
     probTransRep->hessian_d2X_dU2(x_vars, hessian_xu);
   else { // letter lacking redefinition of virtual fn
-    Cerr << "Error: derived class does not redefine hessian_d2X_dU2() virtual "
-         << "fn.\nNo default defined at ProbabilityTransformation base class.\n"
-	 << std::endl;
+    PCerr << "Error: derived class does not redefine hessian_d2X_dU2() virtual "
+          << "fn.\nNo default defined at ProbabilityTransformation base class."
+	  << "\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -691,26 +691,26 @@ distribution_parameter(size_t index, short target, const Real& param)
     break;
   case N_LWR_BND:
     if (ranVarTypesX[index] != BOUNDED_NORMAL) { // protect this for now
-      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
-	   << std::endl;
+      PCerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
+	    << std::endl;
       abort_handler(-1);
     }
     //if (ranVarLowerBndsX[index] == -DBL_MAX && param != -DBL_MAX) {
-    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive lower bound "
-    //       << "is not allowed." << std::endl;
+    //  PCerr << "Error: for BOUNDED_NORMAL, activating an inactive lower bound"
+    //        << " is not allowed." << std::endl;
     //  abort_handler(-1);
     //}
     //else
     ranVarLowerBndsX[index] = param; break;
   case LN_LWR_BND:
     if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
-      Cerr << "Error: setting lognormal bounds only allowed for "
-	   << "BOUNDED_LOGNORMAL." << std::endl;
+      PCerr << "Error: setting lognormal bounds only allowed for "
+	    << "BOUNDED_LOGNORMAL." << std::endl;
       abort_handler(-1);
     }
     //if (ranVarLowerBndsX[index] == 0. && param != 0.) {
-    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive lower "
-    //       << "bound is not allowed." << std::endl;
+    //  PCerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive lower "
+    //        << "bound is not allowed." << std::endl;
     //  abort_handler(-1);
     //}
     //else
@@ -743,26 +743,26 @@ distribution_parameter(size_t index, short target, const Real& param)
     break;
   case N_UPR_BND:
     if (ranVarTypesX[index] != BOUNDED_NORMAL) { // protect this for now
-      Cerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
-	   << std::endl;
+      PCerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
+	    << std::endl;
       abort_handler(-1);
     }
     //if (ranVarUpperBndsX[index] == DBL_MAX && param != DBL_MAX) {
-    //  Cerr << "Error: for BOUNDED_NORMAL, activating an inactive upper bound "
-    //       << "is not allowed." << std::endl;
+    //  PCerr << "Error: for BOUNDED_NORMAL, activating an inactive upper bound "
+    //        << "is not allowed." << std::endl;
     //  abort_handler(-1);
     //}
     //else
     ranVarUpperBndsX[index] = param; break;
   case LN_UPR_BND:
     if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
-      Cerr << "Error: setting lognormal bounds only allowed for "
-	   << "BOUNDED_LOGNORMAL." << std::endl;
+      PCerr << "Error: setting lognormal bounds only allowed for "
+	    << "BOUNDED_LOGNORMAL." << std::endl;
       abort_handler(-1);
     }
     //if (ranVarUpperBndsX[index] == DBL_MAX && param != DBL_MAX) {
-    //  Cerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive upper "
-    //       << "bound is not allowed." << std::endl;
+    //  PCerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive upper "
+    //        << "bound is not allowed." << std::endl;
     //  abort_handler(-1);
     //}
     //else
@@ -926,8 +926,8 @@ Real ProbabilityTransformation::erf_inverse(const Real& p)
   else if (p_new == 1.)
     z = pow(10., 150.); 
   else if (p_new < 0. || p_new > 1.) {
-    Cerr << "Error: probability greater than 1 or less than 0 in erf_inverse()."
-         << std::endl;
+    PCerr << "Error: probability greater than 1 or less than 0 in erf_inverse()."
+          << std::endl;
     abort_handler(-1);
   }
   // user erf instead of erfc
@@ -994,13 +994,13 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
 	reduction = true;
 	scaled_x = scaled_x_step;
 	res      = res_step;
-	//Cout << "residual = " << res << " delta = " << delta_scaled_x
-	//     << " scaled_x = " << scaled_x << '\n';
+	//PCout << "residual = " << res << " delta = " << delta_scaled_x
+	//      << " scaled_x = " << scaled_x << '\n';
       }
       else if (converged)
 	terminate = true; // kick out of inner while
       else {
-	//Cout << "Backtracking\n";
+	//PCout << "Backtracking\n";
 	delta_scaled_x /= 2.; // backtrack
 	if (backtrack_iters++ >= max_iters) // backtrack iter must complete
 	  terminate = true;
@@ -1055,8 +1055,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	// ----------------------------
 	RealVector trans_vars_v_plus_h;
 	v1(j) = v0(j) + h;
-	Cout << ">>>>> Pecos finite difference gradient evaluation for v["
-	     << j+1 << "] + h:\n";
+	PCout << ">>>>> Pecos finite difference gradient evaluation for v["
+	      << j+1 << "] + h:\n";
 	//trans_X_to_U(v1, trans_vars_v_plus_h);
 	trans_U_to_X(v1, trans_vars_v_plus_h);
 
@@ -1065,8 +1065,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	// -----------------------------
 	RealVector trans_vars_v_minus_h;
 	v1(j) = v0(j) - h;
-	Cout << ">>>>> Pecos finite difference gradient evaluation for v["
-	     << j+1 << "] - h:\n";
+	PCout << ">>>>> Pecos finite difference gradient evaluation for v["
+	      << j+1 << "] - h:\n";
 	//trans_X_to_U(v1, trans_vars_v_minus_h);
 	trans_U_to_X(v1, trans_vars_v_minus_h);
 
@@ -1092,8 +1092,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	  // Evaluate trans_vars_v_plus_2h
 	  // -----------------------------
 	  v1(j) = v0(j) + 2.*h;
-	  Cout << ">>>>> Pecos finite difference Hessian evaluation for v["
-	       << j+1 << "] + 2h:\n";
+	  PCout << ">>>>> Pecos finite difference Hessian evaluation for v["
+	        << j+1 << "] + 2h:\n";
 	  //trans_X_to_U(v1, trans_vars_v_plus_2h);
 	  trans_U_to_X(v1, trans_vars_v_plus_2h);
 
@@ -1101,8 +1101,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	  // Evaluate trans_vars_v_minus_2h
 	  // ------------------------------
 	  v1(j) = v0(j) - 2.*h;
-	  Cout << ">>>>> Pecos finite difference Hessian evaluation for v["
-	       << j+1 << "] - 2h:\n";
+	  PCout << ">>>>> Pecos finite difference Hessian evaluation for v["
+	        << j+1 << "] - 2h:\n";
 	  //trans_X_to_U(v1, trans_vars_v_minus_2h);
 	  trans_U_to_X(v1, trans_vars_v_minus_2h);
 
@@ -1123,8 +1123,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	    // -----------------------------------
 	    v1(j) = v0(j) + h;
 	    v1(k) = v0(k) + h;
-	    Cout << ">>>>> Pecos finite difference Hessian evaluation for v["
-		 << j+1 << "] + h, v[" << k+1 << "] + h:\n";
+	    PCout << ">>>>> Pecos finite difference Hessian evaluation for v["
+		  << j+1 << "] + h, v[" << k+1 << "] + h:\n";
 	    //trans_X_to_U(v1, trans_vars_v_plus_h_plus_h);
 	    trans_U_to_X(v1, trans_vars_v_plus_h_plus_h);
 	    // ------------------------------------
@@ -1132,8 +1132,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	    // ------------------------------------
 	    //v1(j) = v0(j) + h;
 	    v1(k) = v0(k) - h;
-	    Cout << ">>>>> Pecos finite difference Hessian evaluation for v["
-		 << j+1 << "] + h, v[" << k+1 << "] - h:\n";
+	    PCout << ">>>>> Pecos finite difference Hessian evaluation for v["
+		  << j+1 << "] + h, v[" << k+1 << "] - h:\n";
 	    //trans_X_to_U(v1, trans_vars_v_plus_h_minus_h);
 	    trans_U_to_X(v1, trans_vars_v_plus_h_minus_h);
 	    // ------------------------------------
@@ -1141,8 +1141,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	    // ------------------------------------
 	    v1(j) = v0(j) - h;
 	    v1(k) = v0(k) + h;
-	    Cout << ">>>>> Pecos finite difference Hessian evaluation for v["
-		 << j+1 << "] - h, v[" << k+1 << "] + h:\n";
+	    PCout << ">>>>> Pecos finite difference Hessian evaluation for v["
+		  << j+1 << "] - h, v[" << k+1 << "] + h:\n";
 	    //trans_X_to_U(v1, trans_vars_v_minus_h_plus_h);
 	    trans_U_to_X(v1, trans_vars_v_minus_h_plus_h);
 	    // -------------------------------------
@@ -1150,8 +1150,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	    // -------------------------------------
 	    //v1(j) = v0(j) - h;
 	    v1(k) = v0(k) - h;
-	    Cout << ">>>>> Pecos finite difference Hessian evaluation for v["
-		 << j+1 << "] - h, v[" << k+1 << "] - h:\n";
+	    PCout << ">>>>> Pecos finite difference Hessian evaluation for v["
+		  << j+1 << "] - h, v[" << k+1 << "] - h:\n";
 	    //trans_X_to_U(v1, trans_vars_v_minus_h_minus_h);
 	    trans_U_to_X(v1, trans_vars_v_minus_h_minus_h);
 
@@ -1177,8 +1177,8 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 	  // Evaluate fn_grads_v_plus_h
 	  // --------------------------
 	  v1(j) = v0(j) + h;
-	  Cout << ">>>>> Pecos finite difference Hessian evaluation for v["
-	       << j+1 << "] + h:\n";
+	  PCout << ">>>>> Pecos finite difference Hessian evaluation for v["
+	        << j+1 << "] + h:\n";
 	  RealVector trans_vars_v_plus_h;
 	  trans_U_to_X(v1, trans_vars_v_plus_h);
 	  RealMatrix jac_v0, jac_v_plus_h;
@@ -1211,13 +1211,13 @@ verify_trans_jacobian_hessian(const RealVector& v0)
   trans_U_to_X(v0, x0);
   RealMatrix jacobian_xu;
   jacobian_dX_dU(x0, jacobian_xu);
-  Cout << "\nNumerical jacobian:" << num_jac_dtv_dv
-       << "\nAnalytic jacobian:"  << jacobian_xu; //jacobian_ux;
+  PCout << "\nNumerical jacobian:" << num_jac_dtv_dv
+        << "\nAnalytic jacobian:"  << jacobian_xu; //jacobian_ux;
   RealSymMatrixArray hessian_xu(num_tv);
   hessian_d2X_dU2(x0, hessian_xu);
   for (i=0; i<num_tv; i++)
-    Cout << "\nNumerical Hessian:" << num_hess_d2tv_dv2[i]
-	 << "\nAnalytic Hessian:"  << hessian_xu[i];
+    PCout << "\nNumerical Hessian:" << num_hess_d2tv_dv2[i]
+	  << "\nAnalytic Hessian:"  << hessian_xu[i];
 }
 
 
@@ -1233,8 +1233,8 @@ void ProbabilityTransformation::verify_design_jacobian(const RealVector& u0)
   jacobian_dX_dS(x0, jacobian_xs);
 
   // Print out numerical and analytic:
-  Cout << "\nNumerical jacobian:" << num_jac_dx_ds
-       << "\nAnalytic jacobian:"  << jacobian_xs;
+  PCout << "\nNumerical jacobian:" << num_jac_dx_ds
+        << "\nAnalytic jacobian:"  << jacobian_xs;
 }
 #endif // DERIV_DEBUG
 

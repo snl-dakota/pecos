@@ -26,8 +26,8 @@ DataTransformation::DataTransformation(BaseConstructor):
   dataTransRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "DataTransformation::DataTransformation(BaseConstructor) called to "
-       << "build base class for letter." << std::endl;
+  PCout << "DataTransformation::DataTransformation(BaseConstructor) called to "
+        << "build base class for letter." << std::endl;
 #endif
 }
 
@@ -38,8 +38,8 @@ DataTransformation::DataTransformation(BaseConstructor):
 DataTransformation::DataTransformation(): dataTransRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "DataTransformation::DataTransformation() called to build empty "
-       << "envelope." << std::endl;
+  PCout << "DataTransformation::DataTransformation() called to build empty "
+        << "envelope." << std::endl;
 #endif
 }
 
@@ -51,8 +51,8 @@ DataTransformation::DataTransformation(const std::string& data_trans_type):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "DataTransformation::DataTransformation(string&) called to "
-       << "instantiate envelope." << std::endl;
+  PCout << "DataTransformation::DataTransformation(string&) called to "
+        << "instantiate envelope." << std::endl;
 #endif
 
   // Set the rep pointer to the appropriate derived type
@@ -68,8 +68,8 @@ DataTransformation* DataTransformation::
 get_data_trans(const std::string& data_trans_type)
 {
 #ifdef REFCOUNT_DEBUG
-  Cout << "Envelope instantiating letter in get_data_trans(string&)."
-       << std::endl;
+  PCout << "Envelope instantiating letter in get_data_trans(string&)."
+        << std::endl;
 #endif
 
   if (data_trans_type == "inverse_fourier")
@@ -79,8 +79,8 @@ get_data_trans(const std::string& data_trans_type)
   else if (data_trans_type == "inverse_sampling")
     return new SamplingInverseTransformation();
   else {
-    Cerr << "Error: DataTransformation type " << data_trans_type
-	 << " not available." << std::endl;
+    PCerr << "Error: DataTransformation type " << data_trans_type
+	  << " not available." << std::endl;
     return NULL;
   }
 }
@@ -96,11 +96,11 @@ DataTransformation::DataTransformation(const DataTransformation& data_trans)
     dataTransRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "DataTransformation::DataTransformation(DataTransformation&)"
-       << std::endl;
+  PCout << "DataTransformation::DataTransformation(DataTransformation&)"
+        << std::endl;
   if (dataTransRep)
-    Cout << "dataTransRep referenceCount = " << dataTransRep->referenceCount
-	 << std::endl;
+    PCout << "dataTransRep referenceCount = " << dataTransRep->referenceCount
+	  << std::endl;
 #endif
 }
 
@@ -121,10 +121,10 @@ operator=(const DataTransformation& data_trans)
     dataTransRep->referenceCount++;
 
 #ifdef REFCOUNT_DEBUG
-  Cout << "DataTransformation::operator=(DataTransformation&)" << std::endl;
+  PCout << "DataTransformation::operator=(DataTransformation&)" << std::endl;
   if (dataTransRep)
-    Cout << "dataTransRep referenceCount = " << dataTransRep->referenceCount
-	 << std::endl;
+    PCout << "dataTransRep referenceCount = " << dataTransRep->referenceCount
+	  << std::endl;
 #endif
 
   return *this; // calls copy constructor since returned by value
@@ -139,12 +139,12 @@ DataTransformation::~DataTransformation()
   if (dataTransRep) {
     --dataTransRep->referenceCount;
 #ifdef REFCOUNT_DEBUG
-    Cout << "dataTransRep referenceCount decremented to " 
-	 << dataTransRep->referenceCount << std::endl;
+    PCout << "dataTransRep referenceCount decremented to " 
+	  << dataTransRep->referenceCount << std::endl;
 #endif
     if (dataTransRep->referenceCount == 0) {
 #ifdef REFCOUNT_DEBUG
-      Cout << "deleting dataTransRep" << std::endl;
+      PCout << "deleting dataTransRep" << std::endl;
 #endif
       delete dataTransRep;
     }
