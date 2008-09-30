@@ -12,6 +12,17 @@ if WITH_GSL
 SUBDIRS += gsl
 endif
 
+#if WITH_FFT
+#SUBDIRS += dfftpack fftw
+#else
+#  if WITH_DFFTPACK
+#  SUBDIRS += dfftpack
+#  endif
+#  if WITH_FFTW
+#  SUBDIRS += fftw
+#  endif
+#endif
+
 ## Conditionally configured subdirectories should _not_ be recursed into
 ## during 'make distclean' or 'make maintainer-clean'.
 DIST_SUBDIRS = $(SUBDIRS)
