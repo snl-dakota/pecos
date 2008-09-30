@@ -26,10 +26,10 @@ compute_samples(size_t num_samples, size_t seed)
 
   inverseSamples.shapeUninitialized(num_samples, num_terms);
 
-  //if (fourierMethod == "shinozuka_deodatis")
-  //  compute_samples_shinozuka_deodatis(num_samples, seed);
-  //else if (fourierMethod == "grigoriu")
-  compute_samples_grigoriu(num_samples, seed);
+  if (fourierMethod == "shinozuka_deodatis")
+    compute_samples_shinozuka_deodatis(num_samples, seed);
+  else if (fourierMethod == "grigoriu")
+    compute_samples_grigoriu(num_samples, seed);
 }
 
 
@@ -140,6 +140,7 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
     compute_ifft_sample_set(B, i);
   }
 }
+
 
 void FourierInverseTransformation::
 compute_ifft_sample_set(const ComplexArray& B, size_t i)

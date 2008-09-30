@@ -58,10 +58,14 @@ private:
 
   /// sequence of standard deviations computed from psdSequence
   RealVector sigmaSequence;
+
+  /// iFFT approach: "shinozuka_deodatis" or "grigoriu"
+  String fourierMethod;
 };
 
 
-inline FourierInverseTransformation::FourierInverseTransformation()
+inline FourierInverseTransformation::FourierInverseTransformation():
+  fourierMethod("grigoriu") // hardwire for now
 { }
 
 

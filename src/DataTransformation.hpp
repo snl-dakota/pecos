@@ -52,8 +52,12 @@ public:
   virtual void power_spectral_density(const String& psd_name, Real param = 0.);
   // define PSD from a user-defined function
   //virtual void power_spectral_density(fn_ptr);
-  /// pass a discretized PSD directly
+  /// pass a discretized PSD directly: vector or pairs...
   virtual void power_spectral_density(const RealVector& psd);
+
+  //virtual void correlation_function(const String& fn_name, Real param = 0.);
+  //virtual void correlation_function(fn_ptr);
+  //virtual void correlation_function(const RealPairArray& corr_fn);
 
   /// compute InverseTransformation::inverseSamples
   virtual void compute_samples(size_t num_samples, size_t seed);

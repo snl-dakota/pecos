@@ -29,8 +29,9 @@ int main(int argc, char* argv[])
   size_t nseed = 314;    // random number seed
   size_t ns    = 50;     // number of samples
 
+  // Demonstrate 1st-order Markov internally-defined PSD
   ifft_transform.initialize(vbar, T);
-  ifft_transform.power_spectral_density("markov", 1000.); // user-defined psd
+  ifft_transform.power_spectral_density("first_order_markov", 1000.);
   ifft_transform.compute_samples(ns, nseed);
   //for (size_t i=0; i<ns; i++) {
   //  const RealVector& sample_i = ifft_transform.sample(i);

@@ -41,7 +41,11 @@ protected:
 
   void power_spectral_density(const String& psd_name, Real param = 0.);
   //void power_spectral_density(fn_ptr);
-  void power_spectral_density(const RealVector& psd);
+  void power_spectral_density(const RealPairArray& psd);
+
+  //void correlation_function(const String& fn_name, Real param = 0.);
+  //void correlation_function(fn_ptr);
+  //void correlation_function(const RealPairArray& corr_fn);
 
   //
   //- Heading: Data
@@ -82,10 +86,6 @@ inline InverseTransformation::InverseTransformation():
 
 inline InverseTransformation::~InverseTransformation()
 { }
-
-
-inline void InverseTransformation::power_spectral_density(const RealVector& psd)
-{ psdSequence = psd; }
 
 } // namespace Pecos
 

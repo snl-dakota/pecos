@@ -33,7 +33,7 @@ void InverseTransformation::initialize(const Real& total_t, const Real& w_bar)
   omegaBar  = w_bar;
 
   // omegaBar and totalTime specify deltaTime and m
-  deltaTime  = 2.*Pi/omegaBar;  // rad/(rad/sec) = sec
+  deltaTime  = 2.*Pi/omegaBar;  // rad/sec -> sec
   size_t m   = 1 + (size_t)floor(totalTime/deltaTime);
   deltaOmega = omegaBar/(m-1);
 
@@ -60,6 +60,8 @@ power_spectral_density(const String& psd_name, Real param)
     abort_handler(-1);
 
   psdSequence.sizeUninitialized(m);
+  //if (psd_name == "white_noise")            // TO DO
+  //else if (psd_name == "rectangular_pulse") // TO DO
   if (psd_name == "band_limited_white_noise")
     // One-sided PSD for (unit-variance) band-limited white noise:
     // param is upper bound wc (which differs from omegaBar)
@@ -89,14 +91,39 @@ power_spectral_density(const String& psd_name, Real param)
       psdSequence[i] = (omegaSequence[i] <= param) ?
 	intercept + slope * omegaSequence[i] : 0.;
   }
-  else if (psd_name == "markov")
+  else if (psd_name == "first_order_markov") {
     // One-sided PSD for (unit-variance) 1st-order Markov process:
     // param is lambda
     //            2 * lam
     // g(w) = ----------------
-    //        pi ( w^2 + lam^2)
+    //        pi (w^2 + lam^2)
+    Real p_2_over_pi = 2.*param/Pi, param_sq = param*param;
     for (size_t i=0; i<m; i++)
-      psdSequence[i] = 2.*param/Pi/(pow(omegaSequence[i], 2) + param*param);
+      psdSequence[i] = p_2_over_pi/(pow(omegaSequence[i], 2) + param_sq);
+  }
+  else if (psd_name == "second_order_markov") {
+    // One-sided PSD for (unit-variance) 2st-order Markov process:
+    // param is lambda
+    //            4 * lam^3
+    // g(w) = -------------------
+    //        pi (w^2 + lam^2)^2
+    Real param_sq = param*param, p_sq_4_over_pi = 4.*param_sq/Pi;
+    for (size_t i=0; i<m; i++)
+      psdSequence[i]
+	= p_sq_4_over_pi/pow(pow(omegaSequence[i], 2) + param_sq, 2);
+  }
+}
+
+
+/** Incoming psd if a set of (x,y) pairs that define a PSD curve (w, g(w)).  
+    The incoming discretization cannot be assumed to match that selected
+    for psdSequence; therefore, linear interpolation is performed in any
+    combination of log or linear scales for the two axes. */
+void InverseTransformation::power_spectral_density(const RealPairArray& psd)
+{
+  // Interpolation: psd[i].second -> psdSequence
+
+  // interpolation: log-log , linear-log, log-linear, linear-linear
 }
 
 } // namespace Pecos
