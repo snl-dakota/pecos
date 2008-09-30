@@ -39,10 +39,11 @@ typedef std::string String;
 // --------------------------------
 // Numerical arrays (serial dense):
 // --------------------------------
-typedef Teuchos::SerialDenseVector<int, Real>    RealVector;
-typedef Teuchos::SerialDenseVector<int, int>     IntVector;
-typedef Teuchos::SerialDenseMatrix<int, Real>    RealMatrix;
-typedef Teuchos::SerialSymDenseMatrix<int, Real> RealSymMatrix;
+typedef Teuchos::SerialDenseVector<int, Real>                RealVector;
+typedef Teuchos::SerialDenseVector<int, int>                 IntVector;
+//typedef Teuchos::SerialDenseVector<int, std::complex<Real> > ComplexVector;
+typedef Teuchos::SerialDenseMatrix<int, Real>                RealMatrix;
+typedef Teuchos::SerialSymDenseMatrix<int, Real>             RealSymMatrix;
 
 
 // ---------------------------------
@@ -62,6 +63,7 @@ typedef std::vector<unsigned int>   UIntArray;
 typedef std::vector<short>          ShortArray;
 typedef std::vector<unsigned short> UShortArray;
 typedef std::vector<size_t>         SizetArray;
+typedef std::vector<std::complex<Real> > ComplexArray;
 typedef std::vector<String>         StringArray;
 typedef std::vector<RealVector>     RealVectorArray;
 typedef std::vector<RealMatrix>     RealMatrixArray;

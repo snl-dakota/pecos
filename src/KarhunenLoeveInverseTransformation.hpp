@@ -9,7 +9,7 @@
 #ifndef KARHUNEN_LOEVE_INVERSE_TRANSFORMATION_HPP
 #define KARHUNEN_LOEVE_INVERSE_TRANSFORMATION_HPP
 
-#include "DataTransformation.hpp"
+#include "InverseTransformation.hpp"
 
 
 namespace Pecos {
@@ -20,7 +20,7 @@ namespace Pecos {
 /** The KarhunenLoeveInverseTransformation employs an KL decomposition
     to map from the frequency domain to the time domain. */
 
-class KarhunenLoeveInverseTransformation: public DataTransformation
+class KarhunenLoeveInverseTransformation: public InverseTransformation
 {
 public:
 
@@ -47,8 +47,7 @@ private:
 };
 
 
-inline KarhunenLoeveInverseTransformation::KarhunenLoeveInverseTransformation():
-  DataTransformation(BaseConstructor())
+inline KarhunenLoeveInverseTransformation::KarhunenLoeveInverseTransformation()
 { }
 
 

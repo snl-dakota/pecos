@@ -47,7 +47,7 @@ DataTransformation::DataTransformation(): dataTransRep(NULL), referenceCount(1)
 /** Envelope constructor only needs to extract enough data to properly
     execute get_data_trans, since DataTransformation(BaseConstructor)
     builds the actual base class data for the derived transformations. */
-DataTransformation::DataTransformation(const std::string& data_trans_type):
+DataTransformation::DataTransformation(const String& data_trans_type):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -65,7 +65,7 @@ DataTransformation::DataTransformation(const std::string& data_trans_type):
 /** Used only by the envelope constructor to initialize dataTransRep to the 
     appropriate derived type. */
 DataTransformation* DataTransformation::
-get_data_trans(const std::string& data_trans_type)
+get_data_trans(const String& data_trans_type)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_data_trans(string&)."

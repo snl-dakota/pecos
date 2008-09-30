@@ -301,9 +301,6 @@ protected:
   /// is modified in trans_correlations() for use in z-space)
   RealMatrix corrCholeskyFactorZ;
 
-  /// the value for Pi used in several numerical routines
-  static const Real Pi;
-
 private:
 
   //

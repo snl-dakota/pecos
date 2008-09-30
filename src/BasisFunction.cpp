@@ -45,7 +45,7 @@ BasisFunction::BasisFunction(): basisFnRep(NULL), referenceCount(1)
 /** Envelope constructor only needs to extract enough data to properly
     execute get_basis_fn, since BasisFunction(BaseConstructor)
     builds the actual base class data for the derived basis functions. */
-BasisFunction::BasisFunction(const std::string& basis_fn_type):
+BasisFunction::BasisFunction(const String& basis_fn_type):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -62,7 +62,7 @@ BasisFunction::BasisFunction(const std::string& basis_fn_type):
 
 /** Used only by the envelope constructor to initialize basisFnRep to the 
     appropriate derived type. */
-BasisFunction* BasisFunction::get_basis_fn(const std::string& basis_fn_type)
+BasisFunction* BasisFunction::get_basis_fn(const String& basis_fn_type)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_basis_fn(string&)."

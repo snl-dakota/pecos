@@ -1,0 +1,102 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2008, Sandia National Laboratories.
+    This software is distributed under the GNU General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
+#include "InverseTransformation.hpp"
+
+static const char rcsId[]="@(#) $Id: InverseTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
+
+//#define DEBUG
+
+
+namespace Pecos {
+
+void InverseTransformation::initialize(const Real& total_t, const Real& w_bar)
+{
+  bool err_flag = false;
+  if (total_t < 0.) {
+    PCerr << "Error: total time must be non-negative." << std::endl;
+    err_flag = true;
+  }
+  if (w_bar <= 0.) {
+    PCerr << "Error: cut-off frequency must be positive." << std::endl;
+    err_flag = true;
+  }
+  if (err_flag)
+    abort_handler(-1);
+
+  totalTime = total_t;
+  omegaBar  = w_bar;
+
+  // omegaBar and totalTime specify deltaTime and m
+  deltaTime  = 2.*Pi/omegaBar;  // rad/(rad/sec) = sec
+  size_t m   = 1 + (size_t)floor(totalTime/deltaTime);
+  deltaOmega = omegaBar/(m-1);
+
+  timeSequence.sizeUninitialized(m);
+  omegaSequence.sizeUninitialized(m);
+  for (size_t i=0; i<m; i++) {
+    timeSequence[i]  = i*deltaTime;  // from 0 to final time <= totalTime
+    omegaSequence[i] = i*deltaOmega; // from 0 to omegaBar
+  }
+}
+
+
+void InverseTransformation::
+power_spectral_density(const String& psd_name, Real param)
+{
+  size_t m = omegaSequence.length();
+  bool err_flag = false;
+  if (!m) {
+    PCerr << "Error: initialize() must be called prior to "
+	  << "power_spectral_density()." << std::endl;
+    err_flag = true;
+  }
+  if (err_flag)
+    abort_handler(-1);
+
+  psdSequence.sizeUninitialized(m);
+  if (psd_name == "band_limited_white_noise")
+    // One-sided PSD for (unit-variance) band-limited white noise:
+    // param is upper bound wc (which differs from omegaBar)
+    //        { 1/wc   w \in [0,wc]
+    // g(w) = { 
+    //        { 0      otherwise
+    for (size_t i=0; i<m; i++)
+      psdSequence[i] = (omegaSequence[i] <= param) ? 1./param : 0.;
+  else if (psd_name == "increasing_linear" || psd_name == "decreasing_linear") {
+    // One-sided linear PSD with unit variance (s^2 = area) defining either the
+    // lower right or lower left half portion of band_limited_white_noise:
+    // param is upper bound wc (which differs from omegaBar)
+    Real intercept, slope;
+    if (psd_name == "increasing_linear") {
+      // For positive slope (lower right triangle - emphasize high freq):
+      // g(w) = 2/wc^2 w for w in [0,wc], 0 otherwise
+      intercept = 0.;
+      slope     = 2./param/param;
+    }
+    else {
+      // For negative slope (lower left triangle - emphasize low freq):
+      // g(w) = 2/wc - 2/wc^2 w for w in [0,wc], 0 otherwise
+      intercept = 2./param;
+      slope     = -intercept/param;
+    }
+    for (size_t i=0; i<m; i++)
+      psdSequence[i] = (omegaSequence[i] <= param) ?
+	intercept + slope * omegaSequence[i] : 0.;
+  }
+  else if (psd_name == "markov")
+    // One-sided PSD for (unit-variance) 1st-order Markov process:
+    // param is lambda
+    //            2 * lam
+    // g(w) = ----------------
+    //        pi ( w^2 + lam^2)
+    for (size_t i=0; i<m; i++)
+      psdSequence[i] = 2.*param/Pi/(pow(omegaSequence[i], 2) + param*param);
+}
+
+} // namespace Pecos

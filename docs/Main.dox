@@ -74,13 +74,13 @@ time domain to frequency domain based on FFT.  A placeholder for now.
 <li> \ref Pecos::InverseTransformation "InverseTransformation":
 from frequency domain (PSD) to time domain.
      <ul> 
-     <li> \ref Pecos::ForwardTransformation "iFFTInverseTransformation": from
+     <li> \ref Pecos::FourierInverseTransformation "FourierInverseTransformation": from
      frequency domain to time domain based on inverse fast Fourier transform.
      This approach generates a complete time series all at once.
-     <li> \ref Pecos::InverseTransformation "KLInverseTransformation":
+     <li> \ref Pecos::KarhunenLoeveInverseTransformation "KarhunenLoeveInverseTransformation":
      from frequency domain (PSD) to time domain based on Karhunen-Loeve.
      This approach generates a complete time series all at once.
-     <li> \ref Pecos::InverseTransformation "SamplingInverseTransformation":
+     <li> \ref Pecos::SamplingInverseTransformation "SamplingInverseTransformation":
      from frequency domain (PSD) to time domain based on random sampling.
      This approach supports incremental generation of time series.  This
      approach will be adapted from the Salinas implementation by

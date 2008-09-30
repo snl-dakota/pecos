@@ -9,7 +9,7 @@
 #ifndef SAMPLING_INVERSE_TRANSFORMATION_HPP
 #define SAMPLING_INVERSE_TRANSFORMATION_HPP
 
-#include "DataTransformation.hpp"
+#include "InverseTransformation.hpp"
 
 
 namespace Pecos {
@@ -20,7 +20,7 @@ namespace Pecos {
 /** The SamplingInverseTransformation employs a sampling-based inverse
     transform to map from the frequency domain to the time domain. */
 
-class SamplingInverseTransformation: public DataTransformation
+class SamplingInverseTransformation: public InverseTransformation
 {
 public:
 
@@ -47,8 +47,7 @@ private:
 };
 
 
-inline SamplingInverseTransformation::SamplingInverseTransformation():
-  DataTransformation(BaseConstructor())
+inline SamplingInverseTransformation::SamplingInverseTransformation()
 { }
 
 

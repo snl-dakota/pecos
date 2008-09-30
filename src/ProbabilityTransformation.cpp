@@ -16,8 +16,6 @@ static const char rcsId[]="@(#) $Id: ProbabilityTransformation.cpp 4768 2007-12-
 
 namespace Pecos {
 
-const Real ProbabilityTransformation::Pi = 3.1415926535897932385;
-
 
 /** This constructor is the one which must build the base class data
     for all derived classes.  get_prob_trans() instantiates a derived
@@ -53,7 +51,7 @@ ProbabilityTransformation::ProbabilityTransformation():
     execute get_prob_trans, since ProbabilityTransformation(BaseConstructor)
     builds the actual base class data for the derived transformations. */
 ProbabilityTransformation::
-ProbabilityTransformation(const std::string& prob_trans_type):
+ProbabilityTransformation(const String& prob_trans_type):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -71,7 +69,7 @@ ProbabilityTransformation(const std::string& prob_trans_type):
 /** Used only by the envelope constructor to initialize probTransRep to the 
     appropriate derived type. */
 ProbabilityTransformation* ProbabilityTransformation::
-get_prob_trans(const std::string& prob_trans_type)
+get_prob_trans(const String& prob_trans_type)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_prob_trans(string&)."
@@ -931,7 +929,6 @@ Real ProbabilityTransformation::erf_inverse(const Real& p)
     abort_handler(-1);
   }
   // user erf instead of erfc
-  const Real Pi = 3.1415926535897932385;
   Real e = 0.5*(1. - erf(-z/sqrt(2.))) - p_new;
   Real u = e*sqrt(2.*Pi)*exp(z*z/2.);
   z = z - u/(1. + z*u/2.);

@@ -18,9 +18,10 @@ lib_LTLIBRARIES = libpecos.la
 pkginclude_HEADERS = src/pecos_data_types.hpp			\
 		     src/pecos_global_defs.hpp			\
 		     src/DataTransformation.hpp			\
-		     src/FourierInverseTransformation.cpp	\
-		     src/KarhunenLoeveInverseTransformation.cpp	\
-		     src/SamplingInverseTransformation.cpp	\
+		     src/InverseTransformation.hpp		\
+		     src/FourierInverseTransformation.hpp	\
+		     src/KarhunenLoeveInverseTransformation.hpp	\
+		     src/SamplingInverseTransformation.hpp	\
 		     src/ProbabilityTransformation.hpp		\
 		     src/NatafTransformation.hpp		\
 		     src/BasisFunction.hpp

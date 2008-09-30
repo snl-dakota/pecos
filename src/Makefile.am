@@ -8,14 +8,12 @@ else
 AM_CPPFLAGS += -I${top_builddir}/packages/teuchos/src
 endif
 
-## Suppress parallel behavior by gmake; other makes should ignore this.
-.NOTPARALLEL:
-
 ## Set the Pecos library name.
 noinst_LTLIBRARIES = libpecos_src.la
 
 ## Pecos library sources.
 libpecos_src_la_SOURCES = DataTransformation.cpp			\
+			  InverseTransformation.cpp			\
 			  FourierInverseTransformation.cpp		\
 			  KarhunenLoeveInverseTransformation.cpp	\
 			  SamplingInverseTransformation.cpp		\
@@ -29,4 +27,3 @@ MAINTAINERCLEANFILES = Makefile.in
 ## make clean extension to handle compiler cache directories and the like.
 clean-local:
 	-rm -rf ii_files/ SunWS_cache/ so_locations
-
