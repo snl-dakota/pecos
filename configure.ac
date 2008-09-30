@@ -13,7 +13,7 @@ AM_INIT_AUTOMAKE([1.9.6 foreign tar-ustar])
 AC_LANG([C++])
 
 # Future feature (for now, we rely on ACLOCAL_AMFLAGS in Makefile.am):
-#AC_CONFIG_MACRO_DIR([../../m4])
+#AC_CONFIG_MACRO_DIR([m4])
 
 # Since we're using libtool, don't build shared libraries!
 AC_DISABLE_SHARED
@@ -43,8 +43,7 @@ AC_HEADER_STDBOOL
 
 
 # PECOS-specific package checks.
-RAC_PATH_GSL
-RAC_PATH_TEUCHOS
+PECOS_PACKAGES
 
 
 # Write the Makefiles and exit.
