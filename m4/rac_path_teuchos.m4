@@ -48,6 +48,5 @@ AC_DEFUN([RAC_PATH_TEUCHOS],[
     AC_MSG_ERROR([Pecos cannot be configured without Teuchos. Please specify --with-teuchos=yes OR provide a DIR path to Teuchos])
   fi
 
-  dnl Pecos depends on Teuchos UNCONDITIONALLY
-  dnl AM_CONDITIONAL([WITH_TEUCHOS],[test "x$with_teuchos" != xno])
+  AM_CONDITIONAL([WITH_ALT_EXTERNAL_TEUCHOS],[test "x$want_teuchos" != xyes || "$ac_teuchos_path" != ""])
 ])
