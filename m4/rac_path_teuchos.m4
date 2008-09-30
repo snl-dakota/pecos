@@ -29,8 +29,8 @@ AC_DEFUN([RAC_PATH_TEUCHOS],[
     if test "$ac_teuchos_path" != ""; then
       AC_MSG_RESULT([${ac_teuchos_path}])
       if test -d "${ac_teuchos_path}"; then
-        TEUCHOS_CPPFLAGS="-I$ac_teuchos_path"
-        TEUCHOS_LDFLAGS="-L$ac_teuchos_path"
+        TEUCHOS_CPPFLAGS="-I$ac_teuchos_path/src"
+        TEUCHOS_LDFLAGS="-L$ac_teuchos_path/src"
 
         AC_MSG_NOTICE(TEUCHOS_CPPFLAGS: $TEUCHOS_CPPFLAGS)
         AC_SUBST(TEUCHOS_CPPFLAGS)
@@ -48,5 +48,5 @@ AC_DEFUN([RAC_PATH_TEUCHOS],[
     AC_MSG_ERROR([Pecos cannot be configured without Teuchos. Please specify --with-teuchos=yes OR provide a DIR path to Teuchos])
   fi
 
-  AM_CONDITIONAL([WITH_ALT_EXTERNAL_TEUCHOS],[test "x$want_teuchos" != xyes || "$ac_teuchos_path" != ""])
+  AM_CONDITIONAL([WITH_ALT_EXTERNAL_TEUCHOS],[test "x$want_teuchos" = xyes && test -d "${ac_teuchos_path}"])
 ])

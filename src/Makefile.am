@@ -1,7 +1,12 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
 AM_CPPFLAGS  = @GSL_CPPFLAGS@ -I${top_builddir}/packages/gsl
-AM_CPPFLAGS += @TEUCHOS_CPPFLAGS@ -I${top_builddir}/packages/teuchos/src
+
+if WITH_ALT_EXTERNAL_TEUCHOS
+AM_CPPFLAGS += @TEUCHOS_CPPFLAGS@
+else
+AM_CPPFLAGS += -I${top_builddir}/packages/teuchos/src
+endif
 
 ## Suppress parallel behavior by gmake; other makes should ignore this.
 .NOTPARALLEL:
