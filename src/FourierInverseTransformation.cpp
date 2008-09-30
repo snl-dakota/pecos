@@ -62,6 +62,28 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   // use ifft to get samples of X
   X=m*real(ifft(B));
   */
+
+  // Generate num_terms*num_samples LHS samples for V, W ~ iid N(0,1).
+  // This should be more efficient than generating num_terms points each time
+  // within the num_samples loop.
+  int num_terms = psdSequence.length(),
+    num_terms_samples = num_terms*num_samples;
+  //RealVector uuv_l_bnds(2, 0.), uuv_u_bnds(2, 2.*Pi);
+  RealVector Psi(num_terms_samples);
+  //run_lhs(..., uuv_l_bnds, uuv_u_bnds, ..., num_terms_samples, seed, ...);
+
+  size_t i, j;
+  ComplexArray B(num_terms); // ComplexVector fails to instantiate
+  for (i=0; i<num_samples; i++) {
+    for (j=0; j<num_terms; j++) {
+      size_t ij = j + i * num_terms;
+      //const Real& Psi_ij = Psi[ij];
+      //Real A = sigmaSequence[j]*sqrt(2.);
+      //B[j] = std::complex<Real>(A*cos(Psi_ij), A*sin(Psi_ij)); // Euler
+      B[j] = std::polar(sigmaSequence[j]*sqrt(2.), Psi[ij]);
+    }
+    compute_ifft_sample_set(B, i);
+  }
 }
 
 
@@ -110,20 +132,29 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
       size_t ij = j + i * num_terms;
       const Real& v_ij = V[ij];
       const Real& w_ij = W[ij];
-      Real A = sigmaSequence[j]*sqrt(v_ij*v_ij + w_ij*w_ij); // A ~ Rayleigh
-      Real Psi = -atan2(w_ij, v_ij);                         // Psi ~ U(-pi,pi)
-      B[j] = std::complex<Real>(A*cos(Psi), A*sin(Psi));     // Euler's formula
+      //Real A = sigmaSequence[j]*sqrt(v_ij*v_ij + w_ij*w_ij); // A ~ Rayleigh
+      //Real Psi = -atan2(w_ij, v_ij);                       // Psi ~ U(-pi,pi)
+      //B[j] = std::complex<Real>(A*cos(Psi), A*sin(Psi));   // Euler's formula
+      B[j] = std::polar(sigmaSequence[j]*sqrt(v_ij*v_ij + w_ij*w_ij),
+			-atan2(w_ij, v_ij));
     }
-#ifdef PECOS_DFFTPACK
-    double* wsave = new double [4*num_terms+15];
-    // TO DO: auto-tools F77 macros
-    zffti(num_terms, wsave);
-    zfftb(num_terms, B, wsave); // transforms in place
-    delete [] wsave;
-#endif
-    for (j=0; j<num_terms; j++)
-      inverseSamples(i,j) = num_terms*B[j].real();
+    compute_ifft_sample_set(B, i);
   }
+}
+
+void FourierInverseTransformation::
+compute_ifft_sample_set(const ComplexArray& B, size_t i)
+{
+  int num_terms = psdSequence.length();
+#ifdef PECOS_DFFTPACK
+  double* wsave = new double [4*num_terms+15];
+  // TO DO: auto-tools F77 macros
+  zffti_(num_terms, wsave);
+  zfftb_(num_terms, B, wsave); // transforms in place
+  delete [] wsave;
+#endif
+  for (size_t j=0; j<num_terms; j++)
+    inverseSamples(i,j) = num_terms*B[j].real();
 }
 
 } // namespace Pecos

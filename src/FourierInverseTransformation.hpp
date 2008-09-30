@@ -45,8 +45,12 @@ private:
   //- Heading: Utility routines
   //
 
+  /// perform iFFT using Shinozuka-Deodatis algorithm
   void compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed);
+  /// perform iFFT using Grigoriu algorithm
   void compute_samples_grigoriu(size_t num_samples, size_t seed);
+  /// use DFFTPACK or FFTW to map B vector into the i-th inverseSamples vector
+  void compute_ifft_sample_set(const ComplexArray& B, size_t i);
 
   //
   //- Heading: Data
