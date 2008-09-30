@@ -32,9 +32,14 @@ int main(int argc, char* argv[])
   ifft_transform.initialize(vbar, T);
   ifft_transform.power_spectral_density("band_limited_white_noise", 2000.);
   ifft_transform.compute_samples(ns, nseed); // compute samples
+  //for (size_t i=0; i<ns; i++) {
+  //  const RealVector& sample_i = ifft_transform.sample(i);
+  //  PCout << "Sample " << i+1 << ":\n" << sample_i << std::endl;
+  //}
 
-  // generate samples (analytical PSD)
-  //[t,G1]=gsspfft01(p,psdfun,vbar,T,nseed,ns);
+  // OR
+
+  //const RealVector& sample_i = ifft_transform.compute_sample_i(nseed);
 
   return 0;
 }

@@ -31,21 +31,17 @@ public:
   InverseTransformation();  ///< constructor
   ~InverseTransformation(); ///< destructor
 
-  /// set scalar data
-  void initialize(const Real& total_t, const Real& w_bar);
-
-  /// set PSD to standard embedded function
-  void power_spectral_density(const String& psd_name, Real param = 0.);
-  // define PSD from a user-defined function
-  //void power_spectral_density(fn_ptr);
-  /// pass a discretized PSD directly
-  void power_spectral_density(const RealVector& psd);
-
 protected:
 
   //
   //- Heading: Virtual function redefinitions
   //
+
+  void initialize(const Real& total_t, const Real& w_bar);
+
+  void power_spectral_density(const String& psd_name, Real param = 0.);
+  //void power_spectral_density(fn_ptr);
+  void power_spectral_density(const RealVector& psd);
 
   //
   //- Heading: Data

@@ -45,6 +45,18 @@ public:
   //- Heading: Virtual functions
   //
 
+  /// set scalar data
+  virtual void initialize(const Real& total_t, const Real& w_bar);
+
+  /// set PSD to standard embedded function
+  virtual void power_spectral_density(const String& psd_name, Real param = 0.);
+  // define PSD from a user-defined function
+  //virtual void power_spectral_density(fn_ptr);
+  /// pass a discretized PSD directly
+  virtual void power_spectral_density(const RealVector& psd);
+
+  /// compute InverseTransformation::inverseSamples
+  virtual void compute_samples(size_t num_samples, size_t seed);
 
   //
   //- Heading: Member functions

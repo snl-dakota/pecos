@@ -151,4 +151,72 @@ DataTransformation::~DataTransformation()
   }
 }
 
+
+void DataTransformation::initialize(const Real& total_t, const Real& w_bar)
+{
+  if (dataTransRep) // envelope fwd to letter
+    dataTransRep->initialize(total_t, w_bar);
+  else { // letter lacking redefinition of virtual fn
+    PCerr << "Error: derived class does not redefine initialize() virtual fn.\n"
+          << "       No default defined at DataTransformation base class.\n"
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void DataTransformation::
+power_spectral_density(const String& psd_name, Real param)
+{
+  if (dataTransRep) // envelope fwd to letter
+    dataTransRep->power_spectral_density(psd_name, param);
+  else { // letter lacking redefinition of virtual fn
+    PCerr << "Error: derived class does not redefine power_spectral_density() "
+	  << "virtual fn.\n       No default defined at DataTransformation "
+	  << "base class.\n" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+/*
+void DataTransformation::power_spectral_density(fn_ptr)
+{
+  if (dataTransRep) // envelope fwd to letter
+    dataTransRep->power_spectral_density(fn_ptr);
+  else { // letter lacking redefinition of virtual fn
+    PCerr << "Error: derived class does not redefine power_spectral_density() "
+	  << "virtual fn.\n       No default defined at DataTransformation "
+	  << "base class.\n" << std::endl;
+    abort_handler(-1);
+  }
+}
+*/
+
+
+void DataTransformation::power_spectral_density(const RealVector& psd)
+{
+  if (dataTransRep) // envelope fwd to letter
+    dataTransRep->power_spectral_density(psd);
+  else { // letter lacking redefinition of virtual fn
+    PCerr << "Error: derived class does not redefine power_spectral_density() "
+	  << "virtual fn.\n       No default defined at DataTransformation "
+	  << "base class.\n" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void DataTransformation::compute_samples(size_t num_samples, size_t seed)
+{
+  if (dataTransRep) // envelope fwd to letter
+    dataTransRep->compute_samples(num_samples, seed);
+  else { // letter lacking redefinition of virtual fn
+    PCerr << "Error: derived class does not redefine compute_samples() virtual "
+          << "fn.\nNo default defined at DataTransformation base class.\n"
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
 } // namespace Pecos

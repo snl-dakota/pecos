@@ -75,13 +75,12 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
   for (i=0; i<num_samples; i++) {
-    for (j=0; j<num_terms; j++) {
-      size_t ij = j + i * num_terms;
+    for (j=0; j<num_terms; j++)
+      //size_t ij = j + i * num_terms;
       //const Real& Psi_ij = Psi[ij];
       //Real A = sigmaSequence[j]*sqrt(2.);
       //B[j] = std::complex<Real>(A*cos(Psi_ij), A*sin(Psi_ij)); // Euler
-      B[j] = std::polar(sigmaSequence[j]*sqrt(2.), Psi[ij]);
-    }
+      B[j] = std::polar(sigmaSequence[j]*sqrt(2.), Psi[j + i * num_terms]);
     compute_ifft_sample_set(B, i);
   }
 }
