@@ -19,13 +19,15 @@
 
 int main(int argc, char* argv[])
 {
+  //using namespace Pecos;
+
   // Instantiate/initialize the data transformation instance which manages
   // the ProbabilityTransformation and BasisFunction instances.
   Pecos::DataTransformation ifft_transform("inverse_fourier");
 
   // Constants for this problem
-  Real   vbar  = 10000.; // cut-off frequency (rad/s)
-  Real   T     = 5.;     // stop time (sec)
+  Pecos::Real   vbar  = 10000.; // cut-off frequency (rad/s)
+  Pecos::Real   T     = 5.;     // stop time (sec)
   size_t nseed = 314;    // random number seed
   size_t ns    = 50;     // number of samples
 

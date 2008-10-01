@@ -8,7 +8,7 @@ ACLOCAL_AMFLAGS = -I ./m4
 
 ## Source subdirectories to be recursed into during the build.
 ## Convenience libraries to be built in each of the SUBDIRS.
-SUBDIRS = packages src
+SUBDIRS = packages src test
 SUBLIBS = src/libpecos_src.la
 
 ## Set the Pecos library name.

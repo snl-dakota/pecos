@@ -48,6 +48,6 @@ PECOS_PACKAGES
 
 
 # Write the Makefiles and exit.
-AC_CONFIG_FILES([Makefile packages/Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile packages/Makefile src/Makefile test/Makefile])
 
 AC_OUTPUT

@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
   Pecos::DataTransformation ifft_transform("inverse_fourier");
 
   // Constants for this problem
-  Real   vbar  = 5000.; // cut-off frequency (rad/s)
-  Real   T     = 10.;   // stop time (sec)
+  Pecos::Real   vbar  = 5000.; // cut-off frequency (rad/s)
+  Pecos::Real   T     = 10.;   // stop time (sec)
   size_t nseed = 314;   // random number seed
   size_t ns    = 100;   // number of samples
 
