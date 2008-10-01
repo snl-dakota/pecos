@@ -15,10 +15,10 @@ endif
 if WITH_FFT
 SUBDIRS += dfftpack fftw
 else
-#  if WITH_DFFTPACK
-#  SUBDIRS += dfftpack
-#  endif
 # WJB: dont feel like gambling with indenting in Makefiles today - try it tomorrow
+if WITH_DFFTPACK
+SUBDIRS += dfftpack
+endif
 if WITH_FFTW
 SUBDIRS += fftw
 endif
