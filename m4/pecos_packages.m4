@@ -5,9 +5,9 @@ AC_DEFUN([PECOS_PACKAGES],[
   AC_ARG_WITH([fft],AS_HELP_STRING([--without-fft],
               [turn FFT support off]),[with_fft=$withval],[with_fft=no])
   if test "x$with_fft" = xyes; then
-    AC_CONFIG_SUBDIRS([packages/dfftpack])
+    dnl AC_CONFIG_SUBDIRS([packages/dfftpack])
     dnl AC_CONFIG_SUBDIRS([packages/fftw])
-    dnl AC_DEFINE([HAVE_FFT],[1], [Macro to handle code which depends on FFT.])
+    AC_DEFINE([HAVE_FFT],[1], [Macro to handle code which depends on FFT.])
   fi
   AM_CONDITIONAL([WITH_FFT],[test "x$with_fft" = xyes])
 
@@ -15,8 +15,8 @@ AC_DEFUN([PECOS_PACKAGES],[
   AC_ARG_WITH([dfftpack],AS_HELP_STRING([--without-dfftpack],
               [turn DFFTPACK support off]),[with_dfftpack=$withval],[with_dfftpack=yes])
   if test "x$with_dfftpack" = xyes; then
-    dnl AC_CONFIG_SUBDIRS([packages/dfftpack])
-    AC_DEFINE([HAVE_DFFTPACK],[1], [Macro to handle code which depends on DFFTPACK.])
+    AC_CONFIG_SUBDIRS([packages/dfftpack])
+    AC_DEFINE([PECOS_DFFTPACK],[1], [Macro to handle code which depends on DFFTPACK.])
   fi
   AM_CONDITIONAL([WITH_DFFTPACK],[test "x$with_dfftpack" = xyes])
 
@@ -24,7 +24,7 @@ AC_DEFUN([PECOS_PACKAGES],[
   AC_ARG_WITH([fftw],AS_HELP_STRING([--without-fftw],
               [turn FFTW support off]),[with_fftw=$withval],[with_fftw=no])
   if test "x$with_fftw" = xyes; then
-    dnl AC_CONFIG_SUBDIRS([packages/fftw])
+    AC_CONFIG_SUBDIRS([packages/fftw])
     AC_DEFINE([HAVE_FFTW],[1], [Macro to handle code which depends on FFTW.])
   fi
   AM_CONDITIONAL([WITH_FFTW],[test "x$with_fftw" = xyes])

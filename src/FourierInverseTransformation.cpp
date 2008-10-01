@@ -8,6 +8,15 @@
 
 #include "FourierInverseTransformation.hpp"
 
+#ifdef PECOS_DFFTPACK
+#define ZFFTI_F77 F77_FUNC(zffti,ZFFTI)
+extern "C" void ZFFTI_F77(int& n, double* wsave);
+
+#define ZFFTB_F77 F77_FUNC(zfftb,ZFFTB)
+// WJB ToDo: ask MSE about second arg -- comments suggest non-const
+extern "C" void ZFFTB_F77(int& n, const void* scary_deref, double* wsave);
+#endif
+
 static const char rcsId[]="@(#) $Id: FourierInverseTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
 //#define DEBUG
@@ -149,8 +158,10 @@ compute_ifft_sample_set(const ComplexArray& B, size_t i)
 #ifdef PECOS_DFFTPACK
   double* wsave = new double [4*num_terms+15];
   // TO DO: auto-tools F77 macros
-  zffti_(num_terms, wsave);
-  zfftb_(num_terms, B, wsave); // transforms in place
+  ZFFTI_F77(num_terms, wsave);
+  // WJB: ToDo -- check with MSE about B conversion -- zfftb_(num_terms, B, wsave); // transforms in place
+  //ZFFTB_F77(num_terms, (void*)&B[0], wsave); // transforms in place
+  ZFFTB_F77(num_terms, &B[0], wsave); // transforms in place
   delete [] wsave;
 #endif
   for (size_t j=0; j<num_terms; j++)

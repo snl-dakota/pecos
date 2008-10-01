@@ -37,6 +37,7 @@ AC_CHECK_HEADERS([cstdlib])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
+AC_F77_WRAPPERS
 
 # Checks for library functions.
 ## WJB: later -- AC_CHECK_FUNCS([rand random])
