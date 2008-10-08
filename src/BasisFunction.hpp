@@ -9,7 +9,7 @@
 #ifndef BASIS_FUNCTION_HPP
 #define BASIS_FUNCTION_HPP
 
-#include "pecos_global_defs.hpp"
+#include "pecos_data_types.hpp"
 
 
 namespace Pecos {

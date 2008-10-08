@@ -10,6 +10,7 @@
 #define FOURIER_INVERSE_TRANSFORMATION_HPP
 
 #include "InverseTransformation.hpp"
+#include "LHSDriver.hpp"
 
 
 namespace Pecos {
@@ -61,6 +62,9 @@ private:
 
   /// iFFT approach: "shinozuka_deodatis" or "grigoriu"
   String fourierMethod;
+
+  /// LHS wrapper for generating normal or uniform sample sets
+  LHSDriver lhsSampler;
 };
 
 

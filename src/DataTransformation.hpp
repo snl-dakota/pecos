@@ -9,9 +9,9 @@
 #ifndef DATA_TRANSFORMATION_HPP
 #define DATA_TRANSFORMATION_HPP
 
-#include "pecos_global_defs.hpp"
+#include "pecos_data_types.hpp"
 #include "ProbabilityTransformation.hpp"
-#include "BasisFunction.hpp"
+//#include "BasisFunction.hpp"
 
 
 namespace Pecos {
@@ -88,8 +88,8 @@ protected:
 
   /// nonlinear variable transformation
   ProbabilityTransformation probTransform;
-  /// set of Fourier, eigen, or polynomial basis functions
-  BasisFunctionArray basisFns;
+  // set of Fourier, eigen, or polynomial basis functions
+  //BasisFunctionArray basisFns;
 
 private:
 

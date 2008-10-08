@@ -72,14 +72,15 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   X=m*real(ifft(B));
   */
 
-  // Generate num_terms*num_samples LHS samples for V, W ~ iid N(0,1).
+  // Generate num_terms*num_samples LHS samples for Psi ~ iid U(0, 2.*Pi).
   // This should be more efficient than generating num_terms points each time
   // within the num_samples loop.
   int num_terms = psdSequence.length(),
     num_terms_samples = num_terms*num_samples;
-  //RealVector uuv_l_bnds(2, 0.), uuv_u_bnds(2, 2.*Pi);
-  RealVector Psi(num_terms_samples);
-  //run_lhs(..., uuv_l_bnds, uuv_u_bnds, ..., num_terms_samples, seed, ...);
+  RealArray uuv_l_bnds(1, 0.), uuv_u_bnds(1, 2.*Pi);
+  Real2DArray Psi_samples(1);
+  lhsSampler.generate_uniform_samples(uuv_l_bnds, uuv_u_bnds, num_terms_samples,
+				      seed, Psi_samples);
 
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
@@ -89,7 +90,8 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
       //const Real& Psi_ij = Psi[ij];
       //Real A = sigmaSequence[j]*sqrt(2.);
       //B[j] = std::complex<Real>(A*cos(Psi_ij), A*sin(Psi_ij)); // Euler
-      B[j] = std::polar(sigmaSequence[j]*sqrt(2.), Psi[j + i * num_terms]);
+      B[j] = std::polar(sigmaSequence[j]*sqrt(2.),
+			Psi_samples[0][j + i * num_terms]);
     compute_ifft_sample_set(B, i);
   }
 }
@@ -129,17 +131,18 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   // within the num_samples loop.
   int num_terms = psdSequence.length(),
     num_terms_samples = num_terms*num_samples;
-  //RealVector zero_means(2, 0.), unit_std_devs(2, 1.);
-  RealVector V(num_terms_samples), W(num_terms_samples);
-  //run_lhs(..., zero_means, unit_std_devs, ..., num_terms_samples, seed, ...);
+  RealArray zero_means(2, 0.), unit_std_devs(2, 1.), empty_ra;
+  Real2DArray VW_samples(2);
+  lhsSampler.generate_normal_samples(zero_means, unit_std_devs, empty_ra,
+    empty_ra, num_terms_samples, seed, VW_samples);
 
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
   for (i=0; i<num_samples; i++) {
     for (j=0; j<num_terms; j++) {
       size_t ij = j + i * num_terms;
-      const Real& v_ij = V[ij];
-      const Real& w_ij = W[ij];
+      const Real& v_ij = VW_samples[0][ij];
+      const Real& w_ij = VW_samples[1][ij];
       //Real A = sigmaSequence[j]*sqrt(v_ij*v_ij + w_ij*w_ij); // A ~ Rayleigh
       //Real Psi = -atan2(w_ij, v_ij);                       // Psi ~ U(-pi,pi)
       //B[j] = std::complex<Real>(A*cos(Psi), A*sin(Psi));   // Euler's formula

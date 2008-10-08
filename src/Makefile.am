@@ -20,7 +20,8 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  SamplingInverseTransformation.cpp		\
 			  ProbabilityTransformation.cpp			\
 			  NatafTransformation.cpp			\
-			  BasisFunction.cpp
+			  LHSDriver.cpp
+#			  BasisFunction.cpp
 
 ## Extra files to remove when doing 'make maintainer-clean'.
 MAINTAINERCLEANFILES = Makefile.in

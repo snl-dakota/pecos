@@ -9,7 +9,7 @@
 #ifndef PROBABILITY_TRANSFORMATION_HPP
 #define PROBABILITY_TRANSFORMATION_HPP
 
-#include "pecos_global_defs.hpp"
+#include "pecos_data_types.hpp"
 #ifdef HAVE_GSL
 #include "gsl/gsl_randist.h"
 #include "gsl/gsl_cdf.h"

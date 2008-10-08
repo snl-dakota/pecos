@@ -24,7 +24,8 @@ pkginclude_HEADERS = src/pecos_data_types.hpp			\
 		     src/SamplingInverseTransformation.hpp	\
 		     src/ProbabilityTransformation.hpp		\
 		     src/NatafTransformation.hpp		\
-		     src/BasisFunction.hpp
+		     src/LHSDriver.hpp
+#		     src/BasisFunction.hpp
 
 ## No sources in this directory!
 libpecos_la_SOURCES = 

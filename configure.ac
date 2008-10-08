@@ -38,6 +38,7 @@ AC_CHECK_HEADERS([cstdlib])
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL
 AC_F77_WRAPPERS
+AC_FC_WRAPPERS
 ACX_LAPACK
 ACX_BLAS
 

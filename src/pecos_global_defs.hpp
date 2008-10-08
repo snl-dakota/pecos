@@ -9,7 +9,6 @@
 #ifndef PECOS_GLOBAL_DEFS_H
 #define PECOS_GLOBAL_DEFS_H
 
-#include "pecos_data_types.hpp"
 #include <algorithm>
 #include <iostream>
 #include <cfloat>  // for DBL_MIN, DBL_MAX
@@ -22,7 +21,7 @@ namespace Pecos {
 // Special values
 // --------------
 /// the value for Pi used in various numerical routines
-const Real Pi = 3.1415926535897932385;
+const double Pi = 3.1415926535897932385;
 
 /// special value returned by index() when entry not found
 const size_t _NPOS = ~(size_t)0; // one's complement
