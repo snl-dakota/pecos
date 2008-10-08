@@ -31,67 +31,63 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   dnl Teuchos package checks.
   AC_ARG_WITH([teuchos],
-              AC_HELP_STRING([--with-teuchos=DIR], [use Teuchos (default is YES),
-                specify the root directory for Teuchos library (RECOMMENDED)]),
-                [ if test "$withval" = "no"; then
-                    with_teuchos="no"
-                  elif test "$withval" = "yes"; then
-                    with_teuchos="yes"
-                    ac_teuchos_path=""
-                  else
-                    with_teuchos="yes"
-                    teuchos_is_ext="yes"
-                    ac_teuchos_path="$withval"
-                  fi
-                ],[with_teuchos="yes"])
+              AC_HELP_STRING([--with-teuchos=DIR],
+                             [use Teuchos (default is yes), specify the root
+                              directory for Teuchos library]),
+              [],[with_teuchos="yes"])
+  acx_external_teuchos=no
+  case $with_teuchos in
+  dnl Pecos depends on Teuchos UNCONDITIONALLY
+  no)
+    AC_MSG_ERROR([Pecos cannot be configured without Teuchos. Please specify
+                 --with-teuchos OR provide a path to a prebuilt Teuchos.])
+    ;;
 
-  AC_MSG_CHECKING([whether with third-party library, Teuchos, is wanted])
-  AC_MSG_RESULT([${with_teuchos}])
+  dnl For yes, check TEUCHOS_ROOT, otherwise fallback to local Teuchos
+  yes | "")
+    AC_MSG_CHECKING([for Teuchos])
+    if test -n "$TEUCHOS_ROOT" -a -d "$TEUCHOS_ROOT"; then
 
-  if test "x$with_teuchos" = xno; then
-    dnl Pecos depends on Teuchos UNCONDITIONALLY
-    AC_MSG_ERROR([Pecos cannot be configured without Teuchos. Please specify --with-teuchos=yes OR provide a DIR path to a prebuilt Teuchos])
-  else
-    dnl Teuchos dependency can be managed with an alternate, ext path setting
-    AC_MSG_CHECKING([for Teuchos directory])
+      acx_external_teuchos=yes
+      AC_MSG_RESULT([using Teuchos in TEUCHOS_ROOT: $TEUCHOS_ROOT])
 
-    if test "x$ac_teuchos_path" = "x"; then
-      dnl OVERRIDE 'yes' case with one of two possible directory paths
-      dnl resulting from SVN checkout.  "External" is ../teuchos (i.e. prebuilt)
-      dnl and "internal" is packages/teuchos (must be built as a subpackage).
+    elif test -d `pwd`/packages/teuchos; then
 
-      ac_ext_teuchos_path=`cd ${ac_top_builddir}. && pwd`/../teuchos
+      dnl use local teuchos and instruct subpackages to do so as well
+      export TEUCHOS_ROOT=`pwd`/packages/teuchos
+      acx_external_teuchos=no
+      AC_CONFIG_SUBDIRS([packages/teuchos])
+      AC_MSG_RESULT([using local Teuchos in $TEUCHOS_ROOT])
 
-      if test -d ${ac_ext_teuchos_path}; then 
-        ac_teuchos_path=`cd ${ac_top_builddir}. && pwd`/../teuchos
-        teuchos_is_ext="yes"
-        dnl AC_MSG_NOTICE(topIsAsExpectedAndTeuIsEXT: $ac_teuchos_path)
-        AC_MSG_RESULT([${ac_teuchos_path} is EXTERNAL and assumed prebuilt])
-      else
-        ac_teuchos_path=`cd ${ac_top_builddir}. && pwd`/packages/teuchos
-        teuchos_is_ext="no"
-        dnl AC_MSG_NOTICE(ac_teuchos_path: $ac_teuchos_path)
-        AC_MSG_RESULT([the default Teuchos basedir, ${ac_teuchos_path}, will be configured and used for this Pecos build])
-      fi
-    fi
-
-    AC_MSG_RESULT([${teuchos_is_ext}])
-    AC_CONFIG_SUBDIRS([packages/teuchos])
-
-    if test -d "${ac_teuchos_path}"; then
-      TEUCHOS_CPPFLAGS="-I$ac_teuchos_path/src"
-      TEUCHOS_LDFLAGS="-L$ac_teuchos_path/src"
-
-      AC_MSG_NOTICE(TEUCHOS_CPPFLAGS: $TEUCHOS_CPPFLAGS)
-      AC_SUBST(TEUCHOS_CPPFLAGS)
-      AC_SUBST(TEUCHOS_LDFLAGS)
     else
-      AC_MSG_ERROR([the specified Teuchos basedir, ${ac_teuchos_path} does not exist])
+      AC_MSG_RESULT([could not find Teuchos directory.])
     fi
-  fi
+    ;;
+
+  dnl Otherwise, user should have provided an explicit path to Teuchos
+  *)
+    AC_MSG_CHECKING([for Teuchos])
+    TEUCHOS_ROOT=$withval
+    if test -n "$TEUCHOS_ROOT" -a -d "$TEUCHOS_ROOT"; then
+
+      acx_external_teuchos=yes
+      AC_MSG_RESULT([using: $TEUCHOS_ROOT])
+
+    else
+      AC_MSG_ERROR([could not locate $TEUCHOS_ROOT])
+    fi
+    ;;
+  esac
+
+  TEUCHOS_CPPFLAGS="-I$TEUCHOS_ROOT/src"
+  TEUCHOS_LDFLAGS="-L$TEUCHOS_ROOT/src"
+
+  AC_SUBST(TEUCHOS_ROOT)
+  AC_SUBST(TEUCHOS_CPPFLAGS)
+  AC_SUBST(TEUCHOS_LDFLAGS)
+
   AM_CONDITIONAL([WITH_ALT_EXTERNAL_TEUCHOS],
-                 [test "x$with_teuchos" = xyes -a "x$teuchos_is_ext" = xyes -a \
-                  -d "${ac_teuchos_path}"])
+                 [test "x$acx_external_teuchos" = xyes])
 
   dnl GSL package checks.
   AC_ARG_WITH([gsl],
