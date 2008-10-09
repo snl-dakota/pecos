@@ -797,8 +797,12 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // allocation and indexes into it as if it were a vector of 16 char arrays
   // arranged head to tail.
 
+  // The matrix of parameter samples from Fortran 90 is arranged in column-major
+  // order with all variables for sample 1, followed by all variables for
+  // sample 2, etc.  Teuchos::SerialDenseMatrix using column-major memory layout
+  // as well, so use samples(var#,sample#) or samples[sample#][var#] for access.
   if (samples.empty())
-    samples.shapeUninitialized(num_samples, num_av);
+    samples.shapeUninitialized(num_av, num_samples);
   if (sampleRanksMode && sample_ranks.empty()) {
     if (sampleRanksMode == SET_RANKS || sampleRanksMode == SET_GET_RANKS) {
       PCerr << "Error: empty sample ranks array cannot be set in Pecos::"
@@ -806,7 +810,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       abort_handler(-1);
     }
     else if (sampleRanksMode == GET_RANKS)
-      sample_ranks.shapeUninitialized(num_samples, num_av);
+      sample_ranks.shapeUninitialized(num_av, num_samples);
   }
 
   // generate the samples
@@ -815,12 +819,6 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 	     index_list, ptval_list, num_nam, samples.values(), num_var,
 	     sample_ranks.values(), rflag);
   check_error(err_code, "lhs_run");
-
-  // The matrix of parameter samples from Fortran 90 is arranged in column-major
-  // order, which would normally imply a "fortran" copy_type.  However, LHS
-  // arranges the samples as all samples for var 1, followed by all samples for
-  // var 2, etc.  Teuchos::SerialDenseMatrix using column-major memory layout
-  // as well, so use samples(sample#,var#) or samples[var#][sample#] for access.
 
   // deallocate LHS memory
   LHS_CLOSE_FC(err_code);
