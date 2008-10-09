@@ -11,6 +11,12 @@ ACLOCAL_AMFLAGS = -I ./m4
 SUBDIRS = packages src test
 SUBLIBS = src/libpecos_src.la
 
+#if ENABLE_F90
+if WITH_LHS
+LHS_I = src/LHSDriver.hpp
+endif
+#endif
+
 ## Set the Pecos library name.
 lib_LTLIBRARIES = libpecos.la
 
@@ -24,7 +30,7 @@ pkginclude_HEADERS = src/pecos_data_types.hpp			\
 		     src/SamplingInverseTransformation.hpp	\
 		     src/ProbabilityTransformation.hpp		\
 		     src/NatafTransformation.hpp		\
-		     src/LHSDriver.hpp
+		     $(LHS_I)
 #		     src/BasisFunction.hpp
 
 ## No sources in this directory!

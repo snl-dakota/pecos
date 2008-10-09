@@ -29,6 +29,18 @@ AC_DEFUN([PECOS_PACKAGES],[
   fi
   AM_CONDITIONAL([WITH_FFTW],[test "x$with_fftw" = xyes])
 
+  dnl LHS package checks.
+  AC_ARG_WITH([lhs],AS_HELP_STRING([--without-lhs],[turn LHS support off]),
+	      [with_lhs=$withval],[with_lhs=yes])
+  if test "x$with_lhs" = xyes; then
+    AC_DEFINE([PECOS_LHS],[1],[Macro to handle code which depends on LHS.])
+    #if test "x$enable_f90" = xyes; then
+      AC_CONFIG_SUBDIRS([packages/LHS])
+    #fi
+  fi
+  AM_CONDITIONAL([WITH_LHS],
+                 [test "x$with_lhs" = xyes])
+
   dnl Teuchos package checks.
   AC_ARG_WITH([teuchos],
               AC_HELP_STRING([--with-teuchos=DIR],

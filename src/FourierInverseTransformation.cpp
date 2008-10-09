@@ -77,8 +77,9 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   // within the num_samples loop.
   int num_terms = psdSequence.length(),
     num_terms_samples = num_terms*num_samples;
-  RealArray uuv_l_bnds(1, 0.), uuv_u_bnds(1, 2.*Pi);
-  Real2DArray Psi_samples(1);
+  RealVector uuv_l_bnds(1, false), uuv_u_bnds(1, false);
+  uuv_l_bnds[0] = 0.; uuv_u_bnds[0] = 2.*Pi;
+  RealMatrix Psi_samples(num_terms_samples, 1);
   lhsSampler.generate_uniform_samples(uuv_l_bnds, uuv_u_bnds, num_terms_samples,
 				      seed, Psi_samples);
 
@@ -86,12 +87,10 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
   for (i=0; i<num_samples; i++) {
     for (j=0; j<num_terms; j++)
-      //size_t ij = j + i * num_terms;
-      //const Real& Psi_ij = Psi[ij];
       //Real A = sigmaSequence[j]*sqrt(2.);
       //B[j] = std::complex<Real>(A*cos(Psi_ij), A*sin(Psi_ij)); // Euler
       B[j] = std::polar(sigmaSequence[j]*sqrt(2.),
-			Psi_samples[0][j + i * num_terms]);
+			Psi_samples(j + i * num_terms, 0));
     compute_ifft_sample_set(B, i);
   }
 }
@@ -131,8 +130,10 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   // within the num_samples loop.
   int num_terms = psdSequence.length(),
     num_terms_samples = num_terms*num_samples;
-  RealArray zero_means(2, 0.), unit_std_devs(2, 1.), empty_ra;
-  Real2DArray VW_samples(2);
+  RealVector zero_means(2, false), unit_std_devs(2, false), empty_ra;
+  zero_means[0]    = zero_means[1]    = 0.;
+  unit_std_devs[0] = unit_std_devs[1] = 1.;
+  RealMatrix VW_samples(num_terms_samples, 2);
   lhsSampler.generate_normal_samples(zero_means, unit_std_devs, empty_ra,
     empty_ra, num_terms_samples, seed, VW_samples);
 
@@ -141,8 +142,8 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   for (i=0; i<num_samples; i++) {
     for (j=0; j<num_terms; j++) {
       size_t ij = j + i * num_terms;
-      const Real& v_ij = VW_samples[0][ij];
-      const Real& w_ij = VW_samples[1][ij];
+      const Real& v_ij = VW_samples(ij, 0);
+      const Real& w_ij = VW_samples(ij, 1);
       //Real A = sigmaSequence[j]*sqrt(v_ij*v_ij + w_ij*w_ij); // A ~ Rayleigh
       //Real Psi = -atan2(w_ij, v_ij);                       // Psi ~ U(-pi,pi)
       //B[j] = std::complex<Real>(A*cos(Psi), A*sin(Psi));   // Euler's formula

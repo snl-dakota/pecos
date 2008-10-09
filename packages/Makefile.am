@@ -24,6 +24,12 @@ SUBDIRS += fftw
 endif
 endif
 
+#if ENABLE_F90
+if WITH_LHS
+SUBDIRS += LHS
+endif
+#endif
+
 ## Conditionally configured subdirectories should _not_ be recursed into
 ## during 'make distclean' or 'make maintainer-clean'.
 DIST_SUBDIRS = $(SUBDIRS)

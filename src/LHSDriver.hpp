@@ -48,44 +48,46 @@ public:
 
   /// generates the desired set of parameter samples from within general
   /// user-specified probabilistic distributions
-  void generate_samples(const RealArray& d_l_bnds,  const RealArray& d_u_bnds,
-			const RealArray& s_l_bnds,  const RealArray& s_u_bnds,
-			const RealArray& n_means,   const RealArray& n_std_devs,
-			const RealArray& n_l_bnds,  const RealArray& n_u_bnds,
-			const RealArray& ln_means,
-			const RealArray& ln_std_devs,
-			const RealArray& ln_err_facts,
-			const RealArray& ln_l_bnds,
-			const RealArray& ln_u_bnds, const RealArray& u_l_bnds,
-			const RealArray& u_u_bnds,  const RealArray& lu_l_bnds,
-			const RealArray& lu_u_bnds, const RealArray& t_modes,
-			const RealArray& t_l_bnds,  const RealArray& t_u_bnds,
-			const RealArray& e_betas,   const RealArray& b_alphas,
-			const RealArray& b_betas,   const RealArray& b_l_bnds,
-			const RealArray& b_u_bnds,  const RealArray& ga_alphas,
-			const RealArray& ga_betas,  const RealArray& w_alphas,
-			const RealArray& w_betas,   const RealArray& gu_alphas,
-			const RealArray& gu_betas,  const RealArray& f_alphas,
-			const RealArray& f_betas, const Real2DArray& h_bin_prs,
-			const Real2DArray& h_pt_prs, const Real2DArray& i_probs,
-			const Real2DArray& i_bnds,
-			const Real2DArray& correlations,
-			int num_samples,            int seed, 
-			Real2DArray& samples_array, Real2DArray& rank_array);
+  void generate_samples(const RealVector& d_l_bnds, const RealVector& d_u_bnds,
+			const RealVector& s_l_bnds, const RealVector& s_u_bnds,
+			const RealVector& n_means, const RealVector& n_std_devs,
+			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
+			const RealVector& ln_means,
+			const RealVector& ln_std_devs,
+			const RealVector& ln_err_facts,
+			const RealVector& ln_l_bnds,
+			const RealVector& ln_u_bnds, const RealVector& u_l_bnds,
+			const RealVector& u_u_bnds, const RealVector& lu_l_bnds,
+			const RealVector& lu_u_bnds, const RealVector& t_modes,
+			const RealVector& t_l_bnds, const RealVector& t_u_bnds,
+			const RealVector& e_betas,  const RealVector& b_alphas,
+			const RealVector& b_betas,  const RealVector& b_l_bnds,
+			const RealVector& b_u_bnds, const RealVector& ga_alphas,
+			const RealVector& ga_betas, const RealVector& w_alphas,
+			const RealVector& w_betas,  const RealVector& gu_alphas,
+			const RealVector& gu_betas, const RealVector& f_alphas,
+			const RealVector& f_betas,
+			const RealVectorArray& h_bin_prs,
+			const RealVectorArray& h_pt_prs,
+			const RealVectorArray& i_probs,
+			const RealVectorArray& i_bnds,
+			const RealSymMatrix& correlations, int num_samples,
+			int seed, RealMatrix& samples_array,
+			RealMatrix& rank_array);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated normal distributions
-  void generate_normal_samples(const RealArray& n_means,
-			       const RealArray& n_std_devs,
-			       const RealArray& n_l_bnds,
-			       const RealArray& n_u_bnds, int num_samples,
-			       int seed, Real2DArray& samples_array);
+  void generate_normal_samples(const RealVector& n_means,
+			       const RealVector& n_std_devs,
+			       const RealVector& n_l_bnds,
+			       const RealVector& n_u_bnds, int num_samples,
+			       int seed, RealMatrix& samples_array);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated uniform distributions
-  void generate_uniform_samples(const RealArray& u_l_bnds,
-				const RealArray& u_u_bnds, int num_samples,
-				int seed, Real2DArray& samples_array);
+  void generate_uniform_samples(const RealVector& u_l_bnds,
+				const RealVector& u_u_bnds, int num_samples,
+				int seed, RealMatrix& samples_array);
 
 private:
 
@@ -134,6 +136,53 @@ initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 inline LHSDriver::
 LHSDriver(const String& sample_type, short sample_ranks_mode, bool reports)
 { initialize(sample_type, sample_ranks_mode, reports); }
+
+
+
+
+inline void LHSDriver::
+generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
+			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
+			int num_samples, int seed, RealMatrix& samples_array)
+{
+  if (sampleRanksMode) {
+    PCerr << "Error: generate_normal_samples() does not support sample rank "
+	  << "input/output." << std::endl;
+    abort_handler(-1);
+  }
+  RealVector empty_rv; RealVectorArray empty_rva;
+  RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
+  generate_samples(empty_rv, empty_rv, empty_rv, empty_rv, n_means, n_std_devs,
+		   n_l_bnds, n_u_bnds, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rva, empty_rva,
+		   empty_rva, empty_rva, empty_rsm, num_samples, seed,
+		   samples_array, empty_rm);
+}
+
+
+inline void LHSDriver::
+generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
+			 int num_samples, int seed, RealMatrix& samples_array)
+{
+  if (sampleRanksMode) {
+    PCerr << "Error: generate_uniform_samples() does not support sample rank "
+	  << "input/output." << std::endl;
+    abort_handler(-1);
+  }
+  RealVector empty_rv; RealVectorArray empty_rva;
+  RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
+  generate_samples(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, u_l_bnds, u_u_bnds, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rva, empty_rva,
+		   empty_rva, empty_rva, empty_rsm, num_samples, seed,
+		   samples_array, empty_rm);
+}
 
 
 inline void LHSDriver::

@@ -8,7 +8,7 @@
 
 #include "LHSDriver.hpp"
 
-static const char rcsId[]="@(#) $Id: LHSDriver.C 5248 2008-09-05 18:51:52Z wjbohnh $";
+static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
 #define LHS_INIT_MEM_FC FC_FUNC_(lhs_init_mem,LHS_INIT_MEM)
 #define LHS_PREP_FC     FC_FUNC_(lhs_prep,LHS_PREP)
@@ -64,27 +64,29 @@ void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
 namespace Pecos {
 
 void LHSDriver::
-generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
-		 const RealArray& s_l_bnds,     const RealArray& s_u_bnds,
-		 const RealArray& n_means,      const RealArray& n_std_devs,
-		 const RealArray& n_l_bnds,     const RealArray& n_u_bnds,
-		 const RealArray& ln_means,     const RealArray& ln_std_devs,
-		 const RealArray& ln_err_facts, const RealArray& ln_l_bnds,
-		 const RealArray& ln_u_bnds,	const RealArray& u_l_bnds,
-		 const RealArray& u_u_bnds,	const RealArray& lu_l_bnds,
-		 const RealArray& lu_u_bnds,    const RealArray& t_modes,
-		 const RealArray& t_l_bnds,     const RealArray& t_u_bnds,
-		 const RealArray& e_betas,      const RealArray& b_alphas,
-		 const RealArray& b_betas,      const RealArray& b_l_bnds,
-		 const RealArray& b_u_bnds,     const RealArray& ga_alphas,
-		 const RealArray& ga_betas,     const RealArray& w_alphas,
-		 const RealArray& w_betas,      const RealArray& gu_alphas,
-		 const RealArray& gu_betas,     const RealArray& f_alphas,
-		 const RealArray& f_betas,      const Real2DArray& h_bin_prs,
-		 const Real2DArray& h_pt_prs,   const Real2DArray& i_probs,
-		 const Real2DArray& i_bnds,     const Real2DArray& correlations,
-		 int num_samples,               int seed,
-		 Real2DArray& samples_array,    Real2DArray& rank_array)
+generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
+		 const RealVector& s_l_bnds,     const RealVector& s_u_bnds,
+		 const RealVector& n_means,      const RealVector& n_std_devs,
+		 const RealVector& n_l_bnds,     const RealVector& n_u_bnds,
+		 const RealVector& ln_means,     const RealVector& ln_std_devs,
+		 const RealVector& ln_err_facts, const RealVector& ln_l_bnds,
+		 const RealVector& ln_u_bnds,	 const RealVector& u_l_bnds,
+		 const RealVector& u_u_bnds,	 const RealVector& lu_l_bnds,
+		 const RealVector& lu_u_bnds,    const RealVector& t_modes,
+		 const RealVector& t_l_bnds,     const RealVector& t_u_bnds,
+		 const RealVector& e_betas,      const RealVector& b_alphas,
+		 const RealVector& b_betas,      const RealVector& b_l_bnds,
+		 const RealVector& b_u_bnds,     const RealVector& ga_alphas,
+		 const RealVector& ga_betas,     const RealVector& w_alphas,
+		 const RealVector& w_betas,      const RealVector& gu_alphas,
+		 const RealVector& gu_betas,     const RealVector& f_alphas,
+		 const RealVector& f_betas,
+		 const RealVectorArray& h_bin_prs,
+		 const RealVectorArray& h_pt_prs,
+		 const RealVectorArray& i_probs,
+		 const RealVectorArray& i_bnds,
+		 const RealSymMatrix& correlations, int num_samples, int seed,
+		 RealMatrix& samples, RealMatrix& sample_ranks)
 {
   // generate samples within user-specified parameter distributions
 
@@ -96,13 +98,13 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
   }
 
   bool correlation_flag = !correlations.empty();
-  size_t i, j, num_dv = d_l_bnds.size(), num_sv = s_l_bnds.size(),
-    num_nuv = n_means.size(),  num_lnuv = ln_means.size(),
-    num_uuv = u_l_bnds.size(), num_luuv = lu_l_bnds.size(),
-    num_tuv = t_modes.size(),  num_euv  = e_betas.size(),
-    num_buv = b_alphas.size(), num_gauv = ga_alphas.size(),
-    num_wuv = w_alphas.size(), num_guuv = gu_alphas.size(),
-    num_fuv = f_alphas.size(), num_huv  = h_bin_prs.size() + h_pt_prs.size(),
+  size_t i, j, num_dv = d_l_bnds.length(), num_sv = s_l_bnds.length(),
+    num_nuv = n_means.length(),  num_lnuv = ln_means.length(),
+    num_uuv = u_l_bnds.length(), num_luuv = lu_l_bnds.length(),
+    num_tuv = t_modes.length(),  num_euv  = e_betas.length(),
+    num_buv = b_alphas.length(), num_gauv = ga_alphas.length(),
+    num_wuv = w_alphas.length(), num_guuv = gu_alphas.length(),
+    num_fuv = f_alphas.length(), num_huv  = h_bin_prs.size() + h_pt_prs.size(),
     num_iuv = i_probs.size(),
     num_uv  = num_nuv + num_lnuv + num_uuv + num_luuv + num_tuv + num_euv
             + num_buv + num_gauv + num_wuv + num_guuv + num_fuv
@@ -559,8 +561,8 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
-    num_params = (i < num_c_huv) ? h_bin_prs[i].size()/2
-                                 : h_pt_prs[i-num_c_huv].size()/2;
+    num_params = (i < num_c_huv) ? h_bin_prs[i].length()/2
+                                 : h_pt_prs[i-num_c_huv].length()/2;
     double* x_val = new double [num_params];
     double* y_val = new double [num_params];
     if (i < num_c_huv) {
@@ -617,10 +619,10 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
     // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
     // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
     // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
-    const RealArray& interval_probs_i = i_probs[i];
-    const RealArray& interval_bnds_i  = i_bnds[i];
+    const RealVector& interval_probs_i = i_probs[i];
+    const RealVector& interval_bnds_i  = i_bnds[i];
     RealSet x_sort_unique;
-    int num_intervals_i = interval_probs_i.size(),
+    int num_intervals_i = interval_probs_i.length(),
         num_bounds_i    = 2*num_intervals_i;
     for (j=0; j<num_bounds_i; j++)
       x_sort_unique.insert(interval_bnds_i[j]);
@@ -635,7 +637,7 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
     // there are intervals that are overlapping.  This section of code goes
     // through the original intervals and see where they fall relative to the
     // new, sorted intervals for the density calculation.
-    RealArray prob_dens(num_params, 0.);
+    RealVector prob_dens(num_params); // initialize to 0.
     for (j=0; j<num_intervals_i; j++) {
       const Real& lower_value = interval_bnds_i[2*j];
       const Real& upper_value = interval_bnds_i[2*j+1];
@@ -726,7 +728,7 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
   if (correlation_flag) {
     for (i=1; i<num_uv; i++) {
       for (j=0; j<i; j++) {
-	double corr_val = correlations[i][j];
+	double corr_val = correlations(i,j);
 	if (fabs(corr_val) > 1.e-25) {
 	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+num_dv].c_str()),
 		       const_cast<char*>(lhs_names[j+num_dv].c_str()),
@@ -787,14 +789,7 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
   int 	  max_nam        = num_av;
   int*	  index_list     = new int    [max_nam];       // output
   double* ptval_list     = new double [max_nam];       // output
-  double* param_samples  = new double [max_samp_size]; // output
-  double* rank_samples   = (sampleRanksMode) ?
-    new double [max_samp_size] : NULL;                 // input/output
   char*   dist_name_list = new char   [16*max_nam];    // output
-  // Copy data from rank_array into double* needed for Fortran.
-  if (sampleRanksMode == SET_RANKS || sampleRanksMode == SET_GET_RANKS)
-    copy_data(rank_array, rank_samples, max_samp_size, "c");
-
   // dist_name_list is a bit tricky since the f90 array is declared as
   // CHARACTER(LEN=16) :: LSTNAME(MAXNAM), which would seem to be a
   // noncontiguous memory model.  However, a char** does not map correctly to
@@ -802,22 +797,30 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
   // allocation and indexes into it as if it were a vector of 16 char arrays
   // arranged head to tail.
 
+  if (samples.empty())
+    samples.shapeUninitialized(num_samples, num_av);
+  if (sampleRanksMode && sample_ranks.empty()) {
+    if (sampleRanksMode == SET_RANKS || sampleRanksMode == SET_GET_RANKS) {
+      PCerr << "Error: empty sample ranks array cannot be set in Pecos::"
+	    << "LHSDriver::get_parameter_sets()" << std::endl;
+      abort_handler(-1);
+    }
+    else if (sampleRanksMode == GET_RANKS)
+      sample_ranks.shapeUninitialized(num_samples, num_av);
+  }
+
   // generate the samples
   int rflag = sampleRanksMode; // short -> int
-  LHS_RUN_FC(max_var, max_obs, max_nam, err_code, dist_name_list, index_list,
-	     ptval_list, num_nam, param_samples, num_var, rank_samples, rflag);
+  LHS_RUN_FC(max_var, max_obs, max_nam, err_code, dist_name_list,
+	     index_list, ptval_list, num_nam, samples.values(), num_var,
+	     sample_ranks.values(), rflag);
   check_error(err_code, "lhs_run");
 
   // The matrix of parameter samples from Fortran 90 is arranged in column-major
   // order, which would normally imply a "fortran" copy_type.  However, LHS
   // arranges the samples as all samples for var 1, followed by all samples for
-  // var 2, etc.  In order to organize this data as an array of RealArray
-  // parameter sets, an extra transform is needed and a "c" copy_type is used.
-  copy_data(param_samples, max_samp_size, "c", samples_array, num_samples,
-	    num_av);
-  if (sampleRanksMode == GET_RANKS || sampleRanksMode == SET_GET_RANKS)
-    copy_data(rank_samples, max_samp_size, "c", rank_array, num_samples,
-	      num_av);
+  // var 2, etc.  Teuchos::SerialDenseMatrix using column-major memory layout
+  // as well, so use samples(sample#,var#) or samples[var#][sample#] for access.
 
   // deallocate LHS memory
   LHS_CLOSE_FC(err_code);
@@ -826,45 +829,7 @@ generate_samples(const RealArray& d_l_bnds,     const RealArray& d_u_bnds,
   // clean up memory
   delete [] index_list;
   delete [] ptval_list;
-  delete [] param_samples;
-  if (rank_samples)
-    delete [] rank_samples;
   delete [] dist_name_list;
-}
-
-
-void LHSDriver::
-generate_normal_samples(const RealArray& n_means, const RealArray& n_std_devs,
-			const RealArray& n_l_bnds, const RealArray& n_u_bnds,
-			int num_samples, int seed, Real2DArray& samples_array)
-{
-  RealArray   empty_ra;
-  Real2DArray empty_r2a;
-  generate_samples(empty_ra, empty_ra, empty_ra, empty_ra, n_means, n_std_devs,
-		   n_l_bnds, n_u_bnds, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_r2a, empty_r2a,
-		   empty_r2a, empty_r2a, empty_r2a, num_samples, seed,
-		   samples_array, empty_r2a);
-}
-
-
-void LHSDriver::
-generate_uniform_samples(const RealArray& u_l_bnds, const RealArray& u_u_bnds,
-			int num_samples, int seed, Real2DArray& samples_array)
-{
-  RealArray   empty_ra;
-  Real2DArray empty_r2a;
-  generate_samples(empty_ra, empty_ra, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, u_l_bnds, u_u_bnds, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_ra, empty_ra, empty_ra,
-		   empty_ra, empty_ra, empty_ra, empty_r2a, empty_r2a,
-		   empty_r2a, empty_r2a, empty_r2a, num_samples, seed,
-		   samples_array, empty_r2a);
 }
 
 } // namespace Pecos

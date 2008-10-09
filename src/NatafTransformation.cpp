@@ -1130,7 +1130,7 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
 		       fn_grad_x, 0.);
   }
   else { // non-standard DVV
-    RealVector fn_grad_x_trans(x_len), fn_grad_u_trans(x_len);
+    RealVector fn_grad_x_trans(x_len), fn_grad_u_trans(x_len, false);
     size_t i, dvv_index, num_deriv_vars = x_dvv.size();
     SizetArray dvv_index_array(x_len);
     // extract relevant DVV components from fn_grad_x
@@ -1197,7 +1197,7 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
 		       fn_grad_u, 0.);
   }
   else { // non-standard DVV
-    RealVector fn_grad_u_trans(u_len), fn_grad_x_trans(u_len);
+    RealVector fn_grad_u_trans(u_len), fn_grad_x_trans(u_len, false);
     size_t dvv_index, num_deriv_vars = x_dvv.size();
     SizetArray dvv_index_array(u_len);
     // extract relevant DVV components from fn_grad_u
