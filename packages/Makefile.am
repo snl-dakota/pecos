@@ -8,14 +8,15 @@ SUBDIRS = teuchos
 endif
 
 ## Package subdirectories to recurse into.
-if WITH_GSL
+if WITH_ALT_EXTERNAL_GSL
+SUBDIRS +=
+else
 SUBDIRS += gsl
 endif
 
 if WITH_FFT
 SUBDIRS += dfftpack fftw
 else
-# WJB: dont feel like gambling with indenting in Makefiles today - try it tomorrow
 if WITH_DFFTPACK
 SUBDIRS += dfftpack
 endif

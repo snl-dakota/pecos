@@ -1,7 +1,12 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
-# WJB - ToDo ASAP: proper treatment of path to "external" GSL (possibly in /usr/include)
-AM_CPPFLAGS  = -I${top_builddir}/packages/gsl @GSL_CPPFLAGS@
+AM_CPPFLAGS =
+
+if WITH_ALT_EXTERNAL_GSL
+AM_CPPFLAGS += @GSL_CPPFLAGS@
+else
+AM_CPPFLAGS += -I${top_builddir}/packages/gsl
+endif
 
 if WITH_ALT_EXTERNAL_TEUCHOS
 AM_CPPFLAGS += @TEUCHOS_CPPFLAGS@

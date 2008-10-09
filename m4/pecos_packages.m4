@@ -43,7 +43,7 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   dnl Teuchos package checks.
   AC_ARG_WITH([teuchos],
-              AC_HELP_STRING([--with-teuchos=DIR],
+              AC_HELP_STRING([--with-teuchos=<dir>],
                              [use Teuchos (default is yes), specify the root
                               directory for Teuchos library]),
               [],[with_teuchos="yes"])
@@ -103,44 +103,67 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   dnl GSL package checks.
   AC_ARG_WITH([gsl],
-              AC_HELP_STRING([--with-gsl=DIR], [use GSL (default is YES),
-                specify the root directory for GSL library (optional)]),
-                [ if test "$withval" = "no"; then
-                    want_gsl="no"
-                  elif test "$withval" = "yes"; then
-                    want_gsl="yes"
-                    ac_gsl_path=""
-                  else
-                    want_gsl="yes"
-                    ac_gsl_path="$withval"
-                  fi
-                ],[want_gsl="yes"])
+              AC_HELP_STRING([--with-gsl=<dir>],
+                             [use GSL (default is yes), specify the root
+                              directory for GSL library (optional)]),
+              [],[with_gsl="yes"])
+  acx_external_gsl=no
+  case $with_gsl in
+  no)
+    AC_MSG_NOTICE([NOT building with GSL!])
+    export GSL_ROOT=""
+    ;;
 
-  AC_MSG_CHECKING([whether with third-party library, GSL, is wanted])
-  AC_MSG_RESULT([${want_gsl}])
+  dnl For yes, check GSL_ROOT, otherwise fallback to GSL from SVN checkout
+  yes | "")
+    AC_MSG_CHECKING([for GSL])
+    if test -n "$GSL_ROOT" -a -d "$GSL_ROOT"; then
 
-  if test "x$want_gsl" = xyes; then
-    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
-    AC_MSG_CHECKING([for GSL directory])
+      acx_external_gsl=yes
+      AC_MSG_RESULT([using GSL in GSL_ROOT: $GSL_ROOT])
 
-    if test "$ac_gsl_path" != ""; then
-      AC_MSG_RESULT([${ac_gsl_path}])
-      if test -d "${ac_gsl_path}"; then
-        GSL_CPPFLAGS="-I$ac_gsl_path"
-        GSL_LDFLAGS="-L$ac_gsl_path"
+    elif test -d `pwd`/packages/gsl; then
 
-        AC_MSG_NOTICE(GSL_CPPFLAGS: $GSL_CPPFLAGS)
-        AC_SUBST(GSL_CPPFLAGS)
-        AC_SUBST(GSL_LDFLAGS)
-      else
-        AC_MSG_ERROR([the specified GSL basedir, ${ac_gsl_path} does not exist])
-      fi
-    else
-      dnl FLAGS for default case (SVN tree) are easily set in the Makefile.am
-      AC_MSG_RESULT([using default GSL directory in the local SVN tree])
+      dnl use SVN checkout of GSL and instruct subpackages to do so as well
+      export GSL_ROOT=`pwd`/packages/gsl
+      acx_external_gsl=no
       AC_CONFIG_SUBDIRS([packages/gsl])
-    fi
-  fi
-  AM_CONDITIONAL([WITH_GSL],[test "x$with_gsl" != xno])
+      AC_MSG_RESULT([using GSL in $GSL_ROOT])
 
+    else
+      AC_MSG_RESULT([could not find GSL directory.])
+    fi
+
+    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
+    ;;
+
+  dnl Otherwise, user should have provided an explicit path to GSL
+  *)
+    AC_MSG_CHECKING([for GSL])
+    GSL_ROOT=$withval
+    if test -n "$GSL_ROOT" -a -d "$GSL_ROOT"; then
+
+      acx_external_gsl=yes
+      AC_MSG_RESULT([using: $GSL_ROOT])
+
+    else
+      AC_MSG_ERROR([could not locate $GSL_ROOT])
+    fi
+
+    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
+    ;;
+  esac
+
+  dnl Do not export GSL build variables if GSL is not used
+  if test -n "$GSL_ROOT"; then
+    GSL_CPPFLAGS="-I$GSL_ROOT"
+    GSL_LDFLAGS="-L$GSL_ROOT"
+
+    AC_SUBST(GSL_ROOT)
+    AC_SUBST(GSL_CPPFLAGS)
+    AC_SUBST(GSL_LDFLAGS)
+  fi
+
+  AM_CONDITIONAL([WITH_ALT_EXTERNAL_GSL],
+                 [test "x$acx_external_gsl" = xyes -o "x$with_gsl" = xno])
 ])

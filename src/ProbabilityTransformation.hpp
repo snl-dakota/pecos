@@ -485,8 +485,8 @@ moments_from_frechet_params(const Real& alpha, const Real& beta, Real& mean,
   mean     = beta*gam;
   std_dev  = beta*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
 #else
-  Cerr << "Error: frechet distributions only suported in executables "
-       << "configured with the GSL library." << endl;
+  std::cerr << "Error: frechet distributions only suported in executables "
+            << "configured with the GSL library." << std::endl;
   abort_handler(-1);
 #endif // HAVE_GSL
 }
@@ -503,8 +503,8 @@ moments_from_weibull_params(const Real& alpha, const Real& beta, Real& mean,
   mean     = beta*gam;
   std_dev  = cf_var*beta*gam;
 #else
-  Cerr << "Error: weibull distributions only suported in executables "
-       << "configured with the GSL library." << endl;
+  std::cerr << "Error: weibull distributions only suported in executables "
+            << "configured with the GSL library." << std::endl;
   abort_handler(-1);
 #endif // HAVE_GSL
 }
