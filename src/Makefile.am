@@ -1,15 +1,11 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
+AM_CPPFLAGS = @TEUCHOS_CPPFLAGS@
+
 if WITH_GSL
-AM_CPPFLAGS = @GSL_CPPFLAGS@
+AM_CPPFLAGS += @GSL_CPPFLAGS@
 else
 AM_CPPFLAGS =
-endif
-
-if WITH_ALT_EXTERNAL_TEUCHOS
-AM_CPPFLAGS += @TEUCHOS_CPPFLAGS@
-else
-AM_CPPFLAGS += -I${top_builddir}/packages/teuchos/src
 endif
 
 #if ENABLE_F90
