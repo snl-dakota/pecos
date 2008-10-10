@@ -115,10 +115,12 @@ AC_DEFUN([PECOS_PACKAGES],[
     ;;
 
   system)
-    AC_MSG_NOTICE([Using system GSL!])
-    AC_CHECK_LIB([gslcblas],[cblas_ddot])
-    AC_CHECK_LIB([gsl],[gsl_ran_fdist_pdf])
+    AC_MSG_CHECKING([for system GSL])
+    AC_CHECK_LIB([gslcblas],[cblas_dgemm])
+    AC_CHECK_LIB([gsl],[gsl_ran_gamma_pdf])
+    AC_CHECK_HEADERS([gsl/gsl_version.h])
     AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
+    AC_MSG_NOTICE([Using system GSL!])
     GSL_ROOT=""
     ;;
 
@@ -126,6 +128,12 @@ AC_DEFUN([PECOS_PACKAGES],[
   yes | "")
     AC_MSG_CHECKING([for GSL])
     if test -n "$GSL_ROOT" -a -d "$GSL_ROOT"; then
+
+      AC_MSG_NOTICE([GSL_ROOT is set by the caller])
+      dnl save_CPPFLAGS=$CPPFLAGS
+      dnl CPPFLAGS="-I$GSL_ROOT"
+      dnl AC_CHECK_HEADERS([gsl/gsl_version.h],acx_external_gsl=yes,,"-I$GSL_ROOT")
+      dnl CPPFLAGS=$save_CPPFLAGS
 
       acx_external_gsl=yes
       AC_MSG_RESULT([using GSL in GSL_ROOT: $GSL_ROOT])
@@ -136,6 +144,8 @@ AC_DEFUN([PECOS_PACKAGES],[
       GSL_ROOT=`pwd`/packages/gsl
       acx_external_gsl=no
       AC_CONFIG_SUBDIRS([packages/gsl])
+
+      dnl no tests to perform since GSL has yet to be built; trust the SVN co
       AC_MSG_RESULT([using GSL in $GSL_ROOT])
 
     else
@@ -158,7 +168,11 @@ AC_DEFUN([PECOS_PACKAGES],[
       AC_MSG_ERROR([could not locate $GSL_ROOT])
     fi
 
+    dnl For now, trust the user (future enhancement would provide addl checks)
+    dnl AC_CHECK_HEADERS([gsl/gsl_version.h])
+
     AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
+    AC_MSG_NOTICE([Using the GSL specified on the configure line!])
     ;;
   esac
 
