@@ -114,6 +114,14 @@ AC_DEFUN([PECOS_PACKAGES],[
     GSL_ROOT=""
     ;;
 
+  system)
+    AC_MSG_NOTICE([Using system GSL!])
+    AC_CHECK_LIB([gslcblas],[cblas_ddot])
+    AC_CHECK_LIB([gsl],[gsl_ran_fdist_pdf])
+    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
+    GSL_ROOT=""
+    ;;
+
   dnl For yes, check GSL_ROOT, otherwise fallback to GSL from SVN checkout
   yes | "")
     AC_MSG_CHECKING([for GSL])
@@ -154,7 +162,7 @@ AC_DEFUN([PECOS_PACKAGES],[
     ;;
   esac
 
-  dnl Do not export GSL build variables if GSL is not used
+  dnl Do not export GSL build variables in certain cases (i.e. no or system)
   if test -n "$GSL_ROOT"; then
     GSL_CPPFLAGS="-I$GSL_ROOT"
     GSL_LDFLAGS="-L$GSL_ROOT"
@@ -168,9 +176,7 @@ AC_DEFUN([PECOS_PACKAGES],[
   dnl Seems two separate conditionals are needed
   dnl 1. WITH_GSL is the logical choice to control CPPFLAGS in src/Makefile.am
   dnl 2. BUILD_GSL is the logical choice to ensure build of gsl in packages/Makefile.am
-  dnl AM_CONDITIONAL([WITH_ALT_EXTERNAL_GSL],
-  dnl               [test "x$acx_external_gsl" = xyes -o "x$with_gsl" = xno])
 
-  AM_CONDITIONAL([WITH_GSL], [test -n "x$GSL_ROOT"])
+  AM_CONDITIONAL([WITH_GSL], [test -n "x$GSL_ROOT" -o "x$with_gsl" != xno])
   AM_CONDITIONAL([BUILD_GSL], [test "x$acx_external_gsl" = xno])
 ])
