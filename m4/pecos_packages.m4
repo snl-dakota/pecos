@@ -111,7 +111,7 @@ AC_DEFUN([PECOS_PACKAGES],[
   case $with_gsl in
   no)
     AC_MSG_NOTICE([NOT building with GSL!])
-    export GSL_ROOT=""
+    GSL_ROOT=""
     ;;
 
   dnl For yes, check GSL_ROOT, otherwise fallback to GSL from SVN checkout
@@ -125,7 +125,7 @@ AC_DEFUN([PECOS_PACKAGES],[
     elif test -d `pwd`/packages/gsl; then
 
       dnl use SVN checkout of GSL and instruct subpackages to do so as well
-      export GSL_ROOT=`pwd`/packages/gsl
+      GSL_ROOT=`pwd`/packages/gsl
       acx_external_gsl=no
       AC_CONFIG_SUBDIRS([packages/gsl])
       AC_MSG_RESULT([using GSL in $GSL_ROOT])
@@ -164,6 +164,13 @@ AC_DEFUN([PECOS_PACKAGES],[
     AC_SUBST(GSL_LDFLAGS)
   fi
 
-  AM_CONDITIONAL([WITH_ALT_EXTERNAL_GSL],
-                 [test "x$acx_external_gsl" = xyes -o "x$with_gsl" = xno])
+  dnl Perhaps BMA can suggest improved logic
+  dnl Seems two separate conditionals are needed
+  dnl 1. WITH_GSL is the logical choice to control CPPFLAGS in src/Makefile.am
+  dnl 2. BUILD_GSL is the logical choice to ensure build of gsl in packages/Makefile.am
+  dnl AM_CONDITIONAL([WITH_ALT_EXTERNAL_GSL],
+  dnl               [test "x$acx_external_gsl" = xyes -o "x$with_gsl" = xno])
+
+  AM_CONDITIONAL([WITH_GSL], [test -n "x$GSL_ROOT"])
+  AM_CONDITIONAL([BUILD_GSL], [test "x$acx_external_gsl" = xno])
 ])

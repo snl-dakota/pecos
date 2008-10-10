@@ -8,9 +8,7 @@ SUBDIRS = teuchos
 endif
 
 ## Package subdirectories to recurse into.
-if WITH_ALT_EXTERNAL_GSL
-SUBDIRS +=
-else
+if BUILD_GSL
 SUBDIRS += gsl
 endif
 

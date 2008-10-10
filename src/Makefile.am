@@ -1,11 +1,9 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
-AM_CPPFLAGS =
-
-if WITH_ALT_EXTERNAL_GSL
-AM_CPPFLAGS += @GSL_CPPFLAGS@
+if WITH_GSL
+AM_CPPFLAGS = @GSL_CPPFLAGS@
 else
-AM_CPPFLAGS += -I${top_builddir}/packages/gsl
+AM_CPPFLAGS =
 endif
 
 if WITH_ALT_EXTERNAL_TEUCHOS
