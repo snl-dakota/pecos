@@ -11,11 +11,11 @@ ACLOCAL_AMFLAGS = -I ./m4
 SUBDIRS = packages src test
 SUBLIBS = src/libpecos_src.la
 
-#if ENABLE_F90
+if ENABLE_F90
 if WITH_LHS
 LHS_I = src/LHSDriver.hpp
 endif
-#endif
+endif
 
 ## Set the Pecos library name.
 lib_LTLIBRARIES = libpecos.la

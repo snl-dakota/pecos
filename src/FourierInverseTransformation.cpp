@@ -8,7 +8,7 @@
 
 #include "FourierInverseTransformation.hpp"
 
-#ifdef PECOS_DFFTPACK
+#ifdef HAVE_DFFTPACK
 #define ZFFTI_F77 F77_FUNC(zffti,ZFFTI)
 extern "C" void ZFFTI_F77(int& n, double* wsave);
 
@@ -80,8 +80,12 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   RealVector uuv_l_bnds(1, false), uuv_u_bnds(1, false);
   uuv_l_bnds[0] = 0.; uuv_u_bnds[0] = 2.*Pi;
   RealMatrix Psi_samples(num_terms_samples, 1);
+#ifdef HAVE_LHS
   lhsSampler.generate_uniform_samples(uuv_l_bnds, uuv_u_bnds, num_terms_samples,
 				      seed, Psi_samples);
+#else
+  PCerr << "Error: LHS required for uniform sample generation." << std::endl;
+#endif
 
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
@@ -134,8 +138,13 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   zero_means[0]    = zero_means[1]    = 0.;
   unit_std_devs[0] = unit_std_devs[1] = 1.;
   RealMatrix VW_samples(num_terms_samples, 2);
+#ifdef HAVE_LHS
   lhsSampler.generate_normal_samples(zero_means, unit_std_devs, empty_ra,
     empty_ra, num_terms_samples, seed, VW_samples);
+#else
+  PCerr << "Error: LHS required for standard normal sample generation."
+	<< std::endl;
+#endif
 
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
@@ -159,14 +168,13 @@ void FourierInverseTransformation::
 compute_ifft_sample_set(const ComplexArray& B, size_t i)
 {
   int num_terms = psdSequence.length();
-#ifdef PECOS_DFFTPACK
+#ifdef HAVE_DFFTPACK
   double* wsave = new double [4*num_terms+15];
-  // TO DO: auto-tools F77 macros
   ZFFTI_F77(num_terms, wsave);
-  // WJB: ToDo -- check with MSE about B conversion -- zfftb_(num_terms, B, wsave); // transforms in place
-  //ZFFTB_F77(num_terms, (void*)&B[0], wsave); // transforms in place
   ZFFTB_F77(num_terms, &B[0], wsave); // transforms in place
   delete [] wsave;
+#else
+  PCerr << "Error: DFFTPACK required for inverse FFT." << std::endl;
 #endif
   for (size_t j=0; j<num_terms; j++)
     inverseSamples(i,j) = num_terms*B[j].real();

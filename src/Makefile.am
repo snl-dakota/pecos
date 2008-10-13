@@ -6,7 +6,7 @@ if WITH_GSL
 AM_CPPFLAGS += @GSL_CPPFLAGS@
 endif
 
-#if ENABLE_F90
+if ENABLE_F90
 if WITH_LHS
 LHS_BUILD     = $(top_builddir)/packages/LHS
 LHS_ARCHIVE   = $(LHS_BUILD)/liblhs.la
@@ -17,7 +17,7 @@ LHS_S         = LHSDriver.cpp lhs_wrappers.f90
 LTFCCOMPILE = $(LIBTOOL) --tag=F77 --mode=compile $(FC) $(AM_FCFLAGS) \
 	      $(FCFLAGS) $(FCFLAGS_f90) $(MODULES)
 endif
-#endif
+endif
 
 ## Set the Pecos library name.
 noinst_LTLIBRARIES = libpecos_src.la

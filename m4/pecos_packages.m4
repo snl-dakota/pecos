@@ -16,7 +16,7 @@ AC_DEFUN([PECOS_PACKAGES],[
               [turn DFFTPACK support off]),[with_dfftpack=$withval],[with_dfftpack=yes])
   if test "x$with_dfftpack" = xyes; then
     AC_CONFIG_SUBDIRS([packages/dfftpack])
-    AC_DEFINE([PECOS_DFFTPACK],[1], [Macro to handle code which depends on DFFTPACK.])
+    AC_DEFINE([HAVE_DFFTPACK],[1], [Macro to handle code which depends on DFFTPACK.])
   fi
   AM_CONDITIONAL([WITH_DFFTPACK],[test "x$with_dfftpack" = xyes])
 
@@ -32,11 +32,9 @@ AC_DEFUN([PECOS_PACKAGES],[
   dnl LHS package checks.
   AC_ARG_WITH([lhs],AS_HELP_STRING([--without-lhs],[turn LHS support off]),
 	      [with_lhs=$withval],[with_lhs=yes])
-  if test "x$with_lhs" = xyes; then
-    AC_DEFINE([PECOS_LHS],[1],[Macro to handle code which depends on LHS.])
-    #if test "x$enable_f90" = xyes; then
-      AC_CONFIG_SUBDIRS([packages/LHS])
-    #fi
+  if test "x$with_lhs" = xyes -a "x$enable_f90" = xyes; then
+    AC_DEFINE([HAVE_LHS],[1],[Macro to handle code which depends on LHS.])
+    AC_CONFIG_SUBDIRS([packages/LHS])
     LHS_LDFLAGS="-L`pwd`/packages/LHS"
     AC_SUBST(LHS_LDFLAGS)
   fi
