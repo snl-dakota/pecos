@@ -37,6 +37,8 @@ AC_DEFUN([PECOS_PACKAGES],[
     #if test "x$enable_f90" = xyes; then
       AC_CONFIG_SUBDIRS([packages/LHS])
     #fi
+    LHS_LDFLAGS="-L`pwd`/packages/LHS"
+    AC_SUBST(LHS_LDFLAGS)
   fi
   AM_CONDITIONAL([WITH_LHS],
                  [test "x$with_lhs" = xyes])
