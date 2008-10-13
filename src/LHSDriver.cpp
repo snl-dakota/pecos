@@ -7,6 +7,10 @@
     _______________________________________________________________________ */
 
 #include "LHSDriver.hpp"
+#include <algorithm>
+#if defined(__sun) && defined(__sparc) && defined(__SUNPRO_CC)
+#include <math.h>
+#endif
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
@@ -150,7 +154,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     //option_stream << ends;
     int num_replic = 1, ptval_option = 1;
     String option_s(option_stream.str());
-    copy(option_s.begin(), option_s.end(), option_string);
+    std::copy(option_s.begin(), option_s.end(), option_string);
     LHS_OPTIONS2_FC(num_replic, ptval_option, option_string, err_code);
     check_error(err_code, "lhs_options");
   }
@@ -169,13 +173,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Design" << std::setiosflags(std::ios::left) << std::setw(10)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "uniform                         "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 2;
     if (d_l_bnds[i] > -DBL_MAX && d_u_bnds[i] < DBL_MAX) {
       if (d_l_bnds[i] >= d_u_bnds[i]) {
@@ -207,7 +211,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Normal" << std::setiosflags(std::ios::left) << std::setw(10)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -231,7 +235,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       dist_stream << "normal                          "; // no null termination
     }
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(normal)");
@@ -248,7 +252,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Lognormal" << std::setiosflags(std::ios::left)
 		<< std::setw(7) << cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -299,7 +303,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 	dist_stream << "lognormal                       ";// no null termination
     }
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(lognormal)");
@@ -314,13 +318,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Uniform" << std::setiosflags(std::ios::left) << std::setw(9)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "uniform                         "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 2;
     if (u_l_bnds[i] >= u_u_bnds[i]) {
 	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -344,13 +348,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Loguniform" << std::setiosflags(std::ios::left)
 		<< std::setw(6) << cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "loguniform                      "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 2;
     if (lu_l_bnds[i] >= lu_u_bnds[i]) {
 	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -374,13 +378,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Triangular" << std::setiosflags(std::ios::left)
 		<< std::setw(6) << cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "triangular                      "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 3;
     if (t_l_bnds[i] >= t_u_bnds[i]) {
       PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -405,13 +409,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Exponential" << std::setiosflags(std::ios::left)
 		<< std::setw(5) << cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "exponential                     "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 1;
     dist_params[0] = 1./e_betas[i];
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
@@ -428,13 +432,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Beta" << std::setiosflags(std::ios::left) << std::setw(12)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "beta                            "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 4;
     if (b_l_bnds[i] >= b_u_bnds[i]) {
       PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -460,13 +464,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Gamma" << std::setiosflags(std::ios::left) << std::setw(11)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "gamma                           "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 2;
     dist_params[0] = ga_alphas[i];
     dist_params[1] = 1./ga_betas[i];
@@ -484,13 +488,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Gumbel" << std::setiosflags(std::ios::left) << std::setw(10)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "gumbel                          "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 2;
     dist_params[0] = gu_alphas[i];
     dist_params[1] = gu_betas[i];
@@ -508,13 +512,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Frechet" << std::setiosflags(std::ios::left) << std::setw(9)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "frechet                         "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 2;
     dist_params[0] = f_alphas[i];
     dist_params[1] = f_betas[i];
@@ -532,13 +536,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Weibull" << std::setiosflags(std::ios::left) << std::setw(9)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "weibull                         "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     num_params = 2;
     dist_params[0] = w_alphas[i];
     dist_params[1] = w_betas[i];
@@ -557,7 +561,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Histogram" << std::setiosflags(std::ios::left)
 		<< std::setw(7) << cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -589,7 +593,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       PCout << "Histogram " << i+1 << ": " << x_val[j] << ' ' << y_val[j]
 	    << std::endl;
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
 		  x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(histogram)");
@@ -606,13 +610,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "Interval" << std::setiosflags(std::ios::left)
 		<< std::setw(8) << cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
     dist_stream << "continuous linear               "; // no null termination
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
 
     // x_sort_unique is a set with ALL of the interval bounds for this variable
     // in increasing order and unique.  For example, if there are 2 intervals
@@ -693,7 +697,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     name_stream << "State" << std::setiosflags(std::ios::left) << std::setw(11)
 		<< cntr+1;
     String name_s(name_stream.str());
-    copy(name_s.begin(), name_s.end(), name_string);
+    std::copy(name_s.begin(), name_s.end(), name_string);
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -715,7 +719,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       abort_handler(-1);
     }
     String dist_s(dist_stream.str());
-    copy(dist_s.begin(), dist_s.end(), dist_string);
+    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(state)");
@@ -769,13 +773,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   else
     options_stream << "                                ";
   String output_s(output_stream.str());
-  copy(output_s.begin(), output_s.end(), output_string);
+  std::copy(output_s.begin(), output_s.end(), output_string);
   String message_s(message_stream.str());
-  copy(message_s.begin(), message_s.end(), message_string);
+  std::copy(message_s.begin(), message_s.end(), message_string);
   String title_s(title_stream.str());
-  copy(title_s.begin(), title_s.end(), title_string);
+  std::copy(title_s.begin(), title_s.end(), title_string);
   String options_s(options_stream.str());
-  copy(options_s.begin(), options_s.end(), options_string);
+  std::copy(options_s.begin(), options_s.end(), options_string);
   LHS_FILES2_FC(output_string, message_string, title_string, options_string,
 		err_code);
   check_error(err_code, "lhs_files");
