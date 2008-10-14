@@ -19,13 +19,12 @@ AM_LDFLAGS  += @LHS_LDFLAGS@
 LHS_LIBS    =  -llhs
 endif
 
-# Trilinos "model" uses perl scripts to drive tests - for now, simply use 'gmake check'
-#### noinst_PROGRAMS = test_pecos_ifft_g test_pecos_ifft_sd
 
 # Tests to run when 'gmake check' is run
-TESTS = pecos_ifft_g pecos_ifft_sd
-# Tests to build when 'gmake check' is run
-check_PROGRAMS = pecos_ifft_g pecos_ifft_sd
+TESTS = test_pecos_ifft_g test_pecos_ifft_sd
+
+# Programs to link when 'gmake' is run
+noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd
 
 
 # Complete these for each specific test.

@@ -1,0 +1,9 @@
+#!/bin/sh
+./pecos_ifft_sd
+if test $? -ne 0; then
+    echo
+    echo "Error running pecos_ifft_sd" 1>&2
+    echo
+    exit 1
+fi
+
