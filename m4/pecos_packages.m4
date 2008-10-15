@@ -184,7 +184,7 @@ AC_DEFUN([PECOS_PACKAGES],[
   fi
 
   dnl WITH_GSL controls CPPFLAGS in src/Makefile.am
-  AM_CONDITIONAL([WITH_GSL], [test "x$with_gsl" = xsystem -o -n "x$GSL_ROOT" ])
+  AM_CONDITIONAL([WITH_GSL], [test "x$with_gsl" = xsystem -o -n "$GSL_ROOT" ])
   dnl BUILD_GSL controls build of Pecos local gsl in packages/Makefile.am
   AM_CONDITIONAL([BUILD_GSL], [test "x$acx_local_gsl" = xyes])
 
