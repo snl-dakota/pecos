@@ -17,6 +17,8 @@ AC_DEFUN([PECOS_PACKAGES],[
   if test "x$with_dfftpack" = xyes; then
     AC_CONFIG_SUBDIRS([packages/dfftpack])
     AC_DEFINE([HAVE_DFFTPACK],[1], [Macro to handle code which depends on DFFTPACK.])
+    DFFTPACK_LDFLAGS="-L`pwd`/packages/dfftpack"
+    AC_SUBST(DFFTPACK_LDFLAGS)
   fi
   AM_CONDITIONAL([WITH_DFFTPACK],[test "x$with_dfftpack" = xyes])
 

@@ -19,6 +19,11 @@ AM_LDFLAGS  += @LHS_LDFLAGS@
 TPL_LIBS    += -llhs
 endif
 
+if WITH_DFFTPACK
+AM_LDFLAGS  += @DFFTPACK_LDFLAGS@
+TPL_LIBS    += -ldfftpack
+endif
+
 
 # Tests to run when 'gmake check' is run
 TESTS = test_pecos_ifft_g test_pecos_ifft_sd
@@ -31,15 +36,13 @@ noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd
 pecos_ifft_g_SOURCES = pecos_ifft_g.cpp
 pecos_ifft_g_DEPENDENCIES = ${top_builddir}/libpecos.la
 pecos_ifft_g_LDADD = -L${top_builddir} -lpecos \
-    -L${top_builddir}/packages/dfftpack -ldfftpack $(TPL_LIBS) \
-    @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
+    $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
 
 # Complete these for each specific test.
 pecos_ifft_sd_SOURCES = pecos_ifft_g.cpp
 pecos_ifft_sd_DEPENDENCIES = ${top_builddir}/libpecos.la
 pecos_ifft_sd_LDADD = -L${top_builddir} -lpecos \
-    -L${top_builddir}/packages/dfftpack -ldfftpack $(TPL_LIBS) \
-    @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
+    $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
 
 # Define this variable if you want to install test header files.
 # subpkginclude_HEADERS =
