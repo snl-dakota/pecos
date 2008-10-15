@@ -107,7 +107,8 @@ AC_DEFUN([PECOS_PACKAGES],[
                              [use GSL (default is yes), specify the root
                               directory for GSL library (optional)]),
               [],[with_gsl="yes"])
-  acx_external_gsl=no
+
+  acx_local_gsl=no
   case $with_gsl in
   no)
     AC_MSG_NOTICE([NOT building with GSL!])
@@ -134,25 +135,23 @@ AC_DEFUN([PECOS_PACKAGES],[
       dnl CPPFLAGS="-I$GSL_ROOT"
       dnl AC_CHECK_HEADERS([gsl/gsl_version.h],acx_external_gsl=yes,,"-I$GSL_ROOT")
       dnl CPPFLAGS=$save_CPPFLAGS
-
-      acx_external_gsl=yes
       AC_MSG_RESULT([using GSL in GSL_ROOT: $GSL_ROOT])
+      AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
 
     elif test -d `pwd`/packages/gsl; then
 
       dnl use SVN checkout of GSL and instruct subpackages to do so as well
       GSL_ROOT=`pwd`/packages/gsl
-      acx_external_gsl=no
+      acx_local_gsl=yes
       AC_CONFIG_SUBDIRS([packages/gsl])
 
       dnl no tests to perform since GSL has yet to be built; trust the SVN co
       AC_MSG_RESULT([using GSL in $GSL_ROOT])
+      AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
 
     else
       AC_MSG_RESULT([could not find GSL directory.])
     fi
-
-    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
     ;;
 
   dnl Otherwise, user should have provided an explicit path to GSL
@@ -161,18 +160,16 @@ AC_DEFUN([PECOS_PACKAGES],[
     GSL_ROOT=$withval
     if test -n "$GSL_ROOT" -a -d "$GSL_ROOT"; then
 
-      acx_external_gsl=yes
       AC_MSG_RESULT([using: $GSL_ROOT])
+
+      dnl For now, trust the user (future enhancement would provide addl checks)
+      dnl AC_CHECK_HEADERS([gsl/gsl_version.h])
+      AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
+      AC_MSG_NOTICE([Using the GSL specified on the configure line!])
 
     else
       AC_MSG_ERROR([could not locate $GSL_ROOT])
     fi
-
-    dnl For now, trust the user (future enhancement would provide addl checks)
-    dnl AC_CHECK_HEADERS([gsl/gsl_version.h])
-
-    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
-    AC_MSG_NOTICE([Using the GSL specified on the configure line!])
     ;;
   esac
 
@@ -186,11 +183,9 @@ AC_DEFUN([PECOS_PACKAGES],[
     AC_SUBST(GSL_LDFLAGS)
   fi
 
-  dnl Perhaps BMA can suggest improved logic
-  dnl Seems two separate conditionals are needed
-  dnl 1. WITH_GSL is the logical choice to control CPPFLAGS in src/Makefile.am
-  dnl 2. BUILD_GSL is the logical choice to ensure build of gsl in packages/Makefile.am
+  dnl WITH_GSL controls CPPFLAGS in src/Makefile.am
+  AM_CONDITIONAL([WITH_GSL], [test "x$with_gsl" = xsystem -o -n "x$GSL_ROOT" ])
+  dnl BUILD_GSL controls build of Pecos local gsl in packages/Makefile.am
+  AM_CONDITIONAL([BUILD_GSL], [test "x$acx_local_gsl" = xyes])
 
-  AM_CONDITIONAL([WITH_GSL], [test -n "x$GSL_ROOT" -o "x$with_gsl" != xno])
-  AM_CONDITIONAL([BUILD_GSL], [test "x$acx_external_gsl" = xno])
 ])
