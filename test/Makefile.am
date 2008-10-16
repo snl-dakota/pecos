@@ -29,7 +29,10 @@ endif
 TESTS = test_pecos_ifft_g test_pecos_ifft_sd
 
 # Programs to link when 'gmake' is run
-noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd
+# WJB: TEMPORARILY disable linkage of the test programs during gmake step
+##noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd
+# INSTEAD (for a day or so) require the use of 'gmake check' to link the exes
+check_PROGRAMS = pecos_ifft_g pecos_ifft_sd
 
 
 # Complete these for each specific test.
