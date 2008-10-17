@@ -85,6 +85,7 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
 				      seed, Psi_samples);
 #else
   PCerr << "Error: LHS required for uniform sample generation." << std::endl;
+  abort_handler(-1);
 #endif
 
   size_t i, j;
@@ -144,6 +145,7 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
 #else
   PCerr << "Error: LHS required for standard normal sample generation."
 	<< std::endl;
+  abort_handler(-1);
 #endif
 
   size_t i, j;
@@ -175,6 +177,7 @@ compute_ifft_sample_set(const ComplexArray& B, size_t i)
   delete [] wsave;
 #else
   PCerr << "Error: DFFTPACK required for inverse FFT." << std::endl;
+  abort_handler(-1);
 #endif
   for (size_t j=0; j<num_terms; j++)
     inverseSamples(i,j) = num_terms*B[j].real();

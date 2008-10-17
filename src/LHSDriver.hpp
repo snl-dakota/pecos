@@ -117,7 +117,13 @@ private:
 
 inline LHSDriver::LHSDriver() :
   sampleType("lhs"), sampleRanksMode(IGNORE_RANKS), reportFlag(true)
-{}
+{
+#ifndef HAVE_LHS
+  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
+	<< std::endl;
+  abort_handler(-1);
+#endif
+}
 
 
 inline LHSDriver::~LHSDriver()
@@ -133,9 +139,16 @@ initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 }
 
 
-inline LHSDriver::
-LHSDriver(const String& sample_type, short sample_ranks_mode, bool reports)
-{ initialize(sample_type, sample_ranks_mode, reports); }
+inline LHSDriver::LHSDriver(const String& sample_type, short sample_ranks_mode,
+			    bool reports)
+{
+#ifndef HAVE_LHS
+  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
+	<< std::endl;
+  abort_handler(-1);
+#endif
+  initialize(sample_type, sample_ranks_mode, reports);
+}
 
 
 

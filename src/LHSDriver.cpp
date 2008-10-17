@@ -14,6 +14,8 @@
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
+
+#ifdef HAVE_LHS
 #define LHS_INIT_MEM_FC FC_FUNC_(lhs_init_mem,LHS_INIT_MEM)
 #define LHS_PREP_FC     FC_FUNC_(lhs_prep,LHS_PREP)
 #define LHS_RUN_FC      FC_FUNC_(lhs_run,LHS_RUN)
@@ -63,6 +65,7 @@ void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
 //               int* num_names, double* sample_matrix, int* num_vars );
 
 }
+#endif // HAVE_LHS
 
 
 namespace Pecos {
@@ -92,6 +95,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 		 const RealSymMatrix& correlations, int num_samples, int seed,
 		 RealMatrix& samples, RealMatrix& sample_ranks)
 {
+#ifdef HAVE_LHS
   // generate samples within user-specified parameter distributions
 
   // error check on program parameters
@@ -832,6 +836,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   delete [] index_list;
   delete [] ptval_list;
   delete [] dist_name_list;
+#endif // HAVE_LHS
 }
 
 } // namespace Pecos

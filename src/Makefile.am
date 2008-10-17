@@ -8,9 +8,9 @@ endif
 
 if ENABLE_F90
 if WITH_LHS
-##LHS_BUILD     = $(top_builddir)/packages/LHS
-##LHS_ARCHIVE   = $(LHS_BUILD)/liblhs.la
-LHS_S         = LHSDriver.cpp lhs_wrappers.f90
+##LHS_BUILD   = $(top_builddir)/packages/LHS
+##LHS_ARCHIVE = $(LHS_BUILD)/liblhs.la
+LHS_S         = lhs_wrappers.f90
 endif
 endif
 
@@ -30,7 +30,7 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  SamplingInverseTransformation.cpp		\
 			  ProbabilityTransformation.cpp			\
 			  NatafTransformation.cpp			\
-			  $(LHS_S)
+			  LHSDriver.cpp $(LHS_S)
 #			  BasisFunction.cpp
 
 ## Extra files to remove when doing 'make maintainer-clean'.

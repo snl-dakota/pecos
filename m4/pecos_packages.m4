@@ -40,8 +40,7 @@ AC_DEFUN([PECOS_PACKAGES],[
     LHS_LDFLAGS="-L`pwd`/packages/LHS"
     AC_SUBST(LHS_LDFLAGS)
   fi
-  AM_CONDITIONAL([WITH_LHS],
-                 [test "x$with_lhs" = xyes])
+  AM_CONDITIONAL([WITH_LHS],[test "x$with_lhs" = xyes])
 
   dnl Teuchos package checks.
   AC_ARG_WITH([teuchos],

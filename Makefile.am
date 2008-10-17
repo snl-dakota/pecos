@@ -12,9 +12,20 @@ ACLOCAL_AMFLAGS = -I ./m4
 SUBDIRS = packages src . test
 SUBLIBS = src/libpecos_src.la
 
+if WITH_FFT
+SUBLIBS += packages/dfftpack/libdfftpack.la packages/fftw/libfftw.la
+else
+if WITH_DFFTPACK
+SUBLIBS += packages/dfftpack/libdfftpack.la
+endif
+if WITH_FFTW
+SUBLIBS += packages/fftw/libfftw.la
+endif
+endif
+
 if ENABLE_F90
 if WITH_LHS
-LHS_I = src/LHSDriver.hpp
+SUBLIBS += packages/LHS/liblhs.la
 endif
 endif
 
@@ -31,7 +42,7 @@ pkginclude_HEADERS = src/pecos_data_types.hpp			\
 		     src/SamplingInverseTransformation.hpp	\
 		     src/ProbabilityTransformation.hpp		\
 		     src/NatafTransformation.hpp		\
-		     $(LHS_I)
+		     src/LHSDriver.hpp
 #		     src/BasisFunction.hpp
 
 ## No sources in this directory!
