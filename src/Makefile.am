@@ -6,12 +6,10 @@ if WITH_GSL
 AM_CPPFLAGS += @GSL_CPPFLAGS@
 endif
 
-if ENABLE_F90
 if WITH_LHS
 ##LHS_BUILD   = $(top_builddir)/packages/LHS
 ##LHS_ARCHIVE = $(LHS_BUILD)/liblhs.la
 LHS_S         = lhs_wrappers.f90
-endif
 endif
 
 ## HACK NOTICE: Libtool 1.5.X doesn't provide tagging support for F90 sources.

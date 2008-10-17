@@ -23,10 +23,8 @@ SUBLIBS += packages/fftw/libfftw.la
 endif
 endif
 
-if ENABLE_F90
 if WITH_LHS
 SUBLIBS += packages/LHS/liblhs.la
-endif
 endif
 
 ## Set the Pecos library name.
