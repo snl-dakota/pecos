@@ -1,10 +1,10 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
 ## Initialize the SUBDIRS variable; it'll be added to below.
-if WITH_ALT_EXTERNAL_TEUCHOS
 SUBDIRS = 
-else
-SUBDIRS = teuchos
+
+if BUILD_TEUCHOS
+SUBDIRS += teuchos
 endif
 
 ## Package subdirectories to recurse into.

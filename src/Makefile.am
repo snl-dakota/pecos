@@ -7,8 +7,6 @@ AM_CPPFLAGS += @GSL_CPPFLAGS@
 endif
 
 if WITH_LHS
-##LHS_BUILD   = $(top_builddir)/packages/LHS
-##LHS_ARCHIVE = $(LHS_BUILD)/liblhs.la
 LHS_S         = lhs_wrappers.f90
 endif
 

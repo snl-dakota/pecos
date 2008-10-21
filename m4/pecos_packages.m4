@@ -48,7 +48,7 @@ AC_DEFUN([PECOS_PACKAGES],[
                              [use Teuchos (default is yes), specify the root
                               directory for Teuchos library]),
               [],[with_teuchos="yes"])
-  acx_external_teuchos=no
+  acx_local_teuchos=no
   case $with_teuchos in
   dnl Pecos depends on Teuchos UNCONDITIONALLY
   no)
@@ -61,19 +61,18 @@ AC_DEFUN([PECOS_PACKAGES],[
     AC_MSG_CHECKING([for Teuchos])
     if test -n "$TEUCHOS_ROOT" -a -d "$TEUCHOS_ROOT"; then
 
-      acx_external_teuchos=yes
       AC_MSG_RESULT([using Teuchos in TEUCHOS_ROOT: $TEUCHOS_ROOT])
 
     elif test -d `pwd`/packages/teuchos; then
 
       dnl use local teuchos and instruct subpackages to do so as well
       export TEUCHOS_ROOT=`pwd`/packages/teuchos
-      acx_external_teuchos=no
+      acx_local_teuchos=yes
       AC_CONFIG_SUBDIRS([packages/teuchos])
       AC_MSG_RESULT([using local Teuchos in $TEUCHOS_ROOT])
 
     else
-      AC_MSG_RESULT([could not find Teuchos directory.])
+      AC_MSG_ERROR([could not find Teuchos directory.])
     fi
     ;;
 
@@ -82,25 +81,30 @@ AC_DEFUN([PECOS_PACKAGES],[
     AC_MSG_CHECKING([for Teuchos])
     TEUCHOS_ROOT=$withval
     if test -n "$TEUCHOS_ROOT" -a -d "$TEUCHOS_ROOT"; then
-
-      acx_external_teuchos=yes
       AC_MSG_RESULT([using: $TEUCHOS_ROOT])
-
     else
       AC_MSG_ERROR([could not locate $TEUCHOS_ROOT])
     fi
     ;;
   esac
 
-  TEUCHOS_CPPFLAGS="-I$TEUCHOS_ROOT/src"
-  TEUCHOS_LDFLAGS="-L$TEUCHOS_ROOT/src"
+  dnl Finally, check for INSTALLED Teuchos vs. BUILT, but NOT-installed Teuchos
+  if test -d "$TEUCHOS_ROOT/include" -a -d "$TEUCHOS_ROOT/lib"; then
+    AC_MSG_NOTICE([Found an INSTALLED teuchos!])
+    TEUCHOS_CPPFLAGS="-I$TEUCHOS_ROOT/include"
+    TEUCHOS_LDFLAGS="-L$TEUCHOS_ROOT/lib"
+  elif test -d "$TEUCHOS_ROOT/src"; then
+    TEUCHOS_CPPFLAGS="-I$TEUCHOS_ROOT/src"
+    TEUCHOS_LDFLAGS="-L$TEUCHOS_ROOT/src"
+  else
+    AC_MSG_ERROR([could not find Teuchos library relative to $TEUCHOS_ROOT.])
+  fi
 
   AC_SUBST(TEUCHOS_ROOT)
   AC_SUBST(TEUCHOS_CPPFLAGS)
   AC_SUBST(TEUCHOS_LDFLAGS)
 
-  AM_CONDITIONAL([WITH_ALT_EXTERNAL_TEUCHOS],
-                 [test "x$acx_external_teuchos" = xyes])
+  AM_CONDITIONAL([BUILD_TEUCHOS], [test "x$acx_local_teuchos" = xyes])
 
   dnl GSL package checks.
   AC_ARG_WITH([gsl],
