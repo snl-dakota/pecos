@@ -62,6 +62,9 @@ public:
   /// compute InverseTransformation::inverseSamples
   virtual void compute_samples(size_t num_samples, size_t seed);
 
+  /// return the forward/inverse sample matrix
+  virtual const RealMatrix& sample_matrix() const;
+
   //
   //- Heading: Member functions
   //

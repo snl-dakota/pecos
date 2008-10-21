@@ -47,6 +47,9 @@ protected:
   //void correlation_function(fn_ptr);
   //void correlation_function(const RealPairArray& corr_fn);
 
+  /// return inverseSamples
+  const RealMatrix& sample_matrix() const;
+
   //
   //- Heading: Data
   //
@@ -86,6 +89,10 @@ inline InverseTransformation::InverseTransformation():
 
 inline InverseTransformation::~InverseTransformation()
 { }
+
+
+inline const RealMatrix& InverseTransformation::sample_matrix() const
+{ return inverseSamples; }
 
 } // namespace Pecos
 

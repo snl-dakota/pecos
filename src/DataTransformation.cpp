@@ -219,4 +219,17 @@ void DataTransformation::compute_samples(size_t num_samples, size_t seed)
   }
 }
 
+
+const RealMatrix& DataTransformation::sample_matrix() const
+{
+  if (dataTransRep) // envelope fwd to letter
+    return dataTransRep->sample_matrix();
+  else { // letter lacking redefinition of virtual fn
+    PCerr << "Error: derived class does not redefine sample_matrix() virtual "
+          << "fn.\nNo default defined at DataTransformation base class.\n"
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
 } // namespace Pecos
