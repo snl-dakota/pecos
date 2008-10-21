@@ -42,7 +42,7 @@ pecos_ifft_g_LDADD = -L${top_builddir} -lpecos \
     $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
 
 # Complete these for each specific test.
-pecos_ifft_sd_SOURCES = pecos_ifft_g.cpp
+pecos_ifft_sd_SOURCES = pecos_ifft_sd.cpp
 pecos_ifft_sd_DEPENDENCIES = ${top_builddir}/libpecos.la
 pecos_ifft_sd_LDADD = -L${top_builddir} -lpecos \
     $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
