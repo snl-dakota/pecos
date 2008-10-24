@@ -29,8 +29,8 @@ public:
   //- Heading: Constructors and destructor
   //
 
-  FourierInverseTransformation();  ///< constructor
-  ~FourierInverseTransformation(); ///< destructor
+  FourierInverseTransformation(const String& data_trans_type); ///< constructor
+  ~FourierInverseTransformation();                             ///< destructor
 
 protected:
 
@@ -68,8 +68,9 @@ private:
 };
 
 
-inline FourierInverseTransformation::FourierInverseTransformation():
-  fourierMethod("grigoriu") // hardwire for now
+inline FourierInverseTransformation::
+FourierInverseTransformation(const String& data_trans_type):
+  fourierMethod(data_trans_type)
 { }
 
 

@@ -35,9 +35,9 @@ compute_samples(size_t num_samples, size_t seed)
 
   inverseSamples.shapeUninitialized(num_samples, num_terms);
 
-  if (fourierMethod == "shinozuka_deodatis")
+  if (fourierMethod == "inverse_fourier_shinozuka_deodatis")
     compute_samples_shinozuka_deodatis(num_samples, seed);
-  else if (fourierMethod == "grigoriu")
+  else if (fourierMethod == "inverse_fourier_grigoriu")
     compute_samples_grigoriu(num_samples, seed);
 }
 
@@ -179,8 +179,9 @@ compute_ifft_sample_set(const ComplexArray& B, size_t i)
   PCerr << "Error: DFFTPACK required for inverse FFT." << std::endl;
   abort_handler(-1);
 #endif
+  // DFFTPACK returns an unnormalized IFFT
   for (size_t j=0; j<num_terms; j++)
-    inverseSamples(i,j) = num_terms*B[j].real();
+    inverseSamples(i,j) = B[j].real(); //= num_terms*B[j].real();
 }
 
 } // namespace Pecos

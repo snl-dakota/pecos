@@ -72,8 +72,9 @@ get_data_trans(const String& data_trans_type)
         << std::endl;
 #endif
 
-  if (data_trans_type == "inverse_fourier")
-    return new FourierInverseTransformation();
+  if (data_trans_type == "inverse_fourier_shinozuka_deodatis" ||
+      data_trans_type == "inverse_fourier_grigoriu")
+    return new FourierInverseTransformation(data_trans_type);
   else if (data_trans_type == "inverse_kl")
     return new KarhunenLoeveInverseTransformation();
   else if (data_trans_type == "inverse_sampling")

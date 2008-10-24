@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 {
   // Instantiate/initialize the data transformation instance which manages
   // the ProbabilityTransformation and BasisFunction instances.
-  Pecos::DataTransformation ifft_transform("inverse_fourier");
+  Pecos::DataTransformation ifft_transform("inverse_fourier_grigoriu");
 
   // Constants for this problem
   Pecos::Real vbar  = 10000.; // cut-off frequency (rad/s)
