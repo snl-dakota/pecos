@@ -32,13 +32,13 @@ noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd
 pecos_ifft_g_SOURCES = pecos_ifft_g.cpp
 pecos_ifft_g_DEPENDENCIES = ${top_builddir}/libpecos.la
 pecos_ifft_g_LDADD = -L${top_builddir} -lpecos \
-    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
+    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
 
 # Complete these for each specific test.
 pecos_ifft_sd_SOURCES = pecos_ifft_sd.cpp
 pecos_ifft_sd_DEPENDENCIES = ${top_builddir}/libpecos.la
 pecos_ifft_sd_LDADD = -L${top_builddir} -lpecos \
-    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FCLIBS@ @FLIBS@
+    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
 
 # Define this variable if you want to install test header files.
 # subpkginclude_HEADERS =

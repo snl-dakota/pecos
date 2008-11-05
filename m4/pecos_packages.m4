@@ -72,7 +72,9 @@ AC_DEFUN([PECOS_PACKAGES],[
       AC_MSG_RESULT([using local Teuchos in $TEUCHOS_ROOT])
 
     else
-      AC_MSG_ERROR([could not find Teuchos directory.])
+      AC_MSG_NOTICE([could not find Teuchos directory.])
+      AC_MSG_NOTICE([need help locating teuchos!])
+      AC_MSG_ERROR([PLEASE PROVIDE full path to teuchos, --with-teuchos=<DIR>])
     fi
     ;;
 
@@ -155,7 +157,9 @@ AC_DEFUN([PECOS_PACKAGES],[
       AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
 
     else
-      AC_MSG_RESULT([could not find GSL directory.])
+      AC_MSG_NOTICE([could not find GSL directory.])
+      AC_MSG_NOTICE([need help locating gsl!])
+      AC_MSG_ERROR([PLEASE PROVIDE full path to gsl, --with-gsl=<DIR>])
     fi
     ;;
 
