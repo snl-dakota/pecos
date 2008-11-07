@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
   size_t      ns    = 100;   // number of samples
 
   // Demonstrate BLWN internally-defined PSD
-  ifft_transform.initialize(vbar, T);
+  ifft_transform.initialize(T, vbar);
   ifft_transform.power_spectral_density("band_limited_white_noise", 2000.);
   ifft_transform.compute_samples(ns, nseed); // compute samples
 

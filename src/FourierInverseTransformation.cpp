@@ -75,27 +75,28 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   // Generate num_terms*num_samples LHS samples for Psi ~ iid U(0, 2.*Pi).
   // This should be more efficient than generating num_terms points each time
   // within the num_samples loop.
-  int num_terms = psdSequence.length(),
-    num_terms_samples = num_terms*num_samples;
+  int num_terms = psdSequence.length();
   RealVector uuv_l_bnds(1, false), uuv_u_bnds(1, false);
   uuv_l_bnds[0] = 0.; uuv_u_bnds[0] = 2.*Pi;
-  RealMatrix Psi_samples(num_terms_samples, 1);
-#ifdef HAVE_LHS
-  lhsSampler.generate_uniform_samples(uuv_l_bnds, uuv_u_bnds, num_terms_samples,
-				      seed, Psi_samples);
-#else
-  PCerr << "Error: LHS required for uniform sample generation." << std::endl;
-  abort_handler(-1);
-#endif
-
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
+  RealMatrix Psi_samples(num_terms, 1);
   for (i=0; i<num_samples; i++) {
-    for (j=0; j<num_terms; j++)
+#ifdef HAVE_LHS
+    lhsSampler.generate_uniform_samples(uuv_l_bnds, uuv_u_bnds, num_terms,
+					seed, Psi_samples);
+#else
+    PCerr << "Error: LHS required for uniform sample generation." << std::endl;
+    abort_handler(-1);
+#endif
+    for (j=0; j<num_terms; j++) {
       //Real A = sigmaSequence[j]*sqrt(2.);
       //B[j] = std::complex<Real>(A*cos(Psi_ij), A*sin(Psi_ij)); // Euler
-      B[j] = std::polar(sigmaSequence[j]*sqrt(2.),
-			Psi_samples(j + i * num_terms, 0));
+      B[j] = std::polar(sigmaSequence[j]*sqrt(2.), Psi_samples(j, 0));
+#ifdef DEBUG
+      PCout << "B[" <<j<< "] = (" << B[j].real() << ", " << B[j].imag() <<")\n";
+#endif // DEBUG
+    }
     compute_ifft_sample_set(B, i);
   }
 }
@@ -133,33 +134,33 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   // Generate num_terms*num_samples LHS samples for V, W ~ iid N(0,1).
   // This should be more efficient than generating num_terms points each time
   // within the num_samples loop.
-  int num_terms = psdSequence.length(),
-    num_terms_samples = num_terms*num_samples;
+  int num_terms = psdSequence.length();
   RealVector zero_means(2, false), unit_std_devs(2, false), empty_ra;
   zero_means[0]    = zero_means[1]    = 0.;
   unit_std_devs[0] = unit_std_devs[1] = 1.;
-  RealMatrix VW_samples(num_terms_samples, 2);
-#ifdef HAVE_LHS
-  lhsSampler.generate_normal_samples(zero_means, unit_std_devs, empty_ra,
-    empty_ra, num_terms_samples, seed, VW_samples);
-#else
-  PCerr << "Error: LHS required for standard normal sample generation."
-	<< std::endl;
-  abort_handler(-1);
-#endif
-
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
+  RealMatrix VW_samples(num_terms, 2);
   for (i=0; i<num_samples; i++) {
+#ifdef HAVE_LHS
+    lhsSampler.generate_normal_samples(zero_means, unit_std_devs, empty_ra,
+				       empty_ra, num_terms, seed, VW_samples);
+#else
+    PCerr << "Error: LHS required for standard normal sample generation."
+	  << std::endl;
+    abort_handler(-1);
+#endif
     for (j=0; j<num_terms; j++) {
-      size_t ij = j + i * num_terms;
-      const Real& v_ij = VW_samples(ij, 0);
-      const Real& w_ij = VW_samples(ij, 1);
-      //Real A = sigmaSequence[j]*sqrt(v_ij*v_ij + w_ij*w_ij); // A ~ Rayleigh
-      //Real Psi = -atan2(w_ij, v_ij);                       // Psi ~ U(-pi,pi)
+      const Real& v_j = VW_samples(j, 0);
+      const Real& w_j = VW_samples(j, 1);
+      //Real A = sigmaSequence[j]*sqrt(v_j*v_j + w_j*w_j); // A ~ Rayleigh
+      //Real Psi = -atan2(w_j, v_j);                       // Psi ~ U(-pi,pi)
       //B[j] = std::complex<Real>(A*cos(Psi), A*sin(Psi));   // Euler's formula
-      B[j] = std::polar(sigmaSequence[j]*sqrt(v_ij*v_ij + w_ij*w_ij),
-			-atan2(w_ij, v_ij));
+      B[j] = std::polar(sigmaSequence[j]*sqrt(v_j*v_j + w_j*w_j),
+			-atan2(w_j, v_j));
+#ifdef DEBUG
+      PCout << "B[" <<j<< "] = (" << B[j].real() << ", " << B[j].imag() <<")\n";
+#endif // DEBUG
     }
     compute_ifft_sample_set(B, i);
   }
