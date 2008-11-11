@@ -81,10 +81,11 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
   RealMatrix Psi_samples(num_terms, 1);
+  lhsSampler.seed(seed);
   for (i=0; i<num_samples; i++) {
 #ifdef HAVE_LHS
     lhsSampler.generate_uniform_samples(uuv_l_bnds, uuv_u_bnds, num_terms,
-					seed, Psi_samples);
+					Psi_samples);
 #else
     PCerr << "Error: LHS required for uniform sample generation." << std::endl;
     abort_handler(-1);
@@ -141,10 +142,11 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   size_t i, j;
   ComplexArray B(num_terms); // ComplexVector fails to instantiate
   RealMatrix VW_samples(num_terms, 2);
+  lhsSampler.seed(seed);
   for (i=0; i<num_samples; i++) {
 #ifdef HAVE_LHS
     lhsSampler.generate_normal_samples(zero_means, unit_std_devs, empty_ra,
-				       empty_ra, num_terms, seed, VW_samples);
+				       empty_ra, num_terms, VW_samples);
 #else
     PCerr << "Error: LHS required for standard normal sample generation."
 	  << std::endl;

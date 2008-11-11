@@ -70,7 +70,7 @@ private:
 
 inline FourierInverseTransformation::
 FourierInverseTransformation(const String& data_trans_type):
-  fourierMethod(data_trans_type)
+  fourierMethod(data_trans_type), lhsSampler("lhs", IGNORE_RANKS, false)
 { }
 
 

@@ -46,6 +46,9 @@ public:
 		  short sample_ranks_mode = IGNORE_RANKS,
 		  bool reportFlag = true);
 
+  /// set randomSeed
+  void seed(int seed);
+
   /// generates the desired set of parameter samples from within general
   /// user-specified probabilistic distributions
   void generate_samples(const RealVector& d_l_bnds, const RealVector& d_u_bnds,
@@ -72,8 +75,7 @@ public:
 			const RealVectorArray& i_probs,
 			const RealVectorArray& i_bnds,
 			const RealSymMatrix& correlations, int num_samples,
-			int seed, RealMatrix& samples_array,
-			RealMatrix& rank_array);
+			RealMatrix& samples_array, RealMatrix& rank_array);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated normal distributions
@@ -81,13 +83,13 @@ public:
 			       const RealVector& n_std_devs,
 			       const RealVector& n_l_bnds,
 			       const RealVector& n_u_bnds, int num_samples,
-			       int seed, RealMatrix& samples_array);
+			       RealMatrix& samples_array);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated uniform distributions
   void generate_uniform_samples(const RealVector& u_l_bnds,
 				const RealVector& u_u_bnds, int num_samples,
-				int seed, RealMatrix& samples_array);
+				RealMatrix& samples_array);
 
 private:
 
@@ -106,6 +108,9 @@ private:
   /// type of sampling: random, lhs, incremental_lhs, or incremental_random
   String sampleType;
 
+  /// the current random number seed
+  int randomSeed;
+
   /// mode of sample ranks I/O: IGNORE_RANKS, SET_RANKS, GET_RANKS, or
   /// SET_GET_RANKS
   short sampleRanksMode;
@@ -115,8 +120,8 @@ private:
 };
 
 
-inline LHSDriver::LHSDriver() :
-  sampleType("lhs"), sampleRanksMode(IGNORE_RANKS), reportFlag(true)
+inline LHSDriver::LHSDriver() : sampleType("lhs"), randomSeed(0),
+  sampleRanksMode(IGNORE_RANKS), reportFlag(true)
 {
 #ifndef HAVE_LHS
   PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
@@ -151,12 +156,14 @@ inline LHSDriver::LHSDriver(const String& sample_type, short sample_ranks_mode,
 }
 
 
+inline void LHSDriver::seed(int seed)
+{ randomSeed = seed; }
 
 
 inline void LHSDriver::
 generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
-			int num_samples, int seed, RealMatrix& samples_array)
+			int num_samples, RealMatrix& samples_array)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_normal_samples() does not support sample rank "
@@ -171,14 +178,14 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rva, empty_rva,
-		   empty_rva, empty_rva, empty_rsm, num_samples, seed,
-		   samples_array, empty_rm);
+		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
+		   empty_rm);
 }
 
 
 inline void LHSDriver::
 generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
-			 int num_samples, int seed, RealMatrix& samples_array)
+			 int num_samples, RealMatrix& samples_array)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_samples() does not support sample rank "
@@ -193,8 +200,8 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rva, empty_rva,
-		   empty_rva, empty_rva, empty_rsm, num_samples, seed,
-		   samples_array, empty_rm);
+		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
+		   empty_rm);
 }
 
 

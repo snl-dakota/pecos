@@ -90,9 +90,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 		 const RealVector& f_betas,
 		 const RealVectorArray& h_bin_prs,
 		 const RealVectorArray& h_pt_prs,
-		 const RealVectorArray& i_probs,
-		 const RealVectorArray& i_bnds,
-		 const RealSymMatrix& correlations, int num_samples, int seed,
+		 const RealVectorArray& i_probs, const RealVectorArray& i_bnds,
+		 const RealSymMatrix& correlations, int num_samples,
 		 RealMatrix& samples, RealMatrix& sample_ranks)
 {
 #ifdef HAVE_LHS
@@ -124,8 +123,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       max_unc_corr = (num_uv*num_uv - num_uv)/2,
       max_table = -1, print_level = 0, output_width = 1;
   int max_corr = (num_uv > 1) ? max_unc_corr : -1;
-  //lhs_init(num_samples, seed, err_code);
-  LHS_INIT_MEM_FC(num_samples, seed, max_obs, max_samp_size, max_var,
+  //lhs_init(num_samples, randomSeed, err_code);
+  LHS_INIT_MEM_FC(num_samples, randomSeed, max_obs, max_samp_size, max_var,
 		  max_interval, max_corr, max_table, print_level, output_width,
 		  err_code);
   check_error(err_code, "lhs_init_mem");
