@@ -70,6 +70,18 @@ void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
 
 namespace Pecos {
 
+
+/** While it would be desirable in some cases to carve this function
+    into smaller parts and allow multiple invocations of LHS_RUN
+    following a single initialization of types and arrays, the LHS
+    code does not currently allow this: it will return an error if
+    LHS_INIT/LHS_INIT_MEM, at least one distribution call (i.e.,
+    LHS_DIST, LHS_UDIST or LHS_SDIST), and LHS_PREP are not called
+    prior to each invocation of LHS_RUN.  Since LHS_INIT/LHS_INIT_MEM
+    require input of a seed, the approach to computing multiple
+    distinct sample sets must employ advance_seed_sequence() to
+    re-seed multiple generate_samples() calls, rather than continuing
+    an existing random number sequence. */
 void LHSDriver::
 generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 		 const RealVector& s_l_bnds,     const RealVector& s_u_bnds,

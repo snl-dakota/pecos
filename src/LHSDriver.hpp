@@ -48,6 +48,11 @@ public:
 
   /// set randomSeed
   void seed(int seed);
+  /// return randomSeed
+  int seed() const;
+
+  /// reseed using a deterministic sequence
+  void advance_seed_sequence();
 
   /// generates the desired set of parameter samples from within general
   /// user-specified probabilistic distributions
@@ -158,6 +163,24 @@ inline LHSDriver::LHSDriver(const String& sample_type, short sample_ranks_mode,
 
 inline void LHSDriver::seed(int seed)
 { randomSeed = seed; }
+
+
+inline int LHSDriver::seed() const
+{ return randomSeed; }
+
+
+/** It would be preferable to call srand() only once and then call rand()
+    for each LHS execution (the intended usage model), but possible
+    interaction with other uses of rand() in other contexts is a concern.
+    E.g., an srand(clock()) executed elsewhere would ruin the
+    repeatability of the LHSDriver seed sequence.  The only way to insure
+    isolation is to reseed each time.  Any induced correlation should be
+    inconsequential for the intended use. */
+inline void LHSDriver::advance_seed_sequence()
+{
+  srand(randomSeed);
+  randomSeed = 1 + rand(); // from 1 to RANDMAX+1
+}
 
 
 inline void LHSDriver::
