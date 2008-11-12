@@ -10,6 +10,7 @@
 #define LHS_DRIVER_H
 
 #include "pecos_data_types.hpp"
+#include <stdlib.h>	// for rand, srand
 
 
 namespace Pecos {
