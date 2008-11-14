@@ -22,7 +22,7 @@ endif
 
 
 # Tests to run when 'gmake check' is run
-TESTS = test_pecos_ifft_g test_pecos_ifft_sd
+TESTS = pecos_ifft_g pecos_ifft_sd
 
 # Programs to link when 'gmake' is run
 noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd
