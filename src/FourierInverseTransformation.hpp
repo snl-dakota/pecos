@@ -10,10 +10,12 @@
 #define FOURIER_INVERSE_TRANSFORMATION_HPP
 
 #include "InverseTransformation.hpp"
-#include "LHSDriver.hpp"
 
 
 namespace Pecos {
+
+// values for fourierMethod indicating use of Shinozuka-Deodatis or Grigoriu
+enum { IFFT_SD, IFFT_G };
 
 
 /// Class for iFFT data transformation.
@@ -38,7 +40,13 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void compute_samples(size_t num_samples, size_t seed);
+  void initialize(const Real& total_t, const Real& w_bar, size_t seed);
+
+  void power_spectral_density(const String& psd_name, const Real& param = 0.);
+
+  const RealVector& compute_sample();
+
+  const RealMatrix& compute_samples(size_t num_ifft_samples);
 
 private:
 
@@ -47,31 +55,54 @@ private:
   //
 
   /// perform iFFT using Shinozuka-Deodatis algorithm
-  void compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed);
+  void compute_sample_shinozuka_deodatis();
   /// perform iFFT using Grigoriu algorithm
-  void compute_samples_grigoriu(size_t num_samples, size_t seed);
+  void compute_sample_grigoriu();
   /// use DFFTPACK or FFTW to map B vector into the i-th inverseSamples vector
-  void compute_ifft_sample_set(const ComplexArray& B, size_t i);
+  void compute_ifft_sample_set(ComplexArray& ifft_array);
 
   //
   //- Heading: Data
   //
 
+  /// iFFT approach: IFFT_SD (Shinozuka-Deodatis) or IFFT_G (Grigoriu)
+  short fourierMethod;
+
+  /// counter for number of IFFT time domain realizations
+  size_t ifftSampleCntr;
+
   /// sequence of standard deviations computed from psdSequence
   RealVector sigmaSequence;
 
-  /// iFFT approach: "shinozuka_deodatis" or "grigoriu"
-  String fourierMethod;
+  /// the complex array passed through FFTW/DFFTPACK for IFFT conversion
+  /// from frequency domain to time domain
+  ComplexArray ifftArray; // ComplexVector fails to instantiate
 
-  /// LHS wrapper for generating normal or uniform sample sets
-  LHSDriver lhsSampler;
+  /// first LHS parameter vector (means for generate_normal_samples(),
+  /// lower bounds for generate_uniform_samples())
+  RealVector lhsParam1;
+  /// second LHS parameter vector (std devs for generate_normal_samples(),
+  /// upper bounds for generate_uniform_samples())
+  RealVector lhsParam2;
+  /// random variable samples used in Grigoriu (num_terms x 2 variables)
+  /// and Shinozuka-Deodatis (num_terms x 1 variable) algorithms
+  RealMatrix lhsSamples;
 };
 
 
 inline FourierInverseTransformation::
-FourierInverseTransformation(const String& data_trans_type):
-  fourierMethod(data_trans_type), lhsSampler("lhs", IGNORE_RANKS, false)
-{ }
+FourierInverseTransformation(const String& data_trans_type): ifftSampleCntr(0)
+{
+  if (data_trans_type == "inverse_fourier_shinozuka_deodatis")
+    fourierMethod = IFFT_SD;
+  else if (data_trans_type == "inverse_fourier_grigoriu")
+    fourierMethod = IFFT_G;
+  else {
+    PCerr << "Error: bad data transformation type in "
+	  << "FourierInverseTransformation." << std::endl;
+    abort_handler(-1);
+  }
+}
 
 
 inline FourierInverseTransformation::~FourierInverseTransformation()

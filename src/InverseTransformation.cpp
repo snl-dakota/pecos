@@ -15,7 +15,8 @@ static const char rcsId[]="@(#) $Id: InverseTransformation.cpp 4768 2007-12-17 1
 
 namespace Pecos {
 
-void InverseTransformation::initialize(const Real& total_t, const Real& w_bar)
+void InverseTransformation::
+initialize(const Real& total_t, const Real& w_bar, size_t seed)
 {
   bool err_flag = false;
   if (total_t < 0.) {
@@ -43,13 +44,15 @@ void InverseTransformation::initialize(const Real& total_t, const Real& w_bar)
     timeSequence[i]  = i*deltaTime;  // from 0 to final time <= totalTime
     omegaSequence[i] = i*deltaOmega; // from 0 to omegaBar
   }
+
+  lhsSampler.seed(seed);
 }
 
 
 void InverseTransformation::
-power_spectral_density(const String& psd_name, Real param)
+power_spectral_density(const String& psd_name, const Real& param)
 {
-  size_t m = omegaSequence.length();
+  size_t i, m = omegaSequence.length();
   bool err_flag = false;
   if (!m) {
     PCerr << "Error: initialize() must be called prior to "
@@ -68,7 +71,7 @@ power_spectral_density(const String& psd_name, Real param)
     //        { 1/wc   w \in [0,wc]
     // g(w) = { 
     //        { 0      otherwise
-    for (size_t i=0; i<m; i++)
+    for (i=0; i<m; i++)
       psdSequence[i] = (omegaSequence[i] <= param) ? 1./param : 0.;
   else if (psd_name == "increasing_linear" || psd_name == "decreasing_linear") {
     // One-sided linear PSD with unit variance (s^2 = area) defining either the
@@ -87,7 +90,7 @@ power_spectral_density(const String& psd_name, Real param)
       intercept = 2./param;
       slope     = -intercept/param;
     }
-    for (size_t i=0; i<m; i++)
+    for (i=0; i<m; i++)
       psdSequence[i] = (omegaSequence[i] <= param) ?
 	intercept + slope * omegaSequence[i] : 0.;
   }
@@ -98,7 +101,7 @@ power_spectral_density(const String& psd_name, Real param)
     // g(w) = ----------------
     //        pi (w^2 + lam^2)
     Real p_2_over_pi = 2.*param/Pi, param_sq = param*param;
-    for (size_t i=0; i<m; i++)
+    for (i=0; i<m; i++)
       psdSequence[i] = p_2_over_pi/(pow(omegaSequence[i], 2) + param_sq);
   }
   else if (psd_name == "second_order_markov") {
@@ -108,7 +111,7 @@ power_spectral_density(const String& psd_name, Real param)
     // g(w) = -------------------
     //        pi (w^2 + lam^2)^2
     Real param_sq = param*param, p_sq_4_over_pi = 4.*param_sq/Pi;
-    for (size_t i=0; i<m; i++)
+    for (i=0; i<m; i++)
       psdSequence[i]
 	= p_sq_4_over_pi/pow(pow(omegaSequence[i], 2) + param_sq, 2);
   }

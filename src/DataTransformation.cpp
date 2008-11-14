@@ -153,10 +153,11 @@ DataTransformation::~DataTransformation()
 }
 
 
-void DataTransformation::initialize(const Real& total_t, const Real& w_bar)
+void DataTransformation::
+initialize(const Real& total_t, const Real& w_bar, size_t seed)
 {
   if (dataTransRep) // envelope fwd to letter
-    dataTransRep->initialize(total_t, w_bar);
+    dataTransRep->initialize(total_t, w_bar, seed);
   else { // letter lacking redefinition of virtual fn
     PCerr << "Error: derived class does not redefine initialize() virtual fn.\n"
           << "       No default defined at DataTransformation base class.\n"
@@ -167,7 +168,7 @@ void DataTransformation::initialize(const Real& total_t, const Real& w_bar)
 
 
 void DataTransformation::
-power_spectral_density(const String& psd_name, Real param)
+power_spectral_density(const String& psd_name, const Real& param)
 {
   if (dataTransRep) // envelope fwd to letter
     dataTransRep->power_spectral_density(psd_name, param);
@@ -208,12 +209,12 @@ void DataTransformation::power_spectral_density(const RealVector& psd)
 }
 
 
-void DataTransformation::compute_samples(size_t num_samples, size_t seed)
+const RealVector& DataTransformation::compute_sample()
 {
   if (dataTransRep) // envelope fwd to letter
-    dataTransRep->compute_samples(num_samples, seed);
+    return dataTransRep->compute_sample();
   else { // letter lacking redefinition of virtual fn
-    PCerr << "Error: derived class does not redefine compute_samples() virtual "
+    PCerr << "Error: derived class does not redefine compute_sample() virtual "
           << "fn.\nNo default defined at DataTransformation base class.\n"
 	  << std::endl;
     abort_handler(-1);
@@ -221,12 +222,12 @@ void DataTransformation::compute_samples(size_t num_samples, size_t seed)
 }
 
 
-const RealMatrix& DataTransformation::sample_matrix() const
+const RealMatrix& DataTransformation::compute_samples(size_t num_samples)
 {
   if (dataTransRep) // envelope fwd to letter
-    return dataTransRep->sample_matrix();
+    return dataTransRep->compute_samples(num_samples);
   else { // letter lacking redefinition of virtual fn
-    PCerr << "Error: derived class does not redefine sample_matrix() virtual "
+    PCerr << "Error: derived class does not redefine compute_samples() virtual "
           << "fn.\nNo default defined at DataTransformation base class.\n"
 	  << std::endl;
     abort_handler(-1);

@@ -10,6 +10,7 @@
 #define INVERSE_TRANSFORMATION_HPP
 
 #include "DataTransformation.hpp"
+#include "LHSDriver.hpp"
 
 
 namespace Pecos {
@@ -37,9 +38,9 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void initialize(const Real& total_t, const Real& w_bar);
+  void initialize(const Real& total_t, const Real& w_bar, size_t seed);
 
-  void power_spectral_density(const String& psd_name, Real param = 0.);
+  void power_spectral_density(const String& psd_name, const Real& param = 0.);
   //void power_spectral_density(fn_ptr);
   void power_spectral_density(const RealPairArray& psd);
 
@@ -47,8 +48,10 @@ protected:
   //void correlation_function(fn_ptr);
   //void correlation_function(const RealPairArray& corr_fn);
 
-  /// return inverseSamples
-  const RealMatrix& sample_matrix() const;
+  // return inverseSample
+  //const RealVector& sample() const;
+  // return inverseSamples
+  //const RealMatrix& samples() const;
 
   //
   //- Heading: Data
@@ -70,7 +73,13 @@ protected:
 
   /// PSD sequence (frequency domain)
   RealVector psdSequence;
-  /// final set of inverse samples (time domain)
+
+  /// LHS wrapper for generating normal or uniform sample sets
+  LHSDriver lhsSampler;
+
+  /// a single computed inverse sample (time domain)
+  RealVector inverseSample;
+  /// a computed set of inverse samples (time domain)
   RealMatrix inverseSamples;
 
 private:
@@ -83,7 +92,7 @@ private:
 
 
 inline InverseTransformation::InverseTransformation():
-  DataTransformation(BaseConstructor())
+  DataTransformation(BaseConstructor()), lhsSampler("lhs", IGNORE_RANKS, false)
 { }
 
 
@@ -91,8 +100,12 @@ inline InverseTransformation::~InverseTransformation()
 { }
 
 
-inline const RealMatrix& InverseTransformation::sample_matrix() const
-{ return inverseSamples; }
+//inline const RealVector& InverseTransformation::sample() const
+//{ return inverseSample; }
+
+
+//inline const RealMatrix& InverseTransformation::samples() const
+//{ return inverseSamples; }
 
 } // namespace Pecos
 

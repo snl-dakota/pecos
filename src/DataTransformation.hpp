@@ -46,24 +46,25 @@ public:
   //
 
   /// set scalar data
-  virtual void initialize(const Real& total_t, const Real& w_bar);
+  virtual void initialize(const Real& total_t, const Real& w_bar, size_t seed);
 
   /// set PSD to standard embedded function
-  virtual void power_spectral_density(const String& psd_name, Real param = 0.);
+  virtual void power_spectral_density(const String& psd_name,
+				      const Real& param = 0.);
   // define PSD from a user-defined function
   //virtual void power_spectral_density(fn_ptr);
   /// pass a discretized PSD directly: vector or pairs...
   virtual void power_spectral_density(const RealVector& psd);
 
-  //virtual void correlation_function(const String& fn_name, Real param = 0.);
+  //virtual void correlation_function(const String& fn_name,
+  //                                  const Real& param = 0.);
   //virtual void correlation_function(fn_ptr);
   //virtual void correlation_function(const RealPairArray& corr_fn);
 
-  /// compute InverseTransformation::inverseSamples
-  virtual void compute_samples(size_t num_samples, size_t seed);
-
-  /// return the forward/inverse sample matrix
-  virtual const RealMatrix& sample_matrix() const;
+  /// compute and return InverseTransformation::inverseSample
+  virtual const RealVector& compute_sample();
+  /// compute and return InverseTransformation::inverseSamples
+  virtual const RealMatrix& compute_samples(size_t num_samples);
 
   //
   //- Heading: Member functions

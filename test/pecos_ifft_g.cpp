@@ -30,19 +30,26 @@ int main(int argc, char* argv[])
   size_t      ns    = 50;     // number of samples
 
   // Demonstrate 1st-order Markov internally-defined PSD
-  ifft_transform.initialize(T, vbar);
+  ifft_transform.initialize(T, vbar, nseed);
   ifft_transform.power_spectral_density("first_order_markov", 1000.);
-  ifft_transform.compute_samples(ns, nseed);
 
-  // simplest output case for demonstration purposes
-  const Pecos::RealMatrix& samples = ifft_transform.sample_matrix();
+  // compute and return ns samples all at once
+  const Pecos::RealMatrix& samples = ifft_transform.compute_samples(ns);
   PCout << "Sample matrix:\n" << samples << std::endl;
+
+  // compute and return two more, one at a time
+  for (size_t i=ns; i<ns+2; i++) {
+    const Pecos::RealVector& sample = ifft_transform.compute_sample();
+    PCout << "Sample " << i+1 << ":\n" << sample << std::endl;
+  }
+
+  // compute all at once and return one at a time (?)
+  // requires Matrix(i,:) -> Vector conversion
+  //ifft_transform.compute_samples(ns);
   //for (size_t i=0; i<ns; i++) {
-  //  const RealVector& sample_i = ifft_transform.sample(i);
+  //  const Pecos::RealVector& sample = ifft_transform.sample(i);
   //  PCout << "Sample " << i+1 << ":\n" << sample_i << std::endl;
   //}
-  // OR
-  //const RealVector& sample_i = ifft_transform.compute_sample_i(nseed);
 
   return 0;
 }

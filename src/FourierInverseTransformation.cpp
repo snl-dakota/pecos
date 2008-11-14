@@ -21,33 +21,99 @@ static const char rcsId[]="@(#) $Id: FourierInverseTransformation.cpp 4768 2007-
 
 //#define DEBUG
 
-
 namespace Pecos {
 
+
 void FourierInverseTransformation::
-compute_samples(size_t num_samples, size_t seed)
+initialize(const Real& total_t, const Real& w_bar, size_t seed)
 {
-  // sigma_j^2 = psd(omega_j)*deltaOmega_j
+  InverseTransformation::initialize(total_t, w_bar, seed);
+
   size_t i, num_terms = omegaSequence.length();
-  sigmaSequence.sizeUninitialized(num_terms);
-  for (i=0; i<num_terms; i++)
-    sigmaSequence[i] = sqrt(psdSequence[i]*deltaOmega);
+  ifftArray.resize(num_terms);
 
-  inverseSamples.shapeUninitialized(num_samples, num_terms);
-
-  if (fourierMethod == "inverse_fourier_shinozuka_deodatis")
-    compute_samples_shinozuka_deodatis(num_samples, seed);
-  else if (fourierMethod == "inverse_fourier_grigoriu")
-    compute_samples_grigoriu(num_samples, seed);
+  switch (fourierMethod) {
+  case IFFT_SD: // Generate num_terms LHS samples for Psi ~ iid U(0, 2.*Pi).
+    lhsSamples.shapeUninitialized(num_terms, 1);
+    lhsParam1.sizeUninitialized(1);
+    lhsParam2.sizeUninitialized(1);
+    lhsParam1[0] = 0.;    // lower bound
+    lhsParam2[0] = 2.*Pi; // upper bound
+    break;
+  case IFFT_G:  // Generate num_terms LHS samples for V, W ~ iid N(0,1).
+    lhsSamples.shapeUninitialized(num_terms, 2);
+    lhsParam1.sizeUninitialized(2);
+    lhsParam2.sizeUninitialized(2);
+    lhsParam1[0] = lhsParam1[1] = 0.; // zero means
+    lhsParam2[0] = lhsParam2[1] = 1.; // unit std deviations
+    break;
+  }
 }
 
 
 void FourierInverseTransformation::
-compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
+power_spectral_density(const String& psd_name, const Real& param)
 {
-  // Function to generate num_samples independent samples of a zero-mean,
-  // stationary, real-valued Gaussian process using the FFT
-  // algorithm. The model is (Shinozuka and Deodatis):
+  InverseTransformation::power_spectral_density(psd_name, param);
+
+  // sigma_i^2 = psd(omega_i)*deltaOmega_i
+  size_t i, num_terms = psdSequence.length();
+  sigmaSequence.sizeUninitialized(num_terms);
+  for (i=0; i<num_terms; i++)
+    sigmaSequence[i] = sqrt(psdSequence[i]*deltaOmega);
+}
+
+
+const RealVector& FourierInverseTransformation::compute_sample()
+{
+  size_t i, num_terms = omegaSequence.length();
+  inverseSample.sizeUninitialized(num_terms);
+
+  switch (fourierMethod) {
+  case IFFT_SD:
+    compute_sample_shinozuka_deodatis(); break;
+  case IFFT_G:
+    compute_sample_grigoriu();           break;
+  }
+
+  // DFFTPACK returns an unnormalized IFFT
+  for (i=0; i<num_terms; i++)
+    inverseSample[i] = ifftArray[i].real(); //= num_terms*ifftArray[i].real();
+  ifftSampleCntr++;
+
+  return inverseSample;
+}
+
+
+const RealMatrix& FourierInverseTransformation::
+compute_samples(size_t num_ifft_samples)
+{
+  size_t i, num_terms = omegaSequence.length();
+  inverseSamples.shapeUninitialized(num_ifft_samples, num_terms);
+
+  for (ifftSampleCntr=0; ifftSampleCntr<num_ifft_samples; ifftSampleCntr++) {
+    switch (fourierMethod) {
+    case IFFT_SD:
+      compute_sample_shinozuka_deodatis(); break;
+    case IFFT_G:
+      compute_sample_grigoriu();           break;
+    }
+
+    // DFFTPACK returns an unnormalized IFFT
+    for (i=0; i<num_terms; i++)
+      inverseSamples(ifftSampleCntr,i) = ifftArray[i].real();
+                           //= num_terms*ifftArray[i].real();
+  }
+
+  return inverseSamples;
+}
+
+
+void FourierInverseTransformation::compute_sample_shinozuka_deodatis()
+{
+  // Function to generate num_ifft_samples independent samples of a zero-mean,
+  // stationary, real-valued Gaussian process using the FFT algorithm.
+  // The model is (Shinozuka and Deodatis):
   //
   //          m
   // Xm(t) = SUM sqrt(2) * s_k * cos(v_k*t + Psi_k)
@@ -57,14 +123,14 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   //        v_k   = (k-1)*delv is the frequency discretization
   //        s_k^2 = g(v_k)*delv is a discretization of one-sided PSD g(v)
 
-  /*
+  /* MATLAB code:
   // sample Psi ~ U(0,2*pi)
   rand('seed',seed);
-  Psi=2*pi*rand(m,num_samples);
+  Psi=2*pi*rand(m,num_ifft_samples);
 
-  // form num_samples samples of B vector
+  // form num_ifft_samples samples of B vector
   IMAG=sqrt(-1);
-  for i=1:num_samples,
+  for i=1:num_ifft_samples,
     B(:,i)=sqrt(2)*s.*exp(IMAG*Psi(:,i));
   end
 
@@ -72,43 +138,27 @@ compute_samples_shinozuka_deodatis(size_t num_samples, size_t seed)
   X=m*real(ifft(B));
   */
 
-  // Generate num_terms*num_samples LHS samples for Psi ~ iid U(0, 2.*Pi).
-  // This should be more efficient than generating num_terms points each time
-  // within the num_samples loop.
-  int num_terms = psdSequence.length();
-  RealVector uuv_l_bnds(1, false), uuv_u_bnds(1, false);
-  uuv_l_bnds[0] = 0.; uuv_u_bnds[0] = 2.*Pi;
-  size_t i, j;
-  ComplexArray B(num_terms); // ComplexVector fails to instantiate
-  RealMatrix Psi_samples(num_terms, 1);
-  for (i=0; i<num_samples; i++) {
-#ifdef HAVE_LHS
-    if (i==0)
-      lhsSampler.seed(seed);
-    else
-      lhsSampler.advance_seed_sequence();
-    lhsSampler.generate_uniform_samples(uuv_l_bnds, uuv_u_bnds, num_terms,
-					Psi_samples);
-#endif
-    for (j=0; j<num_terms; j++) {
-      //Real A = sigmaSequence[j]*sqrt(2.);
-      //B[j] = std::complex<Real>(A*cos(Psi_ij), A*sin(Psi_ij)); // Euler
-      B[j] = std::polar(sigmaSequence[j]*sqrt(2.), Psi_samples(j, 0));
-#ifdef DEBUG
-      PCout << "B[" <<j<< "] = (" << B[j].real() << ", " << B[j].imag() <<")\n";
-#endif // DEBUG
-    }
-    compute_ifft_sample_set(B, i);
+  size_t i, num_terms = omegaSequence.length();
+  if (ifftSampleCntr)
+    lhsSampler.advance_seed_sequence();
+  lhsSampler.generate_uniform_samples(lhsParam1, lhsParam2, num_terms,
+				      lhsSamples);
+
+  for (i=0; i<num_terms; i++) {
+    //Real A = sigmaSequence[i]*sqrt(2.);
+    //ifftArray[i] = std::complex<Real>(A*cos(Psi_i), A*sin(Psi_i)); // Euler
+    ifftArray[i] = std::polar(sigmaSequence[i]*sqrt(2.), lhsSamples(i, 0));
   }
+
+  compute_ifft_sample_set(ifftArray); // ifftArray: freq -> time domain
 }
 
 
-void FourierInverseTransformation::
-compute_samples_grigoriu(size_t num_samples, size_t seed)
+void FourierInverseTransformation::compute_sample_grigoriu()
 {
-  // Function to generate num_samples independent samples of a zero-mean,
-  // stationary, real-valued Gaussian process using the FFT
-  // algorithm. The model is (Grigoriu):
+  // Function to generate num_ifft_samples independent samples of a zero-mean,
+  // stationary, real-valued Gaussian process using the FFT algorithm.
+  // The model is (Grigoriu):
   //
   //          m
   // Xm(t) = SUM s_k * [V_k * cos(v_k*t) + W_k * sin(v_k*t) ]
@@ -118,11 +168,11 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   //        v_k     = (k-1)*delv is the frequency discretization
   //        s_k^2   = g(v_k)*delv is a discretization of one-sided PSD g(v)
 
-  /*
-  // form num_samples samples of B vector
+  /* MATLAB code:
+  // form num_ifft_samples samples of B vector
   randn('seed',seed);
   IMAG=sqrt(-1);
-  for i=1:num_samples,
+  for i=1:num_ifft_samples,
     V=randn(m,1);W=randn(m,1);  // V, W ~ iid N(0,1)
     A=s.*sqrt(V.^2 + W.^2);     // A ~ Rayleigh
     Psi=-atan2(W,V);            // Psi ~ U(-pi,pi)
@@ -132,58 +182,57 @@ compute_samples_grigoriu(size_t num_samples, size_t seed)
   X=m*real(ifft(B));
   */
 
-  // Generate num_terms*num_samples LHS samples for V, W ~ iid N(0,1).
-  // This should be more efficient than generating num_terms points each time
-  // within the num_samples loop.
-  int num_terms = psdSequence.length();
-  RealVector zero_means(2, false), unit_std_devs(2, false), empty_ra;
-  zero_means[0]    = zero_means[1]    = 0.;
-  unit_std_devs[0] = unit_std_devs[1] = 1.;
-  size_t i, j;
-  ComplexArray B(num_terms); // ComplexVector fails to instantiate
-  RealMatrix VW_samples(num_terms, 2);
-  for (i=0; i<num_samples; i++) {
-#ifdef HAVE_LHS
-    if (i==0)
-      lhsSampler.seed(seed);
-    else
-      lhsSampler.advance_seed_sequence();
-    lhsSampler.generate_normal_samples(zero_means, unit_std_devs, empty_ra,
-				       empty_ra, num_terms, VW_samples);
-#endif
-    for (j=0; j<num_terms; j++) {
-      const Real& v_j = VW_samples(j, 0);
-      const Real& w_j = VW_samples(j, 1);
-      //Real A = sigmaSequence[j]*sqrt(v_j*v_j + w_j*w_j); // A ~ Rayleigh
-      //Real Psi = -atan2(w_j, v_j);                       // Psi ~ U(-pi,pi)
-      //B[j] = std::complex<Real>(A*cos(Psi), A*sin(Psi));   // Euler's formula
-      B[j] = std::polar(sigmaSequence[j]*sqrt(v_j*v_j + w_j*w_j),
-			-atan2(w_j, v_j));
-#ifdef DEBUG
-      PCout << "B[" <<j<< "] = (" << B[j].real() << ", " << B[j].imag() <<")\n";
-#endif // DEBUG
-    }
-    compute_ifft_sample_set(B, i);
+  size_t i, num_terms = omegaSequence.length();
+  RealVector empty_rv;
+  if (ifftSampleCntr)
+    lhsSampler.advance_seed_sequence();
+  lhsSampler.generate_normal_samples(lhsParam1, lhsParam2, empty_rv, empty_rv,
+				     num_terms, lhsSamples);
+
+  for (i=0; i<num_terms; i++) {
+    const Real& v_i = lhsSamples(i, 0);
+    const Real& w_i = lhsSamples(i, 1);
+    //Real A = sigmaSequence[i]*sqrt(v_i*v_i + w_i*w_i); // A ~ Rayleigh
+    //Real Psi = -atan2(w_i, v_i);                       // Psi ~ U(-pi,pi)
+    //ifftArray[i] = std::complex<Real>(A*cos(Psi), A*sin(Psi)); // Euler
+    ifftArray[i] = std::polar(sigmaSequence[i]*sqrt(v_i*v_i + w_i*w_i),
+			      -atan2(w_i, v_i));
   }
+
+  compute_ifft_sample_set(ifftArray); // ifftArray: freq -> time domain
 }
 
 
 void FourierInverseTransformation::
-compute_ifft_sample_set(const ComplexArray& B, size_t i)
+compute_ifft_sample_set(ComplexArray& ifft_array)
 {
-  int num_terms = psdSequence.length();
-#ifdef HAVE_DFFTPACK
+  int num_terms = omegaSequence.length();
+#ifdef DEBUG
+  for (size_t i=0; i<num_terms; i++)
+    PCout << "Freq ifft_array[" << i << "] = (" << ifft_array[i].real() << ", "
+	  << ifft_array[i].imag() << ")\n";
+#endif // DEBUG
+
+#ifdef HAVE_FFTW
+  // default FFT package
+  PCerr << "Error: interface to FFTW not yet implemented." << std::endl;
+  abort_handler(-1);
+#elif HAVE_DFFTPACK
+  // fallback FFT package
   double* wsave = new double [4*num_terms+15];
   ZFFTI_F77(num_terms, wsave);
-  ZFFTB_F77(num_terms, &B[0], wsave); // transforms in place
+  ZFFTB_F77(num_terms, &ifft_array[0], wsave); // transforms in place
   delete [] wsave;
 #else
-  PCerr << "Error: DFFTPACK required for inverse FFT." << std::endl;
+  PCerr << "Error: FFTW or DFFTPACK required for inverse FFT." << std::endl;
   abort_handler(-1);
 #endif
-  // DFFTPACK returns an unnormalized IFFT
-  for (size_t j=0; j<num_terms; j++)
-    inverseSamples(i,j) = B[j].real(); //= num_terms*B[j].real();
+
+#ifdef DEBUG
+  for (size_t i=0; i<num_terms; i++)
+    PCout << "Time ifft_array[" << i << "] = (" << ifft_array[i].real() << ", "
+	  << ifft_array[i].imag() << ")\n";
+#endif // DEBUG
 }
 
 } // namespace Pecos
