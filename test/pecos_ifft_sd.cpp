@@ -14,8 +14,8 @@
 
 /// A driver program for PECOS.
 
-/** Generates PSD samples for a MATLAB example problem using the
-    Shinozuka and Deodatis iFFT algorithm. */
+/** Generates samples from an analytic PSD for a MATLAB example
+    problem using the Shinozuka and Deodatis iFFT algorithm. */
 
 int main(int argc, char* argv[])
 {
