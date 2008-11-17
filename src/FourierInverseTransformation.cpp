@@ -207,6 +207,41 @@ void FourierInverseTransformation::compute_sample_grigoriu()
 }
 
 
+#ifdef HAVE_FFTW
+struct ConvertToFftwComplex :
+  public std::unary_function<std::complex<Real>, void>
+{
+  ConvertToFftwComplex(fftw_complex* buf)
+    : fftwComplexBuf(buf), numConverted(0) {}
+
+  inline void operator() (const std::complex<Real>& x)
+  {
+    *fftwComplexBuf[0] = x.real(); *fftwComplexBuf[1] = x.imag();
+    ++fftwComplexBuf; ++numConverted;
+  }
+
+  fftw_complex* fftwComplexBuf;
+  size_t numConverted;
+};
+
+struct ConvertFromFftwComplex : public std::unary_function<fftw_complex, void>
+{
+  ConvertFromFftwComplex(ComplexArray& buf)
+    : pecosComplexBuf(buf), bufIter(buf.begin()), numConverted(0) {}
+
+  inline void operator() (const fftw_complex& x)
+  {
+    *bufIter = std::complex<Real>(x[0], x[1]);
+    ++bufIter; ++numConverted;
+  }
+
+  ComplexArray& pecosComplexBuf;
+  ComplexArray::iterator bufIter;
+  size_t numConverted;
+};
+#endif // HAVE_FFTW
+
+
 void FourierInverseTransformation::
 compute_ifft_sample_set(ComplexArray& ifft_array)
 {
@@ -219,21 +254,26 @@ compute_ifft_sample_set(ComplexArray& ifft_array)
 
 #ifdef HAVE_FFTW
   // default FFT package
-  PCerr << "Error: interface to FFTW not FULLY implemented." << std::endl;
-  fftw_complex* in  = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*num_terms);
-  fftw_complex* out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*num_terms);
+  fftw_complex* in 
+    = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*num_terms);
+  // For in-place transformation, in/out point to the same array
+  fftw_complex* out = in;
 
-  //std::copy( ifft_array.begin(), ifft_array.end(), in );
-  
-  fftw_plan p = fftw_plan_dft_1d(num_terms, in, out, FFTW_FORWARD,
-                                 FFTW_ESTIMATE);
-  fftw_execute(p);
-  //std::copy( out, out + num_terms, ifft_array.begin() );
+  fftw_plan plan = fftw_plan_dft_1d(num_terms, in, out, FFTW_BACKWARD,
+                                    FFTW_ESTIMATE);
 
-  fftw_destroy_plan(p);
-  fftw_free(in); fftw_free(out);
+  // Initialize the data and execute the plan
+  std::for_each( ifft_array.begin(), ifft_array.end(),
+                 ConvertToFftwComplex(in) );
+  fftw_execute(plan);
 
-  abort_handler(-1);
+  // Copy the result back into ifft_array
+  std::for_each( out, out + num_terms, ConvertFromFftwComplex(ifft_array) );
+
+  fftw_destroy_plan(plan);
+  fftw_free(in); // WJB: don't free twice if "in=place fftw_free(out);
+
+  //abort_handler(-1);  // WJB - ToDo: remove this line ASAP
 #elif HAVE_DFFTPACK
   // fallback FFT package
   double* wsave = new double [4*num_terms+15];
