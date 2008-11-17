@@ -28,6 +28,10 @@ AC_DEFUN([PECOS_PACKAGES],[
   if test "x$with_fftw" = xyes; then
     AC_CONFIG_SUBDIRS([packages/fftw])
     AC_DEFINE([HAVE_FFTW],[1], [Macro to handle code which depends on FFTW.])
+    FFTW_CPPFLAGS="-I`pwd`/packages/fftw/api"
+    FFTW_LDFLAGS="-L`pwd`/packages/fftw"
+    AC_SUBST(FFTW_CPPFLAGS)
+    AC_SUBST(FFTW_LDFLAGS)
   fi
   AM_CONDITIONAL([WITH_FFTW],[test "x$with_fftw" = xyes])
 

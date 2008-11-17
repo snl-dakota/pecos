@@ -8,14 +8,18 @@
 
 #include "FourierInverseTransformation.hpp"
 
-#ifdef HAVE_DFFTPACK
+#ifdef HAVE_FFTW
+#include "fftw3.h"
+
+#elif HAVE_DFFTPACK
 #define ZFFTI_F77 F77_FUNC(zffti,ZFFTI)
 extern "C" void ZFFTI_F77(int& n, double* wsave);
 
 #define ZFFTB_F77 F77_FUNC(zfftb,ZFFTB)
-// WJB ToDo: ask MSE about second arg -- comments suggest non-const
-extern "C" void ZFFTB_F77(int& n, const void* scary_deref, double* wsave);
+extern "C" void ZFFTB_F77(int& n, const void* complex_array, double* wsave);
 #endif
+
+#include <algorithm>
 
 static const char rcsId[]="@(#) $Id: FourierInverseTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -215,7 +219,20 @@ compute_ifft_sample_set(ComplexArray& ifft_array)
 
 #ifdef HAVE_FFTW
   // default FFT package
-  PCerr << "Error: interface to FFTW not yet implemented." << std::endl;
+  PCerr << "Error: interface to FFTW not FULLY implemented." << std::endl;
+  fftw_complex* in  = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*num_terms);
+  fftw_complex* out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex)*num_terms);
+
+  //std::copy( ifft_array.begin(), ifft_array.end(), in );
+  
+  fftw_plan p = fftw_plan_dft_1d(num_terms, in, out, FFTW_FORWARD,
+                                 FFTW_ESTIMATE);
+  fftw_execute(p);
+  //std::copy( out, out + num_terms, ifft_array.begin() );
+
+  fftw_destroy_plan(p);
+  fftw_free(in); fftw_free(out);
+
   abort_handler(-1);
 #elif HAVE_DFFTPACK
   // fallback FFT package

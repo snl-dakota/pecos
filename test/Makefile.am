@@ -20,6 +20,11 @@ TPL_LDFLAGS += @DFFTPACK_LDFLAGS@
 TPL_LIBS    += -ldfftpack
 endif
 
+if WITH_FFTW
+TPL_LDFLAGS += @FFTW_LDFLAGS@
+TPL_LIBS    += -lfftw3
+endif
+
 
 # Tests to run when 'gmake check' is run
 TESTS = pecos_ifft_g pecos_ifft_sd

@@ -6,6 +6,10 @@ if WITH_GSL
 AM_CPPFLAGS += @GSL_CPPFLAGS@
 endif
 
+if WITH_FFTW
+AM_CPPFLAGS += @FFTW_CPPFLAGS@
+endif
+
 if WITH_LHS
 LHS_S         = lhs_wrappers.f90
 endif

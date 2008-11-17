@@ -19,7 +19,7 @@ if WITH_DFFTPACK
 SUBLIBS += packages/dfftpack/libdfftpack.la
 endif
 if WITH_FFTW
-SUBLIBS += packages/fftw/libfftw.la
+SUBLIBS += packages/fftw/libfftw3.la
 endif
 endif
 
