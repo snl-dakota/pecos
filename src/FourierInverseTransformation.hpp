@@ -11,6 +11,9 @@
 
 #include "InverseTransformation.hpp"
 
+#ifdef HAVE_FFTW
+#include "fftw3.h"
+#endif
 
 namespace Pecos {
 
@@ -87,6 +90,11 @@ private:
   /// random variable samples used in Grigoriu (num_terms x 2 variables)
   /// and Shinozuka-Deodatis (num_terms x 1 variable) algorithms
   RealMatrix lhsSamples;
+
+#ifdef HAVE_FFTW
+  /// Plan cache for FFTW
+  fftw_plan fftwPlan;
+#endif  // HAVE_FFTW
 };
 
 
@@ -106,7 +114,10 @@ FourierInverseTransformation(const String& data_trans_type): ifftSampleCntr(0)
 
 
 inline FourierInverseTransformation::~FourierInverseTransformation()
-{ }
+{
+  // WJB: ToDo -- verify this gets called even though the destructor is NOT virtual
+  fftw_destroy_plan(fftwPlan);
+}
 
 } // namespace Pecos
 
