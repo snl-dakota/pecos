@@ -116,7 +116,9 @@ FourierInverseTransformation(const String& data_trans_type): ifftSampleCntr(0)
 inline FourierInverseTransformation::~FourierInverseTransformation()
 {
   // WJB: ToDo -- verify this gets called even though the destructor is NOT virtual
+#ifdef HAVE_FFTW
   fftw_destroy_plan(fftwPlan);
+#endif  // HAVE_FFTW
 }
 
 } // namespace Pecos
