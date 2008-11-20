@@ -64,6 +64,9 @@ private:
   /// use DFFTPACK or FFTW to map B vector into the i-th inverseSamples vector
   void compute_ifft_sample_set(ComplexArray& ifft_array);
 
+  /// deallocate data allocated in initialize()
+  void finalize();
+
   //
   //- Heading: Data
   //
@@ -114,12 +117,7 @@ FourierInverseTransformation(const String& data_trans_type): ifftSampleCntr(0)
 
 
 inline FourierInverseTransformation::~FourierInverseTransformation()
-{
-  // WJB: ToDo -- verify this gets called even though the destructor is NOT virtual
-#ifdef HAVE_FFTW
-  fftw_destroy_plan(fftwPlan);
-#endif  // HAVE_FFTW
-}
+{ finalize(); }
 
 } // namespace Pecos
 

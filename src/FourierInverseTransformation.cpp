@@ -53,12 +53,21 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
 #ifdef HAVE_FFTW
   // For in-place transformation, second and third args deref the same pointer
   fftwPlan = fftw_plan_dft_1d(num_terms, (fftw_complex*)&ifftArray[0],
-                              (fftw_complex*)&ifftArray[0],
-                              FFTW_BACKWARD, FFTW_ESTIMATE);
+    (fftw_complex*)&ifftArray[0], FFTW_BACKWARD, FFTW_ESTIMATE);
 #endif  // HAVE_FFTW
 }
 
 
+void FourierInverseTransformation::finalize()
+{
+#ifdef HAVE_FFTW
+  fftw_destroy_plan(fftwPlan);
+#endif  // HAVE_FFTW
+}
+
+
+/** Augments InverseTransformation::power_spectral_density()
+    definition to include local data initialization (sigmaSequence). */
 void FourierInverseTransformation::
 power_spectral_density(const String& psd_name, const Real& param)
 {
@@ -84,7 +93,7 @@ const RealVector& FourierInverseTransformation::compute_sample()
     compute_sample_grigoriu();           break;
   }
 
-  // DFFTPACK returns an unnormalized IFFT
+  // FFTW and DFFTPACK return unnormalized IFFTs
   for (i=0; i<num_terms; i++)
     inverseSample[i] = ifftArray[i].real(); //= num_terms*ifftArray[i].real();
   ifftSampleCntr++;
@@ -107,7 +116,7 @@ compute_samples(size_t num_ifft_samples)
       compute_sample_grigoriu();           break;
     }
 
-    // DFFTPACK returns an unnormalized IFFT
+    // FFTW and DFFTPACK return unnormalized IFFTs
     for (i=0; i<num_terms; i++)
       inverseSamples(ifftSampleCntr,i) = ifftArray[i].real();
                            //= num_terms*ifftArray[i].real();
@@ -223,12 +232,7 @@ compute_ifft_sample_set(ComplexArray& ifft_array)
 
 #ifdef HAVE_FFTW
   // default FFT package
-
   fftw_execute(fftwPlan);
-
-  // WJB: seems like a job for the destructor -- ask Mike about virtual destr.
-  //fftw_destroy_plan(fftwPlan);
-
 #elif HAVE_DFFTPACK
   // fallback FFT package
   double* wsave = new double [4*num_terms+15];
