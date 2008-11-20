@@ -11,6 +11,12 @@
 
 #include "DataTransformation.hpp"
 
+//#define TIMING
+
+#ifdef TIMING
+#include <ctime>
+#endif // TIMING
+
 
 /// A driver program for PECOS.
 
@@ -36,12 +42,16 @@ int main(int argc, char* argv[])
 
   // compute and return ns samples all at once
   const Pecos::RealMatrix& samples = ifft_transform.compute_samples(ns);
+#ifndef TIMING
   PCout << "Sample matrix:\n" << samples << std::endl;
+#endif // TIMING
 
   // compute and return two more, one at a time
   for (size_t i=ns; i<ns+2; i++) {
     const Pecos::RealVector& sample = ifft_transform.compute_sample();
+#ifndef TIMING
     PCout << "Sample " << i+1 << ":\n" << sample << std::endl;
+#endif // TIMING
   }
 
   // compute all at once and return one at a time (?)
@@ -51,6 +61,11 @@ int main(int argc, char* argv[])
   //  const Pecos::RealVector& sample = ifft_transform.sample(i);
   //  PCout << "Sample " << i+1 << ":\n" << sample_i << std::endl;
   //}
+
+#ifdef TIMING
+  PCout << "Processor time: " << (double)clock()/(double)CLOCKS_PER_SEC
+	<< " seconds." << std::endl;
+#endif // TIMING
 
   return 0;
 }
