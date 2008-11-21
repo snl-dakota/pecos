@@ -7,7 +7,7 @@ AM_CPPFLAGS += @GSL_CPPFLAGS@
 endif
 
 if WITH_FFTW
-AM_CPPFLAGS += @FFTW_CPPFLAGS@
+AM_CPPFLAGS += @FFTW_CPPFLAGS@ -I$(top_srcdir)/packages/fftw/api
 endif
 
 if WITH_LHS
