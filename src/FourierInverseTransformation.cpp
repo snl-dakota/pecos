@@ -53,7 +53,7 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
 #ifdef HAVE_FFTW
   // For in-place transformation, second and third args deref the same pointer
   fftwPlan = fftw_plan_dft_1d(num_terms, (fftw_complex*)&ifftArray[0],
-    (fftw_complex*)&ifftArray[0], FFTW_BACKWARD, FFTW_ESTIMATE);
+    (fftw_complex*)&ifftArray[0], FFTW_BACKWARD, FFTW_MEASURE);
 #endif  // HAVE_FFTW
 }
 
