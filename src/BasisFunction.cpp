@@ -106,14 +106,18 @@ BasisFunction::BasisFunction(const BasisFunction& basis_fn)
     basisFnRep. */
 BasisFunction BasisFunction::operator=(const BasisFunction& basis_fn)
 {
-  // Decrement old
-  if (basisFnRep) // Check for null pointer
-    if (--basisFnRep->referenceCount == 0) 
-      delete basisFnRep;
-  // Increment new
-  basisFnRep = basis_fn.basisFnRep;
-  if (basisFnRep) // Check for an assignment of NULL
-    basisFnRep->referenceCount++;
+  if (basisFnRep != basis_fn.basisFnRep) { // normal case: old != new
+    // Decrement old
+    if (basisFnRep) // Check for null pointer
+      if (--basisFnRep->referenceCount == 0) 
+	delete basisFnRep;
+    // Assign and increment new
+    basisFnRep = basis_fn.basisFnRep;
+    if (basisFnRep) // Check for an assignment of NULL
+      basisFnRep->referenceCount++;
+  }
+  // else if assigning same rep, then do nothing since referenceCount
+  // should already be correct
 
 #ifdef REFCOUNT_DEBUG
   PCout << "BasisFunction::operator=(BasisFunction&)" << std::endl;

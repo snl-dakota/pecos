@@ -111,14 +111,18 @@ ProbabilityTransformation(const ProbabilityTransformation& prob_trans)
 ProbabilityTransformation ProbabilityTransformation::
 operator=(const ProbabilityTransformation& prob_trans)
 {
-  // Decrement old
-  if (probTransRep) // Check for null pointer
-    if (--probTransRep->referenceCount == 0) 
-      delete probTransRep;
-  // Increment new
-  probTransRep = prob_trans.probTransRep;
-  if (probTransRep) // Check for an assignment of NULL
-    probTransRep->referenceCount++;
+  if (probTransRep != prob_trans.probTransRep) { // normal case: old != new
+    // Decrement old
+    if (probTransRep) // Check for null pointer
+      if (--probTransRep->referenceCount == 0) 
+	delete probTransRep;
+    // Assign and increment new
+    probTransRep = prob_trans.probTransRep;
+    if (probTransRep) // Check for an assignment of NULL
+      probTransRep->referenceCount++;
+  }
+  // else if assigning same rep, then do nothing since referenceCount
+  // should already be correct
 
 #ifdef REFCOUNT_DEBUG
   PCout << "ProbabilityTransformation::operator=(ProbabilityTransformation&)"

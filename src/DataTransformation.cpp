@@ -112,14 +112,18 @@ DataTransformation::DataTransformation(const DataTransformation& data_trans)
 DataTransformation DataTransformation::
 operator=(const DataTransformation& data_trans)
 {
-  // Decrement old
-  if (dataTransRep) // Check for null pointer
-    if (--dataTransRep->referenceCount == 0) 
-      delete dataTransRep;
-  // Increment new
-  dataTransRep = data_trans.dataTransRep;
-  if (dataTransRep) // Check for an assignment of NULL
-    dataTransRep->referenceCount++;
+  if (dataTransRep != data_trans.dataTransRep) { // normal case: old != new
+    // Decrement old
+    if (dataTransRep) // Check for null pointer
+      if (--dataTransRep->referenceCount == 0) 
+	delete dataTransRep;
+    // Assign and increment new
+    dataTransRep = data_trans.dataTransRep;
+    if (dataTransRep) // Check for an assignment of NULL
+      dataTransRep->referenceCount++;
+  }
+  // else if assigning same rep, then do nothing since referenceCount
+  // should already be correct
 
 #ifdef REFCOUNT_DEBUG
   PCout << "DataTransformation::operator=(DataTransformation&)" << std::endl;
