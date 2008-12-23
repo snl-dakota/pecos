@@ -31,7 +31,7 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
   InverseTransformation::initialize(total_t, w_bar, seed);
 
   size_t i, num_terms = omegaSequence.length();
-  ifftArray.resize(num_terms);
+  ifftVector.sizeUninitialized(num_terms);
 
   switch (fourierMethod) {
   case IFFT_SD: // Generate num_terms LHS samples for Psi ~ iid U(0, 2.*Pi).
@@ -52,8 +52,8 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
 
 #ifdef HAVE_FFTW
   // For in-place transformation, second and third args deref the same pointer
-  fftwPlan = fftw_plan_dft_1d(num_terms, (fftw_complex*)&ifftArray[0],
-    (fftw_complex*)&ifftArray[0], FFTW_BACKWARD, FFTW_MEASURE);
+  fftwPlan = fftw_plan_dft_1d(num_terms, (fftw_complex*)ifftVector.values(),
+    (fftw_complex*)ifftVector.values(), FFTW_BACKWARD, FFTW_MEASURE);
 #endif  // HAVE_FFTW
 }
 
@@ -95,7 +95,7 @@ const RealVector& FourierInverseTransformation::compute_sample()
 
   // FFTW and DFFTPACK return unnormalized IFFTs
   for (i=0; i<num_terms; i++)
-    inverseSample[i] = ifftArray[i].real(); //= num_terms*ifftArray[i].real();
+    inverseSample[i] = ifftVector[i].real(); //= num_terms*ifftVector[i].real();
   ifftSampleCntr++;
 
   return inverseSample;
@@ -118,8 +118,8 @@ compute_samples(size_t num_ifft_samples)
 
     // FFTW and DFFTPACK return unnormalized IFFTs
     for (i=0; i<num_terms; i++)
-      inverseSamples(ifftSampleCntr,i) = ifftArray[i].real();
-                           //= num_terms*ifftArray[i].real();
+      inverseSamples(ifftSampleCntr,i) = ifftVector[i].real();
+                           //= num_terms*ifftVector[i].real();
   }
 
   return inverseSamples;
@@ -163,11 +163,11 @@ void FourierInverseTransformation::compute_sample_shinozuka_deodatis()
 
   for (i=0; i<num_terms; i++) {
     //Real A = sigmaSequence[i]*sqrt(2.);
-    //ifftArray[i] = std::complex<Real>(A*cos(Psi_i), A*sin(Psi_i)); // Euler
-    ifftArray[i] = std::polar(sigmaSequence[i]*sqrt(2.), lhsSamples(i, 0));
+    //ifftVector[i] = std::complex<Real>(A*cos(Psi_i), A*sin(Psi_i)); // Euler
+    ifftVector[i] = std::polar(sigmaSequence[i]*sqrt(2.), lhsSamples(i, 0));
   }
 
-  compute_ifft_sample_set(ifftArray); // ifftArray: freq -> time domain
+  compute_ifft_sample_set(ifftVector); // ifftVector: freq -> time domain
 }
 
 
@@ -211,23 +211,23 @@ void FourierInverseTransformation::compute_sample_grigoriu()
     const Real& w_i = lhsSamples(i, 1);
     //Real A = sigmaSequence[i]*sqrt(v_i*v_i + w_i*w_i); // A ~ Rayleigh
     //Real Psi = -atan2(w_i, v_i);                       // Psi ~ U(-pi,pi)
-    //ifftArray[i] = std::complex<Real>(A*cos(Psi), A*sin(Psi)); // Euler
-    ifftArray[i] = std::polar(sigmaSequence[i]*sqrt(v_i*v_i + w_i*w_i),
+    //ifftVector[i] = std::complex<Real>(A*cos(Psi), A*sin(Psi)); // Euler
+    ifftVector[i] = std::polar(sigmaSequence[i]*sqrt(v_i*v_i + w_i*w_i),
 			      -atan2(w_i, v_i));
   }
 
-  compute_ifft_sample_set(ifftArray); // ifftArray: freq -> time domain
+  compute_ifft_sample_set(ifftVector); // ifftVector: freq -> time domain
 }
 
 
 void FourierInverseTransformation::
-compute_ifft_sample_set(ComplexArray& ifft_array)
+compute_ifft_sample_set(ComplexVector& ifft_vector)
 {
   int num_terms = omegaSequence.length();
 #ifdef DEBUG
   for (size_t i=0; i<num_terms; i++)
-    PCout << "Freq ifft_array[" << i << "] = (" << ifft_array[i].real() << ", "
-	  << ifft_array[i].imag() << ")\n";
+    PCout << "Freq ifft_vector[" << i << "] = (" << ifft_vector[i].real()
+	  << ", " << ifft_vector[i].imag() << ")\n";
 #endif // DEBUG
 
 #ifdef HAVE_FFTW
@@ -237,7 +237,7 @@ compute_ifft_sample_set(ComplexArray& ifft_array)
   // fallback FFT package
   double* wsave = new double [4*num_terms+15];
   ZFFTI_F77(num_terms, wsave);
-  ZFFTB_F77(num_terms, &ifft_array[0], wsave); // transforms in place
+  ZFFTB_F77(num_terms, ifft_vector.values(), wsave); // transforms in place
   delete [] wsave;
 #else
   PCerr << "Error: FFTW or DFFTPACK required for inverse FFT." << std::endl;
@@ -246,8 +246,8 @@ compute_ifft_sample_set(ComplexArray& ifft_array)
 
 #ifdef DEBUG
   for (size_t i=0; i<num_terms; i++)
-    PCout << "Time ifft_array[" << i << "] = (" << ifft_array[i].real() << ", "
-	  << ifft_array[i].imag() << ")\n";
+    PCout << "Time ifft_vector[" << i << "] = (" << ifft_vector[i].real()
+	  << ", " << ifft_vector[i].imag() << ")\n";
 #endif // DEBUG
 }
 

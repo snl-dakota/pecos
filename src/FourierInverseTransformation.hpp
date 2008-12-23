@@ -62,7 +62,7 @@ private:
   /// perform iFFT using Grigoriu algorithm
   void compute_sample_grigoriu();
   /// use DFFTPACK or FFTW to map B vector into the i-th inverseSamples vector
-  void compute_ifft_sample_set(ComplexArray& ifft_array);
+  void compute_ifft_sample_set(ComplexVector& ifft_vector);
 
   /// deallocate data allocated in initialize()
   void finalize();
@@ -80,9 +80,9 @@ private:
   /// sequence of standard deviations computed from psdSequence
   RealVector sigmaSequence;
 
-  /// the complex array passed through FFTW/DFFTPACK for IFFT conversion
+  /// the complex vector passed through FFTW/DFFTPACK for IFFT conversion
   /// from frequency domain to time domain
-  ComplexArray ifftArray; // ComplexVector fails to instantiate
+  ComplexVector ifftVector;
 
   /// first LHS parameter vector (means for generate_normal_samples(),
   /// lower bounds for generate_uniform_samples())
