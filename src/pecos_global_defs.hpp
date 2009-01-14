@@ -9,6 +9,9 @@
 #ifndef PECOS_GLOBAL_DEFS_H
 #define PECOS_GLOBAL_DEFS_H
 
+#ifdef HAVE_BOOST
+#include <boost/math/constants/constants.hpp>
+#endif
 #include <algorithm>
 #include <iostream>
 #include <cfloat>  // for DBL_MIN, DBL_MAX
@@ -21,7 +24,11 @@ namespace Pecos {
 // Special values
 // --------------
 /// the value for Pi used in various numerical routines
+#ifdef HAVE_BOOST
+const double Pi = boost::math::constants::pi<double>();
+#else
 const double Pi = 3.1415926535897932385;
+#endif
 
 /// special value returned by index() when entry not found
 const size_t _NPOS = ~(size_t)0; // one's complement
