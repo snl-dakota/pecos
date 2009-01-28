@@ -15,7 +15,10 @@
 #include "gsl/gsl_cdf.h"
 #include "gsl/gsl_sf_gamma.h"
 #endif
-
+//#ifdef HAVE_BOOST 
+//#include <boost/math/distributions/normal.hpp>
+//#include <boost/math/special_functions/gamma.hpp>
+//#endif
 #include <math.h>
 
 
@@ -225,11 +228,11 @@ public:
   void moments_from_gumbel_params(const Real& alpha, const Real& beta,
 				  Real& mean, Real& std_dev);
   /// compute mean and std deviation from frechet parameter specification
-  void moments_from_frechet_params(const Real& alpha, const Real& beta,
-				   Real& mean, Real& std_dev);
+  void moments_from_frechet_params(const Real& alpha, const Real& beta1,
+				   Real& mean1, Real& std_dev);
   /// compute mean and std deviation from weibull parameter specification
-  void moments_from_weibull_params(const Real& alpha, const Real& beta,
-				   Real& mean, Real& std_dev);
+  void moments_from_weibull_params(const Real& alpha, const Real& beta1,
+				   Real& mean1, Real& std_dev);
 
 protected:
 
@@ -382,11 +385,14 @@ inline const RealMatrix& ProbabilityTransformation::z_correlation_factor() const
 
 inline Real ProbabilityTransformation::phi(const Real& beta)
 {
-#ifdef HAVE_GSL
+#ifdef HAVE_BOOST
+  normal_dist norm(0,1);
+  return bmth::pdf(norm,beta);
+#elif HAVE_GSL
   return gsl_ran_ugaussian_pdf(beta);
 #else
   return exp(-beta*beta/2.)/sqrt(2.*Pi);
-#endif // HAVE_GSL
+#endif // HAVE_GSL or HAVE_BOOST
 }
 
 
@@ -394,11 +400,14 @@ inline Real ProbabilityTransformation::phi(const Real& beta)
     for positive beta. */
 inline Real ProbabilityTransformation::Phi(const Real& beta)
 {
-#ifdef HAVE_GSL
+#ifdef HAVE_BOOST
+  normal_dist norm(0,1);
+  return bmth::cdf(norm,beta);
+#elif HAVE_GSL
   return gsl_cdf_ugaussian_P(beta);
 #else
   return .5 + .5*erf(beta/sqrt(2.));
-#endif // HAVE_GSL
+#endif // HAVE_GSL or HAVE_BOOST
 }
 
 
@@ -406,11 +415,14 @@ inline Real ProbabilityTransformation::Phi(const Real& beta)
     probability > 0.5. */
 inline Real ProbabilityTransformation::Phi_inverse(const Real& p)
 {
-#ifdef HAVE_GSL
+#ifdef HAVE_BOOST
+  normal_dist norm(0,1);
+  return bmth::quantile(norm,p); 
+#elif HAVE_GSL
   return gsl_cdf_ugaussian_Pinv(p);
 #else
   return sqrt(2.)*erf_inverse(2.*p - 1.);
-#endif // HAVE_GSL
+#endif // HAVE_GSL or HAVE_BOOST
 }
 
 
@@ -476,37 +488,47 @@ moments_from_gumbel_params(const Real& alpha, const Real& beta, Real& mean,
 
 
 inline void ProbabilityTransformation::
-moments_from_frechet_params(const Real& alpha, const Real& beta, Real& mean,
+moments_from_frechet_params(const Real& alpha, const Real& beta1, Real& mean1,
 			    Real& std_dev)
 {
-#ifdef HAVE_GSL
+#ifdef HAVE_BOOST
+  // See Haldar and Mahadevan, p. 91-92
+  Real gam = bmth::tgamma(1.-1./alpha);
+  mean1    = beta1*gam;
+  std_dev  = beta1*sqrt(bmth::tgamma(1.-2./alpha)-gam*gam);
+#elif HAVE_GSL
   // See Haldar and Mahadevan, pp. 91-92
   Real gam = gsl_sf_gamma(1.-1./alpha);
-  mean     = beta*gam;
-  std_dev  = beta*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
+  mean1    = beta1*gam;
+  std_dev  = beta1*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
 #else
   std::cerr << "Error: frechet distributions only suported in executables "
-            << "configured with the GSL library." << std::endl;
+            << "configured with the GSL or Boost library." << std::endl;
   abort_handler(-1);
-#endif // HAVE_GSL
+#endif // HAVE_GSL or HAVE_BOOST
 }
 
 
 inline void ProbabilityTransformation::
-moments_from_weibull_params(const Real& alpha, const Real& beta, Real& mean,
+moments_from_weibull_params(const Real& alpha, const Real& beta1, Real& mean1,
 			    Real& std_dev)
 {
-#ifdef HAVE_GSL
+#ifdef HAVE_BOOST
   // See Haldar and Mahadevan, p. 97
+  Real gam = bmth::tgamma(1.+1./alpha),
+    cf_var = sqrt(bmth::tgamma(1.+2./alpha)/gam/gam - 1.);
+  mean1    = beta1*gam;
+  std_dev  = cf_var*beta1*gam;
+#elif HAVE_GSL
   Real gam = gsl_sf_gamma(1.+1./alpha),
     cf_var = sqrt(gsl_sf_gamma(1.+2./alpha)/gam/gam - 1.);
-  mean     = beta*gam;
-  std_dev  = cf_var*beta*gam;
+  mean1    = beta1*gam;
+  std_dev  = cf_var*beta1*gam;
 #else
   std::cerr << "Error: weibull distributions only suported in executables "
-            << "configured with the GSL library." << std::endl;
+            << "configured with the GSL or Boost library." << std::endl;
   abort_handler(-1);
-#endif // HAVE_GSL
+#endif // HAVE_GSL or HAVE_BOOST
 }
 
 } // namespace Pecos

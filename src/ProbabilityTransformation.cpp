@@ -10,6 +10,10 @@
 #ifdef HAVE_GSL
 #include "gsl/gsl_sf_gamma.h"
 #endif
+#ifdef HAVE_BOOST
+#include <boost/math/distributions/beta.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+#endif
 #include <algorithm>
 
 static const char rcsId[]="@(#) $Id: ProbabilityTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
@@ -856,7 +860,7 @@ distribution_parameter(size_t index, short target, const Real& param)
     ranVarAddtlParamsX[index][1] = param;
     moments_from_frechet_params(ranVarAddtlParamsX[index][0], param,
 				ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
+    break;  
   case W_BETA:
     ranVarAddtlParamsX[index][1] = param;
     moments_from_weibull_params(ranVarAddtlParamsX[index][0], param,
@@ -943,12 +947,27 @@ Real ProbabilityTransformation::erf_inverse(const Real& p)
 }
 #endif // HAVE_GSL
 
-
+#ifdef HAVE_BOOST
+#define BOOST_FLAG 1
+#else 
+#define BOOST_FLAG 0
+#endif
 #ifdef HAVE_GSL
+#define GSL_FLAG 1
+#else 
+#define GSL_FLAG 0
+#endif
+
+#if (GSL_FLAG || BOOST_FLAG)
 /** Solve is performed in scaled space (for the standard beta distribution). */
 Real ProbabilityTransformation::
-cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
+cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta1)
 {
+
+#ifdef HAVE_BOOST
+  beta_dist this_beta(alpha,beta1);
+  return  bmth::quantile(this_beta,normcdf);
+#elif HAVE_GSL
   // F(x) = Phi(z) = normcdf
   // F(x) - normcdf = 0
   // x^{i+1} = x - (F(x) - normcdf)/f(x)
@@ -958,7 +977,7 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
   Real scaled_x = normcdf;
 
   // evaluate residual F(x) - normcdf
-  Real res = gsl_cdf_beta_P(scaled_x, alpha, beta) - normcdf;
+  Real res = gsl_cdf_beta_P(scaled_x, alpha, beta1) - normcdf;
 
   size_t newton_iters = 0, max_iters = 20;
   bool converged = false, terminate = false;
@@ -966,7 +985,7 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
   while (!terminate && !converged) {
 
     // evaluate residual derivative f(x)
-    Real dres_dx = gsl_ran_beta_pdf(scaled_x, alpha, beta);
+    Real dres_dx = gsl_ran_beta_pdf(scaled_x, alpha, beta1);
 
     // compute Newton step
     Real delta_scaled_x;
@@ -988,7 +1007,8 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
       if (scaled_x_step > 1.) scaled_x_step = 1.;
 
       // evaluate residual at scaled_x_step
-      Real res_step = gsl_cdf_beta_P(scaled_x_step, alpha, beta) - normcdf;
+
+      Real res_step = gsl_cdf_beta_P(scaled_x_step, alpha, beta1) - normcdf;
 
       // perform backtracking line search to enforce decrease in res
       if ( fabs(res_step) < fabs(res) ) { // accept step
@@ -1010,9 +1030,11 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta)
     if (++newton_iters >= max_iters) // Newton iteration has completed
       terminate = true;
   }
+
   return scaled_x;
+#endif
 }
-#endif // HAVE_GSL
+#endif // HAVE_GSL or HAVE_BOOST
 
 
 #ifdef DERIV_DEBUG
