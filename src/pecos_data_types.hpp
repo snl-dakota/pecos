@@ -21,6 +21,7 @@
 #ifdef HAVE_BOOST
 // WJB - ToDo: investigate error in boost/math/tools/traits.hpp with SunProCC
 //#include <boost/math/distributions.hpp>
+#include <boost/math/distributions/beta.hpp>
 #include <boost/math/distributions/normal.hpp>
 #include <boost/math/distributions/gamma.hpp>
 #include <boost/math/distributions/weibull.hpp>
