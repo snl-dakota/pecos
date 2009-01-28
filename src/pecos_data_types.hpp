@@ -19,7 +19,15 @@
 #include "Teuchos_SerialSpdDenseSolver.hpp"
 
 #ifdef HAVE_BOOST
-#include <boost/math/distributions.hpp>
+// WJB - ToDo: investigate error in boost/math/tools/traits.hpp with SunProCC
+//#include <boost/math/distributions.hpp>
+#include <boost/math/distributions/normal.hpp>
+#include <boost/math/distributions/gamma.hpp>
+#include <boost/math/distributions/weibull.hpp>
+#include <boost/math/distributions/students_t.hpp>
+#include <boost/math/distributions/chi_squared.hpp>
+#include <boost/math/distributions/fisher_f.hpp>
+#include <boost/math/distributions/exponential.hpp>
 #include <boost/math/policies/policy.hpp>
 namespace bmth = boost::math;
 namespace bmp  = bmth::policies;
