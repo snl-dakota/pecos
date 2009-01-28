@@ -225,5 +225,15 @@ int main(int argc, char* argv[])
 
   boost_test_dist bt;
   bt.print_comparison();
+
+// WJB: an example to compile without conflicting with Laura's work
+//      TO BE REMOVED ASAP
+#ifdef HAVE_BOOST
+  Pecos::normal norm;
+
+  // Get a quantile:
+  Pecos::Real q = bmth::quantile(norm, 0.05);
+#endif // HAVE_BOOST
+
   return 0;
 }

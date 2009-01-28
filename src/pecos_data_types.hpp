@@ -18,6 +18,15 @@
 #include "Teuchos_SerialDenseSolver.hpp"
 #include "Teuchos_SerialSpdDenseSolver.hpp"
 
+#ifdef HAVE_BOOST
+#include <boost/math/distributions.hpp>
+#include <boost/math/policies/policy.hpp>
+namespace bmth = boost::math;
+namespace bmp  = bmth::policies;
+#endif
+
+#include <complex>
+
 
 namespace Pecos {
 
@@ -30,11 +39,20 @@ namespace Pecos {
 // -----------------------------------
 typedef double Real;
 
-
 // --------
 // Strings:
 // --------
 typedef std::string String;
+
+// -----------------------------------
+// Non-default boost math/policy types
+// -----------------------------------
+#ifdef HAVE_BOOST
+typedef bmth::
+  normal_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  normal;
+#endif
 
 
 // --------------------------------
