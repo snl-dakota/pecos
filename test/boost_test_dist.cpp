@@ -37,13 +37,15 @@ boost_test_dist::~boost_test_dist()
 {
   double cdf_value,quantile_value,this_gamma;
   int i,j;
+  PCout.precision(10); 
   
   PCout << "Quantiles for normal" << '\n';
-  for (i=1; i<10; i++){
+  for (i=0; i<11; i++){
     cdf_value = 0.1*i;
 #ifdef HAVE_BOOST
-    boost::math::normal norm(0,1);
-    PCout << std::setw(10) << "Boost " << quantile(norm,cdf_value);
+    Pecos:: normal_dist norm(0,1);
+    // Pecos::Real q = bmth::quantile(norm, cdf_value);
+    PCout << std::setw(10) << "Boost " << bmth::quantile(norm,cdf_value);
 #endif
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_ugaussian_Pinv(cdf_value) << '\n';
@@ -54,8 +56,8 @@ boost_test_dist::~boost_test_dist()
   for (i=-4; i<5; i++){
     quantile_value = 1.0*i;
 #ifdef HAVE_BOOST
-    boost::math::normal norm(0,1);
-    PCout << std::setw(10) << "Boost " << cdf(norm,quantile_value);
+    Pecos::normal_dist norm(0,1);
+    PCout << std::setw(10) << "Boost " << bmth::cdf(norm,quantile_value);
 #endif
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_ugaussian_P(quantile_value) << '\n';
@@ -66,8 +68,8 @@ boost_test_dist::~boost_test_dist()
   for (i=-4; i<5; i++){
     quantile_value = 1.0*i;
 #ifdef HAVE_BOOST
-    boost::math::normal norm(0,1);
-    PCout << std::setw(10) << "Boost " << pdf(norm,quantile_value);
+    Pecos::normal_dist norm(0,1);
+    PCout << std::setw(10) << "Boost " << bmth::pdf(norm,quantile_value);
 #endif
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_ran_ugaussian_pdf(quantile_value) << '\n';
@@ -91,8 +93,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<10; i++){
     cdf_value = 0.1*i;
 #ifdef HAVE_BOOST
-    boost::math::gamma_distribution<> gamma1(3.,1.);
-    PCout << std::setw(10) << "Boost " << quantile(gamma1,cdf_value) ;
+    Pecos::gamma_dist gamma1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::quantile(gamma1,cdf_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_gamma_Pinv(cdf_value, 3.,1.) << '\n';
@@ -103,8 +105,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<6; i++){
     quantile_value = 1.0*i; 
 #ifdef HAVE_BOOST
-    boost::math::gamma_distribution<> gamma1(3.,1.);
-    PCout << std::setw(10) << "Boost " << cdf(gamma1,quantile_value) ;
+    Pecos::gamma_dist gamma1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::cdf(gamma1,quantile_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_gamma_P(quantile_value, 3.,1.) << '\n';
@@ -115,8 +117,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<6; i++){
     quantile_value = 1.0*i; 
 #ifdef HAVE_BOOST
-    boost::math::gamma_distribution<> gamma1(3.,1.);
-    PCout << std::setw(10) << "Boost " << pdf(gamma1,quantile_value) ;
+    Pecos::gamma_dist gamma1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::pdf(gamma1,quantile_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_ran_gamma_pdf(quantile_value, 3.,1.) << '\n';
@@ -127,8 +129,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<5; i++){
     quantile_value = 0.1*i; 
 #ifdef HAVE_BOOST
-    boost::math::weibull_distribution<> weibull1(3.,1.);
-    PCout << std::setw(10) << "Boost " << pdf(weibull1,quantile_value) ;
+    Pecos::weibull_dist weibull1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::pdf(weibull1,quantile_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_ran_weibull_pdf(quantile_value, 1.,3.) << '\n';
@@ -139,8 +141,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<5; i++){
     quantile_value = 0.1*i; 
 #ifdef HAVE_BOOST
-    boost::math::weibull_distribution<> weibull1(3.,1.);
-    PCout << std::setw(10) << "Boost " << cdf(weibull1,quantile_value) ;
+    Pecos::weibull_dist weibull1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::cdf(weibull1,quantile_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_weibull_P(quantile_value, 1.,3.) << '\n';
@@ -148,23 +150,37 @@ boost_test_dist::~boost_test_dist()
   }
 
   PCout << std::setw(10) << "CDF values for beta distribution" << '\n';
-  for (i=1; i<6; i++){
-    quantile_value = 0.1*i; 
+  for (i=0; i<11; i++){
+    quantile_value = i*0.1; 
 #ifdef HAVE_BOOST
-    boost::math::beta_distribution<> beta1(3.,1.);
-    PCout << std::setw(10) << "Boost " << cdf(beta1,quantile_value) ;
+    Pecos::beta_dist beta1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::cdf(beta1,quantile_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_beta_P(quantile_value, 3.,1.) << '\n';
 #endif // HAVE_GSL
   }
 
+  PCout << std::setw(10) << "Quantile values for beta distribution" << '\n';
+  for (i=0; i<11; i++){
+    cdf_value = 0.1*i; 
+#ifdef HAVE_BOOST
+    Pecos::beta_dist beta1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::quantile(beta1,cdf_value) <<'\n';
+#endif //HAVE_BOOST
+    //#ifdef HAVE_GSL
+      // Pecos::ProbabilityTransformation this_trans;
+    //Pecos::Real q = this_trans.cdf_beta_Pinv(cdf_value,3.0,1.0); 
+    //PCout << std::setw(10) << "  GSL " << q  << '\n';
+    //#endif // HAVE_GSL
+  }
+
   PCout << std::setw(10) << "PDF values for beta distribution" << '\n';
   for (i=1; i<6; i++){
     quantile_value = 0.1*i; 
 #ifdef HAVE_BOOST
-    boost::math::beta_distribution<> beta1(3.,1.);
-    PCout << std::setw(10) << "Boost " << pdf(beta1,quantile_value) ;
+    Pecos::beta_dist beta1(3.,1.);
+    PCout << std::setw(10) << "Boost " << bmth::pdf(beta1,quantile_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_ran_beta_pdf(quantile_value, 3., 1.) << '\n';
@@ -175,8 +191,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<6; i++){
     quantile_value = 0.1*i; 
 #ifdef HAVE_BOOST
-    boost::math::fisher_f_distribution<> fisher(10.,4.);
-    PCout << std::setw(10) << "Boost " << pdf(fisher,quantile_value) ;
+    Pecos::fisher_f_dist fisher(10.,4.);
+    PCout << std::setw(10) << "Boost " << bmth::pdf(fisher,quantile_value) ;
 #endif //HAVE_BOOST
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_ran_fdist_pdf(quantile_value, 10., 4.) << '\n';
@@ -187,8 +203,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<10; i++){
     cdf_value = 0.1*i;
 #ifdef HAVE_BOOST
-    boost::math::students_t_distribution<> tdist(10);
-    PCout << std::setw(10) << "Boost " << quantile(tdist,cdf_value);
+    Pecos::students_t_dist tdist(10);
+    PCout << std::setw(10) << "Boost " << bmth::quantile(tdist,cdf_value);
 #endif
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_tdist_Pinv(cdf_value,10) << '\n';
@@ -199,8 +215,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<10; i++){
     cdf_value = 0.1*i;
 #ifdef HAVE_BOOST
-    boost::math::chi_squared_distribution<> chisq(10);
-    PCout << std::setw(10) << "Boost " << quantile(chisq,cdf_value);
+    Pecos::chi_squared_dist chisq(10);
+    PCout << std::setw(10) << "Boost " << bmth::quantile(chisq,cdf_value);
 #endif
 #ifdef HAVE_GSL
     PCout << std::setw(10) << "  GSL " << gsl_cdf_chisq_Pinv(cdf_value,10) << '\n';
@@ -211,8 +227,8 @@ boost_test_dist::~boost_test_dist()
   for (i=1; i<5; i++){
     quantile_value = 0.1*i;
 #ifdef HAVE_BOOST
-    boost::math::exponential_distribution<> expon1(1.5);
-    PCout << std::setw(10) << "Boost " << cdf(expon1,quantile_value);
+    Pecos::exponential_dist expon1(1.5);
+    PCout << std::setw(10) << "Boost " << bmth::cdf(expon1,quantile_value);
 #endif
 #ifdef HAVE_GSL
     PCout << std::setw(10 ) << "  GSL " << gsl_cdf_exponential_P(quantile_value,(1/1.5)) << '\n';
@@ -225,15 +241,6 @@ int main(int argc, char* argv[])
 
   boost_test_dist bt;
   bt.print_comparison();
-
-// WJB: an example to compile without conflicting with Laura's work
-//      TO BE REMOVED ASAP
-#ifdef HAVE_BOOST
-  Pecos::normal norm;
-
-  // Get a quantile:
-  Pecos::Real q = bmth::quantile(norm, 0.05);
-#endif // HAVE_BOOST
 
   return 0;
 }

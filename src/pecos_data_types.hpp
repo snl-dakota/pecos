@@ -51,9 +51,36 @@ typedef std::string String;
 typedef bmth::
   normal_distribution< Real,
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  normal;
+  normal_dist;
+typedef bmth::
+  gamma_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  gamma_dist;
+typedef bmth::
+  exponential_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  exponential_dist;
+typedef bmth::
+  beta_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  beta_dist;
+typedef bmth::
+  weibull_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  weibull_dist;
+typedef bmth::
+  chi_squared_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  chi_squared_dist;
+typedef bmth::
+  students_t_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  students_t_dist;
+typedef bmth::
+  fisher_f_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  fisher_f_dist;
 #endif
-
 
 // --------------------------------
 // Numerical arrays (serial dense):
