@@ -3,7 +3,7 @@ dnl Packages
 AC_DEFUN([PECOS_PACKAGES],[
   dnl BOOST package package check.
   AC_ARG_WITH([boost],AS_HELP_STRING([--without-boost],
-              [turn Boost support off]),[with_boost=$withval],[with_boost=no])
+              [turn Boost support off]),[with_boost=$withval],[with_boost=yes])
   if test "x$with_boost" = xyes; then
     dnl AC_CONFIG_SUBDIRS([packages/boost])
     dnl AC_DEFINE([PECOS_BOOST],[1],[Macro to handle code which depends on Boost.])
