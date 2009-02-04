@@ -872,8 +872,7 @@ distribution_parameter(size_t index, short target, const Real& param)
   trans_correlations();
 }
 
-#ifndef HAVE_BOOST
-#ifndef HAVE_GSL
+#if !defined(HAVE_BOOST) && !defined(HAVE_GSL)
 Real ProbabilityTransformation::erf_inverse(const Real& p)
 {
   // Adapted from ltqnorm.m see URL below for more info
@@ -945,8 +944,7 @@ Real ProbabilityTransformation::erf_inverse(const Real& p)
   z = 1/sqrt(2.)*z;
   return z;
 }
-#endif // HAVE_GSL
-#endif //HAVE_GSL
+#endif // !defined(HAVE_BOOST) || !defined(HAVE_GSL)
 
 
 /** Solve is performed in scaled space (for the standard beta distribution). */

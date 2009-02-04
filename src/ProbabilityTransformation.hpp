@@ -323,12 +323,10 @@ private:
   /// probTransRep to the appropriate derived type.
   ProbabilityTransformation* get_prob_trans(const String& prob_trans_type);
 
-#ifndef HAVE_BOOST
-#ifndef HAVE_GSL
+#if !defined(HAVE_BOOST) && !defined(HAVE_GSL)
   /// Inverse of error function used in Phi_inverse()
   Real erf_inverse(const Real& p);
-#endif // HAVE_GSL
-#endif //HAVE_BOOST
+#endif
 
   //
   //- Heading: Data members
