@@ -232,18 +232,23 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       const Real& upr = ranVarUpperBndsX(i);
       if (ranVarTypesU[i] == BETA) // scale from [-1,1] to [L,U]
 	x_vars(i) = lwr + (upr - lwr)*(z_vars(i)+1.)/2.;
-#ifdef HAVE_GSL
       else if (ranVarTypesU[i] == NORMAL) { // transform from std normal
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
 	Real normcdf = Phi(z_vars(i));
+#ifdef HAVE_BOOST
 	// GSL does not support beta CDF inverse, therefore a special Newton
 	// solve has been implemented for the inversion (which uses the GSL
 	// CDF/PDF fns)
 	Real scaled_x = cdf_beta_Pinv(normcdf, alpha, beta);
+#elif HAVE_GSL
+	// GSL does not support beta CDF inverse, therefore a special Newton
+	// solve has been implemented for the inversion (which uses the GSL
+	// CDF/PDF fns)
+	Real scaled_x = cdf_beta_Pinv(normcdf, alpha, beta);
+#endif
 	x_vars(i) = lwr + (upr - lwr)*scaled_x;
       }
-#endif // HAVE_GSL
       else
 	err_flag = true;
       break;

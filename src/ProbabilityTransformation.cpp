@@ -872,7 +872,7 @@ distribution_parameter(size_t index, short target, const Real& param)
   trans_correlations();
 }
 
-
+#ifndef HAVE_BOOST
 #ifndef HAVE_GSL
 Real ProbabilityTransformation::erf_inverse(const Real& p)
 {
@@ -946,19 +946,9 @@ Real ProbabilityTransformation::erf_inverse(const Real& p)
   return z;
 }
 #endif // HAVE_GSL
+#endif //HAVE_GSL
 
-#ifdef HAVE_BOOST
-#define BOOST_FLAG 1
-#else 
-#define BOOST_FLAG 0
-#endif
-#ifdef HAVE_GSL
-#define GSL_FLAG 1
-#else 
-#define GSL_FLAG 0
-#endif
 
-#if (GSL_FLAG || BOOST_FLAG)
 /** Solve is performed in scaled space (for the standard beta distribution). */
 Real ProbabilityTransformation::
 cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta1)
@@ -1032,9 +1022,9 @@ cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta1)
   }
 
   return scaled_x;
-#endif
+#endif //HAVE_GSL
 }
-#endif // HAVE_GSL or HAVE_BOOST
+
 
 
 #ifdef DERIV_DEBUG
