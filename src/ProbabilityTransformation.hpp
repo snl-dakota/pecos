@@ -267,13 +267,10 @@ protected:
   void verify_design_jacobian(const RealVector& u0);
 #endif // DERIV_DEBUG
 
-#ifdef HAVE_BOOST
-  /// Inverse of standard beta CDF (not supported by GSL)
+#if defined(HAVE_BOOST) || defined(HAVE_GSL)
+  /// Inverse of standard beta CDF (not supported by GSL; boost version is a 2 line "wrapper")
   Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
-#elif HAVE_GSL
-  /// Inverse of standard beta CDF (not supported by GSL)
-  Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
-#endif // HAVE_GSL
+#endif // defined(HAVE_BOOST) || defined(HAVE_GSL)
 
   //
   //- Heading: Data members
