@@ -38,7 +38,7 @@ boost_test_dist::~boost_test_dist()
   double cdf_value,quantile_value,this_gamma;
   int i,j;
   PCout.precision(16); 
-  PCout.setf(std::ios::fixed);
+  PCout.setf(std::ios::scientific);
   PCout.setf(std::ios::showpoint);
   
   PCout << "Quantiles for normal" << '\n';
@@ -55,7 +55,7 @@ boost_test_dist::~boost_test_dist()
   }
 
   PCout << std::setw(16) << "CDF values for normal" << '\n';
-  for (i=-4; i<5; i++){
+  for (i=-20; i<20; i++){
     quantile_value = 1.0*i;
 #ifdef HAVE_BOOST
     Pecos::normal_dist norm(0,1);
@@ -67,7 +67,7 @@ boost_test_dist::~boost_test_dist()
   }
   
   PCout << std::setw(16) << "PDF values for normal" << '\n';
-  for (i=-4; i<5; i++){
+  for (i=-20; i<20; i++){
     quantile_value = 1.0*i;
 #ifdef HAVE_BOOST
     Pecos::normal_dist norm(0,1);
