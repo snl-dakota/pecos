@@ -36,7 +36,7 @@ const size_t _NPOS = ~(size_t)0; // one's complement
 // define special values for ranVarTypesX/U
 enum { DESIGN, NORMAL, BOUNDED_NORMAL, LOGNORMAL, BOUNDED_LOGNORMAL, UNIFORM,
        LOGUNIFORM, TRIANGULAR, EXPONENTIAL, BETA, GAMMA, GUMBEL, FRECHET,
-       WEIBULL, STATE };
+       WEIBULL, HISTOGRAM, INTERVAL, STATE };
 
 // define special values for secondaryACVarMapTargets/secondaryADVarMapTargets
 enum { NO_TARGET, CDV_LWR_BND, CDV_UPR_BND, DDV_LWR_BND, DDV_UPR_BND,

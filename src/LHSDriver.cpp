@@ -566,7 +566,9 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     check_error(err_code, "lhs_dist(weibull)");
   }
 
-  // histogram uncertain
+  // histogram uncertain: in both formats, pairs are defined from an abscissa
+  // in the first field and a count (not a density) in the second field.  The
+  // distinction in the second field is only important for unequal bin widths.
   size_t num_c_huv = h_bin_prs.size();
   for (i=0; i<num_huv; i++, cntr++) {
     //sprintf(name_string,"UserDefined%d", cntr+1);
@@ -604,9 +606,11 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
         y_val[j] = h_pt_prs[i-num_c_huv][2*j+1];
       }
     }
+#ifdef DEBUG
     for (j=0; j<num_params; j++)
       PCout << "Histogram " << i+1 << ": " << x_val[j] << ' ' << y_val[j]
 	    << std::endl;
+#endif //DEBUG
     String dist_s(dist_stream.str());
     std::copy(dist_s.begin(), dist_s.end(), dist_string);
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
@@ -682,7 +686,6 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       else // handle case where there is a gap
 	y_val[j] = y_val[j-1] + 0.0001;
     }
-
     // normalize if necessary
     if (y_val[num_params-1] != 1.0) {
       double y_total = y_val[num_params-1];
@@ -695,7 +698,6 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       PCout << "x_val " << j << "is " << x_val[j] << "\ny_val " << j << "is "
 	    << y_val[j]<< '\n';
 #endif //DEBUG
-
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
 		  x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(interval)");

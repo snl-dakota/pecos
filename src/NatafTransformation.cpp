@@ -86,7 +86,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
   for (int i=0; i<z_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE: {
+    case DESIGN: case STATE: case INTERVAL:
       if (ranVarTypesU[i] == UNIFORM) {
 	// scale from [-1,1] to [L,U]
 	const Real& lwr = ranVarLowerBndsX(i);
@@ -95,15 +95,13 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    }
-    case NORMAL: { // unbounded normal: z = (x - mu)/sigma
+    case NORMAL: // unbounded normal: z = (x - mu)/sigma
       if (ranVarTypesU[i] == NORMAL)
 	x_vars(i) = z_vars(i)*ranVarStdDevsX(i) + ranVarMeansX(i);
       else
 	err_flag = true;
       break;
-    }
-    case BOUNDED_NORMAL: { // bounded normal
+    case BOUNDED_NORMAL: // bounded normal
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& lwr = ranVarLowerBndsX(i);
 	const Real& upr = ranVarUpperBndsX(i);
@@ -124,8 +122,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    }
-    case LOGNORMAL: { // unbounded lognormal: z = (ln x - lamba)/zeta
+    case LOGNORMAL: // unbounded lognormal: z = (ln x - lamba)/zeta
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& mu = ranVarMeansX(i);
 	Real cf_var = ranVarStdDevsX(i)/mu, zeta_sq = log(1 + cf_var*cf_var),
@@ -135,8 +132,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    }
-    case BOUNDED_LOGNORMAL: { // bounded lognormal
+    case BOUNDED_LOGNORMAL: // bounded lognormal
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& lwr = ranVarLowerBndsX(i);
 	const Real& upr = ranVarUpperBndsX(i);
@@ -158,7 +154,6 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    }
     case UNIFORM: {
       const Real& lwr = ranVarLowerBndsX(i);
       Real range = ranVarUpperBndsX(i) - lwr;
@@ -232,18 +227,21 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       const Real& upr = ranVarUpperBndsX(i);
       if (ranVarTypesU[i] == BETA) // scale from [-1,1] to [L,U]
 	x_vars(i) = lwr + (upr - lwr)*(z_vars(i)+1.)/2.;
-#if defined(HAVE_BOOST) || defined(HAVE_GSL)
       else if (ranVarTypesU[i] == NORMAL) { // transform from std normal
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
 	Real normcdf = Phi(z_vars(i));
+#ifdef HAVE_BOOST
+	beta_dist beta1(alpha, beta);
+	Real scaled_x = bmth::quantile(beta1, normcdf);
+#elif HAVE_GSL
 	// GSL does not support beta CDF inverse, therefore a special Newton
 	// solve has been implemented for the inversion (which uses the GSL
-	// CDF/PDF fns) -- the boost version is a thin-wrapper around quantile
+	// CDF/PDF fns).
 	Real scaled_x = cdf_beta_Pinv(normcdf, alpha, beta);
+#endif // HAVE_BOOST
 	x_vars(i) = lwr + (upr - lwr)*scaled_x;
       }
-#endif // defined(HAVE_BOOST) || defined(HAVE_GSL)
       else
 	err_flag = true;
       break;
@@ -267,7 +265,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	err_flag = true;
       break;
     }
-    case GUMBEL: {
+    case GUMBEL:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
 	const Real& alpha = ranVarAddtlParamsX[i](0);
@@ -281,8 +279,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    }
-    case FRECHET: {
+    case FRECHET:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = e^(-(beta/x)^alpha)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
@@ -296,8 +293,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    }
-    case WEIBULL: {
+    case WEIBULL:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
@@ -306,12 +302,20 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
 	Real log1mnormcdf = (z > 0.) ? log(Phi(-z)) : log1p(-Phi(z));
-	x_vars(i)	= beta*pow(-log1mnormcdf, 1./alpha);
+	x_vars(i) = beta*pow(-log1mnormcdf, 1./alpha);
       }
       else
 	err_flag = true;
       break;
-    }
+    case HISTOGRAM:
+      // TO DO
+      //if (ranVarTypesU[i] == NORMAL) {
+      //}
+      //else if (ranVarTypesU[i] == UNIFORM) {
+      //}
+      //else
+	err_flag = true;
+      break;
     }
     if (err_flag) {
       PCerr << "Error: unsupported variable mapping for variable " << i
@@ -366,7 +370,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
   for (int i=0; i<x_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE: {
+    case DESIGN: case STATE: case INTERVAL:
       if (ranVarTypesU[i] == UNIFORM) {
 	const Real& lwr = ranVarLowerBndsX(i);
 	z_vars(i) = 2.*(x_vars(i) - lwr)/(ranVarUpperBndsX(i) - lwr) - 1.;
@@ -374,14 +378,13 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    }
     case NORMAL: // unbounded normal: z = (x - mu)/sigma
       if (ranVarTypesU[i] == NORMAL)
 	z_vars(i) = (x_vars(i)-ranVarMeansX(i))/ranVarStdDevsX(i);
       else
 	err_flag = true;
       break;
-    case BOUNDED_NORMAL: { // bounded normal
+    case BOUNDED_NORMAL: // bounded normal
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& lwr = ranVarLowerBndsX(i);
 	const Real& upr = ranVarUpperBndsX(i);
@@ -403,8 +406,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    }
-    case LOGNORMAL: { // unbounded lognormal: z = (ln x - lamba)/zeta
+    case LOGNORMAL: // unbounded lognormal: z = (ln x - lamba)/zeta
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& mu = ranVarMeansX(i);
 	Real cf_var = ranVarStdDevsX(i)/mu, zeta_sq = log(1. + cf_var*cf_var),
@@ -414,8 +416,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    }
-    case BOUNDED_LOGNORMAL: { // bounded lognormal
+    case BOUNDED_LOGNORMAL: // bounded lognormal
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& lwr = ranVarLowerBndsX(i);
 	const Real& upr = ranVarUpperBndsX(i);
@@ -438,7 +439,6 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    }
     case UNIFORM: {
       // Phi(z) = (x-L)/(U-L)
       const Real& lwr = ranVarLowerBndsX(i);
@@ -536,7 +536,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	err_flag = true;
       break;
     }
-    case GUMBEL: {
+    case GUMBEL:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
 	const Real& alpha = ranVarAddtlParamsX[i](0);
@@ -547,8 +547,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    }
-    case FRECHET: {
+    case FRECHET:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = e^(-(beta/x)^alpha)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
@@ -559,8 +558,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    }
-    case WEIBULL: {
+    case WEIBULL:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
@@ -572,7 +570,15 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    }
+    case HISTOGRAM:
+      // TO DO
+      //if (ranVarTypesU[i] == NORMAL) {
+      //}
+      //else if (ranVarTypesU[i] == UNIFORM) {
+      //}
+      //else
+	err_flag = true;
+      break;
     }
     if (err_flag) {
       PCerr << "Error: unsupported variable mapping for variable " << i
@@ -596,9 +602,9 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
     u_vars.size(z_len);
 
   RealSolver corr_solver;
-  corr_solver.setMatrix( Teuchos::rcp(&corrCholeskyFactorZ, false) );
+  corr_solver.setMatrix(  Teuchos::rcp(&corrCholeskyFactorZ, false) );
   corr_solver.setVectors( Teuchos::rcp(&u_vars, false),
-                          Teuchos::rcp(&z_vars, false) );
+			  Teuchos::rcp(&z_vars, false) );
   corr_solver.solveToRefinedSolution(true);
   corr_solver.solve();
 }
@@ -1543,7 +1549,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
   for (int i=0; i<x_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE:
+    case DESIGN: case STATE: case INTERVAL:
       if (ranVarTypesU[i] == UNIFORM)
 	jacobian_xz(i, i) = (ranVarUpperBndsX(i) - ranVarLowerBndsX(i))/2.;
       else
@@ -1662,8 +1668,8 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	const Real& beta  = ranVarAddtlParamsX[i](1);
 	Real scaled_x = (x_vars(i)-lwr)/scale;
 #ifdef HAVE_BOOST
-	beta_dist beta1(alpha,beta);
-        Real pdf = bmth::pdf(beta1,scaled_x)/scale;
+	beta_dist beta1(alpha, beta);
+        Real pdf = bmth::pdf(beta1, scaled_x)/scale;
 #elif HAVE_GSL
 	// GSL beta passes alpha followed by beta
 	Real pdf = gsl_ran_beta_pdf(scaled_x, alpha, beta)/scale;
@@ -1681,8 +1687,8 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       else if (ranVarTypesU[i] == NORMAL) { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 #ifdef HAVE_BOOST
-	gamma_dist gamma1(alpha,beta);
-        Real pdf = bmth::pdf(gamma1,x_vars(i));
+	gamma_dist gamma1(alpha, beta);
+        Real pdf = bmth::pdf(gamma1, x_vars(i));
 #elif HAVE_GSL
 	// GSL gamma passes alpha followed by beta
 	Real pdf = gsl_ran_gamma_pdf(x_vars(i), alpha, beta);
@@ -1721,8 +1727,8 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
 #ifdef HAVE_BOOST
-	weibull_dist weibull1(alpha,beta);
-        Real pdf = bmth::pdf(weibull1,x_vars(i));
+	weibull_dist weibull1(alpha, beta);
+        Real pdf = bmth::pdf(weibull1, x_vars(i));
 #elif HAVE_GSL
 	// GSL weibull passes beta followed by alpha
 	Real pdf = gsl_ran_weibull_pdf(x_vars(i), beta, alpha);
@@ -1736,6 +1742,15 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	err_flag = true;
       break;
     }
+    case HISTOGRAM:
+      // TO DO
+      //if (ranVarTypesU[i] == NORMAL) {
+      //}
+      //else if (ranVarTypesU[i] == UNIFORM) {
+      //}
+      //else
+	err_flag = true;
+      break;
     }
     if (err_flag) {
       PCerr << "Error: unsupported variable mapping for variable " << i
@@ -1801,7 +1816,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
   for (int i=0; i<x_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE:
+    case DESIGN: case STATE: case INTERVAL:
       if (ranVarTypesU[i] == UNIFORM)
 	jacobian_zx(i, i) = 2./(ranVarUpperBndsX(i) - ranVarLowerBndsX(i));
       else
@@ -1921,8 +1936,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	Real scaled_x = (x_vars(i)-lwr)/scale;
 	// GSL beta passes alpha followed by beta
 #ifdef HAVE_BOOST
-	beta_dist beta1(alpha,beta);
-        Real pdf = bmth::pdf(beta1,scaled_x)/scale;
+	beta_dist beta1(alpha, beta);
+        Real pdf = bmth::pdf(beta1, scaled_x)/scale;
 #elif HAVE_GSL	
 	Real pdf = gsl_ran_beta_pdf(scaled_x, alpha, beta)/scale;
 #endif
@@ -1940,8 +1955,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	// GSL gamma passes alpha followed by beta
 #ifdef HAVE_BOOST
-	gamma_dist gamma1(alpha,beta);
-        Real pdf = bmth::pdf(gamma1,x_vars(i));
+	gamma_dist gamma1(alpha, beta);
+        Real pdf = bmth::pdf(gamma1, x_vars(i));
 #elif HAVE_GSL
 	Real pdf = gsl_ran_gamma_pdf(x_vars(i), alpha, beta);
 #endif
@@ -1979,8 +1994,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
 #ifdef HAVE_BOOST
-	weibull_dist weibull1(alpha,beta);
-        Real pdf = bmth::pdf(weibull1,x_vars(i));
+	weibull_dist weibull1(alpha, beta);
+        Real pdf = bmth::pdf(weibull1, x_vars(i));
 #elif HAVE_GSL
 	// GSL weibull passes beta followed by alpha
 	Real pdf = gsl_ran_weibull_pdf(x_vars(i), beta, alpha);
@@ -1994,6 +2009,15 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	err_flag = true;
       break;
     }
+    case HISTOGRAM:
+      // TO DO
+      //if (ranVarTypesU[i] == NORMAL) {
+      //}
+      //else if (ranVarTypesU[i] == UNIFORM) {
+      //}
+      //else
+	err_flag = true;
+      break;
     }
     if (err_flag) {
       PCerr << "Error: unsupported variable mapping for variable " << i
@@ -2110,8 +2134,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    case NO_TARGET:   // can occur for all_variables Jacobians
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
-	      PCerr << "Error: secondary mapping failure for DESIGN in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for DESIGN in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2133,8 +2157,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      break;
 	    //case N_LWR_BND: case N_UPR_BND: not supported
 	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for NORMAL in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for NORMAL in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2174,7 +2198,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      break;
 	    case NO_TARGET: default:
 	      PCerr << "Error: secondary mapping failure for BOUNDED_NORMAL in "
-		    << "NonD::jacobian_dX_dS()." << std::endl;
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2221,8 +2245,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    }
 	    //case LN_LWR_BND: case LN_UPR_BND: not supported
 	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for LOGNORMAL in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for LOGNORMAL in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2287,7 +2311,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      dupr_ds = 1.; break;
 	    case NO_TARGET: default:
 	      PCerr << "Error: secondary mapping failure for BOUNDED_LOGNORMAL "
-		    << "in NonD::jacobian_dX_dS()." << std::endl;
+		    << "in NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2329,8 +2353,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Uniform Mean          - TO DO
 	    // Uniform Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for UNIFORM in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for UNIFORM in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2375,7 +2399,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Loguniform Std Deviation - TO DO
 	    case NO_TARGET: default:
 	      PCerr << "Error: secondary mapping failure for LOGUNIFORM in "
-		    << "NonD::jacobian_dX_dS()." << std::endl;
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2458,7 +2482,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    }
 	    if (dist_error) {
 	      PCerr << "Error: secondary mapping failure for TRIANGULAR in "
-		    << "NonD::jacobian_dX_dS()." << std::endl;
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	    }
 	  }
@@ -2485,7 +2509,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Exponential Std Deviation - TO DO
 	    case NO_TARGET: default:
 	      PCerr << "Error: secondary mapping failure for EXPONENTIAL in "
-		    << "NonD::jacobian_dX_dS()." << std::endl;
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2568,8 +2592,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      //  = num*exp(num-exp(num))/ranVarStdDevsX(j)/phi(z);
 	      //break;
 	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for GUMBEL in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for GUMBEL in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2601,8 +2625,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Frechet Mean          - TO DO
 	    // Frechet Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for FRECHET in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for FRECHET in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2635,8 +2659,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Weibull Mean          - TO DO
 	    // Weibull Std Deviation - TO DO
 	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for WEIBULL in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for WEIBULL in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2650,6 +2674,18 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  }
 	  break;
 	}
+	case HISTOGRAM:
+	  // TO DO
+	  PCerr << "Error: unsupported mapping for HISTOGRAM in "
+		<< "NatafTransformation::jacobian_dX_dS()." << std::endl;
+	  abort_handler(-1);
+	  break;
+	case INTERVAL:
+	  // TO DO
+	  PCerr << "Error: unsupported mapping for INTERVAL in "
+		<< "NatafTransformation::jacobian_dX_dS()." << std::endl;
+	  abort_handler(-1);
+	  break;
 	case STATE: { // x = L + (z + 1)*(U - L)/2
 	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
 	    switch (target2) {
@@ -2660,8 +2696,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    case NO_TARGET:   // can occur for all_variables Jacobians
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
-	      PCerr << "Error: secondary mapping failure for STATE in NonD::"
-		    << "jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for STATE in "
+		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2747,7 +2783,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
     // each d^2X_i/dZ^2 has a single entry on the diagonal as defined by
     // differentiation of jacobian_dX_dZ()
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE:
+    case DESIGN: case STATE: case INTERVAL:
       if (ranVarTypesU[i] == UNIFORM)
 	hessian_xz[i](i, i) = 0.;
       else
@@ -2759,7 +2795,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    case BOUNDED_NORMAL: { // bounded normal
+    case BOUNDED_NORMAL: // bounded normal
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& lwr   = ranVarLowerBndsX(i);
 	const Real& upr   = ranVarUpperBndsX(i);
@@ -2775,8 +2811,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case LOGNORMAL: { // unbounded lognormal: z = (ln x - lamba)/zeta
+    case LOGNORMAL: // unbounded lognormal: z = (ln x - lamba)/zeta
       if (ranVarTypesU[i] == NORMAL) {
 	// dx/dz = zeta x
 	// d^2x/dz^2 = zeta dx/dz = zeta^2 x
@@ -2787,8 +2822,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case BOUNDED_LOGNORMAL: { // bounded lognormal
+    case BOUNDED_LOGNORMAL: // bounded lognormal
       if (ranVarTypesU[i] == NORMAL) {
 	const Real& lwr = ranVarLowerBndsX(i);
 	const Real& upr = ranVarUpperBndsX(i);
@@ -2806,8 +2840,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case UNIFORM: {
+    case UNIFORM:
       //  F(x) = (x-L)/(U-L)
       //  f(x) = 1/(U-L)
       // f'(x) = 0.
@@ -2821,7 +2854,6 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
     case LOGUNIFORM: {
       //  F(x) = (ln x - ln L)/(ln U - ln L)
       //  f(x) =  1/(ln U - ln L)/x
@@ -2873,7 +2905,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	err_flag = true;
       break;
     }
-    case EXPONENTIAL: {
+    case EXPONENTIAL:
       //  F(x) = 1. - e^(-x/beta)
       //  f(x) = e^(-x/beta) / beta
       // f'(x) = - e^(-x/beta) / beta^2
@@ -2888,8 +2920,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case BETA: {
+    case BETA:
       //  F(x) = gsl
       //  f(x) = gsl
       // f'(x) = f(x) ((alpha-1)/(x-lwr) - (beta-1)/(upr-x))
@@ -2916,8 +2947,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case GAMMA: {
+    case GAMMA:
       //  F(x) = gsl
       //  f(x) = beta^(-alpha) x^(alpha-1) e^(-x/beta) / GammaFn(alpha)
       // f'(x) = beta^(-alpha)/GammaFn(alpha) (e^(-x/beta) (alpha-1) x^(alpha-2)
@@ -2947,8 +2977,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case GUMBEL: {
+    case GUMBEL:
       if (ranVarTypesU[i] == NORMAL) {
 	//  F(x) = e^(-e^(-alpha*(x-u)))
 	//  f(x) = alpha e^(-alpha*(x-u)) F(x)
@@ -2964,8 +2993,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case FRECHET: {
+    case FRECHET:
       if (ranVarTypesU[i] == NORMAL) {
 	//  F(x) = e^(-(beta/x)^alpha)
 	//  f(x) = F(x) alpha (beta/x)^(alpha-1) beta/x^2
@@ -2984,8 +3012,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
-    case WEIBULL: {
+    case WEIBULL:
       if (ranVarTypesU[i] == NORMAL) {
 	//  F(x) = 1.-e^(-(x/beta)^alpha)
 	//  f(x) = alpha/beta e^(-(x/beta)^alpha) (x/beta)^(alpha-1)
@@ -3004,7 +3031,15 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    }
+    case HISTOGRAM:
+      // TO DO
+      //if (ranVarTypesU[i] == NORMAL) {
+      //}
+      //else if (ranVarTypesU[i] == UNIFORM) {
+      //}
+      //else
+	err_flag = true;
+      break;
     }
     if (err_flag) {
       PCerr << "Error: unsupported variable mapping for variable " << i

@@ -267,10 +267,10 @@ protected:
   void verify_design_jacobian(const RealVector& u0);
 #endif // DERIV_DEBUG
 
-#if defined(HAVE_BOOST) || defined(HAVE_GSL)
-  /// Inverse of standard beta CDF (not supported by GSL; boost version is a 2 line "wrapper")
+#if !defined(HAVE_BOOST) && defined(HAVE_GSL)
+  /// Inverse of standard beta CDF by backtracking Newton (not supported by GSL)
   Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
-#endif // defined(HAVE_BOOST) || defined(HAVE_GSL)
+#endif // !defined(HAVE_BOOST) && defined(HAVE_GSL)
 
   //
   //- Heading: Data members
@@ -386,8 +386,8 @@ inline const RealMatrix& ProbabilityTransformation::z_correlation_factor() const
 inline Real ProbabilityTransformation::phi(const Real& beta)
 {
 #ifdef HAVE_BOOST
-  normal_dist norm(0,1);
-  return bmth::pdf(norm,beta);
+  normal_dist norm(0., 1.);
+  return bmth::pdf(norm, beta);
 #elif HAVE_GSL
   return gsl_ran_ugaussian_pdf(beta);
 #else
@@ -401,8 +401,8 @@ inline Real ProbabilityTransformation::phi(const Real& beta)
 inline Real ProbabilityTransformation::Phi(const Real& beta)
 {
 #ifdef HAVE_BOOST
-  normal_dist norm(0,1);
-  return bmth::cdf(norm,beta);
+  normal_dist norm(0., 1.);
+  return bmth::cdf(norm, beta);
 #elif HAVE_GSL
   return gsl_cdf_ugaussian_P(beta);
 #else
@@ -416,8 +416,8 @@ inline Real ProbabilityTransformation::Phi(const Real& beta)
 inline Real ProbabilityTransformation::Phi_inverse(const Real& p)
 {
 #ifdef HAVE_BOOST
-  normal_dist norm(0,1);
-  return bmth::quantile(norm,p); 
+  normal_dist norm(0., 1.);
+  return bmth::quantile(norm, p); 
 #elif HAVE_GSL
   return gsl_cdf_ugaussian_Pinv(p);
 #else
@@ -488,45 +488,44 @@ moments_from_gumbel_params(const Real& alpha, const Real& beta, Real& mean,
 
 
 inline void ProbabilityTransformation::
-moments_from_frechet_params(const Real& alpha, const Real& beta1, Real& mean1,
+moments_from_frechet_params(const Real& alpha, const Real& beta, Real& mean,
 			    Real& std_dev)
 {
-#ifdef HAVE_BOOST
   // See Haldar and Mahadevan, p. 91-92
+#ifdef HAVE_BOOST
   Real gam = bmth::tgamma(1.-1./alpha);
-  mean1    = beta1*gam;
-  std_dev  = beta1*sqrt(bmth::tgamma(1.-2./alpha)-gam*gam);
+  mean    = beta*gam;
+  std_dev = beta*sqrt(bmth::tgamma(1.-2./alpha)-gam*gam);
 #elif HAVE_GSL
-  // See Haldar and Mahadevan, pp. 91-92
   Real gam = gsl_sf_gamma(1.-1./alpha);
-  mean1    = beta1*gam;
-  std_dev  = beta1*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
+  mean    = beta*gam;
+  std_dev = beta*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
 #else
-  std::cerr << "Error: frechet distributions only suported in executables "
-            << "configured with the GSL or Boost library." << std::endl;
+  PCerr << "Error: frechet distributions only supported in executables "
+	<< "configured with the GSL or Boost library." << std::endl;
   abort_handler(-1);
 #endif // HAVE_GSL or HAVE_BOOST
 }
 
 
 inline void ProbabilityTransformation::
-moments_from_weibull_params(const Real& alpha, const Real& beta1, Real& mean1,
+moments_from_weibull_params(const Real& alpha, const Real& beta, Real& mean,
 			    Real& std_dev)
 {
-#ifdef HAVE_BOOST
   // See Haldar and Mahadevan, p. 97
+#ifdef HAVE_BOOST
   Real gam = bmth::tgamma(1.+1./alpha),
     cf_var = sqrt(bmth::tgamma(1.+2./alpha)/gam/gam - 1.);
-  mean1    = beta1*gam;
-  std_dev  = cf_var*beta1*gam;
+  mean    = beta*gam;
+  std_dev = cf_var*beta*gam;
 #elif HAVE_GSL
   Real gam = gsl_sf_gamma(1.+1./alpha),
     cf_var = sqrt(gsl_sf_gamma(1.+2./alpha)/gam/gam - 1.);
-  mean1    = beta1*gam;
-  std_dev  = cf_var*beta1*gam;
+  mean    = beta*gam;
+  std_dev = cf_var*beta*gam;
 #else
-  std::cerr << "Error: weibull distributions only suported in executables "
-            << "configured with the GSL or Boost library." << std::endl;
+  PCerr << "Error: weibull distributions only supported in executables "
+	<< "configured with the GSL or Boost library." << std::endl;
   abort_handler(-1);
 #endif // HAVE_GSL or HAVE_BOOST
 }
