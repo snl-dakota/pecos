@@ -19,6 +19,7 @@
 #include "Teuchos_SerialSpdDenseSolver.hpp"
 
 #ifdef HAVE_BOOST
+#define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 // WJB - ToDo: investigate error in boost/math/tools/traits.hpp with SunProCC
 //#include <boost/math/distributions.hpp>
 #include <boost/math/distributions/beta.hpp>
