@@ -254,21 +254,23 @@ initialize_random_variable_correlations(const RealSymMatrix& x_corr)
 
 
 void ProbabilityTransformation::
-reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
-			   size_t num_state_vars)
+reshape_correlation_matrix(size_t num_leading_vars,
+			   size_t num_probabilistic_vars,
+			   size_t num_trailing_vars)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->reshape_correlation_matrix(num_design_vars,
-					     num_uncertain_vars,
-					     num_state_vars);
+    probTransRep->reshape_correlation_matrix(num_leading_vars,
+					     num_probabilistic_vars,
+					     num_trailing_vars);
   else {
     if (!correlationFlagX)
       return;
 
     size_t i, j, offset, num_corr_vars = corrMatrixX.numRows(),
-      num_active_vars = num_design_vars + num_uncertain_vars + num_state_vars;
+      num_active_vars = num_leading_vars + num_probabilistic_vars +
+      num_trailing_vars;
     if (num_corr_vars != num_active_vars) {
-      if (num_corr_vars != num_uncertain_vars) {
+      if (num_corr_vars != num_probabilistic_vars) {
 	PCerr << "\nError: unknown symmetric matrix dim (" << num_corr_vars
 	      << ") in ProbabilityTransformation::reshape_correlation_matrix()."
 	      << std::endl;
@@ -276,14 +278,14 @@ reshape_correlation_matrix(size_t num_design_vars, size_t num_uncertain_vars,
       }
       RealSymMatrix old_corr_matrix(corrMatrixX);
       corrMatrixX.shape(num_active_vars); // initializes to zero
-      for (i=0; i<num_design_vars; i++)
+      for (i=0; i<num_leading_vars; i++)
 	corrMatrixX(i,i) = 1.;
-      offset = num_design_vars;
-      for (i=0; i<num_uncertain_vars; i++)
-	for (j=0; j<num_uncertain_vars; j++)
+      offset = num_leading_vars;
+      for (i=0; i<num_probabilistic_vars; i++)
+	for (j=0; j<num_probabilistic_vars; j++)
 	  corrMatrixX(i+offset,j+offset) = old_corr_matrix(i,j);
-      offset += num_uncertain_vars;
-      for (i=0; i<num_state_vars; i++)
+      offset += num_probabilistic_vars;
+      for (i=0; i<num_trailing_vars; i++)
 	corrMatrixX(i+offset,i+offset) = 1.;
     }
   }

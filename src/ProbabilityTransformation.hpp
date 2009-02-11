@@ -169,9 +169,9 @@ public:
   void initialize_random_variable_correlations(const RealSymMatrix& x_corr);
 
   /// reshape corrMatrixX for an all_variables specification
-  void reshape_correlation_matrix(size_t num_design_vars,
-				  size_t num_uncertain_vars,
-				  size_t num_state_vars);
+  void reshape_correlation_matrix(size_t num_leading_vars,
+				  size_t num_probabilistic_vars,
+				  size_t num_trailing_vars);
 
   /// return ranVarTypesX
   const ShortArray& x_types() const;
