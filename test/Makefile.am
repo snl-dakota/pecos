@@ -31,10 +31,10 @@ endif
 
 
 # Tests to run when 'gmake check' is run
-TESTS = pecos_ifft_g pecos_ifft_sd boost_test_dist
+TESTS = pecos_ifft_g pecos_ifft_sd boost_test_dist boost_test_rng
 
 # Programs to link when 'gmake' is run
-noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd boost_test_dist
+noinst_PROGRAMS = pecos_ifft_g pecos_ifft_sd boost_test_dist boost_test_rng
 
 
 # Complete these for each specific test.
@@ -53,6 +53,12 @@ pecos_ifft_sd_LDADD = -L${top_builddir} -lpecos \
 boost_test_dist_SOURCES = boost_test_dist.cpp
 boost_test_dist_DEPENDENCIES = ${top_builddir}/libpecos.la
 boost_test_dist_LDADD = -L${top_builddir} -lpecos \
+    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
+
+# Complete these for each specific test.
+boost_test_rng_SOURCES = boost_test_rng.cpp
+boost_test_rng_DEPENDENCIES = ${top_builddir}/libpecos.la
+boost_test_rng_LDADD = -L${top_builddir} -lpecos \
     $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
 
 # Define this variable if you want to install test header files.
