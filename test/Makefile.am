@@ -5,7 +5,7 @@ TPL_LDFLAGS  = @TEUCHOS_LDFLAGS@
 TPL_LIBS     = -lteuchos
 
 if WITH_BOOST
-AM_CPPFLAGS += @BOOST_CPPFLAGS@
+AM_CPPFLAGS += @BOOST_CPPFLAGS@ -I$(top_srcdir)/packages
 endif
 
 if WITH_GSL
