@@ -19,6 +19,7 @@
 #include "Teuchos_SerialSpdDenseSolver.hpp"
 
 #ifdef HAVE_BOOST
+#include "boost/multi_array.hpp"
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 // WJB - ToDo: investigate error in boost/math/tools/traits.hpp with SunProCC
 //#include <boost/math/distributions.hpp>
@@ -134,6 +135,12 @@ typedef std::map<int, short>        IntShortMap;
 typedef std::map<int, int>          IntIntMap;
 typedef std::map<int, RealVector>   IntRealVectorMap;
 
+#ifdef HAVE_BOOST
+typedef boost::multi_array_types::index_range     idx_range;
+typedef boost::multi_array<unsigned int, 1>       UIntMultiArray;
+typedef UIntMultiArray::array_view<1>::type       UIntMultiArrayView;
+typedef UIntMultiArray::const_array_view<1>::type UIntMultiArrayConstView;
+#endif // HAVE_BOOST
 
 // ---------
 // Iterators
