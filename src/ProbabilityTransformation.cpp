@@ -335,8 +335,8 @@ void ProbabilityTransformation::trans_correlations()
 
 void ProbabilityTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealVector& x_vars,    UIntMultiArrayConstView x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealVector& x_vars,    const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, x_vars, x_dvv,
@@ -352,8 +352,8 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
 
 void ProbabilityTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
-		  const RealMatrix& jacobian_xu, UIntMultiArrayConstView x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealMatrix& jacobian_xu, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_grad_X_to_U(fn_grad_x, fn_grad_u, jacobian_xu, x_dvv,
@@ -369,9 +369,8 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
 
 void ProbabilityTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
-		  const RealVector& x_vars, UIntMultiArrayConstView x_dvv,
-		  UIntMultiArrayConstView cv_ids,
-		  UIntMultiArrayConstView acv_ids,
+		  const RealVector& x_vars, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids, const UIntArray& acv_ids,
 		  const SizetArray& acv_map1_indices,
 		  const ShortArray& acv_map2_targets)
 {
@@ -390,9 +389,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 
 void ProbabilityTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
-		  const RealMatrix& jacobian_xs, UIntMultiArrayConstView x_dvv,
-		  UIntMultiArrayConstView cv_ids,
-		  UIntMultiArrayConstView acv_ids,
+		  const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids, const UIntArray& acv_ids,
 		  const SizetArray& acv_map1_indices,
 		  const ShortArray& acv_map2_targets)
 {
@@ -411,8 +409,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 
 void ProbabilityTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealVector& x_vars,    UIntMultiArrayConstView x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealVector& x_vars,    const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, x_vars, x_dvv,
@@ -428,8 +426,8 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
 
 void ProbabilityTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
-		  const RealMatrix& jacobian_ux, UIntMultiArrayConstView x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealMatrix& jacobian_ux, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_grad_U_to_X(fn_grad_u, fn_grad_x, jacobian_ux, x_dvv,
@@ -445,8 +443,8 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
 
 void ProbabilityTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
-		  const RealVector& x_vars, const RealVector& fn_grad_x,
-		  UIntMultiArrayConstView x_dvv, UIntMultiArrayConstView cv_ids)
+		  const RealVector& x_vars,	  const RealVector& fn_grad_x,
+		  const UIntArray&  x_dvv,	  const UIntArray&  cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, x_vars, fn_grad_x,
@@ -464,8 +462,8 @@ void ProbabilityTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealMatrix& jacobian_xu,
 		  const RealSymMatrixArray& hessian_xu,
-		  const RealVector& fn_grad_x, UIntMultiArrayConstView x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealVector& fn_grad_x, const UIntArray& x_dvv,
+		  const UIntArray&  cv_ids)
 {
   if (probTransRep) // envelope fwd to letter
     probTransRep->trans_hess_X_to_U(fn_hess_x, fn_hess_u, jacobian_xu,
@@ -509,7 +507,7 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
 
 void ProbabilityTransformation::
 jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
-	       UIntMultiArrayConstView cv_ids, UIntMultiArrayConstView acv_ids,
+	       const UIntArray&  cv_ids, const UIntArray& acv_ids,
 	       const SizetArray& acv_map1_indices,
 	       const ShortArray& acv_map2_targets)
 {
@@ -550,8 +548,7 @@ void ProbabilityTransformation::
 numerical_design_jacobian(const RealVector& x_vars,
 			  bool xs, RealMatrix& num_jacobian_xs,
 			  bool zs, RealMatrix& num_jacobian_zs,
-			  UIntMultiArrayConstView cv_ids,
-			  UIntMultiArrayConstView acv_ids,
+			  const UIntArray& cv_ids, const UIntArray& acv_ids,
 			  const SizetArray& acv_map1_indices,
 			  const ShortArray& acv_map2_targets)
 {
