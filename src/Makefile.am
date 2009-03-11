@@ -34,6 +34,7 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  SamplingInverseTransformation.cpp		\
 			  ProbabilityTransformation.cpp			\
 			  NatafTransformation.cpp			\
+                          Random.cpp                                    \
 			  LHSDriver.cpp $(LHS_S)
 #			  BasisFunction.cpp
 
