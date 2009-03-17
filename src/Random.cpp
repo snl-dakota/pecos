@@ -14,7 +14,7 @@
 // Are we heading toward the need for a "lhs_config.h"??
 #include "pecos_config.h"
 
-#ifdef HAVE_BOOST
+#if !defined(__SUNPRO_CC)
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
@@ -71,5 +71,5 @@ double rnum2(void)
  return BoostRNG_Monostate::random_num1();
 }
 
-#endif // HAVE_BOOST
+#endif // not __SUNPRO_CC
  
