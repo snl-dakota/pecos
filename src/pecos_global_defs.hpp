@@ -80,18 +80,6 @@ void abort_handler(int code);
 inline void abort_handler(int code)
 { std::exit(code); } // for now, prior to use of MPI
 
-
-template <typename PecosContainerType>
-inline typename PecosContainerType::difference_type
-index(const PecosContainerType& v,
-      const typename PecosContainerType::value_type& val)
-{
-  typename PecosContainerType::const_iterator iter
-    = std::find(v.begin(), v.end(), val);
-  return iter != v.end() ? iter - v.begin() : _NPOS;
-}
-
-
 } // namespace Pecos
 
 #endif // PECOS_GLOBAL_DEFS_H
