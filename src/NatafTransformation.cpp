@@ -1111,7 +1111,7 @@ void NatafTransformation::trans_correlations()
     x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealVector& x_vars,    UIntMultiArrayConstView x_dvv,
+		  const RealVector& x_vars, const UIntArray& x_dvv,
 		  UIntMultiArrayConstView cv_ids)
 {
   RealMatrix jacobian_xu;
@@ -1127,8 +1127,8 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     as this matrix is independent of the response function index and can be
     pulled outside response function loops. */
 void NatafTransformation::
-trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
-		  const RealMatrix& jacobian_xu, UIntMultiArrayConstView x_dvv,
+trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
+		  const RealMatrix& jacobian_xu, const UIntArray& x_dvv,
 		  UIntMultiArrayConstView cv_ids)
 {
   // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
@@ -1150,7 +1150,7 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
     SizetArray dvv_index_array(x_len);
     // extract relevant DVV components from fn_grad_x
     for (i=0; i<x_len; i++) {
-      dvv_index_array[i] = dvv_index = index(x_dvv, cv_ids[i]);
+      dvv_index_array[i] = dvv_index = find_index(x_dvv, cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_x_trans(i) = fn_grad_x(dvv_index);
     }
@@ -1179,7 +1179,7 @@ trans_grad_X_to_U(const RealVector& fn_grad_x,   RealVector& fn_grad_u,
     the Jacobian du/dx.  x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealVector& x_vars,    UIntMultiArrayConstView x_dvv,
+		  const RealVector& x_vars, const UIntArray& x_dvv,
 		  UIntMultiArrayConstView cv_ids)
 {
   RealMatrix jacobian_ux;
@@ -1194,8 +1194,8 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     calculation of jacobian_ux, as this matrix is independent of the response
     function index and can be pulled outside response function loops. */
 void NatafTransformation::
-trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
-		  const RealMatrix& jacobian_ux, UIntMultiArrayConstView x_dvv,
+trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
+		  const RealMatrix& jacobian_ux, const UIntArray& x_dvv,
 		  UIntMultiArrayConstView cv_ids)
 {
   // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
@@ -1217,7 +1217,7 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
     SizetArray dvv_index_array(u_len);
     // extract relevant DVV components from fn_grad_u
     for (int i=0; i<u_len; i++) {
-      dvv_index_array[i] = dvv_index = index(x_dvv, cv_ids[i]);
+      dvv_index_array[i] = dvv_index = find_index(x_dvv, cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_u_trans(i) = fn_grad_u(dvv_index);
     }
@@ -1247,9 +1247,8 @@ trans_grad_U_to_X(const RealVector& fn_grad_u,   RealVector& fn_grad_x,
     form the design gradient dg/ds.  x_vars is the vector of random
     variables in x-space. */
 void NatafTransformation::
-trans_grad_X_to_S(const RealVector& fn_grad_x,
-		  RealVector& fn_grad_s,
-		  const RealVector& x_vars, UIntMultiArrayConstView x_dvv,
+trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
+		  const RealVector& x_vars, const UIntArray& x_dvv,
 		  UIntMultiArrayConstView cv_ids,
 		  UIntMultiArrayConstView acv_ids,
 		  const SizetArray& acv_map1_indices,
@@ -1271,8 +1270,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,
     independent of the response function index and can be pulled
     outside response function loops. */
 void NatafTransformation::
-trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
-		  const RealMatrix& jacobian_xs, UIntMultiArrayConstView x_dvv,
+trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
+		  const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
 		  UIntMultiArrayConstView cv_ids,
 		  UIntMultiArrayConstView acv_ids,
 		  const SizetArray& acv_map1_indices,
@@ -1306,7 +1305,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
     // extract relevant DVV components from fn_grad_x
     size_t i, dvv_index;
     for (i=0; i<x_len; i++) {
-      dvv_index = index(x_dvv, cv_ids[i]);
+      dvv_index = find_index(x_dvv, cv_ids[i]);
       if (dvv_index != _NPOS)
 	fn_grad_x_std(i) = fn_grad_x(dvv_index);
     }
@@ -1341,7 +1340,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
     size_t cntr = 0;
     for (i=0; i<s_len; i++) {
       int acv_id = acv_ids[acv_map1_indices[i]];
-      size_t dvv_index = index(x_dvv, acv_id);
+      size_t dvv_index = find_index(x_dvv, acv_id);
       if (dvv_index != _NPOS)
 	fn_grad_s(cntr++) = (acv_map2_targets[i] == NO_TARGET) ?
 	  fn_grad_x(dvv_index) : // no distribution parameter: if the missing
@@ -1370,7 +1369,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x,   RealVector& fn_grad_s,
 void NatafTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealVector& x_vars, const RealVector& fn_grad_x,
-		  UIntMultiArrayConstView x_dvv, UIntMultiArrayConstView cv_ids)
+		  const UIntArray& x_dvv, UIntMultiArrayConstView cv_ids)
 {
   RealMatrix jacobian_xu;
   jacobian_dX_dU(x_vars, jacobian_xu);
@@ -1400,7 +1399,7 @@ void NatafTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealMatrix& jacobian_xu,
 		  const RealSymMatrixArray& hessian_xu,
-		  const RealVector& fn_grad_x, UIntMultiArrayConstView x_dvv,
+		  const RealVector& fn_grad_x, const UIntArray& x_dvv,
 		  UIntMultiArrayConstView cv_ids)
 {
   // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
@@ -1434,7 +1433,7 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
     size_t i, j, dvv_index_i, dvv_index_j, num_deriv_vars = x_dvv.size();
     dvv_index_array.resize(x_len);
     for (i=0; i<x_len; i++)
-      dvv_index_array[i] = dvv_index_i = index(x_dvv, cv_ids[i]);
+      dvv_index_array[i] = dvv_index_i = find_index(x_dvv, cv_ids[i]);
     if (fn_hess_u.numRows() != num_deriv_vars)
       fn_hess_u.shape(num_deriv_vars);
     // extract relevant DVV components from fn_hess_x
@@ -2112,7 +2111,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   }
 
   for (i=0; i<num_var_map_1c; i++) { // loop over S
-    size_t cv_index = index(cv_ids, acv_ids[acv_map1_indices[i]]);
+    size_t cv_index = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
     // If x_dvv were passed, it would be possible to distinguish different
     // fn_grad_x components, allowing passthrough for computing fn_grad_s for
     // augmented design variables.  For now, this has to be handled spearately

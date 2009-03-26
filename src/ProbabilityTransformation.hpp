@@ -71,20 +71,20 @@ public:
   virtual void trans_grad_X_to_U(const RealVector& fn_grad_x,
 				 RealVector& fn_grad_u,
 				 const RealVector& x_vars,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids);
   /// Transformation routine for gradient vector from x-space to u-space
   virtual void trans_grad_X_to_U(const RealVector& fn_grad_x,
 				 RealVector& fn_grad_u,
 				 const RealMatrix& jacobian_xu,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids);
 
   /// Transformation routine from x-space gradient vector to design space
   virtual void trans_grad_X_to_S(const RealVector& fn_grad_x,
 				 RealVector& fn_grad_s,
 				 const RealVector& x_vars,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids,
 				 UIntMultiArrayConstView acv_ids,
 				 const SizetArray& acv_map1_indices,
@@ -93,7 +93,7 @@ public:
   virtual void trans_grad_X_to_S(const RealVector& fn_grad_x,
 				 RealVector& fn_grad_s,
 				 const RealMatrix& jacobian_xs,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids,
 				 UIntMultiArrayConstView acv_ids,
 				 const SizetArray& acv_map1_indices,
@@ -103,13 +103,13 @@ public:
   virtual void trans_grad_U_to_X(const RealVector& fn_grad_u,
 				 RealVector& fn_grad_x,
 				 const RealVector& x_vars,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids);
   /// Transformation routine for gradient vector from u-space to x-space
   virtual void trans_grad_U_to_X(const RealVector& fn_grad_u,
 				 RealVector& fn_grad_x,
 				 const RealMatrix& jacobian_ux,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids);
 
   /// Transformation routine for Hessian matrix from x-space to u-space
@@ -117,7 +117,7 @@ public:
 				 RealSymMatrix& fn_hess_u,
 				 const RealVector& x_vars,
 				 const RealVector& fn_grad_x,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids);
   /// Transformation routine for Hessian matrix from x-space to u-space
   virtual void trans_hess_X_to_U(const RealSymMatrix& fn_hess_x,
@@ -125,7 +125,7 @@ public:
 				 const RealMatrix& jacobian_xu,
 				 const RealSymMatrixArray& hessian_xu,
 				 const RealVector& fn_grad_x,
-				 UIntMultiArrayConstView x_dvv,
+				 const UIntArray& x_dvv,
 				 UIntMultiArrayConstView cv_ids);
 
   /// Jacobian of x(u) mapping obtained from dX/dZ dZ/dU
@@ -234,6 +234,9 @@ public:
   /// compute mean and std deviation from weibull parameter specification
   void moments_from_weibull_params(const Real& alpha, const Real& beta1,
 				   Real& mean1, Real& std_dev);
+
+  /// function to check modelRep (does this envelope contain a letter)
+  bool is_null() const;
 
 protected:
 
@@ -530,6 +533,10 @@ moments_from_weibull_params(const Real& alpha, const Real& beta, Real& mean,
   abort_handler(-1);
 #endif // HAVE_GSL or HAVE_BOOST
 }
+
+
+inline bool ProbabilityTransformation::is_null() const
+{ return (probTransRep) ? false : true; }
 
 } // namespace Pecos
 

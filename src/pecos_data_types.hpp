@@ -152,6 +152,34 @@ typedef IntIntMap::iterator         IntIntMIter;
 typedef IntIntMap::const_iterator   IntIntMCIter;
 
 
+/// equality operator for UIntArray and UIntMultiArrayConstView
+inline bool operator==(const UIntArray& ua, UIntMultiArrayConstView umav)
+{
+  // Check for equality in array lengths
+  size_t len = ua.size();
+  if ( umav.size() != len )
+    return false;
+
+  // Check each unsigned integer
+  size_t i;
+  for (i=0; i<len; i++)
+    if ( umav[i] != ua[i] )
+      return false;
+
+  return true;
+}
+
+
+template <typename PecosContainerType>
+inline typename PecosContainerType::difference_type
+find_index(const PecosContainerType& v,
+	   const typename PecosContainerType::value_type& val)
+{
+  typename PecosContainerType::const_iterator iter
+    = std::find(v.begin(), v.end(), val);
+  return iter != v.end() ? iter - v.begin() : _NPOS;
+}
+
 } // namespace Pecos
 
 #endif // PECOS_DATA_TYPES_H
