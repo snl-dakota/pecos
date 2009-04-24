@@ -31,7 +31,8 @@ endif
 lib_LTLIBRARIES = libpecos.la
 
 ## Pecos headers that need to be distributed
-pkginclude_HEADERS = src/pecos_data_types.hpp			\
+pkginclude_HEADERS = pecos_config.h				\
+		     src/pecos_data_types.hpp			\
 		     src/pecos_global_defs.hpp			\
 		     src/DataTransformation.hpp			\
 		     src/InverseTransformation.hpp		\
