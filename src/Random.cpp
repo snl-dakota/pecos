@@ -9,11 +9,12 @@
 //- Description: Wrapper for various implementations of Random Number Generators 
 //- Owner:       Laura Swiler and Bill Bohnhoff 
 //- Checked by:
-//- Version: $Id: Random.C 5721 2009-03-03 23:51:34Z wjbohnh $
+//- Version: $Id: Random.cpp 5721 2009-03-03 23:51:34Z wjbohnh $
  
 // Are we heading toward the need for a "lhs_config.h"??
 #include "pecos_config.h"
 
+/* WJB: not quite ready for primetime (comment-out entire module)
 #if !defined(__SUNPRO_CC)
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
@@ -72,4 +73,5 @@ double rnum2(void)
 }
 
 #endif // not __SUNPRO_CC
+// WJB: end "not ready for primetime" comment block */
  
