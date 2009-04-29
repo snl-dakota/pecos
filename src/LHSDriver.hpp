@@ -51,8 +51,12 @@ public:
 
   /// set randomSeed
   void seed(int seed);
+  // set randomSeed and generator
+  void seed(int seed, const String& unifGen);
   /// return randomSeed
   int seed() const;
+  /// return name of uniform generator
+  const char *unifGen();
 
   /// reseed using a deterministic sequence
   void advance_seed_sequence();
@@ -164,8 +168,8 @@ inline LHSDriver::LHSDriver(const String& sample_type, short sample_ranks_mode,
 }
 
 
-inline void LHSDriver::seed(int seed)
-{ randomSeed = seed; }
+//inline void LHSDriver::seed(int seed)	// moved to Random.cpp
+//{ randomSeed = seed; }
 
 
 inline int LHSDriver::seed() const
