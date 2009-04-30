@@ -46,8 +46,17 @@ public:
 unsigned int BoostRNG_Monostate::rngSeed(41u); // WJB: is 41 OK for starters??
 boost::mt19937 BoostRNG_Monostate::rnumGenerator( BoostRNG_Monostate::seed() );
 boost::uniform_real<> BoostRNG_Monostate::uniDist(0, 1);
-double (*BoostRNG_Monostate::random_num)()  = BoostRNG_Monostate::random_num1;
-double (*BoostRNG_Monostate::random_num2)() = BoostRNG_Monostate::random_num1;
+
+#define rnum1 FC_FUNC(rnumlhs1,RNUMLHS1)
+#define rnum2 FC_FUNC(rnumlhs2,RNUMLHS2)
+#define rnumlhs10 FC_FUNC(rnumlhs10,RNUMLHS10)
+#define rnumlhs20 FC_FUNC(rnumlhs20,RNUMLHS20)
+#define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
+extern "C" double rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
+extern "C" void lhs_setseed(int*);
+
+double (*BoostRNG_Monostate::random_num)()  = rnumlhs10; // BoostRNG_Monostate::random_num1;
+double (*BoostRNG_Monostate::random_num2)() = rnumlhs20; // BoostRNG_Monostate::random_num1;
 
 boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
   BoostRNG_Monostate::uniMT(BoostRNG_Monostate::rnumGenerator,
@@ -57,15 +66,6 @@ extern "C" void set_boost_rng_seed(unsigned int rng_seed)
 {
   BoostRNG_Monostate::seed(rng_seed);
 }
-
-
-#define rnum1 FC_FUNC(rnumlhs1,RNUMLHS1)
-#define rnum2 FC_FUNC(rnumlhs2,RNUMLHS2)
-#define rnumlhs10 FC_FUNC(rnumlhs10,RNUMLHS10)
-#define rnumlhs20 FC_FUNC(rnumlhs20,RNUMLHS20)
-#define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
-extern "C" double rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
-extern "C" void lhs_setseed(int*);
  
 double rnum1(void)
 { //std::cout << "running Boost MT" << "\n";
@@ -91,7 +91,11 @@ void Pecos::LHSDriver::seed(int seed)
 				BoostRNG_Monostate::random_num  = rnumlhs10;
 				BoostRNG_Monostate::random_num2 = rnumlhs20;
 				}
-			else if (strcmp(s, "mt19937") && *s) {
+			else if (!strcmp(s, "mt19937")) {
+				BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
+				BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
+				}
+			else if (*s) {
 				fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
 					" to be \"rnumlhs1\" or \"mt19937\","
 					" not \"%s\"\n", s);
