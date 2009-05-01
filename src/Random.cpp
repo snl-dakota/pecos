@@ -17,8 +17,11 @@
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
+#include <stdio.h>
+#include <string.h>
 //#include <boost/generator_iterator.hpp> // WJB: probably not needed
- 
+
+typedef double (*Rfunc)();
 
 class BoostRNG_Monostate
 {
@@ -39,8 +42,8 @@ public:
  static double random_num1()
  { return uniMT(); };
 
- static double (*random_num)();
- static double (*random_num2)();
+ static Rfunc random_num;
+ static Rfunc random_num2;
 };
 
 unsigned int BoostRNG_Monostate::rngSeed(41u); // WJB: is 41 OK for starters??
@@ -55,8 +58,8 @@ boost::uniform_real<> BoostRNG_Monostate::uniDist(0, 1);
 extern "C" double rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
 extern "C" void lhs_setseed(int*);
 
-double (*BoostRNG_Monostate::random_num)()  = rnumlhs10; // BoostRNG_Monostate::random_num1;
-double (*BoostRNG_Monostate::random_num2)() = rnumlhs20; // BoostRNG_Monostate::random_num1;
+double (*BoostRNG_Monostate::random_num)()  = (Rfunc)rnumlhs10; // BoostRNG_Monostate::random_num1;
+double (*BoostRNG_Monostate::random_num2)() = (Rfunc)rnumlhs20; // BoostRNG_Monostate::random_num1;
 
 boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
   BoostRNG_Monostate::uniMT(BoostRNG_Monostate::rnumGenerator,
@@ -88,8 +91,8 @@ void Pecos::LHSDriver::seed(int seed)
 		first = 0;
 		if (s) {
 			if (!strcmp(s,"rnumlhs1")) {
-				BoostRNG_Monostate::random_num  = rnumlhs10;
-				BoostRNG_Monostate::random_num2 = rnumlhs20;
+				BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
+				BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
 				}
 			else if (!strcmp(s, "mt19937")) {
 				BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
@@ -118,8 +121,8 @@ void Pecos::LHSDriver::seed(int seed, const String &unifGen)
 		BoostRNG_Monostate::seed(seed);
 		}
 	else {
-		BoostRNG_Monostate::random_num  = rnumlhs10;
-		BoostRNG_Monostate::random_num2 = rnumlhs20;
+		BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
+		BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
 		lhs_setseed(&seed);
 		}
 	}
@@ -128,7 +131,7 @@ const char* Pecos::LHSDriver::unifGen()
 {
 	if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
 		return "mt19937";
-	if (BoostRNG_Monostate::random_num == rnumlhs10)
+	if (BoostRNG_Monostate::random_num == (Rfunc)rnumlhs10)
 		return "mndp";
 	return "unknown (bug?)";
 	}
