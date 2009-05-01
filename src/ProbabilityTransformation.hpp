@@ -195,46 +195,6 @@ public:
   /// return corrCholeskyFactorZ
   const RealMatrix& z_correlation_factor() const;
 
-  /// Standard normal density function
-  Real phi(const Real& beta);
-  /// Standard normal cumulative distribution function
-  Real Phi(const Real& beta);
-  /// Inverse of standard normal cumulative distribution function
-  Real Phi_inverse(const Real& p);
-
-  /// compute std deviation from lognormal error factor specification
-  void moments_from_lognormal_params(const Real& mean, const Real& err_fact,
-				     Real& std_dev);
-  /// compute mean and std deviation from uniform bounds specification
-  void moments_from_uniform_params(const Real& lwr, const Real& upr, Real& mean,
-				   Real& std_dev);
-  /// compute mean and std deviation from loguniform bounds specification
-  void moments_from_loguniform_params(const Real& lwr, const Real& upr,
-				      Real& mean, Real& std_dev);
-  /// compute mean and std deviation from triangular mode/bounds specification
-  void moments_from_triangular_params(const Real& lwr, const Real& upr,
-				      const Real& mode, Real& mean,
-				      Real& std_dev);
-  /// compute mean and std deviation from exponential beta specification
-  void moments_from_exponential_params(const Real& beta, Real& mean,
-				       Real& std_dev);
-  /// compute mean and std deviation from beta parameter specification
-  void moments_from_beta_params(const Real& lwr, const Real& upr,
-				const Real& alpha, const Real& beta,
-				Real& mean, Real& std_dev);
-  /// compute mean and std deviation from gamma parameter specification
-  void moments_from_gamma_params(const Real& alpha, const Real& beta,
-				 Real& mean, Real& std_dev);
-  /// compute mean and std deviation from gumbel parameter specification
-  void moments_from_gumbel_params(const Real& alpha, const Real& beta,
-				  Real& mean, Real& std_dev);
-  /// compute mean and std deviation from frechet parameter specification
-  void moments_from_frechet_params(const Real& alpha, const Real& beta1,
-				   Real& mean1, Real& std_dev);
-  /// compute mean and std deviation from weibull parameter specification
-  void moments_from_weibull_params(const Real& alpha, const Real& beta1,
-				   Real& mean1, Real& std_dev);
-
   /// function to check modelRep (does this envelope contain a letter)
   bool is_null() const;
 
@@ -270,11 +230,6 @@ protected:
   /// routine for verification of design Jacobian terms
   void verify_design_jacobian(const RealVector& u0);
 #endif // DERIV_DEBUG
-
-#if !defined(HAVE_BOOST) && defined(HAVE_GSL)
-  /// Inverse of standard beta CDF by backtracking Newton (not supported by GSL)
-  Real cdf_beta_Pinv(const Real& normcdf, const Real& alpha, const Real& beta);
-#endif // !defined(HAVE_BOOST) && defined(HAVE_GSL)
 
   //
   //- Heading: Data members
@@ -323,11 +278,6 @@ private:
   /// Used only by the standard envelope constructor to initialize
   /// probTransRep to the appropriate derived type.
   ProbabilityTransformation* get_prob_trans(const String& prob_trans_type);
-
-#if !defined(HAVE_BOOST) && !defined(HAVE_GSL)
-  /// Inverse of error function used in Phi_inverse()
-  Real erf_inverse(const Real& p);
-#endif
 
   //
   //- Heading: Data members
@@ -384,154 +334,6 @@ inline const RealMatrix& ProbabilityTransformation::z_correlation_factor() const
 {
   return (probTransRep) ? probTransRep->corrCholeskyFactorZ :
                           corrCholeskyFactorZ;
-}
-
-
-inline Real ProbabilityTransformation::phi(const Real& beta)
-{
-#ifdef HAVE_BOOST
-  normal_dist norm(0., 1.);
-  return bmth::pdf(norm, beta);
-#elif HAVE_GSL
-  return gsl_ran_ugaussian_pdf(beta);
-#else
-  return exp(-beta*beta/2.)/sqrt(2.*Pi);
-#endif // HAVE_GSL or HAVE_BOOST
-}
-
-
-/** returns a probability < 0.5 for negative beta and a probability > 0.5
-    for positive beta. */
-inline Real ProbabilityTransformation::Phi(const Real& beta)
-{
-#ifdef HAVE_BOOST
-  normal_dist norm(0., 1.);
-  return bmth::cdf(norm, beta);
-#elif HAVE_GSL
-  return gsl_cdf_ugaussian_P(beta);
-#else
-  return .5 + .5*erf(beta/sqrt(2.));
-#endif // HAVE_GSL or HAVE_BOOST
-}
-
-
-/** returns a negative beta for probability < 0.5 and a positive beta for
-    probability > 0.5. */
-inline Real ProbabilityTransformation::Phi_inverse(const Real& p)
-{
-#ifdef HAVE_BOOST
-  normal_dist norm(0., 1.);
-  return bmth::quantile(norm, p); 
-#elif HAVE_GSL
-  return gsl_cdf_ugaussian_Pinv(p);
-#else
-  return sqrt(2.)*erf_inverse(2.*p - 1.);
-#endif // HAVE_GSL or HAVE_BOOST
-}
-
-
-inline void ProbabilityTransformation::
-moments_from_lognormal_params(const Real& mean, const Real& err_fact,
-			      Real& std_dev)
-{
-  Real zeta = log(err_fact)/1.645;
-  std_dev   = mean*sqrt(exp(zeta*zeta)-1.);
-}
-
-
-inline void ProbabilityTransformation::
-moments_from_uniform_params(const Real& lwr, const Real& upr, Real& mean,
-			    Real& std_dev)
-{ mean = (lwr + upr)/2.; std_dev = (upr - lwr)/sqrt(12.); }
-
-
-inline void ProbabilityTransformation::
-moments_from_loguniform_params(const Real& lwr, const Real& upr, Real& mean,
-			       Real& std_dev)
-{
-  Real range = upr - lwr, log_range = log(upr) - log(lwr);
-  mean       = range/log_range;
-  std_dev    = sqrt(range*(log_range*(upr+lwr)-2.*range)/2.)/log_range;
-}
-
-
-inline void ProbabilityTransformation::
-moments_from_triangular_params(const Real& lwr, const Real& upr,
-			       const Real& mode, Real& mean, Real& std_dev)
-{
-  mean    = (lwr + mode + upr)/3.;
-  std_dev = sqrt((lwr*(lwr - mode) + mode*(mode - upr) + upr*(upr - lwr))/18.);
-}
-
-
-inline void ProbabilityTransformation::
-moments_from_exponential_params(const Real& beta, Real& mean, Real& std_dev)
-{ mean = beta; std_dev = beta; }
-
-
-inline void ProbabilityTransformation::
-moments_from_beta_params(const Real& lwr, const Real& upr, const Real& alpha,
-			 const Real& beta, Real& mean, Real& std_dev)
-{
-  Real range = upr - lwr;
-  mean       = lwr + alpha/(alpha+beta)*range;
-  std_dev    = sqrt(alpha*beta/(alpha+beta+1.))/(alpha+beta)*range;
-}
-
-
-inline void ProbabilityTransformation::
-moments_from_gamma_params(const Real& alpha, const Real& beta, Real& mean,
-			  Real& std_dev)
-{ mean = alpha*beta; std_dev = sqrt(alpha)*beta; }
-
-
-inline void ProbabilityTransformation::
-moments_from_gumbel_params(const Real& alpha, const Real& beta, Real& mean,
-			   Real& std_dev)
-{ mean = beta + 0.5772/alpha; std_dev = Pi/sqrt(6.)/alpha; }
-
-
-inline void ProbabilityTransformation::
-moments_from_frechet_params(const Real& alpha, const Real& beta, Real& mean,
-			    Real& std_dev)
-{
-  // See Haldar and Mahadevan, p. 91-92
-#ifdef HAVE_BOOST
-  Real gam = bmth::tgamma(1.-1./alpha);
-  mean    = beta*gam;
-  std_dev = beta*sqrt(bmth::tgamma(1.-2./alpha)-gam*gam);
-#elif HAVE_GSL
-  Real gam = gsl_sf_gamma(1.-1./alpha);
-  mean    = beta*gam;
-  std_dev = beta*sqrt(gsl_sf_gamma(1.-2./alpha)-gam*gam);
-#else
-  PCerr << "Error: frechet distributions only supported in executables "
-	<< "configured with the GSL or Boost library." << std::endl;
-  abort_handler(-1);
-#endif // HAVE_GSL or HAVE_BOOST
-}
-
-
-inline void ProbabilityTransformation::
-moments_from_weibull_params(const Real& alpha, const Real& beta, Real& mean,
-			    Real& std_dev)
-{
-  // See Haldar and Mahadevan, p. 97
-#ifdef HAVE_BOOST
-  Real gam = bmth::tgamma(1.+1./alpha),
-    cf_var = sqrt(bmth::tgamma(1.+2./alpha)/gam/gam - 1.);
-  mean    = beta*gam;
-  std_dev = cf_var*beta*gam;
-#elif HAVE_GSL
-  Real gam = gsl_sf_gamma(1.+1./alpha),
-    cf_var = sqrt(gsl_sf_gamma(1.+2./alpha)/gam/gam - 1.);
-  mean    = beta*gam;
-  std_dev = cf_var*beta*gam;
-#else
-  PCerr << "Error: weibull distributions only supported in executables "
-	<< "configured with the GSL or Boost library." << std::endl;
-  abort_handler(-1);
-#endif // HAVE_GSL or HAVE_BOOST
 }
 
 

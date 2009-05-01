@@ -12,6 +12,7 @@
 #ifdef HAVE_CONFIG_H
 #include "pecos_config.h"
 #endif /* HAVE_CONFIG_H */
+
 #include "pecos_global_defs.hpp"
 
 #include "Teuchos_SerialDenseVector.hpp"
@@ -20,20 +21,6 @@
 
 #ifdef HAVE_BOOST
 #include "boost/multi_array.hpp"
-#define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
-// WJB - ToDo: investigate error in boost/math/tools/traits.hpp with SunProCC
-//#include <boost/math/distributions.hpp>
-#include <boost/math/distributions/beta.hpp>
-#include <boost/math/distributions/normal.hpp>
-#include <boost/math/distributions/gamma.hpp>
-#include <boost/math/distributions/weibull.hpp>
-#include <boost/math/distributions/students_t.hpp>
-#include <boost/math/distributions/chi_squared.hpp>
-#include <boost/math/distributions/fisher_f.hpp>
-#include <boost/math/distributions/exponential.hpp>
-#include <boost/math/policies/policy.hpp>
-namespace bmth = boost::math;
-namespace bmp  = bmth::policies;
 #endif
 
 #include <complex>
@@ -55,43 +42,6 @@ typedef double Real;
 // --------
 typedef std::string String;
 
-// -----------------------------------
-// Non-default boost math/policy types
-// -----------------------------------
-#ifdef HAVE_BOOST
-typedef bmth::
-  normal_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  normal_dist;
-typedef bmth::
-  gamma_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  gamma_dist;
-typedef bmth::
-  exponential_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  exponential_dist;
-typedef bmth::
-  beta_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  beta_dist;
-typedef bmth::
-  weibull_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  weibull_dist;
-typedef bmth::
-  chi_squared_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  chi_squared_dist;
-typedef bmth::
-  students_t_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  students_t_dist;
-typedef bmth::
-  fisher_f_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  fisher_f_dist;
-#endif
 
 // --------------------------------
 // Numerical arrays (serial dense):

@@ -6,6 +6,7 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
+#include "pecos_stat_util.hpp"
 #include "NatafTransformation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #ifdef HAVE_GSL
@@ -228,18 +229,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       if (ranVarTypesU[i] == BETA) // scale from [-1,1] to [L,U]
 	x_vars(i) = lwr + (upr - lwr)*(z_vars(i)+1.)/2.;
       else if (ranVarTypesU[i] == NORMAL) { // transform from std normal
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	Real normcdf = Phi(z_vars(i));
-#ifdef HAVE_BOOST
-	beta_dist beta1(alpha, beta);
-	Real scaled_x = bmth::quantile(beta1, normcdf);
-#elif HAVE_GSL
-	// GSL does not support beta CDF inverse, therefore a special Newton
-	// solve has been implemented for the inversion (which uses the GSL
-	// CDF/PDF fns).
-	Real scaled_x = cdf_beta_Pinv(normcdf, alpha, beta);
-#endif // HAVE_BOOST
+	Real normcdf = Phi(z_vars(i)), scaled_x = std_beta_cdf_inverse(normcdf,
+	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1));
 	x_vars(i) = lwr + (upr - lwr)*scaled_x;
       }
       else
@@ -247,20 +238,11 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       break;
     }
     case GAMMA: {
-      const Real& beta = ranVarAddtlParamsX[i](1);
       if (ranVarTypesU[i] == GAMMA)
-	x_vars(i) = beta*z_vars(i); // x/beta = z
-      else if (ranVarTypesU[i] == NORMAL) {
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	Real normcdf = Phi(z_vars(i));
-#ifdef HAVE_BOOST
-        gamma_dist gamma1(alpha,beta);
-	x_vars(i) = bmth::quantile(gamma1,normcdf);
-#elif HAVE_GSL
-	// GSL gamma passes alpha followed by beta
-	x_vars(i) = gsl_cdf_gamma_Pinv(normcdf, alpha, beta);
-#endif // HAVE_GSL or HAVE_BOOST
-      }
+	x_vars(i) = ranVarAddtlParamsX[i](1)*z_vars(i); // x/beta = z
+      else if (ranVarTypesU[i] == NORMAL)
+	x_vars(i) = gamma_cdf_inverse(Phi(z_vars(i)), ranVarAddtlParamsX[i](0),
+				      ranVarAddtlParamsX[i](1));
       else
 	err_flag = true;
       break;
@@ -268,13 +250,12 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
     case GUMBEL:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	const Real& z     = z_vars(i);
+	const Real& z = z_vars(i);
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
 	Real lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(Phi(z));
-	x_vars(i) = beta - log(-lognormcdf)/alpha;
+	x_vars(i) = ranVarAddtlParamsX[i](1)
+	  - log(-lognormcdf)/ranVarAddtlParamsX[i](0);
       }
       else
 	err_flag = true;
@@ -282,13 +263,12 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
     case FRECHET:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = e^(-(beta/x)^alpha)
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	const Real& z     = z_vars(i);
+	const Real& z = z_vars(i);
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
 	Real lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(Phi(z));
-	x_vars(i) = beta*pow(-lognormcdf, -1./alpha);
+	x_vars(i) = ranVarAddtlParamsX[i](1) *
+	  pow(-lognormcdf, -1./ranVarAddtlParamsX[i](0));
       }
       else
 	err_flag = true;
@@ -296,13 +276,12 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
     case WEIBULL:
       if (ranVarTypesU[i] == NORMAL) {
 	// Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	const Real& z     = z_vars(i);
+	const Real& z = z_vars(i);
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
 	Real log1mnormcdf = (z > 0.) ? log(Phi(-z)) : log1p(-Phi(z));
-	x_vars(i) = beta*pow(-log1mnormcdf, 1./alpha);
+	x_vars(i) = ranVarAddtlParamsX[i](1) *
+	  pow(-log1mnormcdf, 1./ranVarAddtlParamsX[i](0));
       }
       else
 	err_flag = true;
@@ -483,12 +462,11 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       break;
     }
     case EXPONENTIAL: {
-      const Real& beta = ranVarAddtlParamsX[i](0);
       if (ranVarTypesU[i] == EXPONENTIAL) // scale to std exponential exp(-z)
-	z_vars(i) = x_vars(i)/beta;
+	z_vars(i) = x_vars(i)/ranVarAddtlParamsX[i](0);
       else if (ranVarTypesU[i] == NORMAL) { // transform to std normal
 	// as with log1p() in trans_Z_to_X(), avoid numerical probs when exp()~1
-	Real cdf  = -expm1(-x_vars(i)/beta);
+	Real cdf  = -expm1(-x_vars(i)/ranVarAddtlParamsX[i](0));
 	z_vars(i) = Phi_inverse(cdf);
       }
       else
@@ -501,72 +479,42 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       if (ranVarTypesU[i] == BETA) // scale to beta on [-1,1]
 	z_vars(i) = 2.*(x_vars(i) - lwr)/(upr - lwr) - 1.;
       else if (ranVarTypesU[i] == NORMAL) { // transform to std normal
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
 	Real scaled_x = (x_vars(i)-lwr)/(upr - lwr);
-	// GSL beta passes alpha followed by beta
-#ifdef HAVE_BOOST
-        beta_dist beta1(alpha,beta);
-	Real cdf = bmth::cdf(beta1,scaled_x);
-#elif HAVE_GSL
-	Real cdf = gsl_cdf_beta_P(scaled_x, alpha, beta);
-#endif //HAVE_GSL or BOOST
-	z_vars(i) = Phi_inverse(cdf);
+	z_vars(i) = Phi_inverse(std_beta_cdf(scaled_x, ranVarAddtlParamsX[i](0),
+					     ranVarAddtlParamsX[i](1)));
       }
       else
 	err_flag = true;
       break;
     }
     case GAMMA: {
-      const Real& beta = ranVarAddtlParamsX[i](1);
       if (ranVarTypesU[i] == GAMMA) // scale to std gamma
-	z_vars(i) = x_vars(i)/beta;
-      else if (ranVarTypesU[i] == NORMAL) { // transform to std normal
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-#ifdef HAVE_BOOST
-        gamma_dist gamma1(alpha,beta);
-	Real cdf = bmth::cdf(gamma1,x_vars(i));
-#elif HAVE_GSL
-	// GSL gamma passes alpha followed by beta
-	Real cdf  = gsl_cdf_gamma_P(x_vars(i), alpha, beta);
-#endif // HAVE_GSL
-	z_vars(i) = Phi_inverse(cdf);
-      }
+	z_vars(i) = x_vars(i) / ranVarAddtlParamsX[i](1);
+      else if (ranVarTypesU[i] == NORMAL) // transform to std normal
+	z_vars(i) = Phi_inverse(gamma_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	  ranVarAddtlParamsX[i](1)));
       else
 	err_flag = true;
       break;
     }
     case GUMBEL:
-      if (ranVarTypesU[i] == NORMAL) {
-	// Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	Real cdf  = exp(-exp(-alpha*(x_vars(i) - beta)));
-	z_vars(i) = Phi_inverse(cdf);
-      }
+      if (ranVarTypesU[i] == NORMAL) // Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
+	z_vars(i) = Phi_inverse(gumbel_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
+					   ranVarAddtlParamsX[i](1)));
       else
 	err_flag = true;
       break;
     case FRECHET:
-      if (ranVarTypesU[i] == NORMAL) {
-	// Phi(z) = F(x) = e^(-(beta/x)^alpha)
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	Real cdf  = exp(-pow(beta/x_vars(i), alpha));
-	z_vars(i) = Phi_inverse(cdf);
-      }
+      if (ranVarTypesU[i] == NORMAL) // Phi(z) = F(x) = e^(-(beta/x)^alpha)
+	z_vars(i) = Phi_inverse(frechet_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
+					    ranVarAddtlParamsX[i](1)));
       else
 	err_flag = true;
       break;
     case WEIBULL:
-      if (ranVarTypesU[i] == NORMAL) {
-	// Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	// as with log1p() in trans_Z_to_X(), avoid numerical probs when exp()~1
-	Real cdf = -expm1(-pow(x_vars(i)/beta, alpha));
-	z_vars(i) = Phi_inverse(cdf);
-      }
+      if (ranVarTypesU[i] == NORMAL) // Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
+	z_vars(i) = Phi_inverse(weibull_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
+					    ranVarAddtlParamsX[i](1)));
       else
 	err_flag = true;
       break;
@@ -1665,37 +1613,21 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       if (ranVarTypesU[i] == BETA) // linear scaling
 	jacobian_xz(i, i) = scale/2.;
       else if (ranVarTypesU[i] == NORMAL) { // nonlinear transformation
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	Real scaled_x = (x_vars(i)-lwr)/scale;
-#ifdef HAVE_BOOST
-	beta_dist beta1(alpha, beta);
-        Real pdf = bmth::pdf(beta1, scaled_x)/scale;
-#elif HAVE_GSL
-	// GSL beta passes alpha followed by beta
-	Real pdf = gsl_ran_beta_pdf(scaled_x, alpha, beta)/scale;
-#endif // HAVE_GSL or BOOST
-	jacobian_xz(i, i) = phi(z_vars(i))/pdf;
+	Real scaled_x = (x_vars(i)-lwr)/scale,
+	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i](0),
+	  ranVarAddtlParamsX[i](1))/scale;
+	jacobian_xz(i, i) = phi(z_vars(i)) / pdf;
       }
       else
 	err_flag = true;
       break;
     }
     case GAMMA: {
-      const Real& beta = ranVarAddtlParamsX[i](1);
       if (ranVarTypesU[i] == GAMMA) // linear scaling
-	jacobian_xz(i, i) = beta;
-      else if (ranVarTypesU[i] == NORMAL) { // nonlinear transformation
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-#ifdef HAVE_BOOST
-	gamma_dist gamma1(alpha, beta);
-        Real pdf = bmth::pdf(gamma1, x_vars(i));
-#elif HAVE_GSL
-	// GSL gamma passes alpha followed by beta
-	Real pdf = gsl_ran_gamma_pdf(x_vars(i), alpha, beta);
-#endif // HAVE_GSL
-	jacobian_xz(i, i) = phi(z_vars(i))/pdf;
-      }
+	jacobian_xz(i, i) = ranVarAddtlParamsX[i](1); // beta
+      else if (ranVarTypesU[i] == NORMAL) // nonlinear transformation
+	jacobian_xz(i, i) = phi(z_vars(i)) / gamma_pdf(x_vars(i),
+	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1)); // alpha, beta
       else
 	err_flag = true;
       break;
@@ -1724,21 +1656,9 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       break;
     }
     case WEIBULL: {
-      if (ranVarTypesU[i] == NORMAL) {
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-#ifdef HAVE_BOOST
-	weibull_dist weibull1(alpha, beta);
-        Real pdf = bmth::pdf(weibull1, x_vars(i));
-#elif HAVE_GSL
-	// GSL weibull passes beta followed by alpha
-	Real pdf = gsl_ran_weibull_pdf(x_vars(i), beta, alpha);
-#else
-	const Real& x = x_vars(i);
-	Real pdf = alpha/beta * pow(x/beta,alpha-1.) * exp(-pow(x/beta,alpha));
-#endif // HAVE_GSL or BOOST
-	jacobian_xz(i, i) = phi(z_vars(i))/pdf;
-      }
+      if (ranVarTypesU[i] == NORMAL)
+	jacobian_xz(i, i) = phi(z_vars(i)) / weibull_pdf(x_vars(i),
+	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1));
       else
 	err_flag = true;
       break;
@@ -1908,7 +1828,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       if (ranVarTypesU[i] == UNIFORM)
 	jacobian_zx(i, i) = 2.*pdf;
       else if (ranVarTypesU[i] == NORMAL)
-	jacobian_zx(i, i) = pdf/phi(z_vars(i));
+	jacobian_zx(i, i) = pdf / phi(z_vars(i));
       else
 	err_flag = true;
       break;
@@ -1919,7 +1839,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	jacobian_zx(i, i) = 1./beta;
       else if (ranVarTypesU[i] == NORMAL) {
 	Real pdf = exp(-x_vars(i)/beta)/beta;
-	jacobian_zx(i, i) = pdf/phi(z_vars(i));
+	jacobian_zx(i, i) = pdf / phi(z_vars(i));
       }
       else
 	err_flag = true;
@@ -1932,80 +1852,45 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       if (ranVarTypesU[i] == BETA) // linear scaling
 	jacobian_zx(i, i) = 2./scale;
       else if (ranVarTypesU[i] == NORMAL) {
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	Real scaled_x = (x_vars(i)-lwr)/scale;
-	// GSL beta passes alpha followed by beta
-#ifdef HAVE_BOOST
-	beta_dist beta1(alpha, beta);
-        Real pdf = bmth::pdf(beta1, scaled_x)/scale;
-#elif HAVE_GSL	
-	Real pdf = gsl_ran_beta_pdf(scaled_x, alpha, beta)/scale;
-#endif
-	jacobian_zx(i, i) = pdf/phi(z_vars(i));
+	Real scaled_x = (x_vars(i)-lwr)/scale,
+	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i](0),
+	  ranVarAddtlParamsX[i](1))/scale;
+	jacobian_zx(i, i) = pdf / phi(z_vars(i));
       }
       else
 	err_flag = true;
       break;
     }
     case GAMMA: {
-      const Real& beta = ranVarAddtlParamsX[i](1);
       if (ranVarTypesU[i] == GAMMA) // linear scaling
-	jacobian_zx(i, i) = 1./beta;
-      else if (ranVarTypesU[i] == NORMAL) {
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	// GSL gamma passes alpha followed by beta
-#ifdef HAVE_BOOST
-	gamma_dist gamma1(alpha, beta);
-        Real pdf = bmth::pdf(gamma1, x_vars(i));
-#elif HAVE_GSL
-	Real pdf = gsl_ran_gamma_pdf(x_vars(i), alpha, beta);
-#endif
-	jacobian_zx(i, i) = pdf/phi(z_vars(i));
-      }
+	jacobian_zx(i, i) = 1./ranVarAddtlParamsX[i](1);
+      else if (ranVarTypesU[i] == NORMAL)
+	jacobian_zx(i, i) = gamma_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
       else
 	err_flag = true;
       break;
     }
     case GUMBEL: {
-      if (ranVarTypesU[i] == NORMAL) {
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	Real num = exp(-alpha*(x_vars(i)-beta)), pdf = alpha*num*exp(-num);
-	jacobian_zx(i, i) = pdf/phi(z_vars(i));
-      }
+      if (ranVarTypesU[i] == NORMAL)
+	jacobian_zx(i, i) = gumbel_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
       else
 	err_flag = true;
       break;
     }
     case FRECHET: {
-      if (ranVarTypesU[i] == NORMAL) {
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-	Real num = beta/x_vars(i),
-	     pdf = alpha/beta*pow(num,alpha+1.)*exp(-pow(num,alpha));
-	jacobian_zx(i, i) = pdf/phi(z_vars(i));
-      }
+      if (ranVarTypesU[i] == NORMAL)
+	jacobian_zx(i, i) = frechet_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
       else
 	err_flag = true;
       break;
     }
     case WEIBULL: {
-      if (ranVarTypesU[i] == NORMAL) {
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
-#ifdef HAVE_BOOST
-	weibull_dist weibull1(alpha, beta);
-        Real pdf = bmth::pdf(weibull1, x_vars(i));
-#elif HAVE_GSL
-	// GSL weibull passes beta followed by alpha
-	Real pdf = gsl_ran_weibull_pdf(x_vars(i), beta, alpha);
-#else
-	const Real& x = x_vars(i);
-	Real pdf = alpha/beta * pow(x/beta,alpha-1.) * exp(-pow(x/beta,alpha));
-#endif // HAVE_GSL
-	jacobian_zx(i, i) = pdf/phi(z_vars(i));
-      }
+      if (ranVarTypesU[i] == NORMAL)
+	jacobian_zx(i, i) = weibull_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
       else
 	err_flag = true;
       break;
@@ -2933,16 +2818,10 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	const Real& lwr   = ranVarLowerBndsX(i);
 	const Real& upr   = ranVarUpperBndsX(i);
 	const Real& z = z_vars(i); const Real& x = x_vars(i);
-	Real scale = upr - lwr, scaled_x = (x-lwr)/scale;
-#ifdef HAVE_BOOST
-	beta_dist beta1(alpha,beta);
-        Real pdf = bmth::pdf(beta1,scaled_x)/scale;
-#elif HAVE_GSL
-	// GSL beta passes alpha followed by beta
-	Real pdf = gsl_ran_beta_pdf(scaled_x, alpha, beta)/scale;
-#endif //HAVE_GSL OR BOOST
-	Real pdf_deriv = pdf*((alpha-1.)/(x-lwr) - (beta-1.)/(upr-x));
-	Real dx_dz = phi(z)/pdf;
+	Real scale = upr - lwr, scaled_x = (x-lwr)/scale,
+	  pdf = std_beta_pdf(scaled_x, alpha, beta)/scale,
+	  pdf_deriv = pdf*((alpha-1.)/(x-lwr) - (beta-1.)/(upr-x));
+	Real dx_dz = phi(z) / pdf;
 	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
       }
       else
@@ -2959,20 +2838,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	const Real& alpha = ranVarAddtlParamsX[i](0);
 	const Real& beta  = ranVarAddtlParamsX[i](1);
 	const Real& z = z_vars(i); const Real& x = x_vars(i);
-#ifdef HAVE_BOOST
-	gamma_dist gamma1(alpha,beta);
-        Real pdf = bmth::pdf(gamma1,x);
-        Real pdf_deriv = pow(beta,-alpha)/bmth::tgamma(alpha)
-	               * (exp(-x/beta)*(alpha-1.)*pow(x,alpha-2.)
-	               - pow(x,alpha-1.)*exp(-x/beta)/beta);
-#elif HAVE_GSL
-	// GSL gamma passes alpha followed by beta
-	Real pdf = gsl_ran_gamma_pdf(x, alpha, beta);
-	Real pdf_deriv = pow(beta,-alpha)/gsl_sf_gamma(alpha)
-	               * (exp(-x/beta)*(alpha-1.)*pow(x,alpha-2.)
-	               - pow(x,alpha-1.)*exp(-x/beta)/beta);
-#endif // HAVE_GSL or BOOST
-	Real dx_dz = phi(z)/pdf;
+	Real pdf = gamma_pdf(x, alpha, beta),
+	  pdf_deriv = gamma_pdf_deriv(x, alpha, beta), dx_dz = phi(z) / pdf;
 	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
       }
       else

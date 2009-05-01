@@ -9,20 +9,10 @@
 #ifndef BOOST_TEST_DIST_HPP
 #define BOOST_TEST_DIST_HPP
 
-#include "pecos_data_types.hpp"
-#ifdef HAVE_GSL
-#include "gsl/gsl_randist.h"
-#include "gsl/gsl_cdf.h"
-#include "gsl/gsl_sf_gamma.h"
-#endif
-#ifdef HAVE_BOOST 
-#include <boost/math/distributions/normal.hpp>
-#include <boost/math/special_functions/gamma.hpp>
-#endif
-#include <math.h>
+#include "pecos_stat_util.hpp"
 
 
-/// Base class for testing Boost vs. GSL statistical functions
+/// Class for testing Boost vs. GSL statistical functions
 
 
 class boost_test_dist
@@ -31,13 +21,10 @@ public:
 
   /// default constructor
   boost_test_dist();
- 
   /// destructor
   ~boost_test_dist();
 
   void print_comparison();
-
-
 };
 
 #endif

@@ -34,6 +34,7 @@ lib_LTLIBRARIES = libpecos.la
 pkginclude_HEADERS = pecos_config.h				\
 		     src/pecos_data_types.hpp			\
 		     src/pecos_global_defs.hpp			\
+		     src/pecos_stat_util.hpp			\
 		     src/DataTransformation.hpp			\
 		     src/InverseTransformation.hpp		\
 		     src/FourierInverseTransformation.hpp	\
