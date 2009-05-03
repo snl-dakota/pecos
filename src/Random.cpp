@@ -5,23 +5,25 @@
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
  
-//- Class:       Random
-//- Description: Wrapper for various implementations of Random Number Generators 
-//- Owner:       Laura Swiler and Bill Bohnhoff 
+//- Class:       BoostRNG_Monostate
+//- Description: Wrapper for various implementations of Random Number Generators
+//- Owner:       Laura Swiler, Dave Gay, and Bill Bohnhoff 
 //- Checked by:
 //- Version: $Id: Random.cpp 5721 2009-03-03 23:51:34Z wjbohnh $
 
+#include "pecos_data_types.hpp"
 #include "LHSDriver.hpp"
 
-//#if !defined(__SUNPRO_CC)
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
-#include <stdio.h>
-#include <string.h>
-//#include <boost/generator_iterator.hpp> // WJB: probably not needed
+#include <cstdio>
+#include <cstring>
 
-typedef double (*Rfunc)();
+// WJB - 5/3/09 - ToDo: address proper namespace utilization next iteration
+using Pecos::Real;
+typedef Real (*Rfunc)();
+
 
 class BoostRNG_Monostate
 {
@@ -39,14 +41,15 @@ public:
  static unsigned int seed()
  { return rngSeed; }
 
- static double random_num1()
+ static Real random_num1()
  { return uniMT(); };
 
  static Rfunc random_num;
  static Rfunc random_num2;
 };
 
-unsigned int BoostRNG_Monostate::rngSeed(41u); // WJB: is 41 OK for starters??
+
+unsigned int BoostRNG_Monostate::rngSeed(41u); // 41 used in the Boost examples
 boost::mt19937 BoostRNG_Monostate::rnumGenerator( BoostRNG_Monostate::seed() );
 boost::uniform_real<> BoostRNG_Monostate::uniDist(0, 1);
 
@@ -55,11 +58,11 @@ boost::uniform_real<> BoostRNG_Monostate::uniDist(0, 1);
 #define rnumlhs10 FC_FUNC(rnumlhs10,RNUMLHS10)
 #define rnumlhs20 FC_FUNC(rnumlhs20,RNUMLHS20)
 #define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
-extern "C" double rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
+extern "C" Real rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
 extern "C" void lhs_setseed(int*);
 
-double (*BoostRNG_Monostate::random_num)()  = (Rfunc)rnumlhs10; // BoostRNG_Monostate::random_num1;
-double (*BoostRNG_Monostate::random_num2)() = (Rfunc)rnumlhs20; // BoostRNG_Monostate::random_num1;
+Real (*BoostRNG_Monostate::random_num)()  = (Rfunc)rnumlhs10; // BoostRNG_Monostate::random_num1;
+Real (*BoostRNG_Monostate::random_num2)() = (Rfunc)rnumlhs20; // BoostRNG_Monostate::random_num1;
 
 boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
   BoostRNG_Monostate::uniMT(BoostRNG_Monostate::rnumGenerator,
@@ -70,12 +73,12 @@ extern "C" void set_boost_rng_seed(unsigned int rng_seed)
   BoostRNG_Monostate::seed(rng_seed);
 }
  
-double rnum1(void)
+Real rnum1(void)
 { //std::cout << "running Boost MT" << "\n";
   return BoostRNG_Monostate::random_num();
 }
  
-double rnum2(void)
+Real rnum2(void)
 {
 // clone of rnum1
  //std::cout << "running Boost MT" << "\n";
@@ -90,19 +93,19 @@ void Pecos::LHSDriver::seed(int seed)
 		const char *s = getenv("DAKOTA_LHS_UNIFGEN");
 		first = 0;
 		if (s) {
-			if (!strcmp(s,"rnumlhs1")) {
+			if (!std::strcmp(s,"rnumlhs1")) {
 				BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
 				BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
 				}
-			else if (!strcmp(s, "mt19937")) {
+			else if (!std::strcmp(s, "mt19937")) {
 				BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
 				BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
 				}
 			else if (*s) {
-				fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
+				std::fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
 					" to be \"rnumlhs1\" or \"mt19937\","
 					" not \"%s\"\n", s);
-				exit(1);
+				std::exit(1);
 				}
 			}
 		}
@@ -112,7 +115,7 @@ void Pecos::LHSDriver::seed(int seed)
 		lhs_setseed(&seed);
 	}
 
-void Pecos::LHSDriver::seed(int seed, const String &unifGen)
+void Pecos::LHSDriver::seed(int seed, const Pecos::String &unifGen)
 {
 	randomSeed = seed;
 	if (unifGen == "mt19937" || unifGen == "") {
@@ -136,6 +139,3 @@ const char* Pecos::LHSDriver::unifGen()
 	return "unknown (bug?)";
 	}
 
-
-//#endif // not __SUNPRO_CC
- 
