@@ -316,6 +316,10 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	    << " in NatafTransformation::trans_Z_to_X()" << std::endl;
       abort_handler(-1);
     }
+#ifdef DEBUG
+    PCout << "Z_to_X: z[" << i << "] = " << z_vars(i)
+	  <<    " --> x[" << i << "] = " << x_vars(i) << std::endl;
+#endif // DEBUG
   }
 }
 
@@ -545,6 +549,10 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	    << " in NatafTransformation::trans_X_to_Z()" << std::endl;
       abort_handler(-1);
     }
+#ifdef DEBUG
+    PCout << "X_to_Z: x[" << i << "] = " << x_vars(i)
+	  <<    " --> z[" << i << "] = " << z_vars(i) << std::endl;
+#endif // DEBUG
   }
 }
 

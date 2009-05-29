@@ -377,8 +377,8 @@ inline Real gumbel_cdf(const Real& x, const Real& alpha, const Real& beta)
 
 inline Real frechet_pdf(const Real& x, const Real& alpha, const Real& beta)
 {
-  Real num = beta/x;
-  return alpha/beta*std::pow(num,alpha+1.)*std::exp(-std::pow(num,alpha));
+  Real num = std::pow(beta/x, alpha);
+  return alpha/x*num*std::exp(-num);
 }
 
 
@@ -478,8 +478,8 @@ inline void moments_from_frechet_params(const Real& alpha, const Real& beta,
 {
   // See Haldar and Mahadevan, p. 91-92
   Real gam = gamma_function(1.-1./alpha);
-  std_dev = beta*sqrt(gamma_function(1.-2./alpha)-gam*gam);
-  mean = beta*gam;
+  mean     = beta*gam;
+  std_dev  = beta*sqrt(gamma_function(1.-2./alpha)-gam*gam);
 }
 
 
@@ -489,8 +489,8 @@ inline void moments_from_weibull_params(const Real& alpha, const Real& beta,
   // See Haldar and Mahadevan, p. 97
   Real gam = gamma_function(1.+1./alpha),
     cf_var = sqrt(gamma_function(1.+2./alpha)/gam/gam - 1.);
-  mean    = beta*gam;
-  std_dev = cf_var*mean;
+  mean     = beta*gam;
+  std_dev  = cf_var*mean;
 }
 
 } // namespace Pecos
