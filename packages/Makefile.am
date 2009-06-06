@@ -8,10 +8,6 @@ SUBDIRS += teuchos
 endif
 
 ## Package subdirectories to recurse into.
-if BUILD_GSL
-SUBDIRS += gsl
-endif
-
 if WITH_FFT
 SUBDIRS += dfftpack fftw
 else

@@ -8,12 +8,6 @@ if WITH_BOOST
 AM_CPPFLAGS += @BOOST_CPPFLAGS@ -I$(top_srcdir)/packages
 endif
 
-if WITH_GSL
-AM_CPPFLAGS += @GSL_CPPFLAGS@
-TPL_LDFLAGS += @GSL_LDFLAGS@
-TPL_LIBS    += -lgsl
-endif
-
 if WITH_LHS
 TPL_LDFLAGS += @LHS_LDFLAGS@
 TPL_LIBS    += -llhs

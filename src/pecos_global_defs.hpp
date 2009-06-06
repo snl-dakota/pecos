@@ -9,6 +9,9 @@
 #ifndef PECOS_GLOBAL_DEFS_H
 #define PECOS_GLOBAL_DEFS_H
 
+// WJB: only temporary (6/6/09) while I test mods to autotools build harness
+#define HAVE_BOOST 1
+
 #ifdef HAVE_BOOST
 #include <boost/math/constants/constants.hpp>
 #endif

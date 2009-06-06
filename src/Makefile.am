@@ -6,10 +6,6 @@ if WITH_BOOST
 AM_CPPFLAGS += @BOOST_CPPFLAGS@ -I$(top_srcdir)/packages
 endif
 
-if WITH_GSL
-AM_CPPFLAGS += @GSL_CPPFLAGS@
-endif
-
 if WITH_FFTW
 AM_CPPFLAGS += @FFTW_CPPFLAGS@ -I$(top_srcdir)/packages/fftw/api
 endif

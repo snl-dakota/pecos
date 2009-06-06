@@ -6,10 +6,13 @@ AC_DEFUN([PECOS_PACKAGES],[
               [turn Boost support off]),[with_boost=$withval],[with_boost=yes])
   if test "x$with_boost" = xyes; then
     dnl AC_CONFIG_SUBDIRS([packages/boost])
-    dnl AC_DEFINE([PECOS_BOOST],[1],[Macro to handle code which depends on Boost.])
-    AC_DEFINE([HAVE_BOOST],[1],[Macro to handle code which depends on Boost.])
+    dnl AC_DEFINE([HAVE_BOOST],[1],[Macro to handle code which depends on Boost.])
     BOOST_CPPFLAGS="-I`pwd`/packages"
     AC_SUBST(BOOST_CPPFLAGS)
+  else
+    AC_MSG_NOTICE([could not find boost directory!])
+    AC_MSG_ERROR([please ensure your Pecos distribution includes boost header
+                  files in: <pecos_root>/packages/boost])
   fi
   AM_CONDITIONAL([WITH_BOOST],[test "x$with_boost" = xyes])
 
@@ -123,94 +126,4 @@ AC_DEFUN([PECOS_PACKAGES],[
   AC_SUBST(TEUCHOS_LDFLAGS)
 
   AM_CONDITIONAL([BUILD_TEUCHOS], [test "x$acx_local_teuchos" = xyes])
-
-  dnl GSL package checks.
-  AC_ARG_WITH([gsl],
-              AC_HELP_STRING([--with-gsl=<dir>],
-                             [use GSL (default is yes), specify the root
-                              directory for GSL library (optional)]),
-              [],[with_gsl="yes"])
-
-  acx_local_gsl=no
-  case $with_gsl in
-  no)
-    AC_MSG_NOTICE([NOT building with GSL!])
-    GSL_ROOT=""
-    ;;
-
-  system)
-    AC_MSG_CHECKING([for system GSL])
-    AC_CHECK_LIB([gslcblas],[cblas_dgemm])
-    AC_CHECK_LIB([gsl],[gsl_ran_gamma_pdf])
-    AC_CHECK_HEADERS([gsl/gsl_version.h])
-    AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
-    AC_MSG_NOTICE([Using system GSL!])
-    GSL_ROOT=""
-    ;;
-
-  dnl For yes, check GSL_ROOT, otherwise fallback to GSL from SVN checkout
-  yes | "")
-    AC_MSG_CHECKING([for GSL])
-    if test -n "$GSL_ROOT" -a -d "$GSL_ROOT"; then
-
-      AC_MSG_NOTICE([GSL_ROOT is set by the caller])
-      dnl save_CPPFLAGS=$CPPFLAGS
-      dnl CPPFLAGS="-I$GSL_ROOT"
-      dnl AC_CHECK_HEADERS([gsl/gsl_version.h],acx_external_gsl=yes,,"-I$GSL_ROOT")
-      dnl CPPFLAGS=$save_CPPFLAGS
-      AC_MSG_RESULT([using GSL in GSL_ROOT: $GSL_ROOT])
-      AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
-
-    elif test -d `pwd`/packages/gsl; then
-
-      dnl use SVN checkout of GSL and instruct subpackages to do so as well
-      GSL_ROOT=`pwd`/packages/gsl
-      acx_local_gsl=yes
-      AC_CONFIG_SUBDIRS([packages/gsl])
-
-      dnl no tests to perform since GSL has yet to be built; trust the SVN co
-      AC_MSG_RESULT([using GSL in $GSL_ROOT])
-      AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
-
-    else
-      AC_MSG_NOTICE([could not find GSL directory.])
-      AC_MSG_NOTICE([need help locating gsl!])
-      AC_MSG_ERROR([PLEASE PROVIDE full path to gsl, --with-gsl=<DIR>])
-    fi
-    ;;
-
-  dnl Otherwise, user should have provided an explicit path to GSL
-  *)
-    AC_MSG_CHECKING([for GSL])
-    GSL_ROOT=$withval
-    if test -n "$GSL_ROOT" -a -d "$GSL_ROOT"; then
-
-      AC_MSG_RESULT([using: $GSL_ROOT])
-
-      dnl For now, trust the user (future enhancement would provide addl checks)
-      dnl AC_CHECK_HEADERS([gsl/gsl_version.h])
-      AC_DEFINE([HAVE_GSL],[1],[Macro to handle code which depends on GSL.])
-      AC_MSG_NOTICE([Using the GSL specified on the configure line!])
-
-    else
-      AC_MSG_ERROR([could not locate $GSL_ROOT])
-    fi
-    ;;
-  esac
-
-  dnl Do not export GSL build variables in certain cases (i.e. no or system)
-  if test -n "$GSL_ROOT"; then
-    GSL_CPPFLAGS="-I$GSL_ROOT"
-    GSL_LDFLAGS="-L$GSL_ROOT"
-
-    AC_SUBST(GSL_ROOT)
-    AC_SUBST(GSL_CPPFLAGS)
-    AC_SUBST(GSL_LDFLAGS)
-  fi
-
-  dnl WITH_GSL controls CPPFLAGS in src/Makefile.am
-  AM_CONDITIONAL([WITH_GSL], [test "x$with_gsl" = xsystem -o -n "$GSL_ROOT" ])
-  dnl BUILD_GSL controls build of Pecos local gsl in packages/Makefile.am
-  AM_CONDITIONAL([BUILD_GSL], [test "x$acx_local_gsl" = xyes])
-
 ])
