@@ -8,16 +8,16 @@
 
 #include "pecos_stat_util.hpp"
 
-//static const char rcsId[]="@(#) $Id: pecos_stat_util.cpp 4768 2007-12-17 17:49:32Z mseldre $";
+static const char rcsId[]="@(#) $Id: pecos_stat_util.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
 namespace Pecos {
 
-
-#ifdef HAVE_GSL
+/*
+// #ifdef HAVE_GSL
 #include "gsl/gsl_cdf.h"
 #include "gsl/gsl_randist.h"
 
-/** Solve is performed in scaled space (for the standard beta distribution). */
+//  Solve is performed in scaled space (for the standard beta distribution).
 Real cdf_beta_Pinv(const Real& cdf, const Real& alpha, const Real& beta)
 {
   // F(x) = Phi(z) = cdf
@@ -86,11 +86,9 @@ Real cdf_beta_Pinv(const Real& cdf, const Real& alpha, const Real& beta)
   return scaled_x;
 }
 
-#endif // HAVE_GSL
+// #endif // HAVE_GSL */
 
 
-// WJB: remove static keywork to "expose" function outside of this module
-//Real erf_inverse(const Real& p)
 static Real erf_inverse(const Real& p)
 {
   // Adapted from ltqnorm.m see URL below for more info
