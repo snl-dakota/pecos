@@ -19,11 +19,13 @@
 #include "Teuchos_SerialDenseSolver.hpp"
 #include "Teuchos_SerialSpdDenseSolver.hpp"
 
-#ifdef HAVE_BOOST
 #include "boost/multi_array.hpp"
-#endif
-
+#include <algorithm>  // for std::find
 #include <complex>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 
 namespace Pecos {
@@ -85,12 +87,10 @@ typedef std::map<int, short>        IntShortMap;
 typedef std::map<int, int>          IntIntMap;
 typedef std::map<int, RealVector>   IntRealVectorMap;
 
-#ifdef HAVE_BOOST
 typedef boost::multi_array_types::index_range     idx_range;
 typedef boost::multi_array<unsigned int, 1>       UIntMultiArray;
 typedef UIntMultiArray::array_view<1>::type       UIntMultiArrayView;
 typedef UIntMultiArray::const_array_view<1>::type UIntMultiArrayConstView;
-#endif // HAVE_BOOST
 
 // ---------
 // Iterators

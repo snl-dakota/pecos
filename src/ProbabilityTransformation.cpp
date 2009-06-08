@@ -8,14 +8,6 @@
 
 #include "pecos_stat_util.hpp"
 #include "NatafTransformation.hpp"
-#ifdef HAVE_GSL
-#include "gsl/gsl_sf_gamma.h"
-#endif
-#ifdef HAVE_BOOST
-#include <boost/math/distributions/beta.hpp>
-#include <boost/math/special_functions/gamma.hpp>
-#endif
-#include <algorithm>
 
 static const char rcsId[]="@(#) $Id: ProbabilityTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -248,7 +240,7 @@ initialize_random_variable_correlations(const RealSymMatrix& x_corr)
     correlationFlagX = false;
     for (size_t i=1; i<num_ran_vars; i++)
       for (size_t j=0; j<i; j++)
-	if (fabs(x_corr(i,j)) > 1.e-25)
+	if (std::fabs(x_corr(i,j)) > 1.e-25)
 	  correlationFlagX = true;
   }
 }
@@ -604,7 +596,7 @@ numerical_design_jacobian(const RealVector& x_vars,
 
       // Compute the offset for the ith gradient variable.
       // Enforce a minimum delta of fdgss*.01
-      Real h_mag = fd_grad_ss * std::max(fabs(s0), .01);
+      Real h_mag = fd_grad_ss * std::max(std::fabs(s0), .01);
       Real h = (s0 < 0.0) ? -h_mag : h_mag; // h has same sign as s0
 
       // -----------------------------------
@@ -912,7 +904,7 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 
 	// Compute the offset for the ith gradient variable.
 	// Enforce a minimum delta of fdgss*.01
-	Real h_mag = fd_grad_ss * max(fabs(v0(j)), .01);
+	Real h_mag = fd_grad_ss * std::max(std::fabs(v0(j)), .01);
 	Real h = (v1(j) < 0.0) ? -h_mag : h_mag; // h has same sign as v1(j)
 
 	// ----------------------------
@@ -948,7 +940,7 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 
 	  // Compute the 2nd-order Hessian offset for the ith variable.
 	  // Enforce a minimum delta of fdhss*.01
-	  Real h_mag = fd_hess_by_fn_ss * max(fabs(v0(j)), .01);
+	  Real h_mag = fd_hess_by_fn_ss * std::max(std::fabs(v0(j)), .01);
 	  Real h = (v1(j) < 0.0) ? -h_mag : h_mag; // h has same sign as v1(j)
 
 	  // evaluate diagonal term
@@ -1035,7 +1027,7 @@ verify_trans_jacobian_hessian(const RealVector& v0)
 
 	  // Compute the 1st-order Hessian offset for the ith variable.
 	  // Enforce a minimum delta of fdhss*.01
-	  Real h_mag = fd_hess_by_grad_ss * max(fabs(v0(j)), .01);
+	  Real h_mag = fd_hess_by_grad_ss * std::max(std::fabs(v0(j)), .01);
 	  Real h = (v1(j) < 0.0) ? -h_mag : h_mag; // h has same sign as v1(j)
 
 	  // --------------------------

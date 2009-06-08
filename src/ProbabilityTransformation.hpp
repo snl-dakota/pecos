@@ -10,17 +10,6 @@
 #define PROBABILITY_TRANSFORMATION_HPP
 
 #include "pecos_data_types.hpp"
-#ifdef HAVE_GSL
-#include "gsl/gsl_randist.h"
-#include "gsl/gsl_cdf.h"
-#include "gsl/gsl_sf_gamma.h"
-#endif
-//#ifdef HAVE_BOOST 
-//#include <boost/math/distributions/normal.hpp>
-//#include <boost/math/special_functions/gamma.hpp>
-//#endif
-#include <math.h>
-
 
 namespace Pecos {
 
@@ -277,7 +266,8 @@ private:
 
   /// Used only by the standard envelope constructor to initialize
   /// probTransRep to the appropriate derived type.
-  ProbabilityTransformation* get_prob_trans(const String& prob_trans_type);
+  static ProbabilityTransformation*
+    get_prob_trans(const String& prob_trans_type);
 
   //
   //- Heading: Data members

@@ -10,6 +10,7 @@
 #define LHS_DRIVER_H
 
 #include "pecos_data_types.hpp"
+#include "pecos_global_defs.hpp"
 #if defined(__sun) && defined(__sparc) && defined(__SUNPRO_CC)
 #include <stdlib.h> // <cstdlib> insufficient for rand, srand on Sun
 #endif
