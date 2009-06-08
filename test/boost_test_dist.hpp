@@ -9,10 +9,7 @@
 #ifndef BOOST_TEST_DIST_HPP
 #define BOOST_TEST_DIST_HPP
 
-#include "pecos_stat_util.hpp"
-
-
-/// Class for testing Boost vs. GSL statistical functions
+/// Class for testing Boost statistical functions
 
 
 class boost_test_dist
@@ -20,11 +17,13 @@ class boost_test_dist
 public:
 
   /// default constructor
-  boost_test_dist();
-  /// destructor
-  ~boost_test_dist();
+  boost_test_dist() { }
 
-  void print_comparison();
+  /// destructor
+  ~boost_test_dist() { }
+
+  void print_comparison();  // WJB: note GSL is no longer supported as a TPL
 };
 
-#endif
+#endif // BOOST_TEST_DIST_HPP
+

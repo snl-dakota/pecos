@@ -8,14 +8,8 @@
 
 #ifndef BOOST_TEST_RNG_HPP
 #define BOOST_TEST_RNG_HPP
-#ifdef HAVE_BOOST
-using namespace boost;
-#endif
-#include "pecos_data_types.hpp"
-#include <math.h>
 
-
-/// Base class for testing Boost vs. GSL statistical functions
+/// Base class for testing Boost random number generators
 
 
 class boost_test_rng
@@ -23,13 +17,14 @@ class boost_test_rng
 public:
  
   /// default constructor
-  boost_test_rng();
+  boost_test_rng() { }
  
   /// destructor
-  ~boost_test_rng();
+  ~boost_test_rng() { }
 
   //  void experiment(boost::mt19937& generator);
 
 };
 
-#endif
+#endif  // BOOST_TEST_RNG_HPP
+

@@ -7,7 +7,8 @@
     _______________________________________________________________________ */
 
 #include "boost_test_rng.hpp"
-#ifdef HAVE_BOOST
+#include "pecos_data_types.hpp"
+#include "pecos_global_defs.hpp"
 #include <boost/random/linear_congruential.hpp>
 #include <boost/random/lagged_fibonacci.hpp>
 #include <boost/random/mersenne_twister.hpp>
@@ -15,18 +16,8 @@
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/generator_iterator.hpp>
-#endif //HAVE_BOOST
 #include <algorithm>
 #include <iomanip>
-
-
-boost_test_rng::boost_test_rng()
-{
-}
-
-boost_test_rng::~boost_test_rng()
-{ 
-}
 
 
 // This is a reproducible simulation experiment.  See main().
@@ -50,12 +41,9 @@ void experiment(boost::mt19937& generator)
 
 int main(int argc, char* argv[])
 {
-
-  boost_test_rng bt;
-
-// WJB: now some RNG testing -- eventually split out into its own main/.cpp file
-#ifdef HAVE_BOOST
   using namespace boost;
+  //boost_test_rng bt;
+
   PCout.setf(std::ios::fixed);
   PCout.precision(16); 
   PCout.setf(std::ios::scientific);
@@ -96,7 +84,6 @@ int main(int argc, char* argv[])
 
   // When calling other functions which take a generator or distribution
   // as a parameter, make sure to always call by reference (or pointer).
-  // Calling by value invokes the copy constructor... (yadda-yadda -- UNDERSTOOD/BAD IDEA)
   experiment(generator);
 
   PCout << "redo the experiment to verify it:\n";
@@ -109,7 +96,6 @@ int main(int argc, char* argv[])
   uniform_int<> degen_dist(4,4);
   variate_generator<mt19937&, uniform_int<> > deg(generator, degen_dist);
   PCout << deg() << " " << deg() << " " << deg() << std::endl;
-#endif // HAVE_BOOST
 
   return 0;
 }
