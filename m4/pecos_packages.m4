@@ -1,20 +1,11 @@
 dnl Packages
 
 AC_DEFUN([PECOS_PACKAGES],[
-  dnl BOOST package package check.
-  AC_ARG_WITH([boost],AS_HELP_STRING([--without-boost],
-              [turn Boost support off]),[with_boost=$withval],[with_boost=yes])
-  if test "x$with_boost" = xyes; then
-    dnl AC_CONFIG_SUBDIRS([packages/boost])
-    dnl AC_DEFINE([HAVE_BOOST],[1],[Macro to handle code which depends on Boost.])
-    BOOST_CPPFLAGS="-I`pwd`/packages"
-    AC_SUBST(BOOST_CPPFLAGS)
-  else
-    AC_MSG_NOTICE([could not find boost directory!])
-    AC_MSG_ERROR([please ensure your Pecos distribution includes boost header
-                  files in: <pecos_root>/packages/boost])
-  fi
-  AM_CONDITIONAL([WITH_BOOST],[test "x$with_boost" = xyes])
+  dnl BOOST package is needed unconditionally.
+  dnl Pecos provides a header-only subset of the Boost 1.37 release.
+  dnl AC_CONFIG_SUBDIRS([packages/boost])
+  BOOST_CPPFLAGS="-I`pwd`/packages"
+  AC_SUBST(BOOST_CPPFLAGS)
 
   dnl FFT packages - BOTH dfftpack and fftw will be built
   AC_ARG_WITH([fft],AS_HELP_STRING([--without-fft],
