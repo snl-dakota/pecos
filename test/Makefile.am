@@ -4,9 +4,7 @@ AM_CPPFLAGS  = -I${top_srcdir}/src @TEUCHOS_CPPFLAGS@
 TPL_LDFLAGS  = @TEUCHOS_LDFLAGS@
 TPL_LIBS     = -lteuchos
 
-if WITH_BOOST
 AM_CPPFLAGS += @BOOST_CPPFLAGS@ -I$(top_srcdir)/packages
-endif
 
 if WITH_LHS
 TPL_LDFLAGS += @LHS_LDFLAGS@

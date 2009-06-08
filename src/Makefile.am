@@ -1,10 +1,7 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
 AM_CPPFLAGS = @TEUCHOS_CPPFLAGS@
-
-if WITH_BOOST
 AM_CPPFLAGS += @BOOST_CPPFLAGS@ -I$(top_srcdir)/packages
-endif
 
 if WITH_FFTW
 AM_CPPFLAGS += @FFTW_CPPFLAGS@ -I$(top_srcdir)/packages/fftw/api
