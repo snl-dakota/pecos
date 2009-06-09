@@ -10,10 +10,10 @@
 
 #ifdef HAVE_DFFTPACK
 #define ZFFTI_F77 F77_FUNC(zffti,ZFFTI)
-extern "C" void ZFFTI_F77(int& n, double* wsave);
+extern "C" void ZFFTI_F77(int& n, Pecos::Real* wsave);
 
 #define ZFFTB_F77 F77_FUNC(zfftb,ZFFTB)
-extern "C" void ZFFTB_F77(int& n, const void* complex_array, double* wsave);
+extern "C" void ZFFTB_F77(int& n, const void* complex_array,Pecos::Real* wsave);
 #endif
 
 #include <algorithm>
@@ -77,7 +77,7 @@ power_spectral_density(const String& psd_name, const Real& param)
   size_t i, num_terms = psdSequence.length();
   sigmaSequence.sizeUninitialized(num_terms);
   for (i=0; i<num_terms; i++)
-    sigmaSequence[i] = sqrt(psdSequence[i]*deltaOmega);
+    sigmaSequence[i] = std::sqrt(psdSequence[i]*deltaOmega);
 }
 
 
@@ -146,9 +146,9 @@ void FourierInverseTransformation::compute_sample_shinozuka_deodatis()
   Psi=2*pi*rand(m,num_ifft_samples);
 
   // form num_ifft_samples samples of B vector
-  IMAG=sqrt(-1);
+  IMAG=std::sqrt(-1);
   for i=1:num_ifft_samples,
-    B(:,i)=sqrt(2)*s.*exp(IMAG*Psi(:,i));
+    B(:,i)=std::sqrt(2)*s.*exp(IMAG*Psi(:,i));
   end
 
   // use ifft to get samples of X
@@ -162,9 +162,9 @@ void FourierInverseTransformation::compute_sample_shinozuka_deodatis()
 				      lhsSamples);
 
   for (i=0; i<num_terms; i++) {
-    //Real A = sigmaSequence[i]*sqrt(2.);
+    //Real A = sigmaSequence[i]*std::sqrt(2.);
     //ifftVector[i] = std::complex<Real>(A*cos(Psi_i), A*sin(Psi_i)); // Euler
-    ifftVector[i] = std::polar(sigmaSequence[i]*sqrt(2.), lhsSamples(i, 0));
+    ifftVector[i] = std::polar(sigmaSequence[i]*std::sqrt(2.), lhsSamples(i,0));
   }
 
   compute_ifft_sample_set(ifftVector); // ifftVector: freq -> time domain
@@ -188,10 +188,10 @@ void FourierInverseTransformation::compute_sample_grigoriu()
   /* MATLAB code:
   // form num_ifft_samples samples of B vector
   randn('seed',seed);
-  IMAG=sqrt(-1);
+  IMAG=std::sqrt(-1);
   for i=1:num_ifft_samples,
     V=randn(m,1);W=randn(m,1);  // V, W ~ iid N(0,1)
-    A=s.*sqrt(V.^2 + W.^2);     // A ~ Rayleigh
+    A=s.*std::sqrt(V.^2 + W.^2);// A ~ Rayleigh
     Psi=-atan2(W,V);            // Psi ~ U(-pi,pi)
     B(:,i)=A.*exp(IMAG*Psi);
   end
@@ -209,11 +209,11 @@ void FourierInverseTransformation::compute_sample_grigoriu()
   for (i=0; i<num_terms; i++) {
     const Real& v_i = lhsSamples(i, 0);
     const Real& w_i = lhsSamples(i, 1);
-    //Real A = sigmaSequence[i]*sqrt(v_i*v_i + w_i*w_i); // A ~ Rayleigh
-    //Real Psi = -atan2(w_i, v_i);                       // Psi ~ U(-pi,pi)
+    //Real A = sigmaSequence[i]*std::sqrt(v_i*v_i + w_i*w_i); // A ~ Rayleigh
+    //Real Psi = -std::atan2(w_i, v_i);                       // Psi ~ U(-pi,pi)
     //ifftVector[i] = std::complex<Real>(A*cos(Psi), A*sin(Psi)); // Euler
-    ifftVector[i] = std::polar(sigmaSequence[i]*sqrt(v_i*v_i + w_i*w_i),
-			      -atan2(w_i, v_i));
+    ifftVector[i] = std::polar(sigmaSequence[i]*std::sqrt(v_i*v_i + w_i*w_i),
+			      -std::atan2(w_i, v_i));
   }
 
   compute_ifft_sample_set(ifftVector); // ifftVector: freq -> time domain
@@ -235,7 +235,7 @@ compute_ifft_sample_set(ComplexVector& ifft_vector)
   fftw_execute(fftwPlan);
 #elif HAVE_DFFTPACK
   // fallback FFT package
-  double* wsave = new double [4*num_terms+15];
+  Real* wsave = new Real [4*num_terms+15];
   ZFFTI_F77(num_terms, wsave);
   ZFFTB_F77(num_terms, ifft_vector.values(), wsave); // transforms in place
   delete [] wsave;

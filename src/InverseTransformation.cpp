@@ -7,6 +7,7 @@
     _______________________________________________________________________ */
 
 #include "InverseTransformation.hpp"
+#include <cmath>
 
 static const char rcsId[]="@(#) $Id: InverseTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -35,7 +36,7 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
 
   // omegaBar and totalTime specify deltaTime and m
   deltaTime  = 2.*Pi/omegaBar;  // rad/sec -> sec
-  size_t m   = 1 + (size_t)floor(totalTime/deltaTime);
+  size_t m   = 1 + (size_t)std::floor(totalTime/deltaTime);
   deltaOmega = omegaBar/(m-1);
 
   timeSequence.sizeUninitialized(m);
@@ -102,7 +103,7 @@ power_spectral_density(const String& psd_name, const Real& param)
     //        pi (w^2 + lam^2)
     Real p_2_over_pi = 2.*param/Pi, param_sq = param*param;
     for (i=0; i<m; i++)
-      psdSequence[i] = p_2_over_pi/(pow(omegaSequence[i], 2) + param_sq);
+      psdSequence[i] = p_2_over_pi/(std::pow(omegaSequence[i], 2) + param_sq);
   }
   else if (psd_name == "second_order_markov") {
     // One-sided PSD for (unit-variance) 2st-order Markov process:
@@ -113,7 +114,7 @@ power_spectral_density(const String& psd_name, const Real& param)
     Real param_sq = param*param, p_sq_4_over_pi = 4.*param_sq/Pi;
     for (i=0; i<m; i++)
       psdSequence[i]
-	= p_sq_4_over_pi/pow(pow(omegaSequence[i], 2) + param_sq, 2);
+	= p_sq_4_over_pi/std::pow(std::pow(omegaSequence[i], 2) + param_sq, 2);
   }
 }
 

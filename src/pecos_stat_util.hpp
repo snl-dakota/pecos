@@ -31,7 +31,7 @@
 #include <boost/math/policies/policy.hpp>
 namespace bmth = boost::math;
 namespace bmp  = bmth::policies;
-#include <math.h>
+#include <cmath>
 
 
 namespace Pecos {
