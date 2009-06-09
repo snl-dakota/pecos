@@ -12,6 +12,7 @@
 #include <boost/math/constants/constants.hpp>
 #include <iostream>
 #include <cfloat>  // for DBL_MIN, DBL_MAX
+#include <cmath>
 #include <cstdlib>
 
 
