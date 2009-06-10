@@ -476,6 +476,74 @@ inline void lognormal_params_from_moments(const Real& mean, const Real& std_dev,
 }
 
 
+inline void moments_from_lognormal_spec(const RealVector& ln_means,
+					const RealVector& ln_std_devs,
+					const RealVector& ln_lambdas,
+					const RealVector& ln_zetas,
+					const RealVector& ln_err_facts, 
+					size_t i, Real& mean, Real& std_dev)
+{
+  if (!ln_lambdas.empty())
+    moments_from_lognormal_params(ln_lambdas[i], ln_zetas[i], mean, std_dev);
+  else {
+    mean = ln_means[i];
+    if (!ln_std_devs.empty())
+      std_dev = ln_std_devs[i];
+    else
+      std_deviation_from_err_factor(mean, ln_err_facts[i], std_dev);
+  }
+}
+
+
+inline void params_from_lognormal_spec(const RealVector& ln_means,
+				       const RealVector& ln_std_devs,
+				       const RealVector& ln_lambdas,
+				       const RealVector& ln_zetas,
+				       const RealVector& ln_err_facts, 
+				       size_t i, Real& lambda, Real& zeta)
+{
+  if (!ln_lambdas.empty()) {
+    lambda = ln_lambdas[i];
+    zeta   = ln_zetas[i];
+  }
+  else {
+    if (!ln_std_devs.empty())
+      lognormal_params_from_moments(ln_means[i], ln_std_devs[i], lambda, zeta);
+    else {
+      Real mean = ln_means[i], stdev;
+      std_deviation_from_err_factor(mean, ln_err_facts[i], stdev);
+      lognormal_params_from_moments(mean, stdev, lambda, zeta);
+    }
+  }
+}
+
+
+inline void all_from_lognormal_spec(const RealVector& ln_means,
+				    const RealVector& ln_std_devs,
+				    const RealVector& ln_lambdas,
+				    const RealVector& ln_zetas,
+				    const RealVector& ln_err_facts, 
+				    size_t i, Real& mean, Real& std_dev,
+				    Real& lambda, Real& zeta, Real& err_fact)
+{
+  if (!ln_lambdas.empty()) { // lambda/zeta -> mean/std_dev
+    lambda = ln_lambdas[i]; zeta = ln_zetas[i];
+    moments_from_lognormal_params(lambda, zeta, mean, std_dev);
+    err_factor_from_std_deviation(mean, std_dev, err_fact);
+  }
+  else if (!ln_std_devs.empty()) {
+    mean = ln_means[i]; std_dev = ln_std_devs[i];
+    lognormal_params_from_moments(mean, std_dev, lambda, zeta);
+    err_factor_from_std_deviation(mean, std_dev, err_fact);
+  }
+  else { // mean/err_fact -> mean/std_dev
+    mean = ln_means[i]; err_fact = ln_err_facts[i];
+    std_deviation_from_err_factor(mean, err_fact, std_dev);
+    lognormal_params_from_moments(mean, std_dev, lambda, zeta);
+  }
+}
+
+
 inline void moments_from_uniform_params(const Real& lwr, const Real& upr,
 					Real& mean, Real& std_dev)
 { mean = (lwr + upr)/2.; std_dev = (upr - lwr)/std::sqrt(12.); }
