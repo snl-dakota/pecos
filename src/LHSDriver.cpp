@@ -7,6 +7,7 @@
     _______________________________________________________________________ */
 
 #include "LHSDriver.hpp"
+#include "pecos_stat_util.hpp"
 #include <algorithm>
 #if defined(__sun) && defined(__sparc) && defined(__SUNPRO_CC)
 #include <math.h>
@@ -88,6 +89,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 		 const RealVector& n_means,      const RealVector& n_std_devs,
 		 const RealVector& n_l_bnds,     const RealVector& n_u_bnds,
 		 const RealVector& ln_means,     const RealVector& ln_std_devs,
+		 const RealVector& ln_lambdas,   const RealVector& ln_zetas,
 		 const RealVector& ln_err_facts, const RealVector& ln_l_bnds,
 		 const RealVector& ln_u_bnds,	 const RealVector& u_l_bnds,
 		 const RealVector& u_u_bnds,	 const RealVector& lu_l_bnds,
@@ -118,7 +120,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   bool correlation_flag = !correlations.empty();
   size_t i, j, num_dv = d_l_bnds.length(), num_sv = s_l_bnds.length(),
-    num_nuv = n_means.length(),  num_lnuv = ln_means.length(),
+    num_nuv = n_means.length(),
+    num_lnuv = std::max(ln_means.length(), ln_lambdas.length()),
     num_uuv = u_l_bnds.length(), num_luuv = lu_l_bnds.length(),
     num_tuv = t_modes.length(),  num_euv  = e_betas.length(),
     num_buv = b_alphas.length(), num_gauv = ga_alphas.length(),
@@ -257,8 +260,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // lognormal uncertain
-  bool ln_bnd_spec = (!ln_l_bnds.empty() && !ln_u_bnds.empty());
-  bool n_dist = !ln_std_devs.empty();
+  bool ln_bnd_spec = (!ln_l_bnds.empty()  && !ln_u_bnds.empty());
+  bool n_dist      = (!ln_lambdas.empty() || !ln_std_devs.empty());
   for (i=0; i<num_lnuv; i++, cntr++) {
     //sprintf(name_string,"Lognormal%d", cntr+1);
     char name_string[16];
@@ -276,15 +279,15 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       // of the underlying normal distribution (LHS manual, SAND#98-0210, p.39).
       // DAKOTA/UQ methods are standardized on using the mean/std dev of the
       // actual lognormal distribution, which is more intuitive for most users.
-      // Therefore, perform the mapping from the DAKOTA standard to the LHS
-      // input requirements.
-      Real mean_sq      = pow(ln_means[i],2),
-           var          = pow(ln_std_devs[i],2),
-           normal_var   = log(var/mean_sq + 1.),
-           normal_sigma = sqrt(normal_var),
-           normal_mean  = log(ln_means[i]) - normal_var/2.;
-      dist_params[0] = normal_mean;
-      dist_params[1] = normal_sigma;
+      // Therefore, map from the DAKOTA spec (mean/std_dev or lambda/zeta) to
+      // the LHS input requirements (lambda/zeta), if required.
+      if (!ln_lambdas.empty()) {
+	dist_params[0] = ln_lambdas[i];
+	dist_params[1] = ln_zetas[i];
+      }
+      else
+	lognormal_params_from_moments(ln_means[i], ln_std_devs[i],
+				      dist_params[0], dist_params[1]);
     }
     else {
       // In the mean/err factor specification case, LHS expects the mean/err

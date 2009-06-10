@@ -96,7 +96,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    case NORMAL: // unbounded normal: z = (x - mu)/sigma
+    case NORMAL: // unbounded normal: z = (x - mean)/stdev
       if (ranVarTypesU[i] == STD_NORMAL)
 	x_vars(i) = z_vars(i)*ranVarStdDevsX(i) + ranVarMeansX(i);
       else
@@ -112,12 +112,12 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	else if (z == -DBL_MAX)
 	  x_vars(i) = lwr;
 	else {
-	  const Real& mu    = ranVarMeansX(i);
-	  const Real& sigma = ranVarStdDevsX(i);
-	  Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mu)/sigma) : 0.;
-	  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mu)/sigma) : 1.;
+	  const Real& mean  = ranVarMeansX(i);
+	  const Real& stdev = ranVarStdDevsX(i);
+	  Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/stdev) : 0.;
+	  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/stdev) : 1.;
 	  x_vars(i)
-	    = Phi_inverse(Phi(z)*(Phi_ums - Phi_lms) + Phi_lms) * sigma + mu;
+	    = Phi_inverse(Phi(z)*(Phi_ums - Phi_lms) + Phi_lms) * stdev + mean;
 	}
       }
       else if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
@@ -125,13 +125,10 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    case LOGNORMAL: // unbounded lognormal: z = (ln x - lamba)/zeta
-      if (ranVarTypesU[i] == STD_NORMAL) {
-	const Real& mu = ranVarMeansX(i);
-	Real cf_var = ranVarStdDevsX(i)/mu, zeta_sq = log(1 + cf_var*cf_var),
-	  lambda = log(mu) - zeta_sq/2.;
-	x_vars(i) = exp(lambda + sqrt(zeta_sq)*z_vars(i));
-      }
+    case LOGNORMAL: // unbounded lognormal: z = (ln x - lambda)/zeta
+      if (ranVarTypesU[i] == STD_NORMAL)
+	x_vars(i) = exp(ranVarAddtlParamsX[i][0] +
+			ranVarAddtlParamsX[i][1] * z_vars(i));
       else if (ranVarTypesU[i] == LOGNORMAL) // Golub-Welsch: no transform
 	x_vars(i) = z_vars(i);
       else
@@ -147,9 +144,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	else if (z == -DBL_MAX)
 	  x_vars(i) = lwr;
 	else {
-	  const Real& mu = ranVarMeansX(i);
-	  Real cf_var = ranVarStdDevsX(i)/mu, zeta_sq = log(1. + cf_var*cf_var),
-	    lambda = log(mu) - zeta_sq/2., zeta = sqrt(zeta_sq);
+	  const Real& lambda = ranVarAddtlParamsX[i][0];
+	  const Real& zeta   = ranVarAddtlParamsX[i][1];
 	  Real Phi_lms = (lwr > 0.)      ? Phi((log(lwr)-lambda)/zeta) : 0.;
 	  Real Phi_ums = (upr < DBL_MAX) ? Phi((log(upr)-lambda)/zeta) : 1.;
 	  x_vars(i) = exp(Phi_inverse(Phi(z)*(Phi_ums - Phi_lms) + Phi_lms)
@@ -196,7 +192,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	x_vars(i) = z_vars(i);
       else {
 	const Real& lwr  = ranVarLowerBndsX(i);
-	const Real& mode = ranVarAddtlParamsX[i](0);
+	const Real& mode = ranVarAddtlParamsX[i][0];
 	const Real& upr  = ranVarUpperBndsX(i);
 	const Real& z    = z_vars(i);
 	Real range = upr - lwr;
@@ -223,11 +219,11 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       break;
     case EXPONENTIAL:
       if (ranVarTypesU[i] == STD_EXPONENTIAL) // scale: exp(-x/beta) = exp(-z)
-	x_vars(i) = ranVarAddtlParamsX[i](0)*z_vars(i);
+	x_vars(i) = ranVarAddtlParamsX[i][0]*z_vars(i);
       else if (ranVarTypesU[i] == STD_NORMAL) { // transform from std normal
 	const Real& z = z_vars(i);
 	Real log1mnormcdf = (z > 0.) ? log(Phi(-z)) : log1p(-Phi(z));
-	x_vars(i) = -ranVarAddtlParamsX[i](0)*log1mnormcdf;
+	x_vars(i) = -ranVarAddtlParamsX[i][0]*log1mnormcdf;
       }
       else
 	err_flag = true;
@@ -239,7 +235,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	x_vars(i) = lwr + (upr - lwr)*(z_vars(i)+1.)/2.;
       else if (ranVarTypesU[i] == STD_NORMAL) { // transform from std normal
 	Real normcdf = Phi(z_vars(i)), scaled_x = std_beta_cdf_inverse(normcdf,
-	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1));
+	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]);
 	x_vars(i) = lwr + (upr - lwr)*scaled_x;
       }
       else
@@ -248,10 +244,10 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
     }
     case GAMMA: {
       if (ranVarTypesU[i] == STD_GAMMA)
-	x_vars(i) = ranVarAddtlParamsX[i](1)*z_vars(i); // x/beta = z
+	x_vars(i) = ranVarAddtlParamsX[i][1]*z_vars(i); // x/beta = z
       else if (ranVarTypesU[i] == STD_NORMAL)
-	x_vars(i) = gamma_cdf_inverse(Phi(z_vars(i)), ranVarAddtlParamsX[i](0),
-				      ranVarAddtlParamsX[i](1));
+	x_vars(i) = gamma_cdf_inverse(Phi(z_vars(i)), ranVarAddtlParamsX[i][0],
+				      ranVarAddtlParamsX[i][1]);
       else
 	err_flag = true;
       break;
@@ -263,8 +259,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
 	Real lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(Phi(z));
-	x_vars(i) = ranVarAddtlParamsX[i](1)
-	  - log(-lognormcdf)/ranVarAddtlParamsX[i](0);
+	x_vars(i) = ranVarAddtlParamsX[i][1]
+	  - log(-lognormcdf)/ranVarAddtlParamsX[i][0];
       }
       else if (ranVarTypesU[i] == GUMBEL) // Golub-Welsch: no transform
 	x_vars(i) = z_vars(i);
@@ -278,8 +274,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
 	Real lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(Phi(z));
-	x_vars(i) = ranVarAddtlParamsX[i](1) *
-	  pow(-lognormcdf, -1./ranVarAddtlParamsX[i](0));
+	x_vars(i) = ranVarAddtlParamsX[i][1] *
+	  pow(-lognormcdf, -1./ranVarAddtlParamsX[i][0]);
       }
       else if (ranVarTypesU[i] == FRECHET) // Golub-Welsch: no transform
 	x_vars(i) = z_vars(i);
@@ -293,8 +289,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
 	Real log1mnormcdf = (z > 0.) ? log(Phi(-z)) : log1p(-Phi(z));
-	x_vars(i) = ranVarAddtlParamsX[i](1) *
-	  pow(-log1mnormcdf, 1./ranVarAddtlParamsX[i](0));
+	x_vars(i) = ranVarAddtlParamsX[i][1] *
+	  pow(-log1mnormcdf, 1./ranVarAddtlParamsX[i][0]);
       }
       else if (ranVarTypesU[i] == WEIBULL) // Golub-Welsch: no transform
 	x_vars(i) = z_vars(i);
@@ -376,7 +372,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    case NORMAL: // unbounded normal: z = (x - mu)/sigma
+    case NORMAL: // unbounded normal: z = (x - mean)/stdev
       if (ranVarTypesU[i] == STD_NORMAL)
 	z_vars(i) = (x_vars(i)-ranVarMeansX(i))/ranVarStdDevsX(i);
       else
@@ -400,13 +396,10 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    case LOGNORMAL: // unbounded lognormal: z = (ln x - lamba)/zeta
-      if (ranVarTypesU[i] == STD_NORMAL) {
-	const Real& mu = ranVarMeansX(i);
-	Real cf_var = ranVarStdDevsX(i)/mu, zeta_sq = log(1. + cf_var*cf_var),
-	  lambda = log(mu) - zeta_sq/2.;
-	z_vars(i) = (log(x_vars(i)) - lambda)/sqrt(zeta_sq);
-      }
+    case LOGNORMAL: // unbounded lognormal: z = (ln x - lambda)/zeta
+      if (ranVarTypesU[i] == STD_NORMAL)
+	z_vars(i) = (log(x_vars(i)) - ranVarAddtlParamsX[i][0])
+	  / ranVarAddtlParamsX[i][1];
       else if (ranVarTypesU[i] == LOGNORMAL) // Golub-Welsch: no transform
 	z_vars(i) = x_vars(i);
       else
@@ -463,7 +456,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       if (ranVarTypesU[i] == TRIANGULAR) // Golub-Welsch: no transform
 	z_vars(i) = x_vars(i);
       else {
-	Real cdf = triangular_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	Real cdf = triangular_cdf(x_vars(i), ranVarAddtlParamsX[i][0],
 				  ranVarLowerBndsX(i), ranVarUpperBndsX(i));
 	if (ranVarTypesU[i] == STD_UNIFORM)
 	  z_vars(i) = 2.*cdf - 1.;
@@ -475,10 +468,10 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       break;
     case EXPONENTIAL:
       if (ranVarTypesU[i] == STD_EXPONENTIAL)// scale to std exponential exp(-z)
-	z_vars(i) = x_vars(i)/ranVarAddtlParamsX[i](0);
+	z_vars(i) = x_vars(i)/ranVarAddtlParamsX[i][0];
       else if (ranVarTypesU[i] == STD_NORMAL) // transform to std normal
 	z_vars(i)
-	  = Phi_inverse(exponential_cdf(x_vars(i), ranVarAddtlParamsX[i](0)));
+	  = Phi_inverse(exponential_cdf(x_vars(i), ranVarAddtlParamsX[i][0]));
       else
 	err_flag = true;
       break;
@@ -489,8 +482,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	z_vars(i) = 2.*(x_vars(i) - lwr)/(upr - lwr) - 1.;
       else if (ranVarTypesU[i] == STD_NORMAL) { // transform to std normal
 	Real scaled_x = (x_vars(i)-lwr)/(upr - lwr);
-	z_vars(i) = Phi_inverse(std_beta_cdf(scaled_x, ranVarAddtlParamsX[i](0),
-					     ranVarAddtlParamsX[i](1)));
+	z_vars(i) = Phi_inverse(std_beta_cdf(scaled_x, ranVarAddtlParamsX[i][0],
+					     ranVarAddtlParamsX[i][1]));
       }
       else
 	err_flag = true;
@@ -498,18 +491,18 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
     }
     case GAMMA:
       if (ranVarTypesU[i] == STD_GAMMA) // scale to std gamma
-	z_vars(i) = x_vars(i) / ranVarAddtlParamsX[i](1);
+	z_vars(i) = x_vars(i) / ranVarAddtlParamsX[i][1];
       else if (ranVarTypesU[i] == STD_NORMAL) // transform to std normal
-	z_vars(i) = Phi_inverse(gamma_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
-	  ranVarAddtlParamsX[i](1)));
+	z_vars(i) = Phi_inverse(gamma_cdf(x_vars(i), ranVarAddtlParamsX[i][0],
+	  ranVarAddtlParamsX[i][1]));
       else
 	err_flag = true;
       break;
     case GUMBEL:
       if (ranVarTypesU[i] == STD_NORMAL)
 	// Phi(z) = F(x) = e^(-e^(-alpha(x-beta)))
-	z_vars(i) = Phi_inverse(gumbel_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
-					   ranVarAddtlParamsX[i](1)));
+	z_vars(i) = Phi_inverse(gumbel_cdf(x_vars(i), ranVarAddtlParamsX[i][0],
+					   ranVarAddtlParamsX[i][1]));
       else if (ranVarTypesU[i] == GUMBEL) // Golub-Welsch: no transform
 	z_vars(i) = x_vars(i);
       else
@@ -517,8 +510,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       break;
     case FRECHET:
       if (ranVarTypesU[i] == STD_NORMAL) // Phi(z) = F(x) = e^(-(beta/x)^alpha)
-	z_vars(i) = Phi_inverse(frechet_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
-					    ranVarAddtlParamsX[i](1)));
+	z_vars(i) = Phi_inverse(frechet_cdf(x_vars(i), ranVarAddtlParamsX[i][0],
+					    ranVarAddtlParamsX[i][1]));
       else if (ranVarTypesU[i] == FRECHET) // Golub-Welsch: no transform
 	z_vars(i) = x_vars(i);
       else
@@ -527,8 +520,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
     case WEIBULL:
       if (ranVarTypesU[i] == STD_NORMAL)
 	// Phi(z) = F(x) = 1 - e^(-(x/beta)^alpha)
-	z_vars(i) = Phi_inverse(weibull_cdf(x_vars(i), ranVarAddtlParamsX[i](0),
-					    ranVarAddtlParamsX[i](1)));
+	z_vars(i) = Phi_inverse(weibull_cdf(x_vars(i), ranVarAddtlParamsX[i][0],
+					    ranVarAddtlParamsX[i][1]));
       else if (ranVarTypesU[i] == WEIBULL) // Golub-Welsch: no transform
 	z_vars(i) = x_vars(i);
       else
@@ -1538,7 +1531,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       else
 	err_flag = true;
       break;
-    case NORMAL: // unbounded normal: z = (x - mu)/sigma
+    case NORMAL: // unbounded normal: z = (x - mean)/stdev
       if (ranVarTypesU[i] == STD_NORMAL)
 	jacobian_xz(i, i) = ranVarStdDevsX(i);
       else
@@ -1554,12 +1547,9 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       else
 	err_flag = true;
       break;
-    case LOGNORMAL: // unbounded lognormal:  z = (ln x - lamba)/zeta
-      if (ranVarTypesU[i] == STD_NORMAL) {
-	Real cf_var = ranVarStdDevsX(i)/ranVarMeansX(i),
-	  zeta = sqrt(log(1 + cf_var*cf_var));
-	jacobian_xz(i, i) = zeta*x_vars(i);
-      }
+    case LOGNORMAL: // unbounded lognormal:  z = (ln x - lambda)/zeta
+      if (ranVarTypesU[i] == STD_NORMAL)
+	jacobian_xz(i, i) = ranVarAddtlParamsX[i][1] * x_vars(i);
       else if (ranVarTypesU[i] == LOGNORMAL) // Golub-Welsch: no transform
 	jacobian_xz(i, i) = 1.;
       else
@@ -1608,7 +1598,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       if (ranVarTypesU[i] == TRIANGULAR) // Golub-Welsch: no transform
 	jacobian_xz(i, i) = 1.;
       else {
-	Real pdf = triangular_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	Real pdf = triangular_pdf(x_vars(i), ranVarAddtlParamsX[i][0],
 				  ranVarLowerBndsX(i), ranVarUpperBndsX(i));
 	if (ranVarTypesU[i] == STD_UNIFORM)
 	  jacobian_xz(i, i) = 0.5/pdf;
@@ -1619,7 +1609,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       }
       break;
     case EXPONENTIAL: {
-      const Real& beta = ranVarAddtlParamsX[i](0);
+      const Real& beta = ranVarAddtlParamsX[i][0];
       if (ranVarTypesU[i] == STD_EXPONENTIAL) // linear scaling
 	jacobian_xz(i, i) = beta;
       else if (ranVarTypesU[i] == STD_NORMAL) // nonlinear transformation
@@ -1636,8 +1626,8 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	jacobian_xz(i, i) = scale/2.;
       else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
 	Real scaled_x = (x_vars(i)-lwr)/scale,
-	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i](0),
-			     ranVarAddtlParamsX[i](1)) / scale;
+	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i][0],
+			     ranVarAddtlParamsX[i][1]) / scale;
 	jacobian_xz(i, i) = phi(z_vars(i)) / pdf;
       }
       else
@@ -1646,17 +1636,17 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     }
     case GAMMA:
       if (ranVarTypesU[i] == STD_GAMMA) // linear scaling
-	jacobian_xz(i, i) = ranVarAddtlParamsX[i](1); // beta
+	jacobian_xz(i, i) = ranVarAddtlParamsX[i][1]; // beta
       else if (ranVarTypesU[i] == STD_NORMAL) // nonlinear transformation
 	jacobian_xz(i, i) = phi(z_vars(i)) / gamma_pdf(x_vars(i),
-	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1)); // alpha, beta
+	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]); // alpha, beta
       else
 	err_flag = true;
       break;
     case GUMBEL:
       if (ranVarTypesU[i] == STD_NORMAL)
 	jacobian_xz(i, i) = phi(z_vars(i)) / gumbel_pdf(x_vars(i),
-	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1));
+	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]);
       else if (ranVarTypesU[i] == GUMBEL) // Golub-Welsch: no transform
 	jacobian_xz(i, i) = 1.;
       else
@@ -1665,7 +1655,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     case FRECHET:
       if (ranVarTypesU[i] == STD_NORMAL)
 	jacobian_xz(i, i) = phi(z_vars(i)) / frechet_pdf(x_vars(i),
-	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1));
+	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]);
       else if (ranVarTypesU[i] == FRECHET) // Golub-Welsch: no transform
 	jacobian_xz(i, i) = 1.;
       else
@@ -1674,7 +1664,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     case WEIBULL:
       if (ranVarTypesU[i] == STD_NORMAL)
 	jacobian_xz(i, i) = phi(z_vars(i)) / weibull_pdf(x_vars(i),
-	  ranVarAddtlParamsX[i](0), ranVarAddtlParamsX[i](1));
+	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]);
       else if (ranVarTypesU[i] == WEIBULL) // Golub-Welsch: no transform
 	jacobian_xz(i, i) = 1.;
       else
@@ -1760,7 +1750,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       else
 	err_flag = true;
       break;
-    case NORMAL: // unbounded normal: z = (x - mu)/sigma
+    case NORMAL: // unbounded normal: z = (x - mean)/stdev
       if (ranVarTypesU[i] == STD_NORMAL)
 	jacobian_zx(i, i) = 1./ranVarStdDevsX(i);
       else
@@ -1776,12 +1766,9 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       else
 	err_flag = true;
       break;
-    case LOGNORMAL: // unbounded lognormal: z = (ln x - lamba)/zeta
-      if (ranVarTypesU[i] == STD_NORMAL) {
-	Real cf_var = ranVarStdDevsX(i)/ranVarMeansX(i),
-	  zeta = sqrt(log(1 + cf_var*cf_var));
-	jacobian_zx(i, i) = 1./zeta/x_vars(i);
-      }
+    case LOGNORMAL: // unbounded lognormal: z = (ln x - lambda)/zeta
+      if (ranVarTypesU[i] == STD_NORMAL)
+	jacobian_zx(i, i) = 1./ranVarAddtlParamsX[i][1]/x_vars(i);
       else if (ranVarTypesU[i] == LOGNORMAL) // Golub-Welsch: no transform
 	jacobian_zx(i, i) = 1.;
       else
@@ -1830,7 +1817,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       if (ranVarTypesU[i] == TRIANGULAR) // Golub-Welsch: no transform
 	jacobian_zx(i, i) = 1.;
       else {
-	Real pdf = triangular_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
+	Real pdf = triangular_pdf(x_vars(i), ranVarAddtlParamsX[i][0],
 				  ranVarLowerBndsX(i), ranVarUpperBndsX(i));
 	if (ranVarTypesU[i] == STD_UNIFORM)
 	  jacobian_zx(i, i) = 2.*pdf;
@@ -1841,7 +1828,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       }
       break;
     case EXPONENTIAL: {
-      const Real& beta = ranVarAddtlParamsX[i](0);
+      const Real& beta = ranVarAddtlParamsX[i][0];
       if (ranVarTypesU[i] == STD_EXPONENTIAL) // linear scaling
 	jacobian_zx(i, i) = 1./beta;
       else if (ranVarTypesU[i] == STD_NORMAL)
@@ -1858,8 +1845,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	jacobian_zx(i, i) = 2./scale;
       else if (ranVarTypesU[i] == STD_NORMAL) {
 	Real scaled_x = (x_vars(i)-lwr)/scale,
-	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i](0),
-			     ranVarAddtlParamsX[i](1)) / scale;
+	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i][0],
+			     ranVarAddtlParamsX[i][1]) / scale;
 	jacobian_zx(i, i) = pdf / phi(z_vars(i));
       }
       else
@@ -1868,18 +1855,18 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     }
     case GAMMA: {
       if (ranVarTypesU[i] == STD_GAMMA) // linear scaling
-	jacobian_zx(i, i) = 1./ranVarAddtlParamsX[i](1);
+	jacobian_zx(i, i) = 1./ranVarAddtlParamsX[i][1];
       else if (ranVarTypesU[i] == STD_NORMAL)
-	jacobian_zx(i, i) = gamma_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
-	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
+	jacobian_zx(i, i) = gamma_pdf(x_vars(i), ranVarAddtlParamsX[i][0],
+	  ranVarAddtlParamsX[i][1]) / phi(z_vars(i));
       else
 	err_flag = true;
       break;
     }
     case GUMBEL: {
       if (ranVarTypesU[i] == STD_NORMAL)
-	jacobian_zx(i, i) = gumbel_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
-	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
+	jacobian_zx(i, i) = gumbel_pdf(x_vars(i), ranVarAddtlParamsX[i][0],
+	  ranVarAddtlParamsX[i][1]) / phi(z_vars(i));
       else if (ranVarTypesU[i] == GUMBEL) // Golub-Welsch: no transform
 	jacobian_zx(i, i) = 1.;
       else
@@ -1888,8 +1875,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     }
     case FRECHET: {
       if (ranVarTypesU[i] == STD_NORMAL)
-	jacobian_zx(i, i) = frechet_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
-	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
+	jacobian_zx(i, i) = frechet_pdf(x_vars(i), ranVarAddtlParamsX[i][0],
+	  ranVarAddtlParamsX[i][1]) / phi(z_vars(i));
       else if (ranVarTypesU[i] == FRECHET) // Golub-Welsch: no transform
 	jacobian_zx(i, i) = 1.;
       else
@@ -1898,8 +1885,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     }
     case WEIBULL: {
       if (ranVarTypesU[i] == STD_NORMAL)
-	jacobian_zx(i, i) = weibull_pdf(x_vars(i), ranVarAddtlParamsX[i](0),
-	  ranVarAddtlParamsX[i](1)) / phi(z_vars(i));
+	jacobian_zx(i, i) = weibull_pdf(x_vars(i), ranVarAddtlParamsX[i][0],
+	  ranVarAddtlParamsX[i][1]) / phi(z_vars(i));
       else if (ranVarTypesU[i] == WEIBULL) // Golub-Welsch: no transform
 	jacobian_zx(i, i) = 1.;
       else
@@ -2043,7 +2030,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  //    (ranVarUpperBndsX(j)-ranVarLowerBndsX(j))/2.*num_dz_ds(j, i);
 	  break;
 	}
-	case NORMAL: { // x = z sigma + mu
+	case NORMAL: { // x = z stdev + mean
 	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
 	    switch (target2) {
 	    case N_MEAN: // Deriv of Normal w.r.t. its Mean
@@ -2066,167 +2053,217 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  break;
 	}
 	case BOUNDED_NORMAL: { // bounded normal
-	  const Real& mu    = ranVarMeansX(j);
-	  const Real& sigma = ranVarStdDevsX(j);
+	  const Real& mean  = ranVarMeansX(j);
+	  const Real& stdev = ranVarStdDevsX(j);
 	  const Real& lwr   = ranVarLowerBndsX(j);
 	  const Real& upr   = ranVarUpperBndsX(j);
 	  const Real& x     = x_vars(j); const Real& z = z_vars(j);
-	  Real lms = (lwr > -DBL_MAX) ? (lwr-mu)/sigma : -DBL_MAX;
-	  Real ums = (upr <  DBL_MAX) ? (upr-mu)/sigma :  DBL_MAX;
-	  Real xms = (x-mu)/sigma, phi_x = phi(xms);
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    Real phi_lms = (lwr > -DBL_MAX) ? phi(lms) : 0.;
-	    Real phi_ums = (upr <  DBL_MAX) ? phi(ums) : 0.;
-	    Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
-	    switch (target2) {
-	    case N_MEAN: // Deriv of Bounded Normal w.r.t. its Mean
+	  Real lms = (lwr > -DBL_MAX) ? (lwr-mean)/stdev : -DBL_MAX;
+	  Real ums = (upr <  DBL_MAX) ? (upr-mean)/stdev :  DBL_MAX;
+	  Real xms = (x-mean)/stdev, phi_x = phi(xms);
+	  if (ranVarTypesU[j] == STD_NORMAL) {
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      Real phi_lms = (lwr > -DBL_MAX) ? phi(lms) : 0.;
+	      Real phi_ums = (upr <  DBL_MAX) ? phi(ums) : 0.;
+	      Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
+	      switch (target2) {
+	      case N_MEAN: // Deriv of Bounded Normal w.r.t. its Mean
+		jacobian_xs(j, i)
+		  = 1. - (normcdf_comp*phi_lms + Phi(z)*phi_ums)/phi_x;
+		break;
+	      case N_STD_DEV: // Deriv of Bounded Normal w.r.t. its Std Dev
+		jacobian_xs(j, i)
+		  = xms - (normcdf_comp*phi_lms*lms + Phi(z)*phi_ums*ums)/phi_x;
+		break;
+	      case N_LWR_BND: // Deriv of Bounded Normal w.r.t. its lower bound
+		jacobian_xs(j, i) = phi_lms/phi_x*normcdf_comp;
+		break;
+	      case N_UPR_BND: // Deriv of Bounded Normal w.r.t. its upper bound
+		jacobian_xs(j, i) = phi_ums/phi_x*Phi(z);
+		break;
+	      case NO_TARGET: default:
+		PCerr << "Error: secondary mapping failure for BOUNDED_NORMAL "
+		      << "in NatafTransformation::jacobian_dX_dS()."<<std::endl;
+		abort_handler(-1);
+		break;
+	      }
+	    }
+	    // Deriv of Normal w.r.t. any distribution parameter
+	    if (correlationFlagX) {
+	      Real Phi_lms = (lwr > -DBL_MAX) ? Phi(lms) : 0.;
+	      Real Phi_ums = (upr <  DBL_MAX) ? Phi(ums) : 1.;
 	      jacobian_xs(j, i)
-		= 1. - (normcdf_comp*phi_lms + Phi(z)*phi_ums)/phi_x;
-	      break;
-	    case N_STD_DEV: // Deriv of Bounded Normal w.r.t. its Std Deviation
-	      jacobian_xs(j, i)
-		= xms - (normcdf_comp*phi_lms*lms + Phi(z)*phi_ums*ums)/phi_x;
-	      break;
-	    case N_LWR_BND: // Deriv of Bounded Normal w.r.t. its lower bound
-	      jacobian_xs(j, i) = phi_lms/phi_x*normcdf_comp;
-	      break;
-	    case N_UPR_BND: // Deriv of Bounded Normal w.r.t. its upper bound
-	      jacobian_xs(j, i) = phi_ums/phi_x*Phi(z);
-	      break;
-	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for BOUNDED_NORMAL in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
-	      break;
+		+= stdev*phi(z)*(Phi_ums - Phi_lms)/phi_x*num_dz_ds(j, i);
 	    }
 	  }
-	  // Deriv of Normal w.r.t. any distribution parameter
-	  if (correlationFlagX) {
-	    Real Phi_lms = (lwr > -DBL_MAX) ? Phi(lms) : 0.;
-	    Real Phi_ums = (upr <  DBL_MAX) ? Phi(ums) : 1.;
-	    jacobian_xs(j, i)
-	      += sigma*phi(z)*(Phi_ums - Phi_lms)/phi_x*num_dz_ds(j, i);
+	  else if (ranVarTypesU[j] == BOUNDED_NORMAL) { // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
 	  }
 	  break;
 	}
-	case LOGNORMAL: { // x = exp(lamba + z zeta)
+	case LOGNORMAL: { // x = exp(lambda + z zeta)
 	  const Real& x = x_vars(j);
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    switch (target2) {
-	    case LN_MEAN: { // Deriv of Lognormal w.r.t. its Mean
-	      // x = exp(lamba + z zeta)
-	      const Real& mu = ranVarMeansX(j);
-	      if (ranVarAddtlParamsX[j].length()) // mean, error factor spec
-		jacobian_xs(j, i) = x/mu;
-	      else {                              // mean, std deviation spec
-		const Real& sigma = ranVarStdDevsX(j);
-		Real mu_sq = mu*mu, var = sigma*sigma,
-		  zeta = sqrt(log(1. + var/mu_sq));
-		jacobian_xs(j, i) = x*(zeta*mu_sq + 2.*zeta*var -
-		  z_vars(j)*var)/mu/zeta/(mu_sq + var);
+	  if (ranVarTypesU[j] == STD_NORMAL) {
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      bool ln_err_fact = (ranVarAddtlParamsX[j].length() > 2);
+	      switch (target2) {
+	      case LN_MEAN: { // Deriv of Lognormal w.r.t. its Mean
+		// x = exp(lambda + z zeta)
+		const Real& mean = ranVarMeansX(j);
+		if (ln_err_fact) // mean, error factor spec
+		  jacobian_xs(j, i) = x/mean;
+		else {           // mean, std deviation spec
+		  const Real& stdev = ranVarStdDevsX(j);
+		  const Real& zeta  = ranVarAddtlParamsX[i][1];
+		  Real mean_sq = mean*mean, var = stdev*stdev;
+		  jacobian_xs(j, i) = x*(zeta*mean_sq + 2.*zeta*var -
+		    z_vars(j)*var)/mean/zeta/(mean_sq + var);
+		}
+		break;
 	      }
-	      break;
+	      case LN_STD_DEV: // Deriv of Lognormal w.r.t. its Std Deviation
+		if (ln_err_fact) { // mean, error factor spec
+		  PCerr << "Error: derivative with respect to LN_STD_DEV is "
+			<< "unsupported for error factor specifications."
+			<< std::endl;
+		  abort_handler(-1);
+		}
+		else {             // mean, std deviation spec
+		  const Real& mean  = ranVarMeansX(j);
+		  const Real& stdev = ranVarStdDevsX(j);
+		  const Real& zeta  = ranVarAddtlParamsX[i][1];
+		  Real mean_sq = mean*mean, var = stdev*stdev;
+		  jacobian_xs(j, i)
+		    = x*stdev*(z_vars(j)-zeta)/zeta/(mean_sq+var);
+		}
+		break;
+	      case LN_LAMBDA: // Deriv of Lognormal w.r.t. its Lambda
+		jacobian_xs(j, i) = x;
+		break;
+	      case LN_ZETA:   // Deriv of Lognormal w.r.t. its Zeta
+		jacobian_xs(j, i) = x*z_vars(j);
+		break;
+	      case LN_ERR_FACT: // Deriv of Lognormal w.r.t. its Error Factor
+		if (ln_err_fact) // mean, error factor spec
+		  jacobian_xs(j, i) = x*(z_vars(j) - ranVarAddtlParamsX[i][1])
+		    / Phi_inverse(0.95) / ranVarAddtlParamsX[j][2];
+		else {           // mean, std deviation spec
+		  PCerr << "Error: derivative with respect to LN_ERR_FACT is "
+			<< "unsupported for std deviation specifications."
+			<< std::endl;
+		  abort_handler(-1);
+		}
+		break;
+		//case LN_LWR_BND: case LN_UPR_BND: not supported
+	      case NO_TARGET: default:
+		PCerr << "Error: secondary mapping failure for LOGNORMAL in "
+		      << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+		abort_handler(-1);
+		break;
+	      }
 	    }
-	    case LN_STD_DEV: { // Deriv of Lognormal w.r.t. its Std Deviation
-	      const Real& mu    = ranVarMeansX(j);
-	      const Real& sigma = ranVarStdDevsX(j);
-	      Real mu_sq = mu*mu, var = sigma*sigma,
-		zeta = sqrt(log(1. + var/mu_sq));
-	      jacobian_xs(j, i) = x*sigma*(z_vars(j)-zeta)/zeta/(mu_sq+var);
-	      break;
-	    }
-	    case LN_ERR_FACT: { // Deriv of Lognormal w.r.t. its Error Factor
-	      const Real& err = ranVarAddtlParamsX[j](0);
-	      Real z_95 = Phi_inverse(0.95); // approx. 1.645
-	      jacobian_xs(j, i) = x/z_95/err*(z_vars(j) - log(err)/z_95);
-	      break;
-	    }
-	    //case LN_LWR_BND: case LN_UPR_BND: not supported
-	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for LOGNORMAL in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
-	      break;
+	    // Deriv of Lognormal w.r.t. any distribution parameter
+	    if (correlationFlagX) {
+	      Real cf_var = ranVarStdDevsX(j)/ranVarMeansX(j),
+		zeta = sqrt(log(1. + cf_var*cf_var));
+	      jacobian_xs(j, i) += x*zeta*num_dz_ds(j, i);
 	    }
 	  }
-	  // Deriv of Lognormal w.r.t. any distribution parameter
-	  if (correlationFlagX) {
-	    Real cf_var = ranVarStdDevsX(j)/ranVarMeansX(j),
-	      zeta = sqrt(log(1. + cf_var*cf_var));
-	    jacobian_xs(j, i) += x*zeta*num_dz_ds(j, i);
+	  else if (ranVarTypesU[j] == LOGNORMAL) { // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
 	  }
 	  break;
 	}
 	case BOUNDED_LOGNORMAL: { // bounded lognormal
-	  const Real& mu    = ranVarMeansX(i);
-	  const Real& sigma = ranVarStdDevsX(i);
-	  const Real& lwr   = ranVarLowerBndsX(j);
-	  const Real& upr   = ranVarUpperBndsX(j);
-	  const Real& x     = x_vars(j); const Real& z = z_vars(j);
-	  Real cf_var = sigma/mu, zeta_sq = log(1.+cf_var*cf_var),
-	    lambda = log(mu) - zeta_sq/2., zeta = sqrt(zeta_sq),
-	    xms = (log(x)-lambda)/zeta, phi_xms = phi(xms);
+	  const Real& mean   = ranVarMeansX(i);
+	  const Real& stdev  = ranVarStdDevsX(i);
+	  const Real& lambda = ranVarAddtlParamsX[i][0];
+	  const Real& zeta   = ranVarAddtlParamsX[i][1];
+	  const Real& lwr    = ranVarLowerBndsX(j);
+	  const Real& upr    = ranVarUpperBndsX(j);
+	  const Real& x      = x_vars(j); const Real& z = z_vars(j);
+	  Real xms = (log(x)-lambda)/zeta, phi_xms = phi(xms);
 	  Real lms = (lwr > 0.)      ? (log(lwr)-lambda)/zeta : -DBL_MAX;
 	  Real ums = (upr < DBL_MAX) ? (log(upr)-lambda)/zeta :  DBL_MAX;
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    Real phi_lms = (lwr > 0.)      ? phi(lms) : 0.;
-	    Real phi_ums = (upr < DBL_MAX) ? phi(ums) : 0.;
-	    Real dlambda_ds = 0., dzeta_ds = 0., dlwr_ds = 0., dupr_ds = 0.,
-	      mu_sq = mu*mu, var = sigma*sigma;
-	    bool ln_err_fact = ranVarAddtlParamsX[j].length();
-	    switch (target2) {
-	    case LN_MEAN: // Deriv of Bounded Lognormal w.r.t. its Mean
-	      if (ln_err_fact) // mean, error factor spec
-		dlambda_ds = 1./mu; //dzeta_ds = 0.;
-	      else {             // mean, std deviation spec
-		dlambda_ds = (1.+var/(mu_sq+var))/mu;
-		dzeta_ds   = -var/zeta/mu/(mu_sq+var);
-	      }
-	      break;
-	    case LN_STD_DEV: // Deriv of Bounded LogN w.r.t. its Std Deviation
-	      if (ln_err_fact) {
-		PCerr << "Error: derivative with respect to LN_STD_DEV is "
-		      << "unsupported for error factor specifications."
+	  if (ranVarTypesU[j] == STD_NORMAL) {
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      Real phi_lms = (lwr > 0.)      ? phi(lms) : 0.;
+	      Real phi_ums = (upr < DBL_MAX) ? phi(ums) : 0.;
+	      Real dlambda_ds = 0., dzeta_ds = 0., dlwr_ds = 0., dupr_ds = 0.,
+		mean_sq = mean*mean, var = stdev*stdev;
+	      bool ln_err_fact = (ranVarAddtlParamsX[j].length() > 2);
+	      switch (target2) {
+	      case LN_MEAN: // Deriv of Bounded Lognormal w.r.t. its Mean
+		if (ln_err_fact) // mean, error factor spec
+		  dlambda_ds = 1./mean; //dzeta_ds = 0.;
+		else {             // mean, std deviation spec
+		  dlambda_ds = (1.+var/(mean_sq+var))/mean;
+		  dzeta_ds   = -var/zeta/mean/(mean_sq+var);
+		}
+		break;
+	      case LN_STD_DEV: // Deriv of Bounded LogN w.r.t. its Std Deviation
+		if (ln_err_fact) {
+		  PCerr << "Error: derivative with respect to LN_STD_DEV is "
+			<< "unsupported for error factor specifications."
+			<< std::endl;
+		  abort_handler(-1);
+		}
+		else {
+		  dlambda_ds = -stdev/(mean_sq+var);
+		  dzeta_ds   = stdev/zeta/(mean_sq+var);
+		}
+		break;
+	      case LN_LAMBDA: // Deriv of Bounded Lognormal w.r.t. its Lambda
+		dlambda_ds = 1.; break;
+	      case LN_ZETA:   // Deriv of Bounded Lognormal w.r.t. its Zeta
+		dzeta_ds = 1.;   break;
+	      case LN_ERR_FACT: // Deriv of Bounded LogN w.r.t. its Error Factor
+		if (ln_err_fact) {
+		  dzeta_ds   = 1./Phi_inverse(0.95)/ranVarAddtlParamsX[j][2];
+		  dlambda_ds = -zeta*dzeta_ds;
+		}
+		else {
+		  PCerr << "Error: derivative with respect to LN_ERR_FACT is "
+			<< "unsupported for std deviation specifications."
+			<< std::endl;
+		  abort_handler(-1);
+		}
+		break;
+	      case LN_LWR_BND: // Deriv of Bounded LogN w.r.t. its Lower Bound
+		dlwr_ds = 1.; break;
+	      case LN_UPR_BND: // Deriv of Bounded LogN w.r.t. its Upper Bound
+		dupr_ds = 1.; break;
+	      case NO_TARGET: default:
+		PCerr << "Error: secondary mapping failure for BOUNDED_"
+		      << "LOGNORMAL in NatafTransformation::jacobian_dX_dS()."
 		      << std::endl;
 		abort_handler(-1);
+		break;
 	      }
-	      dlambda_ds = -sigma/(mu_sq+var);
-	      dzeta_ds   = sigma/zeta/(mu_sq+var);
-	      break;
-	    case LN_ERR_FACT: // Deriv of Bounded LogN w.r.t. its Error Factor
-	      if (!ln_err_fact) {
-		PCerr << "Error: derivative with respect to LN_ERR_FACT is "
-		      << "unsupported for std deviation specifications."
-		      << std::endl;
-		abort_handler(-1);
-	      }
-	      dzeta_ds   = 1./Phi_inverse(0.95)/ranVarAddtlParamsX[j](0);
-	      dlambda_ds = -zeta*dzeta_ds;
-	      break;
-	    case LN_LWR_BND: // Deriv of Bounded LogN w.r.t. its Lower Bound
-	      dlwr_ds = 1.; break;
-	    case LN_UPR_BND: // Deriv of Bounded LogN w.r.t. its Upper Bound
-	      dupr_ds = 1.; break;
-	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for BOUNDED_LOGNORMAL "
-		    << "in NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
-	      break;
+	      Real dlms_ds = (lwr > 0.) ?
+		(dlwr_ds/lwr - dlambda_ds - lms*dzeta_ds)/zeta : 0.;
+	      Real dums_ds = (upr < DBL_MAX) ?
+		(dupr_ds/upr - dlambda_ds - ums*dzeta_ds)/zeta : 0.;
+	      Real dxms_ds = Phi(z)/phi_xms*(phi_ums*dums_ds - phi_lms*dlms_ds)
+		+ phi_lms/phi_xms*dlms_ds;
+	      jacobian_xs(j, i) = x*(zeta*dxms_ds + dlambda_ds + xms*dzeta_ds);
 	    }
-	    Real dlms_ds = (lwr > 0.) ?
-	      (dlwr_ds/lwr - dlambda_ds - lms*dzeta_ds)/zeta : 0.;
-	    Real dums_ds = (upr < DBL_MAX) ?
-	      (dupr_ds/upr - dlambda_ds - ums*dzeta_ds)/zeta : 0.;
-	    Real dxms_ds = Phi(z)/phi_xms*(phi_ums*dums_ds - phi_lms*dlms_ds)
-	                 + phi_lms/phi_xms*dlms_ds;
-	    jacobian_xs(j, i) = x*(zeta*dxms_ds + dlambda_ds + xms*dzeta_ds);
+	    // Deriv of Lognormal w.r.t. any distribution parameter
+	    if (correlationFlagX) {
+	      Real Phi_lms = (lwr > 0.)      ? Phi(lms) : 0.;
+	      Real Phi_ums = (upr < DBL_MAX) ? Phi(ums) : 1.;
+	      jacobian_xs(j, i)
+		+= (Phi_ums - Phi_lms)*phi(z)/phi_xms*num_dz_ds(j, i);
+	    }
 	  }
-	  // Deriv of Lognormal w.r.t. any distribution parameter
-	  if (correlationFlagX) {
-	    Real Phi_lms = (lwr > 0.)      ? Phi(lms) : 0.;
-	    Real Phi_ums = (upr < DBL_MAX) ? Phi(ums) : 1.;
-	    jacobian_xs(j, i)
-	      += (Phi_ums - Phi_lms)*phi(z)/phi_xms*num_dz_ds(j, i);
+	  else if (ranVarTypesU[j] == BOUNDED_LOGNORMAL) { // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
 	  }
 	  break;
 	}
@@ -2276,112 +2313,129 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  const Real& lwr = ranVarLowerBndsX(j);
 	  const Real& upr = ranVarUpperBndsX(j);
 	  const Real& x = x_vars(j); const Real& z = z_vars(j);
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    switch (target2) {
-	    case LU_LWR_BND: { // Deriv of Loguniform w.r.t. its Lower Bound
-	      if (ranVarTypesU[j] == STD_UNIFORM)
-		jacobian_xs(j, i) = x*(1.-z)/2./lwr;
-	      else if (ranVarTypesU[j] == STD_NORMAL) {
-		Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
-		jacobian_xs(j, i) = x*normcdf_comp/lwr;
-	      }
-	      break;
-	    }
-	    case LU_UPR_BND: // Deriv of Loguniform w.r.t. its Upper Bound
-	      if (ranVarTypesU[j] == STD_UNIFORM)
-		jacobian_xs(j, i) = x*(z+1.)/2./upr;
-	      else if (ranVarTypesU[j] == STD_NORMAL)
-		jacobian_xs(j, i) = x*Phi(z)/upr;
-	      break;
-	    // Loguniform Mean          - TO DO
-	    // Loguniform Std Deviation - TO DO
-	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for LOGUNIFORM in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
-	      break;
-	    }
+	  if (ranVarTypesU[j] == LOGUNIFORM) { // no transformation
+	    // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
 	  }
-	  // Deriv of Loguniform w.r.t. any distribution parameter
-	  // Note: UNIFORM case should currently be zero, but may be
-	  // nonzero in the future once correlation warping is more complete.
-	  if (correlationFlagX) { // not currently supported in Nataf
-	    if (ranVarTypesU[j] == STD_UNIFORM)
-	      jacobian_xs(j, i) += x*(log(upr)-log(lwr))/2.*num_dz_ds(j, i);
-	    else if (ranVarTypesU[j] == STD_NORMAL)
-	      jacobian_xs(j, i) += x*(log(upr)-log(lwr))*phi(z)*num_dz_ds(j, i);
+	  else { // transformation to std normal or std uniform
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      switch (target2) {
+	      case LU_LWR_BND: { // Deriv of Loguniform w.r.t. its Lower Bound
+		if (ranVarTypesU[j] == STD_UNIFORM)
+		  jacobian_xs(j, i) = x*(1.-z)/2./lwr;
+		else if (ranVarTypesU[j] == STD_NORMAL) {
+		  Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
+		  jacobian_xs(j, i) = x*normcdf_comp/lwr;
+		}
+		break;
+	      }
+	      case LU_UPR_BND: // Deriv of Loguniform w.r.t. its Upper Bound
+		if (ranVarTypesU[j] == STD_UNIFORM)
+		  jacobian_xs(j, i) = x*(z+1.)/2./upr;
+		else if (ranVarTypesU[j] == STD_NORMAL)
+		  jacobian_xs(j, i) = x*Phi(z)/upr;
+		break;
+	      // Loguniform Mean          - TO DO
+	      // Loguniform Std Deviation - TO DO
+	      case NO_TARGET: default:
+		PCerr << "Error: secondary mapping failure for LOGUNIFORM in "
+		      << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+		abort_handler(-1);
+		break;
+	      }
+	    }
+	    // Deriv of Loguniform w.r.t. any distribution parameter
+	    // Note: UNIFORM case should currently be zero, but may be
+	    // nonzero in the future once correlation warping is more complete.
+	    if (correlationFlagX) { // not currently supported in Nataf
+	      if (ranVarTypesU[j] == STD_UNIFORM)
+		jacobian_xs(j, i) += x*(log(upr)-log(lwr))/2.*num_dz_ds(j, i);
+	      else if (ranVarTypesU[j] == STD_NORMAL)
+		jacobian_xs(j, i)
+		  += x*(log(upr)-log(lwr))*phi(z)*num_dz_ds(j, i);
+	    }
 	  }
 	  break;
 	}
 	case TRIANGULAR: {
 	  const Real& lwr  = ranVarLowerBndsX(j);
-	  const Real& mode = ranVarAddtlParamsX[j](0);
+	  const Real& mode = ranVarAddtlParamsX[j][0];
 	  const Real& upr  = ranVarUpperBndsX(j);
 	  const Real& x = x_vars(j); const Real& z = z_vars(j);
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    bool dist_error = false;
-	    if (x < mode) {
-	      Real term;
-	      if (ranVarTypesU[j] == STD_UNIFORM)
-		term = (z+1.)/4.;
-	      else if (ranVarTypesU[j] == STD_NORMAL)
-		term = Phi(z)/2.;
-	      switch (target2) {
-	      case T_MODE: // Triangular Mode
-		jacobian_xs(j, i) = term*(upr-lwr)/(x-lwr);              break;
-	      case T_LWR_BND: // Triangular Lower Bound
-		jacobian_xs(j, i) = 1. + term*(2.*lwr-upr-mode)/(x-lwr); break;
-	      case T_UPR_BND: // Triangular Upper Bound
-		jacobian_xs(j, i) = term*(mode-lwr)/(x-lwr);             break;
-	      // Triangular Mean          - TO DO
-	      // Triangular Std Deviation - TO DO
-	      case NO_TARGET: default:
-		dist_error = true;                                       break;
-	      }
-	      // Deriv of Triangular w.r.t. any distribution parameter
-	      if (correlationFlagX) { // not currently supported for triangular
-		Real term_deriv;
+	  if (ranVarTypesU[j] == TRIANGULAR) { // no transformation
+	    // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
+	  }
+	  else { // transformation to std normal or std uniform
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      bool dist_error = false;
+	      if (x < mode) {
+		Real term;
 		if (ranVarTypesU[j] == STD_UNIFORM)
-		  term_deriv = 0.25;
+		  term = (z+1.)/4.;
 		else if (ranVarTypesU[j] == STD_NORMAL)
-		  term_deriv = phi(z)/2.;
-		jacobian_xs(j, i)
-		  += (upr-lwr)*(mode-lwr)*term_deriv/(x-lwr)*num_dz_ds(j, i);
+		  term = Phi(z)/2.;
+		switch (target2) {
+		case T_MODE: // Triangular Mode
+		  jacobian_xs(j, i) = term*(upr-lwr)/(x-lwr);            break;
+		case T_LWR_BND: // Triangular Lower Bound
+		  jacobian_xs(j, i) = 1.+term*(2.*lwr-upr-mode)/(x-lwr); break;
+		case T_UPR_BND: // Triangular Upper Bound
+		  jacobian_xs(j, i) = term*(mode-lwr)/(x-lwr);           break;
+		// Triangular Mean          - TO DO
+		// Triangular Std Deviation - TO DO
+		case NO_TARGET: default:
+		  dist_error = true;                                     break;
+		}
+		// Deriv of Triangular w.r.t. any distribution parameter
+		if (correlationFlagX) {// not currently supported for triangular
+		  Real term_deriv;
+		  if (ranVarTypesU[j] == STD_UNIFORM)
+		    term_deriv = 0.25;
+		  else if (ranVarTypesU[j] == STD_NORMAL)
+		    term_deriv = phi(z)/2.;
+		  jacobian_xs(j, i)
+		    += (upr-lwr)*(mode-lwr)*term_deriv/(x-lwr)*num_dz_ds(j, i);
+		}
 	      }
-	    }
-	    else {
-	      Real term;
-	      if (ranVarTypesU[j] == STD_UNIFORM)
-		term = (1.-z)/4.;
-	      else if (ranVarTypesU[j] == STD_NORMAL)
-		term = (z > 0.) ? Phi(-z)/2. : (1. - Phi(z))/2.;
-	      switch (target2) {
-	      case T_MODE: // Triangular Mode
-		jacobian_xs(j, i) = term*(upr-lwr)/(upr-x);              break;
-	      case T_LWR_BND: // Triangular Lower Bound
-		jacobian_xs(j, i) = (upr-mode)*term/(upr-x);             break;
-	      case T_UPR_BND: // Triangular Upper Bound
-		jacobian_xs(j, i) = 1. - term*(2.*upr-lwr-mode)/(upr-x); break;
-	      // Triangular Mean          - TO DO
-	      // Triangular Std Deviation - TO DO
-	      case NO_TARGET: default:
-		dist_error = true;                                       break;
-	      }
-	      // Deriv of Triangular w.r.t. any distribution parameter
-	      if (correlationFlagX) { // not currently supported for triangular
-		Real term_deriv;
+	      else {
+		Real term;
 		if (ranVarTypesU[j] == STD_UNIFORM)
-		  term_deriv = -0.25;
+		  term = (1.-z)/4.;
 		else if (ranVarTypesU[j] == STD_NORMAL)
-		  term_deriv = -phi(z)/2.;
-		jacobian_xs(j, i)
-		  -= (upr-mode)*(upr-lwr)*term_deriv/(upr-x)*num_dz_ds(j, i);
+		  term = (z > 0.) ? Phi(-z)/2. : (1. - Phi(z))/2.;
+		switch (target2) {
+		case T_MODE: // Triangular Mode
+		  jacobian_xs(j, i) = term*(upr-lwr)/(upr-x);            break;
+		case T_LWR_BND: // Triangular Lower Bound
+		  jacobian_xs(j, i) = (upr-mode)*term/(upr-x);           break;
+		case T_UPR_BND: // Triangular Upper Bound
+		  jacobian_xs(j, i) = 1.-term*(2.*upr-lwr-mode)/(upr-x); break;
+		// Triangular Mean          - TO DO
+		// Triangular Std Deviation - TO DO
+		case NO_TARGET: default:
+		  dist_error = true;                                     break;
+		}
+		// Deriv of Triangular w.r.t. any distribution parameter
+		if (correlationFlagX) {// not currently supported for triangular
+		  Real term_deriv;
+		  if (ranVarTypesU[j] == STD_UNIFORM)
+		    term_deriv = -0.25;
+		  else if (ranVarTypesU[j] == STD_NORMAL)
+		    term_deriv = -phi(z)/2.;
+		  jacobian_xs(j, i)
+		    -= (upr-mode)*(upr-lwr)*term_deriv/(upr-x)*num_dz_ds(j, i);
+		}
 	      }
-	    }
-	    if (dist_error) {
-	      PCerr << "Error: secondary mapping failure for TRIANGULAR in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
+	      if (dist_error) {
+		PCerr << "Error: secondary mapping failure for TRIANGULAR in "
+		      << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+		abort_handler(-1);
+	      }
 	    }
 	  }
 	  break;
@@ -2416,7 +2470,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  // Note: EXPONENTIAL case should currently be zero, but may be
 	  // nonzero in the future once correlation warping is more complete.
 	  if (correlationFlagX) {
-	    const Real& beta = ranVarAddtlParamsX[j](0);
+	    const Real& beta = ranVarAddtlParamsX[j][0];
 	    if (ranVarTypesU[j] == STD_EXPONENTIAL)
 	      jacobian_xs(j, i) += beta*num_dz_ds(j, i);
 	    else if (ranVarTypesU[j] == STD_NORMAL)
@@ -2459,116 +2513,138 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Note: GAMMA case should currently be zero, but may be
 	    // nonzero in the future once correlation warping is more complete.
 	    if (correlationFlagX)
-	      jacobian_xs(j, i) += ranVarAddtlParamsX[j](1)*num_dz_ds(j, i);
+	      jacobian_xs(j, i) += ranVarAddtlParamsX[j][1]*num_dz_ds(j, i);
 	  }
 	  break;
 	}
 	case GUMBEL: {
-	  const Real& alpha = ranVarAddtlParamsX[j](0);
+	  const Real& alpha = ranVarAddtlParamsX[j][0];
 	  const Real& z = z_vars(j);
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    switch (target2) {
-	    case GU_ALPHA: { // Gumbel Alpha
-	      // x = beta - ln(-ln(Phi(z)))/alpha
-	      jacobian_xs(j, i) = log(-log(Phi(z)))/alpha/alpha;
-	      break;
+	  if (ranVarTypesU[j] == STD_NORMAL) {
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      switch (target2) {
+	      case GU_ALPHA: { // Gumbel Alpha
+		// x = beta - ln(-ln(Phi(z)))/alpha
+		jacobian_xs(j, i) = log(-log(Phi(z)))/alpha/alpha;
+		break;
+	      }
+	      case GU_BETA: // Gumbel Beta
+		jacobian_xs(j, i) = 1.;
+		break;
+	      // Gumbel Mean
+	        //x = x_vars(j);
+		//alpha = Pi/sqrt(6.)/ranVarStdDevsX(j);
+		//num = -alpha*(x-z);
+		//jacobian_xs(j, i) = -alpha*exp(num-exp(num))/phi(z);
+		//break;
+	      // Gumbel Standard Deviation
+	        //x = x_vars(j);
+		//alpha = Pi/sqrt(6.)/ranVarStdDevsX(j);
+		//num = -alpha*(x-z);
+		//jacobian_xs(j, i)
+		//  = num*exp(num-exp(num))/ranVarStdDevsX(j)/phi(z);
+		//break;
+	      case NO_TARGET: default:
+		PCerr << "Error: secondary mapping failure for GUMBEL in "
+		      << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+		abort_handler(-1);
+		break;
+	      }
 	    }
-	    case GU_BETA: // Gumbel Beta
-	      jacobian_xs(j, i) = 1.;
-	      break;
-	    // Gumbel Mean
-	      //x = x_vars(j);
-	      //alpha = Pi/sqrt(6.)/ranVarStdDevsX(j);
-	      //num = -alpha*(x-z);
-	      //jacobian_xs(j, i) = -alpha*exp(num-exp(num))/phi(z);
-	      //break;
-	    // Gumbel Standard Deviation
-	      //x = x_vars(j);
-	      //alpha = Pi/sqrt(6.)/ranVarStdDevsX(j);
-	      //num = -alpha*(x-z);
-	      //jacobian_xs(j, i)
-	      //  = num*exp(num-exp(num))/ranVarStdDevsX(j)/phi(z);
-	      //break;
-	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for GUMBEL in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
-	      break;
+	    // Deriv of Gumbel w.r.t. any distribution parameter
+	    if (correlationFlagX) {
+	      Real normcdf = Phi(z),
+		lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(normcdf);
+	      jacobian_xs(j, i) -= phi(z)/alpha/normcdf/lognormcdf
+		                *  num_dz_ds(j, i);
 	    }
 	  }
-	  // Deriv of Gumbel w.r.t. any distribution parameter
-	  if (correlationFlagX) {
-	    Real normcdf = Phi(z),
-	      lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(normcdf);
-	    jacobian_xs(j, i) -= phi(z)/alpha/normcdf/lognormcdf
-	                       * num_dz_ds(j, i);
+	  else if (ranVarTypesU[j] == GUMBEL) { // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
 	  }
 	  break;
 	}
 	case FRECHET: {
-	  const Real& alpha = ranVarAddtlParamsX[j](0);
+	  const Real& alpha = ranVarAddtlParamsX[j][0];
 	  const Real& z = z_vars(j);
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    switch (target2) {
-	    case F_ALPHA: { // Frechet Alpha
-	      // x = beta (-ln(Phi(z)))^(-1/alpha)
-	      const Real& beta  = ranVarAddtlParamsX[j](1);
-	      Real num = -log(Phi(z));
-	      jacobian_xs(j, i) = beta/alpha/alpha*log(num)*pow(num,-1./alpha);
-	      break;
+	  if (ranVarTypesU[j] == STD_NORMAL) {
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      switch (target2) {
+	      case F_ALPHA: { // Frechet Alpha
+		// x = beta (-ln(Phi(z)))^(-1/alpha)
+		const Real& beta  = ranVarAddtlParamsX[j][1];
+		Real num = -log(Phi(z));
+		jacobian_xs(j, i) = beta/alpha/alpha*log(num)
+		                  * pow(num,-1./alpha);
+		break;
+	      }
+	      case F_BETA: // Frechet Beta
+		jacobian_xs(j, i) = pow(-log(Phi(z)), -1./alpha);
+		break;
+	      // Frechet Mean          - TO DO
+	      // Frechet Std Deviation - TO DO
+	      case NO_TARGET: default:
+		PCerr << "Error: secondary mapping failure for FRECHET in "
+		      << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+		abort_handler(-1);
+		break;
+	      }
 	    }
-	    case F_BETA: // Frechet Beta
-	      jacobian_xs(j, i) = pow(-log(Phi(z)), -1./alpha);
-	      break;
-	    // Frechet Mean          - TO DO
-	    // Frechet Std Deviation - TO DO
-	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for FRECHET in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
-	      break;
+	    // Deriv of Frechet w.r.t. any distribution parameter
+	    if (correlationFlagX) {
+	      Real normcdf = Phi(z),
+		lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(normcdf);
+	      jacobian_xs(j, i) -= x_vars(j)*phi(z)/alpha/normcdf/lognormcdf
+		                *  num_dz_ds(j, i);
 	    }
 	  }
-	  // Deriv of Frechet w.r.t. any distribution parameter
-	  if (correlationFlagX) {
-	    Real normcdf = Phi(z),
-	      lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(normcdf);
-	    jacobian_xs(j, i) -= x_vars(j)*phi(z)/alpha/normcdf/lognormcdf
-	                       * num_dz_ds(j, i);
+	  else if (ranVarTypesU[j] == FRECHET) { // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
 	  }
 	  break;
 	}
 	case WEIBULL: {
-	  const Real& alpha = ranVarAddtlParamsX[j](0);
+	  const Real& alpha = ranVarAddtlParamsX[j][0];
 	  const Real& z = z_vars(j); 
-	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	    Real log1mnormcdf = (z > 0.) ? log(Phi(-z)) : log1p(-Phi(z));
-	    switch (target2) {
-	    case W_ALPHA: { // Weibull Alpha
-	      // x = beta (-ln(1-Phi(z)))^(1/alpha)
-	      const Real& beta  = ranVarAddtlParamsX[j](1);
-	      jacobian_xs(j, i) = -beta/alpha/alpha*log(-log1mnormcdf)*
-		pow(-log1mnormcdf,1./alpha);
-	      break;
+	  if (ranVarTypesU[j] == STD_NORMAL) {
+	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
+	      Real log1mnormcdf = (z > 0.) ? log(Phi(-z)) : log1p(-Phi(z));
+	      switch (target2) {
+	      case W_ALPHA: { // Weibull Alpha
+		// x = beta (-ln(1-Phi(z)))^(1/alpha)
+		const Real& beta  = ranVarAddtlParamsX[j][1];
+		jacobian_xs(j, i) = -beta/alpha/alpha*log(-log1mnormcdf)*
+		  pow(-log1mnormcdf,1./alpha);
+		break;
+	      }
+	      case W_BETA: // Weibull Beta
+		jacobian_xs(j, i) = pow(-log1mnormcdf, 1./alpha);
+		break;
+	      // Weibull Mean          - TO DO
+	      // Weibull Std Deviation - TO DO
+	      case NO_TARGET: default:
+		PCerr << "Error: secondary mapping failure for WEIBULL in "
+		      << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+		abort_handler(-1);
+		break;
+	      }
 	    }
-	    case W_BETA: // Weibull Beta
-	      jacobian_xs(j, i) = pow(-log1mnormcdf, 1./alpha);
-	      break;
-	    // Weibull Mean          - TO DO
-	    // Weibull Std Deviation - TO DO
-	    case NO_TARGET: default:
-	      PCerr << "Error: secondary mapping failure for WEIBULL in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
-	      abort_handler(-1);
-	      break;
+	    // Deriv of Weibull w.r.t. any distribution parameter
+	    if (correlationFlagX) {
+	      Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
+	      Real log1mnormcdf = (z > 0.) ? log(normcdf_comp) : log1p(-Phi(z));
+	      jacobian_xs(j, i) -= x_vars(j)*phi(z)/alpha/normcdf_comp/
+		log1mnormcdf * num_dz_ds(j,i);
 	    }
 	  }
-	  // Deriv of Weibull w.r.t. any distribution parameter
-	  if (correlationFlagX) {
-	    Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
-	    Real log1mnormcdf = (z > 0.) ? log(normcdf_comp) : log1p(-Phi(z));
-	    jacobian_xs(j, i) -= x_vars(j)*phi(z)/alpha/normcdf_comp/
-	      log1mnormcdf * num_dz_ds(j,i);
+	  else if (ranVarTypesU[j] == WEIBULL) { // *** TO DO ***
+	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
+		  << "jacobian_dX_dS()" << std::endl;
+	    abort_handler(-1);
 	  }
 	  break;
 	}
@@ -2687,7 +2763,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    case NORMAL: // unbounded normal: z = (x - mu)/sigma
+    case NORMAL: // unbounded normal: z = (x - mean)/stdev
       if (ranVarTypesU[i] == STD_NORMAL)
 	hessian_xz[i](i, i) = 0.;
       else
@@ -2695,11 +2771,13 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       break;
     case BOUNDED_NORMAL: // bounded normal
       if (ranVarTypesU[i] == STD_NORMAL) {
-	const Real& mu = ranVarMeansX(i); const Real& sigma = ranVarStdDevsX(i);
-	const Real& z  = z_vars(i);       const Real& x     = x_vars(i);
-	Real pdf = bounded_normal_pdf(x, mu, sigma, ranVarLowerBndsX(i),
+	const Real& mean  = ranVarMeansX(i);
+	const Real& stdev = ranVarStdDevsX(i);
+	const Real& z     = z_vars(i);
+	const Real& x     = x_vars(i);
+	Real pdf = bounded_normal_pdf(x, mean, stdev, ranVarLowerBndsX(i),
 				      ranVarUpperBndsX(i)),
-	  pdf_deriv = pdf*(mu-x)/sigma/sigma, dx_dz = phi(z)/pdf;
+	  pdf_deriv = pdf*(mean-x)/stdev/stdev, dx_dz = phi(z)/pdf;
 	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
       }
       else if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
@@ -2707,13 +2785,12 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    case LOGNORMAL: // unbounded lognormal: z = (ln x - lamba)/zeta
+    case LOGNORMAL: // unbounded lognormal: z = (ln x - lambda)/zeta
       if (ranVarTypesU[i] == STD_NORMAL) {
 	// dx/dz = zeta x
 	// d^2x/dz^2 = zeta dx/dz = zeta^2 x
-	Real cf_var = ranVarStdDevsX(i)/ranVarMeansX(i),
-	  zeta_sq = log(1 + cf_var*cf_var);
-	hessian_xz[i](i, i) = zeta_sq*x_vars(i);
+	const Real& zeta    = ranVarAddtlParamsX[i][1];
+	hessian_xz[i](i, i) = zeta*zeta*x_vars(i);
       }
       else if (ranVarTypesU[i] == LOGNORMAL) // Golub-Welsch: no transform
 	hessian_xz[i](i, i) = 0.;
@@ -2722,12 +2799,14 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       break;
     case BOUNDED_LOGNORMAL: // bounded lognormal
       if (ranVarTypesU[i] == STD_NORMAL) {
-	const Real& mu = ranVarMeansX(i); const Real& sigma = ranVarStdDevsX(i);
-	Real cf_var = sigma/mu, zeta_sq = log(1. + cf_var*cf_var),
-	  lambda = log(mu) - zeta_sq/2., zeta = sqrt(zeta_sq);
-	const Real& x = x_vars(i); const Real& z = z_vars(i);
+	const Real& lambda = ranVarAddtlParamsX[i][0];
+	const Real& zeta   = ranVarAddtlParamsX[i][1];
+	const Real& mean   = ranVarMeansX(i);
+	const Real& stdev  = ranVarStdDevsX(i);
+	const Real& x      = x_vars(i);
+	const Real& z      = z_vars(i);
 	Real xms = (log(x)-lambda)/zeta,
-	     pdf = bounded_lognormal_pdf(x, mu, sigma, ranVarLowerBndsX(i),
+	     pdf = bounded_lognormal_pdf(x, mean, stdev, ranVarLowerBndsX(i),
 					 ranVarUpperBndsX(i)),
 	     pdf_deriv = -pdf*(zeta+xms)/x/zeta, dx_dz = phi(z)/pdf;
 	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
@@ -2783,7 +2862,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	// f'(x): 2/(U-L)/(M-L)          -2/(U-L)/(U-M)
 	// Note: at x=M, F(x) and f(x) are continuous but f'(x) is not
 	const Real& lwr  = ranVarLowerBndsX(i);
-	const Real& mode = ranVarAddtlParamsX[i](0);
+	const Real& mode = ranVarAddtlParamsX[i][0];
 	const Real& upr  = ranVarUpperBndsX(i);
 	const Real& x    = x_vars(i);
 	Real pdf, pdf_deriv, range = upr - lwr;
@@ -2817,7 +2896,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       if (ranVarTypesU[i] == STD_EXPONENTIAL) // linear scaling
 	hessian_xz[i](i, i) = 0.0;
       else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
-	const Real& beta = ranVarAddtlParamsX[i](0); const Real& z = z_vars(i);
+	const Real& beta = ranVarAddtlParamsX[i][0]; const Real& z = z_vars(i);
 	Real pdf = exponential_pdf(x_vars(i), beta), pdf_deriv = -pdf/beta,
 	  dx_dz = phi(z)/pdf;
 	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
@@ -2832,8 +2911,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       if (ranVarTypesU[i] == STD_BETA) // linear scaling
 	hessian_xz[i](i, i) = 0.0;
       else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
+	const Real& alpha = ranVarAddtlParamsX[i][0];
+	const Real& beta  = ranVarAddtlParamsX[i][1];
 	const Real& lwr   = ranVarLowerBndsX(i);
 	const Real& upr   = ranVarUpperBndsX(i);
 	const Real& z = z_vars(i); const Real& x = x_vars(i);
@@ -2854,8 +2933,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       if (ranVarTypesU[i] == STD_GAMMA) // linear scaling
 	hessian_xz[i](i, i) = 0.0;
       else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
+	const Real& alpha = ranVarAddtlParamsX[i][0];
+	const Real& beta  = ranVarAddtlParamsX[i][1];
 	const Real& z = z_vars(i); const Real& x = x_vars(i);
 	Real pdf = gamma_pdf(x, alpha, beta),
 	  pdf_deriv = pow(beta,-alpha) / gamma_function(alpha) *
@@ -2872,8 +2951,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	//  F(x) = e^(-e^(-alpha*(x-u)))
 	//  f(x) = alpha e^(-alpha*(x-u)) F(x)
 	// f'(x) = alpha (e^(-alpha*(x-u)) f(x) - alpha F(x) e^(-alpha*(x-u)))
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
+	const Real& alpha = ranVarAddtlParamsX[i][0];
+	const Real& beta  = ranVarAddtlParamsX[i][1];
 	const Real& z     = z_vars(i);
 	Real num = exp(-alpha*(x_vars(i)-beta)), cdf = exp(-num),
 	  pdf = alpha*num*cdf, pdf_deriv = alpha*(num*pdf - alpha*cdf*num),
@@ -2892,8 +2971,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	//       = F(x) alpha/beta (beta/x)^(alpha+1)
 	// f'(x) = alpha/beta ((beta/x)^(alpha+1) f(x) -
 	//                     F(x) (alpha+1)/beta (beta/x)^(alpha+2))
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
+	const Real& alpha = ranVarAddtlParamsX[i][0];
+	const Real& beta  = ranVarAddtlParamsX[i][1];
 	const Real& z     = z_vars(i);
 	Real num = beta/x_vars(i), cdf = exp(-pow(num,alpha)),
 	  pdf = alpha/beta*pow(num,alpha+1.)*cdf, dx_dz = phi(z)/pdf,
@@ -2912,8 +2991,8 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	//  f(x) = alpha/beta e^(-(x/beta)^alpha) (x/beta)^(alpha-1)
 	// f'(x) = alpha/beta (e^(-(x/beta)^alpha) (alpha-1)/beta
 	//                     (x/beta)^(alpha-2) - (x/beta)^(alpha-1) f(x))
-	const Real& alpha = ranVarAddtlParamsX[i](0);
-	const Real& beta  = ranVarAddtlParamsX[i](1);
+	const Real& alpha = ranVarAddtlParamsX[i][0];
+	const Real& beta  = ranVarAddtlParamsX[i][1];
 	const Real& z     = z_vars(i);
 	Real num = x_vars(i)/beta, num2 = exp(-pow(num,alpha)),
 	  pdf = alpha/beta*num2*pow(num,alpha-1.), dx_dz = phi(z)/pdf,

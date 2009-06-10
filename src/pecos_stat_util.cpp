@@ -13,7 +13,8 @@ static const char rcsId[]="@(#) $Id: pecos_stat_util.cpp 4768 2007-12-17 17:49:3
 namespace Pecos {
 
 /*
-// #ifdef HAVE_GSL
+#ifndef HAVE_BOOST
+#ifdef HAVE_GSL
 #include "gsl/gsl_cdf.h"
 #include "gsl/gsl_randist.h"
 
@@ -86,8 +87,7 @@ Real cdf_beta_Pinv(const Real& cdf, const Real& alpha, const Real& beta)
   return scaled_x;
 }
 
-// #endif // HAVE_GSL */
-
+#else
 
 static Real erf_inverse(const Real& p)
 {
@@ -160,5 +160,9 @@ static Real erf_inverse(const Real& p)
   z = 1/std::sqrt(2.)*z;
   return z;
 }
+
+#endif // HAVE_GSL
+#endif // HAVE_BOOST
+*/
 
 } // namespace Pecos

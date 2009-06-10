@@ -70,6 +70,8 @@ public:
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
 			const RealVector& ln_means,
 			const RealVector& ln_std_devs,
+			const RealVector& ln_lambdas,
+			const RealVector& ln_zetas,
 			const RealVector& ln_err_facts,
 			const RealVector& ln_l_bnds,
 			const RealVector& ln_u_bnds, const RealVector& u_l_bnds,
@@ -208,9 +210,9 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rva, empty_rva,
-		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
-		   empty_rm);
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rva,
+		   empty_rva, empty_rva, empty_rva, empty_rsm, num_samples,
+		   samples_array, empty_rm);
 }
 
 
@@ -227,12 +229,12 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
   RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
   generate_samples(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, u_l_bnds, u_u_bnds, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rv, empty_rv, u_l_bnds, u_u_bnds, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rva, empty_rva,
-		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
-		   empty_rm);
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rva,
+		   empty_rva, empty_rva, empty_rva, empty_rsm, num_samples,
+		   samples_array, empty_rm);
 }
 
 

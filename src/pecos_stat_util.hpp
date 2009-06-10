@@ -10,11 +10,13 @@
 #define PECOS_STAT_UTIL_HPP
 
 #include "pecos_data_types.hpp"
-/* #ifdef HAVE_GSL
+/*
+#ifdef HAVE_GSL
 #include "gsl/gsl_randist.h"
 #include "gsl/gsl_cdf.h"
 #include "gsl/gsl_sf_gamma.h"
-// #endif */
+#endif 
+*/
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 // WJB - ToDo: investigate error in boost/math/tools/traits.hpp with SunProCC
 //#include <boost/math/distributions.hpp>
@@ -78,24 +80,31 @@ typedef bmth::
   fisher_f_dist;
 
 
-/* #ifdef HAVE_GSL
+/*
+#ifndef HAVE_BOOST
+#ifdef HAVE_GSL
 /// Inverse of standard beta CDF by backtracking Newton (not supported by GSL)
 Real cdf_beta_Pinv(const Real& cdf, const Real& alpha, const Real& beta);
-// #else
+#else
 /// Inverse of error function used in Phi_inverse()
 Real erf_inverse(const Real& p);
-// #endif // HAVE_GSL */
+#endif // HAVE_GSL
+#endif // HAVE_BOOST
+*/
 
 
 inline Real phi(const Real& beta)
 {
+//#ifdef HAVE_BOOST
   normal_dist norm(0., 1.);
   return bmth::pdf(norm, beta);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   return gsl_ran_ugaussian_pdf(beta);
-// #else
+#else
   return std::exp(-beta*beta/2.)/std::sqrt(2.*Pi);
-// #endif */
+#endif
+*/
 }
 
 
@@ -103,13 +112,16 @@ inline Real phi(const Real& beta)
     for positive beta. */
 inline Real Phi(const Real& beta)
 {
+//#ifdef HAVE_BOOST
   normal_dist norm(0., 1.);
   return bmth::cdf(norm, beta);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   return gsl_cdf_ugaussian_P(beta);
-// #else
+#else
   return .5 + .5*erf(beta/std::sqrt(2.));
-// #endif */
+#endif
+*/
 }
 
 
@@ -117,13 +129,16 @@ inline Real Phi(const Real& beta)
     probability > 0.5. */
 inline Real Phi_inverse(const Real& p)
 {
+//#ifdef HAVE_BOOST
   normal_dist norm(0., 1.);
   return bmth::quantile(norm, p); 
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   return gsl_cdf_ugaussian_Pinv(p);
-// #else
+#else
   return std::sqrt(2.)*erf_inverse(2.*p - 1.);
-// #endif // HAVE_GSL or HAVE_BOOST */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
@@ -152,22 +167,24 @@ inline Real lognormal_pdf(const Real& x, const Real& mean, const Real& std_dev)
   // convert mean/std_dev of lognormal to lambda/zeta of underlying normal
   Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var),
     lambda = std::log(mean) - zeta_sq/2., zeta = std::sqrt(zeta_sq);
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   lognormal_dist logn1(lambda, zeta);
   return bmth::pdf(logn1, x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   return gsl_ran_lognormal_pdf(x, lambda, zeta);
-// #else
+#else
   return 1./std::sqrt(2.*Pi)/zeta/x *
     std::exp(-std::pow(std::log(x)-lambda, 2)/2./zeta_sq);
-// #endif // HAVE_GSL or HAVE_BOOST */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
 inline Real lognormal_cdf(const Real& x, const Real& mean, const Real& std_dev)
 {
   // convert mean/std_dev of lognormal to lambda/zeta of underlying normal
-  Real cf_var = std_dev/mean, zeta_sq = std::log(1 + cf_var*cf_var),
+  Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var),
     lambda = std::log(mean) - zeta_sq/2., zeta = std::sqrt(zeta_sq);
   return Phi((std::log(x) - lambda)/zeta);
 }
@@ -261,65 +278,75 @@ inline Real exponential_cdf(const Real& x, const Real& beta)
 
 inline Real std_beta_pdf(const Real& x, const Real& alpha, const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   beta_dist beta1(alpha, beta);
   return bmth::pdf(beta1, x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL beta passes alpha followed by beta
   return gsl_ran_beta_pdf(x, alpha, beta);
-// #endif // HAVE_GSL or BOOST */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
 inline Real std_beta_cdf(const Real& x, const Real& alpha, const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   beta_dist beta1(alpha, beta);
   return bmth::cdf(beta1, x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL beta passes alpha followed by beta
   return gsl_cdf_beta_P(x, alpha, beta);
-// #endif //HAVE_GSL or BOOST */
+#endif //HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
 inline Real std_beta_cdf_inverse(const Real& cdf, const Real& alpha,
 				 const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   beta_dist beta1(alpha, beta);
   return bmth::quantile(beta1, cdf);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL does not support beta CDF inverse, therefore a special Newton solve
   // has been implemented for the inversion (which uses the GSL CDF/PDF fns).
   return cdf_beta_Pinv(cdf, alpha, beta);
-// #endif // HAVE_BOOST */
+#endif // HAVE_BOOST
+*/
 }
 
 
 inline Real gamma_function(const Real& x)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   return bmth::tgamma(x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   return gsl_sf_gamma(x);
-// #else
+#else
   PCerr << "Error: gamma function only supported in executables configured "
 	<< "with the GSL or Boost library." << std::endl;
   abort_handler(-1);
-// #endif // HAVE_GSL or BOOST */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
 inline Real gamma_pdf(const Real& x, const Real& alpha, const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   gamma_dist gamma1(alpha, beta);
   return bmth::pdf(gamma1, x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL gamma passes alpha followed by beta
   return gsl_ran_gamma_pdf(x, alpha, beta);
-// #endif // HAVE_GSL */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
@@ -332,26 +359,30 @@ inline Real gamma_pdf(const Real& x, const Real& alpha, const Real& beta)
 
 inline Real gamma_cdf(const Real& x, const Real& alpha, const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   gamma_dist gamma1(alpha, beta);
   return bmth::cdf(gamma1, x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL gamma passes alpha followed by beta
   return gsl_cdf_gamma_P(x, alpha, beta);
-// #endif // HAVE_GSL */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
 inline Real gamma_cdf_inverse(const Real& cdf, const Real& alpha,
 			      const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   gamma_dist gamma1(alpha, beta);
   return bmth::quantile(gamma1, cdf);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL gamma passes alpha followed by beta
   return gsl_cdf_gamma_Pinv(cdf, alpha, beta);
-// #endif // HAVE_GSL or HAVE_BOOST */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
@@ -379,39 +410,69 @@ inline Real frechet_cdf(const Real& x, const Real& alpha, const Real& beta)
 
 inline Real weibull_pdf(const Real& x, const Real& alpha, const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   weibull_dist weibull1(alpha, beta);
   return bmth::pdf(weibull1, x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL weibull passes beta followed by alpha
   return gsl_ran_weibull_pdf(x, beta, alpha);
-// #else
+#else
   return alpha/beta * std::pow(x/beta,alpha-1.) *
     std::exp(-std::pow(x/beta,alpha));
-// #endif // HAVE_GSL or BOOST */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
 inline Real weibull_cdf(const Real& x, const Real& alpha, const Real& beta)
 {
-// #ifdef HAVE_BOOST
+//#ifdef HAVE_BOOST
   weibull_dist weibull1(alpha, beta);
   return bmth::cdf(weibull1, x);
-/* #elif HAVE_GSL
+/*
+#elif HAVE_GSL
   // GSL weibull passes beta followed by alpha
   return gsl_cdf_weibull_P(x, beta, alpha);
-// #else
+#else
   // avoid numerical probs when exp()~1
   return -expm1(-std::pow(x/beta, alpha));
-// #endif // HAVE_GSL or BOOST */
+#endif // HAVE_GSL or HAVE_BOOST
+*/
 }
 
 
-inline void moments_from_lognormal_params(const Real& mean,
+inline void std_deviation_from_err_factor(const Real& mean,
 					  const Real& err_fact, Real& std_dev)
 {
   Real zeta = std::log(err_fact)/Phi_inverse(0.95); // Phi^{-1}(0.95) ~= 1.645
-  std_dev   = mean*std::sqrt(std::exp(zeta*zeta)-1.);
+  std_dev   = mean * std::sqrt(expm1(zeta*zeta));
+}
+
+
+inline void err_factor_from_std_deviation(const Real& mean, const Real& std_dev,
+					  Real& err_fact)
+{
+  Real cf_var = std_dev/mean, zeta = std::sqrt(std::log(1. + cf_var*cf_var));
+  err_fact = std::exp(Phi_inverse(0.95)*zeta);
+}
+
+
+inline void moments_from_lognormal_params(const Real& lambda, const Real& zeta,
+					  Real& mean, Real& std_dev)
+{
+  Real zeta_sq = zeta*zeta;
+  mean    = std::exp(lambda + zeta_sq/2.);
+  std_dev = mean * std::sqrt(expm1(zeta_sq));
+}
+
+
+inline void lognormal_params_from_moments(const Real& mean, const Real& std_dev,
+					  Real& lambda, Real& zeta)
+{
+  Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var);
+  lambda = std::log(mean) - zeta_sq/2.;
+  zeta   = std::sqrt(zeta_sq);
 }
 
 

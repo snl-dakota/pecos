@@ -668,11 +668,14 @@ distribution_parameter(size_t index, short target)
     return ranVarMeansX[index];          break;
   case N_STD_DEV:   case LN_STD_DEV:
     return ranVarStdDevsX[index];        break;
-  case LN_ERR_FACT: case T_MODE:    case E_BETA:  case B_ALPHA: case GA_ALPHA:
+  case LN_LAMBDA:   case T_MODE:    case E_BETA:  case B_ALPHA: case GA_ALPHA:
   case GU_ALPHA:    case F_ALPHA:   case W_ALPHA:
     return ranVarAddtlParamsX[index][0]; break;
-  case B_BETA:      case GA_BETA:   case GU_BETA: case F_BETA:  case W_BETA:
+  case LN_ZETA:     case B_BETA:    case GA_BETA: case GU_BETA: case F_BETA:
+  case W_BETA:
     return ranVarAddtlParamsX[index][1]; break;
+  case LN_ERR_FACT:
+    return ranVarAddtlParamsX[index][2]; break;
   }
 }
 
@@ -792,14 +795,47 @@ distribution_parameter(size_t index, short target, const Real& param)
   // -------------------------
   // Distribution shape params
   // -------------------------
-  case N_MEAN:    case LN_MEAN:
-    ranVarMeansX[index] = param;   break;
-  case N_STD_DEV: case LN_STD_DEV:
+  case N_MEAN:
+    ranVarMeansX[index]   = param; break;
+  case N_STD_DEV:
     ranVarStdDevsX[index] = param; break;
-  case LN_ERR_FACT:
+  case LN_MEAN:
+    ranVarMeansX[index] = param;
+    lognormal_params_from_moments(param, ranVarStdDevsX[index],
+				  ranVarAddtlParamsX[index][0],
+				  ranVarAddtlParamsX[index][1]);
+    err_factor_from_std_deviation(param, ranVarStdDevsX[index],
+				  ranVarAddtlParamsX[index][2]);
+    break;
+  case LN_STD_DEV:
+    ranVarStdDevsX[index] = param;
+    lognormal_params_from_moments(ranVarMeansX[index], param,
+				  ranVarAddtlParamsX[index][0],
+				  ranVarAddtlParamsX[index][1]);
+    err_factor_from_std_deviation(ranVarMeansX[index], param,
+				  ranVarAddtlParamsX[index][2]);
+    break;
+  case LN_LAMBDA:
     ranVarAddtlParamsX[index][0] = param;
-    moments_from_lognormal_params(ranVarMeansX[index], param,
+    moments_from_lognormal_params(param, ranVarAddtlParamsX[index][1],
+				  ranVarMeansX[index], ranVarStdDevsX[index]);
+    err_factor_from_std_deviation(ranVarMeansX[index], ranVarStdDevsX[index],
+				  ranVarAddtlParamsX[index][2]);
+    break;
+  case LN_ZETA:
+    ranVarAddtlParamsX[index][1] = param;
+    moments_from_lognormal_params(ranVarAddtlParamsX[index][0], param,
+				  ranVarMeansX[index], ranVarStdDevsX[index]);
+    err_factor_from_std_deviation(ranVarMeansX[index], ranVarStdDevsX[index],
+				  ranVarAddtlParamsX[index][2]);
+    break;
+  case LN_ERR_FACT:
+    ranVarAddtlParamsX[index][2] = param;
+    std_deviation_from_err_factor(ranVarMeansX[index], param,
 				  ranVarStdDevsX[index]);
+    lognormal_params_from_moments(ranVarMeansX[index], ranVarStdDevsX[index],
+				  ranVarAddtlParamsX[index][0],
+				  ranVarAddtlParamsX[index][1]);
     break;
   case T_MODE:
     ranVarAddtlParamsX[index][0] = param;
