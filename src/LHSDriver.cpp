@@ -9,9 +9,6 @@
 #include "LHSDriver.hpp"
 #include "pecos_stat_util.hpp"
 #include <algorithm>
-#if defined(__sun) && defined(__sparc) && defined(__SUNPRO_CC)
-#include <math.h>
-#endif
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
@@ -38,9 +35,9 @@ void LHS_INIT_MEM_FC( int& obs, int& seed, int& max_obs, int& max_samp_size,
 void LHS_PREP_FC( int& ierror, int& num_names, int& num_vars );
 
 void LHS_RUN_FC( int& max_var, int& max_obs, int& max_names, int& ierror,
-		 char* dist_names, int* name_order, double* ptvals,
-		 int& num_names, double* sample_matrix, int& num_vars,
-                 double* rank_matrix, int& rank_flag );
+		 char* dist_names, int* name_order, Pecos::Real* ptvals,
+		 int& num_names, Pecos::Real* sample_matrix, int& num_vars,
+                 Pecos::Real* rank_matrix, int& rank_flag );
 
 void LHS_CLOSE_FC( int& ierror );
 
@@ -48,15 +45,15 @@ void LHS_CLOSE_FC( int& ierror );
 void LHS_OPTIONS2_FC( int& num_replications, int& ptval_option,
 		      char* sampling_options, int& ierror );
 
-void LHS_DIST2_FC( char* label, int& ptval_flag, double& ptval,
-		   char* dist_type, double* dist_params, int& num_params,
+void LHS_DIST2_FC( char* label, int& ptval_flag, Pecos::Real& ptval,
+		   char* dist_type, Pecos::Real* dist_params, int& num_params,
 		   int& ierror, int& dist_id, int& ptval_id );
 
-void LHS_UDIST2_FC( char* label, int& ptval_flag, double& ptval,
-		    char* dist_type, int& num_pts, double* x, double* y,
-		    int& ierror, int& dist_id, int& ptval_id );
+void LHS_UDIST2_FC( char* label, int& ptval_flag, Pecos::Real& ptval,
+		    char* dist_type, int& num_pts, Pecos::Real* x,
+		    Pecos::Real* y, int& ierror, int& dist_id, int& ptval_id );
 
-void LHS_CORR2_FC( char* label1, char* label2, double& corr, int& ierror );
+void LHS_CORR2_FC( char* label1, char* label2, Pecos::Real& corr, int& ierror );
 
 void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
 		    int& ierror );
@@ -179,7 +176,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   int num_params, cntr = 0, ptval_flag = 0;
   int dist_num, pv_num; // outputs (ignored)
-  double ptval = 0., dist_params[4];
+  Real ptval = 0., dist_params[4];
   StringArray lhs_names(num_av);
 
   // design (treated as uniform)
@@ -587,8 +584,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     std::ostringstream dist_stream;
     num_params = (i < num_c_huv) ? h_bin_prs[i].length()/2
                                  : h_pt_prs[i-num_c_huv].length()/2;
-    double* x_val = new double [num_params];
-    double* y_val = new double [num_params];
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
     if (i < num_c_huv) {
       // LHS requires accumulation of CDF with first y at 0 and last y at 1
       dist_stream << "continuous linear               "; // no null termination
@@ -652,9 +649,9 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
         num_bounds_i    = 2*num_intervals_i;
     for (j=0; j<num_bounds_i; j++)
       x_sort_unique.insert(interval_bnds_i[j]);
-    // convert RealSet to double*
+    // convert RealSet to Real*
     num_params = x_sort_unique.size();
-    double* x_val = new double [num_params];
+    Real* x_val = new Real [num_params];
     RealSet::iterator it = x_sort_unique.begin();
     for (j=0; j<num_params; j++, it++)
       x_val[j] = *it;
@@ -680,8 +677,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
     // put the densities in a cumulative format necessary for
     // the LHS histogram variable.  Note that x_val and y_val
-    // are defined as double* for input to the Fortran call.
-    double* y_val = new double [num_params];
+    // are defined as Real* for input to the Fortran call.
+    Real* y_val = new Real [num_params];
     y_val[0] = 0.;
     for (j=1; j<num_params; j++) {
       if (prob_dens[j] > 0.0)
@@ -691,7 +688,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     }
     // normalize if necessary
     if (y_val[num_params-1] != 1.0) {
-      double y_total = y_val[num_params-1];
+      Real y_total = y_val[num_params-1];
       for (j=1; j<num_params; j++)
 	y_val[j] /= y_total;
     }
@@ -752,7 +749,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   if (correlation_flag) {
     for (i=1; i<num_uv; i++) {
       for (j=0; j<i; j++) {
-	double corr_val = correlations(i,j);
+	Real corr_val = correlations(i,j);
 	if (fabs(corr_val) > 1.e-25) {
 	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+num_dv].c_str()),
 		       const_cast<char*>(lhs_names[j+num_dv].c_str()),
@@ -810,10 +807,10 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   check_error(err_code, "lhs_prep");
 
   // allocate the memory to hold samples, pt values, variable names, etc.
-  int 	  max_nam        = num_av;
-  int*	  index_list     = new int    [max_nam];       // output
-  double* ptval_list     = new double [max_nam];       // output
-  char*   dist_name_list = new char   [16*max_nam];    // output
+  int   max_nam        = num_av;
+  int*  index_list     = new int    [max_nam];       // output
+  Real* ptval_list     = new Real   [max_nam];       // output
+  char* dist_name_list = new char   [16*max_nam];    // output
   // dist_name_list is a bit tricky since the f90 array is declared as
   // CHARACTER(LEN=16) :: LSTNAME(MAXNAM), which would seem to be a
   // noncontiguous memory model.  However, a char** does not map correctly to

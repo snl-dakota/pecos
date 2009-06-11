@@ -11,9 +11,6 @@
 
 #include "pecos_data_types.hpp"
 #include "pecos_global_defs.hpp"
-#if defined(__sun) && defined(__sparc) && defined(__SUNPRO_CC)
-#include <stdlib.h> // <cstdlib> insufficient for rand, srand on Sun
-#endif
 
 
 namespace Pecos {
@@ -188,8 +185,8 @@ inline int LHSDriver::seed() const
     inconsequential for the intended use. */
 inline void LHSDriver::advance_seed_sequence()
 {
-  srand(randomSeed);
-  randomSeed = 1 + rand(); // from 1 to RANDMAX+1
+  std::srand(randomSeed);
+  randomSeed = 1 + std::rand(); // from 1 to RANDMAX+1
 }
 
 

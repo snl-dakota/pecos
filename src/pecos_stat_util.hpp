@@ -17,20 +17,10 @@
 #include "gsl/gsl_sf_gamma.h"
 #endif 
 */
+
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
-// WJB - ToDo: investigate error in boost/math/tools/traits.hpp with SunProCC
-//#include <boost/math/distributions.hpp>
-#include <boost/math/distributions/normal.hpp>
-#include <boost/math/distributions/lognormal.hpp>
-#include <boost/math/distributions/exponential.hpp>
-#include <boost/math/distributions/beta.hpp>
-#include <boost/math/distributions/gamma.hpp>
-#include <boost/math/distributions/weibull.hpp>
-#include <boost/math/distributions/students_t.hpp>
-#include <boost/math/distributions/chi_squared.hpp>
-#include <boost/math/distributions/fisher_f.hpp>
-#include <boost/math/special_functions/gamma.hpp>
-#include <boost/math/policies/policy.hpp>
+#include <boost/math/distributions.hpp>
+
 namespace bmth = boost::math;
 namespace bmp  = bmth::policies;
 
