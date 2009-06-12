@@ -90,7 +90,7 @@ void Pecos::LHSDriver::seed(int seed)
 	static int first = 1;
 	randomSeed = seed;
 	if (first) {
-		const char *s = getenv("DAKOTA_LHS_UNIFGEN");
+		const char *s = std::getenv("DAKOTA_LHS_UNIFGEN");
 		first = 0;
 		if (s) {
 			if (!std::strcmp(s,"rnumlhs1")) {
