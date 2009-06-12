@@ -274,8 +274,6 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     if (n_dist) {
       // In the mean/std dev specification case, LHS expects the mean/std dev
       // of the underlying normal distribution (LHS manual, SAND#98-0210, p.39).
-      // DAKOTA/UQ methods are standardized on using the mean/std dev of the
-      // actual lognormal distribution, which is more intuitive for most users.
       // Therefore, map from the DAKOTA spec (mean/std_dev or lambda/zeta) to
       // the LHS input requirements (lambda/zeta), if required.
       if (!ln_lambdas.empty()) {
@@ -287,10 +285,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 				      dist_params[0], dist_params[1]);
     }
     else {
-      // In the mean/err factor specification case, LHS expects the mean/err
-      // factor of the actual lognormal distribution (LHS manual, SAND#98-0210,
-      // p.39).  This is consistent with the DAKOTA/UQ standard, so no mapping
-      // is required.
+      // In the mean/err factor specification case, DAKOTA and LHS are
+      // consistent (LHS manual, SAND#98-0210, p.39) and no mapping is required.
       dist_params[0] = ln_means[i];
       dist_params[1] = ln_err_facts[i];
     }
