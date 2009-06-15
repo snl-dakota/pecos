@@ -2142,8 +2142,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 		  jacobian_xs(j, i) = x*(z_vars[j] - ranVarAddtlParamsX[j][1])
 		    / Phi_inverse(0.95) / ranVarAddtlParamsX[j][2];
 		else {           // mean, std deviation spec
-		  PCerr << "Error: derivative with respect to LN_ERR_FACT is "
-			<< "unsupported for std deviation specifications."
+		  PCerr << "Error: derivative with respect to LN_ERR_FACT "
+			<< "requires error factor specifications."
 			<< std::endl;
 		  abort_handler(-1);
 		}
@@ -2157,11 +2157,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      }
 	    }
 	    // Deriv of Lognormal w.r.t. any distribution parameter
-	    if (correlationFlagX) {
-	      Real cf_var = ranVarStdDevsX[j]/ranVarMeansX[j],
-		zeta = std::sqrt(log(1. + cf_var*cf_var));
-	      jacobian_xs(j, i) += x*zeta*num_dz_ds(j, i);
-	    }
+	    if (correlationFlagX)
+	      jacobian_xs(j, i) += x*ranVarAddtlParamsX[j][1]*num_dz_ds(j, i);
 	  }
 	  else if (ranVarTypesU[j] == LOGNORMAL) { // *** TO DO ***
 	    PCerr << "Error: mapping not yet supported in NatafTransformation::"
@@ -2219,8 +2216,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 		  dlambda_ds = -zeta*dzeta_ds;
 		}
 		else {
-		  PCerr << "Error: derivative with respect to LN_ERR_FACT is "
-			<< "unsupported for std deviation specifications."
+		  PCerr << "Error: derivative with respect to LN_ERR_FACT "
+			<< "requires error factor specifications."
 			<< std::endl;
 		  abort_handler(-1);
 		}
@@ -2781,8 +2778,13 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       if (ranVarTypesU[i] == STD_NORMAL) {
 	// dx/dz = zeta x
 	// d^2x/dz^2 = zeta dx/dz = zeta^2 x
-	const Real& zeta    = ranVarAddtlParamsX[i][1];
-	hessian_xz[i](i, i) = zeta*zeta*x_vars[i];
+	Real zeta_sq;
+	lognormal_zeta_sq_from_moments(ranVarMeansX[i], ranVarStdDevsX[i],
+				       zeta_sq);
+	hessian_xz[i](i, i) = zeta_sq*x_vars[i];
+	// causes DIFFs due to loss of precision from squaring of sqrt:
+	//const Real& zeta    = ranVarAddtlParamsX[i][1];
+	//hessian_xz[i](i, i) = zeta*zeta*x_vars[i];
       }
       else if (ranVarTypesU[i] == LOGNORMAL) // Golub-Welsch: no transform
 	hessian_xz[i](i, i) = 0.;

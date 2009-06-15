@@ -675,7 +675,14 @@ distribution_parameter(size_t index, short target)
   case W_BETA:
     return ranVarAddtlParamsX[index][1]; break;
   case LN_ERR_FACT:
-    return ranVarAddtlParamsX[index][2]; break;
+    if (ranVarAddtlParamsX[index].length() > 2)
+      return ranVarAddtlParamsX[index][2];
+    else {
+      PCerr << "Error: LN_ERR_FACT cannot be returned in Probability"
+	    << "Transformation::distribution_parameter()." << std::endl;
+      abort_handler(-1);
+    }
+    break;
   }
 }
 
@@ -804,35 +811,46 @@ distribution_parameter(size_t index, short target, const Real& param)
     lognormal_params_from_moments(param, ranVarStdDevsX[index],
 				  ranVarAddtlParamsX[index][0],
 				  ranVarAddtlParamsX[index][1]);
-    err_factor_from_std_deviation(param, ranVarStdDevsX[index],
-				  ranVarAddtlParamsX[index][2]);
+    if (ranVarAddtlParamsX[index].length() > 2)
+      lognormal_err_factor_from_std_deviation(param, ranVarStdDevsX[index],
+					      ranVarAddtlParamsX[index][2]);
     break;
   case LN_STD_DEV:
     ranVarStdDevsX[index] = param;
     lognormal_params_from_moments(ranVarMeansX[index], param,
 				  ranVarAddtlParamsX[index][0],
 				  ranVarAddtlParamsX[index][1]);
-    err_factor_from_std_deviation(ranVarMeansX[index], param,
-				  ranVarAddtlParamsX[index][2]);
+    if (ranVarAddtlParamsX[index].length() > 2)
+      lognormal_err_factor_from_std_deviation(ranVarMeansX[index], param,
+					      ranVarAddtlParamsX[index][2]);
     break;
   case LN_LAMBDA:
     ranVarAddtlParamsX[index][0] = param;
     moments_from_lognormal_params(param, ranVarAddtlParamsX[index][1],
 				  ranVarMeansX[index], ranVarStdDevsX[index]);
-    err_factor_from_std_deviation(ranVarMeansX[index], ranVarStdDevsX[index],
-				  ranVarAddtlParamsX[index][2]);
+    if (ranVarAddtlParamsX[index].length() > 2)
+      lognormal_err_factor_from_std_deviation(ranVarMeansX[index],
+					      ranVarStdDevsX[index],
+					      ranVarAddtlParamsX[index][2]);
     break;
   case LN_ZETA:
     ranVarAddtlParamsX[index][1] = param;
     moments_from_lognormal_params(ranVarAddtlParamsX[index][0], param,
 				  ranVarMeansX[index], ranVarStdDevsX[index]);
-    err_factor_from_std_deviation(ranVarMeansX[index], ranVarStdDevsX[index],
-				  ranVarAddtlParamsX[index][2]);
+    if (ranVarAddtlParamsX[index].length() > 2)
+      lognormal_err_factor_from_std_deviation(ranVarMeansX[index],
+					      ranVarStdDevsX[index],
+					      ranVarAddtlParamsX[index][2]);
     break;
   case LN_ERR_FACT:
+    if (ranVarAddtlParamsX[index].length() < 3) {
+      PCerr << "Error: LN_ERR_FACT cannot be set in Probability"
+	    << "Transformation::distribution_parameter()." << std::endl;
+      abort_handler(-1);
+    }
     ranVarAddtlParamsX[index][2] = param;
-    std_deviation_from_err_factor(ranVarMeansX[index], param,
-				  ranVarStdDevsX[index]);
+    lognormal_std_deviation_from_err_factor(ranVarMeansX[index], param,
+					    ranVarStdDevsX[index]);
     lognormal_params_from_moments(ranVarMeansX[index], ranVarStdDevsX[index],
 				  ranVarAddtlParamsX[index][0],
 				  ranVarAddtlParamsX[index][1]);

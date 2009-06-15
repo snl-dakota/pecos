@@ -70,17 +70,20 @@ typedef bmth::
   fisher_f_dist;
 
 
+inline Real gamma_function(const Real& x)
+{
+//#ifdef HAVE_BOOST
+  return bmth::tgamma(x);
 /*
-#ifndef HAVE_BOOST
-#ifdef HAVE_GSL
-/// Inverse of standard beta CDF by backtracking Newton (not supported by GSL)
-Real cdf_beta_Pinv(const Real& cdf, const Real& alpha, const Real& beta);
+#elif HAVE_GSL
+  return gsl_sf_gamma(x);
 #else
-/// Inverse of error function used in Phi_inverse()
-Real erf_inverse(const Real& p);
-#endif // HAVE_GSL
-#endif // HAVE_BOOST
+  PCerr << "Error: gamma function only supported in executables configured "
+	<< "with the GSL or Boost library." << std::endl;
+  abort_handler(-1);
+#endif // HAVE_GSL or HAVE_BOOST
 */
+}
 
 
 inline Real phi(const Real& beta)
@@ -132,6 +135,203 @@ inline Real Phi_inverse(const Real& p)
 }
 
 
+/*
+#ifndef HAVE_BOOST
+#ifdef HAVE_GSL
+/// Inverse of standard beta CDF by backtracking Newton (not supported by GSL)
+Real cdf_beta_Pinv(const Real& cdf, const Real& alpha, const Real& beta);
+#else
+/// Inverse of error function used in Phi_inverse()
+Real erf_inverse(const Real& p);
+#endif // HAVE_GSL
+#endif // HAVE_BOOST
+*/
+
+
+inline void lognormal_std_deviation_from_err_factor(const Real& mean,
+						    const Real& err_fact,
+						    Real& std_dev)
+{
+  Real zeta = std::log(err_fact)/Phi_inverse(0.95); // Phi^{-1}(0.95) ~= 1.645
+  std_dev   = mean * std::sqrt(expm1(zeta*zeta));
+}
+
+
+inline void lognormal_err_factor_from_std_deviation(const Real& mean,
+						    const Real& std_dev,
+						    Real& err_fact)
+{
+  Real cf_var = std_dev/mean, zeta = std::sqrt(std::log(1. + cf_var*cf_var));
+  err_fact = std::exp(Phi_inverse(0.95)*zeta);
+}
+
+
+inline void moments_from_lognormal_params(const Real& lambda, const Real& zeta,
+					  Real& mean, Real& std_dev)
+{
+  Real zeta_sq = zeta*zeta;
+  mean    = std::exp(lambda + zeta_sq/2.);
+  std_dev = mean * std::sqrt(expm1(zeta_sq));
+}
+
+
+inline void lognormal_zeta_sq_from_moments(const Real& mean,
+					   const Real& std_dev,
+					   Real& zeta_sq)
+{
+  Real cf_var = std_dev/mean;
+  zeta_sq = std::log(1. + cf_var*cf_var);
+}
+
+
+inline void lognormal_params_from_moments(const Real& mean, const Real& std_dev,
+					  Real& lambda, Real& zeta)
+{
+  Real zeta_sq;
+  lognormal_zeta_sq_from_moments(mean, std_dev, zeta_sq);
+  lambda = std::log(mean) - zeta_sq/2.;
+  zeta   = std::sqrt(zeta_sq);
+}
+
+
+inline void moments_from_lognormal_spec(const RealVector& ln_means,
+					const RealVector& ln_std_devs,
+					const RealVector& ln_lambdas,
+					const RealVector& ln_zetas,
+					const RealVector& ln_err_facts, 
+					size_t i, Real& mean, Real& std_dev)
+{
+  if (!ln_lambdas.empty())
+    moments_from_lognormal_params(ln_lambdas[i], ln_zetas[i], mean, std_dev);
+  else {
+    mean = ln_means[i];
+    if (!ln_std_devs.empty())
+      std_dev = ln_std_devs[i];
+    else
+      lognormal_std_deviation_from_err_factor(mean, ln_err_facts[i], std_dev);
+  }
+}
+
+
+inline void params_from_lognormal_spec(const RealVector& ln_means,
+				       const RealVector& ln_std_devs,
+				       const RealVector& ln_lambdas,
+				       const RealVector& ln_zetas,
+				       const RealVector& ln_err_facts, 
+				       size_t i, Real& lambda, Real& zeta)
+{
+  if (!ln_lambdas.empty()) {
+    lambda = ln_lambdas[i];
+    zeta   = ln_zetas[i];
+  }
+  else {
+    if (!ln_std_devs.empty())
+      lognormal_params_from_moments(ln_means[i], ln_std_devs[i], lambda, zeta);
+    else {
+      Real mean = ln_means[i], stdev;
+      lognormal_std_deviation_from_err_factor(mean, ln_err_facts[i], stdev);
+      lognormal_params_from_moments(mean, stdev, lambda, zeta);
+    }
+  }
+}
+
+
+inline void all_from_lognormal_spec(const RealVector& ln_means,
+				    const RealVector& ln_std_devs,
+				    const RealVector& ln_lambdas,
+				    const RealVector& ln_zetas,
+				    const RealVector& ln_err_facts, 
+				    size_t i, Real& mean, Real& std_dev,
+				    Real& lambda, Real& zeta, Real& err_fact)
+{
+  if (!ln_lambdas.empty()) { // lambda/zeta -> mean/std_dev
+    lambda = ln_lambdas[i]; zeta = ln_zetas[i];
+    moments_from_lognormal_params(lambda, zeta, mean, std_dev);
+    lognormal_err_factor_from_std_deviation(mean, std_dev, err_fact);
+  }
+  else if (!ln_std_devs.empty()) {
+    mean = ln_means[i]; std_dev = ln_std_devs[i];
+    lognormal_params_from_moments(mean, std_dev, lambda, zeta);
+    lognormal_err_factor_from_std_deviation(mean, std_dev, err_fact);
+  }
+  else { // mean/err_fact -> mean/std_dev
+    mean = ln_means[i]; err_fact = ln_err_facts[i];
+    lognormal_std_deviation_from_err_factor(mean, err_fact, std_dev);
+    lognormal_params_from_moments(mean, std_dev, lambda, zeta);
+  }
+}
+
+
+inline void moments_from_uniform_params(const Real& lwr, const Real& upr,
+					Real& mean, Real& std_dev)
+{ mean = (lwr + upr)/2.; std_dev = (upr - lwr)/std::sqrt(12.); }
+
+
+inline void moments_from_loguniform_params(const Real& lwr, const Real& upr,
+					   Real& mean, Real& std_dev)
+{
+  Real range = upr - lwr, log_range = std::log(upr) - std::log(lwr);
+  mean       = range/log_range;
+  std_dev    = std::sqrt(range*(log_range*(upr+lwr)-2.*range)/2.)/log_range;
+}
+
+
+inline void moments_from_triangular_params(const Real& lwr, const Real& upr,
+					   const Real& mode, Real& mean,
+					   Real& std_dev)
+{
+  mean    = (lwr + mode + upr)/3.;
+  std_dev = std::sqrt((lwr*(lwr - mode) + mode*(mode - upr) + upr*(upr - lwr))/18.);
+}
+
+
+inline void moments_from_exponential_params(const Real& beta, Real& mean,
+					    Real& std_dev)
+{ mean = beta; std_dev = beta; }
+
+
+inline void moments_from_beta_params(const Real& lwr, const Real& upr,
+				     const Real& alpha, const Real& beta,
+				     Real& mean, Real& std_dev)
+{
+  Real range = upr - lwr;
+  mean       = lwr + alpha/(alpha+beta)*range;
+  std_dev    = std::sqrt(alpha*beta/(alpha+beta+1.))/(alpha+beta)*range;
+}
+
+
+inline void moments_from_gamma_params(const Real& alpha, const Real& beta,
+				      Real& mean, Real& std_dev)
+{ mean = alpha*beta; std_dev = std::sqrt(alpha)*beta; }
+
+
+inline void moments_from_gumbel_params(const Real& alpha, const Real& beta,
+				       Real& mean, Real& std_dev)
+{ mean = beta + 0.57721566490153286/alpha; std_dev = Pi/std::sqrt(6.)/alpha; }
+/* Euler-Mascheroni constant is 0.5772... */
+
+
+inline void moments_from_frechet_params(const Real& alpha, const Real& beta,
+					Real& mean, Real& std_dev)
+{
+  // See Haldar and Mahadevan, p. 91-92
+  Real gam = gamma_function(1.-1./alpha);
+  mean     = beta*gam;
+  std_dev  = beta*std::sqrt(gamma_function(1.-2./alpha)-gam*gam);
+}
+
+
+inline void moments_from_weibull_params(const Real& alpha, const Real& beta,
+					Real& mean, Real& std_dev)
+{
+  // See Haldar and Mahadevan, p. 97
+  Real gam = gamma_function(1.+1./alpha),
+    cf_var = std::sqrt(gamma_function(1.+2./alpha)/gam/gam - 1.);
+  mean     = beta*gam;
+  std_dev  = cf_var*mean;
+}
+
+
 inline Real bounded_normal_pdf(const Real& x, const Real& mean, 
 			       const Real& std_dev, const Real& lwr,
 			       const Real& upr)
@@ -154,16 +354,20 @@ inline Real bounded_normal_cdf(const Real& x, const Real& mean,
 
 inline Real lognormal_pdf(const Real& x, const Real& mean, const Real& std_dev)
 {
-  // convert mean/std_dev of lognormal to lambda/zeta of underlying normal
-  Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var),
-    lambda = std::log(mean) - zeta_sq/2., zeta = std::sqrt(zeta_sq);
+  Real lambda, zeta;
 //#ifdef HAVE_BOOST
+  lognormal_params_from_moments(mean, std_dev, lambda, zeta);
   lognormal_dist logn1(lambda, zeta);
   return bmth::pdf(logn1, x);
 /*
 #elif HAVE_GSL
+  lognormal_params_from_moments(mean, std_dev, lambda, zeta);
   return gsl_ran_lognormal_pdf(x, lambda, zeta);
 #else
+  Real zeta_sq;
+  lognormal_zeta_sq_from_moments(mean, std_dev, zeta_sq);
+  lambda = std::log(mean) - zeta_sq/2.;
+  zeta = std::sqrt(zeta_sq);
   return 1./std::sqrt(2.*Pi)/zeta/x *
     std::exp(-std::pow(std::log(x)-lambda, 2)/2./zeta_sq);
 #endif // HAVE_GSL or HAVE_BOOST
@@ -173,9 +377,8 @@ inline Real lognormal_pdf(const Real& x, const Real& mean, const Real& std_dev)
 
 inline Real lognormal_cdf(const Real& x, const Real& mean, const Real& std_dev)
 {
-  // convert mean/std_dev of lognormal to lambda/zeta of underlying normal
-  Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var),
-    lambda = std::log(mean) - zeta_sq/2., zeta = std::sqrt(zeta_sq);
+  Real lambda, zeta;
+  lognormal_params_from_moments(mean, std_dev, lambda, zeta);
   return Phi((std::log(x) - lambda)/zeta);
 }
 
@@ -184,8 +387,8 @@ inline Real bounded_lognormal_pdf(const Real& x, const Real& mean,
 				  const Real& std_dev, const Real& lwr,
 				  const Real& upr)
 {
-  Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var),
-    lambda = std::log(mean) - zeta_sq/2., zeta = std::sqrt(zeta_sq);
+  Real lambda, zeta;
+  lognormal_params_from_moments(mean, std_dev, lambda, zeta);
   Real Phi_lms = (lwr > 0.)      ? Phi((std::log(lwr)-lambda)/zeta) : 0.;
   Real Phi_ums = (upr < DBL_MAX) ? Phi((std::log(upr)-lambda)/zeta) : 1.;
   return phi((std::log(x)-lambda)/zeta)/(Phi_ums-Phi_lms)/x/zeta;
@@ -196,8 +399,8 @@ inline Real bounded_lognormal_cdf(const Real& x, const Real& mean,
 				  const Real& std_dev, const Real& lwr,
 				  const Real& upr)
 {
-  Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var),
-    lambda = std::log(mean) - zeta_sq/2., zeta = std::sqrt(zeta_sq);
+  Real lambda, zeta;
+  lognormal_params_from_moments(mean, std_dev, lambda, zeta);
   Real Phi_lms = (lwr > 0.)      ? Phi((std::log(lwr)-lambda)/zeta) : 0.;
   Real Phi_ums = (upr < DBL_MAX) ? Phi((std::log(upr)-lambda)/zeta) : 1.;
   return (Phi((std::log(x)-lambda)/zeta) - Phi_lms)/(Phi_ums - Phi_lms);
@@ -310,22 +513,6 @@ inline Real std_beta_cdf_inverse(const Real& cdf, const Real& alpha,
 }
 
 
-inline Real gamma_function(const Real& x)
-{
-//#ifdef HAVE_BOOST
-  return bmth::tgamma(x);
-/*
-#elif HAVE_GSL
-  return gsl_sf_gamma(x);
-#else
-  PCerr << "Error: gamma function only supported in executables configured "
-	<< "with the GSL or Boost library." << std::endl;
-  abort_handler(-1);
-#endif // HAVE_GSL or HAVE_BOOST
-*/
-}
-
-
 inline Real gamma_pdf(const Real& x, const Real& alpha, const Real& beta)
 {
 //#ifdef HAVE_BOOST
@@ -342,8 +529,9 @@ inline Real gamma_pdf(const Real& x, const Real& alpha, const Real& beta)
 
 //inline Real gamma_pdf_deriv(const Real& x, const Real& alpha,const Real& beta)
 //{
-//  return std::pow(beta,-alpha) / gamma_function(alpha) * (std::exp(-x/beta)*(alpha-1.) *
-//    std::pow(x,alpha-2.) - std::pow(x,alpha-1.) * std::exp(-x/beta)/beta);
+//  return std::pow(beta,-alpha) / gamma_function(alpha) *
+//    (std::exp(-x/beta)*(alpha-1.) * std::pow(x,alpha-2.) -
+//     std::pow(x,alpha-1.) * std::exp(-x/beta)/beta);
 //}
 
 
@@ -429,178 +617,6 @@ inline Real weibull_cdf(const Real& x, const Real& alpha, const Real& beta)
   return -expm1(-std::pow(x/beta, alpha));
 #endif // HAVE_GSL or HAVE_BOOST
 */
-}
-
-
-inline void std_deviation_from_err_factor(const Real& mean,
-					  const Real& err_fact, Real& std_dev)
-{
-  Real zeta = std::log(err_fact)/Phi_inverse(0.95); // Phi^{-1}(0.95) ~= 1.645
-  std_dev   = mean * std::sqrt(expm1(zeta*zeta));
-}
-
-
-inline void err_factor_from_std_deviation(const Real& mean, const Real& std_dev,
-					  Real& err_fact)
-{
-  Real cf_var = std_dev/mean, zeta = std::sqrt(std::log(1. + cf_var*cf_var));
-  err_fact = std::exp(Phi_inverse(0.95)*zeta);
-}
-
-
-inline void moments_from_lognormal_params(const Real& lambda, const Real& zeta,
-					  Real& mean, Real& std_dev)
-{
-  Real zeta_sq = zeta*zeta;
-  mean    = std::exp(lambda + zeta_sq/2.);
-  std_dev = mean * std::sqrt(expm1(zeta_sq));
-}
-
-
-inline void lognormal_params_from_moments(const Real& mean, const Real& std_dev,
-					  Real& lambda, Real& zeta)
-{
-  Real cf_var = std_dev/mean, zeta_sq = std::log(1. + cf_var*cf_var);
-  lambda = std::log(mean) - zeta_sq/2.;
-  zeta   = std::sqrt(zeta_sq);
-}
-
-
-inline void moments_from_lognormal_spec(const RealVector& ln_means,
-					const RealVector& ln_std_devs,
-					const RealVector& ln_lambdas,
-					const RealVector& ln_zetas,
-					const RealVector& ln_err_facts, 
-					size_t i, Real& mean, Real& std_dev)
-{
-  if (!ln_lambdas.empty())
-    moments_from_lognormal_params(ln_lambdas[i], ln_zetas[i], mean, std_dev);
-  else {
-    mean = ln_means[i];
-    if (!ln_std_devs.empty())
-      std_dev = ln_std_devs[i];
-    else
-      std_deviation_from_err_factor(mean, ln_err_facts[i], std_dev);
-  }
-}
-
-
-inline void params_from_lognormal_spec(const RealVector& ln_means,
-				       const RealVector& ln_std_devs,
-				       const RealVector& ln_lambdas,
-				       const RealVector& ln_zetas,
-				       const RealVector& ln_err_facts, 
-				       size_t i, Real& lambda, Real& zeta)
-{
-  if (!ln_lambdas.empty()) {
-    lambda = ln_lambdas[i];
-    zeta   = ln_zetas[i];
-  }
-  else {
-    if (!ln_std_devs.empty())
-      lognormal_params_from_moments(ln_means[i], ln_std_devs[i], lambda, zeta);
-    else {
-      Real mean = ln_means[i], stdev;
-      std_deviation_from_err_factor(mean, ln_err_facts[i], stdev);
-      lognormal_params_from_moments(mean, stdev, lambda, zeta);
-    }
-  }
-}
-
-
-inline void all_from_lognormal_spec(const RealVector& ln_means,
-				    const RealVector& ln_std_devs,
-				    const RealVector& ln_lambdas,
-				    const RealVector& ln_zetas,
-				    const RealVector& ln_err_facts, 
-				    size_t i, Real& mean, Real& std_dev,
-				    Real& lambda, Real& zeta, Real& err_fact)
-{
-  if (!ln_lambdas.empty()) { // lambda/zeta -> mean/std_dev
-    lambda = ln_lambdas[i]; zeta = ln_zetas[i];
-    moments_from_lognormal_params(lambda, zeta, mean, std_dev);
-    err_factor_from_std_deviation(mean, std_dev, err_fact);
-  }
-  else if (!ln_std_devs.empty()) {
-    mean = ln_means[i]; std_dev = ln_std_devs[i];
-    lognormal_params_from_moments(mean, std_dev, lambda, zeta);
-    err_factor_from_std_deviation(mean, std_dev, err_fact);
-  }
-  else { // mean/err_fact -> mean/std_dev
-    mean = ln_means[i]; err_fact = ln_err_facts[i];
-    std_deviation_from_err_factor(mean, err_fact, std_dev);
-    lognormal_params_from_moments(mean, std_dev, lambda, zeta);
-  }
-}
-
-
-inline void moments_from_uniform_params(const Real& lwr, const Real& upr,
-					Real& mean, Real& std_dev)
-{ mean = (lwr + upr)/2.; std_dev = (upr - lwr)/std::sqrt(12.); }
-
-
-inline void moments_from_loguniform_params(const Real& lwr, const Real& upr,
-					   Real& mean, Real& std_dev)
-{
-  Real range = upr - lwr, log_range = std::log(upr) - std::log(lwr);
-  mean       = range/log_range;
-  std_dev    = std::sqrt(range*(log_range*(upr+lwr)-2.*range)/2.)/log_range;
-}
-
-
-inline void moments_from_triangular_params(const Real& lwr, const Real& upr,
-					   const Real& mode, Real& mean,
-					   Real& std_dev)
-{
-  mean    = (lwr + mode + upr)/3.;
-  std_dev = std::sqrt((lwr*(lwr - mode) + mode*(mode - upr) + upr*(upr - lwr))/18.);
-}
-
-
-inline void moments_from_exponential_params(const Real& beta, Real& mean,
-					    Real& std_dev)
-{ mean = beta; std_dev = beta; }
-
-
-inline void moments_from_beta_params(const Real& lwr, const Real& upr,
-				     const Real& alpha, const Real& beta,
-				     Real& mean, Real& std_dev)
-{
-  Real range = upr - lwr;
-  mean       = lwr + alpha/(alpha+beta)*range;
-  std_dev    = std::sqrt(alpha*beta/(alpha+beta+1.))/(alpha+beta)*range;
-}
-
-
-inline void moments_from_gamma_params(const Real& alpha, const Real& beta,
-				      Real& mean, Real& std_dev)
-{ mean = alpha*beta; std_dev = std::sqrt(alpha)*beta; }
-
-
-inline void moments_from_gumbel_params(const Real& alpha, const Real& beta,
-				       Real& mean, Real& std_dev)
-{ mean = beta + 0.57721566490153286/alpha; std_dev = Pi/std::sqrt(6.)/alpha; }
-/* Euler-Mascheroni constant is 0.5772... */
-
-
-inline void moments_from_frechet_params(const Real& alpha, const Real& beta,
-					Real& mean, Real& std_dev)
-{
-  // See Haldar and Mahadevan, p. 91-92
-  Real gam = gamma_function(1.-1./alpha);
-  mean     = beta*gam;
-  std_dev  = beta*std::sqrt(gamma_function(1.-2./alpha)-gam*gam);
-}
-
-
-inline void moments_from_weibull_params(const Real& alpha, const Real& beta,
-					Real& mean, Real& std_dev)
-{
-  // See Haldar and Mahadevan, p. 97
-  Real gam = gamma_function(1.+1./alpha),
-    cf_var = std::sqrt(gamma_function(1.+2./alpha)/gam/gam - 1.);
-  mean     = beta*gam;
-  std_dev  = cf_var*mean;
 }
 
 } // namespace Pecos
