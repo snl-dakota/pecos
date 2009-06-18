@@ -350,7 +350,7 @@ inline void moments_from_histogram_bin_params(const RealVector& hist_bin_prs,
     std_dev += count * (upr*upr + upr*lwr + lwr*lwr); // upr*clu + count*lwr*lwr
   }
   mean   /= 2.;
-  std_dev = std_dev/3. - mean*mean;
+  std_dev = std::sqrt(std_dev/3. - mean*mean);
 }
 
 
@@ -367,7 +367,7 @@ inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
     mean    += cv;
     std_dev += cv*val;
   }
-  std_dev -= mean*mean;
+  std_dev = std::sqrt(std_dev - mean*mean);
 }
 
 
