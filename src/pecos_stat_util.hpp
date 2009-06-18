@@ -280,8 +280,9 @@ inline void moments_from_triangular_params(const Real& lwr, const Real& upr,
 					   const Real& mode, Real& mean,
 					   Real& std_dev)
 {
-  mean    = (lwr + mode + upr)/3.;
-  std_dev = std::sqrt((lwr*(lwr - mode) + mode*(mode - upr) + upr*(upr - lwr))/18.);
+  mean = (lwr + mode + upr)/3.;
+  std_dev
+    = std::sqrt((lwr*(lwr - mode) + mode*(mode - upr) + upr*(upr - lwr))/18.);
 }
 
 
@@ -329,6 +330,44 @@ inline void moments_from_weibull_params(const Real& alpha, const Real& beta,
     cf_var = std::sqrt(gamma_function(1.+2./alpha)/gam/gam - 1.);
   mean     = beta*gam;
   std_dev  = cf_var*mean;
+}
+
+
+inline void moments_from_histogram_bin_params(const RealVector& hist_bin_prs,
+					      Real& mean, Real& std_dev)
+{
+  // in bin case, (x,y) and (x,c) are not equivalent since bins have non-zero
+  // width -> assume (x,c) count/frequency-based (already converted from (x,y)
+  // skyline/density-based) with normalization (counts sum to 1.)
+  mean = std_dev = 0.;
+  size_t num_bins = hist_bin_prs.length() / 2 - 1;
+  for (int i=0; i<num_bins; ++i) {
+    const Real& lwr   = hist_bin_prs[2*i];
+    const Real& count = hist_bin_prs[2*i+1];
+    const Real& upr   = hist_bin_prs[2*i+2];
+    //Real clu = count * (lwr + upr);
+    mean    += count * (lwr + upr); // clu
+    std_dev += count * (upr*upr + upr*lwr + lwr*lwr); // upr*clu + count*lwr*lwr
+  }
+  mean   /= 2.;
+  std_dev = std_dev/3. - mean*mean;
+}
+
+
+inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
+					     Real& mean, Real& std_dev)
+{
+  // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
+  // assume normalization (counts sum to 1.).
+  mean = std_dev = 0.;
+  size_t num_pts = hist_pt_prs.length() / 2 - 1;
+  for (int i=0; i<num_pts; ++i) {
+    const Real& val = hist_pt_prs[2*i];
+    Real cv = hist_pt_prs[2*i+1]*val; // count * val
+    mean    += cv;
+    std_dev += cv*val;
+  }
+  std_dev -= mean*mean;
 }
 
 
@@ -408,19 +447,23 @@ inline Real bounded_lognormal_cdf(const Real& x, const Real& mean,
 
 
 inline Real std_uniform_pdf()
-{ return 0.5; } // [-1,1]
+{ return 0.5; } // equal probability on [-1,1]
 
 
 inline Real std_uniform_cdf(const Real& x)
-{ return (x + 1.)/2.; } // [-1,1]
+{ return (x + 1.)/2.; } // linear [-1,1] -> [0,1]
+
+
+inline Real std_uniform_cdf_inverse(const Real& cdf)
+{ return 2.*cdf - 1.; } // linear [0,1] -> [-1,1]
 
 
 inline Real uniform_pdf(const Real& lwr, const Real& upr)
-{ return 1./(upr - lwr); } // [lwr,upr]
+{ return 1./(upr - lwr); } // equal probability on [lwr,upr]
 
 
 inline Real uniform_cdf(const Real& x, const Real& lwr, const Real& upr)
-{ return (x - lwr)/(upr - lwr); } // [lwr,upr]
+{ return (x - lwr)/(upr - lwr); } // linear [lwr,upr] -> [0,1]
 
 
 inline Real loguniform_pdf(const Real& x, const Real& lwr, const Real& upr)
@@ -617,6 +660,68 @@ inline Real weibull_cdf(const Real& x, const Real& alpha, const Real& beta)
   return -expm1(-std::pow(x/beta, alpha));
 #endif // HAVE_GSL or HAVE_BOOST
 */
+}
+
+
+inline Real histogram_bin_pdf(const Real& x, const RealVector& hist_bin_prs)
+{
+  size_t num_bins = hist_bin_prs.length() / 2 - 1;
+  if (x < hist_bin_prs[0] || x > hist_bin_prs[2*num_bins])
+    return 0.;
+  else
+    for (int i=0; i<num_bins; ++i) {
+      const Real& upr = hist_bin_prs[2*i+2];
+      if (x < upr) // return density = count / (upr - lwr);
+	return hist_bin_prs[2*i+1] / (upr - hist_bin_prs[2*i]);
+    }
+}
+
+
+inline Real histogram_bin_cdf(const Real& x, const RealVector& hist_bin_prs)
+{
+  size_t num_bins = hist_bin_prs.length() / 2 - 1;
+  if (x <= hist_bin_prs[0])
+    return 0.;
+  else if (x >= hist_bin_prs[2*num_bins])
+    return 1.;
+  else {
+    Real cdf = 0.;
+    for (int i=0; i<num_bins; ++i) {
+      const Real& count = hist_bin_prs[2*i+1];
+      const Real& upr   = hist_bin_prs[2*i+2];
+      if (x < upr) {
+	const Real& lwr = hist_bin_prs[2*i];
+	cdf += count * (x - lwr) / (upr - lwr);
+	break;
+      }
+      else
+	cdf += count;
+    }
+    return cdf;
+  }
+}
+
+
+inline Real histogram_bin_cdf_inverse(const Real& cdf,
+				      const RealVector& hist_bin_prs)
+{
+  size_t num_bins = hist_bin_prs.length() / 2 - 1;
+  if (cdf <= 0.)
+    return hist_bin_prs[0];
+  else if (cdf >= 1.)
+    return hist_bin_prs[2*num_bins];
+  else {
+    Real upr_cdf = 0.;
+    for (int i=0; i<num_bins; ++i) {
+      const Real& count = hist_bin_prs[2*i+1];
+      upr_cdf += count;
+      if (cdf < upr_cdf) {
+	const Real& upr = hist_bin_prs[2*i+2];
+	const Real& lwr = hist_bin_prs[2*i];
+	return lwr + (upr_cdf - cdf) / count * (upr - lwr);
+      }
+    }
+  }
 }
 
 } // namespace Pecos

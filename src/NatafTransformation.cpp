@@ -289,13 +289,16 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else
 	err_flag = true;
       break;
-    case HISTOGRAM:
-      // TO DO
-      //if (ranVarTypesU[i] == STD_NORMAL) {
-      //}
-      //else if (ranVarTypesU[i] == STD_UNIFORM) {
-      //}
-      //else
+    case HISTOGRAM_BIN:
+      if (ranVarTypesU[i] == STD_NORMAL)
+	x_vars[i] = histogram_bin_cdf_inverse(Phi(z_vars[i]),
+					      ranVarAddtlParamsX[i]);
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	x_vars[i] = histogram_bin_cdf_inverse(std_uniform_cdf(z_vars[i]),
+					      ranVarAddtlParamsX[i]);
+      else if (ranVarTypesU[i] == HISTOGRAM_BIN)
+	x_vars[i] = z_vars[i];
+      else
 	err_flag = true;
       break;
     }
@@ -519,13 +522,16 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       else
 	err_flag = true;
       break;
-    case HISTOGRAM:
-      // TO DO
-      //if (ranVarTypesU[i] == STD_NORMAL) {
-      //}
-      //else if (ranVarTypesU[i] == STD_UNIFORM) {
-      //}
-      //else
+    case HISTOGRAM_BIN:
+      if (ranVarTypesU[i] == STD_NORMAL)
+	z_vars[i] = Phi_inverse(histogram_bin_cdf(x_vars[i],
+						  ranVarAddtlParamsX[i]));
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	z_vars[i] = std_uniform_cdf_inverse(histogram_bin_cdf(x_vars[i],
+					    ranVarAddtlParamsX[i]));
+      else if (ranVarTypesU[i] == HISTOGRAM_BIN)
+	z_vars[i] = x_vars[i];
+      else
 	err_flag = true;
       break;
     }
@@ -1344,8 +1350,8 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 	     ranVarTypesX[i] == BOUNDED_LOGNORMAL ||
 	     ranVarTypesX[i] == LOGUNIFORM || ranVarTypesX[i] == TRIANGULAR ||
 	     ranVarTypesX[i] == GUMBEL     || ranVarTypesX[i] == FRECHET    ||
-	     ranVarTypesX[i] == WEIBULL    || ranVarTypesX[i] == HISTOGRAM ) &&
-	   ranVarTypesX[i]   != ranVarTypesU[i] ) )
+	     ranVarTypesX[i] == WEIBULL    || ranVarTypesX[i] == HISTOGRAM_BIN )
+	  && ranVarTypesX[i] != ranVarTypesU[i] ) )
       { nonlinear_vars_map = true; break; }
 
   if (nonlinear_vars_map) // nonlinear transformation has Hessian
@@ -1593,7 +1599,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	Real pdf = triangular_pdf(x_vars[i], ranVarAddtlParamsX[i][0],
 				  ranVarLowerBndsX[i], ranVarUpperBndsX[i]);
 	if (ranVarTypesU[i] == STD_UNIFORM)
-	  jacobian_xz(i, i) = 0.5/pdf;
+	  jacobian_xz(i, i) = std_uniform_pdf() / pdf;
 	else if (ranVarTypesU[i] == STD_NORMAL)
 	  jacobian_xz(i, i) = phi(z_vars[i])/pdf;
 	else
@@ -1662,13 +1668,16 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       else
 	err_flag = true;
       break;
-    case HISTOGRAM:
-      // TO DO
-      //if (ranVarTypesU[i] == STD_NORMAL) {
-      //}
-      //else if (ranVarTypesU[i] == STD_UNIFORM) {
-      //}
-      //else
+    case HISTOGRAM_BIN:
+      if (ranVarTypesU[i] == STD_NORMAL)
+	jacobian_xz(i, i) = phi(z_vars[i]) /
+	  histogram_bin_pdf(x_vars[i], ranVarAddtlParamsX[i]);
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	jacobian_xz(i, i) = std_uniform_pdf() /
+	  histogram_bin_pdf(x_vars[i], ranVarAddtlParamsX[i]);
+      else if (ranVarTypesU[i] == HISTOGRAM_BIN)
+	jacobian_xz(i, i) = 1.;
+      else
 	err_flag = true;
       break;
     }
@@ -1812,7 +1821,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	Real pdf = triangular_pdf(x_vars[i], ranVarAddtlParamsX[i][0],
 				  ranVarLowerBndsX[i], ranVarUpperBndsX[i]);
 	if (ranVarTypesU[i] == STD_UNIFORM)
-	  jacobian_zx(i, i) = 2.*pdf;
+	  jacobian_zx(i, i) = pdf / std_uniform_pdf();
 	else if (ranVarTypesU[i] == STD_NORMAL)
 	  jacobian_zx(i, i) = pdf / phi(z_vars[i]);
 	else
@@ -1885,13 +1894,16 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	err_flag = true;
       break;
     }
-    case HISTOGRAM:
-      // TO DO
-      //if (ranVarTypesU[i] == STD_NORMAL) {
-      //}
-      //else if (ranVarTypesU[i] == STD_UNIFORM) {
-      //}
-      //else
+    case HISTOGRAM_BIN:
+      if (ranVarTypesU[i] == STD_NORMAL)
+	jacobian_zx(i, i) = histogram_bin_pdf(x_vars[i], ranVarAddtlParamsX[i])
+	  / phi(z_vars[i]);
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	jacobian_zx(i, i) = histogram_bin_pdf(x_vars[i], ranVarAddtlParamsX[i])
+	  / std_uniform_pdf();
+      else if (ranVarTypesU[i] == HISTOGRAM_BIN)
+	jacobian_zx(i, i) = 1.;
+      else
 	err_flag = true;
       break;
     }
@@ -2637,9 +2649,9 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  }
 	  break;
 	}
-	case HISTOGRAM:
+	case HISTOGRAM_BIN:
 	  // TO DO
-	  PCerr << "Error: unsupported mapping for HISTOGRAM in "
+	  PCerr << "Error: unsupported mapping for HISTOGRAM_BIN in "
 		<< "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	  abort_handler(-1);
 	  break;
@@ -2888,7 +2900,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       //  f(x) = e^(-x/beta) / beta
       // f'(x) = - e^(-x/beta) / beta^2
       if (ranVarTypesU[i] == STD_EXPONENTIAL) // linear scaling
-	hessian_xz[i](i, i) = 0.0;
+	hessian_xz[i](i, i) = 0.;
       else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
 	const Real& beta = ranVarAddtlParamsX[i][0]; const Real& z = z_vars[i];
 	Real pdf = exponential_pdf(x_vars[i], beta), pdf_deriv = -pdf/beta,
@@ -2903,7 +2915,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       //  f(x) = gsl
       // f'(x) = f(x) ((alpha-1)/(x-lwr) - (beta-1)/(upr-x))
       if (ranVarTypesU[i] == STD_BETA) // linear scaling
-	hessian_xz[i](i, i) = 0.0;
+	hessian_xz[i](i, i) = 0.;
       else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i][0];
 	const Real& beta  = ranVarAddtlParamsX[i][1];
@@ -2925,7 +2937,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       // f'(x) = beta^(-alpha)/GammaFn(alpha) (e^(-x/beta) (alpha-1) x^(alpha-2)
       //                                       - x^(alpha-1) e^(-x/beta)/beta)
       if (ranVarTypesU[i] == STD_GAMMA) // linear scaling
-	hessian_xz[i](i, i) = 0.0;
+	hessian_xz[i](i, i) = 0.;
       else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i][0];
 	const Real& beta  = ranVarAddtlParamsX[i][1];
@@ -3001,13 +3013,17 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       else
 	err_flag = true;
       break;
-    case HISTOGRAM:
-      // TO DO
-      //if (ranVarTypesU[i] == STD_NORMAL) {
-      //}
-      //else if (ranVarTypesU[i] == STD_UNIFORM) {
-      //}
-      //else
+    case HISTOGRAM_BIN:
+      if (ranVarTypesU[i] == STD_NORMAL) {
+	const Real& z = z_vars[i];
+	hessian_xz[i](i, i) = -phi(z) * z /
+	  histogram_bin_pdf(x_vars[i], ranVarAddtlParamsX[i]); // pdf_deriv = 0.
+      }
+      else if (ranVarTypesU[i] == STD_UNIFORM) // transformation is piece-wise
+	hessian_xz[i](i, i) = 0.;              // linear with discont. Jacobian
+      else if (ranVarTypesU[i] == HISTOGRAM_BIN)
+	hessian_xz[i](i, i) = 0.;
+      else
 	err_flag = true;
       break;
     }
