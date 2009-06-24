@@ -587,12 +587,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       dist_stream << "continuous linear               "; // no null termination
       for (j=0; j<num_params; j++)
         x_val[j] = h_bin_prs[i][2*j];
-      Real sum = 0.;
-      for (j=1; j<num_params; j++)
-        sum += h_bin_prs[i][2*j-1]; // last y from DAKOTA must be zero
+      // Assume already normalized with sum = 1
+      //Real sum = 0.;
+      //for (j=1; j<num_params; j++)
+      //  sum += h_bin_prs[i][2*j-1]; // last y from DAKOTA must be zero
       y_val[0] = 0.;
       for (j=1; j<num_params; j++)
-        y_val[j] = y_val[j-1] + h_bin_prs[i][2*j-1]/sum;
+        y_val[j] = y_val[j-1] + h_bin_prs[i][2*j-1];// / sum;
     }
     else {
       // LHS can use discrete frequency information directly
