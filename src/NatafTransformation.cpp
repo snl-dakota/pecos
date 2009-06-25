@@ -1493,6 +1493,10 @@ jacobian_dX_dU(const RealVector& x_vars, RealMatrix& jacobian_xu)
   }
   else // dX/dU = dX/dZ since dZ/dU = I
     jacobian_dX_dZ(x_vars, jacobian_xu);
+
+#ifdef DEBUG
+  PCout << "jacobian_dX_dU:\n" << jacobian_xu;
+#endif
 }
 
 
@@ -1715,6 +1719,10 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
   }
   else // dU/dX = dZ/dX since dU/dZ = I
     jacobian_dZ_dX(x_vars, jacobian_ux);
+
+#ifdef DEBUG
+  PCout << "jacobian_dU_dX:\n" << jacobian_ux;
+#endif
 }
 
 
