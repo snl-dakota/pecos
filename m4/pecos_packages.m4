@@ -210,7 +210,7 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   if test $acx_valid_inc -eq 1 -a $acx_valid_lib -eq 1; then
 
-    TEUCHOS_CPPFLAGS="-I$TEUCHOS_INCLUDE"
+    TEUCHOS_CPPFLAGS="-I$TEUCHOS_INCLUDE -I$TEUCHOS_LIB"
     TEUCHOS_LDFLAGS="-L$TEUCHOS_LIB"
 
   dnl Check for INSTALLED Teuchos vs. BUILT, but NOT-installed Teuchos
