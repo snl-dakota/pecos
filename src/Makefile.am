@@ -28,8 +28,8 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  ProbabilityTransformation.cpp			\
 			  NatafTransformation.cpp			\
 			  pecos_stat_util.cpp				\
-                          Random.cpp                                    \
-			  LHSDriver.cpp $(LHS_S)
+                          LHSDriver.cpp                                 \
+			  LHSDriverSelectRNG.cpp $(LHS_S)
 #			  BasisFunction.cpp
 
 ## Extra files to remove when doing 'make maintainer-clean'.
