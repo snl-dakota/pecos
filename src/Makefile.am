@@ -1,5 +1,7 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
+AM_CXXFLAGS = @DEBUGFLAGS@ @OPTFLAGS@
+
 AM_CPPFLAGS = @TEUCHOS_CPPFLAGS@
 AM_CPPFLAGS += @BOOST_CPPFLAGS@ -I$(top_srcdir)/packages
 

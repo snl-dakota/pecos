@@ -1,5 +1,7 @@
 ## Process this file with automake to produce 'Makefile.in'.
 
+AM_CXXFLAGS  = @DEBUGFLAGS@ @OPTFLAGS@
+
 AM_CPPFLAGS  = -I${top_srcdir}/src @TEUCHOS_CPPFLAGS@
 TPL_LDFLAGS  = @TEUCHOS_LDFLAGS@
 TPL_LIBS     = -lteuchos

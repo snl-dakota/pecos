@@ -52,11 +52,9 @@ AC_HEADER_STDBOOL
 ACX_BLAS
 ACX_LAPACK
 
-# Checks for library functions.
-## WJB: later -- AC_CHECK_FUNCS([rand random])
-
 
 # PECOS-specific package checks.
+PECOS_OPTIONS
 PECOS_PACKAGES
 
 
