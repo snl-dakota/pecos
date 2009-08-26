@@ -609,8 +609,9 @@ inline Real gamma_cdf_inverse(const Real& cdf, const Real& alpha,
 
 inline Real gumbel_pdf(const Real& x, const Real& alpha, const Real& beta)
 {
-  Real num = std::exp(-alpha*(x-beta));
-  return alpha*num*std::exp(-num);
+  double num = std::exp(-alpha*(x-beta));
+  // if num overflows, apply L'Hopital's rule
+  return (num > DBL_MAX) ? 0. : alpha*num*std::exp(-num);
 }
 
 
