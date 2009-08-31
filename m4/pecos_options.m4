@@ -10,13 +10,13 @@ AC_DEFUN([PECOS_OPTIONS],[
     dnl AC_MSG_RESULT([yes])
     dnl AC_DEFINE([HAVE_PECOS_DEBUG],[1],[Macro to enable debug in Pecos.])
     DEBUGFLAGS="-g"
-    dnl CXXFLAGS=""
   else
     dnl AC_MSG_RESULT([no])
     AC_DEFINE([BOOST_DISABLE_ASSERTS],[1],[Macro to disable Boost asserts.])
     DEBUGFLAGS=""
   fi
   AC_SUBST(DEBUGFLAGS)
+  AM_CONDITIONAL([WITH_DEBUG_ENABLED],[test "x$enable_debug" = xyes])
 
 
   dnl Specify optimization level.
@@ -30,25 +30,31 @@ AC_DEFUN([PECOS_OPTIONS],[
   elif test "x$with_opt" = xyes; then
     AC_MSG_RESULT([2])
     OPTFLAGS="-O2"
+    CXXFLAGS=""
   elif test "x$with_opt" = x0; then
     AC_MSG_RESULT([${with_opt}])
     OPTFLAGS="-O0"
+    CXXFLAGS=""
   elif test "x$with_opt" = x1; then
     AC_MSG_RESULT([${with_opt}])
     OPTFLAGS="-O1"
+    CXXFLAGS=""
   elif test "x$with_opt" = x2; then
     dnl Default case is explicitly specified
     AC_MSG_RESULT([${with_opt}])
     OPTFLAGS="-O2"
+    CXXFLAGS=""
   elif test "x$with_opt" = x3; then
     AC_MSG_RESULT([${with_opt}])
     OPTFLAGS="-O3"
+    CXXFLAGS=""
   else
     AC_MSG_RESULT([${with_opt}])
-    AC_MSG_WARN([Unrecognized optimization level, using '-02'.])
-    OPTFLAGS="-O2"
+    AC_MSG_NOTICE([Unrecognized optimization level, using default '-02'.])
+    dnl OPTFLAGS="-O2"
+    dnl CXXFLAGS=""
   fi
-  CXXFLAGS=""
   AC_SUBST(OPTFLAGS)
+  AM_CONDITIONAL([WITH_CUSTOM_OPT_LEVEL],[test "x$OPTFLAGS" != "x"])
 
 ])

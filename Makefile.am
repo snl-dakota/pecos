@@ -4,7 +4,6 @@
 
 ## Need the config directory for its m4 files.
 ACLOCAL_AMFLAGS = -I ./m4
-#### if subsidiary pkg in Dakota tree -- ACLOCAL_AMFLAGS = -I ../../m4
 
 ## Source subdirectories to be recursed into during the build.
 ## Convenience libraries to be built in each of the SUBDIRS.
