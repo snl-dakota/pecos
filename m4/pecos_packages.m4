@@ -1,11 +1,59 @@
 dnl Packages
 
 AC_DEFUN([PECOS_PACKAGES],[
-  dnl BOOST package is needed unconditionally.
-  dnl Pecos provides a header-only subset of the Boost 1.37 release.
-  dnl AC_CONFIG_SUBDIRS([packages/boost])
-  BOOST_CPPFLAGS="-I`pwd`/packages"
+  AC_ARG_WITH([boost],
+              AC_HELP_STRING([--with-boost=DIR],
+                             [use Boost headers in specified DIR]),
+              [],[with_boost="yes"])
+  case $with_boost in
+  no) 
+    dnl BOOST package is needed unconditionally.
+    dnl Pecos provides a header-only subset of the Boost 1.37 release.
+    AC_MSG_ERROR([PECOS cannot be configured without Boost. Please specify
+                  directory to boost headers OR simply, --with-boost=yes
+                  to get the default path to the PECOS provided boost subset.])
+    ;;      
+
+  dnl For yes, check BOOST_ROOT, otherwise fallback to local Boost
+  yes | "")
+    AC_MSG_CHECKING([for Boost])
+    if test -n "$BOOST_ROOT" -a -d "$BOOST_ROOT"; then
+
+      AC_MSG_RESULT([using Boost in BOOST_ROOT: $BOOST_ROOT])
+
+    elif test -d `pwd`/packages/boost; then
+
+      dnl Use local Boost and instruct subpackages to do so as well
+      export BOOST_ROOT=`pwd`/packages/boost
+
+      dnl Nothing to config/build; Pecos provides a header-only subset
+      dnl AC_CONFIG_SUBDIRS([packages/boost])
+      AC_MSG_RESULT([using local Boost in $BOOST_ROOT])
+
+    else
+      AC_MSG_NOTICE([could not find Boost directory.])
+      AC_MSG_NOTICE([need help locating boost!])
+      AC_MSG_ERROR([PLEASE PROVIDE full path to boost, --with-boost=<DIR>])
+    fi
+    ;;
+
+  dnl Otherwise, user should have provided an explicit path to Boost
+  *)
+    AC_MSG_CHECKING([for specified Boost])
+    BOOST_ROOT=$withval
+    if test -n "$BOOST_ROOT" -a -d "$BOOST_ROOT"; then
+      AC_MSG_RESULT([using: $BOOST_ROOT])
+    else
+      AC_MSG_ERROR([could not locate $BOOST_ROOT])
+    fi
+    ;;
+
+  esac
+
+  BOOST_CPPFLAGS="-I$BOOST_ROOT/.."
   AC_SUBST(BOOST_CPPFLAGS)
+  AC_ARG_VAR(BOOST_ROOT, [Path to header-only subset of Boost, a C++ foundation package])
+
 
   dnl FFT packages - BOTH dfftpack and fftw will be built
   AC_ARG_WITH([fft],AS_HELP_STRING([--without-fft],
@@ -40,6 +88,20 @@ AC_DEFUN([PECOS_PACKAGES],[
     AC_SUBST(FFTW_LDFLAGS)
   fi
   AM_CONDITIONAL([WITH_FFTW],[test "x$with_fftw" = xyes])
+
+  dnl GPL package checks.
+#  AC_ARG_WITH([gpl],AS_HELP_STRING([--without-gpl],
+#              [turn GPL support off]),[with_gpl=$withval],[with_gpl=no])
+#  if test "x$with_gpl" = xyes; then
+#    dnl Currently, the only GPL package that Pecos depends on is FFTW
+#    dnl AC_CONFIG_SUBDIRS([packages/fftw])
+#    AC_DEFINE([HAVE_FFTW],[1], [Macro to handle code which depends on FFTW.])
+#    FFTW_CPPFLAGS="-I`pwd`/packages/fftw/api"
+#    FFTW_LDFLAGS="-L`pwd`/packages/fftw"
+#    AC_SUBST(FFTW_CPPFLAGS)
+#    AC_SUBST(FFTW_LDFLAGS)
+#  fi
+#  AM_CONDITIONAL([WITH_FFTW],[test "x$with_gpl" = xyes])
 
   dnl LHS package checks.
   AC_ARG_WITH([lhs],AS_HELP_STRING([--without-lhs],[turn LHS support off]),
