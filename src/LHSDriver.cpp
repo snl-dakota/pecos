@@ -182,13 +182,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // design (treated as uniform)
   for (i=0; i<num_dv; i++, cntr++) {
     //sprintf(name_string,"Design%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Design" << std::setiosflags(std::ios::left) << std::setw(10)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -220,13 +221,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   bool n_bnd_spec = (!n_l_bnds.empty() && !n_u_bnds.empty());
   for (i=0; i<num_nuv; i++, cntr++) {
     //sprintf(name_string, "Normal%d ", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Normal" << std::setiosflags(std::ios::left) << std::setw(10)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -261,13 +263,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   bool n_dist      = (!ln_lambdas.empty() || !ln_std_devs.empty());
   for (i=0; i<num_lnuv; i++, cntr++) {
     //sprintf(name_string,"Lognormal%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Lognormal" << std::setiosflags(std::ios::left)
 		<< std::setw(7) << cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -323,13 +326,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // uniform uncertain
   for (i=0; i<num_uuv; i++, cntr++) {
     //sprintf(name_string,"Uniform%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Uniform" << std::setiosflags(std::ios::left) << std::setw(9)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -353,13 +357,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // loguniform uncertain
   for (i=0; i<num_luuv; i++, cntr++) {
     //sprintf(name_string,"Loguniform%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Loguniform" << std::setiosflags(std::ios::left)
 		<< std::setw(6) << cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -383,13 +388,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // triangular uncertain
   for (i=0; i<num_tuv; i++, cntr++) {
     //sprintf(name_string,"Triangular%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Triangular" << std::setiosflags(std::ios::left)
 		<< std::setw(6) << cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -414,13 +420,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // exponential uncertain
   for (i=0; i<num_euv; i++, cntr++) {
     //sprintf(name_string,"Exponential%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Exponential" << std::setiosflags(std::ios::left)
 		<< std::setw(5) << cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -437,13 +444,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // beta uncertain
   for (i=0; i<num_buv; i++, cntr++) {
     //sprintf(name_string,"Beta%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Beta" << std::setiosflags(std::ios::left) << std::setw(12)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -469,13 +477,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // gamma uncertain
   for (i=0; i<num_gauv; i++, cntr++) {
     //sprintf(name_string,"Gamma%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Gamma" << std::setiosflags(std::ios::left) << std::setw(11)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -493,13 +502,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // gumbel uncertain
   for (i=0; i<num_guuv; i++, cntr++) {
     //sprintf(name_string,"Gumbel%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Gumbel" << std::setiosflags(std::ios::left) << std::setw(10)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -517,13 +527,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // frechet uncertain
   for (i=0; i<num_fuv; i++, cntr++) {
     //sprintf(name_string,"Frechet%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Frechet" << std::setiosflags(std::ios::left) << std::setw(9)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -541,13 +552,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // weibull uncertain
   for (i=0; i<num_wuv; i++, cntr++) {
     //sprintf(name_string,"Weibull%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Weibull" << std::setiosflags(std::ios::left) << std::setw(9)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -568,13 +580,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   size_t num_c_huv = h_bin_prs.size();
   for (i=0; i<num_huv; i++, cntr++) {
     //sprintf(name_string,"UserDefined%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Histogram" << std::setiosflags(std::ios::left)
 		<< std::setw(7) << cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -620,13 +633,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // interval uncertain: convert to histogram for sampling
   for (i=0; i<num_iuv; i++, cntr++) {
     //sprintf(name_string,"UserDefined%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "Interval" << std::setiosflags(std::ios::left)
 		<< std::setw(8) << cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
@@ -705,13 +719,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // state (treated as uniform)
   for (i=0; i<num_sv; i++, cntr++) {
     //sprintf(name_string,"State%d", cntr+1);
-    char name_string[16];
+    char name_string[17];
     std::ostringstream name_stream;
     // Don't null-terminate the string since the '\0' is not used in Fortran
     name_stream << "State" << std::setiosflags(std::ios::left) << std::setw(11)
 		<< cntr+1;
     String name_s(name_stream.str());
     std::copy(name_s.begin(), name_s.end(), name_string);
+    name_string[16] = 0; // In the next line, it needs to be null-terminated.
     lhs_names[cntr] = name_string;
     char dist_string[32];
     std::ostringstream dist_stream;
