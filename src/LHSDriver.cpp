@@ -68,6 +68,36 @@ void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
 
 namespace Pecos {
 
+/** Helper function to copy names that Fortran will see as
+    character*16 values, and are null-terminated for assignment
+    to String values.  Fortran won't see the null at the end. */
+
+ static void
+f77name16(char buf[17], const char *name, StringArray &lhs_names, int cntr)
+{
+	char *b, *be;
+	for(b = buf, be = buf + 16; b < be; ++b)
+		if (!(*b = *name++)) {
+			b += snprintf(b, be-b, "%d", cntr+1);
+			while(b < be)
+				*b++ = ' ';
+			break;
+			}
+	*be = 0;
+	lhs_names[cntr] = buf;
+	}
+
+ static void
+f77dist32(char buf[32], const char *name) // blank-filled but not null-terminated
+{
+	char *b, *be;
+	for(b = buf, be = buf + 32; b < be; ++b)
+		if (!(*b = *name++)) {
+			do *b++ = ' ';
+			   while(b < be);
+			break;
+			}
+	}
 
 /** While it would be desirable in some cases to carve this function
     into smaller parts and allow multiple invocations of LHS_RUN
@@ -178,24 +208,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   int dist_num, pv_num; // outputs (ignored)
   Real ptval = 0., dist_params[4];
   StringArray lhs_names(num_av);
+  char dist_string[32], name_string[17];
+  const char *distname;
 
   // design (treated as uniform)
   for (i=0; i<num_dv; i++, cntr++) {
-    //sprintf(name_string,"Design%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Design" << std::setiosflags(std::ios::left) << std::setw(10)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "uniform                         "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Design", lhs_names, cntr);
+    f77dist32(dist_string, "uniform");
     num_params = 2;
     if (d_l_bnds[i] > -DBL_MAX && d_u_bnds[i] < DBL_MAX) {
       if (d_l_bnds[i] >= d_u_bnds[i]) {
@@ -220,18 +239,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // normal uncertain
   bool n_bnd_spec = (!n_l_bnds.empty() && !n_u_bnds.empty());
   for (i=0; i<num_nuv; i++, cntr++) {
-    //sprintf(name_string, "Normal%d ", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Normal" << std::setiosflags(std::ios::left) << std::setw(10)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
+    f77name16(name_string, "Normal", lhs_names, cntr);
     dist_params[0] = n_means[i];
     dist_params[1] = n_std_devs[i];
     // check for bounded normal
@@ -245,14 +253,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       num_params = 4;
       dist_params[2] = n_l_bnds[i];
       dist_params[3] = n_u_bnds[i];
-      dist_stream << "bounded normal                  "; // no null termination
+      distname = "bounded normal";
     }
     else { // normal
       num_params = 2;
-      dist_stream << "normal                          "; // no null termination
+      distname = "normal";
     }
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77dist32(dist_string, distname);
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(normal)");
@@ -262,18 +269,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   bool ln_bnd_spec = (!ln_l_bnds.empty()  && !ln_u_bnds.empty());
   bool n_dist      = (!ln_lambdas.empty() || !ln_std_devs.empty());
   for (i=0; i<num_lnuv; i++, cntr++) {
-    //sprintf(name_string,"Lognormal%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Lognormal" << std::setiosflags(std::ios::left)
-		<< std::setw(7) << cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
+    f77name16(name_string, "Lognormal", lhs_names, cntr);
     if (n_dist) {
       // In the mean/std dev specification case, LHS expects the mean/std dev
       // of the underlying normal distribution (LHS manual, SAND#98-0210, p.39).
@@ -305,19 +301,18 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       dist_params[2] = ln_l_bnds[i];
       dist_params[3] = ln_u_bnds[i];
       if (n_dist)
-	dist_stream << "bounded lognormal-n             ";// no null termination
+	distname = "bounded lognormal-n";
       else
-	dist_stream << "bounded lognormal               ";// no null termination
+	distname = "bounded lognormal";
     }
     else {
       num_params = 2;
       if (n_dist)
-	dist_stream << "lognormal-n                     ";// no null termination
+	distname = "lognormal-n";
       else
-	dist_stream << "lognormal                       ";// no null termination
+	distname = "lognormal";
     }
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77dist32(dist_string, distname);
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(lognormal)");
@@ -325,21 +320,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // uniform uncertain
   for (i=0; i<num_uuv; i++, cntr++) {
-    //sprintf(name_string,"Uniform%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Uniform" << std::setiosflags(std::ios::left) << std::setw(9)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "uniform                         "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Uniform", lhs_names, cntr);
+    f77dist32(dist_string, "uniform");
     num_params = 2;
     if (u_l_bnds[i] >= u_u_bnds[i]) {
 	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -356,21 +338,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // loguniform uncertain
   for (i=0; i<num_luuv; i++, cntr++) {
-    //sprintf(name_string,"Loguniform%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Loguniform" << std::setiosflags(std::ios::left)
-		<< std::setw(6) << cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "loguniform                      "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Loguniform", lhs_names, cntr);
+    f77dist32(dist_string, "loguniform");
     num_params = 2;
     if (lu_l_bnds[i] >= lu_u_bnds[i]) {
 	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -387,21 +356,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // triangular uncertain
   for (i=0; i<num_tuv; i++, cntr++) {
-    //sprintf(name_string,"Triangular%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Triangular" << std::setiosflags(std::ios::left)
-		<< std::setw(6) << cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "triangular                      "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Triangular", lhs_names, cntr);
+    f77dist32(dist_string, "triangular");
     num_params = 3;
     if (t_l_bnds[i] >= t_u_bnds[i]) {
       PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -419,21 +375,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // exponential uncertain
   for (i=0; i<num_euv; i++, cntr++) {
-    //sprintf(name_string,"Exponential%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Exponential" << std::setiosflags(std::ios::left)
-		<< std::setw(5) << cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "exponential                     "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Exponential", lhs_names, cntr);
+    f77dist32(dist_string, "exponential");
     num_params = 1;
     dist_params[0] = 1./e_betas[i];
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
@@ -443,21 +386,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // beta uncertain
   for (i=0; i<num_buv; i++, cntr++) {
-    //sprintf(name_string,"Beta%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Beta" << std::setiosflags(std::ios::left) << std::setw(12)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "beta                            "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Beta", lhs_names, cntr);
+    f77dist32(dist_string, "beta");
     num_params = 4;
     if (b_l_bnds[i] >= b_u_bnds[i]) {
       PCerr << "\nError: nond_sampling requires lower bounds strictly less "
@@ -476,21 +406,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // gamma uncertain
   for (i=0; i<num_gauv; i++, cntr++) {
-    //sprintf(name_string,"Gamma%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Gamma" << std::setiosflags(std::ios::left) << std::setw(11)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "gamma                           "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Gamma", lhs_names, cntr);
+    f77dist32(dist_string, "gamma");
     num_params = 2;
     dist_params[0] = ga_alphas[i];
     dist_params[1] = 1./ga_betas[i];
@@ -501,21 +418,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // gumbel uncertain
   for (i=0; i<num_guuv; i++, cntr++) {
-    //sprintf(name_string,"Gumbel%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Gumbel" << std::setiosflags(std::ios::left) << std::setw(10)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "gumbel                          "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Gumbel", lhs_names, cntr);
+    f77dist32(dist_string, "gumbel");
     num_params = 2;
     dist_params[0] = gu_alphas[i];
     dist_params[1] = gu_betas[i];
@@ -526,21 +430,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // frechet uncertain
   for (i=0; i<num_fuv; i++, cntr++) {
-    //sprintf(name_string,"Frechet%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Frechet" << std::setiosflags(std::ios::left) << std::setw(9)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "frechet                         "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Frechet", lhs_names, cntr);
+    f77dist32(dist_string, "frechet");
     num_params = 2;
     dist_params[0] = f_alphas[i];
     dist_params[1] = f_betas[i];
@@ -551,21 +442,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // weibull uncertain
   for (i=0; i<num_wuv; i++, cntr++) {
-    //sprintf(name_string,"Weibull%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Weibull" << std::setiosflags(std::ios::left) << std::setw(9)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "weibull                         "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Weibull", lhs_names, cntr);
+    f77dist32(dist_string, "weibull");
     num_params = 2;
     dist_params[0] = w_alphas[i];
     dist_params[1] = w_betas[i];
@@ -579,25 +457,14 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // distinction in the second field is only important for unequal bin widths.
   size_t num_c_huv = h_bin_prs.size();
   for (i=0; i<num_huv; i++, cntr++) {
-    //sprintf(name_string,"UserDefined%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Histogram" << std::setiosflags(std::ios::left)
-		<< std::setw(7) << cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    num_params = (i < num_c_huv) ? h_bin_prs[i].length()/2
+    f77name16(name_string, "Histogram", lhs_names, cntr);
+     num_params = (i < num_c_huv) ? h_bin_prs[i].length()/2
                                  : h_pt_prs[i-num_c_huv].length()/2;
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
     if (i < num_c_huv) {
       // LHS requires accumulation of CDF with first y at 0 and last y at 1
-      dist_stream << "continuous linear               "; // no null termination
+      distname = "continuous linear";
       for (j=0; j<num_params; j++)
         x_val[j] = h_bin_prs[i][2*j];
       // Assume already normalized with sum = 1
@@ -610,7 +477,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     }
     else {
       // LHS can use discrete frequency information directly
-      dist_stream << "discrete histogram              "; // no null termination
+      distname = "discrete histogram";
       for (j=0; j<num_params; j++) {
         x_val[j] = h_pt_prs[i-num_c_huv][2*j];
         y_val[j] = h_pt_prs[i-num_c_huv][2*j+1];
@@ -621,8 +488,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       PCout << "Histogram " << i+1 << ": " << x_val[j] << ' ' << y_val[j]
 	    << std::endl;
 #endif //DEBUG
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77dist32(dist_string, distname);
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
 		  x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(histogram)");
@@ -632,21 +498,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // interval uncertain: convert to histogram for sampling
   for (i=0; i<num_iuv; i++, cntr++) {
-    //sprintf(name_string,"UserDefined%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "Interval" << std::setiosflags(std::ios::left)
-		<< std::setw(8) << cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "continuous linear               "; // no null termination
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
+    f77name16(name_string, "Interval", lhs_names, cntr);
+    f77dist32(dist_string, "continuous linear");
 
     // x_sort_unique is a set with ALL of the interval bounds for this variable
     // in increasing order and unique.  For example, if there are 2 intervals
@@ -718,19 +571,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 
   // state (treated as uniform)
   for (i=0; i<num_sv; i++, cntr++) {
-    //sprintf(name_string,"State%d", cntr+1);
-    char name_string[17];
-    std::ostringstream name_stream;
-    // Don't null-terminate the string since the '\0' is not used in Fortran
-    name_stream << "State" << std::setiosflags(std::ios::left) << std::setw(11)
-		<< cntr+1;
-    String name_s(name_stream.str());
-    std::copy(name_s.begin(), name_s.end(), name_string);
-    name_string[16] = 0; // In the next line, it needs to be null-terminated.
-    lhs_names[cntr] = name_string;
-    char dist_string[32];
-    std::ostringstream dist_stream;
-    dist_stream << "uniform                         "; // no null termination
+    f77name16(name_string, "State", lhs_names, cntr);
+    f77dist32(dist_string, "uniform");
     num_params = 2;
     if (s_l_bnds[i] > -DBL_MAX && s_u_bnds[i] < DBL_MAX) {
       if (s_l_bnds[i] >= s_u_bnds[i]) {
@@ -747,8 +589,6 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 	    << "variables using uniform\n       distributions." << std::endl;
       abort_handler(-1);
     }
-    String dist_s(dist_stream.str());
-    std::copy(dist_s.begin(), dist_s.end(), dist_string);
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(state)");
