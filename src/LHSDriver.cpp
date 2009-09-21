@@ -68,10 +68,10 @@ void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
 
 namespace Pecos {
 
+
 /** Helper function to copy names that Fortran will see as
     character*16 values, and are null-terminated for assignment
     to String values.  Fortran won't see the null at the end. */
-
  static void
 f77name16(char buf[17], const char *name, StringArray &lhs_names, int cntr)
 {
@@ -87,6 +87,7 @@ f77name16(char buf[17], const char *name, StringArray &lhs_names, int cntr)
 	lhs_names[cntr] = buf;
 	}
 
+
  static void
 f77dist32(char buf[32], const char *name) // blank-filled but not null-terminated
 {
@@ -98,6 +99,7 @@ f77dist32(char buf[32], const char *name) // blank-filled but not null-terminate
 			break;
 			}
 	}
+
 
 /** While it would be desirable in some cases to carve this function
     into smaller parts and allow multiple invocations of LHS_RUN
@@ -218,16 +220,16 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     num_params = 2;
     if (d_l_bnds[i] > -DBL_MAX && d_u_bnds[i] < DBL_MAX) {
       if (d_l_bnds[i] >= d_u_bnds[i]) {
-	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
-	      << "than upper bounds to\n       sample design variables using "
-	      << "uniform distributions." << std::endl;
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
+	      << "less than upper bounds to\n       sample design variables "
+	      << "using uniform distributions." << std::endl;
 	abort_handler(-1);
       }
       dist_params[0] = d_l_bnds[i];
       dist_params[1] = d_u_bnds[i];
     }
     else {
-      PCerr << "\nError: nond_sampling requires bounds to sample design "
+      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample design "
 	    << "variables using uniform\n       distributions." << std::endl;
       abort_handler(-1);
     }
@@ -245,9 +247,9 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     // check for bounded normal
     if ( n_bnd_spec && (n_l_bnds[i] > -DBL_MAX || n_u_bnds[i] < DBL_MAX) ) {
       if (n_l_bnds[i] >= n_u_bnds[i]) {
-	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
-	      << "than upper bounds to\n       sample using bounded normal "
-	      << "distributions." << std::endl;
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
+	      << "less than upper bounds to\n       sample using bounded "
+	      << "normal distributions." << std::endl;
 	abort_handler(-1);
       }
       num_params = 4;
@@ -292,9 +294,9 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     // check for bounded lognormal
     if (ln_bnd_spec && (ln_l_bnds[i] > 0.0 || ln_u_bnds[i] < DBL_MAX) ) {
       if (ln_l_bnds[i] >= ln_u_bnds[i]) {
-	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
-	      << "than upper bounds to\n       sample using bounded lognormal "
-	      << "distributions." << std::endl;
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
+	      << "less than upper bounds to\n       sample using bounded "
+	      << "lognormal distributions." << std::endl;
 	abort_handler(-1);
       }
       num_params = 4;
@@ -324,8 +326,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     f77dist32(dist_string, "uniform");
     num_params = 2;
     if (u_l_bnds[i] >= u_u_bnds[i]) {
-	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
-	      << "than upper bounds to\n       sample using uniform "
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
+	      << "less than upper bounds to\n       sample using uniform "
 	      << "distributions." << std::endl;
 	abort_handler(-1);
     }
@@ -342,8 +344,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     f77dist32(dist_string, "loguniform");
     num_params = 2;
     if (lu_l_bnds[i] >= lu_u_bnds[i]) {
-	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
-	      << "than upper bounds to\n       sample using loguniform "
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
+	      << "less than upper bounds to\n       sample using loguniform "
 	      << "distributions." << std::endl;
 	abort_handler(-1);
     }
@@ -360,7 +362,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     f77dist32(dist_string, "triangular");
     num_params = 3;
     if (t_l_bnds[i] >= t_u_bnds[i]) {
-      PCerr << "\nError: nond_sampling requires lower bounds strictly less "
+      PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
 	    << "than upper bounds to\n       sample using triangular "
 	    << "distributions." << std::endl;
       abort_handler(-1);
@@ -390,7 +392,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     f77dist32(dist_string, "beta");
     num_params = 4;
     if (b_l_bnds[i] >= b_u_bnds[i]) {
-      PCerr << "\nError: nond_sampling requires lower bounds strictly less "
+      PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
 	    << "than upper bounds to\n       sample using beta "
 	    << "distributions." << std::endl;
       abort_handler(-1);
@@ -576,16 +578,16 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     num_params = 2;
     if (s_l_bnds[i] > -DBL_MAX && s_u_bnds[i] < DBL_MAX) {
       if (s_l_bnds[i] >= s_u_bnds[i]) {
-	PCerr << "\nError: nond_sampling requires lower bounds strictly less "
-	      << "than upper bounds to\n       sample state variables using "
-	      << "uniform distributions." << std::endl;
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
+	      << "less than upper bounds to\n       sample state variables "
+	      << "using uniform distributions." << std::endl;
 	abort_handler(-1);
       }
       dist_params[0] = s_l_bnds[i];
       dist_params[1] = s_u_bnds[i];
     }
     else {
-      PCerr << "\nError: nond_sampling requires bounds to sample state "
+      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample state "
 	    << "variables using uniform\n       distributions." << std::endl;
       abort_handler(-1);
     }
