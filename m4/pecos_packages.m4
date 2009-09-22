@@ -50,7 +50,7 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   esac
 
-  BOOST_CPPFLAGS="-I$BOOST_ROOT/.."
+  BOOST_CPPFLAGS="-I$BOOST_ROOT"
   AC_SUBST(BOOST_CPPFLAGS)
   AC_ARG_VAR(BOOST_ROOT, [Path to header-only subset of Boost, a C++ foundation package])
 
