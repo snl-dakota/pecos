@@ -78,7 +78,7 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   dnl FFTW package checks.
   AC_ARG_WITH([fftw],AS_HELP_STRING([--without-fftw],
-              [turn FFTW support off]),[with_fftw=$withval],[with_fftw=yes])
+              [turn FFTW support off]),[with_fftw=$withval],[with_fftw=no])
   if test "x$with_fftw" = xyes; then
     AC_CONFIG_SUBDIRS([packages/fftw])
     AC_DEFINE([HAVE_FFTW],[1], [Macro to handle code which depends on FFTW.])
