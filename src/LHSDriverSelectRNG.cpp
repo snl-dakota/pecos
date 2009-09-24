@@ -61,8 +61,8 @@ boost::uniform_real<> BoostRNG_Monostate::uniDist(0, 1);
 extern "C" Real rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
 extern "C" void lhs_setseed(int*);
 
-Real (*BoostRNG_Monostate::random_num)()  = (Rfunc)rnumlhs10; // BoostRNG_Monostate::random_num1;
-Real (*BoostRNG_Monostate::random_num2)() = (Rfunc)rnumlhs20; // BoostRNG_Monostate::random_num1;
+Real (*BoostRNG_Monostate::random_num)()  = BoostRNG_Monostate::random_num1;
+Real (*BoostRNG_Monostate::random_num2)() = BoostRNG_Monostate::random_num1;
 
 boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
   BoostRNG_Monostate::uniMT(BoostRNG_Monostate::rnumGenerator,
