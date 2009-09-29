@@ -87,28 +87,7 @@ Real rnum2(void)
 
 void Pecos::LHSDriver::seed(int seed)
 {
-	static int first = 1;
 	randomSeed = seed;
-	if (first) {
-		const char *s = std::getenv("DAKOTA_LHS_UNIFGEN");
-		first = 0;
-		if (s) {
-			if (!std::strcmp(s,"rnumlhs1")) {
-				BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
-				BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
-				}
-			else if (!std::strcmp(s, "mt19937")) {
-				BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
-				BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
-				}
-			else if (*s) {
-				std::fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
-					" to be \"rnumlhs1\" or \"mt19937\","
-					" not \"%s\"\n", s);
-				std::exit(1);
-				}
-			}
-		}
 	if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
 		BoostRNG_Monostate::seed(seed);
 	else
@@ -117,13 +96,33 @@ void Pecos::LHSDriver::seed(int seed)
 
 void Pecos::LHSDriver::seed(int seed, const Pecos::String &unifGen)
 {
+	static int first = 1;
+	static const char *s;
 	randomSeed = seed;
+	if (first) {
+		s = std::getenv("DAKOTA_LHS_UNIFGEN");
+		first = 0;
+		}
+	if (s) {
+		if (!std::strcmp(s,"rnumlhs1"))
+			goto use_rnum;
+		else if (!std::strcmp(s, "mt19937"))
+			goto use_mt;
+		else if (*s) {
+			std::fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
+				" to be \"rnumlhs1\" or \"mt19937\","
+				" not \"%s\"\n", s);
+			std::exit(1);
+			}
+		}
 	if (unifGen == "mt19937" || unifGen == "") {
+ use_mt:
 		BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
 		BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
 		BoostRNG_Monostate::seed(seed);
 		}
 	else {
+ use_rnum:
 		BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
 		BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
 		lhs_setseed(&seed);
