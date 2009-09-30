@@ -119,12 +119,14 @@ void Pecos::LHSDriver::seed(int seed, const Pecos::String &unifGen)
  use_mt:
 		BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
 		BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
+		allow_seed_advance &= ~2;
 		BoostRNG_Monostate::seed(seed);
 		}
 	else {
  use_rnum:
 		BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
 		BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
+		allow_seed_advance |= 2;
 		lhs_setseed(&seed);
 		}
 	}
