@@ -49,12 +49,13 @@ public:
 
   /// set randomSeed
   void seed(int seed);
-  // set randomSeed and generator
-  void seed(int seed, const String& unifGen);
   /// return randomSeed
   int seed() const;
-  /// return name of uniform generator
-  const char *unifGen();
+
+  // set random number generator
+  void rng(const String& unifGen);
+  // return name of uniform generator
+  //String rng();
 
   /// reseed using a deterministic sequence
   void advance_seed_sequence();

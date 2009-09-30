@@ -116,52 +116,55 @@ void LHSDriver::seed(int seed)
 }
 
 
-void LHSDriver::seed(int seed, const String &unifGen)
+void LHSDriver::rng(const String& rng)
 {
   static int first = 1;
   static const char *s;
-  randomSeed = seed;
   if (first) {
     s = std::getenv("DAKOTA_LHS_UNIFGEN");
     first = 0;
   }
   if (s) {
-    if (!std::strcmp(s,"rnumlhs1"))
+    if (!std::strcmp(s, "rnum2"))
       goto use_rnum;
     else if (!std::strcmp(s, "mt19937"))
       goto use_mt;
-    else if (*s) {
-      std::fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
-		   " to be \"rnumlhs1\" or \"mt19937\","
-		   " not \"%s\"\n", s);
-      std::exit(1);
+    else {
+      PCerr << "Error: LHSDriver::rng() expected $DAKOTA_LHS_UNIFGEN to be "
+	    << "\"rnum2\" or \"mt19937\", not \"" << s << "\".\n"
+	    << std::endl;
+      abort_handler(-1);
     }
   }
-  if (unifGen == "mt19937" || unifGen.empty()) {
+  if (rng == "mt19937" || rng.empty()) {
   use_mt:
     BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
     BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
     allowSeedAdvance &= ~2;
-    BoostRNG_Monostate::seed(seed);
   }
-  else {
+  else if (rng == "rnum2") {
   use_rnum:
     BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
     BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
     allowSeedAdvance |= 2;
-    lhs_setseed(&seed);
+  }
+  else {
+    PCerr << "Error: LHSDriver::rng() expected string to be \"rnum2\" or "
+	  << "\"mt19937\", not \"" << rng << "\".\n" << std::endl;
+    abort_handler(-1);
   }
 }
 
 
-const char* LHSDriver::unifGen()
-{
-  if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
-    return "mt19937";
-  if (BoostRNG_Monostate::random_num == (Rfunc)rnumlhs10)
-    return "mndp";
-  return "unknown (bug?)";
-}
+//String LHSDriver::rng()
+//{
+//  if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
+//    return "mt19937";
+//  if (BoostRNG_Monostate::random_num == (Rfunc)rnumlhs10)
+//    return "rnum2";
+//  else
+//    return "";
+//}
 
 
 /** While it would be desirable in some cases to carve this function
@@ -234,7 +237,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   if (allowSeedAdvance) {
     allowSeedAdvance &= ~1;
     allowSeedAdvance |= 4;
-    LHSDriver::seed(randomSeed);
+    seed(randomSeed);
   }
   LHS_INIT_MEM_FC(num_samples, randomSeed, max_obs, max_samp_size, max_var,
 		  max_interval, max_corr, max_table, print_level, output_width,
