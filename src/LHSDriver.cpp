@@ -7,6 +7,7 @@
     _______________________________________________________________________ */
 
 #include "LHSDriver.hpp"
+#include "LHSDriverSelectRNG.hpp"
 #include "pecos_stat_util.hpp"
 #include <algorithm>
 
@@ -70,35 +71,97 @@ namespace Pecos {
 
 
 /** Helper function to copy names that Fortran will see as
-    character*16 values, and are null-terminated for assignment
-    to String values.  Fortran won't see the null at the end. */
- static void
-f77name16(char buf[17], const char *name, StringArray &lhs_names, int cntr)
+    character*16 values, and are null-terminated for assignment to
+    String values.  Fortran won't see the null at the end. */
+static void f77name16(char buf[17], const char *name,
+		      StringArray &lhs_names, int cntr)
 {
-	char *b, *be;
-	for(b = buf, be = buf + 16; b < be; ++b)
-		if (!(*b = *name++)) {
-			b += snprintf(b, be-b, "%d", cntr+1);
-			while(b < be)
-				*b++ = ' ';
-			break;
-			}
-	*be = 0;
-	lhs_names[cntr] = buf;
-	}
+  // blank-filled but not null-terminated
+  char *b, *be;
+  for(b = buf, be = buf + 16; b < be; ++b)
+    if (!(*b = *name++)) {
+      b += snprintf(b, be-b, "%d", cntr+1);
+      while(b < be)
+	*b++ = ' ';
+      break;
+    }
+  *be = 0;
+  lhs_names[cntr] = buf;
+}
 
 
- static void
-f77dist32(char buf[32], const char *name) // blank-filled but not null-terminated
+/** Helper function to copy names that Fortran will see as
+    character*32 values, and are null-terminated for assignment to
+    String values.  Fortran won't see the null at the end. */
+static void f77dist32(char buf[32], const char *name)
 {
-	char *b, *be;
-	for(b = buf, be = buf + 32; b < be; ++b)
-		if (!(*b = *name++)) {
-			do *b++ = ' ';
-			   while(b < be);
-			break;
-			}
-	}
+  // blank-filled but not null-terminated
+  char *b, *be;
+  for(b = buf, be = buf + 32; b < be; ++b)
+    if (!(*b = *name++)) {
+      do *b++ = ' ';
+      while(b < be);
+      break;
+    }
+}
+
+
+void LHSDriver::seed(int seed)
+{
+  randomSeed = seed;
+  if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
+    BoostRNG_Monostate::seed(seed);
+  else
+    lhs_setseed(&seed);
+}
+
+
+void LHSDriver::seed(int seed, const String &unifGen)
+{
+  static int first = 1;
+  static const char *s;
+  randomSeed = seed;
+  if (first) {
+    s = std::getenv("DAKOTA_LHS_UNIFGEN");
+    first = 0;
+  }
+  if (s) {
+    if (!std::strcmp(s,"rnumlhs1"))
+      goto use_rnum;
+    else if (!std::strcmp(s, "mt19937"))
+      goto use_mt;
+    else if (*s) {
+      std::fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
+		   " to be \"rnumlhs1\" or \"mt19937\","
+		   " not \"%s\"\n", s);
+      std::exit(1);
+    }
+  }
+  if (unifGen == "mt19937" || unifGen.empty()) {
+  use_mt:
+    BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
+    BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
+    allowSeedAdvance &= ~2;
+    BoostRNG_Monostate::seed(seed);
+  }
+  else {
+  use_rnum:
+    BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
+    BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
+    allowSeedAdvance |= 2;
+    lhs_setseed(&seed);
+  }
+}
+
+
+const char* LHSDriver::unifGen()
+{
+  if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
+    return "mt19937";
+  if (BoostRNG_Monostate::random_num == (Rfunc)rnumlhs10)
+    return "mndp";
+  return "unknown (bug?)";
+}
 
 
 /** While it would be desirable in some cases to carve this function
@@ -168,11 +231,11 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       max_table = -1, print_level = 0, output_width = 1;
   int max_corr = (num_uv > 1) ? max_unc_corr : -1;
   //lhs_init(num_samples, randomSeed, err_code);
-  if (allow_seed_advance) {
-	allow_seed_advance &= ~1;
-	allow_seed_advance |= 4;
-	LHSDriver::seed(randomSeed);
-	}
+  if (allowSeedAdvance) {
+    allowSeedAdvance &= ~1;
+    allowSeedAdvance |= 4;
+    LHSDriver::seed(randomSeed);
+  }
   LHS_INIT_MEM_FC(num_samples, randomSeed, max_obs, max_samp_size, max_var,
 		  max_interval, max_corr, max_table, print_level, output_width,
 		  err_code);

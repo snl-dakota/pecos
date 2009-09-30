@@ -131,14 +131,14 @@ private:
   bool reportFlag;
 
   /// for honoring advance_seed_sequence() calls
-  int allow_seed_advance; // bit 1 = first-time flag
-			  // bit 2 = allow repeated seed update
-			  // bit 4 = allow restart from current seed
+  int allowSeedAdvance; // bit 1 = first-time flag
+		        // bit 2 = allow repeated seed update
+			// bit 4 = allow restart from current seed
 };
 
 
 inline LHSDriver::LHSDriver() : sampleType("lhs"), randomSeed(0),
-  sampleRanksMode(IGNORE_RANKS), reportFlag(true), allow_seed_advance(1)
+  sampleRanksMode(IGNORE_RANKS), reportFlag(true), allowSeedAdvance(1)
 {
 #ifndef HAVE_LHS
   PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
@@ -162,7 +162,7 @@ initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 
 
 inline LHSDriver::LHSDriver(const String& sample_type, short sample_ranks_mode,
-			    bool reports): allow_seed_advance(1)
+			    bool reports): allowSeedAdvance(1)
 {
 #ifndef HAVE_LHS
   PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
@@ -171,10 +171,6 @@ inline LHSDriver::LHSDriver(const String& sample_type, short sample_ranks_mode,
 #endif
   initialize(sample_type, sample_ranks_mode, reports);
 }
-
-
-//inline void LHSDriver::seed(int seed)	// moved to Random.cpp
-//{ randomSeed = seed; }
 
 
 inline int LHSDriver::seed() const
@@ -190,12 +186,12 @@ inline int LHSDriver::seed() const
     inconsequential for the intended use. */
 inline void LHSDriver::advance_seed_sequence()
 {
-  allow_seed_advance &= ~4;
-  if (allow_seed_advance & 2) {
-	allow_seed_advance |= 4;
-	std::srand(randomSeed);
-	randomSeed = 1 + std::rand(); // from 1 to RANDMAX+1
-	}
+  allowSeedAdvance &= ~4;
+  if (allowSeedAdvance & 2) {
+    allowSeedAdvance |= 4;
+    std::srand(randomSeed);
+    randomSeed = 1 + std::rand(); // from 1 to RANDMAX+1
+  }
 }
 
 

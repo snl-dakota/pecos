@@ -1,6 +1,7 @@
 /*  ______________________________________________________________________
-    DAKOTA: Design Analysis Kit for Optimization and Terascale Applications
-    Copyright (c) 2006, Sandia National Laboratories.
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2008, Sandia National Laboratories.
     This software is distributed under the GNU General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
@@ -12,8 +13,6 @@
 //- Version: $Id: Random.cpp 5721 2009-03-03 23:51:34Z wjbohnh $
 
 #include "pecos_data_types.hpp"
-#include "LHSDriver.hpp"
-
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
@@ -58,6 +57,7 @@ boost::uniform_real<> BoostRNG_Monostate::uniDist(0, 1);
 #define rnumlhs10 FC_FUNC(rnumlhs10,RNUMLHS10)
 #define rnumlhs20 FC_FUNC(rnumlhs20,RNUMLHS20)
 #define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
+
 extern "C" Real rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
 extern "C" void lhs_setseed(int*);
 
@@ -74,69 +74,14 @@ extern "C" void set_boost_rng_seed(unsigned int rng_seed)
 }
  
 Real rnum1(void)
-{ //std::cout << "running Boost MT" << "\n";
+{
+  //std::cout << "running Boost MT" << "\n";
   return BoostRNG_Monostate::random_num();
 }
  
 Real rnum2(void)
 {
-// clone of rnum1
- //std::cout << "running Boost MT" << "\n";
- return BoostRNG_Monostate::random_num2();
+  // clone of rnum1
+  //std::cout << "running Boost MT" << "\n";
+  return BoostRNG_Monostate::random_num2();
 }
-
-void Pecos::LHSDriver::seed(int seed)
-{
-	randomSeed = seed;
-	if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
-		BoostRNG_Monostate::seed(seed);
-	else
-		lhs_setseed(&seed);
-	}
-
-void Pecos::LHSDriver::seed(int seed, const Pecos::String &unifGen)
-{
-	static int first = 1;
-	static const char *s;
-	randomSeed = seed;
-	if (first) {
-		s = std::getenv("DAKOTA_LHS_UNIFGEN");
-		first = 0;
-		}
-	if (s) {
-		if (!std::strcmp(s,"rnumlhs1"))
-			goto use_rnum;
-		else if (!std::strcmp(s, "mt19937"))
-			goto use_mt;
-		else if (*s) {
-			std::fprintf(stderr, "Expected $DAKOTA_LHS_UNIFGEN"
-				" to be \"rnumlhs1\" or \"mt19937\","
-				" not \"%s\"\n", s);
-			std::exit(1);
-			}
-		}
-	if (unifGen == "mt19937" || unifGen == "") {
- use_mt:
-		BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
-		BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
-		allow_seed_advance &= ~2;
-		BoostRNG_Monostate::seed(seed);
-		}
-	else {
- use_rnum:
-		BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
-		BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
-		allow_seed_advance |= 2;
-		lhs_setseed(&seed);
-		}
-	}
-
-const char* Pecos::LHSDriver::unifGen()
-{
-	if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
-		return "mt19937";
-	if (BoostRNG_Monostate::random_num == (Rfunc)rnumlhs10)
-		return "mndp";
-	return "unknown (bug?)";
-	}
-
