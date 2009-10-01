@@ -109,14 +109,16 @@ static void f77dist32(char buf[32], const char *name)
 void LHSDriver::seed(int seed)
 {
   randomSeed = seed;
+  // The Boost RNG is not set by LHS_INIT_MEM, so must be done here.
   if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
     BoostRNG_Monostate::seed(seed);
-  else
-    lhs_setseed(&seed);
+  // This would be redundant since the f77 ISeed is set in LHS_INIT_MEM:
+  //else
+  // lhs_setseed(&seed);
 }
 
 
-void LHSDriver::rng(const String& rng)
+void LHSDriver::rng(const String& unif_gen)
 {
   static int first = 1;
   static const char *s;
@@ -136,21 +138,21 @@ void LHSDriver::rng(const String& rng)
       abort_handler(-1);
     }
   }
-  if (rng == "mt19937" || rng.empty()) {
+  if (unif_gen == "mt19937" || unif_gen.empty()) {
   use_mt:
     BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
     BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
-    allowSeedAdvance &= ~2;
+    allowSeedAdvance &= ~2; // drop 2 bit: disallow repeated seed update
   }
-  else if (rng == "rnum2") {
+  else if (unif_gen == "rnum2") {
   use_rnum:
     BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
     BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
-    allowSeedAdvance |= 2;
+    allowSeedAdvance |= 2;  // add 2 bit: allow repeated seed update
   }
   else {
     PCerr << "Error: LHSDriver::rng() expected string to be \"rnum2\" or "
-	  << "\"mt19937\", not \"" << rng << "\".\n" << std::endl;
+	  << "\"mt19937\", not \"" << unif_gen << "\".\n" << std::endl;
     abort_handler(-1);
   }
 }
@@ -233,12 +235,8 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
       max_unc_corr = (num_uv*num_uv - num_uv)/2,
       max_table = -1, print_level = 0, output_width = 1;
   int max_corr = (num_uv > 1) ? max_unc_corr : -1;
-  //lhs_init(num_samples, randomSeed, err_code);
-  if (allowSeedAdvance) {
-    allowSeedAdvance &= ~1;
-    allowSeedAdvance |= 4;
-    seed(randomSeed);
-  }
+  // randomSeed passed below propagates to ISeed in the f77 rnum2, but does
+  // not propagate to Boost RNGs (LHSDriver::seed() must be used for that).
   LHS_INIT_MEM_FC(num_samples, randomSeed, max_obs, max_samp_size, max_var,
 		  max_interval, max_corr, max_table, print_level, output_width,
 		  err_code);

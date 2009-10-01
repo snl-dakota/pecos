@@ -53,7 +53,7 @@ public:
   int seed() const;
 
   // set random number generator
-  void rng(const String& unifGen);
+  void rng(const String& unif_gen);
   // return name of uniform generator
   //String rng();
 
@@ -134,7 +134,6 @@ private:
   /// for honoring advance_seed_sequence() calls
   int allowSeedAdvance; // bit 1 = first-time flag
 		        // bit 2 = allow repeated seed update
-			// bit 4 = allow restart from current seed
 };
 
 
@@ -187,11 +186,9 @@ inline int LHSDriver::seed() const
     inconsequential for the intended use. */
 inline void LHSDriver::advance_seed_sequence()
 {
-  allowSeedAdvance &= ~4;
-  if (allowSeedAdvance & 2) {
-    allowSeedAdvance |= 4;
+  if (allowSeedAdvance & 2) { // repeated seed updates allowed
     std::srand(randomSeed);
-    randomSeed = 1 + std::rand(); // from 1 to RANDMAX+1
+    seed(1 + std::rand()); // from 1 to RANDMAX+1
   }
 }
 
