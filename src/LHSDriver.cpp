@@ -9,7 +9,10 @@
 #include "LHSDriver.hpp"
 #include "LHSDriverSelectRNG.hpp"
 #include "pecos_stat_util.hpp"
-#include <algorithm>
+
+#ifdef __SUNPRO_CC
+#include <stdio.h>  // for snprintf
+#endif
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
