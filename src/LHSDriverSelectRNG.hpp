@@ -10,76 +10,113 @@
 //- Description: Wrapper for various implementations of Random Number Generators
 //- Owner:       Laura Swiler, Dave Gay, and Bill Bohnhoff 
 //- Checked by:
-//- Version: $Id: Random.cpp 5721 2009-03-03 23:51:34Z wjbohnh $
+//- Version: $Id$
+
+#ifndef LHS_DRIVER_SELECT_RNG_HPP
+#define LHS_DRIVER_SELECT_RNG_HPP
 
 #include "pecos_data_types.hpp"
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
 
-// WJB - 5/3/09 - ToDo: address proper namespace utilization next iteration
-using Pecos::Real;
-typedef Real (*Rfunc)();
 
+namespace Pecos {
+
+typedef Real (*Rfunc)();
 
 class BoostRNG_Monostate
 {
- static unsigned int rngSeed;
- static boost::mt19937 rnumGenerator;
- static boost::uniform_real<> uniDist;
- static boost::variate_generator<boost::mt19937&, boost::uniform_real<> > uniMT;
+private:
+
+  //
+  //- Heading: Data
+  //
+
+  static unsigned int rngSeed;
+  static boost::mt19937 rnumGenerator;
+  static boost::uniform_real<> uniDist;
+  static boost::variate_generator<boost::mt19937&,boost::uniform_real<> > uniMT;
 
 public:
 
- // WJB: consider adding a counter to ensure set_seed is called only ONCE!
- static void seed(unsigned int rng_seed)
- { rngSeed = rng_seed; rnumGenerator.seed(rng_seed); };
+  //
+  //- Heading: Member functions
+  //
 
- static unsigned int seed()
- { return rngSeed; }
+  /// set randomSeed
+  static void seed(unsigned int rng_seed);
+  /// return randomSeed
+  static unsigned int seed();
 
- static Real random_num1()
- { return uniMT(); };
+  static Real random_num1();
 
- static Rfunc random_num;
- static Rfunc random_num2;
+  //
+  //- Heading: Data
+  //
+
+  /// Cached function pointers
+  static Rfunc randomNum;
+  static Rfunc randomNum2;
 };
 
 
+inline void BoostRNG_Monostate::seed(unsigned int rng_seed)
+{ rngSeed = rng_seed; rnumGenerator.seed(rng_seed); }
+
+inline unsigned int BoostRNG_Monostate::seed()
+{ return rngSeed; }
+
+inline Real BoostRNG_Monostate::random_num1()
+{ return uniMT(); }
+
+
+// WJB: static init should be done in a .cpp file -- time to add a new file
 unsigned int BoostRNG_Monostate::rngSeed(41u); // 41 used in the Boost examples
+
 boost::mt19937 BoostRNG_Monostate::rnumGenerator( BoostRNG_Monostate::seed() );
+
 boost::uniform_real<> BoostRNG_Monostate::uniDist(0, 1);
-
-#define rnum1 FC_FUNC(rnumlhs1,RNUMLHS1)
-#define rnum2 FC_FUNC(rnumlhs2,RNUMLHS2)
-#define rnumlhs10 FC_FUNC(rnumlhs10,RNUMLHS10)
-#define rnumlhs20 FC_FUNC(rnumlhs20,RNUMLHS20)
-#define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
-
-extern "C" Real rnum1(void), rnum2(void), rnumlhs10(void), rnumlhs20(void);
-extern "C" void lhs_setseed(int*);
-
-Real (*BoostRNG_Monostate::random_num)()  = BoostRNG_Monostate::random_num1;
-Real (*BoostRNG_Monostate::random_num2)() = BoostRNG_Monostate::random_num1;
 
 boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
   BoostRNG_Monostate::uniMT(BoostRNG_Monostate::rnumGenerator,
                             BoostRNG_Monostate::uniDist);
  
-extern "C" void set_boost_rng_seed(unsigned int rng_seed)
+Real (*BoostRNG_Monostate::randomNum)()  = BoostRNG_Monostate::random_num1;
+Real (*BoostRNG_Monostate::randomNum2)() = BoostRNG_Monostate::random_num1;
+
+} // namespace Pecos
+
+
+#define rnum1 FC_FUNC(rnumlhs1,RNUMLHS1)
+#define rnum2 FC_FUNC(rnumlhs2,RNUMLHS2)
+
+extern "C" Pecos::Real rnum1(void), rnum2(void);
+
+Pecos::Real rnum1(void)
 {
-  BoostRNG_Monostate::seed(rng_seed);
+  //PCout << "running Boost MT" << "\n";
+  return Pecos::BoostRNG_Monostate::randomNum();
 }
- 
-Real rnum1(void)
-{
-  //std::cout << "running Boost MT" << "\n";
-  return BoostRNG_Monostate::random_num();
-}
- 
-Real rnum2(void)
+
+Pecos::Real rnum2(void)
 {
   // clone of rnum1
-  //std::cout << "running Boost MT" << "\n";
-  return BoostRNG_Monostate::random_num2();
+  //PCout << "running Boost MT" << "\n";
+  return Pecos::BoostRNG_Monostate::randomNum2();
 }
+
+
+/* WJB: suspect seed stuff does nothing
+#define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
+extern "C" void lhs_setseed(int*);
+
+// WJB: need to find out who calls this - if not f90, then go ahead and mangle
+extern "C" void set_boost_rng_seed(unsigned int rng_seed)
+{
+  Pecos::BoostRNG_Monostate::seed(rng_seed);
+}
+*/ 
+
+#endif  // LHS_DRIVER_SELECT_RNG_HPP
+

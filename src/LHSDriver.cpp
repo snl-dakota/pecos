@@ -28,6 +28,9 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_CORR2_FC    FC_FUNC_(lhs_corr2,LHS_CORR2)
 #define LHS_FILES2_FC   FC_FUNC_(lhs_files2,LHS_FILES2)
 
+#define rnumlhs10 FC_FUNC(rnumlhs10,RNUMLHS10)
+#define rnumlhs20 FC_FUNC(rnumlhs20,RNUMLHS20)
+
 extern "C" {
 
 // for these functions, a straight interface to F90 can be used
@@ -65,6 +68,9 @@ void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
 //void lhs_run2( int* max_var, int* max_obs, int* max_names, int* ierror,
 //               char* dist_names, int* name_order, double* ptvals,
 //               int* num_names, double* sample_matrix, int* num_vars );
+
+Pecos::Real rnumlhs10( void );
+Pecos::Real rnumlhs20( void );
 
 }
 #endif // HAVE_LHS
@@ -113,7 +119,7 @@ void LHSDriver::seed(int seed)
 {
   randomSeed = seed;
   // The Boost RNG is not set by LHS_INIT_MEM, so must be done here.
-  if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
+  if (BoostRNG_Monostate::randomNum == BoostRNG_Monostate::random_num1)
     BoostRNG_Monostate::seed(seed);
   // This would be redundant since the f77 ISeed is set in LHS_INIT_MEM:
   //else
@@ -143,14 +149,14 @@ void LHSDriver::rng(const String& unif_gen)
   }
   if (unif_gen == "mt19937" || unif_gen.empty()) {
   use_mt:
-    BoostRNG_Monostate::random_num  = BoostRNG_Monostate::random_num1;
-    BoostRNG_Monostate::random_num2 = BoostRNG_Monostate::random_num1;
+    BoostRNG_Monostate::randomNum  = BoostRNG_Monostate::random_num1;
+    BoostRNG_Monostate::randomNum2 = BoostRNG_Monostate::random_num1;
     allowSeedAdvance &= ~2; // drop 2 bit: disallow repeated seed update
   }
   else if (unif_gen == "rnum2") {
   use_rnum:
-    BoostRNG_Monostate::random_num  = (Rfunc)rnumlhs10;
-    BoostRNG_Monostate::random_num2 = (Rfunc)rnumlhs20;
+    BoostRNG_Monostate::randomNum  = (Rfunc)rnumlhs10;
+    BoostRNG_Monostate::randomNum2 = (Rfunc)rnumlhs20;
     allowSeedAdvance |= 2;  // add 2 bit: allow repeated seed update
   }
   else {
@@ -163,9 +169,9 @@ void LHSDriver::rng(const String& unif_gen)
 
 //String LHSDriver::rng()
 //{
-//  if (BoostRNG_Monostate::random_num == BoostRNG_Monostate::random_num1)
+//  if (BoostRNG_Monostate::randomNum == BoostRNG_Monostate::random_num1)
 //    return "mt19937";
-//  if (BoostRNG_Monostate::random_num == (Rfunc)rnumlhs10)
+//  if (BoostRNG_Monostate::randomNum == (Rfunc)rnumlhs10)
 //    return "rnum2";
 //  else
 //    return "";
