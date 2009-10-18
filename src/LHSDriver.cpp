@@ -7,7 +7,7 @@
     _______________________________________________________________________ */
 
 #include "LHSDriver.hpp"
-#include "LHSDriverSelectRNG.hpp"
+#include "BoostRNG_Monostate.hpp"
 #include "pecos_stat_util.hpp"
 
 #ifdef __SUNPRO_CC

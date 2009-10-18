@@ -12,8 +12,8 @@
 //- Checked by:
 //- Version: $Id$
 
-#ifndef LHS_DRIVER_SELECT_RNG_HPP
-#define LHS_DRIVER_SELECT_RNG_HPP
+#ifndef BOOST_RNG_MONOSTATE_HPP
+#define BOOST_RNG_MONOSTATE_HPP
 
 #include "pecos_data_types.hpp"
 #include <boost/random/mersenne_twister.hpp>
@@ -70,8 +70,6 @@ inline unsigned int BoostRNG_Monostate::seed()
 inline Real BoostRNG_Monostate::random_num1()
 { return uniMT(); }
 
-
-// WJB: static init should be done in a .cpp file -- time to add a new file
 unsigned int BoostRNG_Monostate::rngSeed(41u); // 41 used in the Boost examples
 
 boost::mt19937 BoostRNG_Monostate::rnumGenerator( BoostRNG_Monostate::seed() );
@@ -84,7 +82,6 @@ boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
  
 Real (*BoostRNG_Monostate::randomNum)()  = BoostRNG_Monostate::random_num1;
 Real (*BoostRNG_Monostate::randomNum2)() = BoostRNG_Monostate::random_num1;
-
 } // namespace Pecos
 
 
@@ -93,13 +90,14 @@ Real (*BoostRNG_Monostate::randomNum2)() = BoostRNG_Monostate::random_num1;
 
 extern "C" Pecos::Real rnum1(void), rnum2(void);
 
-Pecos::Real rnum1(void)
+// WJB: inline would be great, but leads to DIFFs in the Regression suite
+/* inline */ Pecos::Real rnum1(void)
 {
   //PCout << "running Boost MT" << "\n";
   return Pecos::BoostRNG_Monostate::randomNum();
 }
 
-Pecos::Real rnum2(void)
+/* inline */ Pecos::Real rnum2(void)
 {
   // clone of rnum1
   //PCout << "running Boost MT" << "\n";
@@ -107,7 +105,7 @@ Pecos::Real rnum2(void)
 }
 
 
-/* WJB: suspect seed stuff does nothing
+/* WJB: prior to release, remove dead code??
 #define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
 extern "C" void lhs_setseed(int*);
 
@@ -118,5 +116,5 @@ extern "C" void set_boost_rng_seed(unsigned int rng_seed)
 }
 */ 
 
-#endif  // LHS_DRIVER_SELECT_RNG_HPP
+#endif  // BOOST_RNG_MONOSTATE_HPP
 
