@@ -42,7 +42,7 @@ pkginclude_HEADERS = pecos_config.h				\
 		     src/ProbabilityTransformation.hpp		\
 		     src/NatafTransformation.hpp		\
 		     src/LHSDriver.hpp				\
-		     src/LHSDriverSelectRNG.hpp
+		     src/BoostRNG_Monostate.hpp
 #		     src/BasisFunction.hpp
 
 ## No sources in this directory!
