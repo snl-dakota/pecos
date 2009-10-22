@@ -52,7 +52,7 @@ public:
   /// return randomSeed
   int seed() const;
 
-  // set random number generator
+  /// set random number generator
   void rng(const String& unif_gen);
   // return name of uniform generator
   //String rng();
