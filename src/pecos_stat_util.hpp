@@ -666,15 +666,20 @@ inline Real weibull_cdf(const Real& x, const Real& alpha, const Real& beta)
 
 inline Real histogram_bin_pdf(const Real& x, const RealVector& hist_bin_prs)
 {
+  // The PDF is discontinuous at the bin bounds.  To resolve this, this
+  // function employs an (arbitrary) convention: closed/inclusive lower bound
+  // and open/exclusive upper bound.
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
-  if (x < hist_bin_prs[0] || x > hist_bin_prs[2*num_bins])
+  if (x < hist_bin_prs[0] || x >= hist_bin_prs[2*num_bins])
     return 0.;
-  else
+  else {
     for (int i=0; i<num_bins; ++i) {
       const Real& upr = hist_bin_prs[2*i+2];
       if (x < upr) // return density = count / (upr - lwr);
 	return hist_bin_prs[2*i+1] / (upr - hist_bin_prs[2*i]);
     }
+    return 0.;
+  }
 }
 
 
