@@ -207,7 +207,11 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 		 const RealVector& ga_betas,     const RealVector& w_alphas,
 		 const RealVector& w_betas,      const RealVector& gu_alphas,
 		 const RealVector& gu_betas,     const RealVector& f_alphas,
-		 const RealVector& f_betas,
+		 const RealVector& f_betas,      const RealVector& p_lambdas, 
+                 const RealVector& bi_probpertrial,const IntVector& bi_numtrials,
+                 const RealVector& nb_probpertrial,const IntVector& nb_numtrials,
+                 const RealVector& ge_probpertrial, 
+                 const IntVector& hg_numtotalpop,const IntVector& hg_numselected,                 const IntVector& hg_numfailed, 
 		 const RealVectorArray& h_bin_prs,
 		 const RealVectorArray& h_pt_prs,
 		 const RealVectorArray& i_probs, const RealVectorArray& i_bnds,
@@ -232,11 +236,15 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     num_tuv = t_modes.length(),  num_euv  = e_betas.length(),
     num_buv = b_alphas.length(), num_gauv = ga_alphas.length(),
     num_wuv = w_alphas.length(), num_guuv = gu_alphas.length(),
-    num_fuv = f_alphas.length(), num_huv  = h_bin_prs.size() + h_pt_prs.size(),
+    num_fuv = f_alphas.length(), num_puv = p_lambdas.length(),
+    num_biuv = bi_probpertrial.length(), num_nbuv = nb_probpertrial.length(),
+    num_geuv = ge_probpertrial.length(), num_hguv = hg_numfailed.length(), 
+    num_huv  = h_bin_prs.size() + h_pt_prs.size(),
     num_iuv = i_probs.size(),
     num_uv  = num_nuv + num_lnuv + num_uuv + num_luuv + num_tuv + num_euv
             + num_buv + num_gauv + num_wuv + num_guuv + num_fuv
-            + num_huv + num_iuv,
+            + num_puv + num_biuv + num_nbuv + num_geuv + num_hguv + 
+              num_huv + num_iuv,
     num_av  = num_dv + num_uv + num_sv;
 
   int err_code = 0, max_var = num_av, max_obs = num_samples,
@@ -530,6 +538,65 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(weibull)");
+  }
+  
+  // poisson uncertain
+  for (i=0; i<num_puv; i++, cntr++) {
+    f77name16(name_string, "Poisson", lhs_names, cntr);
+    f77dist32(dist_string, "poisson");
+    num_params = 1;
+    dist_params[0] = p_lambdas[i];
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
+		 num_params, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_dist(poisson)");
+  }
+
+  // binomial uncertain
+  for (i=0; i<num_biuv; i++, cntr++) {
+    f77name16(name_string, "Binomial", lhs_names, cntr);
+    f77dist32(dist_string, "binomial");
+    num_params = 2;
+    dist_params[0] = bi_probpertrial[i];
+    dist_params[1] = bi_numtrials[i];
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
+		 num_params, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_dist(binomial)");
+  }
+
+  // negative binomial uncertain
+  for (i=0; i<num_nbuv; i++, cntr++) {
+    f77name16(name_string, "Negative Binomial", lhs_names, cntr);
+    f77dist32(dist_string, "negative binomial");
+    num_params = 2;
+    dist_params[0] = nb_probpertrial[i];
+    dist_params[1] = nb_numtrials[i];
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
+		 num_params, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_dist(negative binomial)");
+  }
+
+  // geometric uncertain
+  for (i=0; i<num_geuv; i++, cntr++) {
+    f77name16(name_string, "Geometric", lhs_names, cntr);
+    f77dist32(dist_string, "geometric");
+    num_params = 1;
+    dist_params[0] = ge_probpertrial[i];
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
+		 num_params, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_dist(geometric)");
+  }
+
+  // hypergeometric uncertain
+  for (i=0; i<num_hguv; i++, cntr++) {
+    f77name16(name_string, "Hypergeometric", lhs_names, cntr);
+    f77dist32(dist_string, "hypergeometric");
+    num_params = 3;
+    dist_params[0] = hg_numtotalpop[i];
+    dist_params[1] = hg_numselected[i];
+    dist_params[2] = hg_numfailed[i];
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
+		 num_params, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_dist(hypergeometric)");
   }
 
   // histogram uncertain: in both formats, pairs are defined from an abscissa

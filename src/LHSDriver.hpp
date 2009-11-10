@@ -82,7 +82,11 @@ public:
 			const RealVector& ga_betas, const RealVector& w_alphas,
 			const RealVector& w_betas,  const RealVector& gu_alphas,
 			const RealVector& gu_betas, const RealVector& f_alphas,
-			const RealVector& f_betas,
+			const RealVector& f_betas,  const RealVector& p_lambdas,
+                 const RealVector& bi_probpertrial,const IntVector& bi_numtrials,
+                 const RealVector& nb_probpertrial,const IntVector& nb_numtrials,
+                 const RealVector& ge_probpertrial,
+                 const IntVector& hg_numtotalpop,const IntVector& hg_numselected,                 const IntVector& hg_numfailed,
 			const RealVectorArray& h_bin_prs,
 			const RealVectorArray& h_pt_prs,
 			const RealVectorArray& i_probs,
@@ -203,14 +207,16 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector empty_rv; RealVectorArray empty_rva;
+  RealVector empty_rv; RealVectorArray empty_rva; IntVector empty_iv;
   RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
   generate_samples(empty_rv, empty_rv, empty_rv, empty_rv, n_means, n_std_devs,
 		   n_l_bnds, n_u_bnds, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rva,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+                   empty_rv, empty_iv, empty_rv, empty_iv, empty_rv, empty_iv, 
+                   empty_iv, empty_iv, empty_rva,
 		   empty_rva, empty_rva, empty_rva, empty_rsm, num_samples,
 		   samples_array, empty_rm);
 }
@@ -225,14 +231,16 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector empty_rv; RealVectorArray empty_rva;
+  RealVector empty_rv; RealVectorArray empty_rva; IntVector empty_iv;
   RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
   generate_samples(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, u_l_bnds, u_u_bnds, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rva,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, 
+                   empty_rv, empty_iv, empty_rv, empty_iv, empty_rv, empty_iv, 
+                   empty_iv, empty_iv, empty_rva,
 		   empty_rva, empty_rva, empty_rva, empty_rsm, num_samples,
 		   samples_array, empty_rm);
 }
