@@ -353,6 +353,44 @@ inline void moments_from_histogram_bin_params(const RealVector& hist_bin_prs,
   std_dev = std::sqrt(std_dev/3. - mean*mean);
 }
 
+inline void moments_from_poisson_params(const Real& lambda,
+					Real& mean, Real& std_dev)
+{
+  mean     = lambda;
+  std_dev  = std::sqrt(lambda);
+}
+
+inline void moments_from_binomial_params(const Real& prob_pertrial,
+                                         const int& num_trials, 
+                                         Real& mean, Real& std_dev)
+{
+  mean     = prob_pertrial * num_trials;
+  std_dev  = std::sqrt(prob_pertrial * num_trials *(1-prob_pertrial));
+}
+
+inline void moments_from_negative_binomial_params(const Real& prob_pertrial,
+			                          const int& num_trials,
+                                                  Real& mean, Real& std_dev)
+{
+  mean     = num_trials * ((1-prob_pertrial)/prob_pertrial);
+  std_dev  = std::sqrt(num_trials * ((1-prob_pertrial)/std::pow(prob_pertrial,2)));
+}
+
+inline void moments_from_geometric_params(const Real& prob_pertrial,
+					  Real& mean, Real& std_dev)
+{
+  mean     = (1-prob_pertrial)/prob_pertrial;
+  std_dev  = std::sqrt((1-prob_pertrial)/std::pow(prob_pertrial,2));
+}
+
+inline void moments_from_hypergeometric_params(const int& num_totalpop,
+	                                  int& num_selectedpop, 
+                                          int& num_failed, 
+                                          Real& mean, Real& std_dev)
+{
+  mean     = (num_failed*num_selectedpop)/num_totalpop;
+  std_dev  = std::sqrt((num_failed*num_selectedpop*(num_totalpop-num_failed)*(num_totalpop-num_selectedpop))/(num_totalpop*num_totalpop*(num_totalpop-1)));
+}
 
 inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
 					     Real& mean, Real& std_dev)
