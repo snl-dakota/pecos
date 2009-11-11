@@ -659,19 +659,19 @@ distribution_parameter(size_t index, short target)
 {
   switch (target) {
   case CDV_LWR_BND: case N_LWR_BND: case LN_LWR_BND: case   U_LWR_BND:
-  case  LU_LWR_BND: case T_LWR_BND: case  B_LWR_BND: case CSV_LWR_BND:
+  case  LU_LWR_BND: case T_LWR_BND: case BE_LWR_BND: case CSV_LWR_BND:
     return ranVarLowerBndsX[index];      break;
   case CDV_UPR_BND: case N_UPR_BND: case LN_UPR_BND: case   U_UPR_BND:
-  case  LU_UPR_BND: case T_UPR_BND: case  B_UPR_BND: case CSV_UPR_BND:
+  case  LU_UPR_BND: case T_UPR_BND: case BE_UPR_BND: case CSV_UPR_BND:
     return ranVarUpperBndsX[index];      break;
   case N_MEAN:      case LN_MEAN:
     return ranVarMeansX[index];          break;
   case N_STD_DEV:   case LN_STD_DEV:
     return ranVarStdDevsX[index];        break;
-  case LN_LAMBDA:   case T_MODE:    case E_BETA:  case B_ALPHA: case GA_ALPHA:
+  case LN_LAMBDA:   case T_MODE:    case E_BETA:  case BE_ALPHA: case GA_ALPHA:
   case GU_ALPHA:    case F_ALPHA:   case W_ALPHA:
     return ranVarAddtlParamsX[index][0]; break;
-  case LN_ZETA:     case B_BETA:    case GA_BETA: case GU_BETA: case F_BETA:
+  case LN_ZETA:     case BE_BETA:   case GA_BETA: case GU_BETA:  case F_BETA:
   case W_BETA:
     return ranVarAddtlParamsX[index][1]; break;
   case LN_ERR_FACT:
@@ -740,7 +740,7 @@ distribution_parameter(size_t index, short target, const Real& param)
 				   ranVarAddtlParamsX[index][0],
 				   ranVarMeansX[index], ranVarStdDevsX[index]);
     break;
-  case B_LWR_BND:
+  case BE_LWR_BND:
     ranVarLowerBndsX[index] = param;
     moments_from_beta_params(param, ranVarUpperBndsX[index],
 			     ranVarAddtlParamsX[index][0],
@@ -792,7 +792,7 @@ distribution_parameter(size_t index, short target, const Real& param)
 				   ranVarAddtlParamsX[index][0],
 				   ranVarMeansX[index], ranVarStdDevsX[index]);
     break;
-  case B_UPR_BND:
+  case BE_UPR_BND:
     ranVarUpperBndsX[index] = param;
     moments_from_beta_params(ranVarLowerBndsX[index], param,
 			     ranVarAddtlParamsX[index][0],
@@ -866,7 +866,7 @@ distribution_parameter(size_t index, short target, const Real& param)
     moments_from_exponential_params(param, ranVarMeansX[index],
 				    ranVarStdDevsX[index]);
     break;
-  case B_ALPHA:
+  case BE_ALPHA:
     ranVarAddtlParamsX[index][0] = param;
     moments_from_beta_params(ranVarLowerBndsX[index], ranVarUpperBndsX[index],
 			     param, ranVarAddtlParamsX[index][1],
@@ -892,7 +892,7 @@ distribution_parameter(size_t index, short target, const Real& param)
     moments_from_weibull_params(param, ranVarAddtlParamsX[index][1],
 				ranVarMeansX[index], ranVarStdDevsX[index]);
     break;
-  case B_BETA:
+  case BE_BETA:
     ranVarAddtlParamsX[index][1] = param;
     moments_from_beta_params(ranVarLowerBndsX[index], ranVarUpperBndsX[index],
 			     ranVarAddtlParamsX[index][0], param,

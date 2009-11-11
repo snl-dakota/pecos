@@ -1972,16 +1972,16 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
     }
   }
   if ( (std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
-                  (short)B_ALPHA) != acv_map2_targets.end())  ||
+                  (short)BE_ALPHA) != acv_map2_targets.end())  ||
        (std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
-                  (short)B_BETA) != acv_map2_targets.end())   ||
+                  (short)BE_BETA) != acv_map2_targets.end())   ||
        (std::find(acv_map2_targets.begin(), acv_map2_targets.end(),
                   (short)GA_ALPHA) != acv_map2_targets.end()) ||
        ( beta_gamma_map && ( (std::find(acv_map2_targets.begin(),
-                              acv_map2_targets.end(), (short)B_LWR_BND)
+                              acv_map2_targets.end(), (short)BE_LWR_BND)
 			      != acv_map2_targets.end()) ||
 			     (std::find(acv_map2_targets.begin(),
-                              acv_map2_targets.end(), (short)B_UPR_BND)
+                              acv_map2_targets.end(), (short)BE_UPR_BND)
 			      != acv_map2_targets.end()) ||
 			     (std::find(acv_map2_targets.begin(),
                               acv_map2_targets.end(), (short)GA_BETA)
@@ -2492,11 +2492,11 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // x = lwr + (upr - lwr)*(z+1.)/2.;
 	    if (j == cv_index) {//corresp var has deriv w.r.t. its dist param
 	      switch (target2) {
-	      //case B_ALPHA: // numerically evaluated
-	      //case B_BETA:  // numerically evaluated
-	      case B_LWR_BND: // Beta Lower Bound
+	      //case BE_ALPHA: // numerically evaluated
+	      //case BE_BETA:  // numerically evaluated
+	      case BE_LWR_BND: // Beta Lower Bound
 		jacobian_xs(j, i) = (1. - z_vars[j])/2.;
-	      case B_UPR_BND: // Beta Upper Bound
+	      case BE_UPR_BND: // Beta Upper Bound
 		jacobian_xs(j, i) = (z_vars[j] + 1.)/2.;
 	      }
 	    }
