@@ -760,9 +760,9 @@ inline Real histogram_bin_cdf_inverse(const Real& cdf,
 {
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
   if (cdf <= 0.)
-    return hist_bin_prs[0];
+    return hist_bin_prs[0];          // lower bound abscissa
   else if (cdf >= 1.)
-    return hist_bin_prs[2*num_bins];
+    return hist_bin_prs[2*num_bins]; // upper bound abscissa
   else {
     Real upr_cdf = 0.;
     for (int i=0; i<num_bins; ++i) {
@@ -774,6 +774,8 @@ inline Real histogram_bin_cdf_inverse(const Real& cdf,
 	return lwr + (upr_cdf - cdf) / count * (upr - lwr);
       }
     }
+    // If still no return due to numerical roundoff, return upper bound
+    return hist_bin_prs[2*num_bins]; // upper bound abscissa
   }
 }
 
