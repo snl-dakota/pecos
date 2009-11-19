@@ -235,28 +235,28 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
   }
 
   bool correlation_flag = !correlations.empty();
-  size_t i, j, num_cdv = cd_l_bnds.length(), num_csv = cs_l_bnds.length(),
-    num_ddrv  = ddr_l_bnds.length(), num_dsrv  = dsr_l_bnds.length(),
-    num_ddsiv = ddsi_values.size(),  num_dssiv = dssi_values.size(),
-    num_ddsrv = ddsr_values.size(),  num_dssrv = dssr_values.size(),
-    num_nuv  = n_means.length(),
+  size_t i, j, num_cdv = cd_l_bnds.length(), num_nuv  = n_means.length(),
     num_lnuv = std::max(ln_means.length(), ln_lambdas.length()),
-    num_uuv  = u_l_bnds.length(),  num_luuv = lu_l_bnds.length(),
-    num_tuv  = t_modes.length(),   num_euv  = e_betas.length(),
-    num_buv  = b_alphas.length(),  num_gauv = ga_alphas.length(),
-    num_guuv = gu_alphas.length(), num_fuv  = f_alphas.length(),
-    num_wuv  = w_alphas.length(),  num_hbuv = h_bin_prs.size(),
-    num_puv  = p_lambdas.length(), num_biuv = bi_prob_per_tr.length(),
-    num_nbuv = nb_prob_per_tr.length(),
+    num_uuv  = u_l_bnds.length(),   num_luuv = lu_l_bnds.length(),
+    num_tuv  = t_modes.length(),    num_exuv  = e_betas.length(),
+    num_beuv  = b_alphas.length(),   num_gauv = ga_alphas.length(),
+    num_guuv = gu_alphas.length(),  num_fuv  = f_alphas.length(),
+    num_wuv  = w_alphas.length(),   num_hbuv = h_bin_prs.size(),
+    num_csv  = cs_l_bnds.length(),  num_ddrv = ddr_l_bnds.length(),
+    num_ddsiv = ddsi_values.size(), num_puv  = p_lambdas.length(),
+    num_biuv = bi_prob_per_tr.length(), num_nbuv = nb_prob_per_tr.length(),
     num_geuv = ge_prob_per_tr.length(), num_hguv = hg_num_drawn.length(),
-    num_hpuv = h_pt_prs.size(),    num_iuv = i_probs.size(),
-    num_dv = num_cdv + num_ddrv + num_ddsiv + num_ddsrv,
-    num_uv = num_nuv + num_lnuv + num_uuv + num_luuv + num_tuv + num_euv
-           + num_buv + num_gauv + num_guuv + num_fuv + num_wuv + num_hbuv
-           + num_puv + num_biuv + num_nbuv + num_geuv + num_hguv + num_hpuv
-           + num_iuv,
+    num_dsrv  = dsr_l_bnds.length(), num_dssiv = dssi_values.size(),
+    num_ddsrv = ddsr_values.size(),  num_hpuv = h_pt_prs.size(),
+    num_dssrv = dssr_values.size(),  num_iuv = i_probs.size(),
+    num_dv   = num_cdv  + num_ddrv + num_ddsiv + num_ddsrv,
+    num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
+             + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
+    num_diauv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv,
+    num_drauv = num_hpuv, num_auv = num_cauv + num_diauv + num_drauv,
+    num_ceuv = num_iuv, num_euv = num_ceuv, num_uv = num_auv + num_euv,
     num_sv = num_csv + num_dsrv + num_dssiv + num_dssrv,
-    num_av = num_dv + num_uv + num_sv;
+    num_av = num_dv  + num_uv   + num_sv;
 
   int err_code = 0, max_var = num_av, max_obs = num_samples,
       max_samp_size = num_av*num_samples, max_interval = -1,
@@ -310,6 +310,9 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
   char dist_string[32], name_string[17];
   const char *distname;
 
+  // --------------------
+  // CONTINUOUS VARIABLES
+  // --------------------
   // continuous design (treated as uniform)
   for (i=0; i<num_cdv; ++i, ++cntr) {
     f77name16(name_string, "ContDesign", lhs_names, cntr);
@@ -333,77 +336,6 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(continuous design)");
-  }
-
-  // discrete design range (treated as discrete histogram)
-  for (i=0; i<num_ddrv; ++i, ++cntr) {
-    f77name16(name_string, "DiscDesRange", lhs_names, cntr);
-    f77dist32(dist_string, "discrete histogram");
-    if (ddr_l_bnds[i] > INT_MIN && ddr_u_bnds[i] < INT_MAX) {
-      if (ddr_l_bnds[i] > ddr_u_bnds[i]) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
-	      << "bounds to\n       sample discrete design variables using "
-	      << "discrete histogram distributions." << std::endl;
-	abort_handler(-1);
-      }
-      int lb_i = ddr_l_bnds[i];
-      num_params = ddr_u_bnds[i] - lb_i + 1;
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j) {
-	x_val[j] = (Real)(lb_i+j);
-	y_val[j] = 1.;
-      }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		    x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete design range)");
-      delete [] x_val;
-      delete [] y_val;
-    }
-    else {
-      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
-	    << "design variables\n       using discrete histogram "
-	    << "distributions." << std::endl;
-      abort_handler(-1);
-    }
-  }
-
-  // discrete design set integer (treated as discrete histogram)
-  for (i=0; i<num_ddsiv; ++i, ++cntr) {
-    f77name16(name_string, "DiscDesSetI", lhs_names, cntr);
-    f77dist32(dist_string, "discrete histogram");
-    num_params = ddsi_values[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
-    ISCIter cit = ddsi_values[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = (Real)(*cit);
-      y_val[j] = 1.;
-    }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete design set int)");
-    delete [] x_val;
-    delete [] y_val;
-  }
-
-  // discrete design set real (treated as discrete histogram)
-  for (i=0; i<num_ddsrv; ++i, ++cntr) {
-    f77name16(name_string, "DiscDesSetR", lhs_names, cntr);
-    f77dist32(dist_string, "discrete histogram");
-    num_params = ddsr_values[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
-    RSCIter cit = ddsr_values[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = *cit;
-      y_val[j] = 1.;
-    }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete design set real)");
-    delete [] x_val;
-    delete [] y_val;
   }
 
   // normal uncertain
@@ -544,7 +476,7 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
   }
 
   // exponential uncertain
-  for (i=0; i<num_euv; ++i, ++cntr) {
+  for (i=0; i<num_exuv; ++i, ++cntr) {
     f77name16(name_string, "Exponential", lhs_names, cntr);
     f77dist32(dist_string, "exponential");
     num_params = 1;
@@ -555,7 +487,7 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
   }
 
   // beta uncertain
-  for (i=0; i<num_buv; ++i, ++cntr) {
+  for (i=0; i<num_beuv; ++i, ++cntr) {
     f77name16(name_string, "Beta", lhs_names, cntr);
     f77dist32(dist_string, "beta");
     num_params = 4;
@@ -648,6 +580,158 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
     delete [] y_val;
   }
 
+  // interval uncertain: convert to histogram for sampling
+  for (i=0; i<num_iuv; ++i, ++cntr) {
+    f77name16(name_string, "Interval", lhs_names, cntr);
+    f77dist32(dist_string, "continuous linear");
+
+    // x_sort_unique is a set with ALL of the interval bounds for this variable
+    // in increasing order and unique.  For example, if there are 2 intervals
+    // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
+    // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
+    // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
+    const RealVector& interval_probs_i = i_probs[i];
+    const RealVector& interval_bnds_i  = i_bnds[i];
+    RealSet x_sort_unique;
+    int num_intervals_i = interval_probs_i.length(),
+        num_bounds_i    = 2*num_intervals_i;
+    for (j=0; j<num_bounds_i; ++j)
+      x_sort_unique.insert(interval_bnds_i[j]);
+    // convert RealSet to Real*
+    num_params = x_sort_unique.size();
+    Real* x_val = new Real [num_params];
+    RealSet::iterator it = x_sort_unique.begin();
+    for (j=0; j<num_params; ++j, ++it)
+      x_val[j] = *it;
+
+    // Calculate the probability densities, and account for the cases where
+    // there are intervals that are overlapping.  This section of code goes
+    // through the original intervals and see where they fall relative to the
+    // new, sorted intervals for the density calculation.
+    RealVector prob_dens(num_params); // initialize to 0.
+    for (j=0; j<num_intervals_i; ++j) {
+      const Real& lower_value = interval_bnds_i[2*j];
+      const Real& upper_value = interval_bnds_i[2*j+1];
+      Real interval_density = interval_probs_i[j] / (upper_value - lower_value);
+      int cum_int_index = 0;
+      while (lower_value > x_val[cum_int_index])
+	cum_int_index++;
+      cum_int_index++;
+      while (cum_int_index < num_params && x_val[cum_int_index] <= upper_value){
+	prob_dens[cum_int_index] += interval_density;
+	cum_int_index++;
+      }
+    }
+
+    // put the densities in a cumulative format necessary for LHS histograms.
+    // Note that x_val and y_val are defined as Real* for input to f77.
+    Real* y_val = new Real [num_params];
+    y_val[0] = 0.;
+    for (j=1; j<num_params; ++j) {
+      if (prob_dens[j] > 0.0)
+	y_val[j] = y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]);
+      else // handle case where there is a gap
+	y_val[j] = y_val[j-1] + 0.0001;
+    }
+    // normalize if necessary
+    if (y_val[num_params-1] != 1.0) {
+      Real y_total = y_val[num_params-1];
+      for (j=1; j<num_params; ++j)
+	y_val[j] /= y_total;
+    }
+
+#ifdef DEBUG
+    for (j=0; j<num_params; ++j)
+      PCout << "x_val " << j << " is " << x_val[j] << "\ny_val " << j << " is "
+	    << y_val[j]<< '\n';
+#endif //DEBUG
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(interval)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
+  // continuous state (treated as uniform)
+  for (i=0; i<num_csv; ++i, ++cntr) {
+    f77name16(name_string, "State", lhs_names, cntr);
+    f77dist32(dist_string, "uniform");
+    num_params = 2;
+    if (cs_l_bnds[i] > -DBL_MAX && cs_u_bnds[i] < DBL_MAX) {
+      if (cs_l_bnds[i] >= cs_u_bnds[i]) {
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
+	      << "less than upper bounds to\n       sample state variables "
+	      << "using uniform distributions." << std::endl;
+	abort_handler(-1);
+      }
+      dist_params[0] = cs_l_bnds[i];
+      dist_params[1] = cs_u_bnds[i];
+    }
+    else {
+      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample state "
+	    << "variables using uniform\n       distributions." << std::endl;
+      abort_handler(-1);
+    }
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
+		 num_params, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_dist(state)");
+  }
+
+  // --------------------------
+  // DISCRETE INTEGER VARIABLES
+  // --------------------------
+  // discrete design range (treated as discrete histogram)
+  for (i=0; i<num_ddrv; ++i, ++cntr) {
+    f77name16(name_string, "DiscDesRange", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    if (ddr_l_bnds[i] > INT_MIN && ddr_u_bnds[i] < INT_MAX) {
+      if (ddr_l_bnds[i] > ddr_u_bnds[i]) {
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
+	      << "bounds to\n       sample discrete design variables using "
+	      << "discrete histogram distributions." << std::endl;
+	abort_handler(-1);
+      }
+      int lb_i = ddr_l_bnds[i];
+      num_params = ddr_u_bnds[i] - lb_i + 1;
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j) {
+	x_val[j] = (Real)(lb_i+j);
+	y_val[j] = 1.;
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		    x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete design range)");
+      delete [] x_val;
+      delete [] y_val;
+    }
+    else {
+      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
+	    << "design variables\n       using discrete histogram "
+	    << "distributions." << std::endl;
+      abort_handler(-1);
+    }
+  }
+
+  // discrete design set integer (treated as discrete histogram)
+  for (i=0; i<num_ddsiv; ++i, ++cntr) {
+    f77name16(name_string, "DiscDesSetI", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = ddsi_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    ISCIter cit = ddsi_values[i].begin();
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = (Real)(*cit);
+      y_val[j] = 1.;
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete design set int)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
   // poisson uncertain
   for (i=0; i<num_puv; ++i, ++cntr) {
     f77name16(name_string, "Poisson", lhs_names, cntr);
@@ -707,124 +791,6 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
     check_error(err_code, "lhs_dist(hypergeometric)");
   }
 
-  // histogram point uncertain: pairs are defined from an abscissa in
-  // the first field and a count in the second field.
-  for (i=0; i<num_hpuv; ++i, ++cntr) {
-    f77name16(name_string, "HistogramPt", lhs_names, cntr);
-    f77dist32(dist_string, "discrete histogram");
-    num_params = h_pt_prs[i].length()/2;
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
-    // LHS can use discrete frequency information directly
-    for (j=0; j<num_params; ++j) {
-      x_val[j] = h_pt_prs[i][2*j];
-      y_val[j] = h_pt_prs[i][2*j+1];
-    }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(histogram pt)");
-    delete [] x_val;
-    delete [] y_val;
-  }
-
-  // interval uncertain: convert to histogram for sampling
-  for (i=0; i<num_iuv; ++i, ++cntr) {
-    f77name16(name_string, "Interval", lhs_names, cntr);
-    f77dist32(dist_string, "continuous linear");
-
-    // x_sort_unique is a set with ALL of the interval bounds for this variable
-    // in increasing order and unique.  For example, if there are 2 intervals
-    // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
-    // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
-    // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
-    const RealVector& interval_probs_i = i_probs[i];
-    const RealVector& interval_bnds_i  = i_bnds[i];
-    RealSet x_sort_unique;
-    int num_intervals_i = interval_probs_i.length(),
-        num_bounds_i    = 2*num_intervals_i;
-    for (j=0; j<num_bounds_i; ++j)
-      x_sort_unique.insert(interval_bnds_i[j]);
-    // convert RealSet to Real*
-    num_params = x_sort_unique.size();
-    Real* x_val = new Real [num_params];
-    RealSet::iterator it = x_sort_unique.begin();
-    for (j=0; j<num_params; ++j, ++it)
-      x_val[j] = *it;
-
-    // Calculate the probability densities, and account for the cases where
-    // there are intervals that are overlapping.  This section of code goes
-    // through the original intervals and see where they fall relative to the
-    // new, sorted intervals for the density calculation.
-    RealVector prob_dens(num_params); // initialize to 0.
-    for (j=0; j<num_intervals_i; ++j) {
-      const Real& lower_value = interval_bnds_i[2*j];
-      const Real& upper_value = interval_bnds_i[2*j+1];
-      Real interval_density = interval_probs_i[j] / (upper_value - lower_value);
-      int cum_int_index = 0;
-      while (lower_value > x_val[cum_int_index])
-	cum_int_index++;
-      cum_int_index++;
-      while (cum_int_index < num_params && x_val[cum_int_index] <= upper_value){
-	prob_dens[cum_int_index] += interval_density;
-	cum_int_index++;
-      }
-    }
-
-    // put the densities in a cumulative format necessary for
-    // the LHS histogram variable.  Note that x_val and y_val
-    // are defined as Real* for input to the Fortran call.
-    Real* y_val = new Real [num_params];
-    y_val[0] = 0.;
-    for (j=1; j<num_params; ++j) {
-      if (prob_dens[j] > 0.0)
-	y_val[j] = y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]);
-      else // handle case where there is a gap
-	y_val[j] = y_val[j-1] + 0.0001;
-    }
-    // normalize if necessary
-    if (y_val[num_params-1] != 1.0) {
-      Real y_total = y_val[num_params-1];
-      for (j=1; j<num_params; ++j)
-	y_val[j] /= y_total;
-    }
-
-#ifdef DEBUG
-    for (j=0; j<num_params; ++j)
-      PCout << "x_val " << j << "is " << x_val[j] << "\ny_val " << j << "is "
-	    << y_val[j]<< '\n';
-#endif //DEBUG
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(interval)");
-    delete [] x_val;
-    delete [] y_val;
-  }
-
-  // continuous state (treated as uniform)
-  for (i=0; i<num_csv; ++i, ++cntr) {
-    f77name16(name_string, "State", lhs_names, cntr);
-    f77dist32(dist_string, "uniform");
-    num_params = 2;
-    if (cs_l_bnds[i] > -DBL_MAX && cs_u_bnds[i] < DBL_MAX) {
-      if (cs_l_bnds[i] >= cs_u_bnds[i]) {
-	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample state variables "
-	      << "using uniform distributions." << std::endl;
-	abort_handler(-1);
-      }
-      dist_params[0] = cs_l_bnds[i];
-      dist_params[1] = cs_u_bnds[i];
-    }
-    else {
-      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample state "
-	    << "variables using uniform\n       distributions." << std::endl;
-      abort_handler(-1);
-    }
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(state)");
-  }
-
   // discrete state range (treated as discrete histogram)
   for (i=0; i<num_dsrv; ++i, ++cntr) {
     f77name16(name_string, "DiscStateRange", lhs_names, cntr);
@@ -877,6 +843,48 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
     delete [] y_val;
   }
 
+  // -----------------------
+  // DISCRETE REAL VARIABLES
+  // -----------------------
+  // discrete design set real (treated as discrete histogram)
+  for (i=0; i<num_ddsrv; ++i, ++cntr) {
+    f77name16(name_string, "DiscDesSetR", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = ddsr_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    RSCIter cit = ddsr_values[i].begin();
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = *cit;
+      y_val[j] = 1.;
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete design set real)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
+  // histogram point uncertain: pairs are defined from an abscissa in
+  // the first field and a count in the second field.
+  for (i=0; i<num_hpuv; ++i, ++cntr) {
+    f77name16(name_string, "HistogramPt", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = h_pt_prs[i].length()/2;
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    // LHS can use discrete frequency information directly
+    for (j=0; j<num_params; ++j) {
+      x_val[j] = h_pt_prs[i][2*j];
+      y_val[j] = h_pt_prs[i][2*j+1];
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(histogram pt)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
   // discrete state set real (treated as discrete histogram)
   for (i=0; i<num_dssrv; ++i, ++cntr) {
     f77name16(name_string, "DiscStateSetR", lhs_names, cntr);
@@ -900,13 +908,23 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
   // currently supported for design and state vars in allVars mode).  Only
   // non-zero values in the lower triangular portion of the rank correlation
   // matrix are specified.
-  if (correlation_flag) {
-    for (i=1; i<num_uv; ++i) {
+  if (correlation_flag) { // TO DO: alter indexing
+    for (i=1; i<num_auv; ++i) {
       for (j=0; j<i; ++j) {
 	Real corr_val = correlations(i,j);
 	if (fabs(corr_val) > 1.e-25) {
-	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+num_dv].c_str()),
-		       const_cast<char*>(lhs_names[j+num_dv].c_str()),
+	  // jump over cdv, ceuv, csv, ddv int, dsv int, and ddv real as needed:
+	  size_t offset_i = num_cdv, offset_j = num_cdv;
+	  if (i>=num_cauv)
+	    offset_i += num_ceuv + num_csv + num_ddrv + num_ddsiv;
+	  if (i>=num_cauv+num_diauv)
+	    offset_i += num_dsrv + num_dssiv + num_ddsrv;
+	  if (j>=num_cauv)
+	    offset_j += num_ceuv + num_csv + num_ddrv + num_ddsiv;
+	  if (j>=num_cauv+num_diauv)
+	    offset_j += num_dsrv + num_dssiv + num_ddsrv;
+	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+offset_i].c_str()),
+		       const_cast<char*>(lhs_names[j+offset_j].c_str()),
 		       corr_val, err_code);
 	  check_error(err_code, "lhs_corr");
 	}
