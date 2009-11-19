@@ -190,8 +190,14 @@ void LHSDriver::rng(const String& unif_gen)
     re-seed multiple generate_samples() calls, rather than continuing
     an existing random number sequence. */
 void LHSDriver::
-generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
-		 const RealVector& s_l_bnds,     const RealVector& s_u_bnds,
+generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
+		 const IntVector&  ddr_l_bnds,   const IntVector&  ddr_u_bnds,
+		 const IntSetArray&  ddsi_values,
+		 const RealSetArray& ddsr_values,
+		 const RealVector& cs_l_bnds,    const RealVector& cs_u_bnds,
+		 const IntVector&  dsr_l_bnds,   const IntVector&  dsr_u_bnds,
+		 const IntSetArray&  dssi_values,
+		 const RealSetArray& dssr_values,
 		 const RealVector& n_means,      const RealVector& n_std_devs,
 		 const RealVector& n_l_bnds,     const RealVector& n_u_bnds,
 		 const RealVector& ln_means,     const RealVector& ln_std_devs,
@@ -207,18 +213,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 		 const RealVector& ga_betas,     const RealVector& gu_alphas,
 		 const RealVector& gu_betas,     const RealVector& f_alphas,
 		 const RealVector& f_betas,      const RealVector& w_alphas,
-		 const RealVector& w_betas,      
-                 const RealVectorArray& h_bin_prs,
-                 const RealVector& p_lambdas,    
-                 const RealVector& bi_probpertrial,
-                 const IntVector& bi_numtrials,
-                 const RealVector& nb_probpertrial,
-                 const IntVector& nb_numtrials,
-                 const RealVector& ge_probpertrial, 
-                 const IntVector& hg_numtotalpop,
-                 const IntVector& hg_numselected,                 
-                 const IntVector& hg_numfailed, 
-		 const RealVectorArray& h_pt_prs,
+		 const RealVector& w_betas,   const RealVectorArray& h_bin_prs,
+                 const RealVector& p_lambdas, const RealVector& bi_prob_per_tr,
+                 const IntVector& bi_num_tr,  const RealVector& nb_prob_per_tr,
+                 const IntVector& nb_num_tr,  const RealVector& ge_prob_per_tr, 
+                 const IntVector& hg_total_pop,
+		 const IntVector& hg_selected_pop,
+		 const IntVector& hg_num_drawn, const RealVectorArray& h_pt_prs,
 		 const RealVectorArray& i_probs, const RealVectorArray& i_bnds,
 		 const RealSymMatrix& correlations, int num_samples,
 		 RealMatrix& samples, RealMatrix& sample_ranks)
@@ -234,23 +235,28 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   bool correlation_flag = !correlations.empty();
-  size_t i, j, num_dv = d_l_bnds.length(), num_sv = s_l_bnds.length(),
-    num_nuv = n_means.length(),
+  size_t i, j, num_cdv = cd_l_bnds.length(), num_csv = cs_l_bnds.length(),
+    num_ddrv  = ddr_l_bnds.length(), num_dsrv  = dsr_l_bnds.length(),
+    num_ddsiv = ddsi_values.size(),  num_dssiv = dssi_values.size(),
+    num_ddsrv = ddsr_values.size(),  num_dssrv = dssr_values.size(),
+    num_nuv  = n_means.length(),
     num_lnuv = std::max(ln_means.length(), ln_lambdas.length()),
-    num_uuv = u_l_bnds.length(), num_luuv = lu_l_bnds.length(),
-    num_tuv = t_modes.length(),  num_euv  = e_betas.length(),
-    num_buv = b_alphas.length(), num_gauv = ga_alphas.length(),
-    num_wuv = w_alphas.length(), num_guuv = gu_alphas.length(),
-    num_fuv = f_alphas.length(), num_puv = p_lambdas.length(),
-    num_biuv = bi_probpertrial.length(), num_nbuv = nb_probpertrial.length(),
-    num_geuv = ge_probpertrial.length(), num_hguv = hg_numfailed.length(), 
-    num_huv  = h_bin_prs.size() + h_pt_prs.size(),
-    num_iuv = i_probs.size(),
-    num_uv  = num_nuv + num_lnuv + num_uuv + num_luuv + num_tuv + num_euv
-            + num_buv + num_gauv + num_wuv + num_guuv + num_fuv
-            + num_puv + num_biuv + num_nbuv + num_geuv + num_hguv + 
-              num_huv + num_iuv,
-    num_av  = num_dv + num_uv + num_sv;
+    num_uuv  = u_l_bnds.length(),  num_luuv = lu_l_bnds.length(),
+    num_tuv  = t_modes.length(),   num_euv  = e_betas.length(),
+    num_buv  = b_alphas.length(),  num_gauv = ga_alphas.length(),
+    num_guuv = gu_alphas.length(), num_fuv  = f_alphas.length(),
+    num_wuv  = w_alphas.length(),  num_hbuv = h_bin_prs.size(),
+    num_puv  = p_lambdas.length(), num_biuv = bi_prob_per_tr.length(),
+    num_nbuv = nb_prob_per_tr.length(),
+    num_geuv = ge_prob_per_tr.length(), num_hguv = hg_num_drawn.length(),
+    num_hpuv = h_pt_prs.size(),    num_iuv = i_probs.size(),
+    num_dv = num_cdv + num_ddrv + num_ddsiv + num_ddsrv,
+    num_uv = num_nuv + num_lnuv + num_uuv + num_luuv + num_tuv + num_euv
+           + num_buv + num_gauv + num_guuv + num_fuv + num_wuv + num_hbuv
+           + num_puv + num_biuv + num_nbuv + num_geuv + num_hguv + num_hpuv
+           + num_iuv,
+    num_sv = num_csv + num_dsrv + num_dssiv + num_dssrv,
+    num_av = num_dv + num_uv + num_sv;
 
   int err_code = 0, max_var = num_av, max_obs = num_samples,
       max_samp_size = num_av*num_samples, max_interval = -1,
@@ -304,20 +310,20 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   char dist_string[32], name_string[17];
   const char *distname;
 
-  // design (treated as uniform)
-  for (i=0; i<num_dv; i++, cntr++) {
-    f77name16(name_string, "Design", lhs_names, cntr);
+  // continuous design (treated as uniform)
+  for (i=0; i<num_cdv; ++i, ++cntr) {
+    f77name16(name_string, "ContDesign", lhs_names, cntr);
     f77dist32(dist_string, "uniform");
     num_params = 2;
-    if (d_l_bnds[i] > -DBL_MAX && d_u_bnds[i] < DBL_MAX) {
-      if (d_l_bnds[i] >= d_u_bnds[i]) {
+    if (cd_l_bnds[i] > -DBL_MAX && cd_u_bnds[i] < DBL_MAX) {
+      if (cd_l_bnds[i] >= cd_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
-	      << "less than upper bounds to\n       sample design variables "
-	      << "using uniform distributions." << std::endl;
+	      << "less than upper bounds to\n       sample continuous design "
+	      << "variables using uniform distributions." << std::endl;
 	abort_handler(-1);
       }
-      dist_params[0] = d_l_bnds[i];
-      dist_params[1] = d_u_bnds[i];
+      dist_params[0] = cd_l_bnds[i];
+      dist_params[1] = cd_u_bnds[i];
     }
     else {
       PCerr << "\nError: Pecos::LHSDriver requires bounds to sample design "
@@ -326,12 +332,83 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     }
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_dist(design)");
+    check_error(err_code, "lhs_dist(continuous design)");
+  }
+
+  // discrete design range (treated as discrete histogram)
+  for (i=0; i<num_ddrv; ++i, ++cntr) {
+    f77name16(name_string, "DiscDesRange", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    if (ddr_l_bnds[i] > INT_MIN && ddr_u_bnds[i] < INT_MAX) {
+      if (ddr_l_bnds[i] > ddr_u_bnds[i]) {
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
+	      << "bounds to\n       sample discrete design variables using "
+	      << "discrete histogram distributions." << std::endl;
+	abort_handler(-1);
+      }
+      int lb_i = ddr_l_bnds[i];
+      num_params = ddr_u_bnds[i] - lb_i + 1;
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j) {
+	x_val[j] = (Real)(lb_i+j);
+	y_val[j] = 1.;
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		    x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete design range)");
+      delete [] x_val;
+      delete [] y_val;
+    }
+    else {
+      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
+	    << "design variables\n       using discrete histogram "
+	    << "distributions." << std::endl;
+      abort_handler(-1);
+    }
+  }
+
+  // discrete design set integer (treated as discrete histogram)
+  for (i=0; i<num_ddsiv; ++i, ++cntr) {
+    f77name16(name_string, "DiscDesSetI", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = ddsi_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    ISCIter cit = ddsi_values[i].begin();
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = (Real)(*cit);
+      y_val[j] = 1.;
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete design set int)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
+  // discrete design set real (treated as discrete histogram)
+  for (i=0; i<num_ddsrv; ++i, ++cntr) {
+    f77name16(name_string, "DiscDesSetR", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = ddsr_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    RSCIter cit = ddsr_values[i].begin();
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = *cit;
+      y_val[j] = 1.;
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete design set real)");
+    delete [] x_val;
+    delete [] y_val;
   }
 
   // normal uncertain
   bool n_bnd_spec = (!n_l_bnds.empty() && !n_u_bnds.empty());
-  for (i=0; i<num_nuv; i++, cntr++) {
+  for (i=0; i<num_nuv; ++i, ++cntr) {
     f77name16(name_string, "Normal", lhs_names, cntr);
     dist_params[0] = n_means[i];
     dist_params[1] = n_std_devs[i];
@@ -361,7 +438,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   // lognormal uncertain
   bool ln_bnd_spec = (!ln_l_bnds.empty()  && !ln_u_bnds.empty());
   bool n_dist      = (!ln_lambdas.empty() || !ln_std_devs.empty());
-  for (i=0; i<num_lnuv; i++, cntr++) {
+  for (i=0; i<num_lnuv; ++i, ++cntr) {
     f77name16(name_string, "Lognormal", lhs_names, cntr);
     if (n_dist) {
       // In the mean/std dev specification case, LHS expects the mean/std dev
@@ -412,7 +489,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // uniform uncertain
-  for (i=0; i<num_uuv; i++, cntr++) {
+  for (i=0; i<num_uuv; ++i, ++cntr) {
     f77name16(name_string, "Uniform", lhs_names, cntr);
     f77dist32(dist_string, "uniform");
     num_params = 2;
@@ -430,7 +507,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // loguniform uncertain
-  for (i=0; i<num_luuv; i++, cntr++) {
+  for (i=0; i<num_luuv; ++i, ++cntr) {
     f77name16(name_string, "Loguniform", lhs_names, cntr);
     f77dist32(dist_string, "loguniform");
     num_params = 2;
@@ -448,7 +525,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // triangular uncertain
-  for (i=0; i<num_tuv; i++, cntr++) {
+  for (i=0; i<num_tuv; ++i, ++cntr) {
     f77name16(name_string, "Triangular", lhs_names, cntr);
     f77dist32(dist_string, "triangular");
     num_params = 3;
@@ -467,7 +544,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // exponential uncertain
-  for (i=0; i<num_euv; i++, cntr++) {
+  for (i=0; i<num_euv; ++i, ++cntr) {
     f77name16(name_string, "Exponential", lhs_names, cntr);
     f77dist32(dist_string, "exponential");
     num_params = 1;
@@ -478,7 +555,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // beta uncertain
-  for (i=0; i<num_buv; i++, cntr++) {
+  for (i=0; i<num_buv; ++i, ++cntr) {
     f77name16(name_string, "Beta", lhs_names, cntr);
     f77dist32(dist_string, "beta");
     num_params = 4;
@@ -498,7 +575,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // gamma uncertain
-  for (i=0; i<num_gauv; i++, cntr++) {
+  for (i=0; i<num_gauv; ++i, ++cntr) {
     f77name16(name_string, "Gamma", lhs_names, cntr);
     f77dist32(dist_string, "gamma");
     num_params = 2;
@@ -510,7 +587,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // gumbel uncertain
-  for (i=0; i<num_guuv; i++, cntr++) {
+  for (i=0; i<num_guuv; ++i, ++cntr) {
     f77name16(name_string, "Gumbel", lhs_names, cntr);
     f77dist32(dist_string, "gumbel");
     num_params = 2;
@@ -522,7 +599,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // frechet uncertain
-  for (i=0; i<num_fuv; i++, cntr++) {
+  for (i=0; i<num_fuv; ++i, ++cntr) {
     f77name16(name_string, "Frechet", lhs_names, cntr);
     f77dist32(dist_string, "frechet");
     num_params = 2;
@@ -534,7 +611,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // weibull uncertain
-  for (i=0; i<num_wuv; i++, cntr++) {
+  for (i=0; i<num_wuv; ++i, ++cntr) {
     f77name16(name_string, "Weibull", lhs_names, cntr);
     f77dist32(dist_string, "weibull");
     num_params = 2;
@@ -544,9 +621,35 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(weibull)");
   }
-  
+
+  // histogram bin uncertain: pairs are defined from an abscissa in the first
+  // field and a count (not a density) in the second field.  The distinction
+  // in the second field is only important for unequal bin widths.
+  for (i=0; i<num_hbuv; ++i, ++cntr) {
+    f77name16(name_string, "HistogramBin", lhs_names, cntr);
+    f77dist32(dist_string, "continuous linear");
+    num_params = h_bin_prs[i].length()/2;
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    // LHS requires accumulation of CDF with first y at 0 and last y at 1
+    for (j=0; j<num_params; ++j)
+      x_val[j] = h_bin_prs[i][2*j];
+    // Assume already normalized with sum = 1
+    //Real sum = 0.;
+    //for (j=1; j<num_params; ++j)
+    //  sum += h_bin_prs[i][2*j-1]; // last y from DAKOTA must be zero
+    y_val[0] = 0.;
+    for (j=1; j<num_params; ++j)
+      y_val[j] = y_val[j-1] + h_bin_prs[i][2*j-1];// / sum;
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(histogram bin)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
   // poisson uncertain
-  for (i=0; i<num_puv; i++, cntr++) {
+  for (i=0; i<num_puv; ++i, ++cntr) {
     f77name16(name_string, "Poisson", lhs_names, cntr);
     f77dist32(dist_string, "poisson");
     num_params = 1;
@@ -557,99 +660,75 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
   }
 
   // binomial uncertain
-  for (i=0; i<num_biuv; i++, cntr++) {
+  for (i=0; i<num_biuv; ++i, ++cntr) {
     f77name16(name_string, "Binomial", lhs_names, cntr);
     f77dist32(dist_string, "binomial");
     num_params = 2;
-    dist_params[0] = bi_probpertrial[i];
-    dist_params[1] = bi_numtrials[i];
+    dist_params[0] = bi_prob_per_tr[i];
+    dist_params[1] = bi_num_tr[i];
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(binomial)");
   }
 
   // negative binomial uncertain
-  for (i=0; i<num_nbuv; i++, cntr++) {
-    f77name16(name_string, "Negative Binomial", lhs_names, cntr);
+  for (i=0; i<num_nbuv; ++i, ++cntr) {
+    f77name16(name_string, "NegBinomial", lhs_names, cntr);
     f77dist32(dist_string, "negative binomial");
     num_params = 2;
-    dist_params[0] = nb_probpertrial[i];
-    dist_params[1] = nb_numtrials[i];
+    dist_params[0] = nb_prob_per_tr[i];
+    dist_params[1] = nb_num_tr[i];
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(negative binomial)");
   }
 
   // geometric uncertain
-  for (i=0; i<num_geuv; i++, cntr++) {
+  for (i=0; i<num_geuv; ++i, ++cntr) {
     f77name16(name_string, "Geometric", lhs_names, cntr);
     f77dist32(dist_string, "geometric");
     num_params = 1;
-    dist_params[0] = ge_probpertrial[i];
+    dist_params[0] = ge_prob_per_tr[i];
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(geometric)");
   }
 
   // hypergeometric uncertain
-  for (i=0; i<num_hguv; i++, cntr++) {
-    f77name16(name_string, "Hypergeometric", lhs_names, cntr);
+  for (i=0; i<num_hguv; ++i, ++cntr) {
+    f77name16(name_string, "Hypergeom", lhs_names, cntr);
     f77dist32(dist_string, "hypergeometric");
     num_params = 3;
-    dist_params[0] = hg_numtotalpop[i];
-    dist_params[1] = hg_numselected[i];
-    dist_params[2] = hg_numfailed[i];
+    dist_params[0] = hg_total_pop[i];
+    dist_params[1] = hg_selected_pop[i];
+    dist_params[2] = hg_num_drawn[i];
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(hypergeometric)");
   }
 
-  // histogram uncertain: in both formats, pairs are defined from an abscissa
-  // in the first field and a count (not a density) in the second field.  The
-  // distinction in the second field is only important for unequal bin widths.
-  size_t num_c_huv = h_bin_prs.size();
-  for (i=0; i<num_huv; i++, cntr++) {
-    f77name16(name_string, "Histogram", lhs_names, cntr);
-     num_params = (i < num_c_huv) ? h_bin_prs[i].length()/2
-                                 : h_pt_prs[i-num_c_huv].length()/2;
+  // histogram point uncertain: pairs are defined from an abscissa in
+  // the first field and a count in the second field.
+  for (i=0; i<num_hpuv; ++i, ++cntr) {
+    f77name16(name_string, "HistogramPt", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = h_pt_prs[i].length()/2;
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
-    if (i < num_c_huv) {
-      // LHS requires accumulation of CDF with first y at 0 and last y at 1
-      distname = "continuous linear";
-      for (j=0; j<num_params; j++)
-        x_val[j] = h_bin_prs[i][2*j];
-      // Assume already normalized with sum = 1
-      //Real sum = 0.;
-      //for (j=1; j<num_params; j++)
-      //  sum += h_bin_prs[i][2*j-1]; // last y from DAKOTA must be zero
-      y_val[0] = 0.;
-      for (j=1; j<num_params; j++)
-        y_val[j] = y_val[j-1] + h_bin_prs[i][2*j-1];// / sum;
+    // LHS can use discrete frequency information directly
+    for (j=0; j<num_params; ++j) {
+      x_val[j] = h_pt_prs[i][2*j];
+      y_val[j] = h_pt_prs[i][2*j+1];
     }
-    else {
-      // LHS can use discrete frequency information directly
-      distname = "discrete histogram";
-      for (j=0; j<num_params; j++) {
-        x_val[j] = h_pt_prs[i-num_c_huv][2*j];
-        y_val[j] = h_pt_prs[i-num_c_huv][2*j+1];
-      }
-    }
-#ifdef DEBUG
-    for (j=0; j<num_params; j++)
-      PCout << "Histogram " << i+1 << ": " << x_val[j] << ' ' << y_val[j]
-	    << std::endl;
-#endif //DEBUG
-    f77dist32(dist_string, distname);
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
 		  x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(histogram)");
+    check_error(err_code, "lhs_udist(histogram pt)");
     delete [] x_val;
     delete [] y_val;
   }
 
   // interval uncertain: convert to histogram for sampling
-  for (i=0; i<num_iuv; i++, cntr++) {
+  for (i=0; i<num_iuv; ++i, ++cntr) {
     f77name16(name_string, "Interval", lhs_names, cntr);
     f77dist32(dist_string, "continuous linear");
 
@@ -663,13 +742,13 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     RealSet x_sort_unique;
     int num_intervals_i = interval_probs_i.length(),
         num_bounds_i    = 2*num_intervals_i;
-    for (j=0; j<num_bounds_i; j++)
+    for (j=0; j<num_bounds_i; ++j)
       x_sort_unique.insert(interval_bnds_i[j]);
     // convert RealSet to Real*
     num_params = x_sort_unique.size();
     Real* x_val = new Real [num_params];
     RealSet::iterator it = x_sort_unique.begin();
-    for (j=0; j<num_params; j++, it++)
+    for (j=0; j<num_params; ++j, ++it)
       x_val[j] = *it;
 
     // Calculate the probability densities, and account for the cases where
@@ -677,7 +756,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     // through the original intervals and see where they fall relative to the
     // new, sorted intervals for the density calculation.
     RealVector prob_dens(num_params); // initialize to 0.
-    for (j=0; j<num_intervals_i; j++) {
+    for (j=0; j<num_intervals_i; ++j) {
       const Real& lower_value = interval_bnds_i[2*j];
       const Real& upper_value = interval_bnds_i[2*j+1];
       Real interval_density = interval_probs_i[j] / (upper_value - lower_value);
@@ -696,7 +775,7 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     // are defined as Real* for input to the Fortran call.
     Real* y_val = new Real [num_params];
     y_val[0] = 0.;
-    for (j=1; j<num_params; j++) {
+    for (j=1; j<num_params; ++j) {
       if (prob_dens[j] > 0.0)
 	y_val[j] = y_val[j-1] + prob_dens[j] * (x_val[j] - x_val[j-1]);
       else // handle case where there is a gap
@@ -705,12 +784,12 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     // normalize if necessary
     if (y_val[num_params-1] != 1.0) {
       Real y_total = y_val[num_params-1];
-      for (j=1; j<num_params; j++)
+      for (j=1; j<num_params; ++j)
 	y_val[j] /= y_total;
     }
 
 #ifdef DEBUG
-    for (j=0;j<num_params;j++)
+    for (j=0; j<num_params; ++j)
       PCout << "x_val " << j << "is " << x_val[j] << "\ny_val " << j << "is "
 	    << y_val[j]<< '\n';
 #endif //DEBUG
@@ -721,20 +800,20 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     delete [] y_val;
   }
 
-  // state (treated as uniform)
-  for (i=0; i<num_sv; i++, cntr++) {
+  // continuous state (treated as uniform)
+  for (i=0; i<num_csv; ++i, ++cntr) {
     f77name16(name_string, "State", lhs_names, cntr);
     f77dist32(dist_string, "uniform");
     num_params = 2;
-    if (s_l_bnds[i] > -DBL_MAX && s_u_bnds[i] < DBL_MAX) {
-      if (s_l_bnds[i] >= s_u_bnds[i]) {
+    if (cs_l_bnds[i] > -DBL_MAX && cs_u_bnds[i] < DBL_MAX) {
+      if (cs_l_bnds[i] >= cs_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
 	      << "less than upper bounds to\n       sample state variables "
 	      << "using uniform distributions." << std::endl;
 	abort_handler(-1);
       }
-      dist_params[0] = s_l_bnds[i];
-      dist_params[1] = s_u_bnds[i];
+      dist_params[0] = cs_l_bnds[i];
+      dist_params[1] = cs_u_bnds[i];
     }
     else {
       PCerr << "\nError: Pecos::LHSDriver requires bounds to sample state "
@@ -746,13 +825,84 @@ generate_samples(const RealVector& d_l_bnds,     const RealVector& d_u_bnds,
     check_error(err_code, "lhs_dist(state)");
   }
 
+  // discrete state range (treated as discrete histogram)
+  for (i=0; i<num_dsrv; ++i, ++cntr) {
+    f77name16(name_string, "DiscStateRange", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    if (dsr_l_bnds[i] > INT_MIN && dsr_u_bnds[i] < INT_MAX) {
+      if (dsr_l_bnds[i] > dsr_u_bnds[i]) {
+	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
+	      << "bounds to\n       sample discrete state variables using "
+	      << "discrete histogram distributions." << std::endl;
+	abort_handler(-1);
+      }
+      int lb_i = dsr_l_bnds[i];
+      num_params = dsr_u_bnds[i] - lb_i + 1;
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j) {
+	x_val[j] = (Real)(lb_i+j);
+	y_val[j] = 1.;
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		    x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete state range)");
+      delete [] x_val;
+      delete [] y_val;
+    }
+    else {
+      PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
+	    << "state variables\n       using discrete histogram distributions."
+	    << std::endl;
+      abort_handler(-1);
+    }
+  }
+
+  // discrete state set integer (treated as discrete histogram)
+  for (i=0; i<num_dssiv; ++i, ++cntr) {
+    f77name16(name_string, "DiscStateSetI", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = dssi_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    ISCIter cit = dssi_values[i].begin();
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = (Real)(*cit);
+      y_val[j] = 1.;
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete state set int)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
+  // discrete state set real (treated as discrete histogram)
+  for (i=0; i<num_dssrv; ++i, ++cntr) {
+    f77name16(name_string, "DiscStateSetR", lhs_names, cntr);
+    f77dist32(dist_string, "discrete histogram");
+    num_params = dssr_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    RSCIter cit = dssr_values[i].begin();
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = *cit;
+      y_val[j] = 1.;
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
+		  x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete state set real)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
   // specify the rank correlations among the uncertain vars (no correlation
   // currently supported for design and state vars in allVars mode).  Only
   // non-zero values in the lower triangular portion of the rank correlation
   // matrix are specified.
   if (correlation_flag) {
-    for (i=1; i<num_uv; i++) {
-      for (j=0; j<i; j++) {
+    for (i=1; i<num_uv; ++i) {
+      for (j=0; j<i; ++j) {
 	Real corr_val = correlations(i,j);
 	if (fabs(corr_val) > 1.e-25) {
 	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+num_dv].c_str()),

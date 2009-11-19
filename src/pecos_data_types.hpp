@@ -83,6 +83,8 @@ typedef std::vector<RealSymMatrix>  RealSymMatrixArray;
 
 typedef std::set<int>               IntSet;
 typedef std::set<Real>              RealSet;
+typedef std::vector<IntSet>         IntSetArray;
+typedef std::vector<RealSet>        RealSetArray;
 typedef std::map<int, short>        IntShortMap;
 typedef std::map<int, int>          IntIntMap;
 typedef std::map<int, RealVector>   IntRealVectorMap;
@@ -97,6 +99,8 @@ typedef UIntMultiArray::const_array_view<1>::type UIntMultiArrayConstView;
 // ---------
 typedef IntSet::iterator            ISIter;
 typedef IntSet::const_iterator      ISCIter;
+typedef RealSet::iterator           RSIter;
+typedef RealSet::const_iterator     RSCIter;
 typedef IntShortMap::iterator       IntShMIter;
 typedef IntIntMap::iterator         IntIntMIter;
 typedef IntIntMap::const_iterator   IntIntMCIter;

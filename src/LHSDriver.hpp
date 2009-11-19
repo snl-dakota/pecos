@@ -62,8 +62,18 @@ public:
 
   /// generates the desired set of parameter samples from within general
   /// user-specified probabilistic distributions
-  void generate_samples(const RealVector& d_l_bnds, const RealVector& d_u_bnds,
-			const RealVector& s_l_bnds, const RealVector& s_u_bnds,
+  void generate_samples(const RealVector&   cd_l_bnds,
+			const RealVector&   cd_u_bnds,
+			const IntVector&    ddr_l_bnds,
+			const IntVector&    ddr_u_bnds,
+			const IntSetArray&  ddsi_values,
+			const RealSetArray& ddsr_values,
+			const RealVector&   cs_l_bnds,
+			const RealVector&   cs_u_bnds,
+			const IntVector&    dsr_l_bnds,
+			const IntVector&    dsr_u_bnds,
+			const IntSetArray&  dssi_values,
+			const RealSetArray& dssr_values,
 			const RealVector& n_means, const RealVector& n_std_devs,
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
 			const RealVector& ln_means,
@@ -84,11 +94,15 @@ public:
 			const RealVector& f_betas, const RealVector& w_alphas,
 			const RealVector& w_betas, 
                         const RealVectorArray& h_bin_prs,
-                 const RealVector& p_lambdas,
-                 const RealVector& bi_probpertrial,const IntVector& bi_numtrials,
-                 const RealVector& nb_probpertrial,const IntVector& nb_numtrials,
-                 const RealVector& ge_probpertrial,
-                 const IntVector& hg_numtotalpop,const IntVector& hg_numselected,                 const IntVector& hg_numfailed,
+			const RealVector& p_lambdas,
+			const RealVector& bi_prob_per_tr,
+			const IntVector& bi_num_tr,
+			const RealVector& nb_prob_per_tr,
+			const IntVector& nb_num_tr,
+			const RealVector& ge_prob_per_tr,
+			const IntVector& hg_total_pop,
+			const IntVector& hg_selected_pop,
+			const IntVector& hg_num_drawn,
 			const RealVectorArray& h_pt_prs,
 			const RealVectorArray& i_probs,
 			const RealVectorArray& i_bnds,
@@ -208,18 +222,20 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector empty_rv; RealVectorArray empty_rva; IntVector empty_iv;
-  RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
-  generate_samples(empty_rv, empty_rv, empty_rv, empty_rv, n_means, n_std_devs,
-		   n_l_bnds, n_u_bnds, empty_rv, empty_rv, empty_rv, empty_rv,
+  RealVector  empty_rv;  RealVectorArray empty_rva; IntVector empty_iv;
+  RealMatrix  empty_rm;  RealSymMatrix   empty_rsm;
+  IntSetArray empty_isa; RealSetArray    empty_rsa;
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
+		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
+		   n_means, n_std_devs, n_l_bnds, n_u_bnds, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rva,
-                   empty_rv, empty_rv, empty_iv, empty_rv, empty_iv, empty_rv, 
-                   empty_iv, empty_iv, empty_iv,
-		   empty_rva, empty_rva, empty_rva, empty_rsm, num_samples,
-		   samples_array, empty_rm);
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+		   empty_rv, empty_rva, empty_rv, empty_rv, empty_iv, empty_rv,
+		   empty_iv, empty_rv, empty_iv, empty_iv, empty_iv, empty_rva,
+		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
+		   empty_rm);
 }
 
 
@@ -234,15 +250,18 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
   }
   RealVector empty_rv; RealVectorArray empty_rva; IntVector empty_iv;
   RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
-  generate_samples(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+  IntSetArray empty_isa; RealSetArray    empty_rsa;
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
+		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, u_l_bnds, u_u_bnds, empty_rv,
+		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, u_l_bnds,
+		   u_u_bnds, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rva,                   empty_rv, empty_rv, empty_iv, empty_rv, empty_iv, empty_rv,
-                   empty_iv, empty_iv, empty_iv,
-		   empty_rva, empty_rva, empty_rva, empty_rsm, num_samples,
-		   samples_array, empty_rm);
+		   empty_rv, empty_rva, empty_rv, empty_rv, empty_iv, empty_rv,
+		   empty_iv, empty_rv, empty_iv, empty_iv, empty_iv, empty_rva,
+		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
+		   empty_rm);
 }
 
 
