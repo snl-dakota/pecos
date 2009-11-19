@@ -407,7 +407,7 @@ inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
   // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
   // assume normalization (counts sum to 1.).
   mean = std_dev = 0.;
-  size_t num_pts = hist_pt_prs.length() / 2 - 1;
+  size_t num_pts = hist_pt_prs.length() / 2;
   for (int i=0; i<num_pts; ++i) {
     const Real& val = hist_pt_prs[2*i];
     Real cv = hist_pt_prs[2*i+1]*val; // count * val
