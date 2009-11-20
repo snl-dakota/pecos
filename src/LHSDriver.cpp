@@ -784,8 +784,8 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
     f77dist32(dist_string, "hypergeometric");
     num_params = 3;
     dist_params[0] = hg_total_pop[i];
-    dist_params[1] = hg_selected_pop[i];
-    dist_params[2] = hg_num_drawn[i];
+    dist_params[1] = hg_num_drawn[i];
+    dist_params[2] = hg_selected_pop[i];
     LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
 		 num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(hypergeometric)");
