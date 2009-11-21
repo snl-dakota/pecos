@@ -190,12 +190,12 @@ void LHSDriver::rng(const String& unif_gen)
     re-seed multiple generate_samples() calls, rather than continuing
     an existing random number sequence. */
 void LHSDriver::
-generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
-		 const IntVector&  ddr_l_bnds,   const IntVector&  ddr_u_bnds,
+generate_samples(const RealVector&   cd_l_bnds,  const RealVector& cd_u_bnds,
+		 const IntVector&    ddr_l_bnds, const IntVector&  ddr_u_bnds,
 		 const IntSetArray&  ddsi_values,
 		 const RealSetArray& ddsr_values,
-		 const RealVector& cs_l_bnds,    const RealVector& cs_u_bnds,
-		 const IntVector&  dsr_l_bnds,   const IntVector&  dsr_u_bnds,
+		 const RealVector&   cs_l_bnds,  const RealVector& cs_u_bnds,
+		 const IntVector&    dsr_l_bnds, const IntVector&  dsr_u_bnds,
 		 const IntSetArray&  dssi_values,
 		 const RealSetArray& dssr_values,
 		 const RealVector& n_means,      const RealVector& n_std_devs,
@@ -252,8 +252,8 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
     num_dv   = num_cdv  + num_ddrv + num_ddsiv + num_ddsrv,
     num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
              + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
-    num_diauv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv,
-    num_drauv = num_hpuv, num_auv = num_cauv + num_diauv + num_drauv,
+    num_dauiv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv,
+    num_daurv = num_hpuv, num_auv = num_cauv + num_dauiv + num_daurv,
     num_ceuv = num_iuv, num_euv = num_ceuv, num_uv = num_auv + num_euv,
     num_sv = num_csv + num_dsrv + num_dssiv + num_dssrv,
     num_av = num_dv  + num_uv   + num_sv;
@@ -908,7 +908,7 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
   // currently supported for design and state vars in allVars mode).  Only
   // non-zero values in the lower triangular portion of the rank correlation
   // matrix are specified.
-  if (correlation_flag) { // TO DO: alter indexing
+  if (correlation_flag) {
     for (i=1; i<num_auv; ++i) {
       for (j=0; j<i; ++j) {
 	Real corr_val = correlations(i,j);
@@ -917,11 +917,11 @@ generate_samples(const RealVector& cd_l_bnds,    const RealVector& cd_u_bnds,
 	  size_t offset_i = num_cdv, offset_j = num_cdv;
 	  if (i>=num_cauv)
 	    offset_i += num_ceuv + num_csv + num_ddrv + num_ddsiv;
-	  if (i>=num_cauv+num_diauv)
+	  if (i>=num_cauv+num_dauiv)
 	    offset_i += num_dsrv + num_dssiv + num_ddsrv;
 	  if (j>=num_cauv)
 	    offset_j += num_ceuv + num_csv + num_ddrv + num_ddsiv;
-	  if (j>=num_cauv+num_diauv)
+	  if (j>=num_cauv+num_dauiv)
 	    offset_j += num_dsrv + num_dssiv + num_ddsrv;
 	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+offset_i].c_str()),
 		       const_cast<char*>(lhs_names[j+offset_j].c_str()),
