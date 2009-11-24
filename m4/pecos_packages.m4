@@ -8,7 +8,7 @@ AC_DEFUN([PECOS_PACKAGES],[
   case $with_boost in
   no) 
     dnl BOOST package is needed unconditionally.
-    dnl Pecos provides a header-only subset of the Boost 1.37 release.
+    dnl Pecos provides a header-only subset of the Boost 1.40 release.
     AC_MSG_ERROR([PECOS cannot be configured without Boost. Please specify
                   directory to boost headers OR simply, --with-boost=yes
                   to get the default path to the PECOS provided boost subset.])
@@ -49,6 +49,14 @@ AC_DEFUN([PECOS_PACKAGES],[
     ;;
 
   esac
+
+  boost_version_req=103700
+  boost_version=`grep 'define BOOST_VERSION 1' $BOOST_ROOT/boost/version.hpp | cut -d' ' -f3`
+  if test $boost_version -ge $boost_version_req; then
+    AC_MSG_RESULT([Boost meets PECOS min version: $boost_version >= $boost_version_req])
+  else
+    AC_MSG_ERROR([OLD Boost: $boost_version needs to be $boost_version_req or later])
+  fi
 
   BOOST_CPPFLAGS="-I$BOOST_ROOT"
   AC_SUBST(BOOST_CPPFLAGS)
