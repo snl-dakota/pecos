@@ -86,7 +86,7 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   dnl FFTW package checks.
   AC_ARG_WITH([fftw],AS_HELP_STRING([--without-fftw],
-              [turn FFTW support off]),[with_fftw=$withval],[with_fftw=no])
+              [turn support for GPL package, FFTW off]),[with_fftw=$withval],[with_fftw=no])
   if test "x$with_fftw" = xyes; then
     AC_CONFIG_SUBDIRS([packages/fftw])
     AC_DEFINE([HAVE_FFTW],[1], [Macro to handle code which depends on FFTW.])
@@ -94,22 +94,9 @@ AC_DEFUN([PECOS_PACKAGES],[
     FFTW_LDFLAGS="-L`pwd`/packages/fftw"
     AC_SUBST(FFTW_CPPFLAGS)
     AC_SUBST(FFTW_LDFLAGS)
+    AC_MSG_NOTICE([NOTE: your PECOS build includes the binary, GPL library, FFTW!])
   fi
   AM_CONDITIONAL([WITH_FFTW],[test "x$with_fftw" = xyes])
-
-  dnl GPL package checks.
-#  AC_ARG_WITH([gpl],AS_HELP_STRING([--without-gpl],
-#              [turn GPL support off]),[with_gpl=$withval],[with_gpl=no])
-#  if test "x$with_gpl" = xyes; then
-#    dnl Currently, the only GPL package that Pecos depends on is FFTW
-#    dnl AC_CONFIG_SUBDIRS([packages/fftw])
-#    AC_DEFINE([HAVE_FFTW],[1], [Macro to handle code which depends on FFTW.])
-#    FFTW_CPPFLAGS="-I`pwd`/packages/fftw/api"
-#    FFTW_LDFLAGS="-L`pwd`/packages/fftw"
-#    AC_SUBST(FFTW_CPPFLAGS)
-#    AC_SUBST(FFTW_LDFLAGS)
-#  fi
-#  AM_CONDITIONAL([WITH_FFTW],[test "x$with_gpl" = xyes])
 
   dnl LHS package checks.
   AC_ARG_WITH([lhs],AS_HELP_STRING([--without-lhs],[turn LHS support off]),
