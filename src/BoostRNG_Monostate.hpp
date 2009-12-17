@@ -85,12 +85,14 @@ Real (*BoostRNG_Monostate::randomNum2)() = BoostRNG_Monostate::random_num1;
 } // namespace Pecos
 
 
+#ifdef HAVE_LHS
 #define rnum1 FC_FUNC(rnumlhs1,RNUMLHS1)
 #define rnum2 FC_FUNC(rnumlhs2,RNUMLHS2)
+#endif  // HAVE_LHS
 
 extern "C" Pecos::Real rnum1(void), rnum2(void);
 
-// WJB: inline would be great, but leads to DIFFs in the Regression suite
+// inline leads to DIFFs in the Regression suite
 /* inline */ Pecos::Real rnum1(void)
 {
   //PCout << "running Boost MT" << "\n";
@@ -103,18 +105,6 @@ extern "C" Pecos::Real rnum1(void), rnum2(void);
   //PCout << "running Boost MT" << "\n";
   return Pecos::BoostRNG_Monostate::randomNum2();
 }
-
-
-/* WJB: prior to release, remove dead code??
-#define lhs_setseed FC_FUNC(lhssetseed,LHSSETSEED)
-extern "C" void lhs_setseed(int*);
-
-// WJB: need to find out who calls this - if not f90, then go ahead and mangle
-extern "C" void set_boost_rng_seed(unsigned int rng_seed)
-{
-  Pecos::BoostRNG_Monostate::seed(rng_seed);
-}
-*/ 
 
 #endif  // BOOST_RNG_MONOSTATE_HPP
 
