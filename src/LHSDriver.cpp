@@ -190,12 +190,12 @@ void LHSDriver::rng(const String& unif_gen)
     re-seed multiple generate_samples() calls, rather than continuing
     an existing random number sequence. */
 void LHSDriver::
-generate_samples(const RealVector&   cd_l_bnds,  const RealVector& cd_u_bnds,
-		 const IntVector&    ddr_l_bnds, const IntVector&  ddr_u_bnds,
+generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
+		 const IntVector&    ddri_l_bnds, const IntVector&  ddri_u_bnds,
 		 const IntSetArray&  ddsi_values,
 		 const RealSetArray& ddsr_values,
-		 const RealVector&   cs_l_bnds,  const RealVector& cs_u_bnds,
-		 const IntVector&    dsr_l_bnds, const IntVector&  dsr_u_bnds,
+		 const RealVector&   cs_l_bnds,   const RealVector& cs_u_bnds,
+		 const IntVector&    dsri_l_bnds, const IntVector&  dsri_u_bnds,
 		 const IntSetArray&  dssi_values,
 		 const RealSetArray& dssr_values,
 		 const RealVector& n_means,      const RealVector& n_std_devs,
@@ -239,24 +239,24 @@ generate_samples(const RealVector&   cd_l_bnds,  const RealVector& cd_u_bnds,
     num_lnuv = std::max(ln_means.length(), ln_lambdas.length()),
     num_uuv  = u_l_bnds.length(),   num_luuv = lu_l_bnds.length(),
     num_tuv  = t_modes.length(),    num_exuv  = e_betas.length(),
-    num_beuv  = b_alphas.length(),   num_gauv = ga_alphas.length(),
+    num_beuv = b_alphas.length(),   num_gauv = ga_alphas.length(),
     num_guuv = gu_alphas.length(),  num_fuv  = f_alphas.length(),
     num_wuv  = w_alphas.length(),   num_hbuv = h_bin_prs.size(),
-    num_csv  = cs_l_bnds.length(),  num_ddrv = ddr_l_bnds.length(),
+    num_csv  = cs_l_bnds.length(),  num_ddriv = ddri_l_bnds.length(),
     num_ddsiv = ddsi_values.size(), num_puv  = p_lambdas.length(),
     num_biuv = bi_prob_per_tr.length(), num_nbuv = nb_prob_per_tr.length(),
     num_geuv = ge_prob_per_tr.length(), num_hguv = hg_num_drawn.length(),
-    num_dsrv  = dsr_l_bnds.length(), num_dssiv = dssi_values.size(),
-    num_ddsrv = ddsr_values.size(),  num_hpuv = h_pt_prs.size(),
-    num_dssrv = dssr_values.size(),  num_iuv = i_probs.size(),
-    num_dv   = num_cdv  + num_ddrv + num_ddsiv + num_ddsrv,
+    num_dsriv = dsri_l_bnds.length(), num_dssiv = dssi_values.size(),
+    num_ddsrv = ddsr_values.size(), num_hpuv = h_pt_prs.size(),
+    num_dssrv = dssr_values.size(), num_iuv  = i_probs.size(),
+    num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddsrv,
     num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
              + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
     num_dauiv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv,
     num_daurv = num_hpuv, num_auv = num_cauv + num_dauiv + num_daurv,
-    num_ceuv = num_iuv, num_euv = num_ceuv, num_uv = num_auv + num_euv,
-    num_sv = num_csv + num_dsrv + num_dssiv + num_dssrv,
-    num_av = num_dv  + num_uv   + num_sv;
+    num_ceuv  = num_iuv,  num_euv = num_ceuv, num_uv = num_auv + num_euv,
+    num_sv = num_csv + num_dsriv + num_dssiv + num_dssrv,
+    num_av = num_dv  + num_uv    + num_sv;
 
   int err_code = 0, max_var = num_av, max_obs = num_samples,
       max_samp_size = num_av*num_samples, max_interval = -1,
@@ -681,18 +681,18 @@ generate_samples(const RealVector&   cd_l_bnds,  const RealVector& cd_u_bnds,
   // DISCRETE INTEGER VARIABLES
   // --------------------------
   // discrete design range (treated as discrete histogram)
-  for (i=0; i<num_ddrv; ++i, ++cntr) {
+  for (i=0; i<num_ddriv; ++i, ++cntr) {
     f77name16(name_string, "DiscDesRange", lhs_names, cntr);
     f77dist32(dist_string, "discrete histogram");
-    if (ddr_l_bnds[i] > INT_MIN && ddr_u_bnds[i] < INT_MAX) {
-      if (ddr_l_bnds[i] > ddr_u_bnds[i]) {
+    if (ddri_l_bnds[i] > INT_MIN && ddri_u_bnds[i] < INT_MAX) {
+      if (ddri_l_bnds[i] > ddri_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
 	      << "bounds to\n       sample discrete design variables using "
 	      << "discrete histogram distributions." << std::endl;
 	abort_handler(-1);
       }
-      int lb_i = ddr_l_bnds[i];
-      num_params = ddr_u_bnds[i] - lb_i + 1;
+      int lb_i = ddri_l_bnds[i];
+      num_params = ddri_u_bnds[i] - lb_i + 1;
       Real* x_val = new Real [num_params];
       Real* y_val = new Real [num_params];
       for (j=0; j<num_params; ++j) {
@@ -792,18 +792,18 @@ generate_samples(const RealVector&   cd_l_bnds,  const RealVector& cd_u_bnds,
   }
 
   // discrete state range (treated as discrete histogram)
-  for (i=0; i<num_dsrv; ++i, ++cntr) {
+  for (i=0; i<num_dsriv; ++i, ++cntr) {
     f77name16(name_string, "DiscStateRange", lhs_names, cntr);
     f77dist32(dist_string, "discrete histogram");
-    if (dsr_l_bnds[i] > INT_MIN && dsr_u_bnds[i] < INT_MAX) {
-      if (dsr_l_bnds[i] > dsr_u_bnds[i]) {
+    if (dsri_l_bnds[i] > INT_MIN && dsri_u_bnds[i] < INT_MAX) {
+      if (dsri_l_bnds[i] > dsri_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
 	      << "bounds to\n       sample discrete state variables using "
 	      << "discrete histogram distributions." << std::endl;
 	abort_handler(-1);
       }
-      int lb_i = dsr_l_bnds[i];
-      num_params = dsr_u_bnds[i] - lb_i + 1;
+      int lb_i = dsri_l_bnds[i];
+      num_params = dsri_u_bnds[i] - lb_i + 1;
       Real* x_val = new Real [num_params];
       Real* y_val = new Real [num_params];
       for (j=0; j<num_params; ++j) {
@@ -916,13 +916,13 @@ generate_samples(const RealVector&   cd_l_bnds,  const RealVector& cd_u_bnds,
 	  // jump over cdv, ceuv, csv, ddv int, dsv int, and ddv real as needed:
 	  size_t offset_i = num_cdv, offset_j = num_cdv;
 	  if (i>=num_cauv)
-	    offset_i += num_ceuv + num_csv + num_ddrv + num_ddsiv;
+	    offset_i += num_ceuv + num_csv + num_ddriv + num_ddsiv;
 	  if (i>=num_cauv+num_dauiv)
-	    offset_i += num_dsrv + num_dssiv + num_ddsrv;
+	    offset_i += num_dsriv + num_dssiv + num_ddsrv;
 	  if (j>=num_cauv)
-	    offset_j += num_ceuv + num_csv + num_ddrv + num_ddsiv;
+	    offset_j += num_ceuv + num_csv + num_ddriv + num_ddsiv;
 	  if (j>=num_cauv+num_dauiv)
-	    offset_j += num_dsrv + num_dssiv + num_ddsrv;
+	    offset_j += num_dsriv + num_dssiv + num_ddsrv;
 	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+offset_i].c_str()),
 		       const_cast<char*>(lhs_names[j+offset_j].c_str()),
 		       corr_val, err_code);
