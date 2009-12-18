@@ -18,18 +18,20 @@ Email: pecos-developers@dev.sandia.gov
 ------------------------------------------------------------------------------
 License.
 
-PECOS is distributed under the GNU General Public License.  It is free 
-software; you can redistribute it and/or modify it under the terms of the GNU 
-General Public License as published by the Free Software Foundation; either 
-version 2 of the License, or (at your option) any later version.  A copy of 
-this license is included in the LICENSE file, and is also available online 
-from http://www.gnu.org/copyleft/gpl.html.  Also refer to the COPYRIGHT file 
-for important U.S. Government legal notices.
+PECOS is distributed under the GNU Lesser General Public License.  It
+is free software; you can redistribute it and/or modify it under the
+terms of the GNU Lesser General Public License as published by the
+Free Software Foundation; either version 2.1 of the License, or (at
+your option) any later version.  A copy of this license is included in
+the LICENSE file, and is also available online from
+http://www.gnu.org/licenses/lgpl.html.  Also refer to the COPYRIGHT
+file for important U.S. Government legal notices.
 
-The PECOS distribution contains libraries which are available separately
-under compatible licensing terms.  In particular, many of the libraries in
-packages are available separately under the GNU General Public License (GPL)
-or Lesser General Public License (LGPL).
+The PECOS distribution contains libraries which are available
+separately under compatible licensing terms.  In particular, many of
+the libraries in packages are available separately under the GNU
+General Public License (GPL) or Lesser General Public License (LGPL),
+though GPL libraries are disabled by default.
 
 ------------------------------------------------------------------------------
 Overview.

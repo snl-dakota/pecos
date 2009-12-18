@@ -2,7 +2,7 @@
 
     PECOS: Parallel Environment for Creation Of Stochastics
     Copyright (c) 2008, Sandia National Laboratories.
-    This software is distributed under the GNU General Public License.
+    This software is distributed under the GNU Lesser General Public License.
     For more information, see the README file in the top Dakota directory.
     _______________________________________________________________________ */
  
