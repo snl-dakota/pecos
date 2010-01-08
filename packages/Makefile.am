@@ -23,6 +23,10 @@ if WITH_LHS
 SUBDIRS += LHS
 endif
 
+if WITH_VPI_SPARSE_GRID
+SUBDIRS += VPISparseGrid
+endif
+
 ## Conditionally configured subdirectories should _not_ be recursed into
 ## during 'make distclean' or 'make maintainer-clean'.
 DIST_SUBDIRS = $(SUBDIRS)
