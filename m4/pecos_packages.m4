@@ -110,15 +110,15 @@ AC_DEFUN([PECOS_PACKAGES],[
   AM_CONDITIONAL([WITH_LHS],[test "x$with_lhs" = xyes -a "x$enable_f90" = xyes])
 
   dnl VPISparseGrid package checks.
-  AC_ARG_WITH([vpisparsegrid],AS_HELP_STRING([--without-vpisparsegrid],
-	      [turn VPISparseGrid support off]),[with_vpisparsegrid=$withval],
-	      [with_vpisparsegrid=yes])
-  if test "x$with_vpisparsegrid" = xyes; then
-    AC_DEFINE([HAVE_VPI_SPARSE_GRID],[1],
+  AC_ARG_WITH([sparsegrid],AS_HELP_STRING([--without-sparsegrid],
+	      [turn VPISparseGrid support off]),[with_sparsegrid=$withval],
+	      [with_sparsegrid=yes])
+  if test "x$with_sparsegrid" = xyes; then
+    AC_DEFINE([HAVE_SPARSE_GRID],[1],
 	      [Macro to handle code which depends on VPISparseGrid.])
     AC_CONFIG_SUBDIRS([packages/VPISparseGrid])
   fi
-  AM_CONDITIONAL([WITH_VPI_SPARSE_GRID],[test "x$with_vpisparsegrid" = xyes])
+  AM_CONDITIONAL([WITH_SPARSE_GRID],[test "x$with_sparsegrid" = xyes])
 
 
   dnl -------------------------

@@ -24,8 +24,8 @@ endif
 if WITH_LHS
 SUBLIBS += packages/LHS/liblhs.la
 endif
-if WITH_VPI_SPARSE_GRID
-SUBLIBS += packages/VPISparseGrid/src/libvpisparsegrid.la
+if WITH_SPARSE_GRID
+SUBLIBS += packages/VPISparseGrid/src/libsparsegrid.la
 endif
 
 ## Set the Pecos library name.

@@ -23,7 +23,7 @@ if WITH_LHS
 SUBDIRS += LHS
 endif
 
-if WITH_VPI_SPARSE_GRID
+if WITH_SPARSE_GRID
 SUBDIRS += VPISparseGrid
 endif
 
