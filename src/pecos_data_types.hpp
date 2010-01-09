@@ -134,6 +134,45 @@ find_index(const PecosContainerType& v,
   return iter != v.end() ? iter - v.begin() : _NPOS;
 }
 
+
+/// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to
+/// std::vector<ScalarType>
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv,
+	       std::vector<ScalarType>& v)
+{
+  OrdinalType size_sdv = sdv.length();
+  if (size_sdv != v.size())
+    v.resize(size_sdv);
+  for (OrdinalType i=0; i<size_sdv; ++i)
+    v[i] = sdv[i];
+}
+
+
+/// copy std::vector<ScalarType> to
+/// Teuchos::SerialDenseVector<OrdinalType, ScalarType>
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const std::vector<ScalarType>& v,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv)
+{
+  size_t size_v = v.size();
+  if (sdv.length() != size_v)
+    sdv.sizeUninitialized(size_v);
+  for (OrdinalType i=0; i<size_v; ++i)
+    sdv[i] = v[i];
+}
+
+
+/// global std::ostream insertion operator for std::vector
+template <class T>
+std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
+{
+  size_t i=0, len = data.size();
+  for (i=0; i<len; ++i)
+    s << "                     " << data[i] << '\n';
+  return s;
+}
+
 } // namespace Pecos
 
 #endif // PECOS_DATA_TYPES_H

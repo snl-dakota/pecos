@@ -117,6 +117,10 @@ AC_DEFUN([PECOS_PACKAGES],[
     AC_DEFINE([HAVE_SPARSE_GRID],[1],
 	      [Macro to handle code which depends on VPISparseGrid.])
     AC_CONFIG_SUBDIRS([packages/VPISparseGrid])
+    SPARSE_GRID_CPPFLAGS="-I`pwd`/packages/VPISparseGrid/src"
+    SPARSE_GRID_LDFLAGS="-L`pwd`/packages/VPISparseGrid/src"
+    AC_SUBST(SPARSE_GRID_CPPFLAGS)
+    AC_SUBST(SPARSE_GRID_LDFLAGS)
   fi
   AM_CONDITIONAL([WITH_SPARSE_GRID],[test "x$with_sparsegrid" = xyes])
 

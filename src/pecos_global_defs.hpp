@@ -45,6 +45,11 @@ enum { NO_TARGET, CDV_LWR_BND, CDV_UPR_BND, DDRIV_LWR_BND, DDRIV_UPR_BND,
        GE_P_PER_TRIAL, HGE_TOT_POP, HGE_SEL_POP, HGE_FAILED,
        CSV_LWR_BND, CSV_UPR_BND, DSRIV_LWR_BND, DSRIV_UPR_BND };
 
+/// derived basis polynomial types (orthogonal polynomial order follows
+/// uncertain variable spec order of normal, uniform, exponential, beta, gamma)
+enum { /* NO_POLY, */ HERMITE, LEGENDRE, LAGUERRE, JACOBI, GENERALIZED_LAGUERRE,
+       NUMERICALLY_GENERATED, LAGRANGE };
+
 
 // ----------------
 // Standard streams

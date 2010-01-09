@@ -941,7 +941,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     options_stream;
   output_stream  << "LHS_samples.out                 ";
   message_stream << "LHS_distributions.out           ";
-  title_stream   << "DAKOTA LHS                      ";
+  title_stream   << "Pecos::LHSDriver                ";
   // From the LHS manual (p. 100): LHSRPTS is used to specify which reports LHS
   // will print in the message output file. If LHSRPTS is omitted, the message
   // file will contain only the title, run specifications, and descriptions of

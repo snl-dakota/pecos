@@ -12,7 +12,11 @@ AM_CPPFLAGS += @FFTW_CPPFLAGS@ -I$(top_srcdir)/packages/fftw/api
 endif
 
 if WITH_LHS
-LHS_S         = lhs_wrappers.f90
+LHS_S = lhs_wrappers.f90
+endif
+
+if WITH_SPARSE_GRID
+AM_CPPFLAGS += @SPARSE_GRID_CPPFLAGS@
 endif
 
 ## HACK NOTICE: Libtool 1.5.X doesn't provide tagging support for F90 sources.
@@ -31,6 +35,15 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  SamplingInverseTransformation.cpp		\
 			  ProbabilityTransformation.cpp			\
 			  NatafTransformation.cpp			\
+			  BasisPolynomial.cpp				\
+			  LagrangeInterpPolynomial.cpp			\
+			  OrthogonalPolynomial.cpp			\
+			  GenLaguerreOrthogPolynomial.cpp		\
+			  HermiteOrthogPolynomial.cpp			\
+			  JacobiOrthogPolynomial.cpp			\
+			  LaguerreOrthogPolynomial.cpp			\
+			  LegendreOrthogPolynomial.cpp			\
+			  NumericGenOrthogPolynomial.cpp		\
 			  pecos_stat_util.cpp				\
                           LHSDriver.cpp                                 \
 			  $(LHS_S)

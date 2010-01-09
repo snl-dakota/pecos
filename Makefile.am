@@ -43,6 +43,15 @@ pkginclude_HEADERS = pecos_config.h				\
 		     src/SamplingInverseTransformation.hpp	\
 		     src/ProbabilityTransformation.hpp		\
 		     src/NatafTransformation.hpp		\
+		     src/BasisPolynomial.hpp			\
+		     src/LagrangeInterpPolynomial.hpp		\
+		     src/OrthogonalPolynomial.hpp		\
+		     src/GenLaguerreOrthogPolynomial.hpp	\
+		     src/HermiteOrthogPolynomial.hpp		\
+		     src/JacobiOrthogPolynomial.hpp		\
+		     src/LaguerreOrthogPolynomial.hpp		\
+		     src/LegendreOrthogPolynomial.hpp		\
+		     src/NumericGenOrthogPolynomial.hpp		\
 		     src/LHSDriver.hpp				\
 		     src/BoostRNG_Monostate.hpp
 #		     src/BasisFunction.hpp
