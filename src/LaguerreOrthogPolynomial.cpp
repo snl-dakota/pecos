@@ -279,7 +279,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
-      webbur::laguerre_compute(order, gaussPoints.data(), gaussWeights.data());
+      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
 #else
       PCerr << "Error: overflow in maximum quadrature order limit (10) in "
 	    << "LaguerreOrthogPolynomial::gauss_points()." << std::endl;
@@ -386,7 +386,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
-      webbur::laguerre_compute(order, gaussPoints.data(), gaussWeights.data());
+      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
 #else
       // define Gauss wts from Gauss pts using formula above
       const RealArray& gauss_pts = gauss_points(order);

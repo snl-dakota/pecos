@@ -169,8 +169,8 @@ const RealArray& JacobiOrthogPolynomial::gauss_points(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
-      webbur::jacobi_compute(order, alphaPoly, betaPoly, gaussPoints.data(),
-			     gaussWeights.data());
+      webbur::jacobi_compute(order, alphaPoly, betaPoly, &gaussPoints[0],
+			     &gaussWeights[0]);
       const Real& wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	gaussWeights[i] *= wt_factor; // polynomial weight fn -> PDF
@@ -205,8 +205,8 @@ const RealArray& JacobiOrthogPolynomial::gauss_weights(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
-      webbur::jacobi_compute(order, alphaPoly, betaPoly, gaussPoints.data(),
-			     gaussWeights.data());
+      webbur::jacobi_compute(order, alphaPoly, betaPoly, &gaussPoints[0],
+			     &gaussWeights[0]);
       const Real& wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	gaussWeights[i] *= wt_factor; // polynomial weight fn -> PDF

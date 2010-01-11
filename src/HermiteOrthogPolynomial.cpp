@@ -212,7 +212,7 @@ const RealArray& HermiteOrthogPolynomial::gauss_points(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
-      webbur::hermite_compute(order, gaussPoints.data(), gaussWeights.data());
+      webbur::hermite_compute(order, &gaussPoints[0], &gaussWeights[0]);
       for (size_t i=0; i<order; i++) {
 	gaussPoints[i]  *= ptFactor; // scale H_n roots by sr2 to get He_n roots
 	gaussWeights[i] *= wtFactor; // polynomial weight fn -> PDF
@@ -306,7 +306,7 @@ const RealArray& HermiteOrthogPolynomial::gauss_weights(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
-      webbur::hermite_compute(order, gaussPoints.data(), gaussWeights.data());
+      webbur::hermite_compute(order, &gaussPoints[0], &gaussWeights[0]);
       for (size_t i=0; i<order; i++) {
 	gaussPoints[i]  *= ptFactor; // scale H_n roots by sr2 to get He_n roots
 	gaussWeights[i] *= wtFactor; // polynomial weight fn -> PDF

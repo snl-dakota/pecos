@@ -164,8 +164,8 @@ gauss_points(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
-      webbur::gen_laguerre_compute(order, alphaPoly, gaussPoints.data(),
-				   gaussWeights.data());
+      webbur::gen_laguerre_compute(order, alphaPoly, &gaussPoints[0],
+				   &gaussWeights[0]);
       const Real& wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	gaussWeights[i] *= wt_factor; // polynomial weight fn -> PDF
@@ -202,8 +202,8 @@ gauss_weights(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
-      webbur::gen_laguerre_compute(order, alphaPoly, gaussPoints.data(),
-				   gaussWeights.data());
+      webbur::gen_laguerre_compute(order, alphaPoly, &gaussPoints[0],
+				   &gaussWeights[0]);
       const Real& wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	gaussWeights[i] *= wt_factor; // polynomial weight fn -> PDF
