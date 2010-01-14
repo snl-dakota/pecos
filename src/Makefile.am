@@ -4,11 +4,10 @@ if WITH_DEBUG_ENABLED
 AM_CXXFLAGS = @DEBUGFLAGS@
 endif
 
-#AM_CPPFLAGS = @TEUCHOS_CPPFLAGS@ @BOOST_CPPFLAGS@ -I$(top_srcdir)/packages
 AM_CPPFLAGS = @TEUCHOS_CPPFLAGS@ @BOOST_CPPFLAGS@
 
 if WITH_FFTW
-AM_CPPFLAGS += @FFTW_CPPFLAGS@ -I$(top_srcdir)/packages/fftw/api
+AM_CPPFLAGS += @FFTW_CPPFLAGS@ -I${top_srcdir}/packages/fftw/api
 endif
 
 if WITH_LHS
@@ -16,7 +15,7 @@ LHS_S = lhs_wrappers.f90
 endif
 
 if WITH_SPARSE_GRID
-AM_CPPFLAGS += @SPARSE_GRID_CPPFLAGS@
+AM_CPPFLAGS += -I${top_srcdir}/packages/VPISparseGrid/src ##-I${top_builddir}/packages/VPISparseGrid
 endif
 
 ## HACK NOTICE: Libtool 1.5.X doesn't provide tagging support for F90 sources.
