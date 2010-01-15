@@ -52,6 +52,7 @@ pkginclude_HEADERS = pecos_config.h				\
 		     src/LaguerreOrthogPolynomial.hpp		\
 		     src/LegendreOrthogPolynomial.hpp		\
 		     src/NumericGenOrthogPolynomial.hpp		\
+		     src/SparseGrid.hpp				\
 		     src/LHSDriver.hpp				\
 		     src/BoostRNG_Monostate.hpp
 #		     src/BasisFunction.hpp

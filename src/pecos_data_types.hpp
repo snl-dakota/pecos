@@ -163,6 +163,18 @@ void copy_data(const std::vector<ScalarType>& v,
 }
 
 
+/// copy ScalarType* to Teuchos::SerialDenseVector<OrdinalType, ScalarType>
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv)
+{
+  if (sdv.length() != ptr_len)
+    sdv.sizeUninitialized(ptr_len);
+  for (OrdinalType i=0; i<ptr_len; ++i)
+    sdv[i] = ptr[i];
+}
+
+
 /// global std::ostream insertion operator for std::vector
 template <class T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
