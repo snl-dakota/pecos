@@ -374,7 +374,7 @@ const RealArray& LegendreOrthogPolynomial::gauss_weights(unsigned short order)
       const RealArray& gauss_pts = gauss_points(order);
       for (size_t i=0; i<order; i++) {
 	const Real& x_i = gauss_pts[i];
-	gaussWeights[i] = (1.-x_i*x_i)/pow(order*get_value(x_i, order-1), 2);
+	gaussWeights[i] = (1.-x_i*x_i)/std::pow(order*get_value(x_i,order-1),2);
       }
 #endif
       break;

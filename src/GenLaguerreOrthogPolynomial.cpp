@@ -215,10 +215,10 @@ gauss_weights(unsigned short order)
 	// For integer alphaPoly:
 	//gaussWeights[i] = factorial_ratio(order+alphaPoly-1, order) * x_i /
 	//  (order+alphaPoly) / factorial(alphaPoly) /
-	//  pow(get_value(x_i,order-1),2);
+	//  std::pow(get_value(x_i,order-1),2);
 	// For real alphaPoly:
 	gaussWeights[i] = pochhammer(alphaPoly+1., order) * x_i /
-	  factorial(order) / pow((order+alphaPoly)*get_value(x_i, order-1), 2);
+	  factorial(order)/std::pow((order+alphaPoly)*get_value(x_i,order-1),2);
       }
 #endif
       break;

@@ -12,6 +12,7 @@
 //- Owner:        Mike Eldred, Sandia National Laboratories
 
 #include "HermiteOrthogPolynomial.hpp"
+#include "pecos_global_defs.hpp"
 #ifdef HAVE_SPARSE_GRID
 #include "sandia_rules.H"
 #endif
@@ -19,7 +20,7 @@
 
 namespace Pecos {
 
-const Real HermiteOrthogPolynomial::Pi(3.1415926535897932385);
+const Real HermiteOrthogPolynomial::Pi(Pi);
 
 
 const Real& HermiteOrthogPolynomial::
