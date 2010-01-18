@@ -15,6 +15,7 @@
 #define HERMITE_ORTHOG_POLYNOMIAL_HPP
 
 #include "OrthogonalPolynomial.hpp"
+#include "pecos_global_defs.hpp"
 
 
 namespace Pecos {
@@ -67,8 +68,6 @@ private:
   //- Heading: Data
   //
 
-  /// numerical value of Pi
-  static const Real Pi;
 };
 
 
