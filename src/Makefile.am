@@ -15,7 +15,7 @@ LHS_S = lhs_wrappers.f90
 endif
 
 if WITH_SPARSE_GRID
-AM_CPPFLAGS += -I${top_srcdir}/packages/VPISparseGrid/src ##-I${top_builddir}/packages/VPISparseGrid
+AM_CPPFLAGS += -I${top_srcdir}/packages/VPISparseGrid/src
 endif
 
 ## HACK NOTICE: Libtool 1.5.X doesn't provide tagging support for F90 sources.
