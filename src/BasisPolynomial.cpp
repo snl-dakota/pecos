@@ -17,6 +17,7 @@
 #include "JacobiOrthogPolynomial.hpp"
 #include "LaguerreOrthogPolynomial.hpp"
 #include "GenLaguerreOrthogPolynomial.hpp"
+#include "ChebyshevOrthogPolynomial.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 #include "LagrangeInterpPolynomial.hpp"
 
@@ -86,7 +87,7 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type)
   switch (poly_type) {
   //case NO_POLY:
   //  polynomial = NULL;                            break;
-  case HERMITE:       // var_type == "normal"
+  case HERMITE:  // var_type == "normal"
     polynomial = new HermiteOrthogPolynomial();     break;
   case LEGENDRE: // var_type == "uniform"
     polynomial = new LegendreOrthogPolynomial();    break;
@@ -96,6 +97,8 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type)
     polynomial = new JacobiOrthogPolynomial();      break;
   case GENERALIZED_LAGUERRE: // var_type == "gamma"
     polynomial = new GenLaguerreOrthogPolynomial(); break;
+  case CHEBYSHEV: // for Clenshaw-Curtis and Fejer
+    polynomial = new ChebyshevOrthogPolynomial();   break;
   case NUMERICALLY_GENERATED:
     polynomial = new NumericGenOrthogPolynomial();  break;
   case LAGRANGE:

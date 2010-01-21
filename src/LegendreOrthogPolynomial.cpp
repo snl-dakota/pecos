@@ -139,13 +139,14 @@ get_gradient(const Real& x, unsigned short order)
   }
   case 6: {
     Real x2 = x*x;
-    basisPolyGradient = (693.*x2*x2*x - 630.*x2*x + 105.*x)/8.;
+    basisPolyGradient = x*(693.*x2*x2 - 630.*x2 + 105.)/8.;
     break;
   }
   default:
     // Support higher order polynomials using a 3 point recursion formula:
-    Real x2 = x*x, dPdx_n = (693.*x2*x2*x - 630.*x2*x + 105.*x)/8., // P'_6
-      dPdx_nminus1 = (315.*x2*x2 - 210.*x2 + 15.)/8.;               // P'_5
+    Real x2 = x*x, x4 = x2*x2,
+      dPdx_n       = x*(693.*x4 - 630.*x2 + 105.)/8., // P'_6
+      dPdx_nminus1 = (315.*x4 - 210.*x2 + 15.)/8.;    // P'_5
     for (size_t i=6; i<order; i++) {
       basisPolyGradient // dPdx_nplus1
 	= ( (2.*i+1.)*(x*dPdx_n + get_value(x,i)) - i*dPdx_nminus1 ) / (i+1.);

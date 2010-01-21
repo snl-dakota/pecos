@@ -48,7 +48,13 @@ enum { NO_TARGET, CDV_LWR_BND, CDV_UPR_BND, DDRIV_LWR_BND, DDRIV_UPR_BND,
 /// derived basis polynomial types (orthogonal polynomial order follows
 /// uncertain variable spec order of normal, uniform, exponential, beta, gamma)
 enum { /* NO_POLY, */ HERMITE, LEGENDRE, LAGUERRE, JACOBI, GENERALIZED_LAGUERRE,
-       NUMERICALLY_GENERATED, LAGRANGE };
+       CHEBYSHEV, NUMERICALLY_GENERATED, LAGRANGE };
+
+/// integration rules within VPISparseGrid
+enum { CLENSHAW_CURTIS=1, FEJER2, GAUSS_PATTERSON, GAUSS_LEGENDRE,
+       GAUSS_HERMITE, GEN_GAUSS_HERMITE, GAUSS_LAGUERRE, GEN_GAUSS_LAGUERRE,
+       GAUSS_JACOBI, GOLUB_WELSCH, CLENSHAW_CURTIS_SLOW, FEJER2_SLOW,
+       GAUSS_PATTERSON_SLOW };
 
 
 // ----------------

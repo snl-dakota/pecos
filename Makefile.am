@@ -46,13 +46,14 @@ pkginclude_HEADERS = pecos_config.h				\
 		     src/BasisPolynomial.hpp			\
 		     src/LagrangeInterpPolynomial.hpp		\
 		     src/OrthogonalPolynomial.hpp		\
+		     src/ChebyshevOrthogPolynomial.hpp		\
 		     src/GenLaguerreOrthogPolynomial.hpp	\
 		     src/HermiteOrthogPolynomial.hpp		\
 		     src/JacobiOrthogPolynomial.hpp		\
 		     src/LaguerreOrthogPolynomial.hpp		\
 		     src/LegendreOrthogPolynomial.hpp		\
 		     src/NumericGenOrthogPolynomial.hpp		\
-		     src/SparseGrid.hpp				\
+		     src/SparseGridDriver.hpp			\
 		     src/LHSDriver.hpp				\
 		     src/BoostRNG_Monostate.hpp
 #		     src/BasisFunction.hpp

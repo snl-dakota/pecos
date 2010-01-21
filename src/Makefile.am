@@ -37,13 +37,14 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  BasisPolynomial.cpp				\
 			  LagrangeInterpPolynomial.cpp			\
 			  OrthogonalPolynomial.cpp			\
+			  ChebyshevOrthogPolynomial.cpp			\
 			  GenLaguerreOrthogPolynomial.cpp		\
 			  HermiteOrthogPolynomial.cpp			\
 			  JacobiOrthogPolynomial.cpp			\
 			  LaguerreOrthogPolynomial.cpp			\
 			  LegendreOrthogPolynomial.cpp			\
 			  NumericGenOrthogPolynomial.cpp		\
-			  SparseGrid.cpp				\
+			  SparseGridDriver.cpp				\
 			  pecos_stat_util.cpp				\
                           LHSDriver.cpp                                 \
 			  $(LHS_S)
