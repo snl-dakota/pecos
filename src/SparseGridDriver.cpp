@@ -295,7 +295,7 @@ void SparseGridDriver::compute_grid()
   // Get collocation points and integration weights
   // ----------------------------------------------
   weightSets.sizeUninitialized(num_colloc_pts);
-  variableSets.shapeUninitialized(num_colloc_pts, numVars);
+  variableSets.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
   uniqueIndexMapping.resize(num_total_pts);
 
   int* sparse_order  = new int [num_colloc_pts*numVars];
@@ -399,7 +399,7 @@ void SparseGridDriver::compute_grid()
   for (i=0; i<num_colloc_pts; ++i) {
     weightSets[i] *= wt_factor;
     for (j=0; j<numVars; ++j)
-      variableSets(i,j) *= pt_factor[j];
+      variableSets[i][j] *= pt_factor[j]; // ith column, jth row
   }
 
   /*
