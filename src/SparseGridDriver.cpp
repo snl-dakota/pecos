@@ -381,11 +381,11 @@ void SparseGridDriver::compute_grid()
     case GAUSS_LEGENDRE: case GAUSS_PATTERSON: case GAUSS_PATTERSON_SLOW:
       wt_factor *= legendre_poly.weight_factor();     break;
     case GAUSS_JACOBI:
-      jacobi_poly.alpha_stat(polyParams[pp_cntr]);
-      jacobi_poly.beta_stat(polyParams[pp_cntr+1]);
+      jacobi_poly.beta_stat(polyParams[pp_cntr]+1.);       // convert poly->stat
+      jacobi_poly.alpha_stat(polyParams[pp_cntr+1]+1.);    // convert poly->stat
       wt_factor *= jacobi_poly.weight_factor();       break;
     case GEN_GAUSS_LAGUERRE:
-      gen_laguerre_poly.alpha_stat(polyParams[pp_cntr]);
+      gen_laguerre_poly.alpha_stat(polyParams[pp_cntr]+1.);// convert poly->stat
       wt_factor *= gen_laguerre_poly.weight_factor(); break;
     case CLENSHAW_CURTIS: case CLENSHAW_CURTIS_SLOW:
     case FEJER2:          case FEJER2_SLOW:
