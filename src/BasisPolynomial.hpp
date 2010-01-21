@@ -168,7 +168,7 @@ private:
 
   /// Used by the envelope constructor to initialize polyRep to the
   /// appropriate derived type.
-  BasisPolynomial* get_polynomial(short poly_type);
+  BasisPolynomial* get_polynomial(short poly_type, short gauss_mode = 0);
 
   //
   //- Heading: Data

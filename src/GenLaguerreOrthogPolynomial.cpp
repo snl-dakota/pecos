@@ -171,7 +171,8 @@ gauss_points(unsigned short order)
 	gaussWeights[i] *= wt_factor; // polynomial weight fn -> PDF
 #else
       PCerr << "Error: overflow in maximum quadrature order limit (2) in "
-	    << "GenLaguerreOrthogPolynomial::gauss_points()." << std::endl;
+	    << "GenLaguerreOrthogPolynomial::gauss_points().  Configure with "
+	    << "VPISparseGrid to extend range." << std::endl;
       abort_handler(-1);
 #endif
       break;

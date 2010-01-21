@@ -38,8 +38,9 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  ChebyshevOrthogPolynomial();  ///< default constructor
-  ~ChebyshevOrthogPolynomial(); ///< destructor
+  ChebyshevOrthogPolynomial(short gauss_mode); ///< extended constructor
+  ChebyshevOrthogPolynomial();                 ///< default constructor
+  ~ChebyshevOrthogPolynomial();                ///< destructor
 
 protected:
 
@@ -68,10 +69,18 @@ private:
   //- Heading: Data
   //
 
+  /// CLENSHAW_CURTIS/CLENSHAW_CURTIS_SLOW or FEJER2/FEJER2_SLOW
+  short gaussMode;
 };
 
 
-inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial()
+inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial(short gauss_mode):
+  gaussMode(gauss_mode)
+{ wtFactor = 0.5; }
+
+
+inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial():
+  gaussMode(CLENSHAW_CURTIS) // default
 { wtFactor = 0.5; }
 
 

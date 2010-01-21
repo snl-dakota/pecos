@@ -172,10 +172,15 @@ const RealArray& ChebyshevOrthogPolynomial::gauss_points(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
     if (gaussWeights.size() != order)
       gaussWeights.resize(order);
-    if (true) //(mode == CC) // TO DO
+    if (gaussMode == CLENSHAW_CURTIS || gaussMode == CLENSHAW_CURTIS_SLOW)
       webbur::clenshaw_curtis_compute(order, &gaussPoints[0], &gaussWeights[0]);
-    else
+    else if (gaussMode == FEJER2 || gaussMode == FEJER2_SLOW)
       webbur::fejer2_compute(order, &gaussPoints[0], &gaussWeights[0]);
+    else {
+      PCerr << "Error: unsupported Gauss point type in "
+	    << "ChebyshevOrthogPolynomial::gauss_points()." << std::endl;
+      abort_handler(-1);
+    }
     for (size_t i=0; i<order; i++)
       gaussWeights[i] *= wtFactor;
 #else
@@ -207,10 +212,15 @@ const RealArray& ChebyshevOrthogPolynomial::gauss_weights(unsigned short order)
 #ifdef HAVE_SPARSE_GRID
     if (gaussPoints.size() != order)
       gaussPoints.resize(order);
-    if (true) //(mode == ) // TO DO
+    if (gaussMode == CLENSHAW_CURTIS || gaussMode == CLENSHAW_CURTIS_SLOW)
       webbur::clenshaw_curtis_compute(order, &gaussPoints[0], &gaussWeights[0]);
-    else
+    else if (gaussMode == FEJER2 || gaussMode == FEJER2_SLOW)
       webbur::fejer2_compute(order, &gaussPoints[0], &gaussWeights[0]);
+    else {
+      PCerr << "Error: unsupported Gauss weight type in "
+	    << "ChebyshevOrthogPolynomial::gauss_weights()." << std::endl;
+      abort_handler(-1);
+    }
     for (size_t i=0; i<order; i++)
       gaussWeights[i] *= wtFactor;
 #else

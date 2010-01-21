@@ -282,7 +282,8 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
 #else
       PCerr << "Error: overflow in maximum quadrature order limit (10) in "
-	    << "LaguerreOrthogPolynomial::gauss_points()." << std::endl;
+	    << "LaguerreOrthogPolynomial::gauss_points().  Configure with "
+	    << "VPISparseGrid to extend range." << std::endl;
       abort_handler(-1);
 #endif
       break;

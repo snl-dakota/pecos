@@ -217,7 +217,8 @@ const RealArray& HermiteOrthogPolynomial::gauss_points(unsigned short order)
       }
 #else
       PCerr << "Error: overflow in maximum quadrature order limit (10) in "
-	    << "HermiteOrthogPolynomial::gauss_points()." << std::endl;
+	    << "HermiteOrthogPolynomial::gauss_points().  Configure with "
+	    << "VPISparseGrid to extend range." << std::endl;
       abort_handler(-1);
 #endif
       break;

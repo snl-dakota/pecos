@@ -40,8 +40,9 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  LegendreOrthogPolynomial();  ///< default constructor
-  ~LegendreOrthogPolynomial(); ///< destructor
+  LegendreOrthogPolynomial(short gauss_mode); ///< extended constructor
+  LegendreOrthogPolynomial();                 ///< default constructor
+  ~LegendreOrthogPolynomial();                ///< destructor
 
 protected:
 
@@ -70,10 +71,18 @@ private:
   //- Heading: Data
   //
 
+  /// GAUSS_LEGENDRE or GAUSS_PATTERSON/GAUSS_PATTERSON_SLOW
+  short gaussMode;
 };
 
 
-inline LegendreOrthogPolynomial::LegendreOrthogPolynomial()
+inline LegendreOrthogPolynomial::LegendreOrthogPolynomial(short gauss_mode):
+  gaussMode(gauss_mode)
+{ wtFactor = 0.5; }
+
+
+inline LegendreOrthogPolynomial::LegendreOrthogPolynomial():
+  gaussMode(GAUSS_LEGENDRE) // default
 { wtFactor = 0.5; }
 
 

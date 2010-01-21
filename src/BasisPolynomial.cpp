@@ -77,32 +77,36 @@ BasisPolynomial::BasisPolynomial(short poly_type):
 
 /** Used only by the envelope constructor to initialize polyRep to the 
     appropriate derived type. */
-BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type)
+BasisPolynomial* BasisPolynomial::
+get_polynomial(short poly_type, short gauss_mode)
 {
 #ifdef REFCOUNT_DEBUG
-  PCout << "Envelope instantiating letter in get_polynomial(short)." << std::endl;
+  PCout << "Envelope instantiating letter in get_polynomial(short, short)."
+	<< std::endl;
 #endif
 
   BasisPolynomial* polynomial;
   switch (poly_type) {
   //case NO_POLY:
-  //  polynomial = NULL;                            break;
+  //  polynomial = NULL;                                                  break;
   case HERMITE:  // var_type == "normal"
-    polynomial = new HermiteOrthogPolynomial();     break;
+    polynomial = new HermiteOrthogPolynomial();                           break;
   case LEGENDRE: // var_type == "uniform"
-    polynomial = new LegendreOrthogPolynomial();    break;
+    polynomial = (gauss_mode) ? new LegendreOrthogPolynomial(gauss_mode) :
+                                new LegendreOrthogPolynomial();           break;
   case LAGUERRE: // var_type == "exponential"
-    polynomial = new LaguerreOrthogPolynomial();    break;
+    polynomial = new LaguerreOrthogPolynomial();                          break;
   case JACOBI:   // var_type == "beta"
-    polynomial = new JacobiOrthogPolynomial();      break;
+    polynomial = new JacobiOrthogPolynomial();                            break;
   case GENERALIZED_LAGUERRE: // var_type == "gamma"
-    polynomial = new GenLaguerreOrthogPolynomial(); break;
+    polynomial = new GenLaguerreOrthogPolynomial();                       break;
   case CHEBYSHEV: // for Clenshaw-Curtis and Fejer
-    polynomial = new ChebyshevOrthogPolynomial();   break;
+    polynomial = (gauss_mode) ? new ChebyshevOrthogPolynomial(gauss_mode) :
+                                new ChebyshevOrthogPolynomial();          break;
   case NUMERICALLY_GENERATED:
-    polynomial = new NumericGenOrthogPolynomial();  break;
+    polynomial = new NumericGenOrthogPolynomial();                        break;
   case LAGRANGE:
-    polynomial = new LagrangeInterpPolynomial();    break;
+    polynomial = new LagrangeInterpPolynomial();                          break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
 	 << std::endl;
