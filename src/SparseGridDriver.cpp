@@ -114,7 +114,7 @@ initialize_grid_parameters(const ShortArray& u_types,
   // For nested grids, enforce interpolation usage since nonlinear growth is a
   // poor performer for integrand monomial coverage --> stick with linear growth
   // Gaussian rules for integration.
-  bool nested_rules = (sparse_grid_usage == "interpolation"); // != integration
+  bool nested_rules = true;//(sparse_grid_usage == "interpolation");
   // For now, this logic is more restrictive than it may ultimately need to be.
   // If Gauss-Patterson can be extended to Hermite/Lag/Gen Lag/Jacobi, then
   // enforce consistency in growth rules: nested -> nonlinear growth rules,
@@ -452,6 +452,44 @@ void SparseGridDriver::compute_grid()
   delete [] indices;
   delete [] bases;
   */
+}
+
+
+void SparseGridDriver::
+anisotropic_multi_index(unsigned short upper_bound, Int2DArray& multi_index,
+			RealArray& coeffs) const
+{
+  multi_index.clear();
+  coeffs.clear();
+  // Utilize webbur::sgmga_vcn_{ordered,coef} for 0-based index sets
+  // (w*alpha_min-|alpha| < |alpha . j| <= w*alpha_min).
+  // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
+  // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
+  // w-N+1 <= |j| <= w.
+  IntArray x(numVars), x_max(numVars); //x_max = upper_bound;
+  Real wt_sum = 0., q_max = upper_bound;
+  for (size_t i=0; i<numVars; ++i) {
+    wt_sum += ssgAnisoLevelWts[i];
+    x_max[i] = (int)std::ceil(q_max/ssgAnisoLevelWts[i]);
+  }
+  Real q_min = upper_bound - wt_sum;
+#ifdef DEBUG
+  Cout << "q_min = " << q_min << " q_max = " << q_max;
+#endif // DEBUG
+
+  bool more = false;
+  webbur::sgmga_vcn_ordered(numVars, ssgAnisoLevelWts.values(), &x_max[0],
+			    &x[0], q_min, q_max, &more);
+  while (more) {
+    Real coeff = webbur::sgmga_vcn_coef(numVars, ssgAnisoLevelWts.values(),
+					&x_max[0], &x[0], q_min, q_max);
+    if (std::abs(coeff) > 1.e-10) {
+      multi_index.push_back(x);
+      coeffs.push_back(coeff);
+    }
+    webbur::sgmga_vcn_ordered(numVars, ssgAnisoLevelWts.values(),
+			      &x_max[0], &x[0], q_min, q_max, &more);
+  }
 }
 
 

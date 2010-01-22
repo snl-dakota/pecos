@@ -74,6 +74,12 @@ public:
   /// compute scaled variable and weight sets for the sparse grid
   void compute_grid();
 
+  /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying the
+  /// anisotropic index set constraint, along with their corresponding
+  /// coefficients
+  void anisotropic_multi_index(unsigned short upper_bound,
+    Int2DArray& multi_index, RealArray& coeffs) const;
+
   /// number of collocation points with duplicates removed
   int grid_size(unsigned short ssg_level);
   /// total number of collocation points including duplicates
@@ -86,10 +92,10 @@ public:
 
   /// return isotropicSSG
   bool isotropic_sparse_grid() const;
-  /// return ssgAnisoLevelWts
-  const RealVector& sparse_grid_anisotropic_weights() const;
-  /// return duplicateTol
-  const Real& duplicate_tolerance() const;
+  // return ssgAnisoLevelWts
+  //const RealVector& sparse_grid_anisotropic_weights() const;
+  // return duplicateTol
+  //const Real& duplicate_tolerance() const;
   /// return integrationRules
   const IntArray& integration_rules() const;
   /// return uniqueIndexMapping
@@ -243,13 +249,13 @@ inline bool SparseGridDriver::isotropic_sparse_grid() const
 { return isotropicSSG; }
 
 
-inline const RealVector& SparseGridDriver::
-sparse_grid_anisotropic_weights() const
-{ return ssgAnisoLevelWts; }
+//inline const RealVector& SparseGridDriver::
+//sparse_grid_anisotropic_weights() const
+//{ return ssgAnisoLevelWts; }
 
 
-inline const Real& SparseGridDriver::duplicate_tolerance() const
-{ return duplicateTol; }
+//inline const Real& SparseGridDriver::duplicate_tolerance() const
+//{ return duplicateTol; }
 
 
 inline const IntArray& SparseGridDriver::integration_rules() const

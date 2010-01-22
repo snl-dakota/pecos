@@ -76,6 +76,7 @@ typedef std::vector<std::complex<Real> >    ComplexArray;
 typedef std::vector<std::pair<Real, Real> > RealPairArray;
 typedef std::vector<String>         StringArray;
 typedef std::vector<RealArray>      Real2DArray;
+typedef std::vector<IntArray>       Int2DArray;
 typedef std::vector<RealVector>     RealVectorArray;
 typedef std::vector<RealMatrix>     RealMatrixArray;
 typedef std::vector<RealSymMatrix>  RealSymMatrixArray;
