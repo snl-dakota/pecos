@@ -65,6 +65,9 @@ protected:
   /// polynomial order n
   const RealArray& gauss_weights(unsigned short order);
 
+  /// set gaussMode
+  void gauss_mode(short mode);
+
 private:
 
   //
@@ -88,6 +91,10 @@ inline LegendreOrthogPolynomial::LegendreOrthogPolynomial():
 
 inline LegendreOrthogPolynomial::~LegendreOrthogPolynomial()
 { }
+
+
+inline void LegendreOrthogPolynomial::gauss_mode(short mode)
+{ gaussMode = mode; }
 
 } // namespace Pecos
 

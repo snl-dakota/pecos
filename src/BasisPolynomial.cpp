@@ -60,7 +60,7 @@ BasisPolynomial::BasisPolynomial(): polyRep(NULL), referenceCount(1)
     This constructor executes get_polynomial(type), which invokes the
     default constructor of the derived letter class, which in turn
     invokes the BaseConstructor of the base class. */
-BasisPolynomial::BasisPolynomial(short poly_type):
+BasisPolynomial::BasisPolynomial(short poly_type, short gauss_mode):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -69,7 +69,7 @@ BasisPolynomial::BasisPolynomial(short poly_type):
 #endif
 
   // Set the rep pointer to the appropriate derived type
-  polyRep = get_polynomial(poly_type);
+  polyRep = get_polynomial(poly_type, gauss_mode);
   if ( /* poly_type != NO_POLY && */ !polyRep ) // bad type, insufficient memory
     abort_handler(-1);
 }
@@ -312,6 +312,18 @@ void BasisPolynomial::beta_stat(const Real& beta)
     polyRep->beta_stat(beta);
   else {
     PCerr << "Error: beta_stat() not available for this basis polynomial "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisPolynomial::gauss_mode(short mode)
+{
+  if (polyRep)
+    polyRep->gauss_mode(mode);
+  else {
+    PCerr << "Error: gauss_mode() not available for this basis polynomial "
 	  << "type." << std::endl;
     abort_handler(-1);
   }

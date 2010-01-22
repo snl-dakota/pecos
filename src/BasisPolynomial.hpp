@@ -45,7 +45,7 @@ public:
   /// default constructor
   BasisPolynomial();
    /// alternate constructor
-  BasisPolynomial(short poly_type);
+  BasisPolynomial(short poly_type, short gauss_mode = 0);
   /// copy constructor
   BasisPolynomial(const BasisPolynomial& polynomial);
 
@@ -103,6 +103,10 @@ public:
   /// set JacobiOrthogPolynomial::alphaPoly from statistical defn of beta
   /** This is defined only for parameterized orthogonal polynomials. */
   virtual void beta_stat(const Real& beta);
+
+  /// set LegendreOrthogPolynomial::gaussMode or
+  /// ChebyshevOrthogPolynomial::gaussMode
+  virtual void gauss_mode(short mode);
 
   /// set LagrangeInterpPolynomial::interpolationPts
   /** This is defined only for interpolation polynomials. */
@@ -168,7 +172,7 @@ private:
 
   /// Used by the envelope constructor to initialize polyRep to the
   /// appropriate derived type.
-  BasisPolynomial* get_polynomial(short poly_type, short gauss_mode = 0);
+  BasisPolynomial* get_polynomial(short poly_type, short gauss_mode);
 
   //
   //- Heading: Data

@@ -172,12 +172,20 @@ initialize_grid_parameters(const ShortArray& u_types,
       // rule become skewed when mixing Gauss rules with CC.  For this reason,
       // CC is selected only if isotropic in rule (for now).
       if (nested_rules) {
-	compute1DPoints[i]  = webbur::clenshaw_curtis_compute_points_np;
-	compute1DWeights[i] = webbur::clenshaw_curtis_compute_weights_np;
-	integrationRules[i] = CLENSHAW_CURTIS; // closed fully nested
+	// GAUSS_PATTERSON valid only up to ssgLevel==7 (max m=2^{l+1}-1 = 255)
+	// GAUSS_PATTERSON_SLOW valid up to ssgLevel==127 (max m=2*l+1   = 255)
+	compute1DPoints[i]  = webbur::patterson_lookup_points_np;
+	compute1DWeights[i] = webbur::patterson_lookup_weights_np;
+	integrationRules[i] = GAUSS_PATTERSON_SLOW; // closed fully nested
+
+	//compute1DPoints[i]  = webbur::clenshaw_curtis_compute_points_np;
+	//compute1DWeights[i] = webbur::clenshaw_curtis_compute_weights_np;
+	//integrationRules[i] = CLENSHAW_CURTIS_SLOW; // closed fully nested
+
+	//compute1DPoints[i]  = webbur::fejer2_compute_points_np;
+	//compute1DWeights[i] = webbur::fejer2_compute_weights_np;
+	//integrationRules[i] = FEJER2_SLOW; // closed fully nested
       }
-      // TO DO: slow growth Clenshaw-Curtis, Fejer, slow growth Fejer,
-      //        Gauss-Patterson, slow growth Gauss-Patterson
       else {
 	compute1DPoints[i]  = webbur::legendre_compute_points_np;
 	compute1DWeights[i] = webbur::legendre_compute_weights_np;
@@ -366,10 +374,10 @@ void SparseGridDriver::compute_grid()
   BasisPolynomial hermite_poly, legendre_poly, jacobi_poly, gen_laguerre_poly,
     chebyshev_poly;;
   if (construct_h)  hermite_poly      = BasisPolynomial(HERMITE);
-  if (construct_l)  legendre_poly     = BasisPolynomial(LEGENDRE);
+  if (construct_l)  legendre_poly     = BasisPolynomial(LEGENDRE); //, mode);
   if (construct_j)  jacobi_poly       = BasisPolynomial(JACOBI);
   if (construct_gl) gen_laguerre_poly = BasisPolynomial(GENERALIZED_LAGUERRE);
-  if (construct_c)  chebyshev_poly    = BasisPolynomial(CHEBYSHEV);
+  if (construct_c)  chebyshev_poly    = BasisPolynomial(CHEBYSHEV);//, mode);
   Real wt_factor = 1.;
   RealVector pt_factor(numVars, false); pt_factor = 1.;
   size_t pp_cntr = 0;
@@ -379,6 +387,7 @@ void SparseGridDriver::compute_grid()
       pt_factor[i] = hermite_poly.point_factor();
       wt_factor   *= hermite_poly.weight_factor();    break;
     case GAUSS_LEGENDRE: case GAUSS_PATTERSON: case GAUSS_PATTERSON_SLOW:
+      legendre_poly.gauss_mode(integrationRules[i]);
       wt_factor *= legendre_poly.weight_factor();     break;
     case GAUSS_JACOBI:
       jacobi_poly.beta_stat(polyParams[pp_cntr]+1.);       // convert poly->stat
@@ -389,6 +398,7 @@ void SparseGridDriver::compute_grid()
       wt_factor *= gen_laguerre_poly.weight_factor(); break;
     case CLENSHAW_CURTIS: case CLENSHAW_CURTIS_SLOW:
     case FEJER2:          case FEJER2_SLOW:
+      chebyshev_poly.gauss_mode(integrationRules[i]);
       wt_factor *= chebyshev_poly.weight_factor();    break;
     //case GAUSS_LAGUERRE: case GOLUB_WELSCH: // scaling is OK
     }

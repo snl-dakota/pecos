@@ -63,6 +63,9 @@ protected:
   /// polynomial order n
   const RealArray& gauss_weights(unsigned short order);
 
+  /// set gaussMode
+  void gauss_mode(short mode);
+
 private:
 
   //
@@ -86,6 +89,10 @@ inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial():
 
 inline ChebyshevOrthogPolynomial::~ChebyshevOrthogPolynomial()
 { }
+
+
+inline void ChebyshevOrthogPolynomial::gauss_mode(short mode)
+{ gaussMode = mode; }
 
 } // namespace Pecos
 
