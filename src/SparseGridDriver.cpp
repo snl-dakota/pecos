@@ -26,17 +26,12 @@ static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:
 namespace Pecos {
 
 
-void SparseGridDriver::
-initialize_grid_level(size_t num_vars, size_t ssg_level,
-		      const RealVector& dimension_pref)
+void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 {
-  numVars  = num_vars;
-  ssgLevel = ssg_level;
-
-  if (dimension_pref.empty())
+  if (dim_pref.empty())
     isotropicSSG = true;
   else {
-    if (dimension_pref.length() != numVars) {
+    if (dim_pref.length() != numVars) {
       PCerr << "Error: length of sparse grid dimension preference "
 	    << "specification is inconsistent with\n       number of variables "
 	    << "in SparseGridDriver::initialize_grid_level()." << std::endl;
@@ -44,17 +39,17 @@ initialize_grid_level(size_t num_vars, size_t ssg_level,
     }
 
     isotropicSSG = true;
-    Real pref0 = dimension_pref[0];
+    Real pref0 = dim_pref[0];
     for (size_t i=1; i<numVars; ++i)
-      if (std::abs(dimension_pref[i] - pref0) > DBL_EPSILON)
+      if (std::abs(dim_pref[i] - pref0) > DBL_EPSILON)
 	{ isotropicSSG = false; break; }
 
     if (!isotropicSSG) {
       ssgAnisoLevelWts.sizeUninitialized(numVars);
       webbur::sgmga_importance_to_aniso(numVars,
-	dimension_pref.values(), ssgAnisoLevelWts.values());
+	dim_pref.values(), ssgAnisoLevelWts.values());
 #ifdef DEBUG
-      PCout << "dimension_pref:\n"; write_data(Cout, dimension_pref);
+      PCout << "dimension_preference:\n"; write_data(Cout, dim_pref);
       PCout << "ssgAnisoLevelWts after sgmga_importance_to_aniso:\n";
       write_data(Cout, ssgAnisoLevelWts);
 #endif
@@ -72,20 +67,19 @@ initialize_grid_level(size_t num_vars, size_t ssg_level,
 
 void SparseGridDriver::
 initialize_grid_parameters(const ShortArray& u_types,
-  const String& sparse_grid_usage, const RealVector& nuv_means,
-  const RealVector& nuv_std_devs,  const RealVector& nuv_l_bnds,
-  const RealVector& nuv_u_bnds,	   const RealVector& lnuv_means,
-  const RealVector& lnuv_std_devs, const RealVector& lnuv_lambdas,
-  const RealVector& lnuv_zetas,	   const RealVector& lnuv_err_facts,
-  const RealVector& lnuv_l_bnds,   const RealVector& lnuv_u_bnds,
-  const RealVector& luuv_l_bnds,   const RealVector& luuv_u_bnds,
-  const RealVector& tuv_modes,	   const RealVector& tuv_l_bnds,
-  const RealVector& tuv_u_bnds,	   const RealVector& buv_alphas,
-  const RealVector& buv_betas,	   const RealVector& gauv_alphas,
-  const RealVector& guuv_alphas,   const RealVector& guuv_betas,
-  const RealVector& fuv_alphas,	   const RealVector& fuv_betas,
-  const RealVector& wuv_alphas,	   const RealVector& wuv_betas,
-  const RealVectorArray& hbuv_bin_prs)
+  const RealVector& nuv_means,      const RealVector& nuv_std_devs,
+  const RealVector& nuv_l_bnds,     const RealVector& nuv_u_bnds,
+  const RealVector& lnuv_means,     const RealVector& lnuv_std_devs,
+  const RealVector& lnuv_lambdas,   const RealVector& lnuv_zetas,
+  const RealVector& lnuv_err_facts, const RealVector& lnuv_l_bnds,
+  const RealVector& lnuv_u_bnds,    const RealVector& luuv_l_bnds,
+  const RealVector& luuv_u_bnds,    const RealVector& tuv_modes,
+  const RealVector& tuv_l_bnds,     const RealVector& tuv_u_bnds,
+  const RealVector& buv_alphas,     const RealVector& buv_betas,
+  const RealVector& gauv_alphas,    const RealVector& guuv_alphas,
+  const RealVector& guuv_betas,     const RealVector& fuv_alphas,
+  const RealVector& fuv_betas,      const RealVector& wuv_alphas,
+  const RealVector& wuv_betas,      const RealVectorArray& hbuv_bin_prs)
 {
   integrationRules.resize(numVars);
   compute1DPoints.resize(numVars);
@@ -111,19 +105,14 @@ initialize_grid_parameters(const ShortArray& u_types,
   }
   polyParams.resize(num_total_params);
 
-  // For nested grids, enforce interpolation usage since nonlinear growth is a
-  // poor performer for integrand monomial coverage --> stick with linear growth
-  // Gaussian rules for integration.
-  bool nested_rules = true;//(sparse_grid_usage == "interpolation");
-  // For now, this logic is more restrictive than it may ultimately need to be.
-  // If Gauss-Patterson can be extended to Hermite/Lag/Gen Lag/Jacobi, then
-  // enforce consistency in growth rules: nested -> nonlinear growth rules,
-  // non-nested -> linear growth rules.  For now, CC for isotropic uniform is
-  // the only nested option.
-  if (nested_rules)
-    for (i=0; i<numVars; ++i)
-      if (u_types[i] != STD_UNIFORM)
-	{ nested_rules = false; break; }
+  // For now, this logic is more restrictive than it needs to be (nested iff
+  // isotropic uniform).  Ultimately, just want consistency: use nested rules
+  // with slow exponential growth where available and non-nested rules with
+  // linear growth where nested is not available.
+  bool nested_rules = true;
+  for (i=0; i<numVars; ++i)
+    if (u_types[i] != STD_UNIFORM)
+      { nested_rules = false; break; }
 
   size_t nuv_cntr = 0, lnuv_cntr = 0, luuv_cntr = 0, tuv_cntr = 0, buv_cntr = 0,
     gauv_cntr = 0, guuv_cntr = 0, fuv_cntr = 0, wuv_cntr = 0, pp_cntr = 0;
@@ -267,24 +256,24 @@ initialize_grid_parameters(const ShortArray& u_types,
 }
 
 
-int SparseGridDriver::grid_size(unsigned short ssg_level)
+int SparseGridDriver::grid_size()
 {
   return (isotropicSSG) ?
-    webbur::sparse_grid_mixed_growth_size(numVars, ssg_level,
+    webbur::sparse_grid_mixed_growth_size(numVars, ssgLevel,
       &integrationRules[0], &numPolyParams[0], &polyParams[0],
       &compute1DPoints[0], duplicateTol, webbur::level_to_order_default) :
-    webbur::sgmga_size(numVars, ssgAnisoLevelWts.values(), ssg_level,
+    webbur::sgmga_size(numVars, ssgAnisoLevelWts.values(), ssgLevel,
       &integrationRules[0], &numPolyParams[0], &polyParams[0],
       &compute1DPoints[0], duplicateTol, webbur::level_to_order_default);
 }
 
 
-int SparseGridDriver::grid_size_total(unsigned short ssg_level)
+int SparseGridDriver::grid_size_total()
 {
   return (isotropicSSG) ?
-    webbur::sparse_grid_mixed_growth_size_total(numVars, ssg_level,
+    webbur::sparse_grid_mixed_growth_size_total(numVars, ssgLevel,
       &integrationRules[0], webbur::level_to_order_default) :
-    webbur::sgmga_size_total(numVars, ssgAnisoLevelWts.values(), ssg_level,
+    webbur::sgmga_size_total(numVars, ssgAnisoLevelWts.values(), ssgLevel,
       &integrationRules[0], webbur::level_to_order_default);
 }
 
@@ -294,8 +283,7 @@ void SparseGridDriver::compute_grid()
   // --------------------------------
   // Get number of collocation points
   // --------------------------------
-  int num_total_pts  = grid_size_total(ssgLevel),
-      num_colloc_pts = grid_size(ssgLevel);
+  int num_total_pts = grid_size_total(), num_colloc_pts = grid_size();
   PCout << "Total number of sparse grid integration points: "
 	<< num_colloc_pts << '\n';
 

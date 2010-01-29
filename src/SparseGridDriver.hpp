@@ -56,20 +56,19 @@ public:
 
   /// set polyParams, integrationRules, and FPType function pointers
   void initialize_grid_parameters(const ShortArray& u_types,
-    const String& sparse_grid_usage, const RealVector& nuv_means,
-    const RealVector& nuv_std_devs,  const RealVector& nuv_l_bnds,
-    const RealVector& nuv_u_bnds,    const RealVector& lnuv_means,
-    const RealVector& lnuv_std_devs, const RealVector& lnuv_lambdas,
-    const RealVector& lnuv_zetas,    const RealVector& lnuv_err_facts,
-    const RealVector& lnuv_l_bnds,   const RealVector& lnuv_u_bnds,
-    const RealVector& luuv_l_bnds,   const RealVector& luuv_u_bnds,
-    const RealVector& tuv_modes,     const RealVector& tuv_l_bnds,
-    const RealVector& tuv_u_bnds,    const RealVector& buv_alphas,
-    const RealVector& buv_betas,     const RealVector& gauv_alphas,
-    const RealVector& guuv_alphas,   const RealVector& guuv_betas,
-    const RealVector& fuv_alphas,    const RealVector& fuv_betas,
-    const RealVector& wuv_alphas,    const RealVector& wuv_betas,
-    const RealVectorArray& hbuv_bin_prs);
+    const RealVector& nuv_means,      const RealVector& nuv_std_devs,
+    const RealVector& nuv_l_bnds,     const RealVector& nuv_u_bnds,
+    const RealVector& lnuv_means,     const RealVector& lnuv_std_devs,
+    const RealVector& lnuv_lambdas,   const RealVector& lnuv_zetas,
+    const RealVector& lnuv_err_facts, const RealVector& lnuv_l_bnds,
+    const RealVector& lnuv_u_bnds,    const RealVector& luuv_l_bnds,
+    const RealVector& luuv_u_bnds,    const RealVector& tuv_modes,
+    const RealVector& tuv_l_bnds,     const RealVector& tuv_u_bnds,
+    const RealVector& buv_alphas,     const RealVector& buv_betas,
+    const RealVector& gauv_alphas,    const RealVector& guuv_alphas,
+    const RealVector& guuv_betas,     const RealVector& fuv_alphas,
+    const RealVector& fuv_betas,      const RealVector& wuv_alphas,
+    const RealVector& wuv_betas,      const RealVectorArray& hbuv_bin_prs);
 
   /// compute scaled variable and weight sets for the sparse grid
   void compute_grid();
@@ -81,9 +80,9 @@ public:
     Int2DArray& multi_index, RealArray& coeffs) const;
 
   /// number of collocation points with duplicates removed
-  int grid_size(unsigned short ssg_level);
+  int grid_size();
   /// total number of collocation points including duplicates
-  int grid_size_total(unsigned short ssg_level);
+  int grid_size_total();
 
   /// return weightSets
   const RealVector& weight_sets() const;
@@ -92,8 +91,14 @@ public:
 
   /// return isotropicSSG
   bool isotropic_sparse_grid() const;
-  // return ssgAnisoLevelWts
-  //const RealVector& sparse_grid_anisotropic_weights() const;
+  /// set ssgLevel
+  void sparse_grid_level(unsigned short ssg_level);
+  /// return ssgLevel
+  unsigned short sparse_grid_level() const;
+  /// set ssgAnisoLevelWts
+  void dimension_preference(const RealVector& dim_pref);
+  /// return ssgAnisoLevelWts
+  const RealVector& sparse_grid_anisotropic_weights() const;
   // return duplicateTol
   //const Real& duplicate_tolerance() const;
   /// return integrationRules
@@ -249,6 +254,14 @@ inline bool SparseGridDriver::isotropic_sparse_grid() const
 { return isotropicSSG; }
 
 
+inline unsigned short SparseGridDriver::sparse_grid_level() const
+{ return ssgLevel; }
+
+
+inline void SparseGridDriver::sparse_grid_level(unsigned short ssg_level)
+{ ssgLevel = ssg_level; }
+
+
 //inline const RealVector& SparseGridDriver::
 //sparse_grid_anisotropic_weights() const
 //{ return ssgAnisoLevelWts; }
@@ -264,6 +277,16 @@ inline const IntArray& SparseGridDriver::integration_rules() const
 
 inline const IntArray& SparseGridDriver::unique_index_mapping() const
 { return uniqueIndexMapping; }
+
+
+inline void SparseGridDriver::
+initialize_grid_level(size_t num_vars, size_t ssg_level,
+		      const RealVector& dim_pref)
+{
+  numVars = num_vars;
+  sparse_grid_level(ssg_level);
+  dimension_preference(dim_pref);
+}
 
 
 inline void SparseGridDriver::
