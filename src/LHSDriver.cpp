@@ -155,9 +155,15 @@ void LHSDriver::rng(const String& unif_gen)
   }
   else if (unif_gen == "rnum2") {
   use_rnum:
+#ifdef HAVE_LHS
     BoostRNG_Monostate::randomNum  = (Rfunc)rnumlhs10;
     BoostRNG_Monostate::randomNum2 = (Rfunc)rnumlhs20;
     allowSeedAdvance |= 2;  // add 2 bit: allow repeated seed update
+#else
+    PCerr << "Error: LHSDriver::rng() Use of rnum2 for RNG selection is NOT "
+	  << "supported in current (without-lhs) configuration" << std::endl;
+    abort_handler(-1);
+#endif
   }
   else {
     PCerr << "Error: LHSDriver::rng() expected string to be \"rnum2\" or "
