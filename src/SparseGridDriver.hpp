@@ -262,9 +262,9 @@ inline void SparseGridDriver::sparse_grid_level(unsigned short ssg_level)
 { ssgLevel = ssg_level; }
 
 
-//inline const RealVector& SparseGridDriver::
-//sparse_grid_anisotropic_weights() const
-//{ return ssgAnisoLevelWts; }
+inline const RealVector& SparseGridDriver::
+sparse_grid_anisotropic_weights() const
+{ return ssgAnisoLevelWts; }
 
 
 //inline const Real& SparseGridDriver::duplicate_tolerance() const
