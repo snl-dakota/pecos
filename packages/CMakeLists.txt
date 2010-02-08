@@ -1,5 +1,6 @@
 
-SUBDIRS(teuchos)
+#SUBDIRS(teuchos)
+SUBDIRS(teuchos VPISparseGrid)
 
 IF(WITH_FFT)
 #  SUBDIRS(dfftpack fftw)

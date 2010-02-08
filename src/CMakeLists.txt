@@ -1,6 +1,8 @@
 
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/packages/teuchos/src
-                    ${PROJECT_BINARY_DIR}/packages/teuchos/src)
+INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR}
+                    ${PROJECT_SOURCE_DIR}/packages/teuchos/src
+                    ${PROJECT_BINARY_DIR}/packages/teuchos/src
+                    ${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
 
 ## Pecos library sources.
 SET(Pecos_src
@@ -11,9 +13,22 @@ SET(Pecos_src
   SamplingInverseTransformation.cpp
   ProbabilityTransformation.cpp
   NatafTransformation.cpp
-  pecos_stat_util.cpp
+  BasisPolynomial.cpp
+  LagrangeInterpPolynomial.cpp
+  OrthogonalPolynomial.cpp
+  ChebyshevOrthogPolynomial.cpp
+  GenLaguerreOrthogPolynomial.cpp
+  HermiteOrthogPolynomial.cpp
+  JacobiOrthogPolynomial.cpp
+  LaguerreOrthogPolynomial.cpp
+  LegendreOrthogPolynomial.cpp
+  NumericGenOrthogPolynomial.cpp
+  SparseGridDriver.cpp
   LHSDriver.cpp
-  BasisFunction.cpp
+  pecos_stat_util.cpp
+  pecos_data_types.hpp
+  pecos_global_defs.hpp
+  pecos_stat_util.hpp
   DataTransformation.hpp
   InverseTransformation.hpp
   FourierInverseTransformation.hpp
@@ -21,9 +36,19 @@ SET(Pecos_src
   SamplingInverseTransformation.hpp
   ProbabilityTransformation.hpp
   NatafTransformation.hpp
-  pecos_stat_util.hpp
+  BasisPolynomial.hpp
+  LagrangeInterpPolynomial.hpp
+  OrthogonalPolynomial.hpp
+  ChebyshevOrthogPolynomial.hpp
+  GenLaguerreOrthogPolynomial.hpp
+  HermiteOrthogPolynomial.hpp
+  JacobiOrthogPolynomial.hpp
+  LaguerreOrthogPolynomial.hpp
+  LegendreOrthogPolynomial.hpp
+  NumericGenOrthogPolynomial.hpp
+  SparseGridDriver.hpp
   LHSDriver.hpp
-  BasisFunction.hpp
+  BoostRNG_Monostate.hpp
 )
 
 IF(WITH_LHS)

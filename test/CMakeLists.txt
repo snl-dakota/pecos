@@ -1,8 +1,13 @@
-SET(TPL_LIBS teuchos)
+SET(TPL_LIBS teuchos dfftpack)
 
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src
+INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR}
+                    ${PROJECT_SOURCE_DIR}/src
                     ${PROJECT_SOURCE_DIR}/packages/teuchos/src
                     ${PROJECT_BINARY_DIR}/packages/teuchos/src)
+
+#IF(WITH_SPARSE_GRID)
+#  SET(TPL_LIBS ${TPL_LIBS} sparsegrid)
+#ENDIF(WITH_SPARSE_GRID)
 
 IF(WITH_LHS)
   SET(TPL_LIBS ${TPL_LIBS} lhs)

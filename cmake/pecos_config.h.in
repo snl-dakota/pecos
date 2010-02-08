@@ -1,0 +1,75 @@
+/* $Header: */
+
+/* Copy of the following file, edited to be used with CMake */
+/* pecos_config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Macro to disable Boost asserts. */
+#define BOOST_DISABLE_ASSERTS 1
+
+// WJB: pull Fortran config from Teuchos_config.h since I will need at least one more iteration anyway
+#if 0
+/* Define to dummy `main' function (if any) required to link to the Fortran
+   libraries. */
+/* #undef F77_DUMMY_MAIN */
+
+/* Define to a macro mangling the given C identifier (in lower and upper
+   case), which must not contain underscores, for linking with Fortran. */
+#define F77_FUNC@FortranCInterface_GLOBAL_MACRO@
+
+/* As F77_FUNC, but for C identifiers containing underscores. */
+#define F77_FUNC_@F77_FUNC@_
+
+/* Define if F77_FUNC and F77_FUNC_ are equivalent. */
+#cmakedefine F77_FUNC_EQUIV
+
+/* Define if F77 and FC dummy `main' functions are identical. */
+#cmakedefine FC_DUMMY_MAIN_EQ_F77
+
+/* Define if you have a BLAS library. */
+#define HAVE_BLAS @BLAS_FOUND@
+#endif
+// WJB: end ifdef'd-out Fortran coupling block
+
+/* Macro to handle code which depends on DFFTPACK. */
+#define HAVE_DFFTPACK 1
+
+/* Define to 1 if you have the <inttypes.h> header file. */
+//wjbPOUNDdefine HAVE_INTTYPES_H 1
+
+/* Define if you have LAPACK library. */
+#define HAVE_LAPACK @LAPACK_lapack_WORKS@
+
+/* Macro to handle code which depends on LHS. */
+#cmakedefine HAVE_LHS @WITH_LHS@
+
+/* Define to 1 if you have the <memory.h> header file. */
+//wjbPOUNDdefine HAVE_MEMORY_H 1
+
+/* Define to 1 if you have the <stdint.h> header file. */
+//wjbPOUNDdefine HAVE_STDINT_H 1
+
+/* Define to 1 if you have the <stdlib.h> header file. */
+#cmakedefine HAVE_STDLIB_H
+
+/* Name of package */
+//wjbPOUNDdefine PACKAGE "pecos"
+
+/* Define to the address where bug reports for this package should be sent. */
+//wjbPOUNDdefine PACKAGE_BUGREPORT "pecos-developers@development.sandia.gov"
+
+/* Define to the full name of this package. */
+//wjbPOUNDdefine PACKAGE_NAME "PECOS"
+
+/* Define to the full name and version of this package. */
+//wjbPOUNDdefine PACKAGE_STRING "PECOS 1.0"
+
+/* Define to the one symbol short name of this package. */
+//wjbPOUNDdefine PACKAGE_TARNAME "pecos"
+
+/* Define to the version of this package. */
+//wjbPOUNDdefine PACKAGE_VERSION "1.0"
+
+/* Define to 1 if you have the ANSI C header files. */
+//wjbPOUNDdefine STDC_HEADERS 1
+#cmakedefine STDC_HEADERS ${STDC_HEADERS}
+
