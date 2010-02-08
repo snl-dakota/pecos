@@ -1,0 +1,16 @@
+
+SUBDIRS(teuchos)
+
+IF(WITH_FFT)
+#  SUBDIRS(dfftpack fftw)
+  SUBDIRS(dfftpack)
+ELSEIF(WITH_DFFTPACK)
+  SUBDIRS(dfftpack)
+ELSEIF(WITH_FFTW)
+  SUBDIRS(fftw)
+ENDIF(WITH_FFT)
+
+IF(WITH_LHS)
+  SUBDIRS(LHS)
+ENDIF(WITH_LHS)
+
