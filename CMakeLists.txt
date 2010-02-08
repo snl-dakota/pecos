@@ -35,8 +35,7 @@ SUBDIRS(packages src test)
 #OPTION(WITH_FFT "Build the fftw and dfftpack packages" ON)
 OPTION(WITH_FFT "Build the dfftpack packages" ON)
 OPTION(WITH_DFFTPACK "Build the dfftpack package.  This OPTION has no effect if WITH_FFT is ON" ON)
-#OPTION(WITH_FFTW "Build the fftw package.  This OPTION has no effect if WITH_FFT is ON" ON)
-OPTION(WITH_FFTW "Build the fftw package.  " OFF)
+OPTION(WITH_FFTW "Build the fftw package.  This OPTION has no effect if WITH_FFT is ON" OFF)
 OPTION(WITH_LHS "Build the LHS package." ON)
 
 #Keep track of what libraries should be included in libpecos
@@ -59,8 +58,8 @@ ENDIF(WITH_LHS)
 
 # libpecos.la must be built PRIOR to the linkage of test executables
 # WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
-#ADD_LIBRARY(pecos empty.cxx)
-#TARGET_LINK_LIBRARIES(pecos ${SUBLIBS})
+ADD_LIBRARY(pecos empty.cxx)
+TARGET_LINK_LIBRARIES(pecos ${SUBLIBS})
 
 #not sure what's up with this, install rules or something???
 ## Pecos headers that need to be distributed
