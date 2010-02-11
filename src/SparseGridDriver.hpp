@@ -76,8 +76,8 @@ public:
   /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying the
   /// anisotropic index set constraint, along with their corresponding
   /// coefficients
-  void anisotropic_multi_index(unsigned short upper_bound,
-    Int2DArray& multi_index, RealArray& coeffs) const;
+  void anisotropic_multi_index(Int2DArray& multi_index,
+			       RealArray& coeffs) const;
 
   /// number of collocation points with duplicates removed
   int grid_size();

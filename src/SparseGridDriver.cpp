@@ -444,8 +444,7 @@ void SparseGridDriver::compute_grid()
 
 
 void SparseGridDriver::
-anisotropic_multi_index(unsigned short upper_bound, Int2DArray& multi_index,
-			RealArray& coeffs) const
+anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 {
   multi_index.clear();
   coeffs.clear();
@@ -454,13 +453,13 @@ anisotropic_multi_index(unsigned short upper_bound, Int2DArray& multi_index,
   // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
   // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
   // w-N+1 <= |j| <= w.
-  IntArray x(numVars), x_max(numVars); //x_max = upper_bound;
-  Real wt_sum = 0., q_max = upper_bound;
+  IntArray x(numVars), x_max(numVars); //x_max = ssgLevel;
+  Real wt_sum = 0., q_max = ssgLevel;
   for (size_t i=0; i<numVars; ++i) {
     wt_sum += ssgAnisoLevelWts[i];
     x_max[i] = (int)std::ceil(q_max/ssgAnisoLevelWts[i]);
   }
-  Real q_min = upper_bound - wt_sum;
+  Real q_min = ssgLevel - wt_sum;
 #ifdef DEBUG
   Cout << "q_min = " << q_min << " q_max = " << q_max;
 #endif // DEBUG
