@@ -53,7 +53,11 @@ SET(Pecos_src
 
 IF(WITH_LHS)
   SET(Pecos_src ${Pecos_src} lhs_wrappers.f90)
-  SET_PROPERTY(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS -ffixed-form)
+  IF(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
+    SET_PROPERTY(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS -ffixed-form)
+  ELSE(CMAKE_Fortran_COMPILER_ID STREQUAL Intel)
+    SET_PROPERTY(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS -fixed)
+  ENDIF(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
 ENDIF(WITH_LHS)
 
 ADD_LIBRARY(pecos_src ${Pecos_src})
