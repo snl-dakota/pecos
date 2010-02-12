@@ -49,16 +49,16 @@ void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
       webbur::sgmga_importance_to_aniso(numVars,
 	dim_pref.values(), ssgAnisoLevelWts.values());
 #ifdef DEBUG
-      PCout << "dimension_preference:\n"; write_data(Cout, dim_pref);
+      PCout << "dimension_preference:\n"; write_data(PCout, dim_pref);
       PCout << "ssgAnisoLevelWts after sgmga_importance_to_aniso:\n";
-      write_data(Cout, ssgAnisoLevelWts);
+      write_data(PCout, ssgAnisoLevelWts);
 #endif
       int option = 1; // weights scaled so that minimum nonzero entry is 1
       webbur::sgmga_aniso_normalize(option, numVars,
 	ssgAnisoLevelWts.values());
 #ifdef DEBUG
       PCout << "ssgAnisoLevelWts after sgmga_aniso_normalize:\n";
-      write_data(Cout, ssgAnisoLevelWts);
+      write_data(PCout, ssgAnisoLevelWts);
 #endif
     }
   }
@@ -337,7 +337,7 @@ void SparseGridDriver::compute_grid()
   delete [] sparse_order;
   delete [] sparse_index;
 #ifdef DEBUG
-  Cout << "uniqueIndexMapping:\n" << uniqueIndexMapping << '\n';
+  PCout << "uniqueIndexMapping:\n" << uniqueIndexMapping << '\n';
 #endif
 
   // compute scale factors
@@ -434,7 +434,7 @@ void SparseGridDriver::compute_grid()
     }
     ssgIndexMap[key] = i;
 #ifdef DEBUG
-    Cout << "i = " << i << " key =\n" << key << std::endl;
+    PCout << "i = " << i << " key =\n" << key << std::endl;
 #endif // DEBUG
   }
   delete [] indices;
@@ -456,12 +456,14 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
   IntArray x(numVars), x_max(numVars); //x_max = ssgLevel;
   Real wt_sum = 0., q_max = ssgLevel;
   for (size_t i=0; i<numVars; ++i) {
-    wt_sum += ssgAnisoLevelWts[i];
-    x_max[i] = (int)std::ceil(q_max/ssgAnisoLevelWts[i]);
+    const Real& wt_i = ssgAnisoLevelWts[i];
+    wt_sum += wt_i;
+    // minimum nonzero weight is scaled to 1, so just catch special case of 0
+    x_max[i] = (std::abs(wt_i) > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
   }
   Real q_min = ssgLevel - wt_sum;
 #ifdef DEBUG
-  Cout << "q_min = " << q_min << " q_max = " << q_max;
+  PCout << "q_min = " << q_min << " q_max = " << q_max;
 #endif // DEBUG
 
   bool more = false;

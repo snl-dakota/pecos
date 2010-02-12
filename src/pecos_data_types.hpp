@@ -176,13 +176,30 @@ void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
 }
 
 
+/// std::ostream write for Teuchos::SerialDenseVector
+template <typename OrdinalType, typename ScalarType>
+void write_data(std::ostream& s,
+		const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
+{
+  s.setf(std::ios::scientific);
+  s << std::setprecision(write_precision);
+  OrdinalType len = v.length();
+  for (OrdinalType i=0; i<len; i++)
+    s << "                     " << std::setw(write_precision+7)
+      << v[i] << '\n';
+}
+
+
 /// global std::ostream insertion operator for std::vector
 template <class T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 {
+  s.setf(std::ios::scientific);
+  s << std::setprecision(write_precision);
   size_t i=0, len = data.size();
   for (i=0; i<len; ++i)
-    s << "                     " << data[i] << '\n';
+    s << "                     " << std::setw(write_precision+7)
+      << data[i] << '\n';
   return s;
 }
 
