@@ -90,15 +90,19 @@ public:
   const RealMatrix& variable_sets() const;
 
   /// return isotropicSSG
-  bool isotropic_sparse_grid() const;
+  bool isotropic() const;
   /// set ssgLevel
-  void sparse_grid_level(unsigned short ssg_level);
+  void level(unsigned short ssg_level);
   /// return ssgLevel
-  unsigned short sparse_grid_level() const;
+  unsigned short level() const;
   /// set ssgAnisoLevelWts
   void dimension_preference(const RealVector& dim_pref);
+  /// set ssgAnisoLevelWts
+  void anisotropic_weights(const RealVector& aniso_wts);
   /// return ssgAnisoLevelWts
-  const RealVector& sparse_grid_anisotropic_weights() const;
+  const RealVector& anisotropic_weights() const;
+  /// update axisLowerBounds
+  void update_axis_lower_bounds();
   // return duplicateTol
   //const Real& duplicate_tolerance() const;
   /// return integrationRules
@@ -204,6 +208,9 @@ private:
   /// weighting vector for anisotropic sparse grids: higher weight equates
   /// to lower dimension preference due to lb <= |alpha|.|i| <= ub
   RealVector ssgAnisoLevelWts;
+  /// refinement constraints that ensure that level/anisotropic weight updates
+  /// contain all previous multi-index sets
+  RealVector axisLowerBounds;
 
   /// integer codes for sgmga routine integration rule options
   IntArray integrationRules;
@@ -250,20 +257,19 @@ inline const RealMatrix& SparseGridDriver::variable_sets() const
 { return variableSets; }
 
 
-inline bool SparseGridDriver::isotropic_sparse_grid() const
+inline bool SparseGridDriver::isotropic() const
 { return isotropicSSG; }
 
 
-inline unsigned short SparseGridDriver::sparse_grid_level() const
+inline unsigned short SparseGridDriver::level() const
 { return ssgLevel; }
 
 
-inline void SparseGridDriver::sparse_grid_level(unsigned short ssg_level)
+inline void SparseGridDriver::level(unsigned short ssg_level)
 { ssgLevel = ssg_level; }
 
 
-inline const RealVector& SparseGridDriver::
-sparse_grid_anisotropic_weights() const
+inline const RealVector& SparseGridDriver::anisotropic_weights() const
 { return ssgAnisoLevelWts; }
 
 
@@ -284,7 +290,7 @@ initialize_grid_level(size_t num_vars, size_t ssg_level,
 		      const RealVector& dim_pref)
 {
   numVars = num_vars;
-  sparse_grid_level(ssg_level);
+  level(ssg_level);
   dimension_preference(dim_pref);
 }
 

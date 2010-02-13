@@ -28,40 +28,83 @@ namespace Pecos {
 
 void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 {
-  if (dim_pref.empty())
+  RealVector aniso_wts;
+  if (!dim_pref.empty()) {
+    size_t num_pref = dim_pref.length();
+    aniso_wts.sizeUninitialized(num_pref);
+    webbur::sgmga_importance_to_aniso(num_pref, dim_pref.values(),
+				      aniso_wts.values());
+#ifdef DEBUG
+    PCout << "dimension preference:\n"; write_data(PCout, dim_pref);
+    PCout << "anisotropic weights after sgmga_importance_to_aniso():\n";
+    write_data(PCout, aniso_wts);
+#endif
+  }
+  anisotropic_weights(aniso_wts);
+}
+
+
+void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
+{
+  if (aniso_wts.empty())
     isotropicSSG = true;
   else {
-    if (dim_pref.length() != numVars) {
-      PCerr << "Error: length of sparse grid dimension preference "
+    if (aniso_wts.length() != numVars) {
+      PCerr << "Error: length of sparse grid anisotropic weights "
 	    << "specification is inconsistent with\n       number of variables "
-	    << "in SparseGridDriver::initialize_grid_level()." << std::endl;
+	    << "in SparseGridDriver::anisotropic_weights()." << std::endl;
       abort_handler(-1);
     }
 
     isotropicSSG = true;
-    Real pref0 = dim_pref[0];
+    Real wt0 = aniso_wts[0];
     for (size_t i=1; i<numVars; ++i)
-      if (std::abs(dim_pref[i] - pref0) > DBL_EPSILON)
+      if (std::abs(aniso_wts[i] - wt0) > DBL_EPSILON)
 	{ isotropicSSG = false; break; }
 
     if (!isotropicSSG) {
-      ssgAnisoLevelWts.sizeUninitialized(numVars);
-      webbur::sgmga_importance_to_aniso(numVars,
-	dim_pref.values(), ssgAnisoLevelWts.values());
-#ifdef DEBUG
-      PCout << "dimension_preference:\n"; write_data(PCout, dim_pref);
-      PCout << "ssgAnisoLevelWts after sgmga_importance_to_aniso:\n";
-      write_data(PCout, ssgAnisoLevelWts);
-#endif
       int option = 1; // weights scaled so that minimum nonzero entry is 1
-      webbur::sgmga_aniso_normalize(option, numVars,
-	ssgAnisoLevelWts.values());
+      ssgAnisoLevelWts = aniso_wts; // copy
+      webbur::sgmga_aniso_normalize(option, numVars, ssgAnisoLevelWts.values());
 #ifdef DEBUG
-      PCout << "ssgAnisoLevelWts after sgmga_aniso_normalize:\n";
+      PCout << "ssgAnisoLevelWts after sgmga_aniso_normalize():\n";
       write_data(PCout, ssgAnisoLevelWts);
 #endif
+      // enforce axis lower bounds, if present, for current ssgLevel.  An axis
+      // lower bound defines a weight upper bound based on the current ssgLevel:
+      // LB_i = level*wt_min/wt_i --> wt_i = level*wt_min/LB_i and wt_min=1.
+      // Catch special case of dim_pref_i = 0 --> wt_i = LB_i = 0.
+      if (!axisLowerBounds.empty()) {
+	for (size_t i=0; i<numVars; ++i)
+	  if (std::abs(axisLowerBounds[i]) > 1.e-10)
+	    ssgAnisoLevelWts[i] = std::min((Real)ssgLevel/axisLowerBounds[i],
+					   ssgAnisoLevelWts[i]);
+#ifdef DEBUG
+	PCout << "ssgAnisoLevelWts after axisLowerBounds enforcement:\n";
+	write_data(PCout, ssgAnisoLevelWts);
+#endif
+      }
     }
   }
+}
+
+
+void SparseGridDriver::update_axis_lower_bounds()
+{
+  if (axisLowerBounds.empty())
+    axisLowerBounds.sizeUninitialized(numVars);
+  // An axisLowerBound is the maximum index coverage achieved on a coordinate
+  // axis (when all other indices are zero); it defines a constraint for
+  // minimum coordinate coverage in future refinements.  The linear index set
+  // constraint is level*wt_min-|wt| < j.wt <= level*wt_min, which becomes
+  // level-|wt| < j_i w_i <= level for wt_min=1 and all other indices=0.
+  // The max feasible j_i is then level/w_i (except for special case w_i=0).
+  if (isotropicSSG)
+    axisLowerBounds = (Real)ssgLevel; // all weights = 1
+  else // min nonzero weight scaled to 1 --> just catch special case w_i=0
+    for (size_t i=0; i<numVars; ++i)
+      axisLowerBounds[i] = (std::abs(ssgAnisoLevelWts[i]) > 1.e-10) ?
+	(Real)ssgLevel/ssgAnisoLevelWts[i] : 0.;
 }
 
 
