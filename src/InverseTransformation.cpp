@@ -35,7 +35,7 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
   omegaBar  = w_bar;
 
   // omegaBar and totalTime specify deltaTime and m
-  deltaTime  = 2.*Pi/omegaBar;  // rad/sec -> sec
+  deltaTime  = 2.*PI/omegaBar;  // rad/sec -> sec
   size_t m   = 1 + (size_t)std::floor(totalTime/deltaTime);
   deltaOmega = omegaBar/(m-1);
 
@@ -101,7 +101,7 @@ power_spectral_density(const String& psd_name, const Real& param)
     //            2 * lam
     // g(w) = ----------------
     //        pi (w^2 + lam^2)
-    Real p_2_over_pi = 2.*param/Pi, param_sq = param*param;
+    Real p_2_over_pi = 2.*param/PI, param_sq = param*param;
     for (i=0; i<m; i++)
       psdSequence[i] = p_2_over_pi/(std::pow(omegaSequence[i], 2) + param_sq);
   }
@@ -111,7 +111,7 @@ power_spectral_density(const String& psd_name, const Real& param)
     //            4 * lam^3
     // g(w) = -------------------
     //        pi (w^2 + lam^2)^2
-    Real param_sq = param*param, p_sq_4_over_pi = 4.*param_sq/Pi;
+    Real param_sq = param*param, p_sq_4_over_pi = 4.*param_sq/PI;
     for (i=0; i<m; i++)
       psdSequence[i]
 	= p_sq_4_over_pi/std::pow(std::pow(omegaSequence[i], 2) + param_sq, 2);

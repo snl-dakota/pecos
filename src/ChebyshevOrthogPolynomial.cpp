@@ -152,7 +152,7 @@ get_gradient(const Real& x, unsigned short order)
 
 const Real& ChebyshevOrthogPolynomial::norm_squared(unsigned short order)
 {
-  orthogPolyNormSq = (order) ? Pi/2. : Pi;
+  orthogPolyNormSq = (order) ? PI/2. : PI;
   return orthogPolyNormSq;
 }
 

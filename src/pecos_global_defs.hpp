@@ -21,14 +21,14 @@ namespace Pecos {
 // --------------
 // Special values
 // --------------
-/// the value for Pi used in various numerical routines
-const double Pi = boost::math::constants::pi<double>();
+/// the value for PI used in various numerical routines
+const double PI = boost::math::constants::pi<double>();
 
 /// special value returned by index() when entry not found
 const size_t _NPOS = ~(size_t)0; // one's complement
 
 /// used in ostream data output functions
-const int write_precision = 10;
+const int WRITE_PRECISION = 10;
 
 // define special values for ranVarTypesX/U
 enum { DESIGN, STD_NORMAL, NORMAL, BOUNDED_NORMAL, LOGNORMAL, BOUNDED_LOGNORMAL,

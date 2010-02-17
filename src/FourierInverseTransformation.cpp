@@ -34,12 +34,12 @@ initialize(const Real& total_t, const Real& w_bar, size_t seed)
   ifftVector.sizeUninitialized(num_terms);
 
   switch (fourierMethod) {
-  case IFFT_SD: // Generate num_terms LHS samples for Psi ~ iid U(0, 2.*Pi).
+  case IFFT_SD: // Generate num_terms LHS samples for Psi ~ iid U(0, 2.*PI).
     lhsSamples.shapeUninitialized(num_terms, 1);
     lhsParam1.sizeUninitialized(1);
     lhsParam2.sizeUninitialized(1);
     lhsParam1[0] = 0.;    // lower bound
-    lhsParam2[0] = 2.*Pi; // upper bound
+    lhsParam2[0] = 2.*PI; // upper bound
     break;
   case IFFT_G:  // Generate num_terms LHS samples for V, W ~ iid N(0,1).
     lhsSamples.shapeUninitialized(num_terms, 2);

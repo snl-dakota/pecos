@@ -182,10 +182,10 @@ void write_data(std::ostream& s,
 		const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
 {
   s.setf(std::ios::scientific);
-  s << std::setprecision(write_precision);
+  s << std::setprecision(WRITE_PRECISION);
   OrdinalType len = v.length();
   for (OrdinalType i=0; i<len; i++)
-    s << "                     " << std::setw(write_precision+7)
+    s << "                     " << std::setw(WRITE_PRECISION+7)
       << v[i] << '\n';
 }
 
@@ -195,10 +195,10 @@ template <class T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 {
   s.setf(std::ios::scientific);
-  s << std::setprecision(write_precision);
+  s << std::setprecision(WRITE_PRECISION);
   size_t i=0, len = data.size();
   for (i=0; i<len; ++i)
-    s << "                     " << std::setw(write_precision+7)
+    s << "                     " << std::setw(WRITE_PRECISION+7)
       << data[i] << '\n';
   return s;
 }

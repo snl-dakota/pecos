@@ -2542,13 +2542,13 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 		break;
 	      // Gumbel Mean
 	        //x = x_vars[j];
-		//alpha = Pi/std::sqrt(6.)/ranVarStdDevsX[j];
+		//alpha = PI/std::sqrt(6.)/ranVarStdDevsX[j];
 		//num = -alpha*(x-z);
 		//jacobian_xs(j, i) = -alpha*exp(num-exp(num))/phi(z);
 		//break;
 	      // Gumbel Standard Deviation
 	        //x = x_vars[j];
-		//alpha = Pi/std::sqrt(6.)/ranVarStdDevsX[j];
+		//alpha = PI/std::sqrt(6.)/ranVarStdDevsX[j];
 		//num = -alpha*(x-z);
 		//jacobian_xs(j, i)
 		//  = num*exp(num-exp(num))/ranVarStdDevsX[j]/phi(z);

@@ -153,7 +153,7 @@ static Real erf_inverse(const Real& p)
   }
   // use erf instead of erfc
   Real e = 0.5*(1. - erf(-z/std::sqrt(2.))) - p_new;
-  Real u = e*std::sqrt(2.*Pi)*std::exp(z*z/2.);
+  Real u = e*std::sqrt(2.*PI)*std::exp(z*z/2.);
   z = z - u/(1. + z*u/2.);
   // scale since this is the erf inverse not gaussian inverse
   // see above

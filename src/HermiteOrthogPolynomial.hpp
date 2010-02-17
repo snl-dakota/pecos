@@ -25,7 +25,7 @@ namespace Pecos {
 /** The HermiteOrthogPolynomial class evaluates a univariate Hermite
     polynomial of a particular order.  It uses the "probabilist's"
     formulation for which the polynomials are orthogonal with respect
-    to the weight function 1/std::sqrt(2*Pi) exp(-x^2/2) when integrated
+    to the weight function 1/std::sqrt(2*PI) exp(-x^2/2) when integrated
     over the support range of [-infinity,+infinity].  It enables
     (mixed) multidimensional orthogonal polynomial basis functions
     within OrthogPolyApproximation. */
@@ -72,7 +72,7 @@ private:
 
 
 inline HermiteOrthogPolynomial::HermiteOrthogPolynomial()
-{ ptFactor = std::sqrt(2.); wtFactor = 1./std::sqrt(Pi); }
+{ ptFactor = std::sqrt(2.); wtFactor = 1./std::sqrt(PI); }
 
 
 inline HermiteOrthogPolynomial::~HermiteOrthogPolynomial()

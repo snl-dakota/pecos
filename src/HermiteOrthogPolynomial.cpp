@@ -235,7 +235,7 @@ const RealArray& HermiteOrthogPolynomial::gauss_weights(unsigned short order)
   // which for He(x), is n!/(n He_{n-1}(x_i))^2.
 
   // The sums of the weights = 1, which is the integral of the density function
-  // 1/sqrt(2*Pi) exp(-x^2/2) over the support range of [-infinity,+infinity]
+  // 1/sqrt(2*PI) exp(-x^2/2) over the support range of [-infinity,+infinity]
   // (the std normal CDF for +infinity).
 
   if (gaussWeights.size() != order) { // if not already computed

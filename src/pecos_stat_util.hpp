@@ -95,7 +95,7 @@ inline Real phi(const Real& beta)
 #elif HAVE_GSL
   return gsl_ran_ugaussian_pdf(beta);
 #else
-  return std::exp(-beta*beta/2.)/std::sqrt(2.*Pi);
+  return std::exp(-beta*beta/2.)/std::sqrt(2.*PI);
 #endif
 */
 }
@@ -308,7 +308,7 @@ inline void moments_from_gamma_params(const Real& alpha, const Real& beta,
 
 inline void moments_from_gumbel_params(const Real& alpha, const Real& beta,
 				       Real& mean, Real& std_dev)
-{ mean = beta + 0.57721566490153286/alpha; std_dev = Pi/std::sqrt(6.)/alpha; }
+{ mean = beta + 0.57721566490153286/alpha; std_dev = PI/std::sqrt(6.)/alpha; }
 /* Euler-Mascheroni constant is 0.5772... */
 
 
@@ -454,7 +454,7 @@ inline Real lognormal_pdf(const Real& x, const Real& mean, const Real& std_dev)
   lognormal_zeta_sq_from_moments(mean, std_dev, zeta_sq);
   lambda = std::log(mean) - zeta_sq/2.;
   zeta = std::sqrt(zeta_sq);
-  return 1./std::sqrt(2.*Pi)/zeta/x *
+  return 1./std::sqrt(2.*PI)/zeta/x *
     std::exp(-std::pow(std::log(x)-lambda, 2)/2./zeta_sq);
 #endif // HAVE_GSL or HAVE_BOOST
 */
