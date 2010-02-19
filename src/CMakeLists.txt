@@ -23,7 +23,9 @@ SET(Pecos_src
   LaguerreOrthogPolynomial.cpp
   LegendreOrthogPolynomial.cpp
   NumericGenOrthogPolynomial.cpp
+  CubatureDriver.cpp
   SparseGridDriver.cpp
+  TensorProductDriver.cpp
   LHSDriver.cpp
   pecos_stat_util.cpp
   pecos_data_types.hpp
@@ -46,7 +48,9 @@ SET(Pecos_src
   LaguerreOrthogPolynomial.hpp
   LegendreOrthogPolynomial.hpp
   NumericGenOrthogPolynomial.hpp
+  CubatureDriver.hpp
   SparseGridDriver.hpp
+  TensorProductDriver.hpp
   LHSDriver.hpp
   BoostRNG_Monostate.hpp
 )
