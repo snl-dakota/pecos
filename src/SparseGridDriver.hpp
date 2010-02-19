@@ -52,7 +52,7 @@ public:
 
   /// set ssgLevel, isotropicSSG, and ssgAnisoLevelWts
   void initialize_grid_level(size_t num_vars, size_t ssg_level,
-			     const RealVector& dimension_pref);
+			     const RealVector& dim_pref);
 
   /// set polyParams, integrationRules, and FPType function pointers
   void initialize_grid_parameters(const ShortArray& u_types,

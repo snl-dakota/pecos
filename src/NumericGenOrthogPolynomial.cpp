@@ -39,22 +39,20 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
   // **************************
   // Analytic recursion coeffs:
   // **************************
-  case Pecos::LOGNORMAL:
+  case LOGNORMAL:
     if (coeffsNormsFlag) // PCE
       pre_process_coeffs_norms = post_process_coeffs = true;
     break;
-  /*
   // ********************************
   // Chebyshev moment-based approach:
   // ********************************
-  //case Pecos::LOGNORMAL:
-  case Pecos::WEIBULL:
-  //case Pecos::STOCHASTIC_EXPANSION:
+  //case LOGNORMAL:
+  //case WEIBULL:
+  case STOCHASTIC_EXPANSION:
     if (coeffsNormsFlag) // PCE
       pre_process_coeffs_norms = post_process_coeffs
         = post_process_native_norm_sq = post_process_last_norm_sq = true;
     break;
-  */
   // *******************************
   // Discretized Stieltjes approach:
   // *******************************
@@ -79,7 +77,7 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
   int i, j;
   RealVector alpha(m, false), beta(m, false), off_diag(m-1, false);
   switch (distributionType) {
-  case Pecos::LOGNORMAL: {
+  case LOGNORMAL: {
     // -----------------------------------------------------------------------
     // Recursion coefficients are available analytically:
     // (a) Simpson, I.C., "Numerical Integration over a Semi-Infinite Interval
@@ -116,47 +114,7 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
       }
     }
 
-    /*
-    // -------------------------------------------------------------------------
-    // Raw moments available analytically: can also use moment-based approach
-    // referred to as the (unmodified) Chebyshev algorithm by Gautschi -> avoids
-    // need to approximate inner products for recursion coefficients, although
-    // the highest order orthogPolyNormsSq[m] cannot be computed reliably with
-    // native quadrature (must either be evaluated using another *_integral()
-    // fn or another m+1 eigenproblem must be solved for m+1 Gauss pts/wts).
-    // This method is unstable and loses accuracy for higher m -> therefore, it
-    // is not the default; however, it is the _only_ method to not require a
-    // full PDF of the random variable.
-    // -------------------------------------------------------------------------
-    Real cf_var  = distParams[1]/distParams[0],
-         zeta_sq = std::log(1. + cf_var*cf_var),
-         lambda  = std::log(distParams[0]) - zeta_sq/2.;
-    beta[0] = 1.;
-    // compute raw moments
-    RealVector raw_moments(2*m+1);
-    raw_moments[0] = 1.; // integral of 1*PDF is 1
-    for (i=1; i<=2*m; ++i)
-      raw_moments[i] = std::exp(i*lambda+i*i*zeta_sq/2.);
-    // form Hankel matrix
-    RealSymMatrix H(m+1, false);
-    for (i=0; i<=m; ++i)
-      for (j=0; j<=i; ++j)
-	H(i,j) = raw_moments[i+j];
-    // perform Cholesky factorization
-    RealSpdSolver chol_solver;
-    chol_solver.setMatrix( Teuchos::rcp(&H, false) );
-    chol_solver.factor(); // Cholesky factorization (LL^T) in place
-    // compute recursion coefficients
-    for (i=0; i<m; ++i) {
-      alpha[i] = H(i+1,i)/H(i,i); // lower triangle
-      if (i) {
-	const Real& Him1im1 = H(i-1,i-1);
-	alpha[i]     -= H(i,i-1) / Him1im1; // lower triangle
-	off_diag[i-1] = H(i,i)   / Him1im1;
-	beta[i]       = std::pow(off_diag[i-1], 2);
-      }
-    }
-    */
+    // Chebyshev option available below
 
     // Discretized option: use default approach below combined with discrete
     // inner_product using ~100k steps that sum pc1*pc2*pdf from 0->50.
@@ -166,8 +124,9 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     //     by dangling reference to "s" in Eqs. 10 and 11).
     break;
   }
-  /*
-  case Pecos::WEIBULL: { //case Pecos::STOCHASTIC_EXPANSION: {
+  //case LOGNORMAL:
+  //case WEIBULL:
+  case STOCHASTIC_EXPANSION: {
     // -------------------------------------------------------------------------
     // Raw moments are available analytically: use moment-based approach
     // referred to as the (unmodified) Chebyshev algorithm by Gautschi -> avoids
@@ -183,9 +142,22 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     // compute raw moments
     RealVector raw_moments(2*m+1);
     raw_moments[0] = 1.; // integral of 1*PDF is 1
-    for (i=1; i<=2*m; ++i)
-      raw_moments[i] = std::pow(distParams[1], i)
-	* Pecos::gamma_function(1. + i/distParams[0]);
+
+    // LOGNORMAL:
+    //Real cf_var  = distParams[1]/distParams[0],
+    //     zeta_sq = std::log(1. + cf_var*cf_var),
+    //     lambda  = std::log(distParams[0]) - zeta_sq/2.;
+    //for (i=1; i<=2*m; ++i)
+    //  raw_moments[i] = std::exp(i*lambda+i*i*zeta_sq/2.);
+
+    // WEIBULL:
+    //for (i=1; i<=2*m; ++i)
+    //  raw_moments[i] = std::pow(distParams[1], i)
+    //	* gamma_function(1. + i/distParams[0]);
+
+    // STOCHASTIC_EXPANSION:
+    // TO DO
+
     // form Hankel matrix
     RealSymMatrix H(m+1, false);
     for (i=0; i<=m; ++i)
@@ -207,7 +179,6 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     }
     break;
   }
-  */
   default: {
     // ---------------------------------------------------------------------
     // The default approach is the discretized Stieltjes algorithm
@@ -314,7 +285,7 @@ inner_product(const RealVector& poly_coeffs1,
   // *************************
   // * BOUNDED DISTRIBUTIONS *
   // *************************
-  case Pecos::BOUNDED_NORMAL:
+  case BOUNDED_NORMAL:
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_normal_pdf, distParams[2], distParams[3]);
@@ -323,7 +294,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_normal_pdf, distParams[2], distParams[3]);
     break;
-  case Pecos::BOUNDED_LOGNORMAL:
+  case BOUNDED_LOGNORMAL:
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_lognormal_pdf, distParams[2], distParams[3]);
@@ -332,7 +303,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_lognormal_pdf, distParams[2], distParams[3]);
     break;
-  case Pecos::LOGUNIFORM:
+  case LOGUNIFORM:
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  loguniform_pdf, distParams[0], distParams[1]);
@@ -341,7 +312,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  loguniform_pdf, distParams[0], distParams[1]);
     break;
-  case Pecos::TRIANGULAR:
+  case TRIANGULAR:
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  triangular_pdf, distParams[1], distParams[2]);
@@ -350,23 +321,23 @@ inner_product(const RealVector& poly_coeffs1,
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  triangular_pdf, distParams[1], distParams[2]);
     break;
-  case Pecos::HISTOGRAM_BIN: {
+  case HISTOGRAM_BIN: {
     size_t dp_len = distParams.length(),
       u_bnd_index = (dp_len>=2) ? dp_len-2 : 0;
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  Pecos::histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
+    //  histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      Pecos::histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
+      histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //	Pecos::histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
+    //	histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
     break;
   }
   // ******************************
   // * SEMI-BOUNDED DISTRIBUTIONS *
   // ******************************
   // Alternate integration:
-  case Pecos::LOGNORMAL:
+  case LOGNORMAL:
     // Alternate integrations:
     //return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
     //					   lognormal_pdf);
@@ -381,7 +352,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, lognormal_pdf,
     //                                1.e-5, distParams[0] + 60.*distParams[1]);
     break;
-  case Pecos::FRECHET: {
+  case FRECHET: {
     // Alternate integration:
     // Better stability w/ Laguerre for Rosenbrock Frechet (infinite variance?)
     return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
@@ -389,7 +360,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2,
     //                                  frechet_pdf);
     //Real mean, stdev;
-    //Pecos::moments_from_frechet_params(distParams[0], distParams[1],
+    //moments_from_frechet_params(distParams[0], distParams[1],
     //				         mean, stdev);
     // minimal left tail with heavy right tail;
     // start is offset to avoid division by 0. in frechet_pdf
@@ -401,13 +372,13 @@ inner_product(const RealVector& poly_coeffs1,
     //                                0.1, mean+300.*stdev);
     break;
   }
-  case Pecos::WEIBULL: {
+  case WEIBULL: {
     // Alternate integration:
     //return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
     //                                     weibull_pdf);
     return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf);
     //Real mean, stdev;
-    //Pecos::moments_from_weibull_params(distParams[0], distParams[1],
+    //moments_from_weibull_params(distParams[0], distParams[1],
     //				       mean, stdev);
     // heavy left tail with minimal right tail;
     // start is offset to avoid division by negative power of 0. in weibull_pdf
@@ -422,12 +393,12 @@ inner_product(const RealVector& poly_coeffs1,
   // ***************************
   // * UNBOUNDED DISTRIBUTIONS *
   // ***************************
-  case Pecos::GUMBEL: {
+  case GUMBEL: {
     // Alternate integration:
     //return hermite_unbounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf);
     return fejer_unbounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf);
     //Real mean, stdev;
-    //Pecos::moments_from_gumbel_params(distParams[0], distParams[1],
+    //moments_from_gumbel_params(distParams[0], distParams[1],
     //				        mean, stdev);
     // left and right tail treated equally
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf,
@@ -461,7 +432,7 @@ hermite_unbounded_integral(const RealVector& poly_coeffs1,
     const Real& gp_i = gauss_pts[i];
     v1 = get_value(gp_i, poly_coeffs1); // cached due to update of const ref
     sum += gauss_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
-        *  weight_fn(gp_i, distParams) / Pecos::phi(gp_i);
+        *  weight_fn(gp_i, distParams) / phi(gp_i);
   }
   return sum;
 }
@@ -497,8 +468,8 @@ fejer_unbounded_integral(const RealVector& poly_coeffs1,
   //     poly1(x) * poly2(x) * weight_fn(x) * dx/dz where x ~ (-inf,inf) and
   //     z ~ (-1,1) on open intervals.
   // (2) could correct fejer_wts to PDF weighting by dividing by 2. and then
-  //     divide sum by Pecos::std_uniform_pdf() as in legendre_bounded_integral
-  //     below --> cancels out.
+  //     divide sum by std_uniform_pdf() as in legendre_bounded_integral below
+  //     --> cancels out.
   return sum;
 }
 
@@ -519,7 +490,7 @@ laguerre_semibounded_integral(const RealVector& poly_coeffs1,
     const Real& gp_i = gauss_pts[i];
     v1 = get_value(gp_i, poly_coeffs1); // cached: update of const ref
     sum += gauss_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
-        *  weight_fn(gp_i, distParams) / Pecos::std_exponential_pdf(gp_i);
+        *  weight_fn(gp_i, distParams) / std_exponential_pdf(gp_i);
   }
   return sum;
 }
@@ -556,8 +527,8 @@ fejer_semibounded_integral(const RealVector& poly_coeffs1,
   //     poly1(x) * poly2(x) * weight_fn(x) * dx/dz where x ~ (0,inf) and
   //     z ~ (-1,1) on open intervals.
   // (2) could correct fejer_wts to PDF weighting by dividing by 2. and then
-  //     divide sum by Pecos::std_uniform_pdf() as in legendre_bounded_integral
-  //     below --> cancels out.
+  //     divide sum by std_uniform_pdf() as in legendre_bounded_integral below
+  //     --> cancels out.
   return sum;
 }
 
@@ -580,7 +551,7 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
     sum += gauss_wts[i] * v1 * get_value(unscaled_gp_i, poly_coeffs2)
         *  weight_fn(unscaled_gp_i, distParams);
   }
-  return sum / Pecos::std_uniform_pdf() * range_over_2;
+  return sum / std_uniform_pdf() * range_over_2;
 }
 
 
@@ -613,8 +584,8 @@ cc_bounded_integral(const RealVector& poly_coeffs1,
   //     ~burkardt/cpp_src/sandia_rules/sandia_rules.html) -> integrand is just
   //     poly1 * poly2 * weight_fn.
   // (2) could correct cc_wts to PDF weighting by dividing by 2. and then
-  //     divide sum by Pecos::std_uniform_pdf() as in legendre_bounded_integral
-  //     above --> cancels out.
+  //     divide sum by std_uniform_pdf() as in legendre_bounded_integral above
+  //     --> cancels out.
   return sum * range_over_2;
 }
 

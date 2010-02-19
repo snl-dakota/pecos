@@ -526,6 +526,16 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 
 
 // TO DO: avoid recalculating existing Gauss pts within following functions
+//
+// Burkardt: instead of params/data, pass index and retain array of NGPoly
+//
+// Then add interface to pass in array of polynomials in initialize() instead
+// of current initialize_grid_parameters().
+//
+// KDE: look at figTree --> if not too dense; otherwise, simple box kernel +
+// Gaussian kernel
+//
+// add/activate STOCHASTIC_EXPANSION allowing moments or KDE
 void SparseGridDriver::
 bounded_normal_gauss_points(int order, int num_params, double* params,
 			    double* data)

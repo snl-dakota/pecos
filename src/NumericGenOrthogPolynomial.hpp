@@ -105,21 +105,21 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// thin wrapper for Pecos::bounded_normal_pdf for NGFPType API
+  /// thin wrapper for bounded_normal_pdf for NGFPType API
   static Real bounded_normal_pdf(const Real& x, const RealVector& params);
-  /// thin wrapper for Pecos::lognormal_pdf for NGFPType API
+  /// thin wrapper for lognormal_pdf for NGFPType API
   static Real lognormal_pdf(const Real& x, const RealVector& params);
-  /// thin wrapper for Pecos::bounded_lognormal_pdf for NGFPType API
+  /// thin wrapper for bounded_lognormal_pdf for NGFPType API
   static Real bounded_lognormal_pdf(const Real& x, const RealVector& params);
-  /// thin wrapper for Pecos::loguniform_pdf for NGFPType API
+  /// thin wrapper for loguniform_pdf for NGFPType API
   static Real loguniform_pdf(const Real& x, const RealVector& params);
-  /// thin wrapper for Pecos::triangular_pdf for NGFPType API
+  /// thin wrapper for triangular_pdf for NGFPType API
   static Real triangular_pdf(const Real& x, const RealVector& params);
-  /// thin wrapper for Pecos::gumbel_pdf for NGFPType API
+  /// thin wrapper for gumbel_pdf for NGFPType API
   static Real gumbel_pdf(const Real& x, const RealVector& params);
-  /// thin wrapper for Pecos::frechet_pdf for NGFPType API
+  /// thin wrapper for frechet_pdf for NGFPType API
   static Real frechet_pdf(const Real& x, const RealVector& params);
-  /// thin wrapper for Pecos::weibull_pdf for NGFPType API
+  /// thin wrapper for weibull_pdf for NGFPType API
   static Real weibull_pdf(const Real& x, const RealVector& params);
 
   /// solve a symmetric tridiagonal eigenvalue problem for the Gauss
@@ -183,7 +183,8 @@ private:
   //
 
   /// the type of non-Askey distribution: BOUNDED_NORMAL, LOGNORMAL,
-  /// BOUNDED_LOGNORMAL, LOGUNIFORM, TRIANGULAR, GUMBEL, FRECHET, or WEIBULL
+  /// BOUNDED_LOGNORMAL, LOGUNIFORM, TRIANGULAR, GUMBEL, FRECHET,
+  /// WEIBULL, or STOCHASTIC_EXPANSION
   short distributionType;
 
   /// distribution parameters (e.g., mean, std_dev, alpha, beta)
@@ -243,7 +244,7 @@ inline void NumericGenOrthogPolynomial::
 bounded_normal_distribution(const Real& mean,  const Real& std_dev,
 			    const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = Pecos::BOUNDED_NORMAL;
+  distributionType = BOUNDED_NORMAL;
   distParams.sizeUninitialized(4);
   distParams[0] = mean;  distParams[1] = std_dev;
   distParams[2] = l_bnd; distParams[3] = u_bnd;
@@ -254,7 +255,7 @@ bounded_normal_distribution(const Real& mean,  const Real& std_dev,
 inline void NumericGenOrthogPolynomial::
 lognormal_distribution(const Real& mean, const Real& std_dev)
 {
-  distributionType = Pecos::LOGNORMAL;
+  distributionType = LOGNORMAL;
   distParams.sizeUninitialized(2);
   distParams[0] = mean; distParams[1] = std_dev;
   reset_gauss();
@@ -265,7 +266,7 @@ inline void NumericGenOrthogPolynomial::
 bounded_lognormal_distribution(const Real& mean,  const Real& std_dev,
 			       const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = Pecos::BOUNDED_LOGNORMAL;
+  distributionType = BOUNDED_LOGNORMAL;
   distParams.sizeUninitialized(4);
   distParams[0] = mean;  distParams[1] = std_dev;
   distParams[2] = l_bnd; distParams[3] = u_bnd;
@@ -276,7 +277,7 @@ bounded_lognormal_distribution(const Real& mean,  const Real& std_dev,
 inline void NumericGenOrthogPolynomial::
 loguniform_distribution(const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = Pecos::LOGUNIFORM;
+  distributionType = LOGUNIFORM;
   distParams.sizeUninitialized(2);
   distParams[0] = l_bnd; distParams[1] = u_bnd;
   reset_gauss();
@@ -286,7 +287,7 @@ loguniform_distribution(const Real& l_bnd, const Real& u_bnd)
 inline void NumericGenOrthogPolynomial::
 triangular_distribution(const Real& mode, const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = Pecos::TRIANGULAR;
+  distributionType = TRIANGULAR;
   distParams.sizeUninitialized(3);
   distParams[0] = mode; distParams[1] = l_bnd; distParams[2] = u_bnd;
   reset_gauss();
@@ -296,7 +297,7 @@ triangular_distribution(const Real& mode, const Real& l_bnd, const Real& u_bnd)
 inline void NumericGenOrthogPolynomial::
 gumbel_distribution(const Real& alpha, const Real& beta)
 {
-  distributionType = Pecos::GUMBEL;
+  distributionType = GUMBEL;
   distParams.sizeUninitialized(2);
   distParams[0] = alpha; distParams[1] = beta;
   reset_gauss();
@@ -306,7 +307,7 @@ gumbel_distribution(const Real& alpha, const Real& beta)
 inline void NumericGenOrthogPolynomial::
 frechet_distribution(const Real& alpha, const Real& beta)
 {
-  distributionType = Pecos::FRECHET;
+  distributionType = FRECHET;
   distParams.sizeUninitialized(2);
   distParams[0] = alpha; distParams[1] = beta;
   reset_gauss();
@@ -316,7 +317,7 @@ frechet_distribution(const Real& alpha, const Real& beta)
 inline void NumericGenOrthogPolynomial::
 weibull_distribution(const Real& alpha, const Real& beta)
 {
-  distributionType = Pecos::WEIBULL;
+  distributionType = WEIBULL;
   distParams.sizeUninitialized(2);
   distParams[0] = alpha; distParams[1] = beta;
   reset_gauss();
@@ -326,7 +327,7 @@ weibull_distribution(const Real& alpha, const Real& beta)
 inline void NumericGenOrthogPolynomial::
 histogram_bin_distribution(const RealVector& bin_pairs)
 {
-  distributionType = Pecos::HISTOGRAM_BIN;
+  distributionType = HISTOGRAM_BIN;
   distParams = bin_pairs;
   reset_gauss();
 }

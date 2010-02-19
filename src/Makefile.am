@@ -44,7 +44,9 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  LaguerreOrthogPolynomial.cpp			\
 			  LegendreOrthogPolynomial.cpp			\
 			  NumericGenOrthogPolynomial.cpp		\
+			  CubatureDriver.cpp				\
 			  SparseGridDriver.cpp				\
+			  TensorProductDriver.cpp			\
 			  pecos_stat_util.cpp				\
                           LHSDriver.cpp                                 \
 			  $(LHS_S)
