@@ -78,10 +78,11 @@ void TensorProductDriver::initialize_grid_parameters(const ShortArray& u_types)
     case STD_NORMAL:
       integrationRules[i] = GAUSS_HERMITE; break;
     case STD_UNIFORM:
-      // GAUSS_PATTERSON valid only up to ssgLevel==7 (max m=2^{l+1}-1 = 255)
-      // GAUSS_PATTERSON_SLOW valid up to ssgLevel==127 (max m=2*l+1   = 255)
+      // GAUSS_PATTERSON valid only up to level==7 (max m=2^{l+1}-1 = 255)
+      // GAUSS_PATTERSON_MODERATE valid up to level==63 (max m=255, m=4*l+1)
+      // GAUSS_PATTERSON_SLOW valid up to level==127 (max m=255, m=2*l+1)
       integrationRules[i] = (nested_rules) ?
-	GAUSS_PATTERSON_SLOW : GAUSS_LEGENDRE;  break;
+	GAUSS_PATTERSON_MODERATE : GAUSS_LEGENDRE;  break;
     case STD_EXPONENTIAL:
       integrationRules[i] = GAUSS_LAGUERRE;     break;
     case STD_BETA:

@@ -204,18 +204,22 @@ initialize_grid_parameters(const ShortArray& u_types,
       // rule become skewed when mixing Gauss rules with CC.  For this reason,
       // CC is selected only if isotropic in rule (for now).
       if (nested_rules) {
-	// GAUSS_PATTERSON valid only up to ssgLevel==7 (max m=2^{l+1}-1 = 255)
-	// GAUSS_PATTERSON_SLOW valid up to ssgLevel==127 (max m=2*l+1   = 255)
+	// GAUSS_PATTERSON valid only up to level==7 (max m=2^{l+1}-1 = 255)
+	// GAUSS_PATTERSON_MODERATE valid up to level==63 (max m=255, m=4*l+1)
+	// GAUSS_PATTERSON_SLOW valid up to level==127 (max m=255, m=2*l+1)
 	compute1DPoints[i]  = webbur::patterson_lookup_points_np;
 	compute1DWeights[i] = webbur::patterson_lookup_weights_np;
+	//integrationRules[i] = GAUSS_PATTERSON_MODERATE; // closed fully nested
 	integrationRules[i] = GAUSS_PATTERSON_SLOW; // closed fully nested
 
 	//compute1DPoints[i]  = webbur::clenshaw_curtis_compute_points_np;
 	//compute1DWeights[i] = webbur::clenshaw_curtis_compute_weights_np;
+	//integrationRules[i] = CLENSHAW_CURTIS_MODERATE; // closed fully nested
 	//integrationRules[i] = CLENSHAW_CURTIS_SLOW; // closed fully nested
 
 	//compute1DPoints[i]  = webbur::fejer2_compute_points_np;
 	//compute1DWeights[i] = webbur::fejer2_compute_weights_np;
+	//integrationRules[i] = FEJER2_MODERATE; // closed fully nested
 	//integrationRules[i] = FEJER2_SLOW; // closed fully nested
       }
       else {
@@ -391,14 +395,16 @@ void SparseGridDriver::compute_grid()
     switch (integrationRules[i]) {
     case GAUSS_HERMITE:
       construct_h = true;  break;
-    case GAUSS_LEGENDRE: case GAUSS_PATTERSON: case GAUSS_PATTERSON_SLOW:
+    case GAUSS_LEGENDRE:           case GAUSS_PATTERSON:
+    case GAUSS_PATTERSON_MODERATE: case GAUSS_PATTERSON_SLOW:
       construct_l = true;  break;
     case GAUSS_JACOBI:
       construct_j = true;  break;
     case GEN_GAUSS_LAGUERRE:
       construct_gl = true; break;
-    case CLENSHAW_CURTIS: case CLENSHAW_CURTIS_SLOW:
-    case FEJER2:          case FEJER2_SLOW:
+    case CLENSHAW_CURTIS:          case FEJER2:
+    case CLENSHAW_CURTIS_MODERATE: case FEJER2_MODERATE:
+    case CLENSHAW_CURTIS_SLOW:     case FEJER2_SLOW:
       construct_c = true;  break;
     }
   }
@@ -417,7 +423,8 @@ void SparseGridDriver::compute_grid()
     case GAUSS_HERMITE: // Gauss-Hermite open weakly nested
       pt_factor[i] = hermite_poly.point_factor();
       wt_factor   *= hermite_poly.weight_factor();    break;
-    case GAUSS_LEGENDRE: case GAUSS_PATTERSON: case GAUSS_PATTERSON_SLOW:
+    case GAUSS_LEGENDRE:           case GAUSS_PATTERSON:
+    case GAUSS_PATTERSON_MODERATE: case GAUSS_PATTERSON_SLOW:
       legendre_poly.gauss_mode(integrationRules[i]);
       wt_factor *= legendre_poly.weight_factor();     break;
     case GAUSS_JACOBI:
@@ -427,8 +434,9 @@ void SparseGridDriver::compute_grid()
     case GEN_GAUSS_LAGUERRE:
       gen_laguerre_poly.alpha_stat(polyParams[pp_cntr]+1.);// convert poly->stat
       wt_factor *= gen_laguerre_poly.weight_factor(); break;
-    case CLENSHAW_CURTIS: case CLENSHAW_CURTIS_SLOW:
-    case FEJER2:          case FEJER2_SLOW:
+    case CLENSHAW_CURTIS:          case FEJER2:
+    case CLENSHAW_CURTIS_MODERATE: case FEJER2_MODERATE:
+    case CLENSHAW_CURTIS_SLOW:     case FEJER2_SLOW:
       chebyshev_poly.gauss_mode(integrationRules[i]);
       wt_factor *= chebyshev_poly.weight_factor();    break;
     //case GAUSS_LAGUERRE: case GOLUB_WELSCH: // scaling is OK
@@ -465,7 +473,9 @@ void SparseGridDriver::compute_grid()
 	key[j] = 2 * bases[cntr] + 1;                 // map to quad order
 	key[j+numVars] = indices[cntr] + bases[cntr]; // 0-based index
 	break;
-      case CLENSHAW_CURTIS: case CLENSHAW_CURTIS_SLOW:
+      case CLENSHAW_CURTIS:
+      case CLENSHAW_CURTIS_MODERATE:
+      case CLENSHAW_CURTIS_SLOW:
 	key[j] = closed_order_max;      // promotion to highest grid
 	key[j+numVars] = indices[cntr]; // already 0-based
 	break;

@@ -45,19 +45,15 @@ public:
   /// set numVars
   void initialize(size_t num_vars, unsigned short prec, int rule);
 
-  /// compute scaled variable and weight sets for the cubature grid
-  void compute_grid();
-
   /// number of collocation points with duplicates removed
   int grid_size();
+  /// compute scaled variable and weight sets for the cubature grid
+  void compute_grid();
 
   /// return weightSets
   const RealVector& weight_sets() const;
   /// return variableSets
   const RealMatrix& variable_sets() const;
-
-  /// return integrationRule
-  int integration_rule() const;
 
 private:
 
@@ -73,7 +69,7 @@ private:
   size_t numVars;
   /// integrand precision
   unsigned short integrandPrec;
-  /// integer codes for sgmga routine integration rule options
+  /// integer code for integration rule
   int integrationRule;
 
   /// the set of weights associated with each point in the cubature grid
@@ -97,10 +93,6 @@ inline const RealVector& CubatureDriver::weight_sets() const
 
 inline const RealMatrix& CubatureDriver::variable_sets() const
 { return variableSets; }
-
-
-inline int CubatureDriver::integration_rule() const
-{ return integrationRule; }
 
 
 inline void CubatureDriver::
