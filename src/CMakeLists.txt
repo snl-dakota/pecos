@@ -1,58 +1,12 @@
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/packages/teuchos/src
-                    ${PROJECT_BINARY_DIR}/packages/teuchos/src
-                    ${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
+                    ${PROJECT_BINARY_DIR}/packages/teuchos/src)
+IF(HAVE_SPARSE_GRID)
+  INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
+ENDIF(HAVE_SPARSE_GRID)
 
 ## Pecos library sources.
-SET(Pecos_src
-  DataTransformation.cpp
-  InverseTransformation.cpp
-  FourierInverseTransformation.cpp
-  KarhunenLoeveInverseTransformation.cpp
-  SamplingInverseTransformation.cpp
-  ProbabilityTransformation.cpp
-  NatafTransformation.cpp
-  BasisPolynomial.cpp
-  LagrangeInterpPolynomial.cpp
-  OrthogonalPolynomial.cpp
-  ChebyshevOrthogPolynomial.cpp
-  GenLaguerreOrthogPolynomial.cpp
-  HermiteOrthogPolynomial.cpp
-  JacobiOrthogPolynomial.cpp
-  LaguerreOrthogPolynomial.cpp
-  LegendreOrthogPolynomial.cpp
-  NumericGenOrthogPolynomial.cpp
-  CubatureDriver.cpp
-  SparseGridDriver.cpp
-  TensorProductDriver.cpp
-  LHSDriver.cpp
-  pecos_stat_util.cpp
-  pecos_data_types.hpp
-  pecos_global_defs.hpp
-  pecos_stat_util.hpp
-  DataTransformation.hpp
-  InverseTransformation.hpp
-  FourierInverseTransformation.hpp
-  KarhunenLoeveInverseTransformation.hpp
-  SamplingInverseTransformation.hpp
-  ProbabilityTransformation.hpp
-  NatafTransformation.hpp
-  BasisPolynomial.hpp
-  LagrangeInterpPolynomial.hpp
-  OrthogonalPolynomial.hpp
-  ChebyshevOrthogPolynomial.hpp
-  GenLaguerreOrthogPolynomial.hpp
-  HermiteOrthogPolynomial.hpp
-  JacobiOrthogPolynomial.hpp
-  LaguerreOrthogPolynomial.hpp
-  LegendreOrthogPolynomial.hpp
-  NumericGenOrthogPolynomial.hpp
-  CubatureDriver.hpp
-  SparseGridDriver.hpp
-  TensorProductDriver.hpp
-  LHSDriver.hpp
-  BoostRNG_Monostate.hpp
-)
+FILE(GLOB Pecos_src *.cpp)
 
 IF(HAVE_LHS)
   SET(Pecos_src ${Pecos_src} lhs_wrappers.f90)
