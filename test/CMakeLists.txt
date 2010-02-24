@@ -1,6 +1,7 @@
 SET(TPL_LIBS teuchos)
 
 INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src
+                    ${Boost_INCLUDE_DIRS}
                     ${PROJECT_SOURCE_DIR}/packages/teuchos/src
                     ${PROJECT_BINARY_DIR}/packages/teuchos/src)
 
@@ -22,21 +23,22 @@ ENDIF(WITH_FFTW)
 
 # Complete these for each specific test.
 ADD_EXECUTABLE(pecos_ifft_g pecos_ifft_g.cpp)
-TARGET_LINK_LIBRARIES(pecos_ifft_g pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS} pecos_src)
+TARGET_LINK_LIBRARIES(pecos_ifft_g pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS}
+${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 ADD_TEST(pecos_ifft_g pecos_ifft_g)
 
 # Complete these for each specific test.
 ADD_EXECUTABLE(pecos_ifft_sd pecos_ifft_sd.cpp)
-TARGET_LINK_LIBRARIES(pecos_ifft_sd pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+TARGET_LINK_LIBRARIES(pecos_ifft_sd pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 ADD_TEST(pecos_ifft_sd pecos_ifft_sd)
 
 # Complete these for each specific test.
 ADD_EXECUTABLE(boost_test_dist boost_test_dist.cpp)
-TARGET_LINK_LIBRARIES(boost_test_dist pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+TARGET_LINK_LIBRARIES(boost_test_dist ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 ADD_TEST(boost_test_dist boost_test_dist)
 
 # Complete these for each specific test.
 ADD_EXECUTABLE(boost_test_rng boost_test_rng.cpp)
-TARGET_LINK_LIBRARIES(boost_test_rng pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+TARGET_LINK_LIBRARIES(boost_test_rng ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 ADD_TEST(boost_test_rng boost_test_rng)
 

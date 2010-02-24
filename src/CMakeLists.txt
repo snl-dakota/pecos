@@ -1,5 +1,6 @@
 
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/packages/teuchos/src
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS}
+                    ${PROJECT_SOURCE_DIR}/packages/teuchos/src
                     ${PROJECT_BINARY_DIR}/packages/teuchos/src)
 IF(HAVE_SPARSE_GRID)
   INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
