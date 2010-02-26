@@ -1067,7 +1067,7 @@ void InterpPolyApproximation::compute_global_sensitivity()
 void InterpPolyApproximation::get_subsets()
 {
   // includes the "zero" set
-  int num_subsets = (int)std::pow(2.0,numVars);
+  int num_subsets = (int)std::pow(2.,(int)numVars);
 
   for (int i=1; i<num_subsets; i++) {
     // find all constituent subsets of set i and store

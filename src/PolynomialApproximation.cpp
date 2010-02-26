@@ -25,7 +25,7 @@ void PolynomialApproximation::allocate_arrays()
   // size the sensitivity member variables
   if (expansionCoeffFlag) {
     if (sobolIndices.empty())
-      sobolIndices.sizeUninitialized((int)std::pow(2.,numVars));
+      sobolIndices.sizeUninitialized((int)std::pow(2.,(int)numVars));
     if (totalSobolIndices.empty())
       totalSobolIndices.sizeUninitialized(numVars);
   }
