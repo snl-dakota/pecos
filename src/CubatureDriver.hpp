@@ -15,7 +15,7 @@
 #ifndef CUBATURE_DRIVER_HPP
 #define CUBATURE_DRIVER_HPP
 
-#include "pecos_data_types.hpp"
+#include "IntegrationDriver.hpp"
 
 namespace Pecos {
 
@@ -27,7 +27,7 @@ namespace Pecos {
     Dakota::NonDCubature, but could also be used for general numerical
     integration of moments. */
 
-class CubatureDriver
+class CubatureDriver: public IntegrationDriver
 {
 public:
 
@@ -50,11 +50,6 @@ public:
   /// compute scaled variable and weight sets for the cubature grid
   void compute_grid();
 
-  /// return weightSets
-  const RealVector& weight_sets() const;
-  /// return variableSets
-  const RealMatrix& variable_sets() const;
-
 private:
 
   //
@@ -65,17 +60,10 @@ private:
   //- Heading: Data
   //
 
-  /// number of variables in the cubature grid
-  size_t numVars;
   /// integrand precision
   unsigned short integrandPrec;
   /// integer code for integration rule
   int integrationRule;
-
-  /// the set of weights associated with each point in the cubature grid
-  RealVector weightSets;
-  /// the set of points in the cubature grid, arranged num points by numVars
-  RealMatrix variableSets;
 };
 
 
@@ -87,18 +75,10 @@ inline CubatureDriver::~CubatureDriver()
 { }
 
 
-inline const RealVector& CubatureDriver::weight_sets() const
-{ return weightSets; }
-
-
-inline const RealMatrix& CubatureDriver::variable_sets() const
-{ return variableSets; }
-
-
 inline void CubatureDriver::
 initialize(size_t num_vars, unsigned short prec, int rule)
 { numVars = num_vars; integrandPrec = prec; integrationRule = rule; }
 
-} // namespace Dakota
+} // namespace Pecos
 
 #endif

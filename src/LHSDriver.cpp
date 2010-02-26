@@ -203,32 +203,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 		 const RealVector&   cs_l_bnds,   const RealVector& cs_u_bnds,
 		 const IntVector&    dsri_l_bnds, const IntVector&  dsri_u_bnds,
 		 const IntSetArray&  dssi_values,
-		 const RealSetArray& dssr_values,
-		 const RealVector& n_means,      const RealVector& n_std_devs,
-		 const RealVector& n_l_bnds,     const RealVector& n_u_bnds,
-		 const RealVector& ln_means,     const RealVector& ln_std_devs,
-		 const RealVector& ln_lambdas,   const RealVector& ln_zetas,
-		 const RealVector& ln_err_facts, const RealVector& ln_l_bnds,
-		 const RealVector& ln_u_bnds,	 const RealVector& u_l_bnds,
-		 const RealVector& u_u_bnds,	 const RealVector& lu_l_bnds,
-		 const RealVector& lu_u_bnds,    const RealVector& t_modes,
-		 const RealVector& t_l_bnds,     const RealVector& t_u_bnds,
-		 const RealVector& e_betas,      const RealVector& b_alphas,
-		 const RealVector& b_betas,      const RealVector& b_l_bnds,
-		 const RealVector& b_u_bnds,     const RealVector& ga_alphas,
-		 const RealVector& ga_betas,     const RealVector& gu_alphas,
-		 const RealVector& gu_betas,     const RealVector& f_alphas,
-		 const RealVector& f_betas,      const RealVector& w_alphas,
-		 const RealVector& w_betas,   const RealVectorArray& h_bin_prs,
-                 const RealVector& p_lambdas, const RealVector& bi_prob_per_tr,
-                 const IntVector& bi_num_tr,  const RealVector& nb_prob_per_tr,
-                 const IntVector& nb_num_tr,  const RealVector& ge_prob_per_tr, 
-                 const IntVector& hg_total_pop,
-		 const IntVector& hg_selected_pop,
-		 const IntVector& hg_num_drawn, const RealVectorArray& h_pt_prs,
-		 const RealVectorArray& i_probs, const RealVectorArray& i_bnds,
-		 const RealSymMatrix& correlations, int num_samples,
-		 RealMatrix& samples, RealMatrix& sample_ranks)
+		 const RealSetArray& dssr_values, const DistributionParams& dp,
+		 int num_samples, RealMatrix& samples, RealMatrix& sample_ranks)
 {
 #ifdef HAVE_LHS
   // generate samples within user-specified parameter distributions
@@ -239,6 +215,53 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 	  << "be nonzero." << std::endl;
     abort_handler(-1);
   }
+
+  const RealVector& n_means = dp.normal_means();
+  const RealVector& n_std_devs = dp.normal_std_deviations();
+  const RealVector& n_l_bnds = dp.normal_lower_bounds();
+  const RealVector& n_u_bnds = dp.normal_upper_bounds();
+  const RealVector& ln_means = dp.lognormal_means();
+  const RealVector& ln_std_devs = dp.lognormal_std_deviations();
+  const RealVector& ln_lambdas = dp.lognormal_lambdas();
+  const RealVector& ln_zetas = dp.lognormal_zetas();
+  const RealVector& ln_err_facts = dp.lognormal_error_factors();
+  const RealVector& ln_l_bnds = dp.lognormal_lower_bounds();
+  const RealVector& ln_u_bnds = dp.lognormal_upper_bounds();
+  const RealVector& u_l_bnds = dp.uniform_lower_bounds();
+  const RealVector& u_u_bnds = dp.uniform_upper_bounds();
+  const RealVector& lu_l_bnds = dp.loguniform_lower_bounds();
+  const RealVector& lu_u_bnds = dp.loguniform_upper_bounds();
+  const RealVector& t_modes = dp.triangular_modes();
+  const RealVector& t_l_bnds = dp.triangular_lower_bounds();
+  const RealVector& t_u_bnds = dp.triangular_upper_bounds();
+  const RealVector& e_betas = dp.exponential_betas();
+  const RealVector& b_alphas = dp.beta_alphas();
+  const RealVector& b_betas = dp.beta_betas();
+  const RealVector& b_l_bnds = dp.beta_lower_bounds();
+  const RealVector& b_u_bnds = dp.beta_upper_bounds();
+  const RealVector& ga_alphas = dp.gamma_alphas();
+  const RealVector& ga_betas = dp.gamma_betas();
+  const RealVector& gu_alphas = dp.gumbel_alphas();
+  const RealVector& gu_betas = dp.gumbel_betas();
+  const RealVector& f_alphas = dp.frechet_alphas();
+  const RealVector& f_betas  = dp.frechet_betas();
+  const RealVector& w_alphas = dp.weibull_alphas();
+  const RealVector& w_betas = dp.weibull_betas();
+  const RealVectorArray& h_bin_prs = dp.histogram_bin_pairs();
+  const RealVector& p_lambdas = dp.poisson_lambdas();
+  const RealVector& bi_prob_per_tr = dp.binomial_probabilities_per_trial();
+  const IntVector&  bi_num_tr = dp.binomial_num_trials();
+  const RealVector& nb_prob_per_tr
+    = dp.negative_binomial_probabilities_per_trial();
+  const IntVector&  nb_num_tr = dp.negative_binomial_num_trials();
+  const RealVector& ge_prob_per_tr = dp.geometric_probabilities_per_trial();
+  const IntVector&  hg_total_pop = dp.hypergeometric_total_population();
+  const IntVector&  hg_selected_pop = dp.hypergeometric_selected_population();
+  const IntVector&  hg_num_drawn = dp.hypergeometric_num_drawn();
+  const RealVectorArray& h_pt_prs = dp.histogram_point_pairs();
+  const RealVectorArray& i_probs = dp.interval_probabilities();
+  const RealVectorArray& i_bnds  = dp.interval_bounds();
+  const RealSymMatrix& correlations = dp.uncertain_correlations();
 
   bool correlation_flag = !correlations.empty();
   size_t i, j, num_cdv = cd_l_bnds.length(), num_nuv  = n_means.length(),

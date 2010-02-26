@@ -15,9 +15,11 @@
 #ifndef TENSOR_PRODUCT_DRIVER_HPP
 #define TENSOR_PRODUCT_DRIVER_HPP
 
-#include "pecos_data_types.hpp"
+#include "IntegrationDriver.hpp"
 
 namespace Pecos {
+
+class DistributionParams;
 
 
 /// generates N-dimensional tensor-product quadrature grids for
@@ -27,7 +29,7 @@ namespace Pecos {
 /** This class is used by Dakota::NonDQuadrature, but could also be
     used for general numerical integration of moments. */
 
-class TensorProductDriver
+class TensorProductDriver: public IntegrationDriver
 {
 public:
 
@@ -39,36 +41,35 @@ public:
   ~TensorProductDriver(); ///< destructor
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
-  /// set numVars, isotropicTPQ, and tpqAnisoLevelWts
-  void initialize_grid_level(size_t num_vars, const RealVector& dim_pref);
-
-  /// set integrationRules
-  void initialize_grid_parameters(const ShortArray& u_types);
+  /// set anisoLevelWts
+  void anisotropic_weights(const RealVector& aniso_wts);
 
   /// compute scaled variable and weight sets for the TPQ grid
   void compute_grid();
-
   /// number of collocation points
-  size_t grid_size();
+  int grid_size();
 
-  /// return weightSets
-  const RealVector& weight_sets() const;
-  /// return variableSets
-  const RealMatrix& variable_sets() const;
+  //
+  //- Heading: Member functions
+  //
 
-  /// return isotropicTPQ
-  bool isotropic() const;
-  /// set tpqAnisoLevelWts
-  void dimension_preference(const RealVector& dim_pref);
-  /// set tpqAnisoLevelWts
-  void anisotropic_weights(const RealVector& aniso_wts);
-  /// return tpqAnisoLevelWts
-  const RealVector& anisotropic_weights() const;
-  /// return integrationRules
-  const IntArray& integration_rules() const;
+  /// set quadOrder
+  void quadrature_order(const UShortArray& quad_order);
+  /// set ith entry in quadOrder
+  void quadrature_order(unsigned short order, size_t i);
+  /// return quadOrder
+  const UShortArray& quadrature_order() const;
+  /// return ith entry in quadOrder
+  unsigned short quadrature_order(size_t i) const;
+
+  /// set numVars, integrationRules, polynomialBasis
+  void initialize_grid(const ShortArray& u_types, bool nested_rules);
+  /// set numVars, integrationRules, polynomialBasis
+  void initialize_grid_parameters(const ShortArray& u_types,
+				  const DistributionParams& dp);
 
 private:
 
@@ -80,27 +81,8 @@ private:
   //- Heading: Data
   //
 
-  /// number of variables in the tensor-product grid
-  size_t numVars;
-
   /// the isotropic/anisotropic quadrature order
   UShortArray quadOrder;
-
-  /// flag indicating an isotropic tensor-product grid
-  bool isotropicTPQ;
-  // vector of dimension preference levels for anisotropic tensor-product grid
-  //RealVector tpqDimPref;
-  /// weighting vector for anisotropic tensor-product grids
-  RealVector tpqAnisoLevelWts;
-
-  /// integer codes for sgmga routine integration rule options
-  IntArray integrationRules;
-
-  /// the set of weights associated with each point in the tensor-product grid
-  RealVector weightSets;
-  /// the set of points in the tensor-product grid,
-  /// arranged num points by numVars
-  RealMatrix variableSets;
 };
 
 
@@ -112,42 +94,31 @@ inline TensorProductDriver::~TensorProductDriver()
 { }
 
 
-inline size_t TensorProductDriver::grid_size()
+inline void TensorProductDriver::quadrature_order(const UShortArray& quad_order)
+{ quadOrder = quad_order; }
+
+
+inline void TensorProductDriver::
+quadrature_order(unsigned short order, size_t i)
+{ quadOrder[i] = order; }
+
+
+inline const UShortArray& TensorProductDriver::quadrature_order() const
+{ return quadOrder; }
+
+
+inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
+{ return quadOrder[i]; }
+
+
+inline int TensorProductDriver::grid_size()
 {
-  size_t i, size = 1;
-  for (i=0; i<numVars; ++i)
+  int size = 1;
+  for (size_t i=0; i<numVars; ++i)
     size *= quadOrder[i];
   return size;
 }
 
-
-inline const RealVector& TensorProductDriver::weight_sets() const
-{ return weightSets; }
-
-
-inline const RealMatrix& TensorProductDriver::variable_sets() const
-{ return variableSets; }
-
-
-inline bool TensorProductDriver::isotropic() const
-{ return isotropicTPQ; }
-
-
-inline const RealVector& TensorProductDriver::anisotropic_weights() const
-{ return tpqAnisoLevelWts; }
-
-
-inline const IntArray& TensorProductDriver::integration_rules() const
-{ return integrationRules; }
-
-
-inline void TensorProductDriver::
-initialize_grid_level(size_t num_vars, const RealVector& dim_pref)
-{
-  numVars = num_vars;
-  dimension_preference(dim_pref);
-}
-
-} // namespace Dakota
+} // namespace Pecos
 
 #endif

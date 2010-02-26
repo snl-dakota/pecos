@@ -67,16 +67,21 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // ---------------------------------------
 typedef std::deque<bool>            BoolDeque; // See Meyers' Effective STL, #18
 typedef std::vector<Real>           RealArray;
+typedef std::vector<RealArray>      Real2DArray;
+typedef std::vector<Real2DArray>    Real3DArray;
 typedef std::vector<int>            IntArray;
+typedef std::vector<IntArray>       Int2DArray;
 typedef std::vector<unsigned int>   UIntArray;
 typedef std::vector<short>          ShortArray;
 typedef std::vector<unsigned short> UShortArray;
+typedef std::vector<UShortArray>    UShort2DArray;
+typedef std::vector<UShort2DArray>  UShort3DArray;
 typedef std::vector<size_t>         SizetArray;
+typedef std::vector<SizetArray>     Sizet2DArray;
+typedef std::list<size_t>           SizetList;
 typedef std::vector<std::complex<Real> >    ComplexArray;
 typedef std::vector<std::pair<Real, Real> > RealPairArray;
 typedef std::vector<String>         StringArray;
-typedef std::vector<RealArray>      Real2DArray;
-typedef std::vector<IntArray>       Int2DArray;
 typedef std::vector<RealVector>     RealVectorArray;
 typedef std::vector<RealMatrix>     RealMatrixArray;
 typedef std::vector<RealSymMatrix>  RealSymMatrixArray;
@@ -161,6 +166,20 @@ void copy_data(const std::vector<ScalarType>& v,
     sdv.sizeUninitialized(size_v);
   for (OrdinalType i=0; i<size_v; ++i)
     sdv[i] = v[i];
+}
+
+
+/// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to same
+/// (used in place of operator= when a deep copy of a vector view is needed)
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv1,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv2)
+{
+  OrdinalType size_sdv1 = sdv1.length();
+  if (size_sdv1 != sdv2.length())
+    sdv2.sizeUninitialized(size_sdv1);
+  for (OrdinalType i=0; i<size_sdv1; ++i)
+    sdv2[i] = sdv1[i];
 }
 
 

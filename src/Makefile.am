@@ -34,6 +34,10 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  SamplingInverseTransformation.cpp		\
 			  ProbabilityTransformation.cpp			\
 			  NatafTransformation.cpp			\
+			  BasisApproximation.cpp			\
+			  PolynomialApproximation.cpp			\
+			  InterpPolyApproximation.cpp			\
+			  OrthogPolyApproximation.cpp			\
 			  BasisPolynomial.cpp				\
 			  LagrangeInterpPolynomial.cpp			\
 			  OrthogonalPolynomial.cpp			\
@@ -44,13 +48,12 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  LaguerreOrthogPolynomial.cpp			\
 			  LegendreOrthogPolynomial.cpp			\
 			  NumericGenOrthogPolynomial.cpp		\
+                          LHSDriver.cpp $(LHS_S)			\
+			  IntegrationDriver.cpp				\
 			  CubatureDriver.cpp				\
 			  SparseGridDriver.cpp				\
 			  TensorProductDriver.cpp			\
-			  pecos_stat_util.cpp				\
-                          LHSDriver.cpp                                 \
-			  $(LHS_S)
-#			  BasisFunction.cpp
+			  pecos_stat_util.cpp
 
 ## Extra files to remove when doing 'make maintainer-clean'.
 MAINTAINERCLEANFILES = Makefile.in

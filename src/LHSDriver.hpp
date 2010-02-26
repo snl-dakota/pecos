@@ -11,6 +11,7 @@
 
 #include "pecos_data_types.hpp"
 #include "pecos_global_defs.hpp"
+#include "DistributionParams.hpp"
 
 
 namespace Pecos {
@@ -74,39 +75,7 @@ public:
 			const IntVector&    dsr_u_bnds,
 			const IntSetArray&  dssi_values,
 			const RealSetArray& dssr_values,
-			const RealVector& n_means, const RealVector& n_std_devs,
-			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
-			const RealVector& ln_means,
-			const RealVector& ln_std_devs,
-			const RealVector& ln_lambdas,
-			const RealVector& ln_zetas,
-			const RealVector& ln_err_facts,
-			const RealVector& ln_l_bnds,
-			const RealVector& ln_u_bnds, const RealVector& u_l_bnds,
-			const RealVector& u_u_bnds, const RealVector& lu_l_bnds,
-			const RealVector& lu_u_bnds, const RealVector& t_modes,
-			const RealVector& t_l_bnds, const RealVector& t_u_bnds,
-			const RealVector& e_betas,  const RealVector& b_alphas,
-			const RealVector& b_betas,  const RealVector& b_l_bnds,
-			const RealVector& b_u_bnds, const RealVector& ga_alphas,
-			const RealVector& ga_betas, const RealVector& gu_alphas,
-			const RealVector& gu_betas, const RealVector& f_alphas,
-			const RealVector& f_betas, const RealVector& w_alphas,
-			const RealVector& w_betas, 
-                        const RealVectorArray& h_bin_prs,
-			const RealVector& p_lambdas,
-			const RealVector& bi_prob_per_tr,
-			const IntVector& bi_num_tr,
-			const RealVector& nb_prob_per_tr,
-			const IntVector& nb_num_tr,
-			const RealVector& ge_prob_per_tr,
-			const IntVector& hg_total_pop,
-			const IntVector& hg_selected_pop,
-			const IntVector& hg_num_drawn,
-			const RealVectorArray& h_pt_prs,
-			const RealVectorArray& i_probs,
-			const RealVectorArray& i_bnds,
-			const RealSymMatrix& correlations, int num_samples,
+			const DistributionParams& dp, int num_samples,
 			RealMatrix& samples_array, RealMatrix& rank_array);
 
   /// generates the desired set of parameter samples from within
@@ -225,17 +194,18 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
   RealVector  empty_rv;  RealVectorArray empty_rva; IntVector empty_iv;
   RealMatrix  empty_rm;  RealSymMatrix   empty_rsm;
   IntSetArray empty_isa; RealSetArray    empty_rsa;
+  DistributionParams dp(n_means, n_std_devs, n_l_bnds, n_u_bnds, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rva, empty_rv, empty_rv, empty_iv,
+			empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
+			empty_iv, empty_rva, empty_rva, empty_rva, empty_rsm);
   generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
 		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   n_means, n_std_devs, n_l_bnds, n_u_bnds, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rva, empty_rv, empty_rv, empty_iv, empty_rv,
-		   empty_iv, empty_rv, empty_iv, empty_iv, empty_iv, empty_rva,
-		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
-		   empty_rm);
+		   dp, num_samples, samples_array, empty_rm);
 }
 
 
@@ -248,20 +218,21 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector empty_rv; RealVectorArray empty_rva; IntVector empty_iv;
-  RealMatrix empty_rm; RealSymMatrix   empty_rsm; 
+  RealVector empty_rv;   RealVectorArray empty_rva; IntVector empty_iv;
+  RealMatrix empty_rm;   RealSymMatrix   empty_rsm; 
   IntSetArray empty_isa; RealSetArray    empty_rsa;
+  DistributionParams dp(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, u_l_bnds, u_u_bnds, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
+			empty_rv, empty_rva, empty_rv, empty_rv, empty_iv,
+			empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
+			empty_iv, empty_rva, empty_rva, empty_rva, empty_rsm);
   generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
 		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, u_l_bnds,
-		   u_u_bnds, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-		   empty_rv, empty_rva, empty_rv, empty_rv, empty_iv, empty_rv,
-		   empty_iv, empty_rv, empty_iv, empty_iv, empty_iv, empty_rva,
-		   empty_rva, empty_rva, empty_rsm, num_samples, samples_array,
-		   empty_rm);
+		   dp, num_samples, samples_array, empty_rm);
 }
 
 

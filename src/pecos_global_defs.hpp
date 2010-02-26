@@ -60,6 +60,9 @@ enum { CLENSHAW_CURTIS=1, FEJER2, GAUSS_PATTERSON, GAUSS_LEGENDRE,
        GAUSS_PATTERSON_SLOW, CLENSHAW_CURTIS_MODERATE, FEJER2_MODERATE,
        GAUSS_PATTERSON_MODERATE };
 
+/// solution approaches for calculating the polynomial basis coefficients
+enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
+
 
 // ----------------
 // Standard streams

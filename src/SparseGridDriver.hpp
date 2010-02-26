@@ -15,15 +15,17 @@
 #ifndef SPARSE_GRID_DRIVER_HPP
 #define SPARSE_GRID_DRIVER_HPP
 
-#include "pecos_data_types.hpp"
+#include "IntegrationDriver.hpp"
 #include "sandia_rules.H"
 
 namespace Pecos {
 
 /// pointer to a Gauss point or weight evaluation function, matching
-/// the prototype required by Dakota/packages/quadrature/sparse_grid
+/// the prototype required by Pecos/packages/VPISparseGrid
 typedef void ( *FPType ) ( int order, int num_params, double* params,
 			   double* data );
+
+class DistributionParams;
 
 
 /// Derived nondeterministic class that generates N-dimensional
@@ -35,7 +37,7 @@ typedef void ( *FPType ) ( int order, int num_params, double* params,
     Clenshaw-Curtis and Gaussian quadrature rules within Smolyak
     sparse grids. */
 
-class SparseGridDriver
+class SparseGridDriver: public IntegrationDriver
 {
 public:
 
@@ -47,66 +49,52 @@ public:
   ~SparseGridDriver(); ///< destructor
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
-
-  /// set ssgLevel, isotropicSSG, and ssgAnisoLevelWts
-  void initialize_grid_level(size_t num_vars, size_t ssg_level,
-			     const RealVector& dim_pref);
-
-  /// set polyParams, integrationRules, and FPType function pointers
-  void initialize_grid_parameters(const ShortArray& u_types,
-    const RealVector& nuv_means,      const RealVector& nuv_std_devs,
-    const RealVector& nuv_l_bnds,     const RealVector& nuv_u_bnds,
-    const RealVector& lnuv_means,     const RealVector& lnuv_std_devs,
-    const RealVector& lnuv_lambdas,   const RealVector& lnuv_zetas,
-    const RealVector& lnuv_err_facts, const RealVector& lnuv_l_bnds,
-    const RealVector& lnuv_u_bnds,    const RealVector& luuv_l_bnds,
-    const RealVector& luuv_u_bnds,    const RealVector& tuv_modes,
-    const RealVector& tuv_l_bnds,     const RealVector& tuv_u_bnds,
-    const RealVector& buv_alphas,     const RealVector& buv_betas,
-    const RealVector& gauv_alphas,    const RealVector& guuv_alphas,
-    const RealVector& guuv_betas,     const RealVector& fuv_alphas,
-    const RealVector& fuv_betas,      const RealVector& wuv_alphas,
-    const RealVector& wuv_betas,      const RealVectorArray& hbuv_bin_prs);
 
   /// compute scaled variable and weight sets for the sparse grid
   void compute_grid();
-
-  /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying the
-  /// anisotropic index set constraint, along with their corresponding
-  /// coefficients
-  void anisotropic_multi_index(Int2DArray& multi_index,
-			       RealArray& coeffs) const;
-
   /// number of collocation points with duplicates removed
   int grid_size();
-  /// total number of collocation points including duplicates
-  int grid_size_total();
 
-  /// return weightSets
-  const RealVector& weight_sets() const;
-  /// return variableSets
-  const RealMatrix& variable_sets() const;
-
-  /// return isotropicSSG
-  bool isotropic() const;
-  /// set ssgLevel
-  void level(unsigned short ssg_level);
-  /// return ssgLevel
-  unsigned short level() const;
   /// set ssgAnisoLevelWts
   void dimension_preference(const RealVector& dim_pref);
   /// set ssgAnisoLevelWts
   void anisotropic_weights(const RealVector& aniso_wts);
-  /// return ssgAnisoLevelWts
-  const RealVector& anisotropic_weights() const;
+
+  //
+  //- Heading: Member functions
+  //
+
+  /// set ssgLevel, isotropicSSG, and ssgAnisoLevelWts
+  void initialize_grid(const ShortArray& u_types, size_t ssg_level,
+		       const RealVector& dim_pref,
+		       const String& sparse_grid_usage);
+
+  /// set polyParams, integrationRules, and FPType function pointers
+  void initialize_grid_parameters(const ShortArray& u_types,
+				  const DistributionParams& dp);
+
+  /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying
+  /// the anisotropic index set constraint, along with their corresponding
+  /// coefficients
+  void anisotropic_multi_index(Int2DArray& multi_index,
+			       RealArray& coeffs) const;
+
+  /// total number of collocation points including duplicates
+  int grid_size_total();
+
+  /// set ssgLevel
+  void level(unsigned short ssg_level);
+  /// return ssgLevel
+  unsigned short level() const;
+
   /// update axisLowerBounds
   void update_axis_lower_bounds();
+
   // return duplicateTol
   //const Real& duplicate_tolerance() const;
-  /// return integrationRules
-  const IntArray& integration_rules() const;
+
   /// return uniqueIndexMapping
   const IntArray& unique_index_mapping() const;
 
@@ -117,6 +105,12 @@ public:
   /// converts an array of sparse grid levels to an array of
   /// integration orders based on integrationRules
   void level_to_order(const UShortArray& levels, UShortArray& orders) const;
+
+private:
+
+  //
+  //- Heading: Convenience functions
+  //
 
   /// function for numerically-generated Gauss points for
   /// BOUNDED_NORMAL distribution
@@ -184,36 +178,20 @@ public:
   static void histogram_bin_gauss_weights(int order, int num_params,
 					  double* params, double* data);
 
-private:
-
-  //
-  //- Heading: Convenience functions
-  //
-
   //
   //- Heading: Data
   //
 
-  /// number of variables in the sparse grid
-  size_t numVars;
-
   /// the Smolyak sparse grid level
   unsigned short ssgLevel;
-  /// flag indicating an isotropic Smolyak sparse grid
-  /** sgmga routines are used for anisotropic, but sparse_grid_mixed_growth
-      routines are used for isotropic due to reduced computational overhead */
-  bool isotropicSSG;
-  // vector of dimension preference levels for anisotropic sparse grid
-  //RealVector ssgDimPref;
-  /// weighting vector for anisotropic sparse grids: higher weight equates
-  /// to lower dimension preference due to lb <= |alpha|.|i| <= ub
-  RealVector ssgAnisoLevelWts;
+
+  /// "integration" or "interpolation"
+  String sparseGridUsage;
+
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
   RealVector axisLowerBounds;
 
-  /// integer codes for sgmga routine integration rule options
-  IntArray integrationRules;
   /// number of parameters for each polynomial; input to sgmga routines
   /// (corresponds to set of variables defined by integrationRules)
   IntArray numPolyParams;
@@ -225,11 +203,6 @@ private:
 
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
-
-  /// the set of weights associated with each point in the sparse grid
-  RealVector weightSets;
-  /// the set of points in the sparse grid, arranged num points by numVars
-  RealMatrix variableSets;
 
   /// output from sgmga_unique_index()
   IntArray uniqueIndexMapping;
@@ -249,18 +222,6 @@ inline SparseGridDriver::~SparseGridDriver()
 { }
 
 
-inline const RealVector& SparseGridDriver::weight_sets() const
-{ return weightSets; }
-
-
-inline const RealMatrix& SparseGridDriver::variable_sets() const
-{ return variableSets; }
-
-
-inline bool SparseGridDriver::isotropic() const
-{ return isotropicSSG; }
-
-
 inline unsigned short SparseGridDriver::level() const
 { return ssgLevel; }
 
@@ -269,30 +230,12 @@ inline void SparseGridDriver::level(unsigned short ssg_level)
 { ssgLevel = ssg_level; }
 
 
-inline const RealVector& SparseGridDriver::anisotropic_weights() const
-{ return ssgAnisoLevelWts; }
-
-
 //inline const Real& SparseGridDriver::duplicate_tolerance() const
 //{ return duplicateTol; }
 
 
-inline const IntArray& SparseGridDriver::integration_rules() const
-{ return integrationRules; }
-
-
 inline const IntArray& SparseGridDriver::unique_index_mapping() const
 { return uniqueIndexMapping; }
-
-
-inline void SparseGridDriver::
-initialize_grid_level(size_t num_vars, size_t ssg_level,
-		      const RealVector& dim_pref)
-{
-  numVars = num_vars;
-  level(ssg_level);
-  dimension_preference(dim_pref);
-}
 
 
 inline void SparseGridDriver::
@@ -314,6 +257,6 @@ level_to_order(const UShortArray& levels, UShortArray& orders) const
     level_to_order(i, levels[i], orders[i]);
 }
 
-} // namespace Dakota
+} // namespace Pecos
 
 #endif

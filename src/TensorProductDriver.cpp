@@ -13,6 +13,7 @@
 //- Version:
 
 #include "TensorProductDriver.hpp"
+#include "OrthogPolyApproximation.hpp"
 #include "pecos_stat_util.hpp"
 
 static const char rcsId[]="@(#) $Id: TensorProductDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
@@ -22,24 +23,10 @@ static const char rcsId[]="@(#) $Id: TensorProductDriver.C,v 1.57 2004/06/21 19:
 namespace Pecos {
 
 
-void TensorProductDriver::dimension_preference(const RealVector& dim_pref)
-{
-  RealVector aniso_wts;
-  if (!dim_pref.empty()) {
-    size_t num_pref = dim_pref.length();
-    aniso_wts.sizeUninitialized(num_pref);
-    for (size_t i=0; i<num_pref; ++i)
-      aniso_wts[i] = (dim_pref[i] == 0.) ? 0. : 1./dim_pref[i];
-    // scaling occurs in anisotropic_weights() below
-  }
-  anisotropic_weights(aniso_wts);
-}
-
-
 void TensorProductDriver::anisotropic_weights(const RealVector& aniso_wts)
 {
   if (aniso_wts.empty())
-    isotropicTPQ = true;
+    dimIsotropic = true;
   else {
     if (aniso_wts.length() != numVars) {
       PCerr << "Error: length of anisotropic weights specification is "
@@ -48,32 +35,25 @@ void TensorProductDriver::anisotropic_weights(const RealVector& aniso_wts)
       abort_handler(-1);
     }
 
-    isotropicTPQ = true;
+    dimIsotropic = true;
     Real wt0 = aniso_wts[0];
     for (size_t i=1; i<numVars; ++i)
       if (std::abs(aniso_wts[i] - wt0) > DBL_EPSILON)
-	{ isotropicTPQ = false; break; }
+	{ dimIsotropic = false; break; }
 
     // TO DO: scaling
-    tpqAnisoLevelWts = aniso_wts;
+    anisoLevelWts = aniso_wts;
   }
 }
 
 
-void TensorProductDriver::initialize_grid_parameters(const ShortArray& u_types)
+void TensorProductDriver::
+initialize_grid(const ShortArray& u_types, bool nested_rules)
 {
+  numVars = u_types.size();
+  quadOrder.resize(numVars);
   integrationRules.resize(numVars);
-
-  // isotropic uniform).  Ultimately, just want consistency: use nested rules
-  // with slow exponential growth where available and non-nested rules with
-  // linear growth where nested is not available.
-  bool nested_rules = true;
-  size_t i;
-  for (i=0; i<numVars; ++i)
-    if (u_types[i] != STD_UNIFORM)
-      { nested_rules = false; break; }
-
-  for (i=0; i<numVars; i++) {
+  for (size_t i=0; i<numVars; i++) {
     switch (u_types[i]) {
     case STD_NORMAL:
       integrationRules[i] = GAUSS_HERMITE; break;
@@ -100,6 +80,21 @@ void TensorProductDriver::initialize_grid_parameters(const ShortArray& u_types)
       break;
     }
   }
+
+  ShortArray basis_types, gauss_modes;
+  OrthogPolyApproximation::distribution_types(u_types, integrationRules,
+					      basis_types, gauss_modes);
+  OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
+					      polynomialBasis);
+}
+
+
+void TensorProductDriver::
+initialize_grid_parameters(const ShortArray& u_types, 
+			   const DistributionParams& dist_params)
+{
+  OrthogPolyApproximation::distribution_parameters(u_types, dist_params,
+						   polynomialBasis);
 }
 
 
@@ -115,10 +110,35 @@ void TensorProductDriver::compute_grid()
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
+  size_t i, j;
+  if (gaussPts1D.empty() || gaussWts1D.empty()) {
+    gaussPts1D.resize(numVars); gaussWts1D.resize(numVars);
+    for (i=0; i<numVars; ++i)
+      { gaussPts1D[i].resize(1); gaussWts1D[i].resize(1); }
+  }
+  for (i=0; i<numVars; ++i) {
+    gaussPts1D[i][0] = polynomialBasis[i].gauss_points(quadOrder[i]);
+    gaussWts1D[i][0] = polynomialBasis[i].gauss_weights(quadOrder[i]);
+  }
+  // Tensor-product quadrature: Integral of f approximated by
+  // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
+  // > project 1-D gauss point arrays (of potentially different type and order)
+  //   into an n-dimensional stencil.
+  // > compute and store products of 1-D Gauss weights at each point in stencil.
   weightSets.sizeUninitialized(num_colloc_pts);
   variableSets.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
-
-  // TO DO
+  UShortArray gauss_indices(numVars, 0);
+  for (i=0; i<num_colloc_pts; i++) {
+    Real& wt_prod_i = weightSets[i];
+    Real* vars_i  = variableSets[i];
+    wt_prod_i = 1.0;
+    for (j=0; j<numVars; j++) {
+      vars_i[j]  = gaussPts1D[j][0][gauss_indices[j]];
+      wt_prod_i *= gaussWts1D[j][0][gauss_indices[j]];
+    }
+    // increment the n-dimensional gauss point index set
+    PolynomialApproximation::increment_indices(gauss_indices, quadOrder, true);
+  }
 }
 
 } // namespace Pecos
