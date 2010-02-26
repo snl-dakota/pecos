@@ -43,6 +43,12 @@ pkginclude_HEADERS = pecos_config.h				\
 		     src/SamplingInverseTransformation.hpp	\
 		     src/ProbabilityTransformation.hpp		\
 		     src/NatafTransformation.hpp		\
+		     src/BasisApproximation.hpp			\
+		     src/PolynomialApproximation.hpp		\
+		     src/InterpPolyApproximation.hpp		\
+		     src/OrthogPolyApproximation.hpp		\
+		     src/SurrogateDataPoint.hpp			\
+		     src/DistributionParams.hpp			\
 		     src/BasisPolynomial.hpp			\
 		     src/LagrangeInterpPolynomial.hpp		\
 		     src/OrthogonalPolynomial.hpp		\
@@ -53,12 +59,12 @@ pkginclude_HEADERS = pecos_config.h				\
 		     src/LaguerreOrthogPolynomial.hpp		\
 		     src/LegendreOrthogPolynomial.hpp		\
 		     src/NumericGenOrthogPolynomial.hpp		\
+		     src/LHSDriver.hpp				\
+		     src/IntegrationDriver.hpp			\
 		     src/CubatureDriver.hpp			\
 		     src/SparseGridDriver.hpp			\
 		     src/TensorProductDriver.hpp		\
-		     src/LHSDriver.hpp				\
 		     src/BoostRNG_Monostate.hpp
-#		     src/BasisFunction.hpp
 
 ## No sources in this directory!
 libpecos_la_SOURCES = 
