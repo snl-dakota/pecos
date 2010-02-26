@@ -183,9 +183,6 @@ protected:
   /// matching is not enforced.
   std::list<SurrogateDataPoint> dataPoints;
 
-  /// order of polynomial approximation
-  UShortArray approxOrder;
-
   /// pointer to integration driver instance
   IntegrationDriver* driverRep;
 

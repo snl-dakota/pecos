@@ -43,7 +43,7 @@ public:
   //
 
   /// default constructor
-  OrthogPolyApproximation(size_t num_vars);
+  OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars);
   /// destructor
   ~OrthogPolyApproximation();
 
@@ -225,8 +225,10 @@ private:
   //- Heading: Data
   //
 
-  /// number of terms in Polynomial Chaos expansion (length of chaosCoeffs)
+  /// number of terms in orthogonal polynomial expansion (length of chaosCoeffs)
   int numExpansionTerms;
+  /// order of orthogonal polynomial expansion
+  UShortArray approxOrder;
 
   /// array of basis types for each one-dimensional orthogonal polynomial:
   /// HERMITE, LEGENDRE, LAGUERRE, JACOBI, GENERALIZED_LAGUERRE, CHEBYSHEV,
@@ -264,9 +266,10 @@ private:
 };
 
 
-inline OrthogPolyApproximation::OrthogPolyApproximation(size_t num_vars):
+inline OrthogPolyApproximation::
+OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
   PolynomialApproximation(num_vars), numExpansionTerms(0),
-  quadratureExpansion(TENSOR_PRODUCT) // TOTAL_ORDER
+  approxOrder(approx_order), quadratureExpansion(TENSOR_PRODUCT) //TOTAL_ORDER
   //sparseGridExpansion()//TOTAL_ORDER,HEURISTIC_TOTAL_ORDER,TENSOR_PRODUCT_SUM
 { }
 

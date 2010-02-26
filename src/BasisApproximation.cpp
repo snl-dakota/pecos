@@ -49,7 +49,8 @@ BasisApproximation::BasisApproximation():
     execute get_basis_approx, since BasisApproximation(BaseConstructor)
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
-BasisApproximation(const String& basis_approx_type, size_t num_vars):
+BasisApproximation(const String& approx_type, const UShortArray& approx_order,
+		   size_t num_vars):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -58,7 +59,7 @@ BasisApproximation(const String& basis_approx_type, size_t num_vars):
 #endif
 
   // Set the rep pointer to the appropriate derived type
-  basisApproxRep = get_basis_approx(basis_approx_type, num_vars);
+  basisApproxRep = get_basis_approx(approx_type, approx_order, num_vars);
   if ( !basisApproxRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -67,23 +68,24 @@ BasisApproximation(const String& basis_approx_type, size_t num_vars):
 /** Used only by the envelope constructor to initialize basisApproxRep to the 
     appropriate derived type. */
 BasisApproximation* BasisApproximation::
-get_basis_approx(const String& basis_approx_type, size_t num_vars)
+get_basis_approx(const String& approx_type, const UShortArray& approx_order,
+		 size_t num_vars)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_basis_approx(string&)."
         << std::endl;
 #endif
 
-  if (basis_approx_type == "fourier")
+  if (approx_type == "fourier")
     return NULL;//new FourierBasisApproximation(num_vars);
-  else if (basis_approx_type == "eigen")
+  else if (approx_type == "eigen")
     return NULL;//new SVDLeftEigenBasisApproximation(num_vars);
-  else if (basis_approx_type == "global_interpolation_polynomial")
+  else if (approx_type == "global_interpolation_polynomial")
     return new InterpPolyApproximation(num_vars);
-  else if (basis_approx_type == "global_orthogonal_polynomial")
-    return new OrthogPolyApproximation(num_vars);
+  else if (approx_type == "global_orthogonal_polynomial")
+    return new OrthogPolyApproximation(approx_order, num_vars);
   else {
-    PCerr << "Error: BasisApproximation type " << basis_approx_type
+    PCerr << "Error: BasisApproximation type " << approx_type
 	  << " not available." << std::endl;
     return NULL;
   }
