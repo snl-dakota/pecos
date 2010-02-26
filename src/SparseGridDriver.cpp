@@ -260,7 +260,7 @@ initialize_grid_parameters(const ShortArray& u_types,
     }
     num_total_params += numPolyParams[i];
   }
-  polyParams.resize(num_total_params);
+  polyParams.resize(num_total_params); // may be zero size
 
   size_t nuv_cntr = 0, lnuv_cntr = 0, luuv_cntr = 0, tuv_cntr = 0, buv_cntr = 0,
     gauv_cntr = 0, guuv_cntr = 0, fuv_cntr = 0, wuv_cntr = 0, pp_cntr = 0;
@@ -349,12 +349,14 @@ initialize_grid_parameters(const ShortArray& u_types,
 
 int SparseGridDriver::grid_size()
 {
+  // polyParams may be zero size
+  double* poly_params = (polyParams.size()) ? &polyParams[0] : NULL;
   return (dimIsotropic) ?
     webbur::sparse_grid_mixed_growth_size(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], duplicateTol, webbur::level_to_order_default) :
     webbur::sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], duplicateTol, webbur::level_to_order_default);
 }
 
@@ -387,9 +389,11 @@ void SparseGridDriver::compute_grid()
 
   int* sparse_order  = new int [num_colloc_pts*numVars];
   int* sparse_index  = new int [num_colloc_pts*numVars];
+  // polyParams may be zero size
+  double* poly_params = (polyParams.size()) ? &polyParams[0] : NULL;
   if (dimIsotropic) {
     webbur::sparse_grid_mixed_growth_unique_index(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
       webbur::level_to_order_default, &uniqueIndexMapping[0]);
     webbur::sparse_grid_mixed_growth_index(numVars, ssgLevel,
@@ -397,18 +401,18 @@ void SparseGridDriver::compute_grid()
       &uniqueIndexMapping[0], webbur::level_to_order_default, sparse_order,
       sparse_index);
     webbur::sparse_grid_mixed_growth_weight(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DWeights[0], num_colloc_pts, num_total_pts,
       &uniqueIndexMapping[0], webbur::level_to_order_default,
       weightSets.values());
     webbur::sparse_grid_mixed_growth_point(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
       webbur::level_to_order_default, variableSets.values());
   }
   else {
     webbur::sgmga_unique_index(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
       webbur::level_to_order_default, &uniqueIndexMapping[0]);
     webbur::sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
@@ -416,12 +420,12 @@ void SparseGridDriver::compute_grid()
       &uniqueIndexMapping[0], webbur::level_to_order_default, sparse_order,
       sparse_index);
     webbur::sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DWeights[0], num_colloc_pts, num_total_pts,
       &uniqueIndexMapping[0], webbur::level_to_order_default,
       weightSets.values());
     webbur::sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], &polyParams[0],
+      &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
       webbur::level_to_order_default, variableSets.values());
   }
