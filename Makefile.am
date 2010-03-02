@@ -32,7 +32,7 @@ endif
 lib_LTLIBRARIES = libpecos.la
 
 ## Pecos headers that need to be distributed
-pkginclude_HEADERS = pecos_config.h				\
+include_HEADERS = pecos_config.h				\
 		     src/pecos_data_types.hpp			\
 		     src/pecos_global_defs.hpp			\
 		     src/pecos_stat_util.hpp			\
