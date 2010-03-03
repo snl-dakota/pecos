@@ -53,26 +53,63 @@ initialize_grid(const ShortArray& u_types, bool nested_rules)
   numVars = u_types.size();
   quadOrder.resize(numVars);
   integrationRules.resize(numVars);
+
+  short exp_growth = MODERATE_GROWTH;//SLOW_GROWTH,STANDARD_GROWTH;
+  short nested_uniform_base_rule = GAUSS_PATTERSON;//CLENSHAW_CURTIS,FEJER2
   for (size_t i=0; i<numVars; i++) {
     switch (u_types[i]) {
     case STD_NORMAL:
-      integrationRules[i] = GAUSS_HERMITE; break;
+      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GAUSS_HERMITE_SLOW :
+	GAUSS_HERMITE; break;
     case STD_UNIFORM:
-      // GAUSS_PATTERSON valid only up to level==7 (max m=2^{l+1}-1 = 255)
-      // GAUSS_PATTERSON_MODERATE valid up to level==63 (max m=255, m=4*l+1)
-      // GAUSS_PATTERSON_SLOW valid up to level==127 (max m=255, m=2*l+1)
-      integrationRules[i] = (nested_rules) ?
-	GAUSS_PATTERSON_MODERATE : GAUSS_LEGENDRE;  break;
+      if (nested_rules)
+	switch (nested_uniform_base_rule) {
+	case GAUSS_PATTERSON: // closed fully nested
+	  switch (exp_growth) {
+	  case SLOW_GROWTH:	// valid up to level==127 (max m=255, m=2*l+1)
+	    integrationRules[i] = GAUSS_PATTERSON_SLOW;     break;
+	  case MODERATE_GROWTH:	// valid up to level==63 (max m=255, m=4*l+1)
+	    integrationRules[i] = GAUSS_PATTERSON_MODERATE; break;
+	  case STANDARD_GROWTH:	// valid up to level==7 (max m=2^{l+1}-1 = 255)
+	    integrationRules[i] = GAUSS_PATTERSON;          break;
+	  } break;
+	case CLENSHAW_CURTIS:
+	  switch (exp_growth) {
+	  case SLOW_GROWTH:
+	    integrationRules[i] = CLENSHAW_CURTIS_SLOW;     break;
+	  case MODERATE_GROWTH:
+	    integrationRules[i] = CLENSHAW_CURTIS_MODERATE; break;
+	  case STANDARD_GROWTH:
+	    integrationRules[i] = CLENSHAW_CURTIS;          break;
+	  } break;
+	case FEJER2:
+	  switch (exp_growth) {
+	  case SLOW_GROWTH:
+	    integrationRules[i] = FEJER2_SLOW;     break;
+	  case MODERATE_GROWTH:
+	    integrationRules[i] = FEJER2_MODERATE; break;
+	  case STANDARD_GROWTH:
+	    integrationRules[i] = FEJER2;          break;
+	  } break;
+	}
+      else
+	integrationRules[i] = GAUSS_LEGENDRE; // no SLOW if not nested_rules
+      break;
     case STD_EXPONENTIAL:
-      integrationRules[i] = GAUSS_LAGUERRE;     break;
+      integrationRules[i] =//(exp_growth == SLOW_GROWTH) ? GAUSS_LAGUERRE_SLOW :
+	GAUSS_LAGUERRE;     break;
     case STD_BETA:
-      integrationRules[i] = GAUSS_JACOBI;       break;
+      integrationRules[i] =//(exp_growth == SLOW_GROWTH) ? GAUSS_JACOBI_SLOW :
+	GAUSS_JACOBI;       break;
     case STD_GAMMA:
-      integrationRules[i] = GEN_GAUSS_LAGUERRE; break;
+      integrationRules[i] =
+	//(exp_growth == SLOW_GROWTH) ? GEN_GAUSS_LAGUERRE_SLOW :
+	GEN_GAUSS_LAGUERRE; break;
     case BOUNDED_NORMAL: case LOGNORMAL:  case BOUNDED_LOGNORMAL:
     case LOGUNIFORM:     case TRIANGULAR: case GUMBEL:
     case FRECHET:        case WEIBULL:    case HISTOGRAM_BIN:
-      integrationRules[i] = GOLUB_WELSCH;       break;
+      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
+	GOLUB_WELSCH;       break;
     default:
       PCerr << "Error: unsupported distribution type in TensorProductDriver "
 	    << "for u_type = " << u_types[i] << std::endl;

@@ -63,6 +63,9 @@ enum { CLENSHAW_CURTIS=1, FEJER2, GAUSS_PATTERSON, GAUSS_LEGENDRE,
 /// solution approaches for calculating the polynomial basis coefficients
 enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
 
+/// options for exponential growth rule setting
+enum { SLOW_GROWTH, MODERATE_GROWTH, STANDARD_GROWTH };
+
 
 // ----------------
 // Standard streams
