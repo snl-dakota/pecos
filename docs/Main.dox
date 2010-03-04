@@ -14,9 +14,12 @@ namespace Pecos { // for some reason, this doesn't work with mainpage
   <ul>
   <li> <a href="index.html#DevDataTrans">Data Transformations</a>
   <li> <a href="index.html#DevProbTrans">Probability Transformations</a>
-  <li> <a href="index.html#DevBasisFns">Basis Functions</a>
+  <li> <a href="index.html#DevNDBasis">Multivariate Basis Functions</a>
+  <li> <a href="index.html#Dev1DBasis">Univariate Basis Functions</a>
+  <li> <a href="index.html#DevDrivers">Integration Drivers</a>
   </ul>
 <li> <a href="index.html#DevServices">Services</a>
+<li> <a href="index.html#DevCodeEx">Code Examples</a>
 <li> <a href="index.html#DevAddtnl">Additional Resources</a>
 </ul>
 \endhtmlonly
@@ -26,11 +29,17 @@ namespace Pecos { // for some reason, this doesn't work with mainpage
 
 
 The PECOS (Parallel Environment for Creation Of Stochastics) library
-generates samples of random fields (RFs) and stochastic processes
-(SPs) from a set of user-defined power spectral densities (PSDs).  The
-RF/SP may be either Gaussian or non-Gaussian and either stationary or
-nonstationary, and the resulting sample is intended for run-time query
-by parallel finite element simulation codes.
+initiated as a capability to generate samples of random fields (RFs)
+and stochastic processes (SPs) from a set of user-defined power
+spectral densities (PSDs).  The RF/SP may be either Gaussian or
+non-Gaussian and either stationary or nonstationary, and the resulting
+sample is intended for run-time query by parallel finite element
+simulation codes.
+
+PECOS has grown to include univariate and multivariate polynomial 
+approximations, using either orthogonal or interpolation polynomials,
+along with numerical integration drivers for computing expansion
+coefficients.
 
 The Developers Manual documents the class structures used by the PECOS
 library.  It derives directly from annotation of the source code.
@@ -54,6 +63,7 @@ and leveraged for new purposes.
 
 The software components are presented in the following sections using
 a top-down order.
+
 
 \subsection DevDataTrans Data Transformations
 
@@ -88,6 +98,7 @@ from frequency domain (PSD) to time domain.
      </ul>
 </ul>
 
+
 \subsection DevProbTrans Probability Transformations
 
 Class hierarchy: \ref Pecos::ProbabilityTransformation "ProbabilityTransformation".
@@ -116,25 +127,74 @@ approach when this level of data is known.  Rosenblatt is not yet
 supported but may be added in time.
 </ul>
 
-\subsection DevBasisFns Basis Functions
 
-Class hierarchy: \ref Pecos::BasisFunction "BasisFunction".
+\subsection DevDrivers Integration Drivers
 
-This hierarchy provides sets of basis functions for spatial and/or
-time domains in support of DataTransformation capabilities.  Specific
-basis function sets may include:
+Class hierarchy: \ref Pecos::IntegrationDriver "IntegrationDriver".
+
+This hierarchy provides a set of drivers for multivariate numerical
+integration for computing coefficients of a multivariate 
+\ref Pecos::BasisApproximation "BasisApproximation".  Specific drivers 
+include:
+<ul> 
+<li> \ref Pecos::CubatureDriver "CubatureDriver"
+<li> \ref Pecos::SparseGridDriver "SparseGridDriver"
+<li> \ref Pecos::TensorProductDriver "TensorProductDriver"
+</ul>
+
+\ref Pecos::LHSDriver "LHSDriver" is currently separate from this hierarchy.
+
+
+\subsection DevNDBasis Multivariate Basis Approximations
+
+Class hierarchy: \ref Pecos::BasisApproximation "BasisApproximation".
+
+This hierarchy provides sets of multivariate basis functions for
+spatial and/or time domains in support of DataTransformation
+capabilities.  Specific basis function sets may include:
 
 <ul> 
 <li> \ref Pecos::FourierBasis "FourierBasis": Fourier basis functions
 which map frequencies to the time domain.
 <li> \ref Pecos::KLBasis "KLBasis": discrete Karhunen-Loeve
 eigenfunctions from singular value decomposition of covariance matrices.  
-<li> \ref Pecos::OrthogonalBasis "OrthogonalBasis": polynomial basis
-functions which are orthogonal with respect to continuous probability
-distribution fuction weightings (Hermite, Legendre, Laguerre, Jacobi,
-and generalized Laguerre).
-<li> \ref Pecos::InterpolationBasis "InterpolationBasis": Lagrange 
-interpolation polynomial basis functions.
+<li> \ref Pecos::PolynomialApproximation "PolynomialApproximation":
+     <ul>
+     <li> \ref Pecos::OrthogPolyApproximation "OrthogPolyApproximation": a 
+          multivariate orthogonal basis defined from one-dimensional orthogonal 
+          polynomials (\ref Pecos::OrthogonalPolynomial "OrthogonalPolynomial") 
+          and a multi-index.
+     <li> \ref Pecos::InterpPolyApproximation "InterpPolyApproximation": a 
+          multivariate interpolation basis defined from one-dimensional 
+          Lagrange interpolation polynomials
+          (\ref Pecos::LagrangeInterpPolynomial "LagrangeInterpPolynomial") 
+          and a multi-index.
+     </ul>
+</ul>
+
+
+\subsection Dev1DBasis Univariate Basis Approximations
+
+Class hierarchy: \ref Pecos::BasisPolynomial "BasisPolynomial".
+
+This hierarchy provides sets of univariate basis functions in support of 
+the multivariate \ref Pecos::BasisApproximation "BasisApproximation"
+capabilities.  Specific univariate basis functions options include:
+<ul> 
+<li> \ref Pecos::OrthogonalPolynomial "OrthogonalPolynomial": polynomial 
+basis functions which are orthogonal with respect to a variety of
+continuous probability distribution function weightings:
+    <ul>
+    <li> \ref Pecos::HermiteOrthogPolynomial "HermiteOrthogPolynomial"
+    <li> \ref Pecos::LegendreOrthogPolynomial "LegendreOrthogPolynomial"
+    <li> \ref Pecos::LaguerreOrthogPolynomial "LaguerreOrthogPolynomial"
+    <li> \ref Pecos::JacobiOrthogPolynomial "JacobiOrthogPolynomial"
+    <li> \ref Pecos::GenLaguerreOrthogPolynomial "GenLaguerreOrthogPolynomial"
+    <li> \ref Pecos::ChebyshevOrthogPolynomial "ChebyshevOrthogPolynomial"
+    <li> \ref Pecos::NumericGenOrthogPolynomial "NumericGenOrthogPolynomial"
+    </ul>
+<li> \ref Pecos::LagrangeInterpPolynomial "LagrangeInterpPolynomial": 
+one-dimensional Lagrange interpolation polynomials.
 </ul>
 
 
@@ -146,17 +206,100 @@ memory management, etc.  An overview of the classes and member
 functions involved in performing these services is included below.
 
 <ul> 
-
 <li> Memory management: PECOS employs the techniques of reference
 counting and representation sharing through the use of letter-envelope
 and handle-body idioms (Coplien, "Advanced C++").
-
 <li> Fast Fourier transform (FFT): Two FFT libraries will be supported.
 First, FFTW provides platform tuned and parallel FFT operations in C
 under a GNU GPL license.  Second, DFFTPACK provides a reference FFT
 implementation in F77 in the public domain.
-
 </ul>
+
+
+\section DevCodeEx Code Examples
+
+
+\code
+  size_t num_vars = 5;
+
+  // basis configuration arrays
+  UShortArray exp_order(num_vars, 2);               // isotropic order
+  ShortArray  var_types(num_vars, STD_UNIFORM);     // isotropic variable types
+  IntArray    int_rules(num_vars, GAUSS_PATTERSON_MODERATE); // isotropic rules
+
+  // distribution parameters (for transformed space only)
+  DistributionParams dist_params;
+  //dist_params.normal_means(nm);
+  //dist_params.normal_std_deviations(nsd);
+
+  // multivariate basis constructs 1D bases from types/rules
+  //BasisApproximation basis("global_orthogonal_polynomial", exp_order, num_vars);
+  OrthogPolyApproximation basis(exp_order, num_vars);
+  basis.distributions(var_types, int_rules, dist_params);
+
+  // driver
+  IntegrationDriver driver(SPARSE_GRID);
+  size_t ssg_level = 3;
+  driver.initialize_grid(ssg_level, ...);
+  basis.integration_driver_rep(driver.driver_rep());
+
+  // get grid, evaluate results (outside Pecos), and set results
+
+  // form approximation
+  basis.find_coefficients();
+\endcode
+
+<!--
+// Instantiate and configure basis; then pass into driver to define grid points
+
+// pass input/output pairs from driver and basis into a coefficient solver,
+// which can accept either an array of 1D bases or an nD basis -> separate
+// basis from approximation; keep solver and approximation (basis + coeffs)
+// abstract enough to accept either an array of 1D bases or a true nD basis
+
+// approximation = coefficients + multivariate basis + multiIndex
+
+// allow for sharing of basis array between response instances
+
+// DAKOTA design: synchronize settings and provide simple integrated spec;
+// PECOS design: Give full flexibility and don't constrain user from bad
+// combinations; just provide sensible defaults and possibly warnings.
+
+// Develop tests -> will guide design as code example above helped:
+// (1) instantiate and configure basis (vector<1D> or otherwise)
+// (2) instantiate and configure driver (without basis?)
+// (3) instantiate vector<approximation(basis, driver)>
+// (4) get inputs -> (compute outputs outside Pecos) -> set outputs
+// (5) find_coefficients()  [generalize to compute_expansion()]
+// (6) post-processing as desired: get_value, get_mean, etc.
+
+// Also, try to eliminate ugly data pushes from NonDPCE et al.
+
+\code
+  // (1) basis
+  std::vector<BasisPolynomial> basis(num_vars);
+  configure_basis(basis, var_types, int_rules, dist_params);
+
+  // (2) driver
+  IntegrationDriver driver(SPARSE_GRID);
+  size_t ssg_level = 3;
+  driver.initialize_grid(ssg_level, ...);
+
+  // (3) approximation
+  std::vector<PolynomialApproximation> approx(num_fns);
+  configure_approximations(approx, basis, driver);
+
+  // (4) gets points, evaluate results (outside Pecos), set results
+  const RealMatrix& pts = driver.compute_grid(); // (num_pts x num_vars)
+  // evaluate -> RealMatrix results(num_pts x num_fns)
+  for (i=0; i<num_fns; ++i)
+    approx[i].grid_results(results[i]);
+
+  // (5) form approximation
+  for (i=0; i<num_fns; ++i)
+    approx[i].compute_expansion();
+\endcode
+-->
 
 
 \section DevAddtnl Additional Resources
@@ -165,7 +308,7 @@ implementation in F77 in the public domain.
 Additional development resources include:
 
 \li Project web pages will be maintained in the future at 
-http://www.cs.sandia.gov/PECOS.
+http://www.cs.sandia.gov/pecos
 
 */
 
