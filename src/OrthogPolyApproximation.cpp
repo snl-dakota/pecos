@@ -661,7 +661,7 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 {
   if (exp_order.size() != numVars)
     exp_order.resize(numVars);
-  const IntArray& rules = driverRep->integration_rules();
+  const IntArray& rules = ((SparseGridDriver*)driverRep)->integration_rules();
   for (size_t i=0; i<numVars; ++i) {
     switch (rules[i]) {
     case CLENSHAW_CURTIS: case CLENSHAW_CURTIS_SLOW:

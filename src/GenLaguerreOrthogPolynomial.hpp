@@ -51,6 +51,13 @@ public:
   GenLaguerreOrthogPolynomial(const Real& alpha_stat); ///< standard constructor
   ~GenLaguerreOrthogPolynomial();                      ///< destructor
 
+  //
+  //- Heading: Virtual function redefinitions
+  //
+
+  /// calculate and return wtFactor based on alphaPoly
+  const Real& weight_factor();
+
 protected:
 
   //
@@ -73,9 +80,6 @@ protected:
   /// return the generalized Gauss-Laguerre quadrature weights
   /// corresponding to polynomial order n
   const RealArray& gauss_weights(unsigned short order);
-
-  /// calculate and return wtFactor based on alphaPoly
-  const Real& weight_factor();
 
   /// set alphaPoly
   void alpha_polynomial(const Real& alpha);

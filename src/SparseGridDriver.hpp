@@ -89,6 +89,9 @@ public:
   /// return ssgLevel
   unsigned short level() const;
 
+  /// return integrationRules
+  const IntArray& integration_rules() const;
+
   /// update axisLowerBounds
   void update_axis_lower_bounds();
 
@@ -185,6 +188,9 @@ private:
   /// the Smolyak sparse grid level
   unsigned short ssgLevel;
 
+  /// integer codes for sgmga routine integration rule options
+  IntArray integrationRules;
+
   /// "integration" or "interpolation"
   String sparseGridUsage;
 
@@ -228,6 +234,10 @@ inline unsigned short SparseGridDriver::level() const
 
 inline void SparseGridDriver::level(unsigned short ssg_level)
 { ssgLevel = ssg_level; }
+
+
+inline const IntArray& SparseGridDriver::integration_rules() const
+{ return integrationRules; }
 
 
 //inline const Real& SparseGridDriver::duplicate_tolerance() const

@@ -67,8 +67,6 @@ public:
 
   /// return isotropicTPQ
   bool isotropic() const;
-  /// return integrationRules
-  const IntArray& integration_rules() const;
   /// return anisoLevelWts
   const RealVector& anisotropic_weights() const;
   /// return polynomialBasis
@@ -113,9 +111,6 @@ protected:
   /// weighting vector for dimension anisotropic grids
   RealVector anisoLevelWts;
 
-  /// integer codes for sgmga routine integration rule options
-  IntArray integrationRules;
-
   /// array of one-dimensional orthogonal polynomials used in
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
@@ -158,10 +153,6 @@ inline bool IntegrationDriver::isotropic() const
 
 inline const RealVector& IntegrationDriver::anisotropic_weights() const
 { return (driverRep) ? driverRep->anisoLevelWts : anisoLevelWts; }
-
-
-inline const IntArray& IntegrationDriver::integration_rules() const
-{ return (driverRep) ? driverRep->integrationRules : integrationRules; }
 
 
 inline const std::vector<BasisPolynomial>& IntegrationDriver::

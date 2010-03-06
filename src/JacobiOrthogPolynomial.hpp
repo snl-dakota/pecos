@@ -54,6 +54,13 @@ public:
   /// destructor
   ~JacobiOrthogPolynomial();
 
+  //
+  //- Heading: Virtual function redefinitions
+  //
+
+  /// calculate and return wtFactor based on alphaPoly and betaPoly
+  const Real& weight_factor();
+
 protected:
 
   //
@@ -75,9 +82,6 @@ protected:
   /// return the Gauss-Jacobi quadrature weights corresponding to
   /// polynomial order n
   const RealArray& gauss_weights(unsigned short order);
-
-  /// calculate and return wtFactor based on alphaPoly and betaPoly
-  const Real& weight_factor();
 
   /// set alphaPoly
   void alpha_polynomial(const Real& alpha);

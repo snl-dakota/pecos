@@ -65,6 +65,9 @@ public:
   /// return ith entry in quadOrder
   unsigned short quadrature_order(size_t i) const;
 
+  /// return integrationRules
+  const IntArray& integration_rules() const;
+
   /// set numVars, integrationRules, polynomialBasis
   void initialize_grid(const ShortArray& u_types, bool nested_rules);
   /// set numVars, integrationRules, polynomialBasis
@@ -83,6 +86,9 @@ private:
 
   /// the isotropic/anisotropic quadrature order
   UShortArray quadOrder;
+
+  /// integer codes for sgmga routine integration rule options
+  IntArray integrationRules;
 };
 
 
@@ -109,6 +115,10 @@ inline const UShortArray& TensorProductDriver::quadrature_order() const
 
 inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
 { return quadOrder[i]; }
+
+
+inline const IntArray& TensorProductDriver::integration_rules() const
+{ return integrationRules; }
 
 
 inline int TensorProductDriver::grid_size()
