@@ -45,11 +45,11 @@ public:
   //
 
   /// set numVars, integrandOrder, and integrationRule
-  void initialize_grid(size_t num_vars, unsigned short order,
+  void initialize_grid(const ShortArray& u_types, unsigned short order,
 		       unsigned short rule);
   /// initialize settings for parameterized cubature rules
   void initialize_grid_parameters(const ShortArray& u_types,
-				  const DistributionParams& dp);
+				  const DistributionParams& dist_params);
 
   // set integrandOrder
   void integrand_order(unsigned short order);
@@ -110,12 +110,6 @@ inline void CubatureDriver::integration_rule(unsigned short rule)
 
 inline unsigned short CubatureDriver::integration_rule() const
 { return integrationRule; }
-
-
-inline void CubatureDriver::
-initialize_grid(size_t num_vars, unsigned short order, unsigned short rule)
-{ numVars = num_vars; integrand_order(order); integration_rule(rule); }
-
 
 } // namespace Pecos
 

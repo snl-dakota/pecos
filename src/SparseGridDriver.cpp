@@ -412,8 +412,10 @@ void SparseGridDriver::compute_grid()
   // Get number of collocation points
   // --------------------------------
   int num_total_pts = grid_size_total(), num_colloc_pts = grid_size();
+#ifdef DEBUG
   PCout << "Total number of sparse grid integration points: "
 	<< num_colloc_pts << '\n';
+#endif // DEBUG
 
   // ----------------------------------------------
   // Get collocation points and integration weights

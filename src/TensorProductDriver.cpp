@@ -141,8 +141,10 @@ void TensorProductDriver::compute_grid()
   // Get number of collocation points
   // --------------------------------
   int num_colloc_pts = grid_size();
+#ifdef DEBUG
   PCout << "Total number of tensor-product quadrature points: "
 	<< num_colloc_pts << '\n';
+#endif // DEBUG
 
   // ----------------------------------------------
   // Get collocation points and integration weights

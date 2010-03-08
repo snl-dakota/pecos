@@ -14,6 +14,7 @@
 
 #include "CubatureDriver.hpp"
 #include "sandia_cubature.H"
+#include "OrthogPolyApproximation.hpp"
 #include "DistributionParams.hpp"
 #include "HermiteOrthogPolynomial.hpp"
 #include "LegendreOrthogPolynomial.hpp"
@@ -30,18 +31,54 @@ namespace Pecos {
 
 
 void CubatureDriver::
-initialize_grid_parameters(const ShortArray& u_types,
-			   const DistributionParams& dp)
+initialize_grid(const ShortArray& u_types, unsigned short order,
+		unsigned short rule)
 {
-  // TO DO: verify homogeneity in values for parameterized cubature rules
+  numVars = u_types.size();
+  integrand_order(order);
+  integration_rule(rule);
 
+  ShortArray basis_types, gauss_modes;
+  IntArray int_rules(numVars, (int)rule);
+  OrthogPolyApproximation::distribution_types(u_types, int_rules, basis_types,
+					      gauss_modes);
+  OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
+					      polynomialBasis);
+}
+
+
+void CubatureDriver::
+initialize_grid_parameters(const ShortArray& u_types,
+			   const DistributionParams& dist_params)
+{
   // extract alpha, beta stats: values must be homogeneous
+  bool err_flag = false;
   switch (integrationRule) {
   case GAUSS_JACOBI:
-    alphaStat = dp.beta_alpha(0); betaStat = dp.beta_beta(0); break;
+    alphaStat = dist_params.beta_alpha(0);
+    betaStat  = dist_params.beta_beta(0);
+    // verify homogeneity
+    for (size_t i=1; i<numVars; ++i)
+      if (dist_params.beta_alpha(i) != alphaStat ||
+	  dist_params.beta_beta(i)  != betaStat)
+	err_flag = true;
+    break;
   case GEN_GAUSS_LAGUERRE:
-    alphaStat = dp.gamma_alpha(0);                            break;
+    alphaStat = dist_params.gamma_alpha(0); break;
+    // verify homogeneity
+    for (size_t i=1; i<numVars; ++i)
+      if (dist_params.gamma_alpha(i) != alphaStat)
+	err_flag = true;
   }
+
+  if (err_flag) {
+    PCerr << "Error: inhomogeneous distribution parameters in "
+	  << "CubatureDriver::initialize_grid_parameters()." << std::endl;
+    abort_handler(-1);
+  }
+
+  OrthogPolyApproximation::distribution_parameters(u_types, dist_params,
+						   polynomialBasis);
 }
 
 
@@ -104,7 +141,9 @@ void CubatureDriver::compute_grid()
   // Get number of collocation points
   // --------------------------------
   int num_pts = grid_size();
+#ifdef DEBUG
   PCout << "Total number of cubature integration points: " << num_pts << '\n';
+#endif // DEBUG
 
   // ----------------------------------------------
   // Get collocation points and integration weights
@@ -113,7 +152,7 @@ void CubatureDriver::compute_grid()
   variableSets.shapeUninitialized(numVars, num_pts); // Teuchos: col major
   double *pts = variableSets.values(), *wts = weightSets.values();
   bool err_flag = false, pt_scaling = false, wt_scaling = false;
-  double pt_factor = 1., wt_factor = 1.;
+  double pt_factor, wt_factor;
   switch(integrationRule) {
   case GAUSS_HERMITE: {
     switch (integrandOrder) {
@@ -132,7 +171,8 @@ void CubatureDriver::compute_grid()
     }
     HermiteOrthogPolynomial poly;
     pt_scaling = true; pt_factor = poly.point_factor();
-    wt_scaling = true; wt_factor = poly.weight_factor();        break;
+    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
+    break;
   }
   case GAUSS_LEGENDRE: {
     switch (integrandOrder) {
@@ -150,7 +190,8 @@ void CubatureDriver::compute_grid()
     default: err_flag = true;                                   break;
     }
     LegendreOrthogPolynomial poly;
-    wt_scaling = true; wt_factor = poly.weight_factor();        break;
+    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
+    break;
   }
   case GAUSS_LAGUERRE:
     switch (integrandOrder) {
@@ -169,7 +210,8 @@ void CubatureDriver::compute_grid()
     default: err_flag = true;                            break;
     }
     JacobiOrthogPolynomial poly(alphaStat, betaStat);
-    wt_scaling = true; wt_factor = poly.weight_factor(); break;
+    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
+    break;
   }
   case GEN_GAUSS_LAGUERRE: {
     switch (integrandOrder) {
@@ -180,7 +222,8 @@ void CubatureDriver::compute_grid()
     default: err_flag = true;                            break;
     }
     GenLaguerreOrthogPolynomial poly(alphaStat);
-    wt_scaling = true; wt_factor = poly.weight_factor(); break;
+    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
+    break;
   }
   case GOLUB_WELSCH:
     switch (integrandOrder) {

@@ -225,7 +225,7 @@ int OrthogPolyApproximation::min_coefficients() const
   // surface of multiple dimensions
   if (expansionCoeffFlag || expansionGradFlag)
     switch (expCoeffsSolnApproach) {
-    case QUADRATURE: case SPARSE_GRID: case SAMPLING:
+    case QUADRATURE: case CUBATURE: case SPARSE_GRID: case SAMPLING:
       return 1; // quadrature: (int)pow((Real)MIN_GAUSS_PTS, numVars);
       break;
     case REGRESSION:
@@ -263,9 +263,9 @@ void OrthogPolyApproximation::find_coefficients()
 
   // anchorPoint, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
-  //   SAMPLING:               treat it as another currentPoint
-  //   QUADRATURE/SPARSE_GRID: error
-  //   REGRESSION:             use equality-constrained least squares
+  //   SAMPLING:   treat it as another currentPoint
+  //   QUADRATURE/CUBATURE/SPARSE_GRID: error
+  //   REGRESSION: use equality-constrained least squares
   size_t i, j, num_pts = dataPoints.size();
   if (!anchorPoint.is_null())
     ++num_pts;
@@ -323,7 +323,7 @@ void OrthogPolyApproximation::find_coefficients()
     integration();
     break;
   }
-  case SPARSE_GRID:
+  case CUBATURE: case SPARSE_GRID:
     if (!driverRep) {
       PCerr << "Error: pointer to integration driver required in "
 	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
@@ -331,8 +331,9 @@ void OrthogPolyApproximation::find_coefficients()
     }
     if (num_pts != driverRep->weight_sets().length()) {
       PCerr << "Error: number of current points (" << num_pts << ") is not "
-	    << "consistent with\n       sparse grid data in "
-	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+	    << "consistent with\n       number of weights from integration "
+	    << "driver in OrthogPolyApproximation::find_coefficients()."
+	    << std::endl;
       abort_handler(-1);
     }
 
@@ -395,6 +396,22 @@ void OrthogPolyApproximation::allocate_arrays()
     if (update_exp_form)
       numExpansionTerms = multiIndex.size();
     PCout << numExpansionTerms << " terms\n";
+    break;
+  }
+  case CUBATURE: {
+    CubatureDriver* cub_driver = (CubatureDriver*)driverRep;
+    //unsigned short cub_int_order = cub_driver->integrand_order();
+    //bool update_exp_form = (cub_int_order != cubIntOrderPrev);
+    //cubIntOrderPrev = cub_int_order;
+    UShortArray integrand_order(numVars, cub_driver->integrand_order());
+    integrand_order_to_expansion_order(integrand_order, approxOrder);
+    total_order_multi_index(approxOrder, multiIndex);
+    numExpansionTerms = multiIndex.size();
+    PCout << "Orthogonal polynomial approximation order = { ";
+    for (size_t i=0; i<numVars; ++i)
+      PCout << approxOrder[i] << ' ';
+    PCout << "} using total-order expansion of " << numExpansionTerms
+	  << " terms\n";
     break;
   }
   case SPARSE_GRID: {
@@ -903,8 +920,9 @@ void OrthogPolyApproximation::integration()
     abort_handler(-1);
   }
 
-  // Perform tensor-product quadrature/Smolyak sparse grid using
-  // point & weight sets computed in TensorProductDriver/SparseGridDriver
+  // Perform numerical integration via tensor-product quadrature/
+  // cubature/Smolyak sparse grids using point & weight sets computed
+  // in TensorProductDriver/CubatureDriver/SparseGridDriver.
   size_t i, j, k, num_deriv_vars = expansionCoeffGrads.numRows();
   const RealVector& wt_sets = driverRep->weight_sets();
   std::list<SurrogateDataPoint>::iterator it;
