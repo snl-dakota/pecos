@@ -201,7 +201,7 @@ inline bool BasisPolynomial::is_null() const
     be fine for the polynomial orders that we would expect to
     encounter.  Whenever possible, orthogonal polynomial
     implementations should use factorial_ratio() or n_choose_k()
-    instead of factorial() to avoid size_t overflow. */
+    instead of factorial() to avoid overflow. */
 inline Real BasisPolynomial::factorial(unsigned short n)
 {
   Real fact = 1.;

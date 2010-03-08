@@ -49,7 +49,7 @@ public:
 		       unsigned short rule);
   /// initialize settings for parameterized cubature rules
   void initialize_grid_parameters(const ShortArray& u_types,
-				  const DistributionParams& dist_params);
+				  const DistributionParams& dp);
 
   // set integrandOrder
   void integrand_order(unsigned short order);
@@ -81,10 +81,14 @@ private:
   /// integer code for integration rule
   unsigned short integrationRule;
 
-  /// alpha value for parameterized polynomials: Jacobi, generalized Laguerre
-  Real alphaStat;
-  /// beta value for parameterized polynomials: Jacobi, generalized Laguerre
-  Real betaStat;
+  /// alpha value for parameterized polynomials (Jacobi, generalized
+  /// Laguerre) using orthogonal polynomial convention (converted from
+  /// statistical convention)
+  Real alphaPoly;
+  /// beta value for parameterized polynomials (Jacobi, generalized
+  /// Laguerre) using orthogonal polynomial convention (converted from
+  /// statistical convention)
+  Real betaPoly;
 };
 
 

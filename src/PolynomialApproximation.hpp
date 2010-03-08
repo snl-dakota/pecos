@@ -334,16 +334,16 @@ increment_indices(UShortArray& indices, const UShortArray& limits,
 		  bool include_limit_equality)
 {
   size_t n = indices.size(), increment_index = 0;
-  indices[increment_index]++;
+  ++indices[increment_index];
   while ( increment_index < n &&
 	  ( (  include_limit_equality && 
 	       indices[increment_index] >= limits[increment_index] ) ||
 	    ( !include_limit_equality && 
 	       indices[increment_index] >  limits[increment_index] ) ) ) {
     indices[increment_index] = 0;
-    increment_index++;
+    ++increment_index;
     if (increment_index < n)
-      indices[increment_index]++;
+      ++indices[increment_index];
   }
 }
 
@@ -355,7 +355,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
   bool increment_complete = false;
   while (!increment_complete) {
     terms[last_index] = 1;
-    terms[prev_index]++;
+    ++terms[prev_index];
     if (prev_index == 0) {
       increment_complete = true;
       if (terms[prev_index] > term_limit)
@@ -363,7 +363,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
     }
     else {
       last_index = prev_index;
-      prev_index--;
+      --prev_index;
       if (terms[last_index] <= terms[prev_index])
 	increment_complete = true;
     }

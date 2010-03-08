@@ -16,10 +16,6 @@
 #include "sandia_cubature.H"
 #include "OrthogPolyApproximation.hpp"
 #include "DistributionParams.hpp"
-#include "HermiteOrthogPolynomial.hpp"
-#include "LegendreOrthogPolynomial.hpp"
-#include "JacobiOrthogPolynomial.hpp"
-#include "GenLaguerreOrthogPolynomial.hpp"
 //#include "NumericGenOrthogPolynomial.hpp"
 //#include "pecos_stat_util.hpp"
 
@@ -49,26 +45,32 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
 
 void CubatureDriver::
 initialize_grid_parameters(const ShortArray& u_types,
-			   const DistributionParams& dist_params)
+			   const DistributionParams& dp)
 {
-  // extract alpha, beta stats: values must be homogeneous
+  // store polynomial parameterizations (if needed separate from
+  // polynomialBasis) and verify homogeneity
   bool err_flag = false;
   switch (integrationRule) {
-  case GAUSS_JACOBI:
-    alphaStat = dist_params.beta_alpha(0);
-    betaStat  = dist_params.beta_beta(0);
+  case GAUSS_JACOBI: {
+    Real alpha0 = dp.beta_alpha(0), beta0 = dp.beta_beta(0);
+    alphaPoly = beta0 - 1.; betaPoly = alpha0 - 1.; // stat -> poly
     // verify homogeneity
     for (size_t i=1; i<numVars; ++i)
-      if (dist_params.beta_alpha(i) != alphaStat ||
-	  dist_params.beta_beta(i)  != betaStat)
+      if (dp.beta_alpha(i) != alpha0 || dp.beta_beta(i) != beta0)
 	err_flag = true;
     break;
-  case GEN_GAUSS_LAGUERRE:
-    alphaStat = dist_params.gamma_alpha(0); break;
+  }
+  case GEN_GAUSS_LAGUERRE: {
+    Real alpha0 = dp.gamma_alpha(0);
+    alphaPoly = alpha0 - 1.; // stat -> poly
     // verify homogeneity
     for (size_t i=1; i<numVars; ++i)
-      if (dist_params.gamma_alpha(i) != alphaStat)
+      if (dp.gamma_alpha(i) != alpha0)
 	err_flag = true;
+    break;
+  }
+  //case GOLUB_WELSCH
+    // TO DO
   }
 
   if (err_flag) {
@@ -77,7 +79,7 @@ initialize_grid_parameters(const ShortArray& u_types,
     abort_handler(-1);
   }
 
-  OrthogPolyApproximation::distribution_parameters(u_types, dist_params,
+  OrthogPolyApproximation::distribution_parameters(u_types, dp,
 						   polynomialBasis);
 }
 
@@ -112,15 +114,15 @@ int CubatureDriver::grid_size()
     } break;
   case GAUSS_JACOBI:
     switch (integrandOrder) {
-    case 1: return webbur::cn_jac_01_1_size(numVars,   alphaStat, betaStat);
+    case 1: return webbur::cn_jac_01_1_size(numVars,   alphaPoly, betaPoly);
       break;
-    case 2: return webbur::cn_jac_02_xiu_size(numVars, alphaStat, betaStat);
+    case 2: return webbur::cn_jac_02_xiu_size(numVars, alphaPoly, betaPoly);
       break;
     } break;
   case GEN_GAUSS_LAGUERRE:
     switch (integrandOrder) {
-    case 1: return webbur::epn_glg_01_1_size(numVars,   alphaStat); break;
-    case 2: return webbur::epn_glg_02_xiu_size(numVars, alphaStat); break;
+    case 1: return webbur::epn_glg_01_1_size(numVars,   alphaPoly); break;
+    case 2: return webbur::epn_glg_02_xiu_size(numVars, alphaPoly); break;
     } break;
   case GOLUB_WELSCH:
     switch (integrandOrder) {
@@ -169,10 +171,7 @@ void CubatureDriver::compute_grid()
 	webbur::en_her_05_2(numVars, num_pts, pts, wts);        break;
     default: err_flag = true;                                   break;
     }
-    HermiteOrthogPolynomial poly;
-    pt_scaling = true; pt_factor = poly.point_factor();
-    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
-    break;
+    pt_scaling = true; wt_scaling = true; break;
   }
   case GAUSS_LEGENDRE: {
     switch (integrandOrder) {
@@ -189,9 +188,7 @@ void CubatureDriver::compute_grid()
 	webbur::cn_leg_05_2(numVars, num_pts, pts, wts);        break;
     default: err_flag = true;                                   break;
     }
-    LegendreOrthogPolynomial poly;
-    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
-    break;
+    wt_scaling = true; break;
   }
   case GAUSS_LAGUERRE:
     switch (integrandOrder) {
@@ -202,28 +199,24 @@ void CubatureDriver::compute_grid()
   case GAUSS_JACOBI: {
     switch (integrandOrder) {
     case 1:
-      webbur::cn_jac_01_1(numVars,   alphaStat, betaStat, num_pts, pts, wts);
+      webbur::cn_jac_01_1(numVars,   alphaPoly, betaPoly, num_pts, pts, wts);
       break;
     case 2:
-      webbur::cn_jac_02_xiu(numVars, alphaStat, betaStat, num_pts, pts, wts);
+      webbur::cn_jac_02_xiu(numVars, alphaPoly, betaPoly, num_pts, pts, wts);
       break;
-    default: err_flag = true;                            break;
+    default: err_flag = true; break;
     }
-    JacobiOrthogPolynomial poly(alphaStat, betaStat);
-    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
-    break;
+    wt_scaling = true;        break;
   }
   case GEN_GAUSS_LAGUERRE: {
     switch (integrandOrder) {
-    case 1: webbur::epn_glg_01_1(numVars,   alphaStat, num_pts, pts, wts);
+    case 1: webbur::epn_glg_01_1(numVars,   alphaPoly, num_pts, pts, wts);
       break;
-    case 2: webbur::epn_glg_02_xiu(numVars, alphaStat, num_pts, pts, wts);
+    case 2: webbur::epn_glg_02_xiu(numVars, alphaPoly, num_pts, pts, wts);
       break;
-    default: err_flag = true;                            break;
+    default: err_flag = true; break;
     }
-    GenLaguerreOrthogPolynomial poly(alphaStat);
-    wt_scaling = true; wt_factor = std::pow(poly.weight_factor(), (int)numVars);
-    break;
+    wt_scaling = true;        break;
   }
   case GOLUB_WELSCH:
     switch (integrandOrder) {
@@ -245,10 +238,15 @@ void CubatureDriver::compute_grid()
   }
 
   // scale points and weights
+  BasisPolynomial& poly0 = polynomialBasis[0];
   if (pt_scaling)
-    variableSets.scale(pt_factor);
+    variableSets.scale(poly0.point_factor());
   if (wt_scaling)
-    weightSets.scale(wt_factor);
+    weightSets.scale(std::pow(poly0.weight_factor(), (int)numVars));
+#ifdef DEBUG
+  PCout << "\nPoint factor = " << poly0.point_factor() << "\nWeight factor = "
+	<< std::pow(poly0.weight_factor(), (int)numVars) << std::endl;
+#endif // DEBUG
 }
 
 } // namespace Pecos

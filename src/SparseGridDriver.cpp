@@ -498,11 +498,14 @@ void SparseGridDriver::compute_grid()
   }
 
   // apply point/weight scaling
-  for (i=0; i<num_colloc_pts; ++i) {
-    weightSets[i] *= wt_factor;
+  weightSets.scale(wt_factor);
+  for (i=0; i<num_colloc_pts; ++i)
     for (j=0; j<numVars; ++j)
       variableSets[i][j] *= pt_factor[j]; // ith column, jth row
-  }
+#ifdef DEBUG
+  PCout << "\nPoint factors = " << pt_factor
+	<< "\nWeight factor = "	<< wt_factor << std::endl;
+#endif // DEBUG
 
   if (sparseGridUsage == "interpolation") { // 1D arrays not needed for PCE
     // ----------------------------
