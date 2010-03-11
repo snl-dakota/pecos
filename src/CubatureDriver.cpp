@@ -113,8 +113,9 @@ initialize_grid_parameters(const ShortArray& u_types,
   }
 
   if (err_flag) {
-    PCerr << "Error: inhomogeneous distribution parameters in "
-	  << "CubatureDriver::initialize_grid_parameters()." << std::endl;
+    PCerr << "Error: inhomogeneous distribution parameters in CubatureDriver::"
+	  << "initialize_grid_parameters().\n       Consider using a variable "
+	  << "transformation to standard form." << std::endl;
     abort_handler(-1);
   }
 
