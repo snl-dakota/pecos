@@ -90,12 +90,12 @@ public:
   /// (calculate and) return wtFactor
   virtual const Real& weight_factor();
 
-  /// set {Jacobi,GenLaguerre}OrthogPolynomial::alphaPoly
+  /// return {Jacobi,GenLaguerre}OrthogPolynomial::alphaPoly
   /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void alpha_polynomial(const Real& alpha);
-  /// set JacobiOrthogPolynomial::betaPoly
+  virtual const Real& alpha_polynomial() const;
+  /// return JacobiOrthogPolynomial::betaPoly
   /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void beta_polynomial(const Real& beta);
+  virtual const Real& beta_polynomial() const;
   /// set JacobiOrthogPolynomial::betaPoly or
   /// GenLaguerreOrthogPolynomial::alphaPoly from statistical defn of alpha
   /** This is defined only for parameterized orthogonal polynomials. */

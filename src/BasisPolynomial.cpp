@@ -270,27 +270,27 @@ const Real& BasisPolynomial::weight_factor()
 }
 
 
-void BasisPolynomial::alpha_polynomial(const Real& alpha)
+const Real& BasisPolynomial::alpha_polynomial() const
 {
-  if (polyRep)
-    polyRep->alpha_polynomial(alpha);
-  else {
+  if (!polyRep) {
     PCerr << "Error: alpha_polynomial() not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
+
+  return polyRep->alpha_polynomial();
 }
 
 
-void BasisPolynomial::beta_polynomial(const Real& beta)
+const Real& BasisPolynomial::beta_polynomial() const
 {
-  if (polyRep)
-    polyRep->beta_polynomial(beta);
-  else {
-    PCerr << "Error: beta_polynomial() not available for this basis polynomial "
-	  << "type." << std::endl;
+  if (!polyRep) {
+    PCerr << "Error: beta_polynomial() not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
+
+  return polyRep->beta_polynomial();
 }
 
 

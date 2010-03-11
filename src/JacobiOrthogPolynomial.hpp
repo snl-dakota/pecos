@@ -83,10 +83,10 @@ protected:
   /// polynomial order n
   const RealArray& gauss_weights(unsigned short order);
 
-  /// set alphaPoly
-  void alpha_polynomial(const Real& alpha);
-  /// set betaPoly
-  void beta_polynomial(const Real& beta);
+  /// return alphaPoly
+  const Real& alpha_polynomial() const;
+  /// return betaPoly
+  const Real& beta_polynomial() const;
   /// set betaPoly using the conversion betaPoly = alpha_stat - 1.
   void alpha_stat(const Real& alpha);
   /// set alphaPoly using the conversion alphaPoly = beta_stat - 1.
@@ -123,12 +123,12 @@ inline JacobiOrthogPolynomial::~JacobiOrthogPolynomial()
 { }
 
 
-inline void JacobiOrthogPolynomial::alpha_polynomial(const Real& alpha)
-{ alphaPoly = alpha; reset_gauss(); }
+inline const Real& JacobiOrthogPolynomial::alpha_polynomial() const
+{ return alphaPoly; }
 
 
-inline void JacobiOrthogPolynomial::beta_polynomial(const Real& beta)
-{ betaPoly = beta; reset_gauss(); }
+inline const Real& JacobiOrthogPolynomial::beta_polynomial() const
+{ return betaPoly; }
 
 
 inline void JacobiOrthogPolynomial::alpha_stat(const Real& alpha)

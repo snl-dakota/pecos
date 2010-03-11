@@ -81,8 +81,8 @@ protected:
   /// corresponding to polynomial order n
   const RealArray& gauss_weights(unsigned short order);
 
-  /// set alphaPoly
-  void alpha_polynomial(const Real& alpha);
+  /// return alphaPoly
+  const Real& alpha_polynomial() const;
   /// set alphaPoly using the conversion alphaPoly = alpha_stat-1.
   void alpha_stat(const Real& alpha);
 
@@ -112,8 +112,8 @@ inline GenLaguerreOrthogPolynomial::~GenLaguerreOrthogPolynomial()
 { }
 
 
-inline void GenLaguerreOrthogPolynomial::alpha_polynomial(const Real& alpha)
-{ alphaPoly = alpha; reset_gauss(); }
+inline const Real& GenLaguerreOrthogPolynomial::alpha_polynomial() const
+{ return alphaPoly; }
 
 
 inline void GenLaguerreOrthogPolynomial::alpha_stat(const Real& alpha)

@@ -20,12 +20,6 @@
 //#define DEBUG
 //#define ADAPTIVE_DEBUG
 
-#ifdef HAVE_PECOS_DEBUG
-#define LAPACK_DBG(a) std::cout << #a " = " << a << std::endl;
-#else
-#define LAPACK_DBG(a) ( void(0) )
-#endif
-
 namespace Pecos {
 
 
@@ -75,7 +69,12 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     return;
 
   int i, j;
-  RealVector alpha(m, false), beta(m, false), off_diag(m-1, false);
+  // TO DO: improve data persistence
+  //if (alpha3TR.empty() || beta3TR.empty()) // || distParamsUpdate
+    { alpha3TR.sizeUninitialized(m); beta3TR.sizeUninitialized(m); }
+  //else if (m > alpha3TR.length() || m > beta3TR.length())
+  //  { alpha3TR.resize(m); beta3TR.resize(m); } // preserve previous
+  RealVector off_diag(m-1, false);
   switch (distributionType) {
   case LOGNORMAL: {
     // -----------------------------------------------------------------------
@@ -87,22 +86,22 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     //     pp. 1111-1116, 2001.
     // -----------------------------------------------------------------------
     Real cf_var = distParams[1]/distParams[0], e_zeta_sq = 1. + cf_var*cf_var, 
-      zeta_sq  = std::log(e_zeta_sq),
+      zeta_sq  = std::log(e_zeta_sq), // denoted as "u" in Simpson
       lambda   = std::log(distParams[0]) - zeta_sq/2.,
-      e_lambda = std::exp(lambda);
-    beta[0] = 0.; // both Simpson and Wilck
+      e_lambda = std::exp(lambda);    // denoted as "m" in Simpson
+    beta3TR[0] = 0.; // both Simpson and Wilck
     // compute analytic recursion coefficients alpha_i and beta_i
     for (i=0; i<m; ++i) {
-      alpha[i] = e_lambda * (std::pow(e_zeta_sq,i)*(e_zeta_sq + 1.) - 1.) *
+      alpha3TR[i] = e_lambda * (std::pow(e_zeta_sq,i)*(e_zeta_sq + 1.) - 1.) *
 	std::pow(e_zeta_sq,(2.*i-1.)/2.); // Simpson
-      //alpha[i] = ((e_zeta_sq + 1.) * std::pow(e_zeta_sq,i) - 1.) *
+      //alpha3TR[i] = ((e_zeta_sq + 1.) * std::pow(e_zeta_sq,i) - 1.) *
       //  std::pow(e_zeta_sq,(2.*i-1.)/2.); // Wilck
       if (i) {
-	beta[i] = e_lambda * e_lambda * (std::pow(e_zeta_sq,i) - 1.) *
+	beta3TR[i] = e_lambda * e_lambda * (std::pow(e_zeta_sq,i) - 1.) *
 	  std::pow(e_zeta_sq,3*i-2); // Simpson
-	//beta[i] = (std::pow(e_zeta_sq,i) - 1.) *
+	//beta3TR[i] = (std::pow(e_zeta_sq,i) - 1.) *
 	//  std::pow(e_zeta_sq,3*i-2); // Wilck
-	off_diag[i-1] = std::sqrt(beta[i]);
+	off_diag[i-1] = std::sqrt(beta3TR[i]);
       }
     }
     if (coeffsNormsFlag) {
@@ -138,7 +137,7 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     // is not the default; however, it is the _only_ method to not require a
     // full PDF of the random variable.
     // -------------------------------------------------------------------------
-    beta[0] = 1.;
+    beta3TR[0] = 1.;
     // compute raw moments
     RealVector raw_moments(2*m+1);
     raw_moments[0] = 1.; // integral of 1*PDF is 1
@@ -169,12 +168,12 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     chol_solver.factor(); // Cholesky factorization (LL^T) in place
     // compute recursion coefficients
     for (i=0; i<m; ++i) {
-      alpha[i] = H(i+1,i)/H(i,i); // lower triangle
+      alpha3TR[i] = H(i+1,i)/H(i,i); // lower triangle
       if (i) {
 	const Real& Him1im1 = H(i-1,i-1);
-	alpha[i]     -= H(i,i-1) / Him1im1; // lower triangle
+	alpha3TR[i]  -= H(i,i-1) / Him1im1; // lower triangle
 	off_diag[i-1] = H(i,i)   / Him1im1;
-	beta[i]       = std::pow(off_diag[i-1], 2);
+	beta3TR[i]    = std::pow(off_diag[i-1], 2);
       }
     }
     break;
@@ -185,45 +184,45 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     // (W. Gautschi, SIAM J. Sci. Stat. Comput., Vol. 3, No. 3, Sept. 1982)
     // ---------------------------------------------------------------------
     // set up the coefficients
-    beta[0] = orthogPolyNormsSq[0];
+    beta3TR[0] = orthogPolyNormsSq[0];
     RealVector xi_poly_coeffs_i;
     for (i=0; i<m; ++i) {
       const RealVector& poly_coeffs_i = polyCoeffs[i];
       if (i) { // compute norm^2, beta, and off_diag
 	orthogPolyNormsSq[i] = inner_product(poly_coeffs_i, poly_coeffs_i);
-	beta[i] = orthogPolyNormsSq[i] / orthogPolyNormsSq[i-1];
-	off_diag[i-1] = std::sqrt(beta[i]);
+	beta3TR[i] = orthogPolyNormsSq[i] / orthogPolyNormsSq[i-1];
+	off_diag[i-1] = std::sqrt(beta3TR[i]);
       }
-      // form xi_poly_coeffs_i to compute alpha
+      // form xi_poly_coeffs_i to compute alpha_i
       int i_len = poly_coeffs_i.length();
       xi_poly_coeffs_i.sizeUninitialized(i_len+1);
       xi_poly_coeffs_i[0] = 0.;
       for (j=0; j<i_len; ++j)
 	xi_poly_coeffs_i[j+1] = poly_coeffs_i[j];
-      alpha[i] = inner_product(xi_poly_coeffs_i, poly_coeffs_i)
-	       / orthogPolyNormsSq[i];
+      alpha3TR[i] = inner_product(xi_poly_coeffs_i, poly_coeffs_i)
+	          / orthogPolyNormsSq[i];
       // update polyCoeffs[i+1]
       if (i == 0)
-	polynomial_recursion(polyCoeffs[i+1], alpha[i], poly_coeffs_i);
+	polynomial_recursion(polyCoeffs[i+1], alpha3TR[i], poly_coeffs_i);
       else if (i < m-1 || coeffsNormsFlag)
-	polynomial_recursion(polyCoeffs[i+1], alpha[i], poly_coeffs_i,
-			     beta[i], polyCoeffs[i-1]);
+	polynomial_recursion(polyCoeffs[i+1], alpha3TR[i], poly_coeffs_i,
+			     beta3TR[i], polyCoeffs[i-1]);
     }
     break;
   }
   }
 
   if (post_process_coeffs) {
-    polynomial_recursion(polyCoeffs[1], alpha[0], polyCoeffs[0]);
+    polynomial_recursion(polyCoeffs[1], alpha3TR[0], polyCoeffs[0]);
     for (i=1; i<m; ++i)
-      polynomial_recursion(polyCoeffs[i+1], alpha[i], polyCoeffs[i], beta[i],
-			   polyCoeffs[i-1]);
+      polynomial_recursion(polyCoeffs[i+1], alpha3TR[i], polyCoeffs[i],
+			   beta3TR[i], polyCoeffs[i-1]);
   }
 
 #ifdef DEBUG
   for (i=0; i<m; ++i)
-    PCout << "alpha[" << i << "] = " << alpha[i]
-	  << " beta[" << i << "] = " << beta[i] << '\n';
+    PCout << "alpha[" << i << "] = " << alpha3TR[i]
+	  << " beta[" << i << "] = " << beta3TR[i] << '\n';
   if (coeffsNormsFlag)
     for (i=0; i<=m; ++i)
       PCout << "polyCoeffs[" << i << "] =\n" << polyCoeffs[i];
@@ -235,19 +234,22 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
   Teuchos::LAPACK<int, Real> la;
   int info = 0;
   double* work = new double [std::max(1,2*m-2)]; // temporary work array
-  la.STEQR('I', m, alpha.values(), off_diag.values(), z_eigvec.values(), ldz,
+  // DSTEQR docs for 3rd field: (input/output)
+  //   On entry, the diagonal elements of the tridiagonal matrix.
+  //   On exit, if INFO = 0, the eigenvalues in ascending order.
+  copy_data(alpha3TR, gaussPoints); // eigenvalues are Gauss points
+  la.STEQR('I', m, &gaussPoints[0], off_diag.values(), z_eigvec.values(), ldz,
 	   work, &info);
-  LAPACK_DBG(info);
   if (info) {
-    PCerr << "Error: nonzero return code from LAPACK STEQR (symmetric "
-	  << "tridiagonal eigensolution)\n       in "
+    PCerr << "Error: nonzero return code (" << info << ") from LAPACK STEQR "
+	  << "(symmetric tridiagonal eigensolution)\n       in "
 	  << "NumericGenOrthogPolynomial::solve_eigenproblem()" << std::endl;
     abort_handler(-1);
   }
   delete [] work;
 
-  // compute the Guass points and weights from the eigenvalues/eigenvectors
-  copy_data(alpha, gaussPoints); // eigenvalues are Gauss points
+  // Gauss points are the eigenvalues which are updated in place by STEQR.
+  // compute the Gauss weights from the eigenvectors:
   gaussWeights.resize(m);
   //const Real& norm_sq_0 = orthogPolyNormsSq[0];
   for (i=0; i<m; ++i)
@@ -661,6 +663,22 @@ native_quadrature_integral(const RealVector& poly_coeffs1,
     i_sum += v1 * get_value(gp_i, poly_coeffs2) * gaussWeights[i];
   }
   return i_sum;
+}
+
+
+const Real& NumericGenOrthogPolynomial::alpha_recursion(unsigned short order)
+{
+  if (alpha3TR.length() <= order)
+    solve_eigenproblem(order+1);
+  return alpha3TR[order];
+}
+
+
+const Real& NumericGenOrthogPolynomial::beta_recursion(unsigned short order)
+{
+  if (beta3TR.length() <= order)
+    solve_eigenproblem(order+1);
+  return beta3TR[order];
 }
 
 

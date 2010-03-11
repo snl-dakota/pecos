@@ -58,6 +58,11 @@ public:
   /// return the Gauss quadrature weights corresponding to polynomial order
   const RealArray& gauss_weights(unsigned short order);
 
+  /// calculate and return alpha3TR[order]
+  const Real& alpha_recursion(unsigned short order);
+  /// calculate and return beta3TR[order]
+  const Real& beta_recursion(unsigned short order);
+
   /// set distribution type and parameters for a BOUNDED_NORMAL distribution
   void bounded_normal_distribution(const Real& mean,  const Real& std_dev,
 				   const Real& l_bnd, const Real& u_bnd);
@@ -125,6 +130,7 @@ private:
   /// solve a symmetric tridiagonal eigenvalue problem for the Gauss
   /// points and weights for an orthogonal polynomial of order m
   void solve_eigenproblem(unsigned short m);
+
   /// compute three point recursion for polyCoeffs[i+1]
   void polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
 			    const RealVector& poly_coeffs_i, const Real& beta_i,
@@ -132,9 +138,11 @@ private:
   /// compute truncated three point recursion for polyCoeffs[i+1]
   void polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
 			    const RealVector& poly_coeffs_i);
+
   /// compute inner product of specified polynomial orders
   Real inner_product(const RealVector& poly_coeffs1,
 		     const RealVector& poly_coeffs2);
+
   /// compute an unbounded integral using Gauss-Hermite integration
   Real hermite_unbounded_integral(const RealVector& poly_coeffs1,
 				  const RealVector& poly_coeffs2,
@@ -171,6 +179,7 @@ private:
   /// (up to order 2m-1 based on gaussPoints and gaussWeights of order m)
   Real native_quadrature_integral(const RealVector& poly_coeffs1,
 				  const RealVector& poly_coeffs2);
+
   /// retrieve the value of the 1-D generated polynomial (of given
   /// coefficients) for a given parameter value
   const Real& get_value(const Real& x, const RealVector& poly_coeffs);
@@ -196,6 +205,13 @@ private:
 
   /// coefficients of the orthogonal polynomials, from order 0 to m
   RealVectorArray polyCoeffs;
+
+  /// alpha three-term recurrence parameters: alpha3TR[i] multiplied
+  /// by polyCoeffs[i] contributes to polyCoeffs[i+1]
+  RealVector alpha3TR;
+  /// beta three-term recurrence parameters: beta3TR[i] multiplied
+  /// by polyCoeffs[i-1] contributes to polyCoeffs[i+1]
+  RealVector beta3TR;
 
   /// norm-squared of all orthogonal polynomials, from order 0 to m,
   /// as defined by the inner product <Poly_i, Poly_i> = ||Poly_i||^2

@@ -72,6 +72,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// verify that all values within params are identical
+  bool verify_homogeneity(const RealVector& params) const;
+  /// verify that all vectors within params are identical
+  bool verify_homogeneity(const RealVectorArray& params) const;
+
   //
   //- Heading: Data
   //
@@ -80,15 +85,6 @@ private:
   unsigned short integrandOrder;
   /// integer code for integration rule
   unsigned short integrationRule;
-
-  /// alpha value for parameterized polynomials (Jacobi, generalized
-  /// Laguerre) using orthogonal polynomial convention (converted from
-  /// statistical convention)
-  Real alphaPoly;
-  /// beta value for parameterized polynomials (Jacobi, generalized
-  /// Laguerre) using orthogonal polynomial convention (converted from
-  /// statistical convention)
-  Real betaPoly;
 };
 
 
@@ -114,6 +110,33 @@ inline void CubatureDriver::integration_rule(unsigned short rule)
 
 inline unsigned short CubatureDriver::integration_rule() const
 { return integrationRule; }
+
+
+inline bool CubatureDriver::verify_homogeneity(const RealVector& params) const
+{
+  bool err_flag = false;
+  if (!params.empty()) {
+    const Real& param0 = params[0];
+    for (size_t i=1; i<numVars; ++i)
+      if (params[i] != param0)
+	{ err_flag = true; break; }
+  }
+  return err_flag;
+}
+
+
+inline bool CubatureDriver::
+verify_homogeneity(const RealVectorArray& params) const
+{
+  bool err_flag = false;
+  if (!params.empty()) {
+    const RealVector& param0 = params[0];
+    for (size_t i=1; i<numVars; ++i)
+      if (params[i] != param0)
+	{ err_flag = true; break; }
+  }
+  return err_flag;
+}
 
 } // namespace Pecos
 
