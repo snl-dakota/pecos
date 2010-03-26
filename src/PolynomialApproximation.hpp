@@ -250,14 +250,14 @@ private:
 
 inline PolynomialApproximation::PolynomialApproximation():
   driverRep(NULL), expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionGradFlag(false)
+  expansionGradFlag(false), ssgLevelPrev(USHRT_MAX)
 { }
 
 
 inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionGradFlag(false)
+  expansionGradFlag(false), ssgLevelPrev(USHRT_MAX)
 { }
 
 

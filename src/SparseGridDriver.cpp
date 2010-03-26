@@ -59,14 +59,19 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
     }
 
     dimIsotropic = true;
-    Real wt0 = aniso_wts[0];
-    for (size_t i=1; i<numVars; ++i)
-      if (std::abs(aniso_wts[i] - wt0) > DBL_EPSILON)
+    anisoLevelWts.resize(numVars);
+    // truncate any negative values
+    size_t i;
+    for (i=0; i<numVars; ++i)
+      anisoLevelWts[i] = (aniso_wts[i] < 0.) ? 0. : aniso_wts[i];
+    // detect anisotropy
+    Real wt0 = anisoLevelWts[0];
+    for (i=1; i<numVars; ++i)
+      if (std::abs(anisoLevelWts[i] - wt0) > DBL_EPSILON)
 	{ dimIsotropic = false; break; }
-
+    // normalize and enforce axis lower bounds/weight upper bounds
     if (!dimIsotropic) {
       int option = 1; // weights scaled so that minimum nonzero entry is 1
-      anisoLevelWts = aniso_wts; // copy
       webbur::sgmga_aniso_normalize(option, numVars, anisoLevelWts.values());
 #ifdef DEBUG
       PCout << "anisoLevelWts after sgmga_aniso_normalize():\n";
@@ -77,10 +82,12 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       // LB_i = level*wt_min/wt_i --> wt_i = level*wt_min/LB_i and wt_min=1.
       // Catch special case of dim_pref_i = 0 --> wt_i = LB_i = 0.
       if (!axisLowerBounds.empty()) {
-	for (size_t i=0; i<numVars; ++i)
-	  if (std::abs(axisLowerBounds[i]) > 1.e-10)
-	    anisoLevelWts[i] = std::min((Real)ssgLevel/axisLowerBounds[i],
-					   anisoLevelWts[i]);
+	for (i=0; i<numVars; ++i)
+	  if (axisLowerBounds[i] > 1.e-10) {                 // nonzero LB
+	    Real wt_u_bnd = (Real)ssgLevel/axisLowerBounds[i];
+	    anisoLevelWts[i] = (anisoLevelWts[i] > 1.e-10) ? // nonzero wt
+	      std::min(wt_u_bnd, anisoLevelWts[i]) : wt_u_bnd;
+	  }
 #ifdef DEBUG
 	PCout << "anisoLevelWts after axisLowerBounds enforcement:\n";
 	write_data(PCout, anisoLevelWts);
@@ -105,7 +112,7 @@ void SparseGridDriver::update_axis_lower_bounds()
     axisLowerBounds = (Real)ssgLevel; // all weights = 1
   else // min nonzero weight scaled to 1 --> just catch special case w_i=0
     for (size_t i=0; i<numVars; ++i)
-      axisLowerBounds[i] = (std::abs(anisoLevelWts[i]) > 1.e-10) ?
+      axisLowerBounds[i] = (anisoLevelWts[i] > 1.e-10) ? // nonzero wt
 	(Real)ssgLevel/anisoLevelWts[i] : 0.;
 }
 
@@ -602,7 +609,7 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
     const Real& wt_i = anisoLevelWts[i];
     wt_sum += wt_i;
     // minimum nonzero weight is scaled to 1, so just catch special case of 0
-    x_max[i] = (std::abs(wt_i) > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
+    x_max[i] = (wt_i > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
   }
   Real q_min = ssgLevel - wt_sum;
 #ifdef DEBUG
