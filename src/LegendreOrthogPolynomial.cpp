@@ -188,8 +188,7 @@ const RealArray& LegendreOrthogPolynomial::gauss_points(unsigned short order)
 
   if (gaussPoints.size() != order) { // if not already computed
     gaussPoints.resize(order);
-    if (gaussMode == GAUSS_PATTERSON || gaussMode == GAUSS_PATTERSON_MODERATE ||
-	gaussMode == GAUSS_PATTERSON_SLOW) {
+    if (gaussMode == GAUSS_PATTERSON) {
 #ifdef HAVE_SPARSE_GRID
       webbur::patterson_lookup_points(order, &gaussPoints[0]);
 #else
@@ -324,8 +323,7 @@ const RealArray& LegendreOrthogPolynomial::gauss_weights(unsigned short order)
 
   if (gaussWeights.size() != order) { // if not already computed
     gaussWeights.resize(order);
-    if (gaussMode == GAUSS_PATTERSON || gaussMode == GAUSS_PATTERSON_MODERATE ||
-	gaussMode == GAUSS_PATTERSON_SLOW) {
+    if (gaussMode == GAUSS_PATTERSON) {
 #ifdef HAVE_SPARSE_GRID
       webbur::patterson_lookup_weights(order, &gaussWeights[0]);
       for (size_t i=0; i<order; i++)

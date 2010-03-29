@@ -72,8 +72,7 @@ private:
   //- Heading: Data
   //
 
-  /// CLENSHAW_CURTIS/CLENSHAW_CURTIS_MODERATE/CLENSHAW_CURTIS_SLOW or
-  /// FEJER2/FEJER2_MODERATE/FEJER2_SLOW
+  /// CLENSHAW_CURTIS or FEJER2
   short gaussMode;
 };
 

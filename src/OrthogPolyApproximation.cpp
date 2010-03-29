@@ -544,7 +544,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
 	<< "\nsm_multi_index =\n" << sm_multi_index << '\n';
 #endif // DEBUG
 
-  UShortArray quad_order(numVars), integrand_order(numVars);
+  UShortArray integrand_order(numVars);
   if (sparseGridExpansion == TENSOR_PRODUCT_SUM) {
     // assemble a complete list of individual polynomial coverage
     // defined from the linear combination of mixed tensor products
@@ -552,14 +552,17 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     UShort2DArray tp_multi_index;
     UShortArray expansion_order(numVars);
     for (i=0; i<num_smolyak_indices; ++i) {
-      ssg_driver->level_to_order(sm_multi_index[i], quad_order);
-      quadrature_order_to_integrand_order(quad_order, integrand_order);
+      // enforce moderate linear integrand growth (for now)
+      // TO DO: allow use of SLOW_RESTRICTED_GROWTH
+      level_growth_to_integrand_order(sm_multi_index[i],
+	MODERATE_RESTRICTED_GROWTH, integrand_order);
       integrand_order_to_expansion_order(integrand_order, expansion_order);
       tensor_product_multi_index(expansion_order, tp_multi_index, true);
       append_unique(tp_multi_index, multi_index);
 #ifdef DEBUG
-      PCout << "level =\n" << sm_multi_index[i] << "quadrature_order =\n"
-	    << quad_order << "integrand_order =\n" << integrand_order
+      PCout << "level =\n" << sm_multi_index[i]
+          //<< "quadrature_order =\n" << quad_order
+	    << "integrand_order =\n" << integrand_order
 	    << "expansion_order =\n" << expansion_order << "tp_multi_index =\n"
 	    << tp_multi_index << '\n';//<< "multi_index =\n" << multi_index;
 #endif // DEBUG
@@ -568,6 +571,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
   }
   else if (sparseGridExpansion == TOTAL_ORDER) {
     // back out approxOrder & use total_order_multi_index()
+    UShortArray quad_order(numVars);
     UShort2DArray pareto(1), total_pareto;
     for (i=0; i<num_smolyak_indices; ++i) {
       ssg_driver->level_to_order(sm_multi_index[i], quad_order);
@@ -678,35 +682,29 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 {
   if (exp_order.size() != numVars)
     exp_order.resize(numVars);
-  const IntArray& rules = ((SparseGridDriver*)driverRep)->integration_rules();
+  const IntArray& int_rules
+    = ((SparseGridDriver*)driverRep)->integration_rules();
+  const IntArray& growth_rules
+    = ((SparseGridDriver*)driverRep)->growth_rules();
   for (size_t i=0; i<numVars; ++i) {
-    switch (rules[i]) {
-    case CLENSHAW_CURTIS: case CLENSHAW_CURTIS_SLOW:
-    case FEJER2:          case FEJER2_SLOW: // TO DO: verify
-      // integrand order = 2*level+1 ("sharp" result from Novak & Ritter, 1996)
-    case GAUSS_PATTERSON_SLOW: {
-      // level is scaled back to be consistent with CC guarantee above:
-      // -> consistency is good for mixing & matching anisotropic rules, but...
-      // -> seems overly conservative: for isotropic, more desirable to scale
-      //    back only where needed to avoid overshooting total-order precision.
-      unsigned short integrand = 2*ssg_level + 1;
-      exp_order[i] = integrand / 2; // remainder truncated
-      // results in exp_order = level
+    switch (growth_rules[i]) {
+    case FULL_EXPONENTIAL:
+      switch (int_rules[i]) {
+      case CLENSHAW_CURTIS: case FEJER2: { // TO DO: verify F2
+	// integrand order = 2*level+1 ("sharp" result from Novak & Ritter,1996)
+	unsigned short integrand = 2*ssg_level + 1;
+	exp_order[i] = integrand / 2; // remainder truncated
+	// results in exp_order = level
+	break;
+      }
+      default:
+	PCerr << "Error: unsupported integration rule for "
+	      << "FULL_EXPONENTIAL growth in OrthogPolyApproximation::"
+	      << "sparse_grid_level_to_expansion_order()." << std::endl;
+	abort_handler(-1);
+      }
       break;
-    }
-    /*
-    case GAUSS_PATTERSON: { // TO DO
-      // Exponential growth: o(l) = 2^{l+1}-1
-      // integrand = 2o-1 (Gaussian) - o(l-1) (constraints from previous rule)
-      //           + 1 (odd order rule -> symmetry)
-      // *** Can be applied on a per-tensor product basis but not to full SSG.
-      unsigned short integrand = (ssg_level) ?
-	3*(unsigned short)std::pow(2.,(int)ssg_level) - 1 : 1;
-      exp_order[i] = integrand / 2; // remainder truncated
-      break;
-    }
-    */
-    default: {
+    case MODERATE_LINEAR: {
       // linear growth Gauss rules & matching moderate growth exponential rules
 
       // For std exponential growth: use total integrand order = m (based on
@@ -729,7 +727,45 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
       exp_order[i] = (wmNp1 > 0) ? wmNp1 + ssg_level : ssg_level;
       break;
     }
+    default:
+      PCerr << "Error: unsupported growth rule in OrthogPolyApproximation::"
+	    << "sparse_grid_level_to_expansion_order()," << std::endl;
+      abort_handler(-1);
     }
+  }
+}
+
+
+/** The computed integrand_order may be conservative (by design) in the
+    presence of exponential growth.  This avoids aggressive optimization
+    of PCE expansion orders when an exponential rule takes a large jump
+    that is not balanced by the other index set component mappings. */
+void OrthogPolyApproximation::
+level_growth_to_integrand_order(const UShortArray& levels, short exp_growth,
+				UShortArray& int_order)
+{
+  size_t i, n = levels.size();
+  if (int_order.size() != n)
+    int_order.resize(n);
+  switch (exp_growth) {
+  case SLOW_RESTRICTED_GROWTH:
+    for (i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
+      int_order[i] =  2*levels[i] + 1;
+    break;
+  case MODERATE_RESTRICTED_GROWTH:
+    for (i=0; i<n; ++i) // synch with moderate linear growth: i = 4l + 1
+      int_order[i] =  4*levels[i] + 1;
+    break;
+  case UNRESTRICTED_GROWTH: {
+    // This was previously the only option for TENSOR_PRODUCT_SUM expansions,
+    // but was too aggressive for use with exponential growth.  It is retained
+    // for completeness, but is not recommended.
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    UShortArray quad_order(numVars);
+    ssg_driver->level_to_order(levels, quad_order);
+    quadrature_order_to_integrand_order(quad_order, int_order);
+    break;
+  }
   }
 }
 
@@ -768,15 +804,12 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
   else
     for (i=0; i<n; ++i)
       switch (gaussModes[i]) {
-      case CLENSHAW_CURTIS:          case FEJER2:
-      case CLENSHAW_CURTIS_MODERATE: case FEJER2_MODERATE:
-      case CLENSHAW_CURTIS_SLOW:     case FEJER2_SLOW:
+      case CLENSHAW_CURTIS: case FEJER2:
 	// i = m (odd m), m-1 (even m).  Note that growth rule enforces odd.
 	// TO DO: verify FEJER2 same as CC
 	int_order[i] = (quad_order[i] % 2) ? quad_order[i] : quad_order[i] - 1;
 	break;
-      case GAUSS_PATTERSON: case GAUSS_PATTERSON_MODERATE:
-      case GAUSS_PATTERSON_SLOW: {
+      case GAUSS_PATTERSON: {
 	// for o(l)=2^{l+1}-1, o(l-1) = (o(l)-1)/2
 	unsigned short previous = std::max(1,(quad_order[i] - 1)/2);
 	int_order[i] = 2*quad_order[i] - previous;

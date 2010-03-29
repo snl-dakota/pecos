@@ -119,23 +119,23 @@ void SparseGridDriver::update_axis_lower_bounds()
 
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  size_t ssg_level,
-		const RealVector& dim_pref, const String& sparse_grid_usage)
+		const RealVector& dim_pref, const String& ssg_usage,
+		short exp_growth, short nested_uniform_rule)
 {
   numVars = u_types.size();
-  sparseGridUsage = sparse_grid_usage;
+  sparseGridUsage = ssg_usage;
   level(ssg_level);
   dimension_preference(dim_pref);
 
   integrationRules.resize(numVars);
+  growthRules.resize(numVars);
   compute1DPoints.resize(numVars);
   compute1DWeights.resize(numVars);
 
-  short exp_growth = MODERATE_GROWTH;//SLOW_GROWTH,STANDARD_GROWTH;
-  short nested_uniform_base_rule = GAUSS_PATTERSON;//CLENSHAW_CURTIS,FEJER2;
-  bool  nested_rules = true;
   // For STANDARD exponential growth, use of nested rules is restricted to
   // isotropic uniform in order to enforce consistent growth rates:
-  if (exp_growth == STANDARD_GROWTH)
+  bool nested_rules = true;
+  if (exp_growth == UNRESTRICTED_GROWTH)
     for (size_t i=0; i<numVars; ++i)
       if (u_types[i] != STD_UNIFORM)
 	{ nested_rules = false; break; }
@@ -148,23 +148,27 @@ initialize_grid(const ShortArray& u_types,  size_t ssg_level,
     case STD_NORMAL:
       compute1DPoints[i]  = webbur::hermite_compute_points_np;
       compute1DWeights[i] = webbur::hermite_compute_weights_np;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GAUSS_HERMITE_SLOW :
-	GAUSS_HERMITE; break;
+      integrationRules[i] = GAUSS_HERMITE;
+      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
     case BOUNDED_NORMAL:
       compute1DPoints[i]  = bounded_normal_gauss_points;
       compute1DWeights[i] = bounded_normal_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case LOGNORMAL:
       compute1DPoints[i]  = lognormal_gauss_points;
       compute1DWeights[i] = lognormal_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case BOUNDED_LOGNORMAL:
       compute1DPoints[i]  = bounded_lognormal_gauss_points;
       compute1DWeights[i] = bounded_lognormal_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case STD_UNIFORM:
       // For tensor-product quadrature, Gauss-Legendre is used due to greater
       // polynomial exactness since nesting is not a concern.  For nested sparse
@@ -173,94 +177,90 @@ initialize_grid(const ShortArray& u_types,  size_t ssg_level,
       // rule become skewed when mixing Gauss rules with CC.  For this reason,
       // CC is selected only if isotropic in rule (for now).
       if (nested_rules) {
-	switch (nested_uniform_base_rule) {
+	integrationRules[i] = nested_uniform_rule;
+	switch (nested_uniform_rule) {
 	case GAUSS_PATTERSON: // closed fully nested
 	  compute1DPoints[i]  = webbur::patterson_lookup_points_np;
-	  compute1DWeights[i] = webbur::patterson_lookup_weights_np;
-	  switch (exp_growth) {
-	  case SLOW_GROWTH:	// valid up to level==127 (max m=255, m=2*l+1)
-	    integrationRules[i] = GAUSS_PATTERSON_SLOW;     break;
-	  case MODERATE_GROWTH:	// valid up to level==63 (max m=255, m=4*l+1)
-	    integrationRules[i] = GAUSS_PATTERSON_MODERATE; break;
-	  case STANDARD_GROWTH:	// valid up to level==7 (max m=2^{l+1}-1 = 255)
-	    integrationRules[i] = GAUSS_PATTERSON;          break;
-	  } break;
+	  compute1DWeights[i] = webbur::patterson_lookup_weights_np; break;
 	case CLENSHAW_CURTIS:
 	  compute1DPoints[i]  = webbur::clenshaw_curtis_compute_points_np;
 	  compute1DWeights[i] = webbur::clenshaw_curtis_compute_weights_np;
-	  switch (exp_growth) {
-	  case SLOW_GROWTH:
-	    integrationRules[i] = CLENSHAW_CURTIS_SLOW;     break;
-	  case MODERATE_GROWTH:
-	    integrationRules[i] = CLENSHAW_CURTIS_MODERATE; break;
-	  case STANDARD_GROWTH:
-	    integrationRules[i] = CLENSHAW_CURTIS;          break;
-	  } break;
+	  break;
 	case FEJER2:
 	  compute1DPoints[i]  = webbur::fejer2_compute_points_np;
-	  compute1DWeights[i] = webbur::fejer2_compute_weights_np;
-	  switch (exp_growth) {
-	  case SLOW_GROWTH:
-	    integrationRules[i] = FEJER2_SLOW;     break;
-	  case MODERATE_GROWTH:
-	    integrationRules[i] = FEJER2_MODERATE; break;
-	  case STANDARD_GROWTH:
-	    integrationRules[i] = FEJER2;          break;
-	  } break;
+	  compute1DWeights[i] = webbur::fejer2_compute_weights_np;   break;
 	}
+	switch (exp_growth) {
+	case SLOW_RESTRICTED_GROWTH:
+	  growthRules[i] = SLOW_EXPONENTIAL;     break;
+	case MODERATE_RESTRICTED_GROWTH:
+	  growthRules[i] = MODERATE_EXPONENTIAL; break;
+	case UNRESTRICTED_GROWTH:
+	  growthRules[i] = FULL_EXPONENTIAL;     break;
+	} 
       }
       else {
 	compute1DPoints[i]  = webbur::legendre_compute_points_np;
 	compute1DWeights[i] = webbur::legendre_compute_weights_np;
-	integrationRules[i] = GAUSS_LEGENDRE; // no SLOW if not nested_rules
+	integrationRules[i] = GAUSS_LEGENDRE;
+	growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	  SLOW_LINEAR_ODD : MODERATE_LINEAR;
       }
       break;
     case LOGUNIFORM:
       compute1DPoints[i]  = loguniform_gauss_points;
       compute1DWeights[i] = loguniform_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case TRIANGULAR:
       compute1DPoints[i]  = triangular_gauss_points;
       compute1DWeights[i] = triangular_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case STD_EXPONENTIAL:
       compute1DPoints[i]  = webbur::laguerre_compute_points_np;
       compute1DWeights[i] = webbur::laguerre_compute_weights_np;
-      integrationRules[i] =//(exp_growth == SLOW_GROWTH) ? GAUSS_LAGUERRE_SLOW :
-	GAUSS_LAGUERRE; break;
+      integrationRules[i] = GAUSS_LAGUERRE;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case STD_BETA:
       compute1DPoints[i]  = webbur::jacobi_compute_points_np;
       compute1DWeights[i] = webbur::jacobi_compute_weights_np;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GAUSS_JACOBI_SLOW :
-	GAUSS_JACOBI; break;
+      integrationRules[i] = GAUSS_JACOBI;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case STD_GAMMA:
       compute1DPoints[i]  = webbur::gen_laguerre_compute_points_np;
       compute1DWeights[i] = webbur::gen_laguerre_compute_weights_np;
-      integrationRules[i] =
-	//(exp_growth == SLOW_GROWTH) ? GEN_GAUSS_LAGUERRE_SLOW :
-	GEN_GAUSS_LAGUERRE; break;
+      integrationRules[i] = GEN_GAUSS_LAGUERRE;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case GUMBEL:
       compute1DPoints[i]  = gumbel_gauss_points;
       compute1DWeights[i] = gumbel_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case FRECHET:
       compute1DPoints[i]  = frechet_gauss_points;
       compute1DWeights[i] = frechet_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case WEIBULL:
       compute1DPoints[i]  = weibull_gauss_points;
       compute1DWeights[i] = weibull_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     case HISTOGRAM_BIN: {
       compute1DPoints[i]  = histogram_bin_gauss_points;
       compute1DWeights[i] = histogram_bin_gauss_weights;
-      integrationRules[i] = //(exp_growth == SLOW_GROWTH) ? GOLUB_WELSCH_SLOW :
-	GOLUB_WELSCH; break;
+      integrationRules[i] = GOLUB_WELSCH;
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
     }
     default:
       PCerr << "Error: unsupported distribution type in SparseGridDriver for "
@@ -289,8 +289,8 @@ initialize_grid_parameters(const ShortArray& u_types,
     switch (u_types[i]) {
     case STD_GAMMA:
       numPolyParams[i] = 1; break;
-    case STD_BETA: case LOGNORMAL: case LOGUNIFORM: case GUMBEL: case FRECHET:
-    case WEIBULL:
+    case STD_BETA: case LOGNORMAL: case LOGUNIFORM:
+    case GUMBEL:   case FRECHET:   case WEIBULL:
       numPolyParams[i] = 2; break;
     case TRIANGULAR:
       numPolyParams[i] = 3; break;
@@ -396,10 +396,10 @@ int SparseGridDriver::grid_size()
   return (dimIsotropic) ?
     webbur::sparse_grid_mixed_growth_size(numVars, ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
-      &compute1DPoints[0], duplicateTol, webbur::level_to_order_default) :
+      &compute1DPoints[0], duplicateTol, &growthRules[0]) :
     webbur::sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
-      &compute1DPoints[0], duplicateTol, webbur::level_to_order_default);
+      &compute1DPoints[0], duplicateTol, &growthRules[0]);
 }
 
 
@@ -407,9 +407,9 @@ int SparseGridDriver::grid_size_total()
 {
   return (dimIsotropic) ?
     webbur::sparse_grid_mixed_growth_size_total(numVars, ssgLevel,
-      &integrationRules[0], webbur::level_to_order_default) :
+      &integrationRules[0], &growthRules[0]) :
     webbur::sgmga_size_total(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], webbur::level_to_order_default);
+      &integrationRules[0], &growthRules[0]);
 }
 
 
@@ -439,39 +439,35 @@ void SparseGridDriver::compute_grid()
     webbur::sparse_grid_mixed_growth_unique_index(numVars, ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
-      webbur::level_to_order_default, &uniqueIndexMapping[0]);
+      &growthRules[0], &uniqueIndexMapping[0]);
     webbur::sparse_grid_mixed_growth_index(numVars, ssgLevel,
       &integrationRules[0], num_colloc_pts, num_total_pts,
-      &uniqueIndexMapping[0], webbur::level_to_order_default, sparse_order,
-      sparse_index);
+      &uniqueIndexMapping[0], &growthRules[0], sparse_order, sparse_index);
     webbur::sparse_grid_mixed_growth_weight(numVars, ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DWeights[0], num_colloc_pts, num_total_pts,
-      &uniqueIndexMapping[0], webbur::level_to_order_default,
-      weightSets.values());
+      &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
     webbur::sparse_grid_mixed_growth_point(numVars, ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
-      webbur::level_to_order_default, variableSets.values());
+      &growthRules[0], variableSets.values());
   }
   else {
     webbur::sgmga_unique_index(numVars, anisoLevelWts.values(), ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
-      webbur::level_to_order_default, &uniqueIndexMapping[0]);
+      &growthRules[0], &uniqueIndexMapping[0]);
     webbur::sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
       &integrationRules[0], num_colloc_pts, num_total_pts,
-      &uniqueIndexMapping[0], webbur::level_to_order_default, sparse_order,
-      sparse_index);
+      &uniqueIndexMapping[0], &growthRules[0], sparse_order, sparse_index);
     webbur::sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DWeights[0], num_colloc_pts, num_total_pts,
-      &uniqueIndexMapping[0], webbur::level_to_order_default,
-      weightSets.values());
+      &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
     webbur::sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
       &integrationRules[0], &numPolyParams[0], poly_params,
       &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
-      webbur::level_to_order_default, variableSets.values());
+      &growthRules[0], variableSets.values());
   }
   delete [] sparse_order;
   delete [] sparse_index;
@@ -489,13 +485,10 @@ void SparseGridDriver::compute_grid()
     case GAUSS_HERMITE:
       pt_factor[i] = polynomialBasis[i].point_factor();
       wt_factor   *= polynomialBasis[i].weight_factor(); break;
-    case GAUSS_LEGENDRE:           case GAUSS_PATTERSON:
-    case GAUSS_PATTERSON_MODERATE: case GAUSS_PATTERSON_SLOW:
-    case GAUSS_JACOBI:             case GEN_GAUSS_LAGUERRE:
+    case GAUSS_LEGENDRE:  case GAUSS_PATTERSON:
+    case GAUSS_JACOBI:    case GEN_GAUSS_LAGUERRE:
       wt_factor *= polynomialBasis[i].weight_factor();   break;
-    case CLENSHAW_CURTIS:          case FEJER2:
-    case CLENSHAW_CURTIS_MODERATE: case FEJER2_MODERATE:
-    case CLENSHAW_CURTIS_SLOW:     case FEJER2_SLOW:
+    case CLENSHAW_CURTIS: case FEJER2:
       if (chebyshev_poly.is_null())
 	chebyshev_poly = BasisPolynomial(CHEBYSHEV);//, mode);
       //chebyshev_poly.gauss_mode(integrationRules[i]);// no effect on wtFactor
@@ -527,19 +520,17 @@ void SparseGridDriver::compute_grid()
     for (i=0; i<numVars; i++) {
       gaussPts1D[i].resize(ssgLevel + 1); gaussWts1D[i].resize(ssgLevel + 1);
       switch (integrationRules[i]) {
-      case CLENSHAW_CURTIS:          case FEJER2:
-      case CLENSHAW_CURTIS_MODERATE: case FEJER2_MODERATE:
-      case CLENSHAW_CURTIS_SLOW:     case FEJER2_SLOW:
+      case CLENSHAW_CURTIS: case FEJER2:
 	chebyshev_poly.gauss_mode(integrationRules[i]); // integration mode
 	for (level_index=0; level_index<=ssgLevel; level_index++) {
-	  level_to_order(i, level_index, order); // growth rule
+	  level_to_order(i, level_index, order);
 	  gaussPts1D[i][level_index] = chebyshev_poly.gauss_points(order);
 	  gaussWts1D[i][level_index] = chebyshev_poly.gauss_weights(order);
 	}
 	break;
       default: // Gaussian rules
 	for (level_index=0; level_index<=ssgLevel; level_index++) {
-	  level_to_order(i, level_index, order); // growth rule
+	  level_to_order(i, level_index, order);
 	  gaussPts1D[i][level_index] = polynomialBasis[i].gauss_points(order);
 	  gaussWts1D[i][level_index] = polynomialBasis[i].gauss_weights(order);
 	}
@@ -558,7 +549,7 @@ void SparseGridDriver::compute_grid()
 
   webbur::sparse_grid_mixed_growth_index(numVars, ssgLevel,
     integrationRules, num_colloc_pts, num_total_pts, uniqueIndexMapping,
-    webbur::level_to_order_default, bases, indices);
+    &growthRules[0], bases, indices);
 
   IntArray key(2*numVars);
   unsigned short closed_order_max;
@@ -571,8 +562,6 @@ void SparseGridDriver::compute_grid()
 	key[j+numVars] = indices[cntr] + bases[cntr]; // 0-based index
 	break;
       case CLENSHAW_CURTIS:
-      case CLENSHAW_CURTIS_MODERATE:
-      case CLENSHAW_CURTIS_SLOW:
 	key[j] = closed_order_max;      // promotion to highest grid
 	key[j+numVars] = indices[cntr]; // already 0-based
 	break;

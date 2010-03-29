@@ -178,15 +178,19 @@ private:
   /// initialize multiIndex using a sparse grid expansion
   void sparse_grid_multi_index(UShort2DArray& multi_index);
 
-  /// convert quadrature orders to integrand orders
+  /// convert quadrature orders to integrand orders using rigorous mappings
   void quadrature_order_to_integrand_order(const UShortArray& quad_order,
 					   UShortArray& int_order);
-  /// convert integrand orders to expansion orders
+  /// convert integrand orders to expansion orders using rigorous mappings
   void integrand_order_to_expansion_order(const UShortArray& int_order,
 					  UShortArray& exp_order);
-  /// convert sparse grid levels to expansion orders
+  /// convert sparse grid level to expansion orders using available heuristics
   void sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 					    UShortArray& exp_order);
+  /// convert a level index set and a growth setting to an integrand_order
+  void level_growth_to_integrand_order(const UShortArray& levels,
+				       short exp_growth,
+				       UShortArray& int_order);
 
   /// append multi-indices from tp_multi_index that do not already
   /// appear in multi_index
@@ -236,11 +240,8 @@ private:
   ShortArray basisTypes;
 
   /// array of Gauss mode options for some derived orthogonal polynomial 
-  /// types: Legendre supports GAUSS_LEGENDRE or
-  /// GAUSS_PATTERSON/GAUSS_PATTERSON_MODERATE/GAUSS_PATTERSON_SLOW,
-  /// Chebyshev supports
-  /// CLENSHAW_CURTIS/CLENSHAW_CURTIS_MODERATE/CLENSHAW_CURTIS_SLOW or
-  /// FEJER2/FEJER2_MODERATE/FEJER2_SLOW.
+  /// types: Legendre supports GAUSS_LEGENDRE or GAUSS_PATTERSON,
+  /// Chebyshev supports CLENSHAW_CURTIS or FEJER2.
   ShortArray gaussModes;
 
   /// array of one-dimensional basis polynomial objects which are used in

@@ -74,8 +74,7 @@ private:
   //- Heading: Data
   //
 
-  /// GAUSS_LEGENDRE or
-  /// GAUSS_PATTERSON/GAUSS_PATTERSON_MODERATE/GAUSS_PATTERSON_SLOW
+  /// GAUSS_LEGENDRE or GAUSS_PATTERSON
   short gaussMode;
 };
 

@@ -68,8 +68,8 @@ public:
 
   /// set ssgLevel, isotropicSSG, and ssgAnisoLevelWts
   void initialize_grid(const ShortArray& u_types, size_t ssg_level,
-		       const RealVector& dim_pref,
-		       const String& sparse_grid_usage);
+		       const RealVector& dim_pref, const String& ssg_usage,
+		       short exp_growth, short nested_uniform_rule);
 
   /// set polyParams, integrationRules, and FPType function pointers
   void initialize_grid_parameters(const ShortArray& u_types,
@@ -91,6 +91,8 @@ public:
 
   /// return integrationRules
   const IntArray& integration_rules() const;
+  /// return growthRules
+  const IntArray& growth_rules() const;
 
   /// update axisLowerBounds
   void update_axis_lower_bounds();
@@ -104,10 +106,10 @@ public:
   /// converts an array of sparse grid levels to an array of
   /// integration orders based on integrationRules
   void level_to_order(size_t i, unsigned short level,
-		      unsigned short& order) const;
+		      unsigned short& order);
   /// converts an array of sparse grid levels to an array of
   /// integration orders based on integrationRules
-  void level_to_order(const UShortArray& levels, UShortArray& orders) const;
+  void level_to_order(const UShortArray& levels, UShortArray& orders);
 
 private:
 
@@ -188,8 +190,10 @@ private:
   /// the Smolyak sparse grid level
   unsigned short ssgLevel;
 
-  /// integer codes for sgmga routine integration rule options
+  /// integer codes for integration rule options
   IntArray integrationRules;
+  /// integer codes for growth rule options
+  IntArray growthRules;
 
   /// "integration" or "interpolation"
   String sparseGridUsage;
@@ -240,6 +244,10 @@ inline const IntArray& SparseGridDriver::integration_rules() const
 { return integrationRules; }
 
 
+inline const IntArray& SparseGridDriver::growth_rules() const
+{ return growthRules; }
+
+
 //inline const Real& SparseGridDriver::duplicate_tolerance() const
 //{ return duplicateTol; }
 
@@ -249,16 +257,17 @@ inline const IntArray& SparseGridDriver::unique_index_mapping() const
 
 
 inline void SparseGridDriver::
-level_to_order(size_t i, unsigned short level, unsigned short& order) const
+level_to_order(size_t i, unsigned short level, unsigned short& order)
 {
-  int ilevel = level, irule = integrationRules[i], iorder;
-  webbur::level_to_order_default(1, &ilevel, &irule, &iorder);
+  int ilevel = level, iorder;
+  webbur::level_growth_to_order(1, &ilevel, &integrationRules[i],
+				&growthRules[i], &iorder);
   order = iorder;
 }
 
 
 inline void SparseGridDriver::
-level_to_order(const UShortArray& levels, UShortArray& orders) const
+level_to_order(const UShortArray& levels, UShortArray& orders)
 {
   size_t i, num_levels = levels.size();
   if (orders.size() != num_levels)

@@ -69,7 +69,8 @@ public:
   const IntArray& integration_rules() const;
 
   /// set numVars, integrationRules, polynomialBasis
-  void initialize_grid(const ShortArray& u_types, bool nested_rules);
+  void initialize_grid(const ShortArray& u_types, bool nested_rules,
+		       short exp_growth, short nested_uniform_rule);
   /// set numVars, integrationRules, polynomialBasis
   void initialize_grid_parameters(const ShortArray& u_types,
 				  const DistributionParams& dp);
@@ -87,8 +88,10 @@ private:
   /// the isotropic/anisotropic quadrature order
   UShortArray quadOrder;
 
-  /// integer codes for sgmga routine integration rule options
+  /// integer codes for integration rule options
   IntArray integrationRules;
+  /// integer codes for growth rule options
+  IntArray growthRules;
 };
 
 
