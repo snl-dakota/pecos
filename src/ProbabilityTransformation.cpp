@@ -681,6 +681,7 @@ distribution_parameter(size_t index, short target)
       PCerr << "Error: LN_ERR_FACT cannot be returned in Probability"
 	    << "Transformation::distribution_parameter()." << std::endl;
       abort_handler(-1);
+      return ranVarLowerBndsX[0];
     }
     break;
   }
