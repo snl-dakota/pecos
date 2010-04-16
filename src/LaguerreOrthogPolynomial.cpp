@@ -206,7 +206,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[1] =  2. + sr2;
       break;
     }
-    // end analytic expressions, begin tabulated values (Abramowitz & Stegun)
+    /* Only ~12 digits of precision in Abramowitz & Stegun tabulated values
     case 3:
       gaussPoints[0] =  0.415774556783;
       gaussPoints[1] =  2.294280360279;
@@ -275,8 +275,10 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[8] = 21.996585811981;
       gaussPoints[9] = 29.920697012274;
       break;
+    */
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
       webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
@@ -314,7 +316,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[1] = (2. - sr2)/4.;
       break;
     }
-    // end analytic expressions, begin tabulated values (Abramowitz & Stegun)
+    /* Only ~12 digits of precision in Abramowitz & Stegun tabulated values
     case 3:
       gaussWeights[0] = 0.711093009929;
       gaussWeights[1] = 0.278517733569;
@@ -383,8 +385,10 @@ const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[8] = 1.83956482398e-9;
       gaussWeights[9] = 9.91182721961e-13;
       break;
+    */
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
       webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);

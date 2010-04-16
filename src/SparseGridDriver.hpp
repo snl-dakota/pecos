@@ -22,8 +22,7 @@ namespace Pecos {
 
 /// pointer to a Gauss point or weight evaluation function, matching
 /// the prototype required by Pecos/packages/VPISparseGrid
-typedef void ( *FPType ) ( int order, int num_params, double* params,
-			   double* data );
+typedef void ( *FPType ) ( int order, int index, double* data );
 
 class DistributionParams;
 
@@ -117,75 +116,26 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// function for numerically-generated Gauss points for
-  /// BOUNDED_NORMAL distribution
-  static void bounded_normal_gauss_points(int order, int num_params,
-					  double* params, double* data);
-  /// function for numerically-generated Gauss weights for
-  /// BOUNDED_NORMAL distribution
-  static void bounded_normal_gauss_weights(int order, int num_params,
-					   double* params, double* data);
-  /// function for numerically-generated Gauss points for LOGNORMAL distribution
-  static void lognormal_gauss_points(int order, int num_params, double* params,
-				     double* data);
-  /// function for numerically-generated Gauss weights for LOGNORMAL
-  /// distribution
-  static void lognormal_gauss_weights(int order, int num_params, double* params,
-				      double* data);
-  /// function for numerically-generated Gauss points for
-  /// BOUNDED_LOGNORMAL distribution
-  static void bounded_lognormal_gauss_points(int order, int num_params,
-					     double* params, double* data);
-  /// function for numerically-generated Gauss weights for
-  /// BOUNDED_LOGNORMAL distribution
-  static void bounded_lognormal_gauss_weights(int order, int num_params,
-					      double* params, double* data);
-  /// function for numerically-generated Gauss points for LOGUNIFORM
-  /// distribution
-  static void loguniform_gauss_points(int order, int num_params, double* params,
-				      double* data);
-  /// function for numerically-generated Gauss weights for LOGUNIFORM
-  /// distribution
-  static void loguniform_gauss_weights(int order, int num_params,
-				       double* params, double* data);
-  /// function for numerically-generated Gauss points for TRIANGULAR
-  /// distribution
-  static void triangular_gauss_points(int order, int num_params, double* params,
-				      double* data);
-  /// function for numerically-generated Gauss weights for TRIANGULAR
-  /// distribution
-  static void triangular_gauss_weights(int order, int num_params,
-				       double* params, double* data);
-  /// function for numerically-generated Gauss points for GUMBEL distribution
-  static void gumbel_gauss_points(int order, int num_params, double* params,
-				  double* data);
-  /// function for numerically-generated Gauss weights for GUMBEL distribution
-  static void gumbel_gauss_weights(int order, int num_params, double* params,
-				   double* data);
-  /// function for numerically-generated Gauss points for FRECHET distribution
-  static void frechet_gauss_points(int order, int num_params, double* params,
-				   double* data);
-  /// function for numerically-generated Gauss weights for FRECHET distribution
-  static void frechet_gauss_weights(int order, int num_params, double* params,
-				    double* data);
-  /// function for numerically-generated Gauss points for WEIBULL distribution
-  static void weibull_gauss_points(int order, int num_params, double* params,
-				   double* data);
-  /// function for numerically-generated Gauss weights for WEIBULL distribution
-  static void weibull_gauss_weights(int order, int num_params, double* params,
-				    double* data);
-  /// function for numerically-generated Gauss points for
-  /// HISTOGRAM_BIN distribution
-  static void histogram_bin_gauss_points(int order, int num_params,
-					 double* params, double* data);
-  /// function for numerically-generated Gauss weights for
-  /// HISTOGRAM_BIN distribution
-  static void histogram_bin_gauss_weights(int order, int num_params,
-					  double* params, double* data);
+  /// function for computing Gauss points for polynomialBasis[index]
+  static void basis_gauss_points(int order, int index, double* data);
+  /// function for computing Gauss weights for polynomialBasis[index]
+  static void basis_gauss_weights(int order, int index, double* data);
+
+  /// function for computing collocation points for ChebyshevOrthogPolynomial
+  static void chebyshev_points(int order, int index, double* data);
+  /// function for computing collocation weights for ChebyshevOrthogPolynomial
+  static void chebyshev_weights(int order, int index, double* data);
 
   //
   //- Heading: Data
   //
+
+  /// pointer to instance of this class for use in statis member functions
+  static SparseGridDriver* sgdInstance;
+
+  /// pointer to a ChebyshevOrthogPolynomial instance for access to Fejer2 and
+  /// Clenshaw-Curtis integration points/weights (avoid repeated instantiations)
+  BasisPolynomial* chebyPolyPtr;
 
   /// the Smolyak sparse grid level
   unsigned short ssgLevel;
@@ -224,12 +174,13 @@ private:
 };
 
 
-inline SparseGridDriver::SparseGridDriver(): duplicateTol(1.e-15)
+inline SparseGridDriver::SparseGridDriver():
+  chebyPolyPtr(NULL), duplicateTol(1.e-15)
 { }
 
 
 inline SparseGridDriver::~SparseGridDriver()
-{ }
+{ if (chebyPolyPtr) delete chebyPolyPtr; }
 
 
 inline unsigned short SparseGridDriver::level() const

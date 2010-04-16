@@ -57,14 +57,31 @@ initialize_grid(const ShortArray& u_types, bool nested_rules,
   growthRules.resize(numVars);
 
   for (size_t i=0; i<numVars; i++) {
+    // set integrationRules
     switch (u_types[i]) {
-    case STD_NORMAL:
-      integrationRules[i] = GAUSS_HERMITE;
-      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+    case STD_NORMAL:      integrationRules[i] = GAUSS_HERMITE;      break;
+    case STD_UNIFORM:
+      // For tensor-product quadrature, Gauss-Legendre is used due to greater
+      // polynomial exactness since nesting is not a concern.  For nested sparse
+      // grids, Clenshaw-Curtis or Gauss-Patterson can be better selections.
+      // However, sparse grids that are isotropic in level but anisotropic in
+      // rule become skewed when mixing Gauss rules with CC.  For this reason,
+      // CC is selected only if isotropic in rule (for now).
+      integrationRules[i] = (nested_rules) ?
+	nested_uniform_rule : GAUSS_LEGENDRE;                       break;
+    case STD_EXPONENTIAL: integrationRules[i] = GAUSS_LAGUERRE;     break;
+    case STD_BETA:        integrationRules[i] = GAUSS_JACOBI;       break;
+    case STD_GAMMA:       integrationRules[i] = GEN_GAUSS_LAGUERRE; break;
+    default:              integrationRules[i] = GOLUB_WELSCH;       break;
+    }
+
+    // set growthRules
+    switch (u_types[i]) {
+    case STD_NORMAL: // symmetric Gaussian linear growth
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
     case STD_UNIFORM:
-      if (nested_rules) {
-	integrationRules[i] = nested_uniform_rule;
+      if (nested_rules) // symmetric exponential growth
 	switch (exp_growth) {
 	case SLOW_RESTRICTED_GROWTH:
 	  growthRules[i] = SLOW_EXPONENTIAL;     break;
@@ -72,36 +89,14 @@ initialize_grid(const ShortArray& u_types, bool nested_rules,
 	  growthRules[i] = MODERATE_EXPONENTIAL; break;
 	case UNRESTRICTED_GROWTH:
 	  growthRules[i] = FULL_EXPONENTIAL;     break;
-	} 
-      }
-      else {
-	integrationRules[i] = GAUSS_LEGENDRE;
-	growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	}
+      else // symmetric Gaussian linear growth
+	growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
 	  SLOW_LINEAR_ODD : MODERATE_LINEAR;
-      }
       break;
-    case STD_EXPONENTIAL:
-      integrationRules[i] = GAUSS_LAGUERRE;
+    default: // asymmetric Gaussian linear growth
       growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case STD_BETA:
-      integrationRules[i] = GAUSS_JACOBI;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case STD_GAMMA:
-      integrationRules[i] = GEN_GAUSS_LAGUERRE;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case BOUNDED_NORMAL: case LOGNORMAL:  case BOUNDED_LOGNORMAL:
-    case LOGUNIFORM:     case TRIANGULAR: case GUMBEL:
-    case FRECHET:        case WEIBULL:    case HISTOGRAM_BIN:
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    default:
-      PCerr << "Error: unsupported distribution type in TensorProductDriver "
-	    << "for u_type = " << u_types[i] << std::endl;
-      abort_handler(-1);
       break;
     }
   }

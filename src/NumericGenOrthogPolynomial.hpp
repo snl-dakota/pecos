@@ -53,11 +53,6 @@ public:
   //- Heading: Public functions
   //
 
-  /// return the Gauss quadrature points corresponding to polynomial order
-  const RealArray& gauss_points(unsigned short order);
-  /// return the Gauss quadrature weights corresponding to polynomial order
-  const RealArray& gauss_weights(unsigned short order);
-
   /// calculate and return alpha3TR[order]
   const Real& alpha_recursion(unsigned short order);
   /// calculate and return beta3TR[order]
@@ -93,6 +88,11 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
+
+  /// return the Gauss quadrature points corresponding to polynomial order
+  const RealArray& gauss_points(unsigned short order);
+  /// return the Gauss quadrature weights corresponding to polynomial order
+  const RealArray& gauss_weights(unsigned short order);
 
   /// retrieve the value of the generated polynomial of given order
   /// for a given parameter x

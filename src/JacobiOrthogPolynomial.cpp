@@ -167,6 +167,7 @@ const RealArray& JacobiOrthogPolynomial::gauss_points(unsigned short order)
     }
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
       webbur::jacobi_compute(order, alphaPoly, betaPoly, &gaussPoints[0],
@@ -204,6 +205,7 @@ const RealArray& JacobiOrthogPolynomial::gauss_weights(unsigned short order)
       break;
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
       webbur::jacobi_compute(order, alphaPoly, betaPoly, &gaussPoints[0],

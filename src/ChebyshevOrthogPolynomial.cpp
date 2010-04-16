@@ -170,19 +170,16 @@ const RealArray& ChebyshevOrthogPolynomial::gauss_points(unsigned short order)
     gaussPoints.resize(order);
 
 #ifdef HAVE_SPARSE_GRID
-    if (gaussWeights.size() != order)
-      gaussWeights.resize(order);
+    // separable calculation of points/weights in sandia_rules.C
     if (gaussMode == CLENSHAW_CURTIS)
-      webbur::clenshaw_curtis_compute(order, &gaussPoints[0], &gaussWeights[0]);
+      webbur::clenshaw_curtis_compute_points(order, &gaussPoints[0]);
     else if (gaussMode == FEJER2)
-      webbur::fejer2_compute(order, &gaussPoints[0], &gaussWeights[0]);
+      webbur::fejer2_compute_points(order, &gaussPoints[0]);
     else {
       PCerr << "Error: unsupported Gauss point type in "
 	    << "ChebyshevOrthogPolynomial::gauss_points()." << std::endl;
       abort_handler(-1);
     }
-    for (size_t i=0; i<order; i++)
-      gaussWeights[i] *= wtFactor;
 #else
     PCerr << "Error: configuration with VPISparseGrid package required in "
 	  << "ChebyshevOrthogPolynomial::gauss_points()." << std::endl;
@@ -210,12 +207,11 @@ const RealArray& ChebyshevOrthogPolynomial::gauss_weights(unsigned short order)
     gaussWeights.resize(order);
 
 #ifdef HAVE_SPARSE_GRID
-    if (gaussPoints.size() != order)
-      gaussPoints.resize(order);
+    // separable calculation of points/weights in sandia_rules.C
     if (gaussMode == CLENSHAW_CURTIS)
-      webbur::clenshaw_curtis_compute(order, &gaussPoints[0], &gaussWeights[0]);
+      webbur::clenshaw_curtis_compute_weights(order, &gaussWeights[0]);
     else if (gaussMode == FEJER2)
-      webbur::fejer2_compute(order, &gaussPoints[0], &gaussWeights[0]);
+      webbur::fejer2_compute_weights(order, &gaussWeights[0]);
     else {
       PCerr << "Error: unsupported Gauss weight type in "
 	    << "ChebyshevOrthogPolynomial::gauss_weights()." << std::endl;

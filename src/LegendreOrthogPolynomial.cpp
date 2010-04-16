@@ -234,7 +234,7 @@ const RealArray& LegendreOrthogPolynomial::gauss_points(unsigned short order)
 	gaussPoints[4] =  sr245p14sr70;
 	break;
       }
-	// end analytic expressions, begin tabulated values (Abramowitz&Stegun)
+      /* end analytic expressions, begin tabulated values (Abramowitz&Stegun)
       case 6:
 	gaussPoints[0] = -0.932469514203152;
 	gaussPoints[1] = -0.661209386466265;
@@ -285,8 +285,10 @@ const RealArray& LegendreOrthogPolynomial::gauss_points(unsigned short order)
 	gaussPoints[8] = -gaussPoints[1];
 	gaussPoints[9] = -gaussPoints[0];
 	break;
+      */
       default:
 #ifdef HAVE_SPARSE_GRID
+	// sandia_rules.C calculates points/weights together
 	if (gaussWeights.size() != order)
 	  gaussWeights.resize(order);
 	webbur::legendre_compute(order, &gaussPoints[0], &gaussWeights[0]);
@@ -359,7 +361,7 @@ const RealArray& LegendreOrthogPolynomial::gauss_weights(unsigned short order)
 	gaussWeights[2] = 64./225.;
 	break;
       }
-	// end analytic expressions, begin tabulated values (Abramowitz&Stegun)
+      /* end analytic expressions, begin tabulated values (Abramowitz&Stegun)
       case 6:
 	gaussWeights[0] = gaussWeights[5] = 0.171324492379170 * wtFactor;
 	gaussWeights[1] = gaussWeights[4] = 0.360761573048139 * wtFactor;
@@ -391,8 +393,10 @@ const RealArray& LegendreOrthogPolynomial::gauss_weights(unsigned short order)
 	gaussWeights[3] = gaussWeights[6] = 0.269266719309996 * wtFactor;
 	gaussWeights[4] = gaussWeights[5] = 0.295524224714753 * wtFactor;
 	break;
+      */
       default:
 #ifdef HAVE_SPARSE_GRID
+	// sandia_rules.C calculates points/weights together
 	if (gaussPoints.size() != order)
 	  gaussPoints.resize(order);
 	webbur::legendre_compute(order, &gaussPoints[0], &gaussWeights[0]);

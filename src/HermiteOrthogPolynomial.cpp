@@ -150,7 +150,7 @@ const RealArray& HermiteOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[4] =  sr5psr10;
       break;
     }
-    // end analytic expressions, begin tabulated values (Abramowitz & Stegun)
+    /* end analytic expressions, begin tabulated values (Abramowitz & Stegun)
     case 6: {
       gaussPoints[0] = -2.350604973674492 * ptFactor;
       gaussPoints[1] = -1.335849074013697 * ptFactor;
@@ -206,8 +206,10 @@ const RealArray& HermiteOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[9] = -gaussPoints[0];
       break;
     }
+    */
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
       webbur::hermite_compute(order, &gaussPoints[0], &gaussWeights[0]);
@@ -264,7 +266,7 @@ const RealArray& HermiteOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[2] = 8./15.;
       break;
     }
-    // end analytic expressions, begin tabulated values (Abramowitz & Stegun)
+    /* end analytic expressions, begin tabulated values (Abramowitz & Stegun)
     case 6: {
       gaussWeights[0] = gaussWeights[5] = 4.530009905509e-3 * wtFactor;
       gaussWeights[1] = gaussWeights[4] = 0.1570673203229 * wtFactor;
@@ -301,8 +303,10 @@ const RealArray& HermiteOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[4] = gaussWeights[5] = 0.6108626337353 * wtFactor;
       break;
     }
+    */
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
       webbur::hermite_compute(order, &gaussPoints[0], &gaussWeights[0]);

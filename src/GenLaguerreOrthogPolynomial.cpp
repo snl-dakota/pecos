@@ -162,6 +162,7 @@ gauss_points(unsigned short order)
     }
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussWeights.size() != order)
 	gaussWeights.resize(order);
       webbur::gen_laguerre_compute(order, alphaPoly, &gaussPoints[0],
@@ -201,6 +202,7 @@ gauss_weights(unsigned short order)
       break;
     default:
 #ifdef HAVE_SPARSE_GRID
+      // sandia_rules.C calculates points/weights together
       if (gaussPoints.size() != order)
 	gaussPoints.resize(order);
       webbur::gen_laguerre_compute(order, alphaPoly, &gaussPoints[0],

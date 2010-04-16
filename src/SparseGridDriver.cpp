@@ -14,10 +14,10 @@
 
 #include "SparseGridDriver.hpp"
 #include "sandia_rules.H"
-#include "sparse_grid_mixed_growth.H"
-#include "sgmga.H"
+#include "sandia_sgmg.H"
+#include "sandia_sgmga.H"
 #include "OrthogPolyApproximation.hpp"
-#include "NumericGenOrthogPolynomial.hpp"
+#include "ChebyshevOrthogPolynomial.hpp"
 #include "DistributionParams.hpp"
 #include "pecos_stat_util.hpp"
 
@@ -27,6 +27,9 @@ static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:
 
 namespace Pecos {
 
+/// initialize static member pointer to active driver instance
+SparseGridDriver* SparseGridDriver::sgdInstance(NULL);
+
 
 void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 {
@@ -34,11 +37,11 @@ void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
   if (!dim_pref.empty()) {
     size_t num_pref = dim_pref.length();
     aniso_wts.sizeUninitialized(num_pref);
-    webbur::sgmga_importance_to_aniso(num_pref, dim_pref.values(),
-				      aniso_wts.values());
+    webbur::sandia_sgmga_importance_to_aniso(num_pref, dim_pref.values(),
+					     aniso_wts.values());
 #ifdef DEBUG
     PCout << "dimension preference:\n"; write_data(PCout, dim_pref);
-    PCout << "anisotropic weights after sgmga_importance_to_aniso():\n";
+    PCout << "anisotropic weights after sandia_sgmga_importance_to_aniso():\n";
     write_data(PCout, aniso_wts);
 #endif
   }
@@ -72,9 +75,10 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
     // normalize and enforce axis lower bounds/weight upper bounds
     if (!dimIsotropic) {
       int option = 1; // weights scaled so that minimum nonzero entry is 1
-      webbur::sgmga_aniso_normalize(option, numVars, anisoLevelWts.values());
+      webbur::sandia_sgmga_aniso_normalize(option, numVars,
+					   anisoLevelWts.values());
 #ifdef DEBUG
-      PCout << "anisoLevelWts after sgmga_aniso_normalize():\n";
+      PCout << "anisoLevelWts after sandia_sgmga_aniso_normalize():\n";
       write_data(PCout, anisoLevelWts);
 #endif
       // enforce axis lower bounds, if present, for current ssgLevel.  An axis
@@ -143,32 +147,24 @@ initialize_grid(const ShortArray& u_types,  size_t ssg_level,
   // and synchronized with STANDARD Gaussian linear growth.
   // For SLOW exponential growth, nested rules can be used heterogeneously
   // and synchronized with SLOW Gaussian linear growth (not yet available).
+
+  bool cheby_poly = false;
   for (size_t i=0; i<numVars; i++) {
+    // set compute1DPoints/compute1DWeights
+    if (u_types[i] == STD_UNIFORM && nested_rules && 
+	nested_uniform_rule != GAUSS_PATTERSON) {
+      compute1DPoints[i]  = chebyshev_points;
+      compute1DWeights[i] = chebyshev_weights;
+      cheby_poly = true;
+    }
+    else {
+      compute1DPoints[i]  = basis_gauss_points;
+      compute1DWeights[i] = basis_gauss_weights;
+    }
+
+    // set integrationRules
     switch (u_types[i]) {
-    case STD_NORMAL:
-      compute1DPoints[i]  = webbur::hermite_compute_points_np;
-      compute1DWeights[i] = webbur::hermite_compute_weights_np;
-      integrationRules[i] = GAUSS_HERMITE;
-      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
-    case BOUNDED_NORMAL:
-      compute1DPoints[i]  = bounded_normal_gauss_points;
-      compute1DWeights[i] = bounded_normal_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case LOGNORMAL:
-      compute1DPoints[i]  = lognormal_gauss_points;
-      compute1DWeights[i] = lognormal_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case BOUNDED_LOGNORMAL:
-      compute1DPoints[i]  = bounded_lognormal_gauss_points;
-      compute1DWeights[i] = bounded_lognormal_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
+    case STD_NORMAL:      integrationRules[i] = GAUSS_HERMITE;      break;
     case STD_UNIFORM:
       // For tensor-product quadrature, Gauss-Legendre is used due to greater
       // polynomial exactness since nesting is not a concern.  For nested sparse
@@ -176,20 +172,21 @@ initialize_grid(const ShortArray& u_types,  size_t ssg_level,
       // However, sparse grids that are isotropic in level but anisotropic in
       // rule become skewed when mixing Gauss rules with CC.  For this reason,
       // CC is selected only if isotropic in rule (for now).
-      if (nested_rules) {
-	integrationRules[i] = nested_uniform_rule;
-	switch (nested_uniform_rule) {
-	case GAUSS_PATTERSON: // closed fully nested
-	  compute1DPoints[i]  = webbur::patterson_lookup_points_np;
-	  compute1DWeights[i] = webbur::patterson_lookup_weights_np; break;
-	case CLENSHAW_CURTIS:
-	  compute1DPoints[i]  = webbur::clenshaw_curtis_compute_points_np;
-	  compute1DWeights[i] = webbur::clenshaw_curtis_compute_weights_np;
-	  break;
-	case FEJER2:
-	  compute1DPoints[i]  = webbur::fejer2_compute_points_np;
-	  compute1DWeights[i] = webbur::fejer2_compute_weights_np;   break;
-	}
+      integrationRules[i] = (nested_rules) ?
+	nested_uniform_rule : GAUSS_LEGENDRE;                       break;
+    case STD_EXPONENTIAL: integrationRules[i] = GAUSS_LAGUERRE;     break;
+    case STD_BETA:        integrationRules[i] = GAUSS_JACOBI;       break;
+    case STD_GAMMA:       integrationRules[i] = GEN_GAUSS_LAGUERRE; break;
+    default:              integrationRules[i] = GOLUB_WELSCH;       break;
+    }
+
+    // set growthRules
+    switch (u_types[i]) {
+    case STD_NORMAL: // symmetric Gaussian linear growth
+      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
+    case STD_UNIFORM:
+      if (nested_rules) // symmetric exponential growth
 	switch (exp_growth) {
 	case SLOW_RESTRICTED_GROWTH:
 	  growthRules[i] = SLOW_EXPONENTIAL;     break;
@@ -197,78 +194,19 @@ initialize_grid(const ShortArray& u_types,  size_t ssg_level,
 	  growthRules[i] = MODERATE_EXPONENTIAL; break;
 	case UNRESTRICTED_GROWTH:
 	  growthRules[i] = FULL_EXPONENTIAL;     break;
-	} 
-      }
-      else {
-	compute1DPoints[i]  = webbur::legendre_compute_points_np;
-	compute1DWeights[i] = webbur::legendre_compute_weights_np;
-	integrationRules[i] = GAUSS_LEGENDRE;
-	growthRules[i]      = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	}
+      else // symmetric Gaussian linear growth
+	growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
 	  SLOW_LINEAR_ODD : MODERATE_LINEAR;
-      }
       break;
-    case LOGUNIFORM:
-      compute1DPoints[i]  = loguniform_gauss_points;
-      compute1DWeights[i] = loguniform_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
+    default: // asymmetric Gaussian linear growth
       growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case TRIANGULAR:
-      compute1DPoints[i]  = triangular_gauss_points;
-      compute1DWeights[i] = triangular_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case STD_EXPONENTIAL:
-      compute1DPoints[i]  = webbur::laguerre_compute_points_np;
-      compute1DWeights[i] = webbur::laguerre_compute_weights_np;
-      integrationRules[i] = GAUSS_LAGUERRE;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case STD_BETA:
-      compute1DPoints[i]  = webbur::jacobi_compute_points_np;
-      compute1DWeights[i] = webbur::jacobi_compute_weights_np;
-      integrationRules[i] = GAUSS_JACOBI;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case STD_GAMMA:
-      compute1DPoints[i]  = webbur::gen_laguerre_compute_points_np;
-      compute1DWeights[i] = webbur::gen_laguerre_compute_weights_np;
-      integrationRules[i] = GEN_GAUSS_LAGUERRE;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case GUMBEL:
-      compute1DPoints[i]  = gumbel_gauss_points;
-      compute1DWeights[i] = gumbel_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case FRECHET:
-      compute1DPoints[i]  = frechet_gauss_points;
-      compute1DWeights[i] = frechet_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case WEIBULL:
-      compute1DPoints[i]  = weibull_gauss_points;
-      compute1DWeights[i] = weibull_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    case HISTOGRAM_BIN: {
-      compute1DPoints[i]  = histogram_bin_gauss_points;
-      compute1DWeights[i] = histogram_bin_gauss_weights;
-      integrationRules[i] = GOLUB_WELSCH;
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-    }
-    default:
-      PCerr << "Error: unsupported distribution type in SparseGridDriver for "
-	    << "u_type = " << u_types[i] << std::endl;
-      abort_handler(-1);
       break;
     }
   }
+  if (cheby_poly) // gauss_mode set within loops
+    chebyPolyPtr = new BasisPolynomial(CHEBYSHEV);
 
   // avoid regenerating polynomialBasis, if up to date
   ShortArray basis_types, gauss_modes;
@@ -283,107 +221,6 @@ void SparseGridDriver::
 initialize_grid_parameters(const ShortArray& u_types,
 			   const DistributionParams& dp)
 {
-  numPolyParams.assign(numVars, 0);
-  size_t i, num_total_params = 0, hbuv_cntr = 0;
-  for (i=0; i<numVars; i++) {
-    switch (u_types[i]) {
-    case STD_GAMMA:
-      numPolyParams[i] = 1; break;
-    case STD_BETA: case LOGNORMAL: case LOGUNIFORM:
-    case GUMBEL:   case FRECHET:   case WEIBULL:
-      numPolyParams[i] = 2; break;
-    case TRIANGULAR:
-      numPolyParams[i] = 3; break;
-    case BOUNDED_NORMAL: case BOUNDED_LOGNORMAL:
-      numPolyParams[i] = 4; break;
-    case HISTOGRAM_BIN:
-      numPolyParams[i] = dp.histogram_bin_pairs(hbuv_cntr).length();
-      ++hbuv_cntr;          break;
-    }
-    num_total_params += numPolyParams[i];
-  }
-  polyParams.resize(num_total_params); // may be zero size
-
-  size_t nuv_cntr = 0, lnuv_cntr = 0, luuv_cntr = 0, tuv_cntr = 0, buv_cntr = 0,
-    gauv_cntr = 0, guuv_cntr = 0, fuv_cntr = 0, wuv_cntr = 0, pp_cntr = 0;
-  hbuv_cntr = 0;
-  for (i=0; i<numVars; i++) {
-    switch (u_types[i]) {
-    case STD_NORMAL:
-      ++nuv_cntr; break;
-    case BOUNDED_NORMAL:
-      polyParams[pp_cntr] = dp.normal_mean(nuv_cntr);          ++pp_cntr;
-      polyParams[pp_cntr] = dp.normal_std_deviation(nuv_cntr); ++pp_cntr;
-      polyParams[pp_cntr] = dp.normal_lower_bound(nuv_cntr);   ++pp_cntr;
-      polyParams[pp_cntr] = dp.normal_upper_bound(nuv_cntr);   ++pp_cntr;
-      ++nuv_cntr; break;
-    case LOGNORMAL:
-      moments_from_lognormal_spec(dp.lognormal_means(),
-				  dp.lognormal_std_deviations(),
-				  dp.lognormal_lambdas(), dp.lognormal_zetas(),
-				  dp.lognormal_error_factors(), lnuv_cntr,
-				  polyParams[pp_cntr], polyParams[pp_cntr+1]);
-      pp_cntr += 2;
-      ++lnuv_cntr; break;
-    case BOUNDED_LOGNORMAL:
-      moments_from_lognormal_spec(dp.lognormal_means(),
-				  dp.lognormal_std_deviations(),
-				  dp.lognormal_lambdas(), dp.lognormal_zetas(),
-				  dp.lognormal_error_factors(), lnuv_cntr,
-				  polyParams[pp_cntr], polyParams[pp_cntr+1]);
-      pp_cntr += 2;
-      polyParams[pp_cntr] = dp.lognormal_lower_bound(lnuv_cntr); ++pp_cntr;
-      polyParams[pp_cntr] = dp.lognormal_upper_bound(lnuv_cntr); ++pp_cntr;
-      ++lnuv_cntr; break;
-    case STD_UNIFORM:
-      break;
-    case LOGUNIFORM:
-      polyParams[pp_cntr] = dp.loguniform_lower_bound(luuv_cntr); ++pp_cntr;
-      polyParams[pp_cntr] = dp.loguniform_upper_bound(luuv_cntr); ++pp_cntr;
-      ++luuv_cntr; break;
-    case TRIANGULAR:
-      polyParams[pp_cntr] = dp.triangular_mode(tuv_cntr);        ++pp_cntr;
-      polyParams[pp_cntr] = dp.triangular_lower_bound(tuv_cntr); ++pp_cntr;
-      polyParams[pp_cntr] = dp.triangular_upper_bound(tuv_cntr); ++pp_cntr;
-      ++tuv_cntr; break;
-    case STD_EXPONENTIAL:
-      break;
-    case STD_BETA:
-      // convert stat to poly and assume consistent ordering via b_cntr:
-      polyParams[pp_cntr] = dp.beta_beta(buv_cntr)  - 1.; ++pp_cntr;
-      polyParams[pp_cntr] = dp.beta_alpha(buv_cntr) - 1.; ++pp_cntr;
-      ++buv_cntr; break;
-    case STD_GAMMA:
-      // convert stat to poly and assume consistent ordering via g_cntr:
-      polyParams[pp_cntr] = dp.gamma_alpha(gauv_cntr) - 1.; ++pp_cntr;
-      ++gauv_cntr; break;
-    case GUMBEL:
-      polyParams[pp_cntr] = dp.gumbel_alpha(guuv_cntr); ++pp_cntr;
-      polyParams[pp_cntr] = dp.gumbel_beta(guuv_cntr);  ++pp_cntr;
-      ++guuv_cntr; break;
-    case FRECHET:
-      polyParams[pp_cntr] = dp.frechet_alpha(fuv_cntr); ++pp_cntr;
-      polyParams[pp_cntr] = dp.frechet_beta(fuv_cntr);  ++pp_cntr;
-      ++fuv_cntr; break;
-    case WEIBULL:
-      polyParams[pp_cntr] = dp.weibull_alpha(wuv_cntr); ++pp_cntr;
-      polyParams[pp_cntr] = dp.weibull_beta(wuv_cntr);  ++pp_cntr;
-      ++wuv_cntr; break;
-    case HISTOGRAM_BIN: {
-      const RealVector& hbuv_prs_cntr = dp.histogram_bin_pairs(hbuv_cntr);
-      size_t j, num_params = hbuv_prs_cntr.length();
-      for (j=0; j<num_params; ++j, ++pp_cntr)
-	polyParams[pp_cntr] = hbuv_prs_cntr[j];
-      ++hbuv_cntr; break;
-    }
-    default:
-      PCerr << "Error: unsupported distribution type in SparseGridDriver for "
-	    << "u_type = " << u_types[i] << std::endl;
-      abort_handler(-1);
-      break;
-    }
-  }
-
   OrthogPolyApproximation::distribution_parameters(u_types, dp,
 						   polynomialBasis);
 }
@@ -391,24 +228,23 @@ initialize_grid_parameters(const ShortArray& u_types,
 
 int SparseGridDriver::grid_size()
 {
-  // polyParams may be zero size
-  double* poly_params = (polyParams.size()) ? &polyParams[0] : NULL;
+  // do this here (called at beginning of compute_grid())
+  sgdInstance = this;
+
   return (dimIsotropic) ?
-    webbur::sparse_grid_mixed_growth_size(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
+    webbur::sgmg_size(numVars, ssgLevel, &integrationRules[0],
       &compute1DPoints[0], duplicateTol, &growthRules[0]) :
-    webbur::sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
-      &compute1DPoints[0], duplicateTol, &growthRules[0]);
+    webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
+      &integrationRules[0], &compute1DPoints[0], duplicateTol, &growthRules[0]);
 }
 
 
 int SparseGridDriver::grid_size_total()
 {
   return (dimIsotropic) ?
-    webbur::sparse_grid_mixed_growth_size_total(numVars, ssgLevel,
-      &integrationRules[0], &growthRules[0]) :
-    webbur::sgmga_size_total(numVars, anisoLevelWts.values(), ssgLevel,
+    webbur::sgmg_size_total(numVars, ssgLevel, &integrationRules[0],
+      &growthRules[0]) :
+    webbur::sandia_sgmga_size_total(numVars, anisoLevelWts.values(), ssgLevel,
       &integrationRules[0], &growthRules[0]);
 }
 
@@ -418,7 +254,9 @@ void SparseGridDriver::compute_grid()
   // --------------------------------
   // Get number of collocation points
   // --------------------------------
-  int num_total_pts = grid_size_total(), num_colloc_pts = grid_size();
+  // Note:  grid_size() sets sgdInstance
+  // TO DO: order calls for data reuse
+  int num_colloc_pts = grid_size(), num_total_pts = grid_size_total();
 #ifdef DEBUG
   PCout << "Total number of sparse grid integration points: "
 	<< num_colloc_pts << '\n';
@@ -431,81 +269,41 @@ void SparseGridDriver::compute_grid()
   variableSets.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
   uniqueIndexMapping.resize(num_total_pts);
 
-  int* sparse_order  = new int [num_colloc_pts*numVars];
-  int* sparse_index  = new int [num_colloc_pts*numVars];
-  // polyParams may be zero size
-  double* poly_params = (polyParams.size()) ? &polyParams[0] : NULL;
+  int* sparse_order = new int [num_colloc_pts*numVars];
+  int* sparse_index = new int [num_colloc_pts*numVars];
   if (dimIsotropic) {
-    webbur::sparse_grid_mixed_growth_unique_index(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
+    webbur::sgmg_unique_index(numVars, ssgLevel, &integrationRules[0],
       &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
       &growthRules[0], &uniqueIndexMapping[0]);
-    webbur::sparse_grid_mixed_growth_index(numVars, ssgLevel,
-      &integrationRules[0], num_colloc_pts, num_total_pts,
-      &uniqueIndexMapping[0], &growthRules[0], sparse_order, sparse_index);
-    webbur::sparse_grid_mixed_growth_weight(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
+    webbur::sgmg_index(numVars, ssgLevel, &integrationRules[0], num_colloc_pts,
+      num_total_pts, &uniqueIndexMapping[0], &growthRules[0], sparse_order,
+      sparse_index);
+    webbur::sgmg_weight(numVars, ssgLevel, &integrationRules[0],
       &compute1DWeights[0], num_colloc_pts, num_total_pts,
       &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
-    webbur::sparse_grid_mixed_growth_point(numVars, ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
+    webbur::sgmg_point(numVars, ssgLevel, &integrationRules[0],
       &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
       &growthRules[0], variableSets.values());
   }
   else {
-    webbur::sgmga_unique_index(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
-      &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
-      &growthRules[0], &uniqueIndexMapping[0]);
-    webbur::sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
+    webbur::sandia_sgmga_unique_index(numVars, anisoLevelWts.values(), ssgLevel,
+      &integrationRules[0], &compute1DPoints[0], duplicateTol, num_colloc_pts,
+      num_total_pts, &growthRules[0], &uniqueIndexMapping[0]);
+    webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
       &integrationRules[0], num_colloc_pts, num_total_pts,
       &uniqueIndexMapping[0], &growthRules[0], sparse_order, sparse_index);
-    webbur::sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
-      &compute1DWeights[0], num_colloc_pts, num_total_pts,
+    webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
+      &integrationRules[0], &compute1DWeights[0], num_colloc_pts, num_total_pts,
       &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
-    webbur::sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &numPolyParams[0], poly_params,
-      &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
-      &growthRules[0], variableSets.values());
+    webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
+      &integrationRules[0], &compute1DPoints[0], num_colloc_pts, sparse_order,
+      sparse_index, &growthRules[0], variableSets.values());
   }
   delete [] sparse_order;
   delete [] sparse_index;
 #ifdef DEBUG
   PCout << "uniqueIndexMapping:\n" << uniqueIndexMapping << '\n';
 #endif
-
-  // compute scale factors for VPISparseGrid outputs
-  Real wt_factor = 1.;
-  RealVector pt_factor(numVars, false); pt_factor = 1.;
-  size_t i, j;
-  BasisPolynomial chebyshev_poly;
-  for (i=0; i<numVars; ++i) {
-    switch (integrationRules[i]) {
-    case GAUSS_HERMITE:
-      pt_factor[i] = polynomialBasis[i].point_factor();
-      wt_factor   *= polynomialBasis[i].weight_factor(); break;
-    case GAUSS_LEGENDRE:  case GAUSS_PATTERSON:
-    case GAUSS_JACOBI:    case GEN_GAUSS_LAGUERRE:
-      wt_factor *= polynomialBasis[i].weight_factor();   break;
-    case CLENSHAW_CURTIS: case FEJER2:
-      if (chebyshev_poly.is_null())
-	chebyshev_poly = BasisPolynomial(CHEBYSHEV);//, mode);
-      //chebyshev_poly.gauss_mode(integrationRules[i]);// no effect on wtFactor
-      wt_factor *= chebyshev_poly.weight_factor();       break;
-    //case GAUSS_LAGUERRE: case GOLUB_WELSCH: // scaling is OK
-    }
-  }
-
-  // apply point/weight scaling
-  weightSets.scale(wt_factor);
-  for (i=0; i<num_colloc_pts; ++i)
-    for (j=0; j<numVars; ++j)
-      variableSets[i][j] *= pt_factor[j]; // ith column, jth row
-#ifdef DEBUG
-  PCout << "\nPoint factors = " << pt_factor
-	<< "\nWeight factor = "	<< wt_factor << std::endl;
-#endif // DEBUG
 
   if (sparseGridUsage == "interpolation") { // 1D arrays not needed for PCE
     // ----------------------------
@@ -517,15 +315,15 @@ void SparseGridDriver::compute_grid()
       gaussWts1D.resize(numVars);
     // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
     unsigned short level_index, order;
-    for (i=0; i<numVars; i++) {
+    for (size_t i=0; i<numVars; i++) {
       gaussPts1D[i].resize(ssgLevel + 1); gaussWts1D[i].resize(ssgLevel + 1);
       switch (integrationRules[i]) {
       case CLENSHAW_CURTIS: case FEJER2:
-	chebyshev_poly.gauss_mode(integrationRules[i]); // integration mode
+	chebyPolyPtr->gauss_mode(integrationRules[i]); // integration mode
 	for (level_index=0; level_index<=ssgLevel; level_index++) {
 	  level_to_order(i, level_index, order);
-	  gaussPts1D[i][level_index] = chebyshev_poly.gauss_points(order);
-	  gaussWts1D[i][level_index] = chebyshev_poly.gauss_weights(order);
+	  gaussPts1D[i][level_index] = chebyPolyPtr->gauss_points(order);
+	  gaussWts1D[i][level_index] = chebyPolyPtr->gauss_weights(order);
 	}
 	break;
       default: // Gaussian rules
@@ -547,9 +345,8 @@ void SparseGridDriver::compute_grid()
   int* indices = new int [size];
   int* bases   = new int [size];
 
-  webbur::sparse_grid_mixed_growth_index(numVars, ssgLevel,
-    integrationRules, num_colloc_pts, num_total_pts, uniqueIndexMapping,
-    &growthRules[0], bases, indices);
+  webbur::sgmg_index(numVars, ssgLevel, integrationRules, num_colloc_pts,
+    num_total_pts, uniqueIndexMapping, &growthRules[0], bases, indices);
 
   IntArray key(2*numVars);
   unsigned short closed_order_max;
@@ -587,7 +384,7 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 {
   multi_index.clear();
   coeffs.clear();
-  // Utilize webbur::sgmga_vcn_{ordered,coef} for 0-based index sets
+  // Utilize webbur::sandia_sgmga_vcn_{ordered,coef} for 0-based index sets
   // (w*alpha_min-|alpha| < |alpha . j| <= w*alpha_min).
   // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
   // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
@@ -606,316 +403,58 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 #endif // DEBUG
 
   bool more = false;
-  webbur::sgmga_vcn_ordered(numVars, anisoLevelWts.values(), &x_max[0], &x[0],
-			    q_min, q_max, &more);
+  webbur::sandia_sgmga_vcn_ordered(numVars, anisoLevelWts.values(), &x_max[0],
+				   &x[0], q_min, q_max, &more);
   while (more) {
-    Real coeff = webbur::sgmga_vcn_coef(numVars, anisoLevelWts.values(),
-					&x_max[0], &x[0], q_min, q_max);
+    Real coeff = webbur::sandia_sgmga_vcn_coef(numVars, anisoLevelWts.values(),
+					       &x_max[0], &x[0], q_min, q_max);
     if (std::abs(coeff) > 1.e-10) {
       multi_index.push_back(x);
       coeffs.push_back(coeff);
     }
-    webbur::sgmga_vcn_ordered(numVars, anisoLevelWts.values(), &x_max[0], &x[0],
-			      q_min, q_max, &more);
+    webbur::sandia_sgmga_vcn_ordered(numVars, anisoLevelWts.values(), &x_max[0],
+				     &x[0], q_min, q_max, &more);
   }
 }
 
 
-// TO DO: avoid recalculating existing Gauss pts within following functions
+// TO DO: resolve compute vs. lookup for Hermite/Legendre/Laguerre
 //
-// Burkardt: instead of params/data, pass index and retain array of NGPoly
-//
-// Then add interface to pass in array of polynomials in initialize() instead
+// Add interface to pass in array of polynomials in initialize() instead
 // of current initialize_grid_parameters().
 //
 // KDE: look at figTree --> if lightweight; else, code simple box kernel and
 // Gaussian kernel
 //
 // add/activate STOCHASTIC_EXPANSION allowing moments or KDE
-void SparseGridDriver::
-bounded_normal_gauss_points(int order, int num_params, double* params,
-			    double* data)
+void SparseGridDriver::basis_gauss_points(int order, int index, double* data)
 {
-  if (num_params != 4) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::bounded_normal_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.bounded_normal_distribution(params[0], params[1], params[2], params[3]);
-                                //(mean,      stdev,     lwr,       upr);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
+  const RealArray& gauss_pts
+    = sgdInstance->polynomialBasis[index].gauss_points(order);
   std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
 }
 
 
-void SparseGridDriver::
-bounded_normal_gauss_weights(int order, int num_params, double* params,
-			     double* data)
+void SparseGridDriver::basis_gauss_weights(int order, int index, double* data)
 {
-  if (num_params != 4) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::bounded_normal_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.bounded_normal_distribution(params[0], params[1], params[2], params[3]);
-                                //(mean,      stdev,     lwr,       upr);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
+  const RealArray& gauss_wts
+    = sgdInstance->polynomialBasis[index].gauss_weights(order);
   std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
 }
 
 
-void SparseGridDriver::
-lognormal_gauss_points(int order, int num_params, double* params, double* data)
+void SparseGridDriver::chebyshev_points(int order, int index, double* data)
 {
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::lognormal_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.lognormal_distribution(params[0], params[1]); //(mean, stdev);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
+  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
+  const RealArray& gauss_pts = sgdInstance->chebyPolyPtr->gauss_points(order);
   std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
 }
 
 
-void SparseGridDriver::
-lognormal_gauss_weights(int order, int num_params, double* params, double* data)
+void SparseGridDriver::chebyshev_weights(int order, int index, double* data)
 {
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::lognormal_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.lognormal_distribution(params[0], params[1]); //(mean, stdev);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-bounded_lognormal_gauss_points(int order, int num_params, double* params,
-			       double* data)
-{
-  if (num_params != 4) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::bounded_lognormal_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.bounded_lognormal_distribution(params[0], params[1], params[2],
-				      params[3]); //(mean, stdev, lwr, upr);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-bounded_lognormal_gauss_weights(int order, int num_params, double* params,
-				double* data)
-{
-  if (num_params != 4) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::bounded_lognormal_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.bounded_lognormal_distribution(params[0], params[1], params[2],
-				      params[3]); //(mean, stdev, lwr, upr);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-loguniform_gauss_points(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::loguniform_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.loguniform_distribution(params[0], params[1]); //(lwr, upr);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-loguniform_gauss_weights(int order, int num_params, double* params,
-			 double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::loguniform_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.loguniform_distribution(params[0], params[1]); //(lwr, upr);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-triangular_gauss_points(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 3) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::triangular_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.triangular_distribution(params[0], params[1], params[2]);
-                            //(mode,      lwr,       upr);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-triangular_gauss_weights(int order, int num_params, double* params,
-			 double* data)
-{
-  if (num_params != 3) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::triangular_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.triangular_distribution(params[0], params[1], params[2]);
-                            //(mode,      lwr,       upr);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-gumbel_gauss_points(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::gumbel_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.gumbel_distribution(params[0], params[1]); //(alpha, beta);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-gumbel_gauss_weights(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::gumbel_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.gumbel_distribution(params[0], params[1]); //(alpha, beta);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-frechet_gauss_points(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::frechet_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.frechet_distribution(params[0], params[1]); //(alpha, beta);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-frechet_gauss_weights(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::frechet_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.frechet_distribution(params[0], params[1]); //(alpha, beta);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-weibull_gauss_points(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::weibull_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.weibull_distribution(params[0], params[1]); //(alpha, beta);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-weibull_gauss_weights(int order, int num_params, double* params, double* data)
-{
-  if (num_params != 2) {
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::weibull_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  ngop.weibull_distribution(params[0], params[1]); //(alpha, beta);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-histogram_bin_gauss_points(int order, int num_params, double* params,
-			   double* data)
-{
-  if (num_params < 4 || num_params % 2) { // need at least 2 (x,c) pairs
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::histogram_bin_gauss_points()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  RealVector param_vec;
-  copy_data(params, num_params, param_vec);
-  ngop.histogram_bin_distribution(param_vec);
-  const RealArray& gauss_pts = ngop.gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
-}
-
-
-void SparseGridDriver::
-histogram_bin_gauss_weights(int order, int num_params, double* params,
-			    double* data)
-{
-  if (num_params < 4 || num_params % 2) { // need at least 2 (x,c) pairs
-    PCerr << "Error: wrong number of distribution parameters in "
-	  << "SparseGridDriver::histogram_bin_gauss_weights()" << std::endl;
-    abort_handler(-1);
-  }
-  NumericGenOrthogPolynomial ngop;
-  RealVector param_vec;
-  copy_data(params, num_params, param_vec);
-  ngop.histogram_bin_distribution(param_vec);
-  const RealArray& gauss_wts = ngop.gauss_weights(order);
+  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
+  const RealArray& gauss_wts = sgdInstance->chebyPolyPtr->gauss_weights(order);
   std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
 }
 
