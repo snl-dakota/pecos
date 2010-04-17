@@ -20,6 +20,8 @@
 
 namespace Pecos {
 
+class DistributionParams;
+
 
 /// base class for generating N-dimensional grids for numerical evaluation
 /// of expectation integrals over independent standard random variables.
@@ -55,6 +57,10 @@ public:
   virtual void dimension_preference(const RealVector& dim_pref);
   /// set anisoLevelWts
   virtual void anisotropic_weights(const RealVector& aniso_wts);
+
+  /// update polynomialBasis with data from dist_params
+  virtual void initialize_grid_parameters(const ShortArray& u_types,
+					  const DistributionParams& dp);
 
   /// compute scaled variable and weight sets for the TPQ grid
   virtual void compute_grid();
@@ -96,6 +102,15 @@ protected:
   /// (BaseConstructor overloading avoids infinite recursion in the
   /// derived class constructors - Coplien, p. 139)
   IntegrationDriver(BaseConstructor);
+
+  //
+  //- Heading: Member functions
+  //
+
+  /// set int_rules and growth_rules
+  void initialize_rules(const ShortArray& u_types, bool nested_rules,
+			short exp_growth, short nested_uniform_rule,
+			IntArray& int_rules, IntArray& growth_rules);
 
   //
   //- Heading: Data

@@ -16,6 +16,7 @@
 #include "CubatureDriver.hpp"
 #include "SparseGridDriver.hpp"
 #include "TensorProductDriver.hpp"
+#include "OrthogPolyApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: IntegrationDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -186,6 +187,79 @@ void IntegrationDriver::anisotropic_weights(const RealVector& aniso_wts)
     driverRep->anisotropic_weights(aniso_wts); // forward to letter
   else
     anisoLevelWts = aniso_wts; // default implementation
+}
+
+
+/** protected function called only from derived class letters. */
+void IntegrationDriver::
+initialize_rules(const ShortArray& u_types, bool nested_rules,
+		 short exp_growth, short nested_uniform_rule,
+		 IntArray& int_rules, IntArray& growth_rules)
+{
+  int_rules.resize(numVars);
+  growth_rules.resize(numVars);
+
+  for (size_t i=0; i<numVars; i++) {
+    // set int_rules
+    switch (u_types[i]) {
+    case STD_NORMAL:      int_rules[i] = GAUSS_HERMITE;      break;
+    case STD_UNIFORM:
+      // For tensor-product quadrature, Gauss-Legendre is used due to greater
+      // polynomial exactness since nesting is not a concern.  For nested sparse
+      // grids, Clenshaw-Curtis or Gauss-Patterson can be better selections.
+      // However, sparse grids that are isotropic in level but anisotropic in
+      // rule become skewed when mixing Gauss rules with CC.  For this reason,
+      // CC is selected only if isotropic in rule (for now).
+      int_rules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
+      break;
+    case STD_EXPONENTIAL: int_rules[i] = GAUSS_LAGUERRE;     break;
+    case STD_BETA:        int_rules[i] = GAUSS_JACOBI;       break;
+    case STD_GAMMA:       int_rules[i] = GEN_GAUSS_LAGUERRE; break;
+    default:              int_rules[i] = GOLUB_WELSCH;       break;
+    }
+
+    // set growth_rules
+    switch (u_types[i]) {
+    case STD_NORMAL: // symmetric Gaussian linear growth
+      growth_rules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
+    case STD_UNIFORM:
+      if (nested_rules) // symmetric exponential growth
+	switch (exp_growth) {
+	case SLOW_RESTRICTED_GROWTH:
+	  growth_rules[i] = SLOW_EXPONENTIAL;     break;
+	case MODERATE_RESTRICTED_GROWTH:
+	  growth_rules[i] = MODERATE_EXPONENTIAL; break;
+	case UNRESTRICTED_GROWTH:
+	  growth_rules[i] = FULL_EXPONENTIAL;     break;
+	}
+      else // symmetric Gaussian linear growth
+	growth_rules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	  SLOW_LINEAR_ODD : MODERATE_LINEAR;
+      break;
+    default: // asymmetric Gaussian linear growth
+      growth_rules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
+    }
+  }
+
+  ShortArray basis_types, gauss_modes;
+  OrthogPolyApproximation::distribution_types(u_types, int_rules, basis_types,
+					      gauss_modes);
+  OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
+					      polynomialBasis);
+}
+
+
+void IntegrationDriver::
+initialize_grid_parameters(const ShortArray& u_types, 
+			   const DistributionParams& dp)
+{
+  if (driverRep)
+    driverRep->initialize_grid_parameters(u_types, dp); // forward to letter
+  else // default implementation
+    OrthogPolyApproximation::distribution_parameters(u_types, dp,
+						     polynomialBasis);
 }
 
 

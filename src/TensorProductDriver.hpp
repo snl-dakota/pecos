@@ -19,8 +19,6 @@
 
 namespace Pecos {
 
-class DistributionParams;
-
 
 /// generates N-dimensional tensor-product quadrature grids for
 /// numerical evaluation of expectation integrals over independent
@@ -68,12 +66,9 @@ public:
   /// return integrationRules
   const IntArray& integration_rules() const;
 
-  /// set numVars, integrationRules, polynomialBasis
+  /// invoke initialize_rules() to set integration and growth rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules,
 		       short exp_growth, short nested_uniform_rule);
-  /// set numVars, integrationRules, polynomialBasis
-  void initialize_grid_parameters(const ShortArray& u_types,
-				  const DistributionParams& dp);
 
 private:
 

@@ -24,8 +24,6 @@ namespace Pecos {
 /// the prototype required by Pecos/packages/VPISparseGrid
 typedef void ( *FPType ) ( int order, int index, double* data );
 
-class DistributionParams;
-
 
 /// Derived nondeterministic class that generates N-dimensional
 /// Smolyak sparse grids for numerical evaluation of expectation
@@ -69,10 +67,6 @@ public:
   void initialize_grid(const ShortArray& u_types, size_t ssg_level,
 		       const RealVector& dim_pref, const String& ssg_usage,
 		       short exp_growth, short nested_uniform_rule);
-
-  /// set polyParams, integrationRules, and FPType function pointers
-  void initialize_grid_parameters(const ShortArray& u_types,
-				  const DistributionParams& dp);
 
   /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying
   /// the anisotropic index set constraint, along with their corresponding

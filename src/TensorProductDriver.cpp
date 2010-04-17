@@ -13,7 +13,7 @@
 //- Version:
 
 #include "TensorProductDriver.hpp"
-#include "OrthogPolyApproximation.hpp"
+#include "PolynomialApproximation.hpp"
 #include "pecos_stat_util.hpp"
 
 static const char rcsId[]="@(#) $Id: TensorProductDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
@@ -53,68 +53,8 @@ initialize_grid(const ShortArray& u_types, bool nested_rules,
 {
   numVars = u_types.size();
   quadOrder.resize(numVars);
-  integrationRules.resize(numVars);
-  growthRules.resize(numVars);
-
-  for (size_t i=0; i<numVars; i++) {
-    // set integrationRules
-    switch (u_types[i]) {
-    case STD_NORMAL:      integrationRules[i] = GAUSS_HERMITE;      break;
-    case STD_UNIFORM:
-      // For tensor-product quadrature, Gauss-Legendre is used due to greater
-      // polynomial exactness since nesting is not a concern.  For nested sparse
-      // grids, Clenshaw-Curtis or Gauss-Patterson can be better selections.
-      // However, sparse grids that are isotropic in level but anisotropic in
-      // rule become skewed when mixing Gauss rules with CC.  For this reason,
-      // CC is selected only if isotropic in rule (for now).
-      integrationRules[i] = (nested_rules) ?
-	nested_uniform_rule : GAUSS_LEGENDRE;                       break;
-    case STD_EXPONENTIAL: integrationRules[i] = GAUSS_LAGUERRE;     break;
-    case STD_BETA:        integrationRules[i] = GAUSS_JACOBI;       break;
-    case STD_GAMMA:       integrationRules[i] = GEN_GAUSS_LAGUERRE; break;
-    default:              integrationRules[i] = GOLUB_WELSCH;       break;
-    }
-
-    // set growthRules
-    switch (u_types[i]) {
-    case STD_NORMAL: // symmetric Gaussian linear growth
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
-    case STD_UNIFORM:
-      if (nested_rules) // symmetric exponential growth
-	switch (exp_growth) {
-	case SLOW_RESTRICTED_GROWTH:
-	  growthRules[i] = SLOW_EXPONENTIAL;     break;
-	case MODERATE_RESTRICTED_GROWTH:
-	  growthRules[i] = MODERATE_EXPONENTIAL; break;
-	case UNRESTRICTED_GROWTH:
-	  growthRules[i] = FULL_EXPONENTIAL;     break;
-	}
-      else // symmetric Gaussian linear growth
-	growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	  SLOW_LINEAR_ODD : MODERATE_LINEAR;
-      break;
-    default: // asymmetric Gaussian linear growth
-      growthRules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR : MODERATE_LINEAR; break;
-      break;
-    }
-  }
-
-  ShortArray basis_types, gauss_modes;
-  OrthogPolyApproximation::distribution_types(u_types, integrationRules,
-					      basis_types, gauss_modes);
-  OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
-					      polynomialBasis);
-}
-
-
-void TensorProductDriver::
-initialize_grid_parameters(const ShortArray& u_types, 
-			   const DistributionParams& dist_params)
-{
-  OrthogPolyApproximation::distribution_parameters(u_types, dist_params,
-						   polynomialBasis);
+  initialize_rules(u_types, nested_rules, exp_growth, nested_uniform_rule,
+		   integrationRules, growthRules);
 }
 
 
