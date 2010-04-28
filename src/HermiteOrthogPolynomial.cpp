@@ -316,6 +316,7 @@ const RealArray& HermiteOrthogPolynomial::gauss_weights(unsigned short order)
       for (size_t i=0; i<order; i++)
 	gaussWeights[i]
 	  = factorial(order)/std::pow(order*get_value(gauss_pts[i], order-1),2);
+      break;
     }
 #endif
   }
