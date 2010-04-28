@@ -298,8 +298,7 @@ const RealArray& LegendreOrthogPolynomial::gauss_points(unsigned short order)
 	PCerr << "Error: overflow in maximum quadrature order limit (10) in "
 	      << "LegendreOrthogPolynomial::gauss_points().  Configure with "
 	      << "VPISparseGrid to extend range." << std::endl;
-	abort_handler(-1);
-	break;
+	abort_handler(-1); break;
       }
     }
     else

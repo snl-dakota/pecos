@@ -211,8 +211,7 @@ const RealArray& HermiteOrthogPolynomial::gauss_points(unsigned short order)
       PCerr << "Error: overflow in maximum quadrature order limit (10) in "
 	    << "HermiteOrthogPolynomial::gauss_points().  Configure with "
 	    << "VPISparseGrid to extend range." << std::endl;
-      abort_handler(-1);
-      break;
+      abort_handler(-1); break;
     }
 #endif
   }
@@ -254,60 +253,50 @@ const RealArray& HermiteOrthogPolynomial::gauss_weights(unsigned short order)
 #else
     switch (order) {
     case 1: // weights for one Gauss-Hermite point:
-      gaussWeights[0] = 1.0;
-      break;
+      gaussWeights[0] = 1.0; break;
     case 2: // weights for two Gauss-Hermite points:
-      gaussWeights[0] = gaussWeights[1] = 0.5;
-      break;
+      gaussWeights[0] = gaussWeights[1] = 0.5; break;
     case 3: // weights for three Gauss-Hermite points:
       gaussWeights[0] = gaussWeights[2] = 1./6.;
-      gaussWeights[1] = 2./3.;
-      break;
+      gaussWeights[1] = 2./3.; break;
     case 4: { // weights for four Gauss-Hermite points:
       Real sr6 = std::sqrt(6.);
       gaussWeights[0] = gaussWeights[3] = 1./4./(3.+sr6);
-      gaussWeights[1] = gaussWeights[2] = 1./4./(3.-sr6);
-      break;
+      gaussWeights[1] = gaussWeights[2] = 1./4./(3.-sr6); break;
     }
     case 5: { // weights for five Gauss-Hermite points:
       Real w2sr10 = 2.*std::sqrt(10.);
       gaussWeights[0] = gaussWeights[4] = 3./20./(7.+w2sr10);
       gaussWeights[1] = gaussWeights[3] = 3./20./(7.-w2sr10);
-      gaussWeights[2] = 8./15.;
-      break;
+      gaussWeights[2] = 8./15.; break;
     }
     // tabulated values from Abramowitz & Stegun have limited precision
     case 6:
       gaussWeights[0] = gaussWeights[5] = 4.530009905509e-3 * wtFactor;
       gaussWeights[1] = gaussWeights[4] = 0.1570673203229 * wtFactor;
-      gaussWeights[2] = gaussWeights[3] = 0.7246295952244 * wtFactor;
-      break;
+      gaussWeights[2] = gaussWeights[3] = 0.7246295952244 * wtFactor; break;
     case 7:
       gaussWeights[0] = gaussWeights[6] = 9.717812450995e-4 * wtFactor;
       gaussWeights[1] = gaussWeights[5] = 5.451558281913e-2 * wtFactor;
       gaussWeights[2] = gaussWeights[4] = 0.4256072526101 * wtFactor;
-      gaussWeights[3] = 0.8102646175568 * wtFactor;
-      break;
+      gaussWeights[3] = 0.8102646175568 * wtFactor; break;
     case 8:
       gaussWeights[0] = gaussWeights[7] = 1.996040722114e-4 * wtFactor;
       gaussWeights[1] = gaussWeights[6] = 1.707798300741e-2 * wtFactor;
       gaussWeights[2] = gaussWeights[5] = 0.2078023258149 * wtFactor;
-      gaussWeights[3] = gaussWeights[4] = 0.6611470125582 * wtFactor;
-      break;
+      gaussWeights[3] = gaussWeights[4] = 0.6611470125582 * wtFactor; break;
     case 9:
       gaussWeights[0] = gaussWeights[8] = 3.960697726326e-5 * wtFactor;
       gaussWeights[1] = gaussWeights[7] = 4.943624275537e-3 * wtFactor;
       gaussWeights[2] = gaussWeights[6] = 8.847452739438e-2 * wtFactor;
       gaussWeights[3] = gaussWeights[5] = 0.4326515590026 * wtFactor;
-      gaussWeights[4] = 0.7202352156061 * wtFactor;
-      break;
+      gaussWeights[4] = 0.7202352156061 * wtFactor; break;
     case 10:
       gaussWeights[0] = gaussWeights[9] = 7.640432855233e-6 * wtFactor;
       gaussWeights[1] = gaussWeights[8] = 1.343645746781e-3 * wtFactor;
       gaussWeights[2] = gaussWeights[7] = 3.387439445548e-2 * wtFactor;
       gaussWeights[3] = gaussWeights[6] = 0.2401386110823 * wtFactor;
-      gaussWeights[4] = gaussWeights[5] = 0.6108626337353 * wtFactor;
-      break;
+      gaussWeights[4] = gaussWeights[5] = 0.6108626337353 * wtFactor; break;
     default:
       // define Gauss wts from Gauss pts using
       // -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),

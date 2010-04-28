@@ -125,7 +125,8 @@ get_gradient(const Real& x, unsigned short order)
   // The previous approach, while very compact, produces 0/0 = NaN at x = 0.
   // To avoid NaN issue at lower bound, differentiate the 3 pt value recursion
   // to get a 3 point gradient recursion
-  switch (order) {
+  switch (order) {pause;
+
   case 0:
     basisPolyGradient = 0.;
     break;
@@ -278,8 +279,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       PCerr << "Error: overflow in maximum quadrature order limit (10) in "
 	    << "LaguerreOrthogPolynomial::gauss_points().  Configure with "
 	    << "VPISparseGrid to extend range." << std::endl;
-      abort_handler(-1);
-      break;
+      abort_handler(-1); break;
     }
 #endif
   }
