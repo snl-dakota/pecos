@@ -187,7 +187,7 @@ const Real& LaguerreOrthogPolynomial::norm_squared(unsigned short order)
 
 const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
 {
-  // pull this out from default below since order=0 is initial gauss pts length
+  // pull this outside block below since order=0 is initial gauss pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
 	  << "LaguerreOrthogPolynomial::gauss_points()." << std::endl;
@@ -196,43 +196,46 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
 
   if (gaussPoints.size() != order) { // if not already computed
     gaussPoints.resize(order);
+#ifdef HAVE_SPARSE_GRID
+    if (order <= 20) // retrieve full precision tabulated values
+      webbur::laguerre_lookup_points(order, &gaussPoints[0]);
+    else { // calculates points/weights together
+      if (gaussWeights.size() != order)
+	gaussWeights.resize(order);
+      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
+    }
+#else
     switch (order) {
     case 1: // zeros of L_1(x) for one Gauss-Laguerre point:
-      gaussPoints[0] =  1.0;
-      break;
+      gaussPoints[0] =  1.0; break;
     case 2: { // zeros of L_2(x) for two Gauss-Laguerre points:
       Real sr2 = std::sqrt(2.);
       gaussPoints[0] =  2. - sr2;
-      gaussPoints[1] =  2. + sr2;
-      break;
+      gaussPoints[1] =  2. + sr2; break;
     }
-    /* Only ~12 digits of precision in Abramowitz & Stegun tabulated values
+    // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
     case 3:
       gaussPoints[0] =  0.415774556783;
       gaussPoints[1] =  2.294280360279;
-      gaussPoints[2] =  6.289945082937;
-      break;
+      gaussPoints[2] =  6.289945082937; break;
     case 4:
       gaussPoints[0] =  0.322547689619;
       gaussPoints[1] =  1.745761101158;
       gaussPoints[2] =  4.536620296921;
-      gaussPoints[3] =  9.395070912301;
-      break;
+      gaussPoints[3] =  9.395070912301; break;
     case 5:
       gaussPoints[0] =  0.263560319718;
       gaussPoints[1] =  1.413403059107;
       gaussPoints[2] =  3.596425771041;
       gaussPoints[3] =  7.085810005859;
-      gaussPoints[4] = 12.640800844276;
-      break;
+      gaussPoints[4] = 12.640800844276; break;
     case 6:
       gaussPoints[0] =  0.222846604179;
       gaussPoints[1] =  1.188932101673;
       gaussPoints[2] =  2.992736326059;
       gaussPoints[3] =  5.775143569105;
       gaussPoints[4] =  9.837467418383;
-      gaussPoints[5] = 15.982873980602;
-      break;
+      gaussPoints[5] = 15.982873980602; break;
     case 7:
       gaussPoints[0] =  0.193043676560;
       gaussPoints[1] =  1.026664895339;
@@ -240,8 +243,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[3] =  4.900353084526;
       gaussPoints[4] =  8.182153444563;
       gaussPoints[5] = 12.734180291798;
-      gaussPoints[6] = 19.395727862263;
-      break;
+      gaussPoints[6] = 19.395727862263; break;
     case 8:
       gaussPoints[0] =  0.170279632305;
       gaussPoints[1] =  0.903701776799;
@@ -250,8 +252,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[4] =  7.045905402393;
       gaussPoints[5] = 10.758516010181;
       gaussPoints[6] = 15.740678641278;
-      gaussPoints[7] = 22.863131736889;
-      break;
+      gaussPoints[7] = 22.863131736889; break;
     case 9:
       gaussPoints[0] =  0.152322227732;
       gaussPoints[1] =  0.807220022742;
@@ -261,8 +262,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[5] =  9.372985251688;
       gaussPoints[6] = 13.466236911092;
       gaussPoints[7] = 18.833597788992;
-      gaussPoints[8] = 26.374071890927;
-      break;
+      gaussPoints[8] = 26.374071890927; break;
     case 10:
       gaussPoints[0] =  0.137793470540;
       gaussPoints[1] =  0.729454549503;
@@ -273,23 +273,15 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
       gaussPoints[6] = 11.843785837900;
       gaussPoints[7] = 16.279257831378;
       gaussPoints[8] = 21.996585811981;
-      gaussPoints[9] = 29.920697012274;
-      break;
-    */
+      gaussPoints[9] = 29.920697012274; break;
     default:
-#ifdef HAVE_SPARSE_GRID
-      // sandia_rules.C calculates points/weights together
-      if (gaussWeights.size() != order)
-	gaussWeights.resize(order);
-      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
-#else
       PCerr << "Error: overflow in maximum quadrature order limit (10) in "
 	    << "LaguerreOrthogPolynomial::gauss_points().  Configure with "
 	    << "VPISparseGrid to extend range." << std::endl;
       abort_handler(-1);
-#endif
       break;
     }
+#endif
   }
 
   return gaussPoints;
@@ -298,51 +290,58 @@ const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
 
 const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
 {
-  // Derived from -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
-  // which for L(x), is x_i/(n L_{n-1}(x_i))^2.
+  // pull this outside block below since order=0 is initial gauss pts length
+  if (order < 1) {
+    PCerr << "Error: underflow in minimum quadrature order (1) in "
+	  << "LaguerreOrthogPolynomial::gauss_weights()." << std::endl;
+    abort_handler(-1);
+  }
 
   // The sums of the weights = 1, which is the integral of the density function
   // exp(-x) over the support range of [0,+infinity].
 
   if (gaussWeights.size() != order) { // if not already computed
     gaussWeights.resize(order);
+#ifdef HAVE_SPARSE_GRID
+    if (order <= 20) // tabulated values from sandia_rules have full precision
+      webbur::laguerre_lookup_weights(order, &gaussWeights[0]);
+    else { // sandia_rules calculates points/weights together
+      if (gaussPoints.size() != order)
+	gaussPoints.resize(order);
+      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
+    }
+#else
     switch (order) {
     case 1: // weights for one Gauss-Laguerre point:
-      gaussWeights[0] = 1.0;
-      break;
+      gaussWeights[0] = 1.0; break;
     case 2: { // weights for two Gauss-Laguerre points:
       Real sr2 = std::sqrt(2.);
       gaussWeights[0] = (2. + sr2)/4.;
-      gaussWeights[1] = (2. - sr2)/4.;
-      break;
+      gaussWeights[1] = (2. - sr2)/4.; break;
     }
-    /* Only ~12 digits of precision in Abramowitz & Stegun tabulated values
+    // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
     case 3:
       gaussWeights[0] = 0.711093009929;
       gaussWeights[1] = 0.278517733569;
-      gaussWeights[2] = 0.0103892565016;
-      break;
+      gaussWeights[2] = 0.0103892565016; break;
     case 4:
       gaussWeights[0] = 0.603154104342;
       gaussWeights[1] = 0.357418692438;
       gaussWeights[2] = 0.0388879085150;
-      gaussWeights[3] = 0.000539294705561;
-      break;
+      gaussWeights[3] = 0.000539294705561; break;
     case 5:
       gaussWeights[0] = 0.521755610583;
       gaussWeights[1] = 0.398666811083;
       gaussWeights[2] = 0.0759424496817;
       gaussWeights[3] = 0.00361175867992;
-      gaussWeights[4] = 2.33699723858e-5;
-      break;
+      gaussWeights[4] = 2.33699723858e-5; break;
     case 6:
       gaussWeights[0] = 0.458964673950;
       gaussWeights[1] = 0.417000830772;
       gaussWeights[2] = 0.113373382074;
       gaussWeights[3] = 0.0103991974531;
       gaussWeights[4] = 0.000261017202815;
-      gaussWeights[5] = 8.98547906430e-7;
-      break;
+      gaussWeights[5] = 8.98547906430e-7; break;
     case 7:
       gaussWeights[0] = 0.409318951701;
       gaussWeights[1] = 0.421831277862;
@@ -350,8 +349,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[3] = 0.0206335144687;
       gaussWeights[4] = 0.00107401014328;
       gaussWeights[5] = 1.58654643486e-5;
-      gaussWeights[6] = 3.17031547900e-8;
-      break;
+      gaussWeights[6] = 3.17031547900e-8; break;
     case 8:
       gaussWeights[0] = 0.369188589342;
       gaussWeights[1] = 0.418786780814;
@@ -360,8 +358,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[4] = 0.00279453623523;
       gaussWeights[5] = 9.07650877336e-5;
       gaussWeights[6] = 8.48574671627e-7;
-      gaussWeights[7] = 1.04800117487e-9;
-      break;
+      gaussWeights[7] = 1.04800117487e-9; break;
     case 9:
       gaussWeights[0] = 0.336126421798;
       gaussWeights[1] = 0.411213980424;
@@ -371,8 +368,7 @@ const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[5] = 0.000305249767093;
       gaussWeights[6] = 6.59212302608e-6;
       gaussWeights[7] = 4.11076933035e-8;
-      gaussWeights[8] = 3.29087403035e-11;
-      break;
+      gaussWeights[8] = 3.29087403035e-11; break;
     case 10:
       gaussWeights[0] = 0.308441115765;
       gaussWeights[1] = 0.401119929155;
@@ -383,25 +379,19 @@ const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
       gaussWeights[6] = 2.82592334960e-5;
       gaussWeights[7] = 4.24931398496e-7;
       gaussWeights[8] = 1.83956482398e-9;
-      gaussWeights[9] = 9.91182721961e-13;
-      break;
-    */
+      gaussWeights[9] = 9.91182721961e-13; break;
     default:
-#ifdef HAVE_SPARSE_GRID
-      // sandia_rules.C calculates points/weights together
-      if (gaussPoints.size() != order)
-	gaussPoints.resize(order);
-      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
-#else
-      // define Gauss wts from Gauss pts using formula above
+      // define Gauss wts from Gauss pts using
+      // -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
+      // which for L(x), is x_i/(n L_{n-1}(x_i))^2.
       const RealArray& gauss_pts = gauss_points(order);
       for (size_t i=0; i<order; i++) {
 	const Real& x_i = gauss_pts[i];
 	gaussWeights[i] = x_i/std::pow(order*get_value(x_i, order-1), 2);
       }
-#endif
       break;
     }
+#endif
   }
 
   return gaussWeights;
