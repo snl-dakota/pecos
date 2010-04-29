@@ -675,14 +675,12 @@ distribution_parameter(size_t index, short target)
   case W_BETA:
     return ranVarAddtlParamsX[index][1]; break;
   case LN_ERR_FACT:
-    if (ranVarAddtlParamsX[index].length() > 2)
-      return ranVarAddtlParamsX[index][2];
-    else {
+    if (ranVarAddtlParamsX[index].length() < 3) {
       PCerr << "Error: LN_ERR_FACT cannot be returned in Probability"
 	    << "Transformation::distribution_parameter()." << std::endl;
       abort_handler(-1);
-      return ranVarLowerBndsX[0];
     }
+    return ranVarAddtlParamsX[index][2];
     break;
   }
 }
