@@ -63,10 +63,15 @@ public:
   //- Heading: Member functions
   //
 
-  /// set ssgLevel, isotropicSSG, and ssgAnisoLevelWts
+  /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, size_t ssg_level,
-		       const RealVector& dim_pref, const String& ssg_usage,
-		       short exp_growth, short nested_uniform_rule);
+		       const RealVector& dim_pref, bool store_1d_gauss,
+		       short growth_rate, short nested_uniform_rule);
+  /// initialize all sparse grid settings except for distribution params
+  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
+		       size_t ssg_level, const RealVector& dim_pref,
+		       bool  store_1d_gauss = false,
+		       short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
   /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying
   /// the anisotropic index set constraint, along with their corresponding
@@ -139,8 +144,8 @@ private:
   /// integer codes for growth rule options
   IntArray growthRules;
 
-  /// "integration" or "interpolation"
-  String sparseGridUsage;
+  /// controls conditional population of gaussPts1D and gaussWts1D
+  bool store1DGauss;
 
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
@@ -169,7 +174,7 @@ private:
 
 
 inline SparseGridDriver::SparseGridDriver():
-  chebyPolyPtr(NULL), duplicateTol(1.e-15)
+  chebyPolyPtr(NULL), ssgLevel(0), store1DGauss(false), duplicateTol(1.e-15)
 { }
 
 

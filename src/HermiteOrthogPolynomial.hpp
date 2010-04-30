@@ -72,7 +72,11 @@ private:
 
 
 inline HermiteOrthogPolynomial::HermiteOrthogPolynomial()
-{ ptFactor = std::sqrt(2.); wtFactor = 1./std::sqrt(PI); }
+{
+  gaussMode = GAUSS_HERMITE;
+  ptFactor  = std::sqrt(2.);
+  wtFactor  = 1./std::sqrt(PI);
+}
 
 
 inline HermiteOrthogPolynomial::~HermiteOrthogPolynomial()

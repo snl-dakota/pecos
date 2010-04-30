@@ -49,11 +49,11 @@ void TensorProductDriver::anisotropic_weights(const RealVector& aniso_wts)
 
 void TensorProductDriver::
 initialize_grid(const ShortArray& u_types, bool nested_rules,
-		short exp_growth, short nested_uniform_rule)
+		short growth_rate, short nested_uniform_rule)
 {
   numVars = u_types.size();
   quadOrder.resize(numVars);
-  initialize_rules(u_types, nested_rules, exp_growth, nested_uniform_rule,
+  initialize_rules(u_types, nested_rules, growth_rate, nested_uniform_rule,
 		   integrationRules, growthRules);
 }
 

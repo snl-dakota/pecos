@@ -741,13 +741,13 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
     of PCE expansion orders when an exponential rule takes a large jump
     that is not balanced by the other index set component mappings. */
 void OrthogPolyApproximation::
-level_growth_to_integrand_order(const UShortArray& levels, short exp_growth,
+level_growth_to_integrand_order(const UShortArray& levels, short growth_rate,
 				UShortArray& int_order)
 {
   size_t i, n = levels.size();
   if (int_order.size() != n)
     int_order.resize(n);
-  switch (exp_growth) {
+  switch (growth_rate) {
   case SLOW_RESTRICTED_GROWTH:
     for (i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
       int_order[i] =  2*levels[i] + 1;

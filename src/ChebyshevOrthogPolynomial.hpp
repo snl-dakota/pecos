@@ -67,36 +67,25 @@ protected:
   /// return the inner product <T_n,T_n> = ||T_n||^2
   const Real& norm_squared(unsigned short order);
 
-  /// set gaussMode
-  void gauss_mode(short mode);
-
 private:
 
   //
   //- Heading: Data
   //
-
-  /// CLENSHAW_CURTIS or FEJER2
-  short gaussMode;
 };
 
 
-inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial(short gauss_mode):
-  gaussMode(gauss_mode)
-{ wtFactor = 0.5; }
+// gaussMode may be CLENSHAW_CURTIS (default) or FEJER2
+inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial(short gauss_mode)
+{ gaussMode = gauss_mode;      wtFactor = 0.5; }
 
 
-inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial():
-  gaussMode(CLENSHAW_CURTIS) // default
-{ wtFactor = 0.5; }
+inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial()
+{ gaussMode = CLENSHAW_CURTIS; wtFactor = 0.5; }
 
 
 inline ChebyshevOrthogPolynomial::~ChebyshevOrthogPolynomial()
 { }
-
-
-inline void ChebyshevOrthogPolynomial::gauss_mode(short mode)
-{ gaussMode = mode; }
 
 } // namespace Pecos
 

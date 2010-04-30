@@ -107,10 +107,15 @@ protected:
   //- Heading: Member functions
   //
 
-  /// set int_rules and growth_rules
+  /// set int_rules and growth_rules from u_types, nested_rules, growth_rate,
+  /// and nested_uniform_rule
   void initialize_rules(const ShortArray& u_types, bool nested_rules,
-			short exp_growth, short nested_uniform_rule,
+			short growth_rate, short nested_uniform_rule,
 			IntArray& int_rules, IntArray& growth_rules);
+  /// set int_rules and growth_rules from poly_basis and growth_rate
+  void initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
+			short growth_rate, IntArray& int_rules,
+			IntArray& growth_rules);
 
   //
   //- Heading: Data

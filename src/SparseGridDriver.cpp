@@ -121,21 +121,21 @@ void SparseGridDriver::update_axis_lower_bounds()
 
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  size_t ssg_level,
-		const RealVector& dim_pref, const String& ssg_usage,
-		short exp_growth, short nested_uniform_rule)
+		const RealVector& dim_pref, bool store_1d_gauss,
+		short growth_rate, short nested_uniform_rule)
 {
   numVars = u_types.size();
   compute1DPoints.resize(numVars);
   compute1DWeights.resize(numVars);
 
-  sparseGridUsage = ssg_usage;
+  store1DGauss = store_1d_gauss;
   level(ssg_level);
   dimension_preference(dim_pref);
 
   // For STANDARD exponential growth, use of nested rules is restricted to
   // isotropic uniform in order to enforce consistent growth rates:
   bool nested_rules = true;
-  if (exp_growth == UNRESTRICTED_GROWTH)
+  if (growth_rate == UNRESTRICTED_GROWTH)
     for (size_t i=0; i<numVars; ++i)
       if (u_types[i] != STD_UNIFORM)
 	{ nested_rules = false; break; }
@@ -161,14 +161,38 @@ initialize_grid(const ShortArray& u_types,  size_t ssg_level,
   if (cheby_poly) // gauss_mode set within loops
     chebyPolyPtr = new BasisPolynomial(CHEBYSHEV);
 
-  initialize_rules(u_types, nested_rules, exp_growth, nested_uniform_rule,
+  initialize_rules(u_types, nested_rules, growth_rate, nested_uniform_rule,
 		   integrationRules, growthRules);
+}
+
+
+void SparseGridDriver::
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
+		size_t ssg_level, const RealVector& dim_pref,
+		bool store_1d_gauss, short growth_rate)
+{
+  numVars         = poly_basis.size();
+  polynomialBasis = poly_basis; // shallow copy
+  store1DGauss    = store_1d_gauss;
+
+  level(ssg_level);
+  dimension_preference(dim_pref);
+
+  compute1DPoints.resize(numVars);
+  compute1DWeights.resize(numVars);
+  for (size_t i=0; i<numVars; i++) {
+    compute1DPoints[i]  = basis_gauss_points;
+    compute1DWeights[i] = basis_gauss_weights;
+  }
+
+  initialize_rules(poly_basis, growth_rate, integrationRules, growthRules);
 }
 
 
 int SparseGridDriver::grid_size()
 {
-  // do this here (called at beginning of compute_grid())
+  // do this here (called at beginning of compute_grid()) since sgdInstance
+  // required within compute1DPoints below
   sgdInstance = this;
 
   return (dimIsotropic) ?
@@ -245,7 +269,7 @@ void SparseGridDriver::compute_grid()
   PCout << "uniqueIndexMapping:\n" << uniqueIndexMapping << '\n';
 #endif
 
-  if (sparseGridUsage == "interpolation") { // 1D arrays not needed for PCE
+  if (store1DGauss) { // 1D arrays not needed for PCE
     // ----------------------------
     // Define 1-D point/weight sets
     // ----------------------------
@@ -358,13 +382,12 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 }
 
 
-// TO DO: resolve compute vs. lookup for Hermite/Legendre/Laguerre
-//
-// Add interface to pass in array of polynomials in initialize() instead
-// of current initialize_grid_parameters().
-//
+// TO DO:
 // KDE: look at figTree --> if lightweight; else, code simple box kernel and
 // Gaussian kernel
+//
+// sampling on stoch expansion within \xi --> kernel added for each sample -->
+// approximate PDF for response --> accept a KDE PDF within NumGenOrthogPoly
 //
 // add/activate STOCHASTIC_EXPANSION allowing moments or KDE
 void SparseGridDriver::basis_gauss_points(int order, int index, double* data)

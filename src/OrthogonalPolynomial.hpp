@@ -58,6 +58,15 @@ public:
 protected:
 
   //
+  //- Heading: Virtual function redefinitions
+  //
+
+  /// set gaussMode
+  void gauss_mode(short mode);
+  /// get gaussMode
+  short gauss_mode() const;
+
+  //
   //- Heading: Data
   //
 
@@ -70,6 +79,13 @@ protected:
   RealArray gaussPoints;
   /// Gauss weights for one-dimensional Gaussian quadrature
   RealArray gaussWeights;
+
+  /// the type of integration rule associated with the orthogonal polynomial
+  /** In most cases, this is just the corresponding Gauss quadrature rule.
+      However, for Legendre, gaussMode manages the option of GAUSS_LEGENDRE
+      or GAUSS_PATTERSON, and for Chebyshev, it manages the option of
+      CLENSHAW_CURTIS or FEJER2. */
+  short gaussMode;
 
 private:
 
@@ -90,6 +106,14 @@ inline OrthogonalPolynomial::~OrthogonalPolynomial()
 
 inline void OrthogonalPolynomial::reset_gauss()
 { gaussPoints.clear(); gaussWeights.clear(); }
+
+
+inline void OrthogonalPolynomial::gauss_mode(short mode)
+{ gaussMode = mode; }
+
+
+inline short OrthogonalPolynomial::gauss_mode() const
+{ return gaussMode; }
 
 } // namespace Pecos
 

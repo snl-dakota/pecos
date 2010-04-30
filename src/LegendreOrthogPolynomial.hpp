@@ -65,36 +65,25 @@ protected:
   /// polynomial order n
   const RealArray& gauss_weights(unsigned short order);
 
-  /// set gaussMode
-  void gauss_mode(short mode);
-
 private:
 
   //
   //- Heading: Data
   //
-
-  /// GAUSS_LEGENDRE or GAUSS_PATTERSON
-  short gaussMode;
 };
 
 
-inline LegendreOrthogPolynomial::LegendreOrthogPolynomial(short gauss_mode):
-  gaussMode(gauss_mode)
-{ wtFactor = 0.5; }
+// gaussMode may be GAUSS_LEGENDRE (default) or GAUSS_PATTERSON
+inline LegendreOrthogPolynomial::LegendreOrthogPolynomial(short gauss_mode)
+{ gaussMode = gauss_mode;     wtFactor = 0.5; }
 
 
-inline LegendreOrthogPolynomial::LegendreOrthogPolynomial():
-  gaussMode(GAUSS_LEGENDRE) // default
-{ wtFactor = 0.5; }
+inline LegendreOrthogPolynomial::LegendreOrthogPolynomial()
+{ gaussMode = GAUSS_LEGENDRE; wtFactor = 0.5; }
 
 
 inline LegendreOrthogPolynomial::~LegendreOrthogPolynomial()
 { }
-
-
-inline void LegendreOrthogPolynomial::gauss_mode(short mode)
-{ gaussMode = mode; }
 
 } // namespace Pecos
 

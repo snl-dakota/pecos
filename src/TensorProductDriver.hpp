@@ -68,7 +68,7 @@ public:
 
   /// invoke initialize_rules() to set integration and growth rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules,
-		       short exp_growth, short nested_uniform_rule);
+		       short growth_rate, short nested_uniform_rule);
 
 private:
 

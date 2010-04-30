@@ -74,7 +74,7 @@ private:
 
 
 inline LaguerreOrthogPolynomial::LaguerreOrthogPolynomial()
-{ }
+{ gaussMode = GAUSS_LAGUERRE; }
 
 
 inline LaguerreOrthogPolynomial::~LaguerreOrthogPolynomial()

@@ -221,7 +221,7 @@ private:
 
 inline NumericGenOrthogPolynomial::NumericGenOrthogPolynomial() :
   coeffsNormsFlag(false)
-{ ptFactor = wtFactor = 1.; }
+{ gaussMode = GOLUB_WELSCH; ptFactor = wtFactor = 1.; }
 
 
 inline NumericGenOrthogPolynomial::~NumericGenOrthogPolynomial()

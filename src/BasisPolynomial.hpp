@@ -104,9 +104,10 @@ public:
   /** This is defined only for parameterized orthogonal polynomials. */
   virtual void beta_stat(const Real& beta);
 
-  /// set LegendreOrthogPolynomial::gaussMode or
-  /// ChebyshevOrthogPolynomial::gaussMode
+  /// set OrthogonalPolynomial::gaussMode
   virtual void gauss_mode(short mode);
+  /// get OrthogonalPolynomial::gaussMode
+  virtual short gauss_mode() const;
 
   /// set LagrangeInterpPolynomial::interpolationPts
   /** This is defined only for interpolation polynomials. */

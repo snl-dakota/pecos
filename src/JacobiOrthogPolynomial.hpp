@@ -109,14 +109,14 @@ private:
 
 inline JacobiOrthogPolynomial::JacobiOrthogPolynomial():
   alphaPoly(0.), betaPoly(0.)
-{ }
+{ gaussMode = GAUSS_JACOBI; }
 
 
 // TO DO
 inline JacobiOrthogPolynomial::
 JacobiOrthogPolynomial(const Real& alpha_stat, const Real& beta_stat):
   alphaPoly(beta_stat-1.), betaPoly(alpha_stat-1.) // inverted conventions
-{ }
+{ gaussMode = GAUSS_JACOBI; }
 
 
 inline JacobiOrthogPolynomial::~JacobiOrthogPolynomial()

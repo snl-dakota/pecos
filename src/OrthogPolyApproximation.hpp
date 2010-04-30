@@ -189,7 +189,7 @@ private:
 					    UShortArray& exp_order);
   /// convert a level index set and a growth setting to an integrand_order
   void level_growth_to_integrand_order(const UShortArray& levels,
-				       short exp_growth,
+				       short growth_rate,
 				       UShortArray& int_order);
 
   /// append multi-indices from tp_multi_index that do not already

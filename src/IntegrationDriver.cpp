@@ -193,7 +193,7 @@ void IntegrationDriver::anisotropic_weights(const RealVector& aniso_wts)
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_rules(const ShortArray& u_types, bool nested_rules,
-		 short exp_growth, short nested_uniform_rule,
+		 short growth_rate, short nested_uniform_rule,
 		 IntArray& int_rules, IntArray& growth_rules)
 {
   int_rules.resize(numVars);
@@ -221,11 +221,11 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
     // set growth_rules
     switch (u_types[i]) {
     case STD_NORMAL: // symmetric Gaussian linear growth
-      growth_rules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+      growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
     case STD_UNIFORM:
       if (nested_rules) // symmetric exponential growth
-	switch (exp_growth) {
+	switch (growth_rate) {
 	case SLOW_RESTRICTED_GROWTH:
 	  growth_rules[i] = SLOW_EXPONENTIAL;     break;
 	case MODERATE_RESTRICTED_GROWTH:
@@ -234,11 +234,11 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
 	  growth_rules[i] = FULL_EXPONENTIAL;     break;
 	}
       else // symmetric Gaussian linear growth
-	growth_rules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+	growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	  SLOW_LINEAR_ODD : MODERATE_LINEAR;
       break;
     default: // asymmetric Gaussian linear growth
-      growth_rules[i] = (exp_growth == SLOW_RESTRICTED_GROWTH) ?
+      growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR : MODERATE_LINEAR; break;
     }
   }
@@ -248,6 +248,38 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
 					      gauss_modes);
   OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
 					      polynomialBasis);
+}
+
+
+/** protected function called only from derived class letters. */
+void IntegrationDriver::
+initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
+		 short growth_rate, IntArray& int_rules, IntArray& growth_rules)
+{
+  int_rules.resize(numVars);
+  growth_rules.resize(numVars);
+
+  for (size_t i=0; i<numVars; i++) {
+    int_rules[i] = polynomialBasis[i].gauss_mode();
+    switch (int_rules[i]) {
+    case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
+      growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
+    case GAUSS_PATTERSON: case CLENSHAW_CURTIS: case FEJER2: // exp growth
+      switch (growth_rate) {
+      case SLOW_RESTRICTED_GROWTH:
+	growth_rules[i] = SLOW_EXPONENTIAL;     break;
+      case MODERATE_RESTRICTED_GROWTH:
+	growth_rules[i] = MODERATE_EXPONENTIAL; break;
+      case UNRESTRICTED_GROWTH:
+	growth_rules[i] = FULL_EXPONENTIAL;     break;
+      }
+      break;
+    default: // asymmetric Gaussian linear growth
+      growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
+    }
+  }
 }
 
 

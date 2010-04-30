@@ -277,7 +277,6 @@ const Real& BasisPolynomial::alpha_polynomial() const
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
-
   return polyRep->alpha_polynomial();
 }
 
@@ -289,7 +288,6 @@ const Real& BasisPolynomial::beta_polynomial() const
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
-
   return polyRep->beta_polynomial();
 }
 
@@ -323,10 +321,21 @@ void BasisPolynomial::gauss_mode(short mode)
   if (polyRep)
     polyRep->gauss_mode(mode);
   else {
-    PCerr << "Error: gauss_mode() not available for this basis polynomial "
+    PCerr << "Error: gauss_mode(short) not available for this basis polynomial "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+short BasisPolynomial::gauss_mode() const
+{
+  if (!polyRep) {
+    PCerr << "Error: gauss_mode() not available for this basis polynomial type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->gauss_mode();
 }
 
 
