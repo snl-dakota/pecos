@@ -23,6 +23,16 @@
 namespace Pecos {
 
 
+// TO DO:
+// KDE: look at figTree --> if lightweight; else, code simple box kernel and
+// Gaussian kernel
+//
+// sampling on stoch expansion within \xi --> kernel added for each sample -->
+// approximate PDF for response --> accept a KDE PDF within NumGenOrthogPoly
+//
+// activate STOCHASTIC_EXPANSION allowing either moments (SC) or KDE (general)
+
+
 /** Numbering conventions follow Gautschi. */
 void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
 {

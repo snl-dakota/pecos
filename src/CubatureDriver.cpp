@@ -39,7 +39,7 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
   for (size_t i=1; i<numVars; ++i)
     if (u_types[i] != type0) {
       PCerr << "Error: u_types must be isotropic in CubatureDriver::"
-	    << "initialize_grid()." << std::endl;
+	    << "initialize_grid(u_types)." << std::endl;
       abort_handler(-1);
     }
 
@@ -52,6 +52,26 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
 					      gauss_modes);
   OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
 					      polynomialBasis);
+}
+
+
+void CubatureDriver::
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
+		unsigned short order)
+{
+  numVars = poly_basis.size();
+  integrand_order(order);
+
+  // check for isotropic u_types
+  unsigned short rule0 = poly_basis[0].gauss_mode();
+  for (size_t i=1; i<numVars; ++i)
+    if (poly_basis[i].gauss_mode() != rule0) {
+      PCerr << "Error: integration rule must be isotropic in CubatureDriver::"
+	    << "initialize_grid(poly_basis)." << std::endl;
+      abort_handler(-1);
+    }
+
+  integration_rule(rule0);
 }
 
 

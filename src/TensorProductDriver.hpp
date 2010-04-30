@@ -69,6 +69,10 @@ public:
   /// invoke initialize_rules() to set integration and growth rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules,
 		       short growth_rate, short nested_uniform_rule);
+  /// initialize all sparse grid settings except for distribution params
+  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
+		       const UShortArray& quad_order,
+		       short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
 private:
 

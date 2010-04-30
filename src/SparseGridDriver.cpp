@@ -219,7 +219,7 @@ void SparseGridDriver::compute_grid()
   // Get number of collocation points
   // --------------------------------
   // Note:  grid_size() sets sgdInstance
-  // TO DO: order calls for data reuse
+  // TO DO: improve efficiency of these calls through data reuse
   int num_colloc_pts = grid_size(), num_total_pts = grid_size_total();
 #ifdef DEBUG
   PCout << "Total number of sparse grid integration points: "
@@ -382,14 +382,6 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 }
 
 
-// TO DO:
-// KDE: look at figTree --> if lightweight; else, code simple box kernel and
-// Gaussian kernel
-//
-// sampling on stoch expansion within \xi --> kernel added for each sample -->
-// approximate PDF for response --> accept a KDE PDF within NumGenOrthogPoly
-//
-// add/activate STOCHASTIC_EXPANSION allowing moments or KDE
 void SparseGridDriver::basis_gauss_points(int order, int index, double* data)
 {
   const RealArray& gauss_pts

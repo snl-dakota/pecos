@@ -58,6 +58,16 @@ initialize_grid(const ShortArray& u_types, bool nested_rules,
 }
 
 
+void TensorProductDriver::
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
+		const UShortArray& quad_order, short growth_rate)
+{
+  numVars   = poly_basis.size();
+  quadOrder = quad_order;
+  initialize_rules(poly_basis, growth_rate, integrationRules, growthRules);
+}
+
+
 void TensorProductDriver::compute_grid()
 {
   // --------------------------------

@@ -44,9 +44,14 @@ public:
   //- Heading: Member functions
   //
 
-  /// set numVars, integrandOrder, and integrationRule
+  /// initialize cubature settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short order,
 		       unsigned short rule);
+  /// initialize all cubature settings (distribution params already
+  /// set within poly_basis)
+  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
+		       unsigned short order);
+
   /// initialize settings for parameterized cubature rules
   void initialize_grid_parameters(const ShortArray& u_types,
 				  const DistributionParams& dp);
