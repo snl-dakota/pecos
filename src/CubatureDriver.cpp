@@ -59,7 +59,8 @@ void CubatureDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 		unsigned short order)
 {
-  numVars = poly_basis.size();
+  numVars         = poly_basis.size();
+  polynomialBasis = poly_basis; // shallow copy
   integrand_order(order);
 
   // check for isotropic u_types

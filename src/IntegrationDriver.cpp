@@ -260,7 +260,7 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
   growth_rules.resize(numVars);
 
   for (size_t i=0; i<numVars; i++) {
-    int_rules[i] = polynomialBasis[i].gauss_mode();
+    int_rules[i] = poly_basis[i].gauss_mode();
     switch (int_rules[i]) {
     case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
       growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?

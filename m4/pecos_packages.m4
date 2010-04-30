@@ -118,10 +118,10 @@ AC_DEFUN([PECOS_PACKAGES],[
 	      [Macro to handle code which depends on VPISparseGrid.])
     AC_CONFIG_SUBDIRS([packages/VPISparseGrid])
     dnl The following macros seem overkill for a simple pkg like VPISparseGrid
-    dnl SPARSE_GRID_CPPFLAGS="-I`pwd`/packages/VPISparseGrid/src"
-    dnl SPARSE_GRID_LDFLAGS="-L`pwd`/packages/VPISparseGrid/src"
-    dnl AC_SUBST(SPARSE_GRID_CPPFLAGS)
-    dnl AC_SUBST(SPARSE_GRID_LDFLAGS)
+    dnl SPARSEGRID_CPPFLAGS="-I`pwd`/packages/VPISparseGrid/src"
+    SPARSEGRID_LDFLAGS="-L`pwd`/packages/VPISparseGrid/src"
+    dnl AC_SUBST(SPARSEGRID_CPPFLAGS)
+    AC_SUBST(SPARSEGRID_LDFLAGS)
   fi
   AM_CONDITIONAL([WITH_SPARSE_GRID],[test "x$with_sparsegrid" = xyes])
 

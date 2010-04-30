@@ -120,7 +120,7 @@ void SparseGridDriver::update_axis_lower_bounds()
 
 
 void SparseGridDriver::
-initialize_grid(const ShortArray& u_types,  size_t ssg_level,
+initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref, bool store_1d_gauss,
 		short growth_rate, short nested_uniform_rule)
 {
@@ -168,7 +168,7 @@ initialize_grid(const ShortArray& u_types,  size_t ssg_level,
 
 void SparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		size_t ssg_level, const RealVector& dim_pref,
+		unsigned short ssg_level, const RealVector& dim_pref,
 		bool store_1d_gauss, short growth_rate)
 {
   numVars         = poly_basis.size();

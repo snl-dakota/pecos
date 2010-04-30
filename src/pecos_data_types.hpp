@@ -209,6 +209,33 @@ void write_data(std::ostream& s,
 }
 
 
+/// formatted ostream insertion operator for SerialSymDenseMatrix
+template <typename OrdinalType, typename ScalarType>
+void write_data(std::ostream& s,
+                const Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>& m,
+                bool brackets, bool row_rtn, bool final_rtn)
+{
+  const OrdinalType& nrows = m.numRows();
+  const OrdinalType& ncols = m.numCols();
+  s.setf(std::ios::scientific); // formatting optimized for T = double
+  s << std::setprecision(WRITE_PRECISION);
+  if (brackets)
+    s << "[[ ";
+  for (OrdinalType i=0; i<nrows; ++i) {
+    for (OrdinalType j=0; j<ncols; ++j)
+      s << std::setw(WRITE_PRECISION+7) << m(i,j) << ' ';
+    // NOTE: newlines on every 4th component (as in the row vector case)
+    // could lead to ambiguity in the matrix case.
+    if (row_rtn && i!=m.numRows()-1)
+      s << "\n   ";
+  }
+  if (brackets)
+    s << "]] ";
+  if (final_rtn)
+    s << '\n';
+}
+
+
 /// global std::ostream insertion operator for std::vector
 template <class T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)

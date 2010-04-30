@@ -62,8 +62,9 @@ void TensorProductDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 		const UShortArray& quad_order, short growth_rate)
 {
-  numVars   = poly_basis.size();
-  quadOrder = quad_order;
+  numVars         = poly_basis.size();
+  polynomialBasis = poly_basis; // shallow copy
+  quadOrder       = quad_order;
   initialize_rules(poly_basis, growth_rate, integrationRules, growthRules);
 }
 
