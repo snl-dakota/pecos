@@ -24,8 +24,8 @@ TPL_LIBS    += -lfftw3
 endif
 
 if WITH_SPARSE_GRID
-AM_CPPFLAGS += @SPARSEGRID_CPPFLAGS@
-TPL_LDFLAGS += @SPARSEGRID_LDFLAGS@
+AM_CPPFLAGS += -I${top_srcdir}/packages/VPISparseGrid/src
+TPL_LDFLAGS += -L${top_builddir}/packages/VPISparseGrid/src
 TPL_LIBS    += -lsparsegrid
 endif
 

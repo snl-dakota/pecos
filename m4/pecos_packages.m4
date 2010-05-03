@@ -117,11 +117,6 @@ AC_DEFUN([PECOS_PACKAGES],[
     AC_DEFINE([HAVE_SPARSE_GRID],[1],
 	      [Macro to handle code which depends on VPISparseGrid.])
     AC_CONFIG_SUBDIRS([packages/VPISparseGrid])
-    dnl The following macros are used in Pecos/test/Makefile.am
-    SPARSEGRID_CPPFLAGS="-I`pwd`/packages/VPISparseGrid/src"
-    SPARSEGRID_LDFLAGS="-L`pwd`/packages/VPISparseGrid/src"
-    AC_SUBST(SPARSEGRID_CPPFLAGS)
-    AC_SUBST(SPARSEGRID_LDFLAGS)
   fi
   AM_CONDITIONAL([WITH_SPARSE_GRID],[test "x$with_sparsegrid" = xyes])
 
