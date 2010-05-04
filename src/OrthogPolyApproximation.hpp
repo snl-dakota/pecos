@@ -126,16 +126,15 @@ protected:
   const RealVector& get_gradient(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
   /// and given DVV
-  const RealVector& get_gradient(const RealVector& x,
-				      const UIntArray& dvv);
+  const RealVector& get_gradient(const RealVector& x, const UIntArray& dvv);
 
   /// return the mean of the PCE, treating all variables as random
   const Real& get_mean();
   /// return the mean of the PCE for a given parameter vector,
   /// treating a subset of the variables as random
   const Real& get_mean(const RealVector& x);
-  /// return the gradient of the PCE mean for a given parameter
-  /// vector, treating all variables as random
+  /// return the gradient of the PCE mean for a given parameter vector,
+  /// treating all variables as random
   const RealVector& get_mean_gradient();
   /// return the gradient of the PCE mean for a given parameter vector
   /// and given DVV, treating a subset of the variables as random

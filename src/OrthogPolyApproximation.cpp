@@ -1440,9 +1440,9 @@ const Real& OrthogPolyApproximation::get_mean(const RealVector& x)
       }
       expansionMean += Psi*expansionCoeffs[i];
 #ifdef DEBUG
-      PCout << "Mean estimate inclusion: term index = " << i << " Psi = " << Psi
-	    << " PCE coeff = " << expansionCoeffs[i] << " total = "
-	    << expansionMean << '\n';
+      PCout << "Mean estimate inclusion: term index = " << i
+	    << " Psi = " << Psi << " PCE coeff = " << expansionCoeffs[i]
+	    << " total = " << expansionMean << '\n';
 #endif // DEBUG
     }
   }
@@ -1582,9 +1582,8 @@ get_covariance(const RealVector& exp_coeffs_2)
 }
 
 
-/** In this case, a subset of the expansion variables are random
-    variables and the variance of the expansion involves summations
-    over this subset. */
+/** In this case, a subset of the expansion variables are random variables
+    and the variance of the expansion involves summations over this subset. */
 const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
 {
   // Error check for required data
