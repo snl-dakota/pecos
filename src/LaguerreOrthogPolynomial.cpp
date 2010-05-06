@@ -125,7 +125,7 @@ get_gradient(const Real& x, unsigned short order)
   // The previous approach, while very compact, produces 0/0 = NaN at x = 0.
   // To avoid NaN issue at lower bound, differentiate the 3 pt value recursion
   // to get a 3 point gradient recursion
-  switch (order) {pause;
+  switch (order) {
 
   case 0:
     basisPolyGradient = 0.;
