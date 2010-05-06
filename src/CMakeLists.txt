@@ -1,29 +1,28 @@
+#include_directories(${Teuchos_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS}
+                    ${Teuchos_INCLUDE_DIRS})
+link_directories(${Teuchos_LIBRARY_DIRS})
 
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS}
-                    ${PROJECT_SOURCE_DIR}/packages/teuchos/src
-                    ${PROJECT_BINARY_DIR}/packages/teuchos/src)
-IF(HAVE_SPARSE_GRID)
-  INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
-ENDIF(HAVE_SPARSE_GRID)
+if(HAVE_SPARSE_GRID)
+  include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
+endif(HAVE_SPARSE_GRID)
+
+set(Pecos_libs teuchos lapack)
+
+if(WITH_FFTW)
+  set(Pecos_libs ${Pecos_libs} fftw3)
+  include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
+endif(WITH_FFTW)
 
 ## Pecos library sources.
-FILE(GLOB Pecos_src *.cpp)
+file(GLOB Pecos_src *.cpp)
 
-IF(HAVE_LHS)
-  SET(Pecos_src ${Pecos_src} lhs_wrappers.f90)
-  IF(CMAKE_Fortran_COMPILER_ID STREQUAL GNU)
-    SET_PROPERTY(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS -ffixed-form)
-  ELSEIF(CMAKE_Fortran_COMPILER_ID STREQUAL Intel)
-    SET_PROPERTY(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS -fixed)
-  ELSEIF(CMAKE_Fortran_COMPILER_ID STREQUAL PGI)
-    SET_PROPERTY(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS -Mfixed)
-  ENDIF()
-ENDIF(HAVE_LHS)
+if(WITH_LHS)
+  set(Pecos_src ${Pecos_src} lhs_wrappers.f90)
+  set_property(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS ${FIXED_FLAG})
+  set(Pecos_libs ${Pecos_libs} lhs)
+endif(WITH_LHS)
 
-ADD_LIBRARY(pecos_src ${Pecos_src})
-IF(HAVE_LHS)
-TARGET_LINK_LIBRARIES(pecos_src teuchos lhs ${LAPACK_LIBRARIES})
-ELSE(HAVE_LHS)
-TARGET_LINK_LIBRARIES(pecos_src teuchos ${LAPACK_LIBRARIES})
-ENDIF(HAVE_LHS)
+add_library(pecos_src ${Pecos_src})
+target_link_libraries(pecos_src ${Pecos_libs})
 

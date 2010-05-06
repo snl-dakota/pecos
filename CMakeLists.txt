@@ -1,74 +1,115 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 
-PROJECT("Pecos" C CXX Fortran)
+project("Pecos" C CXX Fortran)
 
-IF(WIN32)
-  FIND_PACKAGE(CLAPACK REQUIRED)
-ELSE()
-  FIND_PACKAGE(BLAS REQUIRED)
-  FIND_PACKAGE(LAPACK REQUIRED)
-ENDIF() 
+# first check for a system blas and lapack
+find_library(BLAS_LIBS blas)
+find_library(LAPACK_LIBS lapack)
+if(NOT BLAS_LIBS OR NOT LAPACK_LIBS)
+  # if not a system blas and lapack, then
+  # look for a cmake built LAPACK with
+  # find_package
+  find_package(LAPACK REQUIRED NO_MODULE)
+  set(BLAS_LIBS blas)
+  set(LAPACK_LIBS lapack)
+endif()
 
-FIND_PACKAGE(Boost 1.40 REQUIRED)
+# hack to be fixed when CMake does it automatically
+if(${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
+  set(FIXED_FLAG "-fixed")
+elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
+  set(FIXED_FLAG "-ffixed-form")
+elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
+  set(FIXED_FLAG "-Mfixed")
+endif()
 
-INCLUDE(CTest)
+find_package(Boost 1.40 REQUIRED)
 
-SET( CMAKE_MODULE_PATH
+include(CTest)
+
+set( CMAKE_MODULE_PATH
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_arch
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config_tests
+  ${CMAKE_MODULE_PATH}
 )
 
-SET(Pecos_ENABLE_C ON)
-SET(Pecos_ENABLE_CXX ON)
-SET(Pecos_ENABLE_Fortran ON)
+# Bill.Hoffman: What are these??
+set(Pecos_ENABLE_C ON)
+set(Pecos_ENABLE_CXX ON)
+set(Pecos_ENABLE_Fortran ON)
 
-SUBDIRS(packages src test)
+#include(TrilinosFortranMangling)
 
-#INCLUDE(TrilinosFortranMangling)
-
-# Package-specific configuration options
-SET(Pecos_ENABLE_DEBUG OFF)
-SET(Pecos_ENABLE_EXPLICIT_INSTANTIATION OFF)
-SET(Pecos_ENABLE_PERFORMANCE_TESTS OFF)
+# should not be hard coded
+set(Pecos_ENABLE_DEBUG ON)
+set(Pecos_ENABLE_EXPLICIT_INSTANTIATION OFF)
+set(Pecos_ENABLE_PERFORMANCE_TESTS OFF)
 
 SET(BOOST_DISABLE_ASSERTS 1)
 
-# WJB - ToDo: upgrade to latest FFTW prior to CMakeifying
-#OPTION(WITH_FFT "Build the fftw and dfftpack packages" ON)
-OPTION(WITH_FFT "Build the dfftpack packages" ON)
-OPTION(HAVE_DFFTPACK "Build the dfftpack package.  This OPTION has no effect if WITH_FFT is ON" ON)
-OPTION(WITH_FFTW "Build the fftw package.  This OPTION has no effect if WITH_FFT is ON" OFF)
+# WJB: see conditional further down -- find_package(Fftw3)
 
-# WJB: why 2 vars when 1 will do?? OPTION(WITH_LHS "Build the LHS package." ON)
-OPTION(HAVE_LHS "Build the LHS package." ON)
-OPTION(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
+# WJB - ToDo: upgrade to latest FFTW prior to FULL CMakeification
+#option(HAVE_FFT "Build the fftw and dfftpack packages" ON)
+option(HAVE_FFT "FIND an installed fftw pkg and BUILD the dfftpack pkg in the
+distro" ON)
+option(HAVE_DFFTPACK "Build the dfftpack package.  This OPTION has no effect if
+  WITH_FFT is ON" ON)
+# WJB - ToDo: ensure that the default setting for HAVE_FFTW is OFF, even when
+# HAVE_FFT is ON
+option(HAVE_FFTW "FIND and installed fftw package. This OPTION has no effect
+if HAVE_FFT is ON" OFF)
+
+option(HAVE_LHS "Build the LHS package." ON)
+option(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
+
+option(USE_SYSTEM_TEUCHOS
+  "If false, Pecos will use the included version of Teuchos."
+  OFF)
+
+if(USE_SYSTEM_TEUCHOS)
+  find_package(Trilinos REQUIRED)
+  include(${Trilinos_DIR}/TrilinosConfig.cmake)
+  set(Teuchos_INCLUDE_DIRS ${Trilinos_INCLUDE_DIRS} CACHE FILEPATH "include dir for Teuchos" FORCE)
+  set(Teuchos_LIBRARY_DIRS ${Trilinos_LIBRARY_DIRS} CACHE FILEPATH "library dir for Teuchos" FORCE)
+else()
+  set(Teuchos_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/packages/teuchos/src
+                           ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/src)
+  set(Teuchos_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/src)
+endif()
+
 
 #Keep track of what libraries should be included in libpecos
-SET(SUBLIBS pecos_src)
+set(SUBLIBS pecos_src)
 
 #Descend into source subdirectories based on user preference
-IF(WITH_FFT)
-#  SET(SUBLIBS ${SUBLIBS} dfftpack fftw3)
-  SET(SUBLIBS ${SUBLIBS} dfftpack)
-ELSEIF(HAVE_DFFTPACK)
-  SET(SUBLIBS ${SUBLIBS} dfftpack)
-ELSEIF(WITH_FFTW)
-  SET(SUBLIBS ${SUBLIBS} fftw3)
-ENDIF(WITH_FFT)
+if(HAVE_FFT)
+  #set(SUBLIBS ${SUBLIBS} dfftpack fftw3)
+  set(SUBLIBS ${SUBLIBS} dfftpack)
+elseif(HAVE_DFFTPACK)
+  set(SUBLIBS ${SUBLIBS} dfftpack)
+elseif(HAVE_FFTW)
+  #set(SUBLIBS ${SUBLIBS} fftw3)
+  find_package(Fftw3)
+endif(HAVE_FFT)
 
-IF(HAVE_LHS)
-  SET(SUBLIBS ${SUBLIBS} lhs)
-ENDIF(HAVE_LHS)
+if(HAVE_LHS)
+  set(SUBLIBS ${SUBLIBS} lhs)
+endif(HAVE_LHS)
 
-IF(HAVE_SPARSE_GRID)
-  SET(SUBLIBS ${SUBLIBS} sparsegrid)
-ENDIF(HAVE_SPARSE_GRID)
+if(HAVE_SPARSE_GRID)
+  set(SUBLIBS ${SUBLIBS} sparsegrid)
+endif(HAVE_SPARSE_GRID)
 
+add_subdirectory(packages)
+add_subdirectory(src)
+add_subdirectory(test)
 
 # Package-specific configuration options
-INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR})
+#include_directories(${Pecos_BINARY_DIR})
+include_directories(${PROJECT_BINARY_DIR})
 
 CONFIGURE_FILE("${PROJECT_SOURCE_DIR}/cmake/pecos_config.h.in"
   "${PROJECT_BINARY_DIR}/pecos_config.h"
@@ -80,10 +121,11 @@ ADD_DEFINITIONS("-DHAVE_CONFIG_H")
 
 # libpecos.la must be built PRIOR to the linkage of test executables
 # WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
-ADD_LIBRARY(pecos empty.cxx)
-TARGET_LINK_LIBRARIES(pecos ${SUBLIBS})
+add_library(pecos empty.cxx)
+target_link_libraries(pecos ${SUBLIBS})
 
-# WJB - ToDo: delete here to bottom once I am done debugging the build settings
+# WJB - ToDo: delete here to bottom once I am done debugging the build
+# settings
 FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")
 GET_CMAKE_PROPERTY(res VARIABLES)
 FOREACH(var ${res})
