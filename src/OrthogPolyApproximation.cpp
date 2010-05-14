@@ -959,11 +959,14 @@ void OrthogPolyApproximation::integration()
   size_t i, j, k, num_deriv_vars = expansionCoeffGrads.numRows();
   const RealVector& wt_sets = driverRep->weight_sets();
   std::list<SurrogateDataPoint>::iterator it;
-  Real empty_r;
-  if (expansionCoeffFlag) expansionCoeffs     = 0.;
-  if (expansionGradFlag)  expansionCoeffGrads = 0.;
+  Real wt_resp_fn_i, Psi_ij; Real* exp_grad;
+  RealVector wt_resp_grad_i;
+  if (expansionCoeffFlag) expansionCoeffs = 0.;
+  if (expansionGradFlag) {
+    expansionCoeffGrads = 0.;
+    wt_resp_grad_i.sizeUninitialized(num_deriv_vars);
+  }
   for (i=0, it=dataPoints.begin(); it!=dataPoints.end(); ++i, ++it) {
-    Real wt_resp_fn_i; RealVector wt_resp_grad_i;
     if (expansionCoeffFlag)
       wt_resp_fn_i = wt_sets[i] * it->response_function();
     if (expansionGradFlag) {
@@ -972,13 +975,13 @@ void OrthogPolyApproximation::integration()
     }
     const RealVector& c_vars_i = it->continuous_variables();
     for (j=0; j<numExpansionTerms; ++j) {
-      Real Psi_ij = multivariate_polynomial(c_vars_i, j);
+      Psi_ij = multivariate_polynomial(c_vars_i, j);
       if (expansionCoeffFlag)
 	expansionCoeffs[j] += Psi_ij * wt_resp_fn_i;
       if (expansionGradFlag) {
-	Real* exp_grad_j = expansionCoeffGrads[j];
+	exp_grad = expansionCoeffGrads[j];
 	for (k=0; k<num_deriv_vars; ++k)
-	  exp_grad_j[k] += Psi_ij * wt_resp_grad_i[k];
+	  exp_grad[k] += Psi_ij * wt_resp_grad_i[k];
       }
     }
   }
@@ -987,9 +990,9 @@ void OrthogPolyApproximation::integration()
     if (expansionCoeffFlag)
       expansionCoeffs[i] /= norm_sq;
     if (expansionGradFlag) {
-      Real* exp_grad_i = expansionCoeffGrads[i];
+      exp_grad = expansionCoeffGrads[i];
       for (k=0; k<num_deriv_vars; ++k)
-	exp_grad_i[k] /= norm_sq;
+	exp_grad[k] /= norm_sq;
     }
 #ifdef DEBUG
     PCout << "coeff[" << i <<"] = " << expansionCoeffs[i]
@@ -1090,8 +1093,7 @@ void OrthogPolyApproximation::regression()
     // Solves min ||b - Ax||_2 s.t. Cx = d (Note: b,C switched from LAPACK docs)
     // where {b,d} are single vectors (multiple RHS not supported).
 
-    size_t offset = 1;
-    num_pts += offset;
+    ++num_pts; // increment dataPoints count by one for anchor point
 
     int num_cons = 1; // only 1 anchor point constraint
     // Vector of response values that correspond to the samples in matrix A.
@@ -1197,14 +1199,11 @@ void OrthogPolyApproximation::expectation()
 {
   // "lhs" or "random", no weights needed
   std::list<SurrogateDataPoint>::iterator it;
-  size_t i, j, k, offset = 0, num_pts = dataPoints.size(),
+  size_t i, j, num_pts = dataPoints.size(),
     num_deriv_vars = expansionCoeffGrads.numRows();
-  if (!anchorPoint.is_null()) {
-    offset   = 1;
-    num_pts += offset;
-  }
+  if (!anchorPoint.is_null())
+    ++num_pts;
 
-  Real empty_r;
   /*
   // The following implementation evaluates all PCE coefficients
   // using a consistent expectation formulation
@@ -1213,7 +1212,7 @@ void OrthogPolyApproximation::expectation()
     exp_coeff_i = (anchorPoint.is_null()) ? 0.0 :
       anchorPoint.response_function() *
       multivariate_polynomial(anchorPoint.continuous_variables(), i);
-    for (j=offset, it=dataPoints.begin(); j<num_pts; ++j, ++it)
+    for (it=dataPoints.begin(); it!=dataPoints.end(); ++it)
       exp_coeff_i += it->response_function() * 
         multivariate_polynomial(it->continuous_variables(), i);
     exp_coeff_i /= num_pts * norm_squared(i);
@@ -1228,6 +1227,7 @@ void OrthogPolyApproximation::expectation()
   // response mean) as an expectation and then removes the mean from the
   // expectation evaluation of all subsequent coefficients.  This approach
   // has been observed to result in better results for small sample sizes.
+  Real empty_r;
   Real& mean = (expansionCoeffFlag) ? expansionCoeffs[0] : empty_r;
   Real* mean_grad
     = (expansionGradFlag) ? (Real*)expansionCoeffGrads[0] : NULL;
@@ -1253,7 +1253,7 @@ void OrthogPolyApproximation::expectation()
   if (expansionGradFlag)
     for (j=0; j<num_deriv_vars; ++j)
       mean_grad[j] /= num_pts;
-  Real chaos_sample, resp_fn_minus_mean;
+  Real chaos_sample, resp_fn_minus_mean, term; Real* exp_grad_i;
   RealVector resp_grad_minus_mean;
   if (expansionGradFlag) resp_grad_minus_mean.sizeUninitialized(num_deriv_vars);
   if (!anchorPoint.is_null()) {
@@ -1270,7 +1270,7 @@ void OrthogPolyApproximation::expectation()
       if (expansionCoeffFlag)
 	expansionCoeffs[i] = resp_fn_minus_mean * chaos_sample;
       if (expansionGradFlag) {
-	Real* exp_grad_i = expansionCoeffGrads[i];
+	exp_grad_i = expansionCoeffGrads[i];
 	for (j=0; j<num_deriv_vars; ++j)
 	  exp_grad_i[j] = resp_grad_minus_mean[j] * chaos_sample;
       }
@@ -1290,18 +1290,18 @@ void OrthogPolyApproximation::expectation()
       if (expansionCoeffFlag)
 	expansionCoeffs[i] += resp_fn_minus_mean * chaos_sample;
       if (expansionGradFlag) {
-	Real* exp_grad_i = expansionCoeffGrads[i];
+	exp_grad_i = expansionCoeffGrads[i];
 	for (j=0; j<num_deriv_vars; ++j)
 	  exp_grad_i[j] += resp_grad_minus_mean[j] * chaos_sample;
       }
     }
   }
   for (i=1; i<numExpansionTerms; ++i) {
-    Real term = num_pts * norm_squared(i);
+    term = num_pts * norm_squared(i);
     if (expansionCoeffFlag)
       expansionCoeffs[i] /= term;
     if (expansionGradFlag) {
-      Real* exp_grad_i = expansionCoeffGrads[i];
+      exp_grad_i = expansionCoeffGrads[i];
       for (j=0; j<num_deriv_vars; ++j)
 	exp_grad_i[j] /= term;
     }
