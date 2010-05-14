@@ -960,42 +960,40 @@ void OrthogPolyApproximation::integration()
   const RealVector& wt_sets = driverRep->weight_sets();
   std::list<SurrogateDataPoint>::iterator it;
   Real empty_r;
-  for (i=0; i<numExpansionTerms; ++i) {
-
-    Real& chaos_coeff_i = (expansionCoeffFlag) ? expansionCoeffs[i] : empty_r;
-    Real* chaos_grad_i  = (expansionGradFlag)  ? expansionCoeffGrads[i] : NULL;
-    if (expansionCoeffFlag) chaos_coeff_i = 0.;
-    if (expansionGradFlag)  std::fill_n(chaos_grad_i, num_deriv_vars, 0.);
-    for (j=0, it=dataPoints.begin(); it!=dataPoints.end(); ++j, ++it) {
-
-      // sum contribution to inner product <f, Psi_j>
-      //Real chaos_sample
-      //  = multivariate_polynomial(it->continuous_variables(), i)
-      //num += wt_sets[j] * chaos_sample * it->response_function();
-      // sum contribution to inner product <Psi_j, Psi_j>
-      //den += wt_sets[j] * pow(chaos_sample, 2);
-
-      Real wt_samp_prod = wt_sets[j] *
-	multivariate_polynomial(it->continuous_variables(), i);
+  if (expansionCoeffFlag) expansionCoeffs     = 0.;
+  if (expansionGradFlag)  expansionCoeffGrads = 0.;
+  for (i=0, it=dataPoints.begin(); it!=dataPoints.end(); ++i, ++it) {
+    Real wt_resp_fn_i; RealVector wt_resp_grad_i;
+    if (expansionCoeffFlag)
+      wt_resp_fn_i = wt_sets[i] * it->response_function();
+    if (expansionGradFlag) {
+      wt_resp_grad_i = it->response_gradient(); // copy
+      wt_resp_grad_i.scale(wt_sets[i]);
+    }
+    const RealVector& c_vars_i = it->continuous_variables();
+    for (j=0; j<numExpansionTerms; ++j) {
+      Real Psi_ij = multivariate_polynomial(c_vars_i, j);
       if (expansionCoeffFlag)
-	chaos_coeff_i += wt_samp_prod * it->response_function();
+	expansionCoeffs[j] += Psi_ij * wt_resp_fn_i;
       if (expansionGradFlag) {
-	const RealVector curr_pt_grad = it->response_gradient();
+	Real* exp_grad_j = expansionCoeffGrads[j];
 	for (k=0; k<num_deriv_vars; ++k)
-	  chaos_grad_i[k] += wt_samp_prod * curr_pt_grad[k];
+	  exp_grad_j[k] += Psi_ij * wt_resp_grad_i[k];
       }
     }
-
-    //expansionCoeffs[i] = num / den;
+  }
+  for (i=0; i<numExpansionTerms; ++i) {
     const Real& norm_sq = norm_squared(i);
     if (expansionCoeffFlag)
-      chaos_coeff_i /= norm_sq;
-    if (expansionGradFlag)
+      expansionCoeffs[i] /= norm_sq;
+    if (expansionGradFlag) {
+      Real* exp_grad_i = expansionCoeffGrads[i];
       for (k=0; k<num_deriv_vars; ++k)
-	chaos_grad_i[k] /= norm_sq;
+	exp_grad_i[k] /= norm_sq;
+    }
 #ifdef DEBUG
-    PCout << "coeff[" << i <<"] = " << chaos_coeff_i
-        //<< "coeff_grad[" << i <<"] = " << chaos_grad_i
+    PCout << "coeff[" << i <<"] = " << expansionCoeffs[i]
+        //<< "coeff_grad[" << i <<"] = " << expansionCoeffGrads[i]
 	  << " norm squared[" << i <<"] = " << norm_sq << "\n\n";
 #endif // DEBUG
   }
@@ -1028,16 +1026,16 @@ void OrthogPolyApproximation::regression()
     size_t num_deriv_vars = (expansionGradFlag)  ?
       expansionCoeffGrads.numRows() : 0;
     size_t num_coeff_rhs  = (expansionCoeffFlag) ? 1 : 0;
-    int num_rhs  = num_coeff_rhs + num_deriv_vars; // input: # of RHS vectors
+    int  num_rhs = num_coeff_rhs + num_deriv_vars; // input: # of RHS vectors
     double rcond = -1.; // input:  use macheps to rank singular vals of A
-    int rank     =  0;  // output: effective rank of matrix A
+    int    rank  =  0;  // output: effective rank of matrix A
     // input: vectors of response data that correspond to samples in matrix A.
     double* b_vectors = new double [num_rows_A*num_rhs]; // "b" in A*x = b
     // output: vector of singular values, dimensioned for overdetermined system
     double* s_vector  = new double [num_cols_A];
 
     // Get the optimal work array size
-    int lwork    = -1; // special code for workspace query
+    int    lwork = -1; // special code for workspace query
     double* work = new double [1]; // temporary work array
     la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
 	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
@@ -1060,7 +1058,7 @@ void OrthogPolyApproximation::regression()
       if (expansionCoeffFlag)
 	b_vectors[i] = it->response_function(); // i-th point: response value
       if (expansionGradFlag) {
-	const RealVector curr_pt_grad = it->response_gradient();
+	const RealVector& curr_pt_grad = it->response_gradient();
 	for (j=0; j<num_deriv_vars; ++j) // i-th point, j-th gradient component
 	  b_vectors[(j+num_coeff_rhs)*num_pts+i] = curr_pt_grad[j];
       }
@@ -1211,16 +1209,16 @@ void OrthogPolyApproximation::expectation()
   // The following implementation evaluates all PCE coefficients
   // using a consistent expectation formulation
   for (i=0; i<numExpansionTerms; ++i) {
-    Real& chaos_coeff_i = expansionCoeffs[i];
-    chaos_coeff_i = (anchorPoint.is_null()) ? 0.0 :
+    Real& exp_coeff_i = expansionCoeffs[i];
+    exp_coeff_i = (anchorPoint.is_null()) ? 0.0 :
       anchorPoint.response_function() *
       multivariate_polynomial(anchorPoint.continuous_variables(), i);
     for (j=offset, it=dataPoints.begin(); j<num_pts; ++j, ++it)
-      chaos_coeff_i += it->response_function() * 
+      exp_coeff_i += it->response_function() * 
         multivariate_polynomial(it->continuous_variables(), i);
-    chaos_coeff_i /= num_pts * norm_squared(i);
+    exp_coeff_i /= num_pts * norm_squared(i);
 #ifdef DEBUG
-    PCout << "coeff[" << i << "] = " << chaos_coeff_i
+    PCout << "coeff[" << i << "] = " << exp_coeff_i
 	  << " norm squared[" << i <<"] = " << norm_squared(i) << '\n';
 #endif // DEBUG
   }
@@ -1234,18 +1232,18 @@ void OrthogPolyApproximation::expectation()
   Real* mean_grad
     = (expansionGradFlag) ? (Real*)expansionCoeffGrads[0] : NULL;
   if (anchorPoint.is_null()) {
-    if (expansionCoeffFlag) mean = 0.0;
-    if (expansionGradFlag)  std::fill_n(mean_grad, num_deriv_vars, 0.);
+    if (expansionCoeffFlag) expansionCoeffs     = 0.;
+    if (expansionGradFlag)  expansionCoeffGrads = 0.;
   }
   else {
-    if (expansionCoeffFlag)mean      = anchorPoint.response_function();
+    if (expansionCoeffFlag)     mean = anchorPoint.response_function();
     if (expansionGradFlag) mean_grad = anchorPoint.response_gradient().values();
   }
   for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
     if (expansionCoeffFlag)
       mean += it->response_function();
     if (expansionGradFlag) {
-      const RealVector curr_pt_grad = it->response_gradient();
+      const RealVector& curr_pt_grad = it->response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	mean_grad[j] += curr_pt_grad[j];
     }
@@ -1255,44 +1253,61 @@ void OrthogPolyApproximation::expectation()
   if (expansionGradFlag)
     for (j=0; j<num_deriv_vars; ++j)
       mean_grad[j] /= num_pts;
-  Real chaos_sample;
-  for (i=1; i<numExpansionTerms; ++i) {
-    Real& chaos_coeff_i = (expansionCoeffFlag) ? expansionCoeffs[i] : empty_r;
-    Real* chaos_grad_i  = (expansionGradFlag)  ? expansionCoeffGrads[i] : NULL;
-    if (anchorPoint.is_null()) {
-      if (expansionCoeffFlag) chaos_coeff_i = 0.0;
-      if (expansionGradFlag)  std::fill_n(chaos_grad_i, num_deriv_vars, 0.);
+  Real chaos_sample, resp_fn_minus_mean;
+  RealVector resp_grad_minus_mean;
+  if (expansionGradFlag) resp_grad_minus_mean.sizeUninitialized(num_deriv_vars);
+  if (!anchorPoint.is_null()) {
+    if (expansionCoeffFlag)
+      resp_fn_minus_mean = anchorPoint.response_function() - mean;
+    if (expansionGradFlag) {
+      const RealVector& anchor_grad = anchorPoint.response_gradient();
+      for (j=0; j<num_deriv_vars; ++j)
+	resp_grad_minus_mean[j] = anchor_grad[j] - mean_grad[j];
     }
-    else {
-      chaos_sample
-	= multivariate_polynomial(anchorPoint.continuous_variables(), i);
+    const RealVector& c_vars = anchorPoint.continuous_variables();
+    for (i=1; i<numExpansionTerms; ++i) {
+      chaos_sample = multivariate_polynomial(c_vars, i);
       if (expansionCoeffFlag)
-	chaos_coeff_i = (anchorPoint.response_function() - mean) * chaos_sample;
+	expansionCoeffs[i] = resp_fn_minus_mean * chaos_sample;
       if (expansionGradFlag) {
-	const RealVector anchor_grad = anchorPoint.response_gradient();
+	Real* exp_grad_i = expansionCoeffGrads[i];
 	for (j=0; j<num_deriv_vars; ++j)
-	  chaos_grad_i[j] = (anchor_grad[j] - mean_grad[j]) * chaos_sample;
+	  exp_grad_i[j] = resp_grad_minus_mean[j] * chaos_sample;
       }
     }
-    for (j=offset, it=dataPoints.begin(); j<num_pts; ++j, ++it) {
-      chaos_sample = multivariate_polynomial(it->continuous_variables(), i);
+  }
+  for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
+    if (expansionCoeffFlag)
+      resp_fn_minus_mean = it->response_function() - mean;
+    if (expansionGradFlag) {
+      const RealVector& resp_grad = it->response_gradient();
+      for (j=0; j<num_deriv_vars; ++j)
+	resp_grad_minus_mean[j] = resp_grad[j] - mean_grad[j];
+    }
+    const RealVector& c_vars = it->continuous_variables();
+    for (i=1; i<numExpansionTerms; ++i) {
+      chaos_sample = multivariate_polynomial(c_vars, i);
       if (expansionCoeffFlag)
-	chaos_coeff_i += (it->response_function() - mean) * chaos_sample;
+	expansionCoeffs[i] += resp_fn_minus_mean * chaos_sample;
       if (expansionGradFlag) {
-	const RealVector curr_pt_grad = it->response_gradient();
-	for (k=0; k<num_deriv_vars; ++k)
-	  chaos_grad_i[k] += (curr_pt_grad[k] - mean_grad[k]) * chaos_sample;
+	Real* exp_grad_i = expansionCoeffGrads[i];
+	for (j=0; j<num_deriv_vars; ++j)
+	  exp_grad_i[j] += resp_grad_minus_mean[j] * chaos_sample;
       }
     }
+  }
+  for (i=1; i<numExpansionTerms; ++i) {
     Real term = num_pts * norm_squared(i);
     if (expansionCoeffFlag)
-      chaos_coeff_i /= term;
-    if (expansionGradFlag)
+      expansionCoeffs[i] /= term;
+    if (expansionGradFlag) {
+      Real* exp_grad_i = expansionCoeffGrads[i];
       for (j=0; j<num_deriv_vars; ++j)
-	chaos_grad_i[j] /= term;
+	exp_grad_i[j] /= term;
+    }
 #ifdef DEBUG
-    PCout << "coeff[" << i << "] = " << chaos_coeff_i
-        //<< "coeff_grad[" << i <<"] = " << chaos_grad_i
+    PCout << "coeff[" << i << "] = " << expansionCoeffs[i]
+        //<< "coeff_grad[" << i <<"] = " << exp_grad_i
 	  << " norm squared[" << i <<"] = " << norm_squared(i) << '\n';
 #endif // DEBUG
   }
