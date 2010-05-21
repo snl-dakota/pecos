@@ -122,7 +122,7 @@ void SparseGridDriver::update_axis_lower_bounds()
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref, bool store_1d_gauss,
-		short growth_rate, short nested_uniform_rule)
+		bool nested_rules, short growth_rate, short nested_uniform_rule)
 {
   numVars = u_types.size();
   compute1DPoints.resize(numVars);
@@ -132,17 +132,15 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   level(ssg_level);
   dimension_preference(dim_pref);
 
-  // For STANDARD exponential growth, use of nested rules is restricted to
-  // isotropic uniform in order to enforce consistent growth rates:
-  bool nested_rules = true;
-  if (growth_rate == UNRESTRICTED_GROWTH)
+  // For unrestricted exponential growth, use of nested rules is restricted
+  // to isotropic uniform in order to enforce consistent growth rates:
+  if (nested_rules && growth_rate == UNRESTRICTED_GROWTH)
     for (size_t i=0; i<numVars; ++i)
       if (u_types[i] != STD_UNIFORM)
 	{ nested_rules = false; break; }
-  // For MODERATE exponential growth, nested rules can be used heterogeneously
-  // and synchronized with STANDARD Gaussian linear growth.
-  // For SLOW exponential growth, nested rules can be used heterogeneously
-  // and synchronized with SLOW Gaussian linear growth (not yet available).
+  // For MODERATE and SLOW restricted exponential growth, nested rules can be
+  // used heterogeneously and synchronized with STANDARD and SLOW Gaussian
+  // linear growth, respectively.
 
   bool cheby_poly = false;
   for (size_t i=0; i<numVars; i++) {

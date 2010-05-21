@@ -65,8 +65,10 @@ public:
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-		       const RealVector& dim_pref, bool store_1d_gauss,
-		       short growth_rate, short nested_uniform_rule);
+		       const RealVector& dim_pref, bool store_1d_gauss = false,
+		       bool  nested_rules = true,
+		       short growth_rate  = MODERATE_RESTRICTED_GROWTH,
+		       short nested_uniform_rule = GAUSS_PATTERSON);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,

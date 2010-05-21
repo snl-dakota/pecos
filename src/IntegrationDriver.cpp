@@ -202,7 +202,9 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
   for (size_t i=0; i<numVars; i++) {
     // set int_rules
     switch (u_types[i]) {
-    case STD_NORMAL:      int_rules[i] = GAUSS_HERMITE;      break;
+    case STD_NORMAL:
+      //int_rules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
+      int_rules[i] = GAUSS_HERMITE; break;
     case STD_UNIFORM:
       // For tensor-product quadrature, Gauss-Legendre is used due to greater
       // polynomial exactness since nesting is not a concern.  For nested sparse
@@ -221,6 +223,18 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
     // set growth_rules
     switch (u_types[i]) {
     case STD_NORMAL: // symmetric Gaussian linear growth
+      /*
+      if (nested_rules) // symmetric exponential growth
+	switch (growth_rate) {
+	case SLOW_RESTRICTED_GROWTH:
+	  growth_rules[i] = SLOW_EXPONENTIAL;     break;
+	case MODERATE_RESTRICTED_GROWTH:
+	  growth_rules[i] = MODERATE_EXPONENTIAL; break;
+	case UNRESTRICTED_GROWTH:
+	  growth_rules[i] = FULL_EXPONENTIAL;     break;
+	}
+      else
+      */
       growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
     case STD_UNIFORM:
@@ -266,6 +280,7 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
       growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
     case GAUSS_PATTERSON: case CLENSHAW_CURTIS: case FEJER2: // exp growth
+    //case GENZ_KEISTER:
       switch (growth_rate) {
       case SLOW_RESTRICTED_GROWTH:
 	growth_rules[i] = SLOW_EXPONENTIAL;     break;
