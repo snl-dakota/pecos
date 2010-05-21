@@ -369,7 +369,7 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 				   &x[0], q_min, q_max, &more);
   while (more) {
     Real coeff = webbur::sandia_sgmga_vcn_coef(numVars, anisoLevelWts.values(),
-					       &x_max[0], &x[0], q_min, q_max);
+					       &x[0], q_max);
     if (std::abs(coeff) > 1.e-10) {
       multi_index.push_back(x);
       coeffs.push_back(coeff);
