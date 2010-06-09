@@ -9,10 +9,7 @@
 #include "LHSDriver.hpp"
 #include "BoostRNG_Monostate.hpp"
 #include "pecos_stat_util.hpp"
-
-#ifdef __SUNPRO_CC
-#include <stdio.h>  // for snprintf
-#endif
+#include <boost/lexical_cast.hpp>
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
@@ -52,11 +49,11 @@ void LHS_CLOSE_FC( int& ierror );
 void LHS_OPTIONS2_FC( int& num_replications, int& ptval_option,
 		      char* sampling_options, int& ierror );
 
-void LHS_DIST2_FC( char* label, int& ptval_flag, Pecos::Real& ptval,
+void LHS_DIST2_FC( const char* label, int& ptval_flag, Pecos::Real& ptval,
 		   char* dist_type, Pecos::Real* dist_params, int& num_params,
 		   int& ierror, int& dist_id, int& ptval_id );
 
-void LHS_UDIST2_FC( char* label, int& ptval_flag, Pecos::Real& ptval,
+void LHS_UDIST2_FC( const char* label, int& ptval_flag, Pecos::Real& ptval,
 		    char* dist_type, int& num_pts, Pecos::Real* x,
 		    Pecos::Real* y, int& ierror, int& dist_id, int& ptval_id );
 
@@ -79,23 +76,16 @@ Pecos::Real rnumlhs20( void );
 namespace Pecos {
 
 
-/** Helper function to copy names that Fortran will see as
-    character*16 values, and are null-terminated for assignment to
-    String values.  Fortran won't see the null at the end. */
-static void f77name16(char buf[17], const char *name,
-		      StringArray &lhs_names, int cntr)
+/** Helper function to create labels that Fortran will see as
+    character*16 values which are NOT null-terminated.  For convenience,
+    the StringArray, lhs_names, is also populated. */
+static const char* f77name16(const String& name, size_t index,
+                             StringArray& lhs_names)
 {
-  // blank-filled but not null-terminated
-  char *b, *be;
-  for(b = buf, be = buf + 16; b < be; ++b)
-    if (!(*b = *name++)) {
-      b += snprintf(b, be-b, "%d", cntr+1);
-      while(b < be)
-	*b++ = ' ';
-      break;
-    }
-  *be = 0;
-  lhs_names[cntr] = buf;
+  String label = name + boost::lexical_cast<String>(index+1);
+  label.resize(16, ' ');
+  lhs_names[index] = label;
+  return lhs_names[index].data();  // NOTE: no NULL terminator
 }
 
 
@@ -336,15 +326,15 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   int dist_num, pv_num; // outputs (ignored)
   Real ptval = 0., dist_params[4];
   StringArray lhs_names(num_av);
-  char dist_string[32], name_string[17];
-  const char *distname;
+  char dist_string[32];
+  const char *name_string, *distname;
 
   // --------------------
   // CONTINUOUS VARIABLES
   // --------------------
   // continuous design (treated as uniform)
   for (i=0; i<num_cdv; ++i, ++cntr) {
-    f77name16(name_string, "ContDesign", lhs_names, cntr);
+    name_string = f77name16("ContDesign", cntr, lhs_names);
     f77dist32(dist_string, "uniform");
     num_params = 2;
     if (cd_l_bnds[i] > -DBL_MAX && cd_u_bnds[i] < DBL_MAX) {
@@ -370,7 +360,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // normal uncertain
   bool n_bnd_spec = (!n_l_bnds.empty() && !n_u_bnds.empty());
   for (i=0; i<num_nuv; ++i, ++cntr) {
-    f77name16(name_string, "Normal", lhs_names, cntr);
+    name_string = f77name16("Normal", cntr, lhs_names);
     dist_params[0] = n_means[i];
     dist_params[1] = n_std_devs[i];
     // check for bounded normal
@@ -400,7 +390,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   bool ln_bnd_spec = (!ln_l_bnds.empty()  && !ln_u_bnds.empty());
   bool n_dist      = (!ln_lambdas.empty() || !ln_std_devs.empty());
   for (i=0; i<num_lnuv; ++i, ++cntr) {
-    f77name16(name_string, "Lognormal", lhs_names, cntr);
+    name_string = f77name16("Lognormal", cntr, lhs_names);
     if (n_dist) {
       // In the mean/std dev specification case, LHS expects the mean/std dev
       // of the underlying normal distribution (LHS manual, SAND#98-0210, p.39).
@@ -451,7 +441,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // uniform uncertain
   for (i=0; i<num_uuv; ++i, ++cntr) {
-    f77name16(name_string, "Uniform", lhs_names, cntr);
+    name_string = f77name16("Uniform", cntr, lhs_names);
     f77dist32(dist_string, "uniform");
     num_params = 2;
     if (u_l_bnds[i] >= u_u_bnds[i]) {
@@ -469,7 +459,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // loguniform uncertain
   for (i=0; i<num_luuv; ++i, ++cntr) {
-    f77name16(name_string, "Loguniform", lhs_names, cntr);
+    name_string = f77name16("Loguniform", cntr, lhs_names);
     f77dist32(dist_string, "loguniform");
     num_params = 2;
     if (lu_l_bnds[i] >= lu_u_bnds[i]) {
@@ -487,7 +477,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // triangular uncertain
   for (i=0; i<num_tuv; ++i, ++cntr) {
-    f77name16(name_string, "Triangular", lhs_names, cntr);
+    name_string = f77name16("Triangular", cntr, lhs_names);
     f77dist32(dist_string, "triangular");
     num_params = 3;
     if (t_l_bnds[i] >= t_u_bnds[i]) {
@@ -506,7 +496,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // exponential uncertain
   for (i=0; i<num_exuv; ++i, ++cntr) {
-    f77name16(name_string, "Exponential", lhs_names, cntr);
+    name_string = f77name16("Exponential", cntr, lhs_names);
     f77dist32(dist_string, "exponential");
     num_params = 1;
     dist_params[0] = 1./e_betas[i];
@@ -517,7 +507,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // beta uncertain
   for (i=0; i<num_beuv; ++i, ++cntr) {
-    f77name16(name_string, "Beta", lhs_names, cntr);
+    name_string = f77name16("Beta", cntr, lhs_names);
     f77dist32(dist_string, "beta");
     num_params = 4;
     if (b_l_bnds[i] >= b_u_bnds[i]) {
@@ -537,7 +527,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // gamma uncertain
   for (i=0; i<num_gauv; ++i, ++cntr) {
-    f77name16(name_string, "Gamma", lhs_names, cntr);
+    name_string = f77name16("Gamma", cntr, lhs_names);
     f77dist32(dist_string, "gamma");
     num_params = 2;
     dist_params[0] = ga_alphas[i];
@@ -549,7 +539,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // gumbel uncertain
   for (i=0; i<num_guuv; ++i, ++cntr) {
-    f77name16(name_string, "Gumbel", lhs_names, cntr);
+    name_string = f77name16("Gumbel", cntr, lhs_names);
     f77dist32(dist_string, "gumbel");
     num_params = 2;
     dist_params[0] = gu_alphas[i];
@@ -561,7 +551,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // frechet uncertain
   for (i=0; i<num_fuv; ++i, ++cntr) {
-    f77name16(name_string, "Frechet", lhs_names, cntr);
+    name_string = f77name16("Frechet", cntr, lhs_names);
     f77dist32(dist_string, "frechet");
     num_params = 2;
     dist_params[0] = f_alphas[i];
@@ -573,7 +563,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // weibull uncertain
   for (i=0; i<num_wuv; ++i, ++cntr) {
-    f77name16(name_string, "Weibull", lhs_names, cntr);
+    name_string = f77name16("Weibull", cntr, lhs_names);
     f77dist32(dist_string, "weibull");
     num_params = 2;
     dist_params[0] = w_alphas[i];
@@ -587,7 +577,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // field and a count (not a density) in the second field.  The distinction
   // in the second field is only important for unequal bin widths.
   for (i=0; i<num_hbuv; ++i, ++cntr) {
-    f77name16(name_string, "HistogramBin", lhs_names, cntr);
+    name_string = f77name16("HistogramBin", cntr, lhs_names);
     f77dist32(dist_string, "continuous linear");
     num_params = h_bin_prs[i].length()/2;
     Real* x_val = new Real [num_params];
@@ -611,7 +601,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // interval uncertain: convert to histogram for sampling
   for (i=0; i<num_iuv; ++i, ++cntr) {
-    f77name16(name_string, "Interval", lhs_names, cntr);
+    name_string = f77name16("Interval", cntr, lhs_names);
     f77dist32(dist_string, "continuous linear");
 
     // x_sort_unique is a set with ALL of the interval bounds for this variable
@@ -683,7 +673,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // continuous state (treated as uniform)
   for (i=0; i<num_csv; ++i, ++cntr) {
-    f77name16(name_string, "State", lhs_names, cntr);
+    name_string = f77name16("State", cntr, lhs_names);
     f77dist32(dist_string, "uniform");
     num_params = 2;
     if (cs_l_bnds[i] > -DBL_MAX && cs_u_bnds[i] < DBL_MAX) {
@@ -711,7 +701,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // --------------------------
   // discrete design range (treated as discrete histogram)
   for (i=0; i<num_ddriv; ++i, ++cntr) {
-    f77name16(name_string, "DiscDesRange", lhs_names, cntr);
+    name_string = f77name16("DiscDesRange", cntr, lhs_names);
     f77dist32(dist_string, "discrete histogram");
     if (ddri_l_bnds[i] > INT_MIN && ddri_u_bnds[i] < INT_MAX) {
       if (ddri_l_bnds[i] > ddri_u_bnds[i]) {
@@ -744,7 +734,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // discrete design set integer (treated as discrete histogram)
   for (i=0; i<num_ddsiv; ++i, ++cntr) {
-    f77name16(name_string, "DiscDesSetI", lhs_names, cntr);
+    name_string = f77name16("DiscDesSetI", cntr, lhs_names);
     f77dist32(dist_string, "discrete histogram");
     num_params = ddsi_values[i].size();
     Real* x_val = new Real [num_params];
@@ -763,7 +753,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // poisson uncertain
   for (i=0; i<num_puv; ++i, ++cntr) {
-    f77name16(name_string, "Poisson", lhs_names, cntr);
+    name_string = f77name16("Poisson", cntr, lhs_names);
     f77dist32(dist_string, "poisson");
     num_params = 1;
     dist_params[0] = p_lambdas[i];
@@ -774,7 +764,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // binomial uncertain
   for (i=0; i<num_biuv; ++i, ++cntr) {
-    f77name16(name_string, "Binomial", lhs_names, cntr);
+    name_string = f77name16("Binomial", cntr, lhs_names);
     f77dist32(dist_string, "binomial");
     num_params = 2;
     dist_params[0] = bi_prob_per_tr[i];
@@ -786,7 +776,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // negative binomial uncertain
   for (i=0; i<num_nbuv; ++i, ++cntr) {
-    f77name16(name_string, "NegBinomial", lhs_names, cntr);
+    name_string = f77name16("NegBinomial", cntr, lhs_names);
     f77dist32(dist_string, "negative binomial");
     num_params = 2;
     dist_params[0] = nb_prob_per_tr[i];
@@ -798,7 +788,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // geometric uncertain
   for (i=0; i<num_geuv; ++i, ++cntr) {
-    f77name16(name_string, "Geometric", lhs_names, cntr);
+    name_string = f77name16("Geometric", cntr, lhs_names);
     f77dist32(dist_string, "geometric");
     num_params = 1;
     dist_params[0] = ge_prob_per_tr[i];
@@ -809,7 +799,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // hypergeometric uncertain
   for (i=0; i<num_hguv; ++i, ++cntr) {
-    f77name16(name_string, "Hypergeom", lhs_names, cntr);
+    name_string = f77name16("Hypergeom", cntr, lhs_names);
     f77dist32(dist_string, "hypergeometric");
     num_params = 3;
     dist_params[0] = hg_total_pop[i];
@@ -822,7 +812,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // discrete state range (treated as discrete histogram)
   for (i=0; i<num_dsriv; ++i, ++cntr) {
-    f77name16(name_string, "DiscStateRange", lhs_names, cntr);
+    // WJB - ToDo - consider "throwing exception" here: assert(cntr < 100);
+    name_string = f77name16("DiscStateRange", cntr, lhs_names);
     f77dist32(dist_string, "discrete histogram");
     if (dsri_l_bnds[i] > INT_MIN && dsri_u_bnds[i] < INT_MAX) {
       if (dsri_l_bnds[i] > dsri_u_bnds[i]) {
@@ -855,7 +846,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // discrete state set integer (treated as discrete histogram)
   for (i=0; i<num_dssiv; ++i, ++cntr) {
-    f77name16(name_string, "DiscStateSetI", lhs_names, cntr);
+    name_string = f77name16("DiscStateSetI", cntr, lhs_names);
     f77dist32(dist_string, "discrete histogram");
     num_params = dssi_values[i].size();
     Real* x_val = new Real [num_params];
@@ -877,7 +868,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // -----------------------
   // discrete design set real (treated as discrete histogram)
   for (i=0; i<num_ddsrv; ++i, ++cntr) {
-    f77name16(name_string, "DiscDesSetR", lhs_names, cntr);
+    name_string = f77name16("DiscDesSetR", cntr, lhs_names);
     f77dist32(dist_string, "discrete histogram");
     num_params = ddsr_values[i].size();
     Real* x_val = new Real [num_params];
@@ -897,7 +888,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // histogram point uncertain: pairs are defined from an abscissa in
   // the first field and a count in the second field.
   for (i=0; i<num_hpuv; ++i, ++cntr) {
-    f77name16(name_string, "HistogramPt", lhs_names, cntr);
+    name_string = f77name16("HistogramPt", cntr, lhs_names);
     f77dist32(dist_string, "discrete histogram");
     num_params = h_pt_prs[i].length()/2;
     Real* x_val = new Real [num_params];
@@ -916,7 +907,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // discrete state set real (treated as discrete histogram)
   for (i=0; i<num_dssrv; ++i, ++cntr) {
-    f77name16(name_string, "DiscStateSetR", lhs_names, cntr);
+    name_string = f77name16("DiscStateSetR", cntr, lhs_names);
     f77dist32(dist_string, "discrete histogram");
     num_params = dssr_values[i].size();
     Real* x_val = new Real [num_params];
@@ -952,8 +943,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 	    offset_j += num_ceuv + num_csv + num_ddriv + num_ddsiv;
 	  if (j>=num_cauv+num_dauiv)
 	    offset_j += num_dsriv + num_dssiv + num_ddsrv;
-	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+offset_i].c_str()),
-		       const_cast<char*>(lhs_names[j+offset_j].c_str()),
+	  LHS_CORR2_FC(const_cast<char*>(lhs_names[i+offset_i].data()),
+		       const_cast<char*>(lhs_names[j+offset_j].data()),
 		       corr_val, err_code);
 	  check_error(err_code, "lhs_corr");
 	}
