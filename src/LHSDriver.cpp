@@ -47,20 +47,20 @@ void LHS_CLOSE_FC( int& ierror );
 
 // for these functions, bridge-function interfaces to F90 are required
 void LHS_OPTIONS2_FC( int& num_replications, int& ptval_option,
-		      char* sampling_options, int& ierror );
+		      const char* sampling_options, int& ierror );
 
 void LHS_DIST2_FC( const char* label, int& ptval_flag, Pecos::Real& ptval,
-		   char* dist_type, Pecos::Real* dist_params, int& num_params,
+		   const char* dist_type, Pecos::Real* dist_params, int& num_params,
 		   int& ierror, int& dist_id, int& ptval_id );
 
 void LHS_UDIST2_FC( const char* label, int& ptval_flag, Pecos::Real& ptval,
-		    char* dist_type, int& num_pts, Pecos::Real* x,
+		    const char* dist_type, int& num_pts, Pecos::Real* x,
 		    Pecos::Real* y, int& ierror, int& dist_id, int& ptval_id );
 
 void LHS_CORR2_FC( char* label1, char* label2, Pecos::Real& corr, int& ierror );
 
-void LHS_FILES2_FC( char* lhsout, char* lhsmsg, char* lhstitl, char* lhsopts,
-		    int& ierror );
+void LHS_FILES2_FC( const char* lhsout, const char* lhsmsg, const char* lhstitl,
+		    const char* lhsopts, int& ierror );
 
 //void lhs_run2( int* max_var, int* max_obs, int* max_names, int* ierror,
 //               char* dist_names, int* name_order, double* ptvals,
@@ -86,22 +86,6 @@ static const char* f77name16(const String& name, size_t index,
   label.resize(16, ' ');
   lhs_names[index] = label;
   return lhs_names[index].data();  // NOTE: no NULL terminator
-}
-
-
-/** Helper function to copy names that Fortran will see as
-    character*32 values, and are null-terminated for assignment to
-    String values.  Fortran won't see the null at the end. */
-static void f77dist32(char buf[32], const char *name)
-{
-  // blank-filled but not null-terminated
-  char *b, *be;
-  for(b = buf, be = buf + 32; b < be; ++b)
-    if (!(*b = *name++)) {
-      do *b++ = ' ';
-      while(b < be);
-      break;
-    }
 }
 
 
@@ -291,14 +275,11 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // set sample type to either LHS (default) or random Monte Carlo (optional)
   bool call_lhs_option = false;
-  char option_string[32];
-  std::ostringstream option_stream;
+  String option_string("              ");
   if (sampleType == "random" || sampleType == "incremental_random") {
-    option_stream << "RANDOM SAMPLE ";
+    option_string   = "RANDOM SAMPLE ";
     call_lhs_option = true;
   }
-  else
-    option_stream << "              ";
   // set mixing option to either restricted pairing (default) or random pairing
   // (optional).  For enforcing user-specified correlation, restricted pairing
   // is required.  And for uncorrelated variables, restricted pairing results
@@ -307,18 +288,15 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // option for it could be added in the future if a use arises.
   bool random_pairing_flag = false; // this option hard-wired off for now
   if (!correlation_flag && random_pairing_flag) {
-    option_stream << "RANDOM PAIRING    ";
+    option_string += "RANDOM PAIRING";
     call_lhs_option = true;
   }
-  else // use default of restricted pairing
-    option_stream << "                  ";
+  // else // use default of restricted pairing (WJB: ask MSE about this comment)
+  option_string.resize(32, ' ');
   if (call_lhs_option) {
     // Don't null-terminate the string since the '\0' is not used in Fortran
-    //option_stream << ends;
     int num_replic = 1, ptval_option = 1;
-    String option_s(option_stream.str());
-    std::copy(option_s.begin(), option_s.end(), option_string);
-    LHS_OPTIONS2_FC(num_replic, ptval_option, option_string, err_code);
+    LHS_OPTIONS2_FC(num_replic, ptval_option, option_string.data(), err_code);
     check_error(err_code, "lhs_options");
   }
 
@@ -326,7 +304,6 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   int dist_num, pv_num; // outputs (ignored)
   Real ptval = 0., dist_params[4];
   StringArray lhs_names(num_av);
-  char dist_string[32];
   const char *name_string, *distname;
 
   // --------------------
@@ -335,7 +312,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // continuous design (treated as uniform)
   for (i=0; i<num_cdv; ++i, ++cntr) {
     name_string = f77name16("ContDesign", cntr, lhs_names);
-    f77dist32(dist_string, "uniform");
+    String dist_string("uniform");
+    dist_string.resize(32, ' ');
     num_params = 2;
     if (cd_l_bnds[i] > -DBL_MAX && cd_u_bnds[i] < DBL_MAX) {
       if (cd_l_bnds[i] >= cd_u_bnds[i]) {
@@ -352,8 +330,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 	    << "variables using uniform\n       distributions." << std::endl;
       abort_handler(-1);
     }
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(continuous design)");
   }
 
@@ -380,9 +358,10 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       num_params = 2;
       distname = "normal";
     }
-    f77dist32(dist_string, distname);
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    String dist_string(distname);
+    dist_string.resize(32, ' ');
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(normal)");
   }
 
@@ -433,16 +412,18 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       else
 	distname = "lognormal";
     }
-    f77dist32(dist_string, distname);
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    String dist_string(distname);
+    dist_string.resize(32, ' ');
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(lognormal)");
   }
 
   // uniform uncertain
   for (i=0; i<num_uuv; ++i, ++cntr) {
     name_string = f77name16("Uniform", cntr, lhs_names);
-    f77dist32(dist_string, "uniform");
+    String dist_string("uniform");
+    dist_string.resize(32, ' ');
     num_params = 2;
     if (u_l_bnds[i] >= u_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
@@ -452,15 +433,16 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     }
     dist_params[0] = u_l_bnds[i];
     dist_params[1] = u_u_bnds[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(uniform)");
   }
 
   // loguniform uncertain
   for (i=0; i<num_luuv; ++i, ++cntr) {
     name_string = f77name16("Loguniform", cntr, lhs_names);
-    f77dist32(dist_string, "loguniform");
+    String dist_string("loguniform");
+    dist_string.resize(32, ' ');
     num_params = 2;
     if (lu_l_bnds[i] >= lu_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
@@ -470,15 +452,16 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     }
     dist_params[0] = lu_l_bnds[i];
     dist_params[1] = lu_u_bnds[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(loguniform)");
   }
 
   // triangular uncertain
   for (i=0; i<num_tuv; ++i, ++cntr) {
     name_string = f77name16("Triangular", cntr, lhs_names);
-    f77dist32(dist_string, "triangular");
+    String dist_string("triangular");
+    dist_string.resize(32, ' ');
     num_params = 3;
     if (t_l_bnds[i] >= t_u_bnds[i]) {
       PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
@@ -489,26 +472,28 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     dist_params[0] = t_l_bnds[i];
     dist_params[1] = t_modes[i];
     dist_params[2] = t_u_bnds[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(triangular)");
   }
 
   // exponential uncertain
   for (i=0; i<num_exuv; ++i, ++cntr) {
     name_string = f77name16("Exponential", cntr, lhs_names);
-    f77dist32(dist_string, "exponential");
+    String dist_string("exponential");
+    dist_string.resize(32, ' ');
     num_params = 1;
     dist_params[0] = 1./e_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(exponential)");
   }
 
   // beta uncertain
   for (i=0; i<num_beuv; ++i, ++cntr) {
     name_string = f77name16("Beta", cntr, lhs_names);
-    f77dist32(dist_string, "beta");
+    String dist_string("beta");
+    dist_string.resize(32, ' ');
     num_params = 4;
     if (b_l_bnds[i] >= b_u_bnds[i]) {
       PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly less "
@@ -520,56 +505,60 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     dist_params[1] = b_u_bnds[i];
     dist_params[2] = b_alphas[i];
     dist_params[3] = b_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(beta)");
   }
 
   // gamma uncertain
   for (i=0; i<num_gauv; ++i, ++cntr) {
     name_string = f77name16("Gamma", cntr, lhs_names);
-    f77dist32(dist_string, "gamma");
+    String dist_string("gamma");
+    dist_string.resize(32, ' ');
     num_params = 2;
     dist_params[0] = ga_alphas[i];
     dist_params[1] = 1./ga_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(gamma)");
   }
 
   // gumbel uncertain
   for (i=0; i<num_guuv; ++i, ++cntr) {
     name_string = f77name16("Gumbel", cntr, lhs_names);
-    f77dist32(dist_string, "gumbel");
+    String dist_string("gumbel");
+    dist_string.resize(32, ' ');
     num_params = 2;
     dist_params[0] = gu_alphas[i];
     dist_params[1] = gu_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(gumbel)");
   }
 
   // frechet uncertain
   for (i=0; i<num_fuv; ++i, ++cntr) {
     name_string = f77name16("Frechet", cntr, lhs_names);
-    f77dist32(dist_string, "frechet");
+    String dist_string("frechet");
+    dist_string.resize(32, ' ');
     num_params = 2;
     dist_params[0] = f_alphas[i];
     dist_params[1] = f_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(frechet)");
   }
 
   // weibull uncertain
   for (i=0; i<num_wuv; ++i, ++cntr) {
     name_string = f77name16("Weibull", cntr, lhs_names);
-    f77dist32(dist_string, "weibull");
+    String dist_string("weibull");
+    dist_string.resize(32, ' ');
     num_params = 2;
     dist_params[0] = w_alphas[i];
     dist_params[1] = w_betas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(weibull)");
   }
 
@@ -578,7 +567,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // in the second field is only important for unequal bin widths.
   for (i=0; i<num_hbuv; ++i, ++cntr) {
     name_string = f77name16("HistogramBin", cntr, lhs_names);
-    f77dist32(dist_string, "continuous linear");
+    String dist_string("continuous linear");
+    dist_string.resize(32, ' ');
     num_params = h_bin_prs[i].length()/2;
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
@@ -592,8 +582,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     y_val[0] = 0.;
     for (j=1; j<num_params; ++j)
       y_val[j] = y_val[j-1] + h_bin_prs[i][2*j-1];// / sum;
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(histogram bin)");
     delete [] x_val;
     delete [] y_val;
@@ -602,7 +592,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // interval uncertain: convert to histogram for sampling
   for (i=0; i<num_iuv; ++i, ++cntr) {
     name_string = f77name16("Interval", cntr, lhs_names);
-    f77dist32(dist_string, "continuous linear");
+    String dist_string("continuous linear");
+    dist_string.resize(32, ' ');
 
     // x_sort_unique is a set with ALL of the interval bounds for this variable
     // in increasing order and unique.  For example, if there are 2 intervals
@@ -664,8 +655,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       PCout << "x_val " << j << " is " << x_val[j] << "\ny_val " << j << " is "
 	    << y_val[j]<< '\n';
 #endif //DEBUG
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(interval)");
     delete [] x_val;
     delete [] y_val;
@@ -674,7 +665,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // continuous state (treated as uniform)
   for (i=0; i<num_csv; ++i, ++cntr) {
     name_string = f77name16("State", cntr, lhs_names);
-    f77dist32(dist_string, "uniform");
+    String dist_string("uniform");
+    dist_string.resize(32, ' ');
     num_params = 2;
     if (cs_l_bnds[i] > -DBL_MAX && cs_u_bnds[i] < DBL_MAX) {
       if (cs_l_bnds[i] >= cs_u_bnds[i]) {
@@ -691,8 +683,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 	    << "variables using uniform\n       distributions." << std::endl;
       abort_handler(-1);
     }
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(state)");
   }
 
@@ -702,7 +694,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // discrete design range (treated as discrete histogram)
   for (i=0; i<num_ddriv; ++i, ++cntr) {
     name_string = f77name16("DiscDesRange", cntr, lhs_names);
-    f77dist32(dist_string, "discrete histogram");
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
     if (ddri_l_bnds[i] > INT_MIN && ddri_u_bnds[i] < INT_MAX) {
       if (ddri_l_bnds[i] > ddri_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
@@ -718,8 +711,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 	x_val[j] = (Real)(lb_i+j);
 	y_val[j] = 1.;
       }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		    x_val, y_val, err_code, dist_num, pv_num);
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
       check_error(err_code, "lhs_udist(discrete design range)");
       delete [] x_val;
       delete [] y_val;
@@ -735,7 +728,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // discrete design set integer (treated as discrete histogram)
   for (i=0; i<num_ddsiv; ++i, ++cntr) {
     name_string = f77name16("DiscDesSetI", cntr, lhs_names);
-    f77dist32(dist_string, "discrete histogram");
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
     num_params = ddsi_values[i].size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
@@ -744,8 +738,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       x_val[j] = (Real)(*cit);
       y_val[j] = 1.;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(discrete design set int)");
     delete [] x_val;
     delete [] y_val;
@@ -754,67 +748,72 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // poisson uncertain
   for (i=0; i<num_puv; ++i, ++cntr) {
     name_string = f77name16("Poisson", cntr, lhs_names);
-    f77dist32(dist_string, "poisson");
+    String dist_string("poisson");
+    dist_string.resize(32, ' ');
     num_params = 1;
     dist_params[0] = p_lambdas[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(poisson)");
   }
 
   // binomial uncertain
   for (i=0; i<num_biuv; ++i, ++cntr) {
     name_string = f77name16("Binomial", cntr, lhs_names);
-    f77dist32(dist_string, "binomial");
+    String dist_string("binomial");
+    dist_string.resize(32, ' ');
     num_params = 2;
     dist_params[0] = bi_prob_per_tr[i];
     dist_params[1] = bi_num_tr[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(binomial)");
   }
 
   // negative binomial uncertain
   for (i=0; i<num_nbuv; ++i, ++cntr) {
     name_string = f77name16("NegBinomial", cntr, lhs_names);
-    f77dist32(dist_string, "negative binomial");
+    String dist_string("negative binomial");
+    dist_string.resize(32, ' ');
     num_params = 2;
     dist_params[0] = nb_prob_per_tr[i];
     dist_params[1] = nb_num_tr[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(negative binomial)");
   }
 
   // geometric uncertain
   for (i=0; i<num_geuv; ++i, ++cntr) {
     name_string = f77name16("Geometric", cntr, lhs_names);
-    f77dist32(dist_string, "geometric");
+    String dist_string("geometric");
+    dist_string.resize(32, ' ');
     num_params = 1;
     dist_params[0] = ge_prob_per_tr[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(geometric)");
   }
 
   // hypergeometric uncertain
   for (i=0; i<num_hguv; ++i, ++cntr) {
     name_string = f77name16("Hypergeom", cntr, lhs_names);
-    f77dist32(dist_string, "hypergeometric");
+    String dist_string("hypergeometric");
+    dist_string.resize(32, ' ');
     num_params = 3;
     dist_params[0] = hg_total_pop[i];
     dist_params[1] = hg_num_drawn[i];
     dist_params[2] = hg_selected_pop[i];
-    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string, dist_params,
-		 num_params, err_code, dist_num, pv_num);
+    LHS_DIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		 dist_params, num_params, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_dist(hypergeometric)");
   }
 
   // discrete state range (treated as discrete histogram)
   for (i=0; i<num_dsriv; ++i, ++cntr) {
-    // WJB - ToDo - consider "throwing exception" here: assert(cntr < 100);
     name_string = f77name16("DiscStateRange", cntr, lhs_names);
-    f77dist32(dist_string, "discrete histogram");
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
     if (dsri_l_bnds[i] > INT_MIN && dsri_u_bnds[i] < INT_MAX) {
       if (dsri_l_bnds[i] > dsri_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds <= upper "
@@ -830,8 +829,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 	x_val[j] = (Real)(lb_i+j);
 	y_val[j] = 1.;
       }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		    x_val, y_val, err_code, dist_num, pv_num);
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
       check_error(err_code, "lhs_udist(discrete state range)");
       delete [] x_val;
       delete [] y_val;
@@ -847,7 +846,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // discrete state set integer (treated as discrete histogram)
   for (i=0; i<num_dssiv; ++i, ++cntr) {
     name_string = f77name16("DiscStateSetI", cntr, lhs_names);
-    f77dist32(dist_string, "discrete histogram");
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
     num_params = dssi_values[i].size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
@@ -856,8 +856,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       x_val[j] = (Real)(*cit);
       y_val[j] = 1.;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(discrete state set int)");
     delete [] x_val;
     delete [] y_val;
@@ -869,7 +869,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // discrete design set real (treated as discrete histogram)
   for (i=0; i<num_ddsrv; ++i, ++cntr) {
     name_string = f77name16("DiscDesSetR", cntr, lhs_names);
-    f77dist32(dist_string, "discrete histogram");
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
     num_params = ddsr_values[i].size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
@@ -878,8 +879,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       x_val[j] = *cit;
       y_val[j] = 1.;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(discrete design set real)");
     delete [] x_val;
     delete [] y_val;
@@ -889,7 +890,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // the first field and a count in the second field.
   for (i=0; i<num_hpuv; ++i, ++cntr) {
     name_string = f77name16("HistogramPt", cntr, lhs_names);
-    f77dist32(dist_string, "discrete histogram");
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
     num_params = h_pt_prs[i].length()/2;
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
@@ -898,8 +900,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       x_val[j] = h_pt_prs[i][2*j];
       y_val[j] = h_pt_prs[i][2*j+1];
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(histogram pt)");
     delete [] x_val;
     delete [] y_val;
@@ -908,7 +910,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // discrete state set real (treated as discrete histogram)
   for (i=0; i<num_dssrv; ++i, ++cntr) {
     name_string = f77name16("DiscStateSetR", cntr, lhs_names);
-    f77dist32(dist_string, "discrete histogram");
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
     num_params = dssr_values[i].size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
@@ -917,8 +920,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       x_val[j] = *cit;
       y_val[j] = 1.;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string, num_params,
-		  x_val, y_val, err_code, dist_num, pv_num);
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(discrete state set real)");
     delete [] x_val;
     delete [] y_val;
@@ -954,14 +957,13 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // Create files showing distributions and associated statistics.  Avoid
   // issues with null-terminated strings from C++ (which mess up the Fortran
-  // output) by using ostrstreams without ends insertions.
-  char output_string[32], message_string[32], title_string[32],
-    options_string[32];
-  std::ostringstream output_stream, message_stream, title_stream,
-    options_stream;
-  output_stream  << "LHS_samples.out                 ";
-  message_stream << "LHS_distributions.out           ";
-  title_stream   << "Pecos::LHSDriver                ";
+  // output) by using std::string::data().
+  String output_string("LHS_samples.out");
+  output_string.resize(32, ' ');
+  String message_string("LHS_distributions.out");
+  message_string.resize(32, ' ');
+  String title_string("Pecos::LHSDriver");
+  title_string.resize(32, ' ');
   // From the LHS manual (p. 100): LHSRPTS is used to specify which reports LHS
   // will print in the message output file. If LHSRPTS is omitted, the message
   // file will contain only the title, run specifications, and descriptions of
@@ -977,20 +979,10 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // avoids numerical problems with generating input variable histogram plots
   // as trust regions become small in SBO (mainly an issue before conversion of
   // f90 LHS to double precision).
-  if (reportFlag)
-    options_stream << "LHSRPTS CORR HIST DATA          ";
-  else
-    options_stream << "                                ";
-  String output_s(output_stream.str());
-  std::copy(output_s.begin(), output_s.end(), output_string);
-  String message_s(message_stream.str());
-  std::copy(message_s.begin(), message_s.end(), message_string);
-  String title_s(title_stream.str());
-  std::copy(title_s.begin(), title_s.end(), title_string);
-  String options_s(options_stream.str());
-  std::copy(options_s.begin(), options_s.end(), options_string);
-  LHS_FILES2_FC(output_string, message_string, title_string, options_string,
-		err_code);
+  String options_string = (reportFlag) ? "LHSRPTS CORR HIST DATA" : " ";
+  options_string.resize(32, ' ');
+  LHS_FILES2_FC(output_string.data(), message_string.data(),
+                title_string.data(), options_string.data(), err_code);
   check_error(err_code, "lhs_files");
 
   // perform internal checks on input to LHS
