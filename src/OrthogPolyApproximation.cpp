@@ -286,11 +286,6 @@ void OrthogPolyApproximation::find_coefficients()
   // calculate polynomial chaos coefficients
   switch (expCoeffsSolnApproach) {
   case QUADRATURE: {
-    if (!driverRep) {
-      PCerr << "Error: pointer to integration driver required in "
-	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
-      abort_handler(-1);
-    }
     // verify quad_order stencil matches num_pts
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray& quad_order = tpq_driver->quadrature_order();
@@ -303,8 +298,7 @@ void OrthogPolyApproximation::find_coefficients()
     size_t num_gauss_pts = 1;
     for (i=0; i<numVars; ++i)
       num_gauss_pts *= quad_order[i];
-    if (num_pts != num_gauss_pts ||
-	num_pts != driverRep->weight_sets().length()) {
+    if (num_pts != num_gauss_pts) {
       PCerr << "Error: number of current points (" << num_pts << ") is not "
 	    << "consistent with\n       quadrature data in "
 	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
@@ -320,25 +314,43 @@ void OrthogPolyApproximation::find_coefficients()
     }
 #endif // DEBUG
 
-    integration();
+    // single expansion integration
+    integration_checks();
+    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
+			expansionCoeffs, expansionCoeffGrads);
     break;
   }
-  case CUBATURE: case SPARSE_GRID:
-    if (!driverRep) {
-      PCerr << "Error: pointer to integration driver required in "
-	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
-      abort_handler(-1);
-    }
-    if (num_pts != driverRep->weight_sets().length()) {
-      PCerr << "Error: number of current points (" << num_pts << ") is not "
-	    << "consistent with\n       number of weights from integration "
-	    << "driver in OrthogPolyApproximation::find_coefficients()."
-	    << std::endl;
-      abort_handler(-1);
-    }
-
-    integration();
+  case CUBATURE:
+    // single expansion integration
+    integration_checks();
+    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
+			expansionCoeffs, expansionCoeffGrads);
     break;
+  case SPARSE_GRID: {
+    // Note: allocate_arrays() calls sparse_grid_multi_index()
+    // --> which calls smolyak_multi_index() --> smolyak{MultiIndex,Coeffs}
+    // --> uses append_unique to define combined expansion multiIndex
+
+    // multiple expansion integration
+    integration_checks();
+    if (expansionCoeffFlag) expansionCoeffs = 0.;
+    if (expansionGradFlag)  expansionCoeffGrads = 0.;
+    size_t i, num_tensor_grids = smolyakCoeffs.size();
+    std::vector<SurrogateDataPoint> tp_data_points;
+    RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
+    // loop over tensor-products, forming sub-expansions, and sum them up
+    for (i=0; i<num_tensor_grids; ++i) {
+      const UShort2DArray& tp_multi_index = collocKey[i];
+      // form tp_data_points, tp_weights using collocKey et al.
+      integration_data(i, tp_data_points, tp_weights);
+      // form tp expansion coeffs
+      integrate_expansion(tp_multi_index, tp_data_points, tp_weights,
+			  tp_expansion, tp_expansion_grads);
+      // sum tp-expansions into expansionCoeffs/expansionCoeffGrads
+      add_unique(i, tp_expansion, tp_expansion_grads);
+    }
+    break;
+  }
   case REGRESSION:
     regression();
     break;
@@ -423,11 +435,7 @@ void OrthogPolyApproximation::allocate_arrays()
     ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
-    if (update_exp_form) {
-      // set sparseGridExpansion differently for isotropic vs. anisotropic SSG
-      sparseGridExpansion = (driverRep->isotropic()) ?
-	TOTAL_ORDER : TENSOR_PRODUCT_SUM;
-      // compute and output number of terms
+    if (update_exp_form) { // compute and output number of terms
       sparse_grid_multi_index(multiIndex);
       numExpansionTerms = multiIndex.size();
     }
@@ -520,8 +528,8 @@ void OrthogPolyApproximation::allocate_arrays()
   if (expansionCoeffFlag && expansionCoeffs.length() != numExpansionTerms)
     expansionCoeffs.sizeUninitialized(numExpansionTerms);
   if (expansionGradFlag) {
-    const SurrogateDataPoint& sdp = (anchorPoint.is_null()) ?
-      *dataPoints.begin() : anchorPoint;
+    const SurrogateDataPoint& sdp
+      = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
     size_t num_deriv_vars = sdp.response_gradient().length();
     if (expansionCoeffGrads.numRows() != num_deriv_vars ||
 	expansionCoeffGrads.numCols() != numExpansionTerms)
@@ -536,51 +544,52 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
 
   // Smolyak lower bound is w-n+1 --> offset is n-1
-  UShort2DArray sm_multi_index; RealArray sm_coeffs;
-  smolyak_multi_index(sm_multi_index, sm_coeffs);
-  size_t i, num_smolyak_indices = sm_multi_index.size();
+  //smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
+  size_t i, num_smolyak_indices = smolyakMultiIndex.size();
 #ifdef DEBUG
   PCout << "num_smolyak_indices = " << num_smolyak_indices
-	<< "\nsm_multi_index =\n" << sm_multi_index << '\n';
+	<< "\nsmolyakMultiIndex =\n" << smolyakMultiIndex << '\n';
 #endif // DEBUG
 
-  UShortArray integrand_order(numVars);
   if (sparseGridExpansion == TENSOR_PRODUCT_SUM) {
     // assemble a complete list of individual polynomial coverage
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
-    UShort2DArray tp_multi_index;
-    UShortArray expansion_order(numVars);
+    tpMultiIndexMap.clear();
+    //UShort2DArray tp_multi_index;
+    //UShortArray integrand_order(numVars), expansion_order(numVars);
     for (i=0; i<num_smolyak_indices; ++i) {
+      /*
       // enforce moderate linear integrand growth (for now)
       // TO DO: allow use of SLOW_RESTRICTED_GROWTH
-      level_growth_to_integrand_order(sm_multi_index[i],
+      level_growth_to_integrand_order(smolyakMultiIndex[i],
 	MODERATE_RESTRICTED_GROWTH, integrand_order);
       integrand_order_to_expansion_order(integrand_order, expansion_order);
       tensor_product_multi_index(expansion_order, tp_multi_index, true);
       append_unique(tp_multi_index, multi_index);
 #ifdef DEBUG
-      PCout << "level =\n" << sm_multi_index[i]
-          //<< "quadrature_order =\n" << quad_order
+      PCout << "level =\n" << smolyakMultiIndex[i]
 	    << "integrand_order =\n" << integrand_order
 	    << "expansion_order =\n" << expansion_order << "tp_multi_index =\n"
 	    << tp_multi_index << '\n';//<< "multi_index =\n" << multi_index;
 #endif // DEBUG
       tp_multi_index.clear();
+      */
+      append_unique(collocKey[i], multi_index);
     }
   }
   else if (sparseGridExpansion == TOTAL_ORDER) {
     // back out approxOrder & use total_order_multi_index()
-    UShortArray quad_order(numVars);
+    UShortArray integrand_order(numVars), quad_order(numVars);
     UShort2DArray pareto(1), total_pareto;
     for (i=0; i<num_smolyak_indices; ++i) {
-      ssg_driver->level_to_order(sm_multi_index[i], quad_order);
+      ssg_driver->level_to_order(smolyakMultiIndex[i], quad_order);
       quadrature_order_to_integrand_order(quad_order, integrand_order);
       // maintain an n-dimensional Pareto front of nondominated multi-indices
       pareto[0] = integrand_order;
       update_pareto(pareto, total_pareto);
 #ifdef DEBUG
-      PCout << "level =\n" << sm_multi_index[i] << "\nquad_order =\n"
+      PCout << "level =\n" << smolyakMultiIndex[i] << "\nquad_order =\n"
 	    << quad_order << "\nintegrand_order =\n" << integrand_order << '\n';
 #endif // DEBUG
     }
@@ -836,18 +845,52 @@ integrand_order_to_expansion_order(const UShortArray& int_order,
 
 
 void OrthogPolyApproximation::
+add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
+	   const RealMatrix& tp_expansion_grads)
+{
+  size_t i, j, index, num_tp_terms = (expansionCoeffFlag) ? 
+    tp_expansion_coeffs.length() : tp_expansion_grads.numCols();
+  const Real&       sm_coeff  = smolyakCoeffs[tp_index];
+  const SizetArray& tp_mi_map = tpMultiIndexMap[tp_index];
+  for (i=0; i<num_tp_terms; ++i) {
+    index = tp_mi_map[i];
+    if (expansionCoeffFlag)
+      expansionCoeffs[index] += sm_coeff * tp_expansion_coeffs[i];
+    if (expansionGradFlag) {
+      size_t      num_deriv_vars = expansionCoeffGrads.numRows();
+      Real*       exp_grad_ndx   = expansionCoeffGrads[index];
+      const Real* tp_grad_i      = tp_expansion_grads[i];
+      for (j=0; j<num_deriv_vars; ++j)
+	exp_grad_ndx[j] += sm_coeff * tp_grad_i[j];
+    }
+  }
+}
+
+
+void OrthogPolyApproximation::
 append_unique(const UShort2DArray& tp_multi_index, UShort2DArray& multi_index)
 {
-  if (multi_index.empty())
+  size_t i, num_tp_mi = tp_multi_index.size();
+  if (multi_index.empty()) {
     multi_index = tp_multi_index;
+    tpMultiIndexMap.resize(1); tpMultiIndexMap[0].resize(num_tp_mi);
+    for (i=0; i<num_tp_mi; ++i)
+      tpMultiIndexMap[0][i] = i;
+  }
   else {
-    size_t i, num_tp_mi = tp_multi_index.size();
+    SizetArray tp_mi_map(num_tp_mi);
     for (i=0; i<num_tp_mi; ++i) {
       const UShortArray& search_mi = tp_multi_index[i];
-      if (std::find(multi_index.begin(), multi_index.end(), search_mi) ==
-	  multi_index.end()) // search_mi does not yet exist in multi_index
+      // TO DO: make this more efficient
+      size_t index = find_index(multi_index, search_mi);
+      if (index == _NPOS) { // search_mi does not yet exist in multi_index
+	tp_mi_map[i] = multi_index.size();
 	multi_index.push_back(search_mi);
+      }
+      else
+	tp_mi_map[i] = index;
     }
+    tpMultiIndexMap.push_back(tp_mi_map);
   }
 }
 
@@ -933,6 +976,52 @@ assess_dominance(const UShortArray& new_order,
 }
 
 
+void OrthogPolyApproximation::integration_checks()
+{
+  if (!anchorPoint.is_null()) { // TO DO: verify this creates a problem
+    PCerr << "Error: anchor point not supported for numerical integration in "
+	  << "OrthogPolyApproximation::integration()." << std::endl;
+    abort_handler(-1);
+  }
+  if (!driverRep) {
+    PCerr << "Error: pointer to integration driver required in "
+	  << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+  size_t num_pts = dataPoints.size();
+  if (num_pts != driverRep->weight_sets().length()) {
+    PCerr << "Error: number of current points (" << num_pts << ") is not "
+	  << "consistent with\n       number of weights from integration driver"
+	  << " in OrthogPolyApproximation::find_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void OrthogPolyApproximation::
+integration_data(size_t tp_index,
+		 std::vector<SurrogateDataPoint>& tp_data_points,
+		 RealVector& tp_weights)
+{
+  // extract tensor points from dataPoints and tensor weights from gaussWts1D
+  const UShort2DArray& tp_mi        = collocKey[tp_index];
+  const UShortArray&   sm_index     = smolyakMultiIndex[tp_index];
+  const SizetArray&    coeff_index  = expansionCoeffIndices[tp_index];
+  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  size_t i, j, num_tp_pts = coeff_index.size();
+  tp_data_points.resize(num_tp_pts); tp_weights.resize(num_tp_pts);
+  for (i=0; i<num_tp_pts; ++i) {
+    // tensor-product point
+    tp_data_points[i] = dataPoints[coeff_index[i]];
+    // tensor-product weight
+    Real& tp_wts_i = tp_weights[i]; tp_wts_i = 1.;
+    const UShortArray& tp_mi_i = tp_mi[i];
+    for (j=0; j<numVars; ++j)
+      tp_wts_i *= gauss_wts_1d[j][sm_index[j]][tp_mi_i[j]];
+  }
+}
+
+
 /** The coefficients of the PCE for the response are calculated using a
     Galerkin projection of the response against each multivariate orthogonal
     polynomial basis fn using the inner product ratio <f,Psi>/<Psi^2>, where
@@ -941,62 +1030,72 @@ assess_dominance(const UShortArray& new_order,
     1-D quadrature rules are defined for specific 1-D weighting functions
     and support ranges and approximate the integral of f*weighting as the
     Sum_i of w_i f_i.  To extend this to n-dimensions, a tensor product
-    quadrature rule or Smolyak sparse grid rule is applied using the product
-    of 1-D weightings applied to the n-dimensional stencil of points.  It is
-    not necessary to approximate the integral for the denominator numerically,
-    since this is available analytically. */
-void OrthogPolyApproximation::integration()
+    quadrature rule, cubature, or Smolyak sparse grid rule is applied.  
+    It is not necessary to approximate the integral for the denominator
+    numerically, since this is available analytically. */
+void OrthogPolyApproximation::
+integrate_expansion(const UShort2DArray& multi_index,
+		    const std::vector<SurrogateDataPoint>& data_pts,
+		    const RealVector& wt_sets, RealVector& exp_coeffs,
+		    RealMatrix& exp_coeff_grads)
 {
-  if (!anchorPoint.is_null()) { // TO DO: verify this creates a problem
-    PCerr << "Error: anchor point not supported for numerical integration in "
-	  << "OrthogPolyApproximation::integration()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // Perform numerical integration via tensor-product quadrature/
-  // cubature/Smolyak sparse grids using point & weight sets computed
-  // in TensorProductDriver/CubatureDriver/SparseGridDriver.
-  size_t i, j, k, num_deriv_vars = expansionCoeffGrads.numRows();
-  const RealVector& wt_sets = driverRep->weight_sets();
-  std::list<SurrogateDataPoint>::iterator it;
+  // Perform numerical integration via tensor-product quadrature/cubature/
+  // Smolyak sparse grids.  Quadrature/cubature use a single application of
+  // point and weight sets computed by TensorProductDriver/CubatureDriver, and
+  // sparse grids could do this as well, but it is better to integrate the
+  // sparse grid on a per-tensor-product basis folowed by summing the
+  // corresponding PC expansions.
+  std::vector<SurrogateDataPoint>::const_iterator cit;
+  size_t i, j, k, num_exp_terms = multi_index.size(),
+    num_deriv_vars = exp_coeff_grads.numRows();
   Real wt_resp_fn_i, Psi_ij; Real* exp_grad;
   RealVector wt_resp_grad_i;
-  if (expansionCoeffFlag) expansionCoeffs = 0.;
+  if (expansionCoeffFlag) { // shape if needed and zero out
+    if (exp_coeffs.length() != num_exp_terms)
+      exp_coeffs.size(num_exp_terms); // init to 0
+    else
+      exp_coeffs = 0.;
+  }
   if (expansionGradFlag) {
-    expansionCoeffGrads = 0.;
+    if (exp_coeff_grads.numRows() != num_deriv_vars ||
+	exp_coeff_grads.numCols() != num_exp_terms)
+      exp_coeff_grads.shape(num_deriv_vars, num_exp_terms); // init to 0
+    else
+      exp_coeff_grads = 0.;
     wt_resp_grad_i.sizeUninitialized(num_deriv_vars);
   }
-  for (i=0, it=dataPoints.begin(); it!=dataPoints.end(); ++i, ++it) {
+  for (i=0, cit=data_pts.begin(); cit!=data_pts.end(); ++i, ++cit) {
     if (expansionCoeffFlag)
-      wt_resp_fn_i = wt_sets[i] * it->response_function();
+      wt_resp_fn_i = wt_sets[i] * cit->response_function();
     if (expansionGradFlag) {
-      wt_resp_grad_i = it->response_gradient(); // copy
+      wt_resp_grad_i = cit->response_gradient(); // copy
       wt_resp_grad_i.scale(wt_sets[i]);
     }
-    const RealVector& c_vars_i = it->continuous_variables();
-    for (j=0; j<numExpansionTerms; ++j) {
-      Psi_ij = multivariate_polynomial(c_vars_i, j);
+    const RealVector& c_vars_i = cit->continuous_variables();
+    for (j=0; j<num_exp_terms; ++j) {
+      Psi_ij = multivariate_polynomial(c_vars_i, multi_index[j]);
       if (expansionCoeffFlag)
-	expansionCoeffs[j] += Psi_ij * wt_resp_fn_i;
+	exp_coeffs[j] += Psi_ij * wt_resp_fn_i;
       if (expansionGradFlag) {
-	exp_grad = expansionCoeffGrads[j];
+	exp_grad = exp_coeff_grads[j];
 	for (k=0; k<num_deriv_vars; ++k)
 	  exp_grad[k] += Psi_ij * wt_resp_grad_i[k];
       }
     }
   }
-  for (i=0; i<numExpansionTerms; ++i) {
-    const Real& norm_sq = norm_squared(i);
+
+  for (i=0; i<num_exp_terms; ++i) {
+    const Real& norm_sq = norm_squared(multi_index[i]);
     if (expansionCoeffFlag)
-      expansionCoeffs[i] /= norm_sq;
+      exp_coeffs[i] /= norm_sq;
     if (expansionGradFlag) {
-      exp_grad = expansionCoeffGrads[i];
+      exp_grad = exp_coeff_grads[i];
       for (k=0; k<num_deriv_vars; ++k)
 	exp_grad[k] /= norm_sq;
     }
 #ifdef DEBUG
-    PCout << "coeff[" << i <<"] = " << expansionCoeffs[i]
-        //<< "coeff_grad[" << i <<"] = " << expansionCoeffGrads[i]
+    PCout << "coeff[" << i <<"] = " << exp_coeffs[i]
+        //<< "coeff_grad[" << i <<"] = " << exp_coeff_grads[i]
 	  << " norm squared[" << i <<"] = " << norm_sq << "\n\n";
 #endif // DEBUG
   }
@@ -1018,7 +1117,7 @@ void OrthogPolyApproximation::regression()
   int num_cols_A = numExpansionTerms; // Number of columns in matrix A
   // Matrix of polynomial terms unrolled into a vector.
   double* A_matrix = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
-  std::list<SurrogateDataPoint>::iterator it;
+  std::vector<SurrogateDataPoint>::iterator it;
   Teuchos::LAPACK<int, Real> la;
   bool err_flag = false;
 
@@ -1052,7 +1151,8 @@ void OrthogPolyApproximation::regression()
     // A(1,2), A(2,2), A(1,3), A(2,3).
     for (i=0; i<numExpansionTerms; ++i)
       for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++cntr)
-	A_matrix[cntr] = multivariate_polynomial(it->continuous_variables(), i);
+	A_matrix[cntr] = multivariate_polynomial(it->continuous_variables(),
+						 multiIndex[i]);
 
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_pts (rows) x num_rhs (cols),
@@ -1120,10 +1220,10 @@ void OrthogPolyApproximation::regression()
       // by F77 for the GGLSE subroutine from LAPACK.
       for (i=0; i<numExpansionTerms; ++i) {
 	for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++cntr)
-	  A_matrix[cntr]
-	    = multivariate_polynomial(it->continuous_variables(), i);
-	C_matrix[i]
-	  = multivariate_polynomial(anchorPoint.continuous_variables(), i);
+	  A_matrix[cntr] = multivariate_polynomial(it->continuous_variables(),
+						   multiIndex[i]);
+	C_matrix[i] = multivariate_polynomial(
+	  anchorPoint.continuous_variables(), multiIndex[i]);
       }
       for (it=dataPoints.begin(), i=0; it!=dataPoints.end(); ++it, ++i)
 	b_vector[i] = it->response_function();
@@ -1146,10 +1246,10 @@ void OrthogPolyApproximation::regression()
 	cntr = 0;
 	for (i=0; i<numExpansionTerms; ++i) {
 	  for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++cntr)
-	    A_matrix[cntr]
-	      = multivariate_polynomial(it->continuous_variables(), i);
-	  C_matrix[i]
-	    = multivariate_polynomial(anchorPoint.continuous_variables(), i);
+	    A_matrix[cntr] = multivariate_polynomial(it->continuous_variables(),
+						     multiIndex[i]);
+	  C_matrix[i] = multivariate_polynomial(
+	    anchorPoint.continuous_variables(), multiIndex[i]);
 	}
 	// the Ax=b RHS is the dataPoints values for the i-th grad component
 	for (j=0, it=dataPoints.begin(); j<num_rows_A; ++j, ++it)
@@ -1198,7 +1298,7 @@ void OrthogPolyApproximation::regression()
 void OrthogPolyApproximation::expectation()
 {
   // "lhs" or "random", no weights needed
-  std::list<SurrogateDataPoint>::iterator it;
+  std::vector<SurrogateDataPoint>::iterator it;
   size_t i, j, num_pts = dataPoints.size(),
     num_deriv_vars = expansionCoeffGrads.numRows();
   if (!anchorPoint.is_null())
@@ -1210,15 +1310,16 @@ void OrthogPolyApproximation::expectation()
   for (i=0; i<numExpansionTerms; ++i) {
     Real& exp_coeff_i = expansionCoeffs[i];
     exp_coeff_i = (anchorPoint.is_null()) ? 0.0 :
-      anchorPoint.response_function() *
-      multivariate_polynomial(anchorPoint.continuous_variables(), i);
+      anchorPoint.response_function() * multivariate_polynomial(
+        anchorPoint.continuous_variables(), multiIndex[i]);
     for (it=dataPoints.begin(); it!=dataPoints.end(); ++it)
       exp_coeff_i += it->response_function() * 
-        multivariate_polynomial(it->continuous_variables(), i);
-    exp_coeff_i /= num_pts * norm_squared(i);
+        multivariate_polynomial(it->continuous_variables(), multiIndex[i]);
+    exp_coeff_i /= num_pts * norm_squared(multiIndex[i]);
 #ifdef DEBUG
     PCout << "coeff[" << i << "] = " << exp_coeff_i
-	  << " norm squared[" << i <<"] = " << norm_squared(i) << '\n';
+	  << " norm squared[" << i <<"] = " << norm_squared(multiIndex[i])
+	  << '\n';
 #endif // DEBUG
   }
   */
@@ -1266,7 +1367,7 @@ void OrthogPolyApproximation::expectation()
     }
     const RealVector& c_vars = anchorPoint.continuous_variables();
     for (i=1; i<numExpansionTerms; ++i) {
-      chaos_sample = multivariate_polynomial(c_vars, i);
+      chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
       if (expansionCoeffFlag)
 	expansionCoeffs[i] = resp_fn_minus_mean * chaos_sample;
       if (expansionGradFlag) {
@@ -1286,7 +1387,7 @@ void OrthogPolyApproximation::expectation()
     }
     const RealVector& c_vars = it->continuous_variables();
     for (i=1; i<numExpansionTerms; ++i) {
-      chaos_sample = multivariate_polynomial(c_vars, i);
+      chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
       if (expansionCoeffFlag)
 	expansionCoeffs[i] += resp_fn_minus_mean * chaos_sample;
       if (expansionGradFlag) {
@@ -1297,7 +1398,7 @@ void OrthogPolyApproximation::expectation()
     }
   }
   for (i=1; i<numExpansionTerms; ++i) {
-    term = num_pts * norm_squared(i);
+    term = num_pts * norm_squared(multiIndex[i]);
     if (expansionCoeffFlag)
       expansionCoeffs[i] /= term;
     if (expansionGradFlag) {
@@ -1308,7 +1409,8 @@ void OrthogPolyApproximation::expectation()
 #ifdef DEBUG
     PCout << "coeff[" << i << "] = " << expansionCoeffs[i]
         //<< "coeff_grad[" << i <<"] = " << exp_grad_i
-	  << " norm squared[" << i <<"] = " << norm_squared(i) << '\n';
+	  << " norm squared[" << i <<"] = " << norm_squared(multiIndex[i])
+	  << '\n';
 #endif // DEBUG
   }
 }
@@ -1592,7 +1694,8 @@ get_covariance(const RealVector& exp_coeffs_2)
 {
   expansionVariance = 0.0;
   for (size_t i=1; i<numExpansionTerms; ++i)
-    expansionVariance += expansionCoeffs[i] * exp_coeffs_2[i] * norm_squared(i);
+    expansionVariance += expansionCoeffs[i] * exp_coeffs_2[i] *
+      norm_squared(multiIndex[i]);
   return expansionVariance;
 }
 
@@ -1620,7 +1723,7 @@ const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
       if (multiIndex[i][*it]) // term does not appear in mean(nr)
 	{ include_i = true; break; }
     if (include_i) {
-      Real norm_sq_i = norm_squared_random(i);
+      Real norm_sq_i = norm_squared_random(multiIndex[i]);
       for (j=1; j<numExpansionTerms; ++j) {
 
 	// random part of polynomial must be identical to contribute to variance
@@ -1682,7 +1785,7 @@ const RealVector& OrthogPolyApproximation::get_variance_gradient()
     expansionVarianceGrad.sizeUninitialized(num_deriv_vars);
   expansionVarianceGrad = 0.0;
   for (i=1; i<numExpansionTerms; ++i) {
-    Real term_i = 2. * expansionCoeffs[i] * norm_squared(i);
+    Real term_i = 2. * expansionCoeffs[i] * norm_squared(multiIndex[i]);
     for (j=0; j<num_deriv_vars; ++j)
       expansionVarianceGrad[j] += term_i * expansionCoeffGrads[i][j];
   }
@@ -1727,7 +1830,7 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
 	if (multiIndex[j][*it]) // term does not appear in mean(nr)
 	  { include_j = true; break; }
       if (include_j) {
-	Real norm_sq_j = norm_squared_random(j);
+	Real norm_sq_j = norm_squared_random(multiIndex[j]);
 	for (k=1; k<numExpansionTerms; ++k) {
 	  // random part of polynomial must be identical to contribute to
 	  // variance (else orthogonality drops term)
@@ -1825,14 +1928,14 @@ void OrthogPolyApproximation::gradient_check()
 }
 
 
-const Real& OrthogPolyApproximation::norm_squared(size_t expansion_index)
+const Real& OrthogPolyApproximation::norm_squared(const UShortArray& indices)
 {
   // the norm squared of a particular multivariate polynomial is the product of
   // the norms squared of the numVars univariate polynomials that comprise it.
   multiPolyNormSq = 1.0;
   unsigned short order;
   for (size_t i=0; i<numVars; ++i) {
-    order = multiIndex[expansion_index][i];
+    order = indices[i];
     if (order)
       multiPolyNormSq *= polynomialBasis[i].norm_squared(order);
   }
@@ -1840,7 +1943,8 @@ const Real& OrthogPolyApproximation::norm_squared(size_t expansion_index)
 }
 
 
-const Real& OrthogPolyApproximation::norm_squared_random(size_t expansion_index)
+const Real& OrthogPolyApproximation::
+norm_squared_random(const UShortArray& indices)
 {
   // the norm squared of a particular multivariate polynomial is the product of
   // the norms squared of the numVars univariate polynomials that comprise it.
@@ -1848,7 +1952,7 @@ const Real& OrthogPolyApproximation::norm_squared_random(size_t expansion_index)
   unsigned short order;
   for (size_t i=0; i<numVars; ++i) {
     if (randomVarsKey[i]) {
-      order = multiIndex[expansion_index][i];
+      order = indices[i];
       if (order)
 	multiPolyNormSq *= polynomialBasis[i].norm_squared(order);
     }
@@ -1874,7 +1978,7 @@ void OrthogPolyApproximation::compute_global_sensitivity()
   // variables and non-probabilistic variables
   Real p_var = 0;
   for (i=1; i<numExpansionTerms; i++) 
-    p_var += norm_squared(i)*expansionCoeffs(i)*expansionCoeffs(i);
+    p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
 
   // iterate through multiIndex and store sensitivities
   sobolIndices      = 0.;
@@ -1882,7 +1986,8 @@ void OrthogPolyApproximation::compute_global_sensitivity()
   totalSobolIndices = 0.;
   for (i=1; i<numExpansionTerms; ++i) {
     index_bin = 0;
-    Real p_var_i = norm_squared(i)*expansionCoeffs(i)*expansionCoeffs(i)/p_var;
+    Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
+      expansionCoeffs(i) / p_var;
     for (j=0; j<numVars; ++j) {
       if (multiIndex[i][j]) {
 	// convert this subset multiIndex[i] into binary number

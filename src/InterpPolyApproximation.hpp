@@ -163,24 +163,6 @@ private:
   /// expansion (length of expansionCoeffs)
   int numCollocPts;
 
-  /// numSmolyakIndices-by-numVars array for identifying the index to use
-  /// within the polynomialBasis for a particular variable
-  /** The index sets correspond to j (0-based) for use as indices, which are
-      offset from the i indices (1-based) normally used in the Smolyak
-      expressions.  For quadrature, the indices are zero (irrespective of
-      integration order) since there is one polynomialBasis per variable; for
-      sparse grid, the index corresponds to level - 1 within each anisotropic
-      tensor-product integration of a Smolyak recursion. */
-  UShort2DArray smolyakMultiIndex;
-  /// precomputed array of Smolyak combinatorial coefficients
-  RealArray smolyakCoeffs;
-  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
-  /// the 1-D interpolant indices for sets of tensor-product collocation points.
-  UShort3DArray collocKey;
-  /// numSmolyakIndices-by-numTensorProductPts array for linking the
-  /// set of tensor products to the expansionCoeffs array.
-  Sizet2DArray expansionCoeffIndices;
-
   /// the value of a tensor-product interpolant; a contributor to approxValue
   Real tpValue;
   /// the gradient of a tensor-product interpolant; a contributor to

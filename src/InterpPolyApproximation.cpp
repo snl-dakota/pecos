@@ -65,7 +65,7 @@ void InterpPolyApproximation::find_coefficients()
       Teuchos::setCol(anchorPoint.response_gradient(), 0, expansionCoeffGrads);
   }
 
-  std::list<SurrogateDataPoint>::iterator it = dataPoints.begin();
+  std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   for (i=offset; i<numCollocPts; ++i, ++it) {
     if (expansionCoeffFlag)
       expansionCoeffs[i] = it->response_function();
@@ -82,8 +82,8 @@ void InterpPolyApproximation::allocate_arrays()
   if (expansionCoeffFlag && expansionCoeffs.length() != numCollocPts)
     expansionCoeffs.sizeUninitialized(numCollocPts);
   if (expansionGradFlag) {
-    const SurrogateDataPoint& sdp = (anchorPoint.is_null()) ?
-      *dataPoints.begin() : anchorPoint;
+    const SurrogateDataPoint& sdp
+      = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
     size_t num_deriv_vars = sdp.response_gradient().length();
     if (expansionCoeffGrads.numRows() != num_deriv_vars ||
 	expansionCoeffGrads.numCols() != numCollocPts)
@@ -165,14 +165,12 @@ void InterpPolyApproximation::allocate_arrays()
     const RealVector& aniso_wts  = driverRep->anisotropic_weights();
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     unsigned short    ssg_level  = ssg_driver->level();
-    bool update_exp_form
+    bool update_basis_form
       = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
     ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     // *** TO DO: capture updates to parameterized/numerical polynomials
-    bool update_basis_form = update_exp_form;
     // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
 
-    size_t i, j, k;
     if (update_basis_form) {
       // size and initialize polynomialBasis, multiple interpolants per variable
       if (polynomialBasis.empty())
@@ -180,6 +178,7 @@ void InterpPolyApproximation::allocate_arrays()
       // j range is 0:w inclusive; i range is 1:w+1 inclusive
       unsigned short num_levels = ssg_level + 1;
       const Real3DArray& gauss_pts_1d = driverRep->gauss_points_array();
+      size_t i, j, k;
       for (i=0; i<numVars; i++) {
 	polynomialBasis[i].resize(num_levels);
 	for (j=0; j<num_levels; j++) { // j->num_levels-1->ssg_level
@@ -195,104 +194,6 @@ void InterpPolyApproximation::allocate_arrays()
 	    polynomialBasis[i][j] = BasisPolynomial(LAGRANGE);
 	    polynomialBasis[i][j].interpolation_points(gauss_pts_1d[i][j]);
 	  }
-	}
-      }
-    }
-
-    if (update_exp_form) {
-      // Populate smolyakMultiIndex for use in forming interpolants.  Identifies
-      // use of polynomialBasis[variable][index] based on index 0:num_levels-1.
-      // Implementation is adapted from OrthogPolyApproximation::multiIndex.
-      // w = q - N = dimension-independent level.  For isotropic,
-      //   w + 1 <= |i| <= w + N for i starts at 1 (used for index set defn.)
-      //   w - N + 1 <= |j| <= w for j = i - 1 starts at 0 (used for generation)
-      // For anisotropic, a weighted linear index set constraint is used.
-      smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
-
-      // define mapping from 1:numCollocPts to set of 1d interpolation indices
-      size_t num_smolyak_indices = smolyakMultiIndex.size();
-      collocKey.resize(num_smolyak_indices);
-      expansionCoeffIndices.resize(num_smolyak_indices);
-      UShortArray quad_order(numVars); //, gauss_indices(numVars);
-      //IntArray key(2*numVars);
-      //unsigned short closed_order_max;
-      //ssg_driver->level_to_order_closed_exponential(ssg_level,
-      //  closed_order_max);
-      //const IntArray& rules = driverRep->integration_rules();
-      //const IntArraySizetMap& index_map = ssg_driver->index_map();
-      const IntArray& unique_mapping = ssg_driver->unique_index_mapping();
-      size_t cntr = 0;
-      for (i=0; i<num_smolyak_indices; i++) {
-	//const UShortArray& sm_index_i = smolyakMultiIndex[i];
-	ssg_driver->level_to_order(smolyakMultiIndex[i], quad_order);
-
-	size_t num_tp_pts = tensor_product_terms(quad_order);
-	UShort2DArray& colloc_key_i = collocKey[i];
-	colloc_key_i.resize(num_tp_pts);
-	tensor_product_multi_index(quad_order, colloc_key_i);
-
-	SizetArray& coeff_map_i = expansionCoeffIndices[i];
-	coeff_map_i.resize(num_tp_pts);
-        //gauss_indices = 0;
-	for (j=0; j<num_tp_pts; j++) {
-	  coeff_map_i[j]  = unique_mapping[cntr++];
-
-	  /*
-	  // update expansionCoeffIndices: sparse grid nesting of points may be
-	  // tracked by demoting each point to its lowest order representation
-	  // or by promoting each point to the highest order grid.
-	  for (k=0; k<numVars; k++) {
-	    switch (rules[k]) {
-	    // For open weakly-nested rules (Gauss-Hermite, Gauss-Legendre),
-	    // demote to order=1,index=0 if a center pt for a particular order>1
-	    case GAUSS_HERMITE: case GAUSS_LEGENDRE:
-	      if (numVars > 1 && quad_order[k] > 1 &&
-		  gauss_indices[k] == (quad_order[k]-1)/2) // demoted base/index
-		{ key[k] = 1;        key[k+numVars] = 0; }
-	      else                                    // original base/index
-		{ key[k] = quad_order[k]; key[k+numVars] = gauss_indices[k]; }
-	      break;
-	    // For closed nested rules (Clenshaw-Curtis), base is a dummy and
-	    // index is promoted to the highest order grid
-	    case CLENSHAW_CURTIS:
-	      key[k] = closed_order_max; // promoted base
-	      if (sm_index_i[k] == 0)
-		key[k+numVars] = (closed_order_max-1)/2;      // promoted index
-	      else {
-		key[k+numVars] = gauss_indices[k];
-		unsigned short delta_w = ssg_level - sm_index_i[k];
-		if (delta_w)
-		  key[k+numVars] *= (size_t)pow(2., delta_w); // promoted index
-	      }
-	      break;
-	    // For open non-nested rules (Gauss-Laguerre), no modification reqd
-            // Note: might need to check for symmetric cases of Gauss-Jacobi
-	    default: // original base/index
-	      key[k] = quad_order[k]; key[k+numVars] = gauss_indices[k];
-	      break;
-	    }
-	  }
-#ifdef DEBUG
-	  PCout << "lookup key:\n" << key << std::endl;
-#endif // DEBUG
-	  IntArraySizetMap::const_iterator cit = index_map.find(key);
-	  if (cit == index_map.end()) {
-	    PCerr << "Error: lookup on sparse grid index map failed in "
-	          << "InterpPolyApproximation::find_coefficients()"
-		  << std::endl;
-	    abort_handler(-1);
-	  }
-	  else
-	    coeff_map_i[j] = cit->second;
-
-	  // increment the n-dimensional gauss point index set
-	  increment_indices(gauss_indices, quad_order, true);
-	  */
-#ifdef DEBUG
-	  PCout << "collocKey[" << i << "][" << j << "]:\n" << colloc_key_i[j]
-		<< "expansionCoeffIndices[" << i << "][" << j << "] = "
-		<< coeff_map_i[j] << '\n';
-#endif // DEBUG
 	}
       }
     }

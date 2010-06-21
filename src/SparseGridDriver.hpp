@@ -105,11 +105,11 @@ public:
   const IntArray& unique_index_mapping() const;
 
   /// converts an array of sparse grid levels to an array of
-  /// integration orders based on integrationRules
+  /// quadrature orders based on integrationRules/growthRules
   void level_to_order(size_t i, unsigned short level,
 		      unsigned short& order);
   /// converts an array of sparse grid levels to an array of
-  /// integration orders based on integrationRules
+  /// quadrature orders based on integrationRules/growthRules
   void level_to_order(const UShortArray& levels, UShortArray& orders);
 
 private:

@@ -163,10 +163,10 @@ protected:
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as random
-  const Real& norm_squared(size_t expansion_index);
+  const Real& norm_squared(const UShortArray& indices);
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating a subset of the variables as random
-  const Real& norm_squared_random(size_t expansion_index);
+  const Real& norm_squared_random(const UShortArray& indices);
 
 private:
 
@@ -195,6 +195,10 @@ private:
   /// appear in multi_index
   void append_unique(const UShort2DArray& tp_multi_index,
 		     UShort2DArray& multi_index);
+  /// add tp_expansion_coeffs/tp_expansion_grads contribution to
+  /// expansion_coeffs/expansion_grads
+  void add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
+		  const RealMatrix& tp_expansion_grads);
   /// update the total Pareto set with new Pareto-optimal polynomial indices
   void update_pareto(const UShort2DArray& new_pareto,
 		     UShort2DArray& total_pareto);
@@ -209,17 +213,28 @@ private:
 
   /// calculate a particular multivariate orthogonal polynomial
   /// evaluated at a particular parameter set
-  Real multivariate_polynomial(const RealVector& x, size_t term);
+  Real multivariate_polynomial(const RealVector& x, const UShortArray& indices);
 
-  /// computes the chaosCoeffs via numerical integration
-  /// (expCoeffsSolnApproach is QUADRATURE or SPARSE_GRID)
-  void integration();
   /// computes the chaosCoeffs via linear regression
   /// (expCoeffsSolnApproach is REGRESSION)
   void regression();
   /// computes the chaosCoeffs via averaging of samples
   /// (expCoeffsSolnApproach is SAMPLING)
   void expectation();
+
+  /// perform sanity checks prior to numerical integration
+  void integration_checks();
+  /// extract tp_data_points from dataPoints and tp_weights from
+  /// driverRep->gaussWts1D
+  void integration_data(size_t tp_index,
+			std::vector<SurrogateDataPoint>& tp_data_points,
+			RealVector& tp_weights);
+  /// computes the chaosCoeffs via numerical integration
+  /// (expCoeffsSolnApproach is QUADRATURE, CUBATURE, or SPARSE_GRID)
+  void integrate_expansion(const UShort2DArray& multi_index,
+			   const std::vector<SurrogateDataPoint>& data_pts,
+			   const RealVector& wt_sets, RealVector& exp_coeffs,
+			   RealMatrix& exp_coeff_grads);
 
   /// cross-validates alternate gradient expressions
   void gradient_check();
@@ -251,6 +266,9 @@ private:
   /// the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
   UShort2DArray multiIndex;
+  /// sparse grid bookkeeping: mapping from num tensor-products by 
+  /// tensor-product multi-indices into aggregated multiIndex
+  Sizet2DArray tpMultiIndexMap;
 
   /// norm-squared of one of the multivariate polynomial basis functions
   Real multiPolyNormSq;
@@ -269,8 +287,8 @@ private:
 inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
   PolynomialApproximation(num_vars), numExpansionTerms(0),
-  approxOrder(approx_order), quadratureExpansion(TENSOR_PRODUCT) //TOTAL_ORDER
-  //sparseGridExpansion()//TOTAL_ORDER,HEURISTIC_TOTAL_ORDER,TENSOR_PRODUCT_SUM
+  approxOrder(approx_order), quadratureExpansion(TENSOR_PRODUCT), //TOTAL_ORDER
+  sparseGridExpansion(TENSOR_PRODUCT_SUM) //TOTAL_ORDER,HEURISTIC_TOTAL_ORDER
 { }
 
 
@@ -351,12 +369,12 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
 
 
 inline Real OrthogPolyApproximation::
-multivariate_polynomial(const RealVector& xi, size_t term)
+multivariate_polynomial(const RealVector& xi, const UShortArray& indices)
 {
   unsigned short order_1d;
   Real mvp = 1.0;
   for (size_t i=0; i<numVars; ++i) {
-    order_1d = multiIndex[term][i];
+    order_1d = indices[i];
     if (order_1d)
       mvp *= polynomialBasis[i].get_value(xi[i], order_1d);
   }

@@ -156,18 +156,19 @@ protected:
   //- Heading: Member functions
   //
 
-  /// initialize multiIndex using a tensor-product expansion
+  /// initialize expansion multi_index using a tensor-product expansion
   void tensor_product_multi_index(const UShortArray& order,
 				  UShort2DArray& multi_index,
 				  bool exp_order_offset = false);
-  /// initialize multi_index using a total-order expansion from an
-  /// upper_bound array specification
+  /// initialize expansion multi_index using a total-order expansion
+  /// from an upper_bound array specification
   void total_order_multi_index(const UShortArray& upper_bound,
 			       UShort2DArray& multi_index,
 			       short lower_bound_offset = -1,
 			       unsigned int max_terms = UINT_MAX);
-  /// initialize multi_index and coeffs using an isotropic or anisotropic
-  /// index set constraint
+  /// initialize Smolyak multi_index (index sets defining the set of
+  /// tensor products) and Smolyak combinatorial coeffs using an
+  /// isotropic or anisotropic index set constraint
   void smolyak_multi_index(UShort2DArray& multi_index, RealArray& coeffs);
 
   //
@@ -178,16 +179,16 @@ protected:
   /// for which exact matching is enforced (e.g., using equality-constrained
   /// least squares regression).
   SurrogateDataPoint anchorPoint;
-  /// list of samples used to build the approximation.  These sample points
+  /// set of samples used to build the approximation.  These sample points
   /// are fit approximately (e.g., using least squares regression); exact
   /// matching is not enforced.
-  std::list<SurrogateDataPoint> dataPoints;
+  std::vector<SurrogateDataPoint> dataPoints;
 
   /// pointer to integration driver instance
   IntegrationDriver* driverRep;
 
   /// identifies the approach taken in find_coefficients():
-  /// QUADRATURE, SPARSE_GRID, REGRESSION, or SAMPLING
+  /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
   short expCoeffsSolnApproach;
 
   /// flag for calculation of expansionCoeffs from response values
@@ -214,6 +215,24 @@ protected:
   /// list of indices identifying the non-random variable subset within the
   /// active variables (used in all_variables mode; defined from randomVarsKey)
   SizetList nonRandomIndices;
+
+  /// numSmolyakIndices-by-numVars array for identifying the index to use
+  /// within the polynomialBasis for a particular variable
+  /** The index sets correspond to j (0-based) for use as indices, which are
+      offset from the i indices (1-based) normally used in the Smolyak
+      expressions.  For quadrature, the indices are zero (irrespective of
+      integration order) since there is one polynomialBasis per variable; for
+      sparse grid, the index corresponds to level, one within each anisotropic
+      tensor-product integration of a Smolyak recursion. */
+  UShort2DArray smolyakMultiIndex;
+  /// precomputed array of Smolyak combinatorial coefficients
+  RealArray smolyakCoeffs;
+  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
+  /// the 1-D interpolant indices for sets of tensor-product collocation points.
+  UShort3DArray collocKey;
+  /// numSmolyakIndices-by-numTensorProductPts array for linking the
+  /// set of tensor products to the expansionCoeffs array.
+  Sizet2DArray expansionCoeffIndices;
 
   /// expected value of the expansion
   Real expansionMean;
@@ -267,7 +286,13 @@ inline PolynomialApproximation::~PolynomialApproximation()
 
 inline void PolynomialApproximation::
 data_points(const std::list<Pecos::SurrogateDataPoint>& pts)
-{ dataPoints = pts; }
+{
+  size_t i, num_pts = pts.size();
+  dataPoints.resize(num_pts);
+  std::list<Pecos::SurrogateDataPoint>::const_iterator cit;
+  for (i=0, cit=pts.begin(); i<num_pts; ++i, ++cit)
+    dataPoints[i] = *cit; 
+}
 
 
 inline void PolynomialApproximation::
