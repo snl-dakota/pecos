@@ -247,120 +247,6 @@ int OrthogPolyApproximation::min_coefficients() const
 }
 
 
-void OrthogPolyApproximation::find_coefficients()
-{
-  if (!expansionCoeffFlag && !expansionGradFlag) {
-    PCerr << "Warning: neither expansion coefficients nor expansion "
-	  << "coefficient gradients\n         are active in "
-	  << "OrthogPolyApproximation::find_coefficients().\n         "
-	  << "Bypassing approximation construction." << std::endl;
-    return;
-  }
-
-  // For testing of anchorPoint logic:
-  //anchorPoint = dataPoints.front();
-  //dataPoints.pop_front();
-
-  // anchorPoint, if present, is handled differently for different
-  // expCoeffsSolnApproach settings:
-  //   SAMPLING:   treat it as another currentPoint
-  //   QUADRATURE/CUBATURE/SPARSE_GRID: error
-  //   REGRESSION: use equality-constrained least squares
-  size_t i, j, num_pts = dataPoints.size();
-  if (!anchorPoint.is_null())
-    ++num_pts;
-  if (!num_pts) {
-    PCerr << "Error: nonzero number of sample points required in "
-	  << "OrthogPolyApproximation::find_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // Array sizing can be divided into two parts:
-  // > data used in all cases (size in allocate_arrays())
-  // > data not used in expansion import case (size here)
-  allocate_arrays();
-#ifdef DEBUG
-  gradient_check();
-#endif // DEBUG
-
-  // calculate polynomial chaos coefficients
-  switch (expCoeffsSolnApproach) {
-  case QUADRATURE: {
-    // verify quad_order stencil matches num_pts
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray& quad_order = tpq_driver->quadrature_order();
-    if (quad_order.size() != numVars) {
-      PCerr << "Error: quadrature order array is not consistent with number of "
-	    << "variables (" << numVars << ")\n       in "
-	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
-      abort_handler(-1);
-    }
-    size_t num_gauss_pts = 1;
-    for (i=0; i<numVars; ++i)
-      num_gauss_pts *= quad_order[i];
-    if (num_pts != num_gauss_pts) {
-      PCerr << "Error: number of current points (" << num_pts << ") is not "
-	    << "consistent with\n       quadrature data in "
-	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
-      abort_handler(-1);
-    }
-
-#ifdef DEBUG
-    for (i=0; i<numVars; ++i) {
-      OrthogonalPolynomial* poly_rep
-	= (OrthogonalPolynomial*)polynomialBasis[i].polynomial_rep();
-      for (j=1; j<=quad_order[i]; ++j)
-	poly_rep->gauss_check(j);
-    }
-#endif // DEBUG
-
-    // single expansion integration
-    integration_checks();
-    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
-			expansionCoeffs, expansionCoeffGrads);
-    break;
-  }
-  case CUBATURE:
-    // single expansion integration
-    integration_checks();
-    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
-			expansionCoeffs, expansionCoeffGrads);
-    break;
-  case SPARSE_GRID: {
-    // Note: allocate_arrays() calls sparse_grid_multi_index()
-    // --> which calls smolyak_multi_index() --> smolyak{MultiIndex,Coeffs}
-    // --> uses append_unique to define combined expansion multiIndex
-
-    // multiple expansion integration
-    integration_checks();
-    if (expansionCoeffFlag) expansionCoeffs = 0.;
-    if (expansionGradFlag)  expansionCoeffGrads = 0.;
-    size_t i, num_tensor_grids = smolyakCoeffs.size();
-    std::vector<SurrogateDataPoint> tp_data_points;
-    RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
-    // loop over tensor-products, forming sub-expansions, and sum them up
-    for (i=0; i<num_tensor_grids; ++i) {
-      const UShort2DArray& tp_multi_index = collocKey[i];
-      // form tp_data_points, tp_weights using collocKey et al.
-      integration_data(i, tp_data_points, tp_weights);
-      // form tp expansion coeffs
-      integrate_expansion(tp_multi_index, tp_data_points, tp_weights,
-			  tp_expansion, tp_expansion_grads);
-      // sum tp-expansions into expansionCoeffs/expansionCoeffGrads
-      add_unique(i, tp_expansion, tp_expansion_grads);
-    }
-    break;
-  }
-  case REGRESSION:
-    regression();
-    break;
-  case SAMPLING:
-    expectation();
-    break;
-  }
-}
-
-
 void OrthogPolyApproximation::allocate_arrays()
 {
   PolynomialApproximation::allocate_arrays();
@@ -538,6 +424,120 @@ void OrthogPolyApproximation::allocate_arrays()
 }
 
 
+void OrthogPolyApproximation::find_coefficients()
+{
+  if (!expansionCoeffFlag && !expansionGradFlag) {
+    PCerr << "Warning: neither expansion coefficients nor expansion "
+	  << "coefficient gradients\n         are active in "
+	  << "OrthogPolyApproximation::find_coefficients().\n         "
+	  << "Bypassing approximation construction." << std::endl;
+    return;
+  }
+
+  // For testing of anchorPoint logic:
+  //anchorPoint = dataPoints.front();
+  //dataPoints.pop_front();
+
+  // anchorPoint, if present, is handled differently for different
+  // expCoeffsSolnApproach settings:
+  //   SAMPLING:   treat it as another currentPoint
+  //   QUADRATURE/CUBATURE/SPARSE_GRID: error
+  //   REGRESSION: use equality-constrained least squares
+  size_t i, j, num_pts = dataPoints.size();
+  if (!anchorPoint.is_null())
+    ++num_pts;
+  if (!num_pts) {
+    PCerr << "Error: nonzero number of sample points required in "
+	  << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+
+  // Array sizing can be divided into two parts:
+  // > data used in all cases (size in allocate_arrays())
+  // > data not used in expansion import case (size here)
+  allocate_arrays();
+#ifdef DEBUG
+  gradient_check();
+#endif // DEBUG
+
+  // calculate polynomial chaos coefficients
+  switch (expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    // verify quad_order stencil matches num_pts
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    const UShortArray& quad_order = tpq_driver->quadrature_order();
+    if (quad_order.size() != numVars) {
+      PCerr << "Error: quadrature order array is not consistent with number of "
+	    << "variables (" << numVars << ")\n       in "
+	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+      abort_handler(-1);
+    }
+    size_t num_gauss_pts = 1;
+    for (i=0; i<numVars; ++i)
+      num_gauss_pts *= quad_order[i];
+    if (num_pts != num_gauss_pts) {
+      PCerr << "Error: number of current points (" << num_pts << ") is not "
+	    << "consistent with\n       quadrature data in "
+	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+      abort_handler(-1);
+    }
+
+#ifdef DEBUG
+    for (i=0; i<numVars; ++i) {
+      OrthogonalPolynomial* poly_rep
+	= (OrthogonalPolynomial*)polynomialBasis[i].polynomial_rep();
+      for (j=1; j<=quad_order[i]; ++j)
+	poly_rep->gauss_check(j);
+    }
+#endif // DEBUG
+
+    // single expansion integration
+    integration_checks();
+    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
+			expansionCoeffs, expansionCoeffGrads);
+    break;
+  }
+  case CUBATURE:
+    // single expansion integration
+    integration_checks();
+    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
+			expansionCoeffs, expansionCoeffGrads);
+    break;
+  case SPARSE_GRID: {
+    // Note: allocate_arrays() calls sparse_grid_multi_index()
+    // --> which calls smolyak_multi_index() --> smolyak{MultiIndex,Coeffs}
+    // --> uses append_unique to define combined expansion multiIndex
+
+    // multiple expansion integration
+    integration_checks();
+    if (expansionCoeffFlag) expansionCoeffs = 0.;
+    if (expansionGradFlag)  expansionCoeffGrads = 0.;
+    size_t i, num_tensor_grids = smolyakCoeffs.size();
+    std::vector<SurrogateDataPoint> tp_data_points;
+    RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
+    // loop over tensor-products, forming sub-expansions, and sum them up
+    for (i=0; i<num_tensor_grids; ++i) {
+      const UShort2DArray& tp_multi_index = collocKey[i];
+      // form tp_data_points, tp_weights using collocKey et al.
+      integration_data(i, tp_data_points, tp_weights);
+      // form tp expansion coeffs
+      integrate_expansion(tp_multi_index, tp_data_points, tp_weights,
+			  tp_expansion, tp_expansion_grads);
+      // sum tp-expansions into expansionCoeffs/expansionCoeffGrads
+      add_unique(i, tp_expansion, tp_expansion_grads);
+    }
+    break;
+  }
+  case REGRESSION:
+    regression();
+    break;
+  case SAMPLING:
+    expectation();
+    break;
+  }
+}
+
+
 void OrthogPolyApproximation::
 sparse_grid_multi_index(UShort2DArray& multi_index)
 {
@@ -556,10 +556,13 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
     tpMultiIndexMap.clear();
-    //UShort2DArray tp_multi_index;
-    //UShortArray integrand_order(numVars), expansion_order(numVars);
+    // This approach overlays the exact tensor-product multi-indices:
+    for (i=0; i<num_smolyak_indices; ++i)
+      append_unique(collocKey[i], multi_index);
+    /* This approach was more conservative, mitigating any exponential growth:
+    UShort2DArray tp_multi_index;
+    UShortArray integrand_order(numVars), expansion_order(numVars);
     for (i=0; i<num_smolyak_indices; ++i) {
-      /*
       // enforce moderate linear integrand growth (for now)
       // TO DO: allow use of SLOW_RESTRICTED_GROWTH
       level_growth_to_integrand_order(smolyakMultiIndex[i],
@@ -574,9 +577,8 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
 	    << tp_multi_index << '\n';//<< "multi_index =\n" << multi_index;
 #endif // DEBUG
       tp_multi_index.clear();
-      */
-      append_unique(collocKey[i], multi_index);
     }
+    */
   }
   else if (sparseGridExpansion == TOTAL_ORDER) {
     // back out approxOrder & use total_order_multi_index()
@@ -845,29 +847,6 @@ integrand_order_to_expansion_order(const UShortArray& int_order,
 
 
 void OrthogPolyApproximation::
-add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
-	   const RealMatrix& tp_expansion_grads)
-{
-  size_t i, j, index, num_tp_terms = (expansionCoeffFlag) ? 
-    tp_expansion_coeffs.length() : tp_expansion_grads.numCols();
-  const Real&       sm_coeff  = smolyakCoeffs[tp_index];
-  const SizetArray& tp_mi_map = tpMultiIndexMap[tp_index];
-  for (i=0; i<num_tp_terms; ++i) {
-    index = tp_mi_map[i];
-    if (expansionCoeffFlag)
-      expansionCoeffs[index] += sm_coeff * tp_expansion_coeffs[i];
-    if (expansionGradFlag) {
-      size_t      num_deriv_vars = expansionCoeffGrads.numRows();
-      Real*       exp_grad_ndx   = expansionCoeffGrads[index];
-      const Real* tp_grad_i      = tp_expansion_grads[i];
-      for (j=0; j<num_deriv_vars; ++j)
-	exp_grad_ndx[j] += sm_coeff * tp_grad_i[j];
-    }
-  }
-}
-
-
-void OrthogPolyApproximation::
 append_unique(const UShort2DArray& tp_multi_index, UShort2DArray& multi_index)
 {
   size_t i, num_tp_mi = tp_multi_index.size();
@@ -891,6 +870,29 @@ append_unique(const UShort2DArray& tp_multi_index, UShort2DArray& multi_index)
 	tp_mi_map[i] = index;
     }
     tpMultiIndexMap.push_back(tp_mi_map);
+  }
+}
+
+
+void OrthogPolyApproximation::
+add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
+	   const RealMatrix& tp_expansion_grads)
+{
+  size_t i, j, index, num_tp_terms = (expansionCoeffFlag) ? 
+    tp_expansion_coeffs.length() : tp_expansion_grads.numCols();
+  const Real&       sm_coeff  = smolyakCoeffs[tp_index];
+  const SizetArray& tp_mi_map = tpMultiIndexMap[tp_index];
+  for (i=0; i<num_tp_terms; ++i) {
+    index = tp_mi_map[i];
+    if (expansionCoeffFlag)
+      expansionCoeffs[index] += sm_coeff * tp_expansion_coeffs[i];
+    if (expansionGradFlag) {
+      size_t      num_deriv_vars = expansionCoeffGrads.numRows();
+      Real*       exp_grad_ndx   = expansionCoeffGrads[index];
+      const Real* tp_grad_i      = tp_expansion_grads[i];
+      for (j=0; j<num_deriv_vars; ++j)
+	exp_grad_ndx[j] += sm_coeff * tp_grad_i[j];
+    }
   }
 }
 
@@ -1047,7 +1049,7 @@ integrate_expansion(const UShort2DArray& multi_index,
   // corresponding PC expansions.
   std::vector<SurrogateDataPoint>::const_iterator cit;
   size_t i, j, k, num_exp_terms = multi_index.size(),
-    num_deriv_vars = exp_coeff_grads.numRows();
+    num_deriv_vars = data_pts[0].response_gradient().length();
   Real wt_resp_fn_i, Psi_ij; Real* exp_grad;
   RealVector wt_resp_grad_i;
   if (expansionCoeffFlag) { // shape if needed and zero out
@@ -1093,12 +1095,11 @@ integrate_expansion(const UShort2DArray& multi_index,
       for (k=0; k<num_deriv_vars; ++k)
 	exp_grad[k] /= norm_sq;
     }
-#ifdef DEBUG
-    PCout << "coeff[" << i <<"] = " << exp_coeffs[i]
-        //<< "coeff_grad[" << i <<"] = " << exp_coeff_grads[i]
-	  << " norm squared[" << i <<"] = " << norm_sq << "\n\n";
-#endif // DEBUG
   }
+#ifdef DEBUG
+  PCout << "expansion_coeffs:\n" << exp_coeffs
+	<< "expansion_coeff_grads:\n" << exp_coeff_grads<< "\n\n";
+#endif // DEBUG
 }
 
 

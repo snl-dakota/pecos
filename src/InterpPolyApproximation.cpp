@@ -29,52 +29,6 @@ int InterpPolyApproximation::min_coefficients() const
 }
 
 
-void InterpPolyApproximation::find_coefficients()
-{
-  if (!expansionCoeffFlag && !expansionGradFlag) {
-    PCerr << "Warning: neither expansion coefficients nor expansion "
-	  << "coefficient gradients\n         are active in "
-	  << "InterpPolyApproximation::find_coefficients().\n         "
-	  << "Bypassing approximation construction." << std::endl;
-    return;
-  }
-
-  // For testing of anchorPoint logic:
-  //anchorPoint = dataPoints.front();
-  //dataPoints.pop_front();
-
-  size_t i, offset = 0;
-  numCollocPts = dataPoints.size();
-  // anchorPoint, if present, is the first expansionSample.
-  if (!anchorPoint.is_null()) {
-    offset        = 1;
-    numCollocPts += offset;
-  }
-  if (!numCollocPts) {
-    PCerr << "Error: nonzero number of sample points required in "
-	  << "InterpPolyApproximation::find_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-
-  allocate_arrays();
-
-  if (!anchorPoint.is_null()) {
-    if (expansionCoeffFlag)
-      expansionCoeffs[0] = anchorPoint.response_function();
-    if (expansionGradFlag)
-      Teuchos::setCol(anchorPoint.response_gradient(), 0, expansionCoeffGrads);
-  }
-
-  std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
-  for (i=offset; i<numCollocPts; ++i, ++it) {
-    if (expansionCoeffFlag)
-      expansionCoeffs[i] = it->response_function();
-    if (expansionGradFlag)
-      Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
-  }
-}
-
-
 void InterpPolyApproximation::allocate_arrays()
 {
   PolynomialApproximation::allocate_arrays();
@@ -199,6 +153,52 @@ void InterpPolyApproximation::allocate_arrays()
     }
     break;
   }
+  }
+}
+
+
+void InterpPolyApproximation::find_coefficients()
+{
+  if (!expansionCoeffFlag && !expansionGradFlag) {
+    PCerr << "Warning: neither expansion coefficients nor expansion "
+	  << "coefficient gradients\n         are active in "
+	  << "InterpPolyApproximation::find_coefficients().\n         "
+	  << "Bypassing approximation construction." << std::endl;
+    return;
+  }
+
+  // For testing of anchorPoint logic:
+  //anchorPoint = dataPoints.front();
+  //dataPoints.pop_front();
+
+  size_t i, offset = 0;
+  numCollocPts = dataPoints.size();
+  // anchorPoint, if present, is the first expansionSample.
+  if (!anchorPoint.is_null()) {
+    offset        = 1;
+    numCollocPts += offset;
+  }
+  if (!numCollocPts) {
+    PCerr << "Error: nonzero number of sample points required in "
+	  << "InterpPolyApproximation::find_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+
+  allocate_arrays();
+
+  if (!anchorPoint.is_null()) {
+    if (expansionCoeffFlag)
+      expansionCoeffs[0] = anchorPoint.response_function();
+    if (expansionGradFlag)
+      Teuchos::setCol(anchorPoint.response_gradient(), 0, expansionCoeffGrads);
+  }
+
+  std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
+  for (i=offset; i<numCollocPts; ++i, ++it) {
+    if (expansionCoeffFlag)
+      expansionCoeffs[i] = it->response_function();
+    if (expansionGradFlag)
+      Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
   }
 }
 
