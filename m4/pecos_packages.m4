@@ -234,9 +234,9 @@ AC_DEFUN([PECOS_PACKAGES],[
 
   acx_local_teuchos=no
   case $with_teuchos in
-  dnl DAKOTA depends on Teuchos UNCONDITIONALLY
+  dnl Pecos depends on Teuchos UNCONDITIONALLY
   no)
-    AC_MSG_ERROR([DAKOTA cannot be configured without Teuchos. Please use a
+    AC_MSG_ERROR([Pecos cannot be configured without Teuchos. Please use a
                  --with-teuchos option OR provide path to a prebuilt Teuchos.])
     ;;
 

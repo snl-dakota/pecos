@@ -47,7 +47,7 @@ set(Pecos_ENABLE_DEBUG ON)
 set(Pecos_ENABLE_EXPLICIT_INSTANTIATION OFF)
 set(Pecos_ENABLE_PERFORMANCE_TESTS OFF)
 
-SET(BOOST_DISABLE_ASSERTS 1)
+set(BOOST_DISABLE_ASSERTS 1)
 
 # WJB: see conditional further down -- find_package(Fftw3)
 
@@ -111,25 +111,16 @@ add_subdirectory(test)
 #include_directories(${Pecos_BINARY_DIR})
 include_directories(${PROJECT_BINARY_DIR})
 
-CONFIGURE_FILE("${PROJECT_SOURCE_DIR}/cmake/pecos_config.h.in"
+configure_file("${PROJECT_SOURCE_DIR}/cmake/pecos_config.h.in"
   "${PROJECT_BINARY_DIR}/pecos_config.h"
   @ONLY
 )
 
-ADD_DEFINITIONS("-DHAVE_CONFIG_H")
+add_definitions("-DHAVE_CONFIG_H")
 
 
 # libpecos.la must be built PRIOR to the linkage of test executables
 # WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
 add_library(pecos empty.cxx)
 target_link_libraries(pecos ${SUBLIBS})
-
-# WJB - ToDo: delete here to bottom once I am done debugging the build
-# settings
-FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")
-GET_CMAKE_PROPERTY(res VARIABLES)
-FOREACH(var ${res})
-  FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt
-             "${var} \"${${var}}\"\n")
-ENDFOREACH(var ${res})
 

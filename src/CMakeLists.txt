@@ -1,11 +1,15 @@
 #include_directories(${Teuchos_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS}
-                    ${Teuchos_INCLUDE_DIRS})
+                    ${Teuchos_INCLUDE_DIRS}
+                    ${PROJECT_BINARY_DIR})
 link_directories(${Teuchos_LIBRARY_DIRS})
 
 if(HAVE_SPARSE_GRID)
   include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
 endif(HAVE_SPARSE_GRID)
+
+# The package's pkg_config.h file is located in $PROJECT_BINARY_DIR (see above)
+add_definitions("-DHAVE_CONFIG_H")
 
 set(Pecos_libs teuchos lapack)
 
