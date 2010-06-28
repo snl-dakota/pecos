@@ -6,26 +6,28 @@
 /* Macro to disable Boost asserts. */
 #cmakedefine BOOST_DISABLE_ASSERTS 1
 
-// WJB: pull Fortran config from Teuchos_config.h since I will need at least one more iteration anyway
-#if 0
+// WJB - ToDo: get guidance since I suspect I am doing this wrong!! #define F77_FUNC@F77_FUNC@
 /* Define to dummy `main' function (if any) required to link to the Fortran
    libraries. */
 /* #undef F77_DUMMY_MAIN */
 
 /* Define to a macro mangling the given C identifier (in lower and upper
    case), which must not contain underscores, for linking with Fortran. */
+#ifdef F77_FUNC
+#undef F77_FUNC
 #define F77_FUNC@FortranCInterface_GLOBAL_MACRO@
+#endif
+#define FC_FUNC@FortranCInterface_GLOBAL_MACRO@
 
 /* As F77_FUNC, but for C identifiers containing underscores. */
 #define F77_FUNC_@F77_FUNC@_
+#define FC_FUNC_@FortranCInterface_GLOBAL_MACRO@
 
 /* Define if F77_FUNC and F77_FUNC_ are equivalent. */
 #cmakedefine F77_FUNC_EQUIV
 
 /* Define if F77 and FC dummy `main' functions are identical. */
 #cmakedefine FC_DUMMY_MAIN_EQ_F77
-#endif
-// WJB: end ifdef'd-out Fortran coupling block
 
 /* Macro to handle code which depends on DFFTPACK. */
 #cmakedefine HAVE_DFFTPACK 1

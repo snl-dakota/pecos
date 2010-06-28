@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project("Pecos" C CXX Fortran)
 
+# WJB: dependency on Trilinos macros seems undesirable -- #include(TrilinosFortranMangling)
+#include(FortranCInterface)
+
 # first check for a system blas and lapack
 find_library(BLAS_LIBS blas)
 find_library(LAPACK_LIBS lapack)
@@ -35,12 +38,6 @@ set( CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
 )
 
-# Bill.Hoffman: What are these??
-set(Pecos_ENABLE_C ON)
-set(Pecos_ENABLE_CXX ON)
-set(Pecos_ENABLE_Fortran ON)
-
-#include(TrilinosFortranMangling)
 
 # should not be hard coded
 set(Pecos_ENABLE_DEBUG ON)
@@ -121,6 +118,22 @@ add_definitions("-DHAVE_CONFIG_H")
 
 # libpecos.la must be built PRIOR to the linkage of test executables
 # WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
-add_library(pecos empty.cxx)
+add_library(pecos SHARED empty.cxx)
+add_library(pecos-static STATIC empty.cxx)
+
+## Ensure both the shared and static libraries have the same root name
+set_target_properties(pecos-static PROPERTIES OUTPUT_NAME "pecos")
+set_target_properties(pecos-static PROPERTIES PREFIX "lib")
+
 target_link_libraries(pecos ${SUBLIBS})
+
+
+# WJB - ToDo: delete here to bottom once I am done debugging the build
+# settings
+FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")
+GET_CMAKE_PROPERTY(res VARIABLES)
+FOREACH(var ${res})
+  FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt
+             "${var} \"${${var}}\"\n")
+ENDFOREACH(var ${res})
 
