@@ -26,6 +26,11 @@ elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
   set(FIXED_FLAG "-Mfixed")
 endif()
 
+if(CMAKE_SYSTEM_NAME MATCHES Darwin)
+  set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+endif()
+
 find_package(Boost 1.40 REQUIRED)
 
 include(CTest)
