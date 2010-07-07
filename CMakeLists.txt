@@ -5,6 +5,9 @@ project("Pecos" C CXX Fortran)
 # WJB: dependency on Trilinos macros seems undesirable -- #include(TrilinosFortranMangling)
 include(FortranCInterface)
 
+option(BUILD_STATIC "build static libraries" OFF)
+
+
 # first check for a system blas and lapack
 find_library(BLAS_LIBS blas)
 find_library(LAPACK_LIBS lapack)
