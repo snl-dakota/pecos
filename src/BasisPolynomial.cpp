@@ -90,7 +90,8 @@ get_polynomial(short poly_type, short gauss_mode)
   //case NO_POLY:
   //  polynomial = NULL;                                                  break;
   case HERMITE:  // var_type == "normal"
-    polynomial = new HermiteOrthogPolynomial();                           break;
+    polynomial = (gauss_mode) ? new HermiteOrthogPolynomial(gauss_mode) :
+                                new HermiteOrthogPolynomial();            break;
   case LEGENDRE: // var_type == "uniform"
     polynomial = (gauss_mode) ? new LegendreOrthogPolynomial(gauss_mode) :
                                 new LegendreOrthogPolynomial();           break;

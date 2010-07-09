@@ -81,10 +81,11 @@ protected:
   RealArray gaussWeights;
 
   /// the type of integration rule associated with the orthogonal polynomial
-  /** In most cases, this is just the corresponding Gauss quadrature rule.
-      However, for Legendre, gaussMode manages the option of GAUSS_LEGENDRE
-      or GAUSS_PATTERSON, and for Chebyshev, it manages the option of
-      CLENSHAW_CURTIS or FEJER2. */
+  /** In most cases, this is just the corresponding Gauss quadrature
+      rule.  However, for Legendre, gaussMode manages the option of
+      GAUSS_LEGENDRE or GAUSS_PATTERSON, for Chebyshev, it manages the
+      option of CLENSHAW_CURTIS or FEJER2, and for Hermite, it manages
+      the option of GAUSS_HERMITE or GENZ_KEISTER. */
   short gaussMode;
 
 private:

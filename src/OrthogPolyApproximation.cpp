@@ -812,7 +812,9 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
 	int_order[i] =  2*quad_order[i] - 1; // i = 2m - 1
 	break;
       }
-  else
+  else {
+    const UShortArray& gk_order = driverRep->genz_keister_order();
+    const UShortArray& gk_prec  = driverRep->genz_keister_precision();
     for (i=0; i<n; ++i)
       switch (gaussModes[i]) {
       case CLENSHAW_CURTIS: case FEJER2:
@@ -822,13 +824,39 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
 	break;
       case GAUSS_PATTERSON: {
 	// for o(l)=2^{l+1}-1, o(l-1) = (o(l)-1)/2
-	unsigned short previous = std::max(1,(quad_order[i] - 1)/2);
-	int_order[i] = 2*quad_order[i] - previous;
+	unsigned short prev_o = std::max(1,(quad_order[i] - 1)/2);
+	int_order[i] = 2*quad_order[i] - prev_o;
 	break;
+      }
+      case GENZ_KEISTER: {
+	// same relationship as Gauss-Patterson, except prev_o does not follow
+	// simple pattern and requires lookup
+	unsigned short lev = 0, max_lev = 4;
+	for (lev=0; lev<=max_lev; ++lev)
+	  if (gk_order[lev] == quad_order[i])
+	    { int_order[i] = gk_prec[lev]; break; }
+	/*
+	int lev, o, prev_o = 1, max_lev = 4, i_rule = GENZ_KEISTER,
+	  g_rule = FULL_EXPONENTIAL; // map l->o directly without restriction
+	for (lev=0; lev<=max_lev; ++lev) {
+	  webbur::level_growth_to_order(1, &lev, &i_rule, &g_rule, &o);
+	  if (o == quad_order[i])
+	    { int_order[i] = 2*quad_order[i] - prev_o; break; }
+	  else
+	    prev_o = o;
+	}
+	*/
+	if (lev>max_lev) {
+	  PCerr << "Error: maximum GENZ_KEISTER level exceeded in OrthogPoly"
+		<< "Approximation::quadrature_order_to_integrand_order()"
+		<< std::endl;
+	  abort_handler(-1);
+	}
       }
       default: // standard non-nested Gauss rules
 	int_order[i] =  2*quad_order[i] - 1; break; // i = 2m - 1
       }
+  }
 }
 
 

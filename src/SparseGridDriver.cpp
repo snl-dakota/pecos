@@ -133,10 +133,10 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   dimension_preference(dim_pref);
 
   // For unrestricted exponential growth, use of nested rules is restricted
-  // to isotropic uniform in order to enforce consistent growth rates:
+  // to uniform/normal in order to enforce similar growth rates:
   if (nested_rules && growth_rate == UNRESTRICTED_GROWTH)
     for (size_t i=0; i<numVars; ++i)
-      if (u_types[i] != STD_UNIFORM)
+      if (u_types[i] != STD_UNIFORM && u_types[i] != STD_NORMAL)
 	{ nested_rules = false; break; }
   // For MODERATE and SLOW restricted exponential growth, nested rules can be
   // used heterogeneously and synchronized with STANDARD and SLOW Gaussian
@@ -156,7 +156,7 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
       compute1DWeights[i] = basis_gauss_weights;
     }
   }
-  if (cheby_poly) // gauss_mode set within loops
+  if (cheby_poly && !chebyPolyPtr) // gauss_mode set within loops
     chebyPolyPtr = new BasisPolynomial(CHEBYSHEV);
 
   initialize_rules(u_types, nested_rules, growth_rate, nested_uniform_rule,

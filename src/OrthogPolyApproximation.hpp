@@ -253,9 +253,10 @@ private:
   /// or NUMERICALLY_GENERATED
   ShortArray basisTypes;
 
-  /// array of Gauss mode options for some derived orthogonal polynomial 
-  /// types: Legendre supports GAUSS_LEGENDRE or GAUSS_PATTERSON,
-  /// Chebyshev supports CLENSHAW_CURTIS or FEJER2.
+  /// array of Gauss mode options for some derived orthogonal polynomial
+  /// types: Legendre supports GAUSS_LEGENDRE or GAUSS_PATTERSON, Chebyshev
+  /// supports CLENSHAW_CURTIS or FEJER2, and Hermite supports GAUSS_HERMITE
+  /// or GENZ_KEISTER.
   ShortArray gaussModes;
 
   /// array of one-dimensional basis polynomial objects which are used in

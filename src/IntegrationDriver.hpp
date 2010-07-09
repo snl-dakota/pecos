@@ -88,6 +88,11 @@ public:
   /// return gaussWts1D
   const Real3DArray& gauss_weights_array() const;
 
+  /// return orderGenzKeister
+  const UShortArray& genz_keister_order()     const;
+  /// return precGenzKeister
+  const UShortArray& genz_keister_precision() const;
+
   /// returns approxRep for access to derived class member functions
   /// that are not mapped to the base level
   IntegrationDriver* driver_rep() const;
@@ -146,6 +151,11 @@ protected:
   /// numContinuousVars x num_levels_per_var sets of 1D Gauss weights
   Real3DArray gaussWts1D;
 
+  /// lookup for set of 1-D Genz-Keister quadrature orders
+  static UShortArray orderGenzKeister;
+  /// lookup for set of 1-D Genz-Keister integrand precisions
+  static UShortArray precGenzKeister;
+
 private:
 
   //
@@ -175,8 +185,8 @@ inline const RealVector& IntegrationDriver::anisotropic_weights() const
 { return (driverRep) ? driverRep->anisoLevelWts : anisoLevelWts; }
 
 
-inline const std::vector<BasisPolynomial>& IntegrationDriver::
-polynomial_basis() const
+inline const std::vector<BasisPolynomial>& 
+IntegrationDriver::polynomial_basis() const
 { return (driverRep) ? driverRep->polynomialBasis : polynomialBasis; }
 
 
@@ -194,6 +204,14 @@ inline const Real3DArray& IntegrationDriver::gauss_points_array() const
 
 inline const Real3DArray& IntegrationDriver::gauss_weights_array() const
 { return (driverRep) ? driverRep->gaussWts1D : gaussWts1D; }
+
+
+inline const UShortArray& IntegrationDriver::genz_keister_order() const
+{ return (driverRep) ? driverRep->orderGenzKeister : orderGenzKeister; }
+
+
+inline const UShortArray& IntegrationDriver::genz_keister_precision() const
+{ return (driverRep) ? driverRep->precGenzKeister : precGenzKeister; }
 
 
 inline IntegrationDriver* IntegrationDriver::driver_rep() const

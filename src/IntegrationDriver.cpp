@@ -24,6 +24,9 @@ static const char rcsId[]="@(#) $Id: IntegrationDriver.C,v 1.57 2004/06/21 19:57
 
 namespace Pecos {
 
+UShortArray IntegrationDriver::orderGenzKeister;
+UShortArray IntegrationDriver::precGenzKeister;
+
 
 /** This constructor is the one which must build the base class data
     for all derived classes.  get_driver() instantiates a derived
@@ -35,6 +38,17 @@ namespace Pecos {
 IntegrationDriver::IntegrationDriver(BaseConstructor):
   driverRep(NULL), referenceCount(1)
 {
+  if (orderGenzKeister.empty()) {
+    orderGenzKeister.resize(5); //orderGenzKeister = { 1, 3,  9, 19, 35 };
+    orderGenzKeister[0] =  1; orderGenzKeister[1] =  3; orderGenzKeister[2] = 9;
+    orderGenzKeister[3] = 19; orderGenzKeister[4] = 35;
+  }
+  if (precGenzKeister.empty()) {
+    precGenzKeister.resize(5); //precGenzKeister  = { 1, 5, 15, 29, 51 }; 
+    precGenzKeister[0] =  1; precGenzKeister[1] =  5; precGenzKeister[2] = 15;
+    precGenzKeister[3] = 29; precGenzKeister[4] = 51;
+  }
+
 #ifdef REFCOUNT_DEBUG
   PCout << "IntegrationDriver::IntegrationDriver(BaseConstructor) called to "
         << "build base class for letter." << std::endl;
@@ -203,8 +217,7 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
     // set int_rules
     switch (u_types[i]) {
     case STD_NORMAL:
-      //int_rules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
-      int_rules[i] = GAUSS_HERMITE; break;
+      int_rules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
     case STD_UNIFORM:
       // For tensor-product quadrature, Gauss-Legendre is used due to greater
       // polynomial exactness since nesting is not a concern.  For nested sparse
@@ -222,22 +235,7 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
 
     // set growth_rules
     switch (u_types[i]) {
-    case STD_NORMAL: // symmetric Gaussian linear growth
-      /*
-      if (nested_rules) // symmetric exponential growth
-	switch (growth_rate) {
-	case SLOW_RESTRICTED_GROWTH:
-	  growth_rules[i] = SLOW_EXPONENTIAL;     break;
-	case MODERATE_RESTRICTED_GROWTH:
-	  growth_rules[i] = MODERATE_EXPONENTIAL; break;
-	case UNRESTRICTED_GROWTH:
-	  growth_rules[i] = FULL_EXPONENTIAL;     break;
-	}
-      else
-      */
-      growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
-	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
-    case STD_UNIFORM:
+    case STD_NORMAL: case STD_UNIFORM:
       if (nested_rules) // symmetric exponential growth
 	switch (growth_rate) {
 	case SLOW_RESTRICTED_GROWTH:
@@ -279,8 +277,8 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
     case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
       growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
-    case GAUSS_PATTERSON: case CLENSHAW_CURTIS: case FEJER2: // exp growth
-    //case GENZ_KEISTER:
+    case GAUSS_PATTERSON: case CLENSHAW_CURTIS: case FEJER2: case GENZ_KEISTER:
+      // nested rules with exponential growth
       switch (growth_rate) {
       case SLOW_RESTRICTED_GROWTH:
 	growth_rules[i] = SLOW_EXPONENTIAL;     break;

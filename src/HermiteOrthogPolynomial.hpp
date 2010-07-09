@@ -38,8 +38,9 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  HermiteOrthogPolynomial();  ///< default constructor
-  ~HermiteOrthogPolynomial(); ///< destructor
+  HermiteOrthogPolynomial(short gauss_mode);  ///< extended constructor
+  HermiteOrthogPolynomial();                  ///< default constructor
+  ~HermiteOrthogPolynomial();                 ///< destructor
 
 protected:
 
@@ -69,6 +70,14 @@ private:
   //
 
 };
+
+
+inline HermiteOrthogPolynomial::HermiteOrthogPolynomial(short gauss_mode)
+{
+  gaussMode = gauss_mode;
+  ptFactor  = std::sqrt(2.);
+  wtFactor  = 1./std::sqrt(PI);
+}
 
 
 inline HermiteOrthogPolynomial::HermiteOrthogPolynomial()
