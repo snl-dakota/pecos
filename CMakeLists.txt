@@ -129,6 +129,11 @@ add_definitions("-DHAVE_CONFIG_H")
 
 # libpecos.la must be built PRIOR to the linkage of test executables
 # WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
+configure_file("${PROJECT_SOURCE_DIR}/cmake/empty.cxx.in"
+  "${PROJECT_BINARY_DIR}/empty.cxx"
+  @ONLY
+)
+
 add_library(pecos SHARED empty.cxx)
 add_library(pecos-static STATIC empty.cxx)
 
