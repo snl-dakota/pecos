@@ -186,10 +186,10 @@ private:
   /// convert sparse grid level to expansion orders using available heuristics
   void sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 					    UShortArray& exp_order);
-  /// convert a level index set and a growth setting to an integrand_order
-  void level_growth_to_integrand_order(const UShortArray& levels,
-				       short growth_rate,
-				       UShortArray& int_order);
+  // convert a level index set and a growth setting to an integrand_order
+  //void level_growth_to_integrand_order(const UShortArray& levels,
+  //				         short growth_rate,
+  //				         UShortArray& int_order);
 
   /// append multi-indices from tp_multi_index that do not already
   /// appear in multi_index

@@ -95,7 +95,8 @@ private:
 };
 
 
-inline TensorProductDriver::TensorProductDriver()
+inline TensorProductDriver::TensorProductDriver():
+  IntegrationDriver(BaseConstructor())
 { }
 
 

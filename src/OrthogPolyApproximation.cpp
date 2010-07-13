@@ -21,7 +21,7 @@
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
-//#define DEBUG
+#define DEBUG
 
 
 namespace Pecos {
@@ -556,33 +556,34 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
     tpMultiIndexMap.clear();
-    // This approach overlays the exact tensor-product multi-indices:
-    for (i=0; i<num_smolyak_indices; ++i)
-      append_unique(collocKey[i], multi_index);
-    /* This approach was more conservative, mitigating any exponential growth:
+    // This approach works for std Gauss rules, but not GP, CC, F2, or GK:
+    //for (i=0; i<num_smolyak_indices; ++i)
+    //  append_unique(collocKey[i], multi_index);
     UShort2DArray tp_multi_index;
-    UShortArray integrand_order(numVars), expansion_order(numVars);
+    UShortArray quad_order(numVars), integrand_order(numVars),
+      expansion_order(numVars);
     for (i=0; i<num_smolyak_indices; ++i) {
-      // enforce moderate linear integrand growth (for now)
-      // TO DO: allow use of SLOW_RESTRICTED_GROWTH
-      level_growth_to_integrand_order(smolyakMultiIndex[i],
-	MODERATE_RESTRICTED_GROWTH, integrand_order);
+      // Prior approach mitigated any exponential growth by enforcing moderate
+      // linear integrand growth (TO DO: allow use of SLOW_RESTRICTED_GROWTH):
+      //level_growth_to_integrand_order(smolyakMultiIndex[i],
+      //  MODERATE_RESTRICTED_GROWTH, integrand_order);
+      ssg_driver->level_to_order(smolyakMultiIndex[i], quad_order);
+      quadrature_order_to_integrand_order(quad_order, integrand_order);
       integrand_order_to_expansion_order(integrand_order, expansion_order);
       tensor_product_multi_index(expansion_order, tp_multi_index, true);
       append_unique(tp_multi_index, multi_index);
 #ifdef DEBUG
-      PCout << "level =\n" << smolyakMultiIndex[i]
-	    << "integrand_order =\n" << integrand_order
+      PCout << "level =\n" << smolyakMultiIndex[i] << "quad_order =\n"
+	    << quad_order << "integrand_order =\n" << integrand_order
 	    << "expansion_order =\n" << expansion_order << "tp_multi_index =\n"
 	    << tp_multi_index << '\n';//<< "multi_index =\n" << multi_index;
 #endif // DEBUG
       tp_multi_index.clear();
     }
-    */
   }
   else if (sparseGridExpansion == TOTAL_ORDER) {
     // back out approxOrder & use total_order_multi_index()
-    UShortArray integrand_order(numVars), quad_order(numVars);
+    UShortArray quad_order(numVars), integrand_order(numVars);
     UShort2DArray pareto(1), total_pareto;
     for (i=0; i<num_smolyak_indices; ++i) {
       ssg_driver->level_to_order(smolyakMultiIndex[i], quad_order);
@@ -747,10 +748,10 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 }
 
 
-/** The computed integrand_order may be conservative (by design) in the
+/* The computed integrand_order may be conservative (by design) in the
     presence of exponential growth.  This avoids aggressive optimization
     of PCE expansion orders when an exponential rule takes a large jump
-    that is not balanced by the other index set component mappings. */
+    that is not balanced by the other index set component mappings.
 void OrthogPolyApproximation::
 level_growth_to_integrand_order(const UShortArray& levels, short growth_rate,
 				UShortArray& int_order)
@@ -779,6 +780,7 @@ level_growth_to_integrand_order(const UShortArray& levels, short growth_rate,
   }
   }
 }
+*/
 
 
 void OrthogPolyApproximation::
@@ -852,6 +854,7 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
 		<< std::endl;
 	  abort_handler(-1);
 	}
+	break;
       }
       default: // standard non-nested Gauss rules
 	int_order[i] =  2*quad_order[i] - 1; break; // i = 2m - 1

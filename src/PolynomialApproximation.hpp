@@ -228,10 +228,10 @@ protected:
   /// precomputed array of Smolyak combinatorial coefficients
   RealArray smolyakCoeffs;
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
-  /// the 1-D interpolant indices for sets of tensor-product collocation points.
+  /// the 1-D point indices for sets of tensor-product collocation points
   UShort3DArray collocKey;
   /// numSmolyakIndices-by-numTensorProductPts array for linking the
-  /// set of tensor products to the expansionCoeffs array.
+  /// set of tensor products to the expansionCoeffs array
   Sizet2DArray expansionCoeffIndices;
 
   /// expected value of the expansion

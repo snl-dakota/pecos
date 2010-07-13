@@ -93,7 +93,7 @@ private:
 };
 
 
-inline CubatureDriver::CubatureDriver()
+inline CubatureDriver::CubatureDriver(): IntegrationDriver(BaseConstructor())
 { }
 
 

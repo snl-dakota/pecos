@@ -177,7 +177,8 @@ private:
 
 
 inline SparseGridDriver::SparseGridDriver():
-  chebyPolyPtr(NULL), ssgLevel(0), store1DGauss(false), duplicateTol(1.e-15)
+  IntegrationDriver(BaseConstructor()), chebyPolyPtr(NULL), ssgLevel(0),
+  store1DGauss(false), duplicateTol(1.e-15)
 { }
 
 
