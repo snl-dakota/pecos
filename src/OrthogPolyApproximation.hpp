@@ -21,7 +21,9 @@
 namespace Pecos {
 
 // special values for quadratureExpansion and sparseGridExpansion
-enum { TOTAL_ORDER, TENSOR_PRODUCT, HEURISTIC_TOTAL_ORDER, TENSOR_PRODUCT_SUM };
+enum { TENSOR_INT_TOTAL_ORD_EXP,      TENSOR_INT_TENSOR_EXP,
+       TENSOR_INT_TENSOR_SUM_EXP,     SPARSE_INT_TOTAL_ORD_EXP,
+       SPARSE_INT_HEUR_TOTAL_ORD_EXP, SPARSE_INT_TENSOR_SUM_EXP };
 
 class DistributionParams;
 
@@ -174,8 +176,11 @@ private:
   //- Heading: Member functions
   //
 
-  /// initialize multiIndex using a sparse grid expansion
+  /// initialize multi_index using a sparse grid expansion
   void sparse_grid_multi_index(UShort2DArray& multi_index);
+  /// initialize tp_multi_index from tpMultiIndexMap
+  void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
+				      size_t tp_index);
 
   /// convert quadrature orders to integrand orders using rigorous mappings
   void quadrature_order_to_integrand_order(const UShortArray& quad_order,
@@ -186,10 +191,10 @@ private:
   /// convert sparse grid level to expansion orders using available heuristics
   void sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 					    UShortArray& exp_order);
-  // convert a level index set and a growth setting to an integrand_order
-  //void level_growth_to_integrand_order(const UShortArray& levels,
-  //				         short growth_rate,
-  //				         UShortArray& int_order);
+  /// convert a level index set and a growth setting to an integrand_order
+  void level_growth_to_integrand_order(const UShortArray& levels,
+				       short growth_rate,
+				       UShortArray& int_order);
 
   /// append multi-indices from tp_multi_index that do not already
   /// appear in multi_index
@@ -275,12 +280,12 @@ private:
   Real multiPolyNormSq;
 
   /// switch for formulation of orthogonal polynomial expansion
-  /// integrated with tensor-product quadrature: TOTAL_ORDER or
-  /// TENSOR_PRODUCT expansion.
+  /// integrated with tensor-product quadrature:
+  /// TENSOR_INT_TOTAL_ORD_EXP or TENSOR_INT_TENSOR_EXP expansion.
   short quadratureExpansion;
-  /// switch for formulation of orthogonal polynomial expansion
-  /// integrated with sparse grids: TOTAL_ORDER,
-  /// HEURISTIC_TOTAL_ORDER, or TENSOR_PRODUCT_SUM expansion.
+  /// switch for formulation of orthogonal polynomial expansion for
+  /// sparse grids: TENSOR_INT_TENSOR_SUM_EXP, SPARSE_INT_TENSOR_SUM_EXP,
+  /// SPARSE_INT_TOTAL_ORD_EXP, or SPARSE_INT_HEUR_TOTAL_ORD_EXP expansion.
   short sparseGridExpansion;
 };
 
@@ -288,8 +293,8 @@ private:
 inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
   PolynomialApproximation(num_vars), numExpansionTerms(0),
-  approxOrder(approx_order), quadratureExpansion(TENSOR_PRODUCT), //TOTAL_ORDER
-  sparseGridExpansion(TENSOR_PRODUCT_SUM) //TOTAL_ORDER,HEURISTIC_TOTAL_ORDER
+  approxOrder(approx_order), quadratureExpansion(TENSOR_INT_TENSOR_EXP),
+  sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
 { }
 
 
