@@ -156,6 +156,10 @@ protected:
   //- Heading: Member functions
   //
 
+  /// define smolyakMultiIndex, smolyakCoeffs, collocKey, and
+  /// expansionCoeffIndices
+  void allocate_ssg_arrays();
+
   /// initialize expansion multi_index using a tensor-product expansion
   void tensor_product_multi_index(const UShortArray& order,
 				  UShort2DArray& multi_index,

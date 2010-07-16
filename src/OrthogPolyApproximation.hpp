@@ -178,9 +178,9 @@ private:
 
   /// initialize multi_index using a sparse grid expansion
   void sparse_grid_multi_index(UShort2DArray& multi_index);
-  /// initialize tp_multi_index from tpMultiIndexMap
-  void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
-				      size_t tp_index);
+  // initialize tp_multi_index from tpMultiIndexMap
+  //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
+  //				        size_t tp_index);
 
   /// convert quadrature orders to integrand orders using rigorous mappings
   void quadrature_order_to_integrand_order(const UShortArray& quad_order,
@@ -199,7 +199,7 @@ private:
   /// append multi-indices from tp_multi_index that do not already
   /// appear in multi_index
   void append_unique(const UShort2DArray& tp_multi_index,
-		     UShort2DArray& multi_index);
+		     UShort2DArray& multi_index, bool define_tp_mi_map);
   /// add tp_expansion_coeffs/tp_expansion_grads contribution to
   /// expansion_coeffs/expansion_grads
   void add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
@@ -272,6 +272,12 @@ private:
   /// the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
   UShort2DArray multiIndex;
+  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
+  /// identifying the orders of the one-dimensional orthogonal polynomials
+  /// contributing to each of the multivariate orthogonal polynomials.
+  /** For nested rules (GP, CC, or GK), collocKey is insufficient and we
+      must track expansion orders separately. */
+  UShort3DArray tpMultiIndex;
   /// sparse grid bookkeeping: mapping from num tensor-products by 
   /// tensor-product multi-indices into aggregated multiIndex
   Sizet2DArray tpMultiIndexMap;

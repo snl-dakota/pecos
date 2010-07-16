@@ -119,12 +119,17 @@ void InterpPolyApproximation::allocate_arrays()
     const RealVector& aniso_wts  = driverRep->anisotropic_weights();
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     unsigned short    ssg_level  = ssg_driver->level();
-    bool update_basis_form
-      = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
-    ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
-    // *** TO DO: capture updates to parameterized/numerical polynomials
-    // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
 
+    bool update_exp_form
+      = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
+    // *** TO DO: capture updates to parameterized/numerical polynomials
+    if (update_exp_form) {
+      smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
+      allocate_ssg_arrays();
+    }
+
+    bool update_basis_form = update_exp_form;
+    // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
     if (update_basis_form) {
       // size and initialize polynomialBasis, multiple interpolants per variable
       if (polynomialBasis.empty())
@@ -151,6 +156,8 @@ void InterpPolyApproximation::allocate_arrays()
 	}
       }
     }
+
+    ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     break;
   }
   }

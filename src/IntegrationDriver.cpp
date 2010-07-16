@@ -39,12 +39,12 @@ IntegrationDriver::IntegrationDriver(BaseConstructor):
   driverRep(NULL), referenceCount(1)
 {
   if (orderGenzKeister.empty()) {
-    orderGenzKeister.resize(5); //orderGenzKeister = { 1, 3,  9, 19, 35 };
+    orderGenzKeister.resize(5); //orderGenzKeister = { 1, 3, 9, 19, 35 };
     orderGenzKeister[0] =  1; orderGenzKeister[1] =  3; orderGenzKeister[2] = 9;
     orderGenzKeister[3] = 19; orderGenzKeister[4] = 35;
   }
   if (precGenzKeister.empty()) {
-    precGenzKeister.resize(5); //precGenzKeister  = { 1, 5, 15, 29, 51 }; 
+    precGenzKeister.resize(5); //precGenzKeister = { 1, 5, 15, 29, 51 }; 
     precGenzKeister[0] =  1; precGenzKeister[1] =  5; precGenzKeister[2] = 15;
     precGenzKeister[3] = 29; precGenzKeister[4] = 51;
   }
