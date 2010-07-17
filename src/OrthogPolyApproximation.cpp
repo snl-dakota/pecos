@@ -21,7 +21,7 @@
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
-#define DEBUG
+//#define DEBUG
 
 
 namespace Pecos {
