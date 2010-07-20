@@ -44,9 +44,9 @@ distribution_types(const ShortArray& u_types,
     for (i=0; i<num_rules; i++)
       //switch (u_types[i]) {
       //case STD_UNIFORM:
-        gauss_modes[i] = (short)int_rules[i];//                           break;
+        gauss_modes[i] = (short)int_rules[i];// break;
       //default:
-      //  gauss_modes[i] = 0;                                             break;
+      //  gauss_modes[i] = 0;                   break;
       //}
   }
 
@@ -265,7 +265,6 @@ void OrthogPolyApproximation::allocate_arrays()
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray& quad_order = tpq_driver->quadrature_order();
     bool update_exp_form = (quad_order != quadOrderPrev);
-    quadOrderPrev = quad_order;
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
@@ -294,13 +293,15 @@ void OrthogPolyApproximation::allocate_arrays()
     if (update_exp_form)
       numExpansionTerms = multiIndex.size();
     PCout << numExpansionTerms << " terms\n";
+
+    quadOrderPrev = quad_order;
     break;
   }
   case CUBATURE: {
     CubatureDriver* cub_driver = (CubatureDriver*)driverRep;
     //unsigned short cub_int_order = cub_driver->integrand_order();
     //bool update_exp_form = (cub_int_order != cubIntOrderPrev);
-    //cubIntOrderPrev = cub_int_order;
+
     UShortArray integrand_order(numVars, cub_driver->integrand_order());
     integrand_order_to_expansion_order(integrand_order, approxOrder);
     total_order_multi_index(approxOrder, multiIndex);
@@ -310,6 +311,8 @@ void OrthogPolyApproximation::allocate_arrays()
       PCout << approxOrder[i] << ' ';
     PCout << "} using total-order expansion of " << numExpansionTerms
 	  << " terms\n";
+
+    //cubIntOrderPrev = cub_int_order;
     break;
   }
   case SPARSE_GRID: {
@@ -318,14 +321,14 @@ void OrthogPolyApproximation::allocate_arrays()
     unsigned short    ssg_level  = ssg_driver->level();
     bool update_exp_form
       = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
-    ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) { // compute and output number of terms
-      smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
-      if (sparseGridExpansion == TENSOR_INT_TENSOR_SUM_EXP)
-	allocate_ssg_arrays();
       sparse_grid_multi_index(multiIndex);
+      if (sparseGridExpansion == TENSOR_INT_TENSOR_SUM_EXP)
+	allocate_collocation_arrays();
+      else
+	{ smolyakMultiIndex.clear(); smolyakCoeffs.clear(); }
       numExpansionTerms = multiIndex.size();
     }
     if (sparseGridExpansion == TENSOR_INT_TENSOR_SUM_EXP)
@@ -349,6 +352,8 @@ void OrthogPolyApproximation::allocate_arrays()
 	    << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
       abort_handler(-1);
     }
+
+    ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     break;
   }
   default: { // SAMPLING and REGRESSION
@@ -358,8 +363,6 @@ void OrthogPolyApproximation::allocate_arrays()
     // TO DO: support uniform/adaptive refinement.
     //bool update_exp_form = (approxOrder       != approxOrderPrev ||
     //                        numExpansionTerms != numExpTermsPrev);
-    //approxOrderPrev = approxOrder;
-    //numExpTermsPrev = numExpansionTerms;
 
     // TO DO: this logic is not reentrant since approxOrder updates
     //        numExpansionTerms and vice versa
@@ -411,6 +414,8 @@ void OrthogPolyApproximation::allocate_arrays()
 	    << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
       abort_handler(-1);
     }
+
+    //approxOrderPrev = approxOrder; numExpTermsPrev = numExpansionTerms;
     break;
   }
   }
@@ -510,16 +515,15 @@ void OrthogPolyApproximation::find_coefficients()
     integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
 			expansionCoeffs, expansionCoeffGrads);
     break;
-  case SPARSE_GRID: {
+  case SPARSE_GRID:
     integration_checks();
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // multiple expansion integration
-      // Note: allocate_arrays() calls allocate_ssg_arrays() and
-      //       sparse_grid_multi_index()
-      // --> allocate_ssg_arrays() defines smolyakMultiIndex, smolyakCoeffs,
-      //     collocKey, and expansionCoeffIndices
-      // --> sparse_grid_multi_index() uses append_unique() to build multiIndex
+      // Note: allocate_arrays() calls sparse_grid_multi_index() [calls
+      // smolyak_multi_index() to define smolyakMultiIndex/smolyakCoeffs and
+      // uses append_unique() to build multiIndex] and
+      // allocate_collocation_arrays() [defines collocKey/expansionCoeffIndices]
       if (expansionCoeffFlag) expansionCoeffs = 0.;
       if (expansionGradFlag)  expansionCoeffGrads = 0.;
       size_t i, num_tensor_grids = smolyakCoeffs.size();
@@ -537,19 +541,20 @@ void OrthogPolyApproximation::find_coefficients()
 	// sum tp-expansions into expansionCoeffs/expansionCoeffGrads
 	add_unique(i, tp_expansion, tp_expansion_grads);
       }
-      tpMultiIndex.clear();      tpMultiIndexMap.clear();
-      smolyakMultiIndex.clear(); smolyakCoeffs.clear();
-      collocKey.clear();         expansionCoeffIndices.clear();
+      //if (!reEntrantFlag) {
+      //  smolyakMultiIndex.clear(); smolyakCoeffs.clear();
+      //  collocKey.clear();         expansionCoeffIndices.clear();
+      //  tpMultiIndex.clear();      tpMultiIndexMap.clear();
+      //}
       break;
     }
     default: // SPARSE_INT_*
       // single expansion integration
       integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
 			  expansionCoeffs, expansionCoeffGrads);
-      smolyakMultiIndex.clear(); smolyakCoeffs.clear();
       break;
     }
-  }
+    break;
   case REGRESSION:
     regression();
     break;
@@ -563,10 +568,9 @@ void OrthogPolyApproximation::find_coefficients()
 void OrthogPolyApproximation::
 sparse_grid_multi_index(UShort2DArray& multi_index)
 {
-  // moved up to allocate_arrays() level:
-  //smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
-
+  smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
   size_t i, num_smolyak_indices = smolyakMultiIndex.size();
+
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
   switch (sparseGridExpansion) {
   case TENSOR_INT_TENSOR_SUM_EXP: {
@@ -975,18 +979,17 @@ void OrthogPolyApproximation::
 add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
 	   const RealMatrix& tp_expansion_grads)
 {
-  size_t i, j, index, num_tp_terms = (expansionCoeffFlag) ? 
-    tp_expansion_coeffs.length() : tp_expansion_grads.numCols();
   const Real&       sm_coeff  = smolyakCoeffs[tp_index];
   const SizetArray& tp_mi_map = tpMultiIndexMap[tp_index];
+  size_t i, j, index, num_tp_terms = tp_mi_map.size(), 
+    num_deriv_vars = expansionCoeffGrads.numRows();
   for (i=0; i<num_tp_terms; ++i) {
     index = tp_mi_map[i];
     if (expansionCoeffFlag)
       expansionCoeffs[index] += sm_coeff * tp_expansion_coeffs[i];
     if (expansionGradFlag) {
-      size_t      num_deriv_vars = expansionCoeffGrads.numRows();
-      Real*       exp_grad_ndx   = expansionCoeffGrads[index];
-      const Real* tp_grad_i      = tp_expansion_grads[i];
+      Real*       exp_grad_ndx = expansionCoeffGrads[index];
+      const Real* tp_grad_i    = tp_expansion_grads[i];
       for (j=0; j<num_deriv_vars; ++j)
 	exp_grad_ndx[j] += sm_coeff * tp_grad_i[j];
     }

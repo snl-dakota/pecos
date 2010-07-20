@@ -55,7 +55,6 @@ void InterpPolyApproximation::allocate_arrays()
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray& quad_order = tpq_driver->quadrature_order();
     bool update_exp_form = (quad_order != quadOrderPrev);
-    quadOrderPrev = quad_order;
     // *** TO DO: capture updates to parameterized/numerical polynomials
     bool update_basis_form = update_exp_form;
     // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
@@ -113,6 +112,8 @@ void InterpPolyApproximation::allocate_arrays()
       for (i=0; i<numCollocPts; i++)
 	expansionCoeffIndices[0][i] = i;
     }
+
+    quadOrderPrev = quad_order;
     break;
   }
   case SPARSE_GRID: {
@@ -125,7 +126,7 @@ void InterpPolyApproximation::allocate_arrays()
     // *** TO DO: capture updates to parameterized/numerical polynomials
     if (update_exp_form) {
       smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
-      allocate_ssg_arrays();
+      allocate_collocation_arrays();
     }
 
     bool update_basis_form = update_exp_form;

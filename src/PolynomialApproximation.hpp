@@ -156,9 +156,8 @@ protected:
   //- Heading: Member functions
   //
 
-  /// define smolyakMultiIndex, smolyakCoeffs, collocKey, and
-  /// expansionCoeffIndices
-  void allocate_ssg_arrays();
+  /// define collocKey and expansionCoeffIndices
+  void allocate_collocation_arrays();
 
   /// initialize expansion multi_index using a tensor-product expansion
   void tensor_product_multi_index(const UShortArray& order,
@@ -171,7 +170,7 @@ protected:
 			       short lower_bound_offset = -1,
 			       unsigned int max_terms = UINT_MAX);
   /// initialize Smolyak multi_index (index sets defining the set of
-  /// tensor products) and Smolyak combinatorial coeffs using an
+  /// tensor products) and Smolyak combinatorial coefficients using an
   /// isotropic or anisotropic index set constraint
   void smolyak_multi_index(UShort2DArray& multi_index, RealArray& coeffs);
 

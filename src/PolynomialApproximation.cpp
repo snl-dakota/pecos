@@ -32,7 +32,7 @@ void PolynomialApproximation::allocate_arrays()
 }
 
 
-void PolynomialApproximation::allocate_ssg_arrays()
+void PolynomialApproximation::allocate_collocation_arrays()
 {
   // define mapping from 1:numCollocPts to set of 1d interpolation indices
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
