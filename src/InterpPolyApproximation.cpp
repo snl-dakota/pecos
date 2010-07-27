@@ -25,8 +25,10 @@ int InterpPolyApproximation::min_coefficients() const
 {
   // return the minimum number of data instances required to build the 
   // surface of multiple dimensions
-  return (expansionCoeffFlag || expansionGradFlag) ? 1 : 0;
+  return (expansionCoeffFlag || expansionNonProbGradFlag) ? 1 : 0;
 }
+
+
 
 
 void InterpPolyApproximation::allocate_arrays()
@@ -35,7 +37,7 @@ void InterpPolyApproximation::allocate_arrays()
 
   if (expansionCoeffFlag && expansionCoeffs.length() != numCollocPts)
     expansionCoeffs.sizeUninitialized(numCollocPts);
-  if (expansionGradFlag) {
+  if (expansionNonProbGradFlag) {
     const SurrogateDataPoint& sdp
       = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
     size_t num_deriv_vars = sdp.response_gradient().length();
@@ -48,7 +50,8 @@ void InterpPolyApproximation::allocate_arrays()
   // anisotropic weights could move points around without changing the total.
   //bool update_exp_form =
   //  ( (expansionCoeffFlag && expansionCoeffs.length() != numCollocPts) ||
-  //    (expansionGradFlag && expansionCoeffGrads.numCols() != numCollocPts ) );
+  //    (expansionNonProbGradFlag &&
+  //     expansionCoeffGrads.numCols() != numCollocPts ) );
 
   switch (expCoeffsSolnApproach) {
   case QUADRATURE: {
@@ -167,7 +170,7 @@ void InterpPolyApproximation::allocate_arrays()
 
 void InterpPolyApproximation::find_coefficients()
 {
-  if (!expansionCoeffFlag && !expansionGradFlag) {
+  if (!expansionCoeffFlag && !expansionNonProbGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
 	  << "coefficient gradients\n         are active in "
 	  << "InterpPolyApproximation::find_coefficients().\n         "
@@ -197,7 +200,7 @@ void InterpPolyApproximation::find_coefficients()
   if (!anchorPoint.is_null()) {
     if (expansionCoeffFlag)
       expansionCoeffs[0] = anchorPoint.response_function();
-    if (expansionGradFlag)
+    if (expansionNonProbGradFlag)
       Teuchos::setCol(anchorPoint.response_gradient(), 0, expansionCoeffGrads);
   }
 
@@ -205,7 +208,7 @@ void InterpPolyApproximation::find_coefficients()
   for (i=offset; i<numCollocPts; ++i, ++it) {
     if (expansionCoeffFlag)
       expansionCoeffs[i] = it->response_function();
-    if (expansionGradFlag)
+    if (expansionNonProbGradFlag)
       Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
   }
 }
@@ -343,7 +346,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
   for (i=0; i<num_deriv_vars; i++) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     // Error check for required data
-    if (randomVarsKey[deriv_index] && !expansionGradFlag) {
+    if (randomVarsKey[deriv_index] && !expansionNonProbGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
       abort_handler(-1);
@@ -480,7 +483,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
   SizetList::iterator it;
   for (i=0; i<num_deriv_vars; i++) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    if (randomVarsKey[deriv_index] && !expansionGradFlag) { // Error check 
+    if (randomVarsKey[deriv_index] && !expansionNonProbGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
       abort_handler(-1);
@@ -722,7 +725,7 @@ const RealVector& InterpPolyApproximation::get_mean_gradient()
   // d/ds <R> = <dR/ds>
 
   // Error check for required data
-  if (!expansionGradFlag) {
+  if (!expansionNonProbGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
     abort_handler(-1);
@@ -874,7 +877,7 @@ const RealVector& InterpPolyApproximation::get_variance_gradient()
 	  << "InterpPolyApproximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
   }
-  if (!expansionGradFlag) {
+  if (!expansionNonProbGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
     abort_handler(-1);

@@ -223,7 +223,7 @@ int OrthogPolyApproximation::min_coefficients() const
 {
   // return the minimum number of data instances required to build the 
   // surface of multiple dimensions
-  if (expansionCoeffFlag || expansionGradFlag)
+  if (expansionCoeffFlag || expansionNonProbGradFlag)
     switch (expCoeffsSolnApproach) {
     case QUADRATURE: case CUBATURE: case SPARSE_GRID: case SAMPLING:
       return 1; // quadrature: (int)pow((Real)MIN_GAUSS_PTS, numVars);
@@ -425,7 +425,7 @@ void OrthogPolyApproximation::allocate_arrays()
   // the data import case.
   if (expansionCoeffFlag && expansionCoeffs.length() != numExpansionTerms)
     expansionCoeffs.sizeUninitialized(numExpansionTerms);
-  if (expansionGradFlag) {
+  if (expansionNonProbGradFlag) {
     const SurrogateDataPoint& sdp
       = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
     size_t num_deriv_vars = sdp.response_gradient().length();
@@ -438,7 +438,7 @@ void OrthogPolyApproximation::allocate_arrays()
 
 void OrthogPolyApproximation::find_coefficients()
 {
-  if (!expansionCoeffFlag && !expansionGradFlag) {
+  if (!expansionCoeffFlag && !expansionNonProbGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
 	  << "coefficient gradients\n         are active in "
 	  << "OrthogPolyApproximation::find_coefficients().\n         "
@@ -524,8 +524,8 @@ void OrthogPolyApproximation::find_coefficients()
       // smolyak_multi_index() to define smolyakMultiIndex/smolyakCoeffs and
       // uses append_unique() to build multiIndex] and
       // allocate_collocation_arrays() [defines collocKey/expansionCoeffIndices]
-      if (expansionCoeffFlag) expansionCoeffs = 0.;
-      if (expansionGradFlag)  expansionCoeffGrads = 0.;
+      if (expansionCoeffFlag)       expansionCoeffs = 0.;
+      if (expansionNonProbGradFlag) expansionCoeffGrads = 0.;
       size_t i, num_tensor_grids = smolyakCoeffs.size();
       std::vector<SurrogateDataPoint> tp_data_points;
       RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
@@ -987,7 +987,7 @@ add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
     index = tp_mi_map[i];
     if (expansionCoeffFlag)
       expansionCoeffs[index] += sm_coeff * tp_expansion_coeffs[i];
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       Real*       exp_grad_ndx = expansionCoeffGrads[index];
       const Real* tp_grad_i    = tp_expansion_grads[i];
       for (j=0; j<num_deriv_vars; ++j)
@@ -1158,7 +1158,7 @@ integrate_expansion(const UShort2DArray& multi_index,
     else
       exp_coeffs = 0.;
   }
-  if (expansionGradFlag) {
+  if (expansionNonProbGradFlag) {
     if (exp_coeff_grads.numRows() != num_deriv_vars ||
 	exp_coeff_grads.numCols() != num_exp_terms)
       exp_coeff_grads.shape(num_deriv_vars, num_exp_terms); // init to 0
@@ -1169,7 +1169,7 @@ integrate_expansion(const UShort2DArray& multi_index,
   for (i=0, cit=data_pts.begin(); cit!=data_pts.end(); ++i, ++cit) {
     if (expansionCoeffFlag)
       wt_resp_fn_i = wt_sets[i] * cit->response_function();
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       wt_resp_grad_i = cit->response_gradient(); // copy
       wt_resp_grad_i.scale(wt_sets[i]);
     }
@@ -1178,7 +1178,7 @@ integrate_expansion(const UShort2DArray& multi_index,
       Psi_ij = multivariate_polynomial(c_vars_i, multi_index[j]);
       if (expansionCoeffFlag)
 	exp_coeffs[j] += Psi_ij * wt_resp_fn_i;
-      if (expansionGradFlag) {
+      if (expansionNonProbGradFlag) {
 	exp_grad = exp_coeff_grads[j];
 	for (k=0; k<num_deriv_vars; ++k)
 	  exp_grad[k] += Psi_ij * wt_resp_grad_i[k];
@@ -1190,7 +1190,7 @@ integrate_expansion(const UShort2DArray& multi_index,
     const Real& norm_sq = norm_squared(multi_index[i]);
     if (expansionCoeffFlag)
       exp_coeffs[i] /= norm_sq;
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       exp_grad = exp_coeff_grads[i];
       for (k=0; k<num_deriv_vars; ++k)
 	exp_grad[k] /= norm_sq;
@@ -1226,7 +1226,7 @@ void OrthogPolyApproximation::regression()
     // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
     // where {b} may have multiple RHS -> multiple {x} solutions.
 
-    size_t num_deriv_vars = (expansionGradFlag)  ?
+    size_t num_deriv_vars = (expansionNonProbGradFlag)  ?
       expansionCoeffGrads.numRows() : 0;
     size_t num_coeff_rhs  = (expansionCoeffFlag) ? 1 : 0;
     int  num_rhs = num_coeff_rhs + num_deriv_vars; // input: # of RHS vectors
@@ -1261,7 +1261,7 @@ void OrthogPolyApproximation::regression()
     for (i=0, it=dataPoints.begin(); i<num_rows_A; ++i, ++it) {
       if (expansionCoeffFlag)
 	b_vectors[i] = it->response_function(); // i-th point: response value
-      if (expansionGradFlag) {
+      if (expansionNonProbGradFlag) {
 	const RealVector& curr_pt_grad = it->response_gradient();
 	for (j=0; j<num_deriv_vars; ++j) // i-th point, j-th gradient component
 	  b_vectors[(j+num_coeff_rhs)*num_pts+i] = curr_pt_grad[j];
@@ -1280,7 +1280,7 @@ void OrthogPolyApproximation::regression()
     // submatrix of b_vectors
     if (expansionCoeffFlag)
       copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
-    if (expansionGradFlag)
+    if (expansionNonProbGradFlag)
       for (i=0; i<numExpansionTerms; ++i)
 	for (j=0; j<num_deriv_vars; ++j)
 	  expansionCoeffGrads(j,i) = b_vectors[(j+num_coeff_rhs)*num_pts+i];
@@ -1340,7 +1340,7 @@ void OrthogPolyApproximation::regression()
       copy_data(x_vector, numExpansionTerms, expansionCoeffs);
     }
 
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       size_t num_deriv_vars = expansionCoeffGrads.numRows();
       for (i=0; i<num_deriv_vars; ++i) {
 	// must be recomputed each time since DGGLSE solves in place
@@ -1432,19 +1432,21 @@ void OrthogPolyApproximation::expectation()
   Real empty_r;
   Real& mean = (expansionCoeffFlag) ? expansionCoeffs[0] : empty_r;
   Real* mean_grad
-    = (expansionGradFlag) ? (Real*)expansionCoeffGrads[0] : NULL;
+    = (expansionNonProbGradFlag) ? (Real*)expansionCoeffGrads[0] : NULL;
   if (anchorPoint.is_null()) {
-    if (expansionCoeffFlag) expansionCoeffs     = 0.;
-    if (expansionGradFlag)  expansionCoeffGrads = 0.;
+    if (expansionCoeffFlag)       expansionCoeffs     = 0.;
+    if (expansionNonProbGradFlag) expansionCoeffGrads = 0.;
   }
   else {
-    if (expansionCoeffFlag)     mean = anchorPoint.response_function();
-    if (expansionGradFlag) mean_grad = anchorPoint.response_gradient().values();
+    if (expansionCoeffFlag)
+      mean = anchorPoint.response_function();
+    if (expansionNonProbGradFlag)
+      mean_grad = anchorPoint.response_gradient().values();
   }
   for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
     if (expansionCoeffFlag)
       mean += it->response_function();
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       const RealVector& curr_pt_grad = it->response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	mean_grad[j] += curr_pt_grad[j];
@@ -1452,16 +1454,17 @@ void OrthogPolyApproximation::expectation()
   }
   if (expansionCoeffFlag)
     mean /= num_pts;
-  if (expansionGradFlag)
+  if (expansionNonProbGradFlag)
     for (j=0; j<num_deriv_vars; ++j)
       mean_grad[j] /= num_pts;
   Real chaos_sample, resp_fn_minus_mean, term; Real* exp_grad_i;
   RealVector resp_grad_minus_mean;
-  if (expansionGradFlag) resp_grad_minus_mean.sizeUninitialized(num_deriv_vars);
+  if (expansionNonProbGradFlag)
+    resp_grad_minus_mean.sizeUninitialized(num_deriv_vars);
   if (!anchorPoint.is_null()) {
     if (expansionCoeffFlag)
       resp_fn_minus_mean = anchorPoint.response_function() - mean;
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       const RealVector& anchor_grad = anchorPoint.response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	resp_grad_minus_mean[j] = anchor_grad[j] - mean_grad[j];
@@ -1471,7 +1474,7 @@ void OrthogPolyApproximation::expectation()
       chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
       if (expansionCoeffFlag)
 	expansionCoeffs[i] = resp_fn_minus_mean * chaos_sample;
-      if (expansionGradFlag) {
+      if (expansionNonProbGradFlag) {
 	exp_grad_i = expansionCoeffGrads[i];
 	for (j=0; j<num_deriv_vars; ++j)
 	  exp_grad_i[j] = resp_grad_minus_mean[j] * chaos_sample;
@@ -1481,7 +1484,7 @@ void OrthogPolyApproximation::expectation()
   for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
     if (expansionCoeffFlag)
       resp_fn_minus_mean = it->response_function() - mean;
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       const RealVector& resp_grad = it->response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	resp_grad_minus_mean[j] = resp_grad[j] - mean_grad[j];
@@ -1491,7 +1494,7 @@ void OrthogPolyApproximation::expectation()
       chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
       if (expansionCoeffFlag)
 	expansionCoeffs[i] += resp_fn_minus_mean * chaos_sample;
-      if (expansionGradFlag) {
+      if (expansionNonProbGradFlag) {
 	exp_grad_i = expansionCoeffGrads[i];
 	for (j=0; j<num_deriv_vars; ++j)
 	  exp_grad_i[j] += resp_grad_minus_mean[j] * chaos_sample;
@@ -1502,7 +1505,7 @@ void OrthogPolyApproximation::expectation()
     term = num_pts * norm_squared(multiIndex[i]);
     if (expansionCoeffFlag)
       expansionCoeffs[i] /= term;
-    if (expansionGradFlag) {
+    if (expansionNonProbGradFlag) {
       exp_grad_i = expansionCoeffGrads[i];
       for (j=0; j<num_deriv_vars; ++j)
 	exp_grad_i[j] /= term;
@@ -1659,7 +1662,7 @@ const RealVector& OrthogPolyApproximation::get_mean_gradient()
   // d/ds \mu_R = d/ds \alpha_0 = <dR/ds>
 
   // Error check for required data
-  if (!expansionGradFlag) {
+  if (!expansionNonProbGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "OrthogPolyApproximation::get_mean_gradient()." << std::endl;
     abort_handler(-1);
@@ -1696,7 +1699,7 @@ get_mean_gradient(const RealVector& x, const UIntArray& dvv)
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     if (randomVarsKey[deriv_index]) { // deriv w.r.t. design var insertion
       // Error check for required data
-      if (!expansionGradFlag) {
+      if (!expansionNonProbGradFlag) {
 	PCerr << "Error: expansion coefficient gradients not defined in "
 	      << "OrthogPolyApproximation::get_mean_gradient()." << std::endl;
 	abort_handler(-1);
@@ -1855,7 +1858,7 @@ const RealVector& OrthogPolyApproximation::get_variance_gradient()
 	  << "OrthogPolyApproximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
   }
-  if (!expansionGradFlag) {
+  if (!expansionNonProbGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "OrthogPolyApproximation::get_variance_gradient()." << std::endl;
     abort_handler(-1);
@@ -1900,7 +1903,7 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
   size_t cntr = 0; // insertions carried in order within expansionCoeffGrads
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    if (randomVarsKey[deriv_index] && !expansionGradFlag) { // Error check 
+    if (randomVarsKey[deriv_index] && !expansionNonProbGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "OrthogPolyApproximation::get_variance_gradient()." << std::endl;
       abort_handler(-1);

@@ -109,10 +109,15 @@ public:
   /// get expansionCoeffFlag
   bool expansion_coefficient_flag() const;
 
-  /// set expansionGradFlag
-  void expansion_gradient_flag(bool grad_flag);
-  /// get expansionGradFlag
-  bool expansion_gradient_flag() const;
+  /// set expansionNonProbGradFlag
+  void expansion_non_prob_gradient_flag(bool grad_flag);
+  /// get expansionNonProbGradFlag
+  bool expansion_non_prob_gradient_flag() const;
+  
+  /// set expansionProbGradFlag
+  void expansion_prob_gradient_flag(bool grad_flag);
+  /// get expansionProbGradFlag
+  bool expansion_prob_gradient_flag() const;
 
   /// return sobolIndices
   const RealVector& sobol_indices() const;
@@ -197,7 +202,10 @@ protected:
   /// flag for calculation of expansionCoeffs from response values
   bool expansionCoeffFlag;
   /// flag for calculation of expansionCoeffGrads from response gradients
-  bool expansionGradFlag;
+  bool expansionNonProbGradFlag;
+  /// flag for use of polynomial gradients in Least Squares Solve for
+  /// expansion coefficients
+  bool expansionProbGradFlag;
 
   /// previous quadrature order;
   /// used for tracking need for expansion form updates
@@ -272,14 +280,16 @@ private:
 
 inline PolynomialApproximation::PolynomialApproximation():
   driverRep(NULL), expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionGradFlag(false), ssgLevelPrev(USHRT_MAX)
+  expansionNonProbGradFlag(false), expansionProbGradFlag(false),
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
 inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionGradFlag(false), ssgLevelPrev(USHRT_MAX)
+  expansionNonProbGradFlag(false), expansionProbGradFlag(false),
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -323,16 +333,28 @@ inline bool PolynomialApproximation::expansion_coefficient_flag() const
 { return expansionCoeffFlag; }
 
 
-inline void PolynomialApproximation::expansion_gradient_flag(bool grad_flag)
-{ expansionGradFlag = grad_flag; }
+inline void PolynomialApproximation::
+expansion_non_prob_gradient_flag(bool grad_flag)
+{ expansionNonProbGradFlag = grad_flag; }
 
 
-inline bool PolynomialApproximation::expansion_gradient_flag() const
-{ return expansionGradFlag; }
+inline bool PolynomialApproximation::
+expansion_non_prob_gradient_flag() const
+{ return expansionNonProbGradFlag; }
+
+
+inline void PolynomialApproximation::
+expansion_prob_gradient_flag(bool grad_flag)
+{ expansionProbGradFlag = grad_flag; }
+
+
+inline bool PolynomialApproximation::expansion_prob_gradient_flag() const
+{ return expansionProbGradFlag; }
 
 
 inline const RealVector& PolynomialApproximation::sobol_indices() const
 { return sobolIndices; }
+
 
 inline const RealVector& PolynomialApproximation::total_sobol_indices() const
 { return totalSobolIndices; }
