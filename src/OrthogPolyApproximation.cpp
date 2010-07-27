@@ -1526,26 +1526,16 @@ const Real& OrthogPolyApproximation::get_value(const RealVector& x)
     abort_handler(-1);
   }
 
-  // sum expansion to get response prediction
+  // sum expansion to get response value prediction
   approxValue = 0.0;
-  Real Psi;
-  size_t i, j;
-  unsigned short order_1d;
-  for (i=0; i<numExpansionTerms; ++i) {
-    Psi = 1.0;
-    for (j=0; j<numVars; ++j) {
-      order_1d = multiIndex[i][j];
-      if (order_1d)
-	Psi *= polynomialBasis[j].get_value(x[j], order_1d);
-    }
-    approxValue += Psi*expansionCoeffs[i];
-  }
+  for (size_t i=0; i<numExpansionTerms; ++i)
+    approxValue += expansionCoeffs[i]
+                *  multivariate_polynomial(x, multiIndex[i]);
   return approxValue;
 }
 
 
-const RealVector& OrthogPolyApproximation::
-get_gradient(const RealVector& x)
+const RealVector& OrthogPolyApproximation::get_gradient(const RealVector& x)
 {
   // this could define a default_dvv and call get_gradient(x, dvv),
   // but we want this fn to be as fast as possible
@@ -1562,16 +1552,12 @@ get_gradient(const RealVector& x)
   approxGradient = 0.0;
 
   // sum expansion to get response gradient prediction
-  size_t i, j, k;
+  size_t i, j;
   for (i=0; i<numExpansionTerms; ++i) {
-    for (j=0; j<numVars; ++j) {
-      Real term_i_grad_j = 1.0;
-      for (k=0; k<numVars; ++k)
-	term_i_grad_j *= (k == j) ?
-	  polynomialBasis[k].get_gradient(x[k], multiIndex[i][k]) :
-	  polynomialBasis[k].get_value(x[k],    multiIndex[i][k]);
-      approxGradient[j] += expansionCoeffs[i]*term_i_grad_j;
-    }
+    const RealVector& term_i_grad
+      = multivariate_polynomial_gradient(x, multiIndex[i]);
+    for (j=0; j<numVars; ++j)
+      approxGradient[j] += expansionCoeffs[i]*term_i_grad[j];
   }
   return approxGradient;
 }
@@ -1587,23 +1573,17 @@ get_gradient(const RealVector& x, const UIntArray& dvv)
     abort_handler(-1);
   }
 
-  size_t num_deriv_vars = dvv.size();
+  size_t i, j, num_deriv_vars = dvv.size();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.sizeUninitialized(num_deriv_vars);
   approxGradient = 0.0;
 
   // sum expansion to get response gradient prediction
-  size_t i, j, k, deriv_index;
   for (i=0; i<numExpansionTerms; ++i) {
-    for (j=0; j<num_deriv_vars; ++j) {
-      deriv_index = dvv[j] - 1; // *** requires an "All" view
-      Real term_i_grad_j = 1.0;
-      for (k=0; k<numVars; ++k)
-	term_i_grad_j *= (k == deriv_index) ?
-	  polynomialBasis[k].get_gradient(x[k], multiIndex[i][k]) :
-	  polynomialBasis[k].get_value(x[k],    multiIndex[i][k]);
-      approxGradient[j] += expansionCoeffs[i]*term_i_grad_j;
-    }
+    const RealVector& term_i_grad
+      = multivariate_polynomial_gradient(x, multiIndex[i], dvv);
+    for (j=0; j<num_deriv_vars; ++j)
+      approxGradient[j] += expansionCoeffs[i]*term_i_grad[j];
   }
   return approxGradient;
 }

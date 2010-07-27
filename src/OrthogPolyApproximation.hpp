@@ -216,9 +216,17 @@ private:
 			const UShortArray& existing_order,
 			bool& new_dominated, bool& existing_dominated);
 
-  /// calculate a particular multivariate orthogonal polynomial
+  /// calculate a particular multivariate orthogonal polynomial value
   /// evaluated at a particular parameter set
   Real multivariate_polynomial(const RealVector& x, const UShortArray& indices);
+  /// calculate a particular multivariate orthogonal polynomial gradient
+  /// evaluated at a particular parameter set
+  const RealVector& multivariate_polynomial_gradient(const RealVector& xi,
+    const UShortArray& indices);
+  /// calculate a particular multivariate orthogonal polynomial gradient with
+  /// respect to specified dvv and evaluated at a particular parameter set
+  const RealVector& multivariate_polynomial_gradient(const RealVector& xi,
+    const UShortArray& indices, const UIntArray& dvv);
 
   /// computes the chaosCoeffs via linear regression
   /// (expCoeffsSolnApproach is REGRESSION)
@@ -284,6 +292,9 @@ private:
 
   /// norm-squared of one of the multivariate polynomial basis functions
   Real multiPolyNormSq;
+  /// Data vector for storing the gradients of individual expansion term
+  /// polynomials.  Called in multivariate_polynomial_gradient().
+  RealVector mvpGradient;
 
   /// switch for formulation of orthogonal polynomial expansion
   /// integrated with tensor-product quadrature:
@@ -391,6 +402,48 @@ multivariate_polynomial(const RealVector& xi, const UShortArray& indices)
       mvp *= polynomialBasis[i].get_value(xi[i], order_1d);
   }
   return mvp;
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+multivariate_polynomial_gradient(const RealVector& xi,
+				 const UShortArray& indices)
+{
+  if (mvpGradient.length() != numVars)
+    mvpGradient.sizeUninitialized(numVars);
+  size_t i, j;
+  for (i=0; i<numVars; ++i) {
+    Real& mvp_grad_i = mvpGradient[i];
+    mvp_grad_i = 1.0;
+    // differentiation of product of 1D polynomials
+    for (j=0; j<numVars; ++j)
+      mvp_grad_i *= (j == i) ?
+	polynomialBasis[j].get_gradient(xi[j], indices[j]) :
+	polynomialBasis[j].get_value(xi[j],    indices[j]);
+  }
+  return mvpGradient;
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+multivariate_polynomial_gradient(const RealVector& xi,
+				 const UShortArray& indices,
+				 const UIntArray& dvv)
+{
+  size_t i, j, deriv_index, num_deriv_vars = dvv.size();
+  if (mvpGradient.length() != num_deriv_vars)
+    mvpGradient.sizeUninitialized(num_deriv_vars);
+  for (i=0; i<num_deriv_vars; ++i) {
+    deriv_index = dvv[i] - 1; // *** requires an "All" view
+    Real& mvp_grad_i = mvpGradient[i];
+    mvp_grad_i = 1.0;
+    // differentiation of product of 1D polynomials
+    for (j=0; j<numVars; ++j)
+      mvp_grad_i *= (j == deriv_index) ?
+	polynomialBasis[j].get_gradient(xi[j], indices[j]) :
+	polynomialBasis[j].get_value(xi[j],    indices[j]);
+  }
+  return mvpGradient;
 }
 
 } // namespace Pecos
