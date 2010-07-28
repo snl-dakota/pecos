@@ -1125,7 +1125,7 @@ integration_data(size_t tp_index,
 
 
 /** The coefficients of the PCE for the response are calculated using a
-    Galerkin projection of the response against each multivariate orthogonal
+    spectral projection of the response against each multivariate orthogonal
     polynomial basis fn using the inner product ratio <f,Psi>/<Psi^2>, where
     inner product <a,b> is the n-dimensional integral of a*b*weighting over
     the support range of the n-dimensional (composite) weighting function.
@@ -1203,7 +1203,7 @@ integrate_expansion(const UShort2DArray& multi_index,
 }
 
 
-/** In this case, regression is used in place of Galerkin projection.  That
+/** In this case, regression is used in place of spectral projection.  That
     is, instead of calculating the PCE coefficients using inner product
     ratios, linear least squares is used to estimate the PCE coefficients
     which best match a set of response samples.  This approach is also known
@@ -1212,91 +1212,35 @@ integrate_expansion(const UShort2DArray& multi_index,
     LAPACK, based on the presence of an anchorPoint. */
 void OrthogPolyApproximation::regression()
 {
-  size_t i, j, num_pts = dataPoints.size(), cntr = 0;
-  int info       = 0; // output flag from DGELSS/DGGLSE subroutines
-  int num_rows_A = num_pts;           // Number of rows in matrix A
-  int num_cols_A = numExpansionTerms; // Number of columns in matrix A
-  // Matrix of polynomial terms unrolled into a vector.
-  double* A_matrix = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
+  // Implementation currently supports expansionProbGradFlag,
+  // expansionNonProbGradFlag, or neither, but not both.
+  if (expansionProbGradFlag && expansionNonProbGradFlag) {
+    PCerr << "Error: OrthogPolyApproximation::regression() supports "
+	  << "derivatives with respect to probabilistic or nonprobabilistic "
+	  << "variables, but not both." << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, j, num_pts = dataPoints.size(),
+    eqns_per_pt = (expansionProbGradFlag) ? 1 + numVars : 1;
   std::vector<SurrogateDataPoint>::iterator it;
   Teuchos::LAPACK<int, Real> la;
-  bool err_flag = false;
+  bool err_flag = false, anchor_pt = !anchorPoint.is_null(),
+    fn_constrained_lls = (expansionProbGradFlag && num_pts < numExpansionTerms);
+  double *A_matrix, *work;
+  int info = 0, // output flag from DGELSS/DGGLSE subroutines
+    num_cols_A = numExpansionTerms; // Number of columns in matrix A
 
-  if (anchorPoint.is_null()) {
-    // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
-    // where {b} may have multiple RHS -> multiple {x} solutions.
-
-    size_t num_deriv_vars = (expansionNonProbGradFlag)  ?
-      expansionCoeffGrads.numRows() : 0;
-    size_t num_coeff_rhs  = (expansionCoeffFlag) ? 1 : 0;
-    int  num_rhs = num_coeff_rhs + num_deriv_vars; // input: # of RHS vectors
-    double rcond = -1.; // input:  use macheps to rank singular vals of A
-    int    rank  =  0;  // output: effective rank of matrix A
-    // input: vectors of response data that correspond to samples in matrix A.
-    double* b_vectors = new double [num_rows_A*num_rhs]; // "b" in A*x = b
-    // output: vector of singular values, dimensioned for overdetermined system
-    double* s_vector  = new double [num_cols_A];
-
-    // Get the optimal work array size
-    int    lwork = -1; // special code for workspace query
-    double* work = new double [1]; // temporary work array
-    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-    lwork = (int)work[0]; // optimal work array size returned by query
-    delete [] work;
-    work = new double [lwork]; // Optimal work array
-
-    // The "A" matrix is a contiguous block of memory packed in column-major
-    // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
-    // example, the 6 elements of A(2,3) are stored in the order A(1,1), A(2,1),
-    // A(1,2), A(2,2), A(1,3), A(2,3).
-    for (i=0; i<numExpansionTerms; ++i)
-      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++cntr)
-	A_matrix[cntr] = multivariate_polynomial(it->continuous_variables(),
-						 multiIndex[i]);
-
-    // response data (values/gradients) define the multiple RHS which are
-    // matched in the LS soln.  b_vectors is num_pts (rows) x num_rhs (cols),
-    // arranged in column-major order.
-    for (i=0, it=dataPoints.begin(); i<num_rows_A; ++i, ++it) {
-      if (expansionCoeffFlag)
-	b_vectors[i] = it->response_function(); // i-th point: response value
-      if (expansionNonProbGradFlag) {
-	const RealVector& curr_pt_grad = it->response_gradient();
-	for (j=0; j<num_deriv_vars; ++j) // i-th point, j-th gradient component
-	  b_vectors[(j+num_coeff_rhs)*num_pts+i] = curr_pt_grad[j];
-      }
-    }
-
-    // Least squares computation using LAPACK's DGELSS subroutine which uses a
-    // SVD method for solving the least squares problem
-    info = 0;
-    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-    if (info)
-      err_flag = true;
-
-    // DGELSS returns the x solution in the numExpansionTerms x num_rhs
-    // submatrix of b_vectors
-    if (expansionCoeffFlag)
-      copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
-    if (expansionNonProbGradFlag)
-      for (i=0; i<numExpansionTerms; ++i)
-	for (j=0; j<num_deriv_vars; ++j)
-	  expansionCoeffGrads(j,i) = b_vectors[(j+num_coeff_rhs)*num_pts+i];
-
-    delete [] b_vectors;
-    delete [] s_vector;
-    delete [] work;
-  }
-  else {
+  if (anchor_pt) {
     // Use DGGLSE for equality-constrained LLS soln using GRQ factorization.
     // Solves min ||b - Ax||_2 s.t. Cx = d (Note: b,C switched from LAPACK docs)
     // where {b,d} are single vectors (multiple RHS not supported).
 
-    ++num_pts; // increment dataPoints count by one for anchor point
-
-    int num_cons = 1; // only 1 anchor point constraint
+    int num_cons     = eqns_per_pt; // constraints from one anchor point
+    int num_rows_A   = num_pts*eqns_per_pt; // Number of rows in matrix A
+    // Matrix of polynomial terms in a contiguous block of memory packed in
+    // column-major ordering as required by F77 LAPACK subroutines.
+    A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
     // Vector of response values that correspond to the samples in matrix A.
     double* b_vector = new double [num_rows_A]; // "b" in A*x = b
     // Matrix of constraints unrolled into a vector
@@ -1307,28 +1251,53 @@ void OrthogPolyApproximation::regression()
     double* x_vector = new double [num_cols_A]; // "x" in b - A*x, C*x = d
 
     // Get the optimal work array size
-    int lwork    = -1; // special code for workspace query
-    double* work = new double [1]; // temporary work array
+    int lwork        = -1; // special code for workspace query
+    work             = new double [1]; // temporary work array
     la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
 	     num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
     lwork = (int)work[0]; // optimal work array size returned by query
     delete [] work;
-    work = new double [lwork]; // Optimal work array
+    work             = new double [lwork]; // Optimal work array
 
     if (expansionCoeffFlag) {
-      // pack dataPoints in A and anchor point in C.  The "A" matrix is a
-      // contiguous block of memory packed in column-major ordering as required
-      // by F77 for the GGLSE subroutine from LAPACK.
+      // pack dataPoints values/gradients in A,b and anchor point
+      // values/gradients in C,d.
+      size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
       for (i=0; i<numExpansionTerms; ++i) {
-	for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++cntr)
-	  A_matrix[cntr] = multivariate_polynomial(it->continuous_variables(),
-						   multiIndex[i]);
-	C_matrix[i] = multivariate_polynomial(
-	  anchorPoint.continuous_variables(), multiIndex[i]);
+	const UShortArray& mi = multiIndex[i];
+	for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr) {
+	  const RealVector& c_vars = it->continuous_variables();
+	  A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi);
+	  if (expansionProbGradFlag) {
+	    const RealVector& mvp_grad
+	      = multivariate_polynomial_gradient(c_vars, mi);
+	    for (j=0; j<numVars; ++j, ++a_cntr)
+	      A_matrix[a_cntr] = mvp_grad[j];
+	  }
+	}
+	const RealVector& ap_c_vars = anchorPoint.continuous_variables();
+	C_matrix[c_cntr] = multivariate_polynomial(ap_c_vars, mi); ++c_cntr;
+	if (expansionProbGradFlag) {
+	  const RealVector& mvp_grad
+	    = multivariate_polynomial_gradient(ap_c_vars, mi);
+	  for (j=0; j<numVars; ++j, ++c_cntr)
+	    C_matrix[c_cntr] = mvp_grad[j];
+	}
       }
-      for (it=dataPoints.begin(), i=0; it!=dataPoints.end(); ++it, ++i)
-	b_vector[i] = it->response_function();
-      d_vector[0] = anchorPoint.response_function();    // anchor data
+      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++b_cntr) {
+	b_vector[b_cntr] = it->response_function();
+	if (expansionProbGradFlag) {
+	  const RealVector& resp_grad = it->response_gradient();
+	  for (j=0; j<numVars; ++j, ++b_cntr)
+	    b_vector[b_cntr] = resp_grad[j];
+	}
+      }
+      d_vector[d_cntr] = anchorPoint.response_function(); ++d_cntr;
+      if (expansionProbGradFlag) {
+	const RealVector& resp_grad = anchorPoint.response_gradient();
+	for (j=0; j<numVars; ++j, ++d_cntr)
+	  d_vector[d_cntr] = resp_grad[j];
+      }
       // Least squares computation using LAPACK's DGGLSE subroutine which uses a
       // GRQ factorization method for solving the least squares problem
       info = 0;
@@ -1344,13 +1313,14 @@ void OrthogPolyApproximation::regression()
       size_t num_deriv_vars = expansionCoeffGrads.numRows();
       for (i=0; i<num_deriv_vars; ++i) {
 	// must be recomputed each time since DGGLSE solves in place
-	cntr = 0;
-	for (i=0; i<numExpansionTerms; ++i) {
-	  for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++cntr)
-	    A_matrix[cntr] = multivariate_polynomial(it->continuous_variables(),
-						     multiIndex[i]);
-	  C_matrix[i] = multivariate_polynomial(
-	    anchorPoint.continuous_variables(), multiIndex[i]);
+	size_t a_cntr = 0;
+	for (j=0; j<numExpansionTerms; ++j) {
+	  const UShortArray& mi = multiIndex[j];
+	  for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr)
+	    A_matrix[a_cntr]
+	      = multivariate_polynomial(it->continuous_variables(), mi);
+	  C_matrix[j]
+	    = multivariate_polynomial(anchorPoint.continuous_variables(), mi);
 	}
 	// the Ax=b RHS is the dataPoints values for the i-th grad component
 	for (j=0, it=dataPoints.begin(); j<num_rows_A; ++j, ++it)
@@ -1373,10 +1343,158 @@ void OrthogPolyApproximation::regression()
     delete [] C_matrix;
     delete [] d_vector;
     delete [] x_vector;
-    delete [] work;
   }
+  else if (fn_constrained_lls) {
 
+    int num_rows_A = num_pts*numVars; // Number of rows in matrix A
+    int num_cons   = num_pts; // constraints from response function values
+    // Matrix of polynomial terms in a contiguous block of memory packed in
+    // column-major ordering as required by F77 LAPACK subroutines.
+    A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
+    // Vector of response values that correspond to the samples in matrix A.
+    double* b_vector = new double [num_rows_A]; // "b" in A*x = b
+    // Matrix of constraints unrolled into a vector
+    double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
+    // RHS of constraints
+    double* d_vector = new double [num_cons];   // "d" in C*x = d
+    // Solution vector
+    double* x_vector = new double [num_cols_A]; // "x" in b - A*x, C*x = d
+
+    // Get the optimal work array size
+    int lwork        = -1; // special code for workspace query
+    work             = new double [1]; // temporary work array
+    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
+	     num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
+    lwork = (int)work[0]; // optimal work array size returned by query
+    delete [] work;
+    work             = new double [lwork]; // Optimal work array
+
+    // pack dataPoints gradients in A,b and dataPoints values in C,d.
+    size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
+    for (i=0; i<numExpansionTerms; ++i) {
+      const UShortArray& mi = multiIndex[i];
+      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++c_cntr) {
+	const RealVector& c_vars = it->continuous_variables();
+	// hard constraint on response values
+	C_matrix[c_cntr] = multivariate_polynomial(c_vars, mi);
+	// LLS on response gradients
+	const RealVector& mvp_grad
+	  = multivariate_polynomial_gradient(c_vars, mi);
+	for (j=0; j<numVars; ++j, ++a_cntr)
+	  A_matrix[a_cntr] = mvp_grad[j];
+      }
+    }
+    for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++d_cntr) {
+      d_vector[d_cntr] = it->response_function();
+      const RealVector& resp_grad = it->response_gradient();
+      for (j=0; j<numVars; ++j, ++b_cntr)
+	b_vector[b_cntr] = resp_grad[j];
+    }
+    // Least squares computation using LAPACK's DGGLSE subroutine which uses a
+    // GRQ factorization method for solving the least squares problem
+    info = 0;
+    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A,
+	     C_matrix, num_cons, b_vector, d_vector, x_vector, work,
+	     lwork, &info);
+    if (info)
+      err_flag = true;
+    copy_data(x_vector, numExpansionTerms, expansionCoeffs);
+
+    delete [] b_vector;
+    delete [] C_matrix;
+    delete [] d_vector;
+    delete [] x_vector;
+  }
+  else {
+    // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
+    // where {b} may have multiple RHS -> multiple {x} solutions.
+
+    int    num_rows_A    = num_pts*eqns_per_pt; // Number of rows in matrix A
+    size_t num_grad_rhs  = (expansionNonProbGradFlag) ?
+      expansionCoeffGrads.numRows() : 0;
+    size_t num_coeff_rhs = (expansionCoeffFlag) ? 1 : 0;
+    int    num_rhs = num_coeff_rhs + num_grad_rhs; // input: # of RHS vectors
+    double rcond = -1.; // input:  use macheps to rank singular vals of A
+    int    rank  =  0;  // output: effective rank of matrix A
+    // Matrix of polynomial terms unrolled into a vector.
+    A_matrix          = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
+    // input: vectors of response data that correspond to samples in matrix A.
+    double* b_vectors = new double [num_rows_A*num_rhs]; // "b" in A*x = b
+    // output: vector of singular values, dimensioned for overdetermined system
+    double* s_vector  = new double [num_cols_A];
+
+    // Get the optimal work array size
+    int lwork         = -1; // special code for workspace query
+    work              = new double [1]; // temporary work array
+    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
+	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
+    lwork = (int)work[0]; // optimal work array size returned by query
+    delete [] work;
+    work              = new double [lwork]; // Optimal work array
+
+    // The "A" matrix is a contiguous block of memory packed in column-major
+    // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
+    // example, the 6 elements of A(2,3) are stored in the order A(1,1), A(2,1),
+    // A(1,2), A(2,2), A(1,3), A(2,3).
+    size_t a_cntr = 0, b_cntr = 0;
+    for (i=0; i<numExpansionTerms; ++i) {
+      const UShortArray& mi = multiIndex[i];
+      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr) {
+	const RealVector& c_vars = it->continuous_variables();
+	A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi);
+	if (expansionProbGradFlag) {
+	  const RealVector& mvp_grad
+	    = multivariate_polynomial_gradient(c_vars, mi);
+	  for (j=0; j<numVars; ++j, ++a_cntr)
+	    A_matrix[a_cntr] = mvp_grad[j];
+	}
+      }
+    }
+
+    // response data (values/gradients) define the multiple RHS which are
+    // matched in the LS soln.  b_vectors is num_pts (rows) x num_rhs (cols),
+    // arranged in column-major order.
+    for (i=0, it=dataPoints.begin(); i<num_rows_A; ++it, ++i) {
+      if (expansionProbGradFlag) {
+	if (expansionCoeffFlag)
+	  { b_vectors[b_cntr] = it->response_function(); ++b_cntr; }
+	const RealVector& resp_grad = it->response_gradient();
+	for (j=0; j<numVars; ++j, ++b_cntr)
+	  b_vectors[b_cntr] = resp_grad[j];
+      }
+      else { 
+	if (expansionCoeffFlag)
+	  b_vectors[i] = it->response_function();
+	if (expansionNonProbGradFlag) {
+	  const RealVector& resp_grad = it->response_gradient();
+	  for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th gradient component
+	    b_vectors[(j+num_coeff_rhs)*num_pts+i] = resp_grad[j];
+	}
+      }
+    }
+
+    // Least squares computation using LAPACK's DGELSS subroutine which uses a
+    // SVD method for solving the least squares problem
+    info = 0;
+    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
+	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
+    if (info)
+      err_flag = true;
+
+    // DGELSS returns the x solution in the numExpansionTerms x num_rhs
+    // submatrix of b_vectors
+    if (expansionCoeffFlag)
+      copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
+    if (expansionNonProbGradFlag)
+      for (i=0; i<numExpansionTerms; ++i)
+	for (j=0; j<num_grad_rhs; ++j)
+	  expansionCoeffGrads(j,i) = b_vectors[(j+num_coeff_rhs)*num_pts+i];
+
+    delete [] b_vectors;
+    delete [] s_vector;
+  }
   delete [] A_matrix;
+  delete [] work;
 
   if (err_flag) { // if numerical problems in LLS, abort with error message
     PCerr << "Error: nonzero return code from LAPACK linear least squares in "
@@ -1387,7 +1505,7 @@ void OrthogPolyApproximation::regression()
 
 
 /** The coefficients of the PCE for the response are calculated using a
-    Galerkin projection of the response against each multivariate orthogonal
+    spectral projection of the response against each multivariate orthogonal
     polynomial basis fn using the inner product ratio <f,Psi>/<Psi^2>,
     where inner product <a,b> is the n-dimensional integral of a*b*weighting
     over the support range of the n-dimensional (composite) weighting
