@@ -524,7 +524,7 @@ void OrthogPolyApproximation::find_coefficients()
       // smolyak_multi_index() to define smolyakMultiIndex/smolyakCoeffs and
       // uses append_unique() to build multiIndex] and
       // allocate_collocation_arrays() [defines collocKey/expansionCoeffIndices]
-      if (expansionCoeffFlag)       expansionCoeffs = 0.;
+      if (expansionCoeffFlag)     expansionCoeffs = 0.;
       if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
       size_t i, num_tensor_grids = smolyakCoeffs.size();
       std::vector<SurrogateDataPoint> tp_data_points;
@@ -1212,9 +1212,9 @@ integrate_expansion(const UShort2DArray& multi_index,
     LAPACK, based on the presence of an anchorPoint. */
 void OrthogPolyApproximation::regression()
 {
-  // Implementation currently supports derivDataExpVarsFlag,
+  // Implementation currently supports dataOrder > 1,
   // expansionCoeffGradFlag, or neither, but not both.
-  if (derivDataExpVarsFlag && expansionCoeffGradFlag) {
+  if ( (dataOrder & 6) && expansionCoeffGradFlag) {
     PCerr << "Error: OrthogPolyApproximation::regression() supports "
 	  << "derivatives with respect to probabilistic or nonprobabilistic "
 	  << "variables, but not both." << std::endl;
@@ -1222,11 +1222,11 @@ void OrthogPolyApproximation::regression()
   }
 
   size_t i, j, num_pts = dataPoints.size(),
-    eqns_per_pt = (derivDataExpVarsFlag) ? 1 + numVars : 1;
+    eqns_per_pt = (dataOrder & 2) ? 1 + numVars : 1;
   std::vector<SurrogateDataPoint>::iterator it;
   Teuchos::LAPACK<int, Real> la;
   bool err_flag = false, anchor_pt = !anchorPoint.is_null(),
-    fn_constrained_lls = (derivDataExpVarsFlag && num_pts < numExpansionTerms);
+    fn_constrained_lls = ((dataOrder & 2) && num_pts < numExpansionTerms);
   double *A_matrix, *work;
   int info = 0, // output flag from DGELSS/DGGLSE subroutines
     num_cols_A = numExpansionTerms; // Number of columns in matrix A
@@ -1268,7 +1268,7 @@ void OrthogPolyApproximation::regression()
 	for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr) {
 	  const RealVector& c_vars = it->continuous_variables();
 	  A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi);
-	  if (derivDataExpVarsFlag) {
+	  if (dataOrder & 2) {
 	    const RealVector& mvp_grad
 	      = multivariate_polynomial_gradient(c_vars, mi);
 	    for (j=0; j<numVars; ++j, ++a_cntr)
@@ -1277,7 +1277,7 @@ void OrthogPolyApproximation::regression()
 	}
 	const RealVector& ap_c_vars = anchorPoint.continuous_variables();
 	C_matrix[c_cntr] = multivariate_polynomial(ap_c_vars, mi); ++c_cntr;
-	if (derivDataExpVarsFlag) {
+	if (dataOrder & 2) {
 	  const RealVector& mvp_grad
 	    = multivariate_polynomial_gradient(ap_c_vars, mi);
 	  for (j=0; j<numVars; ++j, ++c_cntr)
@@ -1286,14 +1286,14 @@ void OrthogPolyApproximation::regression()
       }
       for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++b_cntr) {
 	b_vector[b_cntr] = it->response_function();
-	if (derivDataExpVarsFlag) {
+	if (dataOrder & 2) {
 	  const RealVector& resp_grad = it->response_gradient();
 	  for (j=0; j<numVars; ++j, ++b_cntr)
 	    b_vector[b_cntr] = resp_grad[j];
 	}
       }
       d_vector[d_cntr] = anchorPoint.response_function(); ++d_cntr;
-      if (derivDataExpVarsFlag) {
+      if (dataOrder & 2) {
 	const RealVector& resp_grad = anchorPoint.response_gradient();
 	for (j=0; j<numVars; ++j, ++d_cntr)
 	  d_vector[d_cntr] = resp_grad[j];
@@ -1442,7 +1442,7 @@ void OrthogPolyApproximation::regression()
       for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr) {
 	const RealVector& c_vars = it->continuous_variables();
 	A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi);
-	if (derivDataExpVarsFlag) {
+	if (dataOrder & 2) {
 	  const RealVector& mvp_grad
 	    = multivariate_polynomial_gradient(c_vars, mi);
 	  for (j=0; j<numVars; ++j, ++a_cntr)
@@ -1455,7 +1455,7 @@ void OrthogPolyApproximation::regression()
     // matched in the LS soln.  b_vectors is num_pts (rows) x num_rhs (cols),
     // arranged in column-major order.
     for (i=0, it=dataPoints.begin(); i<num_rows_A; ++it, ++i) {
-      if (derivDataExpVarsFlag) {
+      if (dataOrder & 2) {
 	if (expansionCoeffFlag)
 	  { b_vectors[b_cntr] = it->response_function(); ++b_cntr; }
 	const RealVector& resp_grad = it->response_gradient();
@@ -1552,7 +1552,7 @@ void OrthogPolyApproximation::expectation()
   Real* mean_grad
     = (expansionCoeffGradFlag) ? (Real*)expansionCoeffGrads[0] : NULL;
   if (anchorPoint.is_null()) {
-    if (expansionCoeffFlag)       expansionCoeffs     = 0.;
+    if (expansionCoeffFlag)     expansionCoeffs     = 0.;
     if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
   }
   else {

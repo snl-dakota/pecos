@@ -41,7 +41,7 @@ public:
   /// default constructor
   PolynomialApproximation();
   /// standard constructor
-  PolynomialApproximation(size_t num_vars);
+  PolynomialApproximation(size_t num_vars, unsigned short data_order);
   /// destructor
   ~PolynomialApproximation();
 
@@ -113,11 +113,6 @@ public:
   void expansion_coefficient_gradient_flag(bool grad_flag);
   /// get expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
-
-  /// set derivDataExpVarsFlag
-  void derivative_data_expansion_variables_flag(bool grad_flag);
-  /// get derivDataExpVarsFlag
-  bool derivative_data_expansion_variables_flag() const;
 
   /// return sobolIndices
   const RealVector& sobol_indices() const;
@@ -203,9 +198,11 @@ protected:
   bool expansionCoeffFlag;
   /// flag for calculation of expansionCoeffGrads from response gradients
   bool expansionCoeffGradFlag;
-  /// flag for use of polynomial gradients in Least Squares Solve for
-  /// expansion coefficients
-  bool derivDataExpVarsFlag;
+  /// order of data contained within dataPoints
+  /** manages presence of derivative data with respect to the expansion
+      variables (aleatory or combined) within the expansion coefficient
+      calculation process (currently only within regression()). */
+  unsigned short dataOrder;
 
   /// previous quadrature order;
   /// used for tracking need for expansion form updates
@@ -280,16 +277,15 @@ private:
 
 inline PolynomialApproximation::PolynomialApproximation():
   driverRep(NULL), expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), derivDataExpVarsFlag(false),
-  ssgLevelPrev(USHRT_MAX)
+  expansionCoeffGradFlag(false), dataOrder(1), ssgLevelPrev(USHRT_MAX)
 { }
 
 
-inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
+inline PolynomialApproximation::
+PolynomialApproximation(size_t num_vars, unsigned short data_order):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), derivDataExpVarsFlag(false),
-  ssgLevelPrev(USHRT_MAX)
+  expansionCoeffGradFlag(false), dataOrder(data_order), ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -341,16 +337,6 @@ expansion_coefficient_gradient_flag(bool grad_flag)
 inline bool PolynomialApproximation::
 expansion_coefficient_gradient_flag() const
 { return expansionCoeffGradFlag; }
-
-
-inline void PolynomialApproximation::
-derivative_data_expansion_variables_flag(bool grad_flag)
-{ derivDataExpVarsFlag = grad_flag; }
-
-
-inline bool PolynomialApproximation::
-derivative_data_expansion_variables_flag() const
-{ return derivDataExpVarsFlag; }
 
 
 inline const RealVector& PolynomialApproximation::sobol_indices() const
