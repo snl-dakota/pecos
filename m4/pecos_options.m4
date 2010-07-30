@@ -18,4 +18,12 @@ AC_DEFUN([PECOS_OPTIONS],[
   AC_SUBST(DEBUGFLAGS)
   AM_CONDITIONAL([WITH_DEBUG_ENABLED],[test "x$enable_debug" = xyes])
 
+  dnl Tests option check.
+  AC_ARG_ENABLE([tests],
+                AS_HELP_STRING([--disable-tests],[do not build unit tests]),
+                [enable_tests=$enableval],[enable_tests=yes])
+  if test "x$enable_debug" = xyes; then
+    AC_CONFIG_SUBDIRS([test])
+  fi
+  AM_CONDITIONAL([ENABLE_TESTS],[test "x$enable_tests" = xyes])
 ])
