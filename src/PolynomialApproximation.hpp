@@ -41,7 +41,7 @@ public:
   /// default constructor
   PolynomialApproximation();
   /// standard constructor
-  PolynomialApproximation(size_t num_vars, unsigned short data_order);
+  PolynomialApproximation(size_t num_vars);
   /// destructor
   ~PolynomialApproximation();
 
@@ -198,11 +198,6 @@ protected:
   bool expansionCoeffFlag;
   /// flag for calculation of expansionCoeffGrads from response gradients
   bool expansionCoeffGradFlag;
-  /// order of data contained within dataPoints
-  /** manages presence of derivative data with respect to the expansion
-      variables (aleatory or combined) within the expansion coefficient
-      calculation process (currently only within regression()). */
-  unsigned short dataOrder;
 
   /// previous quadrature order;
   /// used for tracking need for expansion form updates
@@ -277,15 +272,14 @@ private:
 
 inline PolynomialApproximation::PolynomialApproximation():
   driverRep(NULL), expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), dataOrder(1), ssgLevelPrev(USHRT_MAX)
+  expansionCoeffGradFlag(false), ssgLevelPrev(USHRT_MAX)
 { }
 
 
-inline PolynomialApproximation::
-PolynomialApproximation(size_t num_vars, unsigned short data_order):
+inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), dataOrder(data_order), ssgLevelPrev(USHRT_MAX)
+  expansionCoeffGradFlag(false), ssgLevelPrev(USHRT_MAX)
 { }
 
 

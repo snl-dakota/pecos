@@ -50,7 +50,7 @@ BasisApproximation::BasisApproximation():
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
 BasisApproximation(const String& approx_type, const UShortArray& approx_order,
-		   size_t num_vars, unsigned short data_order):
+		   size_t num_vars):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -60,7 +60,7 @@ BasisApproximation(const String& approx_type, const UShortArray& approx_order,
 
   // Set the rep pointer to the appropriate derived type
   basisApproxRep
-    = get_basis_approx(approx_type, approx_order, num_vars, data_order);
+    = get_basis_approx(approx_type, approx_order, num_vars);
   if ( !basisApproxRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -70,7 +70,7 @@ BasisApproximation(const String& approx_type, const UShortArray& approx_order,
     appropriate derived type. */
 BasisApproximation* BasisApproximation::
 get_basis_approx(const String& approx_type, const UShortArray& approx_order,
-		 size_t num_vars, unsigned short data_order)
+		 size_t num_vars)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_basis_approx(string&)."
@@ -82,9 +82,9 @@ get_basis_approx(const String& approx_type, const UShortArray& approx_order,
   else if (approx_type == "eigen")
     return NULL;//new SVDLeftEigenBasisApproximation(num_vars);
   else if (approx_type == "global_interpolation_polynomial")
-    return new InterpPolyApproximation(num_vars, data_order);
+    return new InterpPolyApproximation(num_vars);
   else if (approx_type == "global_orthogonal_polynomial")
-    return new OrthogPolyApproximation(approx_order, num_vars, data_order);
+    return new OrthogPolyApproximation(approx_order, num_vars);
   else {
     PCerr << "Error: BasisApproximation type " << approx_type
 	  << " not available." << std::endl;
