@@ -8,8 +8,12 @@ ACLOCAL_AMFLAGS = -I ./m4
 ## Source subdirectories to be recursed into during the build.
 ## Convenience libraries to be built in each of the SUBDIRS.
 ## Top-level, libpecos.la must be built PRIOR to the linkage of test executables
-SUBDIRS = packages src . test
+SUBDIRS = packages src .
 SUBLIBS = src/libpecos_src.la
+
+if ENABLE_TESTS
+SUBDIRS += test
+endif
 
 if WITH_FFT
 SUBLIBS += packages/dfftpack/libdfftpack.la packages/fftw/libfftw.la
