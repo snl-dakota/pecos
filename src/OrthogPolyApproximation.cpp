@@ -1225,8 +1225,8 @@ void OrthogPolyApproximation::regression()
   // expansion variables (aleatory or combined) within the expansion
   // coefficient calculation process, which must be distinguished from the
   // expansionCoeffGradFlag case.
-  bool use_grads_flag     = ((data_order & 2) && !expansionCoeffGradFlag),
-       fn_constrained_lls = (use_grads_flag && num_pts < numExpansionTerms);
+  bool  use_grads_flag = ((data_order & 2) && !expansionCoeffGradFlag),
+    fn_constrained_lls = (use_grads_flag && num_pts < numExpansionTerms);
   size_t eqns_per_pt = (use_grads_flag) ? 1 + numVars : 1;
   std::vector<SurrogateDataPoint>::iterator it;
   Teuchos::LAPACK<int, Real> la;
@@ -1268,9 +1268,9 @@ void OrthogPolyApproximation::regression()
       size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
       for (i=0; i<numExpansionTerms; ++i) {
 	const UShortArray& mi = multiIndex[i];
-	for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr) {
+	for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
 	  const RealVector& c_vars = it->continuous_variables();
-	  A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi);
+	  A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
 	  if (use_grads_flag) {
 	    const RealVector& mvp_grad
 	      = multivariate_polynomial_gradient(c_vars, mi);
@@ -1287,8 +1287,8 @@ void OrthogPolyApproximation::regression()
 	    C_matrix[c_cntr] = mvp_grad[j];
 	}
       }
-      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++b_cntr) {
-	b_vector[b_cntr] = it->response_function();
+      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
+	b_vector[b_cntr] = it->response_function(); ++b_cntr;
 	if (use_grads_flag) {
 	  const RealVector& resp_grad = it->response_gradient();
 	  for (j=0; j<numVars; ++j, ++b_cntr)
@@ -1442,9 +1442,9 @@ void OrthogPolyApproximation::regression()
     size_t a_cntr = 0, b_cntr = 0;
     for (i=0; i<numExpansionTerms; ++i) {
       const UShortArray& mi = multiIndex[i];
-      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr) {
+      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
 	const RealVector& c_vars = it->continuous_variables();
-	A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi);
+	A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
 	if (use_grads_flag) {
 	  const RealVector& mvp_grad
 	    = multivariate_polynomial_gradient(c_vars, mi);
@@ -1457,15 +1457,15 @@ void OrthogPolyApproximation::regression()
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_pts (rows) x num_rhs (cols),
     // arranged in column-major order.
-    for (i=0, it=dataPoints.begin(); i<num_rows_A; ++it, ++i) {
-      if (use_grads_flag) {
-	if (expansionCoeffFlag)
-	  { b_vectors[b_cntr] = it->response_function(); ++b_cntr; }
+    if (use_grads_flag)
+      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
+	b_vectors[b_cntr] = it->response_function(); ++b_cntr;
 	const RealVector& resp_grad = it->response_gradient();
 	for (j=0; j<numVars; ++j, ++b_cntr)
 	  b_vectors[b_cntr] = resp_grad[j];
       }
-      else { 
+    else
+      for (i=0, it=dataPoints.begin(); i<num_pts; ++it, ++i) {
 	if (expansionCoeffFlag)
 	  b_vectors[i] = it->response_function();
 	if (expansionCoeffGradFlag) {
@@ -1474,7 +1474,6 @@ void OrthogPolyApproximation::regression()
 	    b_vectors[(j+num_coeff_rhs)*num_pts+i] = resp_grad[j];
 	}
       }
-    }
 
     // Least squares computation using LAPACK's DGELSS subroutine which uses a
     // SVD method for solving the least squares problem
