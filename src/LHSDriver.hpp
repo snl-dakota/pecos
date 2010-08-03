@@ -62,7 +62,8 @@ public:
   void advance_seed_sequence();
 
   /// generates the desired set of parameter samples from within general
-  /// user-specified probabilistic distributions
+  /// user-specified probabilistic distributions (DistributionParams
+  /// specification augmented with design and state variables)
   void generate_samples(const RealVector&   cd_l_bnds,
 			const RealVector&   cd_u_bnds,
 			const IntVector&    ddr_l_bnds,
@@ -77,6 +78,11 @@ public:
 			const RealSetArray& dssr_values,
 			const DistributionParams& dp, int num_samples,
 			RealMatrix& samples_array, RealMatrix& rank_array);
+
+  /// generates the desired set of parameter samples from within a
+  /// DistributionParams specification
+  void generate_samples(const DistributionParams& dp, int num_samples,
+			RealMatrix& samples_array);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated normal distributions
@@ -178,6 +184,23 @@ inline void LHSDriver::advance_seed_sequence()
     std::srand(randomSeed);
     seed(1 + std::rand()); // from 1 to RANDMAX+1
   }
+}
+
+
+inline void LHSDriver::
+generate_samples(const DistributionParams& dp, int num_samples,
+		 RealMatrix& samples_array)
+{
+  if (sampleRanksMode) {
+    PCerr << "Error: generate_samples(DistributionParams&) does not support "
+	  << "sample rank input/output." << std::endl;
+    abort_handler(-1);
+  }
+  RealVector  empty_rv;  IntVector    empty_iv; RealMatrix empty_rm;
+  IntSetArray empty_isa; RealSetArray empty_rsa;
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
+		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
+		   dp, num_samples, samples_array, empty_rm);
 }
 
 
