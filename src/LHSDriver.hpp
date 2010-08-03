@@ -36,7 +36,7 @@ public:
 
   LHSDriver();  ///< default constructor
   LHSDriver(const String& sample_type, short sample_ranks_mode = IGNORE_RANKS,
-	    bool reportFlag = true);  ///< constructor
+	    bool reports = true);  ///< constructor
   ~LHSDriver(); ///< destructor
 
   //
@@ -45,8 +45,7 @@ public:
 
   /// populate data when not passed through ctor
   void initialize(const String& sample_type,
-		  short sample_ranks_mode = IGNORE_RANKS,
-		  bool reportFlag = true);
+		  short sample_ranks_mode = IGNORE_RANKS, bool reports = true);
 
   /// set randomSeed
   void seed(int seed);

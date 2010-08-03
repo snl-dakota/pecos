@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
   // Instantiate/initialize LHSDriver
   std::cout << "Instantiating LHSDriver:\n";
-  Pecos::LHSDriver lhs_driver("lhs"); // default sample_ranks_mode, reportFlag
+  Pecos::LHSDriver lhs_driver("lhs"); // default sample_ranks_mode, reports
   lhs_driver.seed(1234567);
 
   // Compute and output samples
