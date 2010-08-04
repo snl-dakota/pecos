@@ -36,7 +36,7 @@ public:
   //
 
   /// default constructor
-  InterpPolyApproximation(size_t num_vars);
+  InterpPolyApproximation(size_t num_vars, short output_level);
   /// destructor
   ~InterpPolyApproximation();
 
@@ -182,8 +182,9 @@ private:
 };
 
 
-inline InterpPolyApproximation::InterpPolyApproximation(size_t num_vars):
-  PolynomialApproximation(num_vars), numCollocPts(0)
+inline InterpPolyApproximation::
+InterpPolyApproximation(size_t num_vars, short output_level):
+  PolynomialApproximation(num_vars, output_level), numCollocPts(0)
 { }
 
 

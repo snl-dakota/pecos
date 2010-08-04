@@ -41,7 +41,7 @@ public:
   /// default constructor
   PolynomialApproximation();
   /// standard constructor
-  PolynomialApproximation(size_t num_vars);
+  PolynomialApproximation(size_t num_vars, short output_level);
   /// destructor
   ~PolynomialApproximation();
 
@@ -193,6 +193,9 @@ protected:
   /// identifies the approach taken in find_coefficients():
   /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
   short expCoeffsSolnApproach;
+  /// SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT, or
+  /// DEBUG_OUTPUT
+  short outputLevel;
 
   /// flag for calculation of expansionCoeffs from response values
   bool expansionCoeffFlag;
@@ -271,15 +274,18 @@ private:
 
 
 inline PolynomialApproximation::PolynomialApproximation():
-  driverRep(NULL), expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), ssgLevelPrev(USHRT_MAX)
+  driverRep(NULL), expCoeffsSolnApproach(SAMPLING), outputLevel(NORMAL_OUTPUT),
+  expansionCoeffFlag(true), expansionCoeffGradFlag(false),
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
-inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
+inline PolynomialApproximation::
+PolynomialApproximation(size_t num_vars, short output_level):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
-  expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), ssgLevelPrev(USHRT_MAX)
+  expCoeffsSolnApproach(SAMPLING), outputLevel(output_level),
+  expansionCoeffFlag(true), expansionCoeffGradFlag(false),
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 

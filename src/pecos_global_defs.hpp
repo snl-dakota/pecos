@@ -69,6 +69,10 @@ enum { SLOW_RESTRICTED_GROWTH, MODERATE_RESTRICTED_GROWTH,
 /// solution approaches for calculating the polynomial basis coefficients
 enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
 
+/// options for output verbosity (mirrors Dakota/src/DataMethod.H)
+enum { SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT,
+       DEBUG_OUTPUT };
+
 
 // ----------------
 // Standard streams

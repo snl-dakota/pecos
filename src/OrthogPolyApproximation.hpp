@@ -45,7 +45,8 @@ public:
   //
 
   /// default constructor
-  OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars);
+  OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
+			  short output_level);
   /// destructor
   ~OrthogPolyApproximation();
 
@@ -308,8 +309,9 @@ private:
 
 
 inline OrthogPolyApproximation::
-OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
-  PolynomialApproximation(num_vars), numExpansionTerms(0),
+OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
+			short output_level):
+  PolynomialApproximation(num_vars, output_level), numExpansionTerms(0),
   approxOrder(approx_order), quadratureExpansion(TENSOR_INT_TENSOR_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
 { }
