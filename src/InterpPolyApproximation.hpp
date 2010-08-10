@@ -106,29 +106,57 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// compute the value of an interpolant on an isotropic/anisotropic
+  /// compute the value of a tensor interpolant on an isotropic/anisotropic
+  /// tensor-product grid; contributes to get_value(x)
+  const Real& tensor_product_value(const RealVector& x);
+  /// compute the value of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_value(x)
   const Real& tensor_product_value(const RealVector& x, size_t tp_index);
-  /// compute the gradient of an interpolant on an isotropic/anisotropic
+
+  /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
+  /// tensor-product grid; contributes to get_gradient(x)
+  const RealVector& tensor_product_gradient(const RealVector& x);
+  /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_gradient(x)
   const RealVector& tensor_product_gradient(const RealVector& x,
 					    size_t tp_index);
-  /// compute the gradient of an interpolant on an isotropic/anisotropic
+  /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
+  /// tensor-product grid for given DVV; contributes to get_gradient(x, dvv)
+  const RealVector& tensor_product_gradient(const RealVector& x,
+					    const UIntArray& dvv);
+  /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid for given DVV; contributes to get_gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
     size_t tp_index, const UIntArray& dvv);
-  /// compute the mean of an interpolant on an isotropic/anisotropic
+
+  /// compute the mean of a tensor interpolant on an isotropic/anisotropic
+  /// tensor-product grid; contributes to get_mean(x)
+  const Real& tensor_product_mean(const RealVector& x);
+  /// compute the mean of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_mean(x)
   const Real& tensor_product_mean(const RealVector& x, size_t tp_index);
-  /// compute the mean of an interpolant on an isotropic/anisotropic
+
+  /// compute the mean of a tensor interpolant on an isotropic/anisotropic
+  /// tensor-product grid; contributes to get_mean(x)
+  const RealVector& tensor_product_mean_gradient(const RealVector& x,
+						 const UIntArray& dvv);
+  /// compute the mean of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_mean(x)
   const RealVector& tensor_product_mean_gradient(const RealVector& x,
     size_t tp_index, const UIntArray& dvv);
 
-  /// compute the variance of an interpolant on an isotropic/anisotropic
+  /// compute the variance of a tensor interpolant on an isotropic/anisotropic
+  /// tensor-product grid; contributes to get_variance(x)
+  const Real& tensor_product_variance(const RealVector& x);
+  /// compute the variance of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_variance(x)
   const Real& tensor_product_variance(const RealVector& x, size_t tp_index);
-  /// compute the variance of an interpolant on an isotropic/anisotropic
+
+  /// compute the variance of a tensor interpolant on an isotropic/anisotropic
+  /// tensor-product grid; contributes to get_variance(x)
+  const RealVector& tensor_product_variance_gradient(const RealVector& x,
+						     const UIntArray& dvv);
+  /// compute the variance of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_variance(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
     size_t tp_index, const UIntArray& dvv);
@@ -136,12 +164,13 @@ private:
   /// performs sorting to store constituent subsets (constituentSets)
   void get_subsets();
   /// recursively identifies constituent subsets
-  void lower_sets(int plus_one_set, IntSet &top_level_set);
-  /// finds variance of interpolant with respect to variables in the set
-  Real partial_variance_integral(const int &set_value, size_t tp_index,
-				 UShortArray &quad_order);
+  void lower_sets(int plus_one_set, IntSet& top_level_set);
+  /// finds variance of tensor interpolant with respect to variables in the set
+  Real partial_variance_integral(int set_value);
+  /// finds variance of sparse interpolant with respect to variables in the set
+  Real partial_variance_integral(int set_value, size_t tp_index);
   /// computes partialVariance
-  void partial_variance(const int &set_value);
+  void partial_variance(int set_value);
 
   //
   //- Heading: Data

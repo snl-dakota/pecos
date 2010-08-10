@@ -325,10 +325,6 @@ void OrthogPolyApproximation::allocate_arrays()
 
     if (update_exp_form) { // compute and output number of terms
       sparse_grid_multi_index(multiIndex);
-      if (sparseGridExpansion == TENSOR_INT_TENSOR_SUM_EXP)
-	allocate_collocation_arrays();
-      else
-	{ smolyakMultiIndex.clear(); smolyakCoeffs.clear(); }
       numExpansionTerms = multiIndex.size();
     }
     if (sparseGridExpansion == TENSOR_INT_TENSOR_SUM_EXP)
@@ -520,13 +516,13 @@ void OrthogPolyApproximation::find_coefficients()
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // multiple expansion integration
-      // Note: allocate_arrays() calls sparse_grid_multi_index() [calls
-      // smolyak_multi_index() to define smolyakMultiIndex/smolyakCoeffs and
-      // uses append_unique() to build multiIndex] and
-      // allocate_collocation_arrays() [defines collocKey/expansionCoeffIndices]
+      // Note: allocate_arrays() calls sparse_grid_multi_index() [which calls
+      // allocate_smolyak_arrays() and allocate_collocation_arrays() to define
+      // smolyakMultiIndex/smolyakCoeffs/collocKey/expansionCoeffIndices]
+      // which uses append_unique() to build multiIndex.
       if (expansionCoeffFlag)     expansionCoeffs = 0.;
       if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
-      size_t i, num_tensor_grids = smolyakCoeffs.size();
+      size_t i, num_tensor_grids = tpMultiIndex.size();
       std::vector<SurrogateDataPoint> tp_data_points;
       RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
       // loop over tensor-products, forming sub-expansions, and sum them up
@@ -542,9 +538,9 @@ void OrthogPolyApproximation::find_coefficients()
 	add_unique(i, tp_expansion, tp_expansion_grads);
       }
       //if (!reEntrantFlag) {
-      //  smolyakMultiIndex.clear(); smolyakCoeffs.clear();
-      //  collocKey.clear();         expansionCoeffIndices.clear();
-      //  tpMultiIndex.clear();      tpMultiIndexMap.clear();
+      //  ssg_driver->clear_smolyak_arrays();
+      //  ssg_driver->clear_collocation_arrays();
+      //  tpMultiIndex.clear(); tpMultiIndexMap.clear();
       //}
       break;
     }
@@ -568,12 +564,15 @@ void OrthogPolyApproximation::find_coefficients()
 void OrthogPolyApproximation::
 sparse_grid_multi_index(UShort2DArray& multi_index)
 {
-  smolyak_multi_index(smolyakMultiIndex, smolyakCoeffs);
-  size_t i, num_smolyak_indices = smolyakMultiIndex.size();
-
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  ssg_driver->allocate_smolyak_arrays();
+  const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
+  size_t i, num_smolyak_indices = sm_multi_index.size();
+
   switch (sparseGridExpansion) {
   case TENSOR_INT_TENSOR_SUM_EXP: {
+    // allocate additional collocation point bookkeeping
+    ssg_driver->allocate_collocation_arrays();
     // assemble a complete list of individual polynomial coverage
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
@@ -585,13 +584,13 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
       // regenerate i-th expansion_order as collocKey[i] cannot be used in
       // general case (i.e., for nested rules GP, CC, F2, or GK).  Rather,
       // collocKey[i] is to be used only as the key to the collocation pts.
-      ssg_driver->level_to_order(smolyakMultiIndex[i], quad_order);
+      ssg_driver->level_to_order(sm_multi_index[i], quad_order);
       quadrature_order_to_integrand_order(quad_order, integrand_order);
       integrand_order_to_expansion_order(integrand_order, expansion_order);
       tensor_product_multi_index(expansion_order, tpMultiIndex[i], true);
       append_unique(tpMultiIndex[i], multi_index, true);
 #ifdef DEBUG
-      PCout << "level =\n" << smolyakMultiIndex[i] << "quad_order =\n"
+      PCout << "level =\n" << sm_multi_index[i] << "quad_order =\n"
 	    << quad_order << "integrand_order =\n" << integrand_order
 	    << "expansion_order =\n" << expansion_order << "tp_multi_index =\n"
 	    << tpMultiIndex[i] << "multi_index =\n" << multi_index << '\n';
@@ -608,13 +607,13 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     for (i=0; i<num_smolyak_indices; ++i) {
       // Mitigate uneven integrand coverage due to exponential growth by
       // enforcing moderate linear growth (TO DO: SLOW_RESTRICTED_GROWTH):
-      level_growth_to_integrand_order(smolyakMultiIndex[i],
+      level_growth_to_integrand_order(sm_multi_index[i],
         MODERATE_RESTRICTED_GROWTH, integrand_order);
       integrand_order_to_expansion_order(integrand_order, expansion_order);
       tensor_product_multi_index(expansion_order, tp_multi_index, true);
       append_unique(tp_multi_index, multi_index, false);
 #ifdef DEBUG
-      PCout << "level =\n" << smolyakMultiIndex[i] << "integrand_order =\n"
+      PCout << "level =\n" << sm_multi_index[i] << "integrand_order =\n"
 	    << integrand_order << "expansion_order =\n" << expansion_order
 	    << "tp_multi_index =\n" << tp_multi_index << "multi_index =\n"
 	    << multi_index << '\n';
@@ -627,13 +626,13 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     UShortArray quad_order(numVars), integrand_order(numVars);
     UShort2DArray pareto(1), total_pareto;
     for (i=0; i<num_smolyak_indices; ++i) {
-      ssg_driver->level_to_order(smolyakMultiIndex[i], quad_order);
+      ssg_driver->level_to_order(sm_multi_index[i], quad_order);
       quadrature_order_to_integrand_order(quad_order, integrand_order);
       // maintain an n-dimensional Pareto front of nondominated multi-indices
       pareto[0] = integrand_order;
       update_pareto(pareto, total_pareto);
 #ifdef DEBUG
-      PCout << "level =\n" << smolyakMultiIndex[i] << "\nquad_order =\n"
+      PCout << "level =\n" << sm_multi_index[i] << "\nquad_order =\n"
 	    << quad_order << "\nintegrand_order =\n" << integrand_order << '\n';
 #endif // DEBUG
     }
@@ -979,8 +978,9 @@ void OrthogPolyApproximation::
 add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
 	   const RealMatrix& tp_expansion_grads)
 {
-  const Real&       sm_coeff  = smolyakCoeffs[tp_index];
-  const SizetArray& tp_mi_map = tpMultiIndexMap[tp_index];
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  const Real&       sm_coeff   = ssg_driver->smolyak_coefficients()[tp_index];
+  const SizetArray& tp_mi_map  = tpMultiIndexMap[tp_index];
   size_t i, j, index, num_tp_terms = tp_mi_map.size(), 
     num_deriv_vars = expansionCoeffGrads.numRows();
   for (i=0; i<num_tp_terms; ++i) {
@@ -1106,10 +1106,12 @@ integration_data(size_t tp_index,
 		 RealVector& tp_weights)
 {
   // extract tensor points from dataPoints and tensor weights from gaussWts1D
-  const UShort2DArray& tp_mi        = collocKey[tp_index];
-  const UShortArray&   sm_index     = smolyakMultiIndex[tp_index];
-  const SizetArray&    coeff_index  = expansionCoeffIndices[tp_index];
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  const UShort2DArray& tp_mi  = ssg_driver->collocation_key()[tp_index];
+  const UShortArray& sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const SizetArray& coeff_index
+    = ssg_driver->expansion_coefficient_indices()[tp_index];
+  const Real3DArray& gauss_wts_1d = driverRep->gauss_weights_array();
   size_t i, j, num_tp_pts = coeff_index.size();
   tp_data_points.resize(num_tp_pts); tp_weights.resize(num_tp_pts);
   for (i=0; i<num_tp_pts; ++i) {

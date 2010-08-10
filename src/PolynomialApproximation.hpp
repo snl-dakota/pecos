@@ -132,8 +132,19 @@ public:
   /// return the number of expansion terms for a tensor-product expansion
   /// with the provided (anisotropic) quadrature orders (default) or
   /// expansion orders (offset = true)
-  size_t tensor_product_terms(const UShortArray& order,
-			      bool exp_order_offset = false);
+  static size_t tensor_product_terms(const UShortArray& order,
+				     bool exp_order_offset = false);
+
+  /// initialize expansion multi_index using a tensor-product expansion
+  static void tensor_product_multi_index(const UShortArray& order,
+					 UShort2DArray& multi_index,
+					 bool exp_order_offset = false);
+  /// initialize expansion multi_index using a total-order expansion
+  /// from an upper_bound array specification
+  static void total_order_multi_index(const UShortArray& upper_bound,
+				      UShort2DArray& multi_index,
+				      short lower_bound_offset = -1,
+				      unsigned int max_terms = UINT_MAX);
 
   /// utility function for incrementing a set of multidimensional indices
   static void increment_indices(UShortArray& indices, const UShortArray& limits,
@@ -155,24 +166,6 @@ protected:
   //
   //- Heading: Member functions
   //
-
-  /// define collocKey and expansionCoeffIndices
-  void allocate_collocation_arrays();
-
-  /// initialize expansion multi_index using a tensor-product expansion
-  void tensor_product_multi_index(const UShortArray& order,
-				  UShort2DArray& multi_index,
-				  bool exp_order_offset = false);
-  /// initialize expansion multi_index using a total-order expansion
-  /// from an upper_bound array specification
-  void total_order_multi_index(const UShortArray& upper_bound,
-			       UShort2DArray& multi_index,
-			       short lower_bound_offset = -1,
-			       unsigned int max_terms = UINT_MAX);
-  /// initialize Smolyak multi_index (index sets defining the set of
-  /// tensor products) and Smolyak combinatorial coefficients using an
-  /// isotropic or anisotropic index set constraint
-  void smolyak_multi_index(UShort2DArray& multi_index, RealArray& coeffs);
 
   //
   //- Heading: Data
@@ -221,24 +214,6 @@ protected:
   /// list of indices identifying the non-random variable subset within the
   /// active variables (used in all_variables mode; defined from randomVarsKey)
   SizetList nonRandomIndices;
-
-  /// numSmolyakIndices-by-numVars array for identifying the index to use
-  /// within the polynomialBasis for a particular variable
-  /** The index sets correspond to j (0-based) for use as indices, which are
-      offset from the i indices (1-based) normally used in the Smolyak
-      expressions.  For quadrature, the indices are zero (irrespective of
-      integration order) since there is one polynomialBasis per variable; for
-      sparse grid, the index corresponds to level, one within each anisotropic
-      tensor-product integration of a Smolyak recursion. */
-  UShort2DArray smolyakMultiIndex;
-  /// precomputed array of Smolyak combinatorial coefficients
-  RealArray smolyakCoeffs;
-  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
-  /// the 1-D point indices for sets of tensor-product collocation points
-  UShort3DArray collocKey;
-  /// numSmolyakIndices-by-numTensorProductPts array for linking the
-  /// set of tensor products to the expansionCoeffs array
-  Sizet2DArray expansionCoeffIndices;
 
   /// expected value of the expansion
   Real expansionMean;

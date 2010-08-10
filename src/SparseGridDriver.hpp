@@ -63,6 +63,15 @@ public:
   //- Heading: Member functions
   //
 
+  /// overloaded form initializes smolyakMultiIndex and smolyakCoeffs
+  void allocate_smolyak_arrays();
+  /// initialize Smolyak multi-index (index sets defining the set of
+  /// tensor products) and Smolyak combinatorial coefficients using an
+  /// isotropic or anisotropic index set constraint
+  void allocate_smolyak_arrays(UShort2DArray& multi_index, RealArray& coeffs);
+  /// initialize collocKey and expansionCoeffIndices
+  void allocate_collocation_arrays();
+
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
 		       const RealVector& dim_pref, bool store_1d_gauss = false,
@@ -85,6 +94,33 @@ public:
   /// total number of collocation points including duplicates
   int grid_size_total();
 
+  /// update axisLowerBounds
+  void update_axis_lower_bounds();
+
+  /// generalized sparse grid function for 
+  void generalized_coefficients(const UShort2DArray& multi_index,
+				RealArray& coeffs) const;
+  /// generalized sparse grid function for 
+  void initialize_sets();
+  /// generalized sparse grid function for 
+  void finalize_sets();
+  /// generalized sparse grid function for 
+  void push_trial_set(const UShortArray& set);
+  /// generalized sparse grid function for 
+  void pop_trial_set();
+  /// generalized sparse grid function for 
+  void update_sets(const UShortArray& set_star);
+  /// generalized sparse grid function for 
+  void add_active_neighbors(const UShortArray& set);
+
+  /// converts an array of sparse grid levels to an array of
+  /// quadrature orders based on integrationRules/growthRules
+  void level_to_order(size_t i, unsigned short level,
+		      unsigned short& order);
+  /// converts an array of sparse grid levels to an array of
+  /// quadrature orders based on integrationRules/growthRules
+  void level_to_order(const UShortArray& levels, UShortArray& orders);
+
   /// set ssgLevel
   void level(unsigned short ssg_level);
   /// return ssgLevel
@@ -95,22 +131,24 @@ public:
   /// return growthRules
   const IntArray& growth_rules() const;
 
-  /// update axisLowerBounds
-  void update_axis_lower_bounds();
+  /// return smolyakMultiIndex
+  const UShort2DArray& smolyak_multi_index() const;
+  /// return smolyakCoeffs
+  const RealArray& smolyak_coefficients() const;
+  /// return collocKey
+  const UShort3DArray& collocation_key() const;
+  /// return expansionCoeffIndices
+  const Sizet2DArray& expansion_coefficient_indices() const;
+  /// return uniqueIndexMapping
+  const IntArray& unique_index_mapping() const;
 
   // return duplicateTol
   //const Real& duplicate_tolerance() const;
 
-  /// return uniqueIndexMapping
-  const IntArray& unique_index_mapping() const;
-
-  /// converts an array of sparse grid levels to an array of
-  /// quadrature orders based on integrationRules/growthRules
-  void level_to_order(size_t i, unsigned short level,
-		      unsigned short& order);
-  /// converts an array of sparse grid levels to an array of
-  /// quadrature orders based on integrationRules/growthRules
-  void level_to_order(const UShortArray& levels, UShortArray& orders);
+  /// return activeMultiIndex
+  const std::set<UShortArray>& active_multi_index() const;
+  /// return oldMultiIndex
+  const std::set<UShortArray>& old_multi_index() const;
 
 private:
 
@@ -163,11 +201,38 @@ private:
   /// duplication tolerance used in sgmga routines
   Real duplicateTol;
 
+  /// numSmolyakIndices-by-numVars array for identifying the index to use
+  /// within the polynomialBasis for a particular variable
+  /** The index sets correspond to j (0-based) for use as indices, which
+      are offset from the i indices (1-based) normally used in the Smolyak
+      expressions.  The indices correspond to levels, one within each
+      anisotropic tensor-product integration of a Smolyak recursion. */
+  UShort2DArray smolyakMultiIndex;
+  /// precomputed array of Smolyak combinatorial coefficients
+  RealArray smolyakCoeffs;
+  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
+  /// the 1-D point indices for sets of tensor-product collocation points
+  UShort3DArray collocKey;
+  /// numSmolyakIndices-by-numTensorProductPts array for linking the
+  /// set of tensor products to the expansionCoeffs array
+  Sizet2DArray expansionCoeffIndices;
+  /// output from sgmga_unique_index()
+  IntArray uniqueIndexMapping;
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
-  /// output from sgmga_unique_index()
-  IntArray uniqueIndexMapping;
+  /// old reference index sets for generalized sparse grids
+  std::set<UShortArray> oldMultiIndex; // or UShort2DArray
+  /// active index sets under current consideration for inclusion in a
+  /// generalized sparse grid
+  std::set<UShortArray> activeMultiIndex; // or UShort2DArray
+  // Smolyak combinatorial coefficients corresponding to oldMultiIndex
+  //RealArray oldCoeffs;
+  // Smolyak combinatorial coefficients corresponding to oldMultiIndex
+  //RealArray activeCoeffs;
+  // if activeMultiIndex is sorted, activeCoeffs must track ordering.
+  // Consider std::map<UShortArray, Real>?  Or rely on temporary
+  // insertion into smolyakMultiIndex/smolyakCoeffs?
 
   /// array of pointers to Gauss point evaluation functions
   std::vector<FPType> compute1DPoints;
@@ -202,12 +267,41 @@ inline const IntArray& SparseGridDriver::growth_rules() const
 { return growthRules; }
 
 
-//inline const Real& SparseGridDriver::duplicate_tolerance() const
-//{ return duplicateTol; }
+inline const UShort2DArray& SparseGridDriver::smolyak_multi_index() const
+{ return smolyakMultiIndex; }
+
+
+inline const RealArray& SparseGridDriver::smolyak_coefficients() const
+{ return smolyakCoeffs; }
+
+
+inline const UShort3DArray& SparseGridDriver::collocation_key() const
+{ return collocKey; }
+
+
+inline const Sizet2DArray& SparseGridDriver::
+expansion_coefficient_indices() const
+{ return expansionCoeffIndices; }
 
 
 inline const IntArray& SparseGridDriver::unique_index_mapping() const
 { return uniqueIndexMapping; }
+
+
+//inline const Real& SparseGridDriver::duplicate_tolerance() const
+//{ return duplicateTol; }
+
+
+inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const
+{ return activeMultiIndex; }
+
+
+inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
+{ return oldMultiIndex; }
+
+
+inline void SparseGridDriver::allocate_smolyak_arrays()
+{ allocate_smolyak_arrays(smolyakMultiIndex, smolyakCoeffs); }
 
 
 inline void SparseGridDriver::
@@ -228,6 +322,42 @@ level_to_order(const UShortArray& levels, UShortArray& orders)
     orders.resize(num_levels);
   for (i=0; i<num_levels; i++)
     level_to_order(i, levels[i], orders[i]);
+}
+
+
+inline void SparseGridDriver::
+basis_gauss_points(int order, int index, double* data)
+{
+  const RealArray& gauss_pts
+    = sgdInstance->polynomialBasis[index].gauss_points(order);
+  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
+}
+
+
+inline void SparseGridDriver::
+basis_gauss_weights(int order, int index, double* data)
+{
+  const RealArray& gauss_wts
+    = sgdInstance->polynomialBasis[index].gauss_weights(order);
+  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
+}
+
+
+inline void SparseGridDriver::
+chebyshev_points(int order, int index, double* data)
+{
+  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
+  const RealArray& gauss_pts = sgdInstance->chebyPolyPtr->gauss_points(order);
+  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
+}
+
+
+inline void SparseGridDriver::
+chebyshev_weights(int order, int index, double* data)
+{
+  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
+  const RealArray& gauss_wts = sgdInstance->chebyPolyPtr->gauss_weights(order);
+  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
 }
 
 } // namespace Pecos

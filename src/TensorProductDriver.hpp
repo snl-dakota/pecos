@@ -65,6 +65,8 @@ public:
 
   /// return integrationRules
   const IntArray& integration_rules() const;
+  /// return collocKey
+  const UShort2DArray& collocation_key() const;
 
   /// invoke initialize_rules() to set integration and growth rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
@@ -92,6 +94,10 @@ private:
   IntArray integrationRules;
   /// integer codes for growth rule options
   IntArray growthRules;
+
+  /// numCollocPts-by-numVars array for identifying the 1-D point
+  /// indices for sets of tensor-product collocation points
+  UShort2DArray collocKey;
 };
 
 
@@ -123,6 +129,10 @@ inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
 
 inline const IntArray& TensorProductDriver::integration_rules() const
 { return integrationRules; }
+
+
+inline const UShort2DArray& TensorProductDriver::collocation_key() const
+{ return collocKey; }
 
 
 inline int TensorProductDriver::grid_size()

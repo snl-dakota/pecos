@@ -13,9 +13,11 @@
 //- Version:
 
 #include "SparseGridDriver.hpp"
+#include "PolynomialApproximation.hpp"
 #include "sandia_rules.H"
 #include "sandia_sgmg.H"
 #include "sandia_sgmga.H"
+#include "sandia_sgmgg.H"
 #include "DistributionParams.hpp"
 #include "pecos_stat_util.hpp"
 
@@ -27,6 +29,142 @@ namespace Pecos {
 
 /// initialize static member pointer to active driver instance
 SparseGridDriver* SparseGridDriver::sgdInstance(NULL);
+
+
+void SparseGridDriver::
+allocate_smolyak_arrays(UShort2DArray& multi_index, RealArray& coeffs)
+{
+  // Populate smolyakMultiIndex and smolyakCoeffs.  Identifies
+  // use of polynomialBasis[variable][index] based on index 0:num_levels-1.
+  // w = q - N = dimension-independent level.  For isotropic,
+  //   w + 1 <= |i| <= w + N for i starts at 1 (used for index set defn.)
+  //   w - N + 1 <= |j| <= w for j = i - 1 starts at 0 (used for generation)
+  // For anisotropic, a weighted linear index set constraint is used.
+
+  if (dimIsotropic) {
+    // initialize multi_index
+    UShortArray levels(numVars, ssgLevel);
+    PolynomialApproximation::total_order_multi_index(levels, multi_index,
+						     numVars-1);
+    size_t i, j, num_terms = multi_index.size();
+    // initialize coeffs
+    coeffs.resize(num_terms);
+    for (i=0; i<num_terms; i++) {
+      const UShortArray& index_set_i = multi_index[i];
+      int wpNmi = ssgLevel; // w + N - |i| = w - |j|
+      for (j=0; j<numVars; j++) // subtract 1-norm of index set
+	wpNmi -= index_set_i[j];
+      coeffs[i] = std::pow(-1., wpNmi)
+	* BasisPolynomial::n_choose_k(numVars - 1, wpNmi);
+    }
+  }
+  else {
+    // utilize Pecos wrapper to sgmga_vcn_{ordered,coef}
+    Int2DArray pmi;
+    anisotropic_multi_index(pmi, coeffs);
+    // copy Int2DArray -> UShort2DArray
+    size_t i, j, num_pmi = pmi.size();
+    multi_index.resize(num_pmi);
+    for (i=0; i<num_pmi; ++i) {
+      multi_index[i].resize(numVars);
+      for (j=0; j<numVars; ++j)
+	multi_index[i][j] = (unsigned short)pmi[i][j];
+    }
+  }
+
+#ifdef DEBUG
+  size_t i, num_terms = coeffs.size();
+  PCout << "\nnum Smolyak terms = " << num_terms << '\n';
+  for (i=0; i<num_terms; i++)
+    PCout << "multi_index[" << i << "]:\n" << multi_index[i]
+	  << "coeffs[" << i << "] = " << coeffs[i] << "\n\n";
+#endif // DEBUG
+}
+
+
+void SparseGridDriver::allocate_collocation_arrays()
+{
+  // define mapping from 1:numCollocPts to set of 1d interpolation indices
+  size_t num_smolyak_indices = smolyakMultiIndex.size();
+  collocKey.resize(num_smolyak_indices);
+  expansionCoeffIndices.resize(num_smolyak_indices);
+  UShortArray quad_order(numVars); //, gauss_indices(numVars);
+  //IntArray key(2*numVars);
+  //unsigned short closed_order_max;
+  //level_to_order_closed_exponential(ssg_level, closed_order_max);
+  size_t i, j, cntr = 0;
+  for (i=0; i<num_smolyak_indices; ++i) {
+    UShort2DArray& key_i       = collocKey[i];
+    SizetArray&    coeff_map_i = expansionCoeffIndices[i];
+
+    level_to_order(smolyakMultiIndex[i], quad_order);
+    PolynomialApproximation::tensor_product_multi_index(quad_order, key_i);
+    size_t num_tp_pts = key_i.size();
+    coeff_map_i.resize(num_tp_pts);
+    //gauss_indices = 0;
+    for (j=0; j<num_tp_pts; ++j, ++cntr) {
+      coeff_map_i[j] = uniqueIndexMapping[cntr];
+
+      /*
+      // update expansionCoeffIndices: sparse grid nesting of points may be
+      // tracked by demoting each point to its lowest order representation
+      // or by promoting each point to the highest order grid.
+      for (k=0; k<numVars; k++) {
+	switch (integrationRules[k]) {
+	// For open weakly-nested rules (Gauss-Hermite, Gauss-Legendre),
+	// demote to order=1,index=0 if a center pt for a particular order>1
+	case GAUSS_HERMITE: case GAUSS_LEGENDRE:
+	  if (numVars > 1 && quad_order[k] > 1 &&
+	      gauss_indices[k] == (quad_order[k]-1)/2) // demoted base/index
+	    { key[k] = 1;        key[k+numVars] = 0; }
+	  else                                    // original base/index
+	    { key[k] = quad_order[k]; key[k+numVars] = gauss_indices[k]; }
+	  break;
+	// For closed nested rules (Clenshaw-Curtis), base is a dummy and
+	// index is promoted to the highest order grid
+	case CLENSHAW_CURTIS:
+	  key[k] = closed_order_max; // promoted base
+	  if (sm_index_i[k] == 0)
+	    key[k+numVars] = (closed_order_max-1)/2;      // promoted index
+	  else {
+	    key[k+numVars] = gauss_indices[k];
+	    unsigned short delta_w = ssg_level - sm_index_i[k];
+	    if (delta_w)
+	      key[k+numVars] *= (size_t)pow(2., delta_w); // promoted index
+	  }
+	  break;
+	// For open non-nested rules (Gauss-Laguerre), no modification reqd
+        // Note: might need to check for symmetric cases of Gauss-Jacobi
+	default: // original base/index
+	  key[k] = quad_order[k]; key[k+numVars] = gauss_indices[k];
+	  break;
+	}
+      }
+#ifdef DEBUG
+      PCout << "lookup key:\n" << key << std::endl;
+#endif // DEBUG
+      IntArraySizetMap::const_iterator cit = ssgIndexMap.find(key);
+      if (cit == ssgIndexMap.end()) {
+	PCerr << "Error: lookup on sparse grid index map failed in "
+	      << "InterpPolyApproximation::find_coefficients()"
+	      << std::endl;
+	abort_handler(-1);
+      }
+      else
+	coeff_map_i[j] = cit->second;
+
+      // increment the n-dimensional gauss point index set
+      if (j != num_tp_pts - 1)
+        increment_indices(gauss_indices, quad_order, true);
+      */
+#ifdef DEBUG
+      PCout << "collocKey[" << i << "][" << j << "]:\n" << key_i[j]
+	    << "expansionCoeffIndices[" << i << "][" << j << "] = "
+	    << coeff_map_i[j] << '\n';
+#endif // DEBUG
+    }
+  }
+}
 
 
 void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
@@ -380,35 +518,108 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 }
 
 
-void SparseGridDriver::basis_gauss_points(int order, int index, double* data)
+void SparseGridDriver::
+generalized_coefficients(const UShort2DArray& multi_index,
+			 RealArray& coeffs) const
 {
-  const RealArray& gauss_pts
-    = sgdInstance->polynomialBasis[index].gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
+  size_t i, j, cntr = 0, num_sets = multi_index.size();
+  if (coeffs.size() != num_sets)
+    coeffs.resize(num_sets);
+  int* mi       = new int [numVars*num_sets];
+  int* i_coeffs = new int [num_sets];
+  //copy_data(multi_index, mi); // UShort2DArray -> int*
+  for (i=0; i<num_sets; ++i)
+    for (j=0; j<numVars; ++j, ++cntr)
+      mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
+  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, i_coeffs);
+  for (i=0; i<num_sets; ++i)
+    coeffs[i] = (Real)i_coeffs[i];
+  delete [] mi;
+  delete [] i_coeffs;
 }
 
 
-void SparseGridDriver::basis_gauss_weights(int order, int index, double* data)
+void SparseGridDriver::initialize_sets()
 {
-  const RealArray& gauss_wts
-    = sgdInstance->polynomialBasis[index].gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
+  // define set O (old) from smolyakMultiIndex and smolyakCoeffs
+  //oldMultiIndex = smolyakMultiIndex;
+  //oldCoeffs     = smolyakCoeffs;
+  oldMultiIndex.clear();
+  oldMultiIndex.insert(smolyakMultiIndex.begin(), smolyakMultiIndex.end());
+
+  // compute initial set A (active)
+  size_t i, num_old_sets = smolyakCoeffs.size();
+  for (i=0; i<num_old_sets; ++i)
+    if (smolyakCoeffs[i] > 0.) // set is on index set frontier
+      add_active_neighbors(smolyakMultiIndex[i]);
 }
 
 
-void SparseGridDriver::chebyshev_points(int order, int index, double* data)
+void SparseGridDriver::finalize_sets()
 {
-  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
-  const RealArray& gauss_pts = sgdInstance->chebyPolyPtr->gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
+  // for final answer, push all evaluated sets into old and clear active
+  //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
+  smolyakMultiIndex.insert(smolyakMultiIndex.end(), activeMultiIndex.begin(),
+			   activeMultiIndex.end());
+  activeMultiIndex.clear();
+  generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+  // update collocKey, expansionCoeffIndices, uniqueIndexMapping
+  allocate_collocation_arrays();
 }
 
 
-void SparseGridDriver::chebyshev_weights(int order, int index, double* data)
+void SparseGridDriver::push_trial_set(const UShortArray& set)
 {
-  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
-  const RealArray& gauss_wts = sgdInstance->chebyPolyPtr->gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
+  // update evaluation set: smolyakMultiIndex, smolyakCoeffs
+  //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
+  smolyakMultiIndex.push_back(set);
+  generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+  // update collocKey, expansionCoeffIndices, uniqueIndexMapping
+  allocate_collocation_arrays();
+}
+
+
+void SparseGridDriver::pop_trial_set()
+{ smolyakMultiIndex.pop_back(); }
+
+
+void SparseGridDriver::update_sets(const UShortArray& set_star)
+{
+  // update set O with set_star:
+  oldMultiIndex.insert(set_star);
+
+  // remove set_star from A: 
+  activeMultiIndex.erase(set_star);
+  // update set A based on neighbors of set_star: 
+  add_active_neighbors(set_star);
+
+  // update evaluation set: this push is permanent
+  push_trial_set(set_star);
+}
+
+
+void SparseGridDriver::add_active_neighbors(const UShortArray& set)
+{
+  UShortArray trial_set = set;
+  std::set<UShortArray>::const_iterator cit;
+  size_t i, j;
+  for (i=0; i<numVars; ++i) {
+    // i^{th} candidate for set A (active) computed from forward neighbor:
+    // increment by 1 in dimension i
+    trial_set[i] += 1;
+    // test all backwards neighbors for membership in set O (old)
+    bool backward_old = true;
+    for (j=0; j<numVars; ++j) {
+      trial_set[j] -= 1;
+      cit = oldMultiIndex.find(trial_set);
+      trial_set[j] += 1; // restore
+      if (cit == oldMultiIndex.end())
+	{ backward_old = false; break; }
+    }
+    if (backward_old) // std::set<> will discard any active duplicates
+      activeMultiIndex.insert(trial_set);
+    trial_set[i] -= 1; // restore
+  }
 }
 
 } // namespace Pecos

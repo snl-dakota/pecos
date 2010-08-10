@@ -100,6 +100,7 @@ void TensorProductDriver::compute_grid()
   // > compute and store products of 1-D Gauss weights at each point in stencil.
   weightSets.sizeUninitialized(num_colloc_pts);
   variableSets.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
+  collocKey.resize(num_colloc_pts);
   UShortArray gauss_indices(numVars, 0);
   for (i=0; i<num_colloc_pts; i++) {
     Real& wt_prod_i = weightSets[i];
@@ -109,8 +110,10 @@ void TensorProductDriver::compute_grid()
       vars_i[j]  = gaussPts1D[j][0][gauss_indices[j]];
       wt_prod_i *= gaussWts1D[j][0][gauss_indices[j]];
     }
+    collocKey[i] = gauss_indices;
     // increment the n-dimensional gauss point index set
-    PolynomialApproximation::increment_indices(gauss_indices, quadOrder, true);
+    if (i != num_colloc_pts-1)
+      PolynomialApproximation::increment_indices(gauss_indices,quadOrder,true);
   }
 }
 
