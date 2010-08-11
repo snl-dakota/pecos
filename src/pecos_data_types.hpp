@@ -249,6 +249,17 @@ std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
   return s;
 }
 
+/// global std::ostream insertion operator for std::set
+template <class T>
+std::ostream& operator<<(std::ostream& s, const std::set<T>& data)
+{
+  for (typename std::set<T>::const_iterator cit = data.begin();
+       cit != data.end(); ++cit)
+    s << "                     " << std::setw(WRITE_PRECISION+7)
+      << *cit << '\n';
+  return s;
+}
+
 } // namespace Pecos
 
 #endif // PECOS_DATA_TYPES_H

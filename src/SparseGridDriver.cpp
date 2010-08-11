@@ -23,7 +23,7 @@
 
 static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-//#define DEBUG
+#define DEBUG
 
 namespace Pecos {
 
@@ -550,8 +550,14 @@ void SparseGridDriver::initialize_sets()
   // compute initial set A (active)
   size_t i, num_old_sets = smolyakCoeffs.size();
   for (i=0; i<num_old_sets; ++i)
-    if (smolyakCoeffs[i] > 0.) // set is on index set frontier
+    // TO DO: necessary but not sufficient for presence on index set frontier
+    if (smolyakCoeffs[i] > 0.) // check (weighted) norm of set?
       add_active_neighbors(smolyakMultiIndex[i]);
+
+#ifdef DEBUG
+  PCout << "SparseGridDriver::initialize_sets():\nold sets:\n" << oldMultiIndex
+	<< "active sets:\n" << activeMultiIndex << std::endl;
+#endif // DEBUG
 }
 
 
@@ -570,12 +576,37 @@ void SparseGridDriver::finalize_sets()
 
 void SparseGridDriver::push_trial_set(const UShortArray& set)
 {
+#ifdef DEBUG
+  PCout << "SparseGridDriver::push_trial_set() recomputing sparse grid for "
+	<< "trial set:\n" << set << std::endl;
+#endif // DEBUG
   // update evaluation set: smolyakMultiIndex, smolyakCoeffs
   //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
   smolyakMultiIndex.push_back(set);
+
+  // cannot use allocate_smolyak_arrays(), rather we use
+  // generalized_coefficients() to update smolyakCoeffs from smolyakMultiIndex
   generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+#ifdef DEBUG
+  PCout << "SparseGridDriver::push_trial_set() generalized coefficients:\n"
+	<< smolyakCoeffs << std::endl;
+#endif // DEBUG
+
+  // *** TO DO: requires updated uniqueIndexMapping
   // update collocKey, expansionCoeffIndices, uniqueIndexMapping
-  allocate_collocation_arrays();
+  //allocate_collocation_arrays();
+
+  /* *** TO DO: prior to having sandia_sgmgg available, could manually
+  // increment the point sets (ignoring the merging of duplicates).  Still
+  // would need the right aggregated weights though.   Perhaps should wait
+  // on this and instead focus on required framework infrastructure.
+  //increment_collocation_arrays() ???
+  UShortArray new_mi, quad_order(numVars); SizetArray new_coeff_map;
+  level_to_order(set, quad_order);
+  PolynomialApproximation::tensor_product_multi_index(quad_order, new_mi);
+  collocKey.push_back(new_multi_index);
+  expansionCoeffIndices.push_back(new_coeff_map);
+  */
 }
 
 
@@ -585,16 +616,19 @@ void SparseGridDriver::pop_trial_set()
 
 void SparseGridDriver::update_sets(const UShortArray& set_star)
 {
-  // update set O with set_star:
+  // update set O by adding set_star to oldMultiIndex:
   oldMultiIndex.insert(set_star);
 
-  // remove set_star from A: 
+  // remove set_star from set A by erasing from activeMultiIndex: 
   activeMultiIndex.erase(set_star);
-  // update set A based on neighbors of set_star: 
+  // update activeMultiIndex (set A) based on neighbors of set_star: 
   add_active_neighbors(set_star);
 
-  // update evaluation set: this push is permanent
+  // update evaluation set smolyakMultiIndex:
+  // this push is permanent (will not be popped)
   push_trial_set(set_star);
+
+  // TO DO: prune irrelevant sets that have Coeff = 0
 }
 
 
@@ -606,19 +640,27 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
   for (i=0; i<numVars; ++i) {
     // i^{th} candidate for set A (active) computed from forward neighbor:
     // increment by 1 in dimension i
-    trial_set[i] += 1;
-    // test all backwards neighbors for membership in set O (old)
-    bool backward_old = true;
-    for (j=0; j<numVars; ++j) {
-      trial_set[j] -= 1;
-      cit = oldMultiIndex.find(trial_set);
-      trial_set[j] += 1; // restore
-      if (cit == oldMultiIndex.end())
-	{ backward_old = false; break; }
+    unsigned short& trial_set_i = trial_set[i];
+    trial_set_i += 1;
+    // candidate could be in oldMultiIndex since smolyakCoeffs[i]>0 test
+    // in initialize_sets() is necessary but not sufficient
+    if (oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
+      // test all backwards neighbors for membership in set O (old)
+      bool backward_old = true;
+      for (j=0; j<numVars; ++j) {
+	unsigned short& trial_set_j = trial_set[j];
+	if (trial_set_j) { // if 0, then admissible by default
+	  trial_set_j -= 1;
+	  cit = oldMultiIndex.find(trial_set);
+	  trial_set_j += 1; // restore
+	  if (cit == oldMultiIndex.end())
+	    { backward_old = false; break; }
+	}
+      }
+      if (backward_old) // std::set<> will discard any active duplicates
+	activeMultiIndex.insert(trial_set);
     }
-    if (backward_old) // std::set<> will discard any active duplicates
-      activeMultiIndex.insert(trial_set);
-    trial_set[i] -= 1; // restore
+    trial_set_i -= 1; // restore
   }
 }
 
