@@ -887,7 +887,7 @@ const Real& InterpPolyApproximation::get_value(const RealVector& x)
     // Smolyak recursion of anisotropic tensor products
     approxValue = 0.;
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
       approxValue += sm_coeffs[i] * tensor_product_value(x, i);
@@ -920,10 +920,10 @@ const RealVector& InterpPolyApproximation::get_gradient(const RealVector& x)
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
-      const Real&       coeff   = sm_coeffs[i];
+      int coeff = sm_coeffs[i];
       const RealVector& tp_grad = tensor_product_gradient(x, i);
       for (j=0; j<numVars; ++j)
 	approxGradient[j] += coeff * tp_grad[j];
@@ -956,10 +956,10 @@ get_gradient(const RealVector& x, const UIntArray& dvv)
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
-      const Real&       coeff   = sm_coeffs[i];
+      int coeff = sm_coeffs[i];
       const RealVector& tp_grad = tensor_product_gradient(x, i, dvv);
       for (j=0; j<num_deriv_vars; ++j)
 	approxGradient[j] += coeff * tp_grad[j];
@@ -1009,7 +1009,7 @@ const Real& InterpPolyApproximation::get_mean(const RealVector& x)
   case SPARSE_GRID: {
     expansionMean = 0.;
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
       expansionMean += sm_coeffs[i] * tensor_product_mean(x, i);
@@ -1074,10 +1074,10 @@ get_mean_gradient(const RealVector& x, const UIntArray& dvv)
     expansionMeanGrad = 0.;
     // Smolyak recursion of anisotropic tensor products
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
-      const Real&       coeff    = sm_coeffs[i];
+      int coeff = sm_coeffs[i];
       const RealVector& tpm_grad = tensor_product_mean_gradient(x, i, dvv);
       for (j=0; j<num_deriv_vars; ++j)
 	expansionMeanGrad[j] += coeff * tpm_grad[j];
@@ -1164,7 +1164,7 @@ const Real& InterpPolyApproximation::get_variance(const RealVector& x)
   case SPARSE_GRID:
     expansionVariance = 0.;
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
       expansionVariance	+= sm_coeffs[i] * tensor_product_variance(x, i);
@@ -1239,10 +1239,10 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
     expansionVarianceGrad = 0.;
     // Smolyak recursion of anisotropic tensor products
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
-      const Real&       coeff    = sm_coeffs[i];
+      int coeff = sm_coeffs[i];
       const RealVector& tpv_grad = tensor_product_variance_gradient(x, i, dvv);
       for (j=0; j<num_deriv_vars; ++j)
 	expansionVarianceGrad[j] += coeff * tpv_grad[j];
@@ -1476,7 +1476,7 @@ void InterpPolyApproximation::partial_variance(int set_value)
     break;
   case SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const RealArray&  sm_coeffs  = ssg_driver->smolyak_coefficients();
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     // Smolyak recursion of anisotropic tensor products
     size_t num_smolyak_indices = sm_coeffs.size();
     for (size_t i=0; i<num_smolyak_indices; ++i)

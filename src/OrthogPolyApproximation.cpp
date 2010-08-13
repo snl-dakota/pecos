@@ -979,7 +979,7 @@ add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
 	   const RealMatrix& tp_expansion_grads)
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const Real&       sm_coeff   = ssg_driver->smolyak_coefficients()[tp_index];
+  int               sm_coeff   = ssg_driver->smolyak_coefficients()[tp_index];
   const SizetArray& tp_mi_map  = tpMultiIndexMap[tp_index];
   size_t i, j, index, num_tp_terms = tp_mi_map.size(), 
     num_deriv_vars = expansionCoeffGrads.numRows();

@@ -68,7 +68,7 @@ public:
   /// initialize Smolyak multi-index (index sets defining the set of
   /// tensor products) and Smolyak combinatorial coefficients using an
   /// isotropic or anisotropic index set constraint
-  void allocate_smolyak_arrays(UShort2DArray& multi_index, RealArray& coeffs);
+  void allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
   /// initialize collocKey and expansionCoeffIndices
   void allocate_collocation_arrays();
 
@@ -88,8 +88,7 @@ public:
   /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying
   /// the anisotropic index set constraint, along with their corresponding
   /// coefficients
-  void anisotropic_multi_index(Int2DArray& multi_index,
-			       RealArray& coeffs) const;
+  void anisotropic_multi_index(Int2DArray& multi_index, IntArray& coeffs) const;
 
   /// total number of collocation points including duplicates
   int grid_size_total();
@@ -99,7 +98,7 @@ public:
 
   /// generalized sparse grid function for 
   void generalized_coefficients(const UShort2DArray& multi_index,
-				RealArray& coeffs) const;
+				IntArray& coeffs) const;
   /// generalized sparse grid function for 
   void initialize_sets();
   /// generalized sparse grid function for 
@@ -134,7 +133,7 @@ public:
   /// return smolyakMultiIndex
   const UShort2DArray& smolyak_multi_index() const;
   /// return smolyakCoeffs
-  const RealArray& smolyak_coefficients() const;
+  const IntArray& smolyak_coefficients() const;
   /// return collocKey
   const UShort3DArray& collocation_key() const;
   /// return expansionCoeffIndices
@@ -165,6 +164,9 @@ private:
   static void chebyshev_points(int order, int index, double* data);
   /// function for computing collocation weights for ChebyshevOrthogPolynomial
   static void chebyshev_weights(int order, int index, double* data);
+
+  // compute 1-norm |i| for index set i
+  unsigned int index_norm(const UShortArray& index_set) const;
 
   //
   //- Heading: Data
@@ -209,7 +211,7 @@ private:
       anisotropic tensor-product integration of a Smolyak recursion. */
   UShort2DArray smolyakMultiIndex;
   /// precomputed array of Smolyak combinatorial coefficients
-  RealArray smolyakCoeffs;
+  IntArray smolyakCoeffs;
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
   UShort3DArray collocKey;
@@ -227,9 +229,9 @@ private:
   /// generalized sparse grid
   std::set<UShortArray> activeMultiIndex; // or UShort2DArray
   // Smolyak combinatorial coefficients corresponding to oldMultiIndex
-  //RealArray oldCoeffs;
+  //IntArray oldCoeffs;
   // Smolyak combinatorial coefficients corresponding to oldMultiIndex
-  //RealArray activeCoeffs;
+  //IntArray activeCoeffs;
   // if activeMultiIndex is sorted, activeCoeffs must track ordering.
   // Consider std::map<UShortArray, Real>?  Or rely on temporary
   // insertion into smolyakMultiIndex/smolyakCoeffs?
@@ -271,7 +273,7 @@ inline const UShort2DArray& SparseGridDriver::smolyak_multi_index() const
 { return smolyakMultiIndex; }
 
 
-inline const RealArray& SparseGridDriver::smolyak_coefficients() const
+inline const IntArray& SparseGridDriver::smolyak_coefficients() const
 { return smolyakCoeffs; }
 
 
@@ -358,6 +360,16 @@ chebyshev_weights(int order, int index, double* data)
   sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
   const RealArray& gauss_wts = sgdInstance->chebyPolyPtr->gauss_weights(order);
   std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
+}
+
+
+inline unsigned int SparseGridDriver::
+index_norm(const UShortArray& index_set) const
+{
+  unsigned int i, norm = 0, len = index_set.size();
+  for (i=0; i<len; ++i)
+    norm += index_set[i];
+  return norm;
 }
 
 } // namespace Pecos

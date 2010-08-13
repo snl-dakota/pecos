@@ -32,7 +32,7 @@ SparseGridDriver* SparseGridDriver::sgdInstance(NULL);
 
 
 void SparseGridDriver::
-allocate_smolyak_arrays(UShort2DArray& multi_index, RealArray& coeffs)
+allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
 {
   // Populate smolyakMultiIndex and smolyakCoeffs.  Identifies
   // use of polynomialBasis[variable][index] based on index 0:num_levels-1.
@@ -50,12 +50,9 @@ allocate_smolyak_arrays(UShort2DArray& multi_index, RealArray& coeffs)
     // initialize coeffs
     coeffs.resize(num_terms);
     for (i=0; i<num_terms; i++) {
-      const UShortArray& index_set_i = multi_index[i];
-      int wpNmi = ssgLevel; // w + N - |i| = w - |j|
-      for (j=0; j<numVars; j++) // subtract 1-norm of index set
-	wpNmi -= index_set_i[j];
-      coeffs[i] = std::pow(-1., wpNmi)
-	* BasisPolynomial::n_choose_k(numVars - 1, wpNmi);
+      int wpNmi = ssgLevel - index_norm(multi_index[i]); // w+N-|i| = w-|j|
+      coeffs[i] = std::pow(-1, wpNmi)
+	* (int)BasisPolynomial::n_choose_k(numVars - 1, wpNmi);
     }
   }
   else {
@@ -480,7 +477,7 @@ void SparseGridDriver::compute_grid()
 
 
 void SparseGridDriver::
-anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
+anisotropic_multi_index(Int2DArray& multi_index, IntArray& coeffs) const
 {
   multi_index.clear();
   coeffs.clear();
@@ -506,8 +503,8 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
   webbur::sandia_sgmga_vcn_ordered(numVars, anisoLevelWts.values(), &x_max[0],
 				   &x[0], q_min, q_max, &more);
   while (more) {
-    Real coeff = webbur::sandia_sgmga_vcn_coef(numVars, anisoLevelWts.values(),
-					       &x[0], q_max);
+    int coeff = (int)webbur::sandia_sgmga_vcn_coef(numVars,
+		anisoLevelWts.values(), &x[0], q_max);
     if (std::abs(coeff) > 1.e-10) {
       multi_index.push_back(x);
       coeffs.push_back(coeff);
@@ -520,22 +517,18 @@ anisotropic_multi_index(Int2DArray& multi_index, RealArray& coeffs) const
 
 void SparseGridDriver::
 generalized_coefficients(const UShort2DArray& multi_index,
-			 RealArray& coeffs) const
+			 IntArray& coeffs) const
 {
   size_t i, j, cntr = 0, num_sets = multi_index.size();
   if (coeffs.size() != num_sets)
     coeffs.resize(num_sets);
-  int* mi       = new int [numVars*num_sets];
-  int* i_coeffs = new int [num_sets];
+  int* mi = new int [numVars*num_sets];
   //copy_data(multi_index, mi); // UShort2DArray -> int*
   for (i=0; i<num_sets; ++i)
     for (j=0; j<numVars; ++j, ++cntr)
       mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
-  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, i_coeffs);
-  for (i=0; i<num_sets; ++i)
-    coeffs[i] = (Real)i_coeffs[i];
+  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
   delete [] mi;
-  delete [] i_coeffs;
 }
 
 
@@ -549,10 +542,16 @@ void SparseGridDriver::initialize_sets()
 
   // compute initial set A (active)
   size_t i, num_old_sets = smolyakCoeffs.size();
-  for (i=0; i<num_old_sets; ++i)
-    // TO DO: necessary but not sufficient for presence on index set frontier
-    if (smolyakCoeffs[i] > 0.) // check (weighted) norm of set?
+  for (i=0; i<num_old_sets; ++i) {
+    if (dimIsotropic) {
+      if (smolyakCoeffs[i] == 1 && index_norm(smolyakMultiIndex[i]) == ssgLevel)
+	add_active_neighbors(smolyakMultiIndex[i]);
+    }
+    // necessary but not sufficient for presence on index set frontier;
+    // weighted norm of index set may differ from level
+    else if (smolyakCoeffs[i] == 1)
       add_active_neighbors(smolyakMultiIndex[i]);
+  }
 
 #ifdef DEBUG
   PCout << "SparseGridDriver::initialize_sets():\nold sets:\n" << oldMultiIndex
@@ -592,7 +591,7 @@ void SparseGridDriver::push_trial_set(const UShortArray& set)
 	<< smolyakCoeffs << std::endl;
 #endif // DEBUG
 
-  // *** TO DO: requires updated uniqueIndexMapping
+  // *** TO DO: requires updated uniqueIndexMapping from sandia_sgmgg
   // update collocKey, expansionCoeffIndices, uniqueIndexMapping
   //allocate_collocation_arrays();
 
@@ -642,7 +641,7 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
     // increment by 1 in dimension i
     unsigned short& trial_set_i = trial_set[i];
     trial_set_i += 1;
-    // candidate could be in oldMultiIndex since smolyakCoeffs[i]>0 test
+    // candidate could be in oldMultiIndex since smolyakCoeffs[i]==1 test
     // in initialize_sets() is necessary but not sufficient
     if (oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
       // test all backwards neighbors for membership in set O (old)
