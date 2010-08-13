@@ -51,7 +51,7 @@ allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
     coeffs.resize(num_terms);
     for (i=0; i<num_terms; i++) {
       int wpNmi = ssgLevel - index_norm(multi_index[i]); // w+N-|i| = w-|j|
-      coeffs[i] = std::pow(-1, wpNmi)
+      coeffs[i] = (int)std::pow(-1., wpNmi)
 	* (int)BasisPolynomial::n_choose_k(numVars - 1, wpNmi);
     }
   }
