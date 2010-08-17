@@ -114,6 +114,8 @@ public:
   /// get expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
+  /// return sobolIndexMap 
+  const IntIntMap& sobol_index_map() const;
   /// return sobolIndices
   const RealVector& sobol_indices() const;
   /// return totalSobolIndices
@@ -235,6 +237,9 @@ protected:
       expansion only over the random variables). */
   RealMatrix expansionCoeffGrads;
 
+  /// introduce mapping to unify disparate enumeration of sensitivity
+  /// indices
+  IntIntMap sobolIndexMap;
   /// global sensitivities as given by Sobol'
   RealVector sobolIndices;
   /// total global sensitivities as given by Sobol'
@@ -312,6 +317,10 @@ expansion_coefficient_gradient_flag(bool grad_flag)
 inline bool PolynomialApproximation::
 expansion_coefficient_gradient_flag() const
 { return expansionCoeffGradFlag; }
+
+
+inline const IntIntMap& PolynomialApproximation::sobol_index_map() const
+{ return sobolIndexMap; }
 
 
 inline const RealVector& PolynomialApproximation::sobol_indices() const

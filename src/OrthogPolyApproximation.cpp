@@ -2169,6 +2169,8 @@ norm_squared_random(const UShortArray& indices)
 
 void OrthogPolyApproximation::compute_global_sensitivity()
 {
+  if (outputLevel < NORMAL_OUTPUT)
+    return;
   // Allocation of memory for sensitivity variables done in 
   // PolynomialApproximation::allocate_arrays()
 
@@ -2190,11 +2192,13 @@ void OrthogPolyApproximation::compute_global_sensitivity()
   sobolIndices      = 0.;
   sobolIndices[0]   = 1.;
   totalSobolIndices = 0.;
+  // GT: compute according to output verbosity
   for (i=1; i<numExpansionTerms; ++i) {
     index_bin = 0;
     Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
       expansionCoeffs(i) / p_var;
     for (j=0; j<numVars; ++j) {
+      // GT: for each term, multiIndex indicates whether a variable belongs to that term
       if (multiIndex[i][j]) {
 	// convert this subset multiIndex[i] into binary number
 	index_bin += (size_t)pow(2.,(int)j);
@@ -2203,7 +2207,9 @@ void OrthogPolyApproximation::compute_global_sensitivity()
 	totalSobolIndices[j] += p_var_i;
       }
     }
-    sobolIndices[index_bin] += p_var_i;
+    // If term is main effect (exists in map), keep; otherwise, discard
+    if (sobolIndexMap.find(index_bin) != sobolIndexMap.end())
+      sobolIndices[sobolIndexMap[index_bin]] += p_var_i;
   }
 }
 

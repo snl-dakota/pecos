@@ -1263,8 +1263,12 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
 
 
 // Compute Sobol Indices for global sensitivity analysis
+// GT: need to make change here; find constiuent sets according to output verbosity
+// STATUS: not complete
 void InterpPolyApproximation::compute_global_sensitivity()
 {
+  if (outputLevel <  NORMAL_OUTPUT)
+    return;
   // need the full tensor product mean and tensor product variance
   Real total_mean = get_mean();
   Real total_variance =	get_variance();
@@ -1272,6 +1276,7 @@ void InterpPolyApproximation::compute_global_sensitivity()
   ////////////////////// Start Sort ///////////////////////////
 
   // size member variables
+  // GT: these are sized correctly (follows the length of sobolIndices)
   constituentSets.resize(sobolIndices.length());
   partialVariance.size(sobolIndices.length());
 
@@ -1284,28 +1289,56 @@ void InterpPolyApproximation::compute_global_sensitivity()
   partialVariance[0] = std::pow(total_mean,2.0); // init with mean sq
   totalSobolIndices = 0; // init total indices
 
-  // Solve for partial variances
+  /*// Solve for partial variances
   for (int ct=1; ct<sobolIndices.length(); ct++) {
+    // GT: instead of using counter directly, convert to "set number"
+    // GT: only compute partial variances of sets of interest
     partial_variance(ct);
     sobolIndices[ct] = 1/total_variance*partialVariance[ct];
+    // GT: Looks like total indices simply identify the membership of the sobolIndices 
+    // and adds it to the appropriate bin
     for (int k=0; k<std::numeric_limits<int>::digits; ++k)
       if (ct & (1 << k)) // if subset ct contains variable k
 	totalSobolIndices[k] += sobolIndices[ct];
+  }*/
+  // Solve for partial variance
+  for (IntIntMIter map_iter=sobolIndexMap.begin(); map_iter!=sobolIndexMap.end(); map_iter++) {
+    partial_variance((*map_iter).first);
+    sobolIndices[(*map_iter).second] = 1/total_variance*partialVariance[(*map_iter).second];
+    // GT: Looks like total indices simply identify the membership of the sobolIndices 
+    // and adds it to the appropriate bin
+    for (int k=0; k<std::numeric_limits<int>::digits; ++k)
+      if ((*map_iter).first & (1 << k)) // if subset ct contains variable k
+	totalSobolIndices[k] += sobolIndices[(*map_iter).second];
   }
 }
 
 
 /** Find constituent subsets. */
+// GT: need to make change here; find constiuent sets according to output verbosity
+// STATUS: not complete
 void InterpPolyApproximation::get_subsets()
 {
   // includes the "zero" set
-  int num_subsets = (int)std::pow(2.,(int)numVars);
+  // GT: Represents all possible sets of variablesi
+  // GT: change this to "numVars" if quiet or silent
+  int num_subsets = sobolIndices.length(); 
 
-  for (int i=1; i<num_subsets; ++i) {
+  // change this to not look at ONLY the subsets according to 
+  // verbosity
+  /*for (int i=1; i<num_subsets; ++i) {
     // find all constituent subsets of set i and store
     lower_sets(i,constituentSets[i]);
     // pull out top_level_set from the constituent set
     constituentSets[i].erase(i);	
+  }*/
+  // Here we want to utilize the integer representation of the subset
+  // but we want to store it in a size appropriate container
+  // so finding lower sets is given the argument of the integer rep (*.first) and stored in
+  // constituentSets in size-appropriate-index-map (*.second)
+  for (IntIntMIter map_iter=sobolIndexMap.begin(); map_iter!=sobolIndexMap.end(); map_iter++) {
+    lower_sets((*map_iter).first,constituentSets[(*map_iter).second]);
+    constituentSets[(*map_iter).second].erase((*map_iter).first);
   }
 }
 
@@ -1323,7 +1356,8 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
     top_level_set.insert(plus_one_set);
   // and find lower level sets
   for (int k=0; k<std::numeric_limits<int>::digits; ++k)
-    if (plus_one_set & (1 << k)) // if subset i contains variable k
+    // GT: this performs a bitwise comparison by shifting 1 by k spaces and comparing that to a binary form of plus_one_set; this allows the variable membership using integers instead of a d-array of bools
+    if (plus_one_set & (1 << k)) // if subset i contains variable k, remove that variable from the set by converting the bit-form of (1<<k) to an integer and subtract from the plus_one_set
       lower_sets(plus_one_set-(int)std::pow(2.0,k),top_level_set);
 }
 
@@ -1481,7 +1515,7 @@ void InterpPolyApproximation::partial_variance(int set_value)
   // Computes the integral first
   switch (expCoeffsSolnApproach) {
   case QUADRATURE:
-    partialVariance[set_value] = partial_variance_integral(set_value);
+    partialVariance[sobolIndexMap[set_value]] = partial_variance_integral(set_value);
     break;
   case SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
@@ -1489,7 +1523,7 @@ void InterpPolyApproximation::partial_variance(int set_value)
     // Smolyak recursion of anisotropic tensor products
     size_t num_smolyak_indices = sm_coeffs.size();
     for (size_t i=0; i<num_smolyak_indices; ++i)
-      partialVariance[set_value] += sm_coeffs[i]
+      partialVariance[sobolIndexMap[set_value]] += sm_coeffs[i]
 	* partial_variance_integral(set_value, i);
     break;
   }
