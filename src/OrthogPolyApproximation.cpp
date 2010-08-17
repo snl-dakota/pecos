@@ -2192,13 +2192,11 @@ void OrthogPolyApproximation::compute_global_sensitivity()
   sobolIndices      = 0.;
   sobolIndices[0]   = 1.;
   totalSobolIndices = 0.;
-  // GT: compute according to output verbosity
   for (i=1; i<numExpansionTerms; ++i) {
     index_bin = 0;
     Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
       expansionCoeffs(i) / p_var;
     for (j=0; j<numVars; ++j) {
-      // GT: for each term, multiIndex indicates whether a variable belongs to that term
       if (multiIndex[i][j]) {
 	// convert this subset multiIndex[i] into binary number
 	index_bin += (size_t)pow(2.,(int)j);

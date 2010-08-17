@@ -22,7 +22,7 @@ namespace Pecos {
 
 void PolynomialApproximation::allocate_arrays()
 {
-  // GT: sobolIndices[0] is reserved for mean in the verbose case
+  // sobolIndices[0] is reserved for mean in the verbose case
   // so we keep that convention for the normal case for semantic
   // and programming consistency (e.g. InterpPoly relies on that 
   // convention;
@@ -30,11 +30,11 @@ void PolynomialApproximation::allocate_arrays()
   int verbose_index_length = (int)std::pow(2.,(int)numVars);
   // size the sensitivity member variables
   if (expansionCoeffFlag) {
-    // GT: Probably should aggregate these two checks 
+    // TODO: Probably should aggregate these two checks 
     if (sobolIndices.empty()) {
-      // GT: Allocate memory specific to output control
+      // Allocate memory specific to output control
       switch(outputLevel) {
-        // GT: no allocation needed
+        // no allocation needed
 	case SILENT_OUTPUT:
 	case QUIET_OUTPUT: break;
 	case NORMAL_OUTPUT:
@@ -53,10 +53,9 @@ void PolynomialApproximation::allocate_arrays()
 	  abort_handler(-1); break;
       }
     }
+    // same for totalSobolIndices
     if (totalSobolIndices.empty()) {
-      // GT: Allocate memory specific to output control
       switch(outputLevel) {
-        // GT: no allocation needed
 	case SILENT_OUTPUT:
 	case QUIET_OUTPUT: break;
 	case NORMAL_OUTPUT:
