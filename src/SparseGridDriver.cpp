@@ -41,12 +41,12 @@ allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
   //   w - N + 1 <= |j| <= w for j = i - 1 starts at 0 (used for generation)
   // For anisotropic, a weighted linear index set constraint is used.
 
-  if (dimIsotropic) {
-    // initialize multi_index
+  size_t i;
+  if (dimIsotropic) { // initialize multi_index
     UShortArray levels(numVars, ssgLevel);
     PolynomialApproximation::total_order_multi_index(levels, multi_index,
 						     numVars-1);
-    size_t i, j, num_terms = multi_index.size();
+    size_t num_terms = multi_index.size();
     // initialize coeffs
     coeffs.resize(num_terms);
     for (i=0; i<num_terms; i++) {
@@ -55,27 +55,70 @@ allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
 	* (int)BasisPolynomial::n_choose_k(numVars - 1, wpNmi);
     }
   }
-  else {
-    // utilize Pecos wrapper to sgmga_vcn_{ordered,coef}
-    Int2DArray pmi;
-    anisotropic_multi_index(pmi, coeffs);
-    // copy Int2DArray -> UShort2DArray
-    size_t i, j, num_pmi = pmi.size();
-    multi_index.resize(num_pmi);
-    for (i=0; i<num_pmi; ++i) {
-      multi_index[i].resize(numVars);
-      for (j=0; j<numVars; ++j)
-	multi_index[i][j] = (unsigned short)pmi[i][j];
+  else { // utilize Pecos wrapper to sgmga_vcn_{ordered,coef}
+    multi_index.clear();
+    coeffs.clear();
+    // Utilize webbur::sandia_sgmga_vcn_{ordered,coef} for 0-based index sets
+    // (w*alpha_min-|alpha| < |alpha . j| <= w*alpha_min).
+    // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
+    // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
+    // w-N+1 <= |j| <= w.
+    IntArray x(numVars), x_max(numVars); //x_max = ssgLevel;
+    UShortArray index_set(numVars);
+    Real wt_sum = 0., q_max = ssgLevel;
+    for (i=0; i<numVars; ++i) {
+      const Real& wt_i = anisoLevelWts[i];
+      wt_sum += wt_i;
+      // minimum nonzero weight is scaled to 1, so just catch special case of 0
+      x_max[i] = (wt_i > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
+    }
+    Real q_min = ssgLevel - wt_sum;
+#ifdef DEBUG
+    PCout << "q_min = " << q_min << " q_max = " << q_max;
+#endif // DEBUG
+
+    bool more = false;
+    Real *aniso_wts = anisoLevelWts.values();
+    int  *x0 = &x[0], *xm0 = &x_max[0], coeff;
+    webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wts, xm0, x0,
+				     q_min, q_max, &more);
+    while (more) {
+      coeff = (int)webbur::sandia_sgmga_vcn_coef(numVars, aniso_wts, x0, q_max);
+      if (coeff) {
+	coeffs.push_back(coeff);
+	for (i=0; i<numVars; ++i)
+	  index_set[i] = (unsigned short)x[i];
+	multi_index.push_back(index_set);
+      }
+      webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wts, xm0, x0,
+				       q_min, q_max, &more);
     }
   }
 
 #ifdef DEBUG
-  size_t i, num_terms = coeffs.size();
+  size_t num_terms = coeffs.size();
   PCout << "\nnum Smolyak terms = " << num_terms << '\n';
   for (i=0; i<num_terms; i++)
     PCout << "multi_index[" << i << "]:\n" << multi_index[i]
 	  << "coeffs[" << i << "] = " << coeffs[i] << "\n\n";
 #endif // DEBUG
+}
+
+
+void SparseGridDriver::
+allocate_generalized_coefficients(const UShort2DArray& multi_index,
+				  IntArray& coeffs) const
+{
+  size_t i, j, cntr = 0, num_sets = multi_index.size();
+  if (coeffs.size() != num_sets)
+    coeffs.resize(num_sets);
+  int* mi = new int [numVars*num_sets];
+  //copy_data(multi_index, mi); // UShort2DArray -> int*
+  for (i=0; i<num_sets; ++i)
+    for (j=0; j<numVars; ++j, ++cntr)
+      mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
+  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
+  delete [] mi;
 }
 
 
@@ -406,28 +449,29 @@ void SparseGridDriver::compute_grid()
     // ----------------------------
     // Define 1-D point/weight sets
     // ----------------------------
-    if (gaussPts1D.empty())
-      gaussPts1D.resize(numVars);
-    if (gaussWts1D.empty())
-      gaussWts1D.resize(numVars);
+    size_t i;
+    if (gaussPts1D.empty() || gaussWts1D.empty()) {
+      gaussPts1D.resize(ssgLevel + 1); gaussWts1D.resize(ssgLevel + 1);
+      for (i=0; i<=ssgLevel; ++i)
+	{ gaussPts1D[i].resize(numVars); gaussWts1D[i].resize(numVars); }
+    }
     // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
     unsigned short level_index, order;
-    for (size_t i=0; i<numVars; i++) {
-      gaussPts1D[i].resize(ssgLevel + 1); gaussWts1D[i].resize(ssgLevel + 1);
+    for (i=0; i<numVars; i++) {
       switch (integrationRules[i]) {
       case CLENSHAW_CURTIS: case FEJER2:
 	chebyPolyPtr->gauss_mode(integrationRules[i]); // integration mode
 	for (level_index=0; level_index<=ssgLevel; level_index++) {
 	  level_to_order(i, level_index, order);
-	  gaussPts1D[i][level_index] = chebyPolyPtr->gauss_points(order);
-	  gaussWts1D[i][level_index] = chebyPolyPtr->gauss_weights(order);
+	  gaussPts1D[level_index][i] = chebyPolyPtr->gauss_points(order);
+	  gaussWts1D[level_index][i] = chebyPolyPtr->gauss_weights(order);
 	}
 	break;
       default: // Gaussian rules
 	for (level_index=0; level_index<=ssgLevel; level_index++) {
 	  level_to_order(i, level_index, order);
-	  gaussPts1D[i][level_index] = polynomialBasis[i].gauss_points(order);
-	  gaussWts1D[i][level_index] = polynomialBasis[i].gauss_weights(order);
+	  gaussPts1D[level_index][i] = polynomialBasis[i].gauss_points(order);
+	  gaussWts1D[level_index][i] = polynomialBasis[i].gauss_weights(order);
 	}
 	break;
       }
@@ -476,82 +520,24 @@ void SparseGridDriver::compute_grid()
 }
 
 
-void SparseGridDriver::
-anisotropic_multi_index(Int2DArray& multi_index, IntArray& coeffs) const
-{
-  multi_index.clear();
-  coeffs.clear();
-  // Utilize webbur::sandia_sgmga_vcn_{ordered,coef} for 0-based index sets
-  // (w*alpha_min-|alpha| < |alpha . j| <= w*alpha_min).
-  // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
-  // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
-  // w-N+1 <= |j| <= w.
-  IntArray x(numVars), x_max(numVars); //x_max = ssgLevel;
-  Real wt_sum = 0., q_max = ssgLevel;
-  for (size_t i=0; i<numVars; ++i) {
-    const Real& wt_i = anisoLevelWts[i];
-    wt_sum += wt_i;
-    // minimum nonzero weight is scaled to 1, so just catch special case of 0
-    x_max[i] = (wt_i > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
-  }
-  Real q_min = ssgLevel - wt_sum;
-#ifdef DEBUG
-  PCout << "q_min = " << q_min << " q_max = " << q_max;
-#endif // DEBUG
-
-  bool more = false;
-  webbur::sandia_sgmga_vcn_ordered(numVars, anisoLevelWts.values(), &x_max[0],
-				   &x[0], q_min, q_max, &more);
-  while (more) {
-    int coeff = (int)webbur::sandia_sgmga_vcn_coef(numVars,
-		anisoLevelWts.values(), &x[0], q_max);
-    if (std::abs(coeff) > 1.e-10) {
-      multi_index.push_back(x);
-      coeffs.push_back(coeff);
-    }
-    webbur::sandia_sgmga_vcn_ordered(numVars, anisoLevelWts.values(), &x_max[0],
-				     &x[0], q_min, q_max, &more);
-  }
-}
-
-
-void SparseGridDriver::
-generalized_coefficients(const UShort2DArray& multi_index,
-			 IntArray& coeffs) const
-{
-  size_t i, j, cntr = 0, num_sets = multi_index.size();
-  if (coeffs.size() != num_sets)
-    coeffs.resize(num_sets);
-  int* mi = new int [numVars*num_sets];
-  //copy_data(multi_index, mi); // UShort2DArray -> int*
-  for (i=0; i<num_sets; ++i)
-    for (j=0; j<numVars; ++j, ++cntr)
-      mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
-  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
-  delete [] mi;
-}
-
-
 void SparseGridDriver::initialize_sets()
 {
-  // define set O (old) from smolyakMultiIndex and smolyakCoeffs
+  // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
   //oldMultiIndex = smolyakMultiIndex;
-  //oldCoeffs     = smolyakCoeffs;
   oldMultiIndex.clear();
   oldMultiIndex.insert(smolyakMultiIndex.begin(), smolyakMultiIndex.end());
 
-  // compute initial set A (active)
+  // compute initial set A (active) by applying add_active_neighbors()
+  // to the frontier of smolyakMultiIndex:
   size_t i, num_old_sets = smolyakCoeffs.size();
-  for (i=0; i<num_old_sets; ++i) {
-    if (dimIsotropic) {
-      if (smolyakCoeffs[i] == 1 && index_norm(smolyakMultiIndex[i]) == ssgLevel)
+  // anisotropic test on coeff==1 is necessary but not sufficient for presence
+  // on index set frontier, requiring an additional logic test within
+  // add_active_neighbors().  This is currently the best we can do since the
+  // weighted norm of the index set may differ from the level.
+  for (i=0; i<num_old_sets; ++i)
+    if ( smolyakCoeffs[i] == 1 && ( !dimIsotropic || // imperfect for aniso
+	 ( dimIsotropic && index_norm(smolyakMultiIndex[i]) == ssgLevel ) ) )
 	add_active_neighbors(smolyakMultiIndex[i]);
-    }
-    // necessary but not sufficient for presence on index set frontier;
-    // weighted norm of index set may differ from level
-    else if (smolyakCoeffs[i] == 1)
-      add_active_neighbors(smolyakMultiIndex[i]);
-  }
 
 #ifdef DEBUG
   PCout << "SparseGridDriver::initialize_sets():\nold sets:\n" << oldMultiIndex
@@ -567,9 +553,9 @@ void SparseGridDriver::finalize_sets()
   smolyakMultiIndex.insert(smolyakMultiIndex.end(), activeMultiIndex.begin(),
 			   activeMultiIndex.end());
   activeMultiIndex.clear();
-  generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
   // update collocKey, expansionCoeffIndices, uniqueIndexMapping
-  allocate_collocation_arrays();
+  //allocate_collocation_arrays();
 }
 
 
@@ -583,9 +569,9 @@ void SparseGridDriver::push_trial_set(const UShortArray& set)
   //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
   smolyakMultiIndex.push_back(set);
 
-  // cannot use allocate_smolyak_arrays(), rather we use
-  // generalized_coefficients() to update smolyakCoeffs from smolyakMultiIndex
-  generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+  // cannot use allocate_smolyak_arrays(), rather we use allocate_generalized_
+  // coefficients() to update smolyakCoeffs from smolyakMultiIndex
+  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
 #ifdef DEBUG
   PCout << "SparseGridDriver::push_trial_set() generalized coefficients:\n"
 	<< smolyakCoeffs << std::endl;
@@ -600,10 +586,11 @@ void SparseGridDriver::push_trial_set(const UShortArray& set)
   // would need the right aggregated weights though.   Perhaps should wait
   // on this and instead focus on required framework infrastructure.
   //increment_collocation_arrays() ???
-  UShortArray new_mi, quad_order(numVars); SizetArray new_coeff_map;
+  UShort2DArray new_mi; UShortArray quad_order(numVars);
+  SizetArray new_coeff_map;
   level_to_order(set, quad_order);
-  PolynomialApproximation::tensor_product_multi_index(quad_order, new_mi);
-  collocKey.push_back(new_multi_index);
+  compute_tensor_grid(quad_order, basis, new_mi, pts, wts, pts_1d, wts_1d);
+  collocKey.push_back(new_mi);
   expansionCoeffIndices.push_back(new_coeff_map);
   */
 }
@@ -641,9 +628,9 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
     // increment by 1 in dimension i
     unsigned short& trial_set_i = trial_set[i];
     trial_set_i += 1;
-    // candidate could be in oldMultiIndex since smolyakCoeffs[i]==1 test
-    // in initialize_sets() is necessary but not sufficient
-    if (oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
+    // anisotropic initialize_sets() candidates could be in oldMultiIndex
+    // since smolyakCoeffs[i]==1 test is necessary but not sufficient
+    if (dimIsotropic || oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
       // test all backwards neighbors for membership in set O (old)
       bool backward_old = true;
       for (j=0; j<numVars; ++j) {

@@ -1121,7 +1121,7 @@ integration_data(size_t tp_index,
     Real& tp_wts_i = tp_weights[i]; tp_wts_i = 1.;
     const UShortArray& tp_mi_i = tp_mi[i];
     for (j=0; j<numVars; ++j)
-      tp_wts_i *= gauss_wts_1d[j][sm_index[j]][tp_mi_i[j]];
+      tp_wts_i *= gauss_wts_1d[sm_index[j]][j][tp_mi_i[j]];
   }
 }
 

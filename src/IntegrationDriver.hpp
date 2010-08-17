@@ -122,6 +122,13 @@ protected:
 			short growth_rate, IntArray& int_rules,
 			IntArray& growth_rules);
 
+  /// compute variable and weight sets for a tensor-product grid
+  void compute_tensor_grid(const UShortArray& order,
+			   std::vector<BasisPolynomial>& poly_basis,
+			   UShort2DArray& colloc_key,
+			   RealMatrix& pts, RealVector& wts,
+			   Real2DArray& pts_1d, Real2DArray& wts_1d);
+
   //
   //- Heading: Data
   //
@@ -146,9 +153,9 @@ protected:
   /// arranged num points by numVars
   RealMatrix variableSets;
 
-  /// numContinuousVars x num_levels_per_var sets of 1D Gauss points
+  /// num_levels_per_var x numContinuousVars sets of 1D Gauss points
   Real3DArray gaussPts1D;
-  /// numContinuousVars x num_levels_per_var sets of 1D Gauss weights
+  /// num_levels_per_var x numContinuousVars sets of 1D Gauss weights
   Real3DArray gaussWts1D;
 
   /// lookup for set of 1-D Genz-Keister quadrature orders

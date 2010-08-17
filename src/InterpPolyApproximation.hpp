@@ -183,10 +183,10 @@ private:
 
   /// 2D array of one-dimensional basis polynomial objects which are used in
   /// constructing the multivariate orthogonal/interpolation polynomials.
-  /** Each variable (outer array size = numVars) may have multiple integration
-      orders associated with it (inner array size = num_levels_per_var = 1 for
+  /** Each variable (inner array size = numVars) may have multiple integration
+      orders associated with it (outer array size = num_levels_per_var = 1 for
       quadrature, w + numVars for sparse grid). */
-  std::vector< std::vector< BasisPolynomial > > polynomialBasis;
+  std::vector<std::vector<BasisPolynomial> > polynomialBasis;
 
   /// total number of collocation points = number of terms in interpolation
   /// expansion (length of expansionCoeffs)

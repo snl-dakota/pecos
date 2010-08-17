@@ -65,10 +65,16 @@ public:
 
   /// overloaded form initializes smolyakMultiIndex and smolyakCoeffs
   void allocate_smolyak_arrays();
-  /// initialize Smolyak multi-index (index sets defining the set of
-  /// tensor products) and Smolyak combinatorial coefficients using an
-  /// isotropic or anisotropic index set constraint
+  /// initialize Smolyak multi-index (index sets defining the set of tensor
+  /// products) and Smolyak combinatorial coefficients using an isotropic or
+  /// anisotropic index set constraint.  For anisotropic, webbur::sgmga_vcn_*
+  /// functions are used to compute index sets satisfying the anisotropic
+  /// index set constraint, along with their corresponding coefficients.
   void allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
+  /// initialize the Smolyak combinatorial coefficients for the
+  /// multi-indices defining a generalized sparse grid
+  void allocate_generalized_coefficients(const UShort2DArray& multi_index,
+					 IntArray& coeffs) const;
   /// initialize collocKey and expansionCoeffIndices
   void allocate_collocation_arrays();
 
@@ -85,20 +91,12 @@ public:
 		       bool  store_1d_gauss = false,
 		       short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
-  /// Use webbur::sgmga_vcn_* functions to compute index sets satisfying
-  /// the anisotropic index set constraint, along with their corresponding
-  /// coefficients
-  void anisotropic_multi_index(Int2DArray& multi_index, IntArray& coeffs) const;
-
   /// total number of collocation points including duplicates
   int grid_size_total();
 
   /// update axisLowerBounds
   void update_axis_lower_bounds();
 
-  /// generalized sparse grid function for 
-  void generalized_coefficients(const UShort2DArray& multi_index,
-				IntArray& coeffs) const;
   /// generalized sparse grid function for 
   void initialize_sets();
   /// generalized sparse grid function for 

@@ -76,22 +76,20 @@ void InterpPolyApproximation::allocate_arrays()
     // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
     if (update_basis_form) {
       // size and initialize polynomialBasis, one interpolant per variable
-      if (polynomialBasis.empty()) {
-	polynomialBasis.resize(numVars);
-	for (i=0; i<numVars; ++i)
-	  polynomialBasis[i].resize(1);
-      }
-      const Real3DArray& gauss_pts_1d = driverRep->gauss_points_array();
+      if (polynomialBasis.empty())
+	{ polynomialBasis.resize(1); polynomialBasis[0].resize(numVars); }
+      const Real2DArray& gauss_pts_1d = driverRep->gauss_points_array()[0];
+      std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
       for (i=0; i<numVars; ++i) {
 	bool found = false;
 	for (j=0; j<i; ++j)
-	  if (gauss_pts_1d[i][0] == gauss_pts_1d[j][0]) // equality in pt vector
+	  if (gauss_pts_1d[i] == gauss_pts_1d[j]) // equality in pt vector
 	    { found = true; break; }
 	if (found) // reuse previous instance via shared representation
-	  polynomialBasis[i][0] = polynomialBasis[j][0];
+	  poly_basis_0[i] = poly_basis_0[j];
 	else { // instantiate a new unique instance
-	  polynomialBasis[i][0] = BasisPolynomial(LAGRANGE);
-	  polynomialBasis[i][0].interpolation_points(gauss_pts_1d[i][0]);
+	  poly_basis_0[i] = BasisPolynomial(LAGRANGE);
+	  poly_basis_0[i].interpolation_points(gauss_pts_1d[i]);
 	}
       }
     }
@@ -115,27 +113,31 @@ void InterpPolyApproximation::allocate_arrays()
     bool update_basis_form = update_exp_form;
     // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
     if (update_basis_form) {
-      // size and initialize polynomialBasis, multiple interpolants per variable
-      if (polynomialBasis.empty())
-	polynomialBasis.resize(numVars);
-      // j range is 0:w inclusive; i range is 1:w+1 inclusive
-      unsigned short num_levels = ssg_level + 1;
-      const Real3DArray& gauss_pts_1d = driverRep->gauss_points_array();
       size_t i, j, k;
-      for (i=0; i<numVars; ++i) {
-	polynomialBasis[i].resize(num_levels);
-	for (j=0; j<num_levels; ++j) { // j->num_levels-1->ssg_level
-	  // anisotropic levels: check other dims at corresponding level
+      unsigned short num_levels = ssg_level + 1;
+      // size and initialize polynomialBasis, multiple interpolants per variable
+      if (polynomialBasis.empty()) {
+	polynomialBasis.resize(num_levels);
+	for (i=0; i<num_levels; ++i)
+	  polynomialBasis[i].resize(numVars);
+      }
+      // j range is 0:w inclusive; i range is 1:w+1 inclusive
+      const Real3DArray& gauss_pts_1d = driverRep->gauss_points_array();
+      for (i=0; i<num_levels; ++i) { // i->num_levels-1->ssg_level
+	const Real2DArray&          gauss_pts_1d_i = gauss_pts_1d[i];
+	std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
+	// anisotropic levels: check other dims at corresponding level
+	for (j=0; j<numVars; ++j) {
 	  bool found = false;
-	  for (k=0; k<i; ++k)
-	    if (//ssg_level[k]   >= j && // level j exists for dimension k
-		gauss_pts_1d[i][j] == gauss_pts_1d[k][j]) // pt vector equality
+	  for (k=0; k<j; ++k)
+	    if (//ssg_level[k]   >= i && // level i exists for dimension k
+		gauss_pts_1d_i[j] == gauss_pts_1d_i[k]) // pt vector equality
 	      { found = true; break; }
 	  if (found) // reuse previous instances via shared representations
-	    polynomialBasis[i][j] = polynomialBasis[k][j]; // shared rep
+	    poly_basis_i[j] = poly_basis_i[k]; // shared rep
 	  else { // instantiate new unique instances
-	    polynomialBasis[i][j] = BasisPolynomial(LAGRANGE);
-	    polynomialBasis[i][j].interpolation_points(gauss_pts_1d[i][j]);
+	    poly_basis_i[j] = BasisPolynomial(LAGRANGE);
+	    poly_basis_i[j].interpolation_points(gauss_pts_1d_i[j]);
 	  }
 	}
       }
@@ -202,11 +204,12 @@ const Real& InterpPolyApproximation::tensor_product_value(const RealVector& x)
 
   tpValue = 0.;
   size_t i, j;
+  std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   for (i=0; i<numCollocPts; ++i) {
     Real L_i = 1.0;
     const UShortArray& key_i = key[i];
     for (j=0; j<numVars; ++j)
-      L_i *= polynomialBasis[j][0].get_value(x[j], key_i[j]);
+      L_i *= poly_basis_0[j].get_value(x[j], key_i[j]);
     tpValue += expansionCoeffs[i] * L_i;
   }
   return tpValue;
@@ -229,7 +232,7 @@ tensor_product_value(const RealVector& x, size_t tp_index)
     const UShortArray& key_i = key[i];
     Real L_i = 1.0;
     for (j=0; j<numVars; ++j)
-      L_i *= polynomialBasis[j][sm_index[j]].get_value(x[j], key_i[j]);
+      L_i *= polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
     tpValue += expansionCoeffs[coeff_index[i]] * L_i;
   }
   return tpValue;
@@ -246,6 +249,7 @@ tensor_product_gradient(const RealVector& x)
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
+  std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   size_t i, j, k;
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i   = key[i];
@@ -254,8 +258,8 @@ tensor_product_gradient(const RealVector& x)
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == j) ?
-	  polynomialBasis[k][0].get_gradient(x[k], key_i[k]) :
-	  polynomialBasis[k][0].get_value(x[k],    key_i[k]);
+	  poly_basis_0[k].get_gradient(x[k], key_i[k]) :
+	  poly_basis_0[k].get_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -284,8 +288,8 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == j) ?
-	  polynomialBasis[k][sm_index[k]].get_gradient(x[k], key_i[k]) :
-	  polynomialBasis[k][sm_index[k]].get_value(x[k],    key_i[k]);
+	  polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_i[k]) :
+	  polynomialBasis[sm_index[k]][k].get_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -304,6 +308,7 @@ tensor_product_gradient(const RealVector& x, const UIntArray& dvv)
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   tpGradient = 0.;
+  std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   size_t i, j, k, deriv_index;
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i   = key[i];
@@ -313,8 +318,8 @@ tensor_product_gradient(const RealVector& x, const UIntArray& dvv)
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == deriv_index) ?
-	  polynomialBasis[k][0].get_gradient(x[k], key_i[k]) :
-	  polynomialBasis[k][0].get_value(x[k],    key_i[k]);
+	  poly_basis_0[k].get_gradient(x[k], key_i[k]) :
+	  poly_basis_0[k].get_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -346,8 +351,8 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == deriv_index) ?
-	  polynomialBasis[k][sm_index[k]].get_gradient(x[k], key_i[k]) :
-	  polynomialBasis[k][sm_index[k]].get_value(x[k],    key_i[k]);
+	  polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_i[k]) :
+	  polynomialBasis[sm_index[k]][k].get_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -360,16 +365,17 @@ const Real& InterpPolyApproximation::tensor_product_mean(const RealVector& x)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
 
   tpMean = 0.;
+  std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   size_t i, j;
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i = key[i];
     Real prod_i = 1.;
     for (j=0; j<numVars; ++j)
-      prod_i *= (randomVarsKey[j]) ? gauss_wts_1d[j][0][key_i[j]] :
-	polynomialBasis[j][0].get_value(x[j], key_i[j]);
+      prod_i *= (randomVarsKey[j]) ? gauss_wts_1d[j][key_i[j]] :
+	poly_basis_0[j].get_value(x[j], key_i[j]);
     tpMean += expansionCoeffs[i] * prod_i;
   }
   return tpMean;
@@ -393,8 +399,8 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
     const UShortArray& key_i = key[i];
     Real prod_i = 1.;
     for (j=0; j<numVars; ++j)
-      prod_i *= (randomVarsKey[j]) ? gauss_wts_1d[j][sm_index[j]][key_i[j]] :
-	polynomialBasis[j][sm_index[j]].get_value(x[j], key_i[j]);
+      prod_i *= (randomVarsKey[j]) ? gauss_wts_1d[sm_index[j]][j][key_i[j]] :
+	polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
     tpMean += expansionCoeffs[coeff_index[i]] * prod_i;
   }
   return tpMean;
@@ -407,13 +413,14 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
 
   size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
     cntr = 0; // insertions in cntr order w/i tpCoeffGrads
   if (tpMeanGrad.length() != num_deriv_vars)
     tpMeanGrad.sizeUninitialized(num_deriv_vars);
   tpMeanGrad = 0.;
+  std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   SizetList::iterator it;
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
@@ -432,14 +439,14 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
       const UShortArray& key_j = key[j];
       Real wt_prod_j = 1.;
       for (it=randomIndices.begin(); it!=randomIndices.end(); it++)
-	{ k = *it; wt_prod_j *= gauss_wts_1d[k][0][key_j[k]]; }
+	{ k = *it; wt_prod_j *= gauss_wts_1d[k][key_j[k]]; }
       if (randomVarsKey[deriv_index]) {
 	// --------------------------------------------------------------------
 	// derivative of All var expansion w.r.t. random var (design insertion)
 	// --------------------------------------------------------------------
 	Real Lsa_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++)
-	  { k = *it; Lsa_j *= polynomialBasis[k][0].get_value(x[k], key_j[k]); }
+	  { k = *it; Lsa_j *= poly_basis_0[k].get_value(x[k], key_j[k]); }
 	tpMeanGrad[i] += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, j);
       }
       else {
@@ -450,8 +457,8 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[k][0].get_gradient(x[k], key_j[k]) :
-	    polynomialBasis[k][0].get_value(x[k],    key_j[k]);
+	    poly_basis_0[k].get_gradient(x[k], key_j[k]) :
+	    poly_basis_0[k].get_value(x[k],    key_j[k]);
 	}
 	tpMeanGrad[i] += expansionCoeffs[j] * wt_prod_j * dLsa_j_dsa_i;
       }
@@ -514,7 +521,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
       Real wt_prod_j = 1.;
       for (it=randomIndices.begin(); it!=randomIndices.end(); it++) {
 	k = *it;
-	wt_prod_j *= gauss_wts_1d[k][sm_index[k]][key_j[k]];
+	wt_prod_j *= gauss_wts_1d[sm_index[k]][k][key_j[k]];
       }
       if (randomVarsKey[deriv_index]) {
 	// --------------------------------------------------------------------
@@ -523,7 +530,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	Real Lsa_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	  k = *it;
-	  Lsa_j *= polynomialBasis[k][sm_index[k]].get_value(x[k], key_j[k]);
+	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
 	}
 	tpMeanGrad[i]
 	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, coeff_index[j]);
@@ -536,8 +543,8 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[k][sm_index[k]].get_gradient(x[k], key_j[k]) :
-	    polynomialBasis[k][sm_index[k]].get_value(x[k],    key_j[k]);
+	    polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_j[k]) :
+	    polynomialBasis[sm_index[k]][k].get_value(x[k],    key_j[k]);
 	}
 	tpMeanGrad[i]
 	  += expansionCoeffs[coeff_index[j]] * wt_prod_j * dLsa_j_dsa_i;
@@ -557,20 +564,21 @@ tensor_product_variance(const RealVector& x)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
 
   tpVariance = 0.;
   size_t i, j, k;
   Real mean = 0.;
   SizetList::iterator it;
+  std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i = key[i];
     Real wt_prod_i = 1., Ls_prod_i = 1.;
     for (k=0; k<numVars; ++k)
       if (randomVarsKey[k])
-	wt_prod_i *= gauss_wts_1d[k][0][key_i[k]];
+	wt_prod_i *= gauss_wts_1d[k][key_i[k]];
       else
-	Ls_prod_i *= polynomialBasis[k][0].get_value(x[k], key_i[k]);
+	Ls_prod_i *= poly_basis_0[k].get_value(x[k], key_i[k]);
     const Real& exp_coeff_i = expansionCoeffs[i];
     mean += exp_coeff_i * wt_prod_i * Ls_prod_i;
     for (j=0; j<numCollocPts; ++j) {
@@ -585,7 +593,7 @@ tensor_product_variance(const RealVector& x)
 	Real Ls_prod_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	  k = *it;
-	  Ls_prod_j *= polynomialBasis[k][0].get_value(x[k], key_j[k]);
+	  Ls_prod_j *= poly_basis_0[k].get_value(x[k], key_j[k]);
 	}
 	tpVariance += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
 	  * expansionCoeffs[j];
@@ -617,9 +625,9 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
     Real wt_prod_i = 1., Ls_prod_i = 1.;
     for (k=0; k<numVars; ++k)
       if (randomVarsKey[k])
-	wt_prod_i *= gauss_wts_1d[k][sm_index[k]][key_i[k]];
+	wt_prod_i *= gauss_wts_1d[sm_index[k]][k][key_i[k]];
       else
-	Ls_prod_i *= polynomialBasis[k][sm_index[k]].get_value(x[k], key_i[k]);
+	Ls_prod_i *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_i[k]);
     const Real& exp_coeff_i = expansionCoeffs[coeff_index[i]];
     mean += exp_coeff_i * wt_prod_i * Ls_prod_i;
     for (j=0; j<num_colloc_pts; ++j) {
@@ -634,7 +642,7 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
 	Real Ls_prod_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	  k = *it;
-	  Ls_prod_j *= polynomialBasis[k][sm_index[k]].get_value(x[k],key_j[k]);
+	  Ls_prod_j *= polynomialBasis[sm_index[k]][k].get_value(x[k],key_j[k]);
 	}
 	tpVariance += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
 	  * expansionCoeffs[coeff_index[j]];
@@ -652,7 +660,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
 
   Real mean = 0.;
   size_t i, j, k, l, deriv_index, num_deriv_vars = dvv.size(),
@@ -661,6 +669,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
     tpVarianceGrad.sizeUninitialized(num_deriv_vars);
   tpVarianceGrad = 0.;
   SizetList::iterator it;
+  std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     if (randomVarsKey[deriv_index] && !expansionCoeffGradFlag) {
@@ -676,9 +685,9 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
       Real wt_prod_j = 1., Lsa_j = 1., dLsa_j_dsa_i = 1.;
       for (k=0; k<numVars; ++k)
 	if (randomVarsKey[k])
-	  wt_prod_j *= gauss_wts_1d[k][0][key_j[k]];
+	  wt_prod_j *= gauss_wts_1d[k][key_j[k]];
 	else
-	  Lsa_j *= polynomialBasis[k][0].get_value(x[k], key_j[k]);
+	  Lsa_j *= poly_basis_0[k].get_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
       if (i == 0)
 	mean += expansionCoeffs[j] * wt_prod_j * Lsa_j;
@@ -688,8 +697,8 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[k][0].get_gradient(x[k], key_j[k]) :
-	    polynomialBasis[k][0].get_value(x[k],    key_j[k]);
+	    poly_basis_0[k].get_gradient(x[k], key_j[k]) :
+	    poly_basis_0[k].get_value(x[k],    key_j[k]);
 	}
 	mean_grad_i += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[j];
       }
@@ -706,7 +715,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 	  Real Lsa_k = 1.;
 	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	    l = *it;
-	    Lsa_k *= polynomialBasis[l][0].get_value(x[l], key_k[l]);
+	    Lsa_k *= poly_basis_0[l].get_value(x[l], key_k[l]);
 	  }
 	  if (randomVarsKey[deriv_index])
 	    // ---------------------------------------------------------------
@@ -723,8 +732,8 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++){
 	      l = *it;
 	      dLsa_k_dsa_i *= (l == deriv_index) ?
-		polynomialBasis[l][0].get_gradient(x[l], key_k[l]):
-		polynomialBasis[l][0].get_value(x[l],    key_k[l]);
+		poly_basis_0[l].get_gradient(x[l], key_k[l]):
+		poly_basis_0[l].get_value(x[l],    key_k[l]);
 	    }
 	    tpVarianceGrad[i] +=
 	      wt_prod_j * expansionCoeffs[j] * expansionCoeffs[k] *
@@ -796,9 +805,9 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
       Real wt_prod_j = 1., Lsa_j = 1., dLsa_j_dsa_i = 1.;
       for (k=0; k<numVars; ++k)
 	if (randomVarsKey[k])
-	  wt_prod_j *= gauss_wts_1d[k][sm_index[k]][key_j[k]];
+	  wt_prod_j *= gauss_wts_1d[sm_index[k]][k][key_j[k]];
 	else
-	  Lsa_j *= polynomialBasis[k][sm_index[k]].get_value(x[k], key_j[k]);
+	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
       if (i == 0)
 	mean += expansionCoeffs[coeff_index[j]] * wt_prod_j * Lsa_j;
@@ -809,8 +818,8 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[k][sm_index[k]].get_gradient(x[k], key_j[k]) :
-	    polynomialBasis[k][sm_index[k]].get_value(x[k],    key_j[k]);
+	    polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_j[k]) :
+	    polynomialBasis[sm_index[k]][k].get_value(x[k],    key_j[k]);
 	}
 	mean_grad_i
 	  += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[coeff_index[j]];
@@ -828,7 +837,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	  Real Lsa_k = 1.;
 	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
 	    l = *it;
-	    Lsa_k *= polynomialBasis[l][sm_index[l]].get_value(x[l], key_k[l]);
+	    Lsa_k *= polynomialBasis[sm_index[l]][l].get_value(x[l], key_k[l]);
 	  }
 	  if (randomVarsKey[deriv_index])
 	    // ---------------------------------------------------------------
@@ -847,8 +856,8 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++){
 	      l = *it;
 	      dLsa_k_dsa_i *= (l == deriv_index) ?
-		polynomialBasis[l][sm_index[l]].get_gradient(x[l], key_k[l]):
-		polynomialBasis[l][sm_index[l]].get_value(x[l],    key_k[l]);
+		polynomialBasis[sm_index[l]][l].get_gradient(x[l], key_k[l]):
+		polynomialBasis[sm_index[l]][l].get_value(x[l],    key_k[l]);
 	    }
 	    tpVarianceGrad[i] +=
 	      wt_prod_j * expansionCoeffs[coeff_index[j]] *
@@ -1326,7 +1335,7 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
   const UShortArray&   quad_order   = tpq_driver->quadrature_order();;
 
   // Distinguish between non-members and members of the given set, set_value
@@ -1367,9 +1376,9 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
 	0 : key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-	prod_i_nonmembers *= gauss_wts_1d[j][0][key_i[j]];
+	prod_i_nonmembers *= gauss_wts_1d[j][key_i[j]];
       else
-	prod_i_members *= gauss_wts_1d[j][0][key_i[j]];
+	prod_i_members *= gauss_wts_1d[j][key_i[j]];
     }
 
     // mem_weights is performed more time than necessary here, but it
@@ -1442,9 +1451,9 @@ partial_variance_integral(int set_value, size_t tp_index)
 	0 : key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-	prod_i_nonmembers *= gauss_wts_1d[j][sm_index[j]][key_i[j]];
+	prod_i_nonmembers *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
       else
-	prod_i_members *= gauss_wts_1d[j][sm_index[j]][key_i[j]];
+	prod_i_members *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
     }
 
     // mem_weights is performed more time than necessary here, but it

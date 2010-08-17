@@ -204,6 +204,41 @@ void IntegrationDriver::anisotropic_weights(const RealVector& aniso_wts)
 }
 
 
+void IntegrationDriver::
+initialize_grid_parameters(const ShortArray& u_types, 
+			   const DistributionParams& dp)
+{
+  if (driverRep)
+    driverRep->initialize_grid_parameters(u_types, dp); // forward to letter
+  else // default implementation
+    OrthogPolyApproximation::distribution_parameters(u_types, dp,
+						     polynomialBasis);
+}
+
+
+void IntegrationDriver::compute_grid()
+{
+  if (driverRep)
+    driverRep->compute_grid(); // forward to letter
+  else {
+    PCerr << "Error: compute_grid() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+int IntegrationDriver::grid_size()
+{
+  if (!driverRep) {
+    PCerr << "Error: grid_size() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->grid_size(); // forward to letter
+}
+
+
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_rules(const ShortArray& u_types, bool nested_rules,
@@ -297,37 +332,44 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
 
 
 void IntegrationDriver::
-initialize_grid_parameters(const ShortArray& u_types, 
-			   const DistributionParams& dp)
+compute_tensor_grid(const UShortArray& quad_order,
+		    std::vector<BasisPolynomial>& poly_basis,
+		    UShort2DArray& colloc_key, RealMatrix& pts, RealVector& wts,
+		    Real2DArray& pts_1d, Real2DArray& wts_1d)
 {
-  if (driverRep)
-    driverRep->initialize_grid_parameters(u_types, dp); // forward to letter
-  else // default implementation
-    OrthogPolyApproximation::distribution_parameters(u_types, dp,
-						     polynomialBasis);
-}
-
-
-void IntegrationDriver::compute_grid()
-{
-  if (driverRep)
-    driverRep->compute_grid(); // forward to letter
-  else {
-    PCerr << "Error: compute_grid() not available for this driver type."
-	  << std::endl;
-    abort_handler(-1);
+  size_t i, j, num_colloc_pts = 1;
+  for (i=0; i<numVars; ++i)
+    num_colloc_pts *= quad_order[i];
+  if (pts_1d.empty() || wts_1d.empty()) {
+    pts_1d.resize(numVars);
+    wts_1d.resize(numVars);
   }
-}
-
-
-int IntegrationDriver::grid_size()
-{
-  if (!driverRep) {
-    PCerr << "Error: grid_size() not available for this driver type."
-	  << std::endl;
-    abort_handler(-1);
+  for (i=0; i<numVars; ++i) {
+    pts_1d[i] = poly_basis[i].gauss_points(quad_order[i]);
+    wts_1d[i] = poly_basis[i].gauss_weights(quad_order[i]);
   }
-  return driverRep->grid_size(); // forward to letter
+  // Tensor-product quadrature: Integral of f approximated by
+  // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
+  // > project 1-D gauss point arrays (of potentially different type and order)
+  //   into an n-dimensional stencil
+  // > compute and store products of 1-D Gauss weights at each point in stencil
+  wts.sizeUninitialized(num_colloc_pts);
+  pts.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
+  colloc_key.resize(num_colloc_pts);
+  UShortArray gauss_indices(numVars, 0);
+  for (i=0; i<num_colloc_pts; i++) {
+    Real& wt_i = wts[i];
+    Real* pt_i = pts[i]; // column vector i
+    wt_i = 1.0;
+    for (j=0; j<numVars; j++) {
+      pt_i[j] = pts_1d[j][gauss_indices[j]];
+      wt_i   *= wts_1d[j][gauss_indices[j]];
+    }
+    colloc_key[i] = gauss_indices;
+    // increment the n-dimensional gauss point index set
+    if (i != num_colloc_pts-1)
+      PolynomialApproximation::increment_indices(gauss_indices,quad_order,true);
+  }
 }
 
 } // namespace Pecos
