@@ -1332,7 +1332,7 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
     // this performs a bitwise comparison by shifting 1 by k spaces 
     // and comparing that to a binary form of plus_one_set; this allows 
     // the variable membership using integers instead of a d-array of bools
-    if (plus_one_set & (1 << k)) i
+    if (plus_one_set & (1 << k))
       // if subset i contains variable k, remove that variable from the set 
       // by converting the bit-form of (1<<k) to an integer and subtract from the plus_one_set
       lower_sets(plus_one_set-(int)std::pow(2.0,k),top_level_set);
