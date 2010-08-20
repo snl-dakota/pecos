@@ -284,8 +284,8 @@ private:
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials
   /// contributing to each of the multivariate orthogonal polynomials.
-  /** For nested rules (GP, CC, or GK), collocKey is insufficient and we
-      must track expansion orders separately. */
+  /** For nested rules (GP, CC, or GK), the integration driver's collocKey
+      is insufficient and we must track expansion orders separately. */
   UShort3DArray tpMultiIndex;
   /// sparse grid bookkeeping: mapping from num tensor-products by 
   /// tensor-product multi-indices into aggregated multiIndex

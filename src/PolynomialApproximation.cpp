@@ -22,67 +22,48 @@ namespace Pecos {
 
 void PolynomialApproximation::allocate_arrays()
 {
-  // sobolIndices[0] is reserved for mean in the verbose case
-  // so we keep that convention for the normal case for semantic
-  // and programming consistency (e.g. InterpPoly relies on that 
-  // convention;
-  int normal_index_length = (int)numVars+1;
-  int verbose_index_length = (int)std::pow(2.,(int)numVars);
-  // size the sensitivity member variables
+  // size the sensitivity member variables: sobolIndices[0] is
+  // reserved for mean in the verbose case so we keep that convention
+  // for the normal case for semantic and programming consistency
+  // (e.g. InterpPoly relies on that convention)
   if (expansionCoeffFlag) {
-    // TODO: Probably should aggregate these two checks 
-    if (sobolIndices.empty()) {
-      // Allocate memory specific to output control
-      switch(outputLevel) {
-        // no allocation needed
-	case SILENT_OUTPUT:
-	case QUIET_OUTPUT: break;
-	case NORMAL_OUTPUT:
-          // map binary to integer main effects form 
-	  for (int i=1; i < normal_index_length; i++) 
-            sobolIndexMap[int(std::pow(2.,i-1))] = i; 
-          sobolIndices.sizeUninitialized(normal_index_length); break;
-	case VERBOSE_OUTPUT:
-	case DEBUG_OUTPUT:
-	  for (int i=0; i < verbose_index_length; i++) 
-            sobolIndexMap[i] = i; // already in binary notation
-	  sobolIndices.sizeUninitialized(verbose_index_length); break;
-        default:
-	  PCerr << "Error: unsupported outputLevel value in PolynomialApproximation::"
-	      << "allocate_arrays()." << std::endl;
-	  abort_handler(-1); break;
+    switch (outputLevel) { // Allocate memory specific to output control
+    case NORMAL_OUTPUT:
+      if (sobolIndices.empty()) {
+	int normal_index_length = (int)numVars+1;
+	// map binary to integer main effects form 
+	for (int i=1; i < normal_index_length; i++) 
+	  sobolIndexMap[int(std::pow(2.,i-1))] = i; 
+	sobolIndices.sizeUninitialized(normal_index_length);
       }
-    }
-    // same for totalSobolIndices
-    if (totalSobolIndices.empty()) {
-      switch(outputLevel) {
-	case SILENT_OUTPUT:
-	case QUIET_OUTPUT: break;
-	case NORMAL_OUTPUT:
-	case VERBOSE_OUTPUT:
-  	case DEBUG_OUTPUT:
-          totalSobolIndices.sizeUninitialized(numVars);
-	  break;
-        default:
-	  PCerr << "Error: unsupported outputLevel value in PolynomialApproximation::"
-	      << "allocate_arrays()." << std::endl;
-	  abort_handler(-1); break;
+      if (totalSobolIndices.empty())
+	totalSobolIndices.sizeUninitialized(numVars);
+      break;
+    case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
+      if (sobolIndices.empty()) {
+	int verbose_index_length = (int)std::pow(2.,(int)numVars);
+	for (int i=0; i < verbose_index_length; i++) 
+	  sobolIndexMap[i] = i; // already in binary notation
+	sobolIndices.sizeUninitialized(verbose_index_length);
       }
+      if (totalSobolIndices.empty())
+	totalSobolIndices.sizeUninitialized(numVars);
+      break;
     }
   }
 }
   
 	
-	/** Return the number of terms in a tensor-product expansion.  For
-	    isotropic and anisotropic expansion orders, calculation of the
-	    number of expansion terms is straightforward: Prod(p_i + 1). */
-	size_t PolynomialApproximation::
-	tensor_product_terms(const UShortArray& order, bool exp_order_offset)
-  {
-    size_t i, n = order.size(), num_terms = 1;
-	  if (exp_order_offset)
-	    for (i=0; i<n; ++i)
-	      num_terms *= order[i] + 1; // PCE: expansion order p
+/** Return the number of terms in a tensor-product expansion.  For
+    isotropic and anisotropic expansion orders, calculation of the
+    number of expansion terms is straightforward: Prod(p_i + 1). */
+size_t PolynomialApproximation::
+tensor_product_terms(const UShortArray& order, bool exp_order_offset)
+{
+  size_t i, n = order.size(), num_terms = 1;
+  if (exp_order_offset)
+    for (i=0; i<n; ++i)
+      num_terms *= order[i] + 1; // PCE: expansion order p
   else
     for (i=0; i<n; ++i)
       num_terms *= order[i];     // SC:  quadrature order m (default)
