@@ -49,3 +49,8 @@ add_executable(pecos_int_driver pecos_int_driver.cpp)
 target_link_libraries(pecos_int_driver pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 add_test(pecos_int_driver pecos_int_driver)
 
+# Complete these for each specific test.
+add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
+target_link_libraries(pecos_lhs_driver pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+add_test(pecos_lhs_driver pecos_lhs_driver)
+
