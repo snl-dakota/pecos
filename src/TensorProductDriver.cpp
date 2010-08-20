@@ -82,10 +82,7 @@ void TensorProductDriver::compute_grid()
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
-  if (gaussPts1D.empty() || gaussWts1D.empty())
-    { gaussPts1D.resize(1); gaussWts1D.resize(1); }
-  compute_tensor_grid(quadOrder, polynomialBasis, collocKey, variableSets,
-		      weightSets, gaussPts1D[0], gaussWts1D[0]);
+  compute_tensor_grid(quadOrder, collocKey, gaussPts1D, gaussWts1D);
 }
 
 } // namespace Pecos

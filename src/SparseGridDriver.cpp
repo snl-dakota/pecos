@@ -449,10 +449,10 @@ void SparseGridDriver::compute_grid()
     // ----------------------------
     // Define 1-D point/weight sets
     // ----------------------------
-    size_t i;
-    if (gaussPts1D.empty() || gaussWts1D.empty()) {
-      gaussPts1D.resize(ssgLevel + 1); gaussWts1D.resize(ssgLevel + 1);
-      for (i=0; i<=ssgLevel; ++i)
+    size_t i, num_levels = ssgLevel + 1;
+    if (gaussPts1D.size() != num_levels || gaussWts1D.size() != num_levels) {
+      gaussPts1D.resize(num_levels); gaussWts1D.resize(num_levels);
+      for (i=0; i<num_levels; ++i)
 	{ gaussPts1D[i].resize(numVars); gaussWts1D[i].resize(numVars); }
     }
     // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
@@ -461,14 +461,14 @@ void SparseGridDriver::compute_grid()
       switch (integrationRules[i]) {
       case CLENSHAW_CURTIS: case FEJER2:
 	chebyPolyPtr->gauss_mode(integrationRules[i]); // integration mode
-	for (level_index=0; level_index<=ssgLevel; level_index++) {
+	for (level_index=0; level_index<num_levels; ++level_index) {
 	  level_to_order(i, level_index, order);
 	  gaussPts1D[level_index][i] = chebyPolyPtr->gauss_points(order);
 	  gaussWts1D[level_index][i] = chebyPolyPtr->gauss_weights(order);
 	}
 	break;
       default: // Gaussian rules
-	for (level_index=0; level_index<=ssgLevel; level_index++) {
+	for (level_index=0; level_index<num_levels; ++level_index) {
 	  level_to_order(i, level_index, order);
 	  gaussPts1D[level_index][i] = polynomialBasis[i].gauss_points(order);
 	  gaussWts1D[level_index][i] = polynomialBasis[i].gauss_weights(order);
@@ -553,51 +553,7 @@ void SparseGridDriver::finalize_sets()
   smolyakMultiIndex.insert(smolyakMultiIndex.end(), activeMultiIndex.begin(),
 			   activeMultiIndex.end());
   activeMultiIndex.clear();
-  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
-  // update collocKey, expansionCoeffIndices, uniqueIndexMapping
-  //allocate_collocation_arrays();
 }
-
-
-void SparseGridDriver::push_trial_set(const UShortArray& set)
-{
-#ifdef DEBUG
-  PCout << "SparseGridDriver::push_trial_set() recomputing sparse grid for "
-	<< "trial set:\n" << set << std::endl;
-#endif // DEBUG
-  // update evaluation set: smolyakMultiIndex, smolyakCoeffs
-  //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
-  smolyakMultiIndex.push_back(set);
-
-  // cannot use allocate_smolyak_arrays(), rather we use allocate_generalized_
-  // coefficients() to update smolyakCoeffs from smolyakMultiIndex
-  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
-#ifdef DEBUG
-  PCout << "SparseGridDriver::push_trial_set() generalized coefficients:\n"
-	<< smolyakCoeffs << std::endl;
-#endif // DEBUG
-
-  // *** TO DO: requires updated uniqueIndexMapping from sandia_sgmgg
-  // update collocKey, expansionCoeffIndices, uniqueIndexMapping
-  //allocate_collocation_arrays();
-
-  /* *** TO DO: prior to having sandia_sgmgg available, could manually
-  // increment the point sets (ignoring the merging of duplicates).  Still
-  // would need the right aggregated weights though.   Perhaps should wait
-  // on this and instead focus on required framework infrastructure.
-  //increment_collocation_arrays() ???
-  UShort2DArray new_mi; UShortArray quad_order(numVars);
-  SizetArray new_coeff_map;
-  level_to_order(set, quad_order);
-  compute_tensor_grid(quad_order, basis, new_mi, pts, wts, pts_1d, wts_1d);
-  collocKey.push_back(new_mi);
-  expansionCoeffIndices.push_back(new_coeff_map);
-  */
-}
-
-
-void SparseGridDriver::pop_trial_set()
-{ smolyakMultiIndex.pop_back(); }
 
 
 void SparseGridDriver::update_sets(const UShortArray& set_star)

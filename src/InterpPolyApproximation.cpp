@@ -78,7 +78,7 @@ void InterpPolyApproximation::allocate_arrays()
       // size and initialize polynomialBasis, one interpolant per variable
       if (polynomialBasis.empty())
 	{ polynomialBasis.resize(1); polynomialBasis[0].resize(numVars); }
-      const Real2DArray& gauss_pts_1d = driverRep->gauss_points_array()[0];
+      const Real2DArray& gauss_pts_1d = tpq_driver->gauss_points_array();
       std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
       for (i=0; i<numVars; ++i) {
 	bool found = false;
@@ -122,7 +122,7 @@ void InterpPolyApproximation::allocate_arrays()
 	  polynomialBasis[i].resize(numVars);
       }
       // j range is 0:w inclusive; i range is 1:w+1 inclusive
-      const Real3DArray& gauss_pts_1d = driverRep->gauss_points_array();
+      const Real3DArray& gauss_pts_1d = ssg_driver->gauss_points_array();
       for (i=0; i<num_levels; ++i) { // i->num_levels-1->ssg_level
 	const Real2DArray&          gauss_pts_1d_i = gauss_pts_1d[i];
 	std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
@@ -365,7 +365,7 @@ const Real& InterpPolyApproximation::tensor_product_mean(const RealVector& x)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
+  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
 
   tpMean = 0.;
   std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
@@ -391,7 +391,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
   const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
   const SizetArray&    coeff_index
     = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   tpMean = 0.;
   size_t i, j, num_colloc_pts = key.size();
@@ -413,7 +413,7 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
+  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
 
   size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
     cntr = 0; // insertions in cntr order w/i tpCoeffGrads
@@ -481,7 +481,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
   const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
   const SizetArray&    coeff_index
     = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   // -------------------------------------------------------------------
   // Mixed variable key:
@@ -564,7 +564,7 @@ tensor_product_variance(const RealVector& x)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
+  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
 
   tpVariance = 0.;
   size_t i, j, k;
@@ -614,7 +614,7 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
   const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
   const SizetArray&    coeff_index
     = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   size_t i, j, k, num_colloc_pts = key.size();
   Real mean = 0.;
@@ -660,7 +660,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
+  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
 
   Real mean = 0.;
   size_t i, j, k, l, deriv_index, num_deriv_vars = dvv.size(),
@@ -763,7 +763,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
   const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
   const SizetArray&    coeff_index
     = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   // -------------------------------------------------------------------
   // Mixed variable key:
@@ -1346,7 +1346,7 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = driverRep->gauss_weights_array()[0];
+  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
   const UShortArray&   quad_order   = tpq_driver->quadrature_order();;
 
   // Distinguish between non-members and members of the given set, set_value
@@ -1420,7 +1420,7 @@ partial_variance_integral(int set_value, size_t tp_index)
   const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
   const SizetArray&    coeff_index
     = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 

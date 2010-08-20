@@ -1111,7 +1111,7 @@ integration_data(size_t tp_index,
   const UShortArray& sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const SizetArray& coeff_index
     = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = driverRep->gauss_weights_array();
+  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
   size_t i, j, num_tp_pts = coeff_index.size();
   tp_data_points.resize(num_tp_pts); tp_weights.resize(num_tp_pts);
   for (i=0; i<num_tp_pts; ++i) {

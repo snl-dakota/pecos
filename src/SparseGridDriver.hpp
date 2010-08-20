@@ -110,6 +110,11 @@ public:
   /// generalized sparse grid function for 
   void add_active_neighbors(const UShortArray& set);
 
+  /// calls compute_tensor_grid() for trialIndexSet
+  void compute_trial_grid();
+  /// calls allocate_{generalized_coefficients,collocation_arrays}
+  void update_arrays();
+
   /// converts an array of sparse grid levels to an array of
   /// quadrature orders based on integrationRules/growthRules
   void level_to_order(size_t i, unsigned short level,
@@ -146,6 +151,11 @@ public:
   const std::set<UShortArray>& active_multi_index() const;
   /// return oldMultiIndex
   const std::set<UShortArray>& old_multi_index() const;
+
+  /// return gaussPts1D
+  const Real3DArray& gauss_points_array()  const;
+  /// return gaussWts1D
+  const Real3DArray& gauss_weights_array() const;
 
 private:
 
@@ -226,13 +236,13 @@ private:
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid
   std::set<UShortArray> activeMultiIndex; // or UShort2DArray
-  // Smolyak combinatorial coefficients corresponding to oldMultiIndex
-  //IntArray oldCoeffs;
-  // Smolyak combinatorial coefficients corresponding to oldMultiIndex
-  //IntArray activeCoeffs;
-  // if activeMultiIndex is sorted, activeCoeffs must track ordering.
-  // Consider std::map<UShortArray, Real>?  Or rely on temporary
-  // insertion into smolyakMultiIndex/smolyakCoeffs?
+  /// current trial index set for generalized sparse grids
+  UShortArray trialIndexSet;
+
+  /// num_levels_per_var x numContinuousVars sets of 1D Gauss points
+  Real3DArray gaussPts1D;
+  /// num_levels_per_var x numContinuousVars sets of 1D Gauss weights
+  Real3DArray gaussWts1D;
 
   /// array of pointers to Gauss point evaluation functions
   std::vector<FPType> compute1DPoints;
@@ -292,6 +302,18 @@ inline const IntArray& SparseGridDriver::unique_index_mapping() const
 //{ return duplicateTol; }
 
 
+inline const Real3DArray& SparseGridDriver::gauss_points_array() const
+{ return gaussPts1D; }
+
+
+inline const Real3DArray& SparseGridDriver::gauss_weights_array() const
+{ return gaussWts1D; }
+
+
+inline void SparseGridDriver::allocate_smolyak_arrays()
+{ allocate_smolyak_arrays(smolyakMultiIndex, smolyakCoeffs); }
+
+
 inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const
 { return activeMultiIndex; }
 
@@ -300,8 +322,44 @@ inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
 { return oldMultiIndex; }
 
 
-inline void SparseGridDriver::allocate_smolyak_arrays()
-{ allocate_smolyak_arrays(smolyakMultiIndex, smolyakCoeffs); }
+inline void SparseGridDriver::push_trial_set(const UShortArray& set)
+{ trialIndexSet = set; smolyakMultiIndex.push_back(set); }
+
+
+inline void SparseGridDriver::pop_trial_set()
+{ /* trialIndexSet.clear(); */ smolyakMultiIndex.pop_back(); }
+
+
+inline void SparseGridDriver::compute_trial_grid()
+{
+  UShortArray quad_order(numVars);
+  UShort2DArray new_key;
+  if (gaussPts1D.empty() || gaussWts1D.empty())
+    { gaussPts1D.resize(1); gaussWts1D.resize(1); }
+  level_to_order(trialIndexSet, quad_order);
+  compute_tensor_grid(quad_order, new_key, gaussPts1D[0], gaussWts1D[0]);
+  collocKey.push_back(new_key);
+
+  /* *** TO DO: prior to having sandia_sgmgg available, could manually
+  // increment the point sets (ignoring the merging of duplicates).  Still
+  // would need the right aggregated weights though.
+  //increment_collocation_arrays() ???
+  SizetArray new_coeff_map;
+  expansionCoeffIndices.push_back(new_coeff_map);
+  */
+}
+
+
+inline void SparseGridDriver::update_arrays()
+{
+  // cannot use allocate_smolyak_arrays(), rather we use allocate_generalized_
+  // coefficients() to update smolyakCoeffs from smolyakMultiIndex
+  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+
+  // *** TO DO: requires updated uniqueIndexMapping from sandia_sgmgg
+  // update collocKey, expansionCoeffIndices, uniqueIndexMapping
+  allocate_collocation_arrays();
+}
 
 
 inline void SparseGridDriver::

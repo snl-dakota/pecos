@@ -332,9 +332,7 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
 
 
 void IntegrationDriver::
-compute_tensor_grid(const UShortArray& quad_order,
-		    std::vector<BasisPolynomial>& poly_basis,
-		    UShort2DArray& colloc_key, RealMatrix& pts, RealVector& wts,
+compute_tensor_grid(const UShortArray& quad_order, UShort2DArray& colloc_key,
 		    Real2DArray& pts_1d, Real2DArray& wts_1d)
 {
   size_t i, j, num_colloc_pts = 1;
@@ -345,21 +343,21 @@ compute_tensor_grid(const UShortArray& quad_order,
     wts_1d.resize(numVars);
   }
   for (i=0; i<numVars; ++i) {
-    pts_1d[i] = poly_basis[i].gauss_points(quad_order[i]);
-    wts_1d[i] = poly_basis[i].gauss_weights(quad_order[i]);
+    pts_1d[i] = polynomialBasis[i].gauss_points(quad_order[i]);
+    wts_1d[i] = polynomialBasis[i].gauss_weights(quad_order[i]);
   }
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
   // > project 1-D gauss point arrays (of potentially different type and order)
   //   into an n-dimensional stencil
   // > compute and store products of 1-D Gauss weights at each point in stencil
-  wts.sizeUninitialized(num_colloc_pts);
-  pts.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
+  weightSets.sizeUninitialized(num_colloc_pts);
+  variableSets.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
   colloc_key.resize(num_colloc_pts);
   UShortArray gauss_indices(numVars, 0);
   for (i=0; i<num_colloc_pts; i++) {
-    Real& wt_i = wts[i];
-    Real* pt_i = pts[i]; // column vector i
+    Real& wt_i = weightSets[i];
+    Real* pt_i = variableSets[i]; // column vector i
     wt_i = 1.0;
     for (j=0; j<numVars; j++) {
       pt_i[j] = pts_1d[j][gauss_indices[j]];
