@@ -58,6 +58,8 @@ public:
   virtual int min_coefficients() const;
   /// calculate the data fit coefficients using currentPoints and anchorPoint
   virtual void find_coefficients();
+  /// recalculate the data fit coefficients following currentPoints update
+  virtual void increment_coefficients();
   /// print the coefficient array computed in find_coefficients()
   virtual void print_coefficients(std::ostream& s) const;
 

@@ -115,6 +115,9 @@ protected:
   /// find the coefficients for the expansion of multivariate
   /// orthogonal polynomials
   void find_coefficients();
+  /// update the coefficients for the expansion of multivariate
+  /// orthogonal polynomials
+  void increment_coefficients();
 
   /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;

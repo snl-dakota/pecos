@@ -345,7 +345,10 @@ inline void SparseGridDriver::compute_trial_grid()
   // would need the right aggregated weights though.
   //increment_collocation_arrays() ???
   SizetArray new_coeff_map;
+  // ...
   expansionCoeffIndices.push_back(new_coeff_map);
+  for ()
+    uniqueIndexMapping.push_back(...);
   */
 }
 

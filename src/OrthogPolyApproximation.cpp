@@ -561,6 +561,50 @@ void OrthogPolyApproximation::find_coefficients()
 }
 
 
+void OrthogPolyApproximation::increment_coefficients()
+{
+  // update polynomial chaos coefficients by appending an additional
+  // expansion integration
+  bool err_flag = false;
+  switch (expCoeffsSolnApproach) {
+  case SPARSE_GRID:
+    switch (sparseGridExpansion) {
+    case TENSOR_INT_TENSOR_SUM_EXP: {
+      size_t index = tpMultiIndex.size(); // - 1 ??
+      std::vector<SurrogateDataPoint> tp_data_points;
+      RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
+
+      // form tp_data_points, tp_weights using collocKey et al.
+      integration_data(index, tp_data_points, tp_weights);
+      // form tp expansion coeffs
+      integrate_expansion(tpMultiIndex[index], tp_data_points, tp_weights,
+			  tp_expansion, tp_expansion_grads);
+      // sum tp-expansions into expansionCoeffs/expansionCoeffGrads
+      add_unique(index, tp_expansion, tp_expansion_grads);
+
+      //if (!reEntrantFlag) {
+      //  ssg_driver->clear_smolyak_arrays();
+      //  ssg_driver->clear_collocation_arrays();
+      //  tpMultiIndex.clear(); tpMultiIndexMap.clear();
+      //}
+      break;
+    }
+    default:
+      err_flag = true; break;
+    }
+    break;
+  default:
+    err_flag = true; break;
+  }
+
+  if (err_flag) {
+    PCerr << "Error: unsupported grid definition in OrthogPolyApproximation::"
+	  << "increment_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void OrthogPolyApproximation::
 sparse_grid_multi_index(UShort2DArray& multi_index)
 {
