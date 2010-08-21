@@ -116,7 +116,7 @@ void InterpPolyApproximation::allocate_arrays()
       size_t i, j, k;
       unsigned short num_levels = ssg_level + 1;
       // size and initialize polynomialBasis, multiple interpolants per variable
-      if (polynomialBasis.empty()) {
+      if (polynomialBasis.size() != num_levels) {
 	polynomialBasis.resize(num_levels);
 	for (i=0; i<num_levels; ++i)
 	  polynomialBasis[i].resize(numVars);
