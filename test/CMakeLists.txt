@@ -1,19 +1,17 @@
 set(TPL_LIBS teuchos)
 
-include_directories(${PROJECT_SOURCE_DIR}/src
+include_directories(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/src
                     ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
 
 link_directories(${Teuchos_LIBRARY_DIRS})
 
+add_definitions("-DHAVE_CONFIG_H")
+
 if(HAVE_SPARSE_GRID)
   include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
   set(TPL_LIBS ${TPL_LIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
-
-if(HAVE_LHS)
-  set(TPL_LIBS ${TPL_LIBS} lhs)
-endif(HAVE_LHS)
 
 if(HAVE_DFFTPACK)
   set(TPL_LIBS ${TPL_LIBS} dfftpack)
@@ -22,6 +20,21 @@ endif(HAVE_DFFTPACK)
 if(HAVE_FFTW)
   set(TPL_LIBS ${TPL_LIBS} fftw3)
 endif(HAVE_FFTW)
+
+
+#if(HAVE_LHS)
+#  set(TPL_LIBS ${TPL_LIBS} lhs)
+#endif(HAVE_LHS)
+function(CheckPackage package)
+  if(HAVE_${package})
+    add_definitions("-DHAVE_${package}")
+    string(TOLOWER ${package} package_lower)
+    set(TPL_LIBS ${TPL_LIBS} ${package_lower} PARENT_SCOPE)
+  endif()
+endfunction(CheckPackage)
+
+CheckPackage(LHS)
+
 
 # Complete these for each specific test.
 add_executable(pecos_ifft_g pecos_ifft_g.cpp)

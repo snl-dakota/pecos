@@ -140,3 +140,11 @@ set_target_properties(pecos-static PROPERTIES PREFIX "lib")
 
 target_link_libraries(pecos ${SUBLIBS})
 
+# WJB - ToDo: delete here to bottom once I am done debugging the bldSettings
+FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")
+GET_CMAKE_PROPERTY(res VARIABLES)
+FOREACH(var ${res})
+  FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt
+             "${var} \"${${var}}\"\n")
+ENDFOREACH(var ${res})
+

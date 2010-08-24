@@ -22,6 +22,7 @@ endif(HAVE_FFTW)
 file(GLOB Pecos_src *.cpp)
 
 if(HAVE_LHS)
+  add_definitions("-DHAVE_LHS")
   set(Pecos_src ${Pecos_src} lhs_wrappers.f90)
   set_property(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS ${FIXED_FLAG})
   set(Pecos_libs ${Pecos_libs} lhs)
