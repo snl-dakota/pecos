@@ -20,6 +20,47 @@
 
 namespace Pecos {
 
+void PolynomialApproximation::allocate_component_effects_array()
+{
+  // sobolIndices[0] is reserved for mean 
+  if (expansionCoeffFlag) {
+    switch (outputLevel) { // Allocate memory specific to output control
+    case NORMAL_OUTPUT:
+      if (sobolIndices.empty()) {
+	int normal_index_length = (int)numVars+1;
+	// map binary to integer main effects form
+	sobolIndexMap[0] = 0; 
+	for (int i=1; i < normal_index_length; i++) 
+	  sobolIndexMap[int(std::pow(2.,i-1))] = i; 
+	sobolIndices.sizeUninitialized(normal_index_length);
+      }
+    case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
+      computeAllIndices = true;
+      if (sobolIndices.empty()) {
+	int verbose_index_length = (int)std::pow(2.,(int)numVars);
+	sobolIndexMap[0] = 0; 
+	for (int i=0; i < verbose_index_length; i++) 
+	  sobolIndexMap[i] = i; // already in binary notation
+	sobolIndices.sizeUninitialized(verbose_index_length);
+      }
+    }
+  }
+}
+
+void PolynomialApproximation::allocate_total_effects_array()
+{
+  // number of total indices independent of number of component
+  // indices
+  if (expansionCoeffFlag) {
+    switch (outputLevel) { // Allocate memory specific to output control
+    case NORMAL_OUTPUT: case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
+      if (totalSobolIndices.empty())
+	totalSobolIndices.sizeUninitialized(numVars);
+      break;
+    }
+  }
+}
+
 void PolynomialApproximation::allocate_arrays()
 {
   // size the sensitivity member variables: sobolIndices[0] is

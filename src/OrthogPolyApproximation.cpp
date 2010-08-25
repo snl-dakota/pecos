@@ -2212,10 +2212,75 @@ norm_squared_random(const UShortArray& indices)
 
 void OrthogPolyApproximation::compute_component_effects()
 {
+  // allocates memory specific to type of sensitivity indices desired
+  allocate_component_effects_array();
+  // Index the set using binary number representation
+  size_t index_bin, i, j;
+  // Compute a pseudo-variance that makes no distinction between probabilistic
+  // variables and non-probabilistic variables
+  Real p_var = 0;
+  for (i=1; i<numExpansionTerms; i++) 
+    p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
+
+  // iterate through multiIndex and store sensitivities
+  sobolIndices      = 0.; // initialize
+  sobolIndices[0]   = 1.; // just a place holder; zero index is never invoked
+  for (i=1; i<numExpansionTerms; ++i) {
+    index_bin = 0;
+    Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
+      expansionCoeffs(i) / p_var;
+    for (j=0; j<numVars; ++j) {
+      if (multiIndex[i][j]) {
+	// convert this subset multiIndex[i] into binary number
+	index_bin += (size_t)pow(2.,(int)j);
+      }
+    }
+    // If term is main effect (exists in map), keep; otherwise, discard
+    if (sobolIndexMap.find(index_bin) != sobolIndexMap.end())
+      sobolIndices[sobolIndexMap[index_bin]] += p_var_i;
+  }
 }
 
 void OrthogPolyApproximation::compute_total_effects() 
 {
+  // allocates memory specific to type of sensitivity indices desired
+  allocate_total_effects_array();
+  totalSobolIndices = 0; 
+  // iterate through existing indices if all component indices are 
+  // available
+  if (computeAllIndices) {
+    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++)
+      for (int k=0; k<numVars; k++) 
+        if ((*itr).first & (1 << k))
+          totalSobolIndices[k] += sobolIndices[(*itr).second];
+  }
+
+  // otherwise, iterate over the expansion terms as it is more 
+  // computationally efficient than performing ANOVA operators
+  else {
+    // Index the set using binary number representation
+    size_t index_bin, i, j;
+    Real p_var = 0;
+    for (i=1; i<numExpansionTerms; i++) 
+      p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
+  
+    // Computing the total indices by iterating through expansion terms is simpler
+    // and more computationally efficient than computing via ANOVA operators 
+    for (i=1; i<numExpansionTerms; ++i) {
+      index_bin = 0;
+      Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
+        expansionCoeffs(i) / p_var;
+      for (j=0; j<numVars; ++j) {
+        if (multiIndex[i][j]) {
+          // convert this subset multiIndex[i] into binary number
+          index_bin += (size_t)pow(2.,(int)j);
+          // for any constituent variable j in exansion term i, the expansion
+          // term contributes to the total sensitivty of variable j
+          totalSobolIndices[j] += p_var_i;
+        }
+      }
+    }
+  }
 }
 
 void OrthogPolyApproximation::compute_global_sensitivity()
@@ -2231,35 +2296,8 @@ void OrthogPolyApproximation::compute_global_sensitivity()
   // | 0 | 0 | 0 | 0 | 1 | represents the subset that only contains variable 1
   // sobolIndices[0] is set to 1; to calculate it is redundant
 
-  // Index the set using binary number representation
-  size_t index_bin, i, j;
-  // Compute a pseudo-variance that makes no distinction between probabilistic
-  // variables and non-probabilistic variables
-  Real p_var = 0;
-  for (i=1; i<numExpansionTerms; i++) 
-    p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
-
-  // iterate through multiIndex and store sensitivities
-  sobolIndices      = 0.;
-  sobolIndices[0]   = 1.;
-  totalSobolIndices = 0.;
-  for (i=1; i<numExpansionTerms; ++i) {
-    index_bin = 0;
-    Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
-      expansionCoeffs(i) / p_var;
-    for (j=0; j<numVars; ++j) {
-      if (multiIndex[i][j]) {
-	// convert this subset multiIndex[i] into binary number
-	index_bin += (size_t)pow(2.,(int)j);
-	// for any constituent variable j in exansion term i, the expansion
-	// term contributes to the total sensitivty of variable j
-	totalSobolIndices[j] += p_var_i;
-      }
-    }
-    // If term is main effect (exists in map), keep; otherwise, discard
-    if (sobolIndexMap.find(index_bin) != sobolIndexMap.end())
-      sobolIndices[sobolIndexMap[index_bin]] += p_var_i;
-  }
+  compute_component_effects();
+  compute_total_effects();
 }
 
 		

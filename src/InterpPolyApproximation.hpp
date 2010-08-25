@@ -173,6 +173,8 @@ private:
   Real partial_variance_integral(int set_value, size_t tp_index);
   /// computes partialVariance
   void partial_variance(int set_value);
+  Real total_effects_integral(int set_value);
+  Real total_effects_integral(int set_value, size_t tp_index);
 
   //
   //- Heading: Data

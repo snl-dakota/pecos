@@ -1263,34 +1263,23 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
 
 
 void InterpPolyApproximation::compute_component_effects()
-{}
-
-void InterpPolyApproximation::compute_total_effects()
-{}
-
-// Compute Sobol Indices for global sensitivity analysis
-void InterpPolyApproximation::compute_global_sensitivity()
 {
-  if (outputLevel <  NORMAL_OUTPUT)
-    return;
-  // need the full tensor product mean and tensor product variance
-  Real total_mean = get_mean();
-  Real total_variance =	get_variance();
-
+  
   ////////////////////// Start Sort ///////////////////////////
 
   // size member variables
+  allocate_component_effects_array();
   constituentSets.resize(sobolIndices.length());
   partialVariance.size(sobolIndices.length());
 
   // perform subset sort
   get_subsets();
 
-  ////////////////////// Begin Computations ////////////////////
-	
+  Real total_mean = get_mean();
+  Real total_variance =	get_variance();
+
   // initialize 
   partialVariance[0] = std::pow(total_mean,2.0); // init with mean sq
-  totalSobolIndices = 0; // init total indices
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin(); map_iter!=sobolIndexMap.end(); map_iter++) {
@@ -1301,11 +1290,204 @@ void InterpPolyApproximation::compute_global_sensitivity()
       sobolIndices[(*map_iter).second] = 1/total_variance*partialVariance[(*map_iter).second];
       // total indices simply identify the membership of the sobolIndices 
       // and adds it to the appropriate bin
-      for (int k=0; k<numVars; ++k)
-        if ((*map_iter).first & (1 << k)) // if subset ct contains variable k
-	totalSobolIndices[k] += sobolIndices[(*map_iter).second];
     }
   }
+}
+
+void InterpPolyApproximation::compute_total_effects()
+{
+  allocate_total_effects_array();
+  totalSobolIndices = 0; // init total indices
+
+  // iterate through existing indices if all component indices are                         
+  // available                                                                             
+  if (computeAllIndices) {
+    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++) 
+      for (int k=0; k<numVars; k++) 
+        if ((*itr).first & (1 << k))                                                       
+          totalSobolIndices[k] += sobolIndices[(*itr).second];                             
+  }
+
+  // if not available, compute total indices independently
+  // approach parallels partial_variance_integral where the algorithm is 
+  // separated by integration approach
+  else {
+    switch (expCoeffsSolnApproach) {
+      case QUADRATURE: {
+        Real l_variance = get_variance();
+        for (int j=0; j<numVars; j++) {
+          // define set_value that includes all but index of interest
+          int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
+          totalSobolIndices[j] = 1 - (total_effects_integral(set_value)/l_variance);
+        }
+        break;
+      }
+      case SPARSE_GRID: {
+        Real l_variance = get_variance();
+        SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+        const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
+        // Smolyak recursion of anisotropic tensor products
+        size_t num_smolyak_indices = sm_coeffs.size();
+        // iterate each variable 
+        for (int j=0; j<numVars; j++) {
+          int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1; 
+          for (size_t i=0; i<num_smolyak_indices; ++i)
+            totalSobolIndices[j] += sm_coeffs[i]*total_effects_integral(set_value,i);
+          totalSobolIndices[j] = 1 - (totalSobolIndices[j]/l_variance);
+        }
+        break;
+      }
+    }
+  }                                                                                        
+}
+
+Real InterpPolyApproximation::total_effects_integral(int set_value)
+{
+  // Some other routine here
+  TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
+  const UShort2DArray& key          = tpq_driver->collocation_key();
+  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
+  const UShortArray&   quad_order   = tpq_driver->quadrature_order();;
+
+  // Distinguish between non-members and members of the given set, set_value
+  BoolDeque nonmember_vars(numVars,true); 
+  int num_mem_expansion_coeffs = 1; // number of expansion coeffs in
+                                    // member-variable-only expansion 
+  IntVector indexing_factor; // factors indexing member variables 
+  indexing_factor.sizeUninitialized(numVars);
+
+  indexing_factor = 1;
+        
+  for (int k=0; k<numVars; ++k) {
+    // if subset contains variable k, set key for variable k to true
+    if (set_value & (1 << k)) {
+      nonmember_vars[k] = false;	
+      // information to properly index mem_expansion_coeffs
+      indexing_factor[k] = num_mem_expansion_coeffs;
+      num_mem_expansion_coeffs *= quad_order[k];
+    }	
+  }
+        
+  // Create vector to store new coefficients
+  RealVector mem_expansion_coeffs(num_mem_expansion_coeffs),
+    mem_weights(num_mem_expansion_coeffs);
+ 
+  // Perform integration over non-member variables and store indices
+  // of new expansion
+  size_t i, j;
+  for (i=0; i<numCollocPts; ++i) {
+    const UShortArray& key_i = key[i];
+    size_t mem_expansion_coeffs_index = 0;	
+    Real prod_i_nonmembers = 1, prod_i_members = 1;
+    for (j=0; j<numVars; ++j) {
+      // Convert key to corresponding index on mem_expansion_coeffs
+      mem_expansion_coeffs_index += (nonmember_vars[j]) ? 
+        0 : key_i[j]*indexing_factor[j];
+      // Save the product of the weights of the member and non-member variables 
+      if (nonmember_vars[j])
+        prod_i_nonmembers *= gauss_wts_1d[j][key_i[j]];
+      else
+        prod_i_members *= gauss_wts_1d[j][key_i[j]];
+    }
+ 
+    // mem_weights is performed more time than necessary here, but it
+    // seems to be the simplest place to put it
+    mem_weights[mem_expansion_coeffs_index] = prod_i_members;
+    // sort coefficients by the "signature" of the member variables
+    // (i.e. mem_expansion_coeffs_index)
+    mem_expansion_coeffs[mem_expansion_coeffs_index]
+      += expansionCoeffs[i]*prod_i_nonmembers;
+  }
+ 
+  // Now integrate over the remaining variables	
+  Real total_mean = get_mean();
+  Real integral = 0;
+  for (i=0; i<num_mem_expansion_coeffs; ++i)
+    integral += std::pow((mem_expansion_coeffs[i]-total_mean),2.0)*mem_weights[i];
+  return integral;
+
+}
+Real InterpPolyApproximation::total_effects_integral(int set_value, size_t tp_index)
+{
+  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
+  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
+  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
+  const SizetArray&    coeff_index
+    = ssg_driver->expansion_coefficient_indices()[tp_index];
+  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
+
+  // Distinguish between non-members and members of the given set, set_value
+  BoolDeque nonmember_vars(numVars,true); 
+  int num_mem_expansion_coeffs = 1; // number of expansion coeffs in
+                                    // member-variable-only expansion 
+  IntVector indexing_factor; // factors indexing member variables 
+  indexing_factor.sizeUninitialized(numVars);
+
+  // create member variable key and get number of expansion coeffs in
+  // member-variable-only expansion
+  indexing_factor = 1;
+	
+  UShortArray quad_order;
+  ssg_driver->level_to_order(sm_index, quad_order);
+  for (int k=0; k<numVars; ++k) {
+    // if subset contains variable k, set key for variable k to true
+    if (set_value & (1 << k)) {
+      nonmember_vars[k] = false;	
+      // information to properly index mem_expansion_coeffs
+      indexing_factor[k] = num_mem_expansion_coeffs;
+      num_mem_expansion_coeffs *= quad_order[k];
+    }	
+  }
+        
+  // Create vector to store new coefficients
+  RealVector mem_expansion_coeffs(num_mem_expansion_coeffs),
+    mem_weights(num_mem_expansion_coeffs);
+ 
+  // Perform integration over non-member variables and store indices
+  // of new expansion
+  size_t i, j, num_colloc_pts = key.size();
+  for (i=0; i <num_colloc_pts; ++i) {
+    const UShortArray& key_i = key[i];
+    size_t mem_expansion_coeffs_index = 0;	
+    Real prod_i_nonmembers = 1, prod_i_members = 1;
+    for (j=0; j<numVars; ++j) {
+      // Convert key to corresponding index on mem_expansion_coeffs
+      mem_expansion_coeffs_index += (nonmember_vars[j]) ? 
+        0 : key_i[j]*indexing_factor[j];
+      // Save the product of the weights of the member and non-member variables 
+      if (nonmember_vars[j])
+        prod_i_nonmembers *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
+      else
+        prod_i_members *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
+    }
+ 
+    // mem_weights is performed more time than necessary here, but it
+    // seems to be the simplest place to put it
+    mem_weights[mem_expansion_coeffs_index] = prod_i_members;
+    // sort coefficients by the "signature" of the member variables
+    // (i.e. mem_expansion_coeffs_index)
+    mem_expansion_coeffs[mem_expansion_coeffs_index]
+      += expansionCoeffs[coeff_index[i]]*prod_i_nonmembers;
+  }
+ 
+  // Now integrate over the remaining variables	
+  Real integral = 0;
+  Real total_mean = get_mean();
+  for (i=0; i<num_mem_expansion_coeffs; ++i)
+    integral += std::pow(mem_expansion_coeffs[i] - total_mean, 2.0)*mem_weights[i];
+
+  return integral;
+}
+
+// Compute Sobol Indices for global sensitivity analysis
+void InterpPolyApproximation::compute_global_sensitivity()
+{
+  if (outputLevel <  NORMAL_OUTPUT)
+    return;
+ 
+  compute_component_effects();
+  compute_total_effects(); 
+
 }
 
 
@@ -1494,9 +1676,9 @@ partial_variance_integral(int set_value, size_t tp_index)
 }
 
 
-/** Computes the partial expection for a certain set represented in
-    integer form.  Solves for lower level subsets if necessary and
-    stores all computations in subsetPartialVariance. */
+/** Computes the variance of component functions. Assumes that all subsets of
+    set_value have been computed in advance which will be true so long as
+    the partial_variance is called following appropriate enumeration of set value  */
 void InterpPolyApproximation::partial_variance(int set_value)
 {
   // Computes the integral first

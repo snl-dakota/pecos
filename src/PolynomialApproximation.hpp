@@ -51,6 +51,8 @@ public:
 
   /// size Sobol arrays
   virtual void allocate_arrays();
+  virtual void allocate_component_effects_array();
+  virtual void allocate_total_effects_array();
 
   /// Performs global sensitivity analysis using Sobol' Indices
   virtual void compute_global_sensitivity() = 0;
@@ -264,7 +266,7 @@ private:
 inline PolynomialApproximation::PolynomialApproximation():
   driverRep(NULL), expCoeffsSolnApproach(SAMPLING), outputLevel(NORMAL_OUTPUT),
   expansionCoeffFlag(true), expansionCoeffGradFlag(false),
-  ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX), computeAllIndices(false)
 { }
 
 
@@ -273,7 +275,7 @@ PolynomialApproximation(size_t num_vars, short output_level):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   expCoeffsSolnApproach(SAMPLING), outputLevel(output_level),
   expansionCoeffFlag(true), expansionCoeffGradFlag(false),
-  ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX), computeAllIndices(false)
 { }
 
 
