@@ -57,6 +57,8 @@ protected:
 
   /// Performs global sensitivity analysis using Sobol' Indices
   void compute_global_sensitivity();
+  void compute_component_effects();
+  void compute_total_effects();
 
   /// retrieve the response expansion value for a given parameter vector
   const Real& get_value(const RealVector& x);

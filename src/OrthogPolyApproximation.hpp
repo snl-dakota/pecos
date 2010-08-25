@@ -124,8 +124,10 @@ protected:
 
   /// Performs global sensitivity analysis using Sobol' Indices
   void compute_global_sensitivity();
-
-  /// retrieve the response PCE value for a given parameter vector
+  void compute_component_effects();
+  void compute_total_effects();
+  
+/// retrieve the response PCE value for a given parameter vector
   const Real& get_value(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
   /// and default DVV

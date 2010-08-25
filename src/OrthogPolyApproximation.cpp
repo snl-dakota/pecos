@@ -2210,6 +2210,13 @@ norm_squared_random(const UShortArray& indices)
   return multiPolyNormSq;
 }
 
+void OrthogPolyApproximation::compute_component_effects()
+{
+}
+
+void OrthogPolyApproximation::compute_total_effects() 
+{
+}
 
 void OrthogPolyApproximation::compute_global_sensitivity()
 {

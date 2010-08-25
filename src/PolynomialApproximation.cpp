@@ -31,7 +31,8 @@ void PolynomialApproximation::allocate_arrays()
     case NORMAL_OUTPUT:
       if (sobolIndices.empty()) {
 	int normal_index_length = (int)numVars+1;
-	// map binary to integer main effects form 
+	// map binary to integer main effects form
+	sobolIndexMap[0] = 0; 
 	for (int i=1; i < normal_index_length; i++) 
 	  sobolIndexMap[int(std::pow(2.,i-1))] = i; 
 	sobolIndices.sizeUninitialized(normal_index_length);
@@ -42,6 +43,7 @@ void PolynomialApproximation::allocate_arrays()
     case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
       if (sobolIndices.empty()) {
 	int verbose_index_length = (int)std::pow(2.,(int)numVars);
+	sobolIndexMap[0] = 0; 
 	for (int i=0; i < verbose_index_length; i++) 
 	  sobolIndexMap[i] = i; // already in binary notation
 	sobolIndices.sizeUninitialized(verbose_index_length);

@@ -54,6 +54,12 @@ public:
 
   /// Performs global sensitivity analysis using Sobol' Indices
   virtual void compute_global_sensitivity() = 0;
+  /// Computes sensitivity indices according to verbosity (from main
+  /// to higher order effects)
+  virtual void compute_component_effects()=0;
+  /// Computes total sensitivity indices according to verbosity and
+  /// existing computations from compute_component_effects()
+  virtual void compute_total_effects()=0;
 
   /// return the mean of the expansion, treating all variables as random
   virtual const Real& get_mean() = 0;
@@ -237,8 +243,10 @@ protected:
       expansion only over the random variables). */
   RealMatrix expansionCoeffGrads;
 
+  // flag to detect whether all indices have been computed
+  bool computeAllIndices;
   /// introduce mapping to unify disparate enumeration of sensitivity
-  /// indices
+  /// indices (e.g. main effects only vs all effects)
   IntIntMap sobolIndexMap;
   /// global sensitivities as given by Sobol'
   RealVector sobolIndices;

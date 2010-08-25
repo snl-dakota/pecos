@@ -1262,6 +1262,12 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
 }
 
 
+void InterpPolyApproximation::compute_component_effects()
+{}
+
+void InterpPolyApproximation::compute_total_effects()
+{}
+
 // Compute Sobol Indices for global sensitivity analysis
 void InterpPolyApproximation::compute_global_sensitivity()
 {
@@ -1288,13 +1294,17 @@ void InterpPolyApproximation::compute_global_sensitivity()
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin(); map_iter!=sobolIndexMap.end(); map_iter++) {
-    partial_variance((*map_iter).first);
-    sobolIndices[(*map_iter).second] = 1/total_variance*partialVariance[(*map_iter).second];
-    // total indices simply identify the membership of the sobolIndices 
-    // and adds it to the appropriate bin
-    for (int k=0; k<std::numeric_limits<int>::digits; ++k)
-      if ((*map_iter).first & (1 << k)) // if subset ct contains variable k
+    // partialVariance[0] stores the mean; it is not a component function
+    // and does not follow the procedures for obtaining variance 
+    if ((*map_iter).first != 0) {
+      partial_variance((*map_iter).first);
+      sobolIndices[(*map_iter).second] = 1/total_variance*partialVariance[(*map_iter).second];
+      // total indices simply identify the membership of the sobolIndices 
+      // and adds it to the appropriate bin
+      for (int k=0; k<numVars; ++k)
+        if ((*map_iter).first & (1 << k)) // if subset ct contains variable k
 	totalSobolIndices[k] += sobolIndices[(*map_iter).second];
+    }
   }
 }
 
@@ -1328,11 +1338,11 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
   else
     top_level_set.insert(plus_one_set);
   // and find lower level sets
-  for (int k=0; k<std::numeric_limits<int>::digits; ++k)
+  for (int k=0; k<numVars; ++k)
     // this performs a bitwise comparison by shifting 1 by k spaces 
     // and comparing that to a binary form of plus_one_set; this allows 
     // the variable membership using integers instead of a d-array of bools
-    if (plus_one_set & (1 << k))
+    if (plus_one_set & (1 << k)) 
       // if subset i contains variable k, remove that variable from the set 
       // by converting the bit-form of (1<<k) to an integer and subtract from the plus_one_set
       lower_sets(plus_one_set-(int)std::pow(2.0,k),top_level_set);
@@ -1360,7 +1370,7 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
   // member-variable-only expansion
   indexing_factor = 1;
 	
-  for (int k=0; k<std::numeric_limits<int>::digits; ++k) {
+  for (int k=0; k<numVars; ++k) {
     // if subset contains variable k, set key for variable k to true
     if (set_value & (1 << k)) {
       nonmember_vars[k] = false;	
@@ -1435,7 +1445,7 @@ partial_variance_integral(int set_value, size_t tp_index)
 	
   UShortArray quad_order;
   ssg_driver->level_to_order(sm_index, quad_order);
-  for (int k=0; k<std::numeric_limits<int>::digits; ++k) {
+  for (int k=0; k<numVars; ++k) {
     // if subset contains variable k, set key for variable k to true
     if (set_value & (1 << k)) {
       nonmember_vars[k] = false;	
@@ -1508,9 +1518,10 @@ void InterpPolyApproximation::partial_variance(int set_value)
   
   // Now subtract the contributions from constituent subsets
   IntSet::iterator itr;
-  for (itr  = constituentSets[set_value].begin();
-       itr != constituentSets[set_value].end(); itr++) 
-    partialVariance[set_value] -= partialVariance[*itr];
+  for (itr  = constituentSets[sobolIndexMap[set_value]].begin();
+       itr != constituentSets[sobolIndexMap[set_value]].end(); itr++) 
+    partialVariance[sobolIndexMap[set_value]] -= partialVariance[sobolIndexMap[*itr]];
+  
 }
 
 } // namespace Pecos
