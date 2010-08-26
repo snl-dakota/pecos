@@ -48,9 +48,14 @@ protected:
 
   int min_coefficients() const;
 
-  /// find the coefficients for the expansion of multivariate
+  /// find the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
   void find_coefficients();
+  /// update the coefficients for the expansion of multivariate Lagrange
+  /// interpolation polynomials
+  void increment_coefficients();
+  /// restore the coefficients to their previous state prior to last increment
+  void decrement_coefficients();
 
   /// size expansionCoeffs and expansionCoeffGrads
   void allocate_arrays();
@@ -107,6 +112,9 @@ private:
   //
   //- Heading: Convenience functions
   //
+
+  /// update polynomialBasis after a change in maximum interpolation depth
+  void update_sparse_interpolation_basis(unsigned short max_level);
 
   /// compute the value of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_value(x)

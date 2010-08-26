@@ -66,13 +66,14 @@ void InterpPolyApproximation::allocate_arrays()
       abort_handler(-1);
     }
 
-    bool update_exp_form = (quad_order != quadOrderPrev);
+    //bool update_exp_form = (quad_order != quadOrderPrev);
     // *** TO DO: capture updates to parameterized/numerical polynomials
     //if (update_exp_form)
       // collocKey currently updated in TensorProductDriver::compute_grid()
       //tpq_driver->allocate_collocation_arrays();
 
-    bool update_basis_form = update_exp_form;
+    // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
+    bool update_basis_form = (quad_order != quadOrderPrev);
     // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
     if (update_basis_form) {
       // size and initialize polynomialBasis, one interpolant per variable
@@ -110,38 +111,13 @@ void InterpPolyApproximation::allocate_arrays()
       ssg_driver->allocate_collocation_arrays();
     }
 
-    bool update_basis_form = update_exp_form;
-    // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
-    if (update_basis_form) {
-      size_t i, j, k;
-      unsigned short num_levels = ssg_level + 1;
-      // size and initialize polynomialBasis, multiple interpolants per variable
-      if (polynomialBasis.size() != num_levels) {
-	polynomialBasis.resize(num_levels);
-	for (i=0; i<num_levels; ++i)
-	  polynomialBasis[i].resize(numVars);
-      }
-      // j range is 0:w inclusive; i range is 1:w+1 inclusive
-      const Real3DArray& gauss_pts_1d = ssg_driver->gauss_points_array();
-      for (i=0; i<num_levels; ++i) { // i->num_levels-1->ssg_level
-	const Real2DArray&          gauss_pts_1d_i = gauss_pts_1d[i];
-	std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
-	// anisotropic levels: check other dims at corresponding level
-	for (j=0; j<numVars; ++j) {
-	  bool found = false;
-	  for (k=0; k<j; ++k)
-	    if (//ssg_level[k]   >= i && // level i exists for dimension k
-		gauss_pts_1d_i[j] == gauss_pts_1d_i[k]) // pt vector equality
-	      { found = true; break; }
-	  if (found) // reuse previous instances via shared representations
-	    poly_basis_i[j] = poly_basis_i[k]; // shared rep
-	  else { // instantiate new unique instances
-	    poly_basis_i[j] = BasisPolynomial(LAGRANGE);
-	    poly_basis_i[j].interpolation_points(gauss_pts_1d_i[j]);
-	  }
-	}
-      }
-    }
+    // Ignore weights since they only reduce the interpolation depth from the
+    // level and the basis update uses a coarse increment based on level.  This
+    // matches isotropic sparse grids, but forces fewer and larger updates in
+    // the case of anisotropic or generalized grids.
+    bool update_basis_form = (ssg_level > ssgLevelPrev);
+    if (update_basis_form)
+      update_sparse_interpolation_basis(ssg_level);
 
     ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     break;
@@ -192,6 +168,103 @@ void InterpPolyApproximation::find_coefficients()
       expansionCoeffs[i] = it->response_function();
     if (expansionCoeffGradFlag)
       Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
+  }
+}
+
+
+void InterpPolyApproximation::increment_coefficients()
+{
+  bool err_flag = false;
+  switch (expCoeffsSolnApproach) {
+  case SPARSE_GRID: {
+    // As for allocate_arrays(), increments are performed in coarser steps
+    // than may be strictly necessary: all increments are filled in for all
+    // vars for a step in level (ignoring anisotropy or generalized indices).
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    const UShortArray& trial_set = ssg_driver->trial_index_set();
+    unsigned short max_trial_index = 0;
+    for (size_t i=0; i<numVars; ++i)
+      if (trial_set[i] > max_trial_index)
+	max_trial_index = trial_set[i];
+    if (max_trial_index+1 > polynomialBasis.size())
+      update_sparse_interpolation_basis(max_trial_index);
+    break;
+  }
+  default:
+    err_flag = true; break;
+  }
+
+  if (err_flag) {
+    PCerr << "Error: unsupported grid definition in InterpPolyApproximation::"
+	  << "increment_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, new_colloc_pts = dataPoints.size();
+  if (!anchorPoint.is_null())
+    new_colloc_pts += 1;
+  if (expansionCoeffFlag)
+    expansionCoeffs.resize(new_colloc_pts);
+  if (expansionCoeffGradFlag) {
+    size_t num_deriv_vars = expansionCoeffGrads.numRows();
+    expansionCoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
+  }
+  std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
+  std::advance(it, numCollocPts);
+  for (i=numCollocPts; i<new_colloc_pts; ++i, ++it) {
+    if (expansionCoeffFlag)
+      expansionCoeffs[i] = it->response_function();
+    if (expansionCoeffGradFlag)
+      Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
+  }
+
+  numCollocPts = new_colloc_pts;
+}
+
+
+void InterpPolyApproximation::decrement_coefficients()
+{
+  // leave polynomialBasis as is
+
+  numCollocPts = dataPoints.size(); // data already decremented
+  if (!anchorPoint.is_null())
+    numCollocPts += 1;
+  // not strictly necessary; next increment takes care of this
+  //if (expansionCoeffFlag)
+  //  expansionCoeffs.resize(numCollocPts);
+  //if (expansionCoeffGradFlag) {
+  //  size_t num_deriv_vars = expansionCoeffGrads.numRows();
+  //  expansionCoeffGrads.reshape(num_deriv_vars, numCollocPts);
+  //}
+}
+
+
+void InterpPolyApproximation::
+update_sparse_interpolation_basis(unsigned short max_level)
+{
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  size_t i, j, k, basis_size = polynomialBasis.size();
+  // j range is 0:w inclusive; i range is 1:w+1 inclusive
+  unsigned short num_levels = max_level + 1;
+  const Real3DArray& gauss_pts_1d = ssg_driver->gauss_points_array();
+  // resize leaves previous levels unmodified: only update new levels
+  polynomialBasis.resize(num_levels);
+  for (i=basis_size; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
+    const Real2DArray&          gauss_pts_1d_i = gauss_pts_1d[i];
+    std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
+    polynomialBasis[i].resize(numVars);
+    for (j=0; j<numVars; ++j) {
+      bool found = false;
+      for (k=0; k<j; ++k)
+	if (gauss_pts_1d_i[j] == gauss_pts_1d_i[k]) // vector equality
+	  { found = true; break; }
+      if (found) // reuse previous instances via shared representations
+	poly_basis_i[j] = poly_basis_i[k]; // shared rep
+      else { // instantiate new unique instances
+	poly_basis_i[j] = BasisPolynomial(LAGRANGE);
+	poly_basis_i[j].interpolation_points(gauss_pts_1d_i[j]);
+      }
+    }
   }
 }
 

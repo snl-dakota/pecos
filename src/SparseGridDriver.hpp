@@ -112,8 +112,6 @@ public:
 
   /// calls compute_tensor_grid() for trialIndexSet
   void compute_trial_grid();
-  /// calls allocate_{generalized_coefficients,collocation_arrays}
-  void update_arrays();
 
   /// converts an array of sparse grid levels to an array of
   /// quadrature orders based on integrationRules/growthRules
@@ -151,6 +149,8 @@ public:
   const std::set<UShortArray>& active_multi_index() const;
   /// return oldMultiIndex
   const std::set<UShortArray>& old_multi_index() const;
+  /// return trialIndexSet
+  const UShortArray& trial_index_set() const;
 
   /// return gaussPts1D
   const Real3DArray& gauss_points_array()  const;
@@ -228,6 +228,9 @@ private:
   Sizet2DArray expansionCoeffIndices;
   /// output from sgmga_unique_index()
   IntArray uniqueIndexMapping;
+  /// the current number of unique points in the grid; used for incrementing
+  /// and decrementing uniqueIndexMapping within generalized sparse grids
+  int numCollocPts;
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
@@ -322,47 +325,8 @@ inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
 { return oldMultiIndex; }
 
 
-inline void SparseGridDriver::push_trial_set(const UShortArray& set)
-{ trialIndexSet = set; smolyakMultiIndex.push_back(set); }
-
-
-inline void SparseGridDriver::pop_trial_set()
-{ /* trialIndexSet.clear(); */ smolyakMultiIndex.pop_back(); }
-
-
-inline void SparseGridDriver::compute_trial_grid()
-{
-  UShortArray quad_order(numVars);
-  UShort2DArray new_key;
-  if (gaussPts1D.empty() || gaussWts1D.empty())
-    { gaussPts1D.resize(1); gaussWts1D.resize(1); }
-  level_to_order(trialIndexSet, quad_order);
-  compute_tensor_grid(quad_order, new_key, gaussPts1D[0], gaussWts1D[0]);
-  collocKey.push_back(new_key);
-
-  /* *** TO DO: prior to having sandia_sgmgg available, could manually
-  // increment the point sets (ignoring the merging of duplicates).  Still
-  // would need the right aggregated weights though.
-  //increment_collocation_arrays() ???
-  SizetArray new_coeff_map;
-  // ...
-  expansionCoeffIndices.push_back(new_coeff_map);
-  for ()
-    uniqueIndexMapping.push_back(...);
-  */
-}
-
-
-inline void SparseGridDriver::update_arrays()
-{
-  // cannot use allocate_smolyak_arrays(), rather we use allocate_generalized_
-  // coefficients() to update smolyakCoeffs from smolyakMultiIndex
-  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
-
-  // *** TO DO: requires updated uniqueIndexMapping from sandia_sgmgg
-  // update collocKey, expansionCoeffIndices, uniqueIndexMapping
-  allocate_collocation_arrays();
-}
+inline const UShortArray& SparseGridDriver::trial_index_set() const
+{ return trialIndexSet; }
 
 
 inline void SparseGridDriver::

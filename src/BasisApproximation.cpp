@@ -235,6 +235,18 @@ void BasisApproximation::increment_coefficients()
 }
 
 
+void BasisApproximation::decrement_coefficients()
+{
+  if (basisApproxRep)
+    basisApproxRep->decrement_coefficients(); 
+  else {
+    PCerr << "Error: decrement_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void BasisApproximation::print_coefficients(std::ostream& s) const
 {
   if (basisApproxRep)

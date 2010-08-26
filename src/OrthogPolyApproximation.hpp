@@ -16,6 +16,7 @@
 
 #include "PolynomialApproximation.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
+#include "SparseGridDriver.hpp"
 
 
 namespace Pecos {
@@ -49,6 +50,13 @@ public:
 			  short output_level);
   /// destructor
   ~OrthogPolyApproximation();
+
+  //
+  //- Heading: Virtual function redefinitions
+  //
+
+  /// initialize polynomialBasis, multiIndex, et al.
+  void allocate_arrays();
 
   //
   //- Heading: Member functions
@@ -101,13 +109,10 @@ public:
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
 
-  /// initialize polynomialBasis, multiIndex, et al.
-  void allocate_arrays();
-
 protected:
 
   //
-  //- Heading: Virtual function redefinitions
+  //- Heading: Virtual function redefinitions and member functions
   //
 
   int min_coefficients() const;
@@ -118,6 +123,8 @@ protected:
   /// update the coefficients for the expansion of multivariate
   /// orthogonal polynomials
   void increment_coefficients();
+  /// restore the coefficients to their previous state prior to last increment
+  void decrement_coefficients();
 
   /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;
@@ -206,10 +213,22 @@ private:
   /// appear in multi_index
   void append_unique(const UShort2DArray& tp_multi_index,
 		     UShort2DArray& multi_index, bool define_tp_mi_map);
+  // restore multi_index to state prior to last append_unique() invocation
+  //void restore(UShort2DArray& multi_index);
+  /// helper function for common code between {add,subtract}_expansion()
+  void combine_expansion(const SizetArray& tp_mi_map,
+			 const RealVector& tp_expansion_coeffs,
+			 const RealMatrix& tp_expansion_grads, int coeff);
   /// add tp_expansion_coeffs/tp_expansion_grads contribution to
-  /// expansion_coeffs/expansion_grads
-  void add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
-		  const RealMatrix& tp_expansion_grads);
+  /// expansionCoeffs/expansionCoeffGrads
+  void add_expansion(size_t tp_index);
+  /// update expansionCoeffs/expansionCoeffGrads by adding trial
+  /// tensor-product expansion and updating coefficients on previous
+  /// tensor-product expansions
+  void append_expansion();
+  // restore expansionCoeffs/expansionCoeffGrads by backing out
+  // previous append_expansion()
+  //void restore_expansion();
   /// update the total Pareto set with new Pareto-optimal polynomial indices
   void update_pareto(const UShort2DArray& new_pareto,
 		     UShort2DArray& total_pareto);
@@ -286,6 +305,7 @@ private:
   /// the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
   UShort2DArray multiIndex;
+
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials
   /// contributing to each of the multivariate orthogonal polynomials.
@@ -295,6 +315,19 @@ private:
   /// sparse grid bookkeeping: mapping from num tensor-products by 
   /// tensor-product multi-indices into aggregated multiIndex
   Sizet2DArray tpMultiIndexMap;
+  /// the set of tensor-product contributions to expansionCoeffs
+  RealVectorArray tpExpansionCoeffs;
+  /// the set of tensor-product contributions to expansionCoeffGrads
+  RealMatrixArray tpExpansionCoeffGrads;
+  /// length of multiIndex prior to append_unique(); used in restore()
+  size_t prevMILen;
+  /// previous smolyak combinatorial coefficients; used in
+  /// {append,restore}_expansion()
+  IntArray prevSmolyakCoeffs;
+  /// previous expansionCoeffs prior to append_expansion()
+  RealVector prevExpCoeffs;
+  /// previous expansionCoeffGrads prior to append_expansion()
+  RealMatrix prevExpCoeffGrads;
 
   /// norm-squared of one of the multivariate polynomial basis functions
   Real multiPolyNormSq;
@@ -396,6 +429,19 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
       ((NumericGenOrthogPolynomial*)polynomialBasis[i].polynomial_rep())
 	->coefficients_norms_flag(flag);
 }
+
+
+inline void OrthogPolyApproximation::add_expansion(size_t tp_index)
+{
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  combine_expansion(tpMultiIndexMap[tp_index], tpExpansionCoeffs[tp_index],
+		    tpExpansionCoeffGrads[tp_index],
+		    ssg_driver->smolyak_coefficients()[tp_index]);
+}
+
+
+//inline void OrthogPolyApproximation::restore(UShort2DArray& multi_index)
+//{ multi_index.resize(prevMILen); }
 
 
 inline Real OrthogPolyApproximation::

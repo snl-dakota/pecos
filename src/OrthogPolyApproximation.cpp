@@ -417,7 +417,7 @@ void OrthogPolyApproximation::allocate_arrays()
   }
 
   // now that terms & order are known, shape some arrays.  This is done here,
-  // rather than in find coefficients(), in order to support array sizing for
+  // rather than in find_coefficients(), in order to support array sizing for
   // the data import case.
   if (expansionCoeffFlag && expansionCoeffs.length() != numExpansionTerms)
     expansionCoeffs.sizeUninitialized(numExpansionTerms);
@@ -524,7 +524,7 @@ void OrthogPolyApproximation::find_coefficients()
       if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
       size_t i, num_tensor_grids = tpMultiIndex.size();
       std::vector<SurrogateDataPoint> tp_data_points;
-      RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
+      RealVector tp_weights;
       // loop over tensor-products, forming sub-expansions, and sum them up
       for (i=0; i<num_tensor_grids; ++i) {
 	// form tp_data_points, tp_weights using collocKey et al.
@@ -533,10 +533,12 @@ void OrthogPolyApproximation::find_coefficients()
 	//map_tensor_product_multi_index(tp_multi_index, i);
 	// form tp expansion coeffs
 	integrate_expansion(tpMultiIndex[i], tp_data_points, tp_weights,
-			    tp_expansion, tp_expansion_grads);
-	// sum tp-expansions into expansionCoeffs/expansionCoeffGrads
-	add_unique(i, tp_expansion, tp_expansion_grads);
+			    tpExpansionCoeffs[i], tpExpansionCoeffGrads[i]);
+	// sum tpExpansion{Coeffs,CoeffGrads} into expansion{Coeffs,CoeffGrads}
+	add_expansion(i);
       }
+      SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+      prevSmolyakCoeffs = ssg_driver->smolyak_coefficients();
       //if (!reEntrantFlag) {
       //  ssg_driver->clear_smolyak_arrays();
       //  ssg_driver->clear_collocation_arrays();
@@ -563,24 +565,71 @@ void OrthogPolyApproximation::find_coefficients()
 
 void OrthogPolyApproximation::increment_coefficients()
 {
+  bool err_flag = false;
+  switch (expCoeffsSolnApproach) {
+  case SPARSE_GRID: {
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    switch (sparseGridExpansion) {
+    case TENSOR_INT_TENSOR_SUM_EXP: {
+      // size tpMultiIndex and tpExpansion{Coeffs,CoeffGrads}
+      size_t index = tpMultiIndex.size(), new_size = index+1;
+      tpMultiIndex.resize(new_size);
+      tpExpansionCoeffs.resize(new_size);
+      tpExpansionCoeffGrads.resize(new_size);
+      // update tpMultiIndex
+      UShortArray quad_order(numVars), int_order(numVars), exp_order(numVars);
+      ssg_driver->level_to_order(ssg_driver->trial_index_set(), quad_order);
+      quadrature_order_to_integrand_order(quad_order, int_order);
+      integrand_order_to_expansion_order(int_order, exp_order);
+      tensor_product_multi_index(exp_order, tpMultiIndex[index], true);
+      // update multiIndex and numExpansionTerms
+      append_unique(tpMultiIndex[index], multiIndex, true);
+      numExpansionTerms = multiIndex.size();
+      break;
+    }
+    default:
+      err_flag = true; break;
+    }
+    break;
+  }
+  default:
+    err_flag = true; break;
+  }
+
+  if (err_flag) {
+    PCerr << "Error: unsupported grid definition in OrthogPolyApproximation::"
+	  << "increment_arrays()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // reshape arrays here to mirror allocate_arrays()
+  if (expansionCoeffFlag)
+    expansionCoeffs.resize(numExpansionTerms); // new terms initialized to 0
+  if (expansionCoeffGradFlag) {
+    size_t num_deriv_vars = expansionCoeffGrads.numRows();
+    expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
+    // new terms initialized to 0
+  }
+
   // update polynomial chaos coefficients by appending an additional
   // expansion integration
-  bool err_flag = false;
   switch (expCoeffsSolnApproach) {
   case SPARSE_GRID:
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
-      size_t index = tpMultiIndex.size(); // - 1 ??
-      std::vector<SurrogateDataPoint> tp_data_points;
-      RealVector tp_weights, tp_expansion; RealMatrix tp_expansion_grads;
 
-      // form tp_data_points, tp_weights using collocKey et al.
-      integration_data(index, tp_data_points, tp_weights);
-      // form tp expansion coeffs
-      integrate_expansion(tpMultiIndex[index], tp_data_points, tp_weights,
-			  tp_expansion, tp_expansion_grads);
-      // sum tp-expansions into expansionCoeffs/expansionCoeffGrads
-      add_unique(index, tp_expansion, tp_expansion_grads);
+      // form tp_data_points, tp_wts using collocKey et al.
+      std::vector<SurrogateDataPoint> tp_data; RealVector tp_wts;
+      size_t index = tpMultiIndex.size() - 1;
+      integration_data(index, tp_data, tp_wts);
+
+      // form trial expansion coeffs/grads
+      integrate_expansion(tpMultiIndex[index], tp_data, tp_wts,
+			  tpExpansionCoeffs[index],
+			  tpExpansionCoeffGrads[index]);
+
+      // sum trial expansions into expansionCoeffs/expansionCoeffGrads
+      append_expansion();
 
       //if (!reEntrantFlag) {
       //  ssg_driver->clear_smolyak_arrays();
@@ -589,19 +638,47 @@ void OrthogPolyApproximation::increment_coefficients()
       //}
       break;
     }
-    default:
-      err_flag = true; break;
+    break;
+  }
+  }
+}
+
+
+void OrthogPolyApproximation::decrement_coefficients()
+{
+  switch (expCoeffsSolnApproach) {
+  case SPARSE_GRID: {
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    switch (sparseGridExpansion) {
+    case TENSOR_INT_TENSOR_SUM_EXP: {
+      // restore expansion{Coeffs,CoeffGrads}:
+      //restore_expansion();
+      expansionCoeffs     = prevExpCoeffs;
+      expansionCoeffGrads = prevExpCoeffGrads;
+      // restore multiIndex and numExpansionTerms:
+      //restore(multiIndex);
+      multiIndex.resize(prevMILen);
+      numExpansionTerms = multiIndex.size();
+      // restore tensor-product bookkeeping:
+      tpMultiIndex.pop_back();
+      tpMultiIndexMap.pop_back();
+      tpExpansionCoeffs.pop_back();
+      tpExpansionCoeffGrads.pop_back();
+      break;
+    }
     }
     break;
-  default:
-    err_flag = true; break;
+  }
   }
 
-  if (err_flag) {
-    PCerr << "Error: unsupported grid definition in OrthogPolyApproximation::"
-	  << "increment_coefficients()" << std::endl;
-    abort_handler(-1);
-  }
+  // not strictly necessary; next increment takes care of this
+  //if (expansionCoeffFlag)
+    //expansionCoeffs.resize(numExpansionTerms); // new terms initialized to 0
+  //if (expansionCoeffGradFlag) {
+    //size_t num_deriv_vars = expansionCoeffGrads.numRows();
+    //expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
+    // new terms initialized to 0
+  //}
 }
 
 
@@ -620,8 +697,9 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // assemble a complete list of individual polynomial coverage
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
-    tpMultiIndexMap.clear();
     tpMultiIndex.resize(num_smolyak_indices);
+    tpExpansionCoeffs.resize(num_smolyak_indices);
+    tpExpansionCoeffGrads.resize(num_smolyak_indices);
     UShortArray quad_order(numVars), integrand_order(numVars),
       expansion_order(numVars);
     for (i=0; i<num_smolyak_indices; ++i) {
@@ -983,6 +1061,7 @@ void OrthogPolyApproximation::
 append_unique(const UShort2DArray& tp_multi_index, UShort2DArray& multi_index,
 	      bool define_tp_mi_map)
 {
+  prevMILen = multi_index.size();
   size_t i, num_tp_mi = tp_multi_index.size();
   if (multi_index.empty()) {
     multi_index = tp_multi_index;
@@ -1019,26 +1098,60 @@ append_unique(const UShort2DArray& tp_multi_index, UShort2DArray& multi_index,
 
 
 void OrthogPolyApproximation::
-add_unique(size_t tp_index, const RealVector& tp_expansion_coeffs,
-	   const RealMatrix& tp_expansion_grads)
+combine_expansion(const SizetArray& tp_mi_map,
+		  const RealVector& tp_expansion_coeffs,
+		  const RealMatrix& tp_expansion_grads, int coeff)
 {
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  int               sm_coeff   = ssg_driver->smolyak_coefficients()[tp_index];
-  const SizetArray& tp_mi_map  = tpMultiIndexMap[tp_index];
   size_t i, j, index, num_tp_terms = tp_mi_map.size(), 
     num_deriv_vars = expansionCoeffGrads.numRows();
   for (i=0; i<num_tp_terms; ++i) {
     index = tp_mi_map[i];
     if (expansionCoeffFlag)
-      expansionCoeffs[index] += sm_coeff * tp_expansion_coeffs[i];
+      expansionCoeffs[index] += coeff * tp_expansion_coeffs[i];
     if (expansionCoeffGradFlag) {
       Real*       exp_grad_ndx = expansionCoeffGrads[index];
       const Real* tp_grad_i    = tp_expansion_grads[i];
       for (j=0; j<num_deriv_vars; ++j)
-	exp_grad_ndx[j] += sm_coeff * tp_grad_i[j];
+	exp_grad_ndx[j] += coeff * tp_grad_i[j];
     }
   }
 }
+
+
+void OrthogPolyApproximation::append_expansion()
+{
+  // for use in restore_expansion()
+  prevExpCoeffs = expansionCoeffs; prevExpCoeffGrads = expansionCoeffGrads;
+
+  // update expansion{Coeffs,CoeffGrads} using a hierarchical update
+  // rather than building from scratch
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
+  size_t index, last_index = sm_coeffs.size() - 1;
+  // add trial expansion
+  combine_expansion(tpMultiIndexMap[last_index], tpExpansionCoeffs[last_index],
+		    tpExpansionCoeffGrads[last_index], sm_coeffs[last_index]);
+  // update other expansion contributions with a changed smolyak coefficient
+  int delta_coeff;
+  for (index=0; index<last_index; ++index) {
+    // add new, subtract previous
+    delta_coeff = sm_coeffs[index] - prevSmolyakCoeffs[index];
+    if (delta_coeff)
+      combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
+			tpExpansionCoeffGrads[index], delta_coeff);
+  }
+}
+
+
+/*
+void OrthogPolyApproximation::restore_expansion()
+{
+  // back out previous update from append_expansion()
+  expansionCoeffs = prevExpCoeffs; expansionCoeffGrads = prevExpCoeffGrads;
+
+  // or negate increments taken in append_expansion()
+}
+*/
 
 
 void OrthogPolyApproximation::
@@ -1151,8 +1264,8 @@ integration_data(size_t tp_index,
 {
   // extract tensor points from dataPoints and tensor weights from gaussWts1D
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& tp_mi  = ssg_driver->collocation_key()[tp_index];
-  const UShortArray& sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&     key = ssg_driver->collocation_key()[tp_index];
+  const UShortArray&  sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const SizetArray& coeff_index
     = ssg_driver->expansion_coefficient_indices()[tp_index];
   const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
@@ -1163,9 +1276,9 @@ integration_data(size_t tp_index,
     tp_data_points[i] = dataPoints[coeff_index[i]];
     // tensor-product weight
     Real& tp_wts_i = tp_weights[i]; tp_wts_i = 1.;
-    const UShortArray& tp_mi_i = tp_mi[i];
+    const UShortArray& key_i = key[i];
     for (j=0; j<numVars; ++j)
-      tp_wts_i *= gauss_wts_1d[sm_index[j]][j][tp_mi_i[j]];
+      tp_wts_i *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
   }
 }
 

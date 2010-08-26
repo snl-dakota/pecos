@@ -101,11 +101,18 @@ public:
   //
 
   /// set dataPoints
-  void data_points(const std::list<Pecos::SurrogateDataPoint>& pts);
+  void data_points(const std::list<SurrogateDataPoint>& pts);
+  /// return size of dataPoints
+  size_t data_size() const;
   /// set anchorPoint
-  void anchor_point(const Pecos::SurrogateDataPoint& pt);
+  void anchor_point(const SurrogateDataPoint& pt);
   /// queries the status of anchorPoint
   bool anchor() const;
+
+  /// push incoming pt onto the end of dataPoints
+  void push_back(const SurrogateDataPoint& pt);
+  /// pop num_data_pts instances off the end of dataPoints
+  void pop(size_t num_data_pts);
 
   /// set expCoeffsSolnApproach
   void solution_approach(short soln_approach);
@@ -284,23 +291,37 @@ inline PolynomialApproximation::~PolynomialApproximation()
 
 
 inline void PolynomialApproximation::
-data_points(const std::list<Pecos::SurrogateDataPoint>& pts)
+data_points(const std::list<SurrogateDataPoint>& pts)
 {
   size_t i, num_pts = pts.size();
   dataPoints.resize(num_pts);
-  std::list<Pecos::SurrogateDataPoint>::const_iterator cit;
+  std::list<SurrogateDataPoint>::const_iterator cit;
   for (i=0, cit=pts.begin(); i<num_pts; ++i, ++cit)
     dataPoints[i] = *cit; 
 }
 
 
-inline void PolynomialApproximation::
-anchor_point(const Pecos::SurrogateDataPoint& pt)
+inline size_t PolynomialApproximation::data_size() const
+{ return dataPoints.size(); }
+
+
+inline void PolynomialApproximation::anchor_point(const SurrogateDataPoint& pt)
 { anchorPoint = pt; }
 
 
 inline bool PolynomialApproximation::anchor() const
 { return !anchorPoint.is_null(); }
+
+
+inline void PolynomialApproximation::push_back(const SurrogateDataPoint& pt)
+{ dataPoints.push_back(pt); }
+
+
+inline void PolynomialApproximation::pop(size_t num_data_pts)
+{
+  size_t num_new_pts = dataPoints.size() - num_data_pts;
+  dataPoints.resize(num_new_pts);
+}
 
 
 inline void PolynomialApproximation::solution_approach(short soln_approach)

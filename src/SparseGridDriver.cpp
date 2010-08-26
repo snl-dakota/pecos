@@ -396,47 +396,48 @@ void SparseGridDriver::compute_grid()
   // --------------------------------
   // Note:  grid_size() sets sgdInstance
   // TO DO: improve efficiency of these calls through data reuse
-  int num_colloc_pts = grid_size(), num_total_pts = grid_size_total();
+  numCollocPts = grid_size();
+  int num_total_pts = grid_size_total();
 #ifdef DEBUG
   PCout << "Total number of sparse grid integration points: "
-	<< num_colloc_pts << '\n';
+	<< numCollocPts << '\n';
 #endif // DEBUG
 
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
-  weightSets.sizeUninitialized(num_colloc_pts);
-  variableSets.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
+  weightSets.sizeUninitialized(numCollocPts);
+  variableSets.shapeUninitialized(numVars, numCollocPts);// Teuchos: col major
   uniqueIndexMapping.resize(num_total_pts);
 
-  int* sparse_order = new int [num_colloc_pts*numVars];
-  int* sparse_index = new int [num_colloc_pts*numVars];
+  int* sparse_order = new int [numCollocPts*numVars];
+  int* sparse_index = new int [numCollocPts*numVars];
   if (dimIsotropic) {
     webbur::sgmg_unique_index(numVars, ssgLevel, &integrationRules[0],
-      &compute1DPoints[0], duplicateTol, num_colloc_pts, num_total_pts,
+      &compute1DPoints[0], duplicateTol, numCollocPts, num_total_pts,
       &growthRules[0], &uniqueIndexMapping[0]);
-    webbur::sgmg_index(numVars, ssgLevel, &integrationRules[0], num_colloc_pts,
+    webbur::sgmg_index(numVars, ssgLevel, &integrationRules[0], numCollocPts,
       num_total_pts, &uniqueIndexMapping[0], &growthRules[0], sparse_order,
       sparse_index);
     webbur::sgmg_weight(numVars, ssgLevel, &integrationRules[0],
-      &compute1DWeights[0], num_colloc_pts, num_total_pts,
+      &compute1DWeights[0], numCollocPts, num_total_pts,
       &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
     webbur::sgmg_point(numVars, ssgLevel, &integrationRules[0],
-      &compute1DPoints[0], num_colloc_pts, sparse_order, sparse_index,
+      &compute1DPoints[0], numCollocPts, sparse_order, sparse_index,
       &growthRules[0], variableSets.values());
   }
   else {
     webbur::sandia_sgmga_unique_index(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &compute1DPoints[0], duplicateTol, num_colloc_pts,
+      &integrationRules[0], &compute1DPoints[0], duplicateTol, numCollocPts,
       num_total_pts, &growthRules[0], &uniqueIndexMapping[0]);
     webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], num_colloc_pts, num_total_pts,
+      &integrationRules[0], numCollocPts, num_total_pts,
       &uniqueIndexMapping[0], &growthRules[0], sparse_order, sparse_index);
     webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &compute1DWeights[0], num_colloc_pts, num_total_pts,
+      &integrationRules[0], &compute1DWeights[0], numCollocPts, num_total_pts,
       &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
     webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &compute1DPoints[0], num_colloc_pts, sparse_order,
+      &integrationRules[0], &compute1DPoints[0], numCollocPts, sparse_order,
       sparse_index, &growthRules[0], variableSets.values());
   }
   delete [] sparse_order;
@@ -482,17 +483,17 @@ void SparseGridDriver::compute_grid()
   // -----------------------------------
   // Get sparse grid index/base mappings
   // -----------------------------------
-  size_t size = numVars*num_colloc_pts, cntr = 0;
+  size_t size = numVars*numCollocPts, cntr = 0;
   int* indices = new int [size];
   int* bases   = new int [size];
 
-  webbur::sgmg_index(numVars, ssgLevel, integrationRules, num_colloc_pts,
+  webbur::sgmg_index(numVars, ssgLevel, integrationRules, numCollocPts,
     num_total_pts, uniqueIndexMapping, &growthRules[0], bases, indices);
 
   IntArray key(2*numVars);
   unsigned short closed_order_max;
   level_to_order_closed_exponential(ssgLevel, closed_order_max);
-  for (i=0; i<num_colloc_pts; i++) {
+  for (i=0; i<numCollocPts; i++) {
     for (j=0; j<numVars; j++, cntr++) {
       switch (integrationRules[j]) {
       case GAUSS_HERMITE: case GAUSS_LEGENDRE:
@@ -543,6 +544,77 @@ void SparseGridDriver::initialize_sets()
   PCout << "SparseGridDriver::initialize_sets():\nold sets:\n" << oldMultiIndex
 	<< "active sets:\n" << activeMultiIndex << std::endl;
 #endif // DEBUG
+}
+
+
+void SparseGridDriver::push_trial_set(const UShortArray& set)
+{
+  trialIndexSet = set;
+  smolyakMultiIndex.push_back(set);
+  // update smolyakCoeffs from smolyakMultiIndex
+  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+}
+
+
+void SparseGridDriver::pop_trial_set()
+{
+  UShort3DArray::iterator it = --collocKey.end();
+  numCollocPts -= it->size(); // subtract number of trial points
+  uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
+
+  //trialIndexSet.clear();
+  smolyakMultiIndex.pop_back();
+  // no need to update smolyakCoeffs as this will be updated on next push
+  collocKey.pop_back();
+  expansionCoeffIndices.pop_back();
+}
+
+
+void SparseGridDriver::compute_trial_grid()
+{
+  // compute variableSets/weightSets and update collocKey
+  UShortArray quad_order(numVars);
+  UShort2DArray new_key; collocKey.push_back(new_key);
+  UShort3DArray::iterator it = --collocKey.end();
+  Real2DArray pts_1d(numVars), wts_1d(numVars);
+  level_to_order(trialIndexSet, quad_order);
+  compute_tensor_grid(quad_order, *it, pts_1d, wts_1d);
+
+  // if needed, update 3D with new 2D gauss pts/wts (in correct location)
+  size_t i, num_levels = gaussPts1D.size(), max_level = 0;
+  for (i=0; i<numVars; ++i)
+    if (trialIndexSet[i] > max_level)
+      max_level = trialIndexSet[i];
+  if (max_level >= num_levels) {
+    gaussPts1D.resize(max_level+1); gaussWts1D.resize(max_level+1);
+    for (i=num_levels; i<=max_level; ++i)
+      { gaussPts1D[i].resize(numVars); gaussWts1D[i].resize(numVars); }
+    for (i=0; i<numVars; ++i) {
+      unsigned short trial_index = trialIndexSet[i];
+      if (trial_index >= num_levels) {
+	gaussPts1D[trial_index][i] = pts_1d[i];
+	gaussWts1D[trial_index][i] = wts_1d[i];
+      }
+    }
+  }
+
+  // update expansionCoeffIndices, uniqueIndexMapping
+  //update_collocation_arrays();
+  //
+  // prior to having updated uniqueIndexMapping available from sandia_sgmgg,
+  // manually increment the point sets (ignoring the merging of duplicates).
+  // The right aggregated weights are picked up for PCE, but SC requires
+  // consolidated pts/wts in moment calculcations!!
+  size_t index, num_tp_pts = it->size();
+  SizetArray new_coeff_map(num_tp_pts);
+  for (i=0; i<num_tp_pts; ++i) {
+    // can't search collocKey for duplicates since indices are relative to order
+    index = numCollocPts + i; // temp hack, prior to sandia_sgmgg management
+    uniqueIndexMapping.push_back(index);
+    new_coeff_map[i] = index;
+  }
+  expansionCoeffIndices.push_back(new_coeff_map);
+  numCollocPts += num_tp_pts; // for now, prior to sgmgg duplicate management
 }
 
 

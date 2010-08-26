@@ -60,6 +60,8 @@ public:
   virtual void find_coefficients();
   /// recalculate the data fit coefficients following currentPoints update
   virtual void increment_coefficients();
+  /// restore the data fit coefficients to the state preceding last increment
+  virtual void decrement_coefficients();
   /// print the coefficient array computed in find_coefficients()
   virtual void print_coefficients(std::ostream& s) const;
 
