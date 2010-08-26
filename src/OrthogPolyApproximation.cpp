@@ -524,18 +524,28 @@ void OrthogPolyApproximation::find_coefficients()
       if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
       size_t i, num_tensor_grids = tpMultiIndex.size();
       std::vector<SurrogateDataPoint> tp_data_points;
-      RealVector tp_weights;
+      RealVector tp_weights;//, tp_coeffs; RealMatrix tp_coeff_grads;
       // loop over tensor-products, forming sub-expansions, and sum them up
       for (i=0; i<num_tensor_grids; ++i) {
 	// form tp_data_points, tp_weights using collocKey et al.
 	integration_data(i, tp_data_points, tp_weights);
+
 	// form tp_multi_index from tpMultiIndexMap
 	//map_tensor_product_multi_index(tp_multi_index, i);
+
 	// form tp expansion coeffs
+	// could protect memory if stochExpRefinement propagated from Dakota
+	//RealVector& tp_coeffs_i = (stochExpRefinement ==
+	//  ADAPTIVE_P_REFINEMENT_GEN_SPARSE) ? tpExpansionCoeffs[i] :tp_coeffs;
+	//RealMatrix& tp_grads_i  = (stochExpRefinement ==
+	//  ADAPTIVE_P_REFINEMENT_GEN_SPARSE) ? tpExpansionCoeffGrads[i] :
+	//  tp_coeff_grads;
 	integrate_expansion(tpMultiIndex[i], tp_data_points, tp_weights,
+			    //tp_coeffs_i, tp_grads_i);
 			    tpExpansionCoeffs[i], tpExpansionCoeffGrads[i]);
-	// sum tpExpansion{Coeffs,CoeffGrads} into expansion{Coeffs,CoeffGrads}
-	add_expansion(i);
+
+	// sum tensor product coeffs/grads into expansion coeffs/grads
+	add_expansion(i);//, tp_coeffs_i, tp_grads_i);
       }
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       prevSmolyakCoeffs = ssg_driver->smolyak_coefficients();
@@ -671,7 +681,8 @@ void OrthogPolyApproximation::decrement_coefficients()
   }
   }
 
-  // not strictly necessary; next increment takes care of this
+  // not necessary since not updating expansion on decrement;
+  // rather, next increment takes care of this.
   //if (expansionCoeffFlag)
     //expansionCoeffs.resize(numExpansionTerms); // new terms initialized to 0
   //if (expansionCoeffGradFlag) {

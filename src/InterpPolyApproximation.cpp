@@ -115,7 +115,8 @@ void InterpPolyApproximation::allocate_arrays()
     // level and the basis update uses a coarse increment based on level.  This
     // matches isotropic sparse grids, but forces fewer and larger updates in
     // the case of anisotropic or generalized grids.
-    bool update_basis_form = (ssg_level > ssgLevelPrev);
+    bool update_basis_form
+      = (ssgLevelPrev == USHRT_MAX || ssg_level > ssgLevelPrev);
     if (update_basis_form)
       update_sparse_interpolation_basis(ssg_level);
 

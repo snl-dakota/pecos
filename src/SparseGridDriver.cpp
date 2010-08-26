@@ -589,12 +589,13 @@ void SparseGridDriver::compute_trial_grid()
     gaussPts1D.resize(max_level+1); gaussWts1D.resize(max_level+1);
     for (i=num_levels; i<=max_level; ++i)
       { gaussPts1D[i].resize(numVars); gaussWts1D[i].resize(numVars); }
-    for (i=0; i<numVars; ++i) {
-      unsigned short trial_index = trialIndexSet[i];
-      if (trial_index >= num_levels) {
-	gaussPts1D[trial_index][i] = pts_1d[i];
-	gaussWts1D[trial_index][i] = wts_1d[i];
-      }
+  }
+  for (i=0; i<numVars; ++i) {
+    unsigned short trial_index = trialIndexSet[i];
+    if (gaussPts1D[trial_index][i].empty() ||
+	gaussWts1D[trial_index][i].empty()) {
+      gaussPts1D[trial_index][i] = pts_1d[i];
+      gaussWts1D[trial_index][i] = wts_1d[i];
     }
   }
 
