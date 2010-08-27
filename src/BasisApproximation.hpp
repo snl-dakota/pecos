@@ -58,7 +58,7 @@ public:
   virtual int min_coefficients() const;
   /// calculate the approximation coefficients using currentPoints and
   /// anchorPoint
-  virtual void find_coefficients();
+  virtual void compute_coefficients();
   /// recalculate the approximation coefficients following currentPoints update
   virtual void increment_coefficients();
   /// restore the approximation coefficients to the state preceding
@@ -73,13 +73,13 @@ public:
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
 
-  /// print the coefficient array computed in find_coefficients()
+  /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s) const;
 
-  /// return the coefficient array computed by find_coefficients()
+  /// return the coefficient array computed by compute_coefficients()
   virtual const RealVector& approximation_coefficients() const;
   /// set the coefficient array from external sources, rather than
-  /// computing with find_coefficients()
+  /// computing with compute_coefficients()
   virtual void approximation_coefficients(const RealVector& approx_coeffs);
 
   //

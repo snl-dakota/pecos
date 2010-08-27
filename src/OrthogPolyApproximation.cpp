@@ -231,7 +231,7 @@ int OrthogPolyApproximation::min_coefficients() const
     case REGRESSION:
       // numExpansionTerms is either set from the NonDPolynomialChaos ctor if
       // expansion_terms is specified or computed by the allocate_arrays() call
-      // in find_coefficients() if expansion_order is specified.  The latter
+      // in compute_coefficients() if expansion_order is specified.  The latter
       // case is too late for use of this fn by ApproximationInterface::
       // minimum_samples() in DataFitSurrModel::build_global(), so
       // numExpansionTerms must be calculated for this case.
@@ -417,8 +417,8 @@ void OrthogPolyApproximation::allocate_arrays()
   }
 
   // now that terms & order are known, shape some arrays.  This is done here,
-  // rather than in find_coefficients(), in order to support array sizing for
-  // the data import case.
+  // rather than in compute_coefficients(), in order to support array sizing
+  // for the data import case.
   if (expansionCoeffFlag && expansionCoeffs.length() != numExpansionTerms)
     expansionCoeffs.sizeUninitialized(numExpansionTerms);
   if (expansionCoeffGradFlag) {
@@ -432,12 +432,12 @@ void OrthogPolyApproximation::allocate_arrays()
 }
 
 
-void OrthogPolyApproximation::find_coefficients()
+void OrthogPolyApproximation::compute_coefficients()
 {
   if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
 	  << "coefficient gradients\n         are active in "
-	  << "OrthogPolyApproximation::find_coefficients().\n         "
+	  << "OrthogPolyApproximation::compute_coefficients().\n         "
 	  << "Bypassing approximation construction." << std::endl;
     return;
   }
@@ -456,7 +456,7 @@ void OrthogPolyApproximation::find_coefficients()
     ++num_pts;
   if (!num_pts) {
     PCerr << "Error: nonzero number of sample points required in "
-	  << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+	  << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
 
@@ -477,7 +477,7 @@ void OrthogPolyApproximation::find_coefficients()
     if (quad_order.size() != numVars) {
       PCerr << "Error: quadrature order array is not consistent with number of "
 	    << "variables (" << numVars << ")\n       in "
-	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+	    << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
       abort_handler(-1);
     }
     size_t num_gauss_pts = 1;
@@ -486,7 +486,7 @@ void OrthogPolyApproximation::find_coefficients()
     if (num_pts != num_gauss_pts) {
       PCerr << "Error: number of current points (" << num_pts << ") is not "
 	    << "consistent with\n       quadrature data in "
-	    << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+	    << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
       abort_handler(-1);
     }
 
@@ -550,7 +550,6 @@ void OrthogPolyApproximation::find_coefficients()
 	combine_expansion(tpMultiIndexMap[i], tpExpansionCoeffs[i],//tp_coeffs_i
 			  tpExpansionCoeffGrads[i], sm_coeffs[i]); //tp_grads_i
       }
-      prevSmolyakCoeffs = sm_coeffs;
       //if (!reEntrantFlag) {
       //  ssg_driver->clear_smolyak_arrays();
       //  ssg_driver->clear_collocation_arrays();
@@ -582,10 +581,8 @@ void OrthogPolyApproximation::increment_coefficients()
   switch (expCoeffsSolnApproach) {
   case SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const UShortArray& trial_set = ssg_driver->trial_index_set();
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
-      savedSmolyakMultiIndex.push_back(trial_set);
       last_index = tpMultiIndex.size();
       // size tpMultiIndex and tpExpansion{Coeffs,CoeffGrads}
       size_t new_size = last_index+1;
@@ -594,7 +591,7 @@ void OrthogPolyApproximation::increment_coefficients()
       tpExpansionCoeffGrads.resize(new_size);
       // update tpMultiIndex
       UShortArray quad_order(numVars), int_order(numVars), exp_order(numVars);
-      ssg_driver->level_to_order(trial_set, quad_order);
+      ssg_driver->level_to_order(ssg_driver->trial_index_set(), quad_order);
       quadrature_order_to_integrand_order(quad_order, int_order);
       integrand_order_to_expansion_order(int_order, exp_order);
       tensor_product_multi_index(exp_order, tpMultiIndex[last_index], true);
@@ -640,23 +637,27 @@ void OrthogPolyApproximation::decrement_coefficients()
 {
   switch (expCoeffsSolnApproach) {
   case SPARSE_GRID:
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
-      // reset expansion{Coeffs,CoeffGrads}:
+      // reset expansion{Coeffs,CoeffGrads}: (set in append_expansions())
       expansionCoeffs     = prevExpCoeffs;
       expansionCoeffGrads = prevExpCoeffGrads;
       // reset multiIndex and numExpansionTerms:
-      multiIndex.resize(prevMILen);
-      numExpansionTerms = multiIndex.size();
+      numExpansionTerms = tpMultiIndexMapRef.back();
+      multiIndex.resize(numExpansionTerms); // truncate previous increment
       // reset tensor-product bookkeeping and save restorable data
-      UShort3DArray::iterator iit = --tpMultiIndex.end();
-      savedTPMultiIndex.push_back(*iit); tpMultiIndex.erase(iit);
-      Sizet2DArray::iterator mit = --tpMultiIndexMap.end();
-      savedTPMultiIndexMap.push_back(*mit); tpMultiIndexMap.erase(mit);
-      RealVectorArray::iterator cit = --tpExpansionCoeffs.end();
-      savedTPExpCoeffs.push_back(*cit); tpExpansionCoeffs.erase(cit);
-      RealMatrixArray::iterator git = --tpExpansionCoeffGrads.end();
-      savedTPExpCoeffGrads.push_back(*git); tpExpansionCoeffGrads.erase(git);
+      savedSmolyakMultiIndex.push_back(ssg_driver->trial_index_set());
+      savedTPMultiIndex.push_back(tpMultiIndex.back());
+      savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
+      savedTPMultiIndexMapRef.push_back(numExpansionTerms);
+      savedTPExpCoeffs.push_back(tpExpansionCoeffs.back());
+      savedTPExpCoeffGrads.push_back(tpExpansionCoeffGrads.back());
+      tpMultiIndex.pop_back();
+      tpMultiIndexMap.pop_back();
+      tpMultiIndexMapRef.pop_back();
+      tpExpansionCoeffs.pop_back();
+      tpExpansionCoeffGrads.pop_back();
       // resize not necessary since not updating expansion on decrement;
       // rather, next increment takes care of this.
       //resize_expansion();
@@ -677,28 +678,31 @@ void OrthogPolyApproximation::restore_coefficients()
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // move previous expansion data to current expansion
       last_index = tpMultiIndex.size();
-      SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
-      const UShortArray&  trial_set = ssg_driver->trial_index_set();
-      UShort2DArray::iterator   sit = std::find(savedSmolyakMultiIndex.begin(),
-				      savedSmolyakMultiIndex.end(), trial_set);
+      SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+      UShort2DArray::iterator  sit = std::find(savedSmolyakMultiIndex.begin(),
+					       savedSmolyakMultiIndex.end(),
+					       ssg_driver->trial_index_set());
       size_t index_star = std::distance(savedSmolyakMultiIndex.begin(), sit);
       savedSmolyakMultiIndex.erase(sit);
       UShort3DArray::iterator   iit = savedTPMultiIndex.begin();
       Sizet2DArray::iterator    mit = savedTPMultiIndexMap.begin();
+      SizetArray::iterator      rit = savedTPMultiIndexMapRef.begin();
       RealVectorArray::iterator cit = savedTPExpCoeffs.begin();
       RealMatrixArray::iterator git = savedTPExpCoeffGrads.begin();
       std::advance(iit, index_star); std::advance(mit, index_star);
-      std::advance(cit, index_star); std::advance(git, index_star);
+      std::advance(rit, index_star); std::advance(cit, index_star);
+      std::advance(git, index_star);
       tpMultiIndex.push_back(*iit);          savedTPMultiIndex.erase(iit);
       tpMultiIndexMap.push_back(*mit);       savedTPMultiIndexMap.erase(mit);
+      tpMultiIndexMapRef.push_back(*rit);    savedTPMultiIndexMapRef.erase(rit);
       tpExpansionCoeffs.push_back(*cit);     savedTPExpCoeffs.erase(cit);
       tpExpansionCoeffGrads.push_back(*git); savedTPExpCoeffGrads.erase(git);
       // update multiIndex and numExpansionTerms
       append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
-			 multiIndex);
+			 tpMultiIndexMapRef[last_index], multiIndex);
       numExpansionTerms = multiIndex.size();
       resize_expansion();
-      // sum trial expansions into expansionCoeffs/expansionCoeffGrads
+      // sum trial expansion into expansionCoeffs/expansionCoeffGrads
       append_expansions(last_index);
       break;
     }
@@ -719,8 +723,9 @@ void OrthogPolyApproximation::finalize_coefficients()
       // update multiIndex and numExpansionTerms
       UShort3DArray::iterator iit = savedTPMultiIndex.begin();
       Sizet2DArray::iterator  mit = savedTPMultiIndexMap.begin();
+      SizetArray::iterator    rit = savedTPMultiIndexMapRef.begin();
       for (; iit!=savedTPMultiIndex.end(); ++iit, ++mit)
-	append_multi_index(*iit, *mit, multiIndex);
+	append_multi_index(*iit, *mit, *rit, multiIndex);
       numExpansionTerms = multiIndex.size();
       resize_expansion();
       // move previous expansion data to current expansion
@@ -728,6 +733,8 @@ void OrthogPolyApproximation::finalize_coefficients()
 	savedTPMultiIndex.end());
       tpMultiIndexMap.insert(tpMultiIndexMap.end(),
 	savedTPMultiIndexMap.begin(), savedTPMultiIndexMap.end());
+      tpMultiIndexMapRef.insert(tpMultiIndexMapRef.end(),
+	savedTPMultiIndexMapRef.begin(), savedTPMultiIndexMapRef.end());
       tpExpansionCoeffs.insert(tpExpansionCoeffs.end(),
 	savedTPExpCoeffs.begin(), savedTPExpCoeffs.end());
       tpExpansionCoeffGrads.insert(tpExpansionCoeffGrads.end(),
@@ -735,9 +742,10 @@ void OrthogPolyApproximation::finalize_coefficients()
       savedSmolyakMultiIndex.clear();
       savedTPMultiIndex.clear();
       savedTPMultiIndexMap.clear();
+      savedTPMultiIndexMapRef.clear();
       savedTPExpCoeffs.clear();
       savedTPExpCoeffGrads.clear();
-      // sum trial expansions into expansionCoeffs/expansionCoeffGrads
+      // sum remaining trial expansions into expansionCoeffs/expansionCoeffGrads
       append_expansions(start_index);
       break;
     }
@@ -917,7 +925,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
 /* This approach reduces memory requirements but must perform additional
    calculation to regenerate the tp_multi_index instances (previously
    generated in sparse_grid_multi_index()).  Currently, these tp_multi_index
-   instances are stored in tpMultiIndex for later use in find_coefficients().
+   instances are stored in tpMultiIndex for later use in compute_coefficients().
 void OrthogPolyApproximation::
 map_tensor_product_multi_index(UShort2DArray& tp_multi_index, size_t tp_index)
 {
@@ -1126,17 +1134,18 @@ void OrthogPolyApproximation::
 append_multi_index(const UShort2DArray& tp_multi_index,
 		   UShort2DArray& multi_index, bool define_tp_mi_map)
 {
-  prevMILen = multi_index.size();
   size_t i, num_tp_mi = tp_multi_index.size();
   if (multi_index.empty()) {
     multi_index = tp_multi_index;
     if (define_tp_mi_map) {
+      tpMultiIndexMapRef.push_back(0);
       tpMultiIndexMap.resize(1); tpMultiIndexMap[0].resize(num_tp_mi);
       for (i=0; i<num_tp_mi; ++i)
 	tpMultiIndexMap[0][i] = i;
     }
   }
   else if (define_tp_mi_map) {
+    tpMultiIndexMapRef.push_back(multi_index.size());
     SizetArray tp_mi_map(num_tp_mi);
     for (i=0; i<num_tp_mi; ++i) {
       const UShortArray& search_mi = tp_multi_index[i];
@@ -1164,16 +1173,40 @@ append_multi_index(const UShort2DArray& tp_multi_index,
 
 void OrthogPolyApproximation::
 append_multi_index(const UShort2DArray& tp_multi_index,
-		   const SizetArray& tp_mi_map, UShort2DArray& multi_index)
+		   SizetArray& tp_mi_map, size_t& tp_mi_map_ref,
+		   UShort2DArray& multi_index)
 {
-  prevMILen = multi_index.size();
   if (multi_index.empty())
     multi_index = tp_multi_index;
   else {
-    size_t i, num_tp_mi = tp_multi_index.size();
-    for (i=0; i<num_tp_mi; ++i)
-      if (tp_mi_map[i] >= prevMILen)
-	multi_index.push_back(tp_multi_index[i]);
+    size_t i, num_tp_mi = tp_multi_index.size(), num_mi = multi_index.size();
+    if (num_mi == tp_mi_map_ref) { // current multi_index corresponds to ref
+      for (i=0; i<num_tp_mi; ++i)
+	if (tp_mi_map[i] >= tp_mi_map_ref)
+	  multi_index.push_back(tp_multi_index[i]);
+    }
+    else if (num_mi > tp_mi_map_ref) { // multi_index has grown since ref taken
+      for (i=0; i<num_tp_mi; ++i)
+	if (tp_mi_map[i] >= tp_mi_map_ref) {
+	  const UShortArray& search_mi = tp_multi_index[i];
+	  // search from reference pt forward
+	  UShort2DArray::iterator it, it_start = multi_index.begin();
+	  std::advance(it_start, tp_mi_map_ref);
+	  it = std::find(it_start, multi_index.end(), search_mi);
+	  if (it == multi_index.end()) { // update map and append multi_index
+	    tp_mi_map[i] = multi_index.size();
+	    multi_index.push_back(tp_multi_index[i]);
+	  }
+	  else // update map
+	    tp_mi_map[i] = tp_mi_map_ref + std::distance(it_start, it);
+	}
+      tp_mi_map_ref = num_mi; // reference point now updated
+    }
+    else { // multi_index is not allowed to shrink since ref taken
+      PCerr << "Error: multi_index inconsistent with reference size in "
+	    << "OrthogPolyApproximation::append_multi_index()." << std::endl;
+      abort_handler(-1);
+    }
   }
 }
 
@@ -1206,8 +1239,9 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
 
   // update expansion{Coeffs,CoeffGrads} using a hierarchical update
   // rather than building from scratch
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
+  SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
+  const IntArray&     sm_coeffs = ssg_driver->smolyak_coefficients();
+  const IntArray& ref_sm_coeffs = ssg_driver->reference_smolyak_coefficients();
   size_t index, num_tensor_grids = sm_coeffs.size();
   // add trial expansions
   for (index=start_index; index<num_tensor_grids; ++index)
@@ -1217,7 +1251,7 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   int delta_coeff;
   for (index=0; index<start_index; ++index) {
     // add new, subtract previous
-    delta_coeff = sm_coeffs[index] - prevSmolyakCoeffs[index];
+    delta_coeff = sm_coeffs[index] - ref_sm_coeffs[index];
     if (delta_coeff)
       combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
 			tpExpansionCoeffGrads[index], delta_coeff);
@@ -1315,14 +1349,15 @@ void OrthogPolyApproximation::integration_checks()
   }
   if (!driverRep) {
     PCerr << "Error: pointer to integration driver required in "
-	  << "OrthogPolyApproximation::find_coefficients()." << std::endl;
+	  << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
   size_t num_pts = dataPoints.size();
   if (num_pts != driverRep->weight_sets().length()) {
     PCerr << "Error: number of current points (" << num_pts << ") is not "
-	  << "consistent with\n       number of weights from integration driver"
-	  << " in OrthogPolyApproximation::find_coefficients()." << std::endl;
+	  << "consistent with\n       number of weights from integration "
+	  << "driver in OrthogPolyApproximation::compute_coefficients()."
+	  << std::endl;
     abort_handler(-1);
   }
 }
@@ -1730,7 +1765,7 @@ void OrthogPolyApproximation::regression()
 
   if (err_flag) { // if numerical problems in LLS, abort with error message
     PCerr << "Error: nonzero return code from LAPACK linear least squares in "
-	  << "OrthogPolyApproximation::find_coefficients()" << std::endl;
+	  << "OrthogPolyApproximation::compute_coefficients()" << std::endl;
     abort_handler(-1);
   }
 }

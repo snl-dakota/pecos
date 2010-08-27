@@ -211,12 +211,12 @@ int BasisApproximation::min_coefficients() const
 }
 
 
-void BasisApproximation::find_coefficients()
+void BasisApproximation::compute_coefficients()
 {
   if (basisApproxRep)
-    basisApproxRep->find_coefficients(); 
+    basisApproxRep->compute_coefficients(); 
   else {
-    PCerr << "Error: find_coefficients() not available for this basis "
+    PCerr << "Error: compute_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }

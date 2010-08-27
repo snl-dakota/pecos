@@ -62,7 +62,7 @@ void InterpPolyApproximation::allocate_arrays()
       num_gauss_pts *= quad_order[i];
     if (num_gauss_pts != numCollocPts) {
       PCerr << "Error: inconsistent total Gauss point count in "
-	    << "InterpPolyApproximation::find_coefficients()" << std::endl;
+	    << "InterpPolyApproximation::allocate_arrays()" << std::endl;
       abort_handler(-1);
     }
 
@@ -127,12 +127,12 @@ void InterpPolyApproximation::allocate_arrays()
 }
 
 
-void InterpPolyApproximation::find_coefficients()
+void InterpPolyApproximation::compute_coefficients()
 {
   if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
 	  << "coefficient gradients\n         are active in "
-	  << "InterpPolyApproximation::find_coefficients().\n         "
+	  << "InterpPolyApproximation::compute_coefficients().\n         "
 	  << "Bypassing approximation construction." << std::endl;
     return;
   }
@@ -150,7 +150,7 @@ void InterpPolyApproximation::find_coefficients()
   }
   if (!numCollocPts) {
     PCerr << "Error: nonzero number of sample points required in "
-	  << "InterpPolyApproximation::find_coefficients()." << std::endl;
+	  << "InterpPolyApproximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
 

@@ -48,9 +48,9 @@ protected:
 
   int min_coefficients() const;
 
-  /// find the coefficients for the expansion of multivariate Lagrange
+  /// compute the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
-  void find_coefficients();
+  void compute_coefficients();
   /// update the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
   void increment_coefficients();

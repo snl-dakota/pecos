@@ -186,7 +186,7 @@ void SparseGridDriver::allocate_collocation_arrays()
       IntArraySizetMap::const_iterator cit = ssgIndexMap.find(key);
       if (cit == ssgIndexMap.end()) {
 	PCerr << "Error: lookup on sparse grid index map failed in "
-	      << "InterpPolyApproximation::find_coefficients()"
+	      << "SparseGridDriver::allocate_collocation_arrays()"
 	      << std::endl;
 	abort_handler(-1);
       }
@@ -544,6 +544,8 @@ void SparseGridDriver::initialize_sets()
   PCout << "SparseGridDriver::initialize_sets():\nold sets:\n" << oldMultiIndex
 	<< "active sets:\n" << activeMultiIndex << std::endl;
 #endif // DEBUG
+
+  refSmolyakCoeffs = smolyakCoeffs;
 }
 
 
@@ -552,19 +554,6 @@ void SparseGridDriver::push_trial_set(const UShortArray& set)
   smolyakMultiIndex.push_back(set);
   // update smolyakCoeffs from smolyakMultiIndex
   allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
-}
-
-
-void SparseGridDriver::pop_trial_set()
-{
-  UShort3DArray::iterator it = --collocKey.end();
-  numCollocPts -= it->size(); // subtract number of trial points
-  uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
-
-  smolyakMultiIndex.pop_back();
-  // no need to update smolyakCoeffs as this will be updated on next push
-  collocKey.pop_back();
-  expansionCoeffIndices.pop_back();
 }
 
 
@@ -604,7 +593,8 @@ void SparseGridDriver::compute_trial_grid()
   // prior to having updated uniqueIndexMapping available from sandia_sgmgg,
   // manually increment the point sets (ignoring the merging of duplicates).
   // The right aggregated weights are picked up for PCE, but SC requires
-  // consolidated pts/wts in moment calculcations!!
+  // update of Driver's weightSets for full point set (TO DO) for certain
+  // functions: get_{mean,mean_gradient,variance/covariance,variance_gradient}
   size_t index, num_tp_pts = it->size();
   SizetArray new_coeff_map(num_tp_pts);
   for (i=0; i<num_tp_pts; ++i) {
@@ -618,6 +608,43 @@ void SparseGridDriver::compute_trial_grid()
 }
 
 
+void SparseGridDriver::pop_trial_set()
+{
+  UShort3DArray::iterator it = --collocKey.end();
+  numCollocPts -= it->size(); // subtract number of trial points
+  uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
+
+  smolyakMultiIndex.pop_back();
+  // no need to update smolyakCoeffs as this will be updated on next push
+  collocKey.pop_back();
+  expansionCoeffIndices.pop_back();
+}
+
+
+void SparseGridDriver::update_sets(const UShortArray& set_star)
+{
+  // set_star is passed as *cit_star from the best entry in activeMultiIndex.
+  // Therefore, we must use caution in updates to activeMultiIndex that can
+  // invalidate cit_star.
+
+  // update evaluation set smolyakMultiIndex:
+  // this push is permanent (will not be popped)
+  push_trial_set(set_star);
+  refSmolyakCoeffs = smolyakCoeffs;
+
+  // update set O by adding set_star to oldMultiIndex:
+  oldMultiIndex.insert(set_star);
+  // remove set_star from set A by erasing from activeMultiIndex:
+  activeMultiIndex.erase(set_star); // invalidates cit_star -> set_star
+
+  // update set A (activeMultiIndex) based on neighbors of set_star:
+  add_active_neighbors(smolyakMultiIndex.back());//(set_star);
+
+  // TO DO: prune irrelevant sets that have Coeff = 0 ?
+  // (this will be tricky, since a 0 close to the frontier can become nonzero)
+}
+
+
 void SparseGridDriver::finalize_sets()
 {
   // for final answer, push all evaluated sets into old and clear active
@@ -625,24 +652,9 @@ void SparseGridDriver::finalize_sets()
   smolyakMultiIndex.insert(smolyakMultiIndex.end(), activeMultiIndex.begin(),
 			   activeMultiIndex.end());
   activeMultiIndex.clear();
-}
-
-
-void SparseGridDriver::update_sets(const UShortArray& set_star)
-{
-  // update set O by adding set_star to oldMultiIndex:
-  oldMultiIndex.insert(set_star);
-
-  // remove set_star from set A by erasing from activeMultiIndex: 
-  activeMultiIndex.erase(set_star);
-  // update activeMultiIndex (set A) based on neighbors of set_star: 
-  add_active_neighbors(set_star);
-
-  // update evaluation set smolyakMultiIndex:
-  // this push is permanent (will not be popped)
-  push_trial_set(set_star);
-
-  // TO DO: prune irrelevant sets that have Coeff = 0
+  // update smolyakCoeffs from smolyakMultiIndex
+  allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+  //refSmolyakCoeffs = smolyakCoeffs; // ref not needed, no addtnl increments
 }
 
 

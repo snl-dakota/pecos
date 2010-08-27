@@ -151,6 +151,8 @@ public:
   const std::set<UShortArray>& old_multi_index() const;
   /// return the trial index set from push_trial_set()
   const UShortArray& trial_index_set() const;
+  /// return refSmolyakCoeffs
+  const IntArray& reference_smolyak_coefficients() const;
 
   /// return gaussPts1D
   const Real3DArray& gauss_points_array()  const;
@@ -218,7 +220,8 @@ private:
       expressions.  The indices correspond to levels, one within each
       anisotropic tensor-product integration of a Smolyak recursion. */
   UShort2DArray smolyakMultiIndex;
-  /// precomputed array of Smolyak combinatorial coefficients
+  /// array of Smolyak combinatorial coefficients, one for each tensor
+  /// product index set
   IntArray smolyakCoeffs;
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
@@ -239,6 +242,9 @@ private:
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid
   std::set<UShortArray> activeMultiIndex; // or UShort2DArray
+  /// current reference values for the Smolyak combinatorial coefficients,
+  /// used in incremental approaches that update smolyakCoeffs
+  IntArray refSmolyakCoeffs;
 
   /// num_levels_per_var x numContinuousVars sets of 1D Gauss points
   Real3DArray gaussPts1D;
@@ -325,6 +331,10 @@ inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
 
 inline const UShortArray& SparseGridDriver::trial_index_set() const
 { return smolyakMultiIndex.back(); }
+
+
+inline const IntArray& SparseGridDriver::reference_smolyak_coefficients() const
+{ return refSmolyakCoeffs; }
 
 
 inline void SparseGridDriver::

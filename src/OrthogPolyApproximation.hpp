@@ -117,9 +117,9 @@ protected:
 
   int min_coefficients() const;
 
-  /// find the coefficients for the expansion of multivariate orthogonal
+  /// compute the coefficients for the expansion of multivariate orthogonal
   /// polynomials
-  void find_coefficients();
+  void compute_coefficients();
   /// update the coefficients based on an increment to the Smolyak multi index
   void increment_coefficients();
   /// restore the coefficients to their baseline state prior to last increment
@@ -221,10 +221,10 @@ private:
   /// appear in multi_index; define tpMultiIndexMap if requested
   void append_multi_index(const UShort2DArray& tp_multi_index,
 			  UShort2DArray& multi_index, bool define_tp_mi_map);
-  /// append multi-indices from tp_multi_index that do not already
-  /// appear in multi_index, using pre-existing tp_mi_map for mapping
+  /// append multi-indices from tp_multi_index that do not already appear in
+  /// multi_index, using pre-existing tp_mi_map and tp_mi_map_ref for mapping
   void append_multi_index(const UShort2DArray& tp_multi_index,
-			  const SizetArray& tp_mi_map,
+			  SizetArray& tp_mi_map, size_t& tp_mi_map_ref,
 			  UShort2DArray& multi_index);
 
   /// helper function for common code between {add,subtract}_expansion()
@@ -323,6 +323,8 @@ private:
   /// sparse grid bookkeeping: mapping from num tensor-products by 
   /// tensor-product multi-indices into aggregated multiIndex
   Sizet2DArray tpMultiIndexMap;
+  /// sparse grid bookkeeping: reference points for tpMultiIndexMap
+  SizetArray tpMultiIndexMapRef;
   /// the set of tensor-product contributions to expansionCoeffs
   RealVectorArray tpExpansionCoeffs;
   /// the set of tensor-product contributions to expansionCoeffGrads
@@ -334,15 +336,13 @@ private:
   UShort3DArray savedTPMultiIndex;
   /// saved instances of tpMultiIndexMap that were computed but not selected
   Sizet2DArray savedTPMultiIndexMap;
+  /// saved instances of tpMultiIndexMapRef that were computed but not selected
+  SizetArray savedTPMultiIndexMapRef;
   /// saved instances of tpExpansionCoeffs that were computed but not selected
   RealVectorArray savedTPExpCoeffs;
   /// saved tpExpansionCoeffGrads instances that were computed but not selected
   RealMatrixArray savedTPExpCoeffGrads;
 
-  /// length of multiIndex prior to append_multi_index()
-  size_t prevMILen;
-  /// previous smolyak combinatorial coefficients; used in append_expansions()
-  IntArray prevSmolyakCoeffs;
   /// previous expansionCoeffs (combined total, not tensor-product
   /// contributions) prior to append_expansions()
   RealVector prevExpCoeffs;

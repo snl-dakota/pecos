@@ -200,7 +200,7 @@ protected:
   /// pointer to integration driver instance
   IntegrationDriver* driverRep;
 
-  /// identifies the approach taken in find_coefficients():
+  /// identifies the approach taken in compute_coefficients():
   /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
   short expCoeffsSolnApproach;
   /// SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT, or
