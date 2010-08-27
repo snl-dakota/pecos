@@ -247,6 +247,41 @@ void BasisApproximation::decrement_coefficients()
 }
 
 
+void BasisApproximation::restore_coefficients()
+{
+  if (basisApproxRep)
+    basisApproxRep->restore_coefficients(); 
+  else {
+    PCerr << "Error: restore_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisApproximation::finalize_coefficients()
+{
+  if (basisApproxRep)
+    basisApproxRep->finalize_coefficients(); 
+  else {
+    PCerr << "Error: finalize_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+bool BasisApproximation::restore_available()
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: restore_available() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+  return basisApproxRep->restore_available(); 
+}
+
+
 void BasisApproximation::print_coefficients(std::ostream& s) const
 {
   if (basisApproxRep)

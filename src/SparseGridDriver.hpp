@@ -110,7 +110,7 @@ public:
   /// generalized sparse grid function for 
   void add_active_neighbors(const UShortArray& set);
 
-  /// calls compute_tensor_grid() for trialIndexSet
+  /// calls compute_tensor_grid() for the index set from push_trial_set()
   void compute_trial_grid();
 
   /// converts an array of sparse grid levels to an array of
@@ -149,7 +149,7 @@ public:
   const std::set<UShortArray>& active_multi_index() const;
   /// return oldMultiIndex
   const std::set<UShortArray>& old_multi_index() const;
-  /// return trialIndexSet
+  /// return the trial index set from push_trial_set()
   const UShortArray& trial_index_set() const;
 
   /// return gaussPts1D
@@ -239,8 +239,6 @@ private:
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid
   std::set<UShortArray> activeMultiIndex; // or UShort2DArray
-  /// current trial index set for generalized sparse grids
-  UShortArray trialIndexSet;
 
   /// num_levels_per_var x numContinuousVars sets of 1D Gauss points
   Real3DArray gaussPts1D;
@@ -326,7 +324,7 @@ inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
 
 
 inline const UShortArray& SparseGridDriver::trial_index_set() const
-{ return trialIndexSet; }
+{ return smolyakMultiIndex.back(); }
 
 
 inline void SparseGridDriver::

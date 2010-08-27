@@ -117,14 +117,22 @@ protected:
 
   int min_coefficients() const;
 
-  /// find the coefficients for the expansion of multivariate
-  /// orthogonal polynomials
+  /// find the coefficients for the expansion of multivariate orthogonal
+  /// polynomials
   void find_coefficients();
-  /// update the coefficients for the expansion of multivariate
-  /// orthogonal polynomials
+  /// update the coefficients based on an increment to the Smolyak multi index
   void increment_coefficients();
-  /// restore the coefficients to their previous state prior to last increment
+  /// restore the coefficients to their baseline state prior to last increment
   void decrement_coefficients();
+  /// restore the coefficients to a previously incremented state as
+  /// identified by the current increment to the Smolyak multi index
+  void restore_coefficients();
+  /// finalize the coefficients by applying all previously evaluated increments
+  void finalize_coefficients();
+
+  /// query trial index for presence in savedSmolyakMultiIndex, indicating
+  /// the ability to restore a previously evaluated increment
+  bool restore_available();
 
   /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;
@@ -134,7 +142,7 @@ protected:
   void compute_component_effects();
   void compute_total_effects();
   
-/// retrieve the response PCE value for a given parameter vector
+  /// retrieve the response PCE value for a given parameter vector
   const Real& get_value(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
   /// and default DVV
@@ -210,25 +218,25 @@ private:
 				       UShortArray& int_order);
 
   /// append multi-indices from tp_multi_index that do not already
-  /// appear in multi_index
-  void append_unique(const UShort2DArray& tp_multi_index,
-		     UShort2DArray& multi_index, bool define_tp_mi_map);
-  // restore multi_index to state prior to last append_unique() invocation
-  //void restore(UShort2DArray& multi_index);
+  /// appear in multi_index; define tpMultiIndexMap if requested
+  void append_multi_index(const UShort2DArray& tp_multi_index,
+			  UShort2DArray& multi_index, bool define_tp_mi_map);
+  /// append multi-indices from tp_multi_index that do not already
+  /// appear in multi_index, using pre-existing tp_mi_map for mapping
+  void append_multi_index(const UShort2DArray& tp_multi_index,
+			  const SizetArray& tp_mi_map,
+			  UShort2DArray& multi_index);
+
   /// helper function for common code between {add,subtract}_expansion()
   void combine_expansion(const SizetArray& tp_mi_map,
 			 const RealVector& tp_expansion_coeffs,
 			 const RealMatrix& tp_expansion_grads, int coeff);
-  /// add tp_expansion_coeffs/tp_expansion_grads contribution to
-  /// expansionCoeffs/expansionCoeffGrads
-  void add_expansion(size_t tp_index);
-  /// update expansionCoeffs/expansionCoeffGrads by adding trial
-  /// tensor-product expansion and updating coefficients on previous
-  /// tensor-product expansions
-  void append_expansion();
-  // restore expansionCoeffs/expansionCoeffGrads by backing out
-  // previous append_expansion()
-  //void restore_expansion();
+  /// update expansionCoeffs/expansionCoeffGrads by adding trial tensor-product
+  /// expansions and updating coefficients on previous tensor-product expansions
+  void append_expansions(size_t start_index);
+  /// resize expansion{Coeffs,CoeffGrads} based on updated numExpansionTerms
+  void resize_expansion();
+
   /// update the total Pareto set with new Pareto-optimal polynomial indices
   void update_pareto(const UShort2DArray& new_pareto,
 		     UShort2DArray& total_pareto);
@@ -319,14 +327,27 @@ private:
   RealVectorArray tpExpansionCoeffs;
   /// the set of tensor-product contributions to expansionCoeffGrads
   RealMatrixArray tpExpansionCoeffGrads;
-  /// length of multiIndex prior to append_unique(); used in restore()
+
+  /// saved trial sets that were computed but not selected
+  UShort2DArray savedSmolyakMultiIndex;
+  /// saved instances of tpMultiIndex that were computed but not selected
+  UShort3DArray savedTPMultiIndex;
+  /// saved instances of tpMultiIndexMap that were computed but not selected
+  Sizet2DArray savedTPMultiIndexMap;
+  /// saved instances of tpExpansionCoeffs that were computed but not selected
+  RealVectorArray savedTPExpCoeffs;
+  /// saved tpExpansionCoeffGrads instances that were computed but not selected
+  RealMatrixArray savedTPExpCoeffGrads;
+
+  /// length of multiIndex prior to append_multi_index()
   size_t prevMILen;
-  /// previous smolyak combinatorial coefficients; used in
-  /// {append,restore}_expansion()
+  /// previous smolyak combinatorial coefficients; used in append_expansions()
   IntArray prevSmolyakCoeffs;
-  /// previous expansionCoeffs prior to append_expansion()
+  /// previous expansionCoeffs (combined total, not tensor-product
+  /// contributions) prior to append_expansions()
   RealVector prevExpCoeffs;
-  /// previous expansionCoeffGrads prior to append_expansion()
+  /// previous expansionCoeffGrads (combined total, not tensor-product
+  /// contributions) prior to append_expansions()
   RealMatrix prevExpCoeffGrads;
 
   /// norm-squared of one of the multivariate polynomial basis functions
@@ -431,17 +452,25 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
 }
 
 
-inline void OrthogPolyApproximation::add_expansion(size_t tp_index)
+inline bool OrthogPolyApproximation::restore_available()
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  combine_expansion(tpMultiIndexMap[tp_index], tpExpansionCoeffs[tp_index],
-		    tpExpansionCoeffGrads[tp_index],
-		    ssg_driver->smolyak_coefficients()[tp_index]);
+  const UShortArray& trial_set = ssg_driver->trial_index_set();
+  return (std::find(savedSmolyakMultiIndex.begin(),
+    savedSmolyakMultiIndex.end(), trial_set) != savedSmolyakMultiIndex.end());
 }
 
 
-//inline void OrthogPolyApproximation::restore(UShort2DArray& multi_index)
-//{ multi_index.resize(prevMILen); }
+inline void OrthogPolyApproximation::resize_expansion()
+{
+  if (expansionCoeffFlag)
+    expansionCoeffs.resize(numExpansionTerms); // new terms initialized to 0
+  if (expansionCoeffGradFlag) {
+    size_t num_deriv_vars = expansionCoeffGrads.numRows();
+    expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
+    // new terms initialized to 0
+  }
+}
 
 
 inline Real OrthogPolyApproximation::

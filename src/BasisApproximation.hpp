@@ -56,12 +56,23 @@ public:
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;
-  /// calculate the data fit coefficients using currentPoints and anchorPoint
+  /// calculate the approximation coefficients using currentPoints and
+  /// anchorPoint
   virtual void find_coefficients();
-  /// recalculate the data fit coefficients following currentPoints update
+  /// recalculate the approximation coefficients following currentPoints update
   virtual void increment_coefficients();
-  /// restore the data fit coefficients to the state preceding last increment
+  /// restore the approximation coefficients to the state preceding
+  /// the last increment
   virtual void decrement_coefficients();
+  /// restore the approximation coefficients to a previously incremented state
+  /// as identified by the current data increment
+  virtual void restore_coefficients();
+  /// test for whether current trial must be incremented or can be
+  /// restored from a previous trial
+  virtual bool restore_available();
+  /// finalize the coefficients by applying all previously evaluated increments
+  virtual void finalize_coefficients();
+
   /// print the coefficient array computed in find_coefficients()
   virtual void print_coefficients(std::ostream& s) const;
 

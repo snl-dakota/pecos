@@ -549,7 +549,6 @@ void SparseGridDriver::initialize_sets()
 
 void SparseGridDriver::push_trial_set(const UShortArray& set)
 {
-  trialIndexSet = set;
   smolyakMultiIndex.push_back(set);
   // update smolyakCoeffs from smolyakMultiIndex
   allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
@@ -562,7 +561,6 @@ void SparseGridDriver::pop_trial_set()
   numCollocPts -= it->size(); // subtract number of trial points
   uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
 
-  //trialIndexSet.clear();
   smolyakMultiIndex.pop_back();
   // no need to update smolyakCoeffs as this will be updated on next push
   collocKey.pop_back();
@@ -577,21 +575,22 @@ void SparseGridDriver::compute_trial_grid()
   UShort2DArray new_key; collocKey.push_back(new_key);
   UShort3DArray::iterator it = --collocKey.end();
   Real2DArray pts_1d(numVars), wts_1d(numVars);
-  level_to_order(trialIndexSet, quad_order);
+  const UShortArray& trial_set = trial_index_set();
+  level_to_order(trial_set, quad_order);
   compute_tensor_grid(quad_order, *it, pts_1d, wts_1d);
 
   // if needed, update 3D with new 2D gauss pts/wts (in correct location)
   size_t i, num_levels = gaussPts1D.size(), max_level = 0;
   for (i=0; i<numVars; ++i)
-    if (trialIndexSet[i] > max_level)
-      max_level = trialIndexSet[i];
+    if (trial_set[i] > max_level)
+      max_level = trial_set[i];
   if (max_level >= num_levels) {
     gaussPts1D.resize(max_level+1); gaussWts1D.resize(max_level+1);
     for (i=num_levels; i<=max_level; ++i)
       { gaussPts1D[i].resize(numVars); gaussWts1D[i].resize(numVars); }
   }
   for (i=0; i<numVars; ++i) {
-    unsigned short trial_index = trialIndexSet[i];
+    unsigned short trial_index = trial_set[i];
     if (gaussPts1D[trial_index][i].empty() ||
 	gaussWts1D[trial_index][i].empty()) {
       gaussPts1D[trial_index][i] = pts_1d[i];
