@@ -127,12 +127,14 @@ protected:
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index
   void restore_coefficients();
-  /// finalize the coefficients by applying all previously evaluated increments
-  void finalize_coefficients();
-
   /// query trial index for presence in savedSmolyakMultiIndex, indicating
   /// the ability to restore a previously evaluated increment
   bool restore_available();
+  /// index of the data set to be restored from within saved bookkeeping
+  /// (i.e.,savedSmolyakMultiIndex)
+  size_t restoration_index();
+  /// finalize the coefficients by applying all previously evaluated increments
+  void finalize_coefficients();
 
   /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;
@@ -455,9 +457,19 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
 inline bool OrthogPolyApproximation::restore_available()
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray& trial_set = ssg_driver->trial_index_set();
   return (std::find(savedSmolyakMultiIndex.begin(),
-    savedSmolyakMultiIndex.end(), trial_set) != savedSmolyakMultiIndex.end());
+    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set()) !=
+    savedSmolyakMultiIndex.end());
+}
+
+
+inline size_t OrthogPolyApproximation::restoration_index()
+{
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  UShort2DArray::iterator  sit = std::find(savedSmolyakMultiIndex.begin(),
+    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set());
+  return (sit == savedSmolyakMultiIndex.end()) ? _NPOS :
+    std::distance(savedSmolyakMultiIndex.begin(), sit);
 }
 
 

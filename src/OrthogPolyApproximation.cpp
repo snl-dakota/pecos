@@ -1187,17 +1187,17 @@ append_multi_index(const UShort2DArray& tp_multi_index,
     }
     else if (num_mi > tp_mi_map_ref) { // multi_index has grown since ref taken
       for (i=0; i<num_tp_mi; ++i)
-	if (tp_mi_map[i] >= tp_mi_map_ref) {
+	if (tp_mi_map[i] >= tp_mi_map_ref) { // was previously appended
 	  const UShortArray& search_mi = tp_multi_index[i];
 	  // search from reference pt forward
 	  UShort2DArray::iterator it, it_start = multi_index.begin();
 	  std::advance(it_start, tp_mi_map_ref);
 	  it = std::find(it_start, multi_index.end(), search_mi);
-	  if (it == multi_index.end()) { // update map and append multi_index
+	  if (it == multi_index.end()) { // still an append: update map, append
 	    tp_mi_map[i] = multi_index.size();
 	    multi_index.push_back(tp_multi_index[i]);
 	  }
-	  else // update map
+	  else // no longer an append: only update map
 	    tp_mi_map[i] = tp_mi_map_ref + std::distance(it_start, it);
 	}
       tp_mi_map_ref = num_mi; // reference point now updated
@@ -1242,8 +1242,13 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
   const IntArray&     sm_coeffs = ssg_driver->smolyak_coefficients();
   const IntArray& ref_sm_coeffs = ssg_driver->reference_smolyak_coefficients();
-  size_t index, num_tensor_grids = sm_coeffs.size();
+#ifdef DEBUG
+  PCout << "In append_expansions()\nsm_coeffs:\n" << sm_coeffs
+	<< "ref_sm_coeffs:\n" << ref_sm_coeffs << std::endl;
+#endif // DEBUG
+
   // add trial expansions
+  size_t index, num_tensor_grids = sm_coeffs.size();
   for (index=start_index; index<num_tensor_grids; ++index)
     combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
 		      tpExpansionCoeffGrads[index], sm_coeffs[index]);
@@ -1252,6 +1257,9 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   for (index=0; index<start_index; ++index) {
     // add new, subtract previous
     delta_coeff = sm_coeffs[index] - ref_sm_coeffs[index];
+#ifdef DEBUG
+    PCout << "delta_coeff = " << delta_coeff << std::endl;
+#endif // DEBUG
     if (delta_coeff)
       combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
 			tpExpansionCoeffGrads[index], delta_coeff);

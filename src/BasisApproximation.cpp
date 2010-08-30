@@ -282,6 +282,17 @@ bool BasisApproximation::restore_available()
 }
 
 
+size_t BasisApproximation::restoration_index()
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: restoration_index() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+  return basisApproxRep->restoration_index(); 
+}
+
+
 void BasisApproximation::print_coefficients(std::ostream& s) const
 {
   if (basisApproxRep)

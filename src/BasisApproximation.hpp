@@ -70,6 +70,8 @@ public:
   /// test for whether current trial must be incremented or can be
   /// restored from a previous trial
   virtual bool restore_available();
+  /// index of the data set to be restored from within saved bookkeeping
+  virtual size_t restoration_index();
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
 

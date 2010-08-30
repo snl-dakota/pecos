@@ -105,23 +105,6 @@ allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
 }
 
 
-void SparseGridDriver::
-allocate_generalized_coefficients(const UShort2DArray& multi_index,
-				  IntArray& coeffs) const
-{
-  size_t i, j, cntr = 0, num_sets = multi_index.size();
-  if (coeffs.size() != num_sets)
-    coeffs.resize(num_sets);
-  int* mi = new int [numVars*num_sets];
-  //copy_data(multi_index, mi); // UShort2DArray -> int*
-  for (i=0; i<num_sets; ++i)
-    for (j=0; j<numVars; ++j, ++cntr)
-      mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
-  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
-  delete [] mi;
-}
-
-
 void SparseGridDriver::allocate_collocation_arrays()
 {
   // define mapping from 1:numCollocPts to set of 1d interpolation indices
@@ -203,6 +186,49 @@ void SparseGridDriver::allocate_collocation_arrays()
 	    << coeff_map_i[j] << '\n';
 #endif // DEBUG
     }
+  }
+}
+
+
+void SparseGridDriver::
+allocate_generalized_coefficients(const UShort2DArray& multi_index,
+				  IntArray& coeffs)
+{
+  size_t i, j, cntr = 0, num_sets = multi_index.size();
+  if (coeffs.size() != num_sets)
+    coeffs.resize(num_sets);
+  int* mi = new int [numVars*num_sets];
+  //copy_data(multi_index, mi); // UShort2DArray -> int*
+  for (i=0; i<num_sets; ++i)
+    for (j=0; j<numVars; ++j, ++cntr)
+      mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
+  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
+  delete [] mi;
+}
+
+
+void SparseGridDriver::update_collocation_arrays(size_t start_index)
+{
+  UShortArray quad_order(numVars);
+  UShort2DArray new_key;    // empty
+  SizetArray new_coeff_map; // empty
+  size_t i, j, index, num_tp_pts, num_sm_mi = smolyakMultiIndex.size();
+  for (i=start_index; i<num_sm_mi; ++i) {
+    // append empty copies
+    collocKey.push_back(new_key);                   // copy of empty array
+    expansionCoeffIndices.push_back(new_coeff_map); // copy of empty array
+    UShort2DArray&    key_i = collocKey.back();             // ref to copy
+    SizetArray& coeff_map_i = expansionCoeffIndices.back(); // ref to copy
+    // update appended entries in place
+    level_to_order(smolyakMultiIndex[i], quad_order);
+    PolynomialApproximation::tensor_product_multi_index(quad_order, key_i);
+    num_tp_pts = key_i.size();
+    coeff_map_i.resize(num_tp_pts);
+    for (j=0, index=numCollocPts; j<num_tp_pts; ++j, ++index) {// prior to sgmgg
+      uniqueIndexMapping.push_back(index);
+      coeff_map_i[j] = index;
+    }
+    numCollocPts += num_tp_pts; // for now, prior to sgmgg duplicate management
   }
 }
 
@@ -544,16 +570,17 @@ void SparseGridDriver::initialize_sets()
   PCout << "SparseGridDriver::initialize_sets():\nold sets:\n" << oldMultiIndex
 	<< "active sets:\n" << activeMultiIndex << std::endl;
 #endif // DEBUG
-
-  refSmolyakCoeffs = smolyakCoeffs;
 }
 
 
 void SparseGridDriver::push_trial_set(const UShortArray& set)
 {
+  size_t last_index = smolyakMultiIndex.size();
   smolyakMultiIndex.push_back(set);
   // update smolyakCoeffs from smolyakMultiIndex
   allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
+  // update collocKey, uniqueIndexMapping, and expansionCoeffIndices
+  update_collocation_arrays(last_index);
 }
 
 
@@ -561,12 +588,10 @@ void SparseGridDriver::compute_trial_grid()
 {
   // compute variableSets/weightSets and update collocKey
   UShortArray quad_order(numVars);
-  UShort2DArray new_key; collocKey.push_back(new_key);
-  UShort3DArray::iterator it = --collocKey.end();
   Real2DArray pts_1d(numVars), wts_1d(numVars);
   const UShortArray& trial_set = trial_index_set();
   level_to_order(trial_set, quad_order);
-  compute_tensor_grid(quad_order, *it, pts_1d, wts_1d);
+  compute_tensor_grid(quad_order, collocKey.back(), pts_1d, wts_1d); // TO DO: eliminate collocKey duplication
 
   // if needed, update 3D with new 2D gauss pts/wts (in correct location)
   size_t i, num_levels = gaussPts1D.size(), max_level = 0;
@@ -586,34 +611,13 @@ void SparseGridDriver::compute_trial_grid()
       gaussWts1D[trial_index][i] = wts_1d[i];
     }
   }
-
-  // update expansionCoeffIndices, uniqueIndexMapping
-  //update_collocation_arrays();
-  //
-  // prior to having updated uniqueIndexMapping available from sandia_sgmgg,
-  // manually increment the point sets (ignoring the merging of duplicates).
-  // The right aggregated weights are picked up for PCE, but SC requires
-  // update of Driver's weightSets for full point set (TO DO) for certain
-  // functions: get_{mean,mean_gradient,variance/covariance,variance_gradient}
-  size_t index, num_tp_pts = it->size();
-  SizetArray new_coeff_map(num_tp_pts);
-  for (i=0; i<num_tp_pts; ++i) {
-    // can't search collocKey for duplicates since indices are relative to order
-    index = numCollocPts + i; // temp hack, prior to sandia_sgmgg management
-    uniqueIndexMapping.push_back(index);
-    new_coeff_map[i] = index;
-  }
-  expansionCoeffIndices.push_back(new_coeff_map);
-  numCollocPts += num_tp_pts; // for now, prior to sgmgg duplicate management
 }
 
 
 void SparseGridDriver::pop_trial_set()
 {
-  UShort3DArray::iterator it = --collocKey.end();
-  numCollocPts -= it->size(); // subtract number of trial points
+  numCollocPts -= collocKey.back().size(); // subtract number of trial points
   uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
-
   smolyakMultiIndex.pop_back();
   // no need to update smolyakCoeffs as this will be updated on next push
   collocKey.pop_back();
@@ -627,10 +631,8 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // Therefore, we must use caution in updates to activeMultiIndex that can
   // invalidate cit_star.
 
-  // update evaluation set smolyakMultiIndex:
-  // this push is permanent (will not be popped)
+  // update evaluation set smolyakMultiIndex (permanently, will not be popped)
   push_trial_set(set_star);
-  refSmolyakCoeffs = smolyakCoeffs;
 
   // update set O by adding set_star to oldMultiIndex:
   oldMultiIndex.insert(set_star);
@@ -647,6 +649,7 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 
 void SparseGridDriver::finalize_sets()
 {
+  size_t start_index = smolyakMultiIndex.size();
   // for final answer, push all evaluated sets into old and clear active
   //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
   smolyakMultiIndex.insert(smolyakMultiIndex.end(), activeMultiIndex.begin(),
@@ -654,7 +657,8 @@ void SparseGridDriver::finalize_sets()
   activeMultiIndex.clear();
   // update smolyakCoeffs from smolyakMultiIndex
   allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
-  //refSmolyakCoeffs = smolyakCoeffs; // ref not needed, no addtnl increments
+  //update_reference(); // reference not needed, no addtnl increments
+  update_collocation_arrays(start_index);
 }
 
 

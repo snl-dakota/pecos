@@ -71,12 +71,15 @@ public:
   /// functions are used to compute index sets satisfying the anisotropic
   /// index set constraint, along with their corresponding coefficients.
   void allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
-  /// initialize the Smolyak combinatorial coefficients for the
-  /// multi-indices defining a generalized sparse grid
+  /// compute the Smolyak combinatorial coefficients for the multi-indices
+  /// defining a generalized sparse grid
   void allocate_generalized_coefficients(const UShort2DArray& multi_index,
-					 IntArray& coeffs) const;
+					 IntArray& coeffs);
   /// initialize collocKey and expansionCoeffIndices
   void allocate_collocation_arrays();
+  /// update collocKey, expansionCoeffIndices, and uniqueIndexMapping for
+  /// the trailing index sets within smolyakMultiIndex
+  void update_collocation_arrays(size_t start_index);
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
@@ -97,21 +100,22 @@ public:
   /// update axisLowerBounds
   void update_axis_lower_bounds();
 
-  /// generalized sparse grid function for 
+  /// generalized sparse grid function for ...
   void initialize_sets();
-  /// generalized sparse grid function for 
-  void finalize_sets();
-  /// generalized sparse grid function for 
-  void push_trial_set(const UShortArray& set);
-  /// generalized sparse grid function for 
-  void pop_trial_set();
-  /// generalized sparse grid function for 
-  void update_sets(const UShortArray& set_star);
-  /// generalized sparse grid function for 
+  /// generalized sparse grid function for ...
   void add_active_neighbors(const UShortArray& set);
-
+  /// generalized sparse grid function for ...
+  void update_reference();
+  /// generalized sparse grid function for ...
+  void push_trial_set(const UShortArray& set);
   /// calls compute_tensor_grid() for the index set from push_trial_set()
   void compute_trial_grid();
+  /// generalized sparse grid function for ...
+  void pop_trial_set();
+  /// generalized sparse grid function for ...
+  void update_sets(const UShortArray& set_star);
+  /// generalized sparse grid function for ...
+  void finalize_sets();
 
   /// converts an array of sparse grid levels to an array of
   /// quadrature orders based on integrationRules/growthRules
@@ -319,6 +323,10 @@ inline const Real3DArray& SparseGridDriver::gauss_weights_array() const
 
 inline void SparseGridDriver::allocate_smolyak_arrays()
 { allocate_smolyak_arrays(smolyakMultiIndex, smolyakCoeffs); }
+
+
+inline void SparseGridDriver::update_reference()
+{ refSmolyakCoeffs = smolyakCoeffs; }
 
 
 inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const
