@@ -1243,8 +1243,9 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   const IntArray&     sm_coeffs = ssg_driver->smolyak_coefficients();
   const IntArray& ref_sm_coeffs = ssg_driver->reference_smolyak_coefficients();
 #ifdef DEBUG
-  PCout << "In append_expansions()\nsm_coeffs:\n" << sm_coeffs
-	<< "ref_sm_coeffs:\n" << ref_sm_coeffs << std::endl;
+  PCout << "In OrthogPolyApproximation::append_expansions() with start index "
+	<< start_index << "\nsm_coeffs:\n" << sm_coeffs << "ref_sm_coeffs:\n"
+	<< ref_sm_coeffs << std::endl;
 #endif // DEBUG
 
   // add trial expansions

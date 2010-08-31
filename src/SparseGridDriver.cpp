@@ -591,7 +591,8 @@ void SparseGridDriver::compute_trial_grid()
   Real2DArray pts_1d(numVars), wts_1d(numVars);
   const UShortArray& trial_set = trial_index_set();
   level_to_order(trial_set, quad_order);
-  compute_tensor_grid(quad_order, collocKey.back(), pts_1d, wts_1d); // TO DO: eliminate collocKey duplication
+  compute_tensor_grid(quad_order, collocKey.back(), pts_1d, wts_1d);
+  // TO DO: eliminate collocKey update duplication
 
   // if needed, update 3D with new 2D gauss pts/wts (in correct location)
   size_t i, num_levels = gaussPts1D.size(), max_level = 0;
@@ -649,9 +650,9 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 
 void SparseGridDriver::finalize_sets()
 {
-  size_t start_index = smolyakMultiIndex.size();
   // for final answer, push all evaluated sets into old and clear active
   //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
+  size_t start_index = smolyakMultiIndex.size();
   smolyakMultiIndex.insert(smolyakMultiIndex.end(), activeMultiIndex.begin(),
 			   activeMultiIndex.end());
   activeMultiIndex.clear();
