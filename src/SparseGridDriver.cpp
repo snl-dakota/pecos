@@ -594,6 +594,10 @@ void SparseGridDriver::compute_trial_grid()
   compute_tensor_grid(quad_order, collocKey.back(), pts_1d, wts_1d);
   // TO DO: eliminate collocKey update duplication
 
+  // track trial sets that have been evaluated (do here since
+  // push_trial_set() used for both new trials and restorations)
+  trialSets.insert(trial_set);
+
   // if needed, update 3D with new 2D gauss pts/wts (in correct location)
   size_t i, num_levels = gaussPts1D.size(), max_level = 0;
   for (i=0; i<numVars; ++i)
@@ -634,17 +638,27 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 
   // update evaluation set smolyakMultiIndex (permanently, will not be popped)
   push_trial_set(set_star);
+  const UShortArray& last_sm_set = smolyakMultiIndex.back();
 
   // update set O by adding set_star to oldMultiIndex:
-  oldMultiIndex.insert(set_star);
+  oldMultiIndex.insert(last_sm_set);
   // remove set_star from set A by erasing from activeMultiIndex:
-  activeMultiIndex.erase(set_star); // invalidates cit_star -> set_star
+  activeMultiIndex.erase(last_sm_set); // invalidates cit_star -> set_star
+  // update subset of A that have been evaluated as trial sets
+  trialSets.erase(last_sm_set);
 
   // update set A (activeMultiIndex) based on neighbors of set_star:
-  add_active_neighbors(smolyakMultiIndex.back());//(set_star);
+  add_active_neighbors(last_sm_set);
 
   // TO DO: prune irrelevant sets that have Coeff = 0 ?
   // (this will be tricky, since a 0 close to the frontier can become nonzero)
+
+#ifdef DEBUG
+  PCout << "Sets updated: (Smolyak,Old,Active,Trial) = ("
+	<< smolyakMultiIndex.size() << "," << oldMultiIndex.size() << ","
+	<< activeMultiIndex.size() << "," << trialSets.size() << ")"
+	<< std::endl;
+#endif // DEBUG
 }
 
 
@@ -653,9 +667,11 @@ void SparseGridDriver::finalize_sets()
   // for final answer, push all evaluated sets into old and clear active
   //smolyakMultiIndex = oldMultiIndex; // not needed if all trials are popped
   size_t start_index = smolyakMultiIndex.size();
-  smolyakMultiIndex.insert(smolyakMultiIndex.end(), activeMultiIndex.begin(),
-			   activeMultiIndex.end());
-  activeMultiIndex.clear();
+  // don't insert activeMultiIndex, as this may include sets which have not
+  // been evaluated (due to final update_sets() call); instead use trialSets
+  smolyakMultiIndex.insert(smolyakMultiIndex.end(), trialSets.begin(),
+			   trialSets.end());
+  activeMultiIndex.clear(); trialSets.clear();
   // update smolyakCoeffs from smolyakMultiIndex
   allocate_generalized_coefficients(smolyakMultiIndex, smolyakCoeffs);
   //update_reference(); // reference not needed, no addtnl increments

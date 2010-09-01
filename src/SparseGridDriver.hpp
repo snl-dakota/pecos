@@ -246,6 +246,9 @@ private:
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid
   std::set<UShortArray> activeMultiIndex; // or UShort2DArray
+  /// subset of active set that have been evaluated as trial sets
+  /// (updated in push_trial_set)
+  std::set<UShortArray> trialSets; // or UShort2DArray
   /// current reference values for the Smolyak combinatorial coefficients,
   /// used in incremental approaches that update smolyakCoeffs
   IntArray refSmolyakCoeffs;

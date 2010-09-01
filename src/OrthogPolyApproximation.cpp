@@ -536,7 +536,7 @@ void OrthogPolyApproximation::compute_coefficients()
 	//map_tensor_product_multi_index(tp_multi_index, i);
 
 	// form tp expansion coeffs
-	// could protect memory if stochExpRefinement propagated from Dakota
+	// TO DO: protect memory; propagate stochExpRefinement from Dakota
 	//RealVector& tp_coeffs_i = (stochExpRefinement ==
 	//  ADAPTIVE_P_REFINEMENT_GEN_SPARSE) ? tpExpansionCoeffs[i] :tp_coeffs;
 	//RealMatrix& tp_grads_i  = (stochExpRefinement ==
@@ -724,13 +724,13 @@ void OrthogPolyApproximation::finalize_coefficients()
       UShort3DArray::iterator iit = savedTPMultiIndex.begin();
       Sizet2DArray::iterator  mit = savedTPMultiIndexMap.begin();
       SizetArray::iterator    rit = savedTPMultiIndexMapRef.begin();
-      for (; iit!=savedTPMultiIndex.end(); ++iit, ++mit)
+      for (; iit!=savedTPMultiIndex.end(); ++iit, ++mit, ++rit)
 	append_multi_index(*iit, *mit, *rit, multiIndex);
       numExpansionTerms = multiIndex.size();
       resize_expansion();
       // move previous expansion data to current expansion
-      tpMultiIndex.insert(tpMultiIndex.end(), savedTPMultiIndex.begin(),
-	savedTPMultiIndex.end());
+      tpMultiIndex.insert(tpMultiIndex.end(),
+	savedTPMultiIndex.begin(), savedTPMultiIndex.end());
       tpMultiIndexMap.insert(tpMultiIndexMap.end(),
 	savedTPMultiIndexMap.begin(), savedTPMultiIndexMap.end());
       tpMultiIndexMapRef.insert(tpMultiIndexMapRef.end(),
@@ -1250,16 +1250,26 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
 
   // add trial expansions
   size_t index, num_tensor_grids = sm_coeffs.size();
-  for (index=start_index; index<num_tensor_grids; ++index)
+  for (index=start_index; index<num_tensor_grids; ++index) {
     combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
 		      tpExpansionCoeffGrads[index], sm_coeffs[index]);
+#ifdef DEBUG
+    PCout << "Trial set sm_coeff = " << sm_coeffs[index]
+	  << "\ntpExpansionCoeffs:\n";
+    write_data(PCout, tpExpansionCoeffs[index]);
+    PCout << "\ntpMultiIndexMap:\n" << tpMultiIndexMap[index] << '\n';
+#endif // DEBUG
+  }
   // update other expansion contributions with a changed smolyak coefficient
   int delta_coeff;
   for (index=0; index<start_index; ++index) {
     // add new, subtract previous
     delta_coeff = sm_coeffs[index] - ref_sm_coeffs[index];
 #ifdef DEBUG
-    PCout << "delta_coeff = " << delta_coeff << std::endl;
+    PCout << "Old set delta_coeff = " << delta_coeff
+	  << "\ntpExpansionCoeffs:\n";
+    write_data(PCout, tpExpansionCoeffs[index]);
+    PCout << "\ntpMultiIndexMap:\n" << tpMultiIndexMap[index] << '\n';
 #endif // DEBUG
     if (delta_coeff)
       combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
