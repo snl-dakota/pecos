@@ -17,11 +17,13 @@
 
 #include "BasisApproximation.hpp"
 #include "SurrogateDataPoint.hpp"
+#include "SparseGridDriver.hpp"
 
 
 namespace Pecos {
 
 class IntegrationDriver;
+class SparseGridDriver;
 
 /// Derived approximation class for global basis polynomials.
 
@@ -111,10 +113,18 @@ public:
   /// queries the status of anchorPoint
   bool anchor() const;
 
-  /// push incoming pt onto the end of dataPoints
+  /// push incoming pt onto the end of dataPoints (implemented at this
+  /// intermediate level since dataPoints are not defined at base level)
   void push_back(const SurrogateDataPoint& pt);
-  /// pop num_data_pts instances off the end of dataPoints
-  void pop(size_t num_data_pts);
+  /// pop pop_count() instances off the end of dataPoints (implemented at this
+  /// intermediate level since dataPoints are not defined at base level)
+  void pop();
+  /// pop num_pop_pts instances off the end of dataPoints (implemented at this
+  /// intermediate level since dataPoints are not defined at base level)
+  void pop(size_t num_pop_pts);
+  /// number of data points to remove in a decrement (implemented at this
+  /// intermediate level since dataPoints are not defined at base level)
+  size_t pop_count();
 
   /// set expCoeffsSolnApproach
   void solution_approach(short soln_approach);
@@ -322,10 +332,31 @@ inline void PolynomialApproximation::push_back(const SurrogateDataPoint& pt)
 { dataPoints.push_back(pt); }
 
 
-inline void PolynomialApproximation::pop(size_t num_data_pts)
+inline void PolynomialApproximation::pop()
+{ pop(pop_count()); }
+
+
+inline void PolynomialApproximation::pop(size_t num_pop_pts)
 {
-  size_t num_new_pts = dataPoints.size() - num_data_pts;
-  dataPoints.resize(num_new_pts);
+  if (num_pop_pts) {
+    size_t data_size = dataPoints.size();
+    if (data_size >= num_pop_pts)
+      dataPoints.resize(data_size - num_pop_pts);
+    else {
+      PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
+	    << data_size << ") in PolynomialApproximation::pop(size_t)."
+	    << std::endl;
+      abort_handler(-1);
+    }
+  }
+}
+
+
+inline size_t PolynomialApproximation::pop_count()
+{
+  // TO DO: update with deployment of sgmgg
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  return ssg_driver->expansion_coefficient_indices().back().size();
 }
 
 
