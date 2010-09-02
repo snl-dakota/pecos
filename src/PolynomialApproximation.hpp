@@ -17,14 +17,11 @@
 
 #include "BasisApproximation.hpp"
 #include "SurrogateDataPoint.hpp"
-#include "SparseGridDriver.hpp"
 
 
 namespace Pecos {
 
 class IntegrationDriver;
-class SparseGridDriver;
-
 
 /// Derived approximation class for global basis polynomials.
 
@@ -53,7 +50,6 @@ public:
   //
 
   /// size Sobol arrays
-  virtual void allocate_arrays();
   virtual void allocate_component_effects_array();
   virtual void allocate_total_effects_array();
 
@@ -78,6 +74,9 @@ public:
   /// and given DVV, treating a subset of the variables as random
   virtual const RealVector& get_mean_gradient(const RealVector& x,
 					      const UIntArray& dvv) = 0;
+
+  /// return moments 1-4
+  virtual const RealVector& get_numeric_moments() = 0;
 
   /// return the variance of the expansion, treating all variables as random
   virtual const Real& get_variance() = 0;
@@ -112,18 +111,10 @@ public:
   /// queries the status of anchorPoint
   bool anchor() const;
 
-  /// push incoming pt onto the end of dataPoints (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
+  /// push incoming pt onto the end of dataPoints
   void push_back(const SurrogateDataPoint& pt);
-  /// pop pop_count() instances off the end of dataPoints (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
-  void pop();
-  /// pop num_pop_pts instances off the end of dataPoints (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
-  void pop(size_t num_pop_pts);
-  /// number of data points to remove in a decrement (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
-  size_t pop_count();
+  /// pop num_data_pts instances off the end of dataPoints
+  void pop(size_t num_data_pts);
 
   /// set expCoeffsSolnApproach
   void solution_approach(short soln_approach);
@@ -251,6 +242,9 @@ protected:
   Real expansionVariance;
   /// gradient of the variance of the expansion
   RealVector expansionVarianceGrad;
+  /// approximation to moments (mean, variance, skewness, kurtosis)
+  /// via quadrature 
+  RealVector numericMoments;
 
   /// the coefficients of the expansion
   RealVector expansionCoeffs;
@@ -328,31 +322,10 @@ inline void PolynomialApproximation::push_back(const SurrogateDataPoint& pt)
 { dataPoints.push_back(pt); }
 
 
-inline void PolynomialApproximation::pop()
-{ pop(pop_count()); }
-
-
-inline void PolynomialApproximation::pop(size_t num_pop_pts)
+inline void PolynomialApproximation::pop(size_t num_data_pts)
 {
-  if (num_pop_pts) {
-    size_t data_size = dataPoints.size();
-    if (data_size >= num_pop_pts)
-      dataPoints.resize(data_size - num_pop_pts);
-    else {
-      PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
-	    << data_size << ") in PolynomialApproximation::pop(size_t)."
-	    << std::endl;
-      abort_handler(-1);
-    }
-  }
-}
-
-
-inline size_t PolynomialApproximation::pop_count()
-{
-  // TO DO: update with deployment of sgmgg
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return ssg_driver->expansion_coefficient_indices().back().size();
+  size_t num_new_pts = dataPoints.size() - num_data_pts;
+  dataPoints.resize(num_new_pts);
 }
 
 

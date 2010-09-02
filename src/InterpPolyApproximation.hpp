@@ -86,6 +86,8 @@ protected:
   /// and given DVV, treating a subset of the variables as random
   const RealVector& get_mean_gradient(const RealVector& x,
 				      const UIntArray& dvv);
+  /// Compute moments of response numerically 
+  const RealVector& get_numeric_moments();
 
   /// return the variance of the expansion, treating all variables as random
   const Real& get_variance();

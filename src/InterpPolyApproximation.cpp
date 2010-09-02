@@ -31,8 +31,6 @@ int InterpPolyApproximation::min_coefficients() const
 
 void InterpPolyApproximation::allocate_arrays()
 {
-  PolynomialApproximation::allocate_arrays();
-
   if (expansionCoeffFlag && expansionCoeffs.length() != numCollocPts)
     expansionCoeffs.sizeUninitialized(numCollocPts);
   if (expansionCoeffGradFlag) {
@@ -1335,6 +1333,48 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
   }
 }
 
+/// TODO:Add overloaded function to support integration over only random variables
+const RealVector& InterpPolyApproximation::get_numeric_moments()
+{
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "InterpPolyApproximation::get_numeric_moments()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // allocate array to store mean, variance, skewness, kurtosis
+  int num_moments = 4;
+  numericMoments.sizeUninitialized(num_moments); 
+  Real my_mean = get_mean();
+ 
+  numericMoments = 0.;
+  const RealVector& wt_sets = driverRep->weight_sets();
+  switch (expCoeffsSolnApproach) {
+  case QUADRATURE: 
+    for (size_t i=0; i<numCollocPts; ++i) {
+      numericMoments[0] = expansionCoeffs[i] * wt_sets[i];
+      for (size_t j=1; j<num_moments; ++j)
+        numericMoments[j] += pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i];
+    }
+    break;
+  case SPARSE_GRID:
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
+    size_t k, num_smolyak_indices = sm_coeffs.size();
+    for (k=0; k<num_smolyak_indices; ++k) {
+      for (size_t i=0; i<numCollocPts; ++i) {
+        numericMoments[0] = expansionCoeffs[i] * wt_sets[i] * sm_coeffs[k];
+        for (size_t j=1; j<num_moments; ++j)
+          numericMoments[j] += pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i] 
+                               * sm_coeffs[k];
+      }
+    }
+    break;
+  } 
+  return numericMoments;
+  
+}
 
 void InterpPolyApproximation::compute_component_effects()
 {
@@ -1556,8 +1596,8 @@ Real InterpPolyApproximation::total_effects_integral(int set_value, size_t tp_in
 // Compute Sobol Indices for global sensitivity analysis
 void InterpPolyApproximation::compute_global_sensitivity()
 {
-  if (outputLevel <  NORMAL_OUTPUT)
-    return;
+  /*if (outputLevel <  NORMAL_OUTPUT)
+    return;*/
  
   compute_component_effects();
   compute_total_effects(); 

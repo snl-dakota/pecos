@@ -23,8 +23,10 @@ namespace Pecos {
 void PolynomialApproximation::allocate_component_effects_array()
 {
   // sobolIndices[0] is reserved for mean 
+ 
   if (expansionCoeffFlag) {
-    switch (outputLevel) { // Allocate memory specific to output control
+    // temporary hack to match baseline output
+    switch (VERBOSE_OUTPUT) { // Allocate memory specific to output control
     case NORMAL_OUTPUT:
       if (sobolIndices.empty()) {
 	int normal_index_length = (int)numVars+1;
@@ -35,6 +37,7 @@ void PolynomialApproximation::allocate_component_effects_array()
 	sobolIndices.sizeUninitialized(normal_index_length);
       }
     case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
+      PCout << "Compute all indices" << std::endl;
       computeAllIndices = true;
       if (sobolIndices.empty()) {
 	int verbose_index_length = (int)std::pow(2.,(int)numVars);
@@ -52,43 +55,11 @@ void PolynomialApproximation::allocate_total_effects_array()
   // number of total indices independent of number of component
   // indices
   if (expansionCoeffFlag) {
-    switch (outputLevel) { // Allocate memory specific to output control
+    // temporary hack to match baseline output
+    switch (VERBOSE_OUTPUT) { // Allocate memory specific to output control
     case NORMAL_OUTPUT: case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
-      if (totalSobolIndices.empty())
-	totalSobolIndices.sizeUninitialized(numVars);
-      break;
-    }
-  }
-}
-
-void PolynomialApproximation::allocate_arrays()
-{
-  // size the sensitivity member variables: sobolIndices[0] is
-  // reserved for mean in the verbose case so we keep that convention
-  // for the normal case for semantic and programming consistency
-  // (e.g. InterpPoly relies on that convention)
-  if (expansionCoeffFlag) {
-    switch (outputLevel) { // Allocate memory specific to output control
-    case NORMAL_OUTPUT:
-      if (sobolIndices.empty()) {
-	int normal_index_length = (int)numVars+1;
-	// map binary to integer main effects form
-	sobolIndexMap[0] = 0; 
-	for (int i=1; i < normal_index_length; i++) 
-	  sobolIndexMap[int(std::pow(2.,i-1))] = i; 
-	sobolIndices.sizeUninitialized(normal_index_length);
-      }
-      if (totalSobolIndices.empty())
-	totalSobolIndices.sizeUninitialized(numVars);
-      break;
-    case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
-      if (sobolIndices.empty()) {
-	int verbose_index_length = (int)std::pow(2.,(int)numVars);
-	sobolIndexMap[0] = 0; 
-	for (int i=0; i < verbose_index_length; i++) 
-	  sobolIndexMap[i] = i; // already in binary notation
-	sobolIndices.sizeUninitialized(verbose_index_length);
-      }
+      PCout << "Compute all indices" << std::endl;
+      computeAllIndices = true;
       if (totalSobolIndices.empty())
 	totalSobolIndices.sizeUninitialized(numVars);
       break;
@@ -96,7 +67,6 @@ void PolynomialApproximation::allocate_arrays()
   }
 }
   
-	
 /** Return the number of terms in a tensor-product expansion.  For
     isotropic and anisotropic expansion orders, calculation of the
     number of expansion terms is straightforward: Prod(p_i + 1). */

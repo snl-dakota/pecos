@@ -249,8 +249,6 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
-  PolynomialApproximation::allocate_arrays();
-
   // Infer expansion formulation from quadrature_order or sparse_grid_level
   // spec, as in SC.  Preserve previous capability (quadrature_order and
   // sparse_grid_level with total-order expansions) for paper results via
@@ -2160,6 +2158,9 @@ get_mean_gradient(const RealVector& x, const UIntArray& dvv)
   return expansionMeanGrad;
 }
 
+const RealVector& OrthogPolyApproximation::get_numeric_moments()
+{}
+
 
 /** In this case, all expansion variables are random variables and the
     variance of the expansion is the sum over all but the first term
@@ -2523,8 +2524,10 @@ void OrthogPolyApproximation::compute_total_effects()
 
 void OrthogPolyApproximation::compute_global_sensitivity()
 {
-  if (outputLevel < NORMAL_OUTPUT)
-    return;
+  // Temporary hack to match baseline output 
+  /*if (outputLevel < NORMAL_OUTPUT)
+    return;*/
+
   // Allocation of memory for sensitivity variables done in 
   // PolynomialApproximation::allocate_arrays()
 
