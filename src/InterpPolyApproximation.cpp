@@ -1355,7 +1355,7 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
     for (size_t i=0; i<numCollocPts; ++i) {
       numericMoments[0] = expansionCoeffs[i] * wt_sets[i];
       for (size_t j=1; j<num_moments; ++j)
-        numericMoments[j] += pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i];
+        numericMoments[j] += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i];
     }
     break;
   case SPARSE_GRID:
@@ -1366,7 +1366,7 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
       for (size_t i=0; i<numCollocPts; ++i) {
         numericMoments[0] = expansionCoeffs[i] * wt_sets[i] * sm_coeffs[k];
         for (size_t j=1; j<num_moments; ++j)
-          numericMoments[j] += pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i] 
+          numericMoments[j] += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i] 
                                * sm_coeffs[k];
       }
     }
