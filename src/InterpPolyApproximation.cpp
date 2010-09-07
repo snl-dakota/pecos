@@ -1067,6 +1067,8 @@ const Real& InterpPolyApproximation::get_mean()
   const RealVector& wt_sets = driverRep->weight_sets();
   for (size_t i=0; i<numCollocPts; ++i)
     expansionMean += expansionCoeffs[i] * wt_sets[i];
+
+  get_numeric_moments();
   return expansionMean;
 }
 
@@ -1346,14 +1348,13 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
   // allocate array to store mean, variance, skewness, kurtosis
   int num_moments = 4;
   numericMoments.sizeUninitialized(num_moments); 
-  Real my_mean = get_mean();
- 
+  Real my_mean = expansionMean;
   numericMoments = 0.;
   const RealVector& wt_sets = driverRep->weight_sets();
   switch (expCoeffsSolnApproach) {
   case QUADRATURE: 
     for (size_t i=0; i<numCollocPts; ++i) {
-      numericMoments[0] = expansionCoeffs[i] * wt_sets[i];
+      numericMoments[0] += expansionCoeffs[i] * wt_sets[i];
       for (size_t j=1; j<num_moments; ++j)
         numericMoments[j] += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i];
     }
@@ -1364,7 +1365,7 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
     size_t k, num_smolyak_indices = sm_coeffs.size();
     for (k=0; k<num_smolyak_indices; ++k) {
       for (size_t i=0; i<numCollocPts; ++i) {
-        numericMoments[0] = expansionCoeffs[i] * wt_sets[i] * sm_coeffs[k];
+        numericMoments[0] += expansionCoeffs[i] * wt_sets[i] * sm_coeffs[k];
         for (size_t j=1; j<num_moments; ++j)
           numericMoments[j] += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i] 
                                * sm_coeffs[k];
@@ -1372,6 +1373,7 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
     }
     break;
   } 
+
   return numericMoments;
   
 }
@@ -1389,8 +1391,8 @@ void InterpPolyApproximation::compute_component_effects()
   // perform subset sort
   get_subsets();
 
-  Real total_mean = get_mean();
-  Real total_variance =	get_variance();
+  Real total_mean = expansionMean;
+  Real total_variance =	expansionVariance;
 
   // initialize 
   partialVariance[0] = std::pow(total_mean,2.0); // init with mean sq
@@ -1428,7 +1430,7 @@ void InterpPolyApproximation::compute_total_effects()
   else {
     switch (expCoeffsSolnApproach) {
       case QUADRATURE: {
-        Real l_variance = get_variance();
+        Real l_variance = expansionVariance;
         for (int j=0; j<numVars; j++) {
           // define set_value that includes all but index of interest
           int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
@@ -1437,7 +1439,7 @@ void InterpPolyApproximation::compute_total_effects()
         break;
       }
       case SPARSE_GRID: {
-        Real l_variance = get_variance();
+        Real l_variance = expansionVariance;
         SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
         const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
         // Smolyak recursion of anisotropic tensor products

@@ -37,7 +37,6 @@ void PolynomialApproximation::allocate_component_effects_array()
 	sobolIndices.sizeUninitialized(normal_index_length);
       }
     case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
-      PCout << "Compute all indices" << std::endl;
       computeAllIndices = true;
       if (sobolIndices.empty()) {
 	int verbose_index_length = (int)std::pow(2.,(int)numVars);
@@ -58,7 +57,6 @@ void PolynomialApproximation::allocate_total_effects_array()
     // temporary hack to match baseline output
     switch (VERBOSE_OUTPUT) { // Allocate memory specific to output control
     case NORMAL_OUTPUT: case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
-      PCout << "Compute all indices" << std::endl;
       computeAllIndices = true;
       if (totalSobolIndices.empty())
 	totalSobolIndices.sizeUninitialized(numVars);

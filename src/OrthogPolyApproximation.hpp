@@ -285,6 +285,10 @@ private:
 			   const std::vector<SurrogateDataPoint>& data_pts,
 			   const RealVector& wt_sets, RealVector& exp_coeffs,
 			   RealMatrix& exp_coeff_grads);
+  void integrate_moments(const UShort2DArray& multi_index,
+		    const std::vector<SurrogateDataPoint>& data_pts,
+                    RealVector& function_vals,
+		    const RealVector& wt_sets, RealVector& moments);
 
   /// cross-validates alternate gradient expressions
   void gradient_check();
