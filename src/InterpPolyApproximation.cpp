@@ -1419,9 +1419,11 @@ void InterpPolyApproximation::compute_total_effects()
   // available                                                                             
   if (computeAllIndices) {
     for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++) 
-      for (int k=0; k<numVars; k++) 
+      for (int k=0; k<numVars; k++) {
         if ((*itr).first & (1 << k))                                                       
           totalSobolIndices[k] += sobolIndices[(*itr).second];                             
+        totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
+      }
   }
 
   // if not available, compute total indices independently
@@ -1434,7 +1436,7 @@ void InterpPolyApproximation::compute_total_effects()
         for (int j=0; j<numVars; j++) {
           // define set_value that includes all but index of interest
           int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
-          totalSobolIndices[j] = 1 - (total_effects_integral(set_value)/l_variance);
+          totalSobolIndices[j] = std::abs(1 - (total_effects_integral(set_value)/l_variance));
         }
         break;
       }
@@ -1449,7 +1451,7 @@ void InterpPolyApproximation::compute_total_effects()
           int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1; 
           for (size_t i=0; i<num_smolyak_indices; ++i)
             totalSobolIndices[j] += sm_coeffs[i]*total_effects_integral(set_value,i);
-          totalSobolIndices[j] = 1 - (totalSobolIndices[j]/l_variance);
+          totalSobolIndices[j] = std::abs(1 - (totalSobolIndices[j]/l_variance));
         }
         break;
       }
