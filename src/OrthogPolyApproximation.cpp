@@ -2201,7 +2201,7 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
     ++num_pts;
   if (!num_pts) {
     PCerr << "Error: nonzero number of sample points required in "
-	  << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
+	  << "OrthogPolyApproximation::get_numeric_moments()." << std::endl;
     abort_handler(-1);
   }
 

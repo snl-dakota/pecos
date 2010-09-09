@@ -1068,7 +1068,6 @@ const Real& InterpPolyApproximation::get_mean()
   for (size_t i=0; i<numCollocPts; ++i)
     expansionMean += expansionCoeffs[i] * wt_sets[i];
 
-  get_numeric_moments();
   return expansionMean;
 }
 
@@ -1602,7 +1601,9 @@ void InterpPolyApproximation::compute_global_sensitivity()
 {
   /*if (outputLevel <  NORMAL_OUTPUT)
     return;*/
- 
+
+  // TO DO: just eliminate this function and use finer grain control
+
   compute_component_effects();
   compute_total_effects(); 
 

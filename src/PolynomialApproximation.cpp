@@ -25,9 +25,10 @@ void PolynomialApproximation::allocate_component_effects_array()
   // sobolIndices[0] is reserved for mean 
  
   if (expansionCoeffFlag) {
-    // temporary hack to match baseline output
-    switch (VERBOSE_OUTPUT) { // Allocate memory specific to output control
-    case NORMAL_OUTPUT:
+    // Allocate memory specific to output control
+    switch (VERBOSE_OUTPUT) { // temporary hack to match baseline output
+                              // TO DO: remove with VBD control
+    case NORMAL_OUTPUT: // main effects only
       if (sobolIndices.empty()) {
 	int normal_index_length = (int)numVars+1;
 	// map binary to integer main effects form
@@ -36,8 +37,8 @@ void PolynomialApproximation::allocate_component_effects_array()
 	  sobolIndexMap[int(std::pow(2.,i-1))] = i; 
 	sobolIndices.sizeUninitialized(normal_index_length);
       }
-    case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
-      computeAllIndices = true;
+    case VERBOSE_OUTPUT: case DEBUG_OUTPUT: // main + interaction effects
+      computeAllIndices = true; // don't recompute total separately; rather sum from component effects
       if (sobolIndices.empty()) {
 	int verbose_index_length = (int)std::pow(2.,(int)numVars);
 	sobolIndexMap[0] = 0; 
@@ -54,10 +55,10 @@ void PolynomialApproximation::allocate_total_effects_array()
   // number of total indices independent of number of component
   // indices
   if (expansionCoeffFlag) {
-    // temporary hack to match baseline output
-    switch (VERBOSE_OUTPUT) { // Allocate memory specific to output control
+    // Allocate memory specific to output control
+    switch (VERBOSE_OUTPUT) { // temp hack to match baseline output
+                              // TO DO: remove with VBD control
     case NORMAL_OUTPUT: case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
-      computeAllIndices = true;
       if (totalSobolIndices.empty())
 	totalSobolIndices.sizeUninitialized(numVars);
       break;
