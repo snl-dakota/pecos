@@ -67,11 +67,16 @@ enum { SLOW_RESTRICTED_GROWTH, MODERATE_RESTRICTED_GROWTH,
        UNRESTRICTED_GROWTH };
 
 /// solution approaches for calculating the polynomial basis coefficients
+/// (options for ConfigurationOptions::expCoeffsSolnApproach)
 enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
-
-/// options for output verbosity (mirrors Dakota/src/DataMethod.H)
-enum { SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT,
-       DEBUG_OUTPUT };
+/// options for ConfigurationOptions::nestingOverride (inactive)
+enum { NO_OVERRIDE=0, NESTED, NON_NESTED };
+/// options for ConfigurationOptions::refinementType (inactive)
+enum { NO_REFINEMENT=0, UNIFORM_P_REFINEMENT, ADAPTIVE_P_REFINEMENT };
+/// options for ConfigurationOptions::refinementControl
+enum { DEFAULT_CONTROL=0, TOTAL_SOBOL, SPECTRAL_DECAY, GENERALIZED_SPARSE };
+/// options for ConfigurationOptions::vbdSetting
+enum { NO_VBD=0, UNIVARIATE_VBD, ALL_VBD };
 
 
 // ----------------

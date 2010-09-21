@@ -20,50 +20,36 @@
 
 namespace Pecos {
 
-void PolynomialApproximation::allocate_component_effects_array()
+void PolynomialApproximation::allocate_component_effects()
 {
   // sobolIndices[0] is reserved for mean 
  
-  if (expansionCoeffFlag) {
-    // Allocate memory specific to output control
-    switch (VERBOSE_OUTPUT) { // temporary hack to match baseline output
-                              // TO DO: remove with VBD control
-    case NORMAL_OUTPUT: // main effects only
-      if (sobolIndices.empty()) {
-	int normal_index_length = (int)numVars+1;
-	// map binary to integer main effects form
-	sobolIndexMap[0] = 0; 
-	for (int i=1; i < normal_index_length; i++) 
-	  sobolIndexMap[int(std::pow(2.,i-1))] = i; 
-	sobolIndices.sizeUninitialized(normal_index_length);
-      }
-    case VERBOSE_OUTPUT: case DEBUG_OUTPUT: // main + interaction effects
-      computeAllIndices = true; // don't recompute total separately; rather sum from component effects
-      if (sobolIndices.empty()) {
-	int verbose_index_length = (int)std::pow(2.,(int)numVars);
-	sobolIndexMap[0] = 0; 
-	for (int i=0; i < verbose_index_length; i++) 
-	  sobolIndexMap[i] = i; // already in binary notation
-	sobolIndices.sizeUninitialized(verbose_index_length);
-      }
+  // Allocate memory specific to output control
+  if (configOptions.expansionCoeffFlag && sobolIndices.empty()) {
+    int i, index_length;
+    switch (configOptions.vbdType) {
+    case UNIVARIATE_VBD: // main effects only
+      index_length = (int)numVars+1;
+      // map binary to integer main effects form
+      sobolIndexMap[0] = 0; 
+      for (i=1; i<index_length; ++i) 
+	sobolIndexMap[int(std::pow(2.,i-1))] = i; 
+    case ALL_VBD: // main + interaction effects
+      // don't recompute total separately; rather sum from component effects
+      index_length = (int)std::pow(2.,(int)numVars);
+      sobolIndexMap[0] = 0; 
+      for (int i=0; i<index_length; ++i) 
+	sobolIndexMap[i] = i; // already in binary notation
     }
+    sobolIndices.sizeUninitialized(index_length);
   }
 }
 
-void PolynomialApproximation::allocate_total_effects_array()
+void PolynomialApproximation::allocate_total_effects()
 {
-  // number of total indices independent of number of component
-  // indices
-  if (expansionCoeffFlag) {
-    // Allocate memory specific to output control
-    switch (VERBOSE_OUTPUT) { // temp hack to match baseline output
-                              // TO DO: remove with VBD control
-    case NORMAL_OUTPUT: case VERBOSE_OUTPUT: case DEBUG_OUTPUT:
-      if (totalSobolIndices.empty())
-	totalSobolIndices.sizeUninitialized(numVars);
-      break;
-    }
-  }
+  // number of total indices independent of number of component indices
+  if (configOptions.expansionCoeffFlag && totalSobolIndices.empty())
+    totalSobolIndices.sizeUninitialized(numVars);
 }
   
 /** Return the number of terms in a tensor-product expansion.  For

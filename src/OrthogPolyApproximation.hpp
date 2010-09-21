@@ -46,8 +46,7 @@ public:
   //
 
   /// default constructor
-  OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
-			  short output_level);
+  OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars);
   /// destructor
   ~OrthogPolyApproximation();
 
@@ -139,9 +138,11 @@ protected:
   /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;
 
-  /// Performs global sensitivity analysis using Sobol' Indices
-  void compute_global_sensitivity();
+  /// Performs global sensitivity analysis using Sobol' Indices;
+  /// computes component (main and interaction) effects
   void compute_component_effects();
+  /// Performs global sensitivity analysis using Sobol' Indices;
+  /// computes total effects
   void compute_total_effects();
   
   /// retrieve the response PCE value for a given parameter vector
@@ -376,9 +377,8 @@ private:
 
 
 inline OrthogPolyApproximation::
-OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
-			short output_level):
-  PolynomialApproximation(num_vars, output_level), numExpansionTerms(0),
+OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
+  PolynomialApproximation(num_vars), numExpansionTerms(0),
   approxOrder(approx_order), quadratureExpansion(TENSOR_INT_TENSOR_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
 { }
@@ -481,9 +481,9 @@ inline size_t OrthogPolyApproximation::restoration_index()
 
 inline void OrthogPolyApproximation::resize_expansion()
 {
-  if (expansionCoeffFlag)
+  if (configOptions.expansionCoeffFlag)
     expansionCoeffs.resize(numExpansionTerms); // new terms initialized to 0
-  if (expansionCoeffGradFlag) {
+  if (configOptions.expansionCoeffGradFlag) {
     size_t num_deriv_vars = expansionCoeffGrads.numRows();
     expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
     // new terms initialized to 0

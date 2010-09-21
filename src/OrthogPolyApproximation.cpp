@@ -223,8 +223,8 @@ int OrthogPolyApproximation::min_coefficients() const
 {
   // return the minimum number of data instances required to build the 
   // surface of multiple dimensions
-  if (expansionCoeffFlag || expansionCoeffGradFlag)
-    switch (expCoeffsSolnApproach) {
+  if (configOptions.expansionCoeffFlag || configOptions.expansionCoeffGradFlag)
+    switch (configOptions.expCoeffsSolnApproach) {
     case QUADRATURE: case CUBATURE: case SPARSE_GRID: case SAMPLING:
       return 1; // quadrature: (int)pow((Real)MIN_GAUSS_PTS, numVars);
       break;
@@ -258,7 +258,7 @@ void OrthogPolyApproximation::allocate_arrays()
   // update (subIterator execution) an expansion's multiIndex definition.
   // Simple logic of updating if previous number of points != current number
   // is not robust enough for anisotropic updates --> track using Prev arrays.
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray& quad_order = tpq_driver->quadrature_order();
@@ -417,9 +417,10 @@ void OrthogPolyApproximation::allocate_arrays()
   // now that terms & order are known, shape some arrays.  This is done here,
   // rather than in compute_coefficients(), in order to support array sizing
   // for the data import case.
-  if (expansionCoeffFlag && expansionCoeffs.length() != numExpansionTerms)
+  if (configOptions.expansionCoeffFlag &&
+      expansionCoeffs.length() != numExpansionTerms)
     expansionCoeffs.sizeUninitialized(numExpansionTerms);
-  if (expansionCoeffGradFlag) {
+  if (configOptions.expansionCoeffGradFlag) {
     const SurrogateDataPoint& sdp
       = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
     size_t num_deriv_vars = sdp.response_gradient().length();
@@ -432,7 +433,8 @@ void OrthogPolyApproximation::allocate_arrays()
 
 void OrthogPolyApproximation::compute_coefficients()
 {
-  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
+  if (!configOptions.expansionCoeffFlag &&
+      !configOptions.expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
 	  << "coefficient gradients\n         are active in "
 	  << "OrthogPolyApproximation::compute_coefficients().\n         "
@@ -467,7 +469,7 @@ void OrthogPolyApproximation::compute_coefficients()
 #endif // DEBUG
 
   // calculate polynomial chaos coefficients
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     // verify quad_order stencil matches num_pts
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -518,13 +520,14 @@ void OrthogPolyApproximation::compute_coefficients()
       // allocate_smolyak_arrays() and allocate_collocation_arrays() to define
       // smolyakMultiIndex/smolyakCoeffs/collocKey/expansionCoeffIndices]
       // which uses append_multi_index() to build multiIndex.
-      if (expansionCoeffFlag)     expansionCoeffs = 0.;
-      if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
+      if (configOptions.expansionCoeffFlag)     expansionCoeffs = 0.;
+      if (configOptions.expansionCoeffGradFlag) expansionCoeffGrads = 0.;
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
       size_t i, num_tensor_grids = tpMultiIndex.size();
       std::vector<SurrogateDataPoint> tp_data_points;
-      RealVector tp_weights;//, tp_coeffs; RealMatrix tp_coeff_grads;
+      RealVector tp_weights, tp_coeffs; RealMatrix tp_coeff_grads;
+      bool store_tp = (configOptions.refinementControl == GENERALIZED_SPARSE);
       // loop over tensor-products, forming sub-expansions, and sum them up
       for (i=0; i<num_tensor_grids; ++i) {
 	// form tp_data_points, tp_weights using collocKey et al.
@@ -534,19 +537,15 @@ void OrthogPolyApproximation::compute_coefficients()
 	//map_tensor_product_multi_index(tp_multi_index, i);
 
 	// form tp expansion coeffs
-	// TO DO: protect memory; propagate stochExpRefinement from Dakota
-	//RealVector& tp_coeffs_i = (stochExpRefinement ==
-	//  ADAPTIVE_P_REFINEMENT_GEN_SPARSE) ? tpExpansionCoeffs[i] :tp_coeffs;
-	//RealMatrix& tp_grads_i  = (stochExpRefinement ==
-	//  ADAPTIVE_P_REFINEMENT_GEN_SPARSE) ? tpExpansionCoeffGrads[i] :
-	//  tp_coeff_grads;
+	RealVector& tp_coeffs_i = (store_tp) ? tpExpansionCoeffs[i] : tp_coeffs;
+	RealMatrix& tp_grads_i
+	  = (store_tp) ? tpExpansionCoeffGrads[i] : tp_coeff_grads;
 	integrate_expansion(tpMultiIndex[i], tp_data_points, tp_weights,
-			    //tp_coeffs_i, tp_grads_i);
-			    tpExpansionCoeffs[i], tpExpansionCoeffGrads[i]);
+			    tp_coeffs_i, tp_grads_i);
 
 	// sum tensor product coeffs/grads into expansion coeffs/grads
-	combine_expansion(tpMultiIndexMap[i], tpExpansionCoeffs[i],//tp_coeffs_i
-			  tpExpansionCoeffGrads[i], sm_coeffs[i]); //tp_grads_i
+	combine_expansion(tpMultiIndexMap[i], tp_coeffs_i, tp_grads_i,
+			  sm_coeffs[i]);
       }
       //if (!reEntrantFlag) {
       //  ssg_driver->clear_smolyak_arrays();
@@ -576,7 +575,7 @@ void OrthogPolyApproximation::increment_coefficients()
 {
   bool err_flag = false;
   size_t last_index;
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     switch (sparseGridExpansion) {
@@ -633,7 +632,7 @@ void OrthogPolyApproximation::increment_coefficients()
 
 void OrthogPolyApproximation::decrement_coefficients()
 {
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID:
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     switch (sparseGridExpansion) {
@@ -670,7 +669,7 @@ void OrthogPolyApproximation::decrement_coefficients()
 void OrthogPolyApproximation::restore_coefficients()
 {
   size_t last_index;
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID:
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
@@ -713,7 +712,7 @@ void OrthogPolyApproximation::restore_coefficients()
 void OrthogPolyApproximation::finalize_coefficients()
 {
   size_t start_index;
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID:
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
@@ -1218,9 +1217,9 @@ combine_expansion(const SizetArray& tp_mi_map,
     num_deriv_vars = expansionCoeffGrads.numRows();
   for (i=0; i<num_tp_terms; ++i) {
     index = tp_mi_map[i];
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       expansionCoeffs[index] += coeff * tp_expansion_coeffs[i];
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       Real*       exp_grad_ndx = expansionCoeffGrads[index];
       const Real* tp_grad_i    = tp_expansion_grads[i];
       for (j=0; j<num_deriv_vars; ++j)
@@ -1434,13 +1433,13 @@ integrate_expansion(const UShort2DArray& multi_index,
     num_deriv_vars = data_pts[0].response_gradient().length();
   Real wt_resp_fn_i, Psi_ij; Real* exp_grad;
   RealVector wt_resp_grad_i;
-  if (expansionCoeffFlag) { // shape if needed and zero out
+  if (configOptions.expansionCoeffFlag) { // shape if needed and zero out
     if (exp_coeffs.length() != num_exp_terms)
       exp_coeffs.size(num_exp_terms); // init to 0
     else
       exp_coeffs = 0.;
   }
-  if (expansionCoeffGradFlag) {
+  if (configOptions.expansionCoeffGradFlag) {
     if (exp_coeff_grads.numRows() != num_deriv_vars ||
 	exp_coeff_grads.numCols() != num_exp_terms)
       exp_coeff_grads.shape(num_deriv_vars, num_exp_terms); // init to 0
@@ -1449,18 +1448,18 @@ integrate_expansion(const UShort2DArray& multi_index,
     wt_resp_grad_i.sizeUninitialized(num_deriv_vars);
   }
   for (i=0, cit=data_pts.begin(); cit!=data_pts.end(); ++i, ++cit) {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       wt_resp_fn_i = wt_sets[i] * cit->response_function();
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       wt_resp_grad_i = cit->response_gradient(); // copy
       wt_resp_grad_i.scale(wt_sets[i]);
     }
     const RealVector& c_vars_i = cit->continuous_variables();
     for (j=0; j<num_exp_terms; ++j) {
       Psi_ij = multivariate_polynomial(c_vars_i, multi_index[j]);
-      if (expansionCoeffFlag)
+      if (configOptions.expansionCoeffFlag)
 	exp_coeffs[j] += Psi_ij * wt_resp_fn_i;
-      if (expansionCoeffGradFlag) {
+      if (configOptions.expansionCoeffGradFlag) {
 	exp_grad = exp_coeff_grads[j];
 	for (k=0; k<num_deriv_vars; ++k)
 	  exp_grad[k] += Psi_ij * wt_resp_grad_i[k];
@@ -1470,9 +1469,9 @@ integrate_expansion(const UShort2DArray& multi_index,
 
   for (i=0; i<num_exp_terms; ++i) {
     const Real& norm_sq = norm_squared(multi_index[i]);
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       exp_coeffs[i] /= norm_sq;
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       exp_grad = exp_coeff_grads[i];
       for (k=0; k<num_deriv_vars; ++k)
 	exp_grad[k] /= norm_sq;
@@ -1539,7 +1538,8 @@ void OrthogPolyApproximation::regression()
   // expansion variables (aleatory or combined) within the expansion
   // coefficient calculation process, which must be distinguished from the
   // expansionCoeffGradFlag case.
-  bool  use_grads_flag = ((data_order & 2) && !expansionCoeffGradFlag),
+  bool use_grads_flag
+    = ((data_order & 2) && !configOptions.expansionCoeffGradFlag),
     fn_constrained_lls = (use_grads_flag && num_pts < numExpansionTerms);
   size_t eqns_per_pt = (use_grads_flag) ? 1 + numVars : 1;
   std::vector<SurrogateDataPoint>::iterator it;
@@ -1576,7 +1576,7 @@ void OrthogPolyApproximation::regression()
     delete [] work;
     work             = new double [lwork]; // Optimal work array
 
-    if (expansionCoeffFlag) {
+    if (configOptions.expansionCoeffFlag) {
       // pack dataPoints values/gradients in A,b and anchor point
       // values/gradients in C,d.
       size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
@@ -1626,7 +1626,7 @@ void OrthogPolyApproximation::regression()
       copy_data(x_vector, numExpansionTerms, expansionCoeffs);
     }
 
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       size_t num_deriv_vars = expansionCoeffGrads.numRows();
       for (i=0; i<num_deriv_vars; ++i) {
 	// must be recomputed each time since DGGLSE solves in place
@@ -1727,9 +1727,9 @@ void OrthogPolyApproximation::regression()
     // where {b} may have multiple RHS -> multiple {x} solutions.
 
     int    num_rows_A    = num_pts*eqns_per_pt; // Number of rows in matrix A
-    size_t num_grad_rhs  = (expansionCoeffGradFlag) ?
+    size_t num_grad_rhs  = (configOptions.expansionCoeffGradFlag) ?
       expansionCoeffGrads.numRows() : 0;
-    size_t num_coeff_rhs = (expansionCoeffFlag) ? 1 : 0;
+    size_t num_coeff_rhs = (configOptions.expansionCoeffFlag) ? 1 : 0;
     int    num_rhs = num_coeff_rhs + num_grad_rhs; // input: # of RHS vectors
     double rcond = -1.; // input:  use macheps to rank singular vals of A
     int    rank  =  0;  // output: effective rank of matrix A
@@ -1780,9 +1780,9 @@ void OrthogPolyApproximation::regression()
       }
     else
       for (i=0, it=dataPoints.begin(); i<num_pts; ++it, ++i) {
-	if (expansionCoeffFlag)
+	if (configOptions.expansionCoeffFlag)
 	  b_vectors[i] = it->response_function();
-	if (expansionCoeffGradFlag) {
+	if (configOptions.expansionCoeffGradFlag) {
 	  const RealVector& resp_grad = it->response_gradient();
 	  for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th gradient component
 	    b_vectors[(j+num_coeff_rhs)*num_pts+i] = resp_grad[j];
@@ -1799,9 +1799,9 @@ void OrthogPolyApproximation::regression()
 
     // DGELSS returns the x solution in the numExpansionTerms x num_rhs
     // submatrix of b_vectors
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
-    if (expansionCoeffGradFlag)
+    if (configOptions.expansionCoeffGradFlag)
       for (i=0; i<numExpansionTerms; ++i)
 	for (j=0; j<num_grad_rhs; ++j)
 	  expansionCoeffGrads(j,i) = b_vectors[(j+num_coeff_rhs)*num_pts+i];
@@ -1864,41 +1864,42 @@ void OrthogPolyApproximation::expectation()
   // expectation evaluation of all subsequent coefficients.  This approach
   // has been observed to result in better results for small sample sizes.
   Real empty_r;
-  Real& mean = (expansionCoeffFlag) ? expansionCoeffs[0] : empty_r;
-  Real* mean_grad
-    = (expansionCoeffGradFlag) ? (Real*)expansionCoeffGrads[0] : NULL;
+  Real& mean      = (configOptions.expansionCoeffFlag) ?
+    expansionCoeffs[0] : empty_r;
+  Real* mean_grad = (configOptions.expansionCoeffGradFlag) ?
+    (Real*)expansionCoeffGrads[0] : NULL;
   if (anchorPoint.is_null()) {
-    if (expansionCoeffFlag)     expansionCoeffs     = 0.;
-    if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
+    if (configOptions.expansionCoeffFlag)     expansionCoeffs     = 0.;
+    if (configOptions.expansionCoeffGradFlag) expansionCoeffGrads = 0.;
   }
   else {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       mean = anchorPoint.response_function();
-    if (expansionCoeffGradFlag)
+    if (configOptions.expansionCoeffGradFlag)
       mean_grad = anchorPoint.response_gradient().values();
   }
   for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       mean += it->response_function();
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       const RealVector& curr_pt_grad = it->response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	mean_grad[j] += curr_pt_grad[j];
     }
   }
-  if (expansionCoeffFlag)
+  if (configOptions.expansionCoeffFlag)
     mean /= num_pts;
-  if (expansionCoeffGradFlag)
+  if (configOptions.expansionCoeffGradFlag)
     for (j=0; j<num_deriv_vars; ++j)
       mean_grad[j] /= num_pts;
   Real chaos_sample, resp_fn_minus_mean, term; Real* exp_grad_i;
   RealVector resp_grad_minus_mean;
-  if (expansionCoeffGradFlag)
+  if (configOptions.expansionCoeffGradFlag)
     resp_grad_minus_mean.sizeUninitialized(num_deriv_vars);
   if (!anchorPoint.is_null()) {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       resp_fn_minus_mean = anchorPoint.response_function() - mean;
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       const RealVector& anchor_grad = anchorPoint.response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	resp_grad_minus_mean[j] = anchor_grad[j] - mean_grad[j];
@@ -1906,9 +1907,9 @@ void OrthogPolyApproximation::expectation()
     const RealVector& c_vars = anchorPoint.continuous_variables();
     for (i=1; i<numExpansionTerms; ++i) {
       chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
-      if (expansionCoeffFlag)
+      if (configOptions.expansionCoeffFlag)
 	expansionCoeffs[i] = resp_fn_minus_mean * chaos_sample;
-      if (expansionCoeffGradFlag) {
+      if (configOptions.expansionCoeffGradFlag) {
 	exp_grad_i = expansionCoeffGrads[i];
 	for (j=0; j<num_deriv_vars; ++j)
 	  exp_grad_i[j] = resp_grad_minus_mean[j] * chaos_sample;
@@ -1916,9 +1917,9 @@ void OrthogPolyApproximation::expectation()
     }
   }
   for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       resp_fn_minus_mean = it->response_function() - mean;
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       const RealVector& resp_grad = it->response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	resp_grad_minus_mean[j] = resp_grad[j] - mean_grad[j];
@@ -1926,9 +1927,9 @@ void OrthogPolyApproximation::expectation()
     const RealVector& c_vars = it->continuous_variables();
     for (i=1; i<numExpansionTerms; ++i) {
       chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
-      if (expansionCoeffFlag)
+      if (configOptions.expansionCoeffFlag)
 	expansionCoeffs[i] += resp_fn_minus_mean * chaos_sample;
-      if (expansionCoeffGradFlag) {
+      if (configOptions.expansionCoeffGradFlag) {
 	exp_grad_i = expansionCoeffGrads[i];
 	for (j=0; j<num_deriv_vars; ++j)
 	  exp_grad_i[j] += resp_grad_minus_mean[j] * chaos_sample;
@@ -1937,9 +1938,9 @@ void OrthogPolyApproximation::expectation()
   }
   for (i=1; i<numExpansionTerms; ++i) {
     term = num_pts * norm_squared(multiIndex[i]);
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       expansionCoeffs[i] /= term;
-    if (expansionCoeffGradFlag) {
+    if (configOptions.expansionCoeffGradFlag) {
       exp_grad_i = expansionCoeffGrads[i];
       for (j=0; j<num_deriv_vars; ++j)
 	exp_grad_i[j] /= term;
@@ -1957,7 +1958,7 @@ void OrthogPolyApproximation::expectation()
 const Real& OrthogPolyApproximation::get_value(const RealVector& x)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
@@ -1978,7 +1979,7 @@ const RealVector& OrthogPolyApproximation::get_gradient(const RealVector& x)
   // but we want this fn to be as fast as possible
 
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_gradient()" << std::endl;
     abort_handler(-1);
@@ -2004,7 +2005,7 @@ const RealVector& OrthogPolyApproximation::
 get_gradient(const RealVector& x, const UIntArray& dvv)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_gradient()" << std::endl;
     abort_handler(-1);
@@ -2031,7 +2032,7 @@ get_gradient(const RealVector& x, const UIntArray& dvv)
 const Real& OrthogPolyApproximation::get_mean()
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_mean()" << std::endl;
     abort_handler(-1);
@@ -2049,7 +2050,7 @@ const Real& OrthogPolyApproximation::get_mean()
 const Real& OrthogPolyApproximation::get_mean(const RealVector& x)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_mean()" << std::endl;
     abort_handler(-1);
@@ -2096,7 +2097,7 @@ const RealVector& OrthogPolyApproximation::get_mean_gradient()
   // d/ds \mu_R = d/ds \alpha_0 = <dR/ds>
 
   // Error check for required data
-  if (!expansionCoeffGradFlag) {
+  if (!configOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "OrthogPolyApproximation::get_mean_gradient()." << std::endl;
     abort_handler(-1);
@@ -2133,14 +2134,14 @@ get_mean_gradient(const RealVector& x, const UIntArray& dvv)
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     if (randomVarsKey[deriv_index]) { // deriv w.r.t. design var insertion
       // Error check for required data
-      if (!expansionCoeffGradFlag) {
+      if (!configOptions.expansionCoeffGradFlag) {
 	PCerr << "Error: expansion coefficient gradients not defined in "
 	      << "OrthogPolyApproximation::get_mean_gradient()." << std::endl;
 	abort_handler(-1);
       }
       expansionMeanGrad[i] = expansionCoeffGrads[0][cntr];
     }
-    else if (!expansionCoeffFlag) { // Error check for required data
+    else if (!configOptions.expansionCoeffFlag) { // Error check for reqd data
       PCerr << "Error: expansion coefficients not defined in "
 	    << "OrthogPolyApproximation::get_mean_gradient()" << std::endl;
       abort_handler(-1);
@@ -2209,15 +2210,15 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
   std::vector<SurrogateDataPoint>::const_iterator cit;
  
   // calculate moments 
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     // Define centered data
     RealVector c_function_vals(dataPoints.size());
     for (i=0,cit=dataPoints.begin(); cit!=dataPoints.end(); ++i,++cit) 
       c_function_vals[i] = cit->response_function() - expansionCoeffs[0];
-    // presumably all exceptions are caught in computing the coefficients of the expansion
-    integrate_moments(multiIndex, dataPoints, c_function_vals, driverRep->weight_sets(),
-			numericMoments);
+    // presumably all exceptions are caught in computing coeffs of the expansion
+    integrate_moments(multiIndex, dataPoints, c_function_vals,
+		      driverRep->weight_sets(),	numericMoments);
     break;
   }
   case SPARSE_GRID:
@@ -2245,11 +2246,12 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
         // Define centered data
         RealVector c_function_vals(tp_data_points.size());
         // center data
-        for (j=0,cit=tp_data_points.begin(); cit!=tp_data_points.end(); ++j,++cit) 
+        for (j=0, cit=tp_data_points.begin(); cit!=tp_data_points.end();
+	     ++j, ++cit)
           c_function_vals[j] = cit->response_function() - expansionCoeffs[0];
         // get moments for constituent tensor grid
-        integrate_moments(tpMultiIndex[i], tp_data_points, c_function_vals, tp_weights,
-			    tp_numeric_moments);
+        integrate_moments(tpMultiIndex[i], tp_data_points, c_function_vals,
+			  tp_weights, tp_numeric_moments);
 
 	// add contribution to sparse grid
 	for (j=0; j<num_moments;++j)
@@ -2262,8 +2264,8 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
       RealVector c_function_vals(dataPoints.size());
       for (i=0,cit=dataPoints.begin(); cit!=dataPoints.end(); ++i,++cit) 
         c_function_vals[i] = cit->response_function() - expansionCoeffs[0];
-      integrate_moments(multiIndex, dataPoints, c_function_vals, driverRep->weight_sets(),
-			  numericMoments);
+      integrate_moments(multiIndex, dataPoints, c_function_vals,
+			driverRep->weight_sets(), numericMoments);
       break;
     }
     break;
@@ -2278,7 +2280,7 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
 const Real& OrthogPolyApproximation::get_variance()
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_variance()" << std::endl;
     abort_handler(-1);
@@ -2304,7 +2306,7 @@ get_covariance(const RealVector& exp_coeffs_2)
 const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_variance()" << std::endl;
     abort_handler(-1);
@@ -2368,12 +2370,12 @@ const RealVector& OrthogPolyApproximation::get_variance_gradient()
   //                 = 2 Sum_{j=1}^P \alpha_j <dR/ds, Psi_j>
 
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
   }
-  if (!expansionCoeffGradFlag) {
+  if (!configOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "OrthogPolyApproximation::get_variance_gradient()." << std::endl;
     abort_handler(-1);
@@ -2403,7 +2405,7 @@ const RealVector& OrthogPolyApproximation::
 get_variance_gradient(const RealVector& x, const UIntArray& dvv)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
@@ -2418,7 +2420,7 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
   size_t cntr = 0; // insertions carried in order within expansionCoeffGrads
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    if (randomVarsKey[deriv_index] && !expansionCoeffGradFlag) {
+    if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "OrthogPolyApproximation::get_variance_gradient()." << std::endl;
       abort_handler(-1);
@@ -2559,10 +2561,20 @@ norm_squared_random(const UShortArray& indices)
   return multiPolyNormSq;
 }
 
+
 void OrthogPolyApproximation::compute_component_effects()
 {
+  // Allocation of memory for sensitivity variables done in 
+  // PolynomialApproximation::allocate_arrays()
+
+  // sobolIndices are index via binary number represenation
+  // e.g. if there are 5 variables -> 5 bit represenation
+  // if a variable belongs to a subset \alpha, it has a value of 1; otherwise 0
+  // | 0 | 0 | 0 | 0 | 1 | represents the subset that only contains variable 1
+  // sobolIndices[0] is set to 1; to calculate it is redundant
+
   // allocates memory specific to type of sensitivity indices desired
-  allocate_component_effects_array();
+  allocate_component_effects(); // TO DO: move upstream
   // Index the set using binary number representation
   size_t index_bin, i, j;
   // Compute a pseudo-variance that makes no distinction between probabilistic
@@ -2590,20 +2602,20 @@ void OrthogPolyApproximation::compute_component_effects()
   }
 }
 
+
 void OrthogPolyApproximation::compute_total_effects() 
 {
   // allocates memory specific to type of sensitivity indices desired
-  allocate_total_effects_array();
-  totalSobolIndices = 0; 
+  allocate_total_effects(); // TO DO: move upstream
+  totalSobolIndices = 0.; 
   // iterate through existing indices if all component indices are 
   // available
-  if (computeAllIndices) {
+  if (configOptions.vbdType == ALL_VBD) {
     for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++)
       for (int k=0; k<numVars; k++) 
         if ((*itr).first & (1 << k))
           totalSobolIndices[k] += sobolIndices[(*itr).second];
   }
-
   // otherwise, iterate over the expansion terms as it is more 
   // computationally efficient than performing ANOVA operators
   else {
@@ -2611,9 +2623,10 @@ void OrthogPolyApproximation::compute_total_effects()
     size_t index_bin, i, j;
     Real p_var = 0;
     for (i=1; i<numExpansionTerms; i++) 
-      p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
+      p_var += norm_squared(multiIndex[i]) * expansionCoeffs(i)
+	* expansionCoeffs(i);
   
-    // Computing the total indices by iterating through expansion terms is simpler
+    // Computing total indices by iterating through expansion terms is simpler
     // and more computationally efficient than computing via ANOVA operators 
     for (i=1; i<numExpansionTerms; ++i) {
       index_bin = 0;
@@ -2632,26 +2645,7 @@ void OrthogPolyApproximation::compute_total_effects()
   }
 }
 
-void OrthogPolyApproximation::compute_global_sensitivity()
-{
-  // Temporary hack to match baseline output 
-  /*if (outputLevel < NORMAL_OUTPUT)
-    return;*/
 
-  // Allocation of memory for sensitivity variables done in 
-  // PolynomialApproximation::allocate_arrays()
-
-  // sobolIndices are index via binary number represenation
-  // e.g. if there are 5 variables -> 5 bit represenation
-  // if a variable belongs to a subset \alpha, it has a value of 1; otherwise 0
-  // | 0 | 0 | 0 | 0 | 1 | represents the subset that only contains variable 1
-  // sobolIndices[0] is set to 1; to calculate it is redundant
-
-  compute_component_effects();
-  compute_total_effects();
-}
-
-		
 void OrthogPolyApproximation::print_coefficients(std::ostream& s) const
 {
   size_t i, j;

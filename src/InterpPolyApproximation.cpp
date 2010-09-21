@@ -25,15 +25,17 @@ int InterpPolyApproximation::min_coefficients() const
 {
   // return the minimum number of data instances required to build the 
   // surface of multiple dimensions
-  return (expansionCoeffFlag || expansionCoeffGradFlag) ? 1 : 0;
+  return (configOptions.expansionCoeffFlag ||
+	  configOptions.expansionCoeffGradFlag) ? 1 : 0;
 }
 
 
 void InterpPolyApproximation::allocate_arrays()
 {
-  if (expansionCoeffFlag && expansionCoeffs.length() != numCollocPts)
+  if (configOptions.expansionCoeffFlag &&
+      expansionCoeffs.length() != numCollocPts)
     expansionCoeffs.sizeUninitialized(numCollocPts);
-  if (expansionCoeffGradFlag) {
+  if (configOptions.expansionCoeffGradFlag) {
     const SurrogateDataPoint& sdp
       = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
     size_t num_deriv_vars = sdp.response_gradient().length();
@@ -45,11 +47,12 @@ void InterpPolyApproximation::allocate_arrays()
   // checking numCollocPts is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total.
   //bool update_exp_form =
-  //  ( (expansionCoeffFlag && expansionCoeffs.length() != numCollocPts) ||
-  //    (expansionCoeffGradFlag &&
+  //  ( (configOptions.expansionCoeffFlag &&
+  //     expansionCoeffs.length()      != numCollocPts) ||
+  //    (configOptions.expansionCoeffGradFlag &&
   //     expansionCoeffGrads.numCols() != numCollocPts ) );
 
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
@@ -127,7 +130,8 @@ void InterpPolyApproximation::allocate_arrays()
 
 void InterpPolyApproximation::compute_coefficients()
 {
-  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
+  if (!configOptions.expansionCoeffFlag &&
+      !configOptions.expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
 	  << "coefficient gradients\n         are active in "
 	  << "InterpPolyApproximation::compute_coefficients().\n         "
@@ -155,17 +159,17 @@ void InterpPolyApproximation::compute_coefficients()
   allocate_arrays();
 
   if (!anchorPoint.is_null()) {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       expansionCoeffs[0] = anchorPoint.response_function();
-    if (expansionCoeffGradFlag)
+    if (configOptions.expansionCoeffGradFlag)
       Teuchos::setCol(anchorPoint.response_gradient(), 0, expansionCoeffGrads);
   }
 
   std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   for (i=offset; i<numCollocPts; ++i, ++it) {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       expansionCoeffs[i] = it->response_function();
-    if (expansionCoeffGradFlag)
+    if (configOptions.expansionCoeffGradFlag)
       Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
   }
 }
@@ -174,7 +178,7 @@ void InterpPolyApproximation::compute_coefficients()
 void InterpPolyApproximation::increment_coefficients()
 {
   bool err_flag = false;
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID: {
     // As for allocate_arrays(), increments are performed in coarser steps
     // than may be strictly necessary: all increments are filled in for all
@@ -202,18 +206,18 @@ void InterpPolyApproximation::increment_coefficients()
   size_t i, new_colloc_pts = dataPoints.size();
   if (!anchorPoint.is_null())
     new_colloc_pts += 1;
-  if (expansionCoeffFlag)
+  if (configOptions.expansionCoeffFlag)
     expansionCoeffs.resize(new_colloc_pts);
-  if (expansionCoeffGradFlag) {
+  if (configOptions.expansionCoeffGradFlag) {
     size_t num_deriv_vars = expansionCoeffGrads.numRows();
     expansionCoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
   }
   std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   std::advance(it, numCollocPts);
   for (i=numCollocPts; i<new_colloc_pts; ++i, ++it) {
-    if (expansionCoeffFlag)
+    if (configOptions.expansionCoeffFlag)
       expansionCoeffs[i] = it->response_function();
-    if (expansionCoeffGradFlag)
+    if (configOptions.expansionCoeffGradFlag)
       Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
   }
 
@@ -229,9 +233,9 @@ void InterpPolyApproximation::decrement_coefficients()
   if (!anchorPoint.is_null())
     numCollocPts += 1;
   // not strictly necessary; next increment takes care of this
-  //if (expansionCoeffFlag)
+  //if (configOptions.expansionCoeffFlag)
   //  expansionCoeffs.resize(numCollocPts);
-  //if (expansionCoeffGradFlag) {
+  //if (configOptions.expansionCoeffGradFlag) {
   //  size_t num_deriv_vars = expansionCoeffGrads.numRows();
   //  expansionCoeffGrads.reshape(num_deriv_vars, numCollocPts);
   //}
@@ -497,12 +501,12 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     // Error check for required data
-    if (randomVarsKey[deriv_index] && !expansionCoeffGradFlag) {
+    if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
       abort_handler(-1);
     }
-    else if (!randomVarsKey[deriv_index] && !expansionCoeffFlag) {
+    else if (!randomVarsKey[deriv_index] && !configOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "InterpPolyApproximation::get_mean_gradient()" << std::endl;
       abort_handler(-1);
@@ -578,12 +582,12 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     // Error check for required data
-    if (randomVarsKey[deriv_index] && !expansionCoeffGradFlag) {
+    if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
       abort_handler(-1);
     }
-    else if (!randomVarsKey[deriv_index] && !expansionCoeffFlag) {
+    else if (!randomVarsKey[deriv_index] && !configOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "InterpPolyApproximation::get_mean_gradient()" << std::endl;
       abort_handler(-1);
@@ -744,7 +748,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
   std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    if (randomVarsKey[deriv_index] && !expansionCoeffGradFlag) {
+    if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
       abort_handler(-1);
@@ -864,7 +868,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
   SizetList::iterator it;
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    if (randomVarsKey[deriv_index] && !expansionCoeffGradFlag) {
+    if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
       abort_handler(-1);
@@ -953,14 +957,14 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 const Real& InterpPolyApproximation::get_value(const RealVector& x)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
 
   // sum expansion to get response prediction
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     return tensor_product_value(x);
     break;
@@ -985,13 +989,13 @@ const RealVector& InterpPolyApproximation::get_gradient(const RealVector& x)
   // but we want this fn to be as fast as possible
 
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_gradient()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     return tensor_product_gradient(x);
     break;
@@ -1020,13 +1024,13 @@ const RealVector& InterpPolyApproximation::
 get_gradient(const RealVector& x, const UIntArray& dvv)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_gradient()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     return tensor_product_gradient(x, dvv);
     break;
@@ -1057,7 +1061,7 @@ get_gradient(const RealVector& x, const UIntArray& dvv)
 const Real& InterpPolyApproximation::get_mean()
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_mean()" << std::endl;
     abort_handler(-1);
@@ -1078,13 +1082,13 @@ const Real& InterpPolyApproximation::get_mean()
 const Real& InterpPolyApproximation::get_mean(const RealVector& x)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_mean()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     return tensor_product_mean(x);
     break;
@@ -1112,7 +1116,7 @@ const RealVector& InterpPolyApproximation::get_mean_gradient()
   // d/ds <R> = <dR/ds>
 
   // Error check for required data
-  if (!expansionCoeffGradFlag) {
+  if (!configOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
     abort_handler(-1);
@@ -1145,7 +1149,7 @@ const RealVector& InterpPolyApproximation::get_mean_gradient()
 const RealVector& InterpPolyApproximation::
 get_mean_gradient(const RealVector& x, const UIntArray& dvv)
 {
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     return tensor_product_mean_gradient(x, dvv);
     break;
@@ -1176,7 +1180,7 @@ get_mean_gradient(const RealVector& x, const UIntArray& dvv)
 const Real& InterpPolyApproximation::get_variance()
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_variance()" << std::endl;
     abort_handler(-1);
@@ -1205,7 +1209,7 @@ const Real& InterpPolyApproximation::
 get_covariance(const RealVector& exp_coeffs_2)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_variance()" << std::endl;
     abort_handler(-1);
@@ -1233,13 +1237,13 @@ get_covariance(const RealVector& exp_coeffs_2)
 const Real& InterpPolyApproximation::get_variance(const RealVector& x)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_variance()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     return tensor_product_variance(x);
     break;
@@ -1263,12 +1267,12 @@ const Real& InterpPolyApproximation::get_variance(const RealVector& x)
 const RealVector& InterpPolyApproximation::get_variance_gradient()
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
   }
-  if (!expansionCoeffGradFlag) {
+  if (!configOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
 	  << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
     abort_handler(-1);
@@ -1304,13 +1308,13 @@ const RealVector& InterpPolyApproximation::
 get_variance_gradient(const RealVector& x, const UIntArray& dvv)
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     return tensor_product_variance_gradient(x, dvv);
     break;
@@ -1334,11 +1338,11 @@ get_variance_gradient(const RealVector& x, const UIntArray& dvv)
   }
 }
 
-/// TODO:Add overloaded function to support integration over only random variables
+/// TO DO: Add overloaded function to support integration over only ran vars
 const RealVector& InterpPolyApproximation::get_numeric_moments()
 {
   // Error check for required data
-  if (!expansionCoeffFlag) {
+  if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "InterpPolyApproximation::get_numeric_moments()" << std::endl;
     abort_handler(-1);
@@ -1350,12 +1354,13 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
   Real my_mean = expansionMean;
   numericMoments = 0.;
   const RealVector& wt_sets = driverRep->weight_sets();
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: 
     for (size_t i=0; i<numCollocPts; ++i) {
       numericMoments[0] += expansionCoeffs[i] * wt_sets[i];
       for (size_t j=1; j<num_moments; ++j)
-        numericMoments[j] += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i];
+        numericMoments[j]
+	  += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i];
     }
     break;
   case SPARSE_GRID:
@@ -1366,8 +1371,8 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
       for (size_t i=0; i<numCollocPts; ++i) {
         numericMoments[0] += expansionCoeffs[i] * wt_sets[i] * sm_coeffs[k];
         for (size_t j=1; j<num_moments; ++j)
-          numericMoments[j] += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i] 
-                               * sm_coeffs[k];
+          numericMoments[j] += std::pow(expansionCoeffs[i] - my_mean, Real(j+1))
+	                    *  wt_sets[i] * sm_coeffs[k];
       }
     }
     break;
@@ -1383,7 +1388,7 @@ void InterpPolyApproximation::compute_component_effects()
   ////////////////////// Start Sort ///////////////////////////
 
   // size member variables
-  allocate_component_effects_array();
+  allocate_component_effects(); // TO DO: move upstream
   constituentSets.resize(sobolIndices.length());
   partialVariance.size(sobolIndices.length());
 
@@ -1397,12 +1402,14 @@ void InterpPolyApproximation::compute_component_effects()
   partialVariance[0] = std::pow(total_mean,2.0); // init with mean sq
 
   // Solve for partial variance
-  for (IntIntMIter map_iter=sobolIndexMap.begin(); map_iter!=sobolIndexMap.end(); map_iter++) {
+  for (IntIntMIter map_iter=sobolIndexMap.begin();
+       map_iter!=sobolIndexMap.end(); ++map_iter) {
     // partialVariance[0] stores the mean; it is not a component function
     // and does not follow the procedures for obtaining variance 
     if ((*map_iter).first != 0) {
       partial_variance((*map_iter).first);
-      sobolIndices[(*map_iter).second] = 1/total_variance*partialVariance[(*map_iter).second];
+      sobolIndices[(*map_iter).second]
+	= 1/total_variance*partialVariance[(*map_iter).second];
       // total indices simply identify the membership of the sobolIndices 
       // and adds it to the appropriate bin
     }
@@ -1411,31 +1418,30 @@ void InterpPolyApproximation::compute_component_effects()
 
 void InterpPolyApproximation::compute_total_effects()
 {
-  allocate_total_effects_array();
+  allocate_total_effects(); // TO DO: move upstream
   totalSobolIndices = 0; // init total indices
 
-  // iterate through existing indices if all component indices are                         
-  // available                                                                             
-  if (computeAllIndices) {
-    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++) 
+  // iterate through existing indices if all component indices are available
+  if (configOptions.vbdType == ALL_VBD) {
+    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++)
       for (int k=0; k<numVars; k++) {
-        if ((*itr).first & (1 << k))                                                       
-          totalSobolIndices[k] += sobolIndices[(*itr).second];                             
+        if ((*itr).first & (1 << k))
+          totalSobolIndices[k] += sobolIndices[(*itr).second];
         totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
       }
   }
-
   // if not available, compute total indices independently
   // approach parallels partial_variance_integral where the algorithm is 
   // separated by integration approach
   else {
-    switch (expCoeffsSolnApproach) {
+    switch (configOptions.expCoeffsSolnApproach) {
       case QUADRATURE: {
         Real l_variance = expansionVariance;
         for (int j=0; j<numVars; j++) {
           // define set_value that includes all but index of interest
           int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
-          totalSobolIndices[j] = std::abs(1 - (total_effects_integral(set_value)/l_variance));
+          totalSobolIndices[j]
+	    = std::abs(1 - (total_effects_integral(set_value)/l_variance));
         }
         break;
       }
@@ -1449,14 +1455,17 @@ void InterpPolyApproximation::compute_total_effects()
         for (int j=0; j<numVars; j++) {
           int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1; 
           for (size_t i=0; i<num_smolyak_indices; ++i)
-            totalSobolIndices[j] += sm_coeffs[i]*total_effects_integral(set_value,i);
-          totalSobolIndices[j] = std::abs(1 - (totalSobolIndices[j]/l_variance));
+            totalSobolIndices[j]
+	      += sm_coeffs[i]*total_effects_integral(set_value,i);
+          totalSobolIndices[j]
+	    = std::abs(1 - (totalSobolIndices[j]/l_variance));
         }
         break;
       }
     }
-  }                                                                                        
+  }
 }
+
 
 Real InterpPolyApproximation::total_effects_integral(int set_value)
 {
@@ -1520,11 +1529,14 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
   Real total_mean = get_mean();
   Real integral = 0;
   for (i=0; i<num_mem_expansion_coeffs; ++i)
-    integral += std::pow((mem_expansion_coeffs[i]-total_mean),2.0)*mem_weights[i];
+    integral
+      += std::pow((mem_expansion_coeffs[i]-total_mean),2.0)*mem_weights[i];
   return integral;
-
 }
-Real InterpPolyApproximation::total_effects_integral(int set_value, size_t tp_index)
+
+
+Real InterpPolyApproximation::
+total_effects_integral(int set_value, size_t tp_index)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
   const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
@@ -1591,22 +1603,9 @@ Real InterpPolyApproximation::total_effects_integral(int set_value, size_t tp_in
   Real integral = 0;
   Real total_mean = get_mean();
   for (i=0; i<num_mem_expansion_coeffs; ++i)
-    integral += std::pow(mem_expansion_coeffs[i] - total_mean, 2.0)*mem_weights[i];
-
+    integral
+      += std::pow(mem_expansion_coeffs[i] - total_mean, 2.0)*mem_weights[i];
   return integral;
-}
-
-// Compute Sobol Indices for global sensitivity analysis
-void InterpPolyApproximation::compute_global_sensitivity()
-{
-  /*if (outputLevel <  NORMAL_OUTPUT)
-    return;*/
-
-  // TO DO: just eliminate this function and use finer grain control
-
-  compute_component_effects();
-  compute_total_effects(); 
-
 }
 
 
@@ -1618,9 +1617,10 @@ void InterpPolyApproximation::get_subsets()
 
   // Here we want to utilize the integer representation of the subset
   // but we want to store it in a size appropriate container
-  // so finding lower sets is given the argument of the integer rep (*.first) and stored in
-  // constituentSets in size-appropriate-index-map (*.second)
-  for (IntIntMIter map_iter=sobolIndexMap.begin(); map_iter!=sobolIndexMap.end(); map_iter++) {
+  // so finding lower sets is given the argument of the integer rep (*.first)
+  // and stored in constituentSets in size-appropriate-index-map (*.second)
+  for (IntIntMIter map_iter=sobolIndexMap.begin();
+       map_iter!=sobolIndexMap.end(); map_iter++) {
     lower_sets((*map_iter).first,constituentSets[(*map_iter).second]);
     constituentSets[(*map_iter).second].erase((*map_iter).first);
   }
@@ -1645,7 +1645,8 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
     // the variable membership using integers instead of a d-array of bools
     if (plus_one_set & (1 << k)) 
       // if subset i contains variable k, remove that variable from the set 
-      // by converting the bit-form of (1<<k) to an integer and subtract from the plus_one_set
+      // by converting the bit-form of (1<<k) to an integer and subtract from
+      // the plus_one_set
       lower_sets(plus_one_set-(int)std::pow(2.0,k),top_level_set);
 }
 
@@ -1795,15 +1796,17 @@ partial_variance_integral(int set_value, size_t tp_index)
 }
 
 
-/** Computes the variance of component functions. Assumes that all subsets of
-    set_value have been computed in advance which will be true so long as
-    the partial_variance is called following appropriate enumeration of set value  */
+/** Computes the variance of component functions. Assumes that all
+    subsets of set_value have been computed in advance which will be
+    true so long as the partial_variance is called following
+    appropriate enumeration of set value  */
 void InterpPolyApproximation::partial_variance(int set_value)
 {
   // Computes the integral first
-  switch (expCoeffsSolnApproach) {
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    partialVariance[sobolIndexMap[set_value]] = partial_variance_integral(set_value);
+    partialVariance[sobolIndexMap[set_value]]
+      = partial_variance_integral(set_value);
     break;
   case SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
@@ -1821,8 +1824,8 @@ void InterpPolyApproximation::partial_variance(int set_value)
   IntSet::iterator itr;
   for (itr  = constituentSets[sobolIndexMap[set_value]].begin();
        itr != constituentSets[sobolIndexMap[set_value]].end(); itr++) 
-    partialVariance[sobolIndexMap[set_value]] -= partialVariance[sobolIndexMap[*itr]];
-  
+    partialVariance[sobolIndexMap[set_value]]
+      -= partialVariance[sobolIndexMap[*itr]];
 }
 
 } // namespace Pecos

@@ -36,7 +36,7 @@ public:
   //
 
   /// default constructor
-  InterpPolyApproximation(size_t num_vars, short output_level);
+  InterpPolyApproximation(size_t num_vars);
   /// destructor
   ~InterpPolyApproximation();
 
@@ -60,9 +60,9 @@ protected:
   /// size expansionCoeffs and expansionCoeffGrads
   void allocate_arrays();
 
-  /// Performs global sensitivity analysis using Sobol' Indices
-  void compute_global_sensitivity();
+  /// computes component (main and interaction) effect Sobol' indices
   void compute_component_effects();
+  /// computes total effect Sobol' indices
   void compute_total_effects();
 
   /// retrieve the response expansion value for a given parameter vector
@@ -225,9 +225,8 @@ private:
 };
 
 
-inline InterpPolyApproximation::
-InterpPolyApproximation(size_t num_vars, short output_level):
-  PolynomialApproximation(num_vars, output_level), numCollocPts(0)
+inline InterpPolyApproximation::InterpPolyApproximation(size_t num_vars):
+  PolynomialApproximation(num_vars), numCollocPts(0)
 { }
 
 

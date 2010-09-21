@@ -25,6 +25,81 @@ namespace Pecos {
 class IntegrationDriver;
 class SparseGridDriver;
 
+
+/// Container class for various polynomial approximation configuration options
+
+/** The ConfigurationOptions class provides a simple container class for a 
+    polynomial approximation configuration options related to data modes,
+    verbosity, and refinement and VBD controls. */
+
+class ConfigurationOptions
+{
+  //
+  //- Heading: Friends
+  //
+
+  friend class PolynomialApproximation;
+  friend class InterpPolyApproximation;
+  friend class OrthogPolyApproximation;
+
+public:
+
+  ConfigurationOptions();
+  ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
+		       bool exp_grad_flag,
+		       //short output_level, short refine_type,
+		       short refine_cntl, short vbd_type);
+  ~ConfigurationOptions();
+
+private:
+
+  /// identifies the approach taken in compute_coefficients():
+  /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
+  short expCoeffsSolnApproach;
+  /// flag for calculation of expansionCoeffs from response values
+  bool expansionCoeffFlag;
+  /// flag for calculation of expansionCoeffGrads from response gradients
+  bool expansionCoeffGradFlag;
+
+  // output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
+  //short outputLevel;
+  // nesting override options: NO_OVERRIDE, NESTED, NON_NESTED
+  //short nestingOverride;
+  // type of refinement: {NO,UNIFORM_P,ADAPTIVE_P}_REFINEMENT
+  //short refinementType;
+
+  /// approach for control of refinement: DEFAULT_CONTROL,
+  /// TOTAL_SOBOL, SPECTRAL_DECAY, or GENERALIZED_SPARSE
+  short refinementControl;
+  /// type of data computed in variance-based decomposition:
+  /// {NO,UNIVARIATE,ALL}_VBD
+  short vbdType;
+};
+
+
+inline ConfigurationOptions::ConfigurationOptions():
+  expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
+  expansionCoeffGradFlag(false),
+  //outputLevel(NORMAL_OUTPUT), refinementType(NO_REFINEMENT),
+  refinementControl(DEFAULT_CONTROL), vbdType(NO_VBD)
+{ }
+
+
+inline ConfigurationOptions::
+ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
+		     bool exp_grad_flag,//short output_level, short refine_type,
+		     short refine_cntl, short vbd_type):
+  expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
+  expansionCoeffGradFlag(exp_grad_flag),
+  //outputLevel(output_level), refinementType(refine_type),
+  refinementControl(refine_cntl), vbdType(vbd_type)
+{ }
+
+
+inline ConfigurationOptions::~ConfigurationOptions()
+{ }
+
+
 /// Derived approximation class for global basis polynomials.
 
 /** The PolynomialApproximation class provides a global approximation
@@ -43,26 +118,20 @@ public:
   /// default constructor
   PolynomialApproximation();
   /// standard constructor
-  PolynomialApproximation(size_t num_vars, short output_level);
-  /// destructor
+  PolynomialApproximation(size_t num_vars);
+  /// destructorboth
   ~PolynomialApproximation();
 
   //
   //- Heading: Virtual member functions
   //
 
-  /// size Sobol arrays
-  virtual void allocate_component_effects_array();
-  virtual void allocate_total_effects_array();
-
-  /// Performs global sensitivity analysis using Sobol' Indices
-  virtual void compute_global_sensitivity() = 0;
   /// Computes sensitivity indices according to verbosity (from main
   /// to higher order effects)
-  virtual void compute_component_effects()=0;
+  virtual void compute_component_effects() = 0;
   /// Computes total sensitivity indices according to verbosity and
   /// existing computations from compute_component_effects()
-  virtual void compute_total_effects()=0;
+  virtual void compute_total_effects() = 0;
 
   /// return the mean of the expansion, treating all variables as random
   virtual const Real& get_mean() = 0;
@@ -104,6 +173,11 @@ public:
   //- Heading: Member functions
   //
 
+  /// size component Sobol arrays
+  void allocate_component_effects();
+  /// size total Sobol arrays
+  void allocate_total_effects();
+
   /// set dataPoints
   void data_points(const std::list<SurrogateDataPoint>& pts);
   /// return size of dataPoints
@@ -131,14 +205,14 @@ public:
   /// get expCoeffsSolnApproach
   short solution_approach() const;
 
-  /// set expansionCoeffFlag
+  /// set ConfigurationOptions::expansionCoeffFlag
   void expansion_coefficient_flag(bool coeff_flag);
-  /// get expansionCoeffFlag
+  /// get ConfigurationOptions::expansionCoeffFlag
   bool expansion_coefficient_flag() const;
 
-  /// set expansionCoeffGradFlag
+  /// set ConfigurationOptions::expansionCoeffGradFlag
   void expansion_coefficient_gradient_flag(bool grad_flag);
-  /// get expansionCoeffGradFlag
+  /// get ConfigurationOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
   /// return sobolIndexMap 
@@ -212,17 +286,8 @@ protected:
   /// pointer to integration driver instance
   IntegrationDriver* driverRep;
 
-  /// identifies the approach taken in compute_coefficients():
-  /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
-  short expCoeffsSolnApproach;
-  /// SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT, or
-  /// DEBUG_OUTPUT
-  short outputLevel;
-
-  /// flag for calculation of expansionCoeffs from response values
-  bool expansionCoeffFlag;
-  /// flag for calculation of expansionCoeffGrads from response gradients
-  bool expansionCoeffGradFlag;
+  /// a basic encapsulation of configuration options
+  ConfigurationOptions configOptions;
 
   /// previous quadrature order;
   /// used for tracking need for expansion form updates
@@ -267,8 +332,6 @@ protected:
       expansion only over the random variables). */
   RealMatrix expansionCoeffGrads;
 
-  // flag to detect whether all indices have been computed
-  bool computeAllIndices;
   /// introduce mapping to unify disparate enumeration of sensitivity
   /// indices (e.g. main effects only vs all effects)
   IntIntMap sobolIndexMap;
@@ -286,18 +349,13 @@ private:
 
 
 inline PolynomialApproximation::PolynomialApproximation():
-  driverRep(NULL), expCoeffsSolnApproach(SAMPLING), outputLevel(NORMAL_OUTPUT),
-  expansionCoeffFlag(true), expansionCoeffGradFlag(false),
-  ssgLevelPrev(USHRT_MAX), computeAllIndices(false)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
 { }
 
 
-inline PolynomialApproximation::
-PolynomialApproximation(size_t num_vars, short output_level):
+inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
-  expCoeffsSolnApproach(SAMPLING), outputLevel(output_level),
-  expansionCoeffFlag(true), expansionCoeffGradFlag(false),
-  ssgLevelPrev(USHRT_MAX), computeAllIndices(false)
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -361,29 +419,29 @@ inline size_t PolynomialApproximation::pop_count()
 
 
 inline void PolynomialApproximation::solution_approach(short soln_approach)
-{ expCoeffsSolnApproach = soln_approach; }
+{ configOptions.expCoeffsSolnApproach = soln_approach; }
 
 
 inline short PolynomialApproximation::solution_approach() const
-{ return expCoeffsSolnApproach; }
+{ return configOptions.expCoeffsSolnApproach; }
 
 
 inline void PolynomialApproximation::expansion_coefficient_flag(bool coeff_flag)
-{ expansionCoeffFlag = coeff_flag; }
+{ configOptions.expansionCoeffFlag = coeff_flag; }
 
 
 inline bool PolynomialApproximation::expansion_coefficient_flag() const
-{ return expansionCoeffFlag; }
+{ return configOptions.expansionCoeffFlag; }
 
 
 inline void PolynomialApproximation::
 expansion_coefficient_gradient_flag(bool grad_flag)
-{ expansionCoeffGradFlag = grad_flag; }
+{ configOptions.expansionCoeffGradFlag = grad_flag; }
 
 
 inline bool PolynomialApproximation::
 expansion_coefficient_gradient_flag() const
-{ return expansionCoeffGradFlag; }
+{ return configOptions.expansionCoeffGradFlag; }
 
 
 inline const IntIntMap& PolynomialApproximation::sobol_index_map() const
