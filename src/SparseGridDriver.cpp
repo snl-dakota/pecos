@@ -202,7 +202,7 @@ allocate_generalized_coefficients(const UShort2DArray& multi_index,
   for (i=0; i<num_sets; ++i)
     for (j=0; j<numVars; ++j, ++cntr)
       mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
-  webbur2::sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
+  webbur::sandia_sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
   delete [] mi;
 }
 
