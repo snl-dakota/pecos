@@ -239,10 +239,12 @@ void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
   if (!dim_pref.empty()) {
     size_t num_pref = dim_pref.length();
     aniso_wts.sizeUninitialized(num_pref);
+#ifdef DEBUG
+    PCout << "dimension preference:\n"; write_data(PCout, dim_pref);
+#endif
     webbur::sandia_sgmga_importance_to_aniso(num_pref, dim_pref.values(),
 					     aniso_wts.values());
 #ifdef DEBUG
-    PCout << "dimension preference:\n"; write_data(PCout, dim_pref);
     PCout << "anisotropic weights after sandia_sgmga_importance_to_aniso():\n";
     write_data(PCout, aniso_wts);
 #endif

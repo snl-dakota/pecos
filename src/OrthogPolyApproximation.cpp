@@ -2608,8 +2608,8 @@ void OrthogPolyApproximation::compute_total_effects()
   if (configOptions.vbdControl == ALL_VBD) {
     for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++)
       for (int k=0; k<numVars; k++) 
-        if ((*itr).first & (1 << k))
-          totalSobolIndices[k] += sobolIndices[(*itr).second];
+        if (itr->first & (1 << k))
+          totalSobolIndices[k] += sobolIndices[itr->second];
   }
   // otherwise, iterate over the expansion terms as it is more 
   // computationally efficient than performing ANOVA operators
