@@ -32,6 +32,9 @@ int InterpPolyApproximation::min_coefficients() const
 
 void InterpPolyApproximation::allocate_arrays()
 {
+  allocate_component_effects();
+  allocate_total_effects();
+
   if (configOptions.expansionCoeffFlag &&
       expansionCoeffs.length() != numCollocPts)
     expansionCoeffs.sizeUninitialized(numCollocPts);
@@ -514,14 +517,14 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
     for (j=0; j<numCollocPts; ++j) {
       const UShortArray& key_j = key[j];
       Real wt_prod_j = 1.;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); it++)
+      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
 	{ k = *it; wt_prod_j *= gauss_wts_1d[k][key_j[k]]; }
       if (randomVarsKey[deriv_index]) {
 	// --------------------------------------------------------------------
 	// derivative of All var expansion w.r.t. random var (design insertion)
 	// --------------------------------------------------------------------
 	Real Lsa_j = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++)
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it)
 	  { k = *it; Lsa_j *= poly_basis_0[k].get_value(x[k], key_j[k]); }
 	tpMeanGrad[i] += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, j);
       }
@@ -530,7 +533,7 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
 	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
 	// ---------------------------------------------------------------------
 	Real dLsa_j_dsa_i = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
 	    poly_basis_0[k].get_gradient(x[k], key_j[k]) :
@@ -595,7 +598,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
     for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
       Real wt_prod_j = 1.;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); it++) {
+      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it) {
 	k = *it;
 	wt_prod_j *= gauss_wts_1d[sm_index[k]][k][key_j[k]];
       }
@@ -604,7 +607,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	// derivative of All var expansion w.r.t. random var (design insertion)
 	// --------------------------------------------------------------------
 	Real Lsa_j = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
 	}
@@ -616,7 +619,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
 	// ---------------------------------------------------------------------
 	Real dLsa_j_dsa_i = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
 	    polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_j[k]) :
@@ -662,12 +665,12 @@ tensor_product_variance(const RealVector& x)
       // to include the ij-th term, colloc pts xi_i must be the same as xi_j
       // for the ran var subset.  In this case, wt_prod_i may be reused.
       bool include = true;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); it++)
+      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
 	if (key_i[*it] != key_j[*it])
 	  { include = false; break; }
       if (include) {
 	Real Ls_prod_j = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  Ls_prod_j *= poly_basis_0[k].get_value(x[k], key_j[k]);
 	}
@@ -711,12 +714,12 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
       // to include the ij-th term, colloc pts xi_i must be the same as xi_j
       // for the ran var subset.  In this case, wt_prod_i may be reused.
       bool include = true;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); it++)
+      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
 	if (key_i[*it] != key_j[*it])
 	  { include = false; break; }
       if (include) {
 	Real Ls_prod_j = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  Ls_prod_j *= polynomialBasis[sm_index[k]][k].get_value(x[k],key_j[k]);
 	}
@@ -770,7 +773,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
       if (randomVarsKey[deriv_index])
 	mean_grad_i += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, j);
       else {
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
 	    poly_basis_0[k].get_gradient(x[k], key_j[k]) :
@@ -784,12 +787,12 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 	// to include the jk-th term, colloc pts xi_j must be the same as xi_k
 	// for the random var subset.  In this case, wt_prod_j may be reused.
 	bool include = true;
-	for (it=randomIndices.begin(); it!=randomIndices.end(); it++)
+	for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
 	  if (key_j[*it] != key_k[*it])
 	    { include = false; break; }
 	if (include) {
 	  Real Lsa_k = 1.;
-	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	    l = *it;
 	    Lsa_k *= poly_basis_0[l].get_value(x[l], key_k[l]);
 	  }
@@ -805,7 +808,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 	    // deriv of All var exp w.r.t. nonrandom var (design augmentation)
 	    // ---------------------------------------------------------------
 	    Real dLsa_k_dsa_i = 1.;
-	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++){
+	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it){
 	      l = *it;
 	      dLsa_k_dsa_i *= (l == deriv_index) ?
 		poly_basis_0[l].get_gradient(x[l], key_k[l]):
@@ -891,7 +894,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	mean_grad_i
 	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr,coeff_index[j]);
       else {
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
 	    polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_j[k]) :
@@ -906,12 +909,12 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	// to include the jk-th term, colloc pts xi_j must be the same as xi_k
 	// for the random var subset.  In this case, wt_prod_j may be reused.
 	bool include = true;
-	for (it=randomIndices.begin(); it!=randomIndices.end(); it++)
+	for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
 	  if (key_j[*it] != key_k[*it])
 	    { include = false; break; }
 	if (include) {
 	  Real Lsa_k = 1.;
-	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++) {
+	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	    l = *it;
 	    Lsa_k *= polynomialBasis[sm_index[l]][l].get_value(x[l], key_k[l]);
 	  }
@@ -929,7 +932,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    // deriv of All var exp w.r.t. nonrandom var (design augmentation)
 	    // ---------------------------------------------------------------
 	    Real dLsa_k_dsa_i = 1.;
-	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); it++){
+	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it){
 	      l = *it;
 	      dLsa_k_dsa_i *= (l == deriv_index) ?
 		polynomialBasis[sm_index[l]][l].get_gradient(x[l], key_k[l]):
@@ -1379,54 +1382,46 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
   } 
 
   return numericMoments;
-  
 }
+
 
 void InterpPolyApproximation::compute_component_effects()
 {
-  
-  ////////////////////// Start Sort ///////////////////////////
-
   // size member variables
-  allocate_component_effects(); // TO DO: move upstream
   constituentSets.resize(sobolIndices.length());
   partialVariance.size(sobolIndices.length());
 
   // perform subset sort
   get_subsets();
 
-  Real total_mean = expansionMean;
-  Real total_variance =	expansionVariance;
-
   // initialize 
-  partialVariance[0] = std::pow(total_mean,2.0); // init with mean sq
+  partialVariance[0] = expansionMean*expansionMean; // init with mean sq
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin();
        map_iter!=sobolIndexMap.end(); ++map_iter) {
     // partialVariance[0] stores the mean; it is not a component function
     // and does not follow the procedures for obtaining variance 
-    if ((*map_iter).first != 0) {
-      partial_variance((*map_iter).first);
-      sobolIndices[(*map_iter).second]
-	= 1/total_variance*partialVariance[(*map_iter).second];
+    if (map_iter->first != 0) {
+      partial_variance(map_iter->first);
+      sobolIndices[map_iter->second]
+	= 1./expansionVariance*partialVariance[map_iter->second];
       // total indices simply identify the membership of the sobolIndices 
       // and adds it to the appropriate bin
     }
   }
 }
 
+
 void InterpPolyApproximation::compute_total_effects()
 {
-  allocate_total_effects(); // TO DO: move upstream
-  totalSobolIndices = 0; // init total indices
-
   // iterate through existing indices if all component indices are available
-  if (configOptions.vbdType == ALL_VBD) {
-    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++)
-      for (int k=0; k<numVars; k++) {
-        if ((*itr).first & (1 << k))
-          totalSobolIndices[k] += sobolIndices[(*itr).second];
+  totalSobolIndices = 0; // init total indices
+  if (configOptions.vbdControl == ALL_VBD) {
+    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); ++itr)
+      for (int k=0; k<numVars; ++k) {
+        if (itr->first & (1 << k))
+          totalSobolIndices[k] += sobolIndices[itr->second];
         totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
       }
   }
@@ -1437,7 +1432,7 @@ void InterpPolyApproximation::compute_total_effects()
     switch (configOptions.expCoeffsSolnApproach) {
       case QUADRATURE: {
         Real l_variance = expansionVariance;
-        for (int j=0; j<numVars; j++) {
+        for (int j=0; j<numVars; ++j) {
           // define set_value that includes all but index of interest
           int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
           totalSobolIndices[j]
@@ -1452,7 +1447,7 @@ void InterpPolyApproximation::compute_total_effects()
         // Smolyak recursion of anisotropic tensor products
         size_t num_smolyak_indices = sm_coeffs.size();
         // iterate each variable 
-        for (int j=0; j<numVars; j++) {
+        for (int j=0; j<numVars; ++j) {
           int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1; 
           for (size_t i=0; i<num_smolyak_indices; ++i)
             totalSobolIndices[j]
@@ -1613,16 +1608,16 @@ total_effects_integral(int set_value, size_t tp_index)
 void InterpPolyApproximation::get_subsets()
 {
   // includes the "zero" set
-  int num_subsets = sobolIndices.length(); 
+  //int num_subsets = sobolIndices.length(); 
 
   // Here we want to utilize the integer representation of the subset
   // but we want to store it in a size appropriate container
-  // so finding lower sets is given the argument of the integer rep (*.first)
-  // and stored in constituentSets in size-appropriate-index-map (*.second)
+  // so finding lower sets is given the argument of the integer rep (->first)
+  // and stored in constituentSets in size-appropriate-index-map (->second)
   for (IntIntMIter map_iter=sobolIndexMap.begin();
-       map_iter!=sobolIndexMap.end(); map_iter++) {
-    lower_sets((*map_iter).first,constituentSets[(*map_iter).second]);
-    constituentSets[(*map_iter).second].erase((*map_iter).first);
+       map_iter!=sobolIndexMap.end(); ++map_iter) {
+    lower_sets(map_iter->first, constituentSets[map_iter->second]);
+    constituentSets[map_iter->second].erase(map_iter->first);
   }
 }
 
@@ -1823,7 +1818,7 @@ void InterpPolyApproximation::partial_variance(int set_value)
   // Now subtract the contributions from constituent subsets
   IntSet::iterator itr;
   for (itr  = constituentSets[sobolIndexMap[set_value]].begin();
-       itr != constituentSets[sobolIndexMap[set_value]].end(); itr++) 
+       itr != constituentSets[sobolIndexMap[set_value]].end(); ++itr) 
     partialVariance[sobolIndexMap[set_value]]
       -= partialVariance[sobolIndexMap[*itr]];
 }

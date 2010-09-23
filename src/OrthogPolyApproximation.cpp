@@ -249,6 +249,9 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
+  allocate_component_effects();
+  allocate_total_effects();
+
   // Infer expansion formulation from quadrature_order or sparse_grid_level
   // spec, as in SC.  Preserve previous capability (quadrature_order and
   // sparse_grid_level with total-order expansions) for paper results via
@@ -525,13 +528,13 @@ void OrthogPolyApproximation::compute_coefficients()
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
       size_t i, num_tensor_grids = tpMultiIndex.size();
-      std::vector<SurrogateDataPoint> tp_data_points;
-      RealVector tp_weights, tp_coeffs; RealMatrix tp_coeff_grads;
+      std::vector<SurrogateDataPoint> tp_data_pts;
+      RealVector tp_wts, tp_coeffs; RealMatrix tp_coeff_grads;
       bool store_tp = (configOptions.refinementControl == GENERALIZED_SPARSE);
       // loop over tensor-products, forming sub-expansions, and sum them up
       for (i=0; i<num_tensor_grids; ++i) {
-	// form tp_data_points, tp_weights using collocKey et al.
-	integration_data(i, tp_data_points, tp_weights);
+	// form tp_data_pts, tp_wts using collocKey et al.
+	integration_data(i, tp_data_pts, tp_wts);
 
 	// form tp_multi_index from tpMultiIndexMap
 	//map_tensor_product_multi_index(tp_multi_index, i);
@@ -540,8 +543,8 @@ void OrthogPolyApproximation::compute_coefficients()
 	RealVector& tp_coeffs_i = (store_tp) ? tpExpansionCoeffs[i] : tp_coeffs;
 	RealMatrix& tp_grads_i
 	  = (store_tp) ? tpExpansionCoeffGrads[i] : tp_coeff_grads;
-	integrate_expansion(tpMultiIndex[i], tp_data_points, tp_weights,
-			    tp_coeffs_i, tp_grads_i);
+	integrate_expansion(tpMultiIndex[i], tp_data_pts, tp_wts, tp_coeffs_i,
+			    tp_grads_i);
 
 	// sum tensor product coeffs/grads into expansion coeffs/grads
 	combine_expansion(tpMultiIndexMap[i], tp_coeffs_i, tp_grads_i,
@@ -596,11 +599,11 @@ void OrthogPolyApproximation::increment_coefficients()
       append_multi_index(tpMultiIndex[last_index], multiIndex, true);
       numExpansionTerms = multiIndex.size();
       resize_expansion();
-      // form tp_data_points, tp_wts using collocKey et al.
-      std::vector<SurrogateDataPoint> tp_data; RealVector tp_wts;
-      integration_data(last_index, tp_data, tp_wts);
+      // form tp_data_pts, tp_wts using collocKey et al.
+      std::vector<SurrogateDataPoint> tp_data_pts; RealVector tp_wts;
+      integration_data(last_index, tp_data_pts, tp_wts);
       // form trial expansion coeffs/grads
-      integrate_expansion(tpMultiIndex[last_index], tp_data, tp_wts,
+      integrate_expansion(tpMultiIndex[last_index], tp_data_pts, tp_wts,
 			  tpExpansionCoeffs[last_index],
 			  tpExpansionCoeffGrads[last_index]);
       // sum trial expansion into expansionCoeffs/expansionCoeffGrads
@@ -768,8 +771,10 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
     tpMultiIndex.resize(num_smolyak_indices);
-    tpExpansionCoeffs.resize(num_smolyak_indices);
-    tpExpansionCoeffGrads.resize(num_smolyak_indices);
+    if (configOptions.refinementControl == GENERALIZED_SPARSE) {
+      tpExpansionCoeffs.resize(num_smolyak_indices);
+      tpExpansionCoeffGrads.resize(num_smolyak_indices);
+    }
     UShortArray quad_order(numVars), integrand_order(numVars),
       expansion_order(numVars);
     for (i=0; i<num_smolyak_indices; ++i) {
@@ -2233,25 +2238,23 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
       size_t i, num_tensor_grids = tpMultiIndex.size();
-      std::vector<SurrogateDataPoint> tp_data_points;
+      std::vector<SurrogateDataPoint> tp_data_pts;
 
-
-      RealVector tp_weights;//, tp_coeffs; RealMatrix tp_coeff_grads;
+      RealVector tp_wts;//, tp_coeffs; RealMatrix tp_coeff_grads;
       RealVector tp_numeric_moments(num_moments);
       numericMoments = 0;
       // loop over tensor-products, forming sub-expansions, and sum them up
       for (i=0; i<num_tensor_grids; ++i) {
-	// form tp_data_points, tp_weights using collocKey et al.
-	integration_data(i, tp_data_points, tp_weights);
+	// form tp_data_pts, tp_wts using collocKey et al.
+	integration_data(i, tp_data_pts, tp_wts);
         // Define centered data
-        RealVector c_function_vals(tp_data_points.size());
+        RealVector c_function_vals(tp_data_pts.size());
         // center data
-        for (j=0, cit=tp_data_points.begin(); cit!=tp_data_points.end();
-	     ++j, ++cit)
+        for (j=0, cit=tp_data_pts.begin(); cit!=tp_data_pts.end(); ++j, ++cit)
           c_function_vals[j] = cit->response_function() - expansionCoeffs[0];
         // get moments for constituent tensor grid
-        integrate_moments(tpMultiIndex[i], tp_data_points, c_function_vals,
-			  tp_weights, tp_numeric_moments);
+        integrate_moments(tpMultiIndex[i], tp_data_pts, c_function_vals,
+			  tp_wts, tp_numeric_moments);
 
 	// add contribution to sparse grid
 	for (j=0; j<num_moments;++j)
@@ -2564,17 +2567,12 @@ norm_squared_random(const UShortArray& indices)
 
 void OrthogPolyApproximation::compute_component_effects()
 {
-  // Allocation of memory for sensitivity variables done in 
-  // PolynomialApproximation::allocate_arrays()
-
   // sobolIndices are index via binary number represenation
   // e.g. if there are 5 variables -> 5 bit represenation
   // if a variable belongs to a subset \alpha, it has a value of 1; otherwise 0
   // | 0 | 0 | 0 | 0 | 1 | represents the subset that only contains variable 1
   // sobolIndices[0] is set to 1; to calculate it is redundant
 
-  // allocates memory specific to type of sensitivity indices desired
-  allocate_component_effects(); // TO DO: move upstream
   // Index the set using binary number representation
   size_t index_bin, i, j;
   // Compute a pseudo-variance that makes no distinction between probabilistic
@@ -2605,12 +2603,9 @@ void OrthogPolyApproximation::compute_component_effects()
 
 void OrthogPolyApproximation::compute_total_effects() 
 {
-  // allocates memory specific to type of sensitivity indices desired
-  allocate_total_effects(); // TO DO: move upstream
-  totalSobolIndices = 0.; 
-  // iterate through existing indices if all component indices are 
-  // available
-  if (configOptions.vbdType == ALL_VBD) {
+  // iterate through existing indices if all component indices are available
+  totalSobolIndices = 0.;
+  if (configOptions.vbdControl == ALL_VBD) {
     for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++)
       for (int k=0; k<numVars; k++) 
         if ((*itr).first & (1 << k))

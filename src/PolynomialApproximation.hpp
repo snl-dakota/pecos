@@ -71,9 +71,9 @@ private:
   /// approach for control of refinement: DEFAULT_CONTROL,
   /// TOTAL_SOBOL, SPECTRAL_DECAY, or GENERALIZED_SPARSE
   short refinementControl;
-  /// type of data computed in variance-based decomposition:
+  /// control for amount of data computed in variance-based decomposition:
   /// {NO,UNIVARIATE,ALL}_VBD
-  short vbdType;
+  short vbdControl;
 };
 
 
@@ -81,7 +81,7 @@ inline ConfigurationOptions::ConfigurationOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
   expansionCoeffGradFlag(false),
   //outputLevel(NORMAL_OUTPUT), refinementType(NO_REFINEMENT),
-  refinementControl(DEFAULT_CONTROL), vbdType(NO_VBD)
+  refinementControl(DEFAULT_CONTROL), vbdControl(NO_VBD)
 { }
 
 
@@ -92,7 +92,7 @@ ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
   expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
   expansionCoeffGradFlag(exp_grad_flag),
   //outputLevel(output_level), refinementType(refine_type),
-  refinementControl(refine_cntl), vbdType(vbd_type)
+  refinementControl(refine_cntl), vbdControl(vbd_type)
 { }
 
 
@@ -200,9 +200,9 @@ public:
   /// intermediate level since dataPoints are not defined at base level)
   size_t pop_count();
 
-  /// set expCoeffsSolnApproach
+  /// set ConfigurationOptions::expCoeffsSolnApproach
   void solution_approach(short soln_approach);
-  /// get expCoeffsSolnApproach
+  /// get ConfigurationOptions::expCoeffsSolnApproach
   short solution_approach() const;
 
   /// set ConfigurationOptions::expansionCoeffFlag
@@ -214,6 +214,16 @@ public:
   void expansion_coefficient_gradient_flag(bool grad_flag);
   /// get ConfigurationOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
+
+  /// set ConfigurationOptions::refinementControl
+  void refinement_control(short refine_cntl);
+  /// get ConfigurationOptions::refinementControl
+  short refinement_control() const;
+
+  /// set ConfigurationOptions::vbdControl
+  void vbd_control(short vbd_cntl);
+  /// get ConfigurationOptions::vbdControl
+  short vbd_control() const;
 
   /// return sobolIndexMap 
   const IntIntMap& sobol_index_map() const;
@@ -442,6 +452,22 @@ expansion_coefficient_gradient_flag(bool grad_flag)
 inline bool PolynomialApproximation::
 expansion_coefficient_gradient_flag() const
 { return configOptions.expansionCoeffGradFlag; }
+
+
+inline void PolynomialApproximation::refinement_control(short refine_cntl)
+{ configOptions.refinementControl = refine_cntl; }
+
+
+inline short PolynomialApproximation::refinement_control() const
+{ return configOptions.refinementControl; }
+
+
+inline void PolynomialApproximation::vbd_control(short vbd_cntl)
+{ configOptions.vbdControl = vbd_cntl; }
+
+
+inline short PolynomialApproximation::vbd_control() const
+{ return configOptions.vbdControl; }
 
 
 inline const IntIntMap& PolynomialApproximation::sobol_index_map() const

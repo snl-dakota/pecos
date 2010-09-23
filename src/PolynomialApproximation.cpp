@@ -25,33 +25,38 @@ void PolynomialApproximation::allocate_component_effects()
   // sobolIndices[0] is reserved for mean 
  
   // Allocate memory specific to output control
-  if (configOptions.expansionCoeffFlag && sobolIndices.empty()) {
+  if (configOptions.vbdControl && configOptions.expansionCoeffFlag &&
+      sobolIndices.empty()) {
     int i, index_length;
-    switch (configOptions.vbdType) {
+    switch (configOptions.vbdControl) {
     case UNIVARIATE_VBD: // main effects only
       index_length = (int)numVars+1;
       // map binary to integer main effects form
-      sobolIndexMap[0] = 0; 
+      sobolIndexMap[0] = 0;
       for (i=1; i<index_length; ++i) 
-	sobolIndexMap[int(std::pow(2.,i-1))] = i; 
+	sobolIndexMap[int(std::pow(2.,i-1))] = i;
+      break;
     case ALL_VBD: // main + interaction effects
       // don't recompute total separately; rather sum from component effects
       index_length = (int)std::pow(2.,(int)numVars);
-      sobolIndexMap[0] = 0; 
-      for (int i=0; i<index_length; ++i) 
+      for (i=0; i<index_length; ++i) 
 	sobolIndexMap[i] = i; // already in binary notation
+      break;
     }
     sobolIndices.sizeUninitialized(index_length);
   }
 }
 
+
 void PolynomialApproximation::allocate_total_effects()
 {
   // number of total indices independent of number of component indices
-  if (configOptions.expansionCoeffFlag && totalSobolIndices.empty())
+  if (configOptions.vbdControl && configOptions.expansionCoeffFlag &&
+      totalSobolIndices.empty())
     totalSobolIndices.sizeUninitialized(numVars);
 }
-  
+
+
 /** Return the number of terms in a tensor-product expansion.  For
     isotropic and anisotropic expansion orders, calculation of the
     number of expansion terms is straightforward: Prod(p_i + 1). */
