@@ -2577,27 +2577,28 @@ void OrthogPolyApproximation::compute_component_effects()
   size_t index_bin, i, j;
   // Compute a pseudo-variance that makes no distinction between probabilistic
   // variables and non-probabilistic variables
-  Real p_var = 0;
+  Real p_var = 0, p_var_i;
   for (i=1; i<numExpansionTerms; i++) 
     p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
 
   // iterate through multiIndex and store sensitivities
-  sobolIndices      = 0.; // initialize
-  sobolIndices[0]   = 1.; // just a place holder; zero index is never invoked
+  sobolIndices    = 0.; // initialize
+  sobolIndices[0] = 1.; // just a place holder; zero index is never invoked
   for (i=1; i<numExpansionTerms; ++i) {
     index_bin = 0;
-    Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
+    p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
       expansionCoeffs(i) / p_var;
-    for (j=0; j<numVars; ++j) {
-      if (multiIndex[i][j]) {
-	// convert this subset multiIndex[i] into binary number
+    for (j=0; j<numVars; ++j)
+      if (multiIndex[i][j]) // convert this subset into binary number
 	index_bin += (size_t)pow(2.,(int)j);
-      }
-    }
     // If term is main effect (exists in map), keep; otherwise, discard
     if (sobolIndexMap.find(index_bin) != sobolIndexMap.end())
       sobolIndices[sobolIndexMap[index_bin]] += p_var_i;
   }
+#ifdef DEBUG
+  PCout << "In OrthogPolyApproximation::compute_component_effects(), "
+	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
+#endif // DEBUG
 }
 
 
@@ -2606,7 +2607,7 @@ void OrthogPolyApproximation::compute_total_effects()
   // iterate through existing indices if all component indices are available
   totalSobolIndices = 0.;
   if (configOptions.vbdControl == ALL_VBD) {
-    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); itr++)
+    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); ++itr)
       for (int k=0; k<numVars; k++) 
         if (itr->first & (1 << k))
           totalSobolIndices[k] += sobolIndices[itr->second];
@@ -2616,7 +2617,7 @@ void OrthogPolyApproximation::compute_total_effects()
   else {
     // Index the set using binary number representation
     size_t index_bin, i, j;
-    Real p_var = 0;
+    Real p_var = 0, p_var_i;
     for (i=1; i<numExpansionTerms; i++) 
       p_var += norm_squared(multiIndex[i]) * expansionCoeffs(i)
 	* expansionCoeffs(i);
@@ -2625,7 +2626,7 @@ void OrthogPolyApproximation::compute_total_effects()
     // and more computationally efficient than computing via ANOVA operators 
     for (i=1; i<numExpansionTerms; ++i) {
       index_bin = 0;
-      Real p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
+      p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
         expansionCoeffs(i) / p_var;
       for (j=0; j<numVars; ++j) {
         if (multiIndex[i][j]) {
@@ -2638,6 +2639,10 @@ void OrthogPolyApproximation::compute_total_effects()
       }
     }
   }
+#ifdef DEBUG
+  PCout << "In OrthogPolyApproximation::compute_total_effects(), "
+	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
+#endif // DEBUG
 }
 
 

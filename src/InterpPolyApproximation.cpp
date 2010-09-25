@@ -1387,29 +1387,35 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
 
 void InterpPolyApproximation::compute_component_effects()
 {
-  // size member variables
-  constituentSets.resize(sobolIndices.length());
-  partialVariance.size(sobolIndices.length());
-
   // perform subset sort
+  constituentSets.resize(sobolIndices.length());
   get_subsets();
 
-  // initialize 
-  partialVariance[0] = expansionMean*expansionMean; // init with mean sq
+  // initialize partialVariance
+  if (partialVariance.empty())
+    partialVariance.sizeUninitialized(sobolIndices.length());
+  partialVariance = 0.;
+
+  Real mean = get_mean(), total_variance = get_variance();
+  partialVariance[0] = mean*mean; // init with mean sq
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin();
        map_iter!=sobolIndexMap.end(); ++map_iter) {
     // partialVariance[0] stores the mean; it is not a component function
     // and does not follow the procedures for obtaining variance 
-    if (map_iter->first != 0) {
+    if (map_iter->first) {
       partial_variance(map_iter->first);
       sobolIndices[map_iter->second]
-	= 1./expansionVariance*partialVariance[map_iter->second];
+	= partialVariance[map_iter->second]/total_variance;
       // total indices simply identify the membership of the sobolIndices 
       // and adds it to the appropriate bin
     }
   }
+#ifdef DEBUG
+  PCout << "In InterpPolyApproximation::compute_component_effects(), "
+	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
+#endif // DEBUG
 }
 
 
@@ -1429,36 +1435,40 @@ void InterpPolyApproximation::compute_total_effects()
   // approach parallels partial_variance_integral where the algorithm is 
   // separated by integration approach
   else {
+    Real total_variance = get_variance();
+    int j, set_value;
     switch (configOptions.expCoeffsSolnApproach) {
       case QUADRATURE: {
-        Real l_variance = expansionVariance;
-        for (int j=0; j<numVars; ++j) {
+        for (j=0; j<numVars; ++j) {
           // define set_value that includes all but index of interest
-          int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
+          set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
           totalSobolIndices[j]
-	    = std::abs(1 - (total_effects_integral(set_value)/l_variance));
+	    = std::abs(1 - (total_effects_integral(set_value)/total_variance));
         }
         break;
       }
       case SPARSE_GRID: {
-        Real l_variance = expansionVariance;
         SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
         const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
         // Smolyak recursion of anisotropic tensor products
-        size_t num_smolyak_indices = sm_coeffs.size();
+        size_t i, num_smolyak_indices = sm_coeffs.size();
         // iterate each variable 
-        for (int j=0; j<numVars; ++j) {
-          int set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1; 
-          for (size_t i=0; i<num_smolyak_indices; ++i)
+        for (j=0; j<numVars; ++j) {
+          set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1; 
+          for (i=0; i<num_smolyak_indices; ++i)
             totalSobolIndices[j]
 	      += sm_coeffs[i]*total_effects_integral(set_value,i);
           totalSobolIndices[j]
-	    = std::abs(1 - (totalSobolIndices[j]/l_variance));
+	    = std::abs(1 - (totalSobolIndices[j]/total_variance));
         }
         break;
       }
     }
   }
+#ifdef DEBUG
+  PCout << "In InterpPolyApproximation::compute_total_effects(), "
+	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
+#endif // DEBUG
 }
 
 

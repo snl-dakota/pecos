@@ -193,7 +193,7 @@ private:
   /// the constituent subsets for each superset
   std::vector<IntSet> constituentSets;
   /// the partialVariances of subset functions f_alpha
-  RealVector partialVariance; 
+  RealVector partialVariance;
 
   /// 2D array of one-dimensional basis polynomial objects which are used in
   /// constructing the multivariate orthogonal/interpolation polynomials.
