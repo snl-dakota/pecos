@@ -17,6 +17,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
+//#define INTERPOLATION_TEST
 
 
 namespace Pecos {
@@ -175,6 +176,17 @@ void InterpPolyApproximation::compute_coefficients()
     if (configOptions.expansionCoeffGradFlag)
       Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
   }
+
+#ifdef INTERPOLATION_TEST
+  // SC should accurately interpolate the collocation data for TPQ and
+  // SSG with fully nested rules, but will exhibit interpolation error
+  // for SSG with other rules.
+  it = dataPoints.begin();
+  for (i=offset; i<numCollocPts; ++i, ++it)
+    PCout << "Colloc pt " << i+1 << ": coeff = " << expansionCoeffs[i]
+	  << " interpolation error = " << std::abs(expansionCoeffs[i] -
+	     get_value(it->continuous_variables())) << '\n';
+#endif // INTERPOLATION_TEST
 }
 
 
