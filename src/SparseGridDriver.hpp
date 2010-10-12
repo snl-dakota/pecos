@@ -100,21 +100,28 @@ public:
   /// update axisLowerBounds
   void update_axis_lower_bounds();
 
-  /// generalized sparse grid function for ...
+  /// initializes old/active/evaluation sets for use within the 
+  /// generalized sparse grid procedure
   void initialize_sets();
-  /// generalized sparse grid function for ...
+  /// update activeMultiIndex from the passed trial set for use within
+  /// the generalized sparse grid procedure
   void add_active_neighbors(const UShortArray& set);
-  /// generalized sparse grid function for ...
+  /// update refSmolyakCoeffs for use within the generalized sparse
+  /// grid procedure
   void update_reference();
-  /// generalized sparse grid function for ...
+  /// update smolyakMultiIndex with a new trial set for use within the
+  /// generalized sparse grid procedure
   void push_trial_set(const UShortArray& set);
   /// calls compute_tensor_grid() for the index set from push_trial_set()
   void compute_trial_grid();
-  /// generalized sparse grid function for ...
+  /// remove the previously pushed trial set from smolyakMultiIndex
+  /// during the course of the generalized sparse grid procedure
   void pop_trial_set();
-  /// generalized sparse grid function for ...
+  /// accept the best of several trial sets and update old/active
+  /// within the generalized sparse grid procedure
   void update_sets(const UShortArray& set_star);
-  /// generalized sparse grid function for ...
+  /// accept all remaining trial sets within the generalized sparse
+  /// grid procedure
   void finalize_sets();
 
   /// converts an array of sparse grid levels to an array of

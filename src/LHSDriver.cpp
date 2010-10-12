@@ -1006,7 +1006,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   // order with all variables for sample 1, followed by all variables for
   // sample 2, etc.  Teuchos::SerialDenseMatrix using column-major memory layout
   // as well, so use samples(var#,sample#) or samples[sample#][var#] for access.
-  if (samples.empty())
+  if (samples.numRows() != num_av || samples.numCols() != num_samples)
     samples.shapeUninitialized(num_av, num_samples);
   if (sampleRanksMode && sample_ranks.empty()) {
     if (sampleRanksMode == SET_RANKS || sampleRanksMode == SET_GET_RANKS) {

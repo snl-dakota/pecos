@@ -224,11 +224,20 @@ void SparseGridDriver::update_collocation_arrays(size_t start_index)
     PolynomialApproximation::tensor_product_multi_index(quad_order, key_i);
     num_tp_pts = key_i.size();
     coeff_map_i.resize(num_tp_pts);
-    for (j=0, index=numCollocPts; j<num_tp_pts; ++j, ++index) {// prior to sgmgg
+    // prior to sgmgg utilities:
+    for (j=0, index=numCollocPts; j<num_tp_pts; ++j, ++index) {
       uniqueIndexMapping.push_back(index);
       coeff_map_i[j] = index;
     }
-    numCollocPts += num_tp_pts; // for now, prior to sgmgg duplicate management
+    numCollocPts += num_tp_pts;
+    /* with sgmgg utilities:
+    webbur::point_radial_tol_unique_index_inc(numVars, numCollocPts,
+      a1, num_tp_pts, a2, duplicateTol, seed, num_unique_al, num_unique_a2,
+      new_unique_index_map.values(), xndu);
+    for (j=0, cntr = numCollocPts; j<num_tp_pts; ++j, ++cntr)
+      coeff_map_i[j] = uniqueIndexMapping[cntr];
+    numCollocPts += new_unique_pts;
+    */
   }
 }
 
