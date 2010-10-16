@@ -144,7 +144,7 @@ public:
   /// return the gradient of the expansion mean for a given parameter vector
   /// and given DVV, treating a subset of the variables as random
   virtual const RealVector& get_mean_gradient(const RealVector& x,
-					      const UIntArray& dvv) = 0;
+					      const SizetArray& dvv) = 0;
 
   /// return moments 1-4
   virtual const RealVector& get_numeric_moments() = 0;
@@ -160,7 +160,7 @@ public:
   /// return the gradient of the expansion variance for a given parameter
   /// vector and given DVV, treating a subset of the variables as random
   virtual const RealVector& get_variance_gradient(const RealVector& x,
-						  const UIntArray& dvv) = 0;
+						  const SizetArray& dvv) = 0;
 
   /// return the variance of the expansion, treating all variables as random
   virtual const Real& get_covariance(const RealVector& exp_coeffs_2) = 0;
@@ -257,7 +257,7 @@ public:
   static void total_order_multi_index(const UShortArray& upper_bound,
 				      UShort2DArray& multi_index,
 				      short lower_bound_offset = -1,
-				      unsigned int max_terms = UINT_MAX);
+				      size_t max_terms = UINT_MAX);
 
   /// utility function for incrementing a set of multidimensional indices
   static void increment_indices(UShortArray& indices, const UShortArray& limits,

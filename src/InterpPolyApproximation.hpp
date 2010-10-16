@@ -72,7 +72,7 @@ protected:
   const RealVector& get_gradient(const RealVector& x);
   /// retrieve the response expansion gradient for a given parameter vector
   /// and given DVV
-  const RealVector& get_gradient(const RealVector& x, const UIntArray& dvv);
+  const RealVector& get_gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the mean of the expansion, treating all variables as random
   const Real& get_mean();
@@ -85,7 +85,7 @@ protected:
   /// return the gradient of the expansion mean for a given parameter vector
   /// and given DVV, treating a subset of the variables as random
   const RealVector& get_mean_gradient(const RealVector& x,
-				      const UIntArray& dvv);
+				      const SizetArray& dvv);
   /// Compute moments of response numerically 
   const RealVector& get_numeric_moments();
 
@@ -100,7 +100,7 @@ protected:
   /// return the gradient of the expansion variance for a given parameter
   /// vector and given DVV, treating a subset of the variables as random
   const RealVector& get_variance_gradient(const RealVector& x,
-					  const UIntArray& dvv);
+					  const SizetArray& dvv);
 
   /// return the covariance of the expansion, treating all variables as random
   const Real& get_covariance(const RealVector& exp_coeffs_2);
@@ -135,11 +135,11 @@ private:
   /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid for given DVV; contributes to get_gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
-					    const UIntArray& dvv);
+					    const SizetArray& dvv);
   /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid for given DVV; contributes to get_gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
-    size_t tp_index, const UIntArray& dvv);
+    size_t tp_index, const SizetArray& dvv);
 
   /// compute the mean of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_mean(x)
@@ -151,11 +151,11 @@ private:
   /// compute the mean of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_mean(x)
   const RealVector& tensor_product_mean_gradient(const RealVector& x,
-						 const UIntArray& dvv);
+						 const SizetArray& dvv);
   /// compute the mean of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_mean(x)
   const RealVector& tensor_product_mean_gradient(const RealVector& x,
-    size_t tp_index, const UIntArray& dvv);
+    size_t tp_index, const SizetArray& dvv);
 
   /// compute the variance of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_variance(x)
@@ -167,11 +167,11 @@ private:
   /// compute the variance of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_variance(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
-						     const UIntArray& dvv);
+						     const SizetArray& dvv);
   /// compute the variance of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_variance(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
-    size_t tp_index, const UIntArray& dvv);
+    size_t tp_index, const SizetArray& dvv);
 
   /// performs sorting to store constituent subsets (constituentSets)
   void get_subsets();

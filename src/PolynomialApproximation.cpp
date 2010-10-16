@@ -170,7 +170,7 @@ total_order_terms(const UShortArray& upper_bound, short lower_bound_offset)
 void PolynomialApproximation::
 total_order_multi_index(const UShortArray& upper_bound,
 			UShort2DArray& multi_index, short lower_bound_offset, 
-			unsigned int max_terms)
+			size_t max_terms)
 {
   // populate multi_index: implementation follows ordering of Eq. 4.1 in
   // [Xiu and Karniadakis, 2002].

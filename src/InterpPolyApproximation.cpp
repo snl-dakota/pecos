@@ -390,7 +390,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
 
 /** Overloaded version supporting tensor-product quadrature. */
 const RealVector& InterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const UIntArray& dvv)
+tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
   const UShort2DArray& key        = tpq_driver->collocation_key();
@@ -421,7 +421,7 @@ tensor_product_gradient(const RealVector& x, const UIntArray& dvv)
 /** Overloaded version supporting Smolyak sparse grids. */
 const RealVector& InterpPolyApproximation::
 tensor_product_gradient(const RealVector& x, size_t tp_index,
-			const UIntArray& dvv)
+			const SizetArray& dvv)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
   const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
@@ -500,7 +500,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
 
 /** Overloaded version supporting tensor-product quadrature. */
 const RealVector& InterpPolyApproximation::
-tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
+tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
@@ -565,7 +565,7 @@ tensor_product_mean_gradient(const RealVector& x, const UIntArray& dvv)
 /** Overloaded version supporting Smolyak sparse grids. */
 const RealVector& InterpPolyApproximation::
 tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
-			     const UIntArray& dvv)
+			     const SizetArray& dvv)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
   const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
@@ -747,7 +747,7 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
 
 /** Overloaded version supporting tensor-product quadrature. */
 const RealVector& InterpPolyApproximation::
-tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
+tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
@@ -847,7 +847,7 @@ tensor_product_variance_gradient(const RealVector& x, const UIntArray& dvv)
 /** Overloaded version supporting Smolyak sparse grids. */
 const RealVector& InterpPolyApproximation::
 tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
-				 const UIntArray& dvv)
+				 const SizetArray& dvv)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
   const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
@@ -1036,7 +1036,7 @@ const RealVector& InterpPolyApproximation::get_gradient(const RealVector& x)
 
 
 const RealVector& InterpPolyApproximation::
-get_gradient(const RealVector& x, const UIntArray& dvv)
+get_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
@@ -1162,7 +1162,7 @@ const RealVector& InterpPolyApproximation::get_mean_gradient()
     expansion: derivatives are evaluated as described above) and some
     are inserted (derivatives are obtained from expansionCoeffGrads). */
 const RealVector& InterpPolyApproximation::
-get_mean_gradient(const RealVector& x, const UIntArray& dvv)
+get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
@@ -1320,7 +1320,7 @@ const RealVector& InterpPolyApproximation::get_variance_gradient()
     expansion) and some are inserted (derivatives are obtained from
     expansionCoeffGrads). */
 const RealVector& InterpPolyApproximation::
-get_variance_gradient(const RealVector& x, const UIntArray& dvv)
+get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {

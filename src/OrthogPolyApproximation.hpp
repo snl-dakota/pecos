@@ -152,7 +152,7 @@ protected:
   const RealVector& get_gradient(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
   /// and given DVV
-  const RealVector& get_gradient(const RealVector& x, const UIntArray& dvv);
+  const RealVector& get_gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the mean of the PCE, treating all variables as random
   const Real& get_mean();
@@ -165,7 +165,7 @@ protected:
   /// return the gradient of the PCE mean for a given parameter vector
   /// and given DVV, treating a subset of the variables as random
   const RealVector& get_mean_gradient(const RealVector& x,
-				      const UIntArray& dvv);
+				      const SizetArray& dvv);
   const RealVector& get_numeric_moments();
 
 
@@ -180,7 +180,7 @@ protected:
   /// return the gradient of the PCE variance for a given parameter
   /// vector and given DVV, treating a subset of the variables as random
   const RealVector& get_variance_gradient(const RealVector& x,
-					  const UIntArray& dvv);
+					  const SizetArray& dvv);
 
   /// return the covariance of the PCE, treating all variables as random
   const Real& get_covariance(const RealVector& exp_coeffs_2);
@@ -264,7 +264,7 @@ private:
   /// calculate a particular multivariate orthogonal polynomial gradient with
   /// respect to specified dvv and evaluated at a particular parameter set
   const RealVector& multivariate_polynomial_gradient(const RealVector& xi,
-    const UShortArray& indices, const UIntArray& dvv);
+    const UShortArray& indices, const SizetArray& dvv);
 
   /// computes the chaosCoeffs via linear regression
   /// (expCoeffsSolnApproach is REGRESSION)
@@ -528,7 +528,7 @@ multivariate_polynomial_gradient(const RealVector& xi,
 inline const RealVector& OrthogPolyApproximation::
 multivariate_polynomial_gradient(const RealVector& xi,
 				 const UShortArray& indices,
-				 const UIntArray& dvv)
+				 const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_deriv_vars = dvv.size();
   if (mvpGradient.length() != num_deriv_vars)

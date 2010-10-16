@@ -1070,8 +1070,8 @@ void NatafTransformation::trans_correlations()
     x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealVector& x_vars, const UIntArray& x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealVector& x_vars, const SizetArray& x_dvv,
+		  SizetMultiArrayConstView cv_ids)
 {
   RealMatrix jacobian_xu;
   jacobian_dX_dU(x_vars, jacobian_xu);
@@ -1087,8 +1087,8 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     pulled outside response function loops. */
 void NatafTransformation::
 trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
-		  const RealMatrix& jacobian_xu, const UIntArray& x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealMatrix& jacobian_xu, const SizetArray& x_dvv,
+		  SizetMultiArrayConstView cv_ids)
 {
   // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
   int x_len = jacobian_xu.numRows();
@@ -1138,8 +1138,8 @@ trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
     the Jacobian du/dx.  x_vars is the vector of random variables in x-space. */
 void NatafTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealVector& x_vars, const UIntArray& x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealVector& x_vars, const SizetArray& x_dvv,
+		  SizetMultiArrayConstView cv_ids)
 {
   RealMatrix jacobian_ux;
   jacobian_dU_dX(x_vars, jacobian_ux);
@@ -1154,8 +1154,8 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     function index and can be pulled outside response function loops. */
 void NatafTransformation::
 trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
-		  const RealMatrix& jacobian_ux, const UIntArray& x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealMatrix& jacobian_ux, const SizetArray& x_dvv,
+		  SizetMultiArrayConstView cv_ids)
 {
   // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
   int u_len = jacobian_ux.numRows();
@@ -1207,9 +1207,9 @@ trans_grad_U_to_X(const RealVector& fn_grad_u, RealVector& fn_grad_x,
     variables in x-space. */
 void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
-		  const RealVector& x_vars, const UIntArray& x_dvv,
-		  UIntMultiArrayConstView cv_ids,
-		  UIntMultiArrayConstView acv_ids,
+		  const RealVector& x_vars, const SizetArray& x_dvv,
+		  SizetMultiArrayConstView cv_ids,
+		  SizetMultiArrayConstView acv_ids,
 		  const SizetArray& acv_map1_indices,
 		  const ShortArray& acv_map2_targets)
 {
@@ -1230,9 +1230,9 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
     outside response function loops. */
 void NatafTransformation::
 trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
-		  const RealMatrix& jacobian_xs, const UIntArray& x_dvv,
-		  UIntMultiArrayConstView cv_ids,
-		  UIntMultiArrayConstView acv_ids,
+		  const RealMatrix& jacobian_xs, const SizetArray& x_dvv,
+		  SizetMultiArrayConstView cv_ids,
+		  SizetMultiArrayConstView acv_ids,
 		  const SizetArray& acv_map1_indices,
 		  const ShortArray& acv_map2_targets)
 {
@@ -1328,7 +1328,7 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
 void NatafTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealVector& x_vars, const RealVector& fn_grad_x,
-		  const UIntArray& x_dvv, UIntMultiArrayConstView cv_ids)
+		  const SizetArray& x_dvv, SizetMultiArrayConstView cv_ids)
 {
   RealMatrix jacobian_xu;
   jacobian_dX_dU(x_vars, jacobian_xu);
@@ -1372,8 +1372,8 @@ void NatafTransformation::
 trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
 		  const RealMatrix& jacobian_xu,
 		  const RealSymMatrixArray& hessian_xu,
-		  const RealVector& fn_grad_x, const UIntArray& x_dvv,
-		  UIntMultiArrayConstView cv_ids)
+		  const RealVector& fn_grad_x, const SizetArray& x_dvv,
+		  SizetMultiArrayConstView cv_ids)
 {
   // Jacobian dimensions = length of ranVarTypesX/U = model.cv()
   int  x_len   = jacobian_xu.numRows();
@@ -1930,7 +1930,8 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     computing statistical design sensitivities for OUU. */
 void NatafTransformation::
 jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
-	       UIntMultiArrayConstView cv_ids, UIntMultiArrayConstView acv_ids,
+	       SizetMultiArrayConstView cv_ids,
+	       SizetMultiArrayConstView acv_ids,
 	       const SizetArray& acv_map1_indices,
 	       const ShortArray& acv_map2_targets)
 {

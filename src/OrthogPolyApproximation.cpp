@@ -2007,7 +2007,7 @@ const RealVector& OrthogPolyApproximation::get_gradient(const RealVector& x)
 
 
 const RealVector& OrthogPolyApproximation::
-get_gradient(const RealVector& x, const UIntArray& dvv)
+get_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
@@ -2126,7 +2126,7 @@ const RealVector& OrthogPolyApproximation::get_mean_gradient()
     expansion: derivatives are evaluated as described above) and some
     are inserted (derivatives are obtained from expansionCoeffGrads). */
 const RealVector& OrthogPolyApproximation::
-get_mean_gradient(const RealVector& x, const UIntArray& dvv)
+get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_deriv_vars = dvv.size();
   if (expansionMeanGrad.length() != num_deriv_vars)
@@ -2405,7 +2405,7 @@ const RealVector& OrthogPolyApproximation::get_variance_gradient()
     expansion) and some are inserted (derivatives are obtained from
     expansionCoeffGrads). */
 const RealVector& OrthogPolyApproximation::
-get_variance_gradient(const RealVector& x, const UIntArray& dvv)
+get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {

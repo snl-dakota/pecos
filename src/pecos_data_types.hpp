@@ -71,7 +71,6 @@ typedef std::vector<RealArray>      Real2DArray;
 typedef std::vector<Real2DArray>    Real3DArray;
 typedef std::vector<int>            IntArray;
 typedef std::vector<IntArray>       Int2DArray;
-typedef std::vector<unsigned int>   UIntArray;
 typedef std::vector<short>          ShortArray;
 typedef std::vector<unsigned short> UShortArray;
 typedef std::vector<UShortArray>    UShort2DArray;
@@ -95,10 +94,10 @@ typedef std::map<int, short>        IntShortMap;
 typedef std::map<int, int>          IntIntMap;
 typedef std::map<int, RealVector>   IntRealVectorMap;
 
-typedef boost::multi_array_types::index_range     idx_range;
-typedef boost::multi_array<unsigned int, 1>       UIntMultiArray;
-typedef UIntMultiArray::array_view<1>::type       UIntMultiArrayView;
-typedef UIntMultiArray::const_array_view<1>::type UIntMultiArrayConstView;
+typedef boost::multi_array_types::index_range      idx_range;
+typedef boost::multi_array<size_t, 1>              SizetMultiArray;
+typedef SizetMultiArray::array_view<1>::type       SizetMultiArrayView;
+typedef SizetMultiArray::const_array_view<1>::type SizetMultiArrayConstView;
 
 // ---------
 // Iterators
@@ -112,18 +111,17 @@ typedef IntIntMap::iterator         IntIntMIter;
 typedef IntIntMap::const_iterator   IntIntMCIter;
 
 
-/// equality operator for UIntArray and UIntMultiArrayConstView
-inline bool operator==(const UIntArray& ua, UIntMultiArrayConstView umav)
+/// equality operator for SizetArray and SizetMultiArrayConstView
+inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
 {
   // Check for equality in array lengths
-  size_t len = ua.size();
-  if ( umav.size() != len )
+  size_t i, len = sa.size();
+  if ( smav.size() != len )
     return false;
 
-  // Check each unsigned integer
-  size_t i;
+  // Check each size_t
   for (i=0; i<len; i++)
-    if ( umav[i] != ua[i] )
+    if ( smav[i] != sa[i] )
       return false;
 
   return true;
