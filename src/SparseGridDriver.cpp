@@ -231,12 +231,15 @@ void SparseGridDriver::update_collocation_arrays(size_t start_index)
     }
     numCollocPts += num_tp_pts;
     /* with sgmgg utilities:
-    webbur::point_radial_tol_unique_index_inc(numVars, numCollocPts,
-      a1, num_tp_pts, a2, duplicateTol, seed, num_unique_al, num_unique_a2,
-      new_unique_index_map.values(), xndu);
+    int num_unique2;
+    // TO DO: need z, r1, indx1, unique1, undx1
+    webbur::point_radial_tol_unique_index_inc2(numVars, numCollocPts,
+      a1, num_tp_pts, a2, duplicateTol, z, r1, indx1, unique1, numCollocPts,
+      undx1, uniqueIndexMapping.values(), r2, indx2, unique2, num_unique2,
+      undx2, new_unique_index_map.values());
     for (j=0, cntr = numCollocPts; j<num_tp_pts; ++j, ++cntr)
       coeff_map_i[j] = uniqueIndexMapping[cntr];
-    numCollocPts += new_unique_pts;
+    numCollocPts += new_unique2;
     */
   }
 }
