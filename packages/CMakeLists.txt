@@ -1,6 +1,6 @@
-if(NOT USE_SYSTEM_TEUCHOS)
-  add_subdirectory(teuchos)
-endif()
+#if(NOT USE_SYSTEM_TEUCHOS)
+#  add_subdirectory(teuchos)
+#endif()
 
 include(ExternalProject)
 
