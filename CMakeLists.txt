@@ -106,8 +106,6 @@ if(HAVE_SPARSE_GRID)
   set(SUBLIBS ${SUBLIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
 
-add_subdirectory(packages)
-
 # first probe for system-installed Trilinos
 # this will respect Trilinos_DIR if already set
 find_package(Trilinos QUIET)
@@ -126,6 +124,9 @@ if ( NOT Trilinos_DIR )
 else()
   message( "Using system trilinos in ${Trilinos_DIR}" )
 endif()
+
+
+add_subdirectory(packages)
 
 add_subdirectory(src)
 
