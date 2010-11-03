@@ -1453,7 +1453,7 @@ void InterpPolyApproximation::compute_total_effects()
       case QUADRATURE: {
         for (j=0; j<numVars; ++j) {
           // define set_value that includes all but index of interest
-          set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1;
+          set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1;
           totalSobolIndices[j]
 	    = std::abs(1 - (total_effects_integral(set_value)/total_variance));
         }
@@ -1466,7 +1466,7 @@ void InterpPolyApproximation::compute_total_effects()
         size_t i, num_smolyak_indices = sm_coeffs.size();
         // iterate each variable 
         for (j=0; j<numVars; ++j) {
-          set_value = std::pow(2.,int(numVars))-std::pow(2.,j) - 1; 
+          set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
           for (i=0; i<num_smolyak_indices; ++i)
             totalSobolIndices[j]
 	      += sm_coeffs[i]*total_effects_integral(set_value,i);
