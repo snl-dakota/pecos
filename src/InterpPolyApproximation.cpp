@@ -73,9 +73,8 @@ void InterpPolyApproximation::allocate_arrays()
 
     //bool update_exp_form = (quad_order != quadOrderPrev);
     // *** TO DO: capture updates to parameterized/numerical polynomials
-    //if (update_exp_form)
-      // collocKey currently updated in TensorProductDriver::compute_grid()
-      //tpq_driver->allocate_collocation_arrays();
+    //if (update_exp_form) {
+    //}
 
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
     bool update_basis_form = (quad_order != quadOrderPrev);
@@ -108,13 +107,11 @@ void InterpPolyApproximation::allocate_arrays()
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     unsigned short    ssg_level  = ssg_driver->level();
 
-    bool update_exp_form
-      = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
+    //bool update_exp_form
+    //  = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
     // *** TO DO: capture updates to parameterized/numerical polynomials
-    if (update_exp_form) {
-      ssg_driver->allocate_smolyak_arrays();
-      ssg_driver->allocate_collocation_arrays();
-    }
+    //if (update_exp_form) {
+    //}
 
     // Ignore weights since they only reduce the interpolation depth from the
     // level and the basis update uses a coarse increment based on level.  This
@@ -311,11 +308,10 @@ const Real& InterpPolyApproximation::tensor_product_value(const RealVector& x)
 const Real& InterpPolyApproximation::
 tensor_product_value(const RealVector& x, size_t tp_index)
 {
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key     = ssg_driver->collocation_key()[tp_index];
-  const UShortArray& sm_index  = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray& coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
+  SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
+  const UShortArray&    sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&       key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
 
   tpValue = 0.;
   size_t i, j, num_colloc_pts = key.size();
@@ -324,7 +320,7 @@ tensor_product_value(const RealVector& x, size_t tp_index)
     Real L_i = 1.0;
     for (j=0; j<numVars; ++j)
       L_i *= polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
-    tpValue += expansionCoeffs[coeff_index[i]] * L_i;
+    tpValue += expansionCoeffs[colloc_index[i]] * L_i;
   }
   return tpValue;
 }
@@ -362,11 +358,10 @@ tensor_product_gradient(const RealVector& x)
 const RealVector& InterpPolyApproximation::
 tensor_product_gradient(const RealVector& x, size_t tp_index)
 {
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
+  SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
+  const UShortArray&    sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&       key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
 
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
@@ -374,7 +369,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
   size_t i, j, k, num_colloc_pts = key.size();
   for (i=0; i<num_colloc_pts; ++i) {
     const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionCoeffs[coeff_index[i]];
+    const Real&        coeff_i = expansionCoeffs[colloc_index[i]];
     for (j=0; j<numVars; ++j) {
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
@@ -423,11 +418,10 @@ const RealVector& InterpPolyApproximation::
 tensor_product_gradient(const RealVector& x, size_t tp_index,
 			const SizetArray& dvv)
 {
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
+  SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
+  const UShortArray&    sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&       key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
 
   size_t num_deriv_vars = dvv.size();
   if (tpGradient.length() != num_deriv_vars)
@@ -436,7 +430,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
   size_t i, j, k, deriv_index, num_colloc_pts = key.size();
   for (i=0; i<num_colloc_pts; ++i) {
     const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionCoeffs[coeff_index[i]];
+    const Real&        coeff_i = expansionCoeffs[colloc_index[i]];
     for (j=0; j<num_deriv_vars; ++j) {
       deriv_index = dvv[j] - 1; // requires an "All" view
       Real term_i_grad_j = 1.0;
@@ -478,11 +472,10 @@ const Real& InterpPolyApproximation::
 tensor_product_mean(const RealVector& x, size_t tp_index)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   tpMean = 0.;
   size_t i, j, num_colloc_pts = key.size();
@@ -492,7 +485,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
     for (j=0; j<numVars; ++j)
       prod_i *= (randomVarsKey[j]) ? gauss_wts_1d[sm_index[j]][j][key_i[j]] :
 	polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
-    tpMean += expansionCoeffs[coeff_index[i]] * prod_i;
+    tpMean += expansionCoeffs[colloc_index[i]] * prod_i;
   }
   return tpMean;
 }
@@ -568,11 +561,10 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 			     const SizetArray& dvv)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   // -------------------------------------------------------------------
   // Mixed variable key:
@@ -624,7 +616,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
 	}
 	tpMeanGrad[i]
-	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, coeff_index[j]);
+	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, colloc_index[j]);
       }
       else {
 	// ---------------------------------------------------------------------
@@ -638,7 +630,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	    polynomialBasis[sm_index[k]][k].get_value(x[k],    key_j[k]);
 	}
 	tpMeanGrad[i]
-	  += expansionCoeffs[coeff_index[j]] * wt_prod_j * dLsa_j_dsa_i;
+	  += expansionCoeffs[colloc_index[j]] * wt_prod_j * dLsa_j_dsa_i;
       }
     }
     if (randomVarsKey[deriv_index]) // deriv w.r.t. design var insertion
@@ -701,11 +693,10 @@ const Real& InterpPolyApproximation::
 tensor_product_variance(const RealVector& x, size_t tp_index)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   size_t i, j, k, num_colloc_pts = key.size();
   Real mean = 0.;
@@ -719,7 +710,7 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
 	wt_prod_i *= gauss_wts_1d[sm_index[k]][k][key_i[k]];
       else
 	Ls_prod_i *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_i[k]);
-    const Real& exp_coeff_i = expansionCoeffs[coeff_index[i]];
+    const Real& exp_coeff_i = expansionCoeffs[colloc_index[i]];
     mean += exp_coeff_i * wt_prod_i * Ls_prod_i;
     for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
@@ -736,7 +727,7 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
 	  Ls_prod_j *= polynomialBasis[sm_index[k]][k].get_value(x[k],key_j[k]);
 	}
 	tpVariance += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
-	  * expansionCoeffs[coeff_index[j]];
+	  * expansionCoeffs[colloc_index[j]];
       }
     }
   }
@@ -850,11 +841,10 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 				 const SizetArray& dvv)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   // -------------------------------------------------------------------
   // Mixed variable key:
@@ -901,10 +891,10 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
       if (i == 0)
-	mean += expansionCoeffs[coeff_index[j]] * wt_prod_j * Lsa_j;
+	mean += expansionCoeffs[colloc_index[j]] * wt_prod_j * Lsa_j;
       if (randomVarsKey[deriv_index])
 	mean_grad_i
-	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr,coeff_index[j]);
+	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr,colloc_index[j]);
       else {
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
@@ -913,7 +903,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    polynomialBasis[sm_index[k]][k].get_value(x[k],    key_j[k]);
 	}
 	mean_grad_i
-	  += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[coeff_index[j]];
+	  += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[colloc_index[j]];
       }
       // second loop of double sum
       for (k=0; k<num_colloc_pts; ++k) {
@@ -935,10 +925,10 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    // deriv of All var expansion w.r.t. random var (design insertion)
 	    // ---------------------------------------------------------------
 	    tpVarianceGrad[i] += wt_prod_j * Lsa_j * Lsa_k *
-	      (expansionCoeffs[coeff_index[j]] *
-	       expansionCoeffGrads(cntr,coeff_index[k]) +
-	       expansionCoeffGrads(cntr,coeff_index[j]) *
-	       expansionCoeffs[coeff_index[k]]);
+	      (expansionCoeffs[colloc_index[j]] *
+	       expansionCoeffGrads(cntr,colloc_index[k]) +
+	       expansionCoeffGrads(cntr,colloc_index[j]) *
+	       expansionCoeffs[colloc_index[k]]);
 	  else {
 	    // ---------------------------------------------------------------
 	    // deriv of All var exp w.r.t. nonrandom var (design augmentation)
@@ -951,8 +941,8 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 		polynomialBasis[sm_index[l]][l].get_value(x[l],    key_k[l]);
 	    }
 	    tpVarianceGrad[i] +=
-	      wt_prod_j * expansionCoeffs[coeff_index[j]] *
-	      expansionCoeffs[coeff_index[k]] *
+	      wt_prod_j * expansionCoeffs[colloc_index[j]] *
+	      expansionCoeffs[colloc_index[k]] *
 	      (Lsa_j * dLsa_k_dsa_i + dLsa_j_dsa_i * Lsa_k);
 	  }
 	}
@@ -1556,11 +1546,10 @@ Real InterpPolyApproximation::
 total_effects_integral(int set_value, size_t tp_index)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -1613,7 +1602,7 @@ total_effects_integral(int set_value, size_t tp_index)
     // sort coefficients by the "signature" of the member variables
     // (i.e. mem_expansion_coeffs_index)
     mem_expansion_coeffs[mem_expansion_coeffs_index]
-      += expansionCoeffs[coeff_index[i]]*prod_i_nonmembers;
+      += expansionCoeffs[colloc_index[i]]*prod_i_nonmembers;
   }
  
   // Now integrate over the remaining variables	
@@ -1745,11 +1734,10 @@ Real InterpPolyApproximation::
 partial_variance_integral(int set_value, size_t tp_index)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray& key        = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&   sm_index   = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray&    coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
-  const Real3DArray&   gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -1802,7 +1790,7 @@ partial_variance_integral(int set_value, size_t tp_index)
     // sort coefficients by the "signature" of the member variables
     // (i.e. mem_expansion_coeffs_index)
     mem_expansion_coeffs[mem_expansion_coeffs_index]
-      += expansionCoeffs[coeff_index[i]]*prod_i_nonmembers;
+      += expansionCoeffs[colloc_index[i]]*prod_i_nonmembers;
   }
 
   // Now integrate over the remaining variables	

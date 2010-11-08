@@ -422,9 +422,8 @@ inline void PolynomialApproximation::pop(size_t num_pop_pts)
 
 inline size_t PolynomialApproximation::pop_count()
 {
-  // TO DO: update with deployment of sgmgg
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return ssg_driver->expansion_coefficient_indices().back().size();
+  return (size_t)ssg_driver->unique_trial_points();
 }
 
 

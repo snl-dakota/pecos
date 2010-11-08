@@ -332,7 +332,8 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
 
 
 void IntegrationDriver::
-compute_tensor_grid(const UShortArray& quad_order, UShort2DArray& colloc_key,
+compute_tensor_grid(const UShortArray& quad_order, RealMatrix& variable_sets,
+		    RealVector& weight_sets, UShort2DArray& colloc_key,
 		    Real2DArray& pts_1d, Real2DArray& wts_1d)
 {
   size_t i, j, num_colloc_pts = 1;
@@ -351,13 +352,13 @@ compute_tensor_grid(const UShortArray& quad_order, UShort2DArray& colloc_key,
   // > project 1-D gauss point arrays (of potentially different type and order)
   //   into an n-dimensional stencil
   // > compute and store products of 1-D Gauss weights at each point in stencil
-  weightSets.sizeUninitialized(num_colloc_pts);
-  variableSets.shapeUninitialized(numVars, num_colloc_pts);// Teuchos: col major
+  weight_sets.sizeUninitialized(num_colloc_pts);
+  variable_sets.shapeUninitialized(numVars, num_colloc_pts);//Teuchos: col major
   colloc_key.resize(num_colloc_pts);
   UShortArray gauss_indices(numVars, 0);
   for (i=0; i<num_colloc_pts; i++) {
-    Real& wt_i = weightSets[i];
-    Real* pt_i = variableSets[i]; // column vector i
+    Real& wt_i = weight_sets[i];
+    Real* pt_i = variable_sets[i]; // column vector i
     wt_i = 1.0;
     for (j=0; j<numVars; j++) {
       pt_i[j] = pts_1d[j][gauss_indices[j]];

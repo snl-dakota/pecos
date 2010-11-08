@@ -46,7 +46,7 @@ public:
   void anisotropic_weights(const RealVector& aniso_wts);
 
   /// compute scaled variable and weight sets for the TPQ grid
-  void compute_grid();
+  void compute_grid(RealMatrix& variable_sets);
   /// number of collocation points
   int grid_size();
 

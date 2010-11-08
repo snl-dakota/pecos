@@ -69,7 +69,7 @@ public:
   /// number of collocation points with duplicates removed
   int grid_size();
   /// compute scaled variable and weight sets for the cubature grid
-  void compute_grid();
+  void compute_grid(RealMatrix& variable_sets);
 
 private:
 

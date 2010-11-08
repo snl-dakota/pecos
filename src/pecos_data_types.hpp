@@ -181,6 +181,16 @@ void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv1,
 }
 
 
+/// copy ScalarType* to ScalarType*
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const ScalarType* ptr1, const OrdinalType ptr_len,
+	       ScalarType* ptr2)
+{
+  for (OrdinalType i=0; i<ptr_len; ++i)
+    ptr2[i] = ptr1[i];
+}
+
+
 /// copy ScalarType* to Teuchos::SerialDenseVector<OrdinalType, ScalarType>
 template <typename OrdinalType, typename ScalarType> 
 void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
@@ -190,6 +200,28 @@ void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
     sdv.sizeUninitialized(ptr_len);
   for (OrdinalType i=0; i<ptr_len; ++i)
     sdv[i] = ptr[i];
+}
+
+
+/// copy ScalarType* to std::deque<ScalarType>
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
+	       std::deque<ScalarType>& deq)
+{
+  if (deq.size() != ptr_len)
+    deq.resize(ptr_len);
+  for (OrdinalType i=0; i<ptr_len; ++i)
+    deq[i] = ptr[i];
+}
+
+
+/// copy std::deque<ScalarType> to ScalarType*
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const std::deque<ScalarType>& deq, ScalarType* ptr,
+	       const OrdinalType ptr_len)
+{
+  for (OrdinalType i=0; i<ptr_len; ++i)
+    ptr[i] = deq[i];
 }
 
 

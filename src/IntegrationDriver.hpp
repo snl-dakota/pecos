@@ -80,8 +80,6 @@ public:
 
   /// return weightSets
   const RealVector& weight_sets() const;
-  /// return variableSets
-  const RealMatrix& variable_sets() const;
 
   /// return orderGenzKeister
   const UShortArray& genz_keister_order()     const;
@@ -118,8 +116,8 @@ protected:
 			IntArray& growth_rules);
 
   /// compute variable and weight sets for a tensor-product grid
-  void compute_tensor_grid(const UShortArray& order,
-			   UShort2DArray& colloc_key,
+  void compute_tensor_grid(const UShortArray& order, RealMatrix& variable_sets,
+			   RealVector& weight_sets, UShort2DArray& colloc_key,
 			   Real2DArray& pts_1d, Real2DArray& wts_1d);
 
   //
@@ -140,11 +138,8 @@ protected:
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
 
-  /// the set of weights associated with each point in the tensor-product grid
+  /// the set of weights associated with each point in the {TPQ,SSG,Cub} grid
   RealVector weightSets;
-  /// the set of points in the tensor-product grid,
-  /// arranged num points by numVars
-  RealMatrix variableSets;
 
   /// lookup for set of 1-D Genz-Keister quadrature orders
   static UShortArray orderGenzKeister;
@@ -187,10 +182,6 @@ IntegrationDriver::polynomial_basis() const
 
 inline const RealVector& IntegrationDriver::weight_sets() const
 { return (driverRep) ? driverRep->weightSets : weightSets; }
-
-
-inline const RealMatrix& IntegrationDriver::variable_sets() const
-{ return (driverRep) ? driverRep->variableSets : variableSets; }
 
 
 inline const UShortArray& IntegrationDriver::genz_keister_order() const

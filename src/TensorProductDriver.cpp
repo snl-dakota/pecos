@@ -69,7 +69,7 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 }
 
 
-void TensorProductDriver::compute_grid()
+void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
 {
 #ifdef DEBUG
   // -----------------------------------
@@ -82,7 +82,8 @@ void TensorProductDriver::compute_grid()
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
-  compute_tensor_grid(quadOrder, collocKey, gaussPts1D, gaussWts1D);
+  compute_tensor_grid(quadOrder, variable_sets, weightSets, collocKey,
+		      gaussPts1D, gaussWts1D);
 }
 
 } // namespace Pecos

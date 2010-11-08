@@ -519,10 +519,8 @@ void OrthogPolyApproximation::compute_coefficients()
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // multiple expansion integration
-      // Note: allocate_arrays() calls sparse_grid_multi_index() [which calls
-      // allocate_smolyak_arrays() and allocate_collocation_arrays() to define
-      // smolyakMultiIndex/smolyakCoeffs/collocKey/expansionCoeffIndices]
-      // which uses append_multi_index() to build multiIndex.
+      // Note: allocate_arrays() calls sparse_grid_multi_index() which uses
+      // append_multi_index() to build multiIndex.
       if (configOptions.expansionCoeffFlag)     expansionCoeffs = 0.;
       if (configOptions.expansionCoeffGradFlag) expansionCoeffGrads = 0.;
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
@@ -759,14 +757,11 @@ void OrthogPolyApproximation::
 sparse_grid_multi_index(UShort2DArray& multi_index)
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  ssg_driver->allocate_smolyak_arrays();
   const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_multi_index.size();
 
   switch (sparseGridExpansion) {
   case TENSOR_INT_TENSOR_SUM_EXP: {
-    // allocate additional collocation point bookkeeping
-    ssg_driver->allocate_collocation_arrays();
     // assemble a complete list of individual polynomial coverage
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
@@ -1376,9 +1371,9 @@ void OrthogPolyApproximation::integration_checks()
   size_t num_pts = dataPoints.size();
   if (num_pts != driverRep->weight_sets().length()) {
     PCerr << "Error: number of current points (" << num_pts << ") is not "
-	  << "consistent with\n       number of weights from integration "
-	  << "driver in OrthogPolyApproximation::compute_coefficients()."
-	  << std::endl;
+	  << "consistent with\n       number of points/weights from "
+	  << "integration driver in\n       OrthogPolyApproximation::"
+	  << "compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
 }
@@ -1390,17 +1385,16 @@ integration_data(size_t tp_index,
 		 RealVector& tp_weights)
 {
   // extract tensor points from dataPoints and tensor weights from gaussWts1D
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const UShort2DArray&     key = ssg_driver->collocation_key()[tp_index];
-  const UShortArray&  sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const SizetArray& coeff_index
-    = ssg_driver->expansion_coefficient_indices()[tp_index];
+  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
+  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
+  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
   const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
-  size_t i, j, num_tp_pts = coeff_index.size();
+  size_t i, j, num_tp_pts = colloc_index.size();
   tp_data_points.resize(num_tp_pts); tp_weights.resize(num_tp_pts);
   for (i=0; i<num_tp_pts; ++i) {
     // tensor-product point
-    tp_data_points[i] = dataPoints[coeff_index[i]];
+    tp_data_points[i] = dataPoints[colloc_index[i]];
     // tensor-product weight
     Real& tp_wts_i = tp_weights[i]; tp_wts_i = 1.;
     const UShortArray& key_i = key[i];
@@ -2199,7 +2193,6 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 // Computes centered (non-normalized) moments numerically
 const RealVector& OrthogPolyApproximation::get_numeric_moments()
 {
-
   size_t i, j, num_pts = dataPoints.size();
   size_t num_moments = 4; // may want this to be a user option?
   numericMoments.sizeUninitialized(num_moments);
@@ -2227,14 +2220,11 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
     break;
   }
   case SPARSE_GRID:
-    // integration_checks();
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // multiple expansion integration
-      // Note: allocate_arrays() calls sparse_grid_multi_index() [which calls
-      // allocate_smolyak_arrays() and allocate_collocation_arrays() to define
-      // smolyakMultiIndex/smolyakCoeffs/collocKey/expansionCoeffIndices]
-      // which uses append_multi_index() to build multiIndex.
+      // Note: allocate_arrays() calls sparse_grid_multi_index() which uses
+      // append_multi_index() to build multiIndex.
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
       size_t i, num_tensor_grids = tpMultiIndex.size();

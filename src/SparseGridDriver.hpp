@@ -50,7 +50,7 @@ public:
   //
 
   /// compute scaled variable and weight sets for the sparse grid
-  void compute_grid();
+  void compute_grid(RealMatrix& variable_sets);
   /// number of collocation points with duplicates removed
   int grid_size();
 
@@ -71,31 +71,49 @@ public:
   /// functions are used to compute index sets satisfying the anisotropic
   /// index set constraint, along with their corresponding coefficients.
   void allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
+  /// overloaded form initializes smolyakCoeffs from smolyakMultiIndex
+  void allocate_smolyak_coefficients();
   /// compute the Smolyak combinatorial coefficients for the multi-indices
   /// defining a generalized sparse grid
-  void allocate_generalized_coefficients(const UShort2DArray& multi_index,
-					 IntArray& coeffs);
-  /// initialize collocKey and expansionCoeffIndices
-  void allocate_collocation_arrays();
-  /// update collocKey, expansionCoeffIndices, and uniqueIndexMapping for
-  /// the trailing index sets within smolyakMultiIndex
-  void update_collocation_arrays(size_t start_index);
+  void allocate_smolyak_coefficients(const UShort2DArray& multi_index,
+				     IntArray& coeffs);
+  /// initialize collocKey from smolyakMultiIndex
+  void allocate_collocation_key();
+  /// update collocKey for the trailing index sets within smolyakMultiIndex
+  void update_collocation_key(size_t start_index);
+  /// initialize collocIndices from collocKey and uniqueIndexMapping
+  void allocate_collocation_indices();
+  /// initialize gaussPts1D and gaussWts1D
+  void allocate_1d_gauss_points_weights();
+  /// update gaussPts1D and gaussWts1D from pts_1d and wts_1d
+  void update_1d_gauss_points_weights(const UShortArray& trial_set,
+				      const Real2DArray& pts_1d,
+				      const Real2DArray& wts_1d);
+
+  /// define a1Points/a1Weights based on the reference grid
+  void reference_unique();
+  /// define a2Points and update collocIndices and uniqueIndexMapping
+  /// for the trailing index sets within smolyakMultiIndex
+  void increment_unique(size_t start_index);
+  /// update a1Points by merging with unique a2Points
+  void merge_unique();
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-		       const RealVector& dim_pref, bool store_1d_gauss = false,
-		       bool  nested_rules = true,
+		       const RealVector& dim_pref,
+		       short refine_type = NO_REFINEMENT,
+		       short refine_control = GENERALIZED_SPARSE,
+		       bool  store_colloc = false, bool nested_rules = true,
 		       short growth_rate  = MODERATE_RESTRICTED_GROWTH,
 		       short nested_uniform_rule = GAUSS_PATTERSON);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 		       unsigned short ssg_level, const RealVector& dim_pref,
-		       bool  store_1d_gauss = false,
+		       short refine_type = NO_REFINEMENT,
+		       short refine_control = GENERALIZED_SPARSE,
+		       bool  store_colloc = false,
 		       short growth_rate = MODERATE_RESTRICTED_GROWTH);
-
-  /// total number of collocation points including duplicates
-  int grid_size_total();
 
   /// update axisLowerBounds
   void update_axis_lower_bounds();
@@ -113,7 +131,10 @@ public:
   /// generalized sparse grid procedure
   void push_trial_set(const UShortArray& set);
   /// calls compute_tensor_grid() for the index set from push_trial_set()
-  void compute_trial_grid();
+  void compute_trial_grid(RealMatrix& unique_variable_sets);
+  /// update collocKey, collocIndices, and uniqueIndexMapping based on
+  /// restoration of previous trial to smolyakMultiIndex
+  void restore_set();
   /// remove the previously pushed trial set from smolyakMultiIndex
   /// during the course of the generalized sparse grid procedure
   void pop_trial_set();
@@ -148,10 +169,12 @@ public:
   const IntArray& smolyak_coefficients() const;
   /// return collocKey
   const UShort3DArray& collocation_key() const;
-  /// return expansionCoeffIndices
-  const Sizet2DArray& expansion_coefficient_indices() const;
+  /// return collocIndices
+  const Sizet2DArray& collocation_indices() const;
   /// return uniqueIndexMapping
   const IntArray& unique_index_mapping() const;
+  /// return num_unique2
+  int unique_trial_points() const;
 
   // return duplicateTol
   //const Real& duplicate_tolerance() const;
@@ -208,8 +231,12 @@ private:
   /// integer codes for growth rule options
   IntArray growthRules;
 
+  /// type of expansion refinement
+  short refineType;
+  /// algorithm control governing expansion refinement
+  short refineControl;
   /// controls conditional population of gaussPts1D and gaussWts1D
-  bool store1DGauss;
+  bool storeCollocDetails;
 
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
@@ -238,8 +265,8 @@ private:
   /// the 1-D point indices for sets of tensor-product collocation points
   UShort3DArray collocKey;
   /// numSmolyakIndices-by-numTensorProductPts array for linking the
-  /// set of tensor products to the expansionCoeffs array
-  Sizet2DArray expansionCoeffIndices;
+  /// set of tensor products to the unique collocation points evaluated
+  Sizet2DArray collocIndices;
   /// output from sgmga_unique_index()
   IntArray uniqueIndexMapping;
   /// the current number of unique points in the grid; used for incrementing
@@ -260,6 +287,14 @@ private:
   /// used in incremental approaches that update smolyakCoeffs
   IntArray refSmolyakCoeffs;
 
+  int numUnique1, numUnique2;//, numUnique3;
+  RealVector zVec, r1Vec, a1Weights, r2Vec, a2Weights;//, r3Vec, a3Weights;
+  RealMatrix a1Points, a2Points;//, a3Points;
+  IntArray sortIndex1, uniqueSet1, uniqueIndex1,
+           sortIndex2, uniqueSet2, uniqueIndex2;
+       //, sortIndex3, uniqueSet3, uniqueIndex3;
+  BoolDeque isUnique1, isUnique2;//, isUnique3;
+
   /// num_levels_per_var x numContinuousVars sets of 1D Gauss points
   Real3DArray gaussPts1D;
   /// num_levels_per_var x numContinuousVars sets of 1D Gauss weights
@@ -274,7 +309,7 @@ private:
 
 inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), chebyPolyPtr(NULL), ssgLevel(0),
-  store1DGauss(false), duplicateTol(1.e-15)
+  storeCollocDetails(false), duplicateTol(1.e-15)
 { }
 
 
@@ -310,13 +345,16 @@ inline const UShort3DArray& SparseGridDriver::collocation_key() const
 { return collocKey; }
 
 
-inline const Sizet2DArray& SparseGridDriver::
-expansion_coefficient_indices() const
-{ return expansionCoeffIndices; }
+inline const Sizet2DArray& SparseGridDriver::collocation_indices() const
+{ return collocIndices; }
 
 
 inline const IntArray& SparseGridDriver::unique_index_mapping() const
 { return uniqueIndexMapping; }
+
+
+inline int SparseGridDriver::unique_trial_points() const
+{ return numUnique2; }
 
 
 //inline const Real& SparseGridDriver::duplicate_tolerance() const
@@ -333,6 +371,10 @@ inline const Real3DArray& SparseGridDriver::gauss_weights_array() const
 
 inline void SparseGridDriver::allocate_smolyak_arrays()
 { allocate_smolyak_arrays(smolyakMultiIndex, smolyakCoeffs); }
+
+
+inline void SparseGridDriver::allocate_smolyak_coefficients()
+{ allocate_smolyak_coefficients(smolyakMultiIndex, smolyakCoeffs); }
 
 
 inline void SparseGridDriver::update_reference()
