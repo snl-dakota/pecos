@@ -10,18 +10,9 @@ if WITH_FFTW
 AM_CPPFLAGS += @FFTW_CPPFLAGS@ -I${top_srcdir}/packages/fftw/api
 endif
 
-if WITH_LHS
-LHS_S = lhs_wrappers.f90
-endif
-
 if WITH_SPARSE_GRID
 AM_CPPFLAGS += -I${top_srcdir}/packages/VPISparseGrid/src
 endif
-
-## HACK NOTICE: Libtool 1.5.X doesn't provide tagging support for F90 sources.
-## Until it does (Libtool 2.0.X), we need to use the F77 tag rules.
-LTFCCOMPILE = $(LIBTOOL) --tag=F77 --mode=compile $(FC) $(AM_FCFLAGS) \
-	      $(FCFLAGS) $(FCFLAGS_f90) $(MODULES)
 
 ## Set the Pecos library name.
 noinst_LTLIBRARIES = libpecos_src.la
@@ -48,7 +39,7 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  LaguerreOrthogPolynomial.cpp			\
 			  LegendreOrthogPolynomial.cpp			\
 			  NumericGenOrthogPolynomial.cpp		\
-                          LHSDriver.cpp $(LHS_S)			\
+                          LHSDriver.cpp					\
 			  IntegrationDriver.cpp				\
 			  CubatureDriver.cpp				\
 			  SparseGridDriver.cpp				\

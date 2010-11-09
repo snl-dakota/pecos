@@ -4,6 +4,11 @@ include_directories(${Boost_INCLUDE_DIRS}
 
 # WJB: not sure this is prudent; moving to shared object libs -- link_directories(${Teuchos_LIBRARY_DIRS})
 
+if(HAVE_LHS)
+  add_definitions("-DHAVE_LHS")
+  set(Pecos_libs ${Pecos_libs} lhs)
+endif(HAVE_LHS)
+
 if(HAVE_SPARSE_GRID)
   include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
 endif(HAVE_SPARSE_GRID)
@@ -20,13 +25,6 @@ endif(HAVE_FFTW)
 
 ## Pecos library sources.
 file(GLOB Pecos_src *.cpp)
-
-if(HAVE_LHS)
-  add_definitions("-DHAVE_LHS")
-  set(Pecos_src ${Pecos_src} lhs_wrappers.f90)
-  set_property(SOURCE lhs_wrappers.f90 PROPERTY COMPILE_FLAGS ${FIXED_FLAG})
-  set(Pecos_libs ${Pecos_libs} lhs)
-endif(HAVE_LHS)
 
 add_library(pecos_src SHARED ${Pecos_src})
 add_library(pecos_src-static STATIC ${Pecos_src})
