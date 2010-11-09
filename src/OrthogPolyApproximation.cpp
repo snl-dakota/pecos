@@ -1238,11 +1238,11 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   // rather than building from scratch
   SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
   const IntArray&     sm_coeffs = ssg_driver->smolyak_coefficients();
-  const IntArray& ref_sm_coeffs = ssg_driver->reference_smolyak_coefficients();
+  const IntArray& sm_coeffs_ref = ssg_driver->smolyak_coefficients_reference();
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::append_expansions() with start index "
-	<< start_index << "\nsm_coeffs:\n" << sm_coeffs << "ref_sm_coeffs:\n"
-	<< ref_sm_coeffs << std::endl;
+	<< start_index << "\nsm_coeffs:\n" << sm_coeffs << "sm_coeffs_ref:\n"
+	<< sm_coeffs_ref << std::endl;
 #endif // DEBUG
 
   // add trial expansions
@@ -1261,7 +1261,7 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   int delta_coeff;
   for (index=0; index<start_index; ++index) {
     // add new, subtract previous
-    delta_coeff = sm_coeffs[index] - ref_sm_coeffs[index];
+    delta_coeff = sm_coeffs[index] - sm_coeffs_ref[index];
 #ifdef DEBUG
     PCout << "Old set delta_coeff = " << delta_coeff
 	  << "\ntpExpansionCoeffs:\n";

@@ -94,7 +94,7 @@ public:
   void reference_unique();
   /// define a2Points and update collocIndices and uniqueIndexMapping
   /// for the trailing index sets within smolyakMultiIndex
-  void increment_unique(size_t start_index);
+  void increment_unique(size_t start_index, bool compute_a2 = true);
   /// update a1Points by merging with unique a2Points
   void merge_unique();
 
@@ -124,7 +124,7 @@ public:
   /// update activeMultiIndex from the passed trial set for use within
   /// the generalized sparse grid procedure
   void add_active_neighbors(const UShortArray& set);
-  /// update refSmolyakCoeffs for use within the generalized sparse
+  /// update smolyakCoeffsRef for use within the generalized sparse
   /// grid procedure
   void update_reference();
   /// update smolyakMultiIndex with a new trial set for use within the
@@ -185,8 +185,8 @@ public:
   const std::set<UShortArray>& old_multi_index() const;
   /// return the trial index set from push_trial_set()
   const UShortArray& trial_index_set() const;
-  /// return refSmolyakCoeffs
-  const IntArray& reference_smolyak_coefficients() const;
+  /// return smolyakCoeffsRef
+  const IntArray& smolyak_coefficients_reference() const;
 
   /// return gaussPts1D
   const Real3DArray& gauss_points_array()  const;
@@ -208,6 +208,23 @@ private:
   static void chebyshev_points(int order, int index, double* data);
   /// function for computing collocation weights for ChebyshevOrthogPolynomial
   static void chebyshev_weights(int order, int index, double* data);
+
+  /// convenience function for defining {a1,a2}{Points,Weights}
+  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
+				     RealMatrix& pts, RealVector& wts);
+  /// convenience function for updating sparse points/weights from a set of
+  /// aggregated tensor points/weights
+  void update_sparse_points_weights(size_t start_index, size_t num_indices,
+				    int new_index_offset,
+				    const RealMatrix& tensor_pts,
+				    const RealVector& tensor_wts,
+				    const BoolDeque&  is_unique,
+				    const IntArray&   unique_index,
+				    RealMatrix& new_sparse_pts,
+				    RealVector& updated_sparse_wts);
+  ///convenience function for assigning collocIndices from uniqueIndex{1,2,3}
+  void assign_tensor_collocation_indices(size_t start_index, size_t num_indices,
+					 const IntArray& unique_index);
 
   // compute 1-norm |i| for index set i
   unsigned int index_norm(const UShortArray& index_set) const;
@@ -283,9 +300,12 @@ private:
   /// subset of active set that have been evaluated as trial sets
   /// (updated in push_trial_set)
   std::set<UShortArray> trialSets; // or UShort2DArray
-  /// current reference values for the Smolyak combinatorial coefficients,
+  /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
-  IntArray refSmolyakCoeffs;
+  IntArray smolyakCoeffsRef;
+  /// reference values for the sparse grid weights corresponding to the current
+  /// reference grid; used in incremental approaches that update weightSets
+  RealVector weightSetsRef;
 
   int numUnique1, numUnique2;//, numUnique3;
   RealVector zVec, r1Vec, a1Weights, r2Vec, a2Weights;//, r3Vec, a3Weights;
@@ -378,7 +398,7 @@ inline void SparseGridDriver::allocate_smolyak_coefficients()
 
 
 inline void SparseGridDriver::update_reference()
-{ refSmolyakCoeffs = smolyakCoeffs; }
+{ smolyakCoeffsRef = smolyakCoeffs; }
 
 
 inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const
@@ -393,8 +413,8 @@ inline const UShortArray& SparseGridDriver::trial_index_set() const
 { return smolyakMultiIndex.back(); }
 
 
-inline const IntArray& SparseGridDriver::reference_smolyak_coefficients() const
-{ return refSmolyakCoeffs; }
+inline const IntArray& SparseGridDriver::smolyak_coefficients_reference() const
+{ return smolyakCoeffsRef; }
 
 
 inline void SparseGridDriver::
