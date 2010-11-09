@@ -271,14 +271,7 @@ void BasisApproximation::finalize_coefficients()
 
 
 bool BasisApproximation::restore_available()
-{
-  if (!basisApproxRep) {
-    PCerr << "Error: restore_available() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-  return basisApproxRep->restore_available(); 
-}
+{ return (basisApproxRep) ? basisApproxRep->restore_available() : false; }
 
 
 size_t BasisApproximation::restoration_index()

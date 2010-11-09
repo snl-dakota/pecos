@@ -210,12 +210,11 @@ private:
   static void chebyshev_weights(int order, int index, double* data);
 
   /// convenience function for defining {a1,a2}{Points,Weights}
-  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
-				     RealMatrix& pts, RealVector& wts);
+  void compute_tensor_points_weights(size_t start_index, RealMatrix& pts,
+				     RealVector& wts);
   /// convenience function for updating sparse points/weights from a set of
   /// aggregated tensor points/weights
-  void update_sparse_points_weights(size_t start_index, size_t num_indices,
-				    int new_index_offset,
+  void update_sparse_points_weights(size_t start_index, int new_index_offset,
 				    const RealMatrix& tensor_pts,
 				    const RealVector& tensor_wts,
 				    const BoolDeque&  is_unique,
@@ -223,7 +222,7 @@ private:
 				    RealMatrix& new_sparse_pts,
 				    RealVector& updated_sparse_wts);
   ///convenience function for assigning collocIndices from uniqueIndex{1,2,3}
-  void assign_tensor_collocation_indices(size_t start_index, size_t num_indices,
+  void assign_tensor_collocation_indices(size_t start_index,
 					 const IntArray& unique_index);
 
   // compute 1-norm |i| for index set i
