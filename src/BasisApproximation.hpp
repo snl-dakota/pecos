@@ -61,14 +61,14 @@ public:
   virtual void compute_coefficients();
   /// recalculate the approximation coefficients following currentPoints update
   virtual void increment_coefficients();
-  /// restore the approximation coefficients to the state preceding
-  /// the last increment
+  /// restore the approximation coefficients to the state preceding the last
+  /// increment
   virtual void decrement_coefficients();
   /// restore the approximation coefficients to a previously incremented state
   /// as identified by the current data increment
   virtual void restore_coefficients();
-  /// test for whether current trial must be incremented or can be
-  /// restored from a previous trial
+  /// test for whether current trial must be incremented or can be restored
+  /// from a previous trial
   virtual bool restore_available();
   /// index of the data set to be restored from within saved bookkeeping
   virtual size_t restoration_index();

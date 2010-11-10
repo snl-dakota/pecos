@@ -208,22 +208,92 @@ void InterpPolyApproximation::increment_coefficients()
   default:
     err_flag = true; break;
   }
-
   if (err_flag) {
     PCerr << "Error: unsupported grid definition in InterpPolyApproximation::"
 	  << "increment_coefficients()" << std::endl;
     abort_handler(-1);
   }
 
+  restore_expansion_coefficients();
+}
+
+
+void InterpPolyApproximation::decrement_coefficients()
+{
+  // leave polynomialBasis as is
+
+  switch (configOptions.expCoeffsSolnApproach) {
+  case SPARSE_GRID: {
+    // move previous expansion data to current expansion
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    savedSmolyakMultiIndex.push_back(ssg_driver->trial_index_set());
+    break;
+  }
+  }
+
+  // not necessary to prune; next increment/restore/finalize takes care of this
+  //if (configOptions.expansionCoeffFlag)
+  //  expansionCoeffs.resize(numCollocPts);
+  //if (configOptions.expansionCoeffGradFlag) {
+  //  size_t num_deriv_vars = expansionCoeffGrads.numRows();
+  //  expansionCoeffGrads.reshape(num_deriv_vars, numCollocPts);
+  //}
+
+  numCollocPts = dataPoints.size(); // data already decremented
+  if (!anchorPoint.is_null())
+    numCollocPts += 1;
+}
+
+
+void InterpPolyApproximation::restore_coefficients()
+{
+  // leave polynomialBasis as is (a previous increment is being restored)
+
+  switch (configOptions.expCoeffsSolnApproach) {
+  case SPARSE_GRID: {
+    // move previous expansion data to current expansion
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    UShort2DArray::iterator sit = std::find(savedSmolyakMultiIndex.begin(),
+					    savedSmolyakMultiIndex.end(),
+					    ssg_driver->trial_index_set());
+    if (sit != savedSmolyakMultiIndex.end())
+      savedSmolyakMultiIndex.erase(sit);
+    break;
+  }
+  }
+
+  restore_expansion_coefficients();
+}
+
+
+void InterpPolyApproximation::finalize_coefficients()
+{
+  // leave polynomialBasis as is (all previous increments are being restored)
+
+  switch (configOptions.expCoeffsSolnApproach) {
+  case SPARSE_GRID:
+    // move previous expansion data to current expansion
+    savedSmolyakMultiIndex.clear();
+    break;
+  }
+
+  restore_expansion_coefficients();
+}
+
+
+void InterpPolyApproximation::restore_expansion_coefficients()
+{
   size_t i, new_colloc_pts = dataPoints.size();
   if (!anchorPoint.is_null())
     new_colloc_pts += 1;
+
   if (configOptions.expansionCoeffFlag)
     expansionCoeffs.resize(new_colloc_pts);
   if (configOptions.expansionCoeffGradFlag) {
     size_t num_deriv_vars = expansionCoeffGrads.numRows();
     expansionCoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
   }
+
   std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   std::advance(it, numCollocPts);
   for (i=numCollocPts; i<new_colloc_pts; ++i, ++it) {
@@ -234,23 +304,6 @@ void InterpPolyApproximation::increment_coefficients()
   }
 
   numCollocPts = new_colloc_pts;
-}
-
-
-void InterpPolyApproximation::decrement_coefficients()
-{
-  // leave polynomialBasis as is
-
-  numCollocPts = dataPoints.size(); // data already decremented
-  if (!anchorPoint.is_null())
-    numCollocPts += 1;
-  // not strictly necessary; next increment takes care of this
-  //if (configOptions.expansionCoeffFlag)
-  //  expansionCoeffs.resize(numCollocPts);
-  //if (configOptions.expansionCoeffGradFlag) {
-  //  size_t num_deriv_vars = expansionCoeffGrads.numRows();
-  //  expansionCoeffGrads.reshape(num_deriv_vars, numCollocPts);
-  //}
 }
 
 

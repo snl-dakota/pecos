@@ -124,8 +124,8 @@ public:
   /// update activeMultiIndex from the passed trial set for use within
   /// the generalized sparse grid procedure
   void add_active_neighbors(const UShortArray& set);
-  /// update smolyakCoeffsRef for use within the generalized sparse
-  /// grid procedure
+  /// update smolyakCoeffsRef and weightSetsRef for use within the
+  /// generalized sparse grid procedure
   void update_reference();
   /// update smolyakMultiIndex with a new trial set for use within the
   /// generalized sparse grid procedure
@@ -214,13 +214,16 @@ private:
 				     RealVector& wts);
   /// convenience function for updating sparse points/weights from a set of
   /// aggregated tensor points/weights
-  void update_sparse_points_weights(size_t start_index, int new_index_offset,
-				    const RealMatrix& tensor_pts,
-				    const RealVector& tensor_wts,
-				    const BoolDeque&  is_unique,
-				    const IntArray&   unique_index,
-				    RealMatrix& new_sparse_pts,
-				    RealVector& updated_sparse_wts);
+  void update_sparse_points(size_t start_index, int new_index_offset,
+			    const RealMatrix& tensor_pts,
+			    const BoolDeque& is_unique,
+			    const IntArray& unique_index,
+			    RealMatrix& new_sparse_pts);
+  /// convenience function for updating sparse points/weights from a set of
+  /// aggregated tensor points/weights
+  void update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
+			     const IntArray& unique_index,
+			     RealVector& updated_sparse_wts);
   ///convenience function for assigning collocIndices from uniqueIndex{1,2,3}
   void assign_tensor_collocation_indices(size_t start_index,
 					 const IntArray& unique_index);
@@ -397,7 +400,7 @@ inline void SparseGridDriver::allocate_smolyak_coefficients()
 
 
 inline void SparseGridDriver::update_reference()
-{ smolyakCoeffsRef = smolyakCoeffs; }
+{ smolyakCoeffsRef = smolyakCoeffs; weightSetsRef = weightSets; }
 
 
 inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const

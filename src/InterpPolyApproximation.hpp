@@ -56,6 +56,11 @@ protected:
   void increment_coefficients();
   /// restore the coefficients to their previous state prior to last increment
   void decrement_coefficients();
+  /// restore the coefficients to a previously incremented state as
+  /// identified by the current increment to the Smolyak multi index
+  void restore_coefficients();
+  /// finalize the coefficients by applying all previously evaluated increments
+  void finalize_coefficients();
 
   /// size expansionCoeffs and expansionCoeffGrads
   void allocate_arrays();
@@ -117,6 +122,8 @@ private:
 
   /// update polynomialBasis after a change in maximum interpolation depth
   void update_sparse_interpolation_basis(unsigned short max_level);
+  /// restore expansion{Coeffs,CoeffGrads} within increment/restore/finalize
+  void restore_expansion_coefficients();
 
   /// compute the value of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_value(x)

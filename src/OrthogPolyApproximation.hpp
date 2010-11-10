@@ -126,12 +126,6 @@ protected:
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index
   void restore_coefficients();
-  /// query trial index for presence in savedSmolyakMultiIndex, indicating
-  /// the ability to restore a previously evaluated increment
-  bool restore_available();
-  /// index of the data set to be restored from within saved bookkeeping
-  /// (i.e.,savedSmolyakMultiIndex)
-  size_t restoration_index();
   /// finalize the coefficients by applying all previously evaluated increments
   void finalize_coefficients();
 
@@ -339,8 +333,6 @@ private:
   /// the set of tensor-product contributions to expansionCoeffGrads
   RealMatrixArray tpExpansionCoeffGrads;
 
-  /// saved trial sets that were computed but not selected
-  UShort2DArray savedSmolyakMultiIndex;
   /// saved instances of tpMultiIndex that were computed but not selected
   UShort3DArray savedTPMultiIndex;
   /// saved instances of tpMultiIndexMap that were computed but not selected
@@ -457,25 +449,6 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
     if (basisTypes[i] == NUMERICALLY_GENERATED)
       ((NumericGenOrthogPolynomial*)polynomialBasis[i].polynomial_rep())
 	->coefficients_norms_flag(flag);
-}
-
-
-inline bool OrthogPolyApproximation::restore_available()
-{
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return (std::find(savedSmolyakMultiIndex.begin(),
-    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set()) !=
-    savedSmolyakMultiIndex.end());
-}
-
-
-inline size_t OrthogPolyApproximation::restoration_index()
-{
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  UShort2DArray::iterator  sit = std::find(savedSmolyakMultiIndex.begin(),
-    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set());
-  return (sit == savedSmolyakMultiIndex.end()) ? _NPOS :
-    std::distance(savedSmolyakMultiIndex.begin(), sit);
 }
 
 

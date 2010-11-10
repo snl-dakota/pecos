@@ -276,6 +276,13 @@ protected:
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);
 
+  /// query trial index for presence in savedSmolyakMultiIndex, indicating
+  /// the ability to restore a previously evaluated increment
+  bool restore_available();
+  /// index of the data set to be restored from within saved bookkeeping
+  /// (i.e.,savedSmolyakMultiIndex)
+  size_t restoration_index();
+
   //
   //- Heading: Member functions
   //
@@ -341,6 +348,9 @@ protected:
       expansion (e.g., with respect to design variables for an
       expansion only over the random variables). */
   RealMatrix expansionCoeffGrads;
+
+  /// saved trial sets that were computed but not selected
+  UShort2DArray savedSmolyakMultiIndex;
 
   /// introduce mapping to unify disparate enumeration of sensitivity
   /// indices (e.g. main effects only vs all effects)
@@ -550,6 +560,25 @@ approximation_coefficients() const
 inline void PolynomialApproximation::
 approximation_coefficients(const RealVector& approx_coeffs)
 { expansionCoeffs = approx_coeffs; }
+
+
+inline bool PolynomialApproximation::restore_available()
+{
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  return (std::find(savedSmolyakMultiIndex.begin(),
+    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set()) !=
+    savedSmolyakMultiIndex.end());
+}
+
+
+inline size_t PolynomialApproximation::restoration_index()
+{
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  UShort2DArray::iterator  sit = std::find(savedSmolyakMultiIndex.begin(),
+    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set());
+  return (sit == savedSmolyakMultiIndex.end()) ? _NPOS :
+    std::distance(savedSmolyakMultiIndex.begin(), sit);
+}
 
 } // namespace Pecos
 
