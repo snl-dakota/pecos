@@ -23,7 +23,7 @@
 
 static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-#define DEBUG
+//#define DEBUG
 
 namespace Pecos {
 
@@ -494,7 +494,9 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
   }
 
 #ifdef DEBUG
-  PCout << "uniqueIndexMapping:\n" << uniqueIndexMapping << '\n';
+  PCout << "uniqueIndexMapping:\n" << uniqueIndexMapping
+	<< "\nvar_sets:\n"; write_data(PCout, var_sets, false, true, true);
+  PCout << "\nweightSets:\n"; write_data(PCout, weightSets); PCout << '\n';
 #endif
 }
 
@@ -659,15 +661,14 @@ void SparseGridDriver::finalize_sets()
   // update collocKey
   update_collocation_key(start_index);
   // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
-  increment_unique(start_index); // *** looks good to here
+  increment_unique(start_index);
   // update weightSets
-  if (trackEnsembleWeights) { // *** verify update_sparse_weights() for >1 set
-    //PCout << "smolyakCoeffsRef =\n" << smolyakCoeffsRef;
-    //PCout << "smolyakCoeffs =\n" << smolyakCoeffs;
+  if (trackEnsembleWeights) {
     weightSets = weightSetsRef; // to be augmented by last_index data
     update_sparse_weights(start_index, a2Weights, uniqueIndex2, weightSets);
-    //PCout << "weightSetsRef =\n"; write_data(PCout, weightSetsRef);
-    //PCout << "weightSets =\n";    write_data(PCout, weightSets);
+#ifdef DEBUG
+    PCout << "weightSets =\n"; write_data(PCout, weightSets);
+#endif // DEBUG
   }
   //merge_unique(); // a1 reference update not needed, no addtnl increments
 }
@@ -907,7 +908,7 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
   // update sizes
   updated_sparse_wts.resize(numCollocPts); // new entries initialized to 0
 
-  int index, delta_coeff;
+  int index, delta_coeff, sm_coeff;
   // back out changes in Smolyak coeff for existing index sets
   for (i=0, cntr=0; i<start_index; ++i) {
     delta_coeff = smolyakCoeffs[i] - smolyakCoeffsRef[i];
@@ -923,13 +924,16 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
   }
   // add contributions for new index sets
   for (i=start_index, cntr=0; i<num_sm_mi; ++i) {
-    num_tp_pts = collocKey[i].size();
-    int sm_coeff_i = smolyakCoeffs[i];
-    if (sm_coeff_i)
+    sm_coeff = smolyakCoeffs[i];
+    if (sm_coeff) {
+      num_tp_pts = collocKey[i].size();
       for (j=0; j<num_tp_pts; ++j, ++cntr) {
 	index = unique_index[cntr];
-	updated_sparse_wts[index] += sm_coeff_i * tensor_wts[cntr];
+	updated_sparse_wts[index] += sm_coeff * tensor_wts[cntr];
       }
+    }
+    else
+      cntr += collocKey[i].size();
   }
 }
 
