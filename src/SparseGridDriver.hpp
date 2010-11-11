@@ -303,8 +303,9 @@ private:
   /// generalized sparse grid
   std::set<UShortArray> activeMultiIndex; // or UShort2DArray
   /// subset of active set that have been evaluated as trial sets
-  /// (updated in push_trial_set)
-  std::set<UShortArray> trialSets; // or UShort2DArray
+  /// (updated in push_trial_set).  Employ array rather than set in
+  /// order to mirror array-based restore/finalize.
+  UShort2DArray trialSets;
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
   IntArray smolyakCoeffsRef;

@@ -23,7 +23,7 @@
 
 static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-//#define DEBUG
+#define DEBUG
 
 namespace Pecos {
 
@@ -569,7 +569,7 @@ void SparseGridDriver::compute_trial_grid(RealMatrix& unique_var_sets)
 
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
-  trialSets.insert(trial_set);
+  trialSets.push_back(trial_set);
 
   // update 3D with new 2D gauss pts/wts (in correct location)
   update_1d_gauss_points_weights(trial_set, pts_1d, wts_1d);
@@ -625,7 +625,10 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // remove set_star from set A by erasing from activeMultiIndex:
   activeMultiIndex.erase(last_sm_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  trialSets.erase(last_sm_set);
+  UShort2DArray::iterator it
+    = std::find(trialSets.begin(), trialSets.end(), last_sm_set);
+  if (it != trialSets.end())
+    trialSets.erase(it);
 
   // update set A (activeMultiIndex) based on neighbors of set_star:
   add_active_neighbors(last_sm_set);
