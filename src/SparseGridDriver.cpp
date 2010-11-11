@@ -323,16 +323,19 @@ void SparseGridDriver::update_axis_lower_bounds()
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref, short refine_type,
-		short refine_control, bool store_colloc, bool nested_rules,
+		short refine_control, bool store_colloc,
+		bool track_ensemble_wts, bool nested_rules,
 		short growth_rate, short nested_uniform_rule)
 {
   numVars = u_types.size();
   compute1DPoints.resize(numVars);
   compute1DWeights.resize(numVars);
 
-  refineType         = refine_type;
-  refineControl      = refine_control;
-  storeCollocDetails = store_colloc;
+  refineType           = refine_type;
+  refineControl        = refine_control;
+  storeCollocDetails   = store_colloc;
+  trackEnsembleWeights = track_ensemble_wts;
+
   level(ssg_level);
   dimension_preference(dim_pref);
 
@@ -372,13 +375,14 @@ void SparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 		unsigned short ssg_level, const RealVector& dim_pref,
 		short refine_type, short refine_control, bool store_colloc,
-		short growth_rate)
+		bool track_ensemble_wts, short growth_rate)
 {
-  numVars            = poly_basis.size();
-  polynomialBasis    = poly_basis; // shallow copy
-  refineType         = refine_type;
-  refineControl      = refine_control;
-  storeCollocDetails = store_colloc;
+  numVars              = poly_basis.size();
+  polynomialBasis      = poly_basis; // shallow copy
+  refineType           = refine_type;
+  refineControl        = refine_control;
+  storeCollocDetails   = store_colloc;
+  trackEnsembleWeights = track_ensemble_wts;
 
   level(ssg_level);
   dimension_preference(dim_pref);
@@ -422,10 +426,12 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     allocate_1d_gauss_points_weights();      // define 1-D point/weight sets
     reference_unique(); // updates collocIndices,uniqueIndexMapping,numCollocPts
     update_sparse_points(0, 0, a1Points, isUnique1, uniqueIndex1, var_sets);
-    update_sparse_weights(0, a1Weights, uniqueIndex1, weightSets);
+    if (trackEnsembleWeights)
+      update_sparse_weights(0, a1Weights, uniqueIndex1, weightSets);
 #ifdef DEBUG
-    PCout << "compute_grid() reference var_sets:\n" << var_sets
-	  << "compute_grid() reference weightSets:\n" << weightSets;
+    PCout << "compute_grid() reference var_sets:\n" << var_sets;
+    if (trackEnsembleWeights)
+      PCout << "compute_grid() reference weightSets:\n" << weightSets;
 #endif // DEBUG
   }
   else { // compute reference and any refined grids
@@ -542,8 +548,10 @@ void SparseGridDriver::restore_set()
   // update collocIndices and uniqueIndexMapping
   increment_unique(last_index);
   // update weightSets
-  weightSets = weightSetsRef; // to be augmented by last_index data
-  update_sparse_weights(last_index, a2Weights, uniqueIndex2, weightSets);
+  if (trackEnsembleWeights) {
+    weightSets = weightSetsRef; // to be augmented by last_index data
+    update_sparse_weights(last_index, a2Weights, uniqueIndex2, weightSets);
+  }
 }
 
 
@@ -573,11 +581,15 @@ void SparseGridDriver::compute_trial_grid(RealMatrix& unique_var_sets)
   // update unique_var_sets and weightSets
   update_sparse_points(last_index, numUnique1, a2Points, isUnique2,
 		       uniqueIndex2, unique_var_sets);
-  weightSets = weightSetsRef; // to be augmented by last_index data
-  update_sparse_weights(last_index, a2Weights, uniqueIndex2, weightSets);
+  if (trackEnsembleWeights) {
+    weightSets = weightSetsRef; // to be augmented by last_index data
+    update_sparse_weights(last_index, a2Weights, uniqueIndex2, weightSets);
+  }
 #ifdef DEBUG
-    PCout << "compute_trial_grid() increment:\nunique variable sets:\n"
-	  << unique_var_sets << "\nupdated weight sets:\n" << weightSets;
+  PCout << "compute_trial_grid() increment:\nunique variable sets:\n"
+	<< unique_var_sets;
+  if (trackEnsembleWeights)
+    PCout << "\nupdated weight sets:\n" << weightSets;
 #endif // DEBUG
 }
 
@@ -644,10 +656,16 @@ void SparseGridDriver::finalize_sets()
   // update collocKey
   update_collocation_key(start_index);
   // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
-  increment_unique(start_index);
+  increment_unique(start_index); // *** looks good to here
   // update weightSets
-  weightSets = weightSetsRef; // to be augmented by last_index data
-  update_sparse_weights(start_index, a2Weights, uniqueIndex2, weightSets);
+  if (trackEnsembleWeights) { // *** verify update_sparse_weights() for >1 set
+    //PCout << "smolyakCoeffsRef =\n" << smolyakCoeffsRef;
+    //PCout << "smolyakCoeffs =\n" << smolyakCoeffs;
+    weightSets = weightSetsRef; // to be augmented by last_index data
+    update_sparse_weights(start_index, a2Weights, uniqueIndex2, weightSets);
+    //PCout << "weightSetsRef =\n"; write_data(PCout, weightSetsRef);
+    //PCout << "weightSets =\n";    write_data(PCout, weightSets);
+  }
   //merge_unique(); // a1 reference update not needed, no addtnl increments
 }
 
@@ -791,17 +809,19 @@ void SparseGridDriver::merge_unique()
   PCout << "Merge unique: num_unique3 = " << num_unique3 << "\na3 =\n" << a3_pts
 	<< "\n               r3   indx3 unique3   undx3   xdnu3:\n";
   for (size_t i=0; i<n1n2; ++i)
-    std::cout << std::setw(17) << r3Vec[i]     << std::setw(8) << sortIndex3[i]
-	      << std::setw(8)  << isUnique3[i] << std::setw(8) << uniqueSet3[i]
-	      << std::setw(8)  << uniqueIndex3[i] << '\n';
+    std::cout << std::setw(17)    << r3_vec[i] << std::setw(8) << sort_index3[i]
+	      << std::setw(8) << is_unique3[i] << std::setw(8) << unique_set3[i]
+	      << std::setw(8) << unique_index3[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
   // update reference points/weights (originally defined by _inc1)
   a1Points = a3_pts;
-  a1Weights.resize(n1n2);
-  for (size_t i=0; i<n2; ++i)
-    a1Weights[n1+i] = a2Weights[i];
+  if (trackEnsembleWeights) {
+    a1Weights.resize(n1n2);
+    for (size_t i=0; i<n2; ++i)
+      a1Weights[n1+i] = a2Weights[i];
+  }
   // update reference indices, counts, radii
   r1Vec        = r3_vec;
   sortIndex1   = sort_index3;
@@ -864,7 +884,6 @@ update_sparse_points(size_t start_index, int new_index_offset,
   // add contributions for new index sets
   for (i=start_index, cntr=0; i<num_sm_mi; ++i) {
     num_tp_pts = collocKey[i].size();
-    const Real& sm_coeff_i = smolyakCoeffs[i];
     for (j=0; j<num_tp_pts; ++j, ++cntr) {
       if (is_unique[cntr]) {
 	index = unique_index[cntr] - new_index_offset;
@@ -886,7 +905,7 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
   updated_sparse_wts.resize(numCollocPts); // new entries initialized to 0
 
   int index, delta_coeff;
-  // back out changes in smolyakCoeff for existing index sets
+  // back out changes in Smolyak coeff for existing index sets
   for (i=0, cntr=0; i<start_index; ++i) {
     delta_coeff = smolyakCoeffs[i] - smolyakCoeffsRef[i];
     if (delta_coeff) {
@@ -902,11 +921,12 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
   // add contributions for new index sets
   for (i=start_index, cntr=0; i<num_sm_mi; ++i) {
     num_tp_pts = collocKey[i].size();
-    const Real& sm_coeff_i = smolyakCoeffs[i];
-    for (j=0; j<num_tp_pts; ++j, ++cntr) {
-      index = unique_index[cntr];
-      updated_sparse_wts[index] += sm_coeff_i * tensor_wts[cntr];
-    }
+    int sm_coeff_i = smolyakCoeffs[i];
+    if (sm_coeff_i)
+      for (j=0; j<num_tp_pts; ++j, ++cntr) {
+	index = unique_index[cntr];
+	updated_sparse_wts[index] += sm_coeff_i * tensor_wts[cntr];
+      }
   }
 }
 

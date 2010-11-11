@@ -201,8 +201,7 @@ void InterpPolyApproximation::increment_coefficients()
     for (size_t i=0; i<numVars; ++i)
       if (trial_set[i] > max_trial_index)
 	max_trial_index = trial_set[i];
-    if (max_trial_index+1 > polynomialBasis.size())
-      update_sparse_interpolation_basis(max_trial_index);
+    update_sparse_interpolation_basis(max_trial_index);
     break;
   }
   default:
@@ -311,26 +310,35 @@ void InterpPolyApproximation::
 update_sparse_interpolation_basis(unsigned short max_level)
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  const Real3DArray& gauss_pts_1d = ssg_driver->gauss_points_array();
+
+  // resize if needed (leaving previous levels unmodified)
   size_t i, j, k, basis_size = polynomialBasis.size();
   // j range is 0:w inclusive; i range is 1:w+1 inclusive
   unsigned short num_levels = max_level + 1;
-  const Real3DArray& gauss_pts_1d = ssg_driver->gauss_points_array();
-  // resize leaves previous levels unmodified: only update new levels
-  polynomialBasis.resize(num_levels);
-  for (i=basis_size; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
-    const Real2DArray&          gauss_pts_1d_i = gauss_pts_1d[i];
-    std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
-    polynomialBasis[i].resize(numVars);
+  if (num_levels > basis_size) {
+    polynomialBasis.resize(num_levels);
+    for (i=basis_size; i<num_levels; ++i)
+      polynomialBasis[i].resize(numVars);
+  }
+
+  // fill gaps that may exist within any level
+  for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
     for (j=0; j<numVars; ++j) {
-      bool found = false;
-      for (k=0; k<j; ++k)
-	if (gauss_pts_1d_i[j] == gauss_pts_1d_i[k]) // vector equality
-	  { found = true; break; }
-      if (found) // reuse previous instances via shared representations
-	poly_basis_i[j] = poly_basis_i[k]; // shared rep
-      else { // instantiate new unique instances
-	poly_basis_i[j] = BasisPolynomial(LAGRANGE);
-	poly_basis_i[j].interpolation_points(gauss_pts_1d_i[j]);
+      const RealArray& gauss_pts_1d_ij =    gauss_pts_1d[i][j];
+      BasisPolynomial&   poly_basis_ij = polynomialBasis[i][j];
+      if (poly_basis_ij.is_null() && !gauss_pts_1d_ij.empty()) {
+	bool found = false;
+	for (k=0; k<j; ++k)
+	  if (gauss_pts_1d_ij == gauss_pts_1d[i][k] &&  // vector equality
+	      !polynomialBasis[i][k].is_null())
+	    { found = true; break; }
+	if (found) // reuse previous instances via shared representations
+	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
+	else { // instantiate new unique instances
+	  poly_basis_ij = BasisPolynomial(LAGRANGE);
+	  poly_basis_ij.interpolation_points(gauss_pts_1d_ij);
+	}
       }
     }
   }
@@ -1033,7 +1041,8 @@ const Real& InterpPolyApproximation::get_value(const RealVector& x)
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
-      approxValue += sm_coeffs[i] * tensor_product_value(x, i);
+      if (sm_coeffs[i])
+	approxValue += sm_coeffs[i] * tensor_product_value(x, i);
     return approxValue;
     break;
   }
@@ -1067,9 +1076,11 @@ const RealVector& InterpPolyApproximation::get_gradient(const RealVector& x)
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
-      const RealVector& tp_grad = tensor_product_gradient(x, i);
-      for (j=0; j<numVars; ++j)
-	approxGradient[j] += coeff * tp_grad[j];
+      if (coeff) {
+	const RealVector& tp_grad = tensor_product_gradient(x, i);
+	for (j=0; j<numVars; ++j)
+	  approxGradient[j] += coeff * tp_grad[j];
+      }
     }
     return approxGradient;
     break;
@@ -1103,9 +1114,11 @@ get_gradient(const RealVector& x, const SizetArray& dvv)
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
-      const RealVector& tp_grad = tensor_product_gradient(x, i, dvv);
-      for (j=0; j<num_deriv_vars; ++j)
-	approxGradient[j] += coeff * tp_grad[j];
+      if (coeff) {
+	const RealVector& tp_grad = tensor_product_gradient(x, i, dvv);
+	for (j=0; j<num_deriv_vars; ++j)
+	  approxGradient[j] += coeff * tp_grad[j];
+      }
     }
     return approxGradient;
     break;
@@ -1156,7 +1169,8 @@ const Real& InterpPolyApproximation::get_mean(const RealVector& x)
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
-      expansionMean += sm_coeffs[i] * tensor_product_mean(x, i);
+      if (sm_coeffs[i])
+	expansionMean += sm_coeffs[i] * tensor_product_mean(x, i);
     return expansionMean;
     break;
   }
@@ -1222,9 +1236,11 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
-      const RealVector& tpm_grad = tensor_product_mean_gradient(x, i, dvv);
-      for (j=0; j<num_deriv_vars; ++j)
-	expansionMeanGrad[j] += coeff * tpm_grad[j];
+      if (coeff) {
+	const RealVector& tpm_grad = tensor_product_mean_gradient(x, i, dvv);
+	for (j=0; j<num_deriv_vars; ++j)
+	  expansionMeanGrad[j] += coeff * tpm_grad[j];
+      }
     }
     return expansionMeanGrad;
     break;
@@ -1311,7 +1327,8 @@ const Real& InterpPolyApproximation::get_variance(const RealVector& x)
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
-      expansionVariance	+= sm_coeffs[i] * tensor_product_variance(x, i);
+      if (sm_coeffs[i])
+	expansionVariance += sm_coeffs[i] * tensor_product_variance(x, i);
     return expansionVariance;
     break;
   }
@@ -1387,9 +1404,12 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
-      const RealVector& tpv_grad = tensor_product_variance_gradient(x, i, dvv);
-      for (j=0; j<num_deriv_vars; ++j)
-	expansionVarianceGrad[j] += coeff * tpv_grad[j];
+      if (coeff) {
+	const RealVector& tpv_grad
+	  = tensor_product_variance_gradient(x, i, dvv);
+	for (j=0; j<num_deriv_vars; ++j)
+	  expansionVarianceGrad[j] += coeff * tpv_grad[j];
+      }
     }
     return expansionVarianceGrad;
     break;
@@ -1426,11 +1446,14 @@ const RealVector& InterpPolyApproximation::get_numeric_moments()
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t k, num_smolyak_indices = sm_coeffs.size();
     for (k=0; k<num_smolyak_indices; ++k) {
-      for (size_t i=0; i<numCollocPts; ++i) {
-        numericMoments[0] += expansionCoeffs[i] * wt_sets[i] * sm_coeffs[k];
-        for (size_t j=1; j<num_moments; ++j)
-          numericMoments[j] += std::pow(expansionCoeffs[i] - my_mean, Real(j+1))
-	                    *  wt_sets[i] * sm_coeffs[k];
+      int sm_coeff = sm_coeffs[k];
+      if (sm_coeff) {
+	for (size_t i=0; i<numCollocPts; ++i) {
+	  numericMoments[0] += expansionCoeffs[i] * wt_sets[i] * sm_coeff;
+	  for (size_t j=1; j<num_moments; ++j)
+	    numericMoments[j] += std::pow(expansionCoeffs[i]-my_mean, Real(j+1))
+	                      *  wt_sets[i] * sm_coeff;
+	}
       }
     }
     break;
@@ -1511,8 +1534,9 @@ void InterpPolyApproximation::compute_total_effects()
         for (j=0; j<numVars; ++j) {
           set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
           for (i=0; i<num_smolyak_indices; ++i)
-            totalSobolIndices[j]
-	      += sm_coeffs[i]*total_effects_integral(set_value,i);
+	    if (sm_coeffs[i])
+	      totalSobolIndices[j]
+		+= sm_coeffs[i]*total_effects_integral(set_value,i);
           totalSobolIndices[j]
 	    = std::abs(1 - (totalSobolIndices[j]/total_variance));
         }
@@ -1872,8 +1896,9 @@ void InterpPolyApproximation::partial_variance(int set_value)
     // Smolyak recursion of anisotropic tensor products
     size_t num_smolyak_indices = sm_coeffs.size();
     for (size_t i=0; i<num_smolyak_indices; ++i)
-      partialVariance[sobolIndexMap[set_value]] += sm_coeffs[i]
-	* partial_variance_integral(set_value, i);
+      if (sm_coeffs[i])
+	partialVariance[sobolIndexMap[set_value]] += sm_coeffs[i]
+	  * partial_variance_integral(set_value, i);
     break;
   }
   }

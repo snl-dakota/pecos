@@ -103,7 +103,9 @@ public:
 		       const RealVector& dim_pref,
 		       short refine_type = NO_REFINEMENT,
 		       short refine_control = GENERALIZED_SPARSE,
-		       bool  store_colloc = false, bool nested_rules = true,
+		       bool  store_colloc = false,
+		       bool  track_ensemble_wts = true,
+		       bool  nested_rules = true,
 		       short growth_rate  = MODERATE_RESTRICTED_GROWTH,
 		       short nested_uniform_rule = GAUSS_PATTERSON);
   /// initialize all sparse grid settings (distribution params already
@@ -113,6 +115,7 @@ public:
 		       short refine_type = NO_REFINEMENT,
 		       short refine_control = GENERALIZED_SPARSE,
 		       bool  store_colloc = false,
+		       bool  track_ensemble_wts = true,
 		       short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
   /// update axisLowerBounds
@@ -308,6 +311,9 @@ private:
   /// reference values for the sparse grid weights corresponding to the current
   /// reference grid; used in incremental approaches that update weightSets
   RealVector weightSetsRef;
+  /// flag indicating need to track weightSets for an ensemble sparse grid
+  /// computed incrementally
+  bool trackEnsembleWeights;
 
   int numUnique1, numUnique2;//, numUnique3;
   RealVector zVec, r1Vec, a1Weights, r2Vec, a2Weights;//, r3Vec, a3Weights;
@@ -400,7 +406,11 @@ inline void SparseGridDriver::allocate_smolyak_coefficients()
 
 
 inline void SparseGridDriver::update_reference()
-{ smolyakCoeffsRef = smolyakCoeffs; weightSetsRef = weightSets; }
+{
+  smolyakCoeffsRef = smolyakCoeffs;
+  if (trackEnsembleWeights)
+    weightSetsRef = weightSets;
+}
 
 
 inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const
