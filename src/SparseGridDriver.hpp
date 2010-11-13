@@ -94,9 +94,11 @@ public:
   void reference_unique();
   /// define a2Points and update collocIndices and uniqueIndexMapping
   /// for the trailing index sets within smolyakMultiIndex
-  void increment_unique(size_t start_index, bool compute_a2 = true);
+  void increment_unique(/*size_t start_index, */bool compute_a2 = true);
   /// update a1Points by merging with unique a2Points
   void merge_unique();
+  /// apply all remaining trial sets
+  void finalize_unique(size_t start_index);
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
@@ -213,8 +215,8 @@ private:
   static void chebyshev_weights(int order, int index, double* data);
 
   /// convenience function for defining {a1,a2}{Points,Weights}
-  void compute_tensor_points_weights(size_t start_index, RealMatrix& pts,
-				     RealVector& wts);
+  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
+				     RealMatrix& pts, RealVector& wts);
   /// convenience function for updating sparse points/weights from a set of
   /// aggregated tensor points/weights
   void update_sparse_points(size_t start_index, int new_index_offset,

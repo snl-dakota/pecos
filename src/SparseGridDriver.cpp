@@ -426,12 +426,8 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     allocate_1d_gauss_points_weights();      // define 1-D point/weight sets
     reference_unique(); // updates collocIndices,uniqueIndexMapping,numCollocPts
     update_sparse_points(0, 0, a1Points, isUnique1, uniqueIndex1, var_sets);
-    if (trackEnsembleWeights)
-      update_sparse_weights(0, a1Weights, uniqueIndex1, weightSets);
 #ifdef DEBUG
     PCout << "compute_grid() reference var_sets:\n" << var_sets;
-    if (trackEnsembleWeights)
-      PCout << "compute_grid() reference weightSets:\n" << weightSets;
 #endif // DEBUG
   }
   else { // compute reference and any refined grids
@@ -548,12 +544,7 @@ void SparseGridDriver::restore_set()
   // update collocKey
   update_collocation_key(last_index);
   // update collocIndices and uniqueIndexMapping
-  increment_unique(last_index);
-  // update weightSets
-  if (trackEnsembleWeights) {
-    weightSets = weightSetsRef; // to be augmented by last_index data
-    update_sparse_weights(last_index, a2Weights, uniqueIndex2, weightSets);
-  }
+  increment_unique();//(last_index);
 }
 
 
@@ -578,20 +569,14 @@ void SparseGridDriver::compute_trial_grid(RealMatrix& unique_var_sets)
 
   // update collocIndices and uniqueIndexMapping
   size_t i, num_tp_pts, index, last_index = smolyakMultiIndex.size() - 1;
-  increment_unique(last_index, false); // don't recompute a2 data
+  increment_unique(false);//(last_index, false); // don't recompute a2 data
 
-  // update unique_var_sets and weightSets
+  // update unique_var_sets
   update_sparse_points(last_index, numUnique1, a2Points, isUnique2,
 		       uniqueIndex2, unique_var_sets);
-  if (trackEnsembleWeights) {
-    weightSets = weightSetsRef; // to be augmented by last_index data
-    update_sparse_weights(last_index, a2Weights, uniqueIndex2, weightSets);
-  }
 #ifdef DEBUG
   PCout << "compute_trial_grid() increment:\nunique variable sets:\n"
 	<< unique_var_sets;
-  if (trackEnsembleWeights)
-    PCout << "\nupdated weight sets:\n" << weightSets;
 #endif // DEBUG
 }
 
@@ -650,6 +635,13 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 void SparseGridDriver::finalize_sets()
 {
   // for final answer, push all evaluated sets into old and clear active
+
+  // One at a time trial insertion approach OK for SC, but not for PCE
+
+  // Old increment_unique(start_index) approach was OK for PCE, but not for SC
+
+  // Need multiple trial insertion approach that matches savedSDPSet behavior
+
   size_t start_index = smolyakMultiIndex.size();
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); instead use trialSets
@@ -661,16 +653,9 @@ void SparseGridDriver::finalize_sets()
   // update collocKey
   update_collocation_key(start_index);
   // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
-  increment_unique(start_index);
-  // update weightSets
-  if (trackEnsembleWeights) {
-    weightSets = weightSetsRef; // to be augmented by last_index data
-    update_sparse_weights(start_index, a2Weights, uniqueIndex2, weightSets);
-#ifdef DEBUG
-    PCout << "weightSets =\n"; write_data(PCout, weightSets);
-#endif // DEBUG
-  }
+  /*increment*/finalize_unique(start_index);// assure no mixing of discrete a2's
   //merge_unique(); // a1 reference update not needed, no addtnl increments
+  //update_reference();
 }
 
 
@@ -710,7 +695,8 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
 void SparseGridDriver::reference_unique()
 {
   // define a1 pts/wts
-  compute_tensor_points_weights(0, a1Points, a1Weights);
+  size_t num_sm_mi = smolyakMultiIndex.size();
+  compute_tensor_points_weights(0, num_sm_mi, a1Points, a1Weights);
 
   // ----
   // INC1
@@ -741,14 +727,24 @@ void SparseGridDriver::reference_unique()
   uniqueIndexMapping = uniqueIndex1; // copy
   assign_tensor_collocation_indices(0, uniqueIndex1);
   numCollocPts = numUnique1;
+  if (trackEnsembleWeights) {
+    update_sparse_weights(0, a1Weights, uniqueIndex1, weightSets);
+#ifdef DEBUG
+    PCout << "reference_unique() reference weightSets:\n" << weightSets;
+#endif // DEBUG
+  }
 }
 
 
-void SparseGridDriver::increment_unique(size_t start_index, bool compute_a2)
+void SparseGridDriver::increment_unique(bool compute_a2)//(size_t start_index,bool compute_a2) 
 {
+  // increment_unique now does processes the final Smolyak index set
+
+  size_t last_index = smolyakMultiIndex.size() - 1;
+
   // define a1 pts/wts
   if (compute_a2) // else already computed (e.g., within compute_trial_grid())
-    compute_tensor_points_weights(start_index, a2Points, a2Weights);
+    compute_tensor_points_weights(/*start_*/last_index, 1, a2Points, a2Weights);
 
   // ----
   // INC2
@@ -782,8 +778,16 @@ void SparseGridDriver::increment_unique(size_t start_index, bool compute_a2)
 
   uniqueIndexMapping.insert(uniqueIndexMapping.end(), uniqueIndex2.begin(),
 			    uniqueIndex2.end());
-  assign_tensor_collocation_indices(start_index, uniqueIndex2);
+  assign_tensor_collocation_indices(/*start_*/last_index, uniqueIndex2);
   numCollocPts = numUnique1 + numUnique2;
+  // update weightSets
+  if (trackEnsembleWeights) {
+    weightSets = weightSetsRef; // to be augmented by last_index data
+    update_sparse_weights(/*start_*/last_index, a2Weights, uniqueIndex2, weightSets);
+#ifdef DEBUG
+    PCout << "\nupdated weight sets:\n" << weightSets;
+#endif // DEBUG
+  }
 }
 
 
@@ -836,25 +840,106 @@ void SparseGridDriver::merge_unique()
   delete [] is_unique1; delete [] is_unique2; delete [] is_unique3;
   // update uniqueIndexMapping, collocIndices, numCollocPts
   uniqueIndexMapping = unique_index3;
-  assign_tensor_collocation_indices(0, unique_index3);
+  //assign_tensor_collocation_indices(0, unique_index3);
   numCollocPts = num_unique3;
 }
 
 
+void SparseGridDriver::finalize_unique(size_t start_index)
+{
+  // This fn supports multiple indices and ensures no order mixing among sets
+  // (which causes a bookkeeping mismatch with Dakota::Approximation::
+  // savedSDPSets) by using inc2/inc3 in careful succession.
+
+  // *** TO DO ***: This doesn't address issue of potential point replication
+  // changes between initial trial set status and finalization.  Need an
+  // improved mechanism for point restore/finalize in Dakota::Approximation.
+
+  size_t i, j, num_sm_mi = smolyakMultiIndex.size();
+  int m = numVars, n1, n2, n1n2, n3, num_unique3, all_n2 = 0;
+  RealVector all_a2_wts, r3_vec; RealMatrix a3_pts;
+  IntArray all_unique_index2, sort_index3, unique_set3, unique_index3;
+  bool *is_unique1, *is_unique2, *is_unique3;
+
+  for (i=start_index; i<num_sm_mi; ++i) {
+
+    compute_tensor_points_weights(i, 1, a2Points, a2Weights);
+    n1 = a1Points.numCols(); n2 = a2Points.numCols();
+    all_a2_wts.resize(all_n2+n2);
+    for (j=0; j<n2; ++j)
+      all_a2_wts[all_n2+j] = a2Weights[j];
+    all_n2 += n2;
+
+    // INC2
+    r2Vec.sizeUninitialized(n2); sortIndex2.resize(n2);
+    uniqueSet2.resize(n2);       uniqueIndex2.resize(n2);
+    is_unique1 = new bool[n1];   is_unique2 = new bool[n2];
+    copy_data(isUnique1, is_unique1, n1);
+    webbur::point_radial_tol_unique_index_inc2(m, n1, a1Points.values(),
+      n2, a2Points.values(), duplicateTol, zVec.values(), r1Vec.values(),
+      &sortIndex1[0], is_unique1, numUnique1, &uniqueSet1[0],
+      &uniqueIndex1[0], r2Vec.values(), &sortIndex2[0], is_unique2,
+      &numUnique2, &uniqueSet2[0], &uniqueIndex2[0]);
+
+    all_unique_index2.insert(all_unique_index2.end(), uniqueIndex2.begin(),
+			     uniqueIndex2.end());
+    numCollocPts += numUnique2;
+
+    if (i < num_sm_mi - 1) {
+      // INC3
+      n1n2 = n1+n2;                       r3_vec.sizeUninitialized(n1n2);
+      a3_pts.shapeUninitialized(m, n1n2); sort_index3.resize(n1n2);
+      unique_set3.resize(n1n2);           unique_index3.resize(n1n2);
+      is_unique3 = new bool[n1n2];
+      webbur::point_radial_tol_unique_index_inc3(m, n1, a1Points.values(),
+        r1Vec.values(), &sortIndex1[0], is_unique1, numUnique1, &uniqueSet1[0],
+        &uniqueIndex1[0], n2, a2Points.values(), r2Vec.values(), &sortIndex2[0],
+        is_unique2, numUnique2, &uniqueSet2[0], &uniqueIndex2[0], &n3,
+        a3_pts.values(), r3_vec.values(), &sort_index3[0], is_unique3,
+        &num_unique3, &unique_set3[0], &unique_index3[0]);
+
+      // update reference points, indices, counts, radii
+      a1Points     = a3_pts;
+      r1Vec        = r3_vec;
+      sortIndex1   = sort_index3;
+      numUnique1   = num_unique3;
+      uniqueSet1   = unique_set3;
+      uniqueIndex1 = unique_index3;
+      copy_data(is_unique3, n1n2, isUnique1);
+      delete [] is_unique3;
+    }
+
+    delete [] is_unique1; delete [] is_unique2;
+  }
+
+  uniqueIndexMapping.insert(uniqueIndexMapping.end(), all_unique_index2.begin(),
+			    all_unique_index2.end());
+  assign_tensor_collocation_indices(start_index, all_unique_index2);
+  if (trackEnsembleWeights) {
+    weightSets = weightSetsRef; // to be augmented
+    update_sparse_weights(start_index, all_a2_wts, all_unique_index2,
+			  weightSets);
+#ifdef DEBUG
+    PCout << "weightSets =\n"; write_data(PCout, weightSets);
+#endif // DEBUG
+  }
+}
+
+
 void SparseGridDriver::
-compute_tensor_points_weights(size_t start_index, RealMatrix& pts,
-			      RealVector& wts)
+compute_tensor_points_weights(size_t start_index, size_t num_indices,
+			      RealMatrix& pts, RealVector& wts)
 {
   size_t i, j, k, cntr, num_tp_pts, num_colloc_pts = 0,
-    num_sm_mi = smolyakMultiIndex.size();
+    end = start_index + num_indices;
   // define num_colloc_pts
-  for (i=start_index; i<num_sm_mi; ++i)
+  for (i=start_index; i<end; ++i)
     num_colloc_pts += collocKey[i].size();
   // define pts/wts: wts are raw product weights; Smolyak combinatorial
   // coefficient applied in compute_grid()/compute_trial_grid()
   pts.shapeUninitialized(numVars, num_colloc_pts);
   wts.sizeUninitialized(num_colloc_pts);
-  for (i=start_index, cntr=0; i<num_sm_mi; ++i) {
+  for (i=start_index, cntr=0; i<end; ++i) {
     const UShortArray& sm_index = smolyakMultiIndex[i];
     num_tp_pts = collocKey[i].size();
     for (j=0; j<num_tp_pts; ++j, ++cntr) {
@@ -939,7 +1024,7 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
 
 
 void SparseGridDriver::
-assign_tensor_collocation_indices(size_t start_index,
+assign_tensor_collocation_indices(size_t start_index, 
 				  const IntArray& unique_index)
 {
   size_t i, j, cntr, num_tp_pts, num_sm_mi = smolyakMultiIndex.size();
