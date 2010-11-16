@@ -854,6 +854,10 @@ void SparseGridDriver::finalize_unique(size_t start_index)
   // *** TO DO ***: This doesn't address issue of potential point replication
   // changes between initial trial set status and finalization.  Need an
   // improved mechanism for point restore/finalize in Dakota::Approximation.
+  // Could add a virtual fn to interrogate collocation_indices() from the 
+  // Approximation level.  Perhaps run some performance tests first to verify
+  // that this condition is possible (or does structure of admissible indices
+  // prevent replication in trial sets that is not first detected in old sets).
 
   size_t i, j, num_sm_mi = smolyakMultiIndex.size();
   int m = numVars, n1, n2, n1n2, n3, num_unique3, all_n2 = 0;
