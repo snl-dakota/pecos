@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 project("Pecos" C CXX Fortran)
 
-# WJB: dependency on Trilinos macros seems undesirable -- #include(TrilinosFortranMangling)
 include(FortranCInterface)
 
 option(BUILD_STATIC "build static libraries" OFF)
