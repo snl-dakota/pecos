@@ -8,19 +8,9 @@
 #define FC_FUNC_@FortranCInterface_GLOBAL_MACRO@
 
 
-// WJB - ToDo - ASAP:  provide proper CMake logic for the following configuration vars
-// Macro to handle code which depends on DFFTPACK.
-#cmakedefine HAVE_DFFTPACK 1
-
-// Macro to handle code which depends on LHS.
-#cmakedefine HAVE_LHS 1
-
-// Macro to handle code which depends on VPISparseGrid.
-#cmakedefine HAVE_SPARSE_GRID 1
-
 // Macro to enable debug in Pecos.
-#cmakedefine HAVE_PECOS_DEBUG
+// #cmakedefine HAVE_PECOS_DEBUG
 
 // Macro to disable Boost asserts.
-#cmakedefine BOOST_DISABLE_ASSERTS 1
+// WJB: remove if add_defn works -- #cmakedefine BOOST_DISABLE_ASSERTS 1
 

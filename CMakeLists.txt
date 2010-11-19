@@ -46,12 +46,10 @@ set( CMAKE_MODULE_PATH
 )
 
 
-# should not be hard coded
-set(Pecos_ENABLE_DEBUG ON)
-set(Pecos_ENABLE_EXPLICIT_INSTANTIATION OFF)
-set(Pecos_ENABLE_PERFORMANCE_TESTS OFF)
-
-set(BOOST_DISABLE_ASSERTS 1)
+option(BOOST_DISABLE_ASSERTS "Toggle BoostAssert, default is AssertDisabled" ON)
+if (BOOST_DISABLE_ASSERTS)
+  add_definitions("-DBOOST_DISABLE_ASSERTS")
+endif (BOOST_DISABLE_ASSERTS)
 
 # WJB - ToDo: test the (HAVE_FFT == OFF) case
 option(HAVE_FFT "Use either the fftw or dfftpack packages" ON)
@@ -85,25 +83,36 @@ option(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
 #Keep track of what libraries should be included in libpecos
 set(SUBLIBS pecos_src)
 
+
+function(CheckPackage package)
+  if(HAVE_${package})
+    add_definitions("-DHAVE_${package}")
+    string(TOLOWER ${package} package_lower)
+    set(SUBLIBS ${SUBLIBS} ${package_lower} PARENT_SCOPE)
+  endif()
+endfunction(CheckPackage)
+
 #Descend into source subdirectories based on user preference
+
+CheckPackage(LHS)
+
 if(HAVE_FFT)
-  #set(SUBLIBS ${SUBLIBS} dfftpack fftw3)
-  if(HAVE_DFFTPACK)
-    set(SUBLIBS ${SUBLIBS} dfftpack)
-  endif(HAVE_DFFTPACK)
+  CheckPackage(DFFTPACK)
+
   if(HAVE_FFTW)
+    add_definitions("-DHAVE_FFTW")
+    include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
     #set(SUBLIBS ${SUBLIBS} fftw3)
     find_package(Fftw3)
   endif(HAVE_FFTW)
+
 endif(HAVE_FFT)
 
-if(HAVE_LHS)
-  set(SUBLIBS ${SUBLIBS} lhs)
-endif(HAVE_LHS)
-
 if(HAVE_SPARSE_GRID)
+  add_definitions("-DHAVE_SPARSE_GRID")
   set(SUBLIBS ${SUBLIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
+
 
 # first probe for system-installed Trilinos
 # this will respect Trilinos_DIR if already set

@@ -1,25 +1,18 @@
+# CMakeLists.txt for pecos source (WJB: Note the source file GLOB below)
+
+add_definitions("-DHAVE_CONFIG_H")
+
 include_directories(${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS}
                     ${PROJECT_BINARY_DIR})
 
-# WJB: not sure this is prudent; moving to shared object libs -- link_directories(${Teuchos_LIBRARY_DIRS})
-
-if(HAVE_LHS)
-  add_definitions("-DHAVE_LHS")
-  set(Pecos_libs ${Pecos_libs} lhs)
-endif(HAVE_LHS)
 
 if(HAVE_SPARSE_GRID)
   include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
 endif(HAVE_SPARSE_GRID)
 
-# The package's pkg_config.h file is located in $PROJECT_BINARY_DIR (see above)
-add_definitions("-DHAVE_CONFIG_H")
-
-# WJB: not sure this is prudent; moving to shared object libs -- set(Pecos_libs teuchos lapack)
-
 if(HAVE_FFTW)
-  # WJB: not sure this is prudent; moving to shared object libs -- set(Pecos_libs ${Pecos_libs} fftw3)
+  #set(Pecos_libs ${Pecos_libs} fftw3)
   include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
 endif(HAVE_FFTW)
 

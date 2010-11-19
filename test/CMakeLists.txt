@@ -1,39 +1,27 @@
-set(TPL_LIBS teuchos)
+# CMakeLists.txt for pecos "unit" tests
+
+add_definitions("-DHAVE_CONFIG_H")
 
 include_directories(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/src
                     ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
 
-link_directories(${Teuchos_LIBRARY_DIRS})
+# Teuchos dependency is unconditional
+set(TPL_LIBS teuchos)
 
-add_definitions("-DHAVE_CONFIG_H")
+link_directories(${Teuchos_LIBRARY_DIRS})
 
 if(HAVE_SPARSE_GRID)
   include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
-  set(TPL_LIBS ${TPL_LIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
-
-if(HAVE_DFFTPACK)
-  set(TPL_LIBS ${TPL_LIBS} dfftpack)
-endif(HAVE_DFFTPACK)
 
 if(HAVE_FFTW)
   set(TPL_LIBS ${TPL_LIBS} fftw3)
 endif(HAVE_FFTW)
 
-
-#if(HAVE_LHS)
-#  set(TPL_LIBS ${TPL_LIBS} lhs)
-#endif(HAVE_LHS)
-function(CheckPackage package)
-  if(HAVE_${package})
-    add_definitions("-DHAVE_${package}")
-    string(TOLOWER ${package} package_lower)
-    set(TPL_LIBS ${TPL_LIBS} ${package_lower} PARENT_SCOPE)
-  endif()
-endfunction(CheckPackage)
-
-CheckPackage(LHS)
+if(HAVE_LHS)
+  set(TPL_LIBS ${TPL_LIBS} lhs)
+endif(HAVE_LHS)
 
 
 # Complete these for each specific test.
