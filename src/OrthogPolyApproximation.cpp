@@ -643,7 +643,7 @@ void OrthogPolyApproximation::decrement_coefficients()
       expansionCoeffs     = prevExpCoeffs;
       expansionCoeffGrads = prevExpCoeffGrads;
       // reset multiIndex and numExpansionTerms:
-      numExpansionTerms = tpMultiIndexMapRef.back();
+      numExpansionTerms   = tpMultiIndexMapRef.back();
       multiIndex.resize(numExpansionTerms); // truncate previous increment
       // reset tensor-product bookkeeping and save restorable data
       savedSmolyakMultiIndex.push_back(ssg_driver->trial_index_set());
@@ -652,10 +652,8 @@ void OrthogPolyApproximation::decrement_coefficients()
       savedTPMultiIndexMapRef.push_back(numExpansionTerms);
       savedTPExpCoeffs.push_back(tpExpansionCoeffs.back());
       savedTPExpCoeffGrads.push_back(tpExpansionCoeffGrads.back());
-      tpMultiIndex.pop_back();
-      tpMultiIndexMap.pop_back();
-      tpMultiIndexMapRef.pop_back();
-      tpExpansionCoeffs.pop_back();
+      tpMultiIndex.pop_back();       tpMultiIndexMap.pop_back();
+      tpMultiIndexMapRef.pop_back(); tpExpansionCoeffs.pop_back();
       tpExpansionCoeffGrads.pop_back();
       // resize not necessary since not updating expansion on decrement;
       // rather, next increment takes care of this.
@@ -678,18 +676,18 @@ void OrthogPolyApproximation::restore_coefficients()
       // move previous expansion data to current expansion
       last_index = tpMultiIndex.size();
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-      UShort2DArray::iterator  sit = std::find(savedSmolyakMultiIndex.begin(),
-					       savedSmolyakMultiIndex.end(),
-					       ssg_driver->trial_index_set());
+      std::deque<UShortArray>::iterator sit
+	= std::find(savedSmolyakMultiIndex.begin(), 
+		    savedSmolyakMultiIndex.end(),ssg_driver->trial_index_set());
       size_t index_star = std::distance(savedSmolyakMultiIndex.begin(), sit);
       savedSmolyakMultiIndex.erase(sit);
-      UShort3DArray::iterator   iit = savedTPMultiIndex.begin();
-      Sizet2DArray::iterator    mit = savedTPMultiIndexMap.begin();
-      SizetArray::iterator      rit = savedTPMultiIndexMapRef.begin();
-      RealVectorArray::iterator cit = savedTPExpCoeffs.begin();
-      RealMatrixArray::iterator git = savedTPExpCoeffGrads.begin();
-      std::advance(iit, index_star); std::advance(mit, index_star);
-      std::advance(rit, index_star); std::advance(cit, index_star);
+      std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
+      std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
+      std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
+      std::deque<RealVector>::iterator    cit = savedTPExpCoeffs.begin();
+      std::deque<RealMatrix>::iterator    git = savedTPExpCoeffGrads.begin();
+      std::advance(iit, index_star);      std::advance(mit, index_star);
+      std::advance(rit, index_star);      std::advance(cit, index_star);
       std::advance(git, index_star);
       tpMultiIndex.push_back(*iit);          savedTPMultiIndex.erase(iit);
       tpMultiIndexMap.push_back(*mit);       savedTPMultiIndexMap.erase(mit);
@@ -720,9 +718,9 @@ void OrthogPolyApproximation::finalize_coefficients()
     case TENSOR_INT_TENSOR_SUM_EXP: {
       start_index = tpMultiIndex.size();
       // update multiIndex and numExpansionTerms
-      UShort3DArray::iterator iit = savedTPMultiIndex.begin();
-      Sizet2DArray::iterator  mit = savedTPMultiIndexMap.begin();
-      SizetArray::iterator    rit = savedTPMultiIndexMapRef.begin();
+      std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
+      std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
+      std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
       for (; iit!=savedTPMultiIndex.end(); ++iit, ++mit, ++rit)
 	append_multi_index(*iit, *mit, *rit, multiIndex);
       numExpansionTerms = multiIndex.size();
@@ -738,12 +736,9 @@ void OrthogPolyApproximation::finalize_coefficients()
 	savedTPExpCoeffs.begin(), savedTPExpCoeffs.end());
       tpExpansionCoeffGrads.insert(tpExpansionCoeffGrads.end(),
 	savedTPExpCoeffGrads.begin(), savedTPExpCoeffGrads.end());
-      savedSmolyakMultiIndex.clear();
-      savedTPMultiIndex.clear();
-      savedTPMultiIndexMap.clear();
-      savedTPMultiIndexMapRef.clear();
-      savedTPExpCoeffs.clear();
-      savedTPExpCoeffGrads.clear();
+      savedSmolyakMultiIndex.clear(); savedTPMultiIndex.clear();
+      savedTPMultiIndexMap.clear();   savedTPMultiIndexMapRef.clear();
+      savedTPExpCoeffs.clear();       savedTPExpCoeffGrads.clear();
       // sum remaining trial expansions into expansionCoeffs/expansionCoeffGrads
       append_expansions(start_index);
       break;

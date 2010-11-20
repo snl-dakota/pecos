@@ -544,7 +544,7 @@ void SparseGridDriver::restore_set()
   // update collocKey
   update_collocation_key(last_index);
   // update collocIndices and uniqueIndexMapping
-  increment_unique();//(last_index);
+  increment_unique();
 }
 
 
@@ -562,14 +562,14 @@ void SparseGridDriver::compute_trial_grid(RealMatrix& unique_var_sets)
 
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
-  trialSets.push_back(trial_set);
+  trialSets.insert(trial_set);
 
   // update 3D with new 2D gauss pts/wts (in correct location)
   update_1d_gauss_points_weights(trial_set, pts_1d, wts_1d);
 
   // update collocIndices and uniqueIndexMapping
   size_t i, num_tp_pts, index, last_index = smolyakMultiIndex.size() - 1;
-  increment_unique(false);//(last_index, false); // don't recompute a2 data
+  increment_unique(false); // don't recompute a2 data
 
   // update unique_var_sets
   update_sparse_points(last_index, numUnique1, a2Points, isUnique2,
@@ -612,10 +612,7 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // remove set_star from set A by erasing from activeMultiIndex:
   activeMultiIndex.erase(last_sm_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  UShort2DArray::iterator it
-    = std::find(trialSets.begin(), trialSets.end(), last_sm_set);
-  if (it != trialSets.end())
-    trialSets.erase(it);
+  trialSets.erase(last_sm_set);
 
   // update set A (activeMultiIndex) based on neighbors of set_star:
   add_active_neighbors(last_sm_set);
@@ -625,22 +622,18 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 
 #ifdef DEBUG
   PCout << "Sets updated: (Smolyak,Old,Active,Trial) = ("
-	<< smolyakMultiIndex.size() << "," << oldMultiIndex.size() << ","
-	<< activeMultiIndex.size() << "," << trialSets.size() << ")"
-	<< std::endl;
+	<< smolyakMultiIndex.size() << ',' << oldMultiIndex.size() << ','
+	<< activeMultiIndex.size() << ',' << trialSets.size() << ')'<<std::endl;
 #endif // DEBUG
 }
 
 
 void SparseGridDriver::finalize_sets()
 {
-  // for final answer, push all evaluated sets into old and clear active
-
-  // One at a time trial insertion approach OK for SC, but not for PCE
-
-  // Old increment_unique(start_index) approach was OK for PCE, but not for SC
-
-  // Need multiple trial insertion approach that matches savedSDPSet behavior
+  // For final answer, push all evaluated sets into old and clear active.
+  // Multiple trial insertion approach must be compatible with
+  // Dakota::Approximation::savedSDPSet behavior (i.e., inc2/inc3 set 
+  // insertions must occur one at a time without mixing).
 
   size_t start_index = smolyakMultiIndex.size();
   // don't insert activeMultiIndex, as this may include sets which have not
@@ -653,7 +646,7 @@ void SparseGridDriver::finalize_sets()
   // update collocKey
   update_collocation_key(start_index);
   // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
-  /*increment*/finalize_unique(start_index);// assure no mixing of discrete a2's
+  finalize_unique(start_index);// assure no mixing of discrete a2's
   //merge_unique(); // a1 reference update not needed, no addtnl increments
   //update_reference();
 }
@@ -736,15 +729,14 @@ void SparseGridDriver::reference_unique()
 }
 
 
-void SparseGridDriver::increment_unique(bool compute_a2)//(size_t start_index,bool compute_a2) 
+void SparseGridDriver::increment_unique(bool compute_a2)
 {
-  // increment_unique now does processes the final Smolyak index set
-
+  // increment_unique processes the trailing Smolyak index set
   size_t last_index = smolyakMultiIndex.size() - 1;
 
   // define a1 pts/wts
   if (compute_a2) // else already computed (e.g., within compute_trial_grid())
-    compute_tensor_points_weights(/*start_*/last_index, 1, a2Points, a2Weights);
+    compute_tensor_points_weights(last_index, 1, a2Points, a2Weights);
 
   // ----
   // INC2
@@ -778,12 +770,12 @@ void SparseGridDriver::increment_unique(bool compute_a2)//(size_t start_index,bo
 
   uniqueIndexMapping.insert(uniqueIndexMapping.end(), uniqueIndex2.begin(),
 			    uniqueIndex2.end());
-  assign_tensor_collocation_indices(/*start_*/last_index, uniqueIndex2);
+  assign_tensor_collocation_indices(last_index, uniqueIndex2);
   numCollocPts = numUnique1 + numUnique2;
   // update weightSets
   if (trackEnsembleWeights) {
     weightSets = weightSetsRef; // to be augmented by last_index data
-    update_sparse_weights(/*start_*/last_index, a2Weights, uniqueIndex2, weightSets);
+    update_sparse_weights(last_index, a2Weights, uniqueIndex2, weightSets);
 #ifdef DEBUG
     PCout << "\nupdated weight sets:\n" << weightSets;
 #endif // DEBUG
@@ -884,6 +876,15 @@ void SparseGridDriver::finalize_unique(size_t start_index)
       &sortIndex1[0], is_unique1, numUnique1, &uniqueSet1[0],
       &uniqueIndex1[0], r2Vec.values(), &sortIndex2[0], is_unique2,
       &numUnique2, &uniqueSet2[0], &uniqueIndex2[0]);
+#ifdef DEBUG
+    PCout << "Finalize unique: numUnique2 = " << numUnique2 << "\na2 =\n"
+	  << a2Points<<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
+    for (j=0; j<n2; ++j)
+      std::cout << std::setw(17)    << r2Vec[j] << std::setw(8) << sortIndex2[j]
+		<< std::setw(8) << isUnique2[j] << std::setw(8) << uniqueSet2[j]
+		<< std::setw(8) << uniqueIndex2[j] << '\n';
+    PCout << std::endl;
+#endif // DEBUG
 
     all_unique_index2.insert(all_unique_index2.end(), uniqueIndex2.begin(),
 			     uniqueIndex2.end());
@@ -901,6 +902,16 @@ void SparseGridDriver::finalize_unique(size_t start_index)
         is_unique2, numUnique2, &uniqueSet2[0], &uniqueIndex2[0], &n3,
         a3_pts.values(), r3_vec.values(), &sort_index3[0], is_unique3,
         &num_unique3, &unique_set3[0], &unique_index3[0]);
+#ifdef DEBUG
+      PCout << "Finalize unique: num_unique3 = " << num_unique3 << "\na3 =\n"
+	    << a3_pts<<"\n               r3   indx3 unique3   undx3   xdnu3:\n";
+      for (j=0; j<n1n2; ++j)
+	std::cout << std::setw(17) << r3_vec[j] << std::setw(8)
+		  << sort_index3[j] << std::setw(8) << is_unique3[j]
+		  << std::setw(8) << unique_set3[j] << std::setw(8)
+		  << unique_index3[j] << '\n';
+      PCout << std::endl;
+#endif // DEBUG
 
       // update reference points, indices, counts, radii
       a1Points     = a3_pts;

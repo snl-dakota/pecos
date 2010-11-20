@@ -334,15 +334,15 @@ private:
   RealMatrixArray tpExpansionCoeffGrads;
 
   /// saved instances of tpMultiIndex that were computed but not selected
-  UShort3DArray savedTPMultiIndex;
+  std::deque<UShort2DArray> savedTPMultiIndex;
   /// saved instances of tpMultiIndexMap that were computed but not selected
-  Sizet2DArray savedTPMultiIndexMap;
+  std::deque<SizetArray> savedTPMultiIndexMap;
   /// saved instances of tpMultiIndexMapRef that were computed but not selected
-  SizetArray savedTPMultiIndexMapRef;
+  std::deque<size_t> savedTPMultiIndexMapRef;
   /// saved instances of tpExpansionCoeffs that were computed but not selected
-  RealVectorArray savedTPExpCoeffs;
+  std::deque<RealVector> savedTPExpCoeffs;
   /// saved tpExpansionCoeffGrads instances that were computed but not selected
-  RealMatrixArray savedTPExpCoeffGrads;
+  std::deque<RealMatrix> savedTPExpCoeffGrads;
 
   /// previous expansionCoeffs (combined total, not tensor-product
   /// contributions) prior to append_expansions()

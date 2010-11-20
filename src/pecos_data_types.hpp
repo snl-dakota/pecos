@@ -135,7 +135,7 @@ find_index(const PecosContainerType& v,
 {
   typename PecosContainerType::const_iterator iter
     = std::find(v.begin(), v.end(), val);
-  return iter != v.end() ? iter - v.begin() : _NPOS;
+  return (iter == v.end()) ? _NPOS : std::distance(v.begin(), iter);
 }
 
 

@@ -93,8 +93,8 @@ public:
   /// define a1Points/a1Weights based on the reference grid
   void reference_unique();
   /// define a2Points and update collocIndices and uniqueIndexMapping
-  /// for the trailing index sets within smolyakMultiIndex
-  void increment_unique(/*size_t start_index, */bool compute_a2 = true);
+  /// for the trailing index set within smolyakMultiIndex
+  void increment_unique(bool compute_a2 = true);
   /// update a1Points by merging with unique a2Points
   void merge_unique();
   /// apply all remaining trial sets
@@ -305,9 +305,8 @@ private:
   /// generalized sparse grid
   std::set<UShortArray> activeMultiIndex; // or UShort2DArray
   /// subset of active set that have been evaluated as trial sets
-  /// (updated in push_trial_set).  Employ array rather than set in
-  /// order to mirror array-based restore/finalize.
-  UShort2DArray trialSets;
+  /// (incremented in compute_trial_grid() and decremented in update_sets())
+  std::set<UShortArray> trialSets; // or UShort2DArray
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
   IntArray smolyakCoeffsRef;

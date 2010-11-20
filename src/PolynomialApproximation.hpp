@@ -279,9 +279,12 @@ protected:
   /// query trial index for presence in savedSmolyakMultiIndex, indicating
   /// the ability to restore a previously evaluated increment
   bool restore_available();
-  /// index of the data set to be restored from within saved bookkeeping
-  /// (i.e.,savedSmolyakMultiIndex)
+  /// returns index of the data set to be restored from within saved
+  /// bookkeeping (i.e., savedSmolyakMultiIndex)
   size_t restoration_index();
+  /// returns i-th index of the data sets to be restored from within saved
+  /// bookkeeping (i.e., savedSmolyakMultiIndex) during finalization
+  size_t finalization_index(size_t i);
 
   //
   //- Heading: Member functions
@@ -350,7 +353,7 @@ protected:
   RealMatrix expansionCoeffGrads;
 
   /// saved trial sets that were computed but not selected
-  UShort2DArray savedSmolyakMultiIndex;
+  std::deque<UShortArray> savedSmolyakMultiIndex;
 
   /// introduce mapping to unify disparate enumeration of sensitivity
   /// indices (e.g. main effects only vs all effects)
@@ -574,10 +577,19 @@ inline bool PolynomialApproximation::restore_available()
 inline size_t PolynomialApproximation::restoration_index()
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  UShort2DArray::iterator  sit = std::find(savedSmolyakMultiIndex.begin(),
-    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set());
-  return (sit == savedSmolyakMultiIndex.end()) ? _NPOS :
-    std::distance(savedSmolyakMultiIndex.begin(), sit);
+  return find_index(savedSmolyakMultiIndex, ssg_driver->trial_index_set());
+}
+
+
+inline size_t PolynomialApproximation::finalization_index(size_t i)
+{
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
+
+  size_t num_saved_indices = savedSmolyakMultiIndex.size(),
+    start = sm_multi_index.size() - num_saved_indices;
+
+  return find_index(savedSmolyakMultiIndex, sm_multi_index[start+i]);
 }
 
 } // namespace Pecos

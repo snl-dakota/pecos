@@ -72,6 +72,8 @@ public:
   virtual bool restore_available();
   /// index of the data set to be restored from within saved bookkeeping
   virtual size_t restoration_index();
+  /// index of the i-th data set to be restored from within saved bookkeeping
+  virtual size_t finalization_index(size_t i);
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
 

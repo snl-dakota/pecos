@@ -252,9 +252,9 @@ void InterpPolyApproximation::restore_coefficients()
   case SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    UShort2DArray::iterator sit = std::find(savedSmolyakMultiIndex.begin(),
-					    savedSmolyakMultiIndex.end(),
-					    ssg_driver->trial_index_set());
+    std::deque<UShortArray>::iterator sit
+      = std::find(savedSmolyakMultiIndex.begin(), savedSmolyakMultiIndex.end(),
+		  ssg_driver->trial_index_set());
     if (sit != savedSmolyakMultiIndex.end())
       savedSmolyakMultiIndex.erase(sit);
     break;

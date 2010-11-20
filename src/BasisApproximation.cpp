@@ -285,6 +285,17 @@ size_t BasisApproximation::restoration_index()
 }
 
 
+size_t BasisApproximation::finalization_index(size_t i)
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: finalization_index(size_t) not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+  return basisApproxRep->finalization_index(i); 
+}
+
+
 void BasisApproximation::print_coefficients(std::ostream& s) const
 {
   if (basisApproxRep)
