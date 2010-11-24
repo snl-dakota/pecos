@@ -37,12 +37,12 @@ add_test(pecos_ifft_sd pecos_ifft_sd)
 
 # Complete these for each specific test.
 add_executable(boost_test_dist boost_test_dist.cpp)
-target_link_libraries(boost_test_dist pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+target_link_libraries(boost_test_dist pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 add_test(boost_test_dist boost_test_dist)
 
 # Complete these for each specific test.
 add_executable(boost_test_rng boost_test_rng.cpp)
-target_link_libraries(boost_test_rng pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+target_link_libraries(boost_test_rng pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
 add_test(boost_test_rng boost_test_rng)
 
 # Complete these for each specific test.
