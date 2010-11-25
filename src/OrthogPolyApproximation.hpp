@@ -160,8 +160,6 @@ protected:
   /// and given DVV, treating a subset of the variables as random
   const RealVector& get_mean_gradient(const RealVector& x,
 				      const SizetArray& dvv);
-  const RealVector& get_numeric_moments();
-
 
   /// return the variance of the PCE, treating all variables as random
   const Real& get_variance();
@@ -177,11 +175,17 @@ protected:
 					  const SizetArray& dvv);
 
   /// return the covariance of the PCE, treating all variables as random
-  const Real& get_covariance(const RealVector& exp_coeffs_2);
-  // return the covariance of the PCE for a given parameter vector,
-  // treating a subset of the variables as random
-  //const Real& get_covariance(const RealVector& x,
-  //                           const RealVector& exp_coeffs_2);
+  Real get_covariance(const RealVector& exp_coeffs_2);
+  /// return the covariance of the PCE for a given parameter vector,
+  /// treating a subset of the variables as random
+  Real get_covariance(const RealVector& x, const RealVector& exp_coeffs_2);
+
+  /// compute numerical moments to order 4 and expansion moments to order 2
+  void compute_central_moments();
+  /// compute expansion moments in all-variables mode to order 2
+  void compute_central_moments(const RealVector& x);
+  /// return centralExpMoments
+  const RealVector& central_moments() const;
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as random
@@ -280,10 +284,6 @@ private:
 			   const std::vector<SurrogateDataPoint>& data_pts,
 			   const RealVector& wt_sets, RealVector& exp_coeffs,
 			   RealMatrix& exp_coeff_grads);
-  void integrate_moments(const UShort2DArray& multi_index,
-		    const std::vector<SurrogateDataPoint>& data_pts,
-                    RealVector& function_vals,
-		    const RealVector& wt_sets, RealVector& moments);
 
   /// cross-validates alternate gradient expressions
   void gradient_check();
@@ -378,6 +378,28 @@ OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
 
 inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
+
+
+inline void OrthogPolyApproximation::compute_central_moments()
+{
+  centralExpMoments.sizeUninitialized(2); get_mean(); get_variance();
+  if (configOptions.expCoeffsSolnApproach == QUADRATURE ||
+      configOptions.expCoeffsSolnApproach == CUBATURE   ||
+      configOptions.expCoeffsSolnApproach == SPARSE_GRID)
+    compute_central_numerical_moments(4);
+}
+
+
+inline void OrthogPolyApproximation::
+compute_central_moments(const RealVector& x)
+{
+  centralExpMoments.sizeUninitialized(2); get_mean(x); get_variance(x);
+  //compute_central_numerical_moments(2, x); // TO DO
+}
+
+
+inline const RealVector& OrthogPolyApproximation::central_moments() const
+{ return centralExpMoments; }
 
 
 inline void OrthogPolyApproximation::expansion_terms(int exp_terms)

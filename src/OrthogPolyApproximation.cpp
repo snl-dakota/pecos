@@ -1480,38 +1480,6 @@ integrate_expansion(const UShort2DArray& multi_index,
 }
 
 
-// Compute moments by projecting data points along the normalized identity function
-void OrthogPolyApproximation::
-integrate_moments(const UShort2DArray& multi_index,
-		    const std::vector<SurrogateDataPoint>& data_pts,
-                    RealVector& function_vals,
-		    const RealVector& wt_sets, RealVector& moments)
-		    
-{
-  std::vector<SurrogateDataPoint>::const_iterator cit;
-  size_t i, j, k;
-  size_t m = moments.length(); 
-  RealVector wt_resp_fn_i(m); Real Psi_ij; 
-  moments = 0;
-
-  // construct vector of wts and modified data points
-  for (i=0, cit=data_pts.begin(); cit!=data_pts.end(); ++i, ++cit) {
-    for (j=0; j<m; ++j) {
-      // do not center the first moment
-      if (j == 0)
-        wt_resp_fn_i[j] = wt_sets[i] * cit->response_function(); 
-      else
-        wt_resp_fn_i[j] = wt_sets[i] * std::pow(function_vals[i],Real(j+1));
-    }
-    const RealVector& c_vars_i = cit->continuous_variables();
-    // only need to access the first basis function (i.e. identity function)
-    Psi_ij = multivariate_polynomial(c_vars_i, multi_index[0]);
-    for (j=0; j<m; ++j)
-      moments[j] += Psi_ij * wt_resp_fn_i[j];
-  }
-
-}
-
 /** In this case, regression is used in place of spectral projection.  That
     is, instead of calculating the PCE coefficients using inner product
     ratios, linear least squares is used to estimate the PCE coefficients
@@ -2030,13 +1998,13 @@ const Real& OrthogPolyApproximation::get_mean()
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_mean()" << std::endl;
+	  << "OrthogPolyApproximation::get_variance()" << std::endl;
     abort_handler(-1);
   }
 
-  //expansionMean = expansionCoeffs[0];
-  //return expansionMean;
-  return expansionCoeffs[0];
+  Real& mean = centralExpMoments[0];
+  mean = expansionCoeffs[0];
+  return mean;
 }
 
 
@@ -2053,7 +2021,8 @@ const Real& OrthogPolyApproximation::get_mean(const RealVector& x)
   }
 
   // sum expansion to get response prediction
-  expansionMean = expansionCoeffs[0];
+  Real& mean = centralExpMoments[0];
+  mean = expansionCoeffs[0];
 
   size_t i;
   SizetList::iterator it;
@@ -2070,16 +2039,16 @@ const Real& OrthogPolyApproximation::get_mean(const RealVector& x)
 	if (order_1d)
 	  Psi *= polynomialBasis[index].get_value(x[index], order_1d);
       }
-      expansionMean += Psi*expansionCoeffs[i];
+      mean += Psi*expansionCoeffs[i];
 #ifdef DEBUG
       PCout << "Mean estimate inclusion: term index = " << i
 	    << " Psi = " << Psi << " PCE coeff = " << expansionCoeffs[i]
-	    << " total = " << expansionMean << '\n';
+	    << " total = " << mean << '\n';
 #endif // DEBUG
     }
   }
 
-  return expansionMean;
+  return mean;
 }
 
 
@@ -2099,10 +2068,10 @@ const RealVector& OrthogPolyApproximation::get_mean_gradient()
     abort_handler(-1);
   }
 
-  //expansionMeanGrad = expansionCoeffGrads[0];
-  return expansionMeanGrad
+  //meanGradient = expansionCoeffGrads[0];
+  return meanGradient
     = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
-  return expansionMeanGrad;
+  return meanGradient;
 }
 
 
@@ -2120,9 +2089,9 @@ const RealVector& OrthogPolyApproximation::
 get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_deriv_vars = dvv.size();
-  if (expansionMeanGrad.length() != num_deriv_vars)
-    expansionMeanGrad.sizeUninitialized(num_deriv_vars);
-  expansionMeanGrad = 0.0;
+  if (meanGradient.length() != num_deriv_vars)
+    meanGradient.sizeUninitialized(num_deriv_vars);
+  meanGradient = 0.0;
 
   SizetList::iterator it;
   size_t cntr = 0; // insertions carried in order within expansionCoeffGrads
@@ -2135,7 +2104,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	      << "OrthogPolyApproximation::get_mean_gradient()." << std::endl;
 	abort_handler(-1);
       }
-      expansionMeanGrad[i] = expansionCoeffGrads[0][cntr];
+      meanGradient[i] = expansionCoeffGrads[0][cntr];
     }
     else if (!configOptions.expansionCoeffFlag) { // Error check for reqd data
       PCerr << "Error: expansion coefficients not defined in "
@@ -2163,7 +2132,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	    if (order_1d)
 	      Psi *= polynomialBasis[index].get_value(x[index], order_1d);
 	  }
-	  expansionMeanGrad[i] += Psi*expansionCoeffGrads[j][cntr];
+	  meanGradient[i] += Psi*expansionCoeffGrads[j][cntr];
 	}
 	else {
 	  // ----------------------------------------------
@@ -2176,7 +2145,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	      polynomialBasis[index].get_gradient(x[index],multiIndex[j][index])
 	    : polynomialBasis[index].get_value(x[index], multiIndex[j][index]);
 	  }
-	  expansionMeanGrad[i] += expansionCoeffs[j]*term_j_grad_i;
+	  meanGradient[i] += expansionCoeffs[j]*term_j_grad_i;
 	}
       }
     }
@@ -2184,84 +2153,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
       ++cntr;
   }
 
-  return expansionMeanGrad;
-}
-
-// Computes centered (non-normalized) moments numerically
-const RealVector& OrthogPolyApproximation::get_numeric_moments()
-{
-  size_t i, j, num_pts = dataPoints.size();
-  size_t num_moments = 4; // may want this to be a user option?
-  numericMoments.sizeUninitialized(num_moments);
-  if (!anchorPoint.is_null())
-    ++num_pts;
-  if (!num_pts) {
-    PCerr << "Error: nonzero number of sample points required in "
-	  << "OrthogPolyApproximation::get_numeric_moments()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // Assumes coefficients have been calculated
-  std::vector<SurrogateDataPoint>::const_iterator cit;
- 
-  // calculate moments 
-  switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: {
-    // Define centered data
-    RealVector c_function_vals(dataPoints.size());
-    for (i=0,cit=dataPoints.begin(); cit!=dataPoints.end(); ++i,++cit) 
-      c_function_vals[i] = cit->response_function() - expansionCoeffs[0];
-    // presumably all exceptions are caught in computing coeffs of the expansion
-    integrate_moments(multiIndex, dataPoints, c_function_vals,
-		      driverRep->weight_sets(),	numericMoments);
-    break;
-  }
-  case SPARSE_GRID:
-    switch (sparseGridExpansion) {
-    case TENSOR_INT_TENSOR_SUM_EXP: {
-      // multiple expansion integration
-      // Note: allocate_arrays() calls sparse_grid_multi_index() which uses
-      // append_multi_index() to build multiIndex.
-      SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-      const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
-      size_t i, num_tensor_grids = tpMultiIndex.size(); int coeff;
-      std::vector<SurrogateDataPoint> tp_data_pts;
-
-      RealVector tp_wts;//, tp_coeffs; RealMatrix tp_coeff_grads;
-      RealVector tp_numeric_moments(num_moments);
-      numericMoments = 0;
-      // loop over tensor-products, forming sub-expansions, and sum them up
-      for (i=0; i<num_tensor_grids; ++i) {
-	// form tp_data_pts, tp_wts using collocKey et al.
-	integration_data(i, tp_data_pts, tp_wts);
-        // Define centered data
-        RealVector c_function_vals(tp_data_pts.size());
-        // center data
-        for (j=0, cit=tp_data_pts.begin(); cit!=tp_data_pts.end(); ++j, ++cit)
-          c_function_vals[j] = cit->response_function() - expansionCoeffs[0];
-        // get moments for constituent tensor grid
-        integrate_moments(tpMultiIndex[i], tp_data_pts, c_function_vals,
-			  tp_wts, tp_numeric_moments);
-
-	// add contribution to sparse grid
-	coeff = sm_coeffs[i];
-	if (coeff)
-	  for (j=0; j<num_moments;++j)
-	    numericMoments[j] += coeff * tp_numeric_moments[j];
-      }
-      break;
-    }
-    default: // SPARSE_INT_*
-      RealVector c_function_vals(dataPoints.size());
-      for (i=0,cit=dataPoints.begin(); cit!=dataPoints.end(); ++i,++cit) 
-        c_function_vals[i] = cit->response_function() - expansionCoeffs[0];
-      integrate_moments(multiIndex, dataPoints, c_function_vals,
-			driverRep->weight_sets(), numericMoments);
-      break;
-    }
-    break;
-  }
-  return numericMoments;
+  return meanGradient;
 }
 
 
@@ -2270,25 +2162,8 @@ const RealVector& OrthogPolyApproximation::get_numeric_moments()
     of the coefficients squared times the polynomial norms squared. */
 const Real& OrthogPolyApproximation::get_variance()
 {
-  // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_variance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  return get_covariance(expansionCoeffs);
-}
-
-
-const Real& OrthogPolyApproximation::
-get_covariance(const RealVector& exp_coeffs_2)
-{
-  expansionVariance = 0.0;
-  for (size_t i=1; i<numExpansionTerms; ++i)
-    expansionVariance += expansionCoeffs[i] * exp_coeffs_2[i] *
-      norm_squared(multiIndex[i]);
-  return expansionVariance;
+  centralExpMoments[1] = get_covariance(expansionCoeffs);
+  return centralExpMoments[1];
 }
 
 
@@ -2296,14 +2171,38 @@ get_covariance(const RealVector& exp_coeffs_2)
     and the variance of the expansion involves summations over this subset. */
 const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
 {
+  centralExpMoments[1] = get_covariance(x, expansionCoeffs);
+  return centralExpMoments[1];
+}
+
+
+Real OrthogPolyApproximation::get_covariance(const RealVector& exp_coeffs_2)
+{
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_variance()" << std::endl;
+	  << "OrthogPolyApproximation::get_covariance()" << std::endl;
     abort_handler(-1);
   }
 
-  expansionVariance = 0.0;
+  Real var = 0.;
+  for (size_t i=1; i<numExpansionTerms; ++i)
+    var += expansionCoeffs[i] * exp_coeffs_2[i] * norm_squared(multiIndex[i]);
+  return var;
+}
+
+
+Real OrthogPolyApproximation::
+get_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
+{
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "OrthogPolyApproximation::get_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  Real var = 0.;
   size_t i, j;
   SizetList::iterator it;
   for (i=1; i<numExpansionTerms; ++i) {
@@ -2325,7 +2224,7 @@ const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
 	  if (multiIndex[i][*it] != multiIndex[j][*it])
 	    { include_j = false; break; }
 	if (include_j) {
-	  Real var_ij = expansionCoeffs[i] * expansionCoeffs[j] * norm_sq_i;
+	  Real var_ij = expansionCoeffs[i] * exp_coeffs_2[j] * norm_sq_i;
 	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	    size_t index = *it;
 	    unsigned short order_1d_i = multiIndex[i][index],
@@ -2336,18 +2235,17 @@ const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
 	    if (order_1d_j)
 	      var_ij *= poly_1d.get_value(x[index], order_1d_j);
 	  }
-	  expansionVariance += var_ij;
+	  var += var_ij;
 #ifdef DEBUG
 	  PCout << "Variance estimate inclusion: term index = " << i
-		<< " variance = " << var_ij << " total = " << expansionVariance
-		<<'\n';
+		<< " variance = " << var_ij << " total = " << var <<'\n';
 #endif // DEBUG
 	}
       }
     }
   }
 
-  return expansionVariance;
+  return var;
 }
 
 
@@ -2373,15 +2271,15 @@ const RealVector& OrthogPolyApproximation::get_variance_gradient()
   }
 
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
-  if (expansionVarianceGrad.length() != num_deriv_vars)
-    expansionVarianceGrad.sizeUninitialized(num_deriv_vars);
-  expansionVarianceGrad = 0.0;
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  varianceGradient = 0.0;
   for (i=1; i<numExpansionTerms; ++i) {
     Real term_i = 2. * expansionCoeffs[i] * norm_squared(multiIndex[i]);
     for (j=0; j<num_deriv_vars; ++j)
-      expansionVarianceGrad[j] += term_i * expansionCoeffGrads[i][j];
+      varianceGradient[j] += term_i * expansionCoeffGrads[i][j];
   }
-  return expansionVarianceGrad;
+  return varianceGradient;
 }
 
 
@@ -2403,9 +2301,9 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
   }
 
   size_t i, j, k, deriv_index, num_deriv_vars = dvv.size();
-  if (expansionVarianceGrad.length() != num_deriv_vars)
-    expansionVarianceGrad.sizeUninitialized(num_deriv_vars);
-  expansionVarianceGrad = 0.0;
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  varianceGradient = 0.0;
 
   SizetList::iterator it;
   size_t cntr = 0; // insertions carried in order within expansionCoeffGrads
@@ -2453,7 +2351,7 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 		if (order_1d_k)
 		  var_jk *= poly_1d.get_value(x[index], order_1d_k);
 	      }
-	      expansionVarianceGrad[i] += var_jk;
+	      varianceGradient[i] += var_jk;
 	    }
 	    else {
 	      // ----------------------------------------------
@@ -2478,7 +2376,7 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 		  poly_1d.get_gradient(x[index], order_1d_k) :
 		  poly_1d.get_value(   x[index], order_1d_k);
 	      }
-	      expansionVarianceGrad[i] += var_jk * 
+	      varianceGradient[i] += var_jk * 
 		(Psi_j*dPsi_k_ds_i + dPsi_j_ds_i*Psi_k);
 	    }
 	  }
@@ -2489,7 +2387,7 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
       ++cntr;
   }
 
-  return expansionVarianceGrad;
+  return varianceGradient;
 }
 
 

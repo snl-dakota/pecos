@@ -704,7 +704,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 
 /** Overloaded version supporting tensor-product quadrature. */
 const Real& InterpPolyApproximation::
-tensor_product_variance(const RealVector& x)
+tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 {
   TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
   const UShort2DArray& key          = tpq_driver->collocation_key();
@@ -712,7 +712,7 @@ tensor_product_variance(const RealVector& x)
 
   tpVariance = 0.;
   size_t i, j, k;
-  Real mean = 0.;
+  Real mean1 = 0., mean2 = 0.;
   SizetList::iterator it;
   std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   for (i=0; i<numCollocPts; ++i) {
@@ -724,7 +724,9 @@ tensor_product_variance(const RealVector& x)
       else
 	Ls_prod_i *= poly_basis_0[k].get_value(x[k], key_i[k]);
     const Real& exp_coeff_i = expansionCoeffs[i];
-    mean += exp_coeff_i * wt_prod_i * Ls_prod_i;
+    Real wt_Ls_prod_i = wt_prod_i * Ls_prod_i;
+    mean1 += exp_coeff_i     * wt_Ls_prod_i;
+    mean2 += exp_coeffs_2[i] * wt_Ls_prod_i;
     for (j=0; j<numCollocPts; ++j) {
       const UShortArray& key_j = key[j];
       // to include the ij-th term, colloc pts xi_i must be the same as xi_j
@@ -740,18 +742,19 @@ tensor_product_variance(const RealVector& x)
 	  Ls_prod_j *= poly_basis_0[k].get_value(x[k], key_j[k]);
 	}
 	tpVariance += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
-	  * expansionCoeffs[j];
+	  * exp_coeffs_2[j];
       }
     }
   }
-  tpVariance -= mean*mean;
+  tpVariance -= mean1*mean2;
   return tpVariance;
 }
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
 const Real& InterpPolyApproximation::
-tensor_product_variance(const RealVector& x, size_t tp_index)
+tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
+			  size_t tp_index)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
@@ -759,8 +762,8 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
   const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
 
-  size_t i, j, k, num_colloc_pts = key.size();
-  Real mean = 0.;
+  size_t i, j, k, index, num_colloc_pts = key.size();
+  Real mean1 = 0., mean2 = 0.;
   SizetList::iterator it;
   tpVariance = 0.;
   for (i=0; i<num_colloc_pts; ++i) {
@@ -771,8 +774,11 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
 	wt_prod_i *= gauss_wts_1d[sm_index[k]][k][key_i[k]];
       else
 	Ls_prod_i *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_i[k]);
-    const Real& exp_coeff_i = expansionCoeffs[colloc_index[i]];
-    mean += exp_coeff_i * wt_prod_i * Ls_prod_i;
+    index = colloc_index[i];
+    const Real& exp_coeff_i = expansionCoeffs[index];
+    Real wt_Ls_prod_i = wt_prod_i * Ls_prod_i;
+    mean1 += exp_coeff_i         * wt_Ls_prod_i;
+    mean2 += exp_coeffs_2[index] * wt_Ls_prod_i;
     for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
       // to include the ij-th term, colloc pts xi_i must be the same as xi_j
@@ -788,11 +794,11 @@ tensor_product_variance(const RealVector& x, size_t tp_index)
 	  Ls_prod_j *= polynomialBasis[sm_index[k]][k].get_value(x[k],key_j[k]);
 	}
 	tpVariance += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
-	  * expansionCoeffs[colloc_index[j]];
+	  * exp_coeffs_2[colloc_index[j]];
       }
     }
   }
-  tpVariance -= mean*mean;
+  tpVariance -= mean1*mean2;
   return tpVariance;
 }
 
@@ -1138,12 +1144,11 @@ const Real& InterpPolyApproximation::get_mean()
     abort_handler(-1);
   }
 
-  expansionMean = 0.;
   const RealVector& wt_sets = driverRep->weight_sets();
+  Real& mean = centralNumMoments[0]; mean = 0.;
   for (size_t i=0; i<numCollocPts; ++i)
-    expansionMean += expansionCoeffs[i] * wt_sets[i];
-
-  return expansionMean;
+    mean += expansionCoeffs[i] * wt_sets[i];
+  return mean;
 }
 
 
@@ -1164,14 +1169,14 @@ const Real& InterpPolyApproximation::get_mean(const RealVector& x)
     return tensor_product_mean(x);
     break;
   case SPARSE_GRID: {
-    expansionMean = 0.;
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
+    Real& mean = centralNumMoments[0]; mean = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
-	expansionMean += sm_coeffs[i] * tensor_product_mean(x, i);
-    return expansionMean;
+	mean += sm_coeffs[i] * tensor_product_mean(x, i);
+    return mean;
     break;
   }
   }
@@ -1196,15 +1201,15 @@ const RealVector& InterpPolyApproximation::get_mean_gradient()
 
   const RealVector& wt_sets = driverRep->weight_sets();
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
-  if (expansionMeanGrad.length() != num_deriv_vars)
-    expansionMeanGrad.sizeUninitialized(num_deriv_vars);
-  expansionMeanGrad = 0.;
+  if (meanGradient.length() != num_deriv_vars)
+    meanGradient.sizeUninitialized(num_deriv_vars);
+  meanGradient = 0.;
   for (i=0; i<numCollocPts; ++i) {
     const Real& wt_prod_i = wt_sets[i];
     for (j=0; j<num_deriv_vars; ++j)
-      expansionMeanGrad[j] += expansionCoeffGrads(j,i) * wt_prod_i;
+      meanGradient[j] += expansionCoeffGrads(j,i) * wt_prod_i;
   }
-  return expansionMeanGrad;
+  return meanGradient;
 }
 
 
@@ -1227,9 +1232,9 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
     break;
   case SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
-    if (expansionMeanGrad.length() != num_deriv_vars)
-      expansionMeanGrad.sizeUninitialized(num_deriv_vars);
-    expansionMeanGrad = 0.;
+    if (meanGradient.length() != num_deriv_vars)
+      meanGradient.sizeUninitialized(num_deriv_vars);
+    meanGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
@@ -1239,10 +1244,10 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
       if (coeff) {
 	const RealVector& tpm_grad = tensor_product_mean_gradient(x, i, dvv);
 	for (j=0; j<num_deriv_vars; ++j)
-	  expansionMeanGrad[j] += coeff * tpm_grad[j];
+	  meanGradient[j] += coeff * tpm_grad[j];
       }
     }
-    return expansionMeanGrad;
+    return meanGradient;
     break;
   }
 }
@@ -1253,55 +1258,8 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 const Real& InterpPolyApproximation::get_variance()
 {
-  // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "InterpPolyApproximation::get_variance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  return get_covariance(expansionCoeffs);
-
-  /*
-  expansionVariance = 0.;
-  Real mean = 0.;
-  const RealVector& wt_sets = driverRep->weight_sets();
-  for (size_t i=0; i<numCollocPts; ++i) {
-    const Real& exp_coeff_i = expansionCoeffs[i];
-    const Real& wt_prod_i   = wt_sets[i];
-    Real coeff_wt_i = exp_coeff_i * wt_prod_i;
-    mean              += coeff_wt_i;
-    expansionVariance += exp_coeff_i * coeff_wt_i;
-  }
-  expansionVariance -= mean*mean;
-  return expansionVariance;
-  */
-}
-
-
-const Real& InterpPolyApproximation::
-get_covariance(const RealVector& exp_coeffs_2)
-{
-  // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "InterpPolyApproximation::get_variance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  expansionVariance = 0.;
-  Real mean_1 = 0., mean_2 = 0.;
-  const RealVector& wt_sets = driverRep->weight_sets();
-  for (size_t i=0; i<numCollocPts; ++i) {
-    const Real& coeff_2i  = exp_coeffs_2[i];
-    const Real& wt_prod_i = wt_sets[i];
-    Real coeff_wt_1i = expansionCoeffs[i] * wt_prod_i;
-    mean_1 += coeff_wt_1i;
-    mean_2 += coeff_2i * wt_prod_i;
-    expansionVariance += coeff_wt_1i * coeff_2i;
-  }
-  expansionVariance -= mean_1*mean_2;
-  return expansionVariance;
+  centralNumMoments[1] = get_covariance(expansionCoeffs);
+  return centralNumMoments[1];
 }
 
 
@@ -1310,26 +1268,61 @@ get_covariance(const RealVector& exp_coeffs_2)
     over this subset. */
 const Real& InterpPolyApproximation::get_variance(const RealVector& x)
 {
+  centralNumMoments[1] = get_covariance(x, expansionCoeffs);
+  return centralNumMoments[1];
+}
+
+
+Real InterpPolyApproximation::get_covariance(const RealVector& exp_coeffs_2)
+{
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "InterpPolyApproximation::get_variance()" << std::endl;
+	  << "InterpPolyApproximation::get_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  Real var = 0., mean_1 = 0., mean_2 = 0.;
+  const RealVector& wt_sets = driverRep->weight_sets();
+  for (size_t i=0; i<numCollocPts; ++i) {
+    const Real& coeff_2i  = exp_coeffs_2[i];
+    const Real& wt_prod_i = wt_sets[i];
+    Real coeff_wt_1i = expansionCoeffs[i] * wt_prod_i;
+    mean_1 += coeff_wt_1i;
+    mean_2 += coeff_2i * wt_prod_i;
+    var    += coeff_wt_1i * coeff_2i;
+  }
+  var -= mean_1*mean_2;
+  return var;
+}
+
+
+/** In this case, a subset of the expansion variables are random
+    variables and the variance of the expansion involves summations
+    over this subset. */
+Real InterpPolyApproximation::
+get_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
+{
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "InterpPolyApproximation::get_covariance()" << std::endl;
     abort_handler(-1);
   }
 
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    return tensor_product_variance(x);
+    return tensor_product_covariance(x, exp_coeffs_2);
     break;
   case SPARSE_GRID:
-    expansionVariance = 0.;
+    Real var = 0.;
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
-	expansionVariance += sm_coeffs[i] * tensor_product_variance(x, i);
-    return expansionVariance;
+	var += sm_coeffs[i] * tensor_product_covariance(x, exp_coeffs_2, i);
+    return var;
     break;
   }
 }
@@ -1355,9 +1348,9 @@ const RealVector& InterpPolyApproximation::get_variance_gradient()
 
   const RealVector& wt_sets = driverRep->weight_sets();
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
-  if (expansionVarianceGrad.length() != num_deriv_vars)
-    expansionVarianceGrad.sizeUninitialized(num_deriv_vars);
-  expansionVarianceGrad = 0.;
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  varianceGradient = 0.;
 
   Real mean = 0.;
   for (i=0; i<numCollocPts; ++i)
@@ -1365,10 +1358,10 @@ const RealVector& InterpPolyApproximation::get_variance_gradient()
   for (i=0; i<numCollocPts; ++i) {
     Real term_i = 2. * (expansionCoeffs[i] - mean) * wt_sets[i];
     for (j=0; j<num_deriv_vars; ++j)
-      expansionVarianceGrad[j] += term_i * expansionCoeffGrads(j,i);
+      varianceGradient[j] += term_i * expansionCoeffGrads(j,i);
   }
 
-  return expansionVarianceGrad;
+  return varianceGradient;
 }
 
 
@@ -1395,9 +1388,9 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
     break;
   case SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
-    if (expansionVarianceGrad.length() != num_deriv_vars)
-      expansionVarianceGrad.sizeUninitialized(num_deriv_vars);
-    expansionVarianceGrad = 0.;
+    if (varianceGradient.length() != num_deriv_vars)
+      varianceGradient.sizeUninitialized(num_deriv_vars);
+    varianceGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
@@ -1408,58 +1401,12 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	const RealVector& tpv_grad
 	  = tensor_product_variance_gradient(x, i, dvv);
 	for (j=0; j<num_deriv_vars; ++j)
-	  expansionVarianceGrad[j] += coeff * tpv_grad[j];
+	  varianceGradient[j] += coeff * tpv_grad[j];
       }
     }
-    return expansionVarianceGrad;
+    return varianceGradient;
     break;
   }
-}
-
-/// TO DO: Add overloaded function to support integration over only ran vars
-const RealVector& InterpPolyApproximation::get_numeric_moments()
-{
-  // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "InterpPolyApproximation::get_numeric_moments()" << std::endl;
-    abort_handler(-1);
-  }
-
-  // allocate array to store mean, variance, skewness, kurtosis
-  int num_moments = 4;
-  numericMoments.sizeUninitialized(num_moments); 
-  Real my_mean = expansionMean;
-  numericMoments = 0.;
-  const RealVector& wt_sets = driverRep->weight_sets();
-  switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: 
-    for (size_t i=0; i<numCollocPts; ++i) {
-      numericMoments[0] += expansionCoeffs[i] * wt_sets[i];
-      for (size_t j=1; j<num_moments; ++j)
-        numericMoments[j]
-	  += std::pow((expansionCoeffs[i] - my_mean), Real(j+1)) * wt_sets[i];
-    }
-    break;
-  case SPARSE_GRID:
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
-    size_t k, num_smolyak_indices = sm_coeffs.size();
-    for (k=0; k<num_smolyak_indices; ++k) {
-      int sm_coeff = sm_coeffs[k];
-      if (sm_coeff) {
-	for (size_t i=0; i<numCollocPts; ++i) {
-	  numericMoments[0] += expansionCoeffs[i] * wt_sets[i] * sm_coeff;
-	  for (size_t j=1; j<num_moments; ++j)
-	    numericMoments[j] += std::pow(expansionCoeffs[i]-my_mean, Real(j+1))
-	                      *  wt_sets[i] * sm_coeff;
-	}
-      }
-    }
-    break;
-  } 
-
-  return numericMoments;
 }
 
 

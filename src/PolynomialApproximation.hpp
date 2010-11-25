@@ -146,9 +146,6 @@ public:
   virtual const RealVector& get_mean_gradient(const RealVector& x,
 					      const SizetArray& dvv) = 0;
 
-  /// return moments 1-4
-  virtual const RealVector& get_numeric_moments() = 0;
-
   /// return the variance of the expansion, treating all variables as random
   virtual const Real& get_variance() = 0;
   /// return the variance of the expansion for a given parameter vector,
@@ -163,15 +160,33 @@ public:
 						  const SizetArray& dvv) = 0;
 
   /// return the variance of the expansion, treating all variables as random
-  virtual const Real& get_covariance(const RealVector& exp_coeffs_2) = 0;
-  // return the variance of the expansion for a given parameter vector,
-  // treating a subset of the variables as random
-  //virtual const Real& get_covariance(const RealVector& x,
-  //                                   const RealVector& exp_coeffs_2) = 0;
+  virtual Real get_covariance(const RealVector& exp_coeffs_2) = 0;
+  /// return the variance of the expansion for a given parameter vector,
+  /// treating a subset of the variables as random
+  virtual Real get_covariance(const RealVector& x,
+                              const RealVector& exp_coeffs_2) = 0;
+
+  /// compute central response moments using some combination of expansion
+  /// post-processing and numerical integration
+  virtual void compute_central_moments() = 0;
+  /// compute central response moments in all-variables mode using some
+  /// combination of expansion post-processing and numerical integration
+  virtual void compute_central_moments(const RealVector& x) = 0;
+  /// return central response moments defined from either expansion
+  /// post-processing or numerical integration
+  virtual const RealVector& central_moments() const = 0;
 
   //
   //- Heading: Member functions
   //
+
+  /// return centralExpMoments
+  const RealVector& central_expansion_moments() const;
+  /// return centralNumMoments
+  const RealVector& central_numerical_moments() const;
+
+  /// compute central moments of response using numerical integration
+  void compute_central_numerical_moments(size_t num_moments);
 
   /// size component Sobol arrays
   void allocate_component_effects();
@@ -329,17 +344,21 @@ protected:
   /// active variables (used in all_variables mode; defined from randomVarsKey)
   SizetList nonRandomIndices;
 
-  /// expected value of the expansion
-  Real expansionMean;
-  /// gradient of the expected value of the expansion
-  RealVector expansionMeanGrad;
-  /// variance of the expansion
-  Real expansionVariance;
-  /// gradient of the variance of the expansion
-  RealVector expansionVarianceGrad;
-  /// approximation to moments (mean, variance, skewness, kurtosis)
-  /// via quadrature 
-  RealVector numericMoments;
+  /// central moments (mean, variance, skewness, kurtosis) computed from
+  /// the stochastic expansion form.  For OrthogPolyApproximation, these
+  /// are primary, and for InterpPolyApproximation, they are secondary.
+  RealVector centralExpMoments;
+  /// central moments (mean, variance, skewness, kurtosis) computed via
+  /// numerical integration of the response.  For OrthogPolyApproximation,
+  /// these are secondary, and for InterpPolyApproximation, they are primary.
+  RealVector centralNumMoments;
+
+  /// gradient of the primary mean (expansion mean for OrthogPoly,
+  /// numerical integration mean for InterpPoly)
+  RealVector meanGradient;
+  /// gradient of the primary variance (expansion variance for OrthogPoly,
+  /// numerical integration variance for InterpPoly)
+  RealVector varianceGradient;
 
   /// the coefficients of the expansion
   RealVector expansionCoeffs;
@@ -384,6 +403,16 @@ inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
 
 inline PolynomialApproximation::~PolynomialApproximation()
 { }
+
+
+inline const RealVector& PolynomialApproximation::
+central_expansion_moments() const
+{ return centralExpMoments; }
+
+
+inline const RealVector& PolynomialApproximation::
+central_numerical_moments() const
+{ return centralNumMoments; }
 
 
 inline void PolynomialApproximation::

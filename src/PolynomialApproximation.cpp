@@ -265,4 +265,47 @@ total_order_multi_index(const UShortArray& upper_bound,
 #endif // DEBUG
 }
 
+
+/// TO DO: Add overloaded function to support integration over only ran vars
+void PolynomialApproximation::
+compute_central_numerical_moments(size_t num_moments)
+{
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "PolynomialApproximation::compute_central_moments()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // stores mean, variance, skewness, kurtosis
+  centralNumMoments.size(num_moments); // init to 0
+
+  size_t i, j, offset = 0, num_pts = dataPoints.size();
+  bool anchor_pt = !anchorPoint.is_null();
+  const RealVector& wt_sets = driverRep->weight_sets();
+
+  // estimate mean
+  Real& mean = centralNumMoments[0];
+  if (anchor_pt) {
+    offset = 1; num_pts += offset;
+    mean   = wt_sets[0] * anchorPoint.response_function();
+  }
+  for (size_t i=offset; i<num_pts; ++i)
+    mean += wt_sets[i] * dataPoints[i].response_function();
+
+  // estimate central moments
+  Real centered_fn_i;
+  if (anchor_pt) {
+    centered_fn_i = anchorPoint.response_function() - mean;
+    for (j=1; j<num_moments; ++j)
+      centralNumMoments[j] = wt_sets[0] * std::pow(centered_fn_i, Real(j+1));
+  }
+  for (i=offset; i<num_pts; ++i) {
+    centered_fn_i = dataPoints[i].response_function() - mean;
+    for (j=1; j<num_moments; ++j)
+      centralNumMoments[j] += wt_sets[i] * std::pow(centered_fn_i, Real(j+1));
+  }
+  //return centralNumMoments;
+}
+
 } // namespace Pecos
