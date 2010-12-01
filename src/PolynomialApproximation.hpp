@@ -168,25 +168,25 @@ public:
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration
-  virtual void compute_central_moments() = 0;
+  virtual void compute_moments() = 0;
   /// compute central response moments in all-variables mode using some
   /// combination of expansion post-processing and numerical integration
-  virtual void compute_central_moments(const RealVector& x) = 0;
+  virtual void compute_moments(const RealVector& x) = 0;
   /// return central response moments defined from either expansion
   /// post-processing or numerical integration
-  virtual const RealVector& central_moments() const = 0;
+  virtual const RealVector& moments() const = 0;
 
   //
   //- Heading: Member functions
   //
 
-  /// return centralExpMoments
-  const RealVector& central_expansion_moments() const;
-  /// return centralNumMoments
-  const RealVector& central_numerical_moments() const;
+  /// return expansionMoments
+  const RealVector& expansion_moments() const;
+  /// return numericalMoments
+  const RealVector& numerical_moments() const;
 
   /// compute central moments of response using numerical integration
-  void compute_central_numerical_moments(size_t num_moments);
+  void compute_numerical_moments(size_t num_moments);
 
   /// size component Sobol arrays
   void allocate_component_effects();
@@ -344,14 +344,16 @@ protected:
   /// active variables (used in all_variables mode; defined from randomVarsKey)
   SizetList nonRandomIndices;
 
-  /// central moments (mean, variance, skewness, kurtosis) computed from
-  /// the stochastic expansion form.  For OrthogPolyApproximation, these
-  /// are primary, and for InterpPolyApproximation, they are secondary.
-  RealVector centralExpMoments;
-  /// central moments (mean, variance, skewness, kurtosis) computed via
-  /// numerical integration of the response.  For OrthogPolyApproximation,
-  /// these are secondary, and for InterpPolyApproximation, they are primary.
-  RealVector centralNumMoments;
+  /// mean, variance, skewness, and kurtosis (raw, central, standardized,
+  /// and offset standardized moments, respectively) computed from the
+  /// stochastic expansion form.  For OrthogPolyApproximation, these are
+  /// primary, and for InterpPolyApproximation, they are currently inactive.
+  RealVector expansionMoments;
+  /// mean, variance, skewness, and kurtosis (raw, central, standardized,
+  /// and offset standardized moments, respectively) computed via numerical
+  /// integration of the response.  For OrthogPolyApproximation, these are
+  /// secondary, and for InterpPolyApproximation, they are primary.
+  RealVector numericalMoments;
 
   /// gradient of the primary mean (expansion mean for OrthogPoly,
   /// numerical integration mean for InterpPoly)
@@ -405,14 +407,12 @@ inline PolynomialApproximation::~PolynomialApproximation()
 { }
 
 
-inline const RealVector& PolynomialApproximation::
-central_expansion_moments() const
-{ return centralExpMoments; }
+inline const RealVector& PolynomialApproximation::expansion_moments() const
+{ return expansionMoments; }
 
 
-inline const RealVector& PolynomialApproximation::
-central_numerical_moments() const
-{ return centralNumMoments; }
+inline const RealVector& PolynomialApproximation::numerical_moments() const
+{ return numericalMoments; }
 
 
 inline void PolynomialApproximation::

@@ -181,11 +181,11 @@ protected:
   Real get_covariance(const RealVector& x, const RealVector& exp_coeffs_2);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
-  void compute_central_moments();
+  void compute_moments();
   /// compute expansion moments in all-variables mode to order 2
-  void compute_central_moments(const RealVector& x);
-  /// return centralExpMoments
-  const RealVector& central_moments() const;
+  void compute_moments(const RealVector& x);
+  /// return expansionMoments
+  const RealVector& moments() const;
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as random
@@ -380,26 +380,27 @@ inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
 
 
-inline void OrthogPolyApproximation::compute_central_moments()
+inline void OrthogPolyApproximation::compute_moments()
 {
-  centralExpMoments.sizeUninitialized(2); get_mean(); get_variance();
+  // standard variables mode supports two expansion and four numerical moments
+  expansionMoments.sizeUninitialized(2); get_mean(); get_variance();
   if (configOptions.expCoeffsSolnApproach == QUADRATURE ||
       configOptions.expCoeffsSolnApproach == CUBATURE   ||
       configOptions.expCoeffsSolnApproach == SPARSE_GRID)
-    compute_central_numerical_moments(4);
+    compute_numerical_moments(4);
 }
 
 
-inline void OrthogPolyApproximation::
-compute_central_moments(const RealVector& x)
+inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
 {
-  centralExpMoments.sizeUninitialized(2); get_mean(x); get_variance(x);
-  //compute_central_numerical_moments(2, x); // TO DO
+  // all variables mode only supports first two moments
+  expansionMoments.sizeUninitialized(2); get_mean(x); get_variance(x);
+  //compute_numerical_moments(2, x); // TO DO
 }
 
 
-inline const RealVector& OrthogPolyApproximation::central_moments() const
-{ return centralExpMoments; }
+inline const RealVector& OrthogPolyApproximation::moments() const
+{ return expansionMoments; }
 
 
 inline void OrthogPolyApproximation::expansion_terms(int exp_terms)

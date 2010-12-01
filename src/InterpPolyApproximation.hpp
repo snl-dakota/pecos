@@ -112,11 +112,11 @@ protected:
   Real get_covariance(const RealVector& x, const RealVector& exp_coeffs_2);
 
   /// compute numerical moments to order 4
-  void compute_central_moments();
+  void compute_moments();
   /// compute numerical moments in all-variables mode to order 2
-  void compute_central_moments(const RealVector& x);
-  /// return centralNumMoments
-  const RealVector& central_moments() const;
+  void compute_moments(const RealVector& x);
+  /// return numericalMoments
+  const RealVector& moments() const;
 
 private:
 
@@ -226,13 +226,13 @@ private:
   /// approxGradient
   RealVector tpGradient;
   /// the mean of a tensor-product interpolant; a contributor to
-  /// centralNumMoments[0] (mean)
+  /// numericalMoments[0] (mean)
   Real tpMean;
   /// the gradient of the mean of a tensor-product interpolant; a
   /// contributor to meanGradient
   RealVector tpMeanGrad;
   /// the variance of a tensor-product interpolant; a contributor to
-  /// centralNumMoments[1] (variance)
+  /// numericalMoments[1] (variance)
   Real tpVariance;
   /// the gradient of the variance of a tensor-product interpolant; a
   /// contributor to varianceGradient
@@ -249,24 +249,25 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
 
 
-inline void InterpPolyApproximation::compute_central_moments()
+inline void InterpPolyApproximation::compute_moments()
 {
-  compute_central_numerical_moments(4);
-  //compute_central_expansion_moments(4);
+  // standard variables mode supports four moments
+  compute_numerical_moments(4);
+  //compute_expansion_moments(4);
 }
 
 
-inline void InterpPolyApproximation::
-compute_central_moments(const RealVector& x)
+inline void InterpPolyApproximation::compute_moments(const RealVector& x)
 {
-  centralNumMoments.sizeUninitialized(2);
-  centralNumMoments[0] = get_mean(x); centralNumMoments[1] = get_variance(x);
-  //compute_central_expansion_moments(2, x);
+  // all variables mode only supports first two moments
+  numericalMoments.sizeUninitialized(2);
+  numericalMoments[0] = get_mean(x); numericalMoments[1] = get_variance(x);
+  //compute_expansion_moments(2, x);
 }
 
 
-inline const RealVector& InterpPolyApproximation::central_moments() const
-{ return centralNumMoments; }
+inline const RealVector& InterpPolyApproximation::moments() const
+{ return numericalMoments; }
 
 } // namespace Pecos
 

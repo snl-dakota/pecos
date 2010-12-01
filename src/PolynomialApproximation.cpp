@@ -267,25 +267,36 @@ total_order_multi_index(const UShortArray& upper_bound,
 
 
 /// TO DO: Add overloaded function to support integration over only ran vars
-void PolynomialApproximation::
-compute_central_numerical_moments(size_t num_moments)
+void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
 {
+  // computes and stores the following moments:
+  // > mean     (1st raw moment)
+  // > variance (2nd central moment)
+  // > skewness (3rd standardized moment)
+  // > kurtosis (4th standardized moment with offset to eliminate "excess")
+
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "PolynomialApproximation::compute_central_moments()" << std::endl;
+    PCerr << "Error: expansion coefficients not defined in Polynomial"
+	  << "Approximation::compute_numerical_moments()" << std::endl;
+    abort_handler(-1);
+  }
+  // current support for this implementation: can't be open-ended since we
+  // employ a specific combination of raw, central, and standardized moments
+  if (num_moments < 1 || num_moments > 4) {
+    PCerr << "Error: unsupported number of moments requested in Polynomial"
+	  << "Approximation::compute_numerical_moments()" << std::endl;
     abort_handler(-1);
   }
 
-  // stores mean, variance, skewness, kurtosis
-  centralNumMoments.size(num_moments); // init to 0
+  numericalMoments.size(num_moments); // init to 0
 
   size_t i, j, offset = 0, num_pts = dataPoints.size();
   bool anchor_pt = !anchorPoint.is_null();
   const RealVector& wt_sets = driverRep->weight_sets();
 
-  // estimate mean
-  Real& mean = centralNumMoments[0];
+  // estimate 1st raw moment (mean)
+  Real& mean = numericalMoments[0];
   if (anchor_pt) {
     offset = 1; num_pts += offset;
     mean   = wt_sets[0] * anchorPoint.response_function();
@@ -293,19 +304,32 @@ compute_central_numerical_moments(size_t num_moments)
   for (size_t i=offset; i<num_pts; ++i)
     mean += wt_sets[i] * dataPoints[i].response_function();
 
-  // estimate central moments
+  // estimate central moments 2 through num_moments
   Real centered_fn_i;
   if (anchor_pt) {
     centered_fn_i = anchorPoint.response_function() - mean;
     for (j=1; j<num_moments; ++j)
-      centralNumMoments[j] = wt_sets[0] * std::pow(centered_fn_i, Real(j+1));
+      numericalMoments[j] = wt_sets[0] * std::pow(centered_fn_i, Real(j+1));
   }
   for (i=offset; i<num_pts; ++i) {
     centered_fn_i = dataPoints[i].response_function() - mean;
     for (j=1; j<num_moments; ++j)
-      centralNumMoments[j] += wt_sets[i] * std::pow(centered_fn_i, Real(j+1));
+      numericalMoments[j] += wt_sets[i] * std::pow(centered_fn_i, Real(j+1));
   }
-  //return centralNumMoments;
+
+  // standardize third and higher central moments, if present
+  if (num_moments > 2) {
+    // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
+    const Real& std_dev = std::sqrt(numericalMoments[1]);
+    for (j=2; j<num_moments; ++j)
+      numericalMoments[j] /= std::pow(std_dev, Real(j+1));
+
+    // offset the fourth standardized moment to eliminate excess kurtosis
+    if (num_moments > 3)
+      numericalMoments[3] -= 3.;
+  }
+
+  //return numericalMoments;
 }
 
 } // namespace Pecos

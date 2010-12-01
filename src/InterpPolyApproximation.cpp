@@ -1145,7 +1145,7 @@ const Real& InterpPolyApproximation::get_mean()
   }
 
   const RealVector& wt_sets = driverRep->weight_sets();
-  Real& mean = centralNumMoments[0]; mean = 0.;
+  Real& mean = numericalMoments[0]; mean = 0.;
   for (size_t i=0; i<numCollocPts; ++i)
     mean += expansionCoeffs[i] * wt_sets[i];
   return mean;
@@ -1172,7 +1172,7 @@ const Real& InterpPolyApproximation::get_mean(const RealVector& x)
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
-    Real& mean = centralNumMoments[0]; mean = 0.;
+    Real& mean = numericalMoments[0]; mean = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
 	mean += sm_coeffs[i] * tensor_product_mean(x, i);
@@ -1258,8 +1258,8 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 const Real& InterpPolyApproximation::get_variance()
 {
-  centralNumMoments[1] = get_covariance(expansionCoeffs);
-  return centralNumMoments[1];
+  numericalMoments[1] = get_covariance(expansionCoeffs);
+  return numericalMoments[1];
 }
 
 
@@ -1268,8 +1268,8 @@ const Real& InterpPolyApproximation::get_variance()
     over this subset. */
 const Real& InterpPolyApproximation::get_variance(const RealVector& x)
 {
-  centralNumMoments[1] = get_covariance(x, expansionCoeffs);
-  return centralNumMoments[1];
+  numericalMoments[1] = get_covariance(x, expansionCoeffs);
+  return numericalMoments[1];
 }
 
 
