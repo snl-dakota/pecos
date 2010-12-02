@@ -1998,7 +1998,7 @@ const Real& OrthogPolyApproximation::get_mean()
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_variance()" << std::endl;
+	  << "OrthogPolyApproximation::get_mean()" << std::endl;
     abort_handler(-1);
   }
 

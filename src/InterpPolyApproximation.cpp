@@ -1421,8 +1421,9 @@ void InterpPolyApproximation::compute_component_effects()
     partialVariance.sizeUninitialized(sobolIndices.length());
   partialVariance = 0.;
 
-  Real mean = get_mean(), total_variance = get_variance();
-  partialVariance[0] = mean*mean; // init with mean sq
+  Real& mean           = numericalMoments[0];
+  Real& total_variance = numericalMoments[1];
+  partialVariance[0]   = mean*mean; // init with mean sq
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin();
@@ -1456,11 +1457,11 @@ void InterpPolyApproximation::compute_total_effects()
         totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
       }
   }
-  // if not available, compute total indices independently
-  // approach parallels partial_variance_integral where the algorithm is 
-  // separated by integration approach
+  // If not available, compute total indices independently.
+  // This approach parallels partial_variance_integral where the algorithm is 
+  // separated by integration approach.
   else {
-    Real total_variance = get_variance();
+    Real& total_variance = numericalMoments[1];
     int j, set_value;
     switch (configOptions.expCoeffsSolnApproach) {
       case QUADRATURE: {
@@ -1508,7 +1509,7 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
-  int num_mem_expansion_coeffs = 1; // number of expansion coeffs in
+  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
                                     // member-variable-only expansion 
   IntVector indexing_factor; // factors indexing member variables 
   indexing_factor.sizeUninitialized(numVars);
@@ -1519,26 +1520,26 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
     // if subset contains variable k, set key for variable k to true
     if (set_value & (1 << k)) {
       nonmember_vars[k] = false;	
-      // information to properly index mem_expansion_coeffs
-      indexing_factor[k] = num_mem_expansion_coeffs;
-      num_mem_expansion_coeffs *= quad_order[k];
+      // information to properly index mem_exp_coeffs
+      indexing_factor[k] = num_mem_exp_coeffs;
+      num_mem_exp_coeffs *= quad_order[k];
     }	
   }
         
   // Create vector to store new coefficients
-  RealVector mem_expansion_coeffs(num_mem_expansion_coeffs),
-    mem_weights(num_mem_expansion_coeffs);
+  RealVector mem_exp_coeffs(num_mem_exp_coeffs),
+    mem_weights(num_mem_exp_coeffs);
  
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j;
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i = key[i];
-    size_t mem_expansion_coeffs_index = 0;	
+    size_t mem_exp_coeffs_index = 0;	
     Real prod_i_nonmembers = 1, prod_i_members = 1;
     for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_expansion_coeffs
-      mem_expansion_coeffs_index += (nonmember_vars[j]) ? 
+      // Convert key to corresponding index on mem_exp_coeffs
+      mem_exp_coeffs_index += (nonmember_vars[j]) ? 
         0 : key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
@@ -1549,19 +1550,18 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
  
     // mem_weights is performed more time than necessary here, but it
     // seems to be the simplest place to put it
-    mem_weights[mem_expansion_coeffs_index] = prod_i_members;
+    mem_weights[mem_exp_coeffs_index] = prod_i_members;
     // sort coefficients by the "signature" of the member variables
-    // (i.e. mem_expansion_coeffs_index)
-    mem_expansion_coeffs[mem_expansion_coeffs_index]
+    // (i.e. mem_exp_coeffs_index)
+    mem_exp_coeffs[mem_exp_coeffs_index]
       += expansionCoeffs[i]*prod_i_nonmembers;
   }
  
   // Now integrate over the remaining variables	
-  Real total_mean = get_mean();
-  Real integral = 0;
-  for (i=0; i<num_mem_expansion_coeffs; ++i)
-    integral
-      += std::pow((mem_expansion_coeffs[i]-total_mean),2.0)*mem_weights[i];
+  Real& total_mean = numericalMoments[0];
+  Real  integral   = 0;
+  for (i=0; i<num_mem_exp_coeffs; ++i)
+    integral += std::pow((mem_exp_coeffs[i]-total_mean),2.0)*mem_weights[i];
   return integral;
 }
 
@@ -1577,8 +1577,8 @@ total_effects_integral(int set_value, size_t tp_index)
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
-  int num_mem_expansion_coeffs = 1; // number of expansion coeffs in
-                                    // member-variable-only expansion 
+  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
+                              // member-variable-only expansion 
   IntVector indexing_factor; // factors indexing member variables 
   indexing_factor.sizeUninitialized(numVars);
 
@@ -1592,27 +1592,27 @@ total_effects_integral(int set_value, size_t tp_index)
     // if subset contains variable k, set key for variable k to true
     if (set_value & (1 << k)) {
       nonmember_vars[k] = false;	
-      // information to properly index mem_expansion_coeffs
-      indexing_factor[k] = num_mem_expansion_coeffs;
-      num_mem_expansion_coeffs *= quad_order[k];
+      // information to properly index mem_exp_coeffs
+      indexing_factor[k] = num_mem_exp_coeffs;
+      num_mem_exp_coeffs *= quad_order[k];
     }	
   }
         
   // Create vector to store new coefficients
-  RealVector mem_expansion_coeffs(num_mem_expansion_coeffs),
-    mem_weights(num_mem_expansion_coeffs);
+  RealVector mem_exp_coeffs(num_mem_exp_coeffs),
+    mem_weights(num_mem_exp_coeffs);
  
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j, num_colloc_pts = key.size();
   for (i=0; i <num_colloc_pts; ++i) {
     const UShortArray& key_i = key[i];
-    size_t mem_expansion_coeffs_index = 0;	
+    size_t mem_exp_coeffs_index = 0;	
     Real prod_i_nonmembers = 1, prod_i_members = 1;
     for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_expansion_coeffs
-      mem_expansion_coeffs_index += (nonmember_vars[j]) ? 
-        0 : key_i[j]*indexing_factor[j];
+      // Convert key to corresponding index on mem_exp_coeffs
+      mem_exp_coeffs_index += (nonmember_vars[j]) ? 0 :
+	key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
         prod_i_nonmembers *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
@@ -1622,19 +1622,18 @@ total_effects_integral(int set_value, size_t tp_index)
  
     // mem_weights is performed more time than necessary here, but it
     // seems to be the simplest place to put it
-    mem_weights[mem_expansion_coeffs_index] = prod_i_members;
+    mem_weights[mem_exp_coeffs_index] = prod_i_members;
     // sort coefficients by the "signature" of the member variables
-    // (i.e. mem_expansion_coeffs_index)
-    mem_expansion_coeffs[mem_expansion_coeffs_index]
+    // (i.e. mem_exp_coeffs_index)
+    mem_exp_coeffs[mem_exp_coeffs_index]
       += expansionCoeffs[colloc_index[i]]*prod_i_nonmembers;
   }
  
   // Now integrate over the remaining variables	
-  Real integral = 0;
-  Real total_mean = get_mean();
-  for (i=0; i<num_mem_expansion_coeffs; ++i)
-    integral
-      += std::pow(mem_expansion_coeffs[i] - total_mean, 2.0)*mem_weights[i];
+  Real  integral   = 0;
+  Real& total_mean = numericalMoments[0];
+  for (i=0; i<num_mem_exp_coeffs; ++i)
+    integral += std::pow(mem_exp_coeffs[i] - total_mean, 2.)*mem_weights[i];
   return integral;
 }
 
@@ -1693,8 +1692,8 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
-  int num_mem_expansion_coeffs = 1; // number of expansion coeffs in
-                                    // member-variable-only expansion 
+  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
+                              // member-variable-only expansion 
   IntVector indexing_factor; // factors indexing member variables 
   indexing_factor.sizeUninitialized(numVars);
 
@@ -1706,27 +1705,27 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
     // if subset contains variable k, set key for variable k to true
     if (set_value & (1 << k)) {
       nonmember_vars[k] = false;	
-      // information to properly index mem_expansion_coeffs
-      indexing_factor[k] = num_mem_expansion_coeffs;
-      num_mem_expansion_coeffs *= quad_order[k];
+      // information to properly index mem_exp_coeffs
+      indexing_factor[k] = num_mem_exp_coeffs;
+      num_mem_exp_coeffs *= quad_order[k];
     }	
   }
 	
   // Create vector to store new coefficients
-  RealVector mem_expansion_coeffs(num_mem_expansion_coeffs),
-    mem_weights(num_mem_expansion_coeffs);
+  RealVector mem_exp_coeffs(num_mem_exp_coeffs),
+    mem_weights(num_mem_exp_coeffs);
 
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j;
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i = key[i];
-    size_t mem_expansion_coeffs_index = 0;	
+    size_t mem_exp_coeffs_index = 0;	
     Real prod_i_nonmembers = 1, prod_i_members = 1;
     for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_expansion_coeffs
-      mem_expansion_coeffs_index += (nonmember_vars[j]) ? 
-	0 : key_i[j]*indexing_factor[j];
+      // Convert key to corresponding index on mem_exp_coeffs
+      mem_exp_coeffs_index += (nonmember_vars[j]) ? 0 :
+	key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
 	prod_i_nonmembers *= gauss_wts_1d[j][key_i[j]];
@@ -1736,17 +1735,17 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
 
     // mem_weights is performed more time than necessary here, but it
     // seems to be the simplest place to put it
-    mem_weights[mem_expansion_coeffs_index] = prod_i_members;
+    mem_weights[mem_exp_coeffs_index] = prod_i_members;
     // sort coefficients by the "signature" of the member variables
-    // (i.e. mem_expansion_coeffs_index)
-    mem_expansion_coeffs[mem_expansion_coeffs_index]
+    // (i.e. mem_exp_coeffs_index)
+    mem_exp_coeffs[mem_exp_coeffs_index]
       += expansionCoeffs[i]*prod_i_nonmembers;
   }
 
   // Now integrate over the remaining variables	
   Real integral = 0;
-  for (i=0; i<num_mem_expansion_coeffs; ++i)
-    integral += std::pow(mem_expansion_coeffs[i], 2.0)*mem_weights[i];
+  for (i=0; i<num_mem_exp_coeffs; ++i)
+    integral += std::pow(mem_exp_coeffs[i], 2.0)*mem_weights[i];
   return integral;	
 }
 
@@ -1765,8 +1764,8 @@ partial_variance_integral(int set_value, size_t tp_index)
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
-  int num_mem_expansion_coeffs = 1; // number of expansion coeffs in
-                                    // member-variable-only expansion 
+  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
+                              // member-variable-only expansion 
   IntVector indexing_factor; // factors indexing member variables 
   indexing_factor.sizeUninitialized(numVars);
 
@@ -1780,26 +1779,26 @@ partial_variance_integral(int set_value, size_t tp_index)
     // if subset contains variable k, set key for variable k to true
     if (set_value & (1 << k)) {
       nonmember_vars[k] = false;	
-      // information to properly index mem_expansion_coeffs
-      indexing_factor[k] = num_mem_expansion_coeffs;
-      num_mem_expansion_coeffs *= quad_order[k];
+      // information to properly index mem_exp_coeffs
+      indexing_factor[k] = num_mem_exp_coeffs;
+      num_mem_exp_coeffs *= quad_order[k];
     }	
   }
 	
   // Create vector to store new coefficients
-  RealVector mem_expansion_coeffs(num_mem_expansion_coeffs),
-    mem_weights(num_mem_expansion_coeffs);
+  RealVector mem_exp_coeffs(num_mem_exp_coeffs),
+    mem_weights(num_mem_exp_coeffs);
 
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j, num_colloc_pts = key.size();
   for (i=0; i <num_colloc_pts; ++i) {
     const UShortArray& key_i = key[i];
-    size_t mem_expansion_coeffs_index = 0;	
+    size_t mem_exp_coeffs_index = 0;	
     Real prod_i_nonmembers = 1, prod_i_members = 1;
     for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_expansion_coeffs
-      mem_expansion_coeffs_index += (nonmember_vars[j]) ? 
+      // Convert key to corresponding index on mem_exp_coeffs
+      mem_exp_coeffs_index += (nonmember_vars[j]) ? 
 	0 : key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
@@ -1810,17 +1809,17 @@ partial_variance_integral(int set_value, size_t tp_index)
 
     // mem_weights is performed more time than necessary here, but it
     // seems to be the simplest place to put it
-    mem_weights[mem_expansion_coeffs_index] = prod_i_members;
+    mem_weights[mem_exp_coeffs_index] = prod_i_members;
     // sort coefficients by the "signature" of the member variables
-    // (i.e. mem_expansion_coeffs_index)
-    mem_expansion_coeffs[mem_expansion_coeffs_index]
+    // (i.e. mem_exp_coeffs_index)
+    mem_exp_coeffs[mem_exp_coeffs_index]
       += expansionCoeffs[colloc_index[i]]*prod_i_nonmembers;
   }
 
   // Now integrate over the remaining variables	
   Real integral = 0;
-  for (i=0; i<num_mem_expansion_coeffs; ++i)
-    integral += std::pow(mem_expansion_coeffs[i], 2.0)*mem_weights[i];
+  for (i=0; i<num_mem_exp_coeffs; ++i)
+    integral += std::pow(mem_exp_coeffs[i], 2.0)*mem_weights[i];
   return integral;	
 }
 
