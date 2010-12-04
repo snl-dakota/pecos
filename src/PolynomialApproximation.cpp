@@ -305,24 +305,24 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
     mean += wt_sets[i] * dataPoints[i].response_function();
 
   // estimate central moments 2 through num_moments
-  Real centered_fn_i;
+  Real centered_fn, pow_fn;
   if (anchor_pt) {
-    centered_fn_i = anchorPoint.response_function() - mean;
+    pow_fn = centered_fn = anchorPoint.response_function() - mean;
     for (j=1; j<num_moments; ++j)
-      numericalMoments[j] = wt_sets[0] * std::pow(centered_fn_i, Real(j+1));
+      { pow_fn *= centered_fn; numericalMoments[j] = wt_sets[0] * pow_fn; }
   }
   for (i=offset; i<num_pts; ++i) {
-    centered_fn_i = dataPoints[i].response_function() - mean;
+    pow_fn = centered_fn = dataPoints[i].response_function() - mean;
     for (j=1; j<num_moments; ++j)
-      numericalMoments[j] += wt_sets[i] * std::pow(centered_fn_i, Real(j+1));
+      { pow_fn *= centered_fn; numericalMoments[j] += wt_sets[i] * pow_fn; }
   }
 
   // standardize third and higher central moments, if present
   if (num_moments > 2) {
     // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
-    const Real& std_dev = std::sqrt(numericalMoments[1]);
+    Real std_dev = std::sqrt(numericalMoments[1]); pow_fn = std_dev*std_dev;
     for (j=2; j<num_moments; ++j)
-      numericalMoments[j] /= std::pow(std_dev, Real(j+1));
+      { pow_fn *= std_dev; numericalMoments[j] /= pow_fn; }
 
     // offset the fourth standardized moment to eliminate excess kurtosis
     if (num_moments > 3)

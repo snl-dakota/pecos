@@ -1282,6 +1282,9 @@ Real InterpPolyApproximation::get_covariance(const RealVector& exp_coeffs_2)
     abort_handler(-1);
   }
 
+  // TO DO: compute mean1,mean2 first, then compute covariance as
+  // wt_prod*(coeff1-mean1)*(coeff2-mean2)
+
   Real var = 0., mean_1 = 0., mean_2 = 0.;
   const RealVector& wt_sets = driverRep->weight_sets();
   for (size_t i=0; i<numCollocPts; ++i) {
@@ -1292,7 +1295,7 @@ Real InterpPolyApproximation::get_covariance(const RealVector& exp_coeffs_2)
     mean_2 += coeff_2i * wt_prod_i;
     var    += coeff_wt_1i * coeff_2i;
   }
-  var -= mean_1*mean_2;
+  var -= mean_1*mean_2; // potential loss of precision
   return var;
 }
 
