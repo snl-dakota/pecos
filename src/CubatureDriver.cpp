@@ -32,7 +32,7 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
 {
   numVars = u_types.size();
   integrand_order(order);
-  integration_rule(rule);
+  integration_rule(rule); // size integrationRules and define first entry
 
   // check for isotropic u_types
   short type0 = u_types[0];
@@ -47,9 +47,8 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
   // (would have to be expanded into array for OrthogPolyApproximation
   // within NonDPCE).
   ShortArray basis_types, gauss_modes;
-  IntArray int_rules(numVars, (int)rule);
-  OrthogPolyApproximation::distribution_types(u_types, int_rules, basis_types,
-					      gauss_modes);
+  OrthogPolyApproximation::distribution_types(u_types, integrationRules,
+					      basis_types, gauss_modes);
   OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
 					      polynomialBasis);
 }
@@ -83,7 +82,7 @@ initialize_grid_parameters(const ShortArray& u_types,
   // verify homogeneity in any polynomial parameterizations
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
-  switch (integrationRule) {
+  switch (integrationRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
     err_flag = (verify_homogeneity(dp.beta_alphas()) ||
 		verify_homogeneity(dp.beta_betas())); break;
@@ -150,7 +149,7 @@ initialize_grid_parameters(const ShortArray& u_types,
 
 int CubatureDriver::grid_size()
 {
-  switch(integrationRule) {
+  switch(integrationRules[0]) {
   case GAUSS_HERMITE:
     switch (integrandOrder) {
     case 1: return webbur::en_her_01_1_size(numVars);    break; // 1
@@ -228,7 +227,7 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   bool err_flag = false, pt_scaling = false, wt_scaling = false;
   double pt_factor, wt_factor;
   BasisPolynomial& poly0 = polynomialBasis[0];
-  switch(integrationRule) {
+  switch(integrationRules[0]) {
   case GAUSS_HERMITE: {
     switch (integrandOrder) {
     case 1: webbur::en_her_01_1(numVars,    num_pts, pts, wts); break;

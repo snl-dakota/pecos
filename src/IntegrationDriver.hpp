@@ -81,6 +81,11 @@ public:
   /// return weightSets
   const RealVector& weight_sets() const;
 
+  /// return integrationRules
+  const IntArray& integration_rules() const;
+  /// return growthRules
+  const IntArray& growth_rules() const;
+
   /// return orderGenzKeister
   const UShortArray& genz_keister_order()     const;
   /// return precGenzKeister
@@ -134,6 +139,11 @@ protected:
   /// weighting vector for dimension anisotropic grids
   RealVector anisoLevelWts;
 
+  /// integer codes for integration rule options
+  IntArray integrationRules;
+  /// integer codes for growth rule options
+  IntArray growthRules;
+
   /// array of one-dimensional orthogonal polynomials used in
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
@@ -182,6 +192,14 @@ IntegrationDriver::polynomial_basis() const
 
 inline const RealVector& IntegrationDriver::weight_sets() const
 { return (driverRep) ? driverRep->weightSets : weightSets; }
+
+
+inline const IntArray& IntegrationDriver::integration_rules() const
+{ return integrationRules; }
+
+
+inline const IntArray& IntegrationDriver::growth_rules() const
+{ return growthRules; }
 
 
 inline const UShortArray& IntegrationDriver::genz_keister_order() const

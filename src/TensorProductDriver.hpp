@@ -63,8 +63,6 @@ public:
   /// return ith entry in quadOrder
   unsigned short quadrature_order(size_t i) const;
 
-  /// return integrationRules
-  const IntArray& integration_rules() const;
   /// return collocKey
   const UShort2DArray& collocation_key() const;
 
@@ -94,11 +92,6 @@ private:
 
   /// the isotropic/anisotropic quadrature order
   UShortArray quadOrder;
-
-  /// integer codes for integration rule options
-  IntArray integrationRules;
-  /// integer codes for growth rule options
-  IntArray growthRules;
 
   /// numCollocPts-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
@@ -135,10 +128,6 @@ inline const UShortArray& TensorProductDriver::quadrature_order() const
 
 inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
 { return quadOrder[i]; }
-
-
-inline const IntArray& TensorProductDriver::integration_rules() const
-{ return integrationRules; }
 
 
 inline const UShort2DArray& TensorProductDriver::collocation_key() const

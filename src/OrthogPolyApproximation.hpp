@@ -16,7 +16,6 @@
 
 #include "PolynomialApproximation.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
-#include "SparseGridDriver.hpp"
 
 
 namespace Pecos {
@@ -51,20 +50,13 @@ public:
   ~OrthogPolyApproximation();
 
   //
-  //- Heading: Virtual function redefinitions
-  //
-
-  /// initialize polynomialBasis, multiIndex, et al.
-  void allocate_arrays();
-
-  //
   //- Heading: Member functions
   //
 
   /// set numExpansionTerms
   void expansion_terms(int exp_terms);
   /// get numExpansionTerms
-  const int& expansion_terms() const;
+  int expansion_terms() const;
 
   /// invoke distribution_types() and, if needed, distribution_parameters()
   void distributions(const ShortArray& u_types,
@@ -131,6 +123,9 @@ protected:
 
   /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;
+
+  /// initialize polynomialBasis, multiIndex, et al.
+  void allocate_arrays();
 
   /// Performs global sensitivity analysis using Sobol' Indices;
   /// computes component (main and interaction) effects
@@ -407,7 +402,7 @@ inline void OrthogPolyApproximation::expansion_terms(int exp_terms)
 { numExpansionTerms = exp_terms; }
 
 
-inline const int& OrthogPolyApproximation::expansion_terms() const
+inline int OrthogPolyApproximation::expansion_terms() const
 { return numExpansionTerms; }
 
 

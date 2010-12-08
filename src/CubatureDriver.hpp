@@ -61,11 +61,6 @@ public:
   // get integrandOrder
   unsigned short integrand_order() const;
 
-  // set integrationRule
-  void integration_rule(unsigned short rule);
-  // get integrationRule
-  unsigned short integration_rule() const;
-
   /// number of collocation points with duplicates removed
   int grid_size();
   /// compute scaled variable and weight sets for the cubature grid
@@ -82,14 +77,15 @@ private:
   /// verify that all vectors within params are identical
   bool verify_homogeneity(const RealVectorArray& params) const;
 
+  // size integrationRules and set first entry
+  void integration_rule(unsigned short rule);
+
   //
   //- Heading: Data
   //
 
   /// integrand order
   unsigned short integrandOrder;
-  /// integer code for integration rule
-  unsigned short integrationRule;
 };
 
 
@@ -110,11 +106,7 @@ inline unsigned short CubatureDriver::integrand_order() const
 
 
 inline void CubatureDriver::integration_rule(unsigned short rule)
-{ integrationRule = rule; }
-
-
-inline unsigned short CubatureDriver::integration_rule() const
-{ return integrationRule; }
+{ integrationRules.resize(1); integrationRules[0] = (int)rule; }
 
 
 inline bool CubatureDriver::verify_homogeneity(const RealVector& params) const

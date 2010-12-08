@@ -163,11 +163,6 @@ public:
   /// return ssgLevel
   unsigned short level() const;
 
-  /// return integrationRules
-  const IntArray& integration_rules() const;
-  /// return growthRules
-  const IntArray& growth_rules() const;
-
   /// return smolyakMultiIndex
   const UShort2DArray& smolyak_multi_index() const;
   /// return smolyakCoeffs
@@ -249,11 +244,6 @@ private:
 
   /// the Smolyak sparse grid level
   unsigned short ssgLevel;
-
-  /// integer codes for integration rule options
-  IntArray integrationRules;
-  /// integer codes for growth rule options
-  IntArray growthRules;
 
   /// type of expansion refinement
   short refineType;
@@ -353,14 +343,6 @@ inline unsigned short SparseGridDriver::level() const
 
 inline void SparseGridDriver::level(unsigned short ssg_level)
 { ssgLevel = ssg_level; }
-
-
-inline const IntArray& SparseGridDriver::integration_rules() const
-{ return integrationRules; }
-
-
-inline const IntArray& SparseGridDriver::growth_rules() const
-{ return growthRules; }
 
 
 inline const UShort2DArray& SparseGridDriver::smolyak_multi_index() const

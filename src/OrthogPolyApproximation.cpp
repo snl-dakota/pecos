@@ -34,22 +34,28 @@ distribution_types(const ShortArray& u_types,
   bool extra_dist_params = false;
   size_t i, num_vars = u_types.size(), num_rules = int_rules.size();
 
-  // Inactive code below is overkill: just copy values since
+  // Initialize gauss_modes from int_rules.  There are three possible
+  // int_rules states: (1) empty (e.g., regression PCE), (2) unit size
+  // (cubature), and (3) num_vars size (tensor or sparse grid).
+  // Note: inactive code below is overkill: just copy values since
   // BasisPolynomial::get_polynomial() does not pass modes to types that
   // don't support them.  These modes allow control of Gauss-Legendre vs.
   // Gauss-Patterson points/weights for Legendre polynomials and
   // Clenshaw-Curtis vs. Fejer points/weights for Chebyshev polynomials.
-  if (gauss_modes.size() != num_rules) {
-    gauss_modes.resize(num_rules);
-    for (i=0; i<num_rules; i++)
+  if (num_rules && gauss_modes.size() != num_vars) {
+    gauss_modes.resize(num_vars);
+    for (i=0; i<num_vars; i++)
       //switch (u_types[i]) {
       //case STD_UNIFORM:
-        gauss_modes[i] = (short)int_rules[i];// break;
+      gauss_modes[i] = (num_rules == num_vars) ?
+	(short)int_rules[i] : (short)int_rules[0]; // cubature defines 1 rule
+      //  break;
       //default:
-      //  gauss_modes[i] = 0;                   break;
+      //  gauss_modes[i] = 0; break;
       //}
   }
 
+  // Initialize basis_types from u_types.
   if (basis_types.size() != num_vars) {
     basis_types.resize(num_vars);
     for (i=0; i<num_vars; i++) {

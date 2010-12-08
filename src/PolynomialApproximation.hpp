@@ -133,6 +133,9 @@ public:
   /// existing computations from compute_component_effects()
   virtual void compute_total_effects() = 0;
 
+  /// size derived class data attributes
+  virtual void allocate_arrays() = 0;
+
   /// return the mean of the expansion, treating all variables as random
   virtual const Real& get_mean() = 0;
   /// return the mean of the expansion for a given parameter vector,
