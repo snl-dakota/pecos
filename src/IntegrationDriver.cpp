@@ -177,33 +177,6 @@ IntegrationDriver::~IntegrationDriver()
 }
 
 
-void IntegrationDriver::dimension_preference(const RealVector& dim_pref)
-{
-  if (driverRep)
-    driverRep->dimension_preference(dim_pref); // forward to letter
-  else { // default implementation
-    RealVector aniso_wts;
-    if (!dim_pref.empty()) {
-      size_t num_pref = dim_pref.length();
-      aniso_wts.sizeUninitialized(num_pref);
-      for (size_t i=0; i<num_pref; ++i)
-	aniso_wts[i] = (dim_pref[i] == 0.) ? 0. : 1./dim_pref[i];
-      // scaling occurs in anisotropic_weights() below
-    }
-    anisotropic_weights(aniso_wts);
-  }
-}
-
-
-void IntegrationDriver::anisotropic_weights(const RealVector& aniso_wts)
-{
-  if (driverRep)
-    driverRep->anisotropic_weights(aniso_wts); // forward to letter
-  else
-    anisoLevelWts = aniso_wts; // default implementation
-}
-
-
 void IntegrationDriver::
 initialize_grid_parameters(const ShortArray& u_types, 
 			   const DistributionParams& dp)

@@ -23,30 +23,6 @@ static const char rcsId[]="@(#) $Id: TensorProductDriver.C,v 1.57 2004/06/21 19:
 namespace Pecos {
 
 
-void TensorProductDriver::anisotropic_weights(const RealVector& aniso_wts)
-{
-  if (aniso_wts.empty())
-    dimIsotropic = true;
-  else {
-    if (aniso_wts.length() != numVars) {
-      PCerr << "Error: length of anisotropic weights specification is "
-	    << "inconsistent with\n       number of variables in "
-	    << "TensorProductDriver::anisotropic_weights()." << std::endl;
-      abort_handler(-1);
-    }
-
-    dimIsotropic = true;
-    Real wt0 = aniso_wts[0];
-    for (size_t i=1; i<numVars; ++i)
-      if (std::abs(aniso_wts[i] - wt0) > DBL_EPSILON)
-	{ dimIsotropic = false; break; }
-
-    // TO DO: scaling
-    anisoLevelWts = aniso_wts;
-  }
-}
-
-
 void TensorProductDriver::
 initialize_grid(const ShortArray& u_types, bool nested_rules,
 		short growth_rate, short nested_uniform_rule)

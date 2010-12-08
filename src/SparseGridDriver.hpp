@@ -54,11 +54,6 @@ public:
   /// number of collocation points with duplicates removed
   int grid_size();
 
-  /// set ssgAnisoLevelWts
-  void dimension_preference(const RealVector& dim_pref);
-  /// set ssgAnisoLevelWts
-  void anisotropic_weights(const RealVector& aniso_wts);
-
   //
   //- Heading: Member functions
   //
@@ -163,6 +158,20 @@ public:
   /// return ssgLevel
   unsigned short level() const;
 
+  /// set anisoLevelWts
+  void dimension_preference(const RealVector& dim_pref);
+  /// set anisoLevelWts
+  void anisotropic_weights(const RealVector& aniso_wts);
+  /// return anisoLevelWts
+  const RealVector& anisotropic_weights() const;
+  /// return dimIsotropic
+  bool isotropic() const;
+
+  /// return refineType
+  short refine_type()    const;
+  /// return refineControl
+  short refine_control() const;
+
   /// return smolyakMultiIndex
   const UShort2DArray& smolyak_multi_index() const;
   /// return smolyakCoeffs
@@ -244,6 +253,13 @@ private:
 
   /// the Smolyak sparse grid level
   unsigned short ssgLevel;
+
+  /// flag indicating a dimension isotropic grid
+  bool dimIsotropic;
+  // vector of dimension preference levels for dimension anisotropic grids
+  //RealVector dimPref;
+  /// weighting vector for dimension anisotropic grids
+  RealVector anisoLevelWts;
 
   /// type of expansion refinement
   short refineType;
@@ -343,6 +359,22 @@ inline unsigned short SparseGridDriver::level() const
 
 inline void SparseGridDriver::level(unsigned short ssg_level)
 { ssgLevel = ssg_level; }
+
+
+inline const RealVector& SparseGridDriver::anisotropic_weights() const
+{ return anisoLevelWts; }
+
+
+inline bool SparseGridDriver::isotropic() const
+{ return dimIsotropic; }
+
+
+inline short SparseGridDriver::refine_type() const
+{ return refineType; }
+
+
+inline short SparseGridDriver::refine_control() const
+{ return refineControl; }
 
 
 inline const UShort2DArray& SparseGridDriver::smolyak_multi_index() const

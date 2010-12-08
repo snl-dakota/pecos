@@ -103,9 +103,9 @@ void InterpPolyApproximation::allocate_arrays()
     break;
   }
   case SPARSE_GRID: {
-    const RealVector& aniso_wts  = driverRep->anisotropic_weights();
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     unsigned short    ssg_level  = ssg_driver->level();
+    const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
 
     //bool update_exp_form
     //  = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);

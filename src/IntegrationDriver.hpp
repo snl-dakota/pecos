@@ -53,11 +53,6 @@ public:
   //- Heading: Virtual functions
   //
 
-  /// set anisoLevelWts
-  virtual void dimension_preference(const RealVector& dim_pref);
-  /// set anisoLevelWts
-  virtual void anisotropic_weights(const RealVector& aniso_wts);
-
   /// update polynomialBasis with data from dist_params
   virtual void initialize_grid_parameters(const ShortArray& u_types,
 					  const DistributionParams& dp);
@@ -71,10 +66,6 @@ public:
   //- Heading: Member functions
   //
 
-  /// return isotropicTPQ
-  bool isotropic() const;
-  /// return anisoLevelWts
-  const RealVector& anisotropic_weights() const;
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
 
@@ -132,13 +123,6 @@ protected:
   /// number of variables in the tensor-product grid
   size_t numVars;
 
-  /// flag indicating a dimension isotropic grid
-  bool dimIsotropic;
-  // vector of dimension preference levels for dimension anisotropic grids
-  //RealVector dimPref;
-  /// weighting vector for dimension anisotropic grids
-  RealVector anisoLevelWts;
-
   /// integer codes for integration rule options
   IntArray integrationRules;
   /// integer codes for growth rule options
@@ -175,14 +159,6 @@ private:
   /// number of objects sharing driverRep
   int referenceCount;
 };
-
-
-inline bool IntegrationDriver::isotropic() const
-{ return (driverRep) ? driverRep->dimIsotropic : dimIsotropic; }
-
-
-inline const RealVector& IntegrationDriver::anisotropic_weights() const
-{ return (driverRep) ? driverRep->anisoLevelWts : anisoLevelWts; }
 
 
 inline const std::vector<BasisPolynomial>& 
