@@ -327,7 +327,8 @@ void OrthogPolyApproximation::allocate_arrays()
     unsigned short    ssg_level  = ssg_driver->level();
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
     bool update_exp_form
-      = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
+      = ( ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev ||
+	  configOptions.refinementControl == GENERALIZED_SPARSE );
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) { // compute and output number of terms
@@ -766,7 +767,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
   case TENSOR_INT_TENSOR_SUM_EXP: {
     // assemble a complete list of individual polynomial coverage
     // defined from the linear combination of mixed tensor products
-    multi_index.clear();
+    multi_index.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
     tpMultiIndex.resize(num_smolyak_indices);
     if (configOptions.refinementControl == GENERALIZED_SPARSE) {
       tpExpansionCoeffs.resize(num_smolyak_indices);

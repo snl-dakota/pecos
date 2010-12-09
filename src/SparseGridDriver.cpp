@@ -721,6 +721,7 @@ void SparseGridDriver::reference_unique()
   assign_tensor_collocation_indices(0, uniqueIndex1);
   numCollocPts = numUnique1;
   if (trackEnsembleWeights) {
+    weightSets = 0.;
     update_sparse_weights(0, a1Weights, uniqueIndex1, weightSets);
 #ifdef DEBUG
     PCout << "reference_unique() reference weightSets:\n" << weightSets;
