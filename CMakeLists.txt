@@ -4,7 +4,7 @@ project("Pecos" C CXX Fortran)
 
 include(FortranCInterface)
 
-option(BUILD_STATIC "build static libraries" OFF)
+option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" OFF)
 
 
 # first check for a system blas and lapack
@@ -160,13 +160,7 @@ configure_file("${Pecos_SOURCE_DIR}/cmake/empty.cxx.in"
   @ONLY
 )
 
-add_library(pecos SHARED empty.cxx)
-add_library(pecos-static STATIC empty.cxx)
-
-## Ensure both the shared and static libraries have the same root name
-set_target_properties(pecos-static PROPERTIES OUTPUT_NAME "pecos")
-set_target_properties(pecos-static PROPERTIES PREFIX "lib")
-
+add_library(pecos empty.cxx)
 target_link_libraries(pecos ${SUBLIBS})
 
 # WJB - ToDo: delete here to bottom once I am done debugging the bldSettings
