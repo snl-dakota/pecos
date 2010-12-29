@@ -20,6 +20,8 @@
 
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 #include <boost/math/distributions.hpp>
+#include <boost/math/special_functions/expm1.hpp>
+using boost::math::expm1;
 
 namespace bmth = boost::math;
 namespace bmp  = bmth::policies;

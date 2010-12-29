@@ -10,6 +10,10 @@
 #include "NatafTransformation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
+//for log1p
+#include <boost/math/special_functions/log1p.hpp>
+using boost::math::log1p;
+
 static const char rcsId[]="@(#) $Id: NatafTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
 //#define DEBUG
