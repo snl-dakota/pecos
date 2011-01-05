@@ -138,7 +138,7 @@ add_subdirectory(packages)
 
 add_subdirectory(src)
 
-if(ENABLE_TESTS)
+if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
