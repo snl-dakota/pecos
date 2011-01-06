@@ -8,9 +8,10 @@
 #define FC_FUNC_@FortranCInterface_GLOBAL_MACRO@
 
 
+// Macro to enable LHS.
+#cmakedefine HAVE_LHS 1
+
+
 // Macro to enable debug in Pecos.
 // #cmakedefine HAVE_PECOS_DEBUG
-
-// Macro to disable Boost asserts.
-// WJB: remove if add_defn works -- #cmakedefine BOOST_DISABLE_ASSERTS 1
 
