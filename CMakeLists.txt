@@ -61,25 +61,6 @@ option(HAVE_FFTW "Find and use an installed fftw package. This OPTION has no
 option(HAVE_LHS "Build the LHS package." ON)
 option(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
 
-#option(USE_SYSTEM_TEUCHOS
-#  "If false, Pecos will use the included version of Teuchos."
-#  OFF)
-
-#if(USE_SYSTEM_TEUCHOS)
-#  # WJB: suspect SYSTEM_TEUCHOS settings specify incorrect paths -- try to get
-#  #      a review from someone interested in this case being enabled
-#  find_package(Trilinos REQUIRED)
-#  ## Kitware version -- include(${Trilinos_DIR}/TrilinosConfig.cmake)
-#  include(${Trilinos_DIR}/TeuchosConfig.cmake)
-#  ##set(Teuchos_INCLUDE_DIRS ${Trilinos_INCLUDE_DIRS} CACHE FILEPATH "include dir for Teuchos" FORCE)
-#  ##set(Teuchos_LIBRARY_DIRS ${Trilinos_LIBRARY_DIRS} CACHE FILEPATH "library dir for Teuchos" FORCE)
-#else()
-#  set(Teuchos_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/packages/teuchos/src
-#                           ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/src)
-#  set(Teuchos_LIBRARY_DIRS ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/src)
-#endif()
-
-
 #Keep track of what libraries should be included in libpecos
 set(SUBLIBS pecos_src)
 
