@@ -18,12 +18,14 @@ Useful Environment Settings
 Generating Local Documentation
 Library Notes
 
+*** This is draft INSTALL documentation adapted from DAKOTA. ***
+*** It will soon be updated with Cmake instructions.         ***
 
 ===========
 Quick Start
 ===========
 
-For the PECOS version 4.x source distributions, the following basic
+For the PECOS version 1.x source distributions, the following basic
 installation approach is recommended:
 
   1) gunzip Pecos_releasename.tar.gz
