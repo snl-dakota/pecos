@@ -30,7 +30,9 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  InterpPolyApproximation.cpp			\
 			  OrthogPolyApproximation.cpp			\
 			  BasisPolynomial.cpp				\
+			  InterpolationPolynomial.cpp			\
 			  LagrangeInterpPolynomial.cpp			\
+			  PiecewiseInterpPolynomial.cpp			\
 			  OrthogonalPolynomial.cpp			\
 			  ChebyshevOrthogPolynomial.cpp			\
 			  GenLaguerreOrthogPolynomial.cpp		\

@@ -6,13 +6,13 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:        LagrangeInterpPolynomial
-//- Description:  Class for 1-D Lagrange Interpolation Polynomials
+//- Class:        PiecewiseInterpPolynomial
+//- Description:  Class for 1-D piecewise Interpolation Polynomials
 //-               
 //- Owner:        Mike Eldred, Sandia National Laboratories
 
-#ifndef LAGRANGE_INTERP_POLYNOMIAL_HPP
-#define LAGRANGE_INTERP_POLYNOMIAL_HPP
+#ifndef PIECEWISE_INTERP_POLYNOMIAL_HPP
+#define PIECEWISE_INTERP_POLYNOMIAL_HPP
 
 #include "InterpolationPolynomial.hpp"
 #include "pecos_data_types.hpp"
@@ -20,14 +20,15 @@
 
 namespace Pecos {
 
-/// Derived basis polynomial class for 1-D Lagrange interpolation polynomials
+/// Derived basis polynomial class for 1-D piecewise interpolation polynomials
 
-/** The LagrangeInterpPolynomial class evaluates a univariate Lagrange
-    interpolation polynomial.  The order of the polynomial is dictated
-    by the number of interpolation points (order = N_p - 1).  It enables
+/** The PiecewiseInterpPolynomial class evaluates a univariate
+    interpolation polynomial with local support.  The order of the
+    polynomial may be linear, based only on interpolated values, or
+    cubic, based on interpolated values and gradients.  It enables
     multidimensional interpolants within InterpPolyApproximation. */
 
-class LagrangeInterpPolynomial: public InterpolationPolynomial
+class PiecewiseInterpPolynomial: public InterpolationPolynomial
 {
 public:
 
@@ -36,20 +37,20 @@ public:
   //
 
   /// default constructor
-  LagrangeInterpPolynomial();
+  PiecewiseInterpPolynomial();
   /// standard constructor
-  LagrangeInterpPolynomial(const RealArray& interpolation_pts);
+  PiecewiseInterpPolynomial(const RealArray& interpolation_pts);
   /// destructor
-  ~LagrangeInterpPolynomial();
+  ~PiecewiseInterpPolynomial();
 
   //
   //- Heading: Virtual function redefinitions
   //
 
-  /// retrieve the value of the i_th Lagrange polynomial for a given
+  /// retrieve the value of the i_th piecewise polynomial for a given
   /// parameter x
   const Real& get_value(const Real& x, unsigned short i);
-  /// retrieve the gradient of the i_th Lagrange polynomial for a
+  /// retrieve the gradient of the i_th piecewise polynomial for a
   /// given parameter x
   const Real& get_gradient(const Real& x, unsigned short i);
 
@@ -59,7 +60,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void precompute_data();
+  //void precompute_data();
 
 private:
 
@@ -67,24 +68,21 @@ private:
   //- Heading: Data
   //
 
-  /// set of denominator products calculated from interpolationPts in
-  /// precompute_data()
-  RealVector lagDenominators;
 };
 
 
-inline LagrangeInterpPolynomial::LagrangeInterpPolynomial():
+inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial():
   InterpolationPolynomial()
 { }
 
 
-inline LagrangeInterpPolynomial::
-LagrangeInterpPolynomial(const RealArray& interpolation_pts):
+inline PiecewiseInterpPolynomial::
+PiecewiseInterpPolynomial(const RealArray& interpolation_pts):
   InterpolationPolynomial(interpolation_pts)
 { }
 
 
-inline LagrangeInterpPolynomial::~LagrangeInterpPolynomial()
+inline PiecewiseInterpPolynomial::~PiecewiseInterpPolynomial()
 { }
 
 } // namespace Pecos
