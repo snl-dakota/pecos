@@ -54,7 +54,9 @@ include_HEADERS = pecos_config.h				\
 		     src/SurrogateDataPoint.hpp			\
 		     src/DistributionParams.hpp			\
 		     src/BasisPolynomial.hpp			\
+		     src/InterpolationPolynomial.hpp		\
 		     src/LagrangeInterpPolynomial.hpp		\
+		     src/PiecewiseInterpPolynomial.hpp		\
 		     src/OrthogonalPolynomial.hpp		\
 		     src/ChebyshevOrthogPolynomial.hpp		\
 		     src/GenLaguerreOrthogPolynomial.hpp	\
