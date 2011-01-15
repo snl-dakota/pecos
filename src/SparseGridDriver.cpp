@@ -106,19 +106,38 @@ allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
 
 
 void SparseGridDriver::
-allocate_smolyak_coefficients(const UShort2DArray& multi_index,
+allocate_smolyak_coefficients(size_t start_index,
+			      const UShort2DArray& multi_index,
 			      IntArray& coeffs)
 {
   size_t i, j, cntr = 0, num_sets = multi_index.size();
   if (coeffs.size() != num_sets)
     coeffs.resize(num_sets);
-  int* mi = new int [numVars*num_sets];
-  //copy_data(multi_index, mi); // UShort2DArray -> int*
-  for (i=0; i<num_sets; ++i)
-    for (j=0; j<numVars; ++j, ++cntr)
-      mi[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
-  webbur::sandia_sgmgg_coef_naive(numVars, num_sets, mi, &coeffs[0]);
-  delete [] mi;
+  int *s1 = new int [numVars*num_sets], *c1 = new int [num_sets],
+      *s2 = new int [numVars];
+  // initialize s1 and c1
+  for (i=0; i<start_index; ++i) {
+    c1[i] = coeffs[i];
+    for (j=0; j<numVars; ++j, ++cntr) // no copy_data() since ushort -> int
+      s1[cntr] = multi_index[i][j]; // sgmgg packs by variable groups
+  }
+  // for each s2, update coeffs
+  for (i=start_index; i<num_sets; ++i) {
+    for (j=0; j<numVars; ++j) // no copy_data() since ushort -> int
+      s2[j] = multi_index[i][j];
+    webbur::sandia_sgmgg_coef_inc2(numVars, i, s1, c1, s2, &coeffs[0]);
+#ifdef DEBUG
+    PCout << "allocate_smolyak_coefficients(): updated Smolyak coeffs =\n"
+	  << coeffs << '\n';
+#endif // DEBUG
+    if (i<num_sets-1) { // update s1 and c1 state for next index
+      for (j=0; j<=i; ++j) // coeffs updated to len i+1
+	c1[j] = coeffs[j];
+      for (j=0; j<numVars; ++j, ++cntr)
+	s1[cntr] = s2[j];
+    }
+  }
+  delete [] s1; delete [] c1; delete [] s2;
 }
 
 
@@ -526,10 +545,11 @@ void SparseGridDriver::initialize_sets()
 
 void SparseGridDriver::push_trial_set(const UShortArray& set)
 {
+  size_t last_index = smolyakMultiIndex.size();
   smolyakMultiIndex.push_back(set);
 
   // update smolyakCoeffs from smolyakMultiIndex
-  allocate_smolyak_coefficients();
+  allocate_smolyak_coefficients(last_index);
 
   // collocKey, collocIndices, and uniqueIndexMapping updated within
   // either restore_set() or compute_trial_grid()
@@ -586,7 +606,7 @@ void SparseGridDriver::pop_trial_set()
   numCollocPts -= numUnique2; // subtract number of trial points
   uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
   smolyakMultiIndex.pop_back();
-  // no need to update smolyakCoeffs as this will be updated on next push
+  smolyakCoeffs = smolyakCoeffsRef;
   collocKey.pop_back();
   collocIndices.pop_back();
 }
@@ -642,7 +662,7 @@ void SparseGridDriver::finalize_sets()
 			   trialSets.end());
   activeMultiIndex.clear(); trialSets.clear();
   // update smolyakCoeffs from smolyakMultiIndex
-  allocate_smolyak_coefficients();
+  allocate_smolyak_coefficients(start_index);
   // update collocKey
   update_collocation_key(start_index);
   // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts

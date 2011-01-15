@@ -67,10 +67,11 @@ public:
   /// index set constraint, along with their corresponding coefficients.
   void allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
   /// overloaded form initializes smolyakCoeffs from smolyakMultiIndex
-  void allocate_smolyak_coefficients();
+  void allocate_smolyak_coefficients(size_t start_index);
   /// compute the Smolyak combinatorial coefficients for the multi-indices
   /// defining a generalized sparse grid
-  void allocate_smolyak_coefficients(const UShort2DArray& multi_index,
+  void allocate_smolyak_coefficients(size_t start_index,
+				     const UShort2DArray& multi_index,
 				     IntArray& coeffs);
   /// initialize collocKey from smolyakMultiIndex
   void allocate_collocation_key();
@@ -417,8 +418,10 @@ inline void SparseGridDriver::allocate_smolyak_arrays()
 { allocate_smolyak_arrays(smolyakMultiIndex, smolyakCoeffs); }
 
 
-inline void SparseGridDriver::allocate_smolyak_coefficients()
-{ allocate_smolyak_coefficients(smolyakMultiIndex, smolyakCoeffs); }
+inline void SparseGridDriver::allocate_smolyak_coefficients(size_t start_index)
+{
+  allocate_smolyak_coefficients(start_index, smolyakMultiIndex, smolyakCoeffs);
+}
 
 
 inline void SparseGridDriver::update_reference()
