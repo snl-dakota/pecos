@@ -21,7 +21,6 @@
 #define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 #include <boost/math/distributions.hpp>
 #include <boost/math/special_functions/expm1.hpp>
-using boost::math::expm1;
 
 namespace bmth = boost::math;
 namespace bmp  = bmth::policies;
@@ -155,7 +154,7 @@ inline void lognormal_std_deviation_from_err_factor(const Real& mean,
 						    Real& std_dev)
 {
   Real zeta = std::log(err_fact)/Phi_inverse(0.95); // Phi^{-1}(0.95) ~= 1.645
-  std_dev   = mean * std::sqrt(expm1(zeta*zeta));
+  std_dev   = mean * std::sqrt(bmth::expm1(zeta*zeta));
 }
 
 
@@ -173,7 +172,7 @@ inline void moments_from_lognormal_params(const Real& lambda, const Real& zeta,
 {
   Real zeta_sq = zeta*zeta;
   mean    = std::exp(lambda + zeta_sq/2.);
-  std_dev = mean * std::sqrt(expm1(zeta_sq));
+  std_dev = mean * std::sqrt(bmth::expm1(zeta_sq));
 }
 
 
@@ -546,7 +545,7 @@ inline Real std_exponential_pdf(const Real& x)
 inline Real std_exponential_cdf(const Real& x)
 {
   // as with log1p(), avoid numerical probs when exp(~0) is ~ 1
-  return -expm1(-x); //1. - std::exp(-x);
+  return -bmth::expm1(-x); //1. - std::exp(-x);
 }
 
 
@@ -557,7 +556,7 @@ inline Real exponential_pdf(const Real& x, const Real& beta)
 inline Real exponential_cdf(const Real& x, const Real& beta)
 {
   // as with log1p(), avoid numerical probs when exp(~0) is ~ 1
-  return -expm1(-x/beta); //1. - std::exp(-x/beta);
+  return -bmth::expm1(-x/beta); //1. - std::exp(-x/beta);
 }
 
 
@@ -707,7 +706,7 @@ inline Real weibull_cdf(const Real& x, const Real& alpha, const Real& beta)
   return gsl_cdf_weibull_P(x, beta, alpha);
 #else
   // avoid numerical probs when exp()~1
-  return -expm1(-std::pow(x/beta, alpha));
+  return -bmth::expm1(-std::pow(x/beta, alpha));
 #endif // HAVE_GSL or HAVE_BOOST
 */
 }
