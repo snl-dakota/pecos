@@ -38,7 +38,7 @@ public:
   /// default constructor
   LagrangeInterpPolynomial();
   /// standard constructor
-  LagrangeInterpPolynomial(const RealArray& interpolation_pts);
+  LagrangeInterpPolynomial(const RealArray& interp_pts);
   /// destructor
   ~LagrangeInterpPolynomial();
 
@@ -67,7 +67,7 @@ private:
   //- Heading: Data
   //
 
-  /// set of denominator products calculated from interpolationPts in
+  /// set of denominator products calculated from interpPts in
   /// precompute_data()
   RealVector lagDenominators;
 };
@@ -79,8 +79,8 @@ inline LagrangeInterpPolynomial::LagrangeInterpPolynomial():
 
 
 inline LagrangeInterpPolynomial::
-LagrangeInterpPolynomial(const RealArray& interpolation_pts):
-  InterpolationPolynomial(interpolation_pts)
+LagrangeInterpPolynomial(const RealArray& interp_pts):
+  InterpolationPolynomial(interp_pts)
 { }
 
 

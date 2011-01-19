@@ -17,7 +17,7 @@
 namespace Pecos {
 
 /** Pre-compute denominator products that are only a function of the
-    interpolationPts. */
+    interpolation points. */
 void LagrangeInterpPolynomial::precompute_data()
 {
   if (lagDenominators.empty())
@@ -25,28 +25,29 @@ void LagrangeInterpPolynomial::precompute_data()
   lagDenominators = 1.;
   size_t i, j;
   for (i=0; i<numInterpPts; i++) {
-    const Real& interp_pt_i = interpolationPts[i];
+    const Real& interp_pt_i = interpPts[i];
     Real&       lag_denom_i = lagDenominators[i];
     for (j=0; j<numInterpPts; j++)
       if (i != j)
-	lag_denom_i *= interp_pt_i - interpolationPts[j];
+	lag_denom_i *= interp_pt_i - interpPts[j];
   }
 }
 
 
-/** Compute value of Lagrange polynomial for interpolation point i. */
+/** Compute value of the Lagrange polynomial corresponding to
+    interpolation point i. */
 const Real& LagrangeInterpPolynomial::get_value(const Real& x, unsigned short i)
 {
   basisPolyValue = 1. / lagDenominators[i];
   for (size_t j=0; j<numInterpPts; j++)
     if (i != j)
-      basisPolyValue *= x - interpolationPts[j];
+      basisPolyValue *= x - interpPts[j];
   return basisPolyValue;
 }
 
 
-/** Compute derivative with respect to x of Lagrange polynomial for
-    interpolation point i. */
+/** Compute derivative with respect to x of the Lagrange polynomial
+    corresponding to interpolation point i. */
 const Real& LagrangeInterpPolynomial::
 get_gradient(const Real& x, unsigned short i)
 { 
@@ -57,7 +58,7 @@ get_gradient(const Real& x, unsigned short i)
       Real prod = 1.;
       for (k=0; k<numInterpPts; k++)
 	if (k != j && k != i)
-	  prod *= x - interpolationPts[k];
+	  prod *= x - interpPts[k];
       numer += prod;
     }
   }

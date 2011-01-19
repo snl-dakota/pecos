@@ -17,8 +17,8 @@
 #include "InterpolationPolynomial.hpp"
 #include "pecos_data_types.hpp"
 
-
 namespace Pecos {
+
 
 /// Derived basis polynomial class for 1-D piecewise interpolation polynomials
 
@@ -39,7 +39,7 @@ public:
   /// default constructor
   PiecewiseInterpPolynomial();
   /// standard constructor
-  PiecewiseInterpPolynomial(const RealArray& interpolation_pts);
+  PiecewiseInterpPolynomial(const RealArray& interp_pts);
   /// destructor
   ~PiecewiseInterpPolynomial();
 
@@ -60,7 +60,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  //void precompute_data();
+  void precompute_data();
 
 private:
 
@@ -68,6 +68,12 @@ private:
   //- Heading: Data
   //
 
+  /// type of polynomial interpolant: LINEAR, QUADRATIC, CUBIC,
+  /// {LINEAR,QUADRATIC,CUBIC}_EQUIDISTANT
+  short interpType;
+
+  /// the constant interval between points for *_EQUIDISTANT interpTypes
+  Real interpInterval;
 };
 
 
@@ -77,8 +83,8 @@ inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial():
 
 
 inline PiecewiseInterpPolynomial::
-PiecewiseInterpPolynomial(const RealArray& interpolation_pts):
-  InterpolationPolynomial(interpolation_pts)
+PiecewiseInterpPolynomial(const RealArray& interp_pts):
+  InterpolationPolynomial(interp_pts)
 { }
 
 

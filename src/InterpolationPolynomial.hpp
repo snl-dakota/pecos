@@ -37,7 +37,7 @@ public:
   /// default constructor
   InterpolationPolynomial();
   /// standard constructor
-  InterpolationPolynomial(const RealArray& interpolation_pts);
+  InterpolationPolynomial(const RealArray& interp_pts);
   /// destructor
   ~InterpolationPolynomial();
 
@@ -46,14 +46,14 @@ public:
   //
 
   /// precompute data that is reused repeatedly within interpolation
-  virtual void precompute_data();
+  virtual void precompute_data() = 0;
 
   //
   //- Heading: Set/get functions
   //
 
-  /// set interpolationPts
-  void interpolation_points(const RealArray& interpolation_pts);
+  /// set interpPts
+  void interpolation_points(const RealArray& interp_pts);
 
 protected:
 
@@ -63,7 +63,7 @@ protected:
 
   /// set of 1-D interpolation points: the i_th interpolation polynomial
   /// evaluated at the j_th interpolation point produces Kronecker delta_ij
-  RealArray interpolationPts;
+  RealArray interpPts;
   /// number of 1-D interpolation points
   size_t numInterpPts;
 
@@ -82,9 +82,9 @@ inline InterpolationPolynomial::InterpolationPolynomial():
 
 
 inline InterpolationPolynomial::
-InterpolationPolynomial(const RealArray& interpolation_pts):
-  BasisPolynomial(BaseConstructor()), interpolationPts(interpolation_pts),
-  numInterpPts(interpolationPts.size())
+InterpolationPolynomial(const RealArray& interp_pts):
+  BasisPolynomial(BaseConstructor()), interpPts(interp_pts),
+  numInterpPts(interpPts.size())
 { precompute_data(); }
 
 
@@ -93,10 +93,10 @@ inline InterpolationPolynomial::~InterpolationPolynomial()
 
 
 inline void InterpolationPolynomial::
-interpolation_points(const RealArray& interpolation_pts)
+interpolation_points(const RealArray& interp_pts)
 {
-  interpolationPts = interpolation_pts;
-  numInterpPts = interpolationPts.size();
+  interpPts    = interp_pts;
+  numInterpPts = interpPts.size();
   precompute_data();
 }
 

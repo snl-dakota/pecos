@@ -78,6 +78,10 @@ enum { DEFAULT_CONTROL=0, TOTAL_SOBOL, SPECTRAL_DECAY, GENERALIZED_SPARSE };
 /// options for ConfigurationOptions::vbdSetting
 enum { NO_VBD=0, UNIVARIATE_VBD, ALL_VBD };
 
+///
+enum { LINEAR_EQUIDISTANT, LINEAR, QUADRATIC_EQUIDISTANT, QUADRATIC,
+       CUBIC_EQUIDISTANT, CUBIC };
+
 
 // ----------------
 // Standard streams
