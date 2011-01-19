@@ -44,11 +44,14 @@ class ConfigurationOptions
 
 public:
 
+  /// default constructor
   ConfigurationOptions();
+  /// constructor
   ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
 		       bool exp_grad_flag,
 		       //short output_level, short refine_type,
 		       short refine_cntl, short vbd_type);
+  /// destructor
   ~ConfigurationOptions();
 
 private:

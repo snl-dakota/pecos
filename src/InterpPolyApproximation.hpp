@@ -197,7 +197,9 @@ private:
   Real partial_variance_integral(int set_value, size_t tp_index);
   /// computes partialVariance
   void partial_variance(int set_value);
+  /// compute total Sobol effects for a tensor grid
   Real total_effects_integral(int set_value);
+  /// compute total Sobol effects for an index within a sparse grid
   Real total_effects_integral(int set_value, size_t tp_index);
 
   //

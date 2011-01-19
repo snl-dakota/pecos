@@ -56,9 +56,9 @@ public:
   void initialize_grid_parameters(const ShortArray& u_types,
 				  const DistributionParams& dp);
 
-  // set integrandOrder
+  /// set integrandOrder
   void integrand_order(unsigned short order);
-  // get integrandOrder
+  /// get integrandOrder
   unsigned short integrand_order() const;
 
   /// number of collocation points with duplicates removed
@@ -77,7 +77,7 @@ private:
   /// verify that all vectors within params are identical
   bool verify_homogeneity(const RealVectorArray& params) const;
 
-  // size integrationRules and set first entry
+  /// size integrationRules and set first entry
   void integration_rule(unsigned short rule);
 
   //

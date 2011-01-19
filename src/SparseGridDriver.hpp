@@ -66,10 +66,10 @@ public:
   /// functions are used to compute index sets satisfying the anisotropic
   /// index set constraint, along with their corresponding coefficients.
   void allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
-  /// overloaded form initializes smolyakCoeffs from smolyakMultiIndex
+  /// overloaded form updates smolyakCoeffs from smolyakMultiIndex
   void allocate_smolyak_coefficients(size_t start_index);
-  /// compute the Smolyak combinatorial coefficients for the multi-indices
-  /// defining a generalized sparse grid
+  /// update the coeffs array based on new trailing index sets within
+  /// multi_index for incrementally generated generalized sparse grids
   void allocate_smolyak_coefficients(size_t start_index,
 				     const UShort2DArray& multi_index,
 				     IntArray& coeffs);
@@ -238,7 +238,7 @@ private:
   void assign_tensor_collocation_indices(size_t start_index,
 					 const IntArray& unique_index);
 
-  // compute 1-norm |i| for index set i
+  /// compute 1-norm |i| (sum of indices) for the given index_set
   unsigned int index_norm(const UShortArray& index_set) const;
 
   //
@@ -290,7 +290,7 @@ private:
       anisotropic tensor-product integration of a Smolyak recursion. */
   UShort2DArray smolyakMultiIndex;
   /// array of Smolyak combinatorial coefficients, one for each tensor
-  /// product index set
+  /// product index set; order is synchronized with smolyakMultiIndex
   IntArray smolyakCoeffs;
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
@@ -324,13 +324,23 @@ private:
   /// computed incrementally
   bool trackEnsembleWeights;
 
-  int numUnique1, numUnique2;//, numUnique3;
-  RealVector zVec, r1Vec, a1Weights, r2Vec, a2Weights;//, r3Vec, a3Weights;
-  RealMatrix a1Points, a2Points;//, a3Points;
-  IntArray sortIndex1, uniqueSet1, uniqueIndex1,
-           sortIndex2, uniqueSet2, uniqueIndex2;
-       //, sortIndex3, uniqueSet3, uniqueIndex3;
-  BoolDeque isUnique1, isUnique2;//, isUnique3;
+  int numUnique1;       ///< number of unique points in set 1 (reference)
+  int numUnique2;       ///< number of unique points in set 2 (increment)
+  RealVector zVec;      ///< random vector used within sgmgg for sorting
+  RealVector r1Vec;     ///< distance values for sorting in set 1 (reference)
+  RealVector r2Vec;     ///< distance values for sorting in set 2 (increment)
+  RealMatrix a1Points;  ///< array of collocation points in set 1 (reference)
+  RealMatrix a2Points;  ///< array of collocation points in set 2 (increment)
+  RealVector a1Weights; ///< array of integration weights in set 1 (reference)
+  RealVector a2Weights; ///< array of integration weights in set 2 (increment)
+  IntArray sortIndex1;  ///< ascending sort index for set 1 (reference)
+  IntArray sortIndex2;  ///< ascending sort index for set 2 (increment)
+  IntArray uniqueSet1;  ///< index within a1 (reference set) of unique points
+  IntArray uniqueSet2;  ///< index within a2 (increment set) of unique points
+  IntArray uniqueIndex1;///< index within uniqueSet1 corresponding to all of a1
+  IntArray uniqueIndex2;///< index within uniqueSet2 corresponding to all of a2
+  BoolDeque isUnique1;  ///< key to unique points in set 1 (reference)
+  BoolDeque isUnique2;  ///< key to unique points in set 2 (increment)
 
   /// num_levels_per_var x numContinuousVars sets of 1D Gauss points
   Real3DArray gaussPts1D;

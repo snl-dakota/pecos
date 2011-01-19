@@ -18,11 +18,11 @@ public:
 
   /// default constructor
   boost_test_dist() { }
-
   /// destructor
   ~boost_test_dist() { }
 
-  void print_comparison();  // WJB: note GSL is no longer supported as a TPL
+  /// output quantities for comparison between GSL and Boost
+  void print_comparison();
 };
 
 #endif // BOOST_TEST_DIST_HPP

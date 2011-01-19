@@ -42,7 +42,7 @@ void PiecewiseInterpPolynomial::precompute_data()
 /** Compute value of the piecewise interpolation polynomial corresponding
     to interpolation point i. */
 const Real& PiecewiseInterpPolynomial::
-get_value(const Real& x, unsigned short i)
+get_value/*_type1*/(const Real& x, unsigned short i)
 {
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
@@ -112,10 +112,16 @@ get_value(const Real& x, unsigned short i)
 }
 
 
+//const Real& PiecewiseInterpPolynomial::
+//get_value_type2(const Real& x, unsigned short i)
+//{
+//}
+
+
 /** Compute derivative with respect to x of the piecewise interpolation
     polynomial corresponding to interpolation point i. */
 const Real& PiecewiseInterpPolynomial::
-get_gradient(const Real& x, unsigned short i)
+get_gradient/*_type1*/(const Real& x, unsigned short i)
 { 
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
@@ -139,5 +145,11 @@ get_gradient(const Real& x, unsigned short i)
   }
   return basisPolyGradient;
 }
+
+
+//const Real& PiecewiseInterpPolynomial::
+//get_gradient_type2(const Real& x, unsigned short i)
+//{ 
+//}
 
 } // namespace Pecos
