@@ -4,7 +4,7 @@ project("Pecos" C CXX Fortran)
 
 include(FortranCInterface)
 
-option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" OFF)
+option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" ON)
 
 
 # first check for a system blas and lapack
