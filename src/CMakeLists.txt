@@ -2,7 +2,7 @@
 
 #the following configuration file is necessary to build shared libs on windows
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/PecosDLLExportMacro.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/PecosDLLExportMacro.h)
+               ${CMAKE_CURRENT_SOURCE_DIR}/PecosDLLExportMacro.h)
   
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
