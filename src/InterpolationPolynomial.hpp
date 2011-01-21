@@ -46,7 +46,7 @@ public:
   //
 
   /// precompute data that is reused repeatedly within interpolation
-  virtual void precompute_data() = 0;
+  virtual void precompute_data();
 
   //
   //- Heading: Set/get functions

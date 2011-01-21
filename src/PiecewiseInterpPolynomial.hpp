@@ -47,12 +47,19 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// retrieve the value of the i_th piecewise polynomial for a given
-  /// parameter x
-  const Real& get_value(const Real& x, unsigned short i);
-  /// retrieve the gradient of the i_th piecewise polynomial for a
+  /// retrieve the value of the i_th piecewise type 1 polynomial for a
   /// given parameter x
-  const Real& get_gradient(const Real& x, unsigned short i);
+  const Real& get_type1_value(const Real& x, unsigned short i);
+  /// retrieve the value of the i_th piecewise type 2 polynomial for a
+  /// given parameter x
+  const Real& get_type2_value(const Real& x, unsigned short i);
+
+  /// retrieve the gradient of the i_th piecewise type 1 polynomial
+  /// for a given parameter x
+  const Real& get_type1_gradient(const Real& x, unsigned short i);
+  /// retrieve the gradient of the i_th piecewise type 2 polynomial
+  /// for a given parameter x
+  const Real& get_type2_gradient(const Real& x, unsigned short i);
 
 protected:
 

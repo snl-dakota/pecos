@@ -17,8 +17,8 @@
 namespace Pecos {
 
 
-//void InterpolationPolynomial::precompute_data()
-//{ } // default implementation is no-op
+void InterpolationPolynomial::precompute_data()
+{ } // default implementation is no-op
 
 
 } // namespace Pecos
