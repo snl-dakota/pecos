@@ -34,8 +34,7 @@ namespace Pecos {
     one of the derived classes (selected in
     BasisPolynomial::get_polynomial()) serves as the letter. */
 
-class BasisPolynomial
-{
+class PECOS_EXPORT BasisPolynomial{
 public:
 
   //

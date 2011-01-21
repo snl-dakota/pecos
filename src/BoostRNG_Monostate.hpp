@@ -20,13 +20,11 @@
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/variate_generator.hpp>
 
-
 namespace Pecos {
 
 typedef Real (*Rfunc)();
 
-class BoostRNG_Monostate
-{
+class PECOS_EXPORT BoostRNG_Monostate{
 private:
 
   //

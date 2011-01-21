@@ -28,8 +28,7 @@ namespace Pecos {
     cubic, based on interpolated values and gradients.  It enables
     multidimensional interpolants within InterpPolyApproximation. */
 
-class PiecewiseInterpPolynomial: public InterpolationPolynomial
-{
+class PECOS_EXPORT PiecewiseInterpPolynomial: public InterpolationPolynomial{
 public:
 
   //
@@ -84,14 +83,12 @@ private:
 };
 
 
-inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial():
-  InterpolationPolynomial()
+inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial()
 { }
 
 
 inline PiecewiseInterpPolynomial::
-PiecewiseInterpPolynomial(const RealArray& interp_pts):
-  InterpolationPolynomial(interp_pts)
+PiecewiseInterpPolynomial(const RealArray& interp_pts)
 { }
 
 

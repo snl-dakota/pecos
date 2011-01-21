@@ -2,7 +2,10 @@
 
 add_definitions("-DHAVE_CONFIG_H")
 
-include_directories(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/src
+include_directories(${PROJECT_BINARY_DIR}
+					${PROJECT_SOURCE_DIR}/src
+					${PROJECT_BINARY_DIR}/src
+					${PROJECT_BINARY_DIR}/packages/VPISparseGrid/src
                     ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
 
@@ -23,35 +26,34 @@ if(HAVE_LHS)
   set(TPL_LIBS ${TPL_LIBS} lhs)
 endif(HAVE_LHS)
 
-
 # Complete these for each specific test.
 add_executable(pecos_ifft_g pecos_ifft_g.cpp)
-target_link_libraries(pecos_ifft_g pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS}
+target_link_libraries(pecos_ifft_g pecos ${TPL_LIBS} ${LAPACK_LIBS}
 ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
-add_test(pecos_ifft_g pecos_ifft_g)
+add_test(pecos_ifft_g ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pecos_ifft_g)
 
 # Complete these for each specific test.
 add_executable(pecos_ifft_sd pecos_ifft_sd.cpp)
-target_link_libraries(pecos_ifft_sd pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
-add_test(pecos_ifft_sd pecos_ifft_sd)
+target_link_libraries(pecos_ifft_sd pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+add_test(pecos_ifft_sd ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pecos_ifft_sd)
 
 # Complete these for each specific test.
 add_executable(boost_test_dist boost_test_dist.cpp)
-target_link_libraries(boost_test_dist pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
-add_test(boost_test_dist boost_test_dist)
+target_link_libraries(boost_test_dist pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+add_test(boost_test_dist ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/boost_test_dist)
 
 # Complete these for each specific test.
 add_executable(boost_test_rng boost_test_rng.cpp)
-target_link_libraries(boost_test_rng pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
-add_test(boost_test_rng boost_test_rng)
+target_link_libraries(boost_test_rng pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+add_test(boost_test_rng ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/boost_test_rng)
 
 # Complete these for each specific test.
 add_executable(pecos_int_driver pecos_int_driver.cpp)
-target_link_libraries(pecos_int_driver pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
-add_test(pecos_int_driver pecos_int_driver)
+target_link_libraries(pecos_int_driver pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+add_test(pecos_int_driver ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pecos_int_driver)
 
 # Complete these for each specific test.
 add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
-target_link_libraries(pecos_lhs_driver pecos pecos_src ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
-add_test(pecos_lhs_driver pecos_lhs_driver)
+target_link_libraries(pecos_lhs_driver pecos ${TPL_LIBS} ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS})
+add_test(pecos_lhs_driver ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/pecos_lhs_driver)
 

@@ -17,7 +17,6 @@
 #include "OrthogonalPolynomial.hpp"
 #include "pecos_global_defs.hpp"
 
-
 namespace Pecos {
 
 /// Derived orthogonal polynomial class for Hermite polynomials
@@ -30,8 +29,7 @@ namespace Pecos {
     (mixed) multidimensional orthogonal polynomial basis functions
     within OrthogPolyApproximation. */
 
-class HermiteOrthogPolynomial: public OrthogonalPolynomial
-{
+class PECOS_EXPORT HermiteOrthogPolynomial: public OrthogonalPolynomial{
 public:
 
   //

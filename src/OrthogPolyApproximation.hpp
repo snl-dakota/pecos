@@ -25,8 +25,7 @@ enum { TENSOR_INT_TOTAL_ORD_EXP,      TENSOR_INT_TENSOR_EXP,
        TENSOR_INT_TENSOR_SUM_EXP,     SPARSE_INT_TOTAL_ORD_EXP,
        SPARSE_INT_HEUR_TOTAL_ORD_EXP, SPARSE_INT_TENSOR_SUM_EXP };
 
-class DistributionParams;
-
+class PECOS_EXPORT DistributionParams;
 
 /// Derived approximation class for orthogonal polynomials (global
 /// approximation).
@@ -36,8 +35,7 @@ class DistributionParams;
     chaos expansions (for stochastic finite element approaches to
     uncertainty quantification). */
 
-class OrthogPolyApproximation: public PolynomialApproximation
-{
+class PECOS_EXPORT OrthogPolyApproximation: public PolynomialApproximation{
 public:
 
   //

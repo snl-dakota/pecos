@@ -16,7 +16,6 @@
 
 #include "OrthogonalPolynomial.hpp"
 
-
 namespace Pecos {
 
 /// Derived orthogonal polynomial class for Legendre polynomials
@@ -32,8 +31,7 @@ namespace Pecos {
     (alpha = beta = 0) of the more general Jacobi polynomials
     (implemented separately) which correspond to the beta distribution. */
 
-class LegendreOrthogPolynomial: public OrthogonalPolynomial
-{
+class PECOS_EXPORT LegendreOrthogPolynomial: public OrthogonalPolynomial{
 public:
 
   //

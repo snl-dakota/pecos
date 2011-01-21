@@ -16,7 +16,6 @@
 
 #include "OrthogonalPolynomial.hpp"
 
-
 namespace Pecos {
 
 /// Derived orthogonal polynomial class for generalized Laguerre polynomials
@@ -39,8 +38,7 @@ namespace Pecos {
     alpha_poly = 0 and weight function = exp(-x) (the standard
     exponential distribution). */
 
-class GenLaguerreOrthogPolynomial: public OrthogonalPolynomial
-{
+class PECOS_EXPORT GenLaguerreOrthogPolynomial: public OrthogonalPolynomial{
 public:
 
   //

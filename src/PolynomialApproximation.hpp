@@ -22,9 +22,7 @@
 
 namespace Pecos {
 
-class IntegrationDriver;
-class SparseGridDriver;
-
+class PECOS_EXPORT IntegrationDriver;class PECOS_EXPORT SparseGridDriver;
 
 /// Container class for various polynomial approximation configuration options
 
@@ -32,8 +30,7 @@ class SparseGridDriver;
     polynomial approximation configuration options related to data modes,
     verbosity, and refinement and VBD controls. */
 
-class ConfigurationOptions
-{
+class PECOS_EXPORT ConfigurationOptions{
   //
   //- Heading: Friends
   //
@@ -110,8 +107,7 @@ inline ConfigurationOptions::~ConfigurationOptions()
     used for polynomial chaos expansions and interpolation polynomials
     used for stochastic collocation. */
 
-class PolynomialApproximation: public BasisApproximation
-{
+class PECOS_EXPORT PolynomialApproximation: public BasisApproximation{
 public:
 
   //

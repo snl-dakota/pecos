@@ -10,6 +10,7 @@
 #define FOURIER_INVERSE_TRANSFORMATION_HPP
 
 #include "InverseTransformation.hpp"
+#include "PecosDLLExportMacro.h"
 
 #ifdef HAVE_FFTW
 #include "fftw3.h"
@@ -26,8 +27,7 @@ enum { IFFT_SD, IFFT_G };
 /** The FourierInverseTransformation employs an inverse fast Fourier
     transform (iFFT) to map from the frequency domain to the time domain. */
 
-class FourierInverseTransformation: public InverseTransformation
-{
+class PECOS_EXPORT FourierInverseTransformation: public InverseTransformation{
 public:
 
   //

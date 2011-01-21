@@ -11,7 +11,6 @@
 
 #include "pecos_data_types.hpp"
 
-
 namespace Pecos {
 
 /// Base class for multivariate basis approximations used for
@@ -20,8 +19,7 @@ namespace Pecos {
 /** The base class for basis approximations defined from Fourier
     functions, eigenfunctions, or polynomial functions. */
 
-class BasisApproximation
-{
+class PECOS_EXPORT BasisApproximation{
 public:
 
   //

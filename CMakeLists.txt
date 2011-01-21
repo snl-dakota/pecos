@@ -6,6 +6,15 @@ include(FortranCInterface)
 
 option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" ON)
 
+#executables have to be in the same directory as .dlls for testing to work
+if(BUILD_SHARED_LIBS AND WIN32)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin CACHE PATH
+  "Single directory for all executables and libraries")
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin CACHE PATH
+  "Single directory for all executables and libraries")
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin CACHE PATH
+  "Single directory for all executables and libraries")
+endif()
 
 # first check for a system blas and lapack
 find_library(BLAS_LIBS blas)
@@ -78,45 +87,33 @@ option(HAVE_FFTW "Find and use an installed fftw package. This OPTION has no
 option(HAVE_LHS "Build the LHS package." ON)
 option(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
 
-#Keep track of what libraries should be included in libpecos
-set(SUBLIBS pecos_src)
-
-
 function(CheckPackage package)
   if(HAVE_${package})
     add_definitions("-DHAVE_${package}")
-    string(TOLOWER ${package} package_lower)
-    set(SUBLIBS ${SUBLIBS} ${package_lower} PARENT_SCOPE)
   endif()
 endfunction(CheckPackage)
 
 #Descend into source subdirectories based on user preference
-
 CheckPackage(LHS)
 
 if(HAVE_FFT)
   CheckPackage(DFFTPACK)
-
   if(HAVE_FFTW)
     add_definitions("-DHAVE_FFTW")
     include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
     #set(SUBLIBS ${SUBLIBS} fftw3)
     find_package(Fftw3)
   endif(HAVE_FFTW)
-
 endif(HAVE_FFT)
 
 if(HAVE_SPARSE_GRID)
   add_definitions("-DHAVE_SPARSE_GRID")
-  set(SUBLIBS ${SUBLIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
-
 
 # first probe for system-installed Trilinos
 # this will respect Trilinos_DIR if already set
 find_package(Trilinos QUIET)
 if ( NOT Trilinos_DIR )
-
   # if no one has configured a local src Teuchos, do so
   # this will respect Teuchos_DIR if already set
   if( NOT Teuchos_DIR )
@@ -131,9 +128,7 @@ else()
   message( "Using system trilinos in ${Trilinos_DIR}" )
 endif()
 
-
 add_subdirectory(packages)
-
 add_subdirectory(src)
 
 if(BUILD_TESTING)
@@ -149,17 +144,6 @@ configure_file("${Pecos_SOURCE_DIR}/cmake/pecos_config.h.in"
 )
 
 add_definitions("-DHAVE_CONFIG_H")
-
-
-# libpecos.la must be built PRIOR to the linkage of test executables
-# WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
-configure_file("${Pecos_SOURCE_DIR}/cmake/empty.cxx.in"
-  "${Pecos_BINARY_DIR}/empty.cxx"
-  @ONLY
-)
-
-add_library(pecos empty.cxx)
-target_link_libraries(pecos ${SUBLIBS})
 
 # WJB - ToDo: delete here to bottom once I am done debugging the bldSettings
 FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")

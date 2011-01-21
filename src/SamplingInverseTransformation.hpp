@@ -20,8 +20,7 @@ namespace Pecos {
 /** The SamplingInverseTransformation employs a sampling-based inverse
     transform to map from the frequency domain to the time domain. */
 
-class SamplingInverseTransformation: public InverseTransformation
-{
+class PECOS_EXPORT SamplingInverseTransformation: public InverseTransformation{
 public:
 
   //
