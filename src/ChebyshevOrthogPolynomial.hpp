@@ -16,6 +16,7 @@
 
 #include "OrthogonalPolynomial.hpp"
 
+
 namespace Pecos {
 
 /// Derived orthogonal polynomial class for Chebyshev polynomials
@@ -29,7 +30,8 @@ namespace Pecos {
     Chebyshev polynomials are a special case of the more general
     Jacobi polynomials (implemented separately). */
 
-class PECOS_EXPORT ChebyshevOrthogPolynomial: public OrthogonalPolynomial{
+class ChebyshevOrthogPolynomial: public OrthogonalPolynomial
+{
 public:
 
   //

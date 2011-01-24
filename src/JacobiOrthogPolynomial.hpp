@@ -16,6 +16,7 @@
 
 #include "OrthogonalPolynomial.hpp"
 
+
 namespace Pecos {
 
 /// Derived orthogonal polynomial class for Jacobi polynomials
@@ -38,7 +39,8 @@ namespace Pecos {
     LegendreOrthogPolynomial (implemented separately), for which
     alpha_poly = beta_poly = 0. */
 
-class PECOS_EXPORT JacobiOrthogPolynomial: public OrthogonalPolynomial{
+class JacobiOrthogPolynomial: public OrthogonalPolynomial
+{
 public:
 
   //

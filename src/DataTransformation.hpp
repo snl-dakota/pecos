@@ -13,6 +13,7 @@
 #include "ProbabilityTransformation.hpp"
 //#include "BasisFunction.hpp"
 
+
 namespace Pecos {
 
 
@@ -23,7 +24,8 @@ namespace Pecos {
     mappings between the time and frequency domain based on
     spectral/FFT, Karhunen-Loeve, and sampling-based approaches. */
 
-class PECOS_EXPORT DataTransformation{
+class DataTransformation
+{
 public:
 
   /// default constructor

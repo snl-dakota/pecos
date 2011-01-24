@@ -16,7 +16,7 @@
 
 #include "PolynomialApproximation.hpp"
 #include "BasisPolynomial.hpp"
-#include "PecosDLLExportMacro.h"
+
 
 namespace Pecos {
 
@@ -27,7 +27,8 @@ namespace Pecos {
     based on interpolation polynomials.  It is used primarily for
     stochastic collocation approaches to uncertainty quantification. */
 
-class PECOS_EXPORT InterpPolyApproximation: public PolynomialApproximation{
+class InterpPolyApproximation: public PolynomialApproximation
+{
 public:
 
   //

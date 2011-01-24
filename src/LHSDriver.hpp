@@ -26,7 +26,8 @@ enum { IGNORE_RANKS, SET_RANKS, GET_RANKS, SET_GET_RANKS };
     employ the Latin Hypercube Sampling (LHS) package from Sandia
     Albuquerque's Risk and Reliability organization. */
 
-class PECOS_EXPORT LHSDriver{
+class LHSDriver
+{
 public:
 
   //

@@ -30,7 +30,8 @@ namespace Pecos {
     OrthogPolyApproximation, which may be mixed and matched in, e.g.,
     the Wiener-Askey scheme for polynomial chaos). */
 
-class PECOS_EXPORT OrthogonalPolynomial: public BasisPolynomial{
+class OrthogonalPolynomial: public BasisPolynomial
+{
 public:
 
   //

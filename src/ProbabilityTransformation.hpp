@@ -19,7 +19,8 @@ namespace Pecos {
 /** The base class for nonlinear distribution transformations,
     including Nataf, Rosenblatt, et al. */
 
-class PECOS_EXPORT ProbabilityTransformation{
+class ProbabilityTransformation
+{
 public:
 
   /// default constructor

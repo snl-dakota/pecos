@@ -20,14 +20,16 @@
 
 namespace Pecos {
 
-class PECOS_EXPORT DistributionParams;
+class DistributionParams;
+
 
 /// base class for generating N-dimensional grids for numerical evaluation
 /// of expectation integrals over independent standard random variables.
 
 /** This class enables Dakota::NonD{Quadrature,Cubature,SparseGrid}. */
 
-class PECOS_EXPORT IntegrationDriver{
+class IntegrationDriver
+{
 public:
 
   //

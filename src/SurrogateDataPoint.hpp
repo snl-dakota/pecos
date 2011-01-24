@@ -21,7 +21,8 @@ namespace Pecos {
 /** The SurrogateDataPoint/SurrogateDataPointRep pairs utilize a
     handle-body idiom (Coplien, Advanced C++). */
 
-class PECOS_EXPORT SurrogateDataPointRep{
+class SurrogateDataPointRep
+{
   //
   //- Heading: Friends
   //
@@ -79,7 +80,8 @@ inline SurrogateDataPointRep::~SurrogateDataPointRep()
     to build the approximation.  A handle-body idiom is used to avoid
     excessive data copying overhead. */
 
-class PECOS_EXPORT SurrogateDataPoint{
+class SurrogateDataPoint
+{
 public:
 
   //

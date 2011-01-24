@@ -14,7 +14,7 @@
 #include <cfloat>  // for DBL_MIN, DBL_MAX
 #include <cmath>
 #include <cstdlib>
-#include "PecosDLLExportMacro.h"
+
 
 namespace Pecos {
 

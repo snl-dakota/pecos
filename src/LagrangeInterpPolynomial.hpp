@@ -27,7 +27,8 @@ namespace Pecos {
     by the number of interpolation points (order = N_p - 1).  It enables
     multidimensional interpolants within InterpPolyApproximation. */
 
-class PECOS_EXPORT LagrangeInterpPolynomial: public InterpolationPolynomial{
+class LagrangeInterpPolynomial: public InterpolationPolynomial
+{
 public:
 
   //
@@ -72,12 +73,14 @@ private:
 };
 
 
-inline LagrangeInterpPolynomial::LagrangeInterpPolynomial()
+inline LagrangeInterpPolynomial::LagrangeInterpPolynomial():
+  InterpolationPolynomial()
 { }
 
 
 inline LagrangeInterpPolynomial::
-LagrangeInterpPolynomial(const RealArray& interp_pts)
+LagrangeInterpPolynomial(const RealArray& interp_pts):
+  InterpolationPolynomial(interp_pts)
 { }
 
 

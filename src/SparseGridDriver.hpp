@@ -34,7 +34,8 @@ typedef void ( *FPType ) ( int order, int index, double* data );
     Clenshaw-Curtis and Gaussian quadrature rules within Smolyak
     sparse grids. */
 
-class PECOS_EXPORT SparseGridDriver: public IntegrationDriver{
+class SparseGridDriver: public IntegrationDriver
+{
 public:
 
   //

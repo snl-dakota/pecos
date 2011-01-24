@@ -19,7 +19,8 @@
 
 namespace Pecos {
 
-class PECOS_EXPORT DistributionParams;
+class DistributionParams;
+
 
 /// Generates N-dimensional cubature grids for numerical evaluation of
 /// expectation integrals over independent standard random variables.
@@ -28,7 +29,8 @@ class PECOS_EXPORT DistributionParams;
     Dakota::NonDCubature, but could also be used for general numerical
     integration of moments. */
 
-class PECOS_EXPORT CubatureDriver: public IntegrationDriver{
+class CubatureDriver: public IntegrationDriver
+{
 public:
 
   //

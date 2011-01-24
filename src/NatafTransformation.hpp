@@ -23,7 +23,8 @@ namespace Pecos {
     standard normals to uncorrelated standard normals (u-space) using
     the inverse Cholesky factor of a modified correlation matrix. */
 
-class PECOS_EXPORT NatafTransformation: public ProbabilityTransformation{
+class NatafTransformation: public ProbabilityTransformation
+{
 public:
 
   //

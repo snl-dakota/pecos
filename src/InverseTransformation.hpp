@@ -21,7 +21,8 @@ namespace Pecos {
 /** The InverseTransformation employs an inverse transform to map from
     the frequency domain to the time domain. */
 
-class PECOS_EXPORT InverseTransformation: public DataTransformation{
+class InverseTransformation: public DataTransformation
+{
 public:
 
   //

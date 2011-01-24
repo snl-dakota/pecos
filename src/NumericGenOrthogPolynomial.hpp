@@ -38,7 +38,8 @@ typedef Real ( *NGFPType ) (const Real& x, const RealVector& params);
     enables (mixed) multidimensional orthogonal polynomial basis
     functions within OrthogPolyApproximation. */
 
-class PECOS_EXPORT NumericGenOrthogPolynomial: public OrthogonalPolynomial{
+class NumericGenOrthogPolynomial: public OrthogonalPolynomial
+{
 public:
 
   //

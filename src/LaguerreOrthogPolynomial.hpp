@@ -16,6 +16,7 @@
 
 #include "OrthogonalPolynomial.hpp"
 
+
 namespace Pecos {
 
 /// Derived orthogonal polynomial class for Laguerre polynomials
@@ -31,7 +32,8 @@ namespace Pecos {
     (alpha = 0) of the generalized Laguerre polynomials (implemented
     separately) which correspond to the standard gamma distribution. */
 
-class PECOS_EXPORT LaguerreOrthogPolynomial: public OrthogonalPolynomial{
+class LaguerreOrthogPolynomial: public OrthogonalPolynomial
+{
 public:
 
   //

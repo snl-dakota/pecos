@@ -20,7 +20,8 @@ namespace Pecos {
 /** The DistributionParams/DistributionParamsRep pairs utilize a
     handle-body idiom (Coplien, Advanced C++). */
 
-class PECOS_EXPORT DistributionParamsRep{
+class DistributionParamsRep
+{
   //
   //- Heading: Friends
   //
@@ -229,7 +230,8 @@ inline DistributionParamsRep::~DistributionParamsRep()
     to build the approximation.  A handle-body idiom is used to avoid
     excessive data copying overhead. */
 
-class PECOS_EXPORT DistributionParams{
+class DistributionParams
+{
 public:
 
   //

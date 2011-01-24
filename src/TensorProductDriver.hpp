@@ -27,7 +27,8 @@ namespace Pecos {
 /** This class is used by Dakota::NonDQuadrature, but could also be
     used for general numerical integration of moments. */
 
-class PECOS_EXPORT TensorProductDriver: public IntegrationDriver{
+class TensorProductDriver: public IntegrationDriver
+{
 public:
 
   //
