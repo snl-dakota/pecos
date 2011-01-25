@@ -371,8 +371,9 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   bool cheby_poly = false;
   for (size_t i=0; i<numVars; i++) {
     // set compute1DPoints/compute1DWeights
-    if (u_types[i] == STD_UNIFORM && nested_rules && 
-	nested_uniform_rule != GAUSS_PATTERSON) {
+    if ( u_types[i] == STD_UNIFORM && nested_rules && 
+	 ( nested_uniform_rule == CLENSHAW_CURTIS ||
+	   nested_uniform_rule == FEJER2) ) {
       compute1DPoints[i]  = chebyshev_points;
       compute1DWeights[i] = chebyshev_weights;
       cheby_poly = true;
