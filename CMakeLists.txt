@@ -97,6 +97,7 @@ endfunction(CheckPackage)
 #Descend into source subdirectories based on user preference
 
 CheckPackage(LHS)
+list(APPEND SUBLIBS mods mod)
 
 if(HAVE_FFT)
   CheckPackage(DFFTPACK)
@@ -116,6 +117,8 @@ if(HAVE_SPARSE_GRID)
 endif(HAVE_SPARSE_GRID)
 
 
+# when building inside Trilinos, the path to Teuchos will already be set
+if (NOT BUILD_IN_TRILINOS)
 # first probe for system-installed Trilinos
 # this will respect Trilinos_DIR if already set
 find_package(Trilinos QUIET)
@@ -133,6 +136,7 @@ if ( NOT Trilinos_DIR )
   find_package( Teuchos NO_MODULE REQUIRED )
 else()
   message( "Using system trilinos in ${Trilinos_DIR}" )
+endif()
 endif()
 
 
@@ -164,6 +168,7 @@ configure_file("${Pecos_SOURCE_DIR}/cmake/empty.cxx.in"
 
 add_library(pecos empty.cxx)
 target_link_libraries(pecos ${SUBLIBS})
+install(TARGETS pecos DESTINATION lib)
 
 # WJB - ToDo: delete here to bottom once I am done debugging the bldSettings
 FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")
@@ -172,4 +177,6 @@ FOREACH(var ${res})
   FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt
              "${var} \"${${var}}\"\n")
 ENDFOREACH(var ${res})
+
+set(Pecos_LINK_LIBRARIES ${SUBLIBS} CACHE INTERNAL "Pecos link libraries")
 
