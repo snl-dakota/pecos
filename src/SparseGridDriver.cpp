@@ -1076,4 +1076,13 @@ assign_tensor_collocation_indices(size_t start_index,
   }
 }
 
+void SparseGridDriver::
+level_to_order(size_t i, unsigned short level, unsigned short& order)
+{
+  int ilevel = level, iorder;
+  webbur::level_growth_to_order(1, &ilevel, &integrationRules[i],
+				&growthRules[i], &iorder);
+  order = iorder;
+}
+
 } // namespace Pecos

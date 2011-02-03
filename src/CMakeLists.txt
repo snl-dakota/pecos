@@ -9,6 +9,7 @@ include_directories(${Boost_INCLUDE_DIRS}
 
 if(HAVE_SPARSE_GRID)
   include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
+  set(Pecos_libs ${Pecos_libs} sparsegrid)
 endif(HAVE_SPARSE_GRID)
 
 if(HAVE_FFTW)
