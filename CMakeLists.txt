@@ -19,15 +19,6 @@ if(NOT BLAS_LIBS OR NOT LAPACK_LIBS)
   set(LAPACK_LIBS lapack)
 endif()
 
-# hack to be fixed when CMake does it automatically
-if(${CMAKE_Fortran_COMPILER_ID} MATCHES "Intel")
-  set(FIXED_FLAG "-fixed")
-elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "GNU")
-  set(FIXED_FLAG "-ffixed-form")
-elseif(${CMAKE_Fortran_COMPILER_ID} MATCHES "PGI")
-  set(FIXED_FLAG "-Mfixed")
-endif()
-
 if(CMAKE_SYSTEM_NAME MATCHES Darwin)
   set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
       "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
