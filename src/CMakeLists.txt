@@ -6,16 +6,32 @@ include_directories(${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS}
                     ${PROJECT_BINARY_DIR})
 
+if(HAVE_LHS)
+  list(APPEND Pecos_libs lhs)
+endif()
 
 if(HAVE_SPARSE_GRID)
+  list(APPEND Pecos_libs sparsegrid)
   include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
-  set(Pecos_libs ${Pecos_libs} sparsegrid)
-endif(HAVE_SPARSE_GRID)
+endif()
 
-if(HAVE_FFTW)
-  #set(Pecos_libs ${Pecos_libs} fftw3)
-  include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
-endif(HAVE_FFTW)
+if(HAVE_FFT)
+  if(HAVE_FFTW)
+    list(APPEND Pecos_libs fftw3)
+    include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
+  elseif(HAVE_DFFTPACK)
+    list(APPEND Pecos_libs dfftpack)
+  endif()
+endif()
+
+# Unconditional dependencies.
+list(APPEND Pecos_libs
+  ${Teuchos_LIBRARIES}
+  ${LAPACK_LIBS}
+  ${BLAS_LIBS}
+  ${FLIBS}
+  ${FCLIBS}
+  )
 
 ## Pecos library sources.
 file(GLOB Pecos_src *.cpp)
