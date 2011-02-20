@@ -50,6 +50,8 @@ include_HEADERS = pecos_config.h				\
 		     src/BasisApproximation.hpp			\
 		     src/PolynomialApproximation.hpp		\
 		     src/InterpPolyApproximation.hpp		\
+		     src/LagrangeInterpPolyApproximation.hpp	\
+		     src/HermiteInterpPolyApproximation.hpp	\
 		     src/OrthogPolyApproximation.hpp		\
 		     src/SurrogateDataPoint.hpp			\
 		     src/DistributionParams.hpp			\
