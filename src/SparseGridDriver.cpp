@@ -649,6 +649,42 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 }
 
 
+void SparseGridDriver::print_final_sets(bool converged_within_tol)
+{
+  // this call should precede finalize_sets()
+  size_t i, j;
+  if (converged_within_tol) {
+    size_t last = smolyakMultiIndex.size() - 1;
+    PCout << "Above tolerance index sets:\n";
+    for (i=0; i<last; ++i) {
+      for (j=0; j<numVars; ++j)
+	PCout << std::setw(5) << smolyakMultiIndex[i][j];
+      PCout << '\n';
+    }
+    PCout << "Below tolerance index sets:\n";
+    for (j=0; j<numVars; ++j)
+      PCout << std::setw(5) << smolyakMultiIndex[last][j];
+    PCout << '\n';
+  }
+  else {
+    size_t num_sm_mi = smolyakMultiIndex.size();
+    PCout << "Final index sets:\n";
+    for (i=0; i<num_sm_mi; ++i) {
+      for (j=0; j<numVars; ++j)
+	PCout << std::setw(5) << smolyakMultiIndex[i][j];
+      PCout << '\n';
+    }
+  }
+  std::set<UShortArray>::const_iterator cit;
+  for (cit=trialSets.begin(); cit!=trialSets.end(); ++cit) {
+    const UShortArray& mi = *cit;
+    for (j=0; j<numVars; ++j)
+      PCout << std::setw(5) << mi[j];
+    PCout << '\n';
+  }
+}
+
+
 void SparseGridDriver::finalize_sets()
 {
   // For final answer, push all evaluated sets into old and clear active.

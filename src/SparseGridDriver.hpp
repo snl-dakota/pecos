@@ -141,6 +141,8 @@ public:
   /// accept the best of several trial sets and update old/active
   /// within the generalized sparse grid procedure
   void update_sets(const UShortArray& set_star);
+  /// print the final accepted and trial sets prior to set finalization
+  void print_final_sets(bool converged_within_tol);
   /// accept all remaining trial sets within the generalized sparse
   /// grid procedure
   void finalize_sets();

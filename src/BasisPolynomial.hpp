@@ -70,6 +70,18 @@ public:
       for the n-th point. */
   virtual const Real& get_gradient(const Real& x, unsigned short n);
 
+  /// retrieve the value of the n_th type 1 polynomial for a given parameter x
+  virtual const Real& get_type1_value(const Real& x, unsigned short n);
+  /// retrieve the value of the n_th type 2 polynomial for a given parameter x
+  virtual const Real& get_type2_value(const Real& x, unsigned short n);
+
+  /// retrieve the gradient of the n_th type 1 polynomial for a given
+  /// parameter x
+  virtual const Real& get_type1_gradient(const Real& x, unsigned short n);
+  /// retrieve the gradient of the n_th type 2 polynomial for a given
+  /// parameter x
+  virtual const Real& get_type2_gradient(const Real& x, unsigned short n);
+
   /// returns the norm-squared of the n_th order polynomial defined by the
   /// inner product <Poly_n, Poly_n> = ||Poly_n||^2
   /** This is defined only for orthogonal polynomials. */
@@ -173,7 +185,7 @@ private:
 
   /// Used by the envelope constructor to initialize polyRep to the
   /// appropriate derived type.
-  BasisPolynomial* get_polynomial(short poly_type, short gauss_mode);
+  BasisPolynomial* get_polynomial(short poly_type, short mode);
 
   //
   //- Heading: Data

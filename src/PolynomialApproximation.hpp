@@ -40,6 +40,8 @@ class ConfigurationOptions
 
   friend class PolynomialApproximation;
   friend class InterpPolyApproximation;
+  friend class LagrangeInterpPolyApproximation;
+  friend class HermiteInterpPolyApproximation;
   friend class OrthogPolyApproximation;
 
 public:

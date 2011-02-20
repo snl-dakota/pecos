@@ -6,28 +6,28 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:        InterpPolyApproximation
-//- Description:  Class for Lagrange Interpolation Polynomial Approximation
+//- Class:        HermiteInterpPolyApproximation
+//- Description:  Class for Hermite Interpolation Polynomial Approximation
 //-               
 //- Owner:        Mike Eldred
 
-#ifndef INTERP_POLY_APPROXIMATION_HPP
-#define INTERP_POLY_APPROXIMATION_HPP
+#ifndef HERMITE_INTERP_POLY_APPROXIMATION_HPP
+#define HERMITE_INTERP_POLY_APPROXIMATION_HPP
 
-#include "PolynomialApproximation.hpp"
-#include "BasisPolynomial.hpp"
+#include "InterpPolyApproximation.hpp"
 
 
 namespace Pecos {
 
-/// Derived approximation class for interpolation polynomials (global
-/// approximation).
+/// Derived approximation class for Hermite interpolation polynomials
+/// (global approximation interpolating function values and gradients
+/// at collocation points).
 
-/** The InterpPolyApproximation class provides a global approximation
-    based on interpolation polynomials.  It is used primarily for
+/** The HermiteInterpPolyApproximation class provides a global approximation
+    based on Hermite interpolation polynomials.  It is used primarily for
     stochastic collocation approaches to uncertainty quantification. */
 
-class InterpPolyApproximation: public PolynomialApproximation
+class HermiteInterpPolyApproximation: public InterpPolyApproximation
 {
 public:
 
@@ -36,9 +36,9 @@ public:
   //
 
   /// default constructor
-  InterpPolyApproximation(size_t num_vars);
+  HermiteInterpPolyApproximation(size_t num_vars);
   /// destructor
-  ~InterpPolyApproximation();
+  ~HermiteInterpPolyApproximation();
 
 protected:
 
@@ -46,31 +46,6 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  int min_coefficients() const;
-
-  /// compute the coefficients for the expansion of multivariate Lagrange
-  /// interpolation polynomials
-  void compute_coefficients();
-  /// update the coefficients for the expansion of multivariate Lagrange
-  /// interpolation polynomials
-  void increment_coefficients();
-  /// restore the coefficients to their previous state prior to last increment
-  void decrement_coefficients();
-  /// restore the coefficients to a previously incremented state as
-  /// identified by the current increment to the Smolyak multi index
-  void restore_coefficients();
-  /// finalize the coefficients by applying all previously evaluated increments
-  void finalize_coefficients();
-
-  /// size expansionCoeffs and expansionCoeffGrads
-  void allocate_arrays();
-
-  /// computes component (main and interaction) effect Sobol' indices
-  void compute_component_effects();
-  /// computes total effect Sobol' indices
-  void compute_total_effects();
-
-  /*
   /// retrieve the response expansion value for a given parameter vector
   const Real& get_value(const RealVector& x);
   /// retrieve the response expansion gradient for a given parameter vector
@@ -111,47 +86,6 @@ protected:
   /// return the covariance of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
   Real get_covariance(const RealVector& x, const RealVector& exp_coeffs_2);
-  */
-
-  /// compute numerical moments to order 4
-  void compute_moments();
-  /// compute numerical moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x);
-  /// return numericalMoments
-  const RealVector& moments() const;
-
-  //
-  //- Heading: Data
-  //
-
-  /// 2D array of one-dimensional basis polynomial objects which are used in
-  /// constructing the multivariate orthogonal/interpolation polynomials.
-  /** Each variable (inner array size = numVars) may have multiple integration
-      orders associated with it (outer array size = num_levels_per_var = 1 for
-      quadrature, w + numVars for sparse grid). */
-  std::vector<std::vector<BasisPolynomial> > polynomialBasis;
-
-  /// total number of collocation points = number of terms in interpolation
-  /// expansion (length of expansionCoeffs)
-  int numCollocPts;
-
-  /// the value of a tensor-product interpolant; a contributor to approxValue
-  Real tpValue;
-  /// the gradient of a tensor-product interpolant; a contributor to
-  /// approxGradient
-  RealVector tpGradient;
-  /// the mean of a tensor-product interpolant; a contributor to
-  /// numericalMoments[0] (mean)
-  Real tpMean;
-  /// the gradient of the mean of a tensor-product interpolant; a
-  /// contributor to meanGradient
-  RealVector tpMeanGrad;
-  /// the variance of a tensor-product interpolant; a contributor to
-  /// numericalMoments[1] (variance)
-  Real tpVariance;
-  /// the gradient of the variance of a tensor-product interpolant; a
-  /// contributor to varianceGradient
-  RealVector tpVarianceGrad;
 
 private:
 
@@ -159,12 +93,6 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// update polynomialBasis after a change in maximum interpolation depth
-  void update_sparse_interpolation_basis(unsigned short max_level);
-  /// restore expansion{Coeffs,CoeffGrads} within increment/restore/finalize
-  void restore_expansion_coefficients();
-
-  /*
   /// compute the value of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to get_value(x)
   const Real& tensor_product_value(const RealVector& x);
@@ -222,62 +150,22 @@ private:
   /// tensor-product grid; contributes to get_variance(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
     size_t tp_index, const SizetArray& dvv);
-  */
-
-  /// performs sorting to store constituent subsets (constituentSets)
-  void get_subsets();
-  /// recursively identifies constituent subsets
-  void lower_sets(int plus_one_set, IntSet& top_level_set);
-  /// finds variance of tensor interpolant with respect to variables in the set
-  Real partial_variance_integral(int set_value);
-  /// finds variance of sparse interpolant with respect to variables in the set
-  Real partial_variance_integral(int set_value, size_t tp_index);
-  /// computes partialVariance
-  void partial_variance(int set_value);
-  /// compute total Sobol effects for a tensor grid
-  Real total_effects_integral(int set_value);
-  /// compute total Sobol effects for an index within a sparse grid
-  Real total_effects_integral(int set_value, size_t tp_index);
 
   //
   //- Heading: Data
   //
 
-  /// the constituent subsets for each superset
-  std::vector<IntSet> constituentSets;
-  /// the partialVariances of subset functions f_alpha
-  RealVector partialVariance;
 };
 
 
-inline InterpPolyApproximation::InterpPolyApproximation(size_t num_vars):
-  PolynomialApproximation(num_vars), numCollocPts(0)
+inline HermiteInterpPolyApproximation::
+HermiteInterpPolyApproximation(size_t num_vars):
+  InterpPolyApproximation(num_vars)
 { }
 
 
-inline InterpPolyApproximation::~InterpPolyApproximation()
+inline HermiteInterpPolyApproximation::~HermiteInterpPolyApproximation()
 { }
-
-
-inline void InterpPolyApproximation::compute_moments()
-{
-  // standard variables mode supports four moments
-  compute_numerical_moments(4);
-  //compute_expansion_moments(4);
-}
-
-
-inline void InterpPolyApproximation::compute_moments(const RealVector& x)
-{
-  // all variables mode only supports first two moments
-  numericalMoments.sizeUninitialized(2);
-  numericalMoments[0] = get_mean(x); numericalMoments[1] = get_variance(x);
-  //compute_expansion_moments(2, x);
-}
-
-
-inline const RealVector& InterpPolyApproximation::moments() const
-{ return numericalMoments; }
 
 } // namespace Pecos
 

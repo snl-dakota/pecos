@@ -38,8 +38,10 @@ public:
 
   /// default constructor
   PiecewiseInterpPolynomial();
-  /// standard constructor
-  PiecewiseInterpPolynomial(const RealArray& interp_pts);
+  /// constructor with mode argument
+  PiecewiseInterpPolynomial(short interp_type);
+  /// constructor with mode and set of points to interpolate
+  PiecewiseInterpPolynomial(const RealArray& interp_pts, short interp_type);
   /// destructor
   ~PiecewiseInterpPolynomial();
 
@@ -47,18 +49,10 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// retrieve the value of the i_th piecewise type 1 polynomial for a
-  /// given parameter x
   const Real& get_type1_value(const Real& x, unsigned short i);
-  /// retrieve the value of the i_th piecewise type 2 polynomial for a
-  /// given parameter x
   const Real& get_type2_value(const Real& x, unsigned short i);
 
-  /// retrieve the gradient of the i_th piecewise type 1 polynomial
-  /// for a given parameter x
   const Real& get_type1_gradient(const Real& x, unsigned short i);
-  /// retrieve the gradient of the i_th piecewise type 2 polynomial
-  /// for a given parameter x
   const Real& get_type2_gradient(const Real& x, unsigned short i);
 
 protected:
@@ -89,9 +83,14 @@ inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial():
 { }
 
 
+inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial(short interp_type):
+  InterpolationPolynomial(), interpType(interp_type)
+{ }
+
+
 inline PiecewiseInterpPolynomial::
-PiecewiseInterpPolynomial(const RealArray& interp_pts):
-  InterpolationPolynomial(interp_pts)
+PiecewiseInterpPolynomial(const RealArray& interp_pts, short interp_type):
+  InterpolationPolynomial(interp_pts), interpType(interp_type)
 { }
 
 

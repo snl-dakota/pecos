@@ -302,7 +302,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_normal_pdf, distParams[2], distParams[3]);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      bounded_normal_pdf, distParams[2], distParams[3]);
+      bounded_normal_pdf, distParams[2], distParams[3], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_normal_pdf, distParams[2], distParams[3]);
     break;
@@ -311,7 +311,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_lognormal_pdf, distParams[2], distParams[3]);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      bounded_lognormal_pdf, distParams[2], distParams[3]);
+      bounded_lognormal_pdf, distParams[2], distParams[3], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  bounded_lognormal_pdf, distParams[2], distParams[3]);
     break;
@@ -320,7 +320,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  loguniform_pdf, distParams[0], distParams[1]);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      loguniform_pdf, distParams[0], distParams[1]);
+      loguniform_pdf, distParams[0], distParams[1], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  loguniform_pdf, distParams[0], distParams[1]);
     break;
@@ -329,7 +329,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  triangular_pdf, distParams[1], distParams[2]);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      triangular_pdf, distParams[1], distParams[2]);
+      triangular_pdf, distParams[1], distParams[2], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  triangular_pdf, distParams[1], distParams[2]);
     break;
@@ -339,8 +339,8 @@ inner_product(const RealVector& poly_coeffs1,
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
-    return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
+    return cc_bounded_integral(poly_coeffs1, poly_coeffs2, histogram_bin_pdf,
+      distParams[0], distParams[u_bnd_index], 50*dp_len); // 100 per bin
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //	histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
     break;
@@ -354,13 +354,13 @@ inner_product(const RealVector& poly_coeffs1,
     //return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
     //					   lognormal_pdf);
     return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2,
-				      lognormal_pdf);
+				      lognormal_pdf, 500);
     // medium left & right tail;
     // start is offset to avoid division by 0. in lognormal_pdf
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,lognormal_pdf,
     //				       1.e-5, distParams[0]+60.*distParams[1]);
     //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, lognormal_pdf,
-    //			         1.e-5, distParams[0] + 60.*distParams[1]);
+    //			         1.e-5, distParams[0] + 60.*distParams[1], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, lognormal_pdf,
     //                                1.e-5, distParams[0] + 60.*distParams[1]);
     break;
@@ -370,7 +370,7 @@ inner_product(const RealVector& poly_coeffs1,
     return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
                                          frechet_pdf);
     //return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2,
-    //                                  frechet_pdf);
+    //                                  frechet_pdf, 500);
     //Real mean, stdev;
     //moments_from_frechet_params(distParams[0], distParams[1],
     //				         mean, stdev);
@@ -379,7 +379,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2, frechet_pdf,
     //				       0.1, mean+300.*stdev);
     //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, frechet_pdf, 0.1,
-    //			         mean+300.*stdev);
+    //			         mean+300.*stdev, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, frechet_pdf,
     //                                0.1, mean+300.*stdev);
     break;
@@ -388,7 +388,8 @@ inner_product(const RealVector& poly_coeffs1,
     // Alternate integration:
     //return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
     //                                     weibull_pdf);
-    return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf);
+    return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2,
+				      weibull_pdf, 500);
     //Real mean, stdev;
     //moments_from_weibull_params(distParams[0], distParams[1],
     //				       mean, stdev);
@@ -397,7 +398,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf,
     //				       1.e-50, mean+30.*stdev);
     //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf,
-    //			       1.e-50, mean+30.*stdev);
+    //			       1.e-50, mean+30.*stdev, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf,
     //                                1.e-50, mean+30.*stdev);
     break;
@@ -408,7 +409,8 @@ inner_product(const RealVector& poly_coeffs1,
   case GUMBEL: {
     // Alternate integration:
     //return hermite_unbounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf);
-    return fejer_unbounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf);
+    return fejer_unbounded_integral(poly_coeffs1, poly_coeffs2,
+				    gumbel_pdf, 500);
     //Real mean, stdev;
     //moments_from_gumbel_params(distParams[0], distParams[1],
     //				        mean, stdev);
@@ -416,7 +418,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf,
     //				       mean-25.*stdev, mean+25.*stdev);
     //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf,
-    //			         mean-25.*stdev, mean+25.*stdev);
+    //			         mean-25.*stdev, mean+25.*stdev, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf,
     //			              mean-25.*stdev, mean+25.*stdev);
     break;
@@ -452,9 +454,10 @@ hermite_unbounded_integral(const RealVector& poly_coeffs1,
 
 Real NumericGenOrthogPolynomial::
 fejer_unbounded_integral(const RealVector& poly_coeffs1,
-			 const RealVector& poly_coeffs2, NGFPType weight_fn)
+			 const RealVector& poly_coeffs2, NGFPType weight_fn,
+			 unsigned short quad_order)
 {
-  unsigned short quad_order = 500; // hardwired (could use adaptive loop)
+  //unsigned short quad_order = 500; // hardwired (could use adaptive loop)
   RealVector fejer_pts(quad_order, false), fejer_wts(quad_order, false);
 #ifdef HAVE_SPARSE_GRID
   webbur::fejer2_compute(quad_order, fejer_pts.values(), fejer_wts.values());
@@ -511,9 +514,9 @@ laguerre_semibounded_integral(const RealVector& poly_coeffs1,
 Real NumericGenOrthogPolynomial::
 fejer_semibounded_integral(const RealVector& poly_coeffs1,
 			   const RealVector& poly_coeffs2,
-			   NGFPType weight_fn)
+			   NGFPType weight_fn, unsigned short quad_order)
 {
-  unsigned short quad_order = 500; // hardwired (could use adaptive loop)
+  //unsigned short quad_order = 500; // hardwired (could use adaptive loop)
   RealVector fejer_pts(quad_order, false), fejer_wts(quad_order, false);
 #ifdef HAVE_SPARSE_GRID
   webbur::fejer2_compute(quad_order, fejer_pts.values(), fejer_wts.values());
@@ -570,9 +573,9 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
 Real NumericGenOrthogPolynomial::
 cc_bounded_integral(const RealVector& poly_coeffs1,
 		    const RealVector& poly_coeffs2, NGFPType weight_fn,
-		    Real start, Real end)
+		    Real start, Real end, unsigned short quad_order)
 {
-  unsigned short quad_order = 500; // hardwired (could use adaptive loop)
+  //unsigned short quad_order = 500; // hardwired (could use adaptive loop)
   RealVector cc_pts(quad_order, false), cc_wts(quad_order, false);
 #ifdef HAVE_SPARSE_GRID
   webbur::clenshaw_curtis_compute(quad_order, cc_pts.values(),

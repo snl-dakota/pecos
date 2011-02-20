@@ -151,7 +151,7 @@ private:
   /// change of variables
   Real fejer_unbounded_integral(const RealVector& poly_coeffs1,
 				const RealVector& poly_coeffs2,
-				NGFPType weight_fn);
+				NGFPType weight_fn, unsigned short quad_order);
   /// compute a semibounded integral using Gauss-Laguerre integration
   Real laguerre_semibounded_integral(const RealVector& poly_coeffs1,
 				     const RealVector& poly_coeffs2,
@@ -160,7 +160,8 @@ private:
   /// change of variables
   Real fejer_semibounded_integral(const RealVector& poly_coeffs1,
 				  const RealVector& poly_coeffs2,
-				  NGFPType weight_fn);
+				  NGFPType weight_fn,
+				  unsigned short quad_order);
   /// compute a bounded integral over the specified range using
   /// Gauss-Legendre integration
   Real legendre_bounded_integral(const RealVector& poly_coeffs1,
@@ -170,7 +171,7 @@ private:
   /// Clenshaw-Curtis integration
   Real cc_bounded_integral(const RealVector& poly_coeffs1,
 			   const RealVector& poly_coeffs2, NGFPType weight_fn,
-			   Real start, Real end);
+			   Real start, Real end, unsigned short quad_order);
   /// compute a bounded integral over the specified range using Riemann sums
   Real riemann_bounded_integral(const RealVector& poly_coeffs1,
 				const RealVector& poly_coeffs2,

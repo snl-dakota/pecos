@@ -7,7 +7,8 @@
     _______________________________________________________________________ */
 
 #include "BasisApproximation.hpp"
-#include "InterpPolyApproximation.hpp"
+#include "LagrangeInterpPolyApproximation.hpp"
+#include "HermiteInterpPolyApproximation.hpp"
 #include "OrthogPolyApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: BasisApproximation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
@@ -80,8 +81,12 @@ get_basis_approx(const String& approx_type, const UShortArray& approx_order,
     return NULL;//new FourierBasisApproximation(num_vars);
   else if (approx_type == "eigen")
     return NULL;//new SVDLeftEigenBasisApproximation(num_vars);
-  else if (approx_type == "global_interpolation_polynomial")
-    return new InterpPolyApproximation(num_vars);
+  else if (approx_type == "global_interpolation_polynomial") {
+    if (false)//(use_derivs_flag)
+      return new HermiteInterpPolyApproximation(num_vars);
+    else
+      return new LagrangeInterpPolyApproximation(num_vars);
+  }
   else if (approx_type == "global_orthogonal_polynomial")
     return new OrthogPolyApproximation(approx_order, num_vars);
   else {

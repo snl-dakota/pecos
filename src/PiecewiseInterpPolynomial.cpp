@@ -96,8 +96,7 @@ get_type1_value(const Real& x, unsigned short i)
     // cubic Hermite spline interpolant with equidistant pts
     // glue together shape fn h01 from [i-1,i] with h00 from [i,i+1]
     if      (x < pt_i && x > interpPts[i-1]) { // p_{k+1}=1, p_k=m_k=m_{k+1}=0
-      Real t = (x-interpPts[i-1])/(pt_i-interpPts[i-1]), // left half interval
-	 tm1 = t-1.;
+      Real t = (x-interpPts[i-1])/(pt_i-interpPts[i-1]); // left half interval
       basisPolyValue = t*t*(3.-2.*t);     // h01(t)
     }
     else if (x > pt_i && x < interpPts[i+1]) { // p_k=1, p_{k+1}=m_k=m_{k+1}=0
@@ -140,14 +139,13 @@ get_type2_value(const Real& x, unsigned short i)
     const Real& pt_i = interpPts[i];
     Real dist = x - pt_i;
     if      (x < pt_i && x > interpPts[i-1]) { // m_{k+1}=1, m_k=p_k=p_{k+1}=0
-      Real t = (x-interpPts[i-1])/(pt_i-interpPts[i-1]), // left half interval
-	 tm1 = t-1.;
-      basisPolyValue = t*t*tm1;   // h11(t)
+      Real t = (x-interpPts[i-1])/(pt_i-interpPts[i-1]); // left half interval
+      basisPolyValue = t*t*(t-1.); // h11(t)
     }
     else if (x > pt_i && x < interpPts[i+1]) { // m_k=1, m_{k+1}=p_k=p_{k+1}=0
       Real t = (x-pt_i)/(interpPts[i+1]-pt_i), // right half interval
 	 tm1 = t-1.;
-      basisPolyValue = tm1*tm1*t; // h10(t)
+      basisPolyValue = tm1*tm1*t;  // h10(t)
     }
     else
       basisPolyValue = 0.;

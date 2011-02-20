@@ -20,6 +20,7 @@
 #include "ChebyshevOrthogPolynomial.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 #include "LagrangeInterpPolynomial.hpp"
+#include "PiecewiseInterpPolynomial.hpp"
 
 
 namespace Pecos {
@@ -77,8 +78,7 @@ BasisPolynomial::BasisPolynomial(short poly_type, short gauss_mode):
 
 /** Used only by the envelope constructor to initialize polyRep to the 
     appropriate derived type. */
-BasisPolynomial* BasisPolynomial::
-get_polynomial(short poly_type, short gauss_mode)
+BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short mode)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_polynomial(short, short)."
@@ -90,11 +90,11 @@ get_polynomial(short poly_type, short gauss_mode)
   //case NO_POLY:
   //  polynomial = NULL;                                                  break;
   case HERMITE:  // var_type == "normal"
-    polynomial = (gauss_mode) ? new HermiteOrthogPolynomial(gauss_mode) :
-                                new HermiteOrthogPolynomial();            break;
+    polynomial = (mode) ? new HermiteOrthogPolynomial(mode)
+                        : new HermiteOrthogPolynomial();                  break;
   case LEGENDRE: // var_type == "uniform"
-    polynomial = (gauss_mode) ? new LegendreOrthogPolynomial(gauss_mode) :
-                                new LegendreOrthogPolynomial();           break;
+    polynomial = (mode) ? new LegendreOrthogPolynomial(mode)
+                        : new LegendreOrthogPolynomial();                 break;
   case LAGUERRE: // var_type == "exponential"
     polynomial = new LaguerreOrthogPolynomial();                          break;
   case JACOBI:   // var_type == "beta"
@@ -102,12 +102,18 @@ get_polynomial(short poly_type, short gauss_mode)
   case GENERALIZED_LAGUERRE: // var_type == "gamma"
     polynomial = new GenLaguerreOrthogPolynomial();                       break;
   case CHEBYSHEV: // for Clenshaw-Curtis and Fejer
-    polynomial = (gauss_mode) ? new ChebyshevOrthogPolynomial(gauss_mode) :
-                                new ChebyshevOrthogPolynomial();          break;
+    polynomial = (mode) ? new ChebyshevOrthogPolynomial(mode)
+                        : new ChebyshevOrthogPolynomial();                break;
   case NUMERICALLY_GENERATED:
     polynomial = new NumericGenOrthogPolynomial();                        break;
   case LAGRANGE:
     polynomial = new LagrangeInterpPolynomial();                          break;
+  case PIECEWISE:
+    // need to cover poly type, poly order, point type, and point data order:
+    // mode covers LINEAR/QUADRATIC/CUBIC poly order plus EQUIDISTANT/GENERAL
+    // point type and data order is inferred from poly order (grads for CUBIC)
+    polynomial = (mode) ? new PiecewiseInterpPolynomial(mode)
+                        : new PiecewiseInterpPolynomial();                break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
 	 << std::endl;
@@ -132,7 +138,7 @@ BasisPolynomial::BasisPolynomial(const BasisPolynomial& polynomial)
 #ifdef REFCOUNT_DEBUG
   PCout << "BasisPolynomial::BasisPolynomial(BasisPolynomial&)" << std::endl;
   if (polyRep)
-    PCout << "polyRep referenceCount = " << polyRep->referenceCount << std::endl;
+    PCout << "polyRep referenceCount = " << polyRep->referenceCount <<std::endl;
 #endif
 }
 
@@ -205,6 +211,50 @@ const Real& BasisPolynomial::get_gradient(const Real& x, unsigned short n)
     abort_handler(-1);
   }
   return polyRep->get_gradient(x, n);
+}
+
+
+const Real& BasisPolynomial::get_type1_value(const Real& x, unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: get_type1_value() not available for this basis polynomial "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->get_type1_value(x, n);
+}
+
+
+const Real& BasisPolynomial::get_type2_value(const Real& x, unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: get_type2_value() not available for this basis polynomial "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->get_type2_value(x, n);
+}
+
+
+const Real& BasisPolynomial::get_type1_gradient(const Real& x, unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: get_type1_gradient() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->get_type1_gradient(x, n);
+}
+
+
+const Real& BasisPolynomial::get_type2_gradient(const Real& x, unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: get_type2_gradient() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->get_type2_gradient(x, n);
 }
 
 
