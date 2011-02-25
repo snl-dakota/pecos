@@ -332,4 +332,14 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
   //return numericalMoments;
 }
 
+
+const RealVector& PolynomialApproximation::dimension_decay_rates()
+{
+  PCerr << "Error: dimension_decay_rates() not available for this basis "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+   
+  return expansionCoeffs; // meaningless return to keep compiler happy
+}
+
 } // namespace Pecos

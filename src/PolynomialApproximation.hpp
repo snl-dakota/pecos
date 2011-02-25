@@ -184,6 +184,10 @@ public:
   /// post-processing or numerical integration
   virtual const RealVector& moments() const = 0;
 
+  /// estimate expansion coefficient decay rates for each random
+  /// variable dimension
+  virtual const RealVector& dimension_decay_rates();
+
   //
   //- Heading: Member functions
   //

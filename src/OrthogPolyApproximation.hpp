@@ -133,7 +133,11 @@ protected:
   /// Performs global sensitivity analysis using Sobol' Indices;
   /// computes total effects
   void compute_total_effects();
-  
+
+  /// estimate chaos expansion coefficient decay rates for each random
+  /// variable dimension using linear least squares in semilog space
+  const RealVector& dimension_decay_rates();
+
   /// retrieve the response PCE value for a given parameter vector
   const Real& get_value(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
@@ -360,6 +364,10 @@ private:
   /// sparse grids: TENSOR_INT_TENSOR_SUM_EXP, SPARSE_INT_TENSOR_SUM_EXP,
   /// SPARSE_INT_TOTAL_ORD_EXP, or SPARSE_INT_HEUR_TOTAL_ORD_EXP expansion.
   short sparseGridExpansion;
+
+  /// spectral coefficient decay rates estimated by LLS on log of
+  /// univariate expansion coefficients
+  RealVector decayRates;
 };
 
 

@@ -2539,6 +2539,98 @@ void OrthogPolyApproximation::compute_total_effects()
 }
 
 
+const RealVector& OrthogPolyApproximation::dimension_decay_rates()
+{
+  if (decayRates.empty())
+    decayRates.sizeUninitialized(numVars);
+
+  // define max_orders for each var for sizing LLS matrices/vectors
+  size_t i, j;
+  UShortArray max_orders(numVars, 0);
+  for (i=0; i<numExpansionTerms; ++i)
+    for (j=0; j<numVars; ++j)
+      if (multiIndex[i][j] > max_orders[j])
+	max_orders[j] = multiIndex[i][j];
+  // size A_vectors and b_vectors
+  RealVectorArray A_vectors(numVars), b_vectors(numVars);
+  int num_rows;
+  for (i=0; i<numVars; ++i) {
+    num_rows = max_orders[i];
+    A_vectors[i].sizeUninitialized(num_rows);
+    b_vectors[i].sizeUninitialized(num_rows);
+  }
+
+  // populate A_vectors and b_vectors
+  unsigned short order, non_zero, var_index, order_index;
+  bool univariate;
+  for (i=1; i<numExpansionTerms; ++i) {
+    univariate = true; non_zero = 0;
+    for (j=0; j<numVars; ++j) {
+      if (order = multiIndex[i][j]) { // test on assignment return
+	++non_zero;
+	if (non_zero > 1) { univariate = false; break;                   }
+	else              { var_index  = j;     order_index = order - 1; }
+      }
+    }
+    if (univariate) {
+      // find a for y = ax + b with x = term order, y = log(coeff), and
+      // b = known intercept for order x = 0
+      A_vectors[var_index][order_index] = (Real)order;
+      b_vectors[var_index][order_index] = std::log(std::abs(expansionCoeffs[i])
+	* std::sqrt(polynomialBasis[var_index].norm_squared(order)));
+    }
+  }
+
+  // Handle case of flatline at numerical precision by ignoring subsequent
+  // values below a tolerance (allow first, prune second)
+  // > high decay rate will de-emphasize refinement, but consider zeroing
+  //   out refinement for a direction that is converged below tol (???)
+  // > for now, truncate max_orders and scale back {A,b}_vectors
+  Real tol = -10.; unsigned short last_index_above, new_size;
+  for (i=0; i<numVars; ++i) {
+    order = max_orders[i];
+    for (j=0; j<order; ++j)
+      if (b_vectors[i][j] > tol)
+	last_index_above = j;
+    new_size = last_index_above+2; // include one value below tolerance
+    if (new_size < order) {
+      //A_vectors[i].resize(new_size); // not strictly needed for pointer below
+      //b_vectors[i].resize(new_size); // not strictly needed for pointer below
+      max_orders[i] = new_size;
+    }
+  }
+
+  // first coefficient is used in each of the LLS solves
+  Real log_coeff0 = std::log(std::abs(expansionCoeffs[0]));
+  for (i=0; i<numVars; ++i) {
+    order = max_orders[i];
+    for (j=0; j<order; ++j)
+      b_vectors[i][j] -= log_coeff0; // intercept b for y=ax+b -> ax = y-b
+  }
+
+  // perform LLS for each variable
+  Teuchos::LAPACK<int, Real> la;
+  int rank = 0, info = 0, lwork; RealVector s_vector(1), work;
+  for (i=0; i<numVars; ++i) {
+    int num_rows_A = max_orders[i];
+    lwork = -1;  // special code for workspace query
+    work.sizeUninitialized(1);
+    la.GELSS(num_rows_A, 1, 1, A_vectors[i].values(), num_rows_A,
+	     b_vectors[i].values(), num_rows_A, s_vector.values(),
+	     -1, &rank, work.values(), lwork, &info);
+    lwork = (int)work[0]; // optimal work array size returned by query
+    work.sizeUninitialized(lwork);
+    la.GELSS(num_rows_A, 1, 1, A_vectors[i].values(), num_rows_A,
+	     b_vectors[i].values(), num_rows_A, s_vector.values(),
+	     -1, &rank, work.values(), lwork, &info);
+    // large>0 is fast converge, small>0 is slow converge, <0 is diverge
+    decayRates[i] = -b_vectors[i][0];
+  }
+
+  return decayRates;
+}
+
+
 void OrthogPolyApproximation::print_coefficients(std::ostream& s) const
 {
   size_t i, j;
