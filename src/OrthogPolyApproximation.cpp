@@ -2566,25 +2566,27 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
   for (i=1; i<numExpansionTerms; ++i) {
     univariate = true; non_zero = 0;
     for (j=0; j<numVars; ++j) {
-      if (order = multiIndex[i][j]) { // test on assignment return
+      if (multiIndex[i][j]) {
 	++non_zero;
-	if (non_zero > 1) { univariate = false; break;                   }
-	else              { var_index  = j;     order_index = order - 1; }
+	if (non_zero > 1) { univariate = false; break; }
+	else { order = multiIndex[i][j]; var_index = j; order_index = order-1; }
       }
     }
     if (univariate) {
       // find a for y = ax + b with x = term order, y = log(coeff), and
       // b = known intercept for order x = 0
+      Real norm   = std::sqrt(polynomialBasis[var_index].norm_squared(order)),
+	abs_coeff = std::abs(expansionCoeffs[i]);
       A_vectors[var_index][order_index] = (Real)order;
-      b_vectors[var_index][order_index] = std::log(std::abs(expansionCoeffs[i])
-	* std::sqrt(polynomialBasis[var_index].norm_squared(order)));
+      b_vectors[var_index][order_index] = (abs_coeff > 1.e-25) ?
+	std::log(abs_coeff * norm) : std::log(norm) - 25.;
     }
   }
 
   // Handle case of flatline at numerical precision by ignoring subsequent
   // values below a tolerance (allow first, prune second)
   // > high decay rate will de-emphasize refinement, but consider zeroing
-  //   out refinement for a direction that is converged below tol (???)
+  //   out refinement for a direction that is converged below tol (?)
   // > for now, truncate max_orders and scale back {A,b}_vectors
   Real tol = -10.; unsigned short last_index_above, new_size;
   for (i=0; i<numVars; ++i) {
@@ -2594,8 +2596,8 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 	last_index_above = j;
     new_size = last_index_above+2; // include one value below tolerance
     if (new_size < order) {
-      //A_vectors[i].resize(new_size); // not strictly needed for pointer below
-      //b_vectors[i].resize(new_size); // not strictly needed for pointer below
+      A_vectors[i].resize(new_size); // needed for psuedo-inv but not LAPACK
+      b_vectors[i].resize(new_size); // needed for psuedo-inv but not LAPACK
       max_orders[i] = new_size;
     }
   }
@@ -2605,10 +2607,19 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
   for (i=0; i<numVars; ++i) {
     order = max_orders[i];
     for (j=0; j<order; ++j)
-      b_vectors[i][j] -= log_coeff0; // intercept b for y=ax+b -> ax = y-b
+      b_vectors[i][j] -= log_coeff0; // intercept b for y = Ax+b -> Ax = y-b
   }
 
-  // perform LLS for each variable
+  // employ simple 1-D pseudo inverse for LLS:
+  // A^T A x = A^T(y-b)  ==>  x = A^T(y-b) / A^T A
+  for (i=0; i<numVars; ++i) {
+    // negate negative slope in log space such that large>0 is fast
+    // convergence, small>0 is slow convergence, and <0 is divergence
+    RealVector& A_i =  A_vectors[i];
+    decayRates[i]   = -A_i.dot(b_vectors[i]) / A_i.dot(A_i);
+  }
+
+  /* perform LAPACK LLS for each variable
   Teuchos::LAPACK<int, Real> la;
   int rank = 0, info = 0, lwork; RealVector s_vector(1), work;
   for (i=0; i<numVars; ++i) {
@@ -2626,6 +2637,7 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
     // large>0 is fast converge, small>0 is slow converge, <0 is diverge
     decayRates[i] = -b_vectors[i][0];
   }
+  */
 
   return decayRates;
 }
