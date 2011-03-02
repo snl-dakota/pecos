@@ -2553,11 +2553,9 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 	max_orders[j] = multiIndex[i][j];
   // size A_vectors and b_vectors
   RealVectorArray A_vectors(numVars), b_vectors(numVars);
-  int num_rows;
   for (i=0; i<numVars; ++i) {
-    num_rows = max_orders[i];
-    A_vectors[i].sizeUninitialized(num_rows);
-    b_vectors[i].sizeUninitialized(num_rows);
+    A_vectors[i].sizeUninitialized(max_orders[i]);
+    b_vectors[i].sizeUninitialized(max_orders[i]);
   }
 
   // populate A_vectors and b_vectors
@@ -2577,52 +2575,56 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
       // b = known intercept for order x = 0
       Real norm   = std::sqrt(polynomialBasis[var_index].norm_squared(order)),
 	abs_coeff = std::abs(expansionCoeffs[i]);
+#ifdef DEBUG
+      PCout << "Univariate contribution: order = " << order << " coeff = "
+	    << abs_coeff << " norm = " << norm << '\n';
+#endif // DEBUG
       A_vectors[var_index][order_index] = (Real)order;
       b_vectors[var_index][order_index] = (abs_coeff > 1.e-25) ?
-	std::log(abs_coeff * norm) : std::log(norm) - 25.;
+	std::log10(abs_coeff * norm) : std::log10(norm) - 25.;
     }
   }
+#ifdef DEBUG
+  PCout << "raw b_vectors:\n";
+  for (i=0; i<numVars; ++i)
+    { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
+#endif // DEBUG
 
-  // Handle case of flatline at numerical precision by ignoring subsequent
-  // values below a tolerance (allow first, prune second)
-  // > high decay rate will de-emphasize refinement, but consider zeroing
-  //   out refinement for a direction that is converged below tol (?)
-  // > for now, truncate max_orders and scale back {A,b}_vectors
-  Real tol = -10.; unsigned short last_index_above, new_size;
+  // first coefficient is used in each of the LLS solves
+  Real log_coeff0 = std::log10(std::abs(expansionCoeffs[0])), tol = -10.;
+  short last_index_above = -1, new_size;
+  //Teuchos::LAPACK<int, Real> la;
+  //int rank = 0, info = 0, lwork; RealVector s_vector(1), work;
   for (i=0; i<numVars; ++i) {
+    RealVector& A_i = A_vectors[i]; RealVector& b_i = b_vectors[i];
+
+    // Handle case of flatline at numerical precision by ignoring subsequent
+    // values below a tolerance (allow first, prune second)
+    // > high decay rate will de-emphasize refinement, but consider zeroing
+    //   out refinement for a direction that is converged below tol (?)
+    // > for now, truncate max_orders and scale back {A,b}_vectors
     order = max_orders[i];
     for (j=0; j<order; ++j)
-      if (b_vectors[i][j] > tol)
+      if (b_i[j] > tol)
 	last_index_above = j;
     new_size = last_index_above+2; // include one value below tolerance
     if (new_size < order) {
-      A_vectors[i].resize(new_size); // needed for psuedo-inv but not LAPACK
-      b_vectors[i].resize(new_size); // needed for psuedo-inv but not LAPACK
-      max_orders[i] = new_size;
+      max_orders[i] = order = new_size;
+      A_i.resize(order); // needed for psuedo-inv but not LAPACK
+      b_i.resize(order); // needed for psuedo-inv but not LAPACK
     }
-  }
 
-  // first coefficient is used in each of the LLS solves
-  Real log_coeff0 = std::log(std::abs(expansionCoeffs[0]));
-  for (i=0; i<numVars; ++i) {
-    order = max_orders[i];
+    // subtract intercept b for y = Ax+b  ==>  Ax = y-b
     for (j=0; j<order; ++j)
-      b_vectors[i][j] -= log_coeff0; // intercept b for y = Ax+b -> Ax = y-b
-  }
+      b_i[j] -= log_coeff0;
 
-  // employ simple 1-D pseudo inverse for LLS:
-  // A^T A x = A^T(y-b)  ==>  x = A^T(y-b) / A^T A
-  for (i=0; i<numVars; ++i) {
+    // employ simple 1-D pseudo inverse for LLS:
+    //   A^T A x = A^T(y-b)  ==>  x = A^T(y-b) / A^T A
     // negate negative slope in log space such that large>0 is fast
     // convergence, small>0 is slow convergence, and <0 is divergence
-    RealVector& A_i =  A_vectors[i];
-    decayRates[i]   = -A_i.dot(b_vectors[i]) / A_i.dot(A_i);
-  }
+    decayRates[i] = -A_i.dot(b_i) / A_i.dot(A_i);
 
-  /* perform LAPACK LLS for each variable
-  Teuchos::LAPACK<int, Real> la;
-  int rank = 0, info = 0, lwork; RealVector s_vector(1), work;
-  for (i=0; i<numVars; ++i) {
+    /* perform LAPACK LLS for each variable
     int num_rows_A = max_orders[i];
     lwork = -1;  // special code for workspace query
     work.sizeUninitialized(1);
@@ -2636,8 +2638,16 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 	     -1, &rank, work.values(), lwork, &info);
     // large>0 is fast converge, small>0 is slow converge, <0 is diverge
     decayRates[i] = -b_vectors[i][0];
+    */
   }
-  */
+
+#ifdef DEBUG
+  PCout << "Intercept log(abs(coeff0)) = " << log_coeff0 << '\n';
+  PCout << "b_vectors after truncation & intercept subtraction:\n";
+  for (i=0; i<numVars; ++i)
+    { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
+  PCout << "Individual approximation decay:\n"; write_data(PCout, decayRates);
+#endif // DEBUG
 
   return decayRates;
 }
