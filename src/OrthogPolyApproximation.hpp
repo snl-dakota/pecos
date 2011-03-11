@@ -372,9 +372,9 @@ private:
   /// univariate expansion coefficients
   RealVector decayRates;
 
-  /// set of failed evaluation indices used for fault tolerance in
-  /// regression() and expectation()
-  SizetSet failedIndices;
+  /// list of failed evaluation indices defined in sample_checks() and
+  /// used for fault tolerance in regression() and expectation()
+  SizetList failedIndices;
 };
 
 

@@ -1392,7 +1392,7 @@ void OrthogPolyApproximation::sample_checks()
 	  exclude = true;
     }
     if (exclude)
-      failedIndices.insert(i);
+      failedIndices.push_back(i);
   }
 }
 
@@ -1533,8 +1533,7 @@ integrate_expansion(const UShort2DArray& multi_index,
     LAPACK, based on anchorPoint and derivative data availability. */
 void OrthogPolyApproximation::regression()
 {
-  bool err_flag = false, anchor_pt = !anchorPoint.is_null(),
-    failed_evals = !failedIndices.empty();
+  bool err_flag = false, anchor_pt = !anchorPoint.is_null();
   size_t i, j, k, num_data_pts = dataPoints.size() - failedIndices.size();
     //num_total_pts = (anchor_pt) ? num_data_pts+1 : num_data_pts;
 
@@ -1553,7 +1552,7 @@ void OrthogPolyApproximation::regression()
   size_t eqns_per_pt = (use_grads_flag) ? 1 + numVars : 1;
   int num_cons = (anchor_pt) ? num_data_pts + eqns_per_pt : num_data_pts;
   bool fn_constrained_lls = (use_grads_flag && num_cons < numExpansionTerms);
-  std::vector<SurrogateDataPoint>::iterator dit; SSIter fit;
+  std::vector<SurrogateDataPoint>::iterator dit; SizetList::iterator fit;
   Teuchos::LAPACK<int, Real> la;
   double *A_matrix, *work;
   int info     = 0, // output flag from GELSS/GGLSE subroutines
@@ -1597,15 +1596,15 @@ void OrthogPolyApproximation::regression()
 	for (j=0; j<numVars; ++j, ++c_cntr)
 	  C_matrix[c_cntr] = mvp_grad[j];
       }
-      if (failed_evals) fit = failedIndices.begin();
-      for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++j) {
-	if (failed_evals && *fit == j)
+      for (j=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	   dit!=dataPoints.end(); ++dit, ++j) {
+	if (fit != failedIndices.end() && *fit == j)
 	  ++fit;
 	else {
 	  const RealVector& c_vars = dit->continuous_variables();
 	  // hard constraint on response values
 	  C_matrix[c_cntr] = multivariate_polynomial(c_vars, mi); ++c_cntr;
-	  // LLS on response gradients
+	  // LLS with remaining DOF on response gradients
 	  const RealVector& mvp_grad
 	    = multivariate_polynomial_gradient(c_vars, mi);
 	  for (k=0; k<numVars; ++k, ++a_cntr)
@@ -1613,18 +1612,20 @@ void OrthogPolyApproximation::regression()
 	}
       }
     }
-    if (anchor_pt) {
+    if (anchor_pt) { // hard constraint on response values & gradients
       d_vector[d_cntr] = anchorPoint.response_function(); ++d_cntr;
       const RealVector& resp_grad = anchorPoint.response_gradient();
       for (j=0; j<numVars; ++j, ++d_cntr)
 	d_vector[d_cntr] = resp_grad[j];
     }
-    if (failed_evals) fit = failedIndices.begin();
-    for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++j) {
-      if (failed_evals && *fit == j)
+    for (j=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	 dit!=dataPoints.end(); ++dit, ++j) {
+      if (fit != failedIndices.end() && *fit == j)
 	++fit;
       else {
+	// hard constraint on response values
 	d_vector[d_cntr] = dit->response_function(); ++d_cntr;
+	// LLS with remaining DOF on response gradients
 	const RealVector& resp_grad = dit->response_gradient();
 	for (j=0; j<numVars; ++j, ++b_cntr)
 	  b_vector[b_cntr] = resp_grad[j];
@@ -1679,9 +1680,9 @@ void OrthogPolyApproximation::regression()
       size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
       for (i=0; i<numExpansionTerms; ++i) {
 	const UShortArray& mi = multiIndex[i];
-	if (failed_evals) fit = failedIndices.begin();
-	for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++j, ++dit) {
-	  if (failed_evals && *fit == j)
+	for (j=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	     dit!=dataPoints.end(); ++j, ++dit) {
+	  if (fit != failedIndices.end() && *fit == j)
 	    ++fit;
 	  else {
 	    const RealVector& c_vars = dit->continuous_variables();
@@ -1703,9 +1704,9 @@ void OrthogPolyApproximation::regression()
 	    C_matrix[c_cntr] = mvp_grad[j];
 	}
       }
-      if (failed_evals) fit = failedIndices.begin();
-      for (i=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++i, ++dit) {
-	if (failed_evals && *fit == i)
+      for (i=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	   dit!=dataPoints.end(); ++i, ++dit) {
+	if (fit != failedIndices.end() && *fit == i)
 	  ++fit;
 	else {
 	  b_vector[b_cntr] = dit->response_function(); ++b_cntr;
@@ -1740,9 +1741,9 @@ void OrthogPolyApproximation::regression()
 	size_t a_cntr = 0, b_cntr = 0;
 	for (j=0; j<numExpansionTerms; ++j) {
 	  const UShortArray& mi = multiIndex[j];
-	  if (failed_evals) fit = failedIndices.begin();
-	  for (k=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++k)
-	    if (failed_evals && *fit == k)
+	  for (k=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	       dit!=dataPoints.end(); ++dit, ++k)
+	    if (fit != failedIndices.end() && *fit == k)
 	      ++fit;
 	    else {
 	      A_matrix[a_cntr]
@@ -1753,9 +1754,9 @@ void OrthogPolyApproximation::regression()
 	    = multivariate_polynomial(anchorPoint.continuous_variables(), mi);
 	}
 	// the Ax=b RHS is the dataPoints values for the i-th grad component
-	if (failed_evals) fit = failedIndices.begin();
-	for (j=0, dit=dataPoints.begin(); j<num_rows_A; ++j, ++dit)
-	  if (failed_evals && *fit == j)
+	for (j=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	     j<num_rows_A; ++j, ++dit)
+	  if (fit != failedIndices.end() && *fit == j)
 	    ++fit;
 	  else
 	    { b_vector[b_cntr] = dit->response_gradient()[i]; ++b_cntr; }
@@ -1812,9 +1813,9 @@ void OrthogPolyApproximation::regression()
     size_t a_cntr = 0, b_cntr = 0;
     for (i=0; i<numExpansionTerms; ++i) {
       const UShortArray& mi = multiIndex[i];
-      if (failed_evals) fit = failedIndices.begin();
-      for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++j) {
-	if (failed_evals && *fit == j)
+      for (j=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	   dit!=dataPoints.end(); ++dit, ++j) {
+	if (fit != failedIndices.end() && *fit == j)
 	  ++fit;
 	else {
 	  const RealVector& c_vars = dit->continuous_variables();
@@ -1833,9 +1834,9 @@ void OrthogPolyApproximation::regression()
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
     if (use_grads_flag) {
-      if (failed_evals) fit = failedIndices.begin();
-      for (i=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++i) {
-	if (failed_evals && *fit == i)
+      for (i=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	   dit!=dataPoints.end(); ++dit, ++i) {
+	if (fit != failedIndices.end() && *fit == i)
 	  ++fit;
 	else {
 	  b_vectors[b_cntr] = dit->response_function(); ++b_cntr;
@@ -1846,9 +1847,9 @@ void OrthogPolyApproximation::regression()
       }
     }
     else {
-      if (failed_evals) fit = failedIndices.begin();
-      for (i=0, dit=dataPoints.begin(); i<num_data_pts; ++dit, ++i) {
-	if (failed_evals && *fit == i)
+      for (i=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+	   i<num_data_pts; ++dit, ++i) {
+	if (fit != failedIndices.end() && *fit == i)
 	  ++fit;
 	else {
 	  if (configOptions.expansionCoeffFlag)
@@ -1908,9 +1909,8 @@ void OrthogPolyApproximation::regression()
 void OrthogPolyApproximation::expectation()
 {
   // "lhs" or "random", no weights needed
-  bool anchor_pt = !anchorPoint.is_null(),
-    failed_evals = !failedIndices.empty();
-  std::vector<SurrogateDataPoint>::iterator dit; SSIter fit;
+  bool anchor_pt = !anchorPoint.is_null();
+  std::vector<SurrogateDataPoint>::iterator dit; SizetList::iterator fit;
   size_t i, j, k, num_data_pts = dataPoints.size() - failedIndices.size(),
     num_deriv_vars = expansionCoeffGrads.numRows(),
     num_total_pts = (anchor_pt) ? num_data_pts+1 : num_data_pts;
@@ -1954,9 +1954,9 @@ void OrthogPolyApproximation::expectation()
     if (configOptions.expansionCoeffFlag)     expansionCoeffs     = 0.;
     if (configOptions.expansionCoeffGradFlag) expansionCoeffGrads = 0.;
   }
-  if (failed_evals) fit = failedIndices.begin();
-  for (k=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++k, ++dit) {
-    if (failed_evals && *fit == k)
+  for (k=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+       dit!=dataPoints.end(); ++k, ++dit) {
+    if (fit != failedIndices.end() && *fit == k)
       ++fit;
     else {
       if (configOptions.expansionCoeffFlag)
@@ -1997,9 +1997,9 @@ void OrthogPolyApproximation::expectation()
       }
     }
   }
-  if (failed_evals) fit = failedIndices.begin();
-  for (k=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++k, ++dit) {
-    if (failed_evals && *fit == k)
+  for (k=0, dit=dataPoints.begin(), fit=failedIndices.begin();
+       dit!=dataPoints.end(); ++k, ++dit) {
+    if (fit != failedIndices.end() && *fit == k)
       ++fit;
     else {
       if (configOptions.expansionCoeffFlag)
