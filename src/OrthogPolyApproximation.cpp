@@ -571,9 +571,11 @@ void OrthogPolyApproximation::compute_coefficients()
     }
     break;
   case REGRESSION:
+    sample_checks();
     regression();
     break;
   case SAMPLING:
+    sample_checks();
     expectation();
     break;
   }
@@ -1360,6 +1362,41 @@ assess_dominance(const UShortArray& new_order,
 }
 
 
+void OrthogPolyApproximation::sample_checks()
+{
+  using boost::math::isfinite;
+
+  bool exclude, anchor_pt = !anchorPoint.is_null();
+  SurrogateDataPoint& pt0 = (anchor_pt) ? anchorPoint : dataPoints[0];
+  bool check_grads = (!pt0.response_gradient().empty());
+  size_t i, j, num_pts = dataPoints.size();
+
+  if (anchor_pt) {
+    exclude = !isfinite(anchorPoint.response_function());
+    if (!exclude && check_grads) {
+      const RealVector& grad = anchorPoint.response_gradient();
+      for (j=0; j<numVars; ++j)
+	if (!isfinite(grad[j]))
+	  exclude = true;
+    }
+    if (exclude)
+      anchorPoint = SurrogateDataPoint(); // clear
+  }
+  failedIndices.clear();
+  for (i=0; i<num_pts; ++i) {
+    exclude = !isfinite(dataPoints[i].response_function());
+    if (!exclude && check_grads) {
+      const RealVector& grad_i = dataPoints[i].response_gradient();
+      for (j=0; j<numVars; ++j)
+	if (!isfinite(grad_i[j]))
+	  exclude = true;
+    }
+    if (exclude)
+      failedIndices.insert(i);
+  }
+}
+
+
 void OrthogPolyApproximation::integration_checks()
 {
   if (!anchorPoint.is_null()) { // TO DO: verify this creates a problem
@@ -1496,8 +1533,10 @@ integrate_expansion(const UShort2DArray& multi_index,
     LAPACK, based on anchorPoint and derivative data availability. */
 void OrthogPolyApproximation::regression()
 {
-  size_t i, j, num_pts = dataPoints.size();
-  bool err_flag = false, anchor_pt = !anchorPoint.is_null();
+  bool err_flag = false, anchor_pt = !anchorPoint.is_null(),
+    failed_evals = !failedIndices.empty();
+  size_t i, j, k, num_data_pts = dataPoints.size() - failedIndices.size();
+    //num_total_pts = (anchor_pt) ? num_data_pts+1 : num_data_pts;
 
   // compute order of data contained within anchorPoint/dataPoints
   SurrogateDataPoint& pt0 = (anchor_pt) ? anchorPoint : dataPoints[0];
@@ -1510,22 +1549,109 @@ void OrthogPolyApproximation::regression()
   // coefficient calculation process, which must be distinguished from the
   // expansionCoeffGradFlag case.
   bool use_grads_flag
-    = ((data_order & 2) && !configOptions.expansionCoeffGradFlag),
-    fn_constrained_lls = (use_grads_flag && num_pts < numExpansionTerms);
+    = ((data_order & 2) && !configOptions.expansionCoeffGradFlag);
   size_t eqns_per_pt = (use_grads_flag) ? 1 + numVars : 1;
-  std::vector<SurrogateDataPoint>::iterator it;
+  int num_cons = (anchor_pt) ? num_data_pts + eqns_per_pt : num_data_pts;
+  bool fn_constrained_lls = (use_grads_flag && num_cons < numExpansionTerms);
+  std::vector<SurrogateDataPoint>::iterator dit; SSIter fit;
   Teuchos::LAPACK<int, Real> la;
   double *A_matrix, *work;
-  int info       = 0, // output flag from DGELSS/DGGLSE subroutines
-      num_cols_A = numExpansionTerms; // Number of columns in matrix A
+  int info     = 0, // output flag from GELSS/GGLSE subroutines
+    num_cols_A = numExpansionTerms; // # of columns in matrix A
 
-  if (anchor_pt) {
+  if (fn_constrained_lls) {
+    // Use DGGLSE for equality-constrained LLS soln using GRQ factorization.
+    // Solves min ||b - Ax||_2 s.t. Cx = d
+
+    int num_rows_A = num_data_pts*numVars; // Number of rows in matrix A
+    // Matrix of polynomial terms in a contiguous block of memory packed in
+    // column-major ordering as required by F77 LAPACK subroutines.
+    A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
+    // Vector of response values that correspond to the samples in matrix A.
+    double* b_vector = new double [num_rows_A]; // "b" in A*x = b
+    // Matrix of constraints unrolled into a vector
+    double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
+    // RHS of constraints
+    double* d_vector = new double [num_cons];   // "d" in C*x = d
+    // Solution vector
+    double* x_vector = new double [num_cols_A]; // "x" in b - A*x, C*x = d
+
+    // Get the optimal work array size
+    int lwork        = -1; // special code for workspace query
+    work             = new double [1]; // temporary work array
+    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
+	     num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
+    lwork = (int)work[0]; // optimal work array size returned by query
+    delete [] work;
+    work             = new double [lwork]; // Optimal work array
+
+    // pack dataPoints gradients in A,b and dataPoints values in C,d.
+    size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
+    for (i=0; i<numExpansionTerms; ++i) {
+      const UShortArray& mi = multiIndex[i];
+      if (anchor_pt) { // hard constraint on response values & gradients
+	const RealVector& ap_c_vars = anchorPoint.continuous_variables();
+	C_matrix[c_cntr] = multivariate_polynomial(ap_c_vars, mi); ++c_cntr;
+	const RealVector& mvp_grad
+	  = multivariate_polynomial_gradient(ap_c_vars, mi);
+	for (j=0; j<numVars; ++j, ++c_cntr)
+	  C_matrix[c_cntr] = mvp_grad[j];
+      }
+      if (failed_evals) fit = failedIndices.begin();
+      for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++j) {
+	if (failed_evals && *fit == j)
+	  ++fit;
+	else {
+	  const RealVector& c_vars = dit->continuous_variables();
+	  // hard constraint on response values
+	  C_matrix[c_cntr] = multivariate_polynomial(c_vars, mi); ++c_cntr;
+	  // LLS on response gradients
+	  const RealVector& mvp_grad
+	    = multivariate_polynomial_gradient(c_vars, mi);
+	  for (k=0; k<numVars; ++k, ++a_cntr)
+	    A_matrix[a_cntr] = mvp_grad[k];
+	}
+      }
+    }
+    if (anchor_pt) {
+      d_vector[d_cntr] = anchorPoint.response_function(); ++d_cntr;
+      const RealVector& resp_grad = anchorPoint.response_gradient();
+      for (j=0; j<numVars; ++j, ++d_cntr)
+	d_vector[d_cntr] = resp_grad[j];
+    }
+    if (failed_evals) fit = failedIndices.begin();
+    for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++j) {
+      if (failed_evals && *fit == j)
+	++fit;
+      else {
+	d_vector[d_cntr] = dit->response_function(); ++d_cntr;
+	const RealVector& resp_grad = dit->response_gradient();
+	for (j=0; j<numVars; ++j, ++b_cntr)
+	  b_vector[b_cntr] = resp_grad[j];
+      }
+    }
+    // Least squares computation using LAPACK's DGGLSE subroutine which uses a
+    // GRQ factorization method for solving the least squares problem
+    info = 0;
+    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A,
+	     C_matrix, num_cons, b_vector, d_vector, x_vector, work,
+	     lwork, &info);
+    if (info)
+      err_flag = true;
+    copy_data(x_vector, numExpansionTerms, expansionCoeffs);
+
+    delete [] b_vector;
+    delete [] C_matrix;
+    delete [] d_vector;
+    delete [] x_vector;
+  }
+  else if (anchor_pt) {
     // Use DGGLSE for equality-constrained LLS soln using GRQ factorization.
     // Solves min ||b - Ax||_2 s.t. Cx = d (Note: b,C switched from LAPACK docs)
     // where {b,d} are single vectors (multiple RHS not supported).
 
     int num_cons     = eqns_per_pt; // constraints from one anchor point
-    int num_rows_A   = num_pts*eqns_per_pt; // Number of rows in matrix A
+    int num_rows_A   = num_data_pts*eqns_per_pt; // Number of rows in matrix A
     // Matrix of polynomial terms in a contiguous block of memory packed in
     // column-major ordering as required by F77 LAPACK subroutines.
     A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
@@ -1553,14 +1679,19 @@ void OrthogPolyApproximation::regression()
       size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
       for (i=0; i<numExpansionTerms; ++i) {
 	const UShortArray& mi = multiIndex[i];
-	for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-	  const RealVector& c_vars = it->continuous_variables();
-	  A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
-	  if (use_grads_flag) {
-	    const RealVector& mvp_grad
-	      = multivariate_polynomial_gradient(c_vars, mi);
-	    for (j=0; j<numVars; ++j, ++a_cntr)
-	      A_matrix[a_cntr] = mvp_grad[j];
+	if (failed_evals) fit = failedIndices.begin();
+	for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++j, ++dit) {
+	  if (failed_evals && *fit == j)
+	    ++fit;
+	  else {
+	    const RealVector& c_vars = dit->continuous_variables();
+	    A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
+	    if (use_grads_flag) {
+	      const RealVector& mvp_grad
+		= multivariate_polynomial_gradient(c_vars, mi);
+	      for (k=0; k<numVars; ++k, ++a_cntr)
+		A_matrix[a_cntr] = mvp_grad[k];
+	    }
 	  }
 	}
 	const RealVector& ap_c_vars = anchorPoint.continuous_variables();
@@ -1572,12 +1703,17 @@ void OrthogPolyApproximation::regression()
 	    C_matrix[c_cntr] = mvp_grad[j];
 	}
       }
-      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-	b_vector[b_cntr] = it->response_function(); ++b_cntr;
-	if (use_grads_flag) {
-	  const RealVector& resp_grad = it->response_gradient();
-	  for (j=0; j<numVars; ++j, ++b_cntr)
-	    b_vector[b_cntr] = resp_grad[j];
+      if (failed_evals) fit = failedIndices.begin();
+      for (i=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++i, ++dit) {
+	if (failed_evals && *fit == i)
+	  ++fit;
+	else {
+	  b_vector[b_cntr] = dit->response_function(); ++b_cntr;
+	  if (use_grads_flag) {
+	    const RealVector& resp_grad = dit->response_gradient();
+	    for (j=0; j<numVars; ++j, ++b_cntr)
+	      b_vector[b_cntr] = resp_grad[j];
+	  }
 	}
       }
       d_vector[d_cntr] = anchorPoint.response_function(); ++d_cntr;
@@ -1601,18 +1737,28 @@ void OrthogPolyApproximation::regression()
       size_t num_deriv_vars = expansionCoeffGrads.numRows();
       for (i=0; i<num_deriv_vars; ++i) {
 	// must be recomputed each time since DGGLSE solves in place
-	size_t a_cntr = 0;
+	size_t a_cntr = 0, b_cntr = 0;
 	for (j=0; j<numExpansionTerms; ++j) {
 	  const UShortArray& mi = multiIndex[j];
-	  for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++a_cntr)
-	    A_matrix[a_cntr]
-	      = multivariate_polynomial(it->continuous_variables(), mi);
+	  if (failed_evals) fit = failedIndices.begin();
+	  for (k=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++k)
+	    if (failed_evals && *fit == k)
+	      ++fit;
+	    else {
+	      A_matrix[a_cntr]
+		= multivariate_polynomial(dit->continuous_variables(), mi);
+	      ++a_cntr;
+	    }
 	  C_matrix[j]
 	    = multivariate_polynomial(anchorPoint.continuous_variables(), mi);
 	}
 	// the Ax=b RHS is the dataPoints values for the i-th grad component
-	for (j=0, it=dataPoints.begin(); j<num_rows_A; ++j, ++it)
-	  b_vector[j] = it->response_gradient()[i];
+	if (failed_evals) fit = failedIndices.begin();
+	for (j=0, dit=dataPoints.begin(); j<num_rows_A; ++j, ++dit)
+	  if (failed_evals && *fit == j)
+	    ++fit;
+	  else
+	    { b_vector[b_cntr] = dit->response_gradient()[i]; ++b_cntr; }
 	// the Cx=d RHS is the anchorPoint value for the i-th gradient component
 	d_vector[0] = anchorPoint.response_gradient()[i];
 	// solve for the PCE coefficients for the i-th gradient component
@@ -1632,72 +1778,11 @@ void OrthogPolyApproximation::regression()
     delete [] d_vector;
     delete [] x_vector;
   }
-  else if (fn_constrained_lls) {
-
-    int num_rows_A = num_pts*numVars; // Number of rows in matrix A
-    int num_cons   = num_pts; // constraints from response function values
-    // Matrix of polynomial terms in a contiguous block of memory packed in
-    // column-major ordering as required by F77 LAPACK subroutines.
-    A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
-    // Vector of response values that correspond to the samples in matrix A.
-    double* b_vector = new double [num_rows_A]; // "b" in A*x = b
-    // Matrix of constraints unrolled into a vector
-    double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
-    // RHS of constraints
-    double* d_vector = new double [num_cons];   // "d" in C*x = d
-    // Solution vector
-    double* x_vector = new double [num_cols_A]; // "x" in b - A*x, C*x = d
-
-    // Get the optimal work array size
-    int lwork        = -1; // special code for workspace query
-    work             = new double [1]; // temporary work array
-    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
-	     num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
-    lwork = (int)work[0]; // optimal work array size returned by query
-    delete [] work;
-    work             = new double [lwork]; // Optimal work array
-
-    // pack dataPoints gradients in A,b and dataPoints values in C,d.
-    size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
-    for (i=0; i<numExpansionTerms; ++i) {
-      const UShortArray& mi = multiIndex[i];
-      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++c_cntr) {
-	const RealVector& c_vars = it->continuous_variables();
-	// hard constraint on response values
-	C_matrix[c_cntr] = multivariate_polynomial(c_vars, mi);
-	// LLS on response gradients
-	const RealVector& mvp_grad
-	  = multivariate_polynomial_gradient(c_vars, mi);
-	for (j=0; j<numVars; ++j, ++a_cntr)
-	  A_matrix[a_cntr] = mvp_grad[j];
-      }
-    }
-    for (it=dataPoints.begin(); it!=dataPoints.end(); ++it, ++d_cntr) {
-      d_vector[d_cntr] = it->response_function();
-      const RealVector& resp_grad = it->response_gradient();
-      for (j=0; j<numVars; ++j, ++b_cntr)
-	b_vector[b_cntr] = resp_grad[j];
-    }
-    // Least squares computation using LAPACK's DGGLSE subroutine which uses a
-    // GRQ factorization method for solving the least squares problem
-    info = 0;
-    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A,
-	     C_matrix, num_cons, b_vector, d_vector, x_vector, work,
-	     lwork, &info);
-    if (info)
-      err_flag = true;
-    copy_data(x_vector, numExpansionTerms, expansionCoeffs);
-
-    delete [] b_vector;
-    delete [] C_matrix;
-    delete [] d_vector;
-    delete [] x_vector;
-  }
   else {
     // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
     // where {b} may have multiple RHS -> multiple {x} solutions.
 
-    int    num_rows_A    = num_pts*eqns_per_pt; // Number of rows in matrix A
+    int    num_rows_A    = num_data_pts*eqns_per_pt; // # of rows in matrix A
     size_t num_grad_rhs  = (configOptions.expansionCoeffGradFlag) ?
       expansionCoeffGrads.numRows() : 0;
     size_t num_coeff_rhs = (configOptions.expansionCoeffFlag) ? 1 : 0;
@@ -1727,38 +1812,56 @@ void OrthogPolyApproximation::regression()
     size_t a_cntr = 0, b_cntr = 0;
     for (i=0; i<numExpansionTerms; ++i) {
       const UShortArray& mi = multiIndex[i];
-      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-	const RealVector& c_vars = it->continuous_variables();
-	A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
-	if (use_grads_flag) {
-	  const RealVector& mvp_grad
-	    = multivariate_polynomial_gradient(c_vars, mi);
-	  for (j=0; j<numVars; ++j, ++a_cntr)
-	    A_matrix[a_cntr] = mvp_grad[j];
+      if (failed_evals) fit = failedIndices.begin();
+      for (j=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++j) {
+	if (failed_evals && *fit == j)
+	  ++fit;
+	else {
+	  const RealVector& c_vars = dit->continuous_variables();
+	  A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
+	  if (use_grads_flag) {
+	    const RealVector& mvp_grad
+	      = multivariate_polynomial_gradient(c_vars, mi);
+	    for (k=0; k<numVars; ++k, ++a_cntr)
+	      A_matrix[a_cntr] = mvp_grad[k];
+	  }
 	}
       }
     }
 
     // response data (values/gradients) define the multiple RHS which are
-    // matched in the LS soln.  b_vectors is num_pts (rows) x num_rhs (cols),
-    // arranged in column-major order.
-    if (use_grads_flag)
-      for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-	b_vectors[b_cntr] = it->response_function(); ++b_cntr;
-	const RealVector& resp_grad = it->response_gradient();
-	for (j=0; j<numVars; ++j, ++b_cntr)
-	  b_vectors[b_cntr] = resp_grad[j];
-      }
-    else
-      for (i=0, it=dataPoints.begin(); i<num_pts; ++it, ++i) {
-	if (configOptions.expansionCoeffFlag)
-	  b_vectors[i] = it->response_function();
-	if (configOptions.expansionCoeffGradFlag) {
-	  const RealVector& resp_grad = it->response_gradient();
-	  for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th gradient component
-	    b_vectors[(j+num_coeff_rhs)*num_pts+i] = resp_grad[j];
+    // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
+    // (cols), arranged in column-major order.
+    if (use_grads_flag) {
+      if (failed_evals) fit = failedIndices.begin();
+      for (i=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit, ++i) {
+	if (failed_evals && *fit == i)
+	  ++fit;
+	else {
+	  b_vectors[b_cntr] = dit->response_function(); ++b_cntr;
+	  const RealVector& resp_grad = dit->response_gradient();
+	  for (j=0; j<numVars; ++j, ++b_cntr)
+	    b_vectors[b_cntr] = resp_grad[j];
 	}
       }
+    }
+    else {
+      if (failed_evals) fit = failedIndices.begin();
+      for (i=0, dit=dataPoints.begin(); i<num_data_pts; ++dit, ++i) {
+	if (failed_evals && *fit == i)
+	  ++fit;
+	else {
+	  if (configOptions.expansionCoeffFlag)
+	    b_vectors[b_cntr] = dit->response_function();
+	  if (configOptions.expansionCoeffGradFlag) {
+	    const RealVector& resp_grad = dit->response_gradient();
+	    for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
+	      b_vectors[(j+num_coeff_rhs)*num_data_pts+b_cntr] = resp_grad[j];
+	  }
+	  ++b_cntr;
+	}
+      }
+    }
 
     // Least squares computation using LAPACK's DGELSS subroutine which uses a
     // SVD method for solving the least squares problem
@@ -1775,7 +1878,8 @@ void OrthogPolyApproximation::regression()
     if (configOptions.expansionCoeffGradFlag)
       for (i=0; i<numExpansionTerms; ++i)
 	for (j=0; j<num_grad_rhs; ++j)
-	  expansionCoeffGrads(j,i) = b_vectors[(j+num_coeff_rhs)*num_pts+i];
+	  expansionCoeffGrads(j,i)
+	    = b_vectors[(j+num_coeff_rhs)*num_data_pts+i];
 
     delete [] b_vectors;
     delete [] s_vector;
@@ -1804,24 +1908,25 @@ void OrthogPolyApproximation::regression()
 void OrthogPolyApproximation::expectation()
 {
   // "lhs" or "random", no weights needed
-  std::vector<SurrogateDataPoint>::iterator it;
-  size_t i, j, num_pts = dataPoints.size(),
-    num_deriv_vars = expansionCoeffGrads.numRows();
-  if (!anchorPoint.is_null())
-    ++num_pts;
+  bool anchor_pt = !anchorPoint.is_null(),
+    failed_evals = !failedIndices.empty();
+  std::vector<SurrogateDataPoint>::iterator dit; SSIter fit;
+  size_t i, j, k, num_data_pts = dataPoints.size() - failedIndices.size(),
+    num_deriv_vars = expansionCoeffGrads.numRows(),
+    num_total_pts = (anchor_pt) ? num_data_pts+1 : num_data_pts;
 
   /*
   // The following implementation evaluates all PCE coefficients
   // using a consistent expectation formulation
   for (i=0; i<numExpansionTerms; ++i) {
     Real& exp_coeff_i = expansionCoeffs[i];
-    exp_coeff_i = (anchorPoint.is_null()) ? 0.0 :
+    exp_coeff_i = (anchor_pt) ?
       anchorPoint.response_function() * multivariate_polynomial(
-        anchorPoint.continuous_variables(), multiIndex[i]);
-    for (it=dataPoints.begin(); it!=dataPoints.end(); ++it)
-      exp_coeff_i += it->response_function() * 
-        multivariate_polynomial(it->continuous_variables(), multiIndex[i]);
-    exp_coeff_i /= num_pts * norm_squared(multiIndex[i]);
+        anchorPoint.continuous_variables(), multiIndex[i]) : 0.0;
+    for (dit=dataPoints.begin(); dit!=dataPoints.end(); ++dit)
+      exp_coeff_i += dit->response_function() * 
+        multivariate_polynomial(dit->continuous_variables(), multiIndex[i]);
+    exp_coeff_i /= num_total_pts * norm_squared(multiIndex[i]);
 #ifdef DEBUG
     PCout << "coeff[" << i << "] = " << exp_coeff_i
 	  << " norm squared[" << i <<"] = " << norm_squared(multiIndex[i])
@@ -1839,35 +1944,40 @@ void OrthogPolyApproximation::expectation()
     expansionCoeffs[0] : empty_r;
   Real* mean_grad = (configOptions.expansionCoeffGradFlag) ?
     (Real*)expansionCoeffGrads[0] : NULL;
-  if (anchorPoint.is_null()) {
-    if (configOptions.expansionCoeffFlag)     expansionCoeffs     = 0.;
-    if (configOptions.expansionCoeffGradFlag) expansionCoeffGrads = 0.;
-  }
-  else {
+  if (anchor_pt) {
     if (configOptions.expansionCoeffFlag)
       mean = anchorPoint.response_function();
     if (configOptions.expansionCoeffGradFlag)
       mean_grad = anchorPoint.response_gradient().values();
   }
-  for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-    if (configOptions.expansionCoeffFlag)
-      mean += it->response_function();
-    if (configOptions.expansionCoeffGradFlag) {
-      const RealVector& curr_pt_grad = it->response_gradient();
-      for (j=0; j<num_deriv_vars; ++j)
-	mean_grad[j] += curr_pt_grad[j];
+  else {
+    if (configOptions.expansionCoeffFlag)     expansionCoeffs     = 0.;
+    if (configOptions.expansionCoeffGradFlag) expansionCoeffGrads = 0.;
+  }
+  if (failed_evals) fit = failedIndices.begin();
+  for (k=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++k, ++dit) {
+    if (failed_evals && *fit == k)
+      ++fit;
+    else {
+      if (configOptions.expansionCoeffFlag)
+	mean += dit->response_function();
+      if (configOptions.expansionCoeffGradFlag) {
+	const RealVector& curr_pt_grad = dit->response_gradient();
+	for (j=0; j<num_deriv_vars; ++j)
+	  mean_grad[j] += curr_pt_grad[j];
+      }
     }
   }
   if (configOptions.expansionCoeffFlag)
-    mean /= num_pts;
+    mean /= num_total_pts;
   if (configOptions.expansionCoeffGradFlag)
     for (j=0; j<num_deriv_vars; ++j)
-      mean_grad[j] /= num_pts;
+      mean_grad[j] /= num_total_pts;
   Real chaos_sample, resp_fn_minus_mean, term; Real* exp_grad_i;
   RealVector resp_grad_minus_mean;
   if (configOptions.expansionCoeffGradFlag)
     resp_grad_minus_mean.sizeUninitialized(num_deriv_vars);
-  if (!anchorPoint.is_null()) {
+  if (anchor_pt) {
     if (configOptions.expansionCoeffFlag)
       resp_fn_minus_mean = anchorPoint.response_function() - mean;
     if (configOptions.expansionCoeffGradFlag) {
@@ -1887,28 +1997,33 @@ void OrthogPolyApproximation::expectation()
       }
     }
   }
-  for (it=dataPoints.begin(); it!=dataPoints.end(); ++it) {
-    if (configOptions.expansionCoeffFlag)
-      resp_fn_minus_mean = it->response_function() - mean;
-    if (configOptions.expansionCoeffGradFlag) {
-      const RealVector& resp_grad = it->response_gradient();
-      for (j=0; j<num_deriv_vars; ++j)
-	resp_grad_minus_mean[j] = resp_grad[j] - mean_grad[j];
-    }
-    const RealVector& c_vars = it->continuous_variables();
-    for (i=1; i<numExpansionTerms; ++i) {
-      chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
+  if (failed_evals) fit = failedIndices.begin();
+  for (k=0, dit=dataPoints.begin(); dit!=dataPoints.end(); ++k, ++dit) {
+    if (failed_evals && *fit == k)
+      ++fit;
+    else {
       if (configOptions.expansionCoeffFlag)
-	expansionCoeffs[i] += resp_fn_minus_mean * chaos_sample;
+	resp_fn_minus_mean = dit->response_function() - mean;
       if (configOptions.expansionCoeffGradFlag) {
-	exp_grad_i = expansionCoeffGrads[i];
+	const RealVector& resp_grad = dit->response_gradient();
 	for (j=0; j<num_deriv_vars; ++j)
-	  exp_grad_i[j] += resp_grad_minus_mean[j] * chaos_sample;
+	  resp_grad_minus_mean[j] = resp_grad[j] - mean_grad[j];
+      }
+      const RealVector& c_vars = dit->continuous_variables();
+      for (i=1; i<numExpansionTerms; ++i) {
+	chaos_sample = multivariate_polynomial(c_vars, multiIndex[i]);
+	if (configOptions.expansionCoeffFlag)
+	  expansionCoeffs[i] += resp_fn_minus_mean * chaos_sample;
+	if (configOptions.expansionCoeffGradFlag) {
+	  exp_grad_i = expansionCoeffGrads[i];
+	  for (j=0; j<num_deriv_vars; ++j)
+	    exp_grad_i[j] += resp_grad_minus_mean[j] * chaos_sample;
+	}
       }
     }
   }
   for (i=1; i<numExpansionTerms; ++i) {
-    term = num_pts * norm_squared(multiIndex[i]);
+    term = num_total_pts * norm_squared(multiIndex[i]);
     if (configOptions.expansionCoeffFlag)
       expansionCoeffs[i] /= term;
     if (configOptions.expansionCoeffGradFlag) {
