@@ -454,7 +454,7 @@ void OrthogPolyApproximation::compute_coefficients()
 
   // For testing of anchorPoint logic:
   //anchorPoint = dataPoints.front();
-  //dataPoints.pop_front();
+  //dataPoints.erase(dataPoints.begin());
 
   // anchorPoint, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
@@ -1678,7 +1678,7 @@ void OrthogPolyApproximation::regression()
     // Vector of response values that correspond to the samples in matrix A.
     double* b_vector = new double [num_rows_A]; // "b" in A*x = b
     // Matrix of constraints unrolled into a vector
-    double* C_matrix = new double [num_cols_A]; // "C" in C*x = d
+    double* C_matrix = new double [num_cols_A*num_cons]; // "C" in C*x = d
     // RHS of constraints
     double* d_vector = new double [num_cons];   // "d" in C*x = d
     // Solution vector
