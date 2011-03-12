@@ -461,10 +461,10 @@ void OrthogPolyApproximation::compute_coefficients()
   //   SAMPLING:   treat it as another currentPoint
   //   QUADRATURE/CUBATURE/SPARSE_GRID: error
   //   REGRESSION: use equality-constrained least squares
-  size_t i, j, num_pts = dataPoints.size();
+  size_t i, j, num_total_pts = dataPoints.size();
   if (!anchorPoint.is_null())
-    ++num_pts;
-  if (!num_pts) {
+    ++num_total_pts;
+  if (!num_total_pts) {
     PCerr << "Error: nonzero number of sample points required in "
 	  << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
@@ -481,7 +481,7 @@ void OrthogPolyApproximation::compute_coefficients()
   // calculate polynomial chaos coefficients
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    // verify quad_order stencil matches num_pts
+    // verify quad_order stencil matches num_total_pts
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray& quad_order = tpq_driver->quadrature_order();
     if (quad_order.size() != numVars) {
@@ -493,9 +493,9 @@ void OrthogPolyApproximation::compute_coefficients()
     size_t num_gauss_pts = 1;
     for (i=0; i<numVars; ++i)
       num_gauss_pts *= quad_order[i];
-    if (num_pts != num_gauss_pts) {
-      PCerr << "Error: number of current points (" << num_pts << ") is not "
-	    << "consistent with\n       quadrature data in "
+    if (num_total_pts != num_gauss_pts) {
+      PCerr << "Error: number of current points (" << num_total_pts
+	    << ") is not consistent with\n       quadrature data in "
 	    << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
       abort_handler(-1);
     }
@@ -1369,7 +1369,7 @@ void OrthogPolyApproximation::sample_checks()
   bool exclude, anchor_pt = !anchorPoint.is_null();
   SurrogateDataPoint& pt0 = (anchor_pt) ? anchorPoint : dataPoints[0];
   bool check_grads = (!pt0.response_gradient().empty());
-  size_t i, j, num_pts = dataPoints.size();
+  size_t i, j, num_data_pts = dataPoints.size();
 
   if (anchor_pt) {
     exclude = !isfinite(anchorPoint.response_function());
@@ -1383,7 +1383,7 @@ void OrthogPolyApproximation::sample_checks()
       anchorPoint = SurrogateDataPoint(); // clear
   }
   failedIndices.clear();
-  for (i=0; i<num_pts; ++i) {
+  for (i=0; i<num_data_pts; ++i) {
     exclude = !isfinite(dataPoints[i].response_function());
     if (!exclude && check_grads) {
       const RealVector& grad_i = dataPoints[i].response_gradient();
@@ -1394,6 +1394,14 @@ void OrthogPolyApproximation::sample_checks()
     if (exclude)
       failedIndices.push_back(i);
   }
+#ifdef DEBUG
+  if (!failedIndices.empty()) {
+    PCout << "failedIndices:\n";
+    for (SizetList::iterator it=failedIndices.begin();
+	 it!=failedIndices.end(); ++it)
+      PCout << std::setw(6) << *it << '\n';
+  }
+#endif // DEBUG
 }
 
 
@@ -1409,10 +1417,10 @@ void OrthogPolyApproximation::integration_checks()
 	  << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
-  size_t num_pts = dataPoints.size();
-  if (num_pts != driverRep->weight_sets().length()) {
-    PCerr << "Error: number of current points (" << num_pts << ") is not "
-	  << "consistent with\n       number of points/weights from "
+  size_t num_data_pts = dataPoints.size();
+  if (num_data_pts != driverRep->weight_sets().length()) {
+    PCerr << "Error: number of current points (" << num_data_pts << ") is "
+	  << "not consistent with\n       number of points/weights from "
 	  << "integration driver in\n       OrthogPolyApproximation::"
 	  << "compute_coefficients()." << std::endl;
     abort_handler(-1);
@@ -1627,10 +1635,21 @@ void OrthogPolyApproximation::regression()
 	d_vector[d_cntr] = dit->response_function(); ++d_cntr;
 	// LLS with remaining DOF on response gradients
 	const RealVector& resp_grad = dit->response_gradient();
-	for (j=0; j<numVars; ++j, ++b_cntr)
-	  b_vector[b_cntr] = resp_grad[j];
+	for (k=0; k<numVars; ++k, ++b_cntr)
+	  b_vector[b_cntr] = resp_grad[k];
       }
     }
+#ifdef DEBUG
+    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
+               C2(Teuchos::View, C_matrix, num_cons,   num_cons,   num_cols_A);
+    RealVector b2(Teuchos::View, b_vector, num_rows_A),
+               d2(Teuchos::View, d_vector, num_cons);
+    PCout << "A_matrix:\n"; write_data(PCout, A2, false, true, true);
+    PCout << "C_matrix:\n"; write_data(PCout, C2, false, true, true);
+    PCout << "b_vector:\n"; write_data(PCout, b2);
+    PCout << "d_vector:\n"; write_data(PCout, d2);
+#endif // DEBUG
+
     // Least squares computation using LAPACK's DGGLSE subroutine which uses a
     // GRQ factorization method for solving the least squares problem
     info = 0;
@@ -1755,7 +1774,7 @@ void OrthogPolyApproximation::regression()
 	}
 	// the Ax=b RHS is the dataPoints values for the i-th grad component
 	for (j=0, dit=dataPoints.begin(), fit=failedIndices.begin();
-	     j<num_rows_A; ++j, ++dit)
+	     dit!=dataPoints.end(); ++j, ++dit)
 	  if (fit != failedIndices.end() && *fit == j)
 	    ++fit;
 	  else
@@ -1848,7 +1867,7 @@ void OrthogPolyApproximation::regression()
     }
     else {
       for (i=0, dit=dataPoints.begin(), fit=failedIndices.begin();
-	   i<num_data_pts; ++dit, ++i) {
+	   dit!=dataPoints.end(); ++dit, ++i) {
 	if (fit != failedIndices.end() && *fit == i)
 	  ++fit;
 	else {
@@ -1863,6 +1882,12 @@ void OrthogPolyApproximation::regression()
 	}
       }
     }
+#ifdef DEBUG
+    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
+               b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
+    PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
+    PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
+#endif // DEBUG
 
     // Least squares computation using LAPACK's DGELSS subroutine which uses a
     // SVD method for solving the least squares problem
