@@ -300,7 +300,7 @@ void OrthogPolyApproximation::allocate_arrays()
     if (update_exp_form)
       numExpansionTerms = multiIndex.size();
     PCout << numExpansionTerms << " terms\n";
-
+    // update reference points
     quadOrderPrev = quad_order;
     break;
   }
@@ -318,7 +318,7 @@ void OrthogPolyApproximation::allocate_arrays()
       PCout << approxOrder[i] << ' ';
     PCout << "} using total-order expansion of " << numExpansionTerms
 	  << " terms\n";
-
+    // update reference points
     //cubIntOrderPrev = cub_int_order;
     break;
   }
@@ -356,21 +356,17 @@ void OrthogPolyApproximation::allocate_arrays()
 	    << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
       abort_handler(-1);
     }
-
+    // update reference points
     ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     break;
   }
   default: { // SAMPLING and REGRESSION
-    // Support efficiency in PCBDO for now.
-    bool update_exp_form
-      = (expansionCoeffs.empty() && expansionCoeffGrads.empty());
-    // TO DO: support uniform/adaptive refinement.
-    //bool update_exp_form = (approxOrder       != approxOrderPrev ||
-    //                        numExpansionTerms != numExpTermsPrev);
-
-    // TO DO: this logic is not reentrant since approxOrder updates
-    //        numExpansionTerms and vice versa
+    // For uniform refinement, only the initial reference expansion supports
+    // a partial total-order definition.  All subsequent refinements will be
+    // based off of approxOrder.  For PCBDO, numExpansionTerms and approxOrder
+    // are invariant and a multiIndex update is prevented by update_exp_form.
     if (!approxOrder.empty()) {
+      bool update_exp_form = (approxOrder != approxOrderPrev);
       if (update_exp_form) {
 	size_t order_len = approxOrder.size();
 	if (order_len != numVars) {
@@ -386,40 +382,44 @@ void OrthogPolyApproximation::allocate_arrays()
 	}
 	total_order_multi_index(approxOrder, multiIndex);
 	numExpansionTerms = multiIndex.size();
+	partialOrder = false;
       }
-      PCout << "Orthogonal polynomial approximation order = { ";
-      for (size_t i=0; i<numVars; ++i)
-	PCout << approxOrder[i] << ' ';
-      PCout << "} using total-order expansion of " << numExpansionTerms
-	    << " terms\n";
+      // update reference point
+      approxOrderPrev = approxOrder;
     }
     else if (numExpansionTerms) { // default is 0
-      unsigned short order = 0;
-      size_t full_order_expansion = 1;
+      unsigned short order = 0; size_t full_order_expansion = 1;
       while (numExpansionTerms > full_order_expansion) {
 	++order;
 	// do in 2 steps rather than 1 to avoid truncation from int division
 	full_order_expansion *= numVars+order;
 	full_order_expansion /= order;
       }
-      PCout << "Orthogonal polynomial approximation order = " << order;
-      if (numExpansionTerms == full_order_expansion)
-	PCout << " using full total-order expansion of ";
-      else
-	PCout << " using partial total-order expansion of ";
-      PCout << numExpansionTerms << " terms\n";
-      if (update_exp_form) {
-	approxOrder.assign(numVars, order);
-	total_order_multi_index(approxOrder, multiIndex, -1, numExpansionTerms);
-      }
+      partialOrder = (numExpansionTerms != full_order_expansion);
+      // define approxOrder to be isotropic and full total-order, but
+      // restrict the multiIndex update according to numExpansionTerms.
+      // Any subsequent uniform refinement increments approxOrder and
+      // loses this restriction.  Subsequent PCBDO invocations retain
+      // this restriction by nature of the update_exp_form protection.
+      approxOrder.assign(numVars, order);
+      total_order_multi_index(approxOrder, multiIndex, -1, numExpansionTerms);
     }
     else {
       PCerr << "Error: bad expansion specification in "
 	    << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
       abort_handler(-1);
     }
-
-    //approxOrderPrev = approxOrder; numExpTermsPrev = numExpansionTerms;
+    // output expansion form
+    PCout << "Orthogonal polynomial approximation order = ";
+    if (partialOrder)
+      PCout << approxOrder[0] << " using partial ";
+    else {
+      PCout << "{ ";
+      for (size_t i=0; i<numVars; ++i)
+	PCout << approxOrder[i] << ' ';
+      PCout << "} using ";
+    }
+    PCout << "total-order expansion of " << numExpansionTerms << " terms\n";
     break;
   }
   }

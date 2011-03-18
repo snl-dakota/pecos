@@ -138,6 +138,9 @@ protected:
   /// variable dimension using linear least squares in semilog space
   const RealVector& dimension_decay_rates();
 
+  /// uniformly increment approxOrder
+  void increment_order();
+
   /// retrieve the response PCE value for a given parameter vector
   const Real& get_value(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
@@ -298,6 +301,13 @@ private:
   int numExpansionTerms;
   /// order of orthogonal polynomial expansion
   UShortArray approxOrder;
+  /// previous value of approxOrder; used for detecting when a multiIndex
+  /// update is needed
+  UShortArray approxOrderPrev;
+  /// flag identifying use of a partial total-order expansion due to
+  /// user specification of a numExpansionTerms value that does not
+  /// define a full total-order expansion
+  bool partialOrder;
 
   /// array of basis types for each one-dimensional orthogonal polynomial:
   /// HERMITE, LEGENDRE, LAGUERRE, JACOBI, GENERALIZED_LAGUERRE, CHEBYSHEV,
@@ -381,13 +391,26 @@ private:
 inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
   PolynomialApproximation(num_vars), numExpansionTerms(0),
-  approxOrder(approx_order), quadratureExpansion(TENSOR_INT_TENSOR_EXP),
+  approxOrder(approx_order), partialOrder(false),
+  quadratureExpansion(TENSOR_INT_TENSOR_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
 { }
 
 
 inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
+
+
+inline void OrthogPolyApproximation::increment_order()
+{
+  // increment approxOrder
+  for (size_t i=0; i<numVars; ++i)
+    approxOrder[i] += 1;
+  // need numExpansionTerms updated for use in NonDPolynomialChaos::
+  // increment_expansion(), but multiIndex update can wait until
+  // compute_coefficients() => allocate_arrays().
+  numExpansionTerms = total_order_terms(approxOrder);
+}
 
 
 inline void OrthogPolyApproximation::compute_moments()

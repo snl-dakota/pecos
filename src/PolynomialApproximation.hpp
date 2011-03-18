@@ -185,8 +185,10 @@ public:
   virtual const RealVector& moments() const = 0;
 
   /// estimate expansion coefficient decay rates for each random
-  /// variable dimension
+  /// variable dimension (OrthogPolyApproximation only)
   virtual const RealVector& dimension_decay_rates();
+  /// increment the approximation order (OrthogPolyApproximation only)
+  virtual void increment_order();
 
   //
   //- Heading: Member functions
