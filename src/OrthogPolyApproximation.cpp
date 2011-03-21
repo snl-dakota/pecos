@@ -2800,7 +2800,7 @@ void OrthogPolyApproximation::print_coefficients(std::ostream& s) const
 
   // terms and term identifiers
   for (i=0; i<numExpansionTerms; ++i) {
-    s << "\n  " << std::setw(17) << expansionCoeffs[i];
+    s << "\n  " << std::setw(WRITE_PRECISION+7) << expansionCoeffs[i];
     for (j=0; j<numVars; ++j) {
       switch (basisTypes[j]) {
       case HERMITE:

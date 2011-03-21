@@ -125,8 +125,8 @@ private:
   bool reportFlag;
 
   /// for honoring advance_seed_sequence() calls
-  int allowSeedAdvance; // bit 1 = first-time flag
-		        // bit 2 = allow repeated seed update
+  short allowSeedAdvance; // bit 1 = first-time flag
+		          // bit 2 = allow repeated seed update
 };
 
 
