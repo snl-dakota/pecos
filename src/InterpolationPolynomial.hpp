@@ -39,7 +39,7 @@ public:
   /// standard constructor
   InterpolationPolynomial(const RealArray& interp_pts);
   /// destructor
-  ~InterpolationPolynomial();
+  virtual ~InterpolationPolynomial();
 
   //
   //- Heading: Virtual functions
@@ -51,7 +51,7 @@ public:
   //
   //- Heading: Set/get functions
   //
-
+  
   /// set interpPts
   void interpolation_points(const RealArray& interp_pts);
 
