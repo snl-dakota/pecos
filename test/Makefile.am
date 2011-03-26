@@ -39,10 +39,10 @@ TESTS = pecos_int_driver pecos_lhs_driver pecos_ifft_g pecos_ifft_sd \
 noinst_PROGRAMS = pecos_int_driver pecos_lhs_driver pecos_ifft_g pecos_ifft_sd \
 		  boost_test_dist boost_test_rng
 
-if HAVE_CPPUNIT
-TESTS += pecos_hierarchical_driver
-noinst_PROGRAMS += pecos_hierarchical_driver
-endif
+#if HAVE_CPPUNIT
+#TESTS += pecos_hierarchical_driver
+#noinst_PROGRAMS += pecos_hierarchical_driver
+#endif
 
 # Complete these for each specific test.
 pecos_int_driver_SOURCES = pecos_int_driver.cpp
