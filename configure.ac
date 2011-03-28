@@ -57,22 +57,6 @@ ACX_LAPACK
 PECOS_OPTIONS
 PECOS_PACKAGES
 
-#AM_PATH_CPPUNIT([1.9.4], [
-#  AC_MSG_RESULT(
-#
-#=== Found CppUnit
-#=== Setting up make check to run tests...)
-#found_cppunit=yes
-#],
-#  AC_MSG_RESULT([
-#
-#=== Unable to find a recent enough CppUnit
-#=== Will not run unit testing!!
-#===
-#=== To get CppUnit see http://cppunit.sourceforge.net
-#]))
-#AM_CONDITIONAL(HAVE_CPPUNIT, test "$found_cppunit" = "yes")
-
 
 # Write the Makefiles and exit.
 AC_CONFIG_FILES([Makefile packages/Makefile src/Makefile test/Makefile])
