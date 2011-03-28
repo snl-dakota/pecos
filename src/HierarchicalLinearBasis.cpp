@@ -63,7 +63,7 @@ get_type1_value(const Real& x, const IntArray& basis_index)
     return basisPolyValue;
   } else { // General case.
     const Real offset = ( (left_end + right_end) / 2.0 - left_end) 
-      / pow(2.0,level-2);
+      / std::pow(2.0,(double)level-2);
     const Real node_point = get_interp_point(basis_index);
     const Real left_support = node_point - offset;
     const Real right_support = node_point + offset;
@@ -111,7 +111,7 @@ get_type1_gradient(const Real& x, const IntArray& basis_index)
     return basisPolyGradient;
   } else {
     const Real offset = ( (left_end + right_end) / 2.0 - left_end) 
-      / pow(2.0,level-2);
+      / std::pow(2.0,(double)level-2);
     const Real node_point = get_interp_point(basis_index);
     const Real left_support = node_point - offset;
     const Real right_support = node_point + offset;
@@ -170,7 +170,7 @@ get_interp_point(const IntArray& basis_index) const
     else return right_end;
   } else {
     Real offset = ( (left_end + right_end) / 2.0 - left_end) 
-      / pow(2.0,level-2);
+      / std::pow(2.0,(double)level-2);
     return left_end + (1 + 2*index)*offset;
   }
 }
@@ -217,7 +217,7 @@ int_to_intArray(unsigned int i)
     for( unsigned int idx = basis_index[0]-1; idx>=1; idx-- ){
       if( idx == 1 ) basis_index[1] -= 1;
       else if( idx == 2 || idx == 3 ) basis_index[1] -= 2;
-      else basis_index[1] -= pow(2,idx-2);
+      else basis_index[1] -= std::pow(2.0,(double)idx-2);
     }
     return basis_index;
   }
@@ -239,7 +239,7 @@ intArray_to_int(const IntArray& basis_index)
   for( unsigned int i = level-1; i>=1; i-- ){
     if( i == 1 ) integer_index += 1;
     else if( i == 2 || i == 3 ) integer_index += 2;
-    else integer_index += pow(2,i-2);
+    else integer_index += std::pow(2.0,(double)i-2);
   }
     
   return integer_index;
@@ -285,9 +285,9 @@ check_valid_index(const IntArray& basis_index)
   }
   else if ( basis_index[0] > 3 && 
 	    ( basis_index[1] < 0 || 
-	      basis_index[1] > pow(2,basis_index[0]-2)-1) ){
+	      basis_index[1] > std::pow(2.0,(double)basis_index[0]-2)-1) ){
     PCerr << "basis_index[1] must be 0<=basis_index[1]<= "
-          << pow(2,basis_index[0]-2)-1 
+          << std::pow(2.0,(double)basis_index[0]-2)-1 
           << "  Got basis_index[1] == " << basis_index[1] 
           << std::endl;
     throw( std::invalid_argument("") );
