@@ -440,8 +440,8 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
   // point orderings than sgmg/sgmga.  Therefore, the reference grid
   // computations are kept completely separate.
 
-  if (refineType    == ADAPTIVE_P_REFINEMENT &&
-      refineControl == GENERALIZED_SPARSE) { // compute reference grid only
+  if (refineType && refineControl == ADAPTIVE_CONTROL_GENERALIZED_SPARSE) {
+    // compute reference grid only
     allocate_collocation_key();              // compute collocKey
     allocate_1d_gauss_points_weights();      // define 1-D point/weight sets
     reference_unique(); // updates collocIndices,uniqueIndexMapping,numCollocPts

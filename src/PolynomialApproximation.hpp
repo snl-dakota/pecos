@@ -70,12 +70,14 @@ private:
   //short outputLevel;
   // nesting override options: NO_OVERRIDE, NESTED, NON_NESTED
   //short nestingOverride;
-  // type of refinement: {NO,UNIFORM_P,ADAPTIVE_P}_REFINEMENT
-  //short refinementType;
 
-  /// approach for control of refinement: DEFAULT_CONTROL,
-  /// TOTAL_SOBOL, SPECTRAL_DECAY, or GENERALIZED_SPARSE
+  // type of refinement: {NO,DIMENSION_P,DIMENSION_H}_REFINEMENT
+  //short refinementType;
+  /// approach for control of refinement: NO_CONTROL, UNIFORM_CONTROL,
+  /// ADAPTIVE_CONTROL_TOTAL_SOBOL, ADAPTIVE_CONTROL_SPECTRAL_DECAY, or
+  /// ADAPTIVE_CONTROL_GENERALIZED_SPARSE
   short refinementControl;
+
   /// control for amount of data computed in variance-based decomposition:
   /// {NO,UNIVARIATE,ALL}_VBD
   short vbdControl;
@@ -86,7 +88,7 @@ inline ConfigurationOptions::ConfigurationOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
   expansionCoeffGradFlag(false),
   //outputLevel(NORMAL_OUTPUT), refinementType(NO_REFINEMENT),
-  refinementControl(DEFAULT_CONTROL), vbdControl(NO_VBD)
+  refinementControl(NO_CONTROL), vbdControl(NO_VBD)
 { }
 
 

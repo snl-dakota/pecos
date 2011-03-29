@@ -73,9 +73,11 @@ enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
 /// options for ConfigurationOptions::nestingOverride (inactive)
 enum { NO_OVERRIDE=0, NESTED, NON_NESTED };
 /// options for ConfigurationOptions::refinementType (inactive)
-enum { NO_REFINEMENT=0, UNIFORM_P_REFINEMENT, ADAPTIVE_P_REFINEMENT };
+enum { NO_REFINEMENT=0, DIMENSION_P_REFINEMENT, DIMENSION_H_REFINEMENT,
+       DOMAIN_H_REFINEMENT };
 /// options for ConfigurationOptions::refinementControl
-enum { DEFAULT_CONTROL=0, TOTAL_SOBOL, SPECTRAL_DECAY, GENERALIZED_SPARSE };
+enum { NO_CONTROL=0, UNIFORM_CONTROL, ADAPTIVE_CONTROL_TOTAL_SOBOL,
+       ADAPTIVE_CONTROL_SPECTRAL_DECAY, ADAPTIVE_CONTROL_GENERALIZED_SPARSE };
 /// options for ConfigurationOptions::vbdSetting
 enum { NO_VBD=0, UNIVARIATE_VBD, ALL_VBD };
 

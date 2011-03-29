@@ -326,9 +326,9 @@ void OrthogPolyApproximation::allocate_arrays()
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     unsigned short    ssg_level  = ssg_driver->level();
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
-    bool update_exp_form
-      = ( ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev ||
-	  configOptions.refinementControl == GENERALIZED_SPARSE );
+    bool update_exp_form =
+      (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev ||
+       configOptions.refinementControl == ADAPTIVE_CONTROL_GENERALIZED_SPARSE);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) { // compute and output number of terms
@@ -534,7 +534,8 @@ void OrthogPolyApproximation::compute_coefficients()
       size_t i, num_tensor_grids = tpMultiIndex.size(); int coeff;
       std::vector<SurrogateDataPoint> tp_data_pts;
       RealVector tp_wts, tp_coeffs; RealMatrix tp_coeff_grads;
-      bool store_tp = (configOptions.refinementControl == GENERALIZED_SPARSE);
+      bool store_tp = (configOptions.refinementControl ==
+		       ADAPTIVE_CONTROL_GENERALIZED_SPARSE);
       // loop over tensor-products, forming sub-expansions, and sum them up
       for (i=0; i<num_tensor_grids; ++i) {
 	// form tp_data_pts, tp_wts using collocKey et al.
@@ -771,7 +772,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // defined from the linear combination of mixed tensor products
     multi_index.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
     tpMultiIndex.resize(num_smolyak_indices);
-    if (configOptions.refinementControl == GENERALIZED_SPARSE) {
+    if (configOptions.refinementControl == ADAPTIVE_CONTROL_GENERALIZED_SPARSE){
       tpExpansionCoeffs.resize(num_smolyak_indices);
       tpExpansionCoeffGrads.resize(num_smolyak_indices);
     }

@@ -97,23 +97,18 @@ public:
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-		       const RealVector& dim_pref,
-		       short refine_type = NO_REFINEMENT,
-		       short refine_control = GENERALIZED_SPARSE,
-		       bool  store_colloc = false,
-		       bool  track_ensemble_wts = true,
-		       bool  nested_rules = true,
-		       short growth_rate  = MODERATE_RESTRICTED_GROWTH,
-		       short nested_uniform_rule = GAUSS_PATTERSON);
+    const RealVector& dim_pref, short refine_type = NO_REFINEMENT,
+    short refine_control = NO_CONTROL, bool store_colloc = false,
+    bool track_ensemble_wts = true, bool nested_rules = true,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH,
+    short nested_uniform_rule = GAUSS_PATTERSON);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		       unsigned short ssg_level, const RealVector& dim_pref,
-		       short refine_type = NO_REFINEMENT,
-		       short refine_control = GENERALIZED_SPARSE,
-		       bool  store_colloc = false,
-		       bool  track_ensemble_wts = true,
-		       short growth_rate = MODERATE_RESTRICTED_GROWTH);
+    unsigned short ssg_level, const RealVector& dim_pref,
+    short refine_type = NO_REFINEMENT, short refine_control = NO_CONTROL,
+    bool store_colloc = false, bool track_ensemble_wts = true,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
   /// update axisLowerBounds
   void update_axis_lower_bounds();
