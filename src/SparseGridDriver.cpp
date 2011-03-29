@@ -341,7 +341,7 @@ void SparseGridDriver::update_axis_lower_bounds()
 
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
-		const RealVector& dim_pref, short refine_type,
+		const RealVector& dim_pref, //short refine_type,
 		short refine_control, bool store_colloc,
 		bool track_ensemble_wts, bool nested_rules,
 		short growth_rate, short nested_uniform_rule)
@@ -350,7 +350,7 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   compute1DPoints.resize(numVars);
   compute1DWeights.resize(numVars);
 
-  refineType           = refine_type;
+  //refineType         = refine_type;
   refineControl        = refine_control;
   storeCollocDetails   = store_colloc;
   trackEnsembleWeights = track_ensemble_wts;
@@ -394,12 +394,13 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 void SparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 		unsigned short ssg_level, const RealVector& dim_pref,
-		short refine_type, short refine_control, bool store_colloc,
+		//short refine_type,
+		short refine_control, bool store_colloc,
 		bool track_ensemble_wts, short growth_rate)
 {
   numVars              = poly_basis.size();
   polynomialBasis      = poly_basis; // shallow copy
-  refineType           = refine_type;
+  //refineType         = refine_type;
   refineControl        = refine_control;
   storeCollocDetails   = store_colloc;
   trackEnsembleWeights = track_ensemble_wts;
@@ -440,7 +441,7 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
   // point orderings than sgmg/sgmga.  Therefore, the reference grid
   // computations are kept completely separate.
 
-  if (refineType && refineControl == ADAPTIVE_CONTROL_GENERALIZED_SPARSE) {
+  if (refineControl == DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
     // compute reference grid only
     allocate_collocation_key();              // compute collocKey
     allocate_1d_gauss_points_weights();      // define 1-D point/weight sets

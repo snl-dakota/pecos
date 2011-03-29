@@ -71,11 +71,11 @@ private:
   // nesting override options: NO_OVERRIDE, NESTED, NON_NESTED
   //short nestingOverride;
 
-  // type of refinement: {NO,DIMENSION_P,DIMENSION_H}_REFINEMENT
+  // type of refinement: {NO,P,H}_REFINEMENT
   //short refinementType;
   /// approach for control of refinement: NO_CONTROL, UNIFORM_CONTROL,
-  /// ADAPTIVE_CONTROL_TOTAL_SOBOL, ADAPTIVE_CONTROL_SPECTRAL_DECAY, or
-  /// ADAPTIVE_CONTROL_GENERALIZED_SPARSE
+  /// DIMENSION_ADAPTIVE_TOTAL_SOBOL, DIMENSION_ADAPTIVE_SPECTRAL_DECAY,
+  /// or DIMENSION_ADAPTIVE_GENERALIZED_SPARSE
   short refinementControl;
 
   /// control for amount of data computed in variance-based decomposition:

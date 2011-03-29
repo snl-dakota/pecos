@@ -97,7 +97,7 @@ public:
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-    const RealVector& dim_pref, short refine_type = NO_REFINEMENT,
+    const RealVector& dim_pref, //short refine_type = NO_REFINEMENT,
     short refine_control = NO_CONTROL, bool store_colloc = false,
     bool track_ensemble_wts = true, bool nested_rules = true,
     short growth_rate = MODERATE_RESTRICTED_GROWTH,
@@ -106,8 +106,9 @@ public:
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
     unsigned short ssg_level, const RealVector& dim_pref,
-    short refine_type = NO_REFINEMENT, short refine_control = NO_CONTROL,
-    bool store_colloc = false, bool track_ensemble_wts = true,
+    //short refine_type = NO_REFINEMENT,
+    short refine_control = NO_CONTROL, bool store_colloc = false,
+    bool track_ensemble_wts = true,
     short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
   /// update axisLowerBounds
@@ -164,8 +165,8 @@ public:
   /// return dimIsotropic
   bool isotropic() const;
 
-  /// return refineType
-  short refine_type()    const;
+  // return refineType
+  //short refine_type()    const;
   /// return refineControl
   short refine_control() const;
 
@@ -258,8 +259,8 @@ private:
   /// weighting vector for dimension anisotropic grids
   RealVector anisoLevelWts;
 
-  /// type of expansion refinement
-  short refineType;
+  // type of expansion refinement
+  //short refineType;
   /// algorithm control governing expansion refinement
   short refineControl;
   /// controls conditional population of gaussPts1D and gaussWts1D
@@ -376,8 +377,8 @@ inline bool SparseGridDriver::isotropic() const
 { return dimIsotropic; }
 
 
-inline short SparseGridDriver::refine_type() const
-{ return refineType; }
+//inline short SparseGridDriver::refine_type() const
+//{ return refineType; }
 
 
 inline short SparseGridDriver::refine_control() const
