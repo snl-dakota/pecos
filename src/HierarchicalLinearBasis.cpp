@@ -212,7 +212,7 @@ int_to_intArray(unsigned int i)
     basis_index[1] = 0;
     return basis_index;
   }else{
-    basis_index[0] = ceil(std::log(i)/ln_of_2) + 1;  // Works to get the level
+    basis_index[0] = std::ceil(std::log((double)i)/ln_of_2) + 1;  // Works to get the level
     // Subtract all the indices in levels above you.  The
     // remainder is your index in the current level
     for( unsigned int idx = basis_index[0]-1; idx>=1; idx-- ){
