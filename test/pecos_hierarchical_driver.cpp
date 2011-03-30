@@ -333,8 +333,9 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  //test log
-  if(log(pow(2,512))/log(2) != 512){
+  //test log if you need more that 512 levels in a hierarchical system you're
+  //in trouble anyway.
+  if(std::log(std::pow(2.0,512.0))/std::log(2.0) != 512){
     std::cout << "log broke down due to rounding." << std::endl;
     return EXIT_FAILURE;
   }
