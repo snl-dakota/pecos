@@ -230,9 +230,6 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
       // For tensor-product quadrature, Gauss-Legendre is used due to greater
       // polynomial exactness since nesting is not a concern.  For nested sparse
       // grids, Clenshaw-Curtis or Gauss-Patterson can be better selections.
-      // However, sparse grids that are isotropic in level but anisotropic in
-      // rule become skewed when mixing Gauss rules with CC.  For this reason,
-      // CC is selected only if isotropic in rule (for now).
       int_rules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
       break;
     case STD_EXPONENTIAL: int_rules[i] = GAUSS_LAGUERRE;     break;

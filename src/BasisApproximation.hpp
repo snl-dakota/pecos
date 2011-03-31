@@ -32,7 +32,7 @@ public:
   BasisApproximation();
   /// standard constructor for envelope
   BasisApproximation(const String& approx_type, const UShortArray& approx_order,
-		     size_t num_vars);
+		     size_t num_vars, unsigned short data_order);
   /// copy constructor
   BasisApproximation(const BasisApproximation& basis_approx);
 
@@ -126,8 +126,8 @@ private:
   /// Used only by the standard envelope constructor to initialize
   /// basisApproxRep to the appropriate derived type.
   BasisApproximation* get_basis_approx(const String& approx_type,
-				       const UShortArray& approx_order,
-				       size_t num_vars);
+    const UShortArray& approx_order, size_t num_vars,
+    unsigned short data_order);
 
   //
   //- Heading: Data members
