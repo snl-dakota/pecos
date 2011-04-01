@@ -51,7 +51,7 @@ BasisApproximation::BasisApproximation():
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
 BasisApproximation(const String& approx_type, const UShortArray& approx_order,
-		   size_t num_vars, unsigned short data_order):
+		   size_t num_vars, short data_order):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -71,7 +71,7 @@ BasisApproximation(const String& approx_type, const UShortArray& approx_order,
     appropriate derived type. */
 BasisApproximation* BasisApproximation::
 get_basis_approx(const String& approx_type, const UShortArray& approx_order,
-		 size_t num_vars, unsigned short data_order)
+		 size_t num_vars, short data_order)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_basis_approx(string&)."

@@ -72,9 +72,8 @@ private:
 
   /// type of refinement: {NO,P,H}_REFINEMENT
   short refinementType;
-  /// approach for control of refinement: NO_CONTROL, UNIFORM_CONTROL,
-  /// DIMENSION_ADAPTIVE_TOTAL_SOBOL, DIMENSION_ADAPTIVE_SPECTRAL_DECAY,
-  /// or DIMENSION_ADAPTIVE_GENERALIZED_SPARSE
+  /// approach for control of refinement: {NO,UNIFORM}_CONTROL or
+  /// DIMENSION_ADAPTIVE_{TOTAL_SOBOL,SPECTRAL_DECAY,GENERALIZED_SPARSE}
   short refinementControl;
 
   /// control for amount of data computed in variance-based decomposition:

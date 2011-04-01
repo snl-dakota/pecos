@@ -93,8 +93,12 @@ void InterpPolyApproximation::allocate_arrays()
 	if (found) // reuse previous instance via shared representation
 	  poly_basis_0[i] = poly_basis_0[j];
 	else { // instantiate a new unique instance
-	  poly_basis_0[i] = (configOptions.refinementType == H_REFINEMENT) ?
-	    BasisPolynomial(PIECEWISE) : BasisPolynomial(LAGRANGE);
+	  if (/* == PIECEWISE_U ||*/ configOptions.refinementType == H_REFINEMENT) {
+	    short mode = (true) ? LINEAR_EQUIDISTANT : CUBIC_EQUIDISTANT;
+	    poly_basis_0[i] = BasisPolynomial(PIECEWISE, mode);
+	  }
+	  else
+	    poly_basis_0[i] = BasisPolynomial(LAGRANGE);
 	  poly_basis_0[i].interpolation_points(gauss_pts_1d[i]);
 	}
       }
@@ -337,9 +341,12 @@ update_sparse_interpolation_basis(unsigned short max_level)
 	if (found) // reuse previous instances via shared representations
 	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
 	else { // instantiate new unique instances
-	  // *** TO DO: support local bases outside of H_REFINEMENT
-	  poly_basis_ij = (configOptions.refinementType == H_REFINEMENT) ?
-	    BasisPolynomial(PIECEWISE) : BasisPolynomial(LAGRANGE);
+	  if (/* == PIECEWISE_U ||*/ configOptions.refinementType == H_REFINEMENT) {
+	    short mode = (true) ? LINEAR_EQUIDISTANT : CUBIC_EQUIDISTANT;
+	    poly_basis_ij = BasisPolynomial(PIECEWISE, mode);
+	  }
+	  else
+	    poly_basis_ij = BasisPolynomial(LAGRANGE);
 	  poly_basis_ij.interpolation_points(gauss_pts_1d_ij);
 	}
       }

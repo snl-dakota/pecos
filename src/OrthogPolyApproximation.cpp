@@ -1549,7 +1549,7 @@ void OrthogPolyApproximation::regression()
 
   // compute order of data contained within anchorPoint/dataPoints
   SurrogateDataPoint& pt0 = (anchor_pt) ? anchorPoint : dataPoints[0];
-  unsigned short data_order = 1;
+  short data_order = 1;
   if (!pt0.response_gradient().empty()) data_order |= 2;
   if (!pt0.response_hessian().empty())  data_order |= 4;
 
