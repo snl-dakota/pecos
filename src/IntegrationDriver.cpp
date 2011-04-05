@@ -215,8 +215,9 @@ int IntegrationDriver::grid_size()
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_rules(const ShortArray& u_types, bool nested_rules,
-		 short growth_rate, short nested_uniform_rule,
-		 IntArray& int_rules, IntArray& growth_rules)
+		 bool  equidistant_rules,   short growth_rate,
+		 short nested_uniform_rule, IntArray& int_rules,
+		 IntArray& growth_rules)
 {
   int_rules.resize(numVars);
   growth_rules.resize(numVars);
@@ -227,10 +228,14 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
     case STD_NORMAL:
       int_rules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
     case STD_UNIFORM:
-      // For tensor-product quadrature, Gauss-Legendre is used due to greater
-      // polynomial exactness since nesting is not a concern.  For nested sparse
-      // grids, Clenshaw-Curtis or Gauss-Patterson can be better selections.
+      // For tensor-product quadrature without refinement, Gauss-Legendre is
+      // preferred due to greater polynomial exactness since nesting is not a
+      // concern.  For sparse grids and refined quadrature, Gauss-Patterson or
+      // Clenshaw-Curtis can be better options.
       int_rules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
+      break;
+    case PIECEWISE_STD_UNIFORM: // closed nested rules required
+      int_rules[i] = (equidistant_rules) ? NEWTON_COTES : CLENSHAW_CURTIS;
       break;
     case STD_EXPONENTIAL: int_rules[i] = GAUSS_LAGUERRE;     break;
     case STD_BETA:        int_rules[i] = GAUSS_JACOBI;       break;
@@ -253,6 +258,16 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
       else // symmetric Gaussian linear growth
 	growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	  SLOW_LINEAR_ODD : MODERATE_LINEAR;
+      break;
+    case PIECEWISE_STD_UNIFORM: // always nested
+      switch (growth_rate) {
+      case SLOW_RESTRICTED_GROWTH:
+	growth_rules[i] = SLOW_EXPONENTIAL;     break;
+      case MODERATE_RESTRICTED_GROWTH:
+	growth_rules[i] = MODERATE_EXPONENTIAL; break;
+      case UNRESTRICTED_GROWTH:
+	growth_rules[i] = FULL_EXPONENTIAL;     break;
+      }
       break;
     default: // asymmetric Gaussian linear growth
       growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
@@ -282,7 +297,8 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
     case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
       growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
-    case GAUSS_PATTERSON: case CLENSHAW_CURTIS: case FEJER2: case GENZ_KEISTER:
+    case GAUSS_PATTERSON: case GENZ_KEISTER:
+    case CLENSHAW_CURTIS: case FEJER2: case NEWTON_COTES:
       // nested rules with exponential growth
       switch (growth_rate) {
       case SLOW_RESTRICTED_GROWTH:

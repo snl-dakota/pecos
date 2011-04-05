@@ -36,7 +36,7 @@ public:
   //
 
   /// default constructor
-  HermiteInterpPolyApproximation(size_t num_vars);
+  HermiteInterpPolyApproximation(short basis_type, size_t num_vars);
   /// destructor
   ~HermiteInterpPolyApproximation();
 
@@ -159,9 +159,9 @@ private:
 
 
 inline HermiteInterpPolyApproximation::
-HermiteInterpPolyApproximation(size_t num_vars):
-  InterpPolyApproximation(num_vars)
-{ }
+HermiteInterpPolyApproximation(short basis_type, size_t num_vars):
+  InterpPolyApproximation(basis_type, num_vars)
+{ dataOrder = 3; }
 
 
 inline HermiteInterpPolyApproximation::~HermiteInterpPolyApproximation()

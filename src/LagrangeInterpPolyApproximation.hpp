@@ -35,7 +35,7 @@ public:
   //
 
   /// default constructor
-  LagrangeInterpPolyApproximation(size_t num_vars);
+  LagrangeInterpPolyApproximation(short basis_type, size_t num_vars);
   /// destructor
   ~LagrangeInterpPolyApproximation();
 
@@ -157,9 +157,9 @@ private:
 
 
 inline LagrangeInterpPolyApproximation::
-LagrangeInterpPolyApproximation(size_t num_vars):
-  InterpPolyApproximation(num_vars)
-{ }
+LagrangeInterpPolyApproximation(short basis_type, size_t num_vars):
+  InterpPolyApproximation(basis_type, num_vars)
+{ dataOrder = 1; }
 
 
 inline LagrangeInterpPolyApproximation::~LagrangeInterpPolyApproximation()

@@ -36,7 +36,7 @@ public:
   //
 
   /// default constructor
-  InterpPolyApproximation(size_t num_vars);
+  InterpPolyApproximation(short basis_type, size_t num_vars);
   /// destructor
   ~InterpPolyApproximation();
 
@@ -153,6 +153,12 @@ protected:
   /// contributor to varianceGradient
   RealVector tpVarianceGrad;
 
+  /// GLOBAL_INTERPOLATION_POLYNOMIAL or LOCAL_INTERPOLATION_POLYNOMIAL
+  short basisType;
+  /// 3 bit representation of value/gradient/Hessian data used for
+  /// forming interpolant
+  short dataOrder;
+
 private:
 
   //
@@ -250,8 +256,9 @@ private:
 };
 
 
-inline InterpPolyApproximation::InterpPolyApproximation(size_t num_vars):
-  PolynomialApproximation(num_vars), numCollocPts(0)
+inline InterpPolyApproximation::
+InterpPolyApproximation(short basis_type, size_t num_vars):
+  PolynomialApproximation(num_vars), numCollocPts(0), basisType(basis_type)
 { }
 
 

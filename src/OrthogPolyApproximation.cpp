@@ -61,25 +61,25 @@ distribution_types(const ShortArray& u_types,
     for (i=0; i<num_vars; i++) {
       switch (u_types[i]) {
       case STD_NORMAL:
-	basis_types[i] = HERMITE;                                  break;
+	basis_types[i] = HERMITE_ORTHOG;                                  break;
       case STD_UNIFORM: // Legendre or Chebyshev OrthogPolynomial
 	// To employ Chebyshev for uniform, have to multiply inner product
 	// integrands by the inverse of the weight function (weight fn =
 	// 1/sqrt(1-x^2); same as beta PDF/Jacobi poly for alpha=beta=-1/2).
-	//basis_types[i] = CHEBYSHEV;                              break;
-	basis_types[i] = LEGENDRE;                                 break;
+	//basis_types[i] = CHEBYSHEV_ORTHOG;                              break;
+	basis_types[i] = LEGENDRE_ORTHOG;                                 break;
       case STD_EXPONENTIAL:
-	basis_types[i] = LAGUERRE;                                 break;
+	basis_types[i] = LAGUERRE_ORTHOG;                                 break;
       case STD_BETA:
-	basis_types[i] = JACOBI;
+	basis_types[i] = JACOBI_ORTHOG;
 	extra_dist_params = true;                                         break;
       case STD_GAMMA:
-	basis_types[i] = GENERALIZED_LAGUERRE;
+	basis_types[i] = GEN_LAGUERRE_ORTHOG;
 	extra_dist_params = true;                                         break;
       case BOUNDED_NORMAL: case BOUNDED_LOGNORMAL: case LOGNORMAL:
       case LOGUNIFORM: case TRIANGULAR:
       case GUMBEL: case FRECHET: case WEIBULL: case HISTOGRAM_BIN:
-	basis_types[i] = NUMERICALLY_GENERATED;
+	basis_types[i] = NUM_GEN_ORTHOG;
 	extra_dist_params = true;                                         break;
       default:
 	PCerr << "Error: unsupported u-space type in OrthogPolyApproximation::"
@@ -1064,7 +1064,7 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
   if (gaussModes.empty()) // use basisTypes with default modes
     for (i=0; i<n; ++i)
       switch (basisTypes[i]) {
-      case CHEBYSHEV: // default mode is Clenshaw-Curtis
+      case CHEBYSHEV_ORTHOG: // default mode is Clenshaw-Curtis
 	int_order[i] = (quad_order[i] % 2) ? quad_order[i] : quad_order[i] - 1;
 	break;
       default: // default mode is standard non-nested Gauss rules
@@ -2544,9 +2544,9 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
     (Legendre,Laguerre,Jacobi,GenLaguerre)OrthogPolynomial::get_gradient(). */
 void OrthogPolyApproximation::gradient_check()
 {
-  BasisPolynomial hermite_poly(HERMITE), legendre_poly(LEGENDRE),
-    laguerre_poly(LAGUERRE), jacobi_poly(JACOBI),
-    gen_laguerre_poly(GENERALIZED_LAGUERRE), chebyshev_poly(CHEBYSHEV);
+  BasisPolynomial hermite_poly(HERMITE_ORTHOG), legendre_poly(LEGENDRE_ORTHOG),
+    laguerre_poly(LAGUERRE_ORTHOG), jacobi_poly(JACOBI_ORTHOG),
+    gen_laguerre_poly(GEN_LAGUERRE_ORTHOG), chebyshev_poly(CHEBYSHEV_ORTHOG);
   // alpha/beta selections mirror dakota_uq_rosenbrock_pce.in
   jacobi_poly.alpha_stat(1.5);
   jacobi_poly.beta_stat(2.);
@@ -2805,25 +2805,25 @@ void OrthogPolyApproximation::print_coefficients(std::ostream& s) const
     s << "\n  " << std::setw(WRITE_PRECISION+7) << expansionCoeffs[i];
     for (j=0; j<numVars; ++j) {
       switch (basisTypes[j]) {
-      case HERMITE:
+      case HERMITE_ORTHOG:
 	std::sprintf(tag,  "He%i", multiIndex[i][j]);
 	break;
-      case LEGENDRE:
+      case LEGENDRE_ORTHOG:
 	std::sprintf(tag,   "P%i", multiIndex[i][j]);
 	break;
-      case LAGUERRE:
+      case LAGUERRE_ORTHOG:
 	std::sprintf(tag,   "L%i", multiIndex[i][j]);
 	break;
-      case JACOBI:
+      case JACOBI_ORTHOG:
 	std::sprintf(tag, "Pab%i", multiIndex[i][j]);
 	break;
-      case GENERALIZED_LAGUERRE:
+      case GEN_LAGUERRE_ORTHOG:
 	std::sprintf(tag,  "La%i", multiIndex[i][j]);
 	break;
-      case CHEBYSHEV:
+      case CHEBYSHEV_ORTHOG:
 	std::sprintf(tag,   "T%i", multiIndex[i][j]);
 	break;
-      case NUMERICALLY_GENERATED:
+      case NUM_GEN_ORTHOG:
 	std::sprintf(tag, "Num%i", multiIndex[i][j]);
 	break;
       default:

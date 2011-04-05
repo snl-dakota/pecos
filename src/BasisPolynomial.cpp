@@ -89,35 +89,37 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short mode)
   switch (poly_type) {
   //case NO_POLY:
   //  polynomial = NULL;                                                  break;
-  case HERMITE:  // var_type == "normal"
+  case HERMITE_ORTHOG:  // var_type == "normal"
     polynomial = (mode) ? new HermiteOrthogPolynomial(mode)
                         : new HermiteOrthogPolynomial();                  break;
-  case LEGENDRE: // var_type == "uniform"
+  case LEGENDRE_ORTHOG: // var_type == "uniform"
     polynomial = (mode) ? new LegendreOrthogPolynomial(mode)
                         : new LegendreOrthogPolynomial();                 break;
-  case LAGUERRE: // var_type == "exponential"
+  case LAGUERRE_ORTHOG: // var_type == "exponential"
     polynomial = new LaguerreOrthogPolynomial();                          break;
-  case JACOBI:   // var_type == "beta"
+  case JACOBI_ORTHOG:   // var_type == "beta"
     polynomial = new JacobiOrthogPolynomial();                            break;
-  case GENERALIZED_LAGUERRE: // var_type == "gamma"
+  case GEN_LAGUERRE_ORTHOG: // var_type == "gamma"
     polynomial = new GenLaguerreOrthogPolynomial();                       break;
-  case CHEBYSHEV: // for Clenshaw-Curtis and Fejer
+  case CHEBYSHEV_ORTHOG: // for Clenshaw-Curtis and Fejer
     polynomial = (mode) ? new ChebyshevOrthogPolynomial(mode)
                         : new ChebyshevOrthogPolynomial();                break;
-  case NUMERICALLY_GENERATED:
+  case NUM_GEN_ORTHOG:
     polynomial = new NumericGenOrthogPolynomial();                        break;
-  case LAGRANGE:
+  case LAGRANGE_INTERP:
     polynomial = new LagrangeInterpPolynomial();                          break;
-  case PIECEWISE:
-    // need to cover poly type, poly order, point type, and point data order:
-    // mode covers LINEAR/QUADRATIC/CUBIC poly order plus EQUIDISTANT/GENERAL
-    // point type and data order is inferred from poly order (grads for CUBIC)
-    polynomial = (mode) ? new PiecewiseInterpPolynomial(mode)
-                        : new PiecewiseInterpPolynomial();                break;
+  //case HERMITE_INTERP:
+  //  polynomial = new HermiteInterpPolynomial();                         break;
+  // PIECEWISE options include poly order, point type, and point data order:
+  // LINEAR/QUADRATIC/CUBIC covers poly order, mode covers EQUIDISTANT/GENERAL
+  // point type, and data order is inferred from poly order (grads for CUBIC).
+  case PIECEWISE_LINEAR_INTERP: case PIECEWISE_CUBIC_INTERP:
+    polynomial = (mode) ? new PiecewiseInterpPolynomial(poly_type, mode)
+                        : new PiecewiseInterpPolynomial(poly_type);       break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
 	 << std::endl;
-    polynomial = NULL;                              break;
+    polynomial = NULL;                                                    break;
   }
   // Note: basisPolyType is not available at construct time, but is thereafter
   //if (polynomial)

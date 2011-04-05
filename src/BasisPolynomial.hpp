@@ -162,8 +162,9 @@ protected:
   //- Heading: Data
   //
 
-  // basis polynomial type: HERMITE, LEGENDRE, LAGUERRE, JACOBI,
-  // GENERALIZED_LAGUERRE, or LAGRANGE
+  // basis polynomial type: HERMITE_ORTHOG, LEGENDRE_ORTHOG, LAGUERRE_ORTHOG,
+  // JACOBI_ORTHOG, GEN_LAGUERRE_ORTHOG, NUM_GEN_ORTHOG, LAGRANGE_INTERP,
+  // HERMITE_INTERP, or PIECEWISE_INTERP
   //short basisPolyType;
 
   /// value of the 1-D basis polynomial; returned by get_value()

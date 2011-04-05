@@ -50,8 +50,9 @@ public:
   ConfigurationOptions();
   /// constructor
   ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
-		       bool exp_grad_flag, //short output_level,
-		       short refine_type, short refine_cntl, short vbd_type);
+		       bool exp_grad_flag,
+		       //short output_level, short refine_type,
+		       short refine_cntl, short vbd_type);
   /// destructor
   ~ConfigurationOptions();
 
@@ -70,8 +71,8 @@ private:
   // nesting override options: NO_OVERRIDE, NESTED, NON_NESTED
   //short nestingOverride;
 
-  /// type of refinement: {NO,P,H}_REFINEMENT
-  short refinementType;
+  // type of refinement: {NO,P,H}_REFINEMENT
+  //short refinementType;
   /// approach for control of refinement: {NO,UNIFORM}_CONTROL or
   /// DIMENSION_ADAPTIVE_{TOTAL_SOBOL,SPECTRAL_DECAY,GENERALIZED_SPARSE}
   short refinementControl;
@@ -84,20 +85,21 @@ private:
 
 inline ConfigurationOptions::ConfigurationOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), //outputLevel(NORMAL_OUTPUT),
-  refinementType(NO_REFINEMENT), refinementControl(NO_CONTROL),
-  vbdControl(NO_VBD)
+  expansionCoeffGradFlag(false),
+  //outputLevel(NORMAL_OUTPUT), refinementType(NO_REFINEMENT),
+  refinementControl(NO_CONTROL), vbdControl(NO_VBD)
 { }
 
 
 inline ConfigurationOptions::
 ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
-		     bool exp_grad_flag, //short output_level,
-		     short refine_type, short refine_cntl, short vbd_type):
+		     bool exp_grad_flag,
+		     //short output_level, short refine_type,
+		     short refine_cntl, short vbd_type):
   expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
-  expansionCoeffGradFlag(exp_grad_flag), //outputLevel(output_level),
-  refinementType(refine_type), refinementControl(refine_cntl),
-  vbdControl(vbd_type)
+  expansionCoeffGradFlag(exp_grad_flag),
+  //outputLevel(output_level), refinementType(refine_type),
+  refinementControl(refine_cntl), vbdControl(vbd_type)
 { }
 
 
@@ -244,10 +246,10 @@ public:
   /// get ConfigurationOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
-  /// set ConfigurationOptions::refinementType
-  void refinement_type(short refine_type);
-  /// get ConfigurationOptions::refinementType
-  short refinement_type() const;
+  // set ConfigurationOptions::refinementType
+  //void refinement_type(short refine_type);
+  // get ConfigurationOptions::refinementType
+  //short refinement_type() const;
 
   /// set ConfigurationOptions::refinementControl
   void refinement_control(short refine_cntl);
@@ -514,12 +516,12 @@ expansion_coefficient_gradient_flag() const
 { return configOptions.expansionCoeffGradFlag; }
 
 
-inline void PolynomialApproximation::refinement_type(short refine_type)
-{ configOptions.refinementType = refine_type; }
+//inline void PolynomialApproximation::refinement_type(short refine_type)
+//{ configOptions.refinementType = refine_type; }
 
 
-inline short PolynomialApproximation::refinement_type() const
-{ return configOptions.refinementType; }
+//inline short PolynomialApproximation::refinement_type() const
+//{ return configOptions.refinementType; }
 
 
 inline void PolynomialApproximation::refinement_control(short refine_cntl)

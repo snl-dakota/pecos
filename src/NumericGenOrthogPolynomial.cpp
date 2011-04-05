@@ -435,7 +435,7 @@ Real NumericGenOrthogPolynomial::
 hermite_unbounded_integral(const RealVector& poly_coeffs1,
 			   const RealVector& poly_coeffs2, NGFPType weight_fn)
 {
-  BasisPolynomial hermite_poly(HERMITE);
+  BasisPolynomial hermite_poly(HERMITE_ORTHOG);
   unsigned short quad_order = 170; // hardwired (could use adaptive loop)
   //quad_order = 175 has numerical problems -> nan's in recursion coeffs
   const RealArray& gauss_pts = hermite_poly.gauss_points(quad_order);
@@ -494,7 +494,7 @@ laguerre_semibounded_integral(const RealVector& poly_coeffs1,
 			      const RealVector& poly_coeffs2,
 			      NGFPType weight_fn)
 {
-  BasisPolynomial laguerre_poly(LAGUERRE);
+  BasisPolynomial laguerre_poly(LAGUERRE_ORTHOG);
   unsigned short quad_order = 95; // hardwired (could use adaptive loop)
   //quad_order = 100 has numerical problems: gauss_wts = inf
   const RealArray& gauss_pts = laguerre_poly.gauss_points(quad_order);
@@ -553,7 +553,7 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
 			  const RealVector& poly_coeffs2, NGFPType weight_fn,
 			  Real start, Real end)
 {
-  BasisPolynomial legendre_poly(LEGENDRE);
+  BasisPolynomial legendre_poly(LEGENDRE_ORTHOG);
   unsigned short quad_order = 50; // hardwired (could use adaptive loop)
   const RealArray& gauss_pts = legendre_poly.gauss_points(quad_order);
   const RealArray& gauss_wts = legendre_poly.gauss_weights(quad_order);

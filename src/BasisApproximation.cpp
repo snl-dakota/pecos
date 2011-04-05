@@ -50,7 +50,7 @@ BasisApproximation::BasisApproximation():
     execute get_basis_approx, since BasisApproximation(BaseConstructor)
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
-BasisApproximation(const String& approx_type, const UShortArray& approx_order,
+BasisApproximation(short basis_type, const UShortArray& approx_order,
 		   size_t num_vars, short data_order):
   referenceCount(1)
 {
@@ -61,7 +61,7 @@ BasisApproximation(const String& approx_type, const UShortArray& approx_order,
 
   // Set the rep pointer to the appropriate derived type
   basisApproxRep
-    = get_basis_approx(approx_type, approx_order, num_vars, data_order);
+    = get_basis_approx(basis_type, approx_order, num_vars, data_order);
   if ( !basisApproxRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -70,7 +70,7 @@ BasisApproximation(const String& approx_type, const UShortArray& approx_order,
 /** Used only by the envelope constructor to initialize basisApproxRep to the 
     appropriate derived type. */
 BasisApproximation* BasisApproximation::
-get_basis_approx(const String& approx_type, const UShortArray& approx_order,
+get_basis_approx(short basis_type, const UShortArray& approx_order,
 		 size_t num_vars, short data_order)
 {
 #ifdef REFCOUNT_DEBUG
@@ -78,20 +78,23 @@ get_basis_approx(const String& approx_type, const UShortArray& approx_order,
         << std::endl;
 #endif
 
-  if (approx_type == "fourier")
-    return NULL;//new FourierBasisApproximation(num_vars);
-  else if (approx_type == "eigen")
-    return NULL;//new SVDLeftEigenBasisApproximation(num_vars);
-  else if (approx_type == "global_interpolation_polynomial" ||
-	   approx_type == "local_interpolation_polynomial") {
-    if (data_order & 2) return new  HermiteInterpPolyApproximation(num_vars);
-    else                return new LagrangeInterpPolyApproximation(num_vars);
+  if (basis_type == GLOBAL_INTERPOLATION_POLYNOMIAL ||
+      basis_type ==  LOCAL_INTERPOLATION_POLYNOMIAL) {
+    if (data_order > 1)
+      return new  HermiteInterpPolyApproximation(basis_type, num_vars);
+    else
+      return new LagrangeInterpPolyApproximation(basis_type, num_vars);
   }
-  else if (approx_type == "global_orthogonal_polynomial" ||
-	   approx_type == "local_orthogonal_polynomial")
+  else if (basis_type == GLOBAL_ORTHOGONAL_POLYNOMIAL)
     return new OrthogPolyApproximation(approx_order, num_vars);
+  //else if (basis_type == LOCAL_ORTHOGONAL_POLYNOMIAL)
+  //  return new OrthogPolyApproximation(approx_order, num_vars);
+  //else if (basis_type == FOURIER_BASIS)
+  //  return new FourierBasisApproximation(num_vars);
+  //else if (basis_type == EIGEN_BASIS)
+  //  return new SVDLeftEigenBasisApproximation(num_vars);
   else {
-    PCerr << "Error: BasisApproximation type " << approx_type
+    PCerr << "Error: BasisApproximation type " << basis_type
 	  << " not available." << std::endl;
     return NULL;
   }

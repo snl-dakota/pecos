@@ -310,8 +310,8 @@ private:
   bool partialOrder;
 
   /// array of basis types for each one-dimensional orthogonal polynomial:
-  /// HERMITE, LEGENDRE, LAGUERRE, JACOBI, GENERALIZED_LAGUERRE, CHEBYSHEV,
-  /// or NUMERICALLY_GENERATED
+  /// HERMITE_ORTHOG, LEGENDRE_ORTHOG, LAGUERRE_ORTHOG, JACOBI_ORTHOG,
+  /// GEN_LAGUERRE_ORTHOG, CHEBYSHEV_ORTHOG, or NUM_GEN_ORTHOG
   ShortArray basisTypes;
 
   /// array of Gauss mode options for some derived orthogonal polynomial
@@ -502,7 +502,7 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
 {
   size_t i, num_basis = basisTypes.size();
   for (i=0; i<num_basis; ++i)
-    if (basisTypes[i] == NUMERICALLY_GENERATED)
+    if (basisTypes[i] == NUM_GEN_ORTHOG)
       ((NumericGenOrthogPolynomial*)polynomialBasis[i].polynomial_rep())
 	->coefficients_norms_flag(flag);
 }

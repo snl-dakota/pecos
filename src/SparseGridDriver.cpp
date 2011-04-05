@@ -344,7 +344,8 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref, //short refine_type,
 		short refine_control, bool store_colloc,
 		bool track_ensemble_wts, bool nested_rules,
-		short growth_rate, short nested_uniform_rule)
+		bool equidistant_rules, short growth_rate,
+		short nested_uniform_rule)
 {
   numVars = u_types.size();
   compute1DPoints.resize(numVars);
@@ -362,7 +363,8 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   // to uniform/normal in order to enforce similar growth rates:
   if (nested_rules && growth_rate == UNRESTRICTED_GROWTH)
     for (size_t i=0; i<numVars; ++i)
-      if (u_types[i] != STD_UNIFORM && u_types[i] != STD_NORMAL)
+      if (u_types[i] != STD_UNIFORM && u_types[i] != PIECEWISE_STD_UNIFORM && 
+	  u_types[i] != STD_NORMAL)
 	{ nested_rules = false; break; }
   // For MODERATE and SLOW restricted exponential growth, nested rules can be
   // used heterogeneously and synchronized with STANDARD and SLOW Gaussian
@@ -371,9 +373,10 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   bool cheby_poly = false;
   for (size_t i=0; i<numVars; i++) {
     // set compute1DPoints/compute1DWeights
-    if ( u_types[i] == STD_UNIFORM && nested_rules && 
-	 ( nested_uniform_rule == CLENSHAW_CURTIS ||
-	   nested_uniform_rule == FEJER2) ) {
+    if ( ( u_types[i] == STD_UNIFORM && nested_rules && 
+	   ( nested_uniform_rule == CLENSHAW_CURTIS ||
+	     nested_uniform_rule == FEJER2 ) ) ||
+	 ( u_types[i] == PIECEWISE_STD_UNIFORM && !equidistant_rules ) ) {
       compute1DPoints[i]  = chebyshev_points;
       compute1DWeights[i] = chebyshev_weights;
       cheby_poly = true;
@@ -384,10 +387,10 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
     }
   }
   if (cheby_poly && !chebyPolyPtr) // gauss_mode set within loops
-    chebyPolyPtr = new BasisPolynomial(CHEBYSHEV);
+    chebyPolyPtr = new BasisPolynomial(CHEBYSHEV_ORTHOG);
 
-  initialize_rules(u_types, nested_rules, growth_rate, nested_uniform_rule,
-		   integrationRules, growthRules);
+  initialize_rules(u_types, nested_rules, equidistant_rules, growth_rate,
+		   nested_uniform_rule, integrationRules, growthRules);
 }
 
 

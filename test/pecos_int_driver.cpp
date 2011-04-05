@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
   size_t i, num_vars = 4;
   std::vector<Pecos::BasisPolynomial> poly_basis(num_vars);
   for (i=0; i<num_vars; ++i)
-    poly_basis[i] = Pecos::BasisPolynomial(Pecos::HERMITE);
+    poly_basis[i] = Pecos::BasisPolynomial(Pecos::HERMITE_ORTHOG);
   Pecos::RealMatrix variable_sets;
 
   // Smolyak sparse grids

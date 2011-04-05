@@ -24,13 +24,14 @@ namespace Pecos {
 
 
 void TensorProductDriver::
-initialize_grid(const ShortArray& u_types, bool nested_rules,
-		short growth_rate, short nested_uniform_rule)
+initialize_grid(const ShortArray& u_types, bool  nested_rules,
+		bool  equidistant_rules,   short growth_rate,
+		short nested_uniform_rule)
 {
   numVars = u_types.size();
   quadOrder.resize(numVars);
-  initialize_rules(u_types, nested_rules, growth_rate, nested_uniform_rule,
-		   integrationRules, growthRules);
+  initialize_rules(u_types, nested_rules, equidistant_rules, growth_rate,
+		   nested_uniform_rule, integrationRules, growthRules);
 }
 
 
