@@ -35,7 +35,9 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  InterpolationPolynomial.cpp			\
 			  LagrangeInterpPolynomial.cpp			\
 			  PiecewiseInterpPolynomial.cpp			\
-			  HierarchicalLinearBasis.cpp			\
+			  HierarchicalBasis.cpp			\
+			  RefinablePointSet.cpp					\
+			  UniformRefinablePointSet.cpp			\
 			  OrthogonalPolynomial.cpp			\
 			  ChebyshevOrthogPolynomial.cpp			\
 			  GenLaguerreOrthogPolynomial.cpp		\
