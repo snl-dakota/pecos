@@ -1909,6 +1909,12 @@ void OrthogPolyApproximation::regression()
 	  expansionCoeffGrads(j,i)
 	    = b_vectors[(j+num_coeff_rhs)*num_data_pts+i];
 
+#ifdef DEBUG
+    // For SVD, the condition number can be extracted from the singular values
+    PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
+	  << s_vector[0]/s_vector[num_cols_A-1] << '\n';
+#endif // DEBUG
+
     delete [] b_vectors;
     delete [] s_vector;
   }

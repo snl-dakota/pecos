@@ -94,11 +94,11 @@ void InterpPolyApproximation::allocate_arrays()
 	  poly_basis_0[i] = poly_basis_0[j];
 	else { // instantiate a new unique instance
 	  if (basisType == LOCAL_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_0[i] = (dataOrder & 2) ? // from Hermite/Lagrange ctor
+	    poly_basis_0[i] = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(PIECEWISE_CUBIC_INTERP,  NEWTON_COTES) :
 	      BasisPolynomial(PIECEWISE_LINEAR_INTERP, NEWTON_COTES);
 	  else if (basisType == GLOBAL_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_0[i] = (dataOrder & 2) ? // from Hermite/Lagrange ctor
+	    poly_basis_0[i] = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(HERMITE_INTERP) :
 	      BasisPolynomial(LAGRANGE_INTERP);
 	  poly_basis_0[i].interpolation_points(gauss_pts_1d[i]);
@@ -344,11 +344,11 @@ update_sparse_interpolation_basis(unsigned short max_level)
 	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
 	else { // instantiate new unique instances
 	  if (basisType == LOCAL_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_ij = (dataOrder & 2) ? // from Hermite/Lagrange ctor
+	    poly_basis_ij = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(PIECEWISE_CUBIC_INTERP,  NEWTON_COTES) :
 	      BasisPolynomial(PIECEWISE_LINEAR_INTERP, NEWTON_COTES);
 	  else if (basisType == GLOBAL_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_ij = (dataOrder & 2) ? // from Hermite/Lagrange ctor
+	    poly_basis_ij = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(HERMITE_INTERP) :
 	      BasisPolynomial(LAGRANGE_INTERP);
 	  poly_basis_ij.interpolation_points(gauss_pts_1d_ij);

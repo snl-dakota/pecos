@@ -155,9 +155,9 @@ protected:
 
   /// GLOBAL_INTERPOLATION_POLYNOMIAL or LOCAL_INTERPOLATION_POLYNOMIAL
   short basisType;
-  /// 3 bit representation of value/gradient/Hessian data used for
-  /// forming interpolant
-  short dataOrder;
+  /// flag indicating use of derivative data for forming local cubic
+  /// spline or global Hermite interpolants
+  bool useDerivs;
 
 private:
 

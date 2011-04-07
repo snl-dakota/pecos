@@ -51,7 +51,7 @@ BasisApproximation::BasisApproximation():
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
 BasisApproximation(short basis_type, const UShortArray& approx_order,
-		   size_t num_vars, short data_order):
+		   size_t num_vars, bool use_derivs):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -61,7 +61,7 @@ BasisApproximation(short basis_type, const UShortArray& approx_order,
 
   // Set the rep pointer to the appropriate derived type
   basisApproxRep
-    = get_basis_approx(basis_type, approx_order, num_vars, data_order);
+    = get_basis_approx(basis_type, approx_order, num_vars, use_derivs);
   if ( !basisApproxRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -71,7 +71,7 @@ BasisApproximation(short basis_type, const UShortArray& approx_order,
     appropriate derived type. */
 BasisApproximation* BasisApproximation::
 get_basis_approx(short basis_type, const UShortArray& approx_order,
-		 size_t num_vars, short data_order)
+		 size_t num_vars, bool use_derivs)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_basis_approx(string&)."
@@ -80,7 +80,7 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
 
   if (basis_type == GLOBAL_INTERPOLATION_POLYNOMIAL ||
       basis_type ==  LOCAL_INTERPOLATION_POLYNOMIAL) {
-    if (data_order > 1)
+    if (use_derivs)
       return new  HermiteInterpPolyApproximation(basis_type, num_vars);
     else
       return new LagrangeInterpPolyApproximation(basis_type, num_vars);

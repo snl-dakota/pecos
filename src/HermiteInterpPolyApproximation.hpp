@@ -161,7 +161,7 @@ private:
 inline HermiteInterpPolyApproximation::
 HermiteInterpPolyApproximation(short basis_type, size_t num_vars):
   InterpPolyApproximation(basis_type, num_vars)
-{ dataOrder = 3; }
+{ useDerivs = true; }
 
 
 inline HermiteInterpPolyApproximation::~HermiteInterpPolyApproximation()
