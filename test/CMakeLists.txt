@@ -1,13 +1,11 @@
 # CMakeLists.txt for pecos "unit" tests
 
-add_definitions("-DHAVE_CONFIG_H")
-
-include_directories(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/src
+include_directories(${Pecos_BINARY_DIR} ${Pecos_SOURCE_DIR}/src
                     ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
 
 if(HAVE_SPARSE_GRID)
-  include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
+  include_directories(${Pecos_SOURCE_DIR}/packages/VPISparseGrid/src)
 endif(HAVE_SPARSE_GRID)
 
 # Ideally the test executables need to link to only "pecos" because it
@@ -47,4 +45,15 @@ add_test(pecos_int_driver pecos_int_driver)
 add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
 target_link_libraries(pecos_lhs_driver ${pecos_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
+
+# Complete these for each specific test.
+add_executable(pecos_hierarchical_driver pecos_hierarchical_driver.cpp)
+target_link_libraries(pecos_hierarchical_driver ${pecos_libs})
+add_test(pecos_hierarchical_driver pecos_hierarchical_driver)
+
+# Complete these for each specific test.
+add_executable(pecos_uniform_refinable_driver
+  pecos_uniform_refinable_driver.cpp)
+target_link_libraries(pecos_uniform_refinable_driver ${pecos_libs})
+add_test(pecos_uniform_refinable_driver pecos_uniform_refinable_driver)
 

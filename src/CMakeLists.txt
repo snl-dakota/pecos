@@ -1,10 +1,8 @@
 # CMakeLists.txt for pecos source (WJB: Note the source file GLOB below)
 
-add_definitions("-DHAVE_CONFIG_H")
-
 include_directories(${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS}
-                    ${PROJECT_BINARY_DIR})
+                    ${Pecos_BINARY_DIR})
 
 if(HAVE_LHS)
   list(APPEND Pecos_libs lhs)
@@ -12,13 +10,13 @@ endif()
 
 if(HAVE_SPARSE_GRID)
   list(APPEND Pecos_libs sparsegrid)
-  include_directories(${PROJECT_SOURCE_DIR}/packages/VPISparseGrid/src)
+  include_directories(${Pecos_SOURCE_DIR}/packages/VPISparseGrid/src)
 endif()
 
 if(HAVE_FFT)
   if(HAVE_FFTW)
     list(APPEND Pecos_libs fftw3)
-    include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
+    include_directories(${Pecos_SOURCE_DIR}/packages/fftw/api)
   elseif(HAVE_DFFTPACK)
     list(APPEND Pecos_libs dfftpack)
   endif()
