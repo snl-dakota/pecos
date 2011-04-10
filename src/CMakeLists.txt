@@ -4,6 +4,8 @@ include_directories(${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS}
                     ${Pecos_BINARY_DIR})
 
+add_definitions("-DHAVE_CONFIG_H")
+
 if(HAVE_LHS)
   list(APPEND Pecos_libs lhs)
 endif()
