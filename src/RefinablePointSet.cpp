@@ -107,4 +107,19 @@ void RefinablePointSet::update_highestLevelPoints()
   highestLevelPointsValid = true;
 }
 
+std::ostream& 
+operator<<(std::ostream& ostr, const RefinablePointSet& pointSet)
+{
+  
+  ostr << "Index" << "\t" << "[level/index]" << "\t" << "Point" << std::endl;
+  ostr << "-----" << "\t" << "-------------" << "\t" << "-----" << std::endl;
+  IntArray value_from_map(2);
+  for ( unsigned int i = 0; i < pointSet.num_interp_points; i++ ) {
+    value_from_map = pointSet.int_index_to_level_index_map[i];
+    ostr << i << "\t[" << value_from_map[0] << "," << value_from_map[1]
+	      << "]\t\t" << pointSet.get_interp_point(value_from_map) << std::endl;
+  }
+  return ostr;
+}
+
 } // End namespace Pecos

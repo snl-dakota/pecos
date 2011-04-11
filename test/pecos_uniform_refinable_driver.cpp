@@ -247,6 +247,9 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
+  //grid printing test
+  std::cout << *a << std::endl;
+
   delete a;
     
   return EXIT_SUCCESS;

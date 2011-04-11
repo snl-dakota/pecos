@@ -31,6 +31,7 @@ int main(int argc, char** argv)
   pointSet->refine_all();
   if ( ( a->get_type1_value(-1, 1) != 1.0 ) ||
        ( a->get_type1_value(-.5,1) != 0.5 ) ||
+       ( a->get_type1_value(2.0,1) != 0.0 ) ||
        ( a->get_type1_value(-1.1,1) != 0.0 ) ||
        ( a->get_type1_value(0.1,1) != 0.0 ) ){
     std::cout << "test failure:  basis[1] did not evaluate correctly."
@@ -42,6 +43,7 @@ int main(int argc, char** argv)
 
   if ( ( a->get_type1_value(1, 2) != 1.0 ) ||
        ( a->get_type1_value(.5,2) != 0.5 ) ||
+       ( a->get_type1_value(0.0,2) != 0.0 ) ||
        ( a->get_type1_value(-.1,2) != 0.0 ) ||
        ( a->get_type1_value(1.1,2) != 0.0 ) ){
     std::cout << "test failure:  basis[2] did not evaluate correctly."
@@ -58,6 +60,7 @@ int main(int argc, char** argv)
 
   if ( ( a->get_type1_value(.25, 5) != 1.0 ) ||
        ( a->get_type1_value(.5,5) != 0.0 ) ||
+       ( a->get_type1_value(0.0,5) != 0.0 ) ||
        ( a->get_type1_value(.75,5) != 0.0 ) ||
        ( a->get_type1_value(.125,5) != 0.5 ) ||
        ( a->get_type1_value(.25 + .125,5) != .5 ) ||
@@ -67,6 +70,261 @@ int main(int argc, char** argv)
               << std::endl;
     return EXIT_FAILURE;
   } 
+
+  // test gradient
+
+  if ( ( a->get_type1_gradient(-.5,0) != 0 ) ||
+       ( a->get_type1_gradient(.5,0) != 0 ) ||
+       ( a->get_type1_gradient(1.5,0) != 0 ) ) {
+    std::cout << "test failure: basis[0] did not evaluate gradient."
+	      << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_gradient(-1, 1) != 0.0 ) ||
+       ( a->get_type1_gradient(0.0,5) != 0.0 ) ||
+       ( a->get_type1_gradient(-.5,1) != -1.0 ) ||
+       ( a->get_type1_gradient(-1.1,1) != 0.0 ) ||
+       ( a->get_type1_gradient(0.1,1) != 0.0 ) ){
+    std::cout << "test failure:  basis[1] did not evaluate gradient."
+	      << " Got f'(-1) == " << a->get_type1_gradient(-1, 1)
+	      << ", f'(-.5) == " << a->get_type1_value(-.5,1)
+              << ", f'(1.1) == " << a->get_type1_value(1.1,1)
+              << ", f'(0.1) == " << a->get_type1_value(0.1,1)
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_gradient(1, 2) != 0.0 ) ||
+       ( a->get_type1_value(0.0,5) != 0.0 ) ||
+       ( a->get_type1_gradient(.5,2) != 1.0 ) ||
+       ( a->get_type1_gradient(-.1,2) != 0.0 ) ||
+       ( a->get_type1_gradient(1.1,2) != 0.0 ) ){
+    std::cout << "test failure:  basis[2] did not evaluate gradient." 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_gradient(.25, 5) != 0.0 ) ||
+       ( a->get_type1_gradient(.5,5) != 0.0 ) ||
+       ( a->get_type1_value(0.0,5) != 0.0 ) ||
+       ( a->get_type1_gradient(.75,5) != 0.0 ) ||
+       ( a->get_type1_gradient(.125,5) != 4 ) ||
+       ( a->get_type1_gradient(.25 + .125,5) != -4 ) ||
+       ( a->get_type1_gradient(-.1,5) != 0 ) ||
+       ( a->get_type1_gradient(.51,5) != 0 ) ){
+    std::cout << "test failure:  basis[5] did not evaluate gradient."
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  delete a;
+
+  // test cubic Hermite evaluations
+
+  a = new HierarchicalBasis(*pointSet, PIECEWISE_CUBIC_INTERP);
+  
+  if ( ( a->get_type1_value(0.1, 0) != 1 ) ||
+       ( a->get_type1_value(-1.1,0) != 0 ) ){
+    std::cout << "test failure:  basis[0] did not evaluate correctly."
+              << " Got f(0.1) = " << a->get_type1_value(0.1, 0)
+              << " and f(-1.1) = " << a->get_type1_value(-1.1, 0) 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_value(-1, 1) != 1.0 ) ||
+       ( a->get_type1_value(-.5,1) != 0.5 ) ||
+       ( a->get_type1_value(0.0,1) != 0.0 ) ||
+       ( a->get_type1_value(-1.1,1) != 0.0 ) ||
+       ( a->get_type1_value(0.1,1) != 0.0 ) ){
+    std::cout << "test failure:  basis[1] did not evaluate correctly."
+              << " Got f(-1) = " << a->get_type1_value(-1, 1)
+              << " and f(-.5) = " << a->get_type1_value(-.5, 1) 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_value(1, 2) != 1.0 ) ||
+       ( a->get_type1_value(0.0,2) != 0.0 ) ||
+       ( a->get_type1_value(.5,2) != 0.5 ) ||
+       ( a->get_type1_value(-.1,2) != 0.0 ) ||
+       ( a->get_type1_value(1.1,2) != 0.0 ) ){
+    std::cout << "test failure:  basis[2] did not evaluate correctly."
+              << " Got f(1) = " << a->get_type1_value(1, 2)
+              << " and f(.5) = " << a->get_type1_value(.5, 2) 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_value(.25, 5) != 1.0 ) ||
+       ( a->get_type1_value(.5,5) != 0.0 ) ||
+       ( a->get_type1_value(0.0,5) != 0.0 ) ||
+       ( a->get_type1_value(.75,5) != 0.0 ) ||
+       ( a->get_type1_value(.125,5) != 0.5 ) ||
+       ( a->get_type1_value(.25 + .125,5) != .5 ) ||
+       ( a->get_type1_value(-.1,5) != 0 ) ||
+       ( a->get_type1_value(.51,5) != 0 ) ){
+    std::cout << "test failure:  basis[5] did not evaluate correctly."
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_value(0.1, 0) != 0 ) ||
+       ( a->get_type2_value(-1.1,0) != 0 ) ){
+    std::cout << "test failure:  basis[0] did not evaluate type 2 correctly."
+              << " Got f(0.1) = " << a->get_type2_value(0.1, 0)
+              << " and f(-1.1) = " << a->get_type2_value(-1.1, 0) 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_value(-1, 1) != 0.0 ) ||
+       ( a->get_type2_value(0.0,1) != 0.0 ) ||
+       ( a->get_type2_value(-.5,1) != 1/8.0 ) ||
+       ( a->get_type2_value(-1.1,1) != 0.0 ) ||
+       ( a->get_type2_value(0.1,1) != 0.0 ) ){
+    std::cout << "test failure:  basis[1] did not evaluate type 2 correctly."
+              << " Got f(-1) = " << a->get_type2_value(-1, 1)
+              << " and f(-.5) = " << a->get_type2_value(-.5, 1) 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_value(1, 2) != 0.0 ) ||
+       ( a->get_type2_value(0.0,2) != 0.0 ) ||
+       ( a->get_type2_value(.5,2) != -1/8.0 ) ||
+       ( a->get_type2_value(-.1,2) != 0.0 ) ||
+       ( a->get_type2_value(1.1,2) != 0.0 ) ){
+    std::cout << "test failure:  basis[2] did not evaluate type 2 correctly."
+              << " Got f(1) = " << a->get_type2_value(1, 2)
+              << " and f(.5) = " << a->get_type2_value(.5, 2) 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_value(.25, 5) != 0.0 ) ||
+       ( a->get_type2_value(.5,5) != 0.0 ) ||
+       ( a->get_type2_value(0.0,5) != 0.0 ) ||
+       ( a->get_type2_value(.75,5) != 0.0 ) ||
+       ( a->get_type2_value(.125,5) != -1/32.0 ) ||
+       ( a->get_type2_value(.25 + .125,5) != 1/32.0 ) ||
+       ( a->get_type2_value(-.1,5) != 0 ) ||
+       ( a->get_type2_value(.51,5) != 0 ) ){
+    std::cout << "test failure:  basis[5] did not evaluate type 2 correctly."
+              << " Got f(.25) == " << a->get_type2_value(.25, 5)
+	      << ", got f(.5) == " << a->get_type2_value(.5, 5)
+	      << ", got f(.75) == " << a->get_type2_value(.25, 5)
+	      << ", got f(.125) == " << a->get_type2_value(.125, 5)
+	      << ", got f(.25+.125) == " << a->get_type2_value(.25+.125, 5)
+	      << ", got f(-.1) == " << a->get_type2_value(-.1, 5)
+              << ", got f(.51) == " << a->get_type2_value(.51, 5)
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  // test cubic hermite gradient
+
+  if ( ( a->get_type1_gradient(-.5,0) != 0 ) ||
+       ( a->get_type1_gradient(.5,0) != 0 ) ||
+       ( a->get_type1_gradient(1.5,0) != 0 ) ) {
+    std::cout << "test failure: cubic_basis[0] did not evaluate type 1 gradient."
+	      << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_gradient(-1, 1) != 0.0 ) ||
+       ( a->get_type1_gradient(0.0,1) != 0.0 ) ||
+       ( a->get_type1_gradient(-.5,1) != -1.5 ) ||
+       ( a->get_type1_gradient(-1.1,1) != 0.0 ) ||
+       ( a->get_type1_gradient(0.1,1) != 0.0 ) ){
+    std::cout << "test failure:  cubic_basis[1] did not evaluate type 1 gradient."
+	      << " Got f'(-1) == " << a->get_type1_gradient(-1, 1)
+	      << ", f'(-.5) == " << a->get_type1_gradient(-.5,1)
+              << ", f'(1.1) == " << a->get_type1_gradient(1.1,1)
+              << ", f'(0.1) == " << a->get_type1_gradient(0.1,1)
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_gradient(1, 2) != 0.0 ) ||
+       ( a->get_type1_gradient(0.0,2) != 0.0 ) ||
+       ( a->get_type1_gradient(.5,2) != 1.5 ) ||
+       ( a->get_type1_gradient(-.1,2) != 0.0 ) ||
+       ( a->get_type1_gradient(1.1,2) != 0.0 ) ){
+    std::cout << "test failure:  cubic_basis[2] did not evaluate type 1 gradient." 
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type1_gradient(.25, 5) != 0.0 ) ||
+       ( a->get_type1_gradient(.5,5) != 0.0 ) ||
+       ( a->get_type1_gradient(0.0,5) != 0.0 ) ||
+       ( a->get_type1_gradient(.75,5) != 0.0 ) ||
+       ( a->get_type1_gradient(.125,5) != 1.5*4 ) ||
+       ( a->get_type1_gradient(.25 + .125,5) != -1.5*4 ) ||
+       ( a->get_type1_gradient(-.1,5) != 0 ) ||
+       ( a->get_type1_gradient(.51,5) != 0 ) ){
+    std::cout << "test failure:  cubic_basis[5] did not evaluate type 1 gradient."
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_gradient(-.5,0) != 0 ) ||
+       ( a->get_type2_gradient(.5,0) != 0 ) ||
+       ( a->get_type2_gradient(1.5,0) != 0 ) ) {
+    std::cout << "test failure: cubic_basis[0] did not evaluate type 2 gradient."
+	      << " Got f(-.5) = " << a->get_type2_gradient(-.5,0)
+              << " Got f(.5) = " << a->get_type2_gradient(.5,0)
+              << " Got f(1.5) = " << a->get_type2_gradient(1.5,0)
+	      << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_gradient(-1, 1) != 1.0 ) ||
+       ( a->get_type2_gradient(0.0,1) != 0.0 ) ||
+       ( a->get_type2_gradient(-.5,1) != -.25 ) ||
+       ( a->get_type2_gradient(-1.1,1) != 0.0 ) ||
+       ( a->get_type2_gradient(0.1,1) != 0.0 ) ){
+    std::cout << "test failure:  cubic_basis[1] did not evaluate type 2 gradient."
+	      << " Got f'(-1) == " << a->get_type2_gradient(-1, 1)
+	      << ", f'(-.5) == " << a->get_type2_gradient(-.5,1)
+              << ", f'(1.1) == " << a->get_type2_gradient(1.1,1)
+              << ", f'(0.1) == " << a->get_type2_gradient(0.1,1)
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_gradient(0, 2) != 0.0 ) ||
+       ( a->get_type2_gradient(0.0,2) != 0.0 ) ||
+       ( a->get_type2_gradient(.5,2) != -.25 ) ||
+       ( a->get_type2_gradient(-.1,2) != 0.0 ) ||
+       ( a->get_type2_gradient(1,2) != 1.0 ) ){
+    std::cout << "test failure:  cubic_basis[2] did not evaluate type 2 gradient."
+	      << " Got f'(0) == " << a->get_type2_gradient(0, 1)
+	      << ", f'(.5) == " << a->get_type2_gradient(.5,1)
+              << ", f'(-.1) == " << a->get_type2_gradient(-.1,1)
+              << ", f'(1) == " << a->get_type2_gradient(1,1)
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  if ( ( a->get_type2_gradient(.25, 5) != 1.0 ) ||
+       ( a->get_type2_gradient(.5,5) != 0.0 ) ||
+       ( a->get_type2_gradient(0.0,5) != 0.0 ) ||
+       ( a->get_type2_gradient(.75,5) != 0.0 ) ||
+       ( a->get_type2_gradient(.125,5) != -.25 ) ||
+       ( a->get_type2_gradient(.25 + .125,5) != -.25 ) ||
+       ( a->get_type2_gradient(-.1,5) != 0 ) ||
+       ( a->get_type2_gradient(.51,5) != 0 ) ){
+    std::cout << "test failure:  cubic_basis[5] did not evaluate type 2 gradient."
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+
+
+  delete a;
+    
 
   return EXIT_SUCCESS;
   

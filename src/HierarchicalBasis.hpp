@@ -43,7 +43,8 @@ public:
   //
 
   /// Standard constructor
-  HierarchicalBasis(RefinablePointSet& pointSet_);
+  HierarchicalBasis(RefinablePointSet& pointSet_, 
+		    short interpType_=PIECEWISE_LINEAR_INTERP);
     
   /// Destructor
   virtual ~HierarchicalBasis();
@@ -68,6 +69,10 @@ protected:
   RefinablePointSet& pointSet;
 
 private:
+
+  /// type of polynomial interpolant: PIECEWISE_LINEAR_INTERP,
+  /// PIECEWISE_QUADRATIC_INTERP, or PIECEWISE_CUBIC_INTERP
+  short interpType;
 
 }; //End class definition
 

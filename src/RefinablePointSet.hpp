@@ -60,12 +60,6 @@ public:
   /// Refines all of the points in the highest level.
   /** Calls refine(). */
   virtual void refine_all();
-    
-  /// Refines the indicated points in the highest level.
-  /** Refine handles the expansion of the int_index_to_level_index_map map
-      each new point gets packed into the map.  Note that refine does NOT
-      update the vector interpPts or highestLevelPoints.*/
-  virtual void refine(const BoolDeque& points) = 0;
 
   /// Returns the point associated with the integer index.
   /**  The ordering of points is in the hierarchical sense
@@ -91,9 +85,19 @@ public:
   /// Returns the total number of interpolation points
   virtual const unsigned int get_num_interp_points() const;
 
+  /// Prints the hierarchical grid.
+  friend std::ostream& 
+  operator<<(std::ostream& ostr, const RefinablePointSet& pointSet);
+
   //
   //- Heading: Pure virtual function definitions
   //
+
+  /// Refines the indicated points in the highest level.
+  /** Refine handles the expansion of the int_index_to_level_index_map map
+      each new point gets packed into the map.  Note that refine does NOT
+      update the vector interpPts or highestLevelPoints.*/
+  virtual void refine(const BoolDeque& points) = 0;
 
   /// Returns the nearest point in a lower level to the left of the given point 
   virtual const Real get_left_neighbor(const unsigned int idx) const = 0;
