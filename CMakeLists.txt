@@ -115,6 +115,12 @@ endif()
 endif()
 link_directories(${Teuchos_LIBRARY_DIRS})
 
+# Export target
+if(Dakota_export_target)
+  set(Pecos_export_target ${Dakota_export_target})
+else()
+  set(Pecos_export_target Pecos-targets)
+endif()
 
 add_subdirectory(packages)
 
@@ -144,7 +150,7 @@ configure_file("${Pecos_SOURCE_DIR}/cmake/empty.cxx.in"
 
 add_library(pecos empty.cxx)
 target_link_libraries(pecos ${SUBLIBS})
-install(TARGETS pecos DESTINATION lib)
+install(TARGETS pecos EXPORT ${Pecos_export_target} DESTINATION lib)
 
 # WJB - ToDo: delete here to bottom once I am done debugging the bldSettings
 FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")
