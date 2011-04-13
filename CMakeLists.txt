@@ -70,6 +70,9 @@ endfunction(CheckPackage)
 #Descend into source subdirectories based on user preference
 
 CheckPackage(LHS)
+if(HAVE_LHS)
+  list(APPEND SUBLIBS mods mod)
+endif(HAVE_LHS)
 
 if(HAVE_FFT)
   CheckPackage(DFFTPACK)
