@@ -70,7 +70,6 @@ endfunction(CheckPackage)
 #Descend into source subdirectories based on user preference
 
 CheckPackage(LHS)
-list(APPEND SUBLIBS mods mod)
 
 if(HAVE_FFT)
   CheckPackage(DFFTPACK)
@@ -138,7 +137,7 @@ configure_file("${Pecos_SOURCE_DIR}/cmake/pecos_config.h.in"
   @ONLY
 )
 
-add_definitions("-DHAVE_CONFIG_H")
+remove_definitions("-DHAVE_CONFIG_H")
 
 
 # libpecos.la must be built PRIOR to the linkage of test executables

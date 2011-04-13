@@ -15,6 +15,8 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 
 
 #ifdef HAVE_LHS
+#ifdef HAVE_CONFIG_H
+// Use the classic, autotools Fortran name mangling macros in pecos_config.h
 #define LHS_INIT_MEM_FC FC_FUNC_(lhs_init_mem,LHS_INIT_MEM)
 #define LHS_PREP_FC     FC_FUNC_(lhs_prep,LHS_PREP)
 #define LHS_RUN_FC      FC_FUNC_(lhs_run,LHS_RUN)
@@ -25,8 +27,26 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_CORR2_FC    FC_FUNC_(lhs_corr2,LHS_CORR2)
 #define LHS_FILES2_FC   FC_FUNC_(lhs_files2,LHS_FILES2)
 
-#define rnumlhs10 FC_FUNC(rnumlhs10,RNUMLHS10)
-#define rnumlhs20 FC_FUNC(rnumlhs20,RNUMLHS20)
+#define rnumlhs10       FC_FUNC(rnumlhs10,RNUMLHS10)
+#define rnumlhs20       FC_FUNC(rnumlhs20,RNUMLHS20)
+
+#else
+// wjbPOUND (already done in MonostateHDR) #include "LHS.h"
+// Use the CMake-generated PREFIXED, fortran name mangling macros (no warnings)
+#define LHS_INIT_MEM_FC LHS_GLOBAL_(lhs_init_mem,LHS_INIT_MEM)
+#define LHS_PREP_FC     LHS_GLOBAL_(lhs_prep,LHS_PREP)
+#define LHS_RUN_FC      LHS_GLOBAL_(lhs_run,LHS_RUN)
+#define LHS_CLOSE_FC    LHS_GLOBAL_(lhs_close,LHS_CLOSE)
+#define LHS_OPTIONS2_FC LHS_GLOBAL_(lhs_options2,LHS_OPTIONS2)
+#define LHS_DIST2_FC    LHS_GLOBAL_(lhs_dist2,LHS_DIST2)
+#define LHS_UDIST2_FC   LHS_GLOBAL_(lhs_udist2,LHS_UDIST2)
+#define LHS_CORR2_FC    LHS_GLOBAL_(lhs_corr2,LHS_CORR2)
+#define LHS_FILES2_FC   LHS_GLOBAL_(lhs_files2,LHS_FILES2)
+
+#define rnumlhs10       LHS_GLOBAL(rnumlhs10,RNUMLHS10)
+#define rnumlhs20       LHS_GLOBAL(rnumlhs20,RNUMLHS20)
+
+#endif // HAVE_CONFIG_H
 
 extern "C" {
 

@@ -5,7 +5,7 @@ include_directories(${Pecos_BINARY_DIR} ${Pecos_SOURCE_DIR}/src
                     ${Teuchos_INCLUDE_DIRS})
 
 if(HAVE_SPARSE_GRID)
-  include_directories(${Pecos_SOURCE_DIR}/packages/VPISparseGrid/src)
+  include_directories(${VPISparseGrid_SOURCE_DIR}/src)
 endif(HAVE_SPARSE_GRID)
 
 # Ideally the test executables need to link to only "pecos" because it

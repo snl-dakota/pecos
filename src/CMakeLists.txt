@@ -4,15 +4,17 @@ include_directories(${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS}
                     ${Pecos_BINARY_DIR})
 
-add_definitions("-DHAVE_CONFIG_H")
+#add_definitions("-DHAVE_CONFIG_H")
+remove_definitions("-DHAVE_CONFIG_H")
 
 if(HAVE_LHS)
-  list(APPEND Pecos_libs lhs)
+  include_directories(${LHS_BINARY_DIR}/include)
+  list(APPEND Pecos_libs lhs mods mod)
 endif()
 
 if(HAVE_SPARSE_GRID)
+  include_directories(${VPISparseGrid_SOURCE_DIR}/src)
   list(APPEND Pecos_libs sparsegrid)
-  include_directories(${Pecos_SOURCE_DIR}/packages/VPISparseGrid/src)
 endif()
 
 if(HAVE_FFT)
@@ -25,13 +27,9 @@ if(HAVE_FFT)
 endif()
 
 # Unconditional dependencies.
-list(APPEND Pecos_libs
-  ${Teuchos_LIBRARIES}
-  ${LAPACK_LIBS}
-  ${BLAS_LIBS}
-  ${FLIBS}
-  ${FCLIBS}
-  )
+list(APPEND Pecos_libs ${Teuchos_LIBRARIES}
+  ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS}
+)
 
 ## Pecos library sources.
 file(GLOB Pecos_src *.cpp)
