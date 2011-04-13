@@ -38,5 +38,5 @@ list(APPEND Pecos_hdr ${Pecos_BINARY_DIR}/pecos_config.h)
 
 add_library(pecos_src ${Pecos_src})
 target_link_libraries(pecos_src ${Pecos_libs})
-install(TARGETS pecos_src EXPORT ${Pecos_export_target} DESTINATION lib)
+install(TARGETS pecos_src EXPORT ${ExportTarget} DESTINATION lib)
 install(FILES ${Pecos_hdr} DESTINATION include)
