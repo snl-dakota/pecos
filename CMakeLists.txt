@@ -130,13 +130,15 @@ if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
 
+# WJB:  remove permanently once I "get buyin" on the NO "HAVE_LHS" in header
+#   file issue 
+#
 # Package-specific configuration options
-include_directories(${Pecos_BINARY_DIR})
-
-configure_file("${Pecos_SOURCE_DIR}/cmake/pecos_config.h.in"
-  "${Pecos_BINARY_DIR}/pecos_config.h"
-  @ONLY
-)
+#
+#configure_file("${Pecos_SOURCE_DIR}/cmake/pecos_config.h.in"
+#  "${Pecos_BINARY_DIR}/pecos_config.h"
+#  @ONLY
+#)
 
 remove_definitions("-DHAVE_CONFIG_H")
 

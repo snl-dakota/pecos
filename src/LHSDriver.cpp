@@ -31,7 +31,6 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define rnumlhs20       FC_FUNC(rnumlhs20,RNUMLHS20)
 
 #else
-// wjbPOUND (already done in MonostateHDR) #include "LHS.h"
 // Use the CMake-generated PREFIXED, fortran name mangling macros (no warnings)
 #define LHS_INIT_MEM_FC LHS_GLOBAL_(lhs_init_mem,LHS_INIT_MEM)
 #define LHS_PREP_FC     LHS_GLOBAL_(lhs_prep,LHS_PREP)
