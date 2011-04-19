@@ -25,6 +25,18 @@ if(CMAKE_SYSTEM_NAME MATCHES Darwin)
 endif()
 
 
+# WJB:  remove permanently once I "get buyin" on the NO "HAVE_LHS" in header
+#   file issue 
+#
+# Package-specific configuration options
+#
+#configure_file("${Pecos_SOURCE_DIR}/cmake/pecos_config.h.in"
+#  "${Pecos_BINARY_DIR}/pecos_config.h"
+#  @ONLY
+#)
+
+remove_definitions("-DHAVE_CONFIG_H")
+
 # Mandate a system or user-provided Boost
 find_package(Boost 1.37 REQUIRED)
 
@@ -129,18 +141,6 @@ add_subdirectory(src)
 if(BUILD_TESTING)
   add_subdirectory(test)
 endif()
-
-# WJB:  remove permanently once I "get buyin" on the NO "HAVE_LHS" in header
-#   file issue 
-#
-# Package-specific configuration options
-#
-#configure_file("${Pecos_SOURCE_DIR}/cmake/pecos_config.h.in"
-#  "${Pecos_BINARY_DIR}/pecos_config.h"
-#  @ONLY
-#)
-
-remove_definitions("-DHAVE_CONFIG_H")
 
 
 # libpecos.la must be built PRIOR to the linkage of test executables
