@@ -35,8 +35,9 @@ public:
   //
 
   LHSDriver();  ///< default constructor
-  LHSDriver(const String& sample_type, short sample_ranks_mode = IGNORE_RANKS,
-	    bool reports = true);  ///< constructor
+  LHSDriver(const std::string& sample_type,
+            short sample_ranks_mode = IGNORE_RANKS,
+            bool reports = true);  ///< constructor
   ~LHSDriver(); ///< destructor
 
   //
@@ -44,7 +45,7 @@ public:
   //
 
   /// populate data when not passed through ctor
-  void initialize(const String& sample_type,
+  void initialize(const std::string& sample_type,
 		  short sample_ranks_mode = IGNORE_RANKS, bool reports = true);
 
   /// set randomSeed
@@ -53,9 +54,9 @@ public:
   int seed() const;
 
   /// set random number generator
-  void rng(const String& unif_gen);
+  void rng(const std::string& unif_gen);
   // return name of uniform generator
-  //String rng();
+  //std::string rng();
 
   /// reseed using a deterministic sequence
   void advance_seed_sequence();
@@ -103,6 +104,9 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// checks whether LHS is enabled in the build and aborts if not
+  static void abort_if_no_lhs();
+
   /// checks the return codes from LHS routines and aborts if an
   /// error is returned
   void check_error(const int& err_code, const char* err_source) const;
@@ -112,7 +116,7 @@ private:
   //
 
   /// type of sampling: random, lhs, incremental_lhs, or incremental_random
-  String sampleType;
+  std::string sampleType;
 
   /// the current random number seed
   int randomSeed;
@@ -133,11 +137,7 @@ private:
 inline LHSDriver::LHSDriver() : sampleType("lhs"), randomSeed(0),
   sampleRanksMode(IGNORE_RANKS), reportFlag(true), allowSeedAdvance(1)
 {
-#ifndef HAVE_LHS
-  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
-	<< std::endl;
-  abort_handler(-1);
-#endif
+  abort_if_no_lhs();
 }
 
 
@@ -146,7 +146,7 @@ inline LHSDriver::~LHSDriver()
 
 
 inline void LHSDriver::
-initialize(const String& sample_type, short sample_ranks_mode, bool reports)
+initialize(const std::string& sample_type, short sample_ranks_mode,bool reports)
 {
   sampleType      = sample_type;
   sampleRanksMode = sample_ranks_mode;
@@ -154,14 +154,11 @@ initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 }
 
 
-inline LHSDriver::LHSDriver(const String& sample_type, short sample_ranks_mode,
-			    bool reports): allowSeedAdvance(1)
+inline LHSDriver::LHSDriver(const std::string& sample_type,
+			    short sample_ranks_mode, bool reports)
+  : allowSeedAdvance(1)
 {
-#ifndef HAVE_LHS
-  PCerr << "Error: LHSDriver not available as PECOS was configured without LHS."
-	<< std::endl;
-  abort_handler(-1);
-#endif
+  abort_if_no_lhs();
   initialize(sample_type, sample_ranks_mode, reports);
 }
 
