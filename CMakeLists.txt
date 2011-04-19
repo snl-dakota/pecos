@@ -38,7 +38,7 @@ endif()
 remove_definitions("-DHAVE_CONFIG_H")
 
 # Mandate a system or user-provided Boost
-find_package(Boost 1.37 REQUIRED)
+find_package(Boost 1.40 REQUIRED)
 
 
 include(CTest)
