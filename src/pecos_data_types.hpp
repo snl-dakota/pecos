@@ -9,9 +9,11 @@
 #ifndef PECOS_DATA_TYPES_H
 #define PECOS_DATA_TYPES_H
 
-#ifdef HAVE_CONFIG_H
-#include "pecos_config.h"
-#endif /* HAVE_CONFIG_H */
+#if defined(HAVE_CONFIG_H) && !defined(DISABLE_DAKOTA_CONFIG_H)
+  // HAVE_CONFIG_H is STILL set in Dakota/src (EVEN IN THE CMAKE BUILD!) so
+  // use a "disable config header" conditional to help manage the transition
+  #include "pecos_config.h"
+#endif // HAVE_CONFIG_H
 
 #include "pecos_global_defs.hpp"
 
