@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 
   if ( ( a->get_type1_gradient(.25, 5) != 0.0 ) ||
        ( a->get_type1_gradient(.5,5) != 0.0 ) ||
-       ( a->get_type1_value(0.0,5) != 0.0 ) ||
+       ( a->get_type1_gradient(0.0,5) != 0.0 ) ||
        ( a->get_type1_gradient(.75,5) != 0.0 ) ||
        ( a->get_type1_gradient(.125,5) != 4 ) ||
        ( a->get_type1_gradient(.25 + .125,5) != -4 ) ||
@@ -117,6 +117,22 @@ int main(int argc, char** argv)
               << std::endl;
     return EXIT_FAILURE;
   }
+
+  //test upcasting to a nodal basis.
+  PiecewiseInterpPolynomial b = HierarchicalBasis(*pointSet);
+  /*
+  if ( ( b.get_type1_value(-1, 0) != 1.0 ) ||
+       ( b.get_type1_value(-.75,0) != 0.5 ) ||
+       ( b.get_type1_value(-0.5,0) != 0.0 ) ||
+       ( b.get_type1_value(-.5,2) != 0.0 ) ||
+       ( b.get_type1_value(-.25,2) != .5 ) ||
+       ( b.get_type1_value(0.0,2) != 1 ) ||
+       ( b.get_type1_value(.125,2) != 0.5 ) ) {
+    std::cout << "test failure:  upcasting to nodal basis unsuccessful. VALUE"
+              << std::endl;
+    return EXIT_FAILURE;
+  }
+  */
 
   delete a;
 

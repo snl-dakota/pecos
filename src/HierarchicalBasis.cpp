@@ -18,9 +18,17 @@ namespace Pecos{
 
 /// Default constructor throws an exception if left_end_ >= right_end_.
   HierarchicalBasis::HierarchicalBasis(RefinablePointSet& pointSet_, short interpType_):
+    PiecewiseInterpPolynomial(interpType_,CLENSHAW_CURTIS),
     pointSet(pointSet_),
-  interpType(interpType_)
-{}
+    interpType(interpType_)
+{
+  interpPts = (pointSet.get_interp_points());
+  if ( interpType == PIECEWISE_QUADRATIC_INTERP ) {
+    PCerr << "Quadratic interpolation not currently implemented in"
+	  << " HierarchicalBasis. Defaulting to linear interpolation.";
+    interpType = PIECEWISE_LINEAR_INTERP;
+  }
+}
 
 HierarchicalBasis::~HierarchicalBasis()
 {}

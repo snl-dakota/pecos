@@ -15,7 +15,7 @@
 #ifndef HIERARCHICABASIS_HPP
 #define HIERARCHICABASIS_HPP
 
-#include "InterpolationPolynomial.hpp"
+#include "PiecewiseInterpPolynomial.hpp"
 #include "pecos_data_types.hpp"
 #include "RefinablePointSet.hpp"
 
@@ -34,13 +34,13 @@ namespace Pecos {
     2009.
 */
 
-class HierarchicalBasis: public InterpolationPolynomial
+class HierarchicalBasis: public PiecewiseInterpPolynomial
 {
 public:
 
   //
   //- Heading: Constructor and Destructor
-  //
+  // 
 
   /// Standard constructor
   HierarchicalBasis(RefinablePointSet& pointSet_, 
