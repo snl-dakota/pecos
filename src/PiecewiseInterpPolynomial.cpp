@@ -59,7 +59,7 @@ get_type1_value(const Real& x, unsigned short i)
       // linear spline interpolant with general point spacing on [a,b];
       // forward/backward looking indices protected by x{<,>}pt_i (closed rules)
       const Real& pt_im1 = interpPts[i-1]; const Real& pt_ip1 = interpPts[i+1];
-      if      (x < pt_i && x > pt_im1)
+      if (x <= pt_i && x > pt_im1) // for x=pt_i: val=1, not 0
 	basisPolyValue = 1. - (x - pt_i)/(pt_im1 - pt_i);
       else if (x > pt_i && x < pt_ip1)
 	basisPolyValue = 1. - (x - pt_i)/(pt_ip1 - pt_i);
@@ -106,12 +106,14 @@ get_type1_value(const Real& x, unsigned short i)
     // cubic Hermite spline interpolant with general point spacing
     // glue together shape fn h01 from [i-1,i] with h00 from [i,i+1]
     const Real& pt_im1 = interpPts[i-1]; const Real& pt_ip1 = interpPts[i+1];
-    if (x < pt_i && x > pt_im1) {         // p_k+1=1, p_k=m_k=m_k+1=0
-      Real t = (x-pt_im1)/(pt_i-pt_im1);  // left half interval
+    if (x <= pt_i && x > pt_im1) { // for x=pt_i: val=1, not 0
+      // left half interval: p_k+1=1, p_k=m_k=m_k+1=0
+      Real t = (x-pt_im1)/(pt_i-pt_im1); 
       basisPolyValue = t*t*(3.-2.*t);     // h01(t)
     }
-    else if (x > pt_i && x < pt_ip1) {    // p_k=1, p_k+1=m_k=m_k+1=0
-      Real t = (x - pt_i)/(pt_ip1-pt_i), tm1 = t-1.; // right half interval
+    else if (x > pt_i && x < pt_ip1) {
+      // right half interval: p_k=1, p_k+1=m_k=m_k+1=0
+      Real t = (x - pt_i)/(pt_ip1-pt_i), tm1 = t-1.;
       basisPolyValue = tm1*tm1*(1.+2.*t); // h00(t)
     }
     else
@@ -145,7 +147,7 @@ get_type2_value(const Real& x, unsigned short i)
       Real interval = pt_ip1-pt_i, t = (x-pt_i)/interval, tm1 = t-1.;
       basisPolyValue = interval*tm1*tm1*t;  // interval*h10(t) -> h10(\xi)
     }
-    else
+    else // includes x == pt_i
       basisPolyValue = 0.;
     break;
   }
@@ -181,7 +183,7 @@ get_type1_gradient(const Real& x, unsigned short i)
 	basisPolyGradient =  1./(pt_i - pt_im1);
       else if (x > pt_i && x < pt_ip1)
 	basisPolyGradient = -1./(pt_ip1 - pt_i);
-      else
+      else // includes x == pt_i
 	basisPolyGradient = 0.;
       break;
     }
@@ -192,7 +194,7 @@ get_type1_gradient(const Real& x, unsigned short i)
     case NEWTON_COTES: {
       Real dist = x - pt_i;
       basisPolyGradient = (std::abs(dist) < interpInterval) ?
-	-2.*dist/(interpInterval*interpInterval) : 0.;
+	-2.*dist/(interpInterval*interpInterval) : 0.; // includes dist=0 case
       break;
     }
     default: {
@@ -233,7 +235,7 @@ get_type1_gradient(const Real& x, unsigned short i)
       Real interval = pt_ip1-pt_i, t = (x-pt_i)/interval, dt_dx = 1./interval;
       basisPolyGradient = 6.*t*(t-1.)*dt_dx; // dh00/dt * dt/dx
     }
-    else
+    else // includes x == pt_i
       basisPolyGradient = 0.;
     break;
   }
@@ -254,7 +256,7 @@ get_type2_gradient(const Real& x, unsigned short i)
     // glue together shape fn h11 from [i-1,i] with h10 from [i,i+1]
     const Real& pt_i   = interpPts[i];
     const Real& pt_im1 = interpPts[i-1]; const Real& pt_ip1 = interpPts[i+1];
-    if (x < pt_i && x > pt_im1) {
+    if (x <= pt_i && x > pt_im1) { // for x=pt_i: grad=1, not 0
       // left half interval: m_k+1=1, m_k=p_k=p_k+1=0
       Real interval = pt_i-pt_im1, t = (x-pt_im1)/interval;//,dt_dx=1./interval;
       basisPolyGradient = t*(3.*t-2.);//*interval*dt_dx (terms cancel)
@@ -265,7 +267,7 @@ get_type2_gradient(const Real& x, unsigned short i)
       basisPolyGradient = t*(3.*t-4.)+1.;//*interval*dt_dx (terms cancel)
     }
     else
-      basisPolyGradient = 0.; // TO DO: x == pt_i -> grad = 1
+      basisPolyGradient = 0.;
     break;
   }
   }
