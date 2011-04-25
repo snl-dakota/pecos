@@ -5,6 +5,7 @@ project("Pecos" C CXX Fortran)
 include(FortranCInterface)
 
 option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" ON)
+remove_definitions("-DHAVE_CONFIG_H")
 
 
 # first check for a system blas and lapack
@@ -24,18 +25,6 @@ if(CMAKE_SYSTEM_NAME MATCHES Darwin)
       "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
 endif()
 
-
-# WJB:  remove permanently once I "get buyin" on the NO "HAVE_LHS" in header
-#   file issue 
-#
-# Package-specific configuration options
-#
-#configure_file("${Pecos_SOURCE_DIR}/cmake/pecos_config.h.in"
-#  "${Pecos_BINARY_DIR}/pecos_config.h"
-#  @ONLY
-#)
-
-remove_definitions("-DHAVE_CONFIG_H")
 
 # Mandate a system or user-provided Boost
 find_package(Boost 1.40 REQUIRED)

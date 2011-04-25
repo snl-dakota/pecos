@@ -33,7 +33,6 @@ list(APPEND Pecos_libs ${Teuchos_LIBRARIES}
 ## Pecos library sources.
 file(GLOB Pecos_src *.cpp)
 file(GLOB Pecos_hdr *.hpp)
-list(APPEND Pecos_hdr ${Pecos_BINARY_DIR}/pecos_config.h)
 
 add_library(pecos_src ${Pecos_src})
 target_link_libraries(pecos_src ${Pecos_libs})
