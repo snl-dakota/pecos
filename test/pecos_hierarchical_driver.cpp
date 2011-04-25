@@ -10,14 +10,14 @@
     \brief A test program for HierarchicalLinearBasis class. */
 
 
-#include "HierarchicalBasis.hpp"
+#include "HierarchPWInterpPolynomial.hpp"
 #include "UniformRefinablePointSet.hpp"
 using namespace Pecos;
 int main(int argc, char** argv)
 {
   
   RefinablePointSet *pointSet = new UniformRefinablePointSet(-1,1);
-  HierarchicalBasis *a = new HierarchicalBasis(*pointSet);
+  HierarchPWInterpPolynomial *a = new HierarchPWInterpPolynomial(*pointSet);
 
   if ( ( a->get_type1_value(0.1, 0) != 1 ) ||
        ( a->get_type1_value(-1.1,0) != 0 ) ){
@@ -119,8 +119,8 @@ int main(int argc, char** argv)
   }
 
   //test upcasting to a nodal basis.
-  PiecewiseInterpPolynomial b = HierarchicalBasis(*pointSet);
-  /*
+  PiecewiseInterpPolynomial b = HierarchPWInterpPolynomial(*pointSet);
+  /*  Will add this in once issue with boundary points is settled.
   if ( ( b.get_type1_value(-1, 0) != 1.0 ) ||
        ( b.get_type1_value(-.75,0) != 0.5 ) ||
        ( b.get_type1_value(-0.5,0) != 0.0 ) ||
@@ -138,7 +138,7 @@ int main(int argc, char** argv)
 
   // test cubic Hermite evaluations
 
-  a = new HierarchicalBasis(*pointSet, PIECEWISE_CUBIC_INTERP);
+  a = new HierarchPWInterpPolynomial(*pointSet, PIECEWISE_CUBIC_INTERP);
   
   if ( ( a->get_type1_value(0.1, 0) != 1 ) ||
        ( a->get_type1_value(-1.1,0) != 0 ) ){

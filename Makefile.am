@@ -59,6 +59,7 @@ include_HEADERS = pecos_config.h				\
 		     src/InterpolationPolynomial.hpp		\
 		     src/LagrangeInterpPolynomial.hpp		\
 		     src/PiecewiseInterpPolynomial.hpp		\
+		     src/HierarchPWInterpPolynomial.hpp		\
 		     src/OrthogonalPolynomial.hpp		\
 		     src/ChebyshevOrthogPolynomial.hpp		\
 		     src/GenLaguerreOrthogPolynomial.hpp	\

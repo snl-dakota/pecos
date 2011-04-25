@@ -34,7 +34,7 @@ namespace Pecos {
     2009.
 */
 
-class HierarchicalBasis: public PiecewiseInterpPolynomial
+class HierarchPWInterpPolynomial: public PiecewiseInterpPolynomial
 {
 public:
 
@@ -43,11 +43,11 @@ public:
   // 
 
   /// Standard constructor
-  HierarchicalBasis(RefinablePointSet& pointSet_, 
+  HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, 
 		    short interpType_=PIECEWISE_LINEAR_INTERP);
     
   /// Destructor
-  virtual ~HierarchicalBasis();
+  virtual ~HierarchPWInterpPolynomial();
 
   //
   //- Heading: Virtual function redefinitions

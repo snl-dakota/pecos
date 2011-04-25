@@ -6,18 +6,18 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:        HierarchicalBasis
-//- Description:  Implementation code for HierarchicalBasis class
+//- Class:        HierarchPWInterpPolynomial
+//- Description:  Implementation code for HierarchPWInterpPolynomial class
 //-               
 //- Owner:        Christopher Miller, University of Maryland
 //- Contact:      cmiller@math.umd.edu
 
-#include "HierarchicalBasis.hpp"
+#include "HierarchPWInterpPolynomial.hpp"
 
 namespace Pecos{
 
 /// Default constructor throws an exception if left_end_ >= right_end_.
-  HierarchicalBasis::HierarchicalBasis(RefinablePointSet& pointSet_, short interpType_):
+  HierarchPWInterpPolynomial::HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, short interpType_):
     PiecewiseInterpPolynomial(interpType_,CLENSHAW_CURTIS),
     pointSet(pointSet_),
     interpType(interpType_)
@@ -25,16 +25,16 @@ namespace Pecos{
   interpPts = (pointSet.get_interp_points());
   if ( interpType == PIECEWISE_QUADRATIC_INTERP ) {
     PCerr << "Quadratic interpolation not currently implemented in"
-	  << " HierarchicalBasis. Defaulting to linear interpolation.";
+	  << " HierarchPWInterpPolynomial. Defaulting to linear interpolation.";
     interpType = PIECEWISE_LINEAR_INTERP;
   }
 }
 
-HierarchicalBasis::~HierarchicalBasis()
+HierarchPWInterpPolynomial::~HierarchPWInterpPolynomial()
 {}
 
 /// Point evaluation of a basis element.
-const Real& HierarchicalBasis::
+const Real& HierarchPWInterpPolynomial::
 get_type1_value(const Real& x, const unsigned int i) 
 {
 
@@ -82,7 +82,7 @@ get_type1_value(const Real& x, const unsigned int i)
 }
 
 /// Point evaluation of the gradient of a basis element.
-const Real& HierarchicalBasis::
+const Real& HierarchPWInterpPolynomial::
 get_type1_gradient(const Real& x, const unsigned int i) 
 {
   const Real nodalPoint = pointSet.get_interp_point(i);
@@ -126,7 +126,7 @@ get_type1_gradient(const Real& x, const unsigned int i)
   return basisPolyGradient;
 }
 
-const Real& HierarchicalBasis::
+const Real& HierarchPWInterpPolynomial::
 get_type2_value(const Real& x, const unsigned int i)
 {
   const Real nodalPoint = pointSet.get_interp_point(i);
@@ -164,7 +164,7 @@ get_type2_value(const Real& x, const unsigned int i)
   return basisPolyValue;
 }
 
-const Real& HierarchicalBasis::
+const Real& HierarchPWInterpPolynomial::
 get_type2_gradient(const Real& x, const unsigned int i)
 {
   const Real nodalPoint = pointSet.get_interp_point(i);
