@@ -93,7 +93,7 @@ void InterpPolyApproximation::allocate_arrays()
 	if (found) // reuse previous instance via shared representation
 	  poly_basis_0[i] = poly_basis_0[j];
 	else { // instantiate a new unique instance
-	  if (basisType == LOCAL_INTERPOLATION_POLYNOMIAL)
+	  if (basisType == PIECEWISE_INTERPOLATION_POLYNOMIAL)
 	    poly_basis_0[i] = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(PIECEWISE_CUBIC_INTERP,  NEWTON_COTES) :
 	      BasisPolynomial(PIECEWISE_LINEAR_INTERP, NEWTON_COTES);
@@ -343,7 +343,7 @@ update_sparse_interpolation_basis(unsigned short max_level)
 	if (found) // reuse previous instances via shared representations
 	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
 	else { // instantiate new unique instances
-	  if (basisType == LOCAL_INTERPOLATION_POLYNOMIAL)
+	  if (basisType == PIECEWISE_INTERPOLATION_POLYNOMIAL)
 	    poly_basis_ij = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(PIECEWISE_CUBIC_INTERP,  NEWTON_COTES) :
 	      BasisPolynomial(PIECEWISE_LINEAR_INTERP, NEWTON_COTES);

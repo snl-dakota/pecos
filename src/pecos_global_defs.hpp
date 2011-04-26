@@ -51,8 +51,8 @@ enum { NO_TARGET, CDV_LWR_BND, CDV_UPR_BND, DDRIV_LWR_BND, DDRIV_UPR_BND,
 
 /// derived basis approximation types
 enum { NO_BASIS, FOURIER_BASIS, EIGEN_BASIS,
-       GLOBAL_INTERPOLATION_POLYNOMIAL, LOCAL_INTERPOLATION_POLYNOMIAL,
-       GLOBAL_ORTHOGONAL_POLYNOMIAL,    LOCAL_ORTHOGONAL_POLYNOMIAL };
+       GLOBAL_INTERPOLATION_POLYNOMIAL, PIECEWISE_INTERPOLATION_POLYNOMIAL,
+       GLOBAL_ORTHOGONAL_POLYNOMIAL,    PIECEWISE_ORTHOGONAL_POLYNOMIAL };
 
 /// derived basis polynomial types (orthogonal polynomial order follows
 /// uncertain variable spec order of normal, uniform, exponential, beta, gamma)

@@ -78,8 +78,8 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
         << std::endl;
 #endif
 
-  if (basis_type == GLOBAL_INTERPOLATION_POLYNOMIAL ||
-      basis_type ==  LOCAL_INTERPOLATION_POLYNOMIAL) {
+  if (basis_type ==    GLOBAL_INTERPOLATION_POLYNOMIAL ||
+      basis_type == PIECEWISE_INTERPOLATION_POLYNOMIAL) {
     if (use_derivs)
       return new  HermiteInterpPolyApproximation(basis_type, num_vars);
     else
@@ -87,7 +87,7 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
   }
   else if (basis_type == GLOBAL_ORTHOGONAL_POLYNOMIAL)
     return new OrthogPolyApproximation(approx_order, num_vars);
-  //else if (basis_type == LOCAL_ORTHOGONAL_POLYNOMIAL)
+  //else if (basis_type == PIECEWISE_ORTHOGONAL_POLYNOMIAL)
   //  return new OrthogPolyApproximation(approx_order, num_vars);
   //else if (basis_type == FOURIER_BASIS)
   //  return new FourierBasisApproximation(num_vars);
