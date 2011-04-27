@@ -18,23 +18,26 @@ namespace Pecos {
 
 void PiecewiseInterpPolynomial::precompute_data()
 {
-  //interpIntervals.size();
-  //for (size_t i=0; i<; ++i)
-  //  interpIntervals[i] = x[k+1] - x[k];
-
-  // For numInterpPts == 1, could unconditionally return value = 1, grad = 0.
-  // For now, enforce numInterpPts to be at least 2.
-  if (numInterpPts < 2) {
-    PCerr << "Error: PiecewiseInterpPolynomial requires at least two points."
+  // For numInterpPts == 1, we unconditionally return value = 1, grad = 0.
+  if (numInterpPts < 1) {
+    PCerr << "Error: PiecewiseInterpPolynomial requires at least one point."
 	  << std::endl;
     abort_handler(-1);
   }
 
   // for equally spaced pts (requires at least 2 points at interval bounds):
-  if (interpMode == NEWTON_COTES) {
+  if (numInterpPts > 1 && interpMode == NEWTON_COTES) {
     size_t num_intervals = numInterpPts - 1;
     interpInterval = (interpPts[num_intervals] - interpPts[0])/num_intervals;
   }
+
+  // for non-equidistant points
+  //if (numInterpPts > 1 && interpMode != NEWTON_COTES) {
+  //  size_t i, num_intervals = numInterpPts - 1;
+  //  interpIntervals.size(num_intervals);
+  //  for (i=0; i<num_intervals; ++i)
+  //    interpIntervals[i] = interpPts[k+1] - interpPts[k];
+  //}
 }
 
 
@@ -43,6 +46,12 @@ void PiecewiseInterpPolynomial::precompute_data()
 const Real& PiecewiseInterpPolynomial::
 get_type1_value(const Real& x, unsigned short i)
 {
+  // handle special case of a single interpolation point
+  if (numInterpPts == 1) {
+    basisPolyValue = 1.;
+    return basisPolyValue;
+  }
+
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
   switch (interpType) {
@@ -139,6 +148,17 @@ get_type1_value(const Real& x, unsigned short i)
 const Real& PiecewiseInterpPolynomial::
 get_type2_value(const Real& x, unsigned short i)
 {
+  // handle special case of a single interpolation point
+  if (numInterpPts == 1) {
+    switch (interpType) {
+    case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
+      basisPolyValue = 0.; break;
+    case PIECEWISE_CUBIC_INTERP:
+      basisPolyValue = x; break; // integral of grad = 1 condition
+    }
+    return basisPolyValue;
+  }
+
   switch (interpType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     basisPolyValue = 0.;
@@ -177,6 +197,12 @@ get_type2_value(const Real& x, unsigned short i)
 const Real& PiecewiseInterpPolynomial::
 get_type1_gradient(const Real& x, unsigned short i)
 { 
+  // handle special case of a single interpolation point
+  if (numInterpPts == 1) {
+    basisPolyGradient = 0.; // derivative of value = 1 condition
+    return basisPolyGradient;
+  }
+
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
   switch (interpType) {
@@ -273,6 +299,17 @@ get_type1_gradient(const Real& x, unsigned short i)
 const Real& PiecewiseInterpPolynomial::
 get_type2_gradient(const Real& x, unsigned short i)
 {
+  // handle special case of a single interpolation point
+  if (numInterpPts == 1) {
+    switch (interpType) {
+    case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
+      basisPolyGradient = 0.; break;
+    case PIECEWISE_CUBIC_INTERP:
+      basisPolyGradient = 1.; break;
+    }
+    return basisPolyGradient;
+  }
+
   switch (interpType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     basisPolyGradient = 0.;
