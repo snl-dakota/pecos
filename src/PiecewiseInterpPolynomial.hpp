@@ -64,6 +64,15 @@ protected:
 
   void precompute_data();
 
+  /// return the interpolation points corresponding to a point set of size order
+  const RealArray& interpolation_points(unsigned short order);
+  /// return the type 1 interpolation weights corresponding to a point
+  /// set of size order
+  const RealArray& type1_interpolation_weights(unsigned short order);
+  /// return the type 2 interpolation weights corresponding to a point
+  /// set of size order
+  const RealArray& type2_interpolation_weights(unsigned short order);
+
 private:
 
   //
@@ -77,8 +86,13 @@ private:
   /// CLENSHAW_CURTIS (non-equidistant)
   short interpMode;
 
-  /// the constant interval between points for equidistant interpModes
+  /// the constant interval between points for an equidistant interpMode
   Real interpInterval;
+
+  /// set of 1-D weights for interpolation of values
+  RealArray type1InterpWts;
+  /// set of 1-D] weights for interpolation of gradients
+  RealArray type2InterpWts;
 };
 
 

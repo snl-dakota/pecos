@@ -12,6 +12,9 @@
 //- Owner:        Mike Eldred, Sandia National Laboratories
 
 #include "PiecewiseInterpPolynomial.hpp"
+#ifdef HAVE_SPARSE_GRID
+#include "sandia_rules.H"
+#endif
 
 namespace Pecos {
 
@@ -340,6 +343,169 @@ get_type2_gradient(const Real& x, unsigned short i)
   }
   }
   return basisPolyGradient;
+}
+
+
+const RealArray& PiecewiseInterpPolynomial::
+interpolation_points(unsigned short order)
+{
+  // pull this outside block below since order=0 is initial interpPts length
+  if (order < 1) {
+    PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
+	  << "Polynomial::interpolation_points()." << std::endl;
+    abort_handler(-1);
+  }
+
+  // Computation of interpPts depends only on interpMode (not on interpType).
+  // Points are defined on [-1,1] (unlike Ma & Zabaras, Jakeman, etc.).
+  // Bypass webbur::{hce,hcc}_compute_points() since it replicates points
+  // in an array of size 2*order to match type1/2 weight aggregation.
+
+  bool mode_err = false;
+  if (interpPts.size() != order) { // if not already computed
+    interpPts.resize(order);
+    if (order == 1)
+      interpPts[0] = 0.;
+    else if (interpMode == NEWTON_COTES) {
+      Real val = 2./((Real)(order - 1));
+      for (unsigned short i=0; i<order; ++i)
+	interpPts[i] = val*i - 1.;
+    }
+    else if (interpMode == CLENSHAW_CURTIS) {
+#ifdef HAVE_SPARSE_GRID
+      webbur::clenshaw_curtis_compute_points(order, &interpPts[0]);
+#else
+      PCerr << "Error: configuration with VPISparseGrid package required in "
+	    << "PiecewiseInterpPolynomial::interpolation_points()."<< std::endl;
+      abort_handler(-1);
+#endif
+    }
+    else
+      mode_err = true;
+  }
+
+  if (mode_err) {
+    PCerr << "Error: unsupported interpolation mode in "
+	  << "PiecewiseInterpPolynomial::interpolation_points()." << std::endl;
+    abort_handler(-1);
+  }
+
+  return interpPts;
+}
+
+
+const RealArray& PiecewiseInterpPolynomial::
+type1_interpolation_weights(unsigned short order)
+{
+  // pull this outside block below since order=0 is initial colloc pts length
+  if (order < 1) {
+    PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
+	  << "Polynomial::interpolation_weights()." << std::endl;
+    abort_handler(-1);
+  }
+
+  bool mode_err = false;
+  if (type1InterpWts.size() != order) { // if not already computed
+    type1InterpWts.resize(order);
+    if (order == 1)
+      type1InterpWts[0] = 1.;
+    else
+      switch (interpType) {
+      case PIECEWISE_LINEAR_INTERP: case PIECEWISE_CUBIC_INTERP:
+	//   Left end:  (x_1 - a)/2/(b-a)           = (x_1 - a)/4
+	//   Interior:  (x_{i+1} - x_{i-1})/2/(b-a) = (x_{i+1} - x_{i-1})/4
+	//   Right end: (b - x_{order-2})/2/(b-a)   = (b - x_{order-2})/4
+	// Bypass webbur::{hce,hcc}_compute_weights() since it aggregates
+	// type1/2 weights in a single array of size 2*order
+	if (interpMode == NEWTON_COTES) {
+	  Real val = interpInterval/4.;
+	  type1InterpWts[0] = type1InterpWts[order-1] = val; // left/right ends
+	  val *= 2.;
+	  for (unsigned short i=1; i<order-1; ++i)
+	    type1InterpWts[i] = val; // interior
+	}
+	else if (interpMode == CLENSHAW_CURTIS) {
+	  // bases for left and right ends span one interp interval
+	  type1InterpWts[0]       = (interpPts[1]      -interpPts[0])/4.;
+	  type1InterpWts[order-1] = (interpPts[order-1]-interpPts[order-2])/4.;
+	  // interior bases span two interp intervals
+	  for (unsigned short i=1; i<order-1; ++i)
+	    type1InterpWts[i] = (interpPts[i+1]-interpPts[i-1])/4.;
+	}
+	else
+	  mode_err = true;
+	break;
+      case PIECEWISE_QUADRATIC_INTERP:
+	mode_err = true; break;
+      }
+  }
+
+  if (mode_err) {
+    PCerr << "Error: unsupported interpolation mode in "
+	  << "PiecewiseInterpPolynomial::interpolation_weights()." << std::endl;
+    abort_handler(-1);
+  }
+
+  return type1InterpWts;
+}
+
+
+const RealArray& PiecewiseInterpPolynomial::
+type2_interpolation_weights(unsigned short order)
+{
+  // pull this outside block below since order=0 is initial colloc pts length
+  if (order < 1) {
+    PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
+	  << "Polynomial::interpolation_weights()." << std::endl;
+    abort_handler(-1);
+  }
+
+  bool mode_err = false;
+  switch (interpType) {
+  case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
+    if (!type2InterpWts.empty())
+      type2InterpWts.clear();
+    break;
+  case PIECEWISE_CUBIC_INTERP:
+    //   Left end:   (x_1 - a)^2/12/(b-a)         =  (x_1 - a)/24
+    //   Interior:   (x_{i+1} - 2x_i + x_{i-1})(x_{i+1} - x_{i-1})/12/(b-a)
+    //            =  (x_{i+1} - 2x_i + x_{i-1})(x_{i+1} - x_{i-1})/24
+    //   Right end: -(b - x_{order-2})^2/12/(b-a) = -(b - x_{order-2})/24
+    // Bypass webbur::{hce,hcc}_compute_weights() since it aggregates
+    // type1/2 weights in a single array of size 2*order
+    if (type2InterpWts.size() != order) { // if not already computed
+      type2InterpWts.resize(order);
+      if (order == 1)
+	type2InterpWts[0] = 0.; // TO DO: verify
+      else if (interpMode == NEWTON_COTES) {
+	Real val = interpInterval*interpInterval/24.;
+	type1InterpWts[0]       =  val; //  left end
+	type1InterpWts[order-1] = -val; // right end
+	for (unsigned short i=1; i<order-1; ++i)
+	  type1InterpWts[i] = 0.; // interior
+      }
+      else if (interpMode == CLENSHAW_CURTIS) {
+	Real val = interpPts[1] - interpPts[0];
+	type1InterpWts[0]       =  val*val/24.;  //  left end
+	val = interpPts[order-1] - interpPts[order-2];
+	type1InterpWts[order-1] = -val*val/24.;  // right end
+	for (unsigned short i=1; i<order-1; ++i) //  interior
+	  type1InterpWts[i] = (interpPts[i+1] - interpPts[i-1])*
+	    (interpPts[i+1] - 2.*interpPts[i] + interpPts[i-1])/24.;
+      }
+      else
+	mode_err = true;
+    }
+    break;
+  }
+
+  if (mode_err) {
+    PCerr << "Error: unsupported interpolation mode in PiecewiseInterp"
+	  << "Polynomial::type2_interpolation_weights()." << std::endl;
+    abort_handler(-1);
+  }
+
+  return type2InterpWts;
 }
 
 } // namespace Pecos
