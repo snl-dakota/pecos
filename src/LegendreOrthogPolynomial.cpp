@@ -177,127 +177,128 @@ const Real& LegendreOrthogPolynomial::norm_squared(unsigned short order)
 }
 
 
-const RealArray& LegendreOrthogPolynomial::gauss_points(unsigned short order)
+const RealArray& LegendreOrthogPolynomial::
+collocation_points(unsigned short order)
 {
-  // pull this outside block below since order=0 is initial gauss pts length
+  // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "LegendreOrthogPolynomial::gauss_points()." << std::endl;
+	  << "LegendreOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
   bool mode_err = false;
-  if (gaussPoints.size() != order) { // if not already computed
-    gaussPoints.resize(order);
+  if (collocPoints.size() != order) { // if not already computed
+    collocPoints.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    if (gaussMode == GAUSS_PATTERSON)
-      webbur::patterson_lookup_points(order, &gaussPoints[0]);
-    else if (gaussMode == GAUSS_LEGENDRE) {
+    if (collocMode == GAUSS_PATTERSON)
+      webbur::patterson_lookup_points(order, &collocPoints[0]);
+    else if (collocMode == GAUSS_LEGENDRE) {
       if (order <= 33) // retrieve full precision tabulated values
-	webbur::legendre_lookup_points(order, &gaussPoints[0]);
+	webbur::legendre_lookup_points(order, &collocPoints[0]);
       else { // sandia_rules calculates points/weights together
-	if (gaussWeights.size() != order)
-	  gaussWeights.resize(order);
-	webbur::legendre_compute(order, &gaussPoints[0], &gaussWeights[0]);
+	if (collocWeights.size() != order)
+	  collocWeights.resize(order);
+	webbur::legendre_compute(order, &collocPoints[0], &collocWeights[0]);
 	for (size_t i=0; i<order; i++)
-	  gaussWeights[i] *= wtFactor; // polynomial weight fn -> PDF
+	  collocWeights[i] *= wtFactor; // polynomial weight fn -> PDF
       }
     }
     else
       mode_err = true;
 #else
-    if (gaussMode == GAUSS_PATTERSON) {
+    if (collocMode == GAUSS_PATTERSON) {
       PCerr << "Error: VPISparseGrid required for Gauss-Patterson points in "
-	    << "LegendreOrthogPolynomial::gauss_points()." << std::endl;
+	    << "LegendreOrthogPolynomial::collocation_points()." << std::endl;
       abort_handler(-1);
     }
-    else if (gaussMode == GAUSS_LEGENDRE) {
+    else if (collocMode == GAUSS_LEGENDRE) {
       switch (order) {
       case 1: // zeros of P_1(x) for one Gauss-Legendre point:
-	gaussPoints[0] = 0.0;
+	collocPoints[0] = 0.0;
 	break;
       case 2: { // zeros of P_2(x) for two Gauss-Legendre points:
 	Real z1osr3 = 1./std::sqrt(3.);
-	gaussPoints[0] = -z1osr3;
-	gaussPoints[1] =  z1osr3;
+	collocPoints[0] = -z1osr3;
+	collocPoints[1] =  z1osr3;
 	break;
       }
       case 3: { // zeros of P_3(x) for three Gauss-Legendre points:
 	Real sr3o5 = std::sqrt(3./5.);
-	gaussPoints[0] = -sr3o5;
-	gaussPoints[1] =  0.0;
-	gaussPoints[2] =  sr3o5;
+	collocPoints[0] = -sr3o5;
+	collocPoints[1] =  0.0;
+	collocPoints[2] =  sr3o5;
 	break;
       }
       case 4: { // zeros of P_4(x) for four Gauss-Legendre points:
 	Real sr30 = std::sqrt(30.), sr525p70sr30 = std::sqrt(525.+70.*sr30)/35.,
 	  sr525m70sr30 = std::sqrt(525.-70.*sr30)/35.;
-	gaussPoints[0] = -sr525p70sr30;
-	gaussPoints[1] = -sr525m70sr30;
-	gaussPoints[2] =  sr525m70sr30;
-	gaussPoints[3] =  sr525p70sr30;
+	collocPoints[0] = -sr525p70sr30;
+	collocPoints[1] = -sr525m70sr30;
+	collocPoints[2] =  sr525m70sr30;
+	collocPoints[3] =  sr525p70sr30;
 	break;
       }
       case 5: { // zeros of P_5(x) for five Gauss-Legendre points:
 	Real sr70 = std::sqrt(70.), sr245p14sr70 = std::sqrt(245.+14.*sr70)/21.,
 	  sr245m14sr70 = std::sqrt(245.-14.*sr70)/21.;
-	gaussPoints[0] = -sr245p14sr70;
-	gaussPoints[1] = -sr245m14sr70;
-	gaussPoints[2] =  0.0;
-	gaussPoints[3] =  sr245m14sr70;
-	gaussPoints[4] =  sr245p14sr70;
+	collocPoints[0] = -sr245p14sr70;
+	collocPoints[1] = -sr245m14sr70;
+	collocPoints[2] =  0.0;
+	collocPoints[3] =  sr245m14sr70;
+	collocPoints[4] =  sr245p14sr70;
 	break;
       }
       // tabulated values from Abramowitz & Stegun have limited precision
       case 6:
-	gaussPoints[0] = -0.932469514203152;
-	gaussPoints[1] = -0.661209386466265;
-	gaussPoints[2] = -0.238619186083197;
-	gaussPoints[3] = -gaussPoints[2];
-	gaussPoints[4] = -gaussPoints[1];
-	gaussPoints[5] = -gaussPoints[0]; break;
+	collocPoints[0] = -0.932469514203152;
+	collocPoints[1] = -0.661209386466265;
+	collocPoints[2] = -0.238619186083197;
+	collocPoints[3] = -collocPoints[2];
+	collocPoints[4] = -collocPoints[1];
+	collocPoints[5] = -collocPoints[0]; break;
       case 7:
-	gaussPoints[0] = -0.949107912342759;
-	gaussPoints[1] = -0.741531185599394;
-	gaussPoints[2] = -0.405845151377397;
-	gaussPoints[3] =  0.0;
-	gaussPoints[4] = -gaussPoints[2];
-	gaussPoints[5] = -gaussPoints[1];
-	gaussPoints[6] = -gaussPoints[0]; break;
+	collocPoints[0] = -0.949107912342759;
+	collocPoints[1] = -0.741531185599394;
+	collocPoints[2] = -0.405845151377397;
+	collocPoints[3] =  0.0;
+	collocPoints[4] = -collocPoints[2];
+	collocPoints[5] = -collocPoints[1];
+	collocPoints[6] = -collocPoints[0]; break;
       case 8:
-	gaussPoints[0] = -0.960289856497536;
-	gaussPoints[1] = -0.796666477413627;
-	gaussPoints[2] = -0.525532409916329;
-	gaussPoints[3] = -0.183434642495650;
-	gaussPoints[4] = -gaussPoints[3];
-	gaussPoints[5] = -gaussPoints[2];
-	gaussPoints[6] = -gaussPoints[1];
-	gaussPoints[7] = -gaussPoints[0]; break;
+	collocPoints[0] = -0.960289856497536;
+	collocPoints[1] = -0.796666477413627;
+	collocPoints[2] = -0.525532409916329;
+	collocPoints[3] = -0.183434642495650;
+	collocPoints[4] = -collocPoints[3];
+	collocPoints[5] = -collocPoints[2];
+	collocPoints[6] = -collocPoints[1];
+	collocPoints[7] = -collocPoints[0]; break;
       case 9:
-	gaussPoints[0] = -0.968160239507626;
-	gaussPoints[1] = -0.836031107326636;
-	gaussPoints[2] = -0.613371432700590;
-	gaussPoints[3] = -0.324253423403809;
-	gaussPoints[4] =  0.0;
-	gaussPoints[5] = -gaussPoints[3];
-	gaussPoints[6] = -gaussPoints[2];
-	gaussPoints[7] = -gaussPoints[1];
-	gaussPoints[8] = -gaussPoints[0]; break;
+	collocPoints[0] = -0.968160239507626;
+	collocPoints[1] = -0.836031107326636;
+	collocPoints[2] = -0.613371432700590;
+	collocPoints[3] = -0.324253423403809;
+	collocPoints[4] =  0.0;
+	collocPoints[5] = -collocPoints[3];
+	collocPoints[6] = -collocPoints[2];
+	collocPoints[7] = -collocPoints[1];
+	collocPoints[8] = -collocPoints[0]; break;
       case 10:
-	gaussPoints[0] = -0.973906528517172;
-	gaussPoints[1] = -0.865063366688985;
-	gaussPoints[2] = -0.679409568299024;
-	gaussPoints[3] = -0.433395394129247;
-	gaussPoints[4] = -0.148874338981631;
-	gaussPoints[5] = -gaussPoints[4];
-	gaussPoints[6] = -gaussPoints[3];
-	gaussPoints[7] = -gaussPoints[2];
-	gaussPoints[8] = -gaussPoints[1];
-	gaussPoints[9] = -gaussPoints[0]; break;
+	collocPoints[0] = -0.973906528517172;
+	collocPoints[1] = -0.865063366688985;
+	collocPoints[2] = -0.679409568299024;
+	collocPoints[3] = -0.433395394129247;
+	collocPoints[4] = -0.148874338981631;
+	collocPoints[5] = -collocPoints[4];
+	collocPoints[6] = -collocPoints[3];
+	collocPoints[7] = -collocPoints[2];
+	collocPoints[8] = -collocPoints[1];
+	collocPoints[9] = -collocPoints[0]; break;
       default:
 	PCerr << "Error: overflow in maximum quadrature order limit (10) in "
-	      << "LegendreOrthogPolynomial::gauss_points().  Configure with "
-	      << "VPISparseGrid to extend range." << std::endl;
+	      << "LegendreOrthogPolynomial::collocation_points().  Configure "
+	      << "with VPISparseGrid to extend range." << std::endl;
 	abort_handler(-1); break;
       }
     }
@@ -307,21 +308,22 @@ const RealArray& LegendreOrthogPolynomial::gauss_points(unsigned short order)
   }
 
   if (mode_err) {
-    PCerr << "Error: unsupported Gauss point mode in "
-	  << "LegendreOrthogPolynomial::gauss_points()." << std::endl;
+    PCerr << "Error: unsupported collocation point mode in "
+	  << "LegendreOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
-  return gaussPoints;
+  return collocPoints;
 }
 
 
-const RealArray& LegendreOrthogPolynomial::gauss_weights(unsigned short order)
+const RealArray& LegendreOrthogPolynomial::
+collocation_weights(unsigned short order)
 {
-  // pull this outside block below since order=0 is initial gauss pts length
+  // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "LegendreOrthogPolynomial::gauss_weights()." << std::endl;
+	  << "LegendreOrthogPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -330,85 +332,88 @@ const RealArray& LegendreOrthogPolynomial::gauss_weights(unsigned short order)
   // Abramowitz & Stegun by a constant factor of 1/2.
 
   bool mode_err = false;
-  if (gaussWeights.size() != order) { // if not already computed
-    gaussWeights.resize(order);
+  if (collocWeights.size() != order) { // if not already computed
+    collocWeights.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    if (gaussMode == GAUSS_PATTERSON)
-      webbur::patterson_lookup_weights(order, &gaussWeights[0]);
-    else if (gaussMode == GAUSS_LEGENDRE) {
+    if (collocMode == GAUSS_PATTERSON)
+      webbur::patterson_lookup_weights(order, &collocWeights[0]);
+    else if (collocMode == GAUSS_LEGENDRE) {
       if (order <= 33) // retrieve full precision tabulated values
-	webbur::legendre_lookup_weights(order, &gaussWeights[0]);
+	webbur::legendre_lookup_weights(order, &collocWeights[0]);
       else { // sandia_rules calculates points/weights together
-	if (gaussPoints.size() != order)
-	  gaussPoints.resize(order);
-	webbur::legendre_compute(order, &gaussPoints[0], &gaussWeights[0]);
+	if (collocPoints.size() != order)
+	  collocPoints.resize(order);
+	webbur::legendre_compute(order, &collocPoints[0], &collocWeights[0]);
       }
     }
     else
       mode_err = true;
     for (size_t i=0; i<order; i++)
-      gaussWeights[i] *= wtFactor;
+      collocWeights[i] *= wtFactor;
 #else
-    if (gaussMode == GAUSS_PATTERSON) {
+    if (collocMode == GAUSS_PATTERSON) {
       PCerr << "Error: VPISparseGrid required for Gauss-Patterson weights in "
-	    << "LegendreOrthogPolynomial::gauss_weights()." << std::endl;
+	    << "LegendreOrthogPolynomial::collocation_weights()." << std::endl;
       abort_handler(-1);
     }
-    else if (gaussMode == GAUSS_LEGENDRE) {
+    else if (collocMode == GAUSS_LEGENDRE) {
       switch (order) {
       case 1: // weights for one Gauss-Legendre point:
-	gaussWeights[0] = 1.0; break;
+	collocWeights[0] = 1.0; break;
       case 2: // weights for two Gauss-Legendre points:
-	gaussWeights[0] = gaussWeights[1] = 0.5; break;
+	collocWeights[0] = collocWeights[1] = 0.5; break;
       case 3: // weights for three Gauss-Legendre points:
-	gaussWeights[0] = gaussWeights[2] = 5./18.;
-	gaussWeights[1] = 4./9.; break;
+	collocWeights[0] = collocWeights[2] = 5./18.;
+	collocWeights[1] = 4./9.; break;
       case 4: { // weights for four Gauss-Legendre points:
 	Real sr30 = std::sqrt(30.);
-	gaussWeights[0] = gaussWeights[3] = (18.-sr30)/72.;
-	gaussWeights[1] = gaussWeights[2] = (18.+sr30)/72.; break;
+	collocWeights[0] = collocWeights[3] = (18.-sr30)/72.;
+	collocWeights[1] = collocWeights[2] = (18.+sr30)/72.; break;
       }
       case 5: { // weights for five Gauss-Legendre points:
 	Real sr70 = std::sqrt(70.);
-	gaussWeights[0] = gaussWeights[4] = (322.-13.*sr70)/1800.;
-	gaussWeights[1] = gaussWeights[3] = (322.+13.*sr70)/1800.;
-	gaussWeights[2] = 64./225.; break;
+	collocWeights[0] = collocWeights[4] = (322.-13.*sr70)/1800.;
+	collocWeights[1] = collocWeights[3] = (322.+13.*sr70)/1800.;
+	collocWeights[2] = 64./225.; break;
       }
       // tabulated values from Abramowitz & Stegun have limited precision
       case 6:
-	gaussWeights[0] = gaussWeights[5] = 0.171324492379170 * wtFactor;
-	gaussWeights[1] = gaussWeights[4] = 0.360761573048139 * wtFactor;
-	gaussWeights[2] = gaussWeights[3] = 0.467913934572691 * wtFactor; break;
+	collocWeights[0] = collocWeights[5] = 0.171324492379170 * wtFactor;
+	collocWeights[1] = collocWeights[4] = 0.360761573048139 * wtFactor;
+	collocWeights[2] = collocWeights[3] = 0.467913934572691 * wtFactor;
+	break;
       case 7:
-	gaussWeights[0] = gaussWeights[6] = 0.129484966168870 * wtFactor;
-	gaussWeights[1] = gaussWeights[5] = 0.279705391489277 * wtFactor;
-	gaussWeights[2] = gaussWeights[4] = 0.381830050505119 * wtFactor;
-	gaussWeights[3] = 0.417959183673469 * wtFactor;	break;
+	collocWeights[0] = collocWeights[6] = 0.129484966168870 * wtFactor;
+	collocWeights[1] = collocWeights[5] = 0.279705391489277 * wtFactor;
+	collocWeights[2] = collocWeights[4] = 0.381830050505119 * wtFactor;
+	collocWeights[3] = 0.417959183673469 * wtFactor;	break;
       case 8:
-	gaussWeights[0] = gaussWeights[7] = 0.101228536290376 * wtFactor;
-	gaussWeights[1] = gaussWeights[6] = 0.222381034453374 * wtFactor;
-	gaussWeights[2] = gaussWeights[5] = 0.313706645877887 * wtFactor;
-	gaussWeights[3] = gaussWeights[4] = 0.362683783378362 * wtFactor; break;
+	collocWeights[0] = collocWeights[7] = 0.101228536290376 * wtFactor;
+	collocWeights[1] = collocWeights[6] = 0.222381034453374 * wtFactor;
+	collocWeights[2] = collocWeights[5] = 0.313706645877887 * wtFactor;
+	collocWeights[3] = collocWeights[4] = 0.362683783378362 * wtFactor;
+	break;
       case 9:
-	gaussWeights[0] = gaussWeights[8] = 0.081274388361574 * wtFactor;
-	gaussWeights[1] = gaussWeights[7] = 0.180648160694857 * wtFactor;
-	gaussWeights[2] = gaussWeights[6] = 0.260610696402935 * wtFactor;
-	gaussWeights[3] = gaussWeights[5] = 0.312347077040003 * wtFactor;
-	gaussWeights[4] = 0.330239355001260 * wtFactor;	break;
+	collocWeights[0] = collocWeights[8] = 0.081274388361574 * wtFactor;
+	collocWeights[1] = collocWeights[7] = 0.180648160694857 * wtFactor;
+	collocWeights[2] = collocWeights[6] = 0.260610696402935 * wtFactor;
+	collocWeights[3] = collocWeights[5] = 0.312347077040003 * wtFactor;
+	collocWeights[4] = 0.330239355001260 * wtFactor;	break;
       case 10:
-	gaussWeights[0] = gaussWeights[9] = 0.066671344308688 * wtFactor;
-	gaussWeights[1] = gaussWeights[8] = 0.149451349150581 * wtFactor;
-	gaussWeights[2] = gaussWeights[7] = 0.219086362515982 * wtFactor;
-	gaussWeights[3] = gaussWeights[6] = 0.269266719309996 * wtFactor;
-	gaussWeights[4] = gaussWeights[5] = 0.295524224714753 * wtFactor; break;
+	collocWeights[0] = collocWeights[9] = 0.066671344308688 * wtFactor;
+	collocWeights[1] = collocWeights[8] = 0.149451349150581 * wtFactor;
+	collocWeights[2] = collocWeights[7] = 0.219086362515982 * wtFactor;
+	collocWeights[3] = collocWeights[6] = 0.269266719309996 * wtFactor;
+	collocWeights[4] = collocWeights[5] = 0.295524224714753 * wtFactor;
+	break;
       default:
 	// define Gauss wts from Gauss pts using
 	// -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
 	// which for P(x) with w(x) = 1/2 is (1-x_i^2)/(n P_{n-1}(x_i))^2.
-	const RealArray& gauss_pts = gauss_points(order);
+	const RealArray& colloc_pts = collocation_points(order);
 	for (size_t i=0; i<order; i++) {
-	  const Real& x_i = gauss_pts[i];
-	  gaussWeights[i] = (1.-x_i*x_i)
+	  const Real& x_i = colloc_pts[i];
+	  collocWeights[i] = (1.-x_i*x_i)
 	                  / std::pow(order*get_value(x_i,order-1),2);
 	}
 	break;
@@ -420,12 +425,12 @@ const RealArray& LegendreOrthogPolynomial::gauss_weights(unsigned short order)
   }
 
   if (mode_err) {
-    PCerr << "Error: unsupported Gauss weight mode in "
-	  << "LegendreOrthogPolynomial::gauss_weights()." << std::endl;
+    PCerr << "Error: unsupported collocation weight mode in "
+	  << "LegendreOrthogPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
-  return gaussWeights;
+  return collocWeights;
 }
 
 } // namespace Pecos

@@ -247,8 +247,8 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
   // DSTEQR docs for 3rd field: (input/output)
   //   On entry, the diagonal elements of the tridiagonal matrix.
   //   On exit, if INFO = 0, the eigenvalues in ascending order.
-  copy_data(alpha3TR, gaussPoints); // eigenvalues are Gauss points
-  la.STEQR('I', m, &gaussPoints[0], off_diag.values(), z_eigvec.values(), ldz,
+  copy_data(alpha3TR, collocPoints); // eigenvalues are Gauss points
+  la.STEQR('I', m, &collocPoints[0], off_diag.values(), z_eigvec.values(), ldz,
 	   work, &info);
   if (info) {
     PCerr << "Error: nonzero return code (" << info << ") from LAPACK STEQR "
@@ -260,10 +260,10 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
 
   // Gauss points are the eigenvalues which are updated in place by STEQR.
   // compute the Gauss weights from the eigenvectors:
-  gaussWeights.resize(m);
+  collocWeights.resize(m);
   //const Real& norm_sq_0 = orthogPolyNormsSq[0];
   for (i=0; i<m; ++i)
-    gaussWeights[i] = std::pow(z_eigvec(0, i), 2.);// * norm_sq_0;
+    collocWeights[i] = std::pow(z_eigvec(0, i), 2.);// * norm_sq_0;
 
   // orthogPolyNormsSq up to order m-1 are available using the just
   // computed Gauss points/weights
@@ -280,7 +280,8 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     for (i=0; i<=m; ++i)
       PCout << "orthogPolyNormsSq[" << i << "] = " << orthogPolyNormsSq[i]
 	    <<'\n';
-  PCout << "gaussPoints:\n" << gaussPoints << "gaussWeights:\n" << gaussWeights;
+  PCout << "collocPoints:\n"  << collocPoints
+	<< "collocWeights:\n" << collocWeights;
 #endif
 }
 
@@ -438,14 +439,14 @@ hermite_unbounded_integral(const RealVector& poly_coeffs1,
   BasisPolynomial hermite_poly(HERMITE_ORTHOG);
   unsigned short quad_order = 170; // hardwired (could use adaptive loop)
   //quad_order = 175 has numerical problems -> nan's in recursion coeffs
-  const RealArray& gauss_pts = hermite_poly.gauss_points(quad_order);
-  const RealArray& gauss_wts = hermite_poly.gauss_weights(quad_order);
+  const RealArray& colloc_pts = hermite_poly.collocation_points(quad_order);
+  const RealArray& colloc_wts = hermite_poly.collocation_weights(quad_order);
 
   Real sum = 0., v1;
   for (size_t i=0; i<quad_order; ++i) {
-    const Real& gp_i = gauss_pts[i];
+    const Real& gp_i = colloc_pts[i];
     v1 = get_value(gp_i, poly_coeffs1); // cached due to update of const ref
-    sum += gauss_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
+    sum += colloc_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
         *  weight_fn(gp_i, distParams) / phi(gp_i);
   }
   return sum;
@@ -496,15 +497,15 @@ laguerre_semibounded_integral(const RealVector& poly_coeffs1,
 {
   BasisPolynomial laguerre_poly(LAGUERRE_ORTHOG);
   unsigned short quad_order = 95; // hardwired (could use adaptive loop)
-  //quad_order = 100 has numerical problems: gauss_wts = inf
-  const RealArray& gauss_pts = laguerre_poly.gauss_points(quad_order);
-  const RealArray& gauss_wts = laguerre_poly.gauss_weights(quad_order);
+  //quad_order = 100 has numerical problems: colloc_wts = inf
+  const RealArray& colloc_pts = laguerre_poly.collocation_points(quad_order);
+  const RealArray& colloc_wts = laguerre_poly.collocation_weights(quad_order);
 
   Real sum = 0., v1;
   for (size_t i=0; i<quad_order; ++i) {
-    const Real& gp_i = gauss_pts[i];
+    const Real& gp_i = colloc_pts[i];
     v1 = get_value(gp_i, poly_coeffs1); // cached: update of const ref
-    sum += gauss_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
+    sum += colloc_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
         *  weight_fn(gp_i, distParams) / std_exponential_pdf(gp_i);
   }
   return sum;
@@ -555,15 +556,15 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
 {
   BasisPolynomial legendre_poly(LEGENDRE_ORTHOG);
   unsigned short quad_order = 50; // hardwired (could use adaptive loop)
-  const RealArray& gauss_pts = legendre_poly.gauss_points(quad_order);
-  const RealArray& gauss_wts = legendre_poly.gauss_weights(quad_order);
+  const RealArray& colloc_pts = legendre_poly.collocation_points(quad_order);
+  const RealArray& colloc_wts = legendre_poly.collocation_weights(quad_order);
 
   Real sum = 0., unscaled_gp_i, v1, range_over_2 = (end - start) / 2.;
   for (size_t i=0; i<quad_order; ++i) {
-    unscaled_gp_i = start + range_over_2 * (gauss_pts[i]+1.);
+    unscaled_gp_i = start + range_over_2 * (colloc_pts[i]+1.);
     // change of variables: dx/dz = range_over_2
     v1 = get_value(unscaled_gp_i, poly_coeffs1); // cached: update of const ref
-    sum += gauss_wts[i] * v1 * get_value(unscaled_gp_i, poly_coeffs2)
+    sum += colloc_wts[i] * v1 * get_value(unscaled_gp_i, poly_coeffs2)
         *  weight_fn(unscaled_gp_i, distParams);
   }
   return sum / std_uniform_pdf() * range_over_2;
@@ -669,11 +670,11 @@ native_quadrature_integral(const RealVector& poly_coeffs1,
 			   const RealVector& poly_coeffs2)
 {
   Real i_sum = 0., v1;
-  size_t i, num_gauss_pts = gaussPoints.size();
-  for (i=0; i<num_gauss_pts; ++i) {
-    const Real& gp_i = gaussPoints[i];
+  size_t i, num_colloc_pts = collocPoints.size();
+  for (i=0; i<num_colloc_pts; ++i) {
+    const Real& gp_i = collocPoints[i];
     v1 = get_value(gp_i, poly_coeffs1); // cached due to update of const ref
-    i_sum += v1 * get_value(gp_i, poly_coeffs2) * gaussWeights[i];
+    i_sum += v1 * get_value(gp_i, poly_coeffs2) * collocWeights[i];
   }
   return i_sum;
 }
@@ -745,34 +746,34 @@ const Real& NumericGenOrthogPolynomial::norm_squared(unsigned short order)
 
 
 const RealArray& NumericGenOrthogPolynomial::
-gauss_points(unsigned short order)
+collocation_points(unsigned short order)
 {
-  // pull this out from default below since order=0 is initial gauss pts length
+  // pull this out from default below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "NumericGenOrthogPolynomial::gauss_points()." << std::endl;
+	  << "NumericGenOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
-  if (gaussPoints.size() != order) // if not already computed
+  if (collocPoints.size() != order) // if not already computed
     solve_eigenproblem(order);
-  return gaussPoints;
+  return collocPoints;
 }
 
 
 const RealArray& NumericGenOrthogPolynomial::
-gauss_weights(unsigned short order)
+collocation_weights(unsigned short order)
 {
-  // pull this out from default below since order=0 is initial gauss pts length
+  // pull this out from default below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "NumericGenOrthogPolynomial::gauss_weights()." << std::endl;
+	  << "NumericGenOrthogPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
-  if (gaussWeights.size() != order) // if not already computed
+  if (collocWeights.size() != order) // if not already computed
     solve_eigenproblem(order);
-  return gaussWeights;
+  return collocWeights;
 }
 
 } // namespace Pecos

@@ -78,10 +78,10 @@ protected:
 
   /// return the Gauss-Jacobi quadrature points corresponding to
   /// polynomial order n
-  const RealArray& gauss_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the Gauss-Jacobi quadrature weights corresponding to
   /// polynomial order n
-  const RealArray& gauss_weights(unsigned short order);
+  const RealArray& collocation_weights(unsigned short order);
 
   /// return alphaPoly
   const Real& alpha_polynomial() const;
@@ -109,14 +109,14 @@ private:
 
 inline JacobiOrthogPolynomial::JacobiOrthogPolynomial():
   alphaPoly(0.), betaPoly(0.)
-{ gaussMode = GAUSS_JACOBI; }
+{ collocMode = GAUSS_JACOBI; }
 
 
 // TO DO
 inline JacobiOrthogPolynomial::
 JacobiOrthogPolynomial(const Real& alpha_stat, const Real& beta_stat):
   alphaPoly(beta_stat-1.), betaPoly(alpha_stat-1.) // inverted conventions
-{ gaussMode = GAUSS_JACOBI; }
+{ collocMode = GAUSS_JACOBI; }
 
 
 inline JacobiOrthogPolynomial::~JacobiOrthogPolynomial()

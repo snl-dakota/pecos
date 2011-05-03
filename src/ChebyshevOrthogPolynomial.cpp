@@ -157,41 +157,43 @@ const Real& ChebyshevOrthogPolynomial::norm_squared(unsigned short order)
 }
 
 
-const RealArray& ChebyshevOrthogPolynomial::gauss_points(unsigned short order)
+const RealArray& ChebyshevOrthogPolynomial::
+collocation_points(unsigned short order)
 {
-  // pull this out from default below since order=0 is initial gauss pts length
+  // pull this out from default below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "ChebyshevOrthogPolynomial::gauss_points()." << std::endl;
+	  << "ChebyshevOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
-  if (gaussPoints.size() != order) { // if not already computed
-    gaussPoints.resize(order);
+  if (collocPoints.size() != order) { // if not already computed
+    collocPoints.resize(order);
 
 #ifdef HAVE_SPARSE_GRID
     // separable calculation of points/weights in sandia_rules.C
-    if (gaussMode == CLENSHAW_CURTIS)
-      webbur::clenshaw_curtis_compute_points(order, &gaussPoints[0]);
-    else if (gaussMode == FEJER2)
-      webbur::fejer2_compute_points(order, &gaussPoints[0]);
+    if (collocMode == CLENSHAW_CURTIS)
+      webbur::clenshaw_curtis_compute_points(order, &collocPoints[0]);
+    else if (collocMode == FEJER2)
+      webbur::fejer2_compute_points(order, &collocPoints[0]);
     else {
-      PCerr << "Error: unsupported Gauss point type in "
-	    << "ChebyshevOrthogPolynomial::gauss_points()." << std::endl;
+      PCerr << "Error: unsupported collocation point type in "
+	    << "ChebyshevOrthogPolynomial::collocation_points()." << std::endl;
       abort_handler(-1);
     }
 #else
     PCerr << "Error: configuration with VPISparseGrid package required in "
-	  << "ChebyshevOrthogPolynomial::gauss_points()." << std::endl;
+	  << "ChebyshevOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
 #endif
   }
 
-  return gaussPoints;
+  return collocPoints;
 }
 
 
-const RealArray& ChebyshevOrthogPolynomial::gauss_weights(unsigned short order)
+const RealArray& ChebyshevOrthogPolynomial::
+collocation_weights(unsigned short order)
 {
   // The sums of the weights = 1, which is the integral of the density
   // function 1/2 over the support range of [-1,+1].  These differ from
@@ -199,34 +201,34 @@ const RealArray& ChebyshevOrthogPolynomial::gauss_weights(unsigned short order)
 
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "ChebyshevOrthogPolynomial::gauss_weights()." << std::endl;
+	  << "ChebyshevOrthogPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
-  if (gaussWeights.size() != order) { // if not already computed
-    gaussWeights.resize(order);
+  if (collocWeights.size() != order) { // if not already computed
+    collocWeights.resize(order);
 
 #ifdef HAVE_SPARSE_GRID
     // separable calculation of points/weights in sandia_rules.C
-    if (gaussMode == CLENSHAW_CURTIS)
-      webbur::clenshaw_curtis_compute_weights(order, &gaussWeights[0]);
-    else if (gaussMode == FEJER2)
-      webbur::fejer2_compute_weights(order, &gaussWeights[0]);
+    if (collocMode == CLENSHAW_CURTIS)
+      webbur::clenshaw_curtis_compute_weights(order, &collocWeights[0]);
+    else if (collocMode == FEJER2)
+      webbur::fejer2_compute_weights(order, &collocWeights[0]);
     else {
-      PCerr << "Error: unsupported Gauss weight type in "
-	    << "ChebyshevOrthogPolynomial::gauss_weights()." << std::endl;
+      PCerr << "Error: unsupported collocation weight type in "
+	    << "ChebyshevOrthogPolynomial::collocation_weights()." << std::endl;
       abort_handler(-1);
     }
     for (size_t i=0; i<order; i++)
-      gaussWeights[i] *= wtFactor;
+      collocWeights[i] *= wtFactor;
 #else
     PCerr << "Error: configuration with VPISparseGrid package required in "
-	  << "ChebyshevOrthogPolynomial::gauss_weights()." << std::endl;
+	  << "ChebyshevOrthogPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
 #endif
   }
 
-  return gaussWeights;
+  return collocWeights;
 }
 
 } // namespace Pecos

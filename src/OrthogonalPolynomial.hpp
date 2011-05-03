@@ -45,14 +45,14 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// destroy history of Gauss pts/wts due to change in alpha/beta stats
+  /// destroy history of Gauss pts/wts due to change in distribution parameters
   void reset_gauss();
 
   //
   //- Heading: Member functions
   //
 
-  /// perform unit testing on the Gauss points/weights
+  /// perform unit testing on Gauss points/weights
   void gauss_check(unsigned short order);
 
 protected:
@@ -61,10 +61,10 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// set gaussMode
-  void gauss_mode(short mode);
-  /// get gaussMode
-  short gauss_mode() const;
+  /// set collocMode
+  void collocation_mode(short mode);
+  /// get collocMode
+  short collocation_mode() const;
 
   //
   //- Heading: Data
@@ -74,19 +74,19 @@ protected:
   /// <Poly_n, Poly_n> = ||Poly_n||^2 (returned by norm_squared())
   Real orthogPolyNormSq;
 
-  /// Gauss points for one-dimensional Gaussian quadrature
+  /// collocation points for one-dimensional quadrature
   /// (x parameter values for which Poly_n(x) = 0)
-  RealArray gaussPoints;
-  /// Gauss weights for one-dimensional Gaussian quadrature
-  RealArray gaussWeights;
+  RealArray collocPoints;
+  /// collocation weights for one-dimensional quadrature
+  RealArray collocWeights;
 
   /// the type of integration rule associated with the orthogonal polynomial
   /** In most cases, this is just the corresponding Gauss quadrature
-      rule.  However, for Legendre, gaussMode manages the option of
+      rule.  However, for Legendre, collocMode manages the option of
       GAUSS_LEGENDRE or GAUSS_PATTERSON, for Chebyshev, it manages the
       option of CLENSHAW_CURTIS or FEJER2, and for Hermite, it manages
       the option of GAUSS_HERMITE or GENZ_KEISTER. */
-  short gaussMode;
+  short collocMode;
 
 private:
 
@@ -106,15 +106,15 @@ inline OrthogonalPolynomial::~OrthogonalPolynomial()
 
 
 inline void OrthogonalPolynomial::reset_gauss()
-{ gaussPoints.clear(); gaussWeights.clear(); }
+{ collocPoints.clear(); collocWeights.clear(); }
 
 
-inline void OrthogonalPolynomial::gauss_mode(short mode)
-{ gaussMode = mode; }
+inline void OrthogonalPolynomial::collocation_mode(short mode)
+{ collocMode = mode; }
 
 
-inline short OrthogonalPolynomial::gauss_mode() const
-{ return gaussMode; }
+inline short OrthogonalPolynomial::collocation_mode() const
+{ return collocMode; }
 
 } // namespace Pecos
 

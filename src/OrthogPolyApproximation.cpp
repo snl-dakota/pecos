@@ -29,12 +29,12 @@ namespace Pecos {
 bool OrthogPolyApproximation::
 distribution_types(const ShortArray& u_types,
 		   const IntArray& int_rules, ShortArray& basis_types,
-		   ShortArray& gauss_modes)
+		   ShortArray& colloc_modes)
 {
   bool extra_dist_params = false;
   size_t i, num_vars = u_types.size(), num_rules = int_rules.size();
 
-  // Initialize gauss_modes from int_rules.  There are three possible
+  // Initialize colloc_modes from int_rules.  There are three possible
   // int_rules states: (1) empty (e.g., regression PCE), (2) unit size
   // (cubature), and (3) num_vars size (tensor or sparse grid).
   // Note: inactive code below is overkill: just copy values since
@@ -42,16 +42,16 @@ distribution_types(const ShortArray& u_types,
   // don't support them.  These modes allow control of Gauss-Legendre vs.
   // Gauss-Patterson points/weights for Legendre polynomials and
   // Clenshaw-Curtis vs. Fejer points/weights for Chebyshev polynomials.
-  if (num_rules && gauss_modes.size() != num_vars) {
-    gauss_modes.resize(num_vars);
+  if (num_rules && colloc_modes.size() != num_vars) {
+    colloc_modes.resize(num_vars);
     for (i=0; i<num_vars; i++)
       //switch (u_types[i]) {
       //case STD_UNIFORM:
-      gauss_modes[i] = (num_rules == num_vars) ?
+      colloc_modes[i] = (num_rules == num_vars) ?
 	(short)int_rules[i] : (short)int_rules[0]; // cubature defines 1 rule
       //  break;
       //default:
-      //  gauss_modes[i] = 0; break;
+      //  colloc_modes[i] = 0; break;
       //}
   }
 
@@ -99,15 +99,15 @@ distribution_types(const ShortArray& u_types,
 
 
 void OrthogPolyApproximation::
-distribution_basis(const ShortArray& basis_types, const ShortArray& gauss_modes,
+distribution_basis(const ShortArray& basis_types, const ShortArray& colloc_modes,
 		   std::vector<BasisPolynomial>& poly_basis)
 {
   size_t i, num_vars = basis_types.size();
-  bool modes = (!gauss_modes.empty());
+  bool modes = (!colloc_modes.empty());
   if (poly_basis.size() != num_vars) {
     poly_basis.resize(num_vars);
     for (i=0; i<num_vars; ++i)
-      poly_basis[i] = (modes) ?	BasisPolynomial(basis_types[i], gauss_modes[i])
+      poly_basis[i] = (modes) ?	BasisPolynomial(basis_types[i], colloc_modes[i])
 	                      :	BasisPolynomial(basis_types[i]);
 
     /*
@@ -490,10 +490,10 @@ void OrthogPolyApproximation::compute_coefficients()
 	    << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
       abort_handler(-1);
     }
-    size_t num_gauss_pts = 1;
+    size_t num_colloc_pts = 1;
     for (i=0; i<numVars; ++i)
-      num_gauss_pts *= quad_order[i];
-    if (num_total_pts != num_gauss_pts) {
+      num_colloc_pts *= quad_order[i];
+    if (num_total_pts != num_colloc_pts) {
       PCerr << "Error: number of current points (" << num_total_pts
 	    << ") is not consistent with\n       quadrature data in "
 	    << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
@@ -1440,7 +1440,7 @@ integration_data(size_t tp_index,
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
   size_t i, j, num_tp_pts = colloc_index.size();
   tp_data_points.resize(num_tp_pts); tp_weights.resize(num_tp_pts);
   for (i=0; i<num_tp_pts; ++i) {
@@ -1450,7 +1450,7 @@ integration_data(size_t tp_index,
     Real& tp_wts_i = tp_weights[i]; tp_wts_i = 1.;
     const UShortArray& key_i = key[i];
     for (j=0; j<numVars; ++j)
-      tp_wts_i *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
+      tp_wts_i *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
   }
 }
 

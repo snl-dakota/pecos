@@ -146,7 +146,7 @@ void SparseGridDriver::allocate_collocation_key()
   // define mapping from 1:numCollocPts to set of 1d interpolation indices
   size_t i, num_smolyak_indices = smolyakMultiIndex.size();
   collocKey.resize(num_smolyak_indices);
-  UShortArray quad_order(numVars); //, gauss_indices(numVars);
+  UShortArray quad_order(numVars); //, collocation_indices(numVars);
   for (i=0; i<num_smolyak_indices; ++i) {
     level_to_order(smolyakMultiIndex[i], quad_order);
     PolynomialApproximation::tensor_product_multi_index(quad_order,
@@ -190,31 +190,33 @@ void SparseGridDriver::allocate_collocation_indices()
 }
 
 
-void SparseGridDriver::allocate_1d_gauss_points_weights()
+void SparseGridDriver::allocate_1d_collocation_points_weights()
 {
   size_t i, num_levels = ssgLevel + 1;
-  if (gaussPts1D.size() != num_levels || gaussWts1D.size() != num_levels) {
-    gaussPts1D.resize(num_levels); gaussWts1D.resize(num_levels);
+  if (collocPts1D.size() != num_levels || collocWts1D.size() != num_levels) {
+    collocPts1D.resize(num_levels); collocWts1D.resize(num_levels);
     for (i=0; i<num_levels; ++i)
-      { gaussPts1D[i].resize(numVars); gaussWts1D[i].resize(numVars); }
+      { collocPts1D[i].resize(numVars); collocWts1D[i].resize(numVars); }
   }
   // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
   unsigned short level_index, order;
   for (i=0; i<numVars; i++) {
     switch (integrationRules[i]) {
     case CLENSHAW_CURTIS: case FEJER2:
-      chebyPolyPtr->gauss_mode(integrationRules[i]); // integration mode
+      chebyPolyPtr->collocation_mode(integrationRules[i]); // integration mode
       for (level_index=0; level_index<num_levels; ++level_index) {
 	level_to_order(i, level_index, order);
-	gaussPts1D[level_index][i] = chebyPolyPtr->gauss_points(order);
-	gaussWts1D[level_index][i] = chebyPolyPtr->gauss_weights(order);
+	collocPts1D[level_index][i] = chebyPolyPtr->collocation_points(order);
+	collocWts1D[level_index][i] = chebyPolyPtr->collocation_weights(order);
       }
       break;
     default: // Gaussian rules
       for (level_index=0; level_index<num_levels; ++level_index) {
 	level_to_order(i, level_index, order);
-	gaussPts1D[level_index][i] = polynomialBasis[i].gauss_points(order);
-	gaussWts1D[level_index][i] = polynomialBasis[i].gauss_weights(order);
+	collocPts1D[level_index][i]
+	  = polynomialBasis[i].collocation_points(order);
+	collocWts1D[level_index][i]
+	  = polynomialBasis[i].collocation_weights(order);
       }
       break;
     }
@@ -223,25 +225,25 @@ void SparseGridDriver::allocate_1d_gauss_points_weights()
 
 
 void SparseGridDriver::
-update_1d_gauss_points_weights(const UShortArray& trial_set,
-			       const Real2DArray& pts_1d,
-			       const Real2DArray& wts_1d)
+update_1d_collocation_points_weights(const UShortArray& trial_set,
+				     const Real2DArray& pts_1d,
+				     const Real2DArray& wts_1d)
 {
-  size_t i, num_levels = gaussPts1D.size(), max_level = 0;
+  size_t i, num_levels = collocPts1D.size(), max_level = 0;
   for (i=0; i<numVars; ++i)
     if (trial_set[i] > max_level)
       max_level = trial_set[i];
   if (max_level >= num_levels) {
-    gaussPts1D.resize(max_level+1); gaussWts1D.resize(max_level+1);
+    collocPts1D.resize(max_level+1); collocWts1D.resize(max_level+1);
     for (i=num_levels; i<=max_level; ++i)
-      { gaussPts1D[i].resize(numVars); gaussWts1D[i].resize(numVars); }
+      { collocPts1D[i].resize(numVars); collocWts1D[i].resize(numVars); }
   }
   for (i=0; i<numVars; ++i) {
     unsigned short trial_index = trial_set[i];
-    if (gaussPts1D[trial_index][i].empty() ||
-	gaussWts1D[trial_index][i].empty()) {
-      gaussPts1D[trial_index][i] = pts_1d[i];
-      gaussWts1D[trial_index][i] = wts_1d[i];
+    if (collocPts1D[trial_index][i].empty() ||
+	collocWts1D[trial_index][i].empty()) {
+      collocPts1D[trial_index][i] = pts_1d[i];
+      collocWts1D[trial_index][i] = wts_1d[i];
     }
   }
 }
@@ -366,8 +368,8 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
       if (u_types[i] != STD_UNIFORM && u_types[i] != PIECEWISE_STD_UNIFORM && 
 	  u_types[i] != STD_NORMAL)
 	{ nested_rules = false; break; }
-  // For MODERATE and SLOW restricted exponential growth, nested rules can be
-  // used heterogeneously and synchronized with STANDARD and SLOW Gaussian
+  // For MODERATE and SLOW restricted exponential growth, nested rules
+  // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
 
   bool cheby_poly = false;
@@ -382,11 +384,11 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
       cheby_poly = true;
     }
     else {
-      compute1DPoints[i]  = basis_gauss_points;
-      compute1DWeights[i] = basis_gauss_weights;
+      compute1DPoints[i]  = basis_collocation_points;
+      compute1DWeights[i] = basis_collocation_weights;
     }
   }
-  if (cheby_poly && !chebyPolyPtr) // gauss_mode set within loops
+  if (cheby_poly && !chebyPolyPtr) // collocation_mode set within loops
     chebyPolyPtr = new BasisPolynomial(CHEBYSHEV_ORTHOG);
 
   initialize_rules(u_types, nested_rules, equidistant_rules, growth_rate,
@@ -414,8 +416,8 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
   compute1DPoints.resize(numVars);
   compute1DWeights.resize(numVars);
   for (size_t i=0; i<numVars; i++) {
-    compute1DPoints[i]  = basis_gauss_points;
-    compute1DWeights[i] = basis_gauss_weights;
+    compute1DPoints[i]  = basis_collocation_points;
+    compute1DWeights[i] = basis_collocation_weights;
   }
 
   initialize_rules(poly_basis, growth_rate, integrationRules, growthRules);
@@ -446,8 +448,8 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
 
   if (refineControl == DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
     // compute reference grid only
-    allocate_collocation_key();              // compute collocKey
-    allocate_1d_gauss_points_weights();      // define 1-D point/weight sets
+    allocate_collocation_key();               // compute collocKey
+    allocate_1d_collocation_points_weights(); // define 1-D point/weight sets
     reference_unique(); // updates collocIndices,uniqueIndexMapping,numCollocPts
     update_sparse_points(0, 0, a1Points, isUnique1, uniqueIndex1, var_sets);
 #ifdef DEBUG
@@ -507,9 +509,9 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     delete [] sparse_index;
 
     if (storeCollocDetails) {
-      allocate_collocation_key();         // compute collocKey
-      allocate_collocation_indices();     // compute collocIndices
-      allocate_1d_gauss_points_weights(); // define 1-D point/weight sets
+      allocate_collocation_key();               // compute collocKey
+      allocate_collocation_indices();           // compute collocIndices
+      allocate_1d_collocation_points_weights(); // define 1-D point/weight sets
     }
   }
 
@@ -589,8 +591,8 @@ void SparseGridDriver::compute_trial_grid(RealMatrix& unique_var_sets)
   // push_trial_set() used for both new trials and restorations)
   trialSets.insert(trial_set);
 
-  // update 3D with new 2D gauss pts/wts (in correct location)
-  update_1d_gauss_points_weights(trial_set, pts_1d, wts_1d);
+  // update 3D with new 2D collocation pts/wts (in correct location)
+  update_1d_collocation_points_weights(trial_set, pts_1d, wts_1d);
 
   // update collocIndices and uniqueIndexMapping
   size_t i, num_tp_pts, index, last_index = smolyakMultiIndex.size() - 1;
@@ -1024,8 +1026,8 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
       Real* pt = pts[cntr]; // column vector of size m
       Real& wt = wts[cntr]; wt = 1.;
       for (k=0; k<numVars; ++k) {
-	pt[k] = gaussPts1D[sm_index[k]][k][key_ij[k]];
-	wt   *= gaussWts1D[sm_index[k]][k][key_ij[k]];
+	pt[k] = collocPts1D[sm_index[k]][k][key_ij[k]];
+	wt   *= collocWts1D[sm_index[k]][k][key_ij[k]];
       }
     }
   }

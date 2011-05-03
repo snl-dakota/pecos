@@ -275,10 +275,10 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
     }
   }
 
-  ShortArray basis_types, gauss_modes;
+  ShortArray basis_types, colloc_modes;
   OrthogPolyApproximation::distribution_types(u_types, int_rules, basis_types,
-					      gauss_modes);
-  OrthogPolyApproximation::distribution_basis(basis_types, gauss_modes,
+					      colloc_modes);
+  OrthogPolyApproximation::distribution_basis(basis_types, colloc_modes,
 					      polynomialBasis);
 }
 
@@ -292,7 +292,7 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
   growth_rules.resize(numVars);
 
   for (size_t i=0; i<numVars; i++) {
-    int_rules[i] = poly_basis[i].gauss_mode();
+    int_rules[i] = poly_basis[i].collocation_mode();
     switch (int_rules[i]) {
     case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
       growth_rules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
@@ -330,30 +330,31 @@ compute_tensor_grid(const UShortArray& quad_order, RealMatrix& variable_sets,
     wts_1d.resize(numVars);
   }
   for (i=0; i<numVars; ++i) {
-    pts_1d[i] = polynomialBasis[i].gauss_points(quad_order[i]);
-    wts_1d[i] = polynomialBasis[i].gauss_weights(quad_order[i]);
+    pts_1d[i] = polynomialBasis[i].collocation_points(quad_order[i]);
+    wts_1d[i] = polynomialBasis[i].collocation_weights(quad_order[i]);
   }
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
-  // > project 1-D gauss point arrays (of potentially different type and order)
+  // > project 1-D colloc point arrays (of potentially different type and order)
   //   into an n-dimensional stencil
-  // > compute and store products of 1-D Gauss weights at each point in stencil
+  // > compute and store products of 1-D colloc weights at each point in stencil
   weight_sets.sizeUninitialized(num_colloc_pts);
   variable_sets.shapeUninitialized(numVars, num_colloc_pts);//Teuchos: col major
   colloc_key.resize(num_colloc_pts);
-  UShortArray gauss_indices(numVars, 0);
+  UShortArray colloc_indices(numVars, 0);
   for (i=0; i<num_colloc_pts; i++) {
     Real& wt_i = weight_sets[i];
     Real* pt_i = variable_sets[i]; // column vector i
     wt_i = 1.0;
     for (j=0; j<numVars; j++) {
-      pt_i[j] = pts_1d[j][gauss_indices[j]];
-      wt_i   *= wts_1d[j][gauss_indices[j]];
+      pt_i[j] = pts_1d[j][colloc_indices[j]];
+      wt_i   *= wts_1d[j][colloc_indices[j]];
     }
-    colloc_key[i] = gauss_indices;
-    // increment the n-dimensional gauss point index set
+    colloc_key[i] = colloc_indices;
+    // increment the n-dimensional collocation point index set
     if (i != num_colloc_pts-1)
-      PolynomialApproximation::increment_indices(gauss_indices,quad_order,true);
+      PolynomialApproximation::increment_indices(colloc_indices,
+						 quad_order, true);
   }
 }
 

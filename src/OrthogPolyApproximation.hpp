@@ -66,7 +66,7 @@ public:
 			    const IntArray& int_rules,
 			    const DistributionParams& dp,
 			    std::vector<BasisPolynomial>& poly_basis,
-			    ShortArray& basis_types, ShortArray& gauss_modes);
+			    ShortArray& basis_types, ShortArray& colloc_modes);
 
   /// allocate polynomialBasis and basisTypes based on u_types
   bool distribution_types(const ShortArray& u_types,
@@ -75,13 +75,13 @@ public:
   static bool distribution_types(const ShortArray& u_types,
 				 const IntArray& int_rules,
 				 ShortArray& basis_types,
-				 ShortArray& gauss_modes);
+				 ShortArray& colloc_modes);
 
   /// allocate polynomialBasis based on basisTypes and gaussModes
   void distribution_basis();
-  /// allocate poly_basis based on basis_types and gauss_modes
+  /// allocate poly_basis based on basis_types and colloc_modes
   static void distribution_basis(const ShortArray& basis_types,
-				 const ShortArray& gauss_modes,
+				 const ShortArray& colloc_modes,
 				 std::vector<BasisPolynomial>& poly_basis);
 
   /// pass distribution parameters from dp to polynomialBasis
@@ -463,11 +463,11 @@ inline void OrthogPolyApproximation::
 distributions(const ShortArray& u_types, const IntArray& int_rules,
 	      const DistributionParams& dp,
 	      std::vector<BasisPolynomial>& poly_basis,
-	      ShortArray& basis_types, ShortArray& gauss_modes)
+	      ShortArray& basis_types, ShortArray& colloc_modes)
 {
   bool dist_params
-    = distribution_types(u_types, int_rules, basis_types, gauss_modes);
-  distribution_basis(basis_types, gauss_modes, poly_basis);
+    = distribution_types(u_types, int_rules, basis_types, colloc_modes);
+  distribution_basis(basis_types, colloc_modes, poly_basis);
   if (dist_params)
     distribution_parameters(u_types, dp, poly_basis);
 }

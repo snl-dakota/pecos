@@ -19,7 +19,7 @@
 
 namespace Pecos {
 
-/// pointer to a Gauss point or weight evaluation function, matching
+/// pointer to a collocation point or weight evaluation function, matching
 /// the prototype required by Pecos/packages/VPISparseGrid
 typedef void ( *FPType ) ( int order, int index, double* data );
 
@@ -30,8 +30,8 @@ typedef void ( *FPType ) ( int order, int index, double* data );
 
 /** This class is used by Dakota::NonDSparseGrid, but could also be
     used for general numerical integration of moments.  It employs 1-D
-    Clenshaw-Curtis and Gaussian quadrature rules within Smolyak
-    sparse grids. */
+    Clenshaw-Curtis, Newton-Cotes, and Gaussian quadrature rules
+    within Smolyak sparse grids. */
 
 class SparseGridDriver: public IntegrationDriver
 {
@@ -78,12 +78,12 @@ public:
   void update_collocation_key(size_t start_index);
   /// initialize collocIndices from collocKey and uniqueIndexMapping
   void allocate_collocation_indices();
-  /// initialize gaussPts1D and gaussWts1D
-  void allocate_1d_gauss_points_weights();
-  /// update gaussPts1D and gaussWts1D from pts_1d and wts_1d
-  void update_1d_gauss_points_weights(const UShortArray& trial_set,
-				      const Real2DArray& pts_1d,
-				      const Real2DArray& wts_1d);
+  /// initialize collocPts1D and collocWts1D
+  void allocate_1d_collocation_points_weights();
+  /// update collocPts1D and collocWts1D from pts_1d and wts_1d
+  void update_1d_collocation_points_weights(const UShortArray& trial_set,
+					    const Real2DArray& pts_1d,
+					    const Real2DArray& wts_1d);
 
   /// define a1Points/a1Weights based on the reference grid
   void reference_unique();
@@ -196,10 +196,10 @@ public:
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
 
-  /// return gaussPts1D
-  const Real3DArray& gauss_points_array()  const;
-  /// return gaussWts1D
-  const Real3DArray& gauss_weights_array() const;
+  /// return collocPts1D
+  const Real3DArray& collocation_points_array()  const;
+  /// return collocWts1D
+  const Real3DArray& collocation_weights_array() const;
 
 private:
 
@@ -207,10 +207,10 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// function for computing Gauss points for polynomialBasis[index]
-  static void basis_gauss_points(int order, int index, double* data);
-  /// function for computing Gauss weights for polynomialBasis[index]
-  static void basis_gauss_weights(int order, int index, double* data);
+  /// function for computing collocation points for polynomialBasis[index]
+  static void basis_collocation_points(int order, int index, double* data);
+  /// function for computing collocation weights for polynomialBasis[index]
+  static void basis_collocation_weights(int order, int index, double* data);
 
   /// function for computing collocation points for ChebyshevOrthogPolynomial
   static void chebyshev_points(int order, int index, double* data);
@@ -264,7 +264,7 @@ private:
   //short refineType;
   /// algorithm control governing expansion refinement
   short refineControl;
-  /// controls conditional population of gaussPts1D and gaussWts1D
+  /// controls conditional population of collocPts1D and collocWts1D
   bool storeCollocDetails;
 
   /// refinement constraints that ensure that level/anisotropic weight updates
@@ -340,14 +340,14 @@ private:
   BoolDeque isUnique1;  ///< key to unique points in set 1 (reference)
   BoolDeque isUnique2;  ///< key to unique points in set 2 (increment)
 
-  /// num_levels_per_var x numContinuousVars sets of 1D Gauss points
-  Real3DArray gaussPts1D;
-  /// num_levels_per_var x numContinuousVars sets of 1D Gauss weights
-  Real3DArray gaussWts1D;
+  /// num_levels_per_var x numContinuousVars sets of 1D collocation points
+  Real3DArray collocPts1D;
+  /// num_levels_per_var x numContinuousVars sets of 1D collocation weights
+  Real3DArray collocWts1D;
 
-  /// array of pointers to Gauss point evaluation functions
+  /// array of pointers to collocation point evaluation functions
   std::vector<FPType> compute1DPoints;
-  /// array of pointers to Gauss weight evaluation functions
+  /// array of pointers to collocation weight evaluation functions
   std::vector<FPType> compute1DWeights;
 };
 
@@ -414,12 +414,12 @@ inline int SparseGridDriver::unique_trial_points() const
 //{ return duplicateTol; }
 
 
-inline const Real3DArray& SparseGridDriver::gauss_points_array() const
-{ return gaussPts1D; }
+inline const Real3DArray& SparseGridDriver::collocation_points_array() const
+{ return collocPts1D; }
 
 
-inline const Real3DArray& SparseGridDriver::gauss_weights_array() const
-{ return gaussWts1D; }
+inline const Real3DArray& SparseGridDriver::collocation_weights_array() const
+{ return collocWts1D; }
 
 
 inline void SparseGridDriver::allocate_smolyak_arrays()
@@ -468,38 +468,42 @@ level_to_order(const UShortArray& levels, UShortArray& orders)
 
 
 inline void SparseGridDriver::
-basis_gauss_points(int order, int index, double* data)
+basis_collocation_points(int order, int index, double* data)
 {
-  const RealArray& gauss_pts
-    = sgdInstance->polynomialBasis[index].gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
+  const RealArray& colloc_pts
+    = sgdInstance->polynomialBasis[index].collocation_points(order);
+  std::copy(colloc_pts.begin(), colloc_pts.begin()+order, data);
 }
 
 
 inline void SparseGridDriver::
-basis_gauss_weights(int order, int index, double* data)
+basis_collocation_weights(int order, int index, double* data)
 {
-  const RealArray& gauss_wts
-    = sgdInstance->polynomialBasis[index].gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
+  const RealArray& colloc_wts
+    = sgdInstance->polynomialBasis[index].collocation_weights(order);
+  std::copy(colloc_wts.begin(), colloc_wts.begin()+order, data);
 }
 
 
 inline void SparseGridDriver::
 chebyshev_points(int order, int index, double* data)
 {
-  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
-  const RealArray& gauss_pts = sgdInstance->chebyPolyPtr->gauss_points(order);
-  std::copy(gauss_pts.begin(), gauss_pts.begin()+order, data);
+  sgdInstance->chebyPolyPtr->
+    collocation_mode(sgdInstance->integrationRules[index]);
+  const RealArray& colloc_pts
+    = sgdInstance->chebyPolyPtr->collocation_points(order);
+  std::copy(colloc_pts.begin(), colloc_pts.begin()+order, data);
 }
 
 
 inline void SparseGridDriver::
 chebyshev_weights(int order, int index, double* data)
 {
-  sgdInstance->chebyPolyPtr->gauss_mode(sgdInstance->integrationRules[index]);
-  const RealArray& gauss_wts = sgdInstance->chebyPolyPtr->gauss_weights(order);
-  std::copy(gauss_wts.begin(), gauss_wts.begin()+order, data);
+  sgdInstance->chebyPolyPtr->
+    collocation_mode(sgdInstance->integrationRules[index]);
+  const RealArray& colloc_wts
+    = sgdInstance->chebyPolyPtr->collocation_weights(order);
+  std::copy(colloc_wts.begin(), colloc_wts.begin()+order, data);
 }
 
 

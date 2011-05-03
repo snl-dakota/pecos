@@ -38,9 +38,9 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  ChebyshevOrthogPolynomial(short gauss_mode); ///< extended constructor
-  ChebyshevOrthogPolynomial();                 ///< default constructor
-  ~ChebyshevOrthogPolynomial();                ///< destructor
+  ChebyshevOrthogPolynomial(short colloc_mode); ///< extended constructor
+  ChebyshevOrthogPolynomial();                  ///< default constructor
+  ~ChebyshevOrthogPolynomial();                 ///< destructor
 
   //
   //- Heading: Virtual function redefinitions
@@ -48,10 +48,10 @@ public:
 
   /// return the Chebyshev quadrature points corresponding to
   /// polynomial order n
-  const RealArray& gauss_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the Chebyshev quadrature weights corresponding to
   /// polynomial order n
-  const RealArray& gauss_weights(unsigned short order);
+  const RealArray& collocation_weights(unsigned short order);
 
 protected:
 
@@ -75,13 +75,13 @@ private:
 };
 
 
-// gaussMode may be CLENSHAW_CURTIS (default) or FEJER2
-inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial(short gauss_mode)
-{ gaussMode = gauss_mode;      wtFactor = 0.5; }
+// collocMode may be CLENSHAW_CURTIS (default) or FEJER2
+inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial(short colloc_mode)
+{ collocMode = colloc_mode;     wtFactor = 0.5; }
 
 
 inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial()
-{ gaussMode = CLENSHAW_CURTIS; wtFactor = 0.5; }
+{ collocMode = CLENSHAW_CURTIS; wtFactor = 0.5; }
 
 
 inline ChebyshevOrthogPolynomial::~ChebyshevOrthogPolynomial()

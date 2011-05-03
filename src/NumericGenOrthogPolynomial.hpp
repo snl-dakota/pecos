@@ -90,9 +90,9 @@ protected:
   //
 
   /// return the Gauss quadrature points corresponding to polynomial order
-  const RealArray& gauss_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the Gauss quadrature weights corresponding to polynomial order
-  const RealArray& gauss_weights(unsigned short order);
+  const RealArray& collocation_weights(unsigned short order);
 
   /// retrieve the value of the generated polynomial of given order
   /// for a given parameter x
@@ -177,7 +177,7 @@ private:
 				const RealVector& poly_coeffs2,
 				NGFPType weight_fn, Real start, Real end);
   /// compute an integral using the native Gaussian quadrature rule
-  /// (up to order 2m-1 based on gaussPoints and gaussWeights of order m)
+  /// (up to order 2m-1 based on collocPoints and collocWeights of order m)
   Real native_quadrature_integral(const RealVector& poly_coeffs1,
 				  const RealVector& poly_coeffs2);
 
@@ -201,7 +201,7 @@ private:
   RealVector distParams;
 
   /// flag identifying the need to compute polyCoeffs and orthogPolyNormsSq
-  /// (if false, only gaussPoints and gaussWeights are computed)
+  /// (if false, only collocPoints and collocWeights are computed)
   bool coeffsNormsFlag;
 
   /// coefficients of the orthogonal polynomials, from order 0 to m
@@ -222,7 +222,7 @@ private:
 
 inline NumericGenOrthogPolynomial::NumericGenOrthogPolynomial() :
   coeffsNormsFlag(false)
-{ gaussMode = GOLUB_WELSCH; ptFactor = wtFactor = 1.; }
+{ collocMode = GOLUB_WELSCH; ptFactor = wtFactor = 1.; }
 
 
 inline NumericGenOrthogPolynomial::~NumericGenOrthogPolynomial()

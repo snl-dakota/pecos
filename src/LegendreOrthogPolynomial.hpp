@@ -40,9 +40,9 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  LegendreOrthogPolynomial(short gauss_mode); ///< extended constructor
-  LegendreOrthogPolynomial();                 ///< default constructor
-  ~LegendreOrthogPolynomial();                ///< destructor
+  LegendreOrthogPolynomial(short colloc_mode); ///< extended constructor
+  LegendreOrthogPolynomial();                  ///< default constructor
+  ~LegendreOrthogPolynomial();                 ///< destructor
 
 protected:
 
@@ -60,10 +60,10 @@ protected:
 
   /// return the Gauss-Legendre quadrature points corresponding to
   /// polynomial order n
-  const RealArray& gauss_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the Gauss-Legendre quadrature weights corresponding to
   /// polynomial order n
-  const RealArray& gauss_weights(unsigned short order);
+  const RealArray& collocation_weights(unsigned short order);
 
 private:
 
@@ -73,13 +73,13 @@ private:
 };
 
 
-// gaussMode may be GAUSS_LEGENDRE (default) or GAUSS_PATTERSON
-inline LegendreOrthogPolynomial::LegendreOrthogPolynomial(short gauss_mode)
-{ gaussMode = gauss_mode;     wtFactor = 0.5; }
+// collocMode may be GAUSS_LEGENDRE (default) or GAUSS_PATTERSON
+inline LegendreOrthogPolynomial::LegendreOrthogPolynomial(short colloc_mode)
+{ collocMode = colloc_mode;    wtFactor = 0.5; }
 
 
 inline LegendreOrthogPolynomial::LegendreOrthogPolynomial()
-{ gaussMode = GAUSS_LEGENDRE; wtFactor = 0.5; }
+{ collocMode = GAUSS_LEGENDRE; wtFactor = 0.5; }
 
 
 inline LegendreOrthogPolynomial::~LegendreOrthogPolynomial()

@@ -186,215 +186,217 @@ const Real& LaguerreOrthogPolynomial::norm_squared(unsigned short order)
 }
 
 
-const RealArray& LaguerreOrthogPolynomial::gauss_points(unsigned short order)
+const RealArray& LaguerreOrthogPolynomial::
+collocation_points(unsigned short order)
 {
-  // pull this outside block below since order=0 is initial gauss pts length
+  // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "LaguerreOrthogPolynomial::gauss_points()." << std::endl;
+	  << "LaguerreOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
-  if (gaussPoints.size() != order) { // if not already computed
-    gaussPoints.resize(order);
+  if (collocPoints.size() != order) { // if not already computed
+    collocPoints.resize(order);
 #ifdef HAVE_SPARSE_GRID
     if (order <= 20) // retrieve full precision tabulated values
-      webbur::laguerre_lookup_points(order, &gaussPoints[0]);
+      webbur::laguerre_lookup_points(order, &collocPoints[0]);
     else { // calculates points/weights together
-      if (gaussWeights.size() != order)
-	gaussWeights.resize(order);
-      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
+      if (collocWeights.size() != order)
+	collocWeights.resize(order);
+      webbur::laguerre_compute(order, &collocPoints[0], &collocWeights[0]);
     }
 #else
     switch (order) {
     case 1: // zeros of L_1(x) for one Gauss-Laguerre point:
-      gaussPoints[0] =  1.0; break;
+      collocPoints[0] =  1.0; break;
     case 2: { // zeros of L_2(x) for two Gauss-Laguerre points:
       Real sr2 = std::sqrt(2.);
-      gaussPoints[0] =  2. - sr2;
-      gaussPoints[1] =  2. + sr2; break;
+      collocPoints[0] =  2. - sr2;
+      collocPoints[1] =  2. + sr2; break;
     }
     // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
     case 3:
-      gaussPoints[0] =  0.415774556783;
-      gaussPoints[1] =  2.294280360279;
-      gaussPoints[2] =  6.289945082937; break;
+      collocPoints[0] =  0.415774556783;
+      collocPoints[1] =  2.294280360279;
+      collocPoints[2] =  6.289945082937; break;
     case 4:
-      gaussPoints[0] =  0.322547689619;
-      gaussPoints[1] =  1.745761101158;
-      gaussPoints[2] =  4.536620296921;
-      gaussPoints[3] =  9.395070912301; break;
+      collocPoints[0] =  0.322547689619;
+      collocPoints[1] =  1.745761101158;
+      collocPoints[2] =  4.536620296921;
+      collocPoints[3] =  9.395070912301; break;
     case 5:
-      gaussPoints[0] =  0.263560319718;
-      gaussPoints[1] =  1.413403059107;
-      gaussPoints[2] =  3.596425771041;
-      gaussPoints[3] =  7.085810005859;
-      gaussPoints[4] = 12.640800844276; break;
+      collocPoints[0] =  0.263560319718;
+      collocPoints[1] =  1.413403059107;
+      collocPoints[2] =  3.596425771041;
+      collocPoints[3] =  7.085810005859;
+      collocPoints[4] = 12.640800844276; break;
     case 6:
-      gaussPoints[0] =  0.222846604179;
-      gaussPoints[1] =  1.188932101673;
-      gaussPoints[2] =  2.992736326059;
-      gaussPoints[3] =  5.775143569105;
-      gaussPoints[4] =  9.837467418383;
-      gaussPoints[5] = 15.982873980602; break;
+      collocPoints[0] =  0.222846604179;
+      collocPoints[1] =  1.188932101673;
+      collocPoints[2] =  2.992736326059;
+      collocPoints[3] =  5.775143569105;
+      collocPoints[4] =  9.837467418383;
+      collocPoints[5] = 15.982873980602; break;
     case 7:
-      gaussPoints[0] =  0.193043676560;
-      gaussPoints[1] =  1.026664895339;
-      gaussPoints[2] =  2.567876744951;
-      gaussPoints[3] =  4.900353084526;
-      gaussPoints[4] =  8.182153444563;
-      gaussPoints[5] = 12.734180291798;
-      gaussPoints[6] = 19.395727862263; break;
+      collocPoints[0] =  0.193043676560;
+      collocPoints[1] =  1.026664895339;
+      collocPoints[2] =  2.567876744951;
+      collocPoints[3] =  4.900353084526;
+      collocPoints[4] =  8.182153444563;
+      collocPoints[5] = 12.734180291798;
+      collocPoints[6] = 19.395727862263; break;
     case 8:
-      gaussPoints[0] =  0.170279632305;
-      gaussPoints[1] =  0.903701776799;
-      gaussPoints[2] =  2.251086629866;
-      gaussPoints[3] =  4.266700170288;
-      gaussPoints[4] =  7.045905402393;
-      gaussPoints[5] = 10.758516010181;
-      gaussPoints[6] = 15.740678641278;
-      gaussPoints[7] = 22.863131736889; break;
+      collocPoints[0] =  0.170279632305;
+      collocPoints[1] =  0.903701776799;
+      collocPoints[2] =  2.251086629866;
+      collocPoints[3] =  4.266700170288;
+      collocPoints[4] =  7.045905402393;
+      collocPoints[5] = 10.758516010181;
+      collocPoints[6] = 15.740678641278;
+      collocPoints[7] = 22.863131736889; break;
     case 9:
-      gaussPoints[0] =  0.152322227732;
-      gaussPoints[1] =  0.807220022742;
-      gaussPoints[2] =  2.005135155619;
-      gaussPoints[3] =  3.783473973331;
-      gaussPoints[4] =  6.204956777877;
-      gaussPoints[5] =  9.372985251688;
-      gaussPoints[6] = 13.466236911092;
-      gaussPoints[7] = 18.833597788992;
-      gaussPoints[8] = 26.374071890927; break;
+      collocPoints[0] =  0.152322227732;
+      collocPoints[1] =  0.807220022742;
+      collocPoints[2] =  2.005135155619;
+      collocPoints[3] =  3.783473973331;
+      collocPoints[4] =  6.204956777877;
+      collocPoints[5] =  9.372985251688;
+      collocPoints[6] = 13.466236911092;
+      collocPoints[7] = 18.833597788992;
+      collocPoints[8] = 26.374071890927; break;
     case 10:
-      gaussPoints[0] =  0.137793470540;
-      gaussPoints[1] =  0.729454549503;
-      gaussPoints[2] =  1.808342901740;
-      gaussPoints[3] =  3.401433697855;
-      gaussPoints[4] =  5.552496140064;
-      gaussPoints[5] =  8.330152746764;
-      gaussPoints[6] = 11.843785837900;
-      gaussPoints[7] = 16.279257831378;
-      gaussPoints[8] = 21.996585811981;
-      gaussPoints[9] = 29.920697012274; break;
+      collocPoints[0] =  0.137793470540;
+      collocPoints[1] =  0.729454549503;
+      collocPoints[2] =  1.808342901740;
+      collocPoints[3] =  3.401433697855;
+      collocPoints[4] =  5.552496140064;
+      collocPoints[5] =  8.330152746764;
+      collocPoints[6] = 11.843785837900;
+      collocPoints[7] = 16.279257831378;
+      collocPoints[8] = 21.996585811981;
+      collocPoints[9] = 29.920697012274; break;
     default:
       PCerr << "Error: overflow in maximum quadrature order limit (10) in "
-	    << "LaguerreOrthogPolynomial::gauss_points().  Configure with "
-	    << "VPISparseGrid to extend range." << std::endl;
+	    << "LaguerreOrthogPolynomial::collocation_points().  Configure "
+	    << "with VPISparseGrid to extend range." << std::endl;
       abort_handler(-1); break;
     }
 #endif
   }
 
-  return gaussPoints;
+  return collocPoints;
 }
 
 
-const RealArray& LaguerreOrthogPolynomial::gauss_weights(unsigned short order)
+const RealArray& LaguerreOrthogPolynomial::
+collocation_weights(unsigned short order)
 {
-  // pull this outside block below since order=0 is initial gauss pts length
+  // pull this outside block below since order=0 is initial colloc wts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "LaguerreOrthogPolynomial::gauss_weights()." << std::endl;
+	  << "LaguerreOrthogPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
   // The sums of the weights = 1, which is the integral of the density function
   // exp(-x) over the support range of [0,+infinity].
 
-  if (gaussWeights.size() != order) { // if not already computed
-    gaussWeights.resize(order);
+  if (collocWeights.size() != order) { // if not already computed
+    collocWeights.resize(order);
 #ifdef HAVE_SPARSE_GRID
     if (order <= 20) // tabulated values from sandia_rules have full precision
-      webbur::laguerre_lookup_weights(order, &gaussWeights[0]);
+      webbur::laguerre_lookup_weights(order, &collocWeights[0]);
     else { // sandia_rules calculates points/weights together
-      if (gaussPoints.size() != order)
-	gaussPoints.resize(order);
-      webbur::laguerre_compute(order, &gaussPoints[0], &gaussWeights[0]);
+      if (collocPoints.size() != order)
+	collocPoints.resize(order);
+      webbur::laguerre_compute(order, &collocPoints[0], &collocWeights[0]);
     }
 #else
     switch (order) {
     case 1: // weights for one Gauss-Laguerre point:
-      gaussWeights[0] = 1.0; break;
+      collocWeights[0] = 1.0; break;
     case 2: { // weights for two Gauss-Laguerre points:
       Real sr2 = std::sqrt(2.);
-      gaussWeights[0] = (2. + sr2)/4.;
-      gaussWeights[1] = (2. - sr2)/4.; break;
+      collocWeights[0] = (2. + sr2)/4.;
+      collocWeights[1] = (2. - sr2)/4.; break;
     }
     // Only ~12 digits of precision in Abramowitz & Stegun tabulated values
     case 3:
-      gaussWeights[0] = 0.711093009929;
-      gaussWeights[1] = 0.278517733569;
-      gaussWeights[2] = 0.0103892565016; break;
+      collocWeights[0] = 0.711093009929;
+      collocWeights[1] = 0.278517733569;
+      collocWeights[2] = 0.0103892565016; break;
     case 4:
-      gaussWeights[0] = 0.603154104342;
-      gaussWeights[1] = 0.357418692438;
-      gaussWeights[2] = 0.0388879085150;
-      gaussWeights[3] = 0.000539294705561; break;
+      collocWeights[0] = 0.603154104342;
+      collocWeights[1] = 0.357418692438;
+      collocWeights[2] = 0.0388879085150;
+      collocWeights[3] = 0.000539294705561; break;
     case 5:
-      gaussWeights[0] = 0.521755610583;
-      gaussWeights[1] = 0.398666811083;
-      gaussWeights[2] = 0.0759424496817;
-      gaussWeights[3] = 0.00361175867992;
-      gaussWeights[4] = 2.33699723858e-5; break;
+      collocWeights[0] = 0.521755610583;
+      collocWeights[1] = 0.398666811083;
+      collocWeights[2] = 0.0759424496817;
+      collocWeights[3] = 0.00361175867992;
+      collocWeights[4] = 2.33699723858e-5; break;
     case 6:
-      gaussWeights[0] = 0.458964673950;
-      gaussWeights[1] = 0.417000830772;
-      gaussWeights[2] = 0.113373382074;
-      gaussWeights[3] = 0.0103991974531;
-      gaussWeights[4] = 0.000261017202815;
-      gaussWeights[5] = 8.98547906430e-7; break;
+      collocWeights[0] = 0.458964673950;
+      collocWeights[1] = 0.417000830772;
+      collocWeights[2] = 0.113373382074;
+      collocWeights[3] = 0.0103991974531;
+      collocWeights[4] = 0.000261017202815;
+      collocWeights[5] = 8.98547906430e-7; break;
     case 7:
-      gaussWeights[0] = 0.409318951701;
-      gaussWeights[1] = 0.421831277862;
-      gaussWeights[2] = 0.147126348658;
-      gaussWeights[3] = 0.0206335144687;
-      gaussWeights[4] = 0.00107401014328;
-      gaussWeights[5] = 1.58654643486e-5;
-      gaussWeights[6] = 3.17031547900e-8; break;
+      collocWeights[0] = 0.409318951701;
+      collocWeights[1] = 0.421831277862;
+      collocWeights[2] = 0.147126348658;
+      collocWeights[3] = 0.0206335144687;
+      collocWeights[4] = 0.00107401014328;
+      collocWeights[5] = 1.58654643486e-5;
+      collocWeights[6] = 3.17031547900e-8; break;
     case 8:
-      gaussWeights[0] = 0.369188589342;
-      gaussWeights[1] = 0.418786780814;
-      gaussWeights[2] = 0.175794986637;
-      gaussWeights[3] = 0.0333434922612;
-      gaussWeights[4] = 0.00279453623523;
-      gaussWeights[5] = 9.07650877336e-5;
-      gaussWeights[6] = 8.48574671627e-7;
-      gaussWeights[7] = 1.04800117487e-9; break;
+      collocWeights[0] = 0.369188589342;
+      collocWeights[1] = 0.418786780814;
+      collocWeights[2] = 0.175794986637;
+      collocWeights[3] = 0.0333434922612;
+      collocWeights[4] = 0.00279453623523;
+      collocWeights[5] = 9.07650877336e-5;
+      collocWeights[6] = 8.48574671627e-7;
+      collocWeights[7] = 1.04800117487e-9; break;
     case 9:
-      gaussWeights[0] = 0.336126421798;
-      gaussWeights[1] = 0.411213980424;
-      gaussWeights[2] = 0.199287525371;
-      gaussWeights[3] = 0.0474605627657;
-      gaussWeights[4] = 0.00559962661079;
-      gaussWeights[5] = 0.000305249767093;
-      gaussWeights[6] = 6.59212302608e-6;
-      gaussWeights[7] = 4.11076933035e-8;
-      gaussWeights[8] = 3.29087403035e-11; break;
+      collocWeights[0] = 0.336126421798;
+      collocWeights[1] = 0.411213980424;
+      collocWeights[2] = 0.199287525371;
+      collocWeights[3] = 0.0474605627657;
+      collocWeights[4] = 0.00559962661079;
+      collocWeights[5] = 0.000305249767093;
+      collocWeights[6] = 6.59212302608e-6;
+      collocWeights[7] = 4.11076933035e-8;
+      collocWeights[8] = 3.29087403035e-11; break;
     case 10:
-      gaussWeights[0] = 0.308441115765;
-      gaussWeights[1] = 0.401119929155;
-      gaussWeights[2] = 0.218068287612;
-      gaussWeights[3] = 0.0620874560987;
-      gaussWeights[4] = 0.00950151697518;
-      gaussWeights[5] = 0.000753008388588;
-      gaussWeights[6] = 2.82592334960e-5;
-      gaussWeights[7] = 4.24931398496e-7;
-      gaussWeights[8] = 1.83956482398e-9;
-      gaussWeights[9] = 9.91182721961e-13; break;
+      collocWeights[0] = 0.308441115765;
+      collocWeights[1] = 0.401119929155;
+      collocWeights[2] = 0.218068287612;
+      collocWeights[3] = 0.0620874560987;
+      collocWeights[4] = 0.00950151697518;
+      collocWeights[5] = 0.000753008388588;
+      collocWeights[6] = 2.82592334960e-5;
+      collocWeights[7] = 4.24931398496e-7;
+      collocWeights[8] = 1.83956482398e-9;
+      collocWeights[9] = 9.91182721961e-13; break;
     default:
       // define Gauss wts from Gauss pts using
       // -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
       // which for L(x), is x_i/(n L_{n-1}(x_i))^2.
-      const RealArray& gauss_pts = gauss_points(order);
+      const RealArray& colloc_pts = collocation_points(order);
       for (size_t i=0; i<order; i++) {
-	const Real& x_i = gauss_pts[i];
-	gaussWeights[i] = x_i/std::pow(order*get_value(x_i, order-1), 2);
+	const Real& x_i = colloc_pts[i];
+	collocWeights[i] = x_i/std::pow(order*get_value(x_i, order-1), 2);
       }
       break;
     }
 #endif
   }
 
-  return gaussWeights;
+  return collocWeights;
 }
 
 } // namespace Pecos

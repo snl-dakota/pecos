@@ -59,10 +59,10 @@ protected:
 
   /// return the Gauss-Laguerre quadrature points corresponding to
   /// polynomial order n
-  const RealArray& gauss_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the Gauss-Laguerre quadrature weights corresponding to
   /// polynomial order n
-  const RealArray& gauss_weights(unsigned short order);
+  const RealArray& collocation_weights(unsigned short order);
 
 private:
 
@@ -74,7 +74,7 @@ private:
 
 
 inline LaguerreOrthogPolynomial::LaguerreOrthogPolynomial()
-{ gaussMode = GAUSS_LAGUERRE; }
+{ collocMode = GAUSS_LAGUERRE; }
 
 
 inline LaguerreOrthogPolynomial::~LaguerreOrthogPolynomial()

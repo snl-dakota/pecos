@@ -63,10 +63,10 @@ public:
   /// return collocKey
   const UShort2DArray& collocation_key() const;
 
-  /// return gaussPts1D
-  const Real2DArray& gauss_points_array()  const;
-  /// return gaussWts1D
-  const Real2DArray& gauss_weights_array() const;
+  /// return collocPts1D
+  const Real2DArray& collocation_points_array()  const;
+  /// return collocWts1D
+  const Real2DArray& collocation_weights_array() const;
 
   /// invoke initialize_rules() to set integration and growth rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
@@ -95,10 +95,10 @@ private:
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
 
-  /// numContinuousVars sets of 1D Gauss points
-  Real2DArray gaussPts1D;
-  /// numContinuousVars sets of 1D Gauss weights
-  Real2DArray gaussWts1D;
+  /// numContinuousVars sets of 1D collocation points
+  Real2DArray collocPts1D;
+  /// numContinuousVars sets of 1D collocation weights
+  Real2DArray collocWts1D;
 };
 
 
@@ -132,12 +132,12 @@ inline const UShort2DArray& TensorProductDriver::collocation_key() const
 { return collocKey; }
 
 
-inline const Real2DArray& TensorProductDriver::gauss_points_array() const
-{ return gaussPts1D; }
+inline const Real2DArray& TensorProductDriver::collocation_points_array() const
+{ return collocPts1D; }
 
 
-inline const Real2DArray& TensorProductDriver::gauss_weights_array() const
-{ return gaussWts1D; }
+inline const Real2DArray& TensorProductDriver::collocation_weights_array() const
+{ return collocWts1D; }
 
 
 inline int TensorProductDriver::grid_size()

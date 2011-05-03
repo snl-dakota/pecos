@@ -62,11 +62,11 @@ void InterpPolyApproximation::allocate_arrays()
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
 
     // verify total number of collocation pts (should not include anchorPoint)
-    size_t i, j, num_gauss_pts = 1;
+    size_t i, j, num_colloc_pts = 1;
     for (i=0; i<numVars; ++i)
-      num_gauss_pts *= quad_order[i];
-    if (num_gauss_pts != numCollocPts) {
-      PCerr << "Error: inconsistent total Gauss point count in "
+      num_colloc_pts *= quad_order[i];
+    if (num_colloc_pts != numCollocPts) {
+      PCerr << "Error: inconsistent total collocation point count in "
 	    << "InterpPolyApproximation::allocate_arrays()" << std::endl;
       abort_handler(-1);
     }
@@ -83,12 +83,12 @@ void InterpPolyApproximation::allocate_arrays()
       // size and initialize polynomialBasis, one interpolant per variable
       if (polynomialBasis.empty())
 	{ polynomialBasis.resize(1); polynomialBasis[0].resize(numVars); }
-      const Real2DArray& gauss_pts_1d = tpq_driver->gauss_points_array();
+      const Real2DArray& colloc_pts_1d = tpq_driver->collocation_points_array();
       std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
       for (i=0; i<numVars; ++i) {
 	bool found = false;
 	for (j=0; j<i; ++j)
-	  if (gauss_pts_1d[i] == gauss_pts_1d[j]) // equality in pt vector
+	  if (colloc_pts_1d[i] == colloc_pts_1d[j]) // equality in pt vector
 	    { found = true; break; }
 	if (found) // reuse previous instance via shared representation
 	  poly_basis_0[i] = poly_basis_0[j];
@@ -101,7 +101,7 @@ void InterpPolyApproximation::allocate_arrays()
 	    poly_basis_0[i] = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(HERMITE_INTERP) :
 	      BasisPolynomial(LAGRANGE_INTERP);
-	  poly_basis_0[i].interpolation_points(gauss_pts_1d[i]);
+	  poly_basis_0[i].interpolation_points(colloc_pts_1d[i]);
 	}
       }
     }
@@ -317,7 +317,7 @@ void InterpPolyApproximation::
 update_sparse_interpolation_basis(unsigned short max_level)
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const Real3DArray& gauss_pts_1d = ssg_driver->gauss_points_array();
+  const Real3DArray& colloc_pts_1d = ssg_driver->collocation_points_array();
 
   // resize if needed (leaving previous levels unmodified)
   size_t i, j, k, basis_size = polynomialBasis.size();
@@ -332,12 +332,12 @@ update_sparse_interpolation_basis(unsigned short max_level)
   // fill gaps that may exist within any level
   for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
     for (j=0; j<numVars; ++j) {
-      const RealArray& gauss_pts_1d_ij =    gauss_pts_1d[i][j];
+      const RealArray& colloc_pts_1d_ij =    colloc_pts_1d[i][j];
       BasisPolynomial&   poly_basis_ij = polynomialBasis[i][j];
-      if (poly_basis_ij.is_null() && !gauss_pts_1d_ij.empty()) {
+      if (poly_basis_ij.is_null() && !colloc_pts_1d_ij.empty()) {
 	bool found = false;
 	for (k=0; k<j; ++k)
-	  if (gauss_pts_1d_ij == gauss_pts_1d[i][k] &&  // vector equality
+	  if (colloc_pts_1d_ij == colloc_pts_1d[i][k] &&  // vector equality
 	      !polynomialBasis[i][k].is_null())
 	    { found = true; break; }
 	if (found) // reuse previous instances via shared representations
@@ -351,7 +351,7 @@ update_sparse_interpolation_basis(unsigned short max_level)
 	    poly_basis_ij = (useDerivs) ? // from Hermite/Lagrange ctor
 	      BasisPolynomial(HERMITE_INTERP) :
 	      BasisPolynomial(LAGRANGE_INTERP);
-	  poly_basis_ij.interpolation_points(gauss_pts_1d_ij);
+	  poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
 	}
       }
     }
@@ -451,10 +451,10 @@ void InterpPolyApproximation::compute_total_effects()
 Real InterpPolyApproximation::total_effects_integral(int set_value)
 {
   // Some other routine here
-  TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
-  const UShortArray&   quad_order   = tpq_driver->quadrature_order();;
+  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
+  const UShort2DArray& key           = tpq_driver->collocation_key();
+  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
+  const UShortArray&   quad_order    = tpq_driver->quadrature_order();;
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -492,9 +492,9 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
         0 : key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-        prod_i_nonmembers *= gauss_wts_1d[j][key_i[j]];
+        prod_i_nonmembers *= colloc_wts_1d[j][key_i[j]];
       else
-        prod_i_members *= gauss_wts_1d[j][key_i[j]];
+        prod_i_members *= colloc_wts_1d[j][key_i[j]];
     }
  
     // mem_weights is performed more time than necessary here, but it
@@ -522,7 +522,7 @@ total_effects_integral(int set_value, size_t tp_index)
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -564,9 +564,9 @@ total_effects_integral(int set_value, size_t tp_index)
 	key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-        prod_i_nonmembers *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
+        prod_i_nonmembers *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
       else
-        prod_i_members *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
+        prod_i_members *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
     }
  
     // mem_weights is performed more time than necessary here, but it
@@ -634,10 +634,10 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
     Overloaded version supporting tensor-product quadrature. */
 Real InterpPolyApproximation::partial_variance_integral(int set_value)
 {
-  TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
-  const UShortArray&   quad_order   = tpq_driver->quadrature_order();;
+  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
+  const UShort2DArray& key           = tpq_driver->collocation_key();
+  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
+  const UShortArray&   quad_order    = tpq_driver->quadrature_order();;
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -677,9 +677,9 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
 	key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-	prod_i_nonmembers *= gauss_wts_1d[j][key_i[j]];
+	prod_i_nonmembers *= colloc_wts_1d[j][key_i[j]];
       else
-	prod_i_members *= gauss_wts_1d[j][key_i[j]];
+	prod_i_members *= colloc_wts_1d[j][key_i[j]];
     }
 
     // mem_weights is performed more time than necessary here, but it
@@ -709,7 +709,7 @@ partial_variance_integral(int set_value, size_t tp_index)
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -751,9 +751,9 @@ partial_variance_integral(int set_value, size_t tp_index)
 	0 : key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-	prod_i_nonmembers *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
+	prod_i_nonmembers *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
       else
-	prod_i_members *= gauss_wts_1d[sm_index[j]][j][key_i[j]];
+	prod_i_members *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
     }
 
     // mem_weights is performed more time than necessary here, but it

@@ -141,43 +141,44 @@ const Real& JacobiOrthogPolynomial::norm_squared(unsigned short order)
 }
 
 
-const RealArray& JacobiOrthogPolynomial::gauss_points(unsigned short order)
+const RealArray& JacobiOrthogPolynomial::
+collocation_points(unsigned short order)
 {
-  // pull this out from default below since order=0 is initial gauss pts length
+  // pull this out from default below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "JacobiOrthogPolynomial::gauss_points()." << std::endl;
+	  << "JacobiOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
-  if (gaussPoints.size() != order) { // if not already computed
-    gaussPoints.resize(order);
+  if (collocPoints.size() != order) { // if not already computed
+    collocPoints.resize(order);
     switch (order) {
     case 1: // zeros of Pab_1(x) for one Gauss-Jacobi point:
-      gaussPoints[0] = (betaPoly - alphaPoly) / (alphaPoly + betaPoly + 2.);
+      collocPoints[0] = (betaPoly - alphaPoly) / (alphaPoly + betaPoly + 2.);
       break;
     case 2: { // zeros of Pab_2(x) for two Gauss-Jacobi points:
       Real a = (alphaPoly+betaPoly+3.)*(alphaPoly+betaPoly+4.),
 	   b = 4.*(alphaPoly+betaPoly+3.)*(alphaPoly+2.),
 	   c = 4.*(alphaPoly+1.)*(alphaPoly+2.),
 	   srdiscrim = std::sqrt(b*b-4.*a*c), a2 = 2.*a;
-      gaussPoints[0] = 1. - (b+srdiscrim)/a2;
-      gaussPoints[1] = 1. - (b-srdiscrim)/a2;
+      collocPoints[0] = 1. - (b+srdiscrim)/a2;
+      collocPoints[1] = 1. - (b-srdiscrim)/a2;
       break;
     }
     default:
 #ifdef HAVE_SPARSE_GRID
       // sandia_rules.C calculates points/weights together
-      if (gaussWeights.size() != order)
-	gaussWeights.resize(order);
-      webbur::jacobi_compute(order, alphaPoly, betaPoly, &gaussPoints[0],
-			     &gaussWeights[0]);
+      if (collocWeights.size() != order)
+	collocWeights.resize(order);
+      webbur::jacobi_compute(order, alphaPoly, betaPoly, &collocPoints[0],
+			     &collocWeights[0]);
       const Real& wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
-	gaussWeights[i] *= wt_factor; // polynomial weight fn -> PDF
+	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
 #else
       PCerr << "Error: overflow in maximum quadrature order limit (2) in "
-	    << "JacobiOrthogPolynomial::gauss_points().  Configure with "
+	    << "JacobiOrthogPolynomial::collocation_points().  Configure with "
 	    << "VPISparseGrid to extend range." << std::endl;
       abort_handler(-1);
 #endif
@@ -185,11 +186,12 @@ const RealArray& JacobiOrthogPolynomial::gauss_points(unsigned short order)
     }
   }
 
-  return gaussPoints;
+  return collocPoints;
 }
 
 
-const RealArray& JacobiOrthogPolynomial::gauss_weights(unsigned short order)
+const RealArray& JacobiOrthogPolynomial::
+collocation_weights(unsigned short order)
 {
   // Derived from (A_n gamma_{n-1})/(A_{n-1} Phi_n'(x_i) Phi_{n-1}(x_i))
 
@@ -197,31 +199,31 @@ const RealArray& JacobiOrthogPolynomial::gauss_weights(unsigned short order)
   // function (1-x)^alpha (1+x)^beta / (2^(alpha+beta+1) B(alpha+1,beta+1))
   // over the support range of [-1,+1].
 
-  if (gaussWeights.size() != order) { // if not already computed
-    gaussWeights.resize(order);
+  if (collocWeights.size() != order) { // if not already computed
+    collocWeights.resize(order);
     switch (order) {
     case 1: // weights for one Gauss-Jacobi point:
-      gaussWeights[0] = 1.0;
+      collocWeights[0] = 1.0;
       break;
     default:
 #ifdef HAVE_SPARSE_GRID
       // sandia_rules.C calculates points/weights together
-      if (gaussPoints.size() != order)
-	gaussPoints.resize(order);
-      webbur::jacobi_compute(order, alphaPoly, betaPoly, &gaussPoints[0],
-			     &gaussWeights[0]);
+      if (collocPoints.size() != order)
+	collocPoints.resize(order);
+      webbur::jacobi_compute(order, alphaPoly, betaPoly, &collocPoints[0],
+			     &collocWeights[0]);
       const Real& wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
-	gaussWeights[i] *= wt_factor; // polynomial weight fn -> PDF
+	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
 #else
       // define Gauss wts from Gauss pts using formula above
-      const RealArray& gauss_pts = gauss_points(order);
+      const RealArray& colloc_pts = collocation_points(order);
       for (size_t i=0; i<order; i++) {
-	const Real& x_i = gauss_pts[i];
+	const Real& x_i = colloc_pts[i];
 	Real AnoAnm1
 	  = (2.*order+alphaPoly+betaPoly) * (2.*order+alphaPoly+betaPoly-1.)
 	  / (2.*order) / (order+alphaPoly+betaPoly);
-	gaussWeights[i]
+	collocWeights[i]
 	  = AnoAnm1 * norm_squared(order-1) / get_value(x_i, order-1)
 	  / get_gradient(x_i, order);
       }
@@ -230,7 +232,7 @@ const RealArray& JacobiOrthogPolynomial::gauss_weights(unsigned short order)
     }
   }
 
-  return gaussWeights;
+  return collocWeights;
 }
 
 

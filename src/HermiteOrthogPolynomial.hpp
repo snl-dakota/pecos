@@ -38,7 +38,7 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  HermiteOrthogPolynomial(short gauss_mode);  ///< extended constructor
+  HermiteOrthogPolynomial(short colloc_mode); ///< extended constructor
   HermiteOrthogPolynomial();                  ///< default constructor
   ~HermiteOrthogPolynomial();                 ///< destructor
 
@@ -58,10 +58,10 @@ protected:
 
   /// return the Gauss-Hermite quadrature points corresponding to
   /// polynomial order
-  const RealArray& gauss_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the Gauss-Hermite quadrature weights corresponding to
   /// polynomial order
-  const RealArray& gauss_weights(unsigned short order);
+  const RealArray& collocation_weights(unsigned short order);
 
 private:
 
@@ -72,19 +72,19 @@ private:
 };
 
 
-inline HermiteOrthogPolynomial::HermiteOrthogPolynomial(short gauss_mode)
+inline HermiteOrthogPolynomial::HermiteOrthogPolynomial(short colloc_mode)
 {
-  gaussMode = gauss_mode;
-  ptFactor  = std::sqrt(2.);
-  wtFactor  = 1./std::sqrt(PI);
+  collocMode = colloc_mode;
+  ptFactor   = std::sqrt(2.);
+  wtFactor   = 1./std::sqrt(PI);
 }
 
 
 inline HermiteOrthogPolynomial::HermiteOrthogPolynomial()
 {
-  gaussMode = GAUSS_HERMITE;
-  ptFactor  = std::sqrt(2.);
-  wtFactor  = 1./std::sqrt(PI);
+  collocMode = GAUSS_HERMITE;
+  ptFactor   = std::sqrt(2.);
+  wtFactor   = 1./std::sqrt(PI);
 }
 
 

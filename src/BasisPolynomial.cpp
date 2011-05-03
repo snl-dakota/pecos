@@ -61,7 +61,7 @@ BasisPolynomial::BasisPolynomial(): polyRep(NULL), referenceCount(1)
     This constructor executes get_polynomial(type), which invokes the
     default constructor of the derived letter class, which in turn
     invokes the BaseConstructor of the base class. */
-BasisPolynomial::BasisPolynomial(short poly_type, short gauss_mode):
+BasisPolynomial::BasisPolynomial(short poly_type, short colloc_mode):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -70,7 +70,7 @@ BasisPolynomial::BasisPolynomial(short poly_type, short gauss_mode):
 #endif
 
   // Set the rep pointer to the appropriate derived type
-  polyRep = get_polynomial(poly_type, gauss_mode);
+  polyRep = get_polynomial(poly_type, colloc_mode);
   if ( /* poly_type != NO_POLY && */ !polyRep ) // bad type, insufficient memory
     abort_handler(-1);
 }
@@ -271,25 +271,25 @@ const Real& BasisPolynomial::norm_squared(unsigned short n)
 }
 
 
-const RealArray& BasisPolynomial::gauss_points(unsigned short n)
+const RealArray& BasisPolynomial::collocation_points(unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: gauss_points() not available for this basis polynomial "
+    PCerr << "Error: collocation_points() not available for this basis polynomial "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->gauss_points(n);
+  return polyRep->collocation_points(n);
 }
 
 
-const RealArray& BasisPolynomial::gauss_weights(unsigned short n)
+const RealArray& BasisPolynomial::collocation_weights(unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: gauss_weights() not available for this basis polynomial "
+    PCerr << "Error: collocation_weights() not available for this basis polynomial "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->gauss_weights(n);
+  return polyRep->collocation_weights(n);
 }
 
 
@@ -369,26 +369,26 @@ void BasisPolynomial::beta_stat(const Real& beta)
 }
 
 
-void BasisPolynomial::gauss_mode(short mode)
+void BasisPolynomial::collocation_mode(short mode)
 {
   if (polyRep)
-    polyRep->gauss_mode(mode);
+    polyRep->collocation_mode(mode);
   else {
-    PCerr << "Error: gauss_mode(short) not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: collocation_mode(short) not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
 }
 
 
-short BasisPolynomial::gauss_mode() const
+short BasisPolynomial::collocation_mode() const
 {
   if (!polyRep) {
-    PCerr << "Error: gauss_mode() not available for this basis polynomial type."
-	  << std::endl;
+    PCerr << "Error: collocation_mode() not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->gauss_mode();
+  return polyRep->collocation_mode();
 }
 
 

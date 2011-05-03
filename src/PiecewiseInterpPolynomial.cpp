@@ -482,7 +482,7 @@ type2_interpolation_weights(unsigned short order)
 	type1InterpWts[0]       =  val; //  left end
 	type1InterpWts[order-1] = -val; // right end
 	for (unsigned short i=1; i<order-1; ++i)
-	  type1InterpWts[i] = 0.; // interior
+	  type1InterpWts[i] = 0.;       //  interior
       }
       else if (interpMode == CLENSHAW_CURTIS) {
 	Real val = interpPts[1] - interpPts[0];

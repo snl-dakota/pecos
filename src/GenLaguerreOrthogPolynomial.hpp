@@ -76,10 +76,10 @@ protected:
 
   /// return the generalized Gauss-Laguerre quadrature points
   /// corresponding to polynomial order n
-  const RealArray& gauss_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the generalized Gauss-Laguerre quadrature weights
   /// corresponding to polynomial order n
-  const RealArray& gauss_weights(unsigned short order);
+  const RealArray& collocation_weights(unsigned short order);
 
   /// return alphaPoly
   const Real& alpha_polynomial() const;
@@ -99,13 +99,13 @@ private:
 
 
 inline GenLaguerreOrthogPolynomial::GenLaguerreOrthogPolynomial(): alphaPoly(0.)
-{ gaussMode = GEN_GAUSS_LAGUERRE; }
+{ collocMode = GEN_GAUSS_LAGUERRE; }
 
 
 // TO DO
 inline GenLaguerreOrthogPolynomial::
 GenLaguerreOrthogPolynomial(const Real& alpha_stat): alphaPoly(alpha_stat-1.)
-{ gaussMode = GEN_GAUSS_LAGUERRE; }
+{ collocMode = GEN_GAUSS_LAGUERRE; }
 
 
 inline GenLaguerreOrthogPolynomial::~GenLaguerreOrthogPolynomial()

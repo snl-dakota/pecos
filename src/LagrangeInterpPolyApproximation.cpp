@@ -187,9 +187,9 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
 const Real& LagrangeInterpPolyApproximation::
 tensor_product_mean(const RealVector& x)
 {
-  TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
+  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
+  const UShort2DArray& key           = tpq_driver->collocation_key();
+  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
 
   tpMean = 0.;
   std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
@@ -198,7 +198,7 @@ tensor_product_mean(const RealVector& x)
     const UShortArray& key_i = key[i];
     Real prod_i = 1.;
     for (j=0; j<numVars; ++j)
-      prod_i *= (randomVarsKey[j]) ? gauss_wts_1d[j][key_i[j]] :
+      prod_i *= (randomVarsKey[j]) ? colloc_wts_1d[j][key_i[j]] :
 	poly_basis_0[j].get_value(x[j], key_i[j]);
     tpMean += expansionCoeffs[i] * prod_i;
   }
@@ -214,7 +214,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
 
   tpMean = 0.;
   size_t i, j, num_colloc_pts = key.size();
@@ -222,7 +222,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
     const UShortArray& key_i = key[i];
     Real prod_i = 1.;
     for (j=0; j<numVars; ++j)
-      prod_i *= (randomVarsKey[j]) ? gauss_wts_1d[sm_index[j]][j][key_i[j]] :
+      prod_i *= (randomVarsKey[j]) ? colloc_wts_1d[sm_index[j]][j][key_i[j]] :
 	polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
     tpMean += expansionCoeffs[colloc_index[i]] * prod_i;
   }
@@ -234,9 +234,9 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
 const RealVector& LagrangeInterpPolyApproximation::
 tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
+  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
+  const UShort2DArray& key           = tpq_driver->collocation_key();
+  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
 
   size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
     cntr = 0; // insertions in cntr order w/i tpCoeffGrads
@@ -262,7 +262,7 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
       const UShortArray& key_j = key[j];
       Real wt_prod_j = 1.;
       for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	{ k = *it; wt_prod_j *= gauss_wts_1d[k][key_j[k]]; }
+	{ k = *it; wt_prod_j *= colloc_wts_1d[k][key_j[k]]; }
       if (randomVarsKey[deriv_index]) {
 	// --------------------------------------------------------------------
 	// derivative of All var expansion w.r.t. random var (design insertion)
@@ -303,7 +303,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
 
   // -------------------------------------------------------------------
   // Mixed variable key:
@@ -343,7 +343,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
       Real wt_prod_j = 1.;
       for (it=randomIndices.begin(); it!=randomIndices.end(); ++it) {
 	k = *it;
-	wt_prod_j *= gauss_wts_1d[sm_index[k]][k][key_j[k]];
+	wt_prod_j *= colloc_wts_1d[sm_index[k]][k][key_j[k]];
       }
       if (randomVarsKey[deriv_index]) {
 	// --------------------------------------------------------------------
@@ -384,9 +384,9 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 const Real& LagrangeInterpPolyApproximation::
 tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 {
-  TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
+  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
+  const UShort2DArray& key           = tpq_driver->collocation_key();
+  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
 
   tpVariance = 0.;
   size_t i, j, k;
@@ -398,7 +398,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
     Real wt_prod_i = 1., Ls_prod_i = 1.;
     for (k=0; k<numVars; ++k)
       if (randomVarsKey[k])
-	wt_prod_i *= gauss_wts_1d[k][key_i[k]];
+	wt_prod_i *= colloc_wts_1d[k][key_i[k]];
       else
 	Ls_prod_i *= poly_basis_0[k].get_value(x[k], key_i[k]);
     const Real& exp_coeff_i = expansionCoeffs[i];
@@ -438,7 +438,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
 
   size_t i, j, k, index, num_colloc_pts = key.size();
   Real mean1 = 0., mean2 = 0.;
@@ -449,7 +449,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
     Real wt_prod_i = 1., Ls_prod_i = 1.;
     for (k=0; k<numVars; ++k)
       if (randomVarsKey[k])
-	wt_prod_i *= gauss_wts_1d[sm_index[k]][k][key_i[k]];
+	wt_prod_i *= colloc_wts_1d[sm_index[k]][k][key_i[k]];
       else
 	Ls_prod_i *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_i[k]);
     index = colloc_index[i];
@@ -485,9 +485,9 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 const RealVector& LagrangeInterpPolyApproximation::
 tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  TensorProductDriver* tpq_driver   = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key          = tpq_driver->collocation_key();
-  const Real2DArray&   gauss_wts_1d = tpq_driver->gauss_weights_array();
+  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
+  const UShort2DArray& key           = tpq_driver->collocation_key();
+  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
 
   Real mean = 0.;
   size_t i, j, k, l, deriv_index, num_deriv_vars = dvv.size(),
@@ -512,7 +512,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
       Real wt_prod_j = 1., Lsa_j = 1., dLsa_j_dsa_i = 1.;
       for (k=0; k<numVars; ++k)
 	if (randomVarsKey[k])
-	  wt_prod_j *= gauss_wts_1d[k][key_j[k]];
+	  wt_prod_j *= colloc_wts_1d[k][key_j[k]];
 	else
 	  Lsa_j *= poly_basis_0[k].get_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
@@ -589,7 +589,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& gauss_wts_1d = ssg_driver->gauss_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
 
   // -------------------------------------------------------------------
   // Mixed variable key:
@@ -631,7 +631,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
       Real wt_prod_j = 1., Lsa_j = 1., dLsa_j_dsa_i = 1.;
       for (k=0; k<numVars; ++k)
 	if (randomVarsKey[k])
-	  wt_prod_j *= gauss_wts_1d[sm_index[k]][k][key_j[k]];
+	  wt_prod_j *= colloc_wts_1d[sm_index[k]][k][key_j[k]];
 	else
 	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i

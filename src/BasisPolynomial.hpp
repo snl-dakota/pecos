@@ -45,7 +45,7 @@ public:
   /// default constructor
   BasisPolynomial();
    /// alternate constructor
-  BasisPolynomial(short poly_type, short gauss_mode = 0);
+  BasisPolynomial(short poly_type, short colloc_mode = 0);
   /// copy constructor
   BasisPolynomial(const BasisPolynomial& polynomial);
 
@@ -87,13 +87,13 @@ public:
   /** This is defined only for orthogonal polynomials. */
   virtual const Real& norm_squared(unsigned short n);
 
-  /// return the gaussPoints corresponding to orthogonal polynomial order n.
+  /// return the collocPoints corresponding to orthogonal polynomial order n.
   /** This is defined only for orthogonal polynomials. */
-  virtual const RealArray& gauss_points(unsigned short n);
-  /// return the gaussWeights corresponding to orthogonal polynomial order n.
+  virtual const RealArray& collocation_points(unsigned short n);
+  /// return the collocWeights corresponding to orthogonal polynomial order n.
   /** This is defined only for orthogonal polynomials. */
-  virtual const RealArray& gauss_weights(unsigned short n);
-  /// destroy history of Gauss pts/wts (due to change in alpha/beta stats)
+  virtual const RealArray& collocation_weights(unsigned short n);
+  /// destroy history of Gauss pts/wts (due to distribution parameter changes)
   /** This is defined only for orthogonal polynomials. */
   virtual void reset_gauss();
 
@@ -116,10 +116,10 @@ public:
   /** This is defined only for parameterized orthogonal polynomials. */
   virtual void beta_stat(const Real& beta);
 
-  /// set OrthogonalPolynomial::gaussMode
-  virtual void gauss_mode(short mode);
-  /// get OrthogonalPolynomial::gaussMode
-  virtual short gauss_mode() const;
+  /// set OrthogonalPolynomial::collocMode
+  virtual void collocation_mode(short mode);
+  /// get OrthogonalPolynomial::collocMode
+  virtual short collocation_mode() const;
 
   /// set LagrangeInterpPolynomial::interpolationPts
   /** This is defined only for interpolation polynomials. */
