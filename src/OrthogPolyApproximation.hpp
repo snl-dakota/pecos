@@ -25,8 +25,6 @@ enum { TENSOR_INT_TOTAL_ORD_EXP,      TENSOR_INT_TENSOR_EXP,
        TENSOR_INT_TENSOR_SUM_EXP,     SPARSE_INT_TOTAL_ORD_EXP,
        SPARSE_INT_HEUR_TOTAL_ORD_EXP, SPARSE_INT_TENSOR_SUM_EXP };
 
-class DistributionParams;
-
 
 /// Derived approximation class for orthogonal polynomials (global
 /// approximation).
@@ -61,36 +59,14 @@ public:
   /// invoke distribution_types() and, if needed, distribution_parameters()
   void distributions(const ShortArray& u_types,
 		     const IntArray& int_rules, const DistributionParams& dp);
-  /// invoke distribution_types() and, if needed, distribution_parameters()
-  static void distributions(const ShortArray& u_types,
-			    const IntArray& int_rules,
-			    const DistributionParams& dp,
-			    std::vector<BasisPolynomial>& poly_basis,
-			    ShortArray& basis_types, ShortArray& colloc_modes);
-
   /// allocate polynomialBasis and basisTypes based on u_types
   bool distribution_types(const ShortArray& u_types,
 			  const IntArray& int_rules);
-  /// allocate poly_basis and basis_types based on u_types
-  static bool distribution_types(const ShortArray& u_types,
-				 const IntArray& int_rules,
-				 ShortArray& basis_types,
-				 ShortArray& colloc_modes);
-
   /// allocate polynomialBasis based on basisTypes and gaussModes
   void distribution_basis();
-  /// allocate poly_basis based on basis_types and colloc_modes
-  static void distribution_basis(const ShortArray& basis_types,
-				 const ShortArray& colloc_modes,
-				 std::vector<BasisPolynomial>& poly_basis);
-
   /// pass distribution parameters from dp to polynomialBasis
   void distribution_parameters(const ShortArray& u_types,
 			       const DistributionParams& dp);
-  /// pass distribution parameters from dp to poly_basis
-  static void distribution_parameters(const ShortArray& u_types,
-				      const DistributionParams& dp,
-				      std::vector<BasisPolynomial>& poly_basis);
 
   /// get polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
@@ -279,7 +255,7 @@ private:
   /// perform sanity checks prior to numerical integration
   void integration_checks();
   /// extract tp_data_points from dataPoints and tp_weights from
-  /// driverRep->gaussWts1D
+  /// driverRep->collocWts1D
   void integration_data(size_t tp_index,
 			std::vector<SurrogateDataPoint>& tp_data_points,
 			RealVector& tp_weights);
@@ -445,31 +421,25 @@ inline int OrthogPolyApproximation::expansion_terms() const
 
 
 inline bool OrthogPolyApproximation::
-distribution_types(const ShortArray& u_types,
-		   const IntArray& int_rules)
-{ return distribution_types(u_types, int_rules, basisTypes, gaussModes); }
+distribution_types(const ShortArray& u_types, const IntArray& int_rules)
+{
+  return PolynomialApproximation::distribution_types(u_types, int_rules,
+						     basisTypes, gaussModes);
+}
 
 
 inline void OrthogPolyApproximation::distribution_basis()
-{ distribution_basis(basisTypes, gaussModes, polynomialBasis); }
+{
+  PolynomialApproximation::distribution_basis(basisTypes, gaussModes,
+					      polynomialBasis);
+}
 
 
 inline void OrthogPolyApproximation::
 distribution_parameters(const ShortArray& u_types, const DistributionParams& dp)
-{ distribution_parameters(u_types, dp, polynomialBasis); }
-
-
-inline void OrthogPolyApproximation::
-distributions(const ShortArray& u_types, const IntArray& int_rules,
-	      const DistributionParams& dp,
-	      std::vector<BasisPolynomial>& poly_basis,
-	      ShortArray& basis_types, ShortArray& colloc_modes)
 {
-  bool dist_params
-    = distribution_types(u_types, int_rules, basis_types, colloc_modes);
-  distribution_basis(basis_types, colloc_modes, poly_basis);
-  if (dist_params)
-    distribution_parameters(u_types, dp, poly_basis);
+  PolynomialApproximation::distribution_parameters(u_types, dp,
+						   polynomialBasis);
 }
 
 
@@ -483,8 +453,9 @@ distributions(const ShortArray& u_types, const IntArray& int_rules,
 	  << ") in OrthogPolyApproximation::distribution_types()." << std::endl;
     abort_handler(-1);
   }
-  distributions(u_types, int_rules, dp, polynomialBasis, basisTypes,
-		gaussModes);
+  PolynomialApproximation::distributions(u_types, int_rules, dp,
+					 polynomialBasis, basisTypes,
+					 gaussModes);
 }
 
 

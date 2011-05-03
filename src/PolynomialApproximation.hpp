@@ -24,6 +24,7 @@ namespace Pecos {
 
 class IntegrationDriver;
 class SparseGridDriver;
+class DistributionParams;
 
 
 /// Container class for various polynomial approximation configuration options
@@ -195,6 +196,26 @@ public:
   //
   //- Heading: Member functions
   //
+
+  /// invoke distribution_types() and, if needed, distribution_parameters()
+  static void distributions(const ShortArray& u_types,
+			    const IntArray& int_rules,
+			    const DistributionParams& dp,
+			    std::vector<BasisPolynomial>& poly_basis,
+			    ShortArray& basis_types, ShortArray& colloc_modes);
+  /// allocate poly_basis and basis_types based on u_types
+  static bool distribution_types(const ShortArray& u_types,
+				 const IntArray& int_rules,
+				 ShortArray& basis_types,
+				 ShortArray& colloc_modes);
+  /// allocate poly_basis based on basis_types and colloc_modes
+  static void distribution_basis(const ShortArray& basis_types,
+				 const ShortArray& colloc_modes,
+				 std::vector<BasisPolynomial>& poly_basis);
+  /// pass distribution parameters from dp to poly_basis
+  static void distribution_parameters(const ShortArray& u_types,
+				      const DistributionParams& dp,
+				      std::vector<BasisPolynomial>& poly_basis);
 
   /// return expansionMoments
   const RealVector& expansion_moments() const;
@@ -426,6 +447,20 @@ inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
 
 inline PolynomialApproximation::~PolynomialApproximation()
 { }
+
+
+inline void PolynomialApproximation::
+distributions(const ShortArray& u_types, const IntArray& int_rules,
+	      const DistributionParams& dp,
+	      std::vector<BasisPolynomial>& poly_basis,
+	      ShortArray& basis_types, ShortArray& colloc_modes)
+{
+  bool dist_params
+    = distribution_types(u_types, int_rules, basis_types, colloc_modes);
+  distribution_basis(basis_types, colloc_modes, poly_basis);
+  if (dist_params)
+    distribution_parameters(u_types, dp, poly_basis);
+}
 
 
 inline const RealVector& PolynomialApproximation::expansion_moments() const

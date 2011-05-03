@@ -14,7 +14,7 @@
 
 #include "CubatureDriver.hpp"
 #include "sandia_cubature.H"
-#include "OrthogPolyApproximation.hpp"
+#include "PolynomialApproximation.hpp"
 #include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 //#include "pecos_stat_util.hpp"
@@ -44,12 +44,12 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
     }
 
   // TO DO: consider using a single BasisPolynomial for CubatureDriver
-  // (would have to be expanded into array for OrthogPolyApproximation
+  // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
   ShortArray basis_types, colloc_modes;
-  OrthogPolyApproximation::distribution_types(u_types, integrationRules,
+  PolynomialApproximation::distribution_types(u_types, integrationRules,
 					      basis_types, colloc_modes);
-  OrthogPolyApproximation::distribution_basis(basis_types, colloc_modes,
+  PolynomialApproximation::distribution_basis(basis_types, colloc_modes,
 					      polynomialBasis);
 }
 
@@ -140,9 +140,9 @@ initialize_grid_parameters(const ShortArray& u_types,
   }
 
   // TO DO: consider using a single BasisPolynomial for CubatureDriver
-  // (would have to be expanded into array for OrthogPolyApproximation
+  // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
-  OrthogPolyApproximation::distribution_parameters(u_types, dp,
+  PolynomialApproximation::distribution_parameters(u_types, dp,
 						   polynomialBasis);
 }
 

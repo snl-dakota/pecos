@@ -14,6 +14,8 @@
 #include "PolynomialApproximation.hpp"
 #include "BasisPolynomial.hpp"
 #include "SparseGridDriver.hpp"
+#include "DistributionParams.hpp"
+#include "NumericGenOrthogPolynomial.hpp"
 
 //#define DEBUG
 
@@ -54,6 +56,206 @@ void PolynomialApproximation::allocate_total_effects()
   if (configOptions.vbdControl && configOptions.expansionCoeffFlag &&
       totalSobolIndices.empty())
     totalSobolIndices.sizeUninitialized(numVars);
+}
+
+
+bool PolynomialApproximation::
+distribution_types(const ShortArray& u_types,
+		   const IntArray& int_rules, ShortArray& basis_types,
+		   ShortArray& colloc_modes)
+{
+  bool extra_dist_params = false;
+  size_t i, num_vars = u_types.size(), num_rules = int_rules.size();
+
+  // Initialize colloc_modes from int_rules.  There are three possible
+  // int_rules states: (1) empty (e.g., regression PCE), (2) unit size
+  // (cubature), and (3) num_vars size (tensor or sparse grid).
+  // Note: inactive code below is overkill: just copy values since
+  // BasisPolynomial::get_polynomial() does not pass modes to types that
+  // don't support them.  These modes allow control of Gauss-Legendre vs.
+  // Gauss-Patterson points/weights for Legendre polynomials and
+  // Clenshaw-Curtis vs. Fejer points/weights for Chebyshev polynomials.
+  if (num_rules && colloc_modes.size() != num_vars) {
+    colloc_modes.resize(num_vars);
+    for (i=0; i<num_vars; i++)
+      //switch (u_types[i]) {
+      //case STD_UNIFORM:
+      colloc_modes[i] = (num_rules == num_vars) ?
+	(short)int_rules[i] : (short)int_rules[0]; // cubature defines 1 rule
+      //  break;
+      //default:
+      //  colloc_modes[i] = 0; break;
+      //}
+  }
+
+  // Initialize basis_types from u_types.
+  if (basis_types.size() != num_vars) {
+    basis_types.resize(num_vars);
+    for (i=0; i<num_vars; i++) {
+      switch (u_types[i]) {
+      case STD_NORMAL:
+	basis_types[i] = HERMITE_ORTHOG;                                  break;
+      case STD_UNIFORM: // Legendre or Chebyshev OrthogPolynomial
+	// To employ Chebyshev for uniform, have to multiply inner product
+	// integrands by the inverse of the weight function (weight fn =
+	// 1/sqrt(1-x^2); same as beta PDF/Jacobi poly for alpha=beta=-1/2).
+	//basis_types[i] = CHEBYSHEV_ORTHOG;                              break;
+	basis_types[i] = LEGENDRE_ORTHOG;                                 break;
+      case STD_EXPONENTIAL:
+	basis_types[i] = LAGUERRE_ORTHOG;                                 break;
+      case STD_BETA:
+	basis_types[i] = JACOBI_ORTHOG;
+	extra_dist_params = true;                                         break;
+      case STD_GAMMA:
+	basis_types[i] = GEN_LAGUERRE_ORTHOG;
+	extra_dist_params = true;                                         break;
+      case BOUNDED_NORMAL: case BOUNDED_LOGNORMAL: case LOGNORMAL:
+      case LOGUNIFORM: case TRIANGULAR:
+      case GUMBEL: case FRECHET: case WEIBULL: case HISTOGRAM_BIN:
+	basis_types[i] = NUM_GEN_ORTHOG;
+	extra_dist_params = true;                                         break;
+      default:
+	PCerr << "Error: unsupported u-space type in PolynomialApproximation::"
+	      << "distribution_types()." << std::endl;
+	abort_handler(-1);                                                break;
+      }
+    }
+  }
+  else
+    for (i=0; i<num_vars; i++)
+      if (u_types[i] != STD_NORMAL && u_types[i] != STD_UNIFORM &&
+	  u_types[i] != STD_EXPONENTIAL)
+	{ extra_dist_params = true; break; }
+
+  return extra_dist_params;
+}
+
+
+void PolynomialApproximation::
+distribution_basis(const ShortArray& basis_types,
+		   const ShortArray& colloc_modes,
+		   std::vector<BasisPolynomial>& poly_basis)
+{
+  size_t i, num_vars = basis_types.size();
+  bool modes = (!colloc_modes.empty());
+  if (poly_basis.size() != num_vars) {
+    poly_basis.resize(num_vars);
+    for (i=0; i<num_vars; ++i)
+      poly_basis[i] = (modes) ?	BasisPolynomial(basis_types[i], colloc_modes[i])
+	                      :	BasisPolynomial(basis_types[i]);
+
+    /*
+    // Could reuse objects as in InterpPolyApproximation, but this would require
+    // caching dist params and moving code from distribution_parameters() to
+    // here, which isn't yet well motivated.
+    size_t i, j;
+    for (i=0; i<numVars; ++i) {
+      // reuse prev instance via shared rep or instantiate new unique instance
+      short basis_type_i = basisTypes[i];
+      bool found = false;
+      for (j=0; j<i; ++j)
+	if ( basis_type_i == basisTypes[j] && ( basis_type_i <= LAGUERRE ||
+	     ( basis_type_i == JACOBI && jacobiAlphas[] == jacobiAlphas[] &&
+	       jacobiBetas[] == jacobiBetas[] ) ||
+	     ( basis_type_i == GENERALIZED_LAGUERRE &&
+	       genLagAlphas[] == genLagAlphas[] ) ) )
+	  { found = true; break; }
+      polynomialBasis[i]
+	= (found) ? polynomialBasis[j] : BasisPolynomial(basis_type_i);
+    }
+    */
+  }
+}
+
+
+void PolynomialApproximation::
+distribution_parameters(const ShortArray& u_types, const DistributionParams& dp,
+			std::vector<BasisPolynomial>& poly_basis)
+{
+  size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
+    luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
+    fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0;
+  for (i=0; i<num_vars; i++)
+    switch (u_types[i]) {
+    case STD_NORMAL:
+      ++nuv_cntr; break;
+    case STD_UNIFORM:
+    case STD_EXPONENTIAL:
+      break;
+    case STD_BETA:
+      poly_basis[i].alpha_stat(dp.beta_alpha(beuv_cntr));
+      poly_basis[i].beta_stat(dp.beta_beta(beuv_cntr));
+      ++beuv_cntr; break;
+    case STD_GAMMA:
+      poly_basis[i].alpha_stat(dp.gamma_alpha(gauv_cntr));
+      ++gauv_cntr; break;
+    case BOUNDED_NORMAL:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	bounded_normal_distribution(dp.normal_mean(nuv_cntr),
+				    dp.normal_std_deviation(nuv_cntr),
+				    dp.normal_lower_bound(nuv_cntr),
+				    dp.normal_upper_bound(nuv_cntr));
+      ++nuv_cntr; break;
+    case LOGNORMAL: {
+      Real mean, stdev;
+      moments_from_lognormal_spec(dp.lognormal_means(),
+				  dp.lognormal_std_deviations(),
+				  dp.lognormal_lambdas(), dp.lognormal_zetas(),
+				  dp.lognormal_error_factors(), lnuv_cntr,
+				  mean, stdev);
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	lognormal_distribution(mean, stdev);
+      ++lnuv_cntr; break;
+    }
+    case BOUNDED_LOGNORMAL: {
+      Real mean, stdev;
+      moments_from_lognormal_spec(dp.lognormal_means(),
+				  dp.lognormal_std_deviations(),
+				  dp.lognormal_lambdas(), dp.lognormal_zetas(),
+				  dp.lognormal_error_factors(), lnuv_cntr,
+				  mean, stdev);
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	bounded_lognormal_distribution(mean, stdev,
+				       dp.lognormal_lower_bound(lnuv_cntr),
+				       dp.lognormal_upper_bound(lnuv_cntr));
+      ++lnuv_cntr; break;
+    }
+    case LOGUNIFORM:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	loguniform_distribution(dp.loguniform_lower_bound(luuv_cntr),
+				dp.loguniform_upper_bound(luuv_cntr));
+      ++luuv_cntr; break;
+    case TRIANGULAR:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	triangular_distribution(dp.triangular_mode(tuv_cntr),
+				dp.triangular_lower_bound(tuv_cntr),
+				dp.triangular_upper_bound(tuv_cntr));
+      ++tuv_cntr; break;
+    case GUMBEL:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	gumbel_distribution(dp.gumbel_alpha(guuv_cntr),
+			    dp.gumbel_beta(guuv_cntr));
+      ++guuv_cntr; break;
+    case FRECHET:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	frechet_distribution(dp.frechet_alpha(fuv_cntr),
+			     dp.frechet_beta(fuv_cntr));
+      ++fuv_cntr; break;
+    case WEIBULL:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	weibull_distribution(dp.weibull_alpha(wuv_cntr),
+			     dp.weibull_beta(wuv_cntr));
+      ++wuv_cntr; break;
+    case HISTOGRAM_BIN:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	histogram_bin_distribution(dp.histogram_bin_pairs(hbuv_cntr));
+      ++hbuv_cntr; break;
+    default:
+      PCerr << "Error: unsupported u-space type in PolynomialApproximation::"
+	    << "distribution_parameters()" << std::endl;
+      abort_handler(-1);
+      break;
+    }
 }
 
 

@@ -16,7 +16,7 @@
 #include "CubatureDriver.hpp"
 #include "SparseGridDriver.hpp"
 #include "TensorProductDriver.hpp"
-#include "OrthogPolyApproximation.hpp"
+#include "PolynomialApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: IntegrationDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -184,7 +184,7 @@ initialize_grid_parameters(const ShortArray& u_types,
   if (driverRep)
     driverRep->initialize_grid_parameters(u_types, dp); // forward to letter
   else // default implementation
-    OrthogPolyApproximation::distribution_parameters(u_types, dp,
+    PolynomialApproximation::distribution_parameters(u_types, dp,
 						     polynomialBasis);
 }
 
@@ -276,9 +276,9 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
   }
 
   ShortArray basis_types, colloc_modes;
-  OrthogPolyApproximation::distribution_types(u_types, int_rules, basis_types,
+  PolynomialApproximation::distribution_types(u_types, int_rules, basis_types,
 					      colloc_modes);
-  OrthogPolyApproximation::distribution_basis(basis_types, colloc_modes,
+  PolynomialApproximation::distribution_basis(basis_types, colloc_modes,
 					      polynomialBasis);
 }
 
