@@ -201,24 +201,11 @@ void SparseGridDriver::allocate_1d_collocation_points_weights()
   // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
   unsigned short level_index, order;
   for (i=0; i<numVars; i++) {
-    switch (integrationRules[i]) {
-    case CLENSHAW_CURTIS: case FEJER2:
-      chebyPolyPtr->collocation_mode(integrationRules[i]); // integration mode
-      for (level_index=0; level_index<num_levels; ++level_index) {
-	level_to_order(i, level_index, order);
-	collocPts1D[level_index][i] = chebyPolyPtr->collocation_points(order);
-	collocWts1D[level_index][i] = chebyPolyPtr->collocation_weights(order);
-      }
-      break;
-    default: // Gaussian rules
-      for (level_index=0; level_index<num_levels; ++level_index) {
-	level_to_order(i, level_index, order);
-	collocPts1D[level_index][i]
-	  = polynomialBasis[i].collocation_points(order);
-	collocWts1D[level_index][i]
-	  = polynomialBasis[i].collocation_weights(order);
-      }
-      break;
+    BasisPolynomial& poly_i = polynomialBasis[i];
+    for (level_index=0; level_index<num_levels; ++level_index) {
+      level_to_order(i, level_index, order);
+      collocPts1D[level_index][i] = poly_i.collocation_points(order);
+      collocWts1D[level_index][i] = poly_i.collocation_weights(order);
     }
   }
 }
@@ -350,8 +337,6 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		short nested_uniform_rule)
 {
   numVars = u_types.size();
-  compute1DPoints.resize(numVars);
-  compute1DWeights.resize(numVars);
 
   //refineType         = refine_type;
   refineControl        = refine_control;
@@ -372,27 +357,12 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
 
-  bool cheby_poly = false;
-  for (size_t i=0; i<numVars; i++) {
-    // set compute1DPoints/compute1DWeights
-    if ( ( u_types[i] == STD_UNIFORM && nested_rules && 
-	   ( nested_uniform_rule == CLENSHAW_CURTIS ||
-	     nested_uniform_rule == FEJER2 ) ) ||
-	 ( u_types[i] == PIECEWISE_STD_UNIFORM && !equidistant_rules ) ) {
-      compute1DPoints[i]  = chebyshev_points;
-      compute1DWeights[i] = chebyshev_weights;
-      cheby_poly = true;
-    }
-    else {
-      compute1DPoints[i]  = basis_collocation_points;
-      compute1DWeights[i] = basis_collocation_weights;
-    }
-  }
-  if (cheby_poly && !chebyPolyPtr) // collocation_mode set within loops
-    chebyPolyPtr = new BasisPolynomial(CHEBYSHEV_ORTHOG);
-
+  // define integrationRules and growthRules
   initialize_rules(u_types, nested_rules, equidistant_rules, growth_rate,
 		   nested_uniform_rule, integrationRules, growthRules);
+
+  // set compute1DPoints and compute1DWeights
+  initialize_rule_pointers();
 }
 
 
@@ -413,14 +383,11 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
   level(ssg_level);
   dimension_preference(dim_pref);
 
-  compute1DPoints.resize(numVars);
-  compute1DWeights.resize(numVars);
-  for (size_t i=0; i<numVars; i++) {
-    compute1DPoints[i]  = basis_collocation_points;
-    compute1DWeights[i] = basis_collocation_weights;
-  }
-
+  // define integrationRules and growthRules
   initialize_rules(poly_basis, growth_rate, integrationRules, growthRules);
+
+  // set compute1DPoints and compute1DWeights
+  initialize_rule_pointers();
 }
 
 

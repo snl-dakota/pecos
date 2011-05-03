@@ -190,10 +190,30 @@ collocation_points(unsigned short order)
   bool mode_err = false;
   if (collocPoints.size() != order) { // if not already computed
     collocPoints.resize(order);
+    switch (collocMode) {
+    case GAUSS_PATTERSON:
 #ifdef HAVE_SPARSE_GRID
-    if (collocMode == GAUSS_PATTERSON)
       webbur::patterson_lookup_points(order, &collocPoints[0]);
-    else if (collocMode == GAUSS_LEGENDRE) {
+#else
+      mode_err = true;
+#endif
+      break;
+    case CLENSHAW_CURTIS: 
+#ifdef HAVE_SPARSE_GRID
+      webbur::clenshaw_curtis_compute_points(order, &collocPoints[0]);
+#else
+      mode_err = true;
+#endif
+      break;
+    case FEJER2: 
+#ifdef HAVE_SPARSE_GRID
+      webbur::fejer2_compute_points(order, &collocPoints[0]);
+#else
+      mode_err = true;
+#endif
+      break;
+    case GAUSS_LEGENDRE:
+#ifdef HAVE_SPARSE_GRID
       if (order <= 33) // retrieve full precision tabulated values
 	webbur::legendre_lookup_points(order, &collocPoints[0]);
       else { // sandia_rules calculates points/weights together
@@ -203,16 +223,7 @@ collocation_points(unsigned short order)
 	for (size_t i=0; i<order; i++)
 	  collocWeights[i] *= wtFactor; // polynomial weight fn -> PDF
       }
-    }
-    else
-      mode_err = true;
 #else
-    if (collocMode == GAUSS_PATTERSON) {
-      PCerr << "Error: VPISparseGrid required for Gauss-Patterson points in "
-	    << "LegendreOrthogPolynomial::collocation_points()." << std::endl;
-      abort_handler(-1);
-    }
-    else if (collocMode == GAUSS_LEGENDRE) {
       switch (order) {
       case 1: // zeros of P_1(x) for one Gauss-Legendre point:
 	collocPoints[0] = 0.0;
@@ -301,10 +312,11 @@ collocation_points(unsigned short order)
 	      << "with VPISparseGrid to extend range." << std::endl;
 	abort_handler(-1); break;
       }
-    }
-    else
-      mode_err = true;
 #endif
+      break;
+    default:
+      mode_err = true; break;
+    }
   }
 
   if (mode_err) {
@@ -334,10 +346,30 @@ collocation_weights(unsigned short order)
   bool mode_err = false;
   if (collocWeights.size() != order) { // if not already computed
     collocWeights.resize(order);
+    switch (collocMode) {
+    case GAUSS_PATTERSON:
 #ifdef HAVE_SPARSE_GRID
-    if (collocMode == GAUSS_PATTERSON)
       webbur::patterson_lookup_weights(order, &collocWeights[0]);
-    else if (collocMode == GAUSS_LEGENDRE) {
+#else
+      mode_err = true;
+#endif
+      break;
+    case CLENSHAW_CURTIS: 
+#ifdef HAVE_SPARSE_GRID
+      webbur::clenshaw_curtis_compute_weights(order, &collocWeights[0]);
+#else
+      mode_err = true;
+#endif
+      break;
+    case FEJER2: 
+#ifdef HAVE_SPARSE_GRID
+      webbur::fejer2_compute_weights(order, &collocWeights[0]);
+#else
+      mode_err = true;
+#endif
+      break;
+    case GAUSS_LEGENDRE:
+#ifdef HAVE_SPARSE_GRID
       if (order <= 33) // retrieve full precision tabulated values
 	webbur::legendre_lookup_weights(order, &collocWeights[0]);
       else { // sandia_rules calculates points/weights together
@@ -345,18 +377,7 @@ collocation_weights(unsigned short order)
 	  collocPoints.resize(order);
 	webbur::legendre_compute(order, &collocPoints[0], &collocWeights[0]);
       }
-    }
-    else
-      mode_err = true;
-    for (size_t i=0; i<order; i++)
-      collocWeights[i] *= wtFactor;
 #else
-    if (collocMode == GAUSS_PATTERSON) {
-      PCerr << "Error: VPISparseGrid required for Gauss-Patterson weights in "
-	    << "LegendreOrthogPolynomial::collocation_weights()." << std::endl;
-      abort_handler(-1);
-    }
-    else if (collocMode == GAUSS_LEGENDRE) {
       switch (order) {
       case 1: // weights for one Gauss-Legendre point:
 	collocWeights[0] = 1.0; break;
@@ -418,9 +439,15 @@ collocation_weights(unsigned short order)
 	}
 	break;
       }
+#endif
+      break;
+    default:
+      mode_err = true; break;
     }
-    else
-      mode_err = true;
+
+#ifdef HAVE_SPARSE_GRID
+    for (size_t i=0; i<order; i++)
+      collocWeights[i] *= wtFactor;
 #endif
   }
 

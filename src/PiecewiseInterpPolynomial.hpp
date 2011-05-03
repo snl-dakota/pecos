@@ -65,13 +65,13 @@ protected:
   void precompute_data();
 
   /// return the interpolation points corresponding to a point set of size order
-  const RealArray& interpolation_points(unsigned short order);
+  const RealArray& collocation_points(unsigned short order);
   /// return the type 1 interpolation weights corresponding to a point
   /// set of size order
-  const RealArray& type1_interpolation_weights(unsigned short order);
+  const RealArray& type1_collocation_weights(unsigned short order);
   /// return the type 2 interpolation weights corresponding to a point
   /// set of size order
-  const RealArray& type2_interpolation_weights(unsigned short order);
+  const RealArray& type2_collocation_weights(unsigned short order);
 
 private:
 

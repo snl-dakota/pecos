@@ -347,12 +347,12 @@ get_type2_gradient(const Real& x, unsigned short i)
 
 
 const RealArray& PiecewiseInterpPolynomial::
-interpolation_points(unsigned short order)
+collocation_points(unsigned short order)
 {
   // pull this outside block below since order=0 is initial interpPts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
-	  << "Polynomial::interpolation_points()." << std::endl;
+	  << "Polynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
@@ -376,7 +376,7 @@ interpolation_points(unsigned short order)
       webbur::clenshaw_curtis_compute_points(order, &interpPts[0]);
 #else
       PCerr << "Error: configuration with VPISparseGrid package required in "
-	    << "PiecewiseInterpPolynomial::interpolation_points()."<< std::endl;
+	    << "PiecewiseInterpPolynomial::collocation_points()."<< std::endl;
       abort_handler(-1);
 #endif
     }
@@ -386,7 +386,7 @@ interpolation_points(unsigned short order)
 
   if (mode_err) {
     PCerr << "Error: unsupported interpolation mode in "
-	  << "PiecewiseInterpPolynomial::interpolation_points()." << std::endl;
+	  << "PiecewiseInterpPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
@@ -395,12 +395,12 @@ interpolation_points(unsigned short order)
 
 
 const RealArray& PiecewiseInterpPolynomial::
-type1_interpolation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
-	  << "Polynomial::interpolation_weights()." << std::endl;
+	  << "Polynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -442,7 +442,7 @@ type1_interpolation_weights(unsigned short order)
 
   if (mode_err) {
     PCerr << "Error: unsupported interpolation mode in "
-	  << "PiecewiseInterpPolynomial::interpolation_weights()." << std::endl;
+	  << "PiecewiseInterpPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -451,12 +451,12 @@ type1_interpolation_weights(unsigned short order)
 
 
 const RealArray& PiecewiseInterpPolynomial::
-type2_interpolation_weights(unsigned short order)
+type2_collocation_weights(unsigned short order)
 {
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
-	  << "Polynomial::interpolation_weights()." << std::endl;
+	  << "Polynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -501,7 +501,7 @@ type2_interpolation_weights(unsigned short order)
 
   if (mode_err) {
     PCerr << "Error: unsupported interpolation mode in PiecewiseInterp"
-	  << "Polynomial::type2_interpolation_weights()." << std::endl;
+	  << "Polynomial::type2_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 

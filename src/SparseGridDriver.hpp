@@ -212,10 +212,9 @@ private:
   /// function for computing collocation weights for polynomialBasis[index]
   static void basis_collocation_weights(int order, int index, double* data);
 
-  /// function for computing collocation points for ChebyshevOrthogPolynomial
-  static void chebyshev_points(int order, int index, double* data);
-  /// function for computing collocation weights for ChebyshevOrthogPolynomial
-  static void chebyshev_weights(int order, int index, double* data);
+  /// initialize compute1DPoints/compute1DWeights function pointer arrays
+  /// for use within webbur::sgmg() and webbur::sgmga() routines
+  void initialize_rule_pointers();
 
   /// convenience function for defining {a1,a2}{Points,Weights}
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,
@@ -245,10 +244,6 @@ private:
 
   /// pointer to instance of this class for use in statis member functions
   static SparseGridDriver* sgdInstance;
-
-  /// pointer to a ChebyshevOrthogPolynomial instance for access to Fejer2 and
-  /// Clenshaw-Curtis integration points/weights (avoid repeated instantiations)
-  BasisPolynomial* chebyPolyPtr;
 
   /// the Smolyak sparse grid level
   unsigned short ssgLevel;
@@ -353,13 +348,13 @@ private:
 
 
 inline SparseGridDriver::SparseGridDriver():
-  IntegrationDriver(BaseConstructor()), chebyPolyPtr(NULL), ssgLevel(0),
-  storeCollocDetails(false), duplicateTol(1.e-15)
+  IntegrationDriver(BaseConstructor()), ssgLevel(0), storeCollocDetails(false),
+  duplicateTol(1.e-15)
 { }
 
 
 inline SparseGridDriver::~SparseGridDriver()
-{ if (chebyPolyPtr) delete chebyPolyPtr; }
+{ }
 
 
 inline unsigned short SparseGridDriver::level() const
@@ -485,25 +480,18 @@ basis_collocation_weights(int order, int index, double* data)
 }
 
 
-inline void SparseGridDriver::
-chebyshev_points(int order, int index, double* data)
+inline void SparseGridDriver::initialize_rule_pointers()
 {
-  sgdInstance->chebyPolyPtr->
-    collocation_mode(sgdInstance->integrationRules[index]);
-  const RealArray& colloc_pts
-    = sgdInstance->chebyPolyPtr->collocation_points(order);
-  std::copy(colloc_pts.begin(), colloc_pts.begin()+order, data);
-}
-
-
-inline void SparseGridDriver::
-chebyshev_weights(int order, int index, double* data)
-{
-  sgdInstance->chebyPolyPtr->
-    collocation_mode(sgdInstance->integrationRules[index]);
-  const RealArray& colloc_wts
-    = sgdInstance->chebyPolyPtr->collocation_weights(order);
-  std::copy(colloc_wts.begin(), colloc_wts.begin()+order, data);
+  // compute1DPoints needed for grid_size() and for sgmg/sgmga
+  compute1DPoints.resize(numVars);
+  for (size_t i=0; i<numVars; i++)
+    compute1DPoints[i] = basis_collocation_points;
+  // compute1DWeights only needed for sgmg/sgmga
+  if (refineControl != DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
+    compute1DWeights.resize(numVars);
+    for (size_t i=0; i<numVars; i++)
+      compute1DWeights[i] = basis_collocation_weights;
+  }
 }
 
 

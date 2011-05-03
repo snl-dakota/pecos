@@ -73,7 +73,8 @@ private:
 };
 
 
-// collocMode may be GAUSS_LEGENDRE (default) or GAUSS_PATTERSON
+// collocMode may be GAUSS_LEGENDRE (default), GAUSS_PATTERSON,
+// CLENSHAW_CURTIS, or FEJER2
 inline LegendreOrthogPolynomial::LegendreOrthogPolynomial(short colloc_mode)
 { collocMode = colloc_mode;    wtFactor = 0.5; }
 
