@@ -59,34 +59,18 @@ void PolynomialApproximation::allocate_total_effects()
 }
 
 
+/** This static function is used by the integration drivers to define a
+    basis for computing points and weights.  Thus, it only employs bases
+    that support a "pull" mode (orthogonal and piecewise interpolation
+    polynomials) and excludes bases that utilize a "push" mode (Lagrange
+    and Hermite global interpolation polynomials). [Note: piecewise 
+    interpolation polynomials could support push of points and then pull
+    of weights, but for now, it is pull for both.] */
 bool PolynomialApproximation::
-distribution_types(const ShortArray& u_types,
-		   const IntArray& int_rules, ShortArray& basis_types,
-		   ShortArray& colloc_modes)
+distribution_types(const ShortArray& u_types, ShortArray& basis_types)
 {
   bool extra_dist_params = false;
-  size_t i, num_vars = u_types.size(), num_rules = int_rules.size();
-
-  // Initialize colloc_modes from int_rules.  There are three possible
-  // int_rules states: (1) empty (e.g., regression PCE), (2) unit size
-  // (cubature), and (3) num_vars size (tensor or sparse grid).
-  // Note: inactive code below is overkill: just copy values since
-  // BasisPolynomial::get_polynomial() does not pass modes to types that
-  // don't support them.  These modes allow control of Gauss-Legendre vs.
-  // Gauss-Patterson points/weights for Legendre polynomials and
-  // Clenshaw-Curtis vs. Fejer points/weights for Chebyshev polynomials.
-  if (num_rules && colloc_modes.size() != num_vars) {
-    colloc_modes.resize(num_vars);
-    for (i=0; i<num_vars; i++)
-      //switch (u_types[i]) {
-      //case STD_UNIFORM:
-      colloc_modes[i] = (num_rules == num_vars) ?
-	(short)int_rules[i] : (short)int_rules[0]; // cubature defines 1 rule
-      //  break;
-      //default:
-      //  colloc_modes[i] = 0; break;
-      //}
-  }
+  size_t i, num_vars = u_types.size();
 
   // Initialize basis_types from u_types.
   if (basis_types.size() != num_vars) {
@@ -95,12 +79,17 @@ distribution_types(const ShortArray& u_types,
       switch (u_types[i]) {
       case STD_NORMAL:
 	basis_types[i] = HERMITE_ORTHOG;                                  break;
-      case STD_UNIFORM: // Legendre or Chebyshev OrthogPolynomial
+      case STD_UNIFORM: // Legendre or Chebyshev OrthogPolynomial (Lagrange
+	// and Hermite interpolation not supported -- see doxygen comment).
 	// To employ Chebyshev for uniform, have to multiply inner product
 	// integrands by the inverse of the weight function (weight fn =
 	// 1/sqrt(1-x^2); same as beta PDF/Jacobi poly for alpha=beta=-1/2).
 	//basis_types[i] = CHEBYSHEV_ORTHOG;                              break;
 	basis_types[i] = LEGENDRE_ORTHOG;                                 break;
+      case PIECEWISE_STD_UNIFORM:
+	basis_types[i] = //(useDerivs) ? PIECEWISE_CUBIC_INTERP:
+	                               PIECEWISE_LINEAR_INTERP;           break;
+	// *** TO DO: useDerivs not elevated and not accessible from static fn
       case STD_EXPONENTIAL:
 	basis_types[i] = LAGUERRE_ORTHOG;                                 break;
       case STD_BETA:
@@ -123,8 +112,8 @@ distribution_types(const ShortArray& u_types,
   }
   else
     for (i=0; i<num_vars; i++)
-      if (u_types[i] != STD_NORMAL && u_types[i] != STD_UNIFORM &&
-	  u_types[i] != STD_EXPONENTIAL)
+      if (u_types[i] != STD_NORMAL            && u_types[i] != STD_UNIFORM &&
+	  u_types[i] != PIECEWISE_STD_UNIFORM && u_types[i] != STD_EXPONENTIAL)
 	{ extra_dist_params = true; break; }
 
   return extra_dist_params;
@@ -133,16 +122,23 @@ distribution_types(const ShortArray& u_types,
 
 void PolynomialApproximation::
 distribution_basis(const ShortArray& basis_types,
-		   const ShortArray& colloc_modes,
+		   const ShortArray& colloc_rules,
 		   std::vector<BasisPolynomial>& poly_basis)
 {
-  size_t i, num_vars = basis_types.size();
-  bool modes = (!colloc_modes.empty());
+  size_t i, num_vars = basis_types.size(), num_rules = colloc_rules.size();
   if (poly_basis.size() != num_vars) {
     poly_basis.resize(num_vars);
-    for (i=0; i<num_vars; ++i)
-      poly_basis[i] = (modes) ?	BasisPolynomial(basis_types[i], colloc_modes[i])
-	                      :	BasisPolynomial(basis_types[i]);
+    if (num_rules == 0)      // default rules
+      for (i=0; i<num_vars; ++i)
+	poly_basis[i] = BasisPolynomial(basis_types[i]);
+    else if (num_rules == 1) { // cubature utilizes a single rule
+      short colloc_rule = colloc_rules[0];
+      for (i=0; i<num_vars; ++i)
+	poly_basis[i] = BasisPolynomial(basis_types[i], colloc_rule);
+    }
+    else if (num_rules == num_vars)
+      for (i=0; i<num_vars; ++i)
+	poly_basis[i] = BasisPolynomial(basis_types[i], colloc_rules[i]);
 
     /*
     // Could reuse objects as in InterpPolyApproximation, but this would require
@@ -179,8 +175,7 @@ distribution_parameters(const ShortArray& u_types, const DistributionParams& dp,
     switch (u_types[i]) {
     case STD_NORMAL:
       ++nuv_cntr; break;
-    case STD_UNIFORM:
-    case STD_EXPONENTIAL:
+    case STD_UNIFORM: case PIECEWISE_STD_UNIFORM: case STD_EXPONENTIAL:
       break;
     case STD_BETA:
       poly_basis[i].alpha_stat(dp.beta_alpha(beuv_cntr));

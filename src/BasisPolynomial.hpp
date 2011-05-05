@@ -45,7 +45,7 @@ public:
   /// default constructor
   BasisPolynomial();
    /// alternate constructor
-  BasisPolynomial(short poly_type, short colloc_mode = 0);
+  BasisPolynomial(short poly_type, short rule = 0);
   /// copy constructor
   BasisPolynomial(const BasisPolynomial& polynomial);
 
@@ -116,10 +116,10 @@ public:
   /** This is defined only for parameterized orthogonal polynomials. */
   virtual void beta_stat(const Real& beta);
 
-  /// set OrthogonalPolynomial::collocMode
-  virtual void collocation_mode(short mode);
-  /// get OrthogonalPolynomial::collocMode
-  virtual short collocation_mode() const;
+  /// set OrthogonalPolynomial::collocRule
+  virtual void collocation_rule(short rule);
+  /// get OrthogonalPolynomial::collocRule
+  virtual short collocation_rule() const;
 
   /// set LagrangeInterpPolynomial::interpolationPts
   /** This is defined only for interpolation polynomials. */
@@ -186,7 +186,7 @@ private:
 
   /// Used by the envelope constructor to initialize polyRep to the
   /// appropriate derived type.
-  BasisPolynomial* get_polynomial(short poly_type, short mode);
+  BasisPolynomial* get_polynomial(short poly_type, short rule);
 
   //
   //- Heading: Data

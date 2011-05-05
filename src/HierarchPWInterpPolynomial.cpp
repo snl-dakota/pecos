@@ -17,16 +17,16 @@
 namespace Pecos{
 
 /// Default constructor throws an exception if left_end_ >= right_end_.
-  HierarchPWInterpPolynomial::HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, short interpType_):
-    PiecewiseInterpPolynomial(interpType_,CLENSHAW_CURTIS),
-    pointSet(pointSet_),
-    interpType(interpType_)
+  HierarchPWInterpPolynomial::HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, short basisType_):
+    PiecewiseInterpPolynomial(basisType_,CLENSHAW_CURTIS),
+    pointSet(pointSet_)
 {
+  basisType = basisType_;
   interpPts = (pointSet.get_interp_points());
-  if ( interpType == PIECEWISE_QUADRATIC_INTERP ) {
+  if ( basisType == PIECEWISE_QUADRATIC_INTERP ) {
     PCerr << "Quadratic interpolation not currently implemented in"
 	  << " HierarchPWInterpPolynomial. Defaulting to linear interpolation.";
-    interpType = PIECEWISE_LINEAR_INTERP;
+    basisType = PIECEWISE_LINEAR_INTERP;
   }
 }
 
@@ -42,7 +42,7 @@ get_type1_value(const Real& x, const unsigned int i)
   const Real leftEndPoint = pointSet.get_left_neighbor(i);
   const Real rightEndPoint = pointSet.get_right_neighbor(i);
 
-  switch (interpType) {
+  switch (basisType) {
     case PIECEWISE_LINEAR_INTERP: {
       if ( i == 0 ) {
         if ( ( x < leftEndPoint ) || ( x > rightEndPoint ) ) basisPolyValue = 0;
@@ -88,7 +88,7 @@ get_type1_gradient(const Real& x, const unsigned int i)
   const Real nodalPoint = pointSet.get_interp_point(i);
   const Real leftEndPoint = pointSet.get_left_neighbor(i);
   const Real rightEndPoint = pointSet.get_right_neighbor(i);
-  switch (interpType) {
+  switch (basisType) {
     case PIECEWISE_LINEAR_INTERP: {
       if ( i == 0 ) {
 	basisPolyGradient = 0;
@@ -133,7 +133,7 @@ get_type2_value(const Real& x, const unsigned int i)
   const Real leftEndPoint = pointSet.get_left_neighbor(i);
   const Real rightEndPoint = pointSet.get_right_neighbor(i);
   
-  switch (interpType) {
+  switch (basisType) {
     case PIECEWISE_CUBIC_INTERP: {
       if ( i == 0 ) {
 	basisPolyValue = 0;
@@ -171,7 +171,7 @@ get_type2_gradient(const Real& x, const unsigned int i)
   const Real leftEndPoint = pointSet.get_left_neighbor(i);
   const Real rightEndPoint = pointSet.get_right_neighbor(i);
   
-  switch (interpType) {
+  switch (basisType) {
     case PIECEWISE_CUBIC_INTERP: {
       if ( i == 0 ) {
 	basisPolyGradient = 0;

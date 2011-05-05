@@ -77,8 +77,8 @@ private:
   /// verify that all vectors within params are identical
   bool verify_homogeneity(const RealVectorArray& params) const;
 
-  /// size integrationRules and set first entry
-  void integration_rule(unsigned short rule);
+  /// size collocRules and set first entry
+  void collocation_rule(unsigned short rule);
 
   //
   //- Heading: Data
@@ -105,8 +105,8 @@ inline unsigned short CubatureDriver::integrand_order() const
 { return integrandOrder; }
 
 
-inline void CubatureDriver::integration_rule(unsigned short rule)
-{ integrationRules.resize(1); integrationRules[0] = (int)rule; }
+inline void CubatureDriver::collocation_rule(unsigned short rule)
+{ collocRules.resize(1); collocRules[0] = (short)rule; }
 
 
 inline bool CubatureDriver::verify_homogeneity(const RealVector& params) const

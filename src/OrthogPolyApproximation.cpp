@@ -751,14 +751,13 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 {
   if (exp_order.size() != numVars)
     exp_order.resize(numVars);
-  const IntArray& int_rules
-    = ((SparseGridDriver*)driverRep)->integration_rules();
-  const IntArray& growth_rules
-    = ((SparseGridDriver*)driverRep)->growth_rules();
+  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  const ShortArray& colloc_rules = ssg_driver->collocation_rules();
+  const IntArray& growth_rules = ssg_driver->api_growth_rules(); // TO DO: repalce array with scalar growth_rate?
   for (size_t i=0; i<numVars; ++i) {
     switch (growth_rules[i]) {
     case FULL_EXPONENTIAL:
-      switch (int_rules[i]) {
+      switch (colloc_rules[i]) {
       case CLENSHAW_CURTIS: case FEJER2: { // TO DO: verify F2
 	// integrand order = 2*level+1 ("sharp" result from Novak & Ritter,1996)
 	unsigned short integrand = 2*ssg_level + 1;
@@ -861,7 +860,7 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
   size_t i, n = quad_order.size();
   if (int_order.size() != n)
     int_order.resize(n);
-  if (gaussModes.empty()) // use basisTypes with default modes
+  if (gaussRules.empty()) // use basisTypes with default modes
     for (i=0; i<n; ++i)
       switch (basisTypes[i]) {
       case CHEBYSHEV_ORTHOG: // default mode is Clenshaw-Curtis
@@ -875,7 +874,7 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
     const UShortArray& gk_order = driverRep->genz_keister_order();
     const UShortArray& gk_prec  = driverRep->genz_keister_precision();
     for (i=0; i<n; ++i)
-      switch (gaussModes[i]) {
+      switch (gaussRules[i]) {
       case CLENSHAW_CURTIS: case FEJER2:
 	// i = m (odd m), m-1 (even m).  Note that growth rule enforces odd.
 	// TO DO: verify FEJER2 same as CC

@@ -38,7 +38,7 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  ChebyshevOrthogPolynomial(short colloc_mode); ///< extended constructor
+  ChebyshevOrthogPolynomial(short colloc_rule); ///< extended constructor
   ChebyshevOrthogPolynomial();                  ///< default constructor
   ~ChebyshevOrthogPolynomial();                 ///< destructor
 
@@ -75,13 +75,13 @@ private:
 };
 
 
-// collocMode may be CLENSHAW_CURTIS (default) or FEJER2
-inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial(short colloc_mode)
-{ collocMode = colloc_mode;     wtFactor = 0.5; }
+// collocRule may be CLENSHAW_CURTIS (default) or FEJER2
+inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial(short colloc_rule)
+{ collocRule = colloc_rule;     wtFactor = 0.5; }
 
 
 inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial()
-{ collocMode = CLENSHAW_CURTIS; wtFactor = 0.5; }
+{ collocRule = CLENSHAW_CURTIS; wtFactor = 0.5; }
 
 
 inline ChebyshevOrthogPolynomial::~ChebyshevOrthogPolynomial()

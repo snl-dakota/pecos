@@ -145,11 +145,11 @@ public:
   void finalize_sets();
 
   /// converts an array of sparse grid levels to an array of
-  /// quadrature orders based on integrationRules/growthRules
+  /// quadrature orders based on apiIntegrationRules/apiGrowthRules
   void level_to_order(size_t i, unsigned short level,
 		      unsigned short& order);
   /// converts an array of sparse grid levels to an array of
-  /// quadrature orders based on integrationRules/growthRules
+  /// quadrature orders based on apiIntegrationRules/apiGrowthRules
   void level_to_order(const UShortArray& levels, UShortArray& orders);
 
   /// set ssgLevel
@@ -165,6 +165,11 @@ public:
   const RealVector& anisotropic_weights() const;
   /// return dimIsotropic
   bool isotropic() const;
+
+  /// return apiIntegrationRules
+  const IntArray& api_integration_rules() const;
+  /// return apiGrowthRules
+  const IntArray& api_growth_rules() const;
 
   // return refineType
   //short refine_type()    const;
@@ -215,6 +220,9 @@ private:
   /// initialize compute1DPoints/compute1DWeights function pointer arrays
   /// for use within webbur::sgmg() and webbur::sgmga() routines
   void initialize_rule_pointers();
+  /// initialize apiIntegrationRules and apiGrowthRules arrays for use
+  /// within webbur::sgmg() and webbur::sgmga() routines
+  void initialize_api_arrays(short growth_rate);
 
   /// convenience function for defining {a1,a2}{Points,Weights}
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,
@@ -262,15 +270,20 @@ private:
   /// controls conditional population of collocPts1D and collocWts1D
   bool storeCollocDetails;
 
+  /// integer codes for integration rule options
+  IntArray apiIntegrationRules;
+  /// integer codes for growth rule options
+  IntArray apiGrowthRules;
+
   /// refinement constraints that ensure that level/anisotropic weight updates
   /// contain all previous multi-index sets
   RealVector axisLowerBounds;
 
   /// number of parameters for each polynomial; input to sgmga routines
-  /// (corresponds to set of variables defined by integrationRules)
+  /// (corresponds to set of variables defined by apiIntegrationRules)
   IntArray numPolyParams;
   /// concatenated array of polynomial parameters for input to sgmga routines
-  /// (corresponds to set of variables defined by integrationRules)
+  /// (corresponds to set of variables defined by apiIntegrationRules)
   RealArray polyParams;
   /// duplication tolerance used in sgmga routines
   Real duplicateTol;
@@ -381,6 +394,14 @@ inline short SparseGridDriver::refine_control() const
 { return refineControl; }
 
 
+inline const IntArray& SparseGridDriver::api_integration_rules() const
+{ return apiIntegrationRules; }
+
+
+inline const IntArray& SparseGridDriver::api_growth_rules() const
+{ return apiGrowthRules; }
+
+
 inline const UShort2DArray& SparseGridDriver::smolyak_multi_index() const
 { return smolyakMultiIndex; }
 
@@ -477,21 +498,6 @@ basis_collocation_weights(int order, int index, double* data)
   const RealArray& colloc_wts
     = sgdInstance->polynomialBasis[index].collocation_weights(order);
   std::copy(colloc_wts.begin(), colloc_wts.begin()+order, data);
-}
-
-
-inline void SparseGridDriver::initialize_rule_pointers()
-{
-  // compute1DPoints needed for grid_size() and for sgmg/sgmga
-  compute1DPoints.resize(numVars);
-  for (size_t i=0; i<numVars; i++)
-    compute1DPoints[i] = basis_collocation_points;
-  // compute1DWeights only needed for sgmg/sgmga
-  if (refineControl != DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
-    compute1DWeights.resize(numVars);
-    for (size_t i=0; i<numVars; i++)
-      compute1DWeights[i] = basis_collocation_weights;
-  }
 }
 
 

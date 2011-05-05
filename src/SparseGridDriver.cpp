@@ -357,10 +357,11 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
 
-  // define integrationRules and growthRules
-  initialize_rules(u_types, nested_rules, equidistant_rules, growth_rate,
-		   nested_uniform_rule, integrationRules, growthRules);
-
+  // define collocRules
+  initialize_rules(u_types, nested_rules, equidistant_rules, 
+		   nested_uniform_rule);
+  // convert collocRules/growth_rate to apiIntegrationRules/apiGrowthRules
+  initialize_api_arrays(growth_rate);
   // set compute1DPoints and compute1DWeights
   initialize_rule_pointers();
 }
@@ -383,11 +384,65 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
   level(ssg_level);
   dimension_preference(dim_pref);
 
-  // define integrationRules and growthRules
-  initialize_rules(poly_basis, growth_rate, integrationRules, growthRules);
-
+  // define collocRules
+  initialize_rules(poly_basis);
+  // convert collocRules/growth_rate to apiIntegrationRules/apiGrowthRules
+  initialize_api_arrays(growth_rate);
   // set compute1DPoints and compute1DWeights
   initialize_rule_pointers();
+}
+
+
+/** Convert Pecos rule settings to IntArrays for input to VPISparseGrid. */
+void SparseGridDriver::initialize_api_arrays(short growth_rate)
+{
+  apiIntegrationRules.resize(numVars);
+  apiGrowthRules.resize(numVars);
+
+  for (size_t i=0; i<numVars; i++) {
+    // convert collocRules to apiIntegrationRules.  NEWTON_COTES is not
+    // recognized by sgmg/sgmga and must be converted to the GOLUB_WELSCH
+    // user-defined rule type.
+    apiIntegrationRules[i] = (collocRules[i] == NEWTON_COTES) ?
+      GOLUB_WELSCH : (int)collocRules[i];
+
+    // convert growth_rate to apiGrowthRules
+    switch (collocRules[i]) {
+    case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
+      apiGrowthRules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
+    case GAUSS_PATTERSON: case GENZ_KEISTER:
+    case CLENSHAW_CURTIS: case FEJER2: case NEWTON_COTES:
+      // nested rules with exponential growth
+      switch (growth_rate) {
+      case SLOW_RESTRICTED_GROWTH:
+	apiGrowthRules[i] = SLOW_EXPONENTIAL;     break;
+      case MODERATE_RESTRICTED_GROWTH:
+	apiGrowthRules[i] = MODERATE_EXPONENTIAL; break;
+      case UNRESTRICTED_GROWTH:
+	apiGrowthRules[i] = FULL_EXPONENTIAL;     break;
+      }
+      break;
+    default: // asymmetric Gaussian linear growth
+      apiGrowthRules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
+	SLOW_LINEAR : MODERATE_LINEAR; break;
+    }
+  }
+}
+
+
+void SparseGridDriver::initialize_rule_pointers()
+{
+  // compute1DPoints needed for grid_size() and for sgmg/sgmga
+  compute1DPoints.resize(numVars);
+  for (size_t i=0; i<numVars; i++)
+    compute1DPoints[i] = basis_collocation_points;
+  // compute1DWeights only needed for sgmg/sgmga
+  if (refineControl != DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
+    compute1DWeights.resize(numVars);
+    for (size_t i=0; i<numVars; i++)
+      compute1DWeights[i] = basis_collocation_weights;
+  }
 }
 
 
@@ -398,10 +453,11 @@ int SparseGridDriver::grid_size()
   sgdInstance = this;
 
   return (dimIsotropic) ?
-    webbur::sgmg_size(numVars, ssgLevel, &integrationRules[0],
-      &compute1DPoints[0], duplicateTol, &growthRules[0]) :
+    webbur::sgmg_size(numVars, ssgLevel, &apiIntegrationRules[0],
+      &compute1DPoints[0], duplicateTol, &apiGrowthRules[0]) :
     webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
-      &integrationRules[0], &compute1DPoints[0], duplicateTol, &growthRules[0]);
+      &apiIntegrationRules[0], &compute1DPoints[0], duplicateTol,
+      &apiGrowthRules[0]);
 }
 
 
@@ -440,37 +496,39 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     int* sparse_index = new int [numCollocPts*numVars];
     if (dimIsotropic) {
       int num_total_pts = webbur::sgmg_size_total(numVars, ssgLevel,
-	&integrationRules[0], &growthRules[0]);
+	&apiIntegrationRules[0], &apiGrowthRules[0]);
       uniqueIndexMapping.resize(num_total_pts);
-      webbur::sgmg_unique_index(numVars, ssgLevel, &integrationRules[0],
+      webbur::sgmg_unique_index(numVars, ssgLevel, &apiIntegrationRules[0],
         &compute1DPoints[0], duplicateTol, numCollocPts, num_total_pts,
-        &growthRules[0], &uniqueIndexMapping[0]);
-      webbur::sgmg_index(numVars, ssgLevel, &integrationRules[0], numCollocPts,
-        num_total_pts, &uniqueIndexMapping[0], &growthRules[0], sparse_order,
-        sparse_index);
-      webbur::sgmg_weight(numVars, ssgLevel, &integrationRules[0],
+        &apiGrowthRules[0], &uniqueIndexMapping[0]);
+      webbur::sgmg_index(numVars, ssgLevel, &apiIntegrationRules[0],
+	numCollocPts, num_total_pts, &uniqueIndexMapping[0], &apiGrowthRules[0],
+	sparse_order, sparse_index);
+      webbur::sgmg_weight(numVars, ssgLevel, &apiIntegrationRules[0],
         &compute1DWeights[0], numCollocPts, num_total_pts,
-        &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
-      webbur::sgmg_point(numVars, ssgLevel, &integrationRules[0],
+        &uniqueIndexMapping[0], &apiGrowthRules[0], weightSets.values());
+      webbur::sgmg_point(numVars, ssgLevel, &apiIntegrationRules[0],
         &compute1DPoints[0], numCollocPts, sparse_order, sparse_index,
-        &growthRules[0], var_sets.values());
+        &apiGrowthRules[0], var_sets.values());
     }
     else {
       int num_total_pts = webbur::sandia_sgmga_size_total(numVars,
-	anisoLevelWts.values(), ssgLevel, &integrationRules[0],&growthRules[0]);
+	anisoLevelWts.values(), ssgLevel, &apiIntegrationRules[0],
+	&apiGrowthRules[0]);
       uniqueIndexMapping.resize(num_total_pts);
       webbur::sandia_sgmga_unique_index(numVars, anisoLevelWts.values(),
-	ssgLevel, &integrationRules[0], &compute1DPoints[0], duplicateTol,
-	numCollocPts, num_total_pts, &growthRules[0], &uniqueIndexMapping[0]);
+	ssgLevel, &apiIntegrationRules[0], &compute1DPoints[0], duplicateTol,
+	numCollocPts, num_total_pts, &apiGrowthRules[0],&uniqueIndexMapping[0]);
       webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
-        &integrationRules[0], numCollocPts, num_total_pts,
-        &uniqueIndexMapping[0], &growthRules[0], sparse_order, sparse_index);
+        &apiIntegrationRules[0], numCollocPts, num_total_pts,
+        &uniqueIndexMapping[0], &apiGrowthRules[0], sparse_order, sparse_index);
       webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
-        &integrationRules[0], &compute1DWeights[0], numCollocPts, num_total_pts,
-        &uniqueIndexMapping[0], &growthRules[0], weightSets.values());
+        &apiIntegrationRules[0], &compute1DWeights[0], numCollocPts,
+	num_total_pts, &uniqueIndexMapping[0], &apiGrowthRules[0],
+	weightSets.values());
       webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
-        &integrationRules[0], &compute1DPoints[0], numCollocPts, sparse_order,
-        sparse_index, &growthRules[0], var_sets.values());
+        &apiIntegrationRules[0], &compute1DPoints[0], numCollocPts,
+	sparse_order, sparse_index, &apiGrowthRules[0], var_sets.values());
     }
     delete [] sparse_order;
     delete [] sparse_index;
@@ -1089,8 +1147,8 @@ void SparseGridDriver::
 level_to_order(size_t i, unsigned short level, unsigned short& order)
 {
   int ilevel = level, iorder;
-  webbur::level_growth_to_order(1, &ilevel, &integrationRules[i],
-				&growthRules[i], &iorder);
+  webbur::level_growth_to_order(1, &ilevel, &apiIntegrationRules[i],
+				&apiGrowthRules[i], &iorder);
   order = iorder;
 }
 

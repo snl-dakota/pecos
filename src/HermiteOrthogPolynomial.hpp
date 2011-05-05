@@ -38,7 +38,7 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  HermiteOrthogPolynomial(short colloc_mode); ///< extended constructor
+  HermiteOrthogPolynomial(short colloc_rule); ///< extended constructor
   HermiteOrthogPolynomial();                  ///< default constructor
   ~HermiteOrthogPolynomial();                 ///< destructor
 
@@ -72,9 +72,9 @@ private:
 };
 
 
-inline HermiteOrthogPolynomial::HermiteOrthogPolynomial(short colloc_mode)
+inline HermiteOrthogPolynomial::HermiteOrthogPolynomial(short colloc_rule)
 {
-  collocMode = colloc_mode;
+  collocRule = colloc_rule;
   ptFactor   = std::sqrt(2.);
   wtFactor   = 1./std::sqrt(PI);
 }
@@ -82,7 +82,7 @@ inline HermiteOrthogPolynomial::HermiteOrthogPolynomial(short colloc_mode)
 
 inline HermiteOrthogPolynomial::HermiteOrthogPolynomial()
 {
-  collocMode = GAUSS_HERMITE;
+  collocRule = GAUSS_HERMITE;
   ptFactor   = std::sqrt(2.);
   wtFactor   = 1./std::sqrt(PI);
 }

@@ -29,13 +29,13 @@ void PiecewiseInterpPolynomial::precompute_data()
   }
 
   // for equally spaced pts (requires at least 2 points at interval bounds):
-  if (numInterpPts > 1 && interpMode == NEWTON_COTES) {
+  if (numInterpPts > 1 && collocRule == NEWTON_COTES) {
     size_t num_intervals = numInterpPts - 1;
     interpInterval = (interpPts[num_intervals] - interpPts[0])/num_intervals;
   }
 
   // for non-equidistant points
-  //if (numInterpPts > 1 && interpMode != NEWTON_COTES) {
+  //if (numInterpPts > 1 && collocRule != NEWTON_COTES) {
   //  size_t i, num_intervals = numInterpPts - 1;
   //  interpIntervals.size(num_intervals);
   //  for (i=0; i<num_intervals; ++i)
@@ -57,9 +57,9 @@ get_type1_value(const Real& x, unsigned short i)
 
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
-  switch (interpType) {
+  switch (basisType) {
   case PIECEWISE_LINEAR_INTERP:
-    switch (interpMode) {
+    switch (collocRule) {
     case NEWTON_COTES: {
       // linear spline interpolant with equidistant pts on [a,b]
       Real abs_dist = std::abs(x - pt_i);
@@ -82,7 +82,7 @@ get_type1_value(const Real& x, unsigned short i)
     }
     break;
   case PIECEWISE_QUADRATIC_INTERP:
-    switch (interpMode) {
+    switch (collocRule) {
     case NEWTON_COTES: {
       // quadratic spline interpolant with equidistant pts on [a,b]
       Real dist = x - pt_i;
@@ -153,7 +153,7 @@ get_type2_value(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
   if (numInterpPts == 1) {
-    switch (interpType) {
+    switch (basisType) {
     case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
       basisPolyValue = 0.; break;
     case PIECEWISE_CUBIC_INTERP:
@@ -162,7 +162,7 @@ get_type2_value(const Real& x, unsigned short i)
     return basisPolyValue;
   }
 
-  switch (interpType) {
+  switch (basisType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     basisPolyValue = 0.;
     break;
@@ -208,9 +208,9 @@ get_type1_gradient(const Real& x, unsigned short i)
 
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
-  switch (interpType) {
+  switch (basisType) {
   case PIECEWISE_LINEAR_INTERP:
-    switch (interpMode) {
+    switch (collocRule) {
     case NEWTON_COTES: {
       // linear spline interpolant with equidistant pts on [a,b]
       Real dist = x - pt_i, abs_dist = std::abs(dist);
@@ -233,7 +233,7 @@ get_type1_gradient(const Real& x, unsigned short i)
     }
     break;
   case PIECEWISE_QUADRATIC_INTERP:
-    switch (interpMode) {
+    switch (collocRule) {
     case NEWTON_COTES: {
       Real dist = x - pt_i;
       basisPolyGradient = (std::abs(dist) < interpInterval) ?
@@ -304,7 +304,7 @@ get_type2_gradient(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
   if (numInterpPts == 1) {
-    switch (interpType) {
+    switch (basisType) {
     case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
       basisPolyGradient = 0.; break;
     case PIECEWISE_CUBIC_INTERP:
@@ -313,7 +313,7 @@ get_type2_gradient(const Real& x, unsigned short i)
     return basisPolyGradient;
   }
 
-  switch (interpType) {
+  switch (basisType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     basisPolyGradient = 0.;
     break;
@@ -356,7 +356,7 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  // Computation of interpPts depends only on interpMode (not on interpType).
+  // Computation of interpPts depends only on collocRule (not on basisType).
   // Points are defined on [-1,1] (unlike Ma & Zabaras, Jakeman, etc.).
   // Bypass webbur::{hce,hcc}_compute_points() since it replicates points
   // in an array of size 2*order to match type1/2 weight aggregation.
@@ -366,12 +366,12 @@ collocation_points(unsigned short order)
     interpPts.resize(order);
     if (order == 1)
       interpPts[0] = 0.;
-    else if (interpMode == NEWTON_COTES) {
+    else if (collocRule == NEWTON_COTES) {
       Real val = 2./((Real)(order - 1));
       for (unsigned short i=0; i<order; ++i)
 	interpPts[i] = val*i - 1.;
     }
-    else if (interpMode == CLENSHAW_CURTIS) {
+    else if (collocRule == CLENSHAW_CURTIS) {
 #ifdef HAVE_SPARSE_GRID
       webbur::clenshaw_curtis_compute_points(order, &interpPts[0]);
 #else
@@ -410,21 +410,21 @@ type1_collocation_weights(unsigned short order)
     if (order == 1)
       type1InterpWts[0] = 1.;
     else
-      switch (interpType) {
+      switch (basisType) {
       case PIECEWISE_LINEAR_INTERP: case PIECEWISE_CUBIC_INTERP:
 	//   Left end:  (x_1 - a)/2/(b-a)           = (x_1 - a)/4
 	//   Interior:  (x_{i+1} - x_{i-1})/2/(b-a) = (x_{i+1} - x_{i-1})/4
 	//   Right end: (b - x_{order-2})/2/(b-a)   = (b - x_{order-2})/4
 	// Bypass webbur::{hce,hcc}_compute_weights() since it aggregates
 	// type1/2 weights in a single array of size 2*order
-	if (interpMode == NEWTON_COTES) {
+	if (collocRule == NEWTON_COTES) {
 	  Real val = interpInterval/4.;
 	  type1InterpWts[0] = type1InterpWts[order-1] = val; // left/right ends
 	  val *= 2.;
 	  for (unsigned short i=1; i<order-1; ++i)
 	    type1InterpWts[i] = val; // interior
 	}
-	else if (interpMode == CLENSHAW_CURTIS) {
+	else if (collocRule == CLENSHAW_CURTIS) {
 	  // bases for left and right ends span one interp interval
 	  type1InterpWts[0]       = (interpPts[1]      -interpPts[0])/4.;
 	  type1InterpWts[order-1] = (interpPts[order-1]-interpPts[order-2])/4.;
@@ -461,7 +461,7 @@ type2_collocation_weights(unsigned short order)
   }
 
   bool mode_err = false;
-  switch (interpType) {
+  switch (basisType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     if (!type2InterpWts.empty())
       type2InterpWts.clear();
@@ -477,14 +477,14 @@ type2_collocation_weights(unsigned short order)
       type2InterpWts.resize(order);
       if (order == 1)
 	type2InterpWts[0] = 0.; // TO DO: verify
-      else if (interpMode == NEWTON_COTES) {
+      else if (collocRule == NEWTON_COTES) {
 	Real val = interpInterval*interpInterval/24.;
 	type1InterpWts[0]       =  val; //  left end
 	type1InterpWts[order-1] = -val; // right end
 	for (unsigned short i=1; i<order-1; ++i)
 	  type1InterpWts[i] = 0.;       //  interior
       }
-      else if (interpMode == CLENSHAW_CURTIS) {
+      else if (collocRule == CLENSHAW_CURTIS) {
 	Real val = interpPts[1] - interpPts[0];
 	type1InterpWts[0]       =  val*val/24.;  //  left end
 	val = interpPts[order-1] - interpPts[order-2];

@@ -61,10 +61,10 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// set collocMode
-  void collocation_mode(short mode);
-  /// get collocMode
-  short collocation_mode() const;
+  /// set collocRule
+  void collocation_rule(short rule);
+  /// get collocRule
+  short collocation_rule() const;
 
   //
   //- Heading: Data
@@ -82,11 +82,11 @@ protected:
 
   /// the type of integration rule associated with the orthogonal polynomial
   /** In most cases, this is just the corresponding Gauss quadrature
-      rule.  However, for Legendre, collocMode manages the option of
+      rule.  However, for Legendre, collocRule manages the option of
       GAUSS_LEGENDRE or GAUSS_PATTERSON, for Chebyshev, it manages the
       option of CLENSHAW_CURTIS or FEJER2, and for Hermite, it manages
       the option of GAUSS_HERMITE or GENZ_KEISTER. */
-  short collocMode;
+  short collocRule;
 
 private:
 
@@ -109,12 +109,12 @@ inline void OrthogonalPolynomial::reset_gauss()
 { collocPoints.clear(); collocWeights.clear(); }
 
 
-inline void OrthogonalPolynomial::collocation_mode(short mode)
-{ collocMode = mode; }
+inline void OrthogonalPolynomial::collocation_rule(short rule)
+{ collocRule = rule; }
 
 
-inline short OrthogonalPolynomial::collocation_mode() const
-{ return collocMode; }
+inline short OrthogonalPolynomial::collocation_rule() const
+{ return collocRule; }
 
 } // namespace Pecos
 

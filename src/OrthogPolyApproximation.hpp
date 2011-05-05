@@ -57,12 +57,10 @@ public:
   int expansion_terms() const;
 
   /// invoke distribution_types() and, if needed, distribution_parameters()
-  void distributions(const ShortArray& u_types,
-		     const IntArray& int_rules, const DistributionParams& dp);
+  void distributions(const ShortArray& u_types, const DistributionParams& dp);
   /// allocate polynomialBasis and basisTypes based on u_types
-  bool distribution_types(const ShortArray& u_types,
-			  const IntArray& int_rules);
-  /// allocate polynomialBasis based on basisTypes and gaussModes
+  bool distribution_types(const ShortArray& u_types);
+  /// allocate polynomialBasis based on basisTypes and gaussRules
   void distribution_basis();
   /// pass distribution parameters from dp to polynomialBasis
   void distribution_parameters(const ShortArray& u_types,
@@ -294,7 +292,7 @@ private:
   /// types: Legendre supports GAUSS_LEGENDRE or GAUSS_PATTERSON, Chebyshev
   /// supports CLENSHAW_CURTIS or FEJER2, and Hermite supports GAUSS_HERMITE
   /// or GENZ_KEISTER.
-  ShortArray gaussModes;
+  ShortArray gaussRules;
 
   /// array of one-dimensional basis polynomial objects which are used in
   /// constructing the multivariate orthogonal/interpolation polynomials
@@ -421,16 +419,15 @@ inline int OrthogPolyApproximation::expansion_terms() const
 
 
 inline bool OrthogPolyApproximation::
-distribution_types(const ShortArray& u_types, const IntArray& int_rules)
+distribution_types(const ShortArray& u_types)
 {
-  return PolynomialApproximation::distribution_types(u_types, int_rules,
-						     basisTypes, gaussModes);
+  return PolynomialApproximation::distribution_types(u_types, basisTypes);
 }
 
 
 inline void OrthogPolyApproximation::distribution_basis()
 {
-  PolynomialApproximation::distribution_basis(basisTypes, gaussModes,
+  PolynomialApproximation::distribution_basis(basisTypes, gaussRules,
 					      polynomialBasis);
 }
 
@@ -444,18 +441,10 @@ distribution_parameters(const ShortArray& u_types, const DistributionParams& dp)
 
 
 inline void OrthogPolyApproximation::
-distributions(const ShortArray& u_types, const IntArray& int_rules,
-	      const DistributionParams& dp)
+distributions(const ShortArray& u_types, const DistributionParams& dp)
 {
-  if (u_types.size() != numVars) {
-    PCerr << "Error: incoming u_types array length (" << u_types.size()
-	  << ") does not match number of variables (" << numVars
-	  << ") in OrthogPolyApproximation::distribution_types()." << std::endl;
-    abort_handler(-1);
-  }
-  PolynomialApproximation::distributions(u_types, int_rules, dp,
-					 polynomialBasis, basisTypes,
-					 gaussModes);
+  PolynomialApproximation::distributions(u_types, dp, polynomialBasis,
+					 basisTypes, gaussRules);
 }
 
 

@@ -44,7 +44,7 @@ public:
 
   /// Standard constructor
   HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, 
-		    short interpType_=PIECEWISE_LINEAR_INTERP);
+		    short basisType_=PIECEWISE_LINEAR_INTERP);
     
   /// Destructor
   virtual ~HierarchPWInterpPolynomial();
@@ -69,10 +69,6 @@ protected:
   RefinablePointSet& pointSet;
 
 private:
-
-  /// type of polynomial interpolant: PIECEWISE_LINEAR_INTERP,
-  /// PIECEWISE_QUADRATIC_INTERP, or PIECEWISE_CUBIC_INTERP
-  short interpType;
 
 }; //End class definition
 

@@ -99,13 +99,13 @@ private:
 
 
 inline GenLaguerreOrthogPolynomial::GenLaguerreOrthogPolynomial(): alphaPoly(0.)
-{ collocMode = GEN_GAUSS_LAGUERRE; }
+{ collocRule = GEN_GAUSS_LAGUERRE; }
 
 
 // TO DO
 inline GenLaguerreOrthogPolynomial::
 GenLaguerreOrthogPolynomial(const Real& alpha_stat): alphaPoly(alpha_stat-1.)
-{ collocMode = GEN_GAUSS_LAGUERRE; }
+{ collocRule = GEN_GAUSS_LAGUERRE; }
 
 
 inline GenLaguerreOrthogPolynomial::~GenLaguerreOrthogPolynomial()

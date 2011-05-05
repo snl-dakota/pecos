@@ -68,15 +68,15 @@ public:
   /// return collocWts1D
   const Real2DArray& collocation_weights_array() const;
 
-  /// invoke initialize_rules() to set integration and growth rules
+  /// invoke initialize_rules() to set collocation rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
 		       bool  equidistant_rules = true,
-		       short growth_rate = MODERATE_RESTRICTED_GROWTH,
+		     //short growth_rate = MODERATE_RESTRICTED_GROWTH,
 		       short nested_uniform_rule = GAUSS_PATTERSON);
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		       const UShortArray& quad_order,
-		       short growth_rate = MODERATE_RESTRICTED_GROWTH);
+		       const UShortArray& quad_order);
+                     //short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
 private:
 

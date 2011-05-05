@@ -115,16 +115,16 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  bool mode_err = false;
+  bool rule_err = false;
   if (collocPoints.size() != order) { // if not already computed
     collocPoints.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    if (collocMode == GENZ_KEISTER) {
+    if (collocRule == GENZ_KEISTER) {
       webbur::hermite_genz_keister_lookup_points(order, &collocPoints[0]);
       for (size_t i=0; i<order; i++)
 	collocPoints[i] *= ptFactor; // scale H_n by sr2 to get He_n
     }
-    else if (collocMode == GAUSS_HERMITE) {
+    else if (collocRule == GAUSS_HERMITE) {
       if (order <= 20) { // retrieve full precision tabulated values
 	webbur::hermite_lookup_points(order, &collocPoints[0]);
 	for (size_t i=0; i<order; i++)
@@ -141,14 +141,14 @@ collocation_points(unsigned short order)
       }
     }
     else
-      mode_err = true;
+      rule_err = true;
 #else
-    if (collocMode == GENZ_KEISTER) {
+    if (collocRule == GENZ_KEISTER) {
       PCerr << "Error: VPISparseGrid required for Genz-Keister points in "
 	    << "HermiteOrthogPolynomial::collocation_points()." << std::endl;
       abort_handler(-1);
     }
-    else if (collocMode == GAUSS_HERMITE) {
+    else if (collocRule == GAUSS_HERMITE) {
       switch (order) {
       case 1: // zeros of He_1(x) for one Gauss-Hermite point:
 	collocPoints[0] = 0.0;  break;
@@ -232,12 +232,12 @@ collocation_points(unsigned short order)
       }
     }
     else
-      mode_err = true;
+      rule_err = true;
 #endif
   }
 
-  if (mode_err) {
-    PCerr << "Error: unsupported collocation point mode in "
+  if (rule_err) {
+    PCerr << "Error: unsupported collocation rule in "
 	  << "HermiteOrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
@@ -260,16 +260,16 @@ collocation_weights(unsigned short order)
   // 1/sqrt(2*PI) exp(-x^2/2) over the support range of [-infinity,+infinity]
   // (the std normal CDF for +infinity).
 
-  bool mode_err = false;
+  bool rule_err = false;
   if (collocWeights.size() != order) { // if not already computed
     collocWeights.resize(order);
 #ifdef HAVE_SPARSE_GRID
-    if (collocMode == GENZ_KEISTER) {
+    if (collocRule == GENZ_KEISTER) {
       webbur::hermite_genz_keister_lookup_weights(order, &collocWeights[0]);
       for (size_t i=0; i<order; i++)
 	collocWeights[i] *= wtFactor; // polynomial weight fn -> PDF
     }
-    else if (collocMode == GAUSS_HERMITE) {
+    else if (collocRule == GAUSS_HERMITE) {
       if (order <= 20) { // retrieve full precision tabulated values
 	webbur::hermite_lookup_weights(order, &collocWeights[0]);
 	for (size_t i=0; i<order; i++)
@@ -286,14 +286,14 @@ collocation_weights(unsigned short order)
       }
     }
     else
-      mode_err = true;
+      rule_err = true;
 #else
-    if (collocMode == GENZ_KEISTER) {
+    if (collocRule == GENZ_KEISTER) {
       PCerr << "Error: VPISparseGrid required for Genz-Keister points in "
 	    << "HermiteOrthogPolynomial::collocation_weights()." << std::endl;
       abort_handler(-1);
     }
-    else if (collocMode == GAUSS_HERMITE) {
+    else if (collocRule == GAUSS_HERMITE) {
       switch (order) {
       case 1: // weights for one Gauss-Hermite point:
 	collocWeights[0] = 1.0; break;
@@ -352,12 +352,12 @@ collocation_weights(unsigned short order)
       }
     }
     else
-      mode_err = true;
+      rule_err = true;
 #endif
   }
 
-  if (mode_err) {
-    PCerr << "Error: unsupported collocation point mode in "
+  if (rule_err) {
+    PCerr << "Error: unsupported collocation rule in "
 	  << "HermiteOrthogPolynomial::collocation_weights()." << std::endl;
     abort_handler(-1);
   }

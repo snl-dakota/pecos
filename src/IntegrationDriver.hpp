@@ -72,10 +72,8 @@ public:
   /// return weightSets
   const RealVector& weight_sets() const;
 
-  /// return integrationRules
-  const IntArray& integration_rules() const;
-  /// return growthRules
-  const IntArray& growth_rules() const;
+  /// return collocRules
+  const ShortArray& collocation_rules() const;
 
   /// return orderGenzKeister
   const UShortArray& genz_keister_order()     const;
@@ -104,13 +102,9 @@ protected:
   /// set int_rules and growth_rules from u_types, nested_rules, growth_rate,
   /// and nested_uniform_rule
   void initialize_rules(const ShortArray& u_types, bool nested_rules,
-			bool  equidistant_rules,   short growth_rate,
-			short nested_uniform_rule, IntArray& int_rules,
-			IntArray& growth_rules);
+			bool  equidistant_rules,  short nested_uniform_rule);
   /// set int_rules and growth_rules from poly_basis and growth_rate
-  void initialize_rules(const std::vector<BasisPolynomial>& poly_basis,
-			short growth_rate, IntArray& int_rules,
-			IntArray& growth_rules);
+  void initialize_rules(const std::vector<BasisPolynomial>& poly_basis);
 
   /// compute variable and weight sets for a tensor-product grid
   void compute_tensor_grid(const UShortArray& order, RealMatrix& variable_sets,
@@ -124,10 +118,8 @@ protected:
   /// number of variables in the tensor-product grid
   size_t numVars;
 
-  /// integer codes for integration rule options
-  IntArray integrationRules;
-  /// integer codes for growth rule options
-  IntArray growthRules;
+  /// enumeration codes for integration rule options
+  ShortArray collocRules;
 
   /// array of one-dimensional orthogonal polynomials used in
   /// computing Gaussian quadrature points and weights
@@ -171,12 +163,8 @@ inline const RealVector& IntegrationDriver::weight_sets() const
 { return (driverRep) ? driverRep->weightSets : weightSets; }
 
 
-inline const IntArray& IntegrationDriver::integration_rules() const
-{ return integrationRules; }
-
-
-inline const IntArray& IntegrationDriver::growth_rules() const
-{ return growthRules; }
+inline const ShortArray& IntegrationDriver::collocation_rules() const
+{ return collocRules; }
 
 
 inline const UShortArray& IntegrationDriver::genz_keister_order() const

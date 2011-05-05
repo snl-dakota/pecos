@@ -74,7 +74,7 @@ private:
 
 
 inline LaguerreOrthogPolynomial::LaguerreOrthogPolynomial()
-{ collocMode = GAUSS_LAGUERRE; }
+{ collocRule = GAUSS_LAGUERRE; }
 
 
 inline LaguerreOrthogPolynomial::~LaguerreOrthogPolynomial()

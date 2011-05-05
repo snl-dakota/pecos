@@ -61,7 +61,7 @@ BasisPolynomial::BasisPolynomial(): polyRep(NULL), referenceCount(1)
     This constructor executes get_polynomial(type), which invokes the
     default constructor of the derived letter class, which in turn
     invokes the BaseConstructor of the base class. */
-BasisPolynomial::BasisPolynomial(short poly_type, short colloc_mode):
+BasisPolynomial::BasisPolynomial(short poly_type, short rule):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -70,7 +70,7 @@ BasisPolynomial::BasisPolynomial(short poly_type, short colloc_mode):
 #endif
 
   // Set the rep pointer to the appropriate derived type
-  polyRep = get_polynomial(poly_type, colloc_mode);
+  polyRep = get_polynomial(poly_type, rule);
   if ( /* poly_type != NO_POLY && */ !polyRep ) // bad type, insufficient memory
     abort_handler(-1);
 }
@@ -78,7 +78,7 @@ BasisPolynomial::BasisPolynomial(short poly_type, short colloc_mode):
 
 /** Used only by the envelope constructor to initialize polyRep to the 
     appropriate derived type. */
-BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short mode)
+BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_polynomial(short, short)."
@@ -90,10 +90,10 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short mode)
   //case NO_POLY:
   //  polynomial = NULL;                                                  break;
   case HERMITE_ORTHOG:  // var_type == "normal"
-    polynomial = (mode) ? new HermiteOrthogPolynomial(mode)
+    polynomial = (rule) ? new HermiteOrthogPolynomial(rule)
                         : new HermiteOrthogPolynomial();                  break;
   case LEGENDRE_ORTHOG: // var_type == "uniform"
-    polynomial = (mode) ? new LegendreOrthogPolynomial(mode)
+    polynomial = (rule) ? new LegendreOrthogPolynomial(rule)
                         : new LegendreOrthogPolynomial();                 break;
   case LAGUERRE_ORTHOG: // var_type == "exponential"
     polynomial = new LaguerreOrthogPolynomial();                          break;
@@ -102,7 +102,7 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short mode)
   case GEN_LAGUERRE_ORTHOG: // var_type == "gamma"
     polynomial = new GenLaguerreOrthogPolynomial();                       break;
   case CHEBYSHEV_ORTHOG: // for Clenshaw-Curtis and Fejer
-    polynomial = (mode) ? new ChebyshevOrthogPolynomial(mode)
+    polynomial = (rule) ? new ChebyshevOrthogPolynomial(rule)
                         : new ChebyshevOrthogPolynomial();                break;
   case NUM_GEN_ORTHOG:
     polynomial = new NumericGenOrthogPolynomial();                        break;
@@ -111,10 +111,10 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short mode)
   //case HERMITE_INTERP:
   //  polynomial = new HermiteInterpPolynomial();                         break;
   // PIECEWISE options include poly order, point type, and point data order:
-  // LINEAR/QUADRATIC/CUBIC covers poly order, mode covers EQUIDISTANT/GENERAL
+  // LINEAR/QUADRATIC/CUBIC covers poly order, rule covers EQUIDISTANT/GENERAL
   // point type, and data order is inferred from poly order (grads for CUBIC).
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_CUBIC_INTERP:
-    polynomial = (mode) ? new PiecewiseInterpPolynomial(poly_type, mode)
+    polynomial = (rule) ? new PiecewiseInterpPolynomial(poly_type, rule)
                         : new PiecewiseInterpPolynomial(poly_type);       break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
@@ -369,26 +369,26 @@ void BasisPolynomial::beta_stat(const Real& beta)
 }
 
 
-void BasisPolynomial::collocation_mode(short mode)
+void BasisPolynomial::collocation_rule(short rule)
 {
   if (polyRep)
-    polyRep->collocation_mode(mode);
+    polyRep->collocation_rule(rule);
   else {
-    PCerr << "Error: collocation_mode(short) not available for this basis "
+    PCerr << "Error: collocation_rule(short) not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
 }
 
 
-short BasisPolynomial::collocation_mode() const
+short BasisPolynomial::collocation_rule() const
 {
   if (!polyRep) {
-    PCerr << "Error: collocation_mode() not available for this basis "
+    PCerr << "Error: collocation_rule() not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->collocation_mode();
+  return polyRep->collocation_rule();
 }
 
 

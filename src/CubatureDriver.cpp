@@ -32,7 +32,7 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
 {
   numVars = u_types.size();
   integrand_order(order);
-  integration_rule(rule); // size integrationRules and define first entry
+  collocation_rule(rule); // size collocRules and define first entry
 
   // check for isotropic u_types
   short type0 = u_types[0];
@@ -46,10 +46,9 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
   // TO DO: consider using a single BasisPolynomial for CubatureDriver
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
-  ShortArray basis_types, colloc_modes;
-  PolynomialApproximation::distribution_types(u_types, integrationRules,
-					      basis_types, colloc_modes);
-  PolynomialApproximation::distribution_basis(basis_types, colloc_modes,
+  ShortArray basis_types;
+  PolynomialApproximation::distribution_types(u_types, basis_types);
+  PolynomialApproximation::distribution_basis(basis_types, collocRules,
 					      polynomialBasis);
 }
 
@@ -63,15 +62,15 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
   integrand_order(order);
 
   // check for isotropic u_types
-  unsigned short rule0 = poly_basis[0].collocation_mode();
+  unsigned short rule0 = poly_basis[0].collocation_rule();
   for (size_t i=1; i<numVars; ++i)
-    if (poly_basis[i].collocation_mode() != rule0) {
+    if (poly_basis[i].collocation_rule() != rule0) {
       PCerr << "Error: integration rule must be isotropic in CubatureDriver::"
 	    << "initialize_grid(poly_basis)." << std::endl;
       abort_handler(-1);
     }
 
-  integration_rule(rule0);
+  collocation_rule(rule0);
 }
 
 
@@ -82,7 +81,7 @@ initialize_grid_parameters(const ShortArray& u_types,
   // verify homogeneity in any polynomial parameterizations
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
-  switch (integrationRules[0]) {
+  switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
     err_flag = (verify_homogeneity(dp.beta_alphas()) ||
 		verify_homogeneity(dp.beta_betas())); break;
@@ -149,7 +148,7 @@ initialize_grid_parameters(const ShortArray& u_types,
 
 int CubatureDriver::grid_size()
 {
-  switch(integrationRules[0]) {
+  switch(collocRules[0]) {
   case GAUSS_HERMITE:
     switch (integrandOrder) {
     case 1: return webbur::en_her_01_1_size(numVars);    break; // 1
@@ -227,7 +226,7 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   bool err_flag = false, pt_scaling = false, wt_scaling = false;
   double pt_factor, wt_factor;
   BasisPolynomial& poly0 = polynomialBasis[0];
-  switch(integrationRules[0]) {
+  switch(collocRules[0]) {
   case GAUSS_HERMITE: {
     switch (integrandOrder) {
     case 1: webbur::en_her_01_1(numVars,    num_pts, pts, wts); break;

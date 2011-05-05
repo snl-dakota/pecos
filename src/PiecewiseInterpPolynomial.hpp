@@ -38,11 +38,11 @@ public:
 
   /// default constructor
   PiecewiseInterpPolynomial();
-  /// constructor with mode argument
-  PiecewiseInterpPolynomial(short poly_type, short mode = NEWTON_COTES);
-  /// constructor with mode and set of points to interpolate
+  /// constructor with rule argument
+  PiecewiseInterpPolynomial(short poly_type, short rule = NEWTON_COTES);
+  /// constructor with rule and set of points to interpolate
   PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
-			    short mode = NEWTON_COTES);
+			    short rule = NEWTON_COTES);
   /// destructor
   ~PiecewiseInterpPolynomial();
 
@@ -73,20 +73,25 @@ protected:
   /// set of size order
   const RealArray& type2_collocation_weights(unsigned short order);
 
-private:
-
   //
   //- Heading: Data
   //
 
   /// type of polynomial interpolant: PIECEWISE_LINEAR_INTERP,
   /// PIECEWISE_QUADRATIC_INTERP, or PIECEWISE_CUBIC_INTERP
-  short interpType;
+  short basisType;
+
   /// name of closed nested rule: NEWTON_COTES (equidistant) or
   /// CLENSHAW_CURTIS (non-equidistant)
-  short interpMode;
+  short collocRule;
 
-  /// the constant interval between points for an equidistant interpMode
+private:
+
+  //
+  //- Heading: Data
+  //
+
+  /// the constant interval between points for an equidistant collocRule
   Real interpInterval;
 
   /// set of 1-D weights for interpolation of values
@@ -102,15 +107,15 @@ inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial():
 
 
 inline PiecewiseInterpPolynomial::
-PiecewiseInterpPolynomial(short poly_type, short mode):
-  InterpolationPolynomial(), interpType(poly_type), interpMode(mode)
+PiecewiseInterpPolynomial(short poly_type, short rule):
+  InterpolationPolynomial(), basisType(poly_type), collocRule(rule)
 { }
 
 
 inline PiecewiseInterpPolynomial::
 PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
-			  short mode):
-  InterpolationPolynomial(interp_pts), interpType(poly_type), interpMode(mode)
+			  short rule):
+  InterpolationPolynomial(interp_pts), basisType(poly_type), collocRule(rule)
 { }
 
 

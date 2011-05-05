@@ -31,6 +31,23 @@ int InterpPolyApproximation::min_coefficients() const
 }
 
 
+void InterpPolyApproximation::
+distribution_types(short& poly_type_1d, short& rule, bool& push_pts)
+{
+  switch (basisType) {
+  case PIECEWISE_INTERPOLATION_POLYNOMIAL:
+    poly_type_1d = (useDerivs) ?
+      PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
+    rule = NEWTON_COTES; push_pts = false;                   break;
+  case GLOBAL_INTERPOLATION_POLYNOMIAL:
+    poly_type_1d = (useDerivs) ? HERMITE_INTERP : LAGRANGE_INTERP;
+    rule = NO_RULE; push_pts = true;                         break;
+  default:
+    poly_type_1d = NO_POLY; rule = NO_RULE; push_pts = true; break;
+  }
+}
+
+
 void InterpPolyApproximation::allocate_arrays()
 {
   allocate_component_effects();
@@ -85,23 +102,19 @@ void InterpPolyApproximation::allocate_arrays()
 	{ polynomialBasis.resize(1); polynomialBasis[0].resize(numVars); }
       const Real2DArray& colloc_pts_1d = tpq_driver->collocation_points_array();
       std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
+      short poly_type_1d; short rule; bool push_pts, found;
+      distribution_types(poly_type_1d, rule, push_pts);
       for (i=0; i<numVars; ++i) {
-	bool found = false;
+	found = false;
 	for (j=0; j<i; ++j)
-	  if (colloc_pts_1d[i] == colloc_pts_1d[j]) // equality in pt vector
+	  if (colloc_pts_1d[i] == colloc_pts_1d[j]) // vector equality in pts
 	    { found = true; break; }
 	if (found) // reuse previous instance via shared representation
 	  poly_basis_0[i] = poly_basis_0[j];
 	else { // instantiate a new unique instance
-	  if (basisType == PIECEWISE_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_0[i] = (useDerivs) ? // from Hermite/Lagrange ctor
-	      BasisPolynomial(PIECEWISE_CUBIC_INTERP,  NEWTON_COTES) :
-	      BasisPolynomial(PIECEWISE_LINEAR_INTERP, NEWTON_COTES);
-	  else if (basisType == GLOBAL_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_0[i] = (useDerivs) ? // from Hermite/Lagrange ctor
-	      BasisPolynomial(HERMITE_INTERP) :
-	      BasisPolynomial(LAGRANGE_INTERP);
-	  poly_basis_0[i].interpolation_points(colloc_pts_1d[i]);
+	  poly_basis_0[i] = BasisPolynomial(poly_type_1d, rule);
+	  if (push_pts)
+	    poly_basis_0[i].interpolation_points(colloc_pts_1d[i]);
 	}
       }
     }
@@ -330,12 +343,14 @@ update_sparse_interpolation_basis(unsigned short max_level)
   }
 
   // fill gaps that may exist within any level
+  short poly_type_1d; short rule; bool push_pts, found;
+  distribution_types(poly_type_1d, rule, push_pts);
   for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
     for (j=0; j<numVars; ++j) {
-      const RealArray& colloc_pts_1d_ij =    colloc_pts_1d[i][j];
-      BasisPolynomial&   poly_basis_ij = polynomialBasis[i][j];
+      const RealArray& colloc_pts_1d_ij =   colloc_pts_1d[i][j];
+      BasisPolynomial&    poly_basis_ij = polynomialBasis[i][j];
       if (poly_basis_ij.is_null() && !colloc_pts_1d_ij.empty()) {
-	bool found = false;
+	found = false;
 	for (k=0; k<j; ++k)
 	  if (colloc_pts_1d_ij == colloc_pts_1d[i][k] &&  // vector equality
 	      !polynomialBasis[i][k].is_null())
@@ -343,15 +358,9 @@ update_sparse_interpolation_basis(unsigned short max_level)
 	if (found) // reuse previous instances via shared representations
 	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
 	else { // instantiate new unique instances
-	  if (basisType == PIECEWISE_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_ij = (useDerivs) ? // from Hermite/Lagrange ctor
-	      BasisPolynomial(PIECEWISE_CUBIC_INTERP,  NEWTON_COTES) :
-	      BasisPolynomial(PIECEWISE_LINEAR_INTERP, NEWTON_COTES);
-	  else if (basisType == GLOBAL_INTERPOLATION_POLYNOMIAL)
-	    poly_basis_ij = (useDerivs) ? // from Hermite/Lagrange ctor
-	      BasisPolynomial(HERMITE_INTERP) :
-	      BasisPolynomial(LAGRANGE_INTERP);
-	  poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+	  poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
+	  if (push_pts)
+	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
 	}
       }
     }

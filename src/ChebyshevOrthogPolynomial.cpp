@@ -172,9 +172,9 @@ collocation_points(unsigned short order)
 
 #ifdef HAVE_SPARSE_GRID
     // separable calculation of points/weights in sandia_rules.C
-    if (collocMode == CLENSHAW_CURTIS)
+    if (collocRule == CLENSHAW_CURTIS)
       webbur::clenshaw_curtis_compute_points(order, &collocPoints[0]);
-    else if (collocMode == FEJER2)
+    else if (collocRule == FEJER2)
       webbur::fejer2_compute_points(order, &collocPoints[0]);
     else {
       PCerr << "Error: unsupported collocation point type in "
@@ -210,9 +210,9 @@ collocation_weights(unsigned short order)
 
 #ifdef HAVE_SPARSE_GRID
     // separable calculation of points/weights in sandia_rules.C
-    if (collocMode == CLENSHAW_CURTIS)
+    if (collocRule == CLENSHAW_CURTIS)
       webbur::clenshaw_curtis_compute_weights(order, &collocWeights[0]);
-    else if (collocMode == FEJER2)
+    else if (collocRule == FEJER2)
       webbur::fejer2_compute_weights(order, &collocWeights[0]);
     else {
       PCerr << "Error: unsupported collocation weight type in "

@@ -187,29 +187,29 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  bool mode_err = false;
+  bool rule_err = false;
   if (collocPoints.size() != order) { // if not already computed
     collocPoints.resize(order);
-    switch (collocMode) {
+    switch (collocRule) {
     case GAUSS_PATTERSON:
 #ifdef HAVE_SPARSE_GRID
       webbur::patterson_lookup_points(order, &collocPoints[0]);
 #else
-      mode_err = true;
+      rule_err = true;
 #endif
       break;
     case CLENSHAW_CURTIS: 
 #ifdef HAVE_SPARSE_GRID
       webbur::clenshaw_curtis_compute_points(order, &collocPoints[0]);
 #else
-      mode_err = true;
+      rule_err = true;
 #endif
       break;
     case FEJER2: 
 #ifdef HAVE_SPARSE_GRID
       webbur::fejer2_compute_points(order, &collocPoints[0]);
 #else
-      mode_err = true;
+      rule_err = true;
 #endif
       break;
     case GAUSS_LEGENDRE:
@@ -315,13 +315,13 @@ collocation_points(unsigned short order)
 #endif
       break;
     default:
-      mode_err = true; break;
+      rule_err = true; break;
     }
   }
 
-  if (mode_err) {
-    PCerr << "Error: unsupported collocation point mode in "
-	  << "LegendreOrthogPolynomial::collocation_points()." << std::endl;
+  if (rule_err) {
+    PCerr << "Error: unsupported collocation rule in LegendreOrthogPolynomial"
+	  << "::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
@@ -343,29 +343,29 @@ collocation_weights(unsigned short order)
   // function 1/2 over the support range of [-1,+1].  These differ from
   // Abramowitz & Stegun by a constant factor of 1/2.
 
-  bool mode_err = false;
+  bool rule_err = false;
   if (collocWeights.size() != order) { // if not already computed
     collocWeights.resize(order);
-    switch (collocMode) {
+    switch (collocRule) {
     case GAUSS_PATTERSON:
 #ifdef HAVE_SPARSE_GRID
       webbur::patterson_lookup_weights(order, &collocWeights[0]);
 #else
-      mode_err = true;
+      rule_err = true;
 #endif
       break;
     case CLENSHAW_CURTIS: 
 #ifdef HAVE_SPARSE_GRID
       webbur::clenshaw_curtis_compute_weights(order, &collocWeights[0]);
 #else
-      mode_err = true;
+      rule_err = true;
 #endif
       break;
     case FEJER2: 
 #ifdef HAVE_SPARSE_GRID
       webbur::fejer2_compute_weights(order, &collocWeights[0]);
 #else
-      mode_err = true;
+      rule_err = true;
 #endif
       break;
     case GAUSS_LEGENDRE:
@@ -442,7 +442,7 @@ collocation_weights(unsigned short order)
 #endif
       break;
     default:
-      mode_err = true; break;
+      rule_err = true; break;
     }
 
 #ifdef HAVE_SPARSE_GRID
@@ -451,9 +451,9 @@ collocation_weights(unsigned short order)
 #endif
   }
 
-  if (mode_err) {
-    PCerr << "Error: unsupported collocation weight mode in "
-	  << "LegendreOrthogPolynomial::collocation_weights()." << std::endl;
+  if (rule_err) {
+    PCerr << "Error: unsupported collocation rule in LegendreOrthogPolynomial"
+	  << "::collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 

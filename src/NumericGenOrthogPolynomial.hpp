@@ -222,7 +222,7 @@ private:
 
 inline NumericGenOrthogPolynomial::NumericGenOrthogPolynomial() :
   coeffsNormsFlag(false)
-{ collocMode = GOLUB_WELSCH; ptFactor = wtFactor = 1.; }
+{ collocRule = GOLUB_WELSCH; ptFactor = wtFactor = 1.; }
 
 
 inline NumericGenOrthogPolynomial::~NumericGenOrthogPolynomial()
