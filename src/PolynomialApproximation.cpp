@@ -75,7 +75,7 @@ distribution_types(const ShortArray& u_types, ShortArray& basis_types)
   // Initialize basis_types from u_types.
   if (basis_types.size() != num_vars) {
     basis_types.resize(num_vars);
-    for (i=0; i<num_vars; i++) {
+    for (i=0; i<num_vars; ++i) {
       switch (u_types[i]) {
       case STD_NORMAL:
 	basis_types[i] = HERMITE_ORTHOG;                                  break;
@@ -111,12 +111,43 @@ distribution_types(const ShortArray& u_types, ShortArray& basis_types)
     }
   }
   else
-    for (i=0; i<num_vars; i++)
+    for (i=0; i<num_vars; ++i)
       if (u_types[i] != STD_NORMAL            && u_types[i] != STD_UNIFORM &&
 	  u_types[i] != PIECEWISE_STD_UNIFORM && u_types[i] != STD_EXPONENTIAL)
 	{ extra_dist_params = true; break; }
 
   return extra_dist_params;
+}
+
+
+void PolynomialApproximation::
+distribution_rules(const ShortArray& u_types, bool nested_rules,
+		   bool equidistant_rules,   short nested_uniform_rule,
+		   ShortArray& colloc_rules)
+{
+  size_t i, num_vars = u_types.size();
+  colloc_rules.resize(num_vars);
+  for (size_t i=0; i<num_vars; ++i) {
+    // set colloc_rules
+    switch (u_types[i]) {
+    case STD_NORMAL:
+      colloc_rules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
+    case STD_UNIFORM:
+      // For tensor-product quadrature without refinement, Gauss-Legendre is
+      // preferred due to greater polynomial exactness since nesting is not a
+      // concern.  For sparse grids and refined quadrature, Gauss-Patterson or
+      // Clenshaw-Curtis can be better options.
+      colloc_rules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
+      break;
+    case PIECEWISE_STD_UNIFORM: // closed nested rules required
+      colloc_rules[i] = (equidistant_rules) ? NEWTON_COTES : CLENSHAW_CURTIS;
+      break;
+    case STD_EXPONENTIAL: colloc_rules[i] = GAUSS_LAGUERRE;     break;
+    case STD_BETA:        colloc_rules[i] = GAUSS_JACOBI;       break;
+    case STD_GAMMA:       colloc_rules[i] = GEN_GAUSS_LAGUERRE; break;
+    default:              colloc_rules[i] = GOLUB_WELSCH;       break;
+    }
+  }
 }
 
 
@@ -128,7 +159,10 @@ distribution_basis(const ShortArray& basis_types,
   size_t i, num_vars = basis_types.size(), num_rules = colloc_rules.size();
   if (poly_basis.size() != num_vars) {
     poly_basis.resize(num_vars);
-    if (num_rules == 0)      // default rules
+    if (num_rules == num_vars)
+      for (i=0; i<num_vars; ++i)
+	poly_basis[i] = BasisPolynomial(basis_types[i], colloc_rules[i]);
+    else if (num_rules == 0)   // use default rules for each basis type
       for (i=0; i<num_vars; ++i)
 	poly_basis[i] = BasisPolynomial(basis_types[i]);
     else if (num_rules == 1) { // cubature utilizes a single rule
@@ -136,9 +170,6 @@ distribution_basis(const ShortArray& basis_types,
       for (i=0; i<num_vars; ++i)
 	poly_basis[i] = BasisPolynomial(basis_types[i], colloc_rule);
     }
-    else if (num_rules == num_vars)
-      for (i=0; i<num_vars; ++i)
-	poly_basis[i] = BasisPolynomial(basis_types[i], colloc_rules[i]);
 
     /*
     // Could reuse objects as in InterpPolyApproximation, but this would require
@@ -147,10 +178,10 @@ distribution_basis(const ShortArray& basis_types,
     size_t i, j;
     for (i=0; i<numVars; ++i) {
       // reuse prev instance via shared rep or instantiate new unique instance
-      short basis_type_i = basisTypes[i];
+      short basis_type_i = basis_types[i];
       bool found = false;
       for (j=0; j<i; ++j)
-	if ( basis_type_i == basisTypes[j] && ( basis_type_i <= LAGUERRE ||
+	if ( basis_type_i == basis_types[j] && ( basis_type_i <= LAGUERRE ||
 	     ( basis_type_i == JACOBI && jacobiAlphas[] == jacobiAlphas[] &&
 	       jacobiBetas[] == jacobiBetas[] ) ||
 	     ( basis_type_i == GENERALIZED_LAGUERRE &&
@@ -171,7 +202,7 @@ distribution_parameters(const ShortArray& u_types, const DistributionParams& dp,
   size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
     luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
     fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0;
-  for (i=0; i<num_vars; i++)
+  for (i=0; i<num_vars; ++i)
     switch (u_types[i]) {
     case STD_NORMAL:
       ++nuv_cntr; break;

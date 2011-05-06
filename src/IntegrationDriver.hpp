@@ -118,7 +118,10 @@ protected:
   /// number of variables in the tensor-product grid
   size_t numVars;
 
-  /// enumeration codes for integration rule options
+  /// enumeration codes for integration rule options.  Manages internal
+  /// mode switches for 1D polynomial types: e.g., GAUSS_LEGENDRE or
+  /// GAUSS_PATTERSON for Legendre, CLENSHAW_CURTIS or FEJER2 for
+  /// Chebyshev, GAUSS_HERMITE or GENZ_KEISTER for Hermite.
   ShortArray collocRules;
 
   /// array of one-dimensional orthogonal polynomials used in

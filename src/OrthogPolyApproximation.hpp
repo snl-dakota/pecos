@@ -60,11 +60,11 @@ public:
   void distributions(const ShortArray& u_types, const DistributionParams& dp);
   /// allocate polynomialBasis and basisTypes based on u_types
   bool distribution_types(const ShortArray& u_types);
-  /// allocate polynomialBasis based on basisTypes and gaussRules
-  void distribution_basis();
-  /// pass distribution parameters from dp to polynomialBasis
-  void distribution_parameters(const ShortArray& u_types,
-			       const DistributionParams& dp);
+
+  /// set basisTypes
+  void basis_types(const ShortArray& basis_types);
+  /// get basisTypes
+  const ShortArray& basis_types() const;
 
   /// get polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
@@ -288,12 +288,6 @@ private:
   /// GEN_LAGUERRE_ORTHOG, CHEBYSHEV_ORTHOG, or NUM_GEN_ORTHOG
   ShortArray basisTypes;
 
-  /// array of Gauss mode options for some derived orthogonal polynomial
-  /// types: Legendre supports GAUSS_LEGENDRE or GAUSS_PATTERSON, Chebyshev
-  /// supports CLENSHAW_CURTIS or FEJER2, and Hermite supports GAUSS_HERMITE
-  /// or GENZ_KEISTER.
-  ShortArray gaussRules;
-
   /// array of one-dimensional basis polynomial objects which are used in
   /// constructing the multivariate orthogonal/interpolation polynomials
   std::vector<BasisPolynomial> polynomialBasis;
@@ -420,32 +414,35 @@ inline int OrthogPolyApproximation::expansion_terms() const
 
 inline bool OrthogPolyApproximation::
 distribution_types(const ShortArray& u_types)
-{
-  return PolynomialApproximation::distribution_types(u_types, basisTypes);
-}
+{ return PolynomialApproximation::distribution_types(u_types, basisTypes); }
 
 
-inline void OrthogPolyApproximation::distribution_basis()
-{
-  PolynomialApproximation::distribution_basis(basisTypes, gaussRules,
-					      polynomialBasis);
-}
-
-
-inline void OrthogPolyApproximation::
-distribution_parameters(const ShortArray& u_types, const DistributionParams& dp)
-{
-  PolynomialApproximation::distribution_parameters(u_types, dp,
-						   polynomialBasis);
-}
-
-
+/** This function is invoked to create basisTypes and polynomialBasis
+    for cases where they have not already been created by an
+    IntegrationDriver (i.e., expansion_samples or regression). */
 inline void OrthogPolyApproximation::
 distributions(const ShortArray& u_types, const DistributionParams& dp)
 {
-  PolynomialApproximation::distributions(u_types, dp, polynomialBasis,
-					 basisTypes, gaussRules);
+  bool dist_params =
+    PolynomialApproximation::distribution_types(u_types, basisTypes);
+  ShortArray colloc_rules;
+  // if there are meaningful rule flags for random sampling cases in the future,
+  // define colloc_rules, else leave empty --> default polynomialBasis config.
+  //PolynomialApproximation::distribution_rules(u_types, ..., colloc_rules);
+  PolynomialApproximation::distribution_basis(basisTypes, colloc_rules,
+					      polynomialBasis);
+  if (dist_params)
+    PolynomialApproximation::distribution_parameters(u_types, dp,
+						     polynomialBasis);
 }
+
+
+inline void OrthogPolyApproximation::basis_types(const ShortArray& basis_types)
+{ basisTypes = basis_types; }
+
+
+inline const ShortArray& OrthogPolyApproximation::basis_types() const
+{ return basisTypes; }
 
 
 inline const std::vector<BasisPolynomial>& OrthogPolyApproximation::

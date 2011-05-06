@@ -217,33 +217,11 @@ void IntegrationDriver::
 initialize_rules(const ShortArray& u_types, bool nested_rules,
 		 bool equidistant_rules,   short nested_uniform_rule)
 {
-  collocRules.resize(numVars);
-  for (size_t i=0; i<numVars; i++) {
-    // set collocRules
-    switch (u_types[i]) {
-    case STD_NORMAL:
-      collocRules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
-    case STD_UNIFORM:
-      // For tensor-product quadrature without refinement, Gauss-Legendre is
-      // preferred due to greater polynomial exactness since nesting is not a
-      // concern.  For sparse grids and refined quadrature, Gauss-Patterson or
-      // Clenshaw-Curtis can be better options.
-      collocRules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
-      break;
-    case PIECEWISE_STD_UNIFORM: // closed nested rules required
-      // sgmg/sgmga don't support NEWTON_COTES; use GOLUB_WELSCH instead
-      //collocRules[i] = (equidistant_rules) ? NEWTON_COTES : CLENSHAW_CURTIS;
-      collocRules[i] = (equidistant_rules) ? GOLUB_WELSCH : CLENSHAW_CURTIS;
-      break;
-    case STD_EXPONENTIAL: collocRules[i] = GAUSS_LAGUERRE;     break;
-    case STD_BETA:        collocRules[i] = GAUSS_JACOBI;       break;
-    case STD_GAMMA:       collocRules[i] = GEN_GAUSS_LAGUERRE; break;
-    default:              collocRules[i] = GOLUB_WELSCH;       break;
-    }
-  }
-
   ShortArray basis_types;
   PolynomialApproximation::distribution_types(u_types, basis_types);
+  PolynomialApproximation::distribution_rules(u_types, nested_rules,
+					      equidistant_rules,
+					      nested_uniform_rule, collocRules);
   PolynomialApproximation::distribution_basis(basis_types, collocRules,
 					      polynomialBasis);
 }

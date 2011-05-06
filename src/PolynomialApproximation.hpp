@@ -197,14 +197,14 @@ public:
   //- Heading: Member functions
   //
 
-  /// invoke distribution_types() and, if needed, distribution_parameters()
-  static void distributions(const ShortArray& u_types,
-			    const DistributionParams& dp,
-			    std::vector<BasisPolynomial>& poly_basis,
-			    ShortArray& basis_types, ShortArray& colloc_rules);
-  /// allocate poly_basis and basis_types based on u_types
+  /// allocate basis_types based on u_types
   static bool distribution_types(const ShortArray& u_types,
 				 ShortArray& basis_types);
+  /// allocate colloc_rules based on u_types and rule options
+  static void distribution_rules(const ShortArray& u_types, bool nested_rules,
+				 bool equidistant_rules,
+				 short nested_uniform_rule,
+				 ShortArray& colloc_rules);
   /// allocate poly_basis based on basis_types and colloc_rules
   static void distribution_basis(const ShortArray& basis_types,
 				 const ShortArray& colloc_rules,
@@ -444,18 +444,6 @@ inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
 
 inline PolynomialApproximation::~PolynomialApproximation()
 { }
-
-
-inline void PolynomialApproximation::
-distributions(const ShortArray& u_types, const DistributionParams& dp,
-	      std::vector<BasisPolynomial>& poly_basis,
-	      ShortArray& basis_types, ShortArray& colloc_rules)
-{
-  bool dist_params = distribution_types(u_types, basis_types);
-  distribution_basis(basis_types, colloc_rules, poly_basis);
-  if (dist_params)
-    distribution_parameters(u_types, dp, poly_basis);
-}
 
 
 inline const RealVector& PolynomialApproximation::expansion_moments() const
