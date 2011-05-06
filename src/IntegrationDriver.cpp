@@ -215,12 +215,14 @@ int IntegrationDriver::grid_size()
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_rules(const ShortArray& u_types, bool nested_rules,
-		 bool equidistant_rules,   short nested_uniform_rule)
+		 bool piecewise_basis,      bool equidistant_rules, 
+		 bool use_derivs,          short nested_uniform_rule)
 {
   ShortArray basis_types;
-  PolynomialApproximation::distribution_types(u_types, basis_types);
+  PolynomialApproximation::distribution_types(u_types, piecewise_basis,
+					      use_derivs, basis_types);
   PolynomialApproximation::distribution_rules(u_types, nested_rules,
-					      equidistant_rules,
+					      piecewise_basis,equidistant_rules,
 					      nested_uniform_rule, collocRules);
   PolynomialApproximation::distribution_basis(basis_types, collocRules,
 					      polynomialBasis);

@@ -36,11 +36,11 @@ distribution_types(short& poly_type_1d, short& rule, bool& push_pts)
 {
   switch (basisType) {
   case PIECEWISE_INTERPOLATION_POLYNOMIAL:
-    poly_type_1d = (useDerivs) ?
+    poly_type_1d = (configOptions.useDerivs) ?
       PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
     rule = NEWTON_COTES; push_pts = false;                   break;
   case GLOBAL_INTERPOLATION_POLYNOMIAL:
-    poly_type_1d = (useDerivs) ? HERMITE_INTERP : LAGRANGE_INTERP;
+    poly_type_1d = (configOptions.useDerivs) ? HERMITE_INTERP : LAGRANGE_INTERP;
     rule = NO_RULE; push_pts = true;                         break;
   default:
     poly_type_1d = NO_POLY; rule = NO_RULE; push_pts = true; break;

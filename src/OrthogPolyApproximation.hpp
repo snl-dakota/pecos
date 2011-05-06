@@ -43,7 +43,8 @@ public:
   //
 
   /// default constructor
-  OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars);
+  OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
+			  bool use_derivs);
   /// destructor
   ~OrthogPolyApproximation();
 
@@ -56,10 +57,11 @@ public:
   /// get numExpansionTerms
   int expansion_terms() const;
 
-  /// invoke distribution_types() and, if needed, distribution_parameters()
-  void distributions(const ShortArray& u_types, const DistributionParams& dp);
-  /// allocate polynomialBasis and basisTypes based on u_types
+  /// allocate polynomialBasis and basisTypes based on u_types and flags
   bool distribution_types(const ShortArray& u_types);
+  /// invoke distribution_types(), distribution_basis(), and, if needed,
+  /// distribution_parameters()
+  void distributions(const ShortArray& u_types, const DistributionParams& dp);
 
   /// set basisTypes
   void basis_types(const ShortArray& basis_types);
@@ -357,12 +359,13 @@ private:
 
 
 inline OrthogPolyApproximation::
-OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars):
+OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
+			bool use_derivs):
   PolynomialApproximation(num_vars), numExpansionTerms(0),
   approxOrder(approx_order), partialOrder(false),
   quadratureExpansion(TENSOR_INT_TENSOR_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
-{ }
+{ configOptions.useDerivs = use_derivs; }
 
 
 inline OrthogPolyApproximation::~OrthogPolyApproximation()
@@ -414,7 +417,11 @@ inline int OrthogPolyApproximation::expansion_terms() const
 
 inline bool OrthogPolyApproximation::
 distribution_types(const ShortArray& u_types)
-{ return PolynomialApproximation::distribution_types(u_types, basisTypes); }
+{
+  return PolynomialApproximation::distribution_types(u_types, false,
+						     configOptions.useDerivs,
+						     basisTypes);
+}
 
 
 /** This function is invoked to create basisTypes and polynomialBasis
@@ -423,8 +430,10 @@ distribution_types(const ShortArray& u_types)
 inline void OrthogPolyApproximation::
 distributions(const ShortArray& u_types, const DistributionParams& dp)
 {
-  bool dist_params =
-    PolynomialApproximation::distribution_types(u_types, basisTypes);
+  bool dist_params
+    = PolynomialApproximation::distribution_types(u_types, false,
+						  configOptions.useDerivs,
+						  basisTypes);
   ShortArray colloc_rules;
   // if there are meaningful rule flags for random sampling cases in the future,
   // define colloc_rules, else leave empty --> default polynomialBasis config.

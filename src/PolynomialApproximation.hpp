@@ -51,7 +51,7 @@ public:
   ConfigurationOptions();
   /// constructor
   ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
-		       bool exp_grad_flag,
+		       bool exp_grad_flag, bool use_derivs,
 		       //short output_level, short refine_type,
 		       short refine_cntl, short vbd_type);
   /// destructor
@@ -66,6 +66,8 @@ private:
   bool expansionCoeffFlag;
   /// flag for calculation of expansionCoeffGrads from response gradients
   bool expansionCoeffGradFlag;
+  /// flag for utilizing derivatives during formation/calculation of expansions
+  bool useDerivs;
 
   // output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   //short outputLevel;
@@ -86,7 +88,7 @@ private:
 
 inline ConfigurationOptions::ConfigurationOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false),
+  expansionCoeffGradFlag(false), useDerivs(false),
   //outputLevel(NORMAL_OUTPUT), refinementType(NO_REFINEMENT),
   refinementControl(NO_CONTROL), vbdControl(NO_VBD)
 { }
@@ -94,11 +96,11 @@ inline ConfigurationOptions::ConfigurationOptions():
 
 inline ConfigurationOptions::
 ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
-		     bool exp_grad_flag,
+		     bool exp_grad_flag, bool use_derivs,
 		     //short output_level, short refine_type,
 		     short refine_cntl, short vbd_type):
   expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
-  expansionCoeffGradFlag(exp_grad_flag),
+  expansionCoeffGradFlag(exp_grad_flag), useDerivs(use_derivs),
   //outputLevel(output_level), refinementType(refine_type),
   refinementControl(refine_cntl), vbdControl(vbd_type)
 { }
@@ -199,10 +201,11 @@ public:
 
   /// allocate basis_types based on u_types
   static bool distribution_types(const ShortArray& u_types,
+				 bool piecewise_basis, bool use_derivs,
 				 ShortArray& basis_types);
   /// allocate colloc_rules based on u_types and rule options
   static void distribution_rules(const ShortArray& u_types, bool nested_rules,
-				 bool equidistant_rules,
+				 bool  piecewise_basis, bool equidistant_rules,
 				 short nested_uniform_rule,
 				 ShortArray& colloc_rules);
   /// allocate poly_basis based on basis_types and colloc_rules

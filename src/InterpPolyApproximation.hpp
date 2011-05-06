@@ -155,9 +155,6 @@ protected:
 
   /// GLOBAL_INTERPOLATION_POLYNOMIAL or PIECEWISE_INTERPOLATION_POLYNOMIAL
   short basisType;
-  /// flag indicating use of derivative data for forming local cubic
-  /// spline or global Hermite interpolants
-  bool useDerivs;
 
 private:
 

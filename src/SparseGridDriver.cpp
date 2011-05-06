@@ -331,9 +331,10 @@ void SparseGridDriver::update_axis_lower_bounds()
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref, //short refine_type,
-		short refine_control, bool store_colloc,
-		bool track_ensemble_wts, bool nested_rules,
-		bool equidistant_rules, short growth_rate,
+		short refine_control,       bool  store_colloc,
+		bool  track_ensemble_wts,   bool  nested_rules,
+		bool  piecewise_basis,      bool  equidistant_rules,
+		bool  use_derivs,           short growth_rate,
 		short nested_uniform_rule)
 {
   numVars = u_types.size();
@@ -350,16 +351,15 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   // to uniform/normal in order to enforce similar growth rates:
   if (nested_rules && growth_rate == UNRESTRICTED_GROWTH)
     for (size_t i=0; i<numVars; ++i)
-      if (u_types[i] != STD_UNIFORM && u_types[i] != PIECEWISE_STD_UNIFORM && 
-	  u_types[i] != STD_NORMAL)
+      if (u_types[i] != STD_UNIFORM && u_types[i] != STD_NORMAL)
 	{ nested_rules = false; break; }
   // For MODERATE and SLOW restricted exponential growth, nested rules
   // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
 
   // define collocRules
-  initialize_rules(u_types, nested_rules, equidistant_rules, 
-		   nested_uniform_rule);
+  initialize_rules(u_types, nested_rules, piecewise_basis, equidistant_rules, 
+		   use_derivs, nested_uniform_rule);
   // convert collocRules/growth_rate to apiIntegrationRules/apiGrowthRules
   initialize_api_arrays(growth_rate);
   // set compute1DPoints and compute1DWeights
@@ -371,8 +371,8 @@ void SparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 		unsigned short ssg_level, const RealVector& dim_pref,
 		//short refine_type,
-		short refine_control, bool store_colloc,
-		bool track_ensemble_wts, short growth_rate)
+		short refine_control,     bool  store_colloc,
+		bool  track_ensemble_wts, short growth_rate)
 {
   numVars              = poly_basis.size();
   polynomialBasis      = poly_basis; // shallow copy

@@ -86,7 +86,7 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
       return new LagrangeInterpPolyApproximation(basis_type, num_vars);
   }
   else if (basis_type == GLOBAL_ORTHOGONAL_POLYNOMIAL)
-    return new OrthogPolyApproximation(approx_order, num_vars);
+    return new OrthogPolyApproximation(approx_order, num_vars, use_derivs);
   //else if (basis_type == PIECEWISE_ORTHOGONAL_POLYNOMIAL)
   //  return new OrthogPolyApproximation(approx_order, num_vars);
   //else if (basis_type == FOURIER_BASIS)

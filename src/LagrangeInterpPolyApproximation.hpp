@@ -159,7 +159,7 @@ private:
 inline LagrangeInterpPolyApproximation::
 LagrangeInterpPolyApproximation(short basis_type, size_t num_vars):
   InterpPolyApproximation(basis_type, num_vars)
-{ useDerivs = false; }
+{ configOptions.useDerivs = false; }
 
 
 inline LagrangeInterpPolyApproximation::~LagrangeInterpPolyApproximation()

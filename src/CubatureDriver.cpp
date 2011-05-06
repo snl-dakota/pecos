@@ -43,11 +43,13 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
       abort_handler(-1);
     }
 
-  // TO DO: consider using a single BasisPolynomial for CubatureDriver
-  // (would have to be expanded into array for PolynomialApproximation
-  // within NonDPCE).
   ShortArray basis_types;
-  PolynomialApproximation::distribution_types(u_types, basis_types);
+  // Cubature used for numerical integration of PCE --> no piecewise bases,
+  // no deriv-based regression
+  PolynomialApproximation::distribution_types(u_types, false, false,
+					      basis_types);
+  // TO DO: consider using a single BasisPolynomial for CubatureDriver (would
+  // have to be expanded into array for PolynomialApproximation within NonDPCE).
   PolynomialApproximation::distribution_basis(basis_types, collocRules,
 					      polynomialBasis);
 }

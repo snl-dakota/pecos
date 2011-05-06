@@ -102,7 +102,8 @@ protected:
   /// set int_rules and growth_rules from u_types, nested_rules, growth_rate,
   /// and nested_uniform_rule
   void initialize_rules(const ShortArray& u_types, bool nested_rules,
-			bool  equidistant_rules,  short nested_uniform_rule);
+			bool piecewise_basis,      bool equidistant_rules, 
+			bool use_derivs,          short nested_uniform_rule);
   /// set int_rules and growth_rules from poly_basis and growth_rate
   void initialize_rules(const std::vector<BasisPolynomial>& poly_basis);
 

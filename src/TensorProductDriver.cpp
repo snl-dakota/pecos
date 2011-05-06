@@ -24,20 +24,20 @@ namespace Pecos {
 
 
 void TensorProductDriver::
-initialize_grid(const ShortArray& u_types, bool  nested_rules,
-		bool  equidistant_rules, //short growth_rate,
-		short nested_uniform_rule)
+initialize_grid(const ShortArray& u_types, bool nested_rules,
+		bool  piecewise_basis,     bool equidistant_rules,
+		bool  use_derivs,         short nested_uniform_rule)
 {
   numVars = u_types.size();
   quadOrder.resize(numVars);
-  initialize_rules(u_types, nested_rules, equidistant_rules,
-		   nested_uniform_rule);
+  initialize_rules(u_types, nested_rules, piecewise_basis, equidistant_rules,
+		   use_derivs, nested_uniform_rule);
 }
 
 
 void TensorProductDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		const UShortArray& quad_order)//, short growth_rate)
+		const UShortArray& quad_order)
 {
   numVars         = poly_basis.size();
   polynomialBasis = poly_basis; // shallow copy

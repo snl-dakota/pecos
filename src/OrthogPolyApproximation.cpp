@@ -1352,16 +1352,33 @@ void OrthogPolyApproximation::regression()
   short data_order = 1;
   if (!pt0.response_gradient().empty()) data_order |= 2;
   if (!pt0.response_hessian().empty())  data_order |= 4;
+  // verify support for configOptions.useDerivs, which indicates usage of
+  // derivative data with respect to expansion variables (aleatory or combined)
+  // within the expansion coefficient solution process, which must be
+  // distinguished from usage of derivative data with respect to non-expansion
+  // variables (the expansionCoeffGradFlag case).
+  if (configOptions.useDerivs) {
+    if (!(data_order & 2)) {
+      PCerr << "Error: useDerivs configuration option lacks data support in "
+	    << "OrthogPolyApproximation::regression()" << std::endl;
+      abort_handler(-1);
+    }
+    if (configOptions.expansionCoeffGradFlag) {
+      PCerr << "Error: useDerivs configuration option conflicts with gradient "
+	    << "expansion request in OrthogPolyApproximation::regression()"
+	    << std::endl;
+      abort_handler(-1);
+    }
+    if (data_order & 4)
+      PCerr << "Warning: useDerivs configuration option does not yet support "
+	    << "Hessian data in OrthogPolyApproximation::regression()"
+	    << std::endl;
+  }
 
-  // use_grads_flag indicates usage of gradient data with respect to the
-  // expansion variables (aleatory or combined) within the expansion
-  // coefficient calculation process, which must be distinguished from the
-  // expansionCoeffGradFlag case.
-  bool use_grads_flag
-    = ((data_order & 2) && !configOptions.expansionCoeffGradFlag);
-  size_t eqns_per_pt = (use_grads_flag) ? 1 + numVars : 1;
+  size_t eqns_per_pt = (configOptions.useDerivs) ? 1 + numVars : 1;
   int num_cons = (anchor_pt) ? num_data_pts + eqns_per_pt : num_data_pts;
-  bool fn_constrained_lls = (use_grads_flag && num_cons < numExpansionTerms);
+  bool fn_constrained_lls
+    = (configOptions.useDerivs && num_cons < numExpansionTerms);
   std::vector<SurrogateDataPoint>::iterator dit; SizetList::iterator fit;
   Teuchos::LAPACK<int, Real> la;
   double *A_matrix, *work;
@@ -1508,7 +1525,7 @@ void OrthogPolyApproximation::regression()
 	  else {
 	    const RealVector& c_vars = dit->continuous_variables();
 	    A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
-	    if (use_grads_flag) {
+	    if (configOptions.useDerivs) {
 	      const RealVector& mvp_grad
 		= multivariate_polynomial_gradient(c_vars, mi);
 	      for (k=0; k<numVars; ++k, ++a_cntr)
@@ -1518,7 +1535,7 @@ void OrthogPolyApproximation::regression()
 	}
 	const RealVector& ap_c_vars = anchorPoint.continuous_variables();
 	C_matrix[c_cntr] = multivariate_polynomial(ap_c_vars, mi); ++c_cntr;
-	if (use_grads_flag) {
+	if (configOptions.useDerivs) {
 	  const RealVector& mvp_grad
 	    = multivariate_polynomial_gradient(ap_c_vars, mi);
 	  for (j=0; j<numVars; ++j, ++c_cntr)
@@ -1531,7 +1548,7 @@ void OrthogPolyApproximation::regression()
 	  ++fit;
 	else {
 	  b_vector[b_cntr] = dit->response_function(); ++b_cntr;
-	  if (use_grads_flag) {
+	  if (configOptions.useDerivs) {
 	    const RealVector& resp_grad = dit->response_gradient();
 	    for (j=0; j<numVars; ++j, ++b_cntr)
 	      b_vector[b_cntr] = resp_grad[j];
@@ -1539,7 +1556,7 @@ void OrthogPolyApproximation::regression()
 	}
       }
       d_vector[d_cntr] = anchorPoint.response_function(); ++d_cntr;
-      if (use_grads_flag) {
+      if (configOptions.useDerivs) {
 	const RealVector& resp_grad = anchorPoint.response_gradient();
 	for (j=0; j<numVars; ++j, ++d_cntr)
 	  d_vector[d_cntr] = resp_grad[j];
@@ -1641,7 +1658,7 @@ void OrthogPolyApproximation::regression()
 	else {
 	  const RealVector& c_vars = dit->continuous_variables();
 	  A_matrix[a_cntr] = multivariate_polynomial(c_vars, mi); ++a_cntr;
-	  if (use_grads_flag) {
+	  if (configOptions.useDerivs) {
 	    const RealVector& mvp_grad
 	      = multivariate_polynomial_gradient(c_vars, mi);
 	    for (k=0; k<numVars; ++k, ++a_cntr)
@@ -1654,7 +1671,7 @@ void OrthogPolyApproximation::regression()
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
-    if (use_grads_flag) {
+    if (configOptions.useDerivs) {
       for (i=0, dit=dataPoints.begin(), fit=failedIndices.begin();
 	   dit!=dataPoints.end(); ++dit, ++i) {
 	if (fit != failedIndices.end() && *fit == i)

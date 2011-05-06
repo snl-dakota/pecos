@@ -67,7 +67,8 @@ void PolynomialApproximation::allocate_total_effects()
     interpolation polynomials could support push of points and then pull
     of weights, but for now, it is pull for both.] */
 bool PolynomialApproximation::
-distribution_types(const ShortArray& u_types, ShortArray& basis_types)
+distribution_types(const ShortArray& u_types, bool piecewise_basis,
+		   bool use_derivs, ShortArray& basis_types)
 {
   bool extra_dist_params = false;
   size_t i, num_vars = u_types.size();
@@ -79,17 +80,18 @@ distribution_types(const ShortArray& u_types, ShortArray& basis_types)
       switch (u_types[i]) {
       case STD_NORMAL:
 	basis_types[i] = HERMITE_ORTHOG;                                  break;
-      case STD_UNIFORM: // Legendre or Chebyshev OrthogPolynomial (Lagrange
-	// and Hermite interpolation not supported -- see doxygen comment).
-	// To employ Chebyshev for uniform, have to multiply inner product
-	// integrands by the inverse of the weight function (weight fn =
-	// 1/sqrt(1-x^2); same as beta PDF/Jacobi poly for alpha=beta=-1/2).
-	//basis_types[i] = CHEBYSHEV_ORTHOG;                              break;
-	basis_types[i] = LEGENDRE_ORTHOG;                                 break;
-      case PIECEWISE_STD_UNIFORM:
-	basis_types[i] = //(useDerivs) ? PIECEWISE_CUBIC_INTERP:
-	                               PIECEWISE_LINEAR_INTERP;           break;
-	// *** TO DO: useDerivs not elevated and not accessible from static fn
+      case STD_UNIFORM:
+	if (piecewise_basis)
+	  basis_types[i] = (use_derivs) ? PIECEWISE_CUBIC_INTERP:
+	                                  PIECEWISE_LINEAR_INTERP;
+	else // Legendre or Chebyshev OrthogPolynomial (Lagrange and Hermite
+	     // interpolation not supported -- see doxygen comment above).
+	  basis_types[i] = LEGENDRE_ORTHOG;
+	  // To employ Chebyshev for uniform, have to multiply inner product
+	  // integrands by the inverse of the weight function (weight fn =
+	  // 1/sqrt(1-x^2); same as beta PDF/Jacobi poly for alpha=beta=-1/2).
+	  //basis_types[i] = CHEBYSHEV_ORTHOG;
+	break;
       case STD_EXPONENTIAL:
 	basis_types[i] = LAGUERRE_ORTHOG;                                 break;
       case STD_BETA:
@@ -112,8 +114,8 @@ distribution_types(const ShortArray& u_types, ShortArray& basis_types)
   }
   else
     for (i=0; i<num_vars; ++i)
-      if (u_types[i] != STD_NORMAL            && u_types[i] != STD_UNIFORM &&
-	  u_types[i] != PIECEWISE_STD_UNIFORM && u_types[i] != STD_EXPONENTIAL)
+      if (u_types[i] != STD_NORMAL && u_types[i] != STD_UNIFORM &&
+	  u_types[i] != STD_EXPONENTIAL)
 	{ extra_dist_params = true; break; }
 
   return extra_dist_params;
@@ -122,25 +124,26 @@ distribution_types(const ShortArray& u_types, ShortArray& basis_types)
 
 void PolynomialApproximation::
 distribution_rules(const ShortArray& u_types, bool nested_rules,
-		   bool equidistant_rules,   short nested_uniform_rule,
-		   ShortArray& colloc_rules)
+		   bool  piecewise_basis,     bool equidistant_rules,
+		   short nested_uniform_rule, ShortArray& colloc_rules)
 {
   size_t i, num_vars = u_types.size();
   colloc_rules.resize(num_vars);
+
+  // set colloc_rules based on u_types
   for (size_t i=0; i<num_vars; ++i) {
-    // set colloc_rules
     switch (u_types[i]) {
     case STD_NORMAL:
       colloc_rules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
     case STD_UNIFORM:
-      // For tensor-product quadrature without refinement, Gauss-Legendre is
-      // preferred due to greater polynomial exactness since nesting is not a
-      // concern.  For sparse grids and refined quadrature, Gauss-Patterson or
-      // Clenshaw-Curtis can be better options.
-      colloc_rules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
-      break;
-    case PIECEWISE_STD_UNIFORM: // closed nested rules required
-      colloc_rules[i] = (equidistant_rules) ? NEWTON_COTES : CLENSHAW_CURTIS;
+      if (piecewise_basis) // closed nested rules required
+	colloc_rules[i] = (equidistant_rules) ? NEWTON_COTES : CLENSHAW_CURTIS;
+      else
+	colloc_rules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
+      // For tensor-product quadrature without refinement, Gauss-Legendre
+      // is preferred due to greater polynomial exactness since nesting is
+      // not a concern.  For sparse grids and quadrature with refinement,
+      // Gauss-Patterson or Clenshaw-Curtis can be better options.
       break;
     case STD_EXPONENTIAL: colloc_rules[i] = GAUSS_LAGUERRE;     break;
     case STD_BETA:        colloc_rules[i] = GAUSS_JACOBI;       break;
@@ -157,6 +160,8 @@ distribution_basis(const ShortArray& basis_types,
 		   std::vector<BasisPolynomial>& poly_basis)
 {
   size_t i, num_vars = basis_types.size(), num_rules = colloc_rules.size();
+
+  // instantiate poly_basis using basis_types and colloc_rules
   if (poly_basis.size() != num_vars) {
     poly_basis.resize(num_vars);
     if (num_rules == num_vars)
@@ -202,11 +207,13 @@ distribution_parameters(const ShortArray& u_types, const DistributionParams& dp,
   size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
     luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
     fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0;
+
+  // update poly_basis using distribution data from dp
   for (i=0; i<num_vars; ++i)
     switch (u_types[i]) {
     case STD_NORMAL:
       ++nuv_cntr; break;
-    case STD_UNIFORM: case PIECEWISE_STD_UNIFORM: case STD_EXPONENTIAL:
+    case STD_UNIFORM: case STD_EXPONENTIAL:
       break;
     case STD_BETA:
       poly_basis[i].alpha_stat(dp.beta_alpha(beuv_cntr));
