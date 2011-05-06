@@ -753,7 +753,7 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
     exp_order.resize(numVars);
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
   const ShortArray& colloc_rules = ssg_driver->collocation_rules();
-  const IntArray&   growth_rules = ssg_driver->api_growth_rules(); // TO DO: replace array with scalar growth_rate?
+  const IntArray&   growth_rules = ssg_driver->api_growth_rules();
   for (size_t i=0; i<numVars; ++i) {
     switch (growth_rules[i]) {
     case FULL_EXPONENTIAL:

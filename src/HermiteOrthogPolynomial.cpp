@@ -108,8 +108,6 @@ const Real& HermiteOrthogPolynomial::norm_squared(unsigned short order)
 const RealArray& HermiteOrthogPolynomial::
 collocation_points(unsigned short order)
 {
-  PCout << "In HermiteOrthogPolynomial::collocation_points()." << std::endl;
-
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
@@ -251,8 +249,6 @@ collocation_points(unsigned short order)
 const RealArray& HermiteOrthogPolynomial::
 collocation_weights(unsigned short order)
 {
-  PCout << "In HermiteOrthogPolynomial::collocation_weights()." << std::endl;
-
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum quadrature order (1) in "
