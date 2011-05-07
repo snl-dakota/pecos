@@ -48,10 +48,10 @@ public:
 
   /// retrieve the value of the i_th Lagrange polynomial for a given
   /// parameter x
-  const Real& get_value(const Real& x, unsigned short i);
+  const Real& get_type1_value(const Real& x, unsigned short i);
   /// retrieve the gradient of the i_th Lagrange polynomial for a
   /// given parameter x
-  const Real& get_gradient(const Real& x, unsigned short i);
+  const Real& get_type1_gradient(const Real& x, unsigned short i);
 
 protected:
 

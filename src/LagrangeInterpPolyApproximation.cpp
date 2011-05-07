@@ -35,7 +35,7 @@ tensor_product_value(const RealVector& x)
     Real L_i = 1.0;
     const UShortArray& key_i = key[i];
     for (j=0; j<numVars; ++j)
-      L_i *= poly_basis_0[j].get_value(x[j], key_i[j]);
+      L_i *= poly_basis_0[j].get_type1_value(x[j], key_i[j]);
     tpValue += expansionCoeffs[i] * L_i;
   }
   return tpValue;
@@ -57,7 +57,7 @@ tensor_product_value(const RealVector& x, size_t tp_index)
     const UShortArray& key_i = key[i];
     Real L_i = 1.0;
     for (j=0; j<numVars; ++j)
-      L_i *= polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
+      L_i *= polynomialBasis[sm_index[j]][j].get_type1_value(x[j], key_i[j]);
     tpValue += expansionCoeffs[colloc_index[i]] * L_i;
   }
   return tpValue;
@@ -83,8 +83,8 @@ tensor_product_gradient(const RealVector& x)
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == j) ?
-	  poly_basis_0[k].get_gradient(x[k], key_i[k]) :
-	  poly_basis_0[k].get_value(x[k],    key_i[k]);
+	  poly_basis_0[k].get_type1_gradient(x[k], key_i[k]) :
+	  poly_basis_0[k].get_type1_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -112,8 +112,8 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == j) ?
-	  polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_i[k]) :
-	  polynomialBasis[sm_index[k]][k].get_value(x[k],    key_i[k]);
+	  polynomialBasis[sm_index[k]][k].get_type1_gradient(x[k], key_i[k]) :
+	  polynomialBasis[sm_index[k]][k].get_type1_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -142,8 +142,8 @@ tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == deriv_index) ?
-	  poly_basis_0[k].get_gradient(x[k], key_i[k]) :
-	  poly_basis_0[k].get_value(x[k],    key_i[k]);
+	  poly_basis_0[k].get_type1_gradient(x[k], key_i[k]) :
+	  poly_basis_0[k].get_type1_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -174,8 +174,8 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
 	term_i_grad_j *= (k == deriv_index) ?
-	  polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_i[k]) :
-	  polynomialBasis[sm_index[k]][k].get_value(x[k],    key_i[k]);
+	  polynomialBasis[sm_index[k]][k].get_type1_gradient(x[k], key_i[k]) :
+	  polynomialBasis[sm_index[k]][k].get_type1_value(x[k],    key_i[k]);
       tpGradient[j] += coeff_i * term_i_grad_j;
     }
   }
@@ -199,7 +199,7 @@ tensor_product_mean(const RealVector& x)
     Real prod_i = 1.;
     for (j=0; j<numVars; ++j)
       prod_i *= (randomVarsKey[j]) ? colloc_wts_1d[j][key_i[j]] :
-	poly_basis_0[j].get_value(x[j], key_i[j]);
+	poly_basis_0[j].get_type1_value(x[j], key_i[j]);
     tpMean += expansionCoeffs[i] * prod_i;
   }
   return tpMean;
@@ -223,7 +223,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
     Real prod_i = 1.;
     for (j=0; j<numVars; ++j)
       prod_i *= (randomVarsKey[j]) ? colloc_wts_1d[sm_index[j]][j][key_i[j]] :
-	polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
+	polynomialBasis[sm_index[j]][j].get_type1_value(x[j], key_i[j]);
     tpMean += expansionCoeffs[colloc_index[i]] * prod_i;
   }
   return tpMean;
@@ -269,7 +269,7 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	// --------------------------------------------------------------------
 	Real Lsa_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it)
-	  { k = *it; Lsa_j *= poly_basis_0[k].get_value(x[k], key_j[k]); }
+	  { k = *it; Lsa_j *= poly_basis_0[k].get_type1_value(x[k], key_j[k]); }
 	tpMeanGrad[i] += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, j);
       }
       else {
@@ -280,8 +280,8 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    poly_basis_0[k].get_gradient(x[k], key_j[k]) :
-	    poly_basis_0[k].get_value(x[k],    key_j[k]);
+	    poly_basis_0[k].get_type1_gradient(x[k], key_j[k]) :
+	    poly_basis_0[k].get_type1_value(x[k],    key_j[k]);
 	}
 	tpMeanGrad[i] += expansionCoeffs[j] * wt_prod_j * dLsa_j_dsa_i;
       }
@@ -352,7 +352,8 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	Real Lsa_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
-	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
+	  Lsa_j *=
+	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_j[k]);
 	}
 	tpMeanGrad[i]
 	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, colloc_index[j]);
@@ -365,8 +366,8 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_j[k]) :
-	    polynomialBasis[sm_index[k]][k].get_value(x[k],    key_j[k]);
+	    polynomialBasis[sm_index[k]][k].get_type1_gradient(x[k], key_j[k]) :
+	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k],    key_j[k]);
 	}
 	tpMeanGrad[i]
 	  += expansionCoeffs[colloc_index[j]] * wt_prod_j * dLsa_j_dsa_i;
@@ -400,7 +401,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
       if (randomVarsKey[k])
 	wt_prod_i *= colloc_wts_1d[k][key_i[k]];
       else
-	Ls_prod_i *= poly_basis_0[k].get_value(x[k], key_i[k]);
+	Ls_prod_i *= poly_basis_0[k].get_type1_value(x[k], key_i[k]);
     const Real& exp_coeff_i = expansionCoeffs[i];
     Real wt_Ls_prod_i = wt_prod_i * Ls_prod_i;
     mean1 += exp_coeff_i     * wt_Ls_prod_i;
@@ -417,7 +418,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 	Real Ls_prod_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
-	  Ls_prod_j *= poly_basis_0[k].get_value(x[k], key_j[k]);
+	  Ls_prod_j *= poly_basis_0[k].get_type1_value(x[k], key_j[k]);
 	}
 	tpVariance += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
 	  * exp_coeffs_2[j];
@@ -451,7 +452,8 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
       if (randomVarsKey[k])
 	wt_prod_i *= colloc_wts_1d[sm_index[k]][k][key_i[k]];
       else
-	Ls_prod_i *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_i[k]);
+	Ls_prod_i *=
+	  polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_i[k]);
     index = colloc_index[i];
     const Real& exp_coeff_i = expansionCoeffs[index];
     Real wt_Ls_prod_i = wt_prod_i * Ls_prod_i;
@@ -469,7 +471,8 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 	Real Ls_prod_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
-	  Ls_prod_j *= polynomialBasis[sm_index[k]][k].get_value(x[k],key_j[k]);
+	  Ls_prod_j *=
+	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_j[k]);
 	}
 	tpVariance += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
 	  * exp_coeffs_2[colloc_index[j]];
@@ -514,7 +517,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	if (randomVarsKey[k])
 	  wt_prod_j *= colloc_wts_1d[k][key_j[k]];
 	else
-	  Lsa_j *= poly_basis_0[k].get_value(x[k], key_j[k]);
+	  Lsa_j *= poly_basis_0[k].get_type1_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
       if (i == 0)
 	mean += expansionCoeffs[j] * wt_prod_j * Lsa_j;
@@ -524,8 +527,8 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    poly_basis_0[k].get_gradient(x[k], key_j[k]) :
-	    poly_basis_0[k].get_value(x[k],    key_j[k]);
+	    poly_basis_0[k].get_type1_gradient(x[k], key_j[k]) :
+	    poly_basis_0[k].get_type1_value(x[k],    key_j[k]);
 	}
 	mean_grad_i += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[j];
       }
@@ -542,7 +545,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	  Real Lsa_k = 1.;
 	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	    l = *it;
-	    Lsa_k *= poly_basis_0[l].get_value(x[l], key_k[l]);
+	    Lsa_k *= poly_basis_0[l].get_type1_value(x[l], key_k[l]);
 	  }
 	  if (randomVarsKey[deriv_index])
 	    // ---------------------------------------------------------------
@@ -559,8 +562,8 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it){
 	      l = *it;
 	      dLsa_k_dsa_i *= (l == deriv_index) ?
-		poly_basis_0[l].get_gradient(x[l], key_k[l]):
-		poly_basis_0[l].get_value(x[l],    key_k[l]);
+		poly_basis_0[l].get_type1_gradient(x[l], key_k[l]):
+		poly_basis_0[l].get_type1_value(x[l],    key_k[l]);
 	    }
 	    tpVarianceGrad[i] +=
 	      wt_prod_j * expansionCoeffs[j] * expansionCoeffs[k] *
@@ -633,7 +636,8 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	if (randomVarsKey[k])
 	  wt_prod_j *= colloc_wts_1d[sm_index[k]][k][key_j[k]];
 	else
-	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
+	  Lsa_j *=
+	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
       if (i == 0)
 	mean += expansionCoeffs[colloc_index[j]] * wt_prod_j * Lsa_j;
@@ -644,8 +648,8 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
 	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_j[k]) :
-	    polynomialBasis[sm_index[k]][k].get_value(x[k],    key_j[k]);
+	    polynomialBasis[sm_index[k]][k].get_type1_gradient(x[k], key_j[k]) :
+	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k],    key_j[k]);
 	}
 	mean_grad_i
 	  += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[colloc_index[j]];
@@ -663,7 +667,8 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	  Real Lsa_k = 1.;
 	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	    l = *it;
-	    Lsa_k *= polynomialBasis[sm_index[l]][l].get_value(x[l], key_k[l]);
+	    Lsa_k *=
+	      polynomialBasis[sm_index[l]][l].get_type1_value(x[l], key_k[l]);
 	  }
 	  if (randomVarsKey[deriv_index])
 	    // ---------------------------------------------------------------
@@ -682,8 +687,9 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it){
 	      l = *it;
 	      dLsa_k_dsa_i *= (l == deriv_index) ?
-		polynomialBasis[sm_index[l]][l].get_gradient(x[l], key_k[l]):
-		polynomialBasis[sm_index[l]][l].get_value(x[l],    key_k[l]);
+		polynomialBasis[sm_index[l]][l].get_type1_gradient(x[l],
+								   key_k[l]):
+		polynomialBasis[sm_index[l]][l].get_type1_value(x[l], key_k[l]);
 	    }
 	    tpVarianceGrad[i] +=
 	      wt_prod_j * expansionCoeffs[colloc_index[j]] *

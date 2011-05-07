@@ -46,16 +46,6 @@ public:
   /// destructor
   ~PiecewiseInterpPolynomial();
 
-  //
-  //- Heading: Virtual function redefinitions
-  //
-
-  const Real& get_type1_value(const Real& x, unsigned short i);
-  const Real& get_type2_value(const Real& x, unsigned short i);
-
-  const Real& get_type1_gradient(const Real& x, unsigned short i);
-  const Real& get_type2_gradient(const Real& x, unsigned short i);
-
 protected:
 
   //
@@ -64,8 +54,17 @@ protected:
 
   void precompute_data();
 
+  const Real& get_type1_value(const Real& x, unsigned short i);
+  const Real& get_type2_value(const Real& x, unsigned short i);
+
+  const Real& get_type1_gradient(const Real& x, unsigned short i);
+  const Real& get_type2_gradient(const Real& x, unsigned short i);
+
   /// return the interpolation points corresponding to a point set of size order
   const RealArray& collocation_points(unsigned short order);
+  /// temporary wrapper of type1_collocation_weights()
+  const RealArray& collocation_weights(unsigned short order);
+
   /// return the type 1 interpolation weights corresponding to a point
   /// set of size order
   const RealArray& type1_collocation_weights(unsigned short order);
@@ -121,6 +120,13 @@ PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
 
 inline PiecewiseInterpPolynomial::~PiecewiseInterpPolynomial()
 { }
+
+
+// TO DO: remove this wrapper once type1/2 functionality is elevated
+//        (currently enable LagrangeInterPolyApproximation using Piecewise)
+inline const RealArray& PiecewiseInterpPolynomial::
+collocation_weights(unsigned short order)
+{ return type1_collocation_weights(order); }
 
 } // namespace Pecos
 
