@@ -64,8 +64,6 @@ protected:
   /// set of 1-D interpolation points: the i_th interpolation polynomial
   /// evaluated at the j_th interpolation point produces Kronecker delta_ij
   RealArray interpPts;
-  /// number of 1-D interpolation points
-  size_t numInterpPts;
 
 private:
 
@@ -83,8 +81,7 @@ inline InterpolationPolynomial::InterpolationPolynomial():
 
 inline InterpolationPolynomial::
 InterpolationPolynomial(const RealArray& interp_pts):
-  BasisPolynomial(BaseConstructor()), interpPts(interp_pts),
-  numInterpPts(interpPts.size())
+  BasisPolynomial(BaseConstructor()), interpPts(interp_pts)
 { precompute_data(); }
 
 
@@ -95,8 +92,7 @@ inline InterpolationPolynomial::~InterpolationPolynomial()
 inline void InterpolationPolynomial::
 interpolation_points(const RealArray& interp_pts)
 {
-  interpPts    = interp_pts;
-  numInterpPts = interpPts.size();
+  interpPts = interp_pts;
   precompute_data();
 }
 

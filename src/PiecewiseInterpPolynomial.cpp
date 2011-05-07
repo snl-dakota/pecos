@@ -21,22 +21,23 @@ namespace Pecos {
 
 void PiecewiseInterpPolynomial::precompute_data()
 {
-  // For numInterpPts == 1, we unconditionally return value = 1, grad = 0.
-  if (numInterpPts < 1) {
+  // For num_interp_pts == 1, we unconditionally return value = 1, grad = 0.
+  size_t num_interp_pts = interpPts.size();
+  if (num_interp_pts < 1) {
     PCerr << "Error: PiecewiseInterpPolynomial requires at least one point."
 	  << std::endl;
     abort_handler(-1);
   }
 
   // for equally spaced pts (requires at least 2 points at interval bounds):
-  if (numInterpPts > 1 && collocRule == NEWTON_COTES) {
-    size_t num_intervals = numInterpPts - 1;
+  if (num_interp_pts > 1 && collocRule == NEWTON_COTES) {
+    size_t num_intervals = num_interp_pts - 1;
     interpInterval = (interpPts[num_intervals] - interpPts[0])/num_intervals;
   }
 
   // for non-equidistant points
-  //if (numInterpPts > 1 && collocRule != NEWTON_COTES) {
-  //  size_t i, num_intervals = numInterpPts - 1;
+  //if (num_interp_pts > 1 && collocRule != NEWTON_COTES) {
+  //  size_t i, num_intervals = num_interp_pts - 1;
   //  interpIntervals.size(num_intervals);
   //  for (i=0; i<num_intervals; ++i)
   //    interpIntervals[i] = interpPts[k+1] - interpPts[k];
@@ -50,7 +51,8 @@ const Real& PiecewiseInterpPolynomial::
 get_type1_value(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
-  if (numInterpPts == 1) {
+  size_t num_interp_pts = interpPts.size();
+  if (num_interp_pts == 1) {
     basisPolyValue = 1.;
     return basisPolyValue;
   }
@@ -104,7 +106,7 @@ get_type1_value(const Real& x, unsigned short i)
 	}
 	else basisPolyValue = 0.;
       }
-      else if (i == numInterpPts-1) { // 1-sided as equidistant 2-sided
+      else if (i == num_interp_pts-1) { // 1-sided as equidistant 2-sided
 	const Real& pt_im1 = interpPts[i-1];
 	if (x > pt_im1) {
 	  Real ratio = (x - pt_i)/(pt_i - pt_im1);
@@ -152,7 +154,7 @@ const Real& PiecewiseInterpPolynomial::
 get_type2_value(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
-  if (numInterpPts == 1) {
+  if (interpPts.size() == 1) {
     switch (basisType) {
     case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
       basisPolyValue = 0.; break;
@@ -201,7 +203,8 @@ const Real& PiecewiseInterpPolynomial::
 get_type1_gradient(const Real& x, unsigned short i)
 { 
   // handle special case of a single interpolation point
-  if (numInterpPts == 1) {
+  size_t num_interp_pts = interpPts.size();
+  if (num_interp_pts == 1) {
     basisPolyGradient = 0.; // derivative of value = 1 condition
     return basisPolyGradient;
   }
@@ -250,7 +253,7 @@ get_type1_gradient(const Real& x, unsigned short i)
 	}
 	else basisPolyGradient = 0.;
       }
-      else if (i == numInterpPts-1) { // 1-sided as equidistant 2-sided
+      else if (i == num_interp_pts-1) { // 1-sided as equidistant 2-sided
 	const Real& pt_im1 = interpPts[i-1];
 	if (x > pt_im1) {
 	  Real interval = pt_i - pt_im1; // 1-sided as equidistant 2-sided
@@ -303,7 +306,7 @@ const Real& PiecewiseInterpPolynomial::
 get_type2_gradient(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
-  if (numInterpPts == 1) {
+  if (interpPts.size() == 1) {
     switch (basisType) {
     case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
       basisPolyGradient = 0.; break;
@@ -370,6 +373,9 @@ collocation_points(unsigned short order)
       Real val = 2./((Real)(order - 1));
       for (unsigned short i=0; i<order; ++i)
 	interpPts[i] = val*i - 1.;
+      // update interpInterval (could also call precompute_data())
+      size_t num_intervals = order - 1;
+      interpInterval = (interpPts[num_intervals] - interpPts[0])/num_intervals;
     }
     else if (collocRule == CLENSHAW_CURTIS) {
 #ifdef HAVE_SPARSE_GRID
@@ -405,6 +411,8 @@ type1_collocation_weights(unsigned short order)
   }
 
   bool mode_err = false;
+  if (interpPts.size() != order)
+    collocation_points(order);
   if (type1InterpWts.size() != order) { // if not already computed
     type1InterpWts.resize(order);
     if (order == 1)
@@ -473,6 +481,8 @@ type2_collocation_weights(unsigned short order)
     //   Right end: -(b - x_{order-2})^2/12/(b-a) = -(b - x_{order-2})/24
     // Bypass webbur::{hce,hcc}_compute_weights() since it aggregates
     // type1/2 weights in a single array of size 2*order
+    if (interpPts.size() != order)
+      collocation_points(order);
     if (type2InterpWts.size() != order) { // if not already computed
       type2InterpWts.resize(order);
       if (order == 1)

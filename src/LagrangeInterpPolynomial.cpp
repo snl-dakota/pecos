@@ -20,14 +20,14 @@ namespace Pecos {
     interpolation points. */
 void LagrangeInterpPolynomial::precompute_data()
 {
+  size_t i, j, num_interp_pts = interpPts.size();
   if (lagDenominators.empty())
-    lagDenominators.resize(numInterpPts);
+    lagDenominators.resize(num_interp_pts);
   lagDenominators = 1.;
-  size_t i, j;
-  for (i=0; i<numInterpPts; i++) {
+  for (i=0; i<num_interp_pts; i++) {
     const Real& interp_pt_i = interpPts[i];
     Real&       lag_denom_i = lagDenominators[i];
-    for (j=0; j<numInterpPts; j++)
+    for (j=0; j<num_interp_pts; j++)
       if (i != j)
 	lag_denom_i *= interp_pt_i - interpPts[j];
   }
@@ -39,8 +39,9 @@ void LagrangeInterpPolynomial::precompute_data()
 const Real& LagrangeInterpPolynomial::
 get_type1_value(const Real& x, unsigned short i)
 {
+  size_t j, num_interp_pts = interpPts.size();
   basisPolyValue = 1. / lagDenominators[i];
-  for (size_t j=0; j<numInterpPts; j++)
+  for (j=0; j<num_interp_pts; j++)
     if (i != j)
       basisPolyValue *= x - interpPts[j];
   return basisPolyValue;
@@ -52,12 +53,12 @@ get_type1_value(const Real& x, unsigned short i)
 const Real& LagrangeInterpPolynomial::
 get_type1_gradient(const Real& x, unsigned short i)
 { 
-  size_t j, k;
+  size_t j, k, num_interp_pts = interpPts.size();
   Real numer = 0.;
-  for (j=0; j<numInterpPts; j++) {
+  for (j=0; j<num_interp_pts; j++) {
     if (j != i) {
       Real prod = 1.;
-      for (k=0; k<numInterpPts; k++)
+      for (k=0; k<num_interp_pts; k++)
 	if (k != j && k != i)
 	  prod *= x - interpPts[k];
       numer += prod;

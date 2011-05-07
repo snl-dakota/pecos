@@ -113,7 +113,7 @@ void InterpPolyApproximation::allocate_arrays()
 	  poly_basis_0[i] = poly_basis_0[j];
 	else { // instantiate a new unique instance
 	  poly_basis_0[i] = BasisPolynomial(poly_type_1d, rule);
-	  if (push_pts)
+	  //if (push_pts)
 	    poly_basis_0[i].interpolation_points(colloc_pts_1d[i]);
 	}
       }
@@ -359,7 +359,7 @@ update_sparse_interpolation_basis(unsigned short max_level)
 	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
 	else { // instantiate new unique instances
 	  poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	  if (push_pts)
+	  //if (push_pts)
 	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
 	}
       }
