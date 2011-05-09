@@ -32,18 +32,18 @@ int InterpPolyApproximation::min_coefficients() const
 
 
 void InterpPolyApproximation::
-distribution_types(short& poly_type_1d, short& rule, bool& push_pts)
+distribution_types(short& poly_type_1d, short& rule)
 {
   switch (basisType) {
   case PIECEWISE_INTERPOLATION_POLYNOMIAL:
     poly_type_1d = (configOptions.useDerivs) ?
       PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
-    rule = NEWTON_COTES; push_pts = false;                   break;
+    rule = NEWTON_COTES;                    break;
   case GLOBAL_INTERPOLATION_POLYNOMIAL:
     poly_type_1d = (configOptions.useDerivs) ? HERMITE_INTERP : LAGRANGE_INTERP;
-    rule = NO_RULE; push_pts = true;                         break;
+    rule = NO_RULE;                         break;
   default:
-    poly_type_1d = NO_POLY; rule = NO_RULE; push_pts = true; break;
+    poly_type_1d = NO_POLY; rule = NO_RULE; break;
   }
 }
 
@@ -102,8 +102,8 @@ void InterpPolyApproximation::allocate_arrays()
 	{ polynomialBasis.resize(1); polynomialBasis[0].resize(numVars); }
       const Real2DArray& colloc_pts_1d = tpq_driver->collocation_points_array();
       std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
-      short poly_type_1d; short rule; bool push_pts, found;
-      distribution_types(poly_type_1d, rule, push_pts);
+      short poly_type_1d; short rule; bool found;
+      distribution_types(poly_type_1d, rule);
       for (i=0; i<numVars; ++i) {
 	found = false;
 	for (j=0; j<i; ++j)
@@ -111,10 +111,9 @@ void InterpPolyApproximation::allocate_arrays()
 	    { found = true; break; }
 	if (found) // reuse previous instance via shared representation
 	  poly_basis_0[i] = poly_basis_0[j];
-	else { // instantiate a new unique instance
+	else { // instantiate and initialize a new unique instance
 	  poly_basis_0[i] = BasisPolynomial(poly_type_1d, rule);
-	  //if (push_pts)
-	    poly_basis_0[i].interpolation_points(colloc_pts_1d[i]);
+	  poly_basis_0[i].interpolation_points(colloc_pts_1d[i]);
 	}
       }
     }
@@ -343,8 +342,8 @@ update_sparse_interpolation_basis(unsigned short max_level)
   }
 
   // fill gaps that may exist within any level
-  short poly_type_1d; short rule; bool push_pts, found;
-  distribution_types(poly_type_1d, rule, push_pts);
+  short poly_type_1d; short rule; bool found;
+  distribution_types(poly_type_1d, rule);
   for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
     for (j=0; j<numVars; ++j) {
       const RealArray& colloc_pts_1d_ij =   colloc_pts_1d[i][j];
@@ -355,12 +354,11 @@ update_sparse_interpolation_basis(unsigned short max_level)
 	  if (colloc_pts_1d_ij == colloc_pts_1d[i][k] &&  // vector equality
 	      !polynomialBasis[i][k].is_null())
 	    { found = true; break; }
-	if (found) // reuse previous instances via shared representations
+	if (found) // reuse previous instance via shared representation
 	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
-	else { // instantiate new unique instances
+	else { // instantiate and initialize a new unique instance
 	  poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	  //if (push_pts)
-	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+	  poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
 	}
       }
     }

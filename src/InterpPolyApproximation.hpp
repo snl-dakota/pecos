@@ -162,8 +162,8 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// define the 1D basis type, collocation rule, and point push/pull mode
-  void distribution_types(short& poly_type_1d, short& rule, bool& push_pts);
+  /// define the 1D basis type and collocation rule
+  void distribution_types(short& poly_type_1d, short& rule);
 
   /// update polynomialBasis after a change in maximum interpolation depth
   void update_sparse_interpolation_basis(unsigned short max_level);
