@@ -87,7 +87,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       if (ranVarTypesU[i] == STD_UNIFORM) {
 	// scale from [-1,1] to [L,U]
 	const Real& lwr = ranVarLowerBndsX[i];
-	x_vars[i] = lwr + (ranVarUpperBndsX[i] - lwr)*(z_vars[i]+1.)/2.;
+	x_vars[i] = lwr + (ranVarUpperBndsX[i]-lwr)*std_uniform_cdf(z_vars[i]);
       }
       else
 	err_flag = true;
@@ -103,10 +103,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& z   = z_vars[i];
-	if (z == DBL_MAX)
-	  x_vars[i] = upr;
-	else if (z == -DBL_MAX)
-	  x_vars[i] = lwr;
+	if      (z ==  DBL_MAX) x_vars[i] = upr;
+	else if (z == -DBL_MAX) x_vars[i] = lwr;
 	else {
 	  const Real& mean  = ranVarMeansX[i];
 	  const Real& stdev = ranVarStdDevsX[i];
@@ -114,6 +112,21 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/stdev) : 1.;
 	  x_vars[i]
 	    = Phi_inverse(Phi(z)*(Phi_ums - Phi_lms) + Phi_lms) * stdev + mean;
+	}
+      }
+      else if (ranVarTypesU[i] == STD_UNIFORM) {
+	const Real& lwr = ranVarLowerBndsX[i];
+	const Real& upr = ranVarUpperBndsX[i];
+	const Real& z   = z_vars[i];
+	if      (z ==  1.) x_vars[i] = upr;
+	else if (z == -1.) x_vars[i] = lwr;
+	else {
+	  const Real& mean  = ranVarMeansX[i];
+	  const Real& stdev = ranVarStdDevsX[i];
+	  Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/stdev) : 0.;
+	  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/stdev) : 1.;
+	  x_vars[i] = Phi_inverse(std_uniform_cdf(z_vars[i])*
+				  (Phi_ums - Phi_lms) + Phi_lms) * stdev + mean;
 	}
       }
       else if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
@@ -135,10 +148,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& z   = z_vars[i];
-	if (z == DBL_MAX)
-	  x_vars[i] = upr;
-	else if (z == -DBL_MAX)
-	  x_vars[i] = lwr;
+	if      (z ==  DBL_MAX) x_vars[i] = upr;
+	else if (z == -DBL_MAX) x_vars[i] = lwr;
 	else {
 	  const Real& lambda = ranVarAddtlParamsX[i][0];
 	  const Real& zeta   = ranVarAddtlParamsX[i][1];
@@ -146,6 +157,21 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	  Real Phi_ums = (upr < DBL_MAX) ? Phi((log(upr)-lambda)/zeta) : 1.;
 	  x_vars[i] = std::exp(Phi_inverse(Phi(z)*(Phi_ums - Phi_lms) + Phi_lms)
 		    * zeta + lambda);
+	}
+      }
+      else if (ranVarTypesU[i] == STD_UNIFORM) {
+	const Real& lwr = ranVarLowerBndsX[i];
+	const Real& upr = ranVarUpperBndsX[i];
+	const Real& z   = z_vars[i];
+	if      (z ==  1.) x_vars[i] = upr;
+	else if (z == -1.) x_vars[i] = lwr;
+	else {
+	  const Real& lambda = ranVarAddtlParamsX[i][0];
+	  const Real& zeta   = ranVarAddtlParamsX[i][1];
+	  Real Phi_lms = (lwr > 0.)      ? Phi((log(lwr)-lambda)/zeta) : 0.;
+	  Real Phi_ums = (upr < DBL_MAX) ? Phi((log(upr)-lambda)/zeta) : 1.;
+	  x_vars[i] = std::exp(Phi_inverse(std_uniform_cdf(z_vars[i])
+		    * (Phi_ums-Phi_lms) + Phi_lms) * zeta + lambda);
 	}
       }
       else if (ranVarTypesU[i] == BOUNDED_LOGNORMAL) // Golub-Welsch: no x-form
@@ -232,6 +258,11 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
       else if (ranVarTypesU[i] == STD_NORMAL) { // transform from std normal
 	Real normcdf = Phi(z_vars[i]), scaled_x = std_beta_cdf_inverse(normcdf,
 	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]);
+	x_vars[i] = lwr + (upr - lwr)*scaled_x;
+      }
+      else if (ranVarTypesU[i] == STD_UNIFORM) {
+	Real scaled_x = std_beta_cdf_inverse(std_uniform_cdf(z_vars[i]),
+	                ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]);
 	x_vars[i] = lwr + (upr - lwr)*scaled_x;
       }
       else
@@ -366,7 +397,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
     case DESIGN: case STATE: case INTERVAL:
       if (ranVarTypesU[i] == STD_UNIFORM) {
 	const Real& lwr = ranVarLowerBndsX[i];
-	z_vars[i] = 2.*(x_vars[i] - lwr)/(ranVarUpperBndsX[i] - lwr) - 1.;
+	z_vars[i] = std_uniform_cdf_inverse((x_vars[i] - lwr)/
+					    (ranVarUpperBndsX[i] - lwr));
       }
       else
 	err_flag = true;
@@ -382,13 +414,21 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& x   = x_vars[i];
-	if (x <= lwr)
-	  z_vars[i] = -DBL_MAX;
-	else if (x >= upr)
-	  z_vars[i] =  DBL_MAX;
+	if      (x <= lwr) z_vars[i] = -DBL_MAX;
+	else if (x >= upr) z_vars[i] =  DBL_MAX;
 	else
 	  z_vars[i] = Phi_inverse(bounded_normal_cdf(x, ranVarMeansX[i],
 	    ranVarStdDevsX[i], lwr, upr));
+      }
+      else if (ranVarTypesU[i] == STD_UNIFORM) {
+	const Real& lwr = ranVarLowerBndsX[i];
+	const Real& upr = ranVarUpperBndsX[i];
+	const Real& x   = x_vars[i];
+	if      (x <= lwr) z_vars[i] = -1.;
+	else if (x >= upr) z_vars[i] =  1.;
+	else
+	  z_vars[i] = std_uniform_cdf_inverse(bounded_normal_cdf(x,
+	    ranVarMeansX[i], ranVarStdDevsX[i], lwr, upr));
       }
       else if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
 	z_vars[i] = x_vars[i];
@@ -409,13 +449,21 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& x   = x_vars[i];
-	if (x <= lwr)
-	  z_vars[i] = -DBL_MAX;
-	else if (x >= upr)
-	  z_vars[i] =  DBL_MAX;
+	if      (x <= lwr) z_vars[i] = -DBL_MAX;
+	else if (x >= upr) z_vars[i] =  DBL_MAX;
 	else
 	  z_vars[i] = Phi_inverse(bounded_lognormal_cdf(x, ranVarMeansX[i],
 	    ranVarStdDevsX[i], lwr, upr));
+      }
+      else if (ranVarTypesU[i] == STD_UNIFORM) {
+	const Real& lwr = ranVarLowerBndsX[i];
+	const Real& upr = ranVarUpperBndsX[i];
+	const Real& x   = x_vars[i];
+	if      (x <= lwr) z_vars[i] = -1.;
+	else if (x >= upr) z_vars[i] =  1.;
+	else
+	  z_vars[i] = std_uniform_cdf_inverse(bounded_lognormal_cdf(x,
+	    ranVarMeansX[i], ranVarStdDevsX[i], lwr, upr));
       }
       else if (ranVarTypesU[i] == BOUNDED_LOGNORMAL) // Golub-Welsch: no x-form
 	z_vars[i] = x_vars[i];
@@ -426,7 +474,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       // Phi(z) = (x-L)/(U-L)
       if (ranVarTypesU[i] == STD_UNIFORM) { // scale to uniform on [-1,1]
 	const Real& lwr = ranVarLowerBndsX[i];
-	z_vars[i] = 2.*(x_vars[i] - lwr)/(ranVarUpperBndsX[i] - lwr) - 1.;
+	z_vars[i] = std_uniform_cdf_inverse((x_vars[i] - lwr)/
+					    (ranVarUpperBndsX[i] - lwr));
       }
       else if (ranVarTypesU[i] == STD_NORMAL) // transform to std normal
 	z_vars[i] = Phi_inverse(uniform_cdf(x_vars[i], ranVarLowerBndsX[i],
@@ -439,7 +488,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       if (ranVarTypesU[i] == STD_UNIFORM) { // transform to uniform on [-1,1]
 	Real log_lwr = log(ranVarLowerBndsX[i]),
 	     log_upr = log(ranVarUpperBndsX[i]);
-	z_vars[i] = 2.*(log(x_vars[i]) - log_lwr)/(log_upr - log_lwr) - 1.;
+	z_vars[i] = std_uniform_cdf_inverse((log(x_vars[i]) - log_lwr)/
+					    (log_upr - log_lwr));
       }
       else if (ranVarTypesU[i] == STD_NORMAL) // transform to std normal
 	// Phi(z) = (ln x - ln L)/(ln U - ln L)
@@ -458,7 +508,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	Real cdf = triangular_cdf(x_vars[i], ranVarAddtlParamsX[i][0],
 				  ranVarLowerBndsX[i], ranVarUpperBndsX[i]);
 	if (ranVarTypesU[i] == STD_UNIFORM)
-	  z_vars[i] = 2.*cdf - 1.;
+	  z_vars[i] = std_uniform_cdf_inverse(cdf);
 	else if (ranVarTypesU[i] == STD_NORMAL)
 	  z_vars[i] = Phi_inverse(cdf);
 	else
@@ -483,6 +533,11 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	Real scaled_x = (x_vars[i]-lwr)/(upr - lwr);
 	z_vars[i] = Phi_inverse(std_beta_cdf(scaled_x, ranVarAddtlParamsX[i][0],
 					     ranVarAddtlParamsX[i][1]));
+      }
+      else if (ranVarTypesU[i] == STD_UNIFORM) {
+	Real scaled_x = (x_vars[i]-lwr)/(upr - lwr);
+	z_vars[i] = std_uniform_cdf_inverse(std_beta_cdf(scaled_x,
+	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]));
       }
       else
 	err_flag = true;
