@@ -78,11 +78,11 @@ tensor_product_value(const RealVector& x, size_t tp_index)
   switch (configOptions.useDerivs) {
   case false:
     for (i=0; i<num_colloc_pts; ++i) {
-      Real L1_i = 1.;
+      L1_i = 1.;
       const UShortArray& key_i = key[i];
       for (j=0; j<numVars; ++j)
 	L1_i *= polynomialBasis[sm_index[j]][j].get_type1_value(x[j], key_i[j]);
-      tpValue += expansionType1Coeffs[i] * L1_i;
+      tpValue += expansionType1Coeffs[colloc_index[i]] * L1_i;
     }
     break;
   case true:
@@ -414,8 +414,8 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	  k = *it;
 	  Lsa_j *= polynomialBasis[sm_index[k]][k].get_value(x[k], key_j[k]);
 	}
-	tpMeanGrad[i]
-	  += wt_prod_j * Lsa_j * expansionType1CoeffGrads(cntr, colloc_index[j]);
+	tpMeanGrad[i] += wt_prod_j * Lsa_j *
+	  expansionType1CoeffGrads(cntr, colloc_index[j]);
       }
       else {
 	// ---------------------------------------------------------------------

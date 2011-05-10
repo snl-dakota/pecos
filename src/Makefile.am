@@ -28,8 +28,7 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  BasisApproximation.cpp			\
 			  PolynomialApproximation.cpp			\
 			  InterpPolyApproximation.cpp			\
-			  LagrangeInterpPolyApproximation.cpp		\
-			  HermiteInterpPolyApproximation.cpp		\
+			  NodalInterpPolyApproximation.cpp		\
 			  OrthogPolyApproximation.cpp			\
 			  BasisPolynomial.cpp				\
 			  InterpolationPolynomial.cpp			\

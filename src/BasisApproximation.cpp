@@ -81,11 +81,9 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
   case GLOBAL_INTERPOLATION_POLYNOMIAL: case PIECEWISE_INTERPOLATION_POLYNOMIAL:
     return new NodalInterpPolyApproximation(basis_type, num_vars);
     break;
-  case GLOBAL_ORTHOGONAL_POLYNOMIAL:
+  case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     return new OrthogPolyApproximation(approx_order, num_vars, use_derivs);
     break;
-  //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
-  //  return new OrthogPolyApproximation(approx_order, num_vars); break;
   //case FOURIER_BASIS:
   //  return new FourierBasisApproximation(num_vars);             break;
   //case EIGEN_BASIS:
