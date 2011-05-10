@@ -62,7 +62,10 @@ protected:
   /// finalize the coefficients by applying all previously evaluated increments
   void finalize_coefficients();
 
-  /// size expansionCoeffs and expansionCoeffGrads
+  //const RealVector& approximation_coefficients() const;
+  //void approximation_coefficients(const RealVector& approx_coeffs);
+
+  /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
   /// computes component (main and interaction) effect Sobol' indices
@@ -131,9 +134,22 @@ protected:
       quadrature, w + numVars for sparse grid). */
   std::vector<std::vector<BasisPolynomial> > polynomialBasis;
 
-  /// total number of collocation points = number of terms in interpolation
-  /// expansion (length of expansionCoeffs)
+  /// total number of collocation points = number of type 1 terms in
+  /// interpolation expansion (length of expansionType1Coeffs)
   int numCollocPts;
+
+  /// the type1 coefficients of the expansion for interpolating values
+  RealVector expansionType1Coeffs;
+  /// the type2 coefficients of the expansion for interpolating gradients
+  RealMatrix expansionType2Coeffs;
+  /// the gradients of the type1 expansion coefficients
+  /** may be interpreted as either the gradients of the expansion
+      coefficients or the coefficients of expansions for the response
+      gradients.  This array is used when sensitivities of moments are
+      needed with respect to variables that do not appear in the
+      expansion (e.g., with respect to design variables for an
+      expansion only over the random variables). */
+  RealMatrix expansionType1CoeffGrads;
 
   /// the value of a tensor-product interpolant; a contributor to approxValue
   Real tpValue;
@@ -265,6 +281,16 @@ InterpPolyApproximation(short basis_type, size_t num_vars):
 
 inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
+
+
+//inline const RealVector& InterpPolyApproximation::
+//approximation_coefficients() const
+//{ return expansionType1Coeffs; }
+
+
+//inline void InterpPolyApproximation::
+//approximation_coefficients(const RealVector& approx_coeffs)
+//{ expansionType1Coeffs = approx_coeffs; }
 
 
 inline void InterpPolyApproximation::compute_moments()

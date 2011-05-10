@@ -41,8 +41,7 @@ class ConfigurationOptions
 
   friend class PolynomialApproximation;
   friend class InterpPolyApproximation;
-  friend class LagrangeInterpPolyApproximation;
-  friend class HermiteInterpPolyApproximation;
+  friend class NodalInterpPolyApproximation;
   friend class OrthogPolyApproximation;
 
 public:
@@ -62,9 +61,10 @@ private:
   /// identifies the approach taken in compute_coefficients():
   /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
   short expCoeffsSolnApproach;
-  /// flag for calculation of expansionCoeffs from response values
+  /// flag for calculation of expansion coefficients from response values
   bool expansionCoeffFlag;
-  /// flag for calculation of expansionCoeffGrads from response gradients
+  /// flag for calculation of gradients of expansion coefficients from
+  /// response gradients
   bool expansionCoeffGradFlag;
   /// flag for utilizing derivatives during formation/calculation of expansions
   bool useDerivs;
@@ -330,9 +330,6 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  const RealVector& approximation_coefficients() const;
-  void approximation_coefficients(const RealVector& approx_coeffs);
-
   /// query trial index for presence in savedSmolyakMultiIndex, indicating
   /// the ability to restore a previously evaluated increment
   bool restore_available();
@@ -403,17 +400,6 @@ protected:
   /// gradient of the primary variance (expansion variance for OrthogPoly,
   /// numerical integration variance for InterpPoly)
   RealVector varianceGradient;
-
-  /// the coefficients of the expansion
-  RealVector expansionCoeffs;
-  /// the gradients of the expansion coefficients
-  /** may be interpreted as either the gradients of the expansion
-      coefficients or the coefficients of expansions for the response
-      gradients.  This array is used when sensitivities of moments are
-      needed with respect to variables that do not appear in the
-      expansion (e.g., with respect to design variables for an
-      expansion only over the random variables). */
-  RealMatrix expansionCoeffGrads;
 
   /// saved trial sets that were computed but not selected
   std::deque<UShortArray> savedSmolyakMultiIndex;
@@ -632,16 +618,6 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
     }
   }
 }
-
-
-inline const RealVector& PolynomialApproximation::
-approximation_coefficients() const
-{ return expansionCoeffs; }
-
-
-inline void PolynomialApproximation::
-approximation_coefficients(const RealVector& approx_coeffs)
-{ expansionCoeffs = approx_coeffs; }
 
 
 inline bool PolynomialApproximation::restore_available()

@@ -572,8 +572,7 @@ const RealVector& PolynomialApproximation::dimension_decay_rates()
 {
   PCerr << "Error: dimension_decay_rates() not available for this polynomial "
 	<< "approximation type." << std::endl;
-  abort_handler(-1);
-  return expansionCoeffs; // meaningless return to keep compilers happy
+  return abort_handler_t<const RealVector&>(-1);
 }
 
 

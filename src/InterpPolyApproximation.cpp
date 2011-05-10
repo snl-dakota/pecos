@@ -53,25 +53,29 @@ void InterpPolyApproximation::allocate_arrays()
   allocate_component_effects();
   allocate_total_effects();
 
-  if (configOptions.expansionCoeffFlag &&
-      expansionCoeffs.length() != numCollocPts)
-    expansionCoeffs.sizeUninitialized(numCollocPts);
-  if (configOptions.expansionCoeffGradFlag) {
-    const SurrogateDataPoint& sdp
-      = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
-    size_t num_deriv_vars = sdp.response_gradient().length();
-    if (expansionCoeffGrads.numRows() != num_deriv_vars ||
-	expansionCoeffGrads.numCols() != numCollocPts)
-      expansionCoeffGrads.shapeUninitialized(num_deriv_vars, numCollocPts);
+  const SurrogateDataPoint& sdp
+    = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
+  size_t num_deriv_vars = sdp.response_gradient().length();
+  if (configOptions.expansionCoeffFlag) {
+    if (expansionType1Coeffs.length() != numCollocPts)
+      expansionType1Coeffs.sizeUninitialized(numCollocPts);
+    if ( configOptions.useDerivs &&
+	 ( expansionType2Coeffs.numRows() != num_deriv_vars ||
+	   expansionType2Coeffs.numCols() != numCollocPts ) )
+      expansionType2Coeffs.shapeUninitialized(num_deriv_vars, numCollocPts);
   }
+  if ( configOptions.expansionCoeffGradFlag &&
+       ( expansionType1CoeffGrads.numRows() != num_deriv_vars ||
+	 expansionType1CoeffGrads.numCols() != numCollocPts ) )
+    expansionType1CoeffGrads.shapeUninitialized(num_deriv_vars, numCollocPts);
 
   // checking numCollocPts is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total.
   //bool update_exp_form =
   //  ( (configOptions.expansionCoeffFlag &&
-  //     expansionCoeffs.length()      != numCollocPts) ||
+  //     expansionType1Coeffs.length()      != numCollocPts) ||
   //    (configOptions.expansionCoeffGradFlag &&
-  //     expansionCoeffGrads.numCols() != numCollocPts ) );
+  //     expansionType1CoeffGrads.numCols() != numCollocPts ) );
 
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
@@ -179,18 +183,25 @@ void InterpPolyApproximation::compute_coefficients()
   allocate_arrays();
 
   if (!anchorPoint.is_null()) {
-    if (configOptions.expansionCoeffFlag)
-      expansionCoeffs[0] = anchorPoint.response_function();
+    if (configOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[0] = anchorPoint.response_function();
+      if (configOptions.useDerivs)
+	Teuchos::setCol(anchorPoint.response_gradient(),0,expansionType2Coeffs);
+    }
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(anchorPoint.response_gradient(), 0, expansionCoeffGrads);
+      Teuchos::setCol(anchorPoint.response_gradient(), 0,
+		      expansionType1CoeffGrads);
   }
 
   std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   for (i=offset; i<numCollocPts; ++i, ++it) {
-    if (configOptions.expansionCoeffFlag)
-      expansionCoeffs[i] = it->response_function();
+    if (configOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[i] = it->response_function();
+      if (configOptions.useDerivs)
+	Teuchos::setCol(it->response_gradient(), (int)i, expansionType2Coeffs);
+    }
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
+      Teuchos::setCol(it->response_gradient(), (int)i,expansionType1CoeffGrads);
   }
 
 #ifdef INTERPOLATION_TEST
@@ -199,8 +210,8 @@ void InterpPolyApproximation::compute_coefficients()
   // for SSG with other rules.
   it = dataPoints.begin();
   for (i=offset; i<numCollocPts; ++i, ++it)
-    PCout << "Colloc pt " << i+1 << ": coeff = " << expansionCoeffs[i]
-	  << " interpolation error = " << std::abs(expansionCoeffs[i] -
+    PCout << "Colloc pt " << i+1 << ": coeff = " << expansionType1Coeffs[i]
+	  << " interpolation error = " << std::abs(expansionType1Coeffs[i] -
 	     get_value(it->continuous_variables())) << '\n';
 #endif // INTERPOLATION_TEST
 }
@@ -251,10 +262,10 @@ void InterpPolyApproximation::decrement_coefficients()
 
   // not necessary to prune; next increment/restore/finalize takes care of this
   //if (configOptions.expansionCoeffFlag)
-  //  expansionCoeffs.resize(numCollocPts);
+  //  expansionType1Coeffs.resize(numCollocPts);
   //if (configOptions.expansionCoeffGradFlag) {
-  //  size_t num_deriv_vars = expansionCoeffGrads.numRows();
-  //  expansionCoeffGrads.reshape(num_deriv_vars, numCollocPts);
+  //  size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+  //  expansionType1CoeffGrads.reshape(num_deriv_vars, numCollocPts);
   //}
 
   numCollocPts = dataPoints.size(); // data already decremented
@@ -306,19 +317,19 @@ void InterpPolyApproximation::restore_expansion_coefficients()
     new_colloc_pts += 1;
 
   if (configOptions.expansionCoeffFlag)
-    expansionCoeffs.resize(new_colloc_pts);
+    expansionType1Coeffs.resize(new_colloc_pts);
   if (configOptions.expansionCoeffGradFlag) {
-    size_t num_deriv_vars = expansionCoeffGrads.numRows();
-    expansionCoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
+    size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+    expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
   }
 
   std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   std::advance(it, numCollocPts);
   for (i=numCollocPts; i<new_colloc_pts; ++i, ++it) {
     if (configOptions.expansionCoeffFlag)
-      expansionCoeffs[i] = it->response_function();
+      expansionType1Coeffs[i] = it->response_function();
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(it->response_gradient(), (int)i, expansionCoeffGrads);
+      Teuchos::setCol(it->response_gradient(), (int)i,expansionType1CoeffGrads);
   }
 
   numCollocPts = new_colloc_pts;
@@ -510,7 +521,7 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
     // sort coefficients by the "signature" of the member variables
     // (i.e. mem_exp_coeffs_index)
     mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionCoeffs[i]*prod_i_nonmembers;
+      += expansionType1Coeffs[i]*prod_i_nonmembers;
   }
  
   // Now integrate over the remaining variables	
@@ -582,7 +593,7 @@ total_effects_integral(int set_value, size_t tp_index)
     // sort coefficients by the "signature" of the member variables
     // (i.e. mem_exp_coeffs_index)
     mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionCoeffs[colloc_index[i]]*prod_i_nonmembers;
+      += expansionType1Coeffs[colloc_index[i]]*prod_i_nonmembers;
   }
  
   // Now integrate over the remaining variables	
@@ -695,7 +706,7 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
     // sort coefficients by the "signature" of the member variables
     // (i.e. mem_exp_coeffs_index)
     mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionCoeffs[i]*prod_i_nonmembers;
+      += expansionType1Coeffs[i]*prod_i_nonmembers;
   }
 
   // Now integrate over the remaining variables	
@@ -769,7 +780,7 @@ partial_variance_integral(int set_value, size_t tp_index)
     // sort coefficients by the "signature" of the member variables
     // (i.e. mem_exp_coeffs_index)
     mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionCoeffs[colloc_index[i]]*prod_i_nonmembers;
+      += expansionType1Coeffs[colloc_index[i]]*prod_i_nonmembers;
   }
 
   // Now integrate over the remaining variables	

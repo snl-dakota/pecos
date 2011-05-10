@@ -100,6 +100,9 @@ protected:
   /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;
 
+  const RealVector& approximation_coefficients() const;
+  void approximation_coefficients(const RealVector& approx_coeffs);
+
   /// initialize polynomialBasis, multiIndex, et al.
   void allocate_arrays();
 
@@ -299,6 +302,17 @@ private:
   /// of the multivariate orthogonal polynomials
   UShort2DArray multiIndex;
 
+  /// the coefficients of the expansion
+  RealVector expansionCoeffs;
+  /// the gradients of the expansion coefficients
+  /** may be interpreted as either the gradients of the expansion
+      coefficients or the coefficients of expansions for the response
+      gradients.  This array is used when sensitivities of moments are
+      needed with respect to variables that do not appear in the
+      expansion (e.g., with respect to design variables for an
+      expansion only over the random variables). */
+  RealMatrix expansionCoeffGrads;
+
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials
   /// contributing to each of the multivariate orthogonal polynomials.
@@ -472,6 +486,16 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
       ((NumericGenOrthogPolynomial*)polynomialBasis[i].polynomial_rep())
 	->coefficients_norms_flag(flag);
 }
+
+
+inline const RealVector& OrthogPolyApproximation::
+approximation_coefficients() const
+{ return expansionCoeffs; }
+
+
+inline void OrthogPolyApproximation::
+approximation_coefficients(const RealVector& approx_coeffs)
+{ expansionCoeffs = approx_coeffs; }
 
 
 inline void OrthogPolyApproximation::resize_expansion()

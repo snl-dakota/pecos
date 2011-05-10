@@ -7,8 +7,7 @@
     _______________________________________________________________________ */
 
 #include "BasisApproximation.hpp"
-#include "LagrangeInterpPolyApproximation.hpp"
-#include "HermiteInterpPolyApproximation.hpp"
+#include "NodalInterpPolyApproximation.hpp"
 #include "OrthogPolyApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: BasisApproximation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
@@ -78,25 +77,23 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
         << std::endl;
 #endif
 
-  if (basis_type ==    GLOBAL_INTERPOLATION_POLYNOMIAL ||
-      basis_type == PIECEWISE_INTERPOLATION_POLYNOMIAL) {
-    if (use_derivs)
-      return new  HermiteInterpPolyApproximation(basis_type, num_vars);
-    else
-      return new LagrangeInterpPolyApproximation(basis_type, num_vars);
-  }
-  else if (basis_type == GLOBAL_ORTHOGONAL_POLYNOMIAL)
+  switch (basis_type) {
+  case GLOBAL_INTERPOLATION_POLYNOMIAL: case PIECEWISE_INTERPOLATION_POLYNOMIAL:
+    return new NodalInterpPolyApproximation(basis_type, num_vars);
+    break;
+  case GLOBAL_ORTHOGONAL_POLYNOMIAL:
     return new OrthogPolyApproximation(approx_order, num_vars, use_derivs);
-  //else if (basis_type == PIECEWISE_ORTHOGONAL_POLYNOMIAL)
-  //  return new OrthogPolyApproximation(approx_order, num_vars);
-  //else if (basis_type == FOURIER_BASIS)
-  //  return new FourierBasisApproximation(num_vars);
-  //else if (basis_type == EIGEN_BASIS)
-  //  return new SVDLeftEigenBasisApproximation(num_vars);
-  else {
+    break;
+  //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
+  //  return new OrthogPolyApproximation(approx_order, num_vars); break;
+  //case FOURIER_BASIS:
+  //  return new FourierBasisApproximation(num_vars);             break;
+  //case EIGEN_BASIS:
+  //  return new SVDLeftEigenBasisApproximation(num_vars);        break;
+  default:
     PCerr << "Error: BasisApproximation type " << basis_type
 	  << " not available." << std::endl;
-    return NULL;
+    return NULL; break;
   }
 }
 

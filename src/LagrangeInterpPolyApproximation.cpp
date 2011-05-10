@@ -36,7 +36,7 @@ tensor_product_value(const RealVector& x)
     const UShortArray& key_i = key[i];
     for (j=0; j<numVars; ++j)
       L_i *= poly_basis_0[j].get_type1_value(x[j], key_i[j]);
-    tpValue += expansionCoeffs[i] * L_i;
+    tpValue += expansionType1Coeffs[i] * L_i;
   }
   return tpValue;
 }
@@ -58,7 +58,7 @@ tensor_product_value(const RealVector& x, size_t tp_index)
     Real L_i = 1.0;
     for (j=0; j<numVars; ++j)
       L_i *= polynomialBasis[sm_index[j]][j].get_type1_value(x[j], key_i[j]);
-    tpValue += expansionCoeffs[colloc_index[i]] * L_i;
+    tpValue += expansionType1Coeffs[colloc_index[i]] * L_i;
   }
   return tpValue;
 }
@@ -78,7 +78,7 @@ tensor_product_gradient(const RealVector& x)
   size_t i, j, k;
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionCoeffs[i];
+    const Real&        coeff_i = expansionType1Coeffs[i];
     for (j=0; j<numVars; ++j) {
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
@@ -107,7 +107,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
   size_t i, j, k, num_colloc_pts = key.size();
   for (i=0; i<num_colloc_pts; ++i) {
     const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionCoeffs[colloc_index[i]];
+    const Real&        coeff_i = expansionType1Coeffs[colloc_index[i]];
     for (j=0; j<numVars; ++j) {
       Real term_i_grad_j = 1.0;
       for (k=0; k<numVars; ++k)
@@ -136,7 +136,7 @@ tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
   size_t i, j, k, deriv_index;
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionCoeffs[i];
+    const Real&        coeff_i = expansionType1Coeffs[i];
     for (j=0; j<num_deriv_vars; ++j) {
       deriv_index = dvv[j] - 1; // requires an "All" view
       Real term_i_grad_j = 1.0;
@@ -168,7 +168,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
   size_t i, j, k, deriv_index, num_colloc_pts = key.size();
   for (i=0; i<num_colloc_pts; ++i) {
     const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionCoeffs[colloc_index[i]];
+    const Real&        coeff_i = expansionType1Coeffs[colloc_index[i]];
     for (j=0; j<num_deriv_vars; ++j) {
       deriv_index = dvv[j] - 1; // requires an "All" view
       Real term_i_grad_j = 1.0;
@@ -200,7 +200,7 @@ tensor_product_mean(const RealVector& x)
     for (j=0; j<numVars; ++j)
       prod_i *= (randomVarsKey[j]) ? colloc_wts_1d[j][key_i[j]] :
 	poly_basis_0[j].get_type1_value(x[j], key_i[j]);
-    tpMean += expansionCoeffs[i] * prod_i;
+    tpMean += expansionType1Coeffs[i] * prod_i;
   }
   return tpMean;
 }
@@ -224,7 +224,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
     for (j=0; j<numVars; ++j)
       prod_i *= (randomVarsKey[j]) ? colloc_wts_1d[sm_index[j]][j][key_i[j]] :
 	polynomialBasis[sm_index[j]][j].get_type1_value(x[j], key_i[j]);
-    tpMean += expansionCoeffs[colloc_index[i]] * prod_i;
+    tpMean += expansionType1Coeffs[colloc_index[i]] * prod_i;
   }
   return tpMean;
 }
@@ -270,7 +270,7 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	Real Lsa_j = 1.;
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it)
 	  { k = *it; Lsa_j *= poly_basis_0[k].get_type1_value(x[k], key_j[k]); }
-	tpMeanGrad[i] += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, j);
+	tpMeanGrad[i] += wt_prod_j * Lsa_j * expansionType1CoeffGrads(cntr, j);
       }
       else {
 	// ---------------------------------------------------------------------
@@ -283,7 +283,7 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	    poly_basis_0[k].get_type1_gradient(x[k], key_j[k]) :
 	    poly_basis_0[k].get_type1_value(x[k],    key_j[k]);
 	}
-	tpMeanGrad[i] += expansionCoeffs[j] * wt_prod_j * dLsa_j_dsa_i;
+	tpMeanGrad[i] += expansionType1Coeffs[j] * wt_prod_j * dLsa_j_dsa_i;
       }
     }
     if (randomVarsKey[deriv_index]) // deriv w.r.t. design var insertion
@@ -356,7 +356,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_j[k]);
 	}
 	tpMeanGrad[i]
-	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, colloc_index[j]);
+	  += wt_prod_j * Lsa_j * expansionType1CoeffGrads(cntr, colloc_index[j]);
       }
       else {
 	// ---------------------------------------------------------------------
@@ -370,7 +370,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k],    key_j[k]);
 	}
 	tpMeanGrad[i]
-	  += expansionCoeffs[colloc_index[j]] * wt_prod_j * dLsa_j_dsa_i;
+	  += expansionType1Coeffs[colloc_index[j]] * wt_prod_j * dLsa_j_dsa_i;
       }
     }
     if (randomVarsKey[deriv_index]) // deriv w.r.t. design var insertion
@@ -402,7 +402,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 	wt_prod_i *= colloc_wts_1d[k][key_i[k]];
       else
 	Ls_prod_i *= poly_basis_0[k].get_type1_value(x[k], key_i[k]);
-    const Real& exp_coeff_i = expansionCoeffs[i];
+    const Real& exp_coeff_i = expansionType1Coeffs[i];
     Real wt_Ls_prod_i = wt_prod_i * Ls_prod_i;
     mean1 += exp_coeff_i     * wt_Ls_prod_i;
     mean2 += exp_coeffs_2[i] * wt_Ls_prod_i;
@@ -455,7 +455,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 	Ls_prod_i *=
 	  polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_i[k]);
     index = colloc_index[i];
-    const Real& exp_coeff_i = expansionCoeffs[index];
+    const Real& exp_coeff_i = expansionType1Coeffs[index];
     Real wt_Ls_prod_i = wt_prod_i * Ls_prod_i;
     mean1 += exp_coeff_i         * wt_Ls_prod_i;
     mean2 += exp_coeffs_2[index] * wt_Ls_prod_i;
@@ -494,7 +494,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 
   Real mean = 0.;
   size_t i, j, k, l, deriv_index, num_deriv_vars = dvv.size(),
-    cntr = 0; // insertions in cntr order w/i expansionCoeffGrads
+    cntr = 0; // insertions in cntr order w/i expansionType1CoeffGrads
   if (tpVarianceGrad.length() != num_deriv_vars)
     tpVarianceGrad.sizeUninitialized(num_deriv_vars);
   tpVarianceGrad = 0.;
@@ -520,9 +520,9 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	  Lsa_j *= poly_basis_0[k].get_type1_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
       if (i == 0)
-	mean += expansionCoeffs[j] * wt_prod_j * Lsa_j;
+	mean += expansionType1Coeffs[j] * wt_prod_j * Lsa_j;
       if (randomVarsKey[deriv_index])
-	mean_grad_i += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr, j);
+	mean_grad_i += wt_prod_j * Lsa_j * expansionType1CoeffGrads(cntr, j);
       else {
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
@@ -530,7 +530,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	    poly_basis_0[k].get_type1_gradient(x[k], key_j[k]) :
 	    poly_basis_0[k].get_type1_value(x[k],    key_j[k]);
 	}
-	mean_grad_i += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[j];
+	mean_grad_i += wt_prod_j * dLsa_j_dsa_i * expansionType1Coeffs[j];
       }
       // second loop of double sum
       for (k=0; k<numCollocPts; ++k) {
@@ -552,8 +552,8 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	    // deriv of All var expansion w.r.t. random var (design insertion)
 	    // ---------------------------------------------------------------
 	    tpVarianceGrad[i] += wt_prod_j * Lsa_j * Lsa_k *
-	      (expansionCoeffs[j] * expansionCoeffGrads(cntr, k) +
-	       expansionCoeffGrads(cntr, j) * expansionCoeffs[k]);
+	      (expansionType1Coeffs[j] * expansionType1CoeffGrads(cntr, k) +
+	       expansionType1CoeffGrads(cntr, j) * expansionType1Coeffs[k]);
 	  else {
 	    // ---------------------------------------------------------------
 	    // deriv of All var exp w.r.t. nonrandom var (design augmentation)
@@ -566,7 +566,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 		poly_basis_0[l].get_type1_value(x[l],    key_k[l]);
 	    }
 	    tpVarianceGrad[i] +=
-	      wt_prod_j * expansionCoeffs[j] * expansionCoeffs[k] *
+	      wt_prod_j * expansionType1Coeffs[j] * expansionType1Coeffs[k] *
 	      (Lsa_j * dLsa_k_dsa_i + dLsa_j_dsa_i * Lsa_k);
 	  }
 	}
@@ -612,7 +612,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
   //                   Lsa_i Lsa_j wt_prod_ij - 2 mu dmu/dsi
   // -------------------------------------------------------------------
   size_t i, j, k, l, deriv_index,
-    cntr = 0, // insertions in cntr order w/i expansionCoeffGrads
+    cntr = 0, // insertions in cntr order w/i expansionType1CoeffGrads
     num_deriv_vars = dvv.size(), num_colloc_pts = key.size();
   if (tpVarianceGrad.length() != num_deriv_vars)
     tpVarianceGrad.sizeUninitialized(num_deriv_vars);
@@ -640,10 +640,10 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_j[k]);
       // update mean (once) and mean_grad_i
       if (i == 0)
-	mean += expansionCoeffs[colloc_index[j]] * wt_prod_j * Lsa_j;
+	mean += expansionType1Coeffs[colloc_index[j]] * wt_prod_j * Lsa_j;
       if (randomVarsKey[deriv_index])
 	mean_grad_i
-	  += wt_prod_j * Lsa_j * expansionCoeffGrads(cntr,colloc_index[j]);
+	  += wt_prod_j * Lsa_j * expansionType1CoeffGrads(cntr,colloc_index[j]);
       else {
 	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	  k = *it;
@@ -652,7 +652,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k],    key_j[k]);
 	}
 	mean_grad_i
-	  += wt_prod_j * dLsa_j_dsa_i * expansionCoeffs[colloc_index[j]];
+	  += wt_prod_j * dLsa_j_dsa_i * expansionType1Coeffs[colloc_index[j]];
       }
       // second loop of double sum
       for (k=0; k<num_colloc_pts; ++k) {
@@ -675,10 +675,10 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 	    // deriv of All var expansion w.r.t. random var (design insertion)
 	    // ---------------------------------------------------------------
 	    tpVarianceGrad[i] += wt_prod_j * Lsa_j * Lsa_k *
-	      (expansionCoeffs[colloc_index[j]] *
-	       expansionCoeffGrads(cntr,colloc_index[k]) +
-	       expansionCoeffGrads(cntr,colloc_index[j]) *
-	       expansionCoeffs[colloc_index[k]]);
+	      (expansionType1Coeffs[colloc_index[j]] *
+	       expansionType1CoeffGrads(cntr,colloc_index[k]) +
+	       expansionType1CoeffGrads(cntr,colloc_index[j]) *
+	       expansionType1Coeffs[colloc_index[k]]);
 	  else {
 	    // ---------------------------------------------------------------
 	    // deriv of All var exp w.r.t. nonrandom var (design augmentation)
@@ -692,8 +692,8 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 		polynomialBasis[sm_index[l]][l].get_type1_value(x[l], key_k[l]);
 	    }
 	    tpVarianceGrad[i] +=
-	      wt_prod_j * expansionCoeffs[colloc_index[j]] *
-	      expansionCoeffs[colloc_index[k]] *
+	      wt_prod_j * expansionType1Coeffs[colloc_index[j]] *
+	      expansionType1Coeffs[colloc_index[k]] *
 	      (Lsa_j * dLsa_k_dsa_i + dLsa_j_dsa_i * Lsa_k);
 	  }
 	}
@@ -832,7 +832,7 @@ const Real& LagrangeInterpPolyApproximation::get_mean()
   const RealVector& wt_sets = driverRep->weight_sets();
   Real& mean = numericalMoments[0]; mean = 0.;
   for (size_t i=0; i<numCollocPts; ++i)
-    mean += expansionCoeffs[i] * wt_sets[i];
+    mean += expansionType1Coeffs[i] * wt_sets[i];
   return mean;
 }
 
@@ -885,14 +885,14 @@ const RealVector& LagrangeInterpPolyApproximation::get_mean_gradient()
   }
 
   const RealVector& wt_sets = driverRep->weight_sets();
-  size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
+  size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
   if (meanGradient.length() != num_deriv_vars)
     meanGradient.sizeUninitialized(num_deriv_vars);
   meanGradient = 0.;
   for (i=0; i<numCollocPts; ++i) {
     const Real& wt_prod_i = wt_sets[i];
     for (j=0; j<num_deriv_vars; ++j)
-      meanGradient[j] += expansionCoeffGrads(j,i) * wt_prod_i;
+      meanGradient[j] += expansionType1CoeffGrads(j,i) * wt_prod_i;
   }
   return meanGradient;
 }
@@ -907,7 +907,7 @@ const RealVector& LagrangeInterpPolyApproximation::get_mean_gradient()
     subset.  This function must handle the mixed case, where some
     design/state variables are augmented (and are part of the
     expansion: derivatives are evaluated as described above) and some
-    are inserted (derivatives are obtained from expansionCoeffGrads). */
+    are inserted (derivatives are obtained from expansionType1CoeffGrads). */
 const RealVector& LagrangeInterpPolyApproximation::
 get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
@@ -943,7 +943,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 const Real& LagrangeInterpPolyApproximation::get_variance()
 {
-  numericalMoments[1] = get_covariance(expansionCoeffs);
+  numericalMoments[1] = get_covariance(expansionType1Coeffs);
   return numericalMoments[1];
 }
 
@@ -953,7 +953,7 @@ const Real& LagrangeInterpPolyApproximation::get_variance()
     over this subset. */
 const Real& LagrangeInterpPolyApproximation::get_variance(const RealVector& x)
 {
-  numericalMoments[1] = get_covariance(x, expansionCoeffs);
+  numericalMoments[1] = get_covariance(x, expansionType1Coeffs);
   return numericalMoments[1];
 }
 
@@ -976,7 +976,7 @@ get_covariance(const RealVector& exp_coeffs_2)
   for (size_t i=0; i<numCollocPts; ++i) {
     const Real& coeff_2i  = exp_coeffs_2[i];
     const Real& wt_prod_i = wt_sets[i];
-    Real coeff_wt_1i = expansionCoeffs[i] * wt_prod_i;
+    Real coeff_wt_1i = expansionType1Coeffs[i] * wt_prod_i;
     mean_1 += coeff_wt_1i;
     mean_2 += coeff_2i * wt_prod_i;
     var    += coeff_wt_1i * coeff_2i;
@@ -1036,18 +1036,18 @@ const RealVector& LagrangeInterpPolyApproximation::get_variance_gradient()
   }
 
   const RealVector& wt_sets = driverRep->weight_sets();
-  size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
+  size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
   if (varianceGradient.length() != num_deriv_vars)
     varianceGradient.sizeUninitialized(num_deriv_vars);
   varianceGradient = 0.;
 
   Real mean = 0.;
   for (i=0; i<numCollocPts; ++i)
-    mean += expansionCoeffs[i] * wt_sets[i];
+    mean += expansionType1Coeffs[i] * wt_sets[i];
   for (i=0; i<numCollocPts; ++i) {
-    Real term_i = 2. * (expansionCoeffs[i] - mean) * wt_sets[i];
+    Real term_i = 2. * (expansionType1Coeffs[i] - mean) * wt_sets[i];
     for (j=0; j<num_deriv_vars; ++j)
-      varianceGradient[j] += term_i * expansionCoeffGrads(j,i);
+      varianceGradient[j] += term_i * expansionType1CoeffGrads(j,i);
   }
 
   return varianceGradient;
@@ -1060,7 +1060,7 @@ const RealVector& LagrangeInterpPolyApproximation::get_variance_gradient()
     in the expansion.  This function must handle the mixed case, where
     some design/state variables are augmented (and are part of the
     expansion) and some are inserted (derivatives are obtained from
-    expansionCoeffGrads). */
+    expansionType1CoeffGrads). */
 const RealVector& LagrangeInterpPolyApproximation::
 get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {

@@ -124,6 +124,17 @@ void abort_handler(int code);
 inline void abort_handler(int code)
 { std::exit(code); } // for now, prior to use of MPI
 
+
+/** Templatized abort_handler_t method that allows for convenient return from 
+    methods that otherwise have no sensible return from error clauses.  Usage:
+    MyType& method() { return abort_handler<MyType&>(-1); } */
+template <typename T>
+T abort_handler_t(int code)
+{
+  abort_handler(code);
+  throw code;
+}
+
 } // namespace Pecos
 
 #endif // PECOS_GLOBAL_DEFS_H

@@ -6,12 +6,12 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:        HermiteInterpPolyApproximation
+//- Class:        NodalInterpPolyApproximation
 //- Description:  Implementation code for InterpPolyApproximation class
 //-               
 //- Owner:        Mike Eldred
 
-#include "HermiteInterpPolyApproximation.hpp"
+#include "NodalInterpPolyApproximation.hpp"
 #include "TensorProductDriver.hpp"
 #include "SparseGridDriver.hpp"
 
@@ -22,30 +22,50 @@ namespace Pecos {
 
 
 /** Overloaded version supporting tensor-product quadrature. */
-const Real& HermiteInterpPolyApproximation::
+const Real& NodalInterpPolyApproximation::
 tensor_product_value(const RealVector& x)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
   const UShort2DArray& key        = tpq_driver->collocation_key();
 
   tpValue = 0.;
-  size_t i, j;
+  size_t i, j, k; Real L1_i, L2_ij;
   std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
-  for (i=0; i<numCollocPts; ++i) {
-    Real H1_i = 1., H2_i = 1.;
-    const UShortArray& key_i = key[i];
-    for (j=0; j<numVars; ++j) {
-      H1_i *= poly_basis_0[j].get_type1_value(x[j], key_i[j]);
-      H2_i *= poly_basis_0[j].get_type2_value(x[j], key_i[j]);
+  switch (configOptions.useDerivs) {
+  case false:
+    for (i=0; i<numCollocPts; ++i) {
+      L1_i = 1.;
+      const UShortArray& key_i = key[i];
+      for (j=0; j<numVars; ++j)
+	L1_i *= poly_basis_0[j].get_type1_value(x[j], key_i[j]);
+      tpValue += expansionType1Coeffs[i] * L1_i;
     }
-    tpValue += expansionType1Coeffs[i] * H1_i;// + some_grads[i] * H2_i;
+    break;
+  case true:
+    for (i=0; i<numCollocPts; ++i) {
+      L1_i = 1.;
+      const UShortArray& key_i = key[i];
+      for (j=0; j<numVars; ++j) {
+	// type1 interpolant for ith collocation point
+	L1_i *= poly_basis_0[j].get_type1_value(x[j], key_i[j]);
+	// type2 interpolant for ith collocation point, jth derivative component
+	L2_ij = 1.;
+	for (k=0; k<numVars; ++k)
+	  L2_ij *= (j == k) ?
+	    poly_basis_0[k].get_type2_value(x[k], key_i[k]) :
+	    poly_basis_0[k].get_type1_value(x[k], key_i[k]);
+	tpValue += expansionType2Coeffs(i,j) * L2_ij;
+      }
+      tpValue += expansionType1Coeffs[i] * L1_i;
+    }
+    break;
   }
   return tpValue;
 }
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
-const Real& HermiteInterpPolyApproximation::
+const Real& NodalInterpPolyApproximation::
 tensor_product_value(const RealVector& x, size_t tp_index)
 {
   SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
@@ -54,20 +74,42 @@ tensor_product_value(const RealVector& x, size_t tp_index)
   const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
 
   tpValue = 0.;
-  size_t i, j, num_colloc_pts = key.size();
-  for (i=0; i<num_colloc_pts; ++i) {
-    const UShortArray& key_i = key[i];
-    Real L_i = 1.0;
-    for (j=0; j<numVars; ++j)
-      L_i *= polynomialBasis[sm_index[j]][j].get_value(x[j], key_i[j]);
-    tpValue += expansionType1Coeffs[colloc_index[i]] * L_i;
+  size_t i, j, k, num_colloc_pts = key.size(); Real L1_i, L2_ij;
+  switch (configOptions.useDerivs) {
+  case false:
+    for (i=0; i<num_colloc_pts; ++i) {
+      Real L1_i = 1.;
+      const UShortArray& key_i = key[i];
+      for (j=0; j<numVars; ++j)
+	L1_i *= polynomialBasis[sm_index[j]][j].get_type1_value(x[j], key_i[j]);
+      tpValue += expansionType1Coeffs[i] * L1_i;
+    }
+    break;
+  case true:
+    for (i=0; i<num_colloc_pts; ++i) {
+      L1_i = 1.;
+      const UShortArray& key_i = key[i];
+      for (j=0; j<numVars; ++j) {
+	// type1 interpolant for ith collocation point
+	L1_i *= polynomialBasis[sm_index[j]][j].get_type1_value(x[j], key_i[j]);
+	// type2 interpolant for ith collocation point, jth derivative component
+	L2_ij = 1.;
+	for (k=0; k<numVars; ++k)
+	  L2_ij *= (j == k) ?
+	    polynomialBasis[sm_index[k]][k].get_type2_value(x[k], key_i[k]) :
+	    polynomialBasis[sm_index[k]][k].get_type1_value(x[k], key_i[k]);
+	tpValue += expansionType2Coeffs(colloc_index[i],j) * L2_ij;
+      }
+      tpValue += expansionType1Coeffs[colloc_index[i]] * L1_i;
+    }
+    break;
   }
   return tpValue;
 }
 
 
 /** Overloaded version supporting tensor-product quadrature. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_gradient(const RealVector& x)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -78,24 +120,32 @@ tensor_product_gradient(const RealVector& x)
   tpGradient = 0.;
   std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
   size_t i, j, k;
-  for (i=0; i<numCollocPts; ++i) {
-    const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionType1Coeffs[i];
-    for (j=0; j<numVars; ++j) {
-      Real term_i_grad_j = 1.0;
-      for (k=0; k<numVars; ++k)
-	term_i_grad_j *= (k == j) ?
-	  poly_basis_0[k].get_gradient(x[k], key_i[k]) :
-	  poly_basis_0[k].get_value(x[k],    key_i[k]);
-      tpGradient[j] += coeff_i * term_i_grad_j;
+  switch (configOptions.useDerivs) {
+  case false:
+    for (i=0; i<numCollocPts; ++i) {
+      const UShortArray& key_i   = key[i];
+      const Real&        coeff_i = expansionType1Coeffs[i];
+      for (j=0; j<numVars; ++j) {
+	Real term_i_grad_j = 1.0;
+	for (k=0; k<numVars; ++k)
+	  term_i_grad_j *= (k == j) ?
+	    poly_basis_0[k].get_gradient(x[k], key_i[k]) :
+	    poly_basis_0[k].get_value(x[k],    key_i[k]);
+	tpGradient[j] += coeff_i * term_i_grad_j;
+      }
     }
+    break;
+  case true:
+    for (i=0; i<numCollocPts; ++i) {
+    }
+    break;
   }
   return tpGradient;
 }
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_gradient(const RealVector& x, size_t tp_index)
 {
   SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
@@ -107,24 +157,32 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
   size_t i, j, k, num_colloc_pts = key.size();
-  for (i=0; i<num_colloc_pts; ++i) {
-    const UShortArray& key_i   = key[i];
-    const Real&        coeff_i = expansionType1Coeffs[colloc_index[i]];
-    for (j=0; j<numVars; ++j) {
-      Real term_i_grad_j = 1.0;
-      for (k=0; k<numVars; ++k)
-	term_i_grad_j *= (k == j) ?
-	  polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_i[k]) :
-	  polynomialBasis[sm_index[k]][k].get_value(x[k],    key_i[k]);
-      tpGradient[j] += coeff_i * term_i_grad_j;
+  switch (configOptions.useDerivs) {
+  case false:
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i   = key[i];
+      const Real&        coeff_i = expansionType1Coeffs[colloc_index[i]];
+      for (j=0; j<numVars; ++j) {
+	Real term_i_grad_j = 1.0;
+	for (k=0; k<numVars; ++k)
+	  term_i_grad_j *= (k == j) ?
+	    polynomialBasis[sm_index[k]][k].get_gradient(x[k], key_i[k]) :
+	    polynomialBasis[sm_index[k]][k].get_value(x[k],    key_i[k]);
+	tpGradient[j] += coeff_i * term_i_grad_j;
+      }
     }
+    break;
+  case true:
+    for (i=0; i<numCollocPts; ++i) {
+    }
+    break;
   }
   return tpGradient;
 }
 
 
 /** Overloaded version supporting tensor-product quadrature. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -154,7 +212,7 @@ tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_gradient(const RealVector& x, size_t tp_index,
 			const SizetArray& dvv)
 {
@@ -186,7 +244,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
 
 
 /** Overloaded version supporting tensor-product quadrature. */
-const Real& HermiteInterpPolyApproximation::
+const Real& NodalInterpPolyApproximation::
 tensor_product_mean(const RealVector& x)
 {
   TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
@@ -209,7 +267,7 @@ tensor_product_mean(const RealVector& x)
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
-const Real& HermiteInterpPolyApproximation::
+const Real& NodalInterpPolyApproximation::
 tensor_product_mean(const RealVector& x, size_t tp_index)
 {
   SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
@@ -233,7 +291,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
 
 
 /** Overloaded version supporting tensor-product quadrature. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
@@ -251,12 +309,12 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     // Error check for required data
     if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
-      PCerr << "Error: expansion coefficient gradients not defined in Hermite"
+      PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	    << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
       abort_handler(-1);
     }
     else if (!randomVarsKey[deriv_index] && !configOptions.expansionCoeffFlag) {
-      PCerr << "Error: expansion coefficients not defined in HermiteInterp"
+      PCerr << "Error: expansion coefficients not defined in NodalInterp"
 	    << "PolyApproximation::get_mean_gradient()" << std::endl;
       abort_handler(-1);
     }
@@ -297,7 +355,7 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 			     const SizetArray& dvv)
 {
@@ -331,12 +389,12 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     // Error check for required data
     if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
-      PCerr << "Error: expansion coefficient gradients not defined in Hermite"
+      PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	    << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
       abort_handler(-1);
     }
     else if (!randomVarsKey[deriv_index] && !configOptions.expansionCoeffFlag) {
-      PCerr << "Error: expansion coefficients not defined in HermiteInterpPoly"
+      PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	    << "Approximation::get_mean_gradient()" << std::endl;
       abort_handler(-1);
     }
@@ -383,7 +441,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 
 
 /** Overloaded version supporting tensor-product quadrature. */
-const Real& HermiteInterpPolyApproximation::
+const Real& NodalInterpPolyApproximation::
 tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 {
   TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
@@ -432,7 +490,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
-const Real& HermiteInterpPolyApproximation::
+const Real& NodalInterpPolyApproximation::
 tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 			  size_t tp_index)
 {
@@ -484,7 +542,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 
 
 /** Overloaded version supporting tensor-product quadrature. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
@@ -502,7 +560,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
-      PCerr << "Error: expansion coefficient gradients not defined in Hermite"
+      PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	    << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
       abort_handler(-1);
     }
@@ -583,7 +641,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 /** Overloaded version supporting Smolyak sparse grids. */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 				 const SizetArray& dvv)
 {
@@ -621,7 +679,7 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
-      PCerr << "Error: expansion coefficient gradients not defined in Hermite"
+      PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	    << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
       abort_handler(-1);
     }
@@ -706,12 +764,12 @@ tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 }
 
 
-const Real& HermiteInterpPolyApproximation::get_value(const RealVector& x)
+const Real& NodalInterpPolyApproximation::get_value(const RealVector& x)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HermiteInterpPolyApproximation::get_value()" << std::endl;
+	  << "NodalInterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
 
@@ -736,7 +794,7 @@ const Real& HermiteInterpPolyApproximation::get_value(const RealVector& x)
 }
 
 
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 get_gradient(const RealVector& x)
 {
   // this could define a default_dvv and call get_gradient(x, dvv),
@@ -745,7 +803,7 @@ get_gradient(const RealVector& x)
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HermiteInterpPolyApproximation::get_gradient()" << std::endl;
+	  << "NodalInterpPolyApproximation::get_gradient()" << std::endl;
     abort_handler(-1);
   }
 
@@ -776,13 +834,13 @@ get_gradient(const RealVector& x)
 }
 
 
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 get_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HermiteInterpPolyApproximation::get_gradient()" << std::endl;
+	  << "NodalInterpPolyApproximation::get_gradient()" << std::endl;
     abort_handler(-1);
   }
 
@@ -816,12 +874,12 @@ get_gradient(const RealVector& x, const SizetArray& dvv)
 
 /** In this case, all expansion variables are random variables and the
     mean of the expansion is simply the sum over i of r_i w_i. */
-const Real& HermiteInterpPolyApproximation::get_mean()
+const Real& NodalInterpPolyApproximation::get_mean()
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HermiteInterpPolyApproximation::get_mean()" << std::endl;
+	  << "NodalInterpPolyApproximation::get_mean()" << std::endl;
     abort_handler(-1);
   }
 
@@ -836,12 +894,12 @@ const Real& HermiteInterpPolyApproximation::get_mean()
 /** In this case, a subset of the expansion variables are random
     variables and the mean of the expansion involves evaluating the
     expectation over this subset. */
-const Real& HermiteInterpPolyApproximation::get_mean(const RealVector& x)
+const Real& NodalInterpPolyApproximation::get_mean(const RealVector& x)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HermiteInterpPolyApproximation::get_mean()" << std::endl;
+	  << "NodalInterpPolyApproximation::get_mean()" << std::endl;
     abort_handler(-1);
   }
 
@@ -869,13 +927,13 @@ const Real& HermiteInterpPolyApproximation::get_mean(const RealVector& x)
     this case, the derivative of the expectation is the expectation of
     the derivative.  The mixed derivative case (some design variables
     are inserted and some are augmented) requires no special treatment. */
-const RealVector& HermiteInterpPolyApproximation::get_mean_gradient()
+const RealVector& NodalInterpPolyApproximation::get_mean_gradient()
 {
   // d/ds <R> = <dR/ds>
 
   // Error check for required data
   if (!configOptions.expansionCoeffGradFlag) {
-    PCerr << "Error: expansion coefficient gradients not defined in Hermite"
+    PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	  << "InterpPolyApproximation::get_mean_gradient()." << std::endl;
     abort_handler(-1);
   }
@@ -904,7 +962,7 @@ const RealVector& HermiteInterpPolyApproximation::get_mean_gradient()
     design/state variables are augmented (and are part of the
     expansion: derivatives are evaluated as described above) and some
     are inserted (derivatives are obtained from expansionType1CoeffGrads). */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   switch (configOptions.expCoeffsSolnApproach) {
@@ -937,7 +995,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 /** In this case, all expansion variables are random variables and the
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
-const Real& HermiteInterpPolyApproximation::get_variance()
+const Real& NodalInterpPolyApproximation::get_variance()
 {
   numericalMoments[1] = get_covariance(expansionType1Coeffs);
   return numericalMoments[1];
@@ -947,20 +1005,20 @@ const Real& HermiteInterpPolyApproximation::get_variance()
 /** In this case, a subset of the expansion variables are random
     variables and the variance of the expansion involves summations
     over this subset. */
-const Real& HermiteInterpPolyApproximation::get_variance(const RealVector& x)
+const Real& NodalInterpPolyApproximation::get_variance(const RealVector& x)
 {
   numericalMoments[1] = get_covariance(x, expansionType1Coeffs);
   return numericalMoments[1];
 }
 
 
-Real HermiteInterpPolyApproximation::
+Real NodalInterpPolyApproximation::
 get_covariance(const RealVector& exp_coeffs_2)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HermiteInterpPolyApproximation::get_covariance()" << std::endl;
+	  << "NodalInterpPolyApproximation::get_covariance()" << std::endl;
     abort_handler(-1);
   }
 
@@ -985,13 +1043,13 @@ get_covariance(const RealVector& exp_coeffs_2)
 /** In this case, a subset of the expansion variables are random
     variables and the variance of the expansion involves summations
     over this subset. */
-Real HermiteInterpPolyApproximation::
+Real NodalInterpPolyApproximation::
 get_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HermiteInterpPolyApproximation::get_covariance()" << std::endl;
+	  << "NodalInterpPolyApproximation::get_covariance()" << std::endl;
     abort_handler(-1);
   }
 
@@ -1017,16 +1075,16 @@ get_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
     any design/state variables are omitted from the expansion.  The
     mixed derivative case (some design variables are inserted and some
     are augmented) requires no special treatment. */
-const RealVector& HermiteInterpPolyApproximation::get_variance_gradient()
+const RealVector& NodalInterpPolyApproximation::get_variance_gradient()
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in HermiteInterpPoly"
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
   }
   if (!configOptions.expansionCoeffGradFlag) {
-    PCerr << "Error: expansion coefficient gradients not defined in Hermite"
+    PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	  << "InterpPolyApproximation::get_variance_gradient()." << std::endl;
     abort_handler(-1);
   }
@@ -1057,12 +1115,12 @@ const RealVector& HermiteInterpPolyApproximation::get_variance_gradient()
     some design/state variables are augmented (and are part of the
     expansion) and some are inserted (derivatives are obtained from
     expansionType1CoeffGrads). */
-const RealVector& HermiteInterpPolyApproximation::
+const RealVector& NodalInterpPolyApproximation::
 get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in HermiteInterpPoly"
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::get_variance_gradient()" << std::endl;
     abort_handler(-1);
   }
