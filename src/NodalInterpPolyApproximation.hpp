@@ -83,10 +83,11 @@ protected:
 					  const SizetArray& dvv);
 
   /// return the covariance of the expansion, treating all variables as random
-  Real get_covariance(const RealVector& exp_coeffs_2);
+  Real get_covariance(PolynomialApproximation* poly_approx_2);
   /// return the covariance of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  Real get_covariance(const RealVector& x, const RealVector& exp_coeffs_2);
+  Real get_covariance(const RealVector& x,
+		      PolynomialApproximation* poly_approx_2);
 
 private:
 
@@ -134,11 +135,11 @@ private:
     size_t tp_index, const SizetArray& dvv);
 
   /// compute the covariance of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to get_covariance(x, exp_coeffs_2)
+  /// tensor-product grid; contributes to get_covariance(x, poly_approx_2)
   const Real& tensor_product_covariance(const RealVector& x,
 					const RealVector& exp_coeffs_2);
   /// compute the covariance of a sparse interpolant on an isotropic/anisotropic
-  /// sparse grid; contributes to get_covariance(x, exp_coeffs_2)
+  /// sparse grid; contributes to get_covariance(x, poly_approx_2)
   const Real& tensor_product_covariance(const RealVector& x,
 					const RealVector& exp_coeffs_2,
 					size_t tp_index);

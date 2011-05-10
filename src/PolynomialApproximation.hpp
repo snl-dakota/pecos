@@ -173,11 +173,11 @@ public:
 						  const SizetArray& dvv) = 0;
 
   /// return the variance of the expansion, treating all variables as random
-  virtual Real get_covariance(const RealVector& exp_coeffs_2) = 0;
+  virtual Real get_covariance(PolynomialApproximation* poly_approx_2) = 0;
   /// return the variance of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
   virtual Real get_covariance(const RealVector& x,
-                              const RealVector& exp_coeffs_2) = 0;
+                              PolynomialApproximation* poly_approx_2) = 0;
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration

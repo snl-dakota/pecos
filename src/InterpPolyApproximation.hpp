@@ -62,8 +62,8 @@ protected:
   /// finalize the coefficients by applying all previously evaluated increments
   void finalize_coefficients();
 
-  //const RealVector& approximation_coefficients() const;
-  //void approximation_coefficients(const RealVector& approx_coeffs);
+  const RealVector& approximation_coefficients() const;
+  void approximation_coefficients(const RealVector& approx_coeffs);
 
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
@@ -283,14 +283,30 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
 
 
-//inline const RealVector& InterpPolyApproximation::
-//approximation_coefficients() const
-//{ return expansionType1Coeffs; }
+inline const RealVector& InterpPolyApproximation::
+approximation_coefficients() const
+{
+  if (configOptions.useDerivs) {
+    PCerr << "Error: approximation_coefficients() not supported in "
+	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
+    return abort_handler_t<const RealVector&>(-1);
+  }
+  else
+    return expansionType1Coeffs;
+}
 
 
-//inline void InterpPolyApproximation::
-//approximation_coefficients(const RealVector& approx_coeffs)
-//{ expansionType1Coeffs = approx_coeffs; }
+inline void InterpPolyApproximation::
+approximation_coefficients(const RealVector& approx_coeffs)
+{
+  if (configOptions.useDerivs) {
+    PCerr << "Error: approximation_coefficients() not supported in "
+	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
+    abort_handler(-1);
+  }
+  else
+    expansionType1Coeffs = approx_coeffs;
+}
 
 
 inline void InterpPolyApproximation::compute_moments()

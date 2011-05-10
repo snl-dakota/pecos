@@ -156,10 +156,11 @@ protected:
 					  const SizetArray& dvv);
 
   /// return the covariance of the PCE, treating all variables as random
-  Real get_covariance(const RealVector& exp_coeffs_2);
+  Real get_covariance(PolynomialApproximation* poly_approx_2);
   /// return the covariance of the PCE for a given parameter vector,
   /// treating a subset of the variables as random
-  Real get_covariance(const RealVector& x, const RealVector& exp_coeffs_2);
+  Real get_covariance(const RealVector& x,
+		      PolynomialApproximation* poly_approx_2);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
   void compute_moments();

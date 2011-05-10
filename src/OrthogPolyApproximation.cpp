@@ -2134,7 +2134,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 const Real& OrthogPolyApproximation::get_variance()
 {
-  expansionMoments[1] = get_covariance(expansionCoeffs);
+  expansionMoments[1] = get_covariance(this);
   return expansionMoments[1];
 }
 
@@ -2143,12 +2143,13 @@ const Real& OrthogPolyApproximation::get_variance()
     and the variance of the expansion involves summations over this subset. */
 const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
 {
-  expansionMoments[1] = get_covariance(x, expansionCoeffs);
+  expansionMoments[1] = get_covariance(x, this);
   return expansionMoments[1];
 }
 
 
-Real OrthogPolyApproximation::get_covariance(const RealVector& exp_coeffs_2)
+Real OrthogPolyApproximation::
+get_covariance(PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
@@ -2157,6 +2158,8 @@ Real OrthogPolyApproximation::get_covariance(const RealVector& exp_coeffs_2)
     abort_handler(-1);
   }
 
+  const RealVector& exp_coeffs_2
+    = ((OrthogPolyApproximation*)poly_approx_2)->expansionCoeffs;
   Real var = 0.;
   for (size_t i=1; i<numExpansionTerms; ++i)
     var += expansionCoeffs[i] * exp_coeffs_2[i] * norm_squared(multiIndex[i]);
@@ -2165,7 +2168,7 @@ Real OrthogPolyApproximation::get_covariance(const RealVector& exp_coeffs_2)
 
 
 Real OrthogPolyApproximation::
-get_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
+get_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
@@ -2174,6 +2177,8 @@ get_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
     abort_handler(-1);
   }
 
+  const RealVector& exp_coeffs_2
+    = ((OrthogPolyApproximation*)poly_approx_2)->expansionCoeffs;
   Real var = 0.;
   size_t i, j;
   SizetList::iterator it;
