@@ -86,10 +86,16 @@ private:
 
   /// integrand order
   unsigned short integrandOrder;
+  /// the current number of unique points in the grid
+  int numPts;
+  /// flag indicating when numPts needs to be recomputed due to an
+  /// update to the cubature settings
+  bool updateGridSize;
 };
 
 
-inline CubatureDriver::CubatureDriver(): IntegrationDriver(BaseConstructor())
+inline CubatureDriver::CubatureDriver(): IntegrationDriver(BaseConstructor()),
+  integrandOrder(0), numPts(0), updateGridSize(true)
 { }
 
 
@@ -98,7 +104,10 @@ inline CubatureDriver::~CubatureDriver()
 
 
 inline void CubatureDriver::integrand_order(unsigned short order)
-{ integrandOrder = order; }
+{
+  if (integrandOrder != order)
+    { integrandOrder = order; updateGridSize = true; }
+}
 
 
 inline unsigned short CubatureDriver::integrand_order() const

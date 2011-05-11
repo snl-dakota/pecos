@@ -50,7 +50,8 @@ public:
 
   /// compute scaled variable and weight sets for the sparse grid
   void compute_grid(RealMatrix& variable_sets);
-  /// number of collocation points with duplicates removed
+  /// compute (if updateGridSize) and return number of collocation
+  /// points with duplicates removed
   int grid_size();
 
   //
@@ -306,9 +307,11 @@ private:
   Sizet2DArray collocIndices;
   /// output from sgmga_unique_index()
   IntArray uniqueIndexMapping;
-  /// the current number of unique points in the grid; used for incrementing
-  /// and decrementing uniqueIndexMapping within generalized sparse grids
+  /// the current number of unique points in the grid
   int numCollocPts;
+  /// flag indicating when numCollocPts needs to be recomputed due to an
+  /// update to the sparse grid settings
+  bool updateGridSize;
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
@@ -362,7 +365,7 @@ private:
 
 inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), ssgLevel(0), storeCollocDetails(false),
-  duplicateTol(1.e-15)
+  duplicateTol(1.e-15), numCollocPts(0), updateGridSize(true)
 { }
 
 
@@ -375,7 +378,10 @@ inline unsigned short SparseGridDriver::level() const
 
 
 inline void SparseGridDriver::level(unsigned short ssg_level)
-{ ssgLevel = ssg_level; }
+{
+  if (ssgLevel != ssg_level)
+    { ssgLevel  = ssg_level; updateGridSize = true; }
+}
 
 
 inline const RealVector& SparseGridDriver::anisotropic_weights() const

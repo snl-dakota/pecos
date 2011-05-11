@@ -258,8 +258,10 @@ void SparseGridDriver::dimension_preference(const RealVector& dim_pref)
 
 void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 {
-  if (aniso_wts.empty())
-    dimIsotropic = true;
+  if (aniso_wts.empty()) {
+    if (!dimIsotropic)          dimIsotropic = updateGridSize = true;
+    if (!anisoLevelWts.empty()) anisoLevelWts.sizeUninitialized(0);
+  }
   else {
     if (aniso_wts.length() != numVars) {
       PCerr << "Error: length of sparse grid anisotropic weights "
@@ -268,19 +270,26 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       abort_handler(-1);
     }
 
-    dimIsotropic = true;
-    anisoLevelWts.resize(numVars);
-    // truncate any negative values
     size_t i;
-    for (i=0; i<numVars; ++i)
-      anisoLevelWts[i] = (aniso_wts[i] < 0.) ? 0. : aniso_wts[i];
     // detect anisotropy
-    Real wt0 = anisoLevelWts[0];
+    bool prev_dim_iso = dimIsotropic; // history for updateGridSize
+    dimIsotropic = true;
+    const Real& wt0 = aniso_wts[0];
     for (i=1; i<numVars; ++i)
-      if (std::abs(anisoLevelWts[i] - wt0) > DBL_EPSILON)
+      if (std::abs(aniso_wts[i] - wt0) > DBL_EPSILON)
 	{ dimIsotropic = false; break; }
-    // normalize and enforce axis lower bounds/weight upper bounds
-    if (!dimIsotropic) {
+    // define updateGridSize and anisoLevelWts
+    if (dimIsotropic) {
+      if (!prev_dim_iso)          updateGridSize = true;
+      if (!anisoLevelWts.empty()) anisoLevelWts.sizeUninitialized(0);
+    }
+    else {
+      RealVector prev_aniso_wts = anisoLevelWts; // history for updateGridSize
+      // truncate any negative values
+      anisoLevelWts.resize(numVars);
+      for (i=0; i<numVars; ++i)
+	anisoLevelWts[i] = std::max(aniso_wts[i], 0.);
+      // normalize and enforce axis lower bounds/weight upper bounds
       int option = 1; // weights scaled so that minimum nonzero entry is 1
       webbur::sandia_sgmga_aniso_normalize(option, numVars,
 					   anisoLevelWts.values());
@@ -304,6 +313,9 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
 	write_data(PCout, anisoLevelWts);
 #endif
       }
+      // define updateGridSize
+      if (anisoLevelWts != prev_aniso_wts)
+	updateGridSize = true;
     }
   }
 }
@@ -448,16 +460,17 @@ void SparseGridDriver::initialize_rule_pointers()
 
 int SparseGridDriver::grid_size()
 {
-  // do this here (called at beginning of compute_grid()) since sgdInstance
-  // required within compute1DPoints below
-  sgdInstance = this;
-
-  return (dimIsotropic) ?
-    webbur::sgmg_size(numVars, ssgLevel, &apiIntegrationRules[0],
-      &compute1DPoints[0], duplicateTol, &apiGrowthRules[0]) :
-    webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
-      &apiIntegrationRules[0], &compute1DPoints[0], duplicateTol,
-      &apiGrowthRules[0]);
+  if (updateGridSize) {
+    sgdInstance = this; // sgdInstance required within compute1DPoints below
+    numCollocPts = (dimIsotropic) ?
+      webbur::sgmg_size(numVars, ssgLevel, &apiIntegrationRules[0],
+	&compute1DPoints[0], duplicateTol, &apiGrowthRules[0]) :
+      webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
+	&apiIntegrationRules[0], &compute1DPoints[0], duplicateTol,
+	&apiGrowthRules[0]);
+    updateGridSize = false;
+  }
+  return numCollocPts;
 }
 
 
@@ -480,12 +493,10 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
 #endif // DEBUG
   }
   else { // compute reference and any refined grids
-    // --------------------------------
-    // Get number of collocation points
-    // --------------------------------
-    // Note:  grid_size() sets sgdInstance
-    // TO DO: improve efficiency of these calls through data reuse
-    numCollocPts = grid_size();
+    // ------------------------------------
+    // Compute number of collocation points
+    // ------------------------------------
+    grid_size(); // ensure numCollocPts is up to date
 
     // ----------------------------------------------
     // Get collocation points and integration weights
@@ -494,6 +505,7 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     var_sets.shapeUninitialized(numVars, numCollocPts);//Teuchos: col major
     int* sparse_order = new int [numCollocPts*numVars];
     int* sparse_index = new int [numCollocPts*numVars];
+    sgdInstance = this; // sgdInstance required within compute1D{Points,Weights}
     if (dimIsotropic) {
       int num_total_pts = webbur::sgmg_size_total(numVars, ssgLevel,
 	&apiIntegrationRules[0], &apiGrowthRules[0]);

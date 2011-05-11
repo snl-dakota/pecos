@@ -150,62 +150,81 @@ initialize_grid_parameters(const ShortArray& u_types,
 
 int CubatureDriver::grid_size()
 {
-  switch(collocRules[0]) {
-  case GAUSS_HERMITE:
-    switch (integrandOrder) {
-    case 1: return webbur::en_her_01_1_size(numVars);    break; // 1
-    case 2: return webbur::en_her_02_xiu_size(numVars);  break; // n+1
-  //case 3: return webbur::en_her_03_1_size(numVars);    break; // 2n
-    case 3: return webbur::en_her_03_xiu_size(numVars);  break; // 2n
-    case 5: return (numVars >=2 && numVars <= 7) ?
-	webbur::en_her_05_1_size(numVars) :                     // n^2+n+2
-	webbur::en_her_05_2_size(numVars);               break; // 2n^2+1
-    } break;
-  case GAUSS_LEGENDRE:
-    switch (integrandOrder) {
-    case 1: return webbur::cn_leg_01_1_size(numVars);    break; // 1
-    case 2: return webbur::cn_leg_02_xiu_size(numVars);  break; // n+1
-  //case 3: return webbur::cn_leg_03_1_size(numVars);    break; // 2n
-    case 3: return webbur::cn_leg_03_xiu_size(numVars);  break; // 2n
-    case 5: return (numVars >=4 && numVars <= 6) ?
-      webbur::cn_leg_05_1_size(numVars) :                       // n^2+n+2
-      webbur::cn_leg_05_2_size(numVars);                 break; // 2n^2+1
-    } break;
-  case GAUSS_LAGUERRE:
-    switch (integrandOrder) {
-    case 1: return webbur::epn_lag_01_1_size(numVars);   break;
-    case 2: return webbur::epn_lag_02_xiu_size(numVars); break;
-    } break;
-  case GAUSS_JACOBI: {
-    BasisPolynomial& poly0 = polynomialBasis[0];
-    const Real& alpha_poly = poly0.alpha_polynomial();
-    const Real& beta_poly  = poly0.beta_polynomial();
-    switch (integrandOrder) {
-    case 1: return webbur::cn_jac_01_1_size(numVars,   alpha_poly, beta_poly);
+  if (updateGridSize) {
+    bool err_flag = false;
+    switch(collocRules[0]) {
+    case GAUSS_HERMITE:
+      switch (integrandOrder) {
+      case 1: numPts = webbur::en_her_01_1_size(numVars);    break; // 1
+      case 2: numPts = webbur::en_her_02_xiu_size(numVars);  break; // n+1
+    //case 3: numPts = webbur::en_her_03_1_size(numVars);    break; // 2n
+      case 3: numPts = webbur::en_her_03_xiu_size(numVars);  break; // 2n
+      case 5: numPts = (numVars >=2 && numVars <= 7) ?
+	webbur::en_her_05_1_size(numVars) :                          // n^2+n+2
+	webbur::en_her_05_2_size(numVars);                   break; // 2n^2+1
+      default: err_flag = true;                              break;
+      }
       break;
-    case 2: return webbur::cn_jac_02_xiu_size(numVars, alpha_poly, beta_poly);
+    case GAUSS_LEGENDRE:
+      switch (integrandOrder) {
+      case 1: numPts = webbur::cn_leg_01_1_size(numVars);    break; // 1
+      case 2: numPts = webbur::cn_leg_02_xiu_size(numVars);  break; // n+1
+    //case 3: numPts = webbur::cn_leg_03_1_size(numVars);    break; // 2n
+      case 3: numPts = webbur::cn_leg_03_xiu_size(numVars);  break; // 2n
+      case 5: numPts = (numVars >=4 && numVars <= 6) ?
+	webbur::cn_leg_05_1_size(numVars) :                          // n^2+n+2
+        webbur::cn_leg_05_2_size(numVars);                   break; // 2n^2+1
+      default: err_flag = true;                              break;
+      }
+      break;
+    case GAUSS_LAGUERRE:
+      switch (integrandOrder) {
+      case 1: numPts = webbur::epn_lag_01_1_size(numVars);   break;
+      case 2: numPts = webbur::epn_lag_02_xiu_size(numVars); break;
+      default: err_flag = true;                              break;
+      }
+      break;
+    case GAUSS_JACOBI: {
+      BasisPolynomial& poly0 = polynomialBasis[0];
+      const Real& alpha_poly = poly0.alpha_polynomial();
+      const Real& beta_poly  = poly0.beta_polynomial();
+      switch (integrandOrder) {
+      case 1: numPts = webbur::cn_jac_01_1_size(numVars, alpha_poly, beta_poly);
+	break;
+      case 2: numPts = webbur::cn_jac_02_xiu_size(numVars,alpha_poly,beta_poly);
+	break;
+      default: err_flag = true; break;
+      }
       break;
     }
-    break;
-  }
-  case GEN_GAUSS_LAGUERRE: {
-    const Real& alpha_poly = polynomialBasis[0].alpha_polynomial();
-    switch (integrandOrder) {
-    case 1: return webbur::epn_glg_01_1_size(numVars,   alpha_poly); break;
-    case 2: return webbur::epn_glg_02_xiu_size(numVars, alpha_poly); break;
+    case GEN_GAUSS_LAGUERRE: {
+      const Real& alpha_poly = polynomialBasis[0].alpha_polynomial();
+      switch (integrandOrder) {
+      case 1: numPts = webbur::epn_glg_01_1_size(numVars,   alpha_poly); break;
+      case 2: numPts = webbur::epn_glg_02_xiu_size(numVars, alpha_poly); break;
+      default: err_flag = true;                                          break;
+      }
+      break;
     }
-    break;
-  }
-  case GOLUB_WELSCH:
-    switch (integrandOrder) {
-    case 2: return webbur::gw_02_xiu_size(numVars); break;
-    } break; 
-  }
+    case GOLUB_WELSCH:
+      switch (integrandOrder) {
+      case 2: numPts = webbur::gw_02_xiu_size(numVars); break;
+      default: err_flag = true;                         break;
+      }
+      break;
+    default:
+      err_flag = true; break;
+    }
 
-  PCerr << "Error: unsupported rule in CubatureDriver::grid_size()."
-	<< std::endl;
-  abort_handler(-1);
-  return 0;
+    if (err_flag) {
+      PCerr << "Error: unsupported rule in CubatureDriver::grid_size()."
+	    << std::endl;
+      abort_handler(-1);
+    }
+    else
+      updateGridSize = false;
+  }
+  return numPts;
 }
 
 
@@ -214,16 +233,16 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   // --------------------------------
   // Get number of collocation points
   // --------------------------------
-  int num_pts = grid_size();
+  grid_size(); // ensure numPts is up to date
 #ifdef DEBUG
-  PCout << "Total number of cubature integration points: " << num_pts << '\n';
+  PCout << "Total number of cubature integration points: " << numPts << '\n';
 #endif // DEBUG
 
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
-  weightSets.sizeUninitialized(num_pts);
-  variable_sets.shapeUninitialized(numVars, num_pts); // Teuchos: col major
+  weightSets.sizeUninitialized(numPts);
+  variable_sets.shapeUninitialized(numVars, numPts); // Teuchos: col major
   double *pts = variable_sets.values(), *wts = weightSets.values();
   bool err_flag = false, pt_scaling = false, wt_scaling = false;
   double pt_factor, wt_factor;
@@ -231,53 +250,53 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   switch(collocRules[0]) {
   case GAUSS_HERMITE: {
     switch (integrandOrder) {
-    case 1: webbur::en_her_01_1(numVars,    num_pts, pts, wts); break;
-    case 2: webbur::en_her_02_xiu(numVars,  num_pts, pts, wts); break;
-  //case 3: webbur::en_her_03_1(numVars,    num_pts, pts, wts); break;
-    case 3: webbur::en_her_03_xiu(numVars,  num_pts, pts, wts); break;
+    case 1: webbur::en_her_01_1(numVars,    numPts, pts, wts); break;
+    case 2: webbur::en_her_02_xiu(numVars,  numPts, pts, wts); break;
+  //case 3: webbur::en_her_03_1(numVars,    numPts, pts, wts); break;
+    case 3: webbur::en_her_03_xiu(numVars,  numPts, pts, wts); break;
     case 5:
       if (numVars >=2 && numVars <= 7) {
 	int option = 1; // two options for n=3,5,6
-	webbur::en_her_05_1(numVars, option, num_pts, pts, wts);
+	webbur::en_her_05_1(numVars, option, numPts, pts, wts);
       }
       else
-	webbur::en_her_05_2(numVars, num_pts, pts, wts);        break;
-    default: err_flag = true;                                   break;
+	webbur::en_her_05_2(numVars, numPts, pts, wts);        break;
+    default: err_flag = true;                                  break;
     }
     pt_scaling = true; wt_scaling = true; break;
   }
   case GAUSS_LEGENDRE: {
     switch (integrandOrder) {
-    case 1: webbur::cn_leg_01_1(numVars,    num_pts, pts, wts); break;
-    case 2: webbur::cn_leg_02_xiu(numVars,  num_pts, pts, wts); break;
-  //case 3: webbur::cn_leg_03_1(numVars,    num_pts, pts, wts); break;
-    case 3: webbur::cn_leg_03_xiu(numVars,  num_pts, pts, wts); break;
+    case 1: webbur::cn_leg_01_1(numVars,    numPts, pts, wts); break;
+    case 2: webbur::cn_leg_02_xiu(numVars,  numPts, pts, wts); break;
+  //case 3: webbur::cn_leg_03_1(numVars,    numPts, pts, wts); break;
+    case 3: webbur::cn_leg_03_xiu(numVars,  numPts, pts, wts); break;
     case 5:
       if (numVars >=4 && numVars <= 6) {
 	int option = 1; // two options for n=5,6
-	webbur::cn_leg_05_1(numVars, option, num_pts, pts, wts);
+	webbur::cn_leg_05_1(numVars, option, numPts, pts, wts);
       }
       else
-	webbur::cn_leg_05_2(numVars, num_pts, pts, wts);        break;
-    default: err_flag = true;                                   break;
+	webbur::cn_leg_05_2(numVars, numPts, pts, wts);        break;
+    default: err_flag = true;                                  break;
     }
     wt_scaling = true; break;
   }
   case GAUSS_LAGUERRE:
     switch (integrandOrder) {
-    case 1: webbur::epn_lag_01_1(numVars,   num_pts, pts, wts); break;
-    case 2: webbur::epn_lag_02_xiu(numVars, num_pts, pts, wts); break;
-    default: err_flag = true;                                   break;
+    case 1: webbur::epn_lag_01_1(numVars,   numPts, pts, wts); break;
+    case 2: webbur::epn_lag_02_xiu(numVars, numPts, pts, wts); break;
+    default: err_flag = true;                                  break;
     } break;
   case GAUSS_JACOBI: {
     const Real& alpha_poly = poly0.alpha_polynomial();
     const Real& beta_poly  = poly0.beta_polynomial();
     switch (integrandOrder) {
     case 1:
-      webbur::cn_jac_01_1(numVars,   alpha_poly, beta_poly, num_pts, pts, wts);
+      webbur::cn_jac_01_1(numVars,   alpha_poly, beta_poly, numPts, pts, wts);
       break;
     case 2:
-      webbur::cn_jac_02_xiu(numVars, alpha_poly, beta_poly, num_pts, pts, wts);
+      webbur::cn_jac_02_xiu(numVars, alpha_poly, beta_poly, numPts, pts, wts);
       break;
     default: err_flag = true; break;
     }
@@ -286,9 +305,9 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   case GEN_GAUSS_LAGUERRE: {
     const Real& alpha_poly = poly0.alpha_polynomial();
     switch (integrandOrder) {
-    case 1: webbur::epn_glg_01_1(numVars,   alpha_poly, num_pts, pts, wts);
+    case 1: webbur::epn_glg_01_1(numVars,   alpha_poly, numPts, pts, wts);
       break;
-    case 2: webbur::epn_glg_02_xiu(numVars, alpha_poly, num_pts, pts, wts);
+    case 2: webbur::epn_glg_02_xiu(numVars, alpha_poly, numPts, pts, wts);
       break;
     default: err_flag = true; break;
     }
@@ -317,7 +336,7 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
 	= (NumericGenOrthogPolynomial*)poly0.polynomial_rep();
       const Real& beta1  = poly0_rep->beta_recursion(1); // do order 1 first
       const Real& alpha0 = poly0_rep->alpha_recursion(0);
-      webbur::gw_02_xiu(numVars, num_pts, 1., -alpha0, beta1, 1., pts, wts);
+      webbur::gw_02_xiu(numVars, numPts, 1., -alpha0, beta1, 1., pts, wts);
       break;
     }
     default: err_flag = true; break;
