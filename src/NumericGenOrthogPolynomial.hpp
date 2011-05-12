@@ -89,20 +89,13 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// return the Gauss quadrature points corresponding to polynomial order
-  const RealArray& collocation_points(unsigned short order);
-  /// return the Gauss quadrature weights corresponding to polynomial order
-  const RealArray& collocation_weights(unsigned short order);
+  const Real& type1_value(const Real& x, unsigned short order);
+  const Real& type1_gradient(const Real& x, unsigned short order);
 
-  /// retrieve the value of the generated polynomial of given order
-  /// for a given parameter x
-  const Real& get_value(const Real& x, unsigned short order);
-  /// retrieve the gradient of the generated polynomial of given order
-  /// for a given parameter x
-  const Real& get_gradient(const Real& x, unsigned short order);
-
-  /// return the inner product <NG_i,NG_i> = ||NG_i||^2
   const Real& norm_squared(unsigned short order);
+
+  const RealArray& collocation_points(unsigned short order);
+  const RealArray& type1_collocation_weights(unsigned short order);
 
 private:
 
@@ -183,10 +176,10 @@ private:
 
   /// retrieve the value of the 1-D generated polynomial (of given
   /// coefficients) for a given parameter value
-  const Real& get_value(const Real& x, const RealVector& poly_coeffs);
+  const Real& type1_value(const Real& x, const RealVector& poly_coeffs);
   /// retrieve the gradient of the 1-D generated polynomial (of given
   /// coefficients) with respect to its dimension for a given parameter value
-  const Real& get_gradient(const Real& x, const RealVector& poly_coeffs);
+  const Real& type1_gradient(const Real& x, const RealVector& poly_coeffs);
 
   //
   //- Heading: Data

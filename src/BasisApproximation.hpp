@@ -47,11 +47,11 @@ public:
   //
 
   /// retrieve the approximate function value for a given parameter vector
-  virtual const Real& get_value(const RealVector& x);
+  virtual const Real& value(const RealVector& x);
   /// retrieve the approximate function gradient for a given parameter vector
-  virtual const RealVector& get_gradient(const RealVector& x);
+  virtual const RealVector& gradient(const RealVector& x);
   /// retrieve the approximate function Hessian for a given parameter vector
-  virtual const RealSymMatrix& get_hessian(const RealVector& x);
+  virtual const RealSymMatrix& hessian(const RealVector& x);
 
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
@@ -112,9 +112,9 @@ protected:
   /// number of variables used in the approximation
   size_t numVars;
 
-  /// value of the approximation returned by get_value()
+  /// value of the approximation returned by value()
   Real approxValue;
-  /// gradient of the approximation returned by get_gradient()
+  /// gradient of the approximation returned by gradient()
   RealVector approxGradient;
 
 private:

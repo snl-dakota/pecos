@@ -22,10 +22,10 @@ void OrthogonalPolynomial::gauss_check(unsigned short order)
   // that Gauss weights sum to inner product of weight function
   PCout << "\nUnit test for Gauss points/weights for order " << order << '\n';
   const RealArray& x = collocation_points(order);
-  const RealArray& w = collocation_weights(order);
+  const RealArray& w = type1_collocation_weights(order);
   Real sum = 0.;
   for (size_t i=0; i<order; i++) {
-    PCout << "Root x = " << x[i] << " Poly(x) = " << get_value(x[i], order)
+    PCout << "Root x = " << x[i] << " Poly(x) = " << type1_value(x[i], order)
 	  << '\n';
     sum += w[i];
   }

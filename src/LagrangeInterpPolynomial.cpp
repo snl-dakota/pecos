@@ -37,7 +37,7 @@ void LagrangeInterpPolynomial::precompute_data()
 /** Compute value of the Lagrange polynomial corresponding to
     interpolation point i. */
 const Real& LagrangeInterpPolynomial::
-get_type1_value(const Real& x, unsigned short i)
+type1_value(const Real& x, unsigned short i)
 {
   size_t j, num_interp_pts = interpPts.size();
   basisPolyValue = 1. / lagDenominators[i];
@@ -51,7 +51,7 @@ get_type1_value(const Real& x, unsigned short i)
 /** Compute derivative with respect to x of the Lagrange polynomial
     corresponding to interpolation point i. */
 const Real& LagrangeInterpPolynomial::
-get_type1_gradient(const Real& x, unsigned short i)
+type1_gradient(const Real& x, unsigned short i)
 { 
   size_t j, k, num_interp_pts = interpPts.size();
   Real numer = 0.;

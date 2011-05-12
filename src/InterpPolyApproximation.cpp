@@ -212,7 +212,7 @@ void InterpPolyApproximation::compute_coefficients()
   for (i=offset; i<numCollocPts; ++i, ++it)
     PCout << "Colloc pt " << i+1 << ": coeff = " << expansionType1Coeffs[i]
 	  << " interpolation error = " << std::abs(expansionType1Coeffs[i] -
-	     get_value(it->continuous_variables())) << '\n';
+	     value(it->continuous_variables())) << '\n';
 #endif // INTERPOLATION_TEST
 }
 
@@ -377,6 +377,109 @@ update_sparse_interpolation_basis(unsigned short max_level)
 }
 
 
+void InterpPolyApproximation::compute_numerical_moments(size_t num_moments)
+{
+  if (!configOptions.useDerivs) {
+    PolynomialApproximation::compute_numerical_moments(num_moments);
+    return;
+  }
+
+  // Implementation below supports gradient-enhanced interpolation
+
+  // computes and stores the following moments:
+  // > mean     (1st raw moment)
+  // > variance (2nd central moment)
+  // > skewness (3rd standardized moment)
+  // > kurtosis (4th standardized moment with offset to eliminate "excess")
+
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in Polynomial"
+	  << "Approximation::compute_numerical_moments()" << std::endl;
+    abort_handler(-1);
+  }
+  // current support for this implementation: can't be open-ended since we
+  // employ a specific combination of raw, central, and standardized moments
+  if (num_moments < 1 || num_moments > 4) {
+    PCerr << "Error: unsupported number of moments requested in Polynomial"
+	  << "Approximation::compute_numerical_moments()" << std::endl;
+    abort_handler(-1);
+  }
+
+  numericalMoments.size(num_moments); // init to 0
+
+  size_t i, j, k, offset = 0, num_pts = dataPoints.size();
+  bool anchor_pt = !anchorPoint.is_null();
+  const RealVector& t1_wts = driverRep->type1_weight_sets();
+  const RealMatrix& t2_wts = driverRep->type2_weight_sets();
+
+  // estimate 1st raw moment (mean)
+  Real& mean = numericalMoments[0];
+  if (anchor_pt) {
+    offset = 1; num_pts += offset;
+    mean = t1_wts[0] * expansionType1Coeffs[0];
+    const Real* coeff2_0 = expansionType2Coeffs[0];
+    const Real*  t2_wt_0 = t2_wts[0];
+    for (j=0; j<numVars; ++j)
+      mean += coeff2_0[j] * t2_wt_0[j];
+  }
+  for (size_t i=offset; i<num_pts; ++i) {
+    mean += t1_wts[i] * expansionType1Coeffs[i];
+    const Real* coeff2_i = expansionType2Coeffs[i];
+    const Real*  t2_wt_i = t2_wts[i];
+    for (j=0; j<numVars; ++j)
+      mean += coeff2_i[j] * t2_wt_i[j];
+  }
+
+  // estimate central moments 2 through num_moments
+  Real centered_fn, pow_fn;
+  if (anchor_pt) {
+    pow_fn = centered_fn = expansionType1Coeffs[0] - mean;
+    const Real* coeff2_0 = expansionType2Coeffs[0];
+    const Real*  t2_wt_0 = t2_wts[0];
+    for (j=1; j<num_moments; ++j) {
+      Real& moment_j = numericalMoments[j];
+      // type2 interpolation of (R - \mu)^n
+      // --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
+      for (k=0; k<numVars; ++k)
+	moment_j += (j+1) * pow_fn * coeff2_0[k] * t2_wt_0[k];
+      // type 1 interpolation of (R - \mu)^n
+      pow_fn   *= centered_fn;
+      moment_j += t1_wts[0] * pow_fn;
+    }
+  }
+  for (i=offset; i<num_pts; ++i) {
+    pow_fn = centered_fn = expansionType1Coeffs[i] - mean;
+    const Real* coeff2_i = expansionType2Coeffs[i];
+    const Real*  t2_wt_i = t2_wts[i];
+    for (j=1; j<num_moments; ++j) {
+      Real& moment_j = numericalMoments[j];
+      // type2 interpolation of (R - \mu)^n
+      // --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
+      for (k=0; k<numVars; ++k)
+	moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
+      // type 1 interpolation of (R - \mu)^n
+      pow_fn   *= centered_fn;
+      moment_j += t1_wts[i] * pow_fn;
+    }
+  }
+
+  // standardize third and higher central moments, if present
+  if (num_moments > 2) {
+    // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
+    Real std_dev = std::sqrt(numericalMoments[1]); pow_fn = std_dev*std_dev;
+    for (j=2; j<num_moments; ++j)
+      { pow_fn *= std_dev; numericalMoments[j] /= pow_fn; }
+
+    // offset the fourth standardized moment to eliminate excess kurtosis
+    if (num_moments > 3)
+      numericalMoments[3] -= 3.;
+  }
+
+  //return numericalMoments;
+}
+
+
 void InterpPolyApproximation::compute_component_effects()
 {
   // perform subset sort
@@ -469,10 +572,11 @@ void InterpPolyApproximation::compute_total_effects()
 Real InterpPolyApproximation::total_effects_integral(int set_value)
 {
   // Some other routine here
-  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key           = tpq_driver->collocation_key();
-  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
-  const UShortArray&   quad_order    = tpq_driver->quadrature_order();;
+  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+  const UShortArray&   quad_order = tpq_driver->quadrature_order();
+  const UShort2DArray& key        = tpq_driver->collocation_key();
+  const Real2DArray&   colloc_wts_1d
+    = tpq_driver->type1_collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -540,7 +644,8 @@ total_effects_integral(int set_value, size_t tp_index)
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
+  const Real3DArray& colloc_wts_1d
+    = ssg_driver->type1_collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -653,9 +758,10 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
 Real InterpPolyApproximation::partial_variance_integral(int set_value)
 {
   TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
+  const UShortArray&   quad_order    = tpq_driver->quadrature_order();
   const UShort2DArray& key           = tpq_driver->collocation_key();
-  const Real2DArray&   colloc_wts_1d = tpq_driver->collocation_weights_array();
-  const UShortArray&   quad_order    = tpq_driver->quadrature_order();;
+  const Real2DArray&   colloc_wts_1d
+    = tpq_driver->type1_collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -727,7 +833,8 @@ partial_variance_integral(int set_value, size_t tp_index)
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
+  const Real3DArray& colloc_wts_1d
+    = ssg_driver->type1_collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 

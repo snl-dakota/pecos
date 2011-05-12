@@ -66,7 +66,7 @@ public:
   /// return collocPts1D
   const Real2DArray& collocation_points_array()  const;
   /// return collocWts1D
-  const Real2DArray& collocation_weights_array() const;
+  const Real2DArray& type1_collocation_weights_array() const;
 
   /// invoke initialize_rules() to set collocation rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
@@ -96,8 +96,8 @@ private:
 
   /// numContinuousVars sets of 1D collocation points
   Real2DArray collocPts1D;
-  /// numContinuousVars sets of 1D collocation weights
-  Real2DArray collocWts1D;
+  /// numContinuousVars sets of 1D type1 collocation weights
+  Real2DArray type1CollocWts1D;
 };
 
 
@@ -135,8 +135,9 @@ inline const Real2DArray& TensorProductDriver::collocation_points_array() const
 { return collocPts1D; }
 
 
-inline const Real2DArray& TensorProductDriver::collocation_weights_array() const
-{ return collocWts1D; }
+inline const Real2DArray& TensorProductDriver::
+type1_collocation_weights_array() const
+{ return type1CollocWts1D; }
 
 
 inline int TensorProductDriver::grid_size()

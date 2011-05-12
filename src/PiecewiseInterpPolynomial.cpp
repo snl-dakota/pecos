@@ -48,7 +48,7 @@ void PiecewiseInterpPolynomial::precompute_data()
 /** Compute value of the piecewise interpolation polynomial corresponding
     to interpolation point i. */
 const Real& PiecewiseInterpPolynomial::
-get_type1_value(const Real& x, unsigned short i)
+type1_value(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
   size_t num_interp_pts = interpPts.size();
@@ -59,7 +59,7 @@ get_type1_value(const Real& x, unsigned short i)
 
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
-  switch (basisType) {
+  switch (basisPolyType) {
   case PIECEWISE_LINEAR_INTERP:
     switch (collocRule) {
     case NEWTON_COTES: {
@@ -151,11 +151,11 @@ get_type1_value(const Real& x, unsigned short i)
 
 
 const Real& PiecewiseInterpPolynomial::
-get_type2_value(const Real& x, unsigned short i)
+type2_value(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
   if (interpPts.size() == 1) {
-    switch (basisType) {
+    switch (basisPolyType) {
     case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
       basisPolyValue = 0.; break;
     case PIECEWISE_CUBIC_INTERP:
@@ -164,7 +164,7 @@ get_type2_value(const Real& x, unsigned short i)
     return basisPolyValue;
   }
 
-  switch (basisType) {
+  switch (basisPolyType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     basisPolyValue = 0.;
     break;
@@ -200,7 +200,7 @@ get_type2_value(const Real& x, unsigned short i)
 /** Compute derivative with respect to x of the piecewise interpolation
     polynomial corresponding to interpolation point i. */
 const Real& PiecewiseInterpPolynomial::
-get_type1_gradient(const Real& x, unsigned short i)
+type1_gradient(const Real& x, unsigned short i)
 { 
   // handle special case of a single interpolation point
   size_t num_interp_pts = interpPts.size();
@@ -211,7 +211,7 @@ get_type1_gradient(const Real& x, unsigned short i)
 
   // does x lie within interval corresponding to interpolation point i
   const Real& pt_i = interpPts[i];
-  switch (basisType) {
+  switch (basisPolyType) {
   case PIECEWISE_LINEAR_INTERP:
     switch (collocRule) {
     case NEWTON_COTES: {
@@ -303,11 +303,11 @@ get_type1_gradient(const Real& x, unsigned short i)
 
 
 const Real& PiecewiseInterpPolynomial::
-get_type2_gradient(const Real& x, unsigned short i)
+type2_gradient(const Real& x, unsigned short i)
 {
   // handle special case of a single interpolation point
   if (interpPts.size() == 1) {
-    switch (basisType) {
+    switch (basisPolyType) {
     case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
       basisPolyGradient = 0.; break;
     case PIECEWISE_CUBIC_INTERP:
@@ -316,7 +316,7 @@ get_type2_gradient(const Real& x, unsigned short i)
     return basisPolyGradient;
   }
 
-  switch (basisType) {
+  switch (basisPolyType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     basisPolyGradient = 0.;
     break;
@@ -359,7 +359,7 @@ collocation_points(unsigned short order)
     abort_handler(-1);
   }
 
-  // Computation of interpPts depends only on collocRule (not on basisType).
+  // Computation of interpPts depends only on collocRule (not on basisPolyType).
   // Points are defined on [-1,1] (unlike Ma & Zabaras, Jakeman, etc.).
   // Bypass webbur::{hce,hcc}_compute_points() since it replicates points
   // in an array of size 2*order to match type1/2 weight aggregation.
@@ -406,7 +406,7 @@ type1_collocation_weights(unsigned short order)
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
-	  << "Polynomial::collocation_weights()." << std::endl;
+	  << "Polynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -418,7 +418,7 @@ type1_collocation_weights(unsigned short order)
     if (order == 1)
       type1InterpWts[0] = 1.;
     else
-      switch (basisType) {
+      switch (basisPolyType) {
       case PIECEWISE_LINEAR_INTERP: case PIECEWISE_CUBIC_INTERP:
 	//   Left end:  (x_1 - a)/2/(b-a)           = (x_1 - a)/4
 	//   Interior:  (x_{i+1} - x_{i-1})/2/(b-a) = (x_{i+1} - x_{i-1})/4
@@ -449,8 +449,8 @@ type1_collocation_weights(unsigned short order)
   }
 
   if (mode_err) {
-    PCerr << "Error: unsupported interpolation mode in "
-	  << "PiecewiseInterpPolynomial::collocation_weights()." << std::endl;
+    PCerr << "Error: unsupported interpolation mode in PiecewiseInterp"
+	  << "Polynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -464,12 +464,12 @@ type2_collocation_weights(unsigned short order)
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
-	  << "Polynomial::collocation_weights()." << std::endl;
+	  << "Polynomial::type2_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
   bool mode_err = false;
-  switch (basisType) {
+  switch (basisPolyType) {
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
     if (!type2InterpWts.empty())
       type2InterpWts.clear();

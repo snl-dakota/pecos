@@ -311,14 +311,14 @@ void OrthogPolyApproximation::compute_coefficients()
 
     // single expansion integration
     integration_checks();
-    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
+    integrate_expansion(multiIndex, dataPoints, driverRep->type1_weight_sets(),
 			expansionCoeffs, expansionCoeffGrads);
     break;
   }
   case CUBATURE:
     // single expansion integration
     integration_checks();
-    integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
+    integrate_expansion(multiIndex, dataPoints, driverRep->type1_weight_sets(),
 			expansionCoeffs, expansionCoeffGrads);
     break;
   case SPARSE_GRID:
@@ -366,7 +366,8 @@ void OrthogPolyApproximation::compute_coefficients()
     default: // SPARSE_INT_*
       // single expansion integration
       integration_checks();
-      integrate_expansion(multiIndex, dataPoints, driverRep->weight_sets(),
+      integrate_expansion(multiIndex, dataPoints,
+			  driverRep->type1_weight_sets(),
 			  expansionCoeffs, expansionCoeffGrads);
       break;
     }
@@ -1220,7 +1221,7 @@ void OrthogPolyApproximation::integration_checks()
     abort_handler(-1);
   }
   size_t num_data_pts = dataPoints.size();
-  if (num_data_pts != driverRep->weight_sets().length()) {
+  if (num_data_pts != driverRep->type1_weight_sets().length()) {
     PCerr << "Error: number of current points (" << num_data_pts << ") is "
 	  << "not consistent with\n       number of points/weights from "
 	  << "integration driver in\n       OrthogPolyApproximation::"
@@ -1240,7 +1241,7 @@ integration_data(size_t tp_index,
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& colloc_wts_1d = ssg_driver->collocation_weights_array();
+  const Real3DArray& colloc_wts_1d = ssg_driver->type1_collocation_weights_array();
   size_t i, j, num_tp_pts = colloc_index.size();
   tp_data_points.resize(num_tp_pts); tp_weights.resize(num_tp_pts);
   for (i=0; i<num_tp_pts; ++i) {
@@ -1891,12 +1892,12 @@ void OrthogPolyApproximation::expectation()
 }
 
 
-const Real& OrthogPolyApproximation::get_value(const RealVector& x)
+const Real& OrthogPolyApproximation::value(const RealVector& x)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_value()" << std::endl;
+	  << "OrthogPolyApproximation::value()" << std::endl;
     abort_handler(-1);
   }
 
@@ -1909,15 +1910,15 @@ const Real& OrthogPolyApproximation::get_value(const RealVector& x)
 }
 
 
-const RealVector& OrthogPolyApproximation::get_gradient(const RealVector& x)
+const RealVector& OrthogPolyApproximation::gradient(const RealVector& x)
 {
-  // this could define a default_dvv and call get_gradient(x, dvv),
+  // this could define a default_dvv and call gradient(x, dvv),
   // but we want this fn to be as fast as possible
 
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_gradient()" << std::endl;
+	  << "OrthogPolyApproximation::gradient()" << std::endl;
     abort_handler(-1);
   }
 
@@ -1938,12 +1939,12 @@ const RealVector& OrthogPolyApproximation::get_gradient(const RealVector& x)
 
 
 const RealVector& OrthogPolyApproximation::
-get_gradient(const RealVector& x, const SizetArray& dvv)
+gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_gradient()" << std::endl;
+	  << "OrthogPolyApproximation::gradient()" << std::endl;
     abort_handler(-1);
   }
 
@@ -1965,12 +1966,12 @@ get_gradient(const RealVector& x, const SizetArray& dvv)
 
 /** In this case, all expansion variables are random variables and the
     mean of the expansion is simply the first chaos coefficient. */
-const Real& OrthogPolyApproximation::get_mean()
+const Real& OrthogPolyApproximation::mean()
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_mean()" << std::endl;
+	  << "OrthogPolyApproximation::mean()" << std::endl;
     abort_handler(-1);
   }
 
@@ -1983,12 +1984,12 @@ const Real& OrthogPolyApproximation::get_mean()
 /** In this case, a subset of the expansion variables are random
     variables and the mean of the expansion involves evaluating the
     expectation over this subset. */
-const Real& OrthogPolyApproximation::get_mean(const RealVector& x)
+const Real& OrthogPolyApproximation::mean(const RealVector& x)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_mean()" << std::endl;
+	  << "OrthogPolyApproximation::mean()" << std::endl;
     abort_handler(-1);
   }
 
@@ -2009,7 +2010,7 @@ const Real& OrthogPolyApproximation::get_mean(const RealVector& x)
 	size_t index = *it;
 	unsigned short order_1d = multiIndex[i][index];
 	if (order_1d)
-	  Psi *= polynomialBasis[index].get_value(x[index], order_1d);
+	  Psi *= polynomialBasis[index].type1_value(x[index], order_1d);
       }
       mean += Psi*expansionCoeffs[i];
 #ifdef DEBUG
@@ -2029,14 +2030,14 @@ const Real& OrthogPolyApproximation::get_mean(const RealVector& x)
     this case, the derivative of the expectation is the expectation of
     the derivative.  The mixed derivative case (some design variables
     are inserted and some are augmented) requires no special treatment. */
-const RealVector& OrthogPolyApproximation::get_mean_gradient()
+const RealVector& OrthogPolyApproximation::mean_gradient()
 {
   // d/ds \mu_R = d/ds \alpha_0 = <dR/ds>
 
   // Error check for required data
   if (!configOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
-	  << "OrthogPolyApproximation::get_mean_gradient()." << std::endl;
+	  << "OrthogPolyApproximation::mean_gradient()." << std::endl;
     abort_handler(-1);
   }
 
@@ -2058,7 +2059,7 @@ const RealVector& OrthogPolyApproximation::get_mean_gradient()
     expansion: derivatives are evaluated as described above) and some
     are inserted (derivatives are obtained from expansionCoeffGrads). */
 const RealVector& OrthogPolyApproximation::
-get_mean_gradient(const RealVector& x, const SizetArray& dvv)
+mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_deriv_vars = dvv.size();
   if (meanGradient.length() != num_deriv_vars)
@@ -2073,14 +2074,14 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
       // Error check for required data
       if (!configOptions.expansionCoeffGradFlag) {
 	PCerr << "Error: expansion coefficient gradients not defined in "
-	      << "OrthogPolyApproximation::get_mean_gradient()." << std::endl;
+	      << "OrthogPolyApproximation::mean_gradient()." << std::endl;
 	abort_handler(-1);
       }
       meanGradient[i] = expansionCoeffGrads[0][cntr];
     }
     else if (!configOptions.expansionCoeffFlag) { // Error check for reqd data
       PCerr << "Error: expansion coefficients not defined in "
-	    << "OrthogPolyApproximation::get_mean_gradient()" << std::endl;
+	    << "OrthogPolyApproximation::mean_gradient()" << std::endl;
       abort_handler(-1);
     }
     for (j=1; j<numExpansionTerms; ++j) {
@@ -2102,7 +2103,7 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	    size_t index = *it;
 	    unsigned short order_1d = multiIndex[j][index];
 	    if (order_1d)
-	      Psi *= polynomialBasis[index].get_value(x[index], order_1d);
+	      Psi *= polynomialBasis[index].type1_value(x[index], order_1d);
 	  }
 	  meanGradient[i] += Psi*expansionCoeffGrads[j][cntr];
 	}
@@ -2114,8 +2115,8 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	    size_t index = *it;
 	    term_j_grad_i *= (index == deriv_index) ?
-	      polynomialBasis[index].get_gradient(x[index],multiIndex[j][index])
-	    : polynomialBasis[index].get_value(x[index], multiIndex[j][index]);
+	      polynomialBasis[index].type1_gradient(x[index],multiIndex[j][index])
+	    : polynomialBasis[index].type1_value(x[index], multiIndex[j][index]);
 	  }
 	  meanGradient[i] += expansionCoeffs[j]*term_j_grad_i;
 	}
@@ -2132,29 +2133,29 @@ get_mean_gradient(const RealVector& x, const SizetArray& dvv)
 /** In this case, all expansion variables are random variables and the
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
-const Real& OrthogPolyApproximation::get_variance()
+const Real& OrthogPolyApproximation::variance()
 {
-  expansionMoments[1] = get_covariance(this);
+  expansionMoments[1] = covariance(this);
   return expansionMoments[1];
 }
 
 
 /** In this case, a subset of the expansion variables are random variables
     and the variance of the expansion involves summations over this subset. */
-const Real& OrthogPolyApproximation::get_variance(const RealVector& x)
+const Real& OrthogPolyApproximation::variance(const RealVector& x)
 {
-  expansionMoments[1] = get_covariance(x, this);
+  expansionMoments[1] = covariance(x, this);
   return expansionMoments[1];
 }
 
 
 Real OrthogPolyApproximation::
-get_covariance(PolynomialApproximation* poly_approx_2)
+covariance(PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_covariance()" << std::endl;
+	  << "OrthogPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
 
@@ -2168,12 +2169,12 @@ get_covariance(PolynomialApproximation* poly_approx_2)
 
 
 Real OrthogPolyApproximation::
-get_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_covariance()" << std::endl;
+	  << "OrthogPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
 
@@ -2208,9 +2209,9 @@ get_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 	      order_1d_j = multiIndex[j][index];
 	    BasisPolynomial& poly_1d = polynomialBasis[index];
 	    if (order_1d_i)
-	      var_ij *= poly_1d.get_value(x[index], order_1d_i);
+	      var_ij *= poly_1d.type1_value(x[index], order_1d_i);
 	    if (order_1d_j)
-	      var_ij *= poly_1d.get_value(x[index], order_1d_j);
+	      var_ij *= poly_1d.type1_value(x[index], order_1d_j);
 	  }
 	  var += var_ij;
 #ifdef DEBUG
@@ -2230,7 +2231,7 @@ get_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     any design/state variables are omitted from the expansion.  The
     mixed derivative case (some design variables are inserted and some
     are augmented) requires no special treatment. */
-const RealVector& OrthogPolyApproximation::get_variance_gradient()
+const RealVector& OrthogPolyApproximation::variance_gradient()
 {
   // d/ds \sigma^2_R = Sum_{j=1}^P <Psi^2_j> d/ds \alpha^2_j
   //                 = 2 Sum_{j=1}^P \alpha_j <dR/ds, Psi_j>
@@ -2238,12 +2239,12 @@ const RealVector& OrthogPolyApproximation::get_variance_gradient()
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_variance_gradient()" << std::endl;
+	  << "OrthogPolyApproximation::variance_gradient()" << std::endl;
     abort_handler(-1);
   }
   if (!configOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in "
-	  << "OrthogPolyApproximation::get_variance_gradient()." << std::endl;
+	  << "OrthogPolyApproximation::variance_gradient()." << std::endl;
     abort_handler(-1);
   }
 
@@ -2268,12 +2269,12 @@ const RealVector& OrthogPolyApproximation::get_variance_gradient()
     expansion) and some are inserted (derivatives are obtained from
     expansionCoeffGrads). */
 const RealVector& OrthogPolyApproximation::
-get_variance_gradient(const RealVector& x, const SizetArray& dvv)
+variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::get_variance_gradient()" << std::endl;
+	  << "OrthogPolyApproximation::variance_gradient()" << std::endl;
     abort_handler(-1);
   }
 
@@ -2288,7 +2289,7 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in "
-	    << "OrthogPolyApproximation::get_variance_gradient()." << std::endl;
+	    << "OrthogPolyApproximation::variance_gradient()." << std::endl;
       abort_handler(-1);
     }
     for (j=1; j<numExpansionTerms; ++j) {
@@ -2324,9 +2325,9 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 		  order_1d_k = multiIndex[k][index];
 		BasisPolynomial& poly_1d = polynomialBasis[index];
 		if (order_1d_j)
-		  var_jk *= poly_1d.get_value(x[index], order_1d_j);
+		  var_jk *= poly_1d.type1_value(x[index], order_1d_j);
 		if (order_1d_k)
-		  var_jk *= poly_1d.get_value(x[index], order_1d_k);
+		  var_jk *= poly_1d.type1_value(x[index], order_1d_k);
 	      }
 	      varianceGradient[i] += var_jk;
 	    }
@@ -2343,15 +2344,15 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 		  order_1d_k = multiIndex[k][index];
 		BasisPolynomial& poly_1d = polynomialBasis[index];
 		if (order_1d_j)
-		  Psi_j *= poly_1d.get_value(x[index], order_1d_j);
+		  Psi_j *= poly_1d.type1_value(x[index], order_1d_j);
 		if (order_1d_k)
-		  Psi_k *= poly_1d.get_value(x[index], order_1d_k);
+		  Psi_k *= poly_1d.type1_value(x[index], order_1d_k);
 		dPsi_j_ds_i *= (index == deriv_index) ?
-		  poly_1d.get_gradient(x[index], order_1d_j) :
-		  poly_1d.get_value(   x[index], order_1d_j);
+		  poly_1d.type1_gradient(x[index], order_1d_j) :
+		  poly_1d.type1_value(   x[index], order_1d_j);
 		dPsi_k_ds_i *= (index == deriv_index) ?
-		  poly_1d.get_gradient(x[index], order_1d_k) :
-		  poly_1d.get_value(   x[index], order_1d_k);
+		  poly_1d.type1_gradient(x[index], order_1d_k) :
+		  poly_1d.type1_value(   x[index], order_1d_k);
 	      }
 	      varianceGradient[i] += var_jk * 
 		(Psi_j*dPsi_k_ds_i + dPsi_j_ds_i*Psi_k);
@@ -2369,7 +2370,7 @@ get_variance_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 /** This test works in combination with DEBUG settings in
-    (Legendre,Laguerre,Jacobi,GenLaguerre)OrthogPolynomial::get_gradient(). */
+    (Legendre,Laguerre,Jacobi,GenLaguerre)OrthogPolynomial::gradient(). */
 void OrthogPolyApproximation::gradient_check()
 {
   BasisPolynomial hermite_poly(HERMITE_ORTHOG), legendre_poly(LEGENDRE_ORTHOG),
@@ -2384,12 +2385,12 @@ void OrthogPolyApproximation::gradient_check()
   PCout << "-------------------------------------------------\n";
   for (size_t n=0; n<=10; n++) {
     PCout << "Gradients at " << x << " for order " << n << '\n';
-    hermite_poly.get_gradient(x, n);
-    legendre_poly.get_gradient(x, n);
-    laguerre_poly.get_gradient(x, n);
-    jacobi_poly.get_gradient(x, n);
-    gen_laguerre_poly.get_gradient(x, n);
-    chebyshev_poly.get_gradient(x, n);
+    hermite_poly.type1_gradient(x, n);
+    legendre_poly.type1_gradient(x, n);
+    laguerre_poly.type1_gradient(x, n);
+    jacobi_poly.type1_gradient(x, n);
+    gen_laguerre_poly.type1_gradient(x, n);
+    chebyshev_poly.type1_gradient(x, n);
     PCout << "-------------------------------------------------\n";
   }
 }

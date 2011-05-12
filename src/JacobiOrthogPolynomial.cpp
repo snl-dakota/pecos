@@ -23,7 +23,7 @@
 namespace Pecos {
 
 const Real& JacobiOrthogPolynomial::
-get_value(const Real& x, unsigned short order)
+type1_value(const Real& x, unsigned short order)
 {
   switch (order) {
   case 0:
@@ -68,17 +68,17 @@ get_value(const Real& x, unsigned short order)
 
 
 const Real& JacobiOrthogPolynomial::
-get_gradient(const Real& x, unsigned short order)
+type1_gradient(const Real& x, unsigned short order)
 {
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
   //basisPolyGradient = (order) ?
-  //  (g1*get_value(x,order) + g0*get_value(x,order-1))/g2 :0.;
+  //  (g1*type1_value(x,order) + g0*type1_value(x,order-1))/g2 :0.;
   if (order) { // be careful with reference to changing basisPolyValue
     Real ab2n = 2.*order+alphaPoly+betaPoly,
       g0 = 2.*(order+alphaPoly)*(order+betaPoly),
       g1 = order*(alphaPoly-betaPoly-ab2n*x), g2 = ab2n*(1.-x*x),
-      Pab_n = get_value(x, order), Pab_nminus1 = get_value(x, order-1);
+      Pab_n = type1_value(x, order), Pab_nminus1 = type1_value(x, order-1);
     basisPolyGradient = (g1*Pab_n + g0*Pab_nminus1)/g2;
   }
   else
@@ -113,7 +113,7 @@ get_gradient(const Real& x, unsigned short order)
       Real ab2i = alphaPoly + betaPoly + 2.*i, pab2i3 = pochhammer(ab2i, 3);
       basisPolyGradient // dPabdx_np1
 	= ( ( (ab2i+1.)*(alphaPoly*alphaPoly-betaPoly*betaPoly) + x*pab2i3 )
-	    * dPabdx_n + pab2i3*get_value(x,i)
+	    * dPabdx_n + pab2i3*type1_value(x,i)
 	    - 2.*(i+alphaPoly)*(i+betaPoly)*(ab2i+2.)*dPabdx_nm1 )
 	/ ( 2.*(i+1.)*(i+alphaPoly+betaPoly+1.)*ab2i );
       if (i != order-1) {
@@ -191,7 +191,7 @@ collocation_points(unsigned short order)
 
 
 const RealArray& JacobiOrthogPolynomial::
-collocation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // Derived from (A_n gamma_{n-1})/(A_{n-1} Phi_n'(x_i) Phi_{n-1}(x_i))
 
@@ -224,8 +224,8 @@ collocation_weights(unsigned short order)
 	  = (2.*order+alphaPoly+betaPoly) * (2.*order+alphaPoly+betaPoly-1.)
 	  / (2.*order) / (order+alphaPoly+betaPoly);
 	collocWeights[i]
-	  = AnoAnm1 * norm_squared(order-1) / get_value(x_i, order-1)
-	  / get_gradient(x_i, order);
+	  = AnoAnm1 * norm_squared(order-1) / type1_value(x_i, order-1)
+	  / type1_gradient(x_i, order);
       }
 #endif
       break;

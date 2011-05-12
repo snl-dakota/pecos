@@ -122,7 +122,7 @@ public:
   /// update activeMultiIndex from the passed trial set for use within
   /// the generalized sparse grid procedure
   void add_active_neighbors(const UShortArray& set);
-  /// update smolyakCoeffsRef and weightSetsRef for use within the
+  /// update smolyakCoeffsRef and type1WeightSetsRef for use within the
   /// generalized sparse grid procedure
   void update_reference();
   /// update smolyakMultiIndex with a new trial set for use within the
@@ -205,7 +205,7 @@ public:
   /// return collocPts1D
   const Real3DArray& collocation_points_array()  const;
   /// return collocWts1D
-  const Real3DArray& collocation_weights_array() const;
+  const Real3DArray& type1_collocation_weights_array() const;
 
 private:
 
@@ -213,13 +213,18 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// function for computing collocation points for polynomialBasis[index]
+  /// function passed by pointer for computing collocation points for
+  /// polynomialBasis[index]
   static void basis_collocation_points(int order, int index, double* data);
-  /// function for computing collocation weights for polynomialBasis[index]
-  static void basis_collocation_weights(int order, int index, double* data);
+  /// function passed by pointer for computing type 1 collocation
+  /// weights for polynomialBasis[index]
+  static void basis_type1_collocation_weights(int order,int index,double* data);
+  /// function passed by pointer for computing type 2 collocation
+  /// weights for polynomialBasis[index]
+  static void basis_type2_collocation_weights(int order,int index,double* data);
 
-  /// initialize compute1DPoints/compute1DWeights function pointer arrays
-  /// for use within webbur::sgmg() and webbur::sgmga() routines
+  /// initialize compute1D{Points,Type1Weights,Type2Weights} function pointer
+  /// arrays for use within webbur::sgmg() and webbur::sgmga() routines
   void initialize_rule_pointers();
   /// initialize apiIntegrationRules and apiGrowthRules arrays for use
   /// within webbur::sgmg() and webbur::sgmga() routines
@@ -327,10 +332,10 @@ private:
   /// used in incremental approaches that update smolyakCoeffs
   IntArray smolyakCoeffsRef;
   /// reference values for the sparse grid weights corresponding to the current
-  /// reference grid; used in incremental approaches that update weightSets
-  RealVector weightSetsRef;
-  /// flag indicating need to track weightSets for an ensemble sparse grid
-  /// computed incrementally
+  /// reference grid; used in incremental approaches that update type1WeightSets
+  RealVector type1WeightSetsRef;
+  /// flag indicating need to track {type1,type2}WeightSets for an
+  /// ensemble sparse grid computed incrementally
   bool trackEnsembleWeights;
 
   int numUnique1;       ///< number of unique points in set 1 (reference)
@@ -354,18 +359,21 @@ private:
   /// num_levels_per_var x numContinuousVars sets of 1D collocation points
   Real3DArray collocPts1D;
   /// num_levels_per_var x numContinuousVars sets of 1D collocation weights
-  Real3DArray collocWts1D;
+  Real3DArray type1CollocWts1D;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<FPType> compute1DPoints;
   /// array of pointers to collocation weight evaluation functions
-  std::vector<FPType> compute1DWeights;
+  std::vector<FPType> compute1DType1Weights;
+  /// array of pointers to collocation weight evaluation functions
+  std::vector<std::vector<FPType> > compute1DType2Weights;
 };
 
 
 inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), ssgLevel(0), storeCollocDetails(false),
-  duplicateTol(1.e-15), numCollocPts(0), updateGridSize(true)
+  duplicateTol(1.e-15), numCollocPts(0), updateGridSize(true),
+  trackEnsembleWeights(false)
 { }
 
 
@@ -440,8 +448,9 @@ inline const Real3DArray& SparseGridDriver::collocation_points_array() const
 { return collocPts1D; }
 
 
-inline const Real3DArray& SparseGridDriver::collocation_weights_array() const
-{ return collocWts1D; }
+inline const Real3DArray& SparseGridDriver::
+type1_collocation_weights_array() const
+{ return type1CollocWts1D; }
 
 
 inline void SparseGridDriver::allocate_smolyak_arrays()
@@ -458,7 +467,7 @@ inline void SparseGridDriver::update_reference()
 {
   smolyakCoeffsRef = smolyakCoeffs;
   if (trackEnsembleWeights)
-    weightSetsRef = weightSets;
+    type1WeightSetsRef = type1WeightSets;
 }
 
 
@@ -499,10 +508,19 @@ basis_collocation_points(int order, int index, double* data)
 
 
 inline void SparseGridDriver::
-basis_collocation_weights(int order, int index, double* data)
+basis_type1_collocation_weights(int order, int index, double* data)
 {
   const RealArray& colloc_wts
-    = sgdInstance->polynomialBasis[index].collocation_weights(order);
+    = sgdInstance->polynomialBasis[index].type1_collocation_weights(order);
+  std::copy(colloc_wts.begin(), colloc_wts.begin()+order, data);
+}
+
+
+inline void SparseGridDriver::
+basis_type2_collocation_weights(int order, int index, double* data)
+{
+  const RealArray& colloc_wts
+    = sgdInstance->polynomialBasis[index].type2_collocation_weights(order);
   std::copy(colloc_wts.begin(), colloc_wts.begin()+order, data);
 }
 

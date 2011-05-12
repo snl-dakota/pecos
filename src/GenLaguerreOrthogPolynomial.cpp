@@ -23,7 +23,7 @@
 namespace Pecos {
 
 const Real& GenLaguerreOrthogPolynomial::
-get_value(const Real& x, unsigned short order)
+type1_value(const Real& x, unsigned short order)
 {
   switch (order) {
   case 0:
@@ -67,14 +67,14 @@ get_value(const Real& x, unsigned short order)
 
 
 const Real& GenLaguerreOrthogPolynomial::
-get_gradient(const Real& x, unsigned short order)
+type1_gradient(const Real& x, unsigned short order)
 {
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
-  //basisPolyGradient = (order) ? (order*get_value(x, order)
-  //                  - (order+alphaPoly)*get_value(x, order-1))/x : 0.;
+  //basisPolyGradient = (order) ? (order*type1_value(x, order)
+  //                  - (order+alphaPoly)*type1_value(x, order-1))/x : 0.;
   if (order) { // be careful with reference to changing basisPolyValue
-    Real La_n = get_value(x, order), La_nminus1 = get_value(x, order-1);
+    Real La_n = type1_value(x, order), La_nminus1 = type1_value(x, order-1);
     basisPolyGradient = (order*La_n - (order+alphaPoly)*La_nminus1)/x;
   }
   else
@@ -105,7 +105,7 @@ get_gradient(const Real& x, unsigned short order)
       = (-x*x + 2.*(alphaPoly+3.)*x - (alphaPoly+2.)*(alphaPoly+3.) )/2.,//L'a_3
       dLadx_nm1 = x - (alphaPoly + 2.);                                 // L'a_2
     for (size_t i=3; i<order; i++) {
-      basisPolyGradient = ( (2.*i+1.+alphaPoly-x)*dLadx_n - get_value(x,i) -
+      basisPolyGradient = ( (2.*i+1.+alphaPoly-x)*dLadx_n - type1_value(x,i) -
 			    (i+alphaPoly)*dLadx_nm1 ) / (i+1.); // dLadx_np1
       if (i != order-1) {
 	dLadx_nm1 = dLadx_n;
@@ -185,7 +185,7 @@ collocation_points(unsigned short order)
 
 
 const RealArray& GenLaguerreOrthogPolynomial::
-collocation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // Derived from -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
   // which for L^(alphaPoly)(x), is Gamma(n+alphaPoly) x_i /
@@ -218,10 +218,10 @@ collocation_weights(unsigned short order)
 	// For integer alphaPoly:
 	//collocWeights[i] = factorial_ratio(order+alphaPoly-1, order) * x_i /
 	//  (order+alphaPoly) / factorial(alphaPoly) /
-	//  std::pow(get_value(x_i,order-1),2);
+	//  std::pow(type1_value(x_i,order-1),2);
 	// For real alphaPoly:
-	collocWeights[i] = pochhammer(alphaPoly+1., order) * x_i /
-	  factorial(order)/std::pow((order+alphaPoly)*get_value(x_i,order-1),2);
+	collocWeights[i] = pochhammer(alphaPoly+1., order)*x_i/factorial(order)
+	  /std::pow((order+alphaPoly) * type1_value(x_i, order-1), 2);
       }
 #endif
       break;

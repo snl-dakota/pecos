@@ -59,40 +59,47 @@ public:
   //- Heading: Virtual functions
   //
 
-  /// retrieve the basis polynomial value for a given parameter value
-  /** For orthogonal polynomials, n specifies the order of the polynomial,
-      whereas for interpolation polynomials, it identifies the interpolant
-      for the n-th point. */
-  virtual const Real& get_value(const Real& x, unsigned short n);
-  /// retrieve the basis polynomial gradient for a given parameter value
-  /** For orthogonal polynomials, n specifies the order of the polynomial,
-      whereas for interpolation polynomials, it identifies the interpolant
-      for the n-th point. */
-  virtual const Real& get_gradient(const Real& x, unsigned short n);
-
   /// retrieve the value of the n_th type 1 polynomial for a given parameter x
-  virtual const Real& get_type1_value(const Real& x, unsigned short n);
+  /** For orthogonal polynomials, n specifies the order of the polynomial,
+      whereas for interpolation polynomials, it identifies the interpolant
+      for the n-th point. */
+  virtual const Real& type1_value(const Real& x, unsigned short n);
   /// retrieve the value of the n_th type 2 polynomial for a given parameter x
-  virtual const Real& get_type2_value(const Real& x, unsigned short n);
+  /** For orthogonal polynomials, n specifies the order of the polynomial,
+      whereas for interpolation polynomials, it identifies the interpolant
+      for the n-th point. */
+  virtual const Real& type2_value(const Real& x, unsigned short n);
 
   /// retrieve the gradient of the n_th type 1 polynomial for a given
   /// parameter x
-  virtual const Real& get_type1_gradient(const Real& x, unsigned short n);
+  /** For orthogonal polynomials, n specifies the order of the polynomial,
+      whereas for interpolation polynomials, it identifies the interpolant
+      for the n-th point. */
+  virtual const Real& type1_gradient(const Real& x, unsigned short n);
   /// retrieve the gradient of the n_th type 2 polynomial for a given
   /// parameter x
-  virtual const Real& get_type2_gradient(const Real& x, unsigned short n);
+  /** For orthogonal polynomials, n specifies the order of the polynomial,
+      whereas for interpolation polynomials, it identifies the interpolant
+      for the n-th point. */
+  virtual const Real& type2_gradient(const Real& x, unsigned short n);
 
   /// returns the norm-squared of the n_th order polynomial defined by the
   /// inner product <Poly_n, Poly_n> = ||Poly_n||^2
   /** This is defined only for orthogonal polynomials. */
   virtual const Real& norm_squared(unsigned short n);
 
-  /// return the collocPoints corresponding to orthogonal polynomial order n.
-  /** This is defined only for orthogonal polynomials. */
+  /// return collocation points corresponding to orthogonal polynomial order n
+  /** This is defined for orthogonal and piecewise interpolation polynomials. */
   virtual const RealArray& collocation_points(unsigned short n);
-  /// return the collocWeights corresponding to orthogonal polynomial order n.
-  /** This is defined only for orthogonal polynomials. */
-  virtual const RealArray& collocation_weights(unsigned short n);
+  /// return the type 1 collocation weights corresponding to a point
+  /// set of size order
+  /** This is defined for orthogonal and piecewise interpolation polynomials. */
+  virtual const RealArray& type1_collocation_weights(unsigned short order);
+  /// return the type 2 collocation weights corresponding to a point
+  /// set of size order
+  /** This is defined for piecewise interpolation polynomials. */
+  virtual const RealArray& type2_collocation_weights(unsigned short order);
+
   /// destroy history of Gauss pts/wts (due to distribution parameter changes)
   /** This is defined only for orthogonal polynomials. */
   virtual void reset_gauss();
@@ -138,8 +145,8 @@ public:
   /// compute the Pochhammer symbol (m)_n = m*(m+1)...*(m+n-1)
   static Real pochhammer(const Real& m, unsigned short n);
 
-  // return basisPolyType
-  //short polynomial_type() const;
+  /// return basisPolyType
+  short basis_type() const;
 
   /// returns polyRep for access to derived class member functions
   /// that are not mapped to the top BasisPolynomial level
@@ -162,15 +169,15 @@ protected:
   //- Heading: Data
   //
 
-  // basis polynomial type: HERMITE_ORTHOG, LEGENDRE_ORTHOG, LAGUERRE_ORTHOG,
-  // JACOBI_ORTHOG, GEN_LAGUERRE_ORTHOG, NUM_GEN_ORTHOG, LAGRANGE_INTERP,
-  // HERMITE_INTERP, or PIECEWISE_INTERP
-  //short basisPolyType;
+  /// basis polynomial type:
+  /// {HERMITE,LEGENDRE,LAGUERRE,JACOBI,GEN_LAGUERRE,NUM_GEN_ORTHOG}_ORTHOG,
+  /// {LAGRANGE,HERMITE}_INTERP, or PIECEWISE_{LINEAR,QUADRATIC,CUBIC}_INTERP
+  short basisPolyType;
 
-  /// value of the 1-D basis polynomial; returned by get_value()
+  /// value of the 1-D basis polynomial; returned by type1_value()
   Real basisPolyValue;
   /// gradient of the 1-D basis polynomial with respect to its
-  /// one parameter; returned by get_gradient()
+  /// one parameter; returned by type1_gradient()
   Real basisPolyGradient;
 
   /// weight discrepancy factor between Abramowitz-Stegun and PDF orthogonality
@@ -199,8 +206,8 @@ private:
 };
 
 
-//inline short BasisPolynomial::polynomial_type() const
-//{ return (polyRep) ? polyRep->basisPolyType : basisPolyType; }
+inline short BasisPolynomial::basis_type() const
+{ return (polyRep) ? polyRep->basisPolyType : basisPolyType; }
 
 
 inline BasisPolynomial* BasisPolynomial::polynomial_rep() const

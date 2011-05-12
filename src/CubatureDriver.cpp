@@ -241,9 +241,9 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
-  weightSets.sizeUninitialized(numPts);
+  type1WeightSets.sizeUninitialized(numPts);
   variable_sets.shapeUninitialized(numVars, numPts); // Teuchos: col major
-  double *pts = variable_sets.values(), *wts = weightSets.values();
+  double *pts = variable_sets.values(), *wts = type1WeightSets.values();
   bool err_flag = false, pt_scaling = false, wt_scaling = false;
   double pt_factor, wt_factor;
   BasisPolynomial& poly0 = polynomialBasis[0];
@@ -355,7 +355,7 @@ void CubatureDriver::compute_grid(RealMatrix& variable_sets)
   if (pt_scaling)
     variable_sets.scale(poly0.point_factor());
   if (wt_scaling)
-    weightSets.scale(std::pow(poly0.weight_factor(), (int)numVars));
+    type1WeightSets.scale(std::pow(poly0.weight_factor(), (int)numVars));
 }
 
 } // namespace Pecos

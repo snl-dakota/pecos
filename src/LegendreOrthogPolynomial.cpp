@@ -22,7 +22,7 @@
 namespace Pecos {
 
 const Real& LegendreOrthogPolynomial::
-get_value(const Real& x, unsigned short order)
+type1_value(const Real& x, unsigned short order)
 {
   switch (order) {
   case 0:
@@ -97,14 +97,14 @@ get_value(const Real& x, unsigned short order)
 
 
 const Real& LegendreOrthogPolynomial::
-get_gradient(const Real& x, unsigned short order)
+type1_gradient(const Real& x, unsigned short order)
 {
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
   //basisPolyGradient = (order) ?
-  //  order*(x*get_value(x, order) - get_value(x, order-1))/(x*x - 1.) : 0.;
+  //  order*(x*type1_value(x, order) - type1_value(x, order-1))/(x*x - 1.) : 0.;
   if (order) { // be careful with reference to changing basisPolyValue
-    Real P_n = get_value(x, order), P_nminus1 = get_value(x, order-1);
+    Real P_n = type1_value(x, order), P_nminus1 = type1_value(x, order-1);
     basisPolyGradient = order*(x*P_n - P_nminus1)/(x*x - 1.);
   }
   else
@@ -149,7 +149,7 @@ get_gradient(const Real& x, unsigned short order)
       dPdx_nminus1 = (315.*x4 - 210.*x2 + 15.)/8.;    // P'_5
     for (size_t i=6; i<order; i++) {
       basisPolyGradient // dPdx_nplus1
-	= ( (2.*i+1.)*(x*dPdx_n + get_value(x,i)) - i*dPdx_nminus1 ) / (i+1.);
+	= ( (2.*i+1.)*(x*dPdx_n + type1_value(x,i)) - i*dPdx_nminus1 ) / (i+1.);
       if (i != order-1) {
 	dPdx_nminus1 = dPdx_n;
 	dPdx_n       = basisPolyGradient;
@@ -330,12 +330,12 @@ collocation_points(unsigned short order)
 
 
 const RealArray& LegendreOrthogPolynomial::
-collocation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
-    PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "LegendreOrthogPolynomial::collocation_weights()." << std::endl;
+    PCerr << "Error: underflow in minimum quadrature order (1) in Legendre"
+	  << "OrthogPolynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -435,7 +435,7 @@ collocation_weights(unsigned short order)
 	for (size_t i=0; i<order; i++) {
 	  const Real& x_i = colloc_pts[i];
 	  collocWeights[i] = (1.-x_i*x_i)
-	                  / std::pow(order*get_value(x_i,order-1),2);
+	                  / std::pow(order*type1_value(x_i,order-1),2);
 	}
 	break;
       }
@@ -453,7 +453,7 @@ collocation_weights(unsigned short order)
 
   if (rule_err) {
     PCerr << "Error: unsupported collocation rule in LegendreOrthogPolynomial"
-	  << "::collocation_weights()." << std::endl;
+	  << "::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 

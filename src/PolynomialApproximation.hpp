@@ -147,37 +147,37 @@ public:
   virtual void allocate_arrays() = 0;
 
   /// return the mean of the expansion, treating all variables as random
-  virtual const Real& get_mean() = 0;
+  virtual const Real& mean() = 0;
   /// return the mean of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  virtual const Real& get_mean(const RealVector& x) = 0;
+  virtual const Real& mean(const RealVector& x) = 0;
   /// return the gradient of the expansion mean for a given parameter
   /// vector, treating all variables as random
-  virtual const RealVector& get_mean_gradient() = 0;
+  virtual const RealVector& mean_gradient() = 0;
   /// return the gradient of the expansion mean for a given parameter vector
   /// and given DVV, treating a subset of the variables as random
-  virtual const RealVector& get_mean_gradient(const RealVector& x,
+  virtual const RealVector& mean_gradient(const RealVector& x,
+					  const SizetArray& dvv) = 0;
+
+  /// return the variance of the expansion, treating all variables as random
+  virtual const Real& variance() = 0;
+  /// return the variance of the expansion for a given parameter vector,
+  /// treating a subset of the variables as random
+  virtual const Real& variance(const RealVector& x) = 0;
+  /// return the gradient of the expansion variance for a given parameter
+  /// vector, treating all variables as random
+  virtual const RealVector& variance_gradient() = 0;
+  /// return the gradient of the expansion variance for a given parameter
+  /// vector and given DVV, treating a subset of the variables as random
+  virtual const RealVector& variance_gradient(const RealVector& x,
 					      const SizetArray& dvv) = 0;
 
   /// return the variance of the expansion, treating all variables as random
-  virtual const Real& get_variance() = 0;
+  virtual Real covariance(PolynomialApproximation* poly_approx_2) = 0;
   /// return the variance of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  virtual const Real& get_variance(const RealVector& x) = 0;
-  /// return the gradient of the expansion variance for a given parameter
-  /// vector, treating all variables as random
-  virtual const RealVector& get_variance_gradient() = 0;
-  /// return the gradient of the expansion variance for a given parameter
-  /// vector and given DVV, treating a subset of the variables as random
-  virtual const RealVector& get_variance_gradient(const RealVector& x,
-						  const SizetArray& dvv) = 0;
-
-  /// return the variance of the expansion, treating all variables as random
-  virtual Real get_covariance(PolynomialApproximation* poly_approx_2) = 0;
-  /// return the variance of the expansion for a given parameter vector,
-  /// treating a subset of the variables as random
-  virtual Real get_covariance(const RealVector& x,
-                              PolynomialApproximation* poly_approx_2) = 0;
+  virtual Real covariance(const RealVector& x,
+			  PolynomialApproximation* poly_approx_2) = 0;
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration
@@ -188,6 +188,8 @@ public:
   /// return central response moments defined from either expansion
   /// post-processing or numerical integration
   virtual const RealVector& moments() const = 0;
+  /// compute central moments of response using numerical integration
+  virtual void compute_numerical_moments(size_t num_moments);
 
   /// estimate expansion coefficient decay rates for each random
   /// variable dimension (OrthogPolyApproximation only)
@@ -221,9 +223,6 @@ public:
   const RealVector& expansion_moments() const;
   /// return numericalMoments
   const RealVector& numerical_moments() const;
-
-  /// compute central moments of response using numerical integration
-  void compute_numerical_moments(size_t num_moments);
 
   /// size component Sobol arrays
   void allocate_component_effects();

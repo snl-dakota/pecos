@@ -49,20 +49,13 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// retrieve the Laguerre polynomial value for a given parameter x 
-  const Real& get_value(const Real& x, unsigned short order);
-  /// retrieve the Laguerre polynomial gradient for a given parameter x 
-  const Real& get_gradient(const Real& x, unsigned short order);
+  const Real& type1_value(const Real& x, unsigned short order);
+  const Real& type1_gradient(const Real& x, unsigned short order);
 
-  /// return the inner product <L_n,L_n> = ||L_n||^2
   const Real& norm_squared(unsigned short order);
 
-  /// return the Gauss-Laguerre quadrature points corresponding to
-  /// polynomial order n
   const RealArray& collocation_points(unsigned short order);
-  /// return the Gauss-Laguerre quadrature weights corresponding to
-  /// polynomial order n
-  const RealArray& collocation_weights(unsigned short order);
+  const RealArray& type1_collocation_weights(unsigned short order);
 
 private:
 

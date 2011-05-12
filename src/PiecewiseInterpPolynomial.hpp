@@ -36,12 +36,10 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  /// default constructor
-  PiecewiseInterpPolynomial();
   /// constructor with rule argument
-  PiecewiseInterpPolynomial(short poly_type, short rule = NEWTON_COTES);
+  PiecewiseInterpPolynomial(short rule = NEWTON_COTES);
   /// constructor with rule and set of points to interpolate
-  PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
+  PiecewiseInterpPolynomial(const RealArray& interp_pts,
 			    short rule = NEWTON_COTES);
   /// destructor
   ~PiecewiseInterpPolynomial();
@@ -54,31 +52,19 @@ protected:
 
   void precompute_data();
 
-  const Real& get_type1_value(const Real& x, unsigned short i);
-  const Real& get_type2_value(const Real& x, unsigned short i);
+  const Real& type1_value(const Real& x, unsigned short i);
+  const Real& type2_value(const Real& x, unsigned short i);
 
-  const Real& get_type1_gradient(const Real& x, unsigned short i);
-  const Real& get_type2_gradient(const Real& x, unsigned short i);
+  const Real& type1_gradient(const Real& x, unsigned short i);
+  const Real& type2_gradient(const Real& x, unsigned short i);
 
-  /// return the interpolation points corresponding to a point set of size order
   const RealArray& collocation_points(unsigned short order);
-  /// temporary wrapper of type1_collocation_weights()
-  const RealArray& collocation_weights(unsigned short order);
-
-  /// return the type 1 interpolation weights corresponding to a point
-  /// set of size order
   const RealArray& type1_collocation_weights(unsigned short order);
-  /// return the type 2 interpolation weights corresponding to a point
-  /// set of size order
   const RealArray& type2_collocation_weights(unsigned short order);
 
   //
   //- Heading: Data
   //
-
-  /// type of polynomial interpolant: PIECEWISE_LINEAR_INTERP,
-  /// PIECEWISE_QUADRATIC_INTERP, or PIECEWISE_CUBIC_INTERP
-  short basisType;
 
   /// name of closed nested rule: NEWTON_COTES (equidistant) or
   /// CLENSHAW_CURTIS (non-equidistant)
@@ -100,33 +86,19 @@ private:
 };
 
 
-inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial():
-  InterpolationPolynomial()
+inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial(short rule):
+  InterpolationPolynomial(), collocRule(rule)
 { }
 
 
 inline PiecewiseInterpPolynomial::
-PiecewiseInterpPolynomial(short poly_type, short rule):
-  InterpolationPolynomial(), basisType(poly_type), collocRule(rule)
-{ }
-
-
-inline PiecewiseInterpPolynomial::
-PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
-			  short rule):
-  InterpolationPolynomial(interp_pts), basisType(poly_type), collocRule(rule)
+PiecewiseInterpPolynomial(const RealArray& interp_pts, short rule):
+  InterpolationPolynomial(interp_pts), collocRule(rule)
 { }
 
 
 inline PiecewiseInterpPolynomial::~PiecewiseInterpPolynomial()
 { }
-
-
-// TO DO: remove this wrapper once type1/2 functionality is elevated
-//        (currently enable LagrangeInterPolyApproximation using Piecewise)
-inline const RealArray& PiecewiseInterpPolynomial::
-collocation_weights(unsigned short order)
-{ return type1_collocation_weights(order); }
 
 } // namespace Pecos
 

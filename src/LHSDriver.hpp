@@ -35,8 +35,7 @@ public:
   //
 
   LHSDriver();  ///< default constructor
-  LHSDriver(const std::string& sample_type,
-            short sample_ranks_mode = IGNORE_RANKS,
+  LHSDriver(const String& sample_type, short sample_ranks_mode = IGNORE_RANKS,
             bool reports = true);  ///< constructor
   ~LHSDriver(); ///< destructor
 
@@ -45,7 +44,7 @@ public:
   //
 
   /// populate data when not passed through ctor
-  void initialize(const std::string& sample_type,
+  void initialize(const String& sample_type,
 		  short sample_ranks_mode = IGNORE_RANKS, bool reports = true);
 
   /// set randomSeed
@@ -54,9 +53,9 @@ public:
   int seed() const;
 
   /// set random number generator
-  void rng(const std::string& unif_gen);
+  void rng(const String& unif_gen);
   // return name of uniform generator
-  //std::string rng();
+  //String rng();
 
   /// reseed using a deterministic sequence
   void advance_seed_sequence();
@@ -116,7 +115,7 @@ private:
   //
 
   /// type of sampling: random, lhs, incremental_lhs, or incremental_random
-  std::string sampleType;
+  String sampleType;
 
   /// the current random number seed
   int randomSeed;
@@ -146,7 +145,7 @@ inline LHSDriver::~LHSDriver()
 
 
 inline void LHSDriver::
-initialize(const std::string& sample_type, short sample_ranks_mode,bool reports)
+initialize(const String& sample_type, short sample_ranks_mode, bool reports)
 {
   sampleType      = sample_type;
   sampleRanksMode = sample_ranks_mode;
@@ -154,9 +153,9 @@ initialize(const std::string& sample_type, short sample_ranks_mode,bool reports)
 }
 
 
-inline LHSDriver::LHSDriver(const std::string& sample_type,
-			    short sample_ranks_mode, bool reports)
-  : allowSeedAdvance(1)
+inline LHSDriver::LHSDriver(const String& sample_type,
+			    short sample_ranks_mode, bool reports) :
+  allowSeedAdvance(1)
 {
   abort_if_no_lhs();
   initialize(sample_type, sample_ranks_mode, reports);

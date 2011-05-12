@@ -71,7 +71,7 @@ BasisPolynomial::BasisPolynomial(short poly_type, short rule):
 
   // Set the rep pointer to the appropriate derived type
   polyRep = get_polynomial(poly_type, rule);
-  if ( /* poly_type != NO_POLY && */ !polyRep ) // bad type, insufficient memory
+  if (poly_type && !polyRep) // bad type, insufficient memory
     abort_handler(-1);
 }
 
@@ -87,8 +87,8 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
 
   BasisPolynomial* polynomial;
   switch (poly_type) {
-  //case NO_POLY:
-  //  polynomial = NULL;                                                  break;
+  case NO_POLY:
+    polynomial = NULL;                                                    break;
   case HERMITE_ORTHOG:  // var_type == "normal"
     polynomial = (rule) ? new HermiteOrthogPolynomial(rule)
                         : new HermiteOrthogPolynomial();                  break;
@@ -113,17 +113,18 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
   // PIECEWISE options include poly order, point type, and point data order:
   // LINEAR/QUADRATIC/CUBIC covers poly order, rule covers EQUIDISTANT/GENERAL
   // point type, and data order is inferred from poly order (grads for CUBIC).
-  case PIECEWISE_LINEAR_INTERP: case PIECEWISE_CUBIC_INTERP:
-    polynomial = (rule) ? new PiecewiseInterpPolynomial(poly_type, rule)
-                        : new PiecewiseInterpPolynomial(poly_type);       break;
+  case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
+  case PIECEWISE_CUBIC_INTERP:
+    polynomial = (rule) ? new PiecewiseInterpPolynomial(rule)
+                        : new PiecewiseInterpPolynomial();                break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
 	 << std::endl;
     polynomial = NULL;                                                    break;
   }
   // Note: basisPolyType is not available at construct time, but is thereafter
-  //if (polynomial)
-  //  polynomial->basisPolyType = poly_type;
+  if (polynomial)
+    polynomial->basisPolyType = poly_type;
   return polynomial;
 }
 
@@ -194,69 +195,47 @@ BasisPolynomial::~BasisPolynomial()
 }
 
 
-const Real& BasisPolynomial::get_value(const Real& x, unsigned short n)
+const Real& BasisPolynomial::type1_value(const Real& x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: get_value() not available for this basis polynomial type."
-	  << std::endl;
-    abort_handler(-1);
-  }
-  return polyRep->get_value(x, n);
-}
-
-
-const Real& BasisPolynomial::get_gradient(const Real& x, unsigned short n)
-{
-  if (!polyRep) {
-    PCerr << "Error: get_gradient() not available for this basis polynomial "
+    PCerr << "Error: type1_value() not available for this basis polynomial "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->get_gradient(x, n);
+  return polyRep->type1_value(x, n);
 }
 
 
-const Real& BasisPolynomial::get_type1_value(const Real& x, unsigned short n)
+const Real& BasisPolynomial::type2_value(const Real& x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: get_type1_value() not available for this basis polynomial "
+    PCerr << "Error: type2_value() not available for this basis polynomial "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->get_type1_value(x, n);
+  return polyRep->type2_value(x, n);
 }
 
 
-const Real& BasisPolynomial::get_type2_value(const Real& x, unsigned short n)
+const Real& BasisPolynomial::type1_gradient(const Real& x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: get_type2_value() not available for this basis polynomial "
+    PCerr << "Error: type1_gradient() not available for this basis polynomial "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->get_type2_value(x, n);
+  return polyRep->type1_gradient(x, n);
 }
 
 
-const Real& BasisPolynomial::get_type1_gradient(const Real& x, unsigned short n)
+const Real& BasisPolynomial::type2_gradient(const Real& x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: get_type1_gradient() not available for this basis "
-	  << "polynomial type." << std::endl;
+    PCerr << "Error: type2_gradient() not available for this basis polynomial "
+	  << "type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->get_type1_gradient(x, n);
-}
-
-
-const Real& BasisPolynomial::get_type2_gradient(const Real& x, unsigned short n)
-{
-  if (!polyRep) {
-    PCerr << "Error: get_type2_gradient() not available for this basis "
-	  << "polynomial type." << std::endl;
-    abort_handler(-1);
-  }
-  return polyRep->get_type2_gradient(x, n);
+  return polyRep->type2_gradient(x, n);
 }
 
 
@@ -274,22 +253,33 @@ const Real& BasisPolynomial::norm_squared(unsigned short n)
 const RealArray& BasisPolynomial::collocation_points(unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: collocation_points() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: collocation_points() not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
   return polyRep->collocation_points(n);
 }
 
 
-const RealArray& BasisPolynomial::collocation_weights(unsigned short n)
+const RealArray& BasisPolynomial::type1_collocation_weights(unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: collocation_weights() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: type1_collocation_weights() not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->collocation_weights(n);
+  return polyRep->type1_collocation_weights(n);
+}
+
+
+const RealArray& BasisPolynomial::type2_collocation_weights(unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: type2_collocation_weights() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->type2_collocation_weights(n);
 }
 
 
@@ -337,8 +327,8 @@ const Real& BasisPolynomial::alpha_polynomial() const
 const Real& BasisPolynomial::beta_polynomial() const
 {
   if (!polyRep) {
-    PCerr << "Error: beta_polynomial() not available for this basis "
-	  << "polynomial type." << std::endl;
+    PCerr << "Error: beta_polynomial() not available for this basis polynomial "
+	  << "type." << std::endl;
     abort_handler(-1);
   }
   return polyRep->beta_polynomial();
@@ -350,8 +340,8 @@ void BasisPolynomial::alpha_stat(const Real& alpha)
   if (polyRep)
     polyRep->alpha_stat(alpha);
   else {
-    PCerr << "Error: alpha_stat() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: alpha_stat() not available for this basis polynomial type."
+	  << std::endl;
     abort_handler(-1);
   }
 }
@@ -362,8 +352,8 @@ void BasisPolynomial::beta_stat(const Real& beta)
   if (polyRep)
     polyRep->beta_stat(beta);
   else {
-    PCerr << "Error: beta_stat() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: beta_stat() not available for this basis polynomial type."
+	  << std::endl;
     abort_handler(-1);
   }
 }
@@ -384,7 +374,7 @@ void BasisPolynomial::collocation_rule(short rule)
 short BasisPolynomial::collocation_rule() const
 {
   if (!polyRep) {
-    PCerr << "Error: collocation_rule() not available for this basis "
+    PCerr << "Error: collocation_rule() not available for this basis polynomial"
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }

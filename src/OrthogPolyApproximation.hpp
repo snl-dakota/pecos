@@ -121,46 +121,44 @@ protected:
   void increment_order();
 
   /// retrieve the response PCE value for a given parameter vector
-  const Real& get_value(const RealVector& x);
+  const Real& value(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
   /// and default DVV
-  const RealVector& get_gradient(const RealVector& x);
+  const RealVector& gradient(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
   /// and given DVV
-  const RealVector& get_gradient(const RealVector& x, const SizetArray& dvv);
+  const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the mean of the PCE, treating all variables as random
-  const Real& get_mean();
+  const Real& mean();
   /// return the mean of the PCE for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& get_mean(const RealVector& x);
+  const Real& mean(const RealVector& x);
   /// return the gradient of the PCE mean for a given parameter vector,
   /// treating all variables as random
-  const RealVector& get_mean_gradient();
+  const RealVector& mean_gradient();
   /// return the gradient of the PCE mean for a given parameter vector
   /// and given DVV, treating a subset of the variables as random
-  const RealVector& get_mean_gradient(const RealVector& x,
-				      const SizetArray& dvv);
+  const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the variance of the PCE, treating all variables as random
-  const Real& get_variance();
+  const Real& variance();
   /// return the variance of the PCE for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& get_variance(const RealVector& x);
+  const Real& variance(const RealVector& x);
   /// return the gradient of the PCE variance for a given parameter
   /// vector, treating all variables as random
-  const RealVector& get_variance_gradient();
+  const RealVector& variance_gradient();
   /// return the gradient of the PCE variance for a given parameter
   /// vector and given DVV, treating a subset of the variables as random
-  const RealVector& get_variance_gradient(const RealVector& x,
-					  const SizetArray& dvv);
+  const RealVector& variance_gradient(const RealVector& x,
+				      const SizetArray& dvv);
 
   /// return the covariance of the PCE, treating all variables as random
-  Real get_covariance(PolynomialApproximation* poly_approx_2);
+  Real covariance(PolynomialApproximation* poly_approx_2);
   /// return the covariance of the PCE for a given parameter vector,
   /// treating a subset of the variables as random
-  Real get_covariance(const RealVector& x,
-		      PolynomialApproximation* poly_approx_2);
+  Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
   void compute_moments();
@@ -402,7 +400,7 @@ inline void OrthogPolyApproximation::increment_order()
 inline void OrthogPolyApproximation::compute_moments()
 {
   // standard variables mode supports two expansion and four numerical moments
-  expansionMoments.sizeUninitialized(2); get_mean(); get_variance();
+  expansionMoments.sizeUninitialized(2); mean(); variance();
   if (configOptions.expCoeffsSolnApproach == QUADRATURE ||
       configOptions.expCoeffsSolnApproach == CUBATURE   ||
       configOptions.expCoeffsSolnApproach == SPARSE_GRID)
@@ -413,7 +411,7 @@ inline void OrthogPolyApproximation::compute_moments()
 inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
 {
   // all variables mode only supports first two moments
-  expansionMoments.sizeUninitialized(2); get_mean(x); get_variance(x);
+  expansionMoments.sizeUninitialized(2); mean(x); variance(x);
   //compute_numerical_moments(2, x); // TO DO
 }
 
@@ -519,7 +517,7 @@ multivariate_polynomial(const RealVector& xi, const UShortArray& indices)
   for (size_t i=0; i<numVars; ++i) {
     order_1d = indices[i];
     if (order_1d)
-      mvp *= polynomialBasis[i].get_value(xi[i], order_1d);
+      mvp *= polynomialBasis[i].type1_value(xi[i], order_1d);
   }
   return mvp;
 }
@@ -538,8 +536,8 @@ multivariate_polynomial_gradient(const RealVector& xi,
     // differentiation of product of 1D polynomials
     for (j=0; j<numVars; ++j)
       mvp_grad_i *= (j == i) ?
-	polynomialBasis[j].get_gradient(xi[j], indices[j]) :
-	polynomialBasis[j].get_value(xi[j],    indices[j]);
+	polynomialBasis[j].type1_gradient(xi[j], indices[j]) :
+	polynomialBasis[j].type1_value(xi[j],    indices[j]);
   }
   return mvpGradient;
 }
@@ -560,8 +558,8 @@ multivariate_polynomial_gradient(const RealVector& xi,
     // differentiation of product of 1D polynomials
     for (j=0; j<numVars; ++j)
       mvp_grad_i *= (j == deriv_index) ?
-	polynomialBasis[j].get_gradient(xi[j], indices[j]) :
-	polynomialBasis[j].get_value(xi[j],    indices[j]);
+	polynomialBasis[j].type1_gradient(xi[j], indices[j]) :
+	polynomialBasis[j].type1_value(xi[j],    indices[j]);
   }
   return mvpGradient;
 }

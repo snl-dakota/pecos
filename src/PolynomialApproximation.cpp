@@ -501,7 +501,7 @@ total_order_multi_index(const UShortArray& upper_bound,
 }
 
 
-/// TO DO: Add overloaded function to support integration over only ran vars
+/// TO DO: Add overloaded function to support integration over variable subset
 void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
 {
   // computes and stores the following moments:
@@ -528,28 +528,28 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
 
   size_t i, j, offset = 0, num_pts = dataPoints.size();
   bool anchor_pt = !anchorPoint.is_null();
-  const RealVector& wt_sets = driverRep->weight_sets();
+  const RealVector& t1_wts = driverRep->type1_weight_sets();
 
   // estimate 1st raw moment (mean)
   Real& mean = numericalMoments[0];
   if (anchor_pt) {
     offset = 1; num_pts += offset;
-    mean   = wt_sets[0] * anchorPoint.response_function();
+    mean  = t1_wts[0] * anchorPoint.response_function();
   }
   for (size_t i=offset; i<num_pts; ++i)
-    mean += wt_sets[i] * dataPoints[i].response_function();
+    mean += t1_wts[i] * dataPoints[i].response_function();
 
   // estimate central moments 2 through num_moments
   Real centered_fn, pow_fn;
   if (anchor_pt) {
     pow_fn = centered_fn = anchorPoint.response_function() - mean;
     for (j=1; j<num_moments; ++j)
-      { pow_fn *= centered_fn; numericalMoments[j] = wt_sets[0] * pow_fn; }
+      { pow_fn *= centered_fn; numericalMoments[j] = t1_wts[0] * pow_fn; }
   }
   for (i=offset; i<num_pts; ++i) {
     pow_fn = centered_fn = dataPoints[i].response_function() - mean;
     for (j=1; j<num_moments; ++j)
-      { pow_fn *= centered_fn; numericalMoments[j] += wt_sets[i] * pow_fn; }
+      { pow_fn *= centered_fn; numericalMoments[j] += t1_wts[i] * pow_fn; }
   }
 
   // standardize third and higher central moments, if present

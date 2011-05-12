@@ -69,8 +69,10 @@ public:
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
 
-  /// return weightSets
-  const RealVector& weight_sets() const;
+  /// return type1WeightSets
+  const RealVector& type1_weight_sets() const;
+  /// return type2WeightSets
+  const RealMatrix& type2_weight_sets() const;
 
   /// return collocRules
   const ShortArray& collocation_rules() const;
@@ -129,8 +131,15 @@ protected:
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
 
-  /// the set of weights associated with each point in the {TPQ,SSG,Cub} grid
-  RealVector weightSets;
+  /// the set of type1 weights (for integration of value interpolants)
+  /// associated with each point in the {TPQ,SSG,Cub} grid
+  RealVector type1WeightSets;
+  /// the set of type2 weights (for integration of gradient interpolants)
+  /// associated with each point in the {TPQ,SSG} grid
+  RealMatrix type2WeightSets;
+
+  /// flag indicating usage of compute1DType2Weights to define type2WeightSets
+  bool computeType2Weights;
 
   /// lookup for set of 1-D Genz-Keister quadrature orders
   static UShortArray orderGenzKeister;
@@ -163,8 +172,12 @@ IntegrationDriver::polynomial_basis() const
 { return (driverRep) ? driverRep->polynomialBasis : polynomialBasis; }
 
 
-inline const RealVector& IntegrationDriver::weight_sets() const
-{ return (driverRep) ? driverRep->weightSets : weightSets; }
+inline const RealVector& IntegrationDriver::type1_weight_sets() const
+{ return (driverRep) ? driverRep->type1WeightSets : type1WeightSets; }
+
+
+inline const RealMatrix& IntegrationDriver::type2_weight_sets() const
+{ return (driverRep) ? driverRep->type2WeightSets : type2WeightSets; }
 
 
 inline const ShortArray& IntegrationDriver::collocation_rules() const

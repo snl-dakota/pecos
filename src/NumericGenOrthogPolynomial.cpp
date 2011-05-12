@@ -427,7 +427,8 @@ inner_product(const RealVector& poly_coeffs1,
   default:
     PCerr << "Error: unsupported distribution type in NumericGenOrthog"
 	  << "Polynomial::inner_product()." << std::endl;
-    abort_handler(-1);                                                  break;
+    abort_handler(-1);
+    break;
   }
 }
 
@@ -440,13 +441,14 @@ hermite_unbounded_integral(const RealVector& poly_coeffs1,
   unsigned short quad_order = 170; // hardwired (could use adaptive loop)
   //quad_order = 175 has numerical problems -> nan's in recursion coeffs
   const RealArray& colloc_pts = hermite_poly.collocation_points(quad_order);
-  const RealArray& colloc_wts = hermite_poly.collocation_weights(quad_order);
+  const RealArray& colloc_wts
+    = hermite_poly.type1_collocation_weights(quad_order);
 
   Real sum = 0., v1;
   for (size_t i=0; i<quad_order; ++i) {
     const Real& gp_i = colloc_pts[i];
-    v1 = get_value(gp_i, poly_coeffs1); // cached due to update of const ref
-    sum += colloc_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
+    v1 = type1_value(gp_i, poly_coeffs1); // cached due to update of const ref
+    sum += colloc_wts[i] * v1 * type1_value(gp_i, poly_coeffs2)
         *  weight_fn(gp_i, distParams) / phi(gp_i);
   }
   return sum;
@@ -474,8 +476,8 @@ fejer_unbounded_integral(const RealVector& poly_coeffs1,
   for (size_t i=0; i<quad_order; ++i) {
     const Real& z_i = fejer_pts[i];
     z_sq = z_i * z_i; one_m_z_sq = 1. - z_sq; x_i = z_i / one_m_z_sq;
-    v1 = get_value(x_i, poly_coeffs1); // cached due to update of const ref
-    sum += fejer_wts[i] * v1 * get_value(x_i, poly_coeffs2)
+    v1 = type1_value(x_i, poly_coeffs1); // cached due to update of const ref
+    sum += fejer_wts[i] * v1 * type1_value(x_i, poly_coeffs2)
         *  weight_fn(x_i, distParams) * (1. + z_sq) / one_m_z_sq / one_m_z_sq;
   }
   // Notes on weighting: two different conceptual approaches
@@ -499,13 +501,14 @@ laguerre_semibounded_integral(const RealVector& poly_coeffs1,
   unsigned short quad_order = 95; // hardwired (could use adaptive loop)
   //quad_order = 100 has numerical problems: colloc_wts = inf
   const RealArray& colloc_pts = laguerre_poly.collocation_points(quad_order);
-  const RealArray& colloc_wts = laguerre_poly.collocation_weights(quad_order);
+  const RealArray& colloc_wts
+    = laguerre_poly.type1_collocation_weights(quad_order);
 
   Real sum = 0., v1;
   for (size_t i=0; i<quad_order; ++i) {
     const Real& gp_i = colloc_pts[i];
-    v1 = get_value(gp_i, poly_coeffs1); // cached: update of const ref
-    sum += colloc_wts[i] * v1 * get_value(gp_i, poly_coeffs2)
+    v1 = type1_value(gp_i, poly_coeffs1); // cached: update of const ref
+    sum += colloc_wts[i] * v1 * type1_value(gp_i, poly_coeffs2)
         *  weight_fn(gp_i, distParams) / std_exponential_pdf(gp_i);
   }
   return sum;
@@ -533,8 +536,8 @@ fejer_semibounded_integral(const RealVector& poly_coeffs1,
   for (size_t i=0; i<quad_order; ++i) {
     const Real& z_i = fejer_pts[i];
     one_m_z =  1. - z_i; x_i = (1. + z_i) / one_m_z;
-    v1 = get_value(x_i, poly_coeffs1); // cached due to update of const ref
-    sum += fejer_wts[i] * v1 * get_value(x_i, poly_coeffs2)
+    v1 = type1_value(x_i, poly_coeffs1); // cached due to update of const ref
+    sum += fejer_wts[i] * v1 * type1_value(x_i, poly_coeffs2)
         *  weight_fn(x_i, distParams) * 2. / (one_m_z * one_m_z);
   }
   // Notes on weighting: two different conceptual approaches
@@ -557,14 +560,15 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
   BasisPolynomial legendre_poly(LEGENDRE_ORTHOG);
   unsigned short quad_order = 50; // hardwired (could use adaptive loop)
   const RealArray& colloc_pts = legendre_poly.collocation_points(quad_order);
-  const RealArray& colloc_wts = legendre_poly.collocation_weights(quad_order);
+  const RealArray& colloc_wts
+    = legendre_poly.type1_collocation_weights(quad_order);
 
   Real sum = 0., unscaled_gp_i, v1, range_over_2 = (end - start) / 2.;
   for (size_t i=0; i<quad_order; ++i) {
     unscaled_gp_i = start + range_over_2 * (colloc_pts[i]+1.);
     // change of variables: dx/dz = range_over_2
-    v1 = get_value(unscaled_gp_i, poly_coeffs1); // cached: update of const ref
-    sum += colloc_wts[i] * v1 * get_value(unscaled_gp_i, poly_coeffs2)
+    v1 = type1_value(unscaled_gp_i, poly_coeffs1);// cached: update of const ref
+    sum += colloc_wts[i] * v1 * type1_value(unscaled_gp_i, poly_coeffs2)
         *  weight_fn(unscaled_gp_i, distParams);
   }
   return sum / std_uniform_pdf() * range_over_2;
@@ -591,8 +595,8 @@ cc_bounded_integral(const RealVector& poly_coeffs1,
   for (size_t i=0; i<quad_order; ++i) {
     unscaled_cc_i = start + range_over_2 * (cc_pts[i]+1.);
     // change of variables: dx/dz = range_over_2
-    v1 = get_value(unscaled_cc_i, poly_coeffs1); // cached: update of const ref
-    sum += cc_wts[i] * v1 * get_value(unscaled_cc_i, poly_coeffs2)
+    v1 = type1_value(unscaled_cc_i, poly_coeffs1);// cached: update of const ref
+    sum += cc_wts[i] * v1 * type1_value(unscaled_cc_i, poly_coeffs2)
         *  weight_fn(unscaled_cc_i, distParams);
   }
   // Notes on weighting: two different conceptual approaches
@@ -618,8 +622,8 @@ riemann_bounded_integral(const RealVector& poly_coeffs1,
     delta = (end-start)/num_partitions, x = start;
   for (unsigned int i=0; i<num_points; ++i) {
     w  = weight_fn(x, distParams);
-    v1 = get_value(x, poly_coeffs1); // cached due to update of const ref
-    i_sum += v1 * get_value(x, poly_coeffs2) * w;
+    v1 = type1_value(x, poly_coeffs1); // cached due to update of const ref
+    i_sum += v1 * type1_value(x, poly_coeffs2) * w;
     w_sum += w;
     x     += delta;
   }
@@ -647,8 +651,8 @@ riemann_bounded_integral(const RealVector& poly_coeffs1,
 #ifdef ADAPTIVE_DEBUG
       PCout << "x = " << x << " w = " << w << std::endl;
 #endif // ADAPTIVE_DEBUG
-      v1 = get_value(x, poly_coeffs1); // cached due to update of const ref
-      i_sum += v1 * get_value(x, poly_coeffs2) * w;
+      v1 = type1_value(x, poly_coeffs1); // cached due to update of const ref
+      i_sum += v1 * type1_value(x, poly_coeffs2) * w;
       w_sum += w;
       x     += delta;
     }
@@ -673,8 +677,8 @@ native_quadrature_integral(const RealVector& poly_coeffs1,
   size_t i, num_colloc_pts = collocPoints.size();
   for (i=0; i<num_colloc_pts; ++i) {
     const Real& gp_i = collocPoints[i];
-    v1 = get_value(gp_i, poly_coeffs1); // cached due to update of const ref
-    i_sum += v1 * get_value(gp_i, poly_coeffs2) * collocWeights[i];
+    v1 = type1_value(gp_i, poly_coeffs1); // cached due to update of const ref
+    i_sum += v1 * type1_value(gp_i, poly_coeffs2) * collocWeights[i];
   }
   return i_sum;
 }
@@ -697,16 +701,16 @@ const Real& NumericGenOrthogPolynomial::beta_recursion(unsigned short order)
 
 
 const Real& NumericGenOrthogPolynomial::
-get_value(const Real& x, unsigned short order)
+type1_value(const Real& x, unsigned short order)
 {
   if (polyCoeffs.size() <= order)
     solve_eigenproblem(order);
-  return get_value(x, polyCoeffs[order]);
+  return type1_value(x, polyCoeffs[order]);
 }
 
 
 const Real& NumericGenOrthogPolynomial::
-get_value(const Real& x, const RealVector& poly_coeffs)
+type1_value(const Real& x, const RealVector& poly_coeffs)
 {
   size_t num_terms = poly_coeffs.length();
   basisPolyValue = poly_coeffs[0];
@@ -717,16 +721,16 @@ get_value(const Real& x, const RealVector& poly_coeffs)
 
 
 const Real& NumericGenOrthogPolynomial::
-get_gradient(const Real& x, unsigned short order)
+type1_gradient(const Real& x, unsigned short order)
 {
   if (polyCoeffs.size() <= order)
     solve_eigenproblem(order);
-  return get_gradient(x, polyCoeffs[order]);
+  return type1_gradient(x, polyCoeffs[order]);
 }
 
 
 const Real& NumericGenOrthogPolynomial::
-get_gradient(const Real& x, const RealVector& poly_coeffs)
+type1_gradient(const Real& x, const RealVector& poly_coeffs)
 {
   // differentiate poly_coeffs with respect to x
   size_t num_terms = poly_coeffs.length();
@@ -762,12 +766,12 @@ collocation_points(unsigned short order)
 
 
 const RealArray& NumericGenOrthogPolynomial::
-collocation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // pull this out from default below since order=0 is initial colloc pts length
   if (order < 1) {
-    PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "NumericGenOrthogPolynomial::collocation_weights()." << std::endl;
+    PCerr << "Error: underflow in minimum quadrature order (1) in NumericGen"
+	  << "OrthogPolynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 

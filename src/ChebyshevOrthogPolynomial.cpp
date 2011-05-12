@@ -22,7 +22,7 @@
 namespace Pecos {
 
 const Real& ChebyshevOrthogPolynomial::
-get_value(const Real& x, unsigned short order)
+type1_value(const Real& x, unsigned short order)
 {
   switch (order) {
   case 0:
@@ -87,7 +87,7 @@ get_value(const Real& x, unsigned short order)
 
 
 const Real& ChebyshevOrthogPolynomial::
-get_gradient(const Real& x, unsigned short order)
+type1_gradient(const Real& x, unsigned short order)
 {
   switch (order) {
   case 0:
@@ -137,7 +137,7 @@ get_gradient(const Real& x, unsigned short order)
       dTdx_nminus1 = x*(1024.*x2*x4 - 1536.*x4 + 640.*x2 - 64.);    // P'_8
     for (size_t i=9; i<order; i++) {
       // dTdx_nplus1:
-      basisPolyGradient	= 2.*x*dTdx_n + 2.*get_value(x,i) - dTdx_nminus1;
+      basisPolyGradient	= 2.*x*dTdx_n + 2.*type1_value(x,i) - dTdx_nminus1;
       if (i != order-1) {
 	dTdx_nminus1 = dTdx_n;
 	dTdx_n       = basisPolyGradient;
@@ -162,8 +162,8 @@ collocation_points(unsigned short order)
 {
   // pull this out from default below since order=0 is initial colloc pts length
   if (order < 1) {
-    PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "ChebyshevOrthogPolynomial::collocation_points()." << std::endl;
+    PCerr << "Error: underflow in minimum quadrature order (1) in Chebyshev"
+	  << "OrthogPolynomial::collocation_points()." << std::endl;
     abort_handler(-1);
   }
 
@@ -177,8 +177,8 @@ collocation_points(unsigned short order)
     else if (collocRule == FEJER2)
       webbur::fejer2_compute_points(order, &collocPoints[0]);
     else {
-      PCerr << "Error: unsupported collocation point type in "
-	    << "ChebyshevOrthogPolynomial::collocation_points()." << std::endl;
+      PCerr << "Error: unsupported collocation point type in ChebyshevOrthog"
+	    << "Polynomial::collocation_points()." << std::endl;
       abort_handler(-1);
     }
 #else
@@ -193,15 +193,15 @@ collocation_points(unsigned short order)
 
 
 const RealArray& ChebyshevOrthogPolynomial::
-collocation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // The sums of the weights = 1, which is the integral of the density
   // function 1/2 over the support range of [-1,+1].  These differ from
   // VPISparseGrid by a constant factor of 1/2.
 
   if (order < 1) {
-    PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "ChebyshevOrthogPolynomial::collocation_weights()." << std::endl;
+    PCerr << "Error: underflow in minimum quadrature order (1) in Chebyshev"
+	  << "OrthogPolynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -215,15 +215,16 @@ collocation_weights(unsigned short order)
     else if (collocRule == FEJER2)
       webbur::fejer2_compute_weights(order, &collocWeights[0]);
     else {
-      PCerr << "Error: unsupported collocation weight type in "
-	    << "ChebyshevOrthogPolynomial::collocation_weights()." << std::endl;
+      PCerr << "Error: unsupported collocation weight type in ChebyshevOrthog"
+	    << "Polynomial::type1_collocation_weights()." << std::endl;
       abort_handler(-1);
     }
     for (size_t i=0; i<order; i++)
       collocWeights[i] *= wtFactor;
 #else
     PCerr << "Error: configuration with VPISparseGrid package required in "
-	  << "ChebyshevOrthogPolynomial::collocation_weights()." << std::endl;
+	  << "ChebyshevOrthogPolynomial::type1_collocation_weights()."
+	  << std::endl;
     abort_handler(-1);
 #endif
   }

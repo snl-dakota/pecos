@@ -166,39 +166,39 @@ BasisApproximation::~BasisApproximation()
 }
 
 
-const Real& BasisApproximation::get_value(const RealVector& x)
+const Real& BasisApproximation::value(const RealVector& x)
 {
   if (!basisApproxRep) {
-    PCerr << "Error: get_value() not available for this basis approximation "
+    PCerr << "Error: value() not available for this basis approximation "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
 
-  return basisApproxRep->get_value(x);
+  return basisApproxRep->value(x);
 }
 
 
-const RealVector& BasisApproximation::get_gradient(const RealVector& x)
+const RealVector& BasisApproximation::gradient(const RealVector& x)
 {
   if (!basisApproxRep) {
-    PCerr << "Error: get_gradient() not available for this basis approximation "
+    PCerr << "Error: gradient() not available for this basis approximation "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
 
-  return basisApproxRep->get_gradient(x);
+  return basisApproxRep->gradient(x);
 }
 
 
-const RealSymMatrix& BasisApproximation::get_hessian(const RealVector& x)
+const RealSymMatrix& BasisApproximation::hessian(const RealVector& x)
 {
   if (!basisApproxRep) {
-    PCerr << "Error: get_hessian() not available for this basis approximation "
+    PCerr << "Error: hessian() not available for this basis approximation "
 	  << "type." << std::endl;
     abort_handler(-1);
   }
     
-  return basisApproxRep->get_hessian(x);
+  return basisApproxRep->hessian(x);
 }
 
 

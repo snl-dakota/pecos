@@ -43,8 +43,7 @@ public:
   // 
 
   /// Standard constructor
-  HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, 
-		    short basisType_=PIECEWISE_LINEAR_INTERP);
+  HierarchPWInterpPolynomial(RefinablePointSet& pointSet_);
     
   /// Destructor
   virtual ~HierarchPWInterpPolynomial();
@@ -53,11 +52,11 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  const Real& get_type1_value(const Real& x, const unsigned int i);
-  const Real& get_type2_value(const Real& x, const unsigned int i);
+  const Real& type1_value(const Real& x, const unsigned int i);
+  const Real& type2_value(const Real& x, const unsigned int i);
 
-  const Real& get_type1_gradient(const Real& x, const unsigned int i);
-  const Real& get_type2_gradient(const Real& x, const unsigned int i);
+  const Real& type1_gradient(const Real& x, const unsigned int i);
+  const Real& type2_gradient(const Real& x, const unsigned int i);
        
 protected:
     

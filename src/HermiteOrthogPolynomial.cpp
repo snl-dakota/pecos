@@ -21,7 +21,7 @@ namespace Pecos {
 
 
 const Real& HermiteOrthogPolynomial::
-get_value(const Real& x, unsigned short order)
+type1_value(const Real& x, unsigned short order)
 {
   switch (order) {
   case 0:
@@ -91,9 +91,9 @@ get_value(const Real& x, unsigned short order)
 
 
 const Real& HermiteOrthogPolynomial::
-get_gradient(const Real& x, unsigned short order)
+type1_gradient(const Real& x, unsigned short order)
 { 
-  basisPolyGradient = (order) ? order*get_value(x, order-1): 0;
+  basisPolyGradient = (order) ? order*type1_value(x, order-1): 0;
   return basisPolyGradient;
 }
 
@@ -247,12 +247,12 @@ collocation_points(unsigned short order)
 
 
 const RealArray& HermiteOrthogPolynomial::
-collocation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
-    PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "HermiteOrthogPolynomial::collocation_weights()." << std::endl;
+    PCerr << "Error: underflow in minimum quadrature order (1) in Hermite"
+	  << "OrthogPolynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -290,7 +290,8 @@ collocation_weights(unsigned short order)
 #else
     if (collocRule == GENZ_KEISTER) {
       PCerr << "Error: VPISparseGrid required for Genz-Keister points in "
-	    << "HermiteOrthogPolynomial::collocation_weights()." << std::endl;
+	    << "HermiteOrthogPolynomial::type1_collocation_weights()."
+	    << std::endl;
       abort_handler(-1);
     }
     else if (collocRule == GAUSS_HERMITE) {
@@ -347,7 +348,7 @@ collocation_weights(unsigned short order)
 	const RealArray& colloc_pts = collocation_points(order);
 	for (size_t i=0; i<order; i++)
 	  collocWeights[i] = factorial(order)/std::pow(order*
-	    get_value(colloc_pts[i], order-1), 2);
+	    type1_value(colloc_pts[i], order-1), 2);
 	break;
       }
     }
@@ -357,8 +358,8 @@ collocation_weights(unsigned short order)
   }
 
   if (rule_err) {
-    PCerr << "Error: unsupported collocation rule in "
-	  << "HermiteOrthogPolynomial::collocation_weights()." << std::endl;
+    PCerr << "Error: unsupported collocation rule in HermiteOrthogPolynomial::"
+	  << "type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 

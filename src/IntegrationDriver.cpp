@@ -36,7 +36,7 @@ UShortArray IntegrationDriver::precGenzKeister;
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~IntegrationDriver). */
 IntegrationDriver::IntegrationDriver(BaseConstructor):
-  driverRep(NULL), referenceCount(1)
+  computeType2Weights(false), driverRep(NULL), referenceCount(1)
 {
   if (orderGenzKeister.empty()) {
     orderGenzKeister.resize(5); //orderGenzKeister = { 1, 3, 9, 19, 35 };
@@ -218,6 +218,7 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
 		 bool piecewise_basis,      bool equidistant_rules, 
 		 bool use_derivs,          short nested_uniform_rule)
 {
+  numVars = u_types.size();
   ShortArray basis_types;
   PolynomialApproximation::distribution_types(u_types, piecewise_basis,
 					      use_derivs, basis_types);
@@ -226,6 +227,10 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
 					      nested_uniform_rule, collocRules);
   PolynomialApproximation::distribution_basis(basis_types, collocRules,
 					      polynomialBasis);
+  for (size_t i=0; i<numVars; i++)
+    if (basis_types[i] == HERMITE_INTERP ||
+	basis_types[i] == PIECEWISE_CUBIC_INTERP)
+      computeType2Weights = true;
 }
 
 
@@ -233,9 +238,17 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
 void IntegrationDriver::
 initialize_rules(const std::vector<BasisPolynomial>& poly_basis)
 {
+  numVars         = poly_basis.size();
+  polynomialBasis = poly_basis; // shallow copy
   collocRules.resize(numVars);
-  for (size_t i=0; i<numVars; i++)
+  for (size_t i=0; i<numVars; i++) {
+    // update collocRules
     collocRules[i] = poly_basis[i].collocation_rule();
+    // define computeType2Weights
+    short basis_type = poly_basis[i].basis_type();
+    if (basis_type == HERMITE_INTERP || basis_type == PIECEWISE_CUBIC_INTERP)
+      computeType2Weights = true;
+  }
 }
 
 
@@ -253,7 +266,7 @@ compute_tensor_grid(const UShortArray& quad_order, RealMatrix& variable_sets,
   }
   for (i=0; i<numVars; ++i) {
     pts_1d[i] = polynomialBasis[i].collocation_points(quad_order[i]);
-    wts_1d[i] = polynomialBasis[i].collocation_weights(quad_order[i]);
+    wts_1d[i] = polynomialBasis[i].type1_collocation_weights(quad_order[i]);
   }
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)

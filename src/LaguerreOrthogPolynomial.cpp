@@ -22,7 +22,7 @@
 namespace Pecos {
 
 const Real& LaguerreOrthogPolynomial::
-get_value(const Real& x, unsigned short order)
+type1_value(const Real& x, unsigned short order)
 {
   switch (order) {
   case 0:
@@ -107,14 +107,14 @@ get_value(const Real& x, unsigned short order)
 
 
 const Real& LaguerreOrthogPolynomial::
-get_gradient(const Real& x, unsigned short order)
+type1_gradient(const Real& x, unsigned short order)
 { 
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
   //basisPolyGradient = (order) ?
-  //  order*(get_value(x, order) - get_value(x, order-1))/x : 0.;
+  //  order*(type1_value(x, order) - type1_value(x, order-1))/x : 0.;
   if (order) { // be careful with reference to changing basisPolyValue
-    Real L_n = get_value(x, order), L_nminus1 = get_value(x, order-1);
+    Real L_n = type1_value(x, order), L_nminus1 = type1_value(x, order-1);
     basisPolyGradient = order*(L_n - L_nminus1)/x;
   }
   else
@@ -163,7 +163,7 @@ get_gradient(const Real& x, unsigned short order)
       dLdx_nminus1 = (-x2*x2 + 20.*x2*x - 120.*x2 + 240.*x - 120.)/24.; // L'_5
     for (size_t i=6; i<order; i++) {
       basisPolyGradient // dLdx_nplus1
-	= ( (2.*i+1.-x)*dLdx_n - get_value(x,i) - i*dLdx_nminus1 ) / (i+1.);
+	= ( (2.*i+1.-x)*dLdx_n - type1_value(x,i) - i*dLdx_nminus1 ) / (i+1.);
       if (i != order-1) {
 	dLdx_nminus1 = dLdx_n;
 	dLdx_n       = basisPolyGradient;
@@ -290,12 +290,12 @@ collocation_points(unsigned short order)
 
 
 const RealArray& LaguerreOrthogPolynomial::
-collocation_weights(unsigned short order)
+type1_collocation_weights(unsigned short order)
 {
   // pull this outside block below since order=0 is initial colloc wts length
   if (order < 1) {
-    PCerr << "Error: underflow in minimum quadrature order (1) in "
-	  << "LaguerreOrthogPolynomial::collocation_weights()." << std::endl;
+    PCerr << "Error: underflow in minimum quadrature order (1) in Laguerre"
+	  << "OrthogPolynomial::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
@@ -389,7 +389,7 @@ collocation_weights(unsigned short order)
       const RealArray& colloc_pts = collocation_points(order);
       for (size_t i=0; i<order; i++) {
 	const Real& x_i = colloc_pts[i];
-	collocWeights[i] = x_i/std::pow(order*get_value(x_i, order-1), 2);
+	collocWeights[i] = x_i/std::pow(order*type1_value(x_i, order-1), 2);
       }
       break;
     }
