@@ -84,9 +84,10 @@ public:
   /// update collocPts1D and collocWts1D from pts_1d and wts_1d
   void update_1d_collocation_points_weights(const UShortArray& trial_set,
 					    const Real2DArray& pts_1d,
-					    const Real2DArray& wts_1d);
+					    const Real2DArray& t1_wts_1d,
+					    const Real2DArray& t2_wts_1d);
 
-  /// define a1Points/a1Weights based on the reference grid
+  /// define a1{Points,Type1Weights,Type2Weights} based on the reference grid
   void reference_unique();
   /// define a2Points and update collocIndices and uniqueIndexMapping
   /// for the trailing index set within smolyakMultiIndex
@@ -204,8 +205,10 @@ public:
 
   /// return collocPts1D
   const Real3DArray& collocation_points_array()  const;
-  /// return collocWts1D
+  /// return type1CollocWts1D
   const Real3DArray& type1_collocation_weights_array() const;
+  /// return type2CollocWts1D
+  const Real3DArray& type2_collocation_weights_array() const;
 
 private:
 
@@ -230,9 +233,11 @@ private:
   /// within webbur::sgmg() and webbur::sgmga() routines
   void initialize_api_arrays(short growth_rate);
 
-  /// convenience function for defining {a1,a2}{Points,Weights}
+  /// convenience function for defining
+  /// {a1,a2}{Points,Type1Weights,Type2Weights}
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,
-				     RealMatrix& pts, RealVector& wts);
+				     RealMatrix& pts, RealVector& t1_wts,
+				     RealMatrix& t2_wts);
   /// convenience function for updating sparse points/weights from a set of
   /// aggregated tensor points/weights
   void update_sparse_points(size_t start_index, int new_index_offset,
@@ -345,8 +350,10 @@ private:
   RealVector r2Vec;     ///< distance values for sorting in set 2 (increment)
   RealMatrix a1Points;  ///< array of collocation points in set 1 (reference)
   RealMatrix a2Points;  ///< array of collocation points in set 2 (increment)
-  RealVector a1Weights; ///< array of integration weights in set 1 (reference)
-  RealVector a2Weights; ///< array of integration weights in set 2 (increment)
+  RealVector a1Type1Weights; ///< vector of type1 weights in set 1 (reference)
+  RealMatrix a1Type2Weights; ///< matrix of type2 weights in set 1 (reference)
+  RealVector a2Type1Weights; ///< vector of type1 weights in set 2 (increment)
+  RealMatrix a2Type2Weights; ///< matrix of type2 weights in set 2 (increment)
   IntArray sortIndex1;  ///< ascending sort index for set 1 (reference)
   IntArray sortIndex2;  ///< ascending sort index for set 2 (increment)
   IntArray uniqueSet1;  ///< index within a1 (reference set) of unique points
@@ -356,17 +363,19 @@ private:
   BoolDeque isUnique1;  ///< key to unique points in set 1 (reference)
   BoolDeque isUnique2;  ///< key to unique points in set 2 (increment)
 
-  /// num_levels_per_var x numContinuousVars sets of 1D collocation points
+  /// num_levels_per_var x numVars sets of 1D collocation points
   Real3DArray collocPts1D;
-  /// num_levels_per_var x numContinuousVars sets of 1D collocation weights
+  /// num_levels_per_var x numVars sets of 1D type1 collocation weights
   Real3DArray type1CollocWts1D;
+  /// num_levels_per_var x numVars sets of 1D type2 collocation weights
+  Real3DArray type2CollocWts1D;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<FPType> compute1DPoints;
-  /// array of pointers to collocation weight evaluation functions
+  /// array of pointers to type1 collocation weight evaluation functions
   std::vector<FPType> compute1DType1Weights;
-  /// array of pointers to collocation weight evaluation functions
-  std::vector<std::vector<FPType> > compute1DType2Weights;
+  // 2D array of pointers to type2 collocation weight evaluation functions
+  //std::vector<std::vector<FPType> > compute1DType2Weights;
 };
 
 
@@ -451,6 +460,11 @@ inline const Real3DArray& SparseGridDriver::collocation_points_array() const
 inline const Real3DArray& SparseGridDriver::
 type1_collocation_weights_array() const
 { return type1CollocWts1D; }
+
+
+inline const Real3DArray& SparseGridDriver::
+type2_collocation_weights_array() const
+{ return type2CollocWts1D; }
 
 
 inline void SparseGridDriver::allocate_smolyak_arrays()

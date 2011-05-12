@@ -111,8 +111,10 @@ protected:
 
   /// compute variable and weight sets for a tensor-product grid
   void compute_tensor_grid(const UShortArray& order, RealMatrix& variable_sets,
-			   RealVector& weight_sets, UShort2DArray& colloc_key,
-			   Real2DArray& pts_1d, Real2DArray& wts_1d);
+			   RealVector& t1_weight_sets,
+			   RealMatrix& t2_weight_sets,
+			   UShort2DArray& colloc_key, Real2DArray& pts_1d,
+			   Real2DArray&   t1_wts_1d,  Real2DArray& t2_wts_1d);
 
   //
   //- Heading: Data
@@ -135,7 +137,7 @@ protected:
   /// associated with each point in the {TPQ,SSG,Cub} grid
   RealVector type1WeightSets;
   /// the set of type2 weights (for integration of gradient interpolants)
-  /// associated with each point in the {TPQ,SSG} grid
+  /// for each derivative component and for each point in the {TPQ,SSG} grid
   RealMatrix type2WeightSets;
 
   /// flag indicating usage of compute1DType2Weights to define type2WeightSets

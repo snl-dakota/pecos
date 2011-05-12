@@ -227,6 +227,36 @@ void copy_data(const std::deque<ScalarType>& deq, ScalarType* ptr,
 }
 
 
+/// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to
+/// ith row of Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>
+template <typename OrdinalType, typename ScalarType> 
+void copy_row(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv,
+	      Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>& sdm,
+	      OrdinalType row)
+{
+  OrdinalType i, len = sdv.length();
+  //if (sdm.numCols() != len)
+  //  PCerr << std::endl;
+  for (i=0; i<len; ++i)
+    sdm(row, i) = sdv[i];
+}
+
+
+/// copy ith row of Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>
+/// to Teuchos::SerialDenseVector<OrdinalType, ScalarType>
+template <typename OrdinalType, typename ScalarType> 
+void copy_row(const Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>& sdm,
+	      OrdinalType row,
+	      const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv)
+{
+  OrdinalType i, len = sdm.numCols();
+  if (sdv.length() != len)
+    sdv.sizeUninitialized(len);
+  for (OrdinalType i=0; i<len; ++i)
+    sdv[i] = sdm(row, i);
+}
+
+
 /// std::ostream write for Teuchos::SerialDenseVector
 template <typename OrdinalType, typename ScalarType>
 void write_data(std::ostream& s,

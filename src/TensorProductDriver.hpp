@@ -65,8 +65,10 @@ public:
 
   /// return collocPts1D
   const Real2DArray& collocation_points_array()  const;
-  /// return collocWts1D
+  /// return type1CollocWts1D
   const Real2DArray& type1_collocation_weights_array() const;
+  /// return type2CollocWts1D
+  const Real2DArray& type2_collocation_weights_array() const;
 
   /// invoke initialize_rules() to set collocation rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
@@ -94,10 +96,12 @@ private:
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
 
-  /// numContinuousVars sets of 1D collocation points
+  /// numVars sets of 1D collocation points
   Real2DArray collocPts1D;
-  /// numContinuousVars sets of 1D type1 collocation weights
+  /// numVars sets of 1D type1 collocation weights
   Real2DArray type1CollocWts1D;
+  /// numVars sets of 1D type2 collocation weights
+  Real2DArray type2CollocWts1D;
 };
 
 
@@ -138,6 +142,11 @@ inline const Real2DArray& TensorProductDriver::collocation_points_array() const
 inline const Real2DArray& TensorProductDriver::
 type1_collocation_weights_array() const
 { return type1CollocWts1D; }
+
+
+inline const Real2DArray& TensorProductDriver::
+type2_collocation_weights_array() const
+{ return type2CollocWts1D; }
 
 
 inline int TensorProductDriver::grid_size()

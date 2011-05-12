@@ -253,37 +253,53 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis)
 
 
 void IntegrationDriver::
-compute_tensor_grid(const UShortArray& quad_order, RealMatrix& variable_sets,
-		    RealVector& weight_sets, UShort2DArray& colloc_key,
-		    Real2DArray& pts_1d, Real2DArray& wts_1d)
+compute_tensor_grid(const UShortArray& quad_order, RealMatrix&  variable_sets,
+		    RealVector&    t1_weight_sets, RealMatrix&  t2_weight_sets,
+		    UShort2DArray& colloc_key,     Real2DArray& pts_1d,
+		    Real2DArray&   t1_wts_1d,      Real2DArray& t2_wts_1d)
 {
-  size_t i, j, num_colloc_pts = 1;
+  size_t i, j, k, num_colloc_pts = 1;
   for (i=0; i<numVars; ++i)
     num_colloc_pts *= quad_order[i];
-  if (pts_1d.empty() || wts_1d.empty()) {
+  if (pts_1d.empty())
     pts_1d.resize(numVars);
-    wts_1d.resize(numVars);
-  }
+  if (t1_wts_1d.empty())
+    t1_wts_1d.resize(numVars);
+  if (computeType2Weights && t2_wts_1d.empty())
+    t2_wts_1d.resize(numVars);
   for (i=0; i<numVars; ++i) {
-    pts_1d[i] = polynomialBasis[i].collocation_points(quad_order[i]);
-    wts_1d[i] = polynomialBasis[i].type1_collocation_weights(quad_order[i]);
+    pts_1d[i]    = polynomialBasis[i].collocation_points(quad_order[i]);
+    t1_wts_1d[i] = polynomialBasis[i].type1_collocation_weights(quad_order[i]);
+    if (computeType2Weights)
+      t2_wts_1d[i]
+	= polynomialBasis[i].type2_collocation_weights(quad_order[i]);
   }
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
   // > project 1-D colloc point arrays (of potentially different type and order)
   //   into an n-dimensional stencil
   // > compute and store products of 1-D colloc weights at each point in stencil
-  weight_sets.sizeUninitialized(num_colloc_pts);
+  t1_weight_sets.sizeUninitialized(num_colloc_pts);
+  if (computeType2Weights)
+    t2_weight_sets.shapeUninitialized(numVars, num_colloc_pts);
   variable_sets.shapeUninitialized(numVars, num_colloc_pts);//Teuchos: col major
   colloc_key.resize(num_colloc_pts);
   UShortArray colloc_indices(numVars, 0);
-  for (i=0; i<num_colloc_pts; i++) {
-    Real& wt_i = weight_sets[i];
-    Real* pt_i = variable_sets[i]; // column vector i
-    wt_i = 1.0;
-    for (j=0; j<numVars; j++) {
-      pt_i[j] = pts_1d[j][colloc_indices[j]];
-      wt_i   *= wts_1d[j][colloc_indices[j]];
+  for (i=0; i<num_colloc_pts; ++i) {
+    Real& t1_wt_i = t1_weight_sets[i]; t1_wt_i = 1.;
+    Real*    pt_i = variable_sets[i]; // column vector i
+    for (j=0; j<numVars; ++j) {
+      pt_i[j]  =    pts_1d[j][colloc_indices[j]];
+      t1_wt_i *= t1_wts_1d[j][colloc_indices[j]];
+    }
+    if (computeType2Weights) {
+      Real* t2_wt_i = t2_weight_sets[i]; // column vector i
+      for (j=0; j<numVars; ++j) {
+	Real& t2_wt_ij = t2_wt_i[j]; t2_wt_ij = 1.;
+	for (k=0; k<numVars; ++k)
+	  t2_wt_ij *= (k==j) ? t2_wts_1d[k][colloc_indices[k]] :
+	                       t1_wts_1d[k][colloc_indices[k]];
+      }
     }
     colloc_key[i] = colloc_indices;
     // increment the n-dimensional collocation point index set

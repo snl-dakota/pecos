@@ -56,8 +56,9 @@ void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
   // ----------------------------------------------
   // Get collocation points and integration weights
   // ----------------------------------------------
-  compute_tensor_grid(quadOrder, variable_sets, type1WeightSets, collocKey,
-		      collocPts1D, type1CollocWts1D);
+  compute_tensor_grid(quadOrder, variable_sets, type1WeightSets,
+		      type2WeightSets, collocKey, collocPts1D,
+		      type1CollocWts1D, type2CollocWts1D);
 }
 
 } // namespace Pecos
