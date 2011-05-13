@@ -43,12 +43,19 @@ public:
   //- Heading: Constructor and Destructor
   // 
 
-  /// Standard constructor
-  HierarchPWInterpPolynomial(RefinablePointSet& pointSet_);
-  /// Alternate constructor
+  // These forms preferred for use from BasisPolynomial::get_polynomial():
+  //
+  // Default constructor (can't do due to reference init)
+  //HierarchPWInterpPolynomial();
+  // Standard constructor (can't do due to reference init)
+  //HierarchPWInterpPolynomial(short basisPolyType_,
+  //			       short collocRule_ = CLENSHAW_CURTIS);
+
+  /// constructor with point set
   HierarchPWInterpPolynomial(RefinablePointSet& pointSet_,
-			     short basisPolyType_);
-    
+			     short basisPolyType_ = PIECEWISE_LINEAR_INTERP,
+			     short    collocRule_ = CLENSHAW_CURTIS);
+
   /// Destructor
   virtual ~HierarchPWInterpPolynomial();
 
@@ -74,6 +81,28 @@ protected:
 private:
 
 }; //End class definition
+
+
+//inline HierarchPWInterpPolynomial::HierarchPWInterpPolynomial():
+//  PiecewiseInterpPolynomial()
+//{ }
+
+//inline HierarchPWInterpPolynomial::
+//HierarchPWInterpPolynomial(short basisPolyType_, short collocRule_):
+//  PiecewiseInterpPolynomial(basisPolyType_, collocRule_))
+//{ }
+
+/// throws an exception if left_end_ >= right_end_.
+inline HierarchPWInterpPolynomial::
+HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, short basisPolyType_,
+			   short collocRule_):
+  PiecewiseInterpPolynomial(pointSet_.get_interp_points(), basisPolyType_,
+			    collocRule_),
+  pointSet(pointSet_)
+{ }
+
+inline HierarchPWInterpPolynomial::~HierarchPWInterpPolynomial()
+{ }
 
 } //End namespace Pecos
 

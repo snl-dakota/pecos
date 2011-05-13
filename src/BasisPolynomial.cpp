@@ -86,45 +86,58 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
 #endif
 
   BasisPolynomial* polynomial;
+  // In orthogonal polynomial and global interpolation polynomial cases,
+  // basisPolyType is not available at construct time, but is thereafter.
   switch (poly_type) {
   case NO_POLY:
     polynomial = NULL;                                                    break;
   case HERMITE_ORTHOG:  // var_type == "normal"
     polynomial = (rule) ? new HermiteOrthogPolynomial(rule)
-                        : new HermiteOrthogPolynomial();                  break;
+                        : new HermiteOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case LEGENDRE_ORTHOG: // var_type == "uniform"
     polynomial = (rule) ? new LegendreOrthogPolynomial(rule)
-                        : new LegendreOrthogPolynomial();                 break;
+                        : new LegendreOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case LAGUERRE_ORTHOG: // var_type == "exponential"
-    polynomial = new LaguerreOrthogPolynomial();                          break;
+    polynomial = new LaguerreOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case JACOBI_ORTHOG:   // var_type == "beta"
-    polynomial = new JacobiOrthogPolynomial();                            break;
+    polynomial = new JacobiOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case GEN_LAGUERRE_ORTHOG: // var_type == "gamma"
-    polynomial = new GenLaguerreOrthogPolynomial();                       break;
+    polynomial = new GenLaguerreOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case CHEBYSHEV_ORTHOG: // for Clenshaw-Curtis and Fejer
     polynomial = (rule) ? new ChebyshevOrthogPolynomial(rule)
-                        : new ChebyshevOrthogPolynomial();                break;
+                        : new ChebyshevOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case NUM_GEN_ORTHOG:
-    polynomial = new NumericGenOrthogPolynomial();                        break;
+    polynomial = new NumericGenOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case LAGRANGE_INTERP:
-    polynomial = new LagrangeInterpPolynomial();                          break;
+    polynomial = new LagrangeInterpPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   //case HERMITE_INTERP:
-  //  polynomial = new HermiteInterpPolynomial();                         break;
+  //  polynomial = new HermiteInterpPolynomial();
+  //  if (polynomial) polynomial->basisPolyType = poly_type;              break;
   // PIECEWISE options include poly order, point type, and point data order:
   // LINEAR/QUADRATIC/CUBIC covers poly order, rule covers EQUIDISTANT/GENERAL
   // point type, and data order is inferred from poly order (grads for CUBIC).
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
   case PIECEWISE_CUBIC_INTERP:
-    polynomial = (rule) ? new PiecewiseInterpPolynomial(rule)
-                        : new PiecewiseInterpPolynomial();                break;
+    //if (hierarch) // TO DO; also need RefinablePointSet
+    //  polynomial = (rule) ? new HierarchPWInterpPolynomial(poly_type, rule)
+    //	                    : new HierarchPWInterpPolynomial(poly_type);
+    //else
+      polynomial = (rule) ? new PiecewiseInterpPolynomial(poly_type, rule)
+	                  : new PiecewiseInterpPolynomial(poly_type);
+    break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
 	 << std::endl;
     polynomial = NULL;                                                    break;
   }
-  // Note: basisPolyType is not available at construct time, but is thereafter
-  if (polynomial)
-    polynomial->basisPolyType = poly_type;
   return polynomial;
 }
 

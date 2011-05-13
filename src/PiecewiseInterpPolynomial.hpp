@@ -36,10 +36,12 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  /// constructor with rule argument
-  PiecewiseInterpPolynomial(short rule = NEWTON_COTES);
-  /// constructor with rule and set of points to interpolate
-  PiecewiseInterpPolynomial(const RealArray& interp_pts,
+  // default constructor
+  PiecewiseInterpPolynomial();
+  /// constructor with poly_type and rule arguments
+  PiecewiseInterpPolynomial(short poly_type, short rule = NEWTON_COTES);
+  /// constructor with poly_type, rule, and set of points to interpolate
+  PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
 			    short rule = NEWTON_COTES);
   /// destructor
   ~PiecewiseInterpPolynomial();
@@ -86,15 +88,22 @@ private:
 };
 
 
-inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial(short rule):
-  InterpolationPolynomial(), collocRule(rule)
-{ }
+inline PiecewiseInterpPolynomial::PiecewiseInterpPolynomial():
+  InterpolationPolynomial(), collocRule(NEWTON_COTES)
+{ basisPolyType = PIECEWISE_LINEAR_INTERP; }
 
 
 inline PiecewiseInterpPolynomial::
-PiecewiseInterpPolynomial(const RealArray& interp_pts, short rule):
+PiecewiseInterpPolynomial(short poly_type, short rule):
+  InterpolationPolynomial(), collocRule(rule)
+{ basisPolyType = poly_type; }
+
+
+inline PiecewiseInterpPolynomial::
+PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
+			  short rule):
   InterpolationPolynomial(interp_pts), collocRule(rule)
-{ }
+{ basisPolyType = poly_type; }
 
 
 inline PiecewiseInterpPolynomial::~PiecewiseInterpPolynomial()

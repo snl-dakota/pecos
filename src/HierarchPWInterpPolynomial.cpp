@@ -16,20 +16,6 @@
 
 namespace Pecos {
 
-/// Default constructor throws an exception if left_end_ >= right_end_.
-HierarchPWInterpPolynomial::
-HierarchPWInterpPolynomial(RefinablePointSet& pointSet_):
-  PiecewiseInterpPolynomial(CLENSHAW_CURTIS), pointSet(pointSet_)
-{ interpPts = (pointSet.get_interp_points()); }
-
-HierarchPWInterpPolynomial::
-HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, short basisPolyType_):
-  PiecewiseInterpPolynomial(CLENSHAW_CURTIS), pointSet(pointSet_)
-{ interpPts = (pointSet.get_interp_points()); basisPolyType = basisPolyType_; }
-
-HierarchPWInterpPolynomial::~HierarchPWInterpPolynomial()
-{ }
-
 /// Point evaluation of a basis element.
 const Real& HierarchPWInterpPolynomial::
 type1_value(const Real& x, const unsigned int i) 
