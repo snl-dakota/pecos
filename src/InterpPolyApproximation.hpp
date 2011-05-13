@@ -36,7 +36,7 @@ public:
   //
 
   /// default constructor
-  InterpPolyApproximation(short basis_type, size_t num_vars);
+  InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs);
   /// destructor
   ~InterpPolyApproximation();
 
@@ -277,8 +277,9 @@ private:
 
 
 inline InterpPolyApproximation::
-InterpPolyApproximation(short basis_type, size_t num_vars):
-  PolynomialApproximation(num_vars), numCollocPts(0), basisType(basis_type)
+InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs):
+  PolynomialApproximation(num_vars, use_derivs), numCollocPts(0),
+  basisType(basis_type)
 { }
 
 

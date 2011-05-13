@@ -17,7 +17,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
-//#define INTERPOLATION_TEST
+#define INTERPOLATION_TEST
 
 
 namespace Pecos {
@@ -209,10 +209,25 @@ void InterpPolyApproximation::compute_coefficients()
   // SSG with fully nested rules, but will exhibit interpolation error
   // for SSG with other rules.
   it = dataPoints.begin();
-  for (i=offset; i<numCollocPts; ++i, ++it)
-    PCout << "Colloc pt " << i+1 << ": coeff = " << expansionType1Coeffs[i]
-	  << " interpolation error = " << std::abs(expansionType1Coeffs[i] -
-	     value(it->continuous_variables())) << '\n';
+  for (i=offset; i<numCollocPts; ++i, ++it) {
+    const Real& coeff1 = expansionType1Coeffs[i];
+    const Real&    val = value(it->continuous_variables());
+    PCout << "Colloc pt " << std::setw(3) << i+1
+	  << ": truth value  = " << std::setw(WRITE_PRECISION+7) << coeff1
+	  << " interpolant = "   << std::setw(WRITE_PRECISION+7) << val
+	  << " error = " << std::setw(WRITE_PRECISION+7)
+	  << std::abs(coeff1 - val) << '\n';
+    if (configOptions.useDerivs) {
+      const Real*     coeff2 = expansionType2Coeffs[i];
+      const RealVector& grad = gradient(it->continuous_variables());
+      for (size_t j=0; j<numVars; ++j)
+	PCout << "               " << "truth grad_" << j+1 << " = "
+	      << std::setw(WRITE_PRECISION+7) << coeff2[j] << " interpolant = "
+	      << std::setw(WRITE_PRECISION+7) << grad[j] << " error = "
+	      << std::setw(WRITE_PRECISION+7) << std::abs(coeff2[j] - grad[j])
+	      << '\n';
+    }
+  }
 #endif // INTERPOLATION_TEST
 }
 

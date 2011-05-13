@@ -374,11 +374,11 @@ private:
 inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
 			bool use_derivs):
-  PolynomialApproximation(num_vars), numExpansionTerms(0),
+  PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
   approxOrder(approx_order), partialOrder(false),
   quadratureExpansion(TENSOR_INT_TENSOR_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
-{ configOptions.useDerivs = use_derivs; }
+{ }
 
 
 inline OrthogPolyApproximation::~OrthogPolyApproximation()

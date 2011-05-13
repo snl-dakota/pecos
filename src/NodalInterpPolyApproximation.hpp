@@ -37,7 +37,8 @@ public:
   //
 
   /// default constructor
-  NodalInterpPolyApproximation(short basis_type, size_t num_vars);
+  NodalInterpPolyApproximation(short basis_type, size_t num_vars,
+			       bool use_derivs);
   /// destructor
   ~NodalInterpPolyApproximation();
 
@@ -159,8 +160,9 @@ private:
 
 
 inline NodalInterpPolyApproximation::
-NodalInterpPolyApproximation(short basis_type, size_t num_vars):
-  InterpPolyApproximation(basis_type, num_vars)
+NodalInterpPolyApproximation(short basis_type, size_t num_vars,
+			     bool use_derivs):
+  InterpPolyApproximation(basis_type, num_vars, use_derivs)
 { }
 
 

@@ -79,7 +79,9 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
 
   switch (basis_type) {
   case GLOBAL_INTERPOLATION_POLYNOMIAL: case PIECEWISE_INTERPOLATION_POLYNOMIAL:
-    return new NodalInterpPolyApproximation(basis_type, num_vars);
+    return //(hierarch) ?
+    //new HierarchInterpPolyApproximation(basis_type, num_vars, use_derivs) :
+      new NodalInterpPolyApproximation(basis_type, num_vars, use_derivs);
     break;
   case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     return new OrthogPolyApproximation(approx_order, num_vars, use_derivs);

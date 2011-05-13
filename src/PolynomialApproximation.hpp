@@ -128,7 +128,7 @@ public:
   /// default constructor
   PolynomialApproximation();
   /// standard constructor
-  PolynomialApproximation(size_t num_vars);
+  PolynomialApproximation(size_t num_vars, bool use_derivs);
   /// destructorboth
   ~PolynomialApproximation();
 
@@ -424,10 +424,11 @@ inline PolynomialApproximation::PolynomialApproximation():
 { }
 
 
-inline PolynomialApproximation::PolynomialApproximation(size_t num_vars):
+inline PolynomialApproximation::
+PolynomialApproximation(size_t num_vars, bool use_derivs):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   ssgLevelPrev(USHRT_MAX)
-{ }
+{ configOptions.useDerivs = use_derivs; }
 
 
 inline PolynomialApproximation::~PolynomialApproximation()
