@@ -22,6 +22,11 @@ HierarchPWInterpPolynomial(RefinablePointSet& pointSet_):
   PiecewiseInterpPolynomial(CLENSHAW_CURTIS), pointSet(pointSet_)
 { interpPts = (pointSet.get_interp_points()); }
 
+HierarchPWInterpPolynomial::
+HierarchPWInterpPolynomial(RefinablePointSet& pointSet_, short basisPolyType_):
+  PiecewiseInterpPolynomial(CLENSHAW_CURTIS), pointSet(pointSet_)
+{ interpPts = (pointSet.get_interp_points()); basisPolyType = basisPolyType_; }
+
 HierarchPWInterpPolynomial::~HierarchPWInterpPolynomial()
 { }
 

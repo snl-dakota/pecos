@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
   std::cout << "Sparse grid points:\n";
   Pecos::write_data(std::cout, variable_sets, false, true, true);
   std::cout << "Sparse grid weights:\n";
-  Pecos::write_data(std::cout, sg_driver.weight_sets());
+  Pecos::write_data(std::cout, sg_driver.type1_weight_sets());
 
   // Tensor-product quadrature
   std::cout << "Instantiating TensorProductDriver:\n";
@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
   std::cout << "Tensor grid points:\n";
   Pecos::write_data(std::cout, variable_sets, false, true, true);
   std::cout << "Tensor grid weights:\n";
-  Pecos::write_data(std::cout, tp_driver.weight_sets());
+  Pecos::write_data(std::cout, tp_driver.type1_weight_sets());
 
   // Cubature
   std::cout << "Instantiating CubatureDriver:\n";
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   std::cout << "Cubature points:\n";
   Pecos::write_data(std::cout, variable_sets, false, true, true);
   std::cout << "Cubature weights:\n";
-  Pecos::write_data(std::cout, c_driver.weight_sets());
+  Pecos::write_data(std::cout, c_driver.type1_weight_sets());
 
   return 0;
 }

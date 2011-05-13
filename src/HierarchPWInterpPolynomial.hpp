@@ -21,17 +21,18 @@
 
 namespace Pecos {
 
-/// Derived basis for 1-D piecewise linear interpolants expressed in a hierarchical basis. 
+/// Derived basis for 1-D piecewise linear interpolants expressed in a
+/// hierarchical basis.
 
 /** The HierarchicalBasis class evaluates a univariate piecewise
-    polynomial interpolation function defined on a hierarchical grid.  The grid is
-    provided by the RefinablePointSet passed to the constructor. 
+    polynomial interpolation function defined on a hierarchical grid.
+    The grid is provided by the RefinablePointSet passed to the
+    constructor.
 
     For additional information see:
     X. Ma and N. Zabras, "An adaptive hierarchical sparse grid 
     collocation algorithm for the solution of stochastic 
-    differential equations", J. Comput. Phys. 228:3084--3113,
-    2009.
+    differential equations", J. Comput. Phys. 228:3084--3113, 2009.
 */
 
 class HierarchPWInterpPolynomial: public PiecewiseInterpPolynomial
@@ -44,6 +45,9 @@ public:
 
   /// Standard constructor
   HierarchPWInterpPolynomial(RefinablePointSet& pointSet_);
+  /// Alternate constructor
+  HierarchPWInterpPolynomial(RefinablePointSet& pointSet_,
+			     short basisPolyType_);
     
   /// Destructor
   virtual ~HierarchPWInterpPolynomial();
