@@ -17,7 +17,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
-#define INTERPOLATION_TEST
+//#define INTERPOLATION_TEST
 
 
 namespace Pecos {

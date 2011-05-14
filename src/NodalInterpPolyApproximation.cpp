@@ -199,7 +199,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
     }
     break;
   case true:
-    for (i=0; i<numCollocPts; ++i) {
+    for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       const Real&     coeff1_i = expansionType1Coeffs[colloc_index[i]];
       const Real*     coeff2_i = expansionType2Coeffs[colloc_index[i]];
@@ -859,8 +859,7 @@ const Real& NodalInterpPolyApproximation::value(const RealVector& x)
 }
 
 
-const RealVector& NodalInterpPolyApproximation::
-gradient(const RealVector& x)
+const RealVector& NodalInterpPolyApproximation::gradient(const RealVector& x)
 {
   // this could define a default_dvv and call gradient(x, dvv),
   // but we want this fn to be as fast as possible
