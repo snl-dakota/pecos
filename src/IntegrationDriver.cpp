@@ -230,7 +230,7 @@ initialize_rules(const ShortArray& u_types, bool nested_rules,
   for (size_t i=0; i<numVars; i++)
     if (basis_types[i] == HERMITE_INTERP ||
 	basis_types[i] == PIECEWISE_CUBIC_INTERP)
-      computeType2Weights = true;
+      { computeType2Weights = true; break; }
 }
 
 

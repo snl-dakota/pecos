@@ -378,10 +378,12 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 
   // For unrestricted exponential growth, use of nested rules is restricted
   // to uniform/normal in order to enforce similar growth rates:
-  if (nested_rules && growth_rate == UNRESTRICTED_GROWTH)
-    for (size_t i=0; i<numVars; ++i)
+  if (nested_rules && growth_rate == UNRESTRICTED_GROWTH) {\
+    size_t i, num_u_types = u_types.size(); // numVars not yet defined
+    for (i=0; i<num_u_types; ++i)
       if (u_types[i] != STD_UNIFORM && u_types[i] != STD_NORMAL)
 	{ nested_rules = false; break; }
+  }
   // For MODERATE and SLOW restricted exponential growth, nested rules
   // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
@@ -535,9 +537,10 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     // ----------------------------------------------
     // Get collocation points and integration weights
     // ----------------------------------------------
-    type1WeightSets.sizeUninitialized(numCollocPts);
-    type2WeightSets.shapeUninitialized(numVars, numCollocPts);
     var_sets.shapeUninitialized(numVars, numCollocPts);
+    type1WeightSets.sizeUninitialized(numCollocPts);
+    if (computeType2Weights)
+      type2WeightSets.shapeUninitialized(numVars, numCollocPts);
     int* sparse_order = new int [numCollocPts*numVars];
     int* sparse_index = new int [numCollocPts*numVars];
     sgdInstance = this; // sgdInstance required within compute1D fn pointers
