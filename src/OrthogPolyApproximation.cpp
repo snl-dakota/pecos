@@ -1975,6 +1975,8 @@ const Real& OrthogPolyApproximation::mean()
     abort_handler(-1);
   }
 
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
   Real& mean = expansionMoments[0];
   mean = expansionCoeffs[0];
   return mean;
@@ -1994,6 +1996,8 @@ const Real& OrthogPolyApproximation::mean(const RealVector& x)
   }
 
   // sum expansion to get response prediction
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
   Real& mean = expansionMoments[0];
   mean = expansionCoeffs[0];
 
@@ -2137,6 +2141,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 const Real& OrthogPolyApproximation::variance()
 {
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
   expansionMoments[1] = covariance(this);
   return expansionMoments[1];
 }
@@ -2146,6 +2152,8 @@ const Real& OrthogPolyApproximation::variance()
     and the variance of the expansion involves summations over this subset. */
 const Real& OrthogPolyApproximation::variance(const RealVector& x)
 {
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
   expansionMoments[1] = covariance(x, this);
   return expansionMoments[1];
 }

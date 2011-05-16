@@ -954,6 +954,8 @@ const Real& NodalInterpPolyApproximation::mean()
   //  abort_handler(-1);
   //}
 
+  if (numericalMoments.empty())
+    numericalMoments.sizeUninitialized(4); // standard mode
   Real& mean = numericalMoments[0]; mean = 0.;
   const RealVector& t1_wts = driverRep->type1_weight_sets();
   switch (configOptions.useDerivs) {
@@ -999,6 +1001,8 @@ const Real& NodalInterpPolyApproximation::mean(const RealVector& x)
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
     size_t i, num_smolyak_indices = sm_coeffs.size();
+    if (numericalMoments.empty())
+      numericalMoments.sizeUninitialized(2); // all_variables mode
     Real& mean = numericalMoments[0]; mean = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
@@ -1085,6 +1089,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 const Real& NodalInterpPolyApproximation::variance()
 {
+  if (numericalMoments.empty())
+    numericalMoments.sizeUninitialized(4); // standard mode
   numericalMoments[1] = covariance(this);
   return numericalMoments[1];
 }
@@ -1095,6 +1101,8 @@ const Real& NodalInterpPolyApproximation::variance()
     over this subset. */
 const Real& NodalInterpPolyApproximation::variance(const RealVector& x)
 {
+  if (numericalMoments.empty())
+    numericalMoments.sizeUninitialized(2); // all_variables mode
   numericalMoments[1] = covariance(x, this);
   return numericalMoments[1];
 }
