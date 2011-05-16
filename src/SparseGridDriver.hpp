@@ -101,7 +101,7 @@ public:
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
     const RealVector& dim_pref, //short refine_type = NO_REFINEMENT,
     short refine_control = NO_CONTROL, bool store_colloc = false,
-    bool  track_ensemble_wts = true,   bool nested_rules = true,
+    bool  track_uniq_prod_wts = true,  bool nested_rules = true,
     bool  piecewise_basis = false,     bool equidistant_rules = true,
     bool  use_derivs = false, short growth_rate = MODERATE_RESTRICTED_GROWTH,
     short nested_uniform_rule = GAUSS_PATTERSON);
@@ -111,7 +111,7 @@ public:
     unsigned short ssg_level, const RealVector& dim_pref,
     //short refine_type = NO_REFINEMENT,
     short refine_control = NO_CONTROL, bool store_colloc = false,
-    bool track_ensemble_wts = true,
+    bool track_uniq_prod_wts = true,
     short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
   /// update axisLowerBounds
@@ -339,9 +339,9 @@ private:
   /// reference values for the sparse grid weights corresponding to the current
   /// reference grid; used in incremental approaches that update type1WeightSets
   RealVector type1WeightSetsRef;
-  /// flag indicating need to track {type1,type2}WeightSets for an
-  /// ensemble sparse grid computed incrementally
-  bool trackEnsembleWeights;
+  /// flag indicating need to track {type1,type2}WeightSets (product weights for
+  /// each unique grid point) as opposed to relying on collections of 1D weights
+  bool trackUniqueProdWeights;
 
   int numUnique1;       ///< number of unique points in set 1 (reference)
   int numUnique2;       ///< number of unique points in set 2 (increment)
@@ -382,7 +382,7 @@ private:
 inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), ssgLevel(0), storeCollocDetails(false),
   duplicateTol(1.e-15), numCollocPts(0), updateGridSize(true),
-  trackEnsembleWeights(false)
+  trackUniqueProdWeights(false)
 { }
 
 
@@ -480,7 +480,7 @@ inline void SparseGridDriver::allocate_smolyak_coefficients(size_t start_index)
 inline void SparseGridDriver::update_reference()
 {
   smolyakCoeffsRef = smolyakCoeffs;
-  if (trackEnsembleWeights)
+  if (trackUniqueProdWeights)
     type1WeightSetsRef = type1WeightSets;
 }
 

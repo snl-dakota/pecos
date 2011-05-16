@@ -295,7 +295,7 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
 }
 
 
-/** Overloaded version supporting tensor-product quadrature. */
+/** Overloaded all_variables version supporting tensor-product quadrature. */
 const Real& NodalInterpPolyApproximation::
 tensor_product_mean(const RealVector& x)
 {
@@ -319,7 +319,7 @@ tensor_product_mean(const RealVector& x)
 }
 
 
-/** Overloaded version supporting Smolyak sparse grids. */
+/** Overloaded all_variables version supporting Smolyak sparse grids. */
 const Real& NodalInterpPolyApproximation::
 tensor_product_mean(const RealVector& x, size_t tp_index)
 {
@@ -344,7 +344,7 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
 }
 
 
-/** Overloaded version supporting tensor-product quadrature. */
+/** Overloaded all_variables version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
 tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
@@ -410,7 +410,7 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 }
 
 
-/** Overloaded version supporting Smolyak sparse grids. */
+/** Overloaded all_variables version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
 tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 			     const SizetArray& dvv)
@@ -498,7 +498,7 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 }
 
 
-/** Overloaded version supporting tensor-product quadrature. */
+/** Overloaded all_variables version supporting tensor-product quadrature. */
 const Real& NodalInterpPolyApproximation::
 tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 {
@@ -548,7 +548,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 }
 
 
-/** Overloaded version supporting Smolyak sparse grids. */
+/** Overloaded all_variables version supporting Smolyak sparse grids. */
 const Real& NodalInterpPolyApproximation::
 tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 			  size_t tp_index)
@@ -602,7 +602,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 }
 
 
-/** Overloaded version supporting tensor-product quadrature. */
+/** Overloaded all_variables version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
 tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
@@ -703,7 +703,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 }
 
 
-/** Overloaded version supporting Smolyak sparse grids. */
+/** Overloaded all_variables version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
 tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
 				 const SizetArray& dvv)
@@ -947,15 +947,22 @@ const Real& NodalInterpPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  size_t i, j;
+  // TO DO:
+  //if (!driverRep->track_unique_product_weights()) {
+  //  PCerr << "Error: unique product weights required in "
+  //	  << "NodalInterpPolyApproximation::mean()" << std::endl;
+  //  abort_handler(-1);
+  //}
+
   Real& mean = numericalMoments[0]; mean = 0.;
   const RealVector& t1_wts = driverRep->type1_weight_sets();
   switch (configOptions.useDerivs) {
   case false:
-    for (i=0; i<numCollocPts; ++i)
+    for (size_t i=0; i<numCollocPts; ++i)
       mean += expansionType1Coeffs[i] * t1_wts[i];
     break;
   case true: {
+    size_t i, j;
     const RealMatrix& t2_wts = driverRep->type2_weight_sets();
     for (i=0; i<numCollocPts; ++i) {
       mean += expansionType1Coeffs[i] * t1_wts[i];
@@ -967,6 +974,7 @@ const Real& NodalInterpPolyApproximation::mean()
     break;
   }
   }
+
   return mean;
 }
 
@@ -1102,52 +1110,50 @@ covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  // TO DO: compute mean1,mean2 first, then compute covariance as
-  // wt_prod*(coeff1-mean1)*(coeff2-mean2)
+  // TO DO:
+  //if (!driverRep->track_unique_product_weights()) {
+  //  PCerr << "Error: unique product weights required in "
+  //	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
+  //  abort_handler(-1);
+  //}
 
+  // compute mean_1,mean_2 first, then compute covariance as
+  // wt_prod*(coeff1-mean_1)*(coeff2-mean_2) in order to avoid precision
+  // loss from computing covariance as <R_i R_j> - \mu_i \mu_j
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
+  // Note: compute_statistics() in dakota/src/NonDExpansion.C orders calls
+  //       to reduce repetition in moment calculations.
+  const Real&       mean_1      = mean();
+  const Real&       mean_2      = nip_approx_2->mean();
   const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
   const RealVector& t1_wts      = driverRep->type1_weight_sets();
-  Real covar = 0., mean_1 = 0., mean_2 = 0.; size_t i, j;
+  Real covar = 0.; size_t i, j;
   switch (configOptions.useDerivs) {
-  case false:
-    for (i=0; i<numCollocPts; ++i) {
-      const Real& coeff1_2i = t1_coeffs_2[i];
-      const Real&   t1_wt_i = t1_wts[i];
-      Real coeff1_wt_1i = expansionType1Coeffs[i] * t1_wt_i;
-      mean_1 += coeff1_wt_1i;
-      mean_2 += coeff1_2i * t1_wt_i;
-      covar  += coeff1_wt_1i * coeff1_2i;
-    }
+  case false: // type1 interpolation of (R_1-\mu_1) (R_2 - \mu_2)
+    for (i=0; i<numCollocPts; ++i)
+      covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
+	    *  t1_wts[i];
     break;
   case true: {
     const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
     const RealMatrix& t2_wts      = driverRep->type2_weight_sets();
     for (i=0; i<numCollocPts; ++i) {
-      const Real& coeff1_i  = expansionType1Coeffs[i];
-      const Real& coeff1_2i = t1_coeffs_2[i];
-      const Real&  t1_wt_i  = t1_wts[i];
-      Real    coeff1_wt1_i  = coeff1_i * t1_wt_i;
-      mean_1 += coeff1_wt1_i;             // expected value of R_1
-      mean_2 += coeff1_2i * t1_wt_i;      // expected value of R_2
-      covar  += coeff1_wt1_i * coeff1_2i; // expected value of R_1 R_2
-      const Real* coeff2_i  = expansionType2Coeffs[i];
-      const Real* coeff2_2i = t2_coeffs_2[i];
-      const Real*  t2_wt_i  = t2_wts[i];
-      for (j=0; j<numVars; ++j) {
-	mean_1 += coeff2_i[j]  * t2_wt_i[j];
-	mean_2 += coeff2_2i[j] * t2_wt_i[j];
-	// type2 interpolation of R_1 R_2
-	// --> interpolated gradients are R_1 * R_2' + R_2 * R_1'
-	covar  += (coeff1_i * coeff2_2i[j] + coeff1_2i * coeff2_i[j])
+      // type1 interpolation of (R_1-\mu_1) (R_2 - \mu_2)
+      Real coeff1_i_mm1 = expansionType1Coeffs[i] - mean_1,
+	  coeff1_2i_mm2 = t1_coeffs_2[i]          - mean_2;
+      covar += coeff1_i_mm1 * coeff1_2i_mm2 *  t1_wts[i];
+      // type2 interpolation of (R_1-\mu_1) (R_2 - \mu_2)
+      // --> interpolated gradients are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
+      const Real *coeff2_i  = expansionType2Coeffs[i],
+	         *coeff2_2i = t2_coeffs_2[i], *t2_wt_i = t2_wts[i];
+      for (j=0; j<numVars; ++j)
+	covar  += (coeff1_i_mm1 * coeff2_2i[j] + coeff1_2i_mm2 * coeff2_i[j])
 	       *  t2_wt_i[j];
-      }
     }
     break;
   }
   }
-  covar -= mean_1*mean_2; // potential loss of precision
   return covar;
 }
 

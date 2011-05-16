@@ -2115,8 +2115,10 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
 	    size_t index = *it;
 	    term_j_grad_i *= (index == deriv_index) ?
-	      polynomialBasis[index].type1_gradient(x[index],multiIndex[j][index])
-	    : polynomialBasis[index].type1_value(x[index], multiIndex[j][index]);
+	      polynomialBasis[index].type1_gradient(x[index],
+						    multiIndex[j][index]) :
+	      polynomialBasis[index].type1_value(x[index],
+						 multiIndex[j][index]);
 	  }
 	  meanGradient[i] += expansionCoeffs[j]*term_j_grad_i;
 	}

@@ -366,15 +366,15 @@ void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref, //short refine_type,
 		short refine_control,       bool  store_colloc,
-		bool  track_ensemble_wts,   bool  nested_rules,
+		bool  track_uniq_prod_wts,  bool  nested_rules,
 		bool  piecewise_basis,      bool  equidistant_rules,
 		bool  use_derivs,           short growth_rate,
 		short nested_uniform_rule)
 {
-  //refineType         = refine_type;
-  refineControl        = refine_control;
-  storeCollocDetails   = store_colloc;
-  trackEnsembleWeights = track_ensemble_wts;
+  //refineType           = refine_type;
+  refineControl          = refine_control;
+  storeCollocDetails     = store_colloc;
+  trackUniqueProdWeights = track_uniq_prod_wts;
 
   // For unrestricted exponential growth, use of nested rules is restricted
   // to uniform/normal in order to enforce similar growth rates:
@@ -403,15 +403,15 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 
 void SparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		unsigned short ssg_level, const RealVector& dim_pref,
+		unsigned short ssg_level,  const RealVector& dim_pref,
 		//short refine_type,
-		short refine_control,     bool  store_colloc,
-		bool  track_ensemble_wts, short growth_rate)
+		short refine_control,      bool  store_colloc,
+		bool  track_uniq_prod_wts, short growth_rate)
 {
-  //refineType         = refine_type;
-  refineControl        = refine_control;
-  storeCollocDetails   = store_colloc;
-  trackEnsembleWeights = track_ensemble_wts;
+  //refineType           = refine_type;
+  refineControl          = refine_control;
+  storeCollocDetails     = store_colloc;
+  trackUniqueProdWeights = track_uniq_prod_wts;
 
   // define collocRules
   initialize_rules(poly_basis);
@@ -538,9 +538,11 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     // Get collocation points and integration weights
     // ----------------------------------------------
     var_sets.shapeUninitialized(numVars, numCollocPts);
-    type1WeightSets.sizeUninitialized(numCollocPts);
-    if (computeType2Weights)
-      type2WeightSets.shapeUninitialized(numVars, numCollocPts);
+    if (trackUniqueProdWeights) {
+      type1WeightSets.sizeUninitialized(numCollocPts);
+      if (computeType2Weights)
+	type2WeightSets.shapeUninitialized(numVars, numCollocPts);
+    }
     int* sparse_order = new int [numCollocPts*numVars];
     int* sparse_index = new int [numCollocPts*numVars];
     sgdInstance = this; // sgdInstance required within compute1D fn pointers
@@ -554,24 +556,26 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
       webbur::sgmg_index(numVars, ssgLevel, &apiIntegrationRules[0],
 	numCollocPts, num_total_pts, &uniqueIndexMapping[0], &apiGrowthRules[0],
 	sparse_order, sparse_index);
-      webbur::sgmg_weight(numVars, ssgLevel, &apiIntegrationRules[0],
-        &compute1DType1Weights[0], numCollocPts, num_total_pts,
-        &uniqueIndexMapping[0], &apiGrowthRules[0], type1WeightSets.values());
-      if (computeType2Weights) {
-	std::vector<FPType> comp_1d_t2_wts = compute1DType1Weights; // copy
-	RealVector t2_wt_set(numCollocPts);
-	for (int i=0; i<numVars; ++i) {
-	  comp_1d_t2_wts[i] = basis_type2_collocation_weights; // change ith ptr
-	  webbur::sgmg_weight(numVars, ssgLevel, &apiIntegrationRules[0],
-	    &comp_1d_t2_wts[0], numCollocPts, num_total_pts,
-	    &uniqueIndexMapping[0], &apiGrowthRules[0], t2_wt_set.values());
-	  copy_row(t2_wt_set, type2WeightSets, i);
-	  comp_1d_t2_wts[i] = basis_type1_collocation_weights; // restore
-	}
-      }
       webbur::sgmg_point(numVars, ssgLevel, &apiIntegrationRules[0],
         &compute1DPoints[0], numCollocPts, sparse_order, sparse_index,
         &apiGrowthRules[0], var_sets.values());
+      if (trackUniqueProdWeights) {
+	webbur::sgmg_weight(numVars, ssgLevel, &apiIntegrationRules[0],
+          &compute1DType1Weights[0], numCollocPts, num_total_pts,
+          &uniqueIndexMapping[0], &apiGrowthRules[0], type1WeightSets.values());
+	if (computeType2Weights) {
+	  std::vector<FPType> comp_1d_t2_wts = compute1DType1Weights; // copy
+	  RealVector t2_wt_set(numCollocPts);
+	  for (int i=0; i<numVars; ++i) {
+	    comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
+	    webbur::sgmg_weight(numVars, ssgLevel, &apiIntegrationRules[0],
+	      &comp_1d_t2_wts[0], numCollocPts, num_total_pts,
+	      &uniqueIndexMapping[0], &apiGrowthRules[0], t2_wt_set.values());
+	    copy_row(t2_wt_set, type2WeightSets, i);
+	    comp_1d_t2_wts[i] = basis_type1_collocation_weights; // restore ptr
+	  }
+	}
+      }
     }
     else {
       int num_total_pts = webbur::sandia_sgmga_size_total(numVars,
@@ -584,26 +588,28 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
       webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
         &apiIntegrationRules[0], numCollocPts, num_total_pts,
         &uniqueIndexMapping[0], &apiGrowthRules[0], sparse_order, sparse_index);
-      webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
-        &apiIntegrationRules[0], &compute1DType1Weights[0], numCollocPts,
-	num_total_pts, &uniqueIndexMapping[0], &apiGrowthRules[0],
-	type1WeightSets.values());
-      if (computeType2Weights) {
-	std::vector<FPType> comp_1d_t2_wts = compute1DType1Weights; // copy
-	RealVector t2_wt_set(numCollocPts);
-	for (int i=0; i<numVars; ++i) {
-	  comp_1d_t2_wts[i] = basis_type2_collocation_weights; // change ith ptr
-	  webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
-            &apiIntegrationRules[0], &comp_1d_t2_wts[0], numCollocPts,
-	    num_total_pts, &uniqueIndexMapping[0], &apiGrowthRules[0],
-	    t2_wt_set.values());
-	  copy_row(t2_wt_set, type2WeightSets, i);
-	  comp_1d_t2_wts[i] = basis_type1_collocation_weights; // restore
-	}
-      }
       webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
         &apiIntegrationRules[0], &compute1DPoints[0], numCollocPts,
 	sparse_order, sparse_index, &apiGrowthRules[0], var_sets.values());
+      if (trackUniqueProdWeights) {
+	webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
+          &apiIntegrationRules[0], &compute1DType1Weights[0], numCollocPts,
+	  num_total_pts, &uniqueIndexMapping[0], &apiGrowthRules[0],
+	  type1WeightSets.values());
+	if (computeType2Weights) {
+	  std::vector<FPType> comp_1d_t2_wts = compute1DType1Weights; // copy
+	  RealVector t2_wt_set(numCollocPts);
+	  for (int i=0; i<numVars; ++i) {
+	    comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
+	    webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(),
+	      ssgLevel, &apiIntegrationRules[0], &comp_1d_t2_wts[0],
+	      numCollocPts, num_total_pts, &uniqueIndexMapping[0],
+	      &apiGrowthRules[0], t2_wt_set.values());
+	    copy_row(t2_wt_set, type2WeightSets, i);
+	    comp_1d_t2_wts[i] = basis_type1_collocation_weights; // restore ptr
+	  }
+	}
+      }
     }
     delete [] sparse_order;
     delete [] sparse_index;
@@ -885,7 +891,7 @@ void SparseGridDriver::reference_unique()
   uniqueIndexMapping = uniqueIndex1; // copy
   assign_tensor_collocation_indices(0, uniqueIndex1);
   numCollocPts = numUnique1;
-  if (trackEnsembleWeights) {
+  if (trackUniqueProdWeights) {
     type1WeightSets = 0.;
     update_sparse_weights(0, a1Type1Weights, uniqueIndex1, type1WeightSets);
 #ifdef DEBUG
@@ -941,7 +947,7 @@ void SparseGridDriver::increment_unique(bool compute_a2)
   assign_tensor_collocation_indices(last_index, uniqueIndex2);
   numCollocPts = numUnique1 + numUnique2;
   // update type1WeightSets
-  if (trackEnsembleWeights) {
+  if (trackUniqueProdWeights) {
     type1WeightSets = type1WeightSetsRef; // to be augmented by last_index data
     update_sparse_weights(last_index, a2Type1Weights, uniqueIndex2,
 			  type1WeightSets);
@@ -986,7 +992,7 @@ void SparseGridDriver::merge_unique()
 
   // update reference points/weights (originally defined by _inc1)
   a1Points = a3_pts;
-  if (trackEnsembleWeights) {
+  if (trackUniqueProdWeights) {
     a1Type1Weights.resize(n1n2);
     for (size_t i=0; i<n2; ++i)
       a1Type1Weights[n1+i] = a2Type1Weights[i];
@@ -1103,7 +1109,7 @@ void SparseGridDriver::finalize_unique(size_t start_index)
   uniqueIndexMapping.insert(uniqueIndexMapping.end(), all_unique_index2.begin(),
 			    all_unique_index2.end());
   assign_tensor_collocation_indices(start_index, all_unique_index2);
-  if (trackEnsembleWeights) {
+  if (trackUniqueProdWeights) {
     type1WeightSets = type1WeightSetsRef; // to be augmented
     update_sparse_weights(start_index, all_a2_wts, all_unique_index2,
 			  type1WeightSets);
