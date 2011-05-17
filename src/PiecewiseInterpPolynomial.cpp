@@ -489,18 +489,18 @@ type2_collocation_weights(unsigned short order)
 	type2InterpWts[0] = 0.; // TO DO: verify
       else if (collocRule == NEWTON_COTES) {
 	Real val = interpInterval*interpInterval/24.;
-	type1InterpWts[0]       =  val; //  left end
-	type1InterpWts[order-1] = -val; // right end
+	type2InterpWts[0]       =  val; //  left end
+	type2InterpWts[order-1] = -val; // right end
 	for (unsigned short i=1; i<order-1; ++i)
-	  type1InterpWts[i] = 0.;       //  interior
+	  type2InterpWts[i] = 0.;       //  interior
       }
       else if (collocRule == CLENSHAW_CURTIS) {
 	Real val = interpPts[1] - interpPts[0];
-	type1InterpWts[0]       =  val*val/24.;  //  left end
+	type2InterpWts[0]       =  val*val/24.;  //  left end
 	val = interpPts[order-1] - interpPts[order-2];
-	type1InterpWts[order-1] = -val*val/24.;  // right end
+	type2InterpWts[order-1] = -val*val/24.;  // right end
 	for (unsigned short i=1; i<order-1; ++i) //  interior
-	  type1InterpWts[i] = (interpPts[i+1] - interpPts[i-1])*
+	  type2InterpWts[i] = (interpPts[i+1] - interpPts[i-1])*
 	    (interpPts[i+1] - 2.*interpPts[i] + interpPts[i-1])/24.;
       }
       else

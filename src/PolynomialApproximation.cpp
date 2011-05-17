@@ -524,7 +524,10 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
     abort_handler(-1);
   }
 
-  numericalMoments.size(num_moments); // init to 0
+  if (numericalMoments.length() == num_moments)
+    numericalMoments = 0.;
+  else
+    numericalMoments.size(num_moments); // init to 0
 
   size_t i, j, offset = 0, num_pts = dataPoints.size();
   bool anchor_pt = !anchorPoint.is_null();

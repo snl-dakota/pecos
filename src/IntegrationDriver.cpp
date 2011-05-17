@@ -274,6 +274,12 @@ compute_tensor_grid(const UShortArray& quad_order, RealMatrix&  variable_sets,
       t2_wts_1d[i]
 	= polynomialBasis[i].type2_collocation_weights(quad_order[i]);
   }
+#ifdef DEBUG
+  PCout << "\n1D variable_sets:\n" << pts_1d;
+  PCout << "\n1D t1_wts:\n" << t1_wts_1d;
+  if (computeType2Weights)
+    PCout << "\n1D t2_wts:\n" << t2_wts_1d;
+#endif
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
   // > project 1-D colloc point arrays (of potentially different type and order)
@@ -307,6 +313,16 @@ compute_tensor_grid(const UShortArray& quad_order, RealMatrix&  variable_sets,
       PolynomialApproximation::increment_indices(colloc_indices,
 						 quad_order, true);
   }
+
+#ifdef DEBUG
+  PCout << "\nvariable_sets:\n";
+  write_data(PCout, variable_sets, false, true, true);
+  PCout << "\nt1_weight_sets:\n"; write_data(PCout, t1_weight_sets);
+  if (computeType2Weights) {
+    PCout << "\nt2_weight_sets:\n";
+    write_data(PCout, t2_weight_sets, false, true, true);
+  }
+#endif
 }
 
 } // namespace Pecos

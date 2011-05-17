@@ -220,6 +220,14 @@ void SparseGridDriver::allocate_1d_collocation_points_weights()
       if (computeType2Weights)
 	type2CollocWts1D[level_index][i]
 	  = poly_i.type2_collocation_weights(order);
+#ifdef DEBUG
+      PCout << "collocPts1D[" << level_index << "][" << i << "]:\n"
+	    << collocPts1D[level_index][i] << "type1CollocWts1D[" << level_index
+	    << "][" << i << "]:\n" << type1CollocWts1D[level_index][i];
+      if (computeType2Weights)
+	PCout << "type2CollocWts1D[" << level_index << "][" << i << "]:\n"
+	      << type2CollocWts1D[level_index][i];
+#endif // DEBUG
     }
   }
 }
@@ -624,8 +632,13 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
 #ifdef DEBUG
   PCout << "uniqueIndexMapping:\n" << uniqueIndexMapping
 	<< "\nvar_sets:\n"; write_data(PCout, var_sets, false, true, true);
-  PCout << "\ntype1WeightSets:\n"; write_data(PCout, type1WeightSets);
-  PCout << '\n';
+  if (trackUniqueProdWeights) {
+    PCout << "\ntype1WeightSets:\n"; write_data(PCout, type1WeightSets);
+    if (computeType2Weights) {
+      PCout << "\ntype2WeightSets:\n";
+      write_data(PCout, type2WeightSets, false, true, true);
+    }
+  }
 #endif
 }
 
@@ -1171,6 +1184,10 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
       }
     }
   }
+#ifdef DEBUG
+    PCout << "Tensor product weights =\ntype1:\n"; write_data(PCout, t1_wts);
+    PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true);
+#endif // DEBUG
 }
 
 
