@@ -16,6 +16,7 @@
 #define SPARSE_GRID_DRIVER_HPP
 
 #include "IntegrationDriver.hpp"
+#include "sandia_rules.H"
 
 namespace Pecos {
 
@@ -508,6 +509,16 @@ inline const UShortArray& SparseGridDriver::trial_index_set() const
 
 inline const IntArray& SparseGridDriver::smolyak_coefficients_reference() const
 { return smolyakCoeffsRef; }
+
+
+inline void SparseGridDriver::
+level_to_order(size_t i, unsigned short level, unsigned short& order)
+{
+  int ilevel = level, iorder;
+  webbur::level_growth_to_order(1, &ilevel, &apiIntegrationRules[i],
+				&apiGrowthRules[i], &iorder);
+  order = iorder;
+}
 
 
 inline void SparseGridDriver::

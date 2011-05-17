@@ -14,7 +14,6 @@
 
 #include "SparseGridDriver.hpp"
 #include "PolynomialApproximation.hpp"
-#include "sandia_rules.H"
 #include "sandia_sgmg.H"
 #include "sandia_sgmga.H"
 #include "sandia_sgmgg.H"
@@ -23,7 +22,7 @@
 
 static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-//#define DEBUG
+#define DEBUG
 
 namespace Pecos {
 
@@ -532,9 +531,6 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
     allocate_1d_collocation_points_weights(); // define 1-D point/weight sets
     reference_unique(); // updates collocIndices,uniqueIndexMapping,numCollocPts
     update_sparse_points(0, 0, a1Points, isUnique1, uniqueIndex1, var_sets);
-#ifdef DEBUG
-    PCout << "compute_grid() reference var_sets:\n" << var_sets;
-#endif // DEBUG
   }
   else { // compute reference and any refined grids
     // ------------------------------------
@@ -630,8 +626,9 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
   }
 
 #ifdef DEBUG
-  PCout << "uniqueIndexMapping:\n" << uniqueIndexMapping
-	<< "\nvar_sets:\n"; write_data(PCout, var_sets, false, true, true);
+  PCout << "SparseGridDriver::compute_grid() results:\nuniqueIndexMapping:\n"
+	<< uniqueIndexMapping << "\nvar_sets:\n";
+  write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
     PCout << "\ntype1WeightSets:\n"; write_data(PCout, type1WeightSets);
     if (computeType2Weights) {
@@ -909,9 +906,12 @@ void SparseGridDriver::reference_unique()
     update_sparse_weights(0, a1Type1Weights, a1Type2Weights, uniqueIndex1,
 			  type1WeightSets, type2WeightSets);
 #ifdef DEBUG
-    PCout << "reference_unique() reference type1WeightSets:\n"
-	  << type1WeightSets << "reference_unique() reference "
-	  << "type2WeightSets:\n" << type2WeightSets;
+    PCout << "\nreference_unique() reference type1WeightSets:\n";
+    write_data(PCout, type1WeightSets);
+    if (computeType2Weights) {
+      PCout << "\nreference_unique() reference type2WeightSets:\n";
+      write_data(PCout, type2WeightSets, false, true, true);
+    }
 #endif // DEBUG
   }
 }
@@ -1264,7 +1264,7 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
 	  Real*       up_t2_wts_j = updated_t2_wts[index];
 	  const Real* te_t2_wts_j = tensor_t2_wts[cntr];
 	  for (k=0; k<numVars; ++k)
-	    up_t2_wts_j[k] += sm_coeff * te_t2_wts_j[cntr];
+	    up_t2_wts_j[k] += sm_coeff * te_t2_wts_j[k];
 	}
       }
     }
@@ -1288,15 +1288,6 @@ assign_tensor_collocation_indices(size_t start_index,
     for (j=0; j<num_tp_pts; ++j, ++cntr)
       indices_i[j] = unique_index[cntr];
   }
-}
-
-void SparseGridDriver::
-level_to_order(size_t i, unsigned short level, unsigned short& order)
-{
-  int ilevel = level, iorder;
-  webbur::level_growth_to_order(1, &ilevel, &apiIntegrationRules[i],
-				&apiGrowthRules[i], &iorder);
-  order = iorder;
 }
 
 } // namespace Pecos
