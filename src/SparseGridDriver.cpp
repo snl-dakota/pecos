@@ -892,11 +892,13 @@ void SparseGridDriver::reference_unique()
   assign_tensor_collocation_indices(0, uniqueIndex1);
   numCollocPts = numUnique1;
   if (trackUniqueProdWeights) {
-    type1WeightSets = 0.;
-    update_sparse_weights(0, a1Type1Weights, uniqueIndex1, type1WeightSets);
+    type1WeightSets = 0.; if (computeType2Weights) type2WeightSets = 0.;
+    update_sparse_weights(0, a1Type1Weights, a1Type2Weights, uniqueIndex1,
+			  type1WeightSets, type2WeightSets);
 #ifdef DEBUG
     PCout << "reference_unique() reference type1WeightSets:\n"
-	  << type1WeightSets;
+	  << type1WeightSets << "reference_unique() reference "
+	  << "type2WeightSets:\n" << type2WeightSets;
 #endif // DEBUG
   }
 }
@@ -948,11 +950,14 @@ void SparseGridDriver::increment_unique(bool compute_a2)
   numCollocPts = numUnique1 + numUnique2;
   // update type1WeightSets
   if (trackUniqueProdWeights) {
-    type1WeightSets = type1WeightSetsRef; // to be augmented by last_index data
-    update_sparse_weights(last_index, a2Type1Weights, uniqueIndex2,
-			  type1WeightSets);
+    type1WeightSets = type1WeightSetsRef;  // to be augmented by last_index data
+    if (computeType2Weights)
+      type2WeightSets = type2WeightSetsRef;// to be augmented by last_index data
+    update_sparse_weights(last_index, a2Type1Weights, a2Type2Weights,
+			  uniqueIndex2, type1WeightSets, type2WeightSets);
 #ifdef DEBUG
-    PCout << "\nupdated weight sets:\n" << type1WeightSets;
+    PCout << "\nupdated type1 weight sets:\n" << type1WeightSets
+	  << "\nupdated type2 weight sets:\n" << type2WeightSets;
 #endif // DEBUG
   }
 }
@@ -994,10 +999,12 @@ void SparseGridDriver::merge_unique()
   a1Points = a3_pts;
   if (trackUniqueProdWeights) {
     a1Type1Weights.resize(n1n2);
-    for (size_t i=0; i<n2; ++i)
+    if (computeType2Weights) a1Type2Weights.reshape(numVars, n1n2);
+    size_t i, j;
+    for (i=0; i<n2; ++i) {
       a1Type1Weights[n1+i] = a2Type1Weights[i];
-    if (computeType2Weights) {
-      // *** TO DO: type2 weights
+      if (computeType2Weights)
+	copy_data(a2Type2Weights[i], numVars, a1Type2Weights[n1+i]);
     }
   }
   // update reference indices, counts, radii
@@ -1031,7 +1038,7 @@ void SparseGridDriver::finalize_unique(size_t start_index)
 
   size_t i, j, num_sm_mi = smolyakMultiIndex.size();
   int m = numVars, n1, n2, n1n2, n3, num_unique3, all_n2 = 0;
-  RealVector all_a2_wts, r3_vec; RealMatrix a3_pts;
+  RealVector all_a2t1_wts, r3_vec; RealMatrix a3_pts, all_a2t2_wts;
   IntArray all_unique_index2, sort_index3, unique_set3, unique_index3;
   bool *is_unique1, *is_unique2, *is_unique3;
 
@@ -1040,9 +1047,13 @@ void SparseGridDriver::finalize_unique(size_t start_index)
     compute_tensor_points_weights(i, 1, a2Points, a2Type1Weights,
 				  a2Type2Weights);
     n1 = a1Points.numCols(); n2 = a2Points.numCols();
-    all_a2_wts.resize(all_n2+n2);
-    for (j=0; j<n2; ++j)
-      all_a2_wts[all_n2+j] = a2Type1Weights[j]; // *** TO DO: Type2
+    all_a2t1_wts.resize(all_n2+n2);
+    if (computeType2Weights) all_a2t2_wts.reshape(numVars, all_n2+n2);
+    for (j=0; j<n2; ++j) {
+      all_a2t1_wts[all_n2+j] = a2Type1Weights[j];
+      if (computeType2Weights)
+	copy_data(a2Type2Weights[j], numVars, all_a2t2_wts[all_n2+j]);
+    }
     all_n2 += n2;
 
     // INC2
@@ -1111,8 +1122,10 @@ void SparseGridDriver::finalize_unique(size_t start_index)
   assign_tensor_collocation_indices(start_index, all_unique_index2);
   if (trackUniqueProdWeights) {
     type1WeightSets = type1WeightSetsRef; // to be augmented
-    update_sparse_weights(start_index, all_a2_wts, all_unique_index2,
-			  type1WeightSets);
+    if (computeType2Weights)
+      type2WeightSets = type2WeightSetsRef; // to be augmented
+    update_sparse_weights(start_index, all_a2t1_wts, all_a2t2_wts,
+			  all_unique_index2, type1WeightSets, type2WeightSets);
 #ifdef DEBUG
     PCout << "type1WeightSets =\n"; write_data(PCout, type1WeightSets);
 #endif // DEBUG
@@ -1190,14 +1203,17 @@ update_sparse_points(size_t start_index, int new_index_offset,
 
 
 void SparseGridDriver::
-update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
-		      const IntArray& unique_index,
-		      RealVector& updated_sparse_wts)
+update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
+		      const RealMatrix& tensor_t2_wts,
+		      const IntArray& unique_index, RealVector& updated_t1_wts,
+		      RealMatrix& updated_t2_wts)
 {
-  size_t i, j, cntr, num_sm_mi = smolyakMultiIndex.size(), num_tp_pts;
+  size_t i, j, k, cntr, num_sm_mi = smolyakMultiIndex.size(), num_tp_pts;
 
   // update sizes
-  updated_sparse_wts.resize(numCollocPts); // new entries initialized to 0
+  updated_t1_wts.resize(numCollocPts); // new entries initialized to 0
+  if (computeType2Weights)
+    updated_t2_wts.reshape(numVars, numCollocPts); // new entries init to 0
 
   int index, delta_coeff, sm_coeff;
   // back out changes in Smolyak coeff for existing index sets
@@ -1207,7 +1223,13 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
       num_tp_pts = collocKey[i].size();
       for (j=0; j<num_tp_pts; ++j, ++cntr) {
 	index = uniqueIndex1[cntr];
-	updated_sparse_wts[index] += delta_coeff * a1Type1Weights[cntr];
+	updated_t1_wts[index] += delta_coeff * a1Type1Weights[cntr];
+	if (computeType2Weights) {
+	  Real*       up_t2_wts_j = updated_t2_wts[index];
+	  const Real* a1_t2_wts_j = a1Type2Weights[cntr];
+	  for (k=0; k<numVars; ++k)
+	    up_t2_wts_j[k] += delta_coeff * a1_t2_wts_j[k];
+	}
       }
     }
     else
@@ -1220,7 +1242,13 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
       num_tp_pts = collocKey[i].size();
       for (j=0; j<num_tp_pts; ++j, ++cntr) {
 	index = unique_index[cntr];
-	updated_sparse_wts[index] += sm_coeff * tensor_wts[cntr];
+	updated_t1_wts[index] += sm_coeff * tensor_t1_wts[cntr];
+	if (computeType2Weights) {
+	  Real*       up_t2_wts_j = updated_t2_wts[index];
+	  const Real* te_t2_wts_j = tensor_t2_wts[cntr];
+	  for (k=0; k<numVars; ++k)
+	    up_t2_wts_j[k] += sm_coeff * te_t2_wts_j[cntr];
+	}
       }
     }
     else

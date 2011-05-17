@@ -238,18 +238,21 @@ private:
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,
 				     RealMatrix& pts, RealVector& t1_wts,
 				     RealMatrix& t2_wts);
-  /// convenience function for updating sparse points/weights from a set of
-  /// aggregated tensor points/weights
+  /// convenience function for updating sparse points from a set of
+  /// aggregated tensor points
   void update_sparse_points(size_t start_index, int new_index_offset,
 			    const RealMatrix& tensor_pts,
 			    const BoolDeque& is_unique,
 			    const IntArray& unique_index,
 			    RealMatrix& new_sparse_pts);
-  /// convenience function for updating sparse points/weights from a set of
-  /// aggregated tensor points/weights
-  void update_sparse_weights(size_t start_index, const RealVector& tensor_wts,
+  /// convenience function for updating sparse weights from a set of
+  /// aggregated tensor weights
+  void update_sparse_weights(size_t start_index,
+			     const RealVector& tensor_t1_wts,
+			     const RealMatrix& tensor_t2_wts,
 			     const IntArray& unique_index,
-			     RealVector& updated_sparse_wts);
+			     RealVector& updated_t1_wts,
+			     RealMatrix& updated_t2_wts);
   ///convenience function for assigning collocIndices from uniqueIndex{1,2,3}
   void assign_tensor_collocation_indices(size_t start_index,
 					 const IntArray& unique_index);
@@ -336,9 +339,12 @@ private:
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
   IntArray smolyakCoeffsRef;
-  /// reference values for the sparse grid weights corresponding to the current
+  /// reference values for the type1 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type1WeightSets
   RealVector type1WeightSetsRef;
+  /// reference values for the type2 weights corresponding to the current
+  /// reference grid; used in incremental approaches that update type2WeightSets
+  RealMatrix type2WeightSetsRef;
   /// flag indicating need to track {type1,type2}WeightSets (product weights for
   /// each unique grid point) as opposed to relying on collections of 1D weights
   bool trackUniqueProdWeights;
@@ -480,8 +486,11 @@ inline void SparseGridDriver::allocate_smolyak_coefficients(size_t start_index)
 inline void SparseGridDriver::update_reference()
 {
   smolyakCoeffsRef = smolyakCoeffs;
-  if (trackUniqueProdWeights)
+  if (trackUniqueProdWeights) {
     type1WeightSetsRef = type1WeightSets;
+    if (computeType2Weights)
+      type2WeightSetsRef = type2WeightSets;
+  }
 }
 
 
