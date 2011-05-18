@@ -387,9 +387,9 @@ private:
 
 
 inline SparseGridDriver::SparseGridDriver():
-  IntegrationDriver(BaseConstructor()), ssgLevel(0), storeCollocDetails(false),
-  duplicateTol(1.e-15), numCollocPts(0), updateGridSize(true),
-  trackUniqueProdWeights(false)
+  IntegrationDriver(BaseConstructor()), ssgLevel(0), dimIsotropic(true),
+  storeCollocDetails(false), duplicateTol(1.e-15), numCollocPts(0),
+  updateGridSize(true), trackUniqueProdWeights(false)
 { }
 
 

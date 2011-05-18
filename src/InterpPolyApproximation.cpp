@@ -167,7 +167,7 @@ void InterpPolyApproximation::compute_coefficients()
   //anchorPoint = dataPoints.front();
   //dataPoints.pop_front();
 
-  size_t i, offset = 0;
+  size_t offset = 0;
   numCollocPts = dataPoints.size();
   // anchorPoint, if present, is the first expansionSample.
   if (!anchorPoint.is_null()) {
@@ -194,14 +194,14 @@ void InterpPolyApproximation::compute_coefficients()
   }
 
   std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
-  for (i=offset; i<numCollocPts; ++i, ++it) {
+  for (int i=offset; i<numCollocPts; ++i, ++it) {
     if (configOptions.expansionCoeffFlag) {
       expansionType1Coeffs[i] = it->response_function();
       if (configOptions.useDerivs)
-	Teuchos::setCol(it->response_gradient(), (int)i, expansionType2Coeffs);
+	Teuchos::setCol(it->response_gradient(), i, expansionType2Coeffs);
     }
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(it->response_gradient(), (int)i,expansionType1CoeffGrads);
+      Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
   }
 
 #ifdef INTERPOLATION_TEST
@@ -209,7 +209,7 @@ void InterpPolyApproximation::compute_coefficients()
   // SSG with fully nested rules, but will exhibit interpolation error
   // for SSG with other rules.
   it = dataPoints.begin();
-  for (i=offset; i<numCollocPts; ++i, ++it) {
+  for (size_t i=offset; i<numCollocPts; ++i, ++it) {
     const Real& coeff1 = expansionType1Coeffs[i];
     const Real&    val = value(it->continuous_variables());
     PCout << "Colloc pt " << std::setw(3) << i+1
@@ -276,8 +276,13 @@ void InterpPolyApproximation::decrement_coefficients()
   }
 
   // not necessary to prune; next increment/restore/finalize takes care of this
-  //if (configOptions.expansionCoeffFlag)
+  //if (configOptions.expansionCoeffFlag) {
   //  expansionType1Coeffs.resize(numCollocPts);
+  //  if (configOptions.useDerivs) {
+  //    size_t num_deriv_vars = expansionType2Coeffs.numRows();
+  //    expansionType2Coeffs.reshape(num_deriv_vars, numCollocPts);
+  //  }
+  //}
   //if (configOptions.expansionCoeffGradFlag) {
   //  size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
   //  expansionType1CoeffGrads.reshape(num_deriv_vars, numCollocPts);
@@ -327,12 +332,17 @@ void InterpPolyApproximation::finalize_coefficients()
 
 void InterpPolyApproximation::restore_expansion_coefficients()
 {
-  size_t i, new_colloc_pts = dataPoints.size();
+  size_t new_colloc_pts = dataPoints.size();
   if (!anchorPoint.is_null())
     new_colloc_pts += 1;
 
-  if (configOptions.expansionCoeffFlag)
+  if (configOptions.expansionCoeffFlag) {
     expansionType1Coeffs.resize(new_colloc_pts);
+    if (configOptions.useDerivs) {
+      size_t num_deriv_vars = expansionType2Coeffs.numRows();
+      expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
+    }
+  }
   if (configOptions.expansionCoeffGradFlag) {
     size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
     expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
@@ -340,11 +350,14 @@ void InterpPolyApproximation::restore_expansion_coefficients()
 
   std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   std::advance(it, numCollocPts);
-  for (i=numCollocPts; i<new_colloc_pts; ++i, ++it) {
-    if (configOptions.expansionCoeffFlag)
+  for (int i=numCollocPts; i<new_colloc_pts; ++i, ++it) {
+    if (configOptions.expansionCoeffFlag) {
       expansionType1Coeffs[i] = it->response_function();
+      if (configOptions.useDerivs)
+	Teuchos::setCol(it->response_gradient(), i, expansionType2Coeffs);
+    }
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(it->response_gradient(), (int)i,expansionType1CoeffGrads);
+      Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
   }
 
   numCollocPts = new_colloc_pts;
