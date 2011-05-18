@@ -481,11 +481,17 @@ void InterpPolyApproximation::compute_numerical_moments(size_t num_moments)
 
   // standardize third and higher central moments, if present
   if (num_moments > 2) {
-    // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
-    Real std_dev = std::sqrt(numericalMoments[1]); pow_fn = std_dev*std_dev;
-    for (j=2; j<num_moments; ++j)
-      { pow_fn *= std_dev; numericalMoments[j] /= pow_fn; }
-
+    const Real& var = numericalMoments[1];
+    if (var > 0.) {
+      // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
+      Real std_dev = std::sqrt(var); pow_fn = std_dev*std_dev;
+      for (j=2; j<num_moments; ++j)
+	{ pow_fn *= std_dev; numericalMoments[j] /= pow_fn; }
+    }
+    else
+      PCerr << "Warning: skewness and kurtosis cannot be standardized due to "
+	    << "non-positive variance.\n         Skipping std deviation "
+	    << "normalization." << std::endl;
     // offset the fourth standardized moment to eliminate excess kurtosis
     if (num_moments > 3)
       numericalMoments[3] -= 3.;

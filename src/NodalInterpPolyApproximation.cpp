@@ -1147,11 +1147,11 @@ covariance(PolynomialApproximation* poly_approx_2)
     const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
     const RealMatrix& t2_wts      = driverRep->type2_weight_sets();
     for (i=0; i<numCollocPts; ++i) {
-      // type1 interpolation of (R_1-\mu_1) (R_2 - \mu_2)
+      // type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
       Real coeff1_i_mm1 = expansionType1Coeffs[i] - mean_1,
 	  coeff1_2i_mm2 = t1_coeffs_2[i]          - mean_2;
-      covar += coeff1_i_mm1 * coeff1_2i_mm2 *  t1_wts[i];
-      // type2 interpolation of (R_1-\mu_1) (R_2 - \mu_2)
+      covar += coeff1_i_mm1 * coeff1_2i_mm2 * t1_wts[i];
+      // type2 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
       // --> interpolated gradients are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
       const Real *coeff2_i  = expansionType2Coeffs[i],
 	         *coeff2_2i = t2_coeffs_2[i], *t2_wt_i = t2_wts[i];

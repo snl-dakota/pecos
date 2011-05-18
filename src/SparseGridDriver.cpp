@@ -22,7 +22,7 @@
 
 static const char rcsId[]="@(#) $Id: SparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-#define DEBUG
+//#define DEBUG
 
 namespace Pecos {
 
@@ -109,10 +109,11 @@ allocate_smolyak_coefficients(size_t start_index,
 			      const UShort2DArray& multi_index,
 			      IntArray& coeffs)
 {
-  size_t i, j, cntr = 0, num_sets = multi_index.size();
+  size_t j, cntr = 0, num_sets = multi_index.size(), len1 = num_sets-1;
+  int i, m = numVars;
   if (coeffs.size() != num_sets)
     coeffs.resize(num_sets);
-  int *s1 = new int [numVars*num_sets], *c1 = new int [num_sets],
+  int *s1 = new int [numVars*len1], *c1 = new int [len1],
       *s2 = new int [numVars];
   // initialize s1 and c1
   for (i=0; i<start_index; ++i) {
@@ -124,16 +125,16 @@ allocate_smolyak_coefficients(size_t start_index,
   for (i=start_index; i<num_sets; ++i) {
     for (j=0; j<numVars; ++j) // no copy_data() since ushort -> int
       s2[j] = multi_index[i][j];
-    webbur::sandia_sgmgg_coef_inc2(numVars, i, s1, c1, s2, &coeffs[0]);
+    webbur::sandia_sgmgg_coef_inc2(m, i, s1, c1, s2, &coeffs[0]);
 #ifdef DEBUG
     PCout << "allocate_smolyak_coefficients(): updated Smolyak coeffs =\n"
 	  << coeffs << '\n';
 #endif // DEBUG
-    if (i<num_sets-1) { // update s1 and c1 state for next index
-      for (j=0; j<=i; ++j) // coeffs updated to len i+1
+    if (i<num_sets-1) { // if not last i, update s1 and c1 state for next pass
+      for (j=0; j<=i; ++j) // coeffs updated to len i+1; max len = num_sets-1
 	c1[j] = coeffs[j];
       for (j=0; j<numVars; ++j, ++cntr)
-	s1[cntr] = s2[j];
+	s1[cntr] = s2[j]; // max len = (num_sets-1)*numVars
     }
   }
   delete [] s1; delete [] c1; delete [] s2;
