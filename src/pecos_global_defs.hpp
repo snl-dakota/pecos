@@ -78,7 +78,9 @@ enum { SLOW_RESTRICTED_GROWTH, MODERATE_RESTRICTED_GROWTH,
 /// (options for ConfigurationOptions::expCoeffsSolnApproach)
 enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
 /// options for ConfigurationOptions::nestingOverride (inactive)
-enum { NO_OVERRIDE=0, NESTED, NON_NESTED };
+enum { NO_NESTING_OVERRIDE=0, NESTED, NON_NESTED };
+/// options for overriding the default growth restriction policy
+enum { NO_GROWTH_OVERRIDE=0, RESTRICTED, UNRESTRICTED };
 /// options for ConfigurationOptions::refinementType (inactive)
 enum { NO_REFINEMENT=0, P_REFINEMENT, H_REFINEMENT };
 /// options for ConfigurationOptions::refinementControl

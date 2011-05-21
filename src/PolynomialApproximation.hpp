@@ -71,7 +71,7 @@ private:
 
   // output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   //short outputLevel;
-  // nesting override options: NO_OVERRIDE, NESTED, NON_NESTED
+  // nesting override options: NO_NESTING_OVERRIDE, NESTED, NON_NESTED
   //short nestingOverride;
 
   // type of refinement: {NO,P,H}_REFINEMENT
