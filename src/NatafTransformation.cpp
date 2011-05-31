@@ -644,7 +644,7 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
     Note: The modification is exact for normal-normal, lognormal-lognormal, and
     normal-lognormal tranformations.  All other cases are approximations with
     some error as noted below. */
-void NatafTransformation::trans_correlations()
+void NatafTransformation::transform_correlations()
 {
   // ranVarTypesX:   the type of random variable.  Supported correlations are
   //                 NORMAL/LOGNORMAL/UNIFORM/EXPONENTIAL/GAMMA/GUMBEL/FRECHET/

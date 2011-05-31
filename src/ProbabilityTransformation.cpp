@@ -313,12 +313,12 @@ trans_X_to_U(const RealVector& x_vars, RealVector& u_vars)
 }
 
 
-void ProbabilityTransformation::trans_correlations()
+void ProbabilityTransformation::transform_correlations()
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->trans_correlations();
+    probTransRep->transform_correlations();
   else { // letter lacking redefinition of virtual fn
-    PCerr << "Error: derived class does not redefine trans_correlations() "
+    PCerr << "Error: derived class does not redefine transform_correlations() "
           << "virtual fn.\nNo default defined at ProbabilityTransformation base"
 	  << " class.\n" << std::endl;
     abort_handler(-1);
@@ -921,7 +921,7 @@ distribution_parameter(size_t index, short target, const Real& param)
   }
 
   // update corrCholeskyFactorZ for new ranVarMeans/ranVarStdDevs
-  trans_correlations();
+  transform_correlations();
 }
 
 

@@ -54,7 +54,7 @@ public:
   /// (corrMatrixX) to account for correlation warping from the nonlinear
   /// X->Z transformation and performs a Cholesky factorization to create
   /// corrCholeskyFactorZ.
-  virtual void trans_correlations();
+  virtual void transform_correlations();
 
   /// Transformation routine for gradient vector from x-space to u-space
   virtual void trans_grad_X_to_U(const RealVector& fn_grad_x,
@@ -249,7 +249,7 @@ protected:
   /// matrix of random variable correlation coefficients
   RealSymMatrix corrMatrixX;
   /// cholesky factor of a modified correlation matrix (#corrMatrixX
-  /// is modified in trans_correlations() for use in z-space)
+  /// is modified in transform_correlations() for use in z-space)
   RealMatrix corrCholeskyFactorZ;
 
 private:

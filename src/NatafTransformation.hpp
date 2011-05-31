@@ -53,7 +53,7 @@ protected:
   /// (corrMatrixX) to account for correlation warping from the nonlinear
   /// X->Z transformation and performs a Cholesky factorization to create
   /// corrCholeskyFactorZ.
-  void trans_correlations();
+  void transform_correlations();
 
   /// Transformation routine for gradient vector from x-space to u-space
   void trans_grad_X_to_U(const RealVector& fn_grad_x, RealVector& fn_grad_u,
