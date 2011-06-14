@@ -16,7 +16,7 @@
 #define POLYNOMIAL_APPROXIMATION_HPP
 
 #include "BasisApproximation.hpp"
-#include "SurrogateDataPoint.hpp"
+#include "SurrogateData.hpp"
 #include "SparseGridDriver.hpp"
 
 
@@ -229,26 +229,26 @@ public:
   /// size total Sobol arrays
   void allocate_total_effects();
 
-  /// set dataPoints
-  void data_points(const std::list<SurrogateDataPoint>& pts);
-  /// return size of dataPoints
+  /// set surrData::{vars,resp}Data
+  void data_points(const SDVArray& sdv_array, const SDRArray& sdr_array);
+  /// return number of data points managed within surrData
   size_t data_size() const;
-  /// set anchorPoint
-  void anchor_point(const SurrogateDataPoint& pt);
-  /// queries the status of anchorPoint
+  /// set surrData::anchor{Vars,Resp}
+  void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
+  /// queries the existence of an anchor point within surrData
   bool anchor() const;
 
-  /// push incoming pt onto the end of dataPoints (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
-  void push_back(const SurrogateDataPoint& pt);
-  /// pop pop_count() instances off the end of dataPoints (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
+  /// push incoming data onto ends of surrData::{vars,resp}Data (implemented at
+  /// this intermediate level since surrData not defined at base level)
+  void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
+  /// pop pop_count() instances off the ends of surrData::{vars,resp}Data
+  /// (implemented at this level since surrData not defined at base level)
   void pop();
-  /// pop num_pop_pts instances off the end of dataPoints (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
+  /// pop num_pop_pts instances off the ends of surrData::{vars,resp}Data
+  /// (implemented at this level since surrData not defined at base level)
   void pop(size_t num_pop_pts);
   /// number of data points to remove in a decrement (implemented at this
-  /// intermediate level since dataPoints are not defined at base level)
+  /// intermediate level since surrData not defined at base level)
   size_t pop_count();
 
   /// set ConfigurationOptions::expCoeffsSolnApproach
@@ -347,14 +347,9 @@ protected:
   //- Heading: Data
   //
 
-  /// a special sample (often at the center of the approximation region)
-  /// for which exact matching is enforced (e.g., using equality-constrained
-  /// least squares regression).
-  SurrogateDataPoint anchorPoint;
-  /// set of samples used to build the approximation.  These sample points
-  /// are fit approximately (e.g., using least squares regression); exact
-  /// matching is not enforced.
-  std::vector<SurrogateDataPoint> dataPoints;
+  /// instance containing the variables/response data arrays for
+  /// constructing a surrogate model
+  SurrogateData surrData;
 
   /// pointer to integration driver instance
   IntegrationDriver* driverRep;
@@ -444,30 +439,26 @@ inline const RealVector& PolynomialApproximation::numerical_moments() const
 
 
 inline void PolynomialApproximation::
-data_points(const std::list<SurrogateDataPoint>& pts)
-{
-  size_t i, num_pts = pts.size();
-  dataPoints.resize(num_pts);
-  std::list<SurrogateDataPoint>::const_iterator cit;
-  for (i=0, cit=pts.begin(); i<num_pts; ++i, ++cit)
-    dataPoints[i] = *cit; 
-}
+data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
+{ surrData.data_points(sdv_array, sdr_array); }
 
 
 inline size_t PolynomialApproximation::data_size() const
-{ return dataPoints.size(); }
+{ return surrData.size(); }
 
 
-inline void PolynomialApproximation::anchor_point(const SurrogateDataPoint& pt)
-{ anchorPoint = pt; }
+inline void PolynomialApproximation::
+anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
+{ surrData.anchor_point(sdv, sdr); }
 
 
 inline bool PolynomialApproximation::anchor() const
-{ return !anchorPoint.is_null(); }
+{ return surrData.anchor(); }
 
 
-inline void PolynomialApproximation::push_back(const SurrogateDataPoint& pt)
-{ dataPoints.push_back(pt); }
+inline void PolynomialApproximation::
+push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
+{ surrData.push_back(sdv, sdr); }
 
 
 inline void PolynomialApproximation::pop()
@@ -475,19 +466,7 @@ inline void PolynomialApproximation::pop()
 
 
 inline void PolynomialApproximation::pop(size_t num_pop_pts)
-{
-  if (num_pop_pts) {
-    size_t data_size = dataPoints.size();
-    if (data_size >= num_pop_pts)
-      dataPoints.resize(data_size - num_pop_pts);
-    else {
-      PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
-	    << data_size << ") in PolynomialApproximation::pop(size_t)."
-	    << std::endl;
-      abort_handler(-1);
-    }
-  }
-}
+{ surrData.pop(num_pop_pts); }
 
 
 inline size_t PolynomialApproximation::pop_count()
@@ -638,7 +617,7 @@ inline size_t PolynomialApproximation::restoration_index()
 
 inline size_t PolynomialApproximation::finalization_index(size_t i)
 {
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
   const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
 
   size_t num_saved_indices = savedSmolyakMultiIndex.size(),

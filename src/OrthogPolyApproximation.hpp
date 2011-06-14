@@ -256,15 +256,14 @@ private:
   void sample_checks();
   /// perform sanity checks prior to numerical integration
   void integration_checks();
-  /// extract tp_data_points from dataPoints and tp_weights from
+  /// extract tp_data_points from surrData and tp_weights from
   /// driverRep->collocWts1D
-  void integration_data(size_t tp_index,
-			std::vector<SurrogateDataPoint>& tp_data_points,
-			RealVector& tp_weights);
+  void integration_data(size_t tp_index, SDVArray& tp_data_vars,
+			SDRArray& tp_data_resp, RealVector& tp_weights);
   /// computes the chaosCoeffs via numerical integration
   /// (expCoeffsSolnApproach is QUADRATURE, CUBATURE, or SPARSE_GRID)
   void integrate_expansion(const UShort2DArray& multi_index,
-			   const std::vector<SurrogateDataPoint>& data_pts,
+			   const SDVArray& data_vars, const SDRArray& data_resp,
 			   const RealVector& wt_sets, RealVector& exp_coeffs,
 			   RealMatrix& exp_coeff_grads);
 

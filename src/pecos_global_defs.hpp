@@ -30,6 +30,9 @@ const size_t _NPOS = ~(size_t)0; // one's complement
 /// used in ostream data output functions
 const int WRITE_PRECISION = 10;
 
+// define special values for vector/matrix data copying modes
+enum { DEFAULT_COPY=0, SHALLOW_COPY, DEEP_COPY };
+
 // define special values for ranVarTypesX/U
 enum { DESIGN, STD_NORMAL, NORMAL, BOUNDED_NORMAL, LOGNORMAL, BOUNDED_LOGNORMAL,
        STD_UNIFORM, UNIFORM, LOGUNIFORM, TRIANGULAR, STD_EXPONENTIAL,

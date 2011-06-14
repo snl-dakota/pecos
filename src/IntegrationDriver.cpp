@@ -38,6 +38,7 @@ UShortArray IntegrationDriver::precGenzKeister;
 IntegrationDriver::IntegrationDriver(BaseConstructor):
   computeType2Weights(false), driverRep(NULL), referenceCount(1)
 {
+  /* Standard 5 step sequence is fully nested (1+2+6+10+16 = 1, 3, 9, 19, 35)
   if (orderGenzKeister.empty()) {
     orderGenzKeister.resize(5); //orderGenzKeister = { 1, 3, 9, 19, 35 };
     orderGenzKeister[0] =  1; orderGenzKeister[1] =  3; orderGenzKeister[2] = 9;
@@ -47,6 +48,22 @@ IntegrationDriver::IntegrationDriver(BaseConstructor):
     precGenzKeister.resize(5); //precGenzKeister = { 1, 5, 15, 29, 51 }; 
     precGenzKeister[0] =  1; precGenzKeister[1] =  5; precGenzKeister[2] = 15;
     precGenzKeister[3] = 29; precGenzKeister[4] = 51;
+  }
+  */
+
+  // To maximize the available precision, we augment this fully nested 5 step
+  // sequence with a 6th step that reuses the 1+2+6+10 sequence portion, but
+  // replaces the +16 with +24.
+  if (orderGenzKeister.empty()) {
+    orderGenzKeister.resize(6); //orderGenzKeister = { 1, 3, 9, 19, 35, 43 };
+    orderGenzKeister[0] =  1; orderGenzKeister[1] =  3;
+    orderGenzKeister[2] =  9; orderGenzKeister[3] = 19;
+    orderGenzKeister[4] = 35; orderGenzKeister[5] = 43;
+  }
+  if (precGenzKeister.empty()) {
+    precGenzKeister.resize(6); //precGenzKeister = { 1, 5, 15, 29, 51, 67 }; 
+    precGenzKeister[0] =  1; precGenzKeister[1] =  5; precGenzKeister[2] = 15;
+    precGenzKeister[3] = 29; precGenzKeister[4] = 51; precGenzKeister[5] = 67;
   }
 
 #ifdef REFCOUNT_DEBUG

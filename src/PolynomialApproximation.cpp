@@ -529,28 +529,28 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
   else
     numericalMoments.size(num_moments); // init to 0
 
-  size_t i, j, offset = 0, num_pts = dataPoints.size();
-  bool anchor_pt = !anchorPoint.is_null();
+  size_t i, j, offset = 0, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
   const RealVector& t1_wts = driverRep->type1_weight_sets();
 
   // estimate 1st raw moment (mean)
   Real& mean = numericalMoments[0];
   if (anchor_pt) {
     offset = 1; num_pts += offset;
-    mean  = t1_wts[0] * anchorPoint.response_function();
+    mean  = t1_wts[0] * surrData.anchor_function();
   }
   for (size_t i=offset; i<num_pts; ++i)
-    mean += t1_wts[i] * dataPoints[i].response_function();
+    mean += t1_wts[i] * surrData.response_function(i);
 
   // estimate central moments 2 through num_moments
   Real centered_fn, pow_fn;
   if (anchor_pt) {
-    pow_fn = centered_fn = anchorPoint.response_function() - mean;
+    pow_fn = centered_fn = surrData.anchor_function() - mean;
     for (j=1; j<num_moments; ++j)
       { pow_fn *= centered_fn; numericalMoments[j] = t1_wts[0] * pow_fn; }
   }
   for (i=offset; i<num_pts; ++i) {
-    pow_fn = centered_fn = dataPoints[i].response_function() - mean;
+    pow_fn = centered_fn = surrData.response_function(i) - mean;
     for (j=1; j<num_moments; ++j)
       { pow_fn *= centered_fn; numericalMoments[j] += t1_wts[i] * pow_fn; }
   }

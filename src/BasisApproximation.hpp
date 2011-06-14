@@ -56,10 +56,9 @@ public:
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;
-  /// calculate the approximation coefficients using currentPoints and
-  /// anchorPoint
+  /// calculate the approximation coefficients using the SurrogateData
   virtual void compute_coefficients();
-  /// recalculate the approximation coefficients following currentPoints update
+  /// recalculate the approximation coefficients following SurrogateData update
   virtual void increment_coefficients();
   /// restore the approximation coefficients to the state preceding the last
   /// increment

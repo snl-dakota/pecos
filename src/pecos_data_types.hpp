@@ -34,7 +34,8 @@ namespace Pecos {
 
 // avoid problems with circular dependencies by using fwd declarations
 //class BasisFunction;
-
+class SurrogateDataVars;
+class SurrogateDataResp;
 
 // -----------------------------------
 // Aliases for fundamental data types:
@@ -86,7 +87,12 @@ typedef std::vector<String>         StringArray;
 typedef std::vector<RealVector>     RealVectorArray;
 typedef std::vector<RealMatrix>     RealMatrixArray;
 typedef std::vector<RealSymMatrix>  RealSymMatrixArray;
+
 //typedef std::vector<BasisFunction>  BasisFunctionArray;
+typedef std::vector<SurrogateDataVars> SDVArray;
+typedef std::vector<SurrogateDataResp> SDRArray;
+typedef std::vector<SDVArray>          SDV2DArray;
+typedef std::vector<SDRArray>          SDR2DArray;
 
 typedef std::set<int>               IntSet;
 typedef std::set<Real>              RealSet;
@@ -170,7 +176,8 @@ void copy_data(const std::vector<ScalarType>& v,
 
 
 /// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to same
-/// (used in place of operator= when a deep copy of a vector view is needed)
+/// (used in place of operator= when a deep copy is required regardless
+/// of Teuchos DataAccess mode)
 template <typename OrdinalType, typename ScalarType> 
 void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv1,
 	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv2)
@@ -180,6 +187,21 @@ void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& sdv1,
     sdv2.sizeUninitialized(size_sdv1);
   for (OrdinalType i=0; i<size_sdv1; ++i)
     sdv2[i] = sdv1[i];
+}
+
+
+/// copy Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType> to same
+/// (used in place of operator= when a deep copy is required regardless
+/// of Teuchos DataAccess mode)
+template <typename OrdinalType, typename ScalarType> 
+void copy_data(const
+	       Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType>& ssdm1,
+	       Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType>& ssdm2)
+{
+  OrdinalType size_ssdm1 = ssdm1.numRows();
+  if (size_ssdm1 != ssdm2.numRows())
+    ssdm2.shapeUninitialized(size_ssdm1);
+  ssdm2.assign(ssdm1); // copies values
 }
 
 

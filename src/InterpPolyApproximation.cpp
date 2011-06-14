@@ -53,9 +53,7 @@ void InterpPolyApproximation::allocate_arrays()
   allocate_component_effects();
   allocate_total_effects();
 
-  const SurrogateDataPoint& sdp
-    = (anchorPoint.is_null()) ? dataPoints[0] : anchorPoint;
-  size_t num_deriv_vars = sdp.response_gradient().length();
+  size_t num_deriv_vars = surrData.num_derivative_variables();
   if (configOptions.expansionCoeffFlag) {
     if (expansionType1Coeffs.length() != numCollocPts)
       expansionType1Coeffs.sizeUninitialized(numCollocPts);
@@ -82,7 +80,7 @@ void InterpPolyApproximation::allocate_arrays()
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
 
-    // verify total number of collocation pts (should not include anchorPoint)
+    // verify total number of collocation pts (should not include anchor pt)
     size_t i, j, num_colloc_pts = 1;
     for (i=0; i<numVars; ++i)
       num_colloc_pts *= quad_order[i];
@@ -163,17 +161,17 @@ void InterpPolyApproximation::compute_coefficients()
     return;
   }
 
-  // For testing of anchorPoint logic:
-  //anchorPoint = dataPoints.front();
-  //dataPoints.pop_front();
+  // For testing of anchor point logic:
+  //size_t index = surrData.size() - 1;
+  //surrData.anchor_point(surrData.variables_data()[index],
+  //                      surrData.response_data()[index]);
+  //surrData.pop(1);
 
   size_t offset = 0;
-  numCollocPts = dataPoints.size();
-  // anchorPoint, if present, is the first expansionSample.
-  if (!anchorPoint.is_null()) {
-    offset        = 1;
-    numCollocPts += offset;
-  }
+  numCollocPts = surrData.size();
+  // anchor point, if present, is the first expansionSample.
+  if (surrData.anchor())
+    { offset = 1; ++numCollocPts; }
   if (!numCollocPts) {
     PCerr << "Error: nonzero number of sample points required in "
 	  << "InterpPolyApproximation::compute_coefficients()." << std::endl;
@@ -182,36 +180,37 @@ void InterpPolyApproximation::compute_coefficients()
 
   allocate_arrays();
 
-  if (!anchorPoint.is_null()) {
+  if (surrData.anchor()) {
     if (configOptions.expansionCoeffFlag) {
-      expansionType1Coeffs[0] = anchorPoint.response_function();
+      expansionType1Coeffs[0] = surrData.anchor_function();
       if (configOptions.useDerivs)
-	Teuchos::setCol(anchorPoint.response_gradient(),0,expansionType2Coeffs);
+	Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType2Coeffs);
     }
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(anchorPoint.response_gradient(), 0,
-		      expansionType1CoeffGrads);
+      Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType1CoeffGrads);
   }
 
-  std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
-  for (int i=offset; i<numCollocPts; ++i, ++it) {
+  size_t index = 0;
+  for (int i=offset; i<numCollocPts; ++i, ++index) {
     if (configOptions.expansionCoeffFlag) {
-      expansionType1Coeffs[i] = it->response_function();
+      expansionType1Coeffs[i] = surrData.response_function(index);
       if (configOptions.useDerivs)
-	Teuchos::setCol(it->response_gradient(), i, expansionType2Coeffs);
+	Teuchos::setCol(surrData.response_gradient(index), i,
+			expansionType2Coeffs);
     }
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
+      Teuchos::setCol(surrData.response_gradient(index), i,
+		      expansionType1CoeffGrads);
   }
 
 #ifdef INTERPOLATION_TEST
   // SC should accurately interpolate the collocation data for TPQ and
   // SSG with fully nested rules, but will exhibit interpolation error
   // for SSG with other rules.
-  it = dataPoints.begin();
-  for (size_t i=offset; i<numCollocPts; ++i, ++it) {
+  index = 0;
+  for (size_t i=offset; i<numCollocPts; ++i, ++index) {
     const Real& coeff1 = expansionType1Coeffs[i];
-    const Real&    val = value(it->continuous_variables());
+    const Real&    val = value(surrData.continuous_variables(index));
     PCout << "Colloc pt " << std::setw(3) << i+1
 	  << ": truth value  = " << std::setw(WRITE_PRECISION+7) << coeff1
 	  << " interpolant = "   << std::setw(WRITE_PRECISION+7) << val
@@ -219,7 +218,7 @@ void InterpPolyApproximation::compute_coefficients()
 	  << std::abs(coeff1 - val) << '\n';
     if (configOptions.useDerivs) {
       const Real*     coeff2 = expansionType2Coeffs[i];
-      const RealVector& grad = gradient(it->continuous_variables());
+      const RealVector& grad = gradient(surrData.continuous_variables(index));
       for (size_t j=0; j<numVars; ++j)
 	PCout << "               " << "truth grad_" << j+1 << " = "
 	      << std::setw(WRITE_PRECISION+7) << coeff2[j] << " interpolant = "
@@ -288,8 +287,8 @@ void InterpPolyApproximation::decrement_coefficients()
   //  expansionType1CoeffGrads.reshape(num_deriv_vars, numCollocPts);
   //}
 
-  numCollocPts = dataPoints.size(); // data already decremented
-  if (!anchorPoint.is_null())
+  numCollocPts = surrData.size(); // data already decremented
+  if (surrData.anchor())
     numCollocPts += 1;
 }
 
@@ -332,9 +331,9 @@ void InterpPolyApproximation::finalize_coefficients()
 
 void InterpPolyApproximation::restore_expansion_coefficients()
 {
-  size_t new_colloc_pts = dataPoints.size();
-  if (!anchorPoint.is_null())
-    new_colloc_pts += 1;
+  size_t offset = 0, new_colloc_pts = surrData.size();
+  if (surrData.anchor())
+    { offset = 1; ++new_colloc_pts; }
 
   if (configOptions.expansionCoeffFlag) {
     expansionType1Coeffs.resize(new_colloc_pts);
@@ -348,16 +347,17 @@ void InterpPolyApproximation::restore_expansion_coefficients()
     expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
   }
 
-  std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
-  std::advance(it, numCollocPts);
-  for (int i=numCollocPts; i<new_colloc_pts; ++i, ++it) {
+  size_t index = numCollocPts - offset;
+  for (int i=numCollocPts; i<new_colloc_pts; ++i, ++index) {
     if (configOptions.expansionCoeffFlag) {
-      expansionType1Coeffs[i] = it->response_function();
+      expansionType1Coeffs[i] = surrData.response_function(index);
       if (configOptions.useDerivs)
-	Teuchos::setCol(it->response_gradient(), i, expansionType2Coeffs);
+	Teuchos::setCol(surrData.response_gradient(index), i,
+			expansionType2Coeffs);
     }
     if (configOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
+      Teuchos::setCol(surrData.response_gradient(index), i,
+		      expansionType1CoeffGrads);
   }
 
   numCollocPts = new_colloc_pts;
@@ -436,15 +436,15 @@ void InterpPolyApproximation::compute_numerical_moments(size_t num_moments)
 
   numericalMoments.size(num_moments); // init to 0
 
-  size_t i, j, k, offset = 0, num_pts = dataPoints.size();
-  bool anchor_pt = !anchorPoint.is_null();
+  size_t i, j, k, offset = 0, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
   const RealVector& t1_wts = driverRep->type1_weight_sets();
   const RealMatrix& t2_wts = driverRep->type2_weight_sets();
 
   // estimate 1st raw moment (mean)
   Real& mean = numericalMoments[0];
   if (anchor_pt) {
-    offset = 1; num_pts += offset;
+    offset = 1; ++num_pts;
     mean = t1_wts[0] * expansionType1Coeffs[0];
     const Real* coeff2_0 = expansionType2Coeffs[0];
     const Real*  t2_wt_0 = t2_wts[0];
