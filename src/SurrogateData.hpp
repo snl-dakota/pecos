@@ -131,7 +131,7 @@ inline SurrogateDataVars::SurrogateDataVars(const SurrogateDataVars& sdv)
   // Increment new (no old to decrement)
   sdvRep = sdv.sdvRep;
   if (sdvRep) // Check for an assignment of NULL
-    sdvRep->referenceCount++;
+    ++sdvRep->referenceCount;
 }
 
 
@@ -155,7 +155,7 @@ operator=(const SurrogateDataVars& sdv)
   // Increment new
   sdvRep = sdv.sdvRep;
   if (sdvRep) // Check for an assignment of NULL
-    sdvRep->referenceCount++;
+    ++sdvRep->referenceCount;
   return *this;
 }
 
@@ -207,7 +207,7 @@ private:
   RealVector    responseGrad; ///< truth response function gradient
   RealSymMatrix responseHess; ///< truth response function Hessian
 
-  /// number of handle objects sharing sdpRep
+  /// number of handle objects sharing sdrRep
   int referenceCount;
 };
 
@@ -302,7 +302,7 @@ inline SurrogateDataResp::SurrogateDataResp(const SurrogateDataResp& sdr)
   // Increment new (no old to decrement)
   sdrRep = sdr.sdrRep;
   if (sdrRep) // Check for an assignment of NULL
-    sdrRep->referenceCount++;
+    ++sdrRep->referenceCount;
 }
 
 
@@ -326,7 +326,7 @@ operator=(const SurrogateDataResp& sdr)
   // Increment new
   sdrRep = sdr.sdrRep;
   if (sdrRep) // Check for an assignment of NULL
-    sdrRep->referenceCount++;
+    ++sdrRep->referenceCount;
   return *this;
 }
 
@@ -355,6 +355,75 @@ inline bool SurrogateDataResp::is_null() const
 { return (sdrRep) ? false : true; }
 
 
+/// Representation of management class for surrogate data defined from
+/// input variable data and output response data.
+
+/** Response sets are generally unique for each approximated response
+    function, but variable sets are often (but not always) replicated.
+    Thus the design accommodates the case where inputs and/or outputs
+    involve either shallow or deep copies. */
+
+class SurrogateDataRep
+{
+  //
+  //- Heading: Friends
+  //
+
+  /// the handle class can access attributes of the body class directly
+  friend class SurrogateData;
+
+public:
+
+private:
+
+  //
+  //- Heading: Constructors and destructor
+  //
+
+  SurrogateDataRep();  ///< constructor
+  ~SurrogateDataRep(); ///< destructor
+
+  //
+  //- Heading: Private data members
+  //
+
+  /// a special variables sample (often at the center of the
+  /// approximation region) for which exact matching is enforced
+  /// (e.g., using equality-constrained least squares regression).
+  SurrogateDataVars anchorVars;
+  /// set of variables samples used to build the approximation.  These
+  /// sample points are fit approximately (e.g., using least squares
+  /// regression); exact matching is not enforced.
+  SDVArray varsData;
+  /// set of variables samples that have been popped off varsData but
+  /// which are available for future restoration.
+  SDV2DArray savedVarsData;
+
+  /// a special response sample (often at the center of the
+  /// approximation region) for which exact matching is enforced
+  /// (e.g., using equality-constrained least squares regression).
+  SurrogateDataResp anchorResp;
+  /// set of response samples used to build the approximation.  These
+  /// sample points are fit approximately (e.g., using least squares
+  /// regression); exact matching is not enforced.
+  SDRArray respData;
+  /// set of response samples that have been popped off respData but
+  /// which are available for future restoration.
+  SDR2DArray savedRespData;
+
+  /// number of handle objects sharing sdRep
+  int referenceCount;
+};
+
+
+inline SurrogateDataRep::SurrogateDataRep(): referenceCount(1)
+{ }
+
+
+inline SurrogateDataRep::~SurrogateDataRep()
+{ }
+
+
 /// Management class for surrogate data defined from input variable
 /// data and output response data.
 
@@ -368,11 +437,15 @@ class SurrogateData
 public:
 
   //
-  //- Heading: Constructors and destructor
+  //- Heading: Constructors, destructor, and operators
   //
 
-  SurrogateData();  ///< constructor
-  ~SurrogateData(); ///< destructor
+  SurrogateData();                        ///< default constructor
+  SurrogateData(const SurrogateData& sd); ///< copy constructor
+  ~SurrogateData();                       ///< destructor
+
+  /// assignment operator
+  SurrogateData& operator=(const SurrogateData& sdv);
 
   //
   //- Heading: Member functions
@@ -443,110 +516,118 @@ private:
   //
   //- Heading: Private data members
   //
-
-  /// a special variables sample (often at the center of the
-  /// approximation region) for which exact matching is enforced
-  /// (e.g., using equality-constrained least squares regression).
-  SurrogateDataVars anchorVars;
-  /// set of variables samples used to build the approximation.  These
-  /// sample points are fit approximately (e.g., using least squares
-  /// regression); exact matching is not enforced.
-  SDVArray varsData;
-  /// set of variables samples that have been popped off varsData but
-  /// which are available for future restoration.
-  SDV2DArray savedVarsData;
-
-  /// a special response sample (often at the center of the
-  /// approximation region) for which exact matching is enforced
-  /// (e.g., using equality-constrained least squares regression).
-  SurrogateDataResp anchorResp;
-  /// set of response samples used to build the approximation.  These
-  /// sample points are fit approximately (e.g., using least squares
-  /// regression); exact matching is not enforced.
-  SDRArray respData;
-  /// set of response samples that have been popped off respData but
-  /// which are available for future restoration.
-  SDR2DArray savedRespData;
+ 
+  /// pointer to the body (handle-body idiom)
+  SurrogateDataRep* sdRep;
 };
 
 
-inline SurrogateData::SurrogateData()
+inline SurrogateData::SurrogateData(): sdRep(new SurrogateDataRep())
 { }
+
+
+inline SurrogateData::SurrogateData(const SurrogateData& sd)
+{
+  // Increment new (no old to decrement)
+  sdRep = sd.sdRep;
+  if (sdRep) // Check for an assignment of NULL
+    ++sdRep->referenceCount;
+}
 
 
 inline SurrogateData::~SurrogateData()
-{ }
+{
+  if (sdRep) { // Check for NULL
+    --sdRep->referenceCount; // decrement
+    if (sdRep->referenceCount == 0)
+      delete sdRep;
+  }
+}
+
+
+inline SurrogateData& SurrogateData::operator=(const SurrogateData& sd)
+{
+  // Decrement old
+  if (sdRep) // Check for NULL
+    if ( --sdRep->referenceCount == 0 ) 
+      delete sdRep;
+  // Increment new
+  sdRep = sd.sdRep;
+  if (sdRep) // Check for an assignment of NULL
+    ++sdRep->referenceCount;
+  return *this;
+}
 
 
 inline void SurrogateData::
 anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
-{ anchorVars = sdv; anchorResp = sdr; }
+{ sdRep->anchorVars = sdv; sdRep->anchorResp = sdr; }
 
 
 inline void SurrogateData::
 data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
-{ varsData = sdv_array; respData = sdr_array; }
+{ sdRep->varsData = sdv_array; sdRep->respData = sdr_array; }
 
 
 inline void SurrogateData::variables_data(const SDVArray& sdv_array)
-{ varsData = sdv_array; }
+{ sdRep->varsData = sdv_array; }
 
 
 inline void SurrogateData::response_data(const SDRArray& sdr_array)
-{ respData = sdr_array; }
+{ sdRep->respData = sdr_array; }
 
 
 inline const SurrogateDataVars& SurrogateData::anchor_variables() const
-{ return anchorVars; }
+{ return sdRep->anchorVars; }
 
 
 inline const SurrogateDataResp& SurrogateData::anchor_response() const
-{ return anchorResp; }
+{ return sdRep->anchorResp; }
 
 
 inline const SDVArray& SurrogateData::variables_data() const
-{ return varsData; }
+{ return sdRep->varsData; }
 
 
 inline const SDRArray& SurrogateData::response_data() const
-{ return respData; }
+{ return sdRep->respData; }
 
 
 inline const RealVector& SurrogateData::anchor_continuous_variables() const
-{ return anchorVars.continuous_variables(); }
+{ return sdRep->anchorVars.continuous_variables(); }
 
 
 inline const RealVector& SurrogateData::continuous_variables(size_t i) const
-{ return varsData[i].continuous_variables(); }
+{ return sdRep->varsData[i].continuous_variables(); }
 
 
 inline const Real& SurrogateData::anchor_function() const
-{ return anchorResp.response_function(); }
+{ return sdRep->anchorResp.response_function(); }
 
 
 inline const RealVector& SurrogateData::anchor_gradient() const
-{ return anchorResp.response_gradient(); }
+{ return sdRep->anchorResp.response_gradient(); }
 
 
 inline const RealSymMatrix& SurrogateData::anchor_hessian() const
-{ return anchorResp.response_hessian(); }
+{ return sdRep->anchorResp.response_hessian(); }
 
 
 inline const Real& SurrogateData::response_function(size_t i) const
-{ return respData[i].response_function(); }
+{ return sdRep->respData[i].response_function(); }
 
 
 inline const RealVector& SurrogateData::response_gradient(size_t i) const
-{ return respData[i].response_gradient(); }
+{ return sdRep->respData[i].response_gradient(); }
 
 
 inline const RealSymMatrix& SurrogateData::response_hessian(size_t i) const
-{ return respData[i].response_hessian(); }
+{ return sdRep->respData[i].response_hessian(); }
 
 
 inline void SurrogateData::
 push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
-{ varsData.push_back(sdv); respData.push_back(sdr); }
+{ sdRep->varsData.push_back(sdv); sdRep->respData.push_back(sdr); }
 
 
 inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
@@ -555,10 +636,10 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
     size_t data_size = size();
     if (data_size >= num_pop_pts) {
       if (save_data) {
-	SDVArray sdv; savedVarsData.push_back(sdv);      // append empty array
-	SDRArray sdr; savedRespData.push_back(sdr);      // append empty array
-	SDVArray& last_sdv_array = savedVarsData.back(); // update in place
-	SDRArray& last_sdr_array = savedRespData.back(); // update in place
+	SDVArray sdv; sdRep->savedVarsData.push_back(sdv); // append empty array
+	SDRArray sdr; sdRep->savedRespData.push_back(sdr); // append empty array
+	SDVArray& last_sdv_array = sdRep->savedVarsData.back();//update in place
+	SDRArray& last_sdr_array = sdRep->savedRespData.back();//update in place
 	/*
 	// prevent underflow portability issue w/ compiler coercion of -num_pop
 	SDVArray::difference_type reverse_adv_vars = num_pop_pts;
@@ -567,12 +648,14 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
 	SDRIter rit = respData.end(); std::advance(rit, -reverse_adv_resp);
 	*/
 	last_sdv_array.insert(last_sdv_array.begin(), //vit,
-			      varsData.end() - num_pop_pts, varsData.end());
+			      sdRep->varsData.end() - num_pop_pts,
+			      sdRep->varsData.end());
 	last_sdr_array.insert(last_sdr_array.begin(), //rit,
-			      respData.end() - num_pop_pts, respData.end());
+			      sdRep->respData.end() - num_pop_pts,
+			      sdRep->respData.end());
       }
       size_t new_size = data_size - num_pop_pts;
-      varsData.resize(new_size); respData.resize(new_size);
+      sdRep->varsData.resize(new_size); sdRep->respData.resize(new_size);
     }
     else {
       PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
@@ -585,45 +668,49 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
 
 inline void SurrogateData::restore(size_t index, bool erase_saved)
 {
-  SDV2DArray::iterator vit = savedVarsData.begin();
-  SDR2DArray::iterator rit = savedRespData.begin();
+  SDV2DArray::iterator vit = sdRep->savedVarsData.begin();
+  SDR2DArray::iterator rit = sdRep->savedRespData.begin();
   std::advance(vit, index); std::advance(rit, index);
-  varsData.insert(varsData.end(), vit->begin(), vit->end());
-  respData.insert(respData.end(), rit->begin(), rit->end());
+  sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
+  sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
   if (erase_saved)
-    { savedVarsData.erase(vit); savedRespData.erase(rit); }
+    { sdRep->savedVarsData.erase(vit); sdRep->savedRespData.erase(rit); }
 }
 
 
 inline bool SurrogateData::anchor() const
-{ return (!anchorVars.is_null() && !anchorResp.is_null()); }
+{ return (!sdRep->anchorVars.is_null() && !sdRep->anchorResp.is_null()); }
 
 
 inline size_t SurrogateData::/*data_*/size() const
-{ return std::min(varsData.size(), respData.size()); }
+{ return std::min(sdRep->varsData.size(), sdRep->respData.size()); }
 
 
 inline size_t SurrogateData::saved_size() const
-{ return std::min(savedVarsData.size(), savedRespData.size()); }
+{ return std::min(sdRep->savedVarsData.size(), sdRep->savedRespData.size()); }
 
 
 inline size_t SurrogateData::num_derivative_variables() const
 {
-  return (anchorResp.is_null()) ? respData[0].response_gradient().length() :
-                                   anchorResp.response_gradient().length();
+  return (sdRep->anchorResp.is_null()) ?
+    sdRep->respData[0].response_gradient().length() :
+    sdRep->anchorResp.response_gradient().length();
 }
 
 
 inline void SurrogateData::clear_anchor()
-{ anchorVars = SurrogateDataVars(); anchorResp = SurrogateDataResp(); }
+{
+  sdRep->anchorVars = SurrogateDataVars();
+  sdRep->anchorResp = SurrogateDataResp();
+}
 
 
 inline void SurrogateData::clear_data()
-{ varsData.clear(); respData.clear(); }
+{ sdRep->varsData.clear(); sdRep->respData.clear(); }
 
 
 inline void SurrogateData::clear_saved()
-{ savedVarsData.clear(); savedRespData.clear(); }
+{ sdRep->savedVarsData.clear(); sdRep->savedRespData.clear(); }
 
 } // namespace Pecos
 

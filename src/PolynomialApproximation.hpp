@@ -229,24 +229,11 @@ public:
   /// size total Sobol arrays
   void allocate_total_effects();
 
-  /// set surrData::{vars,resp}Data
-  void data_points(const SDVArray& sdv_array, const SDRArray& sdr_array);
-  /// return number of data points managed within surrData
-  size_t data_size() const;
-  /// set surrData::anchor{Vars,Resp}
-  void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
-  /// queries the existence of an anchor point within surrData
-  bool anchor() const;
+  /// set surrData (shared representation)
+  void surrogate_data(const SurrogateData& data);
+  /// get surrData
+  const SurrogateData& surrogate_data() const;
 
-  /// push incoming data onto ends of surrData::{vars,resp}Data (implemented at
-  /// this intermediate level since surrData not defined at base level)
-  void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
-  /// pop pop_count() instances off the ends of surrData::{vars,resp}Data
-  /// (implemented at this level since surrData not defined at base level)
-  void pop();
-  /// pop num_pop_pts instances off the ends of surrData::{vars,resp}Data
-  /// (implemented at this level since surrData not defined at base level)
-  void pop(size_t num_pop_pts);
   /// number of data points to remove in a decrement (implemented at this
   /// intermediate level since surrData not defined at base level)
   size_t pop_count();
@@ -438,35 +425,12 @@ inline const RealVector& PolynomialApproximation::numerical_moments() const
 { return numericalMoments; }
 
 
-inline void PolynomialApproximation::
-data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
-{ surrData.data_points(sdv_array, sdr_array); }
+inline const SurrogateData& PolynomialApproximation::surrogate_data() const
+{ return surrData; }
 
 
-inline size_t PolynomialApproximation::data_size() const
-{ return surrData.size(); }
-
-
-inline void PolynomialApproximation::
-anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
-{ surrData.anchor_point(sdv, sdr); }
-
-
-inline bool PolynomialApproximation::anchor() const
-{ return surrData.anchor(); }
-
-
-inline void PolynomialApproximation::
-push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
-{ surrData.push_back(sdv, sdr); }
-
-
-inline void PolynomialApproximation::pop()
-{ pop(pop_count()); }
-
-
-inline void PolynomialApproximation::pop(size_t num_pop_pts)
-{ surrData.pop(num_pop_pts); }
+inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
+{ surrData = data; /* shared representation */ }
 
 
 inline size_t PolynomialApproximation::pop_count()
