@@ -55,6 +55,8 @@ inline SurrogateDataVarsRep::
 SurrogateDataVarsRep(const RealVector& x, short mode):
   referenceCount(1)
 {
+  // Note: provided a way to query DataAccess mode for x, could make
+  // greater use of operator= for {DEEP,SHALLOW}_COPY modes
   if (mode == DEEP_COPY)         // enforce deep vector copy
     copy_data(x, continuousVars);
   else if (mode == SHALLOW_COPY) // enforce shallow vector copy
@@ -217,6 +219,8 @@ SurrogateDataRespRep(const Real& fn_val, const RealVector& fn_grad,
 		     const RealSymMatrix& fn_hess, short mode):
   referenceCount(1)
 {
+  // Note: provided a way to query incoming grad/hess DataAccess modes,
+  // could make greater use of operator= for {DEEP,SHALLOW}_COPY modes
   responseFn = fn_val;              // deep copy for scalars
   if (mode == DEEP_COPY)            // enforce vector/matrix deep copy
     { copy_data(fn_grad, responseGrad); copy_data(fn_hess, responseHess); }
