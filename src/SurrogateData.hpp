@@ -52,8 +52,7 @@ private:
 
 
 inline SurrogateDataVarsRep::
-SurrogateDataVarsRep(const RealVector& x, short mode):
-  referenceCount(1)
+SurrogateDataVarsRep(const RealVector& x, short mode): referenceCount(1)
 {
   // Note: provided a way to query DataAccess mode for x, could make
   // greater use of operator= for {DEEP,SHALLOW}_COPY modes
@@ -197,7 +196,7 @@ private:
 
   /// constructor
   SurrogateDataRespRep(const Real& fn_val, const RealVector& fn_grad,
-		       const RealSymMatrix& fn_hess, short mode);
+		       const RealSymMatrix& fn_hess, short bits, short mode);
   /// destructor
   ~SurrogateDataRespRep();
 
@@ -205,31 +204,38 @@ private:
   //- Heading: Private data members
   //
 
-  Real          responseFn;   ///< truth response function value
+  short           activeBits; ///< active data bits: 1 (fn), 2 (grad), 4 (hess)
+  Real            responseFn; ///< truth response function value
   RealVector    responseGrad; ///< truth response function gradient
   RealSymMatrix responseHess; ///< truth response function Hessian
+  int         referenceCount; ///< number of handle objects sharing sdrRep
 
-  /// number of handle objects sharing sdrRep
-  int referenceCount;
 };
 
 
 inline SurrogateDataRespRep::
 SurrogateDataRespRep(const Real& fn_val, const RealVector& fn_grad,
-		     const RealSymMatrix& fn_hess, short mode):
-  referenceCount(1)
+		     const RealSymMatrix& fn_hess, short bits, short mode):
+  responseFn(fn_val), // always deep copy for scalars
+  activeBits(bits), referenceCount(1)
 {
   // Note: provided a way to query incoming grad/hess DataAccess modes,
   // could make greater use of operator= for {DEEP,SHALLOW}_COPY modes
-  responseFn = fn_val;              // deep copy for scalars
-  if (mode == DEEP_COPY)            // enforce vector/matrix deep copy
-    { copy_data(fn_grad, responseGrad); copy_data(fn_hess, responseHess); }
-  else if (mode == SHALLOW_COPY) {  // enforce vector/matrix shallow copy
-    responseGrad = RealVector(Teuchos::View,fn_grad.values(),fn_grad.length());
-    responseHess = RealSymMatrix(Teuchos::View, fn_hess, fn_hess.numRows());
+  if (mode == DEEP_COPY) {          // enforce vector/matrix deep copy
+    if (activeBits & 2) copy_data(fn_grad, responseGrad);
+    if (activeBits & 4) copy_data(fn_hess, responseHess);
   }
-  else                              // default: assume existing Copy/View state
-    { responseGrad = fn_grad; responseHess = fn_hess; }
+  else if (mode == SHALLOW_COPY) {  // enforce vector/matrix shallow copy
+    if (activeBits & 2)
+      responseGrad = RealVector(Teuchos::View, fn_grad.values(),
+				fn_grad.length());
+    if (activeBits & 4)
+      responseHess = RealSymMatrix(Teuchos::View, fn_hess, fn_hess.numRows());
+  }
+  else {                            // default: assume existing Copy/View state
+    if (activeBits & 2) responseGrad = fn_grad;
+    if (activeBits & 4) responseHess = fn_hess;
+  }
 }
 
 
@@ -257,7 +263,8 @@ public:
   SurrogateDataResp();
   /// standard constructor
   SurrogateDataResp(const Real& fn_val, const RealVector& fn_grad,
-		    const RealSymMatrix& fn_hess, short mode = DEFAULT_COPY);
+		    const RealSymMatrix& fn_hess, short bits,
+		    short mode = DEFAULT_COPY);
   /// copy constructor
   SurrogateDataResp(const SurrogateDataResp& sdr);
   /// destructor
@@ -296,8 +303,8 @@ inline SurrogateDataResp::SurrogateDataResp(): sdrRep(NULL)
 
 inline SurrogateDataResp::
 SurrogateDataResp(const Real& fn_val, const RealVector& fn_grad,
-		  const RealSymMatrix& fn_hess, short mode):
-  sdrRep(new SurrogateDataRespRep(fn_val, fn_grad, fn_hess, mode))
+		  const RealSymMatrix& fn_hess, short bits, short mode):
+  sdrRep(new SurrogateDataRespRep(fn_val, fn_grad, fn_hess, bits, mode))
 { }
 
 
@@ -459,17 +466,22 @@ public:
   void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// set {vars,resp}Data
   void data_points(const SDVArray& sdv_array, const SDRArray& sdr_array);
-  /// set varsData
-  void variables_data(const SDVArray& sdv_array);
-  /// set respData
-  void response_data(const SDRArray& sdr_array);
 
+  /// set anchorVars
+  void anchor_variables(const SurrogateDataVars& sdv);
   /// get anchorVars
   const SurrogateDataVars& anchor_variables() const;
+  /// set anchorResp
+  void anchor_response(const SurrogateDataResp& sdr);
   /// get anchorResp
   const SurrogateDataResp& anchor_response() const;
+
+  /// set varsData
+  void variables_data(const SDVArray& sdv_array);
   /// get varsData
   const SDVArray& variables_data() const;
+  /// set respData
+  void response_data(const SDRArray& sdr_array);
   /// get respData
   const SDRArray& response_data() const;
 
@@ -491,7 +503,11 @@ public:
   /// get respData[i].response_hessian()
   const RealSymMatrix& response_hessian(size_t i) const;
 
-  /// push sdv/sdr onto ends of {vars,resp}Data
+  /// push sdv onto end of varsData
+  void push_back(const SurrogateDataVars& sdv);
+  /// push sdr onto end of respData
+  void push_back(const SurrogateDataResp& sdr);
+  /// push {sdv,sdr} onto ends of {vars,resp}Data
   void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// remove num_pop_pts entries from ends of {vars,resp}Data
   void pop(size_t num_pop_pts, bool save_data = true);
@@ -510,10 +526,22 @@ public:
 
   /// clear anchor{Vars,Resp}
   void clear_anchor();
+  /// clear anchor{Vars,Resp}
+  void clear_anchor_variables();
+  /// clear anchor{Vars,Resp}
+  void clear_anchor_response();
   /// clear {vars,resp}Data
   void clear_data();
+  /// clear {vars,resp}Data
+  void clear_variables_data();
+  /// clear {vars,resp}Data
+  void clear_response_data();
   /// clear saved{Vars,Resp}Data
   void clear_saved();
+  /// clear saved{Vars,Resp}Data
+  void clear_saved_variables();
+  /// clear saved{Vars,Resp}Data
+  void clear_saved_response();
 
 private:
 
@@ -573,24 +601,32 @@ data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
 { sdRep->varsData = sdv_array; sdRep->respData = sdr_array; }
 
 
-inline void SurrogateData::variables_data(const SDVArray& sdv_array)
-{ sdRep->varsData = sdv_array; }
-
-
-inline void SurrogateData::response_data(const SDRArray& sdr_array)
-{ sdRep->respData = sdr_array; }
+inline void SurrogateData::anchor_variables(const SurrogateDataVars& sdv)
+{ sdRep->anchorVars = sdv; }
 
 
 inline const SurrogateDataVars& SurrogateData::anchor_variables() const
 { return sdRep->anchorVars; }
 
 
+inline void SurrogateData::anchor_response(const SurrogateDataResp& sdr)
+{ sdRep->anchorResp = sdr; }
+
+
 inline const SurrogateDataResp& SurrogateData::anchor_response() const
 { return sdRep->anchorResp; }
 
 
+inline void SurrogateData::variables_data(const SDVArray& sdv_array)
+{ sdRep->varsData = sdv_array; }
+
+
 inline const SDVArray& SurrogateData::variables_data() const
 { return sdRep->varsData; }
+
+
+inline void SurrogateData::response_data(const SDRArray& sdr_array)
+{ sdRep->respData = sdr_array; }
 
 
 inline const SDRArray& SurrogateData::response_data() const
@@ -627,6 +663,14 @@ inline const RealVector& SurrogateData::response_gradient(size_t i) const
 
 inline const RealSymMatrix& SurrogateData::response_hessian(size_t i) const
 { return sdRep->respData[i].response_hessian(); }
+
+
+inline void SurrogateData::push_back(const SurrogateDataVars& sdv)
+{ sdRep->varsData.push_back(sdv); }
+
+
+inline void SurrogateData::push_back(const SurrogateDataResp& sdr)
+{ sdRep->respData.push_back(sdr); }
 
 
 inline void SurrogateData::
@@ -709,12 +753,36 @@ inline void SurrogateData::clear_anchor()
 }
 
 
+inline void SurrogateData::clear_anchor_variables()
+{ sdRep->anchorVars = SurrogateDataVars(); }
+
+
+inline void SurrogateData::clear_anchor_response()
+{ sdRep->anchorResp = SurrogateDataResp(); }
+
+
 inline void SurrogateData::clear_data()
 { sdRep->varsData.clear(); sdRep->respData.clear(); }
 
 
+inline void SurrogateData::clear_variables_data()
+{ sdRep->varsData.clear(); }
+
+
+inline void SurrogateData::clear_response_data()
+{ sdRep->respData.clear(); }
+
+
 inline void SurrogateData::clear_saved()
 { sdRep->savedVarsData.clear(); sdRep->savedRespData.clear(); }
+
+
+inline void SurrogateData::clear_saved_variables()
+{ sdRep->savedVarsData.clear(); }
+
+
+inline void SurrogateData::clear_saved_response()
+{ sdRep->savedRespData.clear(); }
 
 } // namespace Pecos
 
