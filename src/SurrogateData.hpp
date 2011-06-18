@@ -512,7 +512,7 @@ public:
   /// remove num_pop_pts entries from ends of {vars,resp}Data
   void pop(size_t num_pop_pts, bool save_data = true);
   /// remove num_pop_pts entries from ends of {vars,resp}Data
-  void restore(size_t index, bool erase_saved = true);
+  size_t restore(size_t index, bool erase_saved = true);
 
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
@@ -714,15 +714,17 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
 }
 
 
-inline void SurrogateData::restore(size_t index, bool erase_saved)
+inline size_t SurrogateData::restore(size_t index, bool erase_saved)
 {
   SDV2DArray::iterator vit = sdRep->savedVarsData.begin();
   SDR2DArray::iterator rit = sdRep->savedRespData.begin();
   std::advance(vit, index); std::advance(rit, index);
+  size_t num_pts = std::min(vit->size(), rit->size());
   sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
   sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
   if (erase_saved)
     { sdRep->savedVarsData.erase(vit); sdRep->savedRespData.erase(rit); }
+  return num_pts;
 }
 
 

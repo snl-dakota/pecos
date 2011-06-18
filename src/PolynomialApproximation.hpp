@@ -234,9 +234,9 @@ public:
   /// get surrData
   const SurrogateData& surrogate_data() const;
 
-  /// number of data points to remove in a decrement (implemented at this
-  /// intermediate level since surrData not defined at base level)
-  size_t pop_count();
+  // number of data points to remove in a decrement (implemented at this
+  // intermediate level since surrData not defined at base level)
+  //size_t pop_count();
 
   /// set ConfigurationOptions::expCoeffsSolnApproach
   void solution_approach(short soln_approach);
@@ -433,11 +433,11 @@ inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
 { surrData = data; /* shared representation */ }
 
 
-inline size_t PolynomialApproximation::pop_count()
-{
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return (size_t)ssg_driver->unique_trial_points();
-}
+//inline size_t PolynomialApproximation::pop_count()
+//{
+//  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+//  return (size_t)ssg_driver->unique_trial_points();
+//}
 
 
 inline void PolynomialApproximation::solution_approach(short soln_approach)
