@@ -50,10 +50,10 @@ protected:
 
   /// compute the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
-  void compute_coefficients();
+  virtual void compute_coefficients();
   /// update the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
-  void increment_coefficients();
+  virtual void increment_coefficients();
   /// restore the coefficients to their previous state prior to last increment
   void decrement_coefficients();
   /// restore the coefficients to a previously incremented state as

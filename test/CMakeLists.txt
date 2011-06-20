@@ -57,3 +57,9 @@ add_executable(pecos_uniform_refinable_driver
 target_link_libraries(pecos_uniform_refinable_driver ${pecos_libs})
 add_test(pecos_uniform_refinable_driver pecos_uniform_refinable_driver)
 
+# Complete these for each specific test.
+add_executable(pecos_hierarch_approx_driver
+  pecos_hierarch_approx_driver.cpp)
+target_link_libraries(pecos_hierarch_approx_driver ${pecos_libs})
+add_test(pecos_hierarch_approx_driver pecos_hierarch_approx_driver)
+

@@ -72,6 +72,8 @@ include_HEADERS = pecos_config.h				\
 		     src/CubatureDriver.hpp			\
 		     src/SparseGridDriver.hpp			\
 		     src/TensorProductDriver.hpp		\
+		     src/LocalRefinableDriver.hpp		\
+		     src/HierarchInterpPolyApproximation.hpp	\
 		     src/BoostRNG_Monostate.hpp
 
 ## No sources in this directory!

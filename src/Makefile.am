@@ -50,6 +50,8 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  CubatureDriver.cpp				\
 			  SparseGridDriver.cpp				\
 			  TensorProductDriver.cpp			\
+			  LocalRefinableDriver.cpp			\
+			  HierarchInterpPolyApproximation.cpp		\
 			  pecos_stat_util.cpp
 
 ## Extra files to remove when doing 'make maintainer-clean'.

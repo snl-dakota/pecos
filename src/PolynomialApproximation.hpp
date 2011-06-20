@@ -43,7 +43,7 @@ class ConfigurationOptions
   friend class InterpPolyApproximation;
   friend class NodalInterpPolyApproximation;
   friend class OrthogPolyApproximation;
-
+  friend class HierarchInterpPolyApproximation;
 public:
 
   /// default constructor
