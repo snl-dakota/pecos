@@ -36,7 +36,9 @@ private:
   //
 
   /// constructor
-  SurrogateDataVarsRep(const RealVector& x, short mode);
+  SurrogateDataVarsRep(const RealVector& c_vars, short mode);
+  /// alternate constructor (data sizing only)
+  SurrogateDataVarsRep(size_t num_vars);
   /// destructor
   ~SurrogateDataVarsRep();
 
@@ -52,17 +54,22 @@ private:
 
 
 inline SurrogateDataVarsRep::
-SurrogateDataVarsRep(const RealVector& x, short mode): referenceCount(1)
+SurrogateDataVarsRep(const RealVector& c_vars, short mode): referenceCount(1)
 {
-  // Note: provided a way to query DataAccess mode for x, could make
+  // Note: provided a way to query DataAccess mode for c_vars, could make
   // greater use of operator= for {DEEP,SHALLOW}_COPY modes
   if (mode == DEEP_COPY)         // enforce deep vector copy
-    copy_data(x, continuousVars);
+    copy_data(c_vars, continuousVars);
   else if (mode == SHALLOW_COPY) // enforce shallow vector copy
-    continuousVars = RealVector(Teuchos::View, x.values(), x.length());
+    continuousVars = RealVector(Teuchos::View,c_vars.values(),c_vars.length());
   else                           // default: assume existing Copy/View state
-    continuousVars = x;
+    continuousVars = c_vars;
 }
+
+
+inline SurrogateDataVarsRep::
+SurrogateDataVarsRep(size_t num_vars): referenceCount(1)
+{ continuousVars.sizeUninitialized(num_vars); }
 
 
 inline SurrogateDataVarsRep::~SurrogateDataVarsRep()
@@ -87,7 +94,9 @@ public:
   /// default constructor
   SurrogateDataVars();
   /// standard constructor
-  SurrogateDataVars(const RealVector& x, short mode = DEFAULT_COPY);
+  SurrogateDataVars(const RealVector& c_vars, short mode = DEFAULT_COPY);
+  /// alternate constructor (data sizing only)
+  SurrogateDataVars(size_t num_vars);
   /// copy constructor
   SurrogateDataVars(const SurrogateDataVars& sdv);
   /// destructor
@@ -95,14 +104,20 @@ public:
 
   /// assignment operator
   SurrogateDataVars& operator=(const SurrogateDataVars& sdv);
-  /// equality operator
-  bool operator==(const SurrogateDataVars& sdv) const;
+  // equality operator
+  //bool operator==(const SurrogateDataVars& sdv) const;
 
   //
   //- Heading: member functions
   //
 
-  const RealVector& continuous_variables() const; ///< return continuousVars
+  /// set i^{th} entry within continuousVars
+  void continuous_variable(const Real& c_var, size_t i);
+  /// set continuousVars
+  void continuous_variables(const RealVector& c_vars,
+			    short mode = DEFAULT_COPY);
+  /// get continuousVars
+  const RealVector& continuous_variables() const;
 
   /// function to check sdvRep (does this handle contain a body)
   bool is_null() const;
@@ -122,8 +137,13 @@ inline SurrogateDataVars::SurrogateDataVars(): sdvRep(NULL)
 { }
 
 
-inline SurrogateDataVars::SurrogateDataVars(const RealVector& x, short mode):
-  sdvRep(new SurrogateDataVarsRep(x, mode))
+inline SurrogateDataVars::SurrogateDataVars(const RealVector& c_vars, short mode):
+  sdvRep(new SurrogateDataVarsRep(c_vars, mode))
+{ }
+
+
+inline SurrogateDataVars::SurrogateDataVars(size_t num_vars):
+  sdvRep(new SurrogateDataVarsRep(num_vars))
 { }
 
 
@@ -161,8 +181,25 @@ operator=(const SurrogateDataVars& sdv)
 }
 
 
-inline bool SurrogateDataVars::operator==(const SurrogateDataVars& sdv) const
-{ return (sdvRep->continuousVars == sdv.sdvRep->continuousVars) ? true : false;}
+//inline bool SurrogateDataVars::operator==(const SurrogateDataVars& sdv) const
+//{ return (sdvRep->continuousVars==sdv.sdvRep->continuousVars) ? true : false;}
+
+
+inline void SurrogateDataVars::continuous_variable(const Real& c_var, size_t i)
+{ sdvRep->continuousVars[i] = c_var; }
+
+
+inline void SurrogateDataVars::
+continuous_variables(const RealVector& c_vars, short mode)
+{
+  if (mode == DEEP_COPY)         // enforce deep vector copy
+    copy_data(c_vars, sdvRep->continuousVars);
+  else if (mode == SHALLOW_COPY) // enforce shallow vector copy
+    sdvRep->continuousVars
+      = RealVector(Teuchos::View, c_vars.values(), c_vars.length());
+  else                           // default: assume existing Copy/View state
+    sdvRep->continuousVars = c_vars;
+}
 
 
 inline const RealVector& SurrogateDataVars::continuous_variables() const
@@ -197,6 +234,8 @@ private:
   /// constructor
   SurrogateDataRespRep(const Real& fn_val, const RealVector& fn_grad,
 		       const RealSymMatrix& fn_hess, short bits, short mode);
+  /// alternate constructor (data sizing only)
+  SurrogateDataRespRep(short data_order, size_t num_vars);
   /// destructor
   ~SurrogateDataRespRep();
 
@@ -239,6 +278,17 @@ SurrogateDataRespRep(const Real& fn_val, const RealVector& fn_grad,
 }
 
 
+inline SurrogateDataRespRep::
+SurrogateDataRespRep(short data_order, size_t num_vars):
+  activeBits(data_order), referenceCount(1)
+{
+  if (data_order & 2)
+    responseGrad.sizeUninitialized(num_vars);
+  if (data_order & 4)
+    responseHess.shapeUninitialized(num_vars);
+}
+
+
 inline SurrogateDataRespRep::~SurrogateDataRespRep()
 { }
 
@@ -265,6 +315,8 @@ public:
   SurrogateDataResp(const Real& fn_val, const RealVector& fn_grad,
 		    const RealSymMatrix& fn_hess, short bits,
 		    short mode = DEFAULT_COPY);
+  /// alternate constructor (data sizing only)
+  SurrogateDataResp(short data_order, size_t num_vars);
   /// copy constructor
   SurrogateDataResp(const SurrogateDataResp& sdr);
   /// destructor
@@ -272,16 +324,31 @@ public:
 
   /// assignment operator
   SurrogateDataResp& operator=(const SurrogateDataResp& sdr);
-  /// equality operator
-  bool operator==(const SurrogateDataResp& sdr) const;
+  // equality operator
+  //bool operator==(const SurrogateDataResp& sdr) const;
 
   //
   //- Heading: member functions
   //
 
-  const Real&          response_function() const; ///< return responseFn
-  const RealVector&    response_gradient() const; ///< return responseGrad
-  const RealSymMatrix& response_hessian()  const; ///< return responseHess
+  /// set responseFn
+  void response_function(const Real& fn);
+  /// get responseFn
+  const Real& response_function() const;
+
+  /// set i^{th} entry within responseGrad
+  void response_gradient(const Real& grad_i, size_t i);
+  /// set responseGrad
+  void response_gradient(const RealVector& grad, short mode = DEFAULT_COPY);
+  /// get responseGrad
+  const RealVector& response_gradient() const;
+
+  /// set i-j^{th} entry within responseHess
+  void response_hessian(const Real& hess_ij, size_t i, size_t j);
+  /// set responseHess
+  void response_hessian(const RealSymMatrix& hess, short mode = DEFAULT_COPY);
+  /// get responseHess
+  const RealSymMatrix& response_hessian() const;
 
   /// function to check sdrRep (does this handle contain a body)
   bool is_null() const;
@@ -305,6 +372,12 @@ inline SurrogateDataResp::
 SurrogateDataResp(const Real& fn_val, const RealVector& fn_grad,
 		  const RealSymMatrix& fn_hess, short bits, short mode):
   sdrRep(new SurrogateDataRespRep(fn_val, fn_grad, fn_hess, bits, mode))
+{ }
+
+
+inline SurrogateDataResp::
+SurrogateDataResp(short data_order, size_t num_vars):
+  sdrRep(new SurrogateDataRespRep(data_order, num_vars))
 { }
 
 
@@ -342,20 +415,59 @@ operator=(const SurrogateDataResp& sdr)
 }
 
 
-inline bool SurrogateDataResp::operator==(const SurrogateDataResp& sdr) const
-{
-  return ( sdrRep->responseFn   == sdr.sdrRep->responseFn   &&
-	   sdrRep->responseGrad == sdr.sdrRep->responseGrad &&
-	   sdrRep->responseHess == sdr.sdrRep->responseHess ) ? true : false;
-}
+//inline bool SurrogateDataResp::operator==(const SurrogateDataResp& sdr) const
+//{
+//  return ( sdrRep->responseFn   == sdr.sdrRep->responseFn   &&
+//	     sdrRep->responseGrad == sdr.sdrRep->responseGrad &&
+//	     sdrRep->responseHess == sdr.sdrRep->responseHess ) ? true : false;
+//}
+
+
+inline void SurrogateDataResp::response_function(const Real& fn)
+{ sdrRep->responseFn = fn; }
 
 
 inline const Real& SurrogateDataResp::response_function() const
 { return sdrRep->responseFn; }
 
 
+inline void SurrogateDataResp::
+response_gradient(const Real& grad_i, size_t i)
+{ sdrRep->responseGrad[i] = grad_i; }
+
+
+inline void SurrogateDataResp::
+response_gradient(const RealVector& grad, short mode)
+{
+  if (mode == DEEP_COPY)          // enforce vector deep copy
+    copy_data(grad, sdrRep->responseGrad);
+  else if (mode == SHALLOW_COPY)  // enforce vector shallow copy
+    sdrRep->responseGrad
+      = RealVector(Teuchos::View, grad.values(), grad.length());
+  else                            // default: assume existing Copy/View state
+    sdrRep->responseGrad = grad;
+}
+
+
 inline const RealVector& SurrogateDataResp::response_gradient() const
 { return sdrRep->responseGrad; }
+
+
+inline void SurrogateDataResp::
+response_hessian(const Real& hess_ij, size_t i, size_t j)
+{ sdrRep->responseHess(i,j) = hess_ij; }
+
+
+inline void SurrogateDataResp::
+response_hessian(const RealSymMatrix& hess, short mode)
+{
+  if (mode == DEEP_COPY)          // enforce matrix deep copy
+    copy_data(hess, sdrRep->responseHess);
+  else if (mode == SHALLOW_COPY)  // enforce matrix shallow copy
+    sdrRep->responseHess = RealSymMatrix(Teuchos::View, hess, hess.numRows());
+  else                            // default: assume existing Copy/View state
+    sdrRep->responseHess = hess;
+}
 
 
 inline const RealSymMatrix& SurrogateDataResp::response_hessian() const
