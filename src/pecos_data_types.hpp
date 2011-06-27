@@ -293,30 +293,45 @@ void write_data(std::ostream& s,
 }
 
 
-/// formatted ostream insertion operator for SerialSymDenseMatrix
+/// formatted ostream insertion operator for SerialDenseMatrix
 template <typename OrdinalType, typename ScalarType>
 void write_data(std::ostream& s,
                 const Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>& m,
                 bool brackets, bool row_rtn, bool final_rtn)
 {
-  const OrdinalType& nrows = m.numRows();
-  const OrdinalType& ncols = m.numCols();
+  OrdinalType i, j, nrows = m.numRows(), ncols = m.numCols();
   s.setf(std::ios::scientific); // formatting optimized for T = double
   s << std::setprecision(WRITE_PRECISION);
-  if (brackets)
-    s << "[[ ";
-  for (OrdinalType i=0; i<nrows; ++i) {
-    for (OrdinalType j=0; j<ncols; ++j)
+  if (brackets)  s << "[[ ";
+  for (i=0; i<nrows; ++i) {
+    for (j=0; j<ncols; ++j)
       s << std::setw(WRITE_PRECISION+7) << m(i,j) << ' ';
-    // NOTE: newlines on every 4th component (as in the row vector case)
-    // could lead to ambiguity in the matrix case.
     if (row_rtn && i!=m.numRows()-1)
       s << "\n   ";
   }
-  if (brackets)
-    s << "]] ";
-  if (final_rtn)
-    s << '\n';
+  if (brackets)  s << "]] ";
+  if (final_rtn) s << '\n';
+}
+
+
+/// formatted ostream insertion operator for SerialSymDenseMatrix
+template <typename OrdinalType, typename ScalarType>
+void write_data(std::ostream& s,
+                const Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType>& m,
+                bool brackets, bool row_rtn, bool final_rtn)
+{
+  OrdinalType i, j, nrows = m.numRows();
+  s.setf(std::ios::scientific); // formatting optimized for T = double
+  s << std::setprecision(WRITE_PRECISION);
+  if (brackets)  s << "[[ ";
+  for (i=0; i<nrows; ++i) {
+    for (j=0; j<nrows; ++j)
+      s << std::setw(WRITE_PRECISION+7) << m(i,j) << ' ';
+    if (row_rtn && i!=m.numRows()-1)
+      s << "\n   ";
+  }
+  if (brackets)  s << "]] ";
+  if (final_rtn) s << '\n';
 }
 
 
@@ -332,6 +347,7 @@ std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
       << data[i] << '\n';
   return s;
 }
+
 
 /// global std::ostream insertion operator for std::set
 template <class T>

@@ -352,6 +352,8 @@ public:
 
   /// function to check sdrRep (does this handle contain a body)
   bool is_null() const;
+  /// output response function, gradient, and Hessian data
+  void write(std::ostream& s) const;
 
 private:
 
@@ -476,6 +478,24 @@ inline const RealSymMatrix& SurrogateDataResp::response_hessian() const
 
 inline bool SurrogateDataResp::is_null() const
 { return (sdrRep) ? false : true; }
+
+
+inline void SurrogateDataResp::write(std::ostream& s) const
+{
+  if (sdrRep->activeBits & 1)
+    s << "function value = " << sdrRep->responseFn;
+  if (sdrRep->activeBits & 2)
+    { s << "function gradient =\n"; write_data(s, sdrRep->responseGrad); }
+  if (sdrRep->activeBits & 4) {
+    s << "function Hessian =\n";
+    write_data(s, sdrRep->responseHess, false, true, false);
+  }
+}
+
+
+/// std::ostream insertion operator for SurrogateDataResp
+inline std::ostream& operator<<(std::ostream& s, const SurrogateDataResp& sdr)
+{ sdr.write(s); return s; }
 
 
 /// Representation of management class for surrogate data defined from
