@@ -483,12 +483,12 @@ inline bool SurrogateDataResp::is_null() const
 inline void SurrogateDataResp::write(std::ostream& s) const
 {
   if (sdrRep->activeBits & 1)
-    s << "function value = " << sdrRep->responseFn;
+    s << "function value = " << sdrRep->responseFn << '\n';
   if (sdrRep->activeBits & 2)
     { s << "function gradient =\n"; write_data(s, sdrRep->responseGrad); }
   if (sdrRep->activeBits & 4) {
     s << "function Hessian =\n";
-    write_data(s, sdrRep->responseHess, false, true, false);
+    write_data(s, sdrRep->responseHess, false, true, true);
   }
 }
 
