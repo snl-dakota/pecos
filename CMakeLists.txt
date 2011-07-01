@@ -27,7 +27,7 @@ endif()
 
 
 # Mandate a system or user-provided Boost
-find_package(Boost 1.40 REQUIRED)
+find_package(Boost 1.37 REQUIRED)
 
 
 include(CTest)
