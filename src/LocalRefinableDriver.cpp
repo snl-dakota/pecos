@@ -29,7 +29,8 @@ namespace Pecos{
   CollocationPoint::CollocationPoint( const RealVector& point_,
 				      const Int2DArray& levelIndex_):
     point(point_),
-    levelIndex(levelIndex_)
+    levelIndex(levelIndex_),
+    level(0)
   {}
 
   const RealVector& CollocationPoint::get_point() const
@@ -40,6 +41,19 @@ namespace Pecos{
   const Int2DArray& CollocationPoint::get_level_index() const
   {
     return levelIndex;
+  }
+
+  const unsigned int CollocationPoint::get_level() const
+  {
+    if (!level) {
+      level = 1;
+      for ( Int2DArray::const_iterator it = levelIndex.begin();
+	    it != levelIndex.end();
+	    ++it) {
+	level += (*it)[0] - 1;
+      }
+    }	
+    return level;
   }
 
   bool CollocationPoint::operator==(const CollocationPoint& col_point) const
@@ -105,7 +119,8 @@ namespace Pecos{
   initialize_grid(const RealArray& lower_bounds,
                   const RealArray& upper_bounds,
 	          const unsigned int starting_level,
-		  const short poly_type_)
+		  const short poly_type_,
+		  const bool use_derivs)
   {
     if ( (poly_type_ != PIECEWISE_LINEAR_INTERP) && 
 	 (poly_type_ != PIECEWISE_CUBIC_INTERP) ){
@@ -122,6 +137,7 @@ namespace Pecos{
 	    << "." << std::endl;
       throw ( std::invalid_argument("") );
     }
+    if (use_derivs) computeType2Weights = true;
     numVars = lower_bounds.size();
     bounds.resize(2);
     bounds[0] = lower_bounds;
@@ -322,10 +338,10 @@ namespace Pecos{
 	if (computeType2Weights) {
 	  type2WeightSets.reshape(numVars, type2WeightSets.numCols() + current_level_size);
 	  for (unsigned int j = 0; j < current_level_size; ++j) {
-	    unsigned int integer_index = num_interp_points - current_level + j;
-	    const RealVector& point = interp_points[integer_index].get_point();
-	    const Real2DArray& support = supports[integer_index];
-	    Real* t2_wt = type2WeightSets[integer_index];
+	    //unsigned int integer_index = num_interp_points - current_level + j;
+	    const RealVector& point = interp_points[int_idx].get_point();
+	    const Real2DArray& support = supports[int_idx];
+	    Real* t2_wt = type2WeightSets[int_idx];
 	    for ( unsigned int k = 0; k<numVars; ++k ) {
 	      Real& t2_wt_k = t2_wt[k]; t2_wt_k = 1.0;
 	      for (unsigned int l = 0; l < numVars; ++l) {

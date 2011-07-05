@@ -33,13 +33,16 @@ namespace Pecos {
 
     ///Standard Constructor
     CollocationPoint( const RealVector& point_,
-                      const Int2DArray& levelIndex_= Int2DArray(0) );
+                      const Int2DArray& levelIndex_= Int2DArray(0));
     
     ///Get Point location.
     const RealVector& get_point() const;
     
     ///Get index of point.
     const Int2DArray& get_level_index() const;
+    
+    ///Get level of point.
+    const unsigned int get_level() const;
   
     ///Equality operator.
     bool operator==(const CollocationPoint& col_point) const;
@@ -55,6 +58,9 @@ namespace Pecos {
 
     ///Point index
     Int2DArray levelIndex;
+
+    ///Point level
+    mutable unsigned int level;
   };
 
   typedef std::vector<CollocationPoint>::iterator ColPtIterator;
@@ -92,7 +98,8 @@ namespace Pecos {
 				 const RealArray& upper_bounds,
 				 const unsigned int starting_level = 1,
 				 const short poly_type = 
-				 PIECEWISE_LINEAR_INTERP);
+				 PIECEWISE_LINEAR_INTERP,
+				 const bool use_derivs = false);
 
     ///Refines every point at the highest level.  Calls refine_locally().
     virtual void refine_globally();

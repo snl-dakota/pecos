@@ -17,6 +17,9 @@ using namespace Pecos;
 Real test_function(const RealVector& x);
 RealVector test_function_grad(const RealVector& x);
 
+Real test_function_2(const RealVector& x);
+void test_function_2_grad(const RealVector& x, RealVector& grad);
+
 
 int main(int argc, char** argv)
 {
@@ -117,7 +120,7 @@ int main(int argc, char** argv)
   //delete a;
   //a = new HierarchInterpPolyApproximation(0,1,false);
   points.clear_data();
-  l_driver.initialize_grid(RealArray(2,-1),RealArray(2,1),11);
+  l_driver.initialize_grid(RealArray(2,-1),RealArray(2,1),8);
 
   RealMatrix col_pts_mat;
   l_driver.compute_grid(col_pts_mat);
@@ -128,8 +131,8 @@ int main(int argc, char** argv)
     points.push_back( SurrogateDataVars(x),
 		      SurrogateDataResp(fn_val,fn_grad,fn_hess,1) );
   }
-  a->surrogate_data(points);
   std::cout << "Grid size is: " << l_driver.grid_size() << std::endl;
+  a->surrogate_data(points);
   a->compute_coefficients();
 
   for (unsigned int idx = 0; idx < l_driver.grid_size(); ++idx ) {
@@ -146,22 +149,22 @@ int main(int argc, char** argv)
   std::cout << "Mean = " << a->mean() << std::endl;
 
   //2D example with gradients.  Not fully implemented yet.
-  /*
+  
   delete a;
-  a = new HierarchInterpPolyApproximation(0,1,true);
+  a = new HierarchInterpPolyApproximation(0,2,true);
   a->integration_driver_rep(&l_driver);
   points.clear_data();
-  l_driver.initialize_grid(RealArray(2,-1),RealArray(2,1),9);
+  l_driver.initialize_grid(RealArray(2,-1),RealArray(2,1),9,PIECEWISE_CUBIC_INTERP,true);
 
   l_driver.compute_grid(col_pts_mat);
   
   fn_grad.size(2);
   for (unsigned int idx = 0; idx < l_driver.grid_size() ; ++idx) {
     RealVector x(Teuchos::Copy,col_pts_mat[idx],2);
-    Real fn_val = test_function(x);
-    fn_grad = test_function_grad(x);
+    Real fn_val = test_function_2(x);
+    test_function_2_grad(x,fn_grad);
     points.push_back( SurrogateDataVars(x),
-		      SurrogateDataResp(fn_val,fn_grad,fn_hess) );
+		      SurrogateDataResp(fn_val,fn_grad,fn_hess,3) );
   }
   
   a->surrogate_data(points);
@@ -169,20 +172,21 @@ int main(int argc, char** argv)
   a->compute_coefficients();
 
   for (unsigned int idx = 0; idx < l_driver.grid_size(); ++idx ) {
-    std::cout << "Value = " << test_function(points.continuous_variables(idx)) 
-	      << " approx = " << a->value( points.continuous_variables(idx) ) << std::endl;
+    //std::cout << "Value = " << test_function_2(points.continuous_variables(idx)) 
+    //<< " approx = " << a->value( points.continuous_variables(idx) ) << std::endl;
     assert( std::abs( a->value( points.continuous_variables(idx) ) -  
-		      test_function(points.continuous_variables(idx)) < 1e-9) );
+		      test_function_2(points.continuous_variables(idx)) < 1e-9) );
   }
   x.size(2);
   x[0] = .69324;
   x[1] = .84529;
-  std::cout << "Value =  " << test_function(x) << std::endl;
+  std::cout << "Value =  " << test_function_2(x) << std::endl;
   std::cout << "Approximate = " << a->value(x) << std::endl;
-  std::cout << "Error = " << std::abs(a->value(x) - test_function(x)) << std::endl;
-
+  //assert( std::abs(test_function_2(x) - a->value(x) ) / test_function_2(x) < 1e-5);
+  std::cout << "Error = " << std::abs(a->value(x) - test_function_2(x))/test_function_2(x) << std::endl;
+  assert( std::abs(a->mean()) < 1e-10 );
   std::cout << "Mean = " << a->mean() << std::endl;
-  */
+  
 
   return EXIT_SUCCESS;
 
@@ -222,4 +226,27 @@ RealVector test_function_grad(const RealVector& x){
     }
   }
   return grad;
+}
+
+Real test_function_2(const RealVector& x) {
+
+  unsigned int dimension = x.length();
+  Real return_val = 1;
+  for ( unsigned int idx = 0; idx < dimension ; ++idx ) {
+    if ( x[idx] == 0 ) return 0;
+    else return_val *= std::sin(x[idx]);
+  }
+  return return_val;
+}
+
+void test_function_2_grad(const RealVector& x, RealVector& grad){
+  
+  unsigned int dimension = x.length();
+  for (unsigned int idx = 0; idx < dimension; ++idx) grad[idx] = 1;
+  for (unsigned int idx = 0; idx < dimension; ++idx) {
+    for ( unsigned int idx2 = 0; idx2 < dimension; ++idx2 ) {
+      if ( idx != idx2) grad[idx] = grad[idx] * std::sin(x[idx2]);
+      else grad[idx] = grad[idx] * ( std::cos(x[idx]) );
+    }
+  }
 }
