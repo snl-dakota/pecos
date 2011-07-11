@@ -23,7 +23,8 @@ namespace Pecos {
 // special values for quadratureExpansion and sparseGridExpansion
 enum { TENSOR_INT_TOTAL_ORD_EXP,      TENSOR_INT_TENSOR_EXP,
        TENSOR_INT_TENSOR_SUM_EXP,     SPARSE_INT_TOTAL_ORD_EXP,
-       SPARSE_INT_HEUR_TOTAL_ORD_EXP, SPARSE_INT_TENSOR_SUM_EXP };
+       SPARSE_INT_HEUR_TOTAL_ORD_EXP, SPARSE_INT_TENSOR_SUM_EXP,
+       SPARSE_INT_RESTR_TENSOR_SUM_EXP };
 
 
 /// Derived approximation class for orthogonal polynomials (global
@@ -357,7 +358,8 @@ private:
   short quadratureExpansion;
   /// switch for formulation of orthogonal polynomial expansion for
   /// sparse grids: TENSOR_INT_TENSOR_SUM_EXP, SPARSE_INT_TENSOR_SUM_EXP,
-  /// SPARSE_INT_TOTAL_ORD_EXP, or SPARSE_INT_HEUR_TOTAL_ORD_EXP expansion.
+  /// SPARSE_INT_RESTR_TENSOR_SUM_EXP, SPARSE_INT_TOTAL_ORD_EXP, or
+  /// SPARSE_INT_HEUR_TOTAL_ORD_EXP expansion.
   short sparseGridExpansion;
 
   /// spectral coefficient decay rates estimated by LLS on log of
@@ -376,7 +378,7 @@ OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
   PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
   approxOrder(approx_order), partialOrder(false),
   quadratureExpansion(TENSOR_INT_TENSOR_EXP),
-  sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
+  sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)//SPARSE_INT_TENSOR_SUM_EXP
 { }
 
 

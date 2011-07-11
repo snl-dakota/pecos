@@ -82,20 +82,19 @@ void OrthogPolyApproximation::allocate_arrays()
     PCout << "Orthogonal polynomial approximation order = { ";
     for (size_t i=0; i<numVars; ++i)
       PCout << approxOrder[i] << ' ';
-    if (quadratureExpansion == TENSOR_INT_TENSOR_EXP) {
+    switch (quadratureExpansion) {
+    case TENSOR_INT_TENSOR_EXP:
       if (update_exp_form)
 	tensor_product_multi_index(approxOrder, multiIndex, true);
-      PCout << "} using tensor-product expansion of ";
-    }
-    else if (quadratureExpansion == TENSOR_INT_TOTAL_ORD_EXP) {
+      PCout << "} using tensor-product expansion of "; break;
+    case TENSOR_INT_TOTAL_ORD_EXP:
       if (update_exp_form)
 	total_order_multi_index(approxOrder, multiIndex);
-      PCout << "} using total-order expansion of ";
-    }
-    else {
-      PCerr << "\nError: unsupported setting for quadratureExpansion in "
+      PCout << "} using total-order expansion of ";    break;
+    default:
+      PCerr << "}\n\nError: unsupported setting for quadratureExpansion in "
 	    << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
-      abort_handler(-1);
+      abort_handler(-1);                               break;
     }
     if (update_exp_form)
       numExpansionTerms = multiIndex.size();
@@ -135,26 +134,25 @@ void OrthogPolyApproximation::allocate_arrays()
       sparse_grid_multi_index(multiIndex);
       numExpansionTerms = multiIndex.size();
     }
-    if (sparseGridExpansion == TENSOR_INT_TENSOR_SUM_EXP)
+    switch (sparseGridExpansion) {
+    case TENSOR_INT_TENSOR_SUM_EXP:
       PCout << "Orthogonal polynomial approximation level = " << ssg_level
 	    << " using tensor integration and tensor sum expansion of "
-	    << numExpansionTerms << " terms\n";
-    else if (sparseGridExpansion == SPARSE_INT_TENSOR_SUM_EXP)
+	    << numExpansionTerms << " terms\n"; break;
+    case SPARSE_INT_TENSOR_SUM_EXP: case SPARSE_INT_RESTR_TENSOR_SUM_EXP:
       PCout << "Orthogonal polynomial approximation level = " << ssg_level
 	    << " using sparse integration and tensor sum expansion of "
-	    << numExpansionTerms << " terms\n";
-    else if (sparseGridExpansion == SPARSE_INT_TOTAL_ORD_EXP ||
-	     sparseGridExpansion == SPARSE_INT_HEUR_TOTAL_ORD_EXP) {
+	    << numExpansionTerms << " terms\n"; break;
+    case SPARSE_INT_TOTAL_ORD_EXP:  case SPARSE_INT_HEUR_TOTAL_ORD_EXP:
       PCout << "Orthogonal polynomial approximation order = { ";
       for (size_t i=0; i<numVars; ++i)
 	PCout << approxOrder[i] << ' ';
       PCout << "} using sparse integration and total-order expansion of "
-	    << numExpansionTerms << " terms\n";
-    }
-    else {
+	    << numExpansionTerms << " terms\n"; break;
+    default:
       PCerr << "Error: unsupported setting for sparseGridExpansion in "
 	    << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
-      abort_handler(-1);
+      abort_handler(-1);                        break;
     }
     // update reference points
     ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
@@ -603,25 +601,33 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     }
     break;
   }
-  case SPARSE_INT_TENSOR_SUM_EXP: {
+  case SPARSE_INT_TENSOR_SUM_EXP: case SPARSE_INT_RESTR_TENSOR_SUM_EXP: {
     // assemble a complete list of individual polynomial coverage
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
     UShort2DArray tp_multi_index;
     UShortArray integrand_order(numVars), expansion_order(numVars);
+    // Note: restricted rule growth within the sparse grid point set is separate
+    // from restricted definition of the expansion terms.  The former makes
+    // integrand precision more uniform by delaying exponential sequences, but
+    // may still contain some nonuniformity.  The latter may enforce expansion
+    // uniformity that would not otherwise be present based on integrand
+    // precision alone, in order to reduce the possibility of a response-basis
+    // product landing in the concave interior of the integrand resolution.
+    short exp_growth = (sparseGridExpansion == SPARSE_INT_RESTR_TENSOR_SUM_EXP)
+      ? MODERATE_RESTRICTED_GROWTH : UNRESTRICTED_GROWTH;
     for (i=0; i<num_smolyak_indices; ++i) {
-      // Mitigate uneven integrand coverage due to exponential growth by
-      // enforcing moderate linear growth (TO DO: SLOW_RESTRICTED_GROWTH):
-      level_growth_to_integrand_order(sm_multi_index[i],
-        MODERATE_RESTRICTED_GROWTH, integrand_order);
+      level_growth_to_integrand_order(sm_multi_index[i], exp_growth,
+				      integrand_order);
       integrand_order_to_expansion_order(integrand_order, expansion_order);
       tensor_product_multi_index(expansion_order, tp_multi_index, true);
       append_multi_index(tp_multi_index, multi_index, false);
 #ifdef DEBUG
       PCout << "level =\n" << sm_multi_index[i] << "integrand_order =\n"
 	    << integrand_order << "expansion_order =\n" << expansion_order
-	    << "tp_multi_index =\n" << tp_multi_index << "multi_index =\n"
-	    << multi_index << '\n';
+	  //<< "tp_multi_index =\n" << tp_multi_index
+	  //<< "multi_index =\n" << multi_index
+	    << '\n';
 #endif // DEBUG
     }
     break;
@@ -822,19 +828,21 @@ level_growth_to_integrand_order(const UShortArray& levels, short growth_rate,
   if (int_order.size() != n)
     int_order.resize(n);
   switch (growth_rate) {
-  case SLOW_RESTRICTED_GROWTH:
+  case SLOW_RESTRICTED_GROWTH:     // not currently used
     for (i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
       int_order[i] =  2*levels[i] + 1;
     break;
-  case MODERATE_RESTRICTED_GROWTH:
+  case MODERATE_RESTRICTED_GROWTH: // used for SPARSE_INT_RESTR_TENSOR_SUM_EXP
+    // mitigate uneven integrand coverage due to exponential rule growth by
+    // enforcing moderate linear expansion growth. TO DO: SLOW_RESTRICTED_GROWTH
     for (i=0; i<n; ++i) // synch with moderate linear growth: i = 4l + 1
       int_order[i] =  4*levels[i] + 1;
     break;
-  case UNRESTRICTED_GROWTH: {
-    // This was previously the only option for SPARSE_INT_TENSOR_SUM_EXP
-    // expansions, but was too aggressive for use with exponential growth.
-    // It is retained for completeness, but is not recommended (this member
-    // fn generalizes, but still provides access to the previous behavior).
+  case UNRESTRICTED_GROWTH: {      // used for SPARSE_INT_TENSOR_SUM_EXP and
+                                   // consistent with TENSOR_INT_TENSOR_SUM_EXP
+    // This option is generally too aggressive for use with nested rules with
+    // exponential rule growth.  It is retained for completeness and comparison,
+    // but is not recommended for use as anything other than a reference point.
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     UShortArray quad_order(numVars);
     ssg_driver->level_to_order(levels, quad_order);
@@ -1227,9 +1235,10 @@ void OrthogPolyApproximation::integration_checks()
   size_t num_data_pts = surrData.size();
   if (num_data_pts != driverRep->type1_weight_sets().length()) {
     PCerr << "Error: number of current points (" << num_data_pts << ") is "
-	  << "not consistent with\n       number of points/weights from "
-	  << "integration driver in\n       OrthogPolyApproximation::"
-	  << "compute_coefficients()." << std::endl;
+	  << "not consistent with\n       number of points/weights ("
+	  << driverRep->type1_weight_sets().length() << ") from integration "
+	  << "driver in\n       OrthogPolyApproximation::compute_coefficients"
+	  << "()." << std::endl;
     abort_handler(-1);
   }
 }
