@@ -378,7 +378,14 @@ OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
   PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
   approxOrder(approx_order), partialOrder(false),
   quadratureExpansion(TENSOR_INT_TENSOR_EXP),
-  sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)//SPARSE_INT_TENSOR_SUM_EXP
+//quadratureExpansion(TENSOR_INT_TOTAL_ORDER_EXP),
+  sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
+//sparseGridExpansion(SPARSE_INT_TOTAL_ORDER_EXP)
+//sparseGridExpansion(SPARSE_INT_HEUR_TOTAL_ORDER_EXP)
+//sparseGridExpansion(SPARSE_INT_TENSOR_SUM_EXP)
+//sparseGridExpansion(SPARSE_INT_RESTR_TENSOR_SUM_EXP)
+// Note: for sparseGridExpansion == SPARSE_INT_*, all_variables mode requires
+//       track_wts = true in Dakota::NonDExpansion::construct_sparse_grid().
 { }
 
 
