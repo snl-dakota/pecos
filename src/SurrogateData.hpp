@@ -118,6 +118,8 @@ public:
 			    short mode = DEFAULT_COPY);
   /// get continuousVars
   const RealVector& continuous_variables() const;
+  /// get view of continuousVars for updating in place
+  RealVector continuous_variables_view();
 
   /// function to check sdvRep (does this handle contain a body)
   bool is_null() const;
@@ -204,6 +206,13 @@ continuous_variables(const RealVector& c_vars, short mode)
 
 inline const RealVector& SurrogateDataVars::continuous_variables() const
 { return sdvRep->continuousVars; }
+
+
+inline RealVector SurrogateDataVars::continuous_variables_view()
+{
+  return RealVector(Teuchos::View, sdvRep->continuousVars.values(),
+		    sdvRep->continuousVars.length());
+}
 
 
 inline bool SurrogateDataVars::is_null() const
@@ -335,6 +344,8 @@ public:
   void response_function(const Real& fn);
   /// get responseFn
   const Real& response_function() const;
+  /// get "view" of responseFn for updating in place
+  Real& response_function_view();
 
   /// set i^{th} entry within responseGrad
   void response_gradient(const Real& grad_i, size_t i);
@@ -342,6 +353,8 @@ public:
   void response_gradient(const RealVector& grad, short mode = DEFAULT_COPY);
   /// get responseGrad
   const RealVector& response_gradient() const;
+  /// get view of responseGrad for updating in place
+  RealVector response_gradient_view();
 
   /// set i-j^{th} entry within responseHess
   void response_hessian(const Real& hess_ij, size_t i, size_t j);
@@ -349,6 +362,8 @@ public:
   void response_hessian(const RealSymMatrix& hess, short mode = DEFAULT_COPY);
   /// get responseHess
   const RealSymMatrix& response_hessian() const;
+  /// get view of responseHess for updating in place
+  RealSymMatrix response_hessian_view();
 
   /// function to check sdrRep (does this handle contain a body)
   bool is_null() const;
@@ -433,6 +448,10 @@ inline const Real& SurrogateDataResp::response_function() const
 { return sdrRep->responseFn; }
 
 
+inline Real& SurrogateDataResp::response_function_view()
+{ return sdrRep->responseFn; }
+
+
 inline void SurrogateDataResp::
 response_gradient(const Real& grad_i, size_t i)
 { sdrRep->responseGrad[i] = grad_i; }
@@ -455,6 +474,13 @@ inline const RealVector& SurrogateDataResp::response_gradient() const
 { return sdrRep->responseGrad; }
 
 
+inline RealVector SurrogateDataResp::response_gradient_view()
+{
+  return RealVector(Teuchos::View, sdrRep->responseGrad.values(),
+		    sdrRep->responseGrad.length());
+}
+
+
 inline void SurrogateDataResp::
 response_hessian(const Real& hess_ij, size_t i, size_t j)
 { sdrRep->responseHess(i,j) = hess_ij; }
@@ -474,6 +500,13 @@ response_hessian(const RealSymMatrix& hess, short mode)
 
 inline const RealSymMatrix& SurrogateDataResp::response_hessian() const
 { return sdrRep->responseHess; }
+
+
+inline RealSymMatrix SurrogateDataResp::response_hessian_view()
+{
+  return RealSymMatrix(Teuchos::View, sdrRep->responseHess,
+		       sdrRep->responseHess.numRows());
+}
 
 
 inline bool SurrogateDataResp::is_null() const
