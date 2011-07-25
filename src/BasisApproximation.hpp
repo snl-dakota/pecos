@@ -75,6 +75,10 @@ public:
   virtual size_t finalization_index(size_t i);
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
+  /// store the current coefficients for later combination
+  virtual void store_coefficients();
+  /// combine the current coefficients with a previously stored set
+  virtual void combine_coefficients();
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s) const;

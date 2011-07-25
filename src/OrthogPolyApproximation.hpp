@@ -211,13 +211,15 @@ private:
 			  SizetArray& tp_mi_map, size_t& tp_mi_map_ref,
 			  UShort2DArray& multi_index);
 
-  /// helper function for common code between {add,subtract}_expansion()
-  void combine_expansion(const SizetArray& tp_mi_map,
-			 const RealVector& tp_expansion_coeffs,
-			 const RealMatrix& tp_expansion_grads, int coeff);
-  /// update expansionCoeffs/expansionCoeffGrads by adding trial tensor-product
-  /// expansions and updating coefficients on previous tensor-product expansions
-  void append_expansions(size_t start_index);
+  /// overlay the passed tensor-product expansion with the aggregate
+  /// expansion{Coeffs,CoeffGrads}
+  void overlay_tensor_expansion(const SizetArray& tp_mi_map,
+				const RealVector& tp_expansion_coeffs,
+				const RealMatrix& tp_expansion_grads,
+				int coeff);
+  /// update expansion{Coeffs,CoeffGrads} by adding one or more tensor-product
+  /// expansions and updating all Smolyak coefficients
+  void append_tensor_expansions(size_t start_index);
   /// resize expansion{Coeffs,CoeffGrads} based on updated numExpansionTerms
   void resize_expansion();
 
@@ -339,11 +341,11 @@ private:
   /// saved tpExpansionCoeffGrads instances that were computed but not selected
   std::deque<RealMatrix> savedTPExpCoeffGrads;
 
-  /// previous expansionCoeffs (combined total, not tensor-product
-  /// contributions) prior to append_expansions()
+  /// previous expansionCoeffs (aggregated total, not tensor-product
+  /// contributions) prior to append_tensor_expansions()
   RealVector prevExpCoeffs;
-  /// previous expansionCoeffGrads (combined total, not tensor-product
-  /// contributions) prior to append_expansions()
+  /// previous expansionCoeffGrads (aggregated total, not tensor-product
+  /// contributions) prior to append_tensor_expansions()
   RealMatrix prevExpCoeffGrads;
 
   /// norm-squared of one of the multivariate polynomial basis functions

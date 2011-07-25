@@ -276,6 +276,30 @@ void BasisApproximation::finalize_coefficients()
 }
 
 
+void BasisApproximation::store_coefficients()
+{
+  if (basisApproxRep)
+    basisApproxRep->store_coefficients(); 
+  else {
+    PCerr << "Error: store_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisApproximation::combine_coefficients()
+{
+  if (basisApproxRep)
+    basisApproxRep->combine_coefficients(); 
+  else {
+    PCerr << "Error: combine_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 bool BasisApproximation::restore_available()
 { return (basisApproxRep) ? basisApproxRep->restore_available() : false; }
 

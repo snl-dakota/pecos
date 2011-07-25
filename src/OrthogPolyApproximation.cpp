@@ -356,7 +356,8 @@ void OrthogPolyApproximation::compute_coefficients()
 	// sum tensor product coeffs/grads into expansion coeffs/grads
 	coeff = sm_coeffs[i];
 	if (coeff)
-	  combine_expansion(tpMultiIndexMap[i], tp_coeffs_i, tp_grads_i, coeff);
+	  overlay_tensor_expansion(tpMultiIndexMap[i], tp_coeffs_i,
+				   tp_grads_i, coeff);
       }
       //if (!reEntrantFlag) {
       //  ssg_driver->clear_smolyak_arrays();
@@ -420,7 +421,7 @@ void OrthogPolyApproximation::increment_coefficients()
 			  tp_wts, tpExpansionCoeffs[last_index],
 			  tpExpansionCoeffGrads[last_index]);
       // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-      append_expansions(last_index);
+      append_tensor_expansions(last_index);
       // cleanup
       //if (!reEntrantFlag) {
       //  ssg_driver->clear_smolyak_arrays();
@@ -453,7 +454,7 @@ void OrthogPolyApproximation::decrement_coefficients()
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
-      // reset expansion{Coeffs,CoeffGrads}: (set in append_expansions())
+      // reset expansion{Coeffs,CoeffGrads}: (set in append_tensor_expansions())
       expansionCoeffs     = prevExpCoeffs;
       expansionCoeffGrads = prevExpCoeffGrads;
       // reset multiIndex and numExpansionTerms:
@@ -514,7 +515,7 @@ void OrthogPolyApproximation::restore_coefficients()
       numExpansionTerms = multiIndex.size();
       resize_expansion();
       // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-      append_expansions(last_index);
+      append_tensor_expansions(last_index);
       break;
     }
     break;
@@ -554,7 +555,7 @@ void OrthogPolyApproximation::finalize_coefficients()
       savedTPMultiIndexMap.clear();   savedTPMultiIndexMapRef.clear();
       savedTPExpCoeffs.clear();       savedTPExpCoeffGrads.clear();
       // sum remaining trial expansions into expansionCoeffs/expansionCoeffGrads
-      append_expansions(start_index);
+      append_tensor_expansions(start_index);
       break;
     }
     break;
@@ -1030,9 +1031,9 @@ append_multi_index(const UShort2DArray& tp_multi_index,
 
 
 void OrthogPolyApproximation::
-combine_expansion(const SizetArray& tp_mi_map,
-		  const RealVector& tp_expansion_coeffs,
-		  const RealMatrix& tp_expansion_grads, int coeff)
+overlay_tensor_expansion(const SizetArray& tp_mi_map,
+			 const RealVector& tp_expansion_coeffs,
+			 const RealMatrix& tp_expansion_grads, int coeff)
 {
   size_t i, j, index, num_tp_terms = tp_mi_map.size(), 
     num_deriv_vars = expansionCoeffGrads.numRows();
@@ -1050,7 +1051,7 @@ combine_expansion(const SizetArray& tp_mi_map,
 }
 
 
-void OrthogPolyApproximation::append_expansions(size_t start_index)
+void OrthogPolyApproximation::append_tensor_expansions(size_t start_index)
 {
   // for use in decrement_coefficients()
   prevExpCoeffs = expansionCoeffs; prevExpCoeffGrads = expansionCoeffGrads;
@@ -1061,9 +1062,9 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   const IntArray&     sm_coeffs = ssg_driver->smolyak_coefficients();
   const IntArray& sm_coeffs_ref = ssg_driver->smolyak_coefficients_reference();
 #ifdef DEBUG
-  PCout << "In OrthogPolyApproximation::append_expansions() with start index "
-	<< start_index << "\nsm_coeffs:\n" << sm_coeffs << "sm_coeffs_ref:\n"
-	<< sm_coeffs_ref << std::endl;
+  PCout << "In OrthogPolyApproximation::append_tensor_expansions() with "
+	<< "start index " << start_index << "\nsm_coeffs:\n" << sm_coeffs
+	<< "sm_coeffs_ref:\n" << sm_coeffs_ref << std::endl;
 #endif // DEBUG
 
   // add trial expansions
@@ -1072,8 +1073,8 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
   for (index=start_index; index<num_tensor_grids; ++index) {
     coeff = sm_coeffs[index];
     if (coeff)
-      combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
-			tpExpansionCoeffGrads[index], coeff);
+      overlay_tensor_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
+			       tpExpansionCoeffGrads[index], coeff);
 #ifdef DEBUG
     PCout << "Trial set sm_coeff = " << coeff << "\ntpExpansionCoeffs:\n";
     write_data(PCout, tpExpansionCoeffs[index]);
@@ -1091,10 +1092,51 @@ void OrthogPolyApproximation::append_expansions(size_t start_index)
     PCout << "\ntpMultiIndexMap:\n" << tpMultiIndexMap[index] << '\n';
 #endif // DEBUG
     if (delta_coeff)
-      combine_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
-			tpExpansionCoeffGrads[index], delta_coeff);
+      overlay_tensor_expansion(tpMultiIndexMap[index], tpExpansionCoeffs[index],
+			       tpExpansionCoeffGrads[index], delta_coeff);
   }
 }
+
+
+/*
+void OrthogPolyApproximation::
+add_expansions(const UShort3DArray&   tp_multi_indices,
+	       const RealVectorArray& tp_exp_coeffs_array,
+	       const RealMatrixArray& tp_exp_coeff_grads_array)
+{
+  // finalize_expansions() may be closest model for this
+  size_t i, num_tp_mi = tp_multi_indices.size(),
+    start_index = tpMultiIndex.size();
+  for (i=0; i<num_tp_mi; ++i) {
+    // increments tpMultiIndexMap
+    append_multi_index(tp_multi_indices[i], multiIndex, true); // this version?
+    // ...
+  }
+  tpMultiIndex.insert(tpMultiIndex.end(), tp_multi_indices.begin(),
+		      tp_multi_indices.end());
+  // TO DO: tpMultiIndexMap, tpMultiIndexMapRef
+  tpExpansionCoeffs.insert(tpExpansionCoeffs.end(), tp_exp_coeffs_array.begin(),
+			   tp_exp_coeffs_array.end());
+  tpExpansionCoeffGrads.insert(tpExpansionCoeffGrads.end(),
+			       tp_exp_coeff_grads_array.begin(),
+			       tp_exp_coeff_grads_array.end());
+  // Note: SparseGridDriver has NOT updated the Smolyak coefficients due to a
+  // grid increment.  Will need to manage this explicitly: instead of updating
+  // the coeffs for the TPs within a single grid, we must add two expansions
+  // with fixed Smolyak and exp coefficients.  Thus, append_multi_index() and
+  // overlay_tensor_expansion() appear to do what we want, but
+  // append_tensor_expansions() is likely too specific to grid increments.
+  append_tensor_expansions(start_index);
+}
+
+
+void OrthogPolyApproximation::
+multiply_expansions(const UShort2DArray& tp_multi_index,
+		    const RealVector& tp_exp_coeffs)
+{
+
+}
+*/
 
 
 void OrthogPolyApproximation::
