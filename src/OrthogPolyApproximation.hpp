@@ -345,6 +345,9 @@ private:
   /// stored multiIndex (aggregated total, not tensor-product
   /// contributions) for use in combine_expansions()
   UShort2DArray storedMultiIndex;
+  /// stored type1 weight sets (aggregated total, not tensor-product
+  /// contributions) for use in combine_expansions()
+  RealVector storedType1WtSets;
   /// stored expansionCoeffs (aggregated total, not tensor-product
   /// contributions) for use in combine_expansions()
   RealVector storedExpCoeffs;

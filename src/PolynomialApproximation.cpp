@@ -532,7 +532,13 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
   size_t i, j, offset = 0, num_pts = surrData.size();
   bool anchor_pt = surrData.anchor();
   const RealVector& t1_wts = driverRep->type1_weight_sets();
-
+  if (t1_wts.length() != num_pts) {
+    PCerr << "Error: mismatch in array lengths between integration driver "
+	  << "weights ("  << t1_wts.length() << ") and surrogate data points ("
+	  << num_pts << ") in PolynomialApproximation::compute_numerical_"
+	  << "moments()." << std::endl;
+    abort_handler(-1);
+  }
   // estimate 1st raw moment (mean)
   Real& mean = numericalMoments[0];
   if (anchor_pt) {
@@ -560,7 +566,7 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
     const Real& var = numericalMoments[1];
     if (var > 0.) {
       // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
-      Real std_dev = std::sqrt(var); pow_fn = std_dev*std_dev;
+      Real std_dev = std::sqrt(var); pow_fn = var;
       for (j=2; j<num_moments; ++j)
 	{ pow_fn *= std_dev; numericalMoments[j] /= pow_fn; }
     }

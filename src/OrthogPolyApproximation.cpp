@@ -572,16 +572,17 @@ void OrthogPolyApproximation::store_coefficients()
 
   switch (configOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID: {
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    size_t i, num_sm_mi = sm_multi_index.size();
+    //SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    //const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
+    //const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    //size_t i, num_sm_mi = sm_multi_index.size();
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP:
       // This approach stores the aggregate sparse data
       storedMultiIndex    = multiIndex;
       storedExpCoeffs     = expansionCoeffs;
       storedExpCoeffGrads = expansionCoeffGrads;
+      storedType1WtSets   = driverRep->type1_weight_sets();
 
       /* This approach stores the individual tensor data
       // save restorable data
@@ -615,12 +616,18 @@ void OrthogPolyApproximation::combine_coefficients()
 
   //if (correctionType == ADDITIVE_CORRECTION) {
 
+    // update multiIndex
     Sizet2DArray stored_mi_map; SizetArray stored_mi_map_ref;
     append_multi_index(storedMultiIndex, multiIndex, stored_mi_map,
 		       stored_mi_map_ref);
     // update expansion{Coeffs,CoeffGrads}
+    // TO DO: resize_expansion()???
     overlay_expansion(stored_mi_map.back(), storedExpCoeffs,
 		      storedExpCoeffGrads, 1);
+    // update SparseGridDriver weights
+    // TO DO: this isn't correct for moment # > 1.  SC approximations must be
+    // consolidated prior to variance/skewness/kurtosis calculation.
+    driverRep->append_type1_weight_sets(storedType1WtSets);
 
     /*
     size_t i, num_tp_mi = savedTPMultiIndex.size();

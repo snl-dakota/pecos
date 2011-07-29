@@ -74,6 +74,11 @@ public:
   /// return type2WeightSets
   const RealMatrix& type2_weight_sets() const;
 
+  // append to end of type1WeightSets
+  void append_type1_weight_sets(const RealVector& t1_wts);
+  // append to end of type2WeightSets
+  void append_type2_weight_sets(const RealMatrix& t2_wts);
+
   /// return collocRules
   const ShortArray& collocation_rules() const;
 
@@ -180,6 +185,42 @@ inline const RealVector& IntegrationDriver::type1_weight_sets() const
 
 inline const RealMatrix& IntegrationDriver::type2_weight_sets() const
 { return (driverRep) ? driverRep->type2WeightSets : type2WeightSets; }
+
+
+inline void IntegrationDriver::
+append_type1_weight_sets(const RealVector& t1_wts)
+{
+  if (driverRep)
+    driverRep->append_type1_weight_sets(t1_wts);
+  else {
+    size_t i, num_curr_t1_wts = type1WeightSets.length(),
+      num_new_t1_wts = t1_wts.length(),
+      num_total_t1_wts = num_curr_t1_wts + num_new_t1_wts;
+    type1WeightSets.resize(num_total_t1_wts);
+    for (i=0; i<num_new_t1_wts; ++i)
+      type1WeightSets[num_curr_t1_wts+i] = t1_wts[i];
+  }
+}
+
+
+inline void IntegrationDriver::
+append_type2_weight_sets(const RealMatrix& t2_wts)
+{
+  if (driverRep)
+    driverRep->append_type2_weight_sets(t2_wts);
+  else {
+    size_t i, j, num_curr_t2_wts = type2WeightSets.numCols(),
+      num_new_t2_wts = t2_wts.numCols(),
+      num_total_t2_wts = num_curr_t2_wts + num_new_t2_wts;
+    type2WeightSets.reshape(numVars, num_total_t2_wts);
+    for (i=0; i<num_new_t2_wts; ++i) {
+      Real*      curr_t2_i = type2WeightSets[num_curr_t2_wts+i];
+      const Real* new_t2_i = t2_wts[i];
+      for (j=0; j<numVars; ++j)
+	curr_t2_i[j] = new_t2_i[j];
+    }
+  }
+}
 
 
 inline const ShortArray& IntegrationDriver::collocation_rules() const
