@@ -382,6 +382,8 @@ protected:
   /// numerical integration variance for InterpPoly)
   RealVector varianceGradient;
 
+  // saved Smolyak coefficients corresponding to savedSmolyakMultiIndex
+  //IntArray savedSmolyakCoeffs;
   /// saved trial sets that were computed but not selected
   std::deque<UShortArray> savedSmolyakMultiIndex;
 

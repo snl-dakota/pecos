@@ -85,20 +85,14 @@ protected:
 
   int min_coefficients() const;
 
-  /// compute the coefficients for the expansion of multivariate orthogonal
-  /// polynomials
   void compute_coefficients();
-  /// update the coefficients based on an increment to the Smolyak multi index
   void increment_coefficients();
-  /// restore the coefficients to their baseline state prior to last increment
   void decrement_coefficients();
-  /// restore the coefficients to a previously incremented state as
-  /// identified by the current increment to the Smolyak multi index
   void restore_coefficients();
-  /// finalize the coefficients by applying all previously evaluated increments
   void finalize_coefficients();
+  void store_coefficients();
+  void combine_coefficients();
 
-  /// print the coefficients for the expansion
   void print_coefficients(std::ostream& s) const;
 
   const RealVector& approximation_coefficients() const;
@@ -201,22 +195,29 @@ private:
 				       short growth_rate,
 				       UShortArray& int_order);
 
-  /// append multi-indices from tp_multi_index that do not already
-  /// appear in multi_index; define tpMultiIndexMap if requested
-  void append_multi_index(const UShort2DArray& tp_multi_index,
-			  UShort2DArray& multi_index, bool define_tp_mi_map);
-  /// append multi-indices from tp_multi_index that do not already appear in
-  /// multi_index, using pre-existing tp_mi_map and tp_mi_map_ref for mapping
-  void append_multi_index(const UShort2DArray& tp_multi_index,
-			  SizetArray& tp_mi_map, size_t& tp_mi_map_ref,
+  /// append multi-indices from app_multi_index that do not already
+  /// appear in multi_index
+  void append_multi_index(const UShort2DArray& app_multi_index,
+			  UShort2DArray& multi_index);
+  /// append multi-indices from app_multi_index that do not already
+  /// appear in multi_index; define multi_index_map and multi_index_map_ref
+  void append_multi_index(const UShort2DArray& app_multi_index,
+			  UShort2DArray& multi_index,
+			  Sizet2DArray& multi_index_map,
+			  SizetArray& multi_index_map_ref);
+  /// append multi-indices from app_multi_index that do not already
+  /// appear in multi_index, using previously defined multi_index_map
+  /// and multi_index_map_ref for mapping
+  void append_multi_index(const UShort2DArray& app_multi_index,
+			  SizetArray& multi_index_map,
+			  size_t& multi_index_map_ref,
 			  UShort2DArray& multi_index);
 
   /// overlay the passed tensor-product expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads}
-  void overlay_tensor_expansion(const SizetArray& tp_mi_map,
-				const RealVector& tp_expansion_coeffs,
-				const RealMatrix& tp_expansion_grads,
-				int coeff);
+  void overlay_expansion(const SizetArray& multi_index_map,
+			 const RealVector& exp_coeffs,
+			 const RealMatrix& exp_grads, int coeff);
   /// update expansion{Coeffs,CoeffGrads} by adding one or more tensor-product
   /// expansions and updating all Smolyak coefficients
   void append_tensor_expansions(size_t start_index);
@@ -340,6 +341,16 @@ private:
   std::deque<RealVector> savedTPExpCoeffs;
   /// saved tpExpansionCoeffGrads instances that were computed but not selected
   std::deque<RealMatrix> savedTPExpCoeffGrads;
+
+  /// stored multiIndex (aggregated total, not tensor-product
+  /// contributions) for use in combine_expansions()
+  UShort2DArray storedMultiIndex;
+  /// stored expansionCoeffs (aggregated total, not tensor-product
+  /// contributions) for use in combine_expansions()
+  RealVector storedExpCoeffs;
+  /// stored expansionCoeffGrads (aggregated total, not tensor-product
+  /// contributions) for use in combine_expansions()
+  RealMatrix storedExpCoeffGrads;
 
   /// previous expansionCoeffs (aggregated total, not tensor-product
   /// contributions) prior to append_tensor_expansions()

@@ -676,6 +676,10 @@ public:
   void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// remove num_pop_pts entries from ends of {vars,resp}Data
   void pop(size_t num_pop_pts, bool save_data = true);
+  /// move all entries from {vars,resp}Data to saved{Vars,Resp}Data
+  void store();
+  /// move all entries from saved{Vars,Resp}Data to {vars,resp}Data
+  void restore();
   /// remove num_pop_pts entries from ends of {vars,resp}Data
   size_t restore(size_t index, bool erase_saved = true);
 
@@ -703,9 +707,9 @@ public:
   void clear_response_data();
   /// clear saved{Vars,Resp}Data
   void clear_saved();
-  /// clear saved{Vars,Resp}Data
+  /// clear savedVarsData
   void clear_saved_variables();
-  /// clear saved{Vars,Resp}Data
+  /// clear savedRespData
   void clear_saved_response();
 
 private:
@@ -876,6 +880,26 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
       abort_handler(-1);
     }
   }
+}
+
+
+inline void SurrogateData::store()
+{
+  sdRep->savedVarsData.push_back(sdRep->varsData);
+  sdRep->savedRespData.push_back(sdRep->respData);
+  clear_data();
+}
+
+
+inline void SurrogateData::restore()
+{
+  SDVArray& saved_vars = sdRep->savedVarsData.back();
+  SDRArray& saved_resp = sdRep->savedRespData.back();
+  sdRep->varsData.insert(sdRep->varsData.end(), saved_vars.begin(),
+			 saved_vars.end());
+  sdRep->respData.insert(sdRep->respData.end(), saved_resp.begin(),
+			 saved_resp.end());
+  sdRep->savedVarsData.pop_back(); sdRep->savedRespData.pop_back();
 }
 
 
