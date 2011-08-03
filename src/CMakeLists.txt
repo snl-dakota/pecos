@@ -6,6 +6,11 @@ include_directories(${Boost_INCLUDE_DIRS}
 
 remove_definitions("-DHAVE_CONFIG_H")
 
+option(BOOST_DISABLE_ASSERTS "Toggle BoostAssert, default is AssertDisabled" ON)
+if (BOOST_DISABLE_ASSERTS)
+  add_definitions("-DBOOST_DISABLE_ASSERTS")
+endif (BOOST_DISABLE_ASSERTS)
+
 if(HAVE_LHS)
   include_directories(${LHS_BINARY_DIR}/include)
   list(APPEND Pecos_libs lhs mods mod)

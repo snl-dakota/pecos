@@ -41,11 +41,6 @@ set( CMAKE_MODULE_PATH
 )
 
 
-option(BOOST_DISABLE_ASSERTS "Toggle BoostAssert, default is AssertDisabled" ON)
-if (BOOST_DISABLE_ASSERTS)
-  add_definitions("-DBOOST_DISABLE_ASSERTS")
-endif (BOOST_DISABLE_ASSERTS)
-
 # WJB - ToDo: test the (HAVE_FFT == OFF) case
 option(HAVE_FFT "Use either the fftw or dfftpack packages" ON)
 option(HAVE_DFFTPACK "Build the dfftpack package.  This OPTION has no effect if
