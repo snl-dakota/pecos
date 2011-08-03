@@ -1,8 +1,21 @@
 # CMakeLists.txt for pecos "unit" tests
 
-include_directories(${Pecos_BINARY_DIR} ${Pecos_SOURCE_DIR}/src
+include_directories(${Pecos_SOURCE_DIR}/src
                     ${Boost_INCLUDE_DIRS}
                     ${Teuchos_INCLUDE_DIRS})
+
+remove_definitions("-DHAVE_CONFIG_H")
+
+option(BOOST_DISABLE_ASSERTS "Toggle BoostAssert, default is AssertDisabled" ON)
+if (BOOST_DISABLE_ASSERTS)
+  add_definitions("-DBOOST_DISABLE_ASSERTS")
+endif(BOOST_DISABLE_ASSERTS)
+
+if (${CMAKE_CXX_COMPILER_ID} MATCHES "XL" OR
+    ${CMAKE_CXX_COMPILER_ID} MATCHES "VisualAge")
+  add_definitions("-DBOOST_MPL_CFG_ASSERT_USE_RELATION_NAMES")
+endif()
+
 
 if(HAVE_SPARSE_GRID)
   include_directories(${VPISparseGrid_SOURCE_DIR}/src)

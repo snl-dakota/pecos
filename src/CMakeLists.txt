@@ -1,15 +1,19 @@
 # CMakeLists.txt for pecos source (WJB: Note the source file GLOB below)
 
-include_directories(${Boost_INCLUDE_DIRS}
-                    ${Teuchos_INCLUDE_DIRS}
-                    ${Pecos_BINARY_DIR})
+include_directories(${Boost_INCLUDE_DIRS} ${Teuchos_INCLUDE_DIRS})
 
 remove_definitions("-DHAVE_CONFIG_H")
 
 option(BOOST_DISABLE_ASSERTS "Toggle BoostAssert, default is AssertDisabled" ON)
 if (BOOST_DISABLE_ASSERTS)
   add_definitions("-DBOOST_DISABLE_ASSERTS")
-endif (BOOST_DISABLE_ASSERTS)
+endif(BOOST_DISABLE_ASSERTS)
+
+if (${CMAKE_CXX_COMPILER_ID} MATCHES "XL" OR
+    ${CMAKE_CXX_COMPILER_ID} MATCHES "VisualAge")
+  add_definitions("-DBOOST_MPL_CFG_ASSERT_USE_RELATION_NAMES")
+endif()
+
 
 if(HAVE_LHS)
   include_directories(${LHS_BINARY_DIR}/include)
