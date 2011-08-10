@@ -21,6 +21,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
+//#define DECAY_DEBUG
 
 
 namespace Pecos {
@@ -571,20 +572,23 @@ void OrthogPolyApproximation::store_coefficients()
   // may not be as convenient for SC (review).
 
   switch (configOptions.expCoeffsSolnApproach) {
+  // This approach stores the aggregate expansion data
+  case QUADRATURE: case SPARSE_GRID:
+    storedMultiIndex    = multiIndex;
+    storedExpCoeffs     = expansionCoeffs;
+    storedExpCoeffGrads = expansionCoeffGrads;
+    storedType1WtSets   = driverRep->type1_weight_sets();
+    break;
+  }
+
+  /* This approach stores the individual tensor data
   case SPARSE_GRID: {
-    //SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    //const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
-    //const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    //size_t i, num_sm_mi = sm_multi_index.size();
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    size_t i, num_sm_mi = sm_multi_index.size();
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP:
-      // This approach stores the aggregate sparse data
-      storedMultiIndex    = multiIndex;
-      storedExpCoeffs     = expansionCoeffs;
-      storedExpCoeffGrads = expansionCoeffGrads;
-      storedType1WtSets   = driverRep->type1_weight_sets();
-
-      /* This approach stores the individual tensor data
       // save restorable data
       for (i=0; i<num_sm_mi; ++i) {
 	savedSmolyakMultiIndex.push_back(sm_multi_index[i]);
@@ -600,12 +604,11 @@ void OrthogPolyApproximation::store_coefficients()
       multiIndex.clear();        tpMultiIndex.clear();
       tpMultiIndexMap.clear();   tpMultiIndexMapRef.clear();
       tpExpansionCoeffs.clear(); tpExpansionCoeffGrads.clear();
-      */
       break;
     }
     break;
   }
-  }
+  */
 }
 
 
@@ -628,6 +631,8 @@ void OrthogPolyApproximation::combine_coefficients()
     // TO DO: this isn't correct for moment # > 1.  SC approximations must be
     // consolidated prior to variance/skewness/kurtosis calculation.
     driverRep->append_type1_weight_sets(storedType1WtSets);
+    //approxData.combine() performed in Dakota::Approximation::combine()
+    //driverRep->combine_type1_weight_sets(storedType1WtSets, stored_mi_map.back());
 
     /*
     size_t i, num_tp_mi = savedTPMultiIndex.size();
@@ -2701,20 +2706,20 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
       // b = known intercept for order x = 0
       Real norm   = std::sqrt(polynomialBasis[var_index].norm_squared(order)),
 	abs_coeff = std::abs(expansionCoeffs[i]);
-#ifdef DEBUG
+#ifdef DECAY_DEBUG
       PCout << "Univariate contribution: order = " << order << " coeff = "
 	    << abs_coeff << " norm = " << norm << '\n';
-#endif // DEBUG
+#endif // DECAY_DEBUG
       A_vectors[var_index][order_index] = (Real)order;
       b_vectors[var_index][order_index] = (abs_coeff > 1.e-25) ?
 	std::log10(abs_coeff * norm) : std::log10(norm) - 25.;
     }
   }
-#ifdef DEBUG
+#ifdef DECAY_DEBUG
   PCout << "raw b_vectors:\n";
   for (i=0; i<numVars; ++i)
     { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
-#endif // DEBUG
+#endif // DECAY_DEBUG
 
   // first coefficient is used in each of the LLS solves
   Real log_coeff0 = std::log10(std::abs(expansionCoeffs[0])), tol = -10.;
@@ -2767,13 +2772,13 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
     */
   }
 
-#ifdef DEBUG
+#ifdef DECAY_DEBUG
   PCout << "Intercept log(abs(coeff0)) = " << log_coeff0 << '\n';
   PCout << "b_vectors after truncation & intercept subtraction:\n";
   for (i=0; i<numVars; ++i)
     { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
   PCout << "Individual approximation decay:\n"; write_data(PCout, decayRates);
-#endif // DEBUG
+#endif // DECAY_DEBUG
 
   return decayRates;
 }
