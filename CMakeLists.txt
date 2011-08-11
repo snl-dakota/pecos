@@ -7,17 +7,21 @@ include(FortranCInterface)
 option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" ON)
 remove_definitions("-DHAVE_CONFIG_H")
 
-
 # first check for a system blas and lapack
-find_library(BLAS_LIBS blas)
-find_library(LAPACK_LIBS lapack)
-if(NOT BLAS_LIBS OR NOT LAPACK_LIBS)
-  # if not a system blas and lapack, then
-  # look for a cmake built LAPACK with
-  # find_package
-  find_package(LAPACK REQUIRED NO_MODULE)
-  set(BLAS_LIBS blas)
-  set(LAPACK_LIBS lapack)
+if(NOT DEFINED BLAS_LIBS OR NOT DEFINED LAPACK_LIBS)
+  if(NOT DEFINED BLAS_LIBS)
+    find_library(BLAS_LIBS blas)
+  endif()
+  if(NOT DEFINED LAPACK_LIBS)
+    find_library(LAPACK_LIBS lapack)
+  endif()
+  if(NOT BLAS_LIBS OR NOT LAPACK_LIBS)
+    # if not a system blas and lapack, then look for a cmake built LAPACK
+    # with find_package
+    find_package(LAPACK REQUIRED NO_MODULE)
+    set(BLAS_LIBS blas)
+    set(LAPACK_LIBS lapack)
+  endif()
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES Darwin)
