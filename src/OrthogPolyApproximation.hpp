@@ -116,7 +116,7 @@ protected:
   void increment_order();
 
   /// retrieve the response PCE value for a given parameter vector
-  const Real& value(const RealVector& x);
+  Real value(const RealVector& x);
   /// retrieve the response PCE gradient for a given parameter vector
   /// and default DVV
   const RealVector& gradient(const RealVector& x);
@@ -125,10 +125,10 @@ protected:
   const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the mean of the PCE, treating all variables as random
-  const Real& mean();
+  Real mean();
   /// return the mean of the PCE for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& mean(const RealVector& x);
+  Real mean(const RealVector& x);
   /// return the gradient of the PCE mean for a given parameter vector,
   /// treating all variables as random
   const RealVector& mean_gradient();
@@ -137,10 +137,10 @@ protected:
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the variance of the PCE, treating all variables as random
-  const Real& variance();
+  Real variance();
   /// return the variance of the PCE for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& variance(const RealVector& x);
+  Real variance(const RealVector& x);
   /// return the gradient of the PCE variance for a given parameter
   /// vector, treating all variables as random
   const RealVector& variance_gradient();
@@ -164,10 +164,10 @@ protected:
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as random
-  const Real& norm_squared(const UShortArray& indices);
+  Real norm_squared(const UShortArray& indices);
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating a subset of the variables as random
-  const Real& norm_squared_random(const UShortArray& indices);
+  Real norm_squared_random(const UShortArray& indices);
 
 private:
 
@@ -345,15 +345,15 @@ private:
   /// stored multiIndex (aggregated total, not tensor-product
   /// contributions) for use in combine_expansions()
   UShort2DArray storedMultiIndex;
-  /// stored type1 weight sets (aggregated total, not tensor-product
-  /// contributions) for use in combine_expansions()
-  RealVector storedType1WtSets;
   /// stored expansionCoeffs (aggregated total, not tensor-product
   /// contributions) for use in combine_expansions()
   RealVector storedExpCoeffs;
   /// stored expansionCoeffGrads (aggregated total, not tensor-product
   /// contributions) for use in combine_expansions()
   RealMatrix storedExpCoeffGrads;
+  /// stored type1 weight sets (aggregated total, not tensor-product
+  /// contributions) for use in combine_expansions()
+  RealVector storedType1WtSets;
 
   /// previous expansionCoeffs (aggregated total, not tensor-product
   /// contributions) prior to append_tensor_expansions()
@@ -362,8 +362,6 @@ private:
   /// contributions) prior to append_tensor_expansions()
   RealMatrix prevExpCoeffGrads;
 
-  /// norm-squared of one of the multivariate polynomial basis functions
-  Real multiPolyNormSq;
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials.  Called in multivariate_polynomial_gradient().
   RealVector mvpGradient;
@@ -428,7 +426,7 @@ inline void OrthogPolyApproximation::compute_moments()
   if (configOptions.expCoeffsSolnApproach == QUADRATURE ||
       configOptions.expCoeffsSolnApproach == CUBATURE   ||
       configOptions.expCoeffsSolnApproach == SPARSE_GRID)
-    compute_numerical_moments(4);
+    compute_numerical_response_moments(4);
 }
 
 
@@ -436,7 +434,7 @@ inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
 {
   // all variables mode only supports first two moments
   expansionMoments.sizeUninitialized(2); mean(x); variance(x);
-  //compute_numerical_moments(2, x); // TO DO
+  //compute_numerical_response_moments(2, x); // TO DO
 }
 
 

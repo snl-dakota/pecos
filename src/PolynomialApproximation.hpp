@@ -147,10 +147,10 @@ public:
   virtual void allocate_arrays() = 0;
 
   /// return the mean of the expansion, treating all variables as random
-  virtual const Real& mean() = 0;
+  virtual Real mean() = 0;
   /// return the mean of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  virtual const Real& mean(const RealVector& x) = 0;
+  virtual Real mean(const RealVector& x) = 0;
   /// return the gradient of the expansion mean for a given parameter
   /// vector, treating all variables as random
   virtual const RealVector& mean_gradient() = 0;
@@ -160,10 +160,10 @@ public:
 					  const SizetArray& dvv) = 0;
 
   /// return the variance of the expansion, treating all variables as random
-  virtual const Real& variance() = 0;
+  virtual Real variance() = 0;
   /// return the variance of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  virtual const Real& variance(const RealVector& x) = 0;
+  virtual Real variance(const RealVector& x) = 0;
   /// return the gradient of the expansion variance for a given parameter
   /// vector, treating all variables as random
   virtual const RealVector& variance_gradient() = 0;
@@ -189,7 +189,7 @@ public:
   /// post-processing or numerical integration
   virtual const RealVector& moments() const = 0;
   /// compute central moments of response using numerical integration
-  virtual void compute_numerical_moments(size_t num_moments);
+  virtual void compute_numerical_response_moments(size_t num_moments);
 
   /// estimate expansion coefficient decay rates for each random
   /// variable dimension (OrthogPolyApproximation only)

@@ -502,7 +502,8 @@ total_order_multi_index(const UShortArray& upper_bound,
 
 
 /// TO DO: Add overloaded function to support integration over variable subset
-void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
+void PolynomialApproximation::
+compute_numerical_response_moments(size_t num_moments)
 {
   // computes and stores the following moments:
   // > mean     (1st raw moment)
@@ -510,17 +511,11 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
   // > skewness (3rd standardized moment)
   // > kurtosis (4th standardized moment with offset to eliminate "excess")
 
-  // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in Polynomial"
-	  << "Approximation::compute_numerical_moments()" << std::endl;
-    abort_handler(-1);
-  }
   // current support for this implementation: can't be open-ended since we
   // employ a specific combination of raw, central, and standardized moments
   if (num_moments < 1 || num_moments > 4) {
     PCerr << "Error: unsupported number of moments requested in Polynomial"
-	  << "Approximation::compute_numerical_moments()" << std::endl;
+	  << "Approximation::compute_numerical_response_moments()" << std::endl;
     abort_handler(-1);
   }
 
@@ -536,7 +531,7 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
     PCerr << "Error: mismatch in array lengths between integration driver "
 	  << "weights ("  << t1_wts.length() << ") and surrogate data points ("
 	  << num_pts << ") in PolynomialApproximation::compute_numerical_"
-	  << "moments()." << std::endl;
+	  << "response_moments()." << std::endl;
     abort_handler(-1);
   }
   // estimate 1st raw moment (mean)
@@ -545,7 +540,7 @@ void PolynomialApproximation::compute_numerical_moments(size_t num_moments)
     offset = 1; num_pts += offset;
     mean  = t1_wts[0] * surrData.anchor_function();
   }
-  for (size_t i=offset; i<num_pts; ++i)
+  for (i=offset; i<num_pts; ++i)
     mean += t1_wts[i] * surrData.response_function(i);
 
   // estimate central moments 2 through num_moments

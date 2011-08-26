@@ -69,7 +69,9 @@ protected:
   void allocate_arrays();
 
   /// compute central moments of response using numerical integration
-  void compute_numerical_moments(size_t num_moments);
+  void compute_numerical_response_moments(size_t num_moments);
+  /// compute central moments of response using numerical integration
+  void compute_numerical_expansion_moments(size_t num_moments);
 
   /// computes component (main and interaction) effect Sobol' indices
   void compute_component_effects();
@@ -78,7 +80,7 @@ protected:
 
   /*
   /// retrieve the response expansion value for a given parameter vector
-  const Real& value(const RealVector& x);
+  Real value(const RealVector& x);
   /// retrieve the response expansion gradient for a given parameter vector
   /// and default DVV
   const RealVector& gradient(const RealVector& x);
@@ -87,10 +89,10 @@ protected:
   const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the mean of the expansion, treating all variables as random
-  const Real& mean();
+  Real mean();
   /// return the mean of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& mean(const RealVector& x);
+  Real mean(const RealVector& x);
   /// return the gradient of the expansion mean for a given parameter vector,
   /// treating all variables as random
   const RealVector& mean_gradient();
@@ -100,10 +102,10 @@ protected:
 				      const SizetArray& dvv);
 
   /// return the variance of the expansion, treating all variables as random
-  const Real& variance();
+  Real variance();
   /// return the variance of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& variance(const RealVector& x);
+  Real variance(const RealVector& x);
   /// return the gradient of the expansion variance for a given parameter
   /// vector, treating all variables as random
   const RealVector& variance_gradient();
@@ -154,20 +156,12 @@ protected:
       expansion only over the random variables). */
   RealMatrix expansionType1CoeffGrads;
 
-  /// the value of a tensor-product interpolant; a contributor to approxValue
-  Real tpValue;
   /// the gradient of a tensor-product interpolant; a contributor to
   /// approxGradient
   RealVector tpGradient;
-  /// the mean of a tensor-product interpolant; a contributor to
-  /// numericalMoments[0] (mean)
-  Real tpMean;
   /// the gradient of the mean of a tensor-product interpolant; a
   /// contributor to meanGradient
   RealVector tpMeanGrad;
-  /// the variance of a tensor-product interpolant; a contributor to
-  /// numericalMoments[1] (variance)
-  Real tpVariance;
   /// the gradient of the variance of a tensor-product interpolant; a
   /// contributor to varianceGradient
   RealVector tpVarianceGrad;
@@ -193,10 +187,10 @@ private:
   /*
   /// compute the value of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to value(x)
-  const Real& tensor_product_value(const RealVector& x);
+  Real tensor_product_value(const RealVector& x);
   /// compute the value of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to value(x)
-  const Real& tensor_product_value(const RealVector& x, size_t tp_index);
+  Real tensor_product_value(const RealVector& x, size_t tp_index);
 
   /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to gradient(x)
@@ -216,10 +210,10 @@ private:
 
   /// compute the mean of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to mean(x)
-  const Real& tensor_product_mean(const RealVector& x);
+  Real tensor_product_mean(const RealVector& x);
   /// compute the mean of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to mean(x)
-  const Real& tensor_product_mean(const RealVector& x, size_t tp_index);
+  Real tensor_product_mean(const RealVector& x, size_t tp_index);
 
   /// compute the mean of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to mean(x)
@@ -232,13 +226,13 @@ private:
 
   /// compute the covariance of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to covariance(x, exp_coeffs_2)
-  const Real& tensor_product_covariance(const RealVector& x,
-					const RealVector& exp_coeffs_2);
+  Real tensor_product_covariance(const RealVector& x,
+				 const RealVector& exp_coeffs_2);
   /// compute the covariance of a sparse interpolant on an isotropic/anisotropic
   /// sparse grid; contributes to covariance(x, exp_coeffs_2)
-  const Real& tensor_product_covariance(const RealVector& x,
-					const RealVector& exp_coeffs_2,
-					size_t tp_index);
+  Real tensor_product_covariance(const RealVector& x,
+				 const RealVector& exp_coeffs_2,
+				 size_t tp_index);
 
   /// compute the variance of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to variance(x)
@@ -316,8 +310,12 @@ approximation_coefficients(const RealVector& approx_coeffs)
 inline void InterpPolyApproximation::compute_moments()
 {
   // standard variables mode supports four moments
-  compute_numerical_moments(4);
-  //compute_expansion_moments(4);
+  compute_numerical_response_moments(4);
+  //if (configOptions.outputLevel >= VERBOSE_OUTPUT)
+    compute_numerical_expansion_moments(4);
+  // numericalMoments and expansionMoments should be the same for faithful
+  // interpolants (TPQ and SSG with nested rules), but will differ for other
+  // cases (SSG with non-nested rules)
 }
 
 
@@ -326,7 +324,15 @@ inline void InterpPolyApproximation::compute_moments(const RealVector& x)
   // all variables mode only supports first two moments
   numericalMoments.sizeUninitialized(2);
   numericalMoments[0] = mean(x); numericalMoments[1] = variance(x);
-  //compute_expansion_moments(2, x);
+  //compute_numerical_expansion_moments(4, x);
+
+  // Note: it would be feasible to implement an all_variables version of
+  // compute_numerical_expansion_moments() by evaluating the combined
+  // expansion at {design/epistemic=initialPtU,aleatory=Gauss points}
+  // --> cannot do this for compute_numerical_response_moments()
+  //     (lacking required response data)
+  // --> would require generation of new TPQ/SSG grid only over aleatory vars
+  // --> could possibly retire redundant all_vars functions
 }
 
 

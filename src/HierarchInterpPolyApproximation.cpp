@@ -27,7 +27,7 @@ namespace Pecos {
   ~HierarchInterpPolyApproximation()
   {}
 
-  const Real& HierarchInterpPolyApproximation::
+  Real HierarchInterpPolyApproximation::
   value(const RealVector& x)
   {
     if (!configOptions.expansionCoeffFlag) {
@@ -35,7 +35,7 @@ namespace Pecos {
 	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
       abort_handler(-1);
     }
-    approxValue = 0;
+    Real approx_val = 0.;
     LocalRefinableDriver* lr_driver = 
       static_cast<LocalRefinableDriver*>(driverRep);
     unsigned int num_colloc_points = lr_driver->grid_size();
@@ -51,7 +51,7 @@ namespace Pecos {
       // Sum over only those elements whose support contains x
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
 	
-	Real localValue = 1.0;
+	Real local_val = 1.0;
 	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
 	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
 	const Real2DArray& this_point_support = supports[supportIndicator[i]];
@@ -60,27 +60,27 @@ namespace Pecos {
 	  const unsigned int this_dim_level = level_index[dim_idx][0];
 	  const unsigned int this_dim_index = level_index[dim_idx][1];
 	  if ( this_dim_level == 1 ) {
-	    localValue *= 1;  //constant case
+	    local_val *= 1;  //constant case
 	  } else { //Linear hat functions
 	    if ( x[dim_idx] == point[dim_idx] ) {
-	      localValue *= 1;
+	      local_val *= 1;
 	    } else if (x[dim_idx] < point[dim_idx]) {
-	      localValue *= ( x[dim_idx] - this_point_support[0][dim_idx] ) / 
+	      local_val *= ( x[dim_idx] - this_point_support[0][dim_idx] ) / 
 		( point[dim_idx] - this_point_support[0][dim_idx] );
 	    } else {
-	      localValue *= ( this_point_support[1][dim_idx] - x[dim_idx] ) /
+	      local_val *= ( this_point_support[1][dim_idx] - x[dim_idx] ) /
 		( this_point_support[1][dim_idx] - point[dim_idx] );
 	    }
 	  }   
 	}
-	approxValue += expansionType1Coeffs[supportIndicator[i]] * localValue;
+	approx_val += expansionType1Coeffs[supportIndicator[i]] * local_val;
       }
       break;
     case true:
       // Sum over only those elements whose support contains x
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i ) {
 	
-	Real localValue = 1.0;
+	Real local_val = 1.0;
 	const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]]; // column vector
 	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
 	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
@@ -144,17 +144,14 @@ namespace Pecos {
 	  }
 	}
 	for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator ) {
-	  approxValue = approxValue + terms[accumulator];
+	  approx_val += terms[accumulator];
 	}
 	  //Real const * fakeout = terms.RealMatrix::operator[](0);
-	  //approxValue = approxValue + 
-	  //std::accumulate(fakeout,
-	  //		  fakeout+terms.length(),
-	  //		  0);
+	  //approx_val += std::accumulate(fakeout, fakeout+terms.length(), 0);
       }
       break;
     }
-    return approxValue;
+    return approx_val;
     
   }
   
@@ -348,7 +345,7 @@ namespace Pecos {
 
   }
 
-  const Real& HierarchInterpPolyApproximation::
+  Real HierarchInterpPolyApproximation::
   mean()
   {
     // Error check for required data
@@ -382,7 +379,7 @@ namespace Pecos {
     return mean;
   }
 
-  const Real& HierarchInterpPolyApproximation::
+  Real HierarchInterpPolyApproximation::
   mean(const RealVector& x)
   {
     std::cout << "TODO: mean in all variables mode";
@@ -419,7 +416,7 @@ namespace Pecos {
     return meanGradient;
   }
 
-  const Real& HierarchInterpPolyApproximation::
+  Real HierarchInterpPolyApproximation::
   variance()
   {
     if (numericalMoments.empty())
@@ -428,7 +425,7 @@ namespace Pecos {
     return numericalMoments[1];
   }
 
-  const Real& HierarchInterpPolyApproximation::
+  Real HierarchInterpPolyApproximation::
   variance(const RealVector& x)
   {
     //TODO
@@ -463,8 +460,7 @@ namespace Pecos {
     }
     HierarchInterpPolyApproximation* hip_approx_2 = 
       static_cast<HierarchInterpPolyApproximation*>(poly_approx_2);
-    const Real& mean_1 = mean();
-    const Real& mean_2 = hip_approx_2->mean();
+    Real mean_1 = mean(), mean_2 = hip_approx_2->mean();
     const RealVector& t1_coeffs_2 = hip_approx_2->expansionType1Coeffs;
     const RealVector& t1_wts = driverRep->type1_weight_sets();
     Real covar = 0.0;
@@ -619,7 +615,7 @@ namespace Pecos {
     maxComputedCoeff = numCollocPts-1;
   }
 
-  const Real& HierarchInterpPolyApproximation::
+  Real HierarchInterpPolyApproximation::
   value(const RealVector& x, unsigned int max_level)
   {
     if (!configOptions.expansionCoeffFlag) {
@@ -627,7 +623,7 @@ namespace Pecos {
 	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
       abort_handler(-1);
     }
-    approxValue = 0;
+    Real approx_val = 0.;
     LocalRefinableDriver* lr_driver = 
       static_cast<LocalRefinableDriver*>(driverRep);
     unsigned int num_colloc_points = lr_driver->grid_size();
@@ -645,7 +641,7 @@ namespace Pecos {
 	
 	unsigned int this_point_level = colloc_pts[supportIndicator[i]].get_level();
 	if ( this_point_level <= max_level ) {
-	  Real localValue = 1.0;
+	  Real local_val = 1.0;
 	  const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
 	  const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
 	  const Real2DArray& this_point_support = supports[supportIndicator[i]];
@@ -654,20 +650,20 @@ namespace Pecos {
 	    const unsigned int this_dim_level = level_index[dim_idx][0];
 	    const unsigned int this_dim_index = level_index[dim_idx][1];
 	    if ( this_dim_level == 1 ) {
-	      localValue *= 1;  //constant case
+	      local_val *= 1;  //constant case
 	    } else { //Linear hat functions
 	      if ( x[dim_idx] == point[dim_idx] ) {
-		localValue *= 1;
+		local_val *= 1;
 	      } else if (x[dim_idx] < point[dim_idx]) {
-		localValue *= ( x[dim_idx] - this_point_support[0][dim_idx] ) / 
+		local_val *= ( x[dim_idx] - this_point_support[0][dim_idx] ) / 
 		  ( point[dim_idx] - this_point_support[0][dim_idx] );
 	      } else {
-		localValue *= ( this_point_support[1][dim_idx] - x[dim_idx] ) /
+		local_val *= ( this_point_support[1][dim_idx] - x[dim_idx] ) /
 		  ( this_point_support[1][dim_idx] - point[dim_idx] );
 	      }
 	    }   
 	  }
-	  approxValue += expansionType1Coeffs[supportIndicator[i]] * localValue;
+	  approx_val += expansionType1Coeffs[supportIndicator[i]] * local_val;
 	} else break;
       } 
 	
@@ -677,7 +673,7 @@ namespace Pecos {
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i ) {
 	unsigned int this_point_level = colloc_pts[supportIndicator[i]].get_level();
 	if ( this_point_level <= max_level ) {
-	  Real localValue = 1.0;
+	  Real local_val = 1.0;
 	  const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]]; // column vector
 	  const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
 	  const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
@@ -745,16 +741,16 @@ namespace Pecos {
 	    }
 	  }
 	  for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator ) {
-	    approxValue = approxValue + terms[accumulator];
+	    approx_val += terms[accumulator];
 	  }
-	  //approxValue += std::accumulate(terms.RealMatrix::operator[](0),
+	  //approx_val += std::accumulate(terms.RealMatrix::operator[](0),
 	  //				 terms.RealMatrix::operator[](0)+terms.length(),
 	  //				 0);
 	} else break;
       }
       break;
     }
-    return approxValue;
+    return approx_val;
     
   }
 

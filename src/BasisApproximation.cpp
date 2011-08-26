@@ -168,7 +168,7 @@ BasisApproximation::~BasisApproximation()
 }
 
 
-const Real& BasisApproximation::value(const RealVector& x)
+Real BasisApproximation::value(const RealVector& x)
 {
   if (!basisApproxRep) {
     PCerr << "Error: value() not available for this basis approximation "

@@ -47,7 +47,7 @@ public:
   //
 
   /// retrieve the approximate function value for a given parameter vector
-  virtual const Real& value(const RealVector& x);
+  virtual Real value(const RealVector& x);
   /// retrieve the approximate function gradient for a given parameter vector
   virtual const RealVector& gradient(const RealVector& x);
   /// retrieve the approximate function Hessian for a given parameter vector
@@ -115,8 +115,6 @@ protected:
   /// number of variables used in the approximation
   size_t numVars;
 
-  /// value of the approximation returned by value()
-  Real approxValue;
   /// gradient of the approximation returned by gradient()
   RealVector approxGradient;
 

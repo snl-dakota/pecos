@@ -567,21 +567,17 @@ void OrthogPolyApproximation::finalize_coefficients()
 
 void OrthogPolyApproximation::store_coefficients()
 {
-  // TO DO: tpMultiIndex arrays not currently stored unless GSG.
-  // Consider creating separate saved arrays for use at aggregated level.
-  // may not be as convenient for SC (review).
-
-  switch (configOptions.expCoeffsSolnApproach) {
   // This approach stores the aggregate expansion data
+  storedMultiIndex    = multiIndex;
+  storedExpCoeffs     = expansionCoeffs;
+  storedExpCoeffGrads = expansionCoeffGrads;
+  switch (configOptions.expCoeffsSolnApproach) { // approach-specific storage
   case QUADRATURE: case SPARSE_GRID:
-    storedMultiIndex    = multiIndex;
-    storedExpCoeffs     = expansionCoeffs;
-    storedExpCoeffGrads = expansionCoeffGrads;
-    storedType1WtSets   = driverRep->type1_weight_sets();
-    break;
+    storedType1WtSets = driverRep->type1_weight_sets(); break;
   }
 
   /* This approach stores the individual tensor data
+     Note: tpMultiIndex arrays not currently stored unless GSG.
   case SPARSE_GRID: {
     SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
     const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
@@ -1472,7 +1468,7 @@ integrate_expansion(const UShort2DArray& multi_index,
   }
 
   for (i=0; i<num_exp_terms; ++i) {
-    const Real& norm_sq = norm_squared(multi_index[i]);
+    Real norm_sq = norm_squared(multi_index[i]);
     if (configOptions.expansionCoeffFlag)
       exp_coeffs[i] /= norm_sq;
     if (configOptions.expansionCoeffGradFlag) {
@@ -2042,7 +2038,7 @@ void OrthogPolyApproximation::expectation()
 }
 
 
-const Real& OrthogPolyApproximation::value(const RealVector& x)
+Real OrthogPolyApproximation::value(const RealVector& x)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
@@ -2052,11 +2048,10 @@ const Real& OrthogPolyApproximation::value(const RealVector& x)
   }
 
   // sum expansion to get response value prediction
-  approxValue = 0.0;
+  Real approx_val = 0.;
   for (size_t i=0; i<numExpansionTerms; ++i)
-    approxValue += expansionCoeffs[i]
-                *  multivariate_polynomial(x, multiIndex[i]);
-  return approxValue;
+    approx_val += expansionCoeffs[i]*multivariate_polynomial(x, multiIndex[i]);
+  return approx_val;
 }
 
 
@@ -2116,7 +2111,7 @@ gradient(const RealVector& x, const SizetArray& dvv)
 
 /** In this case, all expansion variables are random variables and the
     mean of the expansion is simply the first chaos coefficient. */
-const Real& OrthogPolyApproximation::mean()
+Real OrthogPolyApproximation::mean()
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
@@ -2136,7 +2131,7 @@ const Real& OrthogPolyApproximation::mean()
 /** In this case, a subset of the expansion variables are random
     variables and the mean of the expansion involves evaluating the
     expectation over this subset. */
-const Real& OrthogPolyApproximation::mean(const RealVector& x)
+Real OrthogPolyApproximation::mean(const RealVector& x)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
@@ -2289,7 +2284,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 /** In this case, all expansion variables are random variables and the
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
-const Real& OrthogPolyApproximation::variance()
+Real OrthogPolyApproximation::variance()
 {
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
@@ -2300,7 +2295,7 @@ const Real& OrthogPolyApproximation::variance()
 
 /** In this case, a subset of the expansion variables are random variables
     and the variance of the expansion involves summations over this subset. */
-const Real& OrthogPolyApproximation::variance(const RealVector& x)
+Real OrthogPolyApproximation::variance(const RealVector& x)
 {
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
@@ -2556,36 +2551,35 @@ void OrthogPolyApproximation::gradient_check()
 }
 
 
-const Real& OrthogPolyApproximation::norm_squared(const UShortArray& indices)
+Real OrthogPolyApproximation::norm_squared(const UShortArray& indices)
 {
   // the norm squared of a particular multivariate polynomial is the product of
   // the norms squared of the numVars univariate polynomials that comprise it.
-  multiPolyNormSq = 1.0;
+  Real multivar_norm_sq = 1.;
   unsigned short order;
   for (size_t i=0; i<numVars; ++i) {
     order = indices[i];
     if (order)
-      multiPolyNormSq *= polynomialBasis[i].norm_squared(order);
+      multivar_norm_sq *= polynomialBasis[i].norm_squared(order);
   }
-  return multiPolyNormSq;
+  return multivar_norm_sq;
 }
 
 
-const Real& OrthogPolyApproximation::
-norm_squared_random(const UShortArray& indices)
+Real OrthogPolyApproximation::norm_squared_random(const UShortArray& indices)
 {
   // the norm squared of a particular multivariate polynomial is the product of
   // the norms squared of the numVars univariate polynomials that comprise it.
-  multiPolyNormSq = 1.0;
+  Real multivar_norm_sq = 1.;
   unsigned short order;
   for (size_t i=0; i<numVars; ++i) {
     if (randomVarsKey[i]) {
       order = indices[i];
       if (order)
-	multiPolyNormSq *= polynomialBasis[i].norm_squared(order);
+	multivar_norm_sq *= polynomialBasis[i].norm_squared(order);
     }
   }
-  return multiPolyNormSq;
+  return multivar_norm_sq;
 }
 
 

@@ -59,7 +59,7 @@ public:
 
 
   /// retrieve the response expansion value for a given parameter vector
-  const Real& value(const RealVector& x);
+  Real value(const RealVector& x);
   /// retrieve the response expansion gradient for a given parameter vector
   /// and default DVV
   const RealVector& gradient(const RealVector& x);
@@ -68,10 +68,10 @@ public:
   const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
 
   /// return the mean of the expansion, treating all variables as random
-  const Real& mean();
+  Real mean();
   /// return the mean of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& mean(const RealVector& x);
+  Real mean(const RealVector& x);
   /// return the gradient of the expansion mean for a given parameter vector,
   /// treating all variables as random
   const RealVector& mean_gradient();
@@ -81,10 +81,10 @@ public:
 				  const SizetArray& dvv);
 
   /// return the variance of the expansion, treating all variables as random
-  const Real& variance();
+  Real variance();
   /// return the variance of the expansion for a given parameter vector,
   /// treating a subset of the variables as random
-  const Real& variance(const RealVector& x);
+  Real variance(const RealVector& x);
   /// return the gradient of the expansion variance for a given parameter
   /// vector, treating all variables as random
   const RealVector& variance_gradient();
@@ -105,7 +105,7 @@ protected:
   const IntArray& in_support_of(const RealVector& x);
 
   /// compute the value at a point using a lower level than the full approximation.
-  const Real& value(const RealVector& x, unsigned int max_level);
+  Real value(const RealVector& x, unsigned int max_level);
 
   /// compute the approximate gradient at a point using a lower level than the full approximation.
   const RealVector& gradient(const RealVector& x, unsigned int max_level);
