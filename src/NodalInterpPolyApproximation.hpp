@@ -113,28 +113,36 @@ private:
 
   /// compute the value of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to value(x)
-  Real tensor_product_value(const RealVector& x, const UShort2DArray& key);
+  Real tensor_product_value(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShort2DArray& key);
   /// compute the value of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to value(x)
-  Real tensor_product_value(const RealVector& x, const UShortArray& sm_index,
-    const UShort2DArray& key, const SizetArray& colloc_index);
+  Real tensor_product_value(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& sm_index, const UShort2DArray& key,
+    const SizetArray& colloc_index);
 
   /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to gradient(x)
   const RealVector& tensor_product_gradient(const RealVector& x,
-					    const UShort2DArray& key);
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShort2DArray& key);
   /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to gradient(x)
   const RealVector& tensor_product_gradient(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShortArray& sm_index, const UShort2DArray& key,
     const SizetArray& colloc_index);
   /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid for given DVV; contributes to gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShort2DArray& key, const SizetArray& dvv);
   /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid for given DVV; contributes to gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShortArray& sm_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 

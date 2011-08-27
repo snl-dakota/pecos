@@ -23,19 +23,20 @@ namespace Pecos {
 
 /** Overloaded version supporting tensor-product quadrature. */
 Real NodalInterpPolyApproximation::
-tensor_product_value(const RealVector& x, const UShort2DArray& key)
+tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
+		     const RealMatrix& exp_t2_coeffs, const UShort2DArray& key)
 {
   Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
   switch (configOptions.useDerivs) {
   case false:
     for (size_t i=0; i<num_colloc_pts; ++i)
-      tp_val += expansionType1Coeffs[i] * type1_interpolant_value(x, key[i]);
+      tp_val += exp_t1_coeffs[i] * type1_interpolant_value(x, key[i]);
     break;
   case true:
     for (size_t i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      tp_val += expansionType1Coeffs[i] * type1_interpolant_value(x, key_i);
-      const Real* coeff2_i = expansionType2Coeffs[i];
+      tp_val += exp_t1_coeffs[i] * type1_interpolant_value(x, key_i);
+      const Real* coeff2_i = exp_t2_coeffs[i];
       for (size_t j=0; j<numVars; ++j)
 	tp_val += coeff2_i[j] * type2_interpolant_value(x, j, key_i);
     }
@@ -47,22 +48,24 @@ tensor_product_value(const RealVector& x, const UShort2DArray& key)
 
 /** Overloaded version supporting Smolyak sparse grids. */
 Real NodalInterpPolyApproximation::
-tensor_product_value(const RealVector& x,      const UShortArray& sm_index,
-		     const UShort2DArray& key, const SizetArray& colloc_index)
+tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
+		     const RealMatrix& exp_t2_coeffs,
+		     const UShortArray& sm_index, const UShort2DArray& key,
+		     const SizetArray& colloc_index)
 {
   Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
   switch (configOptions.useDerivs) {
   case false:
     for (i=0; i<num_colloc_pts; ++i)
-      tp_val += expansionType1Coeffs[colloc_index[i]] *
+      tp_val += exp_t1_coeffs[colloc_index[i]] *
 	        type1_interpolant_value(x, key[i], sm_index);
     break;
   case true:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      tp_val += expansionType1Coeffs[colloc_index[i]] *
+      tp_val += exp_t1_coeffs[colloc_index[i]] *
 	        type1_interpolant_value(x, key_i, sm_index);
-      const Real* coeff2_i = expansionType2Coeffs[colloc_index[i]];
+      const Real* coeff2_i = exp_t2_coeffs[colloc_index[i]];
       for (size_t j=0; j<numVars; ++j)
 	tp_val += coeff2_i[j] * type2_interpolant_value(x, j, key_i, sm_index);
     }
@@ -74,7 +77,9 @@ tensor_product_value(const RealVector& x,      const UShortArray& sm_index,
 
 /** Overloaded version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const UShort2DArray& key)
+tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
+			const RealMatrix& exp_t2_coeffs,
+			const UShort2DArray& key)
 {
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
@@ -85,7 +90,7 @@ tensor_product_gradient(const RealVector& x, const UShort2DArray& key)
   case false:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      const Real&     coeff1_i = expansionType1Coeffs[i];
+      const Real&     coeff1_i = exp_t1_coeffs[i];
       for (j=0; j<numVars; ++j) // compute ith contribution to tpGradient[j]
 	tpGradient[j] += coeff1_i * type1_interpolant_gradient(x, j, key_i);
     }
@@ -93,8 +98,8 @@ tensor_product_gradient(const RealVector& x, const UShort2DArray& key)
   case true:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      const Real&     coeff1_i = expansionType1Coeffs[i];
-      const Real*     coeff2_i = expansionType2Coeffs[i]; // column vector
+      const Real&     coeff1_i = exp_t1_coeffs[i];
+      const Real*     coeff2_i = exp_t2_coeffs[i]; // column vector
       for (j=0; j<numVars; ++j) { // ith contribution to jth grad component
 	tpGradient[j] += coeff1_i * type1_interpolant_gradient(x, j, key_i);
 	for (size_t k=0; k<numVars; ++k) // type2 interpolant for kth grad comp
@@ -110,8 +115,9 @@ tensor_product_gradient(const RealVector& x, const UShort2DArray& key)
 
 /** Overloaded version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
-			const UShort2DArray& key,
+tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
+			const RealMatrix& exp_t2_coeffs,
+			const UShortArray& sm_index, const UShort2DArray& key,
 			const SizetArray& colloc_index)
 {
   if (tpGradient.length() != numVars)
@@ -123,7 +129,7 @@ tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
   case false:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      const Real&     coeff1_i = expansionType1Coeffs[colloc_index[i]];
+      const Real&     coeff1_i = exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
 	tpGradient[j] +=
 	  coeff1_i * type1_interpolant_gradient(x, j, key_i, sm_index);
@@ -132,8 +138,8 @@ tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
   case true:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      const Real&     coeff1_i = expansionType1Coeffs[colloc_index[i]];
-      const Real*     coeff2_i = expansionType2Coeffs[colloc_index[i]];
+      const Real&     coeff1_i = exp_t1_coeffs[colloc_index[i]];
+      const Real*     coeff2_i = exp_t2_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j) { // ith contribution to jth grad component
 	tpGradient[j] +=
 	  coeff1_i * type1_interpolant_gradient(x, j, key_i, sm_index);
@@ -150,8 +156,9 @@ tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
 
 /** Overloaded version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const UShort2DArray& key,
-			const SizetArray& dvv)
+tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
+			const RealMatrix& exp_t2_coeffs,
+			const UShort2DArray& key, const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_colloc_pts = key.size(),
     num_deriv_vars = dvv.size();
@@ -163,7 +170,7 @@ tensor_product_gradient(const RealVector& x, const UShort2DArray& key,
   case false:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i   = key[i];
-      const Real&        coeff1_i = expansionType1Coeffs[i];
+      const Real&        coeff1_i = exp_t1_coeffs[i];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
 	tpGradient[j] += coeff1_i *
@@ -174,8 +181,8 @@ tensor_product_gradient(const RealVector& x, const UShort2DArray& key,
   case true:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      const Real&     coeff1_i = expansionType1Coeffs[i];
-      const Real*     coeff2_i = expansionType2Coeffs[i]; // column vector
+      const Real&     coeff1_i = exp_t1_coeffs[i];
+      const Real*     coeff2_i = exp_t2_coeffs[i]; // column vector
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
 	tpGradient[j] += coeff1_i *
@@ -193,8 +200,9 @@ tensor_product_gradient(const RealVector& x, const UShort2DArray& key,
 
 /** Overloaded version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
-			const UShort2DArray& key,
+tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
+			const RealMatrix& exp_t2_coeffs,
+			const UShortArray& sm_index, const UShort2DArray& key,
 			const SizetArray& colloc_index, const SizetArray& dvv)
 {
   size_t i, j, k, deriv_index, num_colloc_pts = key.size(),
@@ -207,7 +215,7 @@ tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
   case false:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i   = key[i];
-      const Real&        coeff_i = expansionType1Coeffs[colloc_index[i]];
+      const Real&        coeff_i = exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
 	tpGradient[j] += coeff_i *
@@ -218,8 +226,8 @@ tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
   case true:
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
-      const Real&     coeff1_i = expansionType1Coeffs[colloc_index[i]];
-      const Real*     coeff2_i = expansionType2Coeffs[colloc_index[i]];
+      const Real&     coeff1_i = exp_t1_coeffs[colloc_index[i]];
+      const Real*     coeff2_i = exp_t2_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
 	tpGradient[j] += coeff1_i *
@@ -778,7 +786,8 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    return tensor_product_value(x, tpq_driver->collocation_key());
+    return tensor_product_value(x, expansionType1Coeffs, expansionType2Coeffs,
+				tpq_driver->collocation_key());
     break;
   }
   case SPARSE_GRID: {
@@ -793,7 +802,8 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
 	approx_val += sm_coeffs[i] *
-	  tensor_product_value(x, sm_mi[i], colloc_key[i], colloc_indices[i]);
+	  tensor_product_value(x, expansionType1Coeffs, expansionType2Coeffs,
+			       sm_mi[i], colloc_key[i], colloc_indices[i]);
     return approx_val;
     break;
   }
@@ -813,7 +823,8 @@ Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
   // sum expansion to get response prediction
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    return tensor_product_value(x, storedCollocKey[0]);
+    return tensor_product_value(x, storedExpType1Coeffs, storedExpType2Coeffs,
+				storedCollocKey[0]);
     break;
   case SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
@@ -822,8 +833,9 @@ Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
     for (i=0; i<num_smolyak_indices; ++i)
       if (storedSmolyakCoeffs[i])
 	approx_val += storedSmolyakCoeffs[i] *
-	  tensor_product_value(x, storedSmolyakMultiIndex[i],
-			       storedCollocKey[i], storedCollocIndices[i]);
+	  tensor_product_value(x, storedExpType1Coeffs, storedExpType2Coeffs,
+			       storedSmolyakMultiIndex[i], storedCollocKey[i],
+			       storedCollocIndices[i]);
     return approx_val;
     break;
   }
@@ -846,7 +858,8 @@ const RealVector& NodalInterpPolyApproximation::gradient(const RealVector& x)
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    return tensor_product_gradient(x, tpq_driver->collocation_key());
+    return tensor_product_gradient(x, expansionType1Coeffs,
+      expansionType2Coeffs, tpq_driver->collocation_key());
     break;
   }
   case SPARSE_GRID: {
@@ -863,9 +876,9 @@ const RealVector& NodalInterpPolyApproximation::gradient(const RealVector& x)
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
       if (coeff_i) {
-	const RealVector& tp_grad
-	  = tensor_product_gradient(x, sm_mi[i], colloc_key[i],
-				    colloc_indices[i]);
+	const RealVector& tp_grad = tensor_product_gradient(x,
+	  expansionType1Coeffs, expansionType2Coeffs, sm_mi[i],
+	  colloc_key[i], colloc_indices[i]);
 	for (j=0; j<numVars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -892,7 +905,8 @@ stored_gradient(const RealVector& x)
 
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    return tensor_product_gradient(x, storedCollocKey[0]);
+    return tensor_product_gradient(x, storedExpType1Coeffs,
+      storedExpType2Coeffs, storedCollocKey[0]);
     break;
   case SPARSE_GRID: {
     if (approxGradient.length() != numVars)
@@ -903,9 +917,10 @@ stored_gradient(const RealVector& x)
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = storedSmolyakCoeffs[i];
       if (coeff_i) {
-	const RealVector& tp_grad
-	  = tensor_product_gradient(x, storedSmolyakMultiIndex[i],
-				    storedCollocKey[i], storedCollocIndices[i]);
+	const RealVector& tp_grad = tensor_product_gradient(x,
+	  storedExpType1Coeffs, storedExpType2Coeffs,
+	  storedSmolyakMultiIndex[i], storedCollocKey[i],
+	  storedCollocIndices[i]);
 	for (j=0; j<numVars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -930,7 +945,8 @@ gradient(const RealVector& x, const SizetArray& dvv)
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    return tensor_product_gradient(x, tpq_driver->collocation_key(), dvv);
+    return tensor_product_gradient(x, expansionType1Coeffs,
+      expansionType2Coeffs, tpq_driver->collocation_key(), dvv);
     break;
   }
   case SPARSE_GRID: {
@@ -948,9 +964,9 @@ gradient(const RealVector& x, const SizetArray& dvv)
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
       if (coeff_i) {
-	const RealVector& tp_grad
-	  = tensor_product_gradient(x, sm_mi[i], colloc_key[i],
-				    colloc_indices[i], dvv);
+	const RealVector& tp_grad = tensor_product_gradient(x,
+	  expansionType1Coeffs, expansionType2Coeffs, sm_mi[i],
+	  colloc_key[i], colloc_indices[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
