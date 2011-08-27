@@ -61,6 +61,13 @@ protected:
   void restore_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments
   void finalize_coefficients();
+  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
+  /// storedColloc{Key,Indices}, and storedSmolyak{MultiIndex,Coeffs}
+  void store_coefficients();
+  /// augment current interpolant using
+  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
+  /// and storedSmolyak{MultiIndex,Coeffs}
+  void combine_coefficients();
 
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);
@@ -155,6 +162,14 @@ protected:
       expansion (e.g., with respect to design variables for an
       expansion only over the random variables). */
   RealMatrix expansionType1CoeffGrads;
+
+  RealVector storedExpType1Coeffs;
+  RealMatrix storedExpType2Coeffs;
+  RealMatrix storedExpType1CoeffGrads;
+  UShort2DArray storedSmolyakMultiIndex;
+  IntArray storedSmolyakCoeffs;
+  UShort3DArray storedCollocKey;
+  Sizet2DArray storedCollocIndices;
 
   /// the gradient of a tensor-product interpolant; a contributor to
   /// approxGradient

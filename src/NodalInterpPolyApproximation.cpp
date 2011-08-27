@@ -23,19 +23,16 @@ namespace Pecos {
 
 /** Overloaded version supporting tensor-product quadrature. */
 Real NodalInterpPolyApproximation::
-tensor_product_value(const RealVector& x)
+tensor_product_value(const RealVector& x, const UShort2DArray& key)
 {
-  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key        = tpq_driver->collocation_key();
-
-  Real tp_val = 0.; size_t i;
+  Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
   switch (configOptions.useDerivs) {
   case false:
-    for (i=0; i<numCollocPts; ++i)
+    for (size_t i=0; i<num_colloc_pts; ++i)
       tp_val += expansionType1Coeffs[i] * type1_interpolant_value(x, key[i]);
     break;
   case true:
-    for (i=0; i<numCollocPts; ++i) {
+    for (size_t i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       tp_val += expansionType1Coeffs[i] * type1_interpolant_value(x, key_i);
       const Real* coeff2_i = expansionType2Coeffs[i];
@@ -50,13 +47,9 @@ tensor_product_value(const RealVector& x)
 
 /** Overloaded version supporting Smolyak sparse grids. */
 Real NodalInterpPolyApproximation::
-tensor_product_value(const RealVector& x, size_t tp_index)
+tensor_product_value(const RealVector& x,      const UShortArray& sm_index,
+		     const UShort2DArray& key, const SizetArray& colloc_index)
 {
-  SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&    sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&       key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
-
   Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
   switch (configOptions.useDerivs) {
   case false:
@@ -81,19 +74,16 @@ tensor_product_value(const RealVector& x, size_t tp_index)
 
 /** Overloaded version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x)
+tensor_product_gradient(const RealVector& x, const UShort2DArray& key)
 {
-  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key        = tpq_driver->collocation_key();
-
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
 
-  size_t i, j;
+  size_t i, j, num_colloc_pts = key.size();
   switch (configOptions.useDerivs) {
   case false:
-    for (i=0; i<numCollocPts; ++i) {
+    for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       const Real&     coeff1_i = expansionType1Coeffs[i];
       for (j=0; j<numVars; ++j) // compute ith contribution to tpGradient[j]
@@ -101,7 +91,7 @@ tensor_product_gradient(const RealVector& x)
     }
     break;
   case true:
-    for (i=0; i<numCollocPts; ++i) {
+    for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       const Real&     coeff1_i = expansionType1Coeffs[i];
       const Real*     coeff2_i = expansionType2Coeffs[i]; // column vector
@@ -120,13 +110,10 @@ tensor_product_gradient(const RealVector& x)
 
 /** Overloaded version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, size_t tp_index)
+tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
+			const UShort2DArray& key,
+			const SizetArray& colloc_index)
 {
-  SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&    sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&       key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
-
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
@@ -163,20 +150,18 @@ tensor_product_gradient(const RealVector& x, size_t tp_index)
 
 /** Overloaded version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
+tensor_product_gradient(const RealVector& x, const UShort2DArray& key,
+			const SizetArray& dvv)
 {
-  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key        = tpq_driver->collocation_key();
-
-  size_t num_deriv_vars = dvv.size();
+  size_t i, j, deriv_index, num_colloc_pts = key.size(),
+    num_deriv_vars = dvv.size();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   tpGradient = 0.;
 
-  size_t i, j, deriv_index;
   switch (configOptions.useDerivs) {
   case false:
-    for (i=0; i<numCollocPts; ++i) {
+    for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i   = key[i];
       const Real&        coeff1_i = expansionType1Coeffs[i];
       for (j=0; j<num_deriv_vars; ++j) {
@@ -187,7 +172,7 @@ tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
     }
     break;
   case true:
-    for (i=0; i<numCollocPts; ++i) {
+    for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       const Real&     coeff1_i = expansionType1Coeffs[i];
       const Real*     coeff2_i = expansionType2Coeffs[i]; // column vector
@@ -208,20 +193,16 @@ tensor_product_gradient(const RealVector& x, const SizetArray& dvv)
 
 /** Overloaded version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, size_t tp_index,
-			const SizetArray& dvv)
+tensor_product_gradient(const RealVector& x, const UShortArray& sm_index,
+			const UShort2DArray& key,
+			const SizetArray& colloc_index, const SizetArray& dvv)
 {
-  SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&    sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&       key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
-
-  size_t num_deriv_vars = dvv.size();
+  size_t i, j, k, deriv_index, num_colloc_pts = key.size(),
+    num_deriv_vars = dvv.size();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   tpGradient = 0.;
 
-  size_t i, j, k, deriv_index, num_colloc_pts = key.size();
   switch (configOptions.useDerivs) {
   case false:
     for (i=0; i<num_colloc_pts; ++i) {
@@ -255,17 +236,16 @@ tensor_product_gradient(const RealVector& x, size_t tp_index,
 
 
 /** Overloaded all_variables version supporting tensor-product quadrature. */
-Real NodalInterpPolyApproximation::tensor_product_mean(const RealVector& x)
+Real NodalInterpPolyApproximation::
+tensor_product_mean(const RealVector& x, const UShort2DArray& key)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key        = tpq_driver->collocation_key();
   const Real2DArray&   colloc_wts_1d
     = tpq_driver->type1_collocation_weights_array();
 
-  Real tp_mean = 0.;
   std::vector<BasisPolynomial>& basis_0 = polynomialBasis[0];
-  size_t i, j;
-  for (i=0; i<numCollocPts; ++i) {
+  size_t i, j, num_colloc_pts = key.size(); Real tp_mean = 0.;
+  for (i=0; i<num_colloc_pts; ++i) {
     const UShortArray& key_i = key[i];
     Real prod_i = 1.;
     for (j=0; j<numVars; ++j)
@@ -279,12 +259,10 @@ Real NodalInterpPolyApproximation::tensor_product_mean(const RealVector& x)
 
 /** Overloaded all_variables version supporting Smolyak sparse grids. */
 Real NodalInterpPolyApproximation::
-tensor_product_mean(const RealVector& x, size_t tp_index)
+tensor_product_mean(const RealVector& x, const UShortArray& sm_index,
+		    const UShort2DArray& key, const SizetArray& colloc_index)
 {
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
   const Real3DArray& colloc_wts_1d
     = ssg_driver->type1_collocation_weights_array();
 
@@ -304,14 +282,15 @@ tensor_product_mean(const RealVector& x, size_t tp_index)
 
 /** Overloaded all_variables version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
+tensor_product_mean_gradient(const RealVector& x, const UShort2DArray& key,
+			     const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key        = tpq_driver->collocation_key();
   const Real2DArray&   colloc_wts_1d
     = tpq_driver->type1_collocation_weights_array();
 
-  size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
+  size_t i, j, k, deriv_index, num_colloc_pts = key.size(),
+    num_deriv_vars = dvv.size(),
     cntr = 0; // insertions in cntr order w/i tpCoeffGrads
   if (tpMeanGrad.length() != num_deriv_vars)
     tpMeanGrad.sizeUninitialized(num_deriv_vars);
@@ -332,7 +311,7 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 	    << "PolyApproximation::tensor_product_mean_gradient()" << std::endl;
       abort_handler(-1);
     }
-    for (j=0; j<numCollocPts; ++j) {
+    for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
       Real wt_prod_j = 1.;
       for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
@@ -370,13 +349,12 @@ tensor_product_mean_gradient(const RealVector& x, const SizetArray& dvv)
 
 /** Overloaded all_variables version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
+tensor_product_mean_gradient(const RealVector& x, const UShortArray& sm_index,
+			     const UShort2DArray& key,
+			     const SizetArray& colloc_index,
 			     const SizetArray& dvv)
 {
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
   const Real3DArray& colloc_wts_1d
     = ssg_driver->type1_collocation_weights_array();
 
@@ -458,19 +436,19 @@ tensor_product_mean_gradient(const RealVector& x, size_t tp_index,
 
 /** Overloaded all_variables version supporting tensor-product quadrature. */
 Real NodalInterpPolyApproximation::
-tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
+tensor_product_covariance(const RealVector& x, const UShort2DArray& key,
+			  const RealVector& exp_coeffs_2)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key        = tpq_driver->collocation_key();
   const Real2DArray&   colloc_wts_1d
     = tpq_driver->type1_collocation_weights_array();
 
   Real tp_covar = 0.;
-  size_t i, j, k;
+  size_t i, j, k, num_colloc_pts = key.size();
   Real mean1 = 0., mean2 = 0.;
   SizetList::iterator it;
   std::vector<BasisPolynomial>& basis_0 = polynomialBasis[0];
-  for (i=0; i<numCollocPts; ++i) {
+  for (i=0; i<num_colloc_pts; ++i) {
     const UShortArray& key_i = key[i];
     Real wt_prod_i = 1., Ls_prod_i = 1.;
     for (k=0; k<numVars; ++k)
@@ -482,7 +460,7 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
     Real wt_Ls_prod_i = wt_prod_i * Ls_prod_i;
     mean1 += exp_coeff_i     * wt_Ls_prod_i;
     mean2 += exp_coeffs_2[i] * wt_Ls_prod_i;
-    for (j=0; j<numCollocPts; ++j) {
+    for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
       // to include the ij-th term, colloc pts xi_i must be the same as xi_j
       // for the ran var subset.  In this case, wt_prod_i may be reused.
@@ -508,13 +486,12 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2)
 
 /** Overloaded all_variables version supporting Smolyak sparse grids. */
 Real NodalInterpPolyApproximation::
-tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
-			  size_t tp_index)
+tensor_product_covariance(const RealVector& x, const UShortArray& sm_index,
+			  const UShort2DArray& key,
+			  const SizetArray& colloc_index,
+			  const RealVector& exp_coeffs_2)
 {
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
   const Real3DArray& colloc_wts_1d
     = ssg_driver->type1_collocation_weights_array();
 
@@ -562,15 +539,16 @@ tensor_product_covariance(const RealVector& x, const RealVector& exp_coeffs_2,
 
 /** Overloaded all_variables version supporting tensor-product quadrature. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
+tensor_product_variance_gradient(const RealVector& x, const UShort2DArray& key,
+				 const SizetArray& dvv)
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShort2DArray& key        = tpq_driver->collocation_key();
   const Real2DArray&   colloc_wts_1d
     = tpq_driver->type1_collocation_weights_array();
 
   Real mean = 0.;
-  size_t i, j, k, l, deriv_index, num_deriv_vars = dvv.size(),
+  size_t i, j, k, l, deriv_index, num_colloc_pts = key.size(),
+    num_deriv_vars = dvv.size(),
     cntr = 0; // insertions in cntr order w/i expansionType1CoeffGrads
   if (tpVarianceGrad.length() != num_deriv_vars)
     tpVarianceGrad.sizeUninitialized(num_deriv_vars);
@@ -587,7 +565,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
     }
     Real mean_grad_i = 0.;
     // first loop of double sum
-    for (j=0; j<numCollocPts; ++j) {
+    for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
       // compute wt_prod_j and Lsa_j
       Real wt_prod_j = 1., Lsa_j = 1., dLsa_j_dsa_i = 1.;
@@ -611,7 +589,7 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 	mean_grad_i += wt_prod_j * dLsa_j_dsa_i * expansionType1Coeffs[j];
       }
       // second loop of double sum
-      for (k=0; k<numCollocPts; ++k) {
+      for (k=0; k<num_colloc_pts; ++k) {
 	const UShortArray& key_k = key[k];
 	// to include the jk-th term, colloc pts xi_j must be the same as xi_k
 	// for the random var subset.  In this case, wt_prod_j may be reused.
@@ -663,13 +641,13 @@ tensor_product_variance_gradient(const RealVector& x, const SizetArray& dvv)
 
 /** Overloaded all_variables version supporting Smolyak sparse grids. */
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_variance_gradient(const RealVector& x, size_t tp_index,
+tensor_product_variance_gradient(const RealVector& x,
+				 const UShortArray& sm_index,
+				 const UShort2DArray& key,
+				 const SizetArray& colloc_index,
 				 const SizetArray& dvv)
 {
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
+  SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
   const Real3DArray& colloc_wts_1d
     = ssg_driver->type1_collocation_weights_array();
 
@@ -798,18 +776,54 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
 
   // sum expansion to get response prediction
   switch (configOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    return tensor_product_value(x, tpq_driver->collocation_key());
+    break;
+  }
+  case SPARSE_GRID: {
+    // Smolyak recursion of anisotropic tensor products
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    size_t i, num_smolyak_indices = sm_coeffs.size();
+    Real approx_val = 0.;
+    for (i=0; i<num_smolyak_indices; ++i)
+      if (sm_coeffs[i])
+	approx_val += sm_coeffs[i] *
+	  tensor_product_value(x, sm_mi[i], colloc_key[i], colloc_indices[i]);
+    return approx_val;
+    break;
+  }
+  }
+}
+
+
+Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
+{
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // sum expansion to get response prediction
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    return tensor_product_value(x);
+    return tensor_product_value(x, storedCollocKey[0]);
     break;
   case SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
     Real approx_val = 0.;
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
-    size_t i, num_smolyak_indices = sm_coeffs.size();
+    size_t i, num_smolyak_indices = storedSmolyakCoeffs.size();
     for (i=0; i<num_smolyak_indices; ++i)
-      if (sm_coeffs[i])
-	approx_val += sm_coeffs[i] * tensor_product_value(x, i);
+      if (storedSmolyakCoeffs[i])
+	approx_val += storedSmolyakCoeffs[i] *
+	  tensor_product_value(x, storedSmolyakMultiIndex[i],
+			       storedCollocKey[i], storedCollocIndices[i]);
     return approx_val;
     break;
   }
@@ -830,21 +844,68 @@ const RealVector& NodalInterpPolyApproximation::gradient(const RealVector& x)
   }
 
   switch (configOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    return tensor_product_gradient(x, tpq_driver->collocation_key());
+    break;
+  }
+  case SPARSE_GRID: {
+    if (approxGradient.length() != numVars)
+      approxGradient.sizeUninitialized(numVars);
+    approxGradient = 0.;
+    // Smolyak recursion of anisotropic tensor products
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    size_t i, j, num_smolyak_indices = sm_coeffs.size();
+    for (i=0; i<num_smolyak_indices; ++i) {
+      int coeff_i = sm_coeffs[i];
+      if (coeff_i) {
+	const RealVector& tp_grad
+	  = tensor_product_gradient(x, sm_mi[i], colloc_key[i],
+				    colloc_indices[i]);
+	for (j=0; j<numVars; ++j)
+	  approxGradient[j] += coeff_i * tp_grad[j];
+      }
+    }
+    return approxGradient;
+    break;
+  }
+  }
+}
+
+
+const RealVector& NodalInterpPolyApproximation::
+stored_gradient(const RealVector& x)
+{
+  // this could define a default_dvv and call gradient(x, dvv),
+  // but we want this fn to be as fast as possible
+
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::gradient()" << std::endl;
+    abort_handler(-1);
+  }
+
+  switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    return tensor_product_gradient(x);
+    return tensor_product_gradient(x, storedCollocKey[0]);
     break;
   case SPARSE_GRID: {
     if (approxGradient.length() != numVars)
       approxGradient.sizeUninitialized(numVars);
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
-    size_t i, j, num_smolyak_indices = sm_coeffs.size();
+    size_t i, j, num_smolyak_indices = storedSmolyakCoeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
-      int coeff_i = sm_coeffs[i];
+      int coeff_i = storedSmolyakCoeffs[i];
       if (coeff_i) {
-	const RealVector& tp_grad = tensor_product_gradient(x, i);
+	const RealVector& tp_grad
+	  = tensor_product_gradient(x, storedSmolyakMultiIndex[i],
+				    storedCollocKey[i], storedCollocIndices[i]);
 	for (j=0; j<numVars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -867,22 +928,29 @@ gradient(const RealVector& x, const SizetArray& dvv)
   }
 
   switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    return tensor_product_gradient(x, dvv);
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    return tensor_product_gradient(x, tpq_driver->collocation_key(), dvv);
     break;
+  }
   case SPARSE_GRID: {
     size_t num_deriv_vars = dvv.size();
     if (approxGradient.length() != num_deriv_vars)
       approxGradient.sizeUninitialized(num_deriv_vars);
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
       if (coeff_i) {
-	const RealVector& tp_grad = tensor_product_gradient(x, i, dvv);
+	const RealVector& tp_grad
+	  = tensor_product_gradient(x, sm_mi[i], colloc_key[i],
+				    colloc_indices[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -952,19 +1020,25 @@ Real NodalInterpPolyApproximation::mean(const RealVector& x)
   }
 
   switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    return tensor_product_mean(x);
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    return tensor_product_mean(x, tpq_driver->collocation_key());
     break;
+  }
   case SPARSE_GRID: {
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     if (numericalMoments.empty())
       numericalMoments.sizeUninitialized(2); // all_variables mode
     Real& mean = numericalMoments[0]; mean = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
-	mean += sm_coeffs[i] * tensor_product_mean(x, i);
+	mean += sm_coeffs[i] *
+	  tensor_product_mean(x, sm_mi[i], colloc_key[i], colloc_indices[i]);
     return mean;
     break;
   }
@@ -1016,22 +1090,29 @@ const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    return tensor_product_mean_gradient(x, dvv);
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    return tensor_product_mean_gradient(x, tpq_driver->collocation_key(), dvv);
     break;
+  }
   case SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
     if (meanGradient.length() != num_deriv_vars)
       meanGradient.sizeUninitialized(num_deriv_vars);
     meanGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
       if (coeff) {
-	const RealVector& tpm_grad = tensor_product_mean_gradient(x, i, dvv);
+	const RealVector& tpm_grad
+	  = tensor_product_mean_gradient(x, sm_mi[i], colloc_key[i],
+					 colloc_indices[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
 	  meanGradient[j] += coeff * tpm_grad[j];
       }
@@ -1139,17 +1220,24 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   const RealVector& t1_coeffs_2
     = ((NodalInterpPolyApproximation*)poly_approx_2)->expansionType1Coeffs;
   switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    return tensor_product_covariance(x, t1_coeffs_2);
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    return tensor_product_covariance(x, tpq_driver->collocation_key(),
+				     t1_coeffs_2);
     break;
+  }
   case SPARSE_GRID:
-    Real covar = 0.;
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
-    size_t i, num_smolyak_indices = sm_coeffs.size();
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    size_t i, num_smolyak_indices = sm_coeffs.size(); Real covar = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
-	covar += sm_coeffs[i] * tensor_product_covariance(x, t1_coeffs_2, i);
+	covar += sm_coeffs[i] *
+	  tensor_product_covariance(x, sm_mi[i], colloc_key[i],
+				    colloc_indices[i], t1_coeffs_2);
     return covar;
     break;
   }
@@ -1211,23 +1299,30 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   }
 
   switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    return tensor_product_variance_gradient(x, dvv);
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    return
+      tensor_product_variance_gradient(x, tpq_driver->collocation_key(), dvv);
     break;
+  }
   case SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
     if (varianceGradient.length() != num_deriv_vars)
       varianceGradient.sizeUninitialized(num_deriv_vars);
     varianceGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
       if (coeff) {
 	const RealVector& tpv_grad
-	  = tensor_product_variance_gradient(x, i, dvv);
+	  = tensor_product_variance_gradient(x, sm_mi[i], colloc_key[i],
+					     colloc_indices[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
 	  varianceGradient[j] += coeff * tpv_grad[j];
       }

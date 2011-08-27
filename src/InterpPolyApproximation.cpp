@@ -329,13 +329,31 @@ void InterpPolyApproximation::finalize_coefficients()
 }
 
 
-/*
 void InterpPolyApproximation::store_coefficients()
 {
-  //storedMultiIndex       = multiIndex;
-  storedExpType1Coeffs     = expansionType1Coeffs;
-  storedExpType2Coeffs     = expansionType2Coeffs;
-  storedExpType1CoeffGrads = expansionType1CoeffGrads;
+  if (configOptions.expansionCoeffFlag) {
+    storedExpType1Coeffs   = expansionType1Coeffs;
+    if (configOptions.useDerivs)
+      storedExpType2Coeffs = expansionType2Coeffs;
+  }
+  if (configOptions.expansionCoeffGradFlag)
+    storedExpType1CoeffGrads = expansionType1CoeffGrads;
+  switch (configOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    storedCollocKey.resize(1);
+    storedCollocKey[0] = tpq_driver->collocation_key();
+    break;
+  }
+  case SPARSE_GRID: {
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    storedSmolyakMultiIndex = ssg_driver->smolyak_multi_index();
+    storedSmolyakCoeffs     = ssg_driver->smolyak_coefficients();
+    storedCollocKey         = ssg_driver->collocation_key();
+    storedCollocIndices     = ssg_driver->collocation_indices();
+    break;
+  }
+  }
 }
 
 
@@ -343,32 +361,41 @@ void InterpPolyApproximation::combine_coefficients()
 {
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
-
-  // RESTORE PREVIOUS EXPANSION FOR EVALUATION (or pass it into type*_value())
-
-  // EVALUATE PREVIOUSLY STORED EXP ON CURRENT GRID AND PERFORM COMBINATION
-  // --> apply delta to expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  for (i=0; i<numCollocPts; ++i) {
+  size_t i, j, offset = 0, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
+  if (anchor_pt) { offset = 1; ++num_pts; }
+  for (i=0; i<num_pts; ++i) {
+    const RealVector& c_vars = (anchor_pt && i == 0) ?
+      surrData.anchor_continuous_variables() :
+      surrData.continuous_variables(i-offset);
     if (configOptions.expansionCoeffFlag) {
       //if (correctionType == ADDITIVE_CORRECTION)
-      //expansionType1Coeffs[i] += value(vars_set[i], storedExpType1Coeffs);
-      // Think I'll need to split up the type1 and type2 contributions within
-      // tensor_product_value(x) so increments can be performed properly
-      expansionType1Coeffs[i] += type1_value(vars_set[i], storedExpType1Coeffs);
-      expansionType2Coeffs[i] += type2_value(vars_set[i], storedExpType2Coeffs);
+      // split up type1 and type2 contribs so increments are performed properly
+      expansionType1Coeffs[i] += stored_value(c_vars);
+      if (configOptions.useDerivs) {
+	const RealVector& stored_grad = stored_gradient(c_vars);
+	Real*         exp_t2_coeffs_i = expansionType2Coeffs[i];
+	size_t num_stored_vars = stored_grad.length();
+	for (j=0; j<num_stored_vars; ++j)
+	  exp_t2_coeffs_i[j] += stored_grad[j];
+      }
       //else if (correctionType == MULTIPLICATIVE_CORRECTION)
-      //expansionType1Coeffs[index] *= type1_value(vars_set[i]);
+      //expansionType1Coeffs[index] *= stored_value(vars_set[i]);
     }
     if (configOptions.expansionCoeffGradFlag) {
-      Real*       exp_grad_i = expansionType1CoeffGrads[i];
-      const Real* grad_i     = gradient(vars_set[i]);
+      Real*   exp_grad_i = expansionType1CoeffGrads[i];
+      /* TO DO
+      const Real* grad_i = gradient(vars_set[i]);
       //if (correctionType == ADDITIVE_CORRECTION)
       for (j=0; j<num_deriv_vars; ++j)
 	exp_grad_i[j] += grad_i[j];
+      //else if (correctionType == MULTIPLICATIVE_CORRECTION)
+      //for (j=0; j<num_deriv_vars; ++j)
+      //  exp_grad_i[j] = ...;
+      */
     }
   }
 }
-*/
 
 
 void InterpPolyApproximation::restore_expansion_coefficients()
@@ -572,8 +599,9 @@ compute_numerical_expansion_moments(size_t num_moments)
   else
     expansionMoments.size(num_moments); // init to 0
 
-  size_t i, j, k, num_pts = surrData.size();
-  if (surrData.anchor()) ++num_pts;
+  size_t i, j, k, offset = 0, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
+  if (anchor_pt) { offset = 1; ++num_pts; }
   const RealVector& t1_wts = driverRep->type1_weight_sets();
   const RealMatrix& t2_wts = driverRep->type2_weight_sets();
   if (t1_wts.length() != num_pts) {
@@ -583,10 +611,13 @@ compute_numerical_expansion_moments(size_t num_moments)
 	  << "expansion_moments()." << std::endl;
     abort_handler(-1);
   }
+
   // estimate 1st raw moment (mean)
   Real& mean = expansionMoments[0];
   for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = surrData.continuous_variables(i);
+    const RealVector& c_vars = (anchor_pt && i == 0) ?
+      surrData.anchor_continuous_variables() :
+      surrData.continuous_variables(i-offset);
     mean += t1_wts[i] * value(c_vars);
     if (configOptions.useDerivs) {
       const RealVector& coeff2_i = gradient(c_vars);
@@ -599,7 +630,9 @@ compute_numerical_expansion_moments(size_t num_moments)
   // estimate central moments 2 through num_moments
   Real centered_fn, pow_fn;
   for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = surrData.continuous_variables(i);
+    const RealVector& c_vars = (anchor_pt && i == 0) ?
+      surrData.anchor_continuous_variables() :
+      surrData.continuous_variables(i-offset);
     pow_fn = centered_fn = value(c_vars) - mean;
     if (configOptions.useDerivs) {
       const RealVector& coeff2_i = gradient(c_vars);

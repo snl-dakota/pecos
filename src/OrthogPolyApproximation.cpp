@@ -2109,6 +2109,14 @@ gradient(const RealVector& x, const SizetArray& dvv)
 }
 
 
+Real OrthogPolyApproximation::stored_value(const RealVector& x)
+{ return 0.; /* TO DO */ }
+
+
+const RealVector& OrthogPolyApproximation::stored_gradient(const RealVector& x)
+{ return approxGradient; /* TO DO */ }
+
+
 /** In this case, all expansion variables are random variables and the
     mean of the expansion is simply the first chaos coefficient. */
 Real OrthogPolyApproximation::mean()

@@ -124,35 +124,21 @@ protected:
   /// and given DVV
   const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
 
-  /// return the mean of the PCE, treating all variables as random
+  Real stored_value(const RealVector& x);
+  const RealVector& stored_gradient(const RealVector& x);
+
   Real mean();
-  /// return the mean of the PCE for a given parameter vector,
-  /// treating a subset of the variables as random
   Real mean(const RealVector& x);
-  /// return the gradient of the PCE mean for a given parameter vector,
-  /// treating all variables as random
   const RealVector& mean_gradient();
-  /// return the gradient of the PCE mean for a given parameter vector
-  /// and given DVV, treating a subset of the variables as random
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
 
-  /// return the variance of the PCE, treating all variables as random
   Real variance();
-  /// return the variance of the PCE for a given parameter vector,
-  /// treating a subset of the variables as random
   Real variance(const RealVector& x);
-  /// return the gradient of the PCE variance for a given parameter
-  /// vector, treating all variables as random
   const RealVector& variance_gradient();
-  /// return the gradient of the PCE variance for a given parameter
-  /// vector and given DVV, treating a subset of the variables as random
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
 
-  /// return the covariance of the PCE, treating all variables as random
   Real covariance(PolynomialApproximation* poly_approx_2);
-  /// return the covariance of the PCE for a given parameter vector,
-  /// treating a subset of the variables as random
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
   /// compute numerical moments to order 4 and expansion moments to order 2

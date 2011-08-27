@@ -48,44 +48,31 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// retrieve the response expansion value for a given parameter vector
+  /// retrieve the response value for the current expansion using the
+  /// given parameter vector
   Real value(const RealVector& x);
-  /// retrieve the response expansion gradient for a given parameter vector
-  /// and default DVV
+  /// retrieve the response gradient for the current expansion using
+  /// the given parameter vector and default DVV
   const RealVector& gradient(const RealVector& x);
-  /// retrieve the response expansion gradient for a given parameter vector
-  /// and given DVV
+  /// retrieve the response gradient for the current expansion using
+  /// the given parameter vector and given DVV
   const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
 
-  /// return the mean of the expansion, treating all variables as random
+  Real stored_value(const RealVector& x);
+  const RealVector& stored_gradient(const RealVector& x);
+
   Real mean();
-  /// return the mean of the expansion for a given parameter vector,
-  /// treating a subset of the variables as random
   Real mean(const RealVector& x);
-  /// return the gradient of the expansion mean for a given parameter vector,
-  /// treating all variables as random
   const RealVector& mean_gradient();
-  /// return the gradient of the expansion mean for a given parameter vector
-  /// and given DVV, treating a subset of the variables as random
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
 
-  /// return the variance of the expansion, treating all variables as random
   Real variance();
-  /// return the variance of the expansion for a given parameter vector,
-  /// treating a subset of the variables as random
   Real variance(const RealVector& x);
-  /// return the gradient of the expansion variance for a given parameter
-  /// vector, treating all variables as random
   const RealVector& variance_gradient();
-  /// return the gradient of the expansion variance for a given parameter
-  /// vector and given DVV, treating a subset of the variables as random
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
 
-  /// return the covariance of the expansion, treating all variables as random
   Real covariance(PolynomialApproximation* poly_approx_2);
-  /// return the covariance of the expansion for a given parameter vector,
-  /// treating a subset of the variables as random
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
 private:
@@ -94,89 +81,100 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// return value of type 1 interpolation polynomial (TPQ case)
   Real type1_interpolant_value(const RealVector& x, const UShortArray& key);
-
+  /// return value of type 1 interpolation polynomial (SSG case)
   Real type1_interpolant_value(const RealVector& x, const UShortArray& key,
 			       const UShortArray& sm_index);
 
+  /// return gradient of type 1 interpolation polynomial (TPQ case)
   Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  const UShortArray& key);
+  /// return gradient of type 1 interpolation polynomial (SSG case)
   Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  const UShortArray& key,
 				  const UShortArray& sm_index);
 
+  /// return value of type 2 interpolation polynomial (TPQ case)
   Real type2_interpolant_value(const RealVector& x, size_t interp_index,
 			       const UShortArray& key);
+  /// return value of type 2 interpolation polynomial (SSG case)
   Real type2_interpolant_value(const RealVector& x, size_t interp_index,
 			       const UShortArray& key,
 			       const UShortArray& sm_index);
 
+  /// return gradient of type 2 interpolation polynomial (TPQ case)
   Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  size_t interp_index, const UShortArray& key);
+  /// return gradient of type 2 interpolation polynomial (SSG case)
   Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  size_t interp_index, const UShortArray& key,
 				  const UShortArray& sm_index);
 
   /// compute the value of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to value(x)
-  Real tensor_product_value(const RealVector& x);
+  Real tensor_product_value(const RealVector& x, const UShort2DArray& key);
   /// compute the value of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to value(x)
-  Real tensor_product_value(const RealVector& x, size_t tp_index);
+  Real tensor_product_value(const RealVector& x, const UShortArray& sm_index,
+    const UShort2DArray& key, const SizetArray& colloc_index);
 
   /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to gradient(x)
-  const RealVector& tensor_product_gradient(const RealVector& x);
+  const RealVector& tensor_product_gradient(const RealVector& x,
+					    const UShort2DArray& key);
   /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to gradient(x)
   const RealVector& tensor_product_gradient(const RealVector& x,
-					    size_t tp_index);
+    const UShortArray& sm_index, const UShort2DArray& key,
+    const SizetArray& colloc_index);
   /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid for given DVV; contributes to gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
-					    const SizetArray& dvv);
+    const UShort2DArray& key, const SizetArray& dvv);
   /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid for given DVV; contributes to gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
-					    size_t tp_index,
-					    const SizetArray& dvv);
+    const UShortArray& sm_index, const UShort2DArray& key,
+    const SizetArray& colloc_index, const SizetArray& dvv);
 
   /// compute the mean of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to mean(x)
-  Real tensor_product_mean(const RealVector& x);
+  Real tensor_product_mean(const RealVector& x, const UShort2DArray& key);
   /// compute the mean of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to mean(x)
-  Real tensor_product_mean(const RealVector& x, size_t tp_index);
+  Real tensor_product_mean(const RealVector& x, const UShortArray& sm_index,
+    const UShort2DArray& key, const SizetArray& colloc_index);
 
   /// compute the mean of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to mean(x)
   const RealVector& tensor_product_mean_gradient(const RealVector& x,
-						 const SizetArray& dvv);
+    const UShort2DArray& key, const SizetArray& dvv);
   /// compute the mean of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to mean(x)
   const RealVector& tensor_product_mean_gradient(const RealVector& x,
-						 size_t tp_index,
-						 const SizetArray& dvv);
+    const UShortArray& sm_index,    const UShort2DArray& key,
+    const SizetArray& colloc_index, const SizetArray& dvv);
 
   /// compute the covariance of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to covariance(x, poly_approx_2)
-  Real tensor_product_covariance(const RealVector& x,
+  Real tensor_product_covariance(const RealVector& x, const UShort2DArray& key,
 				 const RealVector& exp_coeffs_2);
   /// compute the covariance of a sparse interpolant on an isotropic/anisotropic
   /// sparse grid; contributes to covariance(x, poly_approx_2)
   Real tensor_product_covariance(const RealVector& x,
-				 const RealVector& exp_coeffs_2,
-				 size_t tp_index);
+    const UShortArray& sm_index,    const UShort2DArray& key,
+    const SizetArray& colloc_index, const RealVector& exp_coeffs_2);
 
   /// compute the variance of a tensor interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to variance(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
-						     const SizetArray& dvv);
+    const UShort2DArray& key, const SizetArray& dvv);
   /// compute the variance of a sparse interpolant on an isotropic/anisotropic
   /// tensor-product grid; contributes to variance(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
-						     size_t tp_index,
-						     const SizetArray& dvv);
+    const UShortArray& sm_index, const UShort2DArray& key,
+    const SizetArray& colloc_index, const SizetArray& dvv);
 
   //
   //- Heading: Data

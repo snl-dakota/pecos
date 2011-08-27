@@ -146,6 +146,13 @@ public:
   /// size derived class data attributes
   virtual void allocate_arrays() = 0;
 
+  /// retrieve the response value for a stored expansion using the
+  /// given parameter vector
+  virtual Real stored_value(const RealVector& x) = 0;
+  /// retrieve the response gradient for a stored expansion using the
+  /// given parameter vector and default DVV
+  virtual const RealVector& stored_gradient(const RealVector& x) = 0;
+
   /// return the mean of the expansion, treating all variables as random
   virtual Real mean() = 0;
   /// return the mean of the expansion for a given parameter vector,

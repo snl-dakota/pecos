@@ -345,6 +345,13 @@ namespace Pecos {
 
   }
 
+  Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
+  { return 0.; /* TO DO */ }
+
+  const RealVector& HierarchInterpPolyApproximation::
+  stored_gradient(const RealVector& x)
+  { return approxGradient; /* TO DO */ }
+
   Real HierarchInterpPolyApproximation::
   mean()
   {
