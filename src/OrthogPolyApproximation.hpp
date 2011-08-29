@@ -337,9 +337,9 @@ private:
   /// stored expansionCoeffGrads (aggregated total, not tensor-product
   /// contributions) for use in combine_expansions()
   RealMatrix storedExpCoeffGrads;
-  /// stored type1 weight sets (aggregated total, not tensor-product
-  /// contributions) for use in combine_expansions()
-  RealVector storedType1WtSets;
+  // stored type1 weight sets (aggregated total, not tensor-product
+  // contributions) for use in combine_expansions()
+  //RealVector storedType1WtSets;
 
   /// previous expansionCoeffs (aggregated total, not tensor-product
   /// contributions) prior to append_tensor_expansions()

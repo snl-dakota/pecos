@@ -568,13 +568,15 @@ void OrthogPolyApproximation::finalize_coefficients()
 void OrthogPolyApproximation::store_coefficients()
 {
   // This approach stores the aggregate expansion data
-  storedMultiIndex    = multiIndex;
-  storedExpCoeffs     = expansionCoeffs;
-  storedExpCoeffGrads = expansionCoeffGrads;
-  switch (configOptions.expCoeffsSolnApproach) { // approach-specific storage
-  case QUADRATURE: case SPARSE_GRID:
-    storedType1WtSets = driverRep->type1_weight_sets(); break;
-  }
+  storedMultiIndex      = multiIndex;
+  if (configOptions.expansionCoeffFlag)
+    storedExpCoeffs     = expansionCoeffs;
+  if (configOptions.expansionCoeffGradFlag)
+    storedExpCoeffGrads = expansionCoeffGrads;
+  //switch (configOptions.expCoeffsSolnApproach) { // approach-specific storage
+  //case QUADRATURE: case SPARSE_GRID:
+  //  storedType1WtSets = driverRep->type1_weight_sets(); break;
+  //}
 
   /* This approach stores the individual tensor data
      Note: tpMultiIndex arrays not currently stored unless GSG.
@@ -615,19 +617,22 @@ void OrthogPolyApproximation::combine_coefficients()
 
   //if (correctionType == ADDITIVE_CORRECTION) {
 
-    // update multiIndex
+    // update multiIndex with any storedMultiIndex terms not yet included
     Sizet2DArray stored_mi_map; SizetArray stored_mi_map_ref;
     append_multi_index(storedMultiIndex, multiIndex, stored_mi_map,
 		       stored_mi_map_ref);
-    // update expansion{Coeffs,CoeffGrads}
-    // TO DO: resize_expansion()???
+
+    // update expansion{Coeffs,CoeffGrads}.  TO DO: resize_expansion()???
     overlay_expansion(stored_mi_map.back(), storedExpCoeffs,
 		      storedExpCoeffGrads, 1);
+
     // update SparseGridDriver weights
-    // TO DO: this isn't correct for moment # > 1.  SC approximations must be
-    // consolidated prior to variance/skewness/kurtosis calculation.
-    driverRep->append_type1_weight_sets(storedType1WtSets);
-    //approxData.combine() performed in Dakota::Approximation::combine()
+    //
+    // 1st cut: this isn't correct for moment # > 1.  SC approximations must
+    // be consolidated prior to variance/skewness/kurtosis calculation.
+    //driverRep->append_type1_weight_sets(storedType1WtSets);
+    //
+    // TO DO: Perform approxData.combine() in Dakota::Approximation::combine()
     //driverRep->combine_type1_weight_sets(storedType1WtSets, stored_mi_map.back());
 
     /*
@@ -672,7 +677,8 @@ void OrthogPolyApproximation::combine_coefficients()
   //savedTPMultiIndexMap.clear();   savedTPMultiIndexMapRef.clear();
   //savedTPExpCoeffs.clear();       savedTPExpCoeffGrads.clear();
   storedMultiIndex.clear();
-  storedExpCoeffs.resize(0); storedExpCoeffGrads.reshape(0,0);
+  if (configOptions.expansionCoeffFlag)     storedExpCoeffs.resize(0);
+  if (configOptions.expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
 }
 
 

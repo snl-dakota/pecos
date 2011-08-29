@@ -343,6 +343,7 @@ void InterpPolyApproximation::store_coefficients()
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     storedCollocKey.resize(1);
     storedCollocKey[0] = tpq_driver->collocation_key();
+    // TO DO *****************************************
     break;
   }
   case SPARSE_GRID: {
@@ -359,6 +360,11 @@ void InterpPolyApproximation::store_coefficients()
 
 void InterpPolyApproximation::combine_coefficients()
 {
+#ifdef DEBUG
+  PCout << "Original expansion coefficients prior to combination:\n";
+  write_data(PCout, expansionType1Coeffs);
+#endif // DEBUG
+
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
   size_t i, j, offset = 0, num_pts = surrData.size();
@@ -368,10 +374,20 @@ void InterpPolyApproximation::combine_coefficients()
     const RealVector& c_vars = (anchor_pt && i == 0) ?
       surrData.anchor_continuous_variables() :
       surrData.continuous_variables(i-offset);
+#ifdef DEBUG
+    PCout << "Evaluating stored expansion at point " << i+1 << ":\n";
+    write_data(PCout, c_vars);
+#endif // DEBUG
     if (configOptions.expansionCoeffFlag) {
       //if (correctionType == ADDITIVE_CORRECTION)
       // split up type1 and type2 contribs so increments are performed properly
+#ifdef DEBUG
+      Real stored_val = stored_value(c_vars);
+      PCout << "Stored value = " << stored_val << ":\n";
+      expansionType1Coeffs[i] += stored_val;
+#else
       expansionType1Coeffs[i] += stored_value(c_vars);
+#endif // DEBUG
       if (configOptions.useDerivs) {
 	const RealVector& stored_grad = stored_gradient(c_vars);
 	Real*         exp_t2_coeffs_i = expansionType2Coeffs[i];
@@ -394,6 +410,25 @@ void InterpPolyApproximation::combine_coefficients()
       //  exp_grad_i[j] = ...;
       */
     }
+  }
+#ifdef DEBUG
+  PCout << "Updated expansion coefficients following combination:\n";
+  write_data(PCout, expansionType1Coeffs);
+#endif // DEBUG
+
+  // clear stored data now that it has been combined
+  if (configOptions.expansionCoeffFlag) {
+    storedExpType1Coeffs.resize(0);
+    if (configOptions.useDerivs) storedExpType2Coeffs.reshape(0,0);
+  }
+  if (configOptions.expansionCoeffGradFlag)
+    storedExpType1CoeffGrads.reshape(0,0);
+  switch (configOptions.expCoeffsSolnApproach) {
+  case QUADRATURE:
+    storedCollocKey.clear(); break;
+  case SPARSE_GRID:
+    storedSmolyakMultiIndex.clear(); storedSmolyakCoeffs.clear();
+    storedCollocKey.clear();         storedCollocIndices.clear(); break;
   }
 }
 
