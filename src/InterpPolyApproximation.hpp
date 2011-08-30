@@ -158,20 +158,22 @@ private:
   /// restore expansion{Coeffs,CoeffGrads} within increment/restore/finalize
   void restore_expansion_coefficients();
 
+  /// compute total Sobol effects for an index within a sparse grid
+  Real total_effects_integral(int set_value, const UShortArray& quad_order,
+			      const UShortArray& lev_index,
+			      const UShort2DArray& key,
+			      const SizetArray& colloc_index);
   /// performs sorting to store constituent subsets (constituentSets)
   void get_subsets();
   /// recursively identifies constituent subsets
   void lower_sets(int plus_one_set, IntSet& top_level_set);
-  /// finds variance of tensor interpolant with respect to variables in the set
-  Real partial_variance_integral(int set_value);
-  /// finds variance of sparse interpolant with respect to variables in the set
-  Real partial_variance_integral(int set_value, size_t tp_index);
   /// computes partialVariance
   void partial_variance(int set_value);
-  /// compute total Sobol effects for a tensor grid
-  Real total_effects_integral(int set_value);
-  /// compute total Sobol effects for an index within a sparse grid
-  Real total_effects_integral(int set_value, size_t tp_index);
+  /// finds variance of sparse interpolant with respect to variables in the set
+  Real partial_variance_integral(int set_value, const UShortArray& quad_order,
+				 const UShortArray& lev_index,
+				 const UShort2DArray& key,
+				 const SizetArray& colloc_index);
 
   //
   //- Heading: Data

@@ -784,15 +784,15 @@ void InterpPolyApproximation::compute_component_effects()
 void InterpPolyApproximation::compute_total_effects()
 {
   // iterate through existing indices if all component indices are available
-  totalSobolIndices = 0; // init total indices
-  if (configOptions.vbdControl == ALL_VBD) {
+  totalSobolIndices = 0.; // init total indices
+  if (configOptions.vbdControl == ALL_VBD)
     for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); ++itr)
       for (int k=0; k<numVars; ++k) {
         if (itr->first & (1 << k))
           totalSobolIndices[k] += sobolIndices[itr->second];
         totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
       }
-  }
+
   // If not available, compute total indices independently.
   // This approach parallels partial_variance_integral where the algorithm is 
   // separated by integration approach.
@@ -800,32 +800,45 @@ void InterpPolyApproximation::compute_total_effects()
     Real& total_variance = numericalMoments[1];
     int j, set_value;
     switch (configOptions.expCoeffsSolnApproach) {
-      case QUADRATURE: {
-        for (j=0; j<numVars; ++j) {
-          // define set_value that includes all but index of interest
-          set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1;
-          totalSobolIndices[j]
-	    = std::abs(1 - (total_effects_integral(set_value)/total_variance));
-        }
-        break;
+    case QUADRATURE: {
+      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      const UShortArray&   quad_order = tpq_driver->quadrature_order();
+      const UShortArray&    lev_index = tpq_driver->level_index();
+      const UShort2DArray& colloc_key = tpq_driver->collocation_key();
+      SizetArray colloc_index; // empty -> default indexing
+      for (j=0; j<numVars; ++j) {
+	// define set_value that includes all but index of interest
+	set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1;
+	totalSobolIndices[j] = std::abs(1. -
+	  total_effects_integral(set_value, quad_order, lev_index,
+				 colloc_key, colloc_index) / total_variance);
       }
-      case SPARSE_GRID: {
-        SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-        const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
-        // Smolyak recursion of anisotropic tensor products
-        size_t i, num_smolyak_indices = sm_coeffs.size();
-        // iterate each variable 
-        for (j=0; j<numVars; ++j) {
-          set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
-          for (i=0; i<num_smolyak_indices; ++i)
-	    if (sm_coeffs[i])
-	      totalSobolIndices[j]
-		+= sm_coeffs[i]*total_effects_integral(set_value,i);
-          totalSobolIndices[j]
-	    = std::abs(1 - (totalSobolIndices[j]/total_variance));
-        }
-        break;
+      break;
+    }
+    case SPARSE_GRID: {
+      SparseGridDriver*     ssg_driver = (SparseGridDriver*)driverRep;
+      const IntArray&        sm_coeffs = ssg_driver->smolyak_coefficients();
+      const UShort2DArray&    sm_index = ssg_driver->smolyak_multi_index();
+      const UShort3DArray&  colloc_key = ssg_driver->collocation_key();
+      const Sizet2DArray& colloc_index = ssg_driver->collocation_indices();
+      // Smolyak recursion of anisotropic tensor products
+      size_t i, num_smolyak_indices = sm_coeffs.size();
+      UShortArray quad_order;
+      // iterate each variable 
+      for (j=0; j<numVars; ++j) {
+	set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
+	for (i=0; i<num_smolyak_indices; ++i)
+	  if (sm_coeffs[i]) {
+	    ssg_driver->level_to_order(sm_index[i], quad_order);
+	    totalSobolIndices[j] += sm_coeffs[i] *
+	      total_effects_integral(set_value, quad_order, sm_index[i],
+				     colloc_key[i], colloc_index[i]);
+	  }
+	totalSobolIndices[j]
+	  = std::abs(1. - totalSobolIndices[j]/total_variance);
       }
+      break;
+    }
     }
   }
 #ifdef DEBUG
@@ -835,83 +848,11 @@ void InterpPolyApproximation::compute_total_effects()
 }
 
 
-Real InterpPolyApproximation::total_effects_integral(int set_value)
-{
-  // Some other routine here
-  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShortArray&   quad_order = tpq_driver->quadrature_order();
-  const UShortArray&   lev_index  = tpq_driver->level_index();
-  const UShort2DArray& key        = tpq_driver->collocation_key();
-
-  // Distinguish between non-members and members of the given set, set_value
-  BoolDeque nonmember_vars(numVars,true); 
-  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
-                                    // member-variable-only expansion 
-  IntVector indexing_factor; // factors indexing member variables 
-  indexing_factor.sizeUninitialized(numVars);
-
-  indexing_factor = 1;
-        
-  for (int k=0; k<numVars; ++k) {
-    // if subset contains variable k, set key for variable k to true
-    if (set_value & (1 << k)) {
-      nonmember_vars[k] = false;	
-      // information to properly index mem_exp_coeffs
-      indexing_factor[k] = num_mem_exp_coeffs;
-      num_mem_exp_coeffs *= quad_order[k];
-    }	
-  }
-        
-  // Create vector to store new coefficients
-  RealVector mem_exp_coeffs(num_mem_exp_coeffs),
-    mem_weights(num_mem_exp_coeffs);
- 
-  // Perform integration over non-member variables and store indices
-  // of new expansion
-  size_t i, j;
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
-  for (i=0; i<numCollocPts; ++i) {
-    const UShortArray& key_i = key[i];
-    size_t mem_exp_coeffs_index = 0;	
-    Real prod_i_nonmembers = 1, prod_i_members = 1;
-    for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_exp_coeffs
-      mem_exp_coeffs_index += (nonmember_vars[j]) ? 
-        0 : key_i[j]*indexing_factor[j];
-      // Save the product of the weights of the member and non-member variables 
-      if (nonmember_vars[j])
-        prod_i_nonmembers *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      else
-        prod_i_members    *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-    }
- 
-    // mem_weights is performed more time than necessary here, but it
-    // seems to be the simplest place to put it
-    mem_weights[mem_exp_coeffs_index] = prod_i_members;
-    // sort coefficients by the "signature" of the member variables
-    // (i.e. mem_exp_coeffs_index)
-    mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionType1Coeffs[i]*prod_i_nonmembers;
-  }
- 
-  // Now integrate over the remaining variables	
-  Real& total_mean = numericalMoments[0];
-  Real  integral   = 0;
-  for (i=0; i<num_mem_exp_coeffs; ++i)
-    integral += std::pow((mem_exp_coeffs[i]-total_mean),2.0)*mem_weights[i];
-  return integral;
-}
-
-
 Real InterpPolyApproximation::
-total_effects_integral(int set_value, size_t tp_index)
+total_effects_integral(int set_value, const UShortArray& quad_order,
+		       const UShortArray& lev_index, const UShort2DArray& key,
+		       const SizetArray& colloc_index)
 {
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
   int num_mem_exp_coeffs = 1; // number of expansion coeffs in
@@ -922,9 +863,6 @@ total_effects_integral(int set_value, size_t tp_index)
   // create member variable key and get number of expansion coeffs in
   // member-variable-only expansion
   indexing_factor = 1;
-	
-  UShortArray quad_order;
-  ssg_driver->level_to_order(sm_index, quad_order);
   for (int k=0; k<numVars; ++k) {
     // if subset contains variable k, set key for variable k to true
     if (set_value & (1 << k)) {
@@ -937,7 +875,7 @@ total_effects_integral(int set_value, size_t tp_index)
         
   // Create vector to store new coefficients
   RealVector mem_exp_coeffs(num_mem_exp_coeffs),
-    mem_weights(num_mem_exp_coeffs);
+             mem_weights(num_mem_exp_coeffs);
  
   // Perform integration over non-member variables and store indices
   // of new expansion
@@ -948,24 +886,24 @@ total_effects_integral(int set_value, size_t tp_index)
     const UShortArray& key_i = key[i];
     size_t mem_exp_coeffs_index = 0;	
     Real prod_i_nonmembers = 1, prod_i_members = 1;
-    for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_exp_coeffs
-      mem_exp_coeffs_index += (nonmember_vars[j]) ? 0 :
-	key_i[j]*indexing_factor[j];
+    for (j=0; j<numVars; ++j)
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-        prod_i_nonmembers *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
-      else
-        prod_i_members    *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
-    }
+        prod_i_nonmembers    *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      else {
+	// Convert key to corresponding index on mem_exp_coeffs
+	mem_exp_coeffs_index += key_i[j]*indexing_factor[j];
+        prod_i_members       *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      }
  
     // mem_weights is performed more time than necessary here, but it
     // seems to be the simplest place to put it
     mem_weights[mem_exp_coeffs_index] = prod_i_members;
     // sort coefficients by the "signature" of the member variables
     // (i.e. mem_exp_coeffs_index)
+    unsigned short c_index = (colloc_index.empty()) ? i : colloc_index[i];
     mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionType1Coeffs[colloc_index[i]]*prod_i_nonmembers;
+      += expansionType1Coeffs[c_index]*prod_i_nonmembers;
   }
  
   // Now integrate over the remaining variables	
@@ -1019,153 +957,6 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
 }
 
 
-/** Forms an interpolant over variables that are members of the given set.
-    Finds the variance of the interpolant w.r.t. the variables in the set.
-    Overloaded version supporting tensor-product quadrature. */
-Real InterpPolyApproximation::partial_variance_integral(int set_value)
-{
-  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShortArray&   quad_order = tpq_driver->quadrature_order();
-  const UShortArray&   lev_index  = tpq_driver->level_index();
-  const UShort2DArray& key        = tpq_driver->collocation_key();
-
-  // Distinguish between non-members and members of the given set, set_value
-  BoolDeque nonmember_vars(numVars,true); 
-  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
-                              // member-variable-only expansion 
-  IntVector indexing_factor; // factors indexing member variables 
-  indexing_factor.sizeUninitialized(numVars);
-
-  // create member variable key and get number of expansion coeffs in
-  // member-variable-only expansion
-  indexing_factor = 1;
-	
-  for (int k=0; k<numVars; ++k) {
-    // if subset contains variable k, set key for variable k to true
-    if (set_value & (1 << k)) {
-      nonmember_vars[k] = false;	
-      // information to properly index mem_exp_coeffs
-      indexing_factor[k] = num_mem_exp_coeffs;
-      num_mem_exp_coeffs *= quad_order[k];
-    }	
-  }
-	
-  // Create vector to store new coefficients
-  RealVector mem_exp_coeffs(num_mem_exp_coeffs),
-    mem_weights(num_mem_exp_coeffs);
-
-  // Perform integration over non-member variables and store indices
-  // of new expansion
-  size_t i, j;
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
-  for (i=0; i<numCollocPts; ++i) {
-    const UShortArray& key_i = key[i];
-    size_t mem_exp_coeffs_index = 0;	
-    Real prod_i_nonmembers = 1, prod_i_members = 1;
-    for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_exp_coeffs
-      mem_exp_coeffs_index += (nonmember_vars[j]) ? 0 :
-	key_i[j]*indexing_factor[j];
-      // Save the product of the weights of the member and non-member variables 
-      if (nonmember_vars[j])
-	prod_i_nonmembers *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      else
-	prod_i_members    *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-    }
-
-    // mem_weights is performed more time than necessary here, but it
-    // seems to be the simplest place to put it
-    mem_weights[mem_exp_coeffs_index] = prod_i_members;
-    // sort coefficients by the "signature" of the member variables
-    // (i.e. mem_exp_coeffs_index)
-    mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionType1Coeffs[i]*prod_i_nonmembers;
-  }
-
-  // Now integrate over the remaining variables	
-  Real integral = 0;
-  for (i=0; i<num_mem_exp_coeffs; ++i)
-    integral += std::pow(mem_exp_coeffs[i], 2.0)*mem_weights[i];
-  return integral;	
-}
-
-
-/** Forms an interpolant over variables that are members of the given set.
-    Finds the variance of the interpolant w.r.t. the variables in the set.
-    Overloaded version supporting Smolyak sparse grids. */
-Real InterpPolyApproximation::
-partial_variance_integral(int set_value, size_t tp_index)
-{
-  SparseGridDriver*    ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-
-  // Distinguish between non-members and members of the given set, set_value
-  BoolDeque nonmember_vars(numVars,true); 
-  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
-                              // member-variable-only expansion 
-  IntVector indexing_factor; // factors indexing member variables 
-  indexing_factor.sizeUninitialized(numVars);
-
-  // create member variable key and get number of expansion coeffs in
-  // member-variable-only expansion
-  indexing_factor = 1;
-	
-  UShortArray quad_order;
-  ssg_driver->level_to_order(sm_index, quad_order);
-  for (int k=0; k<numVars; ++k) {
-    // if subset contains variable k, set key for variable k to true
-    if (set_value & (1 << k)) {
-      nonmember_vars[k] = false;	
-      // information to properly index mem_exp_coeffs
-      indexing_factor[k] = num_mem_exp_coeffs;
-      num_mem_exp_coeffs *= quad_order[k];
-    }	
-  }
-	
-  // Create vector to store new coefficients
-  RealVector mem_exp_coeffs(num_mem_exp_coeffs),
-    mem_weights(num_mem_exp_coeffs);
-
-  // Perform integration over non-member variables and store indices
-  // of new expansion
-  size_t i, j, num_colloc_pts = key.size();
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
-  for (i=0; i <num_colloc_pts; ++i) {
-    const UShortArray& key_i = key[i];
-    size_t mem_exp_coeffs_index = 0;	
-    Real prod_i_nonmembers = 1, prod_i_members = 1;
-    for (j=0; j<numVars; ++j) {
-      // Convert key to corresponding index on mem_exp_coeffs
-      mem_exp_coeffs_index += (nonmember_vars[j]) ? 
-	0 : key_i[j]*indexing_factor[j];
-      // Save the product of the weights of the member and non-member variables 
-      if (nonmember_vars[j])
-	prod_i_nonmembers *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
-      else
-	prod_i_members    *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
-    }
-
-    // mem_weights is performed more time than necessary here, but it
-    // seems to be the simplest place to put it
-    mem_weights[mem_exp_coeffs_index] = prod_i_members;
-    // sort coefficients by the "signature" of the member variables
-    // (i.e. mem_exp_coeffs_index)
-    mem_exp_coeffs[mem_exp_coeffs_index]
-      += expansionType1Coeffs[colloc_index[i]]*prod_i_nonmembers;
-  }
-
-  // Now integrate over the remaining variables	
-  Real integral = 0;
-  for (i=0; i<num_mem_exp_coeffs; ++i)
-    integral += std::pow(mem_exp_coeffs[i], 2.0)*mem_weights[i];
-  return integral;	
-}
-
-
 /** Computes the variance of component functions. Assumes that all
     subsets of set_value have been computed in advance which will be
     true so long as the partial_variance is called following
@@ -1174,19 +965,33 @@ void InterpPolyApproximation::partial_variance(int set_value)
 {
   // Computes the integral first
   switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    const UShortArray&    lev_index = tpq_driver->level_index();
+    const UShort2DArray& colloc_key = tpq_driver->collocation_key();
+    SizetArray colloc_index; // empty -> default indexing
     partialVariance[sobolIndexMap[set_value]]
-      = partial_variance_integral(set_value);
+      = partial_variance_integral(set_value, quad_order, lev_index,
+				  colloc_key, colloc_index);
     break;
+  }
   case SPARSE_GRID: {
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const IntArray&   sm_coeffs  = ssg_driver->smolyak_coefficients();
+    SparseGridDriver*     ssg_driver = (SparseGridDriver*)driverRep;
+    const IntArray&        sm_coeffs = ssg_driver->smolyak_coefficients();
+    const UShort2DArray&    sm_index = ssg_driver->smolyak_multi_index();
+    const UShort3DArray&  colloc_key = ssg_driver->collocation_key();
+    const Sizet2DArray& colloc_index = ssg_driver->collocation_indices();
     // Smolyak recursion of anisotropic tensor products
-    size_t num_smolyak_indices = sm_coeffs.size();
-    for (size_t i=0; i<num_smolyak_indices; ++i)
-      if (sm_coeffs[i])
+    size_t i, num_smolyak_indices = sm_coeffs.size();
+    UShortArray quad_order;
+    for (i=0; i<num_smolyak_indices; ++i)
+      if (sm_coeffs[i]) {
+	ssg_driver->level_to_order(sm_index[i], quad_order);
 	partialVariance[sobolIndexMap[set_value]] += sm_coeffs[i]
-	  * partial_variance_integral(set_value, i);
+	  * partial_variance_integral(set_value, quad_order, sm_index[i],
+				      colloc_key[i], colloc_index[i]);
+      }
     break;
   }
   }
@@ -1197,6 +1002,76 @@ void InterpPolyApproximation::partial_variance(int set_value)
        itr != constituentSets[sobolIndexMap[set_value]].end(); ++itr) 
     partialVariance[sobolIndexMap[set_value]]
       -= partialVariance[sobolIndexMap[*itr]];
+}
+
+
+/** Forms an interpolant over variables that are members of the given set.
+    Finds the variance of the interpolant w.r.t. the variables in the set.
+    Overloaded version supporting Smolyak sparse grids. */
+Real InterpPolyApproximation::
+partial_variance_integral(int set_value, const UShortArray& quad_order,
+			  const UShortArray& lev_index,
+			  const UShort2DArray& key,
+			  const SizetArray& colloc_index)
+{
+  // Distinguish between non-members and members of the given set, set_value
+  BoolDeque nonmember_vars(numVars,true); 
+  int num_mem_exp_coeffs = 1; // number of expansion coeffs in
+                              // member-variable-only expansion 
+  IntVector indexing_factor; // factors indexing member variables 
+  indexing_factor.sizeUninitialized(numVars);
+
+  // create member variable key and get number of expansion coeffs in
+  // member-variable-only expansion
+  indexing_factor = 1;
+  for (int k=0; k<numVars; ++k) {
+    // if subset contains variable k, set key for variable k to true
+    if (set_value & (1 << k)) {
+      nonmember_vars[k] = false;	
+      // information to properly index mem_exp_coeffs
+      indexing_factor[k] = num_mem_exp_coeffs;
+      num_mem_exp_coeffs *= quad_order[k];
+    }	
+  }
+	
+  // Create vector to store new coefficients
+  RealVector mem_exp_coeffs(num_mem_exp_coeffs), 
+             mem_weights(num_mem_exp_coeffs);
+
+  // Perform integration over non-member variables and store indices
+  // of new expansion
+  size_t i, j, num_colloc_pts = key.size();
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
+  for (i=0; i <num_colloc_pts; ++i) {
+    const UShortArray& key_i = key[i];
+    size_t mem_exp_coeffs_index = 0;	
+    Real prod_i_nonmembers = 1, prod_i_members = 1;
+    for (j=0; j<numVars; ++j)
+      // Save the product of the weights of the member and non-member variables 
+      if (nonmember_vars[j])
+	prod_i_nonmembers    *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      else {
+	// Convert key to corresponding index on mem_exp_coeffs
+	mem_exp_coeffs_index += key_i[j]*indexing_factor[j];
+	prod_i_members       *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      }
+
+    // mem_weights is performed more time than necessary here, but it
+    // seems to be the simplest place to put it
+    mem_weights[mem_exp_coeffs_index] = prod_i_members;
+    // sort coefficients by the "signature" of the member variables
+    // (i.e. mem_exp_coeffs_index)
+    unsigned short c_index = (colloc_index.empty()) ? i : colloc_index[i];
+    mem_exp_coeffs[mem_exp_coeffs_index]
+      += expansionType1Coeffs[c_index]*prod_i_nonmembers;
+  }
+
+  // Now integrate over the remaining variables	
+  Real integral = 0;
+  for (i=0; i<num_mem_exp_coeffs; ++i)
+    integral += std::pow(mem_exp_coeffs[i], 2.)*mem_weights[i];
+  return integral;	
 }
 
 } // namespace Pecos
