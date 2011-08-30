@@ -192,6 +192,7 @@ void SparseGridDriver::allocate_collocation_indices()
 
 void SparseGridDriver::allocate_1d_collocation_points_weights()
 {
+  // resize arrays
   size_t i, num_levels = ssgLevel + 1;
   if (collocPts1D.size() != num_levels) {
     collocPts1D.resize(num_levels);
@@ -208,60 +209,27 @@ void SparseGridDriver::allocate_1d_collocation_points_weights()
     for (i=0; i<num_levels; ++i)
       type2CollocWts1D[i].resize(numVars);
   }
+  // assign values
   // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
-  unsigned short level_index, order;
+  unsigned short l_index, q_order;
   for (i=0; i<numVars; i++) {
     BasisPolynomial& poly_i = polynomialBasis[i];
-    for (level_index=0; level_index<num_levels; ++level_index) {
-      level_to_order(i, level_index, order);
-      collocPts1D[level_index][i] = poly_i.collocation_points(order);
-      type1CollocWts1D[level_index][i]
-	= poly_i.type1_collocation_weights(order);
+    for (l_index=0; l_index<num_levels; ++l_index) {
+      level_to_order(i, l_index, q_order);
+      collocPts1D[l_index][i]      = poly_i.collocation_points(q_order);
+      type1CollocWts1D[l_index][i] = poly_i.type1_collocation_weights(q_order);
       if (computeType2Weights)
-	type2CollocWts1D[level_index][i]
-	  = poly_i.type2_collocation_weights(order);
+	type2CollocWts1D[l_index][i]
+	  = poly_i.type2_collocation_weights(q_order);
 #ifdef DEBUG
-      PCout << "collocPts1D[" << level_index << "][" << i << "]:\n"
-	    << collocPts1D[level_index][i] << "type1CollocWts1D[" << level_index
-	    << "][" << i << "]:\n" << type1CollocWts1D[level_index][i];
+      PCout << "collocPts1D[" << l_index << "][" << i << "]:\n"
+	    << collocPts1D[l_index][i] << "type1CollocWts1D[" << l_index
+	    << "][" << i << "]:\n" << type1CollocWts1D[l_index][i];
       if (computeType2Weights)
-	PCout << "type2CollocWts1D[" << level_index << "][" << i << "]:\n"
-	      << type2CollocWts1D[level_index][i];
+	PCout << "type2CollocWts1D[" << l_index << "][" << i << "]:\n"
+	      << type2CollocWts1D[l_index][i];
 #endif // DEBUG
     }
-  }
-}
-
-
-void SparseGridDriver::
-update_1d_collocation_points_weights(const UShortArray& trial_set,
-				     const Real2DArray& pts_1d,
-				     const Real2DArray& t1_wts_1d,
-				     const Real2DArray& t2_wts_1d)
-{
-  size_t i, num_levels = collocPts1D.size(), max_level = 0;
-  for (i=0; i<numVars; ++i)
-    if (trial_set[i] > max_level)
-      max_level = trial_set[i];
-  if (max_level >= num_levels) {
-    collocPts1D.resize(max_level+1); type1CollocWts1D.resize(max_level+1);
-    for (i=num_levels; i<=max_level; ++i)
-      { collocPts1D[i].resize(numVars); type1CollocWts1D[i].resize(numVars); }
-    if (computeType2Weights) {
-      type2CollocWts1D.resize(max_level+1);
-      for (i=num_levels; i<=max_level; ++i)
-	type2CollocWts1D[i].resize(numVars);
-    }
-  }
-  for (i=0; i<numVars; ++i) {
-    unsigned short trial_index = trial_set[i];
-    if (collocPts1D[trial_index][i].empty() ||
-	type1CollocWts1D[trial_index][i].empty()) {
-      collocPts1D[trial_index][i]      = pts_1d[i];
-      type1CollocWts1D[trial_index][i] = t1_wts_1d[i];
-    }
-    if (computeType2Weights && type2CollocWts1D[trial_index][i].empty())
-      type2CollocWts1D[trial_index][i] = t2_wts_1d[i];
   }
 }
 
@@ -699,18 +667,14 @@ void SparseGridDriver::compute_trial_grid(RealMatrix& unique_var_sets)
   const UShortArray& trial_set = smolyakMultiIndex.back();
   UShortArray quad_order(numVars);
   level_to_order(trial_set, quad_order);
-  Real2DArray pts_1d, t1_wts_1d, t2_wts_1d;
   UShort2DArray new_key;
   collocKey.push_back(new_key); // empty array updated in place
-  compute_tensor_grid(quad_order, a2Points, a2Type1Weights, a2Type2Weights,
-		      collocKey.back(), pts_1d, t1_wts_1d, t2_wts_1d);
+  compute_tensor_grid(quad_order, trial_set, a2Points, a2Type1Weights,
+		      a2Type2Weights, collocKey.back());
 
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
   trialSets.insert(trial_set);
-
-  // update 3D with new 2D collocation pts/wts (in correct location)
-  update_1d_collocation_points_weights(trial_set, pts_1d, t1_wts_1d, t2_wts_1d);
 
   // update collocIndices and uniqueIndexMapping
   size_t i, num_tp_pts, index, last_index = smolyakMultiIndex.size() - 1;

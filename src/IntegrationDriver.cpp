@@ -270,33 +270,17 @@ initialize_rules(const std::vector<BasisPolynomial>& poly_basis)
 
 
 void IntegrationDriver::
-compute_tensor_grid(const UShortArray& quad_order, RealMatrix&  variable_sets,
-		    RealVector&    t1_weight_sets, RealMatrix&  t2_weight_sets,
-		    UShort2DArray& colloc_key,     Real2DArray& pts_1d,
-		    Real2DArray&   t1_wts_1d,      Real2DArray& t2_wts_1d)
+compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
+		    RealMatrix& variable_sets,  RealVector& t1_weight_sets,
+		    RealMatrix& t2_weight_sets, UShort2DArray& colloc_key)
 {
   size_t i, j, k, num_colloc_pts = 1;
   for (i=0; i<numVars; ++i)
     num_colloc_pts *= quad_order[i];
-  if (pts_1d.empty())
-    pts_1d.resize(numVars);
-  if (t1_wts_1d.empty())
-    t1_wts_1d.resize(numVars);
-  if (computeType2Weights && t2_wts_1d.empty())
-    t2_wts_1d.resize(numVars);
-  for (i=0; i<numVars; ++i) {
-    pts_1d[i]    = polynomialBasis[i].collocation_points(quad_order[i]);
-    t1_wts_1d[i] = polynomialBasis[i].type1_collocation_weights(quad_order[i]);
-    if (computeType2Weights)
-      t2_wts_1d[i]
-	= polynomialBasis[i].type2_collocation_weights(quad_order[i]);
-  }
-#ifdef DEBUG
-  PCout << "\n1D variable_sets:\n" << pts_1d;
-  PCout << "\n1D t1_wts:\n" << t1_wts_1d;
-  if (computeType2Weights)
-    PCout << "\n1D t2_wts:\n" << t2_wts_1d;
-#endif
+
+  // update collocPts1D, type1CollocWts1D, and type2CollocWts1D
+  update_1d_collocation_points_weights(quad_order, lev_index);
+
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
   // > project 1-D colloc point arrays (of potentially different type and order)
@@ -312,16 +296,17 @@ compute_tensor_grid(const UShortArray& quad_order, RealMatrix&  variable_sets,
     Real& t1_wt_i = t1_weight_sets[i]; t1_wt_i = 1.;
     Real*    pt_i = variable_sets[i]; // column vector i
     for (j=0; j<numVars; ++j) {
-      pt_i[j]  =    pts_1d[j][colloc_indices[j]];
-      t1_wt_i *= t1_wts_1d[j][colloc_indices[j]];
+      pt_i[j]  =      collocPts1D[lev_index[j]][j][colloc_indices[j]];
+      t1_wt_i *= type1CollocWts1D[lev_index[j]][j][colloc_indices[j]];
     }
     if (computeType2Weights) {
       Real* t2_wt_i = t2_weight_sets[i]; // column vector i
       for (j=0; j<numVars; ++j) {
 	Real& t2_wt_ij = t2_wt_i[j]; t2_wt_ij = 1.;
 	for (k=0; k<numVars; ++k)
-	  t2_wt_ij *= (k==j) ? t2_wts_1d[k][colloc_indices[k]] :
-	                       t1_wts_1d[k][colloc_indices[k]];
+	  t2_wt_ij *= (k == j) ?
+	    type2CollocWts1D[lev_index[k]][k][colloc_indices[k]] :
+	    type1CollocWts1D[lev_index[k]][k][colloc_indices[k]];
       }
     }
     colloc_key[i] = colloc_indices;
@@ -340,6 +325,44 @@ compute_tensor_grid(const UShortArray& quad_order, RealMatrix&  variable_sets,
     write_data(PCout, t2_weight_sets, false, true, true);
   }
 #endif
+}
+
+
+void IntegrationDriver::
+update_1d_collocation_points_weights(const UShortArray& quad_order,
+				     const UShortArray& lev_index)
+{
+  // resize arrays
+  size_t i, size_1d = collocPts1D.size(), max_index = lev_index[0];
+  for (i=1; i<numVars; ++i)
+    if (lev_index[i] > max_index)
+      max_index = lev_index[i];
+  if (max_index >= size_1d) {
+    collocPts1D.resize(max_index+1); type1CollocWts1D.resize(max_index+1);
+    for (i=size_1d; i<=max_index; ++i)
+      { collocPts1D[i].resize(numVars); type1CollocWts1D[i].resize(numVars); }
+    if (computeType2Weights) {
+      type2CollocWts1D.resize(max_index+1);
+      for (i=size_1d; i<=max_index; ++i)
+	type2CollocWts1D[i].resize(numVars);
+    }
+  }
+  // assign values
+  for (i=0; i<numVars; ++i) {
+    unsigned short  l_index = lev_index[i], q_order = quad_order[i];
+    BasisPolynomial& poly_i =           polynomialBasis[i];
+    RealArray&       pts_1d =      collocPts1D[l_index][i];
+    RealArray&    t1_wts_1d = type1CollocWts1D[l_index][i];
+    if (pts_1d.empty() || t1_wts_1d.empty()) {
+      pts_1d    = poly_i.collocation_points(q_order);
+      t1_wts_1d	= poly_i.type1_collocation_weights(q_order);
+    }
+    if (computeType2Weights) {
+      RealArray&  t2_wts_1d = type2CollocWts1D[l_index][i];
+      if (t2_wts_1d.empty())
+	t2_wts_1d = poly_i.type2_collocation_weights(q_order);
+    }
+  }
 }
 
 } // namespace Pecos

@@ -60,15 +60,11 @@ public:
   /// return ith entry in quadOrder
   unsigned short quadrature_order(size_t i) const;
 
+  /// return levelIndex
+  const UShortArray& level_index() const;
+
   /// return collocKey
   const UShort2DArray& collocation_key() const;
-
-  /// return collocPts1D
-  const Real2DArray& collocation_points_array()  const;
-  /// return type1CollocWts1D
-  const Real2DArray& type1_collocation_weights_array() const;
-  /// return type2CollocWts1D
-  const Real2DArray& type2_collocation_weights_array() const;
 
   /// invoke initialize_rules() to set collocation rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
@@ -85,6 +81,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// update levelIndex from quadOrder
+  void update_level_index();
+  /// update levelIndex[i] from quadOrder[i]
+  void update_level_index(size_t i);
+
   //
   //- Heading: Data
   //
@@ -92,16 +93,12 @@ private:
   /// the isotropic/anisotropic quadrature order
   UShortArray quadOrder;
 
+  /// quadrature order offset by one for use as 0-based indices
+  UShortArray levelIndex;
+
   /// numCollocPts-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
-
-  /// numVars sets of 1D collocation points
-  Real2DArray collocPts1D;
-  /// numVars sets of 1D type1 collocation weights
-  Real2DArray type1CollocWts1D;
-  /// numVars sets of 1D type2 collocation weights
-  Real2DArray type2CollocWts1D;
 };
 
 
@@ -114,13 +111,26 @@ inline TensorProductDriver::~TensorProductDriver()
 { }
 
 
+inline void TensorProductDriver::update_level_index()
+{
+  size_t i, len = quadOrder.size();
+  if (levelIndex.size() != len) levelIndex.resize(len);
+  for (i=0; i<len; ++i)
+    levelIndex[i] = quadOrder[i] - 1;
+}
+
+
+inline void TensorProductDriver::update_level_index(size_t i)
+{ levelIndex[i] = quadOrder[i] - 1; }
+
+
 inline void TensorProductDriver::quadrature_order(const UShortArray& quad_order)
-{ quadOrder = quad_order; }
+{ quadOrder = quad_order; update_level_index(); }
 
 
 inline void TensorProductDriver::
 quadrature_order(unsigned short order, size_t i)
-{ quadOrder[i] = order; }
+{ quadOrder[i] = order; update_level_index(i); }
 
 
 inline const UShortArray& TensorProductDriver::quadrature_order() const
@@ -131,22 +141,12 @@ inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
 { return quadOrder[i]; }
 
 
+inline const UShortArray& TensorProductDriver::level_index() const
+{ return levelIndex; }
+
+
 inline const UShort2DArray& TensorProductDriver::collocation_key() const
 { return collocKey; }
-
-
-inline const Real2DArray& TensorProductDriver::collocation_points_array() const
-{ return collocPts1D; }
-
-
-inline const Real2DArray& TensorProductDriver::
-type1_collocation_weights_array() const
-{ return type1CollocWts1D; }
-
-
-inline const Real2DArray& TensorProductDriver::
-type2_collocation_weights_array() const
-{ return type2CollocWts1D; }
 
 
 inline int TensorProductDriver::grid_size()

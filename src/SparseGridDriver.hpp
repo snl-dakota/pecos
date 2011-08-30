@@ -80,13 +80,8 @@ public:
   void update_collocation_key(size_t start_index);
   /// initialize collocIndices from collocKey and uniqueIndexMapping
   void allocate_collocation_indices();
-  /// initialize collocPts1D and collocWts1D
+  /// initialize collocPts1D and type{1,2}CollocWts1D
   void allocate_1d_collocation_points_weights();
-  /// update collocPts1D and collocWts1D from pts_1d and wts_1d
-  void update_1d_collocation_points_weights(const UShortArray& trial_set,
-					    const Real2DArray& pts_1d,
-					    const Real2DArray& t1_wts_1d,
-					    const Real2DArray& t2_wts_1d);
 
   /// define a1{Points,Type1Weights,Type2Weights} based on the reference grid
   void reference_unique();
@@ -203,13 +198,6 @@ public:
   const UShortArray& trial_index_set() const;
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
-
-  /// return collocPts1D
-  const Real3DArray& collocation_points_array()  const;
-  /// return type1CollocWts1D
-  const Real3DArray& type1_collocation_weights_array() const;
-  /// return type2CollocWts1D
-  const Real3DArray& type2_collocation_weights_array() const;
 
 private:
 
@@ -370,13 +358,6 @@ private:
   BoolDeque isUnique1;  ///< key to unique points in set 1 (reference)
   BoolDeque isUnique2;  ///< key to unique points in set 2 (increment)
 
-  /// num_levels_per_var x numVars sets of 1D collocation points
-  Real3DArray collocPts1D;
-  /// num_levels_per_var x numVars sets of 1D type1 collocation weights
-  Real3DArray type1CollocWts1D;
-  /// num_levels_per_var x numVars sets of 1D type2 collocation weights
-  Real3DArray type2CollocWts1D;
-
   /// array of pointers to collocation point evaluation functions
   std::vector<FPType> compute1DPoints;
   /// array of pointers to type1 collocation weight evaluation functions
@@ -458,20 +439,6 @@ inline int SparseGridDriver::unique_trial_points() const
 
 //inline const Real& SparseGridDriver::duplicate_tolerance() const
 //{ return duplicateTol; }
-
-
-inline const Real3DArray& SparseGridDriver::collocation_points_array() const
-{ return collocPts1D; }
-
-
-inline const Real3DArray& SparseGridDriver::
-type1_collocation_weights_array() const
-{ return type1CollocWts1D; }
-
-
-inline const Real3DArray& SparseGridDriver::
-type2_collocation_weights_array() const
-{ return type2CollocWts1D; }
 
 
 inline void SparseGridDriver::allocate_smolyak_arrays()

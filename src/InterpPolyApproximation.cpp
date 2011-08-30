@@ -97,28 +97,8 @@ void InterpPolyApproximation::allocate_arrays()
 
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
     bool update_basis_form = (quad_order != quadOrderPrev);
-    // *** TO DO: carefully evaluate interdependence between exp_form/basis_form
-    if (update_basis_form) {
-      // size and initialize polynomialBasis, one interpolant per variable
-      if (polynomialBasis.empty())
-	{ polynomialBasis.resize(1); polynomialBasis[0].resize(numVars); }
-      const Real2DArray& colloc_pts_1d = tpq_driver->collocation_points_array();
-      std::vector<BasisPolynomial>& poly_basis_0 = polynomialBasis[0];
-      short poly_type_1d; short rule; bool found;
-      distribution_types(poly_type_1d, rule);
-      for (i=0; i<numVars; ++i) {
-	found = false;
-	for (j=0; j<i; ++j)
-	  if (colloc_pts_1d[i] == colloc_pts_1d[j]) // vector equality in pts
-	    { found = true; break; }
-	if (found) // reuse previous instance via shared representation
-	  poly_basis_0[i] = poly_basis_0[j];
-	else { // instantiate and initialize a new unique instance
-	  poly_basis_0[i] = BasisPolynomial(poly_type_1d, rule);
-	  poly_basis_0[i].interpolation_points(colloc_pts_1d[i]);
-	}
-      }
-    }
+    if (update_basis_form)
+      update_tensor_interpolation_basis();
 
     quadOrderPrev = quad_order;
     break;
@@ -341,17 +321,17 @@ void InterpPolyApproximation::store_coefficients()
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    storedCollocKey.resize(1);
-    storedCollocKey[0] = tpq_driver->collocation_key();
-    // TO DO *****************************************
+    storedCollocKey.resize(1); storedLevMultiIndex.resize(1);
+    storedCollocKey[0]     = tpq_driver->collocation_key();
+    storedLevMultiIndex[0] = tpq_driver->level_index();
     break;
   }
   case SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    storedSmolyakMultiIndex = ssg_driver->smolyak_multi_index();
-    storedSmolyakCoeffs     = ssg_driver->smolyak_coefficients();
-    storedCollocKey         = ssg_driver->collocation_key();
-    storedCollocIndices     = ssg_driver->collocation_indices();
+    storedLevMultiIndex = ssg_driver->smolyak_multi_index();
+    storedLevCoeffs     = ssg_driver->smolyak_coefficients();
+    storedCollocKey     = ssg_driver->collocation_key();
+    storedCollocIndices = ssg_driver->collocation_indices();
     break;
   }
   }
@@ -361,7 +341,7 @@ void InterpPolyApproximation::store_coefficients()
 void InterpPolyApproximation::combine_coefficients()
 {
 #ifdef DEBUG
-  PCout << "Original expansion coefficients prior to combination:\n";
+  PCout << "Original type1 expansion coefficients prior to combination:\n";
   write_data(PCout, expansionType1Coeffs);
 #endif // DEBUG
 
@@ -374,20 +354,10 @@ void InterpPolyApproximation::combine_coefficients()
     const RealVector& c_vars = (anchor_pt && i == 0) ?
       surrData.anchor_continuous_variables() :
       surrData.continuous_variables(i-offset);
-#ifdef DEBUG
-    PCout << "Evaluating stored expansion at point " << i+1 << ":\n";
-    write_data(PCout, c_vars);
-#endif // DEBUG
     if (configOptions.expansionCoeffFlag) {
       //if (correctionType == ADDITIVE_CORRECTION)
       // split up type1 and type2 contribs so increments are performed properly
-#ifdef DEBUG
-      Real stored_val = stored_value(c_vars);
-      PCout << "Stored value = " << stored_val << ":\n";
-      expansionType1Coeffs[i] += stored_val;
-#else
       expansionType1Coeffs[i] += stored_value(c_vars);
-#endif // DEBUG
       if (configOptions.useDerivs) {
 	const RealVector& stored_grad = stored_gradient(c_vars);
 	Real*         exp_t2_coeffs_i = expansionType2Coeffs[i];
@@ -412,7 +382,7 @@ void InterpPolyApproximation::combine_coefficients()
     }
   }
 #ifdef DEBUG
-  PCout << "Updated expansion coefficients following combination:\n";
+  PCout << "Updated type1 expansion coefficients following combination:\n";
   write_data(PCout, expansionType1Coeffs);
 #endif // DEBUG
 
@@ -427,8 +397,8 @@ void InterpPolyApproximation::combine_coefficients()
   case QUADRATURE:
     storedCollocKey.clear(); break;
   case SPARSE_GRID:
-    storedSmolyakMultiIndex.clear(); storedSmolyakCoeffs.clear();
-    storedCollocKey.clear();         storedCollocIndices.clear(); break;
+    storedLevMultiIndex.clear(); storedLevCoeffs.clear();
+    storedCollocKey.clear();     storedCollocIndices.clear(); break;
   }
 }
 
@@ -468,12 +438,55 @@ void InterpPolyApproximation::restore_expansion_coefficients()
 }
 
 
+void InterpPolyApproximation::update_tensor_interpolation_basis()
+{
+  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+  const UShortArray&   quad_order = tpq_driver->quadrature_order();
+  const UShortArray&    lev_index = tpq_driver->level_index();
+
+  // resize if needed (leaving previous levels unmodified)
+  size_t i, j, k, basis_size = polynomialBasis.size();
+  unsigned short max_order = quad_order[0];
+  for (i=1; i<numVars; ++i)
+    if (quad_order[i] > max_order)
+      max_order = quad_order[i];
+  // quad_order range is 1:m; quad_index range is 0:m-1
+  if (max_order > basis_size) {
+    polynomialBasis.resize(max_order);
+    for (i=basis_size; i<max_order; ++i)
+      polynomialBasis[i].resize(numVars);
+  }
+
+  // fill any required gaps in polynomialBasis.
+  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
+  short poly_type_1d; short rule; bool found; unsigned short l_index;
+  distribution_types(poly_type_1d, rule);
+  for (j=0; j<numVars; ++j) {
+    l_index = lev_index[j];
+    const RealArray& colloc_pts_1d_ij          =   colloc_pts_1d[l_index][j];
+    std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[l_index];
+    BasisPolynomial& poly_basis_ij = poly_basis_i[j];
+    if (poly_basis_ij.is_null()) { // does not account for parametric changes
+                                   // resulting in new pts for existing orders
+      found = false;
+      for (k=0; k<numVars; ++k)
+	if (k != j && !poly_basis_i[k].is_null() &&
+	    colloc_pts_1d_ij == poly_basis_i[k].interpolation_points())
+	  { found = true; break; }
+      if (found) // reuse previous instance via shared representation
+	poly_basis_ij = poly_basis_i[k]; // shared rep
+      else { // instantiate and initialize a new unique instance
+	poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
+	poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+      }
+    }
+  }
+}
+
+
 void InterpPolyApproximation::
 update_sparse_interpolation_basis(unsigned short max_level)
 {
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const Real3DArray& colloc_pts_1d = ssg_driver->collocation_points_array();
-
   // resize if needed (leaving previous levels unmodified)
   size_t i, j, k, basis_size = polynomialBasis.size();
   // j range is 0:w inclusive; i range is 1:w+1 inclusive
@@ -484,21 +497,26 @@ update_sparse_interpolation_basis(unsigned short max_level)
       polynomialBasis[i].resize(numVars);
   }
 
-  // fill gaps that may exist within any level
+  // fill gaps that may exist within any level (SparseGridDriver::
+  // update_1d_collocation_points_weights() updates in an unstructured manner)
+  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
   short poly_type_1d; short rule; bool found;
   distribution_types(poly_type_1d, rule);
   for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
+    const Real2DArray& colloc_pts_1d_i = colloc_pts_1d[i];
+    std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
     for (j=0; j<numVars; ++j) {
-      const RealArray& colloc_pts_1d_ij =   colloc_pts_1d[i][j];
-      BasisPolynomial&    poly_basis_ij = polynomialBasis[i][j];
-      if (poly_basis_ij.is_null() && !colloc_pts_1d_ij.empty()) {
+      const RealArray& colloc_pts_1d_ij = colloc_pts_1d_i[j];
+      BasisPolynomial&    poly_basis_ij =    poly_basis_i[j];
+      if ( poly_basis_ij.is_null() &&  // doesn't account for parametric changes
+	  !colloc_pts_1d_ij.empty()) { // resulting in new pts for existing levs
 	found = false;
-	for (k=0; k<j; ++k)
-	  if (colloc_pts_1d_ij == colloc_pts_1d[i][k] &&  // vector equality
-	      !polynomialBasis[i][k].is_null())
+	for (k=0; k<numVars; ++k)
+	  if (k != j && !poly_basis_i[k].is_null() &&
+	      colloc_pts_1d_ij == colloc_pts_1d_i[k])  // vector equality
 	    { found = true; break; }
 	if (found) // reuse previous instance via shared representation
-	  poly_basis_ij = polynomialBasis[i][k]; // shared rep
+	  poly_basis_ij = poly_basis_i[k]; // shared rep
 	else { // instantiate and initialize a new unique instance
 	  poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
 	  poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
@@ -822,9 +840,8 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
   // Some other routine here
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
   const UShortArray&   quad_order = tpq_driver->quadrature_order();
+  const UShortArray&   lev_index  = tpq_driver->level_index();
   const UShort2DArray& key        = tpq_driver->collocation_key();
-  const Real2DArray&   colloc_wts_1d
-    = tpq_driver->type1_collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -852,6 +869,8 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j;
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i = key[i];
     size_t mem_exp_coeffs_index = 0;	
@@ -862,9 +881,9 @@ Real InterpPolyApproximation::total_effects_integral(int set_value)
         0 : key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-        prod_i_nonmembers *= colloc_wts_1d[j][key_i[j]];
+        prod_i_nonmembers *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
       else
-        prod_i_members *= colloc_wts_1d[j][key_i[j]];
+        prod_i_members    *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
     }
  
     // mem_weights is performed more time than necessary here, but it
@@ -892,8 +911,6 @@ total_effects_integral(int set_value, size_t tp_index)
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& colloc_wts_1d
-    = ssg_driver->type1_collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -925,6 +942,8 @@ total_effects_integral(int set_value, size_t tp_index)
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j, num_colloc_pts = key.size();
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
   for (i=0; i <num_colloc_pts; ++i) {
     const UShortArray& key_i = key[i];
     size_t mem_exp_coeffs_index = 0;	
@@ -937,7 +956,7 @@ total_effects_integral(int set_value, size_t tp_index)
       if (nonmember_vars[j])
         prod_i_nonmembers *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
       else
-        prod_i_members *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
+        prod_i_members    *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
     }
  
     // mem_weights is performed more time than necessary here, but it
@@ -1005,11 +1024,10 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
     Overloaded version supporting tensor-product quadrature. */
 Real InterpPolyApproximation::partial_variance_integral(int set_value)
 {
-  TensorProductDriver* tpq_driver    = (TensorProductDriver*)driverRep;
-  const UShortArray&   quad_order    = tpq_driver->quadrature_order();
-  const UShort2DArray& key           = tpq_driver->collocation_key();
-  const Real2DArray&   colloc_wts_1d
-    = tpq_driver->type1_collocation_weights_array();
+  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+  const UShortArray&   quad_order = tpq_driver->quadrature_order();
+  const UShortArray&   lev_index  = tpq_driver->level_index();
+  const UShort2DArray& key        = tpq_driver->collocation_key();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -1039,6 +1057,8 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j;
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
   for (i=0; i<numCollocPts; ++i) {
     const UShortArray& key_i = key[i];
     size_t mem_exp_coeffs_index = 0;	
@@ -1049,9 +1069,9 @@ Real InterpPolyApproximation::partial_variance_integral(int set_value)
 	key_i[j]*indexing_factor[j];
       // Save the product of the weights of the member and non-member variables 
       if (nonmember_vars[j])
-	prod_i_nonmembers *= colloc_wts_1d[j][key_i[j]];
+	prod_i_nonmembers *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
       else
-	prod_i_members *= colloc_wts_1d[j][key_i[j]];
+	prod_i_members    *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
     }
 
     // mem_weights is performed more time than necessary here, but it
@@ -1081,8 +1101,6 @@ partial_variance_integral(int set_value, size_t tp_index)
   const UShortArray&     sm_index = ssg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&        key = ssg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = ssg_driver->collocation_indices()[tp_index];
-  const Real3DArray& colloc_wts_1d
-    = ssg_driver->type1_collocation_weights_array();
 
   // Distinguish between non-members and members of the given set, set_value
   BoolDeque nonmember_vars(numVars,true); 
@@ -1114,6 +1132,8 @@ partial_variance_integral(int set_value, size_t tp_index)
   // Perform integration over non-member variables and store indices
   // of new expansion
   size_t i, j, num_colloc_pts = key.size();
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
   for (i=0; i <num_colloc_pts; ++i) {
     const UShortArray& key_i = key[i];
     size_t mem_exp_coeffs_index = 0;	
@@ -1126,7 +1146,7 @@ partial_variance_integral(int set_value, size_t tp_index)
       if (nonmember_vars[j])
 	prod_i_nonmembers *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
       else
-	prod_i_members *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
+	prod_i_members    *= colloc_wts_1d[sm_index[j]][j][key_i[j]];
     }
 
     // mem_weights is performed more time than necessary here, but it

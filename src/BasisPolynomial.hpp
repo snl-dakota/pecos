@@ -128,9 +128,12 @@ public:
   /// get OrthogonalPolynomial::collocRule
   virtual short collocation_rule() const;
 
-  /// set LagrangeInterpPolynomial::interpolationPts
+  /// set InterpolationPolynomial::interpolationPts
   /** This is defined only for interpolation polynomials. */
   virtual void interpolation_points(const RealArray& interpolation_pts);
+  /// set InterpolationPolynomial::interpolationPts
+  /** This is defined only for interpolation polynomials. */
+  virtual const RealArray& interpolation_points() const;
 
   //
   //- Heading: Member functions

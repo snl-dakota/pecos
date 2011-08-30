@@ -75,9 +75,16 @@ public:
   const RealMatrix& type2_weight_sets() const;
 
   // append to end of type1WeightSets
-  void append_type1_weight_sets(const RealVector& t1_wts);
+  //void append_type1_weight_sets(const RealVector& t1_wts);
   // append to end of type2WeightSets
-  void append_type2_weight_sets(const RealMatrix& t2_wts);
+  //void append_type2_weight_sets(const RealMatrix& t2_wts);
+
+  /// return collocPts1D
+  const Real3DArray& collocation_points_array()  const;
+  /// return type1CollocWts1D
+  const Real3DArray& type1_collocation_weights_array() const;
+  /// return type2CollocWts1D
+  const Real3DArray& type2_collocation_weights_array() const;
 
   /// return collocRules
   const ShortArray& collocation_rules() const;
@@ -115,11 +122,12 @@ protected:
   void initialize_rules(const std::vector<BasisPolynomial>& poly_basis);
 
   /// compute variable and weight sets for a tensor-product grid
-  void compute_tensor_grid(const UShortArray& order, RealMatrix& variable_sets,
+  void compute_tensor_grid(const UShortArray& quad_order,
+			   const UShortArray& lev_index,
+			   RealMatrix& variable_sets,
 			   RealVector& t1_weight_sets,
 			   RealMatrix& t2_weight_sets,
-			   UShort2DArray& colloc_key, Real2DArray& pts_1d,
-			   Real2DArray&   t1_wts_1d,  Real2DArray& t2_wts_1d);
+			   UShort2DArray& colloc_key);
 
   //
   //- Heading: Data
@@ -145,6 +153,13 @@ protected:
   /// for each derivative component and for each point in the {TPQ,SSG} grid
   RealMatrix type2WeightSets;
 
+  /// num_levels_per_var x numVars sets of 1D collocation points
+  Real3DArray collocPts1D;
+  /// num_levels_per_var x numVars sets of 1D type1 collocation weights
+  Real3DArray type1CollocWts1D;
+  /// num_levels_per_var x numVars sets of 1D type2 collocation weights
+  Real3DArray type2CollocWts1D;
+
   /// flag indicating usage of compute1DType2Weights to define type2WeightSets
   bool computeType2Weights;
 
@@ -158,6 +173,10 @@ private:
   //
   //- Heading: Member functions
   //
+
+  /// update collocPts1D and type{1,2}CollocWts1D
+  void update_1d_collocation_points_weights(const UShortArray& quad_order,
+					    const UShortArray& lev_index);
 
   /// Used only by the standard envelope constructor to initialize
   /// basisApproxRep to the appropriate derived type.
@@ -187,6 +206,7 @@ inline const RealMatrix& IntegrationDriver::type2_weight_sets() const
 { return (driverRep) ? driverRep->type2WeightSets : type2WeightSets; }
 
 
+/*
 inline void IntegrationDriver::
 append_type1_weight_sets(const RealVector& t1_wts)
 {
@@ -221,6 +241,21 @@ append_type2_weight_sets(const RealMatrix& t2_wts)
     }
   }
 }
+*/
+
+
+inline const Real3DArray& IntegrationDriver::collocation_points_array() const
+{ return collocPts1D; }
+
+
+inline const Real3DArray& IntegrationDriver::
+type1_collocation_weights_array() const
+{ return type1CollocWts1D; }
+
+
+inline const Real3DArray& IntegrationDriver::
+type2_collocation_weights_array() const
+{ return type2CollocWts1D; }
 
 
 inline const ShortArray& IntegrationDriver::collocation_rules() const

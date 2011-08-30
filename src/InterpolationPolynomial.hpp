@@ -54,6 +54,8 @@ public:
   
   /// set interpPts
   void interpolation_points(const RealArray& interp_pts);
+  /// get interpPts
+  const RealArray& interpolation_points() const;
 
 protected:
 
@@ -95,6 +97,10 @@ interpolation_points(const RealArray& interp_pts)
   interpPts = interp_pts;
   precompute_data();
 }
+
+
+inline const RealArray& InterpolationPolynomial::interpolation_points() const
+{ return interpPts; }
 
 } // namespace Pecos
 

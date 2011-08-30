@@ -81,107 +81,64 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// return value of type 1 interpolation polynomial (TPQ case)
-  Real type1_interpolant_value(const RealVector& x, const UShortArray& key);
-  /// return value of type 1 interpolation polynomial (SSG case)
+  /// return value of type 1 interpolation polynomial
   Real type1_interpolant_value(const RealVector& x, const UShortArray& key,
-			       const UShortArray& sm_index);
-
-  /// return gradient of type 1 interpolation polynomial (TPQ case)
-  Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
-				  const UShortArray& key);
-  /// return gradient of type 1 interpolation polynomial (SSG case)
+			       const UShortArray& basis_index);
+  /// return gradient of type 1 interpolation polynomial
   Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  const UShortArray& key,
-				  const UShortArray& sm_index);
+				  const UShortArray& basis_index);
 
-  /// return value of type 2 interpolation polynomial (TPQ case)
-  Real type2_interpolant_value(const RealVector& x, size_t interp_index,
-			       const UShortArray& key);
-  /// return value of type 2 interpolation polynomial (SSG case)
+  /// return value of type 2 interpolation polynomial
   Real type2_interpolant_value(const RealVector& x, size_t interp_index,
 			       const UShortArray& key,
-			       const UShortArray& sm_index);
-
-  /// return gradient of type 2 interpolation polynomial (TPQ case)
-  Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
-				  size_t interp_index, const UShortArray& key);
-  /// return gradient of type 2 interpolation polynomial (SSG case)
+			       const UShortArray& basis_index);
+  /// return gradient of type 2 interpolation polynomial
   Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  size_t interp_index, const UShortArray& key,
-				  const UShortArray& sm_index);
+				  const UShortArray& basis_index);
 
-  /// compute the value of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to value(x)
+  /// compute the value of a tensor interpolant on a tensor grid;
+  /// contributes to value(x)
   Real tensor_product_value(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShort2DArray& key);
-  /// compute the value of a sparse interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to value(x)
-  Real tensor_product_value(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShortArray& sm_index, const UShort2DArray& key,
-    const SizetArray& colloc_index);
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray&  colloc_index);
 
-  /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to gradient(x)
+  /// compute the gradient of a tensor interpolant on a tensor grid;
+  /// contributes to gradient(x)
   const RealVector& tensor_product_gradient(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShort2DArray& key);
-  /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to gradient(x)
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray&  colloc_index);
+  /// compute the gradient of a tensor interpolant on a tensor grid
+  /// for given DVV; contributes to gradient(x, dvv)
   const RealVector& tensor_product_gradient(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShortArray& sm_index, const UShort2DArray& key,
-    const SizetArray& colloc_index);
-  /// compute the gradient of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid for given DVV; contributes to gradient(x, dvv)
-  const RealVector& tensor_product_gradient(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShort2DArray& key, const SizetArray& dvv);
-  /// compute the gradient of a sparse interpolant on an isotropic/anisotropic
-  /// tensor-product grid for given DVV; contributes to gradient(x, dvv)
-  const RealVector& tensor_product_gradient(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShortArray& sm_index, const UShort2DArray& key,
-    const SizetArray& colloc_index, const SizetArray& dvv);
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray& colloc_index,  const SizetArray& dvv);
 
-  /// compute the mean of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to mean(x)
-  Real tensor_product_mean(const RealVector& x, const UShort2DArray& key);
-  /// compute the mean of a sparse interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to mean(x)
-  Real tensor_product_mean(const RealVector& x, const UShortArray& sm_index,
+  /// compute the mean of a tensor interpolant on a tensor grid;
+  /// contributes to mean(x)
+  Real tensor_product_mean(const RealVector& x, const UShortArray& lev_index,
     const UShort2DArray& key, const SizetArray& colloc_index);
 
-  /// compute the mean of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to mean(x)
+  /// compute the gradient of the mean of a tensor interpolant on a
+  /// tensor grid; contributes to mean_gradient(x)
   const RealVector& tensor_product_mean_gradient(const RealVector& x,
-    const UShort2DArray& key, const SizetArray& dvv);
-  /// compute the mean of a sparse interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to mean(x)
-  const RealVector& tensor_product_mean_gradient(const RealVector& x,
-    const UShortArray& sm_index,    const UShort2DArray& key,
+    const UShortArray& lev_index,   const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
-  /// compute the covariance of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to covariance(x, poly_approx_2)
-  Real tensor_product_covariance(const RealVector& x, const UShort2DArray& key,
-				 const RealVector& exp_coeffs_2);
-  /// compute the covariance of a sparse interpolant on an isotropic/anisotropic
-  /// sparse grid; contributes to covariance(x, poly_approx_2)
+  /// compute the covariance of a tensor interpolant on a tensor grid;
+  /// contributes to covariance(x, poly_approx_2)
   Real tensor_product_covariance(const RealVector& x,
-    const UShortArray& sm_index,    const UShort2DArray& key,
+    const UShortArray& lev_index,   const UShort2DArray& key,
     const SizetArray& colloc_index, const RealVector& exp_coeffs_2);
 
-  /// compute the variance of a tensor interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to variance(x)
+  /// compute the gradient of the variance of a tensor interpolant on
+  /// a tensor grid; contributes to variance_gradient(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
-    const UShort2DArray& key, const SizetArray& dvv);
-  /// compute the variance of a sparse interpolant on an isotropic/anisotropic
-  /// tensor-product grid; contributes to variance(x)
-  const RealVector& tensor_product_variance_gradient(const RealVector& x,
-    const UShortArray& sm_index, const UShort2DArray& key,
+    const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
   //
@@ -203,103 +160,47 @@ inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 
 
 inline Real NodalInterpPolyApproximation::
-type1_interpolant_value(const RealVector& x, const UShortArray& key)
-{
-  Real L1 = 1.;
-  std::vector<BasisPolynomial>& basis_0 = polynomialBasis[0];
-  for (size_t j=0; j<numVars; ++j)
-    L1 *= basis_0[j].type1_value(x[j], key[j]);
-  return L1;
-}
-
-
-inline Real NodalInterpPolyApproximation::
 type1_interpolant_value(const RealVector& x, const UShortArray& key,
-			const UShortArray& sm_index)
+			const UShortArray& basis_index)
 {
   Real L1 = 1.;
   for (size_t j=0; j<numVars; ++j)
-    L1 *= polynomialBasis[sm_index[j]][j].type1_value(x[j], key[j]);
+    L1 *= polynomialBasis[basis_index[j]][j].type1_value(x[j], key[j]);
   return L1;
-}
-
-
-inline Real NodalInterpPolyApproximation::
-type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
-			   const UShortArray& key)
-{
-  Real L1_grad = 1.;
-  std::vector<BasisPolynomial>& basis_0 = polynomialBasis[0];
-  for (size_t k=0; k<numVars; ++k)
-    L1_grad *= (k == deriv_index) ? basis_0[k].type1_gradient(x[k], key[k]) :
-                                    basis_0[k].type1_value(x[k],    key[k]);
-  return L1_grad;
 }
 
 
 inline Real NodalInterpPolyApproximation::
 type1_interpolant_gradient(const RealVector& x,    size_t deriv_index,
-			   const UShortArray& key, const UShortArray& sm_index)
+			   const UShortArray& key,
+			   const UShortArray& basis_index)
 {
   Real L1_grad = 1.;
   for (size_t k=0; k<numVars; ++k)
     L1_grad *= (k == deriv_index) ?
-      polynomialBasis[sm_index[k]][k].type1_gradient(x[k], key[k]) :
-      polynomialBasis[sm_index[k]][k].type1_value(x[k],    key[k]);
+      polynomialBasis[basis_index[k]][k].type1_gradient(x[k], key[k]) :
+      polynomialBasis[basis_index[k]][k].type1_value(x[k],    key[k]);
   return L1_grad;
 }
 
 
 inline Real NodalInterpPolyApproximation::
-type2_interpolant_value(const RealVector& x, size_t interp_index,
-			const UShortArray& key)
-{
-  Real L2 = 1.;
-  std::vector<BasisPolynomial>& basis_0 = polynomialBasis[0];
-  for (size_t k=0; k<numVars; ++k)
-    L2 *= (interp_index == k) ? basis_0[k].type2_value(x[k], key[k]) :
-                                basis_0[k].type1_value(x[k], key[k]);
-  return L2;
-}
-
-
-inline Real NodalInterpPolyApproximation::
 type2_interpolant_value(const RealVector& x,    size_t interp_index,
-			const UShortArray& key, const UShortArray& sm_index)
+			const UShortArray& key, const UShortArray& basis_index)
 {
   Real L2 = 1.;
   for (size_t k=0; k<numVars; ++k)
     L2 *= (interp_index == k) ?
-      polynomialBasis[sm_index[k]][k].type2_value(x[k], key[k]) :
-      polynomialBasis[sm_index[k]][k].type1_value(x[k], key[k]);
+      polynomialBasis[basis_index[k]][k].type2_value(x[k], key[k]) :
+      polynomialBasis[basis_index[k]][k].type1_value(x[k], key[k]);
   return L2;
-}
-
-
-inline Real NodalInterpPolyApproximation::
-type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
-			   size_t interp_index, const UShortArray& key)
-{
-  // deriv_index  = desired gradient component
-  // interp_index = index of gradient component used in type2 interpolation
-  Real L2_grad = 1.;
-  std::vector<BasisPolynomial>& basis_0 = polynomialBasis[0];
-  if (interp_index == deriv_index) // match in grad and type2 interp components
-    for (size_t l=0; l<numVars; ++l)
-      L2_grad *= (l == interp_index) ? basis_0[l].type2_gradient(x[l], key[l]) :
-                                       basis_0[l].type1_value(x[l],    key[l]);
-  else                          // mismatch in grad and type2 interp components
-    for (size_t l=0; l<numVars; ++l)
-      L2_grad *= (l == interp_index) ? basis_0[l].type2_value(x[l],    key[l]) :
-	                               basis_0[l].type1_gradient(x[l], key[l]);
-  return L2_grad;
 }
 
 
 inline Real NodalInterpPolyApproximation::
 type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   size_t interp_index, const UShortArray& key,
-			   const UShortArray& sm_index)
+			   const UShortArray& basis_index)
 {
   // deriv_index  = desired gradient component
   // interp_index = index of gradient component used in type2 interpolation
@@ -307,13 +208,13 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
   if (interp_index == deriv_index) // match in grad and type2 interp components
     for (size_t l=0; l<numVars; ++l)
       L2_grad *= (l == interp_index) ?
-	polynomialBasis[sm_index[l]][l].type2_gradient(x[l], key[l]) :
-	polynomialBasis[sm_index[l]][l].type1_value(x[l],    key[l]);
+	polynomialBasis[basis_index[l]][l].type2_gradient(x[l], key[l]) :
+	polynomialBasis[basis_index[l]][l].type1_value(x[l],    key[l]);
   else                          // mismatch in grad and type2 interp components
     for (size_t l=0; l<numVars; ++l)
       L2_grad *= (l == interp_index) ?
-	polynomialBasis[sm_index[l]][l].type2_value(x[l],    key[l]) :
-	polynomialBasis[sm_index[l]][l].type1_gradient(x[l], key[l]);
+	polynomialBasis[basis_index[l]][l].type2_value(x[l],    key[l]) :
+	polynomialBasis[basis_index[l]][l].type1_gradient(x[l], key[l]);
   return L2_grad;
 }
 

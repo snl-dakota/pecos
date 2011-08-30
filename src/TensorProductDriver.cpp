@@ -30,7 +30,7 @@ initialize_grid(const ShortArray& u_types, bool nested_rules,
 {
   initialize_rules(u_types, nested_rules, piecewise_basis, equidistant_rules,
 		   use_derivs, nested_uniform_rule);
-  quadOrder.resize(numVars);
+  quadOrder.resize(numVars); levelIndex.resize(numVars);
 }
 
 
@@ -40,6 +40,7 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 {
   initialize_rules(poly_basis);
   quadOrder = quad_order;
+  update_level_index();
 }
 
 
@@ -53,12 +54,11 @@ void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
 	<< grid_size() << '\n';
 #endif // DEBUG
 
-  // ----------------------------------------------
-  // Get collocation points and integration weights
-  // ----------------------------------------------
-  compute_tensor_grid(quadOrder, variable_sets, type1WeightSets,
-		      type2WeightSets, collocKey, collocPts1D,
-		      type1CollocWts1D, type2CollocWts1D);
+  // -------------------------------------------------------------------
+  // Get collocation points and integration weights and update 1D arrays
+  // -------------------------------------------------------------------
+  compute_tensor_grid(quadOrder, levelIndex, variable_sets, type1WeightSets,
+		      type2WeightSets, collocKey);
 }
 
 } // namespace Pecos

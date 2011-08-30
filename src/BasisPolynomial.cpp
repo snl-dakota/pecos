@@ -387,7 +387,7 @@ void BasisPolynomial::collocation_rule(short rule)
 short BasisPolynomial::collocation_rule() const
 {
   if (!polyRep) {
-    PCerr << "Error: collocation_rule() not available for this basis polynomial"
+    PCerr << "Error: collocation_rule() not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
@@ -404,6 +404,17 @@ void BasisPolynomial::interpolation_points(const RealArray& interpolation_pts)
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
+}
+
+
+const RealArray& BasisPolynomial::interpolation_points() const
+{
+  if (!polyRep) {
+    PCerr << "Error: interpolation_points() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->interpolation_points();
 }
 
 } // namespace Pecos
