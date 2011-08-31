@@ -530,13 +530,6 @@ update_sparse_interpolation_basis(unsigned short max_level)
 void InterpPolyApproximation::
 compute_numerical_response_moments(size_t num_moments)
 {
-  if (!configOptions.useDerivs) {
-    PolynomialApproximation::compute_numerical_response_moments(num_moments);
-    return;
-  }
-
-  // Implementation below supports gradient-enhanced interpolation
-
   // computes and stores the following moments:
   // > mean     (1st raw moment)
   // > variance (2nd central moment)
@@ -545,14 +538,14 @@ compute_numerical_response_moments(size_t num_moments)
 
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in Polynomial"
-	  << "Approximation::compute_numerica_responsel_moments()" << std::endl;
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+	  << "Approximation::compute_numerical_response_moments()" << std::endl;
     abort_handler(-1);
   }
   // current support for this implementation: can't be open-ended since we
   // employ a specific combination of raw, central, and standardized moments
   if (num_moments < 1 || num_moments > 4) {
-    PCerr << "Error: unsupported number of moments requested in Polynomial"
+    PCerr << "Error: unsupported number of moments requested in InterpPoly"
 	  << "Approximation::compute_numerical_response_moments()" << std::endl;
     abort_handler(-1);
   }
@@ -569,7 +562,7 @@ compute_numerical_response_moments(size_t num_moments)
   if (t1_wts.length() != num_pts) {
     PCerr << "Error: mismatch in array lengths between integration driver "
 	  << "weights ("  << t1_wts.length() << ") and surrogate data points ("
-	  << num_pts << ") in PolynomialApproximation::compute_numerical_"
+	  << num_pts << ") in InterpPolyApproximation::compute_numerical_"
 	  << "response_moments()." << std::endl;
     abort_handler(-1);
   }
@@ -578,49 +571,42 @@ compute_numerical_response_moments(size_t num_moments)
   Real& mean = numericalMoments[0];
   for (i=0; i<num_pts; ++i) {
     mean += t1_wts[i] * expansionType1Coeffs[i];
-    const Real* coeff2_i = expansionType2Coeffs[i];
-    const Real*  t2_wt_i = t2_wts[i];
-    for (j=0; j<numVars; ++j)
-      mean += coeff2_i[j] * t2_wt_i[j];
+    if (configOptions.useDerivs) {
+      const Real* coeff2_i = expansionType2Coeffs[i];
+      const Real*  t2_wt_i = t2_wts[i];
+      for (j=0; j<numVars; ++j)
+	mean += coeff2_i[j] * t2_wt_i[j];
+    }
   }
 
   // estimate central moments 2 through num_moments
   Real centered_fn, pow_fn;
   for (i=0; i<num_pts; ++i) {
     pow_fn = centered_fn = expansionType1Coeffs[i] - mean;
-    const Real* coeff2_i = expansionType2Coeffs[i];
-    const Real*  t2_wt_i = t2_wts[i];
-    for (j=1; j<num_moments; ++j) {
-      Real& moment_j = numericalMoments[j];
-      // type2 interpolation of (R - \mu)^n
-      // --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
-      for (k=0; k<numVars; ++k)
-	moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
-      // type 1 interpolation of (R - \mu)^n
-      pow_fn   *= centered_fn;
-      moment_j += t1_wts[i] * pow_fn;
+    if (configOptions.useDerivs) {
+      const Real* coeff2_i = expansionType2Coeffs[i];
+      const Real*  t2_wt_i = t2_wts[i];
+      for (j=1; j<num_moments; ++j) {
+	Real& moment_j = numericalMoments[j];
+	// type2 interpolation of (R - \mu)^n
+	// --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
+	for (k=0; k<numVars; ++k)
+	  moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
+	// type 1 interpolation of (R - \mu)^n
+	pow_fn   *= centered_fn;
+	moment_j += t1_wts[i] * pow_fn;
+      }
     }
+    else
+      for (j=1; j<num_moments; ++j) {
+	pow_fn              *= centered_fn;
+	numericalMoments[j] += t1_wts[i] * pow_fn;
+      }
   }
 
   // standardize third and higher central moments, if present
-  if (num_moments > 2) {
-    const Real& var = numericalMoments[1];
-    if (var > 0.) {
-      // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
-      Real std_dev = std::sqrt(var); pow_fn = std_dev*std_dev;
-      for (j=2; j<num_moments; ++j)
-	{ pow_fn *= std_dev; numericalMoments[j] /= pow_fn; }
-    }
-    else
-      PCerr << "Warning: skewness and kurtosis cannot be standardized due to "
-	    << "non-positive variance.\n         Skipping std deviation "
-	    << "normalization." << std::endl;
-    // offset the fourth standardized moment to eliminate excess kurtosis
-    if (num_moments > 3)
-      numericalMoments[3] -= 3.;
-  }
-
-  //return numericalMoments;
+  if (num_moments > 2)
+    standardize_moments(numericalMoments);
 }
 
 
@@ -635,14 +621,14 @@ compute_numerical_expansion_moments(size_t num_moments)
 
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in Polynomial"
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
 	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
     abort_handler(-1);
   }
   // current support for this implementation: can't be open-ended since we
   // employ a specific combination of raw, central, and standardized moments
   if (num_moments < 1 || num_moments > 4) {
-    PCerr << "Error: unsupported number of moments requested in Polynomial"
+    PCerr << "Error: unsupported number of moments requested in InterpPoly"
 	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
     abort_handler(-1);
   }
@@ -660,7 +646,7 @@ compute_numerical_expansion_moments(size_t num_moments)
   if (t1_wts.length() != num_pts) {
     PCerr << "Error: mismatch in array lengths between integration driver "
 	  << "weights ("  << t1_wts.length() << ") and surrogate data points ("
-	  << num_pts << ") in PolynomialApproximation::compute_numerical_"
+	  << num_pts << ") in InterpPolyApproximation::compute_numerical_"
 	  << "expansion_moments()." << std::endl;
     abort_handler(-1);
   }
@@ -709,41 +695,9 @@ compute_numerical_expansion_moments(size_t num_moments)
   }
 
   // standardize third and higher central moments, if present
-  if (num_moments > 2) {
-    const Real& var = expansionMoments[1];
-    if (var > 0.) {
-      // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
-      Real std_dev = std::sqrt(var); pow_fn = var;
-      for (j=2; j<num_moments; ++j)
-	{ pow_fn *= std_dev; expansionMoments[j] /= pow_fn; }
-    }
-    else
-      PCerr << "Warning: skewness and kurtosis cannot be standardized due to "
-	    << "non-positive variance.\n         Skipping std deviation "
-	    << "normalization." << std::endl;
-    // offset the fourth standardized moment to eliminate excess kurtosis
-    if (num_moments > 3)
-      expansionMoments[3] -= 3.;
-  }
-
-  //return expansionMoments;
+  if (num_moments > 2)
+    standardize_moments(expansionMoments);
 }
-
-
-/* TO DO: could implement:
-void InterpPolyApproximation::
-overlay_numerical_expansion_moments(size_t num_moments)
-
-void InterpPolyApproximation::
-overlay_numerical_response_moments(size_t num_moments)
-
-with explicit extraction of stored PolynomalApproximation data and mgmt via
-storedMultiIndex --> elegant solution to moments, but does not solve sampling
-on combined expansion/interpolant unless value()/gradient() likewise extended
---> IPA would need an eval mode like HSM: stored, current, or overlay.
---> would be better if seamless collapse were possible (requiring down select
-    of options to delta-hat and R_lf (no hat))
-*/
 
 
 void InterpPolyApproximation::compute_component_effects()
@@ -757,9 +711,9 @@ void InterpPolyApproximation::compute_component_effects()
     partialVariance.sizeUninitialized(sobolIndices.length());
   partialVariance = 0.;
 
-  Real& mean           = numericalMoments[0];
-  Real& total_variance = numericalMoments[1];
-  partialVariance[0]   = mean*mean; // init with mean sq
+  const Real& mean           = numericalMoments[0];
+  const Real& total_variance = numericalMoments[1];
+  partialVariance[0]         = mean*mean; // init with mean sq
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin();
@@ -797,7 +751,7 @@ void InterpPolyApproximation::compute_total_effects()
   // This approach parallels partial_variance_integral where the algorithm is 
   // separated by integration approach.
   else {
-    Real& total_variance = numericalMoments[1];
+    const Real& total_variance = numericalMoments[1];
     int j, set_value;
     switch (configOptions.expCoeffsSolnApproach) {
     case QUADRATURE: {
@@ -908,7 +862,7 @@ total_effects_integral(int set_value, const UShortArray& quad_order,
  
   // Now integrate over the remaining variables	
   Real  integral   = 0;
-  Real& total_mean = numericalMoments[0];
+  const Real& total_mean = numericalMoments[0];
   for (i=0; i<num_mem_exp_coeffs; ++i)
     integral += std::pow(mem_exp_coeffs[i] - total_mean, 2.)*mem_weights[i];
   return integral;

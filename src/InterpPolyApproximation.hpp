@@ -75,9 +75,9 @@ protected:
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
-  /// compute central moments of response using numerical integration
+  /// compute moments of response using numerical integration
   void compute_numerical_response_moments(size_t num_moments);
-  /// compute central moments of response using numerical integration
+  /// compute moments of expansion using numerical integration
   void compute_numerical_expansion_moments(size_t num_moments);
 
   /// computes component (main and interaction) effect Sobol' indices

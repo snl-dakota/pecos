@@ -337,6 +337,9 @@ protected:
   //- Heading: Member functions
   //
 
+  /// standardize third and higher central moments and eliminate excess kurtosis
+  void standardize_moments(RealVector& moments);
+
   //
   //- Heading: Data
   //
