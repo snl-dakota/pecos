@@ -269,7 +269,7 @@ void InterpPolyApproximation::decrement_coefficients()
 
   numCollocPts = surrData.size(); // data already decremented
   if (surrData.anchor())
-    numCollocPts += 1;
+    ++numCollocPts;
 }
 
 

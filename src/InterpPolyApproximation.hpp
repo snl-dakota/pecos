@@ -120,13 +120,23 @@ protected:
       expansion only over the random variables). */
   RealMatrix expansionType1CoeffGrads;
 
+  /// storage of expansionType1Coeffs state for subsequent restoration
   RealVector storedExpType1Coeffs;
+  /// storage of expansionType2Coeffs state for subsequent restoration
   RealMatrix storedExpType2Coeffs;
+  /// storage of expansionType1CoeffGrads state for subsequent restoration
   RealMatrix storedExpType1CoeffGrads;
+  /// storage of IntegrationDriver multi-index state for subsequent restoration
   UShort2DArray storedLevMultiIndex;
-  IntArray      storedLevCoeffs;
+  /// storage of IntegrationDriver combinatorial coefficients state
+  /// for subsequent restoration
+  IntArray storedLevCoeffs;
+  /// storage of IntegrationDriver collocation key state for
+  /// subsequent restoration
   UShort3DArray storedCollocKey;
-  Sizet2DArray  storedCollocIndices;
+  /// storage of IntegrationDriver collocation indices state for
+  /// subsequent restoration
+  Sizet2DArray storedCollocIndices;
 
   /// the gradient of a tensor-product interpolant; a contributor to
   /// approxGradient

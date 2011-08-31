@@ -567,25 +567,37 @@ private:
   /// approximation region) for which exact matching is enforced
   /// (e.g., using equality-constrained least squares regression).
   SurrogateDataVars anchorVars;
-  /// set of variables samples used to build the approximation.  These
-  /// sample points are fit approximately (e.g., using least squares
-  /// regression); exact matching is not enforced.
+  /// a set of variables samples used to build the approximation.
+  /// These sample points are fit approximately (e.g., using least
+  /// squares regression); exact matching is not enforced.
   SDVArray varsData;
-  /// set of variables samples that have been popped off varsData but
-  /// which are available for future restoration.
-  SDV2DArray savedVarsData;
+  /// sets of variables samples that have been popped off varsData but
+  /// which are available for future restoration.  The granularity of
+  /// this 2D array corresponds to multiple trial sets, each
+  /// contributing a SDVArray.
+  SDV2DArray savedVarsTrials;
+  /// a set of variables samples that have been stored for future
+  /// restoration.  The granularity of this array corresponds to a
+  /// wholesale storage of the current varsData state.
+  SDVArray storedVarsData;
 
   /// a special response sample (often at the center of the
   /// approximation region) for which exact matching is enforced
   /// (e.g., using equality-constrained least squares regression).
   SurrogateDataResp anchorResp;
-  /// set of response samples used to build the approximation.  These
+  /// a set of response samples used to build the approximation.  These
   /// sample points are fit approximately (e.g., using least squares
   /// regression); exact matching is not enforced.
   SDRArray respData;
-  /// set of response samples that have been popped off respData but
-  /// which are available for future restoration.
-  SDR2DArray savedRespData;
+  /// sets of response samples that have been popped off respData but
+  /// which are available for future restoration.  The granularity of
+  /// this 2D array corresponds to multiple trial sets, each
+  /// contributing a SDRArray.
+  SDR2DArray savedRespTrials;
+  /// a set of response samples that have been stored for future
+  /// restoration.  The granularity of this array corresponds to a
+  /// wholesale storage of the current respData state.
+  SDRArray storedRespData;
 
   /// number of handle objects sharing sdRep
   int referenceCount;
@@ -687,30 +699,20 @@ public:
   bool anchor() const;
   /// return size of {vars,resp}Data arrays (neglecting anchor point)
   size_t /*data_*/size() const;
-  /// return size of saved{Vars,Resp}Data arrays
-  size_t saved_size() const;
+  /// return number of 1D arrays within saved{Vars,Resp}Trials 2D arrays
+  size_t saved_trials() const;
   /// return number of derivative variables as indicated by size of
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
 
   /// clear anchor{Vars,Resp}
   void clear_anchor();
-  /// clear anchor{Vars,Resp}
-  void clear_anchor_variables();
-  /// clear anchor{Vars,Resp}
-  void clear_anchor_response();
   /// clear {vars,resp}Data
   void clear_data();
-  /// clear {vars,resp}Data
-  void clear_variables_data();
-  /// clear {vars,resp}Data
-  void clear_response_data();
-  /// clear saved{Vars,Resp}Data
+  /// clear saved{Vars,Resp}Trials
   void clear_saved();
-  /// clear savedVarsData
-  void clear_saved_variables();
-  /// clear savedRespData
-  void clear_saved_response();
+  /// clear stored{Vars,Resp}Data
+  void clear_stored();
 
 private:
 
@@ -853,10 +855,12 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
     size_t data_size = size();
     if (data_size >= num_pop_pts) {
       if (save_data) {
-	SDVArray sdv; sdRep->savedVarsData.push_back(sdv); // append empty array
-	SDRArray sdr; sdRep->savedRespData.push_back(sdr); // append empty array
-	SDVArray& last_sdv_array = sdRep->savedVarsData.back();//update in place
-	SDRArray& last_sdr_array = sdRep->savedRespData.back();//update in place
+	// append empty arrays and then update them in place
+	SDVArray sdv_array; SDRArray sdr_array;
+	sdRep->savedVarsTrials.push_back(sdv_array);
+	sdRep->savedRespTrials.push_back(sdr_array);
+	SDVArray& last_sdv_array = sdRep->savedVarsTrials.back();
+	SDRArray& last_sdr_array = sdRep->savedRespTrials.back();
 	/*
 	// prevent underflow portability issue w/ compiler coercion of -num_pop
 	SDVArray::difference_type reverse_adv_vars = num_pop_pts;
@@ -883,37 +887,35 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
 }
 
 
+inline size_t SurrogateData::restore(size_t index, bool erase_saved)
+{
+  SDV2DArray::iterator vit = sdRep->savedVarsTrials.begin();
+  SDR2DArray::iterator rit = sdRep->savedRespTrials.begin();
+  std::advance(vit, index); std::advance(rit, index);
+  size_t num_pts = std::min(vit->size(), rit->size());
+  sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
+  sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
+  if (erase_saved)
+    { sdRep->savedVarsTrials.erase(vit); sdRep->savedRespTrials.erase(rit); }
+  return num_pts;
+}
+
+
 inline void SurrogateData::store()
 {
-  sdRep->savedVarsData.push_back(sdRep->varsData);
-  sdRep->savedRespData.push_back(sdRep->respData);
+  sdRep->storedVarsData = sdRep->varsData; // shallow copies
+  sdRep->storedRespData = sdRep->respData; // shallow copies
   clear_data();
 }
 
 
 inline void SurrogateData::restore()
 {
-  SDVArray& saved_vars = sdRep->savedVarsData.back();
-  SDRArray& saved_resp = sdRep->savedRespData.back();
-  sdRep->varsData.insert(sdRep->varsData.end(), saved_vars.begin(),
-			 saved_vars.end());
-  sdRep->respData.insert(sdRep->respData.end(), saved_resp.begin(),
-			 saved_resp.end());
-  sdRep->savedVarsData.pop_back(); sdRep->savedRespData.pop_back();
-}
-
-
-inline size_t SurrogateData::restore(size_t index, bool erase_saved)
-{
-  SDV2DArray::iterator vit = sdRep->savedVarsData.begin();
-  SDR2DArray::iterator rit = sdRep->savedRespData.begin();
-  std::advance(vit, index); std::advance(rit, index);
-  size_t num_pts = std::min(vit->size(), rit->size());
-  sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
-  sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
-  if (erase_saved)
-    { sdRep->savedVarsData.erase(vit); sdRep->savedRespData.erase(rit); }
-  return num_pts;
+  sdRep->varsData.insert(sdRep->varsData.end(), sdRep->storedVarsData.begin(),
+			 sdRep->storedVarsData.end());
+  sdRep->respData.insert(sdRep->respData.end(), sdRep->storedRespData.begin(),
+			 sdRep->storedRespData.end());
+  clear_stored();
 }
 
 
@@ -925,8 +927,10 @@ inline size_t SurrogateData::/*data_*/size() const
 { return std::min(sdRep->varsData.size(), sdRep->respData.size()); }
 
 
-inline size_t SurrogateData::saved_size() const
-{ return std::min(sdRep->savedVarsData.size(), sdRep->savedRespData.size()); }
+inline size_t SurrogateData::saved_trials() const
+{
+  return std::min(sdRep->savedVarsTrials.size(), sdRep->savedRespTrials.size());
+}
 
 
 inline size_t SurrogateData::num_derivative_variables() const
@@ -944,36 +948,16 @@ inline void SurrogateData::clear_anchor()
 }
 
 
-inline void SurrogateData::clear_anchor_variables()
-{ sdRep->anchorVars = SurrogateDataVars(); }
-
-
-inline void SurrogateData::clear_anchor_response()
-{ sdRep->anchorResp = SurrogateDataResp(); }
-
-
 inline void SurrogateData::clear_data()
 { sdRep->varsData.clear(); sdRep->respData.clear(); }
 
 
-inline void SurrogateData::clear_variables_data()
-{ sdRep->varsData.clear(); }
-
-
-inline void SurrogateData::clear_response_data()
-{ sdRep->respData.clear(); }
-
-
 inline void SurrogateData::clear_saved()
-{ sdRep->savedVarsData.clear(); sdRep->savedRespData.clear(); }
+{ sdRep->savedVarsTrials.clear(); sdRep->savedRespTrials.clear(); }
 
 
-inline void SurrogateData::clear_saved_variables()
-{ sdRep->savedVarsData.clear(); }
-
-
-inline void SurrogateData::clear_saved_response()
-{ sdRep->savedRespData.clear(); }
+inline void SurrogateData::clear_stored()
+{ sdRep->storedVarsData.clear(); sdRep->storedRespData.clear(); }
 
 } // namespace Pecos
 

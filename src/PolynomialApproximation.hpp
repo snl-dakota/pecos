@@ -596,9 +596,13 @@ inline size_t PolynomialApproximation::finalization_index(size_t i)
   SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
   const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
 
+  // sm_multi_index is updated in SparseGridDriver::finalize_sets() with all
+  // of the remaining trial sets.  Below, we determine the order with which
+  // these appended trial sets appear in savedSmolyakMultiIndex
+  // (SparseGridDriver::trialSets is a sorted set, but savedSmolyakMultiIndex
+  // retains order of insertion).
   size_t num_saved_indices = savedSmolyakMultiIndex.size(),
-    start = sm_multi_index.size() - num_saved_indices;
-
+         start = sm_multi_index.size() - num_saved_indices;
   return find_index(savedSmolyakMultiIndex, sm_multi_index[start+i]);
 }
 
