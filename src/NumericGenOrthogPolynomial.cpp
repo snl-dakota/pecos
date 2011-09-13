@@ -342,6 +342,13 @@ inner_product(const RealVector& poly_coeffs1,
     //  histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2, histogram_bin_pdf,
       distParams[0], distParams[u_bnd_index], 50*dp_len); // 100 per bin
+
+    // TO DO: consider FACTOR*ORDER1*ORDER2(*DP_LEN?); POLY ORDER IS MAIN ISSUE
+
+    // Note: histograms provide a finite set of PDF data.
+    // Gautschi: you cannot compute #Gauss pts > #discrete data points.
+    // --> consider throwing an error (at a higher level) for order > #bins
+
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //	histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
     break;

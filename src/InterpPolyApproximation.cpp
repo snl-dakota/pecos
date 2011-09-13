@@ -220,7 +220,7 @@ void InterpPolyApproximation::increment_coefficients()
     // than may be strictly necessary: all increments are filled in for all
     // vars for a step in level (ignoring anisotropy or generalized indices).
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const UShortArray& trial_set = ssg_driver->trial_index_set();
+    const UShortArray& trial_set = ssg_driver->trial_set();
     unsigned short max_trial_index = 0;
     for (size_t i=0; i<numVars; ++i)
       if (trial_set[i] > max_trial_index)
@@ -249,7 +249,7 @@ void InterpPolyApproximation::decrement_coefficients()
   case SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    savedSmolyakMultiIndex.push_back(ssg_driver->trial_index_set());
+    savedSmolyakMultiIndex.push_back(ssg_driver->trial_set());
     break;
   }
   }
@@ -283,7 +283,7 @@ void InterpPolyApproximation::restore_coefficients()
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     std::deque<UShortArray>::iterator sit
       = std::find(savedSmolyakMultiIndex.begin(), savedSmolyakMultiIndex.end(),
-		  ssg_driver->trial_index_set());
+		  ssg_driver->trial_set());
     if (sit != savedSmolyakMultiIndex.end())
       savedSmolyakMultiIndex.erase(sit);
     break;

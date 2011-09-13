@@ -195,7 +195,7 @@ public:
   /// return oldMultiIndex
   const std::set<UShortArray>& old_multi_index() const;
   /// return the trial index set from push_trial_set()
-  const UShortArray& trial_index_set() const;
+  const UShortArray& trial_set() const;
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
 
@@ -470,7 +470,7 @@ inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
 { return oldMultiIndex; }
 
 
-inline const UShortArray& SparseGridDriver::trial_index_set() const
+inline const UShortArray& SparseGridDriver::trial_set() const
 { return smolyakMultiIndex.back(); }
 
 

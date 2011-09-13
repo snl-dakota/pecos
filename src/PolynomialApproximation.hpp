@@ -579,15 +579,15 @@ inline bool PolynomialApproximation::restore_available()
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
   return (std::find(savedSmolyakMultiIndex.begin(),
-    savedSmolyakMultiIndex.end(), ssg_driver->trial_index_set()) !=
-    savedSmolyakMultiIndex.end());
+		    savedSmolyakMultiIndex.end(), ssg_driver->trial_set())
+	  != savedSmolyakMultiIndex.end());
 }
 
 
 inline size_t PolynomialApproximation::restoration_index()
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return find_index(savedSmolyakMultiIndex, ssg_driver->trial_index_set());
+  return find_index(savedSmolyakMultiIndex, ssg_driver->trial_set());
 }
 
 

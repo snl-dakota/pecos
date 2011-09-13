@@ -405,7 +405,7 @@ void OrthogPolyApproximation::increment_coefficients()
       tpExpansionCoeffGrads.resize(new_size);
       // update tpMultiIndex
       UShortArray quad_order(numVars), int_order(numVars), exp_order(numVars);
-      ssg_driver->level_to_order(ssg_driver->trial_index_set(), quad_order);
+      ssg_driver->level_to_order(ssg_driver->trial_set(), quad_order);
       quadrature_order_to_integrand_order(quad_order, int_order);
       integrand_order_to_expansion_order(int_order, exp_order);
       tensor_product_multi_index(exp_order, tpMultiIndex[last_index], true);
@@ -462,7 +462,7 @@ void OrthogPolyApproximation::decrement_coefficients()
       numExpansionTerms   = tpMultiIndexMapRef.back();
       multiIndex.resize(numExpansionTerms); // truncate previous increment
       // reset tensor-product bookkeeping and save restorable data
-      savedSmolyakMultiIndex.push_back(ssg_driver->trial_index_set());
+      savedSmolyakMultiIndex.push_back(ssg_driver->trial_set());
       savedTPMultiIndex.push_back(tpMultiIndex.back());
       savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
       savedTPMultiIndexMapRef.push_back(numExpansionTerms);
@@ -494,7 +494,7 @@ void OrthogPolyApproximation::restore_coefficients()
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       std::deque<UShortArray>::iterator sit
 	= std::find(savedSmolyakMultiIndex.begin(), 
-		    savedSmolyakMultiIndex.end(),ssg_driver->trial_index_set());
+		    savedSmolyakMultiIndex.end(), ssg_driver->trial_set());
       size_t index_star = std::distance(savedSmolyakMultiIndex.begin(), sit);
       savedSmolyakMultiIndex.erase(sit);
       std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
