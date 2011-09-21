@@ -408,14 +408,20 @@ void SparseGridDriver::initialize_api_arrays(short growth_rate)
   apiGrowthRules.resize(numVars);
 
   for (size_t i=0; i<numVars; i++) {
-    // convert collocRules to apiIntegrationRules.  NEWTON_COTES is not
-    // recognized by sgmg/sgmga and must be converted to another rule:
-    // > GOLUB_WELSCH is the user-defined rule type, but an open rule is
-    //   assumed which gives the wrong exponential growth.
-    // > CLENSHAW_CURTIS is a closed rule and provides an effective surrogate
-    //   (NEWTON_COTES points are still computed via basis_collocation_points).
-    apiIntegrationRules[i] = (collocRules[i] == NEWTON_COTES) ?
-      CLENSHAW_CURTIS /*GOLUB_WELSCH*/ : (int)collocRules[i];
+    // GOLUB_WELSCH currently corresponds to SGMG/SGMGA User-open and 
+    // NEWTON_COTES currently corresponds to SGMG/SGMGA User-closed.
+    // So for now, an explicit mapping is not necessary.
+    apiIntegrationRules[i] = (int)collocRules[i];
+    /*
+    // convert collocRules to apiIntegrationRules: NEWTON_COTES becomes
+    // USER_CLOSED and GOLUB_WELSCH becomes USER_OPEN for purposes of
+    // interface to sgmg/sgmga.
+    switch (collocRules[i]) {
+    case GOLUB_WELSCH: apiIntegrationRules[i] = USER_OPEN;           break;
+    case NEWTON_COTES: apiIntegrationRules[i] = USER_CLOSED;         break;
+    default:           apiIntegrationRules[i] = (int)collocRules[i]; break;
+    }
+    */
 
     // convert growth_rate to apiGrowthRules
     switch (collocRules[i]) {
