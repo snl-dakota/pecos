@@ -1032,7 +1032,7 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
 	int lev, o, prev_o = 1, max_lev = 4, i_rule = GENZ_KEISTER,
 	  g_rule = FULL_EXPONENTIAL; // map l->o directly without restriction
 	for (lev=0; lev<=max_lev; ++lev) {
-	  webbur::level_growth_to_order(1, &lev, &i_rule, &g_rule, &o);
+	  webbur::level_growth_to_order_new(1, &lev, &i_rule, &g_rule, &o);
 	  if (o == quad_order[i])
 	    { int_order[i] = 2*quad_order[i] - prev_o; break; }
 	  else
