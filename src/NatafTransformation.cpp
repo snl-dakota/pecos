@@ -1603,6 +1603,10 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
 	jacobian_xz(i, i) = phi(z_vars[i]) /
 	  bounded_normal_pdf(x_vars[i], ranVarMeansX[i], ranVarStdDevsX[i],
 			     ranVarLowerBndsX[i], ranVarUpperBndsX[i]);
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	jacobian_xz(i, i) = std_uniform_pdf() /
+	  bounded_normal_pdf(x_vars[i], ranVarMeansX[i], ranVarStdDevsX[i],
+			     ranVarLowerBndsX[i], ranVarUpperBndsX[i]);
       else if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
 	jacobian_xz(i, i) = 1.;
       else
@@ -1619,6 +1623,10 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     case BOUNDED_LOGNORMAL: // bounded lognormal
       if (ranVarTypesU[i] == STD_NORMAL)
 	jacobian_xz(i, i) = phi(z_vars[i]) /
+	  bounded_lognormal_pdf(x_vars[i], ranVarMeansX[i], ranVarStdDevsX[i],
+				ranVarLowerBndsX[i], ranVarUpperBndsX[i]);
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	jacobian_xz(i, i) = std_uniform_pdf() /
 	  bounded_lognormal_pdf(x_vars[i], ranVarMeansX[i], ranVarStdDevsX[i],
 				ranVarLowerBndsX[i], ranVarUpperBndsX[i]);
       else if (ranVarTypesU[i] == BOUNDED_LOGNORMAL) // Golub-Welsch: no x-form
@@ -1685,14 +1693,17 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
       Real scale = upr - lwr;
       if (ranVarTypesU[i] == STD_BETA) // linear scaling
 	jacobian_xz(i, i) = scale/2.;
-      else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
+      else { 
 	Real scaled_x = (x_vars[i]-lwr)/scale,
 	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i][0],
 			     ranVarAddtlParamsX[i][1]) / scale;
-	jacobian_xz(i, i) = phi(z_vars[i]) / pdf;
+	if (ranVarTypesU[i] == STD_NORMAL) // nonlinear transformation
+	  jacobian_xz(i, i) = phi(z_vars[i]) / pdf;
+	else if (ranVarTypesU[i] == STD_UNIFORM) // nonlinear transformation
+	  jacobian_xz(i, i) = std_uniform_pdf() / pdf;
+	else
+	  err_flag = true;
       }
-      else
-	err_flag = true;
       break;
     }
     case GAMMA:
@@ -1829,6 +1840,10 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	jacobian_zx(i, i) = bounded_normal_pdf(x_vars[i], ranVarMeansX[i],
 	  ranVarStdDevsX[i], ranVarLowerBndsX[i], ranVarUpperBndsX[i]) /
 	  phi(z_vars[i]);
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	jacobian_zx(i, i) = bounded_normal_pdf(x_vars[i], ranVarMeansX[i],
+	  ranVarStdDevsX[i], ranVarLowerBndsX[i], ranVarUpperBndsX[i]) /
+	  std_uniform_pdf();
       else if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
 	jacobian_zx(i, i) = 1.;
       else
@@ -1847,6 +1862,10 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
 	jacobian_zx(i, i) = bounded_lognormal_pdf(x_vars[i], ranVarMeansX[i],
 	  ranVarStdDevsX[i], ranVarLowerBndsX[i], ranVarUpperBndsX[i]) /
 	  phi(z_vars[i]);
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	jacobian_zx(i, i) = bounded_lognormal_pdf(x_vars[i], ranVarMeansX[i],
+	  ranVarStdDevsX[i], ranVarLowerBndsX[i], ranVarUpperBndsX[i]) /
+	  std_uniform_pdf();
       else if (ranVarTypesU[i] == BOUNDED_LOGNORMAL) // Golub-Welsch: no x-form
 	jacobian_zx(i, i) = 1.;
       else
@@ -1911,14 +1930,17 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
       Real scale = upr - lwr;
       if (ranVarTypesU[i] == STD_BETA) // linear scaling
 	jacobian_zx(i, i) = 2./scale;
-      else if (ranVarTypesU[i] == STD_NORMAL) {
+      else {
 	Real scaled_x = (x_vars[i]-lwr)/scale,
 	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i][0],
 			     ranVarAddtlParamsX[i][1]) / scale;
-	jacobian_zx(i, i) = pdf / phi(z_vars[i]);
+	if (ranVarTypesU[i] == STD_NORMAL)
+	  jacobian_zx(i, i) = pdf / phi(z_vars[i]);
+	else if (ranVarTypesU[i] == STD_UNIFORM)
+	  jacobian_zx(i, i) = pdf / std_uniform_pdf();
+	else
+	  err_flag = true;
       }
-      else
-	err_flag = true;
       break;
     }
     case GAMMA: {
