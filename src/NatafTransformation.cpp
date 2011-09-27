@@ -2818,10 +2818,17 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 {
   // This routine calculates the Hessian of the transformation x(z):
   //
+  // For z type is STD_NORMAL:
   // d^2x/dz^2 = d/dz (dx/dz) = d/dz ( phi(z)/f(x) )
   //           = (f(x) phi'(z) - phi(z) f'(x) dx/dz)/f(x)^2
-  //           = -phi(z)/f(x)^2 (z f(x) + f'(x) dx/dz)
+  //           = -phi(z)/f(x)^2 (z f(x) + f'(x) dx/dz) [since phi'(z)=-z phi(z)]
   //           = -dx/dz (z + f'(x)/f(x) dx/dz)
+  //
+  // For z type is STD_UNIFORM:
+  // d^2x/dz^2 = d/dz (dx/dz) = d/dz ( u(z)/f(x) )
+  //           = (f(x) u'(z) - u(z) f'(x) dx/dz)/f(x)^2
+  //           = -dx/dz u(z)/f(x) f'(x)/f(x)           [since u'(z)=0]
+  //           = -dx/dz dx/dz f'(x)/f(x)
   //
   // This requires the additional calculation of f'(x), the derivative of
   // the PDF.  Since GSL does not provide these, PDFs are differentiated
@@ -2861,20 +2868,26 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	err_flag = true;
       break;
     case BOUNDED_NORMAL: // bounded normal
-      if (ranVarTypesU[i] == STD_NORMAL) {
+      if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
+	hessian_xz[i](i, i) = 0.;
+      else { // nonlinear transformation
 	const Real& mean  = ranVarMeansX[i];
 	const Real& stdev = ranVarStdDevsX[i];
-	const Real& z     = z_vars[i];
-	const Real& x     = x_vars[i];
+	const Real& z = z_vars[i]; const Real& x = x_vars[i];
 	Real pdf = bounded_normal_pdf(x, mean, stdev, ranVarLowerBndsX[i],
 				      ranVarUpperBndsX[i]),
-	  pdf_deriv = pdf*(mean-x)/stdev/stdev, dx_dz = phi(z)/pdf;
-	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
+	  pdf_deriv = pdf*(mean-x)/stdev/stdev;
+	if (ranVarTypesU[i] == STD_NORMAL) {
+	  Real dx_dz = phi(z) / pdf;
+	  hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
+	}
+	else if (ranVarTypesU[i] == STD_UNIFORM) {
+	  Real dx_dz = std_uniform_pdf() / pdf;
+	  hessian_xz[i](i, i) = -dx_dz*dx_dz*pdf_deriv/pdf;
+	}
+	else
+	  err_flag = true;
       }
-      else if (ranVarTypesU[i] == BOUNDED_NORMAL) // Golub-Welsch: no transform
-	hessian_xz[i](i, i) = 0.;
-      else
-	err_flag = true;
       break;
     case LOGNORMAL: // unbounded lognormal: z = (ln x - lambda)/zeta
       if (ranVarTypesU[i] == STD_NORMAL) {
@@ -2894,23 +2907,29 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	err_flag = true;
       break;
     case BOUNDED_LOGNORMAL: // bounded lognormal
-      if (ranVarTypesU[i] == STD_NORMAL) {
+      if (ranVarTypesU[i] == BOUNDED_LOGNORMAL) // Golub-Welsch: no x-form
+	hessian_xz[i](i, i) = 0.;
+      else { // nonlinear transformation
 	const Real& lambda = ranVarAddtlParamsX[i][0];
 	const Real& zeta   = ranVarAddtlParamsX[i][1];
 	const Real& mean   = ranVarMeansX[i];
 	const Real& stdev  = ranVarStdDevsX[i];
-	const Real& x      = x_vars[i];
-	const Real& z      = z_vars[i];
+	const Real& x = x_vars[i]; const Real& z = z_vars[i];
 	Real xms = (log(x)-lambda)/zeta,
 	     pdf = bounded_lognormal_pdf(x, mean, stdev, ranVarLowerBndsX[i],
 					 ranVarUpperBndsX[i]),
-	     pdf_deriv = -pdf*(zeta+xms)/x/zeta, dx_dz = phi(z)/pdf;
-	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
+	     pdf_deriv = -pdf*(zeta+xms)/x/zeta;
+	if (ranVarTypesU[i] == STD_NORMAL) {
+	  Real dx_dz = phi(z) / pdf;
+	  hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
+	}
+	else if (ranVarTypesU[i] == STD_UNIFORM) {
+	  Real dx_dz = std_uniform_pdf() / pdf;
+	  hessian_xz[i](i, i) = -dx_dz*dx_dz*pdf_deriv/pdf;
+	}
+        else
+	  err_flag = true;
       }
-      else if (ranVarTypesU[i] == BOUNDED_LOGNORMAL) // Golub-Welsch: no x-form
-	hessian_xz[i](i, i) = 0.;
-      else
-	err_flag = true;
       break;
     case UNIFORM:
       //  F(x) = (x-L)/(U-L)
@@ -3006,7 +3025,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
       // f'(x) = f(x) ((alpha-1)/(x-lwr) - (beta-1)/(upr-x))
       if (ranVarTypesU[i] == STD_BETA) // linear scaling
 	hessian_xz[i](i, i) = 0.;
-      else if (ranVarTypesU[i] == STD_NORMAL) { // nonlinear transformation
+      else { // nonlinear transformation
 	const Real& alpha = ranVarAddtlParamsX[i][0];
 	const Real& beta  = ranVarAddtlParamsX[i][1];
 	const Real& lwr   = ranVarLowerBndsX[i];
@@ -3015,11 +3034,17 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	Real scale = upr - lwr, scaled_x = (x-lwr)/scale,
 	  pdf = std_beta_pdf(scaled_x, alpha, beta)/scale,
 	  pdf_deriv = pdf*((alpha-1.)/(x-lwr) - (beta-1.)/(upr-x));
-	Real dx_dz = phi(z) / pdf;
-	hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
+	if (ranVarTypesU[i] == STD_NORMAL) {
+	  Real dx_dz = phi(z) / pdf;
+	  hessian_xz[i](i, i) = -dx_dz*(z + pdf_deriv*dx_dz/pdf);
+	}
+	else if (ranVarTypesU[i] == STD_UNIFORM) {
+	  Real dx_dz = std_uniform_pdf() / pdf;
+	  hessian_xz[i](i, i) = -dx_dz*dx_dz*pdf_deriv/pdf;
+	}
+	else
+	  err_flag = true;
       }
-      else
-	err_flag = true;
       break;
     case GAMMA:
       //  F(x) = gsl
