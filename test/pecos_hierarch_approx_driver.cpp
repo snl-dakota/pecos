@@ -14,6 +14,7 @@
 
 using namespace Pecos;
 
+//Forward declarations of the test functions.
 Real test_function(const RealVector& x);
 RealVector test_function_grad(const RealVector& x);
 
@@ -24,14 +25,29 @@ void test_function_2_grad(const RealVector& x, RealVector& grad);
 int main(int argc, char** argv)
 {
 
+  /*Declare a new HierarchInterpPolyApproximation object
+    of basis_type 0 in one variable.  This approximation
+    will consist of piecewise linear functions since
+    use_derivs is false.
+  */
   HierarchInterpPolyApproximation *a = 
     new HierarchInterpPolyApproximation(0,1,false);
+  
+  /*Construct an integration driver for the approximation.
+    The domain of the approximation is [0,1] and the approximation is 
+    intialized to level 1.
+  */
   LocalRefinableDriver l_driver;
   l_driver.initialize_grid(RealArray(1,0),RealArray(1,1),1);
   const std::vector<CollocationPoint>& col_pts = 
     l_driver.get_collocation_points();
   a->integration_driver_rep(&l_driver);
 
+  /*Perform a few simple tests to make sure everything is working. First we 
+    will push a few dummy values into the approximation, compute the 
+    coefficients and test that the correct values and gradients 
+    are computed by the approximation.
+  */
   RealVector x(1);
   Real fn_val;
   RealVector fn_grad;
@@ -84,6 +100,13 @@ int main(int argc, char** argv)
   assert(a->value(x) == 5.6);
   assert(a->gradient(x)[0] == 0);
 
+  /*These next two test check that the linera interpolation is correct. At
+    this point the 'unknown' function is known to be equal to 0 at 0, 2.718
+    at .5 and 5.6 at 1.  Since the approximation is piecewise linear, at .25
+    the interpolant should be equal to (0 + 2.718)/2 = 1.359.  The gradient
+    should be (2.718 - 0)/(.5 - 0) = 5.436.  A similar check is done for
+    x = .75.
+  */
   x[0] = .25;
 
   std::cout << "The value is... " << a->value(x) << std::endl;
@@ -100,6 +123,11 @@ int main(int argc, char** argv)
   assert(std::abs(a->value(x) - 4.159) < 1e-10);
   assert(std::abs(a->gradient(x)[0] - 5.764) < 1e-10);
 
+  /*Now we do a local refinement of the grid.  Only the collocation point at
+    zero is refined.  The new grid has points {0, .25, .5, 1} a few tests are
+    checked at this level.  The interested (or skeptical) reader can check that
+    things are working as intended.
+  */
   BoolDeque refinementSelector(2,false);
   refinementSelector[0] = true;
   l_driver.refine_locally(refinementSelector);
@@ -116,15 +144,19 @@ int main(int argc, char** argv)
   std::cout << "The value is... " << a->value(x) << std::endl;
   std::cout << "The gradient is... " << a->gradient(x)[0] << std::endl;
   
-  //2D example.
-  //delete a;
-  //a = new HierarchInterpPolyApproximation(0,1,false);
+  /*2D example.  The new approximation domain is [-1,1]^2 and the grid is
+    initialized to level 8.
+  */
   points.clear_data();
   l_driver.initialize_grid(RealArray(2,-1),RealArray(2,1),8);
 
   RealMatrix col_pts_mat;
   l_driver.compute_grid(col_pts_mat);
   
+  /*Loop over the collocation points and evaluate the test function at each of
+    the collocation points.  Again we're testing the linear interpolant so the
+    gradients don't matter.
+  */
   for (unsigned int idx = 0; idx < l_driver.grid_size() ; ++idx) {
     RealVector x(Teuchos::Copy,col_pts_mat[idx],2);
     Real fn_val = test_function(x);
@@ -133,23 +165,36 @@ int main(int argc, char** argv)
   }
   std::cout << "Grid size is: " << l_driver.grid_size() << std::endl;
   a->surrogate_data(points);
+  
+  //This is a rather expensive operation.
   a->compute_coefficients();
 
+  //Test that the interpolant is exact at the grid points.
   for (unsigned int idx = 0; idx < l_driver.grid_size(); ++idx ) {
     assert( std::abs( a->value( points.continuous_variables(idx) ) -  
-		      test_function(points.continuous_variables(idx)) < 1e-9) );
+		      test_function(points.continuous_variables(idx)) < 1e-9));
   }
+
+  /*Test the interpolant at a dummy point.  This grid is fine enough that the
+    error should be small.
+  */
   x.size(2);
   x[0] = .69324;
   x[1] = .84529;
   std::cout << "Value =  " << test_function(x) << std::endl;
   std::cout << "Approximate = " << a->value(x) << std::endl;
-  std::cout << "Error = " << std::abs(a->value(x) - test_function(x)) << std::endl;
+  std::cout << "Error = " << std::abs(a->value(x) - test_function(x)) 
+	    << std::endl;
 
+  //Check the mean computation also.  This should evaluate to near zero.
   std::cout << "Mean = " << a->mean() << std::endl;
 
-  //2D example with gradients.  Not fully implemented yet.
-  
+
+  /*2D example with gradients. For this test we're going to use a function
+    with gradients.  First construct a new approximation to use gradients and
+    initialize a new grid.  The approximation domain is [-1,1]^2 and the grid
+    is initialized to level 9.
+  */ 
   delete a;
   a = new HierarchInterpPolyApproximation(0,2,true);
   a->integration_driver_rep(&l_driver);
@@ -158,6 +203,7 @@ int main(int argc, char** argv)
 
   l_driver.compute_grid(col_pts_mat);
   
+  //Evaluate the function and the gradient at the collocation points.
   fn_grad.size(2);
   for (unsigned int idx = 0; idx < l_driver.grid_size() ; ++idx) {
     RealVector x(Teuchos::Copy,col_pts_mat[idx],2);
@@ -170,21 +216,26 @@ int main(int argc, char** argv)
   a->surrogate_data(points);
   std::cout << "Grid size is: " << l_driver.grid_size() << std::endl;
   a->compute_coefficients();
-
+  
+  //Check that the interpolation is exact at the grid points.
   for (unsigned int idx = 0; idx < l_driver.grid_size(); ++idx ) {
-    //std::cout << "Value = " << test_function_2(points.continuous_variables(idx)) 
-    //<< " approx = " << a->value( points.continuous_variables(idx) ) << std::endl;
-    assert( std::abs( a->value( points.continuous_variables(idx) ) -  
-		      test_function_2(points.continuous_variables(idx)) < 1e-9) );
+    assert(std::abs( a->value( points.continuous_variables(idx) ) -  
+		   test_function_2(points.continuous_variables(idx)) < 1e-9) );
   }
+
+  //Check the interpolation at a non-grid point.
   x.size(2);
   x[0] = .69324;
   x[1] = .84529;
   RealVector grad2(2);
   std::cout << "Value =  " << test_function_2(x) << std::endl;
   std::cout << "Approximate = " << a->value(x) << std::endl;
-  std::cout << "Error = " << std::abs(a->value(x) - test_function_2(x))/test_function_2(x) << std::endl;
-  assert( std::abs(test_function_2(x) - a->value(x) ) / test_function_2(x) < 1e-2);
+  std::cout << "Error = " 
+	    << std::abs(a->value(x) - test_function_2(x))/test_function_2(x) 
+	    << std::endl;
+  assert( std::abs(test_function_2(x) - a->value(x) ) / test_function_2(x) < 
+	  1e-2);
+
   test_function_2_grad(x,grad2);
   std::cout << "Gradient = [" << grad2[0] 
 	    << "," << grad2[1] << "]" <<std::endl;

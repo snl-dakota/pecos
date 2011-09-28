@@ -20,17 +20,19 @@
 namespace Pecos {
 
 /// Derived approximation class for piecewise linear and cubic hierarchical 
-/// interpolation polynomials (local approximation interpolating function values and
-/// potentially gradients at collocation points).
+/// interpolation polynomials (local approximation interpolating function 
+/// values and potentially gradients at collocation points).
 
-/** The HierarchInterpPolyApproximation class provides a local piecewise polynomial
-    approximation based on the hierarchical approach described in 
-    X. Ma and N. Zabaras "An adaptive hierarchical sparse grid collocation algorithm
-    for the solution of stochastic differential equations", Journal of Computational
-    Physics, 228 (2009), 3084-3113.  Both piecewise linear basis functions using 
-    function values at the collocation points and cubic Hermite basis functions
-    using both values and derivatives are available.  It is used primarily
-    for stochastic collocation approaches to uncertainty quantification. */
+/** The HierarchInterpPolyApproximation class provides a local piecewise 
+    polynomial approximation based on the hierarchical approach described in 
+    X. Ma and N. Zabaras "An adaptive hierarchical sparse grid collocation 
+    algorithm for the solution of stochastic differential equations", Journal 
+    of Computational Physics, 228 (2009), 3084-3113.  Both piecewise linear 
+    basis functions using function values at the collocation points and cubic 
+    Hermite basis functions using both values and derivatives are available.  
+    It is used primarily for stochastic collocation approaches to uncertainty 
+    quantification. 
+*/
 
 class HierarchInterpPolyApproximation: public InterpPolyApproximation
 {
@@ -40,7 +42,13 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  /// default constructor
+  /// Default constructor
+  /** @param basis_type Has no effect on the derived class.
+      @param num_vars The number of variables that define the problem.
+      @param use_derivs If true the interpolant consists of piecewise cubic
+        Hermite polynomials which interpolate the function valuse andgraidents.        If false the interpolant is piecewise linear and only interpolates
+        function values.
+  */ 
   HierarchInterpPolyApproximation(short basis_type, 
 				  size_t num_vars,
 				  bool use_derivs);
@@ -58,13 +66,33 @@ public:
   //
 
 
-  /// retrieve the response expansion value for a given parameter vector
+  /// retrieve the response expansion value for a given parameter vector.
+  /** @param x A RealVector of size numVars.  The interpolant is evaluated at
+        this point.
+      @return The value of the interpolant at x.
+  */
   Real value(const RealVector& x);
+  
   /// retrieve the response expansion gradient for a given parameter vector
   /// and default DVV
+  /** @param x A RealVector of size numVars.  The gradient of the interpolant
+        is evaluated at this point.
+     @return A const reference to approxGradient.  This will be a RealVector
+       of length numVars containing the gradient of the interpolant at x.
+  */
   const RealVector& gradient(const RealVector& x);
+  
   /// retrieve the response expansion gradient for a given parameter vector
   /// and given DVV
+  /** @param x A RealVector of size numVars.  The gradient of the interpolatnt
+        with respect to the variables indicated in the array dvv is evaluated
+        at this point.
+      @param dvv A SizetArray of size at least 1 and at most numVars.  Each
+        entry in dvv indicates a direction to take the gradient in.
+      @return A const reference to approxGradient.  This will be a RealVector
+        of length dvv.size() containing the gradient of the interpolant at x
+        with respect to the variables indicated in the dvv input parameter.
+  */
   const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
 
   Real stored_value(const RealVector& x);
