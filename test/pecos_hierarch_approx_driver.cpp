@@ -180,10 +180,16 @@ int main(int argc, char** argv)
   x.size(2);
   x[0] = .69324;
   x[1] = .84529;
+  RealVector grad2(2);
   std::cout << "Value =  " << test_function_2(x) << std::endl;
   std::cout << "Approximate = " << a->value(x) << std::endl;
-  //assert( std::abs(test_function_2(x) - a->value(x) ) / test_function_2(x) < 1e-5);
   std::cout << "Error = " << std::abs(a->value(x) - test_function_2(x))/test_function_2(x) << std::endl;
+  assert( std::abs(test_function_2(x) - a->value(x) ) / test_function_2(x) < 1e-2);
+  test_function_2_grad(x,grad2);
+  std::cout << "Gradient = [" << grad2[0] 
+	    << "," << grad2[1] << "]" <<std::endl;
+  std::cout << "Approx_gradient = [" << a->gradient(x)[0] 
+	    << "," << a->gradient(x)[1] << "]" <<std::endl;
   assert( std::abs(a->mean()) < 1e-10 );
   std::cout << "Mean = " << a->mean() << std::endl;
   

@@ -201,7 +201,7 @@ namespace Pecos {
 	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
 		localGrad_i *= (dim_idx == dim_idx2) ? 
 		  1 / ( point[dim_idx] - this_point_support[0][dim_idx] ) :
-		  (x[dim_idx2] - this_point_support[0][dim_idx]) / 
+		  (x[dim_idx2] - this_point_support[0][dim_idx2]) / 
 		  ( point[dim_idx2] - this_point_support[0][dim_idx2] );
 	      }
 	    } else {
@@ -339,8 +339,183 @@ namespace Pecos {
   const RealVector& HierarchInterpPolyApproximation::
   gradient(const RealVector& x, const SizetArray& dvv)
   {
-    //TODO
-    PCerr << "TODO: gradient in all variables mode" << std::endl;
+    size_t num_deriv_vars = dvv.size();
+    if ( approxGradient.length() != num_deriv_vars )
+      approxGradient.sizeUninitialized(num_deriv_vars);
+    
+    if (!configOptions.expansionCoeffFlag) {
+      PCerr << "Error: expansion coefficients not defined in "
+	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
+      abort_handler(-1);
+    }
+    
+    for ( unsigned int dim_idx = 0; dim_idx < num_deriv_vars; ++dim_idx )
+      approxGradient[dim_idx] = 0; 
+    
+    LocalRefinableDriver* lr_driver = 
+      static_cast<LocalRefinableDriver*>(driverRep);
+    unsigned int num_colloc_points = lr_driver->grid_size();
+
+    //Grab the supports of the hierarchical basis functions.
+    const std::vector<Real2DArray>& supports = lr_driver->get_supports();
+
+    //Determine which basis functions share their support with x.
+    const IntArray& supportIndicator = in_support_of(x);
+    const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
+    switch ( configOptions.useDerivs ) {
+    case false:
+      // Sum over only those elements whose support contains x
+      for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
+	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
+	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
+	const Real2DArray& this_point_support = supports[supportIndicator[i]];
+	
+	for ( unsigned int dim_idx = 0; dim_idx < num_deriv_vars; ++dim_idx ) {
+	  Real localGrad_i = 1;
+	  const size_t deriv_index = dvv[dim_idx] - 1;
+	  const unsigned int this_dim_level = level_index[deriv_index][0];
+	  const unsigned int this_dim_index = level_index[deriv_index][1];
+	  if ( this_dim_level == 1 ) {
+	    localGrad_i *= 0;  //constant case
+	  } else { //Linear hat functions
+	    if ( (x[deriv_index] == point[deriv_index]) || 
+		 (x[deriv_index] == this_point_support[0][deriv_index]) || 
+		 (x[deriv_index] == this_point_support[1][deriv_index]) ) {
+	      localGrad_i *= 0;
+	    } else if (x[deriv_index] < point[deriv_index]) {
+	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
+		localGrad_i *= (deriv_index == dim_idx2) ? 
+		  1 / ( point[deriv_index] - this_point_support[0][deriv_index] ) :
+		  (x[dim_idx2] - this_point_support[0][dim_idx2]) / 
+		  ( point[dim_idx2] - this_point_support[0][dim_idx2] );
+	      }
+	    } else {
+		for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
+		  localGrad_i *= (deriv_index == dim_idx2) ? 
+		    -1 / ( this_point_support[1][deriv_index] - point[deriv_index] ) :
+		    (point[dim_idx2] - x[dim_idx2])/( this_point_support[1][dim_idx2] - point[dim_idx2] );
+		}
+	    }   
+	  }
+	  approxGradient[dim_idx] = approxGradient[dim_idx] + 
+	    expansionType1Coeffs[supportIndicator[i]] * localGrad_i;
+	}
+      }
+      break;
+    case true:
+       // Sum over only those elements whose support contains x
+      for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
+	const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]];
+	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
+	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
+	const Real2DArray& this_point_support = supports[supportIndicator[i]];
+	
+	// These nested loops are filthy.
+	// dim_idx keeps track of which gradient entry we're filling.
+	// dim_idx2 keeps track of which variable we're thinking about.
+	// dim_idx3 tess us which term we're working on. 
+	for ( unsigned int dim_idx = 0; dim_idx < num_deriv_vars; ++dim_idx ) {
+	  RealVector terms(numVars+1);
+	  const size_t deriv_index = dvv[dim_idx] - 1;
+	  terms[0] = expansionType1Coeffs[supportIndicator[i]];
+	  for ( unsigned int j = 0; j < numVars; ++j ) {
+	    terms[j+1] = coeff2_i[j];
+	  }
+	  for ( unsigned int dim_idx2 = 0; dim_idx2< numVars; ++dim_idx2 ) { 
+	    const unsigned int this_dim_level = level_index[dim_idx2][0];
+	    const unsigned int this_dim_index = level_index[dim_idx2][1];
+	    if ( this_dim_level == 1 ) {
+	      terms[0] *= (deriv_index == dim_idx2) ? 0 : 1;  
+	      if ( x[dim_idx2] == point[dim_idx2] ) {
+		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
+		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  1 : 0;  // Take derivative of basis else don't
+		  } else {  //Use type 1.
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 0 : 1; // Take derivative of basis else don't
+		  }
+		}
+	      } else if ( x[dim_idx2] < point[dim_idx2] ) {
+		const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
+		      (point[dim_idx2] - this_point_support[0][dim_idx2]);
+		const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
+		const Real dt_by_dx = 1/dx_by_dt;
+		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
+		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		      (3*t*t-2*t) : 
+		      dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
+		  } else { //use type 1
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		      0 : 1; // Take derivative of basis else don't
+		  }
+		}
+	      } else {
+		const Real t = (x[dim_idx2] - point[dim_idx2])/
+		      (this_point_support[1][dim_idx2] - point[dim_idx2]);
+		const Real dx_by_dt = this_point_support[1][dim_idx2] - point[dim_idx2];
+		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
+		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		      (3*t*t - 4*t + 1) : 
+		      dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
+		  } else { //use type 1
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		      0 : 1; // Take derivative of basis else don't
+		  }
+		}
+	      }
+	    } else {  
+	      if ( x[dim_idx2] == point[dim_idx2] ) {
+		terms[0] *= (dim_idx == dim_idx2) ? 0 : 1;
+		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
+		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  1 : 0;  // Take derivative of basis else don't
+		  } else {  //Use type 1.
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 0 : 1; // Take derivative of basis else don't
+		  }
+		}
+	      } else if ( x[dim_idx2] < point[dim_idx2] ) {
+		const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
+		      (point[dim_idx2] - this_point_support[0][dim_idx2]);
+		const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
+		const Real dt_by_dx = 1/dx_by_dt;
+		terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(-6*t*t + 6*t) : -2*t*t*t + 3*t*t;
+		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
+		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		      (3*t*t-2*t) : 
+		      dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
+		  } else { //use type 1
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		      dt_by_dx*(-6*t*t+6*t) : t*t*(3-2*t); // Take derivative of basis else don't
+		  }
+		}
+	      } else {
+		const Real t = (x[dim_idx2] - point[dim_idx2])/
+		      (this_point_support[1][dim_idx2] - point[dim_idx2]);
+		const Real dx_by_dt = this_point_support[0][dim_idx2] - point[dim_idx2];
+		const Real dt_by_dx = 1/dx_by_dt;
+		terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(6*t*t - 6*t) : 2*t*t*t - 3*t*t + 1;
+		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
+		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		      (3*t*t - 4*t + 1) : 
+		      dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
+		  } else { //use type 1
+		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		      dt_by_dx*(6*t*t-6*t) : (1+2*t)*(1-t)*(1-t); // Take derivative of basis else don't
+		  }
+		}
+	      }
+	    }
+	  }
+	  for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator ) {
+	    approxGradient[dim_idx] += terms[accumulator];
+	  }
+	}
+      }
+      break;
+    }
     return approxGradient;
 
   }
