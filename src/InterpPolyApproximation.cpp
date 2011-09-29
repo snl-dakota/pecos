@@ -35,7 +35,8 @@ void InterpPolyApproximation::
 distribution_types(short& poly_type_1d, short& rule)
 {
   switch (basisType) {
-  case PIECEWISE_INTERPOLATION_POLYNOMIAL:
+  case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
+  case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
     poly_type_1d = (configOptions.useDerivs) ?
       PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
     rule = NEWTON_COTES;                    break;

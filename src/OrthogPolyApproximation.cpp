@@ -1540,8 +1540,8 @@ void OrthogPolyApproximation::regression()
 
   size_t eqns_per_pt = (configOptions.useDerivs) ? 1 + numVars : 1;
   int num_cons = (anchor_pt) ? num_data_pts + eqns_per_pt : num_data_pts;
-  bool fn_constrained_lls
-    = (configOptions.useDerivs && num_cons < numExpansionTerms);
+  bool fn_constrained_lls = false;
+  //  = (configOptions.useDerivs && num_cons < numExpansionTerms);
   SizetList::iterator fit;
   Teuchos::LAPACK<int, Real> la;
   double *A_matrix, *work;
@@ -1880,11 +1880,11 @@ void OrthogPolyApproximation::regression()
 	  expansionCoeffGrads(j,i)
 	    = b_vectors[(j+num_coeff_rhs)*num_data_pts+i];
 
-#ifdef DEBUG
+//#ifdef DEBUG
     // For SVD, the condition number can be extracted from the singular values
     PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
 	  << s_vector[0]/s_vector[num_cols_A-1] << '\n';
-#endif // DEBUG
+//#endif // DEBUG
 
     delete [] b_vectors;
     delete [] s_vector;

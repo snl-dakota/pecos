@@ -8,6 +8,7 @@
 
 #include "BasisApproximation.hpp"
 #include "NodalInterpPolyApproximation.hpp"
+#include "HierarchInterpPolyApproximation.hpp"
 #include "OrthogPolyApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: BasisApproximation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
@@ -78,10 +79,12 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
 #endif
 
   switch (basis_type) {
-  case GLOBAL_INTERPOLATION_POLYNOMIAL: case PIECEWISE_INTERPOLATION_POLYNOMIAL:
-    return //(hierarch) ?
-    //new HierarchInterpPolyApproximation(basis_type, num_vars, use_derivs) :
-      new NodalInterpPolyApproximation(basis_type, num_vars, use_derivs);
+  case GLOBAL_INTERPOLATION_POLYNOMIAL:
+  case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
+    return new NodalInterpPolyApproximation(basis_type, num_vars, use_derivs);
+    break;
+  case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
+    return new HierarchInterpPolyApproximation(basis_type,num_vars,use_derivs);
     break;
   case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     return new OrthogPolyApproximation(approx_order, num_vars, use_derivs);
