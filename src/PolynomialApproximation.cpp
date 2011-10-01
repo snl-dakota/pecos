@@ -501,9 +501,9 @@ total_order_multi_index(const UShortArray& upper_bound,
 }
 
 
-/// TO DO: Add overloaded function to support integration over variable subset
 void PolynomialApproximation::
-compute_numerical_response_moments(size_t num_moments)
+compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
+			  RealVector& moments)
 {
   // computes and stores the following moments:
   // > mean     (1st raw moment)
@@ -515,50 +515,113 @@ compute_numerical_response_moments(size_t num_moments)
   // employ a specific combination of raw, central, and standardized moments
   if (num_moments < 1 || num_moments > 4) {
     PCerr << "Error: unsupported number of moments requested in Polynomial"
-	  << "Approximation::compute_numerical_response_moments()" << std::endl;
+	  << "Approximation::compute_numerical_moments()" << std::endl;
     abort_handler(-1);
   }
 
-  if (numericalMoments.length() == num_moments)
-    numericalMoments = 0.;
+  if (moments.length() == num_moments)
+    moments = 0.;
   else
-    numericalMoments.size(num_moments); // init to 0
+    moments.size(num_moments); // init to 0
 
-  size_t i, j, offset = 0, num_pts = surrData.size();
-  bool anchor_pt = surrData.anchor();
+  size_t i, j, num_pts = coeffs.length();
   const RealVector& t1_wts = driverRep->type1_weight_sets();
   if (t1_wts.length() != num_pts) {
     PCerr << "Error: mismatch in array lengths between integration driver "
-	  << "weights ("  << t1_wts.length() << ") and surrogate data points ("
+	  << "weights ("  << t1_wts.length() << ") and coefficients ("
 	  << num_pts << ") in PolynomialApproximation::compute_numerical_"
-	  << "response_moments()." << std::endl;
+	  << "moments()." << std::endl;
     abort_handler(-1);
   }
+
   // estimate 1st raw moment (mean)
-  Real& mean = numericalMoments[0];
-  if (anchor_pt) {
-    offset = 1; num_pts += offset;
-    mean  = t1_wts[0] * surrData.anchor_function();
-  }
-  for (i=offset; i<num_pts; ++i)
-    mean += t1_wts[i] * surrData.response_function(i);
+  Real& mean = moments[0];
+  for (i=0; i<num_pts; ++i)
+    mean += t1_wts[i] * coeffs[i];
 
   // estimate central moments 2 through num_moments
   Real centered_fn, pow_fn;
-  if (anchor_pt) {
-    pow_fn = centered_fn = surrData.anchor_function() - mean;
-    for (j=1; j<num_moments; ++j)
-      { pow_fn *= centered_fn; numericalMoments[j] = t1_wts[0] * pow_fn; }
-  }
-  for (i=offset; i<num_pts; ++i) {
-    pow_fn = centered_fn = surrData.response_function(i) - mean;
-    for (j=1; j<num_moments; ++j)
-      { pow_fn *= centered_fn; numericalMoments[j] += t1_wts[i] * pow_fn; }
+  for (i=0; i<num_pts; ++i) {
+    pow_fn = centered_fn = coeffs[i] - mean;
+    for (j=1; j<num_moments; ++j) {
+      pow_fn     *= centered_fn;
+      moments[j] += t1_wts[i] * pow_fn;
+    }
   }
 
   // standardize third and higher central moments, if present
   if (num_moments > 2)
-    standardize_moments(numericalMoments);
+    standardize_moments(moments);
+}
+
+
+void PolynomialApproximation::
+compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
+			  const RealMatrix& t2_coeffs, RealVector& moments)
+{
+  // computes and stores the following moments:
+  // > mean     (1st raw moment)
+  // > variance (2nd central moment)
+  // > skewness (3rd standardized moment)
+  // > kurtosis (4th standardized moment with offset to eliminate "excess")
+
+  // current support for this implementation: can't be open-ended since we
+  // employ a specific combination of raw, central, and standardized moments
+  if (num_moments < 1 || num_moments > 4) {
+    PCerr << "Error: unsupported number of moments requested in Polynomial"
+	  << "Approximation::compute_numerical_moments()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (moments.length() == num_moments)
+    moments = 0.;
+  else
+    moments.size(num_moments); // init to 0
+
+  size_t i, j, k, num_pts = t1_coeffs.length();
+  const RealVector& t1_wts = driverRep->type1_weight_sets();
+  const RealMatrix& t2_wts = driverRep->type2_weight_sets();
+  if (t1_wts.length() != num_pts || t2_wts.numCols() != num_pts ||
+      t2_coeffs.numCols() != num_pts) {
+    PCerr << "Error: mismatch in array lengths among integration driver "
+	  << "weights ("  << t1_wts.length() << ", " << t2_wts.numCols()
+	  << ") and coefficients (" << num_pts << ", " << t2_coeffs.numCols()
+	  << ") in PolynomialApproximation::compute_numerical_moments()."
+	  << std::endl;
+    abort_handler(-1);
+  }
+
+  // estimate 1st raw moment (mean)
+  Real& mean = moments[0];
+  for (i=0; i<num_pts; ++i) {
+    mean += t1_wts[i] * t1_coeffs[i];
+    const Real* coeff2_i = t2_coeffs[i];
+    const Real*  t2_wt_i = t2_wts[i];
+    for (j=0; j<numVars; ++j)
+      mean += coeff2_i[j] * t2_wt_i[j];
+  }
+
+  // estimate central moments 2 through num_moments
+  Real centered_fn, pow_fn;
+  for (i=0; i<num_pts; ++i) {
+    pow_fn = centered_fn = t1_coeffs[i] - mean;
+    const Real* coeff2_i = t2_coeffs[i];
+    const Real*  t2_wt_i = t2_wts[i];
+    for (j=1; j<num_moments; ++j) {
+      Real& moment_j = moments[j];
+      // type2 interpolation of (R - \mu)^n
+      // --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
+      for (k=0; k<numVars; ++k)
+	moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
+      // type 1 interpolation of (R - \mu)^n
+      pow_fn   *= centered_fn;
+      moment_j += t1_wts[i] * pow_fn;
+    }
+  }
+
+  // standardize third and higher central moments, if present
+  if (num_moments > 2)
+    standardize_moments(moments);
 }
 
 

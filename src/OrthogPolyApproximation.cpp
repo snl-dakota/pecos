@@ -2597,6 +2597,39 @@ Real OrthogPolyApproximation::norm_squared_random(const UShortArray& indices)
 }
 
 
+void OrthogPolyApproximation::
+compute_numerical_response_moments(size_t num_moments)
+{
+  /*
+  // TO DO: consider having a base class fn that operates on a vector of data
+  // and a vector of moments (exp or num), and then derived classes define the
+  // data vector differently
+  if (storedData) {
+    corr_fn = surrData.response_function(i) + stored_value(c_vars); // TO DO
+    mean += t1_wts[i] * corr_fn;
+    //...
+  }
+  else {
+  */
+
+  size_t i, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
+  if (anchor_pt) ++num_pts;
+  RealVector data_coeffs(num_pts);
+  if (anchor_pt) {
+    data_coeffs[0] = surrData.anchor_function();
+    for (i=1; i<num_pts; ++i)
+      data_coeffs[i] = surrData.response_function(i-1);
+  }
+  else
+    for (i=0; i<num_pts; ++i)
+      data_coeffs[i] = surrData.response_function(i);
+  compute_numerical_moments(num_moments, data_coeffs, numericalMoments);
+
+  //}
+}
+
+
 void OrthogPolyApproximation::compute_component_effects()
 {
   // sobolIndices are index via binary number represenation

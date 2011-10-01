@@ -195,8 +195,6 @@ public:
   /// return central response moments defined from either expansion
   /// post-processing or numerical integration
   virtual const RealVector& moments() const = 0;
-  /// compute central moments of response using numerical integration
-  virtual void compute_numerical_response_moments(size_t num_moments);
 
   /// estimate expansion coefficient decay rates for each random
   /// variable dimension (OrthogPolyApproximation only)
@@ -337,6 +335,14 @@ protected:
   //- Heading: Member functions
   //
 
+  /// compute central moments of response using type1 numerical integration
+  void compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
+				 RealVector& moments);
+  /// compute central moments of response using type1/2 numerical integration
+  void compute_numerical_moments(size_t num_moments,
+				 const RealVector& t1_coeffs,
+				 const RealMatrix& t2_coeffs,
+				 RealVector& moments);
   /// standardize third and higher central moments and eliminate excess kurtosis
   void standardize_moments(RealVector& moments);
 

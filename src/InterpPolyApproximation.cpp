@@ -531,173 +531,56 @@ update_sparse_interpolation_basis(unsigned short max_level)
 void InterpPolyApproximation::
 compute_numerical_response_moments(size_t num_moments)
 {
-  // computes and stores the following moments:
-  // > mean     (1st raw moment)
-  // > variance (2nd central moment)
-  // > skewness (3rd standardized moment)
-  // > kurtosis (4th standardized moment with offset to eliminate "excess")
-
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in InterpPoly"
 	  << "Approximation::compute_numerical_response_moments()" << std::endl;
     abort_handler(-1);
   }
-  // current support for this implementation: can't be open-ended since we
-  // employ a specific combination of raw, central, and standardized moments
-  if (num_moments < 1 || num_moments > 4) {
-    PCerr << "Error: unsupported number of moments requested in InterpPoly"
-	  << "Approximation::compute_numerical_response_moments()" << std::endl;
-    abort_handler(-1);
-  }
 
-  if (numericalMoments.length() == num_moments)
-    numericalMoments = 0.;
+  if (configOptions.useDerivs)
+    compute_numerical_moments(num_moments, expansionType1Coeffs,
+			      expansionType2Coeffs, numericalMoments);
   else
-    numericalMoments.size(num_moments); // init to 0
-
-  size_t i, j, k, num_pts = surrData.size();
-  if (surrData.anchor()) ++num_pts;
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
-  const RealMatrix& t2_wts = driverRep->type2_weight_sets();
-  if (t1_wts.length() != num_pts) {
-    PCerr << "Error: mismatch in array lengths between integration driver "
-	  << "weights ("  << t1_wts.length() << ") and surrogate data points ("
-	  << num_pts << ") in InterpPolyApproximation::compute_numerical_"
-	  << "response_moments()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // estimate 1st raw moment (mean)
-  Real& mean = numericalMoments[0];
-  for (i=0; i<num_pts; ++i) {
-    mean += t1_wts[i] * expansionType1Coeffs[i];
-    if (configOptions.useDerivs) {
-      const Real* coeff2_i = expansionType2Coeffs[i];
-      const Real*  t2_wt_i = t2_wts[i];
-      for (j=0; j<numVars; ++j)
-	mean += coeff2_i[j] * t2_wt_i[j];
-    }
-  }
-
-  // estimate central moments 2 through num_moments
-  Real centered_fn, pow_fn;
-  for (i=0; i<num_pts; ++i) {
-    pow_fn = centered_fn = expansionType1Coeffs[i] - mean;
-    if (configOptions.useDerivs) {
-      const Real* coeff2_i = expansionType2Coeffs[i];
-      const Real*  t2_wt_i = t2_wts[i];
-      for (j=1; j<num_moments; ++j) {
-	Real& moment_j = numericalMoments[j];
-	// type2 interpolation of (R - \mu)^n
-	// --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
-	for (k=0; k<numVars; ++k)
-	  moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
-	// type 1 interpolation of (R - \mu)^n
-	pow_fn   *= centered_fn;
-	moment_j += t1_wts[i] * pow_fn;
-      }
-    }
-    else
-      for (j=1; j<num_moments; ++j) {
-	pow_fn              *= centered_fn;
-	numericalMoments[j] += t1_wts[i] * pow_fn;
-      }
-  }
-
-  // standardize third and higher central moments, if present
-  if (num_moments > 2)
-    standardize_moments(numericalMoments);
+    compute_numerical_moments(num_moments, expansionType1Coeffs,
+			      numericalMoments);
 }
 
 
 void InterpPolyApproximation::
 compute_numerical_expansion_moments(size_t num_moments)
 {
-  // computes and stores the following moments:
-  // > mean     (1st raw moment)
-  // > variance (2nd central moment)
-  // > skewness (3rd standardized moment)
-  // > kurtosis (4th standardized moment with offset to eliminate "excess")
-
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in InterpPoly"
 	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
     abort_handler(-1);
   }
-  // current support for this implementation: can't be open-ended since we
-  // employ a specific combination of raw, central, and standardized moments
-  if (num_moments < 1 || num_moments > 4) {
-    PCerr << "Error: unsupported number of moments requested in InterpPoly"
-	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
-    abort_handler(-1);
-  }
 
-  if (expansionMoments.length() == num_moments)
-    expansionMoments = 0.;
-  else
-    expansionMoments.size(num_moments); // init to 0
-
-  size_t i, j, k, offset = 0, num_pts = surrData.size();
+  size_t i, offset = 0, num_pts = surrData.size();
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) { offset = 1; ++num_pts; }
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
-  const RealMatrix& t2_wts = driverRep->type2_weight_sets();
-  if (t1_wts.length() != num_pts) {
-    PCerr << "Error: mismatch in array lengths between integration driver "
-	  << "weights ("  << t1_wts.length() << ") and surrogate data points ("
-	  << num_pts << ") in InterpPolyApproximation::compute_numerical_"
-	  << "expansion_moments()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // estimate 1st raw moment (mean)
-  Real& mean = expansionMoments[0];
-  for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = (anchor_pt && i == 0) ?
-      surrData.anchor_continuous_variables() :
-      surrData.continuous_variables(i-offset);
-    mean += t1_wts[i] * value(c_vars);
-    if (configOptions.useDerivs) {
-      const RealVector& coeff2_i = gradient(c_vars);
-      const Real*        t2_wt_i = t2_wts[i];
-      for (j=0; j<numVars; ++j)
-	mean += coeff2_i[j] * t2_wt_i[j];
+  RealVector t1_exp(num_pts);
+  if (configOptions.useDerivs) {
+    RealMatrix t2_exp(numVars, num_pts);
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = (anchor_pt && i == 0) ?
+	surrData.anchor_continuous_variables() :
+	surrData.continuous_variables(i-offset);
+      t1_exp[i] = value(c_vars);
+      Teuchos::setCol(gradient(c_vars), (int)i, t2_exp);
     }
+    compute_numerical_moments(num_moments, t1_exp, t2_exp, expansionMoments);
   }
-
-  // estimate central moments 2 through num_moments
-  Real centered_fn, pow_fn;
-  for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = (anchor_pt && i == 0) ?
-      surrData.anchor_continuous_variables() :
-      surrData.continuous_variables(i-offset);
-    pow_fn = centered_fn = value(c_vars) - mean;
-    if (configOptions.useDerivs) {
-      const RealVector& coeff2_i = gradient(c_vars);
-      const Real*        t2_wt_i = t2_wts[i];
-      for (j=1; j<num_moments; ++j) {
-	Real& moment_j = expansionMoments[j];
-	// type2 interpolation of (R - \mu)^n
-	// --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
-	for (k=0; k<numVars; ++k)
-	  moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
-	// type 1 interpolation of (R - \mu)^n
-	pow_fn   *= centered_fn;
-	moment_j += t1_wts[i] * pow_fn;
-      }
+  else {
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = (anchor_pt && i == 0) ?
+	surrData.anchor_continuous_variables() :
+	surrData.continuous_variables(i-offset);
+      t1_exp[i] = value(c_vars);
     }
-    else // type 1 interpolation of (R - \mu)^n
-      for (j=1; j<num_moments; ++j) {
-	pow_fn              *= centered_fn;
-	expansionMoments[j] += t1_wts[i] * pow_fn;
-      }
+    compute_numerical_moments(num_moments, t1_exp, expansionMoments);
   }
-
-  // standardize third and higher central moments, if present
-  if (num_moments > 2)
-    standardize_moments(expansionMoments);
 }
 
 

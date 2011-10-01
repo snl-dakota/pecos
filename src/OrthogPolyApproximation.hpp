@@ -257,6 +257,10 @@ private:
 			   const RealVector& wt_sets, RealVector& exp_coeffs,
 			   RealMatrix& exp_coeff_grads);
 
+  /// update numericalMoments using numerical integration applied
+  /// directly to surrData
+  void compute_numerical_response_moments(size_t num_moments);
+
   /// cross-validates alternate gradient expressions
   void gradient_check();
 
