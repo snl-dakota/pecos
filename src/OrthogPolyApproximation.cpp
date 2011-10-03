@@ -2074,8 +2074,9 @@ const RealVector& OrthogPolyApproximation::gradient(const RealVector& x)
   }
 
   if (approxGradient.length() != numVars)
-    approxGradient.sizeUninitialized(numVars);
-  approxGradient = 0.0;
+    approxGradient.size(numVars); // init to 0
+  else
+    approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
   size_t i, j;
@@ -2116,11 +2117,47 @@ gradient(const RealVector& x, const SizetArray& dvv)
 
 
 Real OrthogPolyApproximation::stored_value(const RealVector& x)
-{ return 0.; /* TO DO */ }
+{
+  // Error check for required data
+  size_t i, num_stored_terms = storedMultiIndex.size();
+  if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
+    PCerr << "Error: stored expansion coefficients not available in "
+	  << "OrthogPolyApproximation::stored_value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // sum expansion to get response value prediction
+  Real approx_val = 0.;
+  for (i=0; i<num_stored_terms; ++i)
+    approx_val += storedExpCoeffs[i] *
+      multivariate_polynomial(x, storedMultiIndex[i]);
+  return approx_val;
+}
 
 
 const RealVector& OrthogPolyApproximation::stored_gradient(const RealVector& x)
-{ return approxGradient; /* TO DO */ }
+{
+  size_t i, j, num_stored_terms = storedMultiIndex.size();
+  if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
+    PCerr << "Error: stored expansion coefficients not available in "
+	  << "OrthogPolyApproximation::stored_gradient()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != numVars)
+    approxGradient.size(numVars); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  for (i=0; i<num_stored_terms; ++i) {
+    const RealVector& term_i_grad
+      = multivariate_polynomial_gradient(x, storedMultiIndex[i]);
+    for (j=0; j<numVars; ++j)
+      approxGradient[j] += storedExpCoeffs[i]*term_i_grad[j];
+  }
+  return approxGradient;
+}
 
 
 /** In this case, all expansion variables are random variables and the
@@ -2600,33 +2637,38 @@ Real OrthogPolyApproximation::norm_squared_random(const UShortArray& indices)
 void OrthogPolyApproximation::
 compute_numerical_response_moments(size_t num_moments)
 {
-  /*
-  // TO DO: consider having a base class fn that operates on a vector of data
-  // and a vector of moments (exp or num), and then derived classes define the
-  // data vector differently
-  if (storedData) {
-    corr_fn = surrData.response_function(i) + stored_value(c_vars); // TO DO
-    mean += t1_wts[i] * corr_fn;
-    //...
-  }
-  else {
-  */
-
   size_t i, num_pts = surrData.size();
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) ++num_pts;
-  RealVector data_coeffs(num_pts);
-  if (anchor_pt) {
-    data_coeffs[0] = surrData.anchor_function();
-    for (i=1; i<num_pts; ++i)
-      data_coeffs[i] = surrData.response_function(i-1);
-  }
-  else
-    for (i=0; i<num_pts; ++i)
-      data_coeffs[i] = surrData.response_function(i);
-  compute_numerical_moments(num_moments, data_coeffs, numericalMoments);
 
-  //}
+  // define data_coeffs
+  RealVector data_coeffs(num_pts);
+  if (false) { //(!storedExpCoeffs.empty() && correctionType == ADDITIVE_CORRECTION) {
+    if (anchor_pt) {
+      data_coeffs[0] = surrData.anchor_function() +
+	stored_value(surrData.anchor_continuous_variables());
+      for (i=1; i<num_pts; ++i)
+	data_coeffs[i] = surrData.response_function(i-1) +
+	  stored_value(surrData.continuous_variables(i-1));
+    }
+    else
+      for (i=0; i<num_pts; ++i)
+	data_coeffs[i] = surrData.response_function(i) +
+	  stored_value(surrData.continuous_variables(i));
+  }
+  else {
+    if (anchor_pt) {
+      data_coeffs[0] = surrData.anchor_function();
+      for (i=1; i<num_pts; ++i)
+	data_coeffs[i] = surrData.response_function(i-1);
+    }
+    else
+      for (i=0; i<num_pts; ++i)
+	data_coeffs[i] = surrData.response_function(i);
+  }
+
+  // update numericalMoments based on data_coeffs
+  compute_numerical_moments(num_moments, data_coeffs, numericalMoments);
 }
 
 
