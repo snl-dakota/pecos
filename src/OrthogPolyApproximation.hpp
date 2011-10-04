@@ -91,7 +91,7 @@ protected:
   void restore_coefficients();
   void finalize_coefficients();
   void store_coefficients();
-  void combine_coefficients();
+  void combine_coefficients(short corr_type);
 
   void print_coefficients(std::ostream& s) const;
 
@@ -333,17 +333,20 @@ private:
   std::deque<RealMatrix> savedTPExpCoeffGrads;
 
   /// stored multiIndex (aggregated total, not tensor-product
-  /// contributions) for use in combine_expansions()
+  /// contributions) for use in combined_coefficients()
   UShort2DArray storedMultiIndex;
   /// stored expansionCoeffs (aggregated total, not tensor-product
-  /// contributions) for use in combine_expansions()
+  /// contributions) for use in combined_coefficients()
   RealVector storedExpCoeffs;
   /// stored expansionCoeffGrads (aggregated total, not tensor-product
-  /// contributions) for use in combine_expansions()
+  /// contributions) for use in combined_coefficients()
   RealMatrix storedExpCoeffGrads;
   // stored type1 weight sets (aggregated total, not tensor-product
-  // contributions) for use in combine_expansions()
+  // contributions) for use in combined_coefficients()
   //RealVector storedType1WtSets;
+  /// correction type needed for numerical response moment estimation with
+  /// combined approximations
+  short correctionType;
 
   /// previous expansionCoeffs (aggregated total, not tensor-product
   /// contributions) prior to append_tensor_expansions()
@@ -380,7 +383,7 @@ inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
 			bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
-  approxOrder(approx_order), partialOrder(false),
+  approxOrder(approx_order), partialOrder(false), correctionType(NO_COMBINE),
   quadratureExpansion(TENSOR_INT_TENSOR_EXP),
 //quadratureExpansion(TENSOR_INT_TOTAL_ORDER_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)

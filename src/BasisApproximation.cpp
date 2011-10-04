@@ -291,10 +291,10 @@ void BasisApproximation::store_coefficients()
 }
 
 
-void BasisApproximation::combine_coefficients()
+void BasisApproximation::combine_coefficients(short corr_type)
 {
   if (basisApproxRep)
-    basisApproxRep->combine_coefficients(); 
+    basisApproxRep->combine_coefficients(corr_type);
   else {
     PCerr << "Error: combine_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;

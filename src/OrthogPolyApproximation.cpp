@@ -610,12 +610,13 @@ void OrthogPolyApproximation::store_coefficients()
 }
 
 
-void OrthogPolyApproximation::combine_coefficients()
+void OrthogPolyApproximation::combine_coefficients(short corr_type)
 {
   // Similar to finalize_coefficients(), but previous multi-index map's are
   // invalid and need to be regenerated.
 
-  //if (correctionType == ADDITIVE_CORRECTION) {
+  correctionType = corr_type;
+  if (corr_type == ADD_COMBINE) {
 
     // update multiIndex with any storedMultiIndex terms not yet included
     Sizet2DArray stored_mi_map; SizetArray stored_mi_map_ref;
@@ -633,52 +634,27 @@ void OrthogPolyApproximation::combine_coefficients()
     //driverRep->append_type1_weight_sets(storedType1WtSets);
     //
     // TO DO: Perform approxData.combine() in Dakota::Approximation::combine()
-    //driverRep->combine_type1_weight_sets(storedType1WtSets, stored_mi_map.back());
+    //driverRep->combine_type1_weight_sets(storedType1WtSets,
+    //                                     stored_mi_map.back());
+  }
+  else if (correctionType == MULT_COMBINE) {
+    PCerr << "Error : multiplicative combination not yet implemented in "
+	  << "OrthogPolyApproximation::combine_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+  else if (correctionType == ADD_MULT_COMBINE) {
+    PCerr << "Error : additive+multiplicative combination not yet implemented "
+	  << "in OrthogPolyApproximation::combine_coefficients()" << std::endl;
+    abort_handler(-1);
+    //add_expansions(addCoeffs, addCoeffGrads);
+    //multiply_expansions(addCoeffs, addCoeffGrads);
+    //compute_combine_factors();
+  }
 
-    /*
-    size_t i, num_tp_mi = savedTPMultiIndex.size();
-    for (i=0; i<num_tp_mi; ++i) {
-      // append data from saved arrays
-      //nond_sparse->append_smolyak(savedSmolyakMultiIndex[i], 
-      //                            savedSmolyakCoeffs[i]); // TO DO
-      tpMultiIndex.push_back(savedTPMultiIndex[i]);
-      //tpMultiIndexMap.push_back(savedTPMultiIndexMap[i]);
-      //tpMultiIndexMapRef.push_back(savedTPMultiIndexMapRef[i]);
-      tpExpansionCoeffs.push_back(savedTPExpCoeffs[i]);
-      tpExpansionCoeffGrads.push_back(savedTPExpCoeffGrads[i]);
-      // update multiIndex, tpMultiIndexMap, & tpMultiIndexMapRef
-      append_multi_index(savedTPMultiIndex[i], multiIndex, tpMultiIndexMap,
-			 tpMultiIndexMapRef);
-      // update expansion{Coeffs,CoeffGrads}
-      overlay_expansion(tpMultiIndexMap.back(),  savedTPExpCoeffs[i],
-			savedTPExpCoeffGrads[i], savedSmolyakCoeffs[i]);
-    }
-    */
-
-    // Note: SparseGridDriver has NOT updated its Smolyak coefficients due to a
-    // grid increment.  Instead of updating coeffs for the TPs within a single
-    // grid, we must add two expansions with fixed Smolyak and exp coefficients.
-    // Thus, append_multi_index() & overlay_expansion() do what we want, but
-    // append_tensor_expansions() is too specific to sparse grid increments.
-    //append_tensor_expansions(start_index);
-
-  //}
-  //else if (correctionType == MULTIPLICATIVE_CORRECTION) {
-  //
-  //}
-  //else if (correctionType == COMBINED_CORRECTION) {
-  //  add_expansions(addCoeffs, addCoeffGrads);
-  //  multiply_expansions(addCoeffs, addCoeffGrads);
-  //  compute_combine_factors();
-  //}
-
-  //savedSmolyakMultiIndex.clear(); savedSmolyakCoeffs.clear();
-  //savedTPMultiIndex.clear();
-  //savedTPMultiIndexMap.clear();   savedTPMultiIndexMapRef.clear();
-  //savedTPExpCoeffs.clear();       savedTPExpCoeffGrads.clear();
-  storedMultiIndex.clear();
-  if (configOptions.expansionCoeffFlag)     storedExpCoeffs.resize(0);
-  if (configOptions.expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
+  // Code below moved to compute_numerical_response_moments()
+  //storedMultiIndex.clear();
+  //if (configOptions.expansionCoeffFlag)     storedExpCoeffs.resize(0);
+  //if (configOptions.expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
 }
 
 
@@ -2643,32 +2619,52 @@ compute_numerical_response_moments(size_t num_moments)
 
   // define data_coeffs
   RealVector data_coeffs(num_pts);
-  if (false) { //(!storedExpCoeffs.empty() && correctionType == ADDITIVE_CORRECTION) {
-    if (anchor_pt) {
-      data_coeffs[0] = surrData.anchor_function() +
-	stored_value(surrData.anchor_continuous_variables());
-      for (i=1; i<num_pts; ++i)
-	data_coeffs[i] = surrData.response_function(i-1) +
-	  stored_value(surrData.continuous_variables(i-1));
-    }
-    else
-      for (i=0; i<num_pts; ++i)
-	data_coeffs[i] = surrData.response_function(i) +
-	  stored_value(surrData.continuous_variables(i));
+  if (anchor_pt) {
+    data_coeffs[0] = surrData.anchor_function();
+    for (i=1; i<num_pts; ++i)
+      data_coeffs[i] = surrData.response_function(i-1);
   }
-  else {
-    if (anchor_pt) {
-      data_coeffs[0] = surrData.anchor_function();
-      for (i=1; i<num_pts; ++i)
-	data_coeffs[i] = surrData.response_function(i-1);
-    }
+  else
+    for (i=0; i<num_pts; ++i)
+      data_coeffs[i] = surrData.response_function(i);
+
+  if (!storedExpCoeffs.empty() && correctionType) {
+    if (anchor_pt)
+      switch (correctionType) {
+      case ADD_COMBINE:
+	data_coeffs[0] += stored_value(surrData.anchor_continuous_variables());
+	for (i=1; i<num_pts; ++i)
+	  data_coeffs[i] += stored_value(surrData.continuous_variables(i-1));
+	break;
+      case MULT_COMBINE:
+	data_coeffs[0] *= stored_value(surrData.anchor_continuous_variables());
+	for (i=1; i<num_pts; ++i)
+	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i-1));
+	break;
+      }
     else
-      for (i=0; i<num_pts; ++i)
-	data_coeffs[i] = surrData.response_function(i);
+      switch (correctionType) {
+      case ADD_COMBINE:
+	for (i=0; i<num_pts; ++i)
+	  data_coeffs[i] += stored_value(surrData.continuous_variables(i));
+	break;
+      case MULT_COMBINE:
+	for (i=0; i<num_pts; ++i)
+	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i));
+	break;
+      }
   }
 
   // update numericalMoments based on data_coeffs
   compute_numerical_moments(num_moments, data_coeffs, numericalMoments);
+
+  // reset
+  if (correctionType) {
+    correctionType = NO_COMBINE;
+    storedMultiIndex.clear();
+    if (configOptions.expansionCoeffFlag)     storedExpCoeffs.resize(0);
+    if (configOptions.expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
+  }
 }
 
 
