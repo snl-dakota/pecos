@@ -241,6 +241,16 @@ int main(int argc, char** argv)
 	    << "," << grad2[1] << "]" <<std::endl;
   std::cout << "Approx_gradient = [" << a->gradient(x)[0] 
 	    << "," << a->gradient(x)[1] << "]" <<std::endl;
+  
+  SizetArray dvv(1);
+  dvv[0] = 1;
+  double approx_df_dx1 = a->gradient(x)[0];
+  double approx_df_dx2 = a->gradient(x)[1];
+  std::cout << "All variables gradient dx1 = " << a->gradient(x,dvv)[0] << std::endl;
+  assert( approx_df_dx1 = a->gradient(x,dvv)[0] ); 
+  dvv[0] = 2;
+  std::cout << "All variables gradient dx2 = " << a->gradient(x,dvv)[0] << std::endl;
+  assert( approx_df_dx2 = a->gradient(x,dvv)[0] );
   assert( std::abs(a->mean()) < 1e-10 );
   std::cout << "Mean = " << a->mean() << std::endl;
   

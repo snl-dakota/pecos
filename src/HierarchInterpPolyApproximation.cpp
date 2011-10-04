@@ -58,7 +58,7 @@ namespace Pecos {
 	
 	for ( unsigned int dim_idx = 0; dim_idx < numVars ; ++dim_idx ) {
 	  const unsigned int this_dim_level = level_index[dim_idx][0];
-	  const unsigned int this_dim_index = level_index[dim_idx][1];
+	  //const unsigned int this_dim_index = level_index[dim_idx][1];
 	  if ( this_dim_level == 1 ) {
 	    local_val *= 1;  //constant case
 	  } else { //Linear hat functions
@@ -441,11 +441,11 @@ namespace Pecos {
 		const Real dt_by_dx = 1/dx_by_dt;
 		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
 		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
 		      (3*t*t-2*t) : 
 		      dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
 		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
 		      0 : 1; // Take derivative of basis else don't
 		  }
 		}
@@ -455,23 +455,23 @@ namespace Pecos {
 		const Real dx_by_dt = this_point_support[1][dim_idx2] - point[dim_idx2];
 		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
 		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
 		      (3*t*t - 4*t + 1) : 
 		      dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
 		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
 		      0 : 1; // Take derivative of basis else don't
 		  }
 		}
 	      }
 	    } else {  
 	      if ( x[dim_idx2] == point[dim_idx2] ) {
-		terms[0] *= (dim_idx == dim_idx2) ? 0 : 1;
+		terms[0] *= (deriv_index == dim_idx2) ? 0 : 1;
 		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
 		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  1 : 0;  // Take derivative of basis else don't
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  1 : 0;  // Take derivative of basis else don't
 		  } else {  //Use type 1.
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 0 : 1; // Take derivative of basis else don't
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 0 : 1; // Take derivative of basis else don't
 		  }
 		}
 	      } else if ( x[dim_idx2] < point[dim_idx2] ) {
@@ -479,14 +479,14 @@ namespace Pecos {
 		      (point[dim_idx2] - this_point_support[0][dim_idx2]);
 		const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
 		const Real dt_by_dx = 1/dx_by_dt;
-		terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(-6*t*t + 6*t) : -2*t*t*t + 3*t*t;
+		terms[0] *= (deriv_index == dim_idx2) ?  dt_by_dx*(-6*t*t + 6*t) : -2*t*t*t + 3*t*t;
 		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
 		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
 		      (3*t*t-2*t) : 
 		      dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
 		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
 		      dt_by_dx*(-6*t*t+6*t) : t*t*(3-2*t); // Take derivative of basis else don't
 		  }
 		}
@@ -495,14 +495,14 @@ namespace Pecos {
 		      (this_point_support[1][dim_idx2] - point[dim_idx2]);
 		const Real dx_by_dt = this_point_support[0][dim_idx2] - point[dim_idx2];
 		const Real dt_by_dx = 1/dx_by_dt;
-		terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(6*t*t - 6*t) : 2*t*t*t - 3*t*t + 1;
+		terms[0] *= (deriv_index == dim_idx2) ?  dt_by_dx*(6*t*t - 6*t) : 2*t*t*t - 3*t*t + 1;
 		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
 		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
 		      (3*t*t - 4*t + 1) : 
 		      dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
 		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
+		    terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
 		      dt_by_dx*(6*t*t-6*t) : (1+2*t)*(1-t)*(1-t); // Take derivative of basis else don't
 		  }
 		}

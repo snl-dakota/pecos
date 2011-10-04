@@ -98,8 +98,18 @@ public:
   Real stored_value(const RealVector& x);
   const RealVector& stored_gradient(const RealVector& x);
 
+  /// Returns the mean of the expansion, treating all variables as random.
+  /** @return The mean of the expansion.
+   */
   Real mean();
+
+  /** @brief Returns the mean of the expansion, treating a subset of the 
+      variables as random.
+      @param x The non-random coordinates
+      @return The mean of the expansion with respect to the random variables.
+  */
   Real mean(const RealVector& x);
+  
   const RealVector& mean_gradient();
   const RealVector& mean_gradient(const RealVector& x,
 				  const SizetArray& dvv);
