@@ -360,24 +360,25 @@ void InterpPolyApproximation::combine_coefficients(short corr_type)
 	// split up type1/type2 contribs so increments are performed properly
 	expansionType1Coeffs[i] += stored_value(c_vars);
 	if (configOptions.useDerivs) {
-	  const RealVector& stored_grad = stored_gradient(c_vars);
-	  Real*         exp_t2_coeffs_i = expansionType2Coeffs[i];
-	  size_t num_stored_vars = stored_grad.length();
-	  for (j=0; j<num_stored_vars; ++j)
-	    exp_t2_coeffs_i[j] += stored_grad[j];
+	  const RealVector& discrep_grad = stored_gradient(c_vars);
+	  Real*          exp_t2_coeffs_i = expansionType2Coeffs[i];
+	  size_t num_discrep_vars = discrep_grad.length();
+	  for (j=0; j<num_discrep_vars; ++j)
+	    exp_t2_coeffs_i[j] += discrep_grad[j];
 	}
       }
       else if (corr_type == MULT_COMBINE) {
-	expansionType1Coeffs[i] *= stored_value(c_vars);
+	Real discrep_val = stored_value(c_vars),
+	          lf_val = expansionType1Coeffs[i]; // copy prior to update
+	expansionType1Coeffs[i] *= discrep_val;
 	if (configOptions.useDerivs) {
-	  const RealVector& stored_grad = stored_gradient(c_vars);
-	  size_t num_stored_vars = stored_grad.length();
-	  //for (j=0; j<num_stored_vars; ++j)
-	  //  *= ; // TO DO
-	  PCerr << "Error : multiplicative combination not yet implemented for "
-		<< "type2 interpolants in InterpPolyApproximation::combine_"
-		<< "coefficients()." << std::endl;
-	  abort_handler(-1);
+	  // hf = lf*discrep --> dhf/dx = dlf/dx*discrep + lf*ddiscrep/dx
+	  const RealVector& discrep_grad = stored_gradient(c_vars);
+	  Real*          exp_t2_coeffs_i = expansionType2Coeffs[i];
+	  size_t num_discrep_vars = discrep_grad.length();
+	  for (j=0; j<num_discrep_vars; ++j)
+	    exp_t2_coeffs_i[j] = exp_t2_coeffs_i[j] * discrep_val
+	                       + discrep_grad[j]    * lf_val;
 	}
       }
     }
