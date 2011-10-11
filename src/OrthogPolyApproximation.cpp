@@ -235,6 +235,10 @@ void OrthogPolyApproximation::allocate_arrays()
 	expansionCoeffGrads.numCols() != numExpansionTerms)
       expansionCoeffGrads.shapeUninitialized(num_deriv_vars, numExpansionTerms);
   }
+
+  // no combination by default, even if storedMultiIndex and
+  // storedExp{Coeffs,CoeffGrads} are defined.  Overridden in 
+  storedExpCombineType = NO_COMBINE;
 }
 
 
@@ -412,7 +416,6 @@ void OrthogPolyApproximation::increment_coefficients()
       // update multiIndex and numExpansionTerms
       append_multi_index(tpMultiIndex[last_index], multiIndex, tpMultiIndexMap,
 			 tpMultiIndexMapRef);
-      numExpansionTerms = multiIndex.size();
       resize_expansion();
       // form tp_data_pts, tp_wts using collocKey et al.
       SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
@@ -458,9 +461,14 @@ void OrthogPolyApproximation::decrement_coefficients()
       // reset expansion{Coeffs,CoeffGrads}: (set in append_tensor_expansions())
       expansionCoeffs     = prevExpCoeffs;
       expansionCoeffGrads = prevExpCoeffGrads;
+
       // reset multiIndex and numExpansionTerms:
       numExpansionTerms   = tpMultiIndexMapRef.back();
       multiIndex.resize(numExpansionTerms); // truncate previous increment
+      // resize not necessary since (1) already updated from prevExp and 
+      // (2) not updating expansion on decrement (next increment updates).
+      //resize_expansion();
+
       // reset tensor-product bookkeeping and save restorable data
       savedSmolyakMultiIndex.push_back(ssg_driver->trial_set());
       savedTPMultiIndex.push_back(tpMultiIndex.back());
@@ -471,9 +479,6 @@ void OrthogPolyApproximation::decrement_coefficients()
       tpMultiIndex.pop_back();       tpMultiIndexMap.pop_back();
       tpMultiIndexMapRef.pop_back(); tpExpansionCoeffs.pop_back();
       tpExpansionCoeffGrads.pop_back();
-      // resize not necessary since not updating expansion on decrement;
-      // rather, next increment takes care of this.
-      //resize_expansion();
       break;
     }
     }
@@ -513,7 +518,6 @@ void OrthogPolyApproximation::restore_coefficients()
       // update multiIndex and numExpansionTerms
       append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
 			 tpMultiIndexMapRef[last_index], multiIndex);
-      numExpansionTerms = multiIndex.size();
       resize_expansion();
       // sum trial expansion into expansionCoeffs/expansionCoeffGrads
       append_tensor_expansions(last_index);
@@ -539,7 +543,6 @@ void OrthogPolyApproximation::finalize_coefficients()
       std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
       for (; iit!=savedTPMultiIndex.end(); ++iit, ++mit, ++rit)
 	append_multi_index(*iit, *mit, *rit, multiIndex);
-      numExpansionTerms = multiIndex.size();
       resize_expansion();
       // move previous expansion data to current expansion
       tpMultiIndex.insert(tpMultiIndex.end(),
@@ -567,7 +570,11 @@ void OrthogPolyApproximation::finalize_coefficients()
 
 void OrthogPolyApproximation::store_coefficients()
 {
-  // This approach stores the aggregate expansion data
+  // Store the aggregated expansion data.  This approach is preferred to
+  // appending to savedTP{MultiIndex,Coeffs,CoeffGrads} since the savedTP
+  // approach is less general (TP and sum of TP only), less memory
+  // efficient (tensor redundancies in sparse grids), and causes ambiguity
+  // in finalize_coefficients() for generalized sparse grids.
   storedMultiIndex      = multiIndex;
   if (configOptions.expansionCoeffFlag)
     storedExpCoeffs     = expansionCoeffs;
@@ -575,80 +582,58 @@ void OrthogPolyApproximation::store_coefficients()
     storedExpCoeffGrads = expansionCoeffGrads;
   //switch (configOptions.expCoeffsSolnApproach) { // approach-specific storage
   //case QUADRATURE: case SPARSE_GRID:
-  //  storedType1WtSets = driverRep->type1_weight_sets(); break;
+  //  storedT1WtSets = driverRep->type1_weight_sets(); break;
   //}
-
-  /* This approach stores the individual tensor data
-     Note: tpMultiIndex arrays not currently stored unless GSG.
-  case SPARSE_GRID: {
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    size_t i, num_sm_mi = sm_multi_index.size();
-    switch (sparseGridExpansion) {
-    case TENSOR_INT_TENSOR_SUM_EXP:
-      // save restorable data
-      for (i=0; i<num_sm_mi; ++i) {
-	savedSmolyakMultiIndex.push_back(sm_multi_index[i]);
-	savedSmolyakCoeffs.push_back(sm_coeffs[i]);
-	savedTPMultiIndex.push_back(tpMultiIndex[i]);
-	//savedTPMultiIndexMap.push_back(tpMultiIndexMap[i]);
-	//savedTPMultiIndexMapRef.push_back(tpMultiIndexMapRef[i]);
-	savedTPExpCoeffs.push_back(tpExpansionCoeffs[i]);
-	savedTPExpCoeffGrads.push_back(tpExpansionCoeffGrads[i]);
-      }
-      // reset tensor-product bookkeeping
-      numExpansionTerms = 0;     resize_expansion();
-      multiIndex.clear();        tpMultiIndex.clear();
-      tpMultiIndexMap.clear();   tpMultiIndexMapRef.clear();
-      tpExpansionCoeffs.clear(); tpExpansionCoeffGrads.clear();
-      break;
-    }
-    break;
-  }
-  */
 }
 
 
-void OrthogPolyApproximation::combine_coefficients(short corr_type)
+void OrthogPolyApproximation::combine_coefficients(short combine_type)
 {
-  // Similar to finalize_coefficients(), but previous multi-index map's are
-  // invalid and need to be regenerated.
+  // based on incoming combine_type, combine the data stored previously
+  // by store_coefficients()
 
-  correctionType = corr_type;
-  if (corr_type == ADD_COMBINE) {
+  // storedExpCombineType used later in compute_numerical_response_moments()
+  storedExpCombineType = combine_type;
+
+  switch (storedExpCombineType) {
+  case ADD_COMBINE: {
 
     // update multiIndex with any storedMultiIndex terms not yet included
     Sizet2DArray stored_mi_map; SizetArray stored_mi_map_ref;
     append_multi_index(storedMultiIndex, multiIndex, stored_mi_map,
 		       stored_mi_map_ref);
-
-    // update expansion{Coeffs,CoeffGrads}.  TO DO: resize_expansion()???
+    // resize expansion{Coeffs,CoeffGrads} based on updated multiIndex
+    resize_expansion();
+    // update expansion{Coeffs,CoeffGrads}
     overlay_expansion(stored_mi_map.back(), storedExpCoeffs,
 		      storedExpCoeffGrads, 1);
 
-    // update SparseGridDriver weights
-    //
-    // 1st cut: this isn't correct for moment # > 1.  SC approximations must
-    // be consolidated prior to variance/skewness/kurtosis calculation.
-    //driverRep->append_type1_weight_sets(storedType1WtSets);
-    //
-    // TO DO: Perform approxData.combine() in Dakota::Approximation::combine()
-    //driverRep->combine_type1_weight_sets(storedType1WtSets,
-    //                                     stored_mi_map.back());
+    // redefinition of compute_numerical_response_moments() eliminates need to
+    // update SparseGridDriver weights (append insufficient, combine requires
+    // approxData.combine() in Dakota::Approximation::combine())
+    //driverRep->append_type1_weight_sets(storedT1WtSets); // OK for mean only
+    //driverRep->combine_type1_weight_sets(storedT1WtSets,stored_mi_map.back());
+
+    break;
   }
-  else if (correctionType == MULT_COMBINE) {
+  case MULT_COMBINE:
+    //multiply_expansion(storedMultiIndex, storedExpCoeffs,
+    //                   storedExpCoeffGrads); // TO DO
     PCerr << "Error : multiplicative combination not yet implemented in "
 	  << "OrthogPolyApproximation::combine_coefficients()" << std::endl;
     abort_handler(-1);
-  }
-  else if (correctionType == ADD_MULT_COMBINE) {
+    break;
+  case ADD_MULT_COMBINE:
+    //overlay_expansion(storedMultiIndex, storedExpCoeffs,
+    //                  storedExpCoeffGrads, addCoeffs, addCoeffGrads);
+    //multiply_expansion(storedMultiIndex, storedExpCoeffs,
+    //                   storedExpCoeffGrads, multCoeffs, multCoeffGrads);
+    //compute_combine_factors(addCoeffs, multCoeffs);
+    //apply_combine_factors();
     PCerr << "Error : additive+multiplicative combination not yet implemented "
 	  << "in OrthogPolyApproximation::combine_coefficients()" << std::endl;
     abort_handler(-1);
-    //add_expansions(addCoeffs, addCoeffGrads);
-    //multiply_expansions(addCoeffs, addCoeffGrads);
-    //compute_combine_factors();
+    break;
   }
 
   // Code below moved to compute_numerical_response_moments()
@@ -2628,43 +2613,38 @@ compute_numerical_response_moments(size_t num_moments)
     for (i=0; i<num_pts; ++i)
       data_coeffs[i] = surrData.response_function(i);
 
-  if (!storedExpCoeffs.empty() && correctionType) {
-    if (anchor_pt)
-      switch (correctionType) {
-      case ADD_COMBINE:
+  if (storedExpCombineType && !storedExpCoeffs.empty()) {
+    // update data_coeffs using evaluations from stored expansions
+    switch (storedExpCombineType) {
+    case ADD_COMBINE:
+      if (anchor_pt) {
 	data_coeffs[0] += stored_value(surrData.anchor_continuous_variables());
 	for (i=1; i<num_pts; ++i)
 	  data_coeffs[i] += stored_value(surrData.continuous_variables(i-1));
-	break;
-      case MULT_COMBINE:
+      }
+      else
+	for (i=0; i<num_pts; ++i)
+	  data_coeffs[i] += stored_value(surrData.continuous_variables(i));
+      break;
+    case MULT_COMBINE:
+      if (anchor_pt) {
 	data_coeffs[0] *= stored_value(surrData.anchor_continuous_variables());
 	for (i=1; i<num_pts; ++i)
 	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i-1));
-	break;
       }
-    else
-      switch (correctionType) {
-      case ADD_COMBINE:
-	for (i=0; i<num_pts; ++i)
-	  data_coeffs[i] += stored_value(surrData.continuous_variables(i));
-	break;
-      case MULT_COMBINE:
+      else
 	for (i=0; i<num_pts; ++i)
 	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i));
-	break;
-      }
-  }
-
-  // update numericalMoments based on data_coeffs
-  compute_numerical_moments(num_moments, data_coeffs, numericalMoments);
-
-  // reset
-  if (correctionType) {
-    correctionType = NO_COMBINE;
+      break;
+    }
+    // stored data may now be cleared
     storedMultiIndex.clear();
     if (configOptions.expansionCoeffFlag)     storedExpCoeffs.resize(0);
     if (configOptions.expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
   }
+
+  // update numericalMoments based on data_coeffs
+  compute_numerical_moments(num_moments, data_coeffs, numericalMoments);
 }
 
 

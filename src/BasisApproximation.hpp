@@ -78,7 +78,7 @@ public:
   /// store the current coefficients for later combination
   virtual void store_coefficients();
   /// combine the current coefficients with a previously stored set
-  virtual void combine_coefficients(short corr_type);
+  virtual void combine_coefficients(short combine_type);
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s) const;

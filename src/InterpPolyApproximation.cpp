@@ -339,7 +339,7 @@ void InterpPolyApproximation::store_coefficients()
 }
 
 
-void InterpPolyApproximation::combine_coefficients(short corr_type)
+void InterpPolyApproximation::combine_coefficients(short combine_type)
 {
 #ifdef DEBUG
   PCout << "Original type1 expansion coefficients prior to combination:\n";
@@ -356,7 +356,7 @@ void InterpPolyApproximation::combine_coefficients(short corr_type)
       surrData.anchor_continuous_variables() :
       surrData.continuous_variables(i-offset);
     if (configOptions.expansionCoeffFlag) {
-      if (corr_type == ADD_COMBINE) {
+      if (combine_type == ADD_COMBINE) {
 	// split up type1/type2 contribs so increments are performed properly
 	expansionType1Coeffs[i] += stored_value(c_vars);
 	if (configOptions.useDerivs) {
@@ -367,7 +367,7 @@ void InterpPolyApproximation::combine_coefficients(short corr_type)
 	    exp_t2_coeffs_i[j] += discrep_grad[j];
 	}
       }
-      else if (corr_type == MULT_COMBINE) {
+      else if (combine_type == MULT_COMBINE) {
 	Real discrep_val = stored_value(c_vars),
 	          lf_val = expansionType1Coeffs[i]; // copy prior to update
 	expansionType1Coeffs[i] *= discrep_val;
@@ -386,10 +386,10 @@ void InterpPolyApproximation::combine_coefficients(short corr_type)
       Real*   exp_grad_i = expansionType1CoeffGrads[i];
       /* TO DO
       const Real* grad_i = gradient(vars_set[i]);
-      //if (corr_type == ADD_COMBINE)
+      //if (combine_type == ADD_COMBINE)
       for (j=0; j<num_deriv_vars; ++j)
 	exp_grad_i[j] += grad_i[j];
-      //else if (corr_type == MULT_COMBINE)
+      //else if (combine_type == MULT_COMBINE)
       //for (j=0; j<num_deriv_vars; ++j)
       //  exp_grad_i[j] = ...;
       */

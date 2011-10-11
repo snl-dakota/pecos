@@ -67,7 +67,7 @@ protected:
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
   /// and storedLev{MultiIndex,Coeffs}
-  void combine_coefficients(short corr_type);
+  void combine_coefficients(short combine_type);
 
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);

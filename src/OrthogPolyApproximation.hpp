@@ -91,7 +91,7 @@ protected:
   void restore_coefficients();
   void finalize_coefficients();
   void store_coefficients();
-  void combine_coefficients(short corr_type);
+  void combine_coefficients(short combine_type);
 
   void print_coefficients(std::ostream& s) const;
 
@@ -207,7 +207,7 @@ private:
   /// update expansion{Coeffs,CoeffGrads} by adding one or more tensor-product
   /// expansions and updating all Smolyak coefficients
   void append_tensor_expansions(size_t start_index);
-  /// resize expansion{Coeffs,CoeffGrads} based on updated numExpansionTerms
+  /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
   void resize_expansion();
 
   /// update the total Pareto set with new Pareto-optimal polynomial indices
@@ -332,21 +332,18 @@ private:
   /// saved tpExpansionCoeffGrads instances that were computed but not selected
   std::deque<RealMatrix> savedTPExpCoeffGrads;
 
-  /// stored multiIndex (aggregated total, not tensor-product
-  /// contributions) for use in combined_coefficients()
+  /// copy of multiIndex (aggregated total, not tensor-product contributions)
+  /// stored in store_coefficients() for use in combine_coefficients()
   UShort2DArray storedMultiIndex;
-  /// stored expansionCoeffs (aggregated total, not tensor-product
-  /// contributions) for use in combined_coefficients()
+  /// copy of expansionCoeffs (aggregated total, not tensor-product contribs)
+  /// stored in store_coefficients() for use in combine_coefficients()
   RealVector storedExpCoeffs;
-  /// stored expansionCoeffGrads (aggregated total, not tensor-product
-  /// contributions) for use in combined_coefficients()
+  /// copy of expansionCoeffGrads (aggregated total, not indiv tensor-products)
+  /// stored in store_coefficients() for use in combine_coefficients()
   RealMatrix storedExpCoeffGrads;
-  // stored type1 weight sets (aggregated total, not tensor-product
-  // contributions) for use in combined_coefficients()
-  //RealVector storedType1WtSets;
-  /// correction type needed for numerical response moment estimation with
-  /// combined approximations
-  short correctionType;
+  /// combination type for stored expansions; cached in class to bridge
+  /// combine_coefficients() and compute_numerical_response_moments()
+  short storedExpCombineType;
 
   /// previous expansionCoeffs (aggregated total, not tensor-product
   /// contributions) prior to append_tensor_expansions()
@@ -383,8 +380,8 @@ inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
 			bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
-  approxOrder(approx_order), partialOrder(false), correctionType(NO_COMBINE),
-  quadratureExpansion(TENSOR_INT_TENSOR_EXP),
+  approxOrder(approx_order), partialOrder(false),
+  storedExpCombineType(NO_COMBINE), quadratureExpansion(TENSOR_INT_TENSOR_EXP),
 //quadratureExpansion(TENSOR_INT_TOTAL_ORDER_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
 //sparseGridExpansion(SPARSE_INT_TOTAL_ORDER_EXP)
@@ -514,6 +511,7 @@ approximation_coefficients(const RealVector& approx_coeffs)
 
 inline void OrthogPolyApproximation::resize_expansion()
 {
+  numExpansionTerms = multiIndex.size();
   if (configOptions.expansionCoeffFlag)
     expansionCoeffs.resize(numExpansionTerms); // new terms initialized to 0
   if (configOptions.expansionCoeffGradFlag) {
