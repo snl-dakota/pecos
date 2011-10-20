@@ -52,6 +52,11 @@ public:
   //- Heading: Member functions
   //
 
+  /// precompute tripleProductMap
+  void precompute_triple_products(unsigned short max_order);
+  /// lookup value based on key within tripleProductMap; return 0 if not stored
+  Real triple_product(const UShortMultiSet& ijk_key) const;
+
   /// perform unit testing on Gauss points/weights
   void gauss_check(unsigned short order);
 
@@ -93,6 +98,11 @@ private:
   //
   //- Heading: Data
   //
+
+  /// mapping from an ijk sorted index set into <Psi_i Psi_j Psi_k>.
+  /// These are precomputed with precompute_triple_products(order)
+  /// and retrieved with triple_product(key)
+  UShortMultiSetRealMap tripleProductMap;
 };
 
 
