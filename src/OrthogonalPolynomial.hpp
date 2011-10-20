@@ -104,12 +104,12 @@ private:
   /// and retrieved with triple_product(key)
   UShortMultiSetRealMap tripleProductMap;
   /// tracks precomputations to prevent redundancy
-  short tripleProductOrder;
+  unsigned short tripleProductOrder;
 };
 
 
 inline OrthogonalPolynomial::OrthogonalPolynomial():
-  BasisPolynomial(BaseConstructor()), tripleProductOrder(-1)
+  BasisPolynomial(BaseConstructor()), tripleProductOrder(0)
 { }
 
 
