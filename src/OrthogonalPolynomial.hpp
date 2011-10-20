@@ -103,11 +103,13 @@ private:
   /// These are precomputed with precompute_triple_products(order)
   /// and retrieved with triple_product(key)
   UShortMultiSetRealMap tripleProductMap;
+  /// tracks precomputations to prevent redundancy
+  short tripleProductOrder;
 };
 
 
 inline OrthogonalPolynomial::OrthogonalPolynomial():
-  BasisPolynomial(BaseConstructor())
+  BasisPolynomial(BaseConstructor()), tripleProductOrder(-1)
 { }
 
 
@@ -117,6 +119,14 @@ inline OrthogonalPolynomial::~OrthogonalPolynomial()
 
 inline void OrthogonalPolynomial::reset_gauss()
 { collocPoints.clear(); collocWeights.clear(); }
+
+
+inline Real OrthogonalPolynomial::
+triple_product(const UShortMultiSet& ijk_key) const
+{
+  UShortMultiSetRealMap::const_iterator cit = tripleProductMap.find(ijk_key);
+  return (cit == tripleProductMap.end()) ? 0. : cit->second;
+}
 
 
 inline void OrthogonalPolynomial::collocation_rule(short rule)

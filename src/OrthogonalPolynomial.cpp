@@ -33,18 +33,41 @@ void OrthogonalPolynomial::gauss_check(unsigned short order)
 }
 
 
-void OrthogonalPolynomial::precompute_triple_products(unsigned short max_order)
+/** There are a number of ways to do this precomputation.  The PECOS
+    approach favors memory over flops by storing nonzero Cijk only for
+    unique index sets.  An alternative approach (used by Stokhos) that
+    favors flops would store all non-zeros and return iterators to
+    allow efficient iteration over these non-zeros. */
+void OrthogonalPolynomial::
+precompute_triple_products(unsigned short max_basis_order)
 {
-  Real c_ijk, tol = 1.e-10;
-  size_t i, j, k, l, max_int_order = 3*max_order,
-    max_quad_order = max_int_order/2 + 1; // rounds up using truncation
-  UShortMultiSet ijk_triple;
+  // Since orthogonal polynomial instances may be shared among
+  // multiple dimensions, check to see if this precomputation has
+  // already been performed to sufficient order.
+  if (tripleProductOrder && max_basis_order <= tripleProductOrder)
+    return;
+
   // Could tailor quad rule to each ijk order: OK if lookup, but too expensive
-  // if numerically generated.  Instead, evaluate a single rule of max order.
+  // if numerically generated.  Instead, retrieve a single rule of max order.
+  size_t i, j, k, l, max_int_order = 3*max_basis_order,
+    max_quad_order = max_int_order/2 + 1; // rounds up using truncation
+  // Override any nested rule setting to ensure i=2m-1.
+  short orig_rule = NO_RULE;
+  if (collocRule == GENZ_KEISTER)
+    { orig_rule = collocRule; collocRule = GAUSS_HERMITE; }
+  else if (collocRule == GAUSS_PATTERSON)
+    { orig_rule = collocRule; collocRule = GAUSS_LEGENDRE; }
   const RealArray& pts = collocation_points(max_quad_order);
   const RealArray& wts = type1_collocation_weights(max_quad_order);
-  for (i=0; i<max_order; ++i)
-    for (j=0; j<=i; ++j)
+  if (orig_rule) // restore
+    collocRule = orig_rule;
+
+  UShortMultiSet ijk_triple;
+  Real c_ijk, norm_sq_i, norm_sq_j, tol = 1.e-12; // tol sync'd with Stokhos
+  for (i=tripleProductOrder; i<max_basis_order; ++i) {
+    norm_sq_i = norm_squared(i);
+    for (j=0; j<=i; ++j) {
+      norm_sq_j = norm_squared(j);
       for (k=0; k<=j; ++k) {
 	c_ijk = 0.;
 	for (l=0; l<max_quad_order; ++l) {
@@ -52,19 +75,16 @@ void OrthogonalPolynomial::precompute_triple_products(unsigned short max_order)
 	  c_ijk += wts[l] * type1_value(pt, i) * type1_value(pt, j)
 	                  * type1_value(pt, k);
 	}
-	if (std::abs(c_ijk) > tol) {
+	if (std::abs(c_ijk) / std::sqrt(norm_sq_i*norm_sq_j*norm_squared(k))
+	    > tol) {
 	  ijk_triple.clear();
 	  ijk_triple.insert(i); ijk_triple.insert(j); ijk_triple.insert(k);
 	  tripleProductMap[ijk_triple] = c_ijk;
 	}
       }
-}
-
-
-Real OrthogonalPolynomial::triple_product(const UShortMultiSet& ijk_key) const
-{
-  UShortMultiSetRealMap::const_iterator cit = tripleProductMap.find(ijk_key);
-  return (cit == tripleProductMap.end()) ? 0. : cit->second;
+    }
+  }
+  tripleProductOrder = max_basis_order;
 }
 
 } // namespace Pecos
