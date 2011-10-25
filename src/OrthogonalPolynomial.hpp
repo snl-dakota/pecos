@@ -54,8 +54,12 @@ public:
 
   /// precompute tripleProductMap
   void precompute_triple_products(unsigned short max_order);
-  /// lookup value based on key within tripleProductMap; return 0 if not stored
-  Real triple_product(const UShortMultiSet& ijk_key) const;
+  /// lookup value based on UShortMultiSet key within tripleProductMap;
+  /// returns false if not stored
+  bool triple_product(const UShortMultiSet& ijk_key, Real& trip_prod) const;
+  /// lookup value based on three size_t keys within tripleProductMap;
+  /// returns false if not stored
+  bool triple_product(size_t i, size_t j, size_t k, Real& trip_prod) const;
 
   /// perform unit testing on Gauss points/weights
   void gauss_check(unsigned short order);
@@ -121,11 +125,23 @@ inline void OrthogonalPolynomial::reset_gauss()
 { collocPoints.clear(); collocWeights.clear(); }
 
 
-inline Real OrthogonalPolynomial::
-triple_product(const UShortMultiSet& ijk_key) const
+inline bool OrthogonalPolynomial::
+triple_product(const UShortMultiSet& ijk_key, Real& trip_prod) const
 {
   UShortMultiSetRealMap::const_iterator cit = tripleProductMap.find(ijk_key);
-  return (cit == tripleProductMap.end()) ? 0. : cit->second;
+  if (cit == tripleProductMap.end())
+    { trip_prod = 0.;          return false; }
+  else
+    { trip_prod = cit->second; return true;  }
+}
+
+
+inline bool OrthogonalPolynomial::
+triple_product(size_t i, size_t j, size_t k, Real& trip_prod) const
+{
+  UShortMultiSet ijk_key;
+  ijk_key.insert(i); ijk_key.insert(j); ijk_key.insert(k);
+  return triple_product(ijk_key, trip_prod);
 }
 
 

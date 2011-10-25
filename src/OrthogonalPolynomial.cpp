@@ -35,9 +35,10 @@ void OrthogonalPolynomial::gauss_check(unsigned short order)
 
 /** There are a number of ways to do this precomputation.  The PECOS
     approach favors memory over flops by storing nonzero Cijk only for
-    unique index sets.  An alternative approach (used by Stokhos) that
-    favors flops would store all non-zeros and return iterators to
-    allow efficient iteration over these non-zeros. */
+    unique index sets.  This approach requires a lookup of index sets
+    rather than direct iteration over non-zeros.  An alternative approach
+    (used by Stokhos) that favors flops would store all non-zeros and
+    return iterators to allow efficient iteration over these non-zeros. */
 void OrthogonalPolynomial::
 precompute_triple_products(unsigned short max_basis_order)
 {
@@ -63,7 +64,7 @@ precompute_triple_products(unsigned short max_basis_order)
     collocRule = orig_rule;
 
   UShortMultiSet ijk_triple;
-  Real c_ijk, norm_sq_i, norm_sq_j, tol = 1.e-12; // tol sync'd with Stokhos
+  Real c_ijk, norm_sq_i, norm_sq_j, tol = 1.e-12; // tol synchronized w/ Stokhos
   for (i=tripleProductOrder; i<max_basis_order; ++i) {
     norm_sq_i = norm_squared(i);
     for (j=0; j<=i; ++j) {

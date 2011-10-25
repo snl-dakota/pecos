@@ -303,9 +303,8 @@ public:
   /// initialize expansion multi_index using a total-order expansion
   /// from an upper_bound array specification
   static void total_order_multi_index(const UShortArray& upper_bound,
-				      UShort2DArray& multi_index,
-				      short lower_bound_offset = -1,
-				      size_t max_terms = UINT_MAX);
+    UShort2DArray& multi_index, short lower_bound_offset = -1,
+    size_t max_terms = _NPOS); // SIZE_MAX is a non-portable extension
 
   /// utility function for incrementing a set of multidimensional indices
   static void increment_indices(UShortArray& indices, const UShortArray& limits,
@@ -321,14 +320,14 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// query trial index for presence in savedSmolyakMultiIndex, indicating
+  /// query trial index for presence in savedLevMultiIndex, indicating
   /// the ability to restore a previously evaluated increment
   bool restore_available();
   /// returns index of the data set to be restored from within saved
-  /// bookkeeping (i.e., savedSmolyakMultiIndex)
+  /// bookkeeping (i.e., savedLevMultiIndex)
   size_t restoration_index();
   /// returns i-th index of the data sets to be restored from within saved
-  /// bookkeeping (i.e., savedSmolyakMultiIndex) during finalization
+  /// bookkeeping (i.e., savedLevMultiIndex) during finalization
   size_t finalization_index(size_t i);
 
   //
@@ -398,10 +397,11 @@ protected:
   /// numerical integration variance for InterpPoly)
   RealVector varianceGradient;
 
-  // saved Smolyak coefficients corresponding to savedSmolyakMultiIndex
-  //IntArray savedSmolyakCoeffs;
   /// saved trial sets that were computed but not selected
-  std::deque<UShortArray> savedSmolyakMultiIndex;
+  std::deque<UShortArray> savedLevMultiIndex;
+  /// storage of level multi-index (levels for tensor or sparse grids)
+  /// for subsequent restoration
+  UShort2DArray storedLevMultiIndex;
 
   /// introduce mapping to unify disparate enumeration of sensitivity
   /// indices (e.g. main effects only vs all effects)
@@ -584,16 +584,15 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 inline bool PolynomialApproximation::restore_available()
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return (std::find(savedSmolyakMultiIndex.begin(),
-		    savedSmolyakMultiIndex.end(), ssg_driver->trial_set())
-	  != savedSmolyakMultiIndex.end());
+  return (std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
+		    ssg_driver->trial_set()) != savedLevMultiIndex.end());
 }
 
 
 inline size_t PolynomialApproximation::restoration_index()
 {
   SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return find_index(savedSmolyakMultiIndex, ssg_driver->trial_set());
+  return find_index(savedLevMultiIndex, ssg_driver->trial_set());
 }
 
 
@@ -604,12 +603,12 @@ inline size_t PolynomialApproximation::finalization_index(size_t i)
 
   // sm_multi_index is updated in SparseGridDriver::finalize_sets() with all
   // of the remaining trial sets.  Below, we determine the order with which
-  // these appended trial sets appear in savedSmolyakMultiIndex
-  // (SparseGridDriver::trialSets is a sorted set, but savedSmolyakMultiIndex
+  // these appended trial sets appear in savedLevMultiIndex
+  // (SparseGridDriver::trialSets is a sorted set, but savedLevMultiIndex
   // retains order of insertion).
-  size_t num_saved_indices = savedSmolyakMultiIndex.size(),
+  size_t num_saved_indices = savedLevMultiIndex.size(),
          start = sm_multi_index.size() - num_saved_indices;
-  return find_index(savedSmolyakMultiIndex, sm_multi_index[start+i]);
+  return find_index(savedLevMultiIndex, sm_multi_index[start+i]);
 }
 
 } // namespace Pecos

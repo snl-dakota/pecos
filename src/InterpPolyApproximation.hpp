@@ -126,8 +126,6 @@ protected:
   RealMatrix storedExpType2Coeffs;
   /// storage of expansionType1CoeffGrads state for subsequent restoration
   RealMatrix storedExpType1CoeffGrads;
-  /// storage of IntegrationDriver multi-index state for subsequent restoration
-  UShort2DArray storedLevMultiIndex;
   /// storage of IntegrationDriver combinatorial coefficients state
   /// for subsequent restoration
   IntArray storedLevCoeffs;

@@ -174,12 +174,11 @@ private:
   void integrand_order_to_expansion_order(const UShortArray& int_order,
 					  UShortArray& exp_order);
   /// convert sparse grid level to expansion orders using available heuristics
-  void sparse_grid_level_to_expansion_order(unsigned short ssg_level,
-					    UShortArray& exp_order);
-  /// convert a level index set and a growth setting to an integrand_order
-  void level_growth_to_integrand_order(const UShortArray& levels,
-				       short growth_rate,
-				       UShortArray& int_order);
+  void heuristic_sparse_grid_level_to_expansion_order(unsigned short ssg_level,
+						      UShortArray& exp_order);
+  /// convert a sparse grid index set and a growth setting to an integrand_order
+  void sparse_grid_levels_to_expansion_order(const UShortArray& levels,
+    UShortArray& exp_order, short growth_rate = UNRESTRICTED_GROWTH);
 
   /// append multi-indices from app_multi_index that do not already
   /// appear in multi_index
@@ -204,6 +203,12 @@ private:
   void overlay_expansion(const SizetArray& multi_index_map,
 			 const RealVector& exp_coeffs,
 			 const RealMatrix& exp_grads, int coeff);
+  /// multiply current expansion ("a") with incoming expansion ("b")
+  /// and store in product expansion ("c")
+  void multiply_expansion(const UShort2DArray& multi_index_b,
+			  const RealVector& exp_coeffs_b,
+			  const RealMatrix& exp_grads_b,
+			  const UShort2DArray& multi_index_c);
   /// update expansion{Coeffs,CoeffGrads} by adding one or more tensor-product
   /// expansions and updating all Smolyak coefficients
   void append_tensor_expansions(size_t start_index);
@@ -341,6 +346,9 @@ private:
   /// copy of expansionCoeffGrads (aggregated total, not indiv tensor-products)
   /// stored in store_coefficients() for use in combine_coefficients()
   RealMatrix storedExpCoeffGrads;
+  /// copy of approxOrder stored in store_coefficients() for use in
+  /// combine_coefficients()
+  UShortArray storedApproxOrder;
   /// combination type for stored expansions; cached in class to bridge
   /// combine_coefficients() and compute_numerical_response_moments()
   short storedExpCombineType;

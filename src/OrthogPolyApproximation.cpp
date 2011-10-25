@@ -237,7 +237,8 @@ void OrthogPolyApproximation::allocate_arrays()
   }
 
   // no combination by default, even if storedMultiIndex and
-  // storedExp{Coeffs,CoeffGrads} are defined.  Overridden in 
+  // storedExp{Coeffs,CoeffGrads} are defined.  Redefined by
+  // attribute passed in combine_coefficients(short).
   storedExpCombineType = NO_COMBINE;
 }
 
@@ -408,10 +409,8 @@ void OrthogPolyApproximation::increment_coefficients()
       tpExpansionCoeffs.resize(new_size);
       tpExpansionCoeffGrads.resize(new_size);
       // update tpMultiIndex
-      UShortArray quad_order(numVars), int_order(numVars), exp_order(numVars);
-      ssg_driver->level_to_order(ssg_driver->trial_set(), quad_order);
-      quadrature_order_to_integrand_order(quad_order, int_order);
-      integrand_order_to_expansion_order(int_order, exp_order);
+      UShortArray exp_order(numVars);
+      sparse_grid_levels_to_expansion_order(ssg_driver->trial_set(), exp_order);
       tensor_product_multi_index(exp_order, tpMultiIndex[last_index], true);
       // update multiIndex and numExpansionTerms
       append_multi_index(tpMultiIndex[last_index], multiIndex, tpMultiIndexMap,
@@ -470,7 +469,7 @@ void OrthogPolyApproximation::decrement_coefficients()
       //resize_expansion();
 
       // reset tensor-product bookkeeping and save restorable data
-      savedSmolyakMultiIndex.push_back(ssg_driver->trial_set());
+      savedLevMultiIndex.push_back(ssg_driver->trial_set());
       savedTPMultiIndex.push_back(tpMultiIndex.back());
       savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
       savedTPMultiIndexMapRef.push_back(numExpansionTerms);
@@ -498,10 +497,10 @@ void OrthogPolyApproximation::restore_coefficients()
       last_index = tpMultiIndex.size();
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       std::deque<UShortArray>::iterator sit
-	= std::find(savedSmolyakMultiIndex.begin(), 
-		    savedSmolyakMultiIndex.end(), ssg_driver->trial_set());
-      size_t index_star = std::distance(savedSmolyakMultiIndex.begin(), sit);
-      savedSmolyakMultiIndex.erase(sit);
+	= std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
+		    ssg_driver->trial_set());
+      size_t index_star = std::distance(savedLevMultiIndex.begin(), sit);
+      savedLevMultiIndex.erase(sit);
       std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
       std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
       std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
@@ -555,7 +554,7 @@ void OrthogPolyApproximation::finalize_coefficients()
 	savedTPExpCoeffs.begin(), savedTPExpCoeffs.end());
       tpExpansionCoeffGrads.insert(tpExpansionCoeffGrads.end(),
 	savedTPExpCoeffGrads.begin(), savedTPExpCoeffGrads.end());
-      savedSmolyakMultiIndex.clear(); savedTPMultiIndex.clear();
+      savedLevMultiIndex.clear();     savedTPMultiIndex.clear();
       savedTPMultiIndexMap.clear();   savedTPMultiIndexMapRef.clear();
       savedTPExpCoeffs.clear();       savedTPExpCoeffGrads.clear();
       // sum remaining trial expansions into expansionCoeffs/expansionCoeffGrads
@@ -580,10 +579,15 @@ void OrthogPolyApproximation::store_coefficients()
     storedExpCoeffs     = expansionCoeffs;
   if (configOptions.expansionCoeffGradFlag)
     storedExpCoeffGrads = expansionCoeffGrads;
-  //switch (configOptions.expCoeffsSolnApproach) { // approach-specific storage
-  //case QUADRATURE: case SPARSE_GRID:
-  //  storedT1WtSets = driverRep->type1_weight_sets(); break;
-  //}
+  switch (configOptions.expCoeffsSolnApproach) { // approach-specific storage
+  case SPARSE_GRID: { // sum of tensor-product expansions
+    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    storedLevMultiIndex = ssg_driver->smolyak_multi_index();
+    break;
+  }
+  default: // tensor-product and total-order expansions
+    storedApproxOrder = approxOrder;
+  }
 }
 
 
@@ -607,22 +611,49 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     // update expansion{Coeffs,CoeffGrads}
     overlay_expansion(stored_mi_map.back(), storedExpCoeffs,
 		      storedExpCoeffGrads, 1);
-
-    // redefinition of compute_numerical_response_moments() eliminates need to
-    // update SparseGridDriver weights (append insufficient, combine requires
-    // approxData.combine() in Dakota::Approximation::combine())
-    //driverRep->append_type1_weight_sets(storedT1WtSets); // OK for mean only
-    //driverRep->combine_type1_weight_sets(storedT1WtSets,stored_mi_map.back());
-
     break;
   }
-  case MULT_COMBINE:
-    //multiply_expansion(storedMultiIndex, storedExpCoeffs,
-    //                   storedExpCoeffGrads); // TO DO
-    PCerr << "Error : multiplicative combination not yet implemented in "
-	  << "OrthogPolyApproximation::combine_coefficients()" << std::endl;
-    abort_handler(-1);
+  case MULT_COMBINE: {
+    // compute form of product expansion
+    UShort2DArray multi_index_prod;
+    switch (configOptions.expCoeffsSolnApproach) {
+    case QUADRATURE: // product of two tensor-product expansions
+      for (size_t i=0; i<numVars; ++i)
+	approxOrder[i] += storedApproxOrder[i];
+      tensor_product_multi_index(approxOrder, multi_index_prod, true);
+      break;
+    case SPARSE_GRID: { // product of two sums of tensor-product expansions
+      SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+      const UShort2DArray& curr_sm_mi = ssg_driver->smolyak_multi_index();
+      UShortArray exp_order_i, exp_order_j, exp_order_prod(numVars);
+      UShort2DArray tp_multi_index_prod, multi_index_prod;
+      size_t i, j, k, num_stored_sm_mi = storedLevMultiIndex.size(),
+	num_curr_sm_mi = curr_sm_mi.size();
+      for (i=0; i<num_stored_sm_mi; ++i) {
+	sparse_grid_levels_to_expansion_order(storedLevMultiIndex[i],
+					      exp_order_i);
+	for (j=0; j<num_curr_sm_mi; ++j) {
+	  sparse_grid_levels_to_expansion_order(curr_sm_mi[j], exp_order_j);
+	  for (k=0; k<numVars; ++k)
+	    exp_order_prod[k] = exp_order_i[k] + exp_order_j[k];
+	  tensor_product_multi_index(exp_order_prod, tp_multi_index_prod, true);
+	  append_multi_index(tp_multi_index_prod, multi_index_prod);
+	}
+      }
+      break;
+    }
+    default: // product of two total-order expansions
+      for (size_t i=0; i<numVars; ++i)
+	approxOrder[i] += storedApproxOrder[i];
+      total_order_multi_index(approxOrder, multi_index_prod);
+      break;
+    }
+
+    // perform the multiplication of current and stored expansions
+    multiply_expansion(storedMultiIndex, storedExpCoeffs, storedExpCoeffGrads,
+		       multi_index_prod);
     break;
+  }
   case ADD_MULT_COMBINE:
     //overlay_expansion(storedMultiIndex, storedExpCoeffs,
     //                  storedExpCoeffGrads, addCoeffs, addCoeffGrads);
@@ -661,15 +692,12 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
       tpExpansionCoeffs.resize(num_smolyak_indices);
       tpExpansionCoeffGrads.resize(num_smolyak_indices);
     }
-    UShortArray quad_order(numVars), integrand_order(numVars),
-      expansion_order(numVars);
+    UShortArray expansion_order(numVars);
     for (i=0; i<num_smolyak_indices; ++i) {
       // regenerate i-th expansion_order as collocKey[i] cannot be used in
       // general case (i.e., for nested rules GP, CC, F2, or GK).  Rather,
       // collocKey[i] is to be used only as the key to the collocation pts.
-      ssg_driver->level_to_order(sm_multi_index[i], quad_order);
-      quadrature_order_to_integrand_order(quad_order, integrand_order);
-      integrand_order_to_expansion_order(integrand_order, expansion_order);
+      sparse_grid_levels_to_expansion_order(sm_multi_index[i], expansion_order);
       tensor_product_multi_index(expansion_order, tpMultiIndex[i], true);
       append_multi_index(tpMultiIndex[i], multi_index, tpMultiIndexMap,
 			 tpMultiIndexMapRef);
@@ -687,7 +715,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // defined from the linear combination of mixed tensor products
     multi_index.clear();
     UShort2DArray tp_multi_index;
-    UShortArray integrand_order(numVars), expansion_order(numVars);
+    UShortArray int_order(numVars), exp_order(numVars);
     // Note: restricted rule growth within the sparse grid point set is separate
     // from restricted definition of the expansion terms.  The former makes
     // integrand precision more uniform by delaying exponential sequences, but
@@ -698,17 +726,15 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     short exp_growth = (sparseGridExpansion == SPARSE_INT_RESTR_TENSOR_SUM_EXP)
       ? MODERATE_RESTRICTED_GROWTH : UNRESTRICTED_GROWTH;
     for (i=0; i<num_smolyak_indices; ++i) {
-      level_growth_to_integrand_order(sm_multi_index[i], exp_growth,
-				      integrand_order);
-      integrand_order_to_expansion_order(integrand_order, expansion_order);
-      tensor_product_multi_index(expansion_order, tp_multi_index, true);
+      sparse_grid_levels_to_expansion_order(sm_multi_index[i], exp_order,
+					    exp_growth);
+      tensor_product_multi_index(exp_order, tp_multi_index, true);
       append_multi_index(tp_multi_index, multi_index);
 #ifdef DEBUG
-      PCout << "level =\n" << sm_multi_index[i] << "integrand_order =\n"
-	    << integrand_order << "expansion_order =\n" << expansion_order
+      PCout << "level =\n" << sm_multi_index[i] << "integrand order =\n"
+	    << int_order << "expansion order =\n" << exp_order << '\n';
 	  //<< "tp_multi_index =\n" << tp_multi_index
-	  //<< "multi_index =\n" << multi_index
-	    << '\n';
+	  //<< "multi_index =\n" << multi_index << '\n';
 #endif // DEBUG
     }
     break;
@@ -807,7 +833,8 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     break;
   }
   case SPARSE_INT_HEUR_TOTAL_ORD_EXP: // early heuristic
-    sparse_grid_level_to_expansion_order(ssg_driver->level(), approxOrder);
+    heuristic_sparse_grid_level_to_expansion_order(ssg_driver->level(),
+						   approxOrder);
     total_order_multi_index(approxOrder, multi_index);
     break;
   default: // possible fallback: revert to [optional] expansion_order spec.
@@ -839,8 +866,8 @@ map_tensor_product_multi_index(UShort2DArray& tp_multi_index, size_t tp_index)
    for CC, Gauss-Patterson, and linear growth Gaussian, but not for
    exponential Gaussian). */
 void OrthogPolyApproximation::
-sparse_grid_level_to_expansion_order(unsigned short ssg_level,
-				     UShortArray& exp_order)
+heuristic_sparse_grid_level_to_expansion_order(unsigned short ssg_level,
+					       UShortArray& exp_order)
 {
   if (exp_order.size() != numVars)
     exp_order.resize(numVars);
@@ -859,9 +886,9 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 	break;
       }
       default:
-	PCerr << "Error: unsupported integration rule for "
-	      << "FULL_EXPONENTIAL growth in OrthogPolyApproximation::"
-	      << "sparse_grid_level_to_expansion_order()." << std::endl;
+	PCerr << "Error: unsupported integration rule for FULL_EXPONENTIAL "
+	      << "growth in OrthogPolyApproximation::heuristic_sparse_grid_"
+	      << "level_to_expansion_order()." << std::endl;
 	abort_handler(-1);
       }
       break;
@@ -890,47 +917,60 @@ sparse_grid_level_to_expansion_order(unsigned short ssg_level,
     }
     default:
       PCerr << "Error: unsupported growth rule in OrthogPolyApproximation::"
-	    << "sparse_grid_level_to_expansion_order()," << std::endl;
+	    << "heuristic_sparse_grid_level_to_expansion_order()," << std::endl;
       abort_handler(-1);
     }
   }
 }
 
 
-/** The computed integrand_order may be conservative (by design) in the
-    presence of exponential growth.  This avoids aggressive optimization
-    of PCE expansion orders when an exponential rule takes a large jump
-    that is not balanced by the other index set component mappings. */
+/** The optional growth_rate supports the option of forcing the
+    computed integrand order to be conservative in the presence of
+    exponential growth due to nested quadrature rules.  This avoids
+    aggressive formulation of PCE expansion orders when an exponential
+    rule takes a large jump that is not balanced by the other index
+    set component mappings.  Note that restricting the expansion
+    growth directly from the level (*_RESTRICTED_GROWTH cases below
+    used by SPARSE_INT_RESTR_TENSOR_SUM_EXP) is similar but not
+    identical to restricting the quadrature order growth from the
+    level and then computing the integrand and expansion orders from
+    the restricted quadrature order (default UNRESTRICTED_GROWTH case
+    below used by SPARSE_INT_TENSOR_SUM_EXP and
+    TENSOR_INT_TENSOR_SUM_EXP, where quadrature rule restriction
+    happens elsewhere).  In particular, these approaches differ in
+    granularity of control, since the former approach grows linearly
+    and the latter approach selects the minimal quadrature order
+    (from nonlinear growth or lookup) that meets a linear target. */
 void OrthogPolyApproximation::
-level_growth_to_integrand_order(const UShortArray& levels, short growth_rate,
-				UShortArray& int_order)
+sparse_grid_levels_to_expansion_order(const UShortArray& levels,
+				      UShortArray& exp_order, short growth_rate)
 {
-  size_t i, n = levels.size();
-  if (int_order.size() != n)
-    int_order.resize(n);
+  size_t n = levels.size();
+  UShortArray int_order(n);
   switch (growth_rate) {
-  case SLOW_RESTRICTED_GROWTH:     // not currently used
-    for (i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
-      int_order[i] =  2*levels[i] + 1;
-    break;
-  case MODERATE_RESTRICTED_GROWTH: // used for SPARSE_INT_RESTR_TENSOR_SUM_EXP
-    // mitigate uneven integrand coverage due to exponential rule growth by
-    // enforcing moderate linear expansion growth. TO DO: SLOW_RESTRICTED_GROWTH
-    for (i=0; i<n; ++i) // synch with moderate linear growth: i = 4l + 1
-      int_order[i] =  4*levels[i] + 1;
-    break;
   case UNRESTRICTED_GROWTH: {      // used for SPARSE_INT_TENSOR_SUM_EXP and
                                    // consistent with TENSOR_INT_TENSOR_SUM_EXP
     // This option is generally too aggressive for use with nested rules with
     // exponential rule growth.  It is retained for completeness and comparison,
     // but is not recommended for use as anything other than a reference point.
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    UShortArray quad_order(numVars);
+    UShortArray quad_order(n);
     ssg_driver->level_to_order(levels, quad_order);
     quadrature_order_to_integrand_order(quad_order, int_order);
     break;
   }
+  case SLOW_RESTRICTED_GROWTH:     // not currently used
+    for (size_t i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
+      int_order[i] =  2*levels[i] + 1;
+    break;
+  case MODERATE_RESTRICTED_GROWTH: // used for SPARSE_INT_RESTR_TENSOR_SUM_EXP
+    // mitigate uneven integrand coverage due to exponential rule growth by
+    // enforcing moderate linear expansion growth. TO DO: SLOW_RESTRICTED_GROWTH
+    for (size_t i=0; i<n; ++i) // synch with moderate linear growth: i = 4l + 1
+      int_order[i] =  4*levels[i] + 1;
+    break;
   }
+  integrand_order_to_expansion_order(int_order, exp_order);
 }
 
 
@@ -1145,6 +1185,75 @@ overlay_expansion(const SizetArray& multi_index_map,
 	exp_grad_ndx[j] += coeff * grad_i[j];
     }
   }
+}
+
+
+void OrthogPolyApproximation::
+multiply_expansion(const UShort2DArray& multi_index_b,
+		   const RealVector& exp_coeffs_b,
+		   const RealMatrix& exp_grads_b,
+		   const UShort2DArray& multi_index_c)
+{
+  UShort2DArray multi_index_a = multiIndex;          // copy
+  RealVector    exp_coeffs_a  = expansionCoeffs;     // copy
+  RealMatrix    exp_grads_a   = expansionCoeffGrads; // copy
+  size_t i, j, k, v, num_a = multi_index_a.size(), num_b = multi_index_b.size(),
+    num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
+
+  // precompute 1D basis triple products required
+  //unsigned short max_a_order, max_b_order, max_c_order;
+  unsigned short max_c_order;
+  for (v=0; v<numVars; ++v) {
+    //max_a_order = max_b_order = max_c_order = 0;
+    max_c_order = 0;
+    /* TO DO: add fine tuning below once simpler overkill approach is working.
+              Also, max info available from multi_index_c estimation loop
+	      (--> move that loop into this fn?)
+    for (i=0; i<num_a; ++i)
+      if (multi_index_a[i][v] > max_a_order)
+	max_a_order = multi_index_a[i][v];
+    for (i=0; i<num_b; ++i)
+      if (multi_index_b[i][v] > max_b_order)
+	max_b_order = multi_index_b[i][v];
+    */
+    for (i=0; i<num_c; ++i)
+      if (multi_index_c[i][v] > max_c_order)
+	max_c_order = multi_index_c[i][v];
+    OrthogonalPolynomial* poly_rep_v
+      = (OrthogonalPolynomial*)polynomialBasis[v].polynomial_rep();
+    //poly_rep_v->precompute_triple_products(max_a_order, max_b_order,
+    //					     max_c_order);
+    poly_rep_v->precompute_triple_products(max_c_order);
+  }
+
+  // For c = a * b, compute coefficient of product expansion as
+  // c_k = \Sum_i \Sum_j a_i b_j <\Psi_i Psi_j Psi_k>
+  expansionCoeffs.size(num_c);                      // init to 0
+  expansionCoeffGrads.shape(num_deriv_vars, num_c); // init to 0
+  Real trip_prod, trip_prod_v; bool non_zero;
+  for (k=0; k<num_c; ++k)
+    for (i=0; i<num_a; ++i)
+      for (j=0; j<num_b; ++j) {
+	trip_prod = 1.;
+	for (v=0; v<numVars; ++v) {
+	  OrthogonalPolynomial* poly_rep_v
+	    = (OrthogonalPolynomial*)polynomialBasis[v].polynomial_rep();
+	  non_zero = poly_rep_v->triple_product(i, j, k, trip_prod_v);
+	  if (non_zero) trip_prod *= trip_prod_v;
+	  else          break;
+	}
+	if (non_zero) {
+	  if (configOptions.expansionCoeffFlag)
+	    expansionCoeffs[k] += exp_coeffs_a[i] * exp_coeffs_b[j] * trip_prod;
+	  // TO DO: verify correctness; treat as PCE coeffs of deriv exp (?)
+	  if (configOptions.expansionCoeffGradFlag)
+	    for (v=0; v<num_deriv_vars; ++v)
+	      expansionCoeffGrads(v,k) += exp_grads_a(v,i) * exp_grads_b(v,j)
+		* trip_prod;
+	}
+      }
+
+  multiIndex = multi_index_c;
 }
 
 

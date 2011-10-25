@@ -250,7 +250,7 @@ void InterpPolyApproximation::decrement_coefficients()
   case SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    savedSmolyakMultiIndex.push_back(ssg_driver->trial_set());
+    savedLevMultiIndex.push_back(ssg_driver->trial_set());
     break;
   }
   }
@@ -283,10 +283,10 @@ void InterpPolyApproximation::restore_coefficients()
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     std::deque<UShortArray>::iterator sit
-      = std::find(savedSmolyakMultiIndex.begin(), savedSmolyakMultiIndex.end(),
+      = std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
 		  ssg_driver->trial_set());
-    if (sit != savedSmolyakMultiIndex.end())
-      savedSmolyakMultiIndex.erase(sit);
+    if (sit != savedLevMultiIndex.end())
+      savedLevMultiIndex.erase(sit);
     break;
   }
   }
@@ -302,7 +302,7 @@ void InterpPolyApproximation::finalize_coefficients()
   switch (configOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID:
     // move previous expansion data to current expansion
-    savedSmolyakMultiIndex.clear();
+    savedLevMultiIndex.clear();
     break;
   }
 
