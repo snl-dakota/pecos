@@ -625,10 +625,10 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     case SPARSE_GRID: { // product of two sums of tensor-product expansions
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       const UShort2DArray& curr_sm_mi = ssg_driver->smolyak_multi_index();
-      UShortArray exp_order_i, exp_order_j, exp_order_prod(numVars);
-      UShort2DArray tp_multi_index_prod, multi_index_prod;
       size_t i, j, k, num_stored_sm_mi = storedLevMultiIndex.size(),
 	num_curr_sm_mi = curr_sm_mi.size();
+      UShortArray exp_order_i, exp_order_j, exp_order_prod(numVars);
+      UShort2DArray tp_multi_index_prod;
       for (i=0; i<num_stored_sm_mi; ++i) {
 	sparse_grid_levels_to_expansion_order(storedLevMultiIndex[i],
 					      exp_order_i);
@@ -1194,15 +1194,18 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 		   const RealMatrix& exp_grads_b,
 		   const UShort2DArray& multi_index_c)
 {
-  UShort2DArray multi_index_a = multiIndex;          // copy
-  RealVector    exp_coeffs_a  = expansionCoeffs;     // copy
-  RealMatrix    exp_grads_a   = expansionCoeffGrads; // copy
+  UShort2DArray multi_index_a = multiIndex; // copy
+  RealVector exp_coeffs_a; RealMatrix exp_grads_a;
+  if (configOptions.expansionCoeffFlag)
+    exp_coeffs_a = expansionCoeffs;         // copy
+  if (configOptions.expansionCoeffGradFlag)
+    exp_grads_a  = expansionCoeffGrads;     // copy
   size_t i, j, k, v, num_a = multi_index_a.size(), num_b = multi_index_b.size(),
     num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
 
   // precompute 1D basis triple products required
   //unsigned short max_a_order, max_b_order, max_c_order;
-  unsigned short max_c_order;
+  unsigned short max_c_order; OrthogonalPolynomial* poly_rep_v;
   for (v=0; v<numVars; ++v) {
     //max_a_order = max_b_order = max_c_order = 0;
     max_c_order = 0;
@@ -1219,26 +1222,27 @@ multiply_expansion(const UShort2DArray& multi_index_b,
     for (i=0; i<num_c; ++i)
       if (multi_index_c[i][v] > max_c_order)
 	max_c_order = multi_index_c[i][v];
-    OrthogonalPolynomial* poly_rep_v
-      = (OrthogonalPolynomial*)polynomialBasis[v].polynomial_rep();
+    poly_rep_v = (OrthogonalPolynomial*)polynomialBasis[v].polynomial_rep();
     //poly_rep_v->precompute_triple_products(max_a_order, max_b_order,
     //					     max_c_order);
     poly_rep_v->precompute_triple_products(max_c_order);
   }
 
   // For c = a * b, compute coefficient of product expansion as
-  // c_k = \Sum_i \Sum_j a_i b_j <\Psi_i Psi_j Psi_k>
-  expansionCoeffs.size(num_c);                      // init to 0
-  expansionCoeffGrads.shape(num_deriv_vars, num_c); // init to 0
-  Real trip_prod, trip_prod_v; bool non_zero;
-  for (k=0; k<num_c; ++k)
-    for (i=0; i<num_a; ++i)
+  // c_k <\Psi_k^2> = \Sum_i \Sum_j a_i b_j <\Psi_i \Psi_j \Psi_k>
+  if (configOptions.expansionCoeffFlag)
+    expansionCoeffs.size(num_c);                      // init to 0
+  if (configOptions.expansionCoeffGradFlag)
+    expansionCoeffGrads.shape(num_deriv_vars, num_c); // init to 0
+  Real trip_prod, trip_prod_v, norm_sq_k; bool non_zero;
+  for (k=0; k<num_c; ++k) {
+    for (i=0; i<num_a; ++i) {
       for (j=0; j<num_b; ++j) {
 	trip_prod = 1.;
 	for (v=0; v<numVars; ++v) {
-	  OrthogonalPolynomial* poly_rep_v
-	    = (OrthogonalPolynomial*)polynomialBasis[v].polynomial_rep();
-	  non_zero = poly_rep_v->triple_product(i, j, k, trip_prod_v);
+	  poly_rep_v=(OrthogonalPolynomial*)polynomialBasis[v].polynomial_rep();
+	  non_zero = poly_rep_v->triple_product(multi_index_a[i][v],
+	    multi_index_b[j][v], multi_index_c[k][v], trip_prod_v);
 	  if (non_zero) trip_prod *= trip_prod_v;
 	  else          break;
 	}
@@ -1248,12 +1252,19 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 	  // TO DO: verify correctness; treat as PCE coeffs of deriv exp (?)
 	  if (configOptions.expansionCoeffGradFlag)
 	    for (v=0; v<num_deriv_vars; ++v)
-	      expansionCoeffGrads(v,k) += exp_grads_a(v,i) * exp_grads_b(v,j)
-		* trip_prod;
+	      expansionCoeffGrads(v,k)
+		+= exp_grads_a(v,i) * exp_grads_b(v,j) * trip_prod;
 	}
       }
-
-  multiIndex = multi_index_c;
+    }
+    norm_sq_k = norm_squared(multi_index_c[k]);
+    if (configOptions.expansionCoeffFlag)
+      expansionCoeffs[k] /= norm_sq_k;
+    if (configOptions.expansionCoeffGradFlag)
+      for (v=0; v<num_deriv_vars; ++v)
+	expansionCoeffGrads(v,k) /= norm_sq_k;
+  }
+  multiIndex = multi_index_c; numExpansionTerms = multiIndex.size();
 }
 
 
