@@ -117,15 +117,23 @@ protected:
 
   /// retrieve the response PCE value for a given parameter vector
   Real value(const RealVector& x);
-  /// retrieve the response PCE gradient for a given parameter vector
-  /// and default DVV
-  const RealVector& gradient(const RealVector& x);
-  /// retrieve the response PCE gradient for a given parameter vector
-  /// and given DVV
-  const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
+  /// retrieve the gradient of the response PCE with respect to all
+  /// variables included in the polynomial basis (e.g., probabilistic
+  /// variables) for a given parameter vector
+  const RealVector& gradient_basis_variables(const RealVector& x);
+  /// retrieve the gradient of the response PCE with respect to variables
+  /// included in the polynomial basis (e.g., probabilistic or "all"
+  /// variables) for a given parameter vector and a given DVV subset
+  const RealVector& gradient_basis_variables(const RealVector& x,
+					     const SizetArray& dvv);
+  /// retrieve the gradient of the response PCE with respect to variables not
+  /// included in the polynomial basis (nonprobabilistic variables such as
+  /// design or epistemic when not in "all" mode) for a given parameter vector
+  const RealVector& gradient_nonbasis_variables(const RealVector& x);
 
   Real stored_value(const RealVector& x);
-  const RealVector& stored_gradient(const RealVector& x);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -149,10 +157,10 @@ protected:
   const RealVector& moments() const;
 
   /// returns the norm-squared of a particular multivariate polynomial,
-  /// treating all variables as random
+  /// treating all variables as probabilistic
   Real norm_squared(const UShortArray& indices);
   /// returns the norm-squared of a particular multivariate polynomial,
-  /// treating a subset of the variables as random
+  /// treating a subset of the variables as probabilistic
   Real norm_squared_random(const UShortArray& indices);
 
 private:
@@ -229,7 +237,7 @@ private:
 
   /// calculate a particular multivariate orthogonal polynomial value
   /// evaluated at a particular parameter set
-  Real multivariate_polynomial(const RealVector& x, const UShortArray& indices);
+  Real multivariate_polynomial(const RealVector& xi,const UShortArray& indices);
   /// calculate a particular multivariate orthogonal polynomial gradient
   /// evaluated at a particular parameter set
   const RealVector& multivariate_polynomial_gradient(const RealVector& xi,
@@ -306,8 +314,8 @@ private:
       coefficients or the coefficients of expansions for the response
       gradients.  This array is used when sensitivities of moments are
       needed with respect to variables that do not appear in the
-      expansion (e.g., with respect to design variables for an
-      expansion only over the random variables). */
+      expansion (e.g., with respect to design or epistemic variables
+      for an expansion only over probabilistic variables). */
   RealMatrix expansionCoeffGrads;
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
@@ -534,7 +542,7 @@ inline Real OrthogPolyApproximation::
 multivariate_polynomial(const RealVector& xi, const UShortArray& indices)
 {
   unsigned short order_1d;
-  Real mvp = 1.0;
+  Real mvp = 1.;
   for (size_t i=0; i<numVars; ++i) {
     order_1d = indices[i];
     if (order_1d)

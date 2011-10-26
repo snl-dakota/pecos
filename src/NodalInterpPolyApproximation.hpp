@@ -48,18 +48,26 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// retrieve the response value for the current expansion using the
-  /// given parameter vector
+  /// retrieve the value of the response expansion using the given
+  /// parameter vector
   Real value(const RealVector& x);
-  /// retrieve the response gradient for the current expansion using
-  /// the given parameter vector and default DVV
-  const RealVector& gradient(const RealVector& x);
-  /// retrieve the response gradient for the current expansion using
-  /// the given parameter vector and given DVV
-  const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
+  /// retrieve the gradient of the response expansion with respect to all
+  /// variables included in the polynomial basis (e.g., probabilistic
+  /// variables) for a given parameter vector
+  const RealVector& gradient_basis_variables(const RealVector& x);
+  /// retrieve the gradient of the response expansion with respect to variables
+  /// included in the polynomial basis (e.g., probabilistic or "all" variables)
+  /// for a given parameter vector and a given DVV subset
+  const RealVector& gradient_basis_variables(const RealVector& x,
+					     const SizetArray& dvv);
+  /// retrieve the gradient of the response expansion with respect to variables
+  /// not included in the polynomial basis (nonprobabilistic variables such as
+  /// design or epistemic when not in "all" mode) for a given parameter vector
+  const RealVector& gradient_nonbasis_variables(const RealVector& x);
 
   Real stored_value(const RealVector& x);
-  const RealVector& stored_gradient(const RealVector& x);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -105,18 +113,27 @@ private:
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray&  colloc_index);
 
-  /// compute the gradient of a tensor interpolant on a tensor grid;
-  /// contributes to gradient(x)
-  const RealVector& tensor_product_gradient(const RealVector& x,
+  /// compute the gradient of a tensor interpolant on a tensor grid
+  /// with respect to variables that are included in the polynomial
+  /// basis; contributes to gradient_basis_variables(x)
+  const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray&  colloc_index);
   /// compute the gradient of a tensor interpolant on a tensor grid
-  /// for given DVV; contributes to gradient(x, dvv)
-  const RealVector& tensor_product_gradient(const RealVector& x,
+  /// with respect to variables that are included in the polynomial
+  /// basis for given DVV; contributes to gradient_basis_variables(x, dvv)
+  const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray& colloc_index,  const SizetArray& dvv);
+  /// compute the gradient of a tensor interpolant on a tensor grid
+  /// with respect to variables that are not included in the
+  /// polynomial basis; contributes to gradient_nonbasis_variables(x)
+  const RealVector& tensor_product_gradient_nonbasis_variables(
+    const RealVector& x,             const RealMatrix& exp_t1_coeff_grads,
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray& colloc_index);
 
   /// compute the mean of a tensor interpolant on a tensor grid;
   /// contributes to mean(x)

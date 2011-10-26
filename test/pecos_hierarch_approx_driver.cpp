@@ -64,10 +64,10 @@ int main(int argc, char** argv)
   a->compute_coefficients();
 
   std::cout << "The value is... " << a->value(x) << std::endl;
-  std::cout << "The gradient is... " << a->gradient(x)[0] << std::endl;
+  std::cout << "The gradient is... " << a->gradient_basis_variables(x)[0] << std::endl;
 
   assert(a->value(x) == 2.718);
-  assert(a->gradient(x)[0] == 0);
+  assert(a->gradient_basis_variables(x)[0] == 0);
 
   l_driver.refine_globally();
 
@@ -87,18 +87,18 @@ int main(int argc, char** argv)
   x[0] = col_pts[1].get_point()[0];
 
   std::cout << "The value is... " << a->value(x) << std::endl;
-  std::cout << "The gradient is... " << a->gradient(x)[0] << std::endl;
+  std::cout << "The gradient is... " << a->gradient_basis_variables(x)[0] << std::endl;
 
   assert(a->value(x) == 0);
-  assert(a->gradient(x)[0] == 0);
+  assert(a->gradient_basis_variables(x)[0] == 0);
 
   x[0] = col_pts[2].get_point()[0];
 
   std::cout << "The value is... " << a->value(x) << std::endl;
-  std::cout << "The gradient is... " << a->gradient(x)[0] << std::endl;
+  std::cout << "The gradient is... " << a->gradient_basis_variables(x)[0] << std::endl;
 
   assert(a->value(x) == 5.6);
-  assert(a->gradient(x)[0] == 0);
+  assert(a->gradient_basis_variables(x)[0] == 0);
 
   /*These next two test check that the linera interpolation is correct. At
     this point the 'unknown' function is known to be equal to 0 at 0, 2.718
@@ -110,18 +110,18 @@ int main(int argc, char** argv)
   x[0] = .25;
 
   std::cout << "The value is... " << a->value(x) << std::endl;
-  std::cout << "The gradient is... " << a->gradient(x)[0] << std::endl;
+  std::cout << "The gradient is... " << a->gradient_basis_variables(x)[0] << std::endl;
 
   assert(std::abs(a->value(x) - 1.359) < 1e-10);
-  assert(std::abs(a->gradient(x)[0] - 5.436) < 1e-10);
+  assert(std::abs(a->gradient_basis_variables(x)[0] - 5.436) < 1e-10);
 
   x[0] = .75;
 
   std::cout << "The value is... " << a->value(x) << std::endl;
-  std::cout << "The gradient is... " << a->gradient(x)[0] << std::endl;
+  std::cout << "The gradient is... " << a->gradient_basis_variables(x)[0] << std::endl;
 
   assert(std::abs(a->value(x) - 4.159) < 1e-10);
-  assert(std::abs(a->gradient(x)[0] - 5.764) < 1e-10);
+  assert(std::abs(a->gradient_basis_variables(x)[0] - 5.764) < 1e-10);
 
   /*Now we do a local refinement of the grid.  Only the collocation point at
     zero is refined.  The new grid has points {0, .25, .5, 1} a few tests are
@@ -142,7 +142,7 @@ int main(int argc, char** argv)
   
   x[0] = .25;
   std::cout << "The value is... " << a->value(x) << std::endl;
-  std::cout << "The gradient is... " << a->gradient(x)[0] << std::endl;
+  std::cout << "The gradient is... " << a->gradient_basis_variables(x)[0] << std::endl;
   
   /*2D example.  The new approximation domain is [-1,1]^2 and the grid is
     initialized to level 8.
@@ -239,18 +239,18 @@ int main(int argc, char** argv)
   test_function_2_grad(x,grad2);
   std::cout << "Gradient = [" << grad2[0] 
 	    << "," << grad2[1] << "]" <<std::endl;
-  std::cout << "Approx_gradient = [" << a->gradient(x)[0] 
-	    << "," << a->gradient(x)[1] << "]" <<std::endl;
+  std::cout << "Approx_gradient = [" << a->gradient_basis_variables(x)[0] 
+	    << "," << a->gradient_basis_variables(x)[1] << "]" <<std::endl;
   
   SizetArray dvv(1);
   dvv[0] = 1;
-  double approx_df_dx1 = a->gradient(x)[0];
-  double approx_df_dx2 = a->gradient(x)[1];
-  std::cout << "All variables gradient dx1 = " << a->gradient(x,dvv)[0] << std::endl;
-  assert( approx_df_dx1 = a->gradient(x,dvv)[0] ); 
+  double approx_df_dx1 = a->gradient_basis_variables(x)[0];
+  double approx_df_dx2 = a->gradient_basis_variables(x)[1];
+  std::cout << "All variables gradient dx1 = " << a->gradient_basis_variables(x,dvv)[0] << std::endl;
+  assert( approx_df_dx1 = a->gradient_basis_variables(x,dvv)[0] ); 
   dvv[0] = 2;
-  std::cout << "All variables gradient dx2 = " << a->gradient(x,dvv)[0] << std::endl;
-  assert( approx_df_dx2 = a->gradient(x,dvv)[0] );
+  std::cout << "All variables gradient dx2 = " << a->gradient_basis_variables(x,dvv)[0] << std::endl;
+  assert( approx_df_dx2 = a->gradient_basis_variables(x,dvv)[0] );
   assert( std::abs(a->mean()) < 1e-10 );
   std::cout << "Mean = " << a->mean() << std::endl;
   

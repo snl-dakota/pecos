@@ -948,24 +948,23 @@ sparse_grid_levels_to_expansion_order(const UShortArray& levels,
   size_t n = levels.size();
   UShortArray int_order(n);
   switch (growth_rate) {
-  case UNRESTRICTED_GROWTH: {      // used for SPARSE_INT_TENSOR_SUM_EXP and
-                                   // consistent with TENSOR_INT_TENSOR_SUM_EXP
-    // This option is generally too aggressive for use with nested rules with
-    // exponential rule growth.  It is retained for completeness and comparison,
-    // but is not recommended for use as anything other than a reference point.
+  case UNRESTRICTED_GROWTH: { // used for {SPARSE,TENSOR}_INT_TENSOR_SUM_EXP
+    // Best option for TENSOR_INT_TENSOR_SUM_EXP, but SPARSE_INT_TENSOR_SUM_EXP
+    // is generally too aggressive for nested rules and exponential growth
+    // (SPARSE_INT_RESTR_TENSOR_SUM_EXP is preferred).
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     UShortArray quad_order(n);
     ssg_driver->level_to_order(levels, quad_order);
     quadrature_order_to_integrand_order(quad_order, int_order);
     break;
   }
-  case SLOW_RESTRICTED_GROWTH:     // not currently used
+  case SLOW_RESTRICTED_GROWTH: // not currently used
     for (size_t i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
       int_order[i] =  2*levels[i] + 1;
     break;
   case MODERATE_RESTRICTED_GROWTH: // used for SPARSE_INT_RESTR_TENSOR_SUM_EXP
     // mitigate uneven integrand coverage due to exponential rule growth by
-    // enforcing moderate linear expansion growth. TO DO: SLOW_RESTRICTED_GROWTH
+    // enforcing moderate linear expansion growth.
     for (size_t i=0; i<n; ++i) // synch with moderate linear growth: i = 4l + 1
       int_order[i] =  4*levels[i] + 1;
     break;
@@ -1195,11 +1194,10 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 		   const UShort2DArray& multi_index_c)
 {
   UShort2DArray multi_index_a = multiIndex; // copy
-  RealVector exp_coeffs_a; RealMatrix exp_grads_a;
-  if (configOptions.expansionCoeffFlag)
-    exp_coeffs_a = expansionCoeffs;         // copy
+  RealVector exp_coeffs_a = expansionCoeffs;// copy (also needed for CoeffGrads)
+  RealMatrix exp_grads_a;
   if (configOptions.expansionCoeffGradFlag)
-    exp_grads_a  = expansionCoeffGrads;     // copy
+    exp_grads_a = expansionCoeffGrads;      // copy
   size_t i, j, k, v, num_a = multi_index_a.size(), num_b = multi_index_b.size(),
     num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
 
@@ -1249,11 +1247,10 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 	if (non_zero) {
 	  if (configOptions.expansionCoeffFlag)
 	    expansionCoeffs[k] += exp_coeffs_a[i] * exp_coeffs_b[j] * trip_prod;
-	  // TO DO: verify correctness; treat as PCE coeffs of deriv exp (?)
 	  if (configOptions.expansionCoeffGradFlag)
 	    for (v=0; v<num_deriv_vars; ++v)
-	      expansionCoeffGrads(v,k)
-		+= exp_grads_a(v,i) * exp_grads_b(v,j) * trip_prod;
+	      expansionCoeffGrads(v,k) += (exp_coeffs_a[i] * exp_grads_b(v,j)
+		+ exp_coeffs_b[j] * exp_grads_a(v,i)) * trip_prod;
 	}
       }
     }
@@ -2142,15 +2139,16 @@ Real OrthogPolyApproximation::value(const RealVector& x)
 }
 
 
-const RealVector& OrthogPolyApproximation::gradient(const RealVector& x)
+const RealVector& OrthogPolyApproximation::
+gradient_basis_variables(const RealVector& x)
 {
-  // this could define a default_dvv and call gradient(x, dvv),
+  // could define a default_dvv and call gradient_basis_variables(x, dvv),
   // but we want this fn to be as fast as possible
 
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::gradient()" << std::endl;
+	  << "OrthogPolyApproximation::gradient_basis_variables()" << std::endl;
     abort_handler(-1);
   }
 
@@ -2164,34 +2162,64 @@ const RealVector& OrthogPolyApproximation::gradient(const RealVector& x)
   for (i=0; i<numExpansionTerms; ++i) {
     const RealVector& term_i_grad
       = multivariate_polynomial_gradient(x, multiIndex[i]);
+    Real& coeff_i = expansionCoeffs[i];
     for (j=0; j<numVars; ++j)
-      approxGradient[j] += expansionCoeffs[i]*term_i_grad[j];
+      approxGradient[j] += coeff_i * term_i_grad[j];
   }
   return approxGradient;
 }
 
 
 const RealVector& OrthogPolyApproximation::
-gradient(const RealVector& x, const SizetArray& dvv)
+gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::gradient()" << std::endl;
+	  << "OrthogPolyApproximation::gradient_basis_variables()" << std::endl;
     abort_handler(-1);
   }
 
   size_t i, j, num_deriv_vars = dvv.size();
   if (approxGradient.length() != num_deriv_vars)
-    approxGradient.sizeUninitialized(num_deriv_vars);
-  approxGradient = 0.0;
+    approxGradient.size(num_deriv_vars); // init to 0
+  else
+    approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
   for (i=0; i<numExpansionTerms; ++i) {
     const RealVector& term_i_grad
       = multivariate_polynomial_gradient(x, multiIndex[i], dvv);
+    Real& coeff_i = expansionCoeffs[i];
     for (j=0; j<num_deriv_vars; ++j)
-      approxGradient[j] += expansionCoeffs[i]*term_i_grad[j];
+      approxGradient[j] += coeff_i * term_i_grad[j];
+  }
+  return approxGradient;
+}
+
+
+const RealVector& OrthogPolyApproximation::
+gradient_nonbasis_variables(const RealVector& x)
+{
+  // Error check for required data
+  if (!configOptions.expansionCoeffGradFlag) {
+    PCerr << "Error: expansion coefficient gradients not defined in OrthogPoly"
+	  << "Approximation::gradient_coefficient_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.size(num_deriv_vars); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  for (i=0; i<numExpansionTerms; ++i) {
+    Real term_i = multivariate_polynomial(x, multiIndex[i]);
+    const Real* exp_coeff_grad_i = expansionCoeffGrads[i];
+    for (j=0; j<num_deriv_vars; ++j)
+      approxGradient[j] += exp_coeff_grad_i[j] * term_i;
   }
   return approxGradient;
 }
@@ -2216,12 +2244,14 @@ Real OrthogPolyApproximation::stored_value(const RealVector& x)
 }
 
 
-const RealVector& OrthogPolyApproximation::stored_gradient(const RealVector& x)
+const RealVector& OrthogPolyApproximation::
+stored_gradient_basis_variables(const RealVector& x)
 {
+  // Error check for required data
   size_t i, j, num_stored_terms = storedMultiIndex.size();
   if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
-    PCerr << "Error: stored expansion coefficients not available in "
-	  << "OrthogPolyApproximation::stored_gradient()" << std::endl;
+    PCerr << "Error: stored expansion coefficients not available in OrthogPoly"
+	  << "Approximation::stored_gradient_basis_variables()" << std::endl;
     abort_handler(-1);
   }
 
@@ -2234,8 +2264,37 @@ const RealVector& OrthogPolyApproximation::stored_gradient(const RealVector& x)
   for (i=0; i<num_stored_terms; ++i) {
     const RealVector& term_i_grad
       = multivariate_polynomial_gradient(x, storedMultiIndex[i]);
+    Real& coeff_i = storedExpCoeffs[i];
     for (j=0; j<numVars; ++j)
-      approxGradient[j] += storedExpCoeffs[i]*term_i_grad[j];
+      approxGradient[j] += coeff_i * term_i_grad[j];
+  }
+  return approxGradient;
+}
+
+
+const RealVector& OrthogPolyApproximation::
+stored_gradient_nonbasis_variables(const RealVector& x)
+{
+  // Error check for required data
+  size_t i, j, num_stored_terms = storedMultiIndex.size(),
+    num_deriv_vars = storedExpCoeffGrads.numRows();
+  if (!num_stored_terms || storedExpCoeffGrads.numCols() != num_stored_terms) {
+    PCerr << "Error: stored expansion coeff grads not available in OrthogPoly"
+	  << "Approximation::stored_gradient_nonbasis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.size(num_deriv_vars); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  for (i=0; i<num_stored_terms; ++i) {
+    Real term_i = multivariate_polynomial(x, storedMultiIndex[i]);
+    const Real* coeff_grad_i = storedExpCoeffGrads[i];
+    for (j=0; j<num_deriv_vars; ++j)
+      approxGradient[j] += coeff_grad_i[j] * term_i;
   }
   return approxGradient;
 }
@@ -2657,7 +2716,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 /** This test works in combination with DEBUG settings in
-    (Legendre,Laguerre,Jacobi,GenLaguerre)OrthogPolynomial::gradient(). */
+    (Legendre,Laguerre,Jacobi,GenLaguerre)OrthogPolynomial::type1_gradient(). */
 void OrthogPolyApproximation::gradient_check()
 {
   BasisPolynomial hermite_poly(HERMITE_ORTHOG), legendre_poly(LEGENDRE_ORTHOG),

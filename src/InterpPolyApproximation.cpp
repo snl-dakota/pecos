@@ -199,7 +199,8 @@ void InterpPolyApproximation::compute_coefficients()
 	  << std::abs(coeff1 - val) << '\n';
     if (configOptions.useDerivs) {
       const Real*     coeff2 = expansionType2Coeffs[i];
-      const RealVector& grad = gradient(surrData.continuous_variables(index));
+      const RealVector& grad
+	= gradient_basis_variables(surrData.continuous_variables(index));
       for (size_t j=0; j<numVars; ++j)
 	PCout << "               " << "truth grad_" << j+1 << " = "
 	      << std::setw(WRITE_PRECISION+7) << coeff2[j] << " interpolant = "
@@ -351,48 +352,48 @@ void InterpPolyApproximation::combine_coefficients(short combine_type)
   size_t i, j, offset = 0, num_pts = surrData.size();
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) { offset = 1; ++num_pts; }
+  Real lf_val, discrep_val;
   for (i=0; i<num_pts; ++i) {
     const RealVector& c_vars = (anchor_pt && i == 0) ?
       surrData.anchor_continuous_variables() :
       surrData.continuous_variables(i-offset);
+    if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
+      discrep_val = stored_value(c_vars);
+      lf_val = expansionType1Coeffs[i]; // copy prior to update
+    }
     if (configOptions.expansionCoeffFlag) {
-      if (combine_type == ADD_COMBINE) {
-	// split up type1/type2 contribs so increments are performed properly
+      // split up type1/type2 contribs so increments are performed properly
+      if (combine_type == ADD_COMBINE)
 	expansionType1Coeffs[i] += stored_value(c_vars);
-	if (configOptions.useDerivs) {
-	  const RealVector& discrep_grad = stored_gradient(c_vars);
-	  Real*          exp_t2_coeffs_i = expansionType2Coeffs[i];
-	  size_t num_discrep_vars = discrep_grad.length();
-	  for (j=0; j<num_discrep_vars; ++j)
-	    exp_t2_coeffs_i[j] += discrep_grad[j];
-	}
-      }
-      else if (combine_type == MULT_COMBINE) {
-	Real discrep_val = stored_value(c_vars),
-	          lf_val = expansionType1Coeffs[i]; // copy prior to update
+      else if (combine_type == MULT_COMBINE)
 	expansionType1Coeffs[i] *= discrep_val;
-	if (configOptions.useDerivs) {
+      if (configOptions.useDerivs) {
+	const RealVector& discrep_grad
+	  = stored_gradient_basis_variables(c_vars);
+	Real* exp_t2_coeffs_i = expansionType2Coeffs[i];
+	size_t num_deriv_vars = discrep_grad.length();
+	if (combine_type == ADD_COMBINE)
+	  for (j=0; j<num_deriv_vars; ++j)
+	    exp_t2_coeffs_i[j] += discrep_grad[j];
+	else if (combine_type == MULT_COMBINE)
 	  // hf = lf*discrep --> dhf/dx = dlf/dx*discrep + lf*ddiscrep/dx
-	  const RealVector& discrep_grad = stored_gradient(c_vars);
-	  Real*          exp_t2_coeffs_i = expansionType2Coeffs[i];
-	  size_t num_discrep_vars = discrep_grad.length();
-	  for (j=0; j<num_discrep_vars; ++j)
+	  for (j=0; j<num_deriv_vars; ++j)
 	    exp_t2_coeffs_i[j] = exp_t2_coeffs_i[j] * discrep_val
 	                       + discrep_grad[j]    * lf_val;
-	}
       }
     }
     if (configOptions.expansionCoeffGradFlag) {
-      Real*   exp_grad_i = expansionType1CoeffGrads[i];
-      /* TO DO
-      const Real* grad_i = gradient(vars_set[i]);
-      //if (combine_type == ADD_COMBINE)
-      for (j=0; j<num_deriv_vars; ++j)
-	exp_grad_i[j] += grad_i[j];
-      //else if (combine_type == MULT_COMBINE)
-      //for (j=0; j<num_deriv_vars; ++j)
-      //  exp_grad_i[j] = ...;
-      */
+      Real* exp_t1_grad_i = expansionType1CoeffGrads[i];
+      const RealVector& discrep_grad
+	= stored_gradient_nonbasis_variables(c_vars);
+      size_t num_deriv_vars = discrep_grad.length();
+      if (combine_type == ADD_COMBINE)
+	for (j=0; j<num_deriv_vars; ++j)
+	  exp_t1_grad_i[j] += discrep_grad[j];
+      else if (combine_type == MULT_COMBINE)
+	for (j=0; j<num_deriv_vars; ++j)
+	  exp_t1_grad_i[j] = exp_t1_grad_i[j] * discrep_val
+	                   + discrep_grad[j]  * lf_val;
     }
   }
 #ifdef DEBUG
@@ -581,7 +582,7 @@ compute_numerical_expansion_moments(size_t num_moments)
 	surrData.anchor_continuous_variables() :
 	surrData.continuous_variables(i-offset);
       t1_exp[i] = value(c_vars);
-      Teuchos::setCol(gradient(c_vars), (int)i, t2_exp);
+      Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
     }
     compute_numerical_moments(num_moments, t1_exp, t2_exp, expansionMoments);
   }

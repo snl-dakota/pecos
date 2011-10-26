@@ -56,15 +56,17 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
 
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
-			const RealMatrix& exp_t2_coeffs,
-			const UShortArray& basis_index,const UShort2DArray& key,
-			const SizetArray& colloc_index)
+tensor_product_gradient_basis_variables(const RealVector& x,
+					const RealVector& exp_t1_coeffs,
+					const RealMatrix& exp_t2_coeffs,
+					const UShortArray& basis_index,
+					const UShort2DArray& key,
+					const SizetArray& colloc_index)
 {
   if (tpGradient.length() != numVars)
-    tpGradient.sizeUninitialized(numVars);
-  tpGradient = 0.;
-
+    tpGradient.size(numVars); // init to 0
+  else
+    tpGradient = 0.;
   size_t i, j, num_colloc_pts = key.size();
   if (exp_t2_coeffs.empty()) {
     for (i=0; i<num_colloc_pts; ++i) {
@@ -98,16 +100,20 @@ tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
 
 
 const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
-			const RealMatrix& exp_t2_coeffs,
-			const UShortArray& basis_index,const UShort2DArray& key,
-			const SizetArray& colloc_index, const SizetArray& dvv)
+tensor_product_gradient_basis_variables(const RealVector& x,
+					const RealVector& exp_t1_coeffs,
+					const RealMatrix& exp_t2_coeffs,
+					const UShortArray& basis_index,
+					const UShort2DArray& key,
+					const SizetArray& colloc_index,
+					const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_colloc_pts = key.size(),
     num_deriv_vars = dvv.size();
   if (tpGradient.length() != num_deriv_vars)
-    tpGradient.sizeUninitialized(num_deriv_vars);
-  tpGradient = 0.;
+    tpGradient.size(num_deriv_vars); // init to 0
+  else
+    tpGradient = 0.;
   if (exp_t2_coeffs.empty()) {
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i   = key[i];
@@ -137,6 +143,30 @@ tensor_product_gradient(const RealVector& x, const RealVector& exp_t1_coeffs,
 	    type2_interpolant_gradient(x, deriv_index, k, key_i, basis_index);
       }
     }
+  }
+  return tpGradient;
+}
+
+
+const RealVector& NodalInterpPolyApproximation::
+tensor_product_gradient_nonbasis_variables(const RealVector& x,
+					   const RealMatrix& exp_t1_coeff_grads,
+					   const UShortArray& basis_index,
+					   const UShort2DArray& key,
+					   const SizetArray& colloc_index)
+{
+  size_t i, j, num_colloc_pts = key.size(),
+    num_deriv_vars = exp_t1_coeff_grads.numRows();
+  if (tpGradient.length() != num_deriv_vars)
+    tpGradient.size(num_deriv_vars); // init to 0
+  else
+    tpGradient = 0.;
+  for (i=0; i<num_colloc_pts; ++i) {
+    const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
+      exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
+    Real t1_val = type1_interpolant_value(x, key[i], basis_index);
+    for (j=0; j<numVars; ++j)
+      tpGradient[j] += exp_t1_coeff_grad_i[j] * t1_val;
   }
   return tpGradient;
 }
@@ -462,12 +492,159 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
 }
 
 
+const RealVector& NodalInterpPolyApproximation::
+gradient_basis_variables(const RealVector& x)
+{
+  // this could define a default_dvv and call gradient_basis_variables(x, dvv),
+  // but we want this fn to be as fast as possible
+
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  switch (configOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    SizetArray colloc_index; // empty -> default indexing
+    return tensor_product_gradient_basis_variables(x, expansionType1Coeffs,
+      expansionType2Coeffs, tpq_driver->level_index(),
+      tpq_driver->collocation_key(), colloc_index);
+    break;
+  }
+  case SPARSE_GRID: {
+    if (approxGradient.length() != numVars)
+      approxGradient.sizeUninitialized(numVars);
+    approxGradient = 0.;
+    // Smolyak recursion of anisotropic tensor products
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    size_t i, j, num_smolyak_indices = sm_coeffs.size();
+    for (i=0; i<num_smolyak_indices; ++i) {
+      int coeff_i = sm_coeffs[i];
+      if (coeff_i) {
+	const RealVector& tp_grad = tensor_product_gradient_basis_variables(x,
+	  expansionType1Coeffs, expansionType2Coeffs, sm_mi[i], colloc_key[i],
+	  colloc_indices[i]);
+	for (j=0; j<numVars; ++j)
+	  approxGradient[j] += coeff_i * tp_grad[j];
+      }
+    }
+    return approxGradient;
+    break;
+  }
+  }
+}
+
+
+const RealVector& NodalInterpPolyApproximation::
+gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
+{
+  // Error check for required data
+  if (!configOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  switch (configOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    SizetArray colloc_index; // empty -> default indexing
+    return tensor_product_gradient_basis_variables(x, expansionType1Coeffs,
+      expansionType2Coeffs, tpq_driver->level_index(),
+      tpq_driver->collocation_key(), colloc_index, dvv);
+    break;
+  }
+  case SPARSE_GRID: {
+    size_t num_deriv_vars = dvv.size();
+    if (approxGradient.length() != num_deriv_vars)
+      approxGradient.sizeUninitialized(num_deriv_vars);
+    approxGradient = 0.;
+    // Smolyak recursion of anisotropic tensor products
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    size_t i, j, num_smolyak_indices = sm_coeffs.size();
+    for (i=0; i<num_smolyak_indices; ++i) {
+      int coeff_i = sm_coeffs[i];
+      if (coeff_i) {
+	const RealVector& tp_grad = tensor_product_gradient_basis_variables(x,
+	  expansionType1Coeffs, expansionType2Coeffs, sm_mi[i], colloc_key[i],
+	  colloc_indices[i], dvv);
+	for (j=0; j<num_deriv_vars; ++j)
+	  approxGradient[j] += coeff_i * tp_grad[j];
+      }
+    }
+    return approxGradient;
+    break;
+  }
+  }
+}
+
+
+const RealVector& NodalInterpPolyApproximation::
+gradient_nonbasis_variables(const RealVector& x)
+{
+  // Error check for required data
+  if (!configOptions.expansionCoeffGradFlag) {
+    PCerr << "Error: expansion coefficient gradients not defined in NodalInterp"
+	  << "PolyApproximation::gradient_nonbasis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  switch (configOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    SizetArray colloc_index; // empty -> default indexing
+    return tensor_product_gradient_nonbasis_variables(x,
+      expansionType1CoeffGrads, tpq_driver->level_index(),
+      tpq_driver->collocation_key(), colloc_index);
+    break;
+  }
+  case SPARSE_GRID: {
+    size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
+    if (approxGradient.length() != num_deriv_vars)
+      approxGradient.size(num_deriv_vars); // init to 0
+    else
+      approxGradient = 0.;
+    // Smolyak recursion of anisotropic tensor products
+    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    size_t num_smolyak_indices = sm_coeffs.size();
+    for (i=0; i<num_smolyak_indices; ++i) {
+      int coeff_i = sm_coeffs[i];
+      if (coeff_i) {
+	const RealVector& tp_grad = tensor_product_gradient_nonbasis_variables(
+	  x, expansionType1CoeffGrads, sm_mi[i], colloc_key[i],
+	  colloc_indices[i]);
+	for (j=0; j<num_deriv_vars; ++j)
+	  approxGradient[j] += coeff_i * tp_grad[j];
+      }
+    }
+    return approxGradient;
+    break;
+  }
+  }
+}
+
+
 Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
 {
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::value()" << std::endl;
+    PCerr << "Error: expansion coefficients not available in "
+	  << "NodalInterpPolyApproximation::stored_value()" << std::endl;
     abort_handler(-1);
   }
 
@@ -497,89 +674,37 @@ Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
 }
 
 
-const RealVector& NodalInterpPolyApproximation::gradient(const RealVector& x)
-{
-  // this could define a default_dvv and call gradient(x, dvv),
-  // but we want this fn to be as fast as possible
-
-  // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::gradient()" << std::endl;
-    abort_handler(-1);
-  }
-
-  switch (configOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    SizetArray colloc_index; // empty -> default indexing
-    return tensor_product_gradient(x, expansionType1Coeffs,expansionType2Coeffs,
-				   tpq_driver->level_index(),
-				   tpq_driver->collocation_key(), colloc_index);
-    break;
-  }
-  case SPARSE_GRID: {
-    if (approxGradient.length() != numVars)
-      approxGradient.sizeUninitialized(numVars);
-    approxGradient = 0.;
-    // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
-    size_t i, j, num_smolyak_indices = sm_coeffs.size();
-    for (i=0; i<num_smolyak_indices; ++i) {
-      int coeff_i = sm_coeffs[i];
-      if (coeff_i) {
-	const RealVector& tp_grad =
-	  tensor_product_gradient(x, expansionType1Coeffs, expansionType2Coeffs,
-				  sm_mi[i], colloc_key[i], colloc_indices[i]);
-	for (j=0; j<numVars; ++j)
-	  approxGradient[j] += coeff_i * tp_grad[j];
-      }
-    }
-    return approxGradient;
-    break;
-  }
-  }
-}
-
-
 const RealVector& NodalInterpPolyApproximation::
-stored_gradient(const RealVector& x)
+stored_gradient_basis_variables(const RealVector& x)
 {
-  // this could define a default_dvv and call gradient(x, dvv),
-  // but we want this fn to be as fast as possible
-
   // Error check for required data
   if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::gradient()" << std::endl;
+    PCerr << "Error: expansion coefficients not available in NodalInterpPoly"
+	  << "Approximation::stored_gradient_basis_variables()" << std::endl;
     abort_handler(-1);
   }
 
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     SizetArray colloc_index; // empty -> default indexing
-    return tensor_product_gradient(x, storedExpType1Coeffs,
-				   storedExpType2Coeffs, storedLevMultiIndex[0],
-				   storedCollocKey[0], colloc_index);
+    return tensor_product_gradient_basis_variables(x, storedExpType1Coeffs,
+      storedExpType2Coeffs, storedLevMultiIndex[0], storedCollocKey[0],
+      colloc_index);
     break;
   }
   case SPARSE_GRID: {
     if (approxGradient.length() != numVars)
-      approxGradient.sizeUninitialized(numVars);
-    approxGradient = 0.;
+      approxGradient.size(numVars); // init to 0
+    else
+      approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     size_t i, j, num_smolyak_indices = storedLevCoeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = storedLevCoeffs[i];
       if (coeff_i) {
-	const RealVector& tp_grad =
-	  tensor_product_gradient(x, storedExpType1Coeffs, storedExpType2Coeffs,
-				  storedLevMultiIndex[i], storedCollocKey[i],
-				  storedCollocIndices[i]);
+	const RealVector& tp_grad = tensor_product_gradient_basis_variables(x,
+	  storedExpType1Coeffs, storedExpType2Coeffs, storedLevMultiIndex[i],
+	  storedCollocKey[i], storedCollocIndices[i]);
 	for (j=0; j<numVars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -592,45 +717,38 @@ stored_gradient(const RealVector& x)
 
 
 const RealVector& NodalInterpPolyApproximation::
-gradient(const RealVector& x, const SizetArray& dvv)
+stored_gradient_nonbasis_variables(const RealVector& x)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::gradient()" << std::endl;
+  if (!configOptions.expansionCoeffGradFlag) {
+    PCerr << "Error: expansion coefficient gradients not available in Nodal"
+	  << "InterpPolyApproximation::stored_gradient_nonbasis_variables()"
+	  << std::endl;
     abort_handler(-1);
   }
 
   switch (configOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
-    return tensor_product_gradient(x, expansionType1Coeffs,
-				   expansionType2Coeffs,
-				   tpq_driver->level_index(),
-				   tpq_driver->collocation_key(),
-				   colloc_index, dvv);
+    return tensor_product_gradient_nonbasis_variables(x,
+      storedExpType1CoeffGrads, storedLevMultiIndex[0], storedCollocKey[0],
+      colloc_index);
     break;
   }
   case SPARSE_GRID: {
-    size_t num_deriv_vars = dvv.size();
-    if (approxGradient.length() != num_deriv_vars)
-      approxGradient.sizeUninitialized(num_deriv_vars);
-    approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
-    size_t i, j, num_smolyak_indices = sm_coeffs.size();
+    size_t i, j, num_smolyak_indices = storedLevCoeffs.size(),
+      num_deriv_vars = storedExpType1CoeffGrads.numRows();
+    if (approxGradient.length() != num_deriv_vars)
+      approxGradient.size(num_deriv_vars); // init to 0
+    else
+      approxGradient = 0.;
     for (i=0; i<num_smolyak_indices; ++i) {
-      int coeff_i = sm_coeffs[i];
+      int coeff_i = storedLevCoeffs[i];
       if (coeff_i) {
-	const RealVector& tp_grad =
-	  tensor_product_gradient(x, expansionType1Coeffs, expansionType2Coeffs,
-				  sm_mi[i], colloc_key[i], colloc_indices[i],
-				  dvv);
+	const RealVector& tp_grad = tensor_product_gradient_nonbasis_variables(
+	  x, storedExpType1CoeffGrads, storedLevMultiIndex[i],
+	  storedCollocKey[i], storedCollocIndices[i]);
 	for (j=0; j<num_deriv_vars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }

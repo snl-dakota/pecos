@@ -80,7 +80,7 @@ public:
      @return A const reference to approxGradient.  This will be a RealVector
        of length numVars containing the gradient of the interpolant at x.
   */
-  const RealVector& gradient(const RealVector& x);
+  const RealVector& gradient_basis_variables(const RealVector& x);
   
   /// retrieve the response expansion gradient for a given parameter vector
   /// and given DVV
@@ -93,10 +93,12 @@ public:
         of length dvv.size() containing the gradient of the interpolant at x
         with respect to the variables indicated in the dvv input parameter.
   */
-  const RealVector& gradient(const RealVector& x, const SizetArray& dvv);
+  const RealVector& gradient_basis_variables(const RealVector& x,
+					     const SizetArray& dvv);
 
   Real stored_value(const RealVector& x);
-  const RealVector& stored_gradient(const RealVector& x);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
 
   /// Returns the mean of the expansion, treating all variables as random.
   /** @return The mean of the expansion.
@@ -132,7 +134,8 @@ protected:
   Real value(const RealVector& x, unsigned int max_level);
 
   /// compute the approximate gradient at a point using a lower level than the full approximation.
-  const RealVector& gradient(const RealVector& x, unsigned int max_level);
+  const RealVector& gradient_basis_variables(const RealVector& x,
+					     unsigned int max_level);
 
   /// The largest computed coefficient.
   unsigned int maxComputedCoeff;

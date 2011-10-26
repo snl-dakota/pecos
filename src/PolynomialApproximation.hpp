@@ -44,6 +44,7 @@ class ConfigurationOptions
   friend class NodalInterpPolyApproximation;
   friend class OrthogPolyApproximation;
   friend class HierarchInterpPolyApproximation;
+
 public:
 
   /// default constructor
@@ -146,12 +147,23 @@ public:
   /// size derived class data attributes
   virtual void allocate_arrays() = 0;
 
+  /// retrieve the response gradient for a stored expansion using the
+  /// given parameter vector and default DVV
+  virtual const RealVector& gradient_basis_variables(const RealVector& x) = 0;
+
   /// retrieve the response value for a stored expansion using the
   /// given parameter vector
   virtual Real stored_value(const RealVector& x) = 0;
-  /// retrieve the response gradient for a stored expansion using the
-  /// given parameter vector and default DVV
-  virtual const RealVector& stored_gradient(const RealVector& x) = 0;
+  /// retrieve the response gradient for a stored expansion with
+  /// respect to all variables included in the polynomial bases;
+  /// evaluate for the given parameter vector.
+  virtual const RealVector&
+    stored_gradient_basis_variables(const RealVector& x) = 0;
+  /// retrieve the response gradient for a stored expansion with
+  /// respect to all variables not included in the polynomial bases;
+  /// evaluate for the given parameter vector.
+  virtual const RealVector&
+    stored_gradient_nonbasis_variables(const RealVector& x) = 0;
 
   /// return the mean of the expansion, treating all variables as random
   virtual Real mean() = 0;
@@ -319,6 +331,9 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
+
+  /// generic base class function mapped to gradient_basis_variables(x)
+  const RealVector& gradient(const RealVector& x);
 
   /// query trial index for presence in savedLevMultiIndex, indicating
   /// the ability to restore a previously evaluated increment
@@ -579,6 +594,10 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
     }
   }
 }
+
+
+inline const RealVector& PolynomialApproximation::gradient(const RealVector& x)
+{ return gradient_basis_variables(x); }
 
 
 inline bool PolynomialApproximation::restore_available()

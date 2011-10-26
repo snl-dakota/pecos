@@ -157,7 +157,7 @@ namespace Pecos {
   
 
   const RealVector& HierarchInterpPolyApproximation::
-  gradient(const RealVector& x)
+  gradient_basis_variables(const RealVector& x)
   {
     if (!configOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
@@ -337,7 +337,7 @@ namespace Pecos {
   }
 
   const RealVector& HierarchInterpPolyApproximation::
-  gradient(const RealVector& x, const SizetArray& dvv)
+  gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
   {
     size_t num_deriv_vars = dvv.size();
     if ( approxGradient.length() != num_deriv_vars )
@@ -524,7 +524,11 @@ namespace Pecos {
   { return 0.; /* TO DO */ }
 
   const RealVector& HierarchInterpPolyApproximation::
-  stored_gradient(const RealVector& x)
+  stored_gradient_basis_variables(const RealVector& x)
+  { return approxGradient; /* TO DO */ }
+
+  const RealVector& HierarchInterpPolyApproximation::
+  stored_gradient_nonbasis_variables(const RealVector& x)
   { return approxGradient; /* TO DO */ }
 
   Real HierarchInterpPolyApproximation::
@@ -741,8 +745,8 @@ namespace Pecos {
 	  this->value(surrData.continuous_variables(i),level - 1);
 	if (configOptions.useDerivs){
 	  RealVector trueGrad = surrData.response_gradient(i);
-	  RealVector approxGrad = 
-	    this->gradient(surrData.continuous_variables(i),level - 1);
+	  RealVector approxGrad = this->
+	    gradient_basis_variables(surrData.continuous_variables(i), level-1);
 	  for ( unsigned int idx = 0; idx < numVars; ++idx ){
 	    trueGrad[idx] -= approxGrad[idx];
 	  }
@@ -783,8 +787,8 @@ namespace Pecos {
 	  this->value(surrData.continuous_variables(i),level - 1);
 	if (configOptions.useDerivs){
 	  RealVector trueGrad = surrData.response_gradient(i);
-	  RealVector approxGrad = 
-	    this->gradient(surrData.continuous_variables(i),level - 1);
+	  RealVector approxGrad = this->
+	    gradient_basis_variables(surrData.continuous_variables(i), level-1);
 	  for ( unsigned int idx = 0; idx < numVars; ++idx ){
 	    trueGrad[idx] -= approxGrad[idx];
 	  }
@@ -937,7 +941,7 @@ namespace Pecos {
   }
 
   const RealVector& HierarchInterpPolyApproximation::
-  gradient(const RealVector& x, unsigned int max_level)
+  gradient_basis_variables(const RealVector& x, unsigned int max_level)
   {
     if (!configOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
