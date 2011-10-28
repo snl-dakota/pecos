@@ -306,12 +306,12 @@ public:
   /// with the provided (anisotropic) quadrature orders (default) or
   /// expansion orders (offset = true)
   static size_t tensor_product_terms(const UShortArray& order,
-				     bool exp_order_offset = false);
+				     bool include_upper_bound = true);
 
   /// initialize expansion multi_index using a tensor-product expansion
   static void tensor_product_multi_index(const UShortArray& order,
 					 UShort2DArray& multi_index,
-					 bool exp_order_offset = false);
+					 bool include_upper_bound = true);
   /// initialize expansion multi_index using a total-order expansion
   /// from an upper_bound array specification
   static void total_order_multi_index(const UShortArray& upper_bound,
@@ -320,7 +320,7 @@ public:
 
   /// utility function for incrementing a set of multidimensional indices
   static void increment_indices(UShortArray& indices, const UShortArray& limits,
-				bool include_limit_equality);
+				bool include_upper_bound);
   /// utility function for incrementing a set of multidimensional terms
   static void increment_terms(UShortArray& terms, size_t& last_index,
 			      size_t& prev_index, const size_t& term_limit,
@@ -556,14 +556,17 @@ random_variables_key(const BoolDeque& random_vars_key)
 
 inline void PolynomialApproximation::
 increment_indices(UShortArray& indices, const UShortArray& limits,
-		  bool include_limit_equality)
+		  bool include_upper_bound)
 {
+  // perform increment
   size_t n = indices.size(), increment_index = 0;
   ++indices[increment_index];
+  // if limit exceeded (including or excluding upper bound value within
+  // range of indices), push to next index
   while ( increment_index < n &&
-	  ( (  include_limit_equality && 
+	  ( ( !include_upper_bound && 
 	       indices[increment_index] >= limits[increment_index] ) ||
-	    ( !include_limit_equality && 
+	    (  include_upper_bound && 
 	       indices[increment_index] >  limits[increment_index] ) ) ) {
     indices[increment_index] = 0;
     ++increment_index;

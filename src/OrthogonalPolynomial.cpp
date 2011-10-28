@@ -40,17 +40,27 @@ void OrthogonalPolynomial::gauss_check(unsigned short order)
     (used by Stokhos) that favors flops would store all non-zeros and
     return iterators to allow efficient iteration over these non-zeros. */
 void OrthogonalPolynomial::
-precompute_triple_products(unsigned short max_basis_order)
+precompute_triple_products(const UShortMultiSet& max_ijk)
 {
   // Since orthogonal polynomial instances may be shared among
   // multiple dimensions, check to see if this precomputation has
   // already been performed to sufficient order.
-  if (tripleProductOrder && max_basis_order <= tripleProductOrder)
+  UShortMultiSet::const_iterator cit, cit_ref;
+  bool update = !tripleProductOrder.empty(), compute = !update;
+  if (update)
+    for (cit =max_ijk.begin(), cit_ref =tripleProductOrder.begin();
+	 cit!=max_ijk.end(),   cit_ref!=tripleProductOrder.end();
+	 ++cit, ++cit_ref)
+      if (*cit > *cit_ref)
+	{ compute = true; break; }
+  if (!compute)
     return;
 
   // Could tailor quad rule to each ijk order: OK if lookup, but too expensive
   // if numerically generated.  Instead, retrieve a single rule of max order.
-  size_t i, j, k, l, max_int_order = 3*max_basis_order,
+  unsigned short i_max, j_max, k_max; // define loop limits in descending order
+  cit = --max_ijk.end(); i_max = *cit; --cit; j_max = *cit; --cit; k_max = *cit;
+  size_t i, j, k, l, max_int_order = i_max + j_max + k_max,
     max_quad_order = max_int_order/2 + 1; // rounds up using truncation
   // Override any nested rule setting to ensure i=2m-1.
   short orig_rule = NO_RULE;
@@ -63,29 +73,31 @@ precompute_triple_products(unsigned short max_basis_order)
   if (orig_rule) // restore
     collocRule = orig_rule;
 
+  // compute unique additions to tripleProductMap
   UShortMultiSet ijk_triple;
-  Real c_ijk, norm_sq_i, norm_sq_j, tol = 1.e-12; // tol synchronized w/ Stokhos
-  for (i=tripleProductOrder; i<max_basis_order; ++i) {
+  Real c_ijk, norm_sq_i, norm_sq_ij, tol = 1.e-12; // Stokhos tol
+  for (i=0; i<=i_max; ++i) {
     norm_sq_i = norm_squared(i);
-    for (j=0; j<=i; ++j) {
-      norm_sq_j = norm_squared(j);
-      for (k=0; k<=j; ++k) {
-	c_ijk = 0.;
-	for (l=0; l<max_quad_order; ++l) {
-	  const Real& pt = pts[l];
-	  c_ijk += wts[l] * type1_value(pt, i) * type1_value(pt, j)
-	                  * type1_value(pt, k);
-	}
-	if (std::abs(c_ijk) / std::sqrt(norm_sq_i*norm_sq_j*norm_squared(k))
-	    > tol) {
-	  ijk_triple.clear();
-	  ijk_triple.insert(i); ijk_triple.insert(j); ijk_triple.insert(k);
-	  tripleProductMap[ijk_triple] = c_ijk;
+    for (j=0; j<=i && j<=j_max; ++j) {
+      norm_sq_ij = norm_sq_i*norm_squared(j);
+      for (k=0; k<=j && k<=k_max; ++k) {
+	ijk_triple.clear();
+	ijk_triple.insert(i); ijk_triple.insert(j); ijk_triple.insert(k);
+	if (!update ||
+	    tripleProductMap.find(ijk_triple) == tripleProductMap.end()) {
+	  c_ijk = 0.;
+	  for (l=0; l<max_quad_order; ++l) {
+	    const Real& pt = pts[l];
+	    c_ijk += wts[l] * type1_value(pt, i) * type1_value(pt, j)
+	                    * type1_value(pt, k);
+	  }
+	  if (std::abs(c_ijk) / std::sqrt(norm_sq_ij*norm_squared(k)) > tol)
+	    tripleProductMap[ijk_triple] = c_ijk;
 	}
       }
     }
   }
-  tripleProductOrder = max_basis_order;
+  tripleProductOrder = max_ijk;
 }
 
 } // namespace Pecos

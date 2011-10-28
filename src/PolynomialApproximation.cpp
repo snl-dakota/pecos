@@ -296,33 +296,38 @@ distribution_parameters(const ShortArray& u_types, const DistributionParams& dp,
     isotropic and anisotropic expansion orders, calculation of the
     number of expansion terms is straightforward: Prod(p_i + 1). */
 size_t PolynomialApproximation::
-tensor_product_terms(const UShortArray& order, bool exp_order_offset)
+tensor_product_terms(const UShortArray& order, bool include_upper_bound)
 {
   size_t i, n = order.size(), num_terms = 1;
-  if (exp_order_offset)
+  if (include_upper_bound)
     for (i=0; i<n; ++i)
-      num_terms *= order[i] + 1; // PCE: expansion order p
+      num_terms *= order[i] + 1; // multi-index from expansion order p (default)
   else
     for (i=0; i<n; ++i)
-      num_terms *= order[i];     // SC:  quadrature order m (default)
+      num_terms *= order[i];     // collocation index from quadrature order m
   return num_terms;
 }
 
 
 void PolynomialApproximation::
-tensor_product_multi_index(const UShortArray& order,
-			   UShort2DArray& multi_index, bool exp_order_offset)
+tensor_product_multi_index(const UShortArray& order, UShort2DArray& multi_index,
+			   bool include_upper_bound)
 {
+  // This function may be used for defining collocation indices for quadrature
+  // points (indices = 0:m-1) or polynomial order multi-indices for tensor
+  // expansions (indices = 0:p).  The inclusion or exclusion of the upper bound
+  // (m or p) is managed with include_upper_bound (false for m, true for p).
+
   // rather than inserting into multi_index, go ahead and estimate its length
   // (since its inexpensive) and use term-by-term assignment.
   size_t i, n = order.size(),
-    mi_len = tensor_product_terms(order, exp_order_offset);
+    mi_len = tensor_product_terms(order, include_upper_bound);
   if (mi_len != multi_index.size())
     multi_index.resize(mi_len);
   UShortArray indices(n, 0); multi_index[0] = indices;
   for (i=1; i<mi_len; ++i) {
     // increment the n-dimensional index set
-    increment_indices(indices, order, !exp_order_offset);
+    increment_indices(indices, order, include_upper_bound);
     multi_index[i] = indices;
   }
 }

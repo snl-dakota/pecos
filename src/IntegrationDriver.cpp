@@ -313,7 +313,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
     // increment the n-dimensional collocation point index set
     if (i != num_colloc_pts-1)
       PolynomialApproximation::increment_indices(colloc_indices,
-						 quad_order, true);
+						 quad_order, false);
   }
 
 #ifdef DEBUG

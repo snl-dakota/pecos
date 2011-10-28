@@ -53,7 +53,7 @@ public:
   //
 
   /// precompute tripleProductMap
-  void precompute_triple_products(unsigned short max_order);
+  void precompute_triple_products(const UShortMultiSet& max_ijk);
   /// lookup value based on UShortMultiSet key within tripleProductMap;
   /// returns false if not stored
   bool triple_product(const UShortMultiSet& ijk_key, Real& trip_prod) const;
@@ -108,12 +108,12 @@ private:
   /// and retrieved with triple_product(key)
   UShortMultiSetRealMap tripleProductMap;
   /// tracks precomputations to prevent redundancy
-  unsigned short tripleProductOrder;
+  UShortMultiSet tripleProductOrder;
 };
 
 
 inline OrthogonalPolynomial::OrthogonalPolynomial():
-  BasisPolynomial(BaseConstructor()), tripleProductOrder(0)
+  BasisPolynomial(BaseConstructor())
 { }
 
 

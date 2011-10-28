@@ -150,7 +150,7 @@ void SparseGridDriver::allocate_collocation_key()
   for (i=0; i<num_smolyak_indices; ++i) {
     level_to_order(smolyakMultiIndex[i], quad_order);
     PolynomialApproximation::tensor_product_multi_index(quad_order,
-							collocKey[i]);
+							collocKey[i], false);
   }
 }
 
@@ -163,7 +163,7 @@ void SparseGridDriver::update_collocation_key(size_t start_index)
   for (i=start_index; i<num_sm_mi; ++i) {
     level_to_order(smolyakMultiIndex[i], quad_order);
     PolynomialApproximation::tensor_product_multi_index(quad_order,
-							collocKey[i]);
+							collocKey[i], false);
   }
 }
 

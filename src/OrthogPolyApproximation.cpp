@@ -86,7 +86,7 @@ void OrthogPolyApproximation::allocate_arrays()
     switch (quadratureExpansion) {
     case TENSOR_INT_TENSOR_EXP:
       if (update_exp_form)
-	tensor_product_multi_index(approxOrder, multiIndex, true);
+	tensor_product_multi_index(approxOrder, multiIndex);
       PCout << "} using tensor-product expansion of "; break;
     case TENSOR_INT_TOTAL_ORD_EXP:
       if (update_exp_form)
@@ -411,7 +411,7 @@ void OrthogPolyApproximation::increment_coefficients()
       // update tpMultiIndex
       UShortArray exp_order(numVars);
       sparse_grid_levels_to_expansion_order(ssg_driver->trial_set(), exp_order);
-      tensor_product_multi_index(exp_order, tpMultiIndex[last_index], true);
+      tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
       // update multiIndex and numExpansionTerms
       append_multi_index(tpMultiIndex[last_index], multiIndex, tpMultiIndexMap,
 			 tpMultiIndexMapRef);
@@ -620,23 +620,27 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     case QUADRATURE: // product of two tensor-product expansions
       for (size_t i=0; i<numVars; ++i)
 	approxOrder[i] += storedApproxOrder[i];
-      tensor_product_multi_index(approxOrder, multi_index_prod, true);
+      tensor_product_multi_index(approxOrder, multi_index_prod);
       break;
     case SPARSE_GRID: { // product of two sums of tensor-product expansions
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-      const UShort2DArray& curr_sm_mi = ssg_driver->smolyak_multi_index();
-      size_t i, j, k, num_stored_sm_mi = storedLevMultiIndex.size(),
-	num_curr_sm_mi = curr_sm_mi.size();
+      // filter out dominated Smolyak multi-indices that don't contribute
+      // to product expansion
+      UShort2DArray curr_pareto, stored_pareto;
+      update_pareto(ssg_driver->smolyak_multi_index(), curr_pareto);
+      update_pareto(storedLevMultiIndex,             stored_pareto);
+      size_t i, j, k, num_stored_mi = stored_pareto.size(),
+	num_curr_mi = curr_pareto.size();
+      // overlay each product expansion from the tensor-product combinations
       UShortArray exp_order_i, exp_order_j, exp_order_prod(numVars);
       UShort2DArray tp_multi_index_prod;
-      for (i=0; i<num_stored_sm_mi; ++i) {
-	sparse_grid_levels_to_expansion_order(storedLevMultiIndex[i],
-					      exp_order_i);
-	for (j=0; j<num_curr_sm_mi; ++j) {
-	  sparse_grid_levels_to_expansion_order(curr_sm_mi[j], exp_order_j);
+      for (i=0; i<num_stored_mi; ++i) {
+	sparse_grid_levels_to_expansion_order(stored_pareto[i], exp_order_i);
+	for (j=0; j<num_curr_mi; ++j) {
+	  sparse_grid_levels_to_expansion_order(curr_pareto[j], exp_order_j);
 	  for (k=0; k<numVars; ++k)
 	    exp_order_prod[k] = exp_order_i[k] + exp_order_j[k];
-	  tensor_product_multi_index(exp_order_prod, tp_multi_index_prod, true);
+	  tensor_product_multi_index(exp_order_prod, tp_multi_index_prod);
 	  append_multi_index(tp_multi_index_prod, multi_index_prod);
 	}
       }
@@ -698,7 +702,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
       // general case (i.e., for nested rules GP, CC, F2, or GK).  Rather,
       // collocKey[i] is to be used only as the key to the collocation pts.
       sparse_grid_levels_to_expansion_order(sm_multi_index[i], expansion_order);
-      tensor_product_multi_index(expansion_order, tpMultiIndex[i], true);
+      tensor_product_multi_index(expansion_order, tpMultiIndex[i]);
       append_multi_index(tpMultiIndex[i], multi_index, tpMultiIndexMap,
 			 tpMultiIndexMapRef);
 #ifdef DEBUG
@@ -728,7 +732,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     for (i=0; i<num_smolyak_indices; ++i) {
       sparse_grid_levels_to_expansion_order(sm_multi_index[i], exp_order,
 					    exp_growth);
-      tensor_product_multi_index(exp_order, tp_multi_index, true);
+      tensor_product_multi_index(exp_order, tp_multi_index);
       append_multi_index(tp_multi_index, multi_index);
 #ifdef DEBUG
       PCout << "level =\n" << sm_multi_index[i] << "integrand order =\n"
@@ -1193,41 +1197,40 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 		   const RealMatrix& exp_grads_b,
 		   const UShort2DArray& multi_index_c)
 {
-  UShort2DArray multi_index_a = multiIndex; // copy
-  RealVector exp_coeffs_a = expansionCoeffs;// copy (also needed for CoeffGrads)
+  UShort2DArray multi_index_a = multiIndex;  // copy (both configOptions)
+  RealVector exp_coeffs_a = expansionCoeffs; // copy (both configOptions)
   RealMatrix exp_grads_a;
   if (configOptions.expansionCoeffGradFlag)
-    exp_grads_a = expansionCoeffGrads;      // copy
+    exp_grads_a = expansionCoeffGrads;       // copy (CoeffGrads only)
   size_t i, j, k, v, num_a = multi_index_a.size(), num_b = multi_index_b.size(),
     num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
 
   // precompute 1D basis triple products required
-  //unsigned short max_a_order, max_b_order, max_c_order;
-  unsigned short max_c_order; OrthogonalPolynomial* poly_rep_v;
+  unsigned short max_a, max_b, max_c; UShortMultiSet max_abc;
+  OrthogonalPolynomial* poly_rep_v;
   for (v=0; v<numVars; ++v) {
-    //max_a_order = max_b_order = max_c_order = 0;
-    max_c_order = 0;
-    /* TO DO: add fine tuning below once simpler overkill approach is working.
-              Also, max info available from multi_index_c estimation loop
-	      (--> move that loop into this fn?)
+    max_a = max_b = max_c = 0; max_abc.clear();
+    // could track max_abc within combine_coefficients() and pass in, but would
+    // need max orders for each dimension for both factors plus their product.
+    // Since this would be awkward and only marginally more efficient, just
+    // compute them here from the available multi-index arrays.
     for (i=0; i<num_a; ++i)
-      if (multi_index_a[i][v] > max_a_order)
-	max_a_order = multi_index_a[i][v];
+      if (multi_index_a[i][v] > max_a)
+	max_a = multi_index_a[i][v];
     for (i=0; i<num_b; ++i)
-      if (multi_index_b[i][v] > max_b_order)
-	max_b_order = multi_index_b[i][v];
-    */
+      if (multi_index_b[i][v] > max_b)
+	max_b = multi_index_b[i][v];
     for (i=0; i<num_c; ++i)
-      if (multi_index_c[i][v] > max_c_order)
-	max_c_order = multi_index_c[i][v];
+      if (multi_index_c[i][v] > max_c)
+	max_c = multi_index_c[i][v];
+    max_abc.insert(max_a); max_abc.insert(max_b); max_abc.insert(max_c); 
     poly_rep_v = (OrthogonalPolynomial*)polynomialBasis[v].polynomial_rep();
-    //poly_rep_v->precompute_triple_products(max_a_order, max_b_order,
-    //					     max_c_order);
-    poly_rep_v->precompute_triple_products(max_c_order);
+    poly_rep_v->precompute_triple_products(max_abc);
   }
 
-  // For c = a * b, compute coefficient of product expansion as
-  // c_k <\Psi_k^2> = \Sum_i \Sum_j a_i b_j <\Psi_i \Psi_j \Psi_k>
+  // For c = a * b, compute coefficient of product expansion as:
+  // \Sum_k c_k \Psi_k = \Sum_i \Sum_j a_i b_j \Psi_i \Psi_j
+  //    c_k <\Psi_k^2> = \Sum_i \Sum_j a_i b_j <\Psi_i \Psi_j \Psi_k>
   if (configOptions.expansionCoeffFlag)
     expansionCoeffs.size(num_c);                      // init to 0
   if (configOptions.expansionCoeffGradFlag)
@@ -1329,7 +1332,7 @@ update_pareto(const UShort2DArray& new_pareto, UShort2DArray& total_pareto)
 	bool new_i_dominated_by_j, total_j_dominated;
 	assess_dominance(new_i, *jit, new_i_dominated_by_j, total_j_dominated);
 	if (new_i_dominated_by_j)
-	  new_i_dominated = true;
+	  { new_i_dominated = true; break; }
 	if (total_j_dominated)
 	  rm_iters.push_back(jit);
       }
@@ -1389,6 +1392,7 @@ assess_dominance(const UShortArray& new_order,
       { equal = false; new_dominated = false; }
     else if (existing_order[i] > new_order[i])
       { equal = false; existing_dominated_temp = false; }
+  // asymmetric logic since incumbent wins a tie
   existing_dominated = (!equal && existing_dominated_temp);
 }
 
