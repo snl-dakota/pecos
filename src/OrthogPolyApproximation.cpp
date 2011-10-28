@@ -625,7 +625,7 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     case SPARSE_GRID: { // product of two sums of tensor-product expansions
       SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
       // filter out dominated Smolyak multi-indices that don't contribute
-      // to product expansion
+      // to the definition of the product expansion
       UShort2DArray curr_pareto, stored_pareto;
       update_pareto(ssg_driver->smolyak_multi_index(), curr_pareto);
       update_pareto(storedLevMultiIndex,             stored_pareto);
@@ -1036,7 +1036,7 @@ quadrature_order_to_integrand_order(const UShortArray& quad_order,
 	int lev, o, prev_o = 1, max_lev = 4, i_rule = GENZ_KEISTER,
 	  g_rule = FULL_EXPONENTIAL; // map l->o directly without restriction
 	for (lev=0; lev<=max_lev; ++lev) {
-	  webbur::level_growth_to_order_new(1, &lev, &i_rule, &g_rule, &o);
+	  webbur::level_growth_to_order(1, &lev, &i_rule, &g_rule, &o);
 	  if (o == quad_order[i])
 	    { int_order[i] = 2*quad_order[i] - prev_o; break; }
 	  else
@@ -1193,8 +1193,8 @@ overlay_expansion(const SizetArray& multi_index_map,
 
 void OrthogPolyApproximation::
 multiply_expansion(const UShort2DArray& multi_index_b,
-		   const RealVector& exp_coeffs_b,
-		   const RealMatrix& exp_grads_b,
+		   const RealVector&    exp_coeffs_b,
+		   const RealMatrix&    exp_grads_b,
 		   const UShort2DArray& multi_index_c)
 {
   UShort2DArray multi_index_a = multiIndex;  // copy (both configOptions)

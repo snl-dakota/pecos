@@ -42,27 +42,25 @@ void OrthogonalPolynomial::gauss_check(unsigned short order)
 void OrthogonalPolynomial::
 precompute_triple_products(const UShortMultiSet& max_ijk)
 {
-  // Since orthogonal polynomial instances may be shared among
-  // multiple dimensions, check to see if this precomputation has
-  // already been performed to sufficient order.
-  UShortMultiSet::const_iterator cit, cit_ref;
-  bool update = !tripleProductOrder.empty(), compute = !update;
-  if (update)
-    for (cit =max_ijk.begin(), cit_ref =tripleProductOrder.begin();
-	 cit!=max_ijk.end(),   cit_ref!=tripleProductOrder.end();
-	 ++cit, ++cit_ref)
-      if (*cit > *cit_ref)
-	{ compute = true; break; }
+  // Since orthogonal polynomial instances may be shared among multiple
+  // dimensions, check to see if this precomputation has already been
+  // performed to sufficient order.
+  bool updating = !tripleProductOrder.empty(), compute = !updating;
+  unsigned short i_max, j_max, k_max; // define loop limits in descending order
+  UShortMultiSet::const_iterator cit = --max_ijk.end();
+  i_max = *cit; --cit; j_max = *cit; --cit; k_max = *cit;
+  if (updating) {
+    cit = --tripleProductOrder.end();   unsigned short i_ref = *cit; --cit;
+    unsigned short j_ref = *cit; --cit; unsigned short k_ref = *cit;
+    if (i_max > i_ref || j_max > j_ref || k_max > k_ref) compute = true;
+  }
   if (!compute)
     return;
 
   // Could tailor quad rule to each ijk order: OK if lookup, but too expensive
   // if numerically generated.  Instead, retrieve a single rule of max order.
-  unsigned short i_max, j_max, k_max; // define loop limits in descending order
-  cit = --max_ijk.end(); i_max = *cit; --cit; j_max = *cit; --cit; k_max = *cit;
-  size_t i, j, k, l, max_int_order = i_max + j_max + k_max,
-    max_quad_order = max_int_order/2 + 1; // rounds up using truncation
-  // Override any nested rule setting to ensure i=2m-1.
+  size_t i, j, k, l, max_quad_order = (i_max + j_max + k_max)/2 + 1;// rounds up
+  // Override any nested rule setting to ensure integrand order = 2m - 1.
   short orig_rule = NO_RULE;
   if (collocRule == GENZ_KEISTER)
     { orig_rule = collocRule; collocRule = GAUSS_HERMITE; }
@@ -83,7 +81,7 @@ precompute_triple_products(const UShortMultiSet& max_ijk)
       for (k=0; k<=j && k<=k_max; ++k) {
 	ijk_triple.clear();
 	ijk_triple.insert(i); ijk_triple.insert(j); ijk_triple.insert(k);
-	if (!update ||
+	if (!updating ||
 	    tripleProductMap.find(ijk_triple) == tripleProductMap.end()) {
 	  c_ijk = 0.;
 	  for (l=0; l<max_quad_order; ++l) {

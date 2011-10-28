@@ -482,8 +482,8 @@ inline void SparseGridDriver::
 level_to_order(size_t i, unsigned short level, unsigned short& order)
 {
   int ilevel = level, iorder;
-  webbur::level_growth_to_order_new(1, &ilevel, &apiIntegrationRules[i],
-				    &apiGrowthRules[i], &iorder);
+  webbur::level_growth_to_order(1, &ilevel, &apiIntegrationRules[i],
+				&apiGrowthRules[i], &iorder);
   order = iorder;
 }
 
