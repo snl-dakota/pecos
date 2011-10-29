@@ -641,14 +641,14 @@ void PolynomialApproximation::standardize_moments(RealVector& moments)
     Real pow_fn = var, std_dev = std::sqrt(var);
     for (i=2; i<num_moments; ++i)
       { pow_fn *= std_dev; moments[i] /= pow_fn; }
+    // offset the fourth standardized moment to eliminate excess kurtosis
+    if (num_moments > 3)
+      moments[3] -= 3.;
   }
   else
     PCerr << "Warning: skewness and kurtosis cannot be standardized due to "
-	  << "non-positive variance.\n         Skipping std deviation "
-	  << "normalization." << std::endl;
-  // offset the fourth standardized moment to eliminate excess kurtosis
-  if (num_moments > 3)
-    moments[3] -= 3.;
+	  << "non-positive variance.\n         Skipping standardization."
+	  << std::endl;
 }
 
 
