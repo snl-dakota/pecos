@@ -555,8 +555,7 @@ compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
   }
 
   // standardize third and higher central moments, if present
-  if (num_moments > 2)
-    standardize_moments(moments);
+  standardize_moments(moments);
 }
 
 
@@ -625,21 +624,20 @@ compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
   }
 
   // standardize third and higher central moments, if present
-  if (num_moments > 2)
-    standardize_moments(moments);
+  standardize_moments(moments);
 }
 
 
 void PolynomialApproximation::standardize_moments(RealVector& moments)
 {
-  size_t i, num_moments = moments.length();
+  size_t num_moments = moments.length();
   if (num_moments <= 2) return;
 
   const Real& var = moments[1];
   if (var > 0.) {
     // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
     Real pow_fn = var, std_dev = std::sqrt(var);
-    for (i=2; i<num_moments; ++i)
+    for (size_t i=2; i<num_moments; ++i)
       { pow_fn *= std_dev; moments[i] /= pow_fn; }
     // offset the fourth standardized moment to eliminate excess kurtosis
     if (num_moments > 3)
