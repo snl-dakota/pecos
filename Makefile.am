@@ -73,6 +73,8 @@ include_HEADERS = pecos_config.h				\
 		     src/SparseGridDriver.hpp			\
 		     src/TensorProductDriver.hpp		\
 		     src/LocalRefinableDriver.hpp		\
+		     src/RefinablePointSet.hpp			\
+                     src/UniformRefinablePointSet.hpp		\
 		     src/HierarchInterpPolyApproximation.hpp	\
 		     src/BoostRNG_Monostate.hpp
 
