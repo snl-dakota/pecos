@@ -33,6 +33,7 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  BasisPolynomial.cpp				\
 			  InterpolationPolynomial.cpp			\
 			  LagrangeInterpPolynomial.cpp			\
+			  HermiteInterpPolynomial.cpp			\
 			  PiecewiseInterpPolynomial.cpp			\
 			  HierarchPWInterpPolynomial.cpp		\
 			  RefinablePointSet.cpp				\

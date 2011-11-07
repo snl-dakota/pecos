@@ -1,0 +1,117 @@
+/*  _______________________________________________________________________
+
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
+
+//- Class:        HermiteInterpPolynomial
+//- Description:  Class for 1-D Hermite Interpolation Polynomials
+//-               
+//- Owner:        Mike Eldred, Sandia National Laboratories
+
+#ifndef HERMITE_INTERP_POLYNOMIAL_HPP
+#define HERMITE_INTERP_POLYNOMIAL_HPP
+
+#include "InterpolationPolynomial.hpp"
+#include "pecos_data_types.hpp"
+
+
+namespace Pecos {
+
+/// Derived basis polynomial class for 1-D Hermite interpolation polynomials
+
+/** The HermiteInterpPolynomial class evaluates a univariate Hermite
+    interpolation polynomial.  The order of the polynomial is dictated
+    by the number of interpolation points (order = N_p - 1).  It enables
+    multidimensional interpolants within InterpPolyApproximation. */
+
+class HermiteInterpPolynomial: public InterpolationPolynomial
+{
+public:
+
+  //
+  //- Heading: Constructor and destructor
+  //
+
+  /// default constructor
+  HermiteInterpPolynomial();
+  /// standard constructor
+  HermiteInterpPolynomial(const RealArray& interp_pts);
+  /// destructor
+  ~HermiteInterpPolynomial();
+
+protected:
+
+  //
+  //- Heading: Virtual function redefinitions
+  //
+
+  void precompute_data();
+
+  const Real& type1_value(const Real& x, unsigned short i);
+  const Real& type2_value(const Real& x, unsigned short i);
+
+  const Real& type1_gradient(const Real& x, unsigned short i);
+  const Real& type2_gradient(const Real& x, unsigned short i);
+
+  const RealArray& type1_collocation_weights(unsigned short order);
+  const RealArray& type2_collocation_weights(unsigned short order);
+
+private:
+
+  //
+  //- Heading: Data
+  //
+
+  /// set of 1-D weights for interpolation of values
+  RealArray type1InterpWts;
+  /// set of 1-D] weights for interpolation of gradients
+  RealArray type2InterpWts;
+
+  /// pre-computed divided difference table for input used in type1
+  /// value calculation
+  Real2DArray xT1ValDiffTab;
+  /// pre-computed divided difference table for output used in type1
+  /// value calculation
+  Real2DArray yT1ValDiffTab;
+  /// pre-computed divided difference table for input used in type1
+  /// gradient calculation
+  Real2DArray xT1GradDiffTab;
+  /// pre-computed divided difference table for output used in type1
+  /// gradient calculation
+  Real2DArray yT1GradDiffTab;
+
+  /// pre-computed divided difference table for input used in type2
+  /// value calculation
+  Real2DArray xT2ValDiffTab;
+  /// pre-computed divided difference table for output used in type2
+  /// value calculation
+  Real2DArray yT2ValDiffTab;
+  /// pre-computed divided difference table for input used in type2
+  /// gradient calculation
+  Real2DArray xT2GradDiffTab;
+  /// pre-computed divided difference table for output used in type2
+  /// gradient calculation
+  Real2DArray yT2GradDiffTab;
+};
+
+
+inline HermiteInterpPolynomial::HermiteInterpPolynomial():
+  InterpolationPolynomial()
+{ }
+
+
+inline HermiteInterpPolynomial::
+HermiteInterpPolynomial(const RealArray& interp_pts):
+  InterpolationPolynomial(interp_pts)
+{ }
+
+
+inline HermiteInterpPolynomial::~HermiteInterpPolynomial()
+{ }
+
+} // namespace Pecos
+
+#endif

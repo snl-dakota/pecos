@@ -20,6 +20,7 @@
 #include "ChebyshevOrthogPolynomial.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 #include "LagrangeInterpPolynomial.hpp"
+#include "HermiteInterpPolynomial.hpp"
 #include "PiecewiseInterpPolynomial.hpp"
 
 
@@ -118,9 +119,9 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
   case LAGRANGE_INTERP:
     polynomial = new LagrangeInterpPolynomial();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
-  //case HERMITE_INTERP:
-  //  polynomial = new HermiteInterpPolynomial();
-  //  if (polynomial) polynomial->basisPolyType = poly_type;              break;
+  case HERMITE_INTERP:
+    polynomial = new HermiteInterpPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;              break;
   // PIECEWISE options include poly order, point type, and point data order:
   // LINEAR/QUADRATIC/CUBIC covers poly order, rule covers EQUIDISTANT/GENERAL
   // point type, and data order is inferred from poly order (grads for CUBIC).
