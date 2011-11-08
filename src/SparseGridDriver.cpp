@@ -212,25 +212,11 @@ void SparseGridDriver::allocate_1d_collocation_points_weights()
   // assign values
   // level_index (j indexing) range is 0:w, level (i indexing) range is 1:w+1
   unsigned short l_index, q_order;
-  for (i=0; i<numVars; i++) {
-    BasisPolynomial& poly_i = polynomialBasis[i];
+  for (i=0; i<numVars; i++)
     for (l_index=0; l_index<num_levels; ++l_index) {
       level_to_order(i, l_index, q_order);
-      collocPts1D[l_index][i]      = poly_i.collocation_points(q_order);
-      type1CollocWts1D[l_index][i] = poly_i.type1_collocation_weights(q_order);
-      if (computeType2Weights)
-	type2CollocWts1D[l_index][i]
-	  = poly_i.type2_collocation_weights(q_order);
-#ifdef DEBUG
-      PCout << "collocPts1D[" << l_index << "][" << i << "]:\n"
-	    << collocPts1D[l_index][i] << "type1CollocWts1D[" << l_index
-	    << "][" << i << "]:\n" << type1CollocWts1D[l_index][i];
-      if (computeType2Weights)
-	PCout << "type2CollocWts1D[" << l_index << "][" << i << "]:\n"
-	      << type2CollocWts1D[l_index][i];
-#endif // DEBUG
+      assign_1d_collocation_points_weights(i, q_order, l_index);
     }
-  }
 }
 
 
@@ -344,8 +330,7 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		short refine_control,       bool  store_colloc,
 		bool  track_uniq_prod_wts,  bool  nested_rules,
 		bool  piecewise_basis,      bool  equidistant_rules,
-		bool  use_derivs,           short growth_rate,
-		short nested_uniform_rule)
+		bool  use_derivs,           short growth_rate)
 {
   //refineType           = refine_type;
   refineControl          = refine_control;
@@ -365,8 +350,8 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   // linear growth, respectively.
 
   // define collocRules
-  initialize_rules(u_types, nested_rules, piecewise_basis, equidistant_rules, 
-		   use_derivs, nested_uniform_rule);
+  initialize_rules(u_types, nested_rules, piecewise_basis,
+		   equidistant_rules, use_derivs);
   // convert collocRules/growth_rate to apiIntegrationRules/apiGrowthRules
   initialize_api_arrays(growth_rate);
   // set compute1D{Points,Type1Weights,Type2Weights}

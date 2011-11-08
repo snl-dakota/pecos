@@ -232,16 +232,15 @@ int IntegrationDriver::grid_size()
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_rules(const ShortArray& u_types, bool nested_rules,
-		 bool piecewise_basis,      bool equidistant_rules, 
-		 bool use_derivs,          short nested_uniform_rule)
+		 bool piecewise_basis, bool equidistant_rules, bool use_derivs)
 {
   numVars = u_types.size();
   ShortArray basis_types;
   PolynomialApproximation::distribution_types(u_types, piecewise_basis,
 					      use_derivs, basis_types);
   PolynomialApproximation::distribution_rules(u_types, nested_rules,
-					      piecewise_basis,equidistant_rules,
-					      nested_uniform_rule, collocRules);
+					      piecewise_basis,
+					      equidistant_rules, collocRules);
   PolynomialApproximation::distribution_basis(basis_types, collocRules,
 					      polynomialBasis);
   for (size_t i=0; i<numVars; i++)
@@ -348,20 +347,34 @@ update_1d_collocation_points_weights(const UShortArray& quad_order,
     }
   }
   // assign values
-  for (i=0; i<numVars; ++i) {
-    unsigned short  l_index = lev_index[i], q_order = quad_order[i];
-    BasisPolynomial& poly_i =           polynomialBasis[i];
-    RealArray&       pts_1d =      collocPts1D[l_index][i];
-    RealArray&    t1_wts_1d = type1CollocWts1D[l_index][i];
-    if (pts_1d.empty() || t1_wts_1d.empty()) {
-      pts_1d    = poly_i.collocation_points(q_order);
-      t1_wts_1d	= poly_i.type1_collocation_weights(q_order);
-    }
-    if (computeType2Weights) {
-      RealArray&  t2_wts_1d = type2CollocWts1D[l_index][i];
-      if (t2_wts_1d.empty())
-	t2_wts_1d = poly_i.type2_collocation_weights(q_order);
-    }
+  for (i=0; i<numVars; ++i)
+    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
+}
+
+
+void IntegrationDriver::
+assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
+				     unsigned short lev_index)
+{
+  BasisPolynomial& poly_i =           polynomialBasis[i];
+  RealArray&       pts_1d =      collocPts1D[lev_index][i];
+  RealArray&    t1_wts_1d = type1CollocWts1D[lev_index][i];
+  if (pts_1d.empty() || t1_wts_1d.empty()) {
+    pts_1d    = poly_i.collocation_points(quad_order);
+    t1_wts_1d = poly_i.type1_collocation_weights(quad_order);
+  }
+#ifdef DEBUG
+  PCout << "collocPts1D[" << lev_index << "][" << i << "]:\n" << pts_1d
+	<< "type1CollocWts1D[" << lev_index << "][" << i << "]:\n" << t1_wts_1d;
+#endif // DEBUG
+  if (computeType2Weights) {
+    RealArray& t2_wts_1d = type2CollocWts1D[lev_index][i];
+    if (t2_wts_1d.empty())
+      t2_wts_1d = poly_i.type2_collocation_weights(quad_order);
+#ifdef DEBUG
+    PCout << "type2CollocWts1D[" << lev_index << "][" << i << "]:\n"
+	  << t2_wts_1d;
+#endif // DEBUG
   }
 }
 

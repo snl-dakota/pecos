@@ -68,9 +68,8 @@ public:
 
   /// invoke initialize_rules() to set collocation rules
   void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
-		       bool  piecewise_basis = false,
-		       bool  equidistant_rules = true, bool use_derivs = false,
-		       short nested_uniform_rule = GAUSS_PATTERSON);
+		       bool piecewise_basis = false,
+		       bool equidistant_rules = true, bool use_derivs = false);
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
 		       const UShortArray& quad_order);

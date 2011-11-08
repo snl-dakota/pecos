@@ -47,11 +47,11 @@ precompute_triple_products(const UShortMultiSet& max_ijk)
   // performed to sufficient order.
   bool updating = !tripleProductOrder.empty(), compute = !updating;
   unsigned short i_max, j_max, k_max; // define loop limits in descending order
-  UShortMultiSet::const_iterator cit = --max_ijk.end();
-  i_max = *cit; --cit; j_max = *cit; --cit; k_max = *cit;
+  UShortMultiSet::const_iterator cit = max_ijk.begin();
+  k_max = *cit; ++cit; j_max = *cit; ++cit; i_max = *cit;
   if (updating) {
-    cit = --tripleProductOrder.end();   unsigned short i_ref = *cit; --cit;
-    unsigned short j_ref = *cit; --cit; unsigned short k_ref = *cit;
+    unsigned short k_ref, j_ref, i_ref; cit = tripleProductOrder.begin();
+    k_ref = *cit; ++cit; j_ref = *cit; ++cit; i_ref = *cit;
     if (i_max > i_ref || j_max > j_ref || k_max > k_ref) compute = true;
   }
   if (!compute)

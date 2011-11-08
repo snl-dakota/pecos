@@ -224,8 +224,7 @@ public:
 				 ShortArray& basis_types);
   /// allocate colloc_rules based on u_types and rule options
   static void distribution_rules(const ShortArray& u_types, bool nested_rules,
-				 bool  piecewise_basis, bool equidistant_rules,
-				 short nested_uniform_rule,
+				 bool piecewise_basis, bool equidistant_rules,
 				 ShortArray& colloc_rules);
   /// allocate poly_basis based on basis_types and colloc_rules
   static void distribution_basis(const ShortArray& basis_types,

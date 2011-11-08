@@ -25,11 +25,10 @@ namespace Pecos {
 
 void TensorProductDriver::
 initialize_grid(const ShortArray& u_types, bool nested_rules,
-		bool  piecewise_basis,     bool equidistant_rules,
-		bool  use_derivs,         short nested_uniform_rule)
+		bool piecewise_basis, bool equidistant_rules, bool use_derivs)
 {
-  initialize_rules(u_types, nested_rules, piecewise_basis, equidistant_rules,
-		   use_derivs, nested_uniform_rule);
+  initialize_rules(u_types, nested_rules, piecewise_basis,
+		   equidistant_rules, use_derivs);
   quadOrder.resize(numVars); levelIndex.resize(numVars);
 }
 

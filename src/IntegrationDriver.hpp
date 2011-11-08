@@ -113,11 +113,10 @@ protected:
   //- Heading: Member functions
   //
 
-  /// set int_rules and growth_rules from u_types, nested_rules, growth_rate,
-  /// and nested_uniform_rule
+  /// set int_rules and growth_rules from u_types and mode booleans
   void initialize_rules(const ShortArray& u_types, bool nested_rules,
-			bool piecewise_basis,      bool equidistant_rules, 
-			bool use_derivs,          short nested_uniform_rule);
+			bool piecewise_basis, bool equidistant_rules,
+			bool use_derivs);
   /// set int_rules and growth_rules from poly_basis and growth_rate
   void initialize_rules(const std::vector<BasisPolynomial>& poly_basis);
 
@@ -128,6 +127,10 @@ protected:
 			   RealVector& t1_weight_sets,
 			   RealMatrix& t2_weight_sets,
 			   UShort2DArray& colloc_key);
+
+  /// update collocPts1D[lev_index][i] and type{1,2}CollocWts1D[lev_index][i]
+  void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
+					    unsigned short lev_index);
 
   //
   //- Heading: Data

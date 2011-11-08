@@ -99,8 +99,7 @@ public:
     short refine_control = NO_CONTROL, bool store_colloc = false,
     bool  track_uniq_prod_wts = true,  bool nested_rules = true,
     bool  piecewise_basis = false,     bool equidistant_rules = true,
-    bool  use_derivs = false, short growth_rate = MODERATE_RESTRICTED_GROWTH,
-    short nested_uniform_rule = GAUSS_PATTERSON);
+    bool  use_derivs = false, short growth_rate = MODERATE_RESTRICTED_GROWTH);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,

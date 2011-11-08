@@ -125,12 +125,13 @@ distribution_types(const ShortArray& u_types, bool piecewise_basis,
 void PolynomialApproximation::
 distribution_rules(const ShortArray& u_types, bool nested_rules,
 		   bool  piecewise_basis,     bool equidistant_rules,
-		   short nested_uniform_rule, ShortArray& colloc_rules)
+		   ShortArray& colloc_rules)
 {
   size_t i, num_vars = u_types.size();
   colloc_rules.resize(num_vars);
 
-  // set colloc_rules based on u_types
+  // set colloc_rules based on u_types: open Gauss rules are used for all
+  // global cases; nested closed rules are used for piecewise approximations.
   for (size_t i=0; i<num_vars; ++i) {
     switch (u_types[i]) {
     case STD_NORMAL:
@@ -139,7 +140,7 @@ distribution_rules(const ShortArray& u_types, bool nested_rules,
       if (piecewise_basis) // closed nested rules required
 	colloc_rules[i] = (equidistant_rules) ? NEWTON_COTES : CLENSHAW_CURTIS;
       else
-	colloc_rules[i] = (nested_rules) ? nested_uniform_rule : GAUSS_LEGENDRE;
+	colloc_rules[i] = (nested_rules) ? GAUSS_PATTERSON : GAUSS_LEGENDRE;
       // For tensor-product quadrature without refinement, Gauss-Legendre
       // is preferred due to greater polynomial exactness since nesting is
       // not a concern.  For sparse grids and quadrature with refinement,
