@@ -113,6 +113,53 @@ type2_gradient(const Real& x, unsigned short i)
 
 
 const RealArray& HermiteInterpPolynomial::
+collocation_points(unsigned short order)
+{
+  // pull this outside block below since order=0 is initial interpPts length
+  if (order < 1) {
+    PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
+	  << "Polynomial::collocation_points()." << std::endl;
+    abort_handler(-1);
+  }
+
+  bool rule_err = false;
+  if (interpPts.size() != order) { // if not already computed
+    interpPts.resize(order);
+#ifdef HAVE_SPARSE_GRID
+    switch (collocRule) {
+    case GAUSS_PATTERSON:
+      webbur::patterson_lookup_points(order, &interpPts[0]);           break;
+    case CLENSHAW_CURTIS: 
+      webbur::clenshaw_curtis_compute_points(order, &interpPts[0]);    break;
+    case FEJER2: 
+      webbur::fejer2_compute_points(order, &interpPts[0]);             break;
+    case GAUSS_LEGENDRE:
+      if (order <= 33) // retrieve full precision tabulated values
+	webbur::legendre_lookup_points(order, &interpPts[0]);
+      else { // sandia_rules calculates points/weights together
+	RealArray legendre_wts(order);
+	webbur::legendre_compute(order, &interpPts[0], &legendre_wts[0]);
+      }
+      break;
+    default:
+      rule_err = true; break;
+    }
+#else
+    rule_err = true;
+#endif
+  }
+
+  if (rule_err) {
+    PCerr << "Error: unsupported collocation rule in HermiteInterpPolynomial"
+	  << "::collocation_points()." << std::endl;
+    abort_handler(-1);
+  }
+
+  return interpPts;
+}
+
+
+const RealArray& HermiteInterpPolynomial::
 type1_collocation_weights(unsigned short order)
 {
   // pull this outside block below since order=0 is initial colloc pts length

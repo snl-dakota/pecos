@@ -201,8 +201,8 @@ initialize_grid_parameters(const ShortArray& u_types,
   if (driverRep)
     driverRep->initialize_grid_parameters(u_types, dp); // forward to letter
   else // default implementation
-    PolynomialApproximation::distribution_parameters(u_types, dp,
-						     polynomialBasis);
+    PolynomialApproximation::update_basis_distribution_parameters(u_types,
+      dp, polynomialBasis);
 }
 
 
@@ -231,18 +231,19 @@ int IntegrationDriver::grid_size()
 
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
-initialize_rules(const ShortArray& u_types, bool nested_rules,
-		 bool piecewise_basis, bool equidistant_rules, bool use_derivs)
+initialize_rules(const ShortArray& u_types,
+		 const Pecos::BasisConfigOptions& bc_options)
 {
   numVars = u_types.size();
   ShortArray basis_types;
-  PolynomialApproximation::distribution_types(u_types, piecewise_basis,
-					      use_derivs, basis_types);
-  PolynomialApproximation::distribution_rules(u_types, nested_rules,
-					      piecewise_basis,
-					      equidistant_rules, collocRules);
-  PolynomialApproximation::distribution_basis(basis_types, collocRules,
-					      polynomialBasis);
+  // TO DO: will this require an OPA/IPA switch?
+  //PolynomialApproximation::initialize_basis_types(u_types, bc_options,
+  //                                                 basis_types);
+  PolynomialApproximation::initialize_collocation_rules(u_types, bc_options,
+							collocRules);
+  PolynomialApproximation::initialize_polynomial_basis(basis_types,
+						       collocRules,
+						       polynomialBasis);
   for (size_t i=0; i<numVars; i++)
     if (basis_types[i] == HERMITE_INTERP ||
 	basis_types[i] == PIECEWISE_CUBIC_INTERP)
@@ -356,7 +357,7 @@ void IntegrationDriver::
 assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 				     unsigned short lev_index)
 {
-  BasisPolynomial& poly_i =           polynomialBasis[i];
+  BasisPolynomial& poly_i =             polynomialBasis[i];
   RealArray&       pts_1d =      collocPts1D[lev_index][i];
   RealArray&    t1_wts_1d = type1CollocWts1D[lev_index][i];
   if (pts_1d.empty() || t1_wts_1d.empty()) {

@@ -35,8 +35,9 @@ public:
   //- Heading: Constructors and destructor
   //
 
-  TensorProductDriver();  ///< default constructor
-  ~TensorProductDriver(); ///< destructor
+  TensorProductDriver();                              ///< default constructor
+  TensorProductDriver(const UShortArray& quad_order); ///< constructor
+  ~TensorProductDriver();                             ///< destructor
 
   //
   //- Heading: Virtual function redefinitions
@@ -67,12 +68,10 @@ public:
   const UShort2DArray& collocation_key() const;
 
   /// invoke initialize_rules() to set collocation rules
-  void initialize_grid(const ShortArray& u_types, bool nested_rules = false,
-		       bool piecewise_basis = false,
-		       bool equidistant_rules = true, bool use_derivs = false);
+  void initialize_grid(const ShortArray& u_types,
+		       const Pecos::BasisConfigOptions& bc_options);
   /// initialize all sparse grid settings except for distribution params
-  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		       const UShortArray& quad_order);
+  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
 private:
 
@@ -99,15 +98,6 @@ private:
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
 };
-
-
-inline TensorProductDriver::TensorProductDriver():
-  IntegrationDriver(BaseConstructor())
-{ }
-
-
-inline TensorProductDriver::~TensorProductDriver()
-{ }
 
 
 inline void TensorProductDriver::update_level_index()
@@ -155,6 +145,20 @@ inline int TensorProductDriver::grid_size()
     size *= quadOrder[i];
   return size;
 }
+
+
+inline TensorProductDriver::TensorProductDriver():
+  IntegrationDriver(BaseConstructor())
+{ }
+
+
+inline TensorProductDriver::TensorProductDriver(const UShortArray& quad_order):
+  IntegrationDriver(BaseConstructor())
+{ quadrature_order(quad_order); }
+
+
+inline TensorProductDriver::~TensorProductDriver()
+{ }
 
 } // namespace Pecos
 

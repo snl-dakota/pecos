@@ -30,7 +30,7 @@ namespace Pecos {
   Real HierarchInterpPolyApproximation::
   value(const RealVector& x)
   {
-    if (!configOptions.expansionCoeffFlag) {
+    if (!expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
       abort_handler(-1);
@@ -46,7 +46,7 @@ namespace Pecos {
     //Determine which basis functions share their support with x.
     const IntArray& supportIndicator = in_support_of(x);
     const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-    switch ( configOptions.useDerivs ) {
+    switch ( basisConfigOptions.useDerivs ) {
     case false:
       // Sum over only those elements whose support contains x
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
@@ -159,7 +159,7 @@ namespace Pecos {
   const RealVector& HierarchInterpPolyApproximation::
   gradient_basis_variables(const RealVector& x)
   {
-    if (!configOptions.expansionCoeffFlag) {
+    if (!expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
       abort_handler(-1);
@@ -178,7 +178,7 @@ namespace Pecos {
     //Determine which basis functions share their support with x.
     const IntArray& supportIndicator = in_support_of(x);
     const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-    switch ( configOptions.useDerivs ) {
+    switch ( basisConfigOptions.useDerivs ) {
     case false:
       // Sum over only those elements whose support contains x
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
@@ -343,7 +343,7 @@ namespace Pecos {
     if ( approxGradient.length() != num_deriv_vars )
       approxGradient.sizeUninitialized(num_deriv_vars);
     
-    if (!configOptions.expansionCoeffFlag) {
+    if (!expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
       abort_handler(-1);
@@ -362,7 +362,7 @@ namespace Pecos {
     //Determine which basis functions share their support with x.
     const IntArray& supportIndicator = in_support_of(x);
     const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-    switch ( configOptions.useDerivs ) {
+    switch ( basisConfigOptions.useDerivs ) {
     case false:
       // Sum over only those elements whose support contains x
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
@@ -535,7 +535,7 @@ namespace Pecos {
   mean()
   {
     // Error check for required data
-    if (!configOptions.expansionCoeffFlag) {
+    if (!expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "NodalInterpPolyApproximation::mean()" << std::endl;
       abort_handler(-1);
@@ -546,7 +546,7 @@ namespace Pecos {
     Real& mean = numericalMoments[0];
     mean = 0;
     const RealVector& t1_wts = lr_driver->type1_weight_sets();
-    switch (configOptions.useDerivs) {
+    switch (basisConfigOptions.useDerivs) {
     case false:
       for ( unsigned int i = 0; i<numCollocPts; ++i)
 	mean += expansionType1Coeffs[i] * t1_wts[i];
@@ -577,7 +577,7 @@ namespace Pecos {
   mean_gradient()
   {
     // Error check for required data
-    if (!configOptions.expansionCoeffGradFlag) {
+    if (!expConfigOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	    << "InterpPolyApproximation::mean_gradient()." << std::endl;
       abort_handler(-1);
@@ -639,7 +639,7 @@ namespace Pecos {
   covariance(PolynomialApproximation* poly_approx_2)
   {
     // Error check for required data
-    if (!configOptions.expansionCoeffFlag) {
+    if (!expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "NodalInterpPolyApproximation::covariance()" << std::endl;
       abort_handler(-1);
@@ -650,7 +650,7 @@ namespace Pecos {
     const RealVector& t1_coeffs_2 = hip_approx_2->expansionType1Coeffs;
     const RealVector& t1_wts = driverRep->type1_weight_sets();
     Real covar = 0.0;
-    switch (configOptions.useDerivs) {
+    switch (basisConfigOptions.useDerivs) {
     case false:
       for ( unsigned int i=0; i<numCollocPts; ++i)
 	covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
@@ -723,14 +723,14 @@ namespace Pecos {
     const std::vector<CollocationPoint>& col_pts = 
       lr_driver->get_collocation_points();
     numVars = surrData.continuous_variables(0).length();
-    if (configOptions.useDerivs) {
+    if (basisConfigOptions.useDerivs) {
       expansionType2Coeffs.shapeUninitialized(numVars,surrData.size());
     }
     expansionType1Coeffs[0] = surrData.response_function(0);
     Teuchos::setCol(surrData.response_gradient(0),0,expansionType2Coeffs);
     unsigned int level = 1;
     for (int i=1; i<numCollocPts; ++i) {
-      if (configOptions.expansionCoeffFlag) {
+      if (expConfigOptions.expansionCoeffFlag) {
 	const Int2DArray& level_index = col_pts[i].get_level_index();
 	const RealVector& point = col_pts[i].get_point();
 	unsigned int this_point_level = col_pts[i].get_level();
@@ -743,7 +743,7 @@ namespace Pecos {
 	//surplus.'
 	expansionType1Coeffs[i] = surrData.response_function(i) - 
 	  this->value(surrData.continuous_variables(i),level - 1);
-	if (configOptions.useDerivs){
+	if (basisConfigOptions.useDerivs) {
 	  RealVector trueGrad = surrData.response_gradient(i);
 	  RealVector approxGrad = this->
 	    gradient_basis_variables(surrData.continuous_variables(i), level-1);
@@ -753,7 +753,7 @@ namespace Pecos {
 	  Teuchos::setCol(trueGrad, i, expansionType2Coeffs);
 	}
       }
-      //if (configOptions.expansionCoeffGradFlag)
+      //if (expConfigOptions.expansionCoeffGradFlag)
       //Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
     }
     maxComputedCoeff = numCollocPts-1;
@@ -773,7 +773,7 @@ namespace Pecos {
     assert(numCollocPts == surrData.size());    
     unsigned int level = 1;
     for (int i=maxComputedCoeff+1; i<numCollocPts; ++i) {
-      if (configOptions.expansionCoeffFlag) {
+      if (expConfigOptions.expansionCoeffFlag) {
 	const Int2DArray& level_index = col_pts[i].get_level_index();
 	const RealVector& point = col_pts[i].get_point();
 	unsigned int this_point_level = col_pts[i].get_level();
@@ -785,7 +785,7 @@ namespace Pecos {
 	//This is the so called 'hierarchical surplus.'
 	expansionType1Coeffs[i] = surrData.response_function(i) - 
 	  this->value(surrData.continuous_variables(i),level - 1);
-	if (configOptions.useDerivs){
+	if (basisConfigOptions.useDerivs) {
 	  RealVector trueGrad = surrData.response_gradient(i);
 	  RealVector approxGrad = this->
 	    gradient_basis_variables(surrData.continuous_variables(i), level-1);
@@ -795,7 +795,7 @@ namespace Pecos {
 	  Teuchos::setCol(trueGrad, i, expansionType2Coeffs);
 	}
       }
-      //if (configOptions.expansionCoeffGradFlag)
+      //if (expConfigOptions.expansionCoeffGradFlag)
       //Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
     }
     maxComputedCoeff = numCollocPts-1;
@@ -804,7 +804,7 @@ namespace Pecos {
   Real HierarchInterpPolyApproximation::
   value(const RealVector& x, unsigned int max_level)
   {
-    if (!configOptions.expansionCoeffFlag) {
+    if (!expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
       abort_handler(-1);
@@ -820,7 +820,7 @@ namespace Pecos {
     //Determine which basis functions share their support with x.
     const IntArray& supportIndicator = in_support_of(x);
     const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-    switch ( configOptions.useDerivs ) {
+    switch ( basisConfigOptions.useDerivs ) {
     case false:
       // Sum over only those elements whose support contains x
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
@@ -943,7 +943,7 @@ namespace Pecos {
   const RealVector& HierarchInterpPolyApproximation::
   gradient_basis_variables(const RealVector& x, unsigned int max_level)
   {
-    if (!configOptions.expansionCoeffFlag) {
+    if (!expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in "
 	    << "HierarchInterpPolyApproximation::get_value()" << std::endl;
       abort_handler(-1);
@@ -962,7 +962,7 @@ namespace Pecos {
     //Determine which basis functions share their support with x.
     const IntArray& supportIndicator = in_support_of(x);
     const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-    switch ( configOptions.useDerivs ) {
+    switch ( basisConfigOptions.useDerivs ) {
     case false:
       // Sum over only those elements whose support contains x
       for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {

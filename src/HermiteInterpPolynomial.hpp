@@ -37,7 +37,9 @@ public:
 
   /// default constructor
   HermiteInterpPolynomial();
-  /// standard constructor
+  /// constructor with collocation rule
+  HermiteInterpPolynomial(short colloc_rule);
+  /// constructor with set of interpolation points
   HermiteInterpPolynomial(const RealArray& interp_pts);
   /// destructor
   ~HermiteInterpPolynomial();
@@ -56,14 +58,22 @@ protected:
   const Real& type1_gradient(const Real& x, unsigned short i);
   const Real& type2_gradient(const Real& x, unsigned short i);
 
+  const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
   const RealArray& type2_collocation_weights(unsigned short order);
+
+  void collocation_rule(short rule);
+  short collocation_rule() const;
 
 private:
 
   //
   //- Heading: Data
   //
+
+  /// name of uniform collocation rule: GAUSS_PATTERSON,
+  /// CLENSHAW_CURTIS, FEJER2, or GAUSS_LEGENDRE
+  short collocRule;
 
   /// set of 1-D weights for interpolation of values
   RealArray type1InterpWts;
@@ -99,18 +109,31 @@ private:
 
 
 inline HermiteInterpPolynomial::HermiteInterpPolynomial():
-  InterpolationPolynomial()
+  InterpolationPolynomial(), collocRule(GAUSS_LEGENDRE)
+{ }
+
+
+inline HermiteInterpPolynomial::HermiteInterpPolynomial(short colloc_rule):
+  InterpolationPolynomial(), collocRule(colloc_rule)
 { }
 
 
 inline HermiteInterpPolynomial::
 HermiteInterpPolynomial(const RealArray& interp_pts):
-  InterpolationPolynomial(interp_pts)
+  InterpolationPolynomial(interp_pts), collocRule(GAUSS_LEGENDRE)
 { }
 
 
 inline HermiteInterpPolynomial::~HermiteInterpPolynomial()
 { }
+
+
+inline void HermiteInterpPolynomial::collocation_rule(short rule)
+{ collocRule = rule; }
+
+
+inline short HermiteInterpPolynomial::collocation_rule() const
+{ return collocRule; }
 
 } // namespace Pecos
 

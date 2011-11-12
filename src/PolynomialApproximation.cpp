@@ -22,110 +22,10 @@
 
 namespace Pecos {
 
-void PolynomialApproximation::allocate_component_effects()
-{
-  // sobolIndices[0] is reserved for mean 
- 
-  // Allocate memory specific to output control
-  if (configOptions.vbdControl && configOptions.expansionCoeffFlag &&
-      sobolIndices.empty()) {
-    int i, index_length;
-    switch (configOptions.vbdControl) {
-    case UNIVARIATE_VBD: // main effects only
-      index_length = (int)numVars+1;
-      // map binary to integer main effects form
-      sobolIndexMap[0] = 0;
-      for (i=1; i<index_length; ++i) 
-	sobolIndexMap[int(std::pow(2.,i-1))] = i;
-      break;
-    case ALL_VBD: // main + interaction effects
-      // don't recompute total separately; rather sum from component effects
-      index_length = (int)std::pow(2.,(int)numVars);
-      for (i=0; i<index_length; ++i) 
-	sobolIndexMap[i] = i; // already in binary notation
-      break;
-    }
-    sobolIndices.sizeUninitialized(index_length);
-  }
-}
-
-
-void PolynomialApproximation::allocate_total_effects()
-{
-  // number of total indices independent of number of component indices
-  if (configOptions.vbdControl && configOptions.expansionCoeffFlag &&
-      totalSobolIndices.empty())
-    totalSobolIndices.sizeUninitialized(numVars);
-}
-
-
-/** This static function is used by the integration drivers to define a
-    basis for computing points and weights.  Thus, it only employs bases
-    that support a "pull" mode (orthogonal and piecewise interpolation
-    polynomials) and excludes bases that utilize a "push" mode (Lagrange
-    and Hermite global interpolation polynomials). [Note: piecewise 
-    interpolation polynomials could support push of points and then pull
-    of weights, but for now, it is pull for both.] */
-bool PolynomialApproximation::
-distribution_types(const ShortArray& u_types, bool piecewise_basis,
-		   bool use_derivs, ShortArray& basis_types)
-{
-  bool extra_dist_params = false;
-  size_t i, num_vars = u_types.size();
-
-  // Initialize basis_types from u_types.
-  if (basis_types.size() != num_vars) {
-    basis_types.resize(num_vars);
-    for (i=0; i<num_vars; ++i) {
-      switch (u_types[i]) {
-      case STD_NORMAL:
-	basis_types[i] = HERMITE_ORTHOG;                                  break;
-      case STD_UNIFORM:
-	if (piecewise_basis)
-	  basis_types[i] = (use_derivs) ? PIECEWISE_CUBIC_INTERP:
-	                                  PIECEWISE_LINEAR_INTERP;
-	else // Legendre or Chebyshev OrthogPolynomial (Lagrange and Hermite
-	     // interpolation not supported -- see doxygen comment above).
-	  basis_types[i] = LEGENDRE_ORTHOG;
-	  // To employ Chebyshev for uniform, have to multiply inner product
-	  // integrands by the inverse of the weight function (weight fn =
-	  // 1/sqrt(1-x^2); same as beta PDF/Jacobi poly for alpha=beta=-1/2).
-	  //basis_types[i] = CHEBYSHEV_ORTHOG;
-	break;
-      case STD_EXPONENTIAL:
-	basis_types[i] = LAGUERRE_ORTHOG;                                 break;
-      case STD_BETA:
-	basis_types[i] = JACOBI_ORTHOG;
-	extra_dist_params = true;                                         break;
-      case STD_GAMMA:
-	basis_types[i] = GEN_LAGUERRE_ORTHOG;
-	extra_dist_params = true;                                         break;
-      case BOUNDED_NORMAL: case BOUNDED_LOGNORMAL: case LOGNORMAL:
-      case LOGUNIFORM: case TRIANGULAR:
-      case GUMBEL: case FRECHET: case WEIBULL: case HISTOGRAM_BIN:
-	basis_types[i] = NUM_GEN_ORTHOG;
-	extra_dist_params = true;                                         break;
-      default:
-	PCerr << "Error: unsupported u-space type in PolynomialApproximation::"
-	      << "distribution_types()." << std::endl;
-	abort_handler(-1);                                                break;
-      }
-    }
-  }
-  else
-    for (i=0; i<num_vars; ++i)
-      if (u_types[i] != STD_NORMAL && u_types[i] != STD_UNIFORM &&
-	  u_types[i] != STD_EXPONENTIAL)
-	{ extra_dist_params = true; break; }
-
-  return extra_dist_params;
-}
-
-
 void PolynomialApproximation::
-distribution_rules(const ShortArray& u_types, bool nested_rules,
-		   bool  piecewise_basis,     bool equidistant_rules,
-		   ShortArray& colloc_rules)
+initialize_collocation_rules(const ShortArray& u_types,
+			     const BasisConfigOptions& bc_options,
+			     ShortArray& colloc_rules)
 {
   size_t i, num_vars = u_types.size();
   colloc_rules.resize(num_vars);
@@ -135,12 +35,15 @@ distribution_rules(const ShortArray& u_types, bool nested_rules,
   for (size_t i=0; i<num_vars; ++i) {
     switch (u_types[i]) {
     case STD_NORMAL:
-      colloc_rules[i] = (nested_rules) ? GENZ_KEISTER : GAUSS_HERMITE; break;
+      colloc_rules[i] = (bc_options.nestedRules) ? GENZ_KEISTER : GAUSS_HERMITE;
+      break;
     case STD_UNIFORM:
-      if (piecewise_basis) // closed nested rules required
-	colloc_rules[i] = (equidistant_rules) ? NEWTON_COTES : CLENSHAW_CURTIS;
+      if (bc_options.piecewiseBasis) // closed nested rules required
+	colloc_rules[i] = (bc_options.equidistantRules) ? NEWTON_COTES :
+	  CLENSHAW_CURTIS;
       else
-	colloc_rules[i] = (nested_rules) ? GAUSS_PATTERSON : GAUSS_LEGENDRE;
+	colloc_rules[i] = (bc_options.nestedRules) ? GAUSS_PATTERSON :
+	  GAUSS_LEGENDRE;
       // For tensor-product quadrature without refinement, Gauss-Legendre
       // is preferred due to greater polynomial exactness since nesting is
       // not a concern.  For sparse grids and quadrature with refinement,
@@ -156,9 +59,9 @@ distribution_rules(const ShortArray& u_types, bool nested_rules,
 
 
 void PolynomialApproximation::
-distribution_basis(const ShortArray& basis_types,
-		   const ShortArray& colloc_rules,
-		   std::vector<BasisPolynomial>& poly_basis)
+initialize_polynomial_basis(const ShortArray& basis_types,
+			    const ShortArray& colloc_rules,
+			    std::vector<BasisPolynomial>& poly_basis)
 {
   size_t i, num_vars = basis_types.size(), num_rules = colloc_rules.size();
 
@@ -202,8 +105,9 @@ distribution_basis(const ShortArray& basis_types,
 
 
 void PolynomialApproximation::
-distribution_parameters(const ShortArray& u_types, const DistributionParams& dp,
-			std::vector<BasisPolynomial>& poly_basis)
+update_basis_distribution_parameters(const ShortArray& u_types,
+				     const DistributionParams& dp,
+				     std::vector<BasisPolynomial>& poly_basis)
 {
   size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
     luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
@@ -290,6 +194,43 @@ distribution_parameters(const ShortArray& u_types, const DistributionParams& dp,
       abort_handler(-1);
       break;
     }
+}
+
+
+void PolynomialApproximation::allocate_component_effects()
+{
+  // sobolIndices[0] is reserved for mean 
+ 
+  // Allocate memory specific to output control
+  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
+      sobolIndices.empty()) {
+    int i, index_length;
+    switch (expConfigOptions.vbdControl) {
+    case UNIVARIATE_VBD: // main effects only
+      index_length = (int)numVars+1;
+      // map binary to integer main effects form
+      sobolIndexMap[0] = 0;
+      for (i=1; i<index_length; ++i) 
+	sobolIndexMap[int(std::pow(2.,i-1))] = i;
+      break;
+    case ALL_VBD: // main + interaction effects
+      // don't recompute total separately; rather sum from component effects
+      index_length = (int)std::pow(2.,(int)numVars);
+      for (i=0; i<index_length; ++i) 
+	sobolIndexMap[i] = i; // already in binary notation
+      break;
+    }
+    sobolIndices.sizeUninitialized(index_length);
+  }
+}
+
+
+void PolynomialApproximation::allocate_total_effects()
+{
+  // number of total indices independent of number of component indices
+  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
+      totalSobolIndices.empty())
+    totalSobolIndices.sizeUninitialized(numVars);
 }
 
 

@@ -64,6 +64,11 @@ protected:
   const RealArray& type1_collocation_weights(unsigned short order);
   const RealArray& type2_collocation_weights(unsigned short order);
 
+  void collocation_rule(short rule);
+  short collocation_rule() const;
+
+private:
+
   //
   //- Heading: Data
   //
@@ -71,12 +76,6 @@ protected:
   /// name of closed nested rule: NEWTON_COTES (equidistant) or
   /// CLENSHAW_CURTIS (non-equidistant)
   short collocRule;
-
-private:
-
-  //
-  //- Heading: Data
-  //
 
   /// the constant interval between points for an equidistant collocRule
   Real interpInterval;
@@ -108,6 +107,14 @@ PiecewiseInterpPolynomial(const RealArray& interp_pts, short poly_type,
 
 inline PiecewiseInterpPolynomial::~PiecewiseInterpPolynomial()
 { }
+
+
+inline void PiecewiseInterpPolynomial::collocation_rule(short rule)
+{ collocRule = rule; }
+
+
+inline short PiecewiseInterpPolynomial::collocation_rule() const
+{ return collocRule; }
 
 } // namespace Pecos
 

@@ -225,13 +225,15 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     // Error check for required data
-    if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
+    if (randomVarsKey[deriv_index] &&
+	!expConfigOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	    << "InterpPolyApproximation::tensor_product_mean_gradient()."
 	    << std::endl;
       abort_handler(-1);
     }
-    else if (!randomVarsKey[deriv_index] && !configOptions.expansionCoeffFlag) {
+    else if (!randomVarsKey[deriv_index] &&
+	     !expConfigOptions.expansionCoeffFlag) {
       PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	    << "Approximation::tensor_product_mean_gradient()" << std::endl;
       abort_handler(-1);
@@ -363,7 +365,8 @@ tensor_product_variance_gradient(const RealVector& x,
     = driverRep->type1_collocation_weights_array();
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    if (randomVarsKey[deriv_index] && !configOptions.expansionCoeffGradFlag) {
+    if (randomVarsKey[deriv_index] &&
+	!expConfigOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	    << "InterpPolyApproximation::tensor_product_variance_gradient()."
 	    << std::endl;
@@ -455,14 +458,14 @@ tensor_product_variance_gradient(const RealVector& x,
 Real NodalInterpPolyApproximation::value(const RealVector& x)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "NodalInterpPolyApproximation::value()" << std::endl;
     abort_handler(-1);
   }
 
   // sum expansion to get response prediction
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
@@ -499,13 +502,13 @@ gradient_basis_variables(const RealVector& x)
   // but we want this fn to be as fast as possible
 
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::gradient_basis_variables()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
@@ -546,13 +549,13 @@ const RealVector& NodalInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::gradient_basis_variables()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
@@ -594,13 +597,13 @@ const RealVector& NodalInterpPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffGradFlag) {
+  if (!expConfigOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in NodalInterp"
 	  << "PolyApproximation::gradient_nonbasis_variables()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
@@ -642,14 +645,14 @@ gradient_nonbasis_variables(const RealVector& x)
 Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not available in "
 	  << "NodalInterpPolyApproximation::stored_value()" << std::endl;
     abort_handler(-1);
   }
 
   // sum expansion to get response prediction
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     SizetArray colloc_index; // empty -> default indexing
     return tensor_product_value(x, storedExpType1Coeffs, storedExpType2Coeffs,
@@ -678,13 +681,13 @@ const RealVector& NodalInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not available in NodalInterpPoly"
 	  << "Approximation::stored_gradient_basis_variables()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     SizetArray colloc_index; // empty -> default indexing
     return tensor_product_gradient_basis_variables(x, storedExpType1Coeffs,
@@ -720,14 +723,14 @@ const RealVector& NodalInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffGradFlag) {
+  if (!expConfigOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not available in Nodal"
 	  << "InterpPolyApproximation::stored_gradient_nonbasis_variables()"
 	  << std::endl;
     abort_handler(-1);
   }
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     SizetArray colloc_index; // empty -> default indexing
     return tensor_product_gradient_nonbasis_variables(x,
@@ -765,7 +768,7 @@ stored_gradient_nonbasis_variables(const RealVector& x)
 Real NodalInterpPolyApproximation::mean()
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "NodalInterpPolyApproximation::mean()" << std::endl;
     abort_handler(-1);
@@ -782,7 +785,7 @@ Real NodalInterpPolyApproximation::mean()
     numericalMoments.sizeUninitialized(4); // standard mode
   Real& mean = numericalMoments[0]; mean = 0.;
   const RealVector& t1_wts = driverRep->type1_weight_sets();
-  switch (configOptions.useDerivs) {
+  switch (basisConfigOptions.useDerivs) {
   case false:
     for (size_t i=0; i<numCollocPts; ++i)
       mean += expansionType1Coeffs[i] * t1_wts[i];
@@ -811,13 +814,13 @@ Real NodalInterpPolyApproximation::mean()
 Real NodalInterpPolyApproximation::mean(const RealVector& x)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "NodalInterpPolyApproximation::mean()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
@@ -856,7 +859,7 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
   // d/ds <R> = <dR/ds>
 
   // Error check for required data
-  if (!configOptions.expansionCoeffGradFlag) {
+  if (!expConfigOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	  << "InterpPolyApproximation::mean_gradient()." << std::endl;
     abort_handler(-1);
@@ -889,7 +892,7 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
 const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
@@ -954,7 +957,7 @@ Real NodalInterpPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
@@ -978,7 +981,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
   const RealVector& t1_wts      = driverRep->type1_weight_sets();
   Real covar = 0.; size_t i, j;
-  switch (configOptions.useDerivs) {
+  switch (basisConfigOptions.useDerivs) {
   case false: // type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
     for (i=0; i<numCollocPts; ++i)
       covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
@@ -1014,7 +1017,7 @@ Real NodalInterpPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
@@ -1022,7 +1025,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
   const RealVector& t1_coeffs_2
     = ((NodalInterpPolyApproximation*)poly_approx_2)->expansionType1Coeffs;
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
@@ -1056,12 +1059,12 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 const RealVector& NodalInterpPolyApproximation::variance_gradient()
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::variance_gradient()" << std::endl;
     abort_handler(-1);
   }
-  if (!configOptions.expansionCoeffGradFlag) {
+  if (!expConfigOptions.expansionCoeffGradFlag) {
     PCerr << "Error: expansion coefficient gradients not defined in Nodal"
 	  << "InterpPolyApproximation::variance_gradient()." << std::endl;
     abort_handler(-1);
@@ -1097,13 +1100,13 @@ const RealVector& NodalInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
 	  << "Approximation::variance_gradient()" << std::endl;
     abort_handler(-1);
   }
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing

@@ -326,34 +326,33 @@ void SparseGridDriver::update_axis_lower_bounds()
 
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
-		const RealVector& dim_pref, //short refine_type,
-		short refine_control,       bool  store_colloc,
-		bool  track_uniq_prod_wts,  bool  nested_rules,
-		bool  piecewise_basis,      bool  equidistant_rules,
-		bool  use_derivs,           short growth_rate)
+		const RealVector& dim_pref,
+		Pecos::BasisConfigOptions& bc_options,
+		/*short refine_type,*/ short refine_control, bool store_colloc,
+		bool track_uniq_prod_wts, short growth_rate)
 {
   //refineType           = refine_type;
   refineControl          = refine_control;
   storeCollocDetails     = store_colloc;
   trackUniqueProdWeights = track_uniq_prod_wts;
+  growthRate             = growth_rate;
 
   // For unrestricted exponential growth, use of nested rules is restricted
   // to uniform/normal in order to enforce similar growth rates:
-  if (nested_rules && growth_rate == UNRESTRICTED_GROWTH) {\
+  if (bc_options.nestedRules && growthRate == UNRESTRICTED_GROWTH) {
     size_t i, num_u_types = u_types.size(); // numVars not yet defined
     for (i=0; i<num_u_types; ++i)
       if (u_types[i] != STD_UNIFORM && u_types[i] != STD_NORMAL)
-	{ nested_rules = false; break; }
+	{ bc_options.nestedRules = false; break; }
   }
   // For MODERATE and SLOW restricted exponential growth, nested rules
   // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
 
   // define collocRules
-  initialize_rules(u_types, nested_rules, piecewise_basis,
-		   equidistant_rules, use_derivs);
-  // convert collocRules/growth_rate to apiIntegrationRules/apiGrowthRules
-  initialize_api_arrays(growth_rate);
+  initialize_rules(u_types, bc_options);
+  // convert collocRules/growthRate to apiIntegrationRules/apiGrowthRules
+  initialize_api_arrays();
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
 
@@ -363,31 +362,19 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 
 
 void SparseGridDriver::
-initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		unsigned short ssg_level,  const RealVector& dim_pref,
-		//short refine_type,
-		short refine_control,      bool  store_colloc,
-		bool  track_uniq_prod_wts, short growth_rate)
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
-  //refineType           = refine_type;
-  refineControl          = refine_control;
-  storeCollocDetails     = store_colloc;
-  trackUniqueProdWeights = track_uniq_prod_wts;
-
   // define collocRules
   initialize_rules(poly_basis);
-  // convert collocRules/growth_rate to apiIntegrationRules/apiGrowthRules
-  initialize_api_arrays(growth_rate);
+  // convert collocRules/growthRate to apiIntegrationRules/apiGrowthRules
+  initialize_api_arrays();
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
-
-  level(ssg_level);
-  dimension_preference(dim_pref);
 }
 
 
 /** Convert Pecos rule settings to IntArrays for input to VPISparseGrid. */
-void SparseGridDriver::initialize_api_arrays(short growth_rate)
+void SparseGridDriver::initialize_api_arrays()
 {
   apiIntegrationRules.resize(numVars);
   apiGrowthRules.resize(numVars);
@@ -408,15 +395,15 @@ void SparseGridDriver::initialize_api_arrays(short growth_rate)
     }
     */
 
-    // convert growth_rate to apiGrowthRules
+    // convert growthRate to apiGrowthRules
     switch (collocRules[i]) {
     case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
-      apiGrowthRules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
+      apiGrowthRules[i] = (growthRate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR_ODD : MODERATE_LINEAR; break;
     case GAUSS_PATTERSON: case GENZ_KEISTER:
     case CLENSHAW_CURTIS: case FEJER2: case NEWTON_COTES:
       // nested rules with exponential growth
-      switch (growth_rate) {
+      switch (growthRate) {
       case SLOW_RESTRICTED_GROWTH:
 	apiGrowthRules[i] = SLOW_EXPONENTIAL;     break;
       case MODERATE_RESTRICTED_GROWTH:
@@ -426,7 +413,7 @@ void SparseGridDriver::initialize_api_arrays(short growth_rate)
       }
       break;
     default: // asymmetric Gaussian linear growth
-      apiGrowthRules[i] = (growth_rate == SLOW_RESTRICTED_GROWTH) ?
+      apiGrowthRules[i] = (growthRate == SLOW_RESTRICTED_GROWTH) ?
 	SLOW_LINEAR : MODERATE_LINEAR; break;
     }
   }

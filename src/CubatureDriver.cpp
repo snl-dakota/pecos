@@ -46,22 +46,21 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
   ShortArray basis_types;
   // Cubature used for numerical integration of PCE --> no piecewise bases,
   // no deriv-based regression
-  PolynomialApproximation::distribution_types(u_types, false, false,
-					      basis_types);
+  // *** TO DO ***: require OPA/IPA switch?
+  //PolynomialApproximation::initialize_basis_types(u_types, false, false,
+  //                                                basis_types);
   // TO DO: consider using a single BasisPolynomial for CubatureDriver (would
   // have to be expanded into array for PolynomialApproximation within NonDPCE).
-  PolynomialApproximation::distribution_basis(basis_types, collocRules,
-					      polynomialBasis);
+  PolynomialApproximation::initialize_polynomial_basis(basis_types, collocRules,
+						       polynomialBasis);
 }
 
 
 void CubatureDriver::
-initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		unsigned short order)
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   numVars         = poly_basis.size();
   polynomialBasis = poly_basis; // shallow copy
-  integrand_order(order);
 
   // check for isotropic u_types
   unsigned short rule0 = poly_basis[0].collocation_rule();
@@ -143,8 +142,8 @@ initialize_grid_parameters(const ShortArray& u_types,
   // TO DO: consider using a single BasisPolynomial for CubatureDriver
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
-  PolynomialApproximation::distribution_parameters(u_types, dp,
-						   polynomialBasis);
+  PolynomialApproximation::update_basis_distribution_parameters(u_types,
+    dp, polynomialBasis);
 }
 
 

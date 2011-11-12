@@ -80,19 +80,19 @@ enum { SLOW_RESTRICTED_GROWTH, MODERATE_RESTRICTED_GROWTH,
        UNRESTRICTED_GROWTH };
 
 /// solution approaches for calculating the polynomial basis coefficients
-/// (options for ConfigurationOptions::expCoeffsSolnApproach)
+/// (options for ExpansionConfigOptions::expCoeffsSolnApproach)
 enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
-/// options for ConfigurationOptions::nestingOverride (inactive)
+/// options for BasisConfigOptions::nestingOverride (inactive)
 enum { NO_NESTING_OVERRIDE=0, NESTED, NON_NESTED };
 /// options for overriding the default growth restriction policy
 enum { NO_GROWTH_OVERRIDE=0, RESTRICTED, UNRESTRICTED };
-/// options for ConfigurationOptions::refinementType (inactive)
+/// options for ExpansionConfigOptions::refinementType (inactive)
 enum { NO_REFINEMENT=0, P_REFINEMENT, H_REFINEMENT };
-/// options for ConfigurationOptions::refinementControl
+/// options for ExpansionConfigOptions::refinementControl
 enum { NO_CONTROL=0, UNIFORM_CONTROL, DIMENSION_ADAPTIVE_TOTAL_SOBOL,
        DIMENSION_ADAPTIVE_SPECTRAL_DECAY,
        DIMENSION_ADAPTIVE_GENERALIZED_SPARSE };
-/// options for ConfigurationOptions::vbdSetting
+/// options for ExpansionConfigOptions::vbdSetting
 enum { NO_VBD=0, UNIVARIATE_VBD, ALL_VBD };
 
 /// options for local basis functions within PiecewiseInterpPolynomial

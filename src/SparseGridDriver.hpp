@@ -42,8 +42,12 @@ public:
   //- Heading: Constructors and destructor
   //
 
-  SparseGridDriver();  ///< default constructor
-  ~SparseGridDriver(); ///< destructor
+  /// default constructor
+  SparseGridDriver();
+  /// constructor
+  SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref);
+  /// destructor
+  ~SparseGridDriver();
 
   //
   //- Heading: Virtual function redefinitions
@@ -95,19 +99,13 @@ public:
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-    const RealVector& dim_pref, //short refine_type = NO_REFINEMENT,
-    short refine_control = NO_CONTROL, bool store_colloc = false,
-    bool  track_uniq_prod_wts = true,  bool nested_rules = true,
-    bool  piecewise_basis = false,     bool equidistant_rules = true,
-    bool  use_derivs = false, short growth_rate = MODERATE_RESTRICTED_GROWTH);
+    const RealVector& dim_pref, Pecos::BasisConfigOptions& bc_options,
+    /*short refine_type = NO_REFINEMENT,*/ short refine_control = NO_CONTROL,
+    bool store_colloc = false, bool track_uniq_prod_wts = true,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
-  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-    unsigned short ssg_level, const RealVector& dim_pref,
-    //short refine_type = NO_REFINEMENT,
-    short refine_control = NO_CONTROL, bool store_colloc = false,
-    bool track_uniq_prod_wts = true,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH);
+  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
   /// update axisLowerBounds
   void update_axis_lower_bounds();
@@ -168,10 +166,25 @@ public:
   /// return apiGrowthRules
   const IntArray& api_growth_rules() const;
 
-  // return refineType
-  //short refine_type()    const;
-  /// return refineControl
-  short refine_control() const;
+  // get refineType
+  //short refinement_type()    const;
+  /// set refineControl
+  void refinement_control(short cntl);
+  /// get refineControl
+  short refinement_control() const;
+
+  /// set storeCollocDetails
+  void store_collocation_details(bool store_colloc);
+  /// get storeCollocDetails
+  bool store_collocation_details() const;
+  /// set trackUniqueProdWeights
+  void track_unique_product_weights(bool track_uniq_prod_wts);
+  /// get trackUniqueProdWeights
+  bool track_unique_product_weights() const;
+  /// set growthRate
+  void growth_rate(short growth_rate);
+  /// get growthRate
+  short growth_rate() const;
 
   /// return smolyakMultiIndex
   const UShort2DArray& smolyak_multi_index() const;
@@ -219,7 +232,7 @@ private:
   void initialize_rule_pointers();
   /// initialize apiIntegrationRules and apiGrowthRules arrays for use
   /// within webbur::sgmg() and webbur::sgmga() routines
-  void initialize_api_arrays(short growth_rate);
+  void initialize_api_arrays();
 
   /// convenience function for defining
   /// {a1,a2}{Points,Type1Weights,Type2Weights}
@@ -271,6 +284,8 @@ private:
   short refineControl;
   /// controls conditional population of collocPts1D and collocWts1D
   bool storeCollocDetails;
+  /// enumeration for rate of exponential growth in nested rules
+  short growthRate;
 
   /// integer codes for integration rule options
   IntArray apiIntegrationRules;
@@ -369,8 +384,27 @@ private:
 inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), ssgLevel(0), dimIsotropic(true),
   storeCollocDetails(false), duplicateTol(1.e-15), numCollocPts(0),
-  updateGridSize(true), trackUniqueProdWeights(false)
+  updateGridSize(true), trackUniqueProdWeights(false),
+  refineControl(NO_CONTROL), //refineType(NO_REFINEMENT),
+  growthRate(MODERATE_RESTRICTED_GROWTH)
 { }
+
+
+inline SparseGridDriver::
+SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref):
+  IntegrationDriver(BaseConstructor()), ssgLevel(ssg_level),
+  storeCollocDetails(false), duplicateTol(1.e-15), numCollocPts(0),
+  updateGridSize(true), trackUniqueProdWeights(false),
+  refineControl(NO_CONTROL), //refineType(NO_REFINEMENT),
+  growthRate(MODERATE_RESTRICTED_GROWTH)
+{
+  if (dim_pref.empty())
+    dimIsotropic = true;
+  else {
+    numVars = dim_pref.length(); // unit length option not supported
+    dimension_preference(dim_pref);
+  }
+}
 
 
 inline SparseGridDriver::~SparseGridDriver()
@@ -396,12 +430,41 @@ inline bool SparseGridDriver::isotropic() const
 { return dimIsotropic; }
 
 
-//inline short SparseGridDriver::refine_type() const
+//inline short SparseGridDriver::refinement_type() const
 //{ return refineType; }
 
 
-inline short SparseGridDriver::refine_control() const
+inline void SparseGridDriver::refinement_control(short cntl)
+{ refineControl = cntl; }
+
+
+inline short SparseGridDriver::refinement_control() const
 { return refineControl; }
+
+
+inline void SparseGridDriver::store_collocation_details(bool store_colloc)
+{ storeCollocDetails = store_colloc; }
+
+
+inline bool SparseGridDriver::store_collocation_details() const
+{ return storeCollocDetails; }
+
+
+inline void SparseGridDriver::
+track_unique_product_weights(bool track_uniq_prod_wts)
+{ trackUniqueProdWeights = track_uniq_prod_wts; }
+
+
+inline bool SparseGridDriver::track_unique_product_weights() const
+{ return trackUniqueProdWeights; }
+
+
+inline void SparseGridDriver::growth_rate(short growth_rate)
+{ growthRate = growth_rate; }
+
+
+inline short SparseGridDriver::growth_rate() const
+{ return growthRate; }
 
 
 inline const IntArray& SparseGridDriver::api_integration_rules() const

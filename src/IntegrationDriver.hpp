@@ -21,6 +21,7 @@
 namespace Pecos {
 
 class DistributionParams;
+class BasisConfigOptions;
 
 
 /// base class for generating N-dimensional grids for numerical evaluation
@@ -114,9 +115,8 @@ protected:
   //
 
   /// set int_rules and growth_rules from u_types and mode booleans
-  void initialize_rules(const ShortArray& u_types, bool nested_rules,
-			bool piecewise_basis, bool equidistant_rules,
-			bool use_derivs);
+  void initialize_rules(const ShortArray& u_types,
+			const Pecos::BasisConfigOptions& bc_options);
   /// set int_rules and growth_rules from poly_basis and growth_rate
   void initialize_rules(const std::vector<BasisPolynomial>& poly_basis);
 

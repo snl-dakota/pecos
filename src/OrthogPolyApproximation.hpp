@@ -58,11 +58,13 @@ public:
   /// get numExpansionTerms
   int expansion_terms() const;
 
-  /// allocate polynomialBasis and basisTypes based on u_types and flags
-  bool distribution_types(const ShortArray& u_types);
-  /// invoke distribution_types(), distribution_basis(), and, if needed,
-  /// distribution_parameters()
-  void distributions(const ShortArray& u_types, const DistributionParams& dp);
+  /// invoke initialize_basis_types(), initialize_polynomial_basis(),
+  /// and, if needed, update_basis_distribution_parameters()
+  void construct_basis(const ShortArray& u_types, const DistributionParams& dp,
+		       const BasisConfigOptions& bc_options);
+  /// invoke initialize_basis_types(const ShortArray&, ShortArray&)
+  /// using basisTypes
+  bool initialize_basis_types(const ShortArray& u_types);
 
   /// set basisTypes
   void basis_types(const ShortArray& basis_types);
@@ -97,6 +99,10 @@ protected:
 
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);
+
+  /// initialize basis_types from u_types
+  bool initialize_basis_types(const ShortArray& u_types,
+			      ShortArray& basis_types);
 
   /// initialize polynomialBasis, multiIndex, et al.
   void allocate_arrays();
@@ -429,9 +435,9 @@ inline void OrthogPolyApproximation::compute_moments()
 {
   // standard variables mode supports two expansion and four numerical moments
   expansionMoments.sizeUninitialized(2); mean(); variance();
-  if (configOptions.expCoeffsSolnApproach == QUADRATURE ||
-      configOptions.expCoeffsSolnApproach == CUBATURE   ||
-      configOptions.expCoeffsSolnApproach == SPARSE_GRID)
+  if (expConfigOptions.expCoeffsSolnApproach == QUADRATURE ||
+      expConfigOptions.expCoeffsSolnApproach == CUBATURE   ||
+      expConfigOptions.expCoeffsSolnApproach == SPARSE_GRID)
     compute_numerical_response_moments(4);
 }
 
@@ -456,35 +462,25 @@ inline int OrthogPolyApproximation::expansion_terms() const
 { return numExpansionTerms; }
 
 
-inline bool OrthogPolyApproximation::
-distribution_types(const ShortArray& u_types)
-{
-  return PolynomialApproximation::distribution_types(u_types, false,
-						     configOptions.useDerivs,
-						     basisTypes);
-}
-
-
 /** This function is invoked to create basisTypes and polynomialBasis
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void OrthogPolyApproximation::
-distributions(const ShortArray& u_types, const DistributionParams& dp)
+construct_basis(const ShortArray& u_types, const DistributionParams& dp,
+		const BasisConfigOptions& bc_options)
 {
-  bool dist_params
-    = PolynomialApproximation::distribution_types(u_types, false,
-						  configOptions.useDerivs,
-						  basisTypes);
+  bool dist_params = initialize_basis_types(u_types, basisTypes);
   ShortArray colloc_rules;
-  // if there are meaningful rule flags for random sampling cases in the future,
-  // define colloc_rules, else leave empty --> default polynomialBasis config.
-  //PolynomialApproximation::distribution_rules(u_types, ..., colloc_rules);
-  PolynomialApproximation::distribution_basis(basisTypes, colloc_rules,
-					      polynomialBasis);
+  initialize_collocation_rules(u_types, bc_options, colloc_rules);
+  initialize_polynomial_basis(basisTypes, colloc_rules, polynomialBasis);
   if (dist_params)
-    PolynomialApproximation::distribution_parameters(u_types, dp,
-						     polynomialBasis);
+    update_basis_distribution_parameters(u_types, dp, polynomialBasis);
 }
+
+
+inline bool OrthogPolyApproximation::
+initialize_basis_types(const ShortArray& u_types)
+{ return initialize_basis_types(u_types, basisTypes); }
 
 
 inline void OrthogPolyApproximation::basis_types(const ShortArray& basis_types)
@@ -528,9 +524,9 @@ approximation_coefficients(const RealVector& approx_coeffs)
 inline void OrthogPolyApproximation::resize_expansion()
 {
   numExpansionTerms = multiIndex.size();
-  if (configOptions.expansionCoeffFlag)
+  if (expConfigOptions.expansionCoeffFlag)
     expansionCoeffs.resize(numExpansionTerms); // new terms initialized to 0
-  if (configOptions.expansionCoeffGradFlag) {
+  if (expConfigOptions.expansionCoeffGradFlag) {
     size_t num_deriv_vars = expansionCoeffGrads.numRows();
     expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
     // new terms initialized to 0

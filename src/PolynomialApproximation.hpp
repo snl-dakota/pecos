@@ -27,53 +27,50 @@ class SparseGridDriver;
 class DistributionParams;
 
 
-/// Container class for various polynomial approximation configuration options
+/// Container class for various expansion configuration options
 
-/** The ConfigurationOptions class provides a simple container class for a 
-    polynomial approximation configuration options related to data modes,
-    verbosity, and refinement and VBD controls. */
+/** The ExpansionConfigOptions class provides a simple container class
+    for expansion configuration options related to data modes, verbosity,
+    refinement, and VBD controls. */
 
-class ConfigurationOptions
+class ExpansionConfigOptions
 {
   //
   //- Heading: Friends
   //
 
-  friend class PolynomialApproximation;
-  friend class InterpPolyApproximation;
-  friend class NodalInterpPolyApproximation;
-  friend class OrthogPolyApproximation;
-  friend class HierarchInterpPolyApproximation;
+  //friend class PolynomialApproximation;
+  //friend class InterpPolyApproximation;
+  //friend class NodalInterpPolyApproximation;
+  //friend class HierarchInterpPolyApproximation;
+  //friend class OrthogPolyApproximation;
 
 public:
 
   /// default constructor
-  ConfigurationOptions();
+  ExpansionConfigOptions();
   /// constructor
-  ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
-		       bool exp_grad_flag, bool use_derivs,
-		       //short output_level, short refine_type,
-		       short refine_cntl, short vbd_type);
+  ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
+			 bool exp_grad_flag,
+			 //short output_level, short refine_type,
+			 short refine_cntl, short vbd_type);
   /// destructor
-  ~ConfigurationOptions();
+  ~ExpansionConfigOptions();
 
-private:
+//private:
 
   /// identifies the approach taken in compute_coefficients():
   /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
   short expCoeffsSolnApproach;
+
   /// flag for calculation of expansion coefficients from response values
   bool expansionCoeffFlag;
   /// flag for calculation of gradients of expansion coefficients from
   /// response gradients
   bool expansionCoeffGradFlag;
-  /// flag for utilizing derivatives during formation/calculation of expansions
-  bool useDerivs;
 
   // output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   //short outputLevel;
-  // nesting override options: NO_NESTING_OVERRIDE, NESTED, NON_NESTED
-  //short nestingOverride;
 
   // type of refinement: {NO,P,H}_REFINEMENT
   //short refinementType;
@@ -87,27 +84,86 @@ private:
 };
 
 
-inline ConfigurationOptions::ConfigurationOptions():
+inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), useDerivs(false),
+  expansionCoeffGradFlag(false),
   //outputLevel(NORMAL_OUTPUT), refinementType(NO_REFINEMENT),
   refinementControl(NO_CONTROL), vbdControl(NO_VBD)
 { }
 
 
-inline ConfigurationOptions::
-ConfigurationOptions(short exp_soln_approach, bool exp_coeff_flag,
-		     bool exp_grad_flag, bool use_derivs,
-		     //short output_level, short refine_type,
-		     short refine_cntl, short vbd_type):
-  expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
-  expansionCoeffGradFlag(exp_grad_flag), useDerivs(use_derivs),
+inline ExpansionConfigOptions::
+ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
+		       bool exp_grad_flag,
+		       //short output_level, short refine_type,
+		       short refine_cntl, short vbd_type):
+  expCoeffsSolnApproach(exp_soln_approach),
+  expansionCoeffFlag(exp_coeff_flag), expansionCoeffGradFlag(exp_grad_flag),
   //outputLevel(output_level), refinementType(refine_type),
   refinementControl(refine_cntl), vbdControl(vbd_type)
 { }
 
 
-inline ConfigurationOptions::~ConfigurationOptions()
+inline ExpansionConfigOptions::~ExpansionConfigOptions()
+{ }
+
+
+/// Container class for various basis configuration options
+
+/** The BasisConfigOptions class provides a simple container class
+    for basis configuration options related to rule nesting, 
+    piecewise basis polynomials, and derivative enhancement. */
+
+class BasisConfigOptions
+{
+  //
+  //- Heading: Friends
+  //
+
+  //friend class PolynomialApproximation;
+  //friend class InterpPolyApproximation;
+  //friend class NodalInterpPolyApproximation;
+  //friend class HierarchInterpPolyApproximation;
+  //friend class OrthogPolyApproximation;
+
+public:
+
+  /// default constructor
+  BasisConfigOptions();
+  /// constructor
+  BasisConfigOptions(bool nested_rules, bool piecewise_basis,
+		     bool equidistant_rules, bool use_derivs);
+  /// destructor
+  ~BasisConfigOptions();
+
+//private:
+
+  /// flag for use of nested integration rules
+  bool nestedRules;
+  /// flag for use of piecewise basis polynomials
+  bool piecewiseBasis;
+  /// flag for use of equidistant points for forming piecewise basis polynomials
+  bool equidistantRules;
+  /// flag for utilizing derivatives during formation/calculation of expansions
+  bool useDerivs;
+};
+
+
+inline BasisConfigOptions::BasisConfigOptions():
+  nestedRules(true), piecewiseBasis(false), equidistantRules(true),
+  useDerivs(false)
+{ }
+
+
+inline BasisConfigOptions::
+BasisConfigOptions(bool nested_rules, bool piecewise_basis,
+		   bool equidistant_rules, bool use_derivs):
+  nestedRules(nested_rules), piecewiseBasis(piecewise_basis),
+  equidistantRules(equidistant_rules), useDerivs(use_derivs)
+{ }
+
+
+inline BasisConfigOptions::~BasisConfigOptions()
 { }
 
 
@@ -218,22 +274,19 @@ public:
   //- Heading: Member functions
   //
 
-  /// allocate basis_types based on u_types
-  static bool distribution_types(const ShortArray& u_types,
-				 bool piecewise_basis, bool use_derivs,
-				 ShortArray& basis_types);
+  // allocate basis_types based on u_types
+  //static bool initialize_basis_types(const ShortArray& u_types,
+  //				       bool piecewise_basis, bool use_derivs,
+  //				       ShortArray& basis_types);
   /// allocate colloc_rules based on u_types and rule options
-  static void distribution_rules(const ShortArray& u_types, bool nested_rules,
-				 bool piecewise_basis, bool equidistant_rules,
-				 ShortArray& colloc_rules);
+  static void initialize_collocation_rules(const ShortArray& u_types,
+    const BasisConfigOptions& bc_options, ShortArray& colloc_rules);
   /// allocate poly_basis based on basis_types and colloc_rules
-  static void distribution_basis(const ShortArray& basis_types,
-				 const ShortArray& colloc_rules,
-				 std::vector<BasisPolynomial>& poly_basis);
+  static void initialize_polynomial_basis(const ShortArray& basis_types,
+    const ShortArray& colloc_rules, std::vector<BasisPolynomial>& poly_basis);
   /// pass distribution parameters from dp to poly_basis
-  static void distribution_parameters(const ShortArray& u_types,
-				      const DistributionParams& dp,
-				      std::vector<BasisPolynomial>& poly_basis);
+  static void update_basis_distribution_parameters(const ShortArray& u_types,
+    const DistributionParams& dp, std::vector<BasisPolynomial>& poly_basis);
 
   /// return expansionMoments
   const RealVector& expansion_moments() const;
@@ -254,34 +307,34 @@ public:
   // intermediate level since surrData not defined at base level)
   //size_t pop_count();
 
-  /// set ConfigurationOptions::expCoeffsSolnApproach
+  /// set ExpansionConfigOptions::expCoeffsSolnApproach
   void solution_approach(short soln_approach);
-  /// get ConfigurationOptions::expCoeffsSolnApproach
+  /// get ExpansionConfigOptions::expCoeffsSolnApproach
   short solution_approach() const;
 
-  /// set ConfigurationOptions::expansionCoeffFlag
+  /// set ExpansionConfigOptions::expansionCoeffFlag
   void expansion_coefficient_flag(bool coeff_flag);
-  /// get ConfigurationOptions::expansionCoeffFlag
+  /// get ExpansionConfigOptions::expansionCoeffFlag
   bool expansion_coefficient_flag() const;
 
-  /// set ConfigurationOptions::expansionCoeffGradFlag
+  /// set ExpansionConfigOptions::expansionCoeffGradFlag
   void expansion_coefficient_gradient_flag(bool grad_flag);
-  /// get ConfigurationOptions::expansionCoeffGradFlag
+  /// get ExpansionConfigOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
-  // set ConfigurationOptions::refinementType
+  // set ExpansionConfigOptions::refinementType
   //void refinement_type(short refine_type);
-  // get ConfigurationOptions::refinementType
+  // get ExpansionConfigOptions::refinementType
   //short refinement_type() const;
 
-  /// set ConfigurationOptions::refinementControl
+  /// set ExpansionConfigOptions::refinementControl
   void refinement_control(short refine_cntl);
-  /// get ConfigurationOptions::refinementControl
+  /// get ExpansionConfigOptions::refinementControl
   short refinement_control() const;
 
-  /// set ConfigurationOptions::vbdControl
+  /// set ExpansionConfigOptions::vbdControl
   void vbd_control(short vbd_cntl);
-  /// get ConfigurationOptions::vbdControl
+  /// get ExpansionConfigOptions::vbdControl
   short vbd_control() const;
 
   /// return sobolIndexMap 
@@ -370,8 +423,10 @@ protected:
   /// pointer to integration driver instance
   IntegrationDriver* driverRep;
 
-  /// a basic encapsulation of configuration options
-  ConfigurationOptions configOptions;
+  /// an encapsulation of expansion configuration options
+  ExpansionConfigOptions expConfigOptions;
+  /// an encapsulation of basis configuration options
+  BasisConfigOptions basisConfigOptions;
 
   /// previous quadrature order;
   /// used for tracking need for expansion form updates
@@ -442,7 +497,7 @@ inline PolynomialApproximation::
 PolynomialApproximation(size_t num_vars, bool use_derivs):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   ssgLevelPrev(USHRT_MAX)
-{ configOptions.useDerivs = use_derivs; }
+{ basisConfigOptions.useDerivs = use_derivs; }
 
 
 inline PolynomialApproximation::~PolynomialApproximation()
@@ -473,53 +528,53 @@ inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
 
 
 inline void PolynomialApproximation::solution_approach(short soln_approach)
-{ configOptions.expCoeffsSolnApproach = soln_approach; }
+{ expConfigOptions.expCoeffsSolnApproach = soln_approach; }
 
 
 inline short PolynomialApproximation::solution_approach() const
-{ return configOptions.expCoeffsSolnApproach; }
+{ return expConfigOptions.expCoeffsSolnApproach; }
 
 
 inline void PolynomialApproximation::expansion_coefficient_flag(bool coeff_flag)
-{ configOptions.expansionCoeffFlag = coeff_flag; }
+{ expConfigOptions.expansionCoeffFlag = coeff_flag; }
 
 
 inline bool PolynomialApproximation::expansion_coefficient_flag() const
-{ return configOptions.expansionCoeffFlag; }
+{ return expConfigOptions.expansionCoeffFlag; }
 
 
 inline void PolynomialApproximation::
 expansion_coefficient_gradient_flag(bool grad_flag)
-{ configOptions.expansionCoeffGradFlag = grad_flag; }
+{ expConfigOptions.expansionCoeffGradFlag = grad_flag; }
 
 
 inline bool PolynomialApproximation::
 expansion_coefficient_gradient_flag() const
-{ return configOptions.expansionCoeffGradFlag; }
+{ return expConfigOptions.expansionCoeffGradFlag; }
 
 
 //inline void PolynomialApproximation::refinement_type(short refine_type)
-//{ configOptions.refinementType = refine_type; }
+//{ expConfigOptions.refinementType = refine_type; }
 
 
 //inline short PolynomialApproximation::refinement_type() const
-//{ return configOptions.refinementType; }
+//{ return expConfigOptions.refinementType; }
 
 
 inline void PolynomialApproximation::refinement_control(short refine_cntl)
-{ configOptions.refinementControl = refine_cntl; }
+{ expConfigOptions.refinementControl = refine_cntl; }
 
 
 inline short PolynomialApproximation::refinement_control() const
-{ return configOptions.refinementControl; }
+{ return expConfigOptions.refinementControl; }
 
 
 inline void PolynomialApproximation::vbd_control(short vbd_cntl)
-{ configOptions.vbdControl = vbd_cntl; }
+{ expConfigOptions.vbdControl = vbd_cntl; }
 
 
 inline short PolynomialApproximation::vbd_control() const
-{ return configOptions.vbdControl; }
+{ return expConfigOptions.vbdControl; }
 
 
 inline const IntIntMap& PolynomialApproximation::sobol_index_map() const

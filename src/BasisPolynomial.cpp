@@ -120,7 +120,8 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
     polynomial = new LagrangeInterpPolynomial();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case HERMITE_INTERP:
-    polynomial = new HermiteInterpPolynomial();
+    polynomial = (rule) ? new HermiteInterpPolynomial(rule)
+                        : new HermiteInterpPolynomial();
     if (polynomial) polynomial->basisPolyType = poly_type;              break;
   // PIECEWISE options include poly order, point type, and point data order:
   // LINEAR/QUADRATIC/CUBIC covers poly order, rule covers EQUIDISTANT/GENERAL

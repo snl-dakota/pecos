@@ -40,6 +40,25 @@ public:
   /// destructor
   ~InterpPolyApproximation();
 
+  //
+  //- Heading: member functions
+  //
+
+  /// define n-D basis types from u_types and mode booleans for use in
+  /// defining quadrature rules used by integration drivers
+  /** These basis types may include orthogonal polynomials for
+      purposes of computing their Gauss points and weights within
+      integration drivers; thus they differ in general from the
+      interpolation polynomial basis used for approximation. */
+  static bool initialize_integration_basis_types(const ShortArray& u_types,
+    const BasisConfigOptions& bc_options, ShortArray& basis_types);
+  /// initialize basis types and collocation rules, construct the polynomial
+  /// basis, and initialize the distribution parameters within this basis
+  static void construct_basis(const ShortArray& u_types,
+			      const DistributionParams& dp,
+			      const BasisConfigOptions& bc_options,
+			      std::vector<Pecos::BasisPolynomial>& poly_basis);
+
 protected:
 
   //
@@ -157,7 +176,7 @@ private:
   //
 
   /// define the 1D basis type and collocation rule
-  void distribution_types(short& poly_type_1d, short& rule);
+  void initialize_polynomial_basis_type(short& poly_type_1d, short& rule);
 
   /// update polynomialBasis after a change in quadrature order
   void update_tensor_interpolation_basis();
@@ -209,7 +228,7 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 inline const RealVector& InterpPolyApproximation::
 approximation_coefficients() const
 {
-  if (configOptions.useDerivs) {
+  if (basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
 	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
     return abort_handler_t<const RealVector&>(-1);
@@ -222,7 +241,7 @@ approximation_coefficients() const
 inline void InterpPolyApproximation::
 approximation_coefficients(const RealVector& approx_coeffs)
 {
-  if (configOptions.useDerivs) {
+  if (basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
 	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
     abort_handler(-1);
@@ -232,11 +251,26 @@ approximation_coefficients(const RealVector& approx_coeffs)
 }
 
 
+inline void InterpPolyApproximation::
+construct_basis(const ShortArray& u_types, const DistributionParams& dp,
+		const BasisConfigOptions& bc_options,
+		std::vector<Pecos::BasisPolynomial>& poly_basis)
+{
+  ShortArray basis_types, colloc_rules;
+  bool dist_params
+    = initialize_integration_basis_types(u_types, bc_options, basis_types);
+  initialize_collocation_rules(u_types, bc_options, colloc_rules);
+  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
+  if (dist_params)
+    update_basis_distribution_parameters(u_types, dp, poly_basis);
+}
+
+
 inline void InterpPolyApproximation::compute_moments()
 {
   // standard variables mode supports four moments
   compute_numerical_response_moments(4);
-  //if (configOptions.outputLevel >= VERBOSE_OUTPUT)
+  //if (expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
     compute_numerical_expansion_moments(4);
   // numericalMoments and expansionMoments should be the same for faithful
   // interpolants (TPQ and SSG with nested rules), but will differ for other

@@ -30,10 +30,9 @@ int main(int argc, char* argv[])
 
   // Smolyak sparse grids
   std::cout << "Instantiating SparseGridDriver:\n";
-  Pecos::SparseGridDriver sg_driver;
   unsigned short level = 3; Pecos::RealVector dimension_pref; // isotropic
-  sg_driver.initialize_grid(poly_basis, level, dimension_pref);
-                          //store_1d_gauss, growth_rate);
+  Pecos::SparseGridDriver sg_driver(level, dimension_pref);
+  sg_driver.initialize_grid(poly_basis);
   sg_driver.compute_grid(variable_sets);
   std::cout << "Sparse grid points:\n";
   Pecos::write_data(std::cout, variable_sets, false, true, true);
@@ -42,9 +41,9 @@ int main(int argc, char* argv[])
 
   // Tensor-product quadrature
   std::cout << "Instantiating TensorProductDriver:\n";
-  Pecos::TensorProductDriver tp_driver;
   Pecos::UShortArray quad_order(num_vars, 3);
-  tp_driver.initialize_grid(poly_basis, quad_order);//, growth_rate);
+  Pecos::TensorProductDriver tp_driver(quad_order);
+  tp_driver.initialize_grid(poly_basis);
   tp_driver.compute_grid(variable_sets);
   std::cout << "Tensor grid points:\n";
   Pecos::write_data(std::cout, variable_sets, false, true, true);
@@ -53,9 +52,9 @@ int main(int argc, char* argv[])
 
   // Cubature
   std::cout << "Instantiating CubatureDriver:\n";
-  Pecos::CubatureDriver c_driver;
   unsigned short integrand_order = 5;
-  c_driver.initialize_grid(poly_basis, integrand_order);
+  Pecos::CubatureDriver c_driver(integrand_order);
+  c_driver.initialize_grid(poly_basis);
   c_driver.compute_grid(variable_sets);
   std::cout << "Cubature points:\n";
   Pecos::write_data(std::cout, variable_sets, false, true, true);

@@ -37,8 +37,9 @@ public:
   //- Heading: Constructors and destructor
   //
 
-  CubatureDriver();  ///< default constructor
-  ~CubatureDriver(); ///< destructor
+  CubatureDriver();                                ///< default constructor
+  CubatureDriver(unsigned short integrand_order);  ///< constructor
+  ~CubatureDriver();                               ///< destructor
 
   //
   //- Heading: Member functions
@@ -49,8 +50,7 @@ public:
 		       unsigned short rule);
   /// initialize all cubature settings (distribution params already
   /// set within poly_basis)
-  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		       unsigned short order);
+  void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
   /// initialize settings for parameterized cubature rules
   void initialize_grid_parameters(const ShortArray& u_types,
@@ -96,6 +96,12 @@ private:
 
 inline CubatureDriver::CubatureDriver(): IntegrationDriver(BaseConstructor()),
   integrandOrder(0), numPts(0), updateGridSize(true)
+{ }
+
+
+inline CubatureDriver::CubatureDriver(unsigned short integrand_order):
+  IntegrationDriver(BaseConstructor()), integrandOrder(integrand_order),
+  numPts(0), updateGridSize(true)
 { }
 
 

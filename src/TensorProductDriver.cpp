@@ -24,22 +24,19 @@ namespace Pecos {
 
 
 void TensorProductDriver::
-initialize_grid(const ShortArray& u_types, bool nested_rules,
-		bool piecewise_basis, bool equidistant_rules, bool use_derivs)
+initialize_grid(const ShortArray& u_types,
+		const Pecos::BasisConfigOptions& bc_options)
 {
-  initialize_rules(u_types, nested_rules, piecewise_basis,
-		   equidistant_rules, use_derivs);
+  initialize_rules(u_types, bc_options);
   quadOrder.resize(numVars); levelIndex.resize(numVars);
 }
 
 
 void TensorProductDriver::
-initialize_grid(const std::vector<BasisPolynomial>& poly_basis,
-		const UShortArray& quad_order)
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   initialize_rules(poly_basis);
-  quadOrder = quad_order;
-  update_level_index();
+  quadOrder.resize(numVars); levelIndex.resize(numVars);
 }
 
 

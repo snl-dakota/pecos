@@ -22,30 +22,80 @@
 
 namespace Pecos {
 
-int InterpPolyApproximation::min_coefficients() const
+/** This version provides the polynomial types needed to retrieve
+    collocation points and weights by an integration driver.  These
+    may involve orthogonal polynomials which will differ from the
+    interpolation polynomial types used in the basis. */
+bool InterpPolyApproximation::
+initialize_integration_basis_types(const ShortArray& u_types,
+				   const BasisConfigOptions& bc_options,
+				   ShortArray& basis_types)
 {
-  // return the minimum number of data instances required to build the 
-  // surface of multiple dimensions
-  return (configOptions.expansionCoeffFlag ||
-	  configOptions.expansionCoeffGradFlag) ? 1 : 0;
+  bool extra_dist_params = false;
+
+  // Initialize basis_types and extra_dist_params from u_types.
+  size_t i, num_vars = u_types.size();
+  if (basis_types.size() != num_vars) {
+    basis_types.resize(num_vars);
+    for (i=0; i<num_vars; ++i) {
+      switch (u_types[i]) {
+      case STD_NORMAL:
+	basis_types[i] = HERMITE_ORTHOG;                                  break;
+      case STD_UNIFORM:
+	if (bc_options.piecewiseBasis)
+	  basis_types[i] = (bc_options.useDerivs) ? PIECEWISE_CUBIC_INTERP :
+	    PIECEWISE_LINEAR_INTERP;
+	else
+	  basis_types[i] = (bc_options.useDerivs) ? HERMITE_INTERP :
+	    LEGENDRE_ORTHOG;
+	break;
+      case STD_EXPONENTIAL:
+	basis_types[i] = LAGUERRE_ORTHOG;                                 break;
+      case STD_BETA:
+	basis_types[i] = JACOBI_ORTHOG;       extra_dist_params = true;   break;
+      case STD_GAMMA:
+	basis_types[i] = GEN_LAGUERRE_ORTHOG; extra_dist_params = true;   break;
+      default:
+	basis_types[i] = NUM_GEN_ORTHOG;      extra_dist_params = true;   break;
+
+      }
+    }
+  }
+  else
+    for (i=0; i<num_vars; ++i)
+      if (u_types[i] != STD_NORMAL && u_types[i] != STD_UNIFORM &&
+	  u_types[i] != STD_EXPONENTIAL)
+	{ extra_dist_params = true; break; }
+
+  return extra_dist_params;
 }
 
 
 void InterpPolyApproximation::
-distribution_types(short& poly_type_1d, short& rule)
+initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 {
   switch (basisType) {
   case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    poly_type_1d = (configOptions.useDerivs) ?
+    poly_type_1d = (basisConfigOptions.useDerivs) ?
       PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
     rule = NEWTON_COTES;                    break;
   case GLOBAL_INTERPOLATION_POLYNOMIAL:
-    poly_type_1d = (configOptions.useDerivs) ? HERMITE_INTERP : LAGRANGE_INTERP;
+    poly_type_1d = (basisConfigOptions.useDerivs) ?
+      HERMITE_INTERP : LAGRANGE_INTERP;
     rule = NO_RULE;                         break;
   default:
     poly_type_1d = NO_POLY; rule = NO_RULE; break;
   }
+}
+
+
+int InterpPolyApproximation::min_coefficients() const
+{
+  // return the minimum number of data instances required to build the 
+  // surface of multiple dimensions
+  return (expConfigOptions.expansionCoeffFlag ||
+	  expConfigOptions.expansionCoeffGradFlag) ? 1 : 0;
 }
 
 
@@ -55,15 +105,15 @@ void InterpPolyApproximation::allocate_arrays()
   allocate_total_effects();
 
   size_t num_deriv_vars = surrData.num_derivative_variables();
-  if (configOptions.expansionCoeffFlag) {
+  if (expConfigOptions.expansionCoeffFlag) {
     if (expansionType1Coeffs.length() != numCollocPts)
       expansionType1Coeffs.sizeUninitialized(numCollocPts);
-    if ( configOptions.useDerivs &&
+    if ( basisConfigOptions.useDerivs &&
 	 ( expansionType2Coeffs.numRows() != num_deriv_vars ||
 	   expansionType2Coeffs.numCols() != numCollocPts ) )
       expansionType2Coeffs.shapeUninitialized(num_deriv_vars, numCollocPts);
   }
-  if ( configOptions.expansionCoeffGradFlag &&
+  if ( expConfigOptions.expansionCoeffGradFlag &&
        ( expansionType1CoeffGrads.numRows() != num_deriv_vars ||
 	 expansionType1CoeffGrads.numCols() != numCollocPts ) )
     expansionType1CoeffGrads.shapeUninitialized(num_deriv_vars, numCollocPts);
@@ -71,12 +121,12 @@ void InterpPolyApproximation::allocate_arrays()
   // checking numCollocPts is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total.
   //bool update_exp_form =
-  //  ( (configOptions.expansionCoeffFlag &&
+  //  ( (expConfigOptions.expansionCoeffFlag &&
   //     expansionType1Coeffs.length()      != numCollocPts) ||
-  //    (configOptions.expansionCoeffGradFlag &&
+  //    (expConfigOptions.expansionCoeffGradFlag &&
   //     expansionType1CoeffGrads.numCols() != numCollocPts ) );
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
@@ -133,8 +183,8 @@ void InterpPolyApproximation::allocate_arrays()
 
 void InterpPolyApproximation::compute_coefficients()
 {
-  if (!configOptions.expansionCoeffFlag &&
-      !configOptions.expansionCoeffGradFlag) {
+  if (!expConfigOptions.expansionCoeffFlag &&
+      !expConfigOptions.expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
 	  << "coefficient gradients\n         are active in "
 	  << "InterpPolyApproximation::compute_coefficients().\n         "
@@ -162,24 +212,24 @@ void InterpPolyApproximation::compute_coefficients()
   allocate_arrays();
 
   if (surrData.anchor()) {
-    if (configOptions.expansionCoeffFlag) {
+    if (expConfigOptions.expansionCoeffFlag) {
       expansionType1Coeffs[0] = surrData.anchor_function();
-      if (configOptions.useDerivs)
+      if (basisConfigOptions.useDerivs)
 	Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType2Coeffs);
     }
-    if (configOptions.expansionCoeffGradFlag)
+    if (expConfigOptions.expansionCoeffGradFlag)
       Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType1CoeffGrads);
   }
 
   size_t index = 0;
   for (int i=offset; i<numCollocPts; ++i, ++index) {
-    if (configOptions.expansionCoeffFlag) {
+    if (expConfigOptions.expansionCoeffFlag) {
       expansionType1Coeffs[i] = surrData.response_function(index);
-      if (configOptions.useDerivs)
+      if (basisConfigOptions.useDerivs)
 	Teuchos::setCol(surrData.response_gradient(index), i,
 			expansionType2Coeffs);
     }
-    if (configOptions.expansionCoeffGradFlag)
+    if (expConfigOptions.expansionCoeffGradFlag)
       Teuchos::setCol(surrData.response_gradient(index), i,
 		      expansionType1CoeffGrads);
   }
@@ -197,7 +247,7 @@ void InterpPolyApproximation::compute_coefficients()
 	  << " interpolant = "   << std::setw(WRITE_PRECISION+7) << val
 	  << " error = " << std::setw(WRITE_PRECISION+7)
 	  << std::abs(coeff1 - val) << '\n';
-    if (configOptions.useDerivs) {
+    if (basisConfigOptions.useDerivs) {
       const Real*     coeff2 = expansionType2Coeffs[i];
       const RealVector& grad
 	= gradient_basis_variables(surrData.continuous_variables(index));
@@ -216,7 +266,7 @@ void InterpPolyApproximation::compute_coefficients()
 void InterpPolyApproximation::increment_coefficients()
 {
   bool err_flag = false;
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID: {
     // As for allocate_arrays(), increments are performed in coarser steps
     // than may be strictly necessary: all increments are filled in for all
@@ -247,7 +297,7 @@ void InterpPolyApproximation::decrement_coefficients()
 {
   // leave polynomialBasis as is
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
@@ -257,14 +307,14 @@ void InterpPolyApproximation::decrement_coefficients()
   }
 
   // not necessary to prune; next increment/restore/finalize takes care of this
-  //if (configOptions.expansionCoeffFlag) {
+  //if (expConfigOptions.expansionCoeffFlag) {
   //  expansionType1Coeffs.resize(numCollocPts);
-  //  if (configOptions.useDerivs) {
+  //  if (basisConfigOptions.useDerivs) {
   //    size_t num_deriv_vars = expansionType2Coeffs.numRows();
   //    expansionType2Coeffs.reshape(num_deriv_vars, numCollocPts);
   //  }
   //}
-  //if (configOptions.expansionCoeffGradFlag) {
+  //if (expConfigOptions.expansionCoeffGradFlag) {
   //  size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
   //  expansionType1CoeffGrads.reshape(num_deriv_vars, numCollocPts);
   //}
@@ -279,7 +329,7 @@ void InterpPolyApproximation::restore_coefficients()
 {
   // leave polynomialBasis as is (a previous increment is being restored)
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
@@ -300,7 +350,7 @@ void InterpPolyApproximation::finalize_coefficients()
 {
   // leave polynomialBasis as is (all previous increments are being restored)
 
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case SPARSE_GRID:
     // move previous expansion data to current expansion
     savedLevMultiIndex.clear();
@@ -313,14 +363,14 @@ void InterpPolyApproximation::finalize_coefficients()
 
 void InterpPolyApproximation::store_coefficients()
 {
-  if (configOptions.expansionCoeffFlag) {
+  if (expConfigOptions.expansionCoeffFlag) {
     storedExpType1Coeffs   = expansionType1Coeffs;
-    if (configOptions.useDerivs)
+    if (basisConfigOptions.useDerivs)
       storedExpType2Coeffs = expansionType2Coeffs;
   }
-  if (configOptions.expansionCoeffGradFlag)
+  if (expConfigOptions.expansionCoeffGradFlag)
     storedExpType1CoeffGrads = expansionType1CoeffGrads;
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     storedCollocKey.resize(1); storedLevMultiIndex.resize(1);
@@ -361,13 +411,13 @@ void InterpPolyApproximation::combine_coefficients(short combine_type)
       discrep_val = stored_value(c_vars);
       lf_val = expansionType1Coeffs[i]; // copy prior to update
     }
-    if (configOptions.expansionCoeffFlag) {
+    if (expConfigOptions.expansionCoeffFlag) {
       // split up type1/type2 contribs so increments are performed properly
       if (combine_type == ADD_COMBINE)
 	expansionType1Coeffs[i] += stored_value(c_vars);
       else if (combine_type == MULT_COMBINE)
 	expansionType1Coeffs[i] *= discrep_val;
-      if (configOptions.useDerivs) {
+      if (basisConfigOptions.useDerivs) {
 	const RealVector& discrep_grad
 	  = stored_gradient_basis_variables(c_vars);
 	Real* exp_t2_coeffs_i = expansionType2Coeffs[i];
@@ -382,7 +432,7 @@ void InterpPolyApproximation::combine_coefficients(short combine_type)
 	                       + discrep_grad[j]    * lf_val;
       }
     }
-    if (configOptions.expansionCoeffGradFlag) {
+    if (expConfigOptions.expansionCoeffGradFlag) {
       Real* exp_t1_grad_i = expansionType1CoeffGrads[i];
       const RealVector& discrep_grad
 	= stored_gradient_nonbasis_variables(c_vars);
@@ -402,13 +452,13 @@ void InterpPolyApproximation::combine_coefficients(short combine_type)
 #endif // DEBUG
 
   // clear stored data now that it has been combined
-  if (configOptions.expansionCoeffFlag) {
+  if (expConfigOptions.expansionCoeffFlag) {
     storedExpType1Coeffs.resize(0);
-    if (configOptions.useDerivs) storedExpType2Coeffs.reshape(0,0);
+    if (basisConfigOptions.useDerivs) storedExpType2Coeffs.reshape(0,0);
   }
-  if (configOptions.expansionCoeffGradFlag)
+  if (expConfigOptions.expansionCoeffGradFlag)
     storedExpType1CoeffGrads.reshape(0,0);
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
     storedCollocKey.clear(); break;
   case SPARSE_GRID:
@@ -424,27 +474,27 @@ void InterpPolyApproximation::restore_expansion_coefficients()
   if (surrData.anchor())
     { offset = 1; ++new_colloc_pts; }
 
-  if (configOptions.expansionCoeffFlag) {
+  if (expConfigOptions.expansionCoeffFlag) {
     expansionType1Coeffs.resize(new_colloc_pts);
-    if (configOptions.useDerivs) {
+    if (basisConfigOptions.useDerivs) {
       size_t num_deriv_vars = expansionType2Coeffs.numRows();
       expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
     }
   }
-  if (configOptions.expansionCoeffGradFlag) {
+  if (expConfigOptions.expansionCoeffGradFlag) {
     size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
     expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
   }
 
   size_t index = numCollocPts - offset;
   for (int i=numCollocPts; i<new_colloc_pts; ++i, ++index) {
-    if (configOptions.expansionCoeffFlag) {
+    if (expConfigOptions.expansionCoeffFlag) {
       expansionType1Coeffs[i] = surrData.response_function(index);
-      if (configOptions.useDerivs)
+      if (basisConfigOptions.useDerivs)
 	Teuchos::setCol(surrData.response_gradient(index), i,
 			expansionType2Coeffs);
     }
-    if (configOptions.expansionCoeffGradFlag)
+    if (expConfigOptions.expansionCoeffGradFlag)
       Teuchos::setCol(surrData.response_gradient(index), i,
 		      expansionType1CoeffGrads);
   }
@@ -475,7 +525,7 @@ void InterpPolyApproximation::update_tensor_interpolation_basis()
   // fill any required gaps in polynomialBasis.
   const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
   short poly_type_1d; short rule; bool found; unsigned short l_index;
-  distribution_types(poly_type_1d, rule);
+  initialize_polynomial_basis_type(poly_type_1d, rule);
   for (j=0; j<numVars; ++j) {
     l_index = lev_index[j];
     const RealArray& colloc_pts_1d_ij          =   colloc_pts_1d[l_index][j];
@@ -516,7 +566,7 @@ update_sparse_interpolation_basis(unsigned short max_level)
   // update_1d_collocation_points_weights() updates in an unstructured manner)
   const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
   short poly_type_1d; short rule; bool found;
-  distribution_types(poly_type_1d, rule);
+  initialize_polynomial_basis_type(poly_type_1d, rule);
   for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
     const Real2DArray& colloc_pts_1d_i = colloc_pts_1d[i];
     std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
@@ -546,13 +596,13 @@ void InterpPolyApproximation::
 compute_numerical_response_moments(size_t num_moments)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in InterpPoly"
 	  << "Approximation::compute_numerical_response_moments()" << std::endl;
     abort_handler(-1);
   }
 
-  if (configOptions.useDerivs)
+  if (basisConfigOptions.useDerivs)
     compute_numerical_moments(num_moments, expansionType1Coeffs,
 			      expansionType2Coeffs, numericalMoments);
   else
@@ -565,7 +615,7 @@ void InterpPolyApproximation::
 compute_numerical_expansion_moments(size_t num_moments)
 {
   // Error check for required data
-  if (!configOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in InterpPoly"
 	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
     abort_handler(-1);
@@ -575,7 +625,7 @@ compute_numerical_expansion_moments(size_t num_moments)
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) { offset = 1; ++num_pts; }
   RealVector t1_exp(num_pts);
-  if (configOptions.useDerivs) {
+  if (basisConfigOptions.useDerivs) {
     RealMatrix t2_exp(numVars, num_pts);
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = (anchor_pt && i == 0) ?
@@ -637,7 +687,7 @@ void InterpPolyApproximation::compute_total_effects()
 {
   // iterate through existing indices if all component indices are available
   totalSobolIndices = 0.; // init total indices
-  if (configOptions.vbdControl == ALL_VBD)
+  if (expConfigOptions.vbdControl == ALL_VBD)
     for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); ++itr)
       for (int k=0; k<numVars; ++k) {
         if (itr->first & (1 << k))
@@ -651,7 +701,7 @@ void InterpPolyApproximation::compute_total_effects()
   else {
     const Real& total_variance = numericalMoments[1];
     int j, set_value;
-    switch (configOptions.expCoeffsSolnApproach) {
+    switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: {
       TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
       const UShortArray&   quad_order = tpq_driver->quadrature_order();
@@ -816,7 +866,7 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
 void InterpPolyApproximation::partial_variance(int set_value)
 {
   // Computes the integral first
-  switch (configOptions.expCoeffsSolnApproach) {
+  switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
