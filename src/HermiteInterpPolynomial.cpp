@@ -115,7 +115,6 @@ type2_gradient(const Real& x, unsigned short i)
 const RealArray& HermiteInterpPolynomial::
 collocation_points(unsigned short order)
 {
-  // pull this outside block below since order=0 is initial interpPts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in PiecewiseInterp"
 	  << "Polynomial::collocation_points()." << std::endl;
@@ -162,20 +161,45 @@ collocation_points(unsigned short order)
 const RealArray& HermiteInterpPolynomial::
 type1_collocation_weights(unsigned short order)
 {
-  // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in HermiteInterpPolynomial"
 	  << "::type1_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
-  // TO DO: integration bounds! (semi-infinite and infinite domains)
-  // TO DO: interpPts matching order ???
-  int i, num_pts = interpPts.size();
-  RealArray wts(2*num_pts);
-  webbur::hermite_interpolant_rule(num_pts, -1., 1., &interpPts[0], &wts[0]);
-  for (i=0; i<num_pts; ++i)
-    type1InterpWts[i] = wts[2*i];
+  bool rule_err = false;
+  if (interpPts.size() != order)
+    collocation_points(order);
+  if (type1InterpWts.size() != order) { // if not already computed
+    type1InterpWts.resize(order);
+#ifdef HAVE_SPARSE_GRID
+    // hermite_interpolant_rule returns type1 & type 2 weights
+    RealArray wts(2*order);
+    // Note: requires integration bounds
+    // TO DO: consider adding support for Gaussian weighting
+    //        (enabling STD_NORMAL_U transformations)
+    webbur::hermite_interpolant_rule(order, -1., 1., &interpPts[0], &wts[0]);
+    if (type2InterpWts.size() == order) // type2 already updated
+      for (size_t i=0; i<order; ++i)
+	type1InterpWts[i] = wtFactor * wts[2*i];
+    else { // update both so subsequent type2 call returns immediately
+      type2InterpWts.resize(order);
+      for (size_t i=0; i<order; ++i) {
+	type1InterpWts[i] = wtFactor * wts[2*i];
+	type2InterpWts[i] = wtFactor * wts[2*i+1];
+      }
+    }
+#else
+    rule_err = true;
+#endif
+  }
+
+  if (rule_err) {
+    PCerr << "Error: unsupported type1 collocation weights in HermiteInterp"
+	  << "Polynomial::type1_collocation_weights()." << std::endl;
+    abort_handler(-1);
+  }
+
   return type1InterpWts;
 }
 
@@ -183,20 +207,45 @@ type1_collocation_weights(unsigned short order)
 const RealArray& HermiteInterpPolynomial::
 type2_collocation_weights(unsigned short order)
 {
-  // pull this outside block below since order=0 is initial colloc pts length
   if (order < 1) {
     PCerr << "Error: underflow in minimum order (1) in HermiteInterpPolynomial"
 	  << "::type2_collocation_weights()." << std::endl;
     abort_handler(-1);
   }
 
-  // TO DO: integration bounds! (semi-infinite and infinite domains)
-  // TO DO: interpPts matching order ???
-  int i, num_pts = interpPts.size();
-  RealArray wts(2*num_pts);
-  webbur::hermite_interpolant_rule(num_pts, -1., 1., &interpPts[0], &wts[0]);
-  for (i=0; i<num_pts; ++i)
-    type2InterpWts[i] = wts[2*i+1];
+  bool rule_err = false;
+  if (interpPts.size() != order)
+    collocation_points(order);
+  if (type2InterpWts.size() != order) { // if not already computed
+    type2InterpWts.resize(order);
+#ifdef HAVE_SPARSE_GRID
+    // hermite_interpolant_rule returns type1 & type2 weights
+    RealArray wts(2*order);
+    // Note: requires integration bounds
+    // TO DO: consider adding support for Gaussian weighting
+    //        (enabling STD_NORMAL_U transformations)
+    webbur::hermite_interpolant_rule(order, -1., 1., &interpPts[0], &wts[0]);
+    if (type1InterpWts.size() == order) // type1 already updated
+      for (size_t i=0; i<order; ++i)
+	type2InterpWts[i] = wtFactor * wts[2*i+1];
+    else { // update both so subsequent type1 call returns immediately
+      type1InterpWts.resize(order);
+      for (size_t i=0; i<order; ++i) {
+	type1InterpWts[i] = wtFactor * wts[2*i];
+	type2InterpWts[i] = wtFactor * wts[2*i+1];
+      }
+    }
+#else
+    rule_err = true;
+#endif
+  }
+
+  if (rule_err) {
+    PCerr << "Error: unsupported type2 collocation weights in HermiteInterp"
+	  << "Polynomial::type2_collocation_weights()." << std::endl;
+    abort_handler(-1);
+  }
+
   return type2InterpWts;
 }
 

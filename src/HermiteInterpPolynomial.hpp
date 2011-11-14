@@ -110,18 +110,18 @@ private:
 
 inline HermiteInterpPolynomial::HermiteInterpPolynomial():
   InterpolationPolynomial(), collocRule(GAUSS_LEGENDRE)
-{ }
+{ wtFactor = 0.5; }
 
 
 inline HermiteInterpPolynomial::HermiteInterpPolynomial(short colloc_rule):
   InterpolationPolynomial(), collocRule(colloc_rule)
-{ }
+{ wtFactor = 0.5; }
 
 
 inline HermiteInterpPolynomial::
 HermiteInterpPolynomial(const RealArray& interp_pts):
   InterpolationPolynomial(interp_pts), collocRule(GAUSS_LEGENDRE)
-{ }
+{ wtFactor = 0.5; }
 
 
 inline HermiteInterpPolynomial::~HermiteInterpPolynomial()
