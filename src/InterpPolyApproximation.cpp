@@ -35,37 +35,30 @@ initialize_integration_basis_types(const ShortArray& u_types,
 
   // Initialize basis_types and extra_dist_params from u_types.
   size_t i, num_vars = u_types.size();
-  if (basis_types.size() != num_vars) {
+  if (basis_types.size() != num_vars)
     basis_types.resize(num_vars);
-    for (i=0; i<num_vars; ++i) {
-      switch (u_types[i]) {
-      case STD_NORMAL:
-	basis_types[i] = HERMITE_ORTHOG;                                  break;
-      case STD_UNIFORM:
-	if (bc_options.piecewiseBasis)
-	  basis_types[i] = (bc_options.useDerivs) ? PIECEWISE_CUBIC_INTERP :
-	    PIECEWISE_LINEAR_INTERP;
-	else
-	  basis_types[i] = (bc_options.useDerivs) ? HERMITE_INTERP :
-	    LEGENDRE_ORTHOG;
-	break;
-      case STD_EXPONENTIAL:
-	basis_types[i] = LAGUERRE_ORTHOG;                                 break;
-      case STD_BETA:
-	basis_types[i] = JACOBI_ORTHOG;       extra_dist_params = true;   break;
-      case STD_GAMMA:
-	basis_types[i] = GEN_LAGUERRE_ORTHOG; extra_dist_params = true;   break;
-      default:
-	basis_types[i] = NUM_GEN_ORTHOG;      extra_dist_params = true;   break;
-
-      }
+  for (i=0; i<num_vars; ++i) {
+    switch (u_types[i]) {
+    case STD_NORMAL:
+      basis_types[i] = HERMITE_ORTHOG;                                break;
+    case STD_UNIFORM:
+      if (bc_options.piecewiseBasis)
+	basis_types[i] = (bc_options.useDerivs) ? PIECEWISE_CUBIC_INTERP :
+	  PIECEWISE_LINEAR_INTERP;
+      else
+	basis_types[i] = (bc_options.useDerivs) ? HERMITE_INTERP :
+	  LEGENDRE_ORTHOG;
+      break;
+    case STD_EXPONENTIAL:
+      basis_types[i] = LAGUERRE_ORTHOG;                               break;
+    case STD_BETA:
+      basis_types[i] = JACOBI_ORTHOG;       extra_dist_params = true; break;
+    case STD_GAMMA:
+      basis_types[i] = GEN_LAGUERRE_ORTHOG; extra_dist_params = true; break;
+    default:
+      basis_types[i] = NUM_GEN_ORTHOG;      extra_dist_params = true; break;
     }
   }
-  else
-    for (i=0; i<num_vars; ++i)
-      if (u_types[i] != STD_NORMAL && u_types[i] != STD_UNIFORM &&
-	  u_types[i] != STD_EXPONENTIAL)
-	{ extra_dist_params = true; break; }
 
   return extra_dist_params;
 }

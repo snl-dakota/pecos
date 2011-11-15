@@ -62,9 +62,6 @@ public:
   /// and, if needed, update_basis_distribution_parameters()
   void construct_basis(const ShortArray& u_types, const DistributionParams& dp,
 		       const BasisConfigOptions& bc_options);
-  /// invoke initialize_basis_types(const ShortArray&, ShortArray&)
-  /// using basisTypes
-  bool initialize_basis_types(const ShortArray& u_types);
 
   /// set basisTypes
   void basis_types(const ShortArray& basis_types);
@@ -476,11 +473,6 @@ construct_basis(const ShortArray& u_types, const DistributionParams& dp,
   if (dist_params)
     update_basis_distribution_parameters(u_types, dp, polynomialBasis);
 }
-
-
-inline bool OrthogPolyApproximation::
-initialize_basis_types(const ShortArray& u_types)
-{ return initialize_basis_types(u_types, basisTypes); }
 
 
 inline void OrthogPolyApproximation::basis_types(const ShortArray& basis_types)
