@@ -55,11 +55,11 @@ time domain data, and modeling using basis functions.
 The use of class hierarchies provides a mechanism for extensibility in
 PECOS components.  In each of the various class hierarchies, adding a
 new capability typically involves deriving a new class and providing a
-small number of virtual function redefinitions.  These redefinitions
-define the coding portions specific to the new derived class, with the
-common portions already defined at the base class.  Thus, with a small
-amount of new code, the existing facilities can be extended, reused,
-and leveraged for new purposes.
+few virtual function redefinitions.  These redefinitions define the
+coding portions specific to the new derived class, with the common
+portions already defined at the base class.  Thus, with a relatively
+small amount of new code, the existing facilities can be extended,
+reused, and leveraged for new purposes.
 
 The software components are presented in the following sections using
 a top-down order.
@@ -137,9 +137,14 @@ integration for computing coefficients of a multivariate
 \ref Pecos::BasisApproximation "BasisApproximation".  Specific drivers 
 include:
 <ul> 
-<li> \ref Pecos::CubatureDriver "CubatureDriver"
-<li> \ref Pecos::SparseGridDriver "SparseGridDriver"
-<li> \ref Pecos::TensorProductDriver "TensorProductDriver"
+<li> \ref Pecos::CubatureDriver "CubatureDriver": 
+Stroud cubature rules and extensions
+<li> \ref Pecos::SparseGridDriver "SparseGridDriver": 
+Smolyak sparse grids; isotropic, anisotropic, and generalized
+<li> \ref Pecos::TensorProductDriver "TensorProductDriver":
+tensor-product quadrature; isotropic and anisotropic
+<li> \ref Pecos::LocalRefinableDriver "LocalRefinableDriver":
+structured grids for local h-refinement
 </ul>
 
 \ref Pecos::LHSDriver "LHSDriver" is currently separate from this hierarchy.
@@ -162,13 +167,15 @@ eigenfunctions from singular value decomposition of covariance matrices.
      <ul>
      <li> \ref Pecos::OrthogPolyApproximation "OrthogPolyApproximation": a 
           multivariate orthogonal basis defined from one-dimensional orthogonal 
-          polynomials (\ref Pecos::OrthogonalPolynomial "OrthogonalPolynomial") 
-          and a multi-index.
-     <li> \ref Pecos::InterpPolyApproximation "InterpPolyApproximation": a 
-          multivariate interpolation basis defined from one-dimensional 
-          Lagrange interpolation polynomials
-          (\ref Pecos::LagrangeInterpPolynomial "LagrangeInterpPolynomial") 
-          and a multi-index.
+          polynomials (see \ref 
+	  Pecos::OrthogonalPolynomial "OrthogonalPolynomial" below)
+	  and a multi-index.
+     <li> \ref Pecos::InterpPolyApproximation "InterpPolyApproximation":
+     	  a multivariate interpolation basis defined from one-dimensional 
+          interpolation polynomials (local or global, value-based or
+	  gradient-enhanced, nodal or hierarchical; see 
+          \ref Pecos::InterpolationPolynomial "InterpolationPolynomial"
+	  below) and a multi-index.
      </ul>
 </ul>
 
@@ -193,8 +200,20 @@ continuous probability distribution function weightings:
     <li> \ref Pecos::ChebyshevOrthogPolynomial "ChebyshevOrthogPolynomial"
     <li> \ref Pecos::NumericGenOrthogPolynomial "NumericGenOrthogPolynomial"
     </ul>
-<li> \ref Pecos::LagrangeInterpPolynomial "LagrangeInterpPolynomial": 
-one-dimensional Lagrange interpolation polynomials.
+<li> \ref Pecos::InterpolationPolynomial "InterpolationPolynomial": 
+one-dimensional interpolation polynomials.
+    <ul>
+    <li> \ref Pecos::LagrangeInterpPolynomial "LagrangeInterpPolynomial":
+    	 global value-based Lagrange interpolation polynomials
+    <li> \ref Pecos::HermiteInterpPolynomial "HermiteInterpPolynomial":
+    	 global gradient-enhanced Hermite interpolation polynomials
+    <li> \ref Pecos::PiecewiseInterpPolynomial "PiecewiseInterpPolynomial":
+    	 local value-based (linear) and gradient-enhanced (cubic)
+	 spline polynomials using a nodal basis formulation
+    <li> \ref Pecos::HierarchPWInterpPolynomial "HierarchPWInterpPolynomial":
+    	 local value-based (linear) and gradient-enhanced (cubic)
+	 spline polynomials using a hierarchical basis formulation
+    </ul>
 </ul>
 
 
@@ -219,6 +238,36 @@ implementation in F77 in the public domain.
 \section DevCodeEx Code Examples
 
 
+A number of test drivers are available in \c pecos/test that demonstrate
+interaction with PECOS capabilities.  The following drivers demonstrate
+basis stochastic process sample generation from power spectral density (PSD):
+<ul> 
+<li> pecos_ifft_g.cpp: scalar stochastic process generation from PSD using
+inverse FFT in the method of Grigoriu.
+<li> pecos_ifft_sd.cpp: scalar stochastic process generation from PSD using
+inverse FFT in the method of Shinozuka and Deodatis.
+</ul>
+
+The following drivers demonstrate generation of grids for collocation methods:
+<ul> 
+<li> pecos_int_driver.cpp: generation of integration driver sample sets
+     (Smolyak sparse grids, tensor-product quadrature, cubature, and local
+     refinable grids)
+<li> pecos_lhs_driver.cpp: generation of an LHS sample set
+<!-- Activate once fully integrated
+<li> pecos_uniform_refinable_driver.cpp: test program for UniformRefinablePointSet
+<li> pecos_hierarch_approx_driver.cpp: test program for HierarchInterpPolyApproximation
+<li> pecos_hierarchical_driver.cpp: test program for HierarchPWInterpPolynomial
+-->
+</ul>
+
+Finally, the following drivers demonstrate miscellaneous statistical utilities:
+<ul> 
+<li> boost_test_dist.cpp: tests Boost statistical distribution functions.
+<li> boost_test_rng.cpp: tests Boost random number generators
+</ul>
+
+<!--
 \code
   size_t num_vars = 5;
 
@@ -248,6 +297,8 @@ implementation in F77 in the public domain.
   // form approximation
   basis.find_coefficients();
 \endcode
+-->
+
 
 <!--
 // Instantiate and configure basis; then pass into driver to define grid points
@@ -308,7 +359,7 @@ implementation in F77 in the public domain.
 Additional development resources include:
 
 \li Project web pages will be maintained in the future at 
-http://www.cs.sandia.gov/pecos
+http://dakota.sandia.gov/packages/pecos
 
 */
 

@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
     poly_basis[i] = Pecos::BasisPolynomial(Pecos::HERMITE_ORTHOG);
   Pecos::RealMatrix variable_sets;
 
-  // Smolyak sparse grids
+  // Smolyak sparse grid
   std::cout << "Instantiating SparseGridDriver:\n";
   unsigned short level = 3; Pecos::RealVector dimension_pref; // isotropic
   Pecos::SparseGridDriver sg_driver(level, dimension_pref);
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
   std::cout << "Cubature weights:\n";
   Pecos::write_data(std::cout, c_driver.type1_weight_sets());
 
-  // Local refinable sparse grid
+  // Local refinable grid
   std::cout << "Instantiating LocalRefinableDriver" << std::endl;
   Pecos::LocalRefinableDriver l_driver;
   unsigned short refinable_level = 4;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
   bounds[0] = Pecos::RealArray(2,-1);
   bounds[1] = Pecos::RealArray(2,1);
 
-  //Check correct initialization
+  // Check correct initialization
   l_driver.initialize_grid(bounds[0],bounds[1],refinable_level,
 			   Pecos::PIECEWISE_LINEAR_INTERP);
   l_driver.compute_grid(variable_sets);
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
   assert( l_driver.grid_size() == 29 );
   assert( l_driver.highest_level_size() == 16 );
 
-  //Attempt local refinement
+  // Attempt local refinement
   Pecos::BoolDeque refinement_selector(16,false);
   refinement_selector[5] = true;
   refinement_selector[10] = true;
