@@ -27,7 +27,7 @@ initialize_collocation_rules(const ShortArray& u_types,
 			     const BasisConfigOptions& bc_options,
 			     ShortArray& colloc_rules)
 {
-  size_t i, num_vars = u_types.size();
+  size_t num_vars = u_types.size();
   colloc_rules.resize(num_vars);
 
   // set colloc_rules based on u_types: open Gauss rules are used for all
