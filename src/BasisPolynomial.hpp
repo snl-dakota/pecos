@@ -144,6 +144,7 @@ public:
   /// compute num!/den!
   static Real factorial_ratio(unsigned short num, unsigned short den);
   /// compute n!/(k!(n-k)!)
+  /** Note: n+p choose n or p = (n+p)!/n!/p! */
   static Real n_choose_k(unsigned short n, unsigned short k);
   /// compute the Pochhammer symbol (m)_n = m*(m+1)...*(m+n-1)
   static Real pochhammer(const Real& m, unsigned short n);
