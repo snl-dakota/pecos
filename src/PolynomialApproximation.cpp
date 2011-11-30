@@ -296,12 +296,13 @@ total_order_terms(const UShortArray& upper_bound, short lower_bound_offset)
 
   size_t num_terms;
   if (isotropic) {
-    num_terms = (size_t)BasisPolynomial::n_choose_k(order+n, order);
+    num_terms = (size_t)std::floor(
+      BasisPolynomial::n_choose_k(order+n, order)+.5); // round non-integral
     if (lower_bound_offset >= 0) { // default is -1
       int omit_order = order - lower_bound_offset - 1;
       if (omit_order >= 0)
-	num_terms -=
-	  (size_t)BasisPolynomial::n_choose_k(omit_order+n, omit_order);
+	num_terms -= (size_t)std::floor(
+	  BasisPolynomial::n_choose_k(omit_order+n, omit_order)+.5); // round
     }
   }
   else { // anisotropic: use multiIndex recursion to compute

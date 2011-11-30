@@ -51,7 +51,7 @@ allocate_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
     for (i=0; i<num_terms; i++) {
       int wpNmi = ssgLevel - index_norm(multi_index[i]); // w+N-|i| = w-|j|
       coeffs[i] = (int)std::pow(-1., wpNmi)
-	* (int)BasisPolynomial::n_choose_k(numVars - 1, wpNmi);
+	* (int)std::floor(BasisPolynomial::n_choose_k(numVars - 1, wpNmi)+.5);
     }
   }
   else { // utilize Pecos wrapper to sgmga_vcn_{ordered,coef}
