@@ -21,58 +21,56 @@
 
 namespace Pecos {
 
-const Real& LegendreOrthogPolynomial::
-type1_value(const Real& x, unsigned short order)
+Real LegendreOrthogPolynomial::type1_value(const Real& x, unsigned short order)
 {
+  Real t1_val;
   switch (order) {
   case 0:
-    basisPolyValue = 1.;
+    t1_val = 1.;
     break;
   case 1:
-    basisPolyValue = x;
+    t1_val = x;
     break;
   case 2:
-    basisPolyValue = (3.*x*x - 1.)/2.;
+    t1_val = (3.*x*x - 1.)/2.;
     break;
   case 3:
-    basisPolyValue = x*(5.*x*x - 3.)/2.;
+    t1_val = x*(5.*x*x - 3.)/2.;
     break;
   case 4: {
     Real x2 = x*x;
-    basisPolyValue = (35.*x2*x2 - 30.*x2 + 3.)/8.;
+    t1_val = (35.*x2*x2 - 30.*x2 + 3.)/8.;
     break;
   }
   case 5: {
     Real x2 = x*x;
-    basisPolyValue = x*(63.*x2*x2 - 70.*x2 + 15.)/8.;
+    t1_val = x*(63.*x2*x2 - 70.*x2 + 15.)/8.;
     break;
   }
   case 6: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = (231.*x2*x4 - 315.*x4 + 105.*x2 - 5.)/16.;
+    t1_val = (231.*x2*x4 - 315.*x4 + 105.*x2 - 5.)/16.;
     break;
   }
   case 7: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = x*(429.*x2*x4 - 693.*x4 + 315.*x2 - 35.)/16.;
+    t1_val = x*(429.*x2*x4 - 693.*x4 + 315.*x2 - 35.)/16.;
     break;
   }
   case 8: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue
-      = (6435.*x4*x4 - 12012.*x2*x4 + 6930.*x4 - 1260.*x2 + 35.)/128.;
+    t1_val = (6435.*x4*x4 - 12012.*x2*x4 + 6930.*x4 - 1260.*x2 + 35.)/128.;
     break;
   }
   case 9: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue
-      = x*(12155.*x4*x4 - 25740.*x2*x4 + 18018.*x4 - 4620.*x2 + 315.)/128.;
+    t1_val = x*(12155.*x4*x4 - 25740.*x2*x4 + 18018.*x4 - 4620.*x2 + 315.)/128.;
     break;
   }
   case 10: {
     Real x2 = x*x, x4 = x2*x2, x8 = x4*x4;
-    basisPolyValue  = (46189.*x2*x8 - 109395.*x8 + 90090.*x2*x4 - 30030.*x4 +
-			3465.*x2 - 63.)/256.;
+    t1_val  = (46189.*x2*x8 - 109395.*x8 + 90090.*x2*x4 - 30030.*x4 +
+	       3465.*x2 - 63.)/256.;
     break;
   }
   default:
@@ -83,33 +81,34 @@ type1_value(const Real& x, unsigned short order)
       P_nminus1 = x*(12155.*x8 - 25740.*x2*x4 + 18018.*x4 - 4620.*x2 + 315.)
                 / 128.; // P_9
     for (size_t i=10; i<order; i++) {
-      basisPolyValue = ( (2.*i+1.)*x*P_n - i*P_nminus1 ) / (i+1.); // P_nplus1
+      t1_val = ( (2.*i+1.)*x*P_n - i*P_nminus1 ) / (i+1.); // P_nplus1
       if (i != order-1) {
 	P_nminus1 = P_n;
-	P_n       = basisPolyValue;
+	P_n       = t1_val;
       }
     }
     break;
   }
 
-  return basisPolyValue;
+  return t1_val;
 }
 
 
-const Real& LegendreOrthogPolynomial::
+Real LegendreOrthogPolynomial::
 type1_gradient(const Real& x, unsigned short order)
 {
+  Real t1_grad;
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
-  //basisPolyGradient = (order) ?
+  //t1_grad = (order) ?
   //  order*(x*type1_value(x, order) - type1_value(x, order-1))/(x*x - 1.) : 0.;
-  if (order) { // be careful with reference to changing basisPolyValue
+  if (order) {
     Real P_n = type1_value(x, order), P_nminus1 = type1_value(x, order-1);
-    basisPolyGradient = order*(x*P_n - P_nminus1)/(x*x - 1.);
+    t1_grad = order*(x*P_n - P_nminus1)/(x*x - 1.);
   }
   else
-    basisPolyGradient = 0.;
-  PCout << "Legendre gradient approach 1: " << basisPolyGradient << '\n';
+    t1_grad = 0.;
+  PCout << "Legendre gradient approach 1: " << t1_grad << '\n';
 #endif // DEBUG
 
   // The previous approach, while very compact, produces 0/0 = NaN at x = +/-1.
@@ -118,28 +117,28 @@ type1_gradient(const Real& x, unsigned short order)
   // gradient recursion
   switch (order) {
   case 0:
-    basisPolyGradient = 0.;
+    t1_grad = 0.;
     break;
   case 1:
-    basisPolyGradient = 1;
+    t1_grad = 1;
     break;
   case 2:
-    basisPolyGradient = 3.*x;
+    t1_grad = 3.*x;
     break;
   case 3:
-    basisPolyGradient = (15.*x*x - 3.)/2.;
+    t1_grad = (15.*x*x - 3.)/2.;
     break;
   case 4:
-    basisPolyGradient = x*(35.*x*x - 15.)/2.;
+    t1_grad = x*(35.*x*x - 15.)/2.;
     break;
   case 5: {
     Real x2 = x*x;
-    basisPolyGradient = (315.*x2*x2 - 210.*x2 + 15.)/8.;
+    t1_grad = (315.*x2*x2 - 210.*x2 + 15.)/8.;
     break;
   }
   case 6: {
     Real x2 = x*x;
-    basisPolyGradient = x*(693.*x2*x2 - 630.*x2 + 105.)/8.;
+    t1_grad = x*(693.*x2*x2 - 630.*x2 + 105.)/8.;
     break;
   }
   default:
@@ -148,32 +147,30 @@ type1_gradient(const Real& x, unsigned short order)
       dPdx_n       = x*(693.*x4 - 630.*x2 + 105.)/8., // P'_6
       dPdx_nminus1 = (315.*x4 - 210.*x2 + 15.)/8.;    // P'_5
     for (size_t i=6; i<order; i++) {
-      basisPolyGradient // dPdx_nplus1
+      t1_grad // dPdx_nplus1
 	= ( (2.*i+1.)*(x*dPdx_n + type1_value(x,i)) - i*dPdx_nminus1 ) / (i+1.);
       if (i != order-1) {
 	dPdx_nminus1 = dPdx_n;
-	dPdx_n       = basisPolyGradient;
+	dPdx_n       = t1_grad;
       }
     }
     break;
   }
 #ifdef DEBUG
-  PCout << "Legendre gradient approach 2: " << basisPolyGradient << '\n';
+  PCout << "Legendre gradient approach 2: " << t1_grad << '\n';
 #endif // DEBUG
 
-  return basisPolyGradient;
+  return t1_grad;
 }
 
 
-const Real& LegendreOrthogPolynomial::norm_squared(unsigned short order)
+Real LegendreOrthogPolynomial::norm_squared(unsigned short order)
 {
   // Abramowitz & Stegun: w(x) = 1
-  //orthogPolyNormSq = 2./(2.*order + 1.);
+  //return 2./(2.*order + 1.);
 
   // sampling density f(x) = 1/(U-L) = 1/2 for [L,U] = [-1,1]
-  orthogPolyNormSq = 1./(2.*order + 1.);
-
-  return orthogPolyNormSq;
+  return 1./(2.*order + 1.);
 }
 
 

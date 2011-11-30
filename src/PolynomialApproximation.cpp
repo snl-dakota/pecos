@@ -27,7 +27,7 @@ initialize_collocation_rules(const ShortArray& u_types,
 			     const BasisConfigOptions& bc_options,
 			     ShortArray& colloc_rules)
 {
-  size_t i, num_vars = u_types.size();
+  size_t num_vars = u_types.size();
   colloc_rules.resize(num_vars);
 
   // set colloc_rules based on u_types: open Gauss rules are used for all
@@ -296,14 +296,14 @@ total_order_terms(const UShortArray& upper_bound, short lower_bound_offset)
 
   size_t num_terms;
   if (isotropic) {
-    num_terms = (size_t)BasisPolynomial::factorial_ratio(order+n, order);
+    num_terms = (size_t)std::floor(
+      BasisPolynomial::n_choose_k(order+n, order)+.5); // round non-integral
     if (lower_bound_offset >= 0) { // default is -1
       int omit_order = order - lower_bound_offset - 1;
       if (omit_order >= 0)
-	num_terms -= (size_t)BasisPolynomial::factorial_ratio(
-	  omit_order+n, omit_order);
+	num_terms -= (size_t)std::floor(
+	  BasisPolynomial::n_choose_k(omit_order+n, omit_order)+.5); // round
     }
-    num_terms /= (size_t)BasisPolynomial::factorial(n);
   }
   else { // anisotropic: use multiIndex recursion to compute
     bool mi_lower_bound = (lower_bound_offset >= 0); // default is -1

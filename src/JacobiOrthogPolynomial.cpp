@@ -22,22 +22,19 @@
 
 namespace Pecos {
 
-const Real& JacobiOrthogPolynomial::
-type1_value(const Real& x, unsigned short order)
+Real JacobiOrthogPolynomial::type1_value(const Real& x, unsigned short order)
 {
+  Real t1_val;
   switch (order) {
   case 0:
-    basisPolyValue = 1.;
-    break;
+    t1_val = 1.;                                                          break;
   case 1:
-    basisPolyValue = (alphaPoly + betaPoly + 2.)*(x-1.)/2. + alphaPoly + 1.;
-    break;
+    t1_val = (alphaPoly + betaPoly + 2.)*(x-1.)/2. + alphaPoly + 1.;      break;
   case 2: {
     Real xm1 = x - 1.;
-    basisPolyValue
-      = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1*xm1 +
-	  4.*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.)*xm1 +
-	  4.*(alphaPoly + 1.)*(alphaPoly + 2.) ) / 8.;
+    t1_val = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1*xm1 +
+	       4.*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.)*xm1 +
+	       4.*(alphaPoly + 1.)*(alphaPoly + 2.) ) / 8.;
     break;
   }
   default: {
@@ -49,41 +46,41 @@ type1_value(const Real& x, unsigned short order)
       Pab_nm1 = (alphaPoly + betaPoly + 2.)*xm1/2. + alphaPoly + 1.; // Pab_1
     for (size_t i=2; i<order; i++) {
       Real ab2i = alphaPoly + betaPoly + 2.*i;
-      basisPolyValue // Pab_np1
+      t1_val // Pab_np1
 	= ( ( (ab2i+1.)*(alphaPoly*alphaPoly-betaPoly*betaPoly)
 	      + x*pochhammer(ab2i,3) )*Pab_n
 	    - 2.*(i+alphaPoly)*(i+betaPoly)*(ab2i+2.)*Pab_nm1 )
 	/ ( 2.*(i+1.)*(i+alphaPoly+betaPoly+1.)*ab2i );
       if (i != order-1) {
 	Pab_nm1 = Pab_n;
-	Pab_n   = basisPolyValue;
+	Pab_n   = t1_val;
       }
     }
     break;
   }
   }
 
-  return basisPolyValue;
+  return t1_val;
 }
 
 
-const Real& JacobiOrthogPolynomial::
-type1_gradient(const Real& x, unsigned short order)
+Real JacobiOrthogPolynomial::type1_gradient(const Real& x, unsigned short order)
 {
+  Real t1_grad;
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
-  //basisPolyGradient = (order) ?
+  //t1_grad = (order) ?
   //  (g1*type1_value(x,order) + g0*type1_value(x,order-1))/g2 :0.;
-  if (order) { // be careful with reference to changing basisPolyValue
+  if (order) {
     Real ab2n = 2.*order+alphaPoly+betaPoly,
       g0 = 2.*(order+alphaPoly)*(order+betaPoly),
       g1 = order*(alphaPoly-betaPoly-ab2n*x), g2 = ab2n*(1.-x*x),
       Pab_n = type1_value(x, order), Pab_nminus1 = type1_value(x, order-1);
-    basisPolyGradient = (g1*Pab_n + g0*Pab_nminus1)/g2;
+    t1_grad = (g1*Pab_n + g0*Pab_nminus1)/g2;
   }
   else
-    basisPolyGradient = 0.;
-  PCout << "Jacobi gradient approach 1: " << basisPolyGradient << '\n';
+    t1_grad = 0.;
+  PCout << "Jacobi gradient approach 1: " << t1_grad << '\n';
 #endif // DEBUG
 
   // The previous approach, while very compact, produces 0/0 = NaN at x = +/-1.
@@ -91,16 +88,13 @@ type1_gradient(const Real& x, unsigned short order)
   // to get a 3 point gradient recursion
   switch (order) {
   case 0:
-    basisPolyGradient = 0.;
-    break;
+    t1_grad = 0.;                                                         break;
   case 1:
-    basisPolyGradient = (alphaPoly + betaPoly + 2.)/2.;
-    break;
+    t1_grad = (alphaPoly + betaPoly + 2.)/2.;                             break;
   case 2: {
     Real xm1 = x - 1.;
-    basisPolyGradient
-      = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1 +
-	  2.*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.) ) / 4.;
+    t1_grad = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1 +
+		2.*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.) ) / 4.;
     break;
   }
   default: {
@@ -111,33 +105,32 @@ type1_gradient(const Real& x, unsigned short order)
       dPabdx_nm1 = (alphaPoly + betaPoly + 2.)/2.;                       // P'_1
     for (size_t i=2; i<order; i++) {
       Real ab2i = alphaPoly + betaPoly + 2.*i, pab2i3 = pochhammer(ab2i, 3);
-      basisPolyGradient // dPabdx_np1
+      t1_grad // dPabdx_np1
 	= ( ( (ab2i+1.)*(alphaPoly*alphaPoly-betaPoly*betaPoly) + x*pab2i3 )
 	    * dPabdx_n + pab2i3*type1_value(x,i)
 	    - 2.*(i+alphaPoly)*(i+betaPoly)*(ab2i+2.)*dPabdx_nm1 )
 	/ ( 2.*(i+1.)*(i+alphaPoly+betaPoly+1.)*ab2i );
       if (i != order-1) {
 	dPabdx_nm1 = dPabdx_n;
-	dPabdx_n   = basisPolyGradient;
+	dPabdx_n   = t1_grad;
       }
     }
     break;
   }
   }
 #ifdef DEBUG
-  PCout << "Jacobi gradient approach 2: " << basisPolyGradient << '\n';
+  PCout << "Jacobi gradient approach 2: " << t1_grad << '\n';
 #endif // DEBUG
 
-  return basisPolyGradient;
+  return t1_grad;
 }
 
 
-const Real& JacobiOrthogPolynomial::norm_squared(unsigned short order)
+Real JacobiOrthogPolynomial::norm_squared(unsigned short order)
 {
-  orthogPolyNormSq = (alphaPoly+betaPoly+1.) / (2.*order+alphaPoly+betaPoly+1.)
+  return (alphaPoly+betaPoly+1.) / (2.*order+alphaPoly+betaPoly+1.)
     * pochhammer(alphaPoly+1.,order) * pochhammer(betaPoly+1.,order)
     / pochhammer(alphaPoly+betaPoly+1.,order) / factorial(order);
-  return orthogPolyNormSq;
 }
 
 

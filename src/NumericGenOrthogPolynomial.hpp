@@ -89,10 +89,9 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  const Real& type1_value(const Real& x, unsigned short order);
-  const Real& type1_gradient(const Real& x, unsigned short order);
-
-  const Real& norm_squared(unsigned short order);
+  Real type1_value(const Real& x, unsigned short order);
+  Real type1_gradient(const Real& x, unsigned short order);
+  Real norm_squared(unsigned short order);
 
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
@@ -176,10 +175,10 @@ private:
 
   /// retrieve the value of the 1-D generated polynomial (of given
   /// coefficients) for a given parameter value
-  const Real& type1_value(const Real& x, const RealVector& poly_coeffs);
+  Real type1_value(const Real& x, const RealVector& poly_coeffs);
   /// retrieve the gradient of the 1-D generated polynomial (of given
   /// coefficients) with respect to its dimension for a given parameter value
-  const Real& type1_gradient(const Real& x, const RealVector& poly_coeffs);
+  Real type1_gradient(const Real& x, const RealVector& poly_coeffs);
 
   //
   //- Heading: Data

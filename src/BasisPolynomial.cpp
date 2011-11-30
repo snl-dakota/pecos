@@ -210,7 +210,7 @@ BasisPolynomial::~BasisPolynomial()
 }
 
 
-const Real& BasisPolynomial::type1_value(const Real& x, unsigned short n)
+Real BasisPolynomial::type1_value(const Real& x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type1_value() not available for this basis polynomial "
@@ -221,7 +221,7 @@ const Real& BasisPolynomial::type1_value(const Real& x, unsigned short n)
 }
 
 
-const Real& BasisPolynomial::type2_value(const Real& x, unsigned short n)
+Real BasisPolynomial::type2_value(const Real& x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type2_value() not available for this basis polynomial "
@@ -232,7 +232,7 @@ const Real& BasisPolynomial::type2_value(const Real& x, unsigned short n)
 }
 
 
-const Real& BasisPolynomial::type1_gradient(const Real& x, unsigned short n)
+Real BasisPolynomial::type1_gradient(const Real& x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type1_gradient() not available for this basis polynomial "
@@ -243,7 +243,7 @@ const Real& BasisPolynomial::type1_gradient(const Real& x, unsigned short n)
 }
 
 
-const Real& BasisPolynomial::type2_gradient(const Real& x, unsigned short n)
+Real BasisPolynomial::type2_gradient(const Real& x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type2_gradient() not available for this basis polynomial "
@@ -254,7 +254,7 @@ const Real& BasisPolynomial::type2_gradient(const Real& x, unsigned short n)
 }
 
 
-const Real& BasisPolynomial::norm_squared(unsigned short n)
+Real BasisPolynomial::norm_squared(unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: norm_squared() not available for this basis polynomial "

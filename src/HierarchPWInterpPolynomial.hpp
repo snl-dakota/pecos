@@ -63,11 +63,11 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  const Real& type1_value(const Real& x, const unsigned int i);
-  const Real& type2_value(const Real& x, const unsigned int i);
+  Real type1_value(const Real& x, const unsigned int i);
+  Real type2_value(const Real& x, const unsigned int i);
 
-  const Real& type1_gradient(const Real& x, const unsigned int i);
-  const Real& type2_gradient(const Real& x, const unsigned int i);
+  Real type1_gradient(const Real& x, const unsigned int i);
+  Real type2_gradient(const Real& x, const unsigned int i);
        
 protected:
     

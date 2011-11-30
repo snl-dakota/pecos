@@ -15,6 +15,7 @@
 #ifdef HAVE_SPARSE_GRID
 #include "sandia_rules.H"
 #endif
+//#define INTERPOLATION_TEST
 
 
 namespace Pecos {
@@ -31,7 +32,11 @@ void HermiteInterpPolynomial::precompute_data()
   // type 1
   xT1ValDiffTab.resize(num_pts);  yT1ValDiffTab.resize(num_pts);
   xT1GradDiffTab.resize(num_pts); yT1GradDiffTab.resize(num_pts);
+  // type 2
+  xT2ValDiffTab.resize(num_pts);  yT2ValDiffTab.resize(num_pts);
+  xT2GradDiffTab.resize(num_pts); yT2GradDiffTab.resize(num_pts);
   for (i=0; i<num_pts; ++i) {
+    // type 1
     RealArray& xt1v_tab_i = xT1ValDiffTab[i];  xt1v_tab_i.resize(n2);
     RealArray& yt1v_tab_i = yT1ValDiffTab[i];  yt1v_tab_i.resize(n2);
     RealArray& xt1g_tab_i = xT1GradDiffTab[i]; xt1g_tab_i.resize(n2m1);
@@ -41,12 +46,13 @@ void HermiteInterpPolynomial::precompute_data()
 				&derivs[0], &xt1v_tab_i[0], &yt1v_tab_i[0],
 				&xt1g_tab_i[0], &yt1g_tab_i[0]);
     values[i] = 0.; // restore
-  }
-
-  // type 2
-  xT2ValDiffTab.resize(num_pts);  yT2ValDiffTab.resize(num_pts);
-  xT2GradDiffTab.resize(num_pts); yT2GradDiffTab.resize(num_pts);
-  for (i=0; i<num_pts; ++i) {
+#ifdef INTERPOLATION_TEST
+    PCout << "xt1v[" << i+1 << "] =\n" << xt1v_tab_i
+	  << "yt1v[" << i+1 << "] =\n" << yt1v_tab_i
+	  << "xt1g[" << i+1 << "] =\n" << xt1g_tab_i
+	  << "yt1g[" << i+1 << "] =\n" << yt1g_tab_i;
+#endif // INTERPOLATION_TEST
+    // type 2
     RealArray& xt2v_tab_i = xT2ValDiffTab[i];  xt2v_tab_i.resize(n2);
     RealArray& yt2v_tab_i = yT2ValDiffTab[i];  yt2v_tab_i.resize(n2);
     RealArray& xt2g_tab_i = xT2GradDiffTab[i]; xt2g_tab_i.resize(n2m1);
@@ -56,59 +62,76 @@ void HermiteInterpPolynomial::precompute_data()
 				&derivs[0], &xt2v_tab_i[0], &yt2v_tab_i[0],
 				&xt2g_tab_i[0], &yt2g_tab_i[0]);
     derivs[i] = 0.; // restore
+#ifdef INTERPOLATION_TEST
+    PCout << "xt2v[" << i+1 << "] =\n" << xt2v_tab_i
+	  << "yt2v[" << i+1 << "] =\n" << yt2v_tab_i
+	  << "xt2g[" << i+1 << "] =\n" << xt2g_tab_i
+	  << "yt2g[" << i+1 << "] =\n" << yt2g_tab_i;
+#endif // INTERPOLATION_TEST
   }
+
+#ifdef INTERPOLATION_TEST
+  int wp = WRITE_PRECISION+7;
+  for (i=0; i<num_pts; ++i) {
+    const Real& pt_i = interpPts[i];
+    PCout << "Interp pt " << std::setw(3) << i+1 << " = "
+	  << std::setw(wp) << pt_i << ":\n";
+    for (int j=0; j<num_pts; ++j)
+      PCout << "  interpolant " << j+1
+	    << " t1 val = "  << std::setw(wp) << type1_value(pt_i, j)
+	    << " t2 val = "  << std::setw(wp) << type2_value(pt_i, j)
+	    << " t1 grad = " << std::setw(wp) << type1_gradient(pt_i, j)
+	    << " t2 grad = " << std::setw(wp) << type2_gradient(pt_i, j) <<'\n';
+  }
+#endif // INTERPOLATION_TEST
 }
 
 
 /** Compute value of the Hermite type 1 polynomial corresponding to
     interpolation point i. */
-const Real& HermiteInterpPolynomial::
-type1_value(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type1_value(const Real& x, unsigned short i)
 {
-  int num_pts = interpPts.size(); Real x_copy = x;
+  int num_pts = interpPts.size(); Real x_copy = x, t1_val, t1_grad;
   webbur::hermite_interpolant_value(num_pts, &xT1ValDiffTab[i][0],
     &yT1ValDiffTab[i][0], &xT1GradDiffTab[i][0], &yT1GradDiffTab[i][0],
-    1, &x_copy, &basisPolyValue, &basisPolyGradient);
-  return basisPolyValue;
+    1, &x_copy, &t1_val, &t1_grad);
+  return t1_val;
 }
 
 
 /** Compute value of the Hermite type 2 polynomial corresponding to
     interpolation point i. */
-const Real& HermiteInterpPolynomial::
-type2_value(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type2_value(const Real& x, unsigned short i)
 {
-  int num_pts = interpPts.size(); Real x_copy = x;
+  int num_pts = interpPts.size(); Real x_copy = x, t2_val, t2_grad;
   webbur::hermite_interpolant_value(num_pts, &xT2ValDiffTab[i][0],
     &yT2ValDiffTab[i][0], &xT2GradDiffTab[i][0], &yT2GradDiffTab[i][0],
-    1, &x_copy, &basisPolyValue, &basisPolyGradient);
-  return basisPolyValue;
+    1, &x_copy, &t2_val, &t2_grad);
+  return t2_val;
 }
 
 
 /** Compute derivative with respect to x of the Hermite type 1
     polynomial corresponding to interpolation point i. */
-const Real& HermiteInterpPolynomial::
-type1_gradient(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
 { 
-  int num_pts = interpPts.size(); Real x_copy = x;
+  int num_pts = interpPts.size(); Real x_copy = x, t1_val, t1_grad;
   webbur::hermite_interpolant_value(num_pts, &xT1ValDiffTab[i][0],
     &yT1ValDiffTab[i][0], &xT1GradDiffTab[i][0], &yT1GradDiffTab[i][0],
-    1, &x_copy, &basisPolyValue, &basisPolyGradient);
-  return basisPolyGradient;
+    1, &x_copy, &t1_val, &t1_grad);
+  return t1_grad;
 }
 
 
 /** Compute derivative with respect to x of the Hermite type 2
     polynomial corresponding to interpolation point i. */
-const Real& HermiteInterpPolynomial::
-type2_gradient(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type2_gradient(const Real& x, unsigned short i)
 { 
-  int num_pts = interpPts.size(); Real x_copy = x;
+  int num_pts = interpPts.size(); Real x_copy = x, t2_val, t2_grad;
   webbur::hermite_interpolant_value(num_pts, &xT2ValDiffTab[i][0],
     &yT2ValDiffTab[i][0], &xT2GradDiffTab[i][0], &yT2GradDiffTab[i][0],
-    1, &x_copy, &basisPolyValue, &basisPolyGradient);
-  return basisPolyGradient;
+    1, &x_copy, &t2_val, &t2_grad);
+  return t2_grad;
 }
 
 

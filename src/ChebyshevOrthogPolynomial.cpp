@@ -21,51 +21,41 @@
 
 namespace Pecos {
 
-const Real& ChebyshevOrthogPolynomial::
-type1_value(const Real& x, unsigned short order)
+Real ChebyshevOrthogPolynomial::type1_value(const Real& x, unsigned short order)
 {
+  Real t1_val;
   switch (order) {
   case 0:
-    basisPolyValue = 1.;
-    break;
+    t1_val = 1.;                                                          break;
   case 1:
-    basisPolyValue = x;
-    break;
+    t1_val = x;                                                           break;
   case 2:
-    basisPolyValue = 2.*x*x - 1.;
-    break;
+    t1_val = 2.*x*x - 1.;                                                 break;
   case 3:
-    basisPolyValue = x*(4.*x*x - 3.);
-    break;
+    t1_val = x*(4.*x*x - 3.);                                             break;
   case 4: {
     Real x2 = x*x;
-    basisPolyValue = 8.*x2*(x2 - 1.) + 1.;
-    break;
+    t1_val = 8.*x2*(x2 - 1.) + 1.;                                        break;
   }
   case 5: {
     Real x2 = x*x;
-    basisPolyValue = x*(16.*x2*x2 - 20.*x2 + 5.);
-    break;
+    t1_val = x*(16.*x2*x2 - 20.*x2 + 5.);                                 break;
   }
   case 6: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = 32.*x2*x4 - 48.*x4 + 18.*x2 - 1.;
-    break;
+    t1_val = 32.*x2*x4 - 48.*x4 + 18.*x2 - 1.;                            break;
   }
   case 7: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = x*(64.*x2*x4 - 112.*x4 + 56.*x2 - 7.);
-    break;
+    t1_val = x*(64.*x2*x4 - 112.*x4 + 56.*x2 - 7.);                       break;
   }
   case 8: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = 128.*x4*x4 - 256.*x2*x4 + 160.*x4 - 32.*x2 + 1.;
-    break;
+    t1_val = 128.*x4*x4 - 256.*x2*x4 + 160.*x4 - 32.*x2 + 1.;             break;
   }
   case 9: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = x*(256.*x4*x4 - 576.*x2*x4 + 432.*x4 - 120.*x2 + 9.);
-    break;
+    t1_val = x*(256.*x4*x4 - 576.*x2*x4 + 432.*x4 - 120.*x2 + 9.);        break;
   }
   default:
     // Support higher order polynomials using the 3 point recursion formula:
@@ -73,62 +63,53 @@ type1_value(const Real& x, unsigned short order)
       T_n       = x*(256.*x8 - 576.*x6 + 432.*x4 - 120.*x2 + 9.), // T_9
       T_nminus1 = 128.*x8 - 256.*x6 + 160.*x4 - 32.*x2 + 1.;      // T_8
     for (size_t i=9; i<order; i++) {
-      basisPolyValue = 2.*x*T_n - T_nminus1; // T_nplus1
+      t1_val = 2.*x*T_n - T_nminus1; // T_nplus1
       if (i != order-1) {
 	T_nminus1 = T_n;
-	T_n       = basisPolyValue;
+	T_n       = t1_val;
       }
     }
     break;
   }
 
-  return basisPolyValue;
+  return t1_val;
 }
 
 
-const Real& ChebyshevOrthogPolynomial::
+Real ChebyshevOrthogPolynomial::
 type1_gradient(const Real& x, unsigned short order)
 {
+  Real t1_grad;
   switch (order) {
   case 0:
-    basisPolyGradient = 0.;
-    break;
+    t1_grad = 0.;                                                         break;
   case 1:
-    basisPolyGradient = 1;
-    break;
+    t1_grad = 1;                                                          break;
   case 2:
-    basisPolyGradient = 4.*x;
-    break;
+    t1_grad = 4.*x;                                                       break;
   case 3:
-    basisPolyGradient = 12.*x*x - 3.;
-    break;
+    t1_grad = 12.*x*x - 3.;                                               break;
   case 4:
-    basisPolyGradient = x*(32.*x*x - 16.);
-    break;
+    t1_grad = x*(32.*x*x - 16.);                                          break;
   case 5: {
     Real x2 = x*x;
-    basisPolyGradient = 80.*x2*x2 - 60.*x2 + 5.;
-    break;
+    t1_grad = 80.*x2*x2 - 60.*x2 + 5.;                                    break;
   }
   case 6: {
     Real x2 = x*x;
-    basisPolyGradient = x*(192.*x2*x2 - 192.*x2 + 36.);
-    break;
+    t1_grad = x*(192.*x2*x2 - 192.*x2 + 36.);                             break;
   }
   case 7: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyGradient = 448.*x2*x4 - 560.*x4 + 168.*x2 - 7.;
-    break;
+    t1_grad = 448.*x2*x4 - 560.*x4 + 168.*x2 - 7.;                        break;
   }
   case 8: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyGradient = x*(1024.*x2*x4 - 1536.*x4 + 640.*x2 - 64.);
-    break;
+    t1_grad = x*(1024.*x2*x4 - 1536.*x4 + 640.*x2 - 64.);                 break;
   }
   case 9: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyGradient = 2304.*x4*x4 - 4032.*x4*x2 + 2160.*x4 - 360.*x2 + 9.;
-    break;
+    t1_grad = 2304.*x4*x4 - 4032.*x4*x2 + 2160.*x4 - 360.*x2 + 9.;        break;
   }
   default:
     // Support higher order polynomials using a 3 point recursion formula:
@@ -137,24 +118,21 @@ type1_gradient(const Real& x, unsigned short order)
       dTdx_nminus1 = x*(1024.*x2*x4 - 1536.*x4 + 640.*x2 - 64.);    // P'_8
     for (size_t i=9; i<order; i++) {
       // dTdx_nplus1:
-      basisPolyGradient	= 2.*x*dTdx_n + 2.*type1_value(x,i) - dTdx_nminus1;
+      t1_grad	= 2.*x*dTdx_n + 2.*type1_value(x,i) - dTdx_nminus1;
       if (i != order-1) {
 	dTdx_nminus1 = dTdx_n;
-	dTdx_n       = basisPolyGradient;
+	dTdx_n       = t1_grad;
       }
     }
     break;
   }
 
-  return basisPolyGradient;
+  return t1_grad;
 }
 
 
-const Real& ChebyshevOrthogPolynomial::norm_squared(unsigned short order)
-{
-  orthogPolyNormSq = (order) ? PI/2. : PI;
-  return orthogPolyNormSq;
-}
+Real ChebyshevOrthogPolynomial::norm_squared(unsigned short order)
+{ return (order) ? PI/2. : PI; }
 
 
 const RealArray& ChebyshevOrthogPolynomial::

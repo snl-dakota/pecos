@@ -22,25 +22,23 @@
 
 namespace Pecos {
 
-const Real& GenLaguerreOrthogPolynomial::
+Real GenLaguerreOrthogPolynomial::
 type1_value(const Real& x, unsigned short order)
 {
+  Real t1_val;
   switch (order) {
   case 0:
-    basisPolyValue = 1.;
-    break;
+    t1_val = 1.;                                                          break;
   case 1:
-    basisPolyValue = -x + alphaPoly + 1.;
-    break;
+    t1_val = -x + alphaPoly + 1.;                                         break;
   case 2:
-    basisPolyValue = (x*x - 2.*(alphaPoly + 2.)*x +
-		      (alphaPoly+1)*(alphaPoly+2.))/2.;
+    t1_val = (x*x - 2.*(alphaPoly + 2.)*x + (alphaPoly+1)*(alphaPoly+2.))/2.;
     break;
   case 3: {
     Real x2 = x*x;
-    basisPolyValue = (-x*x2 + 3.*(alphaPoly+3.)*x2 -
-		      3.*(alphaPoly+2.)*(alphaPoly+3.)*x +
-		      (alphaPoly+1.)*(alphaPoly+2.)*(alphaPoly+3.))/6.;
+    t1_val = (-x*x2 + 3.*(alphaPoly+3.)*x2 -
+	      3.*(alphaPoly+2.)*(alphaPoly+3.)*x +
+	      (alphaPoly+1.)*(alphaPoly+2.)*(alphaPoly+3.))/6.;
     break;
   }
   default: {
@@ -51,35 +49,36 @@ type1_value(const Real& x, unsigned short order)
       La_nm1 = (x*x - 2.*(alphaPoly + 2.)*x +
 		(alphaPoly+1)*(alphaPoly+2.))/2.; // La_2
     for (size_t i=3; i<order; i++) {
-      basisPolyValue = ( (2.*i+1.+alphaPoly-x)*La_n - (i+alphaPoly)*La_nm1 )
+      t1_val = ( (2.*i+1.+alphaPoly-x)*La_n - (i+alphaPoly)*La_nm1 )
 	/ (i+1.); // La_np1
       if (i != order-1) {
 	La_nm1 = La_n;
-	La_n   = basisPolyValue;
+	La_n   = t1_val;
       }
     }
     break;
   }
   }
 
-  return basisPolyValue;
+  return t1_val;
 }
 
 
-const Real& GenLaguerreOrthogPolynomial::
+Real GenLaguerreOrthogPolynomial::
 type1_gradient(const Real& x, unsigned short order)
 {
+  Real t1_grad;
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
-  //basisPolyGradient = (order) ? (order*type1_value(x, order)
+  //t1_grad = (order) ? (order*type1_value(x, order)
   //                  - (order+alphaPoly)*type1_value(x, order-1))/x : 0.;
-  if (order) { // be careful with reference to changing basisPolyValue
+  if (order) {
     Real La_n = type1_value(x, order), La_nminus1 = type1_value(x, order-1);
-    basisPolyGradient = (order*La_n - (order+alphaPoly)*La_nminus1)/x;
+    t1_grad = (order*La_n - (order+alphaPoly)*La_nminus1)/x;
   }
   else
-    basisPolyGradient = 0.;
-  PCout << "Gen Laguerre gradient approach 1: " << basisPolyGradient << '\n';
+    t1_grad = 0.;
+  PCout << "Gen Laguerre gradient approach 1: " << t1_grad << '\n';
 #endif // DEBUG
 
   // The previous approach, while very compact, produces 0/0 = NaN at x = 0.
@@ -87,17 +86,13 @@ type1_gradient(const Real& x, unsigned short order)
   // to get a 3 point gradient recursion
   switch (order) {
   case 0:
-    basisPolyGradient = 0.;
-    break;
+    t1_grad = 0.;                                                         break;
   case 1:
-    basisPolyGradient = -1.;
-    break;
+    t1_grad = -1.;                                                        break;
   case 2:
-    basisPolyGradient = x - (alphaPoly + 2.);
-    break;
+    t1_grad = x - (alphaPoly + 2.);                                       break;
   case 3:
-    basisPolyGradient
-      = (-x*x + 2.*(alphaPoly+3.)*x - (alphaPoly+2.)*(alphaPoly+3.) )/2.;
+    t1_grad = (-x*x + 2.*(alphaPoly+3.)*x - (alphaPoly+2.)*(alphaPoly+3.) )/2.;
     break;
   default: {
     // Support higher order polynomials using the 3 point recursion formula
@@ -105,36 +100,34 @@ type1_gradient(const Real& x, unsigned short order)
       = (-x*x + 2.*(alphaPoly+3.)*x - (alphaPoly+2.)*(alphaPoly+3.) )/2.,//L'a_3
       dLadx_nm1 = x - (alphaPoly + 2.);                                 // L'a_2
     for (size_t i=3; i<order; i++) {
-      basisPolyGradient = ( (2.*i+1.+alphaPoly-x)*dLadx_n - type1_value(x,i) -
+      t1_grad = ( (2.*i+1.+alphaPoly-x)*dLadx_n - type1_value(x,i) -
 			    (i+alphaPoly)*dLadx_nm1 ) / (i+1.); // dLadx_np1
       if (i != order-1) {
 	dLadx_nm1 = dLadx_n;
-	dLadx_n   = basisPolyGradient;
+	dLadx_n   = t1_grad;
       }
     }
     break;
   }
   }
 #ifdef DEBUG
-  PCout << "Gen Laguerre gradient approach 2: " << basisPolyGradient << '\n';
+  PCout << "Gen Laguerre gradient approach 2: " << t1_grad << '\n';
 #endif // DEBUG
 
-  return basisPolyGradient;
+  return t1_grad;
 }
 
 
-const Real& GenLaguerreOrthogPolynomial::norm_squared(unsigned short order)
+Real GenLaguerreOrthogPolynomial::norm_squared(unsigned short order)
 {
   // For integer alphaPoly, Gamma(alphaPoly+n+1)/n!/Gamma(alphaPoly+1)
   // = (alphaPoly+n)!/n!/alphaPoly!
-  //orthogPolyNormSq = n_choose_k(alphaPoly+n,n);
+  //return n_choose_k(alphaPoly+n,n);
 
   // For real alphaPoly: Gamma(alphaPoly+n+1)/Gamma(alphaPoly+1)/n!
   // = (alphaPoly+1)(alphaPoly+2)...(alphaPoly+1+(n-1))/n!
   // = pochhammer(alphaPoly+1,n)/n!
-  orthogPolyNormSq = pochhammer(alphaPoly+1,order) / factorial(order);
-
-  return orthogPolyNormSq;
+  return pochhammer(alphaPoly+1,order) / factorial(order);
 }
 
 
