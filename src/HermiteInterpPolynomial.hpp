@@ -52,11 +52,11 @@ protected:
 
   void precompute_data();
 
-  const Real& type1_value(const Real& x, unsigned short i);
-  const Real& type2_value(const Real& x, unsigned short i);
+  Real type1_value(const Real& x, unsigned short i);
+  Real type2_value(const Real& x, unsigned short i);
 
-  const Real& type1_gradient(const Real& x, unsigned short i);
-  const Real& type2_gradient(const Real& x, unsigned short i);
+  Real type1_gradient(const Real& x, unsigned short i);
+  Real type2_gradient(const Real& x, unsigned short i);
 
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);

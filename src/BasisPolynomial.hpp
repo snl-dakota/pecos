@@ -63,30 +63,30 @@ public:
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual const Real& type1_value(const Real& x, unsigned short n);
+  virtual Real type1_value(const Real& x, unsigned short n);
   /// retrieve the value of the n_th type 2 polynomial for a given parameter x
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual const Real& type2_value(const Real& x, unsigned short n);
+  virtual Real type2_value(const Real& x, unsigned short n);
 
   /// retrieve the gradient of the n_th type 1 polynomial for a given
   /// parameter x
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual const Real& type1_gradient(const Real& x, unsigned short n);
+  virtual Real type1_gradient(const Real& x, unsigned short n);
   /// retrieve the gradient of the n_th type 2 polynomial for a given
   /// parameter x
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual const Real& type2_gradient(const Real& x, unsigned short n);
+  virtual Real type2_gradient(const Real& x, unsigned short n);
 
   /// returns the norm-squared of the n_th order polynomial defined by the
   /// inner product <Poly_n, Poly_n> = ||Poly_n||^2
   /** This is defined only for orthogonal polynomials. */
-  virtual const Real& norm_squared(unsigned short n);
+  virtual Real norm_squared(unsigned short n);
 
   /// return collocation points corresponding to orthogonal polynomial order n
   /** This is defined for orthogonal and piecewise interpolation polynomials. */
@@ -177,12 +177,6 @@ protected:
   /// {HERMITE,LEGENDRE,LAGUERRE,JACOBI,GEN_LAGUERRE,NUM_GEN_ORTHOG}_ORTHOG,
   /// {LAGRANGE,HERMITE}_INTERP, or PIECEWISE_{LINEAR,QUADRATIC,CUBIC}_INTERP
   short basisPolyType;
-
-  /// value of the 1-D basis polynomial; returned by type1_value()
-  Real basisPolyValue;
-  /// gradient of the 1-D basis polynomial with respect to its
-  /// one parameter; returned by type1_gradient()
-  Real basisPolyGradient;
 
   /// weight discrepancy factor between Abramowitz-Stegun and PDF orthogonality
   Real wtFactor;

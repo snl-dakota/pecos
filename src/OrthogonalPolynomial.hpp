@@ -79,10 +79,6 @@ protected:
   //- Heading: Data
   //
 
-  /// norm-squared of the n_th order polynomial defined by the inner product
-  /// <Poly_n, Poly_n> = ||Poly_n||^2 (returned by norm_squared())
-  Real orthogPolyNormSq;
-
   /// collocation points for one-dimensional quadrature
   /// (x parameter values for which Poly_n(x) = 0)
   RealArray collocPoints;

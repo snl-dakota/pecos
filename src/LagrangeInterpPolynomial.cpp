@@ -29,43 +29,41 @@ void LagrangeInterpPolynomial::precompute_data()
     Real&       lag_denom_i = lagDenominators[i];
     for (j=0; j<num_interp_pts; j++)
       if (i != j)
-	lag_denom_i *= interp_pt_i - interpPts[j];
+	lag_denom_i /= interp_pt_i - interpPts[j];
   }
 }
 
 
 /** Compute value of the Lagrange polynomial corresponding to
     interpolation point i. */
-const Real& LagrangeInterpPolynomial::
-type1_value(const Real& x, unsigned short i)
+Real LagrangeInterpPolynomial::type1_value(const Real& x, unsigned short i)
 {
   size_t j, num_interp_pts = interpPts.size();
-  basisPolyValue = 1. / lagDenominators[i];
+  Real t1_val = lagDenominators[i];
   for (j=0; j<num_interp_pts; j++)
     if (i != j)
-      basisPolyValue *= x - interpPts[j];
-  return basisPolyValue;
+      t1_val *= x - interpPts[j];
+  return t1_val;
 }
 
 
 /** Compute derivative with respect to x of the Lagrange polynomial
     corresponding to interpolation point i. */
-const Real& LagrangeInterpPolynomial::
-type1_gradient(const Real& x, unsigned short i)
+Real LagrangeInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
 { 
   size_t j, k, num_interp_pts = interpPts.size();
-  Real numer = 0.;
+  Real t1_grad = 0.;
   for (j=0; j<num_interp_pts; j++) {
     if (j != i) {
       Real prod = 1.;
       for (k=0; k<num_interp_pts; k++)
 	if (k != j && k != i)
 	  prod *= x - interpPts[k];
-      numer += prod;
+      t1_grad += prod;
     }
   }
-  basisPolyGradient = numer / lagDenominators[i];
-  return basisPolyGradient;
+  t1_grad *= lagDenominators[i];
+  return t1_grad;
 }
 
 } // namespace Pecos

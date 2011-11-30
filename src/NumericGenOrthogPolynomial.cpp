@@ -707,7 +707,7 @@ const Real& NumericGenOrthogPolynomial::beta_recursion(unsigned short order)
 }
 
 
-const Real& NumericGenOrthogPolynomial::
+Real NumericGenOrthogPolynomial::
 type1_value(const Real& x, unsigned short order)
 {
   if (polyCoeffs.size() <= order)
@@ -716,18 +716,18 @@ type1_value(const Real& x, unsigned short order)
 }
 
 
-const Real& NumericGenOrthogPolynomial::
+Real NumericGenOrthogPolynomial::
 type1_value(const Real& x, const RealVector& poly_coeffs)
 {
   size_t num_terms = poly_coeffs.length();
-  basisPolyValue = poly_coeffs[0];
+  Real t1_val = poly_coeffs[0];
   for (int i=1; i<num_terms; ++i)
-    basisPolyValue += poly_coeffs[i]*std::pow(x,i);
-  return basisPolyValue;
+    t1_val += poly_coeffs[i]*std::pow(x,i);
+  return t1_val;
 }
 
 
-const Real& NumericGenOrthogPolynomial::
+Real NumericGenOrthogPolynomial::
 type1_gradient(const Real& x, unsigned short order)
 {
   if (polyCoeffs.size() <= order)
@@ -736,19 +736,19 @@ type1_gradient(const Real& x, unsigned short order)
 }
 
 
-const Real& NumericGenOrthogPolynomial::
+Real NumericGenOrthogPolynomial::
 type1_gradient(const Real& x, const RealVector& poly_coeffs)
 {
   // differentiate poly_coeffs with respect to x
   size_t num_terms = poly_coeffs.length();
-  basisPolyGradient = (num_terms > 1) ? poly_coeffs[1] : 0.;
+  Real t1_grad = (num_terms > 1) ? poly_coeffs[1] : 0.;
   for (int i=2; i<num_terms; ++i)
-    basisPolyGradient += i*poly_coeffs[i]*std::pow(x,i-1);
-  return basisPolyGradient;
+    t1_grad += i*poly_coeffs[i]*std::pow(x,i-1);
+  return t1_grad;
 }
 
 
-const Real& NumericGenOrthogPolynomial::norm_squared(unsigned short order)
+Real NumericGenOrthogPolynomial::norm_squared(unsigned short order)
 {
   if (orthogPolyNormsSq.length() <= order)
     solve_eigenproblem(order);

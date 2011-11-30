@@ -20,55 +20,55 @@
 namespace Pecos {
 
 
-const Real& HermiteOrthogPolynomial::
-type1_value(const Real& x, unsigned short order)
+Real HermiteOrthogPolynomial::type1_value(const Real& x, unsigned short order)
 {
+  Real t1_val;
   switch (order) {
   case 0:
-    basisPolyValue = 1.;
+    t1_val = 1.;
     break;
   case 1:
-    basisPolyValue = x;
+    t1_val = x;
     break;
   case 2:
-    basisPolyValue = x*x - 1.;
+    t1_val = x*x - 1.;
     break;
   case 3:
-    basisPolyValue = x*(x*x - 3.);
+    t1_val = x*(x*x - 3.);
     break;
   case 4: {
     Real x2 = x*x;
-    basisPolyValue = x2*x2 - 6.*x2 + 3.;
+    t1_val = x2*x2 - 6.*x2 + 3.;
     break;
   }
   case 5: {
     Real x2 = x*x;
-    basisPolyValue = x*(x2*x2 - 10.*x2 + 15.);
+    t1_val = x*(x2*x2 - 10.*x2 + 15.);
     break;
   }
   case 6: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = x2*x4 - 15.*x4 + 45.*x2 - 15.;
+    t1_val = x2*x4 - 15.*x4 + 45.*x2 - 15.;
     break;
   }
   case 7: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = x*(x2*x4 - 21.*x4 + 105.*x2 - 105.);
+    t1_val = x*(x2*x4 - 21.*x4 + 105.*x2 - 105.);
     break;
   }
   case 8: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = x4*x4 - 28.*x4*x2 + 210.*x4 - 420.*x2 + 105.;
+    t1_val = x4*x4 - 28.*x4*x2 + 210.*x4 - 420.*x2 + 105.;
     break;
   }
   case 9: {
     Real x2 = x*x, x4 = x2*x2;
-    basisPolyValue = x*(x4*x4 - 36.*x4*x2 + 378.*x4 - 1260.*x2 + 945.);
+    t1_val = x*(x4*x4 - 36.*x4*x2 + 378.*x4 - 1260.*x2 + 945.);
     break;
   }
   case 10: {
     Real x2 = x*x, x4 = x2*x2, x8 = x4*x4;
-    basisPolyValue = x2*x8 - 45.*x8 + 630.*x2*x4 - 3150.*x4 + 4725.*x2 - 945.;
+    t1_val = x2*x8 - 45.*x8 + 630.*x2*x4 - 3150.*x4 + 4725.*x2 - 945.;
     break;
   }
   default:
@@ -77,32 +77,26 @@ type1_value(const Real& x, unsigned short order)
       He_n = x2*x8 - 45.*x8 + 630.*x2*x4 - 3150.*x4 + 4725.*x2 - 945., // He_10
       He_nminus1 = x*(x8 - 36.*x4*x2 + 378.*x4 - 1260.*x2 + 945.);     // He_9
     for (size_t i=10; i<order; i++) {
-      basisPolyValue = x*He_n - i*He_nminus1; // He_nplus1
+      t1_val = x*He_n - i*He_nminus1; // He_nplus1
       if (i != order-1) {
 	He_nminus1 = He_n;
-	He_n       = basisPolyValue;
+	He_n       = t1_val;
       }
     }
     break;
   }
 
-  return basisPolyValue;
+  return t1_val;
 }
 
 
-const Real& HermiteOrthogPolynomial::
+Real HermiteOrthogPolynomial::
 type1_gradient(const Real& x, unsigned short order)
-{ 
-  basisPolyGradient = (order) ? order*type1_value(x, order-1): 0;
-  return basisPolyGradient;
-}
+{ return (order) ? order*type1_value(x, order-1) : 0.; }
 
 
-const Real& HermiteOrthogPolynomial::norm_squared(unsigned short order)
-{ 
-  orthogPolyNormSq = factorial(order);
-  return orthogPolyNormSq;
-}
+Real HermiteOrthogPolynomial::norm_squared(unsigned short order)
+{ return factorial(order); }
 
 
 const RealArray& HermiteOrthogPolynomial::

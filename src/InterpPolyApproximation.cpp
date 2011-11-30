@@ -218,6 +218,7 @@ void InterpPolyApproximation::compute_coefficients()
   for (int i=offset; i<numCollocPts; ++i, ++index) {
     if (expConfigOptions.expansionCoeffFlag) {
       expansionType1Coeffs[i] = surrData.response_function(index);
+      // Note: gradients from DAKOTA already scaled in u-space Recast
       if (basisConfigOptions.useDerivs)
 	Teuchos::setCol(surrData.response_gradient(index), i,
 			expansionType2Coeffs);
@@ -234,7 +235,7 @@ void InterpPolyApproximation::compute_coefficients()
   index = 0;
   for (size_t i=offset; i<numCollocPts; ++i, ++index) {
     const Real& coeff1 = expansionType1Coeffs[i];
-    const Real&    val = value(surrData.continuous_variables(index));
+    Real val = value(surrData.continuous_variables(index));
     PCout << "Colloc pt " << std::setw(3) << i+1
 	  << ": truth value  = " << std::setw(WRITE_PRECISION+7) << coeff1
 	  << " interpolant = "   << std::setw(WRITE_PRECISION+7) << val
