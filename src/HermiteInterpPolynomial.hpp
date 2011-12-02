@@ -80,28 +80,23 @@ private:
   /// set of 1-D] weights for interpolation of gradients
   RealArray type2InterpWts;
 
-  /// pre-computed divided difference table for input used in type1
+  /// pre-computed divided difference table for input used in type1/2
   /// value calculation
-  Real2DArray xT1ValDiffTab;
+  RealArray xValDiffTab;
+  /// pre-computed divided difference table for input used in type1/2
+  /// gradient calculation
+  RealArray xGradDiffTab;
+
   /// pre-computed divided difference table for output used in type1
   /// value calculation
   Real2DArray yT1ValDiffTab;
-  /// pre-computed divided difference table for input used in type1
-  /// gradient calculation
-  Real2DArray xT1GradDiffTab;
   /// pre-computed divided difference table for output used in type1
   /// gradient calculation
   Real2DArray yT1GradDiffTab;
 
-  /// pre-computed divided difference table for input used in type2
-  /// value calculation
-  Real2DArray xT2ValDiffTab;
   /// pre-computed divided difference table for output used in type2
   /// value calculation
   Real2DArray yT2ValDiffTab;
-  /// pre-computed divided difference table for input used in type2
-  /// gradient calculation
-  Real2DArray xT2GradDiffTab;
   /// pre-computed divided difference table for output used in type2
   /// gradient calculation
   Real2DArray yT2GradDiffTab;
