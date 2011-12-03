@@ -286,8 +286,7 @@ template <typename OrdinalType, typename ScalarType>
 void write_data(std::ostream& s,
 		const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
 {
-  s.setf(std::ios::scientific);
-  s << std::setprecision(WRITE_PRECISION);
+  s << std::scientific << std::setprecision(WRITE_PRECISION);
   OrdinalType len = v.length();
   for (OrdinalType i=0; i<len; i++)
     s << "                     " << std::setw(WRITE_PRECISION+7)
@@ -302,8 +301,7 @@ void write_data(std::ostream& s,
                 bool brackets, bool row_rtn, bool final_rtn)
 {
   OrdinalType i, j, nrows = m.numRows(), ncols = m.numCols();
-  s.setf(std::ios::scientific); // formatting optimized for T = double
-  s << std::setprecision(WRITE_PRECISION);
+  s << std::scientific << std::setprecision(WRITE_PRECISION);
   if (brackets)  s << "[[ ";
   for (i=0; i<nrows; ++i) {
     for (j=0; j<ncols; ++j)
@@ -323,8 +321,7 @@ void write_data(std::ostream& s,
                 bool brackets, bool row_rtn, bool final_rtn)
 {
   OrdinalType i, j, nrows = m.numRows();
-  s.setf(std::ios::scientific); // formatting optimized for T = double
-  s << std::setprecision(WRITE_PRECISION);
+  s << std::scientific << std::setprecision(WRITE_PRECISION);
   if (brackets)  s << "[[ ";
   for (i=0; i<nrows; ++i) {
     for (j=0; j<nrows; ++j)
@@ -341,8 +338,7 @@ void write_data(std::ostream& s,
 template <class T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 {
-  s.setf(std::ios::scientific);
-  s << std::setprecision(WRITE_PRECISION);
+  s << std::scientific << std::setprecision(WRITE_PRECISION);
   size_t i=0, len = data.size();
   for (i=0; i<len; ++i)
     s << "                     " << std::setw(WRITE_PRECISION+7)
