@@ -100,6 +100,7 @@ typedef std::set<Real>                 RealSet;
 typedef std::vector<IntSet>            IntSetArray;
 typedef std::vector<RealSet>           RealSetArray;
 typedef std::map<int, short>           IntShortMap;
+typedef std::map<size_t, short>        SizetShortMap;
 typedef std::map<int, int>             IntIntMap;
 typedef std::map<int, RealVector>      IntRealVectorMap;
 typedef std::map<UShortMultiSet, Real> UShortMultiSetRealMap;
