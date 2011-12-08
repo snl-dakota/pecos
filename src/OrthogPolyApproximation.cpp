@@ -15,7 +15,6 @@
 #include "TensorProductDriver.hpp"
 #include "SparseGridDriver.hpp"
 #include "CubatureDriver.hpp"
-#include "pecos_stat_util.hpp"
 #include "pecos_global_defs.hpp"
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
@@ -416,11 +415,11 @@ void OrthogPolyApproximation::compute_coefficients()
     }
     break;
   case REGRESSION:
-    sample_checks();
+    surrData.data_checks();
     regression();
     break;
   case SAMPLING:
-    sample_checks();
+    surrData.data_checks();
     expectation();
     break;
   }
@@ -1432,57 +1431,9 @@ assess_dominance(const UShortArray& new_order,
 }
 
 
-void OrthogPolyApproximation::sample_checks()
-{
-  // We take a conservative approach of rejecting all data of derivative
-  // order greater than or equal to a detected failure:
-
-  using boost::math::isfinite;
-
-  size_t i, j, num_surr_data_pts = surrData.size();
-  bool check_grads = (surrData.num_derivative_variables() > 0);
-
-  failedAnchorData = 0;
-  if (surrData.anchor()) {
-    if (!isfinite(surrData.anchor_function()))
-      failedAnchorData = (check_grads) ? 3 : 1;
-    else if (check_grads) {
-      const RealVector& grad = surrData.anchor_gradient();
-      for (j=0; j<numVars; ++j)
-	if (!isfinite(grad[j]))
-	  { failedAnchorData = 2; break;}
-    }
-  }
-
-  failedSurrData.clear();
-  for (i=0; i<num_surr_data_pts; ++i) {
-    if (!isfinite(surrData.response_function(i)))
-      failedSurrData[i] = (check_grads) ? 3 : 1;
-    else if (check_grads) {
-      const RealVector& grad_i = surrData.response_gradient(i);
-      for (j=0; j<numVars; ++j)
-	if (!isfinite(grad_i[j]))
-	  { failedSurrData[i] = 2; break;}
-    }
-  }
-
-#ifdef DEBUG
-  if (failedAnchorData) {
-    PCout << "failedAnchorData = " << failedAnchorData << '\n';
-  if (!failedSurrData.empty()) {
-    PCout << "failedSurrData:\n";
-    for (SizetShortMap::iterator it=failedSurrData.begin();
-	 it!=failedSurrData.end(); ++it)
-      PCout << "index: " << std::setw(6) << it->first
-	    << " data: " << it->second << '\n';
-  }
-#endif // DEBUG
-}
-
-
 void OrthogPolyApproximation::integration_checks()
 {
-  if (surrData.anchor()) { // TO DO: verify this creates a problem
+  if (surrData.anchor()) {
     PCerr << "Error: anchor point not supported for numerical integration in "
 	  << "OrthogPolyApproximation::integration()." << std::endl;
     abort_handler(-1);
@@ -1656,21 +1607,23 @@ void OrthogPolyApproximation::regression()
   // compute data counts
   size_t i, j, k, num_surr_data_pts = surrData.size(),
     num_failed_surr_fn = 0, num_failed_surr_grad = 0;
-  SizetShortMap::iterator fit; bool multiple_rhs = true;
-  for (fit=failedSurrData.begin(); fit!=failedSurrData.end(); ++fit) {
+  SizetShortMap::const_iterator fit; bool combine_rhs = true;
+  short                failed_anchor_data = surrData.failed_anchor_data();
+  const SizetShortMap& failed_resp_data   = surrData.failed_response_data();
+  for (fit=failed_resp_data.begin(); fit!=failed_resp_data.end(); ++fit) {
     short fail_asv = fit->second;
     if (fail_asv & 1) ++num_failed_surr_fn;
     if (fail_asv & 2) ++num_failed_surr_grad;
-    if ( (fail_asv & 3) != 3 ) multiple_rhs = false; // Psi matrices will differ
+    if ( (fail_asv & 3) != 3 ) combine_rhs = false; // Psi matrices will differ
   }
   size_t num_data_pts_fn = num_surr_data_pts - num_failed_surr_fn,
     num_data_pts_grad    = num_surr_data_pts - num_failed_surr_grad,
     anchor_eqns = 0;
   bool anchor_fn = false, anchor_grad = false, anchor_pt = false;
   if (surrData.anchor()) {
-    if (!(failedAnchorData & 1))
+    if (!(failed_anchor_data & 1))
       { anchor_fn   = anchor_pt = true; anchor_eqns += 1; }
-    if ((data_order & 2) && !(failedAnchorData & 2))
+    if ((data_order & 2) && !(failed_anchor_data & 2))
       { anchor_grad = anchor_pt = true; anchor_eqns += numVars; }
   }
 
@@ -1723,9 +1676,9 @@ void OrthogPolyApproximation::regression()
 	for (j=0; j<numVars; ++j, ++c_cntr)
 	  C_matrix[c_cntr] = mvp_grad[j];
       }
-      for (j=0, fit=failedSurrData.begin(); j<num_surr_data_pts; ++j) {
+      for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
 	bool add_val = true, add_grad = true;
-	if (fit != failedSurrData.end() && fit->first == j) {
+	if (fit != failed_resp_data.end() && fit->first == j) {
 	  short fail_asv = fit->second;
 	  if (fail_asv & 1) add_val  = false;
 	  if (fail_asv & 2) add_grad = false;
@@ -1751,9 +1704,9 @@ void OrthogPolyApproximation::regression()
       for (j=0; j<numVars; ++j, ++d_cntr)
 	d_vector[d_cntr] = resp_grad[j];
     }
-    for (j=0, fit=failedSurrData.begin(); j<num_surr_data_pts; ++j) {
+    for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
       bool add_val = true, add_grad = true;
-      if (fit != failedSurrData.end() && fit->first == j) {
+      if (fit != failed_resp_data.end() && fit->first == j) {
 	short fail_asv = fit->second;
 	if (fail_asv & 1) add_val  = false;
 	if (fail_asv & 2) add_grad = false;
@@ -1828,9 +1781,9 @@ void OrthogPolyApproximation::regression()
       size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
       for (i=0; i<numExpansionTerms; ++i) {
 	const UShortArray& mi = multiIndex[i];
-	for (j=0, fit=failedSurrData.begin(); j<num_surr_data_pts; ++j) {
+	for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
 	  bool add_val = true, add_grad = basisConfigOptions.useDerivs;
-	  if (fit != failedSurrData.end() && fit->first == j) {
+	  if (fit != failed_resp_data.end() && fit->first == j) {
 	    short fail_asv = fit->second;
 	    if (fail_asv & 1) add_val  = false;
 	    if (fail_asv & 2) add_grad = false;
@@ -1860,9 +1813,9 @@ void OrthogPolyApproximation::regression()
 	    C_matrix[c_cntr] = mvp_grad[j];
 	}
       }
-      for (i=0, fit=failedSurrData.begin(); i<num_surr_data_pts; ++i) {
+      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
 	bool add_val = true, add_grad = basisConfigOptions.useDerivs;
-	if (fit != failedSurrData.end() && fit->first == i) {
+	if (fit != failed_resp_data.end() && fit->first == i) {
 	  short fail_asv = fit->second;
 	  if (fail_asv & 1) add_val  = false;
 	  if (fail_asv & 2) add_grad = false;
@@ -1901,9 +1854,9 @@ void OrthogPolyApproximation::regression()
 	size_t a_cntr = 0, b_cntr = 0;
 	for (j=0; j<numExpansionTerms; ++j) {
 	  const UShortArray& mi = multiIndex[j];
-	  for (k=0, fit=failedSurrData.begin(); k<num_surr_data_pts; ++k) {
+	  for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
 	    bool add_grad = true;
-	    if (fit != failedSurrData.end() && fit->first == k) {
+	    if (fit != failed_resp_data.end() && fit->first == k) {
 	      if (fit->second & 2) add_grad = false;
 	      ++fit;
 	    }
@@ -1918,9 +1871,9 @@ void OrthogPolyApproximation::regression()
 	      surrData.anchor_continuous_variables(), mi);
 	}
 	// the Ax=b RHS is the i-th grad components from surrData::respData
-	for (j=0, fit=failedSurrData.begin(); j<num_surr_data_pts; ++j) {
+	for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
 	  bool add_grad = true;
-	  if (fit != failedSurrData.end() && fit->first == j) {
+	  if (fit != failed_resp_data.end() && fit->first == j) {
 	    if (fit->second & 2) add_grad = false;
 	    ++fit;
 	  }
@@ -1948,8 +1901,7 @@ void OrthogPolyApproximation::regression()
     delete [] x_vector;
   }
   else {
-    // *** TO DO ***
-    if (expConfigOptions.expansionCoeffGradFlag && !multiple_rhs) {
+    if (expConfigOptions.expansionCoeffGradFlag && !combine_rhs) {
       PCerr << "Error: SVD solution with multiple RHS does not yet support "
 	   << "inconsistency in value/gradient fault tolerance." << std::endl;
       abort_handler(-1);
@@ -1987,9 +1939,9 @@ void OrthogPolyApproximation::regression()
     size_t a_cntr = 0, b_cntr = 0;
     for (i=0; i<numExpansionTerms; ++i) {
       const UShortArray& mi = multiIndex[i];
-      for (j=0, fit=failedSurrData.begin(); j<num_surr_data_pts; ++j) {
+      for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
 	bool add_val = true, add_grad = basisConfigOptions.useDerivs;
-	if (fit != failedSurrData.end() && fit->first == j) {
+	if (fit != failed_resp_data.end() && fit->first == j) {
 	  short fail_asv = fit->second;
 	  if (fail_asv & 1) add_val  = false;
 	  if (fail_asv & 2) add_grad = false;
@@ -2013,9 +1965,9 @@ void OrthogPolyApproximation::regression()
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
     if (basisConfigOptions.useDerivs) {
-      for (i=0, fit=failedSurrData.begin(); i<num_surr_data_pts; ++i) {
+      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
 	bool add_val = true, add_grad = true;
-	if (fit != failedSurrData.end() && fit->first == i) {
+	if (fit != failed_resp_data.end() && fit->first == i) {
 	  short fail_asv = fit->second;
 	  if (fail_asv & 1) add_val  = false;
 	  if (fail_asv & 2) add_grad = false;
@@ -2031,9 +1983,9 @@ void OrthogPolyApproximation::regression()
       }
     }
     else {
-      for (i=0, fit=failedSurrData.begin(); i<num_surr_data_pts; ++i) {
+      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
 	bool add_val = true, add_grad = true, incr = false;
-	if (fit != failedSurrData.end() && fit->first == i) {
+	if (fit != failed_resp_data.end() && fit->first == i) {
 	  short fail_asv = fit->second;
 	  if (fail_asv & 1) add_val  = false;
 	  if (fail_asv & 2) add_grad = false;
@@ -2110,8 +2062,10 @@ void OrthogPolyApproximation::expectation()
   // "lhs" or "random", no weights needed
   size_t i, j, k, num_surr_data_pts = surrData.size(), num_failed_surr_fn = 0,
     num_failed_surr_grad = 0, num_deriv_vars = expansionCoeffGrads.numRows();
-  SizetShortMap::iterator fit;
-  for (fit=failedSurrData.begin(); fit!=failedSurrData.end(); ++fit) {
+  SizetShortMap::const_iterator fit;
+  short                failed_anchor_data = surrData.failed_anchor_data();
+  const SizetShortMap& failed_resp_data   = surrData.failed_response_data();
+  for (fit=failed_resp_data.begin(); fit!=failed_resp_data.end(); ++fit) {
     if (fit->second & 1) ++num_failed_surr_fn;
     if (fit->second & 2) ++num_failed_surr_grad;
   }
@@ -2120,9 +2074,9 @@ void OrthogPolyApproximation::expectation()
     num_total_pts_fn = num_data_pts_fn, num_total_pts_grad = num_data_pts_grad;
   bool anchor_fn = false, anchor_grad = false, anchor_pt = false;
   if (surrData.anchor()) {
-    if (expConfigOptions.expansionCoeffFlag     && !(failedAnchorData & 1))
+    if (expConfigOptions.expansionCoeffFlag     && !(failed_anchor_data & 1))
       { anchor_fn   = anchor_pt = true; ++num_total_pts_fn; }
-    if (expConfigOptions.expansionCoeffGradFlag && !(failedAnchorData & 2))
+    if (expConfigOptions.expansionCoeffGradFlag && !(failed_anchor_data & 2))
       { anchor_grad = anchor_pt = true; ++num_total_pts_grad; }
   }
 
@@ -2164,10 +2118,10 @@ void OrthogPolyApproximation::expectation()
 			       num_deriv_vars, mean_grad);
     else             expansionCoeffGrads = 0.;
   }
-  for (k=0, fit=failedSurrData.begin(); k<num_surr_data_pts; ++k) {
+  for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val  = expConfigOptions.expansionCoeffFlag,
          add_grad = expConfigOptions.expansionCoeffGradFlag;
-    if (fit != failedSurrData.end() && fit->first == j) {
+    if (fit != failed_resp_data.end() && fit->first == j) {
       short fail_asv = fit->second;
       if (fail_asv & 1) add_val  = false;
       if (fail_asv & 2) add_grad = false;
@@ -2211,10 +2165,10 @@ void OrthogPolyApproximation::expectation()
       }
     }
   }
-  for (k=0, fit=failedSurrData.begin(); k<num_surr_data_pts; ++k) {
+  for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val  = expConfigOptions.expansionCoeffFlag,
          add_grad = expConfigOptions.expansionCoeffGradFlag;
-    if (fit != failedSurrData.end() && fit->first == j) {
+    if (fit != failed_resp_data.end() && fit->first == j) {
       short fail_asv = fit->second;
       if (fail_asv & 1) add_val  = false;
       if (fail_asv & 2) add_grad = false;

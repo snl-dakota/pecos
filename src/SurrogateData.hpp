@@ -10,6 +10,7 @@
 #define SURROGATE_DATA_HPP
 
 #include "pecos_data_types.hpp"
+#include "pecos_stat_util.hpp" // for boost::math::isfinite
 
 
 namespace Pecos {
@@ -139,7 +140,8 @@ inline SurrogateDataVars::SurrogateDataVars(): sdvRep(NULL)
 { }
 
 
-inline SurrogateDataVars::SurrogateDataVars(const RealVector& c_vars, short mode):
+inline SurrogateDataVars::
+SurrogateDataVars(const RealVector& c_vars, short mode):
   sdvRep(new SurrogateDataVarsRep(c_vars, mode))
 { }
 
@@ -599,6 +601,13 @@ private:
   /// wholesale storage of the current respData state.
   SDRArray storedRespData;
 
+  /// failed anchor data bits; defined in sample_checks() and used for
+  /// fault tolerance in regression() and expectation()
+  short failedAnchorData;
+  /// map from failed respData indices to failed data bits; defined
+  /// in sample_checks() and used for fault tolerance
+  SizetShortMap failedRespData;
+
   /// number of handle objects sharing sdRep
   int referenceCount;
 };
@@ -704,6 +713,14 @@ public:
   /// return number of derivative variables as indicated by size of
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
+
+  /// screen data sets for samples with Inf/Nan that should be excluded;
+  /// defines failedAnchorData and failedRespData
+  void data_checks();
+  /// return failedAnchorData
+  short failed_anchor_data();
+  /// return failedRespData
+  const SizetShortMap& failed_response_data();
 
   /// clear anchor{Vars,Resp}
   void clear_anchor();
@@ -939,6 +956,60 @@ inline size_t SurrogateData::num_derivative_variables() const
     sdRep->respData[0].response_gradient().length() :
     sdRep->anchorResp.response_gradient().length();
 }
+
+
+inline void SurrogateData::data_checks()
+{
+  // We take a conservative approach of rejecting all data of derivative
+  // order greater than or equal to a detected failure:
+
+  size_t i, j, num_resp = sdRep->respData.size(),
+    num_deriv_vars = num_derivative_variables();
+
+  sdRep->failedAnchorData = 0;
+  if (anchor()) {
+    if (!bmth::isfinite(anchor_function()))
+      sdRep->failedAnchorData = (num_deriv_vars) ? 3 : 1; // conservative
+    else if (num_deriv_vars) {
+      const RealVector& grad = anchor_gradient();
+      for (j=0; j<num_deriv_vars; ++j)
+	if (!bmth::isfinite(grad[j]))
+	  { sdRep->failedAnchorData = 2; break;}
+    }
+  }
+
+  sdRep->failedRespData.clear();
+  for (i=0; i<num_resp; ++i) {
+    if (!bmth::isfinite(response_function(i)))
+      sdRep->failedRespData[i] = (num_deriv_vars) ? 3 : 1; // conservative
+    else if (num_deriv_vars) {
+      const RealVector& grad_i = response_gradient(i);
+      for (j=0; j<num_deriv_vars; ++j)
+	if (!bmth::isfinite(grad_i[j]))
+	  { sdRep->failedRespData[i] = 2; break;}
+    }
+  }
+
+#ifdef DEBUG
+  if (sdRep->failedAnchorData) {
+    PCout << "failedAnchorData = " << sdRep->failedAnchorData << '\n';
+  if (!sdRep->failedRespData.empty()) {
+    PCout << "failedRespData:\n";
+    for (SizetShortMap::iterator it=sdRep->failedRespData.begin();
+	 it!=sdRep->failedRespData.end(); ++it)
+      PCout << "index: " << std::setw(6) << it->first
+	    << " data: " << it->second << '\n';
+  }
+#endif // DEBUG
+}
+
+
+inline short SurrogateData::failed_anchor_data()
+{ return sdRep->failedAnchorData; }
+
+
+inline const SizetShortMap& SurrogateData::failed_response_data()
+{ return sdRep->failedRespData; }
 
 
 inline void SurrogateData::clear_anchor()

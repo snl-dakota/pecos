@@ -257,9 +257,6 @@ private:
   /// (expCoeffsSolnApproach is SAMPLING)
   void expectation();
 
-  /// screen data sets for samples with Inf/Nan that should be excluded;
-  /// defines failedIndices
-  void sample_checks();
   /// perform sanity checks prior to numerical integration
   void integration_checks();
   /// extract tp_data_points from surrData and tp_weights from
@@ -388,14 +385,6 @@ private:
   /// spectral coefficient decay rates estimated by LLS on log of
   /// univariate expansion coefficients
   RealVector decayRates;
-
-  /// failed anchor data bits; defined in sample_checks() and used for
-  /// fault tolerance in regression() and expectation()
-  short failedAnchorData;
-  /// map from failed surrData indices to failed data bits; defined
-  /// in sample_checks() and used for fault tolerance in regression()
-  /// and expectation()
-  SizetShortMap failedSurrData;
 };
 
 
