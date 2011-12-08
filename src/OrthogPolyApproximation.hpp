@@ -277,6 +277,18 @@ private:
   /// cross-validates alternate gradient expressions
   void gradient_check();
 
+  /// pack polynomial contributions to Psi matrix for regression
+  void pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
+			    bool add_val,  double* pack_val,  size_t& pv_cntr,
+			    bool add_grad, double* pack_grad, size_t& pg_cntr);
+  /// pack response contributions to RHS for regression
+  void pack_response_data(const SurrogateDataResp& sdr,
+			  bool add_val,  double* pack_val,  size_t& pv_cntr,
+			  bool add_grad, double* pack_grad, size_t& pg_cntr);
+  /// update add_val and add_gradient based on surrData's failure map
+  void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
+		     bool& add_val, bool& add_grad);
+
   //
   //- Heading: Data
   //
@@ -572,6 +584,49 @@ multivariate_polynomial_gradient(const RealVector& xi,
 	polynomialBasis[j].type1_value(xi[j],    indices[j]);
   }
   return mvpGradient;
+}
+
+
+inline void OrthogPolyApproximation::
+pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
+		     bool add_val,  double* pack_val,  size_t& pv_cntr,
+		     bool add_grad, double* pack_grad, size_t& pg_cntr)
+{
+  if (add_val)
+    { pack_val[pv_cntr] = multivariate_polynomial(c_vars, mi); ++pv_cntr; }
+  if (add_grad) {
+    const RealVector& mvp_grad = multivariate_polynomial_gradient(c_vars, mi);
+    for (size_t j=0; j<numVars; ++j, ++pg_cntr)
+      pack_grad[pg_cntr] = mvp_grad[j];
+  }
+}
+
+
+inline void OrthogPolyApproximation::
+pack_response_data(const SurrogateDataResp& sdr,
+		   bool add_val,  double* pack_val,  size_t& pv_cntr,
+		   bool add_grad, double* pack_grad, size_t& pg_cntr)
+{
+  if (add_val)
+    { pack_val[pv_cntr] = sdr.response_function(); ++pv_cntr; }
+  if (add_grad) {
+    const RealVector& resp_grad = sdr.response_gradient();
+    for (size_t j=0; j<numVars; ++j, ++pg_cntr)
+      pack_grad[pg_cntr] = resp_grad[j];
+  }
+}
+
+
+inline void OrthogPolyApproximation::
+fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
+	      bool& add_val, bool& add_grad)
+{
+  if (fit != surrData.failed_response_data().end() && fit->first == j) {
+    short fail_asv = fit->second;
+    if (fail_asv & 1) add_val  = false;
+    if (fail_asv & 2) add_grad = false;
+    ++fit;
+  }
 }
 
 } // namespace Pecos

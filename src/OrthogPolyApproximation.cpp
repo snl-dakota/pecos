@@ -1616,10 +1616,11 @@ void OrthogPolyApproximation::regression()
     if (fail_asv & 2) ++num_failed_surr_grad;
     if ( (fail_asv & 3) != 3 ) combine_rhs = false; // Psi matrices will differ
   }
-  size_t num_data_pts_fn = num_surr_data_pts - num_failed_surr_fn,
-    num_data_pts_grad    = num_surr_data_pts - num_failed_surr_grad,
-    anchor_eqns = 0;
-  bool anchor_fn = false, anchor_grad = false, anchor_pt = false;
+  size_t anchor_eqns  = 0,
+    num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn,
+    num_data_pts_grad = num_surr_data_pts - num_failed_surr_grad;
+  bool anchor_fn = false, anchor_grad = false, anchor_pt = false,
+    add_val, add_grad;
   if (surrData.anchor()) {
     if (!(failed_anchor_data & 1))
       { anchor_fn   = anchor_pt = true; anchor_eqns += 1; }
@@ -1665,60 +1666,22 @@ void OrthogPolyApproximation::regression()
     size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
     for (i=0; i<numExpansionTerms; ++i) {
       const UShortArray& mi = multiIndex[i];
-      if (anchor_fn) {   // hard constraint on response value
-	C_matrix[c_cntr] = multivariate_polynomial(
-	  surrData.anchor_continuous_variables(), mi);
-	++c_cntr;
-      }
-      if (anchor_grad) { // hard constraint on response gradient
-	const RealVector& mvp_grad = multivariate_polynomial_gradient(
-	  surrData.anchor_continuous_variables(), mi);
-	for (j=0; j<numVars; ++j, ++c_cntr)
-	  C_matrix[c_cntr] = mvp_grad[j];
-      }
+      pack_polynomial_data(surrData.anchor_continuous_variables(), mi,
+			   anchor_fn, C_matrix, c_cntr, anchor_grad,
+			   C_matrix, c_cntr);
       for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-	bool add_val = true, add_grad = true;
-	if (fit != failed_resp_data.end() && fit->first == j) {
-	  short fail_asv = fit->second;
-	  if (fail_asv & 1) add_val  = false;
-	  if (fail_asv & 2) add_grad = false;
-	  ++fit;
-	}
-	if (add_val) {  // hard constraint on response values
-	  C_matrix[c_cntr] = multivariate_polynomial(
-	    surrData.continuous_variables(j), mi);
-	  ++c_cntr;
-	}
-	if (add_grad) { // LLS on response gradients
-	  const RealVector& mvp_grad = multivariate_polynomial_gradient(
-	    surrData.continuous_variables(j), mi);
-	  for (k=0; k<numVars; ++k, ++a_cntr)
-	    A_matrix[a_cntr] = mvp_grad[k];
-	}
+	add_val = add_grad = true; fail_booleans(fit, j, add_val, add_grad);
+	pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
+			     C_matrix, c_cntr, add_grad, A_matrix, a_cntr);
       }
     }
-    if (anchor_fn) // hard constraint on response value
-      { d_vector[d_cntr] = surrData.anchor_function(); ++d_cntr; }
-    if (anchor_grad) { // hard constraint on response gradient
-      const RealVector& resp_grad = surrData.anchor_gradient();
-      for (j=0; j<numVars; ++j, ++d_cntr)
-	d_vector[d_cntr] = resp_grad[j];
-    }
+    pack_response_data(surrData.anchor_response(), anchor_fn, d_vector, d_cntr,
+		       anchor_grad, d_vector, d_cntr);
+    const SDRArray& sdr_array = surrData.response_data();
     for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-      bool add_val = true, add_grad = true;
-      if (fit != failed_resp_data.end() && fit->first == j) {
-	short fail_asv = fit->second;
-	if (fail_asv & 1) add_val  = false;
-	if (fail_asv & 2) add_grad = false;
-	++fit;
-      }
-      if (add_val)    // hard constraint on response values
-	{ d_vector[d_cntr] = surrData.response_function(j); ++d_cntr; }
-      if (add_grad) { // LLS on response gradients
-	const RealVector& resp_grad = surrData.response_gradient(j);
-	for (k=0; k<numVars; ++k, ++b_cntr)
-	  b_vector[b_cntr] = resp_grad[k];
-      }
+      add_val = add_grad = true; fail_booleans(fit, j, add_val, add_grad);
+      pack_response_data(sdr_array[j], add_val, d_vector, d_cntr, add_grad,
+			 b_vector, b_cntr);
     }
 #ifdef DEBUG
     RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
@@ -1753,7 +1716,8 @@ void OrthogPolyApproximation::regression()
 
     num_cons = anchor_eqns; // constraints from one anchor point
     // number of rows in matrix A
-    int num_rows_A   = num_data_pts_fn + num_data_pts_grad * numVars;
+    int num_rows_A   = (basisConfigOptions.useDerivs) ?
+      num_data_pts_fn + num_data_pts_grad * numVars : num_data_pts_fn;
     // Matrix of polynomial terms in a contiguous block of memory packed in
     // column-major ordering as required by F77 LAPACK subroutines.
     A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
@@ -1782,60 +1746,24 @@ void OrthogPolyApproximation::regression()
       for (i=0; i<numExpansionTerms; ++i) {
 	const UShortArray& mi = multiIndex[i];
 	for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-	  bool add_val = true, add_grad = basisConfigOptions.useDerivs;
-	  if (fit != failed_resp_data.end() && fit->first == j) {
-	    short fail_asv = fit->second;
-	    if (fail_asv & 1) add_val  = false;
-	    if (fail_asv & 2) add_grad = false;
-	    ++fit;
-	  }
-	  if (add_val) {
-	    A_matrix[a_cntr] = multivariate_polynomial(
-	      surrData.continuous_variables(j), mi);
-	    ++a_cntr;
-	  }
-	  if (add_grad) {
-	    const RealVector& mvp_grad = multivariate_polynomial_gradient(
-	      surrData.continuous_variables(j), mi);
-	    for (k=0; k<numVars; ++k, ++a_cntr)
-	      A_matrix[a_cntr] = mvp_grad[k];
-	  }
+	  add_val = true; add_grad = basisConfigOptions.useDerivs;
+	  fail_booleans(fit, j, add_val, add_grad);
+	  pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
+			       A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
 	}
-	if (anchor_fn) {
-	  C_matrix[c_cntr] = multivariate_polynomial(
-	    surrData.anchor_continuous_variables(), mi);
-	  ++c_cntr;
-	}
-	if (anchor_grad) {
-	  const RealVector& mvp_grad = multivariate_polynomial_gradient(
-	    surrData.anchor_continuous_variables(), mi);
-	  for (j=0; j<numVars; ++j, ++c_cntr)
-	    C_matrix[c_cntr] = mvp_grad[j];
-	}
+	pack_polynomial_data(surrData.anchor_continuous_variables(), mi,
+			     anchor_fn, C_matrix, c_cntr, anchor_grad,
+			     C_matrix, c_cntr);
       }
+      const SDRArray& sdr_array = surrData.response_data();
       for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
-	bool add_val = true, add_grad = basisConfigOptions.useDerivs;
-	if (fit != failed_resp_data.end() && fit->first == i) {
-	  short fail_asv = fit->second;
-	  if (fail_asv & 1) add_val  = false;
-	  if (fail_asv & 2) add_grad = false;
-	  ++fit;
-	}
-	if (add_val)
-	  { b_vector[b_cntr] = surrData.response_function(i); ++b_cntr; }
-	if (add_grad) {
-	  const RealVector& resp_grad = surrData.response_gradient(i);
-	  for (j=0; j<numVars; ++j, ++b_cntr)
-	    b_vector[b_cntr] = resp_grad[j];
-	}
+	add_val = true; add_grad = basisConfigOptions.useDerivs;
+	fail_booleans(fit, i, add_val, add_grad);
+	pack_response_data(sdr_array[i], add_val, b_vector, b_cntr, add_grad,
+			   b_vector, b_cntr);
       }
-      if (anchor_fn)
-	{ d_vector[d_cntr] = surrData.anchor_function(); ++d_cntr; }
-      if (anchor_grad) {
-	const RealVector& resp_grad = surrData.anchor_gradient();
-	for (j=0; j<numVars; ++j, ++d_cntr)
-	  d_vector[d_cntr] = resp_grad[j];
-      }
+      pack_response_data(surrData.anchor_response(), anchor_fn, d_vector,
+			 d_cntr, anchor_grad, d_vector, d_cntr);
       // Least squares computation using LAPACK's DGGLSE subroutine which uses
       // a GRQ factorization method for solving the least squares problem
       info = 0;
@@ -1848,6 +1776,9 @@ void OrthogPolyApproximation::regression()
     }
 
     if (expConfigOptions.expansionCoeffGradFlag) {
+
+      // TO DO: resize matrices?? (e.g. A sized above based on fn faults)
+
       size_t num_deriv_vars = expansionCoeffGrads.numRows();
       for (i=0; i<num_deriv_vars; ++i) {
 	// must be recomputed each time since DGGLSE solves in place
@@ -1855,28 +1786,22 @@ void OrthogPolyApproximation::regression()
 	for (j=0; j<numExpansionTerms; ++j) {
 	  const UShortArray& mi = multiIndex[j];
 	  for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
-	    bool add_grad = true;
-	    if (fit != failed_resp_data.end() && fit->first == k) {
-	      if (fit->second & 2) add_grad = false;
-	      ++fit;
-	    }
-	    if (add_grad) {
+	    add_val = false; add_grad = true;
+	    fail_booleans(fit, k, add_val, add_grad);
+	    if (add_grad) { // doesn't fit pack_polynomial_data() model
 	      A_matrix[a_cntr] = multivariate_polynomial(
 		surrData.continuous_variables(k), mi);
 	      ++a_cntr;
 	    }
 	  }
-	  if (anchor_grad)
+	  if (anchor_grad) // doesn't fit pack_polynomial_data() model
 	    C_matrix[j] = multivariate_polynomial(
 	      surrData.anchor_continuous_variables(), mi);
 	}
 	// the Ax=b RHS is the i-th grad components from surrData::respData
 	for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-	  bool add_grad = true;
-	  if (fit != failed_resp_data.end() && fit->first == j) {
-	    if (fit->second & 2) add_grad = false;
-	    ++fit;
-	  }
+	  add_val = false; add_grad = true;
+	  fail_booleans(fit, j, add_val, add_grad);
 	  if (add_grad)
 	    { b_vector[b_cntr] = surrData.response_gradient(j)[i]; ++b_cntr; }
 	}
@@ -1900,18 +1825,17 @@ void OrthogPolyApproximation::regression()
     delete [] d_vector;
     delete [] x_vector;
   }
-  else {
-    if (expConfigOptions.expansionCoeffGradFlag && !combine_rhs) {
+  else if (expConfigOptions.expansionCoeffGradFlag) {
+    // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
+    // where {b} may have multiple RHS -> multiple {x} solutions.
+    if (!combine_rhs) {
       PCerr << "Error: SVD solution with multiple RHS does not yet support "
 	   << "inconsistency in value/gradient fault tolerance." << std::endl;
       abort_handler(-1);
     }
-    // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
-    // where {b} may have multiple RHS -> multiple {x} solutions.
-    int    num_rows_A    = (basisConfigOptions.useDerivs) ?
-      num_data_pts_fn + num_data_pts_grad * numVars : num_data_pts_fn;
-    size_t num_grad_rhs  = (expConfigOptions.expansionCoeffGradFlag) ?
-      expansionCoeffGrads.numRows() : 0;
+
+    int    num_rows_A    = num_data_pts_fn;
+    size_t num_grad_rhs  = expansionCoeffGrads.numRows();
     size_t num_coeff_rhs = (expConfigOptions.expansionCoeffFlag) ? 1 : 0;
     int    num_rhs = num_coeff_rhs + num_grad_rhs; // input: # of RHS vectors
     double rcond = -1.; // input:  use macheps to rank singular vals of A
@@ -1940,67 +1864,28 @@ void OrthogPolyApproximation::regression()
     for (i=0; i<numExpansionTerms; ++i) {
       const UShortArray& mi = multiIndex[i];
       for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-	bool add_val = true, add_grad = basisConfigOptions.useDerivs;
-	if (fit != failed_resp_data.end() && fit->first == j) {
-	  short fail_asv = fit->second;
-	  if (fail_asv & 1) add_val  = false;
-	  if (fail_asv & 2) add_grad = false;
-	  ++fit;
-	}
-	if (add_val) {
-	  A_matrix[a_cntr] = multivariate_polynomial(
-	    surrData.continuous_variables(j), mi);
-	  ++a_cntr;
-	}
-	if (add_grad) {
-	  const RealVector& mvp_grad = multivariate_polynomial_gradient(
-	    surrData.continuous_variables(j), mi);
-	  for (k=0; k<numVars; ++k, ++a_cntr)
-	    A_matrix[a_cntr] = mvp_grad[k];
-	}
+	add_val = true; add_grad = false; // no gradients in A
+	fail_booleans(fit, j, add_val, add_grad);
+	pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
+			     A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
       }
     }
 
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
-    if (basisConfigOptions.useDerivs) {
-      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
-	bool add_val = true, add_grad = true;
-	if (fit != failed_resp_data.end() && fit->first == i) {
-	  short fail_asv = fit->second;
-	  if (fail_asv & 1) add_val  = false;
-	  if (fail_asv & 2) add_grad = false;
-	  ++fit;
-	}
-	if (add_val)
-	  { b_vectors[b_cntr] = surrData.response_function(i); ++b_cntr; }
-	if (add_grad) {
-	  const RealVector& resp_grad = surrData.response_gradient(i);
-	  for (j=0; j<numVars; ++j, ++b_cntr)
-	    b_vectors[b_cntr] = resp_grad[j];
-	}
+    for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
+      add_val  = expConfigOptions.expansionCoeffFlag;
+      add_grad = expConfigOptions.expansionCoeffGradFlag;
+      fail_booleans(fit, i, add_val, add_grad);
+      if (add_val)
+	{ b_vectors[b_cntr] = surrData.response_function(i); }
+      if (add_grad) {
+	const RealVector& resp_grad = surrData.response_gradient(i);
+	for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
+	  b_vectors[(j+num_coeff_rhs)*num_data_pts_fn+b_cntr] = resp_grad[j];
       }
-    }
-    else {
-      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
-	bool add_val = true, add_grad = true, incr = false;
-	if (fit != failed_resp_data.end() && fit->first == i) {
-	  short fail_asv = fit->second;
-	  if (fail_asv & 1) add_val  = false;
-	  if (fail_asv & 2) add_grad = false;
-	  ++fit;
-	}
-	if (add_val  && expConfigOptions.expansionCoeffFlag)
-	  { b_vectors[b_cntr] = surrData.response_function(i); incr = true; }
-	if (add_grad && expConfigOptions.expansionCoeffGradFlag) {
-	  const RealVector& resp_grad = surrData.response_gradient(i);
-	  for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
-	    b_vectors[(j+num_coeff_rhs)*num_data_pts_fn+b_cntr] = resp_grad[j];
-	  incr = true;
-	}
-	if (incr) ++b_cntr; // TO DO: review logic
-      }
+      if (add_val || add_grad) ++b_cntr; // TO DO: review logic
     }
 #ifdef DEBUG
     RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
@@ -2026,6 +1911,83 @@ void OrthogPolyApproximation::regression()
 	for (j=0; j<num_grad_rhs; ++j)
 	  expansionCoeffGrads(j,i)
 	    = b_vectors[(j+num_coeff_rhs)*num_data_pts_fn+i]; // TO DO: review
+
+#ifdef DEBUG
+    // For SVD, the condition number can be extracted from the singular values
+    PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
+	  << s_vector[0]/s_vector[num_cols_A-1] << '\n';
+#endif // DEBUG
+
+    delete [] b_vectors;
+    delete [] s_vector;
+  }
+  else {
+    // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
+    // with possible gradient enhancement for a single RHS
+    int    num_rows_A = (basisConfigOptions.useDerivs) ?
+      num_data_pts_fn + num_data_pts_grad * numVars : num_data_pts_fn;
+    int    num_rhs    =  1;  // input: # of RHS vectors
+    double rcond      = -1.; // input:  use macheps to rank singular vals of A
+    int    rank       =  0;  // output: effective rank of matrix A
+    // Matrix of polynomial terms unrolled into a vector.
+    A_matrix          = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
+    // input: vectors of response data that correspond to samples in matrix A.
+    double* b_vectors = new double [num_rows_A*num_rhs]; // "b" in A*x = b
+    // output: vector of singular values, dimensioned for overdetermined system
+    double* s_vector  = new double [num_cols_A];
+
+    // Get the optimal work array size
+    int lwork         = -1; // special code for workspace query
+    work              = new double [1]; // temporary work array
+    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
+	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
+    lwork = (int)work[0]; // optimal work array size returned by query
+    delete [] work;
+    work              = new double [lwork]; // Optimal work array
+
+    // The "A" matrix is a contiguous block of memory packed in column-major
+    // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
+    // example, the 6 elements of A(2,3) are stored in the order A(1,1), A(2,1),
+    // A(1,2), A(2,2), A(1,3), A(2,3).
+    size_t a_cntr = 0, b_cntr = 0;
+    for (i=0; i<numExpansionTerms; ++i) {
+      const UShortArray& mi = multiIndex[i];
+      for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
+	add_val = true; add_grad = basisConfigOptions.useDerivs;
+	fail_booleans(fit, j, add_val, add_grad);
+	pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
+			     A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
+      }
+    }
+
+    // response data (values/gradients) define the multiple RHS which are
+    // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
+    // (cols), arranged in column-major order.
+    const SDRArray& sdr_array = surrData.response_data();
+    for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
+      add_val = true; add_grad = basisConfigOptions.useDerivs;
+      fail_booleans(fit, i, add_val, add_grad);
+      pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr, add_grad,
+			 b_vectors, b_cntr);
+    }
+#ifdef DEBUG
+    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
+               b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
+    PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
+    PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
+#endif // DEBUG
+
+    // Least squares computation using LAPACK's DGELSS subroutine which uses a
+    // SVD method for solving the least squares problem
+    info = 0;
+    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
+	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
+    if (info)
+      lapack_err = true;
+
+    // DGELSS returns the x solution in the numExpansionTerms x num_rhs
+    // submatrix of b_vectors
+    copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
 
 #ifdef DEBUG
     // For SVD, the condition number can be extracted from the singular values
