@@ -1607,14 +1607,14 @@ void OrthogPolyApproximation::regression()
   // compute data counts
   size_t i, j, k, num_surr_data_pts = surrData.size(),
     num_failed_surr_fn = 0, num_failed_surr_grad = 0;
-  SizetShortMap::const_iterator fit; bool combine_rhs = true;
+  SizetShortMap::const_iterator fit; bool faults_differ = false;
   short                failed_anchor_data = surrData.failed_anchor_data();
   const SizetShortMap& failed_resp_data   = surrData.failed_response_data();
   for (fit=failed_resp_data.begin(); fit!=failed_resp_data.end(); ++fit) {
     short fail_asv = fit->second;
     if (fail_asv & 1) ++num_failed_surr_fn;
     if (fail_asv & 2) ++num_failed_surr_grad;
-    if ( (fail_asv & 3) != 3 ) combine_rhs = false; // Psi matrices will differ
+    if ( (fail_asv & 3) != 3 ) faults_differ = true; // Psi matrices will differ
   }
   size_t anchor_eqns  = 0,
     num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn,
@@ -1628,144 +1628,105 @@ void OrthogPolyApproximation::regression()
       { anchor_grad = anchor_pt = true; anchor_eqns += numVars; }
   }
 
-  int num_cons = num_data_pts_fn + anchor_eqns; // # constraints in eq con LLS
-  bool fn_constrained_lls
-    = (basisConfigOptions.useDerivs && num_cons < numExpansionTerms);
+  // TO DO: sanity check for different cases (expansion{Coeff,CoeffGrad}Flag)
+  // to ensure sufficient data following fault omissions
+  //if ( < numExpansionTerms) {
+  //  PCerr << "Error: " << std::endl;
+  //  abort_handler(-1);
+  //}
+
+  bool fn_constrained_lls = (basisConfigOptions.useDerivs &&
+    num_data_pts_fn + anchor_eqns < numExpansionTerms), lapack_err = false;
   Teuchos::LAPACK<int, Real> la;
   double *A_matrix, *work;
   int num_cols_A = numExpansionTerms, info = 0; // GELSS/GGLSE output flag
-  bool lapack_err = false;
 
-  if (fn_constrained_lls) {
-    // Use DGGLSE for equality-constrained LLS soln using GRQ factorization.
-    // Solves min ||b - Ax||_2 s.t. Cx = d
-
-    int num_rows_A   = num_data_pts_grad*numVars; // number of rows in matrix A
-    // Matrix of polynomial terms in a contiguous block of memory packed in
-    // column-major ordering as required by F77 LAPACK subroutines.
-    A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
-    // Vector of response values that correspond to the samples in matrix A.
-    double* b_vector = new double [num_rows_A]; // "b" in A*x = b
-    // Matrix of constraints unrolled into a vector
-    double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
-    // RHS of constraints
-    double* d_vector = new double [num_cons];   // "d" in C*x = d
-    // Solution vector
-    double* x_vector = new double [num_cols_A]; // "x" in b - A*x, C*x = d
-
-    // Get the optimal work array size
-    int lwork        = -1; // special code for workspace query
-    work             = new double [1]; // temporary work array
-    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
-	     num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
-    lwork = (int)work[0]; // optimal work array size returned by query
-    delete [] work;
-    work             = new double [lwork]; // Optimal work array
-
-    // pack surrData::respData gradients in A,b and values in C,d.
-    size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
-    for (i=0; i<numExpansionTerms; ++i) {
-      const UShortArray& mi = multiIndex[i];
-      pack_polynomial_data(surrData.anchor_continuous_variables(), mi,
-			   anchor_fn, C_matrix, c_cntr, anchor_grad,
-			   C_matrix, c_cntr);
-      for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-	add_val = add_grad = true; fail_booleans(fit, j, add_val, add_grad);
-	pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
-			     C_matrix, c_cntr, add_grad, A_matrix, a_cntr);
-      }
-    }
-    pack_response_data(surrData.anchor_response(), anchor_fn, d_vector, d_cntr,
-		       anchor_grad, d_vector, d_cntr);
-    const SDRArray& sdr_array = surrData.response_data();
-    for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-      add_val = add_grad = true; fail_booleans(fit, j, add_val, add_grad);
-      pack_response_data(sdr_array[j], add_val, d_vector, d_cntr, add_grad,
-			 b_vector, b_cntr);
-    }
-#ifdef DEBUG
-    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
-               C2(Teuchos::View, C_matrix, num_cons,   num_cons,   num_cols_A);
-    RealVector b2(Teuchos::View, b_vector, num_rows_A),
-               d2(Teuchos::View, d_vector, num_cons);
-    PCout << "A_matrix:\n"; write_data(PCout, A2, false, true, true);
-    PCout << "C_matrix:\n"; write_data(PCout, C2, false, true, true);
-    PCout << "b_vector:\n"; write_data(PCout, b2);
-    PCout << "d_vector:\n"; write_data(PCout, d2);
-#endif // DEBUG
-
-    // Least squares computation using LAPACK's DGGLSE subroutine which uses a
-    // GRQ factorization method for solving the least squares problem
-    info = 0;
-    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A,
-	     C_matrix, num_cons, b_vector, d_vector, x_vector, work,
-	     lwork, &info);
-    if (info)
-      lapack_err = true;
-    copy_data(x_vector, numExpansionTerms, expansionCoeffs);
-
-    delete [] b_vector;
-    delete [] C_matrix;
-    delete [] d_vector;
-    delete [] x_vector;
-  }
-  else if (anchor_pt) {
+  if (anchor_pt || fn_constrained_lls) {
     // Use DGGLSE for equality-constrained LLS soln using GRQ factorization.
     // Solves min ||b - Ax||_2 s.t. Cx = d (Note: b,C switched from LAPACK docs)
     // where {b,d} are single vectors (multiple RHS not supported).
 
-    num_cons = anchor_eqns; // constraints from one anchor point
-    // number of rows in matrix A
-    int num_rows_A   = (basisConfigOptions.useDerivs) ?
-      num_data_pts_fn + num_data_pts_grad * numVars : num_data_pts_fn;
+    // baseline counts to be augmented:
+    int num_cons   = anchor_eqns,      // number of equality constraints
+        num_rows_A = (basisConfigOptions.useDerivs) ?
+        num_data_pts_grad*numVars : 0; // number of rows in matrix A
+    // anchor_pt and fn_constrained_lls differ in num_data_pts_fn assignment:
+    if (fn_constrained_lls) // constraints: values + anchor data, LLS: grads
+      num_cons   += num_data_pts_fn;
+    else                    // constraints: anchor data, LLS: values + grads
+      num_rows_A += num_data_pts_fn;
+
     // Matrix of polynomial terms in a contiguous block of memory packed in
     // column-major ordering as required by F77 LAPACK subroutines.
     A_matrix         = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
     // Vector of response values that correspond to the samples in matrix A.
     double* b_vector = new double [num_rows_A]; // "b" in A*x = b
-    // Matrix of constraints unrolled into a vector
-    double* C_matrix = new double [num_cols_A*num_cons]; // "C" in C*x = d
-    // RHS of constraints
-    double* d_vector = new double [num_cons];   // "d" in C*x = d
     // Solution vector
     double* x_vector = new double [num_cols_A]; // "x" in b - A*x, C*x = d
 
-    // Get the optimal work array size
-    int lwork        = -1; // special code for workspace query
-    work             = new double [1]; // temporary work array
-    la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
-	     num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
-    lwork = (int)work[0]; // optimal work array size returned by query
-    delete [] work;
-    work             = new double [lwork]; // Optimal work array
+    if (expConfigOptions.expansionCoeffFlag) {// anchor_pt or fn_constrained_lls
 
-    if (expConfigOptions.expansionCoeffFlag) {
-      // pack surrData::respData values/gradients in A,b and
-      // surrData::anchorResp values/gradients in C,d.
+      // Matrix of constraints unrolled into a vector
+      double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
+      // RHS of constraints
+      double* d_vector = new double [num_cons];   // "d" in C*x = d
+
+      // Get the optimal work array size
+      int lwork        = -1; // special code for workspace query
+      work             = new double [1]; // temporary work array
+      la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
+	       num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
+      lwork = (int)work[0]; // optimal work array size returned by query
+      delete [] work;
+      work             = new double [lwork]; // Optimal work array
+
       size_t a_cntr = 0, b_cntr = 0, c_cntr = 0, d_cntr = 0;
       for (i=0; i<numExpansionTerms; ++i) {
 	const UShortArray& mi = multiIndex[i];
-	for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-	  add_val = true; add_grad = basisConfigOptions.useDerivs;
-	  fail_booleans(fit, j, add_val, add_grad);
-	  pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
-			       A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
-	}
+	// pack surrData::anchorResp values/gradients in C,d
 	pack_polynomial_data(surrData.anchor_continuous_variables(), mi,
 			     anchor_fn, C_matrix, c_cntr, anchor_grad,
 			     C_matrix, c_cntr);
+	// pack constraints in C,d and LLS data in A,b.
+	for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
+	  add_val = true; add_grad = basisConfigOptions.useDerivs;
+	  fail_booleans(fit, j, add_val, add_grad);
+	  if (fn_constrained_lls) // values are constraints, grads are LLS data
+	    pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
+				 C_matrix, c_cntr, add_grad, A_matrix, a_cntr);
+	  else                    // values + grads are LLS data
+	    pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
+				 A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
+	}
       }
-      const SDRArray& sdr_array = surrData.response_data();
-      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
-	add_val = true; add_grad = basisConfigOptions.useDerivs;
-	fail_booleans(fit, i, add_val, add_grad);
-	pack_response_data(sdr_array[i], add_val, b_vector, b_cntr, add_grad,
-			   b_vector, b_cntr);
-      }
+      // pack surrData::anchorResp values/gradients in C,d.
       pack_response_data(surrData.anchor_response(), anchor_fn, d_vector,
 			 d_cntr, anchor_grad, d_vector, d_cntr);
+      // pack constraints in C,d and LLS data in A,b.
+      const SDRArray& sdr_array = surrData.response_data();
+      for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
+	add_val = true; add_grad = basisConfigOptions.useDerivs;
+	fail_booleans(fit, j, add_val, add_grad);
+	if (fn_constrained_lls) // values are constraints, grads are LLS data
+	  pack_response_data(sdr_array[j], add_val, d_vector, d_cntr,
+			     add_grad, b_vector, b_cntr);
+	else                    // values + grads are LLS data
+	  pack_response_data(sdr_array[i], add_val, b_vector, b_cntr,
+			     add_grad, b_vector, b_cntr);
+      }
+#ifdef DEBUG
+      RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
+	         C2(Teuchos::View, C_matrix, num_cons,   num_cons,  num_cols_A);
+      RealVector b2(Teuchos::View, b_vector, num_rows_A),
+	         d2(Teuchos::View, d_vector, num_cons);
+      PCout << "A_matrix:\n"; write_data(PCout, A2, false, true, true);
+      PCout << "C_matrix:\n"; write_data(PCout, C2, false, true, true);
+      PCout << "b_vector:\n"; write_data(PCout, b2);
+      PCout << "d_vector:\n"; write_data(PCout, d2);
+#endif // DEBUG
+
       // Least squares computation using LAPACK's DGGLSE subroutine which uses
-      // a GRQ factorization method for solving the least squares problem
+      // a GRQ factorization method for solving the eq-constrained LLS problem
       info = 0;
       la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A,
 	       C_matrix, num_cons, b_vector, d_vector, x_vector, work,
@@ -1773,11 +1734,36 @@ void OrthogPolyApproximation::regression()
       if (info)
 	lapack_err = true;
       copy_data(x_vector, numExpansionTerms, expansionCoeffs);
+
+      delete [] C_matrix;
+      delete [] d_vector;
     }
 
     if (expConfigOptions.expansionCoeffGradFlag) {
+      // this supports only the anchor_pt option, since expansionCoeffGradFlag
+      // and useDerivs in fn_constrained_lls are mutually exclusive
 
-      // TO DO: resize matrices?? (e.g. A sized above based on fn faults)
+      if (faults_differ) {
+	delete [] A_matrix;
+	delete [] b_vector;
+	num_rows_A       = num_data_pts_grad;
+	A_matrix         = new double [num_rows_A*num_cols_A];
+	double* b_vector = new double [num_rows_A];
+      }
+      num_cons = (anchor_grad) ? 1 : 0;
+      double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
+      double* d_vector = new double [num_cons];            // "d" in C*x = d
+
+      // Get the optimal work array size
+      int lwork = -1; // special code for workspace query
+      if (expConfigOptions.expansionCoeffFlag)
+	delete [] work;
+      work      = new double [1]; // temporary work array
+      la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A, C_matrix,
+	       num_cons, b_vector, d_vector, x_vector, work, lwork, &info);
+      lwork     = (int)work[0]; // optimal work array size returned by query
+      delete [] work;
+      work      = new double [lwork]; // Optimal work array
 
       size_t num_deriv_vars = expansionCoeffGrads.numRows();
       for (i=0; i<num_deriv_vars; ++i) {
@@ -1818,17 +1804,16 @@ void OrthogPolyApproximation::regression()
 	for (j=0; j<numExpansionTerms; ++j)
 	  expansionCoeffGrads(i,j) = x_vector[j];
       }
+      delete [] C_matrix;
+      delete [] d_vector;
     }
-
     delete [] b_vector;
-    delete [] C_matrix;
-    delete [] d_vector;
     delete [] x_vector;
   }
   else if (expConfigOptions.expansionCoeffGradFlag) {
     // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
     // where {b} may have multiple RHS -> multiple {x} solutions.
-    if (!combine_rhs) {
+    if (faults_differ) { // *** TO DO ***
       PCerr << "Error: SVD solution with multiple RHS does not yet support "
 	   << "inconsistency in value/gradient fault tolerance." << std::endl;
       abort_handler(-1);
