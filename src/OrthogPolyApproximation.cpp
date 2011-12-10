@@ -1662,13 +1662,13 @@ void OrthogPolyApproximation::regression()
   double *A_matrix, *work;
   int num_cols_A = numExpansionTerms, info = 0; // GELSS/GGLSE output flag
 
-  // *****************************************************
-  // EQUALITY-CONSTRAINED LINEAR LEAST SQUARES WITH DGGLSE
-  // *****************************************************
   if (fn_constrained_lls || anchor_pt) {
-    // Use DGGLSE for equality-constrained LLS soln using GRQ factorization.
-    // Solves min ||b - Ax||_2 s.t. Cx = d (Note: b,C switched from LAPACK docs)
-    // where {b,d} are single vectors (multiple RHS not supported).
+    // *****************************************************
+    // EQUALITY-CONSTRAINED LINEAR LEAST SQUARES WITH DGGLSE
+    // *****************************************************
+    // Solves min ||b - Ax||_2 s.t. Cx = d using GRQ factorization (Note: b,C
+    // switched from LAPACK docs) where {b,d} are single vectors (multiple RHS
+    // not supported).
 
     // baseline counts to be augmented:
     int num_cons   = anchor_eqns,      // number of equality constraints
@@ -1839,14 +1839,17 @@ void OrthogPolyApproximation::regression()
     delete [] b_vector;
     delete [] x_vector;
   }
-  // ************************************
-  // SVD LINEAR LEAST SQUARES WITH DGELSS: no constraints (anchor or resp fn)
-  // ************************************
   else {
+    // ************************************
+    // SVD LINEAR LEAST SQUARES WITH DGELSS: no constraints (anchor or resp fn)
+    // ************************************
     // Multiple cases to support:
-    // (1) case for AAO with multiple RHS
-    // (2) share code for faults_differ and expansionCoeffFlag only
-    // (3) case for all gradients with multiple RHS
+    // > expansionCoeffFlag alone, with and without useDerivs (single RHS)
+    // > expansionCoeffGradFlag alone (multiple RHS)
+    // > expansionCoeffFlag+expansionCoeffGradFlag with consistent faults
+    //   (one integrated solve with multiple RHS)
+    // > expansionCoeffFlag+expansionCoeffGradFlag with inconsistent faults
+    //   (two solves: first with single RHS, second with multiple RHS)
     int num_rows_A = 0, num_coeff_rhs = 0, num_grad_rhs = 0, num_rhs;
     if (expConfigOptions.expansionCoeffFlag)
       { num_rows_A += num_data_pts_fn; num_coeff_rhs = 1; }
