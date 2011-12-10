@@ -1573,39 +1573,41 @@ integrate_expansion(const UShort2DArray& multi_index,
 void OrthogPolyApproximation::regression()
 {
   // compute order of data contained within surrData
-  short data_order = 1;
+  short data_order = (expConfigOptions.expansionCoeffFlag) ? 1 : 0;
   if (surrData.anchor()) {
-    if (!surrData.anchor_gradient().empty())    data_order |= 2;
-    if (!surrData.anchor_hessian().empty())     data_order |= 4;
+    if (!surrData.anchor_gradient().empty())     data_order |= 2;
+    //if (!surrData.anchor_hessian().empty())    data_order |= 4;
   }
   else {
-    if (!surrData.response_gradient(0).empty()) data_order |= 2;
-    if (!surrData.response_hessian(0).empty())  data_order |= 4;
+    if (!surrData.response_gradient(0).empty())  data_order |= 2;
+    //if (!surrData.response_hessian(0).empty()) data_order |= 4;
   }
   // verify support for basisConfigOptions.useDerivs, which indicates usage of
   // derivative data with respect to expansion variables (aleatory or combined)
   // within the expansion coefficient solution process, which must be
   // distinguished from usage of derivative data with respect to non-expansion
   // variables (the expansionCoeffGradFlag case).
+  bool config_err = false;
   if (basisConfigOptions.useDerivs) {
     if (!(data_order & 2)) {
       PCerr << "Error: useDerivs configuration option lacks data support in "
 	    << "OrthogPolyApproximation::regression()" << std::endl;
-      abort_handler(-1);
+      config_err = true;
     }
     if (expConfigOptions.expansionCoeffGradFlag) {
       PCerr << "Error: useDerivs configuration option conflicts with gradient "
 	    << "expansion request in OrthogPolyApproximation::regression()"
 	    << std::endl;
-      abort_handler(-1);
+      config_err = true;
     }
-    if (data_order & 4)
-      PCerr << "Warning: useDerivs configuration option does not yet support "
-	    << "Hessian data in OrthogPolyApproximation::regression()"
-	    << std::endl;
+    //if (data_order & 4)
+    //  PCerr << "Warning: useDerivs configuration option does not yet support "
+    //	      << "Hessian data in OrthogPolyApproximation::regression()"
+    //	      << std::endl;
   }
   // compute data counts
   size_t i, j, k, num_surr_data_pts = surrData.size(),
+    num_deriv_vars = expansionCoeffGrads.numRows(),
     num_failed_surr_fn = 0, num_failed_surr_grad = 0;
   SizetShortMap::const_iterator fit; bool faults_differ = false;
   short                failed_anchor_data = surrData.failed_anchor_data();
@@ -1614,7 +1616,8 @@ void OrthogPolyApproximation::regression()
     short fail_asv = fit->second;
     if (fail_asv & 1) ++num_failed_surr_fn;
     if (fail_asv & 2) ++num_failed_surr_grad;
-    if ( (fail_asv & 3) != 3 ) faults_differ = true; // Psi matrices will differ
+    // if failure omissions are not consistent, manage differing Psi matrices
+    if ( (fail_asv & data_order) != data_order ) faults_differ = true;
   }
   size_t anchor_eqns  = 0,
     num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn,
@@ -1622,18 +1625,36 @@ void OrthogPolyApproximation::regression()
   bool anchor_fn = false, anchor_grad = false, anchor_pt = false,
     add_val, add_grad;
   if (surrData.anchor()) {
-    if (!(failed_anchor_data & 1))
+    if ((data_order & 1) && !(failed_anchor_data & 1))
       { anchor_fn   = anchor_pt = true; anchor_eqns += 1; }
     if ((data_order & 2) && !(failed_anchor_data & 2))
       { anchor_grad = anchor_pt = true; anchor_eqns += numVars; }
   }
 
-  // TO DO: sanity check for different cases (expansion{Coeff,CoeffGrad}Flag)
+  // final sanity checks for different cases (expansion{Coeff,CoeffGrad}Flag)
   // to ensure sufficient data following fault omissions
-  //if ( < numExpansionTerms) {
-  //  PCerr << "Error: " << std::endl;
-  //  abort_handler(-1);
-  //}
+  if (expConfigOptions.expansionCoeffFlag) {
+    size_t total_eqns = num_data_pts_fn + anchor_eqns;
+    if (basisConfigOptions.useDerivs) total_eqns += num_data_pts_grad*numVars;
+    if (total_eqns < numExpansionTerms) {
+      PCerr << "Error: insufficient total equations (" << total_eqns << ") for "
+	    << "regression of PCE coefficients (" << numExpansionTerms << ")."
+	    << std::endl;
+      config_err = true;
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    size_t total_eqns = (anchor_grad) ? num_data_pts_grad+1 : num_data_pts_grad;
+    if (total_eqns < numExpansionTerms) {
+      PCerr << "Error: insufficient total equations (" << total_eqns << ") for "
+	    << "regression of PCE coefficient gradients (" << numExpansionTerms
+	    << ")." << std::endl;
+      config_err = true;
+    }
+  }
+  // if any errors encountered to this point, abort
+  if (config_err)
+    abort_handler(-1);
 
   bool fn_constrained_lls = (basisConfigOptions.useDerivs &&
     num_data_pts_fn + anchor_eqns < numExpansionTerms), lapack_err = false;
@@ -1641,7 +1662,10 @@ void OrthogPolyApproximation::regression()
   double *A_matrix, *work;
   int num_cols_A = numExpansionTerms, info = 0; // GELSS/GGLSE output flag
 
-  if (anchor_pt || fn_constrained_lls) {
+  // *****************************************************
+  // EQUALITY-CONSTRAINED LINEAR LEAST SQUARES WITH DGGLSE
+  // *****************************************************
+  if (fn_constrained_lls || anchor_pt) {
     // Use DGGLSE for equality-constrained LLS soln using GRQ factorization.
     // Solves min ||b - Ax||_2 s.t. Cx = d (Note: b,C switched from LAPACK docs)
     // where {b,d} are single vectors (multiple RHS not supported).
@@ -1664,7 +1688,8 @@ void OrthogPolyApproximation::regression()
     // Solution vector
     double* x_vector = new double [num_cols_A]; // "x" in b - A*x, C*x = d
 
-    if (expConfigOptions.expansionCoeffFlag) {// anchor_pt or fn_constrained_lls
+    if (expConfigOptions.expansionCoeffFlag) {
+      // supports both cases: anchor_pt and fn_constrained_lls
 
       // Matrix of constraints unrolled into a vector
       double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
@@ -1731,8 +1756,7 @@ void OrthogPolyApproximation::regression()
       la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A,
 	       C_matrix, num_cons, b_vector, d_vector, x_vector, work,
 	       lwork, &info);
-      if (info)
-	lapack_err = true;
+      if (info)	lapack_err = true;
       copy_data(x_vector, numExpansionTerms, expansionCoeffs);
 
       delete [] C_matrix;
@@ -1740,21 +1764,22 @@ void OrthogPolyApproximation::regression()
     }
 
     if (expConfigOptions.expansionCoeffGradFlag) {
-      // this supports only the anchor_pt option, since expansionCoeffGradFlag
+      // supports only the anchor_pt case, since expansionCoeffGradFlag
       // and useDerivs in fn_constrained_lls are mutually exclusive
 
+      // update LLS arrays (A,b) if needed
       if (faults_differ) {
 	delete [] A_matrix;
 	delete [] b_vector;
-	num_rows_A       = num_data_pts_grad;
-	A_matrix         = new double [num_rows_A*num_cols_A];
-	double* b_vector = new double [num_rows_A];
+	num_rows_A = num_data_pts_grad;
+	A_matrix   = new double [num_rows_A*num_cols_A];
+	b_vector   = new double [num_rows_A];
       }
+      // update constraint arrays (C,d)
       num_cons = (anchor_grad) ? 1 : 0;
       double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
       double* d_vector = new double [num_cons];            // "d" in C*x = d
-
-      // Get the optimal work array size
+      // update the work array
       int lwork = -1; // special code for workspace query
       if (expConfigOptions.expansionCoeffFlag)
 	delete [] work;
@@ -1765,22 +1790,27 @@ void OrthogPolyApproximation::regression()
       delete [] work;
       work      = new double [lwork]; // Optimal work array
 
-      size_t num_deriv_vars = expansionCoeffGrads.numRows();
+      // solve for vector of coefficient gradients with respect to each
+      // derivative variable, one at a time (DGGLSE does not support multiple
+      // RHS).  The left-hand coefficient matrices are rebuilt each time since
+      // DGGLSE solves in place.  The polynomial and response data packing does
+      // not fit the model of pack_{polynomial,response}_data() helpers due to:
+      // (a) value/add_grad mismatch, and (b) response packing of individual
+      // grad components.
       for (i=0; i<num_deriv_vars; ++i) {
-	// must be recomputed each time since DGGLSE solves in place
 	size_t a_cntr = 0, b_cntr = 0;
 	for (j=0; j<numExpansionTerms; ++j) {
 	  const UShortArray& mi = multiIndex[j];
 	  for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
 	    add_val = false; add_grad = true;
 	    fail_booleans(fit, k, add_val, add_grad);
-	    if (add_grad) { // doesn't fit pack_polynomial_data() model
+	    if (add_grad) {
 	      A_matrix[a_cntr] = multivariate_polynomial(
 		surrData.continuous_variables(k), mi);
 	      ++a_cntr;
 	    }
 	  }
-	  if (anchor_grad) // doesn't fit pack_polynomial_data() model
+	  if (anchor_grad)
 	    C_matrix[j] = multivariate_polynomial(
 	      surrData.anchor_continuous_variables(), mi);
 	}
@@ -1799,8 +1829,7 @@ void OrthogPolyApproximation::regression()
 	la.GGLSE(num_rows_A, num_cols_A, num_cons, A_matrix, num_rows_A,
 		 C_matrix, num_cons, b_vector, d_vector, x_vector, work,
 		 lwork, &info);
-	if (info)
-	  lapack_err = true;
+	if (info) lapack_err = true;
 	for (j=0; j<numExpansionTerms; ++j)
 	  expansionCoeffGrads(i,j) = x_vector[j];
       }
@@ -1810,108 +1839,27 @@ void OrthogPolyApproximation::regression()
     delete [] b_vector;
     delete [] x_vector;
   }
-  else if (expConfigOptions.expansionCoeffGradFlag) {
-    // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
-    // where {b} may have multiple RHS -> multiple {x} solutions.
-    if (faults_differ) { // *** TO DO ***
-      PCerr << "Error: SVD solution with multiple RHS does not yet support "
-	   << "inconsistency in value/gradient fault tolerance." << std::endl;
-      abort_handler(-1);
-    }
-
-    int    num_rows_A    = num_data_pts_fn;
-    size_t num_grad_rhs  = expansionCoeffGrads.numRows();
-    size_t num_coeff_rhs = (expConfigOptions.expansionCoeffFlag) ? 1 : 0;
-    int    num_rhs = num_coeff_rhs + num_grad_rhs; // input: # of RHS vectors
-    double rcond = -1.; // input:  use macheps to rank singular vals of A
-    int    rank  =  0;  // output: effective rank of matrix A
-    // Matrix of polynomial terms unrolled into a vector.
-    A_matrix          = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
-    // input: vectors of response data that correspond to samples in matrix A.
-    double* b_vectors = new double [num_rows_A*num_rhs]; // "b" in A*x = b
-    // output: vector of singular values, dimensioned for overdetermined system
-    double* s_vector  = new double [num_cols_A];
-
-    // Get the optimal work array size
-    int lwork         = -1; // special code for workspace query
-    work              = new double [1]; // temporary work array
-    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-    lwork = (int)work[0]; // optimal work array size returned by query
-    delete [] work;
-    work              = new double [lwork]; // Optimal work array
-
-    // The "A" matrix is a contiguous block of memory packed in column-major
-    // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
-    // example, the 6 elements of A(2,3) are stored in the order A(1,1), A(2,1),
-    // A(1,2), A(2,2), A(1,3), A(2,3).
-    size_t a_cntr = 0, b_cntr = 0;
-    for (i=0; i<numExpansionTerms; ++i) {
-      const UShortArray& mi = multiIndex[i];
-      for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
-	add_val = true; add_grad = false; // no gradients in A
-	fail_booleans(fit, j, add_val, add_grad);
-	pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
-			     A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
-      }
-    }
-
-    // response data (values/gradients) define the multiple RHS which are
-    // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
-    // (cols), arranged in column-major order.
-    for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
-      add_val  = expConfigOptions.expansionCoeffFlag;
-      add_grad = expConfigOptions.expansionCoeffGradFlag;
-      fail_booleans(fit, i, add_val, add_grad);
-      if (add_val)
-	{ b_vectors[b_cntr] = surrData.response_function(i); }
-      if (add_grad) {
-	const RealVector& resp_grad = surrData.response_gradient(i);
-	for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
-	  b_vectors[(j+num_coeff_rhs)*num_data_pts_fn+b_cntr] = resp_grad[j];
-      }
-      if (add_val || add_grad) ++b_cntr; // TO DO: review logic
-    }
-#ifdef DEBUG
-    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
-               b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
-    PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
-    PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
-#endif // DEBUG
-
-    // Least squares computation using LAPACK's DGELSS subroutine which uses a
-    // SVD method for solving the least squares problem
-    info = 0;
-    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-    if (info)
-      lapack_err = true;
-
-    // DGELSS returns the x solution in the numExpansionTerms x num_rhs
-    // submatrix of b_vectors
-    if (expConfigOptions.expansionCoeffFlag)
-      copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
-    if (expConfigOptions.expansionCoeffGradFlag)
-      for (i=0; i<numExpansionTerms; ++i)
-	for (j=0; j<num_grad_rhs; ++j)
-	  expansionCoeffGrads(j,i)
-	    = b_vectors[(j+num_coeff_rhs)*num_data_pts_fn+i]; // TO DO: review
-
-#ifdef DEBUG
-    // For SVD, the condition number can be extracted from the singular values
-    PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
-	  << s_vector[0]/s_vector[num_cols_A-1] << '\n';
-#endif // DEBUG
-
-    delete [] b_vectors;
-    delete [] s_vector;
-  }
+  // ************************************
+  // SVD LINEAR LEAST SQUARES WITH DGELSS: no constraints (anchor or resp fn)
+  // ************************************
   else {
-    // Use DGELSS for LLS soln using SVD.  Solves min ||b - Ax||_2
-    // with possible gradient enhancement for a single RHS
-    int    num_rows_A = (basisConfigOptions.useDerivs) ?
-      num_data_pts_fn + num_data_pts_grad * numVars : num_data_pts_fn;
-    int    num_rhs    =  1;  // input: # of RHS vectors
+    // Multiple cases to support:
+    // (1) case for AAO with multiple RHS
+    // (2) share code for faults_differ and expansionCoeffFlag only
+    // (3) case for all gradients with multiple RHS
+    int num_rows_A = 0, num_coeff_rhs = 0, num_grad_rhs = 0, num_rhs;
+    if (expConfigOptions.expansionCoeffFlag)
+      { num_rows_A += num_data_pts_fn; num_coeff_rhs = 1; }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      num_grad_rhs = num_deriv_vars; // same Psi -> 1 SVD soln with multiple RHS
+    else if (basisConfigOptions.useDerivs)
+      num_rows_A += num_data_pts_grad * numVars;
+    if (faults_differ)
+      num_rhs = (expConfigOptions.expansionCoeffFlag) ?
+	num_coeff_rhs : num_grad_rhs;
+    else
+      num_rhs = num_coeff_rhs + num_grad_rhs;
+
     double rcond      = -1.; // input:  use macheps to rank singular vals of A
     int    rank       =  0;  // output: effective rank of matrix A
     // Matrix of polynomial terms unrolled into a vector.
@@ -1930,59 +1878,142 @@ void OrthogPolyApproximation::regression()
     delete [] work;
     work              = new double [lwork]; // Optimal work array
 
-    // The "A" matrix is a contiguous block of memory packed in column-major
-    // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
-    // example, the 6 elements of A(2,3) are stored in the order A(1,1), A(2,1),
-    // A(1,2), A(2,2), A(1,3), A(2,3).
     size_t a_cntr = 0, b_cntr = 0;
-    for (i=0; i<numExpansionTerms; ++i) {
-      const UShortArray& mi = multiIndex[i];
-      for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
+    if (expConfigOptions.expansionCoeffFlag) {
+
+      // The "A" matrix is a contiguous block of memory packed in column-major
+      // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
+      // example, the 6 elements of A(2,3) are stored in the order A(1,1),
+      // A(2,1), A(1,2), A(2,2), A(1,3), A(2,3).
+      for (i=0; i<numExpansionTerms; ++i) {
+	const UShortArray& mi = multiIndex[i];
+	for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
+	  add_val = true; add_grad = basisConfigOptions.useDerivs;
+	  fail_booleans(fit, j, add_val, add_grad);
+	  pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
+			       A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
+	}
+      }
+
+      // response data (values/gradients) define the multiple RHS which are
+      // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
+      // (cols), arranged in column-major order.
+      const SDRArray& sdr_array = surrData.response_data();
+      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
 	add_val = true; add_grad = basisConfigOptions.useDerivs;
-	fail_booleans(fit, j, add_val, add_grad);
-	pack_polynomial_data(surrData.continuous_variables(j), mi, add_val,
-			     A_matrix, a_cntr, add_grad, A_matrix, a_cntr);
+	fail_booleans(fit, i, add_val, add_grad);
+	pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr, add_grad,
+			   b_vectors, b_cntr);
+      }
+#ifdef DEBUG
+      RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
+                 b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
+      PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
+      PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
+#endif // DEBUG
+
+      // if no RHS augmentation, then solve for coeffs now
+      if (!expConfigOptions.expansionCoeffGradFlag || faults_differ) {
+	info = 0;
+	la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A,
+		 b_vectors, num_rows_A, s_vector, rcond, &rank, work,
+		 lwork, &info);
+	if (info) lapack_err = true;
+
+	// DGELSS returns the x solution in the numExpansionTerms x num_rhs
+	// submatrix of b_vectors
+	copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
+#ifdef DEBUG
+	// For SVD, condition number can be extracted from singular values
+	PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
+	      << s_vector[0]/s_vector[num_cols_A-1] << '\n';
+#endif // DEBUG
       }
     }
 
-    // response data (values/gradients) define the multiple RHS which are
-    // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
-    // (cols), arranged in column-major order.
-    const SDRArray& sdr_array = surrData.response_data();
-    for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
-      add_val = true; add_grad = basisConfigOptions.useDerivs;
-      fail_booleans(fit, i, add_val, add_grad);
-      pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr, add_grad,
-			 b_vectors, b_cntr);
+    if (expConfigOptions.expansionCoeffGradFlag) {
+
+      if (faults_differ) {
+	delete [] A_matrix;
+	delete [] b_vectors;
+	num_rows_A = num_data_pts_grad;
+	num_rhs    = num_grad_rhs; num_coeff_rhs = 0;
+	A_matrix   = new double [num_rows_A*num_cols_A];
+	b_vectors  = new double [num_rows_A*num_rhs];
+
+	delete [] work;
+	lwork = -1; // special code for workspace query
+	work  = new double [1]; // temporary
+	la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A,
+		 b_vectors, num_rows_A, s_vector, rcond, &rank, work,
+		 lwork, &info);
+	lwork = (int)work[0]; // optimal work array size
+	delete [] work;
+	work  = new double [lwork]; // optimal work array
+
+	// repack "A" matrix with different Psi omissions
+	a_cntr = 0;
+	for (i=0; i<numExpansionTerms; ++i) {
+	  const UShortArray& mi = multiIndex[i];
+	  for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
+	    add_val = false; add_grad = true;
+	    fail_booleans(fit, j, add_val, add_grad);
+	    if (add_grad) {
+	      A_matrix[a_cntr] = multivariate_polynomial(
+		surrData.continuous_variables(j), mi);
+	      ++a_cntr;
+	    }
+	  }
+	}
+      }
+
+      // response data (values/gradients) define the multiple RHS which are
+      // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
+      // (cols), arranged in column-major order.
+      b_cntr = 0;
+      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
+	add_val = false; add_grad = true;
+	fail_booleans(fit, i, add_val, add_grad);
+	if (add_grad) {
+	  const RealVector& resp_grad = surrData.response_gradient(i);
+	  for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
+	    b_vectors[(j+num_coeff_rhs)*num_data_pts_grad+b_cntr]
+	      = resp_grad[j];
+	  ++b_cntr;
+	}
+      }
+#ifdef DEBUG
+      RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
+                 b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
+      PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
+      PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
+#endif // DEBUG
+
+      // solve
+      info = 0;
+      la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
+	       num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
+      if (info) lapack_err = true;
+
+      // DGELSS returns the x solution in the numExpansionTerms x num_rhs
+      // submatrix of b_vectors
+      if (expConfigOptions.expansionCoeffFlag && !faults_differ)
+	copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
+      for (i=0; i<numExpansionTerms; ++i)
+	for (j=0; j<num_grad_rhs; ++j)
+	  expansionCoeffGrads(j,i)
+	    = b_vectors[(j+num_coeff_rhs)*num_data_pts_grad+i];
+#ifdef DEBUG
+      // For SVD, the condition number can be extracted from the singular values
+      PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
+	    << s_vector[0]/s_vector[num_cols_A-1] << '\n';
+#endif // DEBUG
     }
-#ifdef DEBUG
-    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A, num_cols_A),
-               b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
-    PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
-    PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
-#endif // DEBUG
-
-    // Least squares computation using LAPACK's DGELSS subroutine which uses a
-    // SVD method for solving the least squares problem
-    info = 0;
-    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-    if (info)
-      lapack_err = true;
-
-    // DGELSS returns the x solution in the numExpansionTerms x num_rhs
-    // submatrix of b_vectors
-    copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
-
-#ifdef DEBUG
-    // For SVD, the condition number can be extracted from the singular values
-    PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
-	  << s_vector[0]/s_vector[num_cols_A-1] << '\n';
-#endif // DEBUG
 
     delete [] b_vectors;
     delete [] s_vector;
   }
+
   delete [] A_matrix;
   delete [] work;
 
