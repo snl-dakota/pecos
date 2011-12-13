@@ -1691,6 +1691,10 @@ void OrthogPolyApproximation::regression()
     if (expConfigOptions.expansionCoeffFlag) {
       // supports both cases: anchor_pt and fn_constrained_lls
 
+      PCout << "Equality-constrained least squares for " << numExpansionTerms
+	    << " chaos coefficients with " << num_rows_A << " equations and "
+	    << num_cons << " constraints.\n";
+
       // Matrix of constraints unrolled into a vector
       double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
       // RHS of constraints
@@ -1777,6 +1781,11 @@ void OrthogPolyApproximation::regression()
       }
       // update constraint arrays (C,d)
       num_cons = (anchor_grad) ? 1 : 0;
+
+      PCout << "Equality-constrained least squares for gradients of "
+	    << numExpansionTerms << " chaos coefficients using " << num_rows_A
+	    << " equations and " << num_cons << " constraints.\n";
+
       double* C_matrix = new double [num_cons*num_cols_A]; // "C" in C*x = d
       double* d_vector = new double [num_cons];            // "d" in C*x = d
       // update the work array
@@ -1884,6 +1893,9 @@ void OrthogPolyApproximation::regression()
     size_t a_cntr = 0, b_cntr = 0;
     if (expConfigOptions.expansionCoeffFlag) {
 
+      PCout << "SVD least squares for " << numExpansionTerms
+	    << " chaos coefficients using " << num_rows_A << " equations.\n";
+
       // The "A" matrix is a contiguous block of memory packed in column-major
       // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
       // example, the 6 elements of A(2,3) are stored in the order A(1,1),
@@ -1969,6 +1981,9 @@ void OrthogPolyApproximation::regression()
 	  }
 	}
       }
+
+      PCout << "SVD least squares for gradients of " << numExpansionTerms
+	    << " chaos coefficients using " << num_rows_A << " equations.\n";
 
       // response data (values/gradients) define the multiple RHS which are
       // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
@@ -2060,6 +2075,12 @@ void OrthogPolyApproximation::expectation()
     if (expConfigOptions.expansionCoeffGradFlag && !(failed_anchor_data & 2))
       { anchor_grad = anchor_pt = true; ++num_total_pts_grad; }
   }
+  if (expConfigOptions.expansionCoeffFlag)
+    PCout << "Expectations of " << numExpansionTerms << " chaos coefficients "
+	  << "using " << num_total_pts_fn << " observations.\n";
+  if (expConfigOptions.expansionCoeffGradFlag)
+    PCout << "Expectations of gradients of " << numExpansionTerms << " chaos "
+	  << "coefficients using " << num_total_pts_grad << " observations.\n";
 
   /*
   // The following implementation evaluates all PCE coefficients
