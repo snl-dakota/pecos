@@ -342,6 +342,11 @@ public:
   //- Heading: member functions
   //
 
+  /// set activeBits
+  void active_bits(short val);
+  /// get activeBits
+  short active_bits() const;
+
   /// set responseFn
   void response_function(const Real& fn);
   /// get responseFn
@@ -440,6 +445,14 @@ operator=(const SurrogateDataResp& sdr)
 //	     sdrRep->responseGrad == sdr.sdrRep->responseGrad &&
 //	     sdrRep->responseHess == sdr.sdrRep->responseHess ) ? true : false;
 //}
+
+
+inline void SurrogateDataResp::active_bits(short val)
+{ sdrRep->activeBits = val; }
+
+
+inline short SurrogateDataResp::active_bits() const
+{ return sdrRep->activeBits; }
 
 
 inline void SurrogateDataResp::response_function(const Real& fn)
@@ -673,6 +686,8 @@ public:
 
   /// get anchorVars.continuous_variables()
   const RealVector& anchor_continuous_variables() const;
+  /// get anchorResp.active_bits()
+  short anchor_active_bits() const;
   /// get anchorResp.response_function()
   const Real& anchor_function() const;
   /// get anchorResp.response_gradient()
@@ -682,6 +697,8 @@ public:
 
   /// get varsData[i].continuous_variables()
   const RealVector& continuous_variables(size_t i) const;
+  /// get respData[i].active_bits()
+  short response_active_bits(size_t i) const;
   /// get respData[i].response_function()
   const Real& response_function(size_t i) const;
   /// get respData[i].response_gradient()
@@ -714,6 +731,8 @@ public:
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
 
+  /// convenience function used by data_checks() for anchorResp and respData
+  void response_check(const SurrogateDataResp& sdr, short& failed_data);
   /// screen data sets for samples with Inf/Nan that should be excluded;
   /// defines failedAnchorData and failedRespData
   void data_checks();
@@ -827,6 +846,14 @@ inline const RealVector& SurrogateData::anchor_continuous_variables() const
 
 inline const RealVector& SurrogateData::continuous_variables(size_t i) const
 { return sdRep->varsData[i].continuous_variables(); }
+
+
+inline short SurrogateData::anchor_active_bits() const
+{ return sdRep->anchorResp.active_bits(); }
+
+
+inline short SurrogateData::response_active_bits(size_t i) const
+{ return sdRep->respData[i].active_bits(); }
 
 
 inline const Real& SurrogateData::anchor_function() const
@@ -958,36 +985,48 @@ inline size_t SurrogateData::num_derivative_variables() const
 }
 
 
-inline void SurrogateData::data_checks()
+inline void SurrogateData::
+response_check(const SurrogateDataResp& sdr, short& failed_data)
 {
   // We take a conservative approach of rejecting all data of derivative
   // order greater than or equal to a detected failure:
 
-  size_t i, j, num_resp = sdRep->respData.size(),
-    num_deriv_vars = num_derivative_variables();
-
-  sdRep->failedAnchorData = 0;
-  if (anchor()) {
-    if (!bmth::isfinite(anchor_function()))
-      sdRep->failedAnchorData = (num_deriv_vars) ? 3 : 1; // conservative
-    else if (num_deriv_vars) {
-      const RealVector& grad = anchor_gradient();
-      for (j=0; j<num_deriv_vars; ++j)
-	if (!bmth::isfinite(grad[j]))
-	  { sdRep->failedAnchorData = 2; break;}
-    }
+  short resp_bits = sdr.active_bits();
+  failed_data = 0;
+  if (resp_bits & 1) {
+    if (!bmth::isfinite(sdr.response_function()))
+      failed_data = resp_bits;     // all data for this and higher deriv orders
   }
+  if ( (resp_bits & 2) && !failed_data ) {
+    const RealVector& grad = sdr.response_gradient();
+    size_t j, num_deriv_vars = grad.length();
+    for (j=0; j<num_deriv_vars; ++j)
+      if (!bmth::isfinite(grad[j]))
+	{ failed_data = (resp_bits & 6); break; } // this & higher deriv orders
+  }
+  if ( (resp_bits & 4) && !failed_data ) {
+    const RealSymMatrix& hess = sdr.response_hessian();
+    size_t j, k, num_deriv_vars = hess.numRows();
+    for (j=0; j<num_deriv_vars; ++j)
+      for (k=0; k<=j; ++k)
+	if (!bmth::isfinite(hess(j,k)))
+	  { failed_data = 4; break; }             // this & higher deriv orders
+  }
+}
+
+
+inline void SurrogateData::data_checks()
+{
+  if (anchor())
+    response_check(anchor_response(), sdRep->failedAnchorData);
 
   sdRep->failedRespData.clear();
+  const SDRArray& resp_data = response_data();
+  size_t i, num_resp = resp_data.size(); short failed_data;
   for (i=0; i<num_resp; ++i) {
-    if (!bmth::isfinite(response_function(i)))
-      sdRep->failedRespData[i] = (num_deriv_vars) ? 3 : 1; // conservative
-    else if (num_deriv_vars) {
-      const RealVector& grad_i = response_gradient(i);
-      for (j=0; j<num_deriv_vars; ++j)
-	if (!bmth::isfinite(grad_i[j]))
-	  { sdRep->failedRespData[i] = 2; break;}
-    }
+    response_check(resp_data[i], failed_data);
+    if (failed_data)
+      sdRep->failedRespData[i] = failed_data;
   }
 
 #ifdef DEBUG
