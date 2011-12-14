@@ -995,7 +995,7 @@ response_check(const SurrogateDataResp& sdr, short& failed_data)
   failed_data = 0;
   if (resp_bits & 1) {
     if (!bmth::isfinite(sdr.response_function()))
-      failed_data = resp_bits;     // all data for this and higher deriv orders
+      failed_data = resp_bits;       // all data for this & higher deriv orders
   }
   if ( (resp_bits & 2) && !failed_data ) {
     const RealVector& grad = sdr.response_gradient();

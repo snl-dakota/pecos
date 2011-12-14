@@ -1862,6 +1862,8 @@ void OrthogPolyApproximation::regression()
     int num_rows_A = 0, num_coeff_rhs = 0, num_grad_rhs = 0, num_rhs;
     if (expConfigOptions.expansionCoeffFlag)
       { num_rows_A += num_data_pts_fn; num_coeff_rhs = 1; }
+    else if (expConfigOptions.expansionCoeffGradFlag)
+      { num_rows_A += num_data_pts_grad; }
     if (expConfigOptions.expansionCoeffGradFlag)
       num_grad_rhs = num_deriv_vars; // same Psi -> 1 SVD soln with multiple RHS
     else if (basisConfigOptions.useDerivs)
