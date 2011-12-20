@@ -31,8 +31,7 @@ namespace Pecos {
     basis functions using function values at the collocation points and cubic 
     Hermite basis functions using both values and derivatives are available.  
     It is used primarily for stochastic collocation approaches to uncertainty 
-    quantification. 
-*/
+    quantification. */
 
 class HierarchInterpPolyApproximation: public InterpPolyApproximation
 {
@@ -46,9 +45,9 @@ public:
   /** @param basis_type Has no effect on the derived class.
       @param num_vars The number of variables that define the problem.
       @param use_derivs If true the interpolant consists of piecewise cubic
-        Hermite polynomials which interpolate the function valuse andgraidents.        If false the interpolant is piecewise linear and only interpolates
-        function values.
-  */ 
+        Hermite polynomials which interpolate the function values and gradients.
+        If false the interpolant is piecewise linear and only interpolates
+        function values. */ 
   HierarchInterpPolyApproximation(short basis_type, 
 				  size_t num_vars,
 				  bool use_derivs);
@@ -127,13 +126,16 @@ public:
 		      PolynomialApproximation* poly_approx_2);
 
 protected:
-  /// returns an int array containing the indices of the points whose support includes x
+  /// returns an int array containing the indices of the points whose
+  /// support includes x
   const IntArray& in_support_of(const RealVector& x);
 
-  /// compute the value at a point using a lower level than the full approximation.
+  /// compute the value at a point using a lower level than the full
+  /// approximation.
   Real value(const RealVector& x, unsigned int max_level);
 
-  /// compute the approximate gradient at a point using a lower level than the full approximation.
+  /// compute the approximate gradient at a point using a lower level
+  /// than the full approximation.
   const RealVector& gradient_basis_variables(const RealVector& x,
 					     unsigned int max_level);
 
@@ -144,7 +146,8 @@ private:
   ///Pecos:PIECEWISE_INTERP_POLYNOMIAL or Pecos:PIECEWISE_CUBIC_INTERP
   short polyType;
 
-  //Array of ints indicating which basis functions have support containing a given point.
+  //Array of ints indicating which basis functions have support
+  //containing a given point.
   IntArray supportIndicator;
 
 };

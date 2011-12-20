@@ -81,7 +81,8 @@ enum { SLOW_RESTRICTED_GROWTH, MODERATE_RESTRICTED_GROWTH,
 
 /// solution approaches for calculating the polynomial basis coefficients
 /// (options for ExpansionConfigOptions::expCoeffsSolnApproach)
-enum { QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, SAMPLING };
+enum { QUADRATURE, CUBATURE, SPARSE_GRID, LOCAL_REFINABLE, REGRESSION,
+       SAMPLING };
 /// options for BasisConfigOptions::nestingOverride (inactive)
 enum { NO_NESTING_OVERRIDE=0, NESTED, NON_NESTED };
 /// options for overriding the default growth restriction policy

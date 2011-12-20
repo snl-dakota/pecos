@@ -14,8 +14,9 @@
 
 #include "IntegrationDriver.hpp"
 #include "CubatureDriver.hpp"
-#include "SparseGridDriver.hpp"
 #include "TensorProductDriver.hpp"
+#include "SparseGridDriver.hpp"
+#include "LocalRefinableDriver.hpp"
 #include "PolynomialApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: IntegrationDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
@@ -111,16 +112,15 @@ IntegrationDriver* IntegrationDriver::get_driver(short driver_type)
   PCout << "Envelope instantiating letter in get_driver(short)." << std::endl;
 #endif
 
-  if (driver_type == QUADRATURE)
-    return new TensorProductDriver();
-  else if (driver_type == CUBATURE)
-    return new CubatureDriver();
-  else if (driver_type == SPARSE_GRID)
-    return new SparseGridDriver();
-  else {
+  switch (driver_type) {
+  case QUADRATURE:      return new TensorProductDriver();  break;
+  case CUBATURE:        return new CubatureDriver();       break;
+  case SPARSE_GRID:     return new SparseGridDriver();     break;
+  case LOCAL_REFINABLE: return new LocalRefinableDriver(); break;
+  default:
     PCerr << "Error: IntegrationDriver type " << driver_type
 	  << " not available." << std::endl;
-    return NULL;
+    return NULL;                                           break;
   }
 }
 
