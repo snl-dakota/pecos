@@ -306,8 +306,12 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
     mean2 += exp_coeffs_2[c_index_i] * wt_Ls_prod_i;
     for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
-      // to include the ij-th term, colloc pts xi_i must be the same as xi_j
-      // for the ran var subset.  In this case, wt_prod_i may be reused.
+      // to include the ij-th term,  basis i must be the same as basis j for the
+      // random variable subset.  In this case, wt_prod_i may be reused.  Note
+      // that it is not necessary to collapse terms with the same random basis
+      // subset, since cross term in (a+b)(a+b) = a^2+2ab+b^2 gets included.
+      // If terms were collapsed (following eval of non-random portions), the
+      // nested loop could be replaced with a single loop to evaluate (a+b)^2.
       bool include = true;
       for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
 	if (key_i[*it] != key_j[*it])
@@ -1035,6 +1039,11 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     break;
   }
   case SPARSE_GRID:
+    // *** TO DO: verify correctness of TP summation approach
+    // *** More rigorous: collapse into unique multiIndex of random terms
+    //     prior to sum squared [or use a nested loop over Smolyak indices
+    //     with extended tensor_product_covariance(key1,key2,etc.) definition
+    //     --> good way to explore why cross-terms appear to cancel out].
     SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
     const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
     const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
@@ -1116,6 +1125,9 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     break;
   }
   case SPARSE_GRID:
+    // *** TO DO: verify correctness of TP summation approach
+    // *** More rigorous: collapse into unique multiIndex of random terms
+    //     prior to sum squared.
     size_t num_deriv_vars = dvv.size();
     if (varianceGradient.length() != num_deriv_vars)
       varianceGradient.sizeUninitialized(num_deriv_vars);

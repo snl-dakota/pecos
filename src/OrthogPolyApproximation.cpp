@@ -2622,9 +2622,12 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     if (include_i) {
       Real norm_sq_i = norm_squared_random(multiIndex[i]);
       for (j=1; j<numExpansionTerms; ++j) {
-
 	// random part of polynomial must be identical to contribute to variance
-	// (else orthogonality drops term)
+	// (else orthogonality drops term).  Note that it is not necessary to
+	// collapse terms with the same random basis subset, since cross term
+	// in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
+	// (following eval of non-random portions), the nested loop could be
+	// replaced with a single loop to evaluate (a+b)^2.
 	bool include_j = true;
 	for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
 	  if (multiIndex[i][*it] != multiIndex[j][*it])
