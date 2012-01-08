@@ -428,7 +428,7 @@ void SparseGridDriver::initialize_rule_pointers()
   for (i=0; i<numVars; ++i)
     compute1DPoints[i] = basis_collocation_points;
   // compute1D{Type1,Type2}Weights only needed for sgmg/sgmga
-  if (refineControl != DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
+  if (refineControl != DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
     compute1DType1Weights.resize(numVars);
     for (i=0; i<numVars; i++)
       compute1DType1Weights[i] = basis_type1_collocation_weights;
@@ -472,7 +472,7 @@ void SparseGridDriver::compute_grid(RealMatrix& var_sets)
   // point orderings than sgmg/sgmga.  Therefore, the reference grid
   // computations are kept completely separate.
 
-  if (refineControl == DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
+  if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
     // compute reference grid only
     allocate_collocation_key();               // compute collocKey
     allocate_1d_collocation_points_weights(); // define 1-D point/weight sets

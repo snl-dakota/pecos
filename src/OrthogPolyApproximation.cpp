@@ -161,7 +161,7 @@ void OrthogPolyApproximation::allocate_arrays()
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
     bool update_exp_form = (ssg_level != ssgLevelPrev ||
       aniso_wts != ssgAnisoWtsPrev || expConfigOptions.refinementControl ==
-      DIMENSION_ADAPTIVE_GENERALIZED_SPARSE);
+      DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) { // compute and output number of terms
@@ -376,7 +376,7 @@ void OrthogPolyApproximation::compute_coefficients()
       SDVArray tp_data_vars; SDRArray tp_data_resp;
       RealVector tp_wts, tp_coeffs; RealMatrix tp_coeff_grads;
       bool store_tp = (expConfigOptions.refinementControl ==
-		       DIMENSION_ADAPTIVE_GENERALIZED_SPARSE);
+		       DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
       // loop over tensor-products, forming sub-expansions, and sum them up
       for (i=0; i<num_tensor_grids; ++i) {
 	// form tp_data_vars, tp_data_resp, tp_wts using collocKey et al.
@@ -726,7 +726,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     multi_index.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
     tpMultiIndex.resize(num_smolyak_indices);
     if (expConfigOptions.refinementControl ==
-	DIMENSION_ADAPTIVE_GENERALIZED_SPARSE) {
+	DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
       tpExpansionCoeffs.resize(num_smolyak_indices);
       tpExpansionCoeffGrads.resize(num_smolyak_indices);
     }
