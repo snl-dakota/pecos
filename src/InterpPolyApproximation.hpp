@@ -283,6 +283,7 @@ inline void InterpPolyApproximation::compute_moments(const RealVector& x)
   // all variables mode only supports first two moments
   numericalMoments.sizeUninitialized(2);
   numericalMoments[0] = mean(x); numericalMoments[1] = variance(x);
+  standardize_moments(numericalMoments);
   //compute_numerical_expansion_moments(4, x);
 
   // Note: it would be feasible to implement an all_variables version of

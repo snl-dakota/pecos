@@ -2393,11 +2393,7 @@ Real OrthogPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
-  Real& mean = expansionMoments[0];
-  mean = expansionCoeffs[0];
-  return mean;
+  return expansionCoeffs[0];
 }
 
 
@@ -2414,10 +2410,7 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
   }
 
   // sum expansion to get response prediction
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
-  Real& mean = expansionMoments[0];
-  mean = expansionCoeffs[0];
+  Real mean = expansionCoeffs[0];
 
   size_t i;
   SizetList::iterator it;
@@ -2558,23 +2551,13 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
 Real OrthogPolyApproximation::variance()
-{
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
-  expansionMoments[1] = covariance(this);
-  return expansionMoments[1];
-}
+{ return covariance(this); }
 
 
 /** In this case, a subset of the expansion variables are random variables
     and the variance of the expansion involves summations over this subset. */
 Real OrthogPolyApproximation::variance(const RealVector& x)
-{
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
-  expansionMoments[1] = covariance(x, this);
-  return expansionMoments[1];
-}
+{ return covariance(x, this); }
 
 
 Real OrthogPolyApproximation::

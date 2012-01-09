@@ -529,8 +529,7 @@ const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x)
 { return approxGradient; /* TO DO */ }
 
-Real HierarchInterpPolyApproximation::
-mean()
+Real HierarchInterpPolyApproximation::mean()
 {
   // Error check for required data
   if (!expConfigOptions.expansionCoeffFlag) {
@@ -538,9 +537,7 @@ mean()
 	  << "NodalInterpPolyApproximation::mean()" << std::endl;
     abort_handler(-1);
   }
-  if ( numericalMoments.length() == 0 ) numericalMoments.size(1);
-  Real& mean = numericalMoments[0];
-  mean = 0;
+  Real mean = 0.;
   const RealVector& t1_wts = driverRep->type1_weight_sets();
   switch (basisConfigOptions.useDerivs) {
   case false:
@@ -561,12 +558,10 @@ mean()
   return mean;
 }
 
-Real HierarchInterpPolyApproximation::
-mean(const RealVector& x)
+Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
   std::cout << "TODO: mean in all variables mode";
-  Real& mean = numericalMoments[0];
-  return mean;
+  return numericalMoments[0];
 }
 
 const RealVector& HierarchInterpPolyApproximation::
@@ -598,25 +593,17 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   return meanGradient;
 }
 
-Real HierarchInterpPolyApproximation::
-variance()
-{
-  if (numericalMoments.empty())
-    numericalMoments.sizeUninitialized(4); // standard mode
-  numericalMoments[1] = covariance(this);
-  return numericalMoments[1];
-}
+Real HierarchInterpPolyApproximation::variance()
+{ return covariance(this); }
 
-Real HierarchInterpPolyApproximation::
-variance(const RealVector& x)
+Real HierarchInterpPolyApproximation::variance(const RealVector& x)
 {
   //TODO
   PCerr << "TODO: variance in all variables mode" << std::endl;
   return numericalMoments[1];
 }
 
-const RealVector& HierarchInterpPolyApproximation::
-variance_gradient()
+const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
   //TODO
   PCerr << "TODO: variance_gradient()" << std::endl;
@@ -674,8 +661,7 @@ covariance(PolynomialApproximation* poly_approx_2)
 }
 
 Real HierarchInterpPolyApproximation::
-covariance(const RealVector& x, 
-	   PolynomialApproximation* poly_approx_2)
+covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   //TODO
   PCerr << "TODO: covariance in all variables" << std::endl;
@@ -706,8 +692,7 @@ in_support_of(const RealVector& x)
   return supportIndicator;
 }
 
-void HierarchInterpPolyApproximation::
-compute_coefficients()
+void HierarchInterpPolyApproximation::compute_coefficients()
 {
   //std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   expansionType1Coeffs.resize(surrData.size());
@@ -755,8 +740,7 @@ compute_coefficients()
   maxComputedCoeff = numCollocPts-1;
 }
 
-void HierarchInterpPolyApproximation::
-increment_coefficients()
+void HierarchInterpPolyApproximation::increment_coefficients()
 {
   //std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   expansionType1Coeffs.resize(surrData.size());

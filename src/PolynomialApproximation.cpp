@@ -565,7 +565,7 @@ compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
     }
   }
 
-  // standardize third and higher central moments, if present
+  // convert central moments to std deviation/skewness/kurtosis
   standardize_moments(moments);
 }
 
@@ -573,22 +573,23 @@ compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
 void PolynomialApproximation::standardize_moments(RealVector& moments)
 {
   size_t num_moments = moments.length();
-  if (num_moments <= 2) return;
+  if (num_moments < 2) return;
 
   const Real& var = moments[1];
   if (var > 0.) {
     // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
     Real pow_fn = var, std_dev = std::sqrt(var);
+    moments[1] = std_dev; // not standardized (2nd standardized moment is 1)
     for (size_t i=2; i<num_moments; ++i)
       { pow_fn *= std_dev; moments[i] /= pow_fn; }
     // offset the fourth standardized moment to eliminate excess kurtosis
     if (num_moments > 3)
       moments[3] -= 3.;
   }
-  else
-    PCerr << "Warning: skewness and kurtosis cannot be standardized due to "
-	  << "non-positive variance.\n         Skipping standardization."
-	  << std::endl;
+  // special case of zero variance is OK for num_moments == 2, but not higher
+  else if ( !(num_moments == 2 && var == 0.) ) // std_dev OK for var == 0.
+    PCerr << "Warning: moments cannot be standardized due to non-positive "
+	  << "variance.\n         Skipping standardization." << std::endl;
 }
 
 

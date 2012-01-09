@@ -671,9 +671,11 @@ void InterpPolyApproximation::compute_component_effects()
     partialVariance.sizeUninitialized(sobolIndices.length());
   partialVariance = 0.;
 
-  const Real& mean           = numericalMoments[0];
-  const Real& total_variance = numericalMoments[1];
-  partialVariance[0]         = mean*mean; // init with mean sq
+  const Real& total_mean = numericalMoments[0];
+  partialVariance[0]     = total_mean*total_mean; // initialize with mean^2
+
+  const Real& m1 = numericalMoments[1]; // standardized, if not num exception
+  Real total_variance = (m1 > 0.) ? m1*m1 : m1;
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin();
@@ -711,7 +713,8 @@ void InterpPolyApproximation::compute_total_effects()
   // This approach parallels partial_variance_integral where the algorithm is 
   // separated by integration approach.
   else {
-    const Real& total_variance = numericalMoments[1];
+    const Real& m1 = numericalMoments[1]; // standardized, if not num exception
+    Real total_variance = (m1 > 0.) ? m1*m1 : m1;
     int j, set_value;
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: {
@@ -821,7 +824,7 @@ total_effects_integral(int set_value, const UShortArray& quad_order,
   }
  
   // Now integrate over the remaining variables	
-  Real  integral   = 0;
+  Real        integral   = 0;
   const Real& total_mean = numericalMoments[0];
   for (i=0; i<num_mem_exp_coeffs; ++i)
     integral += std::pow(mem_exp_coeffs[i] - total_mean, 2.)*mem_weights[i];

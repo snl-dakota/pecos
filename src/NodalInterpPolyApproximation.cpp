@@ -785,9 +785,7 @@ Real NodalInterpPolyApproximation::mean()
   //  abort_handler(-1);
   //}
 
-  if (numericalMoments.empty())
-    numericalMoments.sizeUninitialized(4); // standard mode
-  Real& mean = numericalMoments[0]; mean = 0.;
+  Real mean = 0.;
   const RealVector& t1_wts = driverRep->type1_weight_sets();
   switch (basisConfigOptions.useDerivs) {
   case false:
@@ -839,9 +837,7 @@ Real NodalInterpPolyApproximation::mean(const RealVector& x)
     const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
     const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size();
-    if (numericalMoments.empty())
-      numericalMoments.sizeUninitialized(2); // all_variables mode
-    Real& mean = numericalMoments[0]; mean = 0.;
+    Real mean = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
 	mean += sm_coeffs[i] *
@@ -937,24 +933,14 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
 Real NodalInterpPolyApproximation::variance()
-{
-  if (numericalMoments.empty())
-    numericalMoments.sizeUninitialized(4); // standard mode
-  numericalMoments[1] = covariance(this);
-  return numericalMoments[1];
-}
+{ return covariance(this); }
 
 
 /** In this case, a subset of the expansion variables are random
     variables and the variance of the expansion involves summations
     over this subset. */
 Real NodalInterpPolyApproximation::variance(const RealVector& x)
-{
-  if (numericalMoments.empty())
-    numericalMoments.sizeUninitialized(2); // all_variables mode
-  numericalMoments[1] = covariance(x, this);
-  return numericalMoments[1];
-}
+{ return covariance(x, this); }
 
 
 Real NodalInterpPolyApproximation::
