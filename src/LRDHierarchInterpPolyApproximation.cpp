@@ -6,33 +6,33 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:        HierarchInterpPolyApproximation
+//- Class:        LRDHierarchInterpPolyApproximation
 //- Description:  Implementation code for InterpPolyApproximation class
 //-               
 //- Owner:        Chris Miller
 
-#include "HierarchInterpPolyApproximation.hpp"
+#include "LRDHierarchInterpPolyApproximation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 namespace Pecos {
 
 
-HierarchInterpPolyApproximation::
-HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
+LRDHierarchInterpPolyApproximation::
+LRDHierarchInterpPolyApproximation(short basis_type, size_t num_vars,
 				bool use_derivs):
   InterpPolyApproximation(basis_type,num_vars,use_derivs)
 {}
 
 
-HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
+LRDHierarchInterpPolyApproximation::~LRDHierarchInterpPolyApproximation()
 {}
 
 
-Real HierarchInterpPolyApproximation::value(const RealVector& x)
+Real LRDHierarchInterpPolyApproximation::value(const RealVector& x)
 {
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
+	  << "LRDHierarchInterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
   Real approx_val = 0.;
@@ -154,12 +154,12 @@ Real HierarchInterpPolyApproximation::value(const RealVector& x)
 }
   
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
+	  << "LRDHierarchInterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
   approxGradient.size(numVars);
@@ -335,7 +335,7 @@ gradient_basis_variables(const RealVector& x)
 }
 
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
   size_t num_deriv_vars = dvv.size();
@@ -344,7 +344,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
     
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
+	  << "LRDHierarchInterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
     
@@ -518,18 +518,22 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
   return approxGradient;
 }
 
-Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
+const RealVector& LRDHierarchInterpPolyApproximation::
+gradient_nonbasis_variables(const RealVector& x)
+{ return approxGradient; /* TO DO */ }
+
+Real LRDHierarchInterpPolyApproximation::stored_value(const RealVector& x)
 { return 0.; /* TO DO */ }
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x)
 { return approxGradient; /* TO DO */ }
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x)
 { return approxGradient; /* TO DO */ }
 
-Real HierarchInterpPolyApproximation::mean()
+Real LRDHierarchInterpPolyApproximation::mean()
 {
   // Error check for required data
   if (!expConfigOptions.expansionCoeffFlag) {
@@ -558,13 +562,13 @@ Real HierarchInterpPolyApproximation::mean()
   return mean;
 }
 
-Real HierarchInterpPolyApproximation::mean(const RealVector& x)
+Real LRDHierarchInterpPolyApproximation::mean(const RealVector& x)
 {
   std::cout << "TODO: mean in all variables mode";
   return numericalMoments[0];
 }
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 mean_gradient()
 {
   // Error check for required data
@@ -586,31 +590,31 @@ mean_gradient()
   return meanGradient;
 }
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   std::cout << "TODO: mean_gradient in all variables mode" << std::endl;
   return meanGradient;
 }
 
-Real HierarchInterpPolyApproximation::variance()
+Real LRDHierarchInterpPolyApproximation::variance()
 { return covariance(this); }
 
-Real HierarchInterpPolyApproximation::variance(const RealVector& x)
+Real LRDHierarchInterpPolyApproximation::variance(const RealVector& x)
 {
   //TODO
   PCerr << "TODO: variance in all variables mode" << std::endl;
   return numericalMoments[1];
 }
 
-const RealVector& HierarchInterpPolyApproximation::variance_gradient()
+const RealVector& LRDHierarchInterpPolyApproximation::variance_gradient()
 {
   //TODO
   PCerr << "TODO: variance_gradient()" << std::endl;
   return varianceGradient;
 }
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   //TODO
@@ -618,7 +622,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   return varianceGradient;
 }
 
-Real HierarchInterpPolyApproximation::
+Real LRDHierarchInterpPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
@@ -627,8 +631,8 @@ covariance(PolynomialApproximation* poly_approx_2)
 	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    static_cast<HierarchInterpPolyApproximation*>(poly_approx_2);
+  LRDHierarchInterpPolyApproximation* hip_approx_2 = 
+    static_cast<LRDHierarchInterpPolyApproximation*>(poly_approx_2);
   Real mean_1 = mean(), mean_2 = hip_approx_2->mean();
   const RealVector& t1_coeffs_2 = hip_approx_2->expansionType1Coeffs;
   const RealVector& t1_wts = driverRep->type1_weight_sets();
@@ -660,7 +664,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   return covar;
 }
 
-Real HierarchInterpPolyApproximation::
+Real LRDHierarchInterpPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   //TODO
@@ -669,7 +673,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   return var;
 }
 
-const IntArray& HierarchInterpPolyApproximation::
+const IntArray& LRDHierarchInterpPolyApproximation::
 in_support_of(const RealVector& x)
 {
   LocalRefinableDriver* lr_driver = 
@@ -692,21 +696,26 @@ in_support_of(const RealVector& x)
   return supportIndicator;
 }
 
-void HierarchInterpPolyApproximation::compute_coefficients()
+
+void LRDHierarchInterpPolyApproximation::allocate_expansion_coefficients()
 {
   //std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   expansionType1Coeffs.resize(surrData.size());
+  if (basisConfigOptions.useDerivs)
+    expansionType2Coeffs.shapeUninitialized(numVars,surrData.size());
+}
+
+
+void LRDHierarchInterpPolyApproximation::compute_expansion_coefficients()
+{
+  //std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   assert( driverRep != NULL );
-  numCollocPts = driverRep->grid_size();
-  assert(numCollocPts == surrData.size());
+  assert(numCollocPts == driverRep->grid_size());
   LocalRefinableDriver* lr_driver = 
     static_cast<LocalRefinableDriver*>(driverRep);
   const std::vector<CollocationPoint>& col_pts = 
     lr_driver->get_collocation_points();
   numVars = surrData.continuous_variables(0).length();
-  if (basisConfigOptions.useDerivs) {
-    expansionType2Coeffs.shapeUninitialized(numVars,surrData.size());
-  }
   expansionType1Coeffs[0] = surrData.response_function(0);
   Teuchos::setCol(surrData.response_gradient(0),0,expansionType2Coeffs);
   unsigned int level = 1;
@@ -740,7 +749,36 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   maxComputedCoeff = numCollocPts-1;
 }
 
-void HierarchInterpPolyApproximation::increment_coefficients()
+void LRDHierarchInterpPolyApproximation::restore_expansion_coefficients()
+{
+  size_t new_colloc_pts = surrData.size();
+  /*
+  if (expConfigOptions.expansionCoeffFlag) {
+    expansionType1Coeffs.resize(new_colloc_pts);
+    if (basisConfigOptions.useDerivs) {
+      size_t num_deriv_vars = expansionType2Coeffs.numRows();
+      expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+    expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
+  }
+
+  for (int i=numCollocPts; i<new_colloc_pts; ++i) {
+    if (expConfigOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[i] = surrData.response_function(i);
+      if (basisConfigOptions.useDerivs)
+	Teuchos::setCol(surrData.response_gradient(i), i, expansionType2Coeffs);
+    }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      Teuchos::setCol(surrData.response_gradient(i),i,expansionType1CoeffGrads);
+  }
+  */
+  numCollocPts = new_colloc_pts;
+}
+
+void LRDHierarchInterpPolyApproximation::increment_coefficients()
 {
   //std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
   expansionType1Coeffs.resize(surrData.size());
@@ -781,12 +819,12 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   maxComputedCoeff = numCollocPts-1;
 }
 
-Real HierarchInterpPolyApproximation::
+Real LRDHierarchInterpPolyApproximation::
 value(const RealVector& x, unsigned int max_level)
 {
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
+	  << "LRDHierarchInterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
   Real approx_val = 0.;
@@ -919,12 +957,12 @@ value(const RealVector& x, unsigned int max_level)
   return approx_val;
 }
 
-const RealVector& HierarchInterpPolyApproximation::
+const RealVector& LRDHierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, unsigned int max_level)
 {
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
+	  << "LRDHierarchInterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
   approxGradient.size(numVars);
@@ -1104,6 +1142,53 @@ gradient_basis_variables(const RealVector& x, unsigned int max_level)
     break;
   }
   return approxGradient;
+}
+
+
+void LRDHierarchInterpPolyApproximation::
+compute_numerical_response_moments(size_t num_moments)
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+	  << "Approximation::compute_numerical_response_moments()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // stub
+}
+
+
+void LRDHierarchInterpPolyApproximation::
+compute_numerical_expansion_moments(size_t num_moments)
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
+    abort_handler(-1);
+  }
+  if (expansionMoments.length() != num_moments)
+    expansionMoments.sizeUninitialized(num_moments);
+
+  // stub
+}
+
+
+void LRDHierarchInterpPolyApproximation::compute_total_sobol_indices()
+{
+  // stub
+}
+
+
+void LRDHierarchInterpPolyApproximation::
+member_coefficients_weights(int set_value, const UShortArray& quad_order,
+			    const UShortArray& lev_index,
+			    const UShort2DArray& key,
+			    const SizetArray& colloc_index,
+			    RealVector& member_coeffs, RealVector& member_wts)
+{
+  // stub
 }
 
 }

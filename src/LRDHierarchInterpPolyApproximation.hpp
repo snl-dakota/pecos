@@ -6,7 +6,7 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:        HierarchInterpPolyApproximation
+//- Class:        LRDHierarchInterpPolyApproximation
 //- Description:  Class for Nodal Interpolation Polynomial Approximation
 //-               
 //- Owner:        Chris Miller
@@ -23,7 +23,7 @@ namespace Pecos {
 /// interpolation polynomials (local approximation interpolating function 
 /// values and potentially gradients at collocation points).
 
-/** The HierarchInterpPolyApproximation class provides a local piecewise 
+/** The LRDHierarchInterpPolyApproximation class provides a local piecewise 
     polynomial approximation based on the hierarchical approach described in 
     X. Ma and N. Zabaras "An adaptive hierarchical sparse grid collocation 
     algorithm for the solution of stochastic differential equations", Journal 
@@ -33,7 +33,7 @@ namespace Pecos {
     It is used primarily for stochastic collocation approaches to uncertainty 
     quantification. */
 
-class HierarchInterpPolyApproximation: public InterpPolyApproximation
+class LRDHierarchInterpPolyApproximation: public InterpPolyApproximation
 {
 public:
 
@@ -48,22 +48,33 @@ public:
         Hermite polynomials which interpolate the function values and gradients.
         If false the interpolant is piecewise linear and only interpolates
         function values. */ 
-  HierarchInterpPolyApproximation(short basis_type, 
-				  size_t num_vars,
-				  bool use_derivs);
+  LRDHierarchInterpPolyApproximation(short basis_type, size_t num_vars,
+				     bool use_derivs);
   /// destructor
-  ~HierarchInterpPolyApproximation();
+  ~LRDHierarchInterpPolyApproximation();
 
-  /// Compute the basis coefficients from the data.
-  virtual void compute_coefficients();
+  //
+  //- Heading: <out of date>
+  //
 
   /// Update the coefficients using new data.
-  virtual void increment_coefficients();
+  void increment_coefficients();
 
   //
   //- Heading: Virtual function redefinitions
   //
 
+  void allocate_expansion_coefficients();
+  void compute_expansion_coefficients();
+  void restore_expansion_coefficients();
+  void compute_numerical_response_moments(size_t num_moments);
+  void compute_numerical_expansion_moments(size_t num_moments);
+
+  void compute_total_sobol_indices();
+  void member_coefficients_weights(int set_value,
+    const UShortArray& quad_order, const UShortArray& lev_index,
+    const UShort2DArray& key, const SizetArray& colloc_index,
+    RealVector& member_coeffs, RealVector& member_wts);
 
   /// retrieve the response expansion value for a given parameter vector.
   /** @param x A RealVector of size numVars.  The interpolant is evaluated at
@@ -94,6 +105,8 @@ public:
   */
   const RealVector& gradient_basis_variables(const RealVector& x,
 					     const SizetArray& dvv);
+
+  const RealVector& gradient_nonbasis_variables(const RealVector& x);
 
   Real stored_value(const RealVector& x);
   const RealVector& stored_gradient_basis_variables(const RealVector& x);
@@ -126,6 +139,7 @@ public:
 		      PolynomialApproximation* poly_approx_2);
 
 protected:
+
   /// returns an int array containing the indices of the points whose
   /// support includes x
   const IntArray& in_support_of(const RealVector& x);
@@ -141,6 +155,7 @@ protected:
 
   /// The largest computed coefficient.
   unsigned int maxComputedCoeff;
+
 private:
   
   ///Pecos:PIECEWISE_INTERP_POLYNOMIAL or Pecos:PIECEWISE_CUBIC_INTERP
@@ -150,6 +165,18 @@ private:
   //containing a given point.
   IntArray supportIndicator;
 
+  /// the type1 coefficients of the expansion for interpolating values
+  RealVector expansionType1Coeffs;
+  /// the type2 coefficients of the expansion for interpolating gradients
+  RealMatrix expansionType2Coeffs;
+  /// the gradients of the type1 expansion coefficients
+  /** may be interpreted as either the gradients of the expansion
+      coefficients or the coefficients of expansions for the response
+      gradients.  This array is used when sensitivities of moments are
+      needed with respect to variables that do not appear in the
+      expansion (e.g., with respect to design variables for an
+      expansion only over the random variables). */
+  RealMatrix expansionType1CoeffGrads;
 };
 
 

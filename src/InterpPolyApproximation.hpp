@@ -59,6 +59,14 @@ public:
 			      const BasisConfigOptions& bc_options,
 			      std::vector<Pecos::BasisPolynomial>& poly_basis);
 
+  //
+  //- Heading: Virtual function redefinitions
+  //
+
+  /// compute the coefficients for the expansion of multivariate
+  /// interpolation polynomials
+  void compute_coefficients();
+
 protected:
 
   //
@@ -67,9 +75,6 @@ protected:
 
   int min_coefficients() const;
 
-  /// compute the coefficients for the expansion of multivariate Lagrange
-  /// interpolation polynomials
-  void compute_coefficients();
   /// update the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
   void increment_coefficients();

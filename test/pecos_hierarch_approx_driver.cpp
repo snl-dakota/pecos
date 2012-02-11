@@ -9,7 +9,7 @@
 /** \file pecos_hierarch_approx_driver.cpp
     \brief A test program for HierarchInterpPolyApproximation class. */
 
-#include "HierarchInterpPolyApproximation.hpp"
+#include "LRDHierarchInterpPolyApproximation.hpp"
 #include "LocalRefinableDriver.hpp"
 
 using namespace Pecos;
@@ -25,13 +25,13 @@ void test_function_2_grad(const RealVector& x, RealVector& grad);
 int main(int argc, char** argv)
 {
 
-  /*Declare a new HierarchInterpPolyApproximation object
+  /*Declare a new LRDHierarchInterpPolyApproximation object
     of basis_type 0 in one variable.  This approximation
     will consist of piecewise linear functions since
     use_derivs is false.
   */
-  HierarchInterpPolyApproximation *a = 
-    new HierarchInterpPolyApproximation(0,1,false);
+  LRDHierarchInterpPolyApproximation *a = 
+    new LRDHierarchInterpPolyApproximation(0,1,false);
   
   /*Construct an integration driver for the approximation.
     The domain of the approximation is [0,1] and the approximation is 
@@ -196,7 +196,7 @@ int main(int argc, char** argv)
     is initialized to level 9.
   */ 
   delete a;
-  a = new HierarchInterpPolyApproximation(0,2,true);
+  a = new LRDHierarchInterpPolyApproximation(0,2,true);
   a->integration_driver_rep(&l_driver);
   points.clear_data();
   l_driver.initialize_grid(RealArray(2,-1),RealArray(2,1),9,PIECEWISE_CUBIC_INTERP,true);

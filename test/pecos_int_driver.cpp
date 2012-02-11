@@ -9,7 +9,7 @@
 /** \file pecos_int_driver.cpp
     \brief A driver program for PECOS */
 
-#include "SparseGridDriver.hpp"
+#include "CombinedSparseGridDriver.hpp"
 #include "TensorProductDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "LocalRefinableDriver.hpp"
@@ -29,15 +29,15 @@ int main(int argc, char* argv[])
   Pecos::RealMatrix variable_sets;
 
   // Smolyak sparse grid
-  std::cout << "Instantiating SparseGridDriver:\n";
+  std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = 3; Pecos::RealVector dimension_pref; // isotropic
-  Pecos::SparseGridDriver sg_driver(level, dimension_pref);
-  sg_driver.initialize_grid(poly_basis);
-  sg_driver.compute_grid(variable_sets);
+  Pecos::CombinedSparseGridDriver csg_driver(level, dimension_pref);
+  csg_driver.initialize_grid(poly_basis);
+  csg_driver.compute_grid(variable_sets);
   std::cout << "Sparse grid points:\n";
   Pecos::write_data(std::cout, variable_sets, false, true, true);
   std::cout << "Sparse grid weights:\n";
-  Pecos::write_data(std::cout, sg_driver.type1_weight_sets());
+  Pecos::write_data(std::cout, csg_driver.type1_weight_sets());
 
   // Tensor-product quadrature
   std::cout << "Instantiating TensorProductDriver:\n";
