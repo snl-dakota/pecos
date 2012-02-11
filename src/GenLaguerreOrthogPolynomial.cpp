@@ -13,7 +13,7 @@
 
 #include "GenLaguerreOrthogPolynomial.hpp"
 #ifdef HAVE_SPARSE_GRID
-#include "sandia_rules.H"
+#include "sandia_rules.hpp"
 #endif
 #include "pecos_stat_util.hpp"
 

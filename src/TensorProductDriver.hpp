@@ -61,6 +61,11 @@ public:
   /// return ith entry in quadOrder
   unsigned short quadrature_order(size_t i) const;
 
+  /// return type1WeightSets
+  const RealVector& type1_weight_sets() const;
+  /// return type2WeightSets
+  const RealMatrix& type2_weight_sets() const;
+
   /// return levelIndex
   const UShortArray& level_index() const;
 
@@ -97,6 +102,13 @@ private:
   /// numCollocPts-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
+
+  /// the set of type1 weights (for integration of value interpolants)
+  /// associated with each point in the tensor grid
+  RealVector type1WeightSets;
+  /// the set of type2 weights (for integration of gradient interpolants)
+  /// for each derivative component and for each point in the tensor grid
+  RealMatrix type2WeightSets;
 };
 
 
@@ -128,6 +140,14 @@ inline const UShortArray& TensorProductDriver::quadrature_order() const
 
 inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
 { return quadOrder[i]; }
+
+
+inline const RealVector& TensorProductDriver::type1_weight_sets() const
+{ return type1WeightSets; }
+
+
+inline const RealMatrix& TensorProductDriver::type2_weight_sets() const
+{ return type2WeightSets; }
 
 
 inline const UShortArray& TensorProductDriver::level_index() const

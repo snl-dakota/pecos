@@ -13,7 +13,7 @@
 //- Version:
 
 #include "CubatureDriver.hpp"
-#include "sandia_cubature.H"
+#include "sandia_cubature.hpp"
 #include "PolynomialApproximation.hpp"
 #include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"

@@ -13,7 +13,7 @@
 
 #include "ChebyshevOrthogPolynomial.hpp"
 #ifdef HAVE_SPARSE_GRID
-#include "sandia_rules.H"
+#include "sandia_rules.hpp"
 #endif
 
 //#define DEBUG

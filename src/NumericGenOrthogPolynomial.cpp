@@ -14,7 +14,7 @@
 #include "NumericGenOrthogPolynomial.hpp"
 #include "Teuchos_LAPACK.hpp"
 #ifdef HAVE_SPARSE_GRID
-#include "sandia_rules.H"
+#include "sandia_rules.hpp"
 #endif // HAVE_SPARSE_GRID
 
 //#define DEBUG

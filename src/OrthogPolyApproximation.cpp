@@ -13,7 +13,7 @@
 
 #include "OrthogPolyApproximation.hpp"
 #include "TensorProductDriver.hpp"
-#include "SparseGridDriver.hpp"
+#include "CombinedSparseGridDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "pecos_global_defs.hpp"
 #include "Teuchos_LAPACK.hpp"
@@ -65,7 +65,7 @@ int OrthogPolyApproximation::min_coefficients() const
   if (expConfigOptions.expansionCoeffFlag ||
       expConfigOptions.expansionCoeffGradFlag)
     switch (expConfigOptions.expCoeffsSolnApproach) {
-    case QUADRATURE: case CUBATURE: case SPARSE_GRID: case SAMPLING:
+    case QUADRATURE: case CUBATURE: case COMBINED_SPARSE_GRID: case SAMPLING:
       return 1; // quadrature: (int)pow((Real)MIN_GAUSS_PTS, numVars);
       break;
     case REGRESSION:
@@ -155,10 +155,10 @@ void OrthogPolyApproximation::allocate_arrays()
     //cubIntOrderPrev = cub_int_order;
     break;
   }
-  case SPARSE_GRID: {
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    unsigned short    ssg_level  = ssg_driver->level();
-    const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    unsigned short    ssg_level = csg_driver->level();
+    const RealVector& aniso_wts = csg_driver->anisotropic_weights();
     bool update_exp_form = (ssg_level != ssgLevelPrev ||
       aniso_wts != ssgAnisoWtsPrev || expConfigOptions.refinementControl ==
       DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
@@ -296,7 +296,7 @@ void OrthogPolyApproximation::compute_coefficients()
   // anchor point, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
   //   SAMPLING:   treat it as another data point
-  //   QUADRATURE/CUBATURE/SPARSE_GRID: error
+  //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
   //   REGRESSION: use equality-constrained least squares
   size_t i, j, num_total_pts = surrData.size();
   if (surrData.anchor())
@@ -362,7 +362,7 @@ void OrthogPolyApproximation::compute_coefficients()
 			driverRep->type1_weight_sets(),
 			expansionCoeffs, expansionCoeffGrads);
     break;
-  case SPARSE_GRID:
+  case COMBINED_SPARSE_GRID:
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // multiple expansion integration
@@ -370,8 +370,9 @@ void OrthogPolyApproximation::compute_coefficients()
       // append_multi_index() to build multiIndex.
       if (expConfigOptions.expansionCoeffFlag)     expansionCoeffs = 0.;
       if (expConfigOptions.expansionCoeffGradFlag) expansionCoeffGrads = 0.;
-      SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-      const IntArray& sm_coeffs = ssg_driver->smolyak_coefficients();
+      CombinedSparseGridDriver* csg_driver
+	= (CombinedSparseGridDriver*)driverRep;
+      const IntArray& sm_coeffs = csg_driver->smolyak_coefficients();
       size_t i, num_tensor_grids = tpMultiIndex.size(); int coeff;
       SDVArray tp_data_vars; SDRArray tp_data_resp;
       RealVector tp_wts, tp_coeffs; RealMatrix tp_coeff_grads;
@@ -398,8 +399,8 @@ void OrthogPolyApproximation::compute_coefficients()
 	  overlay_expansion(tpMultiIndexMap[i], tp_coeffs_i, tp_grads_i, coeff);
       }
       //if (!reEntrantFlag) {
-      //  ssg_driver->clear_smolyak_arrays();
-      //  ssg_driver->clear_collocation_arrays();
+      //  csg_driver->clear_smolyak_arrays();
+      //  csg_driver->clear_collocation_arrays();
       //  tpMultiIndex.clear(); tpMultiIndexMap.clear();
       //}
       break;
@@ -431,8 +432,8 @@ void OrthogPolyApproximation::increment_coefficients()
   bool err_flag = false;
   size_t last_index;
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case SPARSE_GRID: {
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       last_index = tpMultiIndex.size();
@@ -443,7 +444,7 @@ void OrthogPolyApproximation::increment_coefficients()
       tpExpansionCoeffGrads.resize(new_size);
       // update tpMultiIndex
       UShortArray exp_order(numVars);
-      sparse_grid_levels_to_expansion_order(ssg_driver->trial_set(), exp_order);
+      sparse_grid_levels_to_expansion_order(csg_driver->trial_set(), exp_order);
       tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
       // update multiIndex and numExpansionTerms
       append_multi_index(tpMultiIndex[last_index], multiIndex, tpMultiIndexMap,
@@ -460,8 +461,8 @@ void OrthogPolyApproximation::increment_coefficients()
       append_tensor_expansions(last_index);
       // cleanup
       //if (!reEntrantFlag) {
-      //  ssg_driver->clear_smolyak_arrays();
-      //  ssg_driver->clear_collocation_arrays();
+      //  csg_driver->clear_smolyak_arrays();
+      //  csg_driver->clear_collocation_arrays();
       //  tpMultiIndex.clear(); tpMultiIndexMap.clear();
       //}
       break;
@@ -486,8 +487,8 @@ void OrthogPolyApproximation::increment_coefficients()
 void OrthogPolyApproximation::decrement_coefficients()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case SPARSE_GRID:
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+  case COMBINED_SPARSE_GRID:
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // reset expansion{Coeffs,CoeffGrads}: (set in append_tensor_expansions())
@@ -502,7 +503,7 @@ void OrthogPolyApproximation::decrement_coefficients()
       //resize_expansion();
 
       // reset tensor-product bookkeeping and save restorable data
-      savedLevMultiIndex.push_back(ssg_driver->trial_set());
+      savedLevMultiIndex.push_back(csg_driver->trial_set());
       savedTPMultiIndex.push_back(tpMultiIndex.back());
       savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
       savedTPMultiIndexMapRef.push_back(numExpansionTerms);
@@ -523,15 +524,16 @@ void OrthogPolyApproximation::restore_coefficients()
 {
   size_t last_index;
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case SPARSE_GRID:
+  case COMBINED_SPARSE_GRID:
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       // move previous expansion data to current expansion
       last_index = tpMultiIndex.size();
-      SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+      CombinedSparseGridDriver* csg_driver
+	= (CombinedSparseGridDriver*)driverRep;
       std::deque<UShortArray>::iterator sit
 	= std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
-		    ssg_driver->trial_set());
+		    csg_driver->trial_set());
       size_t index_star = std::distance(savedLevMultiIndex.begin(), sit);
       savedLevMultiIndex.erase(sit);
       std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
@@ -565,7 +567,7 @@ void OrthogPolyApproximation::finalize_coefficients()
 {
   size_t start_index;
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case SPARSE_GRID:
+  case COMBINED_SPARSE_GRID:
     switch (sparseGridExpansion) {
     case TENSOR_INT_TENSOR_SUM_EXP: {
       start_index = tpMultiIndex.size();
@@ -613,9 +615,9 @@ void OrthogPolyApproximation::store_coefficients()
   if (expConfigOptions.expansionCoeffGradFlag)
     storedExpCoeffGrads = expansionCoeffGrads;
   switch (expConfigOptions.expCoeffsSolnApproach) { // approach-specific storage
-  case SPARSE_GRID: { // sum of tensor-product expansions
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    storedLevMultiIndex = ssg_driver->smolyak_multi_index();
+  case COMBINED_SPARSE_GRID: { // sum of tensor-product expansions
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    storedLevMultiIndex = csg_driver->smolyak_multi_index();
     break;
   }
   default: // tensor-product and total-order expansions
@@ -655,12 +657,13 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
 	approxOrder[i] += storedApproxOrder[i];
       tensor_product_multi_index(approxOrder, multi_index_prod);
       break;
-    case SPARSE_GRID: { // product of two sums of tensor-product expansions
-      SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
+      CombinedSparseGridDriver* csg_driver
+	= (CombinedSparseGridDriver*)driverRep;
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
       UShort2DArray curr_pareto, stored_pareto;
-      update_pareto(ssg_driver->smolyak_multi_index(), curr_pareto);
+      update_pareto(csg_driver->smolyak_multi_index(), curr_pareto);
       update_pareto(storedLevMultiIndex,             stored_pareto);
       size_t i, j, k, num_stored_mi = stored_pareto.size(),
 	num_curr_mi = curr_pareto.size();
@@ -715,8 +718,8 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
 void OrthogPolyApproximation::
 sparse_grid_multi_index(UShort2DArray& multi_index)
 {
-  SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-  const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  const UShort2DArray&  sm_multi_index = csg_driver->smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_multi_index.size();
 
   switch (sparseGridExpansion) {
@@ -782,7 +785,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     UShortArray quad_order(numVars), integrand_order(numVars);
     UShort2DArray pareto(1), total_pareto;
     for (i=0; i<num_smolyak_indices; ++i) {
-      ssg_driver->level_to_order(sm_multi_index[i], quad_order);
+      csg_driver->level_to_order(sm_multi_index[i], quad_order);
       quadrature_order_to_integrand_order(quad_order, integrand_order);
       // maintain an n-dimensional Pareto front of nondominated multi-indices
       pareto[0] = integrand_order;
@@ -829,7 +832,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // increments that may fit within Pareto front.  An important current
     // use case is PCBDO in all_variables mode.
     UShortArray sgl_to_int_order(n); // sg level -> quad order -> int order
-    ssg_driver->level_to_order(ssg_driver->level(), quad_order);
+    csg_driver->level_to_order(csg_driver->level(), quad_order);
     quadrature_order_to_integrand_order(quad_order, sgl_to_int_order);
     bool isotropic_integrand = true;
     order = sgl_to_int_order[0];
@@ -871,7 +874,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     break;
   }
   case SPARSE_INT_HEUR_TOTAL_ORD_EXP: // early heuristic
-    heuristic_sparse_grid_level_to_expansion_order(ssg_driver->level(),
+    heuristic_sparse_grid_level_to_expansion_order(csg_driver->level(),
 						   approxOrder);
     total_order_multi_index(approxOrder, multi_index);
     break;
@@ -909,56 +912,82 @@ heuristic_sparse_grid_level_to_expansion_order(unsigned short ssg_level,
 {
   if (exp_order.size() != numVars)
     exp_order.resize(numVars);
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const ShortArray& colloc_rules = ssg_driver->collocation_rules();
-  const IntArray&   growth_rules = ssg_driver->api_growth_rules();
-  for (size_t i=0; i<numVars; ++i) {
-    switch (growth_rules[i]) {
-    case FULL_EXPONENTIAL:
-      switch (colloc_rules[i]) {
-      case CLENSHAW_CURTIS: case FEJER2: { // TO DO: verify F2
-	// integrand order = 2*level+1 ("sharp" result from Novak & Ritter,1996)
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  const ShortArray& colloc_rules = csg_driver->collocation_rules();
+  short             growth_rate  = csg_driver->growth_rate();
+  for (size_t i=0; i<numVars; ++i)
+    switch (colloc_rules[i]) {
+    case CLENSHAW_CURTIS: case FEJER2: case NEWTON_COTES:
+      switch (growth_rate) {
+      case UNRESTRICTED_GROWTH: {
+	// CC integrand order = 2*l+1: "sharp" result from Novak & Ritter, 1996
 	unsigned short integrand = 2*ssg_level + 1;
 	exp_order[i] = integrand / 2; // remainder truncated
 	// results in exp_order = level
 	break;
       }
       default:
-	PCerr << "Error: unsupported integration rule for FULL_EXPONENTIAL "
-	      << "growth in OrthogPolyApproximation::heuristic_sparse_grid_"
-	      << "level_to_expansion_order()." << std::endl;
+	PCerr << "Error: unsupported growth rate for CLENSHAW_CURTIS/FEJER2 in "
+	      << "OrthogPolyApproximation::heuristic_sparse_grid_level_to_"
+	      << "expansion_order()." << std::endl;
 	abort_handler(-1);
+	break;
       }
       break;
-    case MODERATE_LINEAR: {
-      // linear growth Gauss rules & matching moderate growth exponential rules
+    case GAUSS_PATTERSON: case GENZ_KEISTER:
+      switch (growth_rate) {
+      case MODERATE_RESTRICTED_GROWTH: { // see comment block below
+	short wmNp1 = ssg_level - numVars + 1;
+	exp_order[i] = (wmNp1 > 0) ? wmNp1 + ssg_level : ssg_level;
+	break;
+      }
+      default:
+	PCerr << "Error: unsupported growth rate for GAUSS_PATTERSON/GENZ_"
+	      << "KEISTER in OrthogPolyApproximation::heuristic_sparse_grid_"
+	      << "level_to_expansion_order()." << std::endl;
+	abort_handler(-1);
+	break;
+      }
+      break;
+    case GAUSS_LEGENDRE: case GAUSS_HERMITE: case GEN_GAUSS_HERMITE:
+    case GAUSS_LAGUERRE: case GEN_GAUSS_LAGUERRE: case GAUSS_JACOBI:
+    case GOLUB_WELSCH:
+      switch (growth_rate) {
+      case UNRESTRICTED_GROWTH: case MODERATE_RESTRICTED_GROWTH: {
+	// linear growth Gauss & matching moderate growth exponential rules
 
-      // For std exponential growth: use total integrand order = m (based on
-      // experimental observations in PCE_logratio.m for n=2 and levels<5).
-      // This heuristic has been shown to be nonconservative for higher
-      // dimensions (e.g., short column w/ n=3 and cantilever beam w/ n=4).
-      //SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-      //ssg_driver->level_to_order_open_exponential(ssg_level, integrand);
+	// For std exponential growth: use total integrand order = m (based on
+	// experimental observations in PCE_logratio.m for n=2 and levels<5).
+	// This heuristic has been shown to be nonconservative for higher
+	// dimensions (e.g., short column w/ n=3 and cantilever beam w/ n=4).
 
-      // For linear growth (quad_order = 2*level+1):
-      // This relationship derived from Pareto PCE eo for n={2,4} and w={0,8}
-      // and verified for n=5 and n=9.
-      // > Log ratio  n = 2: For w={0,8}, eo = {0,1,3,5,7,9,11,13,15}
-      // > Short col  n = 3: For w={0,8}, eo = {0,1,2,4,6,8,10,12,14}
-      // > Cantilever n = 4: For w={0,8}, eo = {0,1,2,3,5,7, 9,11,13}
-      // > Gen Rosen  n = 5: For w={0,6}, eo = {0,1,2,3,4,6, 8}
-      // > Steel col  n = 9: For w={0,5}, eo = {0,1,2,3,4,5}
-      // -> Increases by 1 up to wmNp1=0 and increases by 2 thereafter.
-      short wmNp1 = ssg_level - numVars + 1;
-      exp_order[i] = (wmNp1 > 0) ? wmNp1 + ssg_level : ssg_level;
+	// For linear growth (quad_order = 2*level+1):
+	// This relationship derived from Pareto PCE eo for n={2,4} and w={0,8}
+	// and verified for n=5 and n=9.
+	// > Log ratio  n = 2: For w={0,8}, eo = {0,1,3,5,7,9,11,13,15}
+	// > Short col  n = 3: For w={0,8}, eo = {0,1,2,4,6,8,10,12,14}
+	// > Cantilever n = 4: For w={0,8}, eo = {0,1,2,3,5,7, 9,11,13}
+	// > Gen Rosen  n = 5: For w={0,6}, eo = {0,1,2,3,4,6, 8}
+	// > Steel col  n = 9: For w={0,5}, eo = {0,1,2,3,4,5}
+	// --> Increases by 1 up to wmNp1=0 and increases by 2 thereafter.
+	short wmNp1 = ssg_level - numVars + 1;
+	exp_order[i] = (wmNp1 > 0) ? wmNp1 + ssg_level : ssg_level;
+	break;
+      }
+      default:
+	PCerr << "Error: unsupported growth rate for Gauss rules in "
+	      << "OrthogPolyApproximation::heuristic_sparse_grid_level_"
+	      << "to_expansion_order()." << std::endl;
+	abort_handler(-1);
+	break;
+      }
+      break;
+    default:
+      PCerr << "Error: unsupported collocation rule in OrthogPolyApproximation"
+	    << "::heuristic_sparse_grid_level_to_expansion_order()."<<std::endl;
+      abort_handler(-1);
       break;
     }
-    default:
-      PCerr << "Error: unsupported growth rule in OrthogPolyApproximation::"
-	    << "heuristic_sparse_grid_level_to_expansion_order()," << std::endl;
-      abort_handler(-1);
-    }
-  }
 }
 
 
@@ -990,9 +1019,9 @@ sparse_grid_levels_to_expansion_order(const UShortArray& levels,
     // Best option for TENSOR_INT_TENSOR_SUM_EXP, but SPARSE_INT_TENSOR_SUM_EXP
     // is generally too aggressive for nested rules and exponential growth
     // (SPARSE_INT_RESTR_TENSOR_SUM_EXP is preferred).
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     UShortArray quad_order(n);
-    ssg_driver->level_to_order(levels, quad_order);
+    csg_driver->level_to_order(levels, quad_order);
     quadrature_order_to_integrand_order(quad_order, int_order);
     break;
   }
@@ -1309,9 +1338,9 @@ void OrthogPolyApproximation::append_tensor_expansions(size_t start_index)
 
   // update expansion{Coeffs,CoeffGrads} using a hierarchical update
   // rather than building from scratch
-  SparseGridDriver*  ssg_driver = (SparseGridDriver*)driverRep;
-  const IntArray&     sm_coeffs = ssg_driver->smolyak_coefficients();
-  const IntArray& sm_coeffs_ref = ssg_driver->smolyak_coefficients_reference();
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  const IntArray&     sm_coeffs = csg_driver->smolyak_coefficients();
+  const IntArray& sm_coeffs_ref = csg_driver->smolyak_coefficients_reference();
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::append_tensor_expansions() with "
 	<< "start index " << start_index << "\nsm_coeffs:\n" << sm_coeffs
@@ -1443,13 +1472,12 @@ void OrthogPolyApproximation::integration_checks()
 	  << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
-  size_t num_data_pts = surrData.size();
-  if (num_data_pts != driverRep->type1_weight_sets().length()) {
+  size_t num_data_pts = surrData.size(), num_grid_pts = driverRep->grid_size();
+  if (num_data_pts != num_grid_pts) {
     PCerr << "Error: number of current points (" << num_data_pts << ") is "
 	  << "not consistent with\n       number of points/weights ("
-	  << driverRep->type1_weight_sets().length() << ") from integration "
-	  << "driver in\n       OrthogPolyApproximation::compute_coefficients"
-	  << "()." << std::endl;
+	  << num_grid_pts << ") from integration driver in\n       "
+	  << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
 }
@@ -1460,12 +1488,12 @@ integration_data(size_t tp_index, SDVArray& tp_data_vars,
 		 SDRArray& tp_data_resp, RealVector& tp_weights)
 {
   // extract tensor vars/resp from surrData and tensor weights from collocWts1D
-  SparseGridDriver*   ssg_driver = (SparseGridDriver*)driverRep;
-  const UShortArray&    sm_index = ssg_driver->smolyak_multi_index()[tp_index];
-  const UShort2DArray&       key = ssg_driver->collocation_key()[tp_index];
-  const SizetArray& colloc_index = ssg_driver->collocation_indices()[tp_index];
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  const UShortArray&    sm_index = csg_driver->smolyak_multi_index()[tp_index];
+  const UShort2DArray&       key = csg_driver->collocation_key()[tp_index];
+  const SizetArray& colloc_index = csg_driver->collocation_indices()[tp_index];
   const Real3DArray& colloc_wts_1d
-    = ssg_driver->type1_collocation_weights_array();
+    = csg_driver->type1_collocation_weights_array();
   const SDVArray& data_vars = surrData.variables_data();
   const SDRArray& data_resp = surrData.response_data();
   size_t i, j, index, num_tp_pts = colloc_index.size();
@@ -1508,6 +1536,11 @@ integrate_expansion(const UShort2DArray& multi_index,
   // sparse grids could do this as well, but it is better to integrate the
   // sparse grid on a per-tensor-product basis folowed by summing the
   // corresponding PC expansions.
+  if (data_resp[0].is_null()) {
+    PCerr << "Error: null SDR in OrthogPolyApproximation::integrate_expansion()"
+	  << std::endl;
+    abort_handler(-1);
+  }
   size_t i, j, k, num_exp_terms = multi_index.size(),
     num_pts = std::min(data_vars.size(), data_resp.size()),
     num_deriv_vars = data_resp[0].response_gradient().length();
@@ -2893,7 +2926,10 @@ compute_numerical_response_moments(size_t num_moments)
   }
 
   // update numericalMoments based on data_coeffs
-  compute_numerical_moments(num_moments, data_coeffs, numericalMoments);
+  if (numericalMoments.length() != num_moments)
+    numericalMoments.sizeUninitialized(num_moments);
+  compute_numerical_moments(data_coeffs, driverRep->type1_weight_sets(),
+			    numericalMoments);
 }
 
 

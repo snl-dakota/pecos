@@ -17,7 +17,7 @@
 
 #include "BasisApproximation.hpp"
 #include "SurrogateData.hpp"
-#include "SparseGridDriver.hpp"
+#include "CombinedSparseGridDriver.hpp"
 
 
 namespace Pecos {
@@ -59,8 +59,9 @@ public:
 
 //private:
 
-  /// identifies the approach taken in compute_coefficients():
-  /// QUADRATURE, CUBATURE, SPARSE_GRID, REGRESSION, or SAMPLING
+  /// identifies the approach taken in compute_coefficients(): QUADRATURE,
+  /// CUBATURE, COMBINED_SPARSE_GRID, HIERARCHICAL_SPARSE_GRID, REGRESSION,
+  /// or SAMPLING
   short expCoeffsSolnApproach;
 
   /// flag for calculation of expansion coefficients from response values
@@ -203,9 +204,20 @@ public:
   /// size derived class data attributes
   virtual void allocate_arrays() = 0;
 
-  /// retrieve the response gradient for a stored expansion using the
-  /// given parameter vector and default DVV
+  /// retrieve the gradient for a response expansion with respect to
+  /// all variables included in the polynomial bases using the given
+  /// parameter vector and default DVV
   virtual const RealVector& gradient_basis_variables(const RealVector& x) = 0;
+  /// retrieve the gradient for a response expansion with respect to
+  /// variables included in the polynomial basis for a given parameter
+  /// vector and a given DVV subset
+  virtual const RealVector& gradient_basis_variables(const RealVector& x,
+						     const SizetArray& dvv) = 0;
+  /// retrieve the gradient for a response expansion with respect to
+  /// all variables not included in the polynomial bases using the
+  /// given parameter vector and default DVV
+  virtual const RealVector&
+    gradient_nonbasis_variables(const RealVector& x) = 0;
 
   /// retrieve the response value for a stored expansion using the
   /// given parameter vector
@@ -364,6 +376,13 @@ public:
   static void tensor_product_multi_index(const UShortArray& order,
 					 UShort2DArray& multi_index,
 					 bool include_upper_bound = true);
+  /// initialize multi_index using a hierarchical tensor-product expansion
+  static void hierarchical_tensor_product_multi_index(
+    const UShort2DArray& delta_quad, UShort2DArray& multi_index);
+  /// initialize multi_index using a total-order expansion
+  /// from a scalar level
+  static void total_order_multi_index(unsigned short level, size_t num_vars, 
+				      UShort2DArray& multi_index);
   /// initialize expansion multi_index using a total-order expansion
   /// from an upper_bound array specification
   static void total_order_multi_index(const UShortArray& upper_bound,
@@ -402,13 +421,13 @@ protected:
   //
 
   /// compute central moments of response using type1 numerical integration
-  void compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
-				 RealVector& moments);
+  void compute_numerical_moments(const RealVector& coeffs,
+				 const RealVector& t1_wts, RealVector& moments);
   /// compute central moments of response using type1/2 numerical integration
-  void compute_numerical_moments(size_t num_moments,
-				 const RealVector& t1_coeffs,
+  void compute_numerical_moments(const RealVector& t1_coeffs,
 				 const RealMatrix& t2_coeffs,
-				 RealVector& moments);
+				 const RealVector& t1_wts,
+				 const RealMatrix& t2_wts, RealVector& moments);
   /// standardize third and higher central moments and eliminate excess kurtosis
   void standardize_moments(RealVector& moments);
 
@@ -468,9 +487,6 @@ protected:
 
   /// saved trial sets that were computed but not selected
   std::deque<UShortArray> savedLevMultiIndex;
-  /// storage of level multi-index (levels for tensor or sparse grids)
-  /// for subsequent restoration
-  UShort2DArray storedLevMultiIndex;
 
   /// introduce mapping to unify disparate enumeration of sensitivity
   /// indices (e.g. main effects only vs all effects)
@@ -672,16 +688,17 @@ inline size_t PolynomialApproximation::restoration_index()
 }
 
 
+/** For {Orthog,NodalInterp}PolyApproximation. */
 inline size_t PolynomialApproximation::finalization_index(size_t i)
 {
-  SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-  const UShort2DArray& sm_multi_index = ssg_driver->smolyak_multi_index();
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  const UShort2DArray&  sm_multi_index = csg_driver->smolyak_multi_index();
 
   // sm_multi_index is updated in SparseGridDriver::finalize_sets() with all
   // of the remaining trial sets.  Below, we determine the order with which
   // these appended trial sets appear in savedLevMultiIndex
-  // (SparseGridDriver::trialSets is a sorted set, but savedLevMultiIndex
-  // retains order of insertion).
+  // (SparseGridDriver::computedTrialSets is a sorted set, but
+  // savedLevMultiIndex retains order of insertion).
   size_t num_saved_indices = savedLevMultiIndex.size(),
          start = sm_multi_index.size() - num_saved_indices;
   return find_index(savedLevMultiIndex, sm_multi_index[start+i]);

@@ -68,25 +68,29 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // ---------------------------------------
 // Admin/bookkeeping arrays (serial only):
 // ---------------------------------------
-typedef std::deque<bool>            BoolDeque; // See Meyers' Effective STL, #18
-typedef std::vector<Real>           RealArray;
-typedef std::vector<RealArray>      Real2DArray;
-typedef std::vector<Real2DArray>    Real3DArray;
-typedef std::vector<int>            IntArray;
-typedef std::vector<IntArray>       Int2DArray;
-typedef std::vector<short>          ShortArray;
-typedef std::vector<unsigned short> UShortArray;
-typedef std::vector<UShortArray>    UShort2DArray;
-typedef std::vector<UShort2DArray>  UShort3DArray;
-typedef std::vector<size_t>         SizetArray;
-typedef std::vector<SizetArray>     Sizet2DArray;
-typedef std::list<size_t>           SizetList;
+typedef std::deque<bool>             BoolDeque; // See Meyers' Effective STL #18
+typedef std::vector<Real>            RealArray;
+typedef std::vector<RealArray>       Real2DArray;
+typedef std::vector<Real2DArray>     Real3DArray;
+typedef std::vector<int>             IntArray;
+typedef std::vector<IntArray>        Int2DArray;
+typedef std::vector<short>           ShortArray;
+typedef std::vector<unsigned short>  UShortArray;
+typedef std::vector<UShortArray>     UShort2DArray;
+typedef std::vector<UShort2DArray>   UShort3DArray;
+typedef std::vector<UShort3DArray>   UShort4DArray;
+typedef std::vector<size_t>          SizetArray;
+typedef std::vector<SizetArray>      Sizet2DArray;
+typedef std::vector<Sizet2DArray>    Sizet3DArray;
+typedef std::list<size_t>            SizetList;
 typedef std::vector<std::complex<Real> >    ComplexArray;
 typedef std::vector<std::pair<Real, Real> > RealPairArray;
-typedef std::vector<String>         StringArray;
-typedef std::vector<RealVector>     RealVectorArray;
-typedef std::vector<RealMatrix>     RealMatrixArray;
-typedef std::vector<RealSymMatrix>  RealSymMatrixArray;
+typedef std::vector<String>          StringArray;
+typedef std::vector<RealVector>      RealVectorArray;
+typedef std::vector<RealVectorArray> RealVector2DArray;
+typedef std::vector<RealMatrix>      RealMatrixArray;
+typedef std::vector<RealMatrixArray> RealMatrix2DArray;
+typedef std::vector<RealSymMatrix>   RealSymMatrixArray;
 
 //typedef std::vector<BasisFunction>  BasisFunctionArray;
 typedef std::vector<SurrogateDataVars> SDVArray;

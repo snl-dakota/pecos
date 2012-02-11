@@ -9,543 +9,420 @@
 //- Class:        HierarchInterpPolyApproximation
 //- Description:  Implementation code for InterpPolyApproximation class
 //-               
-//- Owner:        Chris Miller
+//- Owner:        Mike Eldred
 
 #include "HierarchInterpPolyApproximation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
+//#define DEBUG
+//#define INTERPOLATION_TEST
+
 namespace Pecos {
 
 
-HierarchInterpPolyApproximation::
-HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
-				bool use_derivs):
-  InterpPolyApproximation(basis_type,num_vars,use_derivs)
-{}
+void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort4DArray& key = hsg_driver->collocation_key();
+  size_t i, j, k, num_levels = key.size(), num_sets, num_tp_pts,
+    num_deriv_vars = surrData.num_derivative_variables();
+  bool t1c = false, t2c = false, t1g = false;
+  if (expConfigOptions.expansionCoeffFlag) {
+    if (expansionType1Coeffs.size() != num_levels)
+      { expansionType1Coeffs.resize(num_levels); t1c = true; }
+    if (basisConfigOptions.useDerivs &&
+	expansionType2Coeffs.size() != num_levels)
+      { expansionType2Coeffs.resize(num_levels); t2c = true; }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag &&
+      expansionType1CoeffGrads.size() != num_levels)
+    { expansionType1CoeffGrads.resize(num_levels); t1g = true; }
+
+  if (t1c || t2c || t1g)
+    for (i=0; i<num_levels; ++i) {
+      const UShort3DArray& key_i = key[i];
+      num_sets = key_i.size();
+      if (t1c) expansionType1Coeffs[i].resize(num_sets);
+      if (t2c) expansionType2Coeffs[i].resize(num_sets);
+      if (t1g) expansionType1CoeffGrads[i].resize(num_sets);
+      for (j=0; j<num_sets; ++j) {
+	num_tp_pts = key_i[j].size();
+	for (k=0; k<num_tp_pts; ++k) {
+	  if (t1c) expansionType1Coeffs[i][j].sizeUninitialized(num_tp_pts);
+	  if (t2c) expansionType2Coeffs[i][j].shapeUninitialized(
+	    num_deriv_vars, num_tp_pts);
+	  if (t1g) expansionType1CoeffGrads[i][j].shapeUninitialized(
+	    num_deriv_vars, num_tp_pts);
+	}
+      }
+    }
+
+  // checking numCollocPts is insufficient due to anisotropy --> changes in
+  // anisotropic weights could move points around without changing the total.
+  //bool update_exp_form =
+  //  ( (expConfigOptions.expansionCoeffFlag &&
+  //     expansionType1Coeffs.length()      != numCollocPts) ||
+  //    (expConfigOptions.expansionCoeffGradFlag &&
+  //     expansionType1CoeffGrads.numCols() != numCollocPts ) );
+}
 
 
-HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
-{}
+void HierarchInterpPolyApproximation::compute_expansion_coefficients()
+{
+  if (surrData.anchor()) {
+    PCerr << "Error: anchor point not supported in HierarchInterpPoly"
+	  << "Approximation::compute_expansion_coefficients" << std::endl;
+    abort_handler(-1);
+    /*
+    if (expConfigOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[0][0][0] = surrData.anchor_function();
+      if (basisConfigOptions.useDerivs)
+	Teuchos::setCol(surrData.anchor_gradient(), 0,
+			expansionType2Coeffs[0][0]);
+    }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      Teuchos::setCol(surrData.anchor_gradient(), 0,
+		      expansionType1CoeffGrads[0][0]);
+    */
+  }
+
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort4DArray& key = hsg_driver->collocation_key();
+  size_t i, j, k, l, num_levels = key.size(), num_sets, num_tp_pts, cntr = 0,
+    num_deriv_vars = surrData.num_derivative_variables();
+
+  // level 0
+  if (expConfigOptions.expansionCoeffFlag) {
+    expansionType1Coeffs[0][0][0] = surrData.response_function(cntr);
+    if (basisConfigOptions.useDerivs)
+      Teuchos::setCol(surrData.response_gradient(cntr), 0,
+		      expansionType2Coeffs[0][0]);
+  }
+  if (expConfigOptions.expansionCoeffGradFlag)
+    Teuchos::setCol(surrData.response_gradient(cntr), 0,
+		    expansionType1CoeffGrads[0][0]);
+  ++cntr;
+  // levels 1 to num_levels
+  for (i=1; i<num_levels; ++i) {
+    const UShort3DArray& key_i = key[i];
+    num_sets = key_i.size();
+    for (j=0; j<num_sets; ++j) {
+      num_tp_pts = key_i[j].size();
+      for (k=0; k<num_tp_pts; ++k, ++cntr) {
+	const RealVector& c_vars = surrData.continuous_variables(cntr);
+	// coefficients are hierarchical surpluses
+	if (expConfigOptions.expansionCoeffFlag) {
+	  expansionType1Coeffs[i][j][k]
+	    = surrData.response_function(cntr) - value(c_vars, i-1);
+	  if (basisConfigOptions.useDerivs) {
+	    const RealVector& data_grad = surrData.response_gradient(cntr);
+	    const RealVector& prev_grad = gradient_basis_variables(c_vars, i-1);
+	    Real* hier_grad = expansionType2Coeffs[i][j][k];
+	    for (l=0; l<num_deriv_vars; ++l)
+	      hier_grad[l] = data_grad[l] - prev_grad[l];
+	    //RealVector hier_grad = surrData.response_gradient(cntr);
+	    //hier_grad -= gradient_basis_variables(c_vars, i-1);
+	    //Teuchos::setCol(hier_grad, (int)k, expansionType2Coeffs[i][j]);
+	  }
+	}
+	if (expConfigOptions.expansionCoeffGradFlag) {
+	  const RealVector& data_grad = surrData.response_gradient(cntr);
+	  const RealVector& prev_grad = gradient_nonbasis_variables(c_vars,i-1);
+	  Real* hier_grad = expansionType1CoeffGrads[i][j][k];
+	  for (l=0; l<num_deriv_vars; ++l)
+	    hier_grad[l] = data_grad[l] - prev_grad[l];
+	  //RealVector hier_grad = surrData.response_gradient(cntr);
+	  //hier_grad -= gradient_nonbasis_variables(c_vars, i-1);
+	  //Teuchos::setCol(hier_grad, (int)k, expansionType1CoeffGrads[i][j]);
+	}
+      }
+    }
+  }
+
+#ifdef INTERPOLATION_TEST
+
+  // TO DO
+
+  // SC should accurately interpolate the collocation data for TPQ and
+  // SSG with fully nested rules, but will exhibit interpolation error
+  // for SSG with other rules.
+  index = 0;
+  Real val, err, val_max_err = 0., grad_max_err = 0.,
+       val_rmse = 0., grad_rmse = 0.;
+  PCout << std::scientific << std::setprecision(WRITE_PRECISION);
+  for (size_t i=0; i<numCollocPts; ++i, ++index) {
+    const Real&       coeff1 = expansionType1Coeffs[i];
+    const RealVector& c_vars = surrData.continuous_variables(index);
+    val = value(c_vars);
+    err = (std::abs(coeff1) > DBL_MIN) ? std::abs(1. - val/coeff1) :
+                                         std::abs(coeff1 - val);
+    PCout << "Colloc pt " << std::setw(3) << i+1
+	  << ": truth value  = "  << std::setw(WRITE_PRECISION+7) << coeff1
+	  << " interpolant = "    << std::setw(WRITE_PRECISION+7) << val
+	  << " relative error = " << std::setw(WRITE_PRECISION+7) << err <<'\n';
+    if (err > val_max_err) val_max_err = err; val_rmse += err * err;
+    if (basisConfigOptions.useDerivs) {
+      const Real*     coeff2 = expansionType2Coeffs[i];
+      const RealVector& grad = gradient_basis_variables(c_vars);
+      for (size_t j=0; j<numVars; ++j) {
+	err = (std::abs(coeff2[j]) > DBL_MIN) ?
+	  std::abs(1. - grad[j]/coeff2[j]) : std::abs(coeff2[j] - grad[j]);
+	PCout << "               " << "truth grad_" << j+1 << " = "
+	      << std::setw(WRITE_PRECISION+7) << coeff2[j] << " interpolant = "
+	      << std::setw(WRITE_PRECISION+7) << grad[j] << " relative error = "
+	      << std::setw(WRITE_PRECISION+7) << err << '\n';
+	if (err > grad_max_err) grad_max_err = err; grad_rmse += err * err;
+      }
+    }
+  }
+  val_rmse = std::sqrt(val_rmse/numCollocPts);
+  PCout << "\nValue interpolation errors:    " << std::setw(WRITE_PRECISION+7)
+	<< val_max_err << " (max) "            << std::setw(WRITE_PRECISION+7)
+	<< val_rmse    << " (RMS)\n";
+  if (basisConfigOptions.useDerivs) {
+    grad_rmse = std::sqrt(grad_rmse/numCollocPts/numVars);
+    PCout << "Gradient interpolation errors: " << std::setw(WRITE_PRECISION+7)
+	  << grad_max_err << " (max) "         << std::setw(WRITE_PRECISION+7)
+	  << grad_rmse    << " (RMS)\n";
+  }
+#endif // INTERPOLATION_TEST
+}
 
 
-Real HierarchInterpPolyApproximation::value(const RealVector& x)
+void HierarchInterpPolyApproximation::store_coefficients()
+{
+  if (expConfigOptions.expansionCoeffFlag) {
+    storedExpType1Coeffs   = expansionType1Coeffs;
+    if (basisConfigOptions.useDerivs)
+      storedExpType2Coeffs = expansionType2Coeffs;
+  }
+  if (expConfigOptions.expansionCoeffGradFlag)
+    storedExpType1CoeffGrads = expansionType1CoeffGrads;
+
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  storedLevMultiIndex = hsg_driver->smolyak_multi_index();
+  storedCollocKey     = hsg_driver->collocation_key();
+  storedCollocIndices = hsg_driver->collocation_indices();
+}
+
+
+void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
+{
+  // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
+  // multiplying stored expansion evaluated at current collocation points
+  size_t i, j, num_pts = surrData.size();
+  Real lf_val, discrep_val;
+  /*
+  for (i=0; i<num_pts; ++i) {
+    const RealVector& c_vars = (anchor_pt && i == 0) ?
+      surrData.anchor_continuous_variables() :
+      surrData.continuous_variables(i);
+    if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
+      discrep_val = stored_value(c_vars);
+      lf_val = expansionType1Coeffs[i]; // copy prior to update
+    }
+    if (expConfigOptions.expansionCoeffFlag) {
+      // split up type1/type2 contribs so increments are performed properly
+      if (combine_type == ADD_COMBINE)
+	expansionType1Coeffs[i] += stored_value(c_vars);
+      else if (combine_type == MULT_COMBINE)
+	expansionType1Coeffs[i] *= discrep_val;
+      if (basisConfigOptions.useDerivs) {
+	const RealVector& discrep_grad
+	  = stored_gradient_basis_variables(c_vars);
+	Real* exp_t2_coeffs_i = expansionType2Coeffs[i];
+	size_t num_deriv_vars = discrep_grad.length();
+	if (combine_type == ADD_COMBINE)
+	  for (j=0; j<num_deriv_vars; ++j)
+	    exp_t2_coeffs_i[j] += discrep_grad[j];
+	else if (combine_type == MULT_COMBINE)
+	  // hf = lf*discrep --> dhf/dx = dlf/dx*discrep + lf*ddiscrep/dx
+	  for (j=0; j<num_deriv_vars; ++j)
+	    exp_t2_coeffs_i[j] = exp_t2_coeffs_i[j] * discrep_val
+	                       + discrep_grad[j]    * lf_val;
+      }
+    }
+    if (expConfigOptions.expansionCoeffGradFlag) {
+      Real* exp_t1_grad_i = expansionType1CoeffGrads[i];
+      const RealVector& discrep_grad
+	= stored_gradient_nonbasis_variables(c_vars);
+      size_t num_deriv_vars = discrep_grad.length();
+      if (combine_type == ADD_COMBINE)
+	for (j=0; j<num_deriv_vars; ++j)
+	  exp_t1_grad_i[j] += discrep_grad[j];
+      else if (combine_type == MULT_COMBINE)
+	for (j=0; j<num_deriv_vars; ++j)
+	  exp_t1_grad_i[j] = exp_t1_grad_i[j] * discrep_val
+	                   + discrep_grad[j]  * lf_val;
+    }
+  }
+  */
+
+  // clear stored data now that it has been combined
+  storedExpType1Coeffs.clear();
+  storedExpType2Coeffs.clear();
+  storedExpType1CoeffGrads.clear();
+  storedLevMultiIndex.clear();
+  storedCollocKey.clear();
+  storedCollocIndices.clear();
+}
+
+
+void HierarchInterpPolyApproximation::restore_expansion_coefficients()
+{
+  size_t new_colloc_pts = surrData.size();
+
+  /*
+  if (expConfigOptions.expansionCoeffFlag) {
+    expansionType1Coeffs.resize(new_colloc_pts);
+    if (basisConfigOptions.useDerivs) {
+      size_t num_deriv_vars = expansionType2Coeffs.numRows();
+      expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+    expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
+  }
+
+  for (int i=numCollocPts; i<new_colloc_pts; ++i) {
+    if (expConfigOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[i] = surrData.response_function(i);
+      if (basisConfigOptions.useDerivs)
+	Teuchos::setCol(surrData.response_gradient(i), i, expansionType2Coeffs);
+    }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      Teuchos::setCol(surrData.response_gradient(i),i,expansionType1CoeffGrads);
+  }
+  */
+
+  numCollocPts = new_colloc_pts;
+}
+
+
+Real HierarchInterpPolyApproximation::
+tensor_product_value(const RealVector& x, const RealVector& t1_coeffs,
+		     const RealMatrix& t2_coeffs,
+		     const UShortArray& basis_index, const UShort2DArray& key)
+{
+  // since coefficients are unique surpluses rather than non-unique
+  // response values, it likely makes sense to tie the surpluses to
+  // interpolation level and eliminate colloc_index
+
+  Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
+  if (t2_coeffs.empty())
+    for (i=0; i<num_colloc_pts; ++i)
+      tp_val += t1_coeffs[i] * 
+	        type1_interpolant_value(x, key[i], basis_index);
+  else {
+    size_t j;
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      tp_val += t1_coeffs[i] *
+	        type1_interpolant_value(x, key_i, basis_index);
+      const Real* t2_coeff_i = t2_coeffs[i];
+      for (j=0; j<numVars; ++j)
+	tp_val += t2_coeff_i[j] *
+	          type2_interpolant_value(x, j, key_i, basis_index);
+    }
+  }
+  return tp_val;
+}
+
+
+Real HierarchInterpPolyApproximation::
+value(const RealVector& x, unsigned short level)
 {
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
     abort_handler(-1);
   }
+
   Real approx_val = 0.;
-  int num_colloc_points = driverRep->grid_size();
-
-  //Grab the supports of the hierarchical basis functions.
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  const std::vector<Real2DArray>& supports = lr_driver->get_supports();
-
-  //Determine which basis functions share their support with x.
-  const IntArray& supportIndicator = in_support_of(x);
-  const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-  switch ( basisConfigOptions.useDerivs ) {
-  case false:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-	
-      Real local_val = 1.0;
-      const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-      const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-      const Real2DArray& this_point_support = supports[supportIndicator[i]];
-	
-      for ( unsigned int dim_idx = 0; dim_idx < numVars ; ++dim_idx ) {
-	const unsigned int this_dim_level = level_index[dim_idx][0];
-	//const unsigned int this_dim_index = level_index[dim_idx][1];
-	if ( this_dim_level == 1 )
-	  local_val *= 1;  //constant case
-	else { //Linear hat functions
-	  if ( x[dim_idx] == point[dim_idx] )
-	    local_val *= 1;
-	  else if (x[dim_idx] < point[dim_idx])
-	    local_val *= ( x[dim_idx] - this_point_support[0][dim_idx] ) / 
-	      ( point[dim_idx] - this_point_support[0][dim_idx] );
-	  else
-	    local_val *= ( this_point_support[1][dim_idx] - x[dim_idx] ) /
-	      ( this_point_support[1][dim_idx] - point[dim_idx] );
-	}
-      }
-      approx_val += expansionType1Coeffs[supportIndicator[i]] * local_val;
-    }
-    break;
-  case true:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i ) {
-	
-      Real local_val = 1.0;
-      const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]]; // column vector
-      const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-      const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-      const Real2DArray& this_point_support = supports[supportIndicator[i]];
-      RealVector terms(numVars+1);
-      terms[0] = expansionType1Coeffs[supportIndicator[i]];
-      for ( unsigned int j = 0; j < numVars; ++j) {
-	terms[j+1] = coeff2_i[j];
-      }
-      for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {
-	const unsigned int this_dim_level = level_index[dim_idx][0];
-	const unsigned int this_dim_index = level_index[dim_idx][1];
-	if ( this_dim_level == 1 ) {
-	  terms[0] *= 1;
-	  if (x[dim_idx] == point[dim_idx]) {
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 0 : 1;
-	    }
-	  } else if (x[dim_idx] < point[dim_idx]) {
-	    const Real t = (x[dim_idx] - this_point_support[0][dim_idx])/
-	      (point[dim_idx] - this_point_support[0][dim_idx]);
-	    const Real dx_by_dt = 
-	      point[dim_idx]-this_point_support[0][dim_idx];
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 
-		t*t*(t-1)*dx_by_dt : 1;
-	    }
-	  } else {
-	    const Real t = (x[dim_idx] - point[dim_idx])/
-	      (this_point_support[1][dim_idx] - point[dim_idx]);
-	    const Real dx_by_dt = 
-	      (this_point_support[1][dim_idx]-point[dim_idx]);
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 
-		t*(1-t)*(1-t)*dx_by_dt : 1;
-	    }
-	  }
-	} else {
-	  if (x[dim_idx] == point[dim_idx]) {
-	    terms[0] *= 1;
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 0 : 1;
-	    }
-	  } else if (x[dim_idx] < point[dim_idx]) {
-	    const Real t = (x[dim_idx] - this_point_support[0][dim_idx])/
-	      (point[dim_idx] - this_point_support[0][dim_idx]);
-	    const Real dx_by_dt = (point[dim_idx] - this_point_support[0][dim_idx]);
-	    terms[0] *= t*t*(3-2*t);
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? t*t*(t-1)*dx_by_dt : t*t*(3-2*t);
-	    }
-	  } else {
-	    const Real t = (x[dim_idx] - point[dim_idx])/
-	      (this_point_support[1][dim_idx] - point[dim_idx]);
-	    const Real dx_by_dt = (this_point_support[1][dim_idx] - point[dim_idx]);
-	    terms[0] *= (1+2*t)*(1-t)*(1-t);
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? t*(1-t)*(1-t)*dx_by_dt : (1+2*t)*(1-t)*(1-t);
-	    }
-	  }
-	}
-      }
-      for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator ) {
-	approx_val += terms[accumulator];
-      }
-      //Real const * fakeout = terms.RealMatrix::operator[](0);
-      //approx_val += std::accumulate(fakeout, fakeout+terms.length(), 0);
-    }
-    break;
+  // loop over outer level indices
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray& key   = hsg_driver->collocation_key();
+  for (size_t lev=0; lev<=level; ++lev) {
+    const UShort2DArray&       sm_mi_l = sm_mi[lev];
+    const UShort3DArray&         key_l = key[lev];
+    const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
+    const RealMatrixArray& t2_coeffs_l = expansionType2Coeffs[lev];
+    size_t set, num_sets = sm_mi_l.size();
+    for (set=0; set<num_sets; ++set)
+      approx_val += tensor_product_value(x, t1_coeffs_l[set], t2_coeffs_l[set],
+					 sm_mi_l[set], key_l[set]);
   }
   return approx_val;
 }
-  
+
 
 const RealVector& HierarchInterpPolyApproximation::
-gradient_basis_variables(const RealVector& x)
+gradient_basis_variables(const RealVector& x, unsigned short level)
 {
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
-    abort_handler(-1);
-  }
   approxGradient.size(numVars);
-  for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx )
-    approxGradient[dim_idx] = 0; 
-    
-  int num_colloc_points = driverRep->grid_size();
-
-  //Grab the supports of the hierarchical basis functions.
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  const std::vector<Real2DArray>& supports = lr_driver->get_supports();
-
-  //Determine which basis functions share their support with x.
-  const IntArray& supportIndicator = in_support_of(x);
-  const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-  switch ( basisConfigOptions.useDerivs ) {
-  case false:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-      const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-      const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-      const Real2DArray& this_point_support = supports[supportIndicator[i]];
-	
-      for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {
-	Real localGrad_i = 1;
-	const unsigned int this_dim_level = level_index[dim_idx][0];
-	const unsigned int this_dim_index = level_index[dim_idx][1];
-	if ( this_dim_level == 1 ) {
-	  localGrad_i *= 0;  //constant case
-	} else { //Linear hat functions
-	  if ( (x[dim_idx] == point[dim_idx]) || 
-	       (x[dim_idx] == this_point_support[0][dim_idx]) || 
-	       (x[dim_idx] == this_point_support[1][dim_idx]) ) {
-	    localGrad_i *= 0;
-	  } else if (x[dim_idx] < point[dim_idx]) {
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      localGrad_i *= (dim_idx == dim_idx2) ? 
-		1 / ( point[dim_idx] - this_point_support[0][dim_idx] ) :
-		(x[dim_idx2] - this_point_support[0][dim_idx2]) / 
-		( point[dim_idx2] - this_point_support[0][dim_idx2] );
-	    }
-	  } else {
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      localGrad_i *= (dim_idx == dim_idx2) ? 
-		-1 / ( this_point_support[1][dim_idx2] - point[dim_idx2] ) :
-		(point[dim_idx2] - x[dim_idx2])/( this_point_support[1][dim_idx2] - point[dim_idx2] );
-	    }
-	  }   
-	}
-	approxGradient[dim_idx] = approxGradient[dim_idx] + 
-	  expansionType1Coeffs[supportIndicator[i]] * localGrad_i;
-      }
-    }
-    break;
-  case true:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-      const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]];
-      const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-      const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-      const Real2DArray& this_point_support = supports[supportIndicator[i]];
-	
-      // These nested loops are filthy.
-      // dim_idx keeps track of which gradient entry we're filling.
-      // dim_idx2 keeps track of which variable we're thinking about.
-      // dim_idx3 tess us which term we're working on. 
-      for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {
-	RealVector terms(numVars+1);
-	terms[0] = expansionType1Coeffs[supportIndicator[i]];
-	for ( unsigned int j = 0; j < numVars; ++j ) {
-	  terms[j+1] = coeff2_i[j];
-	}
-	for ( unsigned int dim_idx2 = 0; dim_idx2< numVars; ++dim_idx2 ) { 
-	  const unsigned int this_dim_level = level_index[dim_idx2][0];
-	  const unsigned int this_dim_index = level_index[dim_idx2][1];
-	  if ( this_dim_level == 1 ) {
-	    terms[0] *= (dim_idx == dim_idx2) ? 0 : 1;  
-	    if ( x[dim_idx2] == point[dim_idx2] ) {
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  1 : 0;  // Take derivative of basis else don't
-		} else {  //Use type 1.
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    } else if ( x[dim_idx2] < point[dim_idx2] ) {
-	      const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
-		(point[dim_idx2] - this_point_support[0][dim_idx2]);
-	      const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
-	      const Real dt_by_dx = 1/dx_by_dt;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		    (3*t*t-2*t) : 
-		    dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		    0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    } else {
-	      const Real t = (x[dim_idx2] - point[dim_idx2])/
-		(this_point_support[1][dim_idx2] - point[dim_idx2]);
-	      const Real dx_by_dt = this_point_support[1][dim_idx2] - point[dim_idx2];
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		    (3*t*t - 4*t + 1) : 
-		    dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		    0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    }
-	  } else {  
-	    if ( x[dim_idx2] == point[dim_idx2] ) {
-	      terms[0] *= (dim_idx == dim_idx2) ? 0 : 1;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  1 : 0;  // Take derivative of basis else don't
-		} else {  //Use type 1.
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    } else if ( x[dim_idx2] < point[dim_idx2] ) {
-	      const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
-		(point[dim_idx2] - this_point_support[0][dim_idx2]);
-	      const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
-	      const Real dt_by_dx = 1/dx_by_dt;
-	      terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(-6*t*t + 6*t) : -2*t*t*t + 3*t*t;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		    (3*t*t-2*t) : 
-		    dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		    dt_by_dx*(-6*t*t+6*t) : t*t*(3-2*t); // Take derivative of basis else don't
-		}
-	      }
-	    } else {
-	      const Real t = (x[dim_idx2] - point[dim_idx2])/
-		(this_point_support[1][dim_idx2] - point[dim_idx2]);
-	      const Real dx_by_dt = this_point_support[0][dim_idx2] - point[dim_idx2];
-	      const Real dt_by_dx = 1/dx_by_dt;
-	      terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(6*t*t - 6*t) : 2*t*t*t - 3*t*t + 1;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		    (3*t*t - 4*t + 1) : 
-		    dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		    dt_by_dx*(6*t*t-6*t) : (1+2*t)*(1-t)*(1-t); // Take derivative of basis else don't
-		}
-	      }
-	    }
-	  }
-	}
-	for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator ) {
-	  approxGradient[dim_idx] += terms[accumulator];
-	}
-	//approxGradient[dim_idx] += std::accumulate(terms.RealMatrix::operator[](0),
-	//					     terms.RealMatrix::operator[](0) + terms.length(),
-	//					     0);
-      }
-    }
-    break;
-  }
+  // TO DO
   return approxGradient;
 }
 
 
 const RealVector& HierarchInterpPolyApproximation::
-gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
+gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
+			 unsigned short level)
 {
   size_t num_deriv_vars = dvv.size();
-  if ( approxGradient.length() != num_deriv_vars )
+  if (approxGradient.length() != num_deriv_vars)
     approxGradient.sizeUninitialized(num_deriv_vars);
-    
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
-    abort_handler(-1);
-  }
-    
-  for ( unsigned int dim_idx = 0; dim_idx < num_deriv_vars; ++dim_idx )
-    approxGradient[dim_idx] = 0; 
-    
-  int num_colloc_points = driverRep->grid_size();
-
-  //Grab the supports of the hierarchical basis functions.
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  const std::vector<Real2DArray>& supports = lr_driver->get_supports();
-
-  //Determine which basis functions share their support with x.
-  const IntArray& supportIndicator = in_support_of(x);
-  const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-  switch ( basisConfigOptions.useDerivs ) {
-  case false:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-      const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-      const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-      const Real2DArray& this_point_support = supports[supportIndicator[i]];
-	
-      for ( unsigned int dim_idx = 0; dim_idx < num_deriv_vars; ++dim_idx ) {
-	Real localGrad_i = 1;
-	const size_t deriv_index = dvv[dim_idx] - 1;
-	const unsigned int this_dim_level = level_index[deriv_index][0];
-	const unsigned int this_dim_index = level_index[deriv_index][1];
-	if ( this_dim_level == 1 ) {
-	  localGrad_i *= 0;  //constant case
-	} else { //Linear hat functions
-	  if ( (x[deriv_index] == point[deriv_index]) || 
-	       (x[deriv_index] == this_point_support[0][deriv_index]) || 
-	       (x[deriv_index] == this_point_support[1][deriv_index]) ) {
-	    localGrad_i *= 0;
-	  } else if (x[deriv_index] < point[deriv_index]) {
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      localGrad_i *= (deriv_index == dim_idx2) ? 
-		1 / ( point[deriv_index] - this_point_support[0][deriv_index] ) :
-		(x[dim_idx2] - this_point_support[0][dim_idx2]) / 
-		( point[dim_idx2] - this_point_support[0][dim_idx2] );
-	    }
-	  } else {
-	    for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-	      localGrad_i *= (deriv_index == dim_idx2) ? 
-		-1 / ( this_point_support[1][deriv_index] - point[deriv_index] ) :
-		(point[dim_idx2] - x[dim_idx2])/( this_point_support[1][dim_idx2] - point[dim_idx2] );
-	    }
-	  }   
-	}
-	approxGradient[dim_idx] = approxGradient[dim_idx] + 
-	  expansionType1Coeffs[supportIndicator[i]] * localGrad_i;
-      }
-    }
-    break;
-  case true:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-      const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]];
-      const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-      const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-      const Real2DArray& this_point_support = supports[supportIndicator[i]];
-	
-      // These nested loops are filthy.
-      // dim_idx keeps track of which gradient entry we're filling.
-      // dim_idx2 keeps track of which variable we're thinking about.
-      // dim_idx3 tess us which term we're working on. 
-      for ( unsigned int dim_idx = 0; dim_idx < num_deriv_vars; ++dim_idx ) {
-	RealVector terms(numVars+1);
-	const size_t deriv_index = dvv[dim_idx] - 1;
-	terms[0] = expansionType1Coeffs[supportIndicator[i]];
-	for ( unsigned int j = 0; j < numVars; ++j ) {
-	  terms[j+1] = coeff2_i[j];
-	}
-	for ( unsigned int dim_idx2 = 0; dim_idx2< numVars; ++dim_idx2 ) { 
-	  const unsigned int this_dim_level = level_index[dim_idx2][0];
-	  const unsigned int this_dim_index = level_index[dim_idx2][1];
-	  if ( this_dim_level == 1 ) {
-	    terms[0] *= (deriv_index == dim_idx2) ? 0 : 1;  
-	    if ( x[dim_idx2] == point[dim_idx2] ) {
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  1 : 0;  // Take derivative of basis else don't
-		} else {  //Use type 1.
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    } else if ( x[dim_idx2] < point[dim_idx2] ) {
-	      const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
-		(point[dim_idx2] - this_point_support[0][dim_idx2]);
-	      const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
-	      const Real dt_by_dx = 1/dx_by_dt;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
-		    (3*t*t-2*t) : 
-		    dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
-		    0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    } else {
-	      const Real t = (x[dim_idx2] - point[dim_idx2])/
-		(this_point_support[1][dim_idx2] - point[dim_idx2]);
-	      const Real dx_by_dt = this_point_support[1][dim_idx2] - point[dim_idx2];
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
-		    (3*t*t - 4*t + 1) : 
-		    dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
-		    0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    }
-	  } else {  
-	    if ( x[dim_idx2] == point[dim_idx2] ) {
-	      terms[0] *= (deriv_index == dim_idx2) ? 0 : 1;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  1 : 0;  // Take derivative of basis else don't
-		} else {  //Use type 1.
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 0 : 1; // Take derivative of basis else don't
-		}
-	      }
-	    } else if ( x[dim_idx2] < point[dim_idx2] ) {
-	      const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
-		(point[dim_idx2] - this_point_support[0][dim_idx2]);
-	      const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
-	      const Real dt_by_dx = 1/dx_by_dt;
-	      terms[0] *= (deriv_index == dim_idx2) ?  dt_by_dx*(-6*t*t + 6*t) : -2*t*t*t + 3*t*t;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
-		    (3*t*t-2*t) : 
-		    dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
-		    dt_by_dx*(-6*t*t+6*t) : t*t*(3-2*t); // Take derivative of basis else don't
-		}
-	      }
-	    } else {
-	      const Real t = (x[dim_idx2] - point[dim_idx2])/
-		(this_point_support[1][dim_idx2] - point[dim_idx2]);
-	      const Real dx_by_dt = this_point_support[0][dim_idx2] - point[dim_idx2];
-	      const Real dt_by_dx = 1/dx_by_dt;
-	      terms[0] *= (deriv_index == dim_idx2) ?  dt_by_dx*(6*t*t - 6*t) : 2*t*t*t - 3*t*t + 1;
-	      for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ?  
-		    (3*t*t - 4*t + 1) : 
-		    dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
-		} else { //use type 1
-		  terms[dim_idx3+1] *= (dim_idx2 == deriv_index) ? 
-		    dt_by_dx*(6*t*t-6*t) : (1+2*t)*(1-t)*(1-t); // Take derivative of basis else don't
-		}
-	      }
-	    }
-	  }
-	}
-	for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator ) {
-	  approxGradient[dim_idx] += terms[accumulator];
-	}
-      }
-    }
-    break;
-  }
+  // TO DO
   return approxGradient;
 }
+
+
+const RealVector& HierarchInterpPolyApproximation::
+gradient_nonbasis_variables(const RealVector& x, unsigned short level)
+{
+  size_t num_deriv_vars;  // TO DO
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.sizeUninitialized(num_deriv_vars);
+  // TO DO
+  return approxGradient;
+}
+
 
 Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
 { return 0.; /* TO DO */ }
+
 
 const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x)
 { return approxGradient; /* TO DO */ }
 
+
 const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x)
 { return approxGradient; /* TO DO */ }
+
 
 Real HierarchInterpPolyApproximation::mean()
 {
   // Error check for required data
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::mean()" << std::endl;
+	  << "HierarchInterpPolyApproximation::mean()" << std::endl;
     abort_handler(-1);
   }
   Real mean = 0.;
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
   switch (basisConfigOptions.useDerivs) {
   case false:
-    for ( unsigned int i = 0; i<numCollocPts; ++i)
-      mean += expansionType1Coeffs[i] * t1_wts[i];
+    //for ( unsigned int i = 0; i<numCollocPts; ++i)
+    //  mean += expansionType1Coeffs[i] * t1_wts[i];
     break;
   case true:
-    const RealMatrix& t2_wts = driverRep->type2_weight_sets();
+    const RealMatrix2DArray& t2_wts = hsg_driver->type2_weight_set_arrays();
+    /*
     for ( unsigned int i = 0; i< numCollocPts; ++i) {
       mean += expansionType1Coeffs[i] * t1_wts[i];
       const Real* coeff2_i = expansionType2Coeffs[i];
@@ -553,10 +430,12 @@ Real HierarchInterpPolyApproximation::mean()
       for (unsigned int j = 0; j< numVars; ++j)
 	mean += coeff2_i[j] * t2_wt_i[j];
     }
+    */
     break;
   }
   return mean;
 }
+
 
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
@@ -564,16 +443,18 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
   return numericalMoments[0];
 }
 
-const RealVector& HierarchInterpPolyApproximation::
-mean_gradient()
+
+const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 {
   // Error check for required data
   if (!expConfigOptions.expansionCoeffGradFlag) {
-    PCerr << "Error: expansion coefficient gradients not defined in Nodal"
+    PCerr << "Error: expansion coefficient gradients not defined in Hierarch"
 	  << "InterpPolyApproximation::mean_gradient()." << std::endl;
     abort_handler(-1);
   }
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
+  /*
   size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
   if (meanGradient.length() != num_deriv_vars)
     meanGradient.sizeUninitialized(num_deriv_vars);
@@ -583,8 +464,10 @@ mean_gradient()
     for (j=0; j<num_deriv_vars; ++j)
       meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
   }
+  */
   return meanGradient;
 }
+
 
 const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
@@ -593,8 +476,10 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   return meanGradient;
 }
 
+
 Real HierarchInterpPolyApproximation::variance()
 { return covariance(this); }
+
 
 Real HierarchInterpPolyApproximation::variance(const RealVector& x)
 {
@@ -603,12 +488,14 @@ Real HierarchInterpPolyApproximation::variance(const RealVector& x)
   return numericalMoments[1];
 }
 
+
 const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
   //TODO
   PCerr << "TODO: variance_gradient()" << std::endl;
   return varianceGradient;
 }
+
 
 const RealVector& HierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
@@ -618,30 +505,35 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   return varianceGradient;
 }
 
+
 Real HierarchInterpPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
   // Error check for required data
   if (!expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
+	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
+  Real covar = 0.;
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     static_cast<HierarchInterpPolyApproximation*>(poly_approx_2);
   Real mean_1 = mean(), mean_2 = hip_approx_2->mean();
-  const RealVector& t1_coeffs_2 = hip_approx_2->expansionType1Coeffs;
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
-  Real covar = 0.0;
+  const RealVector2DArray& t1_coeffs_2 = hip_approx_2->expansionType1Coeffs;
+  const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
   switch (basisConfigOptions.useDerivs) {
   case false:
+    /*
     for ( unsigned int i=0; i<numCollocPts; ++i)
       covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
 	*  t1_wts[i];
+    */
     break;
   case true:
-    const RealMatrix& t2_coeffs_2 = hip_approx_2->expansionType2Coeffs;
-    const RealMatrix& t2_wts = driverRep->type2_weight_sets();
+    const RealMatrix2DArray& t2_coeffs_2 = hip_approx_2->expansionType2Coeffs;
+    const RealMatrix2DArray& t2_wts = hsg_driver->type2_weight_set_arrays();
+    /*
     for ( unsigned int i = 0; i < numCollocPts; ++i) {
       // type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
       Real coeff1_i_mm1 = expansionType1Coeffs[i] - mean_1;
@@ -655,455 +547,208 @@ covariance(PolynomialApproximation* poly_approx_2)
 	covar  += (coeff1_i_mm1 * coeff2_2i[j] + coeff1_2i_mm2 * coeff2_i[j])
 	  *  t2_wt_i[j];
     }
+    */
     break;
   }
   return covar;
 }
+
 
 Real HierarchInterpPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   //TODO
   PCerr << "TODO: covariance in all variables" << std::endl;
-  Real var;
-  return var;
+  Real covar = 0.;
+  return covar;
 }
 
-const IntArray& HierarchInterpPolyApproximation::
-in_support_of(const RealVector& x)
-{
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  supportIndicator.clear();
-  supportIndicator.reserve( driverRep->grid_size() );
-  const std::vector<Real2DArray>& supports = lr_driver->get_supports();
-  bool is_in_support;
 
-  for ( unsigned int idx = 0; idx < numCollocPts; ++idx ) {
-    is_in_support = true;
-    for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {
-      if ( ( x[dim_idx] > supports[idx][1][dim_idx] ) || ( x[dim_idx] < supports[idx][0][dim_idx] ) ) {
-	is_in_support = false;
-	break;
-      }
-    }
-    if ( is_in_support ) supportIndicator.push_back(idx);
+void HierarchInterpPolyApproximation::
+compute_numerical_response_moments(size_t num_moments)
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+	  << "Approximation::compute_numerical_response_moments()" << std::endl;
+    abort_handler(-1);
   }
-  return supportIndicator;
+
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  /* TO DO: add another PolynomialApproximation formulation
+  if (numericalMoments.size() != num_moments)
+    numericalMoments.size(num_moments);
+  if (basisConfigOptions.useDerivs)
+    compute_numerical_moments(expansionType1Coeffs, expansionType2Coeffs,
+			      hsg_driver->type1_weight_set_arrays(),
+			      hsg_driver->type2_weight_set_arrays(),
+			      numericalMoments);
+  else
+    compute_numerical_moments(expansionType1Coeffs,
+			      hsg_driver->type1_weight_set_arrays(),
+			      numericalMoments);
+  */
 }
 
-void HierarchInterpPolyApproximation::compute_coefficients()
+
+void HierarchInterpPolyApproximation::
+compute_numerical_expansion_moments(size_t num_moments)
 {
-  //std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
-  expansionType1Coeffs.resize(surrData.size());
-  assert( driverRep != NULL );
-  numCollocPts = driverRep->grid_size();
-  assert(numCollocPts == surrData.size());
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  const std::vector<CollocationPoint>& col_pts = 
-    lr_driver->get_collocation_points();
-  numVars = surrData.continuous_variables(0).length();
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
+    abort_handler(-1);
+  }
+  if (expansionMoments.length() != num_moments)
+    expansionMoments.sizeUninitialized(num_moments);
+
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  /* TO DO: add another PolynomialApproximation formulation
+  size_t i, num_pts = surrData.size();
+  RealVector t1_exp(num_pts);
   if (basisConfigOptions.useDerivs) {
-    expansionType2Coeffs.shapeUninitialized(numVars,surrData.size());
-  }
-  expansionType1Coeffs[0] = surrData.response_function(0);
-  Teuchos::setCol(surrData.response_gradient(0),0,expansionType2Coeffs);
-  unsigned int level = 1;
-  for (int i=1; i<numCollocPts; ++i) {
-    if (expConfigOptions.expansionCoeffFlag) {
-      const Int2DArray& level_index = col_pts[i].get_level_index();
-      const RealVector& point = col_pts[i].get_point();
-      unsigned int this_point_level = col_pts[i].get_level();
-      if ( this_point_level > level ) {
-	level = this_point_level;
-      }
-      // for the Hierarchical case the coefficient is the function value 
-      //minus the intepolant value from the
-      // previous approximation level.  This is the so called 'hierarchical 
-      //surplus.'
-      expansionType1Coeffs[i] = surrData.response_function(i) - 
-	this->value(surrData.continuous_variables(i),level - 1);
-      if (basisConfigOptions.useDerivs) {
-	RealVector trueGrad = surrData.response_gradient(i);
-	RealVector approxGrad = this->
-	  gradient_basis_variables(surrData.continuous_variables(i), level-1);
-	for ( unsigned int idx = 0; idx < numVars; ++idx ){
-	  trueGrad[idx] -= approxGrad[idx];
-	}
-	Teuchos::setCol(trueGrad, i, expansionType2Coeffs);
-      }
+    RealMatrix t2_exp(numVars, num_pts);
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = surrData.continuous_variables(i);
+      t1_exp[i] = value(c_vars);
+      Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
     }
-    //if (expConfigOptions.expansionCoeffGradFlag)
-    //Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
+    compute_numerical_moments(t1_exp, t2_exp,
+                              hsg_driver->type1_weight_set_arrays(),
+			      hsg_driver->type2_weight_set_arrays(),
+			      expansionMoments);
   }
-  maxComputedCoeff = numCollocPts-1;
+  else {
+    for (i=0; i<num_pts; ++i)
+      t1_exp[i] = value(surrData.continuous_variables(i));
+    compute_numerical_moments(t1_exp, hsg_driver->type1_weight_set_arrays(),
+			      expansionMoments);
+  }
+  */
 }
 
-void HierarchInterpPolyApproximation::increment_coefficients()
+
+/** Computes the variance of component functions. Assumes that all
+    subsets of set_value have been computed in advance which will be
+    true so long as the partial_variance is called following
+    appropriate enumeration of set value  */
+void HierarchInterpPolyApproximation::compute_partial_variance(int set_value)
 {
-  //std::vector<SurrogateDataPoint>::iterator it = dataPoints.begin();
-  expansionType1Coeffs.resize(surrData.size());
-  numCollocPts = driverRep->grid_size();
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  const std::vector<CollocationPoint>& col_pts = 
-    lr_driver->get_collocation_points();
-  if ( maxComputedCoeff == numCollocPts ) return;
-  assert(numCollocPts == surrData.size());    
-  unsigned int level = 1;
-  for (int i=maxComputedCoeff+1; i<numCollocPts; ++i) {
-    if (expConfigOptions.expansionCoeffFlag) {
-      const Int2DArray& level_index = col_pts[i].get_level_index();
-      const RealVector& point = col_pts[i].get_point();
-      unsigned int this_point_level = col_pts[i].get_level();
-      if ( this_point_level > level ) {
-	level = this_point_level;
-      }
-      // for the Hierarchical case the coefficient is the function value 
-      //minus the intepolant value from the previous approximation level.  
-      //This is the so called 'hierarchical surplus.'
-      expansionType1Coeffs[i] = surrData.response_function(i) - 
-	this->value(surrData.continuous_variables(i),level - 1);
-      if (basisConfigOptions.useDerivs) {
-	RealVector trueGrad = surrData.response_gradient(i);
-	RealVector approxGrad = this->
-	  gradient_basis_variables(surrData.continuous_variables(i), level-1);
-	for ( unsigned int idx = 0; idx < numVars; ++idx ){
-	  trueGrad[idx] -= approxGrad[idx];
-	}
-	Teuchos::setCol(trueGrad, i, expansionType2Coeffs);
-      }
+  Real& variance = partialVariance[sobolIndexMap[set_value]];
+  // Computes the integral first
+
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&  colloc_key = hsg_driver->collocation_key();
+  const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
+  // Smolyak recursion of anisotropic tensor products
+  size_t i, num_levels = sm_index.size();
+  /*
+  UShortArray quad_order;
+  for (i=0; i<num_levels; ++i) {
+    for (j; j<num_sets; ++j) {
+      hsg_driver->level_to_order(sm_index[i][j], quad_order);
+      variance += partial_variance_integral(set_value, quad_order, sm_index[i],
+					    colloc_key[i], colloc_index[i]);
     }
-    //if (expConfigOptions.expansionCoeffGradFlag)
-    //Teuchos::setCol(it->response_gradient(), i, expansionType1CoeffGrads);
   }
-  maxComputedCoeff = numCollocPts-1;
+  */
+
+  // manage constituentSets
+  InterpPolyApproximation::compute_partial_variance(set_value);
 }
 
-Real HierarchInterpPolyApproximation::
-value(const RealVector& x, unsigned int max_level)
+
+void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 {
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
-    abort_handler(-1);
-  }
-  Real approx_val = 0.;
-  int num_colloc_points = driverRep->grid_size();
+  const Real& m1 = numericalMoments[1]; // standardized, if not num exception
+  Real total_variance = (m1 > 0.) ? m1*m1 : m1;
+  int j, set_value;
 
-  //Grab the supports of the hierarchical basis functions.
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  const std::vector<Real2DArray>& supports = lr_driver->get_supports();
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&  colloc_key = hsg_driver->collocation_key();
+  const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
 
-  //Determine which basis functions share their support with x.
-  const IntArray& supportIndicator = in_support_of(x);
-  const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-  switch ( basisConfigOptions.useDerivs ) {
-  case false:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-	
-      unsigned int this_point_level = colloc_pts[supportIndicator[i]].get_level();
-      if ( this_point_level <= max_level ) {
-	Real local_val = 1.0;
-	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-	const Real2DArray& this_point_support = supports[supportIndicator[i]];
-	
-	for ( unsigned int dim_idx = 0; dim_idx < numVars ; ++dim_idx ) {
-	  const unsigned int this_dim_level = level_index[dim_idx][0];
-	  const unsigned int this_dim_index = level_index[dim_idx][1];
-	  if ( this_dim_level == 1 ) {
-	    local_val *= 1;  //constant case
-	  } else { //Linear hat functions
-	    if ( x[dim_idx] == point[dim_idx] ) {
-	      local_val *= 1;
-	    } else if (x[dim_idx] < point[dim_idx]) {
-	      local_val *= ( x[dim_idx] - this_point_support[0][dim_idx] ) / 
-		( point[dim_idx] - this_point_support[0][dim_idx] );
-	    } else {
-	      local_val *= ( this_point_support[1][dim_idx] - x[dim_idx] ) /
-		( this_point_support[1][dim_idx] - point[dim_idx] );
-	    }
-	  }   
-	}
-	approx_val += expansionType1Coeffs[supportIndicator[i]] * local_val;
-      } else break;
-    } 
-	
-    break;
-  case true:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i ) {
-      unsigned int this_point_level = colloc_pts[supportIndicator[i]].get_level();
-      if ( this_point_level <= max_level ) {
-	Real local_val = 1.0;
-	const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]]; // column vector
-	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-	const Real2DArray& this_point_support = supports[supportIndicator[i]];
-	RealVector terms(numVars+1);
-	terms[0] = expansionType1Coeffs[supportIndicator[i]];
-	for ( unsigned int j = 0; j < numVars; ++j) {
-	  terms[j+1] = coeff2_i[j];
-	}
-	for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {
-	  const unsigned int this_dim_level = level_index[dim_idx][0];
-	  const unsigned int this_dim_index = level_index[dim_idx][1];
-	  if ( this_dim_level == 1 ) {
-	    terms[0] *= 1;
-	    if (x[dim_idx] == point[dim_idx]) {
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 0 : 1;
-	      }
-	    } else if (x[dim_idx] < point[dim_idx]) {
-	      Real t = (x[dim_idx] - this_point_support[0][dim_idx])/
-		(point[dim_idx] - this_point_support[0][dim_idx]);
-	      Real dx_by_dt = 
-		point[dim_idx] - this_point_support[0][dim_idx];
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 
-		  t*t*(t-1)*dx_by_dt : 1;
-	      }
-	    } else {
-	      const Real t = (x[dim_idx] - point[dim_idx])/
-		(this_point_support[1][dim_idx] - point[dim_idx]);
-	      const Real dx_by_dt = 
-		this_point_support[1][dim_idx] - point[dim_idx];
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 
-		  dx_by_dt*t*(1-t)*(1-t) : 1;
-	      }
-	    }
-	  } else {
-	    if (x[dim_idx] == point[dim_idx]) {
-	      terms[0] *= 1;
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 0 : 1;
-	      }
-	    } else if (x[dim_idx] < point[dim_idx]) {
-	      const Real t = (x[dim_idx] - this_point_support[0][dim_idx])/
-		(point[dim_idx] - this_point_support[0][dim_idx]);
-	      const Real dx_by_dt = 
-		(point[dim_idx] - this_point_support[0][dim_idx]);
-	      terms[0] *= t*t*(3-2*t);
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 
-		  t*t*(t-1)*dx_by_dt : t*t*(3-2*t);
-	      }
-	    } else {
-	      const Real t = (x[dim_idx] - point[dim_idx])/
-		(this_point_support[1][dim_idx] - point[dim_idx]);
-	      const Real dx_by_dt = 
-		(this_point_support[1][dim_idx] - point[dim_idx]);
-	      terms[0] *= (1+2*t)*(1-t)*(1-t);
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		terms[dim_idx2+1] *= (dim_idx == dim_idx2) ? 
-		  t*(1-t)*(1-t)*dx_by_dt : (1+2*t)*(1-t)*(1-t);
-	      }
-	    }
-	  }
-	}
-	for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator ) {
-	  approx_val += terms[accumulator];
-	}
-	//approx_val += std::accumulate(terms.RealMatrix::operator[](0),
-	//				 terms.RealMatrix::operator[](0)+terms.length(),
-	//				 0);
-      } else break;
+    // Smolyak recursion of anisotropic tensor products
+    size_t i, num_levels = sm_index.size();
+    /*
+    UShortArray quad_order;
+    // iterate each variable 
+    for (j=0; j<numVars; ++j) {
+      set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
+      for (i=0; i<num_smolyak_indices; ++i) {
+	hsg_driver->level_to_order(sm_index[i], quad_order);
+	totalSobolIndices[j] += 
+	  total_effects_integral(set_value, quad_order, sm_index[i],
+				 colloc_key[i], colloc_index[i]);
+      }
+      totalSobolIndices[j] = std::abs(1. - totalSobolIndices[j]/total_variance);
     }
-    break;
-  }
-  return approx_val;
+    */
 }
 
-const RealVector& HierarchInterpPolyApproximation::
-gradient_basis_variables(const RealVector& x, unsigned int max_level)
+
+void HierarchInterpPolyApproximation::
+member_coefficients_weights(int set_value, const UShortArray& quad_order,
+			    const UShortArray& lev_index,
+			    const UShort2DArray& key,
+			    const SizetArray& colloc_index,
+			    RealVector& member_coeffs, RealVector& member_wts)
 {
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::get_value()" << std::endl;
-    abort_handler(-1);
-  }
-  approxGradient.size(numVars);
-  for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx )
-    approxGradient[dim_idx] = 0; 
-    
-  int num_colloc_points = driverRep->grid_size();
-
-  //Grab the supports of the hierarchical basis functions.
-  LocalRefinableDriver* lr_driver = 
-    static_cast<LocalRefinableDriver*>(driverRep);
-  const std::vector<Real2DArray>& supports = lr_driver->get_supports();
-
-  //Determine which basis functions share their support with x.
-  const IntArray& supportIndicator = in_support_of(x);
-  const std::vector<CollocationPoint>& colloc_pts = lr_driver->get_collocation_points();
-  switch ( basisConfigOptions.useDerivs ) {
-  case false:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-      unsigned int this_point_level = colloc_pts[supportIndicator[i]].get_level();
-      if ( this_point_level <= max_level ) {
-	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-	const Real2DArray& this_point_support = supports[supportIndicator[i]];
-
-	for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {
-	  Real localGrad_i = 1;
-	  const unsigned int this_dim_level = level_index[dim_idx][0];
-	  const unsigned int this_dim_index = level_index[dim_idx][1];
-	  if ( this_dim_level == 1 ) {
-	    localGrad_i *= 0;  //constant case
-	  } else { //Linear hat functions
-	    if ( (x[dim_idx] == point[dim_idx]) || 
-		 (x[dim_idx] == this_point_support[0][dim_idx]) || 
-		 (x[dim_idx] == this_point_support[1][dim_idx]) ) {
-	      localGrad_i *= 0;
-	    } else if (x[dim_idx] < point[dim_idx]) {
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		localGrad_i *= (dim_idx == dim_idx2) ? 
-		  1 / ( point[dim_idx] - this_point_support[0][dim_idx] ) :
-		  (x[dim_idx2] - this_point_support[0][dim_idx]) / 
-		  ( point[dim_idx2] - this_point_support[0][dim_idx2] );
-	      }
-	    } else {
-	      for ( unsigned int dim_idx2 = 0; dim_idx2 < numVars; ++dim_idx2 ) {
-		localGrad_i *= (dim_idx == dim_idx2) ? 
-		  -1 / ( this_point_support[1][dim_idx2] - point[dim_idx2] ) :
-		  (point[dim_idx2] - x[dim_idx2])/( this_point_support[1][dim_idx2] - point[dim_idx2] );
-	      }
-	    }   
-	  }
-	  approxGradient[dim_idx] = approxGradient[dim_idx] + 
-	    expansionType1Coeffs[supportIndicator[i]] * localGrad_i;
-	}
-      } else break;
+  // create member variable key and get number of expansion coeffs in
+  // member-variable-only expansion
+  BoolDeque nonmember_vars(numVars); // distinguish set members from non-members
+  int num_member_coeffs = 1; // # exp coeffs in member-variable-only expansion
+  IntVector indexing_factor(numVars, false); // factors indexing member vars 
+  for (int k=0; k<numVars; ++k) {
+    // if subset contains variable k, set key for variable k to true
+    if (set_value & (1 << k)) {
+      nonmember_vars[k]  = false;	
+      indexing_factor[k] = num_member_coeffs; // for indexing of member_coeffs
+      num_member_coeffs *= quad_order[k];
     }
-    break;
-  case true:
-    // Sum over only those elements whose support contains x
-    for ( unsigned int i = 0; i<supportIndicator.size(); ++i) {
-      unsigned int this_point_level = colloc_pts[supportIndicator[i]].get_level();
-      if ( this_point_level <= max_level ) {
-	const Real*     coeff2_i = expansionType2Coeffs[supportIndicator[i]];
-	const RealVector& point = colloc_pts[supportIndicator[i]].get_point();
-	const Int2DArray& level_index = colloc_pts[supportIndicator[i]].get_level_index();
-	const Real2DArray& this_point_support = supports[supportIndicator[i]];
-
-	// These nested loops are filthy.
-	// dim_idx keeps track of which gradient entry we're filling.
-	// dim_idx2 keeps track of which variable we're thinking about.
-	// dim_idx3 tess us which term we're working on. 
-	for ( unsigned int dim_idx = 0; dim_idx < numVars; ++dim_idx ) {
-	  RealVector terms(numVars+1);
-	  terms[0] = expansionType1Coeffs[supportIndicator[i]];
-	  for ( unsigned int j = 0; j < numVars; ++j ) {
-	    terms[j+1] = coeff2_i[j];
-	  }
-	  for ( unsigned int dim_idx2 = 0; dim_idx2< numVars; ++dim_idx2 ) { 
-	    const unsigned int this_dim_level = level_index[dim_idx2][0];
-	    const unsigned int this_dim_index = level_index[dim_idx2][1];
-	    if ( this_dim_level == 1 ) {
-	      terms[0] *= (dim_idx == dim_idx2) ? 0 : 1;  
-	      if ( x[dim_idx2] == point[dim_idx2] ) {
-		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  1 : 0;  // Take derivative of basis else don't
-		  } else {  //Use type 1.
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 0 : 1; // Take derivative of basis else don't
-		  }
-		}
-	      } else if ( x[dim_idx2] < point[dim_idx2] ) {
-		const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
-		  (point[dim_idx2] - this_point_support[0][dim_idx2]);
-		const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
-		const Real dt_by_dx = 1/dx_by_dt;
-		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		      (3*t*t-2*t) : 
-		      dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
-		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		      0 : 1; // Take derivative of basis else don't
-		  }
-		}
-	      } else {
-		const Real t = (x[dim_idx2] - point[dim_idx2])/
-		  (this_point_support[1][dim_idx2] - point[dim_idx2]);
-		const Real dx_by_dt = this_point_support[1][dim_idx2] - point[dim_idx2];
-		const Real dt_by_dx = 1/dx_by_dt;
-		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		      (3*t*t - 4*t + 1) : 
-		      dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
-		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		      0 : 1; // Take derivative of basis else don't
-		  }
-		}
-	      }
-	    } else {  
-	      if ( x[dim_idx2] == point[dim_idx2] ) {
-		terms[0] *= (dim_idx == dim_idx2) ? 0 : 1;
-		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  1 : 0;  // Take derivative of basis else don't
-		  } else {  //Use type 1.
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 0 : 1; // Take derivative of basis else don't
-		  }
-		}
-	      } else if ( x[dim_idx2] < point[dim_idx2] ) {
-		const Real t = (x[dim_idx2] - this_point_support[0][dim_idx2])/
-		  (point[dim_idx2] - this_point_support[0][dim_idx2]);
-		const Real dx_by_dt = point[dim_idx2] - this_point_support[0][dim_idx2];
-		const Real dt_by_dx = 1/dx_by_dt;
-		terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(-6*t*t + 6*t) : -2*t*t*t + 3*t*t;
-		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		      (3*t*t-2*t) : 
-		      dx_by_dt*(t*t*t-t*t);  // Take derivative of basis else don't
-		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		      dt_by_dx*(-6*t*t+6*t) : t*t*(3-2*t); // Take derivative of basis else don't
-		  }
-		}
-	      } else {
-		const Real t = (x[dim_idx2] - point[dim_idx2])/
-		  (this_point_support[1][dim_idx2] - point[dim_idx2]);
-		const Real dx_by_dt = this_point_support[1][dim_idx2] - point[dim_idx2];
-		const Real dt_by_dx = 1/dx_by_dt;
-		terms[0] *= (dim_idx == dim_idx2) ?  dt_by_dx*(6*t*t - 6*t) : 2*t*t*t - 3*t*t + 1;
-		for ( unsigned int dim_idx3 = 0; dim_idx3 < numVars; ++dim_idx3 ) {
-		  if ( dim_idx2 == dim_idx3 ) { //Use type 2 function
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ?  
-		      (3*t*t - 4*t + 1) : 
-		      dx_by_dt*t*(1-t)*(1-t);  // Take derivative of basis else don't
-		  } else { //use type 1
-		    terms[dim_idx3+1] *= (dim_idx2 == dim_idx) ? 
-		      dt_by_dx*(6*t*t-6*t) : (1+2*t)*(1-t)*(1-t); // Take derivative of basis else don't
-		  }
-		}
-	      }
-	    }
-	  }
-	  for ( unsigned int accumulator = 0; accumulator < terms.length(); ++accumulator) {
-	    approxGradient[dim_idx] += terms[accumulator];
-	  }
-	  //approxGradient[dim_idx] += std::accumulate(terms.RealMatrix::operator[](0),
-	  //					       terms.RealMatrix::operator[](0) + terms.length(),
-	  //					       0);
-	}
-      } else break;
+    else {
+      nonmember_vars[k]  = true;	
+      indexing_factor[k] = 1;
     }
-    break;
   }
-  return approxGradient;
+
+  // Size vectors to store new coefficients
+  member_coeffs.sizeUninitialized(num_member_coeffs);
+  member_wts.sizeUninitialized(num_member_coeffs);
+
+  // Perform integration over non-member variables and store indices
+  // of new expansion
+  size_t i, j, num_colloc_pts = key.size();
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
+  /*
+  for (i=0; i <num_colloc_pts; ++i) {
+    const UShortArray& key_i = key[i];
+    size_t member_coeffs_index = 0;	
+    Real prod_i_nonmembers = 1., prod_i_members = 1.;
+    for (j=0; j<numVars; ++j)
+      // Save the product of the weights of the member and non-member variables 
+      if (nonmember_vars[j])
+	prod_i_nonmembers *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      else {
+	// Convert key to corresponding index on member_coeffs
+	member_coeffs_index += key_i[j]*indexing_factor[j];
+	prod_i_members      *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      }
+
+    // member_wts is performed more time than necessary here, but it
+    // seems to be the simplest place to put it
+    member_wts[member_coeffs_index] = prod_i_members;
+    // sort coefficients by the "signature" of the member variables
+    // (i.e. member_coeffs_index)
+    unsigned short c_index = (colloc_index.empty()) ? i : colloc_index[i];
+    member_coeffs[member_coeffs_index]
+      += expansionType1Coeffs[c_index]*prod_i_nonmembers;
+  }
+  */
 }
 
 }

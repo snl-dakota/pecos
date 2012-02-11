@@ -17,8 +17,8 @@
 #include "PolynomialApproximation.hpp"
 #include "BasisPolynomial.hpp"
 
-
 namespace Pecos {
+
 
 /// Derived approximation class for interpolation polynomials (global
 /// approximation).
@@ -69,10 +69,10 @@ protected:
 
   /// compute the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
-  virtual void compute_coefficients();
+  void compute_coefficients();
   /// update the coefficients for the expansion of multivariate Lagrange
   /// interpolation polynomials
-  virtual void increment_coefficients();
+  void increment_coefficients();
   /// restore the coefficients to their previous state prior to last increment
   void decrement_coefficients();
   /// restore the coefficients to a previously incremented state as
@@ -80,24 +80,9 @@ protected:
   void restore_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments
   void finalize_coefficients();
-  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
-  /// storedColloc{Key,Indices}, and storedLev{MultiIndex,Coeffs}
-  void store_coefficients();
-  /// augment current interpolant using
-  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
-  /// and storedLev{MultiIndex,Coeffs}
-  void combine_coefficients(short combine_type);
-
-  const RealVector& approximation_coefficients() const;
-  void approximation_coefficients(const RealVector& approx_coeffs);
 
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
-
-  /// compute moments of response using numerical integration
-  void compute_numerical_response_moments(size_t num_moments);
-  /// compute moments of expansion using numerical integration
-  void compute_numerical_expansion_moments(size_t num_moments);
 
   /// computes component (main and interaction) effect Sobol' indices
   void compute_component_effects();
@@ -110,6 +95,60 @@ protected:
   void compute_moments(const RealVector& x);
   /// return numericalMoments
   const RealVector& moments() const;
+
+  //
+  //- Heading: New virtual functions
+  //
+
+  /// derived portion of allocate_arrays()
+  virtual void allocate_expansion_coefficients() = 0;
+  /// derived portion of compute_coefficients()
+  virtual void compute_expansion_coefficients() = 0;
+  /// restore expansion{Coeffs,CoeffGrads} within increment/restore/finalize
+  virtual void restore_expansion_coefficients() = 0;
+  /// compute moments of response using numerical integration
+  virtual void compute_numerical_response_moments(size_t num_moments) = 0;
+  /// compute moments of expansion using numerical integration
+  virtual void compute_numerical_expansion_moments(size_t num_moments) = 0;
+
+  virtual void compute_total_sobol_indices() = 0;
+  virtual void compute_partial_variance(int set_value);
+  virtual void member_coefficients_weights(int set_value,
+    const UShortArray& quad_order, const UShortArray& lev_index,
+    const UShort2DArray& key, const SizetArray& colloc_index,
+    RealVector& member_coeffs, RealVector& member_wts) = 0;
+
+  //
+  //- Heading: Convenience functions
+  //
+
+  /// return value of type 1 interpolation polynomial
+  Real type1_interpolant_value(const RealVector& x, const UShortArray& key,
+			       const UShortArray& basis_index);
+  /// return gradient of type 1 interpolation polynomial
+  Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
+				  const UShortArray& key,
+				  const UShortArray& basis_index);
+
+  /// return value of type 2 interpolation polynomial
+  Real type2_interpolant_value(const RealVector& x, size_t interp_index,
+			       const UShortArray& key,
+			       const UShortArray& basis_index);
+  /// return gradient of type 2 interpolation polynomial
+  Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
+				  size_t interp_index, const UShortArray& key,
+				  const UShortArray& basis_index);
+
+  /// compute total Sobol effects for an index within a sparse grid
+  Real total_effects_integral(int set_value, const UShortArray& quad_order,
+			      const UShortArray& lev_index,
+			      const UShort2DArray& key,
+			      const SizetArray& colloc_index);
+  /// finds variance of sparse interpolant with respect to variables in the set
+  Real partial_variance_integral(int set_value, const UShortArray& quad_order,
+				 const UShortArray& lev_index,
+				 const UShort2DArray& key,
+				 const SizetArray& colloc_index);
 
   //
   //- Heading: Data
@@ -126,35 +165,6 @@ protected:
   /// interpolation expansion (length of expansionType1Coeffs)
   int numCollocPts;
 
-  /// the type1 coefficients of the expansion for interpolating values
-  RealVector expansionType1Coeffs;
-  /// the type2 coefficients of the expansion for interpolating gradients
-  RealMatrix expansionType2Coeffs;
-  /// the gradients of the type1 expansion coefficients
-  /** may be interpreted as either the gradients of the expansion
-      coefficients or the coefficients of expansions for the response
-      gradients.  This array is used when sensitivities of moments are
-      needed with respect to variables that do not appear in the
-      expansion (e.g., with respect to design variables for an
-      expansion only over the random variables). */
-  RealMatrix expansionType1CoeffGrads;
-
-  /// storage of expansionType1Coeffs state for subsequent restoration
-  RealVector storedExpType1Coeffs;
-  /// storage of expansionType2Coeffs state for subsequent restoration
-  RealMatrix storedExpType2Coeffs;
-  /// storage of expansionType1CoeffGrads state for subsequent restoration
-  RealMatrix storedExpType1CoeffGrads;
-  /// storage of IntegrationDriver combinatorial coefficients state
-  /// for subsequent restoration
-  IntArray storedLevCoeffs;
-  /// storage of IntegrationDriver collocation key state for
-  /// subsequent restoration
-  UShort3DArray storedCollocKey;
-  /// storage of IntegrationDriver collocation indices state for
-  /// subsequent restoration
-  Sizet2DArray storedCollocIndices;
-
   /// the gradient of a tensor-product interpolant; a contributor to
   /// approxGradient
   RealVector tpGradient;
@@ -165,8 +175,11 @@ protected:
   /// contributor to varianceGradient
   RealVector tpVarianceGrad;
 
-  /// GLOBAL_INTERPOLATION_POLYNOMIAL, PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL,
-  /// or PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL
+  /// the partialVariances of subset functions f_alpha
+  RealVector partialVariance;
+
+  /// {GLOBAL,PIECEWISE}_{NODAL,HIERARCHICAL}_INTERPOLATION_POLYNOMIAL or
+  /// {GLOBAL,PIECEWISE}_ORTHOGONAL_POLYNOMIAL
   short basisType;
 
 private:
@@ -183,25 +196,10 @@ private:
   /// update polynomialBasis after a change in sparse grid level
   void update_sparse_interpolation_basis(unsigned short max_level);
 
-  /// restore expansion{Coeffs,CoeffGrads} within increment/restore/finalize
-  void restore_expansion_coefficients();
-
-  /// compute total Sobol effects for an index within a sparse grid
-  Real total_effects_integral(int set_value, const UShortArray& quad_order,
-			      const UShortArray& lev_index,
-			      const UShort2DArray& key,
-			      const SizetArray& colloc_index);
   /// performs sorting to store constituent subsets (constituentSets)
   void get_subsets();
   /// recursively identifies constituent subsets
   void lower_sets(int plus_one_set, IntSet& top_level_set);
-  /// computes partialVariance
-  void partial_variance(int set_value);
-  /// finds variance of sparse interpolant with respect to variables in the set
-  Real partial_variance_integral(int set_value, const UShortArray& quad_order,
-				 const UShortArray& lev_index,
-				 const UShort2DArray& key,
-				 const SizetArray& colloc_index);
 
   //
   //- Heading: Data
@@ -209,8 +207,6 @@ private:
 
   /// the constituent subsets for each superset
   std::vector<IntSet> constituentSets;
-  /// the partialVariances of subset functions f_alpha
-  RealVector partialVariance;
 };
 
 
@@ -223,32 +219,6 @@ InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs):
 
 inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
-
-
-inline const RealVector& InterpPolyApproximation::
-approximation_coefficients() const
-{
-  if (basisConfigOptions.useDerivs) {
-    PCerr << "Error: approximation_coefficients() not supported in "
-	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
-    return abort_handler_t<const RealVector&>(-1);
-  }
-  else
-    return expansionType1Coeffs;
-}
-
-
-inline void InterpPolyApproximation::
-approximation_coefficients(const RealVector& approx_coeffs)
-{
-  if (basisConfigOptions.useDerivs) {
-    PCerr << "Error: approximation_coefficients() not supported in "
-	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
-    abort_handler(-1);
-  }
-  else
-    expansionType1Coeffs = approx_coeffs;
-}
 
 
 inline void InterpPolyApproximation::
@@ -298,6 +268,66 @@ inline void InterpPolyApproximation::compute_moments(const RealVector& x)
 
 inline const RealVector& InterpPolyApproximation::moments() const
 { return numericalMoments; }
+
+
+inline Real InterpPolyApproximation::
+type1_interpolant_value(const RealVector& x, const UShortArray& key,
+			const UShortArray& basis_index)
+{
+  Real L1 = 1.;
+  for (size_t j=0; j<numVars; ++j)
+    L1 *= polynomialBasis[basis_index[j]][j].type1_value(x[j], key[j]);
+  return L1;
+}
+
+
+inline Real InterpPolyApproximation::
+type1_interpolant_gradient(const RealVector& x,    size_t deriv_index,
+			   const UShortArray& key,
+			   const UShortArray& basis_index)
+{
+  Real L1_grad = 1.;
+  for (size_t k=0; k<numVars; ++k)
+    L1_grad *= (k == deriv_index) ?
+      polynomialBasis[basis_index[k]][k].type1_gradient(x[k], key[k]) :
+      polynomialBasis[basis_index[k]][k].type1_value(x[k],    key[k]);
+  return L1_grad;
+}
+
+
+inline Real InterpPolyApproximation::
+type2_interpolant_value(const RealVector& x,    size_t interp_index,
+			const UShortArray& key, const UShortArray& basis_index)
+{
+  Real L2 = 1.;
+  for (size_t k=0; k<numVars; ++k)
+    L2 *= (interp_index == k) ?
+      polynomialBasis[basis_index[k]][k].type2_value(x[k], key[k]) :
+      polynomialBasis[basis_index[k]][k].type1_value(x[k], key[k]);
+  return L2;
+}
+
+
+inline Real InterpPolyApproximation::
+type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
+			   size_t interp_index, const UShortArray& key,
+			   const UShortArray& basis_index)
+{
+  // deriv_index  = desired gradient component
+  // interp_index = index of gradient component used in type2 interpolation
+  Real L2_grad = 1.;
+  if (interp_index == deriv_index) // match in grad and type2 interp components
+    for (size_t l=0; l<numVars; ++l)
+      L2_grad *= (l == interp_index) ?
+	polynomialBasis[basis_index[l]][l].type2_gradient(x[l], key[l]) :
+	polynomialBasis[basis_index[l]][l].type1_value(x[l],    key[l]);
+  else                          // mismatch in grad and type2 interp components
+    for (size_t l=0; l<numVars; ++l)
+      L2_grad *= (l == interp_index) ?
+	polynomialBasis[basis_index[l]][l].type2_value(x[l],    key[l]) :
+	polynomialBasis[basis_index[l]][l].type1_gradient(x[l], key[l]);
+  return L2_grad;
+}
 
 } // namespace Pecos
 

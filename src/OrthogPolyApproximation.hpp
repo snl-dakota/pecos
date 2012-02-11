@@ -263,8 +263,8 @@ private:
   /// driverRep->collocWts1D
   void integration_data(size_t tp_index, SDVArray& tp_data_vars,
 			SDRArray& tp_data_resp, RealVector& tp_weights);
-  /// computes the chaosCoeffs via numerical integration
-  /// (expCoeffsSolnApproach is QUADRATURE, CUBATURE, or SPARSE_GRID)
+  /// computes the chaosCoeffs via numerical integration (expCoeffsSolnApproach
+  /// can be QUADRATURE, CUBATURE, or COMBINED_SPARSE_GRID)
   void integrate_expansion(const UShort2DArray& multi_index,
 			   const SDVArray& data_vars, const SDRArray& data_resp,
 			   const RealVector& wt_sets, RealVector& exp_coeffs,
@@ -357,6 +357,9 @@ private:
   /// saved tpExpansionCoeffGrads instances that were computed but not selected
   std::deque<RealMatrix> savedTPExpCoeffGrads;
 
+  /// storage of level multi-index (levels for tensor or sparse grids)
+  /// for subsequent restoration
+  UShort2DArray storedLevMultiIndex;
   /// copy of multiIndex (aggregated total, not tensor-product contributions)
   /// stored in store_coefficients() for use in combine_coefficients()
   UShort2DArray storedMultiIndex;
@@ -441,7 +444,7 @@ inline void OrthogPolyApproximation::compute_moments()
   standardize_moments(expansionMoments);
   if (expConfigOptions.expCoeffsSolnApproach == QUADRATURE ||
       expConfigOptions.expCoeffsSolnApproach == CUBATURE   ||
-      expConfigOptions.expCoeffsSolnApproach == SPARSE_GRID)
+      expConfigOptions.expCoeffsSolnApproach == COMBINED_SPARSE_GRID)
     compute_numerical_response_moments(4);
 }
 

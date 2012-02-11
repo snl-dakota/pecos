@@ -13,12 +13,255 @@
 
 #include "NodalInterpPolyApproximation.hpp"
 #include "TensorProductDriver.hpp"
-#include "SparseGridDriver.hpp"
+#include "CombinedSparseGridDriver.hpp"
+#include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
-
+//#define INTERPOLATION_TEST
 
 namespace Pecos {
+
+
+void NodalInterpPolyApproximation::allocate_expansion_coefficients()
+{
+  size_t num_deriv_vars = surrData.num_derivative_variables();
+  if (expConfigOptions.expansionCoeffFlag) {
+    if (expansionType1Coeffs.length() != numCollocPts)
+      expansionType1Coeffs.sizeUninitialized(numCollocPts);
+    if ( basisConfigOptions.useDerivs &&
+	 ( expansionType2Coeffs.numRows() != num_deriv_vars ||
+	   expansionType2Coeffs.numCols() != numCollocPts ) )
+      expansionType2Coeffs.shapeUninitialized(num_deriv_vars, numCollocPts);
+  }
+  if ( expConfigOptions.expansionCoeffGradFlag &&
+       ( expansionType1CoeffGrads.numRows() != num_deriv_vars ||
+	 expansionType1CoeffGrads.numCols() != numCollocPts ) )
+    expansionType1CoeffGrads.shapeUninitialized(num_deriv_vars, numCollocPts);
+
+  // checking numCollocPts is insufficient due to anisotropy --> changes in
+  // anisotropic weights could move points around without changing the total.
+  //bool update_exp_form =
+  //  ( (expConfigOptions.expansionCoeffFlag &&
+  //     expansionType1Coeffs.length()      != numCollocPts) ||
+  //    (expConfigOptions.expansionCoeffGradFlag &&
+  //     expansionType1CoeffGrads.numCols() != numCollocPts ) );
+}
+
+
+void NodalInterpPolyApproximation::compute_expansion_coefficients()
+{
+  if (surrData.anchor()) {
+    if (expConfigOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[0] = surrData.anchor_function();
+      if (basisConfigOptions.useDerivs)
+	Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType2Coeffs);
+    }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      Teuchos::setCol(surrData.anchor_gradient(), 0, expansionType1CoeffGrads);
+  }
+
+  size_t index = 0, offset = (surrData.anchor()) ? 1 : 0;
+  for (int i=offset; i<numCollocPts; ++i, ++index) {
+    if (expConfigOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[i] = surrData.response_function(index);
+      // Note: gradients from DAKOTA already scaled in u-space Recast
+      if (basisConfigOptions.useDerivs)
+	Teuchos::setCol(surrData.response_gradient(index), i,
+			expansionType2Coeffs);
+    }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      Teuchos::setCol(surrData.response_gradient(index), i,
+		      expansionType1CoeffGrads);
+  }
+
+#ifdef INTERPOLATION_TEST
+  // SC should accurately interpolate the collocation data for TPQ and
+  // SSG with fully nested rules, but will exhibit interpolation error
+  // for SSG with other rules.
+  index = 0;
+  Real val, err, val_max_err = 0., grad_max_err = 0.,
+       val_rmse = 0., grad_rmse = 0.;
+  PCout << std::scientific << std::setprecision(WRITE_PRECISION);
+  for (size_t i=offset; i<numCollocPts; ++i, ++index) {
+    const Real&       coeff1 = expansionType1Coeffs[i];
+    const RealVector& c_vars = surrData.continuous_variables(index);
+    val = value(c_vars);
+    err = (std::abs(coeff1) > DBL_MIN) ? std::abs(1. - val/coeff1) :
+                                         std::abs(coeff1 - val);
+    PCout << "Colloc pt " << std::setw(3) << i+1
+	  << ": truth value  = "  << std::setw(WRITE_PRECISION+7) << coeff1
+	  << " interpolant = "    << std::setw(WRITE_PRECISION+7) << val
+	  << " relative error = " << std::setw(WRITE_PRECISION+7) << err <<'\n';
+    if (err > val_max_err) val_max_err = err; val_rmse += err * err;
+    if (basisConfigOptions.useDerivs) {
+      const Real*     coeff2 = expansionType2Coeffs[i];
+      const RealVector& grad = gradient_basis_variables(c_vars);
+      for (size_t j=0; j<numVars; ++j) {
+	err = (std::abs(coeff2[j]) > DBL_MIN) ?
+	  std::abs(1. - grad[j]/coeff2[j]) : std::abs(coeff2[j] - grad[j]);
+	PCout << "               " << "truth grad_" << j+1 << " = "
+	      << std::setw(WRITE_PRECISION+7) << coeff2[j] << " interpolant = "
+	      << std::setw(WRITE_PRECISION+7) << grad[j] << " relative error = "
+	      << std::setw(WRITE_PRECISION+7) << err << '\n';
+	if (err > grad_max_err) grad_max_err = err; grad_rmse += err * err;
+      }
+    }
+  }
+  val_rmse = std::sqrt(val_rmse/(numCollocPts-offset));
+  PCout << "\nValue interpolation errors:    " << std::setw(WRITE_PRECISION+7)
+	<< val_max_err << " (max) "            << std::setw(WRITE_PRECISION+7)
+	<< val_rmse    << " (RMS)\n";
+  if (basisConfigOptions.useDerivs) {
+    grad_rmse = std::sqrt(grad_rmse/(numCollocPts-offset)/numVars);
+    PCout << "Gradient interpolation errors: " << std::setw(WRITE_PRECISION+7)
+	  << grad_max_err << " (max) "         << std::setw(WRITE_PRECISION+7)
+	  << grad_rmse    << " (RMS)\n";
+  }
+#endif // INTERPOLATION_TEST
+}
+
+
+void NodalInterpPolyApproximation::store_coefficients()
+{
+  if (expConfigOptions.expansionCoeffFlag) {
+    storedExpType1Coeffs   = expansionType1Coeffs;
+    if (basisConfigOptions.useDerivs)
+      storedExpType2Coeffs = expansionType2Coeffs;
+  }
+  if (expConfigOptions.expansionCoeffGradFlag)
+    storedExpType1CoeffGrads = expansionType1CoeffGrads;
+
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    storedCollocKey.resize(1); storedLevMultiIndex.resize(1);
+    storedCollocKey[0]     = tpq_driver->collocation_key();
+    storedLevMultiIndex[0] = tpq_driver->level_index();
+    break;
+  }
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    storedLevMultiIndex = csg_driver->smolyak_multi_index();
+    storedLevCoeffs     = csg_driver->smolyak_coefficients();
+    storedCollocKey     = csg_driver->collocation_key();
+    storedCollocIndices = csg_driver->collocation_indices();
+    break;
+  }
+  }
+}
+
+
+void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
+{
+#ifdef DEBUG
+  PCout << "Original type1 expansion coefficients prior to combination:\n";
+  write_data(PCout, expansionType1Coeffs);
+#endif // DEBUG
+
+  // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
+  // multiplying stored expansion evaluated at current collocation points
+  size_t i, j, offset = 0, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
+  if (anchor_pt) { offset = 1; ++num_pts; }
+  Real lf_val, discrep_val;
+  for (i=0; i<num_pts; ++i) {
+    const RealVector& c_vars = (anchor_pt && i == 0) ?
+      surrData.anchor_continuous_variables() :
+      surrData.continuous_variables(i-offset);
+    if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
+      discrep_val = stored_value(c_vars);
+      lf_val = expansionType1Coeffs[i]; // copy prior to update
+    }
+    if (expConfigOptions.expansionCoeffFlag) {
+      // split up type1/type2 contribs so increments are performed properly
+      if (combine_type == ADD_COMBINE)
+	expansionType1Coeffs[i] += stored_value(c_vars);
+      else if (combine_type == MULT_COMBINE)
+	expansionType1Coeffs[i] *= discrep_val;
+      if (basisConfigOptions.useDerivs) {
+	const RealVector& discrep_grad
+	  = stored_gradient_basis_variables(c_vars);
+	Real* exp_t2_coeffs_i = expansionType2Coeffs[i];
+	size_t num_deriv_vars = discrep_grad.length();
+	if (combine_type == ADD_COMBINE)
+	  for (j=0; j<num_deriv_vars; ++j)
+	    exp_t2_coeffs_i[j] += discrep_grad[j];
+	else if (combine_type == MULT_COMBINE)
+	  // hf = lf*discrep --> dhf/dx = dlf/dx*discrep + lf*ddiscrep/dx
+	  for (j=0; j<num_deriv_vars; ++j)
+	    exp_t2_coeffs_i[j] = exp_t2_coeffs_i[j] * discrep_val
+	                       + discrep_grad[j]    * lf_val;
+      }
+    }
+    if (expConfigOptions.expansionCoeffGradFlag) {
+      Real* exp_t1_grad_i = expansionType1CoeffGrads[i];
+      const RealVector& discrep_grad
+	= stored_gradient_nonbasis_variables(c_vars);
+      size_t num_deriv_vars = discrep_grad.length();
+      if (combine_type == ADD_COMBINE)
+	for (j=0; j<num_deriv_vars; ++j)
+	  exp_t1_grad_i[j] += discrep_grad[j];
+      else if (combine_type == MULT_COMBINE)
+	for (j=0; j<num_deriv_vars; ++j)
+	  exp_t1_grad_i[j] = exp_t1_grad_i[j] * discrep_val
+	                   + discrep_grad[j]  * lf_val;
+    }
+  }
+#ifdef DEBUG
+  PCout << "Updated type1 expansion coefficients following combination:\n";
+  write_data(PCout, expansionType1Coeffs);
+#endif // DEBUG
+
+  // clear stored data now that it has been combined
+  if (expConfigOptions.expansionCoeffFlag) {
+    storedExpType1Coeffs.resize(0);
+    if (basisConfigOptions.useDerivs) storedExpType2Coeffs.reshape(0,0);
+  }
+  if (expConfigOptions.expansionCoeffGradFlag)
+    storedExpType1CoeffGrads.reshape(0,0);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE:
+    storedCollocKey.clear(); break;
+  case COMBINED_SPARSE_GRID:
+    storedLevMultiIndex.clear(); storedLevCoeffs.clear();
+    storedCollocKey.clear();     storedCollocIndices.clear(); break;
+  }
+}
+
+
+void NodalInterpPolyApproximation::restore_expansion_coefficients()
+{
+  size_t offset = 0, new_colloc_pts = surrData.size();
+  if (surrData.anchor())
+    { offset = 1; ++new_colloc_pts; }
+
+  if (expConfigOptions.expansionCoeffFlag) {
+    expansionType1Coeffs.resize(new_colloc_pts);
+    if (basisConfigOptions.useDerivs) {
+      size_t num_deriv_vars = expansionType2Coeffs.numRows();
+      expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+    expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
+  }
+
+  size_t index = numCollocPts - offset;
+  for (int i=numCollocPts; i<new_colloc_pts; ++i, ++index) {
+    if (expConfigOptions.expansionCoeffFlag) {
+      expansionType1Coeffs[i] = surrData.response_function(index);
+      if (basisConfigOptions.useDerivs)
+	Teuchos::setCol(surrData.response_gradient(index), i,
+			expansionType2Coeffs);
+    }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      Teuchos::setCol(surrData.response_gradient(index), i,
+		      expansionType1CoeffGrads);
+  }
+
+  numCollocPts = new_colloc_pts;
+}
 
 
 Real NodalInterpPolyApproximation::
@@ -478,13 +721,13 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
 				tpq_driver->collocation_key(), colloc_index);
     break;
   }
-  case SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     Real approx_val = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
@@ -521,16 +764,16 @@ gradient_basis_variables(const RealVector& x)
       tpq_driver->collocation_key(), colloc_index);
     break;
   }
-  case SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     if (approxGradient.length() != numVars)
       approxGradient.sizeUninitialized(numVars);
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
@@ -568,17 +811,17 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
       tpq_driver->collocation_key(), colloc_index, dvv);
     break;
   }
-  case SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     size_t num_deriv_vars = dvv.size();
     if (approxGradient.length() != num_deriv_vars)
       approxGradient.sizeUninitialized(num_deriv_vars);
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
@@ -616,18 +859,18 @@ gradient_nonbasis_variables(const RealVector& x)
       tpq_driver->collocation_key(), colloc_index);
     break;
   }
-  case SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
     if (approxGradient.length() != num_deriv_vars)
       approxGradient.size(num_deriv_vars); // init to 0
     else
       approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
@@ -664,7 +907,7 @@ Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
 				colloc_index);
     break;
   }
-  case SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
     Real approx_val = 0.;
     size_t i, num_smolyak_indices = storedLevCoeffs.size();
@@ -699,7 +942,7 @@ stored_gradient_basis_variables(const RealVector& x)
       colloc_index);
     break;
   }
-  case SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     if (approxGradient.length() != numVars)
       approxGradient.size(numVars); // init to 0
     else
@@ -742,7 +985,7 @@ stored_gradient_nonbasis_variables(const RealVector& x)
       colloc_index);
     break;
   }
-  case SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
     size_t i, j, num_smolyak_indices = storedLevCoeffs.size(),
       num_deriv_vars = storedExpType1CoeffGrads.numRows();
@@ -830,12 +1073,12 @@ Real NodalInterpPolyApproximation::mean(const RealVector& x)
 			       tpq_driver->collocation_key(), colloc_index);
     break;
   }
-  case SPARSE_GRID: {
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     Real mean = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
@@ -901,17 +1144,17 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 					colloc_index, dvv);
     break;
   }
-  case SPARSE_GRID:
+  case COMBINED_SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
     if (meanGradient.length() != num_deriv_vars)
       meanGradient.sizeUninitialized(num_deriv_vars);
     meanGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
@@ -1024,17 +1267,17 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 				     colloc_index, t1_coeffs_2);
     break;
   }
-  case SPARSE_GRID:
+  case COMBINED_SPARSE_GRID:
     // *** TO DO: verify correctness of TP summation approach
     // *** More rigorous: collapse into unique multiIndex of random terms
     //     prior to sum squared [or use a nested loop over Smolyak indices
     //     with extended tensor_product_covariance(key1,key2,etc.) definition
     //     --> good way to explore why cross-terms appear to cancel out].
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size(); Real covar = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
@@ -1110,7 +1353,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 					    colloc_index, dvv);
     break;
   }
-  case SPARSE_GRID:
+  case COMBINED_SPARSE_GRID:
     // *** TO DO: verify correctness of TP summation approach
     // *** More rigorous: collapse into unique multiIndex of random terms
     //     prior to sum squared.
@@ -1119,11 +1362,11 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
       varianceGradient.sizeUninitialized(num_deriv_vars);
     varianceGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    SparseGridDriver*    ssg_driver     = (SparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = ssg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = ssg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = ssg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = ssg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
@@ -1137,6 +1380,220 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     }
     return varianceGradient;
     break;
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+compute_numerical_response_moments(size_t num_moments)
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+	  << "Approximation::compute_numerical_response_moments()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (numericalMoments.length() != num_moments)
+    numericalMoments.sizeUninitialized(num_moments);
+  if (basisConfigOptions.useDerivs)
+    compute_numerical_moments(expansionType1Coeffs, expansionType2Coeffs,
+			      driverRep->type1_weight_sets(),
+			      driverRep->type2_weight_sets(), numericalMoments);
+  else
+    compute_numerical_moments(expansionType1Coeffs,
+			      driverRep->type1_weight_sets(), numericalMoments);
+}
+
+
+void NodalInterpPolyApproximation::
+compute_numerical_expansion_moments(size_t num_moments)
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in InterpPoly"
+	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
+    abort_handler(-1);
+  }
+  if (expansionMoments.length() != num_moments)
+    expansionMoments.sizeUninitialized(num_moments);
+
+  size_t i, offset = 0, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
+  if (anchor_pt) { offset = 1; ++num_pts; }
+  RealVector t1_exp(num_pts);
+  if (basisConfigOptions.useDerivs) {
+    RealMatrix t2_exp(numVars, num_pts);
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = (anchor_pt && i == 0) ?
+	surrData.anchor_continuous_variables() :
+	surrData.continuous_variables(i-offset);
+      t1_exp[i] = value(c_vars);
+      Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
+    }
+    compute_numerical_moments(t1_exp, t2_exp, driverRep->type1_weight_sets(),
+			      driverRep->type2_weight_sets(), expansionMoments);
+  }
+  else {
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = (anchor_pt && i == 0) ?
+	surrData.anchor_continuous_variables() :
+	surrData.continuous_variables(i-offset);
+      t1_exp[i] = value(c_vars);
+    }
+    compute_numerical_moments(t1_exp, driverRep->type1_weight_sets(),
+			      expansionMoments);
+  }
+}
+
+
+/** Computes the variance of component functions. Assumes that all
+    subsets of set_value have been computed in advance which will be
+    true so long as the partial_variance is called following
+    appropriate enumeration of set value  */
+void NodalInterpPolyApproximation::compute_partial_variance(int set_value)
+{
+  Real& variance = partialVariance[sobolIndexMap[set_value]];
+  // Computes the integral first
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    const UShortArray&    lev_index = tpq_driver->level_index();
+    const UShort2DArray& colloc_key = tpq_driver->collocation_key();
+    SizetArray colloc_index; // empty -> default indexing
+    variance = partial_variance_integral(set_value, quad_order, lev_index,
+					 colloc_key, colloc_index);
+    break;
+  }
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const IntArray&        sm_coeffs = csg_driver->smolyak_coefficients();
+    const UShort2DArray&    sm_index = csg_driver->smolyak_multi_index();
+    const UShort3DArray&  colloc_key = csg_driver->collocation_key();
+    const Sizet2DArray& colloc_index = csg_driver->collocation_indices();
+    // Smolyak recursion of anisotropic tensor products
+    size_t i, num_smolyak_indices = sm_coeffs.size();
+    UShortArray quad_order;
+    for (i=0; i<num_smolyak_indices; ++i)
+      if (sm_coeffs[i]) {
+	csg_driver->level_to_order(sm_index[i], quad_order);
+	variance += sm_coeffs[i] * partial_variance_integral(set_value,
+	  quad_order, sm_index[i], colloc_key[i], colloc_index[i]);
+      }
+    break;
+  }
+  }
+
+  // manage constituentSets
+  InterpPolyApproximation::compute_partial_variance(set_value);
+}
+
+
+void NodalInterpPolyApproximation::compute_total_sobol_indices()
+{
+  const Real& m1 = numericalMoments[1]; // standardized, if not num exception
+  Real total_variance = (m1 > 0.) ? m1*m1 : m1;
+  int j, set_value;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    const UShortArray&   quad_order = tpq_driver->quadrature_order();
+    const UShortArray&    lev_index = tpq_driver->level_index();
+    const UShort2DArray& colloc_key = tpq_driver->collocation_key();
+    SizetArray colloc_index; // empty -> default indexing
+    for (j=0; j<numVars; ++j) {
+      // define set_value that includes all but index of interest
+      set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1;
+      totalSobolIndices[j] = std::abs(1. -
+	total_effects_integral(set_value, quad_order, lev_index,
+			       colloc_key, colloc_index) / total_variance);
+    }
+    break;
+  }
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const IntArray&        sm_coeffs = csg_driver->smolyak_coefficients();
+    const UShort2DArray&    sm_index = csg_driver->smolyak_multi_index();
+    const UShort3DArray&  colloc_key = csg_driver->collocation_key();
+    const Sizet2DArray& colloc_index = csg_driver->collocation_indices();
+    // Smolyak recursion of anisotropic tensor products
+    size_t i, num_smolyak_indices = sm_coeffs.size();
+    UShortArray quad_order;
+    // iterate each variable 
+    for (j=0; j<numVars; ++j) {
+      set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
+      for (i=0; i<num_smolyak_indices; ++i)
+	if (sm_coeffs[i]) {
+	  csg_driver->level_to_order(sm_index[i], quad_order);
+	  totalSobolIndices[j] += sm_coeffs[i] *
+	    total_effects_integral(set_value, quad_order, sm_index[i],
+				   colloc_key[i], colloc_index[i]);
+	}
+      totalSobolIndices[j] = std::abs(1. - totalSobolIndices[j]/total_variance);
+    }
+    break;
+  }
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+member_coefficients_weights(int set_value, const UShortArray& quad_order,
+			    const UShortArray& lev_index,
+			    const UShort2DArray& key,
+			    const SizetArray& colloc_index,
+			    RealVector& member_coeffs, RealVector& member_wts)
+{
+  // create member variable key and get number of expansion coeffs in
+  // member-variable-only expansion
+  BoolDeque nonmember_vars(numVars); // distinguish set members from non-members
+  int num_member_coeffs = 1; // # exp coeffs in member-variable-only expansion
+  IntVector indexing_factor(numVars, false); // factors indexing member vars 
+  for (int k=0; k<numVars; ++k) {
+    // if subset contains variable k, set key for variable k to true
+    if (set_value & (1 << k)) {
+      nonmember_vars[k]  = false;	
+      indexing_factor[k] = num_member_coeffs; // for indexing of member_coeffs
+      num_member_coeffs *= quad_order[k];
+    }
+    else {
+      nonmember_vars[k]  = true;	
+      indexing_factor[k] = 1;
+    }
+  }
+
+  // Size vectors to store new coefficients
+  member_coeffs.size(num_member_coeffs); // init to 0
+  member_wts.size(num_member_coeffs);    // init to 0
+
+  // Perform integration over non-member variables and store indices
+  // of new expansion
+  size_t i, j, num_colloc_pts = key.size(), member_coeffs_index, c_index;
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
+  for (i=0; i <num_colloc_pts; ++i) {
+    const UShortArray& key_i = key[i];
+    member_coeffs_index = 0;	
+    Real prod_i_nonmembers = 1., prod_i_members = 1.;
+    for (j=0; j<numVars; ++j)
+      // Save the product of the weights of the member and non-member variables 
+      if (nonmember_vars[j])
+	prod_i_nonmembers   *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      else {
+	// Convert key to corresponding index on member_coeffs
+	member_coeffs_index += key_i[j] * indexing_factor[j];
+	prod_i_members      *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      }
+
+    // member_wts is performed more time than necessary here, but it
+    // seems to be the simplest place to put it
+    member_wts[member_coeffs_index] = prod_i_members;
+    // sort coefficients by the "signature" of the member variables
+    // (i.e. member_coeffs_index)
+    c_index = (colloc_index.empty()) ? i : colloc_index[i];
+    member_coeffs[member_coeffs_index]
+      += expansionType1Coeffs[c_index]*prod_i_nonmembers;
   }
 }
 

@@ -275,6 +275,28 @@ tensor_product_multi_index(const UShortArray& order, UShort2DArray& multi_index,
 }
 
 
+void PolynomialApproximation::
+hierarchical_tensor_product_multi_index(const UShort2DArray& delta_quad,
+					UShort2DArray& multi_index)
+{
+  // delta_quad are non-sequential indices of hierarchical collocation point
+  // increments
+  size_t i, j, n = delta_quad.size(), mi_len = 1;
+  UShortArray index_bound(n);
+  for (i=0; i<n; ++i)
+    mi_len *= index_bound[i] = delta_quad[i].size();
+  if (mi_len != multi_index.size())
+    multi_index.resize(mi_len);
+  UShortArray indices(n, 0);
+  for (i=0; i<mi_len; ++i) {
+    for (j=0; j<n; ++j)
+      multi_index[i][j] = delta_quad[j][indices[j]];
+    if (i < mi_len-1)
+      increment_indices(indices, index_bound, false); // 0 <= index < bound
+  }
+}
+
+
 /** Return the number of terms in a total-order expansion.  For anisotropic
     expansion order, no simple expression is currently available and the
     number of expansion terms is computed using the multiIndex recursion. */
@@ -346,6 +368,43 @@ total_order_terms(const UShortArray& upper_bound, short lower_bound_offset)
     }
   }
   return num_terms;
+}
+
+
+/** Overloaded version for defining the multi-indices for a single
+    scalar level.  Anisotropy is not supported, so this version is not
+    usable as a kernel within other overloaded versions. */
+void PolynomialApproximation::
+total_order_multi_index(unsigned short level, size_t num_vars, 
+			UShort2DArray& multi_index)
+{
+  UShortArray mi(num_vars, 0);
+  multi_index.clear();
+  // special logic required for level < 2 due to prev_index defn below
+  switch (level) {
+  case 0:
+    multi_index.push_back(mi); break;
+  case 1:
+    for (size_t i=0; i<num_vars; ++i)
+      { mi[i] = 1; multi_index.push_back(mi); mi[i] = 0; }
+    break;
+  default: {
+    UShortArray terms(level, 1); // # of terms = level
+    bool order_complete = false;
+    while (!order_complete) {
+      // this is the inner-most loop w/i the nested looping managed by terms
+      size_t last_index = level - 1, prev_index = level - 2;
+      for (terms[last_index]=1;
+	   terms[last_index]<=terms[prev_index]; ++terms[last_index]) {
+	for (size_t i=0; i<num_vars; ++i)
+	  mi[i] = std::count(terms.begin(), terms.end(), i+1);
+	multi_index.push_back(mi);
+      }
+      increment_terms(terms, last_index, prev_index, num_vars, order_complete);
+    }
+    break;
+  }
+  }
 }
 
 
@@ -449,7 +508,7 @@ total_order_multi_index(const UShortArray& upper_bound,
 
 
 void PolynomialApproximation::
-compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
+compute_numerical_moments(const RealVector& coeffs, const RealVector& t1_wts,
 			  RealVector& moments)
 {
   // computes and stores the following moments:
@@ -460,19 +519,13 @@ compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
 
   // current support for this implementation: can't be open-ended since we
   // employ a specific combination of raw, central, and standardized moments
+  size_t num_moments = moments.length();
   if (num_moments < 1 || num_moments > 4) {
     PCerr << "Error: unsupported number of moments requested in Polynomial"
 	  << "Approximation::compute_numerical_moments()" << std::endl;
     abort_handler(-1);
   }
-
-  if (moments.length() == num_moments)
-    moments = 0.;
-  else
-    moments.size(num_moments); // init to 0
-
   size_t i, j, num_pts = coeffs.length();
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
   if (t1_wts.length() != num_pts) {
     PCerr << "Error: mismatch in array lengths between integration driver "
 	  << "weights ("  << t1_wts.length() << ") and coefficients ("
@@ -482,17 +535,20 @@ compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
   }
 
   // estimate 1st raw moment (mean)
+  moments = 0.;
   Real& mean = moments[0];
   for (i=0; i<num_pts; ++i)
     mean += t1_wts[i] * coeffs[i];
 
   // estimate central moments 2 through num_moments
-  Real centered_fn, pow_fn;
-  for (i=0; i<num_pts; ++i) {
-    pow_fn = centered_fn = coeffs[i] - mean;
-    for (j=1; j<num_moments; ++j) {
-      pow_fn     *= centered_fn;
-      moments[j] += t1_wts[i] * pow_fn;
+  if (num_moments > 1) {
+    Real centered_fn, pow_fn;
+    for (i=0; i<num_pts; ++i) {
+      pow_fn = centered_fn = coeffs[i] - mean;
+      for (j=1; j<num_moments; ++j) {
+	pow_fn     *= centered_fn;
+	moments[j] += t1_wts[i] * pow_fn;
+      }
     }
   }
 
@@ -502,8 +558,9 @@ compute_numerical_moments(size_t num_moments, const RealVector& coeffs,
 
 
 void PolynomialApproximation::
-compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
-			  const RealMatrix& t2_coeffs, RealVector& moments)
+compute_numerical_moments(const RealVector& t1_coeffs,
+			  const RealMatrix& t2_coeffs, const RealVector& t1_wts,
+			  const RealMatrix& t2_wts, RealVector& moments)
 {
   // computes and stores the following moments:
   // > mean     (1st raw moment)
@@ -513,20 +570,13 @@ compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
 
   // current support for this implementation: can't be open-ended since we
   // employ a specific combination of raw, central, and standardized moments
+  size_t num_moments = moments.length();
   if (num_moments < 1 || num_moments > 4) {
     PCerr << "Error: unsupported number of moments requested in Polynomial"
 	  << "Approximation::compute_numerical_moments()" << std::endl;
     abort_handler(-1);
   }
-
-  if (moments.length() == num_moments)
-    moments = 0.;
-  else
-    moments.size(num_moments); // init to 0
-
   size_t i, j, k, num_pts = t1_coeffs.length();
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
-  const RealMatrix& t2_wts = driverRep->type2_weight_sets();
   if (t1_wts.length() != num_pts || t2_wts.numCols() != num_pts ||
       t2_coeffs.numCols() != num_pts) {
     PCerr << "Error: mismatch in array lengths among integration driver "
@@ -538,6 +588,7 @@ compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
   }
 
   // estimate 1st raw moment (mean)
+  moments = 0.;
   Real& mean = moments[0];
   for (i=0; i<num_pts; ++i) {
     mean += t1_wts[i] * t1_coeffs[i];
@@ -548,20 +599,22 @@ compute_numerical_moments(size_t num_moments, const RealVector& t1_coeffs,
   }
 
   // estimate central moments 2 through num_moments
-  Real centered_fn, pow_fn;
-  for (i=0; i<num_pts; ++i) {
-    pow_fn = centered_fn = t1_coeffs[i] - mean;
-    const Real* coeff2_i = t2_coeffs[i];
-    const Real*  t2_wt_i = t2_wts[i];
-    for (j=1; j<num_moments; ++j) {
-      Real& moment_j = moments[j];
-      // type2 interpolation of (R - \mu)^n
-      // --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
-      for (k=0; k<numVars; ++k)
-	moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
-      // type 1 interpolation of (R - \mu)^n
-      pow_fn   *= centered_fn;
-      moment_j += t1_wts[i] * pow_fn;
+  if (num_moments > 1) {
+    Real centered_fn, pow_fn;
+    for (i=0; i<num_pts; ++i) {
+      pow_fn = centered_fn = t1_coeffs[i] - mean;
+      const Real* coeff2_i = t2_coeffs[i];
+      const Real*  t2_wt_i = t2_wts[i];
+      for (j=1; j<num_moments; ++j) {
+	Real& moment_j = moments[j];
+	// type2 interpolation of (R - \mu)^n
+	// --> interpolated gradients are n(R - \mu)^{n-1} dR/dx
+	for (k=0; k<numVars; ++k)
+	  moment_j += (j+1) * pow_fn * coeff2_i[k] * t2_wt_i[k];
+	// type 1 interpolation of (R - \mu)^n
+	pow_fn   *= centered_fn;
+	moment_j += t1_wts[i] * pow_fn;
+      }
     }
   }
 

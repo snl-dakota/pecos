@@ -52,8 +52,10 @@ enum { NO_TARGET, CDV_LWR_BND, CDV_UPR_BND, DDRIV_LWR_BND, DDRIV_UPR_BND,
        CSV_LWR_BND, CSV_UPR_BND, DSRIV_LWR_BND, DSRIV_UPR_BND };
 
 /// derived basis approximation types
-enum { NO_BASIS, FOURIER_BASIS, EIGEN_BASIS, GLOBAL_INTERPOLATION_POLYNOMIAL,
+enum { NO_BASIS, FOURIER_BASIS, EIGEN_BASIS,
+       GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL,
        PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL,
+       GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL,
        PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL,
        GLOBAL_ORTHOGONAL_POLYNOMIAL, PIECEWISE_ORTHOGONAL_POLYNOMIAL };
 
@@ -71,18 +73,20 @@ enum { NO_RULE=0, CLENSHAW_CURTIS, FEJER2, GAUSS_PATTERSON, GAUSS_LEGENDRE,
        GAUSS_JACOBI, GENZ_KEISTER, /*USER_OPEN, USER_CLOSED,*/ GOLUB_WELSCH,
        NEWTON_COTES };
 
-/// growth rules within VPISparseGrid
-enum { DEFAULT_GROWTH, SLOW_LINEAR, SLOW_LINEAR_ODD, MODERATE_LINEAR,
-       SLOW_EXPONENTIAL, MODERATE_EXPONENTIAL, FULL_EXPONENTIAL };
+// growth rules within VPISparseGrid
+//enum { DEFAULT_GROWTH, SLOW_LINEAR, SLOW_LINEAR_ODD, MODERATE_LINEAR,
+//       SLOW_EXPONENTIAL, MODERATE_EXPONENTIAL, FULL_EXPONENTIAL };
 
 /// options for synchronizing linear and exponential growth rule settings
+/// (consistent with slow/moderate/full growth for new level_to_growth_*
+/// functions in sandia_rules.cpp)
 enum { SLOW_RESTRICTED_GROWTH, MODERATE_RESTRICTED_GROWTH,
        UNRESTRICTED_GROWTH };
 
 /// solution approaches for calculating the polynomial basis coefficients
 /// (options for ExpansionConfigOptions::expCoeffsSolnApproach)
-enum { QUADRATURE, CUBATURE, SPARSE_GRID, LOCAL_REFINABLE, REGRESSION,
-       SAMPLING };
+enum { QUADRATURE, CUBATURE, COMBINED_SPARSE_GRID, HIERARCHICAL_SPARSE_GRID,
+       LOCAL_REFINABLE, REGRESSION, SAMPLING };
 /// options for BasisConfigOptions::nestingOverride (inactive)
 enum { NO_NESTING_OVERRIDE=0, NESTED, NON_NESTED };
 /// options for overriding the default growth restriction policy

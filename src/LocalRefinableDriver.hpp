@@ -196,6 +196,13 @@ protected:
 
   bool isInitialized;
 
+  /// the set of type1 weights (for integration of value interpolants)
+  /// associated with each point in the grid
+  RealVector type1WeightSets;
+  /// the set of type2 weights (for integration of gradient interpolants)
+  /// for each derivative component and for each point in the grid
+  RealMatrix type2WeightSets;
+
   ///Computes the quadrature weights for the points at the highest level.
   virtual void set_highest_level_weights();
 

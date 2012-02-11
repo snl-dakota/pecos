@@ -15,7 +15,8 @@
 #include "IntegrationDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "TensorProductDriver.hpp"
-#include "SparseGridDriver.hpp"
+#include "CombinedSparseGridDriver.hpp"
+#include "HierarchSparseGridDriver.hpp"
 #include "LocalRefinableDriver.hpp"
 #include "PolynomialApproximation.hpp"
 
@@ -113,10 +114,11 @@ IntegrationDriver* IntegrationDriver::get_driver(short driver_type)
 #endif
 
   switch (driver_type) {
-  case QUADRATURE:      return new TensorProductDriver();  break;
-  case CUBATURE:        return new CubatureDriver();       break;
-  case SPARSE_GRID:     return new SparseGridDriver();     break;
-  case LOCAL_REFINABLE: return new LocalRefinableDriver(); break;
+  case QUADRATURE:               return new TensorProductDriver();      break;
+  case CUBATURE:                 return new CubatureDriver();           break;
+  case COMBINED_SPARSE_GRID:     return new CombinedSparseGridDriver(); break;
+  case HIERARCHICAL_SPARSE_GRID: return new HierarchSparseGridDriver(); break;
+  case LOCAL_REFINABLE:          return new LocalRefinableDriver();     break;
   default:
     PCerr << "Error: IntegrationDriver type " << driver_type
 	  << " not available." << std::endl;
@@ -206,13 +208,13 @@ initialize_grid_parameters(const ShortArray& u_types,
 }
 
 
-void IntegrationDriver::compute_grid()
+void IntegrationDriver::compute_grid(RealMatrix& var_sets)
 {
   if (driverRep)
-    driverRep->compute_grid(); // forward to letter
+    driverRep->compute_grid(var_sets); // forward to letter
   else {
-    PCerr << "Error: compute_grid() not available for this driver type."
-	  << std::endl;
+    PCerr << "Error: compute_grid(RealMatrix&) not available for this "
+	  << "driver type." << std::endl;
     abort_handler(-1);
   }
 }
@@ -226,6 +228,28 @@ int IntegrationDriver::grid_size()
     abort_handler(-1);
   }
   return driverRep->grid_size(); // forward to letter
+}
+
+
+const RealVector& IntegrationDriver::type1_weight_sets() const
+{
+  if (!driverRep) {
+    PCerr << "Error: type1_weight_sets() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->type1_weight_sets();
+}
+
+
+const RealMatrix& IntegrationDriver::type2_weight_sets() const
+{
+  if (!driverRep) {
+    PCerr << "Error: type2_weight_sets() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->type2_weight_sets();
 }
 
 

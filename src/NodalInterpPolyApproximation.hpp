@@ -48,21 +48,24 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// retrieve the value of the response expansion using the given
-  /// parameter vector
+  void allocate_expansion_coefficients();
+  void compute_expansion_coefficients();
+  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
+  /// storedColloc{Key,Indices}, and storedLev{MultiIndex,Coeffs}
+  void store_coefficients();
+  /// augment current interpolant using
+  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
+  /// and storedLev{MultiIndex,Coeffs}
+  void combine_coefficients(short combine_type);
+  void restore_expansion_coefficients();
+
+  void compute_numerical_response_moments(size_t num_moments);
+  void compute_numerical_expansion_moments(size_t num_moments);
+
   Real value(const RealVector& x);
-  /// retrieve the gradient of the response expansion with respect to all
-  /// variables included in the polynomial basis (e.g., probabilistic
-  /// variables) for a given parameter vector
   const RealVector& gradient_basis_variables(const RealVector& x);
-  /// retrieve the gradient of the response expansion with respect to variables
-  /// included in the polynomial basis (e.g., probabilistic or "all" variables)
-  /// for a given parameter vector and a given DVV subset
   const RealVector& gradient_basis_variables(const RealVector& x,
 					     const SizetArray& dvv);
-  /// retrieve the gradient of the response expansion with respect to variables
-  /// not included in the polynomial basis (nonprobabilistic variables such as
-  /// design or epistemic when not in "all" mode) for a given parameter vector
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
 
   Real stored_value(const RealVector& x);
@@ -83,28 +86,21 @@ protected:
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
+  void compute_total_sobol_indices();
+  void compute_partial_variance(int set_value);
+  void member_coefficients_weights(int set_value,
+    const UShortArray& quad_order, const UShortArray& lev_index,
+    const UShort2DArray& key, const SizetArray& colloc_index,
+    RealVector& member_coeffs, RealVector& member_wts);
+
+  const RealVector& approximation_coefficients() const;
+  void approximation_coefficients(const RealVector& approx_coeffs);
+
 private:
 
   //
   //- Heading: Convenience functions
   //
-
-  /// return value of type 1 interpolation polynomial
-  Real type1_interpolant_value(const RealVector& x, const UShortArray& key,
-			       const UShortArray& basis_index);
-  /// return gradient of type 1 interpolation polynomial
-  Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
-				  const UShortArray& key,
-				  const UShortArray& basis_index);
-
-  /// return value of type 2 interpolation polynomial
-  Real type2_interpolant_value(const RealVector& x, size_t interp_index,
-			       const UShortArray& key,
-			       const UShortArray& basis_index);
-  /// return gradient of type 2 interpolation polynomial
-  Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
-				  size_t interp_index, const UShortArray& key,
-				  const UShortArray& basis_index);
 
   /// compute the value of a tensor interpolant on a tensor grid;
   /// contributes to value(x)
@@ -162,6 +158,37 @@ private:
   //- Heading: Data
   //
 
+  /// the type1 coefficients of the expansion for interpolating values
+  RealVector expansionType1Coeffs;
+  /// the type2 coefficients of the expansion for interpolating gradients
+  RealMatrix expansionType2Coeffs;
+  /// the gradients of the type1 expansion coefficients
+  /** may be interpreted as either the gradients of the expansion
+      coefficients or the coefficients of expansions for the response
+      gradients.  This array is used when sensitivities of moments are
+      needed with respect to variables that do not appear in the
+      expansion (e.g., with respect to design variables for an
+      expansion only over the random variables). */
+  RealMatrix expansionType1CoeffGrads;
+
+  /// storage of expansionType1Coeffs state for subsequent restoration
+  RealVector storedExpType1Coeffs;
+  /// storage of expansionType2Coeffs state for subsequent restoration
+  RealMatrix storedExpType2Coeffs;
+  /// storage of expansionType1CoeffGrads state for subsequent restoration
+  RealMatrix storedExpType1CoeffGrads;
+  /// storage of level multi-index (levels for tensor or sparse grids)
+  /// for subsequent restoration
+  UShort2DArray storedLevMultiIndex;
+  /// storage of IntegrationDriver combinatorial coefficients state
+  /// for subsequent restoration
+  IntArray storedLevCoeffs;
+  /// storage of IntegrationDriver collocation key state for
+  /// subsequent restoration
+  UShort3DArray storedCollocKey;
+  /// storage of IntegrationDriver collocation indices state for
+  /// subsequent restoration
+  Sizet2DArray storedCollocIndices;
 };
 
 
@@ -176,63 +203,29 @@ inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 { }
 
 
-inline Real NodalInterpPolyApproximation::
-type1_interpolant_value(const RealVector& x, const UShortArray& key,
-			const UShortArray& basis_index)
+inline const RealVector& NodalInterpPolyApproximation::
+approximation_coefficients() const
 {
-  Real L1 = 1.;
-  for (size_t j=0; j<numVars; ++j)
-    L1 *= polynomialBasis[basis_index[j]][j].type1_value(x[j], key[j]);
-  return L1;
+  if (basisConfigOptions.useDerivs) {
+    PCerr << "Error: approximation_coefficients() not supported in "
+	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
+    return abort_handler_t<const RealVector&>(-1);
+  }
+  else
+    return expansionType1Coeffs;
 }
 
 
-inline Real NodalInterpPolyApproximation::
-type1_interpolant_gradient(const RealVector& x,    size_t deriv_index,
-			   const UShortArray& key,
-			   const UShortArray& basis_index)
+inline void NodalInterpPolyApproximation::
+approximation_coefficients(const RealVector& approx_coeffs)
 {
-  Real L1_grad = 1.;
-  for (size_t k=0; k<numVars; ++k)
-    L1_grad *= (k == deriv_index) ?
-      polynomialBasis[basis_index[k]][k].type1_gradient(x[k], key[k]) :
-      polynomialBasis[basis_index[k]][k].type1_value(x[k],    key[k]);
-  return L1_grad;
-}
-
-
-inline Real NodalInterpPolyApproximation::
-type2_interpolant_value(const RealVector& x,    size_t interp_index,
-			const UShortArray& key, const UShortArray& basis_index)
-{
-  Real L2 = 1.;
-  for (size_t k=0; k<numVars; ++k)
-    L2 *= (interp_index == k) ?
-      polynomialBasis[basis_index[k]][k].type2_value(x[k], key[k]) :
-      polynomialBasis[basis_index[k]][k].type1_value(x[k], key[k]);
-  return L2;
-}
-
-
-inline Real NodalInterpPolyApproximation::
-type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
-			   size_t interp_index, const UShortArray& key,
-			   const UShortArray& basis_index)
-{
-  // deriv_index  = desired gradient component
-  // interp_index = index of gradient component used in type2 interpolation
-  Real L2_grad = 1.;
-  if (interp_index == deriv_index) // match in grad and type2 interp components
-    for (size_t l=0; l<numVars; ++l)
-      L2_grad *= (l == interp_index) ?
-	polynomialBasis[basis_index[l]][l].type2_gradient(x[l], key[l]) :
-	polynomialBasis[basis_index[l]][l].type1_value(x[l],    key[l]);
-  else                          // mismatch in grad and type2 interp components
-    for (size_t l=0; l<numVars; ++l)
-      L2_grad *= (l == interp_index) ?
-	polynomialBasis[basis_index[l]][l].type2_value(x[l],    key[l]) :
-	polynomialBasis[basis_index[l]][l].type1_gradient(x[l], key[l]);
-  return L2_grad;
+  if (basisConfigOptions.useDerivs) {
+    PCerr << "Error: approximation_coefficients() not supported in "
+	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
+    abort_handler(-1);
+  }
+  else
+    expansionType1Coeffs = approx_coeffs;
 }
 
 } // namespace Pecos

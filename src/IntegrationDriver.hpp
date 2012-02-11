@@ -59,9 +59,14 @@ public:
 					  const DistributionParams& dp);
 
   /// compute scaled variable and weight sets for the TPQ grid
-  virtual void compute_grid();
+  virtual void compute_grid(RealMatrix& var_sets);
   /// compute number of collocation points
   virtual int grid_size();
+
+  /// return type1WeightSets from Cubature/TensorProduct/CombinedSparseGrid
+  virtual const RealVector& type1_weight_sets() const;
+  /// return type2WeightSets from Cubature/TensorProduct/CombinedSparseGrid
+  virtual const RealMatrix& type2_weight_sets() const;
 
   //
   //- Heading: Member functions
@@ -69,11 +74,6 @@ public:
 
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
-
-  /// return type1WeightSets
-  const RealVector& type1_weight_sets() const;
-  /// return type2WeightSets
-  const RealMatrix& type2_weight_sets() const;
 
   // append to end of type1WeightSets
   //void append_type1_weight_sets(const RealVector& t1_wts);
@@ -149,12 +149,12 @@ protected:
   /// computing Gaussian quadrature points and weights
   std::vector<BasisPolynomial> polynomialBasis;
 
-  /// the set of type1 weights (for integration of value interpolants)
-  /// associated with each point in the {TPQ,SSG,Cub} grid
-  RealVector type1WeightSets;
-  /// the set of type2 weights (for integration of gradient interpolants)
-  /// for each derivative component and for each point in the {TPQ,SSG} grid
-  RealMatrix type2WeightSets;
+  // the set of type1 weights (for integration of value interpolants)
+  // associated with each point in the {TPQ,SSG,Cub} grid
+  //RealVector type1WeightSets;
+  // the set of type2 weights (for integration of gradient interpolants)
+  // for each derivative component and for each point in the {TPQ,SSG} grid
+  //RealMatrix type2WeightSets;
 
   /// num_levels_per_var x numVars sets of 1D collocation points
   Real3DArray collocPts1D;
@@ -199,14 +199,6 @@ private:
 inline const std::vector<BasisPolynomial>& 
 IntegrationDriver::polynomial_basis() const
 { return (driverRep) ? driverRep->polynomialBasis : polynomialBasis; }
-
-
-inline const RealVector& IntegrationDriver::type1_weight_sets() const
-{ return (driverRep) ? driverRep->type1WeightSets : type1WeightSets; }
-
-
-inline const RealMatrix& IntegrationDriver::type2_weight_sets() const
-{ return (driverRep) ? driverRep->type2WeightSets : type2WeightSets; }
 
 
 /*
