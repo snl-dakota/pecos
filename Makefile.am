@@ -77,6 +77,9 @@ include_HEADERS = pecos_config.h				\
 		     src/RefinablePointSet.hpp			\
                      src/UniformRefinablePointSet.hpp		\
 		     src/HierarchInterpPolyApproximation.hpp	\
+		     src/LRDHierarchInterpPolyApproximation.hpp	\
+		     src/HierarchSparseGridDriver.hpp		\
+		     src/CombinedSparseGridDriver.hpp		\
 		     src/BoostRNG_Monostate.hpp
 
 ## No sources in this directory!
