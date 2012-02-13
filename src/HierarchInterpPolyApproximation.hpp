@@ -112,12 +112,6 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// compute the value for a particular level and a particular index set
-  Real tensor_product_value(const RealVector& x, const RealVector& t1_coeffs,
-			    const RealMatrix& t2_coeffs,
-			    const UShortArray& basis_index,
-			    const UShort2DArray& key);
-
   /// compute the value at a point for a particular interpolation level
   Real value(const RealVector& x, unsigned short level);
 
@@ -166,9 +160,9 @@ private:
   /// storage of IntegrationDriver collocation key state for
   /// subsequent restoration
   UShort4DArray storedCollocKey;
-  /// storage of IntegrationDriver collocation indices state for
-  /// subsequent restoration
-  Sizet3DArray storedCollocIndices;
+  // storage of IntegrationDriver collocation indices state for
+  // subsequent restoration
+  //Sizet3DArray storedCollocIndices;
 };
 
 

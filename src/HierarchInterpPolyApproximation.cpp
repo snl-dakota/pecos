@@ -202,7 +202,7 @@ void HierarchInterpPolyApproximation::store_coefficients()
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   storedLevMultiIndex = hsg_driver->smolyak_multi_index();
   storedCollocKey     = hsg_driver->collocation_key();
-  storedCollocIndices = hsg_driver->collocation_indices();
+  //storedCollocIndices = hsg_driver->collocation_indices();
 }
 
 
@@ -264,7 +264,7 @@ void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
   storedExpType1CoeffGrads.clear();
   storedLevMultiIndex.clear();
   storedCollocKey.clear();
-  storedCollocIndices.clear();
+  //storedCollocIndices.clear();
 }
 
 
@@ -301,36 +301,6 @@ void HierarchInterpPolyApproximation::restore_expansion_coefficients()
 
 
 Real HierarchInterpPolyApproximation::
-tensor_product_value(const RealVector& x, const RealVector& t1_coeffs,
-		     const RealMatrix& t2_coeffs,
-		     const UShortArray& basis_index, const UShort2DArray& key)
-{
-  // since coefficients are unique surpluses rather than non-unique
-  // response values, it likely makes sense to tie the surpluses to
-  // interpolation level and eliminate colloc_index
-
-  Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
-  if (t2_coeffs.empty())
-    for (i=0; i<num_colloc_pts; ++i)
-      tp_val += t1_coeffs[i] * 
-	        type1_interpolant_value(x, key[i], basis_index);
-  else {
-    size_t j;
-    for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
-      tp_val += t1_coeffs[i] *
-	        type1_interpolant_value(x, key_i, basis_index);
-      const Real* t2_coeff_i = t2_coeffs[i];
-      for (j=0; j<numVars; ++j)
-	tp_val += t2_coeff_i[j] *
-	          type2_interpolant_value(x, j, key_i, basis_index);
-    }
-  }
-  return tp_val;
-}
-
-
-Real HierarchInterpPolyApproximation::
 value(const RealVector& x, unsigned short level)
 {
   if (!expConfigOptions.expansionCoeffFlag) {
@@ -344,15 +314,18 @@ value(const RealVector& x, unsigned short level)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray& key   = hsg_driver->collocation_key();
-  for (size_t lev=0; lev<=level; ++lev) {
+  SizetArray colloc_index; // empty -> default indexing
+  size_t lev, set, num_sets;
+  for (lev=0; lev<=level; ++lev) {
     const UShort2DArray&       sm_mi_l = sm_mi[lev];
     const UShort3DArray&         key_l = key[lev];
     const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
     const RealMatrixArray& t2_coeffs_l = expansionType2Coeffs[lev];
-    size_t set, num_sets = sm_mi_l.size();
+    num_sets = sm_mi_l.size();
     for (set=0; set<num_sets; ++set)
-      approx_val += tensor_product_value(x, t1_coeffs_l[set], t2_coeffs_l[set],
-					 sm_mi_l[set], key_l[set]);
+      approx_val +=
+	tensor_product_value(x, t1_coeffs_l[set], t2_coeffs_l[set],
+			     sm_mi_l[set], key_l[set], colloc_index);
   }
   return approx_val;
 }
@@ -361,8 +334,37 @@ value(const RealVector& x, unsigned short level)
 const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, unsigned short level)
 {
-  approxGradient.size(numVars);
-  // TO DO
+  // this could define a default_dvv and call gradient_basis_variables(x, dvv),
+  // but we want this fn to be as fast as possible
+
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in HierarchInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != numVars)
+    approxGradient.sizeUninitialized(numVars);
+  approxGradient = 0.;
+  // loop over outer level indices
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray& key   = hsg_driver->collocation_key();
+  SizetArray colloc_index; // empty -> default indexing
+  size_t lev, set, num_sets;
+  for (lev=0; lev<=level; ++lev) {
+    const UShort2DArray&       sm_mi_l = sm_mi[lev];
+    const UShort3DArray&         key_l = key[lev];
+    const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
+    const RealMatrixArray& t2_coeffs_l = expansionType2Coeffs[lev];
+    num_sets = sm_mi_l.size();
+    for (set=0; set<num_sets; ++set)
+      approxGradient +=
+	tensor_product_gradient_basis_variables(x, t1_coeffs_l[set],
+	  t2_coeffs_l[set], sm_mi_l[set], key_l[set], colloc_index);
+  }
+
   return approxGradient;
 }
 
@@ -371,10 +373,34 @@ const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 			 unsigned short level)
 {
-  size_t num_deriv_vars = dvv.size();
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in HierarchInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t lev, set, num_sets, num_deriv_vars = dvv.size();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.sizeUninitialized(num_deriv_vars);
-  // TO DO
+  approxGradient = 0.;
+  // loop over outer level indices
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray& key   = hsg_driver->collocation_key();
+  SizetArray colloc_index; // empty -> default indexing
+  for (lev=0; lev<=level; ++lev) {
+    const UShort2DArray&       sm_mi_l = sm_mi[lev];
+    const UShort3DArray&         key_l = key[lev];
+    const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
+    const RealMatrixArray& t2_coeffs_l = expansionType2Coeffs[lev];
+    num_sets = sm_mi_l.size();
+    for (set=0; set<num_sets; ++set)
+      approxGradient +=
+	tensor_product_gradient_basis_variables(x, t1_coeffs_l[set],
+	  t2_coeffs_l[set], sm_mi_l[set], key_l[set], colloc_index, dvv);
+  }
+
   return approxGradient;
 }
 
@@ -382,26 +408,149 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 const RealVector& HierarchInterpPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x, unsigned short level)
 {
-  size_t num_deriv_vars;  // TO DO
+  // Error check for required data
+  size_t lev, set, num_sets, num_deriv_vars;
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    if (expansionType1CoeffGrads.size() > level &&
+	expansionType1CoeffGrads[level].size())
+      num_deriv_vars = expansionType1CoeffGrads[level][0].numRows();
+    else {
+      PCerr << "Error: insufficient size in type1 expansion coefficient "
+	    << "gradients in\n       HierarchInterpPolyApproximation::"
+	    << "gradient_nonbasis_variables()" << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else {
+    PCerr << "Error: expansion coefficient gradients not defined in Hierarch"
+	  << "InterpPolyApproximation::gradient_nonbasis_variables()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.sizeUninitialized(num_deriv_vars);
-  // TO DO
+  approxGradient = 0.;
+  // loop over outer level indices
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray& key   = hsg_driver->collocation_key();
+  SizetArray colloc_index; // empty -> default indexing
+  for (lev=0; lev<=level; ++lev) {
+    const UShort2DArray&            sm_mi_l = sm_mi[lev];
+    const UShort3DArray&              key_l = key[lev];
+    const RealMatrixArray& t1_coeff_grads_l = expansionType1CoeffGrads[lev];
+    num_sets = sm_mi_l.size();
+    for (set=0; set<num_sets; ++set)
+      approxGradient +=
+	tensor_product_gradient_nonbasis_variables(x, t1_coeff_grads_l[set],
+	  sm_mi_l[set], key_l[set], colloc_index);
+  }
+
   return approxGradient;
 }
 
 
 Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
-{ return 0.; /* TO DO */ }
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not available in "
+	  << "HierarchInterpPolyApproximation::stored_value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  Real approx_val = 0.;
+  SizetArray colloc_index; // empty -> default indexing
+  size_t lev, set, num_sets, num_levels = storedLevMultiIndex.size();
+  for (lev=0; lev<num_levels; ++lev) {
+    const UShort2DArray&       sm_mi_l = storedLevMultiIndex[lev];
+    const UShort3DArray&         key_l = storedCollocKey[lev];
+    const RealVectorArray& t1_coeffs_l = storedExpType1Coeffs[lev];
+    const RealMatrixArray& t2_coeffs_l = storedExpType2Coeffs[lev];
+    num_sets = sm_mi_l.size();
+    for (set=0; set<num_sets; ++set)
+      approx_val +=
+	tensor_product_value(x, t1_coeffs_l[set], t2_coeffs_l[set],
+			     sm_mi_l[set], key_l[set], colloc_index);
+  }
+  return approx_val;
+}
 
 
 const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x)
-{ return approxGradient; /* TO DO */ }
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not available in HierarchInterpPoly"
+	  << "Approximation::stored_gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != numVars)
+    approxGradient.sizeUninitialized(numVars);
+  approxGradient = 0.;
+  SizetArray colloc_index; // empty -> default indexing
+  size_t lev, set, num_sets, num_levels = storedLevMultiIndex.size();
+  for (lev=0; lev<num_levels; ++lev) {
+    const UShort2DArray&       sm_mi_l = storedLevMultiIndex[lev];
+    const UShort3DArray&         key_l = storedCollocKey[lev];
+    const RealVectorArray& t1_coeffs_l = storedExpType1Coeffs[lev];
+    const RealMatrixArray& t2_coeffs_l = storedExpType2Coeffs[lev];
+    num_sets = sm_mi_l.size();
+    for (set=0; set<num_sets; ++set)
+      approxGradient +=
+	tensor_product_gradient_basis_variables(x, t1_coeffs_l[set],
+	  t2_coeffs_l[set], sm_mi_l[set], key_l[set], colloc_index);
+  }
+
+  return approxGradient;
+}
 
 
 const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x)
-{ return approxGradient; /* TO DO */ }
+{
+  // Error check for required data
+  size_t lev, set, num_sets, num_deriv_vars,
+    num_levels = storedLevMultiIndex.size();
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    lev = num_levels - 1;
+    if (storedExpType1CoeffGrads.size() == num_levels &&
+	storedExpType1CoeffGrads[lev].size())
+      num_deriv_vars = storedExpType1CoeffGrads[lev][0].numRows();
+    else {
+      PCerr << "Error: insufficient size in stored type1 expansion coefficient "
+	    << "gradients in\n       HierarchInterpPolyApproximation::stored_"
+	    << "gradient_nonbasis_variables()" << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else {
+    PCerr << "Error: expansion coefficient gradients not available in Hierarch"
+	  << "InterpPolyApproximation::stored_gradient_nonbasis_variables()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.sizeUninitialized(num_deriv_vars);
+  approxGradient = 0.;
+  SizetArray colloc_index; // empty -> default indexing
+  for (lev=0; lev<num_levels; ++lev) {
+    const UShort2DArray&            sm_mi_l = storedLevMultiIndex[lev];
+    const UShort3DArray&              key_l = storedCollocKey[lev];
+    const RealMatrixArray& t1_coeff_grads_l = storedExpType1CoeffGrads[lev];
+    num_sets = sm_mi_l.size();
+    for (set=0; set<num_sets; ++set)
+      approxGradient +=
+	tensor_product_gradient_nonbasis_variables(x, t1_coeff_grads_l[set],
+	  sm_mi_l[set], key_l[set], colloc_index);
+  }
+
+  return approxGradient;
+}
 
 
 Real HierarchInterpPolyApproximation::mean()
@@ -439,7 +588,7 @@ Real HierarchInterpPolyApproximation::mean()
 
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
-  std::cout << "TODO: mean in all variables mode";
+  PCerr << "TODO: mean in all variables mode";
   return numericalMoments[0];
 }
 
@@ -472,7 +621,7 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  std::cout << "TODO: mean_gradient in all variables mode" << std::endl;
+  PCerr << "TODO: mean_gradient in all variables mode" << std::endl;
   return meanGradient;
 }
 

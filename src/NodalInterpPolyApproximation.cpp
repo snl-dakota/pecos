@@ -264,157 +264,6 @@ void NodalInterpPolyApproximation::restore_expansion_coefficients()
 }
 
 
-Real NodalInterpPolyApproximation::
-tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
-		     const RealMatrix& exp_t2_coeffs,
-		     const UShortArray& basis_index, const UShort2DArray& key,
-		     const SizetArray& colloc_index)
-{
-  Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
-  if (exp_t2_coeffs.empty()) {
-    if (colloc_index.empty())
-      for (i=0; i<num_colloc_pts; ++i)
-	tp_val += exp_t1_coeffs[i] * 
-	          type1_interpolant_value(x, key[i], basis_index);
-    else
-      for (i=0; i<num_colloc_pts; ++i)
-	tp_val += exp_t1_coeffs[colloc_index[i]] *
-	          type1_interpolant_value(x, key[i], basis_index);
-  }
-  else {
-    size_t j, c_index;
-    for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
-      c_index = (colloc_index.empty()) ? i : colloc_index[i];
-      tp_val += exp_t1_coeffs[c_index] *
-	        type1_interpolant_value(x, key_i, basis_index);
-      const Real* exp_t2_coeff_i = exp_t2_coeffs[c_index];
-      for (j=0; j<numVars; ++j)
-	tp_val += exp_t2_coeff_i[j] *
-	          type2_interpolant_value(x, j, key_i, basis_index);
-    }
-  }
-  return tp_val;
-}
-
-
-const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient_basis_variables(const RealVector& x,
-					const RealVector& exp_t1_coeffs,
-					const RealMatrix& exp_t2_coeffs,
-					const UShortArray& basis_index,
-					const UShort2DArray& key,
-					const SizetArray& colloc_index)
-{
-  if (tpGradient.length() != numVars)
-    tpGradient.size(numVars); // init to 0
-  else
-    tpGradient = 0.;
-  size_t i, j, num_colloc_pts = key.size();
-  if (exp_t2_coeffs.empty()) {
-    for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
-	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
-      for (j=0; j<numVars; ++j)
-	tpGradient[j] += exp_t1_coeff_i *
-	  type1_interpolant_gradient(x, j, key_i, basis_index);
-    }
-  }
-  else {
-    size_t k;
-    for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
-	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
-      const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
-	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
-      for (j=0; j<numVars; ++j) { // ith contribution to jth grad component
-	tpGradient[j] += exp_t1_coeff_i *
-	  type1_interpolant_gradient(x, j, key_i, basis_index);
-	for (k=0; k<numVars; ++k) // type2 interpolant for kth grad comp
-	  tpGradient[j] += exp_t2_coeff_i[k] *
-	    type2_interpolant_gradient(x, j, k, key_i, basis_index);
-      }
-    }
-  }
-  return tpGradient;
-}
-
-
-const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient_basis_variables(const RealVector& x,
-					const RealVector& exp_t1_coeffs,
-					const RealMatrix& exp_t2_coeffs,
-					const UShortArray& basis_index,
-					const UShort2DArray& key,
-					const SizetArray& colloc_index,
-					const SizetArray& dvv)
-{
-  size_t i, j, deriv_index, num_colloc_pts = key.size(),
-    num_deriv_vars = dvv.size();
-  if (tpGradient.length() != num_deriv_vars)
-    tpGradient.size(num_deriv_vars); // init to 0
-  else
-    tpGradient = 0.;
-  if (exp_t2_coeffs.empty()) {
-    for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i   = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
-	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
-      for (j=0; j<num_deriv_vars; ++j) {
-	deriv_index = dvv[j] - 1; // requires an "All" view
-	tpGradient[j] += exp_t1_coeff_i *
-	  type1_interpolant_gradient(x, deriv_index, key_i, basis_index);
-      }
-    }
-  }
-  else {
-    size_t k;
-    for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
-	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
-      const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
-	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
-      for (j=0; j<num_deriv_vars; ++j) {
-	deriv_index = dvv[j] - 1; // requires an "All" view
-	tpGradient[j] += exp_t1_coeff_i *
-	  type1_interpolant_gradient(x, deriv_index, key_i, basis_index);
-	for (k=0; k<numVars; ++k)
-	  tpGradient[j] += exp_t2_coeff_i[k] *
-	    type2_interpolant_gradient(x, deriv_index, k, key_i, basis_index);
-      }
-    }
-  }
-  return tpGradient;
-}
-
-
-const RealVector& NodalInterpPolyApproximation::
-tensor_product_gradient_nonbasis_variables(const RealVector& x,
-					   const RealMatrix& exp_t1_coeff_grads,
-					   const UShortArray& basis_index,
-					   const UShort2DArray& key,
-					   const SizetArray& colloc_index)
-{
-  size_t i, j, num_colloc_pts = key.size(),
-    num_deriv_vars = exp_t1_coeff_grads.numRows();
-  if (tpGradient.length() != num_deriv_vars)
-    tpGradient.size(num_deriv_vars); // init to 0
-  else
-    tpGradient = 0.;
-  for (i=0; i<num_colloc_pts; ++i) {
-    const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
-      exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
-    Real t1_val = type1_interpolant_value(x, key[i], basis_index);
-    for (j=0; j<numVars; ++j)
-      tpGradient[j] += exp_t1_coeff_grad_i[j] * t1_val;
-  }
-  return tpGradient;
-}
-
-
 /** Overloaded all_variables version supporting Smolyak sparse grids. */
 Real NodalInterpPolyApproximation::
 tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
@@ -862,9 +711,8 @@ gradient_nonbasis_variables(const RealVector& x)
   case COMBINED_SPARSE_GRID: {
     size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
     if (approxGradient.length() != num_deriv_vars)
-      approxGradient.size(num_deriv_vars); // init to 0
-    else
-      approxGradient = 0.;
+      approxGradient.sizeUninitialized(num_deriv_vars);
+    approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
@@ -944,9 +792,8 @@ stored_gradient_basis_variables(const RealVector& x)
   }
   case COMBINED_SPARSE_GRID: {
     if (approxGradient.length() != numVars)
-      approxGradient.size(numVars); // init to 0
-    else
-      approxGradient = 0.;
+      approxGradient.sizeUninitialized(numVars);
+    approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     size_t i, j, num_smolyak_indices = storedLevCoeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
@@ -990,9 +837,8 @@ stored_gradient_nonbasis_variables(const RealVector& x)
     size_t i, j, num_smolyak_indices = storedLevCoeffs.size(),
       num_deriv_vars = storedExpType1CoeffGrads.numRows();
     if (approxGradient.length() != num_deriv_vars)
-      approxGradient.size(num_deriv_vars); // init to 0
-    else
-      approxGradient = 0.;
+      approxGradient.sizeUninitialized(num_deriv_vars);
+    approxGradient = 0.;
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = storedLevCoeffs[i];
       if (coeff_i) {

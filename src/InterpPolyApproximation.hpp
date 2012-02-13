@@ -144,6 +144,35 @@ protected:
 				  size_t interp_index, const UShortArray& key,
 				  const UShortArray& basis_index);
 
+  /// compute the value of a tensor interpolant on a tensor grid;
+  /// contributes to value(x)
+  Real tensor_product_value(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray&  colloc_index);
+
+  /// compute the gradient of a tensor interpolant on a tensor grid
+  /// with respect to variables that are included in the polynomial
+  /// basis; contributes to gradient_basis_variables(x)
+  const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray&  colloc_index);
+  /// compute the gradient of a tensor interpolant on a tensor grid
+  /// with respect to variables that are included in the polynomial
+  /// basis for given DVV; contributes to gradient_basis_variables(x, dvv)
+  const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray& colloc_index,  const SizetArray& dvv);
+  /// compute the gradient of a tensor interpolant on a tensor grid
+  /// with respect to variables that are not included in the
+  /// polynomial basis; contributes to gradient_nonbasis_variables(x)
+  const RealVector& tensor_product_gradient_nonbasis_variables(
+    const RealVector& x,             const RealMatrix& exp_t1_coeff_grads,
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray& colloc_index);
+
   /// compute total Sobol effects for an index within a sparse grid
   Real total_effects_integral(int set_value, const UShortArray& quad_order,
 			      const UShortArray& lev_index,

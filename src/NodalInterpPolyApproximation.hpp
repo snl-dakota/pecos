@@ -102,35 +102,6 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// compute the value of a tensor interpolant on a tensor grid;
-  /// contributes to value(x)
-  Real tensor_product_value(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShortArray& basis_index,  const UShort2DArray& key,
-    const SizetArray&  colloc_index);
-
-  /// compute the gradient of a tensor interpolant on a tensor grid
-  /// with respect to variables that are included in the polynomial
-  /// basis; contributes to gradient_basis_variables(x)
-  const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShortArray& basis_index,  const UShort2DArray& key,
-    const SizetArray&  colloc_index);
-  /// compute the gradient of a tensor interpolant on a tensor grid
-  /// with respect to variables that are included in the polynomial
-  /// basis for given DVV; contributes to gradient_basis_variables(x, dvv)
-  const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
-    const UShortArray& basis_index,  const UShort2DArray& key,
-    const SizetArray& colloc_index,  const SizetArray& dvv);
-  /// compute the gradient of a tensor interpolant on a tensor grid
-  /// with respect to variables that are not included in the
-  /// polynomial basis; contributes to gradient_nonbasis_variables(x)
-  const RealVector& tensor_product_gradient_nonbasis_variables(
-    const RealVector& x,             const RealMatrix& exp_t1_coeff_grads,
-    const UShortArray& basis_index,  const UShort2DArray& key,
-    const SizetArray& colloc_index);
-
   /// compute the mean of a tensor interpolant on a tensor grid;
   /// contributes to mean(x)
   Real tensor_product_mean(const RealVector& x, const UShortArray& lev_index,
