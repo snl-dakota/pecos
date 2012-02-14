@@ -564,24 +564,47 @@ Real HierarchInterpPolyApproximation::mean()
   Real mean = 0.;
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
+  size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
+    num_sets, num_tp_pts;
   switch (basisConfigOptions.useDerivs) {
   case false:
-    //for ( unsigned int i = 0; i<numCollocPts; ++i)
-    //  mean += expansionType1Coeffs[i] * t1_wts[i];
-    break;
-  case true:
-    const RealMatrix2DArray& t2_wts = hsg_driver->type2_weight_set_arrays();
-    /*
-    for ( unsigned int i = 0; i< numCollocPts; ++i) {
-      mean += expansionType1Coeffs[i] * t1_wts[i];
-      const Real* coeff2_i = expansionType2Coeffs[i];
-      const Real* t2_wt_i = t2_wts[i];
-      for (unsigned int j = 0; j< numVars; ++j)
-	mean += coeff2_i[j] * t2_wt_i[j];
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
+      num_sets = t1_coeffs_l.size();
+      for (set=0; set<num_sets; ++set) {
+	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
+	const RealVector&    t1_wts_ls = t1_wts[lev][set];
+	num_tp_pts = t1_coeffs_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt)
+	  mean += t1_coeffs_ls[pt] * t1_wts_ls[pt];
+      }
     }
-    */
+    break;
+  case true: {
+    const RealMatrix2DArray& t2_wts = hsg_driver->type2_weight_set_arrays();
+    size_t v;
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
+      num_sets = t1_coeffs_l.size();
+      for (set=0; set<num_sets; ++set) {
+	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
+	const RealMatrix& t2_coeffs_ls = expansionType2Coeffs[lev][set];
+	const RealVector&    t1_wts_ls = t1_wts[lev][set];
+	const RealMatrix&    t2_wts_ls = t2_wts[lev][set];
+	num_tp_pts = t1_coeffs_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  const Real* t2_coeffs_lsp = t2_coeffs_ls[pt];
+	  const Real* t2_wts_lsp    = t2_wts_ls[pt];
+	  mean += t1_coeffs_ls[pt] * t1_wts_ls[pt];
+	  for (v=0; v<numVars; ++v)
+	    mean += t2_coeffs_lsp[v] * t2_wts_lsp[v];
+	}
+      }
+    }
     break;
   }
+  }
+
   return mean;
 }
 
@@ -668,35 +691,59 @@ covariance(PolynomialApproximation* poly_approx_2)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     static_cast<HierarchInterpPolyApproximation*>(poly_approx_2);
+  size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
+    num_sets, num_tp_pts;
   Real mean_1 = mean(), mean_2 = hip_approx_2->mean();
   const RealVector2DArray& t1_coeffs_2 = hip_approx_2->expansionType1Coeffs;
   const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
   switch (basisConfigOptions.useDerivs) {
   case false:
-    /*
-    for ( unsigned int i=0; i<numCollocPts; ++i)
-      covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
-	*  t1_wts[i];
-    */
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_wts_l = t1_wts[lev];
+      num_sets = t1_wts_l.size();
+      for (set=0; set<num_sets; ++set) {
+	const RealVector& t1_coeffs_1ls = expansionType1Coeffs[lev][set];
+	const RealVector& t1_coeffs_2ls = t1_coeffs_2[lev][set];
+	const RealVector&     t1_wts_ls = t1_wts_l[set];
+	num_tp_pts = t1_wts_ls.length();
+	// type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+	for (pt=0; pt<num_tp_pts; ++pt)
+	  covar += (t1_coeffs_1ls[pt] - mean_1) * (t1_coeffs_2ls[pt] - mean_2)
+	        *  t1_wts_ls[pt];
+      }
+    }
     break;
   case true:
     const RealMatrix2DArray& t2_coeffs_2 = hip_approx_2->expansionType2Coeffs;
     const RealMatrix2DArray& t2_wts = hsg_driver->type2_weight_set_arrays();
-    /*
-    for ( unsigned int i = 0; i < numCollocPts; ++i) {
-      // type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-      Real coeff1_i_mm1 = expansionType1Coeffs[i] - mean_1;
-      Real coeff1_2i_mm2 = t1_coeffs_2[i]          - mean_2;
-      covar += coeff1_i_mm1 * coeff1_2i_mm2 * t1_wts[i];
-      // type2 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-      // --> interpolated gradients are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
-      const Real *coeff2_i  = expansionType2Coeffs[i];
-      const Real *coeff2_2i = t2_coeffs_2[i], *t2_wt_i = t2_wts[i];
-      for (unsigned int j=0; j<numVars; ++j)
-	covar  += (coeff1_i_mm1 * coeff2_2i[j] + coeff1_2i_mm2 * coeff2_i[j])
-	  *  t2_wt_i[j];
+    size_t v;
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_wts_l = t1_wts[lev];
+      num_sets = t1_wts_l.size();
+      for (set=0; set<num_sets; ++set) {
+	const RealVector& t1_coeffs_1ls = expansionType1Coeffs[lev][set];
+	const RealVector& t1_coeffs_2ls = t1_coeffs_2[lev][set];
+	const RealMatrix& t2_coeffs_1ls = expansionType2Coeffs[lev][set];
+	const RealMatrix& t2_coeffs_2ls = t2_coeffs_2[lev][set];
+	const RealVector&     t1_wts_ls = t1_wts_l[set];
+	const RealMatrix&     t2_wts_ls = t2_wts[lev][set];
+	num_tp_pts = t1_wts_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  // type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+	  Real t1_coeffs_1lsp_mm1 = t1_coeffs_1ls[pt] - mean_1;
+	  Real t1_coeffs_2lsp_mm2 = t1_coeffs_2ls[pt] - mean_2;
+	  covar += t1_coeffs_1lsp_mm1 * t1_coeffs_2lsp_mm2 * t1_wts_ls[pt];
+	  // type2 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+	  // --> interpolated grads are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
+	  const Real* t2_coeffs_1lsp = t2_coeffs_1ls[pt];
+	  const Real* t2_coeffs_2lsp = t2_coeffs_2ls[pt];
+	  const Real* t2_wts_lsp    = t2_wts_ls[pt];
+	  for (v=0; v<numVars; ++v)
+	    covar += (t1_coeffs_1lsp_mm1 * t2_coeffs_2lsp[v] +
+		      t1_coeffs_2lsp_mm2 * t2_coeffs_1lsp[v]) * t2_wts_lsp[v];
+	}
+      }
     }
-    */
     break;
   }
   return covar;
