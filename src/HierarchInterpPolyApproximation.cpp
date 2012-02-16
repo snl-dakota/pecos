@@ -138,56 +138,6 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 }
 
 
-/*
-void HierarchInterpPolyApproximation::
-compute_expansion_coefficients(RealVector2DArray& t1_coeffs,
-			       RealMatrix2DArray& t2_coeffs,
-			     //RealMatrix2DArray& t1_coeff_grads,
-			       unsigned short order)
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  const UShort4DArray& key = hsg_driver->collocation_key();
-  size_t lev, set, pt, v, num_levels = key.size(), num_sets, num_tp_pts,
-    cntr = 0, num_deriv_vars = surrData.num_derivative_variables();
-
-  Real mu = mean();
-
-  // level 0
-  Real fn_minus_mu = surrData.response_function(cntr) - mu;
-  t1_coeffs[0][0][0] = std::pow(fn_minus_mu, order);
-  if (basisConfigOptions.useDerivs) {
-    RealVector hier_grad = surrData.response_gradient(cntr); // copy
-    hier_grad.scale(order*std::pow(fn_minus_mu, order-1));
-    Teuchos::setCol(hier_grad, 0, t2_coeffs[0][0]);
-  }
-  ++cntr;
-
-  // levels 1 to num_levels
-  for (lev=1; lev<num_levels; ++lev) {
-    const UShort3DArray& key_l = key[lev];
-    num_sets = key_l.size();
-    for (set=0; set<num_sets; ++set) {
-      num_tp_pts = key_l[set].size();
-      for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	const RealVector& c_vars = surrData.continuous_variables(cntr);
-	// coefficients are hierarchical surpluses
-	Real fn_minus_mu = surrData.response_function(cntr) - mu;
-	t1_coeffs[lev][set][pt] = std::pow(fn_minus_mu, order)
-	  - value(c_vars, t1_coeffs, t2_coeffs, lev-1); // TO DO
-	if (basisConfigOptions.useDerivs) {
-	  RealVector hier_grad = surrData.response_gradient(cntr);
-	  hier_grad.scale(order*std::pow(fn_minus_mu, order-1));
-	  hier_grad -= gradient_basis_variables(c_vars, t1_coeffs, t2_coeffs,
-						lev-1);
-	  Teuchos::setCol(hier_grad, (int)pt, t2_coeffs[lev][set]);
-	}
-      }
-    }
-  }
-}
-*/
-
-
 void HierarchInterpPolyApproximation::store_coefficients()
 {
   if (expConfigOptions.expansionCoeffFlag) {
@@ -715,7 +665,8 @@ compute_numerical_response_moments(size_t num_moments)
   const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      key        = hsg_driver->collocation_key();
   size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
-    num_sets, num_tp_pts, cntr = 0, m_index, moment;
+    num_sets, num_tp_pts, cntr = 0;
+  int m_index, moment;
 
   Real& mean = numericalMoments[0];
   mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
@@ -887,7 +838,7 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
     UShortArray quad_order;
     // iterate each variable 
     for (j=0; j<numVars; ++j) {
-      set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
+      set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1; 
       for (i=0; i<num_smolyak_indices; ++i) {
 	hsg_driver->level_to_order(sm_index[i], quad_order);
 	totalSobolIndices[j] += 

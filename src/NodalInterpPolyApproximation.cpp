@@ -1304,7 +1304,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     SizetArray colloc_index; // empty -> default indexing
     for (j=0; j<numVars; ++j) {
       // define set_value that includes all but index of interest
-      set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1;
+      set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1;
       totalSobolIndices[j] = std::abs(1. -
 	total_effects_integral(set_value, quad_order, lev_index,
 			       colloc_key, colloc_index) / total_variance);
@@ -1322,7 +1322,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     UShortArray quad_order;
     // iterate each variable 
     for (j=0; j<numVars; ++j) {
-      set_value = (int)std::pow(2.,int(numVars)) - (int)std::pow(2.,j) - 1; 
+      set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1; 
       for (i=0; i<num_smolyak_indices; ++i)
 	if (sm_coeffs[i]) {
 	  csg_driver->level_to_order(sm_index[i], quad_order);
