@@ -27,34 +27,38 @@ void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
     num_deriv_vars = surrData.num_derivative_variables();
   bool t1c = false, t2c = false, t1g = false;
   if (expConfigOptions.expansionCoeffFlag) {
-    if (expansionType1Coeffs.size() != num_levels)
-      { expansionType1Coeffs.resize(num_levels); t1c = true; }
-    if (basisConfigOptions.useDerivs &&
-	expansionType2Coeffs.size() != num_levels)
-      { expansionType2Coeffs.resize(num_levels); t2c = true; }
+    t1c = true;
+    if (basisConfigOptions.useDerivs) t2c = true;
   }
-  if (expConfigOptions.expansionCoeffGradFlag &&
-      expansionType1CoeffGrads.size() != num_levels)
-    { expansionType1CoeffGrads.resize(num_levels); t1g = true; }
+  if (expConfigOptions.expansionCoeffGradFlag)
+    t1g = true;
 
-  if (t1c || t2c || t1g)
-    for (i=0; i<num_levels; ++i) {
-      const UShort3DArray& key_i = key[i];
-      num_sets = key_i.size();
-      if (t1c) expansionType1Coeffs[i].resize(num_sets);
-      if (t2c) expansionType2Coeffs[i].resize(num_sets);
-      if (t1g) expansionType1CoeffGrads[i].resize(num_sets);
-      for (j=0; j<num_sets; ++j) {
-	num_tp_pts = key_i[j].size();
-	for (k=0; k<num_tp_pts; ++k) {
-	  if (t1c) expansionType1Coeffs[i][j].sizeUninitialized(num_tp_pts);
-	  if (t2c) expansionType2Coeffs[i][j].shapeUninitialized(
-	    num_deriv_vars, num_tp_pts);
-	  if (t1g) expansionType1CoeffGrads[i][j].shapeUninitialized(
-	    num_deriv_vars, num_tp_pts);
-	}
+  if (expansionType1Coeffs.size() != num_levels)
+    expansionType1Coeffs.resize(num_levels);
+  if ( expansionType2Coeffs.size() != num_levels)
+    expansionType2Coeffs.resize(num_levels);
+  if (expansionType1CoeffGrads.size() != num_levels)
+    expansionType1CoeffGrads.resize(num_levels);
+  for (i=0; i<num_levels; ++i) {
+    const UShort3DArray& key_i = key[i];
+    num_sets = key_i.size();
+    if (expansionType1Coeffs[i].size() != num_sets)
+      expansionType1Coeffs[i].resize(num_sets);
+    if (expansionType2Coeffs[i].size() != num_sets)
+      expansionType2Coeffs[i].resize(num_sets);
+    if (expansionType1CoeffGrads[i].size() != num_sets)
+      expansionType1CoeffGrads[i].resize(num_sets);
+    for (j=0; j<num_sets; ++j) {
+      num_tp_pts = key_i[j].size();
+      for (k=0; k<num_tp_pts; ++k) {
+	if (t1c) expansionType1Coeffs[i][j].sizeUninitialized(num_tp_pts);
+	if (t2c) expansionType2Coeffs[i][j].shapeUninitialized(num_deriv_vars,
+							       num_tp_pts);
+	if (t1g) expansionType1CoeffGrads[i][j].shapeUninitialized(
+		 num_deriv_vars, num_tp_pts);
       }
     }
+  }
 
   // checking numCollocPts is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total.

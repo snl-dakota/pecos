@@ -289,6 +289,7 @@ hierarchical_tensor_product_multi_index(const UShort2DArray& delta_quad,
     multi_index.resize(mi_len);
   UShortArray indices(n, 0);
   for (i=0; i<mi_len; ++i) {
+    multi_index[i].resize(n);
     for (j=0; j<n; ++j)
       multi_index[i][j] = delta_quad[j][indices[j]];
     if (i < mi_len-1)

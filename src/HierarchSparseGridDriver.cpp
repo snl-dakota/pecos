@@ -30,6 +30,11 @@ int HierarchSparseGridDriver::grid_size()
   if (updateGridSize) {
     numCollocPts = 0;
     size_t i, j, num_lev = collocKey.size();
+    if (num_lev != ssgLevel+1) {
+      assign_smolyak_multi_index();
+      assign_collocation_key();
+      num_lev = collocKey.size();
+    }
     for (i=0; i<num_lev; ++i) {
       const UShort3DArray& key_i = collocKey[i];
       size_t num_sets = key_i.size();
@@ -61,6 +66,9 @@ void HierarchSparseGridDriver::assign_smolyak_multi_index()
   //   w + 1 <= |i| <= w + N for i starts at 1 (used for index set defn.)
   //   w - N + 1 <= |j| <= w for j = i - 1 starts at 0 (used for generation)
   // For anisotropic, a weighted linear index set constraint is used.
+
+  if (smolyakMultiIndex.size() == ssgLevel+1)
+    return;
 
   smolyakMultiIndex.resize(ssgLevel+1);
   if (dimIsotropic) // initialize Smolyak multi_index
@@ -115,6 +123,9 @@ void HierarchSparseGridDriver::assign_smolyak_multi_index()
 
 void HierarchSparseGridDriver::assign_collocation_key()
 {
+  if (collocKey.size() == ssgLevel+1)
+    return;
+
   collocKey.resize(ssgLevel+1);
   if (nestedGrid) {
     size_t set, num_sets;
@@ -123,6 +134,7 @@ void HierarchSparseGridDriver::assign_collocation_key()
       const UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
       UShort3DArray&         key_l = collocKey[lev];
       num_sets = sm_mi_l.size();
+      key_l.resize(num_sets);
       for (set=0; set<num_sets; ++set) {
 	level_to_delta_order(sm_mi_l[set], delta_quad);
 	PolynomialApproximation::hierarchical_tensor_product_multi_index(
