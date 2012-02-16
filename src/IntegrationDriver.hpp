@@ -64,8 +64,10 @@ public:
   virtual int grid_size();
 
   /// return type1WeightSets from Cubature/TensorProduct/CombinedSparseGrid
+  /// or concatenate type1WeightSets in HierarchSparseGrid
   virtual const RealVector& type1_weight_sets() const;
   /// return type2WeightSets from Cubature/TensorProduct/CombinedSparseGrid
+  /// or concatenate type2WeightSets in HierarchSparseGrid
   virtual const RealMatrix& type2_weight_sets() const;
 
   //

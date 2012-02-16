@@ -65,6 +65,11 @@ public:
   void print_final_sets(bool converged_within_tol) const;
   void print_smolyak_multi_index() const;
 
+  // concatenate type1WeightSets for use in abstract integration functions
+  //const RealVector& type1_weight_sets(); // const;
+  // concatenate type2WeightSets for use in abstract integration functions
+  //const RealMatrix& type2_weight_sets(); // const;
+
   //
   //- Heading: Member functions
   //
@@ -76,9 +81,9 @@ public:
   /// return collocIndices
   const Sizet3DArray& collocation_indices() const;
 
-  /// return type1WeightSets
+  /// return type1WeightSets for use in hierarchical integration functions
   const RealVector2DArray& type1_weight_set_arrays() const;
-  /// return type2WeightSets
+  /// return type2WeightSets for use in hierarchical integration functions
   const RealMatrix2DArray& type2_weight_set_arrays() const;
 
 private:
@@ -136,6 +141,11 @@ private:
   /// for each derivative component and for each point in the sparse grid
   RealMatrix2DArray type2WeightSets;
 
+  // concatenation of type1WeightSets RealVector2DArray into a RealVector
+  //RealVector concatT1WeightSets;
+  // concatenation of type2WeightSets RealMatrix2DArray into a RealMatrix
+  //RealMatrix concatT2WeightSets;
+
   /// stored type 1 weight sets for restoration to type1WeightSets
   std::map<UShortArray, RealVector> savedT1WtSets;
   /// stored type 2 weight sets for restoration to type2WeightSets
@@ -176,6 +186,53 @@ inline const UShort4DArray& HierarchSparseGridDriver::collocation_key() const
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
 { return collocIndices; }
+
+
+/*
+inline const RealVector& HierarchSparseGridDriver::type1_weight_sets() // const
+{
+  if (concatT1WeightSets.length() != numCollocPts) {
+    concatT1WeightSets.sizeUninitialized(numCollocPts);
+    size_t lev, set, pt, cntr = 0, num_levels = type1WeightSets.size(),
+      num_sets, num_tp_pts;
+    for (lev=0; lev<num_levels; ++lev) {
+      num_sets = type1WeightSets[lev].size();
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = type1WeightSets[lev][set].length();
+	const SizetArray& colloc_index = collocIndices[lev][set];
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
+	  concatT1WeightSets[colloc_index[cntr]]
+	    = type1WeightSets[lev][set][pt];
+      }
+    }
+  }
+  return concatT1WeightSets;
+}
+
+
+inline const RealMatrix& HierarchSparseGridDriver::type2_weight_sets() // const
+{
+  if (concatT2WeightSets.numCols() != numCollocPts) {
+    concatT2WeightSets.shapeUninitialized(numVars, numCollocPts);
+    size_t lev, set, pt, v, cntr = 0, num_levels = type2WeightSets.size(),
+      num_sets, num_tp_pts;
+    for (lev=0; lev<num_levels; ++lev) {
+      num_sets = type2WeightSets[lev].size();
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = type2WeightSets[lev][set].numCols();
+	const SizetArray& colloc_index = collocIndices[lev][set];
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  Real* concat_t2_wts = concatT2WeightSets[colloc_index[cntr]];
+	  const Real*  t2_wts = type2WeightSets[lev][set][pt];
+	  for (v=0; v<numVars; ++v)
+	    concat_t2_wts[v] = t2_wts[v];
+	}
+      }
+    }
+  }
+  return concatT2WeightSets;
+}
+*/
 
 
 inline const RealVector2DArray& HierarchSparseGridDriver::

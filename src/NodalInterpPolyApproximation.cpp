@@ -17,7 +17,6 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
-//#define INTERPOLATION_TEST
 
 namespace Pecos {
 
@@ -73,51 +72,6 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
       Teuchos::setCol(surrData.response_gradient(index), i,
 		      expansionType1CoeffGrads);
   }
-
-#ifdef INTERPOLATION_TEST
-  // SC should accurately interpolate the collocation data for TPQ and
-  // SSG with fully nested rules, but will exhibit interpolation error
-  // for SSG with other rules.
-  index = 0;
-  Real val, err, val_max_err = 0., grad_max_err = 0.,
-       val_rmse = 0., grad_rmse = 0.;
-  PCout << std::scientific << std::setprecision(WRITE_PRECISION);
-  for (size_t i=offset; i<numCollocPts; ++i, ++index) {
-    const Real&       coeff1 = expansionType1Coeffs[i];
-    const RealVector& c_vars = surrData.continuous_variables(index);
-    val = value(c_vars);
-    err = (std::abs(coeff1) > DBL_MIN) ? std::abs(1. - val/coeff1) :
-                                         std::abs(coeff1 - val);
-    PCout << "Colloc pt " << std::setw(3) << i+1
-	  << ": truth value  = "  << std::setw(WRITE_PRECISION+7) << coeff1
-	  << " interpolant = "    << std::setw(WRITE_PRECISION+7) << val
-	  << " relative error = " << std::setw(WRITE_PRECISION+7) << err <<'\n';
-    if (err > val_max_err) val_max_err = err; val_rmse += err * err;
-    if (basisConfigOptions.useDerivs) {
-      const Real*     coeff2 = expansionType2Coeffs[i];
-      const RealVector& grad = gradient_basis_variables(c_vars);
-      for (size_t j=0; j<numVars; ++j) {
-	err = (std::abs(coeff2[j]) > DBL_MIN) ?
-	  std::abs(1. - grad[j]/coeff2[j]) : std::abs(coeff2[j] - grad[j]);
-	PCout << "               " << "truth grad_" << j+1 << " = "
-	      << std::setw(WRITE_PRECISION+7) << coeff2[j] << " interpolant = "
-	      << std::setw(WRITE_PRECISION+7) << grad[j] << " relative error = "
-	      << std::setw(WRITE_PRECISION+7) << err << '\n';
-	if (err > grad_max_err) grad_max_err = err; grad_rmse += err * err;
-      }
-    }
-  }
-  val_rmse = std::sqrt(val_rmse/(numCollocPts-offset));
-  PCout << "\nValue interpolation errors:    " << std::setw(WRITE_PRECISION+7)
-	<< val_max_err << " (max) "            << std::setw(WRITE_PRECISION+7)
-	<< val_rmse    << " (RMS)\n";
-  if (basisConfigOptions.useDerivs) {
-    grad_rmse = std::sqrt(grad_rmse/(numCollocPts-offset)/numVars);
-    PCout << "Gradient interpolation errors: " << std::setw(WRITE_PRECISION+7)
-	  << grad_max_err << " (max) "         << std::setw(WRITE_PRECISION+7)
-	  << grad_rmse    << " (RMS)\n";
-  }
-#endif // INTERPOLATION_TEST
 }
 
 

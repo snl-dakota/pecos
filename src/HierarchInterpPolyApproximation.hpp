@@ -9,7 +9,7 @@
 //- Class:        HierarchInterpPolyApproximation
 //- Description:  Class for Nodal Interpolation Polynomial Approximation
 //-               
-//- Owner:        Chris Miller
+//- Owner:        Mike Eldred
 
 #ifndef HIERARCH_INTERP_POLY_APPROXIMATION_HPP
 #define HIERARCH_INTERP_POLY_APPROXIMATION_HPP
@@ -113,21 +113,31 @@ private:
   //
 
   /// compute the value at a point for a particular interpolation level
-  Real value(const RealVector& x, unsigned short level);
+  Real value(const RealVector& x, const UShort3DArray& sm_mi,
+	     const UShort4DArray& key, const RealVector2DArray& t1_coeffs,
+	     const RealMatrix2DArray& t2_coeffs, unsigned short level);
 
   /// compute the approximate gradient with respect to the basis variables
   /// at a particular point for a particular interpolation level
   const RealVector& gradient_basis_variables(const RealVector& x,
-					     unsigned short level);
+    const UShort3DArray& sm_mi, const UShort4DArray& key,
+    const RealVector2DArray& t1_coeffs, const RealMatrix2DArray& t2_coeffs,
+    unsigned short level);
   /// compute the approximate gradient with respect to the basis variables
   /// for a particular point, interpolation level, and DVV
   const RealVector& gradient_basis_variables(const RealVector& x,
-					     const SizetArray& dvv,
-					     unsigned short level);
+    const UShort3DArray& sm_mi, const UShort4DArray& key,
+    const RealVector2DArray& t1_coeffs, const RealMatrix2DArray& t2_coeffs,
+    const SizetArray& dvv, unsigned short level);
   /// compute the approximate gradient with respect to the nonbasis
   /// variables at a particular point for a particular interpolation level
   const RealVector& gradient_nonbasis_variables(const RealVector& x,
-						unsigned short level);
+    const UShort3DArray& sm_mi, const UShort4DArray& key,
+    const RealMatrix2DArray& t1_coeff_grads, unsigned short level);
+
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  Real expectation(const RealVector2DArray& t1_coeffs,
+		   const RealMatrix2DArray& t2_coeffs);
 
   //
   //- Heading: Data
@@ -180,8 +190,10 @@ inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 inline Real HierarchInterpPolyApproximation::value(const RealVector& x)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  unsigned short max_level = hsg_driver->smolyak_multi_index().size()-1;
-  return value(x, max_level);
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return value(x, sm_mi, hsg_driver->collocation_key(), expansionType1Coeffs,
+	       expansionType2Coeffs, max_level);
 }
 
 
@@ -189,8 +201,11 @@ inline const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  unsigned short max_level = hsg_driver->smolyak_multi_index().size()-1;
-  return gradient_basis_variables(x, max_level);
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
+				  expansionType1Coeffs, expansionType2Coeffs,
+				  max_level);
 }
 
 
@@ -198,8 +213,11 @@ inline const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  unsigned short max_level = hsg_driver->smolyak_multi_index().size()-1;
-  return gradient_basis_variables(x, dvv, max_level);
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
+				  expansionType1Coeffs, expansionType2Coeffs,
+				  dvv, max_level);
 }
 
 
@@ -207,8 +225,37 @@ inline const RealVector& HierarchInterpPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  unsigned short max_level = hsg_driver->smolyak_multi_index().size()-1;
-  return gradient_nonbasis_variables(x, max_level);
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return gradient_nonbasis_variables(x, sm_mi, hsg_driver->collocation_key(),
+				     expansionType1CoeffGrads, max_level);
+}
+
+
+inline Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
+{
+  unsigned short max_level = storedLevMultiIndex.size() - 1;
+  return value(x, storedLevMultiIndex, storedCollocKey, storedExpType1Coeffs,
+	       storedExpType2Coeffs, max_level);
+}
+
+
+inline const RealVector& HierarchInterpPolyApproximation::
+stored_gradient_basis_variables(const RealVector& x)
+{
+  unsigned short max_level = storedLevMultiIndex.size() - 1;
+  return gradient_basis_variables(x, storedLevMultiIndex, storedCollocKey,
+				  storedExpType1Coeffs, storedExpType2Coeffs,
+				  max_level);
+}
+
+
+inline const RealVector& HierarchInterpPolyApproximation::
+stored_gradient_nonbasis_variables(const RealVector& x)
+{
+  unsigned short max_level = storedLevMultiIndex.size() - 1;
+  return gradient_nonbasis_variables(x, storedLevMultiIndex, storedCollocKey,
+				     storedExpType1CoeffGrads, max_level);
 }
 
 } // namespace Pecos
