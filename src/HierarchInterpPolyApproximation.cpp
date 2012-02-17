@@ -25,13 +25,6 @@ void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
   const UShort4DArray& key = hsg_driver->collocation_key();
   size_t i, j, k, num_levels = key.size(), num_sets, num_tp_pts,
     num_deriv_vars = surrData.num_derivative_variables();
-  bool t1c = false, t2c = false, t1g = false;
-  if (expConfigOptions.expansionCoeffFlag) {
-    t1c = true;
-    if (basisConfigOptions.useDerivs) t2c = true;
-  }
-  if (expConfigOptions.expansionCoeffGradFlag)
-    t1g = true;
 
   if (expansionType1Coeffs.size() != num_levels)
     expansionType1Coeffs.resize(num_levels);
@@ -51,11 +44,15 @@ void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
     for (j=0; j<num_sets; ++j) {
       num_tp_pts = key_i[j].size();
       for (k=0; k<num_tp_pts; ++k) {
-	if (t1c) expansionType1Coeffs[i][j].sizeUninitialized(num_tp_pts);
-	if (t2c) expansionType2Coeffs[i][j].shapeUninitialized(num_deriv_vars,
-							       num_tp_pts);
-	if (t1g) expansionType1CoeffGrads[i][j].shapeUninitialized(
-		 num_deriv_vars, num_tp_pts);
+	if (expConfigOptions.expansionCoeffFlag) {
+	  expansionType1Coeffs[i][j].sizeUninitialized(num_tp_pts);
+	  if (basisConfigOptions.useDerivs)
+	    expansionType2Coeffs[i][j].shapeUninitialized(num_deriv_vars,
+							  num_tp_pts);
+	}
+	if (expConfigOptions.expansionCoeffGradFlag)
+	  expansionType1CoeffGrads[i][j].shapeUninitialized(num_deriv_vars,
+							    num_tp_pts);
       }
     }
   }
@@ -504,84 +501,78 @@ covariance(PolynomialApproximation* poly_approx_2)
 
   HierarchInterpPolyApproximation* hip_approx_2 = 
     static_cast<HierarchInterpPolyApproximation*>(poly_approx_2);
-  const RealVector2DArray& t1_coeffs_2 = hip_approx_2->expansionType1Coeffs;
-  Real mean_1 = mean(), mean_2 = hip_approx_2->mean();
+  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+  Real mean_1 = mean(),  mean_2 = hip_approx_2->mean();
 
   RealVector2DArray cov_t1_coeffs(num_levels); RealMatrix2DArray cov_t2_coeffs;
   cov_t1_coeffs[0].resize(1); cov_t1_coeffs[0][0].sizeUninitialized(1);
   switch (basisConfigOptions.useDerivs) {
   case false:
     // level 0
-    cov_t1_coeffs[0][0][0] = (expansionType1Coeffs[0][0][0] - mean_1) *
-                             (t1_coeffs_2[0][0][0]          - mean_2);
+    cov_t1_coeffs[0][0][0] = (surrData.response_function(cntr) - mean_1) *
+                             (s_data_2.response_function(cntr) - mean_2);
+    ++cntr;
     // levels 1:w
     for (lev=1; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_1l = expansionType1Coeffs[lev];
-      num_sets = t1_coeffs_1l.size();
+      num_sets = key[lev].size();
       cov_t1_coeffs[lev].resize(num_sets);
       for (set=0; set<num_sets; ++set) {
-	const RealVector& t1_coeffs_1ls = t1_coeffs_1l[set];
-	const RealVector& t1_coeffs_2ls = t1_coeffs_2[lev][set];
-	RealVector&    cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
-	num_tp_pts = t1_coeffs_1ls.length();
+	num_tp_pts = key[lev][set].size();
+	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
 	cov_t1_coeffs_ls.resize(num_tp_pts);
 	// type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  const RealVector& c_vars = surrData.continuous_variables(cntr);
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
 	  cov_t1_coeffs_ls[pt]
-	    = (t1_coeffs_1ls[pt] - mean_1) * (t1_coeffs_2ls[pt] - mean_2)
-	    - value(c_vars, sm_mi, key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
-	}
+	    = (surrData.response_function(cntr) - mean_1)
+	    * (s_data_2.response_function(cntr) - mean_2)
+	    - value(surrData.continuous_variables(cntr), sm_mi, key,
+		    cov_t1_coeffs, cov_t2_coeffs, lev-1);
       }
     }
     break;
   case true:
-    const RealMatrix2DArray& t2_coeffs_2 = hip_approx_2->expansionType2Coeffs;
     size_t v;
     // level 0
-    Real t1_coeffs_1000_mm1 = expansionType1Coeffs[0][0][0] - mean_1;
-    Real t1_coeffs_2000_mm2 = t1_coeffs_2[0][0][0]          - mean_2;
-    cov_t1_coeffs[0][0][0]  = t1_coeffs_1000_mm1 * t1_coeffs_2000_mm2;
+    Real data_fn1_mm1 = surrData.response_function(cntr) - mean_1;
+    Real data_fn2_mm2 = s_data_2.response_function(cntr) - mean_2;
+    cov_t1_coeffs[0][0][0]  = data_fn1_mm1 * data_fn2_mm2;
     cov_t2_coeffs[0].resize(1);
     cov_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
     Real *cov_t2_coeffs_000 = cov_t2_coeffs[0][0][0];
-    const Real *t2_coeffs_1000 = expansionType2Coeffs[0][0][0],
-               *t2_coeffs_2000 = t2_coeffs_2[0][0][0];
+    const RealVector& data_grad1 = surrData.response_gradient(cntr);
+    const RealVector& data_grad2 = s_data_2.response_gradient(cntr);
     for (v=0; v<numVars; ++v)
-      cov_t2_coeffs_000[v] = (t1_coeffs_1000_mm1 * t2_coeffs_2000[v] +
-			      t1_coeffs_2000_mm2 * t2_coeffs_1000[v]);
+      cov_t2_coeffs_000[v] = (data_fn1_mm1 * data_grad2[v] +
+			      data_fn2_mm2 * data_grad1[v]);
+    ++cntr;
     // levels 1:w
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_1l = expansionType1Coeffs[lev];
-      num_sets = t1_coeffs_1l.size();
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = key[lev].size();
       cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
       for (set=0; set<num_sets; ++set) {
-	const RealVector& t1_coeffs_1ls = t1_coeffs_1l[set];
-	const RealVector& t1_coeffs_2ls = t1_coeffs_2[lev][set];
-	const RealMatrix& t2_coeffs_1ls = expansionType2Coeffs[lev][set];
-	const RealMatrix& t2_coeffs_2ls = t2_coeffs_2[lev][set];
-	RealVector&    cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
-	RealMatrix&    cov_t2_coeffs_ls = cov_t2_coeffs[lev][set];
-	num_tp_pts = t1_coeffs_1ls.length();
+	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
+	RealMatrix& cov_t2_coeffs_ls = cov_t2_coeffs[lev][set];
+	num_tp_pts = key[lev][set].size();
 	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	cov_t2_coeffs_ls.shapeUninitialized(numVars, num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  const RealVector& c_vars = surrData.continuous_variables(cntr);
 	  // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	  Real t1_coeffs_1lsp_mm1 = t1_coeffs_1ls[pt] - mean_1;
-	  Real t1_coeffs_2lsp_mm2 = t1_coeffs_2ls[pt] - mean_2;
-	  cov_t1_coeffs_ls[pt] = t1_coeffs_1lsp_mm1 * t1_coeffs_2lsp_mm2 -
+	  data_fn1_mm1 = surrData.response_function(cntr) - mean_1;
+	  data_fn2_mm2 = s_data_2.response_function(cntr) - mean_2;
+	  cov_t1_coeffs_ls[pt] = data_fn1_mm1 * data_fn2_mm2 -
 	    value(c_vars, sm_mi, key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
 	  // type2 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
 	  // --> interpolated grads are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
-	  const Real* t2_coeffs_1lsp = t2_coeffs_1ls[pt];
-	  const Real* t2_coeffs_2lsp = t2_coeffs_2ls[pt];
-	  Real*    cov_t2_coeffs_lsp = cov_t2_coeffs_ls[pt];
-	  const RealVector& prev_grad = gradient_basis_variables(c_vars,
+	  Real* cov_t2_coeffs_lsp = cov_t2_coeffs_ls[pt];
+	  const RealVector& data_grad1 = surrData.response_gradient(cntr);
+	  const RealVector& data_grad2 = s_data_2.response_gradient(cntr);
+	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
 	    sm_mi, key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
 	  for (v=0; v<numVars; ++v)
-	    cov_t2_coeffs_lsp[v] = (t1_coeffs_1lsp_mm1 * t2_coeffs_2lsp[v] +
-	      t1_coeffs_2lsp_mm2 * t2_coeffs_1lsp[v]) - prev_grad[v];
+	    cov_t2_coeffs_lsp[v]
+	      = (data_fn1_mm1 * data_grad2[v] + data_fn2_mm2 * data_grad1[v])
+	      - prev_grad[v];
 	}
       }
     }
@@ -668,21 +659,21 @@ compute_numerical_response_moments(size_t num_moments)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      key        = hsg_driver->collocation_key();
-  size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
-    num_sets, num_tp_pts, cntr = 0;
+  size_t lev, set, pt, num_levels = key.size(), num_sets, num_tp_pts, cntr;
   int m_index, moment;
 
+  if (numericalMoments.length() != num_moments)
+    numericalMoments.sizeUninitialized(num_moments);
   Real& mean = numericalMoments[0];
   mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
 
   // size moment coefficient arrays
   RealVector2DArray mom_t1_coeffs(num_levels);
-  RealMatrix2DArray mom_t2_coeffs;
-  if (basisConfigOptions.useDerivs) mom_t2_coeffs.resize(num_levels);
+  RealMatrix2DArray mom_t2_coeffs(num_levels);
   for (lev=0; lev<num_levels; ++lev) {
     num_sets = key[lev].size();
     mom_t1_coeffs[lev].resize(num_sets);
-    if (basisConfigOptions.useDerivs) mom_t2_coeffs[lev].resize(num_sets);
+    mom_t2_coeffs[lev].resize(num_sets);
     for (set=0; set<num_sets; ++set) {
       num_tp_pts = key[lev][set].size();
       mom_t1_coeffs[lev][set].sizeUninitialized(num_tp_pts);
@@ -692,64 +683,60 @@ compute_numerical_response_moments(size_t num_moments)
   }
 
   for (m_index=1; m_index<num_moments; ++m_index) {
-    moment = m_index+1;
+    moment = m_index+1; cntr = 0;
     switch (basisConfigOptions.useDerivs) {
     case false:
       // level 0
       mom_t1_coeffs[0][0][0]
-	= std::pow(expansionType1Coeffs[0][0][0] - mean, moment);
+	= std::pow(surrData.response_function(cntr) - mean, moment);
+      ++cntr;
       // levels 1:w
       for (lev=1; lev<num_levels; ++lev) {
-	const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
-	num_sets = t1_coeffs_l.size();
+	num_sets = key[lev].size();
 	for (set=0; set<num_sets; ++set) {
-	  const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	  RealVector&   mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
-	  num_tp_pts = t1_coeffs_ls.length();
+	  RealVector& mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
+	  num_tp_pts = key[lev][set].size();
 	  // type1 hierarchical interpolation of (R - \mu)^moment
-	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	    const RealVector& c_vars = surrData.continuous_variables(cntr);
-	    mom_t1_coeffs_ls[pt] = std::pow(t1_coeffs_ls[pt] - mean, moment) -
-	      value(c_vars, sm_mi, key, mom_t1_coeffs, mom_t2_coeffs, lev-1);
-	  }
+	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
+	    mom_t1_coeffs_ls[pt]
+	      = std::pow(surrData.response_function(cntr) - mean, moment)
+	      - value(surrData.continuous_variables(cntr), sm_mi, key,
+		      mom_t1_coeffs, mom_t2_coeffs, lev-1);
 	}
       }
       break;
     case true:
       size_t v;
       // level 0
-      Real t1_coeffs_000_mm     = expansionType1Coeffs[0][0][0] - mean;
-      mom_t1_coeffs[0][0][0]    = t1_coeffs_000_mm;
-      Real* mom_t2_coeffs_000   = mom_t2_coeffs[0][0][0];
-      const Real* t2_coeffs_000 = expansionType2Coeffs[0][0][0];
-      Real deriv = moment * std::pow(t1_coeffs_000_mm, m_index);
+      Real data_fn_mm         = surrData.response_function(cntr) - mean;
+      mom_t1_coeffs[0][0][0]  = std::pow(data_fn_mm, moment);
+      Real* mom_t2_coeffs_000 = mom_t2_coeffs[0][0][0];
+      Real deriv = moment * std::pow(data_fn_mm, m_index);
+      const RealVector& data_grad = surrData.response_gradient(cntr);
       for (v=0; v<numVars; ++v)
-	mom_t2_coeffs_000[v] = deriv * t2_coeffs_000[v];
+	mom_t2_coeffs_000[v] = deriv * data_grad[v];
       // levels 1:w
-      for (lev=0; lev<num_levels; ++lev) {
-	const RealVectorArray& t1_coeffs_l = expansionType1Coeffs[lev];
-	num_sets = t1_coeffs_l.size();
+      for (lev=1, cntr=1; lev<num_levels; ++lev) {
+	num_sets = key[lev].size();
 	for (set=0; set<num_sets; ++set) {
-	  const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	  const RealMatrix& t2_coeffs_ls = expansionType2Coeffs[lev][set];
-	  RealVector&   mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
-	  RealMatrix&   mom_t2_coeffs_ls = mom_t2_coeffs[lev][set];
-	  num_tp_pts = t1_coeffs_ls.length();
+	  num_tp_pts = key[lev][set].size();
+	  RealVector& mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
+	  RealMatrix& mom_t2_coeffs_ls = mom_t2_coeffs[lev][set];
 	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	    const RealVector& c_vars = surrData.continuous_variables(cntr);
 	    // type1 hierarchical interpolation of (R - \mu)^moment
-	    Real t1_coeffs_lsp_mm = t1_coeffs_ls[pt] - mean;
-	    mom_t1_coeffs_ls[pt] = std::pow(t1_coeffs_lsp_mm, moment) -
+	    data_fn_mm = surrData.response_function(cntr) - mean;
+	    mom_t1_coeffs_ls[pt] = std::pow(data_fn_mm, moment) -
 	      value(c_vars, sm_mi, key, mom_t1_coeffs, mom_t2_coeffs, lev-1);
 	    // type2 hierarchical interpolation of (R - \mu)^moment
 	    // --> interpolated grads are moment(R-\mu)^{moment-1} R'
-	    const Real*   t2_coeffs_lsp = t2_coeffs_ls[pt];
-	    Real*     mom_t2_coeffs_lsp = mom_t2_coeffs_ls[pt];
+	    Real* mom_t2_coeffs_lsp = mom_t2_coeffs_ls[pt];
+	    deriv = moment * std::pow(data_fn_mm, m_index);
+	    const RealVector& data_grad = surrData.response_gradient(cntr);
 	    const RealVector& prev_grad = gradient_basis_variables(c_vars,
 	      sm_mi, key, mom_t1_coeffs, mom_t2_coeffs, lev-1);
-	    deriv = moment * std::pow(t1_coeffs_lsp_mm, m_index);
 	    for (v=0; v<numVars; ++v)
-	      mom_t2_coeffs_lsp[v] = deriv * t2_coeffs_lsp[v] - prev_grad[v];
+	      mom_t2_coeffs_lsp[v] = deriv * data_grad[v] - prev_grad[v];
 	  }
 	}
       }
