@@ -17,7 +17,7 @@
 #include "TensorProductDriver.hpp"
 #include "CombinedSparseGridDriver.hpp"
 #include "HierarchSparseGridDriver.hpp"
-#include "LocalRefinableDriver.hpp"
+//#include "LocalRefinableDriver.hpp"
 #include "PolynomialApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: IntegrationDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
@@ -118,7 +118,7 @@ IntegrationDriver* IntegrationDriver::get_driver(short driver_type)
   case CUBATURE:                 return new CubatureDriver();           break;
   case COMBINED_SPARSE_GRID:     return new CombinedSparseGridDriver(); break;
   case HIERARCHICAL_SPARSE_GRID: return new HierarchSparseGridDriver(); break;
-  case LOCAL_REFINABLE:          return new LocalRefinableDriver();     break;
+//case LOCAL_REFINABLE:          return new LocalRefinableDriver();     break;
   default:
     PCerr << "Error: IntegrationDriver type " << driver_type
 	  << " not available." << std::endl;

@@ -12,7 +12,7 @@
 #include "CombinedSparseGridDriver.hpp"
 #include "TensorProductDriver.hpp"
 #include "CubatureDriver.hpp"
-#include "LocalRefinableDriver.hpp"
+//#include "LocalRefinableDriver.hpp"
 
 
 /// A driver program for PECOS.
@@ -61,6 +61,7 @@ int main(int argc, char* argv[])
   std::cout << "Cubature weights:\n";
   Pecos::write_data(std::cout, c_driver.type1_weight_sets());
 
+  /*
   // Local refinable grid
   std::cout << "Instantiating LocalRefinableDriver" << std::endl;
   Pecos::LocalRefinableDriver l_driver;
@@ -110,6 +111,7 @@ int main(int argc, char* argv[])
   assert(l_driver.type1_weight_sets()[0] == 4);
   assert(l_driver.type1_weight_sets()[5] == .25);
   Pecos::write_data(std::cout, l_driver.type1_weight_sets());
+  */
 
   return 0;
 }
