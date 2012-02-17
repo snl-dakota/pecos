@@ -244,40 +244,6 @@ inline const RealMatrix2DArray& HierarchSparseGridDriver::
 type2_weight_set_arrays() const
 { return type2WeightSets; }
 
-
-inline void HierarchSparseGridDriver::
-level_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
-{
-  size_t i, j, num_lev = levels.size(), num_delta;
-  if (delta_quad.size() != num_lev)
-    delta_quad.resize(num_lev);
-  for (i=0; i<num_lev; ++i) {
-    unsigned short lev_i = levels[i], ord_i, ord_im1 = 0;
-    level_to_order(i, lev_i, ord_i);
-    if (lev_i > 0) level_to_order(i, --lev_i, ord_im1);
-    num_delta = ord_i - ord_im1;
-    UShortArray& delta_quad_i = delta_quad[i];
-    delta_quad_i.resize(num_delta);
-    switch(collocRules[i]) {
-    case GAUSS_PATTERSON: // open nested
-      for (j=0; j<num_delta; ++j)
-	delta_quad_i[j] = 2*j;   // 0,2,4,6,8,...
-      break;
-    case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
-      for (j=0; j<num_delta; ++j)
-	delta_quad_i[j] = 2*j+1; // 1,3,5,7,9,...
-      break;
-    case GENZ_KEISTER: // open nested table lookup
-      // TO DO
-      break;
-    default:
-      PCerr << "Error: bad rule type in level_to_delta_order()" << std::endl;
-      abort_handler(-1);
-      break;
-    }
-  }
-}
-
 } // namespace Pecos
 
 #endif

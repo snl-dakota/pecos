@@ -204,6 +204,75 @@ void HierarchSparseGridDriver::update_collocation_indices()
 }
 
 
+void HierarchSparseGridDriver::
+level_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
+{
+  size_t i, j, num_lev = levels.size(), num_delta;
+  if (delta_quad.size() != num_lev)
+    delta_quad.resize(num_lev);
+  for (i=0; i<num_lev; ++i) {
+    unsigned short lev_i = levels[i], ord_i, ord_lm1 = 0;
+    level_to_order(i, lev_i, ord_i);
+    if (lev_i > 0) level_to_order(i, lev_i-1, ord_lm1);
+    num_delta = ord_i - ord_lm1;
+    UShortArray& delta_quad_i = delta_quad[i];
+    delta_quad_i.resize(num_delta);
+    switch(collocRules[i]) {
+    case GAUSS_PATTERSON: // open nested
+      for (j=0; j<num_delta; ++j)
+	delta_quad_i[j] = 2*j; // new ends + new interior: 0,2,4,6,8,...
+      break;
+    case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
+      switch (lev_i) {
+      case 0: delta_quad_i[0] = 0;                      break; // center of 1 pt
+      case 1: delta_quad_i[0] = 0; delta_quad_i[1] = 2; break; // ends of 3 pt
+      default:
+	for (j=0; j<num_delta; ++j)
+	  delta_quad_i[j] = 2*j+1; // new interior: 1,3,5,7,9,...
+	break;
+      }
+      break;
+    case GENZ_KEISTER: // open nested table lookup
+      switch (lev_i) {
+      case 0: delta_quad_i[0] = 0;                      break; // center of 1 pt
+      case 1: delta_quad_i[0] = 0; delta_quad_i[1] = 2; break; // ends of 3 pt
+      case 2:
+	delta_quad_i[0] = 0; delta_quad_i[1] = 1; delta_quad_i[2] = 3;
+	delta_quad_i[3] = 5; delta_quad_i[4] = 7; delta_quad_i[5] = 8;
+	break; // 9 pt rule reusing 2, 4 (center), 6
+      case 3:
+	delta_quad_i[0] =  0; delta_quad_i[1] =  1; delta_quad_i[2] =  3;
+	delta_quad_i[3] =  5; delta_quad_i[4] =  7; delta_quad_i[5] = 11;
+	delta_quad_i[6] = 13; delta_quad_i[7] = 15; delta_quad_i[8] = 17;
+	delta_quad_i[9] = 18;
+	break; // 19 pt rule reusing 
+      case 4:
+	delta_quad_i[0]  =  0; delta_quad_i[1]  =  1; delta_quad_i[2]  =  2;
+	delta_quad_i[3]  =  4; delta_quad_i[4]  =  6; delta_quad_i[5]  =  8;
+	delta_quad_i[6]  = 12; delta_quad_i[7]  = 16; delta_quad_i[8]  = 18;
+	delta_quad_i[9]  = 22; delta_quad_i[10] = 26; delta_quad_i[11] = 28;
+	delta_quad_i[12] = 30; delta_quad_i[13] = 32; delta_quad_i[14] = 33;
+	delta_quad_i[15] = 34;
+	break; // 35 pt rule reusing
+               // 3,5,7,9,10,11,13,14,15,17,19,20,21,23,24,25,27,29,31
+      //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
+      //  break; // disallow for hierarchical interpolation
+      default:
+	PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
+	      << "HierarchSparseGridDriver::level_to_delta_order()"<< std::endl;
+	abort_handler(-1);
+	break;
+      }
+      break;
+    default:
+      PCerr << "Error: bad rule type in level_to_delta_order()" << std::endl;
+      abort_handler(-1);
+      break;
+    }
+  }
+}
+
+
 void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
 {
   assign_smolyak_multi_index();           // compute smolyakMultiIndex
