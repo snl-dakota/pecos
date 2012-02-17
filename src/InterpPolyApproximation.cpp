@@ -17,7 +17,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
-#define INTERPOLATION_TEST
+//#define INTERPOLATION_TEST
 
 namespace Pecos {
 
@@ -184,51 +184,53 @@ void InterpPolyApproximation::compute_coefficients()
   allocate_arrays();
   compute_expansion_coefficients();
 
-
 #ifdef INTERPOLATION_TEST
   // SC should accurately interpolate the collocation data for TPQ and
   // SSG with fully nested rules, but will exhibit interpolation error
   // for SSG with other rules.
-  size_t i, index = 0, offset = (surrData.anchor()) ? 1 : 0,
-    w7 = WRITE_PRECISION+7;
-  Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
-       val_rmse = 0., grad_rmse = 0.;
-  PCout << std::scientific << std::setprecision(WRITE_PRECISION);
-  for (i=offset; i<numCollocPts; ++i, ++index) {
-    const RealVector& c_vars = surrData.continuous_variables(index);
-    const Real&      resp_fn = surrData.response_function(index);
-    interp_val = value(c_vars);
-    err = (std::abs(resp_fn) > DBL_MIN) ? std::abs(1. - interp_val/resp_fn) :
-                                          std::abs(resp_fn - interp_val);
-    PCout << "Colloc pt " << std::setw(3) << i+1
-	  << ": truth value  = "  << std::setw(w7) << resp_fn
-	  << " interpolant = "    << std::setw(w7) << interp_val
-	  << " relative error = " << std::setw(w7) << err <<'\n';
-    if (err > val_max_err) val_max_err = err;
-    val_rmse += err * err;
-    if (basisConfigOptions.useDerivs) {
-      const RealVector& resp_grad   = surrData.response_gradient(index);
-      const RealVector& interp_grad = gradient_basis_variables(c_vars);
-      for (size_t j=0; j<numVars; ++j) {
-	err = (std::abs(resp_grad[j]) > DBL_MIN) ?
-	  std::abs(1. - interp_grad[j]/resp_grad[j]) :
-	  std::abs(resp_grad[j] - interp_grad[j]);
-	PCout << "               " << "truth grad_" << j+1 << " = "
-	      << std::setw(w7) << resp_grad[j]   << " interpolant = "
-	      << std::setw(w7) << interp_grad[j] << " relative error = "
-	      << std::setw(w7) << err << '\n';
-	if (err > grad_max_err) grad_max_err = err;
-	grad_rmse += err * err;
+  if (expConfigOptions.expansionCoeffFlag) {
+    size_t i, index = 0, offset = (surrData.anchor()) ? 1 : 0,
+      w7 = WRITE_PRECISION+7;
+    Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
+      val_rmse = 0., grad_rmse = 0.;
+    PCout << std::scientific << std::setprecision(WRITE_PRECISION);
+    for (i=offset; i<numCollocPts; ++i, ++index) {
+      const RealVector& c_vars = surrData.continuous_variables(index);
+      const Real&      resp_fn = surrData.response_function(index);
+      interp_val = value(c_vars);
+      err = (std::abs(resp_fn) > DBL_MIN) ? std::abs(1. - interp_val/resp_fn) :
+	                                    std::abs(resp_fn - interp_val);
+      PCout << "Colloc pt " << std::setw(3) << i+1
+	    << ": truth value  = "  << std::setw(w7) << resp_fn
+	    << " interpolant = "    << std::setw(w7) << interp_val
+	    << " relative error = " << std::setw(w7) << err <<'\n';
+      if (err > val_max_err) val_max_err = err;
+      val_rmse += err * err;
+      if (basisConfigOptions.useDerivs) {
+	const RealVector& resp_grad   = surrData.response_gradient(index);
+	const RealVector& interp_grad = gradient_basis_variables(c_vars);
+	for (size_t j=0; j<numVars; ++j) {
+	  err = (std::abs(resp_grad[j]) > DBL_MIN) ?
+	    std::abs(1. - interp_grad[j]/resp_grad[j]) :
+	    std::abs(resp_grad[j] - interp_grad[j]);
+	  PCout << "               " << "truth grad_" << j+1 << " = "
+		<< std::setw(w7) << resp_grad[j]   << " interpolant = "
+		<< std::setw(w7) << interp_grad[j] << " relative error = "
+		<< std::setw(w7) << err << '\n';
+	  if (err > grad_max_err) grad_max_err = err;
+	  grad_rmse += err * err;
+	}
       }
     }
-  }
-  val_rmse = std::sqrt(val_rmse/(numCollocPts-offset));
-  PCout << "\nValue interpolation errors:    " << std::setw(w7) << val_max_err
-	<< " (max) " << std::setw(w7) << val_rmse << " (RMS)\n";
-  if (basisConfigOptions.useDerivs) {
-    grad_rmse = std::sqrt(grad_rmse/(numCollocPts-offset)/numVars);
-    PCout << "Gradient interpolation errors: " << std::setw(w7) << grad_max_err
-	  << " (max) " << std::setw(w7) << grad_rmse << " (RMS)\n";
+    val_rmse = std::sqrt(val_rmse/(numCollocPts-offset));
+    PCout << "\nValue interpolation errors:    " << std::setw(w7) << val_max_err
+	  << " (max) " << std::setw(w7) << val_rmse << " (RMS)\n";
+    if (basisConfigOptions.useDerivs) {
+      grad_rmse = std::sqrt(grad_rmse/(numCollocPts-offset)/numVars);
+      PCout << "Gradient interpolation errors: " << std::setw(w7)
+	    << grad_max_err << " (max) " << std::setw(w7) << grad_rmse
+	    << " (RMS)\n";
+    }
   }
 #endif // INTERPOLATION_TEST
 }

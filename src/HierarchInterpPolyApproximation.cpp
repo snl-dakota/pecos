@@ -504,8 +504,9 @@ covariance(PolynomialApproximation* poly_approx_2)
   const SurrogateData& s_data_2 = hip_approx_2->surrData;
   Real mean_1 = mean(),  mean_2 = hip_approx_2->mean();
 
-  RealVector2DArray cov_t1_coeffs(num_levels); RealMatrix2DArray cov_t2_coeffs;
-  cov_t1_coeffs[0].resize(1); cov_t1_coeffs[0][0].sizeUninitialized(1);
+  RealVector2DArray cov_t1_coeffs(num_levels); cov_t1_coeffs[0].resize(1);
+  RealMatrix2DArray cov_t2_coeffs(num_levels); cov_t2_coeffs[0].resize(1);
+  cov_t1_coeffs[0][0].sizeUninitialized(1);
   switch (basisConfigOptions.useDerivs) {
   case false:
     // level 0
@@ -515,11 +516,11 @@ covariance(PolynomialApproximation* poly_approx_2)
     // levels 1:w
     for (lev=1; lev<num_levels; ++lev) {
       num_sets = key[lev].size();
-      cov_t1_coeffs[lev].resize(num_sets);
+      cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
       for (set=0; set<num_sets; ++set) {
 	num_tp_pts = key[lev][set].size();
 	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
-	cov_t1_coeffs_ls.resize(num_tp_pts);
+	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	// type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
 	  cov_t1_coeffs_ls[pt]
@@ -535,8 +536,7 @@ covariance(PolynomialApproximation* poly_approx_2)
     // level 0
     Real data_fn1_mm1 = surrData.response_function(cntr) - mean_1;
     Real data_fn2_mm2 = s_data_2.response_function(cntr) - mean_2;
-    cov_t1_coeffs[0][0][0]  = data_fn1_mm1 * data_fn2_mm2;
-    cov_t2_coeffs[0].resize(1);
+    cov_t1_coeffs[0][0][0] = data_fn1_mm1 * data_fn2_mm2;
     cov_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
     Real *cov_t2_coeffs_000 = cov_t2_coeffs[0][0][0];
     const RealVector& data_grad1 = surrData.response_gradient(cntr);
