@@ -33,13 +33,13 @@ endif
 # Tests to run when 'gmake check' is run
 
 TESTS = pecos_int_driver pecos_lhs_driver pecos_ifft_g pecos_ifft_sd \
-	boost_test_dist boost_test_rng \
-	pecos_hierarchical_driver pecos_uniform_refinable_driver
+	boost_test_dist boost_test_rng
+##	pecos_hierarchical_driver pecos_uniform_refinable_driver
 
 # Programs to link when 'gmake' is run
 noinst_PROGRAMS = pecos_int_driver pecos_lhs_driver pecos_ifft_g pecos_ifft_sd \
-		  boost_test_dist boost_test_rng \
-		  pecos_hierarchical_driver pecos_uniform_refinable_driver
+		  boost_test_dist boost_test_rng
+##		  pecos_hierarchical_driver pecos_uniform_refinable_driver
 
 
 # Complete these for each specific test.
@@ -63,15 +63,15 @@ pecos_ifft_sd_DEPENDENCIES = ${top_builddir}/libpecos.la
 pecos_ifft_sd_LDADD = -L${top_builddir} -lpecos \
     $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
 
-pecos_hierarchical_driver_SOURCES = pecos_hierarchical_driver.cpp
-pecos_hierarchical_driver_DEPENDENCIES = ${top_builddir}/libpecos.la
-pecos_hierarchical_driver_LDADD = -L${top_builddir} -lpecos \
-    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
-    
-pecos_uniform_refinable_driver_SOURCES = pecos_uniform_refinable_driver.cpp
-pecos_uniform_refinable_driver_DEPENDENCIES = ${top_builddir}/libpecos.la
-pecos_uniform_refinable_driver_LDADD = -L${top_builddir} -lpecos \
-    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
+##pecos_hierarchical_driver_SOURCES = pecos_hierarchical_driver.cpp
+##pecos_hierarchical_driver_DEPENDENCIES = ${top_builddir}/libpecos.la
+##pecos_hierarchical_driver_LDADD = -L${top_builddir} -lpecos \
+##    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
+
+##pecos_uniform_refinable_driver_SOURCES = pecos_uniform_refinable_driver.cpp
+##pecos_uniform_refinable_driver_DEPENDENCIES = ${top_builddir}/libpecos.la
+##pecos_uniform_refinable_driver_LDADD = -L${top_builddir} -lpecos \
+##    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
 
 boost_test_dist_SOURCES = boost_test_dist.cpp
 boost_test_dist_DEPENDENCIES = ${top_builddir}/libpecos.la

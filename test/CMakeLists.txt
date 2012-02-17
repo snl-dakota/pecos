@@ -60,20 +60,19 @@ target_link_libraries(pecos_lhs_driver ${pecos_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
 
 # Complete these for each specific test.
-add_executable(pecos_hierarchical_driver pecos_hierarchical_driver.cpp)
-target_link_libraries(pecos_hierarchical_driver ${pecos_libs})
-add_test(pecos_hierarchical_driver pecos_hierarchical_driver)
+#add_executable(pecos_hierarchical_driver pecos_hierarchical_driver.cpp)
+#target_link_libraries(pecos_hierarchical_driver ${pecos_libs})
+#add_test(pecos_hierarchical_driver pecos_hierarchical_driver)
 
 # Complete these for each specific test.
-add_executable(pecos_uniform_refinable_driver
-  pecos_uniform_refinable_driver.cpp)
-target_link_libraries(pecos_uniform_refinable_driver ${pecos_libs})
-add_test(pecos_uniform_refinable_driver pecos_uniform_refinable_driver)
+#add_executable(pecos_uniform_refinable_driver
+#  pecos_uniform_refinable_driver.cpp)
+#target_link_libraries(pecos_uniform_refinable_driver ${pecos_libs})
+#add_test(pecos_uniform_refinable_driver pecos_uniform_refinable_driver)
 
 # Complete these for each specific test.
-add_executable(pecos_hierarch_approx_driver
-  pecos_hierarch_approx_driver.cpp)
-target_link_libraries(pecos_hierarch_approx_driver ${pecos_libs})
-# WJB - ToDo:  Talk with MSE -- reenable vs. retire the failing tests?
-####add_test(pecos_hierarch_approx_driver pecos_hierarch_approx_driver)
+#add_executable(pecos_hierarch_approx_driver
+#  pecos_hierarch_approx_driver.cpp)
+#target_link_libraries(pecos_hierarch_approx_driver ${pecos_libs})
+#add_test(pecos_hierarch_approx_driver pecos_hierarch_approx_driver)
 
