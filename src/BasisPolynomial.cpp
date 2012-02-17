@@ -128,12 +128,8 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
   // point type, and data order is inferred from poly order (grads for CUBIC).
   case PIECEWISE_LINEAR_INTERP: case PIECEWISE_QUADRATIC_INTERP:
   case PIECEWISE_CUBIC_INTERP:
-    //if (hierarch) // TO DO; also need RefinablePointSet
-    //  polynomial = (rule) ? new HierarchPWInterpPolynomial(poly_type, rule)
-    //	                    : new HierarchPWInterpPolynomial(poly_type);
-    //else
-      polynomial = (rule) ? new PiecewiseInterpPolynomial(poly_type, rule)
-	                  : new PiecewiseInterpPolynomial(poly_type);
+    polynomial = (rule) ? new PiecewiseInterpPolynomial(poly_type, rule)
+                        : new PiecewiseInterpPolynomial(poly_type);
     break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."
