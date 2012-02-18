@@ -527,17 +527,17 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
   case COMBINED_SPARSE_GRID: {
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     Real approx_val = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
 	approx_val += sm_coeffs[i] *
 	  tensor_product_value(x, expansionType1Coeffs, expansionType2Coeffs,
-			       sm_mi[i], colloc_key[i], colloc_indices[i]);
+			       sm_mi[i], colloc_key[i], colloc_index[i]);
     return approx_val;
     break;
   }
@@ -573,17 +573,17 @@ gradient_basis_variables(const RealVector& x)
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
       if (coeff_i) {
 	const RealVector& tp_grad = tensor_product_gradient_basis_variables(x,
 	  expansionType1Coeffs, expansionType2Coeffs, sm_mi[i], colloc_key[i],
-	  colloc_indices[i]);
+	  colloc_index[i]);
 	for (j=0; j<numVars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -621,17 +621,17 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
       if (coeff_i) {
 	const RealVector& tp_grad = tensor_product_gradient_basis_variables(x,
 	  expansionType1Coeffs, expansionType2Coeffs, sm_mi[i], colloc_key[i],
-	  colloc_indices[i], dvv);
+	  colloc_index[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -669,17 +669,16 @@ gradient_nonbasis_variables(const RealVector& x)
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
       if (coeff_i) {
 	const RealVector& tp_grad = tensor_product_gradient_nonbasis_variables(
-	  x, expansionType1CoeffGrads, sm_mi[i], colloc_key[i],
-	  colloc_indices[i]);
+	  x, expansionType1CoeffGrads, sm_mi[i], colloc_key[i],colloc_index[i]);
 	for (j=0; j<num_deriv_vars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -875,16 +874,16 @@ Real NodalInterpPolyApproximation::mean(const RealVector& x)
   }
   case COMBINED_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     Real mean = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
 	mean += sm_coeffs[i] *
-	  tensor_product_mean(x, sm_mi[i], colloc_key[i], colloc_indices[i]);
+	  tensor_product_mean(x, sm_mi[i], colloc_key[i], colloc_index[i]);
     return mean;
     break;
   }
@@ -951,17 +950,17 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     meanGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
       if (coeff) {
 	const RealVector& tpm_grad
 	  = tensor_product_mean_gradient(x, sm_mi[i], colloc_key[i],
-					 colloc_indices[i], dvv);
+					 colloc_index[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
 	  meanGradient[j] += coeff * tpm_grad[j];
       }
@@ -1074,16 +1073,16 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     //     with extended tensor_product_covariance(key1,key2,etc.) definition
     //     --> good way to explore why cross-terms appear to cancel out].
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size(); Real covar = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i])
 	covar += sm_coeffs[i] *
-	  tensor_product_covariance(x, sm_mi[i], colloc_key[i],
-				    colloc_indices[i], t1_coeffs_2);
+	  tensor_product_covariance(x, sm_mi[i], colloc_key[i], colloc_index[i],
+				    t1_coeffs_2);
     return covar;
     break;
   }
@@ -1163,17 +1162,17 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     varianceGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi          = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs      = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key     = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_indices = csg_driver->collocation_indices();
+    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff = sm_coeffs[i];
       if (coeff) {
 	const RealVector& tpv_grad
 	  = tensor_product_variance_gradient(x, sm_mi[i], colloc_key[i],
-					     colloc_indices[i], dvv);
+					     colloc_index[i], dvv);
 	for (j=0; j<num_deriv_vars; ++j)
 	  varianceGradient[j] += coeff * tpv_grad[j];
       }
@@ -1268,10 +1267,10 @@ void NodalInterpPolyApproximation::compute_partial_variance(int set_value)
   }
   case COMBINED_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const IntArray&        sm_coeffs = csg_driver->smolyak_coefficients();
-    const UShort2DArray&    sm_index = csg_driver->smolyak_multi_index();
-    const UShort3DArray&  colloc_key = csg_driver->collocation_key();
-    const Sizet2DArray& colloc_index = csg_driver->collocation_indices();
+    const IntArray&            sm_coeffs = csg_driver->smolyak_coefficients();
+    const UShort2DArray&        sm_index = csg_driver->smolyak_multi_index();
+    const UShort3DArray&      colloc_key = csg_driver->collocation_key();
+    const Sizet2DArray&     colloc_index = csg_driver->collocation_indices();
     // Smolyak recursion of anisotropic tensor products
     size_t i, num_smolyak_indices = sm_coeffs.size();
     UShortArray quad_order;
@@ -1306,17 +1305,17 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
       // define set_value that includes all but index of interest
       set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1;
       totalSobolIndices[j] = std::abs(1. -
-	total_effects_integral(set_value, quad_order, lev_index,
-			       colloc_key, colloc_index) / total_variance);
+	total_effects_integral(set_value, quad_order, lev_index, colloc_key,
+			       colloc_index) / total_variance);
     }
     break;
   }
   case COMBINED_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const IntArray&        sm_coeffs = csg_driver->smolyak_coefficients();
-    const UShort2DArray&    sm_index = csg_driver->smolyak_multi_index();
-    const UShort3DArray&  colloc_key = csg_driver->collocation_key();
-    const Sizet2DArray& colloc_index = csg_driver->collocation_indices();
+    const IntArray&            sm_coeffs = csg_driver->smolyak_coefficients();
+    const UShort2DArray&        sm_index = csg_driver->smolyak_multi_index();
+    const UShort3DArray&      colloc_key = csg_driver->collocation_key();
+    const Sizet2DArray&     colloc_index = csg_driver->collocation_indices();
     // Smolyak recursion of anisotropic tensor products
     size_t i, num_smolyak_indices = sm_coeffs.size();
     UShortArray quad_order;

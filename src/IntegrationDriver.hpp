@@ -133,6 +133,9 @@ protected:
   /// update collocPts1D[lev_index][i] and type{1,2}CollocWts1D[lev_index][i]
   void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 					    unsigned short lev_index);
+  /// update collocPts1D and type{1,2}CollocWts1D
+  void update_1d_collocation_points_weights(const UShortArray& quad_order,
+					    const UShortArray& lev_index);
 
   //
   //- Heading: Data
@@ -178,10 +181,6 @@ private:
   //
   //- Heading: Member functions
   //
-
-  /// update collocPts1D and type{1,2}CollocWts1D
-  void update_1d_collocation_points_weights(const UShortArray& quad_order,
-					    const UShortArray& lev_index);
 
   /// Used only by the standard envelope constructor to initialize
   /// basisApproxRep to the appropriate derived type.

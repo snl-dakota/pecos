@@ -222,6 +222,18 @@ void HierarchInterpPolyApproximation::restore_expansion_coefficients()
 {
   size_t new_colloc_pts = surrData.size();
 
+  // *******************************************************
+  // TO DO: currently used by InterpPolyApproximation::
+  // {increment,restore,finalize}_coefficients().
+  // How to update state if multiple trial sets? (finalize?)
+  //
+  // One option is to add granularity: virtual
+  // {increment,restore,finalize}_expansion_coefficients()
+  // from InterpPolyApproximation, where Nodal case has
+  // {increment,finalize}_expansion_coefficients() call
+  // restore_expansion_coefficients() 
+  // *******************************************************
+
   /*
   if (expConfigOptions.expansionCoeffFlag) {
     expansionType1Coeffs.resize(new_colloc_pts);
@@ -262,7 +274,7 @@ value(const RealVector& x, const UShort3DArray& sm_mi, const UShort4DArray& key,
   }
 
   Real approx_val = 0.;
-  SizetArray colloc_index; // empty -> default indexing
+  SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   size_t lev, set, num_sets;
   for (lev=0; lev<=level; ++lev) {
     const UShort2DArray&       sm_mi_l = sm_mi[lev];
@@ -300,7 +312,7 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     approxGradient.sizeUninitialized(numVars);
   approxGradient = 0.;
 
-  SizetArray colloc_index; // empty -> default indexing
+  SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   size_t lev, set, num_sets;
   for (lev=0; lev<=level; ++lev) {
     const UShort2DArray&       sm_mi_l = sm_mi[lev];
@@ -337,7 +349,7 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     approxGradient.sizeUninitialized(num_deriv_vars);
   approxGradient = 0.;
 
-  SizetArray colloc_index; // empty -> default indexing
+  SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   for (lev=0; lev<=level; ++lev) {
     const UShort2DArray&       sm_mi_l = sm_mi[lev];
     const UShort3DArray&         key_l = key[lev];
@@ -383,7 +395,7 @@ gradient_nonbasis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     approxGradient.sizeUninitialized(num_deriv_vars);
   approxGradient = 0.;
 
-  SizetArray colloc_index; // empty -> default indexing
+  SizetArray colloc_index; // empty -> 2DArrays allow default indexing
   for (lev=0; lev<=level; ++lev) {
     const UShort2DArray&            sm_mi_l = sm_mi[lev];
     const UShort3DArray&              key_l = key[lev];
@@ -793,7 +805,8 @@ void HierarchInterpPolyApproximation::compute_partial_variance(int set_value)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();
   const UShort4DArray&  colloc_key = hsg_driver->collocation_key();
-  const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
+  //const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
+
   // Smolyak recursion of anisotropic tensor products
   size_t i, num_levels = sm_index.size();
   /*
@@ -821,7 +834,7 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();
   const UShort4DArray&  colloc_key = hsg_driver->collocation_key();
-  const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
+  //const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
 
     // Smolyak recursion of anisotropic tensor products
     size_t i, num_levels = sm_index.size();

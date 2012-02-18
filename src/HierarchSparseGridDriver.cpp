@@ -285,7 +285,7 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
 
   if (nestedGrid) {
     compute_points_weights(var_sets, type1WeightSets, type2WeightSets);
-    assign_collocation_indices();
+    //assign_collocation_indices();
   }
   /*
   else {
@@ -322,6 +322,11 @@ compute_points_weights(RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts,
     t1_wts.sizeUninitialized(num_tp_pts);
   if (computeType2Weights && t2_wts.numCols() != num_tp_pts)
     t2_wts.shapeUninitialized(numVars, num_tp_pts);
+
+  // update collocPts1D, type1CollocWts1D, and type2CollocWts1D
+  UShortArray total_order;
+  level_to_order(sm_index, total_order);
+  update_1d_collocation_points_weights(total_order, sm_index);
 
   // define points and type 1/2 weights; weights are products of 1D weights
   for (k=0; k<num_tp_pts; ++k) {
@@ -431,6 +436,8 @@ void HierarchSparseGridDriver::push_trial_set(const UShortArray& set)
 {
   trialSet = set;
   size_t lev = index_norm(set);
+  if (smolyakMultiIndex.size() <= lev)
+    smolyakMultiIndex.resize(lev+1);
   smolyakMultiIndex[lev].push_back(set);
 
   // collocKey, collocIndices, and uniqueIndexMapping updated within
@@ -445,7 +452,7 @@ void HierarchSparseGridDriver::restore_set()
   // update collocKey from trialSet
   update_collocation_key();
   if (nestedGrid) {
-    update_collocation_indices();
+    //update_collocation_indices();
     // This approach stores less history than WeightSetsRef approach
     size_t lev = index_norm(trialSet);
     type1WeightSets[lev].push_back(savedT1WtSets[trialSet]);
@@ -472,13 +479,15 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   update_collocation_key();
   if (nestedGrid) {
     size_t lev = index_norm(trialSet);
+    if (type1WeightSets.size() <= lev || type2WeightSets.size() <= lev)
+      { type1WeightSets.resize(lev+1); type2WeightSets.resize(lev+1); }
     RealVectorArray& t1_wts_l = type1WeightSets[lev];
     RealMatrixArray& t2_wts_l = type2WeightSets[lev];
     size_t set = t1_wts_l.size();
     RealVector t1_wts_ls; t1_wts_l.push_back(t1_wts_ls); // update in place
     RealMatrix t2_wts_ls; t2_wts_l.push_back(t2_wts_ls); // update in place
     compute_points_weights(var_sets, t1_wts_l[set], t2_wts_l[set]);
-    update_collocation_indices();
+    //update_collocation_indices();
   }
   /*
   else {
@@ -500,7 +509,7 @@ void HierarchSparseGridDriver::pop_trial_set()
 {
   size_t lev = index_norm(trialSet);
   if (nestedGrid)
-    numCollocPts -= collocIndices[lev].back().size(); // subtract # of trial pts
+    numCollocPts -= collocKey[lev].back().size(); // subtract # of trial pts
   /*
   else {
     numCollocPts -= numUnique2; // subtract number of trial points
@@ -510,7 +519,7 @@ void HierarchSparseGridDriver::pop_trial_set()
 
   smolyakMultiIndex[lev].pop_back();
   collocKey[lev].pop_back();
-  collocIndices[lev].pop_back();
+  //collocIndices[lev].pop_back();
   savedT1WtSets[trialSet] = type1WeightSets[lev].back();
   type1WeightSets[lev].pop_back();
   savedT2WtSets[trialSet] = type2WeightSets[lev].back();
@@ -520,7 +529,11 @@ void HierarchSparseGridDriver::pop_trial_set()
 
 void HierarchSparseGridDriver::merge_set()
 {
-  // TO DO
+  if (nestedGrid) {
+    // no-op
+  }
+  //else
+  //  merge_unique();
 }
 
 
@@ -540,7 +553,7 @@ void HierarchSparseGridDriver::finalize_sets()
       size_t lev = index_norm(trialSet);
       smolyakMultiIndex[lev].push_back(trialSet);
       update_collocation_key();     // update collocKey
-      update_collocation_indices(); // update collocIndices and numCollocPts
+      //update_collocation_indices(); // update collocIndices and numCollocPts
       type1WeightSets[lev].push_back(savedT1WtSets[trialSet]);
       type2WeightSets[lev].push_back(savedT2WtSets[trialSet]);
     }
