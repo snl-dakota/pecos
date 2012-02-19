@@ -35,9 +35,6 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  LagrangeInterpPolynomial.cpp			\
 			  HermiteInterpPolynomial.cpp			\
 			  PiecewiseInterpPolynomial.cpp			\
-			  HierarchPWInterpPolynomial.cpp		\
-			  RefinablePointSet.cpp				\
-			  UniformRefinablePointSet.cpp			\
 			  OrthogonalPolynomial.cpp			\
 			  ChebyshevOrthogPolynomial.cpp			\
 			  GenLaguerreOrthogPolynomial.cpp		\
@@ -51,9 +48,7 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  CubatureDriver.cpp				\
 			  SparseGridDriver.cpp				\
 			  TensorProductDriver.cpp			\
-			  LocalRefinableDriver.cpp			\
 			  HierarchInterpPolyApproximation.cpp		\
-			  LRDHierarchInterpPolyApproximation.cpp	\
 			  HierarchSparseGridDriver.cpp	\
 			  CombinedSparseGridDriver.cpp	\
 			  pecos_stat_util.cpp

@@ -59,7 +59,6 @@ include_HEADERS = pecos_config.h				\
 		     src/LagrangeInterpPolynomial.hpp		\
 		     src/HermiteInterpPolynomial.hpp		\
 		     src/PiecewiseInterpPolynomial.hpp		\
-		     src/HierarchPWInterpPolynomial.hpp		\
 		     src/OrthogonalPolynomial.hpp		\
 		     src/ChebyshevOrthogPolynomial.hpp		\
 		     src/GenLaguerreOrthogPolynomial.hpp	\
@@ -73,11 +72,7 @@ include_HEADERS = pecos_config.h				\
 		     src/CubatureDriver.hpp			\
 		     src/SparseGridDriver.hpp			\
 		     src/TensorProductDriver.hpp		\
-		     src/LocalRefinableDriver.hpp		\
-		     src/RefinablePointSet.hpp			\
-                     src/UniformRefinablePointSet.hpp		\
 		     src/HierarchInterpPolyApproximation.hpp	\
-		     src/LRDHierarchInterpPolyApproximation.hpp	\
 		     src/HierarchSparseGridDriver.hpp		\
 		     src/CombinedSparseGridDriver.hpp		\
 		     src/BoostRNG_Monostate.hpp
