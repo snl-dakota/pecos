@@ -54,10 +54,13 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  /// derived portion of allocate_arrays()
   void allocate_expansion_coefficients();
-  /// derived portion of compute_coefficients()
   void compute_expansion_coefficients();
+  void increment_expansion_coefficients();
+  void decrement_expansion_coefficients();
+  void restore_expansion_coefficients();
+  void finalize_expansion_coefficients();
+
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
   /// storedColloc{Key,Indices}, and storedLevMultiIndex
   void store_coefficients();
@@ -65,7 +68,6 @@ protected:
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
   /// and storedLevMultiIndex
   void combine_coefficients(short combine_type);
-  void restore_expansion_coefficients();
 
   void compute_numerical_response_moments(size_t num_moments);
   void compute_numerical_expansion_moments(size_t num_moments);
@@ -139,6 +141,11 @@ private:
   Real expectation(const RealVector2DArray& t1_coeffs,
 		   const RealMatrix2DArray& t2_coeffs);
 
+  /// move the expansion coefficients for restore_set from
+  /// savedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
+  /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void restore_expansion_coefficients(const UShortArray& restore_set);
+
   //
   //- Heading: Data
   //
@@ -157,6 +164,16 @@ private:
       variables that do not appear in the expansion (e.g., with respect to
       design variables for an expansion only over the random variables). */
   RealMatrix2DArray expansionType1CoeffGrads;
+
+  /// saved type 1 expansion coefficients for restoration to
+  /// expansionType1Coeffs
+  std::map<UShortArray, RealVector> savedExpT1Coeffs;
+  /// saved type 2 expansion coefficients for restoration to
+  /// expansionType2Coeffs
+  std::map<UShortArray, RealMatrix> savedExpT2Coeffs;
+  /// saved type 1 expansion coefficient gradients for restoration to
+  /// expansionType1CoeffGrads
+  std::map<UShortArray, RealMatrix> savedExpT1CoeffGrads;
 
   /// storage of expansionType1Coeffs state for subsequent restoration
   RealVector2DArray storedExpType1Coeffs;
@@ -185,6 +202,20 @@ HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
 
 inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 {}
+
+
+inline void HierarchInterpPolyApproximation::increment_expansion_coefficients()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  restore_expansion_coefficients(hsg_driver->trial_set());
+}
+
+
+inline void HierarchInterpPolyApproximation::restore_expansion_coefficients()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  restore_expansion_coefficients(hsg_driver->trial_set());
+}
 
 
 inline Real HierarchInterpPolyApproximation::value(const RealVector& x)

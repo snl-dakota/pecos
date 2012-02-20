@@ -50,6 +50,11 @@ protected:
 
   void allocate_expansion_coefficients();
   void compute_expansion_coefficients();
+  void increment_expansion_coefficients();
+  void decrement_expansion_coefficients();
+  void restore_expansion_coefficients();
+  void finalize_expansion_coefficients();
+
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
   /// storedColloc{Key,Indices}, and storedLev{MultiIndex,Coeffs}
   void store_coefficients();
@@ -57,7 +62,6 @@ protected:
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
   /// and storedLev{MultiIndex,Coeffs}
   void combine_coefficients(short combine_type);
-  void restore_expansion_coefficients();
 
   void compute_numerical_response_moments(size_t num_moments);
   void compute_numerical_expansion_moments(size_t num_moments);
@@ -172,6 +176,31 @@ NodalInterpPolyApproximation(short basis_type, size_t num_vars,
 
 inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 { }
+
+
+inline void NodalInterpPolyApproximation::increment_expansion_coefficients()
+{ restore_expansion_coefficients(); }
+
+
+inline void NodalInterpPolyApproximation::decrement_expansion_coefficients()
+{
+  // not necessary to prune; next increment/restore/finalize takes care of this
+  //if (expConfigOptions.expansionCoeffFlag) {
+  //  expansionType1Coeffs.resize(numCollocPts);
+  //  if (basisConfigOptions.useDerivs) {
+  //    size_t num_deriv_vars = expansionType2Coeffs.numRows();
+  //    expansionType2Coeffs.reshape(num_deriv_vars, numCollocPts);
+  //  }
+  //}
+  //if (expConfigOptions.expansionCoeffGradFlag) {
+  //  size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+  //  expansionType1CoeffGrads.reshape(num_deriv_vars, numCollocPts);
+  //}
+}
+
+
+inline void NodalInterpPolyApproximation::finalize_expansion_coefficients()
+{ restore_expansion_coefficients(); }
 
 
 inline const RealVector& NodalInterpPolyApproximation::

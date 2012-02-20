@@ -109,8 +109,19 @@ protected:
   virtual void allocate_expansion_coefficients() = 0;
   /// derived portion of compute_coefficients()
   virtual void compute_expansion_coefficients() = 0;
-  /// restore expansion{Coeffs,CoeffGrads} within increment/restore/finalize
+  /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  /// within increment_coefficients()
+  virtual void increment_expansion_coefficients() = 0;
+  /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  /// within decrement_coefficients()
+  virtual void decrement_expansion_coefficients() = 0;
+  /// restore expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  /// within restore_coefficients()
   virtual void restore_expansion_coefficients() = 0;
+  /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  /// within finalize_coefficients()
+  virtual void finalize_expansion_coefficients() = 0;
+
   /// compute moments of response using numerical integration
   virtual void compute_numerical_response_moments(size_t num_moments) = 0;
   /// compute moments of expansion using numerical integration

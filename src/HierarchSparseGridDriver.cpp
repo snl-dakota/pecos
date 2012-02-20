@@ -447,16 +447,18 @@ void HierarchSparseGridDriver::push_trial_set(const UShortArray& set)
 
 void HierarchSparseGridDriver::restore_set()
 {
-  // SparseGridDriver currently retains no memory, so updates are recomputed
-
-  // update collocKey from trialSet
+  // recompute collocKey from trialSet
   update_collocation_key();
   if (nestedGrid) {
     //update_collocation_indices();
     // This approach stores less history than WeightSetsRef approach
     size_t lev = index_norm(trialSet);
     type1WeightSets[lev].push_back(savedT1WtSets[trialSet]);
-    type2WeightSets[lev].push_back(savedT2WtSets[trialSet]);
+    savedT1WtSets.erase(trialSet);
+    if (computeType2Weights) {
+      type2WeightSets[lev].push_back(savedT2WtSets[trialSet]);
+      savedT2WtSets.erase(trialSet);
+    }
   }
   /*
   else { // compute a2
@@ -484,9 +486,14 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
     RealVectorArray& t1_wts_l = type1WeightSets[lev];
     RealMatrixArray& t2_wts_l = type2WeightSets[lev];
     size_t set = t1_wts_l.size();
-    RealVector t1_wts_ls; t1_wts_l.push_back(t1_wts_ls); // update in place
-    RealMatrix t2_wts_ls; t2_wts_l.push_back(t2_wts_ls); // update in place
-    compute_points_weights(var_sets, t1_wts_l[set], t2_wts_l[set]);
+    RealVector t1_wts_ls; RealMatrix t2_wts_ls;
+    t1_wts_l.push_back(t1_wts_ls);   // update in place
+    if (computeType2Weights) {
+      t2_wts_l.push_back(t2_wts_ls); // update in place
+      compute_points_weights(var_sets, t1_wts_l[set], t2_wts_l[set]);
+    }
+    else
+      compute_points_weights(var_sets, t1_wts_l[set], t2_wts_ls);
     //update_collocation_indices();
   }
   /*
@@ -522,8 +529,10 @@ void HierarchSparseGridDriver::pop_trial_set()
   //collocIndices[lev].pop_back();
   savedT1WtSets[trialSet] = type1WeightSets[lev].back();
   type1WeightSets[lev].pop_back();
-  savedT2WtSets[trialSet] = type2WeightSets[lev].back();
-  type2WeightSets[lev].pop_back();
+  if (computeType2Weights) {
+    savedT2WtSets[trialSet] = type2WeightSets[lev].back();
+    type2WeightSets[lev].pop_back();
+  }
 }
 
 
@@ -555,7 +564,8 @@ void HierarchSparseGridDriver::finalize_sets()
       update_collocation_key();     // update collocKey
       //update_collocation_indices(); // update collocIndices and numCollocPts
       type1WeightSets[lev].push_back(savedT1WtSets[trialSet]);
-      type2WeightSets[lev].push_back(savedT2WtSets[trialSet]);
+      if (computeType2Weights)
+	type2WeightSets[lev].push_back(savedT2WtSets[trialSet]);
     }
   }
   /*

@@ -139,6 +139,76 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 }
 
 
+// **********************************************************************
+// TO DO: verify that decrement/restore is always valid for surpluses !!!
+// **********************************************************************
+
+
+void HierarchInterpPolyApproximation::decrement_expansion_coefficients()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShortArray&        trial_set  = hsg_driver->trial_set();
+  size_t lev = hsg_driver->index_norm(trial_set);
+
+  if (expConfigOptions.expansionCoeffFlag) {
+    savedExpT1Coeffs[trial_set] = expansionType1Coeffs[lev].back();
+    expansionType1Coeffs[lev].pop_back();
+    if (basisConfigOptions.useDerivs) {
+      savedExpT2Coeffs[trial_set] = expansionType2Coeffs[lev].back();
+      expansionType2Coeffs[lev].pop_back();
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    savedExpT1CoeffGrads[trial_set] = expansionType1CoeffGrads[lev].back();
+    expansionType1CoeffGrads[lev].pop_back();
+  }
+
+  numCollocPts = surrData.size();
+}
+
+
+void HierarchInterpPolyApproximation::
+restore_expansion_coefficients(const UShortArray& restore_set)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  size_t lev = hsg_driver->index_norm(restore_set);
+  if (expConfigOptions.expansionCoeffFlag) {
+    expansionType1Coeffs[lev].push_back(savedExpT1Coeffs[restore_set]);
+    savedExpT1Coeffs.erase(restore_set);
+    if (basisConfigOptions.useDerivs) {
+      expansionType2Coeffs[lev].push_back(savedExpT2Coeffs[restore_set]);
+      savedExpT2Coeffs.erase(restore_set);
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    expansionType1CoeffGrads[lev].push_back(savedExpT1CoeffGrads[restore_set]);
+    savedExpT1CoeffGrads.erase(restore_set);
+  }
+}
+
+
+void HierarchInterpPolyApproximation::finalize_expansion_coefficients()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
+
+  size_t lev, set, num_sets, num_levels = sm_mi.size(), num_smolyak_sets,
+    num_coeff_sets;
+  for (lev=0; lev<num_levels; ++lev) {
+    const UShort2DArray& sm_mi_l = sm_mi[lev];
+    num_smolyak_sets = sm_mi_l.size();
+    num_coeff_sets = (expConfigOptions.expansionCoeffFlag) ?
+      expansionType1Coeffs[lev].size() : expansionType1CoeffGrads[lev].size();
+    for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
+      restore_expansion_coefficients(sm_mi_l[set]);
+  }
+  savedExpT1Coeffs.clear(); savedExpT2Coeffs.clear();
+  savedExpT1CoeffGrads.clear();
+
+  numCollocPts = surrData.size();
+}
+
+
 void HierarchInterpPolyApproximation::store_coefficients()
 {
   if (expConfigOptions.expansionCoeffFlag) {
@@ -215,50 +285,6 @@ void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
   storedLevMultiIndex.clear();
   storedCollocKey.clear();
   //storedCollocIndices.clear();
-}
-
-
-void HierarchInterpPolyApproximation::restore_expansion_coefficients()
-{
-  size_t new_colloc_pts = surrData.size();
-
-  // *******************************************************
-  // TO DO: currently used by InterpPolyApproximation::
-  // {increment,restore,finalize}_coefficients().
-  // How to update state if multiple trial sets? (finalize?)
-  //
-  // One option is to add granularity: virtual
-  // {increment,restore,finalize}_expansion_coefficients()
-  // from InterpPolyApproximation, where Nodal case has
-  // {increment,finalize}_expansion_coefficients() call
-  // restore_expansion_coefficients() 
-  // *******************************************************
-
-  /*
-  if (expConfigOptions.expansionCoeffFlag) {
-    expansionType1Coeffs.resize(new_colloc_pts);
-    if (basisConfigOptions.useDerivs) {
-      size_t num_deriv_vars = expansionType2Coeffs.numRows();
-      expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
-    }
-  }
-  if (expConfigOptions.expansionCoeffGradFlag) {
-    size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
-    expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
-  }
-
-  for (int i=numCollocPts; i<new_colloc_pts; ++i) {
-    if (expConfigOptions.expansionCoeffFlag) {
-      expansionType1Coeffs[i] = surrData.response_function(i);
-      if (basisConfigOptions.useDerivs)
-	Teuchos::setCol(surrData.response_gradient(i), i, expansionType2Coeffs);
-    }
-    if (expConfigOptions.expansionCoeffGradFlag)
-      Teuchos::setCol(surrData.response_gradient(i),i,expansionType1CoeffGrads);
-  }
-  */
-
-  numCollocPts = new_colloc_pts;
 }
 
 

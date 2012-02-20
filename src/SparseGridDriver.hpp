@@ -156,14 +156,10 @@ public:
   /// return the trial index set from push_trial_set()
   const UShortArray& trial_set() const;
 
-protected:
-
-  //
-  //- Heading: Member functions
-  //
-
   /// compute 1-norm |i| (sum of indices) for the given index_set
   unsigned int index_norm(const UShortArray& index_set) const;
+
+protected:
 
   //
   //- Heading: Data

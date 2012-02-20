@@ -262,7 +262,7 @@ void InterpPolyApproximation::increment_coefficients()
     abort_handler(-1);
   }
 
-  restore_expansion_coefficients();
+  increment_expansion_coefficients();
 }
 
 
@@ -279,18 +279,7 @@ void InterpPolyApproximation::decrement_coefficients()
   }
   }
 
-  // not necessary to prune; next increment/restore/finalize takes care of this
-  //if (expConfigOptions.expansionCoeffFlag) {
-  //  expansionType1Coeffs.resize(numCollocPts);
-  //  if (basisConfigOptions.useDerivs) {
-  //    size_t num_deriv_vars = expansionType2Coeffs.numRows();
-  //    expansionType2Coeffs.reshape(num_deriv_vars, numCollocPts);
-  //  }
-  //}
-  //if (expConfigOptions.expansionCoeffGradFlag) {
-  //  size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
-  //  expansionType1CoeffGrads.reshape(num_deriv_vars, numCollocPts);
-  //}
+  decrement_expansion_coefficients();
 
   numCollocPts = surrData.size(); // data already decremented
   if (surrData.anchor())
@@ -330,7 +319,7 @@ void InterpPolyApproximation::finalize_coefficients()
     break;
   }
 
-  restore_expansion_coefficients();
+  finalize_expansion_coefficients();
 }
 
 
