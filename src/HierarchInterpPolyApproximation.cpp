@@ -139,6 +139,66 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 }
 
 
+void HierarchInterpPolyApproximation::increment_expansion_coefficients()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShortArray&        trial_set  = hsg_driver->trial_set();
+  size_t lev = hsg_driver->index_norm(trial_set), num_deriv_vars = 0;
+
+  if (expConfigOptions.expansionCoeffFlag) {
+    if (lev >= expansionType1Coeffs.size())
+      expansionType1Coeffs.resize(lev+1);
+    if (basisConfigOptions.useDerivs) {
+      num_deriv_vars = expansionType2Coeffs[0][0].numRows();
+      if (lev >= expansionType2Coeffs.size())
+	expansionType2Coeffs.resize(lev+1);
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    num_deriv_vars = expansionType1CoeffGrads[0][0].numRows();
+    if (lev >= expansionType1CoeffGrads.size())
+      expansionType1CoeffGrads.resize(lev+1);
+  }
+
+  // update in place
+  size_t index = numCollocPts, new_colloc_pts = surrData.size(),
+    num_trial_pts = new_colloc_pts - numCollocPts;
+  RealVector fns; RealMatrix grads;
+  if (expConfigOptions.expansionCoeffFlag) {
+    expansionType1Coeffs[lev].push_back(fns);
+    expansionType1Coeffs[lev].back().sizeUninitialized(num_trial_pts);
+    if (basisConfigOptions.useDerivs) {
+      expansionType2Coeffs[lev].push_back(grads);
+      expansionType2Coeffs[lev].back().shapeUninitialized(num_deriv_vars,
+							  num_trial_pts);
+    }
+  }
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    expansionType1CoeffGrads[lev].push_back(grads);
+    expansionType1CoeffGrads[lev].back().shapeUninitialized(num_deriv_vars,
+							    num_trial_pts);
+  }
+  RealVector& t1_coeffs = (expConfigOptions.expansionCoeffFlag) ?
+    expansionType1Coeffs[lev].back() : fns;
+  RealMatrix& t2_coeffs = (expConfigOptions.expansionCoeffFlag &&
+    basisConfigOptions.useDerivs) ? expansionType2Coeffs[lev].back() : grads;
+  RealMatrix& t1_coeff_grads = (expConfigOptions.expansionCoeffGradFlag) ?
+    expansionType1CoeffGrads[lev].back() : grads;
+ 
+  for (int i=0; index<new_colloc_pts; ++i, ++index) {
+    if (expConfigOptions.expansionCoeffFlag) {
+      t1_coeffs[i] = surrData.response_function(index);
+      if (basisConfigOptions.useDerivs)
+	Teuchos::setCol(surrData.response_gradient(index), i, t2_coeffs);
+    }
+    if (expConfigOptions.expansionCoeffGradFlag)
+      Teuchos::setCol(surrData.response_gradient(index), i, t1_coeff_grads);
+  }
+
+  numCollocPts = new_colloc_pts;
+}
+
+
 // **********************************************************************
 // TO DO: verify that decrement/restore is always valid for surpluses !!!
 // **********************************************************************
