@@ -53,9 +53,10 @@ public:
   virtual void initialize_grid(const ShortArray& u_types,
     unsigned short ssg_level, const RealVector& dim_pref,
     Pecos::BasisConfigOptions& bc_options,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH,
     /*short refine_type = NO_REFINEMENT,*/ short refine_control = NO_CONTROL,
     bool store_colloc = false, bool track_uniq_prod_wts = true,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH);
+    bool track_colloc_indices = true);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   virtual void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
@@ -129,6 +130,11 @@ public:
   /// return dimIsotropic
   bool isotropic() const;
 
+  /// set growthRate
+  void growth_rate(short growth_rate);
+  /// get growthRate
+  short growth_rate() const;
+
   // get refineType
   //short refinement_type()    const;
   /// set refineControl
@@ -144,15 +150,19 @@ public:
   void track_unique_product_weights(bool track_uniq_prod_wts);
   /// get trackUniqueProdWeights
   bool track_unique_product_weights() const;
-  /// set growthRate
-  void growth_rate(short growth_rate);
-  /// get growthRate
-  short growth_rate() const;
+  /// set trackCollocIndices
+  void track_collocation_indices(bool track_colloc_indices);
+  /// get trackCollocIndices
+  bool track_collocation_indices() const;
 
   /// return activeMultiIndex
   const std::set<UShortArray>& active_multi_index() const;
   /// return oldMultiIndex
   const std::set<UShortArray>& old_multi_index() const;
+  /// return computedTrialSets
+  const std::set<UShortArray>& computed_trial_sets() const;
+  /// clear computedTrialSets
+  void clear_computed_trial_sets();
   /// return the trial index set from push_trial_set()
   const UShortArray& trial_set() const;
 
@@ -194,6 +204,10 @@ protected:
   /// flag indicating need to track {type1,type2}WeightSets (product weights for
   /// each unique grid point) as opposed to relying on collections of 1D weights
   bool trackUniqueProdWeights;
+  /// due to the hierarchical structure, collocation indices only need
+  /// to be defined in special cases (e.g., generalized sparse grids
+  /// for which index sets can appear in different orders).
+  bool trackCollocIndices;
 
   /// old reference index sets for generalized sparse grids
   std::set<UShortArray> oldMultiIndex; // or UShort2DArray
@@ -224,20 +238,20 @@ private:
 
 inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), ssgLevel(0), dimIsotropic(true),
-  storeCollocDetails(false), numCollocPts(0), updateGridSize(true),
-  trackUniqueProdWeights(false), refineControl(NO_CONTROL),
+  growthRate(MODERATE_RESTRICTED_GROWTH), storeCollocDetails(false),
+  numCollocPts(0), updateGridSize(true), trackUniqueProdWeights(false),
+  trackCollocIndices(true), refineControl(NO_CONTROL)
   //refineType(NO_REFINEMENT),
-  growthRate(MODERATE_RESTRICTED_GROWTH)
 { }
 
 
 inline SparseGridDriver::
 SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref):
   IntegrationDriver(BaseConstructor()), ssgLevel(ssg_level),
-  storeCollocDetails(false), numCollocPts(0), updateGridSize(true),
-  trackUniqueProdWeights(false), refineControl(NO_CONTROL),
+  growthRate(MODERATE_RESTRICTED_GROWTH), storeCollocDetails(false),
+  numCollocPts(0), updateGridSize(true), trackUniqueProdWeights(false),
+  trackCollocIndices(true), refineControl(NO_CONTROL)
   //refineType(NO_REFINEMENT),
-  growthRate(MODERATE_RESTRICTED_GROWTH)
 {
   if (dim_pref.empty())
     dimIsotropic = true;
@@ -300,6 +314,15 @@ inline bool SparseGridDriver::track_unique_product_weights() const
 { return trackUniqueProdWeights; }
 
 
+inline void SparseGridDriver::
+track_collocation_indices(bool track_colloc_indices)
+{ trackCollocIndices = track_colloc_indices; }
+
+
+inline bool SparseGridDriver::track_collocation_indices() const
+{ return trackCollocIndices; }
+
+
 inline void SparseGridDriver::growth_rate(short growth_rate)
 { growthRate = growth_rate; }
 
@@ -314,6 +337,15 @@ inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const
 
 inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
 { return oldMultiIndex; }
+
+
+inline const std::set<UShortArray>& SparseGridDriver::
+computed_trial_sets() const
+{ return computedTrialSets; }
+
+
+inline void SparseGridDriver::clear_computed_trial_sets()
+{ computedTrialSets.clear(); }
 
 
 inline const UShortArray& SparseGridDriver::trial_set() const

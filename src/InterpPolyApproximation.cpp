@@ -316,6 +316,10 @@ void InterpPolyApproximation::finalize_coefficients()
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID:
     // move previous expansion data to current expansion
     savedLevMultiIndex.clear();
+    // clear the computed trial sets (deferred within
+    // {Combined,Hierarch}SparseGridDriver::finalize_sets())
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    sg_driver->clear_computed_trial_sets();
     break;
   }
 

@@ -66,12 +66,15 @@ public:
   /// restore the approximation coefficients to a previously incremented state
   /// as identified by the current data increment
   virtual void restore_coefficients();
-  /// test for whether current trial must be incremented or can be restored
-  /// from a previous trial
+  /// test for whether current trial set requires a new approximation
+  /// increment or can be restored from a previous trial
   virtual bool restore_available();
-  /// index of the data set to be restored from within saved bookkeeping
+  /// returns index of the data set to be restored from within saved
+  /// bookkeeping (e.g., PolynomialApproximation::savedLevMultiIndex)
   virtual size_t restoration_index();
-  /// index of the i-th data set to be restored from within saved bookkeeping
+  /// returns index of the i-th data set to be restored from within saved
+  /// bookkeeping (e.g., PolynomialApproximation::savedLevMultiIndex)
+  /// during finalization
   virtual size_t finalization_index(size_t i);
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();

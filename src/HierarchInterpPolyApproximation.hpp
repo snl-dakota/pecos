@@ -206,8 +206,8 @@ inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 
 inline void HierarchInterpPolyApproximation::restore_expansion_coefficients()
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  restore_expansion_coefficients(hsg_driver->trial_set());
+  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+  restore_expansion_coefficients(sg_driver->trial_set());
 }
 
 

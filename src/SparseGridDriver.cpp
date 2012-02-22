@@ -164,15 +164,16 @@ void SparseGridDriver::update_axis_lower_bounds()
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref,
-		Pecos::BasisConfigOptions& bc_options,
+		Pecos::BasisConfigOptions& bc_options, short growth_rate,
 		/*short refine_type,*/ short refine_control, bool store_colloc,
-		bool track_uniq_prod_wts, short growth_rate)
+		bool track_uniq_prod_wts, bool track_colloc_indices)
 {
+  growthRate             = growth_rate;
   //refineType           = refine_type;
   refineControl          = refine_control;
   storeCollocDetails     = store_colloc;
   trackUniqueProdWeights = track_uniq_prod_wts;
-  growthRate             = growth_rate;
+  trackCollocIndices     = track_colloc_indices;
 
   // For unrestricted exponential growth, use of nested rules is restricted
   // to uniform/normal in order to enforce similar growth rates:

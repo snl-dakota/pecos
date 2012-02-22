@@ -427,8 +427,8 @@ void CombinedSparseGridDriver::initialize_sets()
 	add_active_neighbors(smolyakMultiIndex[i]);
 
 #ifdef DEBUG
-  PCout << "SparseGridDriver::initialize_sets():\nold sets:\n" << oldMultiIndex
-	<< "active sets:\n" << activeMultiIndex << std::endl;
+  PCout << "CombinedSparseGridDriver::initialize_sets():\nold sets:\n"
+	<< oldMultiIndex << "active sets:\n" << activeMultiIndex << std::endl;
 #endif // DEBUG
 }
 
@@ -509,7 +509,10 @@ void CombinedSparseGridDriver::finalize_sets()
   // been evaluated (due to final update_sets() call); use computedTrialSets
   smolyakMultiIndex.insert(smolyakMultiIndex.end(), computedTrialSets.begin(),
 			   computedTrialSets.end());
-  activeMultiIndex.clear(); computedTrialSets.clear();
+  activeMultiIndex.clear();
+  // defer since needed for PolynomialApproximation::finalization_index()
+  //computedTrialSets.clear();
+
   // update smolyakCoeffs from smolyakMultiIndex
   update_smolyak_coefficients(start_index);
   // update collocKey

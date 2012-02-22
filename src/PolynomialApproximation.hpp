@@ -17,7 +17,7 @@
 
 #include "BasisApproximation.hpp"
 #include "SurrogateData.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "SparseGridDriver.hpp"
 
 
 namespace Pecos {
@@ -406,14 +406,8 @@ protected:
   /// generic base class function mapped to gradient_basis_variables(x)
   const RealVector& gradient(const RealVector& x);
 
-  /// query trial index for presence in savedLevMultiIndex, indicating
-  /// the ability to restore a previously evaluated increment
   bool restore_available();
-  /// returns index of the data set to be restored from within saved
-  /// bookkeeping (i.e., savedLevMultiIndex)
   size_t restoration_index();
-  /// returns i-th index of the data sets to be restored from within saved
-  /// bookkeeping (i.e., savedLevMultiIndex) during finalization
   size_t finalization_index(size_t i);
 
   //
@@ -688,20 +682,16 @@ inline size_t PolynomialApproximation::restoration_index()
 }
 
 
-/** For {Orthog,NodalInterp}PolyApproximation. */
 inline size_t PolynomialApproximation::finalization_index(size_t i)
 {
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  const UShort2DArray&  sm_multi_index = csg_driver->smolyak_multi_index();
-
-  // sm_multi_index is updated in SparseGridDriver::finalize_sets() with all
-  // of the remaining trial sets.  Below, we determine the order with which
-  // these appended trial sets appear in savedLevMultiIndex
-  // (SparseGridDriver::computedTrialSets is a sorted set, but
-  // savedLevMultiIndex retains order of insertion).
-  size_t num_saved_indices = savedLevMultiIndex.size(),
-         start = sm_multi_index.size() - num_saved_indices;
-  return find_index(savedLevMultiIndex, sm_multi_index[start+i]);
+  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+  const std::set<UShortArray>& trial_sets = sg_driver->computed_trial_sets();
+  // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid data
+  // with remaining computed trial sets (in sorted order from SparseGridDriver::
+  // computedTrialSets).  Below, we determine the order with which these appended
+  // trial sets appear in savedLevMultiIndex.
+  std::set<UShortArray>::const_iterator cit = trial_sets.begin(); std::advance(cit, i);
+  return find_index(savedLevMultiIndex, *cit);
 }
 
 } // namespace Pecos
