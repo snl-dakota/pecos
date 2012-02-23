@@ -597,10 +597,6 @@ void OrthogPolyApproximation::finalize_coefficients()
       break;
     }
     }
-    // clear the computed trial sets (deferred within
-    // CombinedSparseGridDriver::finalize_sets())
-    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    sg_driver->clear_computed_trial_sets();
     break;
   }
 }

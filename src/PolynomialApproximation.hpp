@@ -688,9 +688,10 @@ inline size_t PolynomialApproximation::finalization_index(size_t i)
   const std::set<UShortArray>& trial_sets = sg_driver->computed_trial_sets();
   // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid data
   // with remaining computed trial sets (in sorted order from SparseGridDriver::
-  // computedTrialSets).  Below, we determine the order with which these appended
-  // trial sets appear in savedLevMultiIndex.
-  std::set<UShortArray>::const_iterator cit = trial_sets.begin(); std::advance(cit, i);
+  // computedTrialSets).  Below, we determine the order with which these
+  // appended trial sets appear in savedLevMultiIndex.
+  std::set<UShortArray>::const_iterator cit = trial_sets.begin();
+  std::advance(cit, i);
   return find_index(savedLevMultiIndex, *cit);
 }
 

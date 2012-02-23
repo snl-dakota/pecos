@@ -161,8 +161,6 @@ public:
   const std::set<UShortArray>& old_multi_index() const;
   /// return computedTrialSets
   const std::set<UShortArray>& computed_trial_sets() const;
-  /// clear computedTrialSets
-  void clear_computed_trial_sets();
   /// return the trial index set from push_trial_set()
   const UShortArray& trial_set() const;
 
@@ -342,10 +340,6 @@ inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
 inline const std::set<UShortArray>& SparseGridDriver::
 computed_trial_sets() const
 { return computedTrialSets; }
-
-
-inline void SparseGridDriver::clear_computed_trial_sets()
-{ computedTrialSets.clear(); }
 
 
 inline const UShortArray& SparseGridDriver::trial_set() const

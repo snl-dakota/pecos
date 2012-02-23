@@ -461,6 +461,9 @@ void HierarchSparseGridDriver::initialize_sets()
     oldMultiIndex.insert(smolyakMultiIndex[lev].begin(),
 			 smolyakMultiIndex[lev].end());
 
+  // computedTrialSets no longer cleared in finalize_sets(), so do on init
+  computedTrialSets.clear();
+
   // compute initial set A (active) by applying add_active_neighbors()
   // to the frontier of smolyakMultiIndex:
   if (dimIsotropic) {
