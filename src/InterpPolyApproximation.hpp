@@ -372,8 +372,6 @@ inline void InterpPolyApproximation::compute_moments()
 inline void InterpPolyApproximation::compute_moments(const RealVector& x)
 {
   // all variables mode only supports first two moments
-  if (numericalMoments.empty())
-    numericalMoments.sizeUninitialized(2);
   mean(x); variance(x);
   standardize_moments(numericalMoments);
   //compute_numerical_expansion_moments(4, x);

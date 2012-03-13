@@ -151,6 +151,9 @@ void InterpPolyApproximation::allocate_arrays()
     break;
   }
   }
+
+  size_t num_moments = (nonRandomIndices.empty()) ? 4 : 2;
+  numericalMoments.sizeUninitialized(num_moments);
 }
 
 
