@@ -72,6 +72,8 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
       Teuchos::setCol(surrData.response_gradient(index), i,
 		      expansionType1CoeffGrads);
   }
+
+  computedMeanData = computedVarianceData = 0;
 }
 
 
@@ -180,6 +182,8 @@ void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
     storedLevMultiIndex.clear(); storedLevCoeffs.clear();
     storedCollocKey.clear();     storedCollocIndices.clear(); break;
   }
+
+  computedMeanData = computedVarianceData = 0;
 }
 
 
@@ -215,6 +219,7 @@ void NodalInterpPolyApproximation::restore_expansion_coefficients()
   }
 
   numCollocPts = new_colloc_pts;
+  computedMeanData = computedVarianceData = 0;
 }
 
 
@@ -223,19 +228,34 @@ Real NodalInterpPolyApproximation::
 tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
 		    const UShort2DArray& key, const SizetArray&  colloc_index)
 {
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::tensor_product_mean()" << std::endl;
+    abort_handler(-1);
+  }
+
   Real tp_mean = 0.;
   size_t i, j, c_index, num_colloc_pts = key.size();
-  for (i=0; i<num_colloc_pts; ++i) {
-    const UShortArray& key_i = key[i];
-    Real prod_i = 1.;
-    for (j=0; j<numVars; ++j)
-      prod_i *= (randomVarsKey[j]) ? colloc_wts_1d[lev_index[j]][j][key_i[j]] :
-	polynomialBasis[lev_index[j]][j].type1_value(x[j], key_i[j]);
-    c_index = (colloc_index.empty()) ? i : colloc_index[i];
-    tp_mean += expansionType1Coeffs[c_index] * prod_i;
+  if (basisConfigOptions.useDerivs) {
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      c_index = (colloc_index.empty()) ? i : colloc_index[i];
+      tp_mean += expansionType1Coeffs[c_index]
+	      *  type1_value_weight(x, key_i, lev_index, randomVarsKey);
+      const Real *t2_coeff_i = expansionType2Coeffs[c_index];
+      for (j=0; j<numVars; ++j)
+	tp_mean += t2_coeff_i[j]
+	        *  type2_value_weight(x, j, key_i, lev_index, randomVarsKey);
+    }
   }
+  else
+    for (i=0; i<num_colloc_pts; ++i) {
+      c_index = (colloc_index.empty()) ? i : colloc_index[i];
+      tp_mean += expansionType1Coeffs[c_index]
+	      *  type1_value_weight(x, key[i], lev_index, randomVarsKey);
+    }
+
   return tp_mean;
 }
 
@@ -265,9 +285,6 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
   if (tpMeanGrad.length() != num_deriv_vars)
     tpMeanGrad.sizeUninitialized(num_deriv_vars);
   tpMeanGrad = 0.;
-  SizetList::iterator it;
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     // Error check for required data
@@ -284,41 +301,40 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	    << "Approximation::tensor_product_mean_gradient()" << std::endl;
       abort_handler(-1);
     }
+    Real& grad_i = tpMeanGrad[i];
     for (j=0; j<num_colloc_pts; ++j) {
       const UShortArray& key_j = key[j];
       c_index = (colloc_index.empty()) ? j : colloc_index[j];
-      Real wt_prod_j = 1.;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	{ k = *it; wt_prod_j *= colloc_wts_1d[lev_index[k]][k][key_j[k]]; }
       if (randomVarsKey[deriv_index]) {
 	// --------------------------------------------------------------------
 	// derivative of All var expansion w.r.t. random var (design insertion)
 	// --------------------------------------------------------------------
-	Real Lsa_j = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	  k = *it;
-	  Lsa_j *= polynomialBasis[lev_index[k]][k].type1_value(x[k], key_j[k]);
+	grad_i += expansionType1CoeffGrads(cntr, c_index)
+	       *  type1_value_weight(x, key_j, lev_index, randomVarsKey);
+	if (basisConfigOptions.useDerivs) {
+	  PCerr << "Error: combination of coefficient gradients and "
+		<< "use_derivatives in NodalInterpPolyApproximation::"
+		<< "tensor_product_mean_gradient()" << std::endl;
+	  abort_handler(-1);
 	}
-	tpMeanGrad[i] += wt_prod_j * Lsa_j *
-	                 expansionType1CoeffGrads(cntr, c_index);
       }
       else {
 	// ---------------------------------------------------------------------
 	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
 	// ---------------------------------------------------------------------
-	Real dLsa_j_dsa_i = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	  k = *it;
-	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[lev_index[k]][k].type1_gradient(x[k], key_j[k]) :
-	    polynomialBasis[lev_index[k]][k].type1_value(x[k],    key_j[k]);
+	grad_i += expansionType1Coeffs[c_index] *
+	  type1_gradient_weight(x, deriv_index, key_j, lev_index,randomVarsKey);
+	if (basisConfigOptions.useDerivs) {
+	  const Real *t2_coeff_j = expansionType2Coeffs[c_index];
+	  for (k=0; k<numVars; ++k)
+	    grad_i += t2_coeff_j[k]
+	           *  type2_gradient_weight(x, deriv_index, k, key_j, lev_index,
+					    randomVarsKey);
 	}
-	tpMeanGrad[i] += expansionType1Coeffs[c_index]
-	              *  wt_prod_j * dLsa_j_dsa_i;
       }
     }
     if (randomVarsKey[deriv_index]) // deriv w.r.t. design var insertion
-      cntr++;
+      ++cntr;
   }
 
   return tpMeanGrad;
@@ -330,52 +346,111 @@ Real NodalInterpPolyApproximation::
 tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 			  const UShort2DArray& key,
 			  const SizetArray& colloc_index,
-			  const RealVector& exp_coeffs_2)
+			  NodalInterpPolyApproximation* nip_approx_2)
 {
-  size_t i, j, k, c_index_i, c_index_j, num_colloc_pts = key.size();
-  Real mean1 = 0., mean2 = 0., tp_covar = 0.; SizetList::iterator it;
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
-  for (i=0; i<num_colloc_pts; ++i) {
-    const UShortArray& key_i = key[i];
-    Real wt_prod_i = 1., Ls_prod_i = 1.;
-    for (k=0; k<numVars; ++k)
-      if (randomVarsKey[k])
-	wt_prod_i *= colloc_wts_1d[lev_index[k]][k][key_i[k]];
-      else
-	Ls_prod_i *=
-	  polynomialBasis[lev_index[k]][k].type1_value(x[k], key_i[k]);
-    c_index_i = (colloc_index.empty()) ? i : colloc_index[i];
-    const Real& exp_coeff_i = expansionType1Coeffs[c_index_i];
-    Real wt_Ls_prod_i = wt_prod_i    * Ls_prod_i;
-    mean1 += exp_coeff_i             * wt_Ls_prod_i;
-    mean2 += exp_coeffs_2[c_index_i] * wt_Ls_prod_i;
-    for (j=0; j<num_colloc_pts; ++j) {
-      const UShortArray& key_j = key[j];
-      // to include the ij-th term,  basis i must be the same as basis j for the
-      // random variable subset.  In this case, wt_prod_i may be reused.  Note
-      // that it is not necessary to collapse terms with the same random basis
-      // subset, since cross term in (a+b)(a+b) = a^2+2ab+b^2 gets included.
-      // If terms were collapsed (following eval of non-random portions), the
-      // nested loop could be replaced with a single loop to evaluate (a+b)^2.
-      bool include = true;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	if (key_i[*it] != key_j[*it])
-	  { include = false; break; }
-      if (include) {
-	Real Ls_prod_j = 1.;
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	  k = *it;
-	  Ls_prod_j *=
-	    polynomialBasis[lev_index[k]][k].type1_value(x[k], key_j[k]);
-	}
-	c_index_j = (colloc_index.empty()) ? j : colloc_index[j];
-	tp_covar += wt_prod_i * Ls_prod_i * Ls_prod_j * exp_coeff_i
-	         *  exp_coeffs_2[c_index_j];
+  // Use interpolation of products, not product of interpolants --> consistent
+  // with distinct covariance() and compute_numerical_moments() and allows
+  // summation of tensor_product_*() to be used for higher moments and their
+  // derivatives.
+
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag ||
+      !nip_approx_2->expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::tensor_product_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  /* TO DO: weights are not a function of x.  Consider pre-computing these
+     for each TP for reuse among multiple integrations and multiple x.
+  if ( !(computedPartialWeights & 1) )
+    tensor_product_type1_partial_weights(randomVarsKey);
+  if ( basisConfigOptions.useDerivs && !(computedPartialWeights & 2) )
+    tensor_product_type2_partial_weights(randomVarsKey);
+  */
+
+  size_t i, j, k, c_index_i, num_colloc_pts = key.size();
+  const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
+  const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
+  Real tp_covar = 0., t1_coeff_1_mm1, t1_coeff_2_mm2, mean_1, mean_2;
+  if (momentInterpType ==   PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN ||
+      momentInterpType == INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN) {
+    mean_1 = tensor_product_mean(x, lev_index, key, colloc_index);
+    mean_2 = nip_approx_2->tensor_product_mean(x, lev_index, key, colloc_index);
+  }
+  else
+    { mean_1 = mean(x); mean_2 = nip_approx_2->mean(x); }
+
+  switch (momentInterpType) {
+  case INTERPOLATION_OF_PRODUCTS_GLOBAL_MEAN:
+  case INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN:
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      c_index_i = (colloc_index.empty()) ? i : colloc_index[i];
+      t1_coeff_1_mm1 = expansionType1Coeffs[c_index_i] - mean_1;
+      t1_coeff_2_mm2 = t1_coeffs_2[c_index_i]          - mean_2;
+      tp_covar += t1_coeff_1_mm1 * t1_coeff_2_mm2
+	       *  type1_value_weight(x, key_i, lev_index, randomVarsKey);
+#ifdef DEBUG
+      PCout << "t1_coeff_1_mm1 = " << t1_coeff_1_mm1 << " t1_coeff_2_mm2 = "
+	    << t1_coeff_2_mm2 << " type1_weight() = "
+	    << type1_weight(key_i, lev_index, randomVarsKey)
+	    << " type1_interpolant_value() = "
+	    << type1_interpolant_value(x, key_i, lev_index, randomVarsKey)
+	    << " sum = " << tp_covar << std::endl;
+#endif // DEBUG
+      if (basisConfigOptions.useDerivs) {
+	const Real *t2_coeff_1 = expansionType2Coeffs[c_index_i],
+	           *t2_coeff_2 = t2_coeffs_2[c_index_i];
+	for (j=0; j<numVars; ++j)
+	  tp_covar += (t1_coeff_1_mm1 * t2_coeff_2[j] +
+		       t1_coeff_2_mm2 * t2_coeff_1[j])
+	           *  type2_value_weight(x, j, key_i, lev_index, randomVarsKey);
       }
     }
+    break;
+  case PRODUCT_OF_INTERPOLANTS_GLOBAL_MEAN:
+  case PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN: {
+    size_t c_index_j; SizetList::iterator it; Real t1_wt_Ls_prod_i;
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      c_index_i = (colloc_index.empty()) ? i : colloc_index[i];
+      t1_coeff_1_mm1  = expansionType1Coeffs[c_index_i] - mean_1;
+      t1_wt_Ls_prod_i = type1_value_weight(x, key_i, lev_index, randomVarsKey);
+      for (j=0; j<num_colloc_pts; ++j) {
+	const UShortArray& key_j = key[j];
+	// to include the ij-th term,  basis i must be the same as basis j for
+	// the random var subset.  In this case, wt_prod_i may be reused.  Note
+	// that it is not necessary to collapse terms with the same random basis
+	// subset, since cross term in (a+b)(a+b) = a^2+2ab+b^2 gets included.
+	// If terms were collapsed (following eval of non-random portions), the
+	// nested loop could be replaced with a single loop to evaluate (a+b)^2.
+	bool include = true;
+	for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
+	  if (key_i[*it] != key_j[*it])
+	    { include = false; break; }
+	if (include) {
+	  c_index_j = (colloc_index.empty()) ? j : colloc_index[j];
+	  t1_coeff_2_mm2 = t1_coeffs_2[c_index_j] - mean_2;
+	  tp_covar += t1_coeff_1_mm1 * t1_coeff_2_mm2 * t1_wt_Ls_prod_i *
+	    type1_interpolant_value(x, key_j, lev_index, randomVarsKey);
+	  /* TO DO
+	  if (basisConfigOptions.useDerivs) {
+	    const Real *t2_coeff_1i = expansionType2Coeffs[c_index_i],
+	               *t2_coeff_2i = t2_coeffs_2[c_index_i];
+	    for (j=0; j<numVars; ++j)
+	      tp_covar += (t1_coeff_1i_mm1 * t2_coeff_2i[j] +
+			   t1_coeff_2i_mm2 * t2_coeff_1i[j]) *
+		type2_value_weight(x, j, key_i, lev_index, randomVarsKey);
+	  }
+	  */
+	}
+      }
+    }
+    break;
   }
-  tp_covar -= mean1*mean2;
+  }
+
   return tp_covar;
 }
 
@@ -405,16 +480,24 @@ tensor_product_variance_gradient(const RealVector& x,
   //   dvar/dsi      = Sum_i Sum_j (r_i dr_j/dsi + dr_i/dsi r_j)
   //                   Lsa_i Lsa_j wt_prod_ij - 2 mu dmu/dsi
   // -------------------------------------------------------------------
-  size_t i, j, k, l, deriv_index, c_index_j, c_index_k, cntr = 0,
+  size_t i, j, k, l, deriv_index, c_index_j, cntr = 0,
     num_deriv_vars = dvv.size(), num_colloc_pts = key.size();
   if (tpVarianceGrad.length() != num_deriv_vars)
     tpVarianceGrad.sizeUninitialized(num_deriv_vars);
   tpVarianceGrad = 0.;
-  Real mean = 0.; SizetList::iterator it;
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
+  Real t1_coeff_j_mm, mean_1 =
+    (momentInterpType ==   PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN ||
+     momentInterpType == INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN) ?
+    tensor_product_mean(x, lev_index, key, colloc_index) : mean(x);
+  const RealVector& mean_grad =
+    (momentInterpType ==   PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN ||
+     momentInterpType == INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN) ?
+    tensor_product_mean_gradient(x, lev_index, key, colloc_index, dvv) :
+    mean_gradient(x, dvv);
+
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    // Error check for required data
     if (randomVarsKey[deriv_index] &&
 	!expConfigOptions.expansionCoeffGradFlag) {
       PCerr << "Error: expansion coefficient gradients not defined in Nodal"
@@ -422,85 +505,109 @@ tensor_product_variance_gradient(const RealVector& x,
 	    << std::endl;
       abort_handler(-1);
     }
-    Real mean_grad_i = 0.;
-    // first loop of double sum
-    for (j=0; j<num_colloc_pts; ++j) {
-      const UShortArray& key_j = key[j];
-      c_index_j = (colloc_index.empty()) ? j : colloc_index[j];
-      // compute wt_prod_j and Lsa_j
-      Real wt_prod_j = 1., Lsa_j = 1., dLsa_j_dsa_i = 1.;
-      for (k=0; k<numVars; ++k)
-	if (randomVarsKey[k])
-	  wt_prod_j *= colloc_wts_1d[lev_index[k]][k][key_j[k]];
-	else
-	  Lsa_j *= polynomialBasis[lev_index[k]][k].type1_value(x[k], key_j[k]);
-      // update mean (once) and mean_grad_i
-      if (i == 0)
-	mean += expansionType1Coeffs[c_index_j] * wt_prod_j * Lsa_j;
-      if (randomVarsKey[deriv_index])
-	mean_grad_i += wt_prod_j * Lsa_j
-	            *  expansionType1CoeffGrads(cntr, c_index_j);
-      else {
-	for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	  k = *it;
-	  dLsa_j_dsa_i *= (k == deriv_index) ?
-	    polynomialBasis[lev_index[k]][k].type1_gradient(x[k], key_j[k]) :
-	    polynomialBasis[lev_index[k]][k].type1_value(x[k],    key_j[k]);
-	}
-	mean_grad_i += wt_prod_j * dLsa_j_dsa_i
-	            *  expansionType1Coeffs[c_index_j];
-      }
-      // second loop of double sum
-      for (k=0; k<num_colloc_pts; ++k) {
-	const UShortArray& key_k = key[k];
-	c_index_k = (colloc_index.empty()) ? k : colloc_index[k];
-	// to include the jk-th term, colloc pts xi_j must be the same as xi_k
-	// for the random var subset.  In this case, wt_prod_j may be reused.
-	bool include = true;
-	for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	  if (key_j[*it] != key_k[*it])
-	    { include = false; break; }
-	if (include) {
-	  Real Lsa_k = 1.;
-	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	    l = *it;
-	    Lsa_k *=
-	      polynomialBasis[lev_index[l]][l].type1_value(x[l], key_k[l]);
+    else if (!randomVarsKey[deriv_index] &&
+	     !expConfigOptions.expansionCoeffFlag) {
+      PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	    << "Approximation::tensor_product_variance_gradient()" << std::endl;
+      abort_handler(-1);
+    }
+    Real& grad_i = tpVarianceGrad[i];
+    switch (momentInterpType) {
+    case INTERPOLATION_OF_PRODUCTS_GLOBAL_MEAN:
+    case INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN:
+      for (j=0; j<num_colloc_pts; ++j) {
+	const UShortArray& key_j = key[j];
+	c_index_j     = (colloc_index.empty()) ? j : colloc_index[j];
+	t1_coeff_j_mm = expansionType1Coeffs[c_index_j] - mean_1;
+	if (randomVarsKey[deriv_index]) {
+	  // ---------------------------------------------------------------
+	  // deriv of All var expansion w.r.t. random var (design insertion)
+	  // ---------------------------------------------------------------
+	  // d/dx[(R-mu)^2] = 2(R-mu)(dR/dx - dmu/dx)
+	  grad_i += 2. * t1_coeff_j_mm
+	         * (expansionType1CoeffGrads(cntr, c_index_j) - mean_grad[i])
+	         *  type1_value_weight(x, key_j, lev_index, randomVarsKey);
+	  if (basisConfigOptions.useDerivs) {
+	    PCerr << "Error: combination of coefficient gradients and "
+		  << "use_derivatives in NodalInterpPolyApproximation::"
+		  << "tensor_product_variance_gradient()" << std::endl;
+	    abort_handler(-1);
 	  }
-	  if (randomVarsKey[deriv_index])
-	    // ---------------------------------------------------------------
-	    // deriv of All var expansion w.r.t. random var (design insertion)
-	    // ---------------------------------------------------------------
-	    tpVarianceGrad[i] += wt_prod_j * Lsa_j * Lsa_k *
-	      (expansionType1Coeffs[c_index_j] *
-	       expansionType1CoeffGrads(cntr, c_index_k) +
-	       expansionType1CoeffGrads(cntr, c_index_j) *
-	       expansionType1Coeffs[c_index_k]);
-	  else {
-	    // ---------------------------------------------------------------
-	    // deriv of All var exp w.r.t. nonrandom var (design augmentation)
-	    // ---------------------------------------------------------------
-	    Real dLsa_k_dsa_i = 1.;
-	    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it){
-	      l = *it;
-	      dLsa_k_dsa_i *= (l == deriv_index) ?
-		polynomialBasis[lev_index[l]][l].type1_gradient(x[l], key_k[l]):
-		polynomialBasis[lev_index[l]][l].type1_value(x[l],    key_k[l]);
+	}
+	else {
+	  // ---------------------------------------------------------------
+	  // deriv of All var exp w.r.t. nonrandom var (design augmentation)
+	  // ---------------------------------------------------------------
+	  grad_i += t1_coeff_j_mm * t1_coeff_j_mm
+	         *  type1_gradient_weight(x, deriv_index, key_j, lev_index,
+					  randomVarsKey);
+	  if (basisConfigOptions.useDerivs) {
+	    const Real *t2_coeff_j = expansionType2Coeffs[c_index_j];
+	    for (k=0; k<numVars; ++k)
+	      grad_i += 2. * (t1_coeff_j_mm * t2_coeff_j[k])
+		     *  type2_gradient_weight(x, deriv_index, k, key_j,
+					      lev_index, randomVarsKey);
+	  }
+	}
+      }
+      break;
+    case PRODUCT_OF_INTERPOLANTS_GLOBAL_MEAN:
+    case PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN: {
+      size_t c_index_k; SizetList::iterator it;
+      Real wt_prod_j, Lsa_j, dLsa_j_dsa_i, t1_coeff_k_mm, Lsa_k;
+      // first loop of double sum
+      for (j=0; j<num_colloc_pts; ++j) {
+	const UShortArray& key_j = key[j];
+	c_index_j = (colloc_index.empty()) ? j : colloc_index[j];
+	// compute wt_prod_j and Lsa_j
+	wt_prod_j = type1_weight(key_j, lev_index, randomVarsKey);
+	Lsa_j     = type1_interpolant_value(x, key_j, lev_index, randomVarsKey);
+	dLsa_j_dsa_i = type1_interpolant_gradient(x, deriv_index, key_j,
+						  lev_index, randomVarsKey);
+	// second loop of double sum
+	for (k=0; k<num_colloc_pts; ++k) {
+	  const UShortArray& key_k = key[k];
+	  c_index_k = (colloc_index.empty()) ? k : colloc_index[k];
+	  // to include jk-th term, colloc pts xi_j must be the same as xi_k
+	  // for random var subset.  In this case, wt_prod_j may be reused.
+	  bool include = true;
+	  for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
+	    if (key_j[*it] != key_k[*it])
+	      { include = false; break; }
+	  if (include) {
+	    t1_coeff_j_mm = expansionType1Coeffs[c_index_j] - mean_1;
+	    t1_coeff_k_mm = expansionType1Coeffs[c_index_k] - mean_1;
+	    Lsa_k = type1_interpolant_value(x,key_k,lev_index,randomVarsKey);
+	    if (randomVarsKey[deriv_index])
+	      // ---------------------------------------------------------
+	      // deriv of All var exp w.r.t. random var (design insertion)
+	      // ---------------------------------------------------------
+	      grad_i += wt_prod_j * Lsa_j * Lsa_k *
+		( t1_coeff_j_mm * ( expansionType1CoeffGrads(cntr, c_index_k) -
+				    mean_grad[i] )
+		+ t1_coeff_k_mm * ( expansionType1CoeffGrads(cntr, c_index_j) -
+				    mean_grad[i] ) );
+	    else {
+	      // ---------------------------------------------------------------
+	      // deriv of All var exp w.r.t. nonrandom var (design augmentation)
+	      // ---------------------------------------------------------------
+	      Real dLsa_k_dsa_i
+		= type1_interpolant_gradient(x, deriv_index, key_k,
+					     lev_index, randomVarsKey);
+	      grad_i += wt_prod_j * t1_coeff_j_mm * t1_coeff_k_mm *
+		(Lsa_j * dLsa_k_dsa_i + dLsa_j_dsa_i * Lsa_k);
 	    }
-	    tpVarianceGrad[i] += wt_prod_j * expansionType1Coeffs[c_index_j] *
-	      expansionType1Coeffs[c_index_k] * (Lsa_j * dLsa_k_dsa_i +
-						 dLsa_j_dsa_i * Lsa_k);
 	  }
 	}
       }
+      break;
+    }
     }
 
-    // subtract 2 mu dmu/ds
-    tpVarianceGrad[i] -= 2. * mean * mean_grad_i;
-
     if (randomVarsKey[deriv_index]) // deriv w.r.t. design var insertion
-      cntr++;
+      ++cntr;
   }
+
   return tpVarianceGrad;
 }
 
@@ -827,25 +934,26 @@ Real NodalInterpPolyApproximation::mean()
   //  abort_handler(-1);
   //}
 
-  Real mean = 0.;
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
-  switch (basisConfigOptions.useDerivs) {
-  case false:
-    for (size_t i=0; i<numCollocPts; ++i)
-      mean += expansionType1Coeffs[i] * t1_wts[i];
-    break;
-  case true: {
-    size_t i, j;
-    const RealMatrix& t2_wts = driverRep->type2_weight_sets();
-    for (i=0; i<numCollocPts; ++i) {
-      mean += expansionType1Coeffs[i] * t1_wts[i];
-      const Real* coeff2_i = expansionType2Coeffs[i];
-      const Real*  t2_wt_i = t2_wts[i];
-      for (j=0; j<numVars; ++j)
-	mean += coeff2_i[j] * t2_wt_i[j];
+  Real& mean = numericalMoments[0];
+  if ( !(computedMeanData & 1) ) {
+    mean = 0.;
+    const RealVector& t1_wts = driverRep->type1_weight_sets();
+    if (basisConfigOptions.useDerivs) {
+      size_t i, j;
+      const RealMatrix& t2_wts = driverRep->type2_weight_sets();
+      for (i=0; i<numCollocPts; ++i) {
+	mean += expansionType1Coeffs[i] * t1_wts[i];
+	const Real* coeff2_i = expansionType2Coeffs[i];
+	const Real*  t2_wt_i = t2_wts[i];
+	for (j=0; j<numVars; ++j)
+	  mean += coeff2_i[j] * t2_wt_i[j];
+      }
     }
-    break;
-  }
+    else
+      for (size_t i=0; i<numCollocPts; ++i)
+	mean += expansionType1Coeffs[i] * t1_wts[i];
+
+    computedMeanData |= 1;
   }
 
   return mean;
@@ -857,37 +965,36 @@ Real NodalInterpPolyApproximation::mean()
     expectation over this subset. */
 Real NodalInterpPolyApproximation::mean(const RealVector& x)
 {
-  // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::mean()" << std::endl;
-    abort_handler(-1);
+  Real& mean = numericalMoments[0];
+  if ( !(computedMeanData & 1) || x != xPrevMean ) {
+    switch (expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE: {
+      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      SizetArray colloc_index; // empty -> default indexing
+      mean = tensor_product_mean(x, tpq_driver->level_index(),
+				 tpq_driver->collocation_key(), colloc_index);
+      break;
+    }
+    case COMBINED_SPARSE_GRID: {
+      CombinedSparseGridDriver* csg_driver
+	= (CombinedSparseGridDriver*)driverRep;
+      const UShort2DArray& sm_mi        = csg_driver->smolyak_multi_index();
+      const IntArray&      sm_coeffs    = csg_driver->smolyak_coefficients();
+      const UShort3DArray& colloc_key   = csg_driver->collocation_key();
+      const Sizet2DArray&  colloc_index = csg_driver->collocation_indices();
+      size_t i, num_smolyak_indices = sm_coeffs.size();
+      mean = 0.;
+      for (i=0; i<num_smolyak_indices; ++i)
+	if (sm_coeffs[i])
+	  mean += sm_coeffs[i] *
+	    tensor_product_mean(x, sm_mi[i], colloc_key[i], colloc_index[i]);
+      break;
+    }
+    }
+    computedMeanData |= 1; xPrevMean = x;
   }
 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    SizetArray colloc_index; // empty -> default indexing
-    return tensor_product_mean(x, tpq_driver->level_index(),
-			       tpq_driver->collocation_key(), colloc_index);
-    break;
-  }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
-    size_t i, num_smolyak_indices = sm_coeffs.size();
-    Real mean = 0.;
-    for (i=0; i<num_smolyak_indices; ++i)
-      if (sm_coeffs[i])
-	mean += sm_coeffs[i] *
-	  tensor_product_mean(x, sm_mi[i], colloc_key[i], colloc_index[i]);
-    return mean;
-    break;
-  }
-  }
+  return mean;
 }
 
 
@@ -907,16 +1014,20 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
-  size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
-  if (meanGradient.length() != num_deriv_vars)
-    meanGradient.sizeUninitialized(num_deriv_vars);
-  meanGradient = 0.;
-  for (i=0; i<numCollocPts; ++i) {
-    const Real& t1_wt_i = t1_wts[i];
-    for (j=0; j<num_deriv_vars; ++j)
-      meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
+  if ( !(computedMeanData & 2) ) {
+    const RealVector& t1_wts = driverRep->type1_weight_sets();
+    size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
+    if (meanGradient.length() != num_deriv_vars)
+      meanGradient.sizeUninitialized(num_deriv_vars);
+    meanGradient = 0.;
+    for (i=0; i<numCollocPts; ++i) {
+      const Real& t1_wt_i = t1_wts[i];
+      for (j=0; j<num_deriv_vars; ++j)
+	meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
+    }
+    computedMeanData |= 2;
   }
+
   return meanGradient;
 }
 
@@ -934,6 +1045,15 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
 const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
+  // if already computed, return previous result
+  if ( (computedMeanData & 2) && x == xPrevMeanGrad) // && dvv == dvvPrev)
+    switch (expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE:           return tpMeanGrad;   break;
+    case COMBINED_SPARSE_GRID: return meanGradient; break;
+    }
+
+  // compute the gradient of the mean
+  computedMeanData |= 2; xPrevMeanGrad = x;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -975,21 +1095,37 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
 Real NodalInterpPolyApproximation::variance()
-{ return covariance(this); }
+{
+  if ( !(computedVarianceData & 1) ) {
+    numericalMoments[1] = covariance(this);
+    computedVarianceData |= 1;
+  }
+  return numericalMoments[1];
+}
 
 
 /** In this case, a subset of the expansion variables are random
     variables and the variance of the expansion involves summations
     over this subset. */
 Real NodalInterpPolyApproximation::variance(const RealVector& x)
-{ return covariance(x, this); }
+{
+  if ( !(computedVarianceData & 1) || x != xPrevVar ) {
+    numericalMoments[1] = covariance(x, this);
+    computedVarianceData |= 1; xPrevVar = x;
+  }
+  return numericalMoments[1];
+}
 
 
 Real NodalInterpPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
+  NodalInterpPolyApproximation* nip_approx_2
+    = (NodalInterpPolyApproximation*)poly_approx_2;
+
   // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
+  if (!expConfigOptions.expansionCoeffFlag ||
+      !nip_approx_2->expConfigOptions.expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
@@ -1005,11 +1141,9 @@ covariance(PolynomialApproximation* poly_approx_2)
   // compute mean_1,mean_2 first, then compute covariance as
   // wt_prod*(coeff1-mean_1)*(coeff2-mean_2) in order to avoid precision
   // loss from computing covariance as <R_i R_j> - \mu_i \mu_j
-  NodalInterpPolyApproximation* nip_approx_2
-    = (NodalInterpPolyApproximation*)poly_approx_2;
   // Note: compute_statistics() in dakota/src/NonDExpansion.C orders calls
   //       to reduce repetition in moment calculations.
-  Real  mean_1 = mean(), mean_2 = nip_approx_2->mean();
+  Real mean_1 = mean(), mean_2  = nip_approx_2->mean();
   const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
   const RealVector& t1_wts      = driverRep->type1_weight_sets();
   Real covar = 0.; size_t i, j;
@@ -1043,35 +1177,32 @@ covariance(PolynomialApproximation* poly_approx_2)
 
 
 /** In this case, a subset of the expansion variables are random
-    variables and the variance of the expansion involves summations
+    variables and the variance of the expansion involves integration
     over this subset. */
 Real NodalInterpPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
-    abort_handler(-1);
-  }
+  NodalInterpPolyApproximation* nip_approx_2
+    = (NodalInterpPolyApproximation*)poly_approx_2;
 
-  const RealVector& t1_coeffs_2
-    = ((NodalInterpPolyApproximation*)poly_approx_2)->expansionType1Coeffs;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
     return tensor_product_covariance(x, tpq_driver->level_index(),
 				     tpq_driver->collocation_key(),
-				     colloc_index, t1_coeffs_2);
+				     colloc_index, nip_approx_2);
     break;
   }
-  case COMBINED_SPARSE_GRID:
-    // *** TO DO: verify correctness of TP summation approach
-    // *** More rigorous: collapse into unique multiIndex of random terms
-    //     prior to sum squared [or use a nested loop over Smolyak indices
-    //     with extended tensor_product_covariance(key1,key2,etc.) definition
-    //     --> good way to explore why cross-terms appear to cancel out].
+
+  // While we can collapse the Smolyak recursion and combine the weights in the
+  // distinct variables case, we cannot do this here for the all_variables case
+  // since the non-integrated interpolation polynomial portions are not constant
+  // and are coupled with the weight combination.  Since we are using an
+  // interpolation of products (which captures the product cross-terms) and
+  // not a product of interpolants, a sum of tensor_product_covariance()'s is
+  // correct and the most straightforward approach.
+  case COMBINED_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
     const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
@@ -1082,9 +1213,11 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
       if (sm_coeffs[i])
 	covar += sm_coeffs[i] *
 	  tensor_product_covariance(x, sm_mi[i], colloc_key[i], colloc_index[i],
-				    t1_coeffs_2);
+				    nip_approx_2);
     return covar;
     break;
+  }
+
   }
 }
 
@@ -1107,19 +1240,20 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
     abort_handler(-1);
   }
 
-  const RealVector& t1_wts = driverRep->type1_weight_sets();
-  size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
-  if (varianceGradient.length() != num_deriv_vars)
-    varianceGradient.sizeUninitialized(num_deriv_vars);
-  varianceGradient = 0.;
+  if ( !(computedVarianceData & 2) ) {
+    const RealVector& t1_wts = driverRep->type1_weight_sets();
+    size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
+    if (varianceGradient.length() != num_deriv_vars)
+      varianceGradient.sizeUninitialized(num_deriv_vars);
+    varianceGradient = 0.;
 
-  Real mean = 0.;
-  for (i=0; i<numCollocPts; ++i)
-    mean += expansionType1Coeffs[i] * t1_wts[i];
-  for (i=0; i<numCollocPts; ++i) {
-    Real term_i = 2. * (expansionType1Coeffs[i] - mean) * t1_wts[i];
-    for (j=0; j<num_deriv_vars; ++j)
-      varianceGradient[j] += term_i * expansionType1CoeffGrads(j,i);
+    Real mean_1 = mean();
+    for (i=0; i<numCollocPts; ++i) {
+      Real term_i = 2. * (expansionType1Coeffs[i] - mean_1) * t1_wts[i];
+      for (j=0; j<num_deriv_vars; ++j)
+	varianceGradient[j] += term_i * expansionType1CoeffGrads(j,i);
+    }
+    computedVarianceData |= 2;
   }
 
   return varianceGradient;
@@ -1136,13 +1270,14 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
 const RealVector& NodalInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
-	  << "Approximation::variance_gradient()" << std::endl;
-    abort_handler(-1);
-  }
+  // if already computed, return previous result
+  if ( (computedVarianceData & 2) && x == xPrevVarGrad) // && dvv == dvvPrev)
+    switch (expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE:           return tpVarianceGrad;   break;
+    case COMBINED_SPARSE_GRID: return varianceGradient; break;
+    }
 
+  computedVarianceData |= 2; xPrevVarGrad = x;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1153,9 +1288,6 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     break;
   }
   case COMBINED_SPARSE_GRID:
-    // *** TO DO: verify correctness of TP summation approach
-    // *** More rigorous: collapse into unique multiIndex of random terms
-    //     prior to sum squared.
     size_t num_deriv_vars = dvv.size();
     if (varianceGradient.length() != num_deriv_vars)
       varianceGradient.sizeUninitialized(num_deriv_vars);
@@ -1274,6 +1406,7 @@ void NodalInterpPolyApproximation::compute_partial_variance(int set_value)
     // Smolyak recursion of anisotropic tensor products
     size_t i, num_smolyak_indices = sm_coeffs.size();
     UShortArray quad_order;
+    variance = 0.;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i]) {
 	csg_driver->level_to_order(sm_index[i], quad_order);
@@ -1321,6 +1454,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     UShortArray quad_order;
     // iterate each variable 
     for (j=0; j<numVars; ++j) {
+      totalSobolIndices[j] = 0.;
       set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1; 
       for (i=0; i<num_smolyak_indices; ++i)
 	if (sm_coeffs[i]) {
@@ -1333,66 +1467,6 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     }
     break;
   }
-  }
-}
-
-
-void NodalInterpPolyApproximation::
-member_coefficients_weights(int set_value, const UShortArray& quad_order,
-			    const UShortArray& lev_index,
-			    const UShort2DArray& key,
-			    const SizetArray& colloc_index,
-			    RealVector& member_coeffs, RealVector& member_wts)
-{
-  // create member variable key and get number of expansion coeffs in
-  // member-variable-only expansion
-  BoolDeque nonmember_vars(numVars); // distinguish set members from non-members
-  int num_member_coeffs = 1; // # exp coeffs in member-variable-only expansion
-  IntVector indexing_factor(numVars, false); // factors indexing member vars 
-  for (int k=0; k<numVars; ++k) {
-    // if subset contains variable k, set key for variable k to true
-    if (set_value & (1 << k)) {
-      nonmember_vars[k]  = false;	
-      indexing_factor[k] = num_member_coeffs; // for indexing of member_coeffs
-      num_member_coeffs *= quad_order[k];
-    }
-    else {
-      nonmember_vars[k]  = true;	
-      indexing_factor[k] = 1;
-    }
-  }
-
-  // Size vectors to store new coefficients
-  member_coeffs.size(num_member_coeffs); // init to 0
-  member_wts.size(num_member_coeffs);    // init to 0
-
-  // Perform integration over non-member variables and store indices
-  // of new expansion
-  size_t i, j, num_colloc_pts = key.size(), member_coeffs_index, c_index;
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
-  for (i=0; i <num_colloc_pts; ++i) {
-    const UShortArray& key_i = key[i];
-    member_coeffs_index = 0;	
-    Real prod_i_nonmembers = 1., prod_i_members = 1.;
-    for (j=0; j<numVars; ++j)
-      // Save the product of the weights of the member and non-member variables 
-      if (nonmember_vars[j])
-	prod_i_nonmembers   *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      else {
-	// Convert key to corresponding index on member_coeffs
-	member_coeffs_index += key_i[j] * indexing_factor[j];
-	prod_i_members      *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      }
-
-    // member_wts is performed more time than necessary here, but it
-    // seems to be the simplest place to put it
-    member_wts[member_coeffs_index] = prod_i_members;
-    // sort coefficients by the "signature" of the member variables
-    // (i.e. member_coeffs_index)
-    c_index = (colloc_index.empty()) ? i : colloc_index[i];
-    member_coeffs[member_coeffs_index]
-      += expansionType1Coeffs[c_index]*prod_i_nonmembers;
   }
 }
 

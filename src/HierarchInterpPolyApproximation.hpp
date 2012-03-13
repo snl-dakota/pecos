@@ -103,10 +103,6 @@ protected:
 
   void compute_total_sobol_indices();
   void compute_partial_variance(int set_value);
-  void member_coefficients_weights(int set_value,
-    const UShortArray& quad_order, const UShortArray& lev_index,
-    const UShort2DArray& key, const SizetArray& colloc_index,
-    RealVector& member_coeffs, RealVector& member_wts);
 
 private:
 

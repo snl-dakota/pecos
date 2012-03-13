@@ -723,4 +723,64 @@ total_effects_integral(int set_value, const UShortArray& quad_order,
   return integral;
 }
 
+
+void InterpPolyApproximation::
+member_coefficients_weights(int set_value, const UShortArray& quad_order,
+			    const UShortArray& lev_index,
+			    const UShort2DArray& key,
+			    const SizetArray& colloc_index,
+			    RealVector& member_coeffs, RealVector& member_wts)
+{
+  // create member variable key and get number of expansion coeffs in
+  // member-variable-only expansion
+  BoolDeque nonmember_vars(numVars); // distinguish set members from non-members
+  int num_member_coeffs = 1; // # exp coeffs in member-variable-only expansion
+  IntVector indexing_factor(numVars, false); // factors indexing member vars 
+  for (int k=0; k<numVars; ++k) {
+    // if subset contains variable k, set key for variable k to true
+    if (set_value & (1 << k)) {
+      nonmember_vars[k]  = false;	
+      indexing_factor[k] = num_member_coeffs; // for indexing of member_coeffs
+      num_member_coeffs *= quad_order[k];
+    }
+    else {
+      nonmember_vars[k]  = true;	
+      indexing_factor[k] = 1;
+    }
+  }
+
+  // Size vectors to store new coefficients
+  member_coeffs.size(num_member_coeffs); // init to 0
+  member_wts.size(num_member_coeffs);    // init to 0
+
+  // Perform integration over non-member variables and store indices
+  // of new expansion
+  size_t i, j, num_colloc_pts = key.size(), member_coeffs_index, c_index;
+  const Real3DArray& colloc_wts_1d
+    = driverRep->type1_collocation_weights_array();
+  for (i=0; i<num_colloc_pts; ++i) {
+    const UShortArray& key_i = key[i];
+    member_coeffs_index = 0;	
+    Real prod_i_nonmembers = 1., prod_i_members = 1.;
+    for (j=0; j<numVars; ++j)
+      // Save the product of the weights of the member and non-member variables 
+      if (nonmember_vars[j])
+	prod_i_nonmembers   *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      else {
+	// Convert key to corresponding index on member_coeffs
+	member_coeffs_index += key_i[j] * indexing_factor[j];
+	prod_i_members      *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
+      }
+
+    // member_wts is performed more time than necessary here, but it
+    // seems to be the simplest place to put it
+    member_wts[member_coeffs_index] = prod_i_members;
+    // sort coefficients by the "signature" of the member variables
+    // (i.e. member_coeffs_index)
+    c_index = (colloc_index.empty()) ? i : colloc_index[i];
+    member_coeffs[member_coeffs_index] += prod_i_nonmembers *
+      surrData.response_function(c_index); // type 1 nodal interp coeffs
+  }
+}
+
 } // namespace Pecos

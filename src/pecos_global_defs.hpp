@@ -104,6 +104,12 @@ enum { NO_VBD=0, UNIVARIATE_VBD, ALL_VBD };
 enum { LINEAR_EQUIDISTANT, LINEAR, QUADRATIC_EQUIDISTANT, QUADRATIC,
        CUBIC_EQUIDISTANT, CUBIC };
 
+/// special values for nodal interpolation of variance and variance gradient
+enum { INTERPOLATION_OF_PRODUCTS_GLOBAL_MEAN,
+       INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN,
+       PRODUCT_OF_INTERPOLANTS_GLOBAL_MEAN,
+       PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN };
+
 /// special values for polynomial expansion combination
 enum { NO_COMBINE=0,  ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
 

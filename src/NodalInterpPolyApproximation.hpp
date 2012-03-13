@@ -92,10 +92,6 @@ protected:
 
   void compute_total_sobol_indices();
   void compute_partial_variance(int set_value);
-  void member_coefficients_weights(int set_value,
-    const UShortArray& quad_order, const UShortArray& lev_index,
-    const UShort2DArray& key, const SizetArray& colloc_index,
-    RealVector& member_coeffs, RealVector& member_wts);
 
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);
@@ -121,7 +117,7 @@ private:
   /// contributes to covariance(x, poly_approx_2)
   Real tensor_product_covariance(const RealVector& x,
     const UShortArray& lev_index,   const UShort2DArray& key,
-    const SizetArray& colloc_index, const RealVector& exp_coeffs_2);
+    const SizetArray& colloc_index, NodalInterpPolyApproximation* nip_approx_2);
 
   /// compute the gradient of the variance of a tensor interpolant on
   /// a tensor grid; contributes to variance_gradient(x)
@@ -132,6 +128,9 @@ private:
   //
   //- Heading: Data
   //
+
+  /// type of interpolation for variance and variance gradient
+  short momentInterpType;
 
   /// the type1 coefficients of the expansion for interpolating values
   RealVector expansionType1Coeffs;
@@ -170,7 +169,11 @@ private:
 inline NodalInterpPolyApproximation::
 NodalInterpPolyApproximation(short basis_type, size_t num_vars,
 			     bool use_derivs):
-  InterpPolyApproximation(basis_type, num_vars, use_derivs)
+  InterpPolyApproximation(basis_type, num_vars, use_derivs),
+  //momentInterpType(INTERPOLATION_OF_PRODUCTS_GLOBAL_MEAN)
+  //momentInterpType(INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN)
+  //momentInterpType(PRODUCT_OF_INTERPOLANTS_GLOBAL_MEAN)
+  momentInterpType(PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN)
 { }
 
 

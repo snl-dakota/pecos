@@ -772,8 +772,8 @@ compute_numerical_response_moments(size_t num_moments)
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
   const UShort4DArray&      key          = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = key.size(),
-    num_sets, num_tp_pts, cntr, index;
+  size_t lev, set, pt, num_levels = key.size(), num_sets, num_tp_pts,
+    cntr, index;
   int m_index, moment;
 
   if (numericalMoments.length() != num_moments)
@@ -918,6 +918,9 @@ void HierarchInterpPolyApproximation::compute_partial_variance(int set_value)
   // Smolyak recursion of anisotropic tensor products
   size_t i, num_levels = sm_index.size();
   /*
+  Can't just use lev/set/pt loop here since partial_variance_integral uses
+  member_coefficients_weights() which uses non-hierachical response values.
+
   UShortArray quad_order;
   for (i=0; i<num_levels; ++i) {
     for (j; j<num_sets; ++j) {
@@ -936,7 +939,7 @@ void HierarchInterpPolyApproximation::compute_partial_variance(int set_value)
 void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 {
   const Real& m1 = numericalMoments[1]; // standardized, if not num exception
-  Real total_variance = (m1 > 0.) ? m1*m1 : m1;
+  Real total_variance = (m1 > 0.) ? m1 * m1 : m1;
   int j, set_value;
 
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
@@ -944,82 +947,23 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
   const UShort4DArray&  colloc_key = hsg_driver->collocation_key();
   //const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
 
-    // Smolyak recursion of anisotropic tensor products
-    size_t i, num_levels = sm_index.size();
-    /*
-    UShortArray quad_order;
-    // iterate each variable 
-    for (j=0; j<numVars; ++j) {
-      set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1; 
-      for (i=0; i<num_smolyak_indices; ++i) {
-	hsg_driver->level_to_order(sm_index[i], quad_order);
-	totalSobolIndices[j] += 
-	  total_effects_integral(set_value, quad_order, sm_index[i],
-				 colloc_key[i], colloc_index[i]);
-      }
-      totalSobolIndices[j] = std::abs(1. - totalSobolIndices[j]/total_variance);
-    }
-    */
-}
-
-
-void HierarchInterpPolyApproximation::
-member_coefficients_weights(int set_value, const UShortArray& quad_order,
-			    const UShortArray& lev_index,
-			    const UShort2DArray& key,
-			    const SizetArray& colloc_index,
-			    RealVector& member_coeffs, RealVector& member_wts)
-{
-  // create member variable key and get number of expansion coeffs in
-  // member-variable-only expansion
-  BoolDeque nonmember_vars(numVars); // distinguish set members from non-members
-  int num_member_coeffs = 1; // # exp coeffs in member-variable-only expansion
-  IntVector indexing_factor(numVars, false); // factors indexing member vars 
-  for (int k=0; k<numVars; ++k) {
-    // if subset contains variable k, set key for variable k to true
-    if (set_value & (1 << k)) {
-      nonmember_vars[k]  = false;	
-      indexing_factor[k] = num_member_coeffs; // for indexing of member_coeffs
-      num_member_coeffs *= quad_order[k];
-    }
-    else {
-      nonmember_vars[k]  = true;	
-      indexing_factor[k] = 1;
-    }
-  }
-
-  // Size vectors to store new coefficients
-  member_coeffs.sizeUninitialized(num_member_coeffs);
-  member_wts.sizeUninitialized(num_member_coeffs);
-
-  // Perform integration over non-member variables and store indices
-  // of new expansion
-  size_t i, j, num_colloc_pts = key.size();
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
+  // Smolyak recursion of anisotropic tensor products
+  size_t i, num_levels = sm_index.size();
   /*
-  for (i=0; i <num_colloc_pts; ++i) {
-    const UShortArray& key_i = key[i];
-    size_t member_coeffs_index = 0;	
-    Real prod_i_nonmembers = 1., prod_i_members = 1.;
-    for (j=0; j<numVars; ++j)
-      // Save the product of the weights of the member and non-member variables 
-      if (nonmember_vars[j])
-	prod_i_nonmembers *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      else {
-	// Convert key to corresponding index on member_coeffs
-	member_coeffs_index += key_i[j]*indexing_factor[j];
-	prod_i_members      *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      }
+  Can't just use lev/set/pt loop here since total_effects_integral uses
+  member_coefficients_weights() which uses non-hierachical response values.
 
-    // member_wts is performed more time than necessary here, but it
-    // seems to be the simplest place to put it
-    member_wts[member_coeffs_index] = prod_i_members;
-    // sort coefficients by the "signature" of the member variables
-    // (i.e. member_coeffs_index)
-    unsigned short c_index = (colloc_index.empty()) ? i : colloc_index[i];
-    member_coeffs[member_coeffs_index]
-      += expansionType1Coeffs[c_index]*prod_i_nonmembers;
+  UShortArray quad_order;
+  // iterate each variable 
+  for (j=0; j<numVars; ++j) {
+    set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1; 
+    for (i=0; i<num_smolyak_indices; ++i) {
+      hsg_driver->level_to_order(sm_index[i], quad_order);
+      totalSobolIndices[j] += 
+        total_effects_integral(set_value, quad_order, sm_index[i],
+	                       colloc_key[i], colloc_index[i]);
+    }
+    totalSobolIndices[j] = std::abs(1. - totalSobolIndices[j]/total_variance);
   }
   */
 }
