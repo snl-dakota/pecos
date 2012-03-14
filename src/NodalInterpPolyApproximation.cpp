@@ -242,18 +242,21 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
       const UShortArray& key_i = key[i];
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
       tp_mean += expansionType1Coeffs[c_index]
-	      *  type1_value_weight(x, key_i, lev_index, randomVarsKey);
+	      *  type1_interpolant_value(x, key_i, lev_index, nonRandomIndices)
+	      *  type1_weight(key_i, lev_index, randomIndices);
       const Real *t2_coeff_i = expansionType2Coeffs[c_index];
       for (j=0; j<numVars; ++j)
 	tp_mean += t2_coeff_i[j]
-	        *  type2_value_weight(x, j, key_i, lev_index, randomVarsKey);
+	  * type2_interpolant_value(x, j, key_i, lev_index, nonRandomIndices)
+	  * type2_weight(j, key_i, lev_index, randomIndices);
     }
   }
   else
     for (i=0; i<num_colloc_pts; ++i) {
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
       tp_mean += expansionType1Coeffs[c_index]
-	      *  type1_value_weight(x, key[i], lev_index, randomVarsKey);
+	      *  type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
+	      *  type1_weight(key[i], lev_index, randomIndices);
     }
 
   return tp_mean;
@@ -310,7 +313,8 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	// derivative of All var expansion w.r.t. random var (design insertion)
 	// --------------------------------------------------------------------
 	grad_i += expansionType1CoeffGrads(cntr, c_index)
-	       *  type1_value_weight(x, key_j, lev_index, randomVarsKey);
+	       *  type1_interpolant_value(x, key_j, lev_index, nonRandomIndices)
+	       *  type1_weight(key_j, lev_index, randomIndices);
 	if (basisConfigOptions.useDerivs) {
 	  PCerr << "Error: combination of coefficient gradients and "
 		<< "use_derivatives in NodalInterpPolyApproximation::"
@@ -322,14 +326,17 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	// ---------------------------------------------------------------------
 	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
 	// ---------------------------------------------------------------------
-	grad_i += expansionType1Coeffs[c_index] *
-	  type1_gradient_weight(x, deriv_index, key_j, lev_index,randomVarsKey);
+	grad_i += expansionType1Coeffs[c_index]
+	  * type1_interpolant_gradient(x, deriv_index, key_j, lev_index,
+				       nonRandomIndices)
+	  * type1_weight(key_j, lev_index, randomIndices);
 	if (basisConfigOptions.useDerivs) {
 	  const Real *t2_coeff_j = expansionType2Coeffs[c_index];
 	  for (k=0; k<numVars; ++k)
 	    grad_i += t2_coeff_j[k]
-	           *  type2_gradient_weight(x, deriv_index, k, key_j, lev_index,
-					    randomVarsKey);
+	      * type2_interpolant_gradient(x, deriv_index, k, key_j, lev_index,
+					   nonRandomIndices)
+	      * type2_weight(k, key_j, lev_index, randomIndices);
 	}
       }
     }
@@ -364,9 +371,9 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
   /* TO DO: weights are not a function of x.  Consider pre-computing these
      for each TP for reuse among multiple integrations and multiple x.
   if ( !(computedPartialWeights & 1) )
-    tensor_product_type1_partial_weights(randomVarsKey);
+    tensor_product_type1_partial_weights(randomIndices);
   if ( basisConfigOptions.useDerivs && !(computedPartialWeights & 2) )
-    tensor_product_type2_partial_weights(randomVarsKey);
+    tensor_product_type2_partial_weights(randomIndices);
   */
 
   size_t i, j, k, c_index_i, num_colloc_pts = key.size();
@@ -390,33 +397,36 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
       t1_coeff_1_mm1 = expansionType1Coeffs[c_index_i] - mean_1;
       t1_coeff_2_mm2 = t1_coeffs_2[c_index_i]          - mean_2;
       tp_covar += t1_coeff_1_mm1 * t1_coeff_2_mm2
-	       *  type1_value_weight(x, key_i, lev_index, randomVarsKey);
+	       *  type1_interpolant_value(x, key_i, lev_index, nonRandomIndices)
+	       *  type1_weight(key_i, lev_index, randomIndices);
 #ifdef DEBUG
       PCout << "t1_coeff_1_mm1 = " << t1_coeff_1_mm1 << " t1_coeff_2_mm2 = "
 	    << t1_coeff_2_mm2 << " type1_weight() = "
-	    << type1_weight(key_i, lev_index, randomVarsKey)
+	    << type1_weight(key_i, lev_index, randomIndices)
 	    << " type1_interpolant_value() = "
-	    << type1_interpolant_value(x, key_i, lev_index, randomVarsKey)
+	    << type1_interpolant_value(x, key_i, lev_index, nonRandomIndices)
 	    << " sum = " << tp_covar << std::endl;
 #endif // DEBUG
       if (basisConfigOptions.useDerivs) {
 	const Real *t2_coeff_1 = expansionType2Coeffs[c_index_i],
 	           *t2_coeff_2 = t2_coeffs_2[c_index_i];
 	for (j=0; j<numVars; ++j)
-	  tp_covar += (t1_coeff_1_mm1 * t2_coeff_2[j] +
-		       t1_coeff_2_mm2 * t2_coeff_1[j])
-	           *  type2_value_weight(x, j, key_i, lev_index, randomVarsKey);
+	  tp_covar +=
+	    (t1_coeff_1_mm1 * t2_coeff_2[j] + t1_coeff_2_mm2 * t2_coeff_1[j])
+	    * type2_interpolant_value(x, j, key_i, lev_index, nonRandomIndices)
+	    * type2_weight(j, key_i, lev_index, randomIndices);
       }
     }
     break;
   case PRODUCT_OF_INTERPOLANTS_GLOBAL_MEAN:
   case PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN: {
-    size_t c_index_j; SizetList::iterator it; Real t1_wt_Ls_prod_i;
+    size_t c_index_j; Real t1_wt_Ls_prod_i;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       c_index_i = (colloc_index.empty()) ? i : colloc_index[i];
       t1_coeff_1_mm1  = expansionType1Coeffs[c_index_i] - mean_1;
-      t1_wt_Ls_prod_i = type1_value_weight(x, key_i, lev_index, randomVarsKey);
+      t1_wt_Ls_prod_i = type1_weight(key_i, lev_index, randomIndices)
+	* type1_interpolant_value(x, key_i, lev_index, nonRandomIndices);
       for (j=0; j<num_colloc_pts; ++j) {
 	const UShortArray& key_j = key[j];
 	// to include the ij-th term,  basis i must be the same as basis j for
@@ -425,23 +435,20 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 	// subset, since cross term in (a+b)(a+b) = a^2+2ab+b^2 gets included.
 	// If terms were collapsed (following eval of non-random portions), the
 	// nested loop could be replaced with a single loop to evaluate (a+b)^2.
-	bool include = true;
-	for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	  if (key_i[*it] != key_j[*it])
-	    { include = false; break; }
-	if (include) {
+	if (match_random_key(key_i, key_j)) {
 	  c_index_j = (colloc_index.empty()) ? j : colloc_index[j];
 	  t1_coeff_2_mm2 = t1_coeffs_2[c_index_j] - mean_2;
 	  tp_covar += t1_coeff_1_mm1 * t1_coeff_2_mm2 * t1_wt_Ls_prod_i *
-	    type1_interpolant_value(x, key_j, lev_index, randomVarsKey);
+	    type1_interpolant_value(x, key_j, lev_index, nonRandomIndices);
 	  /* TO DO
 	  if (basisConfigOptions.useDerivs) {
 	    const Real *t2_coeff_1i = expansionType2Coeffs[c_index_i],
 	               *t2_coeff_2i = t2_coeffs_2[c_index_i];
 	    for (j=0; j<numVars; ++j)
 	      tp_covar += (t1_coeff_1i_mm1 * t2_coeff_2i[j] +
-			   t1_coeff_2i_mm2 * t2_coeff_1i[j]) *
-		type2_value_weight(x, j, key_i, lev_index, randomVarsKey);
+	                   t1_coeff_2i_mm2 * t2_coeff_1i[j])
+		* type2_interpolant_value(x,j,key_i,lev_index,nonRandomIndices)
+		* type2_weight(j, key_i, lev_index, randomIndices);
 	  }
 	  */
 	}
@@ -525,8 +532,9 @@ tensor_product_variance_gradient(const RealVector& x,
 	  // ---------------------------------------------------------------
 	  // d/dx[(R-mu)^2] = 2(R-mu)(dR/dx - dmu/dx)
 	  grad_i += 2. * t1_coeff_j_mm
-	         * (expansionType1CoeffGrads(cntr, c_index_j) - mean_grad[i])
-	         *  type1_value_weight(x, key_j, lev_index, randomVarsKey);
+	    * (expansionType1CoeffGrads(cntr, c_index_j) - mean_grad[i])
+	    * type1_interpolant_value(x, key_j, lev_index, nonRandomIndices)
+	    * type1_weight(key_j, lev_index, randomIndices);
 	  if (basisConfigOptions.useDerivs) {
 	    PCerr << "Error: combination of coefficient gradients and "
 		  << "use_derivatives in NodalInterpPolyApproximation::"
@@ -539,45 +547,43 @@ tensor_product_variance_gradient(const RealVector& x,
 	  // deriv of All var exp w.r.t. nonrandom var (design augmentation)
 	  // ---------------------------------------------------------------
 	  grad_i += t1_coeff_j_mm * t1_coeff_j_mm
-	         *  type1_gradient_weight(x, deriv_index, key_j, lev_index,
-					  randomVarsKey);
+	    * type1_interpolant_gradient(x, deriv_index, key_j, lev_index,
+					 nonRandomIndices)
+	    * type1_weight(key_j, lev_index, randomIndices);
 	  if (basisConfigOptions.useDerivs) {
 	    const Real *t2_coeff_j = expansionType2Coeffs[c_index_j];
 	    for (k=0; k<numVars; ++k)
 	      grad_i += 2. * (t1_coeff_j_mm * t2_coeff_j[k])
-		     *  type2_gradient_weight(x, deriv_index, k, key_j,
-					      lev_index, randomVarsKey);
+		* type2_interpolant_gradient(x, deriv_index, k, key_j,
+					      lev_index, nonRandomIndices)
+		* type2_weight(k, key_j, lev_index, randomIndices);
 	  }
 	}
       }
       break;
     case PRODUCT_OF_INTERPOLANTS_GLOBAL_MEAN:
     case PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN: {
-      size_t c_index_k; SizetList::iterator it;
+      size_t c_index_k;
       Real wt_prod_j, Lsa_j, dLsa_j_dsa_i, t1_coeff_k_mm, Lsa_k;
       // first loop of double sum
       for (j=0; j<num_colloc_pts; ++j) {
 	const UShortArray& key_j = key[j];
 	c_index_j = (colloc_index.empty()) ? j : colloc_index[j];
 	// compute wt_prod_j and Lsa_j
-	wt_prod_j = type1_weight(key_j, lev_index, randomVarsKey);
-	Lsa_j     = type1_interpolant_value(x, key_j, lev_index, randomVarsKey);
+	wt_prod_j = type1_weight(key_j, lev_index, randomIndices);
+	Lsa_j = type1_interpolant_value(x, key_j, lev_index, nonRandomIndices);
 	dLsa_j_dsa_i = type1_interpolant_gradient(x, deriv_index, key_j,
-						  lev_index, randomVarsKey);
+						  lev_index, nonRandomIndices);
 	// second loop of double sum
 	for (k=0; k<num_colloc_pts; ++k) {
 	  const UShortArray& key_k = key[k];
 	  c_index_k = (colloc_index.empty()) ? k : colloc_index[k];
 	  // to include jk-th term, colloc pts xi_j must be the same as xi_k
 	  // for random var subset.  In this case, wt_prod_j may be reused.
-	  bool include = true;
-	  for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	    if (key_j[*it] != key_k[*it])
-	      { include = false; break; }
-	  if (include) {
+	  if (match_random_key(key_j, key_k)) {
 	    t1_coeff_j_mm = expansionType1Coeffs[c_index_j] - mean_1;
 	    t1_coeff_k_mm = expansionType1Coeffs[c_index_k] - mean_1;
-	    Lsa_k = type1_interpolant_value(x,key_k,lev_index,randomVarsKey);
+	    Lsa_k = type1_interpolant_value(x,key_k,lev_index,nonRandomIndices);
 	    if (randomVarsKey[deriv_index])
 	      // ---------------------------------------------------------
 	      // deriv of All var exp w.r.t. random var (design insertion)
@@ -593,7 +599,7 @@ tensor_product_variance_gradient(const RealVector& x,
 	      // ---------------------------------------------------------------
 	      Real dLsa_k_dsa_i
 		= type1_interpolant_gradient(x, deriv_index, key_k,
-					     lev_index, randomVarsKey);
+					     lev_index, nonRandomIndices);
 	      grad_i += wt_prod_j * t1_coeff_j_mm * t1_coeff_k_mm *
 		(Lsa_j * dLsa_k_dsa_i + dLsa_j_dsa_i * Lsa_k);
 	    }
