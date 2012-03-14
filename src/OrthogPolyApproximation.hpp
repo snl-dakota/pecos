@@ -164,7 +164,7 @@ protected:
   Real norm_squared(const UShortArray& indices);
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating a subset of the variables as probabilistic
-  Real norm_squared_random(const UShortArray& indices);
+  Real norm_squared(const UShortArray& indices, const SizetList& rand_indices);
 
 private:
 
@@ -240,14 +240,28 @@ private:
 
   /// calculate a particular multivariate orthogonal polynomial value
   /// evaluated at a particular parameter set
-  Real multivariate_polynomial(const RealVector& xi,const UShortArray& indices);
-  /// calculate a particular multivariate orthogonal polynomial gradient
-  /// evaluated at a particular parameter set
-  const RealVector& multivariate_polynomial_gradient(const RealVector& xi,
+  Real multivariate_polynomial(const RealVector& x,const UShortArray& indices);
+  /// calculate a particular multivariate orthogonal polynomial value over
+  /// the nonrandom variable subset evaluated at a particular parameter set
+  Real multivariate_polynomial(const RealVector& x,const UShortArray& indices,
+			       const SizetList& non_rand_indices);
+
+  /// compute multivariate orthogonal polynomial gradient for term
+  /// corresponding to deriv_index, evaluated at x
+  Real multivariate_polynomial_gradient(const RealVector& x, size_t deriv_index,
     const UShortArray& indices);
-  /// calculate a particular multivariate orthogonal polynomial gradient with
+  /// compute multivariate orthogonal polynomial gradient for term corresponding
+  /// to deriv_index, for nonrandom variable subset, and evaluated at x
+  Real multivariate_polynomial_gradient(const RealVector& x, size_t deriv_index,
+    const UShortArray& indices, const SizetList& non_rand_indices);
+
+  /// calculate multivariate orthogonal polynomial gradient vector
+  /// evaluated at a particular parameter set
+  const RealVector& multivariate_polynomial_gradient_vector(const RealVector& x,
+    const UShortArray& indices);
+  /// calculate multivariate orthogonal polynomial gradient vector with
   /// respect to specified dvv and evaluated at a particular parameter set
-  const RealVector& multivariate_polynomial_gradient(const RealVector& xi,
+  const RealVector& multivariate_polynomial_gradient_vector(const RealVector& x,
     const UShortArray& indices, const SizetArray& dvv);
 
   /// computes the chaosCoeffs via linear regression
@@ -273,6 +287,9 @@ private:
   /// update numericalMoments using numerical integration applied
   /// directly to surrData
   void compute_numerical_response_moments(size_t num_moments);
+
+  /// test for nonzero indices in random variable subset
+  bool zero_random(const UShortArray& indices) const;
 
   /// cross-validates alternate gradient expressions
   void gradient_check();
@@ -384,7 +401,7 @@ private:
   RealMatrix prevExpCoeffGrads;
 
   /// Data vector for storing the gradients of individual expansion term
-  /// polynomials.  Called in multivariate_polynomial_gradient().
+  /// polynomials (see multivariate_polynomial_gradient_vector())
   RealVector mvpGradient;
 
   /// switch for formulation of orthogonal polynomial expansion
@@ -539,58 +556,131 @@ inline void OrthogPolyApproximation::resize_expansion()
 
 
 inline Real OrthogPolyApproximation::
-multivariate_polynomial(const RealVector& xi, const UShortArray& indices)
+multivariate_polynomial(const RealVector& x, const UShortArray& indices)
 {
-  unsigned short order_1d;
-  Real mvp = 1.;
+  Real mvp = 1.; unsigned short order_1d;
   for (size_t i=0; i<numVars; ++i) {
     order_1d = indices[i];
     if (order_1d)
-      mvp *= polynomialBasis[i].type1_value(xi[i], order_1d);
+      mvp *= polynomialBasis[i].type1_value(x[i], order_1d);
   }
   return mvp;
 }
 
 
-inline const RealVector& OrthogPolyApproximation::
-multivariate_polynomial_gradient(const RealVector& xi,
+/** All variables version. */
+inline Real OrthogPolyApproximation::
+multivariate_polynomial(const RealVector& x, const UShortArray& indices,
+			const SizetList& non_rand_indices)
+{
+  Real mvp = 1.; SizetList::const_iterator cit;
+  unsigned short order_1d; size_t i;
+  for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
+    i = *cit; order_1d = indices[i];
+    if (order_1d)
+      mvp *= polynomialBasis[i].type1_value(x[i], order_1d);
+  }
+  return mvp;
+}
+
+
+inline Real OrthogPolyApproximation::
+multivariate_polynomial_gradient(const RealVector& x, size_t deriv_index,
 				 const UShortArray& indices)
+{
+  Real mvp_grad = 1.;
+  for (size_t k=0; k<numVars; ++k)
+    mvp_grad *= (k == deriv_index) ?
+      polynomialBasis[k].type1_gradient(x[k], indices[k]) :
+      polynomialBasis[k].type1_value(x[k],    indices[k]);
+  return mvp_grad;
+}
+
+
+/** All variables version. */
+inline Real OrthogPolyApproximation::
+multivariate_polynomial_gradient(const RealVector& x, size_t deriv_index,
+				 const UShortArray& indices,
+				 const SizetList& non_rand_indices)
+{
+  Real mvp_grad = 1.; SizetList::const_iterator cit; size_t k;
+  for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
+    k = *cit;
+    mvp_grad *= (k == deriv_index) ?
+      polynomialBasis[k].type1_gradient(x[k], indices[k]) :
+      polynomialBasis[k].type1_value(x[k],    indices[k]);
+  }
+  return mvp_grad;
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+multivariate_polynomial_gradient_vector(const RealVector& x,
+					const UShortArray& indices)
 {
   if (mvpGradient.length() != numVars)
     mvpGradient.sizeUninitialized(numVars);
-  size_t i, j;
-  for (i=0; i<numVars; ++i) {
-    Real& mvp_grad_i = mvpGradient[i];
-    mvp_grad_i = 1.0;
-    // differentiation of product of 1D polynomials
-    for (j=0; j<numVars; ++j)
-      mvp_grad_i *= (j == i) ?
-	polynomialBasis[j].type1_gradient(xi[j], indices[j]) :
-	polynomialBasis[j].type1_value(xi[j],    indices[j]);
-  }
+  for (size_t i=0; i<numVars; ++i)
+    mvpGradient[i] = multivariate_polynomial_gradient(x, i, indices);
   return mvpGradient;
 }
 
 
 inline const RealVector& OrthogPolyApproximation::
-multivariate_polynomial_gradient(const RealVector& xi,
-				 const UShortArray& indices,
-				 const SizetArray& dvv)
+multivariate_polynomial_gradient_vector(const RealVector& x,
+					const UShortArray& indices,
+					const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_deriv_vars = dvv.size();
   if (mvpGradient.length() != num_deriv_vars)
     mvpGradient.sizeUninitialized(num_deriv_vars);
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // *** requires an "All" view
-    Real& mvp_grad_i = mvpGradient[i];
-    mvp_grad_i = 1.0;
-    // differentiation of product of 1D polynomials
-    for (j=0; j<numVars; ++j)
-      mvp_grad_i *= (j == deriv_index) ?
-	polynomialBasis[j].type1_gradient(xi[j], indices[j]) :
-	polynomialBasis[j].type1_value(xi[j],    indices[j]);
+    mvpGradient[i] = multivariate_polynomial_gradient(x, deriv_index, indices);
   }
   return mvpGradient;
+}
+
+
+inline bool OrthogPolyApproximation::
+zero_random(const UShortArray& indices) const
+{
+  SizetList::const_iterator cit;
+  for (cit=randomIndices.begin(); cit!=randomIndices.end(); ++cit)
+    if (indices[*cit])
+      return false;
+  return true;
+}
+
+
+inline Real OrthogPolyApproximation::norm_squared(const UShortArray& indices)
+{
+  // the norm squared of a particular multivariate polynomial is the product of
+  // the norms squared of the numVars univariate polynomials that comprise it.
+  Real norm_sq = 1.; unsigned short order_1d;
+  for (size_t i=0; i<numVars; ++i) {
+    order_1d = indices[i];
+    if (order_1d)
+      norm_sq *= polynomialBasis[i].norm_squared(order_1d);
+  }
+  return norm_sq;
+}
+
+
+/** All variables version. */
+inline Real OrthogPolyApproximation::
+norm_squared(const UShortArray& indices, const SizetList& rand_indices)
+{
+  // the norm squared of a particular multivariate polynomial is the product of
+  // the norms squared of the numVars univariate polynomials that comprise it.
+  Real norm_sq = 1.; SizetList::const_iterator cit;
+  unsigned short order_1d; size_t i;
+  for (cit=rand_indices.begin(); cit!=rand_indices.end(); ++cit) {
+    i = *cit; order_1d = indices[i];
+    if (order_1d)
+      norm_sq *= polynomialBasis[i].norm_squared(order_1d);
+  }
+  return norm_sq;
 }
 
 
@@ -602,7 +692,8 @@ pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
   if (add_val)
     { pack_val[pv_cntr] = multivariate_polynomial(c_vars, mi); ++pv_cntr; }
   if (add_grad) {
-    const RealVector& mvp_grad = multivariate_polynomial_gradient(c_vars, mi);
+    const RealVector& mvp_grad
+      = multivariate_polynomial_gradient_vector(c_vars, mi);
     for (size_t j=0; j<numVars; ++j, ++pg_cntr)
       pack_grad[pg_cntr] = mvp_grad[j];
   }

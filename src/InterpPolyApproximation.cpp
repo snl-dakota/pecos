@@ -152,8 +152,10 @@ void InterpPolyApproximation::allocate_arrays()
   }
   }
 
-  size_t num_moments = (nonRandomIndices.empty()) ? 4 : 2;
-  numericalMoments.sizeUninitialized(num_moments);
+  if (numericalMoments.empty()) {
+    size_t num_moments = (nonRandomIndices.empty()) ? 4 : 2;
+    numericalMoments.sizeUninitialized(num_moments);
+  }
 }
 
 

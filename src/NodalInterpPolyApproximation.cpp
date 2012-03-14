@@ -972,7 +972,7 @@ Real NodalInterpPolyApproximation::mean()
 Real NodalInterpPolyApproximation::mean(const RealVector& x)
 {
   Real& mean = numericalMoments[0];
-  if ( !(computedMeanData & 1) || x != xPrevMean ) {
+  if ( !(computedMeanData & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: {
       TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1052,7 +1052,7 @@ const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  if ( (computedMeanData & 2) && x == xPrevMeanGrad) // && dvv == dvvPrev)
+  if ( (computedMeanData & 2) && match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:           return tpMeanGrad;   break;
     case COMBINED_SPARSE_GRID: return meanGradient; break;
@@ -1115,7 +1115,7 @@ Real NodalInterpPolyApproximation::variance()
     over this subset. */
 Real NodalInterpPolyApproximation::variance(const RealVector& x)
 {
-  if ( !(computedVarianceData & 1) || x != xPrevVar ) {
+  if ( !(computedVarianceData & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
     numericalMoments[1] = covariance(x, this);
     computedVarianceData |= 1; xPrevVar = x;
   }
@@ -1277,7 +1277,7 @@ const RealVector& NodalInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  if ( (computedVarianceData & 2) && x == xPrevVarGrad) // && dvv == dvvPrev)
+  if ( (computedVarianceData & 2) && match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:           return tpVarianceGrad;   break;
     case COMBINED_SPARSE_GRID: return varianceGradient; break;

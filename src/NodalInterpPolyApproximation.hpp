@@ -125,10 +125,6 @@ private:
     const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
-  /// return true if matching random variable subsets within keys
-  bool match_random_key(const UShortArray& key_1, 
-			const UShortArray& key_2) const;
-
   //
   //- Heading: Data
   //
@@ -233,17 +229,6 @@ approximation_coefficients(const RealVector& approx_coeffs)
   }
   else
     expansionType1Coeffs = approx_coeffs;
-}
-
-
-inline bool NodalInterpPolyApproximation::
-match_random_key(const UShortArray& key_1, const UShortArray& key_2) const
-{
-  SizetList::const_iterator cit;
-  for (cit=randomIndices.begin(); cit!=randomIndices.end(); ++cit)
-    if (key_1[*cit] != key_2[*cit])
-      return false;
-  return true;
 }
 
 } // namespace Pecos

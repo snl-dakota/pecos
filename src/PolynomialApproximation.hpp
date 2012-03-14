@@ -425,6 +425,13 @@ protected:
   /// standardize third and higher central moments and eliminate excess kurtosis
   void standardize_moments(RealVector& moments);
 
+  /// return true if matching key values within random variable subset
+  bool match_random_key(const UShortArray& key_1, 
+			const UShortArray& key_2) const;
+  /// return true if matching variable values within nonrandom variable subset
+  bool match_nonrandom_vars(const RealVector& vars_1,
+			    const RealVector& vars_2) const;
+
   //
   //- Heading: Data
   //
@@ -693,6 +700,28 @@ inline size_t PolynomialApproximation::finalization_index(size_t i)
   std::set<UShortArray>::const_iterator cit = trial_sets.begin();
   std::advance(cit, i);
   return find_index(savedLevMultiIndex, *cit);
+}
+
+
+inline bool PolynomialApproximation::
+match_random_key(const UShortArray& key_1, const UShortArray& key_2) const
+{
+  SizetList::const_iterator cit;
+  for (cit=randomIndices.begin(); cit!=randomIndices.end(); ++cit)
+    if (key_1[*cit] != key_2[*cit])
+      return false;
+  return true;
+}
+
+
+inline bool PolynomialApproximation::
+match_nonrandom_vars(const RealVector& vars_1, const RealVector& vars_2) const
+{
+  SizetList::const_iterator cit;
+  for (cit=nonRandomIndices.begin(); cit!=nonRandomIndices.end(); ++cit)
+    if (vars_1[*cit] != vars_2[*cit]) // double match w/o tolerance
+      return false;
+  return true;
 }
 
 } // namespace Pecos

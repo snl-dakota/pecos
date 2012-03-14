@@ -2276,7 +2276,7 @@ gradient_basis_variables(const RealVector& x)
   size_t i, j;
   for (i=0; i<numExpansionTerms; ++i) {
     const RealVector& term_i_grad
-      = multivariate_polynomial_gradient(x, multiIndex[i]);
+      = multivariate_polynomial_gradient_vector(x, multiIndex[i]);
     Real& coeff_i = expansionCoeffs[i];
     for (j=0; j<numVars; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
@@ -2304,7 +2304,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
   // sum expansion to get response gradient prediction
   for (i=0; i<numExpansionTerms; ++i) {
     const RealVector& term_i_grad
-      = multivariate_polynomial_gradient(x, multiIndex[i], dvv);
+      = multivariate_polynomial_gradient_vector(x, multiIndex[i], dvv);
     Real& coeff_i = expansionCoeffs[i];
     for (j=0; j<num_deriv_vars; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
@@ -2378,7 +2378,7 @@ stored_gradient_basis_variables(const RealVector& x)
   // sum expansion to get response gradient prediction
   for (i=0; i<num_stored_terms; ++i) {
     const RealVector& term_i_grad
-      = multivariate_polynomial_gradient(x, storedMultiIndex[i]);
+      = multivariate_polynomial_gradient_vector(x, storedMultiIndex[i]);
     Real& coeff_i = storedExpCoeffs[i];
     for (j=0; j<numVars; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
@@ -2445,29 +2445,18 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
   // sum expansion to get response prediction
   Real mean = expansionCoeffs[0];
 
-  size_t i;
-  SizetList::iterator it;
-  for (i=1; i<numExpansionTerms; ++i) {
-    bool include = true;
-    for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-      if (multiIndex[i][*it]) // expectation of this expansion term is zero
-	{ include = false; break; }
-    if (include) {
-      Real Psi = 1.0;
-      for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	size_t index = *it;
-	unsigned short order_1d = multiIndex[i][index];
-	if (order_1d)
-	  Psi *= polynomialBasis[index].type1_value(x[index], order_1d);
-      }
-      mean += Psi*expansionCoeffs[i];
+  for (size_t i=1; i<numExpansionTerms; ++i)
+    // expectations are zero for expansion terms with nonzero random indices
+    if (zero_random(multiIndex[i])) {
+      mean += expansionCoeffs[i]
+	   *  multivariate_polynomial(x, multiIndex[i], nonRandomIndices);
 #ifdef DEBUG
-      PCout << "Mean estimate inclusion: term index = " << i
-	    << " Psi = " << Psi << " PCE coeff = " << expansionCoeffs[i]
-	    << " total = " << mean << '\n';
+      PCout << "Mean estimate inclusion: term index = " << i << " Psi = "
+	    << multivariate_polynomial(x, multiIndex[i], nonRandomIndices)
+	    << " PCE coeff = " << expansionCoeffs[i] << " total = " << mean
+	    << std::endl;
 #endif // DEBUG
     }
-  }
 
   return mean;
 }
@@ -2490,8 +2479,7 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
   }
 
   //meanGradient = expansionCoeffGrads[0];
-  return meanGradient
-    = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
+  meanGradient = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
   return meanGradient;
 }
 
@@ -2533,43 +2521,25 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
       abort_handler(-1);
     }
     for (j=1; j<numExpansionTerms; ++j) {
-      bool include = true;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	if (multiIndex[j][*it]) // expectation of this expansion term is zero
-	  { include = false; break; }
-      if (include) {
+      // expectations are zero for expansion terms with nonzero random indices
+      if (zero_random(multiIndex[j])) {
 	// In both cases below, the term to differentiate is alpha_j(s) Psi_j(s)
 	// since <Psi_j>_xi = 1 for included terms.  The difference occurs based
 	// on whether a particular s_i dependence appears in alpha (for
 	// inserted) or Psi (for augmented).
-	if (randomVarsKey[deriv_index]) {
+	if (randomVarsKey[deriv_index])
 	  // -------------------------------------------
 	  // derivative w.r.t. design variable insertion
 	  // -------------------------------------------
-	  Real Psi = 1.0;
-	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	    size_t index = *it;
-	    unsigned short order_1d = multiIndex[j][index];
-	    if (order_1d)
-	      Psi *= polynomialBasis[index].type1_value(x[index], order_1d);
-	  }
-	  meanGradient[i] += Psi*expansionCoeffGrads[j][cntr];
-	}
-	else {
+	  meanGradient[i] += expansionCoeffGrads[j][cntr]
+	    * multivariate_polynomial(x, multiIndex[j], nonRandomIndices);
+	else
 	  // ----------------------------------------------
 	  // derivative w.r.t. design variable augmentation
 	  // ----------------------------------------------
-	  Real term_j_grad_i = 1.0;
-	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	    size_t index = *it;
-	    term_j_grad_i *= (index == deriv_index) ?
-	      polynomialBasis[index].type1_gradient(x[index],
-						    multiIndex[j][index]) :
-	      polynomialBasis[index].type1_value(x[index],
-						 multiIndex[j][index]);
-	  }
-	  meanGradient[i] += expansionCoeffs[j]*term_j_grad_i;
-	}
+	  meanGradient[i] += expansionCoeffs[j] *
+	    multivariate_polynomial_gradient(x, deriv_index, multiIndex[j],
+					     nonRandomIndices);
       }
     }
     if (randomVarsKey[deriv_index]) // derivative w.r.t. design var insertion
@@ -2631,12 +2601,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     // For r = random_vars and nr = non_random_vars,
     // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
     // -> include only those terms from R(r,nr) which do not appear in \mu_R(nr)
-    bool include_i = false;
-    for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-      if (multiIndex[i][*it]) // term does not appear in mean(nr)
-	{ include_i = true; break; }
-    if (include_i) {
-      Real norm_sq_i = norm_squared_random(multiIndex[i]);
+    if (!zero_random(multiIndex[i])) {
+      Real norm_sq_i = norm_squared(multiIndex[i], randomIndices);
       for (j=1; j<numExpansionTerms; ++j) {
 	// random part of polynomial must be identical to contribute to variance
 	// (else orthogonality drops term).  Note that it is not necessary to
@@ -2644,26 +2610,13 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 	// in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
 	// (following eval of non-random portions), the nested loop could be
 	// replaced with a single loop to evaluate (a+b)^2.
-	bool include_j = true;
-	for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	  if (multiIndex[i][*it] != multiIndex[j][*it])
-	    { include_j = false; break; }
-	if (include_j) {
-	  Real var_ij = expansionCoeffs[i] * exp_coeffs_2[j] * norm_sq_i;
-	  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it) {
-	    size_t index = *it;
-	    unsigned short order_1d_i = multiIndex[i][index],
-	      order_1d_j = multiIndex[j][index];
-	    BasisPolynomial& poly_1d = polynomialBasis[index];
-	    if (order_1d_i)
-	      var_ij *= poly_1d.type1_value(x[index], order_1d_i);
-	    if (order_1d_j)
-	      var_ij *= poly_1d.type1_value(x[index], order_1d_j);
-	  }
-	  var += var_ij;
+	if (match_random_key(multiIndex[i], multiIndex[j])) {
+	  var += expansionCoeffs[i] * exp_coeffs_2[j] * norm_sq_i *
+	    multivariate_polynomial(x, multiIndex[i], nonRandomIndices) *
+	    multivariate_polynomial(x, multiIndex[j], nonRandomIndices);
 #ifdef DEBUG
 	  PCout << "Variance estimate inclusion: term index = " << i
-		<< " variance = " << var_ij << " total = " << var <<'\n';
+		<< " total variance = " << var <<'\n';
 #endif // DEBUG
 	}
       }
@@ -2740,70 +2693,38 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
       abort_handler(-1);
     }
     for (j=1; j<numExpansionTerms; ++j) {
-      bool include_j = false;
-      for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	if (multiIndex[j][*it]) // term does not appear in mean(nr)
-	  { include_j = true; break; }
-      if (include_j) {
-	Real norm_sq_j = norm_squared_random(multiIndex[j]);
+      if (!zero_random(multiIndex[j])) {
+	Real norm_sq_j = norm_squared(multiIndex[j], randomIndices);
 	for (k=1; k<numExpansionTerms; ++k) {
 	  // random part of polynomial must be identical to contribute to
 	  // variance (else orthogonality drops term)
-	  bool include_k = true;
-	  for (it=randomIndices.begin(); it!=randomIndices.end(); ++it)
-	    if (multiIndex[j][*it] != multiIndex[k][*it])
-	      { include_k = false; break; }
-	  if (include_k) {
+	  if (match_random_key(multiIndex[j], multiIndex[k])) {
 	    // In both cases below, the term to differentiate is
 	    // alpha_j(s) alpha_k(s) <Psi_j^2>_xi Psi_j(s) Psi_k(s) and the
 	    // difference occurs based on whether a particular s_i dependence
 	    // appears in alpha (for inserted) or Psi (for augmented).
-	    if (randomVarsKey[deriv_index]) {
+	    if (randomVarsKey[deriv_index])
 	      // -------------------------------------------
 	      // derivative w.r.t. design variable insertion
 	      // -------------------------------------------
-	      Real var_jk = norm_sq_j *
+	      varianceGradient[i] += norm_sq_j *
 		(expansionCoeffs[j] * expansionCoeffGrads[k][cntr] +
-		 expansionCoeffs[k] * expansionCoeffGrads[j][cntr]);
-	      for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end();
-		   ++it) {
-		size_t index = *it;
-		unsigned short order_1d_j = multiIndex[j][index],
-		  order_1d_k = multiIndex[k][index];
-		BasisPolynomial& poly_1d = polynomialBasis[index];
-		if (order_1d_j)
-		  var_jk *= poly_1d.type1_value(x[index], order_1d_j);
-		if (order_1d_k)
-		  var_jk *= poly_1d.type1_value(x[index], order_1d_k);
-	      }
-	      varianceGradient[i] += var_jk;
-	    }
-	    else {
+		 expansionCoeffs[k] * expansionCoeffGrads[j][cntr]) *
+		multivariate_polynomial(x, multiIndex[j], nonRandomIndices) *
+		multivariate_polynomial(x, multiIndex[k], nonRandomIndices);
+	    else
 	      // ----------------------------------------------
 	      // derivative w.r.t. design variable augmentation
 	      // ----------------------------------------------
-	      Real var_jk = expansionCoeffs[j] * expansionCoeffs[k] * norm_sq_j;
-	      Real Psi_j = 1., Psi_k = 1., dPsi_j_ds_i = 1., dPsi_k_ds_i = 1.;
-	      for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end();
-		   ++it) {
-		size_t index = *it;
-		unsigned short order_1d_j = multiIndex[j][index],
-		  order_1d_k = multiIndex[k][index];
-		BasisPolynomial& poly_1d = polynomialBasis[index];
-		if (order_1d_j)
-		  Psi_j *= poly_1d.type1_value(x[index], order_1d_j);
-		if (order_1d_k)
-		  Psi_k *= poly_1d.type1_value(x[index], order_1d_k);
-		dPsi_j_ds_i *= (index == deriv_index) ?
-		  poly_1d.type1_gradient(x[index], order_1d_j) :
-		  poly_1d.type1_value(   x[index], order_1d_j);
-		dPsi_k_ds_i *= (index == deriv_index) ?
-		  poly_1d.type1_gradient(x[index], order_1d_k) :
-		  poly_1d.type1_value(   x[index], order_1d_k);
-	      }
-	      varianceGradient[i] += var_jk * 
-		(Psi_j*dPsi_k_ds_i + dPsi_j_ds_i*Psi_k);
-	    }
+	      varianceGradient[i] +=
+		expansionCoeffs[j] * expansionCoeffs[k] * norm_sq_j *
+		// Psi_j * dPsi_k_ds_i + dPsi_j_ds_i * Psi_k
+		(multivariate_polynomial(x, multiIndex[j], nonRandomIndices) *
+		 multivariate_polynomial_gradient(x, deriv_index, multiIndex[k],
+						  nonRandomIndices) +
+		 multivariate_polynomial_gradient(x, deriv_index, multiIndex[j],
+						  nonRandomIndices) *
+		 multivariate_polynomial(x, multiIndex[k], nonRandomIndices));
 	  }
 	}
       }
@@ -2840,38 +2761,6 @@ void OrthogPolyApproximation::gradient_check()
     chebyshev_poly.type1_gradient(x, n);
     PCout << "-------------------------------------------------\n";
   }
-}
-
-
-Real OrthogPolyApproximation::norm_squared(const UShortArray& indices)
-{
-  // the norm squared of a particular multivariate polynomial is the product of
-  // the norms squared of the numVars univariate polynomials that comprise it.
-  Real multivar_norm_sq = 1.;
-  unsigned short order;
-  for (size_t i=0; i<numVars; ++i) {
-    order = indices[i];
-    if (order)
-      multivar_norm_sq *= polynomialBasis[i].norm_squared(order);
-  }
-  return multivar_norm_sq;
-}
-
-
-Real OrthogPolyApproximation::norm_squared_random(const UShortArray& indices)
-{
-  // the norm squared of a particular multivariate polynomial is the product of
-  // the norms squared of the numVars univariate polynomials that comprise it.
-  Real multivar_norm_sq = 1.;
-  unsigned short order;
-  for (size_t i=0; i<numVars; ++i) {
-    if (randomVarsKey[i]) {
-      order = indices[i];
-      if (order)
-	multivar_norm_sq *= polynomialBasis[i].norm_squared(order);
-    }
-  }
-  return multivar_norm_sq;
 }
 
 
