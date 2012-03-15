@@ -1430,8 +1430,7 @@ void NodalInterpPolyApproximation::compute_partial_variance(int set_value)
 
 void NodalInterpPolyApproximation::compute_total_sobol_indices()
 {
-  const Real& m1 = numericalMoments[1]; // standardized, if not num exception
-  Real total_variance = (m1 > 0.) ? m1*m1 : m1;
+  const Real& total_variance = numericalMoments[1];
   int j, set_value;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {

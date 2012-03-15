@@ -572,17 +572,14 @@ void InterpPolyApproximation::compute_component_effects()
   constituentSets.resize(sobol_len);
   get_subsets();
 
+  const Real& total_mean     = numericalMoments[0];
+  const Real& total_variance = numericalMoments[1];
+
   // initialize partialVariance
   if (partialVariance.empty())
     partialVariance.sizeUninitialized(sobol_len);
   partialVariance = 0.;
-
-  // initialize with mean^2
-  const Real& nm0 = numericalMoments[0]; // standardized, if not num exception
-  partialVariance[0] = nm0*nm0;
-
-  const Real& nm1 = numericalMoments[1]; // standardized, if not num exception
-  Real total_variance = (nm1 > 0.) ? nm1*nm1 : nm1;
+  partialVariance[0] = total_mean * total_mean; // initialize with mean^2
 
   // Solve for partial variance
   for (IntIntMIter map_iter=sobolIndexMap.begin();
