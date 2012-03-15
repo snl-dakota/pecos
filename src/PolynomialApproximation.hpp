@@ -305,6 +305,10 @@ public:
   /// return numericalMoments
   const RealVector& numerical_moments() const;
 
+  /// standardize central moments 2-n and eliminate excess kurtosis
+  void standardize_moments(const RealVector& central_moments,
+			   RealVector& std_moments);
+
   /// size component Sobol arrays
   void allocate_component_effects();
   /// size total Sobol arrays
@@ -422,8 +426,6 @@ protected:
 				 const RealMatrix& t2_coeffs,
 				 const RealVector& t1_wts,
 				 const RealMatrix& t2_wts, RealVector& moments);
-  /// standardize third and higher central moments and eliminate excess kurtosis
-  void standardize_moments(RealVector& moments);
 
   /// return true if matching key values within random variable subset
   bool match_random_key(const UShortArray& key_1, 
@@ -468,15 +470,15 @@ protected:
   /// active variables (used in all_variables mode; defined from randomVarsKey)
   SizetList nonRandomIndices;
 
-  /// mean, variance, skewness, and kurtosis (raw, central, standardized,
-  /// and offset standardized moments, respectively) computed from the
-  /// stochastic expansion form.  For OrthogPolyApproximation, these are
-  /// primary, and for InterpPolyApproximation, they are currently inactive.
+  /// mean and central moments 2/3/4 computed from the stochastic expansion
+  /// form.  For OrthogPolyApproximation, these are primary, and for
+  /// InterpPolyApproximation, they are secondary.  Conversions to standardized
+  /// moments (std deviation, skewness, kurtosis) are performed elsewhere.
   RealVector expansionMoments;
-  /// mean, variance, skewness, and kurtosis (raw, central, standardized,
-  /// and offset standardized moments, respectively) computed via numerical
-  /// integration of the response.  For OrthogPolyApproximation, these are
-  /// secondary, and for InterpPolyApproximation, they are primary.
+  /// mean and central moments 2/3/4 computed via numerical integration of the
+  /// response.  For OrthogPolyApproximation, these are secondary, and for
+  /// InterpPolyApproximation, they are primary.  Conversions to standardized
+  /// moments (std deviation, skewness, kurtosis) are performed elsewhere.
   RealVector numericalMoments;
 
   /// gradient of the primary mean (expansion mean for OrthogPoly,
@@ -618,10 +620,8 @@ random_variables_key(const BoolDeque& random_vars_key)
   randomIndices.clear();
   nonRandomIndices.clear();
   for (size_t i=0; i<numVars; i++)
-    if (random_vars_key[i])
-      randomIndices.push_back(i);
-    else
-      nonRandomIndices.push_back(i);
+    if (random_vars_key[i]) randomIndices.push_back(i);
+    else                 nonRandomIndices.push_back(i);
 }
 
 

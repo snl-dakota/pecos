@@ -554,7 +554,7 @@ compute_numerical_moments(const RealVector& coeffs, const RealVector& t1_wts,
   }
 
   // standardize third and higher central moments, if present
-  standardize_moments(moments);
+  //standardize_moments(moments);
 }
 
 
@@ -620,25 +620,29 @@ compute_numerical_moments(const RealVector& t1_coeffs,
   }
 
   // convert central moments to std deviation/skewness/kurtosis
-  standardize_moments(moments);
+  //standardize_moments(moments);
 }
 
 
-void PolynomialApproximation::standardize_moments(RealVector& moments)
+void PolynomialApproximation::
+standardize_moments(const RealVector& central_moments, RealVector& std_moments)
 {
-  size_t num_moments = moments.length();
-  if (num_moments < 2) return;
+  size_t num_moments = central_moments.length();
+  std_moments.sizeUninitialized(num_moments);
+  if (num_moments >= 1) std_moments[0] = central_moments[0]; // mean
+  if (num_moments <  2) return;
 
-  const Real& var = moments[1];
+  const Real& var = central_moments[1];
+  Real&   std_dev = std_moments[1];
   if (var > 0.) {
     // standardized moment k is E[((X-mu)/sigma)^k] = E[(X-mu)^k]/sigma^k
-    Real pow_fn = var, std_dev = std::sqrt(var);
-    moments[1] = std_dev; // not standardized (2nd standardized moment is 1)
+    std_dev = std::sqrt(var); // not standardized (2nd standardized moment is 1)
+    Real pow_fn = var;
     for (size_t i=2; i<num_moments; ++i)
-      { pow_fn *= std_dev; moments[i] /= pow_fn; }
+      { pow_fn *= std_dev; std_moments[i] = central_moments[i] / pow_fn; }
     // offset the fourth standardized moment to eliminate excess kurtosis
     if (num_moments > 3)
-      moments[3] -= 3.;
+      std_moments[3] -= 3.;
   }
   // special case of zero variance is OK for num_moments == 2, but not higher
   else if ( !(num_moments == 2 && var == 0.) ) // std_dev OK for var == 0.

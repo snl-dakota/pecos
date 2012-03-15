@@ -868,7 +868,7 @@ compute_numerical_response_moments(size_t num_moments)
   }
 
   // standardize third and higher central moments, if present
-  standardize_moments(numericalMoments);
+  //standardize_moments(numericalMoments);
 
   /*
   if (numericalMoments.size() != num_moments)
