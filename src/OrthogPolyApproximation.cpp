@@ -269,6 +269,9 @@ void OrthogPolyApproximation::allocate_arrays()
       expansionCoeffGrads.shapeUninitialized(num_deriv_vars, numExpansionTerms);
   }
 
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
+
   // no combination by default, even if storedMultiIndex and
   // storedExp{Coeffs,CoeffGrads} are defined.  Redefined by
   // attribute passed in combine_coefficients(short).
@@ -2426,7 +2429,9 @@ Real OrthogPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  return expansionCoeffs[0];
+  Real& mean = expansionMoments[0];
+  mean = expansionCoeffs[0];
+  return mean;
 }
 
 
@@ -2442,9 +2447,10 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
     abort_handler(-1);
   }
 
-  // sum expansion to get response prediction
-  Real mean = expansionCoeffs[0];
+  Real& mean = expansionMoments[0];
 
+  // sum expansion to get response prediction
+  mean = expansionCoeffs[0];
   for (size_t i=1; i<numExpansionTerms; ++i)
     // expectations are zero for expansion terms with nonzero random indices
     if (zero_random(multiIndex[i])) {
@@ -2478,7 +2484,6 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  //meanGradient = expansionCoeffGrads[0];
   meanGradient = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
   return meanGradient;
 }
@@ -2497,15 +2502,13 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
 const RealVector& OrthogPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  size_t i, j, deriv_index, num_deriv_vars = dvv.size();
+  size_t i, j, deriv_index, num_deriv_vars = dvv.size(),
+    cntr = 0; // insertions carried in order within expansionCoeffGrads
   if (meanGradient.length() != num_deriv_vars)
     meanGradient.sizeUninitialized(num_deriv_vars);
-  meanGradient = 0.0;
-
-  SizetList::iterator it;
-  size_t cntr = 0; // insertions carried in order within expansionCoeffGrads
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    Real& grad_i = meanGradient[i];
     if (randomVarsKey[deriv_index]) { // deriv w.r.t. design var insertion
       // Error check for required data
       if (!expConfigOptions.expansionCoeffGradFlag) {
@@ -2513,31 +2516,34 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 	      << "OrthogPolyApproximation::mean_gradient()." << std::endl;
 	abort_handler(-1);
       }
-      meanGradient[i] = expansionCoeffGrads[0][cntr];
+      grad_i = expansionCoeffGrads[0][cntr];
     }
-    else if (!expConfigOptions.expansionCoeffFlag) {// error check for reqd data
-      PCerr << "Error: expansion coefficients not defined in "
-	    << "OrthogPolyApproximation::mean_gradient()" << std::endl;
-      abort_handler(-1);
+    else {
+      grad_i = 0.;
+      if (!expConfigOptions.expansionCoeffFlag) { // check for reqd data
+	PCerr << "Error: expansion coefficients not defined in "
+	      << "OrthogPolyApproximation::mean_gradient()" << std::endl;
+	abort_handler(-1);
+      }
     }
     for (j=1; j<numExpansionTerms; ++j) {
       // expectations are zero for expansion terms with nonzero random indices
       if (zero_random(multiIndex[j])) {
-	// In both cases below, the term to differentiate is alpha_j(s) Psi_j(s)
-	// since <Psi_j>_xi = 1 for included terms.  The difference occurs based
-	// on whether a particular s_i dependence appears in alpha (for
-	// inserted) or Psi (for augmented).
+	// In both cases below, term to differentiate is alpha_j(s) Psi_j(s)
+	// since <Psi_j>_xi = 1 for included terms.  The difference occurs
+	// based on whether a particular s_i dependence appears in alpha
+	// (for inserted) or Psi (for augmented).
 	if (randomVarsKey[deriv_index])
 	  // -------------------------------------------
 	  // derivative w.r.t. design variable insertion
 	  // -------------------------------------------
-	  meanGradient[i] += expansionCoeffGrads[j][cntr]
+	  grad_i += expansionCoeffGrads[j][cntr]
 	    * multivariate_polynomial(x, multiIndex[j], nonRandomIndices);
 	else
 	  // ----------------------------------------------
 	  // derivative w.r.t. design variable augmentation
 	  // ----------------------------------------------
-	  meanGradient[i] += expansionCoeffs[j] *
+	  grad_i += expansionCoeffs[j] *
 	    multivariate_polynomial_gradient(x, deriv_index, multiIndex[j],
 					     nonRandomIndices);
       }
@@ -2554,13 +2560,19 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
 Real OrthogPolyApproximation::variance()
-{ return covariance(this); }
+{
+  expansionMoments[1] = covariance(this);
+  return expansionMoments[1];
+}
 
 
 /** In this case, a subset of the expansion variables are random variables
     and the variance of the expansion involves summations over this subset. */
 Real OrthogPolyApproximation::variance(const RealVector& x)
-{ return covariance(x, this); }
+{
+  expansionMoments[1] = covariance(x, this);
+  return expansionMoments[1];
+}
 
 
 Real OrthogPolyApproximation::
@@ -2596,7 +2608,6 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     = ((OrthogPolyApproximation*)poly_approx_2)->expansionCoeffs;
   Real var = 0.;
   size_t i, j;
-  SizetList::iterator it;
   for (i=1; i<numExpansionTerms; ++i) {
     // For r = random_vars and nr = non_random_vars,
     // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
@@ -2651,12 +2662,13 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
   if (varianceGradient.length() != num_deriv_vars)
     varianceGradient.sizeUninitialized(num_deriv_vars);
-  varianceGradient = 0.0;
+  varianceGradient = 0.;
   for (i=1; i<numExpansionTerms; ++i) {
     Real term_i = 2. * expansionCoeffs[i] * norm_squared(multiIndex[i]);
     for (j=0; j<num_deriv_vars; ++j)
       varianceGradient[j] += term_i * expansionCoeffGrads[i][j];
   }
+
   return varianceGradient;
 }
 
@@ -2678,13 +2690,12 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     abort_handler(-1);
   }
 
-  size_t i, j, k, deriv_index, num_deriv_vars = dvv.size();
+  size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
+    cntr = 0; // insertions carried in order within expansionCoeffGrads
   if (varianceGradient.length() != num_deriv_vars)
     varianceGradient.sizeUninitialized(num_deriv_vars);
-  varianceGradient = 0.0;
+  varianceGradient = 0.;
 
-  SizetList::iterator it;
-  size_t cntr = 0; // insertions carried in order within expansionCoeffGrads
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     if (randomVarsKey[deriv_index] && !expConfigOptions.expansionCoeffGradFlag){

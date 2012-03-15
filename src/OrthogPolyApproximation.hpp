@@ -456,8 +456,7 @@ inline void OrthogPolyApproximation::increment_order()
 inline void OrthogPolyApproximation::compute_moments()
 {
   // standard variables mode supports two expansion and four numerical moments
-  expansionMoments.sizeUninitialized(2);
-  expansionMoments[0] = mean(); expansionMoments[1] = variance();
+  mean(); variance(); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
   if (expConfigOptions.expCoeffsSolnApproach == QUADRATURE ||
       expConfigOptions.expCoeffsSolnApproach == CUBATURE   ||
@@ -469,8 +468,7 @@ inline void OrthogPolyApproximation::compute_moments()
 inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
 {
   // all variables mode only supports first two moments
-  expansionMoments.sizeUninitialized(2);
-  expansionMoments[0] = mean(x); expansionMoments[1] = variance(x);
+  mean(x); variance(x); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
   //compute_numerical_response_moments(2, x); // TO DO
 }
