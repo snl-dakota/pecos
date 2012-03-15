@@ -31,7 +31,15 @@ endif()
 
 
 # Mandate a system or user-provided Boost
-find_package(Boost 1.37 REQUIRED)
+if(Boost_DIR)
+  #message( "in PECOS: Boost_DIR already set to ${Boost_DIR}" )
+  include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
+else()
+  find_package(Boost REQUIRED)
+  if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+  endif()
+endif(Boost_DIR)
 
 
 include(CTest)
