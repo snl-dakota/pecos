@@ -213,6 +213,11 @@ protected:
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray& colloc_index);
 
+  /// for a particular level, find index of basis v2 that matches basis v1
+  bool find_basis(unsigned short level, size_t v1, size_t& v2);
+  /// for a particular level, test for equality between basis v2 and basis v1
+  bool same_basis(unsigned short level, size_t v1, size_t v2);
+
   /// compute total Sobol effects for an index within a sparse grid
   Real total_effects_integral(int set_value, const UShortArray& quad_order,
 			      const UShortArray& lev_index,

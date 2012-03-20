@@ -353,21 +353,15 @@ void InterpPolyApproximation::update_tensor_interpolation_basis()
   initialize_polynomial_basis_type(poly_type_1d, rule);
   for (j=0; j<numVars; ++j) {
     l_index = lev_index[j];
-    const RealArray& colloc_pts_1d_ij          =   colloc_pts_1d[l_index][j];
     std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[l_index];
     BasisPolynomial& poly_basis_ij = poly_basis_i[j];
     if (poly_basis_ij.is_null()) { // does not account for parametric changes
                                    // resulting in new pts for existing orders
-      found = false;
-      for (k=0; k<numVars; ++k)
-	if (k != j && !poly_basis_i[k].is_null() &&
-	    colloc_pts_1d_ij == poly_basis_i[k].interpolation_points())
-	  { found = true; break; }
-      if (found) // reuse previous instance via shared representation
-	poly_basis_ij = poly_basis_i[k]; // shared rep
+      if (find_basis(l_index, j, k)) // reuse previous instance via shared rep
+	poly_basis_ij = poly_basis_i[k];
       else { // instantiate and initialize a new unique instance
 	poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+	poly_basis_ij.interpolation_points(colloc_pts_1d[l_index][j]);
       }
     }
   }
@@ -393,20 +387,14 @@ update_sparse_interpolation_basis(unsigned short max_level)
   short poly_type_1d; short rule; bool found;
   initialize_polynomial_basis_type(poly_type_1d, rule);
   for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
-    const Real2DArray& colloc_pts_1d_i = colloc_pts_1d[i];
     std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
     for (j=0; j<numVars; ++j) {
-      const RealArray& colloc_pts_1d_ij = colloc_pts_1d_i[j];
-      BasisPolynomial&    poly_basis_ij =    poly_basis_i[j];
+      const RealArray& colloc_pts_1d_ij = colloc_pts_1d[i][j];
+      BasisPolynomial&    poly_basis_ij =     poly_basis_i[j];
       if ( poly_basis_ij.is_null() &&  // doesn't account for parametric changes
 	  !colloc_pts_1d_ij.empty()) { // resulting in new pts for existing levs
-	found = false;
-	for (k=0; k<numVars; ++k)
-	  if (k != j && !poly_basis_i[k].is_null() &&
-	      colloc_pts_1d_ij == colloc_pts_1d_i[k])  // vector equality
-	    { found = true; break; }
-	if (found) // reuse previous instance via shared representation
-	  poly_basis_ij = poly_basis_i[k]; // shared rep
+	if (find_basis(i, j, k)) // reuse previous instance via shared rep
+	  poly_basis_ij = poly_basis_i[k];
 	else { // instantiate and initialize a new unique instance
 	  poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
 	  poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
@@ -414,6 +402,37 @@ update_sparse_interpolation_basis(unsigned short max_level)
       }
     }
   }
+}
+
+
+bool InterpPolyApproximation::
+find_basis(unsigned short level, size_t v1, size_t& v2)
+{
+  std::vector<BasisPolynomial>& poly_basis_l = polynomialBasis[level];
+  for (v2=0; v2<numVars; ++v2)
+    if (v2 != v1 && !poly_basis_l[v2].is_null() && same_basis(level, v1, v2))
+      return true;
+  return false; 
+}
+
+
+bool InterpPolyApproximation::
+same_basis(unsigned short level, size_t v1, size_t v2)
+{
+  const ShortArray& rules = driverRep->collocation_rules();
+  short rule1 = rules[v1];
+  if (rules[v2] == rule1)
+    switch (rule1) {
+    case GAUSS_JACOBI: case GEN_GAUSS_LAGUERRE: case GOLUB_WELSCH: {
+      // rule type insufficient in these cases, check collocation points
+      const Real2DArray& colloc_pts_1d
+	= driverRep->collocation_points_array()[level];
+      return (colloc_pts_1d[v1] == colloc_pts_1d[v2]);
+      break;
+    }
+    default:
+      return true; break;
+    }
 }
 
 

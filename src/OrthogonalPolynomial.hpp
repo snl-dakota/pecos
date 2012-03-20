@@ -128,7 +128,7 @@ triple_product(const UShortMultiSet& ijk_key, Real& trip_prod) const
   if (cit == tripleProductMap.end())
     { trip_prod = 0.;          return false; }
   else
-    { trip_prod = cit->second; return true;  }
+    { trip_prod = cit->second; return  true; }
 }
 
 

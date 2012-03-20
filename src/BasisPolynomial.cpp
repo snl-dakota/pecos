@@ -393,6 +393,17 @@ short BasisPolynomial::collocation_rule() const
 }
 
 
+size_t BasisPolynomial::interpolation_size() const
+{
+  if (!polyRep) {
+    PCerr << "Error: interpolation_size() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->interpolation_size();
+}
+
+
 void BasisPolynomial::interpolation_points(const RealArray& interpolation_pts)
 {
   if (polyRep)

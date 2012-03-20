@@ -128,10 +128,13 @@ public:
   /// get OrthogonalPolynomial::collocRule
   virtual short collocation_rule() const;
 
-  /// set InterpolationPolynomial::interpolationPts
+  /// get size of InterpolationPolynomial::interpPts
+  /** This is defined only for interpolation polynomials. */
+  virtual size_t interpolation_size() const;
+  /// set InterpolationPolynomial::interpPts
   /** This is defined only for interpolation polynomials. */
   virtual void interpolation_points(const RealArray& interpolation_pts);
-  /// set InterpolationPolynomial::interpolationPts
+  /// get InterpolationPolynomial::interpPts
   /** This is defined only for interpolation polynomials. */
   virtual const RealArray& interpolation_points() const;
 

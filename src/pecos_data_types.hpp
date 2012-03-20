@@ -98,16 +98,18 @@ typedef std::vector<SurrogateDataResp> SDRArray;
 typedef std::vector<SDVArray>          SDV2DArray;
 typedef std::vector<SDRArray>          SDR2DArray;
 
-typedef std::set<int>                  IntSet;
-typedef std::multiset<unsigned short>  UShortMultiSet;
-typedef std::set<Real>                 RealSet;
-typedef std::vector<IntSet>            IntSetArray;
-typedef std::vector<RealSet>           RealSetArray;
-typedef std::map<int, short>           IntShortMap;
-typedef std::map<size_t, short>        SizetShortMap;
-typedef std::map<int, int>             IntIntMap;
-typedef std::map<int, RealVector>      IntRealVectorMap;
-typedef std::map<UShortMultiSet, Real> UShortMultiSetRealMap;
+typedef std::set<int>                    IntSet;
+typedef std::multiset<unsigned short>    UShortMultiSet;
+typedef std::multiset<UShortMultiSet>    UShort2DMultiSet;
+typedef std::set<Real>                   RealSet;
+typedef std::vector<IntSet>              IntSetArray;
+typedef std::vector<RealSet>             RealSetArray;
+typedef std::map<int, short>             IntShortMap;
+typedef std::map<size_t, short>          SizetShortMap;
+typedef std::map<int, int>               IntIntMap;
+typedef std::map<int, RealVector>        IntRealVectorMap;
+typedef std::map<UShortMultiSet,   Real> UShortMultiSetRealMap;
+typedef std::map<UShort2DMultiSet, Real> UShort2DMultiSetRealMap;
 
 typedef boost::multi_array_types::index_range      idx_range;
 typedef boost::multi_array<size_t, 1>              SizetMultiArray;

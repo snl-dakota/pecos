@@ -42,16 +42,19 @@ public:
   virtual ~InterpolationPolynomial();
 
   //
-  //- Heading: Virtual functions
+  //- Heading: New virtual functions
   //
 
   /// precompute data that is reused repeatedly within interpolation
   virtual void precompute_data();
 
   //
-  //- Heading: Set/get functions
+  //- Heading: Virtual function redefinitions
   //
-  
+
+  /// get size of interpPts
+  size_t interpolation_size() const;
+
   /// set interpPts
   void interpolation_points(const RealArray& interp_pts);
   /// get interpPts
@@ -89,6 +92,10 @@ InterpolationPolynomial(const RealArray& interp_pts):
 
 inline InterpolationPolynomial::~InterpolationPolynomial()
 { }
+
+
+inline size_t InterpolationPolynomial::interpolation_size() const
+{ return interpPts.size(); }
 
 
 inline void InterpolationPolynomial::

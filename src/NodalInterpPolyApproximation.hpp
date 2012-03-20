@@ -15,9 +15,11 @@
 #define NODAL_INTERP_POLY_APPROXIMATION_HPP
 
 #include "InterpPolyApproximation.hpp"
+#include "InterpolationPolynomial.hpp"
 
 
 namespace Pecos {
+
 
 /// Derived approximation class for nodal interpolation polynomials
 /// (global approximation interpolating function values and
@@ -113,17 +115,38 @@ private:
     const UShortArray& lev_index,   const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
-  /// compute the covariance of a tensor interpolant on a tensor grid;
+  /// compute the covariance of two tensor interpolants on the same tensor grid;
   /// contributes to covariance(x, poly_approx_2)
   Real tensor_product_covariance(const RealVector& x,
     const UShortArray& lev_index,   const UShort2DArray& key,
     const SizetArray& colloc_index, NodalInterpPolyApproximation* nip_approx_2);
+  /// compute the covariance of two tensor interpolants on different
+  /// tensor grids; contributes to covariance(x, poly_approx_2)
+  Real tensor_product_covariance(const RealVector& x,
+    const UShortArray& lev_index_1, const UShort2DArray& key_1,
+    const SizetArray& colloc_index_1, const UShortArray& lev_index_2,
+    const UShort2DArray& key_2, const SizetArray& colloc_index_2,
+    NodalInterpPolyApproximation* nip_approx_2);
 
   /// compute the gradient of the variance of a tensor interpolant on
   /// a tensor grid; contributes to variance_gradient(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
     const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
+
+  /// update precomputation of nonzero multidimensional integrals of
+  /// products of interpolation polynomials
+  void update_nonzero_basis_products(const UShort2DArray& sm_multi_index);
+
+  /// evaluate 1D integral of product of interpolation polynomials
+  bool basis_product_1d(InterpolationPolynomial* poly_rep_1,
+			InterpolationPolynomial* poly_rep_2,
+			unsigned short key_1, unsigned short key_2,
+			const RealArray& pts, const RealArray& wts, Real& prod);
+  /// lookup multidimensional integral of products of interpolation polynomials
+  bool basis_product(const UShortArray& lev_index_1, const UShortArray& key_1,
+		     const UShortArray& lev_index_2, const UShortArray& key_2,
+		     Real& prod);
 
   //
   //- Heading: Data
@@ -144,6 +167,14 @@ private:
       expansion (e.g., with respect to design variables for an
       expansion only over the random variables). */
   RealMatrix expansionType1CoeffGrads;
+
+  /// map from random index to unique nonZerosMapArray
+  SizetArray nonZerosMapIndices;
+  /// tracks level maxima already populated within nonZerosMap
+  UShortArray nonZerosMapMaxLevels;
+  /// expectations of products of interpolation polynomials,
+  /// precomputed in update_nonzero_basis_products() for efficiency
+  std::vector<UShort2DMultiSetRealMap> nonZerosMapArray;
 
   /// storage of expansionType1Coeffs state for subsequent restoration
   RealVector storedExpType1Coeffs;
@@ -170,10 +201,9 @@ inline NodalInterpPolyApproximation::
 NodalInterpPolyApproximation(short basis_type, size_t num_vars,
 			     bool use_derivs):
   InterpPolyApproximation(basis_type, num_vars, use_derivs),
-  //momentInterpType(INTERPOLATION_OF_PRODUCTS_GLOBAL_MEAN)
-  //momentInterpType(INTERPOLATION_OF_PRODUCTS_TENSOR_MEAN)
-  //momentInterpType(PRODUCT_OF_INTERPOLANTS_GLOBAL_MEAN)
-  momentInterpType(PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN)
+  //momentInterpType(INTERPOLATION_OF_PRODUCTS)
+  //momentInterpType(PRODUCT_OF_INTERPOLANTS_FULL)
+  momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)
 { }
 
 
@@ -229,6 +259,22 @@ approximation_coefficients(const RealVector& approx_coeffs)
   }
   else
     expansionType1Coeffs = approx_coeffs;
+}
+
+
+inline bool NodalInterpPolyApproximation::
+basis_product_1d(InterpolationPolynomial* poly_rep_1,
+		 InterpolationPolynomial* poly_rep_2,
+		 unsigned short key_1, unsigned short key_2,
+		 const RealArray& pts, const RealArray& wts, Real& prod)
+{
+  Real tol = 1.e-12; // consistent with OrthogonalPolynomial triple product tol
+  prod = 0.;
+  size_t i, num_pts = pts.size();
+  for (i=0; i<num_pts; ++i)
+    prod += wts[i] * poly_rep_1->type1_value(pts[i], key_1)
+                   * poly_rep_2->type1_value(pts[i], key_2);
+  return (std::abs(prod) > tol) ? true : false;
 }
 
 } // namespace Pecos
