@@ -427,12 +427,13 @@ same_basis(unsigned short level, size_t v1, size_t v2)
       // rule type insufficient in these cases, check collocation points
       const Real2DArray& colloc_pts_1d
 	= driverRep->collocation_points_array()[level];
-      return (colloc_pts_1d[v1] == colloc_pts_1d[v2]);
-      break;
+      return (colloc_pts_1d[v1] == colloc_pts_1d[v2]); break;
     }
     default:
-      return true; break;
+      return true;                                     break;
     }
+  else
+    return false;
 }
 
 
