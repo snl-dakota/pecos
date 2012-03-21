@@ -1303,18 +1303,41 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     // equivalence has not been proven.
     case PRODUCT_OF_INTERPOLANTS_FULL:
       update_nonzero_basis_products(sm_mi);
-      for (i=0; i<num_smolyak_indices; ++i)
-	if (sm_coeffs[i]) {   // one of each diagonal term
-	  covar += sm_coeffs[i] * sm_coeffs[i] *
+      for (i=0; i<num_smolyak_indices; ++i) {
+	int sm_coeff_i = sm_coeffs[i];
+	if (sm_coeff_i) {   // one of each diagonal term
+#ifdef DEBUG
+	  Real tp_covar
+	    = tensor_product_covariance(x, sm_mi[i], colloc_key[i],
+					colloc_index[i], nip_approx_2);
+	  covar += sm_coeff_i * sm_coeff_i * tp_covar;
+	  PCout << "Diagonal covar: sm_coeffs[" << i << "] = " << sm_coeff_i
+		<< " tp_covar = " << tp_covar << '\n';
+#else
+	  covar += sm_coeff_i * sm_coeff_i *
 	    tensor_product_covariance(x, sm_mi[i], colloc_key[i],
 				      colloc_index[i], nip_approx_2);
+#endif // DEBUG
 	  for (j=0; j<i; ++j)
-	    if (sm_coeffs[j]) // two of each off-diagonal term
-	      covar += 2. * sm_coeffs[i] * sm_coeffs[j] *
+	    if (sm_coeffs[j]) { // two of each off-diagonal term
+#ifdef DEBUG
+	      Real tp_covar =
 		tensor_product_covariance(x,
 		  sm_mi[i], colloc_key[i], colloc_index[i],
 		  sm_mi[j], colloc_key[j], colloc_index[j], nip_approx_2);
+	      covar += 2. * sm_coeff_i * sm_coeffs[j] * tp_covar;
+	      PCout << "Off-diagonal covar: sm_coeffs[" << i << "] = "
+		    << sm_coeff_i << " sm_coeffs[" << j << "] = "
+		    << sm_coeffs[j] << " tp_covar = " << tp_covar << '\n';
+#else
+	      covar += 2. * sm_coeff_i * sm_coeffs[j] *
+		tensor_product_covariance(x,
+		  sm_mi[i], colloc_key[i], colloc_index[i],
+		  sm_mi[j], colloc_key[j], colloc_index[j], nip_approx_2);
+#endif // DEBUG
+	    }
 	}
+      }
       break;
     }
     return covar;
@@ -1448,12 +1471,11 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
   bool empty_nz = nonZerosMapIndices.empty();
   SizetList::iterator it;
   if (empty_nz) {
-    const ShortArray& rules = driverRep->collocation_rules();
     size_t num_v = randomIndices.size(), num_nz = 0, v1, v2, v1_cntr, v2_cntr;
     unsigned short min_max_lev;
     nonZerosMapIndices.resize(num_v); nonZerosMapIndices[0] = num_nz++;
     it=randomIndices.begin(); ++it; SizetList::iterator it2; bool found;
-    for (v1_cntr=0; it!=randomIndices.end(); ++it, ++v1_cntr) {
+    for (v1_cntr=1; it!=randomIndices.end(); ++it, ++v1_cntr) {
       v1 = *it;
       for (it2=randomIndices.begin(), v2_cntr=0; it2!=it; ++it2, ++v2_cntr) {
 	v2 = *it2; min_max_lev = std::min(max_lev_index[v1], max_lev_index[v2]);
@@ -1488,12 +1510,12 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
 	poly_rep_i = (InterpolationPolynomial*)
 	  polynomialBasis[i][v].polynomial_rep();
 	num_pts_i = poly_rep_i->interpolation_size();
-	mk1.clear(); mk1.insert(num_pts_i);
 	j_start = (i<start) ? start : 1;
 	for (j=j_start; j<i; ++j) {
 	  poly_rep_j = (InterpolationPolynomial*)
 	    polynomialBasis[j][v].polynomial_rep();
 	  num_pts_j = poly_rep_j->interpolation_size();
+	  mk1.clear(); mk1.insert(num_pts_i);
 	  mk2.clear(); mk2.insert(num_pts_j);
 	  for (k=0; k<num_pts_i; ++k) {
 	    kit = mk1.insert(k);
@@ -1507,7 +1529,7 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
 #ifdef DEBUG
 		PCout << "basis product var " << v << " lev_1 = " << i
 		      << " lev_2 = " << j << " key_1 = " << k
-		      << " key_2 = " << l << "basis_prod_v = "
+		      << " key_2 = " << l << " basis_prod_v = "
 		      << basis_prod_v << std::endl;
 #endif // DEBUG
 	      }
@@ -1528,9 +1550,8 @@ basis_product(const UShortArray& lev_index_1, const UShortArray& key_1,
 	      const UShortArray& lev_index_2, const UShortArray& key_2,
 	      Real& prod)
 {
-  SizetList::iterator it;   size_t v, v_cntr = 0;
+  SizetList::iterator it; size_t v, v_cntr = 0;
   unsigned short l1v, l2v, k1v, k2v;
-  UShort2DMultiSet map_key; UShortMultiSet mk1, mk2;
   const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_array();
   prod = 1.;
   for (it=randomIndices.begin(); it!=randomIndices.end(); ++it, ++v_cntr) {
@@ -1558,10 +1579,10 @@ basis_product(const UShortArray& lev_index_1, const UShortArray& key_1,
       UShort2DMultiSetRealMap& non_zeros_map
 	= nonZerosMapArray[nonZerosMapIndices[v_cntr]];
       // lookup 1D terms
-      mk1.clear(); mk2.clear(); mk1.insert(k1v); mk2.insert(k2v);
+      UShortMultiSet mk1, mk2; mk1.insert(k1v); mk2.insert(k2v);
       mk1.insert(polynomialBasis[l1v][v].interpolation_size());
       mk2.insert(polynomialBasis[l2v][v].interpolation_size());
-      map_key.clear(); map_key.insert(mk1); map_key.insert(mk2);
+      UShort2DMultiSet map_key; map_key.insert(mk1); map_key.insert(mk2);
       UShort2DMultiSetRealMap::iterator it = non_zeros_map.find(map_key);
       if (it == non_zeros_map.end())
 	return false; // zeros are not stored
