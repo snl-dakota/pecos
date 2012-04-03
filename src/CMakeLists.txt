@@ -35,7 +35,7 @@ if(HAVE_FFT)
 endif()
 
 # Unconditional dependencies.
-list(APPEND Pecos_libs ${Teuchos_LIBRARIES}
+list(APPEND Pecos_libs ${Teuchos_LIBRARIES} ${TEUCHOS_LIBRARY}
   ${LAPACK_LIBS} ${BLAS_LIBS} ${FLIBS} ${FCLIBS}
 )
 

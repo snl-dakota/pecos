@@ -100,12 +100,23 @@ if(HAVE_SPARSE_GRID)
 endif(HAVE_SPARSE_GRID)
 
 
+include(AddExtraTeuchosPaths)
+
 # when building inside Trilinos, the path to Teuchos will already be set
 if (NOT BUILD_IN_TRILINOS)
 # first probe for system-installed Trilinos
 # this will respect Trilinos_DIR if already set
+if(NOT Extra_Teuchos_INCLUDE_DIR OR NOT Extra_Teuchos_LIBRARY_DIR)
 find_package(Trilinos QUIET)
+endif()
+
 if ( NOT Trilinos_DIR )
+
+  # Check a special case in which PATHs to Teuchos headers/lib
+  # are specified, independent of a single/common "prefix"
+  if(Extra_Teuchos_INCLUDE_DIR AND Extra_Teuchos_LIBRARY_DIR)
+    AddExtraTeuchosPaths()
+  else()
 
   # if no one has configured a local src Teuchos, do so
   # this will respect Teuchos_DIR if already set
@@ -119,10 +130,11 @@ if ( NOT Trilinos_DIR )
   endif()
   set(Teuchos_LIBRARIES teuchos)
   find_package( Teuchos NO_MODULE REQUIRED )
+  endif() # Extra_Teuchos_INCLUDE_DIR AND Extra_Teuchos_LIBRARY_DIR
 else()
   message( "Using system trilinos in ${Trilinos_DIR}" )
-endif()
-endif()
+endif() # NOT Trilinos_DIR
+endif() # NOT BUILD_IN_TRILINOS
 link_directories(${Teuchos_LIBRARY_DIRS})
 
 # Set the export name for install targets; parent packages likely want
