@@ -20,18 +20,13 @@
 namespace Pecos {
 
 
-/// Derived approximation class for piecewise linear and cubic hierarchical 
-/// interpolation polynomials (local approximation interpolating function 
-/// values and potentially gradients at collocation points).
+/// Derived approximation class for hierarchical interpolation polynomials
+/// (interpolating values and potentially gradients at collocation points).
 
-/** The HierarchInterpPolyApproximation class provides a local piecewise 
-    polynomial approximation based on the hierarchical approach described in 
-    X. Ma and N. Zabaras "An adaptive hierarchical sparse grid collocation 
-    algorithm for the solution of stochastic differential equations", Journal 
-    of Computational Physics, 228 (2009), 3084-3113.  Both piecewise linear 
-    basis functions using function values at the collocation points and cubic 
-    Hermite basis functions using both values and derivatives are available.  
-    It is used primarily for stochastic collocation approaches to uncertainty 
+/** The HierarchInterpPolyApproximation class provides a polynomial
+    approximation based on hierarchical interpolation.  Both local and
+    global hierarchical basis functions are available.  It is used
+    primarily for stochastic collocation approaches to uncertainty
     quantification. */
 
 class HierarchInterpPolyApproximation: public InterpPolyApproximation

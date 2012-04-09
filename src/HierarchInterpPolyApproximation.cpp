@@ -202,8 +202,6 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
 	hier_grad[v] = data_grad[v] - prev_grad[v];
     }
   }
-
-  numCollocPts = new_colloc_pts;
 }
 
 
@@ -230,8 +228,6 @@ void HierarchInterpPolyApproximation::decrement_expansion_coefficients()
     savedExpT1CoeffGrads[trial_set] = expansionType1CoeffGrads[lev].back();
     expansionType1CoeffGrads[lev].pop_back();
   }
-
-  numCollocPts = surrData.size();
 }
 
 
@@ -272,8 +268,6 @@ void HierarchInterpPolyApproximation::finalize_expansion_coefficients()
   }
   savedExpT1Coeffs.clear(); savedExpT2Coeffs.clear();
   savedExpT1CoeffGrads.clear();
-
-  numCollocPts = surrData.size();
 }
 
 

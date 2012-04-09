@@ -219,7 +219,6 @@ void NodalInterpPolyApproximation::restore_expansion_coefficients()
 		      expansionType1CoeffGrads);
   }
 
-  numCollocPts = new_colloc_pts;
   computedMeanData = computedVarianceData = 0;
 }
 

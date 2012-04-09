@@ -177,8 +177,7 @@ void InterpPolyApproximation::compute_coefficients()
   //surrData.pop(1);
 
   numCollocPts = surrData.size();
-  // anchor point, if present, is the first expansionSample.
-  if (surrData.anchor())
+  if (surrData.anchor()) // anchor point, if present, is first expansionSample
     ++numCollocPts;
   if (!numCollocPts) {
     PCerr << "Error: nonzero number of sample points required in "
@@ -268,6 +267,7 @@ void InterpPolyApproximation::increment_coefficients()
   }
 
   increment_expansion_coefficients();
+  numCollocPts = surrData.size(); if (surrData.anchor()) ++numCollocPts;
 }
 
 
@@ -285,10 +285,7 @@ void InterpPolyApproximation::decrement_coefficients()
   }
 
   decrement_expansion_coefficients();
-
-  numCollocPts = surrData.size(); // data already decremented
-  if (surrData.anchor())
-    ++numCollocPts;
+  numCollocPts = surrData.size(); if (surrData.anchor()) ++numCollocPts;
 }
 
 
@@ -310,6 +307,7 @@ void InterpPolyApproximation::restore_coefficients()
   }
 
   restore_expansion_coefficients();
+  numCollocPts = surrData.size(); if (surrData.anchor()) ++numCollocPts;
 }
 
 
@@ -325,6 +323,7 @@ void InterpPolyApproximation::finalize_coefficients()
   }
 
   finalize_expansion_coefficients();
+  numCollocPts = surrData.size(); if (surrData.anchor()) ++numCollocPts;
 }
 
 
