@@ -1709,7 +1709,7 @@ bool OrthogPolyApproximation::
 L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 	      bool reuse_solver_data)
 {
-  bool L1_solver_err = false;
+  bool L1_solver_err = true;//false;
 
   // TO DO: interface with John's code
 
