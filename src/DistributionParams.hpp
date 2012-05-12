@@ -276,6 +276,28 @@ public:
   //- Heading: member functions
   //
 
+  /// return total number of continuous aleatory uncertain variables
+  size_t cauv()  const;
+  /// return total number of continuous epistemic uncertain variables
+  size_t ceuv()  const;
+  /// return total number of continuous uncertain variables
+  size_t cuv()   const;
+
+  /// return total number of discrete integer aleatory uncertain variables
+  size_t diauv() const;
+  /// return total number of discrete real aleatory uncertain variables
+  size_t drauv() const;
+  /// return total number of discrete integer epistemic uncertain variables
+  size_t dieuv() const;
+  /// return total number of discrete real epistemic uncertain variables
+  size_t dreuv() const;
+  /// return total number of discrete integer uncertain variables
+  size_t diuv()  const;
+  /// return total number of discrete real uncertain variables
+  size_t druv()  const;
+  /// return total number of discrete uncertain variables
+  size_t duv()   const;
+
   /// deep copy (as opposed to operator= shallow copy)
   void copy(const DistributionParams& dp);
   /// data update (no changes to representation (unless null))
@@ -746,6 +768,57 @@ operator=(const DistributionParams& dp)
     dpRep->referenceCount++;
   return *this;
 }
+
+
+inline size_t DistributionParams::cauv() const
+{
+  return dpRep->normalMeans.length() + dpRep->lognormalMeans.length() +
+    dpRep->uniformLowerBnds.length() + dpRep->loguniformLowerBnds.length() +
+    dpRep->triangularModes.length() + dpRep->exponentialBetas.length() + 
+    dpRep->betaAlphas.length() + dpRep->gammaAlphas.length() +
+    dpRep->gumbelAlphas.length() + dpRep->frechetAlphas.length() +
+    dpRep->weibullAlphas.length() + dpRep->histogramBinPairs.size();
+}
+
+
+inline size_t DistributionParams::ceuv() const
+{ return dpRep->intervalBasicProbs.size(); }
+
+
+inline size_t DistributionParams::cuv()  const
+{ return cauv() + ceuv(); }
+
+
+inline size_t DistributionParams::diauv() const
+{
+  return dpRep->poissonLambdas.length() + dpRep->binomialProbPerTrial.length() +
+    dpRep->negBinomialProbPerTrial.length() +
+    dpRep->geometricProbPerTrial.length() + dpRep->hyperGeomNumDrawn.length();
+}
+
+
+inline size_t DistributionParams::drauv() const
+{ return dpRep->histogramPointPairs.size(); }
+
+
+inline size_t DistributionParams::dieuv() const
+{ return 0; }
+
+
+inline size_t DistributionParams::dreuv() const
+{ return 0; }
+
+
+inline size_t DistributionParams::diuv()  const
+{ return diauv() + dieuv(); }
+
+
+inline size_t DistributionParams::druv()  const
+{ return drauv() + dreuv(); }
+
+
+inline size_t DistributionParams::duv()  const
+{ return diuv() + druv(); }
 
 
 inline void DistributionParams::copy(const DistributionParams& dp)
