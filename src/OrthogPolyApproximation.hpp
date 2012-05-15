@@ -17,7 +17,6 @@
 #include "PolynomialApproximation.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 
-
 namespace Pecos {
 
 // special values for quadratureExpansion and sparseGridExpansion

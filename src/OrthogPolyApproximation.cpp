@@ -19,6 +19,8 @@
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
+#include "CompressedSensing.hpp"
+
 //#define DEBUG
 //#define DECAY_DEBUG
 
@@ -69,14 +71,17 @@ int OrthogPolyApproximation::min_coefficients() const
       return 1; // quadrature: (int)pow((Real)MIN_GAUSS_PTS, numVars);
       break;
     case REGRESSION:
+      // At least numVars+1 data instances should be provided to enable
+      // construction of a complete linear approximation.
+      return numVars + 1;
       // numExpansionTerms is either set from the NonDPolynomialChaos ctor if
       // expansion_terms is specified or computed by the allocate_arrays() call
       // in compute_coefficients() if expansion_order is specified.  The latter
       // case is too late for use of this fn by ApproximationInterface::
       // minimum_samples() in DataFitSurrModel::build_global(), so
       // numExpansionTerms must be calculated for this case.
-      return (numExpansionTerms) ?
-	numExpansionTerms : total_order_terms(approxOrder);
+      //return (numExpansionTerms) ?
+      //	numExpansionTerms : total_order_terms(approxOrder);
       break;
     case -1: default: // coefficient import 
       return 0;
@@ -1709,9 +1714,68 @@ bool OrthogPolyApproximation::
 L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 	      bool reuse_solver_data)
 {
-  bool L1_solver_err = true;//false;
+  bool L1_solver_err = false;
 
-  // TO DO: interface with John's code
+  size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.size();
+  double* A_matrix; // 1D matrix of polynomial terms, column-major F77 ordering
+  double* b_vectors; // input: (multiple) RHS of response data
+  int num_rows_A =  0, // number of rows in matrix A
+      num_cols_A = numExpansionTerms, // number of columns in matrix A
+      num_coeff_rhs, num_rhs;
+  bool add_val, add_grad; SizetShortMap::const_iterator fit;
+  const SizetShortMap& failed_resp_data = surrData.failed_response_data();
+
+  // matrix/vector sizing
+  num_rows_A = num_data_pts_fn;
+  num_coeff_rhs = 1;
+  num_rhs = num_coeff_rhs;
+  PCout << "L1-minimization for " << numExpansionTerms
+	<< " chaos coefficients using " << num_rows_A << " equations.\n";
+
+  A_matrix  = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
+  b_vectors = new double [num_rows_A*num_rhs];    // "b" in A*x = b
+
+  // The "A" matrix is a contiguous block of memory packed in column-major
+  // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
+  // example, the 6 elements of A(2,3) are stored in the order A(1,1),
+  // A(2,1), A(1,2), A(2,2), A(1,3), A(2,3).
+  for (i=0; i<numExpansionTerms; ++i) {
+    const UShortArray& mi = multiIndex[i];
+    for (j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; ++j) {
+      add_val = true; add_grad = false;
+      fail_booleans(fit, j, add_val, add_grad);
+      A_matrix[a_cntr] = multivariate_polynomial(surrData.continuous_variables(j), mi); ++a_cntr;
+    }
+  }
+
+  // response data (values/gradients) define the multiple RHS which are
+  // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
+  // (cols), arranged in column-major order.
+  const SDRArray& sdr_array = surrData.response_data();
+  for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
+    add_val = true; add_grad = false;
+    fail_booleans(fit, i, add_val, add_grad);
+    b_vectors[b_cntr] = sdr_array[i].response_function(); ++b_cntr;
+  }
+
+  RealMatrix A( Teuchos::View, A_matrix, num_rows_A, num_rows_A, 
+		num_cols_A );
+  RealMatrix B( Teuchos::View, b_vectors, num_rows_A, num_rows_A, 
+		num_rhs );
+
+  CompressedSensing CS;
+  RealMatrix X;
+  //BasisPursuit( A, B, X );
+  CS.OrthogonalMatchingPursuit( A, B, X );
+
+  //CS.write_matrix_to_file(A,"A.csv");
+  //CS.write_matrix_to_file(B,"B.csv");
+  //CS.write_matrix_to_file(X,"X.csv");
+
+  for ( int j = 0; j < numExpansionTerms; j++ )
+    { 
+      expansionCoeffs[j] = X(j,0);
+    }
 
   return L1_solver_err;
 }

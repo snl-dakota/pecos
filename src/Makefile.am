@@ -30,6 +30,7 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  InterpPolyApproximation.cpp			\
 			  NodalInterpPolyApproximation.cpp		\
 			  OrthogPolyApproximation.cpp			\
+			  CompressedSensing.cpp				\
 			  BasisPolynomial.cpp				\
 			  InterpolationPolynomial.cpp			\
 			  LagrangeInterpPolynomial.cpp			\
