@@ -251,7 +251,7 @@ namespace Pecos {
 	Real x_column_k_max = x_column.normInf();
 	for ( int j = 0; j < n; j++ )
 	  {
-	    U(j,k) = 0.95 * fabs( X(j,k) ) + 0.10 * x_column_k_max;
+	    U(j,k) = 0.95 * std::fabs( X(j,k) ) + 0.10 * x_column_k_max;
 	    fu1(j,k) = X(j,k) - U(j,k);
 	    fu2(j,k) = -X(j,k) - U(j,k);
 	    lamu1(j,k) = -1.0 / fu1(j,k);
@@ -500,7 +500,7 @@ namespace Pecos {
 		      }
 
 		    slackness_p_norm[k] =		\
-		      sqrt( slackness_p_norm[k] );
+		      std::sqrt( slackness_p_norm[k] );
 		    if ( slackness_p_norm[k] >	\
 			 ( 1.0 - alpha * step_size[k] ) * slackness_norm[k] )
 		      {
@@ -561,13 +561,13 @@ namespace Pecos {
     //v_raw = v.values();
     //return blas.IAMAX( v.length(), v_raw, 1 );
     int argMax = 0;
-    double max = fabs(v[0]);
+    double max = std::fabs(v[0]);
     for ( int i = 0; i < v.length(); i++ )
       {
-	//if ( fabs(v[i]) - max > std::numeric_limits<float>::epsilon() )
-	if ( fabs(v[i]) > max )
+	//if ( std::fabs(v[i]) - max > std::numeric_limits<float>::epsilon() )
+	if ( std::fabs(v[i]) > max )
 	  {
-	    max = fabs(v[i]);
+	    max = std::fabs(v[i]);
 	    argMax = i;
 	  }
       }
