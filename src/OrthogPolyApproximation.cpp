@@ -73,9 +73,10 @@ int OrthogPolyApproximation::min_coefficients() const
     case REGRESSION:
       // At least numVars+1 data instances should be provided to enable
       // construction of a complete linear approximation.
-      (numExpansionTerms) ?
-	numExpansionTerms : total_order_terms(approxOrder);
-      return std::min((int)numVars + 1, numExpansionTerms) ;
+      //return numVars+1;
+      // Now that L1-regression has been implemented. There is no longer a need 
+      // to enforce a lower bound on the number of data instances.
+      return 1;
       // numExpansionTerms is either set from the NonDPolynomialChaos ctor if
       // expansion_terms is specified or computed by the allocate_arrays() call
       // in compute_coefficients() if expansion_order is specified.  The latter
