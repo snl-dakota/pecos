@@ -639,6 +639,56 @@ void HierarchSparseGridDriver::finalize_sets()
 }
 
 
+void HierarchSparseGridDriver::
+partition_keys(UShort2DArray& reference_sets,
+	       UShort2DArray& increment_sets) const
+{
+  size_t lev, num_lev = smolyakMultiIndex.size(),
+    trial_lev = index_norm(trialSet), num_sets;
+  reference_sets.resize(num_lev); increment_sets.resize(num_lev);
+  for (lev=0; lev<num_lev; ++lev) {
+    const UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
+    UShortArray& ref_sets_l = reference_sets[lev]; ref_sets_l.resize(2);
+    UShortArray& inc_sets_l = increment_sets[lev]; inc_sets_l.resize(2);
+    num_sets = sm_mi_l.size(); ref_sets_l[0] = 0;
+    if (lev == trial_lev)
+      { ref_sets_l[1] = inc_sets_l[0] = num_sets-1; inc_sets_l[1] = num_sets; }
+    else
+      ref_sets_l[1] = inc_sets_l[0] = inc_sets_l[1] = num_sets;
+  }
+}
+
+
+void HierarchSparseGridDriver::
+partition_keys(UShort3DArray& reference_pts, UShort3DArray& increment_pts) const
+{
+  size_t lev, num_lev = collocKey.size(), set, num_sets, num_tp_pts;
+  // trial_lev = index_norm(trialSet);
+  reference_pts.resize(num_lev); increment_pts.resize(num_lev);
+  for (lev=0; lev<num_lev; ++lev) {
+    num_sets = collocKey[lev].size();
+    reference_pts[lev].resize(num_sets);
+    increment_pts[lev].resize(num_sets);
+    for (set=0; set<num_sets; ++set) {
+      const UShortArray& sm_mi_ls = smolyakMultiIndex[lev][set];
+      UShortArray& ref_pts_ls = reference_pts[lev][set];
+      UShortArray& inc_pts_ls = increment_pts[lev][set];
+      ref_pts_ls.resize(2); inc_pts_ls.resize(2);
+      num_tp_pts = collocKey[lev][set].size();
+      ref_pts_ls[0] = 0;
+      /*
+      if (set == trial_set) {
+	ref_pts_ls[1] = inc_pts_ls[0] = num_tp_pts-1;
+	inc_pts_ls[1] = num_tp_pts;
+      }
+      else
+      */
+	ref_pts_ls[1] = inc_pts_ls[0] = inc_pts_ls[1] = num_tp_pts;
+    }
+  }
+}
+
+
 void HierarchSparseGridDriver::print_final_sets(bool converged_within_tol) const
 {
   // this call should precede finalize_sets()

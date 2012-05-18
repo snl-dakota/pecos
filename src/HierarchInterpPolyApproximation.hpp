@@ -94,7 +94,11 @@ protected:
 
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x,
-		      PolynomialApproximation* poly_approx_2);
+		  PolynomialApproximation* poly_approx_2);
+
+  Real delta_covariance(PolynomialApproximation* poly_approx_2);
+  Real delta_covariance(const RealVector& x,
+			PolynomialApproximation* poly_approx_2);
 
   void compute_total_sobol_indices();
   void compute_partial_variance(int set_value);
@@ -130,7 +134,12 @@ private:
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   Real expectation(const RealVector2DArray& t1_coeffs,
-		   const RealMatrix2DArray& t2_coeffs);
+		   const RealMatrix2DArray& t2_coeffs,
+		   const UShort2DArray& set_partition = UShort2DArray());
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  Real expectation(const RealVector2DArray& t1_coeffs,
+		   const RealMatrix2DArray& t2_coeffs,
+		   const UShort3DArray& pt_partition);
 
   /// move the expansion coefficients for restore_set from
   /// savedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to

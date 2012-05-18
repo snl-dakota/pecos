@@ -259,12 +259,21 @@ public:
   virtual const RealVector& variance_gradient(const RealVector& x,
 					      const SizetArray& dvv) = 0;
 
-  /// return the variance of the expansion, treating all variables as random
+  /// return the covariance between two response expansions, treating
+  /// all variables as random
   virtual Real covariance(PolynomialApproximation* poly_approx_2) = 0;
-  /// return the variance of the expansion for a given parameter vector,
-  /// treating a subset of the variables as random
+  /// return the covariance between two response expansions for a given
+  /// parameter vector, treating a subset of the variables as random
   virtual Real covariance(const RealVector& x,
 			  PolynomialApproximation* poly_approx_2) = 0;
+
+  /// return the change in covariance between two response expansions,
+  /// treating all variables as random
+  virtual Real delta_covariance(PolynomialApproximation* poly_approx_2);
+  /// return the change in covariance between two response expansions for a
+  /// given parameter vector, treating a subset of the variables as random
+  virtual Real delta_covariance(const RealVector& x,
+				PolynomialApproximation* poly_approx_2);
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration

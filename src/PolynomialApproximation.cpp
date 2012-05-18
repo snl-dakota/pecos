@@ -651,6 +651,26 @@ standardize_moments(const RealVector& central_moments, RealVector& std_moments)
 }
 
 
+Real PolynomialApproximation::
+delta_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 const RealVector& PolynomialApproximation::dimension_decay_rates()
 {
   PCerr << "Error: dimension_decay_rates() not available for this polynomial "

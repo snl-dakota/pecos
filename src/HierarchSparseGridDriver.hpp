@@ -81,6 +81,15 @@ public:
   /// return collocIndices
   const Sizet3DArray& collocation_indices() const;
 
+  /// discriminate portions of the level-set hierarchy that are
+  /// reference sets from those in the current increment
+  void partition_keys(UShort2DArray& reference_sets,
+		      UShort2DArray& increment_sets) const;
+  /// discriminate portions of the level-set-point hierarchy that are
+  /// in the reference grid from those in the current increment
+  void partition_keys(UShort3DArray& reference_pts,
+		      UShort3DArray& increment_pts) const;
+
   /// return type1WeightSets for use in hierarchical integration functions
   const RealVector2DArray& type1_weight_set_arrays() const;
   /// return type2WeightSets for use in hierarchical integration functions
