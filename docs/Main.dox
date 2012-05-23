@@ -140,11 +140,20 @@ include:
 <li> \ref Pecos::CubatureDriver "CubatureDriver": 
 Stroud cubature rules and extensions
 <li> \ref Pecos::SparseGridDriver "SparseGridDriver": 
-Smolyak sparse grids; isotropic, anisotropic, and generalized
+Smolyak sparse grids; isotropic, anisotropic, and generalized.
+Sub-classes include:
+     <ul>
+     <li> \ref Pecos::CombinedSparseGridDriver "CombinedSparseGridDriver"
+          for the "combinatorial" sparse grid formulation (combines
+          repeated tensor grids), and 
+     <li> \ref Pecos::HierarchSparseGridDriver "HierarchSparseGridDriver" 
+          for the hierarchical grid formulation (employs differences between
+	  consecutive quadrature levels).
+     </ul>
 <li> \ref Pecos::TensorProductDriver "TensorProductDriver":
 tensor-product quadrature; isotropic and anisotropic
-<li> \ref Pecos::LocalRefinableDriver "LocalRefinableDriver":
-structured grids for local h-refinement
+<!-- <li> \ref Pecos::LocalRefinableDriver "LocalRefinableDriver":
+structured grids for local h-refinement -->
 </ul>
 
 \ref Pecos::LHSDriver "LHSDriver" is currently separate from this hierarchy.
@@ -173,9 +182,15 @@ eigenfunctions from singular value decomposition of covariance matrices.
      <li> \ref Pecos::InterpPolyApproximation "InterpPolyApproximation":
      	  a multivariate interpolation basis defined from one-dimensional 
           interpolation polynomials (local or global, value-based or
-	  gradient-enhanced, nodal or hierarchical; see 
+	  gradient-enhanced; see 
           \ref Pecos::InterpolationPolynomial "InterpolationPolynomial"
-	  below) and a multi-index.
+	  below) and a multi-index.  Sub-classes include:
+          <ul>
+          <li> \ref Pecos::HierarchInterpPolyApproximation "HierarchInterpPolyApproximation"
+               for multivariate interpolation using hierarchical surpluses, and 
+          <li> \ref Pecos::NodalInterpPolyApproximation "NodalInterpPolyApproximation" 
+               for multivariate interpolation using nodal values.
+          </ul>
      </ul>
 </ul>
 
@@ -210,9 +225,9 @@ one-dimensional interpolation polynomials.
     <li> \ref Pecos::PiecewiseInterpPolynomial "PiecewiseInterpPolynomial":
     	 local value-based (linear) and gradient-enhanced (cubic)
 	 spline polynomials using a nodal basis formulation
-    <li> \ref Pecos::HierarchPWInterpPolynomial "HierarchPWInterpPolynomial":
+<!--<li> \ref Pecos::HierarchPWInterpPolynomial "HierarchPWInterpPolynomial":
     	 local value-based (linear) and gradient-enhanced (cubic)
-	 spline polynomials using a hierarchical basis formulation
+	 spline polynomials using a hierarchical basis formulation -->
     </ul>
 </ul>
 
