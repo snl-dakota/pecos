@@ -141,6 +141,10 @@ private:
 		   const RealMatrix2DArray& t2_coeffs,
 		   const UShort3DArray& pt_partition);
 
+  /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  /// for a single index_set
+  void increment_expansion_coefficients(const UShortArray& index_set);
+
   /// move the expansion coefficients for restore_set from
   /// savedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
   /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}

@@ -83,8 +83,14 @@ public:
 
   /// update derived reference data, if required
   virtual void update_reference();
+
+  /// return the trial index set from push_trial_set()
+  virtual const UShortArray& trial_set() const = 0;
   /// return the number of unique collocation points in the trial index set
   virtual int unique_trial_points() const = 0;
+
+  /// computes tensor grids for the index sets due to a isotropic/anisotropic
+  virtual void compute_grid_increment(RealMatrix& var_sets) = 0;
 
   /// print the final accepted and trial sets prior to set finalization
   virtual void print_final_sets(bool converged_within_tol) const;
@@ -161,11 +167,9 @@ public:
   const std::set<UShortArray>& old_multi_index() const;
   /// return computedTrialSets
   const std::set<UShortArray>& computed_trial_sets() const;
-  /// return the trial index set from push_trial_set()
-  const UShortArray& trial_set() const;
 
   /// compute 1-norm |i| (sum of indices) for the given index_set
-  unsigned int index_norm(const UShortArray& index_set) const;
+  size_t index_norm(const UShortArray& index_set) const;
 
 protected:
 
@@ -215,8 +219,6 @@ protected:
   /// subset of active set that have been evaluated as trial sets
   /// (incremented in compute_trial_grid() and decremented in update_sets())
   std::set<UShortArray> computedTrialSets; // or UShort2DArray
-  /// trial evaluation set from push_trial_set(); may be evaluated or restored
-  UShortArray trialSet; // or UShort2DArray
 
 private:
 
@@ -342,10 +344,6 @@ computed_trial_sets() const
 { return computedTrialSets; }
 
 
-inline const UShortArray& SparseGridDriver::trial_set() const
-{ return trialSet; }
-
-
 inline void SparseGridDriver::
 level_to_order(size_t i, unsigned short level, unsigned short& order)
 {
@@ -382,8 +380,7 @@ level_to_order(const UShortArray& levels, UShortArray& orders)
 }
 
 
-inline unsigned int SparseGridDriver::
-index_norm(const UShortArray& index_set) const
+inline size_t SparseGridDriver::index_norm(const UShortArray& index_set) const
 {
   unsigned int i, norm = 0, len = index_set.size();
   for (i=0; i<len; ++i)

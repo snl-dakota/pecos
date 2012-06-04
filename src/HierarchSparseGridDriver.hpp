@@ -60,7 +60,10 @@ public:
   void merge_set();
   void finalize_sets();
 
+  const UShortArray& trial_set() const;
   int unique_trial_points() const;
+
+  void compute_grid_increment(RealMatrix& var_sets);
 
   void print_final_sets(bool converged_within_tol) const;
   void print_smolyak_multi_index() const;
@@ -74,6 +77,9 @@ public:
   //- Heading: Member functions
   //
 
+  /// return incrementSets
+  const UShortArray& increment_sets() const;
+
   /// return smolyakMultiIndex
   const UShort3DArray& smolyak_multi_index() const;
   /// return collocKey
@@ -83,12 +89,12 @@ public:
 
   /// discriminate portions of the level-set hierarchy that are
   /// reference sets from those in the current increment
-  void partition_keys(UShort2DArray& reference_sets,
-		      UShort2DArray& increment_sets) const;
+  void partition_keys(UShort2DArray& reference_set_range,
+		      UShort2DArray& increment_set_range) const;
   /// discriminate portions of the level-set-point hierarchy that are
   /// in the reference grid from those in the current increment
-  void partition_keys(UShort3DArray& reference_pts,
-		      UShort3DArray& increment_pts) const;
+  void partition_keys(UShort3DArray& reference_pt_range,
+		      UShort3DArray& increment_pt_range) const;
 
   /// return type1WeightSets for use in hierarchical integration functions
   const RealVector2DArray& type1_weight_set_arrays() const;
@@ -101,25 +107,29 @@ private:
   //- Heading: Convenience functions
   //
 
-  void assign_smolyak_multi_index();
+  void update_smolyak_multi_index(bool clear_sm_mi = false);
   void assign_collocation_key();
   void update_collocation_key();
   void assign_collocation_indices();
   void update_collocation_indices();
 
-  /// kernel routine used for trialSet and full sparse grid computations
+  /// kernel routine used for trial set and full sparse grid computations
   void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
 			      RealMatrix& t2_wts, const UShortArray& sm_index,
 			      const UShort2DArray& colloc_key);
-  /// compute points and weights for trialSet
+  /// compute points and weights for a trial set
   void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
 			      RealMatrix& t2_wts);
   /// compute points and weights for all levels of the (initial) sparse grid
   void compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
 			      RealMatrix2DArray& t2_wts);
 
+  /// convert a Smolyak index set into hierarchical quadrature increments
   void level_to_delta_order(const UShortArray& levels,
 			    UShort2DArray& delta_quad);
+  /// convert a Smolyak index set into the sizes of hierarchical
+  /// quadrature increments
+  void level_to_delta_size(const UShortArray& levels, UShortArray& delta_size);
 
   //
   //- Heading: Data
@@ -136,6 +146,14 @@ private:
       expressions.  The indices correspond to levels, one within each
       anisotropic tensor-product integration of a Smolyak recursion. */
   UShort3DArray smolyakMultiIndex;
+
+  /// level of trial evaluation set from push_trial_set(); trial set
+  /// corresponds to smolyakMultiIndex[trialLevel].back()
+  unsigned short trialLevel;
+  /// identifies the trailing index set increments within smolyakMultiIndex
+  /// due to an isotropic/anistropic grid refinement
+  UShortArray incrementSets;
+
   /// levels-by-index sets-by-numDeltaPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
   UShort4DArray collocKey;
@@ -177,11 +195,16 @@ inline HierarchSparseGridDriver::~HierarchSparseGridDriver()
 { }
 
 
+inline const UShortArray& HierarchSparseGridDriver::trial_set() const
+{ return smolyakMultiIndex[trialLevel].back(); }
+
+
 inline int HierarchSparseGridDriver::unique_trial_points() const
-{
-  size_t lev = index_norm(trialSet);
-  return collocKey[lev].back().size();
-}
+{ return collocKey[trialLevel].back().size(); }
+
+
+inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
+{ return incrementSets; }
 
 
 inline const UShort3DArray& HierarchSparseGridDriver::

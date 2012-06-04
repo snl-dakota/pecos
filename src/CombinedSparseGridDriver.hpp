@@ -83,8 +83,13 @@ public:
   /// update smolyakCoeffsRef and type{1,2}WeightSetsRef for use within the
   /// generalized sparse grid procedure
   void update_reference();
+
+  /// return trialSet
+  const UShortArray& trial_set() const;
   /// return num_unique2
   int unique_trial_points() const;
+
+  void compute_grid_increment(RealMatrix& var_sets);
 
   void print_final_sets(bool converged_within_tol) const;
   void print_smolyak_multi_index() const;
@@ -223,6 +228,9 @@ private:
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
+  /// trial evaluation set from push_trial_set()
+  UShortArray trialSet;
+
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
   RealVector type1WeightSets;
@@ -316,6 +324,10 @@ inline const Sizet2DArray& CombinedSparseGridDriver::collocation_indices() const
 
 inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
 { return uniqueIndexMapping; }
+
+
+inline const UShortArray& CombinedSparseGridDriver::trial_set() const
+{ return trialSet; }
 
 
 inline int CombinedSparseGridDriver::unique_trial_points() const

@@ -406,6 +406,40 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 }
 
 
+void CombinedSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
+{
+  // compute trial variable/weight sets and update collocKey
+  UShortArray quad_order(numVars);
+  level_to_order(trialSet, quad_order);
+  UShort2DArray new_key;
+  collocKey.push_back(new_key); // empty array updated in place
+  compute_tensor_grid(quad_order, trialSet, a2Points, a2Type1Weights,
+		      a2Type2Weights, collocKey.back());
+
+  // track trial sets that have been evaluated (do here since
+  // push_trial_set() used for both new trials and restorations)
+  computedTrialSets.insert(trialSet);
+
+  // update collocIndices, uniqueIndexMapping, and var_sets,
+  // but don't recompute a2 data
+  increment_unique(false, true, var_sets);
+
+#ifdef DEBUG
+  PCout << "compute_trial_grid() increment:\nunique variable sets:\n"
+	<< var_sets;
+#endif // DEBUG
+}
+
+
+void CombinedSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
+{
+  // TO DO: employ increment_unique for each set in incrementSets
+
+  // build from scratch for now
+  compute_grid(var_sets);
+}
+
+
 void CombinedSparseGridDriver::initialize_sets()
 {
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
@@ -461,31 +495,6 @@ void CombinedSparseGridDriver::restore_set()
   // update pt/wt sets
   RealMatrix dummy_set;
   increment_unique(true, false, dummy_set);
-}
-
-
-void CombinedSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
-{
-  // compute trial variable/weight sets and update collocKey
-  UShortArray quad_order(numVars);
-  level_to_order(trialSet, quad_order);
-  UShort2DArray new_key;
-  collocKey.push_back(new_key); // empty array updated in place
-  compute_tensor_grid(quad_order, trialSet, a2Points, a2Type1Weights,
-		      a2Type2Weights, collocKey.back());
-
-  // track trial sets that have been evaluated (do here since
-  // push_trial_set() used for both new trials and restorations)
-  computedTrialSets.insert(trialSet);
-
-  // update collocIndices, uniqueIndexMapping, and var_sets,
-  // but don't recompute a2 data
-  increment_unique(false, true, var_sets);
-
-#ifdef DEBUG
-  PCout << "compute_trial_grid() increment:\nunique variable sets:\n"
-	<< var_sets;
-#endif // DEBUG
 }
 
 

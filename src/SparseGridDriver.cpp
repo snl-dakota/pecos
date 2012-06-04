@@ -214,17 +214,18 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   restore_set();  // calls increment_unique() --> INC2
   merge_set();    // reset a1 --> INC3
 
-  // use trialSet rather than incoming set_star due to iterator invalidation
+  // use trial set rather than incoming set_star due to iterator invalidation
+  const UShortArray& tr_set = trial_set();
 
   // update set O by adding set_star to oldMultiIndex:
-  oldMultiIndex.insert(trialSet);
+  oldMultiIndex.insert(tr_set);
   // remove set_star from set A by erasing from activeMultiIndex:
-  activeMultiIndex.erase(trialSet); // invalidates cit_star -> set_star
+  activeMultiIndex.erase(tr_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  computedTrialSets.erase(trialSet);
+  computedTrialSets.erase(tr_set);
 
   // update set A (activeMultiIndex) based on neighbors of set_star:
-  add_active_neighbors(trialSet);
+  add_active_neighbors(tr_set);
 
   // Note: pruning irrelevant sets that have Coeff = 0 would be tricky,
   //       since a 0 close to the frontier can become nonzero

@@ -13,7 +13,8 @@
 
 #include "InterpPolyApproximation.hpp"
 #include "TensorProductDriver.hpp"
-#include "SparseGridDriver.hpp"
+#include "CombinedSparseGridDriver.hpp"
+#include "HierarchSparseGridDriver.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
@@ -242,29 +243,54 @@ void InterpPolyApproximation::compute_coefficients()
 
 void InterpPolyApproximation::increment_coefficients()
 {
-  bool err_flag = false;
+  unsigned short max_set_index = 0;
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: {
     // As for allocate_arrays(), increments are performed in coarser steps
     // than may be strictly necessary: all increments are filled in for all
     // vars for a step in level (ignoring anisotropy or generalized indices).
-    SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    const UShortArray& trial_set = ssg_driver->trial_set();
-    unsigned short max_trial_index = 0;
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShortArray& trial_set = csg_driver->trial_set();
     for (size_t i=0; i<numVars; ++i)
-      if (trial_set[i] > max_trial_index)
-	max_trial_index = trial_set[i];
-    update_sparse_interpolation_basis(max_trial_index);
+      if (trial_set[i] > max_set_index)
+	max_set_index = trial_set[i];
+    break;
+  }
+  case HIERARCHICAL_SPARSE_GRID: {
+    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+      const UShortArray& trial_set = hsg_driver->trial_set();
+      for (size_t i=0; i<numVars; ++i)
+	if (trial_set[i] > max_set_index)
+	  max_set_index = trial_set[i];
+      break;
+    }
+    default: { // isotropic/anisotropic refinement
+      const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
+      const UShortArray& incr_sets = hsg_driver->increment_sets();
+      size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets, v;
+      for (lev=0; lev<num_lev; ++lev) {
+	start_set = incr_sets[lev]; num_sets = sm_mi[lev].size();
+	for (set=start_set; set<num_sets; ++set) {
+	  const UShortArray& sm_set = sm_mi[lev][set];
+	  for (v=0; v<numVars; ++v)
+	    if (sm_set[v] > max_set_index)
+	      max_set_index = sm_set[v];
+	}
+      }
+      break;
+    }
+    }
     break;
   }
   default:
-    err_flag = true; break;
-  }
-  if (err_flag) {
     PCerr << "Error: unsupported grid definition in InterpPolyApproximation::"
 	  << "increment_coefficients()" << std::endl;
     abort_handler(-1);
+    break;
   }
+  update_sparse_interpolation_basis(max_set_index);
 
   increment_expansion_coefficients();
   numCollocPts = surrData.size(); if (surrData.anchor()) ++numCollocPts;

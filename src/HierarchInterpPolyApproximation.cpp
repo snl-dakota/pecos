@@ -145,10 +145,30 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 void HierarchInterpPolyApproximation::increment_expansion_coefficients()
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      key        = hsg_driver->collocation_key();
-  const UShortArray&        trial_set  = hsg_driver->trial_set();
-  size_t lev = hsg_driver->index_norm(trial_set);
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
+    increment_expansion_coefficients(hsg_driver->trial_set());
+    break;
+  default: {
+    const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
+    const UShortArray& incr_sets = hsg_driver->increment_sets();
+    size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets;
+    for (lev=0; lev<num_lev; ++lev) {
+      start_set = incr_sets[lev]; num_sets = sm_mi[lev].size();
+      for (set=start_set; set<num_sets; ++set)
+	increment_expansion_coefficients(sm_mi[lev][set]);
+    }
+    break;
+  }
+  }
+}
+
+
+void HierarchInterpPolyApproximation::
+increment_expansion_coefficients(const UShortArray& index_set)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  size_t lev = hsg_driver->index_norm(index_set);
 
   if (lev >= expansionType1Coeffs.size()) {
     expansionType1Coeffs.resize(lev+1);
@@ -156,7 +176,8 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
     expansionType1CoeffGrads.resize(lev+1);
   }
   size_t set = expansionType1Coeffs[lev].size();
-  RealVector fns; RealMatrix grads; // empty
+  // append empty and update in place
+  RealVector fns; RealMatrix grads;
   expansionType1Coeffs[lev].push_back(fns);
   expansionType2Coeffs[lev].push_back(grads);
   expansionType1CoeffGrads[lev].push_back(grads);
@@ -164,9 +185,9 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
   RealMatrix& t2_coeffs      = expansionType2Coeffs[lev][set];
   RealMatrix& t1_coeff_grads = expansionType1CoeffGrads[lev][set];
 
-  // update in place
-  size_t index = numCollocPts, pt, new_colloc_pts = surrData.size(),
-    num_trial_pts = new_colloc_pts - numCollocPts, v, num_deriv_vars = 0;
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray& key   = hsg_driver->collocation_key();
+  size_t index, pt, num_trial_pts = key[lev][set].size(), v, num_deriv_vars = 0;
   if (expConfigOptions.expansionCoeffFlag) {
     t1_coeffs.sizeUninitialized(num_trial_pts);
     if (basisConfigOptions.useDerivs) {
@@ -179,7 +200,7 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
     t1_coeff_grads.shapeUninitialized(num_deriv_vars, num_trial_pts);
   }
  
-  for (pt=0; index<new_colloc_pts; ++pt, ++index) {
+  for (pt=0, index=numCollocPts; pt<num_trial_pts; ++pt, ++index) {
     const RealVector& c_vars = surrData.continuous_variables(index);
     if (expConfigOptions.expansionCoeffFlag) {
       t1_coeffs[pt] = surrData.response_function(index) - value(c_vars, sm_mi,
@@ -202,6 +223,7 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
 	hier_grad[v] = data_grad[v] - prev_grad[v];
     }
   }
+  numCollocPts += num_trial_pts;
 }
 
 
