@@ -819,12 +819,12 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
     break;
   }
 
-  // TO DO: support multiple grid increments in discerning nominal from delta:
-  // isotropic/anisotropic increment or generalized trial set.
+  // Supports multiple grid increments in discerning nominal from delta based
+  // on isotropic/anisotropic/generalized index set increments.  In current
+  // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
+  // In the future, may need 3D keys for level/set/point.
   UShort2DArray reference_key, increment_key;
   hsg_driver->partition_keys(reference_key, increment_key);
-  // For current use, use 2D arrays with set ranges: level -> {start,end} set
-  // For future, could be 3D with level/set/point
 
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
   Real mean_r1 = expectation(expansionType1Coeffs, expansionType2Coeffs,
