@@ -209,7 +209,8 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  RealVectorArray empty_rva; IntVector empty_iv;
+  RealVector  empty_rv;  RealVectorArray empty_rva;
+  IntVector   empty_iv;  IntVectorArray  empty_iva;
   RealMatrix  empty_rm;  RealSymMatrix   empty_rsm;
   IntSetArray empty_isa; RealSetArray    empty_rsa;
   DistributionParams dp(n_means, n_std_devs, n_l_bnds, n_u_bnds, empty_rv,
@@ -220,7 +221,9 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			empty_rv, empty_rva, empty_rv, empty_rv, empty_iv,
 			empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			empty_iv, empty_rva, empty_rva, empty_rva, empty_rsm);
+			empty_iv, empty_rva, empty_rsm, empty_rva, empty_rva,
+			empty_rva, empty_rva, empty_iva, empty_iva, empty_isa,
+			empty_rva, empty_rsa, empty_rva);
   generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
 		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
 		   dp, num_samples, samples_array, empty_rm);
@@ -236,8 +239,9 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector empty_rv;   RealVectorArray empty_rva; IntVector empty_iv;
-  RealMatrix empty_rm;   RealSymMatrix   empty_rsm; 
+  RealVector  empty_rv;  RealVectorArray empty_rva;
+  IntVector   empty_iv;  IntVectorArray  empty_iva;
+  RealMatrix  empty_rm;  RealSymMatrix   empty_rsm; 
   IntSetArray empty_isa; RealSetArray    empty_rsa;
   DistributionParams dp(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
@@ -247,7 +251,9 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 			empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			empty_rv, empty_rva, empty_rv, empty_rv, empty_iv,
 			empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			empty_iv, empty_rva, empty_rva, empty_rva, empty_rsm);
+			empty_iv, empty_rva, empty_rsm, empty_rva, empty_rva,
+			empty_rva, empty_rva, empty_iva, empty_iva, empty_isa,
+			empty_rva, empty_rsa, empty_rva);
   generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
 		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
 		   dp, num_samples, samples_array, empty_rm);

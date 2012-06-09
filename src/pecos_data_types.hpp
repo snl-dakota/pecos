@@ -88,6 +88,7 @@ typedef std::vector<std::pair<Real, Real> > RealPairArray;
 typedef std::vector<String>          StringArray;
 typedef std::vector<RealVector>      RealVectorArray;
 typedef std::vector<RealVectorArray> RealVector2DArray;
+typedef std::vector<IntVector>       IntVectorArray;
 typedef std::vector<RealMatrix>      RealMatrixArray;
 typedef std::vector<RealMatrixArray> RealMatrix2DArray;
 typedef std::vector<RealSymMatrix>   RealSymMatrixArray;

@@ -39,28 +39,32 @@ private:
   DistributionParamsRep();
   /// constructor
   DistributionParamsRep(const RealVector& nuv_means,
-    const RealVector& nuv_std_devs,  const RealVector& nuv_l_bnds,
-    const RealVector& nuv_u_bnds,    const RealVector& lnuv_means,
-    const RealVector& lnuv_std_devs, const RealVector& lnuv_lambdas,
-    const RealVector& lnuv_zetas,    const RealVector& lnuv_err_facts,
-    const RealVector& lnuv_l_bnds,   const RealVector& lnuv_u_bnds,
-    const RealVector& uuv_l_bnds,    const RealVector& uuv_u_bnds,
-    const RealVector& luuv_l_bnds,   const RealVector& luuv_u_bnds,
-    const RealVector& tuv_modes,     const RealVector& tuv_l_bnds,
-    const RealVector& tuv_u_bnds,    const RealVector& euv_betas,
-    const RealVector& beuv_alphas,   const RealVector& beuv_betas,
-    const RealVector& beuv_l_bnds,   const RealVector& beuv_u_bnds,
-    const RealVector& gauv_alphas,   const RealVector& gauv_betas,
-    const RealVector& guuv_alphas,   const RealVector& guuv_betas,
-    const RealVector& fuv_alphas,    const RealVector& fuv_betas,
-    const RealVector& wuv_alphas,    const RealVector& wuv_betas,
-    const RealVectorArray& hbuv_prs, const RealVector& puv_lambdas,
-    const RealVector& biuv_p_per_tr, const IntVector&  biuv_num_trials, 
-    const RealVector& nbuv_p_per_tr, const IntVector&  nbuv_num_trials, 
-    const RealVector& geuv_p_per_tr, const IntVector&  hguv_tot_pop,
-    const IntVector& hguv_sel_pop,   const IntVector& hguv_num_drawn,
-    const RealVectorArray& hpuv_prs, const RealVectorArray& iuv_probs,
-    const RealVectorArray& iuv_bnds, const RealSymMatrix& uv_corr);
+    const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
+    const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
+    const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
+    const RealVector& lnuv_zetas,       const RealVector& lnuv_err_facts,
+    const RealVector& lnuv_l_bnds,      const RealVector& lnuv_u_bnds,
+    const RealVector& uuv_l_bnds,       const RealVector& uuv_u_bnds,
+    const RealVector& luuv_l_bnds,      const RealVector& luuv_u_bnds,
+    const RealVector& tuv_modes,        const RealVector& tuv_l_bnds,
+    const RealVector& tuv_u_bnds,       const RealVector& euv_betas,
+    const RealVector& beuv_alphas,      const RealVector& beuv_betas,
+    const RealVector& beuv_l_bnds,      const RealVector& beuv_u_bnds,
+    const RealVector& gauv_alphas,      const RealVector& gauv_betas,
+    const RealVector& guuv_alphas,      const RealVector& guuv_betas,
+    const RealVector& fuv_alphas,       const RealVector& fuv_betas,
+    const RealVector& wuv_alphas,       const RealVector& wuv_betas,
+    const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
+    const RealVector& biuv_p_per_tr,    const IntVector& biuv_num_trials, 
+    const RealVector& nbuv_p_per_tr,    const IntVector& nbuv_num_trials, 
+    const RealVector& geuv_p_per_tr,    const IntVector& hguv_tot_pop,
+    const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
+    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
+    const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
+    const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
+    const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
+    const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
+    const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs);
   /// destructor
   ~DistributionParamsRep();
 
@@ -132,17 +136,18 @@ private:
   RealVector weibullBetas;
   /// histogram uncertain (x,y) bin pairs (continuous linear histogram)
   RealVectorArray histogramBinPairs;
+
   /// poisson uncertain variable lambdas
   RealVector poissonLambdas;
-  /// binomial uncertain variable probabilities per trial
+  /// binomial uncertain variable probability per trial
   RealVector binomialProbPerTrial;
   /// binomial uncertain variable numbers of trials
   IntVector binomialNumTrials;
-  /// negative binomial uncertain variable probabilities per trial
+  /// negative binomial uncertain variable probability per trial
   RealVector negBinomialProbPerTrial;
   /// negative binomial uncertain variable numbers of trials
   IntVector negBinomialNumTrials;
-  /// geometric uncertain variable probabilities per trial
+  /// geometric uncertain variable probability per trial
   RealVector geometricProbPerTrial;
   /// hypergeometric uncertain variable numbers in total population
   IntVector hyperGeomTotalPopulation;
@@ -152,14 +157,32 @@ private:
   IntVector hyperGeomNumDrawn;
   /// histogram uncertain (x,y) point pairs (discrete histogram)
   RealVectorArray histogramPointPairs;
-  /// basic probability values for interval uncertain variables
-  RealVectorArray intervalBasicProbs;
-  /// interval lower/upper bounds for interval uncertain variables
-  RealVectorArray intervalBounds;
 
   /// uncertain variable correlation matrix (rank correlations for sampling
   /// and correlation coefficients for reliability)
   RealSymMatrix uncertainCorrelations;
+
+  /// basic probability values for continuous interval uncertain variables
+  RealVectorArray contIntervalProbs;
+  /// lower bounds for continuous interval uncertain variables
+  RealVectorArray contIntervalLowerBnds;
+  /// upper bounds for continuous interval uncertain variables
+  RealVectorArray contIntervalUpperBnds;
+
+  /// basic probability values for discrete interval uncertain variables
+  RealVectorArray discIntervalProbs;
+  /// lower bounds for discrete interval uncertain variables
+  IntVectorArray discIntervalLowerBnds;
+  /// upper bounds for discrete interval uncertain variables
+  IntVectorArray discIntervalUpperBnds;
+  /// admissible values for discrete uncertain integer set variables
+  IntSetArray discUncSetIntVals;
+  /// basic probabilities for discrete uncertain integer set variables
+  RealVectorArray discSetIntProbs;
+  /// admissible values for discrete uncertain real set variables
+  RealSetArray discUncSetRealVals;
+  /// basic probabilities for discrete uncertain real set variables
+  RealVectorArray discSetRealProbs;
 
   /// number of handle objects sharing dpRep
   int referenceCount;
@@ -172,28 +195,32 @@ inline DistributionParamsRep::DistributionParamsRep() : referenceCount(1)
 
 inline DistributionParamsRep::
 DistributionParamsRep(const RealVector& nuv_means,
-  const RealVector& nuv_std_devs,  const RealVector& nuv_l_bnds,
-  const RealVector& nuv_u_bnds,    const RealVector& lnuv_means,
-  const RealVector& lnuv_std_devs, const RealVector& lnuv_lambdas,
-  const RealVector& lnuv_zetas,    const RealVector& lnuv_err_facts,
-  const RealVector& lnuv_l_bnds,   const RealVector& lnuv_u_bnds,
-  const RealVector& uuv_l_bnds,    const RealVector& uuv_u_bnds,
-  const RealVector& luuv_l_bnds,   const RealVector& luuv_u_bnds,
-  const RealVector& tuv_modes,     const RealVector& tuv_l_bnds,
-  const RealVector& tuv_u_bnds,    const RealVector& euv_betas,
-  const RealVector& beuv_alphas,   const RealVector& beuv_betas,
-  const RealVector& beuv_l_bnds,   const RealVector& beuv_u_bnds,
-  const RealVector& gauv_alphas,   const RealVector& gauv_betas,
-  const RealVector& guuv_alphas,   const RealVector& guuv_betas,
-  const RealVector& fuv_alphas,    const RealVector& fuv_betas,
-  const RealVector& wuv_alphas,    const RealVector& wuv_betas,
-  const RealVectorArray& hbuv_prs, const RealVector& puv_lambdas,
-  const RealVector& biuv_p_per_tr, const IntVector&  biuv_num_trials, 
-  const RealVector& nbuv_p_per_tr, const IntVector&  nbuv_num_trials, 
-  const RealVector& geuv_p_per_tr, const IntVector&  hguv_tot_pop,
-  const IntVector& hguv_sel_pop,   const IntVector& hguv_num_drawn,
-  const RealVectorArray& hpuv_prs, const RealVectorArray& iuv_probs,
-  const RealVectorArray& iuv_bnds, const RealSymMatrix& uv_corr):
+  const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
+  const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
+  const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
+  const RealVector& lnuv_zetas,       const RealVector& lnuv_err_facts,
+  const RealVector& lnuv_l_bnds,      const RealVector& lnuv_u_bnds,
+  const RealVector& uuv_l_bnds,       const RealVector& uuv_u_bnds,
+  const RealVector& luuv_l_bnds,      const RealVector& luuv_u_bnds,
+  const RealVector& tuv_modes,        const RealVector& tuv_l_bnds,
+  const RealVector& tuv_u_bnds,       const RealVector& euv_betas,
+  const RealVector& beuv_alphas,      const RealVector& beuv_betas,
+  const RealVector& beuv_l_bnds,      const RealVector& beuv_u_bnds,
+  const RealVector& gauv_alphas,      const RealVector& gauv_betas,
+  const RealVector& guuv_alphas,      const RealVector& guuv_betas,
+  const RealVector& fuv_alphas,       const RealVector& fuv_betas,
+  const RealVector& wuv_alphas,       const RealVector& wuv_betas,
+  const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
+  const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
+  const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
+  const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
+  const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
+  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
+  const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
+  const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
+  const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
+  const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
+  const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs):
   normalMeans(nuv_means), normalStdDevs(nuv_std_devs),
   normalLowerBnds(nuv_l_bnds), normalUpperBnds(nuv_u_bnds),
   lognormalMeans(lnuv_means), lognormalStdDevs(lnuv_std_devs),
@@ -213,8 +240,13 @@ DistributionParamsRep(const RealVector& nuv_means,
   negBinomialProbPerTrial(nbuv_p_per_tr), negBinomialNumTrials(nbuv_num_trials),
   geometricProbPerTrial(geuv_p_per_tr), hyperGeomTotalPopulation(hguv_tot_pop),
   hyperGeomSelectedPopulation(hguv_sel_pop),  hyperGeomNumDrawn(hguv_num_drawn),
-  histogramPointPairs(hpuv_prs), intervalBasicProbs(iuv_probs),
-  intervalBounds(iuv_bnds), uncertainCorrelations(uv_corr), referenceCount(1)
+  histogramPointPairs(hpuv_prs), uncertainCorrelations(uv_corr),
+  contIntervalProbs(ciuv_probs), contIntervalLowerBnds(ciuv_l_bnds),
+  contIntervalUpperBnds(ciuv_u_bnds), discIntervalProbs(diuv_probs),
+  discIntervalLowerBnds(diuv_l_bnds), discIntervalUpperBnds(diuv_u_bnds),
+  discUncSetIntVals(dusiv_vals), discSetIntProbs(dusiv_probs),
+  discUncSetRealVals(dusrv_vals), discSetRealProbs(dusrv_probs),
+  referenceCount(1)
 { }
 
 
@@ -242,28 +274,32 @@ public:
   DistributionParams();
   /// standard constructor
   DistributionParams(const RealVector& nuv_means,
-    const RealVector& nuv_std_devs,  const RealVector& nuv_l_bnds,
-    const RealVector& nuv_u_bnds,    const RealVector& lnuv_means,
-    const RealVector& lnuv_std_devs, const RealVector& lnuv_lambdas,
-    const RealVector& lnuv_zetas,    const RealVector& lnuv_err_facts,
-    const RealVector& lnuv_l_bnds,   const RealVector& lnuv_u_bnds,
-    const RealVector& uuv_l_bnds,    const RealVector& uuv_u_bnds,
-    const RealVector& luuv_l_bnds,   const RealVector& luuv_u_bnds,
-    const RealVector& tuv_modes,     const RealVector& tuv_l_bnds,
-    const RealVector& tuv_u_bnds,    const RealVector& euv_betas,
-    const RealVector& beuv_alphas,   const RealVector& beuv_betas,
-    const RealVector& beuv_l_bnds,   const RealVector& beuv_u_bnds,
-    const RealVector& gauv_alphas,   const RealVector& gauv_betas,
-    const RealVector& guuv_alphas,   const RealVector& guuv_betas,
-    const RealVector& fuv_alphas,    const RealVector& fuv_betas,
-    const RealVector& wuv_alphas,    const RealVector& wuv_betas,
-    const RealVectorArray& hbuv_prs, const RealVector& puv_lambdas,
-    const RealVector& biuv_p_per_tr, const IntVector&  biuv_num_trials, 
-    const RealVector& nbuv_p_per_tr, const IntVector&  nbuv_num_trials, 
-    const RealVector& geuv_p_per_tr, const IntVector&  hguv_tot_pop,
-    const IntVector& hguv_sel_pop,   const IntVector& hguv_num_drawn,
-    const RealVectorArray& hpuv_prs, const RealVectorArray& iuv_probs,
-    const RealVectorArray& iuv_bnds, const RealSymMatrix& uv_corr);
+    const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
+    const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
+    const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
+    const RealVector& lnuv_zetas,       const RealVector& lnuv_err_facts,
+    const RealVector& lnuv_l_bnds,      const RealVector& lnuv_u_bnds,
+    const RealVector& uuv_l_bnds,       const RealVector& uuv_u_bnds,
+    const RealVector& luuv_l_bnds,      const RealVector& luuv_u_bnds,
+    const RealVector& tuv_modes,        const RealVector& tuv_l_bnds,
+    const RealVector& tuv_u_bnds,       const RealVector& euv_betas,
+    const RealVector& beuv_alphas,      const RealVector& beuv_betas,
+    const RealVector& beuv_l_bnds,      const RealVector& beuv_u_bnds,
+    const RealVector& gauv_alphas,      const RealVector& gauv_betas,
+    const RealVector& guuv_alphas,      const RealVector& guuv_betas,
+    const RealVector& fuv_alphas,       const RealVector& fuv_betas,
+    const RealVector& wuv_alphas,       const RealVector& wuv_betas,
+    const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
+    const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
+    const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
+    const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
+    const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
+    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
+    const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
+    const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
+    const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
+    const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
+    const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs);
   /// copy constructor
   DistributionParams(const DistributionParams& dp);
   /// destructor
@@ -580,13 +616,13 @@ public:
   /// set the ith poisson uncertain variable lambda parameter
   void poisson_lambda(const Real& p_lambda, size_t i);
 
-  /// return the binomial probabilities per each trial (p) 
-  const RealVector& binomial_probabilities_per_trial() const;
-  /// return the ith binomial probabilities per each trial (p) 
-  const Real& binomial_probabilities_per_trial(size_t i) const;
-  /// set the binomial probabilities per each trial (p) 
-  void binomial_probabilities_per_trial(const RealVector& probs_per_trial);
-  /// set the ith binomial probabilities per each trial (p) 
+  /// return the binomial probability per each trial (p) 
+  const RealVector& binomial_probability_per_trial() const;
+  /// return the ith binomial probability per each trial (p) 
+  const Real& binomial_probability_per_trial(size_t i) const;
+  /// set the binomial probability per each trial (p) 
+  void binomial_probability_per_trial(const RealVector& probs_per_trial);
+  /// set the ith binomial probability per each trial (p) 
   void binomial_probability_per_trial(const Real& prob_per_trial, size_t i);
   /// return the binomial number of trials (N)
   const IntVector& binomial_num_trials() const;
@@ -597,14 +633,14 @@ public:
   /// set the ith binomial number of trials (N)
   void binomial_num_trials(int num_trials, size_t i);
 
-  /// return the negative binomial probabilities per each trial (p) 
-  const RealVector& negative_binomial_probabilities_per_trial() const;
-  /// return the ith negative binomial probabilities per each trial (p) 
-  const Real& negative_binomial_probabilities_per_trial(size_t i) const;
-  /// set the negative binomial probabilities per each trial (p) 
-  void negative_binomial_probabilities_per_trial(
+  /// return the negative binomial probability per each trial (p) 
+  const RealVector& negative_binomial_probability_per_trial() const;
+  /// return the ith negative binomial probability per each trial (p) 
+  const Real& negative_binomial_probability_per_trial(size_t i) const;
+  /// set the negative binomial probability per each trial (p) 
+  void negative_binomial_probability_per_trial(
     const RealVector& probs_per_trial);
-  /// set the ith negative binomial probabilities per each trial (p) 
+  /// set the ith negative binomial probability per each trial (p) 
   void negative_binomial_probability_per_trial(
     const Real& prob_per_trial, size_t i);
   /// return the negative binomial number of trials (N)
@@ -616,13 +652,13 @@ public:
   /// set the ith negative binomial number of trials (N)
   void negative_binomial_num_trials(int num_trials, size_t i);
 
-  /// return the geometric probabilities per each trial (p) 
-  const RealVector& geometric_probabilities_per_trial() const;
-  /// return the ith geometric probabilities per each trial (p) 
-  const Real& geometric_probabilities_per_trial(size_t i) const;
-  /// set the geometric probabilities per each trial (p) 
-  void geometric_probabilities_per_trial(const RealVector& probs_per_trial);
-  /// set the ith geometric probabilities per each trial (p) 
+  /// return the geometric probability per each trial (p) 
+  const RealVector& geometric_probability_per_trial() const;
+  /// return the ith geometric probability per each trial (p) 
+  const Real& geometric_probability_per_trial(size_t i) const;
+  /// set the geometric probability per each trial (p) 
+  void geometric_probability_per_trial(const RealVector& probs_per_trial);
+  /// set the ith geometric probability per each trial (p) 
   void geometric_probability_per_trial(const Real& prob_per_trial, size_t i);
 
   /// return the hypergeometric number in total population 
@@ -659,27 +695,80 @@ public:
   /// set the ith histogram uncertain point pair
   void histogram_point_pairs(const RealVector& h_pt_pairs_i, size_t i);
 
-  /// return the interval basic probability values
-  const RealVectorArray& interval_probabilities() const;
-  /// return the ith interval basic probability value
-  const RealVector& interval_probabilities(size_t i) const;
-  /// set the interval basic probability values
-  void interval_probabilities(const RealVectorArray& int_probs);
-  /// set the ith interval basic probability value
-  void interval_probabilities(const RealVector& int_probs_i, size_t i);
-  /// return the interval bounds
-  const RealVectorArray& interval_bounds() const;
-  /// return the ith interval bound
-  const RealVector& interval_bounds(size_t i) const;
-  /// set the interval bounds
-  void interval_bounds(const RealVectorArray& int_bounds);
-  /// set the ith interval bound
-  void interval_bounds(const RealVector& int_bounds_i, size_t i);
-
   /// return the uncertain variable correlations
   const RealSymMatrix& uncertain_correlations() const;
   /// set the uncertain variable correlations
   void uncertain_correlations(const RealSymMatrix& uncertain_corr);
+
+  /// return the interval basic probability values
+  const RealVectorArray& continuous_interval_probabilities() const;
+  /// return the ith interval basic probability value
+  const RealVector& continuous_interval_probabilities(size_t i) const;
+  /// set the interval basic probability values
+  void continuous_interval_probabilities(const RealVectorArray& ci_probs);
+  /// set the ith interval basic probability value
+  void continuous_interval_probabilities(const RealVector& ci_probs_i,
+					 size_t i);
+  /// return the interval bounds
+  const RealVectorArray& continuous_interval_lower_bounds() const;
+  /// return the ith interval bound
+  const RealVector& continuous_interval_lower_bounds(size_t i) const;
+  /// set the interval bounds
+  void continuous_interval_lower_bounds(const RealVectorArray& ci_l_bnds);
+  /// set the ith interval bound
+  void continuous_interval_lower_bounds(const RealVector& ci_l_bnds_i,
+					size_t i);
+  /// return the interval bounds
+  const RealVectorArray& continuous_interval_upper_bounds() const;
+  /// return the ith interval bound
+  const RealVector& continuous_interval_upper_bounds(size_t i) const;
+  /// set the interval bounds
+  void continuous_interval_upper_bounds(const RealVectorArray& ci_u_bnds);
+  /// set the ith interval bound
+  void continuous_interval_upper_bounds(const RealVector& ci_u_bnds_i,
+					size_t i);
+
+  /// return the interval basic probability values
+  const RealVectorArray& discrete_interval_probabilities() const;
+  /// return the ith interval basic probability value
+  const RealVector& discrete_interval_probabilities(size_t i) const;
+  /// set the interval basic probability values
+  void discrete_interval_probabilities(const RealVectorArray& di_probs);
+  /// set the ith interval basic probability value
+  void discrete_interval_probabilities(const RealVector& di_probs_i, size_t i);
+  /// return the interval bounds
+  const IntVectorArray& discrete_interval_lower_bounds() const;
+  /// return the ith interval bound
+  const IntVector& discrete_interval_lower_bounds(size_t i) const;
+  /// set the interval bounds
+  void discrete_interval_lower_bounds(const IntVectorArray& di_l_bnds);
+  /// set the ith interval bound
+  void discrete_interval_lower_bounds(const IntVector& di_l_bnds_i, size_t i);
+  /// return the interval bounds
+  const IntVectorArray& discrete_interval_upper_bounds() const;
+  /// return the ith interval bound
+  const IntVector& discrete_interval_upper_bounds(size_t i) const;
+  /// set the interval bounds
+  void discrete_interval_upper_bounds(const IntVectorArray& di_u_bnds);
+  /// set the ith interval bound
+  void discrete_interval_upper_bounds(const IntVector& di_u_bnds_i, size_t i);
+
+  /// get the discrete integer set values
+  const IntSetArray& discrete_set_int_values() const;
+  /// set the discrete integer set values
+  void discrete_set_int_values(const IntSetArray& dsi_vals);
+  /// get the discrete integer set basic probabilities
+  const RealVectorArray& discrete_set_int_probabilities() const;
+  /// set the discrete integer set basic probabilities
+  void discrete_set_int_probabilities(const RealVectorArray& dsi_probs);
+  /// get the discrete real set values
+  const RealSetArray& discrete_set_real_values() const;
+  /// set the discrete real set values
+  void discrete_set_real_values(const RealSetArray& dsr_vals);
+  /// get the discrete real set basic probabilities
+  const RealVectorArray& discrete_set_real_probabilities() const;
+  /// set the discrete real set basic probabilities
+  void discrete_set_real_probabilities(const RealVectorArray& dsr_probs);
 
   /// function to check dpRep (does this handle contain a body)
   bool is_null() const;
@@ -702,28 +791,32 @@ inline DistributionParams::DistributionParams():
 
 inline DistributionParams::
 DistributionParams(const RealVector& nuv_means,
-  const RealVector& nuv_std_devs,  const RealVector& nuv_l_bnds,
-  const RealVector& nuv_u_bnds,    const RealVector& lnuv_means,
-  const RealVector& lnuv_std_devs, const RealVector& lnuv_lambdas,
-  const RealVector& lnuv_zetas,    const RealVector& lnuv_err_facts,
-  const RealVector& lnuv_l_bnds,   const RealVector& lnuv_u_bnds,
-  const RealVector& uuv_l_bnds,    const RealVector& uuv_u_bnds,
-  const RealVector& luuv_l_bnds,   const RealVector& luuv_u_bnds,
-  const RealVector& tuv_modes,     const RealVector& tuv_l_bnds,
-  const RealVector& tuv_u_bnds,    const RealVector& euv_betas,
-  const RealVector& beuv_alphas,   const RealVector& beuv_betas,
-  const RealVector& beuv_l_bnds,   const RealVector& beuv_u_bnds,
-  const RealVector& gauv_alphas,   const RealVector& gauv_betas,
-  const RealVector& guuv_alphas,   const RealVector& guuv_betas,
-  const RealVector& fuv_alphas,    const RealVector& fuv_betas,
-  const RealVector& wuv_alphas,    const RealVector& wuv_betas,
-  const RealVectorArray& hbuv_prs, const RealVector& puv_lambdas,
-  const RealVector& biuv_p_per_tr, const IntVector&  biuv_num_trials, 
-  const RealVector& nbuv_p_per_tr, const IntVector&  nbuv_num_trials, 
-  const RealVector& geuv_p_per_tr, const IntVector&  hguv_tot_pop,
-  const IntVector& hguv_sel_pop,   const IntVector& hguv_num_drawn,
-  const RealVectorArray& hpuv_prs, const RealVectorArray& iuv_probs,
-  const RealVectorArray& iuv_bnds, const RealSymMatrix& uv_corr):
+  const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
+  const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
+  const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
+  const RealVector& lnuv_zetas,       const RealVector& lnuv_err_facts,
+  const RealVector& lnuv_l_bnds,      const RealVector& lnuv_u_bnds,
+  const RealVector& uuv_l_bnds,       const RealVector& uuv_u_bnds,
+  const RealVector& luuv_l_bnds,      const RealVector& luuv_u_bnds,
+  const RealVector& tuv_modes,        const RealVector& tuv_l_bnds,
+  const RealVector& tuv_u_bnds,       const RealVector& euv_betas,
+  const RealVector& beuv_alphas,      const RealVector& beuv_betas,
+  const RealVector& beuv_l_bnds,      const RealVector& beuv_u_bnds,
+  const RealVector& gauv_alphas,      const RealVector& gauv_betas,
+  const RealVector& guuv_alphas,      const RealVector& guuv_betas,
+  const RealVector& fuv_alphas,       const RealVector& fuv_betas,
+  const RealVector& wuv_alphas,       const RealVector& wuv_betas,
+  const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
+  const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
+  const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
+  const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
+  const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
+  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
+  const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
+  const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
+  const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
+  const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
+  const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs):
   dpRep(new DistributionParamsRep(nuv_means, nuv_std_devs, nuv_l_bnds,
 	nuv_u_bnds, lnuv_means, lnuv_std_devs, lnuv_lambdas, lnuv_zetas,
 	lnuv_err_facts, lnuv_l_bnds, lnuv_u_bnds, uuv_l_bnds, uuv_u_bnds,
@@ -732,7 +825,9 @@ DistributionParams(const RealVector& nuv_means,
 	gauv_betas, guuv_alphas, guuv_betas, fuv_alphas, fuv_betas, wuv_alphas,
 	wuv_betas, hbuv_prs, puv_lambdas, biuv_p_per_tr, biuv_num_trials,
 	nbuv_p_per_tr, nbuv_num_trials, geuv_p_per_tr, hguv_tot_pop,
-	hguv_sel_pop, hguv_num_drawn, hpuv_prs, iuv_probs, iuv_bnds, uv_corr))
+	hguv_sel_pop, hguv_num_drawn, hpuv_prs, uv_corr, ciuv_probs,
+	ciuv_l_bnds, ciuv_u_bnds, diuv_probs, diuv_l_bnds, diuv_u_bnds,
+	dusiv_vals, dusiv_probs, dusrv_vals, dusrv_probs))
 { }
 
 
@@ -782,7 +877,7 @@ inline size_t DistributionParams::cauv() const
 
 
 inline size_t DistributionParams::ceuv() const
-{ return dpRep->intervalBasicProbs.size(); }
+{ return dpRep->contIntervalProbs.size(); }
 
 
 inline size_t DistributionParams::cuv()  const
@@ -802,11 +897,11 @@ inline size_t DistributionParams::drauv() const
 
 
 inline size_t DistributionParams::dieuv() const
-{ return 0; }
+{ return dpRep->discIntervalProbs.size() + dpRep->discSetIntProbs.size(); }
 
 
 inline size_t DistributionParams::dreuv() const
-{ return 0; }
+{ return dpRep->discSetRealProbs.size(); }
 
 
 inline size_t DistributionParams::diuv()  const
@@ -842,13 +937,18 @@ inline void DistributionParams::copy(const DistributionParams& dp)
     dp.gamma_betas(), dp.gumbel_alphas(), dp.gumbel_betas(),
     dp.frechet_alphas(), dp.frechet_betas(), dp.weibull_alphas(),
     dp.weibull_betas(), dp.histogram_bin_pairs(), dp.poisson_lambdas(),
-    dp.binomial_probabilities_per_trial(), dp.binomial_num_trials(),
-    dp.negative_binomial_probabilities_per_trial(),
-    dp.negative_binomial_num_trials(), dp.geometric_probabilities_per_trial(),
+    dp.binomial_probability_per_trial(), dp.binomial_num_trials(),
+    dp.negative_binomial_probability_per_trial(),
+    dp.negative_binomial_num_trials(), dp.geometric_probability_per_trial(),
     dp.hypergeometric_total_population(),
     dp.hypergeometric_selected_population(), dp.hypergeometric_num_drawn(),
-    dp.histogram_point_pairs(), dp.interval_probabilities(),
-    dp.interval_bounds(), dp.uncertain_correlations());
+    dp.histogram_point_pairs(), dp.uncertain_correlations(),
+    dp.continuous_interval_probabilities(),
+    dp.continuous_interval_lower_bounds(),
+    dp.continuous_interval_upper_bounds(), dp.discrete_interval_probabilities(),
+    dp.discrete_interval_lower_bounds(), dp.discrete_interval_upper_bounds(),
+    dp.discrete_set_int_values(), dp.discrete_set_int_probabilities(),
+    dp.discrete_set_real_values(), dp.discrete_set_real_probabilities());
 }
 
 
@@ -1414,17 +1514,17 @@ inline void DistributionParams::poisson_lambda(const Real& p_lambda, size_t i)
 
 
 inline const RealVector& DistributionParams::
-binomial_probabilities_per_trial() const
+binomial_probability_per_trial() const
 { return dpRep->binomialProbPerTrial; }
 
 
 inline const Real& DistributionParams::
-binomial_probabilities_per_trial(size_t i) const
+binomial_probability_per_trial(size_t i) const
 { return dpRep->binomialProbPerTrial[i]; }
 
 
 inline void DistributionParams::
-binomial_probabilities_per_trial(const RealVector& probs_per_tr)
+binomial_probability_per_trial(const RealVector& probs_per_tr)
 { dpRep->binomialProbPerTrial = probs_per_tr; }
 
 
@@ -1450,17 +1550,17 @@ inline void DistributionParams::binomial_num_trials(int num_tr, size_t i)
 
 
 inline const RealVector& DistributionParams::
-negative_binomial_probabilities_per_trial() const
+negative_binomial_probability_per_trial() const
 { return dpRep->negBinomialProbPerTrial; }
 
 
 inline const Real& DistributionParams::
-negative_binomial_probabilities_per_trial(size_t i) const
+negative_binomial_probability_per_trial(size_t i) const
 { return dpRep->negBinomialProbPerTrial[i]; }
 
 
 inline void DistributionParams::
-negative_binomial_probabilities_per_trial(const RealVector& probs_per_tr)
+negative_binomial_probability_per_trial(const RealVector& probs_per_tr)
 {
   if (dpRep->negBinomialProbPerTrial.empty())//Teuchos operator= does not resize
     dpRep->negBinomialProbPerTrial.sizeUninitialized(probs_per_tr.length());
@@ -1491,17 +1591,17 @@ negative_binomial_num_trials(int num_tr, size_t i)
 
 
 inline const RealVector& DistributionParams::
-geometric_probabilities_per_trial() const
+geometric_probability_per_trial() const
 { return dpRep->geometricProbPerTrial; }
 
 
 inline const Real& DistributionParams::
-geometric_probabilities_per_trial(size_t i) const
+geometric_probability_per_trial(size_t i) const
 { return dpRep->geometricProbPerTrial[i]; }
 
 
 inline void DistributionParams::
-geometric_probabilities_per_trial(const RealVector& probs_per_tr)
+geometric_probability_per_trial(const RealVector& probs_per_tr)
 { dpRep->geometricProbPerTrial = probs_per_tr; }
 
 
@@ -1586,43 +1686,6 @@ histogram_point_pairs(const RealVector& h_pt_pairs_i, size_t i)
 { dpRep->histogramPointPairs[i] = h_pt_pairs_i; }
 
 
-inline const RealVectorArray& DistributionParams::interval_probabilities() const
-{ return dpRep->intervalBasicProbs; }
-
-
-inline const RealVector& DistributionParams::
-interval_probabilities(size_t i) const
-{ return dpRep->intervalBasicProbs[i]; }
-
-
-inline void DistributionParams::
-interval_probabilities(const RealVectorArray& int_probs)
-{ dpRep->intervalBasicProbs = int_probs; }
-
-
-inline void DistributionParams::
-interval_probabilities(const RealVector& int_probs_i, size_t i)
-{ dpRep->intervalBasicProbs[i] = int_probs_i; }
-
-
-inline const RealVectorArray& DistributionParams::interval_bounds() const
-{ return dpRep->intervalBounds; }
-
-
-inline const RealVector& DistributionParams::interval_bounds(size_t i) const
-{ return dpRep->intervalBounds[i]; }
-
-
-inline void DistributionParams::
-interval_bounds(const RealVectorArray& int_bounds)
-{ dpRep->intervalBounds = int_bounds; }
-
-
-inline void DistributionParams::
-interval_bounds(const RealVector& int_bounds_i, size_t i)
-{ dpRep->intervalBounds[i] = int_bounds_i; }
-
-
 inline const RealSymMatrix& DistributionParams::uncertain_correlations() const
 { return dpRep->uncertainCorrelations; }
 
@@ -1630,6 +1693,164 @@ inline const RealSymMatrix& DistributionParams::uncertain_correlations() const
 inline void DistributionParams::
 uncertain_correlations(const RealSymMatrix& uncertain_corr)
 { dpRep->uncertainCorrelations = uncertain_corr; }
+
+
+inline const RealVectorArray& DistributionParams::
+continuous_interval_probabilities() const
+{ return dpRep->contIntervalProbs; }
+
+
+inline const RealVector& DistributionParams::
+continuous_interval_probabilities(size_t i) const
+{ return dpRep->contIntervalProbs[i]; }
+
+
+inline void DistributionParams::
+continuous_interval_probabilities(const RealVectorArray& ci_probs)
+{ dpRep->contIntervalProbs = ci_probs; }
+
+
+inline void DistributionParams::
+continuous_interval_probabilities(const RealVector& ci_probs_i, size_t i)
+{ dpRep->contIntervalProbs[i] = ci_probs_i; }
+
+
+inline const RealVectorArray& DistributionParams::
+continuous_interval_lower_bounds() const
+{ return dpRep->contIntervalLowerBnds; }
+
+
+inline const RealVector& DistributionParams::
+continuous_interval_lower_bounds(size_t i) const
+{ return dpRep->contIntervalLowerBnds[i]; }
+
+
+inline void DistributionParams::
+continuous_interval_lower_bounds(const RealVectorArray& ci_l_bnds)
+{ dpRep->contIntervalLowerBnds = ci_l_bnds; }
+
+
+inline void DistributionParams::
+continuous_interval_lower_bounds(const RealVector& ci_l_bnds_i, size_t i)
+{ dpRep->contIntervalLowerBnds[i] = ci_l_bnds_i; }
+
+
+inline const RealVectorArray& DistributionParams::
+continuous_interval_upper_bounds() const
+{ return dpRep->contIntervalUpperBnds; }
+
+
+inline const RealVector& DistributionParams::
+continuous_interval_upper_bounds(size_t i) const
+{ return dpRep->contIntervalUpperBnds[i]; }
+
+
+inline void DistributionParams::
+continuous_interval_upper_bounds(const RealVectorArray& ci_u_bnds)
+{ dpRep->contIntervalUpperBnds = ci_u_bnds; }
+
+
+inline void DistributionParams::
+continuous_interval_upper_bounds(const RealVector& ci_u_bnds_i, size_t i)
+{ dpRep->contIntervalUpperBnds[i] = ci_u_bnds_i; }
+
+
+inline const RealVectorArray& DistributionParams::
+discrete_interval_probabilities() const
+{ return dpRep->discIntervalProbs; }
+
+
+inline const RealVector& DistributionParams::
+discrete_interval_probabilities(size_t i) const
+{ return dpRep->discIntervalProbs[i]; }
+
+
+inline void DistributionParams::
+discrete_interval_probabilities(const RealVectorArray& di_probs)
+{ dpRep->discIntervalProbs = di_probs; }
+
+
+inline void DistributionParams::
+discrete_interval_probabilities(const RealVector& di_probs_i, size_t i)
+{ dpRep->discIntervalProbs[i] = di_probs_i; }
+
+
+inline const IntVectorArray& DistributionParams::
+discrete_interval_lower_bounds() const
+{ return dpRep->discIntervalLowerBnds; }
+
+
+inline const IntVector& DistributionParams::
+discrete_interval_lower_bounds(size_t i) const
+{ return dpRep->discIntervalLowerBnds[i]; }
+
+
+inline void DistributionParams::
+discrete_interval_lower_bounds(const IntVectorArray& di_l_bnds)
+{ dpRep->discIntervalLowerBnds = di_l_bnds; }
+
+
+inline void DistributionParams::
+discrete_interval_lower_bounds(const IntVector& di_l_bnds_i, size_t i)
+{ dpRep->discIntervalLowerBnds[i] = di_l_bnds_i; }
+
+
+inline const IntVectorArray& DistributionParams::
+discrete_interval_upper_bounds() const
+{ return dpRep->discIntervalUpperBnds; }
+
+
+inline const IntVector& DistributionParams::
+discrete_interval_upper_bounds(size_t i) const
+{ return dpRep->discIntervalUpperBnds[i]; }
+
+
+inline void DistributionParams::
+discrete_interval_upper_bounds(const IntVectorArray& di_u_bnds)
+{ dpRep->discIntervalUpperBnds = di_u_bnds; }
+
+
+inline void DistributionParams::
+discrete_interval_upper_bounds(const IntVector& di_u_bnds_i, size_t i)
+{ dpRep->discIntervalUpperBnds[i] = di_u_bnds_i; }
+
+
+inline const IntSetArray& DistributionParams::discrete_set_int_values() const
+{ return dpRep->discUncSetIntVals; }
+
+
+inline void DistributionParams::
+discrete_set_int_values(const IntSetArray& dsi_vals)
+{ dpRep->discUncSetIntVals = dsi_vals; }
+
+
+inline const RealVectorArray& DistributionParams::
+discrete_set_int_probabilities() const
+{ return dpRep->discSetIntProbs; }
+
+
+inline void DistributionParams::
+discrete_set_int_probabilities(const RealVectorArray& dsi_probs)
+{ dpRep->discSetIntProbs = dsi_probs; }
+
+
+inline const RealSetArray& DistributionParams::discrete_set_real_values() const
+{ return dpRep->discUncSetRealVals; }
+
+
+inline void DistributionParams::
+discrete_set_real_values(const RealSetArray& dsr_vals)
+{ dpRep->discUncSetRealVals = dsr_vals; }
+
+
+inline const RealVectorArray& DistributionParams::
+discrete_set_real_probabilities() const
+{ return dpRep->discSetRealProbs; }
+
+
+inline void DistributionParams::
+discrete_set_real_probabilities(const RealVectorArray& dsr_probs)
+{ dpRep->discSetRealProbs = dsr_probs; }
 
 
 inline void DistributionParams::update(const DistributionParams& dp)
@@ -1670,19 +1891,27 @@ inline void DistributionParams::update(const DistributionParams& dp)
     weibull_betas(dp.weibull_betas());
     histogram_bin_pairs(dp.histogram_bin_pairs());
     poisson_lambdas(dp.poisson_lambdas());
-    binomial_probabilities_per_trial(dp.binomial_probabilities_per_trial());
+    binomial_probability_per_trial(dp.binomial_probability_per_trial());
     binomial_num_trials(dp.binomial_num_trials());
-    negative_binomial_probabilities_per_trial(
-      dp.negative_binomial_probabilities_per_trial());
+    negative_binomial_probability_per_trial(
+      dp.negative_binomial_probability_per_trial());
     negative_binomial_num_trials(dp.negative_binomial_num_trials());
-    geometric_probabilities_per_trial(dp.geometric_probabilities_per_trial());
+    geometric_probability_per_trial(dp.geometric_probability_per_trial());
     hypergeometric_total_population(dp.hypergeometric_total_population());
     hypergeometric_selected_population(dp.hypergeometric_selected_population());
     hypergeometric_num_drawn(dp.hypergeometric_num_drawn());
     histogram_point_pairs(dp.histogram_point_pairs());
-    interval_probabilities(dp.interval_probabilities());
-    interval_bounds(dp.interval_bounds());
     uncertain_correlations(dp.uncertain_correlations());
+    continuous_interval_probabilities(dp.continuous_interval_probabilities());
+    continuous_interval_lower_bounds(dp.continuous_interval_lower_bounds());
+    continuous_interval_upper_bounds(dp.continuous_interval_upper_bounds());
+    discrete_interval_probabilities(dp.discrete_interval_probabilities());
+    discrete_interval_lower_bounds(dp.discrete_interval_lower_bounds());
+    discrete_interval_upper_bounds(dp.discrete_interval_upper_bounds());
+    discrete_set_int_values(dp.discrete_set_int_values());
+    discrete_set_int_probabilities(dp.discrete_set_int_probabilities());
+    discrete_set_real_values(dp.discrete_set_real_values());
+    discrete_set_real_probabilities(dp.discrete_set_real_probabilities());
   }
 }
 

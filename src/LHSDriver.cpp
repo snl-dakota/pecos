@@ -251,19 +251,28 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   const RealVector& w_betas = dp.weibull_betas();
   const RealVectorArray& h_bin_prs = dp.histogram_bin_pairs();
   const RealVector& p_lambdas = dp.poisson_lambdas();
-  const RealVector& bi_prob_per_tr = dp.binomial_probabilities_per_trial();
+  const RealVector& bi_prob_per_tr = dp.binomial_probability_per_trial();
   const IntVector&  bi_num_tr = dp.binomial_num_trials();
   const RealVector& nb_prob_per_tr
-    = dp.negative_binomial_probabilities_per_trial();
+    = dp.negative_binomial_probability_per_trial();
   const IntVector&  nb_num_tr = dp.negative_binomial_num_trials();
-  const RealVector& ge_prob_per_tr = dp.geometric_probabilities_per_trial();
+  const RealVector& ge_prob_per_tr = dp.geometric_probability_per_trial();
   const IntVector&  hg_total_pop = dp.hypergeometric_total_population();
   const IntVector&  hg_selected_pop = dp.hypergeometric_selected_population();
   const IntVector&  hg_num_drawn = dp.hypergeometric_num_drawn();
   const RealVectorArray& h_pt_prs = dp.histogram_point_pairs();
-  const RealVectorArray& i_probs = dp.interval_probabilities();
-  const RealVectorArray& i_bnds  = dp.interval_bounds();
   const RealSymMatrix& correlations = dp.uncertain_correlations();
+
+  const RealVectorArray& ci_probs  = dp.continuous_interval_probabilities();
+  const RealVectorArray& ci_l_bnds = dp.continuous_interval_lower_bounds();
+  const RealVectorArray& ci_u_bnds = dp.continuous_interval_upper_bounds();
+  const RealVectorArray& di_probs  = dp.discrete_interval_probabilities();
+  const IntVectorArray&  di_l_bnds = dp.discrete_interval_lower_bounds();
+  const IntVectorArray&  di_u_bnds = dp.discrete_interval_upper_bounds();
+  const IntSetArray&     dsi_vals  = dp.discrete_set_int_values();
+  const RealVectorArray& dsi_probs = dp.discrete_set_int_probabilities();
+  const RealSetArray&    dsr_vals  = dp.discrete_set_real_values();
+  const RealVectorArray& dsr_probs = dp.discrete_set_real_probabilities();
 
   bool correlation_flag = !correlations.empty();
   size_t i, j, num_cdv = cd_l_bnds.length(), num_nuv  = n_means.length(),
@@ -279,13 +288,17 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     num_geuv = ge_prob_per_tr.length(), num_hguv = hg_num_drawn.length(),
     num_dsriv = dsri_l_bnds.length(), num_dssiv = dssi_values.size(),
     num_ddsrv = ddsr_values.size(), num_hpuv = h_pt_prs.size(),
-    num_dssrv = dssr_values.size(), num_iuv  = i_probs.size(),
+    num_dssrv = dssr_values.size(),
+    num_ciuv  = ci_probs.size(),    num_diuv  = di_probs.size(),
+    num_dusiv = dsi_probs.size(),   num_dusrv = dsr_probs.size(),
     num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddsrv,
     num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
              + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
     num_dauiv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv,
     num_daurv = num_hpuv, num_auv = num_cauv + num_dauiv + num_daurv,
-    num_ceuv  = num_iuv,  num_euv = num_ceuv, num_uv = num_auv + num_euv,
+    num_ceuv  = num_ciuv, num_deuiv = num_diuv + num_dusiv,
+    num_deurv = num_dusrv, num_euv = num_ceuv + num_deuiv + num_deurv,
+    num_uv = num_auv + num_euv,
     num_sv = num_csv + num_dsriv + num_dssiv + num_dssrv,
     num_av = num_dv  + num_uv    + num_sv;
 
@@ -617,9 +630,9 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     delete [] y_val;
   }
 
-  // interval uncertain: convert to histogram for sampling
-  for (i=0; i<num_iuv; ++i, ++cntr) {
-    name_string = f77name16("Interval", cntr, lhs_names);
+  // continuous interval uncertain: convert to histogram for sampling
+  for (i=0; i<num_ciuv; ++i, ++cntr) {
+    name_string = f77name16("ContInterval", cntr, lhs_names);
     String dist_string("continuous linear");
     dist_string.resize(32, ' ');
 
@@ -628,13 +641,15 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
     // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
     // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
-    const RealVector& interval_probs_i = i_probs[i];
-    const RealVector& interval_bnds_i  = i_bnds[i];
+    const RealVector&  ci_probs_i = ci_probs[i];
+    const RealVector& ci_l_bnds_i = ci_l_bnds[i];
+    const RealVector& ci_u_bnds_i = ci_u_bnds[i];
     RealSet x_sort_unique;
-    int num_intervals_i = interval_probs_i.length(),
-        num_bounds_i    = 2*num_intervals_i;
-    for (j=0; j<num_bounds_i; ++j)
-      x_sort_unique.insert(interval_bnds_i[j]);
+    int num_intervals_i = ci_probs_i.length();
+    for (j=0; j<num_intervals_i; ++j) {
+      x_sort_unique.insert(ci_l_bnds_i[j]);
+      x_sort_unique.insert(ci_u_bnds_i[j]);
+    }
     // convert RealSet to Real*
     num_params = x_sort_unique.size();
     Real* x_val = new Real [num_params];
@@ -648,9 +663,9 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     // new, sorted intervals for the density calculation.
     RealVector prob_dens(num_params); // initialize to 0.
     for (j=0; j<num_intervals_i; ++j) {
-      const Real& lower_value = interval_bnds_i[2*j];
-      const Real& upper_value = interval_bnds_i[2*j+1];
-      Real interval_density = interval_probs_i[j] / (upper_value - lower_value);
+      const Real& lower_value = ci_l_bnds_i[j];
+      const Real& upper_value = ci_u_bnds_i[j];
+      Real interval_density = ci_probs_i[j] / (upper_value - lower_value);
       int cum_int_index = 0;
       while (lower_value > x_val[cum_int_index])
 	cum_int_index++;
@@ -837,6 +852,10 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     check_error(err_code, "lhs_dist(hypergeometric)");
   }
 
+  // discrete interval uncertain
+
+  // discrete uncertain set integer
+
   // discrete state range (treated as discrete histogram)
   for (i=0; i<num_dsriv; ++i, ++cntr) {
     name_string = f77name16("DiscStateRange", cntr, lhs_names);
@@ -934,6 +953,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     delete [] x_val;
     delete [] y_val;
   }
+
+  // discrete uncertain set real
 
   // discrete state set real (treated as discrete histogram)
   for (i=0; i<num_dssrv; ++i, ++cntr) {

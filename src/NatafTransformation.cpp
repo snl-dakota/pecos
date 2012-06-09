@@ -83,7 +83,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
   for (int i=0; i<z_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE: case INTERVAL:
+    case CONTINUOUS_DESIGN: case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
       if (ranVarTypesU[i] == STD_UNIFORM) {
 	// scale from [-1,1] to [L,U]
 	const Real& lwr = ranVarLowerBndsX[i];
@@ -394,7 +394,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
   for (int i=0; i<x_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE: case INTERVAL:
+    case CONTINUOUS_DESIGN: case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
       if (ranVarTypesU[i] == STD_UNIFORM) {
 	const Real& lwr = ranVarLowerBndsX[i];
 	z_vars[i] = std_uniform_cdf_inverse((x_vars[i] - lwr)/
@@ -660,9 +660,10 @@ void NatafTransformation::transform_correlations()
   RealSymMatrix mod_corr_matrix(corrMatrixX); // copy
 
   size_t i, j,
-    num_cdv = std::count(ranVarTypesX.begin(),ranVarTypesX.end(),(short)DESIGN),
-    num_cdv_uv = ranVarTypesX.size()
-            - std::count(ranVarTypesX.begin(),ranVarTypesX.end(),(short)STATE);
+    num_cdv = std::count(ranVarTypesX.begin(), ranVarTypesX.end(),
+			 (short)CONTINUOUS_DESIGN),
+    num_cdv_uv = ranVarTypesX.size() - std::count(ranVarTypesX.begin(),
+      ranVarTypesX.end(), (short)CONTINUOUS_STATE);
 
   for (i=num_cdv; i<num_cdv_uv; i++) {
     for (j=num_cdv; j<i; j++) {
@@ -1396,8 +1397,10 @@ trans_hess_X_to_U(const RealSymMatrix& fn_hess_x, RealSymMatrix& fn_hess_u,
   bool nonlinear_vars_map = false;
   size_t i, x_len = x_vars.length();
   for (i=0; i<x_len; i++)
-    if ( ( ( ranVarTypesX[i] == DESIGN  || ranVarTypesX[i] == STATE ||
-	     ranVarTypesX[i] == UNIFORM || ranVarTypesX[i] == INTERVAL ) &&
+    if ( ( ( ranVarTypesX[i] == CONTINUOUS_DESIGN  ||
+	     ranVarTypesX[i] == CONTINUOUS_STATE ||
+	     ranVarTypesX[i] == UNIFORM ||
+	     ranVarTypesX[i] == CONTINUOUS_INTERVAL ) &&
 	   ranVarTypesU[i]   != STD_UNIFORM ) ||
 	 ( ranVarTypesX[i]   == NORMAL && ranVarTypesU[i]  != STD_NORMAL ) ||
 	 ( ranVarTypesX[i]   == EXPONENTIAL &&
@@ -1586,7 +1589,7 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
   for (int i=0; i<x_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE: case INTERVAL:
+    case CONTINUOUS_DESIGN: case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
       if (ranVarTypesU[i] == STD_UNIFORM)
 	jacobian_xz(i, i) = (ranVarUpperBndsX[i] - ranVarLowerBndsX[i])/2.;
       else
@@ -1823,7 +1826,7 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
   for (int i=0; i<x_len; i++) {
     bool err_flag = false;
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE: case INTERVAL:
+    case CONTINUOUS_DESIGN: case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
       if (ranVarTypesU[i] == STD_UNIFORM)
 	jacobian_zx(i, i) = 2./(ranVarUpperBndsX[i] - ranVarLowerBndsX[i]);
       else
@@ -2039,10 +2042,10 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
   // then the beta/gamma distribution parameters do not have to be design
   // variables (dx/ds for beta/gamma x will include a dz/ds contribution).
   if (correlationFlagX) {
-    size_t num_cdv
-      = std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)DESIGN),
-      num_cdv_uv = ranVarTypesX.size()
-      - std::count(ranVarTypesX.begin(), ranVarTypesX.end(), (short)STATE);
+    size_t num_cdv = std::count(ranVarTypesX.begin(), ranVarTypesX.end(),
+				(short)CONTINUOUS_DESIGN),
+      num_cdv_uv = ranVarTypesX.size() - std::count(ranVarTypesX.begin(),
+	ranVarTypesX.end(), (short)CONTINUOUS_STATE);
     for (i=num_cdv; i<num_cdv_uv; i++) {
       if ( (ranVarTypesX[i] == BETA || ranVarTypesX[i] == GAMMA) &&
 	    ranVarTypesX[i] != ranVarTypesU[i] ) {
@@ -2102,7 +2105,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	// Jacobian row    = Z value = j
 	// Jacobian column = S value = i
 	switch (ranVarTypesX[j]) {
-	case DESIGN: { // x = L + (z + 1)*(U - L)/2
+	case CONTINUOUS_DESIGN: { // x = L + (z + 1)*(U - L)/2
 	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
 	    switch (target2) {
 	    case CDV_LWR_BND: // Deriv of CDV w.r.t. its Lower Bound
@@ -2112,8 +2115,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    case NO_TARGET:   // can occur for all_variables Jacobians
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
-	      PCerr << "Error: secondary mapping failure for DESIGN in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for CONTINUOUS_DESIGN "
+		    << "in NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2745,13 +2748,13 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 		<< "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	  abort_handler(-1);
 	  break;
-	case INTERVAL:
+	case CONTINUOUS_INTERVAL:
 	  // TO DO
-	  PCerr << "Error: unsupported mapping for INTERVAL in "
+	  PCerr << "Error: unsupported mapping for CONTINUOUS_INTERVAL in "
 		<< "NatafTransformation::jacobian_dX_dS()." << std::endl;
 	  abort_handler(-1);
 	  break;
-	case STATE: { // x = L + (z + 1)*(U - L)/2
+	case CONTINUOUS_STATE: { // x = L + (z + 1)*(U - L)/2
 	  if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
 	    switch (target2) {
 	    case CSV_LWR_BND: // Deriv of CSV w.r.t. its Lower Bound
@@ -2761,8 +2764,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    case NO_TARGET:   // can occur for all_variables Jacobians
 	      jacobian_xs(j, i) = 0.;                  break;
 	    default:
-	      PCerr << "Error: secondary mapping failure for STATE in "
-		    << "NatafTransformation::jacobian_dX_dS()." << std::endl;
+	      PCerr << "Error: secondary mapping failure for CONTINUOUS_STATE "
+		    << "in NatafTransformation::jacobian_dX_dS()." << std::endl;
 	      abort_handler(-1);
 	      break;
 	    }
@@ -2855,7 +2858,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
     // each d^2X_i/dZ^2 has a single entry on the diagonal as defined by
     // differentiation of jacobian_dX_dZ()
     switch (ranVarTypesX[i]) {
-    case DESIGN: case STATE: case INTERVAL:
+    case CONTINUOUS_DESIGN: case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
       if (ranVarTypesU[i] == STD_UNIFORM)
 	hessian_xz[i](i, i) = 0.;
       else
