@@ -263,16 +263,16 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   const RealVectorArray& h_pt_prs = dp.histogram_point_pairs();
   const RealSymMatrix& correlations = dp.uncertain_correlations();
 
-  const RealVectorArray& ci_probs  = dp.continuous_interval_probabilities();
-  const RealVectorArray& ci_l_bnds = dp.continuous_interval_lower_bounds();
-  const RealVectorArray& ci_u_bnds = dp.continuous_interval_upper_bounds();
-  const RealVectorArray& di_probs  = dp.discrete_interval_probabilities();
-  const IntVectorArray&  di_l_bnds = dp.discrete_interval_lower_bounds();
-  const IntVectorArray&  di_u_bnds = dp.discrete_interval_upper_bounds();
-  const IntSetArray&     dsi_vals  = dp.discrete_set_int_values();
-  const RealVectorArray& dsi_probs = dp.discrete_set_int_probabilities();
-  const RealSetArray&    dsr_vals  = dp.discrete_set_real_values();
-  const RealVectorArray& dsr_probs = dp.discrete_set_real_probabilities();
+  const RealVectorArray& ci_probs    = dp.continuous_interval_probabilities();
+  const RealVectorArray& ci_l_bnds   = dp.continuous_interval_lower_bounds();
+  const RealVectorArray& ci_u_bnds   = dp.continuous_interval_upper_bounds();
+  const RealVectorArray& di_probs    = dp.discrete_interval_probabilities();
+  const IntVectorArray&  di_l_bnds   = dp.discrete_interval_lower_bounds();
+  const IntVectorArray&  di_u_bnds   = dp.discrete_interval_upper_bounds();
+  const IntSetArray&     dusi_values = dp.discrete_set_int_values();
+  const RealVectorArray& dusi_probs  = dp.discrete_set_int_probabilities();
+  const RealSetArray&    dusr_values = dp.discrete_set_real_values();
+  const RealVectorArray& dusr_probs  = dp.discrete_set_real_probabilities();
 
   bool correlation_flag = !correlations.empty();
   size_t i, j, num_cdv = cd_l_bnds.length(), num_nuv  = n_means.length(),
@@ -290,7 +290,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     num_ddsrv = ddsr_values.size(), num_hpuv = h_pt_prs.size(),
     num_dssrv = dssr_values.size(),
     num_ciuv  = ci_probs.size(),    num_diuv  = di_probs.size(),
-    num_dusiv = dsi_probs.size(),   num_dusrv = dsr_probs.size(),
+    num_dusiv = dusi_probs.size(),  num_dusrv = dusr_probs.size(),
     num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddsrv,
     num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
              + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
@@ -650,7 +650,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       x_sort_unique.insert(ci_l_bnds_i[j]);
       x_sort_unique.insert(ci_u_bnds_i[j]);
     }
-    // convert RealSet to Real*
+    // convert sorted RealSet to x_val
     num_params = x_sort_unique.size();
     Real* x_val = new Real [num_params];
     RealSet::iterator it = x_sort_unique.begin();
@@ -663,17 +663,15 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     // new, sorted intervals for the density calculation.
     RealVector prob_dens(num_params); // initialize to 0.
     for (j=0; j<num_intervals_i; ++j) {
-      const Real& lower_value = ci_l_bnds_i[j];
-      const Real& upper_value = ci_u_bnds_i[j];
-      Real interval_density = ci_probs_i[j] / (upper_value - lower_value);
+      const Real& l_bnd = ci_l_bnds_i[j];
+      const Real& u_bnd = ci_u_bnds_i[j];
+      Real ci_density = ci_probs_i[j] / (u_bnd - l_bnd);
       int cum_int_index = 0;
-      while (lower_value > x_val[cum_int_index])
-	cum_int_index++;
-      cum_int_index++;
-      while (cum_int_index < num_params && x_val[cum_int_index] <= upper_value){
-	prob_dens[cum_int_index] += interval_density;
-	cum_int_index++;
-      }
+      while (l_bnd > x_val[cum_int_index])
+	++cum_int_index;
+      ++cum_int_index;
+      while (cum_int_index < num_params && x_val[cum_int_index] <= u_bnd)
+	{ prob_dens[cum_int_index] += ci_density; ++cum_int_index; }
     }
 
     // put the densities in a cumulative format necessary for LHS histograms.
@@ -700,7 +698,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 #endif //DEBUG
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(interval)");
+    check_error(err_code, "lhs_udist(continuous interval)");
     delete [] x_val;
     delete [] y_val;
   }
@@ -853,8 +851,82 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   }
 
   // discrete interval uncertain
+  for (i=0; i<num_diuv; ++i, ++cntr) {
+    name_string = f77name16("DiscInterval", cntr, lhs_names);
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
 
-  // discrete uncertain set integer
+    // x_sort_unique contains ALL of the unique integer values for this
+    // discrete interval variable in increasing order.  For example, if
+    // there are 3 intervals for a variable and the bounds are (1,4),
+    // (3,6), and [9,10], x_sorted will be (1,2,3,4,5,6,9,10).
+    const RealVector& di_probs_i = di_probs[i];
+    const IntVector& di_l_bnds_i = di_l_bnds[i];
+    const IntVector& di_u_bnds_i = di_u_bnds[i];
+    IntSet x_sort_unique;
+    int k, ke, num_intervals_i = di_probs_i.length();
+    for (j=0; j<num_intervals_i; ++j)
+      for (k=di_l_bnds_i[j], ke=di_u_bnds_i[j]; k<=ke; ++k)
+	x_sort_unique.insert(k);
+    // copy sorted IntSet to x_val
+    num_params = x_sort_unique.size();
+    Real* x_val = new Real [num_params];
+    IntSet::iterator it = x_sort_unique.begin();
+    for (j=0; j<num_params; ++j, ++it)
+      x_val[j] = *it;
+
+    // Calculate probability densities and account for overlapping intervals.
+    // Loop over the original intervals and see where they fall relative to
+    // the new, sorted intervals for the density calculation.
+    Real* y_val = new Real [num_params];
+    for (j=0; j<num_params; ++j) y_val[j] = 0.;
+    int l_bnd, u_bnd; size_t index;
+    for (j=0; j<num_intervals_i; ++j) {
+      l_bnd = di_l_bnds_i[j]; u_bnd = di_u_bnds_i[j];
+      Real di_density = di_probs_i[j] / (u_bnd - l_bnd + 1); // p/#integers
+      it = x_sort_unique.find(l_bnd);
+      if (it == x_sort_unique.end()) {
+	PCerr << "Error: lower bound not found in sorted set within LHSDriver "
+	      << "mapping of discrete interval uncertain variable."<< std::endl;
+	abort_handler(-1);
+      }
+      index = std::distance(x_sort_unique.begin(), it);
+      for (k=l_bnd; k<=u_bnd; ++k, ++index)
+	y_val[index] += di_density;
+    }
+
+#ifdef DEBUG
+    for (j=0; j<num_params; ++j)
+      PCout << "x_val " << j << " is " << x_val[j] << "\ny_val " << j << " is "
+	    << y_val[j]<< '\n';
+#endif //DEBUG
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete interval)");
+    delete [] x_val;
+    delete [] y_val;
+  }
+
+  // discrete uncertain set integer (treated as discrete histogram)
+  for (i=0; i<num_dusiv; ++i, ++cntr) {
+    name_string = f77name16("DiscUncSetI", cntr, lhs_names);
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
+    num_params = dusi_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    ISCIter cit = dusi_values[i].begin();
+    const RealVector& dusi_probs_i = dusi_probs[i];
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = (Real)(*cit);
+      y_val[j] = dusi_probs_i[j];
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete uncertain set int)");
+    delete [] x_val;
+    delete [] y_val;
+  }
 
   // discrete state range (treated as discrete histogram)
   for (i=0; i<num_dsriv; ++i, ++cntr) {
@@ -954,7 +1026,26 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     delete [] y_val;
   }
 
-  // discrete uncertain set real
+  // discrete uncertain set real (treated as discrete histogram)
+  for (i=0; i<num_dusrv; ++i, ++cntr) {
+    name_string = f77name16("DiscUncSetR", cntr, lhs_names);
+    String dist_string("discrete histogram");
+    dist_string.resize(32, ' ');
+    num_params = dusr_values[i].size();
+    Real* x_val = new Real [num_params];
+    Real* y_val = new Real [num_params];
+    RSCIter cit = dusr_values[i].begin();
+    const RealVector& dusr_probs_i = dusr_probs[i];
+    for (j=0; j<num_params; ++j, ++cit) {
+      x_val[j] = *cit;
+      y_val[j] = dusr_probs_i[j];
+    }
+    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		  num_params, x_val, y_val, err_code, dist_num, pv_num);
+    check_error(err_code, "lhs_udist(discrete uncertain set real)");
+    delete [] x_val;
+    delete [] y_val;
+  }
 
   // discrete state set real (treated as discrete histogram)
   for (i=0; i<num_dssrv; ++i, ++cntr) {
