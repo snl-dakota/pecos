@@ -13,6 +13,7 @@
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
 
+//#define DEBUG
 
 #ifdef HAVE_LHS
 #ifdef HAVE_CONFIG_H
@@ -693,9 +694,9 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
 #ifdef DEBUG
     for (j=0; j<num_params; ++j)
-      PCout << "x_val " << j << " is " << x_val[j] << "\ny_val " << j << " is "
-	    << y_val[j]<< '\n';
-#endif //DEBUG
+      PCout << "ciuv[" << i << "]: x_val[" << j << "] is " << x_val[j]
+	    << " y_val[" << j << "] is " << y_val[j] << '\n';
+#endif // DEBUG
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(continuous interval)");
@@ -897,9 +898,9 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 
 #ifdef DEBUG
     for (j=0; j<num_params; ++j)
-      PCout << "x_val " << j << " is " << x_val[j] << "\ny_val " << j << " is "
-	    << y_val[j]<< '\n';
-#endif //DEBUG
+      PCout << "diuv[" << i << "]: x_val[" << j << "] is " << x_val[j]
+	    << " y_val[" << j << "] is " << y_val[j] << '\n';
+#endif // DEBUG
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(discrete interval)");
