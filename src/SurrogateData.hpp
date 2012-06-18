@@ -37,9 +37,11 @@ private:
   //
 
   /// constructor
-  SurrogateDataVarsRep(const RealVector& c_vars, short mode);
+  SurrogateDataVarsRep(const RealVector& c_vars, const IntVector& di_vars,
+		       const RealVector& dr_vars, short mode);
   /// alternate constructor (data sizing only)
-  SurrogateDataVarsRep(size_t num_vars);
+  SurrogateDataVarsRep(size_t num_c_vars, size_t num_di_vars,
+		       size_t num_dr_vars);
   /// destructor
   ~SurrogateDataVarsRep();
 
@@ -47,30 +49,52 @@ private:
   //- Heading: Private data members
   //
 
-  RealVector continuousVars; ///< continuous variables
-  //IntVector discreteIntVars;
-  //RealVector discreteRealVars;
+  RealVector continuousVars;   ///< continuous variables
+  IntVector  discreteIntVars;  ///< discrete integer variables
+  RealVector discreteRealVars; ///< discrete real variables
+
   int referenceCount;        ///< number of handle objects sharing sdvRep
 };
 
 
 inline SurrogateDataVarsRep::
-SurrogateDataVarsRep(const RealVector& c_vars, short mode): referenceCount(1)
+SurrogateDataVarsRep(const RealVector& c_vars, const IntVector& di_vars,
+		     const RealVector& dr_vars, short mode): referenceCount(1)
 {
   // Note: provided a way to query DataAccess mode for c_vars, could make
   // greater use of operator= for {DEEP,SHALLOW}_COPY modes
-  if (mode == DEEP_COPY)         // enforce deep vector copy
-    copy_data(c_vars, continuousVars);
-  else if (mode == SHALLOW_COPY) // enforce shallow vector copy
-    continuousVars = RealVector(Teuchos::View,c_vars.values(),c_vars.length());
-  else                           // default: assume existing Copy/View state
-    continuousVars = c_vars;
+  if (mode == DEEP_COPY) {         // enforce deep vector copy
+    if (c_vars.length())  copy_data( c_vars, continuousVars);
+    if (di_vars.length()) copy_data(di_vars, discreteIntVars);
+    if (dr_vars.length()) copy_data(dr_vars, discreteRealVars);
+  }
+  else if (mode == SHALLOW_COPY) { // enforce shallow vector copy
+    if (c_vars.length())
+      continuousVars
+	= RealVector(Teuchos::View,  c_vars.values(),  c_vars.length());
+    if (di_vars.length())
+      discreteIntVars
+	= IntVector(Teuchos::View,  di_vars.values(), di_vars.length());
+    if (di_vars.length())
+      discreteRealVars
+	= RealVector(Teuchos::View, dr_vars.values(), dr_vars.length());
+  }
+  else {                           // default: assume existing Copy/View state
+    if (c_vars.length())    continuousVars = c_vars;
+    if (di_vars.length())  discreteIntVars = di_vars;
+    if (dr_vars.length()) discreteRealVars = dr_vars;
+  }
 }
 
 
 inline SurrogateDataVarsRep::
-SurrogateDataVarsRep(size_t num_vars): referenceCount(1)
-{ continuousVars.sizeUninitialized(num_vars); }
+SurrogateDataVarsRep(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars):
+  referenceCount(1)
+{
+  continuousVars.sizeUninitialized(num_c_vars);
+  discreteIntVars.sizeUninitialized(num_di_vars);
+  discreteRealVars.sizeUninitialized(num_dr_vars);
+}
 
 
 inline SurrogateDataVarsRep::~SurrogateDataVarsRep()
@@ -95,9 +119,10 @@ public:
   /// default constructor
   SurrogateDataVars();
   /// standard constructor
-  SurrogateDataVars(const RealVector& c_vars, short mode = DEFAULT_COPY);
+  SurrogateDataVars(const RealVector& c_vars, const IntVector& di_vars,
+		    const RealVector& dr_vars, short mode = DEFAULT_COPY);
   /// alternate constructor (data sizing only)
-  SurrogateDataVars(size_t num_vars);
+  SurrogateDataVars(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars);
   /// copy constructor
   SurrogateDataVars(const SurrogateDataVars& sdv);
   /// destructor
@@ -122,6 +147,26 @@ public:
   /// get view of continuousVars for updating in place
   RealVector continuous_variables_view();
 
+  /// set i^{th} entry within discreteIntVars
+  void discrete_int_variable(int di_var, size_t i);
+  /// set discreteIntVars
+  void discrete_int_variables(const IntVector& di_vars,
+			      short mode = DEFAULT_COPY);
+  /// get discreteIntVars
+  const IntVector& discrete_int_variables() const;
+  /// get view of discreteIntVars for updating in place
+  IntVector discrete_int_variables_view();
+
+  /// set i^{th} entry within discreteRealVars
+  void discrete_real_variable(const Real& dr_var, size_t i);
+  /// set discreteRealVars
+  void discrete_real_variables(const RealVector& dr_vars,
+			       short mode = DEFAULT_COPY);
+  /// get discreteRealVars
+  const RealVector& discrete_real_variables() const;
+  /// get view of discreteRealVars for updating in place
+  RealVector discrete_real_variables_view();
+
   /// function to check sdvRep (does this handle contain a body)
   bool is_null() const;
 
@@ -141,13 +186,15 @@ inline SurrogateDataVars::SurrogateDataVars(): sdvRep(NULL)
 
 
 inline SurrogateDataVars::
-SurrogateDataVars(const RealVector& c_vars, short mode):
-  sdvRep(new SurrogateDataVarsRep(c_vars, mode))
+SurrogateDataVars(const RealVector& c_vars, const IntVector& di_vars,
+		  const RealVector& dr_vars, short mode):
+  sdvRep(new SurrogateDataVarsRep(c_vars, di_vars, dr_vars, mode))
 { }
 
 
-inline SurrogateDataVars::SurrogateDataVars(size_t num_vars):
-  sdvRep(new SurrogateDataVarsRep(num_vars))
+inline SurrogateDataVars::
+SurrogateDataVars(size_t num_c_vars, size_t num_di_vars, size_t num_dr_vars):
+  sdvRep(new SurrogateDataVarsRep(num_c_vars, num_di_vars, num_dr_vars))
 { }
 
 
@@ -186,7 +233,12 @@ operator=(const SurrogateDataVars& sdv)
 
 
 //inline bool SurrogateDataVars::operator==(const SurrogateDataVars& sdv) const
-//{ return (sdvRep->continuousVars==sdv.sdvRep->continuousVars) ? true : false;}
+//{
+//  return (sdvRep->continuousVars   == sdv.sdvRep->continuousVars  &&
+//          sdvRep->discreteIntVars  == sdv.sdvRep->discreteIntVars &&
+//          sdvRep->discreteRealVars == sdv.sdvRep->discreteRealVars) ?
+//    true : false;
+//}
 
 
 inline void SurrogateDataVars::continuous_variable(const Real& c_var, size_t i)
@@ -214,6 +266,63 @@ inline RealVector SurrogateDataVars::continuous_variables_view()
 {
   return RealVector(Teuchos::View, sdvRep->continuousVars.values(),
 		    sdvRep->continuousVars.length());
+}
+
+
+inline void SurrogateDataVars::discrete_int_variable(int di_var, size_t i)
+{ sdvRep->discreteIntVars[i] = di_var; }
+
+
+inline void SurrogateDataVars::
+discrete_int_variables(const IntVector& di_vars, short mode)
+{
+  if (mode == DEEP_COPY)         // enforce deep vector copy
+    copy_data(di_vars, sdvRep->discreteIntVars);
+  else if (mode == SHALLOW_COPY) // enforce shallow vector copy
+    sdvRep->discreteIntVars
+      = IntVector(Teuchos::View, di_vars.values(), di_vars.length());
+  else                           // default: assume existing Copy/View state
+    sdvRep->discreteIntVars = di_vars;
+}
+
+
+inline const IntVector& SurrogateDataVars::discrete_int_variables() const
+{ return sdvRep->discreteIntVars; }
+
+
+inline IntVector SurrogateDataVars::discrete_int_variables_view()
+{
+  return IntVector(Teuchos::View, sdvRep->discreteIntVars.values(),
+		   sdvRep->discreteIntVars.length());
+}
+
+
+inline void SurrogateDataVars::
+discrete_real_variable(const Real& dr_var, size_t i)
+{ sdvRep->discreteRealVars[i] = dr_var; }
+
+
+inline void SurrogateDataVars::
+discrete_real_variables(const RealVector& dr_vars, short mode)
+{
+  if (mode == DEEP_COPY)         // enforce deep vector copy
+    copy_data(dr_vars, sdvRep->discreteRealVars);
+  else if (mode == SHALLOW_COPY) // enforce shallow vector copy
+    sdvRep->discreteRealVars
+      = RealVector(Teuchos::View, dr_vars.values(), dr_vars.length());
+  else                           // default: assume existing Copy/View state
+    sdvRep->discreteRealVars = dr_vars;
+}
+
+
+inline const RealVector& SurrogateDataVars::discrete_real_variables() const
+{ return sdvRep->discreteRealVars; }
+
+
+inline RealVector SurrogateDataVars::discrete_real_variables_view()
+{
+  return RealVector(Teuchos::View, sdvRep->discreteRealVars.values(),
+		    sdvRep->discreteRealVars.length());
 }
 
 
@@ -686,6 +795,10 @@ public:
 
   /// get anchorVars.continuous_variables()
   const RealVector& anchor_continuous_variables() const;
+  /// get anchorVars.discrete_int_variables()
+  const IntVector& anchor_discrete_int_variables() const;
+  /// get anchorVars.discrete_real_variables()
+  const RealVector& anchor_discrete_real_variables() const;
   /// get anchorResp.active_bits()
   short anchor_active_bits() const;
   /// get anchorResp.response_function()
@@ -697,6 +810,10 @@ public:
 
   /// get varsData[i].continuous_variables()
   const RealVector& continuous_variables(size_t i) const;
+  /// get varsData[i].discrete_int_variables()
+  const IntVector& discrete_int_variables(size_t i) const;
+  /// get varsData[i].discrete_real_variables()
+  const RealVector& discrete_real_variables(size_t i) const;
   /// get respData[i].active_bits()
   short response_active_bits(size_t i) const;
   /// get respData[i].response_function()
@@ -844,8 +961,24 @@ inline const RealVector& SurrogateData::anchor_continuous_variables() const
 { return sdRep->anchorVars.continuous_variables(); }
 
 
+inline const IntVector& SurrogateData::anchor_discrete_int_variables() const
+{ return sdRep->anchorVars.discrete_int_variables(); }
+
+
+inline const RealVector& SurrogateData::anchor_discrete_real_variables() const
+{ return sdRep->anchorVars.discrete_real_variables(); }
+
+
 inline const RealVector& SurrogateData::continuous_variables(size_t i) const
 { return sdRep->varsData[i].continuous_variables(); }
+
+
+inline const IntVector& SurrogateData::discrete_int_variables(size_t i) const
+{ return sdRep->varsData[i].discrete_int_variables(); }
+
+
+inline const RealVector& SurrogateData::discrete_real_variables(size_t i) const
+{ return sdRep->varsData[i].discrete_real_variables(); }
 
 
 inline short SurrogateData::anchor_active_bits() const
