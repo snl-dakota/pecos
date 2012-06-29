@@ -146,10 +146,10 @@ add_subdirectory(packages)
 
 add_subdirectory(src)
 
-if(BUILD_TESTING)
+option(PECOS_ENABLE_TESTS "Enable Pecos-specific tests?" ON)
+if(BUILD_TESTING AND PECOS_ENABLE_TESTS)
   add_subdirectory(test)
 endif()
-
 
 # libpecos.la must be built PRIOR to the linkage of test executables
 # WJB- ToDo: prefer no empty C++ files, so consult with Kitware for a better way
