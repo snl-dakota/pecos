@@ -288,7 +288,7 @@ private:
   /// perform sanity checks prior to numerical integration
   void integration_checks();
   /// extract tp_data_points from surrData and tp_weights from
-  /// driverRep->collocWts1D
+  /// driverRep->type1CollocWts1D
   void integration_data(size_t tp_index, SDVArray& tp_data_vars,
 			SDRArray& tp_data_resp, RealVector& tp_weights);
   /// computes the chaosCoeffs via numerical integration (expCoeffsSolnApproach

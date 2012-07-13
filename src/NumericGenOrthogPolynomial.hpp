@@ -213,7 +213,7 @@ private:
 
 
 inline NumericGenOrthogPolynomial::NumericGenOrthogPolynomial() :
-  coeffsNormsFlag(false)
+  distributionType(NO_TYPE), coeffsNormsFlag(false)
 { collocRule = GOLUB_WELSCH; ptFactor = wtFactor = 1.; }
 
 
@@ -253,21 +253,48 @@ inline void NumericGenOrthogPolynomial::
 bounded_normal_distribution(const Real& mean,  const Real& std_dev,
 			    const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = BOUNDED_NORMAL;
-  distParams.sizeUninitialized(4);
-  distParams[0] = mean;  distParams[1] = std_dev;
-  distParams[2] = l_bnd; distParams[3] = u_bnd;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == BOUNDED_NORMAL) {
+    if ( !real_compare(distParams[0], mean)    ||
+	 !real_compare(distParams[1], std_dev) ||
+	 !real_compare(distParams[2], l_bnd)   ||
+	 !real_compare(distParams[3], u_bnd) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = BOUNDED_NORMAL;
+    distParams.sizeUninitialized(4);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate) {
+    distParams[0] = mean;  distParams[1] = std_dev;
+    distParams[2] = l_bnd; distParams[3] = u_bnd;
+    reset_gauss();
+  }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 lognormal_distribution(const Real& mean, const Real& std_dev)
 {
-  distributionType = LOGNORMAL;
-  distParams.sizeUninitialized(2);
-  distParams[0] = mean; distParams[1] = std_dev;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == LOGNORMAL) {
+    if ( !real_compare(distParams[0], mean) ||
+	 !real_compare(distParams[1], std_dev) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = LOGNORMAL; distParams.sizeUninitialized(2);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate)
+    { distParams[0] = mean; distParams[1] = std_dev; reset_gauss(); }
 }
 
 
@@ -275,70 +302,152 @@ inline void NumericGenOrthogPolynomial::
 bounded_lognormal_distribution(const Real& mean,  const Real& std_dev,
 			       const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = BOUNDED_LOGNORMAL;
-  distParams.sizeUninitialized(4);
-  distParams[0] = mean;  distParams[1] = std_dev;
-  distParams[2] = l_bnd; distParams[3] = u_bnd;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == BOUNDED_LOGNORMAL) {
+    if ( !real_compare(distParams[0], mean)    ||
+	 !real_compare(distParams[1], std_dev) ||
+	 !real_compare(distParams[2], l_bnd)   ||
+	 !real_compare(distParams[3], u_bnd) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = BOUNDED_LOGNORMAL; distParams.sizeUninitialized(4);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate) {
+    distParams[0] = mean;  distParams[1] = std_dev;
+    distParams[2] = l_bnd; distParams[3] = u_bnd;
+    reset_gauss();
+  }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 loguniform_distribution(const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = LOGUNIFORM;
-  distParams.sizeUninitialized(2);
-  distParams[0] = l_bnd; distParams[1] = u_bnd;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == LOGUNIFORM) {
+    if ( !real_compare(distParams[0], l_bnd) ||
+	 !real_compare(distParams[1], u_bnd) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = LOGUNIFORM; distParams.sizeUninitialized(2);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate)
+    { distParams[0] = l_bnd; distParams[1] = u_bnd; reset_gauss(); }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 triangular_distribution(const Real& mode, const Real& l_bnd, const Real& u_bnd)
 {
-  distributionType = TRIANGULAR;
-  distParams.sizeUninitialized(3);
-  distParams[0] = mode; distParams[1] = l_bnd; distParams[2] = u_bnd;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == TRIANGULAR) {
+    if ( !real_compare(distParams[0], mode)  ||
+	 !real_compare(distParams[1], l_bnd) ||
+	 !real_compare(distParams[2], u_bnd) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = TRIANGULAR; distParams.sizeUninitialized(3);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate) {
+    distParams[0] = mode; distParams[1] = l_bnd; distParams[2] = u_bnd;
+    reset_gauss();
+  }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 gumbel_distribution(const Real& alpha, const Real& beta)
 {
-  distributionType = GUMBEL;
-  distParams.sizeUninitialized(2);
-  distParams[0] = alpha; distParams[1] = beta;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == GUMBEL) {
+    if ( !real_compare(distParams[0], alpha) ||
+	 !real_compare(distParams[1], beta) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = GUMBEL; distParams.sizeUninitialized(2);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate)
+    { distParams[0] = alpha; distParams[1] = beta; reset_gauss(); }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 frechet_distribution(const Real& alpha, const Real& beta)
 {
-  distributionType = FRECHET;
-  distParams.sizeUninitialized(2);
-  distParams[0] = alpha; distParams[1] = beta;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == FRECHET) {
+    if ( !real_compare(distParams[0], alpha) ||
+	 !real_compare(distParams[1], beta) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = FRECHET; distParams.sizeUninitialized(2);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate)
+    { distParams[0] = alpha; distParams[1] = beta; reset_gauss(); }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 weibull_distribution(const Real& alpha, const Real& beta)
 {
-  distributionType = WEIBULL;
-  distParams.sizeUninitialized(2);
-  distParams[0] = alpha; distParams[1] = beta;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == WEIBULL) {
+    if ( !real_compare(distParams[0], alpha) ||
+	 !real_compare(distParams[1], beta) )
+      parametricUpdate = true;
+  }
+  else {
+    distributionType = WEIBULL; distParams.sizeUninitialized(2);
+    parametricUpdate = true;
+  }
+  if (parametricUpdate)
+    { distParams[0] = alpha; distParams[1] = beta; reset_gauss(); }
 }
 
 
 inline void NumericGenOrthogPolynomial::
 histogram_bin_distribution(const RealVector& bin_pairs)
 {
-  distributionType = HISTOGRAM_BIN;
-  distParams = bin_pairs;
-  reset_gauss();
+  // *_distribution() routines are called for each approximation build
+  // from PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  if (distributionType == HISTOGRAM_BIN) {
+    if (distParams != bin_pairs)
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = HISTOGRAM_BIN; parametricUpdate = true; }
+  if (parametricUpdate)
+    { distParams = bin_pairs; reset_gauss(); }
 }
 
 

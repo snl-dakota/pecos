@@ -1498,7 +1498,7 @@ void OrthogPolyApproximation::
 integration_data(size_t tp_index, SDVArray& tp_data_vars,
 		 SDRArray& tp_data_resp, RealVector& tp_weights)
 {
-  // extract tensor vars/resp from surrData and tensor weights from collocWts1D
+  // extract tensor vars/resp from surrData and tensor wts from type1CollocWts1D
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
   const UShortArray&    sm_index = csg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&       key = csg_driver->collocation_key()[tp_index];
@@ -1578,11 +1578,20 @@ integrate_expansion(const UShort2DArray& multi_index,
       wt_resp_grad_i = data_resp[i].response_gradient(); // copy
       wt_resp_grad_i.scale(wt_sets[i]);
     }
+#ifdef DEBUG
+    PCout << "wt = " << wt_sets[i] << " resp = "
+	  << data_resp[i].response_function() << std::endl;
+#endif //DEBUG
     const RealVector& c_vars_i = data_vars[i].continuous_variables();
     for (j=0; j<num_exp_terms; ++j) {
       Psi_ij = multivariate_polynomial(c_vars_i, multi_index[j]);
-      if (expConfigOptions.expansionCoeffFlag)
+      if (expConfigOptions.expansionCoeffFlag) {
 	exp_coeffs[j] += Psi_ij * wt_resp_fn_i;
+#ifdef DEBUG
+	PCout << "Psi[" << i << "][" << j << "] = " << Psi_ij
+	      << " exp_coeffs[" << j << "] = " << exp_coeffs[j] << std::endl;
+#endif //DEBUG
+      }
       if (expConfigOptions.expansionCoeffGradFlag) {
 	exp_grad = exp_coeff_grads[j];
 	for (k=0; k<num_deriv_vars; ++k)
@@ -1602,8 +1611,12 @@ integrate_expansion(const UShort2DArray& multi_index,
     }
   }
 #ifdef DEBUG
-  PCout << "expansion_coeffs:\n" << exp_coeffs << "expansion_coeff_grads:\n"
-	<< exp_coeff_grads<< "\n\n";
+  PCout << "expansion_coeffs:\n"; write_data(PCout, exp_coeffs);
+  if (exp_coeff_grads.numRows()) {
+    PCout << "expansion_coeff_grads:\n";
+    write_data(PCout, exp_coeff_grads, true, true, true);
+  }
+  PCout << "\n\n";
 #endif // DEBUG
 }
 

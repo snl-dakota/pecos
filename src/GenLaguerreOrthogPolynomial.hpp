@@ -107,7 +107,15 @@ inline const Real& GenLaguerreOrthogPolynomial::alpha_polynomial() const
 
 
 inline void GenLaguerreOrthogPolynomial::alpha_stat(const Real& alpha)
-{ alphaPoly = alpha - 1.; reset_gauss(); }
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  Real ap = alpha - 1.;
+  if (!real_compare(alphaPoly, ap))
+    { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+}
 
 } // namespace Pecos
 

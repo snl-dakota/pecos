@@ -194,7 +194,7 @@ protected:
   //short refineType;
   /// algorithm control governing expansion refinement
   short refineControl;
-  /// controls conditional population of collocPts1D and collocWts1D
+  /// controls conditional population of collocPts1D and type{1,2}CollocWts1D
   bool storeCollocDetails;
 
   /// the current number of unique points in the grid

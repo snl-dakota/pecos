@@ -155,6 +155,9 @@ public:
   /// return basisPolyType
   short basis_type() const;
 
+  /// return parametricUpdate
+  bool parametric_update() const;
+
   /// returns polyRep for access to derived class member functions
   /// that are not mapped to the top BasisPolynomial level
   BasisPolynomial* polynomial_rep() const;
@@ -180,6 +183,10 @@ protected:
   /// {HERMITE,LEGENDRE,LAGUERRE,JACOBI,GEN_LAGUERRE,NUM_GEN_ORTHOG}_ORTHOG,
   /// {LAGRANGE,HERMITE}_INTERP, or PIECEWISE_{LINEAR,QUADRATIC,CUBIC}_INTERP
   short basisPolyType;
+
+  /// flag indicating presence of a parametric update to the basis polynomial,
+  /// such that previous points/weights may not be reused
+  bool parametricUpdate;
 
   /// weight discrepancy factor between Abramowitz-Stegun and PDF orthogonality
   Real wtFactor;
@@ -209,6 +216,10 @@ private:
 
 inline short BasisPolynomial::basis_type() const
 { return (polyRep) ? polyRep->basisPolyType : basisPolyType; }
+
+
+inline bool BasisPolynomial::parametric_update() const
+{ return (polyRep) ? polyRep->parametricUpdate : parametricUpdate; }
 
 
 inline BasisPolynomial* BasisPolynomial::polynomial_rep() const

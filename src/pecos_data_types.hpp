@@ -157,6 +157,19 @@ find_index(const PecosContainerType& v,
 }
 
 
+/// compare two Real values using DBL_EPSILON relative tolerance
+inline bool real_compare(Real r1, Real r2)
+{
+  // return true if same, false if different
+  if (std::abs(r2) > DBL_MIN)
+    return   (std::abs(1. - r1/r2) <= DBL_EPSILON); // relative
+  //else if (std::abs(r1) > DBL_MIN)
+  //  return (std::abs(1. - r2/r1) <= DBL_EPSILON); // relative
+  else
+    return   (std::abs(r2 - r1)    <= DBL_EPSILON); // absolute
+}
+
+
 /// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to
 /// std::vector<ScalarType>
 template <typename OrdinalType, typename ScalarType> 

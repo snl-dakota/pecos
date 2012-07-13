@@ -338,6 +338,11 @@ public:
   void copy(const DistributionParams& dp);
   /// data update (no changes to representation (unless null))
   void update(const DistributionParams& dp);
+  /// partial data update of the distribution data not affected by an
+  /// x->u variable transformation
+  void update_partial(const DistributionParams& dp_x,
+		      const Pecos::ShortArray& x_types,
+		      const Pecos::ShortArray& u_types);
 
   /// return the normal uncertain variable means
   const RealVector& normal_means() const;
@@ -1912,6 +1917,95 @@ inline void DistributionParams::update(const DistributionParams& dp)
     discrete_set_int_probabilities(dp.discrete_set_int_probabilities());
     discrete_set_real_values(dp.discrete_set_real_values());
     discrete_set_real_probabilities(dp.discrete_set_real_probabilities());
+  }
+}
+
+
+inline void DistributionParams::
+update_partial(const DistributionParams& dp_x, const Pecos::ShortArray& x_types,
+	       const Pecos::ShortArray& u_types)
+{
+  if (!dpRep) { // if no rep, error 
+    PCerr << "Error: DistributionParams::update_partial() requires a valid "
+	  << "representation." << std::endl;
+    abort_handler(-1);
+  }
+  else { // update data of existing instance
+    size_t i, num_vars = x_types.size(), nuv = 0, lnuv = 0, luuv = 0, tuv = 0,
+      buv = 0, gauv = 0, guuv = 0, fuv = 0, wuv = 0, hbuv = 0;
+    if (u_types.size() != num_vars) {
+      PCerr << "Error: DistributionParams::update_partial() requires "
+	    << "transformation variable types." << std::endl;
+      abort_handler(-1);
+    }
+    for (i=0; i<num_vars; ++i) {
+      short u_type_i = u_types[i], x_type_i = x_types[i];
+      if (x_types[i] == u_type_i)
+	switch (u_type_i) {
+	case STD_NORMAL: ++nuv; break;
+	case NORMAL: case BOUNDED_NORMAL://u-space NORMAL not currently possible
+	  normal_mean(dp_x.normal_mean(nuv), nuv);
+	  normal_std_deviation(dp_x.normal_std_deviation(nuv), nuv);
+	  if (u_type_i == BOUNDED_NORMAL) {
+	    normal_lower_bound(dp_x.normal_lower_bound(nuv), nuv);
+	    normal_upper_bound(dp_x.normal_upper_bound(nuv), nuv);
+	  }
+	  ++nuv; break;
+	case LOGNORMAL:	case BOUNDED_LOGNORMAL:
+	  if (!dp_x.lognormal_means().empty()) {
+	    lognormal_mean(dp_x.lognormal_mean(lnuv), lnuv);
+	    if (!dp_x.lognormal_std_deviations().empty())
+	      lognormal_std_deviation(dp_x.lognormal_std_deviation(lnuv), lnuv);
+	    else
+	      lognormal_error_factor(dp_x.lognormal_error_factor(lnuv), lnuv);
+	  }
+	  else if (!dp_x.lognormal_lambdas().empty()) {
+	    lognormal_lambda(dp_x.lognormal_lambda(lnuv), lnuv);
+	    lognormal_zeta(dp_x.lognormal_zeta(lnuv), lnuv);
+	  }
+	  if (u_type_i == BOUNDED_LOGNORMAL) {
+	    lognormal_lower_bound(dp_x.lognormal_lower_bound(lnuv), lnuv);
+	    lognormal_upper_bound(dp_x.lognormal_upper_bound(lnuv), lnuv);
+	  }
+	  ++lnuv; break;
+	case LOGUNIFORM:
+	  loguniform_lower_bound(dp_x.loguniform_lower_bound(luuv), luuv);
+	  loguniform_upper_bound(dp_x.loguniform_upper_bound(luuv), luuv);
+	  ++luuv; break;
+	case TRIANGULAR:
+	  triangular_mode(dp_x.triangular_mode(tuv), tuv);
+	  triangular_lower_bound(dp_x.triangular_lower_bound(tuv), tuv);
+	  triangular_upper_bound(dp_x.triangular_upper_bound(tuv), tuv);
+	  ++tuv; break;
+	case GUMBEL:
+	  gumbel_alpha(dp_x.gumbel_alpha(guuv), guuv);
+	  gumbel_beta(dp_x.gumbel_beta(guuv),   guuv);
+	  ++guuv; break;
+	case FRECHET:
+	  frechet_alpha(dp_x.frechet_alpha(fuv), fuv);
+	  frechet_beta(dp_x.frechet_beta(fuv),   fuv);
+	  ++fuv; break;
+	case WEIBULL:
+	  weibull_alpha(dp_x.weibull_alpha(wuv), wuv);
+	  weibull_beta(dp_x.weibull_beta(wuv),   wuv);
+	  ++wuv; break;
+	case HISTOGRAM_BIN:
+	  histogram_bin_pairs(dp_x.histogram_bin_pairs(hbuv), hbuv);
+	  ++hbuv; break;
+	//default: no-op
+	}
+      else if (u_type_i == STD_BETA && x_type_i == BETA) {
+	// lower,upper bounds are handled in conversion to STD_BETA
+	beta_alpha(dp_x.beta_alpha(buv), buv);
+	beta_beta(dp_x.beta_beta(buv), buv);
+	++buv;
+      }
+      else if (u_type_i == STD_GAMMA && x_type_i == GAMMA) {
+	// beta is handled in conversion to STD_GAMMA
+	gamma_alpha(dp_x.gamma_alpha(gauv), gauv);
+	++gauv;
+      }
+    }
   }
 }
 

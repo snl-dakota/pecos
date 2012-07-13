@@ -123,11 +123,27 @@ inline const Real& JacobiOrthogPolynomial::beta_polynomial() const
 
 
 inline void JacobiOrthogPolynomial::alpha_stat(const Real& alpha)
-{ betaPoly = alpha - 1.; reset_gauss(); }
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  Real bp = alpha - 1.;
+  if (!real_compare(betaPoly, bp))
+    { betaPoly = bp; reset_gauss(); }
+}
 
 
 inline void JacobiOrthogPolynomial::beta_stat(const Real& beta)
-{ alphaPoly = beta - 1.; reset_gauss(); }
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  parametricUpdate = false;
+  Real ap = beta - 1.;
+  if (!real_compare(alphaPoly, ap))
+    { alphaPoly = ap; reset_gauss(); }
+}
 
 } // namespace Pecos
 

@@ -34,7 +34,8 @@ namespace Pecos {
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~BasisPolynomial). */
 BasisPolynomial::BasisPolynomial(BaseConstructor):// basisPolyType(-1),
-  wtFactor(1.), ptFactor(1.), polyRep(NULL), referenceCount(1)
+  parametricUpdate(false), wtFactor(1.), ptFactor(1.), polyRep(NULL),
+  referenceCount(1)
 {
 
 #ifdef REFCOUNT_DEBUG
