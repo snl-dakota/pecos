@@ -100,6 +100,13 @@ void InterpPolyApproximation::allocate_arrays()
   allocate_total_effects();
   allocate_expansion_coefficients();
 
+  bool param_update = false;
+  const std::vector<BasisPolynomial>& num_int_poly_basis
+    = driverRep->polynomial_basis();
+  for (size_t i=0; i<numVars; ++i)
+    if (num_int_poly_basis[i].parametric_update())
+      { param_update = true; break; }
+
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -115,14 +122,9 @@ void InterpPolyApproximation::allocate_arrays()
       abort_handler(-1);
     }
 
-    //bool update_exp_form = (quad_order != quadOrderPrev);
-    // *** TO DO: capture updates to parameterized/numerical polynomials
-    //if (update_exp_form) {
-    //}
-
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
     bool update_basis_form = (quad_order != quadOrderPrev);
-    if (update_basis_form)
+    if (update_basis_form || param_update)
       update_tensor_interpolation_basis();
 
     quadOrderPrev = quad_order;
@@ -133,19 +135,13 @@ void InterpPolyApproximation::allocate_arrays()
     unsigned short    ssg_level  = ssg_driver->level();
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
 
-    //bool update_exp_form
-    //  = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev);
-    // *** TO DO: capture updates to parameterized/numerical polynomials
-    //if (update_exp_form) {
-    //}
-
     // Ignore weights since they only reduce the interpolation depth from the
     // level and the basis update uses a coarse increment based on level.  This
     // matches isotropic sparse grids, but forces fewer and larger updates in
     // the case of anisotropic or generalized grids.
     bool update_basis_form
       = (ssgLevelPrev == USHRT_MAX || ssg_level > ssgLevelPrev);
-    if (update_basis_form)
+    if (update_basis_form || param_update)
       update_sparse_interpolation_basis(ssg_level);
 
     ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
@@ -374,16 +370,25 @@ void InterpPolyApproximation::update_tensor_interpolation_basis()
 
   // fill any required gaps in polynomialBasis.
   const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
-  short poly_type_1d; short rule; bool found; unsigned short l_index;
+  const std::vector<BasisPolynomial>& num_int_poly_basis
+    = driverRep->polynomial_basis();
+  short poly_type_1d, rule; bool found; unsigned short l_index;
   initialize_polynomial_basis_type(poly_type_1d, rule);
   for (j=0; j<numVars; ++j) {
     l_index = lev_index[j];
     std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[l_index];
     BasisPolynomial& poly_basis_ij = poly_basis_i[j];
-    if (poly_basis_ij.is_null()) { // does not account for parametric changes
-                                   // resulting in new pts for existing orders
-      if (find_basis(l_index, j, k)) // reuse previous instance via shared rep
-	poly_basis_ij = poly_basis_i[k];
+    if (num_int_poly_basis[j].parameterized()) { // never share rep
+      if (poly_basis_ij.is_null()) {
+	poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
+	poly_basis_ij.interpolation_points(colloc_pts_1d[l_index][j]);
+      }
+      else if (num_int_poly_basis[j].parametric_update())
+	poly_basis_ij.interpolation_points(colloc_pts_1d[l_index][j]);
+    }
+    else if (poly_basis_ij.is_null()) {
+      if (find_basis(l_index, j, k))
+	poly_basis_ij = poly_basis_i[k]; // reuse prev basis via shared rep
       else { // instantiate and initialize a new unique instance
 	poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
 	poly_basis_ij.interpolation_points(colloc_pts_1d[l_index][j]);
@@ -409,20 +414,31 @@ update_sparse_interpolation_basis(unsigned short max_level)
   // fill gaps that may exist within any level (SparseGridDriver::
   // update_1d_collocation_points_weights() updates in an unstructured manner)
   const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
-  short poly_type_1d; short rule; bool found;
+  const std::vector<BasisPolynomial>& num_int_poly_basis
+    = driverRep->polynomial_basis();
+  short poly_type_1d, rule; bool found;
   initialize_polynomial_basis_type(poly_type_1d, rule);
   for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
     std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
     for (j=0; j<numVars; ++j) {
       const RealArray& colloc_pts_1d_ij = colloc_pts_1d[i][j];
-      BasisPolynomial&    poly_basis_ij =     poly_basis_i[j];
-      if ( poly_basis_ij.is_null() &&  // doesn't account for parametric changes
-	  !colloc_pts_1d_ij.empty()) { // resulting in new pts for existing levs
-	if (find_basis(i, j, k)) // reuse previous instance via shared rep
-	  poly_basis_ij = poly_basis_i[k];
-	else { // instantiate and initialize a new unique instance
-	  poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	  poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+      if (!colloc_pts_1d_ij.empty()) {
+	BasisPolynomial&  poly_basis_ij =     poly_basis_i[j];
+	if (num_int_poly_basis[j].parameterized()) { // never share rep
+	  if (poly_basis_ij.is_null()) {
+	    poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
+	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+	  }
+	  else if (num_int_poly_basis[j].parametric_update())
+	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+	}
+	else if (poly_basis_ij.is_null()) {
+	  if (find_basis(i, j, k))
+	    poly_basis_ij = poly_basis_i[k]; // reuse prev basis via shared rep
+	  else { // instantiate and initialize a new unique instance
+	    poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
+	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
+	  }
 	}
       }
     }

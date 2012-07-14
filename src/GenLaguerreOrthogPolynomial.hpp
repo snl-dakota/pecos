@@ -76,6 +76,9 @@ protected:
   /// set alphaPoly using the conversion alphaPoly = alpha_stat-1.
   void alpha_stat(const Real& alpha);
 
+  /// override default definition (false) since GenLaguerre is parameterized
+  bool parameterized() const;
+
 private:
 
   //
@@ -89,13 +92,13 @@ private:
 
 
 inline GenLaguerreOrthogPolynomial::GenLaguerreOrthogPolynomial(): alphaPoly(0.)
-{ collocRule = GEN_GAUSS_LAGUERRE; }
+{ collocRule = GEN_GAUSS_LAGUERRE; parametricUpdate = true; }
 
 
 // TO DO
 inline GenLaguerreOrthogPolynomial::
 GenLaguerreOrthogPolynomial(const Real& alpha_stat): alphaPoly(alpha_stat-1.)
-{ collocRule = GEN_GAUSS_LAGUERRE; }
+{ collocRule = GEN_GAUSS_LAGUERRE; parametricUpdate = true; }
 
 
 inline GenLaguerreOrthogPolynomial::~GenLaguerreOrthogPolynomial()
@@ -111,11 +114,19 @@ inline void GenLaguerreOrthogPolynomial::alpha_stat(const Real& alpha)
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
-  parametricUpdate = false;
-  Real ap = alpha - 1.;
-  if (!real_compare(alphaPoly, ap))
-    { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+  if (collocPoints.empty() || collocWeights.empty()) // first pass
+    parametricUpdate = true; // prevent false if default value assigned
+  else {
+    parametricUpdate = false;
+    Real ap = alpha - 1.;
+    if (!real_compare(alphaPoly, ap))
+      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+  }
 }
+
+
+inline bool GenLaguerreOrthogPolynomial::parameterized() const
+{ return true; }
 
 } // namespace Pecos
 

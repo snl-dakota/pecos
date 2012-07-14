@@ -37,7 +37,6 @@ BasisPolynomial::BasisPolynomial(BaseConstructor):// basisPolyType(-1),
   parametricUpdate(false), wtFactor(1.), ptFactor(1.), polyRep(NULL),
   referenceCount(1)
 {
-
 #ifdef REFCOUNT_DEBUG
   PCout << "BasisPolynomial::BasisPolynomial(BaseConstructor) called "
 	<< "to build base class for letter." << std::endl;
@@ -425,6 +424,15 @@ const RealArray& BasisPolynomial::interpolation_points() const
     abort_handler(-1);
   }
   return polyRep->interpolation_points();
+}
+
+
+bool BasisPolynomial::parameterized() const
+{
+  if (polyRep)
+    return polyRep->parameterized();
+  else
+    return false; // default if not overridden
 }
 
 } // namespace Pecos

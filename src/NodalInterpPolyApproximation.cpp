@@ -1652,6 +1652,12 @@ compute_numerical_expansion_moments(size_t num_moments)
     }
     compute_numerical_moments(t1_exp, driverRep->type1_weight_sets(),
 			      expansionMoments);
+#ifdef DEBUG
+    PCout << "Expansion moments type 1 coefficients:\n";
+    write_data(PCout, t1_exp);
+    PCout << "Expansion moments type 1 weight sets:\n";
+    write_data(PCout, driverRep->type1_weight_sets());
+#endif // DEBUG
   }
 }
 
