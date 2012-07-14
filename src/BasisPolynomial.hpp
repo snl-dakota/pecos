@@ -138,6 +138,9 @@ public:
   /** This is defined only for interpolation polynomials. */
   virtual const RealArray& interpolation_points() const;
 
+  /// return whether a derived BasisPolynomial type supports parameterization
+  virtual bool parameterized() const;
+
   //
   //- Heading: Member functions
   //

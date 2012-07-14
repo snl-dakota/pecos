@@ -96,6 +96,8 @@ protected:
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
+  bool parameterized() const;
+
 private:
 
   //
@@ -499,6 +501,10 @@ weibull_pdf(const Real& x, const RealVector& params)
 
 inline void NumericGenOrthogPolynomial::coefficients_norms_flag(bool flag)
 { coeffsNormsFlag = flag; }
+
+
+inline bool NumericGenOrthogPolynomial::parameterized() const
+{ return true; }
 
 } // namespace Pecos
 
