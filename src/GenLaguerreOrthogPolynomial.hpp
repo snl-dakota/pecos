@@ -92,13 +92,13 @@ private:
 
 
 inline GenLaguerreOrthogPolynomial::GenLaguerreOrthogPolynomial(): alphaPoly(0.)
-{ collocRule = GEN_GAUSS_LAGUERRE; parametricUpdate = true; }
+{ collocRule = GEN_GAUSS_LAGUERRE; }
 
 
 // TO DO
 inline GenLaguerreOrthogPolynomial::
 GenLaguerreOrthogPolynomial(const Real& alpha_stat): alphaPoly(alpha_stat-1.)
-{ collocRule = GEN_GAUSS_LAGUERRE; parametricUpdate = true; }
+{ collocRule = GEN_GAUSS_LAGUERRE; }
 
 
 inline GenLaguerreOrthogPolynomial::~GenLaguerreOrthogPolynomial()
@@ -114,8 +114,11 @@ inline void GenLaguerreOrthogPolynomial::alpha_stat(const Real& alpha)
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
-  if (collocPoints.empty() || collocWeights.empty()) // first pass
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
+    alphaPoly = alpha - 1.;
+  }
   else {
     parametricUpdate = false;
     Real ap = alpha - 1.;

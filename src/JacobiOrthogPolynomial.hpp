@@ -103,14 +103,14 @@ private:
 
 inline JacobiOrthogPolynomial::JacobiOrthogPolynomial():
   alphaPoly(0.), betaPoly(0.)
-{ collocRule = GAUSS_JACOBI; parametricUpdate = true; }
+{ collocRule = GAUSS_JACOBI; }
 
 
 // TO DO
 inline JacobiOrthogPolynomial::
 JacobiOrthogPolynomial(const Real& alpha_stat, const Real& beta_stat):
   alphaPoly(beta_stat-1.), betaPoly(alpha_stat-1.) // inverted conventions
-{ collocRule = GAUSS_JACOBI; parametricUpdate = true; }
+{ collocRule = GAUSS_JACOBI; }
 
 
 inline JacobiOrthogPolynomial::~JacobiOrthogPolynomial()
@@ -130,13 +130,16 @@ inline void JacobiOrthogPolynomial::alpha_stat(const Real& alpha)
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
-  if (collocPoints.empty() || collocWeights.empty()) // first pass
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
+    betaPoly = alpha - 1.;
+  }
   else {
     parametricUpdate = false;
     Real bp = alpha - 1.;
     if (!real_compare(betaPoly, bp))
-      { betaPoly = bp; reset_gauss(); }
+      { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
   }
 }
 
@@ -146,13 +149,16 @@ inline void JacobiOrthogPolynomial::beta_stat(const Real& beta)
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
-  if (collocPoints.empty() || collocWeights.empty()) // first pass
+  // Logic for first pass included for completeness, but should not be .
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
     parametricUpdate = true; // prevent false if default value assigned
+    alphaPoly = beta - 1.;
+  }
   else {
     parametricUpdate = false;
     Real ap = beta - 1.;
     if (!real_compare(alphaPoly, ap))
-      { alphaPoly = ap; reset_gauss(); }
+      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
   }
 }
 
