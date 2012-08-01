@@ -270,10 +270,10 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   const RealVectorArray& di_probs    = dp.discrete_interval_probabilities();
   const IntVectorArray&  di_l_bnds   = dp.discrete_interval_lower_bounds();
   const IntVectorArray&  di_u_bnds   = dp.discrete_interval_upper_bounds();
-  const IntSetArray&     dusi_values = dp.discrete_set_int_values();
-  const RealVectorArray& dusi_probs  = dp.discrete_set_int_probabilities();
-  const RealSetArray&    dusr_values = dp.discrete_set_real_values();
-  const RealVectorArray& dusr_probs  = dp.discrete_set_real_probabilities();
+  const IntRealMapArray& dusi_vals_probs
+    = dp.discrete_set_int_values_probabilities();
+  const RealRealMapArray& dusr_vals_probs
+    = dp.discrete_set_real_values_probabilities();
 
   bool correlation_flag = !correlations.empty();
   size_t i, j, num_cdv = cd_l_bnds.length(), num_nuv  = n_means.length(),
@@ -290,8 +290,8 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     num_dsriv = dsri_l_bnds.length(), num_dssiv = dssi_values.size(),
     num_ddsrv = ddsr_values.size(), num_hpuv = h_pt_prs.size(),
     num_dssrv = dssr_values.size(),
-    num_ciuv  = ci_probs.size(),    num_diuv  = di_probs.size(),
-    num_dusiv = dusi_probs.size(),  num_dusrv = dusr_probs.size(),
+    num_ciuv  = ci_probs.size(), num_diuv  = di_probs.size(),
+    num_dusiv = dusi_vals_probs.size(), num_dusrv = dusr_vals_probs.size(),
     num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddsrv,
     num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
              + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
@@ -913,14 +913,13 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     name_string = f77name16("DiscUncSetI", cntr, lhs_names);
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
-    num_params = dusi_values[i].size();
+    num_params = dusi_vals_probs[i].size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
-    ISCIter cit = dusi_values[i].begin();
-    const RealVector& dusi_probs_i = dusi_probs[i];
+    IRMCIter cit = dusi_vals_probs[i].begin();
     for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = (Real)(*cit);
-      y_val[j] = dusi_probs_i[j];
+      x_val[j] = (Real)(cit->first); // discrete uncertain set value
+      y_val[j] = cit->second;        // basic probability
     }
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
@@ -1032,14 +1031,13 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     name_string = f77name16("DiscUncSetR", cntr, lhs_names);
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
-    num_params = dusr_values[i].size();
+    num_params = dusr_vals_probs[i].size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
-    RSCIter cit = dusr_values[i].begin();
-    const RealVector& dusr_probs_i = dusr_probs[i];
+    RRMCIter cit = dusr_vals_probs[i].begin();
     for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = *cit;
-      y_val[j] = dusr_probs_i[j];
+      x_val[j] = cit->first;  // discrete uncertain set value
+      y_val[j] = cit->second; // basic probability
     }
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);

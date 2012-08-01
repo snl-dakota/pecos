@@ -63,8 +63,8 @@ private:
     const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
     const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
     const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-    const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
-    const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs);
+    const IntRealMapArray& dusiv_vals_probs,
+    const RealRealMapArray& dusrv_vals_probs);
   /// destructor
   ~DistributionParamsRep();
 
@@ -175,14 +175,12 @@ private:
   IntVectorArray discIntervalLowerBnds;
   /// upper bounds for discrete interval uncertain variables
   IntVectorArray discIntervalUpperBnds;
-  /// admissible values for discrete uncertain integer set variables
-  IntSetArray discUncSetIntVals;
-  /// basic probabilities for discrete uncertain integer set variables
-  RealVectorArray discSetIntProbs;
-  /// admissible values for discrete uncertain real set variables
-  RealSetArray discUncSetRealVals;
-  /// basic probabilities for discrete uncertain real set variables
-  RealVectorArray discSetRealProbs;
+  /// admissible values and basic probability assignments for discrete
+  /// uncertain integer set variables
+  IntRealMapArray discSetIntValsProbs;
+  /// admissible values and basic probability assignments for discrete
+  /// uncertain real set variables
+  RealRealMapArray discSetRealValsProbs;
 
   /// number of handle objects sharing dpRep
   int referenceCount;
@@ -219,8 +217,8 @@ DistributionParamsRep(const RealVector& nuv_means,
   const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
   const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
   const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-  const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
-  const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs):
+  const IntRealMapArray& dusiv_vals_probs,
+  const RealRealMapArray& dusrv_vals_probs):
   normalMeans(nuv_means), normalStdDevs(nuv_std_devs),
   normalLowerBnds(nuv_l_bnds), normalUpperBnds(nuv_u_bnds),
   lognormalMeans(lnuv_means), lognormalStdDevs(lnuv_std_devs),
@@ -244,8 +242,7 @@ DistributionParamsRep(const RealVector& nuv_means,
   contIntervalProbs(ciuv_probs), contIntervalLowerBnds(ciuv_l_bnds),
   contIntervalUpperBnds(ciuv_u_bnds), discIntervalProbs(diuv_probs),
   discIntervalLowerBnds(diuv_l_bnds), discIntervalUpperBnds(diuv_u_bnds),
-  discUncSetIntVals(dusiv_vals), discSetIntProbs(dusiv_probs),
-  discUncSetRealVals(dusrv_vals), discSetRealProbs(dusrv_probs),
+  discSetIntValsProbs(dusiv_vals_probs), discSetRealValsProbs(dusrv_vals_probs),
   referenceCount(1)
 { }
 
@@ -298,8 +295,8 @@ public:
     const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
     const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
     const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-    const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
-    const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs);
+    const IntRealMapArray& dusiv_vals_probs,
+    const RealRealMapArray& dusrv_vals_probs);
   /// copy constructor
   DistributionParams(const DistributionParams& dp);
   /// destructor
@@ -758,22 +755,16 @@ public:
   /// set the ith interval bound
   void discrete_interval_upper_bounds(const IntVector& di_u_bnds_i, size_t i);
 
-  /// get the discrete integer set values
-  const IntSetArray& discrete_set_int_values() const;
-  /// set the discrete integer set values
-  void discrete_set_int_values(const IntSetArray& dsi_vals);
-  /// get the discrete integer set basic probabilities
-  const RealVectorArray& discrete_set_int_probabilities() const;
-  /// set the discrete integer set basic probabilities
-  void discrete_set_int_probabilities(const RealVectorArray& dsi_probs);
-  /// get the discrete real set values
-  const RealSetArray& discrete_set_real_values() const;
-  /// set the discrete real set values
-  void discrete_set_real_values(const RealSetArray& dsr_vals);
-  /// get the discrete real set basic probabilities
-  const RealVectorArray& discrete_set_real_probabilities() const;
-  /// set the discrete real set basic probabilities
-  void discrete_set_real_probabilities(const RealVectorArray& dsr_probs);
+  /// get the discrete integer set values and probabilities
+  const IntRealMapArray& discrete_set_int_values_probabilities() const;
+  /// set the discrete integer set values and probabilities
+  void discrete_set_int_values_probabilities(const IntRealMapArray&
+					     dsi_vals_probs);
+  /// get the discrete real set values and probabilities
+  const RealRealMapArray& discrete_set_real_values_probabilities() const;
+  /// set the discrete real set values and probabilities
+  void discrete_set_real_values_probabilities(const RealRealMapArray&
+					      dsr_vals_probs);
 
   /// function to check dpRep (does this handle contain a body)
   bool is_null() const;
@@ -820,8 +811,8 @@ DistributionParams(const RealVector& nuv_means,
   const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
   const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
   const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-  const IntSetArray& dusiv_vals,      const RealVectorArray& dusiv_probs,
-  const RealSetArray& dusrv_vals,     const RealVectorArray& dusrv_probs):
+  const IntRealMapArray& dusiv_vals_probs,
+  const RealRealMapArray& dusrv_vals_probs):
   dpRep(new DistributionParamsRep(nuv_means, nuv_std_devs, nuv_l_bnds,
 	nuv_u_bnds, lnuv_means, lnuv_std_devs, lnuv_lambdas, lnuv_zetas,
 	lnuv_err_facts, lnuv_l_bnds, lnuv_u_bnds, uuv_l_bnds, uuv_u_bnds,
@@ -832,7 +823,7 @@ DistributionParams(const RealVector& nuv_means,
 	nbuv_p_per_tr, nbuv_num_trials, geuv_p_per_tr, hguv_tot_pop,
 	hguv_sel_pop, hguv_num_drawn, hpuv_prs, uv_corr, ciuv_probs,
 	ciuv_l_bnds, ciuv_u_bnds, diuv_probs, diuv_l_bnds, diuv_u_bnds,
-	dusiv_vals, dusiv_probs, dusrv_vals, dusrv_probs))
+	dusiv_vals_probs, dusrv_vals_probs))
 { }
 
 
@@ -902,11 +893,11 @@ inline size_t DistributionParams::drauv() const
 
 
 inline size_t DistributionParams::dieuv() const
-{ return dpRep->discIntervalProbs.size() + dpRep->discSetIntProbs.size(); }
+{ return dpRep->discIntervalProbs.size() + dpRep->discSetIntValsProbs.size(); }
 
 
 inline size_t DistributionParams::dreuv() const
-{ return dpRep->discSetRealProbs.size(); }
+{ return dpRep->discSetRealValsProbs.size(); }
 
 
 inline size_t DistributionParams::diuv()  const
@@ -952,8 +943,8 @@ inline void DistributionParams::copy(const DistributionParams& dp)
     dp.continuous_interval_lower_bounds(),
     dp.continuous_interval_upper_bounds(), dp.discrete_interval_probabilities(),
     dp.discrete_interval_lower_bounds(), dp.discrete_interval_upper_bounds(),
-    dp.discrete_set_int_values(), dp.discrete_set_int_probabilities(),
-    dp.discrete_set_real_values(), dp.discrete_set_real_probabilities());
+    dp.discrete_set_int_values_probabilities(),
+    dp.discrete_set_real_values_probabilities());
 }
 
 
@@ -1820,42 +1811,24 @@ discrete_interval_upper_bounds(const IntVector& di_u_bnds_i, size_t i)
 { dpRep->discIntervalUpperBnds[i] = di_u_bnds_i; }
 
 
-inline const IntSetArray& DistributionParams::discrete_set_int_values() const
-{ return dpRep->discUncSetIntVals; }
+inline const IntRealMapArray& DistributionParams::
+discrete_set_int_values_probabilities() const
+{ return dpRep->discSetIntValsProbs; }
 
 
 inline void DistributionParams::
-discrete_set_int_values(const IntSetArray& dsi_vals)
-{ dpRep->discUncSetIntVals = dsi_vals; }
+discrete_set_int_values_probabilities(const IntRealMapArray& dsi_vals_probs)
+{ dpRep->discSetIntValsProbs = dsi_vals_probs; }
 
 
-inline const RealVectorArray& DistributionParams::
-discrete_set_int_probabilities() const
-{ return dpRep->discSetIntProbs; }
-
-
-inline void DistributionParams::
-discrete_set_int_probabilities(const RealVectorArray& dsi_probs)
-{ dpRep->discSetIntProbs = dsi_probs; }
-
-
-inline const RealSetArray& DistributionParams::discrete_set_real_values() const
-{ return dpRep->discUncSetRealVals; }
+inline const RealRealMapArray& DistributionParams::
+discrete_set_real_values_probabilities() const
+{ return dpRep->discSetRealValsProbs; }
 
 
 inline void DistributionParams::
-discrete_set_real_values(const RealSetArray& dsr_vals)
-{ dpRep->discUncSetRealVals = dsr_vals; }
-
-
-inline const RealVectorArray& DistributionParams::
-discrete_set_real_probabilities() const
-{ return dpRep->discSetRealProbs; }
-
-
-inline void DistributionParams::
-discrete_set_real_probabilities(const RealVectorArray& dsr_probs)
-{ dpRep->discSetRealProbs = dsr_probs; }
+discrete_set_real_values_probabilities(const RealRealMapArray& dsr_vals_probs)
+{ dpRep->discSetRealValsProbs = dsr_vals_probs; }
 
 
 inline void DistributionParams::update(const DistributionParams& dp)
@@ -1913,10 +1886,10 @@ inline void DistributionParams::update(const DistributionParams& dp)
     discrete_interval_probabilities(dp.discrete_interval_probabilities());
     discrete_interval_lower_bounds(dp.discrete_interval_lower_bounds());
     discrete_interval_upper_bounds(dp.discrete_interval_upper_bounds());
-    discrete_set_int_values(dp.discrete_set_int_values());
-    discrete_set_int_probabilities(dp.discrete_set_int_probabilities());
-    discrete_set_real_values(dp.discrete_set_real_values());
-    discrete_set_real_probabilities(dp.discrete_set_real_probabilities());
+    discrete_set_int_values_probabilities(
+      dp.discrete_set_int_values_probabilities());
+    discrete_set_real_values_probabilities(
+      dp.discrete_set_real_values_probabilities());
   }
 }
 

@@ -108,6 +108,10 @@ typedef std::vector<RealSet>             RealSetArray;
 typedef std::map<int, short>             IntShortMap;
 typedef std::map<size_t, short>          SizetShortMap;
 typedef std::map<int, int>               IntIntMap;
+typedef std::map<int, Real>              IntRealMap;
+typedef std::map<Real, Real>             RealRealMap;
+typedef std::vector<IntRealMap>          IntRealMapArray;
+typedef std::vector<RealRealMap>         RealRealMapArray;
 typedef std::map<int, RealVector>        IntRealVectorMap;
 typedef std::map<UShortMultiSet,   Real> UShortMultiSetRealMap;
 typedef std::map<UShort2DMultiSet, Real> UShort2DMultiSetRealMap;
@@ -127,6 +131,10 @@ typedef RealSet::const_iterator     RSCIter;
 typedef IntShortMap::iterator       IntShMIter;
 typedef IntIntMap::iterator         IntIntMIter;
 typedef IntIntMap::const_iterator   IntIntMCIter;
+typedef IntRealMap::iterator        IRMIter;
+typedef IntRealMap::const_iterator  IRMCIter;
+typedef RealRealMap::iterator       RRMIter;
+typedef RealRealMap::const_iterator RRMCIter;
 
 
 /// equality operator for SizetArray and SizetMultiArrayConstView
