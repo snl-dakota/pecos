@@ -10,7 +10,7 @@
 #define SURROGATE_DATA_HPP
 
 #include "pecos_data_types.hpp"
-#include "pecos_stat_util.hpp" // for boost::math::isfinite
+#include <boost/math/special_functions/fpclassify.hpp> //for boostmath::isfinite
 
 
 namespace Pecos {
@@ -1127,14 +1127,14 @@ response_check(const SurrogateDataResp& sdr, short& failed_data)
   short resp_bits = sdr.active_bits();
   failed_data = 0;
   if (resp_bits & 1) {
-    if (!bmth::isfinite(sdr.response_function()))
+    if (!boost::math::isfinite<double>(sdr.response_function()))
       failed_data = resp_bits;       // all data for this & higher deriv orders
   }
   if ( (resp_bits & 2) && !failed_data ) {
     const RealVector& grad = sdr.response_gradient();
     size_t j, num_deriv_vars = grad.length();
     for (j=0; j<num_deriv_vars; ++j)
-      if (!bmth::isfinite(grad[j]))
+      if (!boost::math::isfinite<double>(grad[j]))
 	{ failed_data = (resp_bits & 6); break; } // this & higher deriv orders
   }
   if ( (resp_bits & 4) && !failed_data ) {
@@ -1142,7 +1142,7 @@ response_check(const SurrogateDataResp& sdr, short& failed_data)
     size_t j, k, num_deriv_vars = hess.numRows();
     for (j=0; j<num_deriv_vars; ++j)
       for (k=0; k<=j; ++k)
-	if (!bmth::isfinite(hess(j,k)))
+	if (!boost::math::isfinite<double>(hess(j,k)))
 	  { failed_data = 4; break; }             // this & higher deriv orders
   }
 }
