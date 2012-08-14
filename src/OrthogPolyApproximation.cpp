@@ -2264,12 +2264,7 @@ void OrthogPolyApproximation::expectation()
   for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val  = expConfigOptions.expansionCoeffFlag,
          add_grad = expConfigOptions.expansionCoeffGradFlag;
-    if (fit != failed_resp_data.end() && fit->first == j) {
-      short fail_asv = fit->second;
-      if (fail_asv & 1) add_val  = false;
-      if (fail_asv & 2) add_grad = false;
-      ++fit;
-    }
+    fail_booleans(fit, k, add_val, add_grad);
     if (add_val)
       mean += surrData.response_function(k);
     if (add_grad) {
@@ -2311,12 +2306,7 @@ void OrthogPolyApproximation::expectation()
   for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val  = expConfigOptions.expansionCoeffFlag,
          add_grad = expConfigOptions.expansionCoeffGradFlag;
-    if (fit != failed_resp_data.end() && fit->first == j) {
-      short fail_asv = fit->second;
-      if (fail_asv & 1) add_val  = false;
-      if (fail_asv & 2) add_grad = false;
-      ++fit;
-    }
+    fail_booleans(fit, k, add_val, add_grad);
     if (add_val)
       resp_fn_minus_mean = surrData.response_function(k) - mean;
     if (add_grad) {
