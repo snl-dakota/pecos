@@ -9,12 +9,13 @@
 #ifndef PECOS_GLOBAL_DEFS_H
 #define PECOS_GLOBAL_DEFS_H
 
-#include <boost/math/constants/constants.hpp>
 #include <iostream>
 #include <cfloat>  // for DBL_MIN, DBL_MAX
 #include <cmath>
 #include <cstdlib>
 
+#define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
+#include <boost/math/constants/constants.hpp>
 
 namespace Pecos {
 

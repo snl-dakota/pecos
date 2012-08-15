@@ -18,7 +18,6 @@
 #endif 
 */
 
-#define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 #include <boost/math/distributions.hpp>
 #include <boost/math/special_functions/expm1.hpp>
 
