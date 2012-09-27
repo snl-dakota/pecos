@@ -19,7 +19,7 @@
 */
 
 #include <boost/math/distributions.hpp>
-#include <boost/math/special_functions/expm1.hpp>
+#include <boost/math/special_functions/sqrt1pm1.hpp> // includes expm1,log1p
 
 namespace bmth = boost::math;
 namespace bmp  = bmth::policies;

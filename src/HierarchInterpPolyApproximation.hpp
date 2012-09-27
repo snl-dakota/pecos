@@ -96,6 +96,11 @@ protected:
   Real covariance(const RealVector& x,
 		  PolynomialApproximation* poly_approx_2);
 
+  Real delta_mean();
+  Real delta_std_deviation();
+  Real delta_beta(bool cdf_flag, Real z_bar);
+  Real delta_z(bool cdf_flag, Real beta_bar);
+
   Real delta_covariance(PolynomialApproximation* poly_approx_2);
   Real delta_covariance(const RealVector& x,
 			PolynomialApproximation* poly_approx_2);

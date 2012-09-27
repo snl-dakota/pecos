@@ -6,13 +6,9 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-#include "pecos_stat_util.hpp"
 #include "NatafTransformation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
-
-//for log1p
-#include <boost/math/special_functions/log1p.hpp>
-using boost::math::log1p;
+#include "pecos_stat_util.hpp"
 
 static const char rcsId[]="@(#) $Id: NatafTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -244,7 +240,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	x_vars[i] = ranVarAddtlParamsX[i][0]*z_vars[i];
       else if (ranVarTypesU[i] == STD_NORMAL) { // transform from std normal
 	const Real& z = z_vars[i];
-	Real log1mnormcdf = (z > 0.) ? std::log(Phi(-z)) : log1p(-Phi(z));
+	Real log1mnormcdf = (z > 0.) ? std::log(Phi(-z)) : bmth::log1p(-Phi(z));
 	x_vars[i] = -ranVarAddtlParamsX[i][0]*log1mnormcdf;
       }
       else
@@ -285,7 +281,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	const Real& z = z_vars[i];
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
-	Real lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : std::log(Phi(z));
+	Real lognormcdf = (z > 0.) ? bmth::log1p(-Phi(-z)) : std::log(Phi(z));
 	x_vars[i] = ranVarAddtlParamsX[i][1]
 	  - std::log(-lognormcdf)/ranVarAddtlParamsX[i][0];
       }
@@ -300,7 +296,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	const Real& z = z_vars[i];
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
-	Real lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : std::log(Phi(z));
+	Real lognormcdf = (z > 0.) ? bmth::log1p(-Phi(-z)) : std::log(Phi(z));
 	x_vars[i] = ranVarAddtlParamsX[i][1] *
 	  std::pow(-lognormcdf, -1./ranVarAddtlParamsX[i][0]);
       }
@@ -315,7 +311,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	const Real& z = z_vars[i];
 	// avoid numerical problems for large z > 0
 	// (normcdf indistinguishable from 1):
-	Real log1mnormcdf = (z > 0.) ? std::log(Phi(-z)) : log1p(-Phi(z));
+	Real log1mnormcdf = (z > 0.) ? std::log(Phi(-z)) : bmth::log1p(-Phi(z));
 	x_vars[i] = ranVarAddtlParamsX[i][1] *
 	  std::pow(-log1mnormcdf, 1./ranVarAddtlParamsX[i][0]);
       }
@@ -2549,7 +2545,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 		jacobian_xs(j, i) = z;
 	      else if (ranVarTypesU[j] == STD_NORMAL)
 		jacobian_xs(j, i)
-		  = (z > 0.) ? -log(normcdf_comp) : -log1p(-Phi(z));
+		  = (z > 0.) ? -log(normcdf_comp) : -bmth::log1p(-Phi(z));
 	      break;
 	    // Exponential Mean          - TO DO
 	    // Exponential Std Deviation - TO DO
@@ -2648,7 +2644,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Deriv of Gumbel w.r.t. any distribution parameter
 	    if (correlationFlagX) {
 	      Real normcdf = Phi(z),
-		lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(normcdf);
+		lognormcdf = (z > 0.) ? bmth::log1p(-Phi(-z)) : log(normcdf);
 	      jacobian_xs(j, i) -= phi(z)/alpha/normcdf/lognormcdf
 		                *  num_dz_ds(j, i);
 	    }
@@ -2689,7 +2685,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Deriv of Frechet w.r.t. any distribution parameter
 	    if (correlationFlagX) {
 	      Real normcdf = Phi(z),
-		lognormcdf = (z > 0.) ? log1p(-Phi(-z)) : log(normcdf);
+		lognormcdf = (z > 0.) ? bmth::log1p(-Phi(-z)) : log(normcdf);
 	      jacobian_xs(j, i) -= x_vars[j]*phi(z)/alpha/normcdf/lognormcdf
 		                *  num_dz_ds(j, i);
 	    }
@@ -2706,7 +2702,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  const Real& z = z_vars[j]; 
 	  if (ranVarTypesU[j] == STD_NORMAL) {
 	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	      Real log1mnormcdf = (z > 0.) ? log(Phi(-z)) : log1p(-Phi(z));
+	      Real log1mnormcdf
+		= (z > 0.) ? log(Phi(-z)) : bmth::log1p(-Phi(z));
 	      switch (target2) {
 	      case W_ALPHA: { // Weibull Alpha
 		// x = beta (-ln(1-Phi(z)))^(1/alpha)
@@ -2730,7 +2727,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Deriv of Weibull w.r.t. any distribution parameter
 	    if (correlationFlagX) {
 	      Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
-	      Real log1mnormcdf = (z > 0.) ? log(normcdf_comp) : log1p(-Phi(z));
+	      Real log1mnormcdf
+		= (z > 0.) ? log(normcdf_comp) : bmth::log1p(-Phi(z));
 	      jacobian_xs(j, i) -= x_vars[j]*phi(z)/alpha/normcdf_comp/
 		log1mnormcdf * num_dz_ds(j,i);
 	    }

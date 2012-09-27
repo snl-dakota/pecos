@@ -13,6 +13,7 @@
 
 #include "HierarchInterpPolyApproximation.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
+#include "pecos_stat_util.hpp"
 
 //#define DEBUG
 
@@ -714,6 +715,68 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   PCerr << "TODO: covariance in all variables" << std::endl;
   Real covar = 0.;
   return covar;
+}
+
+
+Real HierarchInterpPolyApproximation::delta_mean()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  UShort2DArray ref_key, incr_key;
+  hsg_driver->partition_keys(ref_key, incr_key);
+  return expectation(expansionType1Coeffs, expansionType2Coeffs, incr_key);
+}
+
+
+Real HierarchInterpPolyApproximation::delta_std_deviation()
+{
+  // delta-sigma = sqrt( var0 + delta-var ) - sigma0
+  //             = [ sqrt(1 + delta_var / var0) - 1 ] * sigma0
+  //             = sqrt1pm1(delta_var / var0) * sigma0
+  // where sqrt1pm1(x) = expm1[ log1p(x) / 2 ]
+
+  Real delta_var = delta_covariance(this),
+    var0 = covariance(this) - delta_var, // TO DO: improve (using ref_key?)
+    sigma0 = std::sqrt(var0);
+  return bmth::sqrt1pm1(delta_var / var0) * sigma0;
+}
+
+
+Real HierarchInterpPolyApproximation::delta_beta(bool cdf_flag, Real z_bar)
+{
+  //  CDF delta-beta = (mu1 - z-bar)/sigma1 - (mu0 - z-bar)/sigma0
+  //    = (mu1 sigma0 - z-bar sigma0 - mu0 sigma1 + z-bar sigma1)/sigma1/sigma0
+  //    = (delta-mu sigma0 - mu0 delta-sigma + z-bar delta-sigma)/sigma1/sigma0
+  //    = (delta-mu - delta-sigma beta0)/sigma1
+  // CCDF delta-beta = (z-bar - mu1)/sigma1 - (z-bar - mu0)/sigma0
+  //    = (z-bar sigma0 - mu1 sigma0 - z-bar sigma1 + mu0 sigma1)/sigma1/sigma0
+  //    = (mu0 delta-sigma - delta-mu sigma0 - z-bar delta-sigma)/sigma1/sigma0
+  //    = -delta-mu/sigma1 - delta_sigma (z-bar - mu0) / sigma0 / sigma1
+  //    = (-delta-mu - delta-sigma beta0)/sigma1
+
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  UShort2DArray ref_key, incr_key;
+  hsg_driver->partition_keys(ref_key, incr_key);
+  Real mu0   = expectation(expansionType1Coeffs, expansionType2Coeffs, ref_key),
+    delta_mu = expectation(expansionType1Coeffs, expansionType2Coeffs,incr_key),
+    delta_sigma = delta_std_deviation(),
+    sigma1 = std::sqrt(covariance(this)), // TO DO: improve (using ref_key?)
+    sigma0 = sigma1 - delta_sigma;        // TO DO: improve (using ref_key?)
+  Real beta0 = (cdf_flag) ? (mu0 - z_bar) / sigma0 : (z_bar - mu0) / sigma0;
+  return (cdf_flag) ? ( delta_mu - delta_sigma * beta0) / sigma1 :
+                      (-delta_mu - delta_sigma * beta0) / sigma1;
+}
+
+
+Real HierarchInterpPolyApproximation::delta_z(bool cdf_flag, Real beta_bar)
+{
+  //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
+  //              = delta-mu - delta-sigma * beta-bar
+  // CCDF delta-z = (mu1 + sigma1 beta-bar) - (mu0 + sigma0 beta-bar)
+  //              = delta-mu + delta-sigma * beta-bar
+
+  Real delta_mu = delta_mean(), delta_sigma = delta_std_deviation();
+  return (cdf_flag) ? delta_mu - delta_sigma * beta_bar :
+                      delta_mu + delta_sigma * beta_bar;
 }
 
 
