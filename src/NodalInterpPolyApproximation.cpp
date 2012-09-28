@@ -1175,11 +1175,12 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 Real NodalInterpPolyApproximation::variance()
 {
+  Real& var = numericalMoments[1];
   if ( !(computedVarianceData & 1) ) {
-    numericalMoments[1] = covariance(this);
+    var = covariance(this);
     computedVarianceData |= 1;
   }
-  return numericalMoments[1];
+  return var;
 }
 
 
@@ -1188,11 +1189,12 @@ Real NodalInterpPolyApproximation::variance()
     over this subset. */
 Real NodalInterpPolyApproximation::variance(const RealVector& x)
 {
+  Real& var = numericalMoments[1];
   if ( !(computedVarianceData & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
-    numericalMoments[1] = covariance(x, this);
+    var = covariance(x, this);
     computedVarianceData |= 1; xPrevVar = x;
   }
-  return numericalMoments[1];
+  return var;
 }
 
 

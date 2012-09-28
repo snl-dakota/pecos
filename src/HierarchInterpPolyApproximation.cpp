@@ -140,6 +140,8 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
       }
     }
   }
+
+  computedMeanData = computedVarianceData = 0;
 }
 
 
@@ -162,6 +164,8 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
     break;
   }
   }
+
+  computedMeanData = computedVarianceData = 0;
 }
 
 
@@ -289,6 +293,7 @@ void HierarchInterpPolyApproximation::finalize_expansion_coefficients()
     for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
       restore_expansion_coefficients(sm_mi_l[set]);
   }
+  computedMeanData = computedVarianceData = 0;
   savedExpT1Coeffs.clear(); savedExpT2Coeffs.clear();
   savedExpT1CoeffGrads.clear();
 }
@@ -370,6 +375,8 @@ void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
   storedLevMultiIndex.clear();
   storedCollocKey.clear();
   //storedCollocIndices.clear();
+
+  computedMeanData = computedVarianceData = 0;
 }
 
 
@@ -531,18 +538,29 @@ Real HierarchInterpPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  return expectation(expansionType1Coeffs, expansionType2Coeffs);
+  Real& mean = numericalMoments[0];
+  if ( !(computedMeanData & 1) ) {
+    mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
+    computedMeanData |= 1;
+  }
+  return mean;
 }
 
 
 
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
-  // TO DO
-  PCerr << "\nError: mean not yet implemented for all variables mode."
-	<< std::endl;
-  abort_handler(-1);
-  return numericalMoments[0];
+  Real& mean = numericalMoments[0];
+  if ( !(computedMeanData & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
+
+    // TO DO
+    PCerr << "\nError: mean not yet implemented for all variables mode."
+	  << std::endl;
+    abort_handler(-1);
+
+    computedMeanData |= 1; xPrevMean = x;
+  }
+  return mean;
 }
 
 
@@ -554,23 +572,28 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 	  << "InterpPolyApproximation::mean_gradient()." << std::endl;
     abort_handler(-1);
   }
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
 
-  // TO DO
-  PCerr << "\nError: mean_gradient not yet implemented." << std::endl;
-  abort_handler(-1);
-  /*
-  size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
-  if (meanGradient.length() != num_deriv_vars)
-    meanGradient.sizeUninitialized(num_deriv_vars);
-  meanGradient = 0.;
-  for (i=0; i<numCollocPts; ++i) {
-    const Real& t1_wt_i = t1_wts[i];
-    for (j=0; j<num_deriv_vars; ++j)
-      meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
+  if ( !(computedMeanData & 2) ) {
+
+    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
+
+    // TO DO
+    PCerr << "\nError: mean_gradient not yet implemented." << std::endl;
+    abort_handler(-1);
+    /*
+    size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
+    if (meanGradient.length() != num_deriv_vars)
+      meanGradient.sizeUninitialized(num_deriv_vars);
+    meanGradient = 0.;
+    for (i=0; i<numCollocPts; ++i) {
+      const Real& t1_wt_i = t1_wts[i];
+      for (j=0; j<num_deriv_vars; ++j)
+        meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
+    }
+    */
+    computedMeanData |= 2;
   }
-  */
   return meanGradient;
 }
 
@@ -578,27 +601,49 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  // TO DO
-  PCerr << "\nError: mean_gradient not yet implemented for all variables mode."
-	<< std::endl;
-  abort_handler(-1);
+  if ( !(computedMeanData & 2) || !match_nonrandom_vars(x, xPrevMeanGrad) ) {
+    // TO DO
+    PCerr << "\nError: mean_gradient not yet implemented for all variables "
+	  << "mode." << std::endl;
+    abort_handler(-1);
+
+    computedMeanData |= 2; xPrevMeanGrad = x;
+  }
   return meanGradient;
 }
 
 
 Real HierarchInterpPolyApproximation::variance()
-{ return covariance(this); }
+{
+  Real& var = numericalMoments[1];
+  if ( !(computedVarianceData & 1) ) {
+    var = covariance(this);
+    computedVarianceData |= 1;
+  }
+  return var;
+}
 
 
 Real HierarchInterpPolyApproximation::variance(const RealVector& x)
-{ return covariance(x, this); }
+{
+  Real& var = numericalMoments[1];
+  if ( !(computedVarianceData & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
+    var = covariance(x, this);
+    computedVarianceData |= 1; xPrevVar = x;
+  }
+  return var;
+}
 
 
 const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
-  // TO DO
-  PCerr << "\nError: variance_gradient not yet implemented." << std::endl;
-  abort_handler(-1);
+  if ( !(computedVarianceData & 2) ) {
+    // TO DO
+    PCerr << "\nError: variance_gradient not yet implemented." << std::endl;
+    abort_handler(-1);
+
+    computedVarianceData |= 2;
+  }
   return varianceGradient;
 }
 
@@ -606,10 +651,14 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 const RealVector& HierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  // TO DO
-  PCerr << "\nError: variance_gradient not yet implemented for all variables "
-	<< "mode." << std::endl;
-  abort_handler(-1);
+  if ( !(computedVarianceData & 2) || !match_nonrandom_vars(x, xPrevVarGrad) ) {
+    // TO DO
+    PCerr << "\nError: variance_gradient not yet implemented for all variables "
+	  << "mode." << std::endl;
+    abort_handler(-1);
+
+    computedVarianceData |= 2; xPrevVarGrad = x;
+  }
   return varianceGradient;
 }
 

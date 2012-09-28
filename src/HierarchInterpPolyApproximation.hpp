@@ -234,6 +234,7 @@ inline void HierarchInterpPolyApproximation::restore_expansion_coefficients()
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
   restore_expansion_coefficients(sg_driver->trial_set());
+  computedMeanData = computedVarianceData = 0;
 }
 
 
