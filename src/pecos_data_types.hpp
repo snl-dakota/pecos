@@ -68,6 +68,7 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // ---------------------------------------
 // Admin/bookkeeping arrays (serial only):
 // ---------------------------------------
+typedef std::pair<Real, Real>        RealPair;
 typedef std::deque<bool>             BoolDeque; // See Meyers' Effective STL #18
 typedef std::vector<Real>            RealArray;
 typedef std::vector<RealArray>       Real2DArray;
@@ -83,8 +84,8 @@ typedef std::vector<size_t>          SizetArray;
 typedef std::vector<SizetArray>      Sizet2DArray;
 typedef std::vector<Sizet2DArray>    Sizet3DArray;
 typedef std::list<size_t>            SizetList;
-typedef std::vector<std::complex<Real> >    ComplexArray;
-typedef std::vector<std::pair<Real, Real> > RealPairArray;
+typedef std::vector<std::complex<Real> > ComplexArray;
+typedef std::vector<RealPair>        RealPairArray;
 typedef std::vector<String>          StringArray;
 typedef std::vector<RealVector>      RealVectorArray;
 typedef std::vector<RealVectorArray> RealVector2DArray;

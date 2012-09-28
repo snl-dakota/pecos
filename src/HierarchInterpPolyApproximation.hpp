@@ -137,6 +137,16 @@ private:
     const UShort3DArray& sm_mi, const UShort4DArray& key,
     const RealMatrix2DArray& t1_coeff_grads, unsigned short level);
 
+  /// form type 1/2 coefficients for interpolation of R_1 R_2
+  void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+    RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
+    const UShort2DArray& reference_key = UShort2DArray());
+  /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
+  void central_product_interpolant(
+    HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+    RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
+    const UShort2DArray& reference_key = UShort2DArray());
+
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   Real expectation(const RealVector2DArray& t1_coeffs,
 		   const RealMatrix2DArray& t2_coeffs,
@@ -145,6 +155,13 @@ private:
   Real expectation(const RealVector2DArray& t1_coeffs,
 		   const RealMatrix2DArray& t2_coeffs,
 		   const UShort3DArray& pt_partition);
+
+  /// separate expectation() into nominal and delta based on reference
+  /// and increment keys
+  RealPair partition_expectation(const RealVector2DArray& t1_coeffs,
+				 const RealMatrix2DArray& t2_coeffs,
+				 const UShort2DArray& reference_key,
+				 const UShort2DArray& increment_key);
 
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set

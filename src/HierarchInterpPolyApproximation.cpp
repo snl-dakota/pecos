@@ -538,7 +538,10 @@ Real HierarchInterpPolyApproximation::mean()
 
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
-  PCerr << "TODO: mean in all variables mode";
+  // TO DO
+  PCerr << "\nError: mean not yet implemented for all variables mode."
+	<< std::endl;
+  abort_handler(-1);
   return numericalMoments[0];
 }
 
@@ -553,6 +556,10 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
   }
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
+
+  // TO DO
+  PCerr << "\nError: mean_gradient not yet implemented." << std::endl;
+  abort_handler(-1);
   /*
   size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
   if (meanGradient.length() != num_deriv_vars)
@@ -571,7 +578,10 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  PCerr << "TODO: mean_gradient in all variables mode" << std::endl;
+  // TO DO
+  PCerr << "\nError: mean_gradient not yet implemented for all variables mode."
+	<< std::endl;
+  abort_handler(-1);
   return meanGradient;
 }
 
@@ -586,8 +596,9 @@ Real HierarchInterpPolyApproximation::variance(const RealVector& x)
 
 const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
-  //TODO
-  PCerr << "TODO: variance_gradient()" << std::endl;
+  // TO DO
+  PCerr << "\nError: variance_gradient not yet implemented." << std::endl;
+  abort_handler(-1);
   return varianceGradient;
 }
 
@@ -595,8 +606,10 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 const RealVector& HierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  //TODO
-  PCerr << "TODO: variance_gradient in all variables mode" << std::endl;
+  // TO DO
+  PCerr << "\nError: variance_gradient not yet implemented for all variables "
+	<< "mode." << std::endl;
+  abort_handler(-1);
   return varianceGradient;
 }
 
@@ -611,108 +624,29 @@ covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
-  HierarchSparseGridDriver* hsg_driver   = (HierarchSparseGridDriver*)driverRep;
-  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      key          = hsg_driver->collocation_key();
-  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
-    num_sets, num_tp_pts, cntr = 0, index;
-
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
-  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
   Real mean_1 = mean(),  mean_2 = hip_approx_2->mean();
+  central_product_interpolant(hip_approx_2, mean_1, mean_2,
+			      cov_t1_coeffs, cov_t2_coeffs);
 
-  RealVector2DArray cov_t1_coeffs(num_levels); cov_t1_coeffs[0].resize(1);
-  RealMatrix2DArray cov_t2_coeffs(num_levels); cov_t2_coeffs[0].resize(1);
-  cov_t1_coeffs[0][0].sizeUninitialized(1);
-  switch (basisConfigOptions.useDerivs) {
-  case false:
-    // level 0
-    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    cov_t1_coeffs[0][0][0] = (surrData.response_function(index) - mean_1) *
-                             (s_data_2.response_function(index) - mean_2);
-    ++cntr;
-    // levels 1:w
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = key[lev].size();
-      cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = key[lev][set].size();
-	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
-	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	// type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  cov_t1_coeffs_ls[pt]
-	    = (surrData.response_function(index) - mean_1)
-	    * (s_data_2.response_function(index) - mean_2)
-	    - value(surrData.continuous_variables(index), sm_mi, key,
-		    cov_t1_coeffs, cov_t2_coeffs, lev-1);
-	}
-      }
-    }
-    break;
-  case true:
-    size_t v;
-    // level 0
-    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    Real data_fn1_mm1 = surrData.response_function(index) - mean_1;
-    Real data_fn2_mm2 = s_data_2.response_function(index) - mean_2;
-    cov_t1_coeffs[0][0][0] = data_fn1_mm1 * data_fn2_mm2;
-    cov_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
-    Real *cov_t2_coeffs_000 = cov_t2_coeffs[0][0][0];
-    const RealVector& data_grad1 = surrData.response_gradient(index);
-    const RealVector& data_grad2 = s_data_2.response_gradient(index);
-    for (v=0; v<numVars; ++v)
-      cov_t2_coeffs_000[v]
-	= data_fn1_mm1 * data_grad2[v] + data_fn2_mm2 * data_grad1[v];
-    ++cntr;
-    // levels 1:w
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = key[lev].size();
-      cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
-	RealMatrix& cov_t2_coeffs_ls = cov_t2_coeffs[lev][set];
-	num_tp_pts = key[lev][set].size();
-	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	cov_t2_coeffs_ls.shapeUninitialized(numVars, num_tp_pts);
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
-	  // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	  data_fn1_mm1 = surrData.response_function(index) - mean_1;
-	  data_fn2_mm2 = s_data_2.response_function(index) - mean_2;
-	  cov_t1_coeffs_ls[pt] = data_fn1_mm1 * data_fn2_mm2 -
-	    value(c_vars, sm_mi, key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
-	  // type2 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	  // --> interpolated grads are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
-	  Real* cov_t2_coeffs_lsp = cov_t2_coeffs_ls[pt];
-	  const RealVector& data_grad1 = surrData.response_gradient(index);
-	  const RealVector& data_grad2 = s_data_2.response_gradient(index);
-	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
-	    sm_mi, key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
-	  for (v=0; v<numVars; ++v)
-	    cov_t2_coeffs_lsp[v] = data_fn1_mm1 * data_grad2[v]
-	      + data_fn2_mm2 * data_grad1[v] - prev_grad[v];
-	}
-      }
-    }
-    break;
-  }
-
-  // pass these exp coefficients into a general expectation fn
+  // evaluate expectation of these t1/t2 coefficients
   return expectation(cov_t1_coeffs, cov_t2_coeffs);
+  // Note: separation of reference and increment using cov_t{1,2}_coeffs
+  // within partition_expectation() would provide an increment of a central
+  // moment around an invariant center.  For hierarchical covariance, one
+  // must also account for the change in mean as in delta_covariance().
 }
 
 
 Real HierarchInterpPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  //TODO
-  PCerr << "TODO: covariance in all variables" << std::endl;
+  // TO DO
+  PCerr << "\nError: covariance not yet implemented for all variables mode."
+	<< std::endl;
+  abort_handler(-1);
   Real covar = 0.;
   return covar;
 }
@@ -756,14 +690,21 @@ Real HierarchInterpPolyApproximation::delta_beta(bool cdf_flag, Real z_bar)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
-  Real mu0   = expectation(expansionType1Coeffs, expansionType2Coeffs, ref_key),
-    delta_mu = expectation(expansionType1Coeffs, expansionType2Coeffs,incr_key),
+  RealPair mean_pr
+    = partition_expectation(expansionType1Coeffs, expansionType2Coeffs,
+			    ref_key, incr_key);
+  Real mu0 = mean_pr.first, delta_mu = mean_pr.second,
     delta_sigma = delta_std_deviation(),
     sigma1 = std::sqrt(covariance(this)), // TO DO: improve (using ref_key?)
     sigma0 = sigma1 - delta_sigma;        // TO DO: improve (using ref_key?)
-  Real beta0 = (cdf_flag) ? (mu0 - z_bar) / sigma0 : (z_bar - mu0) / sigma0;
-  return (cdf_flag) ? ( delta_mu - delta_sigma * beta0) / sigma1 :
-                      (-delta_mu - delta_sigma * beta0) / sigma1;
+  if (cdf_flag) {
+    Real beta0 = (mu0 - z_bar) / sigma0;
+    return ( delta_mu - delta_sigma * beta0) / sigma1;
+  }
+  else {
+    Real beta0 = (z_bar - mu0) / sigma0;
+    return (-delta_mu - delta_sigma * beta0) / sigma1;
+  }
 }
 
 
@@ -790,115 +731,28 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  HierarchSparseGridDriver* hsg_driver   = (HierarchSparseGridDriver*)driverRep;
-  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      key          = hsg_driver->collocation_key();
-  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
-    num_sets, num_tp_pts, cntr = 0, index;
-
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
-  const SurrogateData& s_data_2 = hip_approx_2->surrData;
-
-  // form hierarchical t1/t2 coeffs for raw moment R1 R2
-  RealVector2DArray r1r2_t1_coeffs(num_levels); r1r2_t1_coeffs[0].resize(1);
-  RealMatrix2DArray r1r2_t2_coeffs(num_levels); r1r2_t2_coeffs[0].resize(1);
-  r1r2_t1_coeffs[0][0].sizeUninitialized(1);
-  switch (basisConfigOptions.useDerivs) {
-  case false:
-    // level 0
-    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    r1r2_t1_coeffs[0][0][0]
-      = surrData.response_function(index) * s_data_2.response_function(index);
-    ++cntr;
-    // levels 1:w
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = key[lev].size();
-      r1r2_t1_coeffs[lev].resize(num_sets);
-      r1r2_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = key[lev][set].size();
-	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
-	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	// type1 hierarchical interpolation of R1 R2
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  r1r2_t1_coeffs_ls[pt] = surrData.response_function(index)
-	    * s_data_2.response_function(index)
-	    - value(surrData.continuous_variables(index), sm_mi, key,
-		    r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
-	}
-      }
-    }
-    break;
-  case true:
-    size_t v;
-    // level 0
-    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    Real data_fn1 = surrData.response_function(index);
-    Real data_fn2 = s_data_2.response_function(index);
-    r1r2_t1_coeffs[0][0][0] = data_fn1 * data_fn2;
-    r1r2_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
-    Real *r1r2_t2_coeffs_000 = r1r2_t2_coeffs[0][0][0];
-    const RealVector& data_grad1 = surrData.response_gradient(index);
-    const RealVector& data_grad2 = s_data_2.response_gradient(index);
-    for (v=0; v<numVars; ++v)
-      r1r2_t2_coeffs_000[v]
-	= data_fn1 * data_grad2[v] + data_fn2 * data_grad1[v];
-    ++cntr;
-    // levels 1:w
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = key[lev].size();
-      r1r2_t1_coeffs[lev].resize(num_sets);
-      r1r2_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
-	RealMatrix& r1r2_t2_coeffs_ls = r1r2_t2_coeffs[lev][set];
-	num_tp_pts = key[lev][set].size();
-	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	r1r2_t2_coeffs_ls.shapeUninitialized(numVars, num_tp_pts);
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
-	  // type1 hierarchical interpolation of R1 R2
-	  data_fn1 = surrData.response_function(index);
-	  data_fn2 = s_data_2.response_function(index);
-	  r1r2_t1_coeffs_ls[pt] = data_fn1 * data_fn2 -
-	    value(c_vars, sm_mi, key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
-	  // type2 hierarchical interpolation of R1 R2
-	  // --> interpolated grads are R1 * R2' + R2 * R1'
-	  Real* r1r2_t2_coeffs_lsp = r1r2_t2_coeffs_ls[pt];
-	  const RealVector& data_grad1 = surrData.response_gradient(index);
-	  const RealVector& data_grad2 = s_data_2.response_gradient(index);
-	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
-	    sm_mi, key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
-	  for (v=0; v<numVars; ++v)
-	    r1r2_t2_coeffs_lsp[v] = data_fn1 * data_grad2[v]
-	      + data_fn2 * data_grad1[v] - prev_grad[v];
-	}
-      }
-    }
-    break;
-  }
-
   // Supports multiple grid increments in discerning nominal from delta based
   // on isotropic/anisotropic/generalized index set increments.  In current
   // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
   // In the future, may need 3D keys for level/set/point.
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   UShort2DArray reference_key, increment_key;
   hsg_driver->partition_keys(reference_key, increment_key);
 
+  HierarchInterpPolyApproximation* hip_approx_2 = 
+    (HierarchInterpPolyApproximation*)poly_approx_2;
+  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
+  product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
+
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
-  Real mean_r1 = expectation(expansionType1Coeffs, expansionType2Coeffs,
-			     reference_key),
-    surplus_r1 = expectation(expansionType1Coeffs, expansionType2Coeffs,
-			     increment_key),
-    mean_r2    = expectation(hip_approx_2->expansionType1Coeffs,
-			     hip_approx_2->expansionType2Coeffs, reference_key),
-    surplus_r2 = expectation(hip_approx_2->expansionType1Coeffs,
-			     hip_approx_2->expansionType2Coeffs, increment_key),
-    surplus_r1r2 = expectation(r1r2_t1_coeffs, r1r2_t2_coeffs, increment_key);
+  RealPair
+    r1_pr = partition_expectation(expansionType1Coeffs, expansionType2Coeffs,
+				  reference_key, increment_key),
+    r2_pr = partition_expectation(hip_approx_2->expansionType1Coeffs,
+				  hip_approx_2->expansionType2Coeffs,
+				  reference_key, increment_key);
+    //r1r2_pr = partition_expectation(r1r2_t1_coeffs, r1r2_t2_coeffs,
+    //				      reference_key, increment_key);
 
   // Hierarchical increment to covariance:
   // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
@@ -908,18 +762,23 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
   //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
   //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
   //     - \DeltaE[Ri] \DeltaE[Rj]
-  return surplus_r1r2 - mean_r1 * surplus_r2 - mean_r2 * surplus_r1
-       - surplus_r1 * surplus_r2;
+  //return r1r2_surplus - r1_mean * r2_surplus - r1_surplus * r2_mean
+  //     - r1_surplus * r2_surplus;
+  return expectation(r1r2_t1_coeffs, r1r2_t2_coeffs, increment_key)
+    - r1_pr.first  * r2_pr.second - r1_pr.second * r2_pr.first
+    - r1_pr.second * r2_pr.second;
 }
 
 
 Real HierarchInterpPolyApproximation::
 delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  //TODO
-  PCerr << "TODO: covariance in all variables" << std::endl;
-  Real covar = 0.;
-  return covar;
+  // TO DO
+  PCerr << "\nError: delta_covariance not yet implemented for all variables "
+	<< "mode." << std::endl;
+  abort_handler(-1);
+  Real delta_covar = 0.;
+  return delta_covar;
 }
 
 
@@ -1044,6 +903,221 @@ expectation(const RealVector2DArray& t1_coeffs,
   }
 
   return integral;
+}
+
+
+RealPair HierarchInterpPolyApproximation::
+partition_expectation(const RealVector2DArray& t1_coeffs,
+		      const RealMatrix2DArray& t2_coeffs,
+		      const UShort2DArray& reference_key,
+		      const UShort2DArray& increment_key)
+{
+  return RealPair(expectation(t1_coeffs, t2_coeffs, reference_key),
+		  expectation(t1_coeffs, t2_coeffs, increment_key));
+}
+
+
+/** Whereas expectation() supports either a reference or increment key
+    (passed as generic set_partition), functions forming hierarchical
+    interpolant coefficients support only a reference key (starting
+    point must be set 0; end point can be controlled). */
+void HierarchInterpPolyApproximation::
+product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+		    RealVector2DArray& r1r2_t1_coeffs,
+		    RealMatrix2DArray& r1r2_t2_coeffs,
+		    const UShort2DArray& reference_key)
+{
+  HierarchSparseGridDriver* hsg_driver   = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&      key          = hsg_driver->collocation_key();
+  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
+  size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
+    num_sets, num_tp_pts, cntr = 0, index;
+  bool partial = !reference_key.empty();
+  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+
+  // form hierarchical t1/t2 coeffs for raw moment R1 R2
+  r1r2_t1_coeffs.resize(num_levels); r1r2_t1_coeffs[0].resize(1);
+  r1r2_t2_coeffs.resize(num_levels); r1r2_t2_coeffs[0].resize(1);
+  r1r2_t1_coeffs[0][0].sizeUninitialized(1);
+  switch (basisConfigOptions.useDerivs) {
+  case false:
+    // level 0 (assume this is always contained in a partial reference_key)
+    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+    r1r2_t1_coeffs[0][0][0]
+      = surrData.response_function(index) * s_data_2.response_function(index);
+    ++cntr;
+    // levels 1:w
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
+      r1r2_t1_coeffs[lev].resize(num_sets);
+      r1r2_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = key[lev][set].size();
+	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
+	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	// type1 hierarchical interpolation of R1 R2
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	  r1r2_t1_coeffs_ls[pt] = surrData.response_function(index)
+	    * s_data_2.response_function(index)
+	    - value(surrData.continuous_variables(index), sm_mi, key,
+		    r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
+	}
+      }
+    }
+    break;
+  case true:
+    size_t v;
+    // level 0 (assume this is always contained in a partial reference_key)
+    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+    Real data_fn1 = surrData.response_function(index);
+    Real data_fn2 = s_data_2.response_function(index);
+    r1r2_t1_coeffs[0][0][0] = data_fn1 * data_fn2;
+    r1r2_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
+    Real *r1r2_t2_coeffs_000 = r1r2_t2_coeffs[0][0][0];
+    const RealVector& data_grad1 = surrData.response_gradient(index);
+    const RealVector& data_grad2 = s_data_2.response_gradient(index);
+    for (v=0; v<numVars; ++v)
+      r1r2_t2_coeffs_000[v]
+	= data_fn1 * data_grad2[v] + data_fn2 * data_grad1[v];
+    ++cntr;
+    // levels 1:w
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
+      r1r2_t1_coeffs[lev].resize(num_sets);
+      r1r2_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
+	RealMatrix& r1r2_t2_coeffs_ls = r1r2_t2_coeffs[lev][set];
+	num_tp_pts = key[lev][set].size();
+	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	r1r2_t2_coeffs_ls.shapeUninitialized(numVars, num_tp_pts);
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  // type1 hierarchical interpolation of R1 R2
+	  data_fn1 = surrData.response_function(index);
+	  data_fn2 = s_data_2.response_function(index);
+	  r1r2_t1_coeffs_ls[pt] = data_fn1 * data_fn2 -
+	    value(c_vars, sm_mi, key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
+	  // type2 hierarchical interpolation of R1 R2
+	  // --> interpolated grads are R1 * R2' + R2 * R1'
+	  Real* r1r2_t2_coeffs_lsp = r1r2_t2_coeffs_ls[pt];
+	  const RealVector& data_grad1 = surrData.response_gradient(index);
+	  const RealVector& data_grad2 = s_data_2.response_gradient(index);
+	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
+	    sm_mi, key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
+	  for (v=0; v<numVars; ++v)
+	    r1r2_t2_coeffs_lsp[v] = data_fn1 * data_grad2[v]
+	      + data_fn2 * data_grad1[v] - prev_grad[v];
+	}
+      }
+    }
+    break;
+  }
+}
+
+
+/** Whereas expectation() supports either a reference or increment key
+    (passed as generic set_partition), functions forming hierarchical
+    interpolant coefficients support only a reference key (starting
+    point must be set 0; end point can be controlled). */
+void HierarchInterpPolyApproximation::
+central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
+			    Real mean_1, Real mean_2,
+			    RealVector2DArray& cov_t1_coeffs,
+			    RealMatrix2DArray& cov_t2_coeffs,
+			    const UShort2DArray& reference_key)
+{
+  // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
+  HierarchSparseGridDriver* hsg_driver   = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&      key          = hsg_driver->collocation_key();
+  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
+  size_t lev, set, pt, num_levels = expansionType1Coeffs.size(),
+    num_sets, num_tp_pts, cntr = 0, index;
+  bool partial = !reference_key.empty();
+  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+
+  cov_t1_coeffs.resize(num_levels); cov_t1_coeffs[0].resize(1);
+  cov_t2_coeffs.resize(num_levels); cov_t2_coeffs[0].resize(1);
+  cov_t1_coeffs[0][0].sizeUninitialized(1);
+  switch (basisConfigOptions.useDerivs) {
+  case false:
+    // level 0 (assume this is always contained in a partial reference_key)
+    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+    cov_t1_coeffs[0][0][0] = (surrData.response_function(index) - mean_1) *
+                             (s_data_2.response_function(index) - mean_2);
+    ++cntr;
+    // levels 1:w
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
+      cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = key[lev][set].size();
+	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
+	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	// type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	  cov_t1_coeffs_ls[pt]
+	    = (surrData.response_function(index) - mean_1)
+	    * (s_data_2.response_function(index) - mean_2)
+	    - value(surrData.continuous_variables(index), sm_mi, key,
+		    cov_t1_coeffs, cov_t2_coeffs, lev-1);
+	}
+      }
+    }
+    break;
+  case true:
+    size_t v;
+    // level 0 (assume this is always contained in a partial reference_key)
+    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+    Real data_fn1_mm1 = surrData.response_function(index) - mean_1;
+    Real data_fn2_mm2 = s_data_2.response_function(index) - mean_2;
+    cov_t1_coeffs[0][0][0] = data_fn1_mm1 * data_fn2_mm2;
+    cov_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
+    Real *cov_t2_coeffs_000 = cov_t2_coeffs[0][0][0];
+    const RealVector& data_grad1 = surrData.response_gradient(index);
+    const RealVector& data_grad2 = s_data_2.response_gradient(index);
+    for (v=0; v<numVars; ++v)
+      cov_t2_coeffs_000[v]
+	= data_fn1_mm1 * data_grad2[v] + data_fn2_mm2 * data_grad1[v];
+    ++cntr;
+    // levels 1:w
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
+      cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
+	RealMatrix& cov_t2_coeffs_ls = cov_t2_coeffs[lev][set];
+	num_tp_pts = key[lev][set].size();
+	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	cov_t2_coeffs_ls.shapeUninitialized(numVars, num_tp_pts);
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+	  data_fn1_mm1 = surrData.response_function(index) - mean_1;
+	  data_fn2_mm2 = s_data_2.response_function(index) - mean_2;
+	  cov_t1_coeffs_ls[pt] = data_fn1_mm1 * data_fn2_mm2 -
+	    value(c_vars, sm_mi, key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
+	  // type2 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+	  // --> interpolated grads are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
+	  Real* cov_t2_coeffs_lsp = cov_t2_coeffs_ls[pt];
+	  const RealVector& data_grad1 = surrData.response_gradient(index);
+	  const RealVector& data_grad2 = s_data_2.response_gradient(index);
+	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
+	    sm_mi, key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
+	  for (v=0; v<numVars; ++v)
+	    cov_t2_coeffs_lsp[v] = data_fn1_mm1 * data_grad2[v]
+	      + data_fn2_mm2 * data_grad1[v] - prev_grad[v];
+	}
+      }
+    }
+    break;
+  }
 }
 
 
