@@ -275,6 +275,19 @@ public:
   virtual Real delta_covariance(const RealVector& x,
 				PolynomialApproximation* poly_approx_2);
 
+  /// return the change in mean between two response expansions,
+  /// treating all variables as random
+  virtual Real delta_mean();
+  /// return the change in standard deviation between two response
+  /// expansions, treating all variables as random
+  virtual Real delta_std_deviation();
+  /// return the change in reliability index (mapped from z_bar)
+  /// between two response expansions, treating all variables as random
+  virtual Real delta_beta(bool cdf_flag, Real z_bar);
+  /// return the change in response level (mapped from beta_bar)
+  /// between two response expansions, treating all variables as random
+  virtual Real delta_z(bool cdf_flag, Real beta_bar);
+
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration
   virtual void compute_moments() = 0;

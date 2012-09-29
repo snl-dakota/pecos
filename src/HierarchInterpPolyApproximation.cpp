@@ -141,7 +141,10 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
     }
   }
 
-  computedMeanData = computedVarianceData = 0;
+  computedMeanData = computedVarianceData
+    //= computedRefMeanData = computedRefVarianceData
+    //= computedDeltaMeanData = computedDeltaVarianceData
+    = 0;
 }
 
 
@@ -165,7 +168,9 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
   }
   }
 
-  computedMeanData = computedVarianceData = 0;
+  //computedRefMeanData     = computedMeanData;
+  //computedRefVarianceData = computedVarianceData;
+  computedMeanData        = computedVarianceData = 0;
 }
 
 
@@ -717,10 +722,12 @@ Real HierarchInterpPolyApproximation::delta_std_deviation()
   //             = sqrt1pm1(delta_var / var0) * sigma0
   // where sqrt1pm1(x) = expm1[ log1p(x) / 2 ]
 
-  Real delta_var = delta_covariance(this),
-    var0 = covariance(this) - delta_var, // TO DO: improve (using ref_key?)
-    sigma0 = std::sqrt(var0);
-  return bmth::sqrt1pm1(delta_var / var0) * sigma0;
+  // TO DO: improve var0 (using ref_key?)
+  Real delta_var = delta_covariance(this), var1   = covariance(this),
+       var0      = var1 - delta_var,       sigma0 = std::sqrt(var0);
+  return (delta_var < var0) ?
+    bmth::sqrt1pm1(delta_var / var0) * sigma0 :           // preserve precision
+    std::sqrt(var1) - sigma0; // no precision issue; prevent var0 = 0 exception
 }
 
 
@@ -739,20 +746,38 @@ Real HierarchInterpPolyApproximation::delta_beta(bool cdf_flag, Real z_bar)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
-  RealPair mean_pr
-    = partition_expectation(expansionType1Coeffs, expansionType2Coeffs,
-			    ref_key, incr_key);
-  Real mu0 = mean_pr.first, delta_mu = mean_pr.second,
+  RealPair mean_pr = partition_expectation(expansionType1Coeffs,
+    expansionType2Coeffs, ref_key, incr_key);
+  Real beta0, mu0 = mean_pr.first, delta_mu = mean_pr.second,
     delta_sigma = delta_std_deviation(),
     sigma1 = std::sqrt(covariance(this)), // TO DO: improve (using ref_key?)
     sigma0 = sigma1 - delta_sigma;        // TO DO: improve (using ref_key?)
+  // Error traps are needed for zero variance: a single point ref grid
+  // (level=0 sparse or m=1 tensor) has zero variance.  Unchanged response
+  // values along an index set could then cause sigma1 also = 0.
   if (cdf_flag) {
-    Real beta0 = (mu0 - z_bar) / sigma0;
-    return ( delta_mu - delta_sigma * beta0) / sigma1;
+    if (sigma0 > 1.e-25 && sigma1 > 1.e-25) {
+      beta0 = (mu0 - z_bar) / sigma0;
+      return ( delta_mu - delta_sigma * beta0) / sigma1;
+    }
+    else if (sigma1 > 1.e-25) // neglect beta0 term (zero init reliability)
+      return delta_mu / sigma1; // or delta = beta1 = (mu1 - z_bar) / sigma1 ?
+    else if (sigma0 > 1.e-25) // assume beta1 = 0 -> delta = -beta0
+      return (z_bar - mu0) / sigma0;
+    else                      // assume beta0 = beta1 = 0
+      return 0;
   }
   else {
-    Real beta0 = (z_bar - mu0) / sigma0;
-    return (-delta_mu - delta_sigma * beta0) / sigma1;
+    if (sigma0 > 1.e-25 && sigma1 > 1.e-25) {
+      beta0 = (z_bar - mu0) / sigma0;
+      return (-delta_mu - delta_sigma * beta0) / sigma1;
+    }
+    else if (sigma1 > 1.e-25) // neglect beta0 term (zero init reliability)
+      return -delta_mu / sigma1;
+    else if (sigma0 > 1.e-25) // assume beta1 = 0 -> delta = -beta0
+      return (mu0 - z_bar) / sigma0;
+    else                      // assume beta0 = beta1 = 0
+      return 0;
   }
 }
 

@@ -671,6 +671,42 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
+Real PolynomialApproximation::delta_mean()
+{
+  PCerr << "Error: delta_mean() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_std_deviation()
+{
+  PCerr << "Error: delta_std_deviation() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_beta(bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: delta_beta() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_z(bool cdf_flag, Real beta_bar)
+{
+  PCerr << "Error: delta_z() not available for this polynomial approximation "
+	<< "type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 const RealVector& PolynomialApproximation::dimension_decay_rates()
 {
   PCerr << "Error: dimension_decay_rates() not available for this polynomial "
