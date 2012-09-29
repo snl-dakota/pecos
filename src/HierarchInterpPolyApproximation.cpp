@@ -722,12 +722,21 @@ Real HierarchInterpPolyApproximation::delta_std_deviation()
   //             = sqrt1pm1(delta_var / var0) * sigma0
   // where sqrt1pm1(x) = expm1[ log1p(x) / 2 ]
 
-  // TO DO: improve var0 (using ref_key?)
-  Real delta_var = delta_covariance(this), var1   = covariance(this),
-       var0      = var1 - delta_var,       sigma0 = std::sqrt(var0);
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  UShort2DArray ref_key, incr_key;
+  hsg_driver->partition_keys(ref_key, incr_key);
+
+  Real delta_var = delta_covariance(this); // TO DO: manage duplication
+  Real mu0 = expectation(expansionType1Coeffs, expansionType2Coeffs, ref_key);
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  central_product_interpolant(this, mu0, mu0, cov_t1_coeffs, cov_t2_coeffs,
+			      ref_key);
+  Real var0 = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key),
+     sigma0 = std::sqrt(var0);
+
   return (delta_var < var0) ?
-    bmth::sqrt1pm1(delta_var / var0) * sigma0 :           // preserve precision
-    std::sqrt(var1) - sigma0; // no precision issue; prevent var0 = 0 exception
+    bmth::sqrt1pm1(delta_var / var0) * sigma0 :            // preserve precision
+    std::sqrt(var0 + delta_var) - sigma0; // precision OK; prevent division by 0
 }
 
 
@@ -746,12 +755,18 @@ Real HierarchInterpPolyApproximation::delta_beta(bool cdf_flag, Real z_bar)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   UShort2DArray ref_key, incr_key;
   hsg_driver->partition_keys(ref_key, incr_key);
+
   RealPair mean_pr = partition_expectation(expansionType1Coeffs,
     expansionType2Coeffs, ref_key, incr_key);
   Real beta0, mu0 = mean_pr.first, delta_mu = mean_pr.second,
-    delta_sigma = delta_std_deviation(),
-    sigma1 = std::sqrt(covariance(this)), // TO DO: improve (using ref_key?)
-    sigma0 = sigma1 - delta_sigma;        // TO DO: improve (using ref_key?)
+    delta_sigma = delta_std_deviation(); // TO DO: manage duplication w/ below
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  central_product_interpolant(this, mu0, mu0, cov_t1_coeffs, cov_t2_coeffs,
+			      ref_key);
+  Real var0 = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key),
+     sigma0 = std::sqrt(var0);
+  Real sigma1 = sigma0 + delta_sigma;
+
   // Error traps are needed for zero variance: a single point ref grid
   // (level=0 sparse or m=1 tensor) has zero variance.  Unchanged response
   // values along an index set could then cause sigma1 also = 0.
