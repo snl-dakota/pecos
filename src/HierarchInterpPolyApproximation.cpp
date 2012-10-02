@@ -928,25 +928,25 @@ delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
   // (level=0 sparse or m=1 tensor) has zero variance.  Unchanged response
   // values along an index set could then cause sigma1 also = 0.
   if (cdf_flag) {
-    if (sigma0 > ZERO_TOL && sigma1 > ZERO_TOL) {
+    if (sigma0 > SMALL_NUMBER && sigma1 > SMALL_NUMBER) {
       beta0 = (mu0 - z_bar) / sigma0;
       return ( delta_mu - delta_sigma * beta0) / sigma1;
     }
-    else if (sigma1 > ZERO_TOL) // neglect beta0 term (zero init reliability)
+    else if (sigma1 > SMALL_NUMBER)// neglect beta0 term (zero init reliability)
       return delta_mu / sigma1; // or delta = beta1 = (mu1 - z_bar) / sigma1 ?
-    else if (sigma0 > ZERO_TOL) // assume beta1 = 0 -> delta = -beta0
+    else if (sigma0 > SMALL_NUMBER) // assume beta1 = 0 -> delta = -beta0
       return (z_bar - mu0) / sigma0;
     else                      // assume beta0 = beta1 = 0
       return 0;
   }
   else {
-    if (sigma0 > ZERO_TOL && sigma1 > ZERO_TOL) {
+    if (sigma0 > SMALL_NUMBER && sigma1 > SMALL_NUMBER) {
       beta0 = (z_bar - mu0) / sigma0;
       return (-delta_mu - delta_sigma * beta0) / sigma1;
     }
-    else if (sigma1 > ZERO_TOL) // neglect beta0 term (zero init reliability)
+    else if (sigma1 > SMALL_NUMBER)// neglect beta0 term (zero init reliability)
       return -delta_mu / sigma1;
-    else if (sigma0 > ZERO_TOL) // assume beta1 = 0 -> delta = -beta0
+    else if (sigma0 > SMALL_NUMBER) // assume beta1 = 0 -> delta = -beta0
       return (mu0 - z_bar) / sigma0;
     else                      // assume beta0 = beta1 = 0
       return 0;

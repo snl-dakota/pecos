@@ -240,7 +240,7 @@ initialize_random_variable_correlations(const RealSymMatrix& x_corr)
     correlationFlagX = false;
     for (size_t i=1; i<num_ran_vars; i++)
       for (size_t j=0; j<i; j++)
-	if (std::fabs(x_corr(i,j)) > ZERO_TOL)
+	if (std::fabs(x_corr(i,j)) > SMALL_NUMBER)
 	  correlationFlagX = true;
   }
 }

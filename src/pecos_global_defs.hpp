@@ -31,10 +31,14 @@ const size_t _NPOS = ~(size_t)0; // one's complement
 /// used in ostream data output functions
 const int WRITE_PRECISION = 10;
 
-/// small value used for protecting division by zero, etc.; intended
-/// to not be as "severe" as DBL_MIN (e.g., values larger than it can
-/// be used in denominators)
-const double ZERO_TOL = 1.e-25;
+/// small value used for protecting division by zero, etc.; an alternative
+/// to DBL_MIN that is less likely to cause underflow/overflow when numbers
+/// larger than it are used in calculations
+const double SMALL_NUMBER = 1.e-25;
+/// large value used as a surrogate for infinity in error traps; an alternative
+/// to DBL_MAX or inf that is less likely to cause underflow/overflow when used
+/// in subsequent calculations
+const double LARGE_NUMBER = 1.e+50;
 
 // define special values for vector/matrix data copying modes
 enum { DEFAULT_COPY=0, SHALLOW_COPY, DEEP_COPY };
