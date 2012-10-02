@@ -1074,7 +1074,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     for (i=1; i<num_auv; ++i) {
       for (j=0; j<i; ++j) {
 	Real corr_val = correlations(i,j);
-	if (fabs(corr_val) > 1.e-25) {
+	if (fabs(corr_val) > ZERO_TOL) {
 	  // jump over cdv, ceuv, csv, ddv int, dsv int, and ddv real as needed:
 	  size_t offset_i = num_cdv, offset_j = num_cdv;
 	  if (i>=num_cauv)

@@ -375,16 +375,18 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
     tensor_product_type2_partial_weights(randomIndices);
   */
 
+  bool same = (this == nip_approx_2);
   size_t i, j, k, c_index_i, num_colloc_pts = key.size();
   const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
   const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
   Real tp_covar = 0., t1_coeff_1_mm1, t1_coeff_2_mm2, mean_1, mean_2;
   if (momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST) {
     mean_1 = tensor_product_mean(x, lev_index, key, colloc_index);
-    mean_2 = nip_approx_2->tensor_product_mean(x, lev_index, key, colloc_index);
+    mean_2 = (same) ? mean_1 :
+      nip_approx_2->tensor_product_mean(x, lev_index, key, colloc_index);
   }
   else
-    { mean_1 = mean(x); mean_2 = nip_approx_2->mean(x); }
+    { mean_1 = mean(x); mean_2 = (same) ? mean_1 : nip_approx_2->mean(x); }
 
   switch (momentInterpType) {
   case INTERPOLATION_OF_PRODUCTS:
@@ -491,12 +493,14 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index_1,
     abort_handler(-1);
   }
 
+  bool same = (this == nip_approx_2);
   size_t i, j, k, c_index_1i, c_index_2j, num_pts_1 = key_1.size(),
     num_pts_2 = key_2.size();
   const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
   const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
   Real tp_covar = 0., t1_coeff_1i_mm1, t1_coeff_2j_mm2, t1_Ls_1i,
-    basis_prod, basis_prod_k, mean_1 = mean(x), mean_2 = nip_approx_2->mean(x);
+    basis_prod, basis_prod_k, mean_1 = mean(x),
+    mean_2 = (same) ? mean_1 : nip_approx_2->mean(x);
 
   bool non_zero; unsigned short l1k, l2k; SizetList::iterator it;
   for (i=0; i<num_pts_1; ++i) {
@@ -1203,6 +1207,7 @@ covariance(PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
+  bool same = (this == nip_approx_2);
 
   // Error check for required data
   if (!expConfigOptions.expansionCoeffFlag ||
@@ -1224,7 +1229,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   // loss from computing covariance as <R_i R_j> - \mu_i \mu_j
   // Note: compute_statistics() in dakota/src/NonDExpansion.C orders calls
   //       to reduce repetition in moment calculations.
-  Real mean_1 = mean(), mean_2  = nip_approx_2->mean();
+  Real mean_1 = mean(), mean_2  = (same) ? mean_1 : nip_approx_2->mean();
   const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
   const RealVector& t1_wts      = driverRep->type1_weight_sets();
   Real covar = 0.; size_t i, j;
@@ -1253,6 +1258,8 @@ covariance(PolynomialApproximation* poly_approx_2)
     break;
   }
   }
+  if (same)
+    { numericalMoments[1] = covar; computedVariance |= 1; }
   return covar;
 }
 
@@ -1265,14 +1272,16 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
+  bool same = (this == nip_approx_2);
+  Real covar;
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
-    return tensor_product_covariance(x, tpq_driver->level_index(),
-				     tpq_driver->collocation_key(),
-				     colloc_index, nip_approx_2);
+    covar = tensor_product_covariance(x, tpq_driver->level_index(),
+				      tpq_driver->collocation_key(),
+				      colloc_index, nip_approx_2);
     break;
   }
 
@@ -1286,7 +1295,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
     const UShort3DArray& colloc_key      = csg_driver->collocation_key();
     const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
-    size_t i, j, num_smolyak_indices = sm_coeffs.size(); Real covar = 0.;
+    size_t i, j, num_smolyak_indices = sm_coeffs.size();
+    covar = 0.;
     switch (momentInterpType) {
     // For an interpolation of products (which captures product cross-terms),
     // a sum of tensor-product covariances is correct and straightforward.
@@ -1341,11 +1351,12 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
       }
       break;
     }
-    return covar;
     break;
   }
-
   }
+  if (same)
+    { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
 }
 
 

@@ -2047,7 +2047,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    ranVarTypesX[i] != ranVarTypesU[i] ) {
 	beta_gamma_map = true;
 	for (j=num_cdv; j<num_cdv_uv; j++)
-	  if (i != j && fabs(corrMatrixX(i, j)) > 1.e-25)
+	  if (i != j && fabs(corrMatrixX(i, j)) > ZERO_TOL)
 	    { need_xs = true; break; }
       }
     }

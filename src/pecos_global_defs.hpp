@@ -31,6 +31,11 @@ const size_t _NPOS = ~(size_t)0; // one's complement
 /// used in ostream data output functions
 const int WRITE_PRECISION = 10;
 
+/// small value used for protecting division by zero, etc.; intended
+/// to not be as "severe" as DBL_MIN (e.g., values larger than it can
+/// be used in denominators)
+const double ZERO_TOL = 1.e-25;
+
 // define special values for vector/matrix data copying modes
 enum { DEFAULT_COPY=0, SHALLOW_COPY, DEEP_COPY };
 
