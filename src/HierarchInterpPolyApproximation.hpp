@@ -100,7 +100,6 @@ protected:
   Real delta_std_deviation();
   Real delta_beta(bool cdf_flag, Real z_bar);
   Real delta_z(bool cdf_flag, Real beta_bar);
-
   Real delta_covariance(PolynomialApproximation* poly_approx_2);
   Real delta_covariance(const RealVector& x,
 			PolynomialApproximation* poly_approx_2);
@@ -137,6 +136,46 @@ private:
     const UShort3DArray& sm_mi, const UShort4DArray& key,
     const RealMatrix2DArray& t1_coeff_grads, unsigned short level);
 
+  /// update bookkeeping when adding a grid increment relative to the
+  /// grid reference
+  void increment_current_from_reference();
+  /// update bookkeeping when removing a grid increment and returning
+  /// to the grid reference
+  void decrement_current_to_reference();
+
+  /// compute the reference mean, excluding the current grid increment
+  Real reference_mean();
+  /// compute the reference mean, excluding the current grid
+  /// increment, using ref_key
+  Real reference_mean(const UShort2DArray& ref_key);
+  /// compute the reference variance, excluding the current grid increment
+  Real reference_variance();
+  /// compute the reference variance, excluding the current grid
+  /// increment, using ref_key
+  Real reference_variance(const UShort2DArray& ref_key);
+
+  /// compute the mean increment due to the current grid increment
+  Real delta_mean(const UShort2DArray& incr_key);
+  /// compute the variance increment due to the current grid increment
+  Real delta_variance();
+  /// compute the variance increment due to the current grid increment
+  Real delta_variance(const UShort2DArray& ref_key,
+		      const UShort2DArray& incr_key);
+  /// compute the standard deviation increment due to the current grid increment
+  Real delta_std_deviation(const UShort2DArray& ref_key,
+			   const UShort2DArray& incr_key);
+  /// compute the reliability index increment due to the current grid increment
+  Real delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
+		  const UShort2DArray& incr_key);
+  /// compute the response level increment due to the current grid increment
+  Real delta_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
+	       const UShort2DArray& incr_key);
+
+  /// compute the covariance increment due to the current grid increment
+  Real delta_covariance(PolynomialApproximation* poly_approx_2,
+			const UShort2DArray& ref_key,
+			const UShort2DArray& incr_key);
+
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
@@ -156,13 +195,6 @@ private:
 		   const RealMatrix2DArray& t2_coeffs,
 		   const UShort3DArray& pt_partition);
 
-  /// separate expectation() into nominal and delta based on reference
-  /// and increment keys
-  RealPair partition_expectation(const RealVector2DArray& t1_coeffs,
-				 const RealMatrix2DArray& t2_coeffs,
-				 const UShort2DArray& reference_key,
-				 const UShort2DArray& increment_key);
-
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
   void increment_expansion_coefficients(const UShortArray& index_set);
@@ -178,6 +210,27 @@ private:
 
   /// Pecos:PIECEWISE_INTERP_POLYNOMIAL or Pecos:PIECEWISE_CUBIC_INTERP
   short polyType;
+
+  /// bookkeeping to track computation of reference mean to avoid
+  /// unnecessary recomputation
+  short computedRefMean;
+  /// bookkeeping to track computation of mean increment to avoid
+  /// unnecessary recomputation
+  short computedDeltaMean;
+  /// bookkeeping to track computation of reference variance to avoid
+  /// unnecessary recomputation
+  short computedRefVariance;
+  /// bookkeeping to track computation of variance increment to avoid
+  /// unnecessary recomputation
+  short computedDeltaVariance;
+  /// storage for reference mean and variance
+  RealVector referenceMoments;
+  /// storage for mean and variance increments
+  RealVector deltaMoments;
+  /// storage for reference mean gradient
+  RealVector meanRefGradient;
+  /// storage for reference variance gradient
+  RealVector varianceRefGradient;
 
   /// the type1 coefficients of the expansion for interpolating values
   RealVector2DArray expansionType1Coeffs;
@@ -234,7 +287,7 @@ inline void HierarchInterpPolyApproximation::restore_expansion_coefficients()
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
   restore_expansion_coefficients(sg_driver->trial_set());
-  computedMeanData = computedVarianceData = 0;
+  increment_current_from_reference();
 }
 
 

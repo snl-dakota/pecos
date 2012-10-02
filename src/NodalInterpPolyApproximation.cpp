@@ -74,7 +74,7 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
 		      expansionType1CoeffGrads);
   }
 
-  computedMeanData = computedVarianceData = 0;
+  computedMean = computedVariance = 0;
 }
 
 
@@ -184,7 +184,7 @@ void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
     storedCollocKey.clear();     storedCollocIndices.clear(); break;
   }
 
-  computedMeanData = computedVarianceData = 0;
+  computedMean = computedVariance = 0;
 }
 
 
@@ -219,7 +219,7 @@ void NodalInterpPolyApproximation::restore_expansion_coefficients()
 		      expansionType1CoeffGrads);
   }
 
-  computedMeanData = computedVarianceData = 0;
+  computedMean = computedVariance = 0;
 }
 
 
@@ -1013,7 +1013,7 @@ Real NodalInterpPolyApproximation::mean()
   //}
 
   Real& mean = numericalMoments[0];
-  if ( !(computedMeanData & 1) ) {
+  if ( !(computedMean & 1) ) {
     mean = 0.;
     const RealVector& t1_wts = driverRep->type1_weight_sets();
     if (basisConfigOptions.useDerivs) {
@@ -1031,7 +1031,7 @@ Real NodalInterpPolyApproximation::mean()
       for (size_t i=0; i<numCollocPts; ++i)
 	mean += expansionType1Coeffs[i] * t1_wts[i];
 
-    computedMeanData |= 1;
+    computedMean |= 1;
   }
 
   return mean;
@@ -1044,7 +1044,7 @@ Real NodalInterpPolyApproximation::mean()
 Real NodalInterpPolyApproximation::mean(const RealVector& x)
 {
   Real& mean = numericalMoments[0];
-  if ( !(computedMeanData & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
+  if ( !(computedMean & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: {
       TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1069,7 +1069,7 @@ Real NodalInterpPolyApproximation::mean(const RealVector& x)
       break;
     }
     }
-    computedMeanData |= 1; xPrevMean = x;
+    computedMean |= 1; xPrevMean = x;
   }
 
   return mean;
@@ -1092,7 +1092,7 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  if ( !(computedMeanData & 2) ) {
+  if ( !(computedMean & 2) ) {
     const RealVector& t1_wts = driverRep->type1_weight_sets();
     size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
     if (meanGradient.length() != num_deriv_vars)
@@ -1103,7 +1103,7 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
       for (j=0; j<num_deriv_vars; ++j)
 	meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
     }
-    computedMeanData |= 2;
+    computedMean |= 2;
   }
 
   return meanGradient;
@@ -1124,7 +1124,7 @@ const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  if ( (computedMeanData & 2) &&
+  if ( (computedMean & 2) &&
        match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:           return tpMeanGrad;   break;
@@ -1132,7 +1132,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     }
 
   // compute the gradient of the mean
-  computedMeanData |= 2; xPrevMeanGrad = x;
+  computedMean |= 2; xPrevMeanGrad = x;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1176,9 +1176,9 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 Real NodalInterpPolyApproximation::variance()
 {
   Real& var = numericalMoments[1];
-  if ( !(computedVarianceData & 1) ) {
+  if ( !(computedVariance & 1) ) {
     var = covariance(this);
-    computedVarianceData |= 1;
+    computedVariance |= 1;
   }
   return var;
 }
@@ -1190,9 +1190,9 @@ Real NodalInterpPolyApproximation::variance()
 Real NodalInterpPolyApproximation::variance(const RealVector& x)
 {
   Real& var = numericalMoments[1];
-  if ( !(computedVarianceData & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
+  if ( !(computedVariance & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
     var = covariance(x, this);
-    computedVarianceData |= 1; xPrevVar = x;
+    computedVariance |= 1; xPrevVar = x;
   }
   return var;
 }
@@ -1367,7 +1367,7 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
     abort_handler(-1);
   }
 
-  if ( !(computedVarianceData & 2) ) {
+  if ( !(computedVariance & 2) ) {
     const RealVector& t1_wts = driverRep->type1_weight_sets();
     size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
     if (varianceGradient.length() != num_deriv_vars)
@@ -1380,7 +1380,7 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
       for (j=0; j<num_deriv_vars; ++j)
 	varianceGradient[j] += term_i * expansionType1CoeffGrads(j,i);
     }
-    computedVarianceData |= 2;
+    computedVariance |= 2;
   }
 
   return varianceGradient;
@@ -1398,14 +1398,14 @@ const RealVector& NodalInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  if ( (computedVarianceData & 2) &&
+  if ( (computedVariance & 2) &&
        match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:           return tpVarianceGrad;   break;
     case COMBINED_SPARSE_GRID: return varianceGradient; break;
     }
 
-  computedVarianceData |= 2; xPrevVarGrad = x;
+  computedVariance |= 2; xPrevVarGrad = x;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;

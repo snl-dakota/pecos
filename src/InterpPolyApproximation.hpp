@@ -268,10 +268,10 @@ protected:
 
   /// track computation of mean and mean gradient to avoid unnecessary
   /// recomputation
-  short computedMeanData;
+  short computedMean;
   /// track computation of variance and variance gradient to avoid
   /// unnecessary recomputation
-  short computedVarianceData;
+  short computedVariance;
   /// track previous evaluation point for all_variables mean to avoid
   /// unnecessary recomputation
   RealVector xPrevMean;
@@ -316,7 +316,7 @@ private:
 inline InterpPolyApproximation::
 InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numCollocPts(0),
-  basisType(basis_type), computedMeanData(0), computedVarianceData(0)
+  basisType(basis_type), computedMean(0), computedVariance(0)
 { }
 
 
