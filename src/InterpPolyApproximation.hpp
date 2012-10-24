@@ -266,25 +266,6 @@ protected:
   /// {GLOBAL,PIECEWISE}_ORTHOGONAL_POLYNOMIAL
   short basisType;
 
-  /// track computation of mean and mean gradient to avoid unnecessary
-  /// recomputation
-  short computedMean;
-  /// track computation of variance and variance gradient to avoid
-  /// unnecessary recomputation
-  short computedVariance;
-  /// track previous evaluation point for all_variables mean to avoid
-  /// unnecessary recomputation
-  RealVector xPrevMean;
-  /// track previous evaluation point for all_variables mean gradient
-  /// to avoid unnecessary recomputation
-  RealVector xPrevMeanGrad;
-  /// track previous evaluation point for all_variables variance to
-  /// avoid unnecessary recomputation
-  RealVector xPrevVar;
-  /// track previous evaluation point for all_variables variance
-  /// gradient to avoid unnecessary recomputation
-  RealVector xPrevVarGrad;
-
 private:
 
   //
@@ -316,7 +297,7 @@ private:
 inline InterpPolyApproximation::
 InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numCollocPts(0),
-  basisType(basis_type), computedMean(0), computedVariance(0)
+  basisType(basis_type)
 { }
 
 

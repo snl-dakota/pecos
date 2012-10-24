@@ -435,6 +435,8 @@ void OrthogPolyApproximation::compute_coefficients()
     expectation();
     break;
   }
+
+  computedMean = computedVariance = 0;
 }
 
 
@@ -492,6 +494,8 @@ void OrthogPolyApproximation::increment_coefficients()
 	  << "increment_coefficients()" << std::endl;
     abort_handler(-1);
   }
+
+  computedMean = computedVariance = 0;
 }
 
 
@@ -528,6 +532,8 @@ void OrthogPolyApproximation::decrement_coefficients()
     }
     break;
   }
+
+  computedMean = computedVariance = 0;
 }
 
 
@@ -571,6 +577,8 @@ void OrthogPolyApproximation::restore_coefficients()
     break;
   }
   }
+
+  computedMean = computedVariance = 0;
 }
 
 
@@ -610,6 +618,8 @@ void OrthogPolyApproximation::finalize_coefficients()
     }
     break;
   }
+
+  computedMean = computedVariance = 0;
 }
 
 
@@ -723,6 +733,8 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
   if (expConfigOptions.expansionCoeffFlag)     storedExpCoeffs.resize(0);
   if (expConfigOptions.expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
   */
+
+  computedMean = computedVariance = 0;
 }
 
 
@@ -2534,7 +2546,8 @@ Real OrthogPolyApproximation::mean()
   }
 
   Real& mean = expansionMoments[0];
-  mean = expansionCoeffs[0];
+  if ( !(computedMean & 1) )
+    { mean = expansionCoeffs[0]; computedMean |= 1; }
   return mean;
 }
 
@@ -2552,22 +2565,24 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
   }
 
   Real& mean = expansionMoments[0];
-
-  // sum expansion to get response prediction
-  mean = expansionCoeffs[0];
-  for (size_t i=1; i<numExpansionTerms; ++i)
-    // expectations are zero for expansion terms with nonzero random indices
-    if (zero_random(multiIndex[i])) {
-      mean += expansionCoeffs[i]
-	   *  multivariate_polynomial(x, multiIndex[i], nonRandomIndices);
+  if ( !(computedMean & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
+    // sum expansion to get response prediction
+    mean = expansionCoeffs[0];
+    for (size_t i=1; i<numExpansionTerms; ++i)
+      // expectations are zero for expansion terms with nonzero random indices
+      if (zero_random(multiIndex[i])) {
+	mean += expansionCoeffs[i]
+	     *  multivariate_polynomial(x, multiIndex[i], nonRandomIndices);
 #ifdef DEBUG
-      PCout << "Mean estimate inclusion: term index = " << i << " Psi = "
-	    << multivariate_polynomial(x, multiIndex[i], nonRandomIndices)
-	    << " PCE coeff = " << expansionCoeffs[i] << " total = " << mean
-	    << std::endl;
+	PCout << "Mean estimate inclusion: term index = " << i << " Psi = "
+	      << multivariate_polynomial(x, multiIndex[i], nonRandomIndices)
+	      << " PCE coeff = " << expansionCoeffs[i] << " total = " << mean
+	      << std::endl;
 #endif // DEBUG
-    }
+      }
 
+    computedMean |= 1; xPrevMean = x;
+  }
   return mean;
 }
 
@@ -2588,7 +2603,10 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  meanGradient = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
+  if ( !(computedMean & 2) ) {
+    meanGradient = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
+    computedMean |= 2;
+  }
   return meanGradient;
 }
 
@@ -2606,6 +2624,11 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
 const RealVector& OrthogPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
+  // if already computed, return previous result
+  if ( (computedMean & 2) &&
+       match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
+    return meanGradient;
+
   size_t i, j, deriv_index, num_deriv_vars = dvv.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
   if (meanGradient.length() != num_deriv_vars)
@@ -2655,6 +2678,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     if (randomVarsKey[deriv_index]) // derivative w.r.t. design var insertion
       ++cntr;
   }
+  computedMean |= 2; xPrevMeanGrad = x;
 
   return meanGradient;
 }
@@ -2665,8 +2689,12 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     of the coefficients squared times the polynomial norms squared. */
 Real OrthogPolyApproximation::variance()
 {
-  expansionMoments[1] = covariance(this);
-  return expansionMoments[1];
+  Real& var = expansionMoments[1];
+  if ( !(computedVariance & 1) ) {
+    var = covariance(this);
+    computedVariance |= 1;
+  }
+  return var;
 }
 
 
@@ -2674,8 +2702,12 @@ Real OrthogPolyApproximation::variance()
     and the variance of the expansion involves summations over this subset. */
 Real OrthogPolyApproximation::variance(const RealVector& x)
 {
-  expansionMoments[1] = covariance(x, this);
-  return expansionMoments[1];
+  Real& var = expansionMoments[1];
+  if ( !(computedVariance & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
+    var = covariance(x, this);
+    computedVariance |= 1; xPrevVar = x;
+  }
+  return var;
 }
 
 
@@ -2763,14 +2795,17 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
     abort_handler(-1);
   }
 
-  size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
-  if (varianceGradient.length() != num_deriv_vars)
-    varianceGradient.sizeUninitialized(num_deriv_vars);
-  varianceGradient = 0.;
-  for (i=1; i<numExpansionTerms; ++i) {
-    Real term_i = 2. * expansionCoeffs[i] * norm_squared(multiIndex[i]);
-    for (j=0; j<num_deriv_vars; ++j)
-      varianceGradient[j] += term_i * expansionCoeffGrads[i][j];
+  if ( !(computedVariance & 2) ) {
+    size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
+    if (varianceGradient.length() != num_deriv_vars)
+      varianceGradient.sizeUninitialized(num_deriv_vars);
+    varianceGradient = 0.;
+    for (i=1; i<numExpansionTerms; ++i) {
+      Real term_i = 2. * expansionCoeffs[i] * norm_squared(multiIndex[i]);
+      for (j=0; j<num_deriv_vars; ++j)
+	varianceGradient[j] += term_i * expansionCoeffGrads[i][j];
+    }
+    computedVariance |= 2;
   }
 
   return varianceGradient;
@@ -2793,6 +2828,11 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 	  << "OrthogPolyApproximation::variance_gradient()" << std::endl;
     abort_handler(-1);
   }
+
+  // if already computed, return previous result
+  if ( (computedVariance & 2) &&
+       match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
+    return varianceGradient;
 
   size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
@@ -2847,6 +2887,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     if (randomVarsKey[deriv_index]) // derivative w.r.t. design var insertion
       ++cntr;
   }
+  computedVariance |= 2; xPrevVarGrad = x;
 
   return varianceGradient;
 }

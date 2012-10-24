@@ -510,6 +510,25 @@ protected:
   /// numerical integration variance for InterpPoly)
   RealVector varianceGradient;
 
+  /// track computation of mean and mean gradient to avoid unnecessary
+  /// recomputation
+  short computedMean;
+  /// track computation of variance and variance gradient to avoid
+  /// unnecessary recomputation
+  short computedVariance;
+  /// track previous evaluation point for all_variables mean to avoid
+  /// unnecessary recomputation
+  RealVector xPrevMean;
+  /// track previous evaluation point for all_variables mean gradient
+  /// to avoid unnecessary recomputation
+  RealVector xPrevMeanGrad;
+  /// track previous evaluation point for all_variables variance to
+  /// avoid unnecessary recomputation
+  RealVector xPrevVar;
+  /// track previous evaluation point for all_variables variance
+  /// gradient to avoid unnecessary recomputation
+  RealVector xPrevVarGrad;
+
   /// saved trial sets that were computed but not selected
   std::deque<UShortArray> savedLevMultiIndex;
 
@@ -530,14 +549,14 @@ private:
 
 
 inline PolynomialApproximation::PolynomialApproximation():
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX), computedMean(0), computedVariance(0)
 { }
 
 
 inline PolynomialApproximation::
 PolynomialApproximation(size_t num_vars, bool use_derivs):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
-  ssgLevelPrev(USHRT_MAX)
+  ssgLevelPrev(USHRT_MAX), computedMean(0), computedVariance(0)
 { basisConfigOptions.useDerivs = use_derivs; }
 
 
