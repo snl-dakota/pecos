@@ -449,7 +449,9 @@ value(const RealVector& x, const UShort3DArray& sm_mi, const UShort4DArray& key,
     const UShort3DArray&         key_l = key[lev];
     const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
     const RealMatrixArray& t2_coeffs_l = t2_coeffs[lev];
-    num_sets = sm_mi_l.size();
+    // sm_mi and key include all current index sets, whereas the t1/t2
+    // coeffs may refect a partial state derived from a reference_key
+    num_sets = t1_coeffs_l.size();
     for (set=0; set<num_sets; ++set)
       approx_val +=
 	tensor_product_value(x, t1_coeffs_l[set], t2_coeffs_l[set],
@@ -487,7 +489,9 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     const UShort3DArray&         key_l = key[lev];
     const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
     const RealMatrixArray& t2_coeffs_l = t2_coeffs[lev];
-    num_sets = sm_mi_l.size();
+    // sm_mi and key include all current index sets, whereas the t1/t2
+    // coeffs may refect a partial state derived from a reference_key
+    num_sets = t1_coeffs_l.size();
     for (set=0; set<num_sets; ++set)
       approxGradient +=
 	tensor_product_gradient_basis_variables(x, t1_coeffs_l[set],
@@ -523,7 +527,9 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     const UShort3DArray&         key_l = key[lev];
     const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
     const RealMatrixArray& t2_coeffs_l = t2_coeffs[lev];
-    num_sets = sm_mi_l.size();
+    // sm_mi and key include all current index sets, whereas the t1/t2
+    // coeffs may refect a partial state derived from a reference_key
+    num_sets = t1_coeffs_l.size();
     for (set=0; set<num_sets; ++set)
       approxGradient +=
 	tensor_product_gradient_basis_variables(x, t1_coeffs_l[set],
@@ -568,7 +574,9 @@ gradient_nonbasis_variables(const RealVector& x, const UShort3DArray& sm_mi,
     const UShort2DArray&            sm_mi_l = sm_mi[lev];
     const UShort3DArray&              key_l = key[lev];
     const RealMatrixArray& t1_coeff_grads_l = t1_coeff_grads[lev];
-    num_sets = sm_mi_l.size();
+    // sm_mi and key include all current index sets, whereas the t1/t2
+    // coeffs may refect a partial state derived from a reference_key
+    num_sets = t1_coeff_grads_l.size();
     for (set=0; set<num_sets; ++set)
       approxGradient +=
 	tensor_product_gradient_nonbasis_variables(x, t1_coeff_grads_l[set],
