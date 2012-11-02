@@ -128,7 +128,7 @@ protected:
   virtual void compute_numerical_expansion_moments(size_t num_moments) = 0;
 
   virtual void compute_total_sobol_indices() = 0;
-  virtual void compute_partial_variance(const BitSet& set_value);
+  virtual void compute_partial_variance(const BitArray& set_value);
 
   //
   //- Heading: Convenience functions
@@ -219,19 +219,19 @@ protected:
   bool same_basis(unsigned short level, size_t v1, size_t v2);
 
   /// compute total Sobol effects for an index within a sparse grid
-  Real total_effects_integral(const BitSet& set_value,
+  Real total_effects_integral(const BitArray& set_value,
 			      const UShortArray& quad_order,
 			      const UShortArray& lev_index,
 			      const UShort2DArray& key,
 			      const SizetArray& colloc_index);
   /// finds variance of sparse interpolant with respect to variables in the set
-  Real partial_variance_integral(const BitSet& set_value,
+  Real partial_variance_integral(const BitArray& set_value,
 				 const UShortArray& quad_order,
 				 const UShortArray& lev_index,
 				 const UShort2DArray& key,
 				 const SizetArray& colloc_index);
   /// defines member_coeffs and member_wts for a particular set_value
-  void member_coefficients_weights(const BitSet& set_value,
+  void member_coefficients_weights(const BitArray& set_value,
     const UShortArray& quad_order, const UShortArray& lev_index,
     const UShort2DArray& key, const SizetArray& colloc_index,
     RealVector& member_coeffs, RealVector& member_wts);
@@ -285,14 +285,14 @@ private:
   /// performs sorting to store constituent subsets (constituentSets)
   void get_subsets();
   /// recursively identifies constituent subsets
-  void lower_sets(BitSet plus_one_set, ULongSet& top_level_set);
+  void lower_sets(const BitArray& plus_one_set, BitArraySet& top_level_set);
 
   //
   //- Heading: Data
   //
 
   /// the constituent subsets for each superset
-  std::vector<ULongSet> constituentSets;
+  std::vector<BitArraySet> constituentSets;
 };
 
 

@@ -1543,7 +1543,7 @@ compute_numerical_expansion_moments(size_t num_moments)
     true so long as the partial_variance is called following
     appropriate enumeration of set value  */
 void HierarchInterpPolyApproximation::
-compute_partial_variance(const BitSet& set_value)
+compute_partial_variance(const BitArray& set_value)
 {
   Real& variance = partialVariance[sobolIndexMap[set_value]];
   // Computes the integral first
@@ -1578,7 +1578,7 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 {
   const Real& m1 = numericalMoments[1]; // standardized, if not num exception
   Real total_variance = (m1 > 0.) ? m1 * m1 : m1;
-  size_t j; BitSet set_value(numVars);
+  size_t j; BitArray set_value(numVars);
 
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();

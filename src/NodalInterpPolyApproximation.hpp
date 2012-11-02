@@ -93,7 +93,7 @@ protected:
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
   void compute_total_sobol_indices();
-  void compute_partial_variance(const BitSet& set_value);
+  void compute_partial_variance(const BitArray& set_value);
 
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);

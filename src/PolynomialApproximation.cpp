@@ -207,7 +207,7 @@ void PolynomialApproximation::allocate_component_effects()
     case UNIVARIATE_VBD: { // main effects only
       index_length = numVars + 1;
       // define binary sets corresponding to main effects
-      BitSet set(numVars, 0);
+      BitArray set(numVars, 0);
       sobolIndexMap[set] = 0;
       for (size_t v=0; v<numVars; ++v)
 	{ set.reset(); set[v] = 1; sobolIndexMap[set] = v+1; }
@@ -217,7 +217,7 @@ void PolynomialApproximation::allocate_component_effects()
       index_length = 1; // (unsigned long)std::pow(2., numVars);
       for (size_t v=0; v<numVars; ++v) index_length *= 2;
       for (unsigned long i=0; i<index_length; ++i)
-	{ BitSet set(numVars, i); sobolIndexMap[set] = i; }
+	{ BitArray set(numVars, i); sobolIndexMap[set] = i; }
       break;
     }
     // sobolIndices[0] is reserved for mean 

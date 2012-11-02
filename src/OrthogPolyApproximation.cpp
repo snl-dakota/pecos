@@ -2995,14 +2995,14 @@ void OrthogPolyApproximation::compute_component_effects()
 
   // iterate through multiIndex and store sensitivities
   sobolIndices = 0.; // initialize (Note: sobolIndices[0] is unused)
-  BitSet set(numVars);
+  BitArray set(numVars);
   for (i=1; i<numExpansionTerms; ++i) {
     set.reset(); // return all bits to 0
     for (j=0; j<numVars; ++j)
       if (multiIndex[i][j]) // activate this bit
 	set[j].flip();
     // If term is main effect (exists in map), keep; otherwise, discard
-    BSULMIter it = sobolIndexMap.find(set);
+    BAULMIter it = sobolIndexMap.find(set);
     if (it != sobolIndexMap.end())
       sobolIndices[it->second] += expansionCoeffs(i) * expansionCoeffs(i)
 	                       *  norm_squared(multiIndex[i]) / p_var;
@@ -3019,7 +3019,7 @@ void OrthogPolyApproximation::compute_total_effects()
   // iterate through existing indices if all component indices are available
   totalSobolIndices = 0.;
   if (expConfigOptions.vbdControl == ALL_VBD) {
-    for (BSULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+    for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
       for (size_t k=0; k<numVars; ++k) 
         if (it->first[k])
           totalSobolIndices[k] += sobolIndices[it->second];
@@ -3036,7 +3036,7 @@ void OrthogPolyApproximation::compute_total_effects()
   
     // Computing total indices by iterating through expansion terms is simpler
     // and more computationally efficient than computing via ANOVA operators 
-    //BitSet set(numVars);
+    //BitArray set(numVars);
     for (i=1; i<numExpansionTerms; ++i) {
       //set.reset(); // return all bits to 0
       p_var_i = expansionCoeffs(i) * expansionCoeffs(i)

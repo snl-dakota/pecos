@@ -1680,7 +1680,7 @@ compute_numerical_expansion_moments(size_t num_moments)
     true so long as the partial_variance is called following
     appropriate enumeration of set value  */
 void NodalInterpPolyApproximation::
-compute_partial_variance(const BitSet& set_value)
+compute_partial_variance(const BitArray& set_value)
 {
   Real& variance = partialVariance[sobolIndexMap[set_value]];
   // Computes the integral first
@@ -1723,7 +1723,7 @@ compute_partial_variance(const BitSet& set_value)
 void NodalInterpPolyApproximation::compute_total_sobol_indices()
 {
   const Real& total_variance = numericalMoments[1];
-  size_t j; BitSet set_value(numVars);
+  size_t j; BitArray set_value(numVars);
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;

@@ -71,7 +71,7 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // Admin/bookkeeping arrays (serial only):
 // ---------------------------------------
 typedef std::deque<bool> BoolDeque; // See Meyers' Effective STL #18
-typedef boost::dynamic_bitset<unsigned long> BitSet;
+typedef boost::dynamic_bitset<unsigned long> BitArray;
 
 typedef std::pair<Real, Real>        RealPair;
 typedef std::list<size_t>            SizetList;
@@ -105,24 +105,24 @@ typedef std::vector<SurrogateDataResp> SDRArray;
 typedef std::vector<SDVArray>          SDV2DArray;
 typedef std::vector<SDRArray>          SDR2DArray;
 
-typedef std::set<int>                    IntSet;
-typedef std::set<size_t>                 ULongSet;
-typedef std::multiset<unsigned short>    UShortMultiSet;
-typedef std::multiset<UShortMultiSet>    UShort2DMultiSet;
-typedef std::set<Real>                   RealSet;
-typedef std::vector<IntSet>              IntSetArray;
-typedef std::vector<RealSet>             RealSetArray;
-typedef std::map<int, short>             IntShortMap;
-typedef std::map<size_t, short>          SizetShortMap;
-typedef std::map<BitSet, unsigned long>  BitSetULongMap;
-typedef std::map<int, int>               IntIntMap;
-typedef std::map<int, Real>              IntRealMap;
-typedef std::map<Real, Real>             RealRealMap;
-typedef std::vector<IntRealMap>          IntRealMapArray;
-typedef std::vector<RealRealMap>         RealRealMapArray;
-typedef std::map<int, RealVector>        IntRealVectorMap;
-typedef std::map<UShortMultiSet,   Real> UShortMultiSetRealMap;
-typedef std::map<UShort2DMultiSet, Real> UShort2DMultiSetRealMap;
+typedef std::set<int>                     IntSet;
+typedef std::set<BitArray>                BitArraySet;
+typedef std::multiset<unsigned short>     UShortMultiSet;
+typedef std::multiset<UShortMultiSet>     UShort2DMultiSet;
+typedef std::set<Real>                    RealSet;
+typedef std::vector<IntSet>               IntSetArray;
+typedef std::vector<RealSet>              RealSetArray;
+typedef std::map<int, short>              IntShortMap;
+typedef std::map<size_t, short>           SizetShortMap;
+typedef std::map<BitArray, unsigned long> BitArrayULongMap;
+typedef std::map<int, int>                IntIntMap;
+typedef std::map<int, Real>               IntRealMap;
+typedef std::map<Real, Real>              RealRealMap;
+typedef std::vector<IntRealMap>           IntRealMapArray;
+typedef std::vector<RealRealMap>          RealRealMapArray;
+typedef std::map<int, RealVector>         IntRealVectorMap;
+typedef std::map<UShortMultiSet,   Real>  UShortMultiSetRealMap;
+typedef std::map<UShort2DMultiSet, Real>  UShort2DMultiSetRealMap;
 
 typedef boost::multi_array_types::index_range      idx_range;
 typedef boost::multi_array<size_t, 1>              SizetMultiArray;
@@ -132,21 +132,21 @@ typedef SizetMultiArray::const_array_view<1>::type SizetMultiArrayConstView;
 // ---------
 // Iterators
 // ---------
-typedef IntSet::iterator               ISIter;
-typedef IntSet::const_iterator         ISCIter;
-typedef ULongSet::iterator             ULSIter;
-typedef ULongSet::const_iterator       ULSCIter;
-typedef RealSet::iterator              RSIter;
-typedef RealSet::const_iterator        RSCIter;
-typedef IntShortMap::iterator          IShMIter;
-typedef IntIntMap::iterator            IIMIter;
-typedef IntIntMap::const_iterator      IIMCIter;
-typedef BitSetULongMap::iterator       BSULMIter;
-typedef BitSetULongMap::const_iterator BSULMCIter;
-typedef IntRealMap::iterator           IRMIter;
-typedef IntRealMap::const_iterator     IRMCIter;
-typedef RealRealMap::iterator          RRMIter;
-typedef RealRealMap::const_iterator    RRMCIter;
+typedef IntSet::iterator                 ISIter;
+typedef IntSet::const_iterator           ISCIter;
+typedef BitArraySet::iterator            BASIter;
+typedef BitArraySet::const_iterator      BASCIter;
+typedef RealSet::iterator                RSIter;
+typedef RealSet::const_iterator          RSCIter;
+typedef IntShortMap::iterator            IShMIter;
+typedef IntIntMap::iterator              IIMIter;
+typedef IntIntMap::const_iterator        IIMCIter;
+typedef BitArrayULongMap::iterator       BAULMIter;
+typedef BitArrayULongMap::const_iterator BAULMCIter;
+typedef IntRealMap::iterator             IRMIter;
+typedef IntRealMap::const_iterator       IRMCIter;
+typedef RealRealMap::iterator            RRMIter;
+typedef RealRealMap::const_iterator      RRMCIter;
 
 
 /// equality operator for SizetArray and SizetMultiArrayConstView
