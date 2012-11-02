@@ -105,7 +105,7 @@ protected:
 			PolynomialApproximation* poly_approx_2);
 
   void compute_total_sobol_indices();
-  void compute_partial_variance(int set_value);
+  void compute_partial_variance(const BitSet& set_value);
 
 private:
 

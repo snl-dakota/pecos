@@ -1679,7 +1679,8 @@ compute_numerical_expansion_moments(size_t num_moments)
     subsets of set_value have been computed in advance which will be
     true so long as the partial_variance is called following
     appropriate enumeration of set value  */
-void NodalInterpPolyApproximation::compute_partial_variance(int set_value)
+void NodalInterpPolyApproximation::
+compute_partial_variance(const BitSet& set_value)
 {
   Real& variance = partialVariance[sobolIndexMap[set_value]];
   // Computes the integral first
@@ -1722,7 +1723,7 @@ void NodalInterpPolyApproximation::compute_partial_variance(int set_value)
 void NodalInterpPolyApproximation::compute_total_sobol_indices()
 {
   const Real& total_variance = numericalMoments[1];
-  int j, set_value;
+  size_t j; BitSet set_value(numVars);
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1732,7 +1733,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     SizetArray colloc_index; // empty -> default indexing
     for (j=0; j<numVars; ++j) {
       // define set_value that includes all but index of interest
-      set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1;
+      set_value.set(); set_value[j].flip();
       totalSobolIndices[j] = std::abs(1. -
 	total_effects_integral(set_value, quad_order, lev_index, colloc_key,
 			       colloc_index) / total_variance);
@@ -1751,7 +1752,8 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     // iterate each variable 
     for (j=0; j<numVars; ++j) {
       totalSobolIndices[j] = 0.;
-      set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1; 
+      // define set_value that includes all but index of interest
+      set_value.set(); set_value[j].flip();
       for (i=0; i<num_smolyak_indices; ++i)
 	if (sm_coeffs[i]) {
 	  csg_driver->level_to_order(sm_index[i], quad_order);

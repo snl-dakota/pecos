@@ -375,8 +375,8 @@ public:
   /// get ExpansionConfigOptions::vbdControl
   short vbd_control() const;
 
-  /// return sobolIndexMap 
-  const IntIntMap& sobol_index_map() const;
+  /// return sobolIndexMap
+  const BitSetULongMap& sobol_index_map() const;
   /// return sobolIndices
   const RealVector& sobol_indices() const;
   /// return totalSobolIndices
@@ -532,9 +532,9 @@ protected:
   /// saved trial sets that were computed but not selected
   std::deque<UShortArray> savedLevMultiIndex;
 
-  /// introduce mapping to unify disparate enumeration of sensitivity
-  /// indices (e.g. main effects only vs all effects)
-  IntIntMap sobolIndexMap;
+  /// mapping to manage different global sensitivity index options
+  /// (e.g. univariate/main effects only vs all effects)
+  BitSetULongMap sobolIndexMap;
   /// global sensitivities as given by Sobol'
   RealVector sobolIndices;
   /// total global sensitivities as given by Sobol'
@@ -637,7 +637,7 @@ inline short PolynomialApproximation::vbd_control() const
 { return expConfigOptions.vbdControl; }
 
 
-inline const IntIntMap& PolynomialApproximation::sobol_index_map() const
+inline const BitSetULongMap& PolynomialApproximation::sobol_index_map() const
 { return sobolIndexMap; }
 
 

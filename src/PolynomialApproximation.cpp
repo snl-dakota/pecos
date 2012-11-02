@@ -199,27 +199,28 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 
 void PolynomialApproximation::allocate_component_effects()
 {
-  // sobolIndices[0] is reserved for mean 
- 
   // Allocate memory specific to output control
   if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
       sobolIndices.empty()) {
-    int i, index_length;
+    unsigned long index_length;
     switch (expConfigOptions.vbdControl) {
-    case UNIVARIATE_VBD: // main effects only
-      index_length = (int)numVars+1;
-      // map binary to integer main effects form
-      sobolIndexMap[0] = 0;
-      for (i=1; i<index_length; ++i) 
-	sobolIndexMap[int(std::pow(2.,i-1))] = i;
-      break;
-    case ALL_VBD: // main + interaction effects
-      // don't recompute total separately; rather sum from component effects
-      index_length = (int)std::pow(2.,(int)numVars);
-      for (i=0; i<index_length; ++i) 
-	sobolIndexMap[i] = i; // already in binary notation
+    case UNIVARIATE_VBD: { // main effects only
+      index_length = numVars + 1;
+      // define binary sets corresponding to main effects
+      BitSet set(numVars, 0);
+      sobolIndexMap[set] = 0;
+      for (size_t v=0; v<numVars; ++v)
+	{ set.reset(); set[v] = 1; sobolIndexMap[set] = v+1; }
       break;
     }
+    case ALL_VBD: // main + interaction effects
+      index_length = 1; // (unsigned long)std::pow(2., numVars);
+      for (size_t v=0; v<numVars; ++v) index_length *= 2;
+      for (unsigned long i=0; i<index_length; ++i)
+	{ BitSet set(numVars, i); sobolIndexMap[set] = i; }
+      break;
+    }
+    // sobolIndices[0] is reserved for mean 
     sobolIndices.sizeUninitialized(index_length);
   }
 }

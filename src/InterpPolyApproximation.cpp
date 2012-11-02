@@ -643,11 +643,11 @@ void InterpPolyApproximation::compute_component_effects()
   partialVariance[0] = total_mean * total_mean; // initialize with mean^2
 
   // Solve for partial variance
-  for (IntIntMIter map_iter=sobolIndexMap.begin();
+  for (BSULMIter map_iter=sobolIndexMap.begin();
        map_iter!=sobolIndexMap.end(); ++map_iter) {
     // partialVariance[0] stores the mean; it is not a component function
     // and does not follow the procedures for obtaining variance 
-    if (map_iter->first) {
+    if (map_iter->first.to_ulong()) {
       compute_partial_variance(map_iter->first);
       sobolIndices[map_iter->second] = partialVariance[map_iter->second]
 	                             / total_variance;
@@ -667,10 +667,10 @@ void InterpPolyApproximation::compute_total_effects()
   // iterate through existing indices if all component indices are available
   totalSobolIndices = 0.; // init total indices
   if (expConfigOptions.vbdControl == ALL_VBD)
-    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); ++itr)
-      for (int k=0; k<numVars; ++k) {
-        if (itr->first & (1 << k))
-          totalSobolIndices[k] += sobolIndices[itr->second];
+    for (BSULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+      for (size_t k=0; k<numVars; ++k) {
+        if (it->first[k])
+          totalSobolIndices[k] += sobolIndices[it->second];
         totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
       }
 
@@ -691,16 +691,16 @@ void InterpPolyApproximation::compute_total_effects()
 void InterpPolyApproximation::get_subsets()
 {
   // includes the "zero" set
-  //int num_subsets = sobolIndices.length(); 
+  //size_t num_subsets = sobolIndices.length(); 
 
   // Here we want to utilize the integer representation of the subset
   // but we want to store it in a size appropriate container
   // so finding lower sets is given the argument of the integer rep (->first)
   // and stored in constituentSets in size-appropriate-index-map (->second)
-  for (IntIntMIter map_iter=sobolIndexMap.begin();
+  for (BSULMIter map_iter=sobolIndexMap.begin();
        map_iter!=sobolIndexMap.end(); ++map_iter) {
     lower_sets(map_iter->first, constituentSets[map_iter->second]);
-    constituentSets[map_iter->second].erase(map_iter->first);
+    constituentSets[map_iter->second].erase(map_iter->first.to_ulong());
   }
 }
 
@@ -708,24 +708,24 @@ void InterpPolyApproximation::get_subsets()
 /** For input set, recursively finds constituent subsets with one
     fewer element */
 void InterpPolyApproximation::
-lower_sets(int plus_one_set, IntSet& top_level_set)
+lower_sets(BitSet plus_one_set, ULongSet& top_level_set)
 {
   // if this set has been stored before, stop
-  if (top_level_set.count(plus_one_set))
+  unsigned long p1_set = plus_one_set.to_ulong();
+  if (top_level_set.find(p1_set) != top_level_set.end())
     return;
-  // otherwise store current set
-  else
-    top_level_set.insert(plus_one_set);
-  // and find lower level sets
-  for (int k=0; k<numVars; ++k)
+
+  // otherwise store current set and find lower level sets
+  top_level_set.insert(p1_set);
+  for (size_t k=0; k<numVars; ++k)
     // this performs a bitwise comparison by shifting 1 by k spaces 
     // and comparing that to a binary form of plus_one_set; this allows 
     // the variable membership using integers instead of a d-array of bools
-    if (plus_one_set & (1 << k)) 
+    if (plus_one_set[k]) {
       // if subset i contains variable k, remove that variable from the set 
-      // by converting the bit-form of (1<<k) to an integer and subtract from
-      // the plus_one_set
-      lower_sets(plus_one_set-(int)std::pow(2.0,k),top_level_set);
+      BitSet mod_set = plus_one_set; mod_set[k].flip();
+      lower_sets(mod_set, top_level_set);
+    }
 }
 
 
@@ -733,16 +733,19 @@ lower_sets(int plus_one_set, IntSet& top_level_set)
     subsets of set_value have been computed in advance which will be
     true so long as the partial_variance is called following
     appropriate enumeration of set value  */
-void InterpPolyApproximation::compute_partial_variance(int set_value)
+void InterpPolyApproximation::compute_partial_variance(const BitSet& set_value)
 {
   // derived classes override to define partialVariance and then invoke
   // base version for constituentSets post-processing
 
   // Now subtract the contributions from constituent subsets
-  IntSet::iterator itr; int set_index = sobolIndexMap[set_value];
-  for (itr  = constituentSets[set_index].begin();
-       itr != constituentSets[set_index].end(); ++itr) 
-    partialVariance[set_index] -= partialVariance[sobolIndexMap[*itr]];
+  ULSIter it; unsigned long set_index = sobolIndexMap[set_value];
+  for (it  = constituentSets[set_index].begin();
+       it != constituentSets[set_index].end(); ++it) {
+    BitSet subset(numVars, *it);
+    unsigned long subset_index  = sobolIndexMap[subset];
+    partialVariance[set_index] -= partialVariance[subset_index];
+  }
 }
 
 
@@ -750,7 +753,8 @@ void InterpPolyApproximation::compute_partial_variance(int set_value)
     Finds the variance of the interpolant w.r.t. the variables in the set.
     Overloaded version supporting Smolyak sparse grids. */
 Real InterpPolyApproximation::
-partial_variance_integral(int set_value, const UShortArray& quad_order,
+partial_variance_integral(const BitSet& set_value,
+			  const UShortArray& quad_order,
 			  const UShortArray& lev_index, 
 			  const UShort2DArray& key,
 			  const SizetArray& colloc_index)
@@ -769,7 +773,7 @@ partial_variance_integral(int set_value, const UShortArray& quad_order,
 
 
 Real InterpPolyApproximation::
-total_effects_integral(int set_value, const UShortArray& quad_order,
+total_effects_integral(const BitSet& set_value, const UShortArray& quad_order,
 		       const UShortArray& lev_index, const UShort2DArray& key,
 		       const SizetArray& colloc_index)
 {
@@ -788,7 +792,8 @@ total_effects_integral(int set_value, const UShortArray& quad_order,
 
 
 void InterpPolyApproximation::
-member_coefficients_weights(int set_value, const UShortArray& quad_order,
+member_coefficients_weights(const BitSet& set_value,
+			    const UShortArray& quad_order,
 			    const UShortArray& lev_index,
 			    const UShort2DArray& key,
 			    const SizetArray& colloc_index,
@@ -796,29 +801,20 @@ member_coefficients_weights(int set_value, const UShortArray& quad_order,
 {
   // create member variable key and get number of expansion coeffs in
   // member-variable-only expansion
-  BoolDeque nonmember_vars(numVars); // distinguish set members from non-members
-  int num_member_coeffs = 1; // # exp coeffs in member-variable-only expansion
-  IntVector indexing_factor(numVars, false); // factors indexing member vars 
-  for (int k=0; k<numVars; ++k) {
-    // if subset contains variable k, set key for variable k to true
-    if (set_value & (1 << k)) {
-      nonmember_vars[k]  = false;	
-      indexing_factor[k] = num_member_coeffs; // for indexing of member_coeffs
-      num_member_coeffs *= quad_order[k];
+  size_t i, j, num_member_coeffs = 1;  // # exp coeffs in member-var-only exp
+  SizetArray indexing_factor(numVars); // factors indexing member vars 
+  for (j=0; j<numVars; ++j)
+    if (set_value[j]) {
+      indexing_factor[j] = num_member_coeffs; // for indexing of member_coeffs
+      num_member_coeffs *= quad_order[j];
     }
-    else {
-      nonmember_vars[k]  = true;	
-      indexing_factor[k] = 1;
-    }
-  }
 
   // Size vectors to store new coefficients
   member_coeffs.size(num_member_coeffs); // init to 0
   member_wts.size(num_member_coeffs);    // init to 0
 
-  // Perform integration over non-member variables and store indices
-  // of new expansion
-  size_t i, j, num_colloc_pts = key.size(), member_coeffs_index, c_index;
+  // Perform integration over non-member vars and store indices of new expansion
+  size_t num_colloc_pts = key.size(), member_coeffs_index, c_index;
   const Real3DArray& colloc_wts_1d
     = driverRep->type1_collocation_weights_array();
   for (i=0; i<num_colloc_pts; ++i) {
@@ -827,14 +823,13 @@ member_coefficients_weights(int set_value, const UShortArray& quad_order,
     Real prod_i_nonmembers = 1., prod_i_members = 1.;
     for (j=0; j<numVars; ++j)
       // Save the product of the weights of the member and non-member variables 
-      if (nonmember_vars[j])
-	prod_i_nonmembers   *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      else {
+      if (set_value[j]) {
 	// Convert key to corresponding index on member_coeffs
 	member_coeffs_index += key_i[j] * indexing_factor[j];
 	prod_i_members      *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
       }
-
+      else
+	prod_i_nonmembers   *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
     // member_wts is performed more time than necessary here, but it
     // seems to be the simplest place to put it
     member_wts[member_coeffs_index] = prod_i_members;

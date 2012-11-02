@@ -2984,29 +2984,28 @@ void OrthogPolyApproximation::compute_component_effects()
   // e.g. if there are 5 variables -> 5 bit represenation
   // if a variable belongs to a subset \alpha, it has a value of 1; otherwise 0
   // | 0 | 0 | 0 | 0 | 1 | represents the subset that only contains variable 1
-  // sobolIndices[0] is set to 1; to calculate it is redundant
 
   // Index the set using binary number representation
-  size_t index_bin, i, j;
+  size_t i, j, index_bin;
   // Compute a pseudo-variance that makes no distinction between probabilistic
   // variables and non-probabilistic variables
-  Real p_var = 0, p_var_i;
+  Real p_var = 0.;
   for (i=1; i<numExpansionTerms; i++) 
     p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
 
   // iterate through multiIndex and store sensitivities
-  sobolIndices    = 0.; // initialize
-  sobolIndices[0] = 1.; // just a place holder; zero index is never invoked
+  sobolIndices = 0.; // initialize (Note: sobolIndices[0] is unused)
+  BitSet set(numVars);
   for (i=1; i<numExpansionTerms; ++i) {
-    index_bin = 0;
-    p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
-      expansionCoeffs(i) / p_var;
+    set.reset(); // return all bits to 0
     for (j=0; j<numVars; ++j)
-      if (multiIndex[i][j]) // convert this subset into binary number
-	index_bin += (size_t)pow(2.,(int)j);
+      if (multiIndex[i][j]) // activate this bit
+	set[j].flip();
     // If term is main effect (exists in map), keep; otherwise, discard
-    if (sobolIndexMap.find(index_bin) != sobolIndexMap.end())
-      sobolIndices[sobolIndexMap[index_bin]] += p_var_i;
+    BSULMIter it = sobolIndexMap.find(set);
+    if (it != sobolIndexMap.end())
+      sobolIndices[it->second] += expansionCoeffs(i) * expansionCoeffs(i)
+	                       *  norm_squared(multiIndex[i]) / p_var;
   }
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::compute_component_effects(), "
@@ -3020,16 +3019,16 @@ void OrthogPolyApproximation::compute_total_effects()
   // iterate through existing indices if all component indices are available
   totalSobolIndices = 0.;
   if (expConfigOptions.vbdControl == ALL_VBD) {
-    for (IntIntMIter itr=sobolIndexMap.begin(); itr!=sobolIndexMap.end(); ++itr)
-      for (int k=0; k<numVars; k++) 
-        if (itr->first & (1 << k))
-          totalSobolIndices[k] += sobolIndices[itr->second];
+    for (BSULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+      for (size_t k=0; k<numVars; ++k) 
+        if (it->first[k])
+          totalSobolIndices[k] += sobolIndices[it->second];
   }
   // otherwise, iterate over the expansion terms as it is more 
   // computationally efficient than performing ANOVA operators
   else {
     // Index the set using binary number representation
-    size_t index_bin, i, j;
+    size_t i, j;//, index_bin;
     Real p_var = 0, p_var_i;
     for (i=1; i<numExpansionTerms; i++) 
       p_var += norm_squared(multiIndex[i]) * expansionCoeffs(i)
@@ -3037,14 +3036,14 @@ void OrthogPolyApproximation::compute_total_effects()
   
     // Computing total indices by iterating through expansion terms is simpler
     // and more computationally efficient than computing via ANOVA operators 
+    //BitSet set(numVars);
     for (i=1; i<numExpansionTerms; ++i) {
-      index_bin = 0;
-      p_var_i = norm_squared(multiIndex[i]) * expansionCoeffs(i) *
-        expansionCoeffs(i) / p_var;
+      //set.reset(); // return all bits to 0
+      p_var_i = expansionCoeffs(i) * expansionCoeffs(i)
+	      * norm_squared(multiIndex[i]) / p_var;
       for (j=0; j<numVars; ++j) {
         if (multiIndex[i][j]) {
-          // convert this subset multiIndex[i] into binary number
-          index_bin += (size_t)pow(2.,(int)j);
+          //set[j].flip();
           // for any constituent variable j in exansion term i, the expansion
           // term contributes to the total sensitivty of variable j
           totalSobolIndices[j] += p_var_i;

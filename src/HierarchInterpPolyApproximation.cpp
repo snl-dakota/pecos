@@ -1542,7 +1542,8 @@ compute_numerical_expansion_moments(size_t num_moments)
     subsets of set_value have been computed in advance which will be
     true so long as the partial_variance is called following
     appropriate enumeration of set value  */
-void HierarchInterpPolyApproximation::compute_partial_variance(int set_value)
+void HierarchInterpPolyApproximation::
+compute_partial_variance(const BitSet& set_value)
 {
   Real& variance = partialVariance[sobolIndexMap[set_value]];
   // Computes the integral first
@@ -1577,7 +1578,7 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 {
   const Real& m1 = numericalMoments[1]; // standardized, if not num exception
   Real total_variance = (m1 > 0.) ? m1 * m1 : m1;
-  int j, set_value;
+  size_t j; BitSet set_value(numVars);
 
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();
@@ -1593,7 +1594,8 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
   UShortArray quad_order;
   // iterate each variable 
   for (j=0; j<numVars; ++j) {
-    set_value = (int)std::pow(2.,(int)numVars) - (int)std::pow(2.,j) - 1; 
+    // define set_value that includes all but index of interest
+    set_value.set(); set_value[j].flip();
     for (i=0; i<num_smolyak_indices; ++i) {
       hsg_driver->level_to_order(sm_index[i], quad_order);
       totalSobolIndices[j] += 

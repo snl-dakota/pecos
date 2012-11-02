@@ -22,6 +22,8 @@
 #include "Teuchos_SerialSpdDenseSolver.hpp"
 
 #include "boost/multi_array.hpp"
+#include "boost/dynamic_bitset.hpp"
+
 #include <algorithm>  // for std::find
 #include <complex>
 #include <map>
@@ -68,8 +70,12 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // ---------------------------------------
 // Admin/bookkeeping arrays (serial only):
 // ---------------------------------------
+typedef std::deque<bool> BoolDeque; // See Meyers' Effective STL #18
+typedef boost::dynamic_bitset<unsigned long> BitSet;
+
 typedef std::pair<Real, Real>        RealPair;
-typedef std::deque<bool>             BoolDeque; // See Meyers' Effective STL #18
+typedef std::list<size_t>            SizetList;
+
 typedef std::vector<Real>            RealArray;
 typedef std::vector<RealArray>       Real2DArray;
 typedef std::vector<Real2DArray>     Real3DArray;
@@ -83,7 +89,6 @@ typedef std::vector<UShort3DArray>   UShort4DArray;
 typedef std::vector<size_t>          SizetArray;
 typedef std::vector<SizetArray>      Sizet2DArray;
 typedef std::vector<Sizet2DArray>    Sizet3DArray;
-typedef std::list<size_t>            SizetList;
 typedef std::vector<std::complex<Real> > ComplexArray;
 typedef std::vector<RealPair>        RealPairArray;
 typedef std::vector<String>          StringArray;
@@ -101,6 +106,7 @@ typedef std::vector<SDVArray>          SDV2DArray;
 typedef std::vector<SDRArray>          SDR2DArray;
 
 typedef std::set<int>                    IntSet;
+typedef std::set<size_t>                 ULongSet;
 typedef std::multiset<unsigned short>    UShortMultiSet;
 typedef std::multiset<UShortMultiSet>    UShort2DMultiSet;
 typedef std::set<Real>                   RealSet;
@@ -108,6 +114,7 @@ typedef std::vector<IntSet>              IntSetArray;
 typedef std::vector<RealSet>             RealSetArray;
 typedef std::map<int, short>             IntShortMap;
 typedef std::map<size_t, short>          SizetShortMap;
+typedef std::map<BitSet, unsigned long>  BitSetULongMap;
 typedef std::map<int, int>               IntIntMap;
 typedef std::map<int, Real>              IntRealMap;
 typedef std::map<Real, Real>             RealRealMap;
@@ -125,17 +132,21 @@ typedef SizetMultiArray::const_array_view<1>::type SizetMultiArrayConstView;
 // ---------
 // Iterators
 // ---------
-typedef IntSet::iterator            ISIter;
-typedef IntSet::const_iterator      ISCIter;
-typedef RealSet::iterator           RSIter;
-typedef RealSet::const_iterator     RSCIter;
-typedef IntShortMap::iterator       IntShMIter;
-typedef IntIntMap::iterator         IntIntMIter;
-typedef IntIntMap::const_iterator   IntIntMCIter;
-typedef IntRealMap::iterator        IRMIter;
-typedef IntRealMap::const_iterator  IRMCIter;
-typedef RealRealMap::iterator       RRMIter;
-typedef RealRealMap::const_iterator RRMCIter;
+typedef IntSet::iterator               ISIter;
+typedef IntSet::const_iterator         ISCIter;
+typedef ULongSet::iterator             ULSIter;
+typedef ULongSet::const_iterator       ULSCIter;
+typedef RealSet::iterator              RSIter;
+typedef RealSet::const_iterator        RSCIter;
+typedef IntShortMap::iterator          IShMIter;
+typedef IntIntMap::iterator            IIMIter;
+typedef IntIntMap::const_iterator      IIMCIter;
+typedef BitSetULongMap::iterator       BSULMIter;
+typedef BitSetULongMap::const_iterator BSULMCIter;
+typedef IntRealMap::iterator           IRMIter;
+typedef IntRealMap::const_iterator     IRMCIter;
+typedef RealRealMap::iterator          RRMIter;
+typedef RealRealMap::const_iterator    RRMCIter;
 
 
 /// equality operator for SizetArray and SizetMultiArrayConstView
