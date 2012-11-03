@@ -1715,7 +1715,7 @@ compute_partial_variance(const BitArray& set_value)
   }
   }
 
-  // manage constituentSets
+  // manage proper subsets
   InterpPolyApproximation::compute_partial_variance(set_value);
 }
 

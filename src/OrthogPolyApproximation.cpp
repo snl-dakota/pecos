@@ -2980,32 +2980,39 @@ compute_numerical_response_moments(size_t num_moments)
 
 void OrthogPolyApproximation::compute_component_effects()
 {
-  // sobolIndices are index via binary number represenation
-  // e.g. if there are 5 variables -> 5 bit represenation
-  // if a variable belongs to a subset \alpha, it has a value of 1; otherwise 0
-  // | 0 | 0 | 0 | 0 | 1 | represents the subset that only contains variable 1
+  // sobolIndices are indexed via a bit array, one bit per variable.
+  // A bit is turned on for an expansion term if there is a variable
+  // dependence (i.e., its multi-index component is non-zero).  Since
+  // the Sobol' indices involve a consolidation of variance contributions
+  // from the expansion terms, we define a bit array from the multIndex
+  // and then use a lookup within sobolIndexMap to assign the expansion
+  // term contribution to the correct Sobol' index.
 
-  // Index the set using binary number representation
-  size_t i, j, index_bin;
-  // Compute a pseudo-variance that makes no distinction between probabilistic
-  // variables and non-probabilistic variables
-  Real p_var = 0.;
-  for (i=1; i<numExpansionTerms; i++) 
-    p_var += norm_squared(multiIndex[i])*expansionCoeffs(i)*expansionCoeffs(i);
+  // compute and sum the variance contributions for each expansion term
+  size_t i, j, k;
+  Real sum_p_var = 0.; RealVector p_var(numExpansionTerms-1, false);
+  for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
+    p_var[k] = expansionCoeffs(i) * expansionCoeffs(i)
+             * norm_squared(multiIndex[i]);
+    sum_p_var += p_var[k];
+  }
 
   // iterate through multiIndex and store sensitivities
   sobolIndices = 0.; // initialize (Note: sobolIndices[0] is unused)
   BitArray set(numVars);
-  for (i=1; i<numExpansionTerms; ++i) {
+  for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
+
+    // determine the bit set corresponding to this expansion term
     set.reset(); // return all bits to 0
     for (j=0; j<numVars; ++j)
-      if (multiIndex[i][j]) // activate this bit
-	set[j].flip();
-    // If term is main effect (exists in map), keep; otherwise, discard
+      if (multiIndex[i][j])
+	set[j].flip(); // expansion term includes var j: activate bit j
+
+    // lookup the bit set within sobolIndexMap --> increment the correct
+    // Sobol' index with the variance contribution from this expansion term.
     BAULMIter it = sobolIndexMap.find(set);
-    if (it != sobolIndexMap.end())
-      sobolIndices[it->second] += expansionCoeffs(i) * expansionCoeffs(i)
-	                       *  norm_squared(multiIndex[i]) / p_var;
+    if (it != sobolIndexMap.end()) // should always be found
+      sobolIndices[it->second] += p_var[k] / sum_p_var;
   }
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::compute_component_effects(), "
@@ -3016,39 +3023,35 @@ void OrthogPolyApproximation::compute_component_effects()
 
 void OrthogPolyApproximation::compute_total_effects() 
 {
-  // iterate through existing indices if all component indices are available
   totalSobolIndices = 0.;
+
+  // iterate through main/interaction indices from compute_component_effects()
   if (expConfigOptions.vbdControl == ALL_VBD) {
     for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
       for (size_t k=0; k<numVars; ++k) 
-        if (it->first[k])
+        if (it->first[k]) // var k is present in this Sobol' index
           totalSobolIndices[k] += sobolIndices[it->second];
   }
-  // otherwise, iterate over the expansion terms as it is more 
-  // computationally efficient than performing ANOVA operators
+
+  // otherwise, iterate over the expansion terms
   else {
-    // Index the set using binary number representation
-    size_t i, j;//, index_bin;
-    Real p_var = 0, p_var_i;
-    for (i=1; i<numExpansionTerms; i++) 
-      p_var += norm_squared(multiIndex[i]) * expansionCoeffs(i)
-	* expansionCoeffs(i);
-  
-    // Computing total indices by iterating through expansion terms is simpler
-    // and more computationally efficient than computing via ANOVA operators 
-    //BitArray set(numVars);
-    for (i=1; i<numExpansionTerms; ++i) {
-      //set.reset(); // return all bits to 0
-      p_var_i = expansionCoeffs(i) * expansionCoeffs(i)
-	      * norm_squared(multiIndex[i]) / p_var;
-      for (j=0; j<numVars; ++j) {
-        if (multiIndex[i][j]) {
-          //set[j].flip();
-          // for any constituent variable j in exansion term i, the expansion
-          // term contributes to the total sensitivty of variable j
-          totalSobolIndices[j] += p_var_i;
-        }
-      }
+    // compute and sum the variance contributions for each expansion term
+    size_t i, j, k;
+    Real sum_p_var = 0., ratio_i;
+    RealVector p_var(numExpansionTerms-1, false);
+    for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
+      p_var[k] = expansionCoeffs(i) * expansionCoeffs(i)
+               * norm_squared(multiIndex[i]);
+      sum_p_var += p_var[k];
+    }
+
+    // for any constituent variable j in exansion term i, the expansion
+    // term contributes to the total sensitivity of variable j
+    for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
+      ratio_i = p_var[k] / sum_p_var;
+      for (j=0; j<numVars; ++j)
+        if (multiIndex[i][j])
+          totalSobolIndices[j] += ratio_i;
     }
   }
 #ifdef DEBUG

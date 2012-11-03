@@ -628,33 +628,20 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 
 void InterpPolyApproximation::compute_component_effects()
 {
-  // perform subset sort
-  size_t sobol_len = sobolIndices.length();
-  constituentSets.resize(sobol_len);
-  get_subsets();
-
-  const Real& total_mean     = numericalMoments[0];
-  const Real& total_variance = numericalMoments[1];
-
   // initialize partialVariance
-  if (partialVariance.empty())
-    partialVariance.sizeUninitialized(sobol_len);
-  partialVariance    = 0.;
-  partialVariance[0] = total_mean * total_mean; // initialize with mean^2
+  if (partialVariance.empty()) partialVariance.size(sobolIndices.length());
+  else                         partialVariance = 0.;
+  partialVariance[0] = numericalMoments[0]*numericalMoments[0]; // init w/ mu^2
 
-  // Solve for partial variance
-  for (BAULMIter map_iter=sobolIndexMap.begin();
-       map_iter!=sobolIndexMap.end(); ++map_iter)
-    // partialVariance[0] stores the mean; it is not a component function
-    // and does not follow the procedures for obtaining variance 
-    if (map_iter->second) {
-      compute_partial_variance(map_iter->first);
-      sobolIndices[map_iter->second] = partialVariance[map_iter->second]
-	                             / total_variance;
-      // total indices simply identify the membership of the sobolIndices 
-      // and adds it to the appropriate bin
+  // Solve for partial variances
+  Real& total_variance = numericalMoments[1];
+  for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it) {
+    unsigned long index = it->second;
+    if (index) { // partialVariance[0] stores mean; no variance to calculate
+      compute_partial_variance(it->first);
+      sobolIndices[index] = partialVariance[index] / total_variance;
     }
-
+  }
 #ifdef DEBUG
   PCout << "In InterpPolyApproximation::compute_component_effects(), "
 	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
@@ -664,19 +651,24 @@ void InterpPolyApproximation::compute_component_effects()
 
 void InterpPolyApproximation::compute_total_effects()
 {
-  // iterate through existing indices if all component indices are available
   totalSobolIndices = 0.; // init total indices
-  if (expConfigOptions.vbdControl == ALL_VBD)
-    for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
-      for (size_t k=0; k<numVars; ++k) {
-        if (it->first[k])
-          totalSobolIndices[k] += sobolIndices[it->second];
-        totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
-      }
 
-  // If not available, compute total indices independently.
-  // This approach parallels partial_variance_integral where the algorithm is 
-  // separated by integration approach.
+  // iterate through existing indices if all component indices are available.
+  // totalSobolIndices simply parse the bit sets of each of the sobolIndices 
+  // and add them to each matching variable bin.
+  if (expConfigOptions.vbdControl == ALL_VBD) {
+    for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+      for (size_t k=0; k<numVars; ++k)
+        if (it->first[k]) // var k is present in this Sobol' index
+          totalSobolIndices[k] += sobolIndices[it->second];
+    // ensure non-negativity of indices
+    for (size_t k=0; k<numVars; ++k)
+      totalSobolIndices[k] = std::max(totalSobolIndices[k], 0.);
+  }
+
+  // If not available, compute total indices independently.  This approach
+  // parallels partial_variance_integral where the algorithm is separated
+  // by integration approach.
   else
     compute_total_sobol_indices(); // virtual
 
@@ -687,64 +679,49 @@ void InterpPolyApproximation::compute_total_effects()
 }
 
 
-/** Find constituent subsets. */
-void InterpPolyApproximation::get_subsets()
-{
-  // includes the "zero" set
-  //size_t num_subsets = sobolIndices.length(); 
-
-  // Here we want to utilize the integer representation of the subset
-  // but we want to store it in a size appropriate container
-  // so finding lower sets is given the argument of the integer rep (->first)
-  // and stored in constituentSets in size-appropriate-index-map (->second)
-  for (BAULMIter map_iter=sobolIndexMap.begin();
-       map_iter!=sobolIndexMap.end(); ++map_iter) {
-    lower_sets(map_iter->first, constituentSets[map_iter->second]);
-    constituentSets[map_iter->second].erase(map_iter->first);
-  }
-}
-
-
-/** For input set, recursively finds constituent subsets with one
-    fewer element */
-void InterpPolyApproximation::
-lower_sets(const BitArray& plus_one_set, BitArraySet& top_level_set)
-{
-  // if this set has been stored before, stop
-  if (top_level_set.find(plus_one_set) != top_level_set.end())
-    return;
-
-  // otherwise store current set and find lower level sets
-  top_level_set.insert(plus_one_set);
-  for (size_t k=0; k<numVars; ++k)
-    // this performs a bitwise comparison by shifting 1 by k spaces 
-    // and comparing that to a binary form of plus_one_set; this allows 
-    // the variable membership using integers instead of a d-array of bools
-    if (plus_one_set[k]) {
-      // if subset i contains variable k, remove that variable from the set 
-      BitArray mod_set = plus_one_set; mod_set[k].flip();
-      lower_sets(mod_set, top_level_set);
-    }
-}
-
-
-/** Computes the variance of component functions. Assumes that all
+/** Computes the variance of component functions.  Assumes that all
     subsets of set_value have been computed in advance which will be
     true so long as the partial_variance is called following
-    appropriate enumeration of set value  */
+    appropriate enumeration of set value. */
 void InterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
 {
-  // derived classes override to define partialVariance and then invoke
-  // base version for constituentSets post-processing
+  // derived classes override to compute partialVariance and then invoke
+  // base version for post-processing of proper subsets
 
-  // Now subtract the contributions from constituent subsets
-  BASIter it; unsigned long set_index = sobolIndexMap[set_value];
-  for (it  = constituentSets[set_index].begin();
-       it != constituentSets[set_index].end(); ++it) {
+  // compute child subsets.  An alternate approach would be to iterate
+  // over sobolIndexMap using it->is_proper_subset_of(set_value).
+  BitArraySet children;
+  proper_subsets(set_value, children);
+
+  // index of parent set within sobolIndices and partialVariance
+  unsigned long set_index;
+  if (!children.empty())
+    set_index = sobolIndexMap[set_value];
+
+  // subtract the contributions from child subsets
+  for (BASIter it=children.begin(); it!=children.end(); ++it) {
     unsigned long subset_index  = sobolIndexMap[*it];
     partialVariance[set_index] -= partialVariance[subset_index];
   }
+}
+
+
+/** For input parent set, recursively finds constituent child subsets
+    with one fewer element */
+void InterpPolyApproximation::
+proper_subsets(const BitArray& parent_set, BitArraySet& children)
+{
+  for (size_t k=0; k<numVars; ++k)
+    if (parent_set[k]) { // check for membership of variable k in parent set
+      // remove var k from parent set to create child set
+      BitArray child_set = parent_set; child_set[k].flip();
+      // if child set has not been stored previously, insert it and recurse
+      if (children.find(child_set) == children.end()) {
+	children.insert(child_set);
+	proper_subsets(child_set, children); // recurse until {0} is reached
+      }
+    }
 }
 
 

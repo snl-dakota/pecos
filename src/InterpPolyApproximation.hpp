@@ -282,17 +282,14 @@ private:
   /// update polynomialBasis after a change in sparse grid level
   void update_sparse_interpolation_basis(unsigned short max_level);
 
-  /// performs sorting to store constituent subsets (constituentSets)
-  void get_subsets();
-  /// recursively identifies constituent subsets
-  void lower_sets(const BitArray& plus_one_set, BitArraySet& top_level_set);
+  /// recursively identifies constituent subsets that are children of
+  /// a parent set
+  void proper_subsets(const BitArray& parent_set, BitArraySet& children);
 
   //
   //- Heading: Data
   //
 
-  /// the constituent subsets for each superset
-  std::vector<BitArraySet> constituentSets;
 };
 
 
