@@ -178,6 +178,12 @@ protected:
   /// polynomials using integrated dimension subset
   Real type1_weight(const UShortArray& key, const UShortArray& basis_index, 
 		    const SizetList& rand_indices);
+  /// return type 1 product weights from integration of type 1 interpolation
+  /// polynomials for both member and nonmember sets
+  void type1_weight(const UShortArray& key, const UShortArray& basis_index, 
+		    const BitArray& member_bits, Real& member_t1_wt_prod,
+		    Real& nonmember_t1_wt_prod);
+
   /// return type 2 product weight from integration of type 1/2 interpolation
   /// polynomials using integrated dimension subset
   Real type2_weight(size_t interp_index, const UShortArray& key,
@@ -500,6 +506,23 @@ type1_weight(const UShortArray& key, const UShortArray& basis_index,
   for (cit=rand_indices.begin(); cit!=rand_indices.end(); ++cit)
     { j = *cit; t1_wt_prod *= t1_wts_1d[basis_index[j]][j][key[j]]; }
   return t1_wt_prod;
+}
+
+
+/** VBD member and non-member partial weights. */
+inline void InterpPolyApproximation::
+type1_weight(const UShortArray& key, const UShortArray& basis_index, 
+	     const BitArray& member_bits, Real& member_t1_wt_prod,
+	     Real& nonmember_t1_wt_prod)
+{
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_array();
+  member_t1_wt_prod = nonmember_t1_wt_prod = 1.;
+  size_t j, num_bits = member_bits.size();
+  for (j=0; j<num_bits; ++j)
+    if (member_bits[j])
+      member_t1_wt_prod    *= t1_wts_1d[basis_index[j]][j][key[j]];
+    else
+      nonmember_t1_wt_prod *= t1_wts_1d[basis_index[j]][j][key[j]];
 }
 
 

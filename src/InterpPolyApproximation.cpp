@@ -631,7 +631,7 @@ void InterpPolyApproximation::compute_component_effects()
   // initialize partialVariance
   if (partialVariance.empty()) partialVariance.size(sobolIndices.length());
   else                         partialVariance = 0.;
-  partialVariance[0] = numericalMoments[0]*numericalMoments[0]; // init w/ mu^2
+  partialVariance[0] = numericalMoments[0]*numericalMoments[0];// init w/ mean^2
 
   // Solve for partial variances
   Real& total_variance = numericalMoments[1];
@@ -679,10 +679,10 @@ void InterpPolyApproximation::compute_total_effects()
 }
 
 
-/** Computes the variance of component functions.  Assumes that all
-    subsets of set_value have been computed in advance which will be
-    true so long as the partial_variance is called following
-    appropriate enumeration of set value. */
+/** Computes the variance of component functions.  Assumes that partial
+    variances of all subsets of set_value have been computed in advance:
+    compute_component_effects() calls compute_partial_variance() using
+    the ordered set_value's in sobolIndexMap. */
 void InterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
 {
@@ -699,7 +699,10 @@ compute_partial_variance(const BitArray& set_value)
   if (!children.empty())
     set_index = sobolIndexMap[set_value];
 
-  // subtract the contributions from child subsets
+  // subtract the contributions from child subsets.  partialVariance
+  // calculations are computed by ordered traversal of sobolIndexMap, which
+  // uses BitArray keys that sort lexicographically (in ascending order of
+  // the corresponding unsigned integer) --> all proper subsets are available.
   for (BASIter it=children.begin(); it!=children.end(); ++it) {
     unsigned long subset_index  = sobolIndexMap[*it];
     partialVariance[set_index] -= partialVariance[subset_index];
@@ -727,7 +730,7 @@ proper_subsets(const BitArray& parent_set, BitArraySet& children)
 
 /** Forms an interpolant over variables that are members of the given set.
     Finds the variance of the interpolant w.r.t. the variables in the set.
-    Overloaded version supporting Smolyak sparse grids. */
+    Derived classes invoke this helper for tensor or sparse grids. */
 Real InterpPolyApproximation::
 partial_variance_integral(const BitArray& set_value,
 			  const UShortArray& quad_order,
@@ -735,24 +738,34 @@ partial_variance_integral(const BitArray& set_value,
 			  const UShort2DArray& key,
 			  const SizetArray& colloc_index)
 {
+  // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
+  // TO DO: extend to support type2 interpolation
+
+  // Perform inner integral over complementary set u' to form new weighted
+  // coefficients h (stored as member_coeffs)
   RealVector member_coeffs, member_wts;
   member_coefficients_weights(set_value, quad_order, lev_index, key,
 			      colloc_index, member_coeffs, member_wts);
 
-  // Now integrate over the remaining variables	
+  // Perform outer integral over set u by evaluating weighted sum of h^2
   Real integral = 0.;
   size_t i, num_member_coeffs = member_coeffs.length();
   for (i=0; i<num_member_coeffs; ++i)
     integral += std::pow(member_coeffs[i], 2.) * member_wts[i];
-  return integral;	
+  return integral;
 }
 
 
+/** Forms an interpolant over variables that are members of the given set.
+    Finds the variance of the interpolant w.r.t. the variables in the set.
+    Derived classes invoke this helper for tensor or sparse grids. */
 Real InterpPolyApproximation::
 total_effects_integral(const BitArray& set_value, const UShortArray& quad_order,
 		       const UShortArray& lev_index, const UShort2DArray& key,
 		       const SizetArray& colloc_index)
 {
+  // TO DO: extend to support type2 interpolation
+
   RealVector member_coeffs, member_wts;
   member_coefficients_weights(set_value, quad_order, lev_index, key,
 			      colloc_index, member_coeffs, member_wts);
@@ -775,13 +788,15 @@ member_coefficients_weights(const BitArray& set_value,
 			    const SizetArray& colloc_index,
 			    RealVector& member_coeffs, RealVector& member_wts)
 {
-  // create member variable key and get number of expansion coeffs in
-  // member-variable-only expansion
+  // TO DO: extend to support type2 interpolation
+
+  // get number of expansion coeffs in member-variable-only expansion and
+  // precompute indexing factors, since they only depend on j
   size_t i, j, num_member_coeffs = 1;  // # exp coeffs in member-var-only exp
-  SizetArray indexing_factor(numVars); // factors indexing member vars 
+  SizetArray indexing_factor; // factors for indexing member coeffs,wts
   for (j=0; j<numVars; ++j)
     if (set_value[j]) {
-      indexing_factor[j] = num_member_coeffs; // for indexing of member_coeffs
+      indexing_factor.push_back(num_member_coeffs); // for member_index below
       num_member_coeffs *= quad_order[j];
     }
 
@@ -790,30 +805,27 @@ member_coefficients_weights(const BitArray& set_value,
   member_wts.size(num_member_coeffs);    // init to 0
 
   // Perform integration over non-member vars and store indices of new expansion
-  size_t num_colloc_pts = key.size(), member_coeffs_index, c_index;
-  const Real3DArray& colloc_wts_1d
-    = driverRep->type1_collocation_weights_array();
+  size_t num_colloc_pts = key.size(), member_index, c_index, cntr;
+  Real member_wt_i, nonmember_wt_i;
   for (i=0; i<num_colloc_pts; ++i) {
     const UShortArray& key_i = key[i];
-    member_coeffs_index = 0;	
-    Real prod_i_nonmembers = 1., prod_i_members = 1.;
-    for (j=0; j<numVars; ++j)
-      // Save the product of the weights of the member and non-member variables 
-      if (set_value[j]) {
-	// Convert key to corresponding index on member_coeffs
-	member_coeffs_index += key_i[j] * indexing_factor[j];
-	prod_i_members      *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-      }
-      else
-	prod_i_nonmembers   *= colloc_wts_1d[lev_index[j]][j][key_i[j]];
-    // member_wts is performed more time than necessary here, but it
-    // seems to be the simplest place to put it
-    member_wts[member_coeffs_index] = prod_i_members;
-    // sort coefficients by the "signature" of the member variables
-    // (i.e. member_coeffs_index)
+    type1_weight(key_i, lev_index, set_value, member_wt_i, nonmember_wt_i);
+
+    // convert key_i to corresponding index on member_{coeffs,wts}.  A more
+    // rigorous approach would define a mapping to a member-variable
+    // multi-index/collocation key (from collapsing non-member indices/keys),
+    // but this approach is simpler and seems sufficiently general.
+    for (j=0, member_index=0, cntr=0; j<numVars; ++j)
+      if (set_value[j])
+	member_index += key_i[j] * indexing_factor[cntr++];
+
+    // integrate out the nonmember dimensions and aggregate with exp coeffs
     c_index = (colloc_index.empty()) ? i : colloc_index[i];
-    member_coeffs[member_coeffs_index] += prod_i_nonmembers *
+    member_coeffs[member_index] += nonmember_wt_i *
       surrData.response_function(c_index); // type 1 nodal interp coeffs
+    // member_wts entries are updated more times than necessary, but
+    // this seems to be the simplest approach
+    member_wts[member_index] = member_wt_i;
   }
 }
 
