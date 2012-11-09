@@ -83,11 +83,11 @@ public:
   //void append_type2_weight_sets(const RealMatrix& t2_wts);
 
   /// return collocPts1D
-  const Real3DArray& collocation_points_array()  const;
+  const Real3DArray& collocation_points_1d()  const;
   /// return type1CollocWts1D
-  const Real3DArray& type1_collocation_weights_array() const;
+  const Real3DArray& type1_collocation_weights_1d() const;
   /// return type2CollocWts1D
-  const Real3DArray& type2_collocation_weights_array() const;
+  const Real3DArray& type2_collocation_weights_1d() const;
 
   /// return collocRules
   const ShortArray& collocation_rules() const;
@@ -240,17 +240,17 @@ append_type2_weight_sets(const RealMatrix& t2_wts)
 */
 
 
-inline const Real3DArray& IntegrationDriver::collocation_points_array() const
+inline const Real3DArray& IntegrationDriver::collocation_points_1d() const
 { return collocPts1D; }
 
 
 inline const Real3DArray& IntegrationDriver::
-type1_collocation_weights_array() const
+type1_collocation_weights_1d() const
 { return type1CollocWts1D; }
 
 
 inline const Real3DArray& IntegrationDriver::
-type2_collocation_weights_array() const
+type2_collocation_weights_1d() const
 { return type2CollocWts1D; }
 
 

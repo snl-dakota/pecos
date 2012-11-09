@@ -369,7 +369,7 @@ void InterpPolyApproximation::update_tensor_interpolation_basis()
   }
 
   // fill any required gaps in polynomialBasis.
-  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
+  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_1d();
   const std::vector<BasisPolynomial>& num_int_poly_basis
     = driverRep->polynomial_basis();
   short poly_type_1d, rule; bool found; unsigned short l_index;
@@ -413,7 +413,7 @@ update_sparse_interpolation_basis(unsigned short max_level)
 
   // fill gaps that may exist within any level (SparseGridDriver::
   // update_1d_collocation_points_weights() updates in an unstructured manner)
-  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_array();
+  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_1d();
   const std::vector<BasisPolynomial>& num_int_poly_basis
     = driverRep->polynomial_basis();
   short poly_type_1d, rule; bool found;
@@ -467,7 +467,7 @@ same_basis(unsigned short level, size_t v1, size_t v2)
     case GAUSS_JACOBI: case GEN_GAUSS_LAGUERRE: case GOLUB_WELSCH: {
       // rule type insufficient in these cases, check collocation points
       const Real2DArray& colloc_pts_1d
-	= driverRep->collocation_points_array()[level];
+	= driverRep->collocation_points_1d()[level];
       return (colloc_pts_1d[v1] == colloc_pts_1d[v2]); break;
     }
     default:
@@ -739,19 +739,28 @@ partial_variance_integral(const BitArray& set_value,
 			  const SizetArray& colloc_index)
 {
   // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
-  // TO DO: extend to support type2 interpolation
 
   // Perform inner integral over complementary set u' to form new weighted
   // coefficients h (stored as member_coeffs)
-  RealVector member_coeffs, member_wts;
+  RealVector member_t1_coeffs, member_t1_wts;
+  RealMatrix member_t2_coeffs, member_t2_wts;
   member_coefficients_weights(set_value, quad_order, lev_index, key,
-			      colloc_index, member_coeffs, member_wts);
+			      colloc_index, member_t1_coeffs, member_t1_wts,
+			      member_t2_coeffs, member_t2_wts);
 
   // Perform outer integral over set u by evaluating weighted sum of h^2
   Real integral = 0.;
-  size_t i, num_member_coeffs = member_coeffs.length();
+  size_t i, num_member_coeffs = member_t1_coeffs.length();
   for (i=0; i<num_member_coeffs; ++i)
-    integral += std::pow(member_coeffs[i], 2.) * member_wts[i];
+    integral += std::pow(member_t1_coeffs[i], 2.) * member_t1_wts[i];
+  if (basisConfigOptions.useDerivs)
+    // type2 interpolation of h^2 = 2 h h'
+    for (i=0; i<num_member_coeffs; ++i) {
+      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
+      for (size_t j=0; j<numVars; ++j)
+	integral += 2. * member_t1_coeffs[i] * m_t2_coeffs_i[j] * m_t2_wts_i[j];
+    }
+
   return integral;
 }
 
@@ -764,18 +773,26 @@ total_effects_integral(const BitArray& set_value, const UShortArray& quad_order,
 		       const UShortArray& lev_index, const UShort2DArray& key,
 		       const SizetArray& colloc_index)
 {
-  // TO DO: extend to support type2 interpolation
-
-  RealVector member_coeffs, member_wts;
+  RealVector member_t1_coeffs, member_t1_wts;
+  RealMatrix member_t2_coeffs, member_t2_wts;
   member_coefficients_weights(set_value, quad_order, lev_index, key,
-			      colloc_index, member_coeffs, member_wts);
+			      colloc_index, member_t1_coeffs, member_t1_wts,
+			      member_t2_coeffs, member_t2_wts);
 
   // Now integrate over the remaining variables	
   Real integral = 0.;
   const Real& total_mean = numericalMoments[0];
-  size_t i, num_member_coeffs = member_coeffs.length();
-  for (i=0; i<num_member_coeffs; ++i)
-    integral += std::pow(member_coeffs[i] - total_mean, 2.) * member_wts[i];
+  size_t i, num_member_coeffs = member_t1_coeffs.length();
+  for (i=0; i<num_member_coeffs; ++i) {
+    Real m_t1_coeff_i_mm = member_t1_coeffs[i] - total_mean;
+    integral += m_t1_coeff_i_mm * m_t1_coeff_i_mm *  member_t1_wts[i];
+    if (basisConfigOptions.useDerivs) { // type2 interpolation of h^2 = 2 h h'
+      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
+      for (size_t j=0; j<numVars; ++j)
+	integral += 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j] *  m_t2_wts_i[j];
+    }
+  }
+
   return integral;
 }
 
@@ -786,10 +803,11 @@ member_coefficients_weights(const BitArray& set_value,
 			    const UShortArray& lev_index,
 			    const UShort2DArray& key,
 			    const SizetArray& colloc_index,
-			    RealVector& member_coeffs, RealVector& member_wts)
+			    RealVector& member_t1_coeffs,
+			    RealVector& member_t1_wts,
+			    RealMatrix& member_t2_coeffs,
+			    RealMatrix& member_t2_wts)
 {
-  // TO DO: extend to support type2 interpolation
-
   // get number of expansion coeffs in member-variable-only expansion and
   // precompute indexing factors, since they only depend on j
   size_t i, j, num_member_coeffs = 1;  // # exp coeffs in member-var-only exp
@@ -801,31 +819,49 @@ member_coefficients_weights(const BitArray& set_value,
     }
 
   // Size vectors to store new coefficients
-  member_coeffs.size(num_member_coeffs); // init to 0
-  member_wts.size(num_member_coeffs);    // init to 0
+  member_t1_coeffs.size(num_member_coeffs); // init to 0
+  member_t1_wts.size(num_member_coeffs);    // init to 0
+  if (basisConfigOptions.useDerivs) {
+    size_t num_deriv_vars = surrData.num_derivative_variables();
+    member_t2_coeffs.shape(num_deriv_vars, num_member_coeffs); // init to 0
+    member_t2_wts.shape(num_deriv_vars, num_member_coeffs);    // init to 0
+  }
 
   // Perform integration over non-member vars and store indices of new expansion
   size_t num_colloc_pts = key.size(), member_index, c_index, cntr;
-  Real member_wt_i, nonmember_wt_i;
+  Real member_wt, nonmember_wt;
   for (i=0; i<num_colloc_pts; ++i) {
-    const UShortArray& key_i = key[i];
-    type1_weight(key_i, lev_index, set_value, member_wt_i, nonmember_wt_i);
-
-    // convert key_i to corresponding index on member_{coeffs,wts}.  A more
-    // rigorous approach would define a mapping to a member-variable
+    // convert key_i to a corresponding index on member_{coeffs,wts}.  A
+    // more rigorous approach would define a mapping to a member-variable
     // multi-index/collocation key (from collapsing non-member indices/keys),
-    // but this approach is simpler and seems sufficiently general.
+    // but the current approach is simpler and sufficiently general.  Note
+    // that the precise sequence of member indices is not important in its
+    // current usage -- it just must enumerate the members in some order.
+    const UShortArray& key_i = key[i];
     for (j=0, member_index=0, cntr=0; j<numVars; ++j)
       if (set_value[j])
 	member_index += key_i[j] * indexing_factor[cntr++];
 
-    // integrate out the nonmember dimensions and aggregate with exp coeffs
+    // integrate out the nonmember dimensions and aggregate with type1 coeffs
+    type1_weight(key_i, lev_index, set_value, member_wt, nonmember_wt);
     c_index = (colloc_index.empty()) ? i : colloc_index[i];
-    member_coeffs[member_index] += nonmember_wt_i *
+    member_t1_coeffs[member_index] += nonmember_wt *
       surrData.response_function(c_index); // type 1 nodal interp coeffs
-    // member_wts entries are updated more times than necessary, but
+    // member_t1_wts entries are updated more times than necessary, but
     // this seems to be the simplest approach
-    member_wts[member_index] = member_wt_i;
+    member_t1_wts[member_index] = member_wt;
+
+    // now do the same for the type2 coeffs and weights
+    if (basisConfigOptions.useDerivs) {
+      Real *m_t2_coeffs_i = member_t2_coeffs[member_index],
+	   *m_t2_wts_i    = member_t2_wts[member_index];
+      const RealVector& surr_grad = surrData.response_gradient(c_index);
+      for (j=0; j<numVars; ++j) {
+	type2_weight(j, key_i, lev_index, set_value, member_wt, nonmember_wt);
+	m_t2_coeffs_i[j] += nonmember_wt * surr_grad[j];
+	m_t2_wts_i[j]    =  member_wt;
+      }
+    }
   }
 }
 

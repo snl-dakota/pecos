@@ -189,6 +189,11 @@ protected:
   Real type2_weight(size_t interp_index, const UShortArray& key,
 		    const UShortArray& basis_index,
 		    const SizetList& rand_indices);
+  /// return type 2 product weight from integration of type 1/2 interpolation
+  /// polynomials for both member and nonmember sets
+  Real type2_weight(size_t interp_index, const UShortArray& key,
+		    const UShortArray& basis_index, const BitArray& member_bits,
+		    Real& member_t2_wt_prod, Real& nonmember_t2_wt_prod);
 
   /// compute the value of a tensor interpolant on a tensor grid;
   /// contributes to value(x)
@@ -240,7 +245,8 @@ protected:
   void member_coefficients_weights(const BitArray& set_value,
     const UShortArray& quad_order, const UShortArray& lev_index,
     const UShort2DArray& key, const SizetArray& colloc_index,
-    RealVector& member_coeffs, RealVector& member_wts);
+    RealVector& member_t1_coeffs, RealVector& member_t1_wts,
+    RealMatrix& member_t2_coeffs, RealMatrix& member_t2_wts);
 
   //
   //- Heading: Data
@@ -501,7 +507,7 @@ inline Real InterpPolyApproximation::
 type1_weight(const UShortArray& key, const UShortArray& basis_index, 
 	     const SizetList& rand_indices)
 {
-  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_array();
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
   Real t1_wt_prod = 1.; SizetList::const_iterator cit; size_t j;
   for (cit=rand_indices.begin(); cit!=rand_indices.end(); ++cit)
     { j = *cit; t1_wt_prod *= t1_wts_1d[basis_index[j]][j][key[j]]; }
@@ -515,7 +521,7 @@ type1_weight(const UShortArray& key, const UShortArray& basis_index,
 	     const BitArray& member_bits, Real& member_t1_wt_prod,
 	     Real& nonmember_t1_wt_prod)
 {
-  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_array();
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
   member_t1_wt_prod = nonmember_t1_wt_prod = 1.;
   size_t j, num_bits = member_bits.size();
   for (j=0; j<num_bits; ++j)
@@ -531,8 +537,8 @@ inline Real InterpPolyApproximation::
 type2_weight(size_t interp_index, const UShortArray& key,
 	     const UShortArray& basis_index, const SizetList& rand_indices)
 {
-  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_array();
-  const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_array();
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
   Real t2_wt_prod = 1.; SizetList::const_iterator cit; size_t j;
   for (cit=rand_indices.begin(); cit!=rand_indices.end(); ++cit) {
     j           = *cit;
@@ -540,6 +546,28 @@ type2_weight(size_t interp_index, const UShortArray& key,
                                       : t1_wts_1d[basis_index[j]][j][key[j]];
   }
   return t2_wt_prod;
+}
+
+
+/** All variables partial weight. */
+inline Real InterpPolyApproximation::
+type2_weight(size_t interp_index, const UShortArray& key,
+	     const UShortArray& basis_index, const BitArray& member_bits,
+	     Real& member_t2_wt_prod, Real& nonmember_t2_wt_prod)
+{
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
+  member_t2_wt_prod = nonmember_t2_wt_prod = 1.;
+  size_t j, num_bits = member_bits.size();
+  for (j=0; j<num_bits; ++j)
+    if (member_bits[j])
+      member_t2_wt_prod *= (interp_index == j) ?
+	t2_wts_1d[basis_index[j]][j][key[j]] :
+	t1_wts_1d[basis_index[j]][j][key[j]];
+    else
+      nonmember_t2_wt_prod *= (interp_index == j) ?
+	t2_wts_1d[basis_index[j]][j][key[j]] :
+	t1_wts_1d[basis_index[j]][j][key[j]];
 }
 
 } // namespace Pecos

@@ -1514,9 +1514,8 @@ integration_data(size_t tp_index, SDVArray& tp_data_vars,
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
   const UShortArray&    sm_index = csg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&       key = csg_driver->collocation_key()[tp_index];
-  const SizetArray& colloc_index = csg_driver->collocation_indices()[tp_index];
-  const Real3DArray& colloc_wts_1d
-    = csg_driver->type1_collocation_weights_array();
+  const SizetArray&  colloc_index = csg_driver->collocation_indices()[tp_index];
+  const Real3DArray& colloc_wts_1d = csg_driver->type1_collocation_weights_1d();
   const SDVArray& data_vars = surrData.variables_data();
   const SDRArray& data_resp = surrData.response_data();
   size_t i, j, index, num_tp_pts = colloc_index.size();

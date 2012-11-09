@@ -1476,8 +1476,8 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
   }
 
   // TO DO: ensure point mode is Gaussian quadrature, not nested rules
-  const Real3DArray&    pts_1d = driverRep->collocation_points_array();
-  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_array();
+  const Real3DArray&    pts_1d = driverRep->collocation_points_1d();
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
 
   // set up bookkeeping for random variables with unique interpolants
   bool empty_nz = nonZerosMapIndices.empty();
@@ -1564,7 +1564,7 @@ basis_product(const UShortArray& lev_index_1, const UShortArray& key_1,
 {
   SizetList::iterator it; size_t v, v_cntr = 0;
   unsigned short l1v, l2v, k1v, k2v;
-  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_array();
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
   prod = 1.;
   for (it=randomIndices.begin(); it!=randomIndices.end(); ++it, ++v_cntr) {
     v = *it;
