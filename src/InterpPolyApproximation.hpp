@@ -191,7 +191,7 @@ protected:
 		    const SizetList& rand_indices);
   /// return type 2 product weight from integration of type 1/2 interpolation
   /// polynomials for both member and nonmember sets
-  Real type2_weight(size_t interp_index, const UShortArray& key,
+  void type2_weight(size_t interp_index, const UShortArray& key,
 		    const UShortArray& basis_index, const BitArray& member_bits,
 		    Real& member_t2_wt_prod, Real& nonmember_t2_wt_prod);
 
@@ -550,7 +550,7 @@ type2_weight(size_t interp_index, const UShortArray& key,
 
 
 /** All variables partial weight. */
-inline Real InterpPolyApproximation::
+inline void InterpPolyApproximation::
 type2_weight(size_t interp_index, const UShortArray& key,
 	     const UShortArray& basis_index, const BitArray& member_bits,
 	     Real& member_t2_wt_prod, Real& nonmember_t2_wt_prod)
