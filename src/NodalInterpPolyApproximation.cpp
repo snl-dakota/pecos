@@ -1683,7 +1683,8 @@ void NodalInterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
 {
   Real& variance = partialVariance[sobolIndexMap[set_value]];
-  // Computes the integral first
+
+  // Compute the partial integral corresponding to set_value
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1692,7 +1693,7 @@ compute_partial_variance(const BitArray& set_value)
     const UShort2DArray& colloc_key = tpq_driver->collocation_key();
     SizetArray colloc_index; // empty -> default indexing
     variance = partial_variance_integral(set_value, quad_order, lev_index,
-					 colloc_key, colloc_index);
+      colloc_key, colloc_index, expansionType1Coeffs, expansionType2Coeffs);
     break;
   }
   case COMBINED_SPARSE_GRID: {
@@ -1709,20 +1710,27 @@ compute_partial_variance(const BitArray& set_value)
       if (sm_coeffs[i]) {
 	csg_driver->level_to_order(sm_index[i], quad_order);
 	variance += sm_coeffs[i] * partial_variance_integral(set_value,
-	  quad_order, sm_index[i], colloc_key[i], colloc_index[i]);
+	  quad_order, sm_index[i], colloc_key[i], colloc_index[i],
+	  expansionType1Coeffs, expansionType2Coeffs);
       }
     break;
   }
   }
 
-  // manage proper subsets
+  // compute proper subsets and subtract their contributions
   InterpPolyApproximation::compute_partial_variance(set_value);
 }
 
 
 void NodalInterpPolyApproximation::compute_total_sobol_indices()
 {
-  const Real& total_variance = numericalMoments[1];
+  // Compute the total expansion variance.  For standard mode, the full variance
+  // is likely already available, as managed by computedVariance in variance().
+  // For all variables mode, we use covariance(this) without passing x for the
+  // nonRandomIndices (bypass computedVariance checks by not using variance()).
+  Real total_variance = (nonRandomIndices.empty()) ? variance() : // std mode
+                        covariance(this);                    // all vars mode
+
   size_t j; BitArray set_value(numVars);
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
@@ -1736,7 +1744,8 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
       set_value.set(); set_value[j].flip();
       totalSobolIndices[j] = std::abs(1. -
 	total_effects_integral(set_value, quad_order, lev_index, colloc_key,
-			       colloc_index) / total_variance);
+			       colloc_index, expansionType1Coeffs,
+			       expansionType2Coeffs) / total_variance);
     }
     break;
   }
@@ -1748,20 +1757,21 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     const Sizet2DArray&     colloc_index = csg_driver->collocation_indices();
     // Smolyak recursion of anisotropic tensor products
     size_t i, num_smolyak_indices = sm_coeffs.size();
-    UShortArray quad_order;
+    UShortArray quad_order; Real complement_variance;
     // iterate each variable 
     for (j=0; j<numVars; ++j) {
-      totalSobolIndices[j] = 0.;
       // define set_value that includes all but index of interest
       set_value.set(); set_value[j].flip();
+      complement_variance = 0.;
       for (i=0; i<num_smolyak_indices; ++i)
 	if (sm_coeffs[i]) {
 	  csg_driver->level_to_order(sm_index[i], quad_order);
-	  totalSobolIndices[j] += sm_coeffs[i] *
+	  complement_variance += sm_coeffs[i] *
 	    total_effects_integral(set_value, quad_order, sm_index[i],
-				   colloc_key[i], colloc_index[i]);
+				   colloc_key[i], colloc_index[i],
+				   expansionType1Coeffs, expansionType2Coeffs);
 	}
-      totalSobolIndices[j] = std::abs(1. - totalSobolIndices[j]/total_variance);
+      totalSobolIndices[j] = std::abs(1. - complement_variance/total_variance);
     }
     break;
   }

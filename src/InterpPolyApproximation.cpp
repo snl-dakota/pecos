@@ -633,8 +633,14 @@ void InterpPolyApproximation::compute_component_effects()
   else                         partialVariance = 0.;
   partialVariance[0] = numericalMoments[0]*numericalMoments[0];// init w/ mean^2
 
+  // Compute the total expansion variance.  For standard mode, the full variance
+  // is likely already available, as managed by computedVariance in variance().
+  // For all variables mode, we use covariance(this) without passing x for the
+  // nonRandomIndices (bypass computedVariance checks by not using variance()).
+  Real total_variance = (nonRandomIndices.empty()) ? variance() : // std mode
+                        covariance(this);                    // all vars mode
+
   // Solve for partial variances
-  Real& total_variance = numericalMoments[1];
   for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it) {
     unsigned long index = it->second;
     if (index) { // partialVariance[0] stores mean; no variance to calculate
@@ -735,8 +741,10 @@ Real InterpPolyApproximation::
 partial_variance_integral(const BitArray& set_value,
 			  const UShortArray& quad_order,
 			  const UShortArray& lev_index, 
-			  const UShort2DArray& key,
-			  const SizetArray& colloc_index)
+			  const UShort2DArray& colloc_key,
+			  const SizetArray& colloc_index,
+			  const RealVector& t1_coeffs,
+			  const RealMatrix& t2_coeffs)
 {
   // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
 
@@ -744,8 +752,9 @@ partial_variance_integral(const BitArray& set_value,
   // coefficients h (stored as member_coeffs)
   RealVector member_t1_coeffs, member_t1_wts;
   RealMatrix member_t2_coeffs, member_t2_wts;
-  member_coefficients_weights(set_value, quad_order, lev_index, key,
-			      colloc_index, member_t1_coeffs, member_t1_wts,
+  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
+			      colloc_index, t1_coeffs, t2_coeffs,
+			      member_t1_coeffs, member_t1_wts,
 			      member_t2_coeffs, member_t2_wts);
 
   // Perform outer integral over set u by evaluating weighted sum of h^2
@@ -770,13 +779,16 @@ partial_variance_integral(const BitArray& set_value,
     Derived classes invoke this helper for tensor or sparse grids. */
 Real InterpPolyApproximation::
 total_effects_integral(const BitArray& set_value, const UShortArray& quad_order,
-		       const UShortArray& lev_index, const UShort2DArray& key,
-		       const SizetArray& colloc_index)
+		       const UShortArray& lev_index,
+		       const UShort2DArray& colloc_key,
+		       const SizetArray& colloc_index,
+		       const RealVector& t1_coeffs, const RealMatrix& t2_coeffs)
 {
   RealVector member_t1_coeffs, member_t1_wts;
   RealMatrix member_t2_coeffs, member_t2_wts;
-  member_coefficients_weights(set_value, quad_order, lev_index, key,
-			      colloc_index, member_t1_coeffs, member_t1_wts,
+  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
+			      colloc_index, t1_coeffs, t2_coeffs,
+			      member_t1_coeffs, member_t1_wts,
 			      member_t2_coeffs, member_t2_wts);
 
   // Now integrate over the remaining variables	
@@ -801,8 +813,10 @@ void InterpPolyApproximation::
 member_coefficients_weights(const BitArray& set_value,
 			    const UShortArray& quad_order,
 			    const UShortArray& lev_index,
-			    const UShort2DArray& key,
+			    const UShort2DArray& colloc_key,
 			    const SizetArray& colloc_index,
+			    const RealVector& t1_coeffs,
+			    const RealMatrix& t2_coeffs,
 			    RealVector& member_t1_coeffs,
 			    RealVector& member_t1_wts,
 			    RealMatrix& member_t2_coeffs,
@@ -822,22 +836,21 @@ member_coefficients_weights(const BitArray& set_value,
   member_t1_coeffs.size(num_member_coeffs); // init to 0
   member_t1_wts.size(num_member_coeffs);    // init to 0
   if (basisConfigOptions.useDerivs) {
-    size_t num_deriv_vars = surrData.num_derivative_variables();
-    member_t2_coeffs.shape(num_deriv_vars, num_member_coeffs); // init to 0
-    member_t2_wts.shape(num_deriv_vars, num_member_coeffs);    // init to 0
+    member_t2_coeffs.shape(numVars, num_member_coeffs); // init to 0
+    member_t2_wts.shape(numVars, num_member_coeffs);    // init to 0
   }
 
   // Perform integration over non-member vars and store indices of new expansion
-  size_t num_colloc_pts = key.size(), member_index, c_index, cntr;
+  size_t num_tp_pts = colloc_key.size(), member_index, c_index, cntr;
   Real member_wt, nonmember_wt;
-  for (i=0; i<num_colloc_pts; ++i) {
+  for (i=0; i<num_tp_pts; ++i) {
     // convert key_i to a corresponding index on member_{coeffs,wts}.  A
     // more rigorous approach would define a mapping to a member-variable
     // multi-index/collocation key (from collapsing non-member indices/keys),
     // but the current approach is simpler and sufficiently general.  Note
     // that the precise sequence of member indices is not important in its
     // current usage -- it just must enumerate the members in some order.
-    const UShortArray& key_i = key[i];
+    const UShortArray& key_i = colloc_key[i];
     for (j=0, member_index=0, cntr=0; j<numVars; ++j)
       if (set_value[j])
 	member_index += key_i[j] * indexing_factor[cntr++];
@@ -845,8 +858,7 @@ member_coefficients_weights(const BitArray& set_value,
     // integrate out the nonmember dimensions and aggregate with type1 coeffs
     type1_weight(key_i, lev_index, set_value, member_wt, nonmember_wt);
     c_index = (colloc_index.empty()) ? i : colloc_index[i];
-    member_t1_coeffs[member_index] += nonmember_wt *
-      surrData.response_function(c_index); // type 1 nodal interp coeffs
+    member_t1_coeffs[member_index] += nonmember_wt * t1_coeffs[c_index];
     // member_t1_wts entries are updated more times than necessary, but
     // this seems to be the simplest approach
     member_t1_wts[member_index] = member_wt;
@@ -855,10 +867,10 @@ member_coefficients_weights(const BitArray& set_value,
     if (basisConfigOptions.useDerivs) {
       Real *m_t2_coeffs_i = member_t2_coeffs[member_index],
 	   *m_t2_wts_i    = member_t2_wts[member_index];
-      const RealVector& surr_grad = surrData.response_gradient(c_index);
+      const Real *t2_coeffs_i = t2_coeffs[c_index];
       for (j=0; j<numVars; ++j) {
 	type2_weight(j, key_i, lev_index, set_value, member_wt, nonmember_wt);
-	m_t2_coeffs_i[j] += nonmember_wt * surr_grad[j];
+	m_t2_coeffs_i[j] += nonmember_wt * t2_coeffs_i[j];
 	m_t2_wts_i[j]    =  member_wt;
       }
     }

@@ -2987,7 +2987,9 @@ void OrthogPolyApproximation::compute_component_effects()
   // and then use a lookup within sobolIndexMap to assign the expansion
   // term contribution to the correct Sobol' index.
 
-  // compute and sum the variance contributions for each expansion term
+  // compute and sum the variance contributions for each expansion term.  For
+  // all_vars mode, this approach picks up the total expansion variance, which
+  // is the desired reference pt for type-agnostic global sensitivity analysis.
   size_t i, j, k;
   Real sum_p_var = 0.; RealVector p_var(numExpansionTerms-1, false);
   for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
@@ -3010,7 +3012,7 @@ void OrthogPolyApproximation::compute_component_effects()
     // lookup the bit set within sobolIndexMap --> increment the correct
     // Sobol' index with the variance contribution from this expansion term.
     BAULMIter it = sobolIndexMap.find(set);
-    if (it != sobolIndexMap.end()) // should always be found
+    if (it != sobolIndexMap.end()) // may not be found if UNIVARIATE_VBD
       sobolIndices[it->second] += p_var[k] / sum_p_var;
   }
 #ifdef DEBUG

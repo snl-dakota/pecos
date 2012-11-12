@@ -231,22 +231,21 @@ protected:
 
   /// compute total Sobol effects for an index within a sparse grid
   Real total_effects_integral(const BitArray& set_value,
-			      const UShortArray& quad_order,
-			      const UShortArray& lev_index,
-			      const UShort2DArray& key,
-			      const SizetArray& colloc_index);
+    const UShortArray& quad_order,   const UShortArray& lev_index,
+    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
+    const RealVector& t1_coeffs,     const RealMatrix& t2_coeffs);
   /// finds variance of sparse interpolant with respect to variables in the set
   Real partial_variance_integral(const BitArray& set_value,
-				 const UShortArray& quad_order,
-				 const UShortArray& lev_index,
-				 const UShort2DArray& key,
-				 const SizetArray& colloc_index);
+    const UShortArray& quad_order,   const UShortArray& lev_index,
+    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
+    const RealVector& t1_coeffs,     const RealMatrix& t2_coeffs);
   /// defines member_coeffs and member_wts for a particular set_value
   void member_coefficients_weights(const BitArray& set_value,
-    const UShortArray& quad_order, const UShortArray& lev_index,
-    const UShort2DArray& key, const SizetArray& colloc_index,
-    RealVector& member_t1_coeffs, RealVector& member_t1_wts,
-    RealMatrix& member_t2_coeffs, RealMatrix& member_t2_wts);
+    const UShortArray& quad_order,   const UShortArray& lev_index,
+    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
+    const RealVector& t1_coeffs,     const RealMatrix& t2_coeffs,
+    RealVector& member_t1_coeffs,    RealVector& member_t1_wts,
+    RealMatrix& member_t2_coeffs,    RealMatrix& member_t2_wts);
 
   //
   //- Heading: Data

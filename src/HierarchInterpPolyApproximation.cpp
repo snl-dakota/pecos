@@ -1538,73 +1538,82 @@ compute_numerical_expansion_moments(size_t num_moments)
 }
 
 
-/** Computes the variance of component functions. Assumes that all
+/** Computes the variance of component functions.  Assumes that all
     subsets of set_value have been computed in advance which will be
     true so long as the partial_variance is called following
-    appropriate enumeration of set value  */
+    appropriate enumeration of set value. */
 void HierarchInterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
 {
   Real& variance = partialVariance[sobolIndexMap[set_value]];
-  // Computes the integral first
 
+  // Compute the partial integral corresponding to set_value
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&  colloc_key = hsg_driver->collocation_key();
-  //const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
+  const UShort3DArray&        sm_index = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
+  const Sizet3DArray&     colloc_index = hsg_driver->collocation_indices();
 
   // Smolyak recursion of anisotropic tensor products
-  size_t i, num_levels = sm_index.size();
-  /*
-  Can't just use lev/set/pt loop here since partial_variance_integral uses
-  member_coefficients_weights() which uses non-hierachical response values.
-
-  UShortArray quad_order;
-  for (i=0; i<num_levels; ++i) {
-    for (j; j<num_sets; ++j) {
-      hsg_driver->level_to_order(sm_index[i][j], quad_order);
-      variance += partial_variance_integral(set_value, quad_order, sm_index[i],
-					    colloc_key[i], colloc_index[i]);
+  size_t lev, set, num_levels = colloc_key.size(), num_sets;
+  UShortArray quad_order; SizetArray empty_array;
+  variance = 0.;
+  for (lev=0; lev<num_levels; ++lev) {
+    num_sets = colloc_key[lev].size();
+    for (set=0; set<num_sets; ++set) {
+      hsg_driver->level_to_order(sm_index[lev][set], quad_order);
+      const SizetArray& colloc_index_ls = (colloc_index.empty()) ?
+	empty_array : colloc_index[lev][set];
+      variance +=
+	partial_variance_integral(set_value, quad_order, sm_index[lev][set],
+				  colloc_key[lev][set], colloc_index_ls,
+				  expansionType1Coeffs[lev][set],
+				  expansionType2Coeffs[lev][set]);
     }
   }
-  */
 
-  // manage proper subsets
+  // compute proper subsets and subtract their contributions
   InterpPolyApproximation::compute_partial_variance(set_value);
 }
 
 
 void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 {
-  const Real& m1 = numericalMoments[1]; // standardized, if not num exception
-  Real total_variance = (m1 > 0.) ? m1 * m1 : m1;
-  size_t j; BitArray set_value(numVars);
+  // Compute the total expansion variance.  For standard mode, the full variance
+  // is likely already available, as managed by computedVariance in variance().
+  // For all variables mode, we use covariance(this) without passing x for the
+  // nonRandomIndices (bypass computedVariance checks by not using variance()).
+  Real total_variance = (nonRandomIndices.empty()) ? variance() : // std mode
+                        covariance(this);                    // all vars mode
 
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  const UShort3DArray&    sm_index = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&  colloc_key = hsg_driver->collocation_key();
-  //const Sizet3DArray& colloc_index = hsg_driver->collocation_indices();
+  const UShort3DArray&        sm_index = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
+  const Sizet3DArray&     colloc_index = hsg_driver->collocation_indices();
 
   // Smolyak recursion of anisotropic tensor products
-  size_t i, num_levels = sm_index.size();
-  /*
-  Can't just use lev/set/pt loop here since total_effects_integral uses
-  member_coefficients_weights() which uses non-hierachical response values.
-
-  UShortArray quad_order;
+  size_t v, lev, set, num_levels = colloc_key.size(), num_sets;
+  UShortArray quad_order; SizetArray empty_array; Real complement_variance;
   // iterate each variable 
-  for (j=0; j<numVars; ++j) {
+  BitArray set_value(numVars);
+  for (v=0; v<numVars; ++v) {
     // define set_value that includes all but index of interest
-    set_value.set(); set_value[j].flip();
-    for (i=0; i<num_smolyak_indices; ++i) {
-      hsg_driver->level_to_order(sm_index[i], quad_order);
-      totalSobolIndices[j] += 
-        total_effects_integral(set_value, quad_order, sm_index[i],
-	                       colloc_key[i], colloc_index[i]);
+    set_value.set(); set_value[v].flip();
+    complement_variance = 0.;
+    for (lev=0; lev<num_levels; ++lev) {
+      num_sets = colloc_key[lev].size();
+      for (set=0; set<num_sets; ++set) {
+	hsg_driver->level_to_order(sm_index[lev][set], quad_order);
+	const SizetArray& colloc_index_ls = (colloc_index.empty()) ?
+	  empty_array : colloc_index[lev][set];
+	complement_variance +=
+	  total_effects_integral(set_value, quad_order, sm_index[lev][set],
+				 colloc_key[lev][set], colloc_index_ls,
+				 expansionType1Coeffs[lev][set],
+				 expansionType2Coeffs[lev][set]);
+      }
     }
-    totalSobolIndices[j] = std::abs(1. - totalSobolIndices[j]/total_variance);
+    totalSobolIndices[v] = std::abs(1. - complement_variance / total_variance);
   }
-  */
 }
 
 }
