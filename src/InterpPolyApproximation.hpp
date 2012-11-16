@@ -141,7 +141,7 @@ protected:
   /// (non-integrated) dimension subset
   Real type1_interpolant_value(const RealVector& x, const UShortArray& key,
 			       const UShortArray& basis_index,
-			       const SizetList& non_rand_indices);
+			       const SizetList& subset_indices);
   /// return gradient of type 1 interpolation polynomial using all dimensions
   Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  const UShortArray& key,
@@ -151,7 +151,7 @@ protected:
   Real type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  const UShortArray& key,
 				  const UShortArray& basis_index,
-				  const SizetList& non_rand_indices);
+				  const SizetList& subset_indices);
 
   /// return value of type 2 interpolation polynomial using all dimensions
   Real type2_interpolant_value(const RealVector& x, size_t interp_index,
@@ -162,7 +162,7 @@ protected:
   Real type2_interpolant_value(const RealVector& x, size_t interp_index,
 			       const UShortArray& key,
 			       const UShortArray& basis_index,
-			       const SizetList& non_rand_indices);
+			       const SizetList& subset_indices);
   /// return gradient of type 2 interpolation polynomial using all dimensions
   Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  size_t interp_index, const UShortArray& key,
@@ -172,12 +172,12 @@ protected:
   Real type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 				  size_t interp_index, const UShortArray& key,
 				  const UShortArray& basis_index,
-				  const SizetList& non_rand_indices);
+				  const SizetList& subset_indices);
 
   /// return type 1 product weight from integration of type 1 interpolation
   /// polynomials using integrated dimension subset
   Real type1_weight(const UShortArray& key, const UShortArray& basis_index, 
-		    const SizetList& rand_indices);
+		    const SizetList& subset_indices);
   /// return type 1 product weights from integration of type 1 interpolation
   /// polynomials for both member and nonmember sets
   void type1_weight(const UShortArray& key, const UShortArray& basis_index, 
@@ -188,7 +188,7 @@ protected:
   /// polynomials using integrated dimension subset
   Real type2_weight(size_t interp_index, const UShortArray& key,
 		    const UShortArray& basis_index,
-		    const SizetList& rand_indices);
+		    const SizetList& subset_indices);
   /// return type 2 product weight from integration of type 1/2 interpolation
   /// polynomials for both member and nonmember sets
   void type2_weight(size_t interp_index, const UShortArray& key,
@@ -201,6 +201,12 @@ protected:
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray&  colloc_index);
+  /// compute the value of a tensor interpolant on a tensor grid over
+  /// a subset of the variables; contributes to value(x)
+  Real tensor_product_value(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray&  colloc_index, const SizetList& subset_indices);
 
   /// compute the gradient of a tensor interpolant on a tensor grid
   /// with respect to variables that are included in the polynomial
@@ -228,24 +234,6 @@ protected:
   bool find_basis(unsigned short level, size_t v1, size_t& v2);
   /// for a particular level, test for equality between basis v2 and basis v1
   bool same_basis(unsigned short level, size_t v1, size_t v2);
-
-  /// compute total Sobol effects for an index within a sparse grid
-  Real total_effects_integral(const BitArray& set_value,
-    const UShortArray& quad_order,   const UShortArray& lev_index,
-    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
-    const RealVector& t1_coeffs,     const RealMatrix& t2_coeffs);
-  /// finds variance of sparse interpolant with respect to variables in the set
-  Real partial_variance_integral(const BitArray& set_value,
-    const UShortArray& quad_order,   const UShortArray& lev_index,
-    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
-    const RealVector& t1_coeffs,     const RealMatrix& t2_coeffs);
-  /// defines member_coeffs and member_wts for a particular set_value
-  void member_coefficients_weights(const BitArray& set_value,
-    const UShortArray& quad_order,   const UShortArray& lev_index,
-    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
-    const RealVector& t1_coeffs,     const RealMatrix& t2_coeffs,
-    RealVector& member_t1_coeffs,    RealVector& member_t1_wts,
-    RealMatrix& member_t2_coeffs,    RealMatrix& member_t2_wts);
 
   //
   //- Heading: Data
@@ -378,10 +366,10 @@ type1_interpolant_value(const RealVector& x, const UShortArray& key,
 inline Real InterpPolyApproximation::
 type1_interpolant_value(const RealVector& x, const UShortArray& key,
 			const UShortArray& basis_index,
-			const SizetList& non_rand_indices)
+			const SizetList& subset_indices)
 {
   Real L1 = 1.; SizetList::const_iterator cit; size_t j;
-  for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j   = *cit;
     L1 *= polynomialBasis[basis_index[j]][j].type1_value(x[j], key[j]);
   }
@@ -408,10 +396,10 @@ inline Real InterpPolyApproximation::
 type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   const UShortArray& key,
 			   const UShortArray& basis_index,
-			   const SizetList& non_rand_indices)
+			   const SizetList& subset_indices)
 {
   Real L1_grad = 1.; SizetList::const_iterator cit; size_t k;
-  for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     k        = *cit;
     L1_grad *= (k == deriv_index) ?
       polynomialBasis[basis_index[k]][k].type1_gradient(x[k], key[k]) :
@@ -438,10 +426,10 @@ type2_interpolant_value(const RealVector& x,    size_t interp_index,
 inline Real InterpPolyApproximation::
 type2_interpolant_value(const RealVector& x,    size_t interp_index,
 			const UShortArray& key, const UShortArray& basis_index,
-			const SizetList& non_rand_indices)
+			const SizetList& subset_indices)
 {
   Real L2 = 1.; SizetList::const_iterator cit; size_t k;
-  for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     k   = *cit;
     L2 *= (interp_index == k) ?
       polynomialBasis[basis_index[k]][k].type2_value(x[k], key[k]) :
@@ -478,20 +466,20 @@ inline Real InterpPolyApproximation::
 type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   size_t interp_index, const UShortArray& key,
 			   const UShortArray& basis_index,
-			   const SizetList& non_rand_indices)
+			   const SizetList& subset_indices)
 {
   // deriv_index  = desired gradient component
   // interp_index = index of gradient component used in type2 interpolation
   Real L2_grad = 1.; SizetList::const_iterator cit; size_t l;
   if (interp_index == deriv_index) // match in grad and type2 interp components
-    for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
+    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
       l        = *cit;
       L2_grad *= (l == interp_index) ?
 	polynomialBasis[basis_index[l]][l].type2_gradient(x[l], key[l]) :
 	polynomialBasis[basis_index[l]][l].type1_value(x[l],    key[l]);
     }
   else                          // mismatch in grad and type2 interp components
-    for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
+    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
       l        = *cit;
       L2_grad *= (l == interp_index) ?
 	polynomialBasis[basis_index[l]][l].type2_value(x[l],    key[l]) :
@@ -504,11 +492,11 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 /** All variables partial weight. */
 inline Real InterpPolyApproximation::
 type1_weight(const UShortArray& key, const UShortArray& basis_index, 
-	     const SizetList& rand_indices)
+	     const SizetList& subset_indices)
 {
   const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
   Real t1_wt_prod = 1.; SizetList::const_iterator cit; size_t j;
-  for (cit=rand_indices.begin(); cit!=rand_indices.end(); ++cit)
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit)
     { j = *cit; t1_wt_prod *= t1_wts_1d[basis_index[j]][j][key[j]]; }
   return t1_wt_prod;
 }
@@ -534,12 +522,12 @@ type1_weight(const UShortArray& key, const UShortArray& basis_index,
 /** All variables partial weight. */
 inline Real InterpPolyApproximation::
 type2_weight(size_t interp_index, const UShortArray& key,
-	     const UShortArray& basis_index, const SizetList& rand_indices)
+	     const UShortArray& basis_index, const SizetList& subset_indices)
 {
   const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
   const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
   Real t2_wt_prod = 1.; SizetList::const_iterator cit; size_t j;
-  for (cit=rand_indices.begin(); cit!=rand_indices.end(); ++cit) {
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j           = *cit;
     t2_wt_prod *= (interp_index == j) ? t2_wts_1d[basis_index[j]][j][key[j]]
                                       : t1_wts_1d[basis_index[j]][j][key[j]];

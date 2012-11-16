@@ -101,6 +101,13 @@ public:
   /// return type2WeightSets for use in hierarchical integration functions
   const RealMatrix2DArray& type2_weight_set_arrays() const;
 
+  /// convert a Smolyak index set into hierarchical quadrature increments
+  void level_to_delta_order(const UShortArray& levels,
+			    UShort2DArray& delta_quad);
+  /// convert a Smolyak index set into the sizes of hierarchical
+  /// quadrature increments
+  void level_to_delta_size(const UShortArray& levels, UShortArray& delta_size);
+
 private:
 
   //
@@ -123,13 +130,6 @@ private:
   /// compute points and weights for all levels of the (initial) sparse grid
   void compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
 			      RealMatrix2DArray& t2_wts);
-
-  /// convert a Smolyak index set into hierarchical quadrature increments
-  void level_to_delta_order(const UShortArray& levels,
-			    UShort2DArray& delta_quad);
-  /// convert a Smolyak index set into the sizes of hierarchical
-  /// quadrature increments
-  void level_to_delta_size(const UShortArray& levels, UShortArray& delta_size);
 
   //
   //- Heading: Data

@@ -148,6 +148,30 @@ private:
 		     const UShortArray& lev_index_2, const UShortArray& key_2,
 		     Real& prod);
 
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using weights from the CombinedSparseGridDriver
+  Real expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs);
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using t{1,2}_wts
+  Real expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
+		   const RealMatrix& t2_coeffs, const RealMatrix& t2_wts);
+
+  /// compute integral for total Sobol' index for variables in a set
+  Real total_effects_integral(const BitArray& set_value,
+    const UShortArray& quad_order,   const UShortArray& lev_index,
+    const UShort2DArray& colloc_key, const SizetArray& colloc_index);
+  /// compute integral for main/interaction Sobol' index for variables in a set
+  Real partial_variance_integral(const BitArray& set_value,
+    const UShortArray& quad_order,   const UShortArray& lev_index,
+    const UShort2DArray& colloc_key, const SizetArray& colloc_index);
+
+  /// defines member_coeffs and member_wts for a particular set_value
+  void member_coefficients_weights(const BitArray& set_value,
+    const UShortArray& quad_order,   const UShortArray& lev_index,
+    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
+    RealVector& member_t1_coeffs,    RealVector& member_t1_wts,
+    RealMatrix& member_t2_coeffs,    RealMatrix& member_t2_wts);
+
   //
   //- Heading: Data
   //
@@ -275,6 +299,15 @@ basis_product_1d(InterpolationPolynomial* poly_rep_1,
     prod += wts[i] * poly_rep_1->type1_value(pts[i], key_1)
                    * poly_rep_2->type1_value(pts[i], key_2);
   return (std::abs(prod) > tol) ? true : false;
+}
+
+
+inline Real NodalInterpPolyApproximation::
+expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs)
+{
+  // This version defaults to type1/2 weights from CombinedSparseGridDriver
+  return expectation(t1_coeffs, driverRep->type1_weight_sets(),
+		     t2_coeffs, driverRep->type2_weight_sets());
 }
 
 } // namespace Pecos

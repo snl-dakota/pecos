@@ -512,6 +512,42 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 }
 
 
+/** All variables version. */
+Real InterpPolyApproximation::
+tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
+		     const RealMatrix& exp_t2_coeffs,
+		     const UShortArray& basis_index, const UShort2DArray& key,
+		     const SizetArray& colloc_index,
+		     const SizetList& subset_indices)
+{
+  Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
+  if (exp_t2_coeffs.empty()) {
+    if (colloc_index.empty())
+      for (i=0; i<num_colloc_pts; ++i)
+	tp_val += exp_t1_coeffs[i] * 
+	  type1_interpolant_value(x, key[i], basis_index, subset_indices);
+    else
+      for (i=0; i<num_colloc_pts; ++i)
+	tp_val += exp_t1_coeffs[colloc_index[i]] *
+	  type1_interpolant_value(x, key[i], basis_index, subset_indices);
+  }
+  else {
+    size_t j, c_index;
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      c_index = (colloc_index.empty()) ? i : colloc_index[i];
+      tp_val += exp_t1_coeffs[c_index] *
+	type1_interpolant_value(x, key_i, basis_index, subset_indices);
+      const Real* exp_t2_coeff_i = exp_t2_coeffs[c_index];
+      for (j=0; j<numVars; ++j)
+	tp_val += exp_t2_coeff_i[j] *
+	  type2_interpolant_value(x, j, key_i, basis_index, subset_indices);
+    }
+  }
+  return tp_val;
+}
+
+
 const RealVector& InterpPolyApproximation::
 tensor_product_gradient_basis_variables(const RealVector& x,
 					const RealVector& exp_t1_coeffs,
@@ -731,150 +767,6 @@ proper_subsets(const BitArray& parent_set, BitArraySet& children)
 	proper_subsets(child_set, children); // recurse until {0} is reached
       }
     }
-}
-
-
-/** Forms an interpolant over variables that are members of the given set.
-    Finds the variance of the interpolant w.r.t. the variables in the set.
-    Derived classes invoke this helper for tensor or sparse grids. */
-Real InterpPolyApproximation::
-partial_variance_integral(const BitArray& set_value,
-			  const UShortArray& quad_order,
-			  const UShortArray& lev_index, 
-			  const UShort2DArray& colloc_key,
-			  const SizetArray& colloc_index,
-			  const RealVector& t1_coeffs,
-			  const RealMatrix& t2_coeffs)
-{
-  // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
-
-  // Perform inner integral over complementary set u' to form new weighted
-  // coefficients h (stored as member_coeffs)
-  RealVector member_t1_coeffs, member_t1_wts;
-  RealMatrix member_t2_coeffs, member_t2_wts;
-  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
-			      colloc_index, t1_coeffs, t2_coeffs,
-			      member_t1_coeffs, member_t1_wts,
-			      member_t2_coeffs, member_t2_wts);
-
-  // Perform outer integral over set u by evaluating weighted sum of h^2
-  Real integral = 0.;
-  size_t i, num_member_coeffs = member_t1_coeffs.length();
-  for (i=0; i<num_member_coeffs; ++i)
-    integral += std::pow(member_t1_coeffs[i], 2.) * member_t1_wts[i];
-  if (basisConfigOptions.useDerivs)
-    // type2 interpolation of h^2 = 2 h h'
-    for (i=0; i<num_member_coeffs; ++i) {
-      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
-      for (size_t j=0; j<numVars; ++j)
-	integral += 2. * member_t1_coeffs[i] * m_t2_coeffs_i[j] * m_t2_wts_i[j];
-    }
-
-  return integral;
-}
-
-
-/** Forms an interpolant over variables that are members of the given set.
-    Finds the variance of the interpolant w.r.t. the variables in the set.
-    Derived classes invoke this helper for tensor or sparse grids. */
-Real InterpPolyApproximation::
-total_effects_integral(const BitArray& set_value, const UShortArray& quad_order,
-		       const UShortArray& lev_index,
-		       const UShort2DArray& colloc_key,
-		       const SizetArray& colloc_index,
-		       const RealVector& t1_coeffs, const RealMatrix& t2_coeffs)
-{
-  RealVector member_t1_coeffs, member_t1_wts;
-  RealMatrix member_t2_coeffs, member_t2_wts;
-  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
-			      colloc_index, t1_coeffs, t2_coeffs,
-			      member_t1_coeffs, member_t1_wts,
-			      member_t2_coeffs, member_t2_wts);
-
-  // Now integrate over the remaining variables	
-  Real integral = 0.;
-  const Real& total_mean = numericalMoments[0];
-  size_t i, num_member_coeffs = member_t1_coeffs.length();
-  for (i=0; i<num_member_coeffs; ++i) {
-    Real m_t1_coeff_i_mm = member_t1_coeffs[i] - total_mean;
-    integral += m_t1_coeff_i_mm * m_t1_coeff_i_mm *  member_t1_wts[i];
-    if (basisConfigOptions.useDerivs) { // type2 interpolation of h^2 = 2 h h'
-      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
-      for (size_t j=0; j<numVars; ++j)
-	integral += 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j] *  m_t2_wts_i[j];
-    }
-  }
-
-  return integral;
-}
-
-
-void InterpPolyApproximation::
-member_coefficients_weights(const BitArray& set_value,
-			    const UShortArray& quad_order,
-			    const UShortArray& lev_index,
-			    const UShort2DArray& colloc_key,
-			    const SizetArray& colloc_index,
-			    const RealVector& t1_coeffs,
-			    const RealMatrix& t2_coeffs,
-			    RealVector& member_t1_coeffs,
-			    RealVector& member_t1_wts,
-			    RealMatrix& member_t2_coeffs,
-			    RealMatrix& member_t2_wts)
-{
-  // get number of expansion coeffs in member-variable-only expansion and
-  // precompute indexing factors, since they only depend on j
-  size_t i, j, num_member_coeffs = 1;  // # exp coeffs in member-var-only exp
-  SizetArray indexing_factor; // factors for indexing member coeffs,wts
-  for (j=0; j<numVars; ++j)
-    if (set_value[j]) {
-      indexing_factor.push_back(num_member_coeffs); // for member_index below
-      num_member_coeffs *= quad_order[j];
-    }
-
-  // Size vectors to store new coefficients
-  member_t1_coeffs.size(num_member_coeffs); // init to 0
-  member_t1_wts.size(num_member_coeffs);    // init to 0
-  if (basisConfigOptions.useDerivs) {
-    member_t2_coeffs.shape(numVars, num_member_coeffs); // init to 0
-    member_t2_wts.shape(numVars, num_member_coeffs);    // init to 0
-  }
-
-  // Perform integration over non-member vars and store indices of new expansion
-  size_t num_tp_pts = colloc_key.size(), member_index, c_index, cntr;
-  Real member_wt, nonmember_wt;
-  for (i=0; i<num_tp_pts; ++i) {
-    // convert key_i to a corresponding index on member_{coeffs,wts}.  A
-    // more rigorous approach would define a mapping to a member-variable
-    // multi-index/collocation key (from collapsing non-member indices/keys),
-    // but the current approach is simpler and sufficiently general.  Note
-    // that the precise sequence of member indices is not important in its
-    // current usage -- it just must enumerate the members in some order.
-    const UShortArray& key_i = colloc_key[i];
-    for (j=0, member_index=0, cntr=0; j<numVars; ++j)
-      if (set_value[j])
-	member_index += key_i[j] * indexing_factor[cntr++];
-
-    // integrate out the nonmember dimensions and aggregate with type1 coeffs
-    type1_weight(key_i, lev_index, set_value, member_wt, nonmember_wt);
-    c_index = (colloc_index.empty()) ? i : colloc_index[i];
-    member_t1_coeffs[member_index] += nonmember_wt * t1_coeffs[c_index];
-    // member_t1_wts entries are updated more times than necessary, but
-    // this seems to be the simplest approach
-    member_t1_wts[member_index] = member_wt;
-
-    // now do the same for the type2 coeffs and weights
-    if (basisConfigOptions.useDerivs) {
-      Real *m_t2_coeffs_i = member_t2_coeffs[member_index],
-	   *m_t2_wts_i    = member_t2_wts[member_index];
-      const Real *t2_coeffs_i = t2_coeffs[c_index];
-      for (j=0; j<numVars; ++j) {
-	type2_weight(j, key_i, lev_index, set_value, member_wt, nonmember_wt);
-	m_t2_coeffs_i[j] += nonmember_wt * t2_coeffs_i[j];
-	m_t2_wts_i[j]    =  member_wt;
-      }
-    }
-  }
 }
 
 } // namespace Pecos

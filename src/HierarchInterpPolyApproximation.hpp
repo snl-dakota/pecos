@@ -117,6 +117,12 @@ private:
   Real value(const RealVector& x, const UShort3DArray& sm_mi,
 	     const UShort4DArray& key, const RealVector2DArray& t1_coeffs,
 	     const RealMatrix2DArray& t2_coeffs, unsigned short level);
+  /// compute the value at a point for a particular interpolation
+  /// level and for a specified subset of the variables
+  Real value(const RealVector& x, const UShort3DArray& sm_mi,
+	     const UShort4DArray& key, const RealVector2DArray& t1_coeffs,
+	     const RealMatrix2DArray& t2_coeffs, unsigned short level,
+	     const SizetList& subset_indices);
 
   /// compute the approximate gradient with respect to the basis variables
   /// at a particular point for a particular interpolation level
@@ -187,13 +193,21 @@ private:
     const UShort2DArray& reference_key = UShort2DArray());
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using weights from the HierarchSparseGridDriver
   Real expectation(const RealVector2DArray& t1_coeffs,
 		   const RealMatrix2DArray& t2_coeffs,
 		   const UShort2DArray& set_partition = UShort2DArray());
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using t{1,2}_wts
   Real expectation(const RealVector2DArray& t1_coeffs,
+		   const RealVector2DArray& t1_wts,
 		   const RealMatrix2DArray& t2_coeffs,
-		   const UShort3DArray& pt_partition);
+		   const RealMatrix2DArray& t2_wts,
+		   const UShort2DArray& set_partition = UShort2DArray());
+  // compute the expected value of the interpolant given by t{1,2}_coeffs
+  //Real expectation(const RealVector2DArray& t1_coeffs,
+  //		   const RealMatrix2DArray& t2_coeffs,
+  //		   const UShort3DArray& pt_partition);
 
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
@@ -203,6 +217,31 @@ private:
   /// savedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
   /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void restore_expansion_coefficients(const UShortArray& restore_set);
+
+  /// compute member expansion for Sobol' index integration
+  void member_coefficients_weights(const BitArray&    member_bits,
+				   UShort4DArray&     member_colloc_key,
+				   Sizet3DArray&      member_colloc_index,
+				   RealVector2DArray& member_t1_coeffs,
+				   RealVector2DArray& member_t1_wts,
+				   RealMatrix2DArray& member_t2_coeffs,
+				   RealMatrix2DArray& member_t2_wts);
+  /// form hierarchical interpolant of h^2 from member-variable
+  /// expansion of h
+  void product_member_coefficients(const BitArray& m_bits,
+				   const UShort4DArray& m_colloc_key,
+				   const Sizet3DArray&  m_colloc_index,
+				   const RealVector2DArray& m_t1_coeffs,
+				   const RealMatrix2DArray& m_t2_coeffs,
+				   RealVector2DArray& prod_m_t1_coeffs,
+				   RealMatrix2DArray& prod_m_t2_coeffs);
+  /// form hierarchical interpolant of (h-\mu)^2 from member-variable
+  /// expansion of h
+  void central_product_member_coefficients(const BitArray& m_bits,
+    const UShort4DArray& m_colloc_key, const Sizet3DArray&  m_colloc_index,
+    const RealVector2DArray& m_t1_coeffs, const RealMatrix2DArray& m_t2_coeffs,
+    Real mean, RealVector2DArray& cprod_m_t1_coeffs,
+    RealMatrix2DArray& cprod_m_t2_coeffs);
 
   //
   //- Heading: Data
@@ -281,6 +320,19 @@ HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
 
 inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 {}
+
+
+inline Real HierarchInterpPolyApproximation::
+expectation(const RealVector2DArray& t1_coeffs,
+	    const RealMatrix2DArray& t2_coeffs,
+	    const UShort2DArray& set_partition)
+{
+  // This version defaults to type1/2 weights from HierarchSparseGridDriver
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  return expectation(t1_coeffs, hsg_driver->type1_weight_set_arrays(),
+		     t2_coeffs, hsg_driver->type2_weight_set_arrays(),
+		     set_partition);
+}
 
 
 inline void HierarchInterpPolyApproximation::restore_expansion_coefficients()

@@ -998,6 +998,29 @@ stored_gradient_nonbasis_variables(const RealVector& x)
 }
 
 
+Real NodalInterpPolyApproximation::
+expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
+	    const RealMatrix& t2_coeffs, const RealMatrix& t2_wts)
+{
+  Real integral = 0.; size_t num_colloc_pts = t1_coeffs.length();
+  if (basisConfigOptions.useDerivs) {
+    size_t i, j, num_vars = t2_coeffs.numRows();
+    for (i=0; i<num_colloc_pts; ++i) {
+      integral += t1_coeffs[i] * t1_wts[i];
+      const Real* coeff2_i = t2_coeffs[i];
+      const Real*  t2_wt_i = t2_wts[i];
+      for (j=0; j<num_vars; ++j)
+	integral += coeff2_i[j] * t2_wt_i[j];
+    }
+  }
+  else
+    for (size_t i=0; i<num_colloc_pts; ++i)
+      integral += t1_coeffs[i] * t1_wts[i];
+
+  return integral;
+}
+
+
 /** In this case, all expansion variables are random variables and the
     mean of the expansion is simply the sum over i of r_i w_i. */
 Real NodalInterpPolyApproximation::mean()
@@ -1018,23 +1041,7 @@ Real NodalInterpPolyApproximation::mean()
 
   Real& mean = numericalMoments[0];
   if ( !(computedMean & 1) ) {
-    mean = 0.;
-    const RealVector& t1_wts = driverRep->type1_weight_sets();
-    if (basisConfigOptions.useDerivs) {
-      size_t i, j;
-      const RealMatrix& t2_wts = driverRep->type2_weight_sets();
-      for (i=0; i<numCollocPts; ++i) {
-	mean += expansionType1Coeffs[i] * t1_wts[i];
-	const Real* coeff2_i = expansionType2Coeffs[i];
-	const Real*  t2_wt_i = t2_wts[i];
-	for (j=0; j<numVars; ++j)
-	  mean += coeff2_i[j] * t2_wt_i[j];
-      }
-    }
-    else
-      for (size_t i=0; i<numCollocPts; ++i)
-	mean += expansionType1Coeffs[i] * t1_wts[i];
-
+    mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
     computedMean |= 1;
   }
 
@@ -1688,12 +1695,10 @@ compute_partial_variance(const BitArray& set_value)
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray&   quad_order = tpq_driver->quadrature_order();
-    const UShortArray&    lev_index = tpq_driver->level_index();
-    const UShort2DArray& colloc_key = tpq_driver->collocation_key();
     SizetArray colloc_index; // empty -> default indexing
-    variance = partial_variance_integral(set_value, quad_order, lev_index,
-      colloc_key, colloc_index, expansionType1Coeffs, expansionType2Coeffs);
+    variance = partial_variance_integral(set_value,
+      tpq_driver->quadrature_order(), tpq_driver->level_index(),
+      tpq_driver->collocation_key(), colloc_index);
     break;
   }
   case COMBINED_SPARSE_GRID: {
@@ -1710,8 +1715,7 @@ compute_partial_variance(const BitArray& set_value)
       if (sm_coeffs[i]) {
 	csg_driver->level_to_order(sm_index[i], quad_order);
 	variance += sm_coeffs[i] * partial_variance_integral(set_value,
-	  quad_order, sm_index[i], colloc_key[i], colloc_index[i],
-	  expansionType1Coeffs, expansionType2Coeffs);
+	  quad_order, sm_index[i], colloc_key[i], colloc_index[i]);
       }
     break;
   }
@@ -1719,6 +1723,43 @@ compute_partial_variance(const BitArray& set_value)
 
   // compute proper subsets and subtract their contributions
   InterpPolyApproximation::compute_partial_variance(set_value);
+}
+
+
+/** Forms an interpolant over variables that are members of the given set.
+    Finds the variance of the interpolant w.r.t. the variables in the set.
+    Derived classes invoke this helper for tensor or sparse grids. */
+Real NodalInterpPolyApproximation::
+partial_variance_integral(const BitArray& set_value,
+			  const UShortArray& quad_order,
+			  const UShortArray& lev_index, 
+			  const UShort2DArray& colloc_key,
+			  const SizetArray& colloc_index)
+{
+  // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
+
+  // Perform inner integral over complementary set u' to form new weighted
+  // coefficients h (stored as member_coeffs)
+  RealVector member_t1_coeffs, member_t1_wts;
+  RealMatrix member_t2_coeffs, member_t2_wts;
+  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
+			      colloc_index, member_t1_coeffs, member_t1_wts,
+			      member_t2_coeffs, member_t2_wts);
+
+  // Perform outer integral over set u by evaluating weighted sum of h^2
+  Real integral = 0.;
+  size_t i, num_member_coeffs = member_t1_coeffs.length();
+  for (i=0; i<num_member_coeffs; ++i)
+    integral += std::pow(member_t1_coeffs[i], 2.) * member_t1_wts[i];
+  if (basisConfigOptions.useDerivs)
+    // type2 interpolation of h^2 = 2 h h'
+    for (i=0; i<num_member_coeffs; ++i) {
+      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
+      for (size_t j=0; j<numVars; ++j)
+	integral += 2. * member_t1_coeffs[i] * m_t2_coeffs_i[j] * m_t2_wts_i[j];
+    }
+
+  return integral;
 }
 
 
@@ -1731,7 +1772,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
   Real total_variance = (nonRandomIndices.empty()) ? variance() : // std mode
                         covariance(this);                    // all vars mode
 
-  size_t j; BitArray set_value(numVars);
+  size_t j; BitArray complement_set(numVars);
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1740,12 +1781,11 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     const UShort2DArray& colloc_key = tpq_driver->collocation_key();
     SizetArray colloc_index; // empty -> default indexing
     for (j=0; j<numVars; ++j) {
-      // define set_value that includes all but index of interest
-      set_value.set(); set_value[j].flip();
+      // define complement_set that includes all but index of interest
+      complement_set.set(); complement_set[j].flip();
       totalSobolIndices[j] = std::abs(1. -
-	total_effects_integral(set_value, quad_order, lev_index, colloc_key,
-			       colloc_index, expansionType1Coeffs,
-			       expansionType2Coeffs) / total_variance);
+	total_effects_integral(complement_set, quad_order, lev_index,
+			       colloc_key, colloc_index) / total_variance);
     }
     break;
   }
@@ -1760,21 +1800,126 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     UShortArray quad_order; Real complement_variance;
     // iterate each variable 
     for (j=0; j<numVars; ++j) {
-      // define set_value that includes all but index of interest
-      set_value.set(); set_value[j].flip();
+      // define complement_set that includes all but index of interest
+      complement_set.set(); complement_set[j].flip();
+      // compute variance of this complement set
       complement_variance = 0.;
       for (i=0; i<num_smolyak_indices; ++i)
 	if (sm_coeffs[i]) {
 	  csg_driver->level_to_order(sm_index[i], quad_order);
 	  complement_variance += sm_coeffs[i] *
-	    total_effects_integral(set_value, quad_order, sm_index[i],
-				   colloc_key[i], colloc_index[i],
-				   expansionType1Coeffs, expansionType2Coeffs);
+	    total_effects_integral(complement_set, quad_order, sm_index[i],
+				   colloc_key[i], colloc_index[i]);
 	}
-      totalSobolIndices[j] = std::abs(1. - complement_variance/total_variance);
+
+      // define total Sobol' index for this var from complement & total variance
+      totalSobolIndices[j]
+	= std::abs(1. - complement_variance / total_variance);
     }
     break;
   }
+  }
+}
+
+
+/** Forms an interpolant over variables that are members of the given set.
+    Finds the variance of the interpolant w.r.t. the variables in the set.
+    Derived classes invoke this helper for tensor or sparse grids. */
+Real NodalInterpPolyApproximation::
+total_effects_integral(const BitArray& set_value, const UShortArray& quad_order,
+		       const UShortArray& lev_index,
+		       const UShort2DArray& colloc_key,
+		       const SizetArray& colloc_index)
+{
+  RealVector member_t1_coeffs, member_t1_wts;
+  RealMatrix member_t2_coeffs, member_t2_wts;
+  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
+			      colloc_index, member_t1_coeffs, member_t1_wts,
+			      member_t2_coeffs, member_t2_wts);
+
+  // Now integrate over the remaining variables	
+  Real integral = 0.;
+  Real total_mean = (nonRandomIndices.empty()) ? mean() :    // std mode
+    expectation(expansionType1Coeffs, expansionType2Coeffs); // all vars mode
+  size_t i, num_member_coeffs = member_t1_coeffs.length();
+  for (i=0; i<num_member_coeffs; ++i) {
+    Real m_t1_coeff_i_mm = member_t1_coeffs[i] - total_mean;
+    integral += m_t1_coeff_i_mm * m_t1_coeff_i_mm *  member_t1_wts[i];
+    if (basisConfigOptions.useDerivs) { // type2 interpolation of h^2 = 2 h h'
+      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
+      for (size_t j=0; j<numVars; ++j)
+	integral += 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j] *  m_t2_wts_i[j];
+    }
+  }
+
+  return integral;
+}
+
+
+void NodalInterpPolyApproximation::
+member_coefficients_weights(const BitArray& set_value,
+			    const UShortArray& quad_order,
+			    const UShortArray& lev_index,
+			    const UShort2DArray& colloc_key,
+			    const SizetArray& colloc_index,
+			    RealVector& member_t1_coeffs,
+			    RealVector& member_t1_wts,
+			    RealMatrix& member_t2_coeffs,
+			    RealMatrix& member_t2_wts)
+{
+  // get number of expansion coeffs in member-variable-only expansion and
+  // precompute indexing factors, since they only depend on j
+  size_t i, j, num_member_coeffs = 1;  // # exp coeffs in member-var-only exp
+  SizetArray indexing_factor; // factors for indexing member coeffs,wts
+  for (j=0; j<numVars; ++j)
+    if (set_value[j]) {
+      indexing_factor.push_back(num_member_coeffs); // for member_index below
+      num_member_coeffs *= quad_order[j];
+    }
+
+  // Size vectors to store new coefficients
+  member_t1_coeffs.size(num_member_coeffs); // init to 0
+  member_t1_wts.size(num_member_coeffs);    // init to 0
+  if (basisConfigOptions.useDerivs) {
+    member_t2_coeffs.shape(numVars, num_member_coeffs); // init to 0
+    member_t2_wts.shape(numVars, num_member_coeffs);    // init to 0
+  }
+
+  // Perform inner integral over complementary set u' (non-member vars) to
+  // form new weighted expansion coefficients h (stored as member_t1_coeffs)
+  size_t num_tp_pts = colloc_key.size(), member_index, c_index, cntr;
+  Real member_wt, nonmember_wt;
+  for (i=0; i<num_tp_pts; ++i) {
+    // convert key_i to a corresponding index on member coeffs and wts.  A
+    // more rigorous approach would define a mapping to a member-variable
+    // multi-index/collocation key (from collapsing non-member indices/keys),
+    // but the current approach is simpler and sufficiently general for this
+    // purpose.  Note: the precise sequence of member indices is not important
+    // in its current usage -- it just must enumerate the unique members.
+    const UShortArray& key_i = colloc_key[i];
+    for (j=0, member_index=0, cntr=0; j<numVars; ++j)
+      if (set_value[j])
+	member_index += key_i[j] * indexing_factor[cntr++];
+
+    // integrate out the nonmember dimensions and aggregate with type1 coeffs
+    type1_weight(key_i, lev_index, set_value, member_wt, nonmember_wt);
+    c_index = (colloc_index.empty()) ? i : colloc_index[i];
+    member_t1_coeffs[member_index]
+      += nonmember_wt * expansionType1Coeffs[c_index];
+    // wt entries updated more times than necessary, but is simplest approach
+    member_t1_wts[member_index] = member_wt;
+
+    // now do the same for the type2 coeffs and weights
+    if (basisConfigOptions.useDerivs) {
+      Real *m_t2_coeffs_i = member_t2_coeffs[member_index],
+	   *m_t2_wts_i    = member_t2_wts[member_index];
+      const Real *t2_coeffs_i = expansionType2Coeffs[c_index];
+      for (j=0; j<numVars; ++j) {
+	type2_weight(j, key_i, lev_index, set_value, member_wt, nonmember_wt);
+	m_t2_coeffs_i[j] += nonmember_wt * t2_coeffs_i[j];
+	m_t2_wts_i[j]    =  member_wt;
+      }
+    }
   }
 }
 
