@@ -217,6 +217,13 @@ protected:
     const SizetArray&  colloc_index);
   /// compute the gradient of a tensor interpolant on a tensor grid
   /// with respect to variables that are included in the polynomial
+  /// basis; contributes to gradient_basis_variables(x)
+  const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& basis_index,  const UShort2DArray& key,
+    const SizetArray&  colloc_index, const SizetList& subset_indices);
+  /// compute the gradient of a tensor interpolant on a tensor grid
+  /// with respect to variables that are included in the polynomial
   /// basis for given DVV; contributes to gradient_basis_variables(x, dvv)
   const RealVector& tensor_product_gradient_basis_variables(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,

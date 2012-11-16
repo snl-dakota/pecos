@@ -131,6 +131,12 @@ private:
     const RealVector2DArray& t1_coeffs, const RealMatrix2DArray& t2_coeffs,
     unsigned short level);
   /// compute the approximate gradient with respect to the basis variables
+  /// at a particular point for a particular interpolation level
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const UShort3DArray& sm_mi, const UShort4DArray& key,
+    const RealVector2DArray& t1_coeffs, const RealMatrix2DArray& t2_coeffs,
+    unsigned short level, const SizetList& subset_indices);
+  /// compute the approximate gradient with respect to the basis variables
   /// for a particular point, interpolation level, and DVV
   const RealVector& gradient_basis_variables(const RealVector& x,
     const UShort3DArray& sm_mi, const UShort4DArray& key,
@@ -220,22 +226,10 @@ private:
 
   /// compute member expansion for Sobol' index integration
   void member_coefficients_weights(const BitArray&    member_bits,
-				   UShort4DArray&     member_colloc_key,
-				   Sizet3DArray&      member_colloc_index,
-				   RealVector2DArray& member_t1_coeffs,
-				   RealVector2DArray& member_t1_wts,
-				   RealMatrix2DArray& member_t2_coeffs,
-				   RealMatrix2DArray& member_t2_wts);
-  /// form hierarchical interpolant of h^2 from member-variable
-  /// expansion of h
-  void product_member_coefficients(const BitArray& m_bits,
-				   const UShort4DArray& m_colloc_key,
-				   const Sizet3DArray&  m_colloc_index,
-				   const RealVector2DArray& m_t1_coeffs,
-				   const RealMatrix2DArray& m_t2_coeffs,
-				   RealVector2DArray& prod_m_t1_coeffs,
-				   RealMatrix2DArray& prod_m_t2_coeffs);
-  /// form hierarchical interpolant of (h-\mu)^2 from member-variable
+    UShort4DArray& member_colloc_key,    Sizet3DArray& member_colloc_index,
+    RealVector2DArray& member_t1_coeffs, RealVector2DArray& member_t1_wts,
+    RealMatrix2DArray& member_t2_coeffs, RealMatrix2DArray& member_t2_wts);
+  /// form hierarchical interpolant of (h-mean)^2 from member-variable
   /// expansion of h
   void central_product_member_coefficients(const BitArray& m_bits,
     const UShort4DArray& m_colloc_key, const Sizet3DArray&  m_colloc_index,

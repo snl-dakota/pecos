@@ -539,6 +539,48 @@ gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
 			 const UShort4DArray& key,
 			 const RealVector2DArray& t1_coeffs,
 			 const RealMatrix2DArray& t2_coeffs,
+			 unsigned short level, const SizetList& subset_indices)
+{
+  // this could define a default_dvv and call gradient_basis_variables(x, dvv),
+  // but we want this fn to be as fast as possible
+
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in HierarchInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != numVars)
+    approxGradient.sizeUninitialized(numVars);
+  approxGradient = 0.;
+
+  SizetArray colloc_index; // empty -> 2DArrays allow default indexing
+  size_t lev, set, num_sets;
+  for (lev=0; lev<=level; ++lev) {
+    const UShort2DArray&       sm_mi_l = sm_mi[lev];
+    const UShort3DArray&         key_l = key[lev];
+    const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+    const RealMatrixArray& t2_coeffs_l = t2_coeffs[lev];
+    // sm_mi and key include all current index sets, whereas the t1/t2
+    // coeffs may refect a partial state derived from a reference_key
+    num_sets = t1_coeffs_l.size();
+    for (set=0; set<num_sets; ++set)
+      approxGradient +=
+	tensor_product_gradient_basis_variables(x, t1_coeffs_l[set],
+	  t2_coeffs_l[set], sm_mi_l[set], key_l[set], colloc_index,
+	  subset_indices);
+  }
+
+  return approxGradient;
+}
+
+
+const RealVector& HierarchInterpPolyApproximation::
+gradient_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
+			 const UShort4DArray& key,
+			 const RealVector2DArray& t1_coeffs,
+			 const RealMatrix2DArray& t2_coeffs,
 			 const SizetArray& dvv, unsigned short level)
 {
   // Error check for required data
@@ -1603,9 +1645,9 @@ compute_partial_variance(const BitArray& set_value)
   // reduced member dimensions
   RealVector2DArray prod_member_t1_coeffs;
   RealMatrix2DArray prod_member_t2_coeffs;
-  product_member_coefficients(set_value, member_colloc_key, member_colloc_index,
-			      member_t1_coeffs, member_t2_coeffs,
-			      prod_member_t1_coeffs, prod_member_t2_coeffs);
+  central_product_member_coefficients(set_value, member_colloc_key,
+    member_colloc_index, member_t1_coeffs, member_t2_coeffs, 0.,
+    prod_member_t1_coeffs, prod_member_t2_coeffs);
 
   // integrate h^2 over the reduced member dimensions
   variance = expectation(prod_member_t1_coeffs, member_t1_wts,
@@ -1771,111 +1813,6 @@ member_coefficients_weights(const BitArray&    member_bits,
 
 
 void HierarchInterpPolyApproximation::
-product_member_coefficients(const BitArray& m_bits,
-			    const UShort4DArray& m_colloc_key,
-			    const Sizet3DArray&  m_colloc_index,
-			    const RealVector2DArray& m_t1_coeffs,
-			    const RealMatrix2DArray& m_t2_coeffs,
-			    RealVector2DArray& prod_m_t1_coeffs,
-			    RealMatrix2DArray& prod_m_t2_coeffs)
-{
-  // We now have a lower dimensional hierarchical interpolant, for which h^2
-  // must now be formed hierarchically.  We use value() to both reconstruct h
-  // from its surpluses and to evaluate the new surpluses for h^2.
-
-  // while colloc_{key,index} are redefined for member vars, sm_mi is not
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
-
-  size_t v, lev, set, pt, num_levels = m_t1_coeffs.size(), num_sets,
-    num_tp_pts, index, h_level = num_levels - 1;
-  SizetList member_indices;
-  for (v=0; v<numVars; ++v)
-    if (m_bits[v])
-      member_indices.push_back(v);
-
-  // form hierarchical t1/t2 coeffs for h^2
-  prod_m_t1_coeffs.resize(num_levels); prod_m_t1_coeffs[0].resize(1);
-  prod_m_t2_coeffs.resize(num_levels); prod_m_t2_coeffs[0].resize(1);
-  // level 0 type1
-  prod_m_t1_coeffs[0][0].sizeUninitialized(1);
-  index = m_colloc_index[0][0][0];
-  Real h_val = value(surrData.continuous_variables(index), sm_mi, m_colloc_key,
-		     m_t1_coeffs, m_t2_coeffs, h_level, member_indices);
-  prod_m_t1_coeffs[0][0][0] = h_val * h_val;
-  switch (basisConfigOptions.useDerivs) {
-  case false:
-    // levels 1:w type1
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = m_colloc_key[lev].size();
-      prod_m_t1_coeffs[lev].resize(num_sets);
-      prod_m_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = m_colloc_key[lev][set].size();
-	RealVector& prod_m_t1_coeffs_ls = prod_m_t1_coeffs[lev][set];
-	prod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	// type1 hierarchical interpolation of h^2
-	for (pt=0; pt<num_tp_pts; ++pt) {
-	  index = m_colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
-	  h_val = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs, m_t2_coeffs,
-			h_level, member_indices);
-	  prod_m_t1_coeffs_ls[pt] = h_val * h_val -
-	    value(c_vars, sm_mi, m_colloc_key, prod_m_t1_coeffs,
-		  prod_m_t2_coeffs, lev-1, member_indices);
-	}
-      }
-    }
-    break;
-  case true:
-    // level 0 type2
-    /*
-    prod_m_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
-    Real *prod_m_t2_coeffs_000 = prod_m_t2_coeffs[0][0][0];
-    const RealVector& data_grad1 = surrData.response_gradient(index);
-    const RealVector& data_grad2 = s_data_2.response_gradient(index);
-    for (v=0; v<numVars; ++v)
-      prod_m_t2_coeffs_000[v]
-	= data_fn1 * data_grad2[v] + data_fn2 * data_grad1[v];
-    // levels 1:w type1 and type2
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = m_colloc_key[lev].size();
-      prod_m_t1_coeffs[lev].resize(num_sets);
-      prod_m_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	RealVector& prod_m_t1_coeffs_ls = prod_m_t1_coeffs[lev][set];
-	RealMatrix& prod_m_t2_coeffs_ls = prod_m_t2_coeffs[lev][set];
-	num_tp_pts = m_colloc_key[lev][set].size();
-	prod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	prod_m_t2_coeffs_ls.shapeUninitialized(numVars, num_tp_pts);
-	for (pt=0; pt<num_tp_pts; ++pt) {
-	  index = m_colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
-	  // type1 hierarchical interpolation of h^2
-	  data_fn1 = surrData.response_function(index);
-	  data_fn2 = s_data_2.response_function(index);
-	  prod_m_t1_coeffs_ls[pt] = data_fn1 * data_fn2 -
-	    value(c_vars, sm_mi, key, prod_m_t1_coeffs, prod_m_t2_coeffs,lev-1);
-	  // type2 hierarchical interpolation of h^2
-	  // --> interpolated grads are 2 h h'
-	  Real* prod_m_t2_coeffs_lsp = prod_m_t2_coeffs_ls[pt];
-	  const RealVector& data_grad1 = surrData.response_gradient(index);
-	  const RealVector& data_grad2 = s_data_2.response_gradient(index);
-	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
-	    sm_mi, key, prod_m_t1_coeffs, prod_m_t2_coeffs, lev-1);
-	  for (v=0; v<numVars; ++v)
-	    prod_m_t2_coeffs_lsp[v] = data_fn1 * data_grad2[v]
-	      + data_fn2 * data_grad1[v] - prev_grad[v];
-	}
-      }
-    }
-    */
-    break;
-  }
-}
-
-
-void HierarchInterpPolyApproximation::
 central_product_member_coefficients(const BitArray& m_bits,
 				    const UShort4DArray& m_colloc_key,
 				    const Sizet3DArray&  m_colloc_index,
@@ -1936,7 +1873,47 @@ central_product_member_coefficients(const BitArray& m_bits,
     break;
   case true:
     // level 0 type2
-
+    const RealVector& h_grad =
+      gradient_basis_variables(surrData.continuous_variables(index), sm_mi,
+      m_colloc_key, m_t1_coeffs, m_t2_coeffs, h_level, member_indices);
+    size_t num_m_vars = member_indices.size();
+    cprod_m_t2_coeffs[0][0].shapeUninitialized(num_m_vars, 1);
+    Real *cprod_m_t2_coeffs_000 = cprod_m_t2_coeffs[0][0][0];
+    for (v=0; v<num_m_vars; ++v)
+      cprod_m_t2_coeffs_000[v] = 2. * h_mm * h_grad[v];
+    // levels 1:w type1 and type2
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = m_colloc_key[lev].size();
+      cprod_m_t1_coeffs[lev].resize(num_sets);
+      cprod_m_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	RealVector& cprod_m_t1_coeffs_ls = cprod_m_t1_coeffs[lev][set];
+	RealMatrix& cprod_m_t2_coeffs_ls = cprod_m_t2_coeffs[lev][set];
+	num_tp_pts = m_colloc_key[lev][set].size();
+	cprod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	cprod_m_t2_coeffs_ls.shapeUninitialized(num_m_vars, num_tp_pts);
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  index = m_colloc_index[lev][set][pt];
+	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  // type1 hierarchical interpolation of h^2
+	  h_mm = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs, m_t2_coeffs,
+		       h_level, member_indices) - mean;
+	  cprod_m_t1_coeffs_ls[pt] = h_mm * h_mm -
+	    value(c_vars, sm_mi, m_colloc_key, cprod_m_t1_coeffs,
+		  cprod_m_t2_coeffs, lev-1, member_indices);
+	  // type2 hierarchical interpolation of h^2
+	  // --> interpolated grads are 2 h h'
+	  Real* cprod_m_t2_coeffs_lsp = cprod_m_t2_coeffs_ls[pt];
+	  const RealVector& h_grad = gradient_basis_variables(c_vars, sm_mi,
+	    m_colloc_key, m_t1_coeffs, m_t2_coeffs, h_level, member_indices);
+	  const RealVector& prev_grad =
+	    gradient_basis_variables(c_vars, sm_mi, m_colloc_key,
+	    cprod_m_t1_coeffs, cprod_m_t2_coeffs, lev-1, member_indices);
+	  for (v=0; v<num_m_vars; ++v)
+	    cprod_m_t2_coeffs_lsp[v] = 2. * h_mm * h_grad[v] - prev_grad[v];
+	}
+      }
+    }
     break;
   }
 }

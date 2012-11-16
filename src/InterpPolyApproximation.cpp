@@ -598,6 +598,51 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 					const UShortArray& basis_index,
 					const UShort2DArray& key,
 					const SizetArray& colloc_index,
+					const SizetList& subset_indices)
+{
+  if (tpGradient.length() != numVars)
+    tpGradient.sizeUninitialized(numVars);
+  tpGradient = 0.;
+  size_t i, j, num_colloc_pts = key.size();
+  if (exp_t2_coeffs.empty()) {
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      for (j=0; j<numVars; ++j)
+	tpGradient[j] += exp_t1_coeff_i *
+	  type1_interpolant_gradient(x, j, key_i, basis_index, subset_indices);
+    }
+  }
+  else {
+    size_t k;
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
+	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
+      for (j=0; j<numVars; ++j) { // ith contribution to jth grad component
+	tpGradient[j] += exp_t1_coeff_i *
+	  type1_interpolant_gradient(x, j, key_i, basis_index, subset_indices);
+	for (k=0; k<numVars; ++k) // type2 interpolant for kth grad comp
+	  tpGradient[j] += exp_t2_coeff_i[k] *
+	    type2_interpolant_gradient(x, j, k, key_i, basis_index,
+				       subset_indices);
+      }
+    }
+  }
+  return tpGradient;
+}
+
+
+const RealVector& InterpPolyApproximation::
+tensor_product_gradient_basis_variables(const RealVector& x,
+					const RealVector& exp_t1_coeffs,
+					const RealMatrix& exp_t2_coeffs,
+					const UShortArray& basis_index,
+					const UShort2DArray& key,
+					const SizetArray& colloc_index,
 					const SizetArray& dvv)
 {
   size_t i, j, deriv_index, num_colloc_pts = key.size(),
