@@ -1663,9 +1663,9 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
   // Compute the total expansion mean and variance.  For standard mode, these
   // are likely already available, as managed by computedMean in mean() and
   // computedVariance in variance().  For all vars mode, we use expectation()
-  // and covariance(this) without passing x for the nonRandomIndices in order
-  // to bypass computedMean and computedVariance checks (since they are not
-  // specialized to mean() vs. mean(x) or variance() vs. variance(x)).
+  // and covariance(this): nonRandomIndices are not passed (full expectation)
+  // and computedMean and computedVariance checks are bypassed (since checks
+  // are not specialized to mean() vs. mean(x) or variance() vs. variance(x)).
   Real total_mean, total_variance;
   if (nonRandomIndices.empty()) { // std mode
     total_mean     = mean();

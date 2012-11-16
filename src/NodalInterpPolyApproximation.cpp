@@ -1696,9 +1696,9 @@ compute_partial_variance(const BitArray& set_value)
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
-    variance = partial_variance_integral(set_value,
-      tpq_driver->quadrature_order(), tpq_driver->level_index(),
-      tpq_driver->collocation_key(), colloc_index);
+    variance = member_integral(set_value, tpq_driver->quadrature_order(),
+			       tpq_driver->level_index(),
+			       tpq_driver->collocation_key(), colloc_index, 0.);
     break;
   }
   case COMBINED_SPARSE_GRID: {
@@ -1714,8 +1714,9 @@ compute_partial_variance(const BitArray& set_value)
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i]) {
 	csg_driver->level_to_order(sm_index[i], quad_order);
-	variance += sm_coeffs[i] * partial_variance_integral(set_value,
-	  quad_order, sm_index[i], colloc_key[i], colloc_index[i]);
+	variance += sm_coeffs[i]
+	         *  member_integral(set_value, quad_order, sm_index[i],
+				    colloc_key[i], colloc_index[i], 0.);
       }
     break;
   }
@@ -1726,51 +1727,23 @@ compute_partial_variance(const BitArray& set_value)
 }
 
 
-/** Forms an interpolant over variables that are members of the given set.
-    Finds the variance of the interpolant w.r.t. the variables in the set.
-    Derived classes invoke this helper for tensor or sparse grids. */
-Real NodalInterpPolyApproximation::
-partial_variance_integral(const BitArray& set_value,
-			  const UShortArray& quad_order,
-			  const UShortArray& lev_index, 
-			  const UShort2DArray& colloc_key,
-			  const SizetArray& colloc_index)
-{
-  // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
-
-  // Perform inner integral over complementary set u' to form new weighted
-  // coefficients h (stored as member_coeffs)
-  RealVector member_t1_coeffs, member_t1_wts;
-  RealMatrix member_t2_coeffs, member_t2_wts;
-  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
-			      colloc_index, member_t1_coeffs, member_t1_wts,
-			      member_t2_coeffs, member_t2_wts);
-
-  // Perform outer integral over set u by evaluating weighted sum of h^2
-  Real integral = 0.;
-  size_t i, num_member_coeffs = member_t1_coeffs.length();
-  for (i=0; i<num_member_coeffs; ++i)
-    integral += std::pow(member_t1_coeffs[i], 2.) * member_t1_wts[i];
-  if (basisConfigOptions.useDerivs)
-    // type2 interpolation of h^2 = 2 h h'
-    for (i=0; i<num_member_coeffs; ++i) {
-      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
-      for (size_t j=0; j<numVars; ++j)
-	integral += 2. * member_t1_coeffs[i] * m_t2_coeffs_i[j] * m_t2_wts_i[j];
-    }
-
-  return integral;
-}
-
-
 void NodalInterpPolyApproximation::compute_total_sobol_indices()
 {
-  // Compute the total expansion variance.  For standard mode, the full variance
-  // is likely already available, as managed by computedVariance in variance().
-  // For all variables mode, we use covariance(this) without passing x for the
-  // nonRandomIndices (bypass computedVariance checks by not using variance()).
-  Real total_variance = (nonRandomIndices.empty()) ? variance() : // std mode
-                        covariance(this);                    // all vars mode
+  // Compute the total expansion mean and variance.  For standard mode, these
+  // are likely already available, as managed by computedMean in mean() and
+  // computedVariance in variance().  For all vars mode, we use expectation()
+  // and covariance(this): nonRandomIndices are not passed (full expectation)
+  // and computedMean and computedVariance checks are bypassed (since checks
+  // are not specialized to mean() vs. mean(x) or variance() vs. variance(x)).
+  Real total_mean, total_variance;
+  if (nonRandomIndices.empty()) { // std mode
+    total_mean     = mean();
+    total_variance = variance();
+  }
+  else {                     // all vars mode
+    total_mean     = expectation(expansionType1Coeffs, expansionType2Coeffs);
+    total_variance = covariance(this);
+  }
 
   size_t j; BitArray complement_set(numVars);
   switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -1783,9 +1756,9 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     for (j=0; j<numVars; ++j) {
       // define complement_set that includes all but index of interest
       complement_set.set(); complement_set[j].flip();
-      totalSobolIndices[j] = std::abs(1. -
-	total_effects_integral(complement_set, quad_order, lev_index,
-			       colloc_key, colloc_index) / total_variance);
+      totalSobolIndices[j] = std::abs(1. - member_integral(complement_set,
+	quad_order, lev_index, colloc_key, colloc_index, total_mean) /
+	total_variance);
     }
     break;
   }
@@ -1807,9 +1780,8 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
       for (i=0; i<num_smolyak_indices; ++i)
 	if (sm_coeffs[i]) {
 	  csg_driver->level_to_order(sm_index[i], quad_order);
-	  complement_variance += sm_coeffs[i] *
-	    total_effects_integral(complement_set, quad_order, sm_index[i],
-				   colloc_key[i], colloc_index[i]);
+	  complement_variance += sm_coeffs[i] * member_integral(complement_set,
+	    quad_order, sm_index[i], colloc_key[i], colloc_index[i],total_mean);
 	}
 
       // define total Sobol' index for this var from complement & total variance
@@ -1824,26 +1796,27 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
 
 /** Forms an interpolant over variables that are members of the given set.
     Finds the variance of the interpolant w.r.t. the variables in the set.
-    Derived classes invoke this helper for tensor or sparse grids. */
+    Higher level functions invoke this helper for tensor or sparse grids. */
 Real NodalInterpPolyApproximation::
-total_effects_integral(const BitArray& set_value, const UShortArray& quad_order,
-		       const UShortArray& lev_index,
-		       const UShort2DArray& colloc_key,
-		       const SizetArray& colloc_index)
+member_integral(const BitArray& set_value, const UShortArray& quad_order,
+		const UShortArray& lev_index, const UShort2DArray& colloc_key,
+		const SizetArray& colloc_index, Real mean)
 {
+  // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
+
+  // Perform inner integral over complementary set u' to form new weighted
+  // coefficients h (stored as member_coeffs)
   RealVector member_t1_coeffs, member_t1_wts;
   RealMatrix member_t2_coeffs, member_t2_wts;
   member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
 			      colloc_index, member_t1_coeffs, member_t1_wts,
 			      member_t2_coeffs, member_t2_wts);
 
-  // Now integrate over the remaining variables	
+  // Perform outer integral over set u by evaluating weighted sum of h^2
   Real integral = 0.;
-  Real total_mean = (nonRandomIndices.empty()) ? mean() :    // std mode
-    expectation(expansionType1Coeffs, expansionType2Coeffs); // all vars mode
   size_t i, num_member_coeffs = member_t1_coeffs.length();
   for (i=0; i<num_member_coeffs; ++i) {
-    Real m_t1_coeff_i_mm = member_t1_coeffs[i] - total_mean;
+    Real m_t1_coeff_i_mm = member_t1_coeffs[i] - mean;
     integral += m_t1_coeff_i_mm * m_t1_coeff_i_mm *  member_t1_wts[i];
     if (basisConfigOptions.useDerivs) { // type2 interpolation of h^2 = 2 h h'
       Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
