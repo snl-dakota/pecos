@@ -157,11 +157,11 @@ private:
 		   const RealMatrix& t2_coeffs, const RealMatrix& t2_wts);
 
   /// compute integral for total Sobol' index for variables in a set
-  Real member_integral(const BitArray& set_value,
+  Real member_integral(const BitArray& member_bits,
     const UShortArray& quad_order,   const UShortArray& lev_index,
     const UShort2DArray& colloc_key, const SizetArray& colloc_index, Real mean);
-  /// defines member_coeffs and member_wts for a particular set_value
-  void member_coefficients_weights(const BitArray& set_value,
+  /// defines member_coeffs and member_wts for a particular membership set
+  void member_coefficients_weights(const BitArray& member_bits,
     const UShortArray& quad_order,   const UShortArray& lev_index,
     const UShort2DArray& colloc_key, const SizetArray& colloc_index,
     RealVector& member_t1_coeffs,    RealVector& member_t1_wts,

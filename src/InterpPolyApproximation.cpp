@@ -749,8 +749,8 @@ void InterpPolyApproximation::compute_total_effects()
         if (it->first[k]) // var k is present in this Sobol' index
           totalSobolIndices[k] += sobolIndices[it->second];
     // ensure non-negativity of indices
-    for (size_t k=0; k<numVars; ++k)
-      totalSobolIndices[k] = std::max(totalSobolIndices[k], 0.);
+    //for (size_t k=0; k<numVars; ++k)
+    //  totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
   }
 
   // If not available, compute total indices independently.  This approach

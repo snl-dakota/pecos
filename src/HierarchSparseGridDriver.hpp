@@ -102,11 +102,15 @@ public:
   const RealMatrix2DArray& type2_weight_set_arrays() const;
 
   /// convert a Smolyak index set into hierarchical quadrature increments
-  void level_to_delta_order(const UShortArray& levels,
+  void levels_to_delta_order(const UShortArray& levels,
 			    UShort2DArray& delta_quad);
   /// convert a Smolyak index set into the sizes of hierarchical
   /// quadrature increments
-  void level_to_delta_size(const UShortArray& levels, UShortArray& delta_size);
+  void levels_to_delta_size(const UShortArray& levels, UShortArray& delta_size);
+  /// convert the i^{th} Smolyak index into the size of a hierarchical
+  /// quadrature increment
+  void level_to_delta_size(size_t i, unsigned short level,
+			   unsigned short& num_delta);
 
 private:
 

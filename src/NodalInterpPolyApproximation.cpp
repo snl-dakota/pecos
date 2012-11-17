@@ -1756,9 +1756,8 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     for (j=0; j<numVars; ++j) {
       // define complement_set that includes all but index of interest
       complement_set.set(); complement_set[j].flip();
-      totalSobolIndices[j] = std::abs(1. - member_integral(complement_set,
-	quad_order, lev_index, colloc_key, colloc_index, total_mean) /
-	total_variance);
+      totalSobolIndices[j] = 1. - member_integral(complement_set, quad_order,
+	lev_index, colloc_key, colloc_index, total_mean) / total_variance;
     }
     break;
   }
@@ -1785,8 +1784,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
 	}
 
       // define total Sobol' index for this var from complement & total variance
-      totalSobolIndices[j]
-	= std::abs(1. - complement_variance / total_variance);
+      totalSobolIndices[j] = 1. - complement_variance / total_variance;
     }
     break;
   }
@@ -1798,7 +1796,7 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     Finds the variance of the interpolant w.r.t. the variables in the set.
     Higher level functions invoke this helper for tensor or sparse grids. */
 Real NodalInterpPolyApproximation::
-member_integral(const BitArray& set_value, const UShortArray& quad_order,
+member_integral(const BitArray& member_bits, const UShortArray& quad_order,
 		const UShortArray& lev_index, const UShort2DArray& colloc_key,
 		const SizetArray& colloc_index, Real mean)
 {
@@ -1808,7 +1806,7 @@ member_integral(const BitArray& set_value, const UShortArray& quad_order,
   // coefficients h (stored as member_coeffs)
   RealVector member_t1_coeffs, member_t1_wts;
   RealMatrix member_t2_coeffs, member_t2_wts;
-  member_coefficients_weights(set_value, quad_order, lev_index, colloc_key,
+  member_coefficients_weights(member_bits, quad_order, lev_index, colloc_key,
 			      colloc_index, member_t1_coeffs, member_t1_wts,
 			      member_t2_coeffs, member_t2_wts);
 
@@ -1830,7 +1828,7 @@ member_integral(const BitArray& set_value, const UShortArray& quad_order,
 
 
 void NodalInterpPolyApproximation::
-member_coefficients_weights(const BitArray& set_value,
+member_coefficients_weights(const BitArray& member_bits,
 			    const UShortArray& quad_order,
 			    const UShortArray& lev_index,
 			    const UShort2DArray& colloc_key,
@@ -1845,7 +1843,7 @@ member_coefficients_weights(const BitArray& set_value,
   size_t i, j, num_member_coeffs = 1;  // # exp coeffs in member-var-only exp
   SizetArray indexing_factor; // factors for indexing member coeffs,wts
   for (j=0; j<numVars; ++j)
-    if (set_value[j]) {
+    if (member_bits[j]) {
       indexing_factor.push_back(num_member_coeffs); // for member_index below
       num_member_coeffs *= quad_order[j];
     }
@@ -1871,11 +1869,11 @@ member_coefficients_weights(const BitArray& set_value,
     // in its current usage -- it just must enumerate the unique members.
     const UShortArray& key_i = colloc_key[i];
     for (j=0, member_index=0, cntr=0; j<numVars; ++j)
-      if (set_value[j])
+      if (member_bits[j])
 	member_index += key_i[j] * indexing_factor[cntr++];
 
     // integrate out the nonmember dimensions and aggregate with type1 coeffs
-    type1_weight(key_i, lev_index, set_value, member_wt, nonmember_wt);
+    type1_weight(key_i, lev_index, member_bits, member_wt, nonmember_wt);
     c_index = (colloc_index.empty()) ? i : colloc_index[i];
     member_t1_coeffs[member_index]
       += nonmember_wt * expansionType1Coeffs[c_index];
@@ -1888,7 +1886,7 @@ member_coefficients_weights(const BitArray& set_value,
 	   *m_t2_wts_i    = member_t2_wts[member_index];
       const Real *t2_coeffs_i = expansionType2Coeffs[c_index];
       for (j=0; j<numVars; ++j) {
-	type2_weight(j, key_i, lev_index, set_value, member_wt, nonmember_wt);
+	type2_weight(j, key_i, lev_index, member_bits, member_wt, nonmember_wt);
 	m_t2_coeffs_i[j] += nonmember_wt * t2_coeffs_i[j];
 	m_t2_wts_i[j]    =  member_wt;
       }

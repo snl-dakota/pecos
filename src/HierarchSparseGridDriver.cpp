@@ -46,7 +46,7 @@ int HierarchSparseGridDriver::grid_size()
 	UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
 	num_sets = sm_mi_l.size();
 	for (set=0; set<num_sets; ++set) {
-	  level_to_delta_size(sm_mi_l[set], delta_size);
+	  levels_to_delta_size(sm_mi_l[set], delta_size);
 	  numCollocPts +=
 	    PolynomialApproximation::tensor_product_terms(delta_size, false);
 	}
@@ -173,7 +173,7 @@ void HierarchSparseGridDriver::assign_collocation_key()
       num_sets = sm_mi_l.size();
       key_l.resize(num_sets);
       for (set=0; set<num_sets; ++set) {
-	level_to_delta_order(sm_mi_l[set], delta_quad);
+	levels_to_delta_order(sm_mi_l[set], delta_quad);
 	PolynomialApproximation::hierarchical_tensor_product_multi_index(
 	  delta_quad, key_l[set]);
       }
@@ -205,7 +205,7 @@ void HierarchSparseGridDriver::update_collocation_key()
     collocKey.resize(sm_mi_len);
   UShort2DArray delta_quad(numVars), key_ls;
   if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
-    level_to_delta_order(trial_set(), delta_quad);
+    levels_to_delta_order(trial_set(), delta_quad);
 
     UShort3DArray& key_l = collocKey[trialLevel];
     size_t set = key_l.size();
@@ -233,7 +233,7 @@ void HierarchSparseGridDriver::update_collocation_key()
       UShort3DArray&   key_l = collocKey[lev];
       start_set = incrementSets[lev]; num_sets = sm_mi_l.size();
       for (set=start_set; set<num_sets; ++set) {
-	level_to_delta_order(sm_mi_l[set], delta_quad);
+	levels_to_delta_order(sm_mi_l[set], delta_quad);
 	key_l.push_back(key_ls); // update in place
 	PolynomialApproximation::hierarchical_tensor_product_multi_index(
 	  delta_quad, key_l[set]);
@@ -350,32 +350,37 @@ void HierarchSparseGridDriver::update_collocation_indices()
 
 
 void HierarchSparseGridDriver::
-level_to_delta_size(const UShortArray& levels, UShortArray& delta_size)
+levels_to_delta_size(const UShortArray& levels, UShortArray& delta_size)
 {
-  size_t i, j, num_lev = levels.size();
+  size_t i, num_lev = levels.size();
   if (delta_size.size() != num_lev)
     delta_size.resize(num_lev);
-  for (i=0; i<num_lev; ++i) {
-    unsigned short  lev_i = levels[i], ord_lm1;
-    unsigned short& num_delta = delta_size[i];
-    level_to_order(i, lev_i, num_delta); // order for level l
-    if (lev_i > 0)                       // minus order for level l-1
-      { level_to_order(i, lev_i-1, ord_lm1); num_delta -= ord_lm1; }
+  for (i=0; i<num_lev; ++i)
+    level_to_delta_size(i, levels[i], delta_size[i]);
+}
+
+
+void HierarchSparseGridDriver::
+level_to_delta_size(size_t i, unsigned short level, unsigned short& num_delta)
+{
+  level_to_order(i, level, num_delta);
+  if (level > 0) {
+    unsigned short ord_lm1;
+    level_to_order(i, level-1, ord_lm1);
+    num_delta -= ord_lm1; // Note: num_delta = 0 in case of growth restriction
   }
 }
 
 
 void HierarchSparseGridDriver::
-level_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
+levels_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
 {
-  size_t i, j, num_lev = levels.size(); unsigned short num_delta;
+  size_t i, j, num_lev = levels.size();
   if (delta_quad.size() != num_lev)
     delta_quad.resize(num_lev);
   for (i=0; i<num_lev; ++i) {
-    unsigned short lev_i = levels[i], ord_lm1;
-    level_to_order(i, lev_i, num_delta); // order for level l
-    if (lev_i > 0)                       // minus order for level l-1
-      { level_to_order(i, lev_i-1, ord_lm1); num_delta -= ord_lm1; }
+    unsigned short num_delta, lev_i = levels[i];
+    level_to_delta_size(i, lev_i, num_delta);
     UShortArray& delta_quad_i = delta_quad[i];
     delta_quad_i.resize(num_delta);
     switch(collocRules[i]) {
@@ -420,13 +425,14 @@ level_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
       //  break; // disallow for hierarchical interpolation
       default:
 	PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
-	      << "HierarchSparseGridDriver::level_to_delta_order()"<< std::endl;
+	      << "HierarchSparseGridDriver::levels_to_delta_order()"
+	      << std::endl;
 	abort_handler(-1);
 	break;
       }
       break;
     default:
-      PCerr << "Error: bad rule type in level_to_delta_order()" << std::endl;
+      PCerr << "Error: bad rule type in levels_to_delta_order()" << std::endl;
       abort_handler(-1);
       break;
     }
