@@ -389,7 +389,7 @@ levels_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
 	delta_quad_i[j] = 2*j; // new ends + new interior: 0,2,4,6,8,...
       break;
     case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
-      switch (lev_i) {
+      switch (lev_i) { // growth restriction should not occur for lev_i = 0 or 1
       case 0: delta_quad_i[0] = 0;                      break; // center of 1 pt
       case 1: delta_quad_i[0] = 0; delta_quad_i[1] = 2; break; // ends of 3 pt
       default:
@@ -399,20 +399,21 @@ levels_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
       }
       break;
     case GENZ_KEISTER: // open nested table lookup
-      switch (lev_i) {
-      case 0: delta_quad_i[0] = 0;                      break; // center of 1 pt
-      case 1: delta_quad_i[0] = 0; delta_quad_i[1] = 2; break; // ends of 3 pt
-      case 2:
+      // switch on num_delta i/o lev_i due to possibility of growth restriction
+      switch (num_delta) {
+      case 1: delta_quad_i[0] = 0;                      break; // center of 1 pt
+      case 2: delta_quad_i[0] = 0; delta_quad_i[1] = 2; break; // ends of 3 pt
+      case 6:
 	delta_quad_i[0] = 0; delta_quad_i[1] = 1; delta_quad_i[2] = 3;
 	delta_quad_i[3] = 5; delta_quad_i[4] = 7; delta_quad_i[5] = 8;
 	break; // 9 pt rule reusing 2, 4 (center), 6
-      case 3:
+      case 10:
 	delta_quad_i[0] =  0; delta_quad_i[1] =  1; delta_quad_i[2] =  3;
 	delta_quad_i[3] =  5; delta_quad_i[4] =  7; delta_quad_i[5] = 11;
 	delta_quad_i[6] = 13; delta_quad_i[7] = 15; delta_quad_i[8] = 17;
 	delta_quad_i[9] = 18;
 	break; // 19 pt rule reusing 
-      case 4:
+      case 16:
 	delta_quad_i[0]  =  0; delta_quad_i[1]  =  1; delta_quad_i[2]  =  2;
 	delta_quad_i[3]  =  4; delta_quad_i[4]  =  6; delta_quad_i[5]  =  8;
 	delta_quad_i[6]  = 12; delta_quad_i[7]  = 16; delta_quad_i[8]  = 18;

@@ -16,6 +16,7 @@
 #include "pecos_stat_util.hpp"
 
 //#define DEBUG
+//#define VBD_DEBUG
 
 namespace Pecos {
 
@@ -1655,8 +1656,14 @@ compute_partial_variance(const BitArray& set_value)
   variance = expectation(prod_member_t1_coeffs, member_t1_wts,
 			 prod_member_t2_coeffs, member_t2_wts);
 
+#ifdef VBD_DEBUG
+  PCout << "Partial variance = " << variance;
+#endif // VBD_DEBUG
   // compute proper subsets and subtract their contributions
   InterpPolyApproximation::compute_partial_variance(set_value);
+#ifdef VBD_DEBUG
+  PCout << " (raw) " << variance << " (minus subsets)\n";
+#endif // VBD_DEBUG
 }
 
 
@@ -1793,6 +1800,13 @@ member_coefficients_weights(const BitArray& member_bits,
 	m_t1_wts_ls[m_index] = member_wt;
 	m_index_ls[m_index]  = (colloc_index.empty()) ? p_cntr :
 	  colloc_index[lev][set][pt];   // links back to surrData c_vars
+#ifdef VBD_DEBUG
+	// TO DO: make sure this is correct.  For the subset of vars used in
+	// value() & gradient_basis_variables(), we may be OK so long as
+	// over-write of different index is consistent in member_vars
+	PCout << "Assigning " << m_index_ls[m_index] << " to m_index_ls["
+	      << m_index << "]\n";
+#endif // VBD_DEBUG
 	m_key_ls[m_index]    = key_lsp; // links back to interp polynomials
 
 	// now do the same for the type2 coeffs and weights
@@ -1808,6 +1822,20 @@ member_coefficients_weights(const BitArray& member_bits,
 	  }
 	}
       }
+#ifdef VBD_DEBUG
+      PCout << "member_bits: " << member_bits // MSB->LSB: order reversed
+	    << "\nmember_t1_coeffs[" << lev << "][" << set << "]:\n";
+      write_data(PCout, member_t1_coeffs[lev][set]);
+      PCout << "member_t1_wts[" << lev << "][" << set << "]:\n";
+      write_data(PCout, member_t1_wts[lev][set]);
+      if (basisConfigOptions.useDerivs) {
+	PCout << "member_t2_coeffs[" << lev << "][" << set << "]:\n";
+	write_data(PCout, member_t2_coeffs[lev][set], false, true, true);
+	PCout << "member_t2_wts[" << lev << "][" << set << "]:\n";
+	write_data(PCout, member_t2_wts[lev][set],    false, true, true);
+      }
+      PCout << std::endl;
+#endif // VBD_DEBUG
     }
   }
 }
@@ -1823,7 +1851,8 @@ central_product_member_coefficients(const BitArray& m_bits,
   // We now have a lower dimensional hierarchical interpolant, for which
   // (h - mean)^2 must be formed hierarchically.  We use value() to both
   // reconstruct h from its surpluses and to evaluate new surpluses for
-  // (h - mean)^2.
+  // (h - mean)^2.  Note that we can simply pass mean = 0 for an h^2
+  // product interpolant (used by compute_partial_variance()).
 
   // while colloc_{key,index} are redefined for member vars, sm_mi is not
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
@@ -1867,6 +1896,11 @@ central_product_member_coefficients(const BitArray& m_bits,
 	    value(c_vars, sm_mi, m_colloc_key, cprod_m_t1_coeffs,
 		  cprod_m_t2_coeffs, lev-1, member_indices);
 	}
+#ifdef VBD_DEBUG
+	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n";
+	write_data(PCout, cprod_m_t1_coeffs[lev][set]);
+	PCout << std::endl;
+#endif // VBD_DEBUG
       }
     }
     break;
@@ -1902,8 +1936,9 @@ central_product_member_coefficients(const BitArray& m_bits,
 		  cprod_m_t2_coeffs, lev-1, member_indices);
 	  // type2 hierarchical interpolation of h^2
 	  // --> interpolated grads are 2 h h'
+	  // --> make a copy of h_grad since prev_grad reuses approxGradient
 	  Real* cprod_m_t2_coeffs_lsp = cprod_m_t2_coeffs_ls[pt];
-	  const RealVector& h_grad = gradient_basis_variables(c_vars, sm_mi,
+	  RealVector h_grad = gradient_basis_variables(c_vars, sm_mi,
 	    m_colloc_key, m_t1_coeffs, m_t2_coeffs, h_level, member_indices);
 	  const RealVector& prev_grad =
 	    gradient_basis_variables(c_vars, sm_mi, m_colloc_key,
@@ -1911,6 +1946,13 @@ central_product_member_coefficients(const BitArray& m_bits,
 	  for (v=0; v<numVars; ++v)//num_m_vars
 	    cprod_m_t2_coeffs_lsp[v] = 2. * h_val_mm * h_grad[v] - prev_grad[v];
 	}
+#ifdef VBD_DEBUG
+	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n";
+	write_data(PCout, cprod_m_t1_coeffs[lev][set]);
+	PCout << "cprod_m_t2_coeffs[" << lev << "][" << set << "]:\n";
+	write_data(PCout, cprod_m_t2_coeffs[lev][set], false, true, true);
+	PCout << std::endl;
+#endif // VBD_DEBUG
       }
     }
     break;

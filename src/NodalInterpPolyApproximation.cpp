@@ -18,6 +18,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 //#define DEBUG
+//#define VBD_DEBUG
 
 namespace Pecos {
 
@@ -1722,8 +1723,14 @@ compute_partial_variance(const BitArray& set_value)
   }
   }
 
+#ifdef VBD_DEBUG
+  PCout << "Partial variance = " << variance;
+#endif // VBD_DEBUG
   // compute proper subsets and subtract their contributions
   InterpPolyApproximation::compute_partial_variance(set_value);
+#ifdef VBD_DEBUG
+  PCout << " (raw) " << variance << " (minus subsets)\n";
+#endif // VBD_DEBUG
 }
 
 
@@ -1813,15 +1820,35 @@ member_integral(const BitArray& member_bits, const UShortArray& quad_order,
   // Perform outer integral over set u by evaluating weighted sum of h^2
   Real integral = 0.;
   size_t i, num_member_coeffs = member_t1_coeffs.length();
+#ifdef VBD_DEBUG
+  RealVector cprod_m_t1_coeffs(num_member_coeffs);
+  RealMatrix cprod_m_t2_coeffs(numVars, num_member_coeffs);
+#endif // VBD_DEBUG
   for (i=0; i<num_member_coeffs; ++i) {
     Real m_t1_coeff_i_mm = member_t1_coeffs[i] - mean;
-    integral += m_t1_coeff_i_mm * m_t1_coeff_i_mm *  member_t1_wts[i];
+    integral += m_t1_coeff_i_mm * m_t1_coeff_i_mm * member_t1_wts[i];
+#ifdef VBD_DEBUG
+    cprod_m_t1_coeffs[i] = m_t1_coeff_i_mm * m_t1_coeff_i_mm;
+#endif // VBD_DEBUG
     if (basisConfigOptions.useDerivs) { // type2 interpolation of h^2 = 2 h h'
       Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
-      for (size_t j=0; j<numVars; ++j)
-	integral += 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j] *  m_t2_wts_i[j];
+      for (size_t j=0; j<numVars; ++j) {
+	integral += 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j] * m_t2_wts_i[j];
+#ifdef VBD_DEBUG
+	cprod_m_t2_coeffs[i][j] = 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j];
+#endif // VBD_DEBUG
+      }
     }
   }
+
+#ifdef VBD_DEBUG
+  PCout << "cprod_m_t1_coeffs:\n"; write_data(PCout, cprod_m_t1_coeffs);
+  if (basisConfigOptions.useDerivs) {
+    PCout << "cprod_m_t2_coeffs:\n";
+    write_data(PCout, cprod_m_t2_coeffs, false, true, true);
+  }
+  PCout << std::endl;
+#endif // VBD_DEBUG
 
   return integral;
 }
@@ -1892,6 +1919,17 @@ member_coefficients_weights(const BitArray& member_bits,
       }
     }
   }
+#ifdef VBD_DEBUG
+  PCout << "member_bits: " << member_bits << '\n'; // MSB->LSB: order reversed
+  PCout << "member_t1_coeffs:\n"; write_data(PCout, member_t1_coeffs);
+  PCout << "member_t1_wts:\n";    write_data(PCout, member_t1_wts);
+  if (basisConfigOptions.useDerivs) {
+    PCout << "member_t2_coeffs:\n";
+    write_data(PCout, member_t2_coeffs, false, true, true);
+    PCout << "member_t2_wts:\n";
+    write_data(PCout, member_t2_wts,    false, true, true);
+  }
+#endif // VBD_DEBUG
 }
 
 } // namespace Pecos
