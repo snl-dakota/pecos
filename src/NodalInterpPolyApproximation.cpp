@@ -735,6 +735,35 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
 }
 
 
+/** Special case used for sparse grid interpolation on variable sub-sets
+    defined from partial integration. */
+Real NodalInterpPolyApproximation::
+value(const RealVector& x, const RealVectorArray& t1_coeffs,
+      const RealMatrixArray& t2_coeffs, const UShort3DArray& colloc_key,
+      const SizetList& subset_indices)
+{
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // Smolyak recursion of anisotropic tensor products
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  const UShort2DArray&      sm_mi      = csg_driver->smolyak_multi_index();
+  const IntArray&           sm_coeffs  = csg_driver->smolyak_coefficients();
+  size_t i, num_smolyak_indices = sm_coeffs.size(); SizetArray colloc_index;
+  Real approx_val = 0.;
+  for (i=0; i<num_smolyak_indices; ++i)
+    if (sm_coeffs[i])
+      approx_val += sm_coeffs[i] *
+	tensor_product_value(x, t1_coeffs[i], t2_coeffs[i], sm_mi[i],
+			     colloc_key[i], colloc_index, subset_indices);
+  return approx_val;
+}
+
+
 const RealVector& NodalInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
@@ -785,6 +814,46 @@ gradient_basis_variables(const RealVector& x)
 }
 
 
+const RealVector& NodalInterpPolyApproximation::
+gradient_basis_variables(const RealVector& x, const RealVectorArray& t1_coeffs,
+			 const RealMatrixArray& t2_coeffs,
+			 const UShort3DArray& colloc_key,
+			 const SizetList& subset_indices)
+{
+  // this could define a default_dvv and call gradient_basis_variables(x, dvv),
+  // but we want this fn to be as fast as possible
+
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != numVars)
+    approxGradient.sizeUninitialized(numVars);
+  approxGradient = 0.;
+  // Smolyak recursion of anisotropic tensor products
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
+  const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
+  size_t i, j, num_smolyak_indices = sm_coeffs.size(); SizetArray colloc_index;
+  for (i=0; i<num_smolyak_indices; ++i) {
+    int coeff_i = sm_coeffs[i];
+    if (coeff_i) {
+      const RealVector& tp_grad = tensor_product_gradient_basis_variables(x,
+	t1_coeffs[i], t2_coeffs[i], sm_mi[i], colloc_key[i], colloc_index,
+	subset_indices);
+      for (j=0; j<numVars; ++j)
+	approxGradient[j] += coeff_i * tp_grad[j];
+    }
+  }
+  return approxGradient;
+}
+
+
+/** Special case used for sparse grid interpolation on variable sub-sets
+    defined from partial integration. */
 const RealVector& NodalInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
@@ -1690,42 +1759,14 @@ compute_numerical_expansion_moments(size_t num_moments)
 void NodalInterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
 {
+  // Perform inner integral over complementary set u' to form new weighted
+  // coefficients h; then perform outer integral of h^2 over set u
   Real& variance = partialVariance[sobolIndexMap[set_value]];
-
-  // Compute the partial integral corresponding to set_value
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    SizetArray colloc_index; // empty -> default indexing
-    variance = member_integral(set_value, tpq_driver->quadrature_order(),
-			       tpq_driver->level_index(),
-			       tpq_driver->collocation_key(), colloc_index, 0.);
-    break;
-  }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const IntArray&            sm_coeffs = csg_driver->smolyak_coefficients();
-    const UShort2DArray&        sm_index = csg_driver->smolyak_multi_index();
-    const UShort3DArray&      colloc_key = csg_driver->collocation_key();
-    const Sizet2DArray&     colloc_index = csg_driver->collocation_indices();
-    // Smolyak recursion of anisotropic tensor products
-    size_t i, num_smolyak_indices = sm_coeffs.size();
-    UShortArray quad_order;
-    variance = 0.;
-    for (i=0; i<num_smolyak_indices; ++i)
-      if (sm_coeffs[i]) {
-	csg_driver->level_to_order(sm_index[i], quad_order);
-	variance += sm_coeffs[i]
-	         *  member_integral(set_value, quad_order, sm_index[i],
-				    colloc_key[i], colloc_index[i], 0.);
-      }
-    break;
-  }
-  }
-
+  variance = member_integral(set_value, 0.);// center = 0
 #ifdef VBD_DEBUG
   PCout << "Partial variance = " << variance;
 #endif // VBD_DEBUG
+
   // compute proper subsets and subtract their contributions
   InterpPolyApproximation::compute_partial_variance(set_value);
 #ifdef VBD_DEBUG
@@ -1752,19 +1793,69 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     total_variance = covariance(this);
   }
 
-  size_t j; BitArray complement_set(numVars);
+  BitArray complement_set(numVars);
+  for (size_t j=0; j<numVars; ++j) {
+    // define complement_set that includes all but index of interest
+    complement_set.set(); complement_set[j].flip();
+
+    // Perform inner integral over complementary set u' to form new weighted
+    // coeffs h; then perform outer integral of (h-total_mean)^2 over set u
+    totalSobolIndices[j] = 1. - member_integral(complement_set, total_mean)
+                         / total_variance;
+  }
+}
+
+
+/** Forms an interpolant over variables that are members of the given set.
+    Finds the variance of the interpolant w.r.t. the variables in the set.
+    Higher level functions invoke this helper for tensor or sparse grids. */
+Real NodalInterpPolyApproximation::
+member_integral(const BitArray& member_bits, Real mean)
+{
+  // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
+
+  Real integral = 0.;
+  size_t i, j, num_member_coeffs, c_index;
+  SizetList member_indices;
+  for (j=0; j<numVars; ++j)
+    if (member_bits[j])
+      member_indices.push_back(j);
+
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray&   quad_order = tpq_driver->quadrature_order();
     const UShortArray&    lev_index = tpq_driver->level_index();
-    const UShort2DArray& colloc_key = tpq_driver->collocation_key();
     SizetArray colloc_index; // empty -> default indexing
-    for (j=0; j<numVars; ++j) {
-      // define complement_set that includes all but index of interest
-      complement_set.set(); complement_set[j].flip();
-      totalSobolIndices[j] = 1. - member_integral(complement_set, quad_order,
-	lev_index, colloc_key, colloc_index, total_mean) / total_variance;
+
+    // Perform inner integral over complementary set u' to form new weighted
+    // coefficients h (stored as member_coeffs)
+    RealVector member_t1_coeffs, member_t1_wts;
+    RealMatrix member_t2_coeffs, member_t2_wts;
+    UShort2DArray member_colloc_key;
+    SizetArray member_colloc_index, empty_colloc_index;
+    member_coefficients_weights(member_bits, tpq_driver->quadrature_order(),
+      lev_index, tpq_driver->collocation_key(), colloc_index, member_t1_coeffs,
+      member_t1_wts, member_t2_coeffs, member_t2_wts, member_colloc_key,
+      member_colloc_index);
+
+    // Perform outer integral over set u
+    num_member_coeffs = member_t1_coeffs.length();
+    for (i=0; i<num_member_coeffs; ++i) {
+      c_index = member_colloc_index[i];
+      const RealVector& c_vars = surrData.continuous_variables(c_index);
+      Real h_t1_coeff_i_mm = tensor_product_value(c_vars, member_t1_coeffs,
+	member_t2_coeffs, lev_index, member_colloc_key, empty_colloc_index,
+	member_indices) - mean;
+      integral += h_t1_coeff_i_mm * h_t1_coeff_i_mm * member_t1_wts[i];
+      if (basisConfigOptions.useDerivs) { // type2 interpolation of h^2 = 2 h h'
+	const RealVector& h_t2_coeffs_i = 
+	  tensor_product_gradient_basis_variables(c_vars, member_t1_coeffs,
+	  member_t2_coeffs, lev_index, member_colloc_key, empty_colloc_index,
+	  member_indices);
+	Real *m_t2_wts_i = member_t2_wts[i];
+	for (j=0; j<numVars; ++j)
+	  integral += 2. * h_t1_coeff_i_mm * h_t2_coeffs_i[j] * m_t2_wts_i[j];
+      }
     }
     break;
   }
@@ -1774,81 +1865,56 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     const UShort2DArray&        sm_index = csg_driver->smolyak_multi_index();
     const UShort3DArray&      colloc_key = csg_driver->collocation_key();
     const Sizet2DArray&     colloc_index = csg_driver->collocation_indices();
-    // Smolyak recursion of anisotropic tensor products
-    size_t i, num_smolyak_indices = sm_coeffs.size();
-    UShortArray quad_order; Real complement_variance;
-    // iterate each variable 
-    for (j=0; j<numVars; ++j) {
-      // define complement_set that includes all but index of interest
-      complement_set.set(); complement_set[j].flip();
-      // compute variance of this complement set
-      complement_variance = 0.;
-      for (i=0; i<num_smolyak_indices; ++i)
-	if (sm_coeffs[i]) {
-	  csg_driver->level_to_order(sm_index[i], quad_order);
-	  complement_variance += sm_coeffs[i] * member_integral(complement_set,
-	    quad_order, sm_index[i], colloc_key[i], colloc_index[i],total_mean);
-	}
+    size_t num_smolyak_indices = sm_coeffs.size(); UShortArray quad_order;
 
-      // define total Sobol' index for this var from complement & total variance
-      totalSobolIndices[j] = 1. - complement_variance / total_variance;
-    }
+    // Perform inner integral over complementary set u' to form new weighted
+    // coefficients h (stored as member {t1,t2} coeffs).  Precompute all
+    // coefficients for h since they are needed below for value()/gradient().
+    RealVectorArray member_t1_coeffs(num_smolyak_indices),
+                    member_t1_wts(num_smolyak_indices);
+    RealMatrixArray member_t2_coeffs(num_smolyak_indices),
+                    member_t2_wts(num_smolyak_indices);
+    UShort3DArray   member_colloc_key(num_smolyak_indices);
+    Sizet2DArray    member_colloc_index(num_smolyak_indices);
+    for (i=0; i<num_smolyak_indices; ++i)
+      if (sm_coeffs[i]) {
+        csg_driver->level_to_order(sm_index[i], quad_order);
+	member_coefficients_weights(member_bits, quad_order, sm_index[i],
+	  colloc_key[i], colloc_index[i], member_t1_coeffs[i], member_t1_wts[i],
+	  member_t2_coeffs[i], member_t2_wts[i], member_colloc_key[i],
+	  member_colloc_index[i]);
+      }
+
+    // Perform outer integral for (h-mean)^2.  The key is to evaluate the
+    // sparse interpolant for h using value() and gradient_basis_variables(),
+    // such that the response {value,gradient} for the reduced-dimension
+    // interpolant has the correct aggregated coefficients.  Then we linearly
+    // sum the member wts over the Smolyak coeffs (the reduced-dimension
+    // sparse grid is not "combined").
+    for (i=0; i<num_smolyak_indices; ++i)
+      if (sm_coeffs[i]) {
+	num_member_coeffs = member_t1_coeffs[i].length();
+	for (j=0; j<num_member_coeffs; ++j) {
+	  c_index = member_colloc_index[i][j];
+	  const RealVector& c_vars = surrData.continuous_variables(c_index);
+	  Real h_t1_coeff_ij_mm = value(c_vars, member_t1_coeffs,
+	    member_t2_coeffs, member_colloc_key, member_indices) - mean;
+	  integral += h_t1_coeff_ij_mm * h_t1_coeff_ij_mm
+	           *  member_t1_wts[i][j] * sm_coeffs[i];
+	  if (basisConfigOptions.useDerivs) { // type2 interp of h^2 = 2 h h'
+	    const RealVector& h_t2_coeffs_ij = gradient_basis_variables(c_vars,
+	      member_t1_coeffs, member_t2_coeffs, member_colloc_key,
+	      member_indices);
+	    Real *m_t2_wts_ij = member_t2_wts[i][j];
+	    for (size_t k=0; k<numVars; ++k)
+	      integral += 2. * h_t1_coeff_ij_mm * h_t2_coeffs_ij[k]
+		       *  m_t2_wts_ij[k] * sm_coeffs[i];
+	  }
+	}
+      }
     break;
   }
   }
-}
-
-
-/** Forms an interpolant over variables that are members of the given set.
-    Finds the variance of the interpolant w.r.t. the variables in the set.
-    Higher level functions invoke this helper for tensor or sparse grids. */
-Real NodalInterpPolyApproximation::
-member_integral(const BitArray& member_bits, const UShortArray& quad_order,
-		const UShortArray& lev_index, const UShort2DArray& colloc_key,
-		const SizetArray& colloc_index, Real mean)
-{
-  // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
-
-  // Perform inner integral over complementary set u' to form new weighted
-  // coefficients h (stored as member_coeffs)
-  RealVector member_t1_coeffs, member_t1_wts;
-  RealMatrix member_t2_coeffs, member_t2_wts;
-  member_coefficients_weights(member_bits, quad_order, lev_index, colloc_key,
-			      colloc_index, member_t1_coeffs, member_t1_wts,
-			      member_t2_coeffs, member_t2_wts);
-
-  // Perform outer integral over set u by evaluating weighted sum of h^2
-  Real integral = 0.;
-  size_t i, num_member_coeffs = member_t1_coeffs.length();
-#ifdef VBD_DEBUG
-  RealVector cprod_m_t1_coeffs(num_member_coeffs);
-  RealMatrix cprod_m_t2_coeffs(numVars, num_member_coeffs);
-#endif // VBD_DEBUG
-  for (i=0; i<num_member_coeffs; ++i) {
-    Real m_t1_coeff_i_mm = member_t1_coeffs[i] - mean;
-    integral += m_t1_coeff_i_mm * m_t1_coeff_i_mm * member_t1_wts[i];
-#ifdef VBD_DEBUG
-    cprod_m_t1_coeffs[i] = m_t1_coeff_i_mm * m_t1_coeff_i_mm;
-#endif // VBD_DEBUG
-    if (basisConfigOptions.useDerivs) { // type2 interpolation of h^2 = 2 h h'
-      Real *m_t2_coeffs_i = member_t2_coeffs[i], *m_t2_wts_i = member_t2_wts[i];
-      for (size_t j=0; j<numVars; ++j) {
-	integral += 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j] * m_t2_wts_i[j];
-#ifdef VBD_DEBUG
-	cprod_m_t2_coeffs[i][j] = 2. * m_t1_coeff_i_mm * m_t2_coeffs_i[j];
-#endif // VBD_DEBUG
-      }
-    }
-  }
-
-#ifdef VBD_DEBUG
-  PCout << "cprod_m_t1_coeffs:\n"; write_data(PCout, cprod_m_t1_coeffs);
-  if (basisConfigOptions.useDerivs) {
-    PCout << "cprod_m_t2_coeffs:\n";
-    write_data(PCout, cprod_m_t2_coeffs, false, true, true);
-  }
-  PCout << std::endl;
-#endif // VBD_DEBUG
 
   return integral;
 }
@@ -1863,7 +1929,9 @@ member_coefficients_weights(const BitArray& member_bits,
 			    RealVector& member_t1_coeffs,
 			    RealVector& member_t1_wts,
 			    RealMatrix& member_t2_coeffs,
-			    RealMatrix& member_t2_wts)
+			    RealMatrix& member_t2_wts,
+			    UShort2DArray& member_colloc_key,
+			    SizetArray& member_colloc_index)
 {
   // get number of expansion coeffs in member-variable-only expansion and
   // precompute indexing factors, since they only depend on j
@@ -1882,6 +1950,8 @@ member_coefficients_weights(const BitArray& member_bits,
     member_t2_coeffs.shape(numVars, num_member_coeffs); // init to 0
     member_t2_wts.shape(numVars, num_member_coeffs);    // init to 0
   }
+  member_colloc_key.resize(num_member_coeffs);
+  member_colloc_index.resize(num_member_coeffs);
 
   // Perform inner integral over complementary set u' (non-member vars) to
   // form new weighted expansion coefficients h (stored as member_t1_coeffs)
@@ -1904,8 +1974,11 @@ member_coefficients_weights(const BitArray& member_bits,
     c_index = (colloc_index.empty()) ? i : colloc_index[i];
     member_t1_coeffs[member_index]
       += nonmember_wt * expansionType1Coeffs[c_index];
-    // wt entries updated more times than necessary, but is simplest approach
-    member_t1_wts[member_index] = member_wt;
+    // reduced dimension data updated more times than necessary, but
+    // tracking this redundancy would be more expensive/complicated
+    member_t1_wts[member_index]       = member_wt;
+    member_colloc_key[member_index]   = key_i;  // links back to interp poly's
+    member_colloc_index[member_index] = c_index;// links back to surrData c_vars
 
     // now do the same for the type2 coeffs and weights
     if (basisConfigOptions.useDerivs) {

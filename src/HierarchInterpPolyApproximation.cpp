@@ -1638,17 +1638,17 @@ compute_partial_variance(const BitArray& set_value)
   RealVector2DArray member_t1_coeffs, member_t1_wts;
   RealMatrix2DArray member_t2_coeffs, member_t2_wts;
   UShort4DArray member_colloc_key; Sizet3DArray member_colloc_index;
-  member_coefficients_weights(set_value, member_colloc_key, member_colloc_index,
-			      member_t1_coeffs, member_t1_wts, member_t2_coeffs,
-			      member_t2_wts);
+  member_coefficients_weights(set_value, member_t1_coeffs, member_t1_wts,
+			      member_t2_coeffs, member_t2_wts,
+			      member_colloc_key, member_colloc_index);
 
   // re-interpolate h^2 (0 passed for mean to central product) using a
   // hierarchical formulation over the reduced member dimensions
   RealVector2DArray prod_member_t1_coeffs;
   RealMatrix2DArray prod_member_t2_coeffs;
-  central_product_member_coefficients(set_value, member_colloc_key,
-				      member_colloc_index, member_t1_coeffs,
-				      member_t2_coeffs, 0.,
+  central_product_member_coefficients(set_value, member_t1_coeffs,
+				      member_t2_coeffs, member_colloc_key,
+				      member_colloc_index, 0.,
 				      prod_member_t1_coeffs,
 				      prod_member_t2_coeffs);
 
@@ -1698,15 +1698,15 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
     // Perform inner integral over complementary set u' to form new weighted
     // coefficients h (stored as member_coeffs), stored hierarchically over
     // the member dimensions.
-    member_coefficients_weights(complement_set, member_colloc_key,
-				member_colloc_index, member_t1_coeffs,
-				member_t1_wts, member_t2_coeffs, member_t2_wts);
+    member_coefficients_weights(complement_set, member_t1_coeffs, member_t1_wts,
+				member_t2_coeffs, member_t2_wts,
+				member_colloc_key, member_colloc_index);
 
     // re-interpolate (h-\mu)^2 using a hierarchical formulation over the
     // reduced member dimensions
-    central_product_member_coefficients(complement_set, member_colloc_key,
-					member_colloc_index, member_t1_coeffs,
-					member_t2_coeffs, total_mean,
+    central_product_member_coefficients(complement_set, member_t1_coeffs,
+					member_t2_coeffs, member_colloc_key,
+					member_colloc_index, total_mean,
 					cprod_member_t1_coeffs,
 					cprod_member_t2_coeffs);
 
@@ -1724,9 +1724,9 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
     members of the given set. */
 void HierarchInterpPolyApproximation::
 member_coefficients_weights(const BitArray& member_bits,
-  UShort4DArray&     member_colloc_key, Sizet3DArray&      member_colloc_index,
   RealVector2DArray& member_t1_coeffs,  RealVector2DArray& member_t1_wts,
-  RealMatrix2DArray& member_t2_coeffs,  RealMatrix2DArray& member_t2_wts)
+  RealMatrix2DArray& member_t2_coeffs,  RealMatrix2DArray& member_t2_wts,
+  UShort4DArray&     member_colloc_key, Sizet3DArray&      member_colloc_index)
 {
   HierarchSparseGridDriver* hsg_driver   = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
@@ -1843,8 +1843,8 @@ member_coefficients_weights(const BitArray& member_bits,
 
 void HierarchInterpPolyApproximation::
 central_product_member_coefficients(const BitArray& m_bits,
-  const UShort4DArray& m_colloc_key,    const Sizet3DArray&  m_colloc_index,
   const RealVector2DArray& m_t1_coeffs, const RealMatrix2DArray& m_t2_coeffs,
+  const UShort4DArray& m_colloc_key,    const Sizet3DArray&  m_colloc_index,
   Real mean, RealVector2DArray& cprod_m_t1_coeffs,
   RealMatrix2DArray& cprod_m_t2_coeffs)
 {

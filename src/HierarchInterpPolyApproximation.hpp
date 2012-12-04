@@ -226,14 +226,14 @@ private:
 
   /// compute member expansion for Sobol' index integration
   void member_coefficients_weights(const BitArray&    member_bits,
-    UShort4DArray& member_colloc_key,    Sizet3DArray& member_colloc_index,
     RealVector2DArray& member_t1_coeffs, RealVector2DArray& member_t1_wts,
-    RealMatrix2DArray& member_t2_coeffs, RealMatrix2DArray& member_t2_wts);
+    RealMatrix2DArray& member_t2_coeffs, RealMatrix2DArray& member_t2_wts,
+    UShort4DArray& member_colloc_key,    Sizet3DArray& member_colloc_index);
   /// form hierarchical interpolant of (h-mean)^2 from member-variable
   /// expansion of h
   void central_product_member_coefficients(const BitArray& m_bits,
-    const UShort4DArray& m_colloc_key, const Sizet3DArray&  m_colloc_index,
     const RealVector2DArray& m_t1_coeffs, const RealMatrix2DArray& m_t2_coeffs,
+    const UShort4DArray&    m_colloc_key, const Sizet3DArray&   m_colloc_index,
     Real mean, RealVector2DArray& cprod_m_t1_coeffs,
     RealMatrix2DArray& cprod_m_t2_coeffs);
 

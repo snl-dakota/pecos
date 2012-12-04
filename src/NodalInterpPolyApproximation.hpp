@@ -156,16 +156,27 @@ private:
   Real expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
 		   const RealMatrix& t2_coeffs, const RealMatrix& t2_wts);
 
+  /// compute value of reduced-dimension interpolant
+  Real value(const RealVector& x, const RealVectorArray& t1_coeffs,
+	     const RealMatrixArray& t2_coeffs, const UShort3DArray& colloc_key,
+	     const SizetList& subset_indices);
+  /// compute gradient of reduced-dimension interpolant with respect
+  /// to basis variables
+  const RealVector& gradient_basis_variables(const RealVector& x,
+					     const RealVectorArray& t1_coeffs,
+					     const RealMatrixArray& t2_coeffs,
+					     const UShort3DArray& colloc_key,
+					     const SizetList& subset_indices);
+
   /// compute integral for total Sobol' index for variables in a set
-  Real member_integral(const BitArray& member_bits,
-    const UShortArray& quad_order,   const UShortArray& lev_index,
-    const UShort2DArray& colloc_key, const SizetArray& colloc_index, Real mean);
+  Real member_integral(const BitArray& member_bits, Real mean);
   /// defines member_coeffs and member_wts for a particular membership set
   void member_coefficients_weights(const BitArray& member_bits,
-    const UShortArray& quad_order,   const UShortArray& lev_index,
-    const UShort2DArray& colloc_key, const SizetArray& colloc_index,
-    RealVector& member_t1_coeffs,    RealVector& member_t1_wts,
-    RealMatrix& member_t2_coeffs,    RealMatrix& member_t2_wts);
+    const UShortArray& quad_order,    const UShortArray& lev_index,
+    const UShort2DArray& colloc_key,  const SizetArray& colloc_index,
+    RealVector& member_t1_coeffs,     RealVector& member_t1_wts,
+    RealMatrix& member_t2_coeffs,     RealMatrix& member_t2_wts,
+    UShort2DArray& member_colloc_key, SizetArray& member_colloc_index);
 
   //
   //- Heading: Data
