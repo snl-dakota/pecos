@@ -105,22 +105,14 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 						       smolyakMultiIndex[lev]);
   else { // utilize webbur::sandia_sgmga_vcn_ordered
 
-    // w*alpha_min-|alpha| < |alpha . j| <= w*alpha_min for 0-based j index sets
-    // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
-    // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
-    // w-N+1 <= |j| <= w.
+    // With scaling alpha_min = 1: q_min < |alpha . j| <= q_max.
     IntArray x(numVars), x_max(numVars); //x_max = ssgLevel;
-    Real wt_sum = 0., q_max = ssgLevel;
+    Real q_min = -1., q_max = ssgLevel; // no lower bound for hierarchical
     for (size_t i=0; i<numVars; ++i) {
       const Real& wt_i = anisoLevelWts[i];
-      wt_sum += wt_i;
       // minimum nonzero weight is scaled to 1, so just catch special case of 0
       x_max[i] = (wt_i > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
     }
-    Real q_min = ssgLevel - wt_sum;
-#ifdef DEBUG
-    PCout << "q_min = " << q_min << " q_max = " << q_max;
-#endif // DEBUG
 
     // We take the simple approach and restart vcn iteration from scratch,
     // checking each index_set for current inclusion in smolyakMultiIndex.
