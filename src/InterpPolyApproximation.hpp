@@ -405,14 +405,20 @@ type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   const UShortArray& basis_index,
 			   const SizetList& subset_indices)
 {
+  // deriv_index must be contained within subset_indices, else the grad is zero
+  bool deriv = false;
+
   Real L1_grad = 1.; SizetList::const_iterator cit; size_t k;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    k        = *cit;
-    L1_grad *= (k == deriv_index) ?
-      polynomialBasis[basis_index[k]][k].type1_gradient(x[k], key[k]) :
-      polynomialBasis[basis_index[k]][k].type1_value(x[k], key[k]);
+    k = *cit;
+    if (k == deriv_index) {
+      L1_grad *= polynomialBasis[basis_index[k]][k].type1_gradient(x[k],key[k]);
+      deriv = true;
+    }
+    else
+      L1_grad *= polynomialBasis[basis_index[k]][k].type1_value(x[k], key[k]);
   }
-  return L1_grad;
+  return (deriv) ? L1_grad : 0.;
 }
 
 
@@ -451,19 +457,18 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   size_t interp_index, const UShortArray& key,
 			   const UShortArray& basis_index)
 {
-  // deriv_index  = desired gradient component
+  //  deriv_index = desired gradient component
   // interp_index = index of gradient component used in type2 interpolation
   Real L2_grad = 1.;
-  if (interp_index == deriv_index) // match in grad and type2 interp components
-    for (size_t l=0; l<numVars; ++l)
+  for (size_t l=0; l<numVars; ++l)
+    if (l == deriv_index)
       L2_grad *= (l == interp_index) ?
 	polynomialBasis[basis_index[l]][l].type2_gradient(x[l], key[l]) :
-	polynomialBasis[basis_index[l]][l].type1_value(x[l],    key[l]);
-  else                          // mismatch in grad and type2 interp components
-    for (size_t l=0; l<numVars; ++l)
-      L2_grad *= (l == interp_index) ?
-	polynomialBasis[basis_index[l]][l].type2_value(x[l],    key[l]) :
 	polynomialBasis[basis_index[l]][l].type1_gradient(x[l], key[l]);
+    else
+      L2_grad *= (l == interp_index) ?
+	polynomialBasis[basis_index[l]][l].type2_value(x[l], key[l]) :
+	polynomialBasis[basis_index[l]][l].type1_value(x[l], key[l]);
   return L2_grad;
 }
 
@@ -475,24 +480,27 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   const UShortArray& basis_index,
 			   const SizetList& subset_indices)
 {
-  // deriv_index  = desired gradient component
+  //  deriv_index = desired gradient component
   // interp_index = index of gradient component used in type2 interpolation
+
+  // deriv_index must be contained within subset_indices, else the grad is zero
+  bool deriv = false;
+
   Real L2_grad = 1.; SizetList::const_iterator cit; size_t l;
-  if (interp_index == deriv_index) // match in grad and type2 interp components
-    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      l        = *cit;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    l = *cit;
+    if (l == deriv_index) {
       L2_grad *= (l == interp_index) ?
 	polynomialBasis[basis_index[l]][l].type2_gradient(x[l], key[l]) :
-	polynomialBasis[basis_index[l]][l].type1_value(x[l],    key[l]);
-    }
-  else                          // mismatch in grad and type2 interp components
-    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      l        = *cit;
-      L2_grad *= (l == interp_index) ?
-	polynomialBasis[basis_index[l]][l].type2_value(x[l],    key[l]) :
 	polynomialBasis[basis_index[l]][l].type1_gradient(x[l], key[l]);
+      deriv = true;
     }
-  return L2_grad;
+    else
+      L2_grad *= (l == interp_index) ?
+	polynomialBasis[basis_index[l]][l].type2_value(x[l], key[l]) :
+	polynomialBasis[basis_index[l]][l].type1_value(x[l], key[l]);
+  }
+  return (deriv) ? L2_grad : 0.;
 }
 
 

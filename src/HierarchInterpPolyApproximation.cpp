@@ -1710,7 +1710,7 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 					cprod_member_t1_coeffs,
 					cprod_member_t2_coeffs);
 
-    // integrate (h-\mu)^2 over the reduced member dimensions
+    // integrate (h-\mu)^2 over the reduced member dimensions using member wts
     complement_variance = expectation(cprod_member_t1_coeffs, member_t1_wts,
 				      cprod_member_t2_coeffs, member_t2_wts);
 
