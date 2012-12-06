@@ -114,7 +114,7 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
 void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
 		RealVector &S, int &rank, Real rcond )
 {
-  Teuchos::LAPACK<int, Real> la;
+    Teuchos::LAPACK<int, Real> la;
 
   //-----------------//
   // Allocate memory //
@@ -132,37 +132,28 @@ void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
   Real *work;  // Teuchos::LAPACK work array
   int info;      // Teuchos::LAPACK output flag
   int lda = A_copy.stride();
-  int ldb = std::max( M, N );
+  int ldb = std::max( std::max( B.stride(), lda ), N );
 
-  // Create a copy of B that if necessary has enough memory
-  // to store the (N x num_rhs) solution. Necessary if M > N. 
-  RealMatrix B_copy( ldb, num_rhs, false );
-
-  // Create view of submatrix of B_copy which we will use to assign B to B_copy
-  RealMatrix B_sub_view( Teuchos::View, B_copy, M, num_rhs, 0, 0 );
-  B_sub_view.assign( B );
+  X.shapeUninitialized( M, num_rhs );
+  X.assign( B );
+  X.reshape( ldb, num_rhs );
+;
 
   lwork = -1;             // special code for workspace query
   work  = new Real [1]; // temporary work array
-  la.GELSS( M, N, num_rhs, A_copy.values(), lda, B_copy.values(), ldb, 
+  la.GELSS( M, N, num_rhs, A_copy.values(), lda, X.values(), ldb, 
 	    S.values(), rcond, &rank, work, lwork, &info );
   lwork = (int)work[0];  // optimal work array size returned by query
+
   delete [] work;
   work  = new Real [lwork]; // Optimal work array
 
   //---------------------------------//
   // Solve Ax = b                    //
   //---------------------------------//
-
-  la.GELSS( M, N, num_rhs, A_copy.values(), lda, B_copy.values(), ldb, 
+  la.GELSS( M, N, num_rhs, A_copy.values(), lda, X.values(), ldb, 
 	    S.values(), rcond, &rank, work, lwork, &info );
-
-  // Store solution vectors in X. If M > N X will be smaller than B_copy.
-  // If M > N this is important.
-  X.shapeUninitialized( N, num_rhs );
-  // Create view of submatrix of Bcopy which contains the solution vectors
-  RealMatrix X_view( Teuchos::View, B_copy, N, num_rhs, 0, 0 );
-  X.assign( X_view );
+  X.reshape( N, num_rhs );
 
   delete [] work;
 };

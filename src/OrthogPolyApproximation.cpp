@@ -1801,14 +1801,10 @@ L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   opts.verbosity = 0;
   CSTool.solve( A, B, solutions, opts, opts_list );
 
-  //CS.write_matrix_to_file(A,"A.csv");
-  //CS.write_matrix_to_file(B,"B.csv");
-  //CS.write_matrix_to_file(X,"X.csv");
+  copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
 
-  for ( int j = 0; j < numExpansionTerms; j++ )
-    { 
-      expansionCoeffs[j] = solutions[0](j,0);
-    }
+  delete [] A_matrix;
+  delete [] b_vectors;
 
   return L1_solver_err;
 }
@@ -2027,19 +2023,28 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   // > expansionCoeffFlag+expansionCoeffGradFlag with inconsistent faults
   //   (two solves: first with single RHS, second with multiple RHS)
 
+  CompressedSensingTool CSTool;
+  CompressedSensingOptions opts;
+  CompressedSensingOptionsList opts_list;
+  RealMatrixList solutions;
+
+  opts.solver = LS;
+  opts.storeHistory = false;
+  opts.epsilon = 1e-15;
+  opts.standardizeInputs = false; // false essential when using derivatives
+  opts.verbosity = 0;
+
+
   Teuchos::LAPACK<int, Real> la; bool lapack_err = false;
   size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.size(),
     num_deriv_vars = expansionCoeffGrads.numRows();
-  double* A_matrix; // 1D matrix of polynomial terms, column-major F77 ordering
-  double* work;     // LAPACK work array
+  double* A_matrix; // 1D matrix of polynomial terms, column-major F77 orderings
   int num_rows_A =  0, // number of rows in matrix A
       num_cols_A = numExpansionTerms, // number of columns in matrix A
-      info = 0, /* LAPACK output flag */ lwork, /* size of LAPACK work array */
       num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs;
   double rcond   = -1.; // input:  use macheps to rank singular vals of A
   int    rank    =  0;  // output: effective rank of matrix A
   double* b_vectors; // input: (multiple) RHS of response data
-  double* s_vector = new double [num_cols_A]; // output: singular values
   bool add_val, add_grad; SizetShortMap::const_iterator fit;
   const SizetShortMap& failed_resp_data = surrData.failed_response_data();
 
@@ -2055,16 +2060,6 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 
     A_matrix  = new double [num_rows_A*num_cols_A]; // "A" in A*x = b
     b_vectors = new double [num_rows_A*num_rhs];    // "b" in A*x = b
-
-    // Get the optimal work array size
-    lwork = -1; // special code for workspace query
-    work  = new double [1]; // temporary work array
-    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-    lwork = (int)work[0]; // optimal work array size returned by query
-    delete [] work;
-    work  = new double [lwork]; // Optimal work array
-
     // The "A" matrix is a contiguous block of memory packed in column-major
     // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
     // example, the 6 elements of A(2,3) are stored in the order A(1,1),
@@ -2089,49 +2084,33 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
       pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr, add_grad,
 			 b_vectors, b_cntr);
     }
+
+    RealMatrix A(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
+      B(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
+
 #ifdef DEBUG
-    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
-               b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
-    PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
-    PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
+    PCout << "A_matrix:\n";  write_data(PCout, A, false, true, true);
+    PCout << "b_vectors:\n"; write_data(PCout, B, false, true, true);
 #endif // DEBUG
 
     // if no RHS augmentation, then solve for coeffs now
     if (!multiple_rhs) {
-      info = 0;
-      la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	       num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-      if (info) lapack_err = true;
 
-      // DGELSS returns the x solution in the numExpansionTerms x num_rhs
-      // submatrix of b_vectors
-      copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
-#ifdef DEBUG
-      // For SVD, condition number can be extracted from singular values
-      PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
-	    << s_vector[0]/s_vector[num_cols_A-1] << '\n';
-#endif // DEBUG
+      CSTool.solve( A, B, solutions, opts, opts_list );
+
+      copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
+      
       delete [] A_matrix;
       delete [] b_vectors;
-      delete [] work;
     }
   }
 
   if (expConfigOptions.expansionCoeffGradFlag) {
-
     if (!multiple_rhs) {
       num_rows_A = num_data_pts_grad;
       num_rhs    = num_grad_rhs; num_coeff_rhs = 0;
       A_matrix   = new double [num_rows_A*num_cols_A];
       b_vectors  = new double [num_rows_A*num_rhs];
-
-      lwork = -1; // special code for workspace query
-      work  = new double [1]; // temporary
-      la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	       num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-      lwork = (int)work[0]; // optimal work array size
-      delete [] work;
-      work  = new double [lwork]; // optimal work array
 
       // repack "A" matrix with different Psi omissions
       a_cntr = 0;
@@ -2166,37 +2145,36 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 	++b_cntr;
       }
     }
+    RealMatrix A(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
+               B(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
+
 #ifdef DEBUG
-    RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
-               b2(Teuchos::View, b_vectors, num_rows_A, num_rows_A, num_rhs);
-    PCout << "A_matrix:\n";  write_data(PCout, A2, false, true, true);
-    PCout << "b_vectors:\n"; write_data(PCout, b2, false, true, true);
+    PCout << "A_matrix:\n";  write_data(PCout, A, false, true, true);
+    PCout << "b_vectors:\n"; write_data(PCout, B, false, true, true);
 #endif // DEBUG
 
     // solve
-    info = 0;
-    la.GELSS(num_rows_A, num_cols_A, num_rhs, A_matrix, num_rows_A, b_vectors,
-	     num_rows_A, s_vector, rcond, &rank, work, lwork, &info);
-    if (info) lapack_err = true;
+    CSTool.solve( A, B, solutions, opts, opts_list );
+
+    if (multiple_rhs)
+      {
+	for ( int j = 0; j < numExpansionTerms; j++ )
+	  expansionCoeffs[j] = solutions[0](j,0);
+      }
 
     // DGELSS returns the x solution in the numExpansionTerms x num_rhs
     // submatrix of b_vectors
-    if (multiple_rhs)
-      copy_data(b_vectors, numExpansionTerms, expansionCoeffs);
+    /*if (multiple_rhs)
+      copy_data(b_vectors, numExpansionTerms, expansionCoeffs);*/
     for (i=0; i<numExpansionTerms; ++i)
       for (j=0; j<num_grad_rhs; ++j)
 	expansionCoeffGrads(j,i)
-	  = b_vectors[(j+num_coeff_rhs)*num_data_pts_grad+i];
-#ifdef DEBUG
-    // For SVD, the condition number can be extracted from the singular values
-    PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
-	  << s_vector[0]/s_vector[num_cols_A-1] << '\n';
-#endif // DEBUG
+	  = solutions[0]((j+num_coeff_rhs)*num_data_pts_grad+i,0);
+    
+
     delete [] A_matrix;
     delete [] b_vectors;
-    delete [] work;
   }
-  delete [] s_vector;
   return lapack_err;
 }
 
@@ -3122,8 +3100,7 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
   // first coefficient is used in each of the LLS solves
   Real log_coeff0 = std::log10(std::abs(expansionCoeffs[0])), tol = -10.;
   short last_index_above = -1, new_size;
-  //Teuchos::LAPACK<int, Real> la;
-  //int rank = 0, info = 0, lwork; RealVector s_vector(1), work;
+
   for (i=0; i<numVars; ++i) {
     RealVector& A_i = A_vectors[i]; RealVector& b_i = b_vectors[i];
 

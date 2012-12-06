@@ -1479,10 +1479,15 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	{
 	case LS:
 	  {
-	    RealVector singularValues;
+	    RealVector singular_values;
 	    int rank(0);
-	    svd_solve( A_stand, B_stand, single_solution, singularValues, rank, 
+	    svd_solve( A_stand, B_stand, single_solution, singular_values, rank, 
 		      solver_tolerance );
+#ifdef DEBUG
+	    // For SVD, condition number can be extracted from singular values
+	    PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "
+		  << singular_values[0]/singular_values[N-1] << '\n';
+#endif // DEBUG
 	    break;
 	  }
 	case BP:
