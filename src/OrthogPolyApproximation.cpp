@@ -1790,10 +1790,16 @@ L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   RealMatrix B( Teuchos::View, b_vectors, num_rows_A, num_rows_A, 
 		num_rhs );
 
-  CompressedSensing CS;
-  RealMatrix X;
-  //BasisPursuit( A, B, X );
-  CS.OrthogonalMatchingPursuit( A, B, X );
+  CompressedSensingTool CSTool;
+  CompressedSensingOptions opts;
+  CompressedSensingOptionsList opts_list;
+  RealMatrixList solutions;
+
+  opts.solver = LASSO;
+  opts.storeHistory = false;
+  opts.epsilon = 1e-15;
+  opts.verbosity = 0;
+  CSTool.solve( A, B, solutions, opts, opts_list );
 
   //CS.write_matrix_to_file(A,"A.csv");
   //CS.write_matrix_to_file(B,"B.csv");
@@ -1801,7 +1807,7 @@ L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 
   for ( int j = 0; j < numExpansionTerms; j++ )
     { 
-      expansionCoeffs[j] = X(j,0);
+      expansionCoeffs[j] = solutions[0](j,0);
     }
 
   return L1_solver_err;

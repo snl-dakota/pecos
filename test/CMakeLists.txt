@@ -76,3 +76,9 @@ add_test(pecos_lhs_driver pecos_lhs_driver)
 #target_link_libraries(pecos_hierarch_approx_driver ${pecos_libs})
 #add_test(pecos_hierarch_approx_driver pecos_hierarch_approx_driver)
 
+
+# Complete these for each specific test.
+add_executable(mytest mytest.cpp)
+target_link_libraries(mytest ${pecos_libs})
+add_test(mytest mytest)
+

@@ -1,741 +1,1650 @@
-/*  _______________________________________________________________________
-
-    PECOS: Parallel Environment for Creation Of Stochastics
-    Copyright (c) 2011, Sandia National Laboratories.
-    This software is distributed under the GNU Lesser General Public License.
-    For more information, see the README file in the top Pecos directory.
-    _______________________________________________________________________ */
-
-//- Description:  Functions for solving undertermined linear systems using 
-// compressed sensing
-
 #include "CompressedSensing.hpp"
+#include "MathTools.hpp"
 
-namespace Pecos {
-
-
-  void CompressedSensing::write_matrix_to_file( RealMatrix& M, 
-						std::string filename )
-  {
-    std::ofstream fid;
-    fid.precision(16);
-    fid.open(filename.c_str());
-    fid << M;
-    fid.close();
-  }
-
-  void CompressedSensing:: copy_data_to_matrix( Real *A_matrix, int m, int n, 
-						RealMatrix& A )
-  {
-    if ( ( m != A.numRows() ) || ( n != A.numCols() ) )
-      A.shapeUninitialized(m,n);
-    int k = 0;
-    for (int j = 0; j < n; j++)
+solverType solverTypeCast( int i )
+{
+  solverType sType;
+  switch( i )
+    {
+    case 0:
       {
-	for (int i = 0; i < m; i++)
-	  {
-	    A(i,j) = A_matrix[k];
-	    k++;
-	  }
-      }	   
-  };
-
-  void CompressedSensing::copy_data_from_matrix( RealMatrix& A, Real *A_matrix  )
-  {
-    int m( A.numRows() ), n( A.numCols() );
-
-    int k = 0;
-    for (int j = 0; j < n; j++)
-      {
-	for (int i = 0; i < m; i++)
-	  {
-	    A_matrix[k] = A(i,j);
-	    k++;
-	  }
-      }	   
-  };
-
-  Real CompressedSensing::DotProduct ( RealVector &v1, RealVector& v2 )
-  {
-    if ( v1.length() != v2.length() )
-      PCout << "DotProduct error: vectors do not have the same length\n";
-    Real sum = 0.0;
-    for ( int i = 0; i < v1.length(); i++ )
-      {
-	sum += v1[i] * v2[i];
+	sType = LS;
+	break;
       }
-    return sum;
-  };
-
-  int CompressedSensing::CholeskySolve( RealMatrix& A, RealMatrix& B,
-					RealMatrix& X )
-  {
-    bool lapack_err = false;
-    Teuchos::LAPACK<int, Real> la;
-
-    int m( A.numRows() ), num_rhs( B.numCols() );
-    Real *A_matrix, *B_matrix;
-    A_matrix = new Real [m*m];
-    B_matrix = new Real [m*num_rhs];
-    copy_data_from_matrix( A, A_matrix );
-    copy_data_from_matrix( B, B_matrix );
-    int info;
-    char uplo( 'L' );
-    // Compute the Cholesky lower triangular factorisation of A
-    la.POTRF( uplo, m, A_matrix, m, &info );
-    if ( info > 0 ) 
+    case 1:
       {
-	PCout << "The matrix A is not positive definite"<< std::endl;
-	lapack_err = true;
-	return lapack_err;
+	sType = BP;
+	break;
       }
-    if ( info < 0 ) 
+    case 2:
       {
-	lapack_err = true;
-	return lapack_err;
+	sType = BPDN;
+	break;
       }
-
-    // Solves the system of linear equations A*X = B with a symmetric
-    // positive definite matrix A=LL' using the Cholesky factorization
-    la.POTRS( uplo, m, num_rhs, A_matrix, m, B_matrix, m, &info );
-    copy_data_to_matrix( B_matrix, m, num_rhs, X );
-
-    delete [] A_matrix;
-    delete [] B_matrix;
-  
-    if ( info < 0 ) lapack_err = true;
-
-    return lapack_err;
-  };
-
-  double CompressedSensing::GetSurrogateDualityGapAndSlackness( 
-					     RealMatrix& primal_residual,
-					     RealMatrix& fu1, 
-					     RealMatrix& fu2, 
-					     RealMatrix& lamu1, 
-					     RealMatrix& lamu2, 
-					     RealMatrix& AtV,
-					     double mu,
-					     double tol,
-					     RealVector& sdg,
-					     RealVector& tau,
-					     RealVector& slackness_norm,
-					     IntVector& complete)
-  {
-    int m = primal_residual.numRows();
-    int n = fu1.numRows();
-    int num_rhs = fu1.numCols();
-
-    double sdg_max = 0.0;
-    for ( int k = 0; k < num_rhs; k++ )
+    case 3:
       {
-	RealVector fu1_column_k( Teuchos::View, fu1[k], n );
-	RealVector fu2_column_k( Teuchos::View, fu2[k], n );
-	RealVector lamu1_column_k( Teuchos::View, lamu1[k], n );
-	RealVector lamu2_column_k( Teuchos::View, lamu2[k], n );
-	sdg[k] = - DotProduct( fu1_column_k , lamu1_column_k ) -	\
-	  DotProduct( fu2_column_k , lamu2_column_k );
-	sdg_max = std::max( sdg_max, sdg[k] );
-	tau[k] = mu * 2 * n / sdg[k];
-       
-	slackness_norm[k] = 0.0;
-	for ( int j = 0; j < n; j++ )
-	  {
-	    double centrality_residual_jk = -lamu1(j,k) * fu1(j,k) - \
-	      1.0 / tau[k];
-	    double centrality_residual_njk = -lamu2(j,k) * fu2(j,k) - \
-	      1.0 / tau[k];
-	    double dual_residual_jk = lamu1(j,k) - lamu2(j,k) + AtV(j,k);
-	    double dual_residual_njk = 1.0 - lamu1(j,k) - lamu2(j,k);
-	    slackness_norm[k] += centrality_residual_jk * \
-	      centrality_residual_jk;
-	    slackness_norm[k] += centrality_residual_njk *	\
-	      centrality_residual_njk;
-	    slackness_norm[k] += dual_residual_jk * \
-	      dual_residual_jk;
-	    slackness_norm[k] += dual_residual_njk * \
-	      dual_residual_njk;
-	  }
-	for ( int i = 0; i < m; i++ )
-	  {
-	    slackness_norm[k] += primal_residual(i,k) * primal_residual(i,k);
-	  }
-	slackness_norm[k] = \
-	  std::sqrt(slackness_norm[k]);
-	//PCout << sdg[k] << "," << tol << "," << complete[k] << "\n";
-	complete[k] = ( ( complete[k] ) || ( sdg[k] < tol ) );
+	sType = OMP;
+	break;
       }
-    return sdg_max;
-  };
-
-  void CompressedSensing::BasisPursuit( RealMatrix& A, RealMatrix& B, 
-					RealMatrix& X )
-  {
-    Teuchos::LAPACK<int, Real> la;
-
-    // Basis Pursuit algorithm parameters
-    Real tol( 1.e-3 );   // primal-duality gap toleranace
-    int max_iter( 50 );  // maximum number of primal dual iterations
-    Real alpha( 1.e-2 ); // used in residual termination condition
-    Real beta( 0.5 );    // used in back tracking procedure
-    Real mu( 10.0 );     // used to update slackness condition
-    Real cgtol( 1.e-8 ); // tolerance of the conjugate gradient algorithm
-
-    // Extract matrix shapes
-    int m( A.numRows() ), n( A.numCols() ), num_rhs( B.numCols() );
-
-    //-----------------------------------//
-    // Estimate solution vector X = A'*B //
-    //-----------------------------------//
-    X.reshape( n, num_rhs );
-    X.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, B, 0.0 );
-
-    //------------------------------------------------------------//
-    // Check whether starting point is in the feasiable region    //
-    // If not use the least squares solution as new start point X //
-    //------------------------------------------------------------//
-    RealMatrix primal_residual( B );
-    primal_residual.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
-			      1.0, A, X, -1.0 );
-  
-    bool compute_least_squares = false;
-    for ( int k = 0; k < num_rhs; k++ )
+    case 4:
       {
-	RealVector b_column( Teuchos::View, B[k], n );
-	RealVector primal_residual_column_k( Teuchos::View, 
-					     primal_residual[k], n );
-	Real frob_norm_of_b_k = b_column.normFrobenius();
-	Real frob_norm_of_primal_residual_k = \
-	  primal_residual_column_k.normFrobenius();
-	if ( ( frob_norm_of_primal_residual_k * 
-	       frob_norm_of_primal_residual_k ) /
-	     ( frob_norm_of_b_k * frob_norm_of_b_k ) > cgtol )
-	  {
-	    // Starting point is not feasiable for at least one of the 
-	    // columns of b.
-	    compute_least_squares = true;
-	    break;
-	  }
+	sType = LASSO;
+	break;
       }
-  
-    if ( compute_least_squares )
+    case 5:
       {
-	// Solve (A'A)X = A'b where A*A' is positive definite symmetric matrix;
-	// Speicifically calcualte X =  A'inv(AA')*b
-
-	// TODO: replace AAt.multiply by SYRK blas routine which is currently
-	// not in teuchos
-	RealMatrix AAt( m, m ), W( n, num_rhs );
-	AAt.multiply( Teuchos::NO_TRANS, Teuchos::TRANS, 1.0, A, A, 0.0 );
-	CholeskySolve( AAt, B, W );
-	X.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, W, 0.0 );
+	sType = LARS;
+	break;
       }
-
-    //-------------------------------------------------------------------//
-    // Convert Basis Pursuit problem into traditional linear programming //
-    // problem.                                                          //
-    // Ensure the constraints $f_{u_1,i}$ and $f_{u_2,i}$ are always     //
-    // negative by choosing $u_i=0.95x_i+0.10\max_i{x}$, $i=1,\ldots,N$  //
-    //-------------------------------------------------------------------//
-
-    // TODO:: Perhaps write linear programming function seperate
-    // from basis pursuit function. merge fu1 and fu2 and lamu1 and lamu2
-    // into fu and lamu respectively which have shape ( 2*n , num_rhs )
-
-    RealMatrix U( n, num_rhs ), fu1( n, num_rhs ), fu2( n, num_rhs );
-    RealMatrix lamu1( n, num_rhs ), lamu2( n, num_rhs );
-    RealMatrix lamudiff( n, num_rhs );
-    for ( int k = 0; k < num_rhs ; k++ )
+    default:
       {
-	RealVector x_column( Teuchos::View, X[k], n );
-	Real x_column_k_max = x_column.normInf();
-	for ( int j = 0; j < n; j++ )
-	  {
-	    U(j,k) = 0.95 * std::fabs( X(j,k) ) + 0.10 * x_column_k_max;
-	    fu1(j,k) = X(j,k) - U(j,k);
-	    fu2(j,k) = -X(j,k) - U(j,k);
-	    lamu1(j,k) = -1.0 / fu1(j,k);
-	    lamu2(j,k) = -1.0 / fu2(j,k); 
-	    lamudiff(j,k) = lamu1(j,k) - lamu2(j,k);
-	  }
+	std::stringstream msg;
+	msg << "solverTypeCast() out of range. Cannot cast " << i;
+	msg << " to enum solverType";
+	throw( std::runtime_error( msg.str() ) );
       }
-
-    // Compute the dual variable v
-    RealMatrix V( m, num_rhs ), AtV( n, num_rhs );
-    V.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, -1.0 , A, lamudiff, 0.0 );
-    AtV.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, V, 0.0 );
-    primal_residual = B;
-
-    // Compute the primal_residual $r_\mathrm{pri} = AX-B$;
-    primal_residual.multiply(Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
-			     1.0, A, X, -1.0);
-  
-    // Compute surrogate duality gap (sdg) and update slackness condition (tau)
-    RealVector sdg( num_rhs ), tau( num_rhs ), slackness_norm( num_rhs );
-    IntVector complete( num_rhs );
-    Real sdg_max;
-    sdg_max = GetSurrogateDualityGapAndSlackness( primal_residual,
-						  fu1, 
-						  fu2, 
-						  lamu1, 
-						  lamu2, 
-						  AtV,
-						  mu,
-						  tol,
-						  sdg,
-						  tau,
-						  slackness_norm,
-						  complete);
-
-    //PCout << "X_matrix:\n"; write_data(PCout, X, false, true, true);
-    //PCout << "V_matrix:\n"; write_data(PCout, V, false, true, true);
-    //PCout << "AtV_matrix:\n"; write_data(PCout, AtV, false, true, true);
-    //PCout << "pimal_residual_matrix:\n"; write_data(PCout, primal_residual,false, true, true);
-    //PCout << "sdg_vector:\n"; write_data(PCout, sdg, false, true, true);
-    //PCout << "tau_vector:\n"; write_data(PCout, tau, false, true, true);
-    //PCout << "slackness_vector:\n"; write_data(PCout, slackness_norm, false,true, true);
-
-    //------------------------------------------//
-    // Iterate though the primal-dual algorithm //
-    //------------------------------------------//
-    int primal_dual_iter( 0 );
-    bool done = ( ( sdg_max < tol ) || ( primal_dual_iter >= max_iter ) );
-    RealMatrix w1( n, num_rhs ), w2( n, num_rhs );
-    RealMatrix sig1( n, num_rhs ), sig2( n, num_rhs ), sigx( n, num_rhs );
-    RealMatrix  w3( m, num_rhs ), w1p( m, num_rhs ), tmp1( n, num_rhs ), \
-      tmp2( n, m );
-    for ( int k = 0; k < num_rhs; k++)
-      complete[k] = false;
-    while ( !done )
-      {
-	primal_dual_iter++;
-      
-	//-------------------------------------------------------//
-	// Set up linear system to compute newton step direction //
-	//-------------------------------------------------------//
-	for ( int k = 0; k < num_rhs ; k++ )
-	  {
-	    for ( int j = 0; j < n; j++ )
-	      {
-		w1(j,k) = - ( - 1.0 / fu1(j,k) + 1.0 / fu2(j,k) ) / tau[k] \
-		  - AtV(j,k);
-		w2(j,k) = - 1.0 - ( 1.0 / fu1(j,k) + 1.0 / fu2(j,k) ) / tau[k];
-		sig1(j,k) = -lamu1(j,k) / fu1(j,k) - lamu2(j,k) / fu2(j,k);
-		sig2(j,k) =  lamu1(j,k) / fu1(j,k) - lamu2(j,k) / fu2(j,k);
-		sigx(j,k) =  sig1(j,k) - sig2(j,k) * sig2(j,k) / sig1(j,k);
-		tmp1(j,k)  =  w1(j,k) / sigx(j,k) - \
-		  w2(j,k) * sig2(j,k) / ( sigx(j,k) * sig1(j,k) );
-	      }
-	    for ( int i = 0; i < m; i++ )
-	      {
-		w3(i,k) = primal_residual(i,k);
-		w1p(i,k)  = w3(i,k);
-	      }
-	  }
-	w1p.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
-		      1.0, A, tmp1, -1.0 );
-	//PCout << "\n Iteration: " << primal_dual_iter << "\n";
-	//PCout << "w1_matrix:\n"; write_data(PCout, w1, false, true, true);
-	//PCout << "w2_matrix:\n"; write_data(PCout, w2, false, true, true);
-	//PCout << "w3_matrix:\n"; write_data(PCout, w3, false, true, true);
-	//PCout << "sig1_matrix:\n"; write_data(PCout, sig1, false, true, true);
-	//PCout << "sig2_matrix:\n"; write_data(PCout, sig2, false, true, true);
-	//PCout << "sigx_matrix:\n"; write_data(PCout, sigx, false, true, true);
-	//PCout << "w1p_matrix:\n"; write_data(PCout, w1p, false, true, true);
-
-	//--------------------------------------------------------//
-	// Compute newton step direction by solving linear system //
-	//--------------------------------------------------------//
-	RealMatrix H11p( m, m );
-	RealMatrix dV( m, num_rhs );
-
-	// Todo I neet to access elements of At. I do this by accessing
-	// underlying data of A and utilising flat 1D structure. Can this 
-	// be done a different way
-	Real *A_matrix;
-	A_matrix = A.values();
-	for ( int k = 0; k < num_rhs ; k++ )
-	  {
-	    if ( !complete[k] )
-	      {
-		for ( int i = 0; i < m; i++ )
-		  {
-		    for ( int j = 0; j < n; j++ )
-		      {
-			tmp2(j,i) = 1.0 / sigx(j,k) * A_matrix[j*m+i];
-		      }
-		  }
-		H11p.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
-			       1.0, A, tmp2, 0.0 );
-		//PCout << "tmp2_matrix:\n"; write_data(PCout, tmp2, false, true, true);
-		//PCout << "H11p_matrix:\n"; write_data(PCout, H11p, false, true,true);
-		
-		RealVector w1p_column_k( Teuchos::View, w1p[k], m );
-		RealVector dv_column_k( m, num_rhs );
-		CholeskySolve( H11p, w1p_column_k, dv_column_k );
-		// Copy dv_column_k to dV
-		for ( int i = 0 ; i < m; i++ )
-		  {
-		    dV(i,k) = dv_column_k[i];
-		  }
-	      }
-	  }
-	//--------------------------//
-	// Compute newton step size //
-	//--------------------------//
-	RealMatrix AtdV( n, num_rhs );
-	RealMatrix dX( n, num_rhs ), dU( n, num_rhs ), dlamu1( n, num_rhs ),\
-	  dlamu2( n, num_rhs );
-	RealVector step_size( num_rhs );
-	AtdV.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
-		       1.0, A, dV, 0.0);
-
-	for ( int k = 0; k < num_rhs ; k++ )
-	  {
-	    if ( !complete[k] )
-	      {
-		step_size[k] = 1.0;
-		for ( int j = 0; j < n; j++ )
-		  {
-		    dX(j,k) = ( w1(j,k) - w2(j,k) * sig2(j,k) / sig1(j,k) - \
-				AtdV(j,k) ) / sigx(j,k);
-		    dU(j,k) = ( w2(j,k) - sig2(j,k) * dX(j,k) ) / sig1(j,k);
-		    dlamu1(j,k) = lamu1(j,k) / fu1(j,k) * ( -dX(j,k) + dU(j,k) )\
-		      - lamu1(j,k) - 1.0 / ( tau[k] * fu1(j,k) );
-		    dlamu2(j,k) = lamu2(j,k) / fu2(j,k) * ( dX(j,k) + dU(j,k) )\
-		      - lamu2(j,k) - 1.0 / ( tau[k] * fu2(j,k) );
-
-		    if ( dlamu1(j,k) < 0 )
-		      {
-			step_size[k] = std::min( step_size[k], 
-						 -lamu1(j,k) / dlamu1(j,k) );
-		      }
-		    if ( dlamu2(j,k) < 0 )
-		      {
-			step_size[k] = std::min( step_size[k], 
-						 -lamu2(j,k) / dlamu2(j,k) );
-		      }
-		    if (  ( dX(j,k) - dU(j,k) ) > 0 )
-		      {
-			step_size[k] = std::min( step_size[k], -fu1(j,k) / \
-						 ( dX(j,k) - dU(j,k) ) );
-		      }
-		    if (  ( -dX(j,k) - dU(j,k) ) > 0 )
-		      {
-			step_size[k] = std::min( step_size[k], -fu2(j,k) / \
-						 ( -dX(j,k) - dU(j,k) ) );
-		      }
-		  }
-		step_size[k] *= 0.99;
-	      }
-	  }
-	RealMatrix AdX( m, num_rhs );
-	AdX.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
-		      1.0, A, dX, 0.0);
-
-	//PCout << "dV_matrix:\n"; write_data(PCout, dV, false, true, true);
-	//PCout << "dX_matrix:\n"; write_data(PCout, dX, false, true, true);
-	//PCout << "AdX_matrix:\n"; write_data(PCout, AdX, false, true, true);
-	//PCout << "AtdV_matrix:\n"; write_data(PCout, AtdV, false, true, true);
-	//PCout << "step_size_matrix:\n"; write_data(PCout, step_size, false,true, true);
-
-	//-------------------------------------------------------------------//
-	// Conduct line search to ensure the norm of the residuals decreases //
-	// sufficiently                                                      //
-	//-------------------------------------------------------------------//
-	bool sufficient_decrease = false;
-	int backiter = 0; // the iteration count of the backward line seach
-
-	// Continue while the norm of the residuals has not decreased 
-	// sufficiently for any of the quantities of interest.
-	RealMatrix X_p( n, num_rhs ), U_p( n, num_rhs );
-	RealMatrix lamu1_p( n, num_rhs ), lamu2_p( n, num_rhs );
-	RealMatrix fu1_p( n, num_rhs ), fu2_p( n, num_rhs );
-	RealMatrix AtV_p( n, num_rhs );
-	RealMatrix V_p( m, num_rhs ), primal_residual_p( m, num_rhs );
-	RealVector slackness_p_norm( num_rhs );
-	while ( !sufficient_decrease )
-	  {
-	    sufficient_decrease = true;
-	    for ( int k = 0; k < num_rhs ; k++ )
-	      {
-		if ( !complete[k] )
-		  {
-		    slackness_p_norm[k] = 0.0;
-		    for ( int j = 0; j < n; j++ )
-		      {
-			X_p(j,k)     =  X(j,k) + step_size[k] * dX(j,k);
-			U_p(j,k)     =  U(j,k) + step_size[k] * dU(j,k);
-			AtV_p(j,k)   =  AtV(j,k) + step_size[k] * AtdV(j,k);
-			lamu1_p(j,k) =  lamu1(j,k) + step_size[k] * dlamu1(j,k);
-			lamu2_p(j,k) =  lamu2(j,k) + step_size[k] * dlamu2(j,k);
-			fu1_p(j,k)   =  X_p(j,k) - U_p(j,k);
-			fu2_p(j,k)   = -X_p(j,k) - U_p(j,k);
-
-			// 0:N-1
-			slackness_p_norm[k] += \
-			  ( lamu1_p(j,k) - lamu2_p(j,k) + AtV_p(j,k) ) * \
-			  ( lamu1_p(j,k) - lamu2_p(j,k) + AtV_p(j,k) );
-			// N:2N-1
-			slackness_p_norm[k] += \
-			  ( 1.0 - lamu1_p(j,k) - lamu2_p(j,k) ) * \
-			  ( 1.0 - lamu1_p(j,k) - lamu2_p(j,k) );
-			// 2N:3N-1
-			slackness_p_norm[k] += \
-			  ( -lamu1_p(j,k) * fu1_p(j,k) - 1.0 / tau[k] ) * \
-			  ( -lamu1_p(j,k) * fu1_p(j,k) - 1.0 / tau[k] );
-			// 3N:4N-1
-			slackness_p_norm[k] += \
-			  ( -lamu2_p(j,k) * fu2_p(j,k) - 1.0 / tau[k] ) * \
-			  ( -lamu2_p(j,k) * fu2_p(j,k) - 1.0 / tau[k] );
-		      }
-
-		    for ( int i = 0; i < m; i++ )
-		      {
-			V_p(i,k)  = V(i,k) + step_size[k] * dV(i,k);
-			primal_residual_p(i,k) = primal_residual(i,k) +	\
-			  step_size[k] * AdX(i,k);
-			slackness_p_norm[k] += primal_residual_p(i,k) *	\
-			  primal_residual_p(i,k);
-		      }
-
-		    slackness_p_norm[k] =		\
-		      std::sqrt( slackness_p_norm[k] );
-		    if ( slackness_p_norm[k] >	\
-			 ( 1.0 - alpha * step_size[k] ) * slackness_norm[k] )
-		      {
-			sufficient_decrease = false;
-		      }
-		    step_size[k] *= beta;
-		  }
-		else
-		  {
-		    for ( int j = 0; j < n; j++ )
-		      {
-			X_p(j,k) = X(j,k);
-		      }
-		  }
-	      }
-	  
-	    backiter++;
-	    if ( backiter > 32 )
-	      {
-		PCout << "Stuck backtracking, returning last iterate.\n";
-		X_p = X;
-		break;
-	      }
-	  }
-	X = X_p; U = U_p;
-	V = V_p; AtV = AtV_p;
-	lamu1 = lamu1_p; lamu2 = lamu2_p;
-	fu1 = fu1_p; fu2 = fu2_p;
-	primal_residual = primal_residual_p;
-	// Update surrogate duality gap and the slackness condition
-	sdg_max = GetSurrogateDualityGapAndSlackness( primal_residual,
-						      fu1, 
-						      fu2, 
-						      lamu1, 
-						      lamu2, 
-						      AtV,
-						      mu,
-						      tol,
-						      sdg,
-						      tau,
-						      slackness_norm,
-						      complete);
-
-	//PCout << "sdg_vector:\n"; write_data(PCout, sdg, false, true, true);
-	//PCout << "tau_vector:\n"; write_data(PCout, tau, false, true, true);
-	//PCout << "slackness_vector:\n"; write_data(PCout, slackness_norm, false,true, true);
-	
-	done = ( ( sdg_max < tol ) || ( primal_dual_iter >= max_iter ) );      
-      }
-    //PCout << "X_matrix:\n"; write_data(PCout, X, false, true, true);
+    };
+  return sType;
 };
 
-  int CompressedSensing::ArgMaxMagnitude(RealVector& v)
-  {
-    //The following blas call does not work
-    //Teuchos::BLAS<int, double> blas;
-    //Real *v_raw;
-    //v_raw = v.values();
-    //return blas.IAMAX( v.length(), v_raw, 1 );
-    int argMax = 0;
-    double max = std::fabs(v[0]);
-    for ( int i = 0; i < v.length(); i++ )
+Real CompressedSensingTool::BP_surrogate_duality_gap( 
+						     RealVector &primal_residual,
+						     RealVector &f_1, 
+						     RealVector &f_2, 
+						     RealVector &lambda_1, 
+						     RealVector &lambda_2, 
+						     RealVector &Atv, 
+						     Real mu, 
+						     Real primal_dual_tol, 
+						     Real &t, 
+						     Real &slackness_norm )
+{
+  int M(primal_residual.numRows() ), N( f_1.numRows() );
+
+  Real sdg( 0.0 );
+  sdg = - f_1.dot( lambda_1 ) - f_2.dot( lambda_2 );
+  t = mu * 2 * N / sdg;
+       
+  slackness_norm = 0.0;
+  for ( int j = 0; j < N; j++ )
+    {
+      Real centrality_residual_j  = -lambda_1[j] * f_1[j] - 1.0 / t;
+      Real centrality_residual_nj = -lambda_2[j] * f_2[j] - 1.0 / t;
+      Real dual_residual_j = lambda_1[j] - lambda_2[j] + Atv[j];
+      Real dual_residual_nj = 1.0 - lambda_1[j] - lambda_2[j];
+      slackness_norm += centrality_residual_j * centrality_residual_j;
+      slackness_norm += centrality_residual_nj * centrality_residual_nj;
+      slackness_norm += dual_residual_j * dual_residual_j;
+      slackness_norm += dual_residual_nj * dual_residual_nj;
+    }
+  for ( int i = 0; i < M; i++ )
+    {
+      slackness_norm += primal_residual[i] * primal_residual[i];
+    }
+  slackness_norm = std::sqrt( slackness_norm );
+
+  return sdg;
+};
+
+void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A, 
+								  RealMatrix &B, 
+								  RealMatrix &X,
+							 Real primal_dual_tol, 
+								  Real cg_tol, 
+								  int verbosity )
+{
+  Teuchos::LAPACK<int, Real> la;
+  
+  // Extract matrix shapes
+  int M( A.numRows() ), N( A.numCols() ), num_rhs( B.numCols() );
+
+
+  // Initialise memory for the solutions
+  X.shapeUninitialized( N, num_rhs );
+ 
+  // Basis Pursuit algorithm parameters
+  int max_iter( 30 );  // maximum number of primal dual iterations
+  Real alpha( 1.e-2 ); // used in residual termination condition
+  Real beta( 0.5 );    // used in back tracking procedure
+  Real mu( 10.0 );     // used to update slackness condition
+
+  // Allocate memory for the elements use to construct the Hessian
+  // of the objective function
+  RealVector f_1( N, false ), f_2( N, false ), lambda_1( N, false ), 
+    lambda_2( N, false ), lambda_diff( N, false ), newton_step_rhs( M, false );
+  RealMatrix newton_step_pos_def_matrix( M, M );
+  
+  // Allocate memory for storing and computing newton steps
+  RealVector Atdv( N, false ), dx( N, false ), du( N, false ), 
+    dlambda_1( N, false ), dlambda_2( N, false ), dv( M, false ), 
+    Adx( M, false );
+
+  // Allocate memory for the updated variables to be temporarily stored
+  RealVector x_new( N, false ), u_new( N, false ), v_new( M, false ), 
+    r_new( M, false ), f_1_new( N, false ), f_2_new( N, false ), 
+    Atv_new( N, false ), lambda_1_new( N, false ), lambda_2_new( N, false );
+
+  for ( int k = 0; k < num_rhs; k++ )
+    {
+      //------------------------------------------------------------//
+      // Check whether starting point is in the feasiable region    //
+      // If not use the least squares solution as new start point X //
+      //------------------------------------------------------------//
+      RealVector x( Teuchos::View, X[k], N );
+      RealVector b( Teuchos::View, B[k], M );
+      RealVector r( b );
+      //Not necessary because X is set to zero( uninitialized) above
+      //r.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, x, -1.0 );
+
+      Real frob_norm_of_b = b.normFrobenius();
+      Real frob_norm_of_r = r.normFrobenius();
+
+      Real initial_guess_tol = ( cg_tol < 0 ) ? 1e-8 : cg_tol;
+      if ( ( frob_norm_of_r * frob_norm_of_r ) /
+	   ( frob_norm_of_b * frob_norm_of_b ) > initial_guess_tol )
+	{
+	  if ( verbosity > 0 )
+	    {
+	      std::cout << "BP_primal_dual_interior_point_method() ";
+	      std::cout << "Initial guess is not feasiable. ";
+	      std::cout << "Computing least squares estimate\n";
+	    }
+
+	  // Solve AX = b
+	  int rank;
+	  RealVector singular_values; // singular values
+	  svd_solve( A, b, x, singular_values, rank );
+	  // Compute reciprocal of condition number
+	  Real rcond = singular_values[singular_values.length()-1] / 
+	    singular_values[0];
+	  if ( rcond < 1e-14 )
+	    {
+	      std::string msg = "BP_primal_dual_interior_point_method() ";
+	      msg += "A is ill conditioned. Cannot find starting point";
+	      throw( std::runtime_error( msg ) );
+	    }
+	  // Compute the primal_residual $r_\mathrm{pri} = Ax-b$;
+	  r.assign( b );
+	  r.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, x, -1.0 );
+	}
+ 
+      //-------------------------------------------------------------------//
+      // Convert Basis Pursuit problem into traditional linear programming //
+      // problem.                                                          //
+      // Ensure the constraints $f_{u_1,i}$ and $f_{u_2,i}$ are always     //
+      // negative by choosing $u_i=0.95x_i+0.10\max_i{x}$, $i=1,\ldots,N$  //
+      //-------------------------------------------------------------------//
+      RealVector u( N, false );
+
+      Real x_max = x.normInf();
+      for ( int j = 0; j < N; j++ )
+	{
+	  u[j] = 0.95 * std::fabs( x[j] ) + 0.10 * x_max;
+	  f_1[j] = x[j] - u[j];
+	  f_2[j] = -x[j] - u[j];
+	  lambda_1[j] = -1.0 / f_1[j];
+	  lambda_2[j] = -1.0 / f_2[j]; 
+	  lambda_diff[j] = lambda_1[j] - lambda_2[j];
+	}
+
+      // Compute the dual variable v
+      RealVector v( M, false ), Atv( N, false );
+      v.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, -1.0 , A, lambda_diff, 
+		  0.0 );
+      Atv.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, v, 0.0 );
+
+      // Compute surrogate duality gap (sdg) and update slackness condition (t)
+      Real t, slackness_norm;
+      Real sdg = BP_surrogate_duality_gap( r, f_1, f_2, lambda_1, lambda_2, 
+					     Atv, mu, primal_dual_tol,
+					     t, slackness_norm );   
+
+      if ( verbosity > 1 )
+	{
+	  std::cout << "At Initialisation:\n";
+	  std::cout << "\tObjective: " << sum( u ) << "\n";
+	  std::cout << "\tPrimal-dual gap: " << sdg << "\n";
+	  std::cout << "\tPrimal residual: ";
+	  std::cout << r.normFrobenius() << "\n";
+	}
+
+      //------------------------------------------//
+      // Iterate though the primal-dual algorithm //
+      //------------------------------------------//
+      RealVector z_1( N, false ), z_2( N, false ), D_1( N, false ), 
+	D_2( N, false ), D_3( N, false ), z_3( M, false ), tmp1( N, false );
+      RealMatrix tmp2( N, M, false );
+      
+      int primal_dual_iter( 0 );
+      bool done = ( ( sdg < primal_dual_tol ) || (primal_dual_iter >= max_iter));
+      while ( !done )
+	{
+	  primal_dual_iter++;
+      
+	  //-------------------------------------------------------//
+	  // Set up linear system to compute newton step direction //
+	  //-------------------------------------------------------//
+	  for ( int j = 0; j < N; j++ )
+	    {
+	      z_1[j] = - ( - 1.0 / f_1[j] + 1.0 / f_2[j] ) / t - Atv[j];
+	      z_2[j] = - 1.0 - ( 1.0 / f_1[j] + 1.0 / f_2[j] ) / t;
+	      D_1[j] = -lambda_1[j] / f_1[j] - lambda_2[j] / f_2[j];
+	      D_2[j] =  lambda_1[j] / f_1[j] - lambda_2[j] / f_2[j];
+	      D_3[j] =  D_1[j] - D_2[j] * D_2[j] / D_1[j];
+	      tmp1[j] =  z_1[j] / D_3[j] - z_2[j] * D_2[j] / (D_3[j] * D_1[j]);
+	    }
+	  for ( int i = 0; i < M; i++ )
+	    {
+	      z_3[i] = -r[i];
+	      newton_step_rhs[i] = z_3[i];
+	    }
+
+	  newton_step_rhs.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
+				    1.0, A, tmp1, -1.0 );
+
+	  //-------------------------------------------------------//
+	  // Set up linear system to compute newton step direction //
+	  //-------------------------------------------------------//
+
+	  // Todo I neet to access elements of At. I do this by accessing
+	  // underlying data of A and utilising flat 1D structure. Can this 
+	  // be done a different way
+	  Real *A_matrix;
+	  A_matrix = A.values();
+	  for ( int j = 0; j < N; j++ )
+	    {
+	      for ( int i = 0; i < M; i++ )
+		{
+		  tmp2(j,i) = A_matrix[j*M+i] / D_3[j];
+		}
+	    }
+	  newton_step_pos_def_matrix.multiply( Teuchos::NO_TRANS, 
+					       Teuchos::NO_TRANS, 
+					       1.0, A, tmp2, 0.0 );
+
+	  int info;
+	  Real rcond( -1. );
+	  Real r_norm;
+	  if ( cg_tol < 0 )
+	    {
+	      // Compute the direction of the newton step for v
+	      info = cholesky_solve( newton_step_pos_def_matrix, 
+				     newton_step_rhs, dv, rcond );
+	      if ( info > 0 )
+		{
+		  if ( verbosity > 0 )
+		    {
+		      std::cout << "BP_primal_dual_interior_point_method() ";
+		      std::cout << "The Hessian matrix is no longer positive ";
+		      std::cout << "definite. If epsilon < 1e-8 this is most ";
+		      std::cout << "likely due to roundoff error. ";
+		      std::cout << "Try a larger epsilon. ";
+		      std::cout << "Returning the last solution.\n";
+		    }
+		  x_new.assign( x );
+		  break;
+		}
+	      if ( rcond < 1.e-14 )
+		{
+		  if ( verbosity > 0 )
+		    {
+		      std::cout << "BP_primal_dual_interior_point_method() ";
+		      std::cout << "Matrix ill-conditioned. ";
+		      std::cout << "Returning the last solution.\n";
+		    }
+		  x_new.assign( x );
+		  break;
+		}
+	    }
+	  else
+	    {
+	      dv = 0.0;
+	      info = conjugate_gradients_solve( newton_step_pos_def_matrix, 
+						newton_step_rhs, dv, r_norm, 
+						cg_tol, M, verbosity );
+	      if ( ( r_norm > 0.5 ) || ( info > 1 ) )
+		{
+		  if ( verbosity > 0 )
+		    {
+		      std::cout << "BP_primal_dual_interior_point_method() ";
+		      std::cout << "Matrix ill-conditioned. ";
+		      std::cout << "Returning the last solution.\n";
+		    }
+		  x_new.assign( x );
+		  break;
+		}
+	    }
+
+
+	  //--------------------------//
+	  // Compute newton step size //
+	  //--------------------------//
+	  Atdv.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
+			 1.0, A, dv, 0.0 );
+	  Real step_size( 1.0 );
+	  for ( int j = 0; j < N; j++ )
+	    {
+	      dx[j] = ( z_1[j] - z_2[j] * D_2[j] / D_1[j] - Atdv[j] ) / D_3[j];
+	      du[j] = ( z_2[j] - D_2[j] * dx[j] ) / D_1[j];
+	      dlambda_1[j] = lambda_1[j] / f_1[j] * ( -dx[j] + du[j] )
+		- lambda_1[j] - 1.0 / ( t * f_1[j] );
+	      dlambda_2[j] = lambda_2[j] / f_2[j] * ( dx[j] + du[j] )	
+		- lambda_2[j] - 1.0 / ( t * f_2[j] );
+	  
+	      if ( dlambda_1[j] < 0 )
+		{
+		  step_size = std::min( step_size, -lambda_1[j] / dlambda_1[j] );
+		}
+	      if ( dlambda_2[j] < 0 )
+		{
+		  step_size = std::min( step_size, -lambda_2[j] / dlambda_2[j] );
+		}
+	      if (  ( dx[j] - du[j] ) > 0 )
+		{
+		  step_size = std::min( step_size, -f_1[j] / ( dx[j] - du[j] ) );
+		}
+	      if (  ( -dx[j] - du[j] ) > 0 )
+		{
+		  step_size = std::min( step_size, -f_2[j] / ( -dx[j] - du[j] ));
+		}
+	    }
+	  step_size *= 0.99;
+
+	  Adx.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, dx, 0.0 );
+
+	  //-------------------------------------------------------------------//
+	  // Conduct line search to ensure the norm of the residuals decreases //
+	  // sufficiently                                                      //
+	  //-------------------------------------------------------------------//
+	  bool sufficient_decrease( false );
+	  // the iteration count of the backward line seach
+	  int line_search_iter( 0 ); 
+
+	  // Continue while the norm of the residuals has not decreased 
+	  // sufficiently for any of the quantities of interest.
+	  while ( !sufficient_decrease )
+	    {
+	      sufficient_decrease = true;
+	      Real new_slackness_norm( 0.0 );
+	      for ( int j = 0; j < N; j++ )
+		{
+		  x_new[j]     =  x[j] + step_size * dx[j];
+		  u_new[j]     =  u[j] + step_size * du[j];
+		  Atv_new[j]   =  Atv[j] + step_size * Atdv[j];
+		  lambda_1_new[j] =  lambda_1[j] + step_size * dlambda_1[j];
+		  lambda_2_new[j] =  lambda_2[j] + step_size * dlambda_2[j];
+		  f_1_new[j]   =  x_new[j] - u_new[j];
+		  f_2_new[j]   = -x_new[j] - u_new[j];
+
+		  // 0:N-1
+		  new_slackness_norm += ( lambda_1_new[j] - lambda_2_new[j] + Atv_new[j] ) * ( lambda_1_new[j] - lambda_2_new[j] + Atv_new[j] );
+		  // N:2N-1
+		  new_slackness_norm += ( 1.0 - lambda_1_new[j] - lambda_2_new[j] ) * ( 1.0 - lambda_1_new[j] - lambda_2_new[j] );
+		  // 2N:3N-1
+		  new_slackness_norm += ( -lambda_1_new[j] * f_1_new[j] - 1.0 / t ) * ( -lambda_1_new[j] * f_1_new[j] - 1.0 / t );
+		  // 3N:4N-1
+		  new_slackness_norm += ( -lambda_2_new[j] * f_2_new[j] - 1.0 / t ) * ( -lambda_2_new[j] * f_2_new[j] - 1.0 / t );
+		}
+      
+	      for ( int i = 0; i < M; i++ )
+		{
+		  v_new[i] = v[i] + step_size * dv[i];
+		  r_new[i] = r[i] + step_size * Adx[i];
+		  new_slackness_norm += r_new[i] * r_new[i];
+		}
+
+	      new_slackness_norm = std::sqrt( new_slackness_norm );
+	      if ( new_slackness_norm > ( 1.0 - alpha * step_size ) * slackness_norm )
+		{
+		  sufficient_decrease = false;
+		}
+	      step_size *= beta;
+  
+	      line_search_iter++;
+	      if ( line_search_iter > 30 )
+		{
+		  if ( verbosity > 0 )
+		    {
+		      std::cout << "BP_primal_dual_interior_point_method() ";
+		      std::cout << "Line search failed. Returning the last ";
+		      std::cout << "solution.\n";
+		    }
+		  x_new.assign( x );
+		  info = 3;
+		  break;
+		}
+	    }
+  
+	  for ( int j = 0; j < N; j++ )
+	    {
+	      x[j] =  x_new[j];
+	      u[j] =  u_new[j];
+	      f_1[j] = f_1_new[j];
+	      f_2[j] = f_2_new[j];
+	      lambda_1[j] = lambda_1_new[j];
+	      lambda_2[j] = lambda_2_new[j];
+	      Atv[j] = Atv_new[j];
+	    }
+	  for ( int i = 0; i < M; i++ )
+	    {
+	      r[i] = r_new[i];
+	      v[i] = v_new[i];
+	    }
+
+	  // Update surrogate duality gap and the slackness condition
+	  Real sdg = BP_surrogate_duality_gap( r, f_1, f_2, lambda_1, 
+						 lambda_2, Atv,
+						 mu, primal_dual_tol, t,
+						 slackness_norm );
+  
+  
+	  done = ( ( sdg < primal_dual_tol ) || ( primal_dual_iter >= max_iter));
+
+	  if ( verbosity > 1 )
+	    {
+	      std::cout << "Newton iteration: " << primal_dual_iter << "\n";
+	      std::cout << "\tObjective: " << sum( u ) << "\n";
+	      std::cout << "\tPrimal-dual gap: " << sdg << "\n";
+	      std::cout << "\tPrimal residual: ";
+	      std::cout << r.normFrobenius() << "\n";
+	      if ( cg_tol < 0 )
+		std::cout << "\tCondition number: " << rcond << "\n";
+	      else
+		std::cout << "\tConjugate gradients residual: " << r_norm <<"\n";
+	    }
+	}
+
+      RealVector X_col( Teuchos::View, X[k], N );
+      X_col.assign( x );
+    }
+};
+
+int CompressedSensingTool::BPDN_compute_central_point( RealMatrix &A, 
+						       RealVector &b, 
+						       RealVector &x, 
+						       RealVector &u,
+						       RealMatrix &AtA, 
+						       Real epsilon, 
+						       Real &t, 
+						       Real newton_tol, 
+						       int newton_max_iter, 
+						       Real cg_tol, 
+						       int verbosity )
+{
+  int newton_info( 0 ); // No error
+
+  // line search parameters
+  Real alpha ( 0.01 );
+  Real beta ( 0.5 );  
+
+  // size of solution vector
+  int N ( A.numCols() );
+
+  // Number of pts in used to construct A
+  int M  ( A.numRows() );
+
+  // Compute the residual
+  RealVector r( b );
+  r.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, x, -1.0 );
+
+  // Set up variables necessary for initialising loop.
+  // The objective function is
+  // sum(u) + (-1/t) ( log(-f_1) + log(-f_2) + log(f3) )
+  RealVector f_1( N, false ), f_2( N, false );
+  Real objective( 0.0 ); 
+  for ( int j = 0; j < N; j++ )
+    {
+      f_1[j] = x[j] - u[j];  // constraint x-u <= 0
+      f_2[j] = -x[j] - u[j]; // constraint -x-u <= 0
+      objective += u[j] - ( std::log( -f_1[j] ) + std::log( -f_2[j] ) ) / t;
+    }
+  //constraint ( ||Ax-b||_2^2-epsilon^2 ) <= 0
+  Real f3 = 0.5 * ( r.dot( r ) - epsilon * epsilon );
+  objective -= std::log( -f3 ) / t;
+
+  // Allocate memory for the elements use to construct the Hessian
+  // of the objective function
+  RealVector D_1( N, false ), D_2( N, false ), D_3( N, false ), 
+    z_1( N, false ), z_2( N, false );
+  
+  // Allocate memory for the gradient and Hessian of the 
+  // objective function
+  RealMatrix newton_step_pos_def_matrix( N, N, false );
+  RealVector newton_step_rhs( N, false );
+
+  // Allocate memory for the newton step
+  RealVector dx( N, false ), du( N, false );
+
+  // Allocate memory for the updated variables to be temporarily stored
+  RealVector x_new( N, false ), u_new( N, false ), r_new( M, false ), 
+    f_1_new( N, false ), f_2_new( N, false ), Atr( N, false ), Adx( M, false );
+
+  int newton_iter( 0 );
+  bool done ( false );
+  while ( !done )
+    {
+      // Form the elements of the Jacobian
+      Atr.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, r, 0.0 );
+      newton_step_pos_def_matrix.multiply( Teuchos::NO_TRANS, Teuchos::TRANS, 
+					   1.0, Atr, Atr, 0.0 );
+      for ( int j = 0; j < N; j++ )
+	{
+	  Real f_1_inv = 1.0 / f_1[j],  f_2_inv = 1.0 / f_2[j];
+	  
+	  z_1[j] = f_1_inv - f_2_inv + Atr[j] / f3;
+	  z_2[j] = -t - f_1_inv - f_2_inv;
+	  
+	  D_1[j] =  f_1_inv * f_1_inv + f_2_inv * f_2_inv;
+	  D_2[j] = -f_1_inv * f_1_inv + f_2_inv * f_2_inv;
+	  D_3[j] = D_1[j] - D_2[j] * D_2[j] / D_1[j]; 
+	  newton_step_rhs[j]  = z_1[j]  - z_2[j] * D_2[j] / D_1[j]; 
+	  
+	  Real f3_inv = 1.0 / f3;
+	  for ( int i = 0; i < N; i++ )
+	    {
+	      newton_step_pos_def_matrix(i,j) = f3_inv * f3_inv * 
+		newton_step_pos_def_matrix(i,j) - f3_inv * AtA(i,j);
+	    }
+	  newton_step_pos_def_matrix(j,j) += D_3[j];
+	}
+
+      // Compute the direction of the newton step for x
+      Real rcond( -1. );
+      Real r_norm;
+      int info;
+      if ( cg_tol < 0 )
+	{
+
+	  info = cholesky_solve( newton_step_pos_def_matrix, 
+				 newton_step_rhs, dx, rcond );	      
+	  if ( info > 0 )
+	    {
+	      if ( verbosity > 0 )
+		{
+		  std::cout << "BPDN_compute_central_point() returning the ";
+		  std::cout << "last iterate. ";
+		  std::cout << "The Hessian matrix is no longer positive ";
+		  std::cout << "definite. ";
+		  std::cout << "If epsilon < 1e-8 this is most likely due to ";
+		  std::cout << "roundoff error. Try a larger epsilon. ";
+		  std::cout << "Returning the last solution\n";
+		}
+	      x_new.assign( x ); u_new.assign( u );
+	      newton_info = 1; // Matrix is not positive definite
+	      break;
+	    }
+	  if ( rcond < 1.e-14 )
+	    {
+	      if ( verbosity > 0 )
+		{
+		  std::cout << "BPDN_compute_central_point() ";
+		  std::cout << "Matrix ill-conditioned. ";
+		  std::cout << "Returning previous solution.\n";
+		}
+	      x_new.assign( x );  u_new.assign( u );
+	      newton_info = 2; // Jacobian matrix is ill-conditioned.
+	      break;
+	    }
+	}
+      else
+	{
+	  dx = 0.0;
+	  info = conjugate_gradients_solve( newton_step_pos_def_matrix, 
+					    newton_step_rhs, dx, r_norm, 
+					    cg_tol, N, verbosity );
+
+	  if ( ( r_norm > 0.5 ) || ( info > 1 ) )
+	    {
+	      if ( verbosity > 0 )
+		{
+		  std::cout << "BPDN_compute_central_point() ";
+		  std::cout << "Matrix ill-conditioned. ";
+		  std::cout << "Returning previous solution.\n";
+		}
+	      x_new.assign( x );  u_new.assign( u );
+	      newton_info = 1; // Matrix is not positive definite
+	      break;
+	    }
+	}
+
+      Adx.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, dx, 0.0 );
+      // Compute the direction of the newton step for u and 
+      // the minimum step size that stays in the interior
+      Real step_size = 1.0;
+      for ( int j = 0; j < N; j++ )
+	{
+	  du[j] = z_2[j] / D_1[j] - dx[j] * D_2[j] / D_1[j];
+	  if ( dx[j] - du[j] > 0.0 )
+	    {
+	      step_size = std::min( step_size, 
+				    -f_1[j] / ( dx[j] - du[j] ) );
+	    }
+	  if ( -dx[j] - du[j] > 0.0 )
+	    {
+	      step_size = std::min( step_size,
+				    -f_2[j] / ( -dx[j] - du[j] ) );
+	    }
+	}
+      Real aqe = Adx.dot( Adx ), bqe = 2.0 * r.dot( Adx ),
+	cqe = r.dot( r ) -  epsilon * epsilon;
+	     
+      step_size = std::min( step_size, ( -bqe + std::sqrt( bqe * bqe - 4.0 * aqe * cqe ) ) / ( 2.0 * aqe ) );
+      step_size *= 0.99;
+	
+      // Backtracking line search 
+      bool sufficient_decrease( false );
+      int line_search_iter( 0 );
+      Real objectivep( 0.0 ), f3p( 0.0 ), lambda2( 0.0 );
+      while ( !sufficient_decrease )
+	{
+	  objectivep = 0.0;
+	  for ( int j = 0; j < N; j++ )
+	    {
+	      x_new[j] = x[j] + step_size * dx[j];
+	      u_new[j]  = u[j] + step_size * du[j];
+	      f_1_new[j] =  x_new[j] - u_new[j];
+	      f_2_new[j] = -x_new[j] - u_new[j];
+	      objectivep += u_new[j] - ( std::log( -f_1_new[j] ) + 
+					 std::log( -f_2_new[j] ) ) / t;
+	    }
+	  for ( int i = 0; i < M; i ++ )
+	    {
+	      r_new[i] = r[i] + step_size * Adx[i];
+	    }
+	  f3p = 0.5 * ( r_new.dot( r_new ) - epsilon * epsilon );
+	  objectivep -= std::log( -f3p ) / t;
+	  lambda2 =  0.0;
+	  for ( int j = 0; j < N; j++ )
+	    {
+	      lambda2 += -( z_1[j] * dx[j] + z_2[j] * du[j] ) / t;
+	    }
+	  lambda2 *= -1.0;
+	  Real flin = objective - lambda2 * alpha * step_size;	    
+	  step_size *= beta;
+	  if ( objectivep <= flin )
+	    {
+	      sufficient_decrease = true;
+	    }
+	  line_search_iter++;
+	  if ( line_search_iter > 30 )
+	    {
+	      if ( verbosity > 0 )
+		{
+		  std::cout << "BPDN_compute_central_point() ";
+		  std::cout << "Line search failed. Returning the last ";
+		  std::cout << "solution.\n";
+		}
+	      x_new.assign( x );
+	      newton_info = 3; // line search failed
+	      break;
+	    }
+	}
+
+      for ( int j = 0; j < N; j++ )
+	{
+	  x[j] =  x_new[j];
+	  u[j] =  u_new[j];
+	  f_1[j] = f_1_new[j];
+	  f_2[j] = f_2_new[j];
+	}
+      r = r_new;
+      f3 = f3p;
+      objective = objectivep;
+
+      if ( lambda2 * 0.5 < newton_tol )
+	{
+	  done = true;
+	}
+      else
+	{
+	  done = false;
+	}
+
+      newton_iter++;
+      if ( newton_iter >= newton_max_iter )
+	{
+	  done = true;
+	}
+      if ( verbosity > 1 )
+	{
+	  Real dx_norm = dx.normFrobenius();
+	  dx_norm *= dx_norm;
+	  Real du_norm = du.normFrobenius();
+	  du_norm *= du_norm;
+	  Real norm = std::sqrt( dx_norm + du_norm ); 
+	  std::cout << "Newton iteration: " << newton_iter << "\n";
+	  std::cout << "\tObjective: " << objective << "\n";
+	  std::cout << "\tStep size: " << step_size * norm << "\n";
+	  if ( cg_tol < 0 )
+	    std::cout << "\tCondition number: " << rcond << "\n";
+	  else
+	    std::cout << "\tConjugate gradients residual: " << r_norm << "\n";
+	}
+    }
+  return newton_info;
+};
+
+void CompressedSensingTool::BPDN_log_barrier_interior_point_method( RealMatrix &A, RealMatrix &B, RealMatrix &X, Real epsilon, Real log_barrier_tol, Real cg_tol, int verbosity )
+{
+  // Extract matrix shapes
+  int M( A.numRows() ), N( A.numCols() ), num_rhs( B.numCols() );
+
+  // Initialise memory for the solutions
+  X.shapeUninitialized( N, num_rhs );
+
+  // Basis Pursuit Denoising algorithm parameters
+  Real mu ( 10 );
+  Real newton_tol ( log_barrier_tol );
+  int newton_max_iter ( 30 );
+ 
+  // Compute A'A. this will be used each time BPDN_compute_central_point_method
+  // is called
+  RealMatrix AtA( N, N );
+  AtA.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, A, 0.0 ); 
+
+  // Allocate memory for solution to one rhs vector
+  RealVector  u( N, false ); 
+ 
+  for ( int k = 0; k < num_rhs; k++ )
+    {
+      //------------------------------------------------------------//
+      // Check whether starting point is in the feasiable region    //
+      // If not use the least squares solution as new start point X //
+      //------------------------------------------------------------//
+      RealVector x( Teuchos::View, X[k], N ); // solution
+      RealVector b( Teuchos::View, B[k], M ); // rhs
+      RealVector r( b );                      // residual
+      //Not necessary because X is set to zero( uninitialized) above
+      //r.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, x, -1.0 );
+
+      if ( r.normFrobenius() > epsilon )
+	{
+	  // Starting point is not feasiable
+	  if ( verbosity > 0 )
+	    {
+	      std::cout << "Initial guess is not feasiable. ";
+	      std::cout << "Computing least squares estimate\n";
+	    }
+
+	  // Solve AX = b
+	  int rank;
+	  RealVector singular_values; // singular values
+	  svd_solve( A, b, x, singular_values, rank );
+	  // Compute reciprocal of condition number
+	  Real rcond = singular_values[singular_values.length()-1] / 
+	    singular_values[0];
+	  if ( rcond < 1e-14 )
+	    {
+	      std::string msg = "BPDN_log_barrier_interior_point_method() ";
+	      msg += "A is ill conditioned. Cannot find starting point";
+	      throw( std::runtime_error( msg ) );
+	    }
+	}
+
+      // Default: choose initial value of t so that the duality gap after 
+      // the first step will be about the original norm  
+      Real t = std::max( ( 2.0 * (Real)N + 1.0 ) / x.normOne(), 1.0 );
+
+      RealVector u( N, false );
+      Real x_max = x.normInf();
+      for ( int j = 0; j < N; j++ )
+	{
+	  u[j] = 0.95 * std::fabs( x[j] ) + 0.10 * x_max;
+	}
+
+      int num_log_barrier_iter = std::ceil( ( std::log( 2. * (Real)N + 1. ) - 
+					      std::log( log_barrier_tol ) - 
+					      std::log( t ) ) / std::log( mu));
+      
+      if ( verbosity > 1 )
+	{
+	  std::cout << "\nInitial l1 norm: " << x.normOne() << "\n";
+	  std::cout << "Initial objective: " << sum( u ) << "\n";
+	  std::cout << "Number of log-barrier iterations: ";
+	  std::cout << num_log_barrier_iter << "\n";
+	}
+
+      // Run newton steps
+      for ( int iter = 0; iter < num_log_barrier_iter; iter++ )
+	{
+	  if ( verbosity > 1 )
+	    std::cout << "\nLog-barrier iteration: " << iter + 1<< "\n";
+	  
+	  int info = BPDN_compute_central_point( A, b, x, u, AtA, epsilon, t, 
+						 newton_tol, newton_max_iter, 
+						 cg_tol, verbosity );
+
+	  if ( verbosity > 1 )
+	    {
+
+	      std::cout.precision( std::numeric_limits<Real>::digits10 );
+	      std::cout.setf( std::ios::scientific );
+	      std::cout << "l1 norm: " << x.normOne() << "\n";
+	      std::cout << "t: " << t << std::endl;
+	    }
+	  if ( info > 0 ) break;
+	  t *= mu;
+	}
+      
+      RealVector X_col( Teuchos::View, X[k], N );
+      X_col.assign( x );
+    }
+};
+
+void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A, 
+							 RealVector &b, 
+							 RealMatrix &solutions,
+						    RealMatrix &solution_metrics,
+							 Real epsilon, 
+						   int max_num_non_zero_entries,
+							 int verbosity )
+{
+
+  Teuchos::BLAS<int, Real> blas;
+
+  int M( A.numRows() ), N( A.numCols() );
+
+  // \todo consider moving AtA outside function so it is only computed once
+  // regardless of the number of rhs
+  RealMatrix AtA; // basis gramian AtA_ij = <A_i,A_j>
+  AtA.shapeUninitialized( N, N );
+  AtA.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, A, 0.0 ); 
+
+  // Determine the maximum number of iterations
+  int max_num_indices( std::min( M, max_num_non_zero_entries ) );
+  max_num_indices = std::min( N, max_num_indices );
+
+  // Initialise entries of all solutions to zero
+  solutions.shape( N, max_num_indices );
+
+  // Allocate memory to store solution metrics
+  solution_metrics.shapeUninitialized( 2, max_num_indices );
+
+  // Vector to store non-zero solution entries
+  RealVector x_sparse;	
+  
+  // Matrix to store Q and R factorization
+  RealMatrix Q( M, N ), R( N, N );
+
+  // Compute residual
+  RealVector residual( b );
+
+  // Compute correlation of columns with residual
+  RealMatrix Atb( N, 1, false );
+  Atb.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
+		1.0, A, residual, 0.0 );
+  RealMatrix correlation( Teuchos::Copy, Atb, N, 1 );
+  
+  // Compute norm of residual
+  Real b_norm( b.dot( b ) ), residual_norm( b_norm );
+
+  if ( verbosity > 1 )
+    {
+      PCout << "Orthogonal Matching Pursuit" << std::endl;
+      printf("Iter\tAdded\tResidual\tl1 norm of x\n");
+    }
+
+  int num_active_indices( 0 );
+  IntVector active_index_set( max_num_indices );
+  bool done = false;
+  while ( !done )
+    {
+      // Find the column that has the largest inner product with
+      // the residual
+      // Warning IAMX returns the index of the element with the 
+      // largest magnitude but IAMAX assumes indexing 1,..,N not 0,...,N-1
+      int active_index = blas.IAMAX( correlation.numRows(), 
+				     correlation[0], 1 ) - 1;
+
+      // Update the QR factorisation.	 
+      RealMatrix A_col( Teuchos::View, A, M, 1, 0, active_index );
+      int colinear = qr_factorization_update_insert_column( Q, R, A_col, 
+							    num_active_indices );
+
+      if ( !colinear )
+	{
+	  active_index_set[num_active_indices] = active_index;
+
+	  // Create subset representations of Atb and AtA
+	  RealMatrix Atb_sparse( num_active_indices + 1, 1, false ), 
+	    AtA_sparse( N, num_active_indices + 1, false );
+	  for ( int i = 0; i < num_active_indices + 1; i++ )
+	    {
+	      int index( active_index_set[i] );
+	      Atb_sparse(i,0) = Atb(index,0);
+	      for ( int n = 0; n < N; n++ )
+		{
+		  AtA_sparse(n,i) = AtA(n,index);
+		}
+	    }
+
+	  //Solve R'z = A'b via back substitution
+	  RealMatrix z;
+	  RealMatrix R_new( Teuchos::View, R, num_active_indices+1, 
+			    num_active_indices+1, 0, 0 );
+	  backward_substitution_solve( R_new, Atb_sparse, z, Teuchos::TRANS );
+
+	  //Solve Rx = z via back substitution to obtain signal
+	  backward_substitution_solve( R_new, z, x_sparse );
+
+	  correlation.assign( Atb );
+	  correlation.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
+				-1.0, AtA_sparse, x_sparse, 1.0 );
+	  Real z_norm = z.normFrobenius();
+	  residual_norm = b_norm - z_norm * z_norm;
+	  num_active_indices++;   
+	}
+      else
+	{
+	  //New column was co linear so ignore
+	  if ( verbosity > 0 )
+	    {
+	      std::stringstream msg;
+	      msg << "No variable added. Column " << active_index;
+	      msg << " was colinear " << std::endl;
+	      std::cout << msg.str();
+	    }
+	}
+
+      // At termination residual_norm can be slightly negative, e.g
+      // ~1e-12
+      if ( residual_norm < 0.0 )
+	residual_norm = 0.0;
+
+      for ( int n = 0; n < num_active_indices; n++ )
+	{
+	  solutions(active_index_set[n],num_active_indices-1) = x_sparse[n];
+	}
+      solution_metrics(0,num_active_indices-1) = residual_norm;
+      solution_metrics(1,num_active_indices-1) = num_active_indices;     
+ 
+      if ( std::sqrt( residual_norm )  <= epsilon )
+	{
+	  if ( verbosity > 1 )
+	    PCout << "Exiting: residual norm lower than tolerance" << std::endl;
+	  done = true;
+	}
+      
+      if ( num_active_indices >= max_num_indices )
+	{
+	  if ( verbosity > 1 )
+	     PCout << "Exiting: maximum number of covariates reached" << std::endl;
+	  done = true;
+	}
+
+      if ( colinear )
+	{
+	  // Usually occurs when A is a vandermonde matrix and the inputs 
+	  // have been standardized. The first column will be colinear
+	  // This condition should only occur when 
+	  // num_covariates = max_num_covariates - 1
+	   if ( verbosity > 1 )
+	     PCout << "Exiting: attempted to add colinear vector" << std::endl;
+	  done = true;
+	}
+
+      if ( verbosity > 1 )
+	printf("%d\t%d\t%1.5e\t%1.5e\n", num_active_indices, 
+	       active_index, residual_norm, x_sparse.normOne() );
+    }
+  // remove unused memory
+  solutions.reshape( N, num_active_indices );
+  solution_metrics.reshape( 2, num_active_indices );
+};
+
+// Need to add check for linear dependence to both lars and fast omp
+// LARS only adds one variable at a time. At the moment an error 
+// is thrown if two or more variables are selected. I need
+// to implement a choice if this happens
+// Check that when num_covariates == N that the least squares solution is returned
+// return solution at each iteration
+void CompressedSensingTool::least_angle_regression( RealMatrix &A, 
+						    RealVector &b, 
+						    RealMatrix &solutions,
+						    RealMatrix &solution_metrics,
+						    Real epsilon, 
+						    solverType solver,
+						    Real delta,
+						    int max_num_iterations,
+						    int verbosity )
+{
+  Teuchos::BLAS<int, Real> blas;
+
+  int M( A.numRows() ), N( A.numCols() );
+  
+  int max_num_covariates = std::min( M, N );
+  if ( delta > std::numeric_limits<Real>::epsilon() )
+    max_num_covariates = std::min( N, max_num_iterations );
+  
+  int max_num_iter = std::min( 10*max_num_covariates, max_num_iterations );
+
+  // Lasso will usually require more iterations than max covariates
+  // as variables are added and deleted during the algorithm. However
+  // to allow cross validation I restrict the number of iterations 
+  // max_num_iter to max_num_covariates. If I do not do this then
+  // LASSO can use different iteration numbers for different training
+  // data but the same cross validation model options
+  //if ( solver == LASSO )
+  // max_num_iter *= 10;
+
+  // Initialise all entries of x to zero
+  solutions.shape( N, max_num_iter );
+
+  // Allocate memory to store solution metrics
+  solution_metrics.shapeUninitialized( 2, max_num_iter );
+
+  // Memory for active indices
+  std::vector<int>::iterator vec_iter;
+  std::vector<int> active_indices;
+  
+  // Store inactive indices
+  std::set<int>::iterator inactive_index_iter;
+  std::set<int> inactive_indices;
+  for ( int n = 0;  n < N; n++) inactive_indices.insert( n );
+  
+  // Matrix to store the full rank matrix associated with x_sparse
+  RealMatrix A_sparse;
+  
+  // Matrix to store cholesky factorization of A'A and initialize to zero
+  RealMatrix U( N, N );
+  
+  // Compute residual
+  RealVector residual( b );
+
+  // Compute correlation of columns with residual
+  RealMatrix Atb( N, 1, false );
+  Atb.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
+		1.0, A, residual, 0.0 );
+  RealMatrix correlation( Teuchos::Copy, Atb, N, 1 );
+
+  if ( verbosity > 1 )
+    {
+      std::cout << "LASSO/LARS ( delta = " << delta << " )\n";
+      printf("Iter\tAdded\tDropped\t\tSparsity\tC\t\tResidual\tl1 norm of x\n");
+    }
+      
+  bool done = false;
+
+  // if solver == LARS sign_condition_violated will always be true. 
+  // if solver = LASSO we must alwways add a variable during the first iteration.
+  // The value of sign_condition_violated will there after will be depend on
+  // whether the LASSO algorithm requires a variable to be added or removed.  
+  bool sign_condition_violated = false; 
+
+  // The index of the column of A we are adding to the active set
+  int index_to_add;
+
+  // The index of the element in the active_indices array which
+  // specifies how to find which column of A violates the sign condition.
+  // i.e. active_indices[index_to_drop] is the column of A which
+  // violates the sign condition
+  int index_to_drop( -1 );
+
+  // The lasso approximation of b. Initialize to zero
+  RealMatrix b_hat( M, 1 );
+
+  int homotopy_iter( 0 );
+  while ( !done )
+    {     
+      int num_covariates( active_indices.size() );
+      Real max_abs_correlation( 0.0 );
+      int prev_iter( std::max( 0, homotopy_iter -1 ) );
+      
+      for ( inactive_index_iter = inactive_indices.begin(); 
+	    inactive_index_iter != inactive_indices.end(); 
+	    inactive_index_iter++ )
+	{
+	  int n = *inactive_index_iter;
+	  Real correlation_n = correlation(n,0);
+	  Real x_n = solutions(n,prev_iter);
+	  Real abs_correlation_n = std::abs( correlation_n-delta*x_n );
+	  if ( abs_correlation_n > max_abs_correlation )
+	    {
+	      max_abs_correlation = abs_correlation_n;
+	      index_to_add = n;
+	    }
+	}
+
+      // Add the new index ( if it exists ) to the active set and 
+      // update the Cholesky factorization
+      int colinear = 0;
+      if ( !sign_condition_violated )
+	{
+
+	  RealMatrix A_col( Teuchos::View, A, M, 1, 0, 
+			    index_to_add );
+	  colinear = cholesky_factorization_update_insert_column( A_sparse, 
+								  U, 
+								  A_col, 
+								  num_covariates,
+								  delta );
+	  if ( colinear == 1 )
+	    {
+	      if ( verbosity > 0  )
+		{
+		  // Usually occurs when A is a vandermonde matrix and the inputs 
+		  // have been standardized. The first column will be colinear
+		  // This condition should only occur when 
+		  // num_covariates = max_num_covariates - 1
+		  std::stringstream msg;
+		  msg << "Exiting: attempted to add colinear vector\n";
+		  std::cout << msg.str();
+		}
+	      break;
+	    }
+
+	  if ( verbosity > 1 )
+	    printf("%d\t%d\t\t\t%d\t\t", homotopy_iter, 
+		   index_to_add, (int)active_indices.size()+1  );
+	  
+	  column_append( A_col, A_sparse );
+	  active_indices.push_back( index_to_add );
+	  inactive_index_iter = inactive_indices.find( index_to_add);
+	  inactive_indices.erase ( inactive_index_iter );
+	  num_covariates = (int)active_indices.size();
+	}
+	
+      // Get the signs of the correlations
+      RealMatrix s_sparse( num_covariates, 1, false );
+      for ( int active_index = 0; active_index < num_covariates; active_index++ )
+	{
+	  s_sparse(active_index,0) = 
+	    sgn( correlation(active_indices[active_index],0) );
+	}
+
+      // normalisation_factor = 1 / sqrt( s'*inv(A'*A)*s )
+      // inv(A'A)*s  = > solve A'*A*z \ s => U'U \ s 
+      // so solve two problems w = U' \ s then z = U \ w
+      RealMatrix w, z;	      
+      RealMatrix U_old( Teuchos::View, U, num_covariates, num_covariates, 0, 0 );
+      backward_substitution_solve( U_old, s_sparse, w, Teuchos::TRANS );
+      backward_substitution_solve( U_old, w, z, Teuchos::NO_TRANS );
+      Real normalisation_factor = 1.0 / std::sqrt( blas.DOT( num_covariates, 
+							       s_sparse[0], 
+							       1, z[0], 1 ));
+
+      // Compute unit vector making equal angles, less than 90^o , 
+      // with the columns of A_sparse
+      RealMatrix w_sparse( z );
+      w_sparse *= normalisation_factor;
+
+      // Compute the equiangular vector
+      RealMatrix u_sparse( M, 1, false );
+      u_sparse.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
+			 1.0, A_sparse, w_sparse, 0.0 );
+
+      // Compute angles betwen A_j and u_sparse
+      RealMatrix angles( N, 1, false );
+      angles.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
+		       1.0, A, u_sparse, 0.0 ); 
+
+      // Compute the lars step size. (2.13) (Efron 2004)
+      // When thea active_indices contains all covariates, gamma_hat
+      // is not defined. By convention in this situation the algorithm takes 
+      // gamma_ =  corelationMax / normalisation_factor , 
+      // making the solution x equal to the ordinary least squares 
+      // estimate for the full set of N covariates.
+      Real gamma_hat = max_abs_correlation / normalisation_factor;
+      if ( num_covariates < N )
+	{
+	  for ( inactive_index_iter = inactive_indices.begin(); 
+		inactive_index_iter != inactive_indices.end(); 
+		inactive_index_iter++ )
+	    {
+	      int n = *inactive_index_iter;
+	      Real gamma_hat1 = ( max_abs_correlation - correlation(n,0) ) / 
+		( normalisation_factor - angles(n,0) );
+	      
+	      gamma_hat = ( ( gamma_hat1 < gamma_hat ) && ( gamma_hat1 > 0 ) )
+		? gamma_hat1 : gamma_hat;
+	      
+	      Real gamma_hat2 =  ( max_abs_correlation + correlation(n,0) ) /
+ 		( normalisation_factor + angles(n,0) );
+
+	      gamma_hat = ( ( gamma_hat2 < gamma_hat ) && ( gamma_hat2 > 0 ) )
+		? gamma_hat2 : gamma_hat;
+	    }
+	}
+
+      // Find the first occurance of a solution element changing sign
+      // (3.5) (Efron 2004)
+      Real gamma_tilde = std::numeric_limits<Real>::max();
+      index_to_drop = -1;
+      if ( solver == LASSO )
+	{
+	  for ( int n = 0; n < num_covariates; n++ )
+	    {
+	      Real gamma = -solutions(active_indices[n],prev_iter) / 
+		w_sparse(n,0);
+	      if ( ( gamma > 0 ) && ( gamma < gamma_tilde ) )
+		{
+		  index_to_drop = n;
+		  gamma_tilde = gamma;
+		}
+	    }
+	}
+
+      Real gamma_min ( gamma_hat );
+      sign_condition_violated = false;
+      if ( gamma_tilde < gamma_hat )
+	{
+	  // The lasso sign restriction is violated. Must remove the index
+	  // active_indices[index_to_drop] from the 
+	  // active index set
+	  gamma_min = gamma_tilde;
+	  sign_condition_violated = true;
+	}
+
+      // Update the solution. Note that the currrent solution is stored in
+      // the previous column of solutions.
+      for ( int n = 0; n < num_covariates; n++ )
+	{
+	  solutions(active_indices[n],homotopy_iter) = 
+	    solutions(active_indices[n],prev_iter) + gamma_min * w_sparse(n,0);
+	}
+
+      // Update the residual. 
+      // b_new = b_old + gamma_min * u_sparse (2.12) (Efron 2004)
+      // => r_new = b - b_new = b - ( b_old + gamma_min * u_sparse )
+      //          = r_old - gamma_min * u_sparse
+      for ( int m = 0; m < M; m ++ )
+	{
+	  b_hat(m,0) += gamma_min * u_sparse(m,0);
+	  residual[m] -= gamma_min * u_sparse(m,0);
+	}
+
+      // Update the correlation (2.15) (Efron 2004)
+      for ( int n = 0; n < N; n ++ )
+	{
+	  correlation(n,0) -= ( gamma_min * angles(n,0) );
+	}
+
+      // Compute residual and corrrelation directly.
+      if (false)
+	{
+	  RealVector x( Teuchos::View, solutions[homotopy_iter], N );
+	  residual.assign(b);
+	  residual.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
+			     1.0, A, x, -1.0 );
+	  correlation.multiply( Teuchos::TRANS, Teuchos::NO_TRANS,
+				1.0, A, residual, 0.0 );
+	}
+
+      Real residual_norm = residual.normFrobenius();
+      RealVector x( Teuchos::View, solutions[homotopy_iter], N );
+
+      if ( sign_condition_violated )
+	{
+	  if ( index_to_drop < 0 )
+	    {
+	      std::string msg = "least_angle_regression() No ";
+	      msg += "index needed to be deleted.";
+	      throw( std::runtime_error( msg ) );
+	    }
+
+	  if ( verbosity > 1 )
+	    {
+	      printf("%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
+		     residual_norm, x.normOne() );
+	      printf("%d\t\t%d\t\t%d\t\t",homotopy_iter+1, 
+		     active_indices[index_to_drop],
+		     (int)active_indices.size()-1 );
+	    }
+
+	  cholesky_factorization_update_delete_column( U, 
+						       index_to_drop, 
+						       num_covariates );
+	  // delete column from A_sparse and resize
+	  delete_column( index_to_drop, A_sparse );
+	  inactive_indices.insert( active_indices[index_to_drop] );
+	  std::vector<int>::iterator it;
+	  it =  active_indices.begin() + index_to_drop;
+	  active_indices.erase( active_indices.begin() + index_to_drop );
+	  num_covariates = (int)active_indices.size();
+	}
+
+      if ( ( verbosity > 1 ) &&( !sign_condition_violated ) )
+      	printf("%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
+	       residual_norm, x.normOne() );
+
+      solution_metrics(0,homotopy_iter) = residual_norm;
+      solution_metrics(1,homotopy_iter) = homotopy_iter; 
+ 
+      if ( residual_norm <= epsilon )
+	{
+	  if ( verbosity > 1 )
+	    PCout << "Exiting: residual norm lower than tolerance" << std::endl;
+	  done = true;
+	}
+      
+      if ( num_covariates >= max_num_covariates )
+	{
+	  if ( verbosity > 1 )
+	     PCout << "Exiting: maximum number of covariates reached" << std::endl;
+	  done = true;
+	}
+
+      if ( colinear )
+	{
+	  // Usually occurs when A is a vandermonde matrix and the inputs 
+	  // have been standardized. The first column will be colinear
+	  // This condition should only occur when 
+	  // num_covariates = max_num_covariates - 1
+	   if ( verbosity > 1 )
+	     PCout << "Exiting: attempted to add colinear vector" << std::endl;
+	  done = true;
+	}
+      
+      homotopy_iter++;
+      if ( homotopy_iter == max_num_iter )
+	{
+	  if ( verbosity > 1 )
+	    PCout << "Exiting: maximum number of iterations reached" << std::endl;
+	  done = true;
+	}
+    }
+  // remove unused memory
+  solutions.reshape( N, homotopy_iter );
+  solution_metrics.reshape( 2, homotopy_iter );
+
+  // The current solutions are the naive elastic net esimates
+  // Rescale to avoid Real shrinkage (12) (Zou 2005)
+  if ( delta > 0 )
+    for ( int iter = 0; iter < homotopy_iter; iter++ )
       {
-	//if ( std::fabs(v[i]) - max > std::numeric_limits<float>::epsilon() )
-	if ( std::fabs(v[i]) > max )
+	for ( int n = 0; n < N; n++ )
 	  {
-	    max = std::fabs(v[i]);
-	    argMax = i;
+	    solutions(n,iter) *= ( 1.0 + delta );
 	  }
       }
-    return argMax;
-  };
-
-  void CompressedSensing::Product(RealMatrix& A, RealVector& x, RealVector& y,
-				  Teuchos::ETransp trans, Real alpha, Real beta)
-  {
-    Teuchos::BLAS<int, double> blas;
-    int m( A.numRows() ), n( A.numCols() );
-    Real *A_raw, *x_raw, *y_raw;
-    A_raw = A.values(); x_raw = x.values(); y_raw = y.values();
-    blas.GEMV( trans, m, n, alpha, A_raw, m, x_raw, 1, beta, y_raw, 1);
-  };
-
-  int CompressedSensing::SVDSolve( RealMatrix& A, RealMatrix& B,
-				   RealMatrix& X )
-  {
-    bool lapack_err = false;
-    Teuchos::LAPACK<int, Real> la;
-
-    int m( A.numRows() ), n( A.numCols() ), num_rhs( B.numCols() );
-    Real *A_matrix, *b_vectors, *X_matrix;
-    A_matrix = new Real [m*m];
-    b_vectors = new Real [m*num_rhs];
-    X_matrix = new Real [m*num_rhs];
-    copy_data_from_matrix( A, A_matrix );
-    copy_data_from_matrix( B, b_vectors );
-
-    double* s_vector = new double [n]; // output: singular values  
-    double rcond   = -1.; // input:  use macheps to rank singular vals of A
-    int    rank    =  0;  // output: effective rank of matrix A
-    int    info    =  0;  // LAPACK output flag
-
-    // Get the optimal work array size
-    int lwork = -1; // special code for workspace query
-    double *work  = new double [1]; // temporary work array
-    la.GELSS( m, n, num_rhs, A_matrix, m, b_vectors,
-	      m, s_vector, rcond, &rank, work, lwork, &info );
-    lwork = (int)work[0]; // optimal work array size returned by query
-    delete [] work;
-    work  = new double [lwork]; // Optimal work array
-
-    la.GELSS( m, n, num_rhs, A_matrix, m, b_vectors,
-	      m, s_vector, rcond, &rank, work, lwork, &info );
-
-    copy_data_to_matrix( b_vectors, m, num_rhs, X );
-
-    delete [] A_matrix;
-    delete [] b_vectors;
-    delete [] X_matrix;
-    delete [] s_vector;
-    delete [] work;
-    if ( info ) lapack_err = true;
-
-    return lapack_err;
-  };
   
-  // Use the modified gram-schmidt algorithm to add a new column to a
-  // matrix A and ensure all columns remain orthogonal.
-  // See A Wavelet Tour of Signal Processing By Stephane Mallat p 428
-  void CompressedSensing::UpdateOrthogonalMatrix(RealMatrix& Q, int n, 
-						 RealVector& new_column)
-  {
-    Teuchos::BLAS<int, double> blas;
+};
+//Check out for elastic nets
+//http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=3897
+//http://www.mlpack.org/doxygen.php?doc=classmlpack_1_1regression_1_1LARS.html#_details
 
-    int m( Q.numRows() ); 
-    Real *new_column_raw;
-    new_column_raw = new_column.values();
-    Real *Q_column_j_raw;
-    for ( int j = 0; j < n; j++ )
-      {
-	RealVector Q_column_j( Teuchos::View, Q[j], m );
-	Q_column_j_raw = Q[j];
-	double scale = DotProduct( Q_column_j, new_column);
-	// Subtract projection of new column onto previous column
-	blas.AXPY( m, -scale, Q_column_j_raw, 1, new_column_raw, 1 ); 
-      }
-    // Add new orthogonalised column to Q
-    double new_column_norm = new_column.normFrobenius();
-    for ( int i = 0; i < m; i++ )
-      {
-	Q[n][i] = new_column[i] / new_column_norm;
-      }
-  };
+void CompressedSensingTool::standardize_inputs( RealMatrix &A, RealMatrix &B, 
+						RealMatrix &A_stand, 
+						RealMatrix &B_stand,
+						RealVector &A_column_norms,
+						RealVector &A_column_means,
+						RealVector &B_means )
+{
 
-  void CompressedSensing::OrthogonalMatchingPursuit( RealMatrix& A, 
-						     RealMatrix& B, 
-						     RealMatrix& X )
-  {
-    double tol = 1.e-8;
- 
-    int m( A.numRows() ), n( A.numCols() ), num_rhs( B.numCols() );
+  int M( A.numRows() ), N( A.numCols() ), num_rhs( B.numCols() );
+  A_stand.shapeUninitialized( M, N );
+  B_stand.shapeUninitialized( M, num_rhs );
 
-    // Initialise all entries of x to zero
-    X.reshape( n, num_rhs );
+  RealVector A_column_var;
+  A_column_var.sizeUninitialized( N );
 
-    for ( int k = 0; k < num_rhs; k++ )
-      {
- 
-	int max_iter( m );
-      
-	RealMatrix Q( m, max_iter );
+  A_column_means.sizeUninitialized( N );
+  A_column_norms.sizeUninitialized( N );
+  for ( int n = 0; n < N; n ++ )
+    {
+      RealVector A_col( Teuchos::View, A[n], M );
+      A_column_means[n] = mean( M, A_col.values() );
+      A_column_var[n] = variance( M, A_col.values() );
+      // If column is a constant vector do not center it
+      if ( A_column_var[n] < 10*std::numeric_limits<Real>::epsilon() )
+	A_column_means[n] = 0.0;
+      for ( int m = 0; m < M; m++ )
+	{
+	  A_stand(m,n) = A(m,n) - A_column_means[n];
+	}
+    }
 
-	// Compute residual
-	RealVector b( Teuchos::Copy, B[k], m ), residual( b ), x( n );
+  for ( int n = 0; n < N; n ++ )
+    {
+      RealVector A_stand_col( Teuchos::View, A_stand[n], M );
+      A_column_norms[n] = A_stand_col.normFrobenius();
+    }
 
-	// Compute correlation of columns with residual
-	RealVector AtR( n );
-	Product( A, residual, AtR, Teuchos::TRANS, 1.0, 0.0 );
-  
-	// Compute norm of residual
-	Real residual_norm( DotProduct( residual, residual ) );
-	Real b_norm( DotProduct( b, b ) );
+  for ( int n = 0; n < N; n ++ )
+    {
+      for ( int m = 0; m < M; m++ )
+	{
+	  A_stand(m,n) = A_stand(m,n) / A_column_norms[n];
+	}
+    }
 
-	int iter( 0 );
-	IntVector active_index_set( n );
-	Real *AtR_vector;
-	bool done = false;
-	RealVector x_orthogonal( n );
-	while ( !done )
+  // If the first column is a vector of ones then center the rhs (B) values
+  // That is only center values if A is a vandermonde matrix built by
+  // a linear model
+  if ( ( A_column_var[0] < 10*std::numeric_limits<Real>::epsilon() ) )
+    {
+      B_means.sizeUninitialized( num_rhs );
+      for ( int k = 0; k < num_rhs; k++ )
+	{
+	  B_means[k] = 0.0;
+	  for ( int m = 0; m < M; m++ )
+	    {
+	      B_means[k] += B(m,k);
+	    }
+	  B_means[k] /= M;
+
+	  for ( int m = 0; m < M; m++ )
+	    {
+	      B_stand(m,k) = B(m,k) - B_means[k];
+	    } 
+	}
+    }
+  else
+    {
+      B_stand = B; 
+    }
+};
+
+void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B, 
+				   RealMatrixList &solutions, 
+				   CompressedSensingOptions &opts,
+				   CompressedSensingOptionsList &opts_list )
+{
+  int M( A.numRows() ), N( A.numCols() ), num_rhs( B.numCols() );
+
+  RealMatrix A_stand, B_stand;
+  RealVector A_column_norms, A_column_means, B_means;
+  if ( opts.standardizeInputs )
+    {
+      standardize_inputs( A, B, A_stand, B_stand, A_column_norms, 
+			  A_column_means, B_means );
+    }
+  else
+    {
+      A_stand = A;
+      B_stand = B;
+    }
+
+  solverType solver( opts.solver );
+  Real solver_tolerance( opts.solverTolerance );
+  if ( M >= N &&  (solver != LASSO ) && ( solver != LARS ) && ( solver != OMP ) )
+    {
+      if ( opts.verbosity > 0 )
+	{
+	  std::string msg = "CompressedSensingTool::solve() A ";
+	  msg += " Matrix is over-determined computing least squares solution.";
+	  std::cout <<  msg << std::endl;
+	}
+      solver = LS;
+      solver_tolerance = -1.0;
+    }
+
+  solutions.resize( num_rhs );
+  opts_list.resize( num_rhs );
+  if ( solver == LS || solver == BP || solver == BPDN )
+    {
+      // These methods only return one solution for each rhs
+      RealMatrix single_solution;
+      switch( solver )
+	{
+	case LS:
 	  {
-	    int arg_max_AtR = ArgMaxMagnitude(AtR);
-	    active_index_set[iter] = arg_max_AtR;	  
-	    RealVector new_column( Teuchos::Copy, A[arg_max_AtR], m );
-	    UpdateOrthogonalMatrix(Q, iter, new_column);
-	    active_index_set[iter] = arg_max_AtR;
-	    //PCout << "Adding variable " << arg_max_AtR << "\n";
+	    RealVector singularValues;
+	    int rank(0);
+	    svd_solve( A_stand, B_stand, single_solution, singularValues, rank, 
+		      solver_tolerance );
+	    break;
+	  }
+	case BP:
+	  {
+	    BP_primal_dual_interior_point_method( A_stand, B_stand, 
+						  single_solution, 
+						  solver_tolerance, 
+					  opts.conjugateGradientsTolerance,
+						  opts.verbosity );
+	    break;
+	  }
+	case BPDN:
+	  {
+	    BPDN_log_barrier_interior_point_method( A_stand, B_stand, 
+						    single_solution, 
+						    opts.epsilon, 
+						    solver_tolerance, 
+					    opts.conjugateGradientsTolerance,
+						    opts.verbosity );
+	    break;
+	  }
+	default:
+	  {
+	    std::string msg = "CompressedSensingTool::solve() ";
+	    msg += " incorrect solver specified";
+	    throw( std::runtime_error( msg ) );
+	  }
+	}
+      // Pack solutions into a  list of length (num_rhs) containing 
+      // ( N x num_solutions=1 ) matrix
+      for ( int k = 0; k < num_rhs; k++ )
+	{
+	  reshape( solutions[k], N, 1 );
+	  RealMatrix solution( Teuchos::View, single_solution, N, 1, 0, k );
+	  solutions[k].assign( solution );
 
-	    Product( Q , b , x_orthogonal, Teuchos::TRANS, 1.0, 0.0 );
-
-	    // Compute residual. Note that here we are using the
-	    // orthogonalised values of x and thus this is not the true
-	    // residual. The residual is not the same but 
-	    // <R^mf, u_m> = <R^mf, g_m> u is orthonormal basis and g is
-	    // original basis. Plot how two residuals compare.
-
-	    // For Matrix operator= to work Teuchos::copy=true must be 
-	    // set during creation of the  matrix being copied.
-	    residual = b;
-	    Product( Q, x_orthogonal, residual, Teuchos::NO_TRANS, -1.0, 1.0 );
-	    residual_norm = DotProduct ( residual, residual );
-      
-	    iter++;      
-	    if ( (residual_norm <= tol*b_norm) || ( iter >= max_iter-1 ) )
-	      done = true;
-	    else
+	  // Store solution metrics in CompressedSensingOptions format.
+	  opts_list[k].resize( 1 );
+	  // First copy the original options
+	  opts_list[k][0] = opts;
+	  // There is no need to update the needed metrics as they will not
+	  // effect the solution produced if used again.
+	}
+    }
+  else
+    {
+      // These methods return multiple solutions for each rhs
+      // solutions[k] will be a ( N x num_solutions ) matrix 
+      // containing multiple solutions x of Ax = b
+      for ( int k = 0; k < num_rhs; k++ )
+	{
+	  // ( M x 1 ) rhs vector of Ax = b
+	  RealVector b( Teuchos::View, B_stand[k], M );
+	  switch( solver )
+	    {
+	    case OMP:
 	      {
-		Product( A, residual, AtR, Teuchos::TRANS, 1.0, 0.0 );
-	      }      
-	  }
-
+		RealMatrix solution_metrics;
+		orthogonal_matching_pursuit( A_stand, b, solutions[k], 
+					     solution_metrics,
+					     opts.epsilon,
+					     opts.maxNumIterations,
+					     opts.verbosity );
+		// Store solution metrics in CompressedSensingOptions format
+		int num_solutions( solutions[k].numCols() );
+		opts_list[k].resize( num_solutions );
+		for ( int l = 0; l < num_solutions; l++ )
+		  {
+		    // First copy the original options
+		    opts_list[k][l] = opts;
+		    // Then update the needed metrics
+		    opts_list[k][l].epsilon = solution_metrics(0,l);
+		    opts_list[k][l].maxNumIterations = 
+		      solution_metrics(1,l);
+		    
+		  }
+		break;
+	      }
+	    case LASSO:
+	      {
+		RealMatrix solution_metrics;
+		least_angle_regression( A_stand, b, solutions[k], 
+					solution_metrics,
+					opts.epsilon, LASSO, opts.delta,
+					opts.maxNumIterations, 
+					opts.verbosity );
+		int num_solutions( solutions[k].numCols() );
+		opts_list[k].resize( num_solutions );
+		for ( int l = 0; l < num_solutions; l++ )
+		  {
+		    // First copy the original options
+		    opts_list[k][l] = opts;
+		    // Then update the needed metrics
+		    opts_list[k][l].epsilon = solution_metrics(0,l);
+		    opts_list[k][l].maxNumIterations = 
+		      solution_metrics(1,l);
+		  }
+		break;
+	      };
+	    case LARS:
+	      {
+		RealMatrix solution_metrics;
+		least_angle_regression( A_stand, b, solutions[k], 
+					solution_metrics,
+					opts.epsilon, LARS, opts.delta,
+					opts.maxNumIterations,
+					opts.verbosity );
+		int num_solutions( solutions[k].numCols() );
+		opts_list[k].resize( num_solutions );
+		for ( int l = 0; l < num_solutions; l++ )
+		  {
+		    // First copy the original options
+		    opts_list[k][l] = opts;
+		    // Then update the needed metrics
+		    opts_list[k][l].epsilon = solution_metrics(0,l);
+		    opts_list[k][l].maxNumIterations = 
+		      solution_metrics(1,l);
+		  }
+		break;
+	      };
+	    default:
+	      {
+		std::string msg = "CompressedSensingTool::solve() ";
+		msg += " incorrect solver specified";
+		throw( std::runtime_error( msg ) );
+	      }
+	    };
+	  
+	  if ( !opts.storeHistory )
+	    {
+	      // Only return final solution 
+	      int num_solutions( solutions[k].numCols() );
+	      RealMatrix final_solution( Teuchos::Copy, solutions[k], 
+					 N, 1, 0, num_solutions - 1 );
+	      solutions[k].reshape( N, 1 );
+	      solutions[k] = final_solution;
+	      // Only return the options that produced the final solution
+	      opts_list[k][0] = opts_list[k][num_solutions-1];
+	      opts_list[k].resize( 1 );
+	    }
+	}
+    }
   
-	RealMatrix A_trunc( m, iter );
-	for (int j = 0; j < iter; j++ )
-	  {
-	    for ( int i = 0; i < m; i++ )
-	      A_trunc(i,j) = A(i,active_index_set[j]);
-	  }
-	RealVector x_trunc( iter );
-	SVDSolve( A_trunc, b, x_trunc );
-
-	for (int j = 0; j < iter; j++ )
-	  {
-	    X(active_index_set[j],k) = x_trunc[j];
-	  }
-      }
-  };
-
-} // namespace pecos
+  if ( opts.standardizeInputs )
+    {
+      for (int k = 0; k < num_rhs; k++ )
+	{
+	  int num_solutions( solutions[k].numCols() );
+	  for ( int l = 0; l < num_solutions; l++ )
+	    {
+	      // Re-adjust solution to account for normalisation of A
+	      for (int j = 0; j < N; j++ )
+		{
+		  solutions[k](j,l) /= A_column_norms[j];
+		}
+	      RealVector solution_kl( Teuchos::View, solutions[k][l], N );
+	      // Readjust solution to account for centering of A
+	      solutions[k](0,l) -= A_column_means.dot( solution_kl );
+	      // Readjust solution to account for centering of B
+	      if ( B_means.length() == num_rhs )
+		solutions[k](0,l) += B_means[k];
+	    }
+	}
+    }
+};

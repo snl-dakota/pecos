@@ -83,6 +83,11 @@ boost_test_rng_DEPENDENCIES = ${top_builddir}/libpecos.la
 boost_test_rng_LDADD = -L${top_builddir} -lpecos \
     $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
 
+mytest_SOURCES = mytest.cpp
+mytest_DEPENDENCIES = ${top_builddir}/libpecos.la
+mytest_LDADD = -L${top_builddir} -lpecos \
+    $(TPL_LDFLAGS) $(TPL_LIBS) @LAPACK_LIBS@ @BLAS_LIBS@ @FLIBS@ @FCLIBS@
+
 
 # Define this variable if you want to install test header files.
 # subpkginclude_HEADERS =

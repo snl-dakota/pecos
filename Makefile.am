@@ -53,6 +53,8 @@ include_HEADERS = pecos_config.h				\
 		     src/NodalInterpPolyApproximation.hpp	\
 		     src/OrthogPolyApproximation.hpp		\
 		     src/CompressedSensing.hpp			\
+		     src/LinearAlgebra.hpp			\
+		     src/MathTools.hpp         			\
 		     src/SurrogateData.hpp			\
 		     src/DistributionParams.hpp			\
 		     src/BasisPolynomial.hpp			\
