@@ -13,7 +13,8 @@
 #include "Teuchos_LAPACK.hpp"
 
 #include "pecos_data_types.hpp"
-using namespace Pecos;
+
+namespace Pecos{
 
 typedef Teuchos::SerialDenseMatrix<int,int> IntMatrix;
 typedef std::vector<RealMatrix> RealMatrixList;
@@ -473,4 +474,7 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 			       Real cg_tol = 1e-8, int max_iter = 50,
 			       int verbosity = 1 );
 
+} // namespace Pecos
+
 #endif
+

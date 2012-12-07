@@ -1,5 +1,7 @@
 #include "MathTools.hpp"
 
+namespace Pecos {
+
 void ind2sub( const IntVector &sizes, int index, int numElems,
 	      IntVector &multiIndex )
 /* Map a linear index of a d-dimensional array to the equivalent
@@ -328,3 +330,5 @@ Real variance( int n, Real *x, int dof )
     }
   return variance / (Real)( n - dof );
 }
+
+} // namespace Pecos

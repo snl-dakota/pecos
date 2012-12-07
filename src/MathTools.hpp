@@ -10,6 +10,8 @@
 
 #include "LinearAlgebra.hpp"
 
+namespace Pecos {
+
 #define PI 4.0*atan(1.0)
 
 /**
@@ -421,5 +423,6 @@ int num_non_zeros( T *data, int n )
   return num_non_zero_count;
 }
 
+} // namespace Pecos
 
 #endif

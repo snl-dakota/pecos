@@ -1,5 +1,6 @@
 #include "LinearAlgebra.hpp"
 
+namespace Pecos {
 int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& X, Real &rcond )
 {
   Teuchos::LAPACK<int, Real> la;
@@ -491,3 +492,5 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
     }    
   return info;
 };
+
+} // namespace Pecos

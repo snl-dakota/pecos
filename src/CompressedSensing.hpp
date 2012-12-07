@@ -10,6 +10,8 @@
 
 #include "LinearAlgebra.hpp"
 
+namespace Pecos {
+
 /**
  * Compressed sensing methods available
  */
@@ -318,4 +320,9 @@ public:
 			   RealVector &A_column_means,
 			   RealVector &B_means ); 
 };
+
+} // namespace Pecos
+
 #endif
+
+

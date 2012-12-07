@@ -1,6 +1,8 @@
 #include "CompressedSensing.hpp"
 #include "MathTools.hpp"
 
+namespace Pecos {
+
 solverType solverTypeCast( int i )
 {
   solverType sType;
@@ -1653,3 +1655,5 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	}
     }
 };
+
+} // namespace Pecos
