@@ -2169,7 +2169,7 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
     for (i=0; i<numExpansionTerms; ++i)
       for (j=0; j<num_grad_rhs; ++j)
 	expansionCoeffGrads(j,i)
-	  = solutions[0]((j+num_coeff_rhs)*num_data_pts_grad+i,0);
+	  = solutions[j+num_coeff_rhs](i,0);
     
 
     delete [] A_matrix;
