@@ -43,10 +43,10 @@ struct CompressedSensingOptions
   int verbosity;           //!< The verbosity level. 0: off, 1: warnings on,  2: all print statements on.
 
   CompressedSensingOptions() : 
-    solver( OMP ), solverTolerance( -1. ), epsilon( 1.e-3 ), delta( 0.0 ),
+    solver( LS ), solverTolerance( -1. ), epsilon( 0.0 ), delta( 0.0 ),
     maxNumIterations( std::numeric_limits<int>::max() ), 
-    standardizeInputs( true ), storeHistory( false ), 
-    conjugateGradientsTolerance( 1e-8 ), verbosity( 0 )
+    standardizeInputs( false ), storeHistory( false ), 
+    conjugateGradientsTolerance( -1 ), verbosity( 0 )
   {};
 
   void print()

@@ -16,6 +16,7 @@
 
 #include "PolynomialApproximation.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
+#include "CompressedSensing.hpp"
 
 namespace Pecos {
 
@@ -431,6 +432,13 @@ private:
   /// spectral coefficient decay rates estimated by LLS on log of
   /// univariate expansion coefficients
   RealVector decayRates;
+
+  /// Wrapper class that is used to solve regression problems
+  CompressedSensingTool CSTool;
+
+  /// Stuct use to define the options of a compressed sensing solve
+  CompressedSensingOptions CSOpts;
+
 };
 
 

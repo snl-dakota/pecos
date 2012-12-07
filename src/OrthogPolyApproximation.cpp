@@ -19,8 +19,6 @@
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
-#include "CompressedSensing.hpp"
-
 //#define DEBUG
 //#define DECAY_DEBUG
 
@@ -1790,16 +1788,12 @@ L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   RealMatrix B( Teuchos::View, b_vectors, num_rows_A, num_rows_A, 
 		num_rhs );
 
-  CompressedSensingTool CSTool;
-  CompressedSensingOptions opts;
   CompressedSensingOptionsList opts_list;
   RealMatrixList solutions;
 
-  opts.solver = LASSO;
-  opts.storeHistory = false;
-  opts.epsilon = 1e-15;
-  opts.verbosity = 0;
-  CSTool.solve( A, B, solutions, opts, opts_list );
+  CSOpts.solver = LASSO;
+  CSOpts.verbosity = 0;
+  CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
   copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
 
@@ -2023,16 +2017,12 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   // > expansionCoeffFlag+expansionCoeffGradFlag with inconsistent faults
   //   (two solves: first with single RHS, second with multiple RHS)
 
-  CompressedSensingTool CSTool;
-  CompressedSensingOptions opts;
   CompressedSensingOptionsList opts_list;
   RealMatrixList solutions;
 
-  opts.solver = LS;
-  opts.storeHistory = false;
-  opts.epsilon = 1e-15;
-  opts.standardizeInputs = false; // false essential when using derivatives
-  opts.verbosity = 0;
+  CSOpts.solver = LS;
+  CSOpts.standardizeInputs = false; // false essential when using derivatives
+  CSOpts.verbosity = 0;
 
 
   Teuchos::LAPACK<int, Real> la; bool lapack_err = false;
@@ -2096,7 +2086,15 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
     // if no RHS augmentation, then solve for coeffs now
     if (!multiple_rhs) {
 
-      CSTool.solve( A, B, solutions, opts, opts_list );
+      if ( num_data_pts_fn < numExpansionTerms )
+	{
+	  PCout << "Using LASSO\n";
+	  CSOpts.solver = LASSO;
+	}
+      else
+	CSOpts.solver = LS;
+
+      CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
       copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
       
@@ -2154,7 +2152,7 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 #endif // DEBUG
 
     // solve
-    CSTool.solve( A, B, solutions, opts, opts_list );
+    CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
     if (multiple_rhs)
       {
