@@ -177,6 +177,12 @@ private:
     RealVector& member_t1_coeffs,     RealVector& member_t1_wts,
     RealMatrix& member_t2_coeffs,     RealMatrix& member_t2_wts,
     UShort2DArray& member_colloc_key, SizetArray& member_colloc_index);
+  /// convert member components of Smolyak index and collocation key into a 
+  /// unique map key for value and gradient lookup
+  void create_member_key(const UShortArray& sm_index,
+			 const UShortArray& member_colloc_key,
+			 const SizetList&   member_indices,
+			 UShortArray& member_map_key);
 
   //
   //- Heading: Data
@@ -314,6 +320,22 @@ expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs)
   // This version defaults to type1/2 weights from CombinedSparseGridDriver
   return expectation(t1_coeffs, driverRep->type1_weight_sets(),
 		     t2_coeffs, driverRep->type2_weight_sets());
+}
+
+
+inline void NodalInterpPolyApproximation::
+create_member_key(const UShortArray& sm_index,
+		  const UShortArray& member_colloc_key,
+		  const SizetList&   member_indices,
+		  UShortArray& member_map_key)
+{
+  size_t member_index, cntr = 0;
+  for (SizetList::const_iterator cit=member_indices.begin();
+       cit!=member_indices.end(); ++cit) {
+    member_index = *cit;
+    member_map_key[cntr] =          sm_index[member_index]; ++cntr;
+    member_map_key[cntr] = member_colloc_key[member_index]; ++cntr;
+  }
 }
 
 } // namespace Pecos

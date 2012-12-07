@@ -74,6 +74,7 @@ typedef std::deque<bool> BoolDeque; // See Meyers' Effective STL #18
 typedef boost::dynamic_bitset<unsigned long> BitArray;
 
 typedef std::pair<Real, Real>        RealPair;
+typedef std::pair<Real, RealVector>  RealRealVectorPair;
 typedef std::list<size_t>            SizetList;
 
 typedef std::vector<Real>            RealArray;

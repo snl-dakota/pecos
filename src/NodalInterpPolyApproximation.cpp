@@ -1814,13 +1814,14 @@ member_integral(const BitArray& member_bits, Real mean)
 {
   // Follows Tang, Iaccarino, Eldred (conference paper AIAA-2010-2922)
 
-  Real integral = 0.;
-  size_t i, j, num_member_coeffs, c_index;
+  size_t i, j, num_member_coeffs;
   SizetList member_indices;
   for (j=0; j<numVars; ++j)
     if (member_bits[j])
       member_indices.push_back(j);
+  size_t num_member_indices = member_indices.size();
 
+  Real integral = 0.;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -1841,8 +1842,8 @@ member_integral(const BitArray& member_bits, Real mean)
     // Perform outer integral over set u
     num_member_coeffs = member_t1_coeffs.length();
     for (i=0; i<num_member_coeffs; ++i) {
-      c_index = member_colloc_index[i];
-      const RealVector& c_vars = surrData.continuous_variables(c_index);
+      const RealVector& c_vars
+	= surrData.continuous_variables(member_colloc_index[i]);
       Real h_t1_coeff_i_mm = tensor_product_value(c_vars, member_t1_coeffs,
 	member_t2_coeffs, lev_index, member_colloc_key, empty_colloc_index,
 	member_indices) - mean;
@@ -1891,25 +1892,53 @@ member_integral(const BitArray& member_bits, Real mean)
     // interpolant has the correct aggregated coefficients.  Then we linearly
     // sum the member wts over the Smolyak coeffs (the reduced-dimension
     // sparse grid is not "combined").
+
+    // For efficiency, we eliminate redundant value()/grad() calls using a
+    // std::map with unique key created from member variable components of
+    // sm_index and member_colloc_key
+    std::map<UShortArray, RealRealVectorPair> member_map;
+    std::map<UShortArray, RealRealVectorPair>::iterator member_map_it;
+    UShortArray member_map_key(2*num_member_indices);
+    RealRealVectorPair val_grad_pr;
+
+    Real h_t1_coeff_ij_mm;
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i]) {
 	num_member_coeffs = member_t1_coeffs[i].length();
 	for (j=0; j<num_member_coeffs; ++j) {
-	  c_index = member_colloc_index[i][j];
-	  const RealVector& c_vars = surrData.continuous_variables(c_index);
-	  Real h_t1_coeff_ij_mm = value(c_vars, member_t1_coeffs,
-	    member_t2_coeffs, member_colloc_key, member_indices) - mean;
+	  const RealVector& c_vars
+	    = surrData.continuous_variables(member_colloc_index[i][j]);
+	  // create key for this member coeff; see if val/grad already computed
+	  create_member_key(sm_index[i], member_colloc_key[i][j],
+			    member_indices, member_map_key);
+	  member_map_it = member_map.find(member_map_key);
+	  bool found = (member_map_it != member_map.end());
+	  // retrieve or compute type1 coefficient for h-mean
+	  if (found)
+	    h_t1_coeff_ij_mm = member_map_it->second.first;
+	  else
+	    val_grad_pr.first = h_t1_coeff_ij_mm =
+	      value(c_vars, member_t1_coeffs, member_t2_coeffs,
+		    member_colloc_key, member_indices) - mean;
+	  // increment integral with type1 contribution of (h-mean)^2
 	  integral += h_t1_coeff_ij_mm * h_t1_coeff_ij_mm
 	           *  member_t1_wts[i][j] * sm_coeffs[i];
-	  if (basisConfigOptions.useDerivs) { // type2 interp of h^2 = 2 h h'
-	    const RealVector& h_t2_coeffs_ij = gradient_basis_variables(c_vars,
-	      member_t1_coeffs, member_t2_coeffs, member_colloc_key,
-	      member_indices);
+	  if (basisConfigOptions.useDerivs) {
+	    // retrieve or compute type2 coefficient for h
+	    if (!found)
+	      val_grad_pr.second = 
+		gradient_basis_variables(c_vars, member_t1_coeffs,
+		member_t2_coeffs, member_colloc_key, member_indices);
+	    const RealVector& h_t2_coeffs_ij = (found) ?
+	      member_map_it->second.second : val_grad_pr.second;
+	    // increment integral with type2 contribution of (h-mean)^2 = 2 h h'
 	    Real *m_t2_wts_ij = member_t2_wts[i][j];
 	    for (size_t k=0; k<numVars; ++k)
 	      integral += 2. * h_t1_coeff_ij_mm * h_t2_coeffs_ij[k]
 		       *  m_t2_wts_ij[k] * sm_coeffs[i];
 	  }
+	  if (!found)
+	    member_map[member_map_key] = val_grad_pr;
 	}
       }
     break;
@@ -1974,8 +2003,9 @@ member_coefficients_weights(const BitArray& member_bits,
     c_index = (colloc_index.empty()) ? i : colloc_index[i];
     member_t1_coeffs[member_index]
       += nonmember_wt * expansionType1Coeffs[c_index];
-    // reduced dimension data updated more times than necessary, but
-    // tracking this redundancy would be more expensive/complicated
+    // reduced dimension data updated more times than necessary, but tracking
+    // this redundancy would be more expensive/complicated.  Note: non-member
+    // key and c_vars data may change, but member data should be consistent.
     member_t1_wts[member_index]       = member_wt;
     member_colloc_key[member_index]   = key_i;  // links back to interp poly's
     member_colloc_index[member_index] = c_index;// links back to surrData c_vars
