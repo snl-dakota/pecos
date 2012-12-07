@@ -1819,7 +1819,6 @@ member_integral(const BitArray& member_bits, Real mean)
   for (j=0; j<numVars; ++j)
     if (member_bits[j])
       member_indices.push_back(j);
-  size_t num_member_indices = member_indices.size();
 
   Real integral = 0.;
   switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -1866,7 +1865,9 @@ member_integral(const BitArray& member_bits, Real mean)
     const UShort2DArray&        sm_index = csg_driver->smolyak_multi_index();
     const UShort3DArray&      colloc_key = csg_driver->collocation_key();
     const Sizet2DArray&     colloc_index = csg_driver->collocation_indices();
-    size_t num_smolyak_indices = sm_coeffs.size(); UShortArray quad_order;
+    size_t num_smolyak_indices = sm_coeffs.size(),
+           num_member_indices  = member_indices.size();
+    UShortArray quad_order;
 
     // Perform inner integral over complementary set u' to form new weighted
     // coefficients h (stored as member {t1,t2} coeffs).  Precompute all
@@ -1905,12 +1906,15 @@ member_integral(const BitArray& member_bits, Real mean)
     for (i=0; i<num_smolyak_indices; ++i)
       if (sm_coeffs[i]) {
 	num_member_coeffs = member_t1_coeffs[i].length();
+	update_member_key(sm_index[i], member_indices, member_map_key, 0);
+	UShort2DArray& m_c_key_i   = member_colloc_key[i];
+	SizetArray&    m_c_index_i = member_colloc_index[i];
 	for (j=0; j<num_member_coeffs; ++j) {
 	  const RealVector& c_vars
-	    = surrData.continuous_variables(member_colloc_index[i][j]);
+	    = surrData.continuous_variables(m_c_index_i[j]);
 	  // create key for this member coeff; see if val/grad already computed
-	  create_member_key(sm_index[i], member_colloc_key[i][j],
-			    member_indices, member_map_key);
+	  update_member_key(m_c_key_i[j], member_indices, member_map_key,
+			    num_member_indices);
 	  member_map_it = member_map.find(member_map_key);
 	  bool found = (member_map_it != member_map.end());
 	  // retrieve or compute type1 coefficient for h-mean
