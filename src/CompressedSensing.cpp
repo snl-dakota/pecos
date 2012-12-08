@@ -10,30 +10,35 @@ solverType solverTypeCast( int i )
     {
     case 0:
       {
-	sType = LS;
+	sType = DEFAULT_SOLVER;
 	break;
       }
     case 1:
       {
-	sType = BP;
+	sType = LS;
 	break;
       }
     case 2:
       {
-	sType = BPDN;
+	sType = BP;
 	break;
       }
     case 3:
       {
-	sType = OMP;
+	sType = BPDN;
 	break;
       }
     case 4:
       {
-	sType = LASSO;
+	sType = OMP;
 	break;
       }
     case 5:
+      {
+	sType = LASSO;
+	break;
+      }
+    case 6:
       {
 	sType = LARS;
 	break;
@@ -47,6 +52,37 @@ solverType solverTypeCast( int i )
       }
     };
   return sType;
+};
+
+lsSolverType lsSolverTypeCast( int i )
+{
+  lsSolverType lsSType;
+  switch( i )
+    {
+    case 0:
+      {
+	lsSType = DEFAULT_LS_SOLVER;
+	break;
+      }
+    case 1:
+      {
+	lsSType = SVD;
+	break;
+      }
+    case 2:
+      {
+	lsSType = EQ_CON_QR;
+	break;
+      }
+    default:
+      {
+	std::stringstream msg;
+	msg << "lsSolverTypeCast() out of range. Cannot cast " << i;
+	msg << " to enum lsSolverType";
+	throw( std::runtime_error( msg.str() ) );
+      }
+    };
+  return lsSType;
 };
 
 Real CompressedSensingTool::BP_surrogate_duality_gap( 

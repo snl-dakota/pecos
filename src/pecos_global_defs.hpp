@@ -122,6 +122,27 @@ enum { INTERPOLATION_OF_PRODUCTS, PRODUCT_OF_INTERPOLANTS_FAST,
 /// special values for polynomial expansion combination
 enum { NO_COMBINE=0,  ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
 
+/// Compressed sensing methods available
+enum solverType
+  {
+    DEFAULT_SOLVER = 0, //!< auto selects based on size of data set
+    LS,    //!< Least squares/minimum norm solution
+    BP,    //!< Basis Pursuit using the primal dual interior point method
+    BPDN,  //!< Basis Pursuit Denoising using the log barrier interior point method
+    OMP,   //!< Orthogonal Matching Pursuit
+    LASSO, //!< Least Absolute Shrinkage and Selection Operator
+    LARS,  //!< Least Angle Regression
+  };
+
+/// Least squares methods available
+enum lsSolverType
+  {
+    DEFAULT_LS_SOLVER = 0, //!< auto selects based on size of data set
+    SVD,       //!< Singular value decomposition
+    EQ_CON_QR, //!< Equality-constrained QR
+  };
+
+
 // ----------------
 // Standard streams
 // ----------------

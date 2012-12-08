@@ -9,23 +9,12 @@
 #define COMPRESSED_SENSING_HPP
 
 #include "LinearAlgebra.hpp"
+#include "pecos_global_defs.hpp"
 
 namespace Pecos {
 
-/**
- * Compressed sensing methods available
- */
-enum solverType
-  {
-    LS,   //!< Least squares/minimum norm solution
-    BP,   //!< Basis Pursuit using the primal dual interior point method
-    BPDN, //!<Basis Pursuit Denoising using the log barrier interior point method
-    OMP,  //!< Orthogonal Matching Pursuit
-    LASSO,//!< Least Absolute Shrinkage and Selection Operator
-    LARS, //!< Least Angle Regression
-  };
-
 solverType solverTypeCast( int i );
+lsSolverType lsSolverTypeCast( int i );
 
 /**
  * \brief Specify a set of options for using the CompressedSensingTool
