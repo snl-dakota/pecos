@@ -118,7 +118,6 @@ IntegrationDriver* IntegrationDriver::get_driver(short driver_type)
   case CUBATURE:                 return new CubatureDriver();           break;
   case COMBINED_SPARSE_GRID:     return new CombinedSparseGridDriver(); break;
   case HIERARCHICAL_SPARSE_GRID: return new HierarchSparseGridDriver(); break;
-//case LOCAL_REFINABLE:          return new LocalRefinableDriver();     break;
   default:
     PCerr << "Error: IntegrationDriver type " << driver_type
 	  << " not available." << std::endl;

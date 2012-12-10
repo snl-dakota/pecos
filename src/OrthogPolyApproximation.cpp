@@ -68,7 +68,11 @@ int OrthogPolyApproximation::min_coefficients() const
     case QUADRATURE: case CUBATURE: case COMBINED_SPARSE_GRID: case SAMPLING:
       return 1; // quadrature: (int)pow((Real)MIN_GAUSS_PTS, numVars);
       break;
-    case REGRESSION:
+    case DEFAULT_REGRESSION:      case DEFAULT_LEAST_SQ_REGRESSION:
+    case SVD_LEAST_SQ_REGRESSION: case EQ_CON_LEAST_SQ_REGRESSION:
+    case BASIS_PURSUIT:           case BASIS_PURSUIT_DENOISING:
+    case ORTHOG_MATCH_PURSUIT:    case LASSO_REGRESSION:
+    case LEAST_ANGLE_REGRESSION:
       // At least numVars+1 data instances should be provided to enable
       // construction of a complete linear approximation.
       //return numVars+1;
@@ -306,7 +310,7 @@ void OrthogPolyApproximation::compute_coefficients()
   // expCoeffsSolnApproach settings:
   //   SAMPLING:   treat it as another data point
   //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
-  //   REGRESSION: use equality-constrained least squares
+  //   LEAST_SQ_REGRESSION: use equality-constrained least squares
   size_t i, j, num_total_pts = surrData.size();
   if (surrData.anchor())
     ++num_total_pts;
@@ -424,13 +428,13 @@ void OrthogPolyApproximation::compute_coefficients()
       break;
     }
     break;
-  case REGRESSION:
-    surrData.data_checks();
-    regression();
-    break;
   case SAMPLING:
     surrData.data_checks();
     expectation();
+    break;
+  default: // L1 (compressed sensing) and L2 (least squares) regression
+    surrData.data_checks();
+    regression();
     break;
   }
 
@@ -1791,7 +1795,7 @@ L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   CompressedSensingOptionsList opts_list;
   RealMatrixList solutions;
 
-  CSOpts.solver = LASSO;
+  CSOpts.solver = LASSO_REGRESSION;
   CSOpts.verbosity = 0;
   CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
@@ -2020,7 +2024,7 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   CompressedSensingOptionsList opts_list;
   RealMatrixList solutions;
 
-  CSOpts.solver = LS;
+  CSOpts.solver = DEFAULT_LEAST_SQ_REGRESSION;
   CSOpts.standardizeInputs = false; // false essential when using derivatives
   CSOpts.verbosity = 0;
 
@@ -2089,10 +2093,10 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
       if ( num_data_pts_fn < numExpansionTerms )
 	{
 	  PCout << "Using LASSO\n";
-	  CSOpts.solver = LASSO;
+	  CSOpts.solver = LASSO_REGRESSION;
 	}
       else
-	CSOpts.solver = LS;
+	CSOpts.solver = DEFAULT_LEAST_SQ_REGRESSION;
 
       CSTool.solve( A, B, solutions, CSOpts, opts_list );
 

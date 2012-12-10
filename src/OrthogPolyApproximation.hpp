@@ -73,8 +73,15 @@ public:
   /// set polynomialBasis
   void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
+  /// set crossValidation flag
+  void cross_validation(bool flag);
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
+
+  /// set the noise tolerance(s) for compressed sensing approaches
+  void noise_tolerance(const RealVector& noise_tol);
+  /// set the L2 penalty parameter for LASSO (elastic net variant)
+  void l2_penalty(Real l2_pen);
 
 protected:
 
@@ -435,10 +442,17 @@ private:
 
   /// Wrapper class that is used to solve regression problems
   CompressedSensingTool CSTool;
-
   /// Stuct use to define the options of a compressed sensing solve
   CompressedSensingOptions CSOpts;
 
+  /// flag for use of automatic cross-validation for parameter
+  /// selection in regression approaches
+  bool crossValidation;
+  /// noise tolerance(s) for compressed sensing algorithms; vector form
+  /// used in cross-validation
+  RealVector noiseTols;
+  /// the L2 penalty parameter for LASSO (elastic net variant)
+  Real l2Penalty;
 };
 
 
@@ -542,6 +556,10 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
 { polynomialBasis = poly_basis; }
 
 
+inline void OrthogPolyApproximation::cross_validation(bool flag)
+{ crossValidation = flag; }
+
+
 inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
 {
   size_t i, num_basis = basisTypes.size();
@@ -550,6 +568,15 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
       ((NumericGenOrthogPolynomial*)polynomialBasis[i].polynomial_rep())
 	->coefficients_norms_flag(flag);
 }
+
+
+inline void OrthogPolyApproximation::
+noise_tolerance(const RealVector& noise_tol)
+{ noiseTols = noise_tol; }
+
+
+inline void OrthogPolyApproximation::l2_penalty(Real l2_pen)
+{ l2Penalty = l2_pen; }
 
 
 inline const RealVector& OrthogPolyApproximation::

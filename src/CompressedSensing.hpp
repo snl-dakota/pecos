@@ -13,15 +13,15 @@
 
 namespace Pecos {
 
-solverType solverTypeCast( int i );
-lsSolverType lsSolverTypeCast( int i );
+//solverType solverTypeCast( int i );
 
 /**
  * \brief Specify a set of options for using the CompressedSensingTool
  */
 struct CompressedSensingOptions
 {
-  solverType solver; //!< Specify which regression solver to use. See solverType
+  //solverType solver; //!< Specify which regression solver to use. See solverType
+  short solver; //!< Specify which regression solver to use: see pecos_global_defs
   Real solverTolerance; //!< Specify the internal tolerance of the solver
   Real epsilon;         //!< Specify the residual tolerance of the solver
   Real delta;           //!< Specify the regularization parameter value
@@ -32,7 +32,8 @@ struct CompressedSensingOptions
   int verbosity;           //!< The verbosity level. 0: off, 1: warnings on,  2: all print statements on.
 
   CompressedSensingOptions() : 
-    solver( LS ), solverTolerance( -1. ), epsilon( 0.0 ), delta( 0.0 ),
+    solver( DEFAULT_LEAST_SQ_REGRESSION ), solverTolerance( -1. ),
+    epsilon( 0.0 ), delta( 0.0 ),
     maxNumIterations( std::numeric_limits<int>::max() ), 
     standardizeInputs( false ), storeHistory( false ), 
     conjugateGradientsTolerance( -1 ), verbosity( 0 )
@@ -273,7 +274,8 @@ public:
 			       RealMatrix &solutions,
 			       RealMatrix &solution_metrics,
 			       Real epsilon = 1e-3, 
-			       solverType solver = LARS,
+			       //solverType solver = LEAST_ANGLE_REGRESSION,
+			       short solver = LEAST_ANGLE_REGRESSION,
 			       Real delta = 0.0,
 	      int max_num_iterations = std::numeric_limits<int>::max(),
 			       int verbosity = 0 );

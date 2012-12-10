@@ -3,44 +3,55 @@
 
 namespace Pecos {
 
+/*
 solverType solverTypeCast( int i )
 {
   solverType sType;
   switch( i )
     {
-    case 0:
-      {
-	sType = DEFAULT_SOLVER;
-	break;
-      }
-    case 1:
-      {
-	sType = LS;
-	break;
-      }
-    case 2:
-      {
-	sType = BP;
-	break;
-      }
-    case 3:
-      {
-	sType = BPDN;
-	break;
-      }
-    case 4:
-      {
-	sType = OMP;
-	break;
-      }
     case 5:
       {
-	sType = LASSO;
+	sType = DEFAULT_REGRESSION;
 	break;
       }
     case 6:
       {
-	sType = LARS;
+	sType = DEFAULT_LEAST_SQ_REGRESSION;
+	break;
+      }
+    case 7:
+      {
+	sType = SVD_LEAST_SQ_REGRESSION;
+	break;
+      }
+    case 8:
+      {
+	sType = EQ_CON_LEAST_SQ_REGRESSION;
+	break;
+      }
+    case 9:
+      {
+	sType = BASIS_PURSUIT;
+	break;
+      }
+    case 10:
+      {
+	sType = BASIS_PURSUIT_DENOISING;
+	break;
+      }
+    case 11:
+      {
+	sType = ORTHOG_MATCH_PURSUIT;
+	break;
+      }
+    case 12:
+      {
+	sType = LASSO_REGRESSION;
+	break;
+      }
+    case 13:
+      {
+	sType = LEAST_ANGLE_REGRESSION;
 	break;
       }
     default:
@@ -53,37 +64,7 @@ solverType solverTypeCast( int i )
     };
   return sType;
 };
-
-lsSolverType lsSolverTypeCast( int i )
-{
-  lsSolverType lsSType;
-  switch( i )
-    {
-    case 0:
-      {
-	lsSType = DEFAULT_LS_SOLVER;
-	break;
-      }
-    case 1:
-      {
-	lsSType = SVD;
-	break;
-      }
-    case 2:
-      {
-	lsSType = EQ_CON_QR;
-	break;
-      }
-    default:
-      {
-	std::stringstream msg;
-	msg << "lsSolverTypeCast() out of range. Cannot cast " << i;
-	msg << " to enum lsSolverType";
-	throw( std::runtime_error( msg.str() ) );
-      }
-    };
-  return lsSType;
-};
+*/
 
 Real CompressedSensingTool::BP_surrogate_duality_gap( 
 						     RealVector &primal_residual,
@@ -1041,7 +1022,8 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 						    RealMatrix &solutions,
 						    RealMatrix &solution_metrics,
 						    Real epsilon, 
-						    solverType solver,
+						    //solverType solver,
+						    short solver,
 						    Real delta,
 						    int max_num_iterations,
 						    int verbosity )
@@ -1062,7 +1044,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   // max_num_iter to max_num_covariates. If I do not do this then
   // LASSO can use different iteration numbers for different training
   // data but the same cross validation model options
-  //if ( solver == LASSO )
+  //if ( solver == LASSO_REGRESSION )
   // max_num_iter *= 10;
 
   // Initialise all entries of x to zero
@@ -1248,7 +1230,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
       // (3.5) (Efron 2004)
       Real gamma_tilde = std::numeric_limits<Real>::max();
       index_to_drop = -1;
-      if ( solver == LASSO )
+      if ( solver == LASSO_REGRESSION )
 	{
 	  for ( int n = 0; n < num_covariates; n++ )
 	    {
@@ -1493,9 +1475,12 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
       B_stand = B;
     }
 
-  solverType solver( opts.solver );
+  //solverType solver( opts.solver );
+  short solver( opts.solver );
   Real solver_tolerance( opts.solverTolerance );
-  if ( M >= N &&  (solver != LASSO ) && ( solver != LARS ) && ( solver != OMP ) )
+  if ( M >= N &&  (solver != LASSO_REGRESSION ) &&
+       ( solver != LEAST_ANGLE_REGRESSION ) &&
+       ( solver != ORTHOG_MATCH_PURSUIT ) )
     {
       if ( opts.verbosity > 0 )
 	{
@@ -1503,19 +1488,20 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	  msg += " Matrix is over-determined computing least squares solution.";
 	  PCout <<  msg << std::endl;
 	}
-      solver = LS;
+      solver = DEFAULT_LEAST_SQ_REGRESSION;
       solver_tolerance = -1.0;
     }
 
   solutions.resize( num_rhs );
   opts_list.resize( num_rhs );
-  if ( solver == LS || solver == BP || solver == BPDN )
+  if ( solver == DEFAULT_LEAST_SQ_REGRESSION || solver == BASIS_PURSUIT ||
+       solver == BASIS_PURSUIT_DENOISING )
     {
       // These methods only return one solution for each rhs
       RealMatrix single_solution;
       switch( solver )
 	{
-	case LS:
+	case DEFAULT_LEAST_SQ_REGRESSION:
 	  {
 	    RealVector singular_values;
 	    int rank(0);
@@ -1528,7 +1514,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 #endif // DEBUG
 	    break;
 	  }
-	case BP:
+	case BASIS_PURSUIT:
 	  {
 	    BP_primal_dual_interior_point_method( A_stand, B_stand, 
 						  single_solution, 
@@ -1537,7 +1523,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 						  opts.verbosity );
 	    break;
 	  }
-	case BPDN:
+	case BASIS_PURSUIT_DENOISING:
 	  {
 	    BPDN_log_barrier_interior_point_method( A_stand, B_stand, 
 						    single_solution, 
@@ -1581,7 +1567,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	  RealVector b( Teuchos::View, B_stand[k], M );
 	  switch( solver )
 	    {
-	    case OMP:
+	    case ORTHOG_MATCH_PURSUIT:
 	      {
 		RealMatrix solution_metrics;
 		orthogonal_matching_pursuit( A_stand, b, solutions[k], 
@@ -1604,12 +1590,12 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 		  }
 		break;
 	      }
-	    case LASSO:
+	    case LASSO_REGRESSION:
 	      {
 		RealMatrix solution_metrics;
 		least_angle_regression( A_stand, b, solutions[k], 
-					solution_metrics,
-					opts.epsilon, LASSO, opts.delta,
+					solution_metrics, opts.epsilon,
+					LASSO_REGRESSION, opts.delta,
 					opts.maxNumIterations, 
 					opts.verbosity );
 		int num_solutions( solutions[k].numCols() );
@@ -1625,12 +1611,12 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 		  }
 		break;
 	      };
-	    case LARS:
+	    case LEAST_ANGLE_REGRESSION:
 	      {
 		RealMatrix solution_metrics;
 		least_angle_regression( A_stand, b, solutions[k], 
-					solution_metrics,
-					opts.epsilon, LARS, opts.delta,
+					solution_metrics, opts.epsilon,
+					LEAST_ANGLE_REGRESSION, opts.delta,
 					opts.maxNumIterations,
 					opts.verbosity );
 		int num_solutions( solutions[k].numCols() );

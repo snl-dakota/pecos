@@ -97,7 +97,10 @@ enum { SLOW_RESTRICTED_GROWTH, MODERATE_RESTRICTED_GROWTH,
 /// solution approaches for calculating the polynomial basis coefficients
 /// (options for ExpansionConfigOptions::expCoeffsSolnApproach)
 enum { QUADRATURE, CUBATURE, COMBINED_SPARSE_GRID, HIERARCHICAL_SPARSE_GRID,
-       LOCAL_REFINABLE, REGRESSION, SAMPLING };
+       SAMPLING, DEFAULT_REGRESSION, DEFAULT_LEAST_SQ_REGRESSION,
+       SVD_LEAST_SQ_REGRESSION, EQ_CON_LEAST_SQ_REGRESSION, BASIS_PURSUIT,
+       BASIS_PURSUIT_DENOISING, ORTHOG_MATCH_PURSUIT, LASSO_REGRESSION,
+       LEAST_ANGLE_REGRESSION };
 /// options for BasisConfigOptions::nestingOverride (inactive)
 enum { NO_NESTING_OVERRIDE=0, NESTED, NON_NESTED };
 /// options for overriding the default growth restriction policy
@@ -121,26 +124,6 @@ enum { INTERPOLATION_OF_PRODUCTS, PRODUCT_OF_INTERPOLANTS_FAST,
 
 /// special values for polynomial expansion combination
 enum { NO_COMBINE=0,  ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
-
-/// Compressed sensing methods available
-enum solverType
-  {
-    DEFAULT_SOLVER = 0, //!< auto selects based on size of data set
-    LS,    //!< Least squares/minimum norm solution
-    BP,    //!< Basis Pursuit using the primal dual interior point method
-    BPDN,  //!< Basis Pursuit Denoising using the log barrier interior point method
-    OMP,   //!< Orthogonal Matching Pursuit
-    LASSO, //!< Least Absolute Shrinkage and Selection Operator
-    LARS,  //!< Least Angle Regression
-  };
-
-/// Least squares methods available
-enum lsSolverType
-  {
-    DEFAULT_LS_SOLVER = 0, //!< auto selects based on size of data set
-    SVD,       //!< Singular value decomposition
-    EQ_CON_QR, //!< Equality-constrained QR
-  };
 
 
 // ----------------
