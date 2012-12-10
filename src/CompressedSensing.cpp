@@ -183,9 +183,9 @@ void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A,
 	{
 	  if ( verbosity > 0 )
 	    {
-	      std::cout << "BP_primal_dual_interior_point_method() ";
-	      std::cout << "Initial guess is not feasiable. ";
-	      std::cout << "Computing least squares estimate\n";
+	      PCout << "BP_primal_dual_interior_point_method() ";
+	      PCout << "Initial guess is not feasiable. ";
+	      PCout << "Computing least squares estimate\n";
 	    }
 
 	  // Solve AX = b
@@ -239,11 +239,11 @@ void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A,
 
       if ( verbosity > 1 )
 	{
-	  std::cout << "At Initialisation:\n";
-	  std::cout << "\tObjective: " << sum( u ) << "\n";
-	  std::cout << "\tPrimal-dual gap: " << sdg << "\n";
-	  std::cout << "\tPrimal residual: ";
-	  std::cout << r.normFrobenius() << "\n";
+	  PCout << "At Initialisation:\n";
+	  PCout << "\tObjective: " << sum( u ) << "\n";
+	  PCout << "\tPrimal-dual gap: " << sdg << "\n";
+	  PCout << "\tPrimal residual: ";
+	  PCout << r.normFrobenius() << "\n";
 	}
 
       //------------------------------------------//
@@ -312,12 +312,12 @@ void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A,
 		{
 		  if ( verbosity > 0 )
 		    {
-		      std::cout << "BP_primal_dual_interior_point_method() ";
-		      std::cout << "The Hessian matrix is no longer positive ";
-		      std::cout << "definite. If epsilon < 1e-8 this is most ";
-		      std::cout << "likely due to roundoff error. ";
-		      std::cout << "Try a larger epsilon. ";
-		      std::cout << "Returning the last solution.\n";
+		      PCout << "BP_primal_dual_interior_point_method() ";
+		      PCout << "The Hessian matrix is no longer positive ";
+		      PCout << "definite. If epsilon < 1e-8 this is most ";
+		      PCout << "likely due to roundoff error. ";
+		      PCout << "Try a larger epsilon. ";
+		      PCout << "Returning the last solution.\n";
 		    }
 		  x_new.assign( x );
 		  break;
@@ -326,9 +326,9 @@ void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A,
 		{
 		  if ( verbosity > 0 )
 		    {
-		      std::cout << "BP_primal_dual_interior_point_method() ";
-		      std::cout << "Matrix ill-conditioned. ";
-		      std::cout << "Returning the last solution.\n";
+		      PCout << "BP_primal_dual_interior_point_method() ";
+		      PCout << "Matrix ill-conditioned. ";
+		      PCout << "Returning the last solution.\n";
 		    }
 		  x_new.assign( x );
 		  break;
@@ -344,9 +344,9 @@ void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A,
 		{
 		  if ( verbosity > 0 )
 		    {
-		      std::cout << "BP_primal_dual_interior_point_method() ";
-		      std::cout << "Matrix ill-conditioned. ";
-		      std::cout << "Returning the last solution.\n";
+		      PCout << "BP_primal_dual_interior_point_method() ";
+		      PCout << "Matrix ill-conditioned. ";
+		      PCout << "Returning the last solution.\n";
 		    }
 		  x_new.assign( x );
 		  break;
@@ -443,9 +443,9 @@ void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A,
 		{
 		  if ( verbosity > 0 )
 		    {
-		      std::cout << "BP_primal_dual_interior_point_method() ";
-		      std::cout << "Line search failed. Returning the last ";
-		      std::cout << "solution.\n";
+		      PCout << "BP_primal_dual_interior_point_method() ";
+		      PCout << "Line search failed. Returning the last ";
+		      PCout << "solution.\n";
 		    }
 		  x_new.assign( x );
 		  info = 3;
@@ -480,15 +480,15 @@ void CompressedSensingTool::BP_primal_dual_interior_point_method( RealMatrix &A,
 
 	  if ( verbosity > 1 )
 	    {
-	      std::cout << "Newton iteration: " << primal_dual_iter << "\n";
-	      std::cout << "\tObjective: " << sum( u ) << "\n";
-	      std::cout << "\tPrimal-dual gap: " << sdg << "\n";
-	      std::cout << "\tPrimal residual: ";
-	      std::cout << r.normFrobenius() << "\n";
+	      PCout << "Newton iteration: " << primal_dual_iter << "\n";
+	      PCout << "\tObjective: " << sum( u ) << "\n";
+	      PCout << "\tPrimal-dual gap: " << sdg << "\n";
+	      PCout << "\tPrimal residual: ";
+	      PCout << r.normFrobenius() << "\n";
 	      if ( cg_tol < 0 )
-		std::cout << "\tCondition number: " << rcond << "\n";
+		PCout << "\tCondition number: " << rcond << "\n";
 	      else
-		std::cout << "\tConjugate gradients residual: " << r_norm <<"\n";
+		PCout << "\tConjugate gradients residual: " << r_norm <<"\n";
 	    }
 	}
 
@@ -599,13 +599,13 @@ int CompressedSensingTool::BPDN_compute_central_point( RealMatrix &A,
 	    {
 	      if ( verbosity > 0 )
 		{
-		  std::cout << "BPDN_compute_central_point() returning the ";
-		  std::cout << "last iterate. ";
-		  std::cout << "The Hessian matrix is no longer positive ";
-		  std::cout << "definite. ";
-		  std::cout << "If epsilon < 1e-8 this is most likely due to ";
-		  std::cout << "roundoff error. Try a larger epsilon. ";
-		  std::cout << "Returning the last solution\n";
+		  PCout << "BPDN_compute_central_point() returning the ";
+		  PCout << "last iterate. ";
+		  PCout << "The Hessian matrix is no longer positive ";
+		  PCout << "definite. ";
+		  PCout << "If epsilon < 1e-8 this is most likely due to ";
+		  PCout << "roundoff error. Try a larger epsilon. ";
+		  PCout << "Returning the last solution\n";
 		}
 	      x_new.assign( x ); u_new.assign( u );
 	      newton_info = 1; // Matrix is not positive definite
@@ -615,9 +615,9 @@ int CompressedSensingTool::BPDN_compute_central_point( RealMatrix &A,
 	    {
 	      if ( verbosity > 0 )
 		{
-		  std::cout << "BPDN_compute_central_point() ";
-		  std::cout << "Matrix ill-conditioned. ";
-		  std::cout << "Returning previous solution.\n";
+		  PCout << "BPDN_compute_central_point() ";
+		  PCout << "Matrix ill-conditioned. ";
+		  PCout << "Returning previous solution.\n";
 		}
 	      x_new.assign( x );  u_new.assign( u );
 	      newton_info = 2; // Jacobian matrix is ill-conditioned.
@@ -635,9 +635,9 @@ int CompressedSensingTool::BPDN_compute_central_point( RealMatrix &A,
 	    {
 	      if ( verbosity > 0 )
 		{
-		  std::cout << "BPDN_compute_central_point() ";
-		  std::cout << "Matrix ill-conditioned. ";
-		  std::cout << "Returning previous solution.\n";
+		  PCout << "BPDN_compute_central_point() ";
+		  PCout << "Matrix ill-conditioned. ";
+		  PCout << "Returning previous solution.\n";
 		}
 	      x_new.assign( x );  u_new.assign( u );
 	      newton_info = 1; // Matrix is not positive definite
@@ -708,9 +708,9 @@ int CompressedSensingTool::BPDN_compute_central_point( RealMatrix &A,
 	    {
 	      if ( verbosity > 0 )
 		{
-		  std::cout << "BPDN_compute_central_point() ";
-		  std::cout << "Line search failed. Returning the last ";
-		  std::cout << "solution.\n";
+		  PCout << "BPDN_compute_central_point() ";
+		  PCout << "Line search failed. Returning the last ";
+		  PCout << "solution.\n";
 		}
 	      x_new.assign( x );
 	      newton_info = 3; // line search failed
@@ -750,13 +750,13 @@ int CompressedSensingTool::BPDN_compute_central_point( RealMatrix &A,
 	  Real du_norm = du.normFrobenius();
 	  du_norm *= du_norm;
 	  Real norm = std::sqrt( dx_norm + du_norm ); 
-	  std::cout << "Newton iteration: " << newton_iter << "\n";
-	  std::cout << "\tObjective: " << objective << "\n";
-	  std::cout << "\tStep size: " << step_size * norm << "\n";
+	  PCout << "Newton iteration: " << newton_iter << "\n";
+	  PCout << "\tObjective: " << objective << "\n";
+	  PCout << "\tStep size: " << step_size * norm << "\n";
 	  if ( cg_tol < 0 )
-	    std::cout << "\tCondition number: " << rcond << "\n";
+	    PCout << "\tCondition number: " << rcond << "\n";
 	  else
-	    std::cout << "\tConjugate gradients residual: " << r_norm << "\n";
+	    PCout << "\tConjugate gradients residual: " << r_norm << "\n";
 	}
     }
   return newton_info;
@@ -800,8 +800,8 @@ void CompressedSensingTool::BPDN_log_barrier_interior_point_method( RealMatrix &
 	  // Starting point is not feasiable
 	  if ( verbosity > 0 )
 	    {
-	      std::cout << "Initial guess is not feasiable. ";
-	      std::cout << "Computing least squares estimate\n";
+	      PCout << "Initial guess is not feasiable. ";
+	      PCout << "Computing least squares estimate\n";
 	    }
 
 	  // Solve AX = b
@@ -836,17 +836,17 @@ void CompressedSensingTool::BPDN_log_barrier_interior_point_method( RealMatrix &
       
       if ( verbosity > 1 )
 	{
-	  std::cout << "\nInitial l1 norm: " << x.normOne() << "\n";
-	  std::cout << "Initial objective: " << sum( u ) << "\n";
-	  std::cout << "Number of log-barrier iterations: ";
-	  std::cout << num_log_barrier_iter << "\n";
+	  PCout << "\nInitial l1 norm: " << x.normOne() << "\n";
+	  PCout << "Initial objective: " << sum( u ) << "\n";
+	  PCout << "Number of log-barrier iterations: ";
+	  PCout << num_log_barrier_iter << "\n";
 	}
 
       // Run newton steps
       for ( int iter = 0; iter < num_log_barrier_iter; iter++ )
 	{
 	  if ( verbosity > 1 )
-	    std::cout << "\nLog-barrier iteration: " << iter + 1<< "\n";
+	    PCout << "\nLog-barrier iteration: " << iter + 1<< "\n";
 	  
 	  int info = BPDN_compute_central_point( A, b, x, u, AtA, epsilon, t, 
 						 newton_tol, newton_max_iter, 
@@ -855,10 +855,10 @@ void CompressedSensingTool::BPDN_log_barrier_interior_point_method( RealMatrix &
 	  if ( verbosity > 1 )
 	    {
 
-	      std::cout.precision( std::numeric_limits<Real>::digits10 );
-	      std::cout.setf( std::ios::scientific );
-	      std::cout << "l1 norm: " << x.normOne() << "\n";
-	      std::cout << "t: " << t << std::endl;
+	      PCout.precision( std::numeric_limits<Real>::digits10 );
+	      PCout.setf( std::ios::scientific );
+	      PCout << "l1 norm: " << x.normOne() << "\n";
+	      PCout << "t: " << t << std::endl;
 	    }
 	  if ( info > 0 ) break;
 	  t *= mu;
@@ -919,7 +919,7 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
   if ( verbosity > 1 )
     {
       PCout << "Orthogonal Matching Pursuit" << std::endl;
-      printf("Iter\tAdded\tResidual\tl1 norm of x\n");
+      std::printf( "Iter\tAdded\tResidual\tl1 norm of x\n" );
     }
 
   int num_active_indices( 0 );
@@ -980,7 +980,7 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 	      std::stringstream msg;
 	      msg << "No variable added. Column " << active_index;
 	      msg << " was colinear " << std::endl;
-	      std::cout << msg.str();
+	      PCout << msg.str();
 	    }
 	}
 
@@ -1022,8 +1022,8 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 	}
 
       if ( verbosity > 1 )
-	printf("%d\t%d\t%1.5e\t%1.5e\n", num_active_indices, 
-	       active_index, residual_norm, x_sparse.normOne() );
+	std::printf( "%d\t%d\t%1.5e\t%1.5e\n", num_active_indices, 
+		     active_index, residual_norm, x_sparse.normOne() );
     }
   // remove unused memory
   solutions.reshape( N, num_active_indices );
@@ -1097,8 +1097,8 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 
   if ( verbosity > 1 )
     {
-      std::cout << "LASSO/LARS ( delta = " << delta << " )\n";
-      printf("Iter\tAdded\tDropped\t\tSparsity\tC\t\tResidual\tl1 norm of x\n");
+      PCout << "LASSO/LARS ( delta = " << delta << " )\n";
+      std::printf( "Iter\tAdded\tDropped\t\tSparsity\tC\t\tResidual\tl1 norm of x\n");
     }
       
   bool done = false;
@@ -1166,13 +1166,13 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 		  // num_covariates = max_num_covariates - 1
 		  std::stringstream msg;
 		  msg << "Exiting: attempted to add colinear vector\n";
-		  std::cout << msg.str();
+		  PCout << msg.str();
 		}
 	      break;
 	    }
 
 	  if ( verbosity > 1 )
-	    printf("%d\t%d\t\t\t%d\t\t", homotopy_iter, 
+	    std::printf( "%d\t%d\t\t\t%d\t\t", homotopy_iter, 
 		   index_to_add, (int)active_indices.size()+1  );
 	  
 	  column_append( A_col, A_sparse );
@@ -1322,11 +1322,11 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 
 	  if ( verbosity > 1 )
 	    {
-	      printf("%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
-		     residual_norm, x.normOne() );
-	      printf("%d\t\t%d\t\t%d\t\t",homotopy_iter+1, 
-		     active_indices[index_to_drop],
-		     (int)active_indices.size()-1 );
+	      std::printf( "%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
+			   residual_norm, x.normOne() );
+	      std::printf( "%d\t\t%d\t\t%d\t\t",homotopy_iter+1, 
+			   active_indices[index_to_drop],
+			   (int)active_indices.size()-1 );
 	    }
 
 	  cholesky_factorization_update_delete_column( U, 
@@ -1342,8 +1342,8 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	}
 
       if ( ( verbosity > 1 ) &&( !sign_condition_violated ) )
-      	printf("%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
-	       residual_norm, x.normOne() );
+      	std::printf( "%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
+		     residual_norm, x.normOne() );
 
       solution_metrics(0,homotopy_iter) = residual_norm;
       solution_metrics(1,homotopy_iter) = homotopy_iter; 
@@ -1501,7 +1501,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	{
 	  std::string msg = "CompressedSensingTool::solve() A ";
 	  msg += " Matrix is over-determined computing least squares solution.";
-	  std::cout <<  msg << std::endl;
+	  PCout <<  msg << std::endl;
 	}
       solver = LS;
       solver_tolerance = -1.0;
