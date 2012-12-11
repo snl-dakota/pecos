@@ -1004,7 +1004,8 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 
       if ( verbosity > 1 )
 	std::printf( "%d\t%d\t%1.5e\t%1.5e\n", num_active_indices, 
-		     active_index, residual_norm, x_sparse.normOne() );
+		     active_index, std::sqrt( residual_norm ),
+		     x_sparse.normOne() );
     }
   // remove unused memory
   solutions.reshape( N, num_active_indices );
@@ -1488,21 +1489,22 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	  msg += " Matrix is over-determined computing least squares solution.";
 	  PCout <<  msg << std::endl;
 	}
-      solver = DEFAULT_LEAST_SQ_REGRESSION;
+      solver = SVD_LEAST_SQ_REGRESSION;
       solver_tolerance = -1.0;
     }
 
   solutions.resize( num_rhs );
   opts_list.resize( num_rhs );
-  if ( solver == DEFAULT_LEAST_SQ_REGRESSION || solver == BASIS_PURSUIT ||
+  if ( solver == SVD_LEAST_SQ_REGRESSION || solver == BASIS_PURSUIT ||
        solver == BASIS_PURSUIT_DENOISING )
     {
       // These methods only return one solution for each rhs
       RealMatrix single_solution;
       switch( solver )
 	{
-	case DEFAULT_LEAST_SQ_REGRESSION:
+	case SVD_LEAST_SQ_REGRESSION:
 	  {
+	    PCout << "Using SVD least squares regression" << std::endl;
 	    RealVector singular_values;
 	    int rank(0);
 	    svd_solve( A_stand, B_stand, single_solution, singular_values, rank, 
@@ -1516,6 +1518,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	  }
 	case BASIS_PURSUIT:
 	  {
+	    PCout << "Using basis pursuit" << std::endl;
 	    BP_primal_dual_interior_point_method( A_stand, B_stand, 
 						  single_solution, 
 						  solver_tolerance, 
@@ -1525,6 +1528,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	  }
 	case BASIS_PURSUIT_DENOISING:
 	  {
+	    PCout << "Using basis pursuit denoising" << std::endl;
 	    BPDN_log_barrier_interior_point_method( A_stand, B_stand, 
 						    single_solution, 
 						    opts.epsilon, 
@@ -1569,6 +1573,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	    {
 	    case ORTHOG_MATCH_PURSUIT:
 	      {
+		PCout << "Using Orthogonal Matching Pursuit" << std::endl;
 		RealMatrix solution_metrics;
 		orthogonal_matching_pursuit( A_stand, b, solutions[k], 
 					     solution_metrics,
@@ -1592,6 +1597,10 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	      }
 	    case LASSO_REGRESSION:
 	      {
+		if ( opts.delta > 0  )
+		  PCout << "Using elastic net regression" << std::endl;
+		else
+		  PCout << "Using LASSO regression" << std::endl;
 		RealMatrix solution_metrics;
 		least_angle_regression( A_stand, b, solutions[k], 
 					solution_metrics, opts.epsilon,
@@ -1613,6 +1622,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	      };
 	    case LEAST_ANGLE_REGRESSION:
 	      {
+		PCout << "Using least angle regression" << std::endl;
 		RealMatrix solution_metrics;
 		least_angle_regression( A_stand, b, solutions[k], 
 					solution_metrics, opts.epsilon,

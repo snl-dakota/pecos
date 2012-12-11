@@ -1718,8 +1718,65 @@ void OrthogPolyApproximation::regression()
     if (total_eqns < numExpansionTerms) under_determined = true;
   }
 
+  
+  CSOpts.solver = expConfigOptions.expCoeffsSolnApproach;
+  bool fn_constrained_lls = (basisConfigOptions.useDerivs && constr_eqns &&
+			     constr_eqns < numExpansionTerms);
+  if (CSOpts.solver==DEFAULT_REGRESSION)
+    if ((fn_constrained_lls || anchor_fn || anchor_grad) && (!under_determined))
+      CSOpts.solver=EQ_CON_LEAST_SQ_REGRESSION;
+    else if (!under_determined)
+      CSOpts.solver=SVD_LEAST_SQ_REGRESSION;
+    else 
+      CSOpts.solver=LASSO_REGRESSION;
+
+  if (CSOpts.solver==DEFAULT_LEAST_SQ_REGRESSION)
+    if ((fn_constrained_lls || anchor_fn || anchor_grad) && (!under_determined))
+      CSOpts.solver=EQ_CON_LEAST_SQ_REGRESSION;
+    else
+      CSOpts.solver=SVD_LEAST_SQ_REGRESSION;
+
+  // Set solver parameters
+  if ( CSOpts.solver == LASSO_REGRESSION )
+    CSOpts.delta = l2Penalty;
+  if ( noiseTols.length() > 0 )
+    CSOpts.epsilon = noiseTols[0];
+  if ( CSOpts.solver != SVD_LEAST_SQ_REGRESSION )
+    //hack unit convergenceTol is available
+    CSOpts.solverTolerance = 1e-6;
+  CSOpts.verbosity = 0;
+  //CSOpts.solverTolerance = ;
+  //CSOpts.maxNumIterations = ;
+
   // Solve the regression problem using L1 or L2 minimization approaches
-  if (under_determined)
+  if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION){
+    if ((fn_constrained_lls || anchor_fn || anchor_grad) && (!under_determined))
+      {
+	regression_err = 
+	  eq_constrained_L2_regression(num_data_pts_fn, num_data_pts_grad,
+	  fn_constrained_lls, anchor_fn, anchor_grad, reuse_solver_data);
+      }
+    else{
+      PCout << "Could not perform equality constrained least-squares. ";
+      if (under_determined){
+	  CSOpts.solver = LASSO_REGRESSION;
+	  PCout << "Using LASSO regression instead\n";
+      }
+      else
+	{
+	  CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
+	  PCout << "Using SVD least squares regression instead\n";
+	}
+      regression_err = 
+	L2_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);
+    }
+  }
+  else{
+    regression_err =
+      L2_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);
+  }
+
+  /*if (under_determined)
     regression_err =
       L1_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);// CS
   else { 
@@ -1729,7 +1786,7 @@ void OrthogPolyApproximation::regression()
       eq_constrained_L2_regression(num_data_pts_fn, num_data_pts_grad,
 	fn_constrained_lls, anchor_fn, anchor_grad, reuse_solver_data) :   // QR
       L2_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);//SVD
-  }
+      }*/
 
   if (regression_err) { // if numerical problems in LLS, abort with error
     PCerr << "Error: nonzero return code from least squares solution in "
@@ -1744,7 +1801,7 @@ L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 	      bool reuse_solver_data)
 {
   bool L1_solver_err = false;
-
+  /*
   size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.size();
   double* A_matrix; // 1D matrix of polynomial terms, column-major F77 ordering
   double* b_vectors; // input: (multiple) RHS of response data
@@ -1803,6 +1860,7 @@ L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 
   delete [] A_matrix;
   delete [] b_vectors;
+  */
 
   return L1_solver_err;
 }
@@ -2024,10 +2082,7 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   CompressedSensingOptionsList opts_list;
   RealMatrixList solutions;
 
-  CSOpts.solver = DEFAULT_LEAST_SQ_REGRESSION;
   CSOpts.standardizeInputs = false; // false essential when using derivatives
-  CSOpts.verbosity = 0;
-
 
   Teuchos::LAPACK<int, Real> la; bool lapack_err = false;
   size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.size(),
@@ -2090,13 +2145,13 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
     // if no RHS augmentation, then solve for coeffs now
     if (!multiple_rhs) {
 
-      if ( num_data_pts_fn < numExpansionTerms )
+      /*if ( num_data_pts_fn < numExpansionTerms )
 	{
-	  PCout << "Using LASSO\n";
+	  PCout << "Using " << expConfigOptions.expCoeffsSolnApproach << "\n";
 	  CSOpts.solver = LASSO_REGRESSION;
 	}
       else
-	CSOpts.solver = DEFAULT_LEAST_SQ_REGRESSION;
+      CSOpts.solver = DEFAULT_LEAST_SQ_REGRESSION;*/
 
       CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
