@@ -79,14 +79,11 @@ int OrthogPolyApproximation::min_coefficients() const
       // Now that L1-regression has been implemented. There is no longer a need 
       // to enforce a lower bound on the number of data instances.
       return 1;
-      // numExpansionTerms is either set from the NonDPolynomialChaos ctor if
-      // expansion_terms is specified or computed by the allocate_arrays() call
-      // in compute_coefficients() if expansion_order is specified.  The latter
-      // case is too late for use of this fn by ApproximationInterface::
-      // minimum_samples() in DataFitSurrModel::build_global(), so
-      // numExpansionTerms must be calculated for this case.
-      //return (numExpansionTerms) ?
-      //	numExpansionTerms : total_order_terms(approxOrder);
+      // numExpansionTerms is computed by the allocate_arrays() call in
+      // compute_coefficients(), which is too late for use of this fn by
+      // ApproximationInterface::minimum_samples() in DataFitSurrModel::
+      // build_global(), so numExpansionTerms must be calculated.
+      //return total_order_terms(approxOrder);
       break;
     case -1: default: // coefficient import 
       return 0;
@@ -203,65 +200,40 @@ void OrthogPolyApproximation::allocate_arrays()
     break;
   }
   default: { // SAMPLING and REGRESSION
-    // For uniform refinement, only the initial reference expansion supports
-    // a partial total-order definition.  All subsequent refinements will be
-    // based off of approxOrder.  For PCBDO, numExpansionTerms and approxOrder
-    // are invariant and a multiIndex update is prevented by update_exp_form.
-    if (!approxOrder.empty()) {
-      bool update_exp_form = (approxOrder != approxOrderPrev);
-      if (update_exp_form) {
-	size_t order_len = approxOrder.size();
-	if (order_len != numVars) {
-	  if (order_len == 1) {
-	    unsigned short order = approxOrder[0];
-	    approxOrder.assign(numVars, order);
-	  }
-	  else {
-	    PCerr << "Error: expansion_order specification length does not "
-		  << "match number of active variables." << std::endl;
-	    abort_handler(-1);
-	  }
-	}
-	total_order_multi_index(approxOrder, multiIndex);
-	numExpansionTerms = multiIndex.size();
-	partialOrder = false;
-      }
-      // update reference point
-      approxOrderPrev = approxOrder;
-    }
-    else if (numExpansionTerms) { // default is 0
-      unsigned short order = 0; size_t full_order_expansion = 1;
-      while (numExpansionTerms > full_order_expansion) {
-	++order;
-	// do in 2 steps rather than 1 to avoid truncation from int division
-	full_order_expansion *= numVars+order;
-	full_order_expansion /= order;
-      }
-      partialOrder = (numExpansionTerms != full_order_expansion);
-      // define approxOrder to be isotropic and full total-order, but
-      // restrict the multiIndex update according to numExpansionTerms.
-      // Any subsequent uniform refinement increments approxOrder and
-      // loses this restriction.  Subsequent PCBDO invocations retain
-      // this restriction by nature of the update_exp_form protection.
-      approxOrder.assign(numVars, order);
-      total_order_multi_index(approxOrder, multiIndex, -1, numExpansionTerms);
-    }
-    else {
+    // For uniform refinement, all refinements are based off of approxOrder.
+    // For PCBDO, numExpansionTerms and approxOrder are invariant and a
+    // multiIndex update is prevented by update_exp_form.
+    if (approxOrder.empty()) {
       PCerr << "Error: bad expansion specification in "
 	    << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
       abort_handler(-1);
     }
-    // output expansion form
-    PCout << "Orthogonal polynomial approximation order = ";
-    if (partialOrder)
-      PCout << approxOrder[0] << " using partial ";
-    else {
-      PCout << "{ ";
-      for (size_t i=0; i<numVars; ++i)
-	PCout << approxOrder[i] << ' ';
-      PCout << "} using ";
+    bool update_exp_form = (approxOrder != approxOrderPrev);
+    if (update_exp_form) {
+      size_t order_len = approxOrder.size();
+      if (order_len != numVars) {
+	if (order_len == 1) {
+	  unsigned short order = approxOrder[0];
+	  approxOrder.assign(numVars, order);
+	}
+	else {
+	  PCerr << "Error: expansion_order specification length does not "
+		<< "match number of active variables." << std::endl;
+	  abort_handler(-1);
+	}
+      }
+      total_order_multi_index(approxOrder, multiIndex);
+      numExpansionTerms = multiIndex.size();
     }
-    PCout << "total-order expansion of " << numExpansionTerms << " terms\n";
+    // update reference point
+    approxOrderPrev = approxOrder;
+
+    // output expansion form
+    PCout << "Orthogonal polynomial approximation order = { ";
+    for (size_t i=0; i<numVars; ++i)
+      PCout << approxOrder[i] << ' ';
+    PCout << "} using total-order expansion of " << numExpansionTerms
+	  << " terms\n";
     break;
   }
   }

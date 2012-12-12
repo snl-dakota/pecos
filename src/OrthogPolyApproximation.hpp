@@ -53,8 +53,6 @@ public:
   //- Heading: Member functions
   //
 
-  /// set numExpansionTerms
-  void expansion_terms(int exp_terms);
   /// get numExpansionTerms
   int expansion_terms() const;
 
@@ -339,10 +337,6 @@ private:
   /// previous value of approxOrder; used for detecting when a multiIndex
   /// update is needed
   UShortArray approxOrderPrev;
-  /// flag identifying use of a partial total-order expansion due to
-  /// user specification of a numExpansionTerms value that does not
-  /// define a full total-order expansion
-  bool partialOrder;
 
   /// array of basis types for each one-dimensional orthogonal polynomial:
   /// HERMITE_ORTHOG, LEGENDRE_ORTHOG, LAGUERRE_ORTHOG, JACOBI_ORTHOG,
@@ -460,8 +454,8 @@ inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
 			bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
-  approxOrder(approx_order), partialOrder(false),
-  storedExpCombineType(NO_COMBINE), quadratureExpansion(TENSOR_INT_TENSOR_EXP),
+  approxOrder(approx_order), storedExpCombineType(NO_COMBINE),
+  quadratureExpansion(TENSOR_INT_TENSOR_EXP),
 //quadratureExpansion(TENSOR_INT_TOTAL_ORDER_EXP),
   sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
 //sparseGridExpansion(SPARSE_INT_TOTAL_ORDER_EXP)
@@ -512,10 +506,6 @@ inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
 
 inline const RealVector& OrthogPolyApproximation::moments() const
 { return expansionMoments; }
-
-
-inline void OrthogPolyApproximation::expansion_terms(int exp_terms)
-{ numExpansionTerms = exp_terms; }
 
 
 inline int OrthogPolyApproximation::expansion_terms() const
