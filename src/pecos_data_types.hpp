@@ -57,6 +57,7 @@ typedef Teuchos::SerialDenseVector<int, Real>                RealVector;
 typedef Teuchos::SerialDenseVector<int, int>                 IntVector;
 typedef Teuchos::SerialDenseVector<int, std::complex<Real> > ComplexVector;
 typedef Teuchos::SerialDenseMatrix<int, Real>                RealMatrix;
+typedef Teuchos::SerialDenseMatrix<int, int>                 IntMatrix;
 typedef Teuchos::SerialSymDenseMatrix<int, Real>             RealSymMatrix;
 
 
@@ -246,6 +247,23 @@ void copy_data(const
   if (size_ssdm1 != ssdm2.numRows())
     ssdm2.shapeUninitialized(size_ssdm1);
   ssdm2.assign(ssdm1); // copies values
+}
+
+
+/// copy Teuchos::SerialSymDenseMatrix<OrdinalType, ScalarType> to same
+/// (used in place of operator= when a deep copy is required regardless
+/// of Teuchos DataAccess mode)
+template <typename OrdinalType, typename ScalarType1, typename ScalarType2> 
+void copy_data(const
+	       Teuchos::SerialDenseMatrix<OrdinalType, ScalarType1>& sdm1,
+	       Teuchos::SerialDenseMatrix<OrdinalType, ScalarType2>& sdm2)
+{
+  OrdinalType r, c, nr_sdm1 = sdm1.numRows(), nc_sdm1 = sdm1.numCols();
+  if (nr_sdm1 != sdm2.numRows() || nc_sdm1 != sdm2.numCols())
+    sdm2.shapeUninitialized(nr_sdm1, nc_sdm1);
+  for (r=0; r<nr_sdm1; ++r)
+    for (c=0; c<nc_sdm1; ++c)
+      sdm2(r,c) = static_cast<ScalarType2>(sdm1(r,c));
 }
 
 

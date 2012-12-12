@@ -97,6 +97,13 @@ public:
 				const RealVector& u_u_bnds, int num_samples,
 				RealMatrix& samples_array);
 
+  /// generates the desired set of parameter samples from within
+  /// uncorrelated uniform distributions
+  void generate_uniform_index_samples(const IntVector& index_l_bnds,
+				      const IntVector& index_u_bnds,
+				      int num_samples,
+				      IntMatrix& index_samples);
+
 private:
 
   //
@@ -108,7 +115,7 @@ private:
 
   /// checks the return codes from LHS routines and aborts if an
   /// error is returned
-  void check_error(const int& err_code, const char* err_source) const;
+  void check_error(int err_code, const char* err_source) const;
 
   //
   //- Heading: Data
@@ -263,7 +270,28 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 
 
 inline void LHSDriver::
-check_error(const int&  err_code, const char* err_source) const
+generate_uniform_index_samples(const IntVector& index_l_bnds,
+			       const IntVector& index_u_bnds,
+			       int num_samples, IntMatrix& index_samples)
+{
+  if (sampleRanksMode) {
+    PCerr << "Error: generate_discrete_samples() does not support sample rank "
+	  << "input/output." << std::endl;
+    abort_handler(-1);
+  }
+  // For    uniform probability, model as discrete design range (this fn).
+  // For nonuniform probability, model as discrete uncertain set integer.
+  RealVector  empty_rv;             IntVector    empty_iv;
+  IntSetArray empty_isa;            RealSetArray empty_rsa;
+  RealMatrix  empty_rm, samples_rm; DistributionParams dp;
+  generate_samples(empty_rv,  empty_rv, index_l_bnds, index_u_bnds,   empty_isa,
+		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
+		   empty_rsa, dp, num_samples, samples_rm, empty_rm);
+  copy_data(samples_rm, index_samples);
+}
+
+
+inline void LHSDriver::check_error(int err_code, const char* err_source) const
 {
   if (err_code) {
     PCerr << "Error: code " << err_code << " returned from " << err_source 

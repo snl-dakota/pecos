@@ -25,6 +25,7 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_OPTIONS2_FC FC_FUNC_(lhs_options2,LHS_OPTIONS2)
 #define LHS_DIST2_FC    FC_FUNC_(lhs_dist2,LHS_DIST2)
 #define LHS_UDIST2_FC   FC_FUNC_(lhs_udist2,LHS_UDIST2)
+#define LHS_CONST2_FC   FC_FUNC_(lhs_const2,LHS_CONST2)
 #define LHS_CORR2_FC    FC_FUNC_(lhs_corr2,LHS_CORR2)
 #define LHS_FILES2_FC   FC_FUNC_(lhs_files2,LHS_FILES2)
 
@@ -40,6 +41,7 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_OPTIONS2_FC LHS_GLOBAL_(lhs_options2,LHS_OPTIONS2)
 #define LHS_DIST2_FC    LHS_GLOBAL_(lhs_dist2,LHS_DIST2)
 #define LHS_UDIST2_FC   LHS_GLOBAL_(lhs_udist2,LHS_UDIST2)
+#define LHS_CONST2_FC   LHS_GLOBAL_(lhs_const2,LHS_CONST2)
 #define LHS_CORR2_FC    LHS_GLOBAL_(lhs_corr2,LHS_CORR2)
 #define LHS_FILES2_FC   LHS_GLOBAL_(lhs_files2,LHS_FILES2)
 
@@ -76,6 +78,9 @@ void LHS_DIST2_FC( const char* label, int& ptval_flag, Pecos::Real& ptval,
 void LHS_UDIST2_FC( const char* label, int& ptval_flag, Pecos::Real& ptval,
 		    const char* dist_type, int& num_pts, Pecos::Real* x,
 		    Pecos::Real* y, int& ierror, int& dist_id, int& ptval_id );
+
+void LHS_CONST2_FC( const char* label, Pecos::Real& ptval, int& ierror,
+		    int& ptval_id );
 
 void LHS_CORR2_FC( char* label1, char* label2, Pecos::Real& corr, int& ierror );
 
@@ -747,17 +752,24 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       }
       int lb_i = ddri_l_bnds[i];
       num_params = ddri_u_bnds[i] - lb_i + 1;
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j) {
-	x_val[j] = (Real)(lb_i+j);
-	y_val[j] = 1.;
+      if (num_params > 1) {
+	Real* x_val = new Real [num_params];
+	Real* y_val = new Real [num_params];
+	for (j=0; j<num_params; ++j) {
+	  x_val[j] = (Real)(lb_i+j);
+	  y_val[j] = 1.;
+	}
+	LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		      num_params, x_val, y_val, err_code, dist_num, pv_num);
+	check_error(err_code, "lhs_udist(discrete design range)");
+	delete [] x_val;
+	delete [] y_val;
       }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete design range)");
-      delete [] x_val;
-      delete [] y_val;
+      else if (num_params == 1) {
+	Real pt_val = (Real)lb_i;
+	LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+	check_error(err_code, "lhs_const(discrete design range)");
+      }
     }
     else {
       PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
@@ -773,18 +785,25 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
     num_params = ddsi_values[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
     ISCIter cit = ddsi_values[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = (Real)(*cit);
-      y_val[j] = 1.;
+    if (num_params > 1) {
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j, ++cit) {
+	x_val[j] = (Real)(*cit);
+	y_val[j] = 1.;
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete design set int)");
+      delete [] x_val;
+      delete [] y_val;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete design set int)");
-    delete [] x_val;
-    delete [] y_val;
+    else if (num_params == 1) {
+      Real pt_val = (Real)(*cit);
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(discrete design set int)");
+    }
   }
 
   // poisson uncertain
@@ -914,18 +933,25 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
     num_params = dusi_vals_probs[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
     IRMCIter cit = dusi_vals_probs[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = (Real)(cit->first); // discrete uncertain set value
-      y_val[j] = cit->second;        // basic probability
+    if (num_params > 1) {
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j, ++cit) {
+	x_val[j] = (Real)(cit->first); // discrete uncertain set value
+	y_val[j] = cit->second;        // basic probability
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete uncertain set int)");
+      delete [] x_val;
+      delete [] y_val;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete uncertain set int)");
-    delete [] x_val;
-    delete [] y_val;
+    else if (num_params == 1) {
+      Real pt_val = (Real)(cit->first);
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(discrete uncertain set int)");
+    }
   }
 
   // discrete state range (treated as discrete histogram)
@@ -942,17 +968,24 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
       }
       int lb_i = dsri_l_bnds[i];
       num_params = dsri_u_bnds[i] - lb_i + 1;
-      Real* x_val = new Real [num_params];
-      Real* y_val = new Real [num_params];
-      for (j=0; j<num_params; ++j) {
-	x_val[j] = (Real)(lb_i+j);
-	y_val[j] = 1.;
+      if (num_params > 1) {
+	Real* x_val = new Real [num_params];
+	Real* y_val = new Real [num_params];
+	for (j=0; j<num_params; ++j) {
+	  x_val[j] = (Real)(lb_i+j);
+	  y_val[j] = 1.;
+	}
+	LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		      num_params, x_val, y_val, err_code, dist_num, pv_num);
+	check_error(err_code, "lhs_udist(discrete state range)");
+	delete [] x_val;
+	delete [] y_val;
       }
-      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		    num_params, x_val, y_val, err_code, dist_num, pv_num);
-      check_error(err_code, "lhs_udist(discrete state range)");
-      delete [] x_val;
-      delete [] y_val;
+      else {
+	Real pt_val = (Real)lb_i;
+	LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+	check_error(err_code, "lhs_const(discrete state range)");
+      }
     }
     else {
       PCerr << "\nError: Pecos::LHSDriver requires bounds to sample discrete "
@@ -968,18 +1001,25 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
     num_params = dssi_values[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
     ISCIter cit = dssi_values[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = (Real)(*cit);
-      y_val[j] = 1.;
+    if (num_params > 1) {
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j, ++cit) {
+	x_val[j] = (Real)(*cit);
+	y_val[j] = 1.;
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete state set int)");
+      delete [] x_val;
+      delete [] y_val;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete state set int)");
-    delete [] x_val;
-    delete [] y_val;
+    else if (num_params == 1) {
+      Real pt_val = (Real)(*cit);
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(discrete state set int)");
+    }
   }
 
   // -----------------------
@@ -991,18 +1031,25 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
     num_params = ddsr_values[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
     RSCIter cit = ddsr_values[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = *cit;
-      y_val[j] = 1.;
+    if (num_params > 1) {
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j, ++cit) {
+	x_val[j] = *cit;
+	y_val[j] = 1.;
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete design set real)");
+      delete [] x_val;
+      delete [] y_val;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete design set real)");
-    delete [] x_val;
-    delete [] y_val;
+    else if (num_params == 1) {
+      Real pt_val = *cit;
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(discrete design set real)");
+    }
   }
 
   // histogram point uncertain: pairs are defined from an abscissa in
@@ -1012,18 +1059,25 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
     num_params = h_pt_prs[i].length()/2;
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
-    // LHS can use discrete frequency information directly
-    for (j=0; j<num_params; ++j) {
-      x_val[j] = h_pt_prs[i][2*j];
-      y_val[j] = h_pt_prs[i][2*j+1];
+    if (num_params > 1) {
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      // LHS can use discrete frequency information directly
+      for (j=0; j<num_params; ++j) {
+	x_val[j] = h_pt_prs[i][2*j];
+	y_val[j] = h_pt_prs[i][2*j+1];
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(histogram pt)");
+      delete [] x_val;
+      delete [] y_val;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(histogram pt)");
-    delete [] x_val;
-    delete [] y_val;
+    else if (num_params == 1) {
+      Real pt_val = h_pt_prs[i][0]; // frequency is 1
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(histogram pt)");
+    }
   }
 
   // discrete uncertain set real (treated as discrete histogram)
@@ -1032,18 +1086,25 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
     num_params = dusr_vals_probs[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
     RRMCIter cit = dusr_vals_probs[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = cit->first;  // discrete uncertain set value
-      y_val[j] = cit->second; // basic probability
+    if (num_params > 1) {
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j, ++cit) {
+	x_val[j] = cit->first;  // discrete uncertain set value
+	y_val[j] = cit->second; // basic probability
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete uncertain set real)");
+      delete [] x_val;
+      delete [] y_val;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete uncertain set real)");
-    delete [] x_val;
-    delete [] y_val;
+    else if (num_params == 1) {
+      Real pt_val = cit->first; // basic probability is 1
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(discrete uncertain set real)");
+    }
   }
 
   // discrete state set real (treated as discrete histogram)
@@ -1052,18 +1113,25 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
     num_params = dssr_values[i].size();
-    Real* x_val = new Real [num_params];
-    Real* y_val = new Real [num_params];
     RSCIter cit = dssr_values[i].begin();
-    for (j=0; j<num_params; ++j, ++cit) {
-      x_val[j] = *cit;
-      y_val[j] = 1.;
+    if (num_params > 1) {
+      Real* x_val = new Real [num_params];
+      Real* y_val = new Real [num_params];
+      for (j=0; j<num_params; ++j, ++cit) {
+	x_val[j] = *cit;
+	y_val[j] = 1.;
+      }
+      LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
+		    num_params, x_val, y_val, err_code, dist_num, pv_num);
+      check_error(err_code, "lhs_udist(discrete state set real)");
+      delete [] x_val;
+      delete [] y_val;
     }
-    LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
-		  num_params, x_val, y_val, err_code, dist_num, pv_num);
-    check_error(err_code, "lhs_udist(discrete state set real)");
-    delete [] x_val;
-    delete [] y_val;
+    else if (num_params == 1) {
+      Real pt_val = *cit;
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(discrete state set real)");
+    }
   }
 
   // specify the rank correlations among the uncertain vars (no correlation

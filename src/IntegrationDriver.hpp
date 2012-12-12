@@ -74,6 +74,10 @@ public:
   //- Heading: Member functions
   //
 
+  /// update collocPts1D and type{1,2}CollocWts1D
+  void update_1d_collocation_points_weights(const UShortArray& quad_order,
+					    const UShortArray& lev_index);
+
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
 
@@ -133,9 +137,6 @@ protected:
   /// update collocPts1D[lev_index][i] and type{1,2}CollocWts1D[lev_index][i]
   void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 					    unsigned short lev_index);
-  /// update collocPts1D and type{1,2}CollocWts1D
-  void update_1d_collocation_points_weights(const UShortArray& quad_order,
-					    const UShortArray& lev_index);
 
   //
   //- Heading: Data
