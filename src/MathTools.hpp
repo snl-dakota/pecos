@@ -12,8 +12,6 @@
 
 namespace Pecos {
 
-#define PI 4.0*atan(1.0)
-
 /**
  * \brief Map a linear index of a d-dimensional array to the equivalent
  * d-dimensional index
@@ -265,9 +263,9 @@ enum lp_norm
   {
     l1_norm,
     l2_norm,
-    linf_norm,
+    linf_norm
   };
-
+  
 /**
  * \brief Return the index of the element of x with the minimum value.
  *

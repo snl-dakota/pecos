@@ -298,7 +298,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
 		int colNumber( activeColumns[i] );
 		Real *diffCol = diff[colNumber];
 		//Sum the absolute values of the entries of col. 
-		error(i,j) = blas.NRM2( M, diffCol, 1 ) / sqrt( (Real)M );
+		error(i,j) = blas.NRM2( M, diffCol, 1 ) / std::sqrt( (Real)M );
 		if ( normalise )
 		  {
 		    // Normalise by the standard deviation of the data in
