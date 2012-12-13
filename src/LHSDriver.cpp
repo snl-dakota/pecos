@@ -1243,4 +1243,52 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 #endif // HAVE_LHS
 }
 
+
+void LHSDriver::
+generate_unique_index_samples(const IntVector& index_l_bnds,
+			      const IntVector& index_u_bnds, int num_samples,
+			      std::set<IntArray>& sorted_samples)
+{
+  if (sampleRanksMode) {
+    PCerr << "Error: generate_discrete_samples() does not support sample rank "
+	  << "input/output." << std::endl;
+    abort_handler(-1);
+  }
+  // For    uniform probability, model as discrete design range (this fn).
+  // For nonuniform probability, model as discrete uncertain set integer.
+  RealVector  empty_rv;              IntVector    empty_iv;
+  IntSetArray empty_isa;             RealSetArray empty_rsa;
+  RealMatrix  empty_rm, samples_rm;  DistributionParams dp;
+  std::set<IntArray>::iterator it;   IntArray sample;
+  // eliminate redundant samples by resampling if necessary.  Could
+  // over-estimate num_samples in anticipation of duplicates, but this
+  // would alter LHS stratification in potentially undesirable ways.
+  bool complete = false, initial = true;
+  size_t i, num_vars = std::min(index_l_bnds.length(), index_u_bnds.length());
+  while (!complete) {
+    // TO DO: ensure that random seed continues properly
+    generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
+		     empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
+		     empty_isa, empty_rsa, dp, num_samples, samples_rm,
+		     empty_rm);
+    if (initial) { // pack initial sample set
+      for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
+	copy_data(samples_rm[i], num_vars, sample);
+	sorted_samples.insert(sample);
+      }
+      if (sorted_samples.size() == num_samples) complete = true;
+      else initial = false;
+    }
+    else { // backfill duplicates with new samples
+      for (int i=0; i<num_samples; ++i)
+	if (sorted_samples.size() < num_samples) {
+	  copy_data(samples_rm[i], num_vars, sample);
+	  sorted_samples.insert(sample);
+	}
+	else
+	  { complete = true; break; }
+    }
+  }
+}
+
 } // namespace Pecos

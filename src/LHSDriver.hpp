@@ -97,12 +97,16 @@ public:
 				const RealVector& u_u_bnds, int num_samples,
 				RealMatrix& samples_array);
 
-  /// generates the desired set of parameter samples from within
-  /// uncorrelated uniform distributions
+  /// generates integer index samples from within uncorrelated uniform
+  /// distributions
   void generate_uniform_index_samples(const IntVector& index_l_bnds,
-				      const IntVector& index_u_bnds,
-				      int num_samples,
-				      IntMatrix& index_samples);
+    const IntVector& index_u_bnds, int num_samples, IntMatrix& index_samples);
+
+  /// generates unique integer index samples from within uncorrelated
+  /// uniform distributions (more expensive than non-unique case)
+  void generate_unique_index_samples(const IntVector& index_l_bnds,
+    const IntVector& index_u_bnds, int num_samples,
+    std::set<IntArray>& sorted_samples);
 
 private:
 

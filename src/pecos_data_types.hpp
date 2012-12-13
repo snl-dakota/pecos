@@ -289,6 +289,43 @@ void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
 }
 
 
+/// copy Array<T> to T*
+template <typename T>
+void copy_data(const std::vector<T>& vec, T* ptr, const size_t ptr_len)
+{
+  if (ptr_len != vec.size()) { // could use <, but enforce exact match
+    PCerr << "Error: bad ptr_len in copy_data(std::vector<T>, T* ptr)."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  for (size_t i=0; i<ptr_len; ++i)
+    ptr[i] = vec[i];
+}
+
+
+/// copy T* to Array<T>
+template <typename T>
+void copy_data(const T* ptr, const size_t ptr_len, std::vector<T>& vec)
+{
+  if (ptr_len != vec.size())
+    vec.resize(ptr_len);
+  for (size_t i=0; i<ptr_len; ++i)
+    vec[i] = ptr[i];
+}
+
+
+/// copy ScalarType1* to Array<ScalarType2> with data cast
+template <typename ScalarType1, typename ScalarType2>
+void copy_data(const ScalarType1* ptr, const size_t ptr_len,
+	       std::vector<ScalarType2>& vec)
+{
+  if (ptr_len != vec.size())
+    vec.resize(ptr_len);
+  for (size_t i=0; i<ptr_len; ++i)
+    vec[i] = static_cast<ScalarType2>(ptr[i]);
+}
+
+
 /// copy ScalarType* to std::deque<ScalarType>
 template <typename OrdinalType, typename ScalarType> 
 void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
