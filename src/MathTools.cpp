@@ -331,4 +331,28 @@ Real variance( int n, Real *x, int dof )
   return variance / (Real)( n - dof );
 }
 
+void get_permutations( IntMatrix &permutations, 
+		       int M , int N, unsigned int seed )
+{
+  std::srand( seed );
+  
+  permutations.reshape( M, N );
+  IntMatrix numbers;
+  for ( int j = 0; j < N; j++ )
+    {
+      std::vector<int> random( M );
+      for ( int i = 0; i < M; i++ ) 
+	{
+	  random[i] = i;
+	}
+
+      std::random_shuffle( random.begin(), random.end() );
+
+      for ( int i = 0; i < M; i++ )
+	{
+	  permutations(i,j) = random[i];
+	}
+    }
+};
+
 } // namespace Pecos

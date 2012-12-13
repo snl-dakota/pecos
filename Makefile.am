@@ -51,10 +51,14 @@ include_HEADERS = pecos_config.h				\
 		     src/PolynomialApproximation.hpp		\
 		     src/InterpPolyApproximation.hpp		\
 		     src/NodalInterpPolyApproximation.hpp	\
-		     src/OrthogPolyApproximation.hpp		\
-		     src/CompressedSensing.hpp			\
-		     src/LinearAlgebra.hpp			\
 		     src/MathTools.hpp         			\
+		     src/LinearAlgebra.hpp			\
+		     src/CompressedSensing.hpp			\
+		     src/ParallelObject.hpp			\
+	   	     src/CrossValidationModules.hpp		\
+	             src/LinearModelModules.hpp			\
+	             src/CrossValidationIterator.hpp		\
+		     src/OrthogPolyApproximation.hpp		\
 		     src/SurrogateData.hpp			\
 		     src/DistributionParams.hpp			\
 		     src/BasisPolynomial.hpp			\

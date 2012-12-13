@@ -287,6 +287,13 @@ private:
   bool L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
 		     bool multiple_rhs);
 
+  /// Use cross validation to find the 'best' PCE degree
+  void run_cross_validation( RealMatrix &A, RealMatrix &B );
+
+  /// For a specific vandermonde matrix find the compressed sennsing 
+  // options that produce the best PCE
+  void estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history );
+
   /// computes the chaosCoeffs via averaging of samples
   /// (expCoeffsSolnApproach is SAMPLING)
   void expectation();
@@ -326,6 +333,15 @@ private:
   void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		     bool& add_val, bool& add_grad);
 
+  /**
+   * \brief Define the set of options used in the cross validation grid search
+   * 
+   * \param opts (output) the options to be used in the grid search
+   * \param M The number of rows of the vandermonde matrix
+   * \param N The number of columns of the vandermonde matrix
+   */
+  void gridSearchFunction( RealMatrix &opts, int M, int N );
+
   //
   //- Heading: Data
   //
@@ -334,6 +350,8 @@ private:
   int numExpansionTerms;
   /// order of orthogonal polynomial expansion
   UShortArray approxOrder;
+  /// order of orthogonal best polynomial expansion found using cross validation
+  IntVector bestApproxOrder;
   /// previous value of approxOrder; used for detecting when a multiIndex
   /// update is needed
   UShortArray approxOrderPrev;

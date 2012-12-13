@@ -29,10 +29,14 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  PolynomialApproximation.cpp			\
 			  InterpPolyApproximation.cpp			\
 			  NodalInterpPolyApproximation.cpp		\
-			  OrthogPolyApproximation.cpp			\
-			  CompressedSensing.cpp				\
-			  LinearAlgebra.cpp				\
 			  MathTools.cpp                                 \
+			  LinearAlgebra.cpp				\
+			  CompressedSensing.cpp				\
+			  ParallelObject.cpp				\
+			  CrossValidationModules.cpp			\
+			  LinearModelModules.cpp			\
+			  CrossValidationIterator.cpp			\
+			  OrthogPolyApproximation.cpp			\
 			  BasisPolynomial.cpp				\
 			  InterpolationPolynomial.cpp			\
 			  LagrangeInterpPolynomial.cpp			\

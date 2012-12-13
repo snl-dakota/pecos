@@ -19,6 +19,12 @@
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
+// headers necessary for cross validation
+#include "MathTools.hpp"
+#include "CrossValidationIterator.hpp"
+#include "LinearModelModules.hpp"
+#include "CrossValidationModules.hpp"
+
 //#define DEBUG
 //#define DECAY_DEBUG
 
@@ -1713,9 +1719,16 @@ void OrthogPolyApproximation::regression()
     CSOpts.delta = l2Penalty;
   if ( noiseTols.length() > 0 )
     CSOpts.epsilon = noiseTols[0];
+  else
+    {
+      noiseTols.size( 1 );
+      noiseTols[0] = CSOpts.epsilon;
+    }
   if ( CSOpts.solver != SVD_LEAST_SQ_REGRESSION )
     //hack unit convergenceTol is available
     CSOpts.solverTolerance = 1e-6;
+  else
+    CSOpts.solverTolerance = -1.0;
   CSOpts.verbosity = 0;
   //CSOpts.solverTolerance = ;
   //CSOpts.maxNumIterations = ;
@@ -2117,17 +2130,18 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
     // if no RHS augmentation, then solve for coeffs now
     if (!multiple_rhs) {
 
-      /*if ( num_data_pts_fn < numExpansionTerms )
-	{
-	  PCout << "Using " << expConfigOptions.expCoeffsSolnApproach << "\n";
-	  CSOpts.solver = LASSO_REGRESSION;
-	}
+      // Perform cross validation loop over degrees here.
+      // Current cross validation will not work for equality 
+      // constrained least squares
+      if ( crossValidation )
+	// run cross validation
+	run_cross_validation( A, B );
       else
-      CSOpts.solver = DEFAULT_LEAST_SQ_REGRESSION;*/
-
-      CSTool.solve( A, B, solutions, CSOpts, opts_list );
-
-      copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
+	{
+	  CSTool.solve( A, B, solutions, CSOpts, opts_list );
+	  
+	  copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
+	}
       
       delete [] A_matrix;
       delete [] b_vectors;
@@ -2206,6 +2220,179 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   }
   return lapack_err;
 }
+
+void OrthogPolyApproximation::run_cross_validation( RealMatrix &A, RealMatrix &B )
+{
+  RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
+  RealMatrix B_copy( Teuchos::Copy, B, B.numRows(), B.numCols() );
+  int num_rhs = B.numCols(), num_dims( approxOrder.size() );
+  // Do cross validation for varing polynomial orders up to 
+  // a maximum order defined by approxOrder[0]
+  int min_order = 1;
+  if ( min_order > approxOrder[0] ) min_order = approxOrder[0];
+
+  /// The options used to create the best PCE for each QOI
+  std::vector<CompressedSensingOptions> bestCompressedSensingOpts_;
+
+  /// The options of the best predictors of the predictors produced by each item 
+  /// in predictorOptionsList_. Information is stored for each PCE degree
+  std::vector<RealMatrixList> predictorOptionsHistory_;
+
+  /// The best predictors of the predictors produced by each item 
+  /// in predictorOptionsList_. Information is stored for each PCE degree
+  std::vector<RealMatrixList> predictorIndicatorsHistory_;
+
+  /// The indicators of each partition for the best predictors of the 
+  /// predictors produced by each item in predictorOptionsList_. 
+  /// Information is stored for each PCE degree
+  std::vector<RealMatrixList> predictorPartitionIndicatorsHistory_;
+  bestCompressedSensingOpts_;
+
+  std::vector<CompressedSensingOptions> best_cs_opts( num_rhs );
+  
+  RealVector min_best_predictor_indicators( num_rhs );
+  min_best_predictor_indicators = std::numeric_limits<Real>::max();
+  bestCompressedSensingOpts_.resize( num_rhs );
+  IntVector best_cross_validation_orders( num_rhs );
+  predictorOptionsHistory_.resize( approxOrder[0] - min_order + 1 );
+  predictorIndicatorsHistory_.resize( approxOrder[0] - min_order + 1 );
+  predictorPartitionIndicatorsHistory_.resize( approxOrder[0] - min_order + 1 );
+  int cnt( 0 );
+  for ( int order = min_order; order <= approxOrder[0]; order++ )
+    {	
+      PCout << "Testing PCE order " << order << std::endl;
+      int num_basis_terms = nchoosek( num_dims + order, order );
+      RealMatrix vandermonde_submatrix( Teuchos::View, 
+					A_copy,
+					A_copy.numRows(),
+					num_basis_terms, 0, 0 );
+
+      RealVector best_predictor_indicators;
+      estimate_compressed_sensing_options_via_cross_validation( 
+							       vandermonde_submatrix, 
+							       B_copy, 
+							       best_cs_opts,
+							       best_predictor_indicators,
+							       predictorOptionsHistory_[cnt], 
+							       predictorIndicatorsHistory_[cnt],  
+							       predictorPartitionIndicatorsHistory_[cnt]);
+
+      // Only execute on master processor
+      //      if ( is_master() )
+      if ( true )
+	{
+	  for ( int k = 0; k < num_rhs; k++ )
+	    {
+	      if ( best_predictor_indicators[k] < 
+		   min_best_predictor_indicators[k] )
+		{
+		  min_best_predictor_indicators[k] = 
+		    best_predictor_indicators[k];
+		  best_cross_validation_orders[k] = order;
+		  bestCompressedSensingOpts_[k] = best_cs_opts[k];
+		}
+	    }
+	}
+      cnt++;
+    }
+  bestApproxOrder = best_cross_validation_orders;
+  bestApproxOrder.print(std::cout);
+  int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
+				  bestApproxOrder[0] );
+  PCout << num_basis_terms << "QQQQQQQQQ\n";
+  // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
+  RealMatrix vandermonde_submatrix( Teuchos::View, 
+				    A_copy,
+				    A_copy.numRows(),
+				    num_basis_terms, 0, 0 );
+  CompressedSensingOptionsList opts_list;
+  RealMatrixList solutions;
+  bestCompressedSensingOpts_[0].storeHistory = false;
+  bestCompressedSensingOpts_[0].print();
+  CSTool.solve( vandermonde_submatrix, B_copy, solutions, 
+		bestCompressedSensingOpts_[0], opts_list );
+  solutions[0].print(std::cout);
+  // Resize solutions so that it can be used with large vandermonde.
+  if (expansionCoeffs.length()!=numExpansionTerms)
+    expansionCoeffs.sizeUninitialized(numExpansionTerms);
+ for ( int i=0; i<num_basis_terms; ++i)
+   expansionCoeffs[i] = solutions[0](i,0);
+ for ( int i=num_basis_terms; i < numExpansionTerms; ++i)
+   expansionCoeffs[i] = 0.0;
+};
+
+void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
+						  int M, int N )
+{
+  // Setup a grid based search
+  bool is_under_determined = M < N;
+  
+  // Define the 1D grids for under and over-determined LARS, LASSO, OMP, BP and 
+  // LS
+  std::vector<RealVector> opts1D( 8 );
+  opts1D[0].size( 1 ); // solver type
+  opts1D[0][0] = CSOpts.solver;
+  opts1D[1].size( 1 ); // Solver tolerance. 
+  opts1D[1][0] = CSOpts.solverTolerance;
+  opts1D[2] = noiseTols; // epsilon.
+  opts1D[3].size( 1 ); // delta
+  opts1D[3] = CSOpts.delta;
+  opts1D[4].size( 1 ); // max_number of non_zeros// todo replace with CSOpts
+  opts1D[4] = std::numeric_limits<int>::max();
+  opts1D[5].size( 1 );  // standardizeInputs
+  opts1D[5] = false;
+  opts1D[6].size( 1 );  // storeHistory
+  opts1D[6] = true;  
+  opts1D[7].size( 1 );  // Verbosity. Warnings on
+  opts1D[7] = 1;
+      
+  // Form the multi-dimensional grid
+  cartesian_product( opts1D, opts );
+  opts.print(std::cout);
+  noiseTols.print(std::cout);
+};
+
+void OrthogPolyApproximation::estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history ){
+  // Initialise the cross validation iterator
+  CrossValidationIterator CV;
+  CV.mpi_communicator( MPI_COMM_WORLD );
+  CV.verbosity( 1 );
+  // Set and partition the data
+  CV.set_data( vandermonde_matrix, rhs );
+  CV.setup_k_folds();
+  
+  // Tell the cross validation iterator what options to test
+  RealMatrix opts;
+  gridSearchFunction( opts, vandermonde_matrix.numRows(),
+		      vandermonde_matrix.numCols() );
+  CV.predictor_options_list( opts );
+
+  // Perform cross validation
+  CV.run( &rmse_indicator, &linear_predictor_analyser, 
+	  &normalised_mean_selector,
+	  &linear_predictor_best_options_extractor );
+
+  // Get results of cross validation
+  RealMatrix best_predictor_options;
+  CV.get_best_predictor_info( best_predictor_options, 
+			      best_predictor_indicators );
+
+  CV.get_history_data( predictor_options_history, 
+		       predictor_indicators_history,
+		       predictor_partition_indicators_history );
+
+  //if ( CV.is_master() )
+  if ( true )
+    {
+      int len_opts(  best_predictor_options.numRows() ), 
+	num_rhs( rhs.numCols() );
+      for ( int k = 0; k < num_rhs; k++ )
+	{
+	  RealVector col( Teuchos::View,  best_predictor_options[k], len_opts );
+	  set_linear_predictor_options( col, best_cs_opts[k] );
+	}
+    }
+};
 
 
 /** The coefficients of the PCE for the response are calculated using a

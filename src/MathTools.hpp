@@ -257,6 +257,10 @@ void get_multi_dimensional_polynomial_indices( int num_dims, int degree, IntMatr
  */
 void set_hypercube_domain( RealVector &domain, int num_dims, Real a, Real b );
 
+/// Perturb the columns of a matrix
+void get_permutations( IntMatrix &permutations, 
+		       int M , int N, unsigned int seed );
+
 enum lp_norm
   {
     l1_norm,
