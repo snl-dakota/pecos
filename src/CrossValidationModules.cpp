@@ -17,7 +17,7 @@ void rmse_indicator( RealMatrix &validation_values,
     {
       Real *diffCol = diff[k];
       //Sum the absolute values of the entries of col. 
-      indicators(k,0) = blas.NRM2( M, diffCol, 1 ) / sqrt( (Real)M );
+      indicators(k,0) = blas.NRM2( M, diffCol, 1 ) / std::sqrt( (Real)M );
     }
 };
 
