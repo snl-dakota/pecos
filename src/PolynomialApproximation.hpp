@@ -51,9 +51,9 @@ public:
   ExpansionConfigOptions();
   /// constructor
   ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-			 bool exp_grad_flag,
-			 //short output_level, short refine_type,
-			 short refine_cntl, short vbd_type);
+			 bool  exp_grad_flag, //short output_level,
+			 short vbd_cntl,      //short refine_type,
+			 short refine_cntl, int max_iter, Real conv_tol);
   /// destructor
   ~ExpansionConfigOptions();
 
@@ -73,35 +73,42 @@ public:
   // output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   //short outputLevel;
 
+  /// control for amount of data computed in variance-based decomposition:
+  /// {NO,UNIVARIATE,ALL}_VBD
+  short vbdControl;
+
   // type of refinement: {NO,P,H}_REFINEMENT
   //short refinementType;
   /// approach for control of refinement: {NO,UNIFORM,LOCAL_ADAPTIVE}_CONTROL
   /// or DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY,GENERALIZED}
   short refinementControl;
 
-  /// control for amount of data computed in variance-based decomposition:
-  /// {NO,UNIVARIATE,ALL}_VBD
-  short vbdControl;
+  /// control for limiting the maximum number of iterations in adapted
+  /// or iterated approximation algorithms
+  int maxIterations;
+  /// convergence tolerance for adapted or iterated approximation algorithms
+  Real convergenceTol;
 };
 
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false),
-  //outputLevel(NORMAL_OUTPUT), refinementType(NO_REFINEMENT),
-  refinementControl(NO_CONTROL), vbdControl(NO_VBD)
+  expansionCoeffGradFlag(false), //outputLevel(NORMAL_OUTPUT),
+  vbdControl(NO_VBD),            //refinementType(NO_REFINEMENT),
+  refinementControl(NO_CONTROL), maxIterations(100), convergenceTol(1.e-4)
 { }
 
 
 inline ExpansionConfigOptions::
 ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-		       bool exp_grad_flag,
-		       //short output_level, short refine_type,
-		       short refine_cntl, short vbd_type):
-  expCoeffsSolnApproach(exp_soln_approach),
-  expansionCoeffFlag(exp_coeff_flag), expansionCoeffGradFlag(exp_grad_flag),
-  //outputLevel(output_level), refinementType(refine_type),
-  refinementControl(refine_cntl), vbdControl(vbd_type)
+		       bool  exp_grad_flag, //short output_level,
+		       short vbd_cntl,      //short refine_type,
+		       short refine_cntl, int max_iter, Real conv_tol):
+  expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
+  expansionCoeffGradFlag(exp_grad_flag), //outputLevel(output_level),
+  vbdControl(vbd_cntl),                  //refinementType(refine_type),
+  refinementControl(refine_cntl), maxIterations(max_iter),
+  convergenceTol(conv_tol)
 { }
 
 
@@ -360,6 +367,11 @@ public:
   /// get ExpansionConfigOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
+  /// set ExpansionConfigOptions::vbdControl
+  void vbd_control(short vbd_cntl);
+  /// get ExpansionConfigOptions::vbdControl
+  short vbd_control() const;
+
   // set ExpansionConfigOptions::refinementType
   //void refinement_type(short refine_type);
   // get ExpansionConfigOptions::refinementType
@@ -370,10 +382,15 @@ public:
   /// get ExpansionConfigOptions::refinementControl
   short refinement_control() const;
 
-  /// set ExpansionConfigOptions::vbdControl
-  void vbd_control(short vbd_cntl);
-  /// get ExpansionConfigOptions::vbdControl
-  short vbd_control() const;
+  /// set ExpansionConfigOptions::maxIterations
+  void maximum_iterations(int max_iter);
+  /// get ExpansionConfigOptions::maxIterations
+  int maximum_iterations() const;
+
+  /// set ExpansionConfigOptions::convergenceTol
+  void convergence_tolerance(Real conv_tol);
+  /// get ExpansionConfigOptions::convergenceTol
+  Real convergence_tolerance() const;
 
   /// return sobolIndexMap
   const BitArrayULongMap& sobol_index_map() const;
@@ -613,6 +630,14 @@ expansion_coefficient_gradient_flag() const
 { return expConfigOptions.expansionCoeffGradFlag; }
 
 
+inline void PolynomialApproximation::vbd_control(short vbd_cntl)
+{ expConfigOptions.vbdControl = vbd_cntl; }
+
+
+inline short PolynomialApproximation::vbd_control() const
+{ return expConfigOptions.vbdControl; }
+
+
 //inline void PolynomialApproximation::refinement_type(short refine_type)
 //{ expConfigOptions.refinementType = refine_type; }
 
@@ -629,12 +654,20 @@ inline short PolynomialApproximation::refinement_control() const
 { return expConfigOptions.refinementControl; }
 
 
-inline void PolynomialApproximation::vbd_control(short vbd_cntl)
-{ expConfigOptions.vbdControl = vbd_cntl; }
+inline void PolynomialApproximation::maximum_iterations(int max_iter)
+{ expConfigOptions.maxIterations = max_iter; }
 
 
-inline short PolynomialApproximation::vbd_control() const
-{ return expConfigOptions.vbdControl; }
+inline int PolynomialApproximation::maximum_iterations() const
+{ return expConfigOptions.maxIterations; }
+
+
+inline void PolynomialApproximation::convergence_tolerance(Real conv_tol)
+{ expConfigOptions.convergenceTol = conv_tol; }
+
+
+inline Real PolynomialApproximation::convergence_tolerance() const
+{ return expConfigOptions.convergenceTol; }
 
 
 inline const BitArrayULongMap& PolynomialApproximation::sobol_index_map() const

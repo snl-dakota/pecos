@@ -279,8 +279,8 @@ generate_uniform_index_samples(const IntVector& index_l_bnds,
 			       int num_samples, IntMatrix& index_samples)
 {
   if (sampleRanksMode) {
-    PCerr << "Error: generate_discrete_samples() does not support sample rank "
-	  << "input/output." << std::endl;
+    PCerr << "Error: generate_uniform_index_samples() does not support sample "
+	  << "rank input/output." << std::endl;
     abort_handler(-1);
   }
   // For    uniform probability, model as discrete design range (this fn).

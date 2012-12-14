@@ -1250,8 +1250,8 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
 			      std::set<IntArray>& sorted_samples)
 {
   if (sampleRanksMode) {
-    PCerr << "Error: generate_discrete_samples() does not support sample rank "
-	  << "input/output." << std::endl;
+    PCerr << "Error: generate_unique_index_samples() does not support sample "
+	  << "rank input/output." << std::endl;
     abort_handler(-1);
   }
   // For    uniform probability, model as discrete design range (this fn).
@@ -1260,13 +1260,12 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
   IntSetArray empty_isa;             RealSetArray empty_rsa;
   RealMatrix  empty_rm, samples_rm;  DistributionParams dp;
   std::set<IntArray>::iterator it;   IntArray sample;
-  // eliminate redundant samples by resampling if necessary.  Could
-  // over-estimate num_samples in anticipation of duplicates, but this
-  // would alter LHS stratification in potentially undesirable ways.
+  // Eliminate redundant samples by resampling if necessary.  Could pad
+  // num_samples in anticipation of duplicates, but this would alter LHS
+  // stratification that could be intended, so use num_samples for now.
   bool complete = false, initial = true;
   size_t i, num_vars = std::min(index_l_bnds.length(), index_u_bnds.length());
   while (!complete) {
-    // TO DO: ensure that random seed continues properly
     generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
 		     empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
 		     empty_isa, empty_rsa, dp, num_samples, samples_rm,
