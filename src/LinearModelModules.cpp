@@ -6,7 +6,7 @@ namespace Pecos {
 void set_linear_predictor_options( RealVector &predictor_opts,  
 				   CompressedSensingOptions &cs_opts )
 {
-  cs_opts.solver =  predictor_opts[0];
+  cs_opts.solver = predictor_opts[0];
   cs_opts.solverTolerance = predictor_opts[1];
   cs_opts.epsilon = predictor_opts[2];
   cs_opts.delta = predictor_opts[3];
@@ -14,6 +14,7 @@ void set_linear_predictor_options( RealVector &predictor_opts,
   cs_opts.standardizeInputs = (bool)predictor_opts[5];
   cs_opts.storeHistory = (bool)predictor_opts[6];
   cs_opts.verbosity = (int)predictor_opts[7];
+  cs_opts.numFunctionSamples = (int)predictor_opts[8];
 };
 
 void extract_linear_predictor_options(CompressedSensingOptionsList &cs_opts_list,
@@ -24,17 +25,18 @@ void extract_linear_predictor_options(CompressedSensingOptionsList &cs_opts_list
   for ( int k = 0; k < num_qoi; k++ )
     {
       int num_predictors( cs_opts_list[k].size() );
-      predictor_options_list[k].shapeUninitialized( 8, num_predictors );
+      predictor_options_list[k].shapeUninitialized( 9, num_predictors );
       for ( int j = 0; j < num_predictors; j++ )
 	{
 	  predictor_options_list[k](0,j) = cs_opts_list[k][j].solver;
 	  predictor_options_list[k](1,j) = cs_opts_list[k][j].solverTolerance;
 	  predictor_options_list[k](2,j) = cs_opts_list[k][j].epsilon;
 	  predictor_options_list[k](3,j) = cs_opts_list[k][j].delta;
-	  predictor_options_list[k](4,j)=cs_opts_list[k][j].maxNumIterations;
+	  predictor_options_list[k](4,j) = cs_opts_list[k][j].maxNumIterations;
 	  predictor_options_list[k](5,j) = cs_opts_list[k][j].standardizeInputs;
 	  predictor_options_list[k](6,j) = cs_opts_list[k][j].storeHistory;
 	  predictor_options_list[k](7,j) = cs_opts_list[k][j].verbosity;
+	  predictor_options_list[k](8,j) = cs_opts_list[k][j].numFunctionSamples;
 	}
     }
 };
@@ -71,7 +73,7 @@ void linear_predictor_analyser( RealMatrix &A_training,
   for ( int k = 0; k < num_qoi; k++ )
     {
       RealMatrix B_prediction( A_validation.numRows(), 
-			   coefficient_sets[k].numCols() );
+			       coefficient_sets[k].numCols() );
       // Use the linear model to predict at the validation points
       B_prediction.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0,
 			     A_validation, coefficient_sets[k], 0.0 );
@@ -105,19 +107,26 @@ void linear_predictor_best_options_extractor( std::vector<RealMatrixList> &parti
   
   for ( int k = 0; k < num_qoi; k++ )
     {
+      std::vector<Real> epsilons( num_partitions );
+
       // Get the average number of max_iterations and the average residual
       // for the best predictors
-      Real best_epsilon( 0.0 );
+      Real ave_epsilon( 0.0 );
       int best_max_num_iterations( 0 );
       int argmin_k = best_predictor_indices[k];
       for ( int i = 0; i < num_partitions; i++ )
 	{
-	  best_epsilon += partition_options[i][k](2,argmin_k);
+	  epsilons[i] = partition_options[i][k](2,argmin_k);
+	  ave_epsilon += epsilons[i];
 	  best_max_num_iterations += partition_options[i][k](4,argmin_k);
 	}
       double sample_size_ratio = (Real)num_samples / 
 	(Real)num_training_samples;
-      best_epsilon /= (Real)num_partitions;
+      ave_epsilon /= (Real)num_partitions;
+      double median_epsilon = median( epsilons );
+      // using ave_epsilon does not work well for rosenbrock
+      // so set to best_epsilon to median_epsilon
+      double best_epsilon = median_epsilon;
       // sqrt used because epsilon is the sqrt( r'r );
       best_epsilon *= std::sqrt( sample_size_ratio );
       best_max_num_iterations /= num_partitions;
@@ -135,94 +144,4 @@ void linear_predictor_best_options_extractor( std::vector<RealMatrixList> &parti
     }
 }
 
-void setup_pce_cross_validation_grid_search( RealMatrix &opts, 
-					     int M, int N )
-{
-  // Setup a grid based search
-  bool is_under_determined = M < N;
-  
-  // Define the 1D grids for under and over-determined LARS, LASSO, OMP, BP and 
-  // LS
-  std::vector<RealVector> opts1D( 8 );
-  opts1D[0].size( 5 ); // solver type
-  opts1D[0][0] = LEAST_ANGLE_REGRESSION; opts1D[0][1] = LASSO_REGRESSION; 
-  opts1D[0][2] = ORTHOG_MATCH_PURSUIT; opts1D[0][3] = BASIS_PURSUIT; 
-  opts1D[0][4] = SVD_LEAST_SQ_REGRESSION; 
-  opts1D[1].size( 1 ); // Solver tolerance. 
-  opts1D[1][0] = 1e-7; // Only necessary for BP
-  opts1D[2].size( 1 ); // epsilon. Initialized to zero
-  opts1D[3].size( 1 ); // delta. Initialized to zero
-  opts1D[4].size( 1 ); // max_number of non_zeros
-  opts1D[4] = std::numeric_limits<int>::max();
-  opts1D[5].size( 1 );  // standardizeInputs
-  opts1D[5] = false;
-  opts1D[6].size( 1 );  // storeHistory
-  opts1D[6] = true;  
-  opts1D[7].size( 1 );  // Verbosity. Warnings on
-  opts1D[7] = 1;
-      
-  // Form the multi-dimensional grid
-  cartesian_product( opts1D, opts );
-
-  // Define the 1D grids for BPDN
-  opts1D[0].size( 1 ); // solver type
-  opts1D[0][0] = BASIS_PURSUIT_DENOISING; 
-  opts1D[1].size( 1 ); // Solver tolerance. Initialized to zero
-  opts1D[1] = 1e-7;
-  if ( is_under_determined )
-    {
-      // Under-determined BPDN
-      opts1D[2].size( 5 ); // epsilon.
-      opts1D[2][0] = 1e-1; opts1D[2][1] = 1e-2; opts1D[2][2] = 1e-3;
-      opts1D[2][3] = 1e-4; opts1D[2][4] = 1e-5;
-    }
-  else
-    {
-      // Over-determined BPDN. Least squares solution will be computed so 
-      // varying epsilon is useless
-      opts1D[2].size( 1 ); // epsilon. Initialized to zero
-    }
-  opts1D[3].size( 1 ); // delta. Initialized to zero
-  opts1D[4].size( 1 ); // max_number of non_zeros
-  opts1D[4] = std::numeric_limits<int>::max();
-  opts1D[5].size( 1 );  // standardizeInputs
-  opts1D[5] = false;
-  opts1D[6].size( 1 );  // storeHistory
-  opts1D[6] = true;  
-  opts1D[7].size( 1 );  // Verbosity. Warnings on
-  opts1D[7] = 1;
-
-
-  // Aggregate the multi-dimensional grids
-  RealMatrix additional_opts;
-  cartesian_product( opts1D, additional_opts );
-  column_append( additional_opts, opts );
-
-
-  /* // Define the 1D grids for elastic net
-  opts1D[0].size( 1 ); // solver type
-  opts1D[0][0] = LASSO; 
-  opts1D[1].size( 1 ); // Solver tolerance. Initialized to zero
-  opts1D[2].size( 1 ); // epsilon. Initialized to zero
-  opts1D[3].size( 5 ); // delta. 
-  opts1D[3][0] = 1e-5; opts1D[3][1] = 1e-4; opts1D[3][2] = 1e-3;
-  opts1D[3][3] = 1e-2; opts1D[3][4] = 1e-1;
-  opts1D[4].size( 1 ); // max_number of non_zeros
-  opts1D[4] = std::numeric_limits<int>::max();
-  opts1D[5].size( 1 );  // standardizeInputs
-  opts1D[5] = false;
-  opts1D[6].size( 1 );  // storeHistory
-  opts1D[6] = true;  
-  opts1D[7].size( 1 );  // Verbosity. Warnings on
-  opts1D[7] = 0;
-
-  // Aggregate the multi-dimensional grids
-  cartesian_product( opts1D, additional_opts );
-  column_append( additional_opts, opts );
-  */
-
-  opts.print(std::cout);
-
-};
-
-} // namespace Pecos
+} //namespace Pecos

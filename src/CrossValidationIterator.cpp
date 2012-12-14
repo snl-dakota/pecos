@@ -1,28 +1,27 @@
 #include "CrossValidationIterator.hpp"
 #include "MathTools.hpp"
-
+ 
 namespace Pecos {
+
 
 void CrossValidationIterator::setup_k_folds( int num_partitions )
 {
   numPartitions_ = num_partitions;
   
   k_folds_check_inputs();
-
-  int num_samples( samples_.numRows() );
     
   // Randomly permute the row indices of the training points and values.
   // This is used to partition the training data into k sets.
   IntMatrix permutations;
-  get_permutations( permutations, num_samples, 1, seed_ );
+  get_permutations( permutations, numFunctionSamples_, 1, seed_ );
   
   // Generate the k sets for cross validation
-  int num_samples_per_fold = num_samples / 
+  int num_samples_per_fold = numFunctionSamples_ / 
     numPartitions_;
 
   int num_small_folds = num_partitions * ( num_samples_per_fold + 1 ) - 
-    num_samples;
-  int num_large_folds = num_samples - num_partitions * num_samples_per_fold;
+    numFunctionSamples_;
+  int num_large_folds = numFunctionSamples_ - num_partitions * num_samples_per_fold;
 
   int max_num_training_samples = num_large_folds * ( num_samples_per_fold + 1 )+
     (num_small_folds - 1) * num_samples_per_fold;
@@ -51,10 +50,10 @@ void CrossValidationIterator::setup_k_folds( int num_partitions )
       validation_indices_sizes[partition_id] = num_validation_samples;
 
       // Store training indices
-      for ( int i = 0; i < num_samples - num_validation_samples ; i++ )
+      for ( int i = 0; i < numFunctionSamples_ - num_validation_samples ; i++ )
 	{
 	  training_indices(i,partition_id) = 
-	    permutations(((j+1)*num_validation_samples+i)%num_samples,0);
+	    permutations(((j+1)*num_validation_samples+i)%numFunctionSamples_,0);
 	}
       training_indices(max_num_training_samples-1,partition_id) = -1;
       training_indices_sizes[partition_id] = max_num_training_samples-1;
@@ -78,10 +77,10 @@ void CrossValidationIterator::setup_k_folds( int num_partitions )
       validation_indices_sizes[partition_id] = num_validation_samples;
 
       // Store training indices
-      for ( int i = 0; i < num_samples - num_validation_samples ; i++ )
+      for ( int i = 0; i < numFunctionSamples_ - num_validation_samples ; i++ )
 	{
 	  training_indices(i,partition_id) = 
-	    permutations((k+(j+1)*num_validation_samples+i)%num_samples,0);
+	    permutations((k+(j+1)*num_validation_samples+i)%numFunctionSamples_,0);
 	}
       training_indices_sizes[partition_id] = max_num_training_samples;
       partition_id++;
@@ -89,7 +88,6 @@ void CrossValidationIterator::setup_k_folds( int num_partitions )
 
   set_partition_indices( training_indices, validation_indices,
 			 training_indices_sizes, validation_indices_sizes );
-
 };
 
 void CrossValidationIterator::partition_data( RealMatrix &training_samples, 
@@ -101,42 +99,73 @@ void CrossValidationIterator::partition_data( RealMatrix &training_samples,
   int num_training_samples( trainingIndicesSizes_[fold] ),
     num_covariates( samples_.numCols() ), num_qoi( values_.numCols() ),
     num_validation_samples( validationIndicesSizes_[fold] );
- 
-  reshape( training_samples, num_training_samples, num_covariates );
-  reshape( training_values, num_training_samples, num_qoi );
-  reshape( validation_samples, num_validation_samples, num_covariates );
-  reshape( validation_values, num_validation_samples, num_qoi );
 
-  for ( int j = 0; j < num_covariates; j++ )
+  int num_data_per_function_sample = samples_.numRows()/numFunctionSamples_;
+ 
+  reshape( training_samples, 
+	   num_data_per_function_sample * num_training_samples, 
+	   num_covariates );
+  reshape( training_values, 
+	   num_data_per_function_sample * num_training_samples, 
+	   num_qoi );
+  reshape( validation_samples, 
+	   num_data_per_function_sample * num_validation_samples, 
+	   num_covariates );
+  reshape( validation_values, 
+	   num_data_per_function_sample * num_validation_samples, 
+	   num_qoi );
+
+  // Partition the sample data
+  for ( int n = 0; n < num_covariates; n++ )
     {
-      
+      // Partition training samples
       for ( int i = 0; i < num_training_samples ; i++ )
 	{
 	  if ( trainingIndices_(i,fold) < 0 )
 	    break;
-	  training_samples(i,j) = samples_(trainingIndices_(i,fold),j);
+	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	    {
+	      training_samples(j*num_training_samples+i,n) = 
+		samples_(j*numFunctionSamples_+trainingIndices_(i,fold),n);
+	    }
 	}
+      // Partition validation samples
       for ( int i = 0; i < num_validation_samples ; i++ )
 	{
 	  if ( validationIndices_(i,fold) < 0 )
 	    break;
-	  validation_samples(i,j) = samples_(validationIndices_(i,fold),j);
+	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	    {
+	      validation_samples(j*num_validation_samples+i,n) = 
+		samples_(j*numFunctionSamples_+validationIndices_(i,fold),n);
+	    }
 	}
     }
-  
+
+  // Partition the values data
   for ( int k = 0; k < num_qoi; k++ )
     {
+      // Partition training function values
       for ( int i = 0; i < num_training_samples ; i++ )
 	{
 	  if ( trainingIndices_(i,fold) < 0 )
 	    break;
-	  training_values(i,k) = values_(trainingIndices_(i,fold),k);
+	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	    {
+	      training_values(j*num_training_samples+i,k) = 
+		values_(j*numFunctionSamples_+trainingIndices_(i,fold),k);
+	    }
 	}
+      // Partition validation function values
       for ( int i = 0; i < num_validation_samples ; i++ )
 	{
 	  if ( validationIndices_(i,fold) < 0 )
 	    break;
-	  validation_values(i,k) = values_(validationIndices_(i,fold),k);
+	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	    {
+	      validation_values(j*num_validation_samples+i,k) = 
+	      values_(j*numFunctionSamples_+validationIndices_(i,fold),k);
+	    }
 	}
     }
 };
@@ -380,19 +409,15 @@ void CrossValidationIterator::get_history_data( RealMatrixList &predictor_option
     }
 
 #else
-  predictor_options_history = predictorOptionsHistory_;
-  predictor_indicators_history = predictorIndicatorsHistory_;
-  predictor_partition_indicators_history = 
-    predictorPartitionIndicatorsHistory_;
-  
-  reshape_history_data( predictor_options_history, 
-			predictor_indicators_history,
-			predictor_partition_indicators_history );
 
-  PCout << "ZZZZ\n";
-  predictor_options_history[0].print(std::cout);
-  predictor_indicators_history[0].print(std::cout);
-  predictor_partition_indicators_history[0].print(std::cout);
+      predictor_options_history = predictorOptionsHistory_;
+      predictor_indicators_history = predictorIndicatorsHistory_;
+      predictor_partition_indicators_history = 
+	predictorPartitionIndicatorsHistory_;
+
+      reshape_history_data( predictor_options_history, 
+			    predictor_indicators_history,
+			    predictor_partition_indicators_history );
 
 #endif
 };
@@ -432,8 +457,11 @@ void CrossValidationIterator::reshape_history_data( RealMatrixList &predictor_op
 
 };
 
-void CrossValidationIterator::set_data( RealMatrix &samples, RealMatrix &values )
+void CrossValidationIterator::set_data( RealMatrix &samples, RealMatrix &values,
+					int num_function_samples )
 {
+  // pass in and set useGradients_ and numFunctionSamples_ here
+
 #ifdef ENABLE_LIBHEAT_MPI
 
   if ( is_master() )
@@ -468,6 +496,30 @@ void CrossValidationIterator::set_data( RealMatrix &samples, RealMatrix &values 
   values_ = values;
 
 #endif
+
+  if ( num_function_samples == 0 )
+    {
+      numFunctionSamples_ = samples_.numRows();
+      useGradients_ = false;
+    }
+  else
+    {
+      if ( ( num_function_samples != samples_.numRows() ) && 
+	   ( samples_.numRows() % num_function_samples != 0 ) )
+	{
+	  std::stringstream msg;
+	  msg << "num_function_samples is inconistent with the data.\n";
+	  msg << "If data contains gradients, set num_function_samples = ";
+	  msg << "num_dims * num_total_samples / ( num_dims + 1 )\n";
+	  msg << "If data does not contain gradients, set ";
+	  msg << "num_function_samples = num_total_samples;";
+	  throw( std::runtime_error( msg.str() ) );
+	}
+      numFunctionSamples_ = num_function_samples;
+    }
+  if ( numFunctionSamples_ != samples_.numRows() )
+    useGradients_= true;
+  
 };
 
 void CrossValidationIterator::set_partition_indices( RealMatrix &training_indices, RealMatrix &validation_indices, RealVector &training_indices_sizes, RealVector &validation_indices_sizes )
@@ -574,6 +626,7 @@ void CrossValidationIterator::predictor_options_list( RealMatrix &predictor_opti
 #else
 
   predictorOptionsList_ = predictor_options_list_in;
+
 #endif
 };
 
@@ -597,13 +650,12 @@ void CrossValidationIterator::k_folds_check_inputs()
       throw( std::runtime_error( msg.str() ) );
     }
   
-  int num_samples = samples_.numRows();
-  if ( numPartitions_ > num_samples )
+  if ( numPartitions_ > numFunctionSamples_ )
     {
       std::stringstream msg;
       msg << "CrossValidationIterator:setup_k_folds() The number of folds: ";
-      msg << numPartitions_ << "must be less than or equal the number of ";
-      msg << "samples: " << num_samples;
+      msg << numPartitions_ << " must be less than or equal the number of ";
+      msg << "samples: " << numFunctionSamples_;
       throw( std::runtime_error( msg.str() ) );
     }
 };
@@ -619,4 +671,4 @@ void CrossValidationIterator::get_partition_indices( RealMatrix &training_indice
    validation_indices = validationIndices_;
 };
 
-} // namespace Pecos
+} //namespace Pecos

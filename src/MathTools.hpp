@@ -425,6 +425,16 @@ int num_non_zeros( T *data, int n )
   return num_non_zero_count;
 }
 
+/**
+ *\brief return the median of a std::vector
+ */
+double median( std::vector<Real> &v );
+
+/**
+ *\brief return the median of a RealVector.
+ */
+double median( RealVector &v );
+
 } // namespace Pecos
 
 #endif

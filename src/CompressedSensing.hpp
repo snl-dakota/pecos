@@ -30,13 +30,14 @@ struct CompressedSensingOptions
   bool storeHistory;       //<! Specify if the solution history should be stored 
   Real conjugateGradientsTolerance; //<! Specify wether to use conjugate gradients internally to solve newton step in BP and BPDN.  If < 0 cholesky factorization will be used.
   int verbosity;           //!< The verbosity level. 0: off, 1: warnings on,  2: all print statements on.
+  int numFunctionSamples; //!< The number of function samples used to construct A and B. Used when A contains gradient information. If zero then numFunctionSamples = A.numRows()
 
   CompressedSensingOptions() : 
     solver( DEFAULT_LEAST_SQ_REGRESSION ), solverTolerance( -1. ),
     epsilon( 0.0 ), delta( 0.0 ),
     maxNumIterations( std::numeric_limits<int>::max() ), 
     standardizeInputs( false ), storeHistory( false ), 
-    conjugateGradientsTolerance( -1 ), verbosity( 0 )
+    conjugateGradientsTolerance( -1 ), verbosity( 0 ), numFunctionSamples( 0 )
   {};
 
   void print()

@@ -474,6 +474,46 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 			       Real cg_tol = 1e-8, int max_iter = 50,
 			       int verbosity = 1 );
 
+/** \brief Solve the linear equality-constrained least squares (LSE)
+*  problem:
+*
+*          minimize || b - A*x ||_2   subject to   C*x = d
+*
+*  where A is an M-by-N matrix, C is a P-by-N matrix, b is a given
+*  M-vector, and d is a given P-vector. It is assumed that
+*  P <= N <= M+P, and
+*
+*           rank(C) = P and  rank( (A) ) = N.
+*                                ( (C) )
+*
+*  These conditions ensure that the LSE problem has a unique solution,
+*  which is obtained using a generalized RQ factorization of the
+*  matrices (C, A) given by
+*
+*     C = (0 R)*Q,   A = Z*T*Q.
+*
+* \param A (input) DOUBLE PRECISION M-by-N matrix A.
+*
+* \param C (input) DOUBLE PRECISION P-by-N matrix B.
+*
+* \param b (input) DOUBLE PRECISION M vector
+*          On entry, b contains the right hand side vector for the
+*          least squares part of the LSE problem.
+*
+* \param d (input) DOUBLE PRECISION P vector
+*          On entry, d contains the right hand side vector for the
+*          constrained equation.
+*
+* \param x (output) DOUBLE PRECISION N -vector
+*          On exit, X is the solution of the LSE problem.
+*/
+void equality_constrained_least_squares_solve( RealMatrix &A, 
+					       RealVector &b,
+					       RealMatrix &C, 
+					       RealVector &d,
+					       RealMatrix &x, 
+					       int verbosity = 0 );
+
 } // namespace Pecos
 
 #endif

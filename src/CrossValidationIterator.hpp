@@ -166,6 +166,13 @@ protected:
   /// Controls the amount of information written to standard I/O
   int verbosity_;
 
+  /// Specify whether values_ contains gradient information
+  bool useGradients_;
+  
+  /// Specify the number of function values in samples_
+  int numFunctionSamples_;
+
+
   /// Set the indices that partition the data into training and validation sets
   void set_partition_indices( RealMatrix &training_indices, 
 			      RealMatrix &validation_indices,
@@ -198,7 +205,8 @@ public:
 
   /// Default constructor
   CrossValidationIterator()
-    : numPartitions_( 10 ), seed_( 0 ), verbosity_( 0 )
+    : numPartitions_( 10 ), seed_( 0 ), verbosity_( 0 ), useGradients_( false ),
+      numFunctionSamples_( 0 )
   {};
   
   /// Deconstructor
@@ -230,9 +238,13 @@ public:
    */
   void setup_k_folds( int num_partitions = 10 );
 
-  /**
-   * \brief Create the training and validation sets associated with a specified 
-   * fold
+
+  /** \brief Create the training and validation data for a partition
+   *
+   * If gradient information is used, this function
+   * assumes that the function data is stored in the first (0-num_pts) 
+   * rows of values_. Then the partial derivative with respect to the first
+   * dimension is stored in (num_pts-2*num_pts) rows of the matrix and so on.
    */
   void partition_data( RealMatrix &training_samples, 
 		       RealMatrix &training_values, 
@@ -294,8 +306,21 @@ public:
 			 RealMatrixList &predictor_indicators_history,
 			 RealMatrixList &predictor_partition_indicators_history);
   
-  /// Set the data to be used in the cross validation study
-  void set_data( RealMatrix &samples, RealMatrix &values );
+  
+  /** \brief Set the data to be used in the cross validation study
+   * \param samples the sample data
+   * \param values the value data
+   * \param num_function_samples the number of function samples in samples.
+   * If gradients is used then set
+   * num_function_samples = num_dims * num_total_samples / ( num_dims + 1 )
+   * if gradients are not used then set
+   * num_function_samples = num_total_samples or 0. 
+   * num_function_samples = 0 will cause 
+   * num_function_samples = num_total_samples to be set internally
+   */
+  void set_data( RealMatrix &samples, RealMatrix &values,
+		 int num_function_samples = 0 );
+
 
   /// Set the predictor options that will be tested during cross validation
   void predictor_options_list( RealMatrix &predictor_options_list_in );

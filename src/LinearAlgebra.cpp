@@ -493,4 +493,73 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
   return info;
 };
 
+void equality_constrained_least_squares_solve( RealMatrix &A, 
+					       RealVector &b,
+					       RealMatrix &C, 
+					       RealVector &d,
+					       RealMatrix &x, 
+					       int verbosity )
+{
+  RealMatrix A_copy( A ), C_copy( C );
+  RealVector b_copy( b ), d_copy( d );
+
+  int M( A_copy.numRows() ), N( A_copy.numCols() ), lda( A_copy.stride() ), 
+    ldc( C_copy.stride() );
+
+  x.shapeUninitialized( N, 1 );
+
+  Teuchos::LAPACK<int, Real> la;
+  double* work;    // LAPACK work array
+  int info( 0 );   // LAPACK output flag
+  int lwork; // size of LAPACK work array
+  int num_cons( C_copy.numRows() ); // number of equality constraints
+
+  // Get the optimal work array size
+  lwork = -1; // special code for workspace query
+  work  = new double [1]; // temporary work array
+  la.GGLSE( M, N, num_cons, A_copy.values(), lda, 
+	    C_copy.values(), ldc, b_copy.values(), d_copy.values(), x.values(), 
+	    work, lwork, &info );
+  lwork = (int)work[0]; // optimal work array size returned by query
+  delete [] work;
+  work  = new double [lwork]; // Optimal work array
+
+  // Least squares computation using LAPACK's DGGLSE subroutine which uses
+  // a GRQ factorization method for solving the eq-constrained LLS problem
+  info = 0;
+  la.GGLSE( M, N, num_cons, A_copy.values(), lda, C_copy.values(),
+	    ldc, b_copy.values(), d_copy.values(), x.values(), 
+	    work, lwork, &info );
+
+  if ( info < 0 )
+    {
+      std::stringstream msg;
+      msg << "equality_constrained_least_squares() dgglse failed. ";
+      msg << "The " << std::abs( info ) << "-th argument had an ";
+      msg << "illegal value";
+      throw( std::runtime_error( msg.str() ) );
+    }
+  if ( info == 1 )
+    {
+      std::stringstream msg;
+      msg << "the upper triangular factor R associated with C in the ";
+      msg << "generalized RQ factorization of the pair (C, A) is ";
+      msg << "singular, so that rank(C) < num_cons; the least squares ";
+      msg << "solution could not be computed.";
+      throw( std::runtime_error( msg.str() ) );
+    }
+  if ( info == 2 )
+    {
+      std::stringstream msg;
+      msg << "the (N-P) by (N-P) part of the upper trapezoidal factor ";
+      msg << "T associated with A in the generalized RQ factorization ";
+      msg << "of the pair (C, A) is singular, so that\n";
+      msg << "rank( (A) ) < N; the least squares solution could not\n";
+      msg << "    ( (C) )\n";
+      msg << "be computed.";
+      throw( std::runtime_error( msg.str() ) );
+    }
+};
+
+
 } // namespace Pecos

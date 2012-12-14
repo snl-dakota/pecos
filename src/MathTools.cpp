@@ -355,4 +355,29 @@ void get_permutations( IntMatrix &permutations,
     }
 };
 
+double median( RealVector &v )
+{
+  std::vector<Real> tmp( v.length() );
+  for ( int i = 0; i < v.length(); i++ )
+    tmp[i] = v[i];
+  return median( tmp );
+};
+
+double median( std::vector<Real> &v )
+{
+  size_t n = v.size();
+  std::vector<Real>::iterator target = v.begin() + n / 2;
+  std::nth_element( v.begin(), target, v.end() );
+  if( n % 2 != 0 )
+    {
+      return *target;
+    }
+  else
+    {
+      std::vector<Real>::iterator target_neighbour = 
+	std::max_element( v.begin(), target );
+      return ( *target + *target_neighbour ) / 2.0;
+    }
+};
+
 } // namespace Pecos

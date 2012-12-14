@@ -76,19 +76,6 @@ void linear_predictor_analyser( RealMatrix &A_training,
  */
 void linear_predictor_best_options_extractor( std::vector<RealMatrixList> &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options );
 
-/**
- * \brief Default grid search for cross validation of a 
- * PolynomialChaosExpansion
- * 
- * \param opts (output) the options to be used in the grid search
- *  
- * \param M The number of rows of the vandermonde matrix
- * 
- * \param N The number of columns of the vandermonde matrix
- */
-void setup_pce_cross_validation_grid_search( RealMatrix &opts, 
-					     int M, int N );
-
 } // namespace Pecos
 
 #endif

@@ -974,8 +974,14 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 	{
 	  solutions(active_index_set[n],num_active_indices-1) = x_sparse[n];
 	}
-      solution_metrics(0,num_active_indices-1) = residual_norm;
+      solution_metrics(0,num_active_indices-1) = std::sqrt( residual_norm );
       solution_metrics(1,num_active_indices-1) = num_active_indices;     
+
+
+      if ( verbosity > 1 )
+	std::printf( "%d\t%d\t%1.5e\t%1.5e\n", num_active_indices, 
+		     active_index, std::sqrt( residual_norm ),
+		     x_sparse.normOne() );
  
       if ( std::sqrt( residual_norm )  <= epsilon )
 	{
@@ -1001,11 +1007,6 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 	     PCout << "Exiting: attempted to add colinear vector" << std::endl;
 	  done = true;
 	}
-
-      if ( verbosity > 1 )
-	std::printf( "%d\t%d\t%1.5e\t%1.5e\n", num_active_indices, 
-		     active_index, std::sqrt( residual_norm ),
-		     x_sparse.normOne() );
     }
   // remove unused memory
   solutions.reshape( N, num_active_indices );
@@ -1081,7 +1082,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   if ( verbosity > 1 )
     {
       PCout << "LASSO/LARS ( delta = " << delta << " )\n";
-      std::printf( "Iter\tAdded\tDropped\t\tSparsity\tC\t\tResidual\tl1 norm of x\n");
+      std::printf( "Iter\tAdded\tDropped\t\tSparsity\tC\t\tResidual\tl1 norm of x\n" );
     }
       
   bool done = false;
@@ -1156,7 +1157,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 
 	  if ( verbosity > 1 )
 	    std::printf( "%d\t%d\t\t\t%d\t\t", homotopy_iter, 
-		   index_to_add, (int)active_indices.size()+1  );
+			 index_to_add, (int)active_indices.size()+1  );
 	  
 	  column_append( A_col, A_sparse );
 	  active_indices.push_back( index_to_add );
@@ -1479,7 +1480,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
   //solverType solver( opts.solver );
   short solver( opts.solver );
   Real solver_tolerance( opts.solverTolerance );
-  if ( M >= N &&  (solver != LASSO_REGRESSION ) &&
+  if ( ( M >= N ) &&  (solver != LASSO_REGRESSION ) &&
        ( solver != LEAST_ANGLE_REGRESSION ) &&
        ( solver != ORTHOG_MATCH_PURSUIT ) )
     {
@@ -1582,6 +1583,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 					     opts.verbosity );
 		// Store solution metrics in CompressedSensingOptions format
 		int num_solutions( solutions[k].numCols() );
+
 		opts_list[k].resize( num_solutions );
 		for ( int l = 0; l < num_solutions; l++ )
 		  {
@@ -1640,6 +1642,32 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 		    opts_list[k][l].maxNumIterations = 
 		      solution_metrics(1,l);
 		  }
+		break;
+	      };
+	    case EQ_CON_LEAST_SQ_REGRESSION:
+	      {
+		if ( opts.numFunctionSamples == 0 )
+		  {
+		    std::stringstream msg;
+		    msg << "opts.numFunctionSamples is set to zero. ";
+		    msg << "Please specify a positive value.";
+		    throw( std::runtime_error( msg.str() ) );
+		  }
+		RealMatrix C_eq( Teuchos::View, A_stand, opts.numFunctionSamples,
+				 A_stand.numCols(),  0, 0 );
+		RealMatrix A_eq( Teuchos::View, A_stand, 
+				 A_stand.numRows()-opts.numFunctionSamples,
+				 A_stand.numCols(), opts.numFunctionSamples, 0);
+		RealVector d_eq( Teuchos::View, B_stand[k], 
+				 opts.numFunctionSamples );
+		RealVector b_eq( Teuchos::View, 
+				 B_stand[k] + opts.numFunctionSamples, 
+				 B_stand.numRows()-opts.numFunctionSamples );
+ 		equality_constrained_least_squares_solve( A_eq, b_eq,
+							  C_eq, d_eq,
+							  solutions[k] );
+		opts_list[k].resize( 1 );
+		opts_list[k][0] = opts;
 		break;
 	      };
 	    default:

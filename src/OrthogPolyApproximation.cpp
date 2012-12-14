@@ -1952,6 +1952,15 @@ eq_constrained_L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
     PCout << "d_vector:\n"; write_data(PCout, d2);
 #endif // DEBUG
 
+   RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
+               C2(Teuchos::View, C_matrix, num_cons,   num_cons,  num_cols_A);
+    RealVector b2(Teuchos::View, b_vector, num_rows_A),
+	       d2(Teuchos::View, d_vector, num_cons);
+    A2.print(std::cout);
+    C2.print(std::cout);
+    b2.print(std::cout);    
+    d2.print(std::cout);
+
     // Least squares computation using LAPACK's DGGLSE subroutine which uses
     // a GRQ factorization method for solving the eq-constrained LLS problem
     info = 0;
@@ -2296,10 +2305,9 @@ void OrthogPolyApproximation::run_cross_validation( RealMatrix &A, RealMatrix &B
       cnt++;
     }
   bestApproxOrder = best_cross_validation_orders;
-  bestApproxOrder.print(std::cout);
   int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
 				  bestApproxOrder[0] );
-  PCout << num_basis_terms << "QQQQQQQQQ\n";
+  PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
   RealMatrix vandermonde_submatrix( Teuchos::View, 
 				    A_copy,
@@ -2311,7 +2319,7 @@ void OrthogPolyApproximation::run_cross_validation( RealMatrix &A, RealMatrix &B
   bestCompressedSensingOpts_[0].print();
   CSTool.solve( vandermonde_submatrix, B_copy, solutions, 
 		bestCompressedSensingOpts_[0], opts_list );
-  solutions[0].print(std::cout);
+
   // Resize solutions so that it can be used with large vandermonde.
   if (expansionCoeffs.length()!=numExpansionTerms)
     expansionCoeffs.sizeUninitialized(numExpansionTerms);
@@ -2329,7 +2337,7 @@ void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   
   // Define the 1D grids for under and over-determined LARS, LASSO, OMP, BP and 
   // LS
-  std::vector<RealVector> opts1D( 8 );
+  std::vector<RealVector> opts1D( 9 );
   opts1D[0].size( 1 ); // solver type
   opts1D[0][0] = CSOpts.solver;
   opts1D[1].size( 1 ); // Solver tolerance. 
@@ -2344,7 +2352,8 @@ void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   opts1D[6].size( 1 );  // storeHistory
   opts1D[6] = true;  
   opts1D[7].size( 1 );  // Verbosity. Warnings on
-  opts1D[7] = 1;
+  opts1D[7] = 2;
+  opts1D[8].size( 1 );  // num function samples
       
   // Form the multi-dimensional grid
   cartesian_product( opts1D, opts );
