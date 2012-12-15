@@ -288,11 +288,12 @@ private:
 		     bool multiple_rhs);
 
   /// Use cross validation to find the 'best' PCE degree
-  void run_cross_validation( RealMatrix &A, RealMatrix &B );
+  void run_cross_validation( RealMatrix &A, RealMatrix &B, 
+			     size_t num_data_pts_fn );
 
   /// For a specific vandermonde matrix find the compressed sennsing 
   // options that produce the best PCE
-  void estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history );
+  void estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history, size_t num_data_pts_fn );
 
   /// computes the chaosCoeffs via averaging of samples
   /// (expCoeffsSolnApproach is SAMPLING)
@@ -340,7 +341,8 @@ private:
    * \param M The number of rows of the vandermonde matrix
    * \param N The number of columns of the vandermonde matrix
    */
-  void gridSearchFunction( RealMatrix &opts, int M, int N );
+  void gridSearchFunction( RealMatrix &opts, int M, int N, 
+			   int num_function_samples );
 
   //
   //- Heading: Data

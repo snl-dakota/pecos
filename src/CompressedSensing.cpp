@@ -1482,7 +1482,8 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
   Real solver_tolerance( opts.solverTolerance );
   if ( ( M >= N ) &&  (solver != LASSO_REGRESSION ) &&
        ( solver != LEAST_ANGLE_REGRESSION ) &&
-       ( solver != ORTHOG_MATCH_PURSUIT ) )
+       ( solver != ORTHOG_MATCH_PURSUIT ) && 
+       ( solver !=  EQ_CON_LEAST_SQ_REGRESSION ) )
     {
       if ( opts.verbosity > 0 )
 	{
@@ -1646,6 +1647,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	      };
 	    case EQ_CON_LEAST_SQ_REGRESSION:
 	      {
+		PCout << "Using equality constained least squares regression\n";
 		if ( opts.numFunctionSamples == 0 )
 		  {
 		    std::stringstream msg;

@@ -1734,7 +1734,7 @@ void OrthogPolyApproximation::regression()
   //CSOpts.maxNumIterations = ;
 
   // Solve the regression problem using L1 or L2 minimization approaches
-  if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION){
+  if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION && !crossValidation){
     if ((fn_constrained_lls || anchor_fn || anchor_grad) && (!under_determined))
       {
 	regression_err = 
@@ -1952,15 +1952,6 @@ eq_constrained_L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
     PCout << "d_vector:\n"; write_data(PCout, d2);
 #endif // DEBUG
 
-   RealMatrix A2(Teuchos::View, A_matrix, num_rows_A, num_rows_A,num_cols_A),
-               C2(Teuchos::View, C_matrix, num_cons,   num_cons,  num_cols_A);
-    RealVector b2(Teuchos::View, b_vector, num_rows_A),
-	       d2(Teuchos::View, d_vector, num_cons);
-    A2.print(std::cout);
-    C2.print(std::cout);
-    b2.print(std::cout);    
-    d2.print(std::cout);
-
     // Least squares computation using LAPACK's DGGLSE subroutine which uses
     // a GRQ factorization method for solving the eq-constrained LLS problem
     info = 0;
@@ -2144,7 +2135,7 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
       // constrained least squares
       if ( crossValidation )
 	// run cross validation
-	run_cross_validation( A, B );
+	run_cross_validation( A, B, num_data_pts_fn );
       else
 	{
 	  CSTool.solve( A, B, solutions, CSOpts, opts_list );
@@ -2230,7 +2221,7 @@ L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
   return lapack_err;
 }
 
-void OrthogPolyApproximation::run_cross_validation( RealMatrix &A, RealMatrix &B )
+void OrthogPolyApproximation::run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
 {
   RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
   RealMatrix B_copy( Teuchos::Copy, B, B.numRows(), B.numCols() );
@@ -2284,7 +2275,8 @@ void OrthogPolyApproximation::run_cross_validation( RealMatrix &A, RealMatrix &B
 							       best_predictor_indicators,
 							       predictorOptionsHistory_[cnt], 
 							       predictorIndicatorsHistory_[cnt],  
-							       predictorPartitionIndicatorsHistory_[cnt]);
+							       predictorPartitionIndicatorsHistory_[cnt],
+							       num_data_pts_fn );
 
       // Only execute on master processor
       //      if ( is_master() )
@@ -2330,7 +2322,8 @@ void OrthogPolyApproximation::run_cross_validation( RealMatrix &A, RealMatrix &B
 };
 
 void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
-						  int M, int N )
+						  int M, int N, 
+						  int num_function_samples )
 {
   // Setup a grid based search
   bool is_under_determined = M < N;
@@ -2354,6 +2347,7 @@ void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   opts1D[7].size( 1 );  // Verbosity. Warnings on
   opts1D[7] = 2;
   opts1D[8].size( 1 );  // num function samples
+  opts1D[8] = num_function_samples;
       
   // Form the multi-dimensional grid
   cartesian_product( opts1D, opts );
@@ -2361,19 +2355,55 @@ void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   noiseTols.print(std::cout);
 };
 
-void OrthogPolyApproximation::estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history ){
+void OrthogPolyApproximation::estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history, size_t num_data_pts_fn ){
   // Initialise the cross validation iterator
   CrossValidationIterator CV;
   CV.mpi_communicator( MPI_COMM_WORLD );
   CV.verbosity( 1 );
   // Set and partition the data
-  CV.set_data( vandermonde_matrix, rhs );
-  CV.setup_k_folds();
+  CV.set_data( vandermonde_matrix, rhs, num_data_pts_fn );
+  int num_folds( 10 );
+
+  // Keep copy of state
+  CompressedSensingOptions cs_opts_copy = CSOpts;
+  
+  if ( ( ( num_data_pts_fn / num_folds == 1 ) && 
+	 ( num_data_pts_fn - 3 < vandermonde_matrix.numCols() ) )  || 
+       ( num_data_pts_fn / num_folds == 0 ) )
+       // use one at a time cross validation
+       num_folds = num_data_pts_fn;
+  if ( num_data_pts_fn == vandermonde_matrix.numCols() )
+    {
+      PCout << "Warning: The cross validation results will not be consistent. ";
+      PCout << "The number of function samples = the number of basis terms, ";
+      PCout << "thus only underdetermined matrices will be generated during ";
+      PCout << "cross validation even though the system is fully determined.\n";
+    }
+  PCout << vandermonde_matrix.numRows() << "<" << vandermonde_matrix.numCols()  << "," << vandermonde_matrix.numRows() * ( num_data_pts_fn - 1 ) / num_data_pts_fn<< std::endl;
+  if ( ( CSOpts.solver == EQ_CON_LEAST_SQ_REGRESSION ) &&
+       ( num_folds = num_data_pts_fn ) && 
+       ( vandermonde_matrix.numRows() * ( num_data_pts_fn - 1 ) / num_data_pts_fn  <= vandermonde_matrix.numCols() ) )
+    // includes exactly determined case
+    {
+      PCout << "EQ_CON_LEAST_SQ_REGRESSION could not be used. ";
+      PCout << "The cross validation training vandermonde matrix is ";
+      PCout << "under-determined\n";
+      CSOpts.solver = LASSO_REGRESSION;
+    }
+  if ( ( CSOpts.solver == EQ_CON_LEAST_SQ_REGRESSION ) && ( num_folds = num_data_pts_fn ) &&  ( num_data_pts_fn - 1 >= vandermonde_matrix.numCols() ) )
+    {
+      PCout << "EQ_CON_LEAST_SQ_REGRESSION could not be used. ";
+      PCout << "The cross validation training vandermonde matrix is ";
+      PCout << "over-determined\n";
+      CSOpts.solver = DEFAULT_REGRESSION;
+    }
+    
+    CV.setup_k_folds( num_folds );
   
   // Tell the cross validation iterator what options to test
   RealMatrix opts;
   gridSearchFunction( opts, vandermonde_matrix.numRows(),
-		      vandermonde_matrix.numCols() );
+		      vandermonde_matrix.numCols(), num_data_pts_fn );
   CV.predictor_options_list( opts );
 
   // Perform cross validation
@@ -2401,6 +2431,9 @@ void OrthogPolyApproximation::estimate_compressed_sensing_options_via_cross_vali
 	  set_linear_predictor_options( col, best_cs_opts[k] );
 	}
     }
+
+  //restore state
+  CSOpts = cs_opts_copy;
 };
 
 
