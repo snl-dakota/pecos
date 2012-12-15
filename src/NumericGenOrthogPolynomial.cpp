@@ -298,24 +298,44 @@ inner_product(const RealVector& poly_coeffs1,
   // *************************
   // * BOUNDED DISTRIBUTIONS *
   // *************************
-  case BOUNDED_NORMAL:
+  case BOUNDED_NORMAL: {
+    // We must trap the case where only one finite bound has been specified:
+    // Quick & dirty: trap +/- DBL_MAX and replace with mu +/- x sigma
+    //                with x sufficiently large [phi(15) ~ 5.53e-50].
+    // More involved: replace bounded integral with semibounded integral;
+    //                but we currently don't have an option for [-inf, ub].
+    Real lb = (real_compare(distParams[2], -DBL_MAX)) ?
+      distParams[0] - 15. * distParams[1] : distParams[2];
+    Real ub = (real_compare(distParams[3],  DBL_MAX)) ?
+      distParams[0] + 15. * distParams[1] : distParams[3];
+
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_normal_pdf, distParams[2], distParams[3]);
+    //  bounded_normal_pdf, lb, ub);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      bounded_normal_pdf, distParams[2], distParams[3], 500);
+			       bounded_normal_pdf, lb, ub, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_normal_pdf, distParams[2], distParams[3]);
+    //  bounded_normal_pdf, lb, ub);
     break;
-  case BOUNDED_LOGNORMAL:
+  }
+  case BOUNDED_LOGNORMAL: {
+    // We must trap the case where a finite upper bound has not been specified:
+    // Quick & dirty: trap +/- DBL_MAX and replace with mu +/- x sigma
+    //                with x sufficiently large [phi(15) ~ 5.53e-50].
+    // More involved: replace bounded integral with semibounded integral;
+    //                but we currently don't have an option for [-inf, ub].
+    Real ub = (real_compare(distParams[3], DBL_MAX)) ?
+      distParams[0] + 15. * distParams[1] : distParams[3];
+
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_lognormal_pdf, distParams[2], distParams[3]);
+    //  bounded_lognormal_pdf, distParams[2], ub);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      bounded_lognormal_pdf, distParams[2], distParams[3], 500);
+      bounded_lognormal_pdf, distParams[2], ub, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_lognormal_pdf, distParams[2], distParams[3]);
+    //  bounded_lognormal_pdf, distParams[2], ub);
     break;
+  }
   case LOGUNIFORM:
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
