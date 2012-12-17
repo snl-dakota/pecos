@@ -457,6 +457,7 @@ inner_product(const RealVector& poly_coeffs1,
     abort_handler(-1);
     break;
   }
+  return 0.;
 }
 
 
