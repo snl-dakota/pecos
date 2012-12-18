@@ -272,20 +272,20 @@ private:
   /// computes the chaosCoeffs via linear regression (expCoeffsSolnApproach
   /// is REGRESSION) using L1 or L2 minimization
   void regression();
-  /// solve the (under-determined) regression problem using L1 minimization
-  /// (compressed sensing)
-  bool L1_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
-		     bool reuse_solver_data);
-  /// solve the (over-determined) regression problem using equality-constrained
-  /// L2 minimization via QR
-  bool eq_constrained_L2_regression(size_t num_data_pts_fn,
-				    size_t num_data_pts_grad,
-				    bool fn_constrained_lls, bool anchor_fn,
-				    bool anchor_grad, bool reuse_solver_data);
-  /// solve the (over-determined) minimization problem using unconstrained L2
-  /// regression via SVD
-  bool L2_regression(size_t num_data_pts_fn, size_t num_data_pts_grad,
-		     bool multiple_rhs);
+
+  /// Run the regression method set in regression()
+  void run_regression();
+
+  /// get info needed to ensure fault tolerance
+  void get_fault_info(size_t &constr_eqns, size_t &anchor_fn, 
+		      size_t &anchor_grad,
+		      bool &under_determined, size_t &num_data_pts_fn,
+		      size_t &num_data_pts_grad, bool &reuse_solver_data,
+		      size_t &total_eqns );
+
+  void remove_faulty_data( RealMatrix &A, RealMatrix &B,
+			   bool expansion_coeff_grad_flag,
+			   IntVector &index_mapping );
 
   /// Use cross validation to find the 'best' PCE degree
   void run_cross_validation( RealMatrix &A, RealMatrix &B, 

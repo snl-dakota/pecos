@@ -435,6 +435,44 @@ double median( std::vector<Real> &v );
  */
 double median( RealVector &v );
 
+template <typename T>
+bool argsort_pair_comparison ( const std::pair<T,int>& l, 
+			       const std::pair<T,int>& r )
+{ 
+  return l.first < r.first; 
+}
+
+/**
+ * \brief sorts the elements of a vector in ascending order. Also returns
+ * the original indices of the sorted elements.
+ * \param v (intput) the vector to be sorted
+ * \param v (output) the sorted vector
+ * \param v (output) the sorted indices
+ */
+template<typename O, typename T>
+void argsort( Teuchos::SerialDenseVector<O,T> &v,
+	      Teuchos::SerialDenseVector<O,T> &v_sorted,
+	      IntVector &indices )
+{
+  int n(  v.length() );
+  std::vector< std::pair<T,int> > tmp( n );
+  for ( int i = 0; i < n; i++ )
+    {
+      tmp[i] =  std::pair<T,int>(v[i],i);
+    }
+  
+  std::sort( tmp.begin(), tmp.end(), argsort_pair_comparison<T> );
+
+  v_sorted.sizeUninitialized( n );
+  indices.sizeUninitialized( n );
+  for ( int i = 0; i < n; i++ )
+    {
+      indices[i] = tmp[i].second;
+      v_sorted[i] = tmp[i].first;
+    }
+}
+
+
 } // namespace Pecos
 
 #endif

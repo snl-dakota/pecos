@@ -101,6 +101,7 @@ void CrossValidationIterator::partition_data( RealMatrix &training_samples,
     num_validation_samples( validationIndicesSizes_[fold] );
 
   int num_data_per_function_sample = samples_.numRows()/numFunctionSamples_;
+  int num_grad_data_per_function_sample = num_data_per_function_sample - 1;
  
   reshape( training_samples, 
 	   num_data_per_function_sample * num_training_samples, 
@@ -123,10 +124,17 @@ void CrossValidationIterator::partition_data( RealMatrix &training_samples,
 	{
 	  if ( trainingIndices_(i,fold) < 0 )
 	    break;
-	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	  // Extract function values
+	  training_samples(i,n) = 
+	    samples_(trainingIndices_(i,fold),n);
+	  for ( int j = 0; j < num_grad_data_per_function_sample; j++ )
 	    {
-	      training_samples(j*num_training_samples+i,n) = 
-		samples_(j*numFunctionSamples_+trainingIndices_(i,fold),n);
+	      training_samples(num_training_samples+
+			       i*num_grad_data_per_function_sample+j,n)=
+ 		samples_(numFunctionSamples_+
+			 trainingIndices_(i,fold)*
+			 num_grad_data_per_function_sample+j,n);
+	      
 	    }
 	}
       // Partition validation samples
@@ -134,10 +142,16 @@ void CrossValidationIterator::partition_data( RealMatrix &training_samples,
 	{
 	  if ( validationIndices_(i,fold) < 0 )
 	    break;
-	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	  validation_samples(i,n) = 
+	    samples_(validationIndices_(i,fold),n);
+	  for ( int j = 0; j < num_grad_data_per_function_sample; j++ )
 	    {
-	      validation_samples(j*num_validation_samples+i,n) = 
-		samples_(j*numFunctionSamples_+validationIndices_(i,fold),n);
+	      validation_samples(num_validation_samples+
+				 i*num_grad_data_per_function_sample+j,n)=
+ 		samples_(numFunctionSamples_+
+			 validationIndices_(i,fold)*
+			 num_grad_data_per_function_sample+j,n);
+
 	    }
 	}
     }
@@ -150,10 +164,15 @@ void CrossValidationIterator::partition_data( RealMatrix &training_samples,
 	{
 	  if ( trainingIndices_(i,fold) < 0 )
 	    break;
-	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	  training_values(i,k) = 
+	    values_(trainingIndices_(i,fold),k);
+	   for ( int j = 0; j < num_grad_data_per_function_sample; j++ )
 	    {
-	      training_values(j*num_training_samples+i,k) = 
-		values_(j*numFunctionSamples_+trainingIndices_(i,fold),k);
+	      training_values(num_training_samples+
+			      i*num_grad_data_per_function_sample+j,k)=
+ 		values_(numFunctionSamples_+
+			trainingIndices_(i,fold)*
+			num_grad_data_per_function_sample+j,k);
 	    }
 	}
       // Partition validation function values
@@ -161,10 +180,15 @@ void CrossValidationIterator::partition_data( RealMatrix &training_samples,
 	{
 	  if ( validationIndices_(i,fold) < 0 )
 	    break;
-	  for ( int j = 0; j < num_data_per_function_sample; j++ )
+	  validation_values(i,k) = 
+	    values_(validationIndices_(i,fold),k);
+	  for ( int j = 0; j < num_grad_data_per_function_sample; j++ )
 	    {
-	      validation_values(j*num_validation_samples+i,k) = 
-	      values_(j*numFunctionSamples_+validationIndices_(i,fold),k);
+	      validation_values(num_validation_samples+
+				 i*num_grad_data_per_function_sample+j,k)=
+ 		values_(numFunctionSamples_+
+			validationIndices_(i,fold)*
+			num_grad_data_per_function_sample+j,k);
 	    }
 	}
     }
@@ -207,7 +231,8 @@ void CrossValidationIterator::run( IndicatorFunction *indicator_function,
 		    opts,
 		    indicator_function,
 		    indicators_list,
-		    predictor_options_list );
+		    predictor_options_list,
+		    numFunctionSamples_ / values_.numRows() );
 	  all_partition_indicators[j] = indicators_list;
 	  all_partition_options[j] = predictor_options_list;
 	}

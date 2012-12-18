@@ -48,7 +48,8 @@ void linear_predictor_analyser( RealMatrix &A_training,
 				RealVector &predictor_opts,
 				IndicatorFunction *indicator_function,
 				RealMatrixList &indicators_list,
-				RealMatrixList &predictor_options_list )
+				RealMatrixList &predictor_options_list,
+				int num_data_per_sample )
 {
   // Extract the predictor options and store in the format needed
   CompressedSensingOptions cs_opts;

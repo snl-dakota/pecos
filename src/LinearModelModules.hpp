@@ -32,6 +32,9 @@ void extract_linear_predictor_options(CompressedSensingOptionsList &cs_opts_list
  * stored in a column of the  matrix. Example: if the analyser
  * builds a set of linear models using LARS then the predictor_options will
  * contain the predictor_opts but will also set the num_non_zeros.
+ *
+ * \param num_data_per_sample The total number of data values per 
+ * function samples( i.e. function value + gradients )
  */
 void linear_predictor_analyser( RealMatrix &A_training, 
 				RealMatrix &B_training, 
@@ -40,7 +43,8 @@ void linear_predictor_analyser( RealMatrix &A_training,
 				RealVector &predictor_opts,
 				IndicatorFunction *indicator_function,
 				RealMatrixList &indicators_list,
-				RealMatrixList &predictor_options_list );
+				RealMatrixList &predictor_options_list,
+				int num_data_per_sample );
 
 /**
  * \brief Extract the options that will create the best predictors on the
