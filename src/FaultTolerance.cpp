@@ -14,12 +14,18 @@ void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
   }
 }
 
+// \todo check if system becomes under-determined. perhaps return flag
+// specifying this. Then if flag is true a different solver can still be
+// used
 void remove_faulty_data( RealMatrix &A, RealMatrix &B, 
-		    bool expansion_coeff_grad_flag,
-		    IntVector &index_mapping,
-		    FaultInfo fault_info,
-		    const SizetShortMap& failed_resp_data )
+			 IntVector &index_mapping,
+			 FaultInfo fault_info,
+			 const SizetShortMap& failed_resp_data )
 {
+  // tmp remove
+  PCout << "Using " << fault_info.num_data_pts_fn << " equations to solve for ";
+  PCout << A.numCols() << " coefficients\n";
+
   size_t  num_rows_A = A.numRows(), num_cols_A  = A.numCols(), 
     num_rhs( B.numCols() );
     
@@ -55,8 +61,26 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
   
   SizetShortMap::const_iterator fit;
 
-  if ( !expansion_coeff_grad_flag )
+  size_t num_grad_rhs = fault_info.num_grad_rhs;
+  size_t num_coef_rhs = B.numCols() - num_grad_rhs;
+  if ( num_grad_rhs > A.numCols() ){
+    num_coef_rhs = 1;
+    num_grad_rhs = 0;
+  }
+
+  bool multiple_rhs = false;
+  if ( ( num_coef_rhs > 0 ) && ( num_grad_rhs > 0 ) ) multiple_rhs = true;
+
+  PCout <<  num_coef_rhs << "," << num_grad_rhs << "," << num_rhs << "," << B.numCols() << "\n";
+
+  if ( num_rhs != num_grad_rhs + num_coef_rhs ){
+    std::string msg = "remove_faulty_data. Fault_info is inconsistent with A";
+    throw(std::runtime_error( msg ) );
+  }
+  RealMatrix B_grad;
+  if ( ( multiple_rhs ) || ( num_coef_rhs == 1 ) )
     {
+      PCout << "here#############3\n";
       // A  = [A_fn; A_grad]
       size_t i, j, k, l, a_fn_cntr, a_grad_cntr;
       // Initialise memory of A_fn and A_grad to largest possible sizes.
@@ -102,10 +126,11 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	  row_append( A_grad_tmp, A );
 	}
 
+      PCout << "$$$$$$$$$$$$$444\n";
       size_t b_fn_cntr = 0, b_grad_cntr = 0;
-      RealMatrix B_fn( fault_info.num_data_pts_fn, num_rhs, false ), 
-	B_grad( fault_info.num_data_pts_grad*fault_info.num_vars, num_rhs, 
-		false );
+      RealMatrix B_fn( fault_info.num_data_pts_fn, num_rhs, false );
+      B_grad.shapeUninitialized( fault_info.num_data_pts_grad * 
+				 fault_info.num_vars, num_rhs );
       for (j=0, l=0, fit=failed_resp_data.begin(); 
 	   j<fault_info.num_surr_data_pts; ++j) {
 	int index = I[l];
@@ -130,15 +155,85 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
       B.assign( B_fn_tmp );
       if ( fault_info.use_derivatives )
 	{
-	  RealMatrix B_grad_tmp( Teuchos::View, B_grad, b_grad_cntr, num_rhs );
+	  RealMatrix B_grad_tmp( Teuchos::View, B_grad, b_grad_cntr, 
+				 num_rhs );
 	  row_append( B_grad_tmp, B );
 	}
+      PCout << "Using " << A.numRows() << " equations to solve for ";
+      PCout << A.numCols() << " coefficients\n";
     }
-  /*else
+
+  if ( num_grad_rhs > 0 )
     {
-    //when computing coef of grad expansion
+      PCout << "!!!!!!!!!!!!!!1\n";
+      // used when computing coef of grad expansion
+
+      PCout << B.numCols() << " col\n";
+
+      // /todo determine appropriate value
+      bool multiple_rhs = true;
+
+      if ( !multiple_rhs )
+	{
+	  PCout << "&&&&&&&&&&&&&&&&&\n";
+	  size_t i, j, k, l, a_grad_cntr;
+	  RealMatrix A_grad( fault_info.num_data_pts_grad, num_cols_A, false );
+	  for (i=0; i<num_cols_A; ++i) {
+	    a_grad_cntr = 0;
+	    for ( j=0, l=0, fit=failed_resp_data.begin(); 
+		  j<fault_info.num_surr_data_pts;  j++){
+	      int index = I[l];
+	      bool add_val = false, add_grad = true;
+	      fail_booleans(fit, sorted_indices[l], add_val, add_grad, 
+			    failed_resp_data );
+	      if ( sorted_indices[l] != j ) add_val = add_grad = false;
+	      if ( add_grad ){
+		for ( k=0; k<fault_info.num_vars; ++k, ++a_grad_cntr ){
+		  A_grad(a_grad_cntr,i) = 
+		    A(index*fault_info.num_vars+k,i);
+		}
+	      }
+	      if ( l < index_map.length() && sorted_indices[l] == j ) l++;
+	      if ( l >= index_map.length() ) break;
+	    }
+	  }
+	  RealMatrix A_grad_tmp( Teuchos::View, A_grad, a_grad_cntr, 
+				 num_cols_A );
+	  A.reshape( a_grad_cntr, num_cols_A );
+	  A.assign( A_grad_tmp );
+	  B_grad.shapeUninitialized( fault_info.num_data_pts_grad, 
+				     num_rhs );
+	}
+      I.print(std::cout);
+      PCout << A.numRows() << "," << A.numCols() << std::endl;
+      PCout << B.numRows() << "," << B.numCols() << std::endl;
+      size_t i, j, k, l, b_grad_cntr = 0;
+      for (j=0, l=0, fit=failed_resp_data.begin(); 
+	   j<fault_info.num_surr_data_pts; ++j) {
+	int index = I[l];
+	bool add_val = false, add_grad = true;
+	fail_booleans(fit, sorted_indices[l], add_val, add_grad,
+		      failed_resp_data);
+	if ( sorted_indices[l] != j ) add_val = add_grad = false;
+	if ( add_grad ) {
+	  for (k=0; k<num_grad_rhs; ++k, ++b_grad_cntr){
+	    PCout << j << "," << b_grad_cntr <<  "," << k << "," << num_coef_rhs+k << "," << index << "\n";
+	    B_grad(b_grad_cntr,num_coef_rhs+k) = 
+	      B(index,num_coef_rhs+k);
+	  }
+	}
+	if ( l < index_map.length() && sorted_indices[l] == j ) l++;
+	if ( l >= index_map.length() ) break;
+      }
+      // Resize matrix to include only non-faulty data
+      RealMatrix B_grad_tmp( Teuchos::View, B_grad, b_grad_cntr, num_rhs );
+      B.reshape( b_grad_cntr, num_rhs );
+      B.assign( B_grad_tmp );
+      B.print(std::cout);
+
     }
-  */
+
+  
 };
 
 } // namespace Pecos

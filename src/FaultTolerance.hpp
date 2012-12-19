@@ -10,7 +10,7 @@ namespace Pecos {
 struct FaultInfo
 {
   size_t constr_eqns, anchor_fn, anchor_grad, num_data_pts_fn,
-    num_data_pts_grad, total_eqns, num_surr_data_pts, num_vars;
+    num_data_pts_grad, total_eqns, num_surr_data_pts, num_vars, num_grad_rhs;
   bool under_determined, reuse_solver_data, use_derivatives;
   
   void set_info( size_t constr_eqns_in, size_t anchor_fn_in, 
@@ -18,7 +18,8 @@ struct FaultInfo
 		 bool under_determined_in, size_t num_data_pts_fn_in, 
 		 size_t num_data_pts_grad_in, bool reuse_solver_data_in,
 		 size_t total_eqns_in, size_t num_surr_data_pts_in,
-		 size_t num_vars_in, bool use_derivatives_in )
+		 size_t num_vars_in, bool use_derivatives_in, 
+		 size_t num_grad_rhs_in )
   {
     constr_eqns = constr_eqns_in; anchor_fn = anchor_fn_in; 
     anchor_grad = anchor_grad_in; under_determined = under_determined_in; 
@@ -27,6 +28,7 @@ struct FaultInfo
     reuse_solver_data = reuse_solver_data_in;
     total_eqns = total_eqns_in; num_surr_data_pts = num_surr_data_pts_in;
     num_vars = num_vars_in; use_derivatives = use_derivatives_in;
+    num_grad_rhs = num_grad_rhs_in;
   }
 };
 
@@ -37,7 +39,6 @@ void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		   const SizetShortMap& failed_response_data );
 
 void remove_faulty_data( RealMatrix &A, RealMatrix &B, 
-			 bool expansion_coeff_grad_flag,
 			 IntVector &index_mapping,
 			 FaultInfo fault_info,
 			 const SizetShortMap& failed_resp_data );
