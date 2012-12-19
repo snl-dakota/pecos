@@ -215,6 +215,12 @@ private:
   //		   const RealMatrix2DArray& t2_coeffs,
   //		   const UShort3DArray& pt_partition);
 
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using weights from the HierarchSparseGridDriver
+  Real expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
+		   const RealMatrix2DArray& t2_coeffs,
+		   const UShort2DArray& set_partition = UShort2DArray());
+
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
   void increment_expansion_coefficients(const UShortArray& index_set);

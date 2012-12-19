@@ -186,7 +186,7 @@ private:
   //- Heading: Data
   //
 
-  /// type of interpolation for variance and variance gradient
+  /// type of interpolation for all-variables covariance and variance gradient
   short momentInterpType;
 
   /// the type1 coefficients of the expansion for interpolating values
@@ -235,6 +235,9 @@ inline NodalInterpPolyApproximation::
 NodalInterpPolyApproximation(short basis_type, size_t num_vars,
 			     bool use_derivs):
   InterpPolyApproximation(basis_type, num_vars, use_derivs),
+  // These 3 compile-time options are relevant for all-variables mode involving
+  // expectations over variable subsets.  The standard view mode employs only
+  // an INTERPOLATION_OF_PRODUCTS approach.
   //momentInterpType(INTERPOLATION_OF_PRODUCTS)
   //momentInterpType(PRODUCT_OF_INTERPOLANTS_FULL)
   momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)

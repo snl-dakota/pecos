@@ -685,12 +685,7 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
   Real& mean = numericalMoments[0];
   if ( !(computedMean & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
-
-    // TO DO
-    PCerr << "\nError: mean not yet implemented for all variables mode."
-	  << std::endl;
-    abort_handler(-1);
-
+    mean = expectation(x, expansionType1Coeffs, expansionType2Coeffs);
     computedMean |= 1; xPrevMean = x;
   }
   return mean;
@@ -830,11 +825,6 @@ covariance(PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  // TO DO
-  PCerr << "\nError: covariance not yet implemented for all variables mode."
-	<< std::endl;
-  abort_handler(-1);
-
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
@@ -844,8 +834,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 			      cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
-  //Real covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
-  Real covar = 0.;
+  Real covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
 
   if (same)
     { numericalMoments[1] = covar; computedVariance |= 1; }
@@ -1270,6 +1259,75 @@ expectation(const RealVector2DArray& t1_coeffs,
   return integral;
 }
 */
+
+
+Real HierarchInterpPolyApproximation::
+expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
+	    const RealMatrix2DArray& t2_coeffs,
+	    const UShort2DArray& set_partition)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
+
+  Real integral = 0.;
+  size_t lev, set, pt, num_levels = t1_coeffs.size(), set_start = 0, set_end,
+    num_tp_pts;
+  bool partial = !set_partition.empty();
+  switch (basisConfigOptions.useDerivs) {
+  case false:
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+      if (partial)
+	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+      else
+	set_end = t1_coeffs_l.size();
+      for (set=set_start; set<set_end; ++set) {
+	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
+	const UShortArray&    sm_mi_ls = sm_mi[lev][set];
+	num_tp_pts = t1_coeffs_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
+	  integral += t1_coeffs_ls[pt]
+	    * type1_interpolant_value(x, key_lsp, sm_mi_ls, nonRandomIndices)
+	    * type1_weight(key_lsp, sm_mi_ls, randomIndices);
+	}
+      }
+    }
+    break;
+  case true: {
+    size_t v;
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+      if (partial)
+	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+      else
+	set_end = t1_coeffs_l.size();
+      for (set=set_start; set<set_end; ++set) {
+	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
+	const RealMatrix& t2_coeffs_ls = t2_coeffs[lev][set];
+	const UShortArray&    sm_mi_ls = sm_mi[lev][set];
+	num_tp_pts = t1_coeffs_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
+	  integral += t1_coeffs_ls[pt]
+	    * type1_interpolant_value(x, key_lsp, sm_mi_ls, nonRandomIndices)
+	    * type1_weight(key_lsp, sm_mi_ls, randomIndices);
+	  const Real* t2_coeffs_lsp = t2_coeffs_ls[pt];
+	  for (v=0; v<numVars; ++v)
+	    integral += t2_coeffs_lsp[v]
+	      * type2_interpolant_value(x, v, key_lsp, sm_mi_ls,
+					nonRandomIndices)
+	      * type2_weight(v, key_lsp, sm_mi_ls, randomIndices);
+	}
+      }
+    }
+    break;
+  }
+  }
+
+  return integral;
+}
 
 
 /** Whereas expectation() supports either a reference or increment key
@@ -1720,7 +1778,7 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 }
 
 
-/** Forms an lower dimensional interpolant over variables that are
+/** Forms a lower dimensional interpolant over variables that are
     members of the given set. */
 void HierarchInterpPolyApproximation::
 member_coefficients_weights(const BitArray& member_bits,
@@ -1796,17 +1854,12 @@ member_coefficients_weights(const BitArray& member_bits,
 	type1_weight(key_lsp, sm_mi_ls, member_bits, member_wt, nonmember_wt);
 	m_t1_coeffs_ls[m_index] += nonmember_wt * t1_coeffs_ls[pt];
 	// reduced dimension data updated more times than necessary, but
-	// tracking this redundancy would be more expensive/complicated
+	// tracking this redundancy would be more expensive/complicated.
+	// Note: key and index->c_vars components are the same only for the
+	// member dimensions later used in value()/gradient_basis_variables().
 	m_t1_wts_ls[m_index] = member_wt;
 	m_index_ls[m_index]  = (colloc_index.empty()) ? p_cntr :
 	  colloc_index[lev][set][pt];   // links back to surrData c_vars
-#ifdef VBD_DEBUG
-	// TO DO: make sure this is correct.  For the subset of vars used in
-	// value() & gradient_basis_variables(), we may be OK so long as
-	// over-write of different index is consistent in member_vars
-	PCout << "Assigning " << m_index_ls[m_index] << " to m_index_ls["
-	      << m_index << "]\n";
-#endif // VBD_DEBUG
 	m_key_ls[m_index]    = key_lsp; // links back to interp polynomials
 
 	// now do the same for the type2 coeffs and weights
@@ -1909,10 +1962,9 @@ central_product_member_coefficients(const BitArray& m_bits,
     const RealVector& h_grad_000 =
       gradient_basis_variables(surrData.continuous_variables(index), sm_mi,
       m_colloc_key, m_t1_coeffs, m_t2_coeffs, h_level, member_indices);
-    //size_t num_m_vars = member_indices.size();
-    cprod_m_t2_coeffs[0][0].shapeUninitialized(numVars, 1);//num_m_vars
+    cprod_m_t2_coeffs[0][0].shapeUninitialized(numVars, 1);
     Real *cprod_m_t2_coeffs_000 = cprod_m_t2_coeffs[0][0][0];
-    for (v=0; v<numVars; ++v)//num_m_vars;
+    for (v=0; v<numVars; ++v)
       cprod_m_t2_coeffs_000[v] = 2. * h_val_mm * h_grad_000[v];
     // levels 1:w type1 and type2
     for (lev=1; lev<num_levels; ++lev) {
@@ -1924,7 +1976,7 @@ central_product_member_coefficients(const BitArray& m_bits,
 	RealMatrix& cprod_m_t2_coeffs_ls = cprod_m_t2_coeffs[lev][set];
 	num_tp_pts = m_colloc_key[lev][set].size();
 	cprod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	cprod_m_t2_coeffs_ls.shapeUninitialized(numVars,num_tp_pts);//num_m_vars
+	cprod_m_t2_coeffs_ls.shapeUninitialized(numVars,num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt) {
 	  index = m_colloc_index[lev][set][pt];
 	  const RealVector& c_vars = surrData.continuous_variables(index);
@@ -1943,7 +1995,7 @@ central_product_member_coefficients(const BitArray& m_bits,
 	  const RealVector& prev_grad =
 	    gradient_basis_variables(c_vars, sm_mi, m_colloc_key,
 	    cprod_m_t1_coeffs, cprod_m_t2_coeffs, lev-1, member_indices);
-	  for (v=0; v<numVars; ++v)//num_m_vars
+	  for (v=0; v<numVars; ++v)
 	    cprod_m_t2_coeffs_lsp[v] = 2. * h_val_mm * h_grad[v] - prev_grad[v];
 	}
 #ifdef VBD_DEBUG
