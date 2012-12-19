@@ -53,6 +53,7 @@ include_HEADERS = pecos_config.h				\
 		     src/NodalInterpPolyApproximation.hpp	\
 		     src/MathTools.hpp         			\
 		     src/LinearAlgebra.hpp			\
+		     src/FaultTolerance.hpp			\
 		     src/CompressedSensing.hpp			\
 		     src/ParallelObject.hpp			\
 	   	     src/CrossValidationModules.hpp		\

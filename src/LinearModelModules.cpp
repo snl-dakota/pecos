@@ -49,7 +49,9 @@ void linear_predictor_analyser( RealMatrix &A_training,
 				IndicatorFunction *indicator_function,
 				RealMatrixList &indicators_list,
 				RealMatrixList &predictor_options_list,
-				int num_data_per_sample )
+				FaultInfo &fault_info,
+				const SizetShortMap& failed_resp_data,
+				IntVector &training_indices )
 {
   // Extract the predictor options and store in the format needed
   CompressedSensingOptions cs_opts;
@@ -60,6 +62,8 @@ void linear_predictor_analyser( RealMatrix &A_training,
   CompressedSensingTool cs_tool;
   RealMatrixList coefficient_sets;
   CompressedSensingOptionsList cs_opts_list;
+  //remove_faulty_data( A_training, B_training, false, training_indices,
+  //		      fault_info, failed_resp_data );
   cs_tool.solve( A_training, B_training, coefficient_sets,
 		 cs_opts, cs_opts_list );
 

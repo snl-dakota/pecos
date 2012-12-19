@@ -27,11 +27,11 @@ void CrossValidationIterator::setup_k_folds( int num_partitions )
     (num_small_folds - 1) * num_samples_per_fold;
   int max_num_validation_samples = num_samples_per_fold + 1;
 
-  RealMatrix training_indices, validation_indices;
+  IntMatrix training_indices, validation_indices;
   training_indices.reshape( max_num_training_samples, numPartitions_ );
   validation_indices.reshape( max_num_validation_samples, numPartitions_ );
 
-  RealVector  training_indices_sizes( numPartitions_ ),
+  IntVector  training_indices_sizes( numPartitions_ ),
     validation_indices_sizes( numPartitions_ );
 
   int partition_id( 0 );
@@ -204,7 +204,9 @@ void CrossValidationIterator::partition_data( RealMatrix &training_samples,
  */
 void CrossValidationIterator::run( IndicatorFunction *indicator_function, 
 				   Analyser *analyser, Selector *selector,
-				   BestOptionsExtractor *best_options_extractor )
+				   BestOptionsExtractor *best_options_extractor,
+				   FaultInfo &fault_info,
+				   const SizetShortMap& failed_resp_data )
 {
   if ( verbosity_ > 0 )
     {
@@ -226,13 +228,18 @@ void CrossValidationIterator::run( IndicatorFunction *indicator_function,
 	  partition_data( training_samples, training_values,
 			  validation_samples, validation_values, j );
 	  RealMatrixList indicators_list;
+	  IntVector partition_training_indices( Teuchos::View, 
+						trainingIndices_[j],
+						trainingIndices_.numRows() );
 	  analyser( training_samples, training_values,
 		    validation_samples, validation_values, 
 		    opts,
 		    indicator_function,
 		    indicators_list,
 		    predictor_options_list,
-		    numFunctionSamples_ / values_.numRows() );
+		    fault_info,
+		    failed_resp_data,
+		    partition_training_indices );
 	  all_partition_indicators[j] = indicators_list;
 	  all_partition_options[j] = predictor_options_list;
 	}
@@ -547,7 +554,7 @@ void CrossValidationIterator::set_data( RealMatrix &samples, RealMatrix &values,
   
 };
 
-void CrossValidationIterator::set_partition_indices( RealMatrix &training_indices, RealMatrix &validation_indices, RealVector &training_indices_sizes, RealVector &validation_indices_sizes )
+void CrossValidationIterator::set_partition_indices( IntMatrix &training_indices, IntMatrix &validation_indices, IntVector &training_indices_sizes, IntVector &validation_indices_sizes )
 {
   
 #ifdef ENABLE_LIBHEAT_MPI
@@ -690,7 +697,7 @@ int CrossValidationIterator::num_partitions()
   return numPartitions_;
 };
 
-void CrossValidationIterator::get_partition_indices( RealMatrix &training_indices, RealMatrix &validation_indices )
+void CrossValidationIterator::get_partition_indices( IntMatrix &training_indices, IntMatrix &validation_indices )
 {
    training_indices = trainingIndices_;
    validation_indices = validationIndices_;
