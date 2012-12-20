@@ -1783,8 +1783,7 @@ void OrthogPolyApproximation::set_fault_info()
   faultInfo.set_info( constr_eqns, anchor_fn, anchor_grad,
 		      under_determined, num_data_pts_fn, num_data_pts_grad,
 		      reuse_solver_data, total_eqns, num_surr_data_pts,
-		      numVars, basisConfigOptions.useDerivs,
-		      expansionCoeffGrads.numRows() );
+		      numVars, basisConfigOptions.useDerivs );
 };
 
 
@@ -1889,7 +1888,7 @@ run_regression()
 	{
 	  
 	  IntVector index_mapping; 
-	  remove_faulty_data( A, B, index_mapping,
+	  remove_faulty_data( A, B, false, index_mapping,
 			      faultInfo,
 			      surrData.failed_response_data() );
 	  CSTool.solve( A, B, solutions, CSOpts, opts_list );
@@ -1942,7 +1941,7 @@ run_regression()
 
     // solve
     IntVector index_mapping; 
-    remove_faulty_data( A, B, index_mapping,
+    remove_faulty_data( A, B, true, index_mapping,
 			faultInfo, surrData.failed_response_data());
     CSTool.solve( A, B, solutions, CSOpts, opts_list );
     
@@ -2052,7 +2051,7 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   // \todo need to have knowledge of expConfigOptions.expansionCoeffFlag
   // hack currently set to true always
   IntVector index_mapping;
-  remove_faulty_data( vandermonde_submatrix, B_copy, index_mapping,
+  remove_faulty_data( vandermonde_submatrix, B_copy, true, index_mapping,
 		      faultInfo, surrData.failed_response_data() );
   CSTool.solve( vandermonde_submatrix, B_copy, solutions, 
 		bestCompressedSensingOpts_[0], opts_list );
