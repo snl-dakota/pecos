@@ -692,6 +692,11 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 }
 
 
+/** In this function, all expansion variables are random variables and
+    any design/state variables are omitted from the expansion.  In
+    this case, the derivative of the expectation is the expectation of
+    the derivative.  The mixed derivative case (some design variables
+    are inserted and some are augmented) requires no special treatment. */
 const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 {
   // Error check for required data
@@ -702,39 +707,29 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
   }
 
   if ( !(computedMean & 2) ) {
-
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
-
-    // TO DO
-    PCerr << "\nError: mean_gradient not yet implemented." << std::endl;
-    abort_handler(-1);
-    /*
-    size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
-    if (meanGradient.length() != num_deriv_vars)
-      meanGradient.sizeUninitialized(num_deriv_vars);
-    meanGradient = 0.;
-    for (i=0; i<numCollocPts; ++i) {
-      const Real& t1_wt_i = t1_wts[i];
-      for (j=0; j<num_deriv_vars; ++j)
-        meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
-    }
-    */
+    meanGradient = expectation(expansionType1CoeffGrads);
     computedMean |= 2;
   }
   return meanGradient;
 }
 
 
+/** In this function, a subset of the expansion variables are random
+    variables and any augmented design/state variables (i.e., not
+    inserted as random variable distribution parameters) are included
+    in the expansion.  In this case, the mean of the expansion is the
+    expectation over the random subset and the derivative of the mean
+    is the derivative of the remaining expansion over the non-random
+    subset.  This function must handle the mixed case, where some
+    design/state variables are augmented (and are part of the
+    expansion: derivatives are evaluated as described above) and some
+    are inserted (derivatives are obtained from expansionType1CoeffGrads). */
 const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   if ( !(computedMean & 2) || !match_nonrandom_vars(x, xPrevMeanGrad) ) {
-    // TO DO
-    PCerr << "\nError: mean_gradient not yet implemented for all variables "
-	  << "mode." << std::endl;
-    abort_handler(-1);
-
+    //meanGradient = expectation(x, expansionType1CoeffGrads, dvv); // TO DO
+    // TO DO: MIXED CASE!
     computedMean |= 2; xPrevMeanGrad = x;
   }
   return meanGradient;
@@ -763,28 +758,41 @@ Real HierarchInterpPolyApproximation::variance(const RealVector& x)
 }
 
 
+/** In this function, all expansion variables are random variables and
+    any design/state variables are omitted from the expansion.  The
+    mixed derivative case (some design variables are inserted and some
+    are augmented) requires no special treatment. */
 const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
   if ( !(computedVariance & 2) ) {
-    // TO DO
-    PCerr << "\nError: variance_gradient not yet implemented." << std::endl;
-    abort_handler(-1);
-
+    Real mean_1 = mean(); const RealVector& mean1_grad = mean_gradient();
+    RealMatrix2DArray cov_t1_coeff_grads;
+    central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
+					 mean1_grad, cov_t1_coeff_grads);
+    varianceGradient = expectation(cov_t1_coeff_grads);
     computedVariance |= 2;
   }
   return varianceGradient;
 }
 
 
+/** In this function, a subset of the expansion variables are random
+    variables and any augmented design/state variables (i.e., not
+    inserted as random variable distribution parameters) are included
+    in the expansion.  This function must handle the mixed case, where
+    some design/state variables are augmented (and are part of the
+    expansion) and some are inserted (derivatives are obtained from
+    expansionType1CoeffGrads). */
 const RealVector& HierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   if ( !(computedVariance & 2) || !match_nonrandom_vars(x, xPrevVarGrad) ) {
-    // TO DO
-    PCerr << "\nError: variance_gradient not yet implemented for all variables "
-	  << "mode." << std::endl;
-    abort_handler(-1);
-
+    Real mean_1 = mean(x); const RealVector& mean1_grad = mean_gradient(x, dvv);
+    RealMatrix2DArray cov_t1_coeff_grads;
+    central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
+					 mean1_grad, cov_t1_coeff_grads);
+    //varianceGradient = expectation(x, cov_t1_coeff_grads, dvv); // TO DO
+    // TO DO: MIXED CASE!
     computedVariance |= 2; xPrevVarGrad = x;
   }
   return varianceGradient;
@@ -837,7 +845,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   Real covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
 
   if (same)
-    { numericalMoments[1] = covar; computedVariance |= 1; }
+    { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
   return covar;
 }
 
@@ -1133,7 +1141,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   Real delta_covar = 0.;
 
   if (same)
-    { deltaMoments[1] = delta_covar; computedDeltaVariance |= 1; }
+    { deltaMoments[1] = delta_covar; computedDeltaVariance |= 1; } // TO DO: xPrevDeltaVar = x;
   return delta_covar;
 }
 
@@ -1327,6 +1335,39 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
   }
 
   return integral;
+}
+
+
+const RealVector& HierarchInterpPolyApproximation::
+expectation(const RealMatrix2DArray& t1_coeff_grads,
+	    const RealVector2DArray& t1_wts, const UShort2DArray& set_partition)
+{
+  size_t lev, num_levels = t1_coeff_grads.size(), set, set_start = 0, set_end, 
+    pt, num_tp_pts, v, num_deriv_vars = t1_coeff_grads[0][0].numRows();
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.sizeUninitialized(num_deriv_vars);
+  approxGradient = 0.;
+  bool partial = !set_partition.empty();
+
+  for (lev=0; lev<num_levels; ++lev) {
+    const RealMatrixArray& t1_coeff_grads_l = t1_coeff_grads[lev];
+    if (partial)
+      { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+    else
+      set_end = t1_coeff_grads_l.size();
+    for (set=set_start; set<set_end; ++set) {
+      const RealMatrix& t1_coeff_grads_ls = t1_coeff_grads_l[set];
+      num_tp_pts = t1_coeff_grads_ls.numCols();
+      for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	const Real* t1_coeff_grads_lsp = t1_coeff_grads_ls[pt];
+	Real t1_wt_lsp = t1_wts[lev][set][pt];
+	for (v=0; v<num_deriv_vars; ++v)
+	  approxGradient[v] += t1_coeff_grads_lsp[v] * t1_wt_lsp;
+      }
+    }
+  }
+
+  return approxGradient;
 }
 
 
@@ -1530,6 +1571,63 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
       }
     }
     break;
+  }
+}
+
+
+void HierarchInterpPolyApproximation::
+central_product_gradient_interpolant(
+  HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+  const RealVector& mean1_grad, const RealVector& mean2_grad, 
+  RealMatrix2DArray& cov_t1_coeff_grads, const UShort2DArray& reference_key)
+{
+  // form hierarchical t1 coeff grads for (R_1 - \mu_1) (R_2 - \mu_2)
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&           sm_mi = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&             key = hsg_driver->collocation_key();
+  const Sizet3DArray&     colloc_index = hsg_driver->collocation_indices();
+  size_t lev, set, pt, num_levels = key.size(), num_sets, num_tp_pts, cntr = 0,
+    index, v, num_deriv_vars = expansionType1CoeffGrads[0][0].numRows();
+  bool partial = !reference_key.empty();
+  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+
+  // level 0 (assume this is always contained in a partial reference_key)
+  cov_t1_coeff_grads.resize(num_levels); cov_t1_coeff_grads[0].resize(1);
+  cov_t1_coeff_grads[0][0].shapeUninitialized(num_deriv_vars, 1);
+  Real* cov_t1_coeff_grads_000 = cov_t1_coeff_grads[0][0][0];
+  index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+  Real r1_mm = surrData.response_function(index) - mean_1,
+       r2_mm = s_data_2.response_function(index) - mean_2;
+  const RealVector& r1_grad = surrData.response_gradient(index);
+  const RealVector& r2_grad = s_data_2.response_gradient(index);
+  for (v=0; v<num_deriv_vars; ++v)
+    cov_t1_coeff_grads_000[v] = r1_mm * (r2_grad[v] - mean2_grad[v])
+                              + r2_mm * (r1_grad[v] - mean1_grad[v]);
+  ++cntr;
+  // levels 1:w
+  for (lev=1; lev<num_levels; ++lev) {
+    num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
+    cov_t1_coeff_grads[lev].resize(num_sets);
+    for (set=0; set<num_sets; ++set) {
+      num_tp_pts = key[lev][set].size();
+      RealMatrix& cov_t1_coeff_grads_ls = cov_t1_coeff_grads[lev][set];
+      cov_t1_coeff_grads_ls.shapeUninitialized(num_deriv_vars, num_tp_pts);
+      // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+      for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	Real r1_mm = surrData.response_function(index) - mean_1,
+             r2_mm = s_data_2.response_function(index) - mean_2;
+	const RealVector& r1_grad = surrData.response_gradient(index);
+	const RealVector& r2_grad = s_data_2.response_gradient(index);
+	const RealVector& prev_grad
+	  = gradient_nonbasis_variables(surrData.continuous_variables(index),
+					sm_mi, key, cov_t1_coeff_grads, lev-1);
+	Real* cov_t1_coeff_grads_lsp = cov_t1_coeff_grads_ls[pt];
+	for (v=0; v<num_deriv_vars; ++v)
+	  cov_t1_coeff_grads_lsp[v] = r1_mm * (r2_grad[v] - mean2_grad[v])
+	    + r2_mm * (r1_grad[v] - mean1_grad[v]) - prev_grad[v];
+      }
+    }
   }
 }
 

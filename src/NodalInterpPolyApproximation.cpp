@@ -1463,6 +1463,7 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
     varianceGradient = 0.;
 
     Real mean_1 = mean();
+    // See Eq. 6.23 in Theory Manual: grad of variance includes grad of mean
     for (i=0; i<numCollocPts; ++i) {
       Real term_i = 2. * (expansionType1Coeffs[i] - mean_1) * t1_wts[i];
       for (j=0; j<num_deriv_vars; ++j)

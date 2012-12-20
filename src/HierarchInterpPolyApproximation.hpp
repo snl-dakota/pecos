@@ -198,6 +198,14 @@ private:
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
     const UShort2DArray& reference_key = UShort2DArray());
 
+  /// form type1 coefficient gradients for interpolation of 
+  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
+  void central_product_gradient_interpolant(
+    HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+    const RealVector& mean1_grad, const RealVector& mean2_grad, 
+    RealMatrix2DArray& cov_t1_coeff_grads,
+    const UShort2DArray& reference_key = UShort2DArray());
+
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using weights from the HierarchSparseGridDriver
   Real expectation(const RealVector2DArray& t1_coeffs,
@@ -220,6 +228,16 @@ private:
   Real expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 		   const RealMatrix2DArray& t2_coeffs,
 		   const UShort2DArray& set_partition = UShort2DArray());
+
+  /// compute the expected value of the gradient interpolant given by
+  /// t1_coeff_grads using weights from the HierarchSparseGridDriver
+  const RealVector& expectation(const RealMatrix2DArray& t1_coeff_grads,
+    const UShort2DArray& set_partition = UShort2DArray());
+  /// compute the expected value of the gradient interpolant given by
+  /// t1_coeff_grads using t1_wts
+  const RealVector& expectation(const RealMatrix2DArray& t1_coeff_grads,
+    const RealVector2DArray& t1_wts,
+    const UShort2DArray& set_partition = UShort2DArray());
 
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
@@ -331,6 +349,16 @@ expectation(const RealVector2DArray& t1_coeffs,
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   return expectation(t1_coeffs, hsg_driver->type1_weight_set_arrays(),
 		     t2_coeffs, hsg_driver->type2_weight_set_arrays(),
+		     set_partition);
+}
+
+
+inline const RealVector& HierarchInterpPolyApproximation::
+expectation(const RealMatrix2DArray& t1_coeff_grads,
+	    const UShort2DArray& set_partition)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  return expectation(t1_coeff_grads, hsg_driver->type1_weight_set_arrays(),
 		     set_partition);
 }
 
