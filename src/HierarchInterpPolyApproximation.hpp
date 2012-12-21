@@ -231,13 +231,23 @@ private:
 
   /// compute the expected value of the gradient interpolant given by
   /// t1_coeff_grads using weights from the HierarchSparseGridDriver
-  const RealVector& expectation(const RealMatrix2DArray& t1_coeff_grads,
-    const UShort2DArray& set_partition = UShort2DArray());
+  const RealVector& expectation_gradient(
+    const RealMatrix2DArray& t1_coeff_grads);
   /// compute the expected value of the gradient interpolant given by
   /// t1_coeff_grads using t1_wts
-  const RealVector& expectation(const RealMatrix2DArray& t1_coeff_grads,
-    const RealVector2DArray& t1_wts,
-    const UShort2DArray& set_partition = UShort2DArray());
+  const RealVector& expectation_gradient(
+    const RealMatrix2DArray& t1_coeff_grads, const RealVector2DArray& t1_wts);
+
+  /// compute the expectation of t1_coeff_grads for index t1cg_index
+  Real expectation_gradient(const RealVector& x,
+			    const RealMatrix2DArray& t1_coeff_grads,
+			    size_t t1cg_index);
+  /// compute the expectation of the gradient of {t1,t2}_coeffs for
+  /// index deriv_index
+  Real expectation_gradient(const RealVector& x,
+			    const RealVector2DArray& t1_coeffs,
+			    const RealMatrix2DArray& t2_coeffs,
+			    size_t deriv_index);
 
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
@@ -354,12 +364,11 @@ expectation(const RealVector2DArray& t1_coeffs,
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
-expectation(const RealMatrix2DArray& t1_coeff_grads,
-	    const UShort2DArray& set_partition)
+expectation_gradient(const RealMatrix2DArray& t1_coeff_grads)
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  return expectation(t1_coeff_grads, hsg_driver->type1_weight_set_arrays(),
-		     set_partition);
+  return expectation_gradient(t1_coeff_grads,
+			      hsg_driver->type1_weight_set_arrays());
 }
 
 

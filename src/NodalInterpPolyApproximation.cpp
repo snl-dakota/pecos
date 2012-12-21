@@ -271,9 +271,8 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 			     const SizetArray& colloc_index,
 			     const SizetArray& dvv)
 {
-  // -------------------------------------------------------------------
-  // Mixed variable key:
-  //   xi = ran vars, sa = augmented des vars, si = inserted design vars
+  // ---------------------------------------------------------------------
+  // For xi = ran vars, sa = augmented des vars, si = inserted design vars
   // Active variable expansion:
   //   R(xi, sa, si) = Sum_i r_i(sa, si) L_i(xi)
   //   mu(sa, si)    = Sum_i r_i(sa, si) wt_prod_i
@@ -283,7 +282,7 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
   //   mu(sa, si)    = Sum_i r_i(si) Lsa_i wt_prod_i
   //   dmu/dsa       = Sum_i r_i(si) dLsa_i/dsa wt_prod_i
   //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
-  // -------------------------------------------------------------------
+  // ---------------------------------------------------------------------
   size_t i, j, k, c_index, deriv_index, cntr = 0, 
     num_deriv_vars = dvv.size(), num_colloc_pts = key.size();
   if (tpMeanGrad.length() != num_deriv_vars)
@@ -291,28 +290,21 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
   tpMeanGrad = 0.;
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    // Error check for required data
-    if (randomVarsKey[deriv_index] &&
-	!expConfigOptions.expansionCoeffGradFlag) {
-      PCerr << "Error: expansion coefficient gradients not defined in Nodal"
-	    << "InterpPolyApproximation::tensor_product_mean_gradient()."
-	    << std::endl;
-      abort_handler(-1);
-    }
-    else if (!randomVarsKey[deriv_index] &&
-	     !expConfigOptions.expansionCoeffFlag) {
-      PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
-	    << "Approximation::tensor_product_mean_gradient()" << std::endl;
-      abort_handler(-1);
-    }
     Real& grad_i = tpMeanGrad[i];
-    for (j=0; j<num_colloc_pts; ++j) {
-      const UShortArray& key_j = key[j];
-      c_index = (colloc_index.empty()) ? j : colloc_index[j];
-      if (randomVarsKey[deriv_index]) {
-	// --------------------------------------------------------------------
-	// derivative of All var expansion w.r.t. random var (design insertion)
-	// --------------------------------------------------------------------
+    if (randomVarsKey[deriv_index]) {
+      // --------------------------------------------------------------------
+      // derivative of All var expansion w.r.t. random var (design insertion)
+      // --------------------------------------------------------------------
+      // Error check for required data
+      if (!expConfigOptions.expansionCoeffGradFlag) {
+	PCerr << "Error: expansion coefficient gradients not defined in Nodal"
+	      << "InterpPolyApproximation::tensor_product_mean_gradient()."
+	      << std::endl;
+	abort_handler(-1);
+      }
+      for (j=0; j<num_colloc_pts; ++j) {
+	const UShortArray& key_j = key[j];
+	c_index = (colloc_index.empty()) ? j : colloc_index[j];
 	grad_i += expansionType1CoeffGrads(cntr, c_index)
 	       *  type1_interpolant_value(x, key_j, lev_index, nonRandomIndices)
 	       *  type1_weight(key_j, lev_index, randomIndices);
@@ -323,10 +315,21 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	  abort_handler(-1);
 	}
       }
-      else {
-	// ---------------------------------------------------------------------
-	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
-	// ---------------------------------------------------------------------
+      ++cntr;
+    }
+    else {
+      // ---------------------------------------------------------------------
+      // deriv of All var expansion w.r.t. nonrandom var (design augmentation)
+      // ---------------------------------------------------------------------
+      // Error check for required data
+      if (!expConfigOptions.expansionCoeffFlag) {
+	PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	      << "Approximation::tensor_product_mean_gradient()" << std::endl;
+	abort_handler(-1);
+      }
+      for (j=0; j<num_colloc_pts; ++j) {
+	const UShortArray& key_j = key[j];
+	c_index = (colloc_index.empty()) ? j : colloc_index[j];
 	grad_i += expansionType1Coeffs[c_index]
 	  * type1_interpolant_gradient(x, deriv_index, key_j, lev_index,
 				       nonRandomIndices)
@@ -341,8 +344,6 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	}
       }
     }
-    if (randomVarsKey[deriv_index]) // deriv w.r.t. design var insertion
-      ++cntr;
   }
 
   return tpMeanGrad;

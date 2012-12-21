@@ -707,7 +707,7 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
   }
 
   if ( !(computedMean & 2) ) {
-    meanGradient = expectation(expansionType1CoeffGrads);
+    meanGradient = expectation_gradient(expansionType1CoeffGrads);
     computedMean |= 2;
   }
   return meanGradient;
@@ -728,8 +728,57 @@ const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   if ( !(computedMean & 2) || !match_nonrandom_vars(x, xPrevMeanGrad) ) {
-    //meanGradient = expectation(x, expansionType1CoeffGrads, dvv); // TO DO
-    // TO DO: MIXED CASE!
+    // ---------------------------------------------------------------------
+    // For xi = ran vars, sa = augmented des vars, si = inserted design vars
+    // Active variable expansion:
+    //   R(xi, sa, si) = Sum_i r_i(sa, si) L_i(xi)
+    //   mu(sa, si)    = Sum_i r_i(sa, si) wt_prod_i
+    //   dmu/ds        = Sum_i dr_i/ds wt_prod_i
+    // All variable expansion:
+    //   R(xi, sa, si) = Sum_i r_i(si) L_i(xi, sa)
+    //   mu(sa, si)    = Sum_i r_i(si) Lsa_i wt_prod_i
+    //   dmu/dsa       = Sum_i r_i(si) dLsa_i/dsa wt_prod_i
+    //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
+    // ---------------------------------------------------------------------
+    size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
+    if (meanGradient.length() != num_deriv_vars)
+      meanGradient.sizeUninitialized(num_deriv_vars);
+    for (i=0; i<num_deriv_vars; ++i) {
+      deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+      if (randomVarsKey[deriv_index]) {
+	// --------------------------------------------------------------------
+	// derivative of All var expansion w.r.t. random var (design insertion)
+	// --------------------------------------------------------------------
+	if (!expConfigOptions.expansionCoeffGradFlag) { // required data check
+	  PCerr << "Error: expansion coefficient gradients not defined in "
+		<< "HierarchInterpPolyApproximation::mean_gradient()."
+		<< std::endl;
+	  abort_handler(-1);
+	}
+	if (basisConfigOptions.useDerivs) {
+	  PCerr << "Error: combination of coefficient gradients and use_"
+		<< "derivatives is not supported in HierarchInterpPoly"
+		<< "Approximation::mean_gradient()." << std::endl;
+	  abort_handler(-1);
+	}
+	meanGradient[i]
+	  = expectation_gradient(x, expansionType1CoeffGrads, cntr);
+	++cntr;
+      }
+      else {
+	// ---------------------------------------------------------------------
+	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
+	// ---------------------------------------------------------------------
+	if (!expConfigOptions.expansionCoeffFlag) { // required data check
+	  PCerr << "Error: expansion coefficients not defined in HierarchInterp"
+		<< "PolyApproximation::mean_gradient()." << std::endl;
+	  abort_handler(-1);
+	}
+	meanGradient[i]
+	  = expectation_gradient(x, expansionType1Coeffs, expansionType2Coeffs,
+				 deriv_index);
+      }
+    }
     computedMean |= 2; xPrevMeanGrad = x;
   }
   return meanGradient;
@@ -769,7 +818,7 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
     RealMatrix2DArray cov_t1_coeff_grads;
     central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
 					 mean1_grad, cov_t1_coeff_grads);
-    varianceGradient = expectation(cov_t1_coeff_grads);
+    varianceGradient = expectation_gradient(cov_t1_coeff_grads);
     computedVariance |= 2;
   }
   return varianceGradient;
@@ -787,12 +836,77 @@ const RealVector& HierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   if ( !(computedVariance & 2) || !match_nonrandom_vars(x, xPrevVarGrad) ) {
-    Real mean_1 = mean(x); const RealVector& mean1_grad = mean_gradient(x, dvv);
-    RealMatrix2DArray cov_t1_coeff_grads;
-    central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
-					 mean1_grad, cov_t1_coeff_grads);
-    //varianceGradient = expectation(x, cov_t1_coeff_grads, dvv); // TO DO
-    // TO DO: MIXED CASE!
+
+    // ---------------------------------------------------------------------
+    // For xi = ran vars, sa = augmented des vars, si = inserted design vars
+    // Active variable expansion:
+    //   R(xi, sa, si) = Sum_i r_i(sa, si) L_i(xi)
+    //   mu(sa, si)    = Sum_i r_i(sa, si) wt_prod_i
+    //   dmu/ds        = Sum_i dr_i/ds wt_prod_i
+    // All variable expansion:
+    //   R(xi, sa, si) = Sum_i r_i(si) L_i(xi, sa)
+    //   mu(sa, si)    = Sum_i r_i(si) Lsa_i wt_prod_i
+    //   dmu/dsa       = Sum_i r_i(si) dLsa_i/dsa wt_prod_i
+    //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
+    // ---------------------------------------------------------------------
+    size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
+    bool insert = false, augment = false;
+    for (i=0; i<num_deriv_vars; ++i) {
+      deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+      if (randomVarsKey[deriv_index]) insert = true;
+      else                           augment = true;
+    }
+
+    RealVector2DArray cov_t1_coeffs;
+    RealMatrix2DArray cov_t1_coeff_grads, cov_t2_coeffs;
+    Real mean_1 = mean(x);
+    if (insert) {
+      const RealVector& mean1_grad = mean_gradient(x, dvv);
+      central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
+					   mean1_grad, cov_t1_coeff_grads);
+    }
+    if (augment)
+      central_product_interpolant(this, mean_1, mean_1, cov_t1_coeffs,
+				  cov_t2_coeffs);
+
+    if (varianceGradient.length() != num_deriv_vars)
+      varianceGradient.sizeUninitialized(num_deriv_vars);
+    for (i=0; i<num_deriv_vars; ++i) {
+      deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+      Real& grad_i = varianceGradient[i];
+      if (randomVarsKey[deriv_index]) {
+	// --------------------------------------------------------------------
+	// derivative of All var expansion w.r.t. random var (design insertion)
+	// --------------------------------------------------------------------
+	if (!expConfigOptions.expansionCoeffGradFlag) { // required data check
+	  PCerr << "Error: expansion coefficient gradients not defined in "
+		<< "HierarchInterpPolyApproximation::variance_gradient()."
+		<< std::endl;
+	  abort_handler(-1);
+	}
+	if (basisConfigOptions.useDerivs) {
+	  PCerr << "Error: combination of coefficient gradients and use_"
+		<< "derivatives is not supported in HierarchInterpPoly"
+		<< "Approximation::variance_gradient()" << std::endl;
+	  abort_handler(-1);
+	}
+	varianceGradient[i] = expectation_gradient(x, cov_t1_coeff_grads, cntr);
+	++cntr;
+      }
+      else {
+	// ---------------------------------------------------------------------
+	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
+	// ---------------------------------------------------------------------
+	if (!expConfigOptions.expansionCoeffFlag) { // required data check
+	  PCerr << "Error: expansion coefficients not defined in Hierarch"
+		<< "InterpPolyApproximation::variance_gradient()." << std::endl;
+	  abort_handler(-1);
+	}
+	varianceGradient[i]
+	  = expectation_gradient(x, cov_t1_coeffs, cov_t2_coeffs, deriv_index);
+      }
+    }
+
     computedVariance |= 2; xPrevVarGrad = x;
   }
   return varianceGradient;
@@ -1338,24 +1452,21 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 }
 
 
+/** For inserted/augmented design/epistemic variables in standard mode. **/
 const RealVector& HierarchInterpPolyApproximation::
-expectation(const RealMatrix2DArray& t1_coeff_grads,
-	    const RealVector2DArray& t1_wts, const UShort2DArray& set_partition)
+expectation_gradient(const RealMatrix2DArray& t1_coeff_grads,
+		     const RealVector2DArray& t1_wts)
 {
-  size_t lev, num_levels = t1_coeff_grads.size(), set, set_start = 0, set_end, 
-    pt, num_tp_pts, v, num_deriv_vars = t1_coeff_grads[0][0].numRows();
+  size_t lev, num_levels = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts,
+    v, num_deriv_vars = t1_coeff_grads[0][0].numRows();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.sizeUninitialized(num_deriv_vars);
   approxGradient = 0.;
-  bool partial = !set_partition.empty();
 
   for (lev=0; lev<num_levels; ++lev) {
     const RealMatrixArray& t1_coeff_grads_l = t1_coeff_grads[lev];
-    if (partial)
-      { set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
-    else
-      set_end = t1_coeff_grads_l.size();
-    for (set=set_start; set<set_end; ++set) {
+    num_sets = t1_coeff_grads_l.size();
+    for (set=0; set<num_sets; ++set) {
       const RealMatrix& t1_coeff_grads_ls = t1_coeff_grads_l[set];
       num_tp_pts = t1_coeff_grads_ls.numCols();
       for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
@@ -1368,6 +1479,78 @@ expectation(const RealMatrix2DArray& t1_coeff_grads,
   }
 
   return approxGradient;
+}
+
+
+/** For inserted design/epistemic variables in all_variables mode. **/
+Real HierarchInterpPolyApproximation::
+expectation_gradient(const RealVector& x,
+		     const RealMatrix2DArray& t1_coeff_grads, size_t t1cg_index)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
+
+  size_t lev, num_levels = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts;
+
+  Real grad = 0.;
+  for (lev=0; lev<num_levels; ++lev) {
+    const RealMatrixArray& t1_coeff_grads_l = t1_coeff_grads[lev];
+    num_sets = t1_coeff_grads_l.size();
+    for (set=0; set<num_sets; ++set) {
+      const RealMatrix& t1_coeff_grads_ls = t1_coeff_grads_l[set];
+      const UShortArray&         sm_mi_ls = sm_mi[lev][set];
+      num_tp_pts = t1_coeff_grads_ls.numCols();
+      for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	const UShortArray& key_lsp = colloc_key[lev][set][pt];
+	grad += t1_coeff_grads_ls(t1cg_index, pt)
+	  * type1_interpolant_value(x, key_lsp, sm_mi_ls, nonRandomIndices)
+	  * type1_weight(key_lsp, sm_mi_ls, randomIndices);
+      }
+    }
+  }
+  return grad;
+}
+
+
+/** For augmented design/epistemic variables in all_variables mode. **/
+Real HierarchInterpPolyApproximation::
+expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
+		     const RealMatrix2DArray& t2_coeffs, size_t deriv_index)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
+
+  size_t lev, num_levels = t1_coeffs.size(), set, num_sets, pt, num_tp_pts, v;
+
+  Real grad = 0.;
+  for (lev=0; lev<num_levels; ++lev) {
+    const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+    num_sets = t1_coeffs_l.size();
+    for (set=0; set<num_sets; ++set) {
+      const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
+      const UShortArray&    sm_mi_ls = sm_mi[lev][set];
+      num_tp_pts = t1_coeffs_ls.numCols();
+      for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	const UShortArray& key_lsp = colloc_key[lev][set][pt];
+	grad += t1_coeffs_ls[pt]
+	  * type1_interpolant_gradient(x, deriv_index, key_lsp, sm_mi_ls,
+				       nonRandomIndices)
+	  * type1_weight(key_lsp, sm_mi_ls, randomIndices);
+	if (basisConfigOptions.useDerivs) {
+	  const Real *t2_coeff_lsp = t2_coeffs[lev][set][pt];
+	  for (v=0; v<numVars; ++v)
+	    grad += t2_coeff_lsp[v]
+	      * type2_interpolant_gradient(x, deriv_index, v, key_lsp,
+					   sm_mi_ls, nonRandomIndices)
+	      * type2_weight(v, key_lsp, sm_mi_ls, randomIndices);
+	}
+      }
+    }
+  }
+
+  return grad;
 }
 
 
