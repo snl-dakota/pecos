@@ -34,16 +34,6 @@ void resize( Teuchos::SerialDenseVector<O,T> &v, O n )
   if ( v.length() != n ) v.resize( n );
 };
 
-/// Append a column vector to a matrix.
-template < typename O, typename T >
-void append_column( const Teuchos::SerialDenseVector<O,T> &vector, 
-		    Teuchos::SerialDenseMatrix<O,T> &matrix )
-{
-  int N( matrix.numCols() );
-  matrix.reshape( vector.length(), N + 1 );
-  fill_column( N, vector, matrix );
-};
-
 /// Delete a column from a matrix
 template < typename O, typename T >
 void delete_column( O col_num, 
@@ -194,6 +184,16 @@ void fill_column( int col_number, const Teuchos::SerialDenseMatrix<O,T> &source,
 	  iter++;
 	}
     }
+};
+
+/// Append a column vector to a matrix.
+template < typename O, typename T >
+void append_column( const Teuchos::SerialDenseVector<O,T> &vector, 
+		    Teuchos::SerialDenseMatrix<O,T> &matrix )
+{
+  int N( matrix.numCols() );
+  matrix.reshape( vector.length(), N + 1 );
+  fill_column( N, vector, matrix );
 };
 
 /** \brief Fill a column of a matrix with the contents of an array.
