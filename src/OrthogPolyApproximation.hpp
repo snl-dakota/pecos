@@ -17,7 +17,6 @@
 #include "PolynomialApproximation.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 #include "CompressedSensing.hpp"
-#include "FaultTolerance.hpp"
 
 namespace Pecos {
 
@@ -26,6 +25,7 @@ enum { TENSOR_INT_TOTAL_ORD_EXP,      TENSOR_INT_TENSOR_EXP,
        TENSOR_INT_TENSOR_SUM_EXP,     SPARSE_INT_TOTAL_ORD_EXP,
        SPARSE_INT_HEUR_TOTAL_ORD_EXP, SPARSE_INT_TENSOR_SUM_EXP,
        SPARSE_INT_RESTR_TENSOR_SUM_EXP };
+
 
 /// Derived approximation class for orthogonal polynomials (global
 /// approximation).
@@ -80,9 +80,6 @@ public:
   void noise_tolerance(const RealVector& noise_tol);
   /// set the L2 penalty parameter for LASSO (elastic net variant)
   void l2_penalty(Real l2_pen);
-
-  /// store the fault info about the response data
-  FaultInfo faultInfo;
 
 protected:
 
@@ -279,8 +276,16 @@ private:
   /// Run the regression method set in regression()
   void run_regression();
 
-  /// set the information needed to ensure fault tolerance
-  void set_fault_info();
+  /// get info needed to ensure fault tolerance
+  void get_fault_info(size_t &constr_eqns, size_t &anchor_fn, 
+		      size_t &anchor_grad,
+		      bool &under_determined, size_t &num_data_pts_fn,
+		      size_t &num_data_pts_grad, bool &reuse_solver_data,
+		      size_t &total_eqns );
+
+  void remove_faulty_data( RealMatrix &A, RealMatrix &B,
+			   bool expansion_coeff_grad_flag,
+			   IntVector &index_mapping );
 
   /// Use cross validation to find the 'best' PCE degree
   void run_cross_validation( RealMatrix &A, RealMatrix &B, 

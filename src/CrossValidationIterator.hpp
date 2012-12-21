@@ -3,7 +3,6 @@
 
 #include "LinearAlgebra.hpp"
 #include "ParallelObject.hpp"
-#include "FaultTolerance.hpp"
 
 namespace Pecos {
 
@@ -40,6 +39,9 @@ typedef void ( IndicatorFunction )( RealMatrix &validation_values,
  * stored in a column of the  matrix. Example: if the analyser
  * builds a set of linear models using LARS then the predictor_options will
  * contain the predictor_opts but will also set the num_non_zeros.
+ *
+ * \param num_data_per_sample The total number of data values per 
+ * function samples( i.e. function value + gradients )
  */
 typedef void ( Analyser )( RealMatrix &training_samples, 
 			   RealMatrix &training_values, 
@@ -49,9 +51,7 @@ typedef void ( Analyser )( RealMatrix &training_samples,
 			   IndicatorFunction *indicator_function,
 			   RealMatrixList &indicators_list,
 			   RealMatrixList &predictor_options_list,
-			   FaultInfo &fault_info,
-			   const SizetShortMap& failed_resp_data,
-			   IntVector &training_indices );
+			   int num_data_per_sample );
 
 /** \brief Select the 'best' predictor from a set of indicators.
  *
@@ -134,17 +134,17 @@ protected:
 
   /// Indices partitioning the data into k-1 folds used to build
   /// the predictors
-  IntMatrix trainingIndices_;
+  RealMatrix trainingIndices_;
 
   /// Indices partitioning the data into 1 folds for computing cross validation
   /// score of the predictors
-  IntMatrix validationIndices_;
+  RealMatrix validationIndices_;
 
   /// The size of the training set for each partition
-  IntVector trainingIndicesSizes_;
+  RealVector trainingIndicesSizes_;
 
     /// The size of the validation set for each partition
-  IntVector validationIndicesSizes_;
+  RealVector validationIndicesSizes_;
 
   /// A set of options that will be used to create instances of the predictor
   RealMatrix predictorOptionsList_;
@@ -178,10 +178,10 @@ protected:
 
 
   /// Set the indices that partition the data into training and validation sets
-  void set_partition_indices( IntMatrix &training_indices, 
-			      IntMatrix &validation_indices,
-			      IntVector &trainining_indices_sizes,
-			      IntVector &validation_indices_sizes );
+  void set_partition_indices( RealMatrix &training_indices, 
+			      RealMatrix &validation_indices,
+			      RealVector &trainining_indices_sizes,
+			      RealVector &validation_indices_sizes );
 
 
   /** \brief Update the best predictor history and the best predictor 
@@ -273,9 +273,7 @@ public:
    */
   void run( IndicatorFunction *indicator_function,
 	    Analyser* analyser, Selector *selector,
-	    BestOptionsExtractor *best_options_extractor,
-	    FaultInfo &fault_info,
-	    const SizetShortMap& failed_resp_data );
+	    BestOptionsExtractor *best_options_extractor );
 
   /** \brief Return the options that create the best predictor for each QOI.
    * Also return the error indicators of each best predictor.
@@ -342,8 +340,8 @@ public:
 
   /// Get the indices used to partition the data into training and
   /// validation sets
-  void get_partition_indices( IntMatrix &training_indices, 
-			      IntMatrix &validation_indices );
+  void get_partition_indices( RealMatrix &training_indices, 
+			      RealMatrix &validation_indices );
   
 };
 

@@ -32,7 +32,6 @@ libpecos_src_la_SOURCES = DataTransformation.cpp			\
 			  MathTools.cpp                                 \
 			  LinearAlgebra.cpp				\
 			  CompressedSensing.cpp				\
-			  FaultTolerance.cpp				\
 			  ParallelObject.cpp				\
 			  CrossValidationModules.cpp			\
 			  LinearModelModules.cpp			\

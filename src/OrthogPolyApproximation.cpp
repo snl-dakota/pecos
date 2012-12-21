@@ -1620,24 +1620,26 @@ integrate_expansion(const UShort2DArray& multi_index,
     LAPACK, based on anchor point and derivative data availability. */
 void OrthogPolyApproximation::regression()
 {
-  set_fault_info();
+  size_t constr_eqns, anchor_fn, anchor_grad, num_data_pts_fn,
+    num_data_pts_grad, total_eqns;
+  bool under_determined, reuse_solver_data;
+  get_fault_info( constr_eqns, anchor_fn, anchor_grad,
+		  under_determined, num_data_pts_fn, num_data_pts_grad,
+		  reuse_solver_data, total_eqns );
   
   CSOpts.solver = expConfigOptions.expCoeffsSolnApproach;
-  bool fn_constrained_lls = (basisConfigOptions.useDerivs && 
-			     faultInfo.constr_eqns &&
-			     faultInfo.constr_eqns < numExpansionTerms);
+  bool fn_constrained_lls = (basisConfigOptions.useDerivs && constr_eqns &&
+			     constr_eqns < numExpansionTerms);
   if (CSOpts.solver==DEFAULT_REGRESSION)
-    if ((fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad) 
-	&& (!faultInfo.under_determined))
+    if ((fn_constrained_lls || anchor_fn || anchor_grad) && (!under_determined))
       CSOpts.solver=EQ_CON_LEAST_SQ_REGRESSION;
-    else if (!faultInfo.under_determined)
+    else if (!under_determined)
       CSOpts.solver=SVD_LEAST_SQ_REGRESSION;
     else 
       CSOpts.solver=LASSO_REGRESSION;
 
   if (CSOpts.solver==DEFAULT_LEAST_SQ_REGRESSION)
-    if ((fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad) 
-	&& (!faultInfo.under_determined))
+    if ((fn_constrained_lls || anchor_fn || anchor_grad) && (!under_determined))
       CSOpts.solver=EQ_CON_LEAST_SQ_REGRESSION;
     else
       CSOpts.solver=SVD_LEAST_SQ_REGRESSION;
@@ -1663,15 +1665,14 @@ void OrthogPolyApproximation::regression()
   // Solve the regression problem using L1 or L2 minimization approaches
   bool regression_err = 0;
   if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION && !crossValidation){
-    if ((fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad) 
-	&& (!faultInfo.under_determined))
+    if ((fn_constrained_lls || anchor_fn || anchor_grad) && (!under_determined))
       {
 	CSOpts.numFunctionSamples = surrData.size();
 	run_regression();
       }
     else{
       PCout << "Could not perform equality constrained least-squares. ";
-      if (faultInfo.under_determined){
+      if (under_determined){
 	CSOpts.solver = LASSO_REGRESSION;
 	PCout << "Using LASSO regression instead\n";
       }
@@ -1697,12 +1698,15 @@ void OrthogPolyApproximation::regression()
 
 }
 
-void OrthogPolyApproximation::set_fault_info()
+void OrthogPolyApproximation::get_fault_info( size_t &constr_eqns, 
+					      size_t &anchor_fn,
+					      size_t &anchor_grad,
+					      bool &under_determined,
+					      size_t &num_data_pts_fn,
+					      size_t &num_data_pts_grad,
+					      bool &reuse_solver_data,
+					      size_t &total_eqns )
 {
-  size_t constr_eqns, anchor_fn, anchor_grad, num_data_pts_fn,
-    num_data_pts_grad, total_eqns, num_surr_data_pts;
-  bool under_determined, reuse_solver_data;
-
   // compute order of data contained within surrData
   short data_order = (expConfigOptions.expansionCoeffFlag) ? 1 : 0;
   if (surrData.anchor()) {
@@ -1750,7 +1754,7 @@ void OrthogPolyApproximation::set_fault_info()
     // if failure omissions are not consistent, manage differing Psi matrices
     if ( (fail_asv & data_order) != data_order ) faults_differ = true;
   }
-  num_surr_data_pts = surrData.size();
+  size_t num_surr_data_pts = surrData.size();
   num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn;
   num_data_pts_grad = num_surr_data_pts - num_failed_surr_grad;
   anchor_fn = false;
@@ -1780,13 +1784,96 @@ void OrthogPolyApproximation::set_fault_info()
     if (total_eqns < numExpansionTerms) under_determined = true;
   }
 
-  faultInfo.set_info( constr_eqns, anchor_fn, anchor_grad,
-		      under_determined, num_data_pts_fn, num_data_pts_grad,
-		      reuse_solver_data, total_eqns, num_surr_data_pts,
-		      numVars, basisConfigOptions.useDerivs );
 };
 
+void OrthogPolyApproximation::
+remove_faulty_data( RealMatrix &A, RealMatrix &B, 
+		    bool expansion_coeff_grad_flag,
+		    IntVector &index_mapping )
+{
 
+  size_t  num_rows_A = A.numRows(), num_cols_A  = A.numCols(), 
+    num_rhs( B.numCols() );
+
+  size_t constr_eqns, anchor_fn, anchor_grad, num_data_pts_fn,
+    num_data_pts_grad, total_eqns;
+  bool under_determined, reuse_solver_data;
+  get_fault_info( constr_eqns, anchor_fn, anchor_grad,
+		  under_determined, num_data_pts_fn, num_data_pts_grad,
+		  reuse_solver_data, total_eqns );
+  
+  size_t num_surr_data_pts = surrData.size();
+
+  if ( index_mapping.length() == 0 )
+    {
+      if ( num_rows_A % num_surr_data_pts !=0 ){
+	std::string msg = "remove_faulty_data() A matrix and index_mapping are ";
+	msg += "inconsistent";
+	throw( std::runtime_error( msg ) );
+      }
+
+      range(index_mapping,0,(int)num_surr_data_pts);  
+    }
+  
+  SizetShortMap::const_iterator fit;
+  const SizetShortMap& failed_resp_data = surrData.failed_response_data();
+
+  if ( !expansion_coeff_grad_flag )
+    {
+      
+      size_t i, j, k, a_fn_cntr, a_grad_cntr;
+      RealMatrix A_fn( num_data_pts_fn, num_cols_A, false ), 
+	A_grad( num_data_pts_grad*numVars, num_cols_A, false );
+      for (i=0; i<num_cols_A; ++i) {
+	a_fn_cntr = 0; a_grad_cntr = 0;
+	for ( j=0, fit=failed_resp_data.begin(); j<num_surr_data_pts; j++){
+	  bool add_val = true, add_grad = basisConfigOptions.useDerivs;
+	  size_t index = index_mapping[j];
+	  fail_booleans(fit, index, add_val, add_grad);
+	  if ( add_val ){
+	    A_fn(a_fn_cntr,i) = A(index,i);
+	    a_fn_cntr++;
+	  }
+	  if ( add_grad ){
+	    for ( k=0; k<numVars; ++k, ++a_grad_cntr )
+	      A_grad(a_grad_cntr,i) = A(num_surr_data_pts+index*numVars+k,i);
+	  }
+	}
+      }
+
+      A = A_fn;
+      if ( basisConfigOptions.useDerivs )
+	row_append( A_grad, A );
+
+      if ( A.numRows() != total_eqns )
+	throw( std::runtime_error(""));
+
+      size_t b_fn_cntr = 0, b_grad_cntr = 0;
+      RealMatrix B_fn( num_data_pts_fn, num_rhs, false ), 
+	B_grad( num_data_pts_grad*numVars, num_rhs, false );
+      for (i=0, fit=failed_resp_data.begin(); i<num_surr_data_pts; ++i) {
+	bool add_val = true, add_grad = basisConfigOptions.useDerivs;
+	fail_booleans(fit, i, add_val, add_grad);
+	if ( add_val )
+	  { B_fn(b_fn_cntr,0) = B(i,0); ++b_fn_cntr; }
+	if ( add_grad ) {
+	  for (k=0; k<numVars; ++k, ++b_grad_cntr)
+	    {
+	      B_grad(b_grad_cntr,0) = B(num_surr_data_pts+i*numVars+k,0);
+	    }
+	}
+      }
+
+      B = B_fn;
+      if ( basisConfigOptions.useDerivs )
+	row_append( B_grad, B );
+    }
+  /*else
+    {
+    //when computing coef of grad expansion
+    }
+  */
+};
 
 void OrthogPolyApproximation::
 run_regression()
@@ -1887,10 +1974,8 @@ run_regression()
       else
 	{
 	  
-	  IntVector index_mapping; 
-	  remove_faulty_data( A, B, false, index_mapping,
-			      faultInfo,
-			      surrData.failed_response_data() );
+	  IntVector index_mapping; remove_faulty_data( A, B, false, 
+						       index_mapping );
 	  CSTool.solve( A, B, solutions, CSOpts, opts_list );
 	  
 	  copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
@@ -1914,7 +1999,7 @@ run_regression()
 	  add_val = false; add_grad = true;
 	  if (add_grad) {
 	    A_matrix[a_cntr] = multivariate_polynomial(
-						       surrData.continuous_variables(j), mi);
+					  surrData.continuous_variables(j), mi);
 	    ++a_cntr;
 	  }
 	}
@@ -1940,9 +2025,7 @@ run_regression()
     }
 
     // solve
-    IntVector index_mapping; 
-    remove_faulty_data( A, B, true, index_mapping,
-			faultInfo, surrData.failed_response_data());
+    IntVector index_mapping; remove_faulty_data( A, B, true, index_mapping );
     CSTool.solve( A, B, solutions, CSOpts, opts_list );
     
     if (multiple_rhs)
@@ -2051,18 +2134,17 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   // \todo need to have knowledge of expConfigOptions.expansionCoeffFlag
   // hack currently set to true always
   IntVector index_mapping;
-  remove_faulty_data( vandermonde_submatrix, B_copy, true, index_mapping,
-		      faultInfo, surrData.failed_response_data() );
+  remove_faulty_data( vandermonde_submatrix, B_copy, true, index_mapping );
   CSTool.solve( vandermonde_submatrix, B_copy, solutions, 
 		bestCompressedSensingOpts_[0], opts_list );
 
   // Resize solutions so that it can be used with large vandermonde.
   if (expansionCoeffs.length()!=numExpansionTerms)
     expansionCoeffs.sizeUninitialized(numExpansionTerms);
-  for ( int i=0; i<num_basis_terms; ++i)
-    expansionCoeffs[i] = solutions[0](i,0);
-  for ( int i=num_basis_terms; i < numExpansionTerms; ++i)
-    expansionCoeffs[i] = 0.0;
+ for ( int i=0; i<num_basis_terms; ++i)
+   expansionCoeffs[i] = solutions[0](i,0);
+ for ( int i=num_basis_terms; i < numExpansionTerms; ++i)
+   expansionCoeffs[i] = 0.0;
 };
 
 void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
@@ -2115,8 +2197,8 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
   if ( ( ( num_data_pts_fn / num_folds == 1 ) && 
 	 ( num_data_pts_fn - 3 < vandermonde_matrix.numCols() ) )  || 
        ( num_data_pts_fn / num_folds == 0 ) )
-    // use one at a time cross validation
-    num_folds = num_data_pts_fn;
+       // use one at a time cross validation
+       num_folds = num_data_pts_fn;
   if ( num_data_pts_fn == vandermonde_matrix.numCols() )
     {
       PCout << "Warning: The cross validation results will not be consistent. ";
@@ -2143,7 +2225,7 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
       CSOpts.solver = DEFAULT_REGRESSION;
     }
     
-  CV.setup_k_folds( num_folds );
+    CV.setup_k_folds( num_folds );
   
   // Tell the cross validation iterator what options to test
   RealMatrix opts;
@@ -2154,8 +2236,7 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
   // Perform cross validation
   CV.run( &rmse_indicator, &linear_predictor_analyser, 
 	  &normalised_mean_selector,
-	  &linear_predictor_best_options_extractor,
-	  faultInfo, surrData.failed_response_data() );
+	  &linear_predictor_best_options_extractor );
 
   // Get results of cross validation
   RealMatrix best_predictor_options;
