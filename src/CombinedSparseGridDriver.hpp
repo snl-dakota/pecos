@@ -169,7 +169,7 @@ private:
   /// aggregated tensor points
   void update_sparse_points(size_t start_index, int new_index_offset,
 			    const RealMatrix& tensor_pts,
-			    const BoolDeque& is_unique,
+			    const BitArray& is_unique,
 			    const IntArray& unique_index,
 			    RealMatrix& new_sparse_pts);
   /// convenience function for updating sparse weights from a set of
@@ -277,8 +277,8 @@ private:
   IntArray uniqueSet2;  ///< index within a2 (increment set) of unique points
   IntArray uniqueIndex1;///< index within uniqueSet1 corresponding to all of a1
   IntArray uniqueIndex2;///< index within uniqueSet2 corresponding to all of a2
-  BoolDeque isUnique1;  ///< key to unique points in set 1 (reference)
-  BoolDeque isUnique2;  ///< key to unique points in set 2 (increment)
+  BitArray isUnique1;   ///< key to unique points in set 1 (reference)
+  BitArray isUnique2;   ///< key to unique points in set 2 (increment)
 };
 
 

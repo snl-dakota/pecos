@@ -403,7 +403,7 @@ public:
   void integration_driver_rep(IntegrationDriver* driver_rep);
 
   /// set randomVarsKey
-  void random_variables_key(const BoolDeque& random_vars_key);
+  void random_variables_key(const BitArray& random_vars_key);
 
   /// return the number of expansion terms for a total order expansion
   /// with the provided (anisotropic) upper_bound array specification
@@ -499,9 +499,9 @@ protected:
   /// used for tracking need for expansion form updates
   RealVector ssgAnisoWtsPrev;
 
-  /// array of booleans identifying the random variable subset within
-  /// the active variables (used in all_variables mode)
-  BoolDeque randomVarsKey;
+  /// array of bits identifying the random variable subset within the
+  /// active variables (used in all_variables mode)
+  BitArray randomVarsKey;
   /// list of indices identifying the random variable subset within the active
   /// variables (used in all_variables mode; defined from randomVarsKey)
   SizetList randomIndices;
@@ -688,7 +688,7 @@ integration_driver_rep(IntegrationDriver* driver_rep)
 
 
 inline void PolynomialApproximation::
-random_variables_key(const BoolDeque& random_vars_key)
+random_variables_key(const BitArray& random_vars_key)
 {
   randomVarsKey = random_vars_key;
   randomIndices.clear();

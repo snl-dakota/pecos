@@ -597,7 +597,7 @@ void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
   zVec.sizeUninitialized(m);  r1Vec.sizeUninitialized(n1);
   sortIndex1.resize(n1);      uniqueIndex1.resize(n1);
   uniqueSet1.resize(n1); // numUnique1 if count_inc1 used
-  bool* is_unique1 = new bool[n1]; // BoolDeque not guaranteed contiguous
+  bool* is_unique1 = new bool[n1];
 
   webbur::point_radial_tol_unique_index_inc1(m, n1, a1Points.values(),
     duplicateTol, &seed, zVec.values(), r1Vec.values(), &sortIndex1[0],
@@ -871,7 +871,7 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
 
 void CombinedSparseGridDriver::
 update_sparse_points(size_t start_index, int new_index_offset,
-		     const RealMatrix& tensor_pts, const BoolDeque& is_unique,
+		     const RealMatrix& tensor_pts, const BitArray& is_unique,
 		     const IntArray& unique_index, RealMatrix& new_sparse_pts)
 {
   size_t i, j, cntr, num_sm_mi = smolyakMultiIndex.size(), num_tp_pts,

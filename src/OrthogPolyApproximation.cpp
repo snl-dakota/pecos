@@ -844,7 +844,7 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
 	{ isotropic_integrand = false; break; }
     if (!isotropic_integrand) {
       bool remaining_dimensions = true;
-      BoolDeque dominated(n, true);
+      BitArray dominated(n); dominated.set();
       UShort2DArray to_multi_index;
       while (remaining_dimensions) {
 	remaining_dimensions = false;

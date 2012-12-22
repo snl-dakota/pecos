@@ -71,7 +71,6 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // ---------------------------------------
 // Admin/bookkeeping arrays (serial only):
 // ---------------------------------------
-typedef std::deque<bool> BoolDeque; // See Meyers' Effective STL #18
 typedef boost::dynamic_bitset<unsigned long> BitArray;
 
 typedef std::pair<Real, Real>        RealPair;
@@ -326,25 +325,25 @@ void copy_data(const ScalarType1* ptr, const size_t ptr_len,
 }
 
 
-/// copy ScalarType* to std::deque<ScalarType>
+/// copy ScalarType* to BitArray
 template <typename OrdinalType, typename ScalarType> 
 void copy_data(const ScalarType* ptr, const OrdinalType ptr_len,
-	       std::deque<ScalarType>& deq)
+	       BitArray& ba)
 {
-  if (deq.size() != ptr_len)
-    deq.resize(ptr_len);
+  if (ba.size() != ptr_len)
+    ba.resize(ptr_len);
   for (OrdinalType i=0; i<ptr_len; ++i)
-    deq[i] = ptr[i];
+    ba[i] = (ptr[i]) ? true : false;
 }
 
 
-/// copy std::deque<ScalarType> to ScalarType*
-template <typename OrdinalType, typename ScalarType> 
-void copy_data(const std::deque<ScalarType>& deq, ScalarType* ptr,
+/// copy BitArray to ScalarType*
+template <typename OrdinalType> //, typename ScalarType>
+void copy_data(const BitArray& ba, bool* ptr, //ScalarType* ptr,
 	       const OrdinalType ptr_len)
 {
   for (OrdinalType i=0; i<ptr_len; ++i)
-    ptr[i] = deq[i];
+    ptr[i] = ba[i]; // or static_cast<ScalarType>(ba[i])
 }
 
 
