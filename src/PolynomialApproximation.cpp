@@ -681,9 +681,27 @@ Real PolynomialApproximation::delta_mean()
 }
 
 
+Real PolynomialApproximation::delta_mean(const RealVector& x)
+{
+  PCerr << "Error: delta_mean(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 Real PolynomialApproximation::delta_std_deviation()
 {
   PCerr << "Error: delta_std_deviation() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::delta_std_deviation(const RealVector& x)
+{
+  PCerr << "Error: delta_std_deviation(x) not available for this polynomial "
 	<< "approximation type." << std::endl;
   abort_handler(-1);
   return 0.;
@@ -699,9 +717,29 @@ Real PolynomialApproximation::delta_beta(bool cdf_flag, Real z_bar)
 }
 
 
+Real PolynomialApproximation::
+delta_beta(const RealVector& x, bool cdf_flag, Real z_bar)
+{
+  PCerr << "Error: delta_beta(x) not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 Real PolynomialApproximation::delta_z(bool cdf_flag, Real beta_bar)
 {
   PCerr << "Error: delta_z() not available for this polynomial approximation "
+	<< "type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_z(const RealVector& x, bool cdf_flag, Real beta_bar)
+{
+  PCerr << "Error: delta_z(x) not available for this polynomial approximation "
 	<< "type." << std::endl;
   abort_handler(-1);
   return 0.;

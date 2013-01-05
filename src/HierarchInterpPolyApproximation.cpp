@@ -964,19 +964,6 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
-Real HierarchInterpPolyApproximation::reference_mean()
-{
-  if ( !(computedRefMean & 1) ) {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    UShort2DArray ref_key, incr_key;
-    hsg_driver->partition_keys(ref_key, incr_key);
-    return reference_mean(ref_key);
-  }
-  else
-    return referenceMoments[0];
-}
-
-
 Real HierarchInterpPolyApproximation::
 reference_mean(const UShort2DArray& ref_key)
 {
@@ -989,16 +976,16 @@ reference_mean(const UShort2DArray& ref_key)
 }
 
 
-Real HierarchInterpPolyApproximation::reference_variance()
+Real HierarchInterpPolyApproximation::
+reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 {
-  if ( !(computedRefVariance & 1) ) {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    UShort2DArray ref_key, incr_key;
-    hsg_driver->partition_keys(ref_key, incr_key);
-    return reference_variance(ref_key);
+  Real& ref_mean = referenceMoments[0];
+  if ( !(computedRefMean & 1) || !match_nonrandom_vars(x, xPrevRefMean) ) {
+    ref_mean
+      = expectation(x, expansionType1Coeffs, expansionType2Coeffs, ref_key);
+    computedRefMean |= 1; xPrevRefMean = x;
   }
-  else
-    return referenceMoments[1];
+  return ref_mean;
 }
 
 
@@ -1011,23 +998,26 @@ reference_variance(const UShort2DArray& ref_key)
     RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
     central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
 				cov_t2_coeffs, ref_key);
-    ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key),
+    ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key);
     computedRefVariance |= 1;
   }
   return ref_var;
 }
 
 
-Real HierarchInterpPolyApproximation::delta_mean()
+Real HierarchInterpPolyApproximation::
+reference_variance(const RealVector& x, const UShort2DArray& ref_key)
 {
-  if ( !(computedDeltaMean & 1) ) {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    UShort2DArray ref_key, incr_key;
-    hsg_driver->partition_keys(ref_key, incr_key);
-    return delta_mean(incr_key);
+  Real& ref_var = referenceMoments[1];
+  if ( !(computedRefVariance & 1) || !match_nonrandom_vars(x, xPrevRefVar) ) {
+    Real ref_mean = reference_mean(x, ref_key);
+    RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+    central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
+				cov_t2_coeffs, ref_key);
+    ref_var = expectation(x, cov_t1_coeffs, cov_t2_coeffs, ref_key);
+    computedRefVariance |= 1; xPrevRefVar = x;
   }
-  else
-    return deltaMoments[0];
+  return ref_var;
 }
 
 
@@ -1043,16 +1033,16 @@ Real HierarchInterpPolyApproximation::delta_mean(const UShort2DArray& incr_key)
 }
 
 
-Real HierarchInterpPolyApproximation::delta_variance()
+Real HierarchInterpPolyApproximation::
+delta_mean(const RealVector& x, const UShort2DArray& incr_key)
 {
-  if ( !(computedDeltaVariance & 1) ) {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    UShort2DArray ref_key, incr_key;
-    hsg_driver->partition_keys(ref_key, incr_key);
-    return delta_variance(ref_key, incr_key);
+  Real& delta_var = deltaMoments[0];
+  if ( !(computedDeltaMean & 1) || !match_nonrandom_vars(x, xPrevDeltaMean) ) {
+    delta_var
+      = expectation(x, expansionType1Coeffs, expansionType2Coeffs, incr_key);
+    computedDeltaMean |= 1; xPrevDeltaMean = x;
   }
-  else
-    return deltaMoments[1];
+  return delta_var;
 }
 
 
@@ -1061,20 +1051,24 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
   Real& delta_var = deltaMoments[1];
   if ( !(computedDeltaVariance & 1) ) {
-    delta_var = delta_covariance(this, ref_key, incr_key),
+    delta_var = delta_covariance(this, ref_key, incr_key);
     computedDeltaVariance |= 1;
   }
   return delta_var;
 }
 
 
-Real HierarchInterpPolyApproximation::delta_std_deviation()
+Real HierarchInterpPolyApproximation::
+delta_variance(const RealVector& x, const UShort2DArray& ref_key,
+	       const UShort2DArray& incr_key)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
-
-  return delta_std_deviation(ref_key, incr_key);
+  Real& delta_var = deltaMoments[1];
+  if ( !(computedDeltaVariance & 1) ||
+       !match_nonrandom_vars(x, xPrevDeltaVar) ) {
+    delta_var = delta_covariance(x, this, ref_key, incr_key);
+    computedDeltaVariance |= 1; xPrevDeltaVar = x;
+  }
+  return delta_var;
 }
 
 
@@ -1096,19 +1090,52 @@ delta_std_deviation(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 }
 
 
-Real HierarchInterpPolyApproximation::delta_beta(bool cdf_flag, Real z_bar)
+Real HierarchInterpPolyApproximation::
+delta_std_deviation(const RealVector& x, const UShort2DArray& ref_key,
+		    const UShort2DArray& incr_key)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  // delta-sigma = sqrt( var0 + delta-var ) - sigma0
+  //             = [ sqrt(1 + delta_var / var0) - 1 ] * sigma0
+  //             = sqrt1pm1(delta_var / var0) * sigma0
+  // where sqrt1pm1(x) = expm1[ log1p(x) / 2 ]
 
-  return delta_beta(cdf_flag, z_bar, ref_key, incr_key);
+  Real delta_var = delta_variance(x, ref_key, incr_key),
+       var0      = reference_variance(x, ref_key),
+       sigma0    = std::sqrt(var0);
+
+  return (delta_var < var0) ?
+    bmth::sqrt1pm1(delta_var / var0) * sigma0 :            // preserve precision
+    std::sqrt(var0 + delta_var) - sigma0; // precision OK; prevent div by var0=0
 }
 
 
 Real HierarchInterpPolyApproximation::
 delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
 	   const UShort2DArray& incr_key)
+{
+  Real mu0      = reference_mean(ref_key),
+    delta_mu    = delta_mean(incr_key),
+    var0        = reference_variance(ref_key), 
+    delta_sigma = delta_std_deviation(ref_key, incr_key);
+  return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
+}
+
+
+Real HierarchInterpPolyApproximation::
+delta_beta(const RealVector& x, bool cdf_flag, Real z_bar,
+	   const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+{
+  Real mu0      = reference_mean(x, ref_key),
+    delta_mu    = delta_mean(x, incr_key),
+    var0        = reference_variance(x, ref_key), 
+    delta_sigma = delta_std_deviation(x, ref_key, incr_key);
+  return delta_beta_map(mu0, delta_mu, var0, delta_sigma, cdf_flag, z_bar);
+}
+
+
+Real HierarchInterpPolyApproximation::
+delta_beta_map(Real mu0, Real delta_mu, Real var0, Real delta_sigma,
+	       bool cdf_flag, Real z_bar)
 {
   //  CDF delta-beta = (mu1 - z-bar)/sigma1 - (mu0 - z-bar)/sigma0
   //    = (mu1 sigma0 - z-bar sigma0 - mu0 sigma1 + z-bar sigma1)/sigma1/sigma0
@@ -1120,14 +1147,10 @@ delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
   //    = -delta-mu/sigma1 - delta_sigma (z-bar - mu0) / sigma0 / sigma1
   //    = (-delta-mu - delta-sigma beta0)/sigma1
 
-  Real beta0, mu0 = reference_mean(ref_key), delta_mu = delta_mean(incr_key),
-    var0 = reference_variance(ref_key), sigma0 = std::sqrt(var0),
-    delta_sigma = delta_std_deviation(ref_key, incr_key),
-    sigma1 = sigma0 + delta_sigma;
-
   // Error traps are needed for zero variance: a single point ref grid
   // (level=0 sparse or m=1 tensor) has zero variance.  Unchanged response
   // values along an index set could then cause sigma1 also = 0.
+  Real beta0, sigma0 = std::sqrt(var0), sigma1 = sigma0 + delta_sigma;
   if (cdf_flag) {
     if (sigma0 > SMALL_NUMBER && sigma1 > SMALL_NUMBER) {
       beta0 = (mu0 - z_bar) / sigma0;
@@ -1155,16 +1178,6 @@ delta_beta(bool cdf_flag, Real z_bar, const UShort2DArray& ref_key,
 }
 
 
-Real HierarchInterpPolyApproximation::delta_z(bool cdf_flag, Real beta_bar)
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
-
-  return delta_z(cdf_flag, beta_bar, ref_key, incr_key);
-}
-
-
 Real HierarchInterpPolyApproximation::
 delta_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
 	const UShort2DArray& incr_key)
@@ -1182,13 +1195,18 @@ delta_z(bool cdf_flag, Real beta_bar, const UShort2DArray& ref_key,
 
 
 Real HierarchInterpPolyApproximation::
-delta_covariance(PolynomialApproximation* poly_approx_2)
+delta_z(const RealVector& x, bool cdf_flag, Real beta_bar,
+	const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  //  CDF delta-z = (mu1 - sigma1 beta-bar) - (mu0 - sigma0 beta-bar)
+  //              = delta-mu - delta-sigma * beta-bar
+  // CCDF delta-z = (mu1 + sigma1 beta-bar) - (mu0 + sigma0 beta-bar)
+  //              = delta-mu + delta-sigma * beta-bar
 
-  return delta_covariance(poly_approx_2, ref_key, incr_key);
+  Real delta_mu = delta_mean(x, incr_key),
+    delta_sigma = delta_std_deviation(x, ref_key, incr_key);
+  return (cdf_flag) ? delta_mu - delta_sigma * beta_bar :
+                      delta_mu + delta_sigma * beta_bar;
 }
 
 
@@ -1214,12 +1232,12 @@ delta_covariance(PolynomialApproximation* poly_approx_2,
   product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
-  Real ref_mean_r1 = reference_mean(ref_key),
-    delta_mean_r1 = delta_mean(incr_key),
-    ref_mean_r2 = (same) ? ref_mean_r1 :
+  Real ref_mean_r1  = reference_mean(ref_key),
+    delta_mean_r1   = delta_mean(incr_key),
+    ref_mean_r2     = (same) ? ref_mean_r1 :
       expectation(hip_approx_2->expansionType1Coeffs,
 		  hip_approx_2->expansionType2Coeffs, ref_key),
-    delta_mean_r2 = (same) ? delta_mean_r1 :
+    delta_mean_r2   = (same) ? delta_mean_r1 :
       expectation(hip_approx_2->expansionType1Coeffs,
 		  hip_approx_2->expansionType2Coeffs, incr_key),
     delta_mean_r1r2 = expectation(r1r2_t1_coeffs, r1r2_t2_coeffs, incr_key);
@@ -1241,21 +1259,33 @@ delta_covariance(PolynomialApproximation* poly_approx_2,
 
 
 Real HierarchInterpPolyApproximation::
-delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2,
+		 const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
-  // TO DO
-  PCerr << "\nError: delta_covariance not yet implemented for all variables "
-	<< "mode." << std::endl;
-  abort_handler(-1);
-
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
+  RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
+  product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
-  Real delta_covar = 0.;
+  // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
+  Real ref_mean_r1  = reference_mean(x, ref_key),
+    delta_mean_r1   = delta_mean(x, incr_key),
+    ref_mean_r2     = (same) ? ref_mean_r1 :
+      expectation(x, hip_approx_2->expansionType1Coeffs,
+		  hip_approx_2->expansionType2Coeffs, ref_key),
+    delta_mean_r2   = (same) ? delta_mean_r1 :
+      expectation(x, hip_approx_2->expansionType1Coeffs,
+		  hip_approx_2->expansionType2Coeffs, incr_key),
+    delta_mean_r1r2 = expectation(x, r1r2_t1_coeffs, r1r2_t2_coeffs, incr_key);
 
-  if (same)
-    { deltaMoments[1] = delta_covar; computedDeltaVariance |= 1; } // TO DO: xPrevDeltaVar = x;
+  // same expression as standard expansion mode case above
+  Real delta_covar = delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
+     - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
+  if (same) {
+    deltaMoments[1] = delta_covar;
+    computedDeltaVariance |= 1; //xPrevDeltaVar = x; // TO DO
+  }
   return delta_covar;
 }
 
@@ -1452,7 +1482,7 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 }
 
 
-/** For inserted/augmented design/epistemic variables in standard mode. **/
+/** For inserted/augmented design/epistemic variables in standard mode. */
 const RealVector& HierarchInterpPolyApproximation::
 expectation_gradient(const RealMatrix2DArray& t1_coeff_grads,
 		     const RealVector2DArray& t1_wts)
@@ -1482,7 +1512,7 @@ expectation_gradient(const RealMatrix2DArray& t1_coeff_grads,
 }
 
 
-/** For inserted design/epistemic variables in all_variables mode. **/
+/** For inserted design/epistemic variables in all_variables mode. */
 Real HierarchInterpPolyApproximation::
 expectation_gradient(const RealVector& x,
 		     const RealMatrix2DArray& t1_coeff_grads, size_t t1cg_index)
@@ -1513,7 +1543,7 @@ expectation_gradient(const RealVector& x,
 }
 
 
-/** For augmented design/epistemic variables in all_variables mode. **/
+/** For augmented design/epistemic variables in all_variables mode. */
 Real HierarchInterpPolyApproximation::
 expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
 		     const RealMatrix2DArray& t2_coeffs, size_t deriv_index)

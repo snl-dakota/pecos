@@ -285,15 +285,27 @@ public:
   /// return the change in mean between two response expansions,
   /// treating all variables as random
   virtual Real delta_mean();
+  /// return the change in mean between two response expansions,
+  /// treating a subset of the variables as random
+  virtual Real delta_mean(const RealVector& x);
   /// return the change in standard deviation between two response
   /// expansions, treating all variables as random
   virtual Real delta_std_deviation();
-  /// return the change in reliability index (mapped from z_bar)
-  /// between two response expansions, treating all variables as random
+  /// return the change in standard deviation between two response
+  /// expansions, treating a subset of the variables as random
+  virtual Real delta_std_deviation(const RealVector& x);
+  /// return the change in reliability index (mapped from z_bar) between
+  /// two response expansions, treating all variables as random
   virtual Real delta_beta(bool cdf_flag, Real z_bar);
-  /// return the change in response level (mapped from beta_bar)
-  /// between two response expansions, treating all variables as random
+  /// return the change in reliability index (mapped from z_bar) between
+  /// two response expansions, treating a subset of the variables as random
+  virtual Real delta_beta(const RealVector& x, bool cdf_flag, Real z_bar);
+  /// return the change in response level (mapped from beta_bar) between
+  /// two response expansions, treating all variables as random
   virtual Real delta_z(bool cdf_flag, Real beta_bar);
+  /// return the change in response level (mapped from beta_bar) between
+  /// two response expansions, treating a subset of the variables as random
+  virtual Real delta_z(const RealVector& x, bool cdf_flag, Real beta_bar);
 
   /// compute central response moments using some combination of expansion
   /// post-processing and numerical integration
