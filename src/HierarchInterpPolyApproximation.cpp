@@ -1531,7 +1531,7 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
     for (set=0; set<num_sets; ++set) {
       const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
       const UShortArray&    sm_mi_ls = sm_mi[lev][set];
-      num_tp_pts = t1_coeffs_ls.numCols();
+      num_tp_pts = t1_coeffs_ls.length();
       for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
 	const UShortArray& key_lsp = colloc_key[lev][set][pt];
 	grad += t1_coeffs_ls[pt]

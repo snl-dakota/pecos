@@ -463,9 +463,9 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 }
 
 
-/** Covariance of response functions for differing tensor products using a 
-    product of interpolants approach.  Needed for sparse interpolants in
-    all_variables mode. */
+/** Covariance of response functions for differing tensor products
+    using a PRODUCT_OF_INTERPOLANTS_FULL approach.  Needed for sparse
+    interpolants in all_variables mode. */
 Real NodalInterpPolyApproximation::
 tensor_product_covariance(const RealVector& x, const UShortArray& lev_index_1,
 			  const UShort2DArray& key_1,
@@ -1121,8 +1121,11 @@ Real NodalInterpPolyApproximation::mean()
 
 
 /** In this case, a subset of the expansion variables are random
-    variables and the mean of the expansion involves evaluating the
-    expectation over this subset. */
+    variables and the mean of the expansion involves integration over
+    this subset and evaluation over the subset's complement.  For the
+    linear sums of tensor interpolants within a sparse interpolant,
+    the expectation can be taken inside the sum and we can simply add
+    up the tensor mean contributions. */
 Real NodalInterpPolyApproximation::mean(const RealVector& x)
 {
   Real& mean = numericalMoments[0];
@@ -1201,7 +1204,10 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
     subset.  This function must handle the mixed case, where some
     design/state variables are augmented (and are part of the
     expansion: derivatives are evaluated as described above) and some
-    are inserted (derivatives are obtained from expansionType1CoeffGrads). */
+    are inserted (derivatives are obtained from expansionType1CoeffGrads).  
+    For the linear sums of tensor interpolants within a sparse 
+    interpolant, the expectation can be taken inside the sum and we 
+    can simply add up the tensor mean gradient contributions. */
 const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
@@ -1253,8 +1259,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 /** In this case, all expansion variables are random variables and the
-    variance of the expansion is the sum over all but the first term
-    of the coefficients squared times the polynomial norms squared. */
+    variance of the expansion uses an interpolation of response products. */
 Real NodalInterpPolyApproximation::variance()
 {
   Real& var = numericalMoments[1];
@@ -1267,8 +1272,8 @@ Real NodalInterpPolyApproximation::variance()
 
 
 /** In this case, a subset of the expansion variables are random
-    variables and the variance of the expansion involves summations
-    over this subset. */
+    variables and the variance of the expansion involves integration
+    over this subset and evaluation over the subset's complement. */
 Real NodalInterpPolyApproximation::variance(const RealVector& x)
 {
   Real& var = numericalMoments[1];
@@ -1280,6 +1285,13 @@ Real NodalInterpPolyApproximation::variance(const RealVector& x)
 }
 
 
+/** In this case, all expansion variables are random variables and the
+    variance of the expansion uses an interpolation of central
+    products (INTERPOLATION_OF_PRODUCTS is the only option for the
+    standard expansion mode).  Since we reinterpolate the central
+    products such that we retain the linear sums of tensor
+    interpolants within a sparse interpolant, the expectation simply
+    involves a summation over the sparse integration weights. */
 Real NodalInterpPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
@@ -1342,9 +1354,31 @@ covariance(PolynomialApproximation* poly_approx_2)
 }
 
 
-/** In this case, a subset of the expansion variables are random
-    variables and the variance of the expansion involves integration
-    over this subset. */
+/** In this case, a subset of the expansion variables are random variables and
+    the variance of the expansion involves integration over this subset.  Three
+    cases are at least partially implemented (type 2 covariance	contributions
+    are not currently implemented for PRODUCT_OF_INTERPOLANTS approaches, and
+    variance_gradient() is not implemented for PRODUCT_OF_INTERPOLANTS_FULL):
+    (1) INTERPOLATION_OF_PRODUCTS: (R-\mu)^2 is reinterpolated, allowing sparse
+        grid covariance to use a linear summation of tensor contributions.  This
+	is most consistent with covariance for the standard variables mode
+	above.  The penalty is that the reinterpolated function is higher order.
+    (2) PRODUCT_OF_INTERPOLANTS_FAST: the covariance of the existing sparse
+        interpolant is computed without reinterpolation, but only the individual
+	covariances from matching tensor grids are included.  Covariance from
+	mismatched tensor grids is neglected, and the mean reference values are
+	individual tensor means, not the "total" mean.  Due to some fortuitous
+	cancellations in the Smolyak construction that have not been fully
+	analyzed, this shortcut/fast approach is often quite accurate.
+    (3) PRODUCT_OF_INTERPOLANTS_FULL: the covariance of the existing sparse
+        interpolant is computed without reinterpolation, the sparse covariance
+	among all tensor grid combinations is included, and the total mean is
+	used as the reference value for all products.  The covariance among
+	mismatched tensor grids requires the evaluation of expectations of
+	mismatched interpolation polynomials (matched order basis polynomials
+	admit a Kronecker delta simplification).  This option has been the most
+	accurate in testing but, despite attempts at pre-computation and fast
+	lookup of these products, has been too expensive for large grids. */
 Real NodalInterpPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
@@ -1373,11 +1407,14 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
     const UShort3DArray& colloc_key      = csg_driver->collocation_key();
     const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
-    size_t i, j, num_smolyak_indices = sm_coeffs.size();
+    size_t i, j, num_smolyak_indices     = sm_coeffs.size();
     covar = 0.;
     switch (momentInterpType) {
     // For an interpolation of products (which captures product cross-terms),
-    // a sum of tensor-product covariances is correct and straightforward.
+    // a sum of tensor-product covariances is correct and straightforward.  For
+    // a product of interpolants, cross-terms are being neglected and results
+    // are fast and approximate.  Note that tensor_product_covariance() must
+    // also alternate its logic based on momentInterpType.
     case INTERPOLATION_OF_PRODUCTS: case PRODUCT_OF_INTERPOLANTS_FAST:
       for (i=0; i<num_smolyak_indices; ++i)
 	if (sm_coeffs[i])
@@ -1387,9 +1424,9 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
       break;
     // For a product of interpolants, the rigorous approach must manage the
     // expectation of products of random interpolation polynomials.  The
-    // PRODUCT_OF_INTERPOLANTS_TENSOR_MEAN shortcut approach has been shown to
-    // be numerically equivalent and less computationally involved, but the
-    // equivalence has not been proven.
+    // PRODUCT_OF_INTERPOLANTS_FAST shortcut approach has been shown to be
+    // numerically accurate and less complex/expensive, but crossterms are 
+    // being neglected.
     case PRODUCT_OF_INTERPOLANTS_FULL:
       update_nonzero_basis_products(sm_mi);
       for (i=0; i<num_smolyak_indices; ++i) {
@@ -1440,8 +1477,13 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 
 /** In this function, all expansion variables are random variables and
     any design/state variables are omitted from the expansion.  The
-    mixed derivative case (some design variables are inserted and some
-    are augmented) requires no special treatment. */
+    mixed derivative case (some design/epistemic variables are
+    inserted and some are augmented) requires no special treatment.
+    Since we reinterpolate the central products
+    (INTERPOLATION_OF_PRODUCTS is the only option for the standard
+    expansion mode) such that we retain the linear sums of tensor
+    interpolants within a sparse interpolant, the expectation gradient
+    simply involves a summation over the sparse integration weights. */
 const RealVector& NodalInterpPolyApproximation::variance_gradient()
 {
   // Error check for required data
@@ -1464,7 +1506,7 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
     varianceGradient = 0.;
 
     Real mean_1 = mean();
-    // See Eq. 6.23 in Theory Manual: grad of variance includes grad of mean
+    // See Eq. 6.23 in Theory Manual: grad of variance incorporates grad of mean
     for (i=0; i<numCollocPts; ++i) {
       Real term_i = 2. * (expansionType1Coeffs[i] - mean_1) * t1_wts[i];
       for (j=0; j<num_deriv_vars; ++j)
@@ -1542,6 +1584,9 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 }
 
 
+/** Used for pre-computing the expected values of basis polynomial
+    products within the PRODUCT_OF_INTERPOLANTS_FULL option for
+    all_variables covariance. */
 void NodalInterpPolyApproximation::
 update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
 {
@@ -1808,9 +1853,10 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
 }
 
 
-/** Forms an interpolant over variables that are members of the given set.
-    Finds the variance of the interpolant w.r.t. the variables in the set.
-    Higher level functions invoke this helper for tensor or sparse grids. */
+/** Forms a new interpolant h over member variables after integrating
+    out the non-member variables.  Then finds the variance by
+    integrating (h-mean)^2 over the member variables, where the mean
+    can be zero for non-central/raw moment cases. */
 Real NodalInterpPolyApproximation::
 member_integral(const BitArray& member_bits, Real mean)
 {
