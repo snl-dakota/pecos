@@ -1284,7 +1284,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2,
      - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
   if (same) {
     deltaMoments[1] = delta_covar;
-    computedDeltaVariance |= 1; //xPrevDeltaVar = x; // TO DO
+    computedDeltaVariance |= 1; xPrevDeltaVar = x;
   }
   return delta_covar;
 }
