@@ -2021,6 +2021,9 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
 							       predictorPartitionIndicatorsHistory_[cnt],
 							       num_data_pts_fn );
 
+      PCout << "order: " << order <<std::endl;
+      PCout << "indicator: " << best_predictor_indicators[0] <<std::endl;
+
       // Only execute on master processor
       //      if ( is_master() )
       if ( true )
@@ -2112,7 +2115,7 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
   // Set and partition the data
   CV.set_data( vandermonde_matrix, rhs, num_data_pts_fn );
   int num_folds( 10 );
-
+  rhs.print(std::cout);
   // Keep copy of state
   CompressedSensingOptions cs_opts_copy = CSOpts;
   
