@@ -1701,7 +1701,7 @@ void OrthogPolyApproximation::set_fault_info()
 {
   size_t constr_eqns, anchor_fn, anchor_grad, num_data_pts_fn,
     num_data_pts_grad, total_eqns, num_surr_data_pts;
-  bool under_determined, reuse_solver_data;
+  bool under_determined = false, reuse_solver_data;
 
   // compute order of data contained within surrData
   short data_order = (expConfigOptions.expansionCoeffFlag) ? 1 : 0;
