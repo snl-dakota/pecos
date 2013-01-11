@@ -51,7 +51,8 @@ typedef void ( Analyser )( RealMatrix &training_samples,
 			   RealMatrixList &predictor_options_list,
 			   FaultInfo &fault_info,
 			   const SizetShortMap& failed_resp_data,
-			   IntVector &training_indices );
+			   IntVector &training_indices,
+			   IntVector &validation_indices );
 
 /** \brief Select the 'best' predictor from a set of indicators.
  *

@@ -231,6 +231,10 @@ void CrossValidationIterator::run( IndicatorFunction *indicator_function,
 	  IntVector partition_training_indices( Teuchos::View, 
 						trainingIndices_[j],
 						trainingIndices_.numRows() );
+	  IntVector partition_validation_indices( Teuchos::View, 
+						  validationIndices_[j],
+						  validationIndices_.numRows() );
+
 	  analyser( training_samples, training_values,
 		    validation_samples, validation_values, 
 		    opts,
@@ -239,7 +243,8 @@ void CrossValidationIterator::run( IndicatorFunction *indicator_function,
 		    predictor_options_list,
 		    fault_info,
 		    failed_resp_data,
-		    partition_training_indices );
+		    partition_training_indices,
+		    partition_validation_indices );
 	  all_partition_indicators[j] = indicators_list;
 	  all_partition_options[j] = predictor_options_list;
 	}

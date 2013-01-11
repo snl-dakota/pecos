@@ -43,7 +43,8 @@ void linear_predictor_analyser( RealMatrix &A_training,
 				RealMatrixList &predictor_options_list,
 				FaultInfo &fault_info,
 				const SizetShortMap& failed_resp_data,
-				IntVector &training_indices );
+				IntVector &training_indices,
+				IntVector &validation_indices );
 
 /**
  * \brief Extract the options that will create the best predictors on the

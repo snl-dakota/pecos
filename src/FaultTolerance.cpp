@@ -24,7 +24,9 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 {
   RealMatrix A_new, B_new;
   
+  PCout << "B\n";
   B.print(std::cout);
+  PCout << "index_mapping\n";
   index_mapping.print(std::cout);
   
   // tmp remove
@@ -49,9 +51,14 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
     }
   // compute the number of rows in a that are function values. The remainder
   // are gradient values
-  size_t num_data_pts_fn_in_A = num_rows_A / fault_info.num_surr_data_pts;
-  if ( num_rows_A % fault_info.num_surr_data_pts != 0 ) num_data_pts_fn_in_A++;
-  num_data_pts_fn_in_A = num_rows_A / num_data_pts_fn_in_A;
+  //size_t num_data_pts_fn_in_A = num_rows_A / fault_info.num_surr_data_pts;
+  //if ( num_rows_A % fault_info.num_surr_data_pts != 0 ) num_data_pts_fn_in_A++;
+  //num_data_pts_fn_in_A = num_rows_A / num_data_pts_fn_in_A;
+  size_t num_data_pts_fn_in_A = num_rows_A;
+  if ( fault_info.use_derivatives )
+    num_data_pts_fn_in_A = num_rows_A / ( fault_info.num_vars + 1 );
+
+  PCout << "data0 " << num_data_pts_fn_in_A << std::endl;
 
   size_t m;
   // When fault tolerance is applied with cross validation some of the 
@@ -65,7 +72,9 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
   // sorted indices are needed to use fail_booleans
   // I is needed to access the correct row in A.
   argsort( index_map, sorted_indices, I );
+  PCout << "I\n";
   I.print(std::cout);
+  PCout << "sorted indices\n";
   sorted_indices.print(std::cout);
   
   SizetShortMap::const_iterator fit;
@@ -81,8 +90,8 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
   bool multiple_rhs = false;
   if ( ( num_coef_rhs > 0 ) && ( num_grad_rhs > 0 ) ) multiple_rhs = true;
 
-  PCout <<  num_coef_rhs << "," << num_grad_rhs << "," << num_rhs << "," << B.numCols() << "\n";
-  PCout <<  fault_info.num_data_pts_fn << "," << fault_info.num_data_pts_grad << "," << fault_info.num_vars << "\n";
+  PCout <<  "data1 " << num_coef_rhs << "," << num_grad_rhs << "," << num_rhs << "," << B.numCols() << "\n";
+  PCout <<  "data2 " << fault_info.num_data_pts_fn << "," << fault_info.num_data_pts_grad << "," << fault_info.num_vars << "\n";
 
   if ( num_rhs != num_grad_rhs + num_coef_rhs ){
     std::string msg = "remove_faulty_data. Fault_info is inconsistent with A";
@@ -106,7 +115,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	      j<fault_info.num_surr_data_pts;  j++){
 	  int index = I[l];
 	  bool add_val = true, add_grad = fault_info.use_derivatives;
-	  //PCout << index << "," << j << "," << l << "," << sorted_indices[l] << "," << fit->first << std::endl;
+	  PCout << index << "," << j << "," << l << "," << sorted_indices[l] << "," << fit->first << std::endl;
 	  //fail_booleans(fit, sorted_indices[l], add_val, add_grad, 
 	  //failed_resp_data );
 	  fail_booleans(fit, j, add_val, add_grad, //new
@@ -121,6 +130,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	  }
 	  if ( add_grad ){
 	    for ( k=0; k<fault_info.num_vars; ++k, ++a_grad_cntr ){
+	      PCout << a_grad_cntr << "," << num_data_pts_fn_in_A+index*fault_info.num_vars+k << "," << i << std::endl;
 	      A_grad(a_grad_cntr,i) = 
 		A(num_data_pts_fn_in_A+index*fault_info.num_vars+k,i);
 	    }
@@ -173,8 +183,6 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
       B_new.shapeUninitialized( b_fn_cntr, num_rhs );
       PCout << "MATRICES:" << std::endl;
       B_new.assign( B_fn_tmp );
-      A_new.print(std::cout);
-      B_new.print(std::cout);
       if ( fault_info.use_derivatives )
 	{
 	  PCout << "@@@@@@@@@@@@@@@@@@@@@\n";
@@ -182,6 +190,10 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 				 num_rhs );
 	  row_append( B_grad_tmp, B_new );
 	}
+      PCout << "A_new\n";
+      A_new.print(std::cout);
+      PCout << "B_new\n";
+      B_new.print(std::cout);
       PCout << "Using " << A_new.numRows() << " equations to solve for ";
       PCout << A_new.numCols() << " coefficients\n";
     }

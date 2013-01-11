@@ -1786,8 +1786,8 @@ void OrthogPolyApproximation::set_fault_info()
 		      numVars, basisConfigOptions.useDerivs,
 		      expansionCoeffGrads.numRows() );
 
-  PCout << "$$$$$$$$$$$$\n";
-  PCout << num_data_pts_fn << "," <<  num_data_pts_grad << std::endl;
+  PCout << "num data pts fn\n";
+  PCout << num_data_pts_fn << "," <<  num_data_pts_grad << "," << num_failed_surr_fn << "," << num_failed_surr_grad << std::endl;
 };
 
 
