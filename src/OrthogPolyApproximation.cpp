@@ -1785,9 +1785,6 @@ void OrthogPolyApproximation::set_fault_info()
 		      reuse_solver_data, total_eqns, num_surr_data_pts,
 		      numVars, basisConfigOptions.useDerivs,
 		      expansionCoeffGrads.numRows() );
-
-  PCout << "num data pts fn\n";
-  PCout << num_data_pts_fn << "," <<  num_data_pts_grad << "," << num_failed_surr_fn << "," << num_failed_surr_grad << std::endl;
 };
 
 
@@ -2021,9 +2018,6 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
 							       predictorPartitionIndicatorsHistory_[cnt],
 							       num_data_pts_fn );
 
-      PCout << "order: " << order <<std::endl;
-      PCout << "indicator: " << best_predictor_indicators[0] <<std::endl;
-
       // Only execute on master processor
       //      if ( is_master() )
       if ( true )
@@ -2055,8 +2049,6 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   RealMatrixList solutions;
   bestCompressedSensingOpts_[0].storeHistory = false;
   bestCompressedSensingOpts_[0].print();
-  // \todo need to have knowledge of expConfigOptions.expansionCoeffFlag
-  // hack currently set to true always
   IntVector index_mapping;
   remove_faulty_data( vandermonde_submatrix, B_copy, index_mapping,
 		      faultInfo, surrData.failed_response_data() );
@@ -2089,21 +2081,19 @@ void OrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   opts1D[2] = noiseTols; // epsilon.
   opts1D[3].size( 1 ); // delta
   opts1D[3] = CSOpts.delta;
-  opts1D[4].size( 1 ); // max_number of non_zeros// todo replace with CSOpts
-  opts1D[4] = std::numeric_limits<int>::max();
+  opts1D[4].size( 1 ); // max_number of non_zeros
+  opts1D[4] = CSOpts.maxNumIterations; 
   opts1D[5].size( 1 );  // standardizeInputs
   opts1D[5] = false;
   opts1D[6].size( 1 );  // storeHistory
   opts1D[6] = true;  
   opts1D[7].size( 1 );  // Verbosity. Warnings on
-  opts1D[7] = 2;
+  opts1D[7] = 1;
   opts1D[8].size( 1 );  // num function samples
   opts1D[8] = num_function_samples;
       
   // Form the multi-dimensional grid
   cartesian_product( opts1D, opts );
-  opts.print(std::cout);
-  noiseTols.print(std::cout);
 };
 
 void OrthogPolyApproximation::
@@ -2115,7 +2105,6 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
   // Set and partition the data
   CV.set_data( vandermonde_matrix, rhs, num_data_pts_fn );
   int num_folds( 10 );
-  rhs.print(std::cout);
   // Keep copy of state
   CompressedSensingOptions cs_opts_copy = CSOpts;
   

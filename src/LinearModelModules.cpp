@@ -66,7 +66,7 @@ void linear_predictor_analyser( RealMatrix &A_training,
   CompressedSensingOptionsList cs_opts_list;
   remove_faulty_data( A_training, B_training, training_indices,
   		      fault_info, failed_resp_data );
-  PCout << "cleaning validation data\n";
+
   remove_faulty_data( A_validation, B_validation, validation_indices,
 		      fault_info, failed_resp_data );
   
@@ -107,11 +107,7 @@ void linear_predictor_analyser( RealMatrix &A_training,
 	  RealMatrix indicators( Teuchos::View, indicators_list[k], 
 				 1, 1, j, 0 );
 	  indicator_function( b_validation, b_prediction, indicators );
-	  PCout << "indi" << std::endl;
-	  indicators.print(std::cout);
 	}
-      PCout << "coeff" << std::endl;
-      coefficient_sets[0].print(std::cout);
     }
 };
 
