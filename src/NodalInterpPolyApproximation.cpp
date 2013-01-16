@@ -1568,18 +1568,26 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray&    lev_index = tpq_driver->level_index();
     SizetArray colloc_index; // empty -> default indexing
 
-    // compute order/level for higher-order covariance grid over non-random vars
-    UShortArray reinterp_quad_order, reinterp_lev_index;
-    reinterpolated_quadrature_order(tpq_driver->quadrature_order(), lev_index,
-				    reinterp_quad_order, reinterp_lev_index);
-    // compute TP covariance using the INTERPOLATION_OF_PRODUCTS approach
-    covar =
-      tensor_product_covariance(x, lev_index, tpq_driver->collocation_key(),
-	colloc_index, reinterp_quad_order, reinterp_lev_index, nip_approx_2);
-    break;
+    switch (momentInterpType) {
+    case INTERPOLATION_OF_PRODUCTS: {
+      const UShortArray& lev_index = tpq_driver->level_index();
+      // compute ord/lev for higher-order covariance grid over non-random vars
+      UShortArray reinterp_quad_order, reinterp_lev_index;
+      reinterpolated_quadrature_order(tpq_driver->quadrature_order(), lev_index,
+				      reinterp_quad_order, reinterp_lev_index);
+      // compute TP covariance with reinterpolation on the higher-order grid
+      covar =
+	tensor_product_covariance(x, lev_index, tpq_driver->collocation_key(),
+	  colloc_index, reinterp_quad_order, reinterp_lev_index, nip_approx_2);
+      break;
+    }
+    case PRODUCT_OF_INTERPOLANTS_FAST: case PRODUCT_OF_INTERPOLANTS_FULL:
+      covar = tensor_product_covariance(x, tpq_driver->level_index(),
+	tpq_driver->collocation_key(), colloc_index, nip_approx_2);
+      break;
+    }
   }
 
   // While we can collapse the Smolyak recursion and combine the weights in the
@@ -1741,15 +1749,25 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    const UShortArray&    lev_index = tpq_driver->level_index();
     SizetArray colloc_index; // empty -> default indexing
-    UShortArray reinterp_quad_order, reinterp_lev_index;
-    reinterpolated_quadrature_order(tpq_driver->quadrature_order(), lev_index,
-				    reinterp_quad_order, reinterp_lev_index);
-    return tensor_product_variance_gradient(x, tpq_driver->level_index(),
-      tpq_driver->collocation_key(), colloc_index, reinterp_quad_order,
-      reinterp_lev_index, dvv);
-    break;
+    switch (momentInterpType) {
+    case INTERPOLATION_OF_PRODUCTS: {
+      const UShortArray& lev_index = tpq_driver->level_index();
+      // compute ord/lev for higher-order covariance grid over non-random vars
+      UShortArray reinterp_quad_order, reinterp_lev_index;
+      reinterpolated_quadrature_order(tpq_driver->quadrature_order(), lev_index,
+				      reinterp_quad_order, reinterp_lev_index);
+      // compute variance grad with reinterpolation on the higher-order grid
+      return tensor_product_variance_gradient(x, lev_index,
+        tpq_driver->collocation_key(), colloc_index, reinterp_quad_order,
+        reinterp_lev_index, dvv);
+      break;
+    }
+    case PRODUCT_OF_INTERPOLANTS_FAST: case PRODUCT_OF_INTERPOLANTS_FULL:
+      return tensor_product_variance_gradient(x, tpq_driver->level_index(),
+        tpq_driver->collocation_key(), colloc_index, dvv);
+      break;
+    }
   }
   case COMBINED_SPARSE_GRID:
     size_t num_deriv_vars = dvv.size();
