@@ -1588,6 +1588,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 	tpq_driver->collocation_key(), colloc_index, nip_approx_2);
       break;
     }
+    break;
   }
 
   // While we can collapse the Smolyak recursion and combine the weights in the
@@ -1768,8 +1769,9 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
         tpq_driver->collocation_key(), colloc_index, dvv);
       break;
     }
+    break;
   }
-  case COMBINED_SPARSE_GRID:
+  case COMBINED_SPARSE_GRID: {
     size_t num_deriv_vars = dvv.size();
     if (varianceGradient.length() != num_deriv_vars)
       varianceGradient.sizeUninitialized(num_deriv_vars);
@@ -1817,6 +1819,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     }
     return varianceGradient;
     break;
+  }
   }
 }
 
