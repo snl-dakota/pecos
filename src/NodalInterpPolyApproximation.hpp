@@ -115,13 +115,23 @@ private:
     const UShortArray& lev_index,   const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
-  /// compute the covariance of two tensor interpolants on the same tensor grid;
+  /// compute the covariance of two tensor interpolants on the same
+  /// tensor grid using an interpolation of products approach;
+  /// contributes to covariance(x, poly_approx_2)
+  Real tensor_product_covariance(const RealVector& x,
+    const UShortArray& lev_index,   const UShort2DArray& key,
+    const SizetArray& colloc_index, const UShortArray& new_quad_order,
+    const UShortArray& new_lev_index,
+    NodalInterpPolyApproximation* nip_approx_2);
+  /// compute the covariance of two tensor interpolants on the same
+  /// tensor grid using a product of interpolants approach;
   /// contributes to covariance(x, poly_approx_2)
   Real tensor_product_covariance(const RealVector& x,
     const UShortArray& lev_index,   const UShort2DArray& key,
     const SizetArray& colloc_index, NodalInterpPolyApproximation* nip_approx_2);
   /// compute the covariance of two tensor interpolants on different
-  /// tensor grids; contributes to covariance(x, poly_approx_2)
+  /// tensor grids using a product of interpolants approach;
+  /// contributes to covariance(x, poly_approx_2)
   Real tensor_product_covariance(const RealVector& x,
     const UShortArray& lev_index_1, const UShort2DArray& key_1,
     const SizetArray& colloc_index_1, const UShortArray& lev_index_2,
@@ -129,7 +139,15 @@ private:
     NodalInterpPolyApproximation* nip_approx_2);
 
   /// compute the gradient of the variance of a tensor interpolant on
-  /// a tensor grid; contributes to variance_gradient(x)
+  /// a tensor grid using an interpolation of products approach;
+  /// contributes to variance_gradient(x)
+  const RealVector& tensor_product_variance_gradient(const RealVector& x,
+    const UShortArray& lev_index, const UShort2DArray& key,
+    const SizetArray& colloc_index, const UShortArray& reinterp_quad_order,
+    const UShortArray& reinterp_lev_index, const SizetArray& dvv);
+  /// compute the gradient of the variance of a tensor interpolant on
+  /// a tensor grid using a product of interpolants approach;
+  /// contributes to variance_gradient(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
     const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
@@ -167,6 +185,18 @@ private:
 					     const RealMatrixArray& t2_coeffs,
 					     const UShort3DArray& colloc_key,
 					     const SizetList& subset_indices);
+
+  /// computes quadrature order and level index for tensor reinterpolation of
+  /// the covariance fn for non-integrated dimensions in all_variables mode
+  void reinterpolated_quadrature_order(const UShortArray& quad_order,
+				       const UShortArray& lev_index,
+				       UShortArray& reinterp_quad_order,
+				       UShortArray& reinterp_lev_index);
+  /// computes quadrature order and level index for sparse reinterpolation of
+  /// the covariance fn for non-integrated dimensions in all_variables mode
+  void reinterpolated_sparse_grid_level(const UShortArray& lev_index,
+					UShortArray& reinterp_quad_order,
+					UShortArray& reinterp_lev_index);
 
   /// compute integral for total Sobol' index for variables in a set
   Real member_integral(const BitArray& member_bits, Real mean);
@@ -235,9 +265,13 @@ inline NodalInterpPolyApproximation::
 NodalInterpPolyApproximation(short basis_type, size_t num_vars,
 			     bool use_derivs):
   InterpPolyApproximation(basis_type, num_vars, use_derivs),
-  // These 3 compile-time options are relevant for all-variables mode involving
-  // expectations over variable subsets.  The standard view mode employs only
-  // an INTERPOLATION_OF_PRODUCTS approach.
+  // These 3 compile-time options are relevant for all-variables covariance
+  // involving expectations over variable subsets.  Covariance for hierarchical
+  // interpolants, nodal covariance in the standard view mode, uses of
+  // PolynomialApproximation::compute_numerical_moments(), and Sobol' index
+  // calculations all employ an INTERPOLATION_OF_PRODUCTS approach, so that
+  // setting is the most self-consistent.  Gradient enhancement is also not
+  // currently supported for PRODUCT_OF_INTERPOLANTS approaches.
   //momentInterpType(INTERPOLATION_OF_PRODUCTS)
   //momentInterpType(PRODUCT_OF_INTERPOLANTS_FULL)
   momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)

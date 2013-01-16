@@ -74,6 +74,13 @@ public:
   //- Heading: Member functions
   //
 
+  /// compute variable sets for a tensor-product grid
+  void compute_tensor_grid(const UShortArray& quad_order,
+			   const UShortArray& lev_index,
+			   const SizetList& subset_indices, 
+			   RealMatrix& variable_sets,
+			   UShort2DArray& colloc_key);
+
   /// update collocPts1D and type{1,2}CollocWts1D
   void update_1d_collocation_points_weights(const UShortArray& quad_order,
 					    const UShortArray& lev_index);
@@ -134,6 +141,10 @@ protected:
 			   RealMatrix& t2_weight_sets,
 			   UShort2DArray& colloc_key);
 
+  /// update collocPts1D for subset variables
+  void update_1d_collocation_points(const UShortArray& quad_order,
+				    const UShortArray& lev_index,
+				    const SizetList& subset_indices);
   /// update collocPts1D[lev_index][i] and type{1,2}CollocWts1D[lev_index][i]
   void assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 					    unsigned short lev_index);

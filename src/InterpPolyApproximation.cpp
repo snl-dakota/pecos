@@ -352,49 +352,14 @@ void InterpPolyApproximation::finalize_coefficients()
 void InterpPolyApproximation::update_tensor_interpolation_basis()
 {
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShortArray&   quad_order = tpq_driver->quadrature_order();
-  const UShortArray&    lev_index = tpq_driver->level_index();
 
   // resize if needed (leaving previous levels unmodified)
-  size_t i, j, k, basis_size = polynomialBasis.size();
-  unsigned short max_order = quad_order[0];
-  for (i=1; i<numVars; ++i)
-    if (quad_order[i] > max_order)
-      max_order = quad_order[i];
-  // quad_order range is 1:m; quad_index range is 0:m-1
-  if (max_order > basis_size) {
-    polynomialBasis.resize(max_order);
-    for (i=basis_size; i<max_order; ++i)
-      polynomialBasis[i].resize(numVars);
-  }
+  resize_polynomial_basis(tpq_driver->quadrature_order());
 
   // fill any required gaps in polynomialBasis.
-  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_1d();
-  const std::vector<BasisPolynomial>& num_int_poly_basis
-    = driverRep->polynomial_basis();
-  short poly_type_1d, rule; bool found; unsigned short l_index;
-  initialize_polynomial_basis_type(poly_type_1d, rule);
-  for (j=0; j<numVars; ++j) {
-    l_index = lev_index[j];
-    std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[l_index];
-    BasisPolynomial& poly_basis_ij = poly_basis_i[j];
-    if (num_int_poly_basis[j].parameterized()) { // never share rep
-      if (poly_basis_ij.is_null()) {
-	poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	poly_basis_ij.interpolation_points(colloc_pts_1d[l_index][j]);
-      }
-      else if (num_int_poly_basis[j].parametric_update())
-	poly_basis_ij.interpolation_points(colloc_pts_1d[l_index][j]);
-    }
-    else if (poly_basis_ij.is_null()) {
-      if (find_basis(l_index, j, k))
-	poly_basis_ij = poly_basis_i[k]; // reuse prev basis via shared rep
-      else { // instantiate and initialize a new unique instance
-	poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	poly_basis_ij.interpolation_points(colloc_pts_1d[l_index][j]);
-      }
-    }
-  }
+  const UShortArray& lev_index = tpq_driver->level_index();
+  for (size_t i=0; i<numVars; ++i)
+    update_interpolation_basis(lev_index[i], i);
 }
 
 
@@ -402,44 +367,46 @@ void InterpPolyApproximation::
 update_sparse_interpolation_basis(unsigned short max_level)
 {
   // resize if needed (leaving previous levels unmodified)
-  size_t i, j, k, basis_size = polynomialBasis.size();
   // j range is 0:w inclusive; i range is 1:w+1 inclusive
   unsigned short num_levels = max_level + 1;
-  if (num_levels > basis_size) {
-    polynomialBasis.resize(num_levels);
-    for (i=basis_size; i<num_levels; ++i)
-      polynomialBasis[i].resize(numVars);
-  }
+  resize_polynomial_basis(num_levels);
 
-  // fill gaps that may exist within any level (SparseGridDriver::
-  // update_1d_collocation_points_weights() updates in an unstructured manner)
-  const Real3DArray& colloc_pts_1d = driverRep->collocation_points_1d();
-  const std::vector<BasisPolynomial>& num_int_poly_basis
-    = driverRep->polynomial_basis();
-  short poly_type_1d, rule; bool found;
-  initialize_polynomial_basis_type(poly_type_1d, rule);
-  for (i=0; i<num_levels; ++i) { // i -> 0:num_levels-1 -> 0:ssg_level
-    std::vector<BasisPolynomial>& poly_basis_i = polynomialBasis[i];
-    for (j=0; j<numVars; ++j) {
-      const RealArray& colloc_pts_1d_ij = colloc_pts_1d[i][j];
-      if (!colloc_pts_1d_ij.empty()) {
-	BasisPolynomial&  poly_basis_ij =     poly_basis_i[j];
-	if (num_int_poly_basis[j].parameterized()) { // never share rep
-	  if (poly_basis_ij.is_null()) {
-	    poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
-	  }
-	  else if (num_int_poly_basis[j].parametric_update())
-	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
-	}
-	else if (poly_basis_ij.is_null()) {
-	  if (find_basis(i, j, k))
-	    poly_basis_ij = poly_basis_i[k]; // reuse prev basis via shared rep
-	  else { // instantiate and initialize a new unique instance
-	    poly_basis_ij = BasisPolynomial(poly_type_1d, rule);
-	    poly_basis_ij.interpolation_points(colloc_pts_1d_ij);
-	  }
-	}
+  size_t i, j;
+  for (i=0; i<num_levels; ++i) // i -> 0:num_levels-1 -> 0:ssg_level
+    for (j=0; j<numVars; ++j)
+      update_interpolation_basis(i, j);
+}
+
+
+void InterpPolyApproximation::
+update_interpolation_basis(unsigned short lev_index, size_t var_index)
+{
+  // fill gaps that may exist within any level
+  const RealArray& colloc_pts_1d_lv
+    = driverRep->collocation_points_1d()[lev_index][var_index];
+  if (!colloc_pts_1d_lv.empty()) {
+    const BasisPolynomial& num_int_poly_basis_v
+      = driverRep->polynomial_basis()[var_index];
+    std::vector<BasisPolynomial>& poly_basis_l  = polynomialBasis[lev_index];
+    BasisPolynomial&              poly_basis_lv = poly_basis_l[var_index];
+    short poly_type_1d, rule;
+    if (num_int_poly_basis_v.parameterized()) { // never share rep
+      if (poly_basis_lv.is_null()) {
+	initialize_polynomial_basis_type(poly_type_1d, rule);
+	poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
+	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
+      }
+      else if (num_int_poly_basis_v.parametric_update())
+	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
+    }
+    else if (poly_basis_lv.is_null()) {
+      size_t var_index2;
+      if (find_basis(lev_index, var_index, var_index2))
+	poly_basis_lv = poly_basis_l[var_index2]; // reuse prev via shared rep
+      else { // instantiate and initialize a new unique instance
+	initialize_polynomial_basis_type(poly_type_1d, rule);
+	poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
+	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
       }
     }
   }
@@ -700,7 +667,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
     const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
       exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
     Real t1_val = type1_interpolant_value(x, key[i], basis_index);
-    for (j=0; j<numVars; ++j)
+    for (j=0; j<num_deriv_vars; ++j)
       tpGradient[j] += exp_t1_coeff_grad_i[j] * t1_val;
   }
   return tpGradient;

@@ -61,6 +61,19 @@ public:
   /// return ith entry in quadOrder
   unsigned short quadrature_order(size_t i) const;
 
+  /// determine the lowest quadrature order that provides integrand
+  /// exactness at least as great as the specified goal, while
+  /// satisfying any nestedness constraints
+  void integrand_goal_to_nested_quadrature_order(size_t i,
+    unsigned short integrand_goal, unsigned short& nested_quad_order);
+  /// determine the lowest quadrature order that provides at least as many
+  /// points as the specified goal, while satisfying any nestedness constraints
+  void quadrature_goal_to_nested_quadrature_order(size_t i,
+    unsigned short quad_goal, unsigned short& nested_quad_order);
+  /// update quadOrder and levelIndex from ref_quad_order while
+  /// satisfying nested rule constraints
+  void nested_quadrature_order(const UShortArray& ref_quad_order);
+
   /// return type1WeightSets
   const RealVector& type1_weight_sets() const;
   /// return type2WeightSets
@@ -140,6 +153,18 @@ inline const UShortArray& TensorProductDriver::quadrature_order() const
 
 inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
 { return quadOrder[i]; }
+
+
+inline void TensorProductDriver::
+nested_quadrature_order(const UShortArray& ref_quad_order)
+{
+  unsigned short nested_order;
+  for (size_t i=0; i<numVars; ++i) {
+    integrand_goal_to_nested_quadrature_order(i, 2*ref_quad_order[i] - 1,
+					      nested_order);
+    quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+  }
+}
 
 
 inline const RealVector& TensorProductDriver::type1_weight_sets() const
