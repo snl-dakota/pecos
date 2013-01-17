@@ -1651,6 +1651,7 @@ void OrthogPolyApproximation::regression()
     {
       noiseTols.size( 1 );
       noiseTols[0] = CSOpts.epsilon;
+      if ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) noiseTols[0] = 1e-3;
     }
   if ( CSOpts.solver != SVD_LEAST_SQ_REGRESSION )
       CSOpts.solverTolerance = expConfigOptions.convergenceTol;
