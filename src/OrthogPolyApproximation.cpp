@@ -3153,38 +3153,64 @@ void OrthogPolyApproximation::print_coefficients(std::ostream& s) const
   for (i=0; i<numExpansionTerms; ++i) {
     s << "\n  " << std::setw(WRITE_PRECISION+7) << expansionCoeffs[i];
     for (j=0; j<numVars; ++j) {
-      switch (basisTypes[j]) {
-      case HERMITE_ORTHOG:
-	std::sprintf(tag,  "He%i", multiIndex[i][j]);
-	break;
-      case LEGENDRE_ORTHOG:
-	std::sprintf(tag,   "P%i", multiIndex[i][j]);
-	break;
-      case LAGUERRE_ORTHOG:
-	std::sprintf(tag,   "L%i", multiIndex[i][j]);
-	break;
-      case JACOBI_ORTHOG:
-	std::sprintf(tag, "Pab%i", multiIndex[i][j]);
-	break;
-      case GEN_LAGUERRE_ORTHOG:
-	std::sprintf(tag,  "La%i", multiIndex[i][j]);
-	break;
-      case CHEBYSHEV_ORTHOG:
-	std::sprintf(tag,   "T%i", multiIndex[i][j]);
-	break;
-      case NUM_GEN_ORTHOG:
-	std::sprintf(tag, "Num%i", multiIndex[i][j]);
-	break;
-      default:
-	PCerr << "Error: bad polynomial type = " << basisTypes[j] << " in "
-	      << "OrthogPolyApproximation::print_coefficients()." << std::endl;
-	abort_handler(-1);
-	break;
-      }
+      get_tag(tag, i, j);
       s << std::setw(5) << tag;
     }
   }
   s << '\n';
+}
+
+void OrthogPolyApproximation::
+coefficient_labels(std::vector<std::string>& coeff_labels) const
+{
+  size_t i, j;
+  char tag[10];
+
+  coeff_labels.reserve(numExpansionTerms);
+
+  // terms and term identifiers
+  for (i=0; i<numExpansionTerms; ++i) {
+    std::string tags;
+    for (j=0; j<numVars; ++j) {
+      if (j!=0)
+	tags += ' ';
+      get_tag(tag, i, j);
+      tags += tag;
+    }
+    coeff_labels.push_back(tags);
+  }
+}
+
+void OrthogPolyApproximation::get_tag(char* tag, size_t i, size_t j) const
+{
+  switch (basisTypes[j]) {
+  case HERMITE_ORTHOG:
+    std::sprintf(tag,  "He%i", multiIndex[i][j]);
+    break;
+  case LEGENDRE_ORTHOG:
+    std::sprintf(tag,   "P%i", multiIndex[i][j]);
+    break;
+  case LAGUERRE_ORTHOG:
+    std::sprintf(tag,   "L%i", multiIndex[i][j]);
+    break;
+  case JACOBI_ORTHOG:
+    std::sprintf(tag, "Pab%i", multiIndex[i][j]);
+    break;
+  case GEN_LAGUERRE_ORTHOG:
+    std::sprintf(tag,  "La%i", multiIndex[i][j]);
+    break;
+  case CHEBYSHEV_ORTHOG:
+    std::sprintf(tag,   "T%i", multiIndex[i][j]);
+    break;
+  case NUM_GEN_ORTHOG:
+    std::sprintf(tag, "Num%i", multiIndex[i][j]);
+    break;
+  default:
+    PCerr << "Error: bad polynomial type = " << basisTypes[j] << " in "
+	  << "OrthogPolyApproximation::print_coefficients()." << std::endl;
+    abort_handler(-1);
+    break; 
+  }
 }
 
 } // namespace Pecos

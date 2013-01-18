@@ -105,6 +105,8 @@ protected:
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);
 
+  void coefficient_labels(std::vector<std::string>& all_coeff_tags) const;
+
   /// initialize basis_types from u_types
   bool initialize_basis_types(const ShortArray& u_types,
 			      ShortArray& basis_types);
@@ -338,6 +340,10 @@ private:
    */
   void gridSearchFunction( RealMatrix &opts, int M, int N, 
 			   int num_function_samples );
+
+  /// Generate the coefficient tag for expansion term i, variable j
+  void get_tag(char* tag, size_t i, size_t j) const;
+
 
   //
   //- Heading: Data

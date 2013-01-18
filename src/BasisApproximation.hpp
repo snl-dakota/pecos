@@ -92,6 +92,9 @@ public:
   /// computing with compute_coefficients()
   virtual void approximation_coefficients(const RealVector& approx_coeffs);
 
+  /// retrieve a vector of coefficient label strings, one per expansion term
+  virtual void coefficient_labels(std::vector<std::string>& coeff_labels) const;
+
   //
   //- Heading: Member functions
   //

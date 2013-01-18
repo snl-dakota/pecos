@@ -366,4 +366,16 @@ approximation_coefficients(const RealVector& approx_coeffs)
   }
 }
 
+void BasisApproximation::
+coefficient_labels(std::vector<std::string>& coeff_labels) const
+{
+  if (basisApproxRep)
+    basisApproxRep->coefficient_labels(coeff_labels);
+  else {
+    PCerr << "Error: coefficient_labels() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
 } // namespace Pecos
