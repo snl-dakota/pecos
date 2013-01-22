@@ -238,9 +238,9 @@ protected:
     const SizetArray& colloc_index);
 
   /// resize polynomialBasis to accomodate an update in the number of levels
-  void resize_polynomial_basis(unsigned short num_levels);
+  bool resize_polynomial_basis(unsigned short num_levels);
   /// resize polynomialBasis to accomodate an update in quadrature order
-  void resize_polynomial_basis(const UShortArray& quad_order);
+  bool resize_polynomial_basis(const UShortArray& quad_order);
   /// update polynomialBasis for a variable index after an update in level
   void update_interpolation_basis(unsigned short lev_index, size_t var_index);
   /// for a particular level, test for equality between basis v2 and basis v1
@@ -331,7 +331,7 @@ construct_basis(const ShortArray& u_types, const DistributionParams& dp,
 }
 
 
-inline void InterpPolyApproximation::
+inline bool InterpPolyApproximation::
 resize_polynomial_basis(unsigned short num_levels)
 {
   size_t i, basis_size = polynomialBasis.size();
@@ -339,11 +339,14 @@ resize_polynomial_basis(unsigned short num_levels)
     polynomialBasis.resize(num_levels);
     for (i=basis_size; i<num_levels; ++i)
       polynomialBasis[i].resize(numVars);
+    return true;
   }
+  else
+    return false;
 }
 
 
-inline void InterpPolyApproximation::
+inline bool InterpPolyApproximation::
 resize_polynomial_basis(const UShortArray& quad_order)
 {
   unsigned short max_order = quad_order[0];
@@ -351,7 +354,7 @@ resize_polynomial_basis(const UShortArray& quad_order)
     if (quad_order[i] > max_order)
       max_order = quad_order[i];
   // quad_order range is 1:m; lev_index range is 0:m-1
-  resize_polynomial_basis(max_order);
+  return resize_polynomial_basis(max_order);
 }
 
 

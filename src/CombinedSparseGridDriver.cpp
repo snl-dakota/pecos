@@ -285,6 +285,58 @@ int CombinedSparseGridDriver::grid_size()
 }
 
 
+void CombinedSparseGridDriver::
+reinterpolated_tensor_grid(const UShortArray& lev_index,
+			   const SizetList& reinterp_indices)
+{
+  std::map<UShortArray, size_t>::iterator map_it = reinterpMap.find(lev_index);
+  if (map_it == reinterpMap.end()) {
+
+    // update arrays in place
+    activeReinterpIndex = reinterpLevelIndices.size();
+    UShortArray usa; UShort2DArray us2a; RealMatrix rm;
+    reinterpLevelIndices.push_back(usa);
+    reinterpQuadOrders.push_back(usa);
+    reinterpVarSets.push_back(rm);
+    reinterpCollocKeys.push_back(us2a);
+    UShortArray& reinterp_lev_index  = reinterpLevelIndices.back();
+    UShortArray& reinterp_quad_order = reinterpQuadOrders.back();
+    reinterp_quad_order.resize(numVars); reinterp_lev_index.resize(numVars);
+
+    // adjust level for reinterpolation of covariance (goal = 2x the interpolant
+    // order).  For nested rules, this may not double the integrand exactness,
+    // but it is unclear how this affects the accuracy of the interpolant.
+    unsigned short l, m, target;
+    SizetList::const_iterator cit = reinterp_indices.begin();
+    for (size_t i=0; i<numVars; ++i) {
+      if (cit != reinterp_indices.end() && i == *cit) { // reinterpolated index
+	l = lev_index[i]; level_to_order(i, l, m);
+	target = 2*m - 1; // target m doubles the interp order (t = 2(m-1)+1)
+	while (m < target)
+	  { ++l; level_to_order(i, l, m); }
+	reinterp_lev_index[i] = l; reinterp_quad_order[i] = m;
+	// advance to the next reinterp index
+	++cit;
+      }
+      else { // not a reinterpolated index --> no change from reference
+	reinterp_lev_index[i] = lev_index[i];
+	level_to_order(i, reinterp_lev_index[i], reinterp_quad_order[i]);
+      }
+    }
+
+    // compute the reinterpolation grid
+    compute_tensor_grid(reinterp_quad_order, reinterp_lev_index,
+			reinterp_indices, reinterpVarSets.back(),
+			reinterpCollocKeys.back());
+
+    // update reiterpMap bookkeeping
+    reinterpMap[lev_index] = activeReinterpIndex;
+  }
+  else
+    activeReinterpIndex = map_it->second;
+}
+
+
 void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 {
   assign_smolyak_arrays();

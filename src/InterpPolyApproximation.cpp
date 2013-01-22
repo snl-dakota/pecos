@@ -354,12 +354,14 @@ void InterpPolyApproximation::update_tensor_interpolation_basis()
   TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
 
   // resize if needed (leaving previous levels unmodified)
-  resize_polynomial_basis(tpq_driver->quadrature_order());
+  bool updated = resize_polynomial_basis(tpq_driver->quadrature_order());
 
-  // fill any required gaps in polynomialBasis.
-  const UShortArray& lev_index = tpq_driver->level_index();
-  for (size_t i=0; i<numVars; ++i)
-    update_interpolation_basis(lev_index[i], i);
+  // fill any required gaps in polynomialBasis
+  if (updated) {
+    const UShortArray& lev_index = tpq_driver->level_index();
+    for (size_t i=0; i<numVars; ++i)
+      update_interpolation_basis(lev_index[i], i);
+  }
 }
 
 
@@ -369,12 +371,14 @@ update_sparse_interpolation_basis(unsigned short max_level)
   // resize if needed (leaving previous levels unmodified)
   // j range is 0:w inclusive; i range is 1:w+1 inclusive
   unsigned short num_levels = max_level + 1;
-  resize_polynomial_basis(num_levels);
+  bool updated = resize_polynomial_basis(num_levels);
 
-  size_t i, j;
-  for (i=0; i<num_levels; ++i) // i -> 0:num_levels-1 -> 0:ssg_level
-    for (j=0; j<numVars; ++j)
-      update_interpolation_basis(i, j);
+  if (updated) {
+    size_t i, j;
+    for (i=0; i<num_levels; ++i) // i -> 0:num_levels-1 -> 0:ssg_level
+      for (j=0; j<numVars; ++j)
+	update_interpolation_basis(i, j);
+  }
 }
 
 

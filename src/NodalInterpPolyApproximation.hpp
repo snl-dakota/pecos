@@ -116,16 +116,8 @@ private:
     const SizetArray& colloc_index, const SizetArray& dvv);
 
   /// compute the covariance of two tensor interpolants on the same
-  /// tensor grid using an interpolation of products approach;
-  /// contributes to covariance(x, poly_approx_2)
-  Real tensor_product_covariance(const RealVector& x,
-    const UShortArray& lev_index,   const UShort2DArray& key,
-    const SizetArray& colloc_index, const UShortArray& new_quad_order,
-    const UShortArray& new_lev_index,
-    NodalInterpPolyApproximation* nip_approx_2);
-  /// compute the covariance of two tensor interpolants on the same
-  /// tensor grid using a product of interpolants approach;
-  /// contributes to covariance(x, poly_approx_2)
+  /// tensor grid using an interpolation of products or product of
+  /// interpolants approach; contributes to covariance(x, poly_approx_2)
   Real tensor_product_covariance(const RealVector& x,
     const UShortArray& lev_index,   const UShort2DArray& key,
     const SizetArray& colloc_index, NodalInterpPolyApproximation* nip_approx_2);
@@ -139,15 +131,8 @@ private:
     NodalInterpPolyApproximation* nip_approx_2);
 
   /// compute the gradient of the variance of a tensor interpolant on
-  /// a tensor grid using an interpolation of products approach;
-  /// contributes to variance_gradient(x)
-  const RealVector& tensor_product_variance_gradient(const RealVector& x,
-    const UShortArray& lev_index, const UShort2DArray& key,
-    const SizetArray& colloc_index, const UShortArray& reinterp_quad_order,
-    const UShortArray& reinterp_lev_index, const SizetArray& dvv);
-  /// compute the gradient of the variance of a tensor interpolant on
-  /// a tensor grid using a product of interpolants approach;
-  /// contributes to variance_gradient(x)
+  /// a tensor grid using an interpolation of products or product of
+  /// interpolants approach; contributes to variance_gradient(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
     const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
@@ -186,17 +171,9 @@ private:
 					     const UShort3DArray& colloc_key,
 					     const SizetList& subset_indices);
 
-  /// computes quadrature order and level index for tensor reinterpolation of
-  /// the covariance fn for non-integrated dimensions in all_variables mode
-  void reinterpolated_quadrature_order(const UShortArray& quad_order,
-				       const UShortArray& lev_index,
-				       UShortArray& reinterp_quad_order,
-				       UShortArray& reinterp_lev_index);
-  /// computes quadrature order and level index for sparse reinterpolation of
-  /// the covariance fn for non-integrated dimensions in all_variables mode
-  void reinterpolated_sparse_grid_level(const UShortArray& lev_index,
-					UShortArray& reinterp_quad_order,
-					UShortArray& reinterp_lev_index);
+  /// computes higher-order grid for tensor reinterpolation of the
+  /// covariance fn for non-integrated dimensions in all_variables mode
+  void reinterpolated_level(const UShortArray& lev_index);
 
   /// compute integral for total Sobol' index for variables in a set
   Real member_integral(const BitArray& member_bits, Real mean);

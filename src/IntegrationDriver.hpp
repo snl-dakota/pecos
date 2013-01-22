@@ -63,6 +63,11 @@ public:
   /// compute number of collocation points
   virtual int grid_size();
 
+  /// computes and stores data for reinterpolation of covariance on a
+  /// higher-order tensor grid
+  virtual void reinterpolated_tensor_grid(const UShortArray& lev_index,
+					  const SizetList& reinterp_indices);
+
   /// return type1WeightSets from Cubature/TensorProduct/CombinedSparseGrid
   /// or concatenate type1WeightSets in HierarchSparseGrid
   virtual const RealVector& type1_weight_sets() const;
@@ -102,6 +107,15 @@ public:
 
   /// return collocRules
   const ShortArray& collocation_rules() const;
+
+  /// return reinterpLevelIndices[activeReinterpIndex]
+  const UShortArray& reinterpolated_level_index() const;
+  /// return reinterpQuadOrders[activeReinterpIndex]
+  const UShortArray& reinterpolated_quadrature_order() const;
+  /// return reinterpVarSets[activeReinterpIndex]
+  const RealMatrix& reinterpolated_variable_sets() const;
+  /// return reinterpCollocKeys[activeReinterpIndex]
+  const UShort2DArray& reinterpolated_collocation_key() const;
 
   /// return orderGenzKeister
   const UShortArray& genz_keister_order()     const;
@@ -182,6 +196,20 @@ protected:
 
   /// flag indicating usage of compute1DType2Weights to define type2WeightSets
   bool computeType2Weights;
+
+  /// bookkeeping for reinterpolation of covariance: stored level indices
+  UShort2DArray reinterpLevelIndices;
+  /// bookkeeping for reinterpolation of covariance: stored quadrature orders
+  UShort2DArray reinterpQuadOrders;
+  /// bookkeeping for reinterpolation of covariance: stored variable sets
+  RealMatrixArray reinterpVarSets;
+  /// bookkeeping for reinterpolation of covariance: stored collocation keys
+  UShort3DArray reinterpCollocKeys;
+
+  /// tracks existing reinterpolation grids to avoid unnecessary recomputation
+  std::map<UShortArray, size_t> reinterpMap;
+  /// bookkeeping for reinterpolation of covariance: active index into arrays
+  size_t activeReinterpIndex;
 
   /// lookup for set of 1-D Genz-Keister quadrature orders
   static UShortArray orderGenzKeister;
@@ -268,6 +296,24 @@ type2_collocation_weights_1d() const
 
 inline const ShortArray& IntegrationDriver::collocation_rules() const
 { return collocRules; }
+
+
+inline const UShortArray& IntegrationDriver::reinterpolated_level_index() const
+{ return reinterpLevelIndices[activeReinterpIndex]; }
+
+
+inline const UShortArray& IntegrationDriver::
+reinterpolated_quadrature_order() const
+{ return reinterpQuadOrders[activeReinterpIndex]; }
+
+
+inline const RealMatrix& IntegrationDriver::reinterpolated_variable_sets() const
+{ return reinterpVarSets[activeReinterpIndex]; }
+
+
+inline const UShort2DArray& IntegrationDriver::
+reinterpolated_collocation_key() const
+{ return reinterpCollocKeys[activeReinterpIndex]; }
 
 
 inline const UShortArray& IntegrationDriver::genz_keister_order() const

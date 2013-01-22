@@ -56,11 +56,12 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// compute scaled variable and weight sets for the sparse grid
   void compute_grid(RealMatrix& variable_sets);
   /// compute (if updateGridSize) and return number of collocation
   /// points with duplicates removed
   int grid_size();
+  void reinterpolated_tensor_grid(const UShortArray& lev_index,
+				  const SizetList& reinterp_indices);
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,

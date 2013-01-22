@@ -38,7 +38,8 @@ UShortArray IntegrationDriver::precGenzKeister;
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~IntegrationDriver). */
 IntegrationDriver::IntegrationDriver(BaseConstructor):
-  computeType2Weights(false), driverRep(NULL), referenceCount(1)
+  computeType2Weights(false), activeReinterpIndex(0),
+  driverRep(NULL), referenceCount(1)
 {
   /* Standard 5 step sequence is fully nested (1+2+6+10+16 = 1, 3, 9, 19, 35)
   if (orderGenzKeister.empty()) {
@@ -227,6 +228,20 @@ int IntegrationDriver::grid_size()
     abort_handler(-1);
   }
   return driverRep->grid_size(); // forward to letter
+}
+
+
+void IntegrationDriver::
+reinterpolated_tensor_grid(const UShortArray& lev_index,
+			   const SizetList& reinterp_indices)
+{
+  if (driverRep) // forward to letter
+    driverRep->reinterpolated_tensor_grid(lev_index, reinterp_indices);
+  else {
+    PCerr << "Error: reinterpolated_tensor_grid() not available for this "
+	  << "driver type." << std::endl;
+    abort_handler(-1);
+  }
 }
 
 

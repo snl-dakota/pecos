@@ -157,6 +157,63 @@ quadrature_goal_to_nested_quadrature_order(size_t i, unsigned short quad_goal,
 }
 
 
+void TensorProductDriver::
+reinterpolated_tensor_grid(const UShortArray& lev_index,
+			   const SizetList& reinterp_indices)
+{
+  if (lev_index != levelIndex) {
+    PCerr << "Error: inconsistent level index in TensorProductDriver::"
+	  << "reinterpolated_tensor_grid()." << std::endl;
+    abort_handler(-1);
+  }
+
+  std::map<UShortArray, size_t>::iterator map_it = reinterpMap.find(lev_index);
+  if (map_it == reinterpMap.end()) {
+
+    if (reinterpLevelIndices.empty()) {
+      reinterpLevelIndices.resize(1); reinterpQuadOrders.resize(1);
+      reinterpVarSets.resize(1);      reinterpCollocKeys.resize(1);
+    }
+    UShortArray& reinterp_lev_index  = reinterpLevelIndices.back();
+    UShortArray& reinterp_quad_order = reinterpQuadOrders.back();
+    if (reinterp_lev_index.size() != numVars) {
+      reinterp_lev_index.resize(numVars);
+      reinterp_quad_order.resize(numVars);
+    }
+
+    SizetList::const_iterator cit = reinterp_indices.begin(); size_t i;
+    for (i=0; i<numVars; ++i) {
+      if (cit != reinterp_indices.end() && i == *cit) { // reinterpolated index
+	// quadrature order goal doubles the order of corresponding interpolant
+	unsigned short quad_goal = 2*quadOrder[i] - 1;
+	// satisfy nestedness constraints, if any
+	quadrature_goal_to_nested_quadrature_order(i, quad_goal,
+						   reinterp_quad_order[i]);
+	// update the interpolation level corresponding to this quad order
+	reinterp_lev_index[i] = reinterp_quad_order[i] - 1;
+	// advance to the next reinterp index
+	++cit;
+      }
+      else { // not a reinterpolated index --> no change from reference
+	reinterp_quad_order[i] = quadOrder[i];
+	reinterp_lev_index[i]  = levelIndex[i];
+      }
+    }
+
+    // compute the reinterpolation grid
+    compute_tensor_grid(reinterp_quad_order, reinterp_lev_index,
+			reinterp_indices, reinterpVarSets.back(),
+			reinterpCollocKeys.back());
+
+    // update reiterpMap bookkeeping: only 1 index needs to be tracked for TPQ
+    reinterpMap.clear();
+    reinterpMap[levelIndex] = activeReinterpIndex = 0;
+  }
+  else
+    activeReinterpIndex = map_it->second;
+}
+
+
 void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
 {
 #ifdef DEBUG

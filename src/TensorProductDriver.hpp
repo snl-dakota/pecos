@@ -43,10 +43,10 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// compute scaled variable and weight sets for the TPQ grid
   void compute_grid(RealMatrix& variable_sets);
-  /// number of collocation points
-  int grid_size();
+  int  grid_size();
+  void reinterpolated_tensor_grid(const UShortArray& lev_index,
+				  const SizetList& reinterp_indices);
 
   //
   //- Heading: Member functions
