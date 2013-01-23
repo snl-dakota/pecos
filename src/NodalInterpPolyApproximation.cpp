@@ -1701,15 +1701,12 @@ void NodalInterpPolyApproximation::
 reinterpolated_level(const UShortArray& lev_index)
 {
   driverRep->reinterpolated_tensor_grid(lev_index, nonRandomIndices);
-  bool updated
-    = resize_polynomial_basis(driverRep->reinterpolated_quadrature_order());
-  if (updated) {
-    const UShortArray& reinterp_lev_index
-      = driverRep->reinterpolated_level_index();
-    SizetList::iterator it; size_t i;
-    for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it)
-      { i = *it; update_interpolation_basis(reinterp_lev_index[i], i); }
-  }
+  const UShortArray& reinterp_lev_index
+    = driverRep->reinterpolated_level_index();
+  resize_polynomial_basis(reinterp_lev_index);
+  SizetList::iterator it; size_t i;
+  for (it=nonRandomIndices.begin(); it!=nonRandomIndices.end(); ++it)
+    { i = *it; update_interpolation_basis(reinterp_lev_index[i], i); }
 }
 
 

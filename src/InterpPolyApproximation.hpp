@@ -237,10 +237,10 @@ protected:
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray& colloc_index);
 
-  /// resize polynomialBasis to accomodate an update in the number of levels
-  bool resize_polynomial_basis(unsigned short num_levels);
-  /// resize polynomialBasis to accomodate an update in quadrature order
-  bool resize_polynomial_basis(const UShortArray& quad_order);
+  /// resize polynomialBasis to accomodate an update in max interpolation level
+  void resize_polynomial_basis(unsigned short max_level);
+  /// resize polynomialBasis to accomodate an update in interpolation levels
+  void resize_polynomial_basis(const UShortArray& lev_index);
   /// update polynomialBasis for a variable index after an update in level
   void update_interpolation_basis(unsigned short lev_index, size_t var_index);
   /// for a particular level, test for equality between basis v2 and basis v1
@@ -331,30 +331,27 @@ construct_basis(const ShortArray& u_types, const DistributionParams& dp,
 }
 
 
-inline bool InterpPolyApproximation::
-resize_polynomial_basis(unsigned short num_levels)
+inline void InterpPolyApproximation::
+resize_polynomial_basis(unsigned short max_level)
 {
   size_t i, basis_size = polynomialBasis.size();
-  if (num_levels > basis_size) {
-    polynomialBasis.resize(num_levels);
-    for (i=basis_size; i<num_levels; ++i)
+  if (max_level >= basis_size) {
+    polynomialBasis.resize(max_level+1);
+    for (i=basis_size; i<=max_level; ++i)
       polynomialBasis[i].resize(numVars);
-    return true;
   }
-  else
-    return false;
 }
 
 
-inline bool InterpPolyApproximation::
-resize_polynomial_basis(const UShortArray& quad_order)
+inline void InterpPolyApproximation::
+resize_polynomial_basis(const UShortArray& lev_index)
 {
-  unsigned short max_order = quad_order[0];
+  unsigned short max_level = lev_index[0];
   for (size_t i=1; i<numVars; ++i)
-    if (quad_order[i] > max_order)
-      max_order = quad_order[i];
-  // quad_order range is 1:m; lev_index range is 0:m-1
-  return resize_polynomial_basis(max_order);
+    if (lev_index[i] > max_level)
+      max_level = lev_index[i];
+  // For tensor quadrature, order range is 1:m; level range is 0:m-1
+  resize_polynomial_basis(max_level);
 }
 
 

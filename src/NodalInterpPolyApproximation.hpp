@@ -241,7 +241,7 @@ private:
 inline NodalInterpPolyApproximation::
 NodalInterpPolyApproximation(short basis_type, size_t num_vars,
 			     bool use_derivs):
-  InterpPolyApproximation(basis_type, num_vars, use_derivs),
+  InterpPolyApproximation(basis_type, num_vars, use_derivs)
   // These 3 compile-time options are relevant for all-variables covariance
   // involving expectations over variable subsets.  Covariance for hierarchical
   // interpolants, nodal covariance in the standard view mode, uses of
@@ -251,8 +251,15 @@ NodalInterpPolyApproximation(short basis_type, size_t num_vars,
   // currently supported for PRODUCT_OF_INTERPOLANTS approaches.
   //momentInterpType(INTERPOLATION_OF_PRODUCTS)
   //momentInterpType(PRODUCT_OF_INTERPOLANTS_FULL)
-  momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)
-{ }
+  //momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)
+{
+  // We are migrating towards consistent usage of INTERPOLATION_OF_PRODUCTS,
+  // but its usage of higher-order reinterpolation of covariance is currently
+  // too slow for production usage.  Thus, we only activate it when needed to
+  // support new capability, such as gradient-enhanced interpolation.
+  momentInterpType = (use_derivs) ?
+    INTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+}
 
 
 inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
