@@ -858,7 +858,6 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 						   int max_num_non_zero_entries,
 							 int verbosity )
 {
-
   Teuchos::BLAS<int, Real> blas;
 
   int M( A.numRows() ), N( A.numCols() );
@@ -914,6 +913,25 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
       // largest magnitude but IAMAX assumes indexing 1,..,N not 0,...,N-1
       int active_index = blas.IAMAX( correlation.numRows(), 
 				     correlation[0], 1 ) - 1;
+
+      // todo define active_index_set as std::set and use find function
+      for ( int i = 0; i < num_active_indices; i++ )
+	{
+	  if ( active_index_set[i] == active_index )
+	    {
+	      if ( verbosity > 1 )
+		{
+		  PCout << "Exiting: New active index has already been added. ";
+		  PCout << "This has likely occured because all correlations ";
+		  PCout << "are roughly the same size. ";
+		  PCout << "This means problem has been solved to roughly ";
+		  PCout << "machine precision. Check this before contiuing.";
+		  PCout << std::endl;
+		}
+	      done = true;
+	    }
+	}
+      if ( done ) break;
 
       // Update the QR factorisation.	 
       RealMatrix A_col( Teuchos::View, A, M, 1, 0, active_index );
