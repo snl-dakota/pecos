@@ -241,8 +241,10 @@ protected:
   void resize_polynomial_basis(unsigned short max_level);
   /// resize polynomialBasis to accomodate an update in interpolation levels
   void resize_polynomial_basis(const UShortArray& lev_index);
-  /// update polynomialBasis for a variable index after an update in level
-  void update_interpolation_basis(unsigned short lev_index, size_t var_index);
+  /// update polynomialBasis for a subset of variables after a change
+  /// in quadrature order
+  void update_tensor_interpolation_basis(const UShortArray& lev_index,
+					 const SizetList& subset_indices);
   /// for a particular level, test for equality between basis v2 and basis v1
   bool same_basis(unsigned short level, size_t v1, size_t v2);
 
@@ -288,9 +290,11 @@ private:
   void initialize_polynomial_basis_type(short& poly_type_1d, short& rule);
 
   /// update polynomialBasis after a change in quadrature order
-  void update_tensor_interpolation_basis();
+  void update_tensor_interpolation_basis(const UShortArray& lev_index);
   /// update polynomialBasis after a change in sparse grid level
   void update_sparse_interpolation_basis(unsigned short max_level);
+  /// update polynomialBasis for a variable index after an update in level
+  void update_interpolation_basis(unsigned short lev_index, size_t var_index);
   /// for a particular level, find index of basis v2 that matches basis v1
   bool find_basis(unsigned short level, size_t v1, size_t& v2);
 

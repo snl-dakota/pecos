@@ -303,7 +303,9 @@ inner_product(const RealVector& poly_coeffs1,
     // Quick & dirty: trap +/- DBL_MAX and replace with mu +/- x sigma
     //                with x sufficiently large [phi(15) ~ 5.53e-50].
     // More involved: replace bounded integral with semibounded integral;
-    //                but we currently don't have an option for [-inf, ub].
+    //                but we would need to add an option for [-inf, ub]:
+    //                monotone mapping from [-inf, ub] to [-1,1] using
+    //                x = ub + (1-z)/(1+z); dx/dz = -2/(1+z)^2
     Real lb = (real_compare(distParams[2], -DBL_MAX)) ?
       distParams[0] - 15. * distParams[1] : distParams[2];
     Real ub = (real_compare(distParams[3],  DBL_MAX)) ?
@@ -323,7 +325,9 @@ inner_product(const RealVector& poly_coeffs1,
     // Quick & dirty: trap +/- DBL_MAX and replace with mu +/- x sigma
     //                with x sufficiently large [phi(15) ~ 5.53e-50].
     // More involved: replace bounded integral with semibounded integral;
-    //                but we currently don't have an option for [-inf, ub].
+    //                but we would need to add an option for [-inf, ub]:
+    //                monotone mapping from [-inf, ub] to [-1,1] using
+    //                x = ub + (1-z)/(1+z); dx/dz = -2/(1+z)^2
     Real ub = (real_compare(distParams[3], DBL_MAX)) ?
       distParams[0] + 15. * distParams[1] : distParams[3];
 

@@ -125,7 +125,7 @@ void InterpPolyApproximation::allocate_arrays()
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
     bool update_basis_form = (quad_order != quadOrderPrev);
     if (update_basis_form || param_update)
-      update_tensor_interpolation_basis();
+      update_tensor_interpolation_basis(tpq_driver->level_index());
 
     quadOrderPrev = quad_order;
     break;
@@ -349,17 +349,29 @@ void InterpPolyApproximation::finalize_coefficients()
 }
 
 
-void InterpPolyApproximation::update_tensor_interpolation_basis()
+void InterpPolyApproximation::
+update_tensor_interpolation_basis(const UShortArray& lev_index)
 {
-  TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-  const UShortArray&   lev_index  = tpq_driver->level_index();
-
   // resize if needed (leaving previous levels unmodified)
   resize_polynomial_basis(lev_index);
 
   // fill any required gaps in polynomialBasis
   for (size_t i=0; i<numVars; ++i)
     update_interpolation_basis(lev_index[i], i);
+}
+
+
+void InterpPolyApproximation::
+update_tensor_interpolation_basis(const UShortArray& lev_index,
+				  const SizetList& subset_indices)
+{
+  // resize if needed (leaving previous levels unmodified)
+  resize_polynomial_basis(lev_index);
+
+  // fill any required gaps in polynomialBasis
+  SizetList::const_iterator cit; size_t i;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit)
+    { i = *cit; update_interpolation_basis(lev_index[i], i); }
 }
 
 
@@ -373,13 +385,20 @@ update_sparse_interpolation_basis(unsigned short max_level)
 
   const std::vector<BasisPolynomial>& num_int_poly_basis
     = driverRep->polynomial_basis();
+  // We must currently process all levels, even if not parameterized, since
+  // update_interpolation_basis() can only update the polynomial basis if the
+  // collocation points are available and the collocation points are only 
+  // available if a particular index level is visited for that variable within 
+  // IntegrationDriver::compute_tensor_grid() (which calls IntegrationDriver::
+  // update_1d_collocation_points_weights()).  That is, there may be gaps that
+  // need to be filled in levels that were previously allocated.
   for (v=0; v<numVars; ++v) {
-    if (num_int_poly_basis[v].parameterized()) // check all levels for updates
+    //if (num_int_poly_basis[v].parameterized()) // check all levels for updates
       for (l=0; l<=max_level; ++l)
 	update_interpolation_basis(l, v);
-    else                                       // update only the new levels
-      for (l=orig_size; l<=max_level; ++l)
-	update_interpolation_basis(l, v);
+    //else                                       // update only the new levels
+    //  for (l=orig_size; l<=max_level; ++l)
+    //    update_interpolation_basis(l, v);
   }
 }
 
