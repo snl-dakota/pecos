@@ -14,20 +14,21 @@
 
 namespace Pecos {
 
-/// The representation of a surrogate data point.  This representation,
-/// or body, may be shared by multiple DistributionParams handle instances.
+/// The representation of a set of aleatory distribution parameters.
+/// This representation, or body, may be shared by multiple
+/// AleatoryDistParams handle instances.
 
-/** The DistributionParams/DistributionParamsRep pairs utilize a
+/** The AleatoryDistParams/AleatoryDistParamsRep pairs utilize a
     handle-body idiom (Coplien, Advanced C++). */
 
-class DistributionParamsRep
+class AleatoryDistParamsRep
 {
   //
   //- Heading: Friends
   //
 
   /// the handle class can access attributes of the body class directly
-  friend class DistributionParams;
+  friend class AleatoryDistParams;
 
 private:
 
@@ -36,9 +37,9 @@ private:
   //
 
   /// default constructor
-  DistributionParamsRep();
+  AleatoryDistParamsRep();
   /// constructor
-  DistributionParamsRep(const RealVector& nuv_means,
+  AleatoryDistParamsRep(const RealVector& nuv_means,
     const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
     const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
     const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
@@ -59,14 +60,9 @@ private:
     const RealVector& nbuv_p_per_tr,    const IntVector& nbuv_num_trials, 
     const RealVector& geuv_p_per_tr,    const IntVector& hguv_tot_pop,
     const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
-    const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
-    const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
-    const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-    const IntRealMapArray& dusiv_vals_probs,
-    const RealRealMapArray& dusrv_vals_probs);
+    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr);
   /// destructor
-  ~DistributionParamsRep();
+  ~AleatoryDistParamsRep();
 
   //
   //- Heading: Private data members
@@ -162,37 +158,17 @@ private:
   /// and correlation coefficients for reliability)
   RealSymMatrix uncertainCorrelations;
 
-  /// basic probability values for continuous interval uncertain variables
-  RealVectorArray contIntervalProbs;
-  /// lower bounds for continuous interval uncertain variables
-  RealVectorArray contIntervalLowerBnds;
-  /// upper bounds for continuous interval uncertain variables
-  RealVectorArray contIntervalUpperBnds;
-
-  /// basic probability values for discrete interval uncertain variables
-  RealVectorArray discIntervalProbs;
-  /// lower bounds for discrete interval uncertain variables
-  IntVectorArray discIntervalLowerBnds;
-  /// upper bounds for discrete interval uncertain variables
-  IntVectorArray discIntervalUpperBnds;
-  /// admissible values and basic probability assignments for discrete
-  /// uncertain integer set variables
-  IntRealMapArray discSetIntValsProbs;
-  /// admissible values and basic probability assignments for discrete
-  /// uncertain real set variables
-  RealRealMapArray discSetRealValsProbs;
-
-  /// number of handle objects sharing dpRep
+  /// number of handle objects sharing adpRep
   int referenceCount;
 };
 
 
-inline DistributionParamsRep::DistributionParamsRep() : referenceCount(1)
+inline AleatoryDistParamsRep::AleatoryDistParamsRep() : referenceCount(1)
 { }
 
 
-inline DistributionParamsRep::
-DistributionParamsRep(const RealVector& nuv_means,
+inline AleatoryDistParamsRep::
+AleatoryDistParamsRep(const RealVector& nuv_means,
   const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
   const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
   const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
@@ -213,12 +189,7 @@ DistributionParamsRep(const RealVector& nuv_means,
   const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
   const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
   const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
-  const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
-  const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
-  const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-  const IntRealMapArray& dusiv_vals_probs,
-  const RealRealMapArray& dusrv_vals_probs):
+  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr):
   normalMeans(nuv_means), normalStdDevs(nuv_std_devs),
   normalLowerBnds(nuv_l_bnds), normalUpperBnds(nuv_u_bnds),
   lognormalMeans(lnuv_means), lognormalStdDevs(lnuv_std_devs),
@@ -239,6 +210,86 @@ DistributionParamsRep(const RealVector& nuv_means,
   geometricProbPerTrial(geuv_p_per_tr), hyperGeomTotalPopulation(hguv_tot_pop),
   hyperGeomSelectedPopulation(hguv_sel_pop),  hyperGeomNumDrawn(hguv_num_drawn),
   histogramPointPairs(hpuv_prs), uncertainCorrelations(uv_corr),
+  referenceCount(1)
+{ }
+
+
+inline AleatoryDistParamsRep::~AleatoryDistParamsRep()
+{ }
+
+
+/// The representation of a set of epistemic distribution parameters.
+/// This representation, or body, may be shared by multiple
+/// EpistemicDistParams handle instances.
+
+/** The EpistemicDistParams/EpistemicDistParamsRep pairs utilize a
+    handle-body idiom (Coplien, Advanced C++). */
+
+class EpistemicDistParamsRep
+{
+  //
+  //- Heading: Friends
+  //
+
+  /// the handle class can access attributes of the body class directly
+  friend class EpistemicDistParams;
+
+private:
+
+  //
+  //- Heading: Private member functions
+  //
+
+  /// default constructor
+  EpistemicDistParamsRep();
+  /// constructor
+  EpistemicDistParamsRep(const RealVectorArray& ciuv_probs, 
+    const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
+    const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
+    const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
+    const RealRealMapArray& dusrv_vals_probs);
+  /// destructor
+  ~EpistemicDistParamsRep();
+
+  //
+  //- Heading: Private data members
+  //
+
+  /// basic probability values for continuous interval uncertain variables
+  RealVectorArray contIntervalProbs;
+  /// lower bounds for continuous interval uncertain variables
+  RealVectorArray contIntervalLowerBnds;
+  /// upper bounds for continuous interval uncertain variables
+  RealVectorArray contIntervalUpperBnds;
+
+  /// basic probability values for discrete interval uncertain variables
+  RealVectorArray discIntervalProbs;
+  /// lower bounds for discrete interval uncertain variables
+  IntVectorArray discIntervalLowerBnds;
+  /// upper bounds for discrete interval uncertain variables
+  IntVectorArray discIntervalUpperBnds;
+  /// admissible values and basic probability assignments for discrete
+  /// uncertain integer set variables
+  IntRealMapArray discSetIntValsProbs;
+  /// admissible values and basic probability assignments for discrete
+  /// uncertain real set variables
+  RealRealMapArray discSetRealValsProbs;
+
+  /// number of handle objects sharing edpRep
+  int referenceCount;
+};
+
+
+inline EpistemicDistParamsRep::EpistemicDistParamsRep() : referenceCount(1)
+{ }
+
+
+inline EpistemicDistParamsRep::
+EpistemicDistParamsRep(const RealVectorArray& ciuv_probs,
+  const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
+  const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
+  const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
+  const RealRealMapArray& dusrv_vals_probs):
   contIntervalProbs(ciuv_probs), contIntervalLowerBnds(ciuv_l_bnds),
   contIntervalUpperBnds(ciuv_u_bnds), discIntervalProbs(diuv_probs),
   discIntervalLowerBnds(diuv_l_bnds), discIntervalUpperBnds(diuv_u_bnds),
@@ -247,19 +298,17 @@ DistributionParamsRep(const RealVector& nuv_means,
 { }
 
 
-inline DistributionParamsRep::~DistributionParamsRep()
+inline EpistemicDistParamsRep::~EpistemicDistParamsRep()
 { }
 
 
-/// Container class encapsulating basic parameter and response data
-/// for defining a "truth" data point.
+/// Container class encapsulating distribution parameters for aleatory
+/// random variables.
 
-/** A list of these data points is contained in Approximation instances
-    (e.g., Dakota::Approximation::currentPoints) and provides the data
-    to build the approximation.  A handle-body idiom is used to avoid
-    excessive data copying overhead. */
+/** This class consolidates aleatory distribution data and simplifies the
+    APIs that require distribution parameters. */
 
-class DistributionParams
+class AleatoryDistParams
 {
 public:
 
@@ -268,9 +317,9 @@ public:
   //
 
   /// default constructor
-  DistributionParams();
+  AleatoryDistParams();
   /// standard constructor
-  DistributionParams(const RealVector& nuv_means,
+  AleatoryDistParams(const RealVector& nuv_means,
     const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
     const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
     const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
@@ -291,19 +340,14 @@ public:
     const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
     const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
     const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
-    const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
-    const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
-    const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-    const IntRealMapArray& dusiv_vals_probs,
-    const RealRealMapArray& dusrv_vals_probs);
+    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr);
   /// copy constructor
-  DistributionParams(const DistributionParams& dp);
+  AleatoryDistParams(const AleatoryDistParams& adp);
   /// destructor
-  ~DistributionParams();
+  ~AleatoryDistParams();
 
   /// assignment operator
-  DistributionParams& operator=(const DistributionParams& dp);
+  AleatoryDistParams& operator=(const AleatoryDistParams& adp);
 
   //
   //- Heading: member functions
@@ -311,33 +355,21 @@ public:
 
   /// return total number of continuous aleatory uncertain variables
   size_t cauv()  const;
-  /// return total number of continuous epistemic uncertain variables
-  size_t ceuv()  const;
-  /// return total number of continuous uncertain variables
-  size_t cuv()   const;
 
   /// return total number of discrete integer aleatory uncertain variables
   size_t diauv() const;
   /// return total number of discrete real aleatory uncertain variables
   size_t drauv() const;
-  /// return total number of discrete integer epistemic uncertain variables
-  size_t dieuv() const;
-  /// return total number of discrete real epistemic uncertain variables
-  size_t dreuv() const;
-  /// return total number of discrete integer uncertain variables
-  size_t diuv()  const;
-  /// return total number of discrete real uncertain variables
-  size_t druv()  const;
-  /// return total number of discrete uncertain variables
-  size_t duv()   const;
+  /// return total number of discrete aleatory uncertain variables
+  size_t dauv()   const;
 
   /// deep copy (as opposed to operator= shallow copy)
-  void copy(const DistributionParams& dp);
+  void copy(const AleatoryDistParams& adp);
   /// data update (no changes to representation (unless null))
-  void update(const DistributionParams& dp);
+  void update(const AleatoryDistParams& adp);
   /// partial data update of the distribution data not affected by an
   /// x->u variable transformation
-  void update_partial(const DistributionParams& dp_x,
+  void update_partial(const AleatoryDistParams& adp_x,
 		      const Pecos::ShortArray& x_types,
 		      const Pecos::ShortArray& u_types);
 
@@ -702,6 +734,1091 @@ public:
   /// set the uncertain variable correlations
   void uncertain_correlations(const RealSymMatrix& uncertain_corr);
 
+  /// function to check adpRep (does this handle contain a body)
+  bool is_null() const;
+
+private:
+
+  //
+  //- Heading: Private data members
+  //
+
+  /// pointer to the body (handle-body idiom)
+  AleatoryDistParamsRep* adpRep;
+};
+
+
+inline AleatoryDistParams::AleatoryDistParams():
+  adpRep(new AleatoryDistParamsRep())
+{ }
+
+
+inline AleatoryDistParams::
+AleatoryDistParams(const RealVector& nuv_means,
+  const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
+  const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
+  const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
+  const RealVector& lnuv_zetas,       const RealVector& lnuv_err_facts,
+  const RealVector& lnuv_l_bnds,      const RealVector& lnuv_u_bnds,
+  const RealVector& uuv_l_bnds,       const RealVector& uuv_u_bnds,
+  const RealVector& luuv_l_bnds,      const RealVector& luuv_u_bnds,
+  const RealVector& tuv_modes,        const RealVector& tuv_l_bnds,
+  const RealVector& tuv_u_bnds,       const RealVector& euv_betas,
+  const RealVector& beuv_alphas,      const RealVector& beuv_betas,
+  const RealVector& beuv_l_bnds,      const RealVector& beuv_u_bnds,
+  const RealVector& gauv_alphas,      const RealVector& gauv_betas,
+  const RealVector& guuv_alphas,      const RealVector& guuv_betas,
+  const RealVector& fuv_alphas,       const RealVector& fuv_betas,
+  const RealVector& wuv_alphas,       const RealVector& wuv_betas,
+  const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
+  const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
+  const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
+  const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
+  const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
+  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr):
+  adpRep(new AleatoryDistParamsRep(nuv_means, nuv_std_devs, nuv_l_bnds,
+	 nuv_u_bnds, lnuv_means, lnuv_std_devs, lnuv_lambdas, lnuv_zetas,
+	 lnuv_err_facts, lnuv_l_bnds, lnuv_u_bnds, uuv_l_bnds, uuv_u_bnds,
+	 luuv_l_bnds, luuv_u_bnds, tuv_modes, tuv_l_bnds, tuv_u_bnds, euv_betas,
+	 beuv_alphas, beuv_betas, beuv_l_bnds, beuv_u_bnds, gauv_alphas,
+	 gauv_betas, guuv_alphas, guuv_betas, fuv_alphas, fuv_betas, wuv_alphas,
+	 wuv_betas, hbuv_prs, puv_lambdas, biuv_p_per_tr, biuv_num_trials,
+	 nbuv_p_per_tr, nbuv_num_trials, geuv_p_per_tr, hguv_tot_pop,
+	 hguv_sel_pop, hguv_num_drawn, hpuv_prs, uv_corr))
+{ }
+
+
+inline AleatoryDistParams::AleatoryDistParams(const AleatoryDistParams& adp)
+{
+  // Increment new (no old to decrement)
+  adpRep = adp.adpRep;
+  if (adpRep) // Check for an assignment of NULL
+    adpRep->referenceCount++;
+}
+
+
+inline AleatoryDistParams::~AleatoryDistParams()
+{
+  if (adpRep) { // Check for NULL
+    --adpRep->referenceCount; // decrement
+    if (adpRep->referenceCount == 0)
+      delete adpRep;
+  }
+}
+
+
+inline AleatoryDistParams& AleatoryDistParams::
+operator=(const AleatoryDistParams& adp)
+{
+  // Decrement old
+  if (adpRep) // Check for NULL
+    if ( --adpRep->referenceCount == 0 ) 
+      delete adpRep;
+  // Increment new
+  adpRep = adp.adpRep;
+  if (adpRep) // Check for an assignment of NULL
+    adpRep->referenceCount++;
+  return *this;
+}
+
+
+inline size_t AleatoryDistParams::cauv() const
+{
+  return adpRep->normalMeans.length() + adpRep->lognormalMeans.length() +
+    adpRep->uniformLowerBnds.length() + adpRep->loguniformLowerBnds.length() +
+    adpRep->triangularModes.length() + adpRep->exponentialBetas.length() + 
+    adpRep->betaAlphas.length() + adpRep->gammaAlphas.length() +
+    adpRep->gumbelAlphas.length() + adpRep->frechetAlphas.length() +
+    adpRep->weibullAlphas.length() + adpRep->histogramBinPairs.size();
+}
+
+
+inline size_t AleatoryDistParams::diauv() const
+{
+  return adpRep->poissonLambdas.length() + adpRep->binomialProbPerTrial.length() +
+    adpRep->negBinomialProbPerTrial.length() +
+    adpRep->geometricProbPerTrial.length() + adpRep->hyperGeomNumDrawn.length();
+}
+
+
+inline size_t AleatoryDistParams::drauv() const
+{ return adpRep->histogramPointPairs.size(); }
+
+
+inline size_t AleatoryDistParams::dauv()  const
+{ return diauv() + drauv(); }
+
+
+inline void AleatoryDistParams::copy(const AleatoryDistParams& adp)
+{ 
+  // Decrement old
+  if (adpRep) // Check for NULL
+    if ( --adpRep->referenceCount == 0 ) 
+      delete adpRep;
+  // Create new
+  adpRep = new AleatoryDistParamsRep(adp.normal_means(),
+    adp.normal_std_deviations(), adp.normal_lower_bounds(),
+    adp.normal_upper_bounds(), adp.lognormal_means(),
+    adp.lognormal_std_deviations(), adp.lognormal_lambdas(),
+    adp.lognormal_zetas(), adp.lognormal_error_factors(),
+    adp.lognormal_lower_bounds(), adp.lognormal_upper_bounds(),
+    adp.uniform_lower_bounds(), adp.uniform_upper_bounds(),
+    adp.loguniform_lower_bounds(), adp.loguniform_upper_bounds(),
+    adp.triangular_modes(), adp.triangular_lower_bounds(),
+    adp.triangular_upper_bounds(), adp.exponential_betas(), adp.beta_alphas(),
+    adp.beta_betas(), adp.beta_lower_bounds(), adp.beta_upper_bounds(),
+    adp.gamma_alphas(), adp.gamma_betas(), adp.gumbel_alphas(),
+    adp.gumbel_betas(), adp.frechet_alphas(), adp.frechet_betas(),
+    adp.weibull_alphas(), adp.weibull_betas(), adp.histogram_bin_pairs(),
+    adp.poisson_lambdas(), adp.binomial_probability_per_trial(),
+    adp.binomial_num_trials(), adp.negative_binomial_probability_per_trial(),
+    adp.negative_binomial_num_trials(), adp.geometric_probability_per_trial(),
+    adp.hypergeometric_total_population(),
+    adp.hypergeometric_selected_population(), adp.hypergeometric_num_drawn(),
+    adp.histogram_point_pairs(), adp.uncertain_correlations());
+}
+
+
+inline const RealVector& AleatoryDistParams::normal_means() const
+{ return adpRep->normalMeans; }
+
+
+inline const Real& AleatoryDistParams::normal_mean(size_t i) const
+{ return adpRep->normalMeans[i]; }
+
+
+inline void AleatoryDistParams::normal_means(const RealVector& n_means)
+{ adpRep->normalMeans = n_means; }
+
+
+inline void AleatoryDistParams::normal_mean(const Real& n_mean, size_t i)
+{ adpRep->normalMeans[i] = n_mean; }
+
+
+inline const RealVector& AleatoryDistParams::normal_std_deviations() const
+{ return adpRep->normalStdDevs; }
+
+
+inline const Real& AleatoryDistParams::normal_std_deviation(size_t i) const
+{ return adpRep->normalStdDevs[i]; }
+
+
+inline void AleatoryDistParams::
+normal_std_deviations(const RealVector& n_std_devs)
+{ adpRep->normalStdDevs = n_std_devs; }
+
+
+inline void AleatoryDistParams::
+normal_std_deviation(const Real& n_std_dev, size_t i)
+{ adpRep->normalStdDevs[i] = n_std_dev; }
+
+
+inline const RealVector& AleatoryDistParams::normal_lower_bounds() const
+{ return adpRep->normalLowerBnds; }
+
+
+inline const Real& AleatoryDistParams::normal_lower_bound(size_t i) const
+{ return adpRep->normalLowerBnds[i]; }
+
+
+inline void AleatoryDistParams::
+normal_lower_bounds(const RealVector& n_lower_bnds)
+{ adpRep->normalLowerBnds = n_lower_bnds; }
+
+
+inline void AleatoryDistParams::
+normal_lower_bound(const Real& n_lower_bnd, size_t i)
+{ adpRep->normalLowerBnds[i] = n_lower_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::normal_upper_bounds() const
+{ return adpRep->normalUpperBnds; }
+
+
+inline const Real& AleatoryDistParams::normal_upper_bound(size_t i) const
+{ return adpRep->normalUpperBnds[i]; }
+
+
+inline void AleatoryDistParams::
+normal_upper_bounds(const RealVector& n_upper_bnds)
+{ adpRep->normalUpperBnds = n_upper_bnds; }
+
+
+inline void AleatoryDistParams::
+normal_upper_bound(const Real& n_upper_bnd, size_t i)
+{ adpRep->normalUpperBnds[i] = n_upper_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::lognormal_means() const
+{ return adpRep->lognormalMeans; }
+
+
+inline const Real& AleatoryDistParams::lognormal_mean(size_t i) const
+{ return adpRep->lognormalMeans[i]; }
+
+
+inline void AleatoryDistParams::lognormal_means(const RealVector& ln_means)
+{ adpRep->lognormalMeans = ln_means; }
+
+
+inline void AleatoryDistParams::lognormal_mean(const Real& ln_mean, size_t i)
+{ adpRep->lognormalMeans[i] = ln_mean; }
+
+
+inline const RealVector& AleatoryDistParams::lognormal_std_deviations() const
+{ return adpRep->lognormalStdDevs; }
+
+
+inline const Real& AleatoryDistParams::lognormal_std_deviation(size_t i) const
+{ return adpRep->lognormalStdDevs[i]; }
+
+
+inline void AleatoryDistParams::
+lognormal_std_deviations(const RealVector& ln_std_devs)
+{ adpRep->lognormalStdDevs = ln_std_devs; }
+
+
+inline void AleatoryDistParams::
+lognormal_std_deviation(const Real& ln_std_dev, size_t i)
+{ adpRep->lognormalStdDevs[i] = ln_std_dev; }
+
+
+inline const RealVector& AleatoryDistParams::lognormal_lambdas() const
+{ return adpRep->lognormalLambdas; }
+
+
+inline const Real& AleatoryDistParams::lognormal_lambda(size_t i) const
+{ return adpRep->lognormalLambdas[i]; }
+
+
+inline void AleatoryDistParams::lognormal_lambdas(const RealVector& ln_lambdas)
+{ adpRep->lognormalLambdas = ln_lambdas; }
+
+
+inline void AleatoryDistParams::
+lognormal_lambda(const Real& ln_lambda, size_t i)
+{ adpRep->lognormalLambdas[i] = ln_lambda; }
+
+
+inline const RealVector& AleatoryDistParams::lognormal_zetas() const
+{ return adpRep->lognormalZetas; }
+
+
+inline const Real& AleatoryDistParams::lognormal_zeta(size_t i) const
+{ return adpRep->lognormalZetas[i]; }
+
+
+inline void AleatoryDistParams::lognormal_zetas(const RealVector& ln_zetas)
+{ adpRep->lognormalZetas = ln_zetas; }
+
+
+inline void AleatoryDistParams::lognormal_zeta(const Real& ln_zeta, size_t i)
+{ adpRep->lognormalZetas[i] = ln_zeta; }
+
+
+inline const RealVector& AleatoryDistParams::lognormal_error_factors() const
+{ return adpRep->lognormalErrFacts; }
+
+
+inline const Real& AleatoryDistParams::lognormal_error_factor(size_t i) const
+{ return adpRep->lognormalErrFacts[i]; }
+
+
+inline void AleatoryDistParams::
+lognormal_error_factors(const RealVector& ln_err_facts)
+{ adpRep->lognormalErrFacts = ln_err_facts; }
+
+
+inline void AleatoryDistParams::
+lognormal_error_factor(const Real& ln_err_fact, size_t i)
+{ adpRep->lognormalErrFacts[i] = ln_err_fact; }
+
+
+inline const RealVector& AleatoryDistParams::lognormal_lower_bounds() const
+{ return adpRep->lognormalLowerBnds; }
+
+
+inline const Real& AleatoryDistParams::lognormal_lower_bound(size_t i) const
+{ return adpRep->lognormalLowerBnds[i]; }
+
+
+inline void AleatoryDistParams::
+lognormal_lower_bounds(const RealVector& ln_lower_bnds)
+{ adpRep->lognormalLowerBnds = ln_lower_bnds; }
+
+
+inline void AleatoryDistParams::
+lognormal_lower_bound(const Real& ln_lower_bnd, size_t i)
+{ adpRep->lognormalLowerBnds[i] = ln_lower_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::lognormal_upper_bounds() const
+{ return adpRep->lognormalUpperBnds; }
+
+
+inline const Real& AleatoryDistParams::lognormal_upper_bound(size_t i) const
+{ return adpRep->lognormalUpperBnds[i]; }
+
+
+inline void AleatoryDistParams::
+lognormal_upper_bounds(const RealVector& ln_upper_bnds)
+{ adpRep->lognormalUpperBnds = ln_upper_bnds; }
+
+
+inline void AleatoryDistParams::
+lognormal_upper_bound(const Real& ln_upper_bnd, size_t i)
+{ adpRep->lognormalUpperBnds[i] = ln_upper_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::uniform_lower_bounds() const
+{ return adpRep->uniformLowerBnds; }
+
+
+inline const Real& AleatoryDistParams::uniform_lower_bound(size_t i) const
+{ return adpRep->uniformLowerBnds[i]; }
+
+
+inline void AleatoryDistParams::
+uniform_lower_bounds(const RealVector& u_lower_bnds)
+{ adpRep->uniformLowerBnds = u_lower_bnds; }
+
+
+inline void AleatoryDistParams::
+uniform_lower_bound(const Real& u_lower_bnd, size_t i)
+{ adpRep->uniformLowerBnds[i] = u_lower_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::uniform_upper_bounds() const
+{ return adpRep->uniformUpperBnds; }
+
+
+inline const Real& AleatoryDistParams::uniform_upper_bound(size_t i) const
+{ return adpRep->uniformUpperBnds[i]; }
+
+
+inline void AleatoryDistParams::
+uniform_upper_bounds(const RealVector& u_upper_bnds)
+{ adpRep->uniformUpperBnds = u_upper_bnds; }
+
+
+inline void AleatoryDistParams::
+uniform_upper_bound(const Real& u_upper_bnd, size_t i)
+{ adpRep->uniformUpperBnds[i] = u_upper_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::loguniform_lower_bounds() const
+{ return adpRep->loguniformLowerBnds; }
+
+
+inline const Real& AleatoryDistParams::loguniform_lower_bound(size_t i) const
+{ return adpRep->loguniformLowerBnds[i]; }
+
+
+inline void AleatoryDistParams::
+loguniform_lower_bounds(const RealVector& lu_lower_bnds)
+{ adpRep->loguniformLowerBnds = lu_lower_bnds; }
+
+
+inline void AleatoryDistParams::
+loguniform_lower_bound(const Real& lu_lower_bnd, size_t i)
+{ adpRep->loguniformLowerBnds[i] = lu_lower_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::loguniform_upper_bounds() const
+{ return adpRep->loguniformUpperBnds; }
+
+
+inline const Real& AleatoryDistParams::loguniform_upper_bound(size_t i) const
+{ return adpRep->loguniformUpperBnds[i]; }
+
+
+inline void AleatoryDistParams::
+loguniform_upper_bounds(const RealVector& lu_upper_bnds)
+{ adpRep->loguniformUpperBnds = lu_upper_bnds; }
+
+
+inline void AleatoryDistParams::
+loguniform_upper_bound(const Real& lu_upper_bnd, size_t i)
+{ adpRep->loguniformUpperBnds[i] = lu_upper_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::triangular_modes() const
+{ return adpRep->triangularModes; }
+
+
+inline const Real& AleatoryDistParams::triangular_mode(size_t i) const
+{ return adpRep->triangularModes[i]; }
+
+
+inline void AleatoryDistParams::triangular_modes(const RealVector& t_modes)
+{ adpRep->triangularModes = t_modes; }
+
+
+inline void AleatoryDistParams::triangular_mode(const Real& t_mode, size_t i)
+{ adpRep->triangularModes[i] = t_mode; }
+
+
+inline const RealVector& AleatoryDistParams::triangular_lower_bounds() const
+{ return adpRep->triangularLowerBnds; }
+
+
+inline const Real& AleatoryDistParams::triangular_lower_bound(size_t i) const
+{ return adpRep->triangularLowerBnds[i]; }
+
+
+inline void AleatoryDistParams::
+triangular_lower_bounds(const RealVector& t_lower_bnds)
+{ adpRep->triangularLowerBnds = t_lower_bnds; }
+
+
+inline void AleatoryDistParams::
+triangular_lower_bound(const Real& t_lower_bnd, size_t i)
+{ adpRep->triangularLowerBnds[i] = t_lower_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::triangular_upper_bounds() const
+{ return adpRep->triangularUpperBnds; }
+
+
+inline const Real& AleatoryDistParams::triangular_upper_bound(size_t i) const
+{ return adpRep->triangularUpperBnds[i]; }
+
+
+inline void AleatoryDistParams::
+triangular_upper_bounds(const RealVector& t_upper_bnds)
+{ adpRep->triangularUpperBnds = t_upper_bnds; }
+
+
+inline void AleatoryDistParams::
+triangular_upper_bound(const Real& t_upper_bnd, size_t i)
+{ adpRep->triangularUpperBnds[i] = t_upper_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::exponential_betas() const
+{ return adpRep->exponentialBetas; }
+
+
+inline const Real& AleatoryDistParams::exponential_beta(size_t i) const
+{ return adpRep->exponentialBetas[i]; }
+
+
+inline void AleatoryDistParams::exponential_betas(const RealVector& e_betas)
+{ adpRep->exponentialBetas = e_betas; }
+
+
+inline void AleatoryDistParams::exponential_beta(const Real& e_beta, size_t i)
+{ adpRep->exponentialBetas[i] = e_beta; }
+
+
+inline const RealVector& AleatoryDistParams::beta_alphas() const
+{ return adpRep->betaAlphas; }
+
+
+inline const Real& AleatoryDistParams::beta_alpha(size_t i) const
+{ return adpRep->betaAlphas[i]; }
+
+
+inline void AleatoryDistParams::beta_alphas(const RealVector& b_alphas)
+{ adpRep->betaAlphas = b_alphas; }
+
+
+inline void AleatoryDistParams::beta_alpha(const Real& b_alpha, size_t i)
+{ adpRep->betaAlphas[i] = b_alpha; }
+
+
+inline const RealVector& AleatoryDistParams::beta_betas() const
+{ return adpRep->betaBetas; }
+
+
+inline const Real& AleatoryDistParams::beta_beta(size_t i) const
+{ return adpRep->betaBetas[i]; }
+
+
+inline void AleatoryDistParams::beta_betas(const RealVector& b_betas)
+{ adpRep->betaBetas = b_betas; }
+
+
+inline void AleatoryDistParams::beta_beta(const Real& b_beta, size_t i)
+{ adpRep->betaBetas[i] = b_beta; }
+
+
+inline const RealVector& AleatoryDistParams::beta_lower_bounds() const
+{ return adpRep->betaLowerBnds; }
+
+
+inline const Real& AleatoryDistParams::beta_lower_bound(size_t i) const
+{ return adpRep->betaLowerBnds[i]; }
+
+
+inline void AleatoryDistParams::
+beta_lower_bounds(const RealVector& b_lower_bnds)
+{ adpRep->betaLowerBnds = b_lower_bnds; }
+
+
+inline void AleatoryDistParams::
+beta_lower_bound(const Real& b_lower_bnd, size_t i)
+{ adpRep->betaLowerBnds[i] = b_lower_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::beta_upper_bounds() const
+{ return adpRep->betaUpperBnds; }
+
+
+inline const Real& AleatoryDistParams::beta_upper_bound(size_t i) const
+{ return adpRep->betaUpperBnds[i]; }
+
+
+inline void AleatoryDistParams::
+beta_upper_bounds(const RealVector& b_upper_bnds)
+{ adpRep->betaUpperBnds = b_upper_bnds; }
+
+
+inline void AleatoryDistParams::
+beta_upper_bound(const Real& b_upper_bnd, size_t i)
+{ adpRep->betaUpperBnds[i] = b_upper_bnd; }
+
+
+inline const RealVector& AleatoryDistParams::gamma_alphas() const
+{ return adpRep->gammaAlphas; }
+
+
+inline const Real& AleatoryDistParams::gamma_alpha(size_t i) const
+{ return adpRep->gammaAlphas[i]; }
+
+
+inline void AleatoryDistParams::gamma_alphas(const RealVector& ga_alphas)
+{ adpRep->gammaAlphas = ga_alphas; }
+
+
+inline void AleatoryDistParams::gamma_alpha(const Real& ga_alpha, size_t i)
+{ adpRep->gammaAlphas[i] = ga_alpha; }
+
+
+inline const RealVector& AleatoryDistParams::gamma_betas() const
+{ return adpRep->gammaBetas; }
+
+
+inline const Real& AleatoryDistParams::gamma_beta(size_t i) const
+{ return adpRep->gammaBetas[i]; }
+
+
+inline void AleatoryDistParams::gamma_betas(const RealVector& ga_betas)
+{ adpRep->gammaBetas = ga_betas; }
+
+
+inline void AleatoryDistParams::gamma_beta(const Real& ga_beta, size_t i)
+{ adpRep->gammaBetas[i] = ga_beta; }
+
+
+inline const RealVector& AleatoryDistParams::gumbel_alphas() const
+{ return adpRep->gumbelAlphas; }
+
+
+inline const Real& AleatoryDistParams::gumbel_alpha(size_t i) const
+{ return adpRep->gumbelAlphas[i]; }
+
+
+inline void AleatoryDistParams::gumbel_alphas(const RealVector& gu_alphas)
+{ adpRep->gumbelAlphas = gu_alphas; }
+
+
+inline void AleatoryDistParams::gumbel_alpha(const Real& gu_alpha, size_t i)
+{ adpRep->gumbelAlphas[i] = gu_alpha; }
+
+
+inline const RealVector& AleatoryDistParams::gumbel_betas() const
+{ return adpRep->gumbelBetas; }
+
+
+inline const Real& AleatoryDistParams::gumbel_beta(size_t i) const
+{ return adpRep->gumbelBetas[i]; }
+
+
+inline void AleatoryDistParams::gumbel_betas(const RealVector& gu_betas)
+{ adpRep->gumbelBetas = gu_betas; }
+
+
+inline void AleatoryDistParams::gumbel_beta(const Real& gu_beta, size_t i)
+{ adpRep->gumbelBetas[i] = gu_beta; }
+
+
+inline const RealVector& AleatoryDistParams::frechet_alphas() const
+{ return adpRep->frechetAlphas; }
+
+
+inline const Real& AleatoryDistParams::frechet_alpha(size_t i) const
+{ return adpRep->frechetAlphas[i]; }
+
+
+inline void AleatoryDistParams::frechet_alphas(const RealVector& f_alphas)
+{ adpRep->frechetAlphas = f_alphas; }
+
+
+inline void AleatoryDistParams::frechet_alpha(const Real& f_alpha, size_t i)
+{ adpRep->frechetAlphas[i] = f_alpha; }
+
+
+inline const RealVector& AleatoryDistParams::frechet_betas() const
+{ return adpRep->frechetBetas; }
+
+
+inline const Real& AleatoryDistParams::frechet_beta(size_t i) const
+{ return adpRep->frechetBetas[i]; }
+
+
+inline void AleatoryDistParams::frechet_betas(const RealVector& f_betas)
+{ adpRep->frechetBetas = f_betas; }
+
+
+inline void AleatoryDistParams::frechet_beta(const Real& f_beta, size_t i)
+{ adpRep->frechetBetas[i] = f_beta; }
+
+
+inline const RealVector& AleatoryDistParams::weibull_alphas() const
+{ return adpRep->weibullAlphas; }
+
+
+inline const Real& AleatoryDistParams::weibull_alpha(size_t i) const
+{ return adpRep->weibullAlphas[i]; }
+
+
+inline void AleatoryDistParams::weibull_alphas(const RealVector& w_alphas)
+{ adpRep->weibullAlphas = w_alphas; }
+
+
+inline void AleatoryDistParams::weibull_alpha(const Real& alpha, size_t i)
+{ adpRep->weibullAlphas[i] = alpha; }
+
+
+inline const RealVector& AleatoryDistParams::weibull_betas() const
+{ return adpRep->weibullBetas; }
+
+
+inline const Real& AleatoryDistParams::weibull_beta(size_t i) const
+{ return adpRep->weibullBetas[i]; }
+
+
+inline void AleatoryDistParams::weibull_betas(const RealVector& w_betas)
+{ adpRep->weibullBetas = w_betas; }
+
+
+inline void AleatoryDistParams::weibull_beta(const Real& beta, size_t i)
+{ adpRep->weibullBetas[i] = beta; }
+
+
+inline const RealVectorArray& AleatoryDistParams::histogram_bin_pairs() const
+{ return adpRep->histogramBinPairs; }
+
+
+inline const RealVector& AleatoryDistParams::histogram_bin_pairs(size_t i) const
+{ return adpRep->histogramBinPairs[i]; }
+
+
+inline void AleatoryDistParams::
+histogram_bin_pairs(const RealVectorArray& h_bin_pairs)
+{ adpRep->histogramBinPairs = h_bin_pairs; }
+
+
+inline void AleatoryDistParams::
+histogram_bin_pairs(const RealVector& h_bin_pr, size_t i)
+{ adpRep->histogramBinPairs[i] = h_bin_pr; }
+
+
+inline const RealVector& AleatoryDistParams::poisson_lambdas() const
+{ return adpRep->poissonLambdas; }
+
+
+inline const Real& AleatoryDistParams::poisson_lambda(size_t i) const
+{ return adpRep->poissonLambdas[i]; }
+
+
+inline void AleatoryDistParams::poisson_lambdas(const RealVector& p_lambdas)
+{ adpRep->poissonLambdas = p_lambdas; }
+
+
+inline void AleatoryDistParams::poisson_lambda(const Real& p_lambda, size_t i)
+{ adpRep->poissonLambdas[i] = p_lambda; }
+
+
+inline const RealVector& AleatoryDistParams::
+binomial_probability_per_trial() const
+{ return adpRep->binomialProbPerTrial; }
+
+
+inline const Real& AleatoryDistParams::
+binomial_probability_per_trial(size_t i) const
+{ return adpRep->binomialProbPerTrial[i]; }
+
+
+inline void AleatoryDistParams::
+binomial_probability_per_trial(const RealVector& probs_per_tr)
+{ adpRep->binomialProbPerTrial = probs_per_tr; }
+
+
+inline void AleatoryDistParams::
+binomial_probability_per_trial(const Real& prob_per_tr, size_t i)
+{ adpRep->binomialProbPerTrial[i] = prob_per_tr; }
+
+
+inline const IntVector& AleatoryDistParams::binomial_num_trials() const
+{ return adpRep->binomialNumTrials; }
+
+
+inline int AleatoryDistParams::binomial_num_trials(size_t i) const
+{ return adpRep->binomialNumTrials[i]; }
+
+
+inline void AleatoryDistParams::binomial_num_trials(const IntVector& num_tr)
+{ adpRep->binomialNumTrials = num_tr; }
+
+
+inline void AleatoryDistParams::binomial_num_trials(int num_tr, size_t i)
+{ adpRep->binomialNumTrials[i] = num_tr; }
+
+
+inline const RealVector& AleatoryDistParams::
+negative_binomial_probability_per_trial() const
+{ return adpRep->negBinomialProbPerTrial; }
+
+
+inline const Real& AleatoryDistParams::
+negative_binomial_probability_per_trial(size_t i) const
+{ return adpRep->negBinomialProbPerTrial[i]; }
+
+
+inline void AleatoryDistParams::
+negative_binomial_probability_per_trial(const RealVector& probs_per_tr)
+{
+  if (adpRep->negBinomialProbPerTrial.empty())//Teuchos operator= doesn't resize
+    adpRep->negBinomialProbPerTrial.sizeUninitialized(probs_per_tr.length());
+  adpRep->negBinomialProbPerTrial = probs_per_tr; }
+
+
+inline void AleatoryDistParams::
+negative_binomial_probability_per_trial(const Real& prob_per_tr, size_t i)
+{ adpRep->negBinomialProbPerTrial[i] = prob_per_tr; }
+
+
+inline const IntVector& AleatoryDistParams::negative_binomial_num_trials() const
+{ return adpRep->negBinomialNumTrials; }
+
+
+inline int AleatoryDistParams::negative_binomial_num_trials(size_t i) const
+{ return adpRep->negBinomialNumTrials[i]; }
+
+
+inline void AleatoryDistParams::
+negative_binomial_num_trials(const IntVector& num_tr)
+{ adpRep->negBinomialNumTrials = num_tr; }
+
+
+inline void AleatoryDistParams::
+negative_binomial_num_trials(int num_tr, size_t i)
+{ adpRep->negBinomialNumTrials[i] = num_tr; }
+
+
+inline const RealVector& AleatoryDistParams::
+geometric_probability_per_trial() const
+{ return adpRep->geometricProbPerTrial; }
+
+
+inline const Real& AleatoryDistParams::
+geometric_probability_per_trial(size_t i) const
+{ return adpRep->geometricProbPerTrial[i]; }
+
+
+inline void AleatoryDistParams::
+geometric_probability_per_trial(const RealVector& probs_per_tr)
+{ adpRep->geometricProbPerTrial = probs_per_tr; }
+
+
+inline void AleatoryDistParams::
+geometric_probability_per_trial(const Real& prob_per_tr, size_t i)
+{ adpRep->geometricProbPerTrial[i] = prob_per_tr; }
+
+
+inline const IntVector& AleatoryDistParams::
+hypergeometric_total_population() const
+{ return adpRep->hyperGeomTotalPopulation; }
+
+
+inline int AleatoryDistParams::hypergeometric_total_population(size_t i) const
+{ return adpRep->hyperGeomTotalPopulation[i]; }
+
+
+inline void AleatoryDistParams::
+hypergeometric_total_population(const IntVector& total_pop)
+{ adpRep->hyperGeomTotalPopulation = total_pop; }
+
+
+inline void AleatoryDistParams::
+hypergeometric_total_population(int total_pop, size_t i)
+{ adpRep->hyperGeomTotalPopulation[i] = total_pop; }
+
+
+inline const IntVector& AleatoryDistParams::
+hypergeometric_selected_population() const
+{ return adpRep->hyperGeomSelectedPopulation; }
+
+
+inline int AleatoryDistParams::
+hypergeometric_selected_population(size_t i) const
+{ return adpRep->hyperGeomSelectedPopulation[i]; }
+
+
+inline void AleatoryDistParams::
+hypergeometric_selected_population(const IntVector& sel_pop)
+{ adpRep->hyperGeomSelectedPopulation = sel_pop; }
+
+
+inline void AleatoryDistParams::
+hypergeometric_selected_population(int sel_pop, size_t i)
+{ adpRep->hyperGeomSelectedPopulation[i] = sel_pop; }
+
+
+inline const IntVector& AleatoryDistParams::hypergeometric_num_drawn() const
+{ return adpRep->hyperGeomNumDrawn; }
+
+
+inline int AleatoryDistParams::hypergeometric_num_drawn(size_t i) const
+{ return adpRep->hyperGeomNumDrawn[i]; }
+
+
+inline void AleatoryDistParams::
+hypergeometric_num_drawn(const IntVector& num_drawn)
+{ adpRep->hyperGeomNumDrawn = num_drawn; }
+
+
+inline void AleatoryDistParams::
+hypergeometric_num_drawn(int num_drawn, size_t i)
+{ adpRep->hyperGeomNumDrawn[i] = num_drawn; }
+
+
+inline const RealVectorArray& AleatoryDistParams::histogram_point_pairs() const
+{ return adpRep->histogramPointPairs; }
+
+
+inline const RealVector& AleatoryDistParams::
+histogram_point_pairs(size_t i) const
+{ return adpRep->histogramPointPairs[i]; }
+
+
+inline void AleatoryDistParams::
+histogram_point_pairs(const RealVectorArray& h_pt_pairs)
+{ adpRep->histogramPointPairs = h_pt_pairs; }
+
+
+inline void AleatoryDistParams::
+histogram_point_pairs(const RealVector& h_pt_pairs_i, size_t i)
+{ adpRep->histogramPointPairs[i] = h_pt_pairs_i; }
+
+
+inline const RealSymMatrix& AleatoryDistParams::uncertain_correlations() const
+{ return adpRep->uncertainCorrelations; }
+
+
+inline void AleatoryDistParams::
+uncertain_correlations(const RealSymMatrix& uncertain_corr)
+{ adpRep->uncertainCorrelations = uncertain_corr; }
+
+
+inline void AleatoryDistParams::update(const AleatoryDistParams& adp)
+{
+  if (!adpRep) // if no rep, create a new instance
+    copy(adp);
+  else {      // update data of existing instance
+    normal_means(adp.normal_means());
+    normal_std_deviations(adp.normal_std_deviations());
+    normal_lower_bounds(adp.normal_lower_bounds());
+    normal_upper_bounds(adp.normal_upper_bounds());
+    lognormal_means(adp.lognormal_means());
+    lognormal_std_deviations(adp.lognormal_std_deviations());
+    lognormal_lambdas(adp.lognormal_lambdas());
+    lognormal_zetas(adp.lognormal_zetas());
+    lognormal_error_factors(adp.lognormal_error_factors());
+    lognormal_lower_bounds(adp.lognormal_lower_bounds());
+    lognormal_upper_bounds(adp.lognormal_upper_bounds());
+    uniform_lower_bounds(adp.uniform_lower_bounds());
+    uniform_upper_bounds(adp.uniform_upper_bounds());
+    loguniform_lower_bounds(adp.loguniform_lower_bounds());
+    loguniform_upper_bounds(adp.loguniform_upper_bounds());
+    triangular_modes(adp.triangular_modes());
+    triangular_lower_bounds(adp.triangular_lower_bounds());
+    triangular_upper_bounds(adp.triangular_upper_bounds());
+    exponential_betas(adp.exponential_betas());
+    beta_alphas(adp.beta_alphas());
+    beta_betas(adp.beta_betas());
+    beta_lower_bounds(adp.beta_lower_bounds());
+    beta_upper_bounds(adp.beta_upper_bounds());
+    gamma_alphas(adp.gamma_alphas());
+    gamma_betas(adp.gamma_betas());
+    gumbel_alphas(adp.gumbel_alphas());
+    gumbel_betas(adp.gumbel_betas());
+    frechet_alphas(adp.frechet_alphas());
+    frechet_betas(adp.frechet_betas());
+    weibull_alphas(adp.weibull_alphas());
+    weibull_betas(adp.weibull_betas());
+    histogram_bin_pairs(adp.histogram_bin_pairs());
+    poisson_lambdas(adp.poisson_lambdas());
+    binomial_probability_per_trial(adp.binomial_probability_per_trial());
+    binomial_num_trials(adp.binomial_num_trials());
+    negative_binomial_probability_per_trial(
+      adp.negative_binomial_probability_per_trial());
+    negative_binomial_num_trials(adp.negative_binomial_num_trials());
+    geometric_probability_per_trial(adp.geometric_probability_per_trial());
+    hypergeometric_total_population(adp.hypergeometric_total_population());
+    hypergeometric_selected_population(
+      adp.hypergeometric_selected_population());
+    hypergeometric_num_drawn(adp.hypergeometric_num_drawn());
+    histogram_point_pairs(adp.histogram_point_pairs());
+    uncertain_correlations(adp.uncertain_correlations());
+  }
+}
+
+
+inline void AleatoryDistParams::
+update_partial(const AleatoryDistParams& adp_x,
+	       const Pecos::ShortArray& x_types,
+	       const Pecos::ShortArray& u_types)
+{
+  if (!adpRep) { // if no rep, error 
+    PCerr << "Error: AleatoryDistParams::update_partial() requires a valid "
+	  << "representation." << std::endl;
+    abort_handler(-1);
+  }
+  else { // update data of existing instance
+    size_t i, num_vars = x_types.size(), nuv = 0, lnuv = 0, luuv = 0, tuv = 0,
+      buv = 0, gauv = 0, guuv = 0, fuv = 0, wuv = 0, hbuv = 0;
+    if (u_types.size() != num_vars) {
+      PCerr << "Error: AleatoryDistParams::update_partial() requires "
+	    << "transformation variable types." << std::endl;
+      abort_handler(-1);
+    }
+    for (i=0; i<num_vars; ++i) {
+      short u_type_i = u_types[i], x_type_i = x_types[i];
+      if (x_types[i] == u_type_i)
+	switch (u_type_i) {
+	case STD_NORMAL: ++nuv; break;
+	case NORMAL: case BOUNDED_NORMAL://u-space NORMAL not currently possible
+	  normal_mean(adp_x.normal_mean(nuv), nuv);
+	  normal_std_deviation(adp_x.normal_std_deviation(nuv), nuv);
+	  if (u_type_i == BOUNDED_NORMAL) {
+	    normal_lower_bound(adp_x.normal_lower_bound(nuv), nuv);
+	    normal_upper_bound(adp_x.normal_upper_bound(nuv), nuv);
+	  }
+	  ++nuv; break;
+	case LOGNORMAL:	case BOUNDED_LOGNORMAL:
+	  if (!adp_x.lognormal_means().empty()) {
+	    lognormal_mean(adp_x.lognormal_mean(lnuv), lnuv);
+	    if (!adp_x.lognormal_std_deviations().empty())
+	      lognormal_std_deviation(adp_x.lognormal_std_deviation(lnuv),lnuv);
+	    else
+	      lognormal_error_factor(adp_x.lognormal_error_factor(lnuv), lnuv);
+	  }
+	  else if (!adp_x.lognormal_lambdas().empty()) {
+	    lognormal_lambda(adp_x.lognormal_lambda(lnuv), lnuv);
+	    lognormal_zeta(adp_x.lognormal_zeta(lnuv), lnuv);
+	  }
+	  if (u_type_i == BOUNDED_LOGNORMAL) {
+	    lognormal_lower_bound(adp_x.lognormal_lower_bound(lnuv), lnuv);
+	    lognormal_upper_bound(adp_x.lognormal_upper_bound(lnuv), lnuv);
+	  }
+	  ++lnuv; break;
+	case LOGUNIFORM:
+	  loguniform_lower_bound(adp_x.loguniform_lower_bound(luuv), luuv);
+	  loguniform_upper_bound(adp_x.loguniform_upper_bound(luuv), luuv);
+	  ++luuv; break;
+	case TRIANGULAR:
+	  triangular_mode(adp_x.triangular_mode(tuv), tuv);
+	  triangular_lower_bound(adp_x.triangular_lower_bound(tuv), tuv);
+	  triangular_upper_bound(adp_x.triangular_upper_bound(tuv), tuv);
+	  ++tuv; break;
+	case GUMBEL:
+	  gumbel_alpha(adp_x.gumbel_alpha(guuv), guuv);
+	  gumbel_beta(adp_x.gumbel_beta(guuv),   guuv);
+	  ++guuv; break;
+	case FRECHET:
+	  frechet_alpha(adp_x.frechet_alpha(fuv), fuv);
+	  frechet_beta(adp_x.frechet_beta(fuv),   fuv);
+	  ++fuv; break;
+	case WEIBULL:
+	  weibull_alpha(adp_x.weibull_alpha(wuv), wuv);
+	  weibull_beta(adp_x.weibull_beta(wuv),   wuv);
+	  ++wuv; break;
+	case HISTOGRAM_BIN:
+	  histogram_bin_pairs(adp_x.histogram_bin_pairs(hbuv), hbuv);
+	  ++hbuv; break;
+	//default: no-op
+	}
+      else if (u_type_i == STD_BETA && x_type_i == BETA) {
+	// lower,upper bounds are handled in conversion to STD_BETA
+	beta_alpha(adp_x.beta_alpha(buv), buv);
+	beta_beta(adp_x.beta_beta(buv), buv);
+	++buv;
+      }
+      else if (u_type_i == STD_GAMMA && x_type_i == GAMMA) {
+	// beta is handled in conversion to STD_GAMMA
+	gamma_alpha(adp_x.gamma_alpha(gauv), gauv);
+	++gauv;
+      }
+    }
+  }
+}
+
+
+inline bool AleatoryDistParams::is_null() const
+{ return (adpRep) ? false : true; }
+
+
+/// Container class encapsulating distribution parameters for epistemic
+/// random variables.
+
+/** This class consolidates epistemic distribution data and simplifies the
+    APIs that require distribution parameters. */
+
+class EpistemicDistParams
+{
+public:
+
+  //
+  //- Heading: Constructors, destructor, and operators
+  //
+
+  /// default constructor
+  EpistemicDistParams();
+  /// standard constructor
+  EpistemicDistParams(const RealVectorArray& ciuv_probs,
+    const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
+    const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
+    const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
+    const RealRealMapArray& dusrv_vals_probs);
+  /// copy constructor
+  EpistemicDistParams(const EpistemicDistParams& edp);
+  /// destructor
+  ~EpistemicDistParams();
+
+  /// assignment operator
+  EpistemicDistParams& operator=(const EpistemicDistParams& edp);
+
+  //
+  //- Heading: member functions
+  //
+
+  /// return total number of continuous epistemic uncertain variables
+  size_t ceuv()  const;
+
+  /// return total number of discrete integer epistemic uncertain variables
+  size_t dieuv() const;
+  /// return total number of discrete real epistemic uncertain variables
+  size_t dreuv() const;
+  /// return total number of discrete epistemic uncertain variables
+  size_t deuv()   const;
+
+  /// deep copy (as opposed to operator= shallow copy)
+  void copy(const EpistemicDistParams& edp);
+  /// data update (no changes to representation (unless null))
+  void update(const EpistemicDistParams& edp);
+
   /// return the interval basic probability values
   const RealVectorArray& continuous_interval_probabilities() const;
   /// return the ith interval basic probability value
@@ -766,7 +1883,7 @@ public:
   void discrete_set_real_values_probabilities(const RealRealMapArray&
 					      dsr_vals_probs);
 
-  /// function to check dpRep (does this handle contain a body)
+  /// function to check edpRep (does this handle contain a body)
   bool is_null() const;
 
 private:
@@ -776,1215 +1893,254 @@ private:
   //
 
   /// pointer to the body (handle-body idiom)
-  DistributionParamsRep* dpRep;
+  EpistemicDistParamsRep* edpRep;
 };
 
 
-inline DistributionParams::DistributionParams():
-  dpRep(new DistributionParamsRep())
+inline EpistemicDistParams::EpistemicDistParams():
+  edpRep(new EpistemicDistParamsRep())
 { }
 
 
-inline DistributionParams::
-DistributionParams(const RealVector& nuv_means,
-  const RealVector& nuv_std_devs,     const RealVector& nuv_l_bnds,
-  const RealVector& nuv_u_bnds,       const RealVector& lnuv_means,
-  const RealVector& lnuv_std_devs,    const RealVector& lnuv_lambdas,
-  const RealVector& lnuv_zetas,       const RealVector& lnuv_err_facts,
-  const RealVector& lnuv_l_bnds,      const RealVector& lnuv_u_bnds,
-  const RealVector& uuv_l_bnds,       const RealVector& uuv_u_bnds,
-  const RealVector& luuv_l_bnds,      const RealVector& luuv_u_bnds,
-  const RealVector& tuv_modes,        const RealVector& tuv_l_bnds,
-  const RealVector& tuv_u_bnds,       const RealVector& euv_betas,
-  const RealVector& beuv_alphas,      const RealVector& beuv_betas,
-  const RealVector& beuv_l_bnds,      const RealVector& beuv_u_bnds,
-  const RealVector& gauv_alphas,      const RealVector& gauv_betas,
-  const RealVector& guuv_alphas,      const RealVector& guuv_betas,
-  const RealVector& fuv_alphas,       const RealVector& fuv_betas,
-  const RealVector& wuv_alphas,       const RealVector& wuv_betas,
-  const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
-  const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
-  const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
-  const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
-  const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr,
-  const RealVectorArray& ciuv_probs,  const RealVectorArray& ciuv_l_bnds,
-  const RealVectorArray& ciuv_u_bnds, const RealVectorArray& diuv_probs,
-  const IntVectorArray& diuv_l_bnds,  const IntVectorArray& diuv_u_bnds,
-  const IntRealMapArray& dusiv_vals_probs,
+inline EpistemicDistParams::
+EpistemicDistParams(const RealVectorArray& ciuv_probs,
+  const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
+  const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
+  const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
   const RealRealMapArray& dusrv_vals_probs):
-  dpRep(new DistributionParamsRep(nuv_means, nuv_std_devs, nuv_l_bnds,
-	nuv_u_bnds, lnuv_means, lnuv_std_devs, lnuv_lambdas, lnuv_zetas,
-	lnuv_err_facts, lnuv_l_bnds, lnuv_u_bnds, uuv_l_bnds, uuv_u_bnds,
-	luuv_l_bnds, luuv_u_bnds, tuv_modes, tuv_l_bnds, tuv_u_bnds, euv_betas,
-	beuv_alphas, beuv_betas, beuv_l_bnds, beuv_u_bnds, gauv_alphas,
-	gauv_betas, guuv_alphas, guuv_betas, fuv_alphas, fuv_betas, wuv_alphas,
-	wuv_betas, hbuv_prs, puv_lambdas, biuv_p_per_tr, biuv_num_trials,
-	nbuv_p_per_tr, nbuv_num_trials, geuv_p_per_tr, hguv_tot_pop,
-	hguv_sel_pop, hguv_num_drawn, hpuv_prs, uv_corr, ciuv_probs,
-	ciuv_l_bnds, ciuv_u_bnds, diuv_probs, diuv_l_bnds, diuv_u_bnds,
-	dusiv_vals_probs, dusrv_vals_probs))
+  edpRep(new EpistemicDistParamsRep(ciuv_probs, ciuv_l_bnds, ciuv_u_bnds,
+    diuv_probs, diuv_l_bnds, diuv_u_bnds, dusiv_vals_probs, dusrv_vals_probs))
 { }
 
 
-inline DistributionParams::DistributionParams(const DistributionParams& dp)
+inline EpistemicDistParams::EpistemicDistParams(const EpistemicDistParams& edp)
 {
   // Increment new (no old to decrement)
-  dpRep = dp.dpRep;
-  if (dpRep) // Check for an assignment of NULL
-    dpRep->referenceCount++;
+  edpRep = edp.edpRep;
+  if (edpRep) // Check for an assignment of NULL
+    edpRep->referenceCount++;
 }
 
 
-inline DistributionParams::~DistributionParams()
+inline EpistemicDistParams::~EpistemicDistParams()
 {
-  if (dpRep) { // Check for NULL
-    --dpRep->referenceCount; // decrement
-    if (dpRep->referenceCount == 0)
-      delete dpRep;
+  if (edpRep) { // Check for NULL
+    --edpRep->referenceCount; // decrement
+    if (edpRep->referenceCount == 0)
+      delete edpRep;
   }
 }
 
 
-inline DistributionParams& DistributionParams::
-operator=(const DistributionParams& dp)
+inline EpistemicDistParams& EpistemicDistParams::
+operator=(const EpistemicDistParams& edp)
 {
   // Decrement old
-  if (dpRep) // Check for NULL
-    if ( --dpRep->referenceCount == 0 ) 
-      delete dpRep;
+  if (edpRep) // Check for NULL
+    if ( --edpRep->referenceCount == 0 ) 
+      delete edpRep;
   // Increment new
-  dpRep = dp.dpRep;
-  if (dpRep) // Check for an assignment of NULL
-    dpRep->referenceCount++;
+  edpRep = edp.edpRep;
+  if (edpRep) // Check for an assignment of NULL
+    edpRep->referenceCount++;
   return *this;
 }
 
 
-inline size_t DistributionParams::cauv() const
-{
-  return dpRep->normalMeans.length() + dpRep->lognormalMeans.length() +
-    dpRep->uniformLowerBnds.length() + dpRep->loguniformLowerBnds.length() +
-    dpRep->triangularModes.length() + dpRep->exponentialBetas.length() + 
-    dpRep->betaAlphas.length() + dpRep->gammaAlphas.length() +
-    dpRep->gumbelAlphas.length() + dpRep->frechetAlphas.length() +
-    dpRep->weibullAlphas.length() + dpRep->histogramBinPairs.size();
-}
+inline size_t EpistemicDistParams::ceuv() const
+{ return edpRep->contIntervalProbs.size(); }
 
 
-inline size_t DistributionParams::ceuv() const
-{ return dpRep->contIntervalProbs.size(); }
+inline size_t EpistemicDistParams::dieuv() const
+{ return edpRep->discIntervalProbs.size() + edpRep->discSetIntValsProbs.size();}
 
 
-inline size_t DistributionParams::cuv()  const
-{ return cauv() + ceuv(); }
+inline size_t EpistemicDistParams::dreuv() const
+{ return edpRep->discSetRealValsProbs.size(); }
 
 
-inline size_t DistributionParams::diauv() const
-{
-  return dpRep->poissonLambdas.length() + dpRep->binomialProbPerTrial.length() +
-    dpRep->negBinomialProbPerTrial.length() +
-    dpRep->geometricProbPerTrial.length() + dpRep->hyperGeomNumDrawn.length();
-}
+inline size_t EpistemicDistParams::deuv()  const
+{ return dieuv() + dreuv(); }
 
 
-inline size_t DistributionParams::drauv() const
-{ return dpRep->histogramPointPairs.size(); }
-
-
-inline size_t DistributionParams::dieuv() const
-{ return dpRep->discIntervalProbs.size() + dpRep->discSetIntValsProbs.size(); }
-
-
-inline size_t DistributionParams::dreuv() const
-{ return dpRep->discSetRealValsProbs.size(); }
-
-
-inline size_t DistributionParams::diuv()  const
-{ return diauv() + dieuv(); }
-
-
-inline size_t DistributionParams::druv()  const
-{ return drauv() + dreuv(); }
-
-
-inline size_t DistributionParams::duv()  const
-{ return diuv() + druv(); }
-
-
-inline void DistributionParams::copy(const DistributionParams& dp)
+inline void EpistemicDistParams::copy(const EpistemicDistParams& edp)
 { 
   // Decrement old
-  if (dpRep) // Check for NULL
-    if ( --dpRep->referenceCount == 0 ) 
-      delete dpRep;
+  if (edpRep) // Check for NULL
+    if ( --edpRep->referenceCount == 0 ) 
+      delete edpRep;
   // Create new
-  dpRep = new DistributionParamsRep(dp.normal_means(),
-    dp.normal_std_deviations(), dp.normal_lower_bounds(),
-    dp.normal_upper_bounds(), dp.lognormal_means(),
-    dp.lognormal_std_deviations(), dp.lognormal_lambdas(), dp.lognormal_zetas(),
-    dp.lognormal_error_factors(), dp.lognormal_lower_bounds(),
-    dp.lognormal_upper_bounds(), dp.uniform_lower_bounds(),
-    dp.uniform_upper_bounds(), dp.loguniform_lower_bounds(),
-    dp.loguniform_upper_bounds(), dp.triangular_modes(),
-    dp.triangular_lower_bounds(), dp.triangular_upper_bounds(),
-    dp.exponential_betas(), dp.beta_alphas(), dp.beta_betas(),
-    dp.beta_lower_bounds(), dp.beta_upper_bounds(), dp.gamma_alphas(),
-    dp.gamma_betas(), dp.gumbel_alphas(), dp.gumbel_betas(),
-    dp.frechet_alphas(), dp.frechet_betas(), dp.weibull_alphas(),
-    dp.weibull_betas(), dp.histogram_bin_pairs(), dp.poisson_lambdas(),
-    dp.binomial_probability_per_trial(), dp.binomial_num_trials(),
-    dp.negative_binomial_probability_per_trial(),
-    dp.negative_binomial_num_trials(), dp.geometric_probability_per_trial(),
-    dp.hypergeometric_total_population(),
-    dp.hypergeometric_selected_population(), dp.hypergeometric_num_drawn(),
-    dp.histogram_point_pairs(), dp.uncertain_correlations(),
-    dp.continuous_interval_probabilities(),
-    dp.continuous_interval_lower_bounds(),
-    dp.continuous_interval_upper_bounds(), dp.discrete_interval_probabilities(),
-    dp.discrete_interval_lower_bounds(), dp.discrete_interval_upper_bounds(),
-    dp.discrete_set_int_values_probabilities(),
-    dp.discrete_set_real_values_probabilities());
+  edpRep = new EpistemicDistParamsRep(edp.continuous_interval_probabilities(),
+    edp.continuous_interval_lower_bounds(),
+    edp.continuous_interval_upper_bounds(),
+    edp.discrete_interval_probabilities(),
+    edp.discrete_interval_lower_bounds(), edp.discrete_interval_upper_bounds(),
+    edp.discrete_set_int_values_probabilities(),
+    edp.discrete_set_real_values_probabilities());
 }
 
 
-inline const RealVector& DistributionParams::normal_means() const
-{ return dpRep->normalMeans; }
-
-
-inline const Real& DistributionParams::normal_mean(size_t i) const
-{ return dpRep->normalMeans[i]; }
-
-
-inline void DistributionParams::normal_means(const RealVector& n_means)
-{ dpRep->normalMeans = n_means; }
-
-
-inline void DistributionParams::normal_mean(const Real& n_mean, size_t i)
-{ dpRep->normalMeans[i] = n_mean; }
-
-
-inline const RealVector& DistributionParams::normal_std_deviations() const
-{ return dpRep->normalStdDevs; }
-
-
-inline const Real& DistributionParams::normal_std_deviation(size_t i) const
-{ return dpRep->normalStdDevs[i]; }
-
-
-inline void DistributionParams::
-normal_std_deviations(const RealVector& n_std_devs)
-{ dpRep->normalStdDevs = n_std_devs; }
-
-
-inline void DistributionParams::
-normal_std_deviation(const Real& n_std_dev, size_t i)
-{ dpRep->normalStdDevs[i] = n_std_dev; }
-
-
-inline const RealVector& DistributionParams::normal_lower_bounds() const
-{ return dpRep->normalLowerBnds; }
-
-
-inline const Real& DistributionParams::normal_lower_bound(size_t i) const
-{ return dpRep->normalLowerBnds[i]; }
-
-
-inline void DistributionParams::
-normal_lower_bounds(const RealVector& n_lower_bnds)
-{ dpRep->normalLowerBnds = n_lower_bnds; }
-
-
-inline void DistributionParams::
-normal_lower_bound(const Real& n_lower_bnd, size_t i)
-{ dpRep->normalLowerBnds[i] = n_lower_bnd; }
-
-
-inline const RealVector& DistributionParams::normal_upper_bounds() const
-{ return dpRep->normalUpperBnds; }
-
-
-inline const Real& DistributionParams::normal_upper_bound(size_t i) const
-{ return dpRep->normalUpperBnds[i]; }
-
-
-inline void DistributionParams::
-normal_upper_bounds(const RealVector& n_upper_bnds)
-{ dpRep->normalUpperBnds = n_upper_bnds; }
-
-
-inline void DistributionParams::
-normal_upper_bound(const Real& n_upper_bnd, size_t i)
-{ dpRep->normalUpperBnds[i] = n_upper_bnd; }
-
-
-inline const RealVector& DistributionParams::lognormal_means() const
-{ return dpRep->lognormalMeans; }
-
-
-inline const Real& DistributionParams::lognormal_mean(size_t i) const
-{ return dpRep->lognormalMeans[i]; }
-
-
-inline void DistributionParams::lognormal_means(const RealVector& ln_means)
-{ dpRep->lognormalMeans = ln_means; }
-
-
-inline void DistributionParams::lognormal_mean(const Real& ln_mean, size_t i)
-{ dpRep->lognormalMeans[i] = ln_mean; }
-
-
-inline const RealVector& DistributionParams::lognormal_std_deviations() const
-{ return dpRep->lognormalStdDevs; }
-
-
-inline const Real& DistributionParams::lognormal_std_deviation(size_t i) const
-{ return dpRep->lognormalStdDevs[i]; }
-
-
-inline void DistributionParams::
-lognormal_std_deviations(const RealVector& ln_std_devs)
-{ dpRep->lognormalStdDevs = ln_std_devs; }
-
-
-inline void DistributionParams::
-lognormal_std_deviation(const Real& ln_std_dev, size_t i)
-{ dpRep->lognormalStdDevs[i] = ln_std_dev; }
-
-
-inline const RealVector& DistributionParams::lognormal_lambdas() const
-{ return dpRep->lognormalLambdas; }
-
-
-inline const Real& DistributionParams::lognormal_lambda(size_t i) const
-{ return dpRep->lognormalLambdas[i]; }
-
-
-inline void DistributionParams::lognormal_lambdas(const RealVector& ln_lambdas)
-{ dpRep->lognormalLambdas = ln_lambdas; }
-
-
-inline void DistributionParams::
-lognormal_lambda(const Real& ln_lambda, size_t i)
-{ dpRep->lognormalLambdas[i] = ln_lambda; }
-
-
-inline const RealVector& DistributionParams::lognormal_zetas() const
-{ return dpRep->lognormalZetas; }
-
-
-inline const Real& DistributionParams::lognormal_zeta(size_t i) const
-{ return dpRep->lognormalZetas[i]; }
-
-
-inline void DistributionParams::lognormal_zetas(const RealVector& ln_zetas)
-{ dpRep->lognormalZetas = ln_zetas; }
-
-
-inline void DistributionParams::lognormal_zeta(const Real& ln_zeta, size_t i)
-{ dpRep->lognormalZetas[i] = ln_zeta; }
-
-
-inline const RealVector& DistributionParams::lognormal_error_factors() const
-{ return dpRep->lognormalErrFacts; }
-
-
-inline const Real& DistributionParams::lognormal_error_factor(size_t i) const
-{ return dpRep->lognormalErrFacts[i]; }
-
-
-inline void DistributionParams::
-lognormal_error_factors(const RealVector& ln_err_facts)
-{ dpRep->lognormalErrFacts = ln_err_facts; }
-
-
-inline void DistributionParams::
-lognormal_error_factor(const Real& ln_err_fact, size_t i)
-{ dpRep->lognormalErrFacts[i] = ln_err_fact; }
-
-
-inline const RealVector& DistributionParams::lognormal_lower_bounds() const
-{ return dpRep->lognormalLowerBnds; }
-
-
-inline const Real& DistributionParams::lognormal_lower_bound(size_t i) const
-{ return dpRep->lognormalLowerBnds[i]; }
-
-
-inline void DistributionParams::
-lognormal_lower_bounds(const RealVector& ln_lower_bnds)
-{ dpRep->lognormalLowerBnds = ln_lower_bnds; }
-
-
-inline void DistributionParams::
-lognormal_lower_bound(const Real& ln_lower_bnd, size_t i)
-{ dpRep->lognormalLowerBnds[i] = ln_lower_bnd; }
-
-
-inline const RealVector& DistributionParams::lognormal_upper_bounds() const
-{ return dpRep->lognormalUpperBnds; }
-
-
-inline const Real& DistributionParams::lognormal_upper_bound(size_t i) const
-{ return dpRep->lognormalUpperBnds[i]; }
-
-
-inline void DistributionParams::
-lognormal_upper_bounds(const RealVector& ln_upper_bnds)
-{ dpRep->lognormalUpperBnds = ln_upper_bnds; }
-
-
-inline void DistributionParams::
-lognormal_upper_bound(const Real& ln_upper_bnd, size_t i)
-{ dpRep->lognormalUpperBnds[i] = ln_upper_bnd; }
-
-
-inline const RealVector& DistributionParams::uniform_lower_bounds() const
-{ return dpRep->uniformLowerBnds; }
-
-
-inline const Real& DistributionParams::uniform_lower_bound(size_t i) const
-{ return dpRep->uniformLowerBnds[i]; }
-
-
-inline void DistributionParams::
-uniform_lower_bounds(const RealVector& u_lower_bnds)
-{ dpRep->uniformLowerBnds = u_lower_bnds; }
-
-
-inline void DistributionParams::
-uniform_lower_bound(const Real& u_lower_bnd, size_t i)
-{ dpRep->uniformLowerBnds[i] = u_lower_bnd; }
-
-
-inline const RealVector& DistributionParams::uniform_upper_bounds() const
-{ return dpRep->uniformUpperBnds; }
-
-
-inline const Real& DistributionParams::uniform_upper_bound(size_t i) const
-{ return dpRep->uniformUpperBnds[i]; }
-
-
-inline void DistributionParams::
-uniform_upper_bounds(const RealVector& u_upper_bnds)
-{ dpRep->uniformUpperBnds = u_upper_bnds; }
-
-
-inline void DistributionParams::
-uniform_upper_bound(const Real& u_upper_bnd, size_t i)
-{ dpRep->uniformUpperBnds[i] = u_upper_bnd; }
-
-
-inline const RealVector& DistributionParams::loguniform_lower_bounds() const
-{ return dpRep->loguniformLowerBnds; }
-
-
-inline const Real& DistributionParams::loguniform_lower_bound(size_t i) const
-{ return dpRep->loguniformLowerBnds[i]; }
-
-
-inline void DistributionParams::
-loguniform_lower_bounds(const RealVector& lu_lower_bnds)
-{ dpRep->loguniformLowerBnds = lu_lower_bnds; }
-
-
-inline void DistributionParams::
-loguniform_lower_bound(const Real& lu_lower_bnd, size_t i)
-{ dpRep->loguniformLowerBnds[i] = lu_lower_bnd; }
-
-
-inline const RealVector& DistributionParams::loguniform_upper_bounds() const
-{ return dpRep->loguniformUpperBnds; }
-
-
-inline const Real& DistributionParams::loguniform_upper_bound(size_t i) const
-{ return dpRep->loguniformUpperBnds[i]; }
-
-
-inline void DistributionParams::
-loguniform_upper_bounds(const RealVector& lu_upper_bnds)
-{ dpRep->loguniformUpperBnds = lu_upper_bnds; }
-
-
-inline void DistributionParams::
-loguniform_upper_bound(const Real& lu_upper_bnd, size_t i)
-{ dpRep->loguniformUpperBnds[i] = lu_upper_bnd; }
-
-
-inline const RealVector& DistributionParams::triangular_modes() const
-{ return dpRep->triangularModes; }
-
-
-inline const Real& DistributionParams::triangular_mode(size_t i) const
-{ return dpRep->triangularModes[i]; }
-
-
-inline void DistributionParams::triangular_modes(const RealVector& t_modes)
-{ dpRep->triangularModes = t_modes; }
-
-
-inline void DistributionParams::triangular_mode(const Real& t_mode, size_t i)
-{ dpRep->triangularModes[i] = t_mode; }
-
-
-inline const RealVector& DistributionParams::triangular_lower_bounds() const
-{ return dpRep->triangularLowerBnds; }
-
-
-inline const Real& DistributionParams::triangular_lower_bound(size_t i) const
-{ return dpRep->triangularLowerBnds[i]; }
-
-
-inline void DistributionParams::
-triangular_lower_bounds(const RealVector& t_lower_bnds)
-{ dpRep->triangularLowerBnds = t_lower_bnds; }
-
-
-inline void DistributionParams::
-triangular_lower_bound(const Real& t_lower_bnd, size_t i)
-{ dpRep->triangularLowerBnds[i] = t_lower_bnd; }
-
-
-inline const RealVector& DistributionParams::triangular_upper_bounds() const
-{ return dpRep->triangularUpperBnds; }
-
-
-inline const Real& DistributionParams::triangular_upper_bound(size_t i) const
-{ return dpRep->triangularUpperBnds[i]; }
-
-
-inline void DistributionParams::
-triangular_upper_bounds(const RealVector& t_upper_bnds)
-{ dpRep->triangularUpperBnds = t_upper_bnds; }
-
-
-inline void DistributionParams::
-triangular_upper_bound(const Real& t_upper_bnd, size_t i)
-{ dpRep->triangularUpperBnds[i] = t_upper_bnd; }
-
-
-inline const RealVector& DistributionParams::exponential_betas() const
-{ return dpRep->exponentialBetas; }
-
-
-inline const Real& DistributionParams::exponential_beta(size_t i) const
-{ return dpRep->exponentialBetas[i]; }
-
-
-inline void DistributionParams::exponential_betas(const RealVector& e_betas)
-{ dpRep->exponentialBetas = e_betas; }
-
-
-inline void DistributionParams::exponential_beta(const Real& e_beta, size_t i)
-{ dpRep->exponentialBetas[i] = e_beta; }
-
-
-inline const RealVector& DistributionParams::beta_alphas() const
-{ return dpRep->betaAlphas; }
-
-
-inline const Real& DistributionParams::beta_alpha(size_t i) const
-{ return dpRep->betaAlphas[i]; }
-
-
-inline void DistributionParams::beta_alphas(const RealVector& b_alphas)
-{ dpRep->betaAlphas = b_alphas; }
-
-
-inline void DistributionParams::beta_alpha(const Real& b_alpha, size_t i)
-{ dpRep->betaAlphas[i] = b_alpha; }
-
-
-inline const RealVector& DistributionParams::beta_betas() const
-{ return dpRep->betaBetas; }
-
-
-inline const Real& DistributionParams::beta_beta(size_t i) const
-{ return dpRep->betaBetas[i]; }
-
-
-inline void DistributionParams::beta_betas(const RealVector& b_betas)
-{ dpRep->betaBetas = b_betas; }
-
-
-inline void DistributionParams::beta_beta(const Real& b_beta, size_t i)
-{ dpRep->betaBetas[i] = b_beta; }
-
-
-inline const RealVector& DistributionParams::beta_lower_bounds() const
-{ return dpRep->betaLowerBnds; }
-
-
-inline const Real& DistributionParams::beta_lower_bound(size_t i) const
-{ return dpRep->betaLowerBnds[i]; }
-
-
-inline void DistributionParams::
-beta_lower_bounds(const RealVector& b_lower_bnds)
-{ dpRep->betaLowerBnds = b_lower_bnds; }
-
-
-inline void DistributionParams::
-beta_lower_bound(const Real& b_lower_bnd, size_t i)
-{ dpRep->betaLowerBnds[i] = b_lower_bnd; }
-
-
-inline const RealVector& DistributionParams::beta_upper_bounds() const
-{ return dpRep->betaUpperBnds; }
-
-
-inline const Real& DistributionParams::beta_upper_bound(size_t i) const
-{ return dpRep->betaUpperBnds[i]; }
-
-
-inline void DistributionParams::
-beta_upper_bounds(const RealVector& b_upper_bnds)
-{ dpRep->betaUpperBnds = b_upper_bnds; }
-
-
-inline void DistributionParams::
-beta_upper_bound(const Real& b_upper_bnd, size_t i)
-{ dpRep->betaUpperBnds[i] = b_upper_bnd; }
-
-
-inline const RealVector& DistributionParams::gamma_alphas() const
-{ return dpRep->gammaAlphas; }
-
-
-inline const Real& DistributionParams::gamma_alpha(size_t i) const
-{ return dpRep->gammaAlphas[i]; }
-
-
-inline void DistributionParams::gamma_alphas(const RealVector& ga_alphas)
-{ dpRep->gammaAlphas = ga_alphas; }
-
-
-inline void DistributionParams::gamma_alpha(const Real& ga_alpha, size_t i)
-{ dpRep->gammaAlphas[i] = ga_alpha; }
-
-
-inline const RealVector& DistributionParams::gamma_betas() const
-{ return dpRep->gammaBetas; }
-
-
-inline const Real& DistributionParams::gamma_beta(size_t i) const
-{ return dpRep->gammaBetas[i]; }
-
-
-inline void DistributionParams::gamma_betas(const RealVector& ga_betas)
-{ dpRep->gammaBetas = ga_betas; }
-
-
-inline void DistributionParams::gamma_beta(const Real& ga_beta, size_t i)
-{ dpRep->gammaBetas[i] = ga_beta; }
-
-
-inline const RealVector& DistributionParams::gumbel_alphas() const
-{ return dpRep->gumbelAlphas; }
-
-
-inline const Real& DistributionParams::gumbel_alpha(size_t i) const
-{ return dpRep->gumbelAlphas[i]; }
-
-
-inline void DistributionParams::gumbel_alphas(const RealVector& gu_alphas)
-{ dpRep->gumbelAlphas = gu_alphas; }
-
-
-inline void DistributionParams::gumbel_alpha(const Real& gu_alpha, size_t i)
-{ dpRep->gumbelAlphas[i] = gu_alpha; }
-
-
-inline const RealVector& DistributionParams::gumbel_betas() const
-{ return dpRep->gumbelBetas; }
-
-
-inline const Real& DistributionParams::gumbel_beta(size_t i) const
-{ return dpRep->gumbelBetas[i]; }
-
-
-inline void DistributionParams::gumbel_betas(const RealVector& gu_betas)
-{ dpRep->gumbelBetas = gu_betas; }
-
-
-inline void DistributionParams::gumbel_beta(const Real& gu_beta, size_t i)
-{ dpRep->gumbelBetas[i] = gu_beta; }
-
-
-inline const RealVector& DistributionParams::frechet_alphas() const
-{ return dpRep->frechetAlphas; }
-
-
-inline const Real& DistributionParams::frechet_alpha(size_t i) const
-{ return dpRep->frechetAlphas[i]; }
-
-
-inline void DistributionParams::frechet_alphas(const RealVector& f_alphas)
-{ dpRep->frechetAlphas = f_alphas; }
-
-
-inline void DistributionParams::frechet_alpha(const Real& f_alpha, size_t i)
-{ dpRep->frechetAlphas[i] = f_alpha; }
-
-
-inline const RealVector& DistributionParams::frechet_betas() const
-{ return dpRep->frechetBetas; }
-
-
-inline const Real& DistributionParams::frechet_beta(size_t i) const
-{ return dpRep->frechetBetas[i]; }
-
-
-inline void DistributionParams::frechet_betas(const RealVector& f_betas)
-{ dpRep->frechetBetas = f_betas; }
-
-
-inline void DistributionParams::frechet_beta(const Real& f_beta, size_t i)
-{ dpRep->frechetBetas[i] = f_beta; }
-
-
-inline const RealVector& DistributionParams::weibull_alphas() const
-{ return dpRep->weibullAlphas; }
-
-
-inline const Real& DistributionParams::weibull_alpha(size_t i) const
-{ return dpRep->weibullAlphas[i]; }
-
-
-inline void DistributionParams::weibull_alphas(const RealVector& w_alphas)
-{ dpRep->weibullAlphas = w_alphas; }
-
-
-inline void DistributionParams::weibull_alpha(const Real& alpha, size_t i)
-{ dpRep->weibullAlphas[i] = alpha; }
-
-
-inline const RealVector& DistributionParams::weibull_betas() const
-{ return dpRep->weibullBetas; }
-
-
-inline const Real& DistributionParams::weibull_beta(size_t i) const
-{ return dpRep->weibullBetas[i]; }
-
-
-inline void DistributionParams::weibull_betas(const RealVector& w_betas)
-{ dpRep->weibullBetas = w_betas; }
-
-
-inline void DistributionParams::weibull_beta(const Real& beta, size_t i)
-{ dpRep->weibullBetas[i] = beta; }
-
-
-inline const RealVectorArray& DistributionParams::histogram_bin_pairs() const
-{ return dpRep->histogramBinPairs; }
-
-
-inline const RealVector& DistributionParams::histogram_bin_pairs(size_t i) const
-{ return dpRep->histogramBinPairs[i]; }
-
-
-inline void DistributionParams::
-histogram_bin_pairs(const RealVectorArray& h_bin_pairs)
-{ dpRep->histogramBinPairs = h_bin_pairs; }
-
-
-inline void DistributionParams::
-histogram_bin_pairs(const RealVector& h_bin_pr, size_t i)
-{ dpRep->histogramBinPairs[i] = h_bin_pr; }
-
-
-inline const RealVector& DistributionParams::poisson_lambdas() const
-{ return dpRep->poissonLambdas; }
-
-
-inline const Real& DistributionParams::poisson_lambda(size_t i) const
-{ return dpRep->poissonLambdas[i]; }
-
-
-inline void DistributionParams::poisson_lambdas(const RealVector& p_lambdas)
-{ dpRep->poissonLambdas = p_lambdas; }
-
-
-inline void DistributionParams::poisson_lambda(const Real& p_lambda, size_t i)
-{ dpRep->poissonLambdas[i] = p_lambda; }
-
-
-inline const RealVector& DistributionParams::
-binomial_probability_per_trial() const
-{ return dpRep->binomialProbPerTrial; }
-
-
-inline const Real& DistributionParams::
-binomial_probability_per_trial(size_t i) const
-{ return dpRep->binomialProbPerTrial[i]; }
-
-
-inline void DistributionParams::
-binomial_probability_per_trial(const RealVector& probs_per_tr)
-{ dpRep->binomialProbPerTrial = probs_per_tr; }
-
-
-inline void DistributionParams::
-binomial_probability_per_trial(const Real& prob_per_tr, size_t i)
-{ dpRep->binomialProbPerTrial[i] = prob_per_tr; }
-
-
-inline const IntVector& DistributionParams::binomial_num_trials() const
-{ return dpRep->binomialNumTrials; }
-
-
-inline int DistributionParams::binomial_num_trials(size_t i) const
-{ return dpRep->binomialNumTrials[i]; }
-
-
-inline void DistributionParams::binomial_num_trials(const IntVector& num_tr)
-{ dpRep->binomialNumTrials = num_tr; }
-
-
-inline void DistributionParams::binomial_num_trials(int num_tr, size_t i)
-{ dpRep->binomialNumTrials[i] = num_tr; }
-
-
-inline const RealVector& DistributionParams::
-negative_binomial_probability_per_trial() const
-{ return dpRep->negBinomialProbPerTrial; }
-
-
-inline const Real& DistributionParams::
-negative_binomial_probability_per_trial(size_t i) const
-{ return dpRep->negBinomialProbPerTrial[i]; }
-
-
-inline void DistributionParams::
-negative_binomial_probability_per_trial(const RealVector& probs_per_tr)
-{
-  if (dpRep->negBinomialProbPerTrial.empty())//Teuchos operator= does not resize
-    dpRep->negBinomialProbPerTrial.sizeUninitialized(probs_per_tr.length());
-  dpRep->negBinomialProbPerTrial = probs_per_tr; }
-
-
-inline void DistributionParams::
-negative_binomial_probability_per_trial(const Real& prob_per_tr, size_t i)
-{ dpRep->negBinomialProbPerTrial[i] = prob_per_tr; }
-
-
-inline const IntVector& DistributionParams::negative_binomial_num_trials() const
-{ return dpRep->negBinomialNumTrials; }
-
-
-inline int DistributionParams::negative_binomial_num_trials(size_t i) const
-{ return dpRep->negBinomialNumTrials[i]; }
-
-
-inline void DistributionParams::
-negative_binomial_num_trials(const IntVector& num_tr)
-{ dpRep->negBinomialNumTrials = num_tr; }
-
-
-inline void DistributionParams::
-negative_binomial_num_trials(int num_tr, size_t i)
-{ dpRep->negBinomialNumTrials[i] = num_tr; }
-
-
-inline const RealVector& DistributionParams::
-geometric_probability_per_trial() const
-{ return dpRep->geometricProbPerTrial; }
-
-
-inline const Real& DistributionParams::
-geometric_probability_per_trial(size_t i) const
-{ return dpRep->geometricProbPerTrial[i]; }
-
-
-inline void DistributionParams::
-geometric_probability_per_trial(const RealVector& probs_per_tr)
-{ dpRep->geometricProbPerTrial = probs_per_tr; }
-
-
-inline void DistributionParams::
-geometric_probability_per_trial(const Real& prob_per_tr, size_t i)
-{ dpRep->geometricProbPerTrial[i] = prob_per_tr; }
-
-
-inline const IntVector& DistributionParams::
-hypergeometric_total_population() const
-{ return dpRep->hyperGeomTotalPopulation; }
-
-
-inline int DistributionParams::hypergeometric_total_population(size_t i) const
-{ return dpRep->hyperGeomTotalPopulation[i]; }
-
-
-inline void DistributionParams::
-hypergeometric_total_population(const IntVector& total_pop)
-{ dpRep->hyperGeomTotalPopulation = total_pop; }
-
-
-inline void DistributionParams::
-hypergeometric_total_population(int total_pop, size_t i)
-{ dpRep->hyperGeomTotalPopulation[i] = total_pop; }
-
-
-inline const IntVector& DistributionParams::
-hypergeometric_selected_population() const
-{ return dpRep->hyperGeomSelectedPopulation; }
-
-
-inline int DistributionParams::
-hypergeometric_selected_population(size_t i) const
-{ return dpRep->hyperGeomSelectedPopulation[i]; }
-
-
-inline void DistributionParams::
-hypergeometric_selected_population(const IntVector& sel_pop)
-{ dpRep->hyperGeomSelectedPopulation = sel_pop; }
-
-
-inline void DistributionParams::
-hypergeometric_selected_population(int sel_pop, size_t i)
-{ dpRep->hyperGeomSelectedPopulation[i] = sel_pop; }
-
-
-inline const IntVector& DistributionParams::hypergeometric_num_drawn() const
-{ return dpRep->hyperGeomNumDrawn; }
-
-
-inline int DistributionParams::hypergeometric_num_drawn(size_t i) const
-{ return dpRep->hyperGeomNumDrawn[i]; }
-
-
-inline void DistributionParams::
-hypergeometric_num_drawn(const IntVector& num_drawn)
-{ dpRep->hyperGeomNumDrawn = num_drawn; }
-
-
-inline void DistributionParams::
-hypergeometric_num_drawn(int num_drawn, size_t i)
-{ dpRep->hyperGeomNumDrawn[i] = num_drawn; }
-
-
-inline const RealVectorArray& DistributionParams::histogram_point_pairs() const
-{ return dpRep->histogramPointPairs; }
-
-
-inline const RealVector& DistributionParams::
-histogram_point_pairs(size_t i) const
-{ return dpRep->histogramPointPairs[i]; }
-
-
-inline void DistributionParams::
-histogram_point_pairs(const RealVectorArray& h_pt_pairs)
-{ dpRep->histogramPointPairs = h_pt_pairs; }
-
-
-inline void DistributionParams::
-histogram_point_pairs(const RealVector& h_pt_pairs_i, size_t i)
-{ dpRep->histogramPointPairs[i] = h_pt_pairs_i; }
-
-
-inline const RealSymMatrix& DistributionParams::uncertain_correlations() const
-{ return dpRep->uncertainCorrelations; }
-
-
-inline void DistributionParams::
-uncertain_correlations(const RealSymMatrix& uncertain_corr)
-{ dpRep->uncertainCorrelations = uncertain_corr; }
-
-
-inline const RealVectorArray& DistributionParams::
+inline const RealVectorArray& EpistemicDistParams::
 continuous_interval_probabilities() const
-{ return dpRep->contIntervalProbs; }
+{ return edpRep->contIntervalProbs; }
 
 
-inline const RealVector& DistributionParams::
+inline const RealVector& EpistemicDistParams::
 continuous_interval_probabilities(size_t i) const
-{ return dpRep->contIntervalProbs[i]; }
+{ return edpRep->contIntervalProbs[i]; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 continuous_interval_probabilities(const RealVectorArray& ci_probs)
-{ dpRep->contIntervalProbs = ci_probs; }
+{ edpRep->contIntervalProbs = ci_probs; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 continuous_interval_probabilities(const RealVector& ci_probs_i, size_t i)
-{ dpRep->contIntervalProbs[i] = ci_probs_i; }
+{ edpRep->contIntervalProbs[i] = ci_probs_i; }
 
 
-inline const RealVectorArray& DistributionParams::
+inline const RealVectorArray& EpistemicDistParams::
 continuous_interval_lower_bounds() const
-{ return dpRep->contIntervalLowerBnds; }
+{ return edpRep->contIntervalLowerBnds; }
 
 
-inline const RealVector& DistributionParams::
+inline const RealVector& EpistemicDistParams::
 continuous_interval_lower_bounds(size_t i) const
-{ return dpRep->contIntervalLowerBnds[i]; }
+{ return edpRep->contIntervalLowerBnds[i]; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 continuous_interval_lower_bounds(const RealVectorArray& ci_l_bnds)
-{ dpRep->contIntervalLowerBnds = ci_l_bnds; }
+{ edpRep->contIntervalLowerBnds = ci_l_bnds; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 continuous_interval_lower_bounds(const RealVector& ci_l_bnds_i, size_t i)
-{ dpRep->contIntervalLowerBnds[i] = ci_l_bnds_i; }
+{ edpRep->contIntervalLowerBnds[i] = ci_l_bnds_i; }
 
 
-inline const RealVectorArray& DistributionParams::
+inline const RealVectorArray& EpistemicDistParams::
 continuous_interval_upper_bounds() const
-{ return dpRep->contIntervalUpperBnds; }
+{ return edpRep->contIntervalUpperBnds; }
 
 
-inline const RealVector& DistributionParams::
+inline const RealVector& EpistemicDistParams::
 continuous_interval_upper_bounds(size_t i) const
-{ return dpRep->contIntervalUpperBnds[i]; }
+{ return edpRep->contIntervalUpperBnds[i]; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 continuous_interval_upper_bounds(const RealVectorArray& ci_u_bnds)
-{ dpRep->contIntervalUpperBnds = ci_u_bnds; }
+{ edpRep->contIntervalUpperBnds = ci_u_bnds; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 continuous_interval_upper_bounds(const RealVector& ci_u_bnds_i, size_t i)
-{ dpRep->contIntervalUpperBnds[i] = ci_u_bnds_i; }
+{ edpRep->contIntervalUpperBnds[i] = ci_u_bnds_i; }
 
 
-inline const RealVectorArray& DistributionParams::
+inline const RealVectorArray& EpistemicDistParams::
 discrete_interval_probabilities() const
-{ return dpRep->discIntervalProbs; }
+{ return edpRep->discIntervalProbs; }
 
 
-inline const RealVector& DistributionParams::
+inline const RealVector& EpistemicDistParams::
 discrete_interval_probabilities(size_t i) const
-{ return dpRep->discIntervalProbs[i]; }
+{ return edpRep->discIntervalProbs[i]; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_interval_probabilities(const RealVectorArray& di_probs)
-{ dpRep->discIntervalProbs = di_probs; }
+{ edpRep->discIntervalProbs = di_probs; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_interval_probabilities(const RealVector& di_probs_i, size_t i)
-{ dpRep->discIntervalProbs[i] = di_probs_i; }
+{ edpRep->discIntervalProbs[i] = di_probs_i; }
 
 
-inline const IntVectorArray& DistributionParams::
+inline const IntVectorArray& EpistemicDistParams::
 discrete_interval_lower_bounds() const
-{ return dpRep->discIntervalLowerBnds; }
+{ return edpRep->discIntervalLowerBnds; }
 
 
-inline const IntVector& DistributionParams::
+inline const IntVector& EpistemicDistParams::
 discrete_interval_lower_bounds(size_t i) const
-{ return dpRep->discIntervalLowerBnds[i]; }
+{ return edpRep->discIntervalLowerBnds[i]; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_interval_lower_bounds(const IntVectorArray& di_l_bnds)
-{ dpRep->discIntervalLowerBnds = di_l_bnds; }
+{ edpRep->discIntervalLowerBnds = di_l_bnds; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_interval_lower_bounds(const IntVector& di_l_bnds_i, size_t i)
-{ dpRep->discIntervalLowerBnds[i] = di_l_bnds_i; }
+{ edpRep->discIntervalLowerBnds[i] = di_l_bnds_i; }
 
 
-inline const IntVectorArray& DistributionParams::
+inline const IntVectorArray& EpistemicDistParams::
 discrete_interval_upper_bounds() const
-{ return dpRep->discIntervalUpperBnds; }
+{ return edpRep->discIntervalUpperBnds; }
 
 
-inline const IntVector& DistributionParams::
+inline const IntVector& EpistemicDistParams::
 discrete_interval_upper_bounds(size_t i) const
-{ return dpRep->discIntervalUpperBnds[i]; }
+{ return edpRep->discIntervalUpperBnds[i]; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_interval_upper_bounds(const IntVectorArray& di_u_bnds)
-{ dpRep->discIntervalUpperBnds = di_u_bnds; }
+{ edpRep->discIntervalUpperBnds = di_u_bnds; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_interval_upper_bounds(const IntVector& di_u_bnds_i, size_t i)
-{ dpRep->discIntervalUpperBnds[i] = di_u_bnds_i; }
+{ edpRep->discIntervalUpperBnds[i] = di_u_bnds_i; }
 
 
-inline const IntRealMapArray& DistributionParams::
+inline const IntRealMapArray& EpistemicDistParams::
 discrete_set_int_values_probabilities() const
-{ return dpRep->discSetIntValsProbs; }
+{ return edpRep->discSetIntValsProbs; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_set_int_values_probabilities(const IntRealMapArray& dsi_vals_probs)
-{ dpRep->discSetIntValsProbs = dsi_vals_probs; }
+{ edpRep->discSetIntValsProbs = dsi_vals_probs; }
 
 
-inline const RealRealMapArray& DistributionParams::
+inline const RealRealMapArray& EpistemicDistParams::
 discrete_set_real_values_probabilities() const
-{ return dpRep->discSetRealValsProbs; }
+{ return edpRep->discSetRealValsProbs; }
 
 
-inline void DistributionParams::
+inline void EpistemicDistParams::
 discrete_set_real_values_probabilities(const RealRealMapArray& dsr_vals_probs)
-{ dpRep->discSetRealValsProbs = dsr_vals_probs; }
+{ edpRep->discSetRealValsProbs = dsr_vals_probs; }
 
 
-inline void DistributionParams::update(const DistributionParams& dp)
+inline void EpistemicDistParams::update(const EpistemicDistParams& edp)
 {
-  if (!dpRep) // if no rep, create a new instance
-    copy(dp);
+  if (!edpRep) // if no rep, create a new instance
+    copy(edp);
   else {      // update data of existing instance
-    normal_means(dp.normal_means());
-    normal_std_deviations(dp.normal_std_deviations());
-    normal_lower_bounds(dp.normal_lower_bounds());
-    normal_upper_bounds(dp.normal_upper_bounds());
-    lognormal_means(dp.lognormal_means());
-    lognormal_std_deviations(dp.lognormal_std_deviations());
-    lognormal_lambdas(dp.lognormal_lambdas());
-    lognormal_zetas(dp.lognormal_zetas());
-    lognormal_error_factors(dp.lognormal_error_factors());
-    lognormal_lower_bounds(dp.lognormal_lower_bounds());
-    lognormal_upper_bounds(dp.lognormal_upper_bounds());
-    uniform_lower_bounds(dp.uniform_lower_bounds());
-    uniform_upper_bounds(dp.uniform_upper_bounds());
-    loguniform_lower_bounds(dp.loguniform_lower_bounds());
-    loguniform_upper_bounds(dp.loguniform_upper_bounds());
-    triangular_modes(dp.triangular_modes());
-    triangular_lower_bounds(dp.triangular_lower_bounds());
-    triangular_upper_bounds(dp.triangular_upper_bounds());
-    exponential_betas(dp.exponential_betas());
-    beta_alphas(dp.beta_alphas());
-    beta_betas(dp.beta_betas());
-    beta_lower_bounds(dp.beta_lower_bounds());
-    beta_upper_bounds(dp.beta_upper_bounds());
-    gamma_alphas(dp.gamma_alphas());
-    gamma_betas(dp.gamma_betas());
-    gumbel_alphas(dp.gumbel_alphas());
-    gumbel_betas(dp.gumbel_betas());
-    frechet_alphas(dp.frechet_alphas());
-    frechet_betas(dp.frechet_betas());
-    weibull_alphas(dp.weibull_alphas());
-    weibull_betas(dp.weibull_betas());
-    histogram_bin_pairs(dp.histogram_bin_pairs());
-    poisson_lambdas(dp.poisson_lambdas());
-    binomial_probability_per_trial(dp.binomial_probability_per_trial());
-    binomial_num_trials(dp.binomial_num_trials());
-    negative_binomial_probability_per_trial(
-      dp.negative_binomial_probability_per_trial());
-    negative_binomial_num_trials(dp.negative_binomial_num_trials());
-    geometric_probability_per_trial(dp.geometric_probability_per_trial());
-    hypergeometric_total_population(dp.hypergeometric_total_population());
-    hypergeometric_selected_population(dp.hypergeometric_selected_population());
-    hypergeometric_num_drawn(dp.hypergeometric_num_drawn());
-    histogram_point_pairs(dp.histogram_point_pairs());
-    uncertain_correlations(dp.uncertain_correlations());
-    continuous_interval_probabilities(dp.continuous_interval_probabilities());
-    continuous_interval_lower_bounds(dp.continuous_interval_lower_bounds());
-    continuous_interval_upper_bounds(dp.continuous_interval_upper_bounds());
-    discrete_interval_probabilities(dp.discrete_interval_probabilities());
-    discrete_interval_lower_bounds(dp.discrete_interval_lower_bounds());
-    discrete_interval_upper_bounds(dp.discrete_interval_upper_bounds());
+    continuous_interval_probabilities(edp.continuous_interval_probabilities());
+    continuous_interval_lower_bounds(edp.continuous_interval_lower_bounds());
+    continuous_interval_upper_bounds(edp.continuous_interval_upper_bounds());
+    discrete_interval_probabilities(edp.discrete_interval_probabilities());
+    discrete_interval_lower_bounds(edp.discrete_interval_lower_bounds());
+    discrete_interval_upper_bounds(edp.discrete_interval_upper_bounds());
     discrete_set_int_values_probabilities(
-      dp.discrete_set_int_values_probabilities());
+      edp.discrete_set_int_values_probabilities());
     discrete_set_real_values_probabilities(
-      dp.discrete_set_real_values_probabilities());
+      edp.discrete_set_real_values_probabilities());
   }
 }
 
 
-inline void DistributionParams::
-update_partial(const DistributionParams& dp_x, const Pecos::ShortArray& x_types,
-	       const Pecos::ShortArray& u_types)
-{
-  if (!dpRep) { // if no rep, error 
-    PCerr << "Error: DistributionParams::update_partial() requires a valid "
-	  << "representation." << std::endl;
-    abort_handler(-1);
-  }
-  else { // update data of existing instance
-    size_t i, num_vars = x_types.size(), nuv = 0, lnuv = 0, luuv = 0, tuv = 0,
-      buv = 0, gauv = 0, guuv = 0, fuv = 0, wuv = 0, hbuv = 0;
-    if (u_types.size() != num_vars) {
-      PCerr << "Error: DistributionParams::update_partial() requires "
-	    << "transformation variable types." << std::endl;
-      abort_handler(-1);
-    }
-    for (i=0; i<num_vars; ++i) {
-      short u_type_i = u_types[i], x_type_i = x_types[i];
-      if (x_types[i] == u_type_i)
-	switch (u_type_i) {
-	case STD_NORMAL: ++nuv; break;
-	case NORMAL: case BOUNDED_NORMAL://u-space NORMAL not currently possible
-	  normal_mean(dp_x.normal_mean(nuv), nuv);
-	  normal_std_deviation(dp_x.normal_std_deviation(nuv), nuv);
-	  if (u_type_i == BOUNDED_NORMAL) {
-	    normal_lower_bound(dp_x.normal_lower_bound(nuv), nuv);
-	    normal_upper_bound(dp_x.normal_upper_bound(nuv), nuv);
-	  }
-	  ++nuv; break;
-	case LOGNORMAL:	case BOUNDED_LOGNORMAL:
-	  if (!dp_x.lognormal_means().empty()) {
-	    lognormal_mean(dp_x.lognormal_mean(lnuv), lnuv);
-	    if (!dp_x.lognormal_std_deviations().empty())
-	      lognormal_std_deviation(dp_x.lognormal_std_deviation(lnuv), lnuv);
-	    else
-	      lognormal_error_factor(dp_x.lognormal_error_factor(lnuv), lnuv);
-	  }
-	  else if (!dp_x.lognormal_lambdas().empty()) {
-	    lognormal_lambda(dp_x.lognormal_lambda(lnuv), lnuv);
-	    lognormal_zeta(dp_x.lognormal_zeta(lnuv), lnuv);
-	  }
-	  if (u_type_i == BOUNDED_LOGNORMAL) {
-	    lognormal_lower_bound(dp_x.lognormal_lower_bound(lnuv), lnuv);
-	    lognormal_upper_bound(dp_x.lognormal_upper_bound(lnuv), lnuv);
-	  }
-	  ++lnuv; break;
-	case LOGUNIFORM:
-	  loguniform_lower_bound(dp_x.loguniform_lower_bound(luuv), luuv);
-	  loguniform_upper_bound(dp_x.loguniform_upper_bound(luuv), luuv);
-	  ++luuv; break;
-	case TRIANGULAR:
-	  triangular_mode(dp_x.triangular_mode(tuv), tuv);
-	  triangular_lower_bound(dp_x.triangular_lower_bound(tuv), tuv);
-	  triangular_upper_bound(dp_x.triangular_upper_bound(tuv), tuv);
-	  ++tuv; break;
-	case GUMBEL:
-	  gumbel_alpha(dp_x.gumbel_alpha(guuv), guuv);
-	  gumbel_beta(dp_x.gumbel_beta(guuv),   guuv);
-	  ++guuv; break;
-	case FRECHET:
-	  frechet_alpha(dp_x.frechet_alpha(fuv), fuv);
-	  frechet_beta(dp_x.frechet_beta(fuv),   fuv);
-	  ++fuv; break;
-	case WEIBULL:
-	  weibull_alpha(dp_x.weibull_alpha(wuv), wuv);
-	  weibull_beta(dp_x.weibull_beta(wuv),   wuv);
-	  ++wuv; break;
-	case HISTOGRAM_BIN:
-	  histogram_bin_pairs(dp_x.histogram_bin_pairs(hbuv), hbuv);
-	  ++hbuv; break;
-	//default: no-op
-	}
-      else if (u_type_i == STD_BETA && x_type_i == BETA) {
-	// lower,upper bounds are handled in conversion to STD_BETA
-	beta_alpha(dp_x.beta_alpha(buv), buv);
-	beta_beta(dp_x.beta_beta(buv), buv);
-	++buv;
-      }
-      else if (u_type_i == STD_GAMMA && x_type_i == GAMMA) {
-	// beta is handled in conversion to STD_GAMMA
-	gamma_alpha(dp_x.gamma_alpha(gauv), gauv);
-	++gauv;
-      }
-    }
-  }
-}
-
-
-inline bool DistributionParams::is_null() const
-{ return (dpRep) ? false : true; }
+inline bool EpistemicDistParams::is_null() const
+{ return (edpRep) ? false : true; }
 
 } // namespace Pecos
 

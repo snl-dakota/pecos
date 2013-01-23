@@ -211,8 +211,9 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
 		 const RealVector&   cs_l_bnds,   const RealVector& cs_u_bnds,
 		 const IntVector&    dsri_l_bnds, const IntVector&  dsri_u_bnds,
 		 const IntSetArray&  dssi_values,
-		 const RealSetArray& dssr_values, const DistributionParams& dp,
-		 int num_samples, RealMatrix& samples, RealMatrix& sample_ranks)
+		 const RealSetArray& dssr_values, const AleatoryDistParams& adp,
+		 const EpistemicDistParams& edp, int num_samples,
+		 RealMatrix& samples, RealMatrix& sample_ranks)
 {
 #ifdef HAVE_LHS
   // generate samples within user-specified parameter distributions
@@ -224,61 +225,61 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     abort_handler(-1);
   }
 
-  const RealVector& n_means = dp.normal_means();
-  const RealVector& n_std_devs = dp.normal_std_deviations();
-  const RealVector& n_l_bnds = dp.normal_lower_bounds();
-  const RealVector& n_u_bnds = dp.normal_upper_bounds();
-  const RealVector& ln_means = dp.lognormal_means();
-  const RealVector& ln_std_devs = dp.lognormal_std_deviations();
-  const RealVector& ln_lambdas = dp.lognormal_lambdas();
-  const RealVector& ln_zetas = dp.lognormal_zetas();
-  const RealVector& ln_err_facts = dp.lognormal_error_factors();
-  const RealVector& ln_l_bnds = dp.lognormal_lower_bounds();
-  const RealVector& ln_u_bnds = dp.lognormal_upper_bounds();
-  const RealVector& u_l_bnds = dp.uniform_lower_bounds();
-  const RealVector& u_u_bnds = dp.uniform_upper_bounds();
-  const RealVector& lu_l_bnds = dp.loguniform_lower_bounds();
-  const RealVector& lu_u_bnds = dp.loguniform_upper_bounds();
-  const RealVector& t_modes = dp.triangular_modes();
-  const RealVector& t_l_bnds = dp.triangular_lower_bounds();
-  const RealVector& t_u_bnds = dp.triangular_upper_bounds();
-  const RealVector& e_betas = dp.exponential_betas();
-  const RealVector& b_alphas = dp.beta_alphas();
-  const RealVector& b_betas = dp.beta_betas();
-  const RealVector& b_l_bnds = dp.beta_lower_bounds();
-  const RealVector& b_u_bnds = dp.beta_upper_bounds();
-  const RealVector& ga_alphas = dp.gamma_alphas();
-  const RealVector& ga_betas = dp.gamma_betas();
-  const RealVector& gu_alphas = dp.gumbel_alphas();
-  const RealVector& gu_betas = dp.gumbel_betas();
-  const RealVector& f_alphas = dp.frechet_alphas();
-  const RealVector& f_betas  = dp.frechet_betas();
-  const RealVector& w_alphas = dp.weibull_alphas();
-  const RealVector& w_betas = dp.weibull_betas();
-  const RealVectorArray& h_bin_prs = dp.histogram_bin_pairs();
-  const RealVector& p_lambdas = dp.poisson_lambdas();
-  const RealVector& bi_prob_per_tr = dp.binomial_probability_per_trial();
-  const IntVector&  bi_num_tr = dp.binomial_num_trials();
+  const RealVector& n_means = adp.normal_means();
+  const RealVector& n_std_devs = adp.normal_std_deviations();
+  const RealVector& n_l_bnds = adp.normal_lower_bounds();
+  const RealVector& n_u_bnds = adp.normal_upper_bounds();
+  const RealVector& ln_means = adp.lognormal_means();
+  const RealVector& ln_std_devs = adp.lognormal_std_deviations();
+  const RealVector& ln_lambdas = adp.lognormal_lambdas();
+  const RealVector& ln_zetas = adp.lognormal_zetas();
+  const RealVector& ln_err_facts = adp.lognormal_error_factors();
+  const RealVector& ln_l_bnds = adp.lognormal_lower_bounds();
+  const RealVector& ln_u_bnds = adp.lognormal_upper_bounds();
+  const RealVector& u_l_bnds = adp.uniform_lower_bounds();
+  const RealVector& u_u_bnds = adp.uniform_upper_bounds();
+  const RealVector& lu_l_bnds = adp.loguniform_lower_bounds();
+  const RealVector& lu_u_bnds = adp.loguniform_upper_bounds();
+  const RealVector& t_modes = adp.triangular_modes();
+  const RealVector& t_l_bnds = adp.triangular_lower_bounds();
+  const RealVector& t_u_bnds = adp.triangular_upper_bounds();
+  const RealVector& e_betas = adp.exponential_betas();
+  const RealVector& b_alphas = adp.beta_alphas();
+  const RealVector& b_betas = adp.beta_betas();
+  const RealVector& b_l_bnds = adp.beta_lower_bounds();
+  const RealVector& b_u_bnds = adp.beta_upper_bounds();
+  const RealVector& ga_alphas = adp.gamma_alphas();
+  const RealVector& ga_betas = adp.gamma_betas();
+  const RealVector& gu_alphas = adp.gumbel_alphas();
+  const RealVector& gu_betas = adp.gumbel_betas();
+  const RealVector& f_alphas = adp.frechet_alphas();
+  const RealVector& f_betas  = adp.frechet_betas();
+  const RealVector& w_alphas = adp.weibull_alphas();
+  const RealVector& w_betas = adp.weibull_betas();
+  const RealVectorArray& h_bin_prs = adp.histogram_bin_pairs();
+  const RealVector& p_lambdas = adp.poisson_lambdas();
+  const RealVector& bi_prob_per_tr = adp.binomial_probability_per_trial();
+  const IntVector&  bi_num_tr = adp.binomial_num_trials();
   const RealVector& nb_prob_per_tr
-    = dp.negative_binomial_probability_per_trial();
-  const IntVector&  nb_num_tr = dp.negative_binomial_num_trials();
-  const RealVector& ge_prob_per_tr = dp.geometric_probability_per_trial();
-  const IntVector&  hg_total_pop = dp.hypergeometric_total_population();
-  const IntVector&  hg_selected_pop = dp.hypergeometric_selected_population();
-  const IntVector&  hg_num_drawn = dp.hypergeometric_num_drawn();
-  const RealVectorArray& h_pt_prs = dp.histogram_point_pairs();
-  const RealSymMatrix& correlations = dp.uncertain_correlations();
+    = adp.negative_binomial_probability_per_trial();
+  const IntVector&  nb_num_tr = adp.negative_binomial_num_trials();
+  const RealVector& ge_prob_per_tr = adp.geometric_probability_per_trial();
+  const IntVector&  hg_total_pop = adp.hypergeometric_total_population();
+  const IntVector&  hg_selected_pop = adp.hypergeometric_selected_population();
+  const IntVector&  hg_num_drawn = adp.hypergeometric_num_drawn();
+  const RealVectorArray& h_pt_prs = adp.histogram_point_pairs();
+  const RealSymMatrix& correlations = adp.uncertain_correlations();
 
-  const RealVectorArray& ci_probs    = dp.continuous_interval_probabilities();
-  const RealVectorArray& ci_l_bnds   = dp.continuous_interval_lower_bounds();
-  const RealVectorArray& ci_u_bnds   = dp.continuous_interval_upper_bounds();
-  const RealVectorArray& di_probs    = dp.discrete_interval_probabilities();
-  const IntVectorArray&  di_l_bnds   = dp.discrete_interval_lower_bounds();
-  const IntVectorArray&  di_u_bnds   = dp.discrete_interval_upper_bounds();
+  const RealVectorArray& ci_probs    = edp.continuous_interval_probabilities();
+  const RealVectorArray& ci_l_bnds   = edp.continuous_interval_lower_bounds();
+  const RealVectorArray& ci_u_bnds   = edp.continuous_interval_upper_bounds();
+  const RealVectorArray& di_probs    = edp.discrete_interval_probabilities();
+  const IntVectorArray&  di_l_bnds   = edp.discrete_interval_lower_bounds();
+  const IntVectorArray&  di_u_bnds   = edp.discrete_interval_upper_bounds();
   const IntRealMapArray& dusi_vals_probs
-    = dp.discrete_set_int_values_probabilities();
+    = edp.discrete_set_int_values_probabilities();
   const RealRealMapArray& dusr_vals_probs
-    = dp.discrete_set_real_values_probabilities();
+    = edp.discrete_set_real_values_probabilities();
 
   bool correlation_flag = !correlations.empty();
   size_t i, j, num_cdv = cd_l_bnds.length(), num_nuv  = n_means.length(),
@@ -1256,10 +1257,10 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
   }
   // For    uniform probability, model as discrete design range (this fn).
   // For nonuniform probability, model as discrete uncertain set integer.
-  RealVector  empty_rv;              IntVector    empty_iv;
-  IntSetArray empty_isa;             RealSetArray empty_rsa;
-  RealMatrix  empty_rm, samples_rm;  DistributionParams dp;
-  std::set<IntArray>::iterator it;   IntArray sample;
+  RealVector empty_rv; RealSetArray empty_rsa; RealMatrix empty_rm, samples_rm;
+  IntVector  empty_iv; IntSetArray  empty_isa; IntArray sample;
+  AleatoryDistParams adp; EpistemicDistParams edp;
+  std::set<IntArray>::iterator it;
   // Eliminate redundant samples by resampling if necessary.  Could pad
   // num_samples in anticipation of duplicates, but this would alter LHS
   // stratification that could be intended, so use num_samples for now.
@@ -1268,7 +1269,7 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
   while (!complete) {
     generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
 		     empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
-		     empty_isa, empty_rsa, dp, num_samples, samples_rm,
+		     empty_isa, empty_rsa, adp, edp, num_samples, samples_rm,
 		     empty_rm);
     if (initial) { // pack initial sample set
       for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?

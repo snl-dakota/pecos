@@ -55,7 +55,7 @@ public:
   /// initialize basis types and collocation rules, construct the polynomial
   /// basis, and initialize the distribution parameters within this basis
   static void construct_basis(const ShortArray& u_types,
-			      const DistributionParams& dp,
+			      const AleatoryDistParams& adp,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<Pecos::BasisPolynomial>& poly_basis);
 
@@ -321,7 +321,7 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 
 
 inline void InterpPolyApproximation::
-construct_basis(const ShortArray& u_types, const DistributionParams& dp,
+construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 		const BasisConfigOptions& bc_options,
 		std::vector<Pecos::BasisPolynomial>& poly_basis)
 {
@@ -331,7 +331,7 @@ construct_basis(const ShortArray& u_types, const DistributionParams& dp,
   initialize_collocation_rules(u_types, bc_options, colloc_rules);
   initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
   if (dist_params)
-    update_basis_distribution_parameters(u_types, dp, poly_basis);
+    update_basis_distribution_parameters(u_types, adp, poly_basis);
 }
 
 

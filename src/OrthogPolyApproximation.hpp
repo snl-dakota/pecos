@@ -58,7 +58,7 @@ public:
 
   /// invoke initialize_basis_types(), initialize_polynomial_basis(),
   /// and, if needed, update_basis_distribution_parameters()
-  void construct_basis(const ShortArray& u_types, const DistributionParams& dp,
+  void construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 		       const BasisConfigOptions& bc_options);
 
   /// set basisTypes
@@ -537,7 +537,7 @@ inline int OrthogPolyApproximation::expansion_terms() const
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */
 inline void OrthogPolyApproximation::
-construct_basis(const ShortArray& u_types, const DistributionParams& dp,
+construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 		const BasisConfigOptions& bc_options)
 {
   bool dist_params = initialize_basis_types(u_types, basisTypes);
@@ -545,7 +545,7 @@ construct_basis(const ShortArray& u_types, const DistributionParams& dp,
   initialize_collocation_rules(u_types, bc_options, colloc_rules);
   initialize_polynomial_basis(basisTypes, colloc_rules, polynomialBasis);
   if (dist_params)
-    update_basis_distribution_parameters(u_types, dp, polynomialBasis);
+    update_basis_distribution_parameters(u_types, adp, polynomialBasis);
 }
 
 

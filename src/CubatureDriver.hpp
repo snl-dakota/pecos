@@ -19,7 +19,7 @@
 
 namespace Pecos {
 
-class DistributionParams;
+class AleatoryDistParams;
 
 
 /// Generates N-dimensional cubature grids for numerical evaluation of
@@ -54,7 +54,7 @@ public:
 
   /// initialize settings for parameterized cubature rules
   void initialize_grid_parameters(const ShortArray& u_types,
-				  const DistributionParams& dp);
+				  const AleatoryDistParams& dp);
 
   /// set integrandOrder
   void integrand_order(unsigned short order);

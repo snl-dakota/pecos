@@ -198,13 +198,13 @@ IntegrationDriver::~IntegrationDriver()
 
 void IntegrationDriver::
 initialize_grid_parameters(const ShortArray& u_types, 
-			   const DistributionParams& dp)
+			   const AleatoryDistParams& adp)
 {
   if (driverRep)
-    driverRep->initialize_grid_parameters(u_types, dp); // forward to letter
+    driverRep->initialize_grid_parameters(u_types, adp); // forward to letter
   else // default implementation
     PolynomialApproximation::update_basis_distribution_parameters(u_types,
-      dp, polynomialBasis);
+      adp, polynomialBasis);
 }
 
 

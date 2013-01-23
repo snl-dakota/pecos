@@ -77,56 +77,56 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 
 void CubatureDriver::
 initialize_grid_parameters(const ShortArray& u_types,
-			   const DistributionParams& dp)
+			   const AleatoryDistParams& adp)
 {
   // verify homogeneity in any polynomial parameterizations
   // (GAUSS_JACOBI, GEN_GAUSS_LAGUERRE, and GOLUB_WELSCH)
   bool err_flag = false;
   switch (collocRules[0]) {
   case GAUSS_JACOBI: // STD_BETA: check only alpha/beta params
-    err_flag = (verify_homogeneity(dp.beta_alphas()) ||
-		verify_homogeneity(dp.beta_betas())); break;
+    err_flag = (verify_homogeneity(adp.beta_alphas()) ||
+		verify_homogeneity(adp.beta_betas())); break;
   case GEN_GAUSS_LAGUERRE: // STD_GAMMA: check only alpha params
-    err_flag = verify_homogeneity(dp.gamma_alphas()); break;
+    err_flag = verify_homogeneity(adp.gamma_alphas()); break;
   case GOLUB_WELSCH: // numerically generated: check all params
     switch (u_types[0]) { // u_types verified in initialize_grid() above
     case BOUNDED_NORMAL:
-      err_flag = (verify_homogeneity(dp.normal_means()) ||
-		  verify_homogeneity(dp.normal_std_deviations()) ||
-		  verify_homogeneity(dp.normal_lower_bounds()) ||
-		  verify_homogeneity(dp.normal_upper_bounds())); break;
+      err_flag = (verify_homogeneity(adp.normal_means()) ||
+		  verify_homogeneity(adp.normal_std_deviations()) ||
+		  verify_homogeneity(adp.normal_lower_bounds()) ||
+		  verify_homogeneity(adp.normal_upper_bounds())); break;
     case LOGNORMAL:
-      err_flag = (verify_homogeneity(dp.lognormal_means()) ||
-		  verify_homogeneity(dp.lognormal_std_deviations()) ||
-		  verify_homogeneity(dp.lognormal_lambdas()) ||
-		  verify_homogeneity(dp.lognormal_zetas()) ||
-		  verify_homogeneity(dp.lognormal_error_factors())); break;
+      err_flag = (verify_homogeneity(adp.lognormal_means()) ||
+		  verify_homogeneity(adp.lognormal_std_deviations()) ||
+		  verify_homogeneity(adp.lognormal_lambdas()) ||
+		  verify_homogeneity(adp.lognormal_zetas()) ||
+		  verify_homogeneity(adp.lognormal_error_factors())); break;
     case BOUNDED_LOGNORMAL:
-      err_flag = (verify_homogeneity(dp.lognormal_means()) ||
-		  verify_homogeneity(dp.lognormal_std_deviations()) ||
-		  verify_homogeneity(dp.lognormal_lambdas()) ||
-		  verify_homogeneity(dp.lognormal_zetas()) ||
-		  verify_homogeneity(dp.lognormal_error_factors()) ||
-		  verify_homogeneity(dp.lognormal_lower_bounds()) ||
-		  verify_homogeneity(dp.lognormal_upper_bounds())); break;
+      err_flag = (verify_homogeneity(adp.lognormal_means()) ||
+		  verify_homogeneity(adp.lognormal_std_deviations()) ||
+		  verify_homogeneity(adp.lognormal_lambdas()) ||
+		  verify_homogeneity(adp.lognormal_zetas()) ||
+		  verify_homogeneity(adp.lognormal_error_factors()) ||
+		  verify_homogeneity(adp.lognormal_lower_bounds()) ||
+		  verify_homogeneity(adp.lognormal_upper_bounds())); break;
     case LOGUNIFORM:
-      err_flag = (verify_homogeneity(dp.loguniform_lower_bounds()) ||
-		  verify_homogeneity(dp.loguniform_upper_bounds())); break;
+      err_flag = (verify_homogeneity(adp.loguniform_lower_bounds()) ||
+		  verify_homogeneity(adp.loguniform_upper_bounds())); break;
     case TRIANGULAR:
-      err_flag = (verify_homogeneity(dp.triangular_modes()) ||
-		  verify_homogeneity(dp.triangular_lower_bounds()) ||
-		  verify_homogeneity(dp.triangular_upper_bounds())); break;
+      err_flag = (verify_homogeneity(adp.triangular_modes()) ||
+		  verify_homogeneity(adp.triangular_lower_bounds()) ||
+		  verify_homogeneity(adp.triangular_upper_bounds())); break;
     case GUMBEL:
-      err_flag = (verify_homogeneity(dp.gumbel_alphas()) ||
-		  verify_homogeneity(dp.gumbel_betas()));  break;
+      err_flag = (verify_homogeneity(adp.gumbel_alphas()) ||
+		  verify_homogeneity(adp.gumbel_betas()));  break;
     case FRECHET:
-      err_flag = (verify_homogeneity(dp.frechet_alphas()) ||
-		  verify_homogeneity(dp.frechet_betas())); break;
+      err_flag = (verify_homogeneity(adp.frechet_alphas()) ||
+		  verify_homogeneity(adp.frechet_betas())); break;
     case WEIBULL:
-      err_flag = (verify_homogeneity(dp.weibull_alphas()) ||
-		  verify_homogeneity(dp.weibull_betas())); break;
+      err_flag = (verify_homogeneity(adp.weibull_alphas()) ||
+		  verify_homogeneity(adp.weibull_betas())); break;
     case HISTOGRAM_BIN:
-      err_flag = verify_homogeneity(dp.histogram_bin_pairs()); break;
+      err_flag = verify_homogeneity(adp.histogram_bin_pairs()); break;
     default: err_flag = true; break;
     }
     break;
@@ -143,7 +143,7 @@ initialize_grid_parameters(const ShortArray& u_types,
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
   PolynomialApproximation::update_basis_distribution_parameters(u_types,
-    dp, polynomialBasis);
+    adp, polynomialBasis);
 }
 
 

@@ -106,7 +106,7 @@ initialize_polynomial_basis(const ShortArray& basis_types,
 
 void PolynomialApproximation::
 update_basis_distribution_parameters(const ShortArray& u_types,
-				     const DistributionParams& dp,
+				     const AleatoryDistParams& adp,
 				     std::vector<BasisPolynomial>& poly_basis)
 {
   size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
@@ -121,25 +121,26 @@ update_basis_distribution_parameters(const ShortArray& u_types,
     case STD_UNIFORM: case STD_EXPONENTIAL:
       break;
     case STD_BETA:
-      poly_basis[i].alpha_stat(dp.beta_alpha(beuv_cntr));
-      poly_basis[i].beta_stat(dp.beta_beta(beuv_cntr));
+      poly_basis[i].alpha_stat(adp.beta_alpha(beuv_cntr));
+      poly_basis[i].beta_stat(adp.beta_beta(beuv_cntr));
       ++beuv_cntr; break;
     case STD_GAMMA:
-      poly_basis[i].alpha_stat(dp.gamma_alpha(gauv_cntr));
+      poly_basis[i].alpha_stat(adp.gamma_alpha(gauv_cntr));
       ++gauv_cntr; break;
     case BOUNDED_NORMAL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_normal_distribution(dp.normal_mean(nuv_cntr),
-				    dp.normal_std_deviation(nuv_cntr),
-				    dp.normal_lower_bound(nuv_cntr),
-				    dp.normal_upper_bound(nuv_cntr));
+	bounded_normal_distribution(adp.normal_mean(nuv_cntr),
+				    adp.normal_std_deviation(nuv_cntr),
+				    adp.normal_lower_bound(nuv_cntr),
+				    adp.normal_upper_bound(nuv_cntr));
       ++nuv_cntr; break;
     case LOGNORMAL: {
       Real mean, stdev;
-      moments_from_lognormal_spec(dp.lognormal_means(),
-				  dp.lognormal_std_deviations(),
-				  dp.lognormal_lambdas(), dp.lognormal_zetas(),
-				  dp.lognormal_error_factors(), lnuv_cntr,
+      moments_from_lognormal_spec(adp.lognormal_means(),
+				  adp.lognormal_std_deviations(),
+				  adp.lognormal_lambdas(),
+				  adp.lognormal_zetas(),
+				  adp.lognormal_error_factors(), lnuv_cntr,
 				  mean, stdev);
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
 	lognormal_distribution(mean, stdev);
@@ -147,46 +148,47 @@ update_basis_distribution_parameters(const ShortArray& u_types,
     }
     case BOUNDED_LOGNORMAL: {
       Real mean, stdev;
-      moments_from_lognormal_spec(dp.lognormal_means(),
-				  dp.lognormal_std_deviations(),
-				  dp.lognormal_lambdas(), dp.lognormal_zetas(),
-				  dp.lognormal_error_factors(), lnuv_cntr,
+      moments_from_lognormal_spec(adp.lognormal_means(),
+				  adp.lognormal_std_deviations(),
+				  adp.lognormal_lambdas(),
+				  adp.lognormal_zetas(),
+				  adp.lognormal_error_factors(), lnuv_cntr,
 				  mean, stdev);
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
 	bounded_lognormal_distribution(mean, stdev,
-				       dp.lognormal_lower_bound(lnuv_cntr),
-				       dp.lognormal_upper_bound(lnuv_cntr));
+				       adp.lognormal_lower_bound(lnuv_cntr),
+				       adp.lognormal_upper_bound(lnuv_cntr));
       ++lnuv_cntr; break;
     }
     case LOGUNIFORM:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	loguniform_distribution(dp.loguniform_lower_bound(luuv_cntr),
-				dp.loguniform_upper_bound(luuv_cntr));
+	loguniform_distribution(adp.loguniform_lower_bound(luuv_cntr),
+				adp.loguniform_upper_bound(luuv_cntr));
       ++luuv_cntr; break;
     case TRIANGULAR:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	triangular_distribution(dp.triangular_mode(tuv_cntr),
-				dp.triangular_lower_bound(tuv_cntr),
-				dp.triangular_upper_bound(tuv_cntr));
+	triangular_distribution(adp.triangular_mode(tuv_cntr),
+				adp.triangular_lower_bound(tuv_cntr),
+				adp.triangular_upper_bound(tuv_cntr));
       ++tuv_cntr; break;
     case GUMBEL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	gumbel_distribution(dp.gumbel_alpha(guuv_cntr),
-			    dp.gumbel_beta(guuv_cntr));
+	gumbel_distribution(adp.gumbel_alpha(guuv_cntr),
+			    adp.gumbel_beta(guuv_cntr));
       ++guuv_cntr; break;
     case FRECHET:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	frechet_distribution(dp.frechet_alpha(fuv_cntr),
-			     dp.frechet_beta(fuv_cntr));
+	frechet_distribution(adp.frechet_alpha(fuv_cntr),
+			     adp.frechet_beta(fuv_cntr));
       ++fuv_cntr; break;
     case WEIBULL:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	weibull_distribution(dp.weibull_alpha(wuv_cntr),
-			     dp.weibull_beta(wuv_cntr));
+	weibull_distribution(adp.weibull_alpha(wuv_cntr),
+			     adp.weibull_beta(wuv_cntr));
       ++wuv_cntr; break;
     case HISTOGRAM_BIN:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	histogram_bin_distribution(dp.histogram_bin_pairs(hbuv_cntr));
+	histogram_bin_distribution(adp.histogram_bin_pairs(hbuv_cntr));
       ++hbuv_cntr; break;
     default:
       PCerr << "Error: unsupported u-space type in PolynomialApproximation::"

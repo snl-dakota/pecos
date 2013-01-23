@@ -20,7 +20,7 @@
 
 namespace Pecos {
 
-class DistributionParams;
+class AleatoryDistParams;
 class BasisConfigOptions;
 
 
@@ -56,7 +56,7 @@ public:
 
   /// update polynomialBasis with data from dist_params
   virtual void initialize_grid_parameters(const ShortArray& u_types,
-					  const DistributionParams& dp);
+					  const AleatoryDistParams& adp);
 
   /// compute scaled variable and weight sets for the TPQ grid
   virtual void compute_grid(RealMatrix& var_sets);

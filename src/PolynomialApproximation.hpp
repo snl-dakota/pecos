@@ -24,7 +24,7 @@ namespace Pecos {
 
 class IntegrationDriver;
 class SparseGridDriver;
-class DistributionParams;
+class AleatoryDistParams;
 
 
 /// Container class for various expansion configuration options
@@ -339,7 +339,7 @@ public:
     const ShortArray& colloc_rules, std::vector<BasisPolynomial>& poly_basis);
   /// pass distribution parameters from dp to poly_basis
   static void update_basis_distribution_parameters(const ShortArray& u_types,
-    const DistributionParams& dp, std::vector<BasisPolynomial>& poly_basis);
+    const AleatoryDistParams& dp, std::vector<BasisPolynomial>& poly_basis);
 
   /// return expansionMoments
   const RealVector& expansion_moments() const;
