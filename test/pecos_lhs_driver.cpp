@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
   // Instantiate/initialize DistributionParams
   std::cout << "Instantiating distribution parameters:\n";
-  Pecos::DistributionParams dp; // default ctor
+  Pecos::AleatoryDistParams dp; // default ctor
   dp.normal_means(num_means);     dp.normal_std_deviations(num_std_devs);
   dp.lognormal_means(lnuv_means); dp.lognormal_std_deviations(lnuv_std_devs);
   dp.uncertain_correlations(uv_corr);
