@@ -21,7 +21,7 @@
 
 namespace Pecos {
 
-Real ChebyshevOrthogPolynomial::type1_value(const Real& x, unsigned short order)
+Real ChebyshevOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
   Real t1_val;
   switch (order) {
@@ -39,29 +39,29 @@ Real ChebyshevOrthogPolynomial::type1_value(const Real& x, unsigned short order)
   }
   case 5: {
     Real x2 = x*x;
-    t1_val = x*(16.*x2*x2 - 20.*x2 + 5.);                                 break;
+    t1_val = x*(x2*(16.*x2 - 20.) + 5.);                                  break;
   }
   case 6: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = 32.*x2*x4 - 48.*x4 + 18.*x2 - 1.;                            break;
+    Real x2 = x*x;
+    t1_val = x2*(x2*(32.*x2 - 48.) + 18.) - 1.;                           break;
   }
   case 7: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x*(64.*x2*x4 - 112.*x4 + 56.*x2 - 7.);                       break;
+    Real x2 = x*x;
+    t1_val = x*(x2*(x2*(64.*x2 - 112.) + 56.) - 7.);                      break;
   }
   case 8: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = 128.*x4*x4 - 256.*x2*x4 + 160.*x4 - 32.*x2 + 1.;             break;
+    Real x2 = x*x;
+    t1_val = x2*(x2*(x2*(128.*x2 - 256.) + 160.) - 32.) + 1.;             break;
   }
   case 9: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x*(256.*x4*x4 - 576.*x2*x4 + 432.*x4 - 120.*x2 + 9.);        break;
+    Real x2 = x*x;
+    t1_val = x*(x2*(x2*(x2*(256.*x2 - 576.) + 432.) - 120.) + 9.);        break;
   }
   default:
     // Support higher order polynomials using the 3 point recursion formula:
-    Real x2 = x*x, x4 = x2*x2, x6 = x2*x4, x8 = x4*x4,
-      T_n       = x*(256.*x8 - 576.*x6 + 432.*x4 - 120.*x2 + 9.), // T_9
-      T_nminus1 = 128.*x8 - 256.*x6 + 160.*x4 - 32.*x2 + 1.;      // T_8
+    Real x2 = x*x,
+      T_n       = x*(x2*(x2*(x2*(256.*x2 - 576.) + 432.) - 120.) + 9.), // T_9
+      T_nminus1 = x2*(x2*(x2*(128.*x2 - 256.) + 160.) - 32.) + 1.;      // T_8
     for (size_t i=9; i<order; i++) {
       t1_val = 2.*x*T_n - T_nminus1; // T_nplus1
       if (i != order-1) {
@@ -76,8 +76,7 @@ Real ChebyshevOrthogPolynomial::type1_value(const Real& x, unsigned short order)
 }
 
 
-Real ChebyshevOrthogPolynomial::
-type1_gradient(const Real& x, unsigned short order)
+Real ChebyshevOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 {
   Real t1_grad;
   switch (order) {
@@ -93,29 +92,29 @@ type1_gradient(const Real& x, unsigned short order)
     t1_grad = x*(32.*x*x - 16.);                                          break;
   case 5: {
     Real x2 = x*x;
-    t1_grad = 80.*x2*x2 - 60.*x2 + 5.;                                    break;
+    t1_grad = x2*(80.*x2 - 60.) + 5.;                                     break;
   }
   case 6: {
     Real x2 = x*x;
-    t1_grad = x*(192.*x2*x2 - 192.*x2 + 36.);                             break;
+    t1_grad = x*(x2*(192.*x2 - 192.) + 36.);                              break;
   }
   case 7: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_grad = 448.*x2*x4 - 560.*x4 + 168.*x2 - 7.;                        break;
+    Real x2 = x*x;
+    t1_grad = x2*(x2*(448.*x2 - 560.) + 168.) - 7.;                       break;
   }
   case 8: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_grad = x*(1024.*x2*x4 - 1536.*x4 + 640.*x2 - 64.);                 break;
+    Real x2 = x*x;
+    t1_grad = x*(x2*(x2*(1024.*x2 - 1536.) + 640.) - 64.);                break;
   }
   case 9: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_grad = 2304.*x4*x4 - 4032.*x4*x2 + 2160.*x4 - 360.*x2 + 9.;        break;
+    Real x2 = x*x;
+    t1_grad = x2*(x2*(x2*(2304.*x2 - 4032.) + 2160.) - 360.) + 9.;        break;
   }
   default:
     // Support higher order polynomials using a 3 point recursion formula:
-    Real x2 = x*x, x4 = x2*x2,
-      dTdx_n = 2304.*x4*x4 - 4032.*x4*x2 + 2160.*x4 - 360.*x2 + 9., // P'_9
-      dTdx_nminus1 = x*(1024.*x2*x4 - 1536.*x4 + 640.*x2 - 64.);    // P'_8
+    Real x2 = x*x,
+      dTdx_n = x2*(x2*(x2*(2304.*x2 - 4032.) + 2160.) - 360.) + 9., // P'_9
+      dTdx_nminus1 = x*(x2*(x2*(1024.*x2 - 1536.) + 640.) - 64.);   // P'_8
     for (size_t i=9; i<order; i++) {
       // dTdx_nplus1:
       t1_grad	= 2.*x*dTdx_n + 2.*type1_value(x,i) - dTdx_nminus1;

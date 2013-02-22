@@ -21,65 +21,57 @@
 
 namespace Pecos {
 
-Real LegendreOrthogPolynomial::type1_value(const Real& x, unsigned short order)
+Real LegendreOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
+  // employ Horner's rule for improved efficiency and precision
   Real t1_val;
   switch (order) {
   case 0:
-    t1_val = 1.;
-    break;
+    t1_val = 1.;                                                          break;
   case 1:
-    t1_val = x;
-    break;
+    t1_val = x;                                                           break;
   case 2:
-    t1_val = (3.*x*x - 1.)/2.;
-    break;
+    t1_val = (3.*x*x - 1.)/2.;                                            break;
   case 3:
-    t1_val = x*(5.*x*x - 3.)/2.;
-    break;
+    t1_val = x*(5.*x*x - 3.)/2.;                                          break;
   case 4: {
     Real x2 = x*x;
-    t1_val = (35.*x2*x2 - 30.*x2 + 3.)/8.;
-    break;
+    t1_val = (x2*(35.*x2 - 30.) + 3.)/8.;                                 break;
   }
   case 5: {
     Real x2 = x*x;
-    t1_val = x*(63.*x2*x2 - 70.*x2 + 15.)/8.;
-    break;
+    t1_val = x*(x2*(63.*x2 - 70.) + 15.)/8.;                              break;
   }
   case 6: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = (231.*x2*x4 - 315.*x4 + 105.*x2 - 5.)/16.;
-    break;
+    Real x2 = x*x;
+    t1_val = (x2*(x2*(231.*x2 - 315.) + 105.) - 5.)/16.;                  break;
   }
   case 7: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x*(429.*x2*x4 - 693.*x4 + 315.*x2 - 35.)/16.;
-    break;
+    Real x2 = x*x;
+    t1_val = x*(x2*(x2*(429.*x2 - 693.) + 315.) - 35.)/16.;               break;
   }
   case 8: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = (6435.*x4*x4 - 12012.*x2*x4 + 6930.*x4 - 1260.*x2 + 35.)/128.;
+    Real x2 = x*x;
+    t1_val = (x2*(x2*(x2*(6435.*x2 - 12012.) + 6930.) - 1260.) + 35.)/128.;
     break;
   }
   case 9: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x*(12155.*x4*x4 - 25740.*x2*x4 + 18018.*x4 - 4620.*x2 + 315.)/128.;
+    Real x2 = x*x;
+    t1_val = x*(x2*(x2*(x2*(12155.*x2 - 25740.) + 18018.) - 4620.) + 315.)/128.;
     break;
   }
   case 10: {
-    Real x2 = x*x, x4 = x2*x2, x8 = x4*x4;
-    t1_val  = (46189.*x2*x8 - 109395.*x8 + 90090.*x2*x4 - 30030.*x4 +
-	       3465.*x2 - 63.)/256.;
+    Real x2 = x*x;
+    t1_val  = (x2*(x2*(x2*(x2*(46189.*x2 - 109395.) + 90090.) - 30030.)
+	    + 3465.) - 63.)/256.;
     break;
   }
-  default:
+  default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real x2 = x*x, x4 = x2*x2, x8 = x4*x4,
-      P_n = (46189.*x2*x8 - 109395.*x8 + 90090.*x2*x4 - 30030.*x4 + 3465.*x2 -
-	     63.)/256., // P_10
-      P_nminus1 = x*(12155.*x8 - 25740.*x2*x4 + 18018.*x4 - 4620.*x2 + 315.)
-                / 128.; // P_9
+    Real x2 = x*x, P_n = (x2*(x2*(x2*(x2*(46189.*x2 - 109395.) + 90090.)
+		       - 30030.) + 3465.) - 63.)/256., // P_10
+      P_nminus1 = x*(x2*(x2*(x2*(12155.*x2 - 25740.) + 18018.) - 4620.) + 315.)
+		/ 128.;                                // P_9
     for (size_t i=10; i<order; i++) {
       t1_val = ( (2.*i+1.)*x*P_n - i*P_nminus1 ) / (i+1.); // P_nplus1
       if (i != order-1) {
@@ -89,13 +81,13 @@ Real LegendreOrthogPolynomial::type1_value(const Real& x, unsigned short order)
     }
     break;
   }
+  }
 
   return t1_val;
 }
 
 
-Real LegendreOrthogPolynomial::
-type1_gradient(const Real& x, unsigned short order)
+Real LegendreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 {
   Real t1_grad;
 #ifdef DEBUG
@@ -117,35 +109,27 @@ type1_gradient(const Real& x, unsigned short order)
   // gradient recursion
   switch (order) {
   case 0:
-    t1_grad = 0.;
-    break;
+    t1_grad = 0.;                                                         break;
   case 1:
-    t1_grad = 1;
-    break;
+    t1_grad = 1;                                                          break;
   case 2:
-    t1_grad = 3.*x;
-    break;
+    t1_grad = 3.*x;                                                       break;
   case 3:
-    t1_grad = (15.*x*x - 3.)/2.;
-    break;
+    t1_grad = (15.*x*x - 3.)/2.;                                          break;
   case 4:
-    t1_grad = x*(35.*x*x - 15.)/2.;
-    break;
+    t1_grad = x*(35.*x*x - 15.)/2.;                                       break;
   case 5: {
     Real x2 = x*x;
-    t1_grad = (315.*x2*x2 - 210.*x2 + 15.)/8.;
-    break;
+    t1_grad = (x2*(315.*x2 - 210.) + 15.)/8.;                             break;
   }
   case 6: {
     Real x2 = x*x;
-    t1_grad = x*(693.*x2*x2 - 630.*x2 + 105.)/8.;
-    break;
+    t1_grad = x*(x2*(693.*x2 - 630.) + 105.)/8.;                          break;
   }
   default:
     // Support higher order polynomials using a 3 point recursion formula:
-    Real x2 = x*x, x4 = x2*x2,
-      dPdx_n       = x*(693.*x4 - 630.*x2 + 105.)/8., // P'_6
-      dPdx_nminus1 = (315.*x4 - 210.*x2 + 15.)/8.;    // P'_5
+    Real x2 = x*x, dPdx_n = x*(x2*(693.*x2 - 630.) + 105.)/8., // P'_6
+      dPdx_nminus1 = (x2*(315.*x2 - 210.) + 15.)/8.;           // P'_5
     for (size_t i=6; i<order; i++) {
       t1_grad // dPdx_nplus1
 	= ( (2.*i+1.)*(x*dPdx_n + type1_value(x,i)) - i*dPdx_nminus1 ) / (i+1.);
@@ -428,9 +412,9 @@ type1_collocation_weights(unsigned short order)
 	// define Gauss wts from Gauss pts using
 	// -(A_{n+1} gamma_n)/(A_n Phi_n'(x_i) Phi_{n+1}(x_i)),
 	// which for P(x) with w(x) = 1/2 is (1-x_i^2)/(n P_{n-1}(x_i))^2.
-	const RealArray& colloc_pts = collocation_points(order);
+	const RealArray& colloc_pts = collocation_points(order); Real x_i;
 	for (size_t i=0; i<order; i++) {
-	  const Real& x_i = colloc_pts[i];
+	  x_i = colloc_pts[i];
 	  collocWeights[i] = (1.-x_i*x_i)
 	                  / std::pow(order*type1_value(x_i,order-1),2);
 	}

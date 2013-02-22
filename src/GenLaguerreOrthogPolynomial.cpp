@@ -22,32 +22,30 @@
 
 namespace Pecos {
 
-Real GenLaguerreOrthogPolynomial::
-type1_value(const Real& x, unsigned short order)
+Real GenLaguerreOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
+  // employ Horner's rule for improved efficiency and precision
   Real t1_val;
   switch (order) {
   case 0:
     t1_val = 1.;                                                          break;
   case 1:
     t1_val = -x + alphaPoly + 1.;                                         break;
-  case 2:
-    t1_val = (x*x - 2.*(alphaPoly + 2.)*x + (alphaPoly+1)*(alphaPoly+2.))/2.;
+  case 2: {
+    Real ap2 = alphaPoly+2.;
+    t1_val = (x*(x - 2.*ap2) + (alphaPoly+1)*ap2)/2.;
     break;
+  }
   case 3: {
-    Real x2 = x*x;
-    t1_val = (-x*x2 + 3.*(alphaPoly+3.)*x2 -
-	      3.*(alphaPoly+2.)*(alphaPoly+3.)*x +
-	      (alphaPoly+1.)*(alphaPoly+2.)*(alphaPoly+3.))/6.;
+    Real ap3 = alphaPoly+3., ap2 = alphaPoly+2.;
+    t1_val = (x*(x*(-x + 3.*ap3) - 3.*ap2*ap3) + (alphaPoly+1.)*ap2*ap3)/6.;
     break;
   }
   default: {
     // Support higher order polynomials using the 3 point recursion formula
-    Real x2 = x*x,
-      La_n = (-x*x2 + 3.*(alphaPoly+3.)*x2 - 3.*(alphaPoly+2.)*(alphaPoly+3.)*x
-	      + (alphaPoly+1.)*(alphaPoly+2.)*(alphaPoly+3.))/6., // La_3
-      La_nm1 = (x*x - 2.*(alphaPoly + 2.)*x +
-		(alphaPoly+1)*(alphaPoly+2.))/2.; // La_2
+    Real ap3 = alphaPoly+3., ap2 = alphaPoly+2., ap1 = alphaPoly+1.,
+      La_n   = (x*(x*(-x + 3.*ap3) - 3.*ap2*ap3) + ap1*ap2*ap3)/6., // La_3
+      La_nm1 = (x*(x - 2.*ap2) + ap1*ap2)/2.;                       // La_2
     for (size_t i=3; i<order; i++) {
       t1_val = ( (2.*i+1.+alphaPoly-x)*La_n - (i+alphaPoly)*La_nm1 )
 	/ (i+1.); // La_np1
@@ -64,8 +62,7 @@ type1_value(const Real& x, unsigned short order)
 }
 
 
-Real GenLaguerreOrthogPolynomial::
-type1_gradient(const Real& x, unsigned short order)
+Real GenLaguerreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 {
   Real t1_grad;
 #ifdef DEBUG
@@ -91,17 +88,19 @@ type1_gradient(const Real& x, unsigned short order)
     t1_grad = -1.;                                                        break;
   case 2:
     t1_grad = x - (alphaPoly + 2.);                                       break;
-  case 3:
-    t1_grad = (-x*x + 2.*(alphaPoly+3.)*x - (alphaPoly+2.)*(alphaPoly+3.) )/2.;
+  case 3: {
+    Real ap3 = alphaPoly+3.;
+    t1_grad = (x*(-x + 2.*ap3) - (alphaPoly+2.)*ap3)/2.;
     break;
+  }
   default: {
     // Support higher order polynomials using the 3 point recursion formula
-    Real x2 = x*x, dLadx_n
-      = (-x*x + 2.*(alphaPoly+3.)*x - (alphaPoly+2.)*(alphaPoly+3.) )/2.,//L'a_3
-      dLadx_nm1 = x - (alphaPoly + 2.);                                 // L'a_2
+    Real ap3 = alphaPoly+3., ap2 = alphaPoly+2.,
+      dLadx_n   = (x*(-x + 2.*ap3) - ap2*ap3)/2., // L'a_3
+      dLadx_nm1 = x - ap2;                         // L'a_2
     for (size_t i=3; i<order; i++) {
       t1_grad = ( (2.*i+1.+alphaPoly-x)*dLadx_n - type1_value(x,i) -
-			    (i+alphaPoly)*dLadx_nm1 ) / (i+1.); // dLadx_np1
+		  (i+alphaPoly)*dLadx_nm1 ) / (i+1.); // dLadx_np1
       if (i != order-1) {
 	dLadx_nm1 = dLadx_n;
 	dLadx_n   = t1_grad;
@@ -160,7 +159,7 @@ collocation_points(unsigned short order)
 	collocWeights.resize(order);
       webbur::gen_laguerre_compute(order, alphaPoly, &collocPoints[0],
 				   &collocWeights[0]);
-      const Real& wt_factor = weight_factor();
+      Real wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
 #else
@@ -200,14 +199,14 @@ type1_collocation_weights(unsigned short order)
 	collocPoints.resize(order);
       webbur::gen_laguerre_compute(order, alphaPoly, &collocPoints[0],
 				   &collocWeights[0]);
-      const Real& wt_factor = weight_factor();
+      Real wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
 #else
       // define Gauss wts from Gauss pts using formula above
       const RealArray& colloc_pts = collocation_points(order);
       for (size_t i=0; i<order; i++) {
-	const Real& x_i = colloc_pts[i];
+	Real x_i = colloc_pts[i];
 	// For integer alphaPoly:
 	//collocWeights[i] = factorial_ratio(order+alphaPoly-1, order) * x_i /
 	//  (order+alphaPoly) / factorial(alphaPoly) /
@@ -225,7 +224,7 @@ type1_collocation_weights(unsigned short order)
 }
 
 
-const Real& GenLaguerreOrthogPolynomial::weight_factor()
+Real GenLaguerreOrthogPolynomial::weight_factor()
 {
 //#ifdef HAVE_BOOST
   wtFactor = 1./bmth::tgamma(alphaPoly + 1.);

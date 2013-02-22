@@ -20,8 +20,9 @@
 namespace Pecos {
 
 
-Real HermiteOrthogPolynomial::type1_value(const Real& x, unsigned short order)
+Real HermiteOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
+  // employ Horner's rule for improved efficiency and precision
   Real t1_val;
   switch (order) {
   case 0:
@@ -38,44 +39,44 @@ Real HermiteOrthogPolynomial::type1_value(const Real& x, unsigned short order)
     break;
   case 4: {
     Real x2 = x*x;
-    t1_val = x2*x2 - 6.*x2 + 3.;
+    t1_val = x2*(x2 - 6.) + 3.;
     break;
   }
   case 5: {
     Real x2 = x*x;
-    t1_val = x*(x2*x2 - 10.*x2 + 15.);
+    t1_val = x*(x2*(x2 - 10.) + 15.);
     break;
   }
   case 6: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x2*x4 - 15.*x4 + 45.*x2 - 15.;
+    Real x2 = x*x;
+    t1_val = x2*(x2*(x2 - 15.) + 45.) - 15.;
     break;
   }
   case 7: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x*(x2*x4 - 21.*x4 + 105.*x2 - 105.);
+    Real x2 = x*x;
+    t1_val = x*(x2*(x2*(x2 - 21.) + 105.) - 105.);
     break;
   }
   case 8: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x4*x4 - 28.*x4*x2 + 210.*x4 - 420.*x2 + 105.;
+    Real x2 = x*x;
+    t1_val = x2*(x2*(x2*(x2 - 28.) + 210.) - 420.) + 105.;
     break;
   }
   case 9: {
-    Real x2 = x*x, x4 = x2*x2;
-    t1_val = x*(x4*x4 - 36.*x4*x2 + 378.*x4 - 1260.*x2 + 945.);
+    Real x2 = x*x;
+    t1_val = x*(x2*(x2*(x2*(x2 - 36.) + 378.) - 1260.) + 945.);
     break;
   }
   case 10: {
-    Real x2 = x*x, x4 = x2*x2, x8 = x4*x4;
-    t1_val = x2*x8 - 45.*x8 + 630.*x2*x4 - 3150.*x4 + 4725.*x2 - 945.;
+    Real x2 = x*x;
+    t1_val = x2*(x2*(x2*(x2*(x2 - 45.) + 630.) - 3150.) + 4725.) - 945.;
     break;
   }
   default:
     // Support higher order polynomials using the 3 point recursion formula:
-    Real x2 = x*x, x4 = x2*x2, x8 = x4*x4,
-      He_n = x2*x8 - 45.*x8 + 630.*x2*x4 - 3150.*x4 + 4725.*x2 - 945., // He_10
-      He_nminus1 = x*(x8 - 36.*x4*x2 + 378.*x4 - 1260.*x2 + 945.);     // He_9
+    Real x2 = x*x,
+      He_n = x2*(x2*(x2*(x2*(x2 - 45.) + 630.) - 3150.) + 4725.) - 945.,// He_10
+      He_nminus1 = x*(x2*(x2*(x2*(x2 - 36.) + 378.) - 1260.) + 945.);   // He_9
     for (size_t i=10; i<order; i++) {
       t1_val = x*He_n - i*He_nminus1; // He_nplus1
       if (i != order-1) {
@@ -90,8 +91,7 @@ Real HermiteOrthogPolynomial::type1_value(const Real& x, unsigned short order)
 }
 
 
-Real HermiteOrthogPolynomial::
-type1_gradient(const Real& x, unsigned short order)
+Real HermiteOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 { return (order) ? order*type1_value(x, order-1) : 0.; }
 
 

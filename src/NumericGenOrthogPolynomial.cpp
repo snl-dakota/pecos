@@ -180,7 +180,7 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     for (i=0; i<m; ++i) {
       alpha3TR[i] = H(i+1,i)/H(i,i); // lower triangle
       if (i) {
-	const Real& Him1im1 = H(i-1,i-1);
+	Real Him1im1 = H(i-1,i-1);
 	alpha3TR[i]  -= H(i,i-1) / Him1im1; // lower triangle
 	off_diag[i-1] = H(i,i)   / Him1im1;
 	beta3TR[i]    = std::pow(off_diag[i-1], 2);
@@ -261,7 +261,7 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
   // Gauss points are the eigenvalues which are updated in place by STEQR.
   // compute the Gauss weights from the eigenvectors:
   collocWeights.resize(m);
-  //const Real& norm_sq_0 = orthogPolyNormsSq[0];
+  //Real norm_sq_0 = orthogPolyNormsSq[0];
   for (i=0; i<m; ++i)
     collocWeights[i] = std::pow(z_eigvec(0, i), 2.);// * norm_sq_0;
 
@@ -476,9 +476,9 @@ hermite_unbounded_integral(const RealVector& poly_coeffs1,
   const RealArray& colloc_wts
     = hermite_poly.type1_collocation_weights(quad_order);
 
-  Real sum = 0., v1;
+  Real sum = 0., v1, gp_i;
   for (size_t i=0; i<quad_order; ++i) {
-    const Real& gp_i = colloc_pts[i];
+    gp_i = colloc_pts[i];
     v1 = type1_value(gp_i, poly_coeffs1); // cached due to update of const ref
     sum += colloc_wts[i] * v1 * type1_value(gp_i, poly_coeffs2)
         *  weight_fn(gp_i, distParams) / phi(gp_i);
@@ -504,9 +504,9 @@ fejer_unbounded_integral(const RealVector& poly_coeffs1,
 
   // monotone mapping from [-inf,inf] to [-1,1] using x = z/(1-z^2)
   // dx/dz = (1+z^2)/(1-z^2)^2
-  Real sum = 0., v1, z_sq, one_m_z_sq, x_i;
+  Real sum = 0., v1, z_sq, one_m_z_sq, x_i, z_i;
   for (size_t i=0; i<quad_order; ++i) {
-    const Real& z_i = fejer_pts[i];
+    z_i = fejer_pts[i];
     z_sq = z_i * z_i; one_m_z_sq = 1. - z_sq; x_i = z_i / one_m_z_sq;
     v1 = type1_value(x_i, poly_coeffs1); // cached due to update of const ref
     sum += fejer_wts[i] * v1 * type1_value(x_i, poly_coeffs2)
@@ -536,9 +536,9 @@ laguerre_semibounded_integral(const RealVector& poly_coeffs1,
   const RealArray& colloc_wts
     = laguerre_poly.type1_collocation_weights(quad_order);
 
-  Real sum = 0., v1;
+  Real sum = 0., v1, gp_i;
   for (size_t i=0; i<quad_order; ++i) {
-    const Real& gp_i = colloc_pts[i];
+    gp_i = colloc_pts[i];
     v1 = type1_value(gp_i, poly_coeffs1); // cached: update of const ref
     sum += colloc_wts[i] * v1 * type1_value(gp_i, poly_coeffs2)
         *  weight_fn(gp_i, distParams) / std_exponential_pdf(gp_i);
@@ -564,9 +564,9 @@ fejer_semibounded_integral(const RealVector& poly_coeffs1,
 
   // monotone mapping from [0,inf] to [-1,1] using x = (1+z)/(1-z)
   // dx/dz = 2/(1-z)^2
-  Real sum = 0., v1, one_m_z, x_i;
+  Real sum = 0., v1, one_m_z, x_i, z_i;
   for (size_t i=0; i<quad_order; ++i) {
-    const Real& z_i = fejer_pts[i];
+    z_i = fejer_pts[i];
     one_m_z =  1. - z_i; x_i = (1. + z_i) / one_m_z;
     v1 = type1_value(x_i, poly_coeffs1); // cached due to update of const ref
     sum += fejer_wts[i] * v1 * type1_value(x_i, poly_coeffs2)
@@ -705,10 +705,10 @@ Real NumericGenOrthogPolynomial::
 native_quadrature_integral(const RealVector& poly_coeffs1,
 			   const RealVector& poly_coeffs2)
 {
-  Real i_sum = 0., v1;
+  Real i_sum = 0., v1, gp_i;
   size_t i, num_colloc_pts = collocPoints.size();
   for (i=0; i<num_colloc_pts; ++i) {
-    const Real& gp_i = collocPoints[i];
+    gp_i = collocPoints[i];
     v1 = type1_value(gp_i, poly_coeffs1); // cached due to update of const ref
     i_sum += v1 * type1_value(gp_i, poly_coeffs2) * collocWeights[i];
   }
@@ -716,7 +716,7 @@ native_quadrature_integral(const RealVector& poly_coeffs1,
 }
 
 
-const Real& NumericGenOrthogPolynomial::alpha_recursion(unsigned short order)
+Real NumericGenOrthogPolynomial::alpha_recursion(unsigned short order)
 {
   if (alpha3TR.length() <= order)
     solve_eigenproblem(order+1);
@@ -724,7 +724,7 @@ const Real& NumericGenOrthogPolynomial::alpha_recursion(unsigned short order)
 }
 
 
-const Real& NumericGenOrthogPolynomial::beta_recursion(unsigned short order)
+Real NumericGenOrthogPolynomial::beta_recursion(unsigned short order)
 {
   if (beta3TR.length() <= order)
     solve_eigenproblem(order+1);
@@ -732,8 +732,7 @@ const Real& NumericGenOrthogPolynomial::beta_recursion(unsigned short order)
 }
 
 
-Real NumericGenOrthogPolynomial::
-type1_value(const Real& x, unsigned short order)
+Real NumericGenOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
   if (polyCoeffs.size() <= order)
     solve_eigenproblem(order);
@@ -742,7 +741,7 @@ type1_value(const Real& x, unsigned short order)
 
 
 Real NumericGenOrthogPolynomial::
-type1_value(const Real& x, const RealVector& poly_coeffs)
+type1_value(Real x, const RealVector& poly_coeffs)
 {
   size_t num_terms = poly_coeffs.length();
   Real t1_val = poly_coeffs[0];
@@ -752,8 +751,7 @@ type1_value(const Real& x, const RealVector& poly_coeffs)
 }
 
 
-Real NumericGenOrthogPolynomial::
-type1_gradient(const Real& x, unsigned short order)
+Real NumericGenOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 {
   if (polyCoeffs.size() <= order)
     solve_eigenproblem(order);
@@ -762,7 +760,7 @@ type1_gradient(const Real& x, unsigned short order)
 
 
 Real NumericGenOrthogPolynomial::
-type1_gradient(const Real& x, const RealVector& poly_coeffs)
+type1_gradient(Real x, const RealVector& poly_coeffs)
 {
   // differentiate poly_coeffs with respect to x
   size_t num_terms = poly_coeffs.length();

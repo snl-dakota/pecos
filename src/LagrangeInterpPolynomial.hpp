@@ -24,8 +24,15 @@ namespace Pecos {
 
 /** The LagrangeInterpPolynomial class evaluates a univariate Lagrange
     interpolation polynomial.  The order of the polynomial is dictated
-    by the number of interpolation points (order = N_p - 1).  It enables
-    multidimensional interpolants within InterpPolyApproximation. */
+    by the number of interpolation points (order = N_p - 1).  It
+    enables multidimensional interpolants within
+    InterpPolyApproximation.  This class supports both the traditional
+    characteristic polynomial form of Lagrange interpolation as well
+    as barycentric Lagrange interpolation (the second form from Berrut
+    and Trefethen, 2004).  The former is used for actual evaluation of
+    1D polynomial values (when needed), whereas the latter allows
+    alternative interpolant evaluations with additional precomputation
+    that improve efficiency from O(n^2) evaluations to O(n). */
 
 class LagrangeInterpPolynomial: public InterpolationPolynomial
 {
@@ -47,11 +54,18 @@ public:
   //
 
   /// retrieve the value of the i_th Lagrange polynomial for a given
-  /// parameter x
-  Real type1_value(const Real& x, unsigned short i);
+  /// parameter x using traditional characteristic polynomial formulation
+  Real type1_value(Real x, unsigned short i);
   /// retrieve the gradient of the i_th Lagrange polynomial for a given
-  /// parameter x
-  Real type1_gradient(const Real& x, unsigned short i);
+  /// parameter x using traditional characteristic polynomial formulation
+  Real type1_gradient(Real x, unsigned short i);
+
+  void set_new_point(Real x);
+  size_t exact_index() const;
+  //const RealVector& barycentric_weights() const;
+  //const RealVector& barycentric_weight_factors() const;
+  Real barycentric_weight_factor(unsigned short i) const;
+  Real barycentric_weight_factor_sum() const;
 
 protected:
 
@@ -68,24 +82,59 @@ private:
   //
 
   /// set of denominator products calculated from interpPts in
-  /// precompute_data()
-  RealVector lagDenominators;
+  /// precompute_data(); in barycentric formulations, these are the weights
+  RealVector bcWeights;
+
+  // additional data for barycentric formulation (second form)
+
+  /// the parameter value for evaluation of the interpolant
+  Real newPoint;
+  /// index of interpolation point exactly matching the interpolated value x
+  size_t exactIndex;
+  /// terms bcWeights[j]/(x-x[j]) from barycentric formulation
+  RealVector bcWeightFactors;
+  /// sum of bcWeightFactors used for evaluating barycentric interpolant
+  /// denominator term
+  Real bcWeightFactorSum;
 };
 
 
 inline LagrangeInterpPolynomial::LagrangeInterpPolynomial():
-  InterpolationPolynomial()
+  InterpolationPolynomial(), newPoint(DBL_MAX), exactIndex(_NPOS)
 { }
 
 
 inline LagrangeInterpPolynomial::
 LagrangeInterpPolynomial(const RealArray& interp_pts):
-  InterpolationPolynomial(interp_pts)
+  InterpolationPolynomial(interp_pts), newPoint(DBL_MAX), exactIndex(_NPOS)
 { }
 
 
 inline LagrangeInterpPolynomial::~LagrangeInterpPolynomial()
 { }
+
+
+inline size_t LagrangeInterpPolynomial::exact_index() const
+{ return exactIndex; }
+
+
+//inline const RealVector& LagrangeInterpPolynomial::
+//barycentric_weights() const
+//{ return bcWeights; }
+
+
+//inline const RealVector& LagrangeInterpPolynomial::
+//barycentric_weight_factors() const
+//{ return bcWeightFactors; }
+
+
+inline Real LagrangeInterpPolynomial::
+barycentric_weight_factor(unsigned short i) const
+{ return bcWeightFactors[i]; }
+
+
+inline Real LagrangeInterpPolynomial::barycentric_weight_factor_sum() const
+{ return bcWeightFactorSum; }
 
 } // namespace Pecos
 

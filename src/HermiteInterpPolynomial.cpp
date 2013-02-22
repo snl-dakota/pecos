@@ -61,7 +61,7 @@ void HermiteInterpPolynomial::precompute_data()
 #ifdef INTERPOLATION_TEST
   int wp = WRITE_PRECISION+7;
   for (i=0; i<num_pts; ++i) {
-    const Real& pt_i = interpPts[i];
+    Real pt_i = interpPts[i];
     PCout << "Interp pt " << std::setw(3) << i+1 << " = "
 	  << std::setw(wp) << pt_i << ":\n";
     for (int j=0; j<num_pts; ++j)
@@ -77,7 +77,7 @@ void HermiteInterpPolynomial::precompute_data()
 
 /** Compute value of the Hermite type 1 polynomial corresponding to
     interpolation point i. */
-Real HermiteInterpPolynomial::type1_value(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type1_value(Real x, unsigned short i)
 {
   int n2 = 2*interpPts.size(); Real x_copy = x, t1_val, t1_grad;
   webbur::hermite_interpolant_value(n2, &xValDiffTab[0], &yT1ValDiffTab[i][0],
@@ -88,7 +88,7 @@ Real HermiteInterpPolynomial::type1_value(const Real& x, unsigned short i)
 
 /** Compute value of the Hermite type 2 polynomial corresponding to
     interpolation point i. */
-Real HermiteInterpPolynomial::type2_value(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type2_value(Real x, unsigned short i)
 {
   int n2 = 2*interpPts.size(); Real x_copy = x, t2_val, t2_grad;
   webbur::hermite_interpolant_value(n2, &xValDiffTab[0], &yT2ValDiffTab[i][0],
@@ -99,7 +99,7 @@ Real HermiteInterpPolynomial::type2_value(const Real& x, unsigned short i)
 
 /** Compute derivative with respect to x of the Hermite type 1
     polynomial corresponding to interpolation point i. */
-Real HermiteInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type1_gradient(Real x, unsigned short i)
 { 
   int n2 = 2*interpPts.size(); Real x_copy = x, t1_val, t1_grad;
   webbur::hermite_interpolant_value(n2, &xValDiffTab[0], &yT1ValDiffTab[i][0],
@@ -110,7 +110,7 @@ Real HermiteInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
 
 /** Compute derivative with respect to x of the Hermite type 2
     polynomial corresponding to interpolation point i. */
-Real HermiteInterpPolynomial::type2_gradient(const Real& x, unsigned short i)
+Real HermiteInterpPolynomial::type2_gradient(Real x, unsigned short i)
 { 
   int n2 = 2*interpPts.size(); Real x_copy = x, t2_val, t2_grad;
   webbur::hermite_interpolant_value(n2, &xValDiffTab[0], &yT2ValDiffTab[i][0],

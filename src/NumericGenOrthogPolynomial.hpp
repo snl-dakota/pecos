@@ -22,8 +22,8 @@
 namespace Pecos {
 
 /// pointer to a PDF evaluation function used within integral evaluators
-typedef Real ( *NGFPType ) (const Real& x, const RealVector& params);
-//typedef Real ( *NGFPType ) (const Real& x, const Real& p1, const Real& p2);
+typedef Real ( *NGFPType ) (Real x, const RealVector& params);
+//typedef Real ( *NGFPType ) (Real x, Real p1, Real p2);
 
 
 /// Derived orthogonal polynomial class for numerically-generated
@@ -54,29 +54,28 @@ public:
   //
 
   /// calculate and return alpha3TR[order]
-  const Real& alpha_recursion(unsigned short order);
+  Real alpha_recursion(unsigned short order);
   /// calculate and return beta3TR[order]
-  const Real& beta_recursion(unsigned short order);
+  Real beta_recursion(unsigned short order);
 
   /// set distribution type and parameters for a BOUNDED_NORMAL distribution
-  void bounded_normal_distribution(const Real& mean,  const Real& std_dev,
-				   const Real& l_bnd, const Real& u_bnd);
+  void bounded_normal_distribution(Real mean,  Real std_dev,
+				   Real l_bnd, Real u_bnd);
   /// set distribution type and parameters for a LOGNORMAL distribution
-  void lognormal_distribution(const Real& mean, const Real& std_dev);
+  void lognormal_distribution(Real mean, Real std_dev);
   /// set distribution type and parameters for a BOUNDED_LOGNORMAL distribution
-  void bounded_lognormal_distribution(const Real& mean,  const Real& std_dev,
-				      const Real& l_bnd, const Real& u_bnd);
+  void bounded_lognormal_distribution(Real mean,  Real std_dev,
+				      Real l_bnd, Real u_bnd);
   /// set distribution type and parameters for a LOGUNIFORM distribution
-  void loguniform_distribution(const Real& l_bnd, const Real& u_bnd);
+  void loguniform_distribution(Real l_bnd, Real u_bnd);
   /// set distribution type and parameters for a TRIANGULAR distribution
-  void triangular_distribution(const Real& mode, const Real& l_bnd,
-			       const Real& u_bnd);
+  void triangular_distribution(Real mode, Real l_bnd, Real u_bnd);
   /// set distribution type and parameters for a GUMBEL distribution
-  void gumbel_distribution(const Real& alpha, const Real& beta);
+  void gumbel_distribution(Real alpha, Real beta);
   /// set distribution type and parameters for a FRECHET distribution
-  void frechet_distribution(const Real& alpha, const Real& beta);
+  void frechet_distribution(Real alpha, Real beta);
   /// set distribution type and parameters for a WEIBULL distribution
-  void weibull_distribution(const Real& alpha, const Real& beta);
+  void weibull_distribution(Real alpha, Real beta);
   /// set distribution type and parameters for a WEIBULL distribution
   void histogram_bin_distribution(const RealVector& bin_pairs);
 
@@ -89,8 +88,8 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  Real type1_value(const Real& x, unsigned short order);
-  Real type1_gradient(const Real& x, unsigned short order);
+  Real type1_value(Real x, unsigned short order);
+  Real type1_gradient(Real x, unsigned short order);
   Real norm_squared(unsigned short order);
 
   const RealArray& collocation_points(unsigned short order);
@@ -105,32 +104,32 @@ private:
   //
 
   /// thin wrapper for bounded_normal_pdf for NGFPType API
-  static Real bounded_normal_pdf(const Real& x, const RealVector& params);
+  static Real bounded_normal_pdf(Real x, const RealVector& params);
   /// thin wrapper for lognormal_pdf for NGFPType API
-  static Real lognormal_pdf(const Real& x, const RealVector& params);
+  static Real lognormal_pdf(Real x, const RealVector& params);
   /// thin wrapper for bounded_lognormal_pdf for NGFPType API
-  static Real bounded_lognormal_pdf(const Real& x, const RealVector& params);
+  static Real bounded_lognormal_pdf(Real x, const RealVector& params);
   /// thin wrapper for loguniform_pdf for NGFPType API
-  static Real loguniform_pdf(const Real& x, const RealVector& params);
+  static Real loguniform_pdf(Real x, const RealVector& params);
   /// thin wrapper for triangular_pdf for NGFPType API
-  static Real triangular_pdf(const Real& x, const RealVector& params);
+  static Real triangular_pdf(Real x, const RealVector& params);
   /// thin wrapper for gumbel_pdf for NGFPType API
-  static Real gumbel_pdf(const Real& x, const RealVector& params);
+  static Real gumbel_pdf(Real x, const RealVector& params);
   /// thin wrapper for frechet_pdf for NGFPType API
-  static Real frechet_pdf(const Real& x, const RealVector& params);
+  static Real frechet_pdf(Real x, const RealVector& params);
   /// thin wrapper for weibull_pdf for NGFPType API
-  static Real weibull_pdf(const Real& x, const RealVector& params);
+  static Real weibull_pdf(Real x, const RealVector& params);
 
   /// solve a symmetric tridiagonal eigenvalue problem for the Gauss
   /// points and weights for an orthogonal polynomial of order m
   void solve_eigenproblem(unsigned short m);
 
   /// compute three point recursion for polyCoeffs[i+1]
-  void polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
-			    const RealVector& poly_coeffs_i, const Real& beta_i,
+  void polynomial_recursion(RealVector& poly_coeffs_ip1, Real alpha_i,
+			    const RealVector& poly_coeffs_i, Real beta_i,
 			    const RealVector& poly_coeffs_im1);
   /// compute truncated three point recursion for polyCoeffs[i+1]
-  void polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
+  void polynomial_recursion(RealVector& poly_coeffs_ip1, Real alpha_i,
 			    const RealVector& poly_coeffs_i);
 
   /// compute inner product of specified polynomial orders
@@ -177,10 +176,10 @@ private:
 
   /// retrieve the value of the 1-D generated polynomial (of given
   /// coefficients) for a given parameter value
-  Real type1_value(const Real& x, const RealVector& poly_coeffs);
+  Real type1_value(Real x, const RealVector& poly_coeffs);
   /// retrieve the gradient of the 1-D generated polynomial (of given
   /// coefficients) with respect to its dimension for a given parameter value
-  Real type1_gradient(const Real& x, const RealVector& poly_coeffs);
+  Real type1_gradient(Real x, const RealVector& poly_coeffs);
 
   //
   //- Heading: Data
@@ -224,7 +223,7 @@ inline NumericGenOrthogPolynomial::~NumericGenOrthogPolynomial()
 
 
 inline void NumericGenOrthogPolynomial::
-polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
+polynomial_recursion(RealVector& poly_coeffs_ip1, Real alpha_i,
 		     const RealVector& poly_coeffs_i)
 {
   // compute alpha[i] recursion contribution to polyCoeffs[i+1]:
@@ -238,8 +237,8 @@ polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
 
 
 inline void NumericGenOrthogPolynomial::
-polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
-		     const RealVector& poly_coeffs_i, const Real& beta_i,
+polynomial_recursion(RealVector& poly_coeffs_ip1, Real alpha_i,
+		     const RealVector& poly_coeffs_i, Real beta_i,
 		     const RealVector& poly_coeffs_im1)
 {
   // compute alpha[i] recursion contribution to polyCoeffs[i+1]:
@@ -252,8 +251,7 @@ polynomial_recursion(RealVector& poly_coeffs_ip1, const Real& alpha_i,
 
 
 inline void NumericGenOrthogPolynomial::
-bounded_normal_distribution(const Real& mean,  const Real& std_dev,
-			    const Real& l_bnd, const Real& u_bnd)
+bounded_normal_distribution(Real mean,  Real std_dev, Real l_bnd, Real u_bnd)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -280,7 +278,7 @@ bounded_normal_distribution(const Real& mean,  const Real& std_dev,
 
 
 inline void NumericGenOrthogPolynomial::
-lognormal_distribution(const Real& mean, const Real& std_dev)
+lognormal_distribution(Real mean, Real std_dev)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -301,8 +299,7 @@ lognormal_distribution(const Real& mean, const Real& std_dev)
 
 
 inline void NumericGenOrthogPolynomial::
-bounded_lognormal_distribution(const Real& mean,  const Real& std_dev,
-			       const Real& l_bnd, const Real& u_bnd)
+bounded_lognormal_distribution(Real mean,  Real std_dev, Real l_bnd, Real u_bnd)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -328,7 +325,7 @@ bounded_lognormal_distribution(const Real& mean,  const Real& std_dev,
 
 
 inline void NumericGenOrthogPolynomial::
-loguniform_distribution(const Real& l_bnd, const Real& u_bnd)
+loguniform_distribution(Real l_bnd, Real u_bnd)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -349,7 +346,7 @@ loguniform_distribution(const Real& l_bnd, const Real& u_bnd)
 
 
 inline void NumericGenOrthogPolynomial::
-triangular_distribution(const Real& mode, const Real& l_bnd, const Real& u_bnd)
+triangular_distribution(Real mode, Real l_bnd, Real u_bnd)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -373,7 +370,7 @@ triangular_distribution(const Real& mode, const Real& l_bnd, const Real& u_bnd)
 
 
 inline void NumericGenOrthogPolynomial::
-gumbel_distribution(const Real& alpha, const Real& beta)
+gumbel_distribution(Real alpha, Real beta)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -394,7 +391,7 @@ gumbel_distribution(const Real& alpha, const Real& beta)
 
 
 inline void NumericGenOrthogPolynomial::
-frechet_distribution(const Real& alpha, const Real& beta)
+frechet_distribution(Real alpha, Real beta)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -415,7 +412,7 @@ frechet_distribution(const Real& alpha, const Real& beta)
 
 
 inline void NumericGenOrthogPolynomial::
-weibull_distribution(const Real& alpha, const Real& beta)
+weibull_distribution(Real alpha, Real beta)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
@@ -454,7 +451,7 @@ histogram_bin_distribution(const RealVector& bin_pairs)
 
 
 inline Real NumericGenOrthogPolynomial::
-bounded_normal_pdf(const Real& x, const RealVector& params)
+bounded_normal_pdf(Real x, const RealVector& params)
 {
   return Pecos::bounded_normal_pdf(x, params[0], params[1],
 				   params[2], params[3]);
@@ -462,12 +459,12 @@ bounded_normal_pdf(const Real& x, const RealVector& params)
 
 
 inline Real NumericGenOrthogPolynomial::
-lognormal_pdf(const Real& x, const RealVector& params)
+lognormal_pdf(Real x, const RealVector& params)
 { return Pecos::lognormal_pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
-bounded_lognormal_pdf(const Real& x, const RealVector& params)
+bounded_lognormal_pdf(Real x, const RealVector& params)
 {
   return Pecos::bounded_lognormal_pdf(x, params[0], params[1],
 				      params[2], params[3]);
@@ -475,27 +472,27 @@ bounded_lognormal_pdf(const Real& x, const RealVector& params)
 
 
 inline Real NumericGenOrthogPolynomial::
-loguniform_pdf(const Real& x, const RealVector& params)
+loguniform_pdf(Real x, const RealVector& params)
 { return Pecos::loguniform_pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
-triangular_pdf(const Real& x, const RealVector& params)
+triangular_pdf(Real x, const RealVector& params)
 { return Pecos::triangular_pdf(x, params[0], params[1], params[2]); }
 
 
 inline Real NumericGenOrthogPolynomial::
-gumbel_pdf(const Real& x, const RealVector& params)
+gumbel_pdf(Real x, const RealVector& params)
 { return Pecos::gumbel_pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
-frechet_pdf(const Real& x, const RealVector& params)
+frechet_pdf(Real x, const RealVector& params)
 { return Pecos::frechet_pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
-weibull_pdf(const Real& x, const RealVector& params)
+weibull_pdf(Real x, const RealVector& params)
 { return Pecos::weibull_pdf(x, params[0], params[1]); }
 
 

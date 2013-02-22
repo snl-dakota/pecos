@@ -174,6 +174,29 @@ protected:
 				  const UShortArray& basis_index,
 				  const SizetList& subset_indices);
 
+  /// set point values within 1D basis polynomials for purposes of
+  /// barycentric precomputation
+  void set_new_point(const RealVector& x, const UShortArray& basis_index);
+  /// set point values within subset of 1D basis polynomials for purposes of
+  /// barycentric precomputation
+  void set_new_point(const RealVector& x, const UShortArray& basis_index,
+		     const SizetList& subset_indices);
+  /// compute the product of 1D barycentric weight factors
+  Real barycentric_factor(const UShortArray& key,
+			  const UShortArray& basis_index);
+  /// compute the product of a subset of 1D barycentric weight factors
+  Real barycentric_factor(const UShortArray& key,
+			  const UShortArray& basis_index,
+			  const SizetList& subset_indices);
+  /// compute the product of 1D barycentric weight factor sums for use in
+  /// the denominator of the barycentric interpolation formula (second form)
+  Real barycentric_denominator(const UShortArray& basis_index);
+  /// compute the product of a subset of 1D barycentric weight factor
+  /// sums for use in the denominator of the barycentric interpolation
+  /// formula (second form)
+  Real barycentric_denominator(const UShortArray& basis_index,
+			       const SizetList& subset_indices);
+
   /// return type 1 product weight from integration of type 1 interpolation
   /// polynomials using integrated dimension subset
   Real type1_weight(const UShortArray& key, const UShortArray& basis_index, 
@@ -195,12 +218,23 @@ protected:
 		    const UShortArray& basis_index, const BitArray& member_bits,
 		    Real& member_t2_wt_prod, Real& nonmember_t2_wt_prod);
 
+  /// compute the value of a tensor interpolant (barycentric Lagrange form)
+  /// on a tensor grid; contributes to value(x)
+  Real tensor_product_value(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const UShortArray& basis_index,
+    const UShort2DArray& key,        const SizetArray&  colloc_index);
   /// compute the value of a tensor interpolant on a tensor grid;
   /// contributes to value(x)
   Real tensor_product_value(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray&  colloc_index);
+  /// compute the value of a tensor interpolant (barycentric Lagrange form)
+  /// on a tensor grid over a subset of the variables; contributes to value(x)
+  Real tensor_product_value(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const UShortArray& basis_index,
+    const UShort2DArray& key,        const SizetArray&  colloc_index,
+    const SizetList& subset_indices);
   /// compute the value of a tensor interpolant on a tensor grid over
   /// a subset of the variables; contributes to value(x)
   Real tensor_product_value(const RealVector& x,
@@ -280,6 +314,10 @@ protected:
   /// {GLOBAL,PIECEWISE}_ORTHOGONAL_POLYNOMIAL
   short basisType;
 
+  /// flag indicating use of barycentric interpolation for global
+  /// value-based Lagrange interpolation
+  bool barycentricFlag;
+
 private:
 
   //
@@ -313,7 +351,12 @@ inline InterpPolyApproximation::
 InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numCollocPts(0),
   basisType(basis_type)
-{ }
+{
+  // barycentric for global Lagrange basis polynomials
+  barycentricFlag = ( !use_derivs &&
+    ( basis_type == GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL /* ||
+      basis_type == GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL */ ) );
+}
 
 
 inline InterpPolyApproximation::~InterpPolyApproximation()
@@ -535,6 +578,88 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 	polynomialBasis[basis_index[l]][l].type1_value(x[l], key[l]);
   }
   return (deriv) ? L2_grad : 0.;
+}
+
+
+inline void InterpPolyApproximation::
+set_new_point(const RealVector& x, const UShortArray& basis_index)
+{
+  for (size_t j=0; j<numVars; ++j)
+    polynomialBasis[basis_index[j]][j].set_new_point(x[j]);
+}
+
+
+inline void InterpPolyApproximation::
+set_new_point(const RealVector& x, const UShortArray& basis_index,
+	      const SizetList& subset_indices)
+{
+  SizetList::const_iterator cit; size_t j;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit)
+    { j = *cit; polynomialBasis[basis_index[j]][j].set_new_point(x[j]); }
+}
+
+
+inline Real InterpPolyApproximation::
+barycentric_factor(const UShortArray& key, const UShortArray& basis_index)
+{
+  Real b1 = 1.; size_t j, exact_index;
+  for (j=0; j<numVars; ++j) {
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
+    exact_index = pb_lv.exact_index();
+    if (exact_index == _NPOS) // new pt is not an exact match: interpolate
+      b1 *= pb_lv.barycentric_weight_factor(key[j]);
+    else if (key[j] != exact_index) // new pt is exact match: factor is 0 or 1
+      { b1 = 0.; break; }
+  }
+  return b1;
+}
+
+
+inline Real InterpPolyApproximation::
+barycentric_factor(const UShortArray& key, const UShortArray& basis_index,
+		   const SizetList& subset_indices)
+{
+  Real b1 = 1.; SizetList::const_iterator cit; size_t j, exact_index;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit;
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
+    exact_index = pb_lv.exact_index();
+    if (exact_index == _NPOS) // new pt is not an exact match: interpolate
+      b1 *= pb_lv.barycentric_weight_factor(key[j]);
+    else if (key[j] != exact_index) // new pt is exact match: factor is 0 or 1
+      { b1 = 0.; break; }
+  }
+  return b1;
+}
+
+
+inline Real InterpPolyApproximation::
+barycentric_denominator(const UShortArray& basis_index)
+{
+  Real denom = 1.;
+  for (size_t j=0; j<numVars; ++j) {
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
+    if (pb_lv.exact_index() == _NPOS)
+      denom *= pb_lv.barycentric_weight_factor_sum();
+    //else: if new pt is exact match, then dimension doesn't contribute to denom
+  }
+  return denom;
+}
+
+
+inline Real InterpPolyApproximation::
+barycentric_denominator(const UShortArray& basis_index,
+			const SizetList& subset_indices)
+{
+  Real denom = 1.; SizetList::const_iterator cit; size_t j;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit;
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
+    if (pb_lv.exact_index() == _NPOS)
+      denom *= pb_lv.barycentric_weight_factor_sum();
+    //else: if new pt is exact match, then dimension doesn't contribute to denom
+  }
+  return denom;
 }
 
 

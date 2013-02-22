@@ -48,7 +48,7 @@ public:
   //
 
   GenLaguerreOrthogPolynomial();                       ///< default constructor
-  GenLaguerreOrthogPolynomial(const Real& alpha_stat); ///< standard constructor
+  GenLaguerreOrthogPolynomial(Real alpha_stat); ///< standard constructor
   ~GenLaguerreOrthogPolynomial();                      ///< destructor
 
   //
@@ -56,7 +56,7 @@ public:
   //
 
   /// calculate and return wtFactor based on alphaPoly
-  const Real& weight_factor();
+  Real weight_factor();
 
 protected:
 
@@ -64,17 +64,17 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  Real type1_value(const Real& x, unsigned short order);
-  Real type1_gradient(const Real& x, unsigned short order);
+  Real type1_value(Real x, unsigned short order);
+  Real type1_gradient(Real x, unsigned short order);
   Real norm_squared(unsigned short order);
 
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
   /// return alphaPoly
-  const Real& alpha_polynomial() const;
+  Real alpha_polynomial() const;
   /// set alphaPoly using the conversion alphaPoly = alpha_stat-1.
-  void alpha_stat(const Real& alpha);
+  void alpha_stat(Real alpha);
 
   /// override default definition (false) since GenLaguerre is parameterized
   bool parameterized() const;
@@ -97,7 +97,7 @@ inline GenLaguerreOrthogPolynomial::GenLaguerreOrthogPolynomial(): alphaPoly(0.)
 
 // TO DO
 inline GenLaguerreOrthogPolynomial::
-GenLaguerreOrthogPolynomial(const Real& alpha_stat): alphaPoly(alpha_stat-1.)
+GenLaguerreOrthogPolynomial(Real alpha_stat): alphaPoly(alpha_stat-1.)
 { collocRule = GEN_GAUSS_LAGUERRE; }
 
 
@@ -105,11 +105,11 @@ inline GenLaguerreOrthogPolynomial::~GenLaguerreOrthogPolynomial()
 { }
 
 
-inline const Real& GenLaguerreOrthogPolynomial::alpha_polynomial() const
+inline Real GenLaguerreOrthogPolynomial::alpha_polynomial() const
 { return alphaPoly; }
 
 
-inline void GenLaguerreOrthogPolynomial::alpha_stat(const Real& alpha)
+inline void GenLaguerreOrthogPolynomial::alpha_stat(Real alpha)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().

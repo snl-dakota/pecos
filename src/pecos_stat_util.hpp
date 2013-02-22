@@ -70,7 +70,7 @@ typedef bmth::
   fisher_f_dist;
 
 
-inline Real gamma_function(const Real& x)
+inline Real gamma_function(Real x)
 {
 //#ifdef HAVE_BOOST
   return bmth::tgamma(x);
@@ -86,7 +86,7 @@ inline Real gamma_function(const Real& x)
 }
 
 
-inline Real phi(const Real& beta)
+inline Real phi(Real beta)
 {
 //#ifdef HAVE_BOOST
   normal_dist norm(0., 1.);
@@ -103,7 +103,7 @@ inline Real phi(const Real& beta)
 
 /** returns a probability < 0.5 for negative beta and a probability > 0.5
     for positive beta. */
-inline Real Phi(const Real& beta)
+inline Real Phi(Real beta)
 {
 //#ifdef HAVE_BOOST
   normal_dist norm(0., 1.);
@@ -120,7 +120,7 @@ inline Real Phi(const Real& beta)
 
 /** returns a negative beta for probability < 0.5 and a positive beta for
     probability > 0.5. */
-inline Real Phi_inverse(const Real& p)
+inline Real Phi_inverse(Real p)
 {
 //#ifdef HAVE_BOOST
   normal_dist norm(0., 1.);
@@ -139,17 +139,16 @@ inline Real Phi_inverse(const Real& p)
 #ifndef HAVE_BOOST
 #ifdef HAVE_GSL
 /// Inverse of standard beta CDF by backtracking Newton (not supported by GSL)
-Real cdf_beta_Pinv(const Real& cdf, const Real& alpha, const Real& beta);
+Real cdf_beta_Pinv(Real cdf, Real alpha, Real beta);
 #else
 /// Inverse of error function used in Phi_inverse()
-Real erf_inverse(const Real& p);
+Real erf_inverse(Real p);
 #endif // HAVE_GSL
 #endif // HAVE_BOOST
 */
 
 
-inline void lognormal_std_deviation_from_err_factor(const Real& mean,
-						    const Real& err_fact,
+inline void lognormal_std_deviation_from_err_factor(Real mean, Real err_fact,
 						    Real& std_dev)
 {
   Real zeta = std::log(err_fact)/Phi_inverse(0.95); // Phi^{-1}(0.95) ~= 1.645
@@ -157,8 +156,7 @@ inline void lognormal_std_deviation_from_err_factor(const Real& mean,
 }
 
 
-inline void lognormal_err_factor_from_std_deviation(const Real& mean,
-						    const Real& std_dev,
+inline void lognormal_err_factor_from_std_deviation(Real mean, Real std_dev,
 						    Real& err_fact)
 {
   Real cf_var = std_dev/mean, zeta = std::sqrt(std::log(1. + cf_var*cf_var));
@@ -166,7 +164,7 @@ inline void lognormal_err_factor_from_std_deviation(const Real& mean,
 }
 
 
-inline void moments_from_lognormal_params(const Real& lambda, const Real& zeta,
+inline void moments_from_lognormal_params(Real lambda, Real zeta,
 					  Real& mean, Real& std_dev)
 {
   Real zeta_sq = zeta*zeta;
@@ -175,8 +173,7 @@ inline void moments_from_lognormal_params(const Real& lambda, const Real& zeta,
 }
 
 
-inline void lognormal_zeta_sq_from_moments(const Real& mean,
-					   const Real& std_dev,
+inline void lognormal_zeta_sq_from_moments(Real mean, Real std_dev,
 					   Real& zeta_sq)
 {
   Real cf_var = std_dev/mean;
@@ -184,7 +181,7 @@ inline void lognormal_zeta_sq_from_moments(const Real& mean,
 }
 
 
-inline void lognormal_params_from_moments(const Real& mean, const Real& std_dev,
+inline void lognormal_params_from_moments(Real mean, Real std_dev,
 					  Real& lambda, Real& zeta)
 {
   Real zeta_sq;
@@ -262,13 +259,13 @@ inline void all_from_lognormal_spec(const RealVector& ln_means,
 }
 
 
-inline void moments_from_uniform_params(const Real& lwr, const Real& upr,
-					Real& mean, Real& std_dev)
+inline void moments_from_uniform_params(Real lwr, Real upr, Real& mean,
+					Real& std_dev)
 { mean = (lwr + upr)/2.; std_dev = (upr - lwr)/std::sqrt(12.); }
 
 
-inline void moments_from_loguniform_params(const Real& lwr, const Real& upr,
-					   Real& mean, Real& std_dev)
+inline void moments_from_loguniform_params(Real lwr, Real upr, Real& mean,
+					   Real& std_dev)
 {
   Real range = upr - lwr, log_range = std::log(upr) - std::log(lwr);
   mean       = range/log_range;
@@ -276,9 +273,8 @@ inline void moments_from_loguniform_params(const Real& lwr, const Real& upr,
 }
 
 
-inline void moments_from_triangular_params(const Real& lwr, const Real& upr,
-					   const Real& mode, Real& mean,
-					   Real& std_dev)
+inline void moments_from_triangular_params(Real lwr, Real upr, Real mode,
+					   Real& mean, Real& std_dev)
 {
   mean = (lwr + mode + upr)/3.;
   std_dev
@@ -286,13 +282,11 @@ inline void moments_from_triangular_params(const Real& lwr, const Real& upr,
 }
 
 
-inline void moments_from_exponential_params(const Real& beta, Real& mean,
-					    Real& std_dev)
+inline void moments_from_exponential_params(Real beta, Real& mean,Real& std_dev)
 { mean = beta; std_dev = beta; }
 
 
-inline void moments_from_beta_params(const Real& lwr, const Real& upr,
-				     const Real& alpha, const Real& beta,
+inline void moments_from_beta_params(Real lwr, Real upr, Real alpha, Real beta,
 				     Real& mean, Real& std_dev)
 {
   Real range = upr - lwr;
@@ -301,19 +295,19 @@ inline void moments_from_beta_params(const Real& lwr, const Real& upr,
 }
 
 
-inline void moments_from_gamma_params(const Real& alpha, const Real& beta,
-				      Real& mean, Real& std_dev)
+inline void moments_from_gamma_params(Real alpha, Real beta, Real& mean,
+				      Real& std_dev)
 { mean = alpha*beta; std_dev = std::sqrt(alpha)*beta; }
 
 
-inline void moments_from_gumbel_params(const Real& alpha, const Real& beta,
-				       Real& mean, Real& std_dev)
+inline void moments_from_gumbel_params(Real alpha, Real beta, Real& mean,
+				       Real& std_dev)
 { mean = beta + 0.57721566490153286/alpha; std_dev = PI/std::sqrt(6.)/alpha; }
 /* Euler-Mascheroni constant is 0.5772... */
 
 
-inline void moments_from_frechet_params(const Real& alpha, const Real& beta,
-					Real& mean, Real& std_dev)
+inline void moments_from_frechet_params(Real alpha, Real beta, Real& mean,
+					Real& std_dev)
 {
   // See Haldar and Mahadevan, p. 91-92
   Real gam = gamma_function(1.-1./alpha);
@@ -322,8 +316,8 @@ inline void moments_from_frechet_params(const Real& alpha, const Real& beta,
 }
 
 
-inline void moments_from_weibull_params(const Real& alpha, const Real& beta,
-					Real& mean, Real& std_dev)
+inline void moments_from_weibull_params(Real alpha, Real beta, Real& mean,
+					Real& std_dev)
 {
   // See Haldar and Mahadevan, p. 97
   Real gam = gamma_function(1.+1./alpha),
@@ -341,11 +335,11 @@ inline void moments_from_histogram_bin_params(const RealVector& hist_bin_prs,
   // skyline/density-based) with normalization (counts sum to 1.)
   mean = std_dev = 0.;
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
+  Real lwr, count, upr;//, clu;
   for (int i=0; i<num_bins; ++i) {
-    const Real& lwr   = hist_bin_prs[2*i];
-    const Real& count = hist_bin_prs[2*i+1];
-    const Real& upr   = hist_bin_prs[2*i+2];
-    //Real clu = count * (lwr + upr);
+    lwr = hist_bin_prs[2*i]; count = hist_bin_prs[2*i+1];
+    upr = hist_bin_prs[2*i+2];
+    //clu = count * (lwr + upr);
     mean    += count * (lwr + upr); // clu
     std_dev += count * (upr*upr + upr*lwr + lwr*lwr); // upr*clu + count*lwr*lwr
   }
@@ -354,16 +348,14 @@ inline void moments_from_histogram_bin_params(const RealVector& hist_bin_prs,
 }
 
 
-inline void moments_from_poisson_params(const Real& lambda,
-					Real& mean, Real& std_dev)
+inline void moments_from_poisson_params(Real lambda, Real& mean, Real& std_dev)
 {
   mean    = lambda;
   std_dev = std::sqrt(lambda);
 }
 
 
-inline void moments_from_binomial_params(const Real& prob_pertrial,
-                                         const int& num_trials, 
+inline void moments_from_binomial_params(Real prob_pertrial, int num_trials, 
                                          Real& mean, Real& std_dev)
 {
   mean    = prob_pertrial * num_trials;
@@ -371,9 +363,9 @@ inline void moments_from_binomial_params(const Real& prob_pertrial,
 }
 
 
-inline void moments_from_negative_binomial_params(const Real& prob_pertrial,
-			                          const int& num_trials,
-                                                  Real& mean, Real& std_dev)
+inline void moments_from_negative_binomial_params(Real prob_pertrial,
+						  int num_trials, Real& mean,
+						  Real& std_dev)
 {
   mean    = (Real)num_trials * (1.-prob_pertrial)/prob_pertrial;
   std_dev = std::sqrt((Real)num_trials * (1.-prob_pertrial) /
@@ -381,7 +373,7 @@ inline void moments_from_negative_binomial_params(const Real& prob_pertrial,
 }
 
 
-inline void moments_from_geometric_params(const Real& prob_pertrial,
+inline void moments_from_geometric_params(Real prob_pertrial,
 					  Real& mean, Real& std_dev)
 {
   mean    = (1.-prob_pertrial)/prob_pertrial;
@@ -389,9 +381,9 @@ inline void moments_from_geometric_params(const Real& prob_pertrial,
 }
 
 
-inline void moments_from_hypergeometric_params(const int& num_total_pop,
-					       const int& num_sel_pop, 
-					       const int& num_fail, 
+inline void moments_from_hypergeometric_params(int num_total_pop,
+					       int num_sel_pop, 
+					       int num_fail, 
 					       Real& mean, Real& std_dev)
 {
   mean    = (Real)(num_fail*num_sel_pop)/(Real)num_total_pop;
@@ -407,10 +399,9 @@ inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
   // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
   // assume normalization (counts sum to 1.).
   mean = std_dev = 0.;
-  size_t num_pts = hist_pt_prs.length() / 2;
+  size_t num_pts = hist_pt_prs.length() / 2; Real val, cv;
   for (int i=0; i<num_pts; ++i) {
-    const Real& val = hist_pt_prs[2*i];
-    Real cv = hist_pt_prs[2*i+1]*val; // count * val
+    val = hist_pt_prs[2*i]; cv = hist_pt_prs[2*i+1]*val; // count * val
     mean    += cv;
     std_dev += cv*val;
   }
@@ -418,9 +409,8 @@ inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
 }
 
 
-inline Real bounded_normal_pdf(const Real& x, const Real& mean, 
-			       const Real& std_dev, const Real& lwr,
-			       const Real& upr)
+inline Real bounded_normal_pdf(Real x, Real mean, Real std_dev, Real lwr,
+			       Real upr)
 {
   Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/std_dev) : 0.;
   Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/std_dev) : 1.;
@@ -428,9 +418,8 @@ inline Real bounded_normal_pdf(const Real& x, const Real& mean,
 }
 
 
-inline Real bounded_normal_cdf(const Real& x, const Real& mean, 
-			       const Real& std_dev, const Real& lwr,
-			       const Real& upr)
+inline Real bounded_normal_cdf(Real x, Real mean, Real std_dev, Real lwr,
+			       Real upr)
 {
   Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/std_dev) : 0.;
   Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/std_dev) : 1.;
@@ -438,7 +427,7 @@ inline Real bounded_normal_cdf(const Real& x, const Real& mean,
 }
 
 
-inline Real lognormal_pdf(const Real& x, const Real& mean, const Real& std_dev)
+inline Real lognormal_pdf(Real x, Real mean, Real std_dev)
 {
   Real lambda, zeta;
 //#ifdef HAVE_BOOST
@@ -461,7 +450,7 @@ inline Real lognormal_pdf(const Real& x, const Real& mean, const Real& std_dev)
 }
 
 
-inline Real lognormal_cdf(const Real& x, const Real& mean, const Real& std_dev)
+inline Real lognormal_cdf(Real x, Real mean, Real std_dev)
 {
   Real lambda, zeta;
   lognormal_params_from_moments(mean, std_dev, lambda, zeta);
@@ -469,9 +458,8 @@ inline Real lognormal_cdf(const Real& x, const Real& mean, const Real& std_dev)
 }
 
 
-inline Real bounded_lognormal_pdf(const Real& x, const Real& mean, 
-				  const Real& std_dev, const Real& lwr,
-				  const Real& upr)
+inline Real bounded_lognormal_pdf(Real x, Real mean, Real std_dev, Real lwr,
+				  Real upr)
 {
   Real lambda, zeta;
   lognormal_params_from_moments(mean, std_dev, lambda, zeta);
@@ -481,9 +469,8 @@ inline Real bounded_lognormal_pdf(const Real& x, const Real& mean,
 }
 
 
-inline Real bounded_lognormal_cdf(const Real& x, const Real& mean, 
-				  const Real& std_dev, const Real& lwr,
-				  const Real& upr)
+inline Real bounded_lognormal_cdf(Real x, Real mean, Real std_dev, Real lwr,
+				  Real upr)
 {
   Real lambda, zeta;
   lognormal_params_from_moments(mean, std_dev, lambda, zeta);
@@ -497,69 +484,67 @@ inline Real std_uniform_pdf()
 { return 0.5; } // equal probability on [-1,1]
 
 
-inline Real std_uniform_cdf(const Real& x)
+inline Real std_uniform_cdf(Real x)
 { return (x + 1.)/2.; } // linear [-1,1] -> [0,1]
 
 
-inline Real std_uniform_cdf_inverse(const Real& cdf)
+inline Real std_uniform_cdf_inverse(Real cdf)
 { return 2.*cdf - 1.; } // linear [0,1] -> [-1,1]
 
 
-inline Real uniform_pdf(const Real& lwr, const Real& upr)
+inline Real uniform_pdf(Real lwr, Real upr)
 { return 1./(upr - lwr); } // equal probability on [lwr,upr]
 
 
-inline Real uniform_cdf(const Real& x, const Real& lwr, const Real& upr)
+inline Real uniform_cdf(Real x, Real lwr, Real upr)
 { return (x - lwr)/(upr - lwr); } // linear [lwr,upr] -> [0,1]
 
 
-inline Real loguniform_pdf(const Real& x, const Real& lwr, const Real& upr)
+inline Real loguniform_pdf(Real x, Real lwr, Real upr)
 { return 1./(std::log(upr) - std::log(lwr))/x; }
 
 
-inline Real loguniform_cdf(const Real& x, const Real& lwr, const Real& upr)
+inline Real loguniform_cdf(Real x, Real lwr, Real upr)
 { return (std::log(x) - std::log(lwr))/(std::log(upr) - std::log(lwr)); }
 
 
-inline Real triangular_pdf(const Real& x, const Real& mode, const Real& lwr,
-			   const Real& upr)
+inline Real triangular_pdf(Real x, Real mode, Real lwr, Real upr)
 {
   return (x < mode) ? 2.*(x-lwr)/(upr-lwr)/(mode-lwr) :
                       2.*(upr-x)/(upr-lwr)/(upr-mode);
 }
 
 
-inline Real triangular_cdf(const Real& x, const Real& mode, const Real& lwr,
-			   const Real& upr)
+inline Real triangular_cdf(Real x, Real mode, Real lwr, Real upr)
 {
   return (x < mode) ? std::pow(x-lwr,2.)/(upr-lwr)/(mode-lwr) :
     ((mode-lwr) - (x+mode-2*upr)*(x-mode)/(upr-mode))/(upr-lwr);
 }
 
 
-inline Real std_exponential_pdf(const Real& x)
+inline Real std_exponential_pdf(Real x)
 { return std::exp(-x); }
 
 
-inline Real std_exponential_cdf(const Real& x)
+inline Real std_exponential_cdf(Real x)
 {
   // as with log1p(), avoid numerical probs when exp(~0) is ~ 1
   return -bmth::expm1(-x); //1. - std::exp(-x);
 }
 
 
-inline Real exponential_pdf(const Real& x, const Real& beta)
+inline Real exponential_pdf(Real x, Real beta)
 { return std::exp(-x/beta)/beta; }
 
 
-inline Real exponential_cdf(const Real& x, const Real& beta)
+inline Real exponential_cdf(Real x, Real beta)
 {
   // as with log1p(), avoid numerical probs when exp(~0) is ~ 1
   return -bmth::expm1(-x/beta); //1. - std::exp(-x/beta);
 }
 
 
-inline Real std_beta_pdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real std_beta_pdf(Real x, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   beta_dist beta1(alpha, beta);
@@ -573,7 +558,7 @@ inline Real std_beta_pdf(const Real& x, const Real& alpha, const Real& beta)
 }
 
 
-inline Real std_beta_cdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real std_beta_cdf(Real x, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   beta_dist beta1(alpha, beta);
@@ -587,8 +572,7 @@ inline Real std_beta_cdf(const Real& x, const Real& alpha, const Real& beta)
 }
 
 
-inline Real std_beta_cdf_inverse(const Real& cdf, const Real& alpha,
-				 const Real& beta)
+inline Real std_beta_cdf_inverse(Real cdf, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   beta_dist beta1(alpha, beta);
@@ -603,7 +587,7 @@ inline Real std_beta_cdf_inverse(const Real& cdf, const Real& alpha,
 }
 
 
-inline Real gamma_pdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real gamma_pdf(Real x, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   gamma_dist gamma1(alpha, beta);
@@ -617,7 +601,7 @@ inline Real gamma_pdf(const Real& x, const Real& alpha, const Real& beta)
 }
 
 
-//inline Real gamma_pdf_deriv(const Real& x, const Real& alpha,const Real& beta)
+//inline Real gamma_pdf_deriv(Real x, Real alpha, Real beta)
 //{
 //  return std::pow(beta,-alpha) / gamma_function(alpha) *
 //    (std::exp(-x/beta)*(alpha-1.) * std::pow(x,alpha-2.) -
@@ -625,7 +609,7 @@ inline Real gamma_pdf(const Real& x, const Real& alpha, const Real& beta)
 //}
 
 
-inline Real gamma_cdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real gamma_cdf(Real x, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   gamma_dist gamma1(alpha, beta);
@@ -639,8 +623,7 @@ inline Real gamma_cdf(const Real& x, const Real& alpha, const Real& beta)
 }
 
 
-inline Real gamma_cdf_inverse(const Real& cdf, const Real& alpha,
-			      const Real& beta)
+inline Real gamma_cdf_inverse(Real cdf, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   gamma_dist gamma1(alpha, beta);
@@ -654,7 +637,7 @@ inline Real gamma_cdf_inverse(const Real& cdf, const Real& alpha,
 }
 
 
-inline Real gumbel_pdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real gumbel_pdf(Real x, Real alpha, Real beta)
 {
   Real num = std::exp(-alpha*(x-beta));
   // if num overflows, apply l'Hopital's rule
@@ -662,22 +645,22 @@ inline Real gumbel_pdf(const Real& x, const Real& alpha, const Real& beta)
 }
 
 
-inline Real gumbel_cdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real gumbel_cdf(Real x, Real alpha, Real beta)
 { return std::exp(-std::exp(-alpha * (x - beta))); }
 
 
-inline Real frechet_pdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real frechet_pdf(Real x, Real alpha, Real beta)
 {
   Real num = std::pow(beta/x, alpha);
   return alpha/x*num*std::exp(-num);
 }
 
 
-inline Real frechet_cdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real frechet_cdf(Real x, Real alpha, Real beta)
 { return std::exp(-std::pow(beta/x, alpha)); }
 
 
-inline Real weibull_pdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real weibull_pdf(Real x, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   weibull_dist weibull1(alpha, beta);
@@ -694,7 +677,7 @@ inline Real weibull_pdf(const Real& x, const Real& alpha, const Real& beta)
 }
 
 
-inline Real weibull_cdf(const Real& x, const Real& alpha, const Real& beta)
+inline Real weibull_cdf(Real x, Real alpha, Real beta)
 {
 //#ifdef HAVE_BOOST
   weibull_dist weibull1(alpha, beta);
@@ -711,7 +694,7 @@ inline Real weibull_cdf(const Real& x, const Real& alpha, const Real& beta)
 }
 
 
-inline Real histogram_bin_pdf(const Real& x, const RealVector& hist_bin_prs)
+inline Real histogram_bin_pdf(Real x, const RealVector& hist_bin_prs)
 {
   // The PDF is discontinuous at the bin bounds.  To resolve this, this
   // function employs an (arbitrary) convention: closed/inclusive lower bound
@@ -720,8 +703,9 @@ inline Real histogram_bin_pdf(const Real& x, const RealVector& hist_bin_prs)
   if (x < hist_bin_prs[0] || x >= hist_bin_prs[2*num_bins])
     return 0.;
   else {
+    Real upr;
     for (int i=0; i<num_bins; ++i) {
-      const Real& upr = hist_bin_prs[2*i+2];
+      upr = hist_bin_prs[2*i+2];
       if (x < upr) // return density = count / (upr - lwr);
 	return hist_bin_prs[2*i+1] / (upr - hist_bin_prs[2*i]);
     }
@@ -730,7 +714,7 @@ inline Real histogram_bin_pdf(const Real& x, const RealVector& hist_bin_prs)
 }
 
 
-inline Real histogram_bin_cdf(const Real& x, const RealVector& hist_bin_prs)
+inline Real histogram_bin_cdf(Real x, const RealVector& hist_bin_prs)
 {
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
   if (x <= hist_bin_prs[0])
@@ -738,12 +722,11 @@ inline Real histogram_bin_cdf(const Real& x, const RealVector& hist_bin_prs)
   else if (x >= hist_bin_prs[2*num_bins])
     return 1.;
   else {
-    Real cdf = 0.;
+    Real cdf = 0., count, upr, lwr;
     for (int i=0; i<num_bins; ++i) {
-      const Real& count = hist_bin_prs[2*i+1];
-      const Real& upr   = hist_bin_prs[2*i+2];
+      count = hist_bin_prs[2*i+1]; upr = hist_bin_prs[2*i+2];
       if (x < upr) {
-	const Real& lwr = hist_bin_prs[2*i];
+        lwr = hist_bin_prs[2*i];
 	cdf += count * (x - lwr) / (upr - lwr);
 	break;
       }
@@ -755,8 +738,7 @@ inline Real histogram_bin_cdf(const Real& x, const RealVector& hist_bin_prs)
 }
 
 
-inline Real histogram_bin_cdf_inverse(const Real& cdf,
-				      const RealVector& hist_bin_prs)
+inline Real histogram_bin_cdf_inverse(Real cdf, const RealVector& hist_bin_prs)
 {
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
   if (cdf <= 0.)
@@ -764,13 +746,12 @@ inline Real histogram_bin_cdf_inverse(const Real& cdf,
   else if (cdf >= 1.)
     return hist_bin_prs[2*num_bins]; // upper bound abscissa
   else {
-    Real upr_cdf = 0.;
+    Real upr_cdf = 0., count, upr, lwr;
     for (int i=0; i<num_bins; ++i) {
-      const Real& count = hist_bin_prs[2*i+1];
+      count = hist_bin_prs[2*i+1];
       upr_cdf += count;
       if (cdf < upr_cdf) {
-	const Real& upr = hist_bin_prs[2*i+2];
-	const Real& lwr = hist_bin_prs[2*i];
+        upr = hist_bin_prs[2*i+2]; lwr = hist_bin_prs[2*i];
 	return lwr + (upr_cdf - cdf) / count * (upr - lwr);
       }
     }

@@ -415,7 +415,8 @@ update_interpolation_basis(unsigned short lev_index, size_t var_index)
     std::vector<BasisPolynomial>& poly_basis_l  = polynomialBasis[lev_index];
     BasisPolynomial&              poly_basis_lv = poly_basis_l[var_index];
     short poly_type_1d, rule;
-    if (num_int_poly_basis_v.parameterized()) { // never share rep
+    // don't share reps in case of parameterized basis or barycentric interp
+    if (num_int_poly_basis_v.parameterized() || barycentricFlag) {
       if (poly_basis_lv.is_null()) {
 	initialize_polynomial_basis_type(poly_type_1d, rule);
 	poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
@@ -424,7 +425,7 @@ update_interpolation_basis(unsigned short lev_index, size_t var_index)
       else if (num_int_poly_basis_v.parametric_update())
 	poly_basis_lv.interpolation_points(colloc_pts_1d_lv);
     }
-    else if (poly_basis_lv.is_null()) {
+    else if (poly_basis_lv.is_null()) { // can share reps for efficiency
       size_t var_index2;
       if (find_basis(lev_index, var_index, var_index2))
 	poly_basis_lv = poly_basis_l[var_index2]; // reuse prev via shared rep
@@ -470,6 +471,52 @@ same_basis(unsigned short level, size_t v1, size_t v2)
 }
 
 
+/** Barycentric approach is only valid for value-based global Lagrange
+    interpolation, either nodal or hierarchical. */
+Real InterpPolyApproximation::
+tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
+		     const UShortArray& basis_index, const UShort2DArray& key,
+		     const SizetArray& colloc_index)
+{
+  // For barycentric interpolation: track x != newPoint within 1D basis
+  set_new_point(x, basis_index);
+
+  Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
+
+  /*
+  // grab an array of Teuchos vector views and perform operations
+  // in an order that minimizes flops (akin to Horner's rule)
+  const RealVectorArray& bc_factors = barycentric_weight_factors(basis_index);
+  for (i=0; i<num_colloc_pts; ++i) { // TO DO: reorder point traversal
+    c_index = (colloc_index.empty()) ? i : colloc_index[i];
+    proc_bc_factor_ij = 1.; sum_bc_factor_ij = 0.;
+    for (j=0; j<numVars; ++j) {
+      bc_factor_ij = bc_factors[j][key[i][j]];
+      proc_bc_factor_ij *= bc_factor_ij;
+    }
+    tp_val += exp_t1_coeffs[c_index] * proc_bc_factor_ij;
+  }
+  tp_val /= barycentric_denominator(basis_index);
+  */
+
+  // delegate loops: cleaner, but some efficiency lost (and possibly precision
+  // as well due to subtractive cancellation among large products) by not using
+  // Horner's rule ordering of flops (see Klimke thesis)
+  if (colloc_index.empty())
+    for (i=0; i<num_colloc_pts; ++i)
+      tp_val += exp_t1_coeffs[i] * barycentric_factor(key[i], basis_index);
+  else
+    for (i=0; i<num_colloc_pts; ++i)
+      tp_val += exp_t1_coeffs[colloc_index[i]] *
+	barycentric_factor(key[i], basis_index);
+
+  tp_val /= barycentric_denominator(basis_index);
+  return tp_val;
+}
+
+
+/** General approach is valid for value-based or gradient-enhanced,
+    local or global, and nodal or hierarchical. */
 Real InterpPolyApproximation::
 tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 		     const RealMatrix& exp_t2_coeffs,
@@ -483,9 +530,13 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	tp_val += exp_t1_coeffs[i] * 
 	          type1_interpolant_value(x, key[i], basis_index);
     else
-      for (i=0; i<num_colloc_pts; ++i)
+      for (i=0; i<num_colloc_pts; ++i) {
 	tp_val += exp_t1_coeffs[colloc_index[i]] *
 	          type1_interpolant_value(x, key[i], basis_index);
+	PCout << "  t1c = " << exp_t1_coeffs[colloc_index[i]] << " t1i = "
+	      << type1_interpolant_value(x, key[i], basis_index)
+	      << " tp_val = " << tp_val << '\n';
+      }
   }
   else {
     size_t j, c_index;
@@ -504,7 +555,32 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 }
 
 
-/** All variables version. */
+/** All variables version using barycentric Lagrange interpolation. */
+Real InterpPolyApproximation::
+tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
+		     const UShortArray& basis_index, const UShort2DArray& key,
+		     const SizetArray& colloc_index,
+		     const SizetList& subset_indices)
+{
+  // For barycentric interpolation: track x != newPoint within 1D basis
+  set_new_point(x, basis_index, subset_indices);
+
+  Real tp_val = 0.; size_t i, num_colloc_pts = key.size();
+  if (colloc_index.empty())
+    for (i=0; i<num_colloc_pts; ++i)
+      tp_val += exp_t1_coeffs[i] * 
+	barycentric_factor(key[i], basis_index, subset_indices);
+  else
+    for (i=0; i<num_colloc_pts; ++i)
+      tp_val += exp_t1_coeffs[colloc_index[i]] *
+	barycentric_factor(key[i], basis_index, subset_indices);
+
+  tp_val /= barycentric_denominator(basis_index, subset_indices);
+  return tp_val;
+}
+
+
+/** All variables version using Hermite/piecewise interpolation. */
 Real InterpPolyApproximation::
 tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 		     const RealMatrix& exp_t2_coeffs,

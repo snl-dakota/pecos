@@ -47,7 +47,7 @@ void PiecewiseInterpPolynomial::precompute_data()
 
 /** Compute value of the piecewise interpolation polynomial corresponding
     to interpolation point i. */
-Real PiecewiseInterpPolynomial::type1_value(const Real& x, unsigned short i)
+Real PiecewiseInterpPolynomial::type1_value(Real x, unsigned short i)
 {
   // handle special case of a single interpolation point
   size_t num_interp_pts = interpPts.size();
@@ -55,8 +55,7 @@ Real PiecewiseInterpPolynomial::type1_value(const Real& x, unsigned short i)
     return 1.;
 
   // does x lie within interval corresponding to interpolation point i
-  const Real& pt_i = interpPts[i];
-  Real t1_val;
+  Real pt_i = interpPts[i], t1_val;
   switch (basisPolyType) {
   case PIECEWISE_LINEAR_INTERP:
     switch (collocRule) {
@@ -96,7 +95,7 @@ Real PiecewiseInterpPolynomial::type1_value(const Real& x, unsigned short i)
     default:
       // quadratic spline interpolant with general point spacing on [a,b]
       if (i == 0) { // 1-sided as equidistant 2-sided
-	const Real& pt_ip1 = interpPts[1];
+	Real pt_ip1 = interpPts[1];
 	if (x < pt_ip1) {
 	  Real ratio = (x - pt_i)/(pt_ip1 - pt_i);
 	  t1_val = 1.-ratio*ratio;
@@ -104,7 +103,7 @@ Real PiecewiseInterpPolynomial::type1_value(const Real& x, unsigned short i)
 	else t1_val = 0.;
       }
       else if (i == num_interp_pts-1) { // 1-sided as equidistant 2-sided
-	const Real& pt_im1 = interpPts[i-1];
+	Real pt_im1 = interpPts[i-1];
 	if (x > pt_im1) {
 	  Real ratio = (x - pt_i)/(pt_i - pt_im1);
 	  t1_val = 1.-ratio*ratio;
@@ -112,7 +111,7 @@ Real PiecewiseInterpPolynomial::type1_value(const Real& x, unsigned short i)
 	else t1_val = 0.;
       }
       else { // 2-sided non-equidistant
-	const Real& pt_im1 = interpPts[i-1];const Real& pt_ip1 = interpPts[i+1];
+	Real pt_im1 = interpPts[i-1], pt_ip1 = interpPts[i+1];
 	// Note: this interpolant does not have zero derivative at x=pt_i
 	t1_val = (x > pt_im1 && x < pt_ip1) ?
 	  (x-pt_im1)*(pt_ip1-x)/(pt_i-pt_im1)/(pt_ip1-pt_i) : 0.;
@@ -124,15 +123,15 @@ Real PiecewiseInterpPolynomial::type1_value(const Real& x, unsigned short i)
     // cubic Hermite spline interpolant with general point spacing
     // glue together shape fn h01 from [i-1,i] with h00 from [i,i+1]
     if (x < pt_i) {
-      const Real& pt_im1 = interpPts[i-1];
+      Real pt_im1 = interpPts[i-1];
       if (x > pt_im1) { // left half interval: p_k+1=1, p_k=m_k=m_k+1=0
-	Real t = (x-pt_im1)/(pt_i-pt_im1); 
+	Real t = (x-pt_im1)/(pt_i-pt_im1);
 	t1_val = t*t*(3.-2.*t);     // h01(t)
       }
       else t1_val = 0.;
     }
     else if (x > pt_i) {
-      const Real& pt_ip1 = interpPts[i+1];
+      Real pt_ip1 = interpPts[i+1];
       if (x < pt_ip1) { // right half interval: p_k=1, p_k+1=m_k=m_k+1=0
 	Real t = (x - pt_i)/(pt_ip1-pt_i), tm1 = t-1.;
 	t1_val = tm1*tm1*(1.+2.*t); // h00(t)
@@ -147,7 +146,7 @@ Real PiecewiseInterpPolynomial::type1_value(const Real& x, unsigned short i)
 }
 
 
-Real PiecewiseInterpPolynomial::type2_value(const Real& x, unsigned short i)
+Real PiecewiseInterpPolynomial::type2_value(Real x, unsigned short i)
 {
   // handle special case of a single interpolation point
   if (interpPts.size() == 1)
@@ -166,9 +165,9 @@ Real PiecewiseInterpPolynomial::type2_value(const Real& x, unsigned short i)
   case PIECEWISE_CUBIC_INTERP: {
     // cubic Hermite spline interpolant with equidistant pts
     // glue together shape fn h11 from [i-1,i] with h10 from [i,i+1]
-    const Real& pt_i = interpPts[i];
+    Real pt_i = interpPts[i];
     if (x < pt_i) {
-      const Real& pt_im1 = interpPts[i-1];
+      Real pt_im1 = interpPts[i-1];
       if (x > pt_im1) { // left half interval: m_k+1=1, m_k=p_k=p_k+1=0
 	Real interval = pt_i-pt_im1, t = (x-pt_im1)/interval;
 	t2_val = interval*t*t*(t-1.); // interval*h11(t) -> h11(\xi)
@@ -176,7 +175,7 @@ Real PiecewiseInterpPolynomial::type2_value(const Real& x, unsigned short i)
       else t2_val = 0.;
     }
     else if (x > pt_i) {
-      const Real& pt_ip1 = interpPts[i+1];
+      Real pt_ip1 = interpPts[i+1];
       if (x < pt_ip1) { // right half interval: m_k=1, m_k+1=p_k=p_k+1=0
 	Real interval = pt_ip1-pt_i, t = (x-pt_i)/interval, tm1 = t-1.;
 	t2_val = interval*tm1*tm1*t;  // interval*h10(t) -> h10(\xi)
@@ -194,7 +193,7 @@ Real PiecewiseInterpPolynomial::type2_value(const Real& x, unsigned short i)
 
 /** Compute derivative with respect to x of the piecewise interpolation
     polynomial corresponding to interpolation point i. */
-Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
+Real PiecewiseInterpPolynomial::type1_gradient(Real x, unsigned short i)
 { 
   // handle special case of a single interpolation point
   size_t num_interp_pts = interpPts.size();
@@ -202,8 +201,7 @@ Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
     return 0.; // derivative of value = 1 condition
 
   // does x lie within interval corresponding to interpolation point i
-  const Real& pt_i = interpPts[i];
-  Real t1_grad;
+  Real pt_i = interpPts[i], t1_grad;
   switch (basisPolyType) {
   case PIECEWISE_LINEAR_INTERP:
     switch (collocRule) {
@@ -238,7 +236,7 @@ Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
     default:
       // quadratic spline interpolant with general point spacing on [a,b]
       if (i == 0) { // 1-sided as equidistant 2-sided
-	const Real& pt_ip1 = interpPts[1];
+	Real pt_ip1 = interpPts[1];
 	if (x < pt_ip1) {
 	  Real interval = pt_ip1 - pt_i; // 1-sided as equidistant 2-sided
 	  t1_grad = -2.*(x - pt_i)/(interval*interval);
@@ -246,7 +244,7 @@ Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
 	else t1_grad = 0.;
       }
       else if (i == num_interp_pts-1) { // 1-sided as equidistant 2-sided
-	const Real& pt_im1 = interpPts[i-1];
+	Real pt_im1 = interpPts[i-1];
 	if (x > pt_im1) {
 	  Real interval = pt_i - pt_im1; // 1-sided as equidistant 2-sided
 	  t1_grad = -2.*(x - pt_i)/(interval*interval);
@@ -254,7 +252,7 @@ Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
 	else t1_grad = 0.;
       }
       else { // 2-sided non-equidistant
-	const Real& pt_im1 = interpPts[i-1];const Real& pt_ip1 = interpPts[i+1];
+	Real pt_im1 = interpPts[i-1], pt_ip1 = interpPts[i+1];
 	// Note: this interpolant does not have zero derivative at x=pt_i
 	if (x > pt_im1 && x < pt_ip1) {
 	  Real interval1 = pt_i - pt_im1, interval2 = pt_ip1 - pt_i,
@@ -271,7 +269,7 @@ Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
     // cubic Hermite spline interpolant with equidistant pts
     // glue together shape fn h01 from [i-1,i] with h00 from [i,i+1]
     if (x < pt_i) {
-      const Real& pt_im1 = interpPts[i-1];
+      Real pt_im1 = interpPts[i-1];
       if (x > pt_im1) { // left half interval: m_k+1=1, m_k=p_k=p_k+1=0
 	Real interval = pt_i-pt_im1, t = (x-pt_im1)/interval, dt_dx=1./interval;
 	t1_grad = 6.*t*(1.-t)*dt_dx; // dh01/dt * dt/dx
@@ -279,7 +277,7 @@ Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
       else t1_grad = 0.;
     }
     else if (x > pt_i) {
-      const Real& pt_ip1 = interpPts[i+1];
+      Real pt_ip1 = interpPts[i+1];
       if (x < pt_ip1) {	// right half interval: m_k=1, m_k+1=p_k=p_k+1=0
 	Real interval = pt_ip1-pt_i, t = (x-pt_i)/interval, dt_dx = 1./interval;
 	t1_grad = 6.*t*(t-1.)*dt_dx; // dh00/dt * dt/dx
@@ -294,7 +292,7 @@ Real PiecewiseInterpPolynomial::type1_gradient(const Real& x, unsigned short i)
 }
 
 
-Real PiecewiseInterpPolynomial::type2_gradient(const Real& x, unsigned short i)
+Real PiecewiseInterpPolynomial::type2_gradient(Real x, unsigned short i)
 {
   // handle special case of a single interpolation point
   if (interpPts.size() == 1)
@@ -313,9 +311,9 @@ Real PiecewiseInterpPolynomial::type2_gradient(const Real& x, unsigned short i)
   case PIECEWISE_CUBIC_INTERP: {
     // cubic Hermite spline interpolant with equidistant pts
     // glue together shape fn h11 from [i-1,i] with h10 from [i,i+1]
-    const Real& pt_i = interpPts[i];
+    Real pt_i = interpPts[i];
     if (x < pt_i) {
-      const Real& pt_im1 = interpPts[i-1];
+      Real pt_im1 = interpPts[i-1];
       if (x > pt_im1) { // left half interval: m_k+1=1, m_k=p_k=p_k+1=0
 	Real interval = pt_i-pt_im1, t = (x-pt_im1)/interval;//dt_dx=1./interval
 	t2_grad = t*(3.*t-2.);//*interval*dt_dx (terms cancel)
@@ -323,7 +321,7 @@ Real PiecewiseInterpPolynomial::type2_gradient(const Real& x, unsigned short i)
       else t2_grad = 0.;
     }
     else if (x > pt_i) {
-      const Real& pt_ip1 = interpPts[i+1];
+      Real pt_ip1 = interpPts[i+1];
       if (x < pt_ip1) { // right half interval: m_k=1, m_k+1=p_k=p_k+1=0
 	Real interval = pt_ip1-pt_i, t = (x-pt_i)/interval;//,dt_dx=1./interval;
 	t2_grad = t*(3.*t-4.)+1.;//*interval*dt_dx (terms cancel)

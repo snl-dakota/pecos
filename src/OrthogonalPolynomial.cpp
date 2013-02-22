@@ -85,7 +85,7 @@ precompute_triple_products(const UShortMultiSet& max_ijk)
 	    tripleProductMap.find(ijk_triple) == tripleProductMap.end()) {
 	  c_ijk = 0.;
 	  for (l=0; l<max_quad_order; ++l) {
-	    const Real& pt = pts[l];
+	    Real pt = pts[l];
 	    c_ijk += wts[l] * type1_value(pt, i) * type1_value(pt, j)
 	                    * type1_value(pt, k);
 	  }

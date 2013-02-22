@@ -22,7 +22,7 @@
 
 namespace Pecos {
 
-Real JacobiOrthogPolynomial::type1_value(const Real& x, unsigned short order)
+Real JacobiOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
   Real t1_val;
   switch (order) {
@@ -31,26 +31,25 @@ Real JacobiOrthogPolynomial::type1_value(const Real& x, unsigned short order)
   case 1:
     t1_val = (alphaPoly + betaPoly + 2.)*(x-1.)/2. + alphaPoly + 1.;      break;
   case 2: {
-    Real xm1 = x - 1.;
-    t1_val = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1*xm1 +
-	       4.*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.)*xm1 +
-	       4.*(alphaPoly + 1.)*(alphaPoly + 2.) ) / 8.;
+    Real xm1 = x - 1., apbp = alphaPoly + betaPoly, apbp3 = apbp + 3.,
+      ap2 = alphaPoly + 2.;
+    t1_val = ( xm1*(apbp3*(apbp + 4.)*xm1 + 4.*apbp3*ap2) +
+	       4.*(alphaPoly + 1.)*ap2 ) / 8.;
     break;
   }
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real xm1 = x - 1.,
-      Pab_n = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1*xm1
-		+ 4*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.)*xm1
-		+ 4.*(alphaPoly + 1.)*(alphaPoly + 2.) ) / 8.,       // Pab_2
-      Pab_nm1 = (alphaPoly + betaPoly + 2.)*xm1/2. + alphaPoly + 1.; // Pab_1
+    Real xm1 = x - 1., apbp = alphaPoly + betaPoly, apbp3 = apbp + 3.,
+      ap2 = alphaPoly + 2., ap1 = alphaPoly + 1.,
+      Pab_n = ( xm1*(apbp3*(apbp + 4.)*xm1 + 4.*apbp3*ap2) +
+		4.*ap1*ap2 ) / 8.,  // Pab_2
+      Pab_nm1 = (apbp + 2.)*xm1/2. + ap1; // Pab_1
     for (size_t i=2; i<order; i++) {
-      Real ab2i = alphaPoly + betaPoly + 2.*i;
+      Real ab2i = apbp + 2.*i;
       t1_val // Pab_np1
-	= ( ( (ab2i+1.)*(alphaPoly*alphaPoly-betaPoly*betaPoly)
-	      + x*pochhammer(ab2i,3) )*Pab_n
+	= ( ( (ab2i+1.)*apbp*(alphaPoly-betaPoly) + x*pochhammer(ab2i,3) )*Pab_n
 	    - 2.*(i+alphaPoly)*(i+betaPoly)*(ab2i+2.)*Pab_nm1 )
-	/ ( 2.*(i+1.)*(i+alphaPoly+betaPoly+1.)*ab2i );
+	/ ( 2.*(i+1.)*(i+apbp+1.)*ab2i );
       if (i != order-1) {
 	Pab_nm1 = Pab_n;
 	Pab_n   = t1_val;
@@ -64,7 +63,7 @@ Real JacobiOrthogPolynomial::type1_value(const Real& x, unsigned short order)
 }
 
 
-Real JacobiOrthogPolynomial::type1_gradient(const Real& x, unsigned short order)
+Real JacobiOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 {
   Real t1_grad;
 #ifdef DEBUG
@@ -92,24 +91,22 @@ Real JacobiOrthogPolynomial::type1_gradient(const Real& x, unsigned short order)
   case 1:
     t1_grad = (alphaPoly + betaPoly + 2.)/2.;                             break;
   case 2: {
-    Real xm1 = x - 1.;
-    t1_grad = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1 +
-		2.*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.) ) / 4.;
+    Real xm1 = x - 1., apbp = alphaPoly + betaPoly, apbp3 = apbp + 3.;
+    t1_grad = ( apbp3*(apbp + 4.)*xm1 +	2.*apbp3*(alphaPoly + 2.) ) / 4.;
     break;
   }
   default: {
     // Support higher order polynomials using the 3 point recursion formula:
-    Real xm1 = x - 1.,
-      dPabdx_n = ( (alphaPoly + betaPoly + 3.)*(alphaPoly + betaPoly + 4.)*xm1 +
-		   2.*(alphaPoly + betaPoly + 3.)*(alphaPoly + 2.) ) / 4.,//P'_2
-      dPabdx_nm1 = (alphaPoly + betaPoly + 2.)/2.;                       // P'_1
+    Real xm1 = x - 1., apbp = alphaPoly + betaPoly, apbp3 = apbp + 3.,
+      dPabdx_n = (apbp3*(apbp + 4.)*xm1 + 2.*apbp3*(alphaPoly + 2.))/4., // P'_2
+      dPabdx_nm1 = (apbp + 2.)/2.;                                       // P'_1
     for (size_t i=2; i<order; i++) {
-      Real ab2i = alphaPoly + betaPoly + 2.*i, pab2i3 = pochhammer(ab2i, 3);
+      Real ab2i = apbp + 2.*i, pab2i3 = pochhammer(ab2i, 3);
       t1_grad // dPabdx_np1
-	= ( ( (ab2i+1.)*(alphaPoly*alphaPoly-betaPoly*betaPoly) + x*pab2i3 )
+	= ( ( (ab2i+1.)*apbp*(alphaPoly-betaPoly) + x*pab2i3 )
 	    * dPabdx_n + pab2i3*type1_value(x,i)
 	    - 2.*(i+alphaPoly)*(i+betaPoly)*(ab2i+2.)*dPabdx_nm1 )
-	/ ( 2.*(i+1.)*(i+alphaPoly+betaPoly+1.)*ab2i );
+	/ ( 2.*(i+1.)*(i+apbp+1.)*ab2i );
       if (i != order-1) {
 	dPabdx_nm1 = dPabdx_n;
 	dPabdx_n   = t1_grad;
@@ -128,9 +125,10 @@ Real JacobiOrthogPolynomial::type1_gradient(const Real& x, unsigned short order)
 
 Real JacobiOrthogPolynomial::norm_squared(unsigned short order)
 {
-  return (alphaPoly+betaPoly+1.) / (2.*order+alphaPoly+betaPoly+1.)
-    * pochhammer(alphaPoly+1.,order) * pochhammer(betaPoly+1.,order)
-    / pochhammer(alphaPoly+betaPoly+1.,order) / factorial(order);
+  Real apbp1 = alphaPoly + betaPoly + 1.;
+  return apbp1 / (2.*order+apbp1) * pochhammer(alphaPoly+1., order)
+    * pochhammer(betaPoly+1., order) / pochhammer(apbp1, order)
+    / factorial(order);
 }
 
 
@@ -151,9 +149,8 @@ collocation_points(unsigned short order)
       collocPoints[0] = (betaPoly - alphaPoly) / (alphaPoly + betaPoly + 2.);
       break;
     case 2: { // zeros of Pab_2(x) for two Gauss-Jacobi points:
-      Real a = (alphaPoly+betaPoly+3.)*(alphaPoly+betaPoly+4.),
-	   b = 4.*(alphaPoly+betaPoly+3.)*(alphaPoly+2.),
-	   c = 4.*(alphaPoly+1.)*(alphaPoly+2.),
+      Real apbp = alphaPoly + betaPoly, apbp3 = apbp + 3., ap2 = alphaPoly + 2.,
+	   a = apbp3*(apbp+4.), b = 4.*apbp3*ap2, c = 4.*(alphaPoly+1.)*ap2,
 	   srdiscrim = std::sqrt(b*b-4.*a*c), a2 = 2.*a;
       collocPoints[0] = 1. - (b+srdiscrim)/a2;
       collocPoints[1] = 1. - (b-srdiscrim)/a2;
@@ -166,7 +163,7 @@ collocation_points(unsigned short order)
 	collocWeights.resize(order);
       webbur::jacobi_compute(order, alphaPoly, betaPoly, &collocPoints[0],
 			     &collocWeights[0]);
-      const Real& wt_factor = weight_factor();
+      Real wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
 #else
@@ -205,17 +202,15 @@ type1_collocation_weights(unsigned short order)
 	collocPoints.resize(order);
       webbur::jacobi_compute(order, alphaPoly, betaPoly, &collocPoints[0],
 			     &collocWeights[0]);
-      const Real& wt_factor = weight_factor();
+      Real wt_factor = weight_factor();
       for (size_t i=0; i<order; i++)
 	collocWeights[i] *= wt_factor; // polynomial weight fn -> PDF
 #else
       // define Gauss wts from Gauss pts using formula above
       const RealArray& colloc_pts = collocation_points(order);
       for (size_t i=0; i<order; i++) {
-	const Real& x_i = colloc_pts[i];
-	Real AnoAnm1
-	  = (2.*order+alphaPoly+betaPoly) * (2.*order+alphaPoly+betaPoly-1.)
-	  / (2.*order) / (order+alphaPoly+betaPoly);
+	Real x_i = colloc_pts[i], apbp = alphaPoly + betaPoly, o2 = 2.*order,
+	  o2apbp = o2+apbp, AnoAnm1 = o2apbp * (o2apbp-1.) / o2 / (order+apbp);
 	collocWeights[i]
 	  = AnoAnm1 * norm_squared(order-1) / type1_value(x_i, order-1)
 	  / type1_gradient(x_i, order);
@@ -229,7 +224,7 @@ type1_collocation_weights(unsigned short order)
 }
 
 
-const Real& JacobiOrthogPolynomial::weight_factor()
+Real JacobiOrthogPolynomial::weight_factor()
 {
 //#ifdef HAVE_BOOST
   wtFactor = 1. / std::pow(2., alphaPoly + betaPoly + 1.) /

@@ -206,7 +206,7 @@ BasisPolynomial::~BasisPolynomial()
 }
 
 
-Real BasisPolynomial::type1_value(const Real& x, unsigned short n)
+Real BasisPolynomial::type1_value(Real x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type1_value() not available for this basis polynomial "
@@ -217,7 +217,7 @@ Real BasisPolynomial::type1_value(const Real& x, unsigned short n)
 }
 
 
-Real BasisPolynomial::type2_value(const Real& x, unsigned short n)
+Real BasisPolynomial::type2_value(Real x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type2_value() not available for this basis polynomial "
@@ -228,7 +228,7 @@ Real BasisPolynomial::type2_value(const Real& x, unsigned short n)
 }
 
 
-Real BasisPolynomial::type1_gradient(const Real& x, unsigned short n)
+Real BasisPolynomial::type1_gradient(Real x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type1_gradient() not available for this basis polynomial "
@@ -239,7 +239,7 @@ Real BasisPolynomial::type1_gradient(const Real& x, unsigned short n)
 }
 
 
-Real BasisPolynomial::type2_gradient(const Real& x, unsigned short n)
+Real BasisPolynomial::type2_gradient(Real x, unsigned short n)
 {
   if (!polyRep) {
     PCerr << "Error: type2_gradient() not available for this basis polynomial "
@@ -294,6 +294,51 @@ const RealArray& BasisPolynomial::type2_collocation_weights(unsigned short n)
 }
 
 
+void BasisPolynomial::set_new_point(Real x)
+{
+  if (polyRep)
+    polyRep->set_new_point(x);
+  else {
+    PCerr << "Error: set_new_point(Real) not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+size_t BasisPolynomial::exact_index() const
+{
+  if (!polyRep) {
+    PCerr << "Error: exact_index() not available for this basis polynomial "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->exact_index();
+}
+
+
+Real BasisPolynomial::barycentric_weight_factor(unsigned short i) const
+{
+  if (!polyRep) {
+    PCerr << "Error: barycentric_weight_factor() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->barycentric_weight_factor(i);
+}
+
+
+Real BasisPolynomial::barycentric_weight_factor_sum() const
+{
+  if (!polyRep) {
+    PCerr << "Error: barycentric_weight_factor_sum() not available for this "
+	  << "basis polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->barycentric_weight_factor_sum();
+}
+
+
 void BasisPolynomial::reset_gauss()
 {
   if (polyRep)
@@ -306,7 +351,7 @@ void BasisPolynomial::reset_gauss()
 }
 
 
-const Real& BasisPolynomial::point_factor()
+Real BasisPolynomial::point_factor()
 {
   if (polyRep)
     return polyRep->point_factor();
@@ -315,7 +360,7 @@ const Real& BasisPolynomial::point_factor()
 }
 
 
-const Real& BasisPolynomial::weight_factor()
+Real BasisPolynomial::weight_factor()
 {
   if (polyRep)
     return polyRep->weight_factor();
@@ -324,7 +369,7 @@ const Real& BasisPolynomial::weight_factor()
 }
 
 
-const Real& BasisPolynomial::alpha_polynomial() const
+Real BasisPolynomial::alpha_polynomial() const
 {
   if (!polyRep) {
     PCerr << "Error: alpha_polynomial() not available for this basis "
@@ -335,7 +380,7 @@ const Real& BasisPolynomial::alpha_polynomial() const
 }
 
 
-const Real& BasisPolynomial::beta_polynomial() const
+Real BasisPolynomial::beta_polynomial() const
 {
   if (!polyRep) {
     PCerr << "Error: beta_polynomial() not available for this basis polynomial "
@@ -346,7 +391,7 @@ const Real& BasisPolynomial::beta_polynomial() const
 }
 
 
-void BasisPolynomial::alpha_stat(const Real& alpha)
+void BasisPolynomial::alpha_stat(Real alpha)
 {
   if (polyRep)
     polyRep->alpha_stat(alpha);
@@ -358,7 +403,7 @@ void BasisPolynomial::alpha_stat(const Real& alpha)
 }
 
 
-void BasisPolynomial::beta_stat(const Real& beta)
+void BasisPolynomial::beta_stat(Real beta)
 {
   if (polyRep)
     polyRep->beta_stat(beta);

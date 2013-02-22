@@ -63,25 +63,25 @@ public:
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual Real type1_value(const Real& x, unsigned short n);
+  virtual Real type1_value(Real x, unsigned short n);
   /// retrieve the value of the n_th type 2 polynomial for a given parameter x
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual Real type2_value(const Real& x, unsigned short n);
+  virtual Real type2_value(Real x, unsigned short n);
 
   /// retrieve the gradient of the n_th type 1 polynomial for a given
   /// parameter x
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual Real type1_gradient(const Real& x, unsigned short n);
+  virtual Real type1_gradient(Real x, unsigned short n);
   /// retrieve the gradient of the n_th type 2 polynomial for a given
   /// parameter x
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
-  virtual Real type2_gradient(const Real& x, unsigned short n);
+  virtual Real type2_gradient(Real x, unsigned short n);
 
   /// returns the norm-squared of the n_th order polynomial defined by the
   /// inner product <Poly_n, Poly_n> = ||Poly_n||^2
@@ -100,28 +100,41 @@ public:
   /** This is defined for piecewise interpolation polynomials. */
   virtual const RealArray& type2_collocation_weights(unsigned short order);
 
+  /// for barycentric interpolation, set the point to be interpolated
+  /// for purposes of precomputation of weight factors
+  virtual void set_new_point(Real x);
+  /// if an exact match between a collocation point and the point to be
+  /// interpolated (from set_new_point()) is detected, return the index of
+  /// the matching collocation point
+  virtual size_t exact_index() const;
+  /// return a particular barycentric weight factor wt_i/(x-x_i)
+  virtual Real barycentric_weight_factor(unsigned short i) const;
+  /// return the sum of all barycentric weight factors for use in computing
+  /// the barycentric interpolation denominator
+  virtual Real barycentric_weight_factor_sum() const;
+
   /// destroy history of Gauss pts/wts (due to distribution parameter changes)
   /** This is defined only for orthogonal polynomials. */
   virtual void reset_gauss();
 
   /// (calculate and) return ptFactor
-  virtual const Real& point_factor();
+  virtual Real point_factor();
   /// (calculate and) return wtFactor
-  virtual const Real& weight_factor();
+  virtual Real weight_factor();
 
   /// return {Jacobi,GenLaguerre}OrthogPolynomial::alphaPoly
   /** This is defined only for parameterized orthogonal polynomials. */
-  virtual const Real& alpha_polynomial() const;
+  virtual Real alpha_polynomial() const;
   /// return JacobiOrthogPolynomial::betaPoly
   /** This is defined only for parameterized orthogonal polynomials. */
-  virtual const Real& beta_polynomial() const;
+  virtual Real beta_polynomial() const;
   /// set JacobiOrthogPolynomial::betaPoly or
   /// GenLaguerreOrthogPolynomial::alphaPoly from statistical defn of alpha
   /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void alpha_stat(const Real& alpha);
+  virtual void alpha_stat(Real alpha);
   /// set JacobiOrthogPolynomial::alphaPoly from statistical defn of beta
   /** This is defined only for parameterized orthogonal polynomials. */
-  virtual void beta_stat(const Real& beta);
+  virtual void beta_stat(Real beta);
 
   /// set OrthogonalPolynomial::collocRule
   virtual void collocation_rule(short rule);
@@ -153,7 +166,7 @@ public:
   /** Note: n+p choose n or p = (n+p)!/n!/p! */
   static Real n_choose_k(unsigned short n, unsigned short k);
   /// compute the Pochhammer symbol (m)_n = m*(m+1)...*(m+n-1)
-  static Real pochhammer(const Real& m, unsigned short n);
+  static Real pochhammer(Real m, unsigned short n);
 
   /// return basisPolyType
   short basis_type() const;
@@ -294,7 +307,7 @@ inline Real BasisPolynomial::n_choose_k(unsigned short n, unsigned short k)
 
 /** This is the rising/upper factorial formulation of the Pochhammer
     symbol (m)_n. */
-inline Real BasisPolynomial::pochhammer(const Real& m, unsigned short n)
+inline Real BasisPolynomial::pochhammer(Real m, unsigned short n)
 {
   // For integer n
   Real poch = (n == 0) ? 1. : m;

@@ -50,7 +50,7 @@ public:
   /// default constructor
   JacobiOrthogPolynomial();
   /// standard constructor
-  JacobiOrthogPolynomial(const Real& alpha_stat, const Real& beta_stat);
+  JacobiOrthogPolynomial(Real alpha_stat, Real beta_stat);
   /// destructor
   ~JacobiOrthogPolynomial();
 
@@ -59,7 +59,7 @@ public:
   //
 
   /// calculate and return wtFactor based on alphaPoly and betaPoly
-  const Real& weight_factor();
+  Real weight_factor();
 
 protected:
 
@@ -67,21 +67,21 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  Real type1_value(const Real& x, unsigned short order);
-  Real type1_gradient(const Real& x, unsigned short order);
+  Real type1_value(Real x, unsigned short order);
+  Real type1_gradient(Real x, unsigned short order);
   Real norm_squared(unsigned short order);
 
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
   /// return alphaPoly
-  const Real& alpha_polynomial() const;
+  Real alpha_polynomial() const;
   /// return betaPoly
-  const Real& beta_polynomial() const;
+  Real beta_polynomial() const;
   /// set betaPoly using the conversion betaPoly = alpha_stat - 1.
-  void alpha_stat(const Real& alpha);
+  void alpha_stat(Real alpha);
   /// set alphaPoly using the conversion alphaPoly = beta_stat - 1.
-  void beta_stat(const Real& beta);
+  void beta_stat(Real beta);
 
   /// override default definition (false) since Jacobi is parameterized
   bool parameterized() const;
@@ -108,7 +108,7 @@ inline JacobiOrthogPolynomial::JacobiOrthogPolynomial():
 
 // TO DO
 inline JacobiOrthogPolynomial::
-JacobiOrthogPolynomial(const Real& alpha_stat, const Real& beta_stat):
+JacobiOrthogPolynomial(Real alpha_stat, Real beta_stat):
   alphaPoly(beta_stat-1.), betaPoly(alpha_stat-1.) // inverted conventions
 { collocRule = GAUSS_JACOBI; }
 
@@ -117,15 +117,15 @@ inline JacobiOrthogPolynomial::~JacobiOrthogPolynomial()
 { }
 
 
-inline const Real& JacobiOrthogPolynomial::alpha_polynomial() const
+inline Real JacobiOrthogPolynomial::alpha_polynomial() const
 { return alphaPoly; }
 
 
-inline const Real& JacobiOrthogPolynomial::beta_polynomial() const
+inline Real JacobiOrthogPolynomial::beta_polynomial() const
 { return betaPoly; }
 
 
-inline void JacobiOrthogPolynomial::alpha_stat(const Real& alpha)
+inline void JacobiOrthogPolynomial::alpha_stat(Real alpha)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
@@ -144,7 +144,7 @@ inline void JacobiOrthogPolynomial::alpha_stat(const Real& alpha)
 }
 
 
-inline void JacobiOrthogPolynomial::beta_stat(const Real& beta)
+inline void JacobiOrthogPolynomial::beta_stat(Real beta)
 {
   // *_stat() routines are called for each approximation build from
   // PolynomialApproximation::update_basis_distribution_parameters().
