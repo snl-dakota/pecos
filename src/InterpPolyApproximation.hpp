@@ -218,23 +218,12 @@ protected:
 		    const UShortArray& basis_index, const BitArray& member_bits,
 		    Real& member_t2_wt_prod, Real& nonmember_t2_wt_prod);
 
-  /// compute the value of a tensor interpolant (barycentric Lagrange form)
-  /// on a tensor grid; contributes to value(x)
-  Real tensor_product_value(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const UShortArray& basis_index,
-    const UShort2DArray& key,        const SizetArray&  colloc_index);
   /// compute the value of a tensor interpolant on a tensor grid;
   /// contributes to value(x)
   Real tensor_product_value(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
     const UShortArray& basis_index,  const UShort2DArray& key,
     const SizetArray&  colloc_index);
-  /// compute the value of a tensor interpolant (barycentric Lagrange form)
-  /// on a tensor grid over a subset of the variables; contributes to value(x)
-  Real tensor_product_value(const RealVector& x,
-    const RealVector& exp_t1_coeffs, const UShortArray& basis_index,
-    const UShort2DArray& key,        const SizetArray&  colloc_index,
-    const SizetList& subset_indices);
   /// compute the value of a tensor interpolant on a tensor grid over
   /// a subset of the variables; contributes to value(x)
   Real tensor_product_value(const RealVector& x,

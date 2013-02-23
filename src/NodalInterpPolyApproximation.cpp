@@ -776,12 +776,9 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     SizetArray colloc_index; // empty -> default indexing
-    return (barycentricFlag) ? // value-based global Lagrange interpolation
-      tensor_product_value(x, expansionType1Coeffs, tpq_driver->level_index(),
-			   tpq_driver->collocation_key(), colloc_index) :
-      tensor_product_value(x, expansionType1Coeffs, expansionType2Coeffs,
-			   tpq_driver->level_index(),
-			   tpq_driver->collocation_key(), colloc_index);
+    return tensor_product_value(x, expansionType1Coeffs, expansionType2Coeffs,
+				tpq_driver->level_index(),
+				tpq_driver->collocation_key(), colloc_index);
     break;
   }
   case COMBINED_SPARSE_GRID: {
@@ -793,19 +790,11 @@ Real NodalInterpPolyApproximation::value(const RealVector& x)
     const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
     size_t i, num_smolyak_indices = sm_coeffs.size();
     Real approx_val = 0.;
-    if (barycentricFlag) { // value-based global Lagrange interpolation
-      for (i=0; i<num_smolyak_indices; ++i)
-	if (sm_coeffs[i])
-	  approx_val += sm_coeffs[i] *
-	    tensor_product_value(x, expansionType1Coeffs, sm_mi[i],
-				 colloc_key[i], colloc_index[i]);
-    }
-    else
-      for (i=0; i<num_smolyak_indices; ++i)
-	if (sm_coeffs[i])
-	  approx_val += sm_coeffs[i] *
-	    tensor_product_value(x, expansionType1Coeffs, expansionType2Coeffs,
-				 sm_mi[i], colloc_key[i], colloc_index[i]);
+    for (i=0; i<num_smolyak_indices; ++i)
+      if (sm_coeffs[i])
+	approx_val += sm_coeffs[i] *
+	  tensor_product_value(x, expansionType1Coeffs, expansionType2Coeffs,
+			       sm_mi[i], colloc_key[i], colloc_index[i]);
     return approx_val;
     break;
   }
