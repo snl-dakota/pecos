@@ -1745,11 +1745,11 @@ void OrthogPolyApproximation::set_fault_info()
   size_t num_failed_surr_fn = 0, num_failed_surr_grad = 0;
   SizetShortMap::const_iterator fit; bool faults_differ = false;
   for (fit=failed_resp_data.begin(); fit!=failed_resp_data.end(); ++fit) {
-    short fail_asv = fit->second;
-    if (fail_asv & 1) ++num_failed_surr_fn;
-    if (fail_asv & 2) ++num_failed_surr_grad;
+    short fail_bits = fit->second;
+    if (fail_bits & 1) ++num_failed_surr_fn;
+    if (fail_bits & 2) ++num_failed_surr_grad;
     // if failure omissions are not consistent, manage differing Psi matrices
-    if ( (fail_asv & data_order) != data_order ) faults_differ = true;
+    if ( (fail_bits & data_order) != data_order ) faults_differ = true;
   }
   num_surr_data_pts = surrData.size();
   num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn;

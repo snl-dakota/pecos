@@ -206,11 +206,22 @@ BasisPolynomial::~BasisPolynomial()
 }
 
 
+Real BasisPolynomial::type1_value(unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: type1_value(unsigned short) not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->type1_value(n);
+}
+
+
 Real BasisPolynomial::type1_value(Real x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: type1_value() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: type1_value(Real, unsigned short) not available for this "
+	  << "basis polynomial type." << std::endl;
     abort_handler(-1);
   }
   return polyRep->type1_value(x, n);
@@ -220,19 +231,30 @@ Real BasisPolynomial::type1_value(Real x, unsigned short n)
 Real BasisPolynomial::type2_value(Real x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: type2_value() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: type2_value(Real, unsigned short) not available for this "
+	  << "basis polynomial type." << std::endl;
     abort_handler(-1);
   }
   return polyRep->type2_value(x, n);
 }
 
 
+Real BasisPolynomial::type1_gradient(unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: type1_gradient(unsigned short) not available for this "
+	  << "basis polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->type1_gradient(n);
+}
+
+
 Real BasisPolynomial::type1_gradient(Real x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: type1_gradient() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: type1_gradient(Real, unsigned short) not available for "
+	  << "this basis polynomial type." << std::endl;
     abort_handler(-1);
   }
   return polyRep->type1_gradient(x, n);
@@ -242,8 +264,8 @@ Real BasisPolynomial::type1_gradient(Real x, unsigned short n)
 Real BasisPolynomial::type2_gradient(Real x, unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: type2_gradient() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: type2_gradient(Real, unsigned short) not available for "
+	  << "this basis polynomial type." << std::endl;
     abort_handler(-1);
   }
   return polyRep->type2_gradient(x, n);
@@ -253,8 +275,8 @@ Real BasisPolynomial::type2_gradient(Real x, unsigned short n)
 Real BasisPolynomial::norm_squared(unsigned short n)
 {
   if (!polyRep) {
-    PCerr << "Error: norm_squared() not available for this basis polynomial "
-	  << "type." << std::endl;
+    PCerr << "Error: norm_squared(unsigned short) not available for this basis "
+	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
   return polyRep->norm_squared(n);
@@ -294,12 +316,12 @@ const RealArray& BasisPolynomial::type2_collocation_weights(unsigned short n)
 }
 
 
-void BasisPolynomial::set_new_point(Real x)
+void BasisPolynomial::set_new_point(Real x, short order)
 {
   if (polyRep)
-    polyRep->set_new_point(x);
+    polyRep->set_new_point(x, order);
   else {
-    PCerr << "Error: set_new_point(Real) not available for this basis "
+    PCerr << "Error: set_new_point(Real, short) not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
@@ -317,25 +339,47 @@ size_t BasisPolynomial::exact_index() const
 }
 
 
-Real BasisPolynomial::barycentric_weight_factor(unsigned short i) const
+Real BasisPolynomial::barycentric_value_factor(unsigned short i) const
 {
   if (!polyRep) {
-    PCerr << "Error: barycentric_weight_factor() not available for this basis "
+    PCerr << "Error: barycentric_value_factor() not available for this basis "
 	  << "polynomial type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->barycentric_weight_factor(i);
+  return polyRep->barycentric_value_factor(i);
 }
 
 
-Real BasisPolynomial::barycentric_weight_factor_sum() const
+Real BasisPolynomial::barycentric_gradient_factor(unsigned short i) const
 {
   if (!polyRep) {
-    PCerr << "Error: barycentric_weight_factor_sum() not available for this "
+    PCerr << "Error: barycentric_gradient_factor() not available for this "
 	  << "basis polynomial type." << std::endl;
     abort_handler(-1);
   }
-  return polyRep->barycentric_weight_factor_sum();
+  return polyRep->barycentric_gradient_factor(i);
+}
+
+
+Real BasisPolynomial::barycentric_value_factor_sum() const
+{
+  if (!polyRep) {
+    PCerr << "Error: barycentric_value_factor_sum() not available for this "
+	  << "basis polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->barycentric_value_factor_sum();
+}
+
+
+Real BasisPolynomial::barycentric_difference_product() const
+{
+  if (!polyRep) {
+    PCerr << "Error: barycentric_difference_product() not available for this "
+	  << "basis polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->barycentric_difference_product();
 }
 
 

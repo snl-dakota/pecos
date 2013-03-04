@@ -59,7 +59,14 @@ public:
   //- Heading: Virtual functions
   //
 
-  /// retrieve the value of the n_th type 1 polynomial for a given parameter x
+  /// retrieve the value of the n_th type 1 polynomial for a given
+  /// parameter x using barycentric formulation
+  /** For orthogonal polynomials, n specifies the order of the polynomial,
+      whereas for interpolation polynomials, it identifies the interpolant
+      for the n-th point. */
+  virtual Real type1_value(unsigned short n);
+  /// retrieve the value of the n_th type 1 polynomial for a given
+  /// parameter x using traditional characteristic polynomial formulation
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
@@ -71,7 +78,13 @@ public:
   virtual Real type2_value(Real x, unsigned short n);
 
   /// retrieve the gradient of the n_th type 1 polynomial for a given
-  /// parameter x
+  /// parameter x using barycentric formulation
+  /** For orthogonal polynomials, n specifies the order of the polynomial,
+      whereas for interpolation polynomials, it identifies the interpolant
+      for the n-th point. */
+  virtual Real type1_gradient(unsigned short n);
+  /// retrieve the gradient of the n_th type 1 polynomial for a given
+  /// parameter x using traditional characteristic polynomial formulation
   /** For orthogonal polynomials, n specifies the order of the polynomial,
       whereas for interpolation polynomials, it identifies the interpolant
       for the n-th point. */
@@ -102,16 +115,21 @@ public:
 
   /// for barycentric interpolation, set the point to be interpolated
   /// for purposes of precomputation of weight factors
-  virtual void set_new_point(Real x);
+  virtual void set_new_point(Real x, short order);
   /// if an exact match between a collocation point and the point to be
   /// interpolated (from set_new_point()) is detected, return the index of
   /// the matching collocation point
   virtual size_t exact_index() const;
-  /// return a particular barycentric weight factor wt_i/(x-x_i)
-  virtual Real barycentric_weight_factor(unsigned short i) const;
-  /// return the sum of all barycentric weight factors for use in computing
-  /// the barycentric interpolation denominator
-  virtual Real barycentric_weight_factor_sum() const;
+  /// return a particular barycentric value factor
+  virtual Real barycentric_value_factor(unsigned short i) const;
+  /// return a particular barycentric gradient factor
+  virtual Real barycentric_gradient_factor(unsigned short i) const;
+  /// return the sum of all barycentric value factors for use in computing
+  /// the barycentric interpolant denominator
+  virtual Real barycentric_value_factor_sum() const;
+  /// return the product of all differences between the interpolation
+  /// points and a current point
+  virtual Real barycentric_difference_product() const;
 
   /// destroy history of Gauss pts/wts (due to distribution parameter changes)
   /** This is defined only for orthogonal polynomials. */

@@ -486,7 +486,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
-    set_new_point(x, basis_index);
+    set_new_point(x, basis_index, 1); // value factors needed
 
     /*
     // grab an array of Teuchos vector views and perform operations
@@ -501,7 +501,20 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
       }
       tp_val += exp_t1_coeffs[c_index] * proc_bc_factor_ij;
     }
-    tp_val /= barycentric_denominator(basis_index);
+    tp_val *= barycentric_value_scaling(basis_index);
+    */
+
+    /*
+    // Consider passing a start_index for the value factor product:
+    if (colloc_index.empty()) {
+      size_t prod_start_index = 0, m_prod = quad_order[prod_start_index];
+      for (i=0; i<num_colloc_pts; ++i) {
+	if (i > m_prod)
+	  { ++prod_start_index; m_prod *= quad_order[prod_start_index]; }
+	tp_val += exp_t1_coeffs[i] *
+	  barycentric_value_factor(key[i], basis_index, prod_start_index);
+      }
+    }
     */
 
     // delegate loops: cleaner, but some efficiency lost (and possibly precision
@@ -509,13 +522,15 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     // using Horner's rule ordering of flops (see Klimke thesis)
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
-	tp_val += exp_t1_coeffs[i] * barycentric_factor(key[i], basis_index);
+	tp_val += exp_t1_coeffs[i] *
+	  barycentric_value_factor(key[i], basis_index);
     else
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[colloc_index[i]] *
-	  barycentric_factor(key[i], basis_index);
+	  barycentric_value_factor(key[i], basis_index);
 
-    tp_val /= barycentric_denominator(basis_index);
+    // apply barycentric denominator
+    tp_val *= barycentric_value_scaling(basis_index);
   }
   else if (exp_t2_coeffs.empty()) {
     if (colloc_index.empty())
@@ -560,18 +575,19 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
-    set_new_point(x, basis_index, subset_indices);
+    set_new_point(x, basis_index, subset_indices, 1); // value factors needed
 
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[i] * 
-	  barycentric_factor(key[i], basis_index, subset_indices);
+	  barycentric_value_factor(key[i], basis_index, subset_indices);
     else
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[colloc_index[i]] *
-	  barycentric_factor(key[i], basis_index, subset_indices);
+	  barycentric_value_factor(key[i], basis_index, subset_indices);
 
-    tp_val /= barycentric_denominator(basis_index, subset_indices);
+    // apply barycentric denominator
+    tp_val *= barycentric_value_scaling(basis_index, subset_indices);
   }
   else if (exp_t2_coeffs.empty()) {
     if (colloc_index.empty())
@@ -612,9 +628,26 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
   size_t i, j, num_colloc_pts = key.size();
-  if (exp_t2_coeffs.empty()) {
+
+  if (barycentricFlag) {
+
+    // For barycentric interpolation: track x != newPoint within 1D basis
+    set_new_point(x, basis_index, 3); // value+gradient factors needed
+
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
+      const UShortArray&   key_i = key[i];
+      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      for (j=0; j<numVars; ++j)
+	tpGradient[j] += exp_t1_coeff_i *
+	  barycentric_gradient_factor(j, key_i, basis_index);
+    }
+
+    tpGradient.scale(barycentric_gradient_scaling(basis_index));
+  }
+  else if (exp_t2_coeffs.empty()) {
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray&   key_i = key[i];
       const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
@@ -625,7 +658,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   else {
     size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
+      const UShortArray&   key_i = key[i];
       const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
@@ -656,9 +689,26 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
   size_t i, j, num_colloc_pts = key.size();
-  if (exp_t2_coeffs.empty()) {
+
+  if (barycentricFlag) {
+
+    // For barycentric interpolation: track x != newPoint within 1D basis
+    set_new_point(x, basis_index, subset_indices, 3);//value+grad factors needed
+
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
+      const UShortArray&   key_i = key[i];
+      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      for (j=0; j<numVars; ++j)
+	tpGradient[j] += exp_t1_coeff_i *
+	  barycentric_gradient_factor(j, key_i, basis_index, subset_indices);
+    }
+
+    tpGradient.scale(barycentric_gradient_scaling(basis_index, subset_indices));
+  }
+  else if (exp_t2_coeffs.empty()) {
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray&   key_i = key[i];
       const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
@@ -669,7 +719,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   else {
     size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
+      const UShortArray&   key_i = key[i];
       const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
@@ -702,9 +752,28 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   tpGradient = 0.;
-  if (exp_t2_coeffs.empty()) {
+
+  if (barycentricFlag) {
+
+    // For barycentric interpolation: track x != newPoint within 1D basis
+    set_new_point(x, basis_index, 3); // value+gradient factors needed
+
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i   = key[i];
+      const UShortArray&   key_i = key[i];
+      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      for (j=0; j<num_deriv_vars; ++j) {
+	deriv_index = dvv[j] - 1; // requires an "All" view
+	tpGradient[j] += exp_t1_coeff_i *
+	  barycentric_gradient_factor(deriv_index, key_i, basis_index);
+      }
+    }
+
+    tpGradient.scale(barycentric_gradient_scaling(basis_index));
+  }
+  else if (exp_t2_coeffs.empty()) {
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray&   key_i = key[i];
       const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
@@ -717,7 +786,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   else {
     size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
+      const UShortArray&   key_i = key[i];
       const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
@@ -748,12 +817,30 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   tpGradient = 0.;
-  for (i=0; i<num_colloc_pts; ++i) {
-    const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
-      exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
-    Real t1_val = type1_interpolant_value(x, key[i], basis_index);
-    for (j=0; j<num_deriv_vars; ++j)
-      tpGradient[j] += exp_t1_coeff_grad_i[j] * t1_val;
+  if (barycentricFlag) {
+
+    // For barycentric interpolation: track x != newPoint within 1D basis
+    set_new_point(x, basis_index, 1); // value factors needed for coeff grads
+
+    for (i=0; i<num_colloc_pts; ++i) {
+      const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
+	exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
+      Real bc_fact = barycentric_value_factor(key[i], basis_index);
+      for (j=0; j<num_deriv_vars; ++j)
+	tpGradient[j] += exp_t1_coeff_grad_i[j] * bc_fact;
+    }
+
+    // apply barycentric denominator
+    tpGradient.scale(barycentric_value_scaling(basis_index));
+  }
+  else {
+    for (i=0; i<num_colloc_pts; ++i) {
+      const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
+	exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
+      Real t1_val = type1_interpolant_value(x, key[i], basis_index);
+      for (j=0; j<num_deriv_vars; ++j)
+	tpGradient[j] += exp_t1_coeff_grad_i[j] * t1_val;
+    }
   }
   return tpGradient;
 }

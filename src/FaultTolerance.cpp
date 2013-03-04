@@ -7,9 +7,9 @@ void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		   const SizetShortMap& failed_response_data )
 {
   if (fit != failed_response_data.end() && fit->first == j) {
-    short fail_asv = fit->second;
-    if (fail_asv & 1) add_val  = false;
-    if (fail_asv & 2) add_grad = false;
+    short fail_bits = fit->second;
+    if (fail_bits & 1) add_val  = false;
+    if (fail_bits & 2) add_grad = false;
     ++fit;
   }
 }

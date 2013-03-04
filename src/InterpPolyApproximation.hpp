@@ -176,26 +176,41 @@ protected:
 
   /// set point values within 1D basis polynomials for purposes of
   /// barycentric precomputation
-  void set_new_point(const RealVector& x, const UShortArray& basis_index);
+  void set_new_point(const RealVector& x, const UShortArray& basis_index,
+		     short order);
   /// set point values within subset of 1D basis polynomials for purposes of
   /// barycentric precomputation
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
-		     const SizetList& subset_indices);
-  /// compute the product of 1D barycentric weight factors
-  Real barycentric_factor(const UShortArray& key,
-			  const UShortArray& basis_index);
-  /// compute the product of a subset of 1D barycentric weight factors
-  Real barycentric_factor(const UShortArray& key,
-			  const UShortArray& basis_index,
-			  const SizetList& subset_indices);
+		     const SizetList& subset_indices, short order);
+
+  /// compute the product of 1D barycentric value factors
+  Real barycentric_value_factor(const UShortArray& key,
+				const UShortArray& basis_index);
+  /// compute the product of a subset of 1D barycentric value factors
+  Real barycentric_value_factor(const UShortArray& key,
+				const UShortArray& basis_index,
+				const SizetList& subset_indices);
   /// compute the product of 1D barycentric weight factor sums for use in
   /// the denominator of the barycentric interpolation formula (second form)
-  Real barycentric_denominator(const UShortArray& basis_index);
+  Real barycentric_value_scaling(const UShortArray& basis_index);
   /// compute the product of a subset of 1D barycentric weight factor
   /// sums for use in the denominator of the barycentric interpolation
   /// formula (second form)
-  Real barycentric_denominator(const UShortArray& basis_index,
-			       const SizetList& subset_indices);
+  Real barycentric_value_scaling(const UShortArray& basis_index,
+				 const SizetList& subset_indices);
+
+  /// compute the product of 1D barycentric gradient factors
+  Real barycentric_gradient_factor(size_t deriv_index, const UShortArray& key,
+				   const UShortArray& basis_index);
+  /// compute the product of a subset of 1D barycentric gradient factors
+  Real barycentric_gradient_factor(size_t deriv_index, const UShortArray& key,
+				   const UShortArray& basis_index,
+				   const SizetList& subset_indices);
+  /// compute the product of 1D barycentric gradient scalings
+  Real barycentric_gradient_scaling(const UShortArray& basis_index);
+  /// compute the product of a subset of 1D barycentric gradient scalings
+  Real barycentric_gradient_scaling(const UShortArray& basis_index,
+				    const SizetList& subset_indices);
 
   /// return type 1 product weight from integration of type 1 interpolation
   /// polynomials using integrated dimension subset
@@ -325,6 +340,10 @@ private:
   /// for a particular level, find index of basis v2 that matches basis v1
   bool find_basis(unsigned short level, size_t v1, size_t& v2);
 
+  /// compute the product of 1D barycentric value factors
+  bool barycentric_value_factor(BasisPolynomial& pb_lv, unsigned short key_lv,
+				Real& prod);
+
   /// recursively identifies constituent subsets that are children of
   /// a parent set
   void proper_subsets(const BitArray& parent_set, BitArraySet& children);
@@ -435,7 +454,7 @@ type1_interpolant_value(const RealVector& x, const UShortArray& key,
 }
 
 
-/** All variables version. */
+/** Combined expansion version. */
 inline Real InterpPolyApproximation::
 type1_interpolant_value(const RealVector& x, const UShortArray& key,
 			const UShortArray& basis_index,
@@ -464,7 +483,7 @@ type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 }
 
 
-/** All variables version. */
+/** Combined expansion version. */
 inline Real InterpPolyApproximation::
 type1_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   const UShortArray& key,
@@ -501,7 +520,7 @@ type2_interpolant_value(const RealVector& x,    size_t interp_index,
 }
 
 
-/** All variables version. */
+/** Combined expansion version. */
 inline Real InterpPolyApproximation::
 type2_interpolant_value(const RealVector& x,    size_t interp_index,
 			const UShortArray& key, const UShortArray& basis_index,
@@ -539,7 +558,7 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 }
 
 
-/** All variables version. */
+/** Combined expansion version. */
 inline Real InterpPolyApproximation::
 type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 			   size_t interp_index, const UShortArray& key,
@@ -571,88 +590,171 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 
 
 inline void InterpPolyApproximation::
-set_new_point(const RealVector& x, const UShortArray& basis_index)
+set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
 {
   for (size_t j=0; j<numVars; ++j)
-    polynomialBasis[basis_index[j]][j].set_new_point(x[j]);
+    polynomialBasis[basis_index[j]][j].set_new_point(x[j], order);
 }
 
 
 inline void InterpPolyApproximation::
 set_new_point(const RealVector& x, const UShortArray& basis_index,
-	      const SizetList& subset_indices)
+	      const SizetList& subset_indices, short order)
 {
   SizetList::const_iterator cit; size_t j;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit)
-    { j = *cit; polynomialBasis[basis_index[j]][j].set_new_point(x[j]); }
+    { j = *cit; polynomialBasis[basis_index[j]][j].set_new_point(x[j], order); }
+}
+
+
+inline bool InterpPolyApproximation::
+barycentric_value_factor(BasisPolynomial& pb_lv, unsigned short key_lv,
+			 Real& prod)
+{
+  size_t exact_index = pb_lv.exact_index();
+  if (exact_index == _NPOS) // new pt is not an exact match: interpolate
+    { prod *= pb_lv.barycentric_value_factor(key_lv); return true; }
+  else if (key_lv != exact_index) // if new pt is exact match, factor is 0 or 1
+    { prod = 0.; return false; }
+  else // factor is 1, no change to prod
+    return true;
 }
 
 
 inline Real InterpPolyApproximation::
-barycentric_factor(const UShortArray& key, const UShortArray& basis_index)
+barycentric_value_factor(const UShortArray& key, const UShortArray& basis_index)
 {
-  Real b1 = 1.; size_t j, exact_index;
-  for (j=0; j<numVars; ++j) {
-    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
-    exact_index = pb_lv.exact_index();
-    if (exact_index == _NPOS) // new pt is not an exact match: interpolate
-      b1 *= pb_lv.barycentric_weight_factor(key[j]);
-    else if (key[j] != exact_index) // new pt is exact match: factor is 0 or 1
-      { b1 = 0.; break; }
-  }
+  Real b1 = 1.;
+  for (size_t j=0; j<numVars; ++j)
+    if (!barycentric_value_factor(polynomialBasis[basis_index[j]][j],key[j],b1))
+      break;
   return b1;
 }
 
 
 inline Real InterpPolyApproximation::
-barycentric_factor(const UShortArray& key, const UShortArray& basis_index,
+barycentric_value_factor(const UShortArray& key, const UShortArray& basis_index,
 		   const SizetList& subset_indices)
 {
-  Real b1 = 1.; SizetList::const_iterator cit; size_t j, exact_index;
+  Real b1 = 1.; SizetList::const_iterator cit; size_t j;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit;
-    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
-    exact_index = pb_lv.exact_index();
-    if (exact_index == _NPOS) // new pt is not an exact match: interpolate
-      b1 *= pb_lv.barycentric_weight_factor(key[j]);
-    else if (key[j] != exact_index) // new pt is exact match: factor is 0 or 1
-      { b1 = 0.; break; }
+    if (!barycentric_value_factor(polynomialBasis[basis_index[j]][j],key[j],b1))
+      break;
   }
   return b1;
 }
 
 
 inline Real InterpPolyApproximation::
-barycentric_denominator(const UShortArray& basis_index)
+barycentric_value_scaling(const UShortArray& basis_index)
 {
-  Real denom = 1.;
+  Real scale = 1.;
   for (size_t j=0; j<numVars; ++j) {
     BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
-    if (pb_lv.exact_index() == _NPOS)
-      denom *= pb_lv.barycentric_weight_factor_sum();
-    //else: if new pt is exact match, then dimension doesn't contribute to denom
+    if (pb_lv.exact_index() == _NPOS) // this dimension contributes to bc denom
+      scale /= pb_lv.barycentric_value_factor_sum();
+    //else (new pt is exact match) dimension doesn't contribute to bc denom
   }
-  return denom;
+  return scale;
 }
 
 
 inline Real InterpPolyApproximation::
-barycentric_denominator(const UShortArray& basis_index,
-			const SizetList& subset_indices)
+barycentric_value_scaling(const UShortArray& basis_index,
+			  const SizetList& subset_indices)
 {
-  Real denom = 1.; SizetList::const_iterator cit; size_t j;
+  Real scale = 1.; SizetList::const_iterator cit; size_t j;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit;
     BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
-    if (pb_lv.exact_index() == _NPOS)
-      denom *= pb_lv.barycentric_weight_factor_sum();
-    //else: if new pt is exact match, then dimension doesn't contribute to denom
+    if (pb_lv.exact_index() == _NPOS) // this dimension contributes to bc denom
+      scale /= pb_lv.barycentric_value_factor_sum();
+    //else (new pt is exact match) dimension doesn't contribute to bc denom
   }
-  return denom;
+  return scale;
 }
 
 
-/** All variables partial weight. */
+inline Real InterpPolyApproximation::
+barycentric_gradient_factor(size_t deriv_index, const UShortArray& key,
+			    const UShortArray& basis_index)
+{
+  Real factor = 1.; size_t k, exact_index;
+  for (k=0; k<numVars; ++k) {
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[k]][k];
+    if (k == deriv_index) // gradient factor, either exact index or not
+      factor *= pb_lv.barycentric_gradient_factor(key[k]);
+    else if (!barycentric_value_factor(pb_lv, key[k], factor))
+      break;
+  }
+  return factor;
+}
+
+
+/** Combined expansion version. */
+inline Real InterpPolyApproximation::
+barycentric_gradient_factor(size_t deriv_index, const UShortArray& key,
+			    const UShortArray& basis_index,
+			    const SizetList& subset_indices)
+{
+  // deriv_index must be contained within subset_indices, else the grad is zero
+  bool deriv = false;
+
+  Real factor = 1.; SizetList::const_iterator cit; size_t k;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    k = *cit;
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[k]][k];
+    if (k == deriv_index) // gradient factor, either exact index or not
+      { factor *= pb_lv.barycentric_gradient_factor(key[k]); deriv = true; }
+    else if (!barycentric_value_factor(pb_lv, key[k], factor))
+      break;
+  }
+  return (deriv) ? factor : 0.;
+}
+
+
+inline Real InterpPolyApproximation::
+barycentric_gradient_scaling(/* size_t deriv_index, */
+			     const UShortArray& basis_index)
+{
+  Real scale = 1.;
+  for (size_t j=0; j<numVars; ++j) {
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
+    // if new pt is not an exact match, then dimension contributes a
+    // difference product, irregardless of derivative index (whether
+    // a gradient or value factor was applied).
+    if (pb_lv.exact_index() == _NPOS)
+      scale *= pb_lv.barycentric_difference_product();
+    // if new pt is exact match, then dimension doesn't contribute to scale,
+    // irregardless of whether a gradient or value factor was applied.
+  }
+  return scale;
+}
+
+
+inline Real InterpPolyApproximation::
+barycentric_gradient_scaling(/* size_t deriv_index, */
+			     const UShortArray& basis_index,
+			     const SizetList& subset_indices)
+{
+  Real scale = 1.; SizetList::const_iterator cit; size_t j;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit;
+    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
+    // if new pt is not an exact match, then dimension contributes a
+    // difference product, irregardless of derivative index (whether
+    // a gradient or value factor was applied).
+    if (pb_lv.exact_index() == _NPOS)
+      scale *= pb_lv.barycentric_difference_product();
+    // if new pt is exact match, then dimension doesn't contribute to scale,
+    // irregardless of whether a gradient or value factor was applied.
+  }
+  return scale;
+}
+
+
+/** Combined expansion partial weight. */
 inline Real InterpPolyApproximation::
 type1_weight(const UShortArray& key, const UShortArray& basis_index, 
 	     const SizetList& subset_indices)
@@ -682,7 +784,7 @@ type1_weight(const UShortArray& key, const UShortArray& basis_index,
 }
 
 
-/** All variables partial weight. */
+/** Combined expansion partial weight. */
 inline Real InterpPolyApproximation::
 type2_weight(size_t interp_index, const UShortArray& key,
 	     const UShortArray& basis_index, const SizetList& subset_indices)
@@ -699,7 +801,7 @@ type2_weight(size_t interp_index, const UShortArray& key,
 }
 
 
-/** All variables partial weight. */
+/** Combined expansion partial weight. */
 inline void InterpPolyApproximation::
 type2_weight(size_t interp_index, const UShortArray& key,
 	     const UShortArray& basis_index, const BitArray& member_bits,

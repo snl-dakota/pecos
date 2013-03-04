@@ -54,18 +54,31 @@ public:
   //
 
   /// retrieve the value of the i_th Lagrange polynomial for a given
+  /// parameter x using barycentric formulation
+  Real type1_value(unsigned short i);
+  /// retrieve the value of the i_th Lagrange polynomial for a given
   /// parameter x using traditional characteristic polynomial formulation
   Real type1_value(Real x, unsigned short i);
+
+  /// retrieve the gradient of the i_th Lagrange polynomial for a given
+  /// parameter x using barycentric formulation
+  Real type1_gradient(unsigned short i);
   /// retrieve the gradient of the i_th Lagrange polynomial for a given
   /// parameter x using traditional characteristic polynomial formulation
   Real type1_gradient(Real x, unsigned short i);
 
-  void set_new_point(Real x);
+  void set_new_point(Real x, short request_order);
   size_t exact_index() const;
+
   //const RealVector& barycentric_weights() const;
-  //const RealVector& barycentric_weight_factors() const;
-  Real barycentric_weight_factor(unsigned short i) const;
-  Real barycentric_weight_factor_sum() const;
+  //const RealVector& barycentric_value_factors() const;
+  //const RealVector& barycentric_gradient_factors() const;
+
+  Real barycentric_value_factor(unsigned short i) const;
+  Real barycentric_gradient_factor(unsigned short i) const;
+
+  Real barycentric_value_factor_sum() const;
+  Real barycentric_difference_product() const;
 
 protected:
 
@@ -89,13 +102,24 @@ private:
 
   /// the parameter value for evaluation of the interpolant
   Real newPoint;
+  /// order of data that has been precomputed at newPoint
+  short newPtOrder;
   /// index of interpolation point exactly matching the interpolated value x
   size_t exactIndex;
+
+  /// product of point differences (x-x_j) for a particular newPoint x
+  /// and interpPts x_j
+  Real diffProduct;
+
   /// terms bcWeights[j]/(x-x[j]) from barycentric formulation
-  RealVector bcWeightFactors;
-  /// sum of bcWeightFactors used for evaluating barycentric interpolant
+  RealVector bcValueFactors;
+  /// sum of bcValueFactors used for evaluating barycentric interpolant
   /// denominator term
-  Real bcWeightFactorSum;
+  Real bcValueFactorSum;
+
+  /// terms for gradients of barycentric interpolants
+  // (bcValueFactors[j] * l(x) * sum of diff inverses)
+  RealVector bcGradFactors;
 };
 
 
@@ -124,17 +148,26 @@ inline size_t LagrangeInterpPolynomial::exact_index() const
 
 
 //inline const RealVector& LagrangeInterpPolynomial::
-//barycentric_weight_factors() const
-//{ return bcWeightFactors; }
+//barycentric_value_factors() const
+//{ return bcValueFactors; }
 
 
 inline Real LagrangeInterpPolynomial::
-barycentric_weight_factor(unsigned short i) const
-{ return bcWeightFactors[i]; }
+barycentric_value_factor(unsigned short i) const
+{ return bcValueFactors[i]; }
 
 
-inline Real LagrangeInterpPolynomial::barycentric_weight_factor_sum() const
-{ return bcWeightFactorSum; }
+inline Real LagrangeInterpPolynomial::
+barycentric_gradient_factor(unsigned short i) const
+{ return bcGradFactors[i]; }
+
+
+inline Real LagrangeInterpPolynomial::barycentric_value_factor_sum() const
+{ return bcValueFactorSum; }
+
+
+inline Real LagrangeInterpPolynomial::barycentric_difference_product() const
+{ return diffProduct; }
 
 } // namespace Pecos
 
