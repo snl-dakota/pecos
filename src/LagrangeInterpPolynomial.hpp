@@ -71,8 +71,8 @@ public:
   size_t exact_index() const;
 
   //const RealVector& barycentric_weights() const;
-  //const RealVector& barycentric_value_factors() const;
-  //const RealVector& barycentric_gradient_factors() const;
+  const RealVector& barycentric_value_factors() const;
+  const RealVector& barycentric_gradient_factors() const;
 
   Real barycentric_value_factor(unsigned short i) const;
   Real barycentric_gradient_factor(unsigned short i) const;
@@ -147,14 +147,19 @@ inline size_t LagrangeInterpPolynomial::exact_index() const
 //{ return bcWeights; }
 
 
-//inline const RealVector& LagrangeInterpPolynomial::
-//barycentric_value_factors() const
-//{ return bcValueFactors; }
+inline const RealVector& LagrangeInterpPolynomial::
+barycentric_value_factors() const
+{ return bcValueFactors; }
 
 
 inline Real LagrangeInterpPolynomial::
 barycentric_value_factor(unsigned short i) const
 { return bcValueFactors[i]; }
+
+
+inline const RealVector& LagrangeInterpPolynomial::
+barycentric_gradient_factors() const
+{ return bcGradFactors; }
 
 
 inline Real LagrangeInterpPolynomial::

@@ -120,8 +120,12 @@ public:
   /// interpolated (from set_new_point()) is detected, return the index of
   /// the matching collocation point
   virtual size_t exact_index() const;
+  /// return the barycentric value factors
+  virtual const RealVector& barycentric_value_factors() const;
   /// return a particular barycentric value factor
   virtual Real barycentric_value_factor(unsigned short i) const;
+  /// return the barycentric gradient factors
+  virtual const RealVector& barycentric_gradient_factors() const;
   /// return a particular barycentric gradient factor
   virtual Real barycentric_gradient_factor(unsigned short i) const;
   /// return the sum of all barycentric value factors for use in computing

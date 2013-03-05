@@ -339,6 +339,17 @@ size_t BasisPolynomial::exact_index() const
 }
 
 
+const RealVector& BasisPolynomial::barycentric_value_factors() const
+{
+  if (!polyRep) {
+    PCerr << "Error: barycentric_value_factors() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->barycentric_value_factors();
+}
+
+
 Real BasisPolynomial::barycentric_value_factor(unsigned short i) const
 {
   if (!polyRep) {
@@ -347,6 +358,17 @@ Real BasisPolynomial::barycentric_value_factor(unsigned short i) const
     abort_handler(-1);
   }
   return polyRep->barycentric_value_factor(i);
+}
+
+
+const RealVector& BasisPolynomial::barycentric_gradient_factors() const
+{
+  if (!polyRep) {
+    PCerr << "Error: barycentric_gradient_factors() not available for this "
+	  << "basis polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->barycentric_gradient_factors();
 }
 
 

@@ -488,38 +488,37 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, 1); // value factors needed
 
-    /*
-    // grab an array of Teuchos vector views and perform operations
-    // in an order that minimizes flops (akin to Horner's rule)
-    const RealVectorArray& bc_factors = barycentric_weight_factors(basis_index);
-    for (i=0; i<num_colloc_pts; ++i) { // TO DO: reorder point traversal
-      c_index = (colloc_index.empty()) ? i : colloc_index[i];
-      proc_bc_factor_ij = 1.; sum_bc_factor_ij = 0.;
-      for (j=0; j<numVars; ++j) {
-        bc_factor_ij = bc_factors[j][key[i][j]];
-        proc_bc_factor_ij *= bc_factor_ij;
+    // apply Horner's rule to group common factors
+    // TO DO: manage inactive interpolation dimensions
+    RealVector accumulator(numVars); size_t j, v_index;
+    RealVectorArray bc_val_facts = barycentric_value_factors_array(basis_index);
+    // TO DO: max_key not valid for delta_quad on closed rules
+    UShortArray max_key(numVars);
+    for (i=0; i<numVars; ++i)
+      max_key[i] = bc_val_facts[i].length() - 1;
+    const RealVector& bc_val_fact_0 = bc_val_facts[0];
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i];
+      accumulator[0] += (colloc_index.empty()) ?
+	exp_t1_coeffs[i]               * bc_val_fact_0[key_i[0]] :
+	exp_t1_coeffs[colloc_index[i]] * bc_val_fact_0[key_i[0]];
+      if (key_i[0] == max_key[0]) {
+	// compute number of variables (v) to accumulate
+	v_index = 1;
+	while (key_i[v_index] == max_key[v_index] && v_index < numVars-1)
+	  ++v_index;
+	// accumulate sums over v variables
+	for (j=1; j<=v_index; ++j) {
+	  accumulator[j]  += accumulator[j-1] * bc_val_facts[j][key_i[j]];
+	  accumulator[j-1] = 0.;
+	}
       }
-      tp_val += exp_t1_coeffs[c_index] * proc_bc_factor_ij;
     }
-    tp_val *= barycentric_value_scaling(basis_index);
-    */
+    tp_val = accumulator[v_index] * barycentric_value_scaling(basis_index);
 
     /*
-    // Consider passing a start_index for the value factor product:
-    if (colloc_index.empty()) {
-      size_t prod_start_index = 0, m_prod = quad_order[prod_start_index];
-      for (i=0; i<num_colloc_pts; ++i) {
-	if (i > m_prod)
-	  { ++prod_start_index; m_prod *= quad_order[prod_start_index]; }
-	tp_val += exp_t1_coeffs[i] *
-	  barycentric_value_factor(key[i], basis_index, prod_start_index);
-      }
-    }
-    */
-
     // delegate loops: cleaner, but some efficiency lost (and possibly precision
-    // as well due to subtractive cancellation among large products) by not
-    // using Horner's rule ordering of flops (see Klimke thesis)
+    // as well due to subtractive cancellation among large products)
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[i] *
@@ -531,6 +530,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
     // apply barycentric denominator
     tp_val *= barycentric_value_scaling(basis_index);
+    */
   }
   else if (exp_t2_coeffs.empty()) {
     if (colloc_index.empty())

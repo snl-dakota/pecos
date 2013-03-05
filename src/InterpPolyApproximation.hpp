@@ -212,6 +212,15 @@ protected:
   Real barycentric_gradient_scaling(const UShortArray& basis_index,
 				    const SizetList& subset_indices);
 
+  /// aggregate an array of views into the value factors corresponding
+  /// to basis_index
+  RealVectorArray
+    barycentric_value_factors_array(const UShortArray& basis_index);
+  /// aggregate an array of views into the gradient factors corresponding
+  /// to basis_index
+  RealVectorArray
+    barycentric_gradient_factors_array(const UShortArray& basis_index);
+
   /// return type 1 product weight from integration of type 1 interpolation
   /// polynomials using integrated dimension subset
   Real type1_weight(const UShortArray& key, const UShortArray& basis_index, 
@@ -751,6 +760,34 @@ barycentric_gradient_scaling(/* size_t deriv_index, */
     // irregardless of whether a gradient or value factor was applied.
   }
   return scale;
+}
+
+
+inline RealVectorArray InterpPolyApproximation::
+barycentric_value_factors_array(const UShortArray& basis_index)
+{
+  RealVectorArray bcvf_array(numVars); // create an array of vector views
+  for (size_t j=0; j<numVars; ++j) {
+    const RealVector& bc_vf
+      = polynomialBasis[basis_index[j]][j].barycentric_value_factors();
+    bcvf_array[j] = RealVector(Teuchos::View, const_cast<Real*>(bc_vf.values()),
+			       bc_vf.length());
+  }
+  return bcvf_array;
+}
+
+
+inline RealVectorArray InterpPolyApproximation::
+barycentric_gradient_factors_array(const UShortArray& basis_index)
+{
+  RealVectorArray bcgf_array(numVars); // create an array of vector views
+  for (size_t j=0; j<numVars; ++j) {
+    const RealVector& bc_gf
+      = polynomialBasis[basis_index[j]][j].barycentric_gradient_factors();
+    bcgf_array[j] = RealVector(Teuchos::View, const_cast<Real*>(bc_gf.values()),
+			       bc_gf.length());
+  }
+  return bcgf_array;
 }
 
 
