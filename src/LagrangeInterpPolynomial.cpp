@@ -73,43 +73,49 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
   }
   */
 
+  if ( (compute_order & 1) && bcValueFactors.length() != num_interp_pts)
+    bcValueFactors.sizeUninitialized(num_interp_pts);
+  if ( (compute_order & 2) && bcGradFactors.length()  != num_interp_pts)
+    bcGradFactors.sizeUninitialized(num_interp_pts);
+
   // precompute value factors or identify exactIndex for 2nd form of
   // barycentric interpolation formula
-  Real diff, diff_inv_sum;
+  Real diff_inv_sum; RealVector diffs;
   if (exactIndex == _NPOS) { // exact match may have been previously detected
-    if (compute_order & 1) {
-      if (bcValueFactors.length() != num_interp_pts)
-	bcValueFactors.resize(num_interp_pts);
-      bcValueFactorSum = 0.;
-    }
-    if (compute_order & 2)
-      { diffProduct = 1.; diff_inv_sum = 0.; }
+    // first, compute diffs vector or exactIndex
+    diffs.sizeUninitialized(num_interp_pts);
     for (j=0; j<num_interp_pts; ++j) {
-      diff = newPoint - interpPts[j];
-      if (diff == 0.) // no tolerance needed due to favorable stability analysis
+      diffs[j] = newPoint - interpPts[j];
+      if (diffs[j] == 0.) // no tolerance needed due to favorable stability
 	{ exactIndex = j; break; }
-      else {
+    }
+
+    // now compute value factors and grad factor terms based on exactIndex
+    if (exactIndex == _NPOS) {
+      if (compute_order & 1) bcValueFactorSum = 0.;
+      if (compute_order & 2) { diffProduct = 1.; diff_inv_sum = 0.; }
+      for (j=0; j<num_interp_pts; ++j) {
 	if (compute_order & 1)
-	  bcValueFactorSum += bcValueFactors[j] = bcWeights[j] / diff;
-	if (compute_order & 2) {
-	  diffProduct  *= diff;
-	  diff_inv_sum += 1. / diff;
-	}
+	  bcValueFactorSum += bcValueFactors[j] = bcWeights[j] / diffs[j];
+	if (compute_order & 2)
+	  { diffProduct *= diffs[j]; diff_inv_sum += 1. / diffs[j]; }
       }
+    }
+    else if (compute_order & 1) {
+      bcValueFactors = 0.; bcValueFactors[exactIndex] = 1.;
+      //bcValueFactorSum = 1.; // not used
     }
   }
 
   // precompute gradient factors for 2nd form of barycentric interpolation
   if (compute_order & 2) {
-    if (bcGradFactors.length() != num_interp_pts)
-      bcGradFactors.resize(num_interp_pts);
     // bcGradFactors (like bcValueFactors) differ from the actual gradient
     // values by diffProduct, which gets applied after a tensor summation
     // using the barycentric gradient scaling.
     if (exactIndex == _NPOS)
       for (j=0; j<num_interp_pts; ++j) // bcValueFactors must be available
 	bcGradFactors[j] = bcValueFactors[j] // * diffProduct
-	  * (diff_inv_sum - 1./(newPoint - interpPts[j]));//back out jth inverse
+	  * (diff_inv_sum - 1. / diffs[j]); // back out jth inverse diff
     else { // Berrut and Trefethen, 2004
       // for this case, bcGradFactors are the actual gradient values
       // and no diffProduct scaling needs to be subsequently applied

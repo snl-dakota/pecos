@@ -616,40 +616,29 @@ set_new_point(const RealVector& x, const UShortArray& basis_index,
 }
 
 
-inline bool InterpPolyApproximation::
-barycentric_value_factor(BasisPolynomial& pb_lv, unsigned short key_lv,
-			 Real& prod)
-{
-  size_t exact_index = pb_lv.exact_index();
-  if (exact_index == _NPOS) // new pt is not an exact match: interpolate
-    { prod *= pb_lv.barycentric_value_factor(key_lv); return true; }
-  else if (key_lv != exact_index) // if new pt is exact match, factor is 0 or 1
-    { prod = 0.; return false; }
-  else // factor is 1, no change to prod
-    return true;
-}
-
-
 inline Real InterpPolyApproximation::
 barycentric_value_factor(const UShortArray& key, const UShortArray& basis_index)
 {
-  Real b1 = 1.;
-  for (size_t j=0; j<numVars; ++j)
-    if (!barycentric_value_factor(polynomialBasis[basis_index[j]][j],key[j],b1))
-      break;
+  Real b1 = 1., vf;
+  for (size_t j=0; j<numVars; ++j) {
+    vf = polynomialBasis[basis_index[j]][j].barycentric_value_factor(key[j]);
+    if (vf == 0.)    { b1  = 0.; break; } // key[j] != exactIndex
+    else if (vf != 1.) b1 *= vf;          // exactIndex == _NPOS
+  }
   return b1;
 }
 
 
 inline Real InterpPolyApproximation::
 barycentric_value_factor(const UShortArray& key, const UShortArray& basis_index,
-		   const SizetList& subset_indices)
+			 const SizetList& subset_indices)
 {
-  Real b1 = 1.; SizetList::const_iterator cit; size_t j;
+  Real b1 = 1., vf; SizetList::const_iterator cit; size_t j;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit;
-    if (!barycentric_value_factor(polynomialBasis[basis_index[j]][j],key[j],b1))
-      break;
+    vf = polynomialBasis[basis_index[j]][j].barycentric_value_factor(key[j]);
+    if (vf == 0.)    { b1  = 0.; break; } // key[j] != exactIndex
+    else if (vf != 1.) b1 *= vf;          // exactIndex == _NPOS
   }
   return b1;
 }
@@ -689,13 +678,16 @@ inline Real InterpPolyApproximation::
 barycentric_gradient_factor(size_t deriv_index, const UShortArray& key,
 			    const UShortArray& basis_index)
 {
-  Real factor = 1.; size_t k, exact_index;
+  Real factor = 1., vf; size_t k, exact_index;
   for (k=0; k<numVars; ++k) {
     BasisPolynomial& pb_lv = polynomialBasis[basis_index[k]][k];
     if (k == deriv_index) // gradient factor, either exact index or not
       factor *= pb_lv.barycentric_gradient_factor(key[k]);
-    else if (!barycentric_value_factor(pb_lv, key[k], factor))
-      break;
+    else {                // value factor, zero if exact_index
+      vf = pb_lv.barycentric_value_factor(key[k]);
+      if (vf == 0.)    { factor  = 0.; break; } // key[k] != exactIndex
+      else if (vf != 1.) factor *= vf;          // exactIndex == _NPOS
+    }
   }
   return factor;
 }
@@ -710,14 +702,17 @@ barycentric_gradient_factor(size_t deriv_index, const UShortArray& key,
   // deriv_index must be contained within subset_indices, else the grad is zero
   bool deriv = false;
 
-  Real factor = 1.; SizetList::const_iterator cit; size_t k;
+  Real factor = 1., vf; SizetList::const_iterator cit; size_t k;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     k = *cit;
     BasisPolynomial& pb_lv = polynomialBasis[basis_index[k]][k];
     if (k == deriv_index) // gradient factor, either exact index or not
       { factor *= pb_lv.barycentric_gradient_factor(key[k]); deriv = true; }
-    else if (!barycentric_value_factor(pb_lv, key[k], factor))
-      break;
+    else {                // value factor, zero if exact_index
+      vf = pb_lv.barycentric_value_factor(key[k]);
+      if (vf == 0.)    { factor  = 0.; break; } // key[k] != exactIndex
+      else if (vf != 1.) factor *= vf;          // exactIndex == _NPOS
+    }
   }
   return (deriv) ? factor : 0.;
 }
