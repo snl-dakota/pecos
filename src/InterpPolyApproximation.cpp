@@ -488,35 +488,41 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, 1); // value factors needed
 
-    // apply Horner's rule to group common factors
-    // TO DO: manage inactive interpolation dimensions
-    RealVector accumulator(numVars); size_t j, v_index;
-    RealVectorArray bc_val_facts = barycentric_value_factors_array(basis_index);
+    /*
+    // apply multidimensional Horner's rule (group common terms)
+    std::vector<BasisPolynomial> act_poly
+      = active_basis_polynomials(basis_index);
+    size_t j, v_index, num_act_v = act_poly.size();
+    RealVector accumulator(num_act_v);
     // TO DO: max_key not valid for delta_quad on closed rules
-    UShortArray max_key(numVars);
-    for (i=0; i<numVars; ++i)
-      max_key[i] = bc_val_facts[i].length() - 1;
-    const RealVector& bc_val_fact_0 = bc_val_facts[0];
-    for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
-      accumulator[0] += (colloc_index.empty()) ?
-	exp_t1_coeffs[i]               * bc_val_fact_0[key_i[0]] :
-	exp_t1_coeffs[colloc_index[i]] * bc_val_fact_0[key_i[0]];
+    UShortArray max_key(num_act_v); size_t act_pts_i, num_act_colloc_pts = 1;
+    for (i=0; i<num_act_v; ++i) {
+      num_act_colloc_pts *= act_pts_i = act_poly[i].interpolation_size();
+      max_key[i] = act_pts_i - 1;
+    }
+    // loop over all pts, summing contributions from the active vars
+    const RealVector& val_fact_0 = lag_poly[0].barycentric_value_factors();
+    for (i=0; i<num_act_colloc_pts; ++i) {
+      i_index = ; // TO DO
+      c_index = (colloc_index.empty()) ? i_index : colloc_index[i_index];
+      const UShortArray& key_i = key[i_index];
+      accumulator[0] += exp_t1_coeffs[c_index] * val_fact_0[key_i[0]]; // TO DO
       if (key_i[0] == max_key[0]) {
 	// compute number of variables (v) to accumulate
 	v_index = 1;
-	while (key_i[v_index] == max_key[v_index] && v_index < numVars-1)
+	while (key_i[v_index] == max_key[v_index] && v_index < num_act_v-1)
 	  ++v_index;
 	// accumulate sums over v variables
 	for (j=1; j<=v_index; ++j) {
-	  accumulator[j]  += accumulator[j-1] * bc_val_facts[j][key_i[j]];
+	  accumulator[j] += accumulator[j-1] *
+	    act_poly[j].barycentric_value_factor(key_i[j]); // TO DO
 	  accumulator[j-1] = 0.;
 	}
       }
     }
     tp_val = accumulator[v_index] * barycentric_value_scaling(basis_index);
+    */
 
-    /*
     // delegate loops: cleaner, but some efficiency lost (and possibly precision
     // as well due to subtractive cancellation among large products)
     if (colloc_index.empty())
@@ -530,7 +536,6 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
     // apply barycentric denominator
     tp_val *= barycentric_value_scaling(basis_index);
-    */
   }
   else if (exp_t2_coeffs.empty()) {
     if (colloc_index.empty())
