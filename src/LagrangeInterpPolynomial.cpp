@@ -62,7 +62,7 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
     abort_handler(-1);
   }
 
-  /* precompute l(x) for 1st form of barycentric interpolation formula
+  /*  first form of barycentric interpolation: precompute l(x)
   diffProduct = 1.;
   for (j=0; j<num_interp_pts; ++j) {
     Real diff = newPoint - interpPts[j];
@@ -78,8 +78,8 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
   if ( (compute_order & 2) && bcGradFactors.length()  != num_interp_pts)
     bcGradFactors.sizeUninitialized(num_interp_pts);
 
-  // precompute value factors or identify exactIndex for 2nd form of
-  // barycentric interpolation formula
+  // second form of barycentric interpolation: precompute value factors and
+  // grad factor terms or identify exactIndex
   Real diff_inv_sum; RealVector diffs;
   if (exactIndex == _NPOS) { // exact match may have been previously detected
     // first, compute diffs vector or exactIndex
@@ -101,13 +101,14 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
 	  { diffProduct *= diffs[j]; diff_inv_sum += 1. / diffs[j]; }
       }
     }
-    else if (compute_order & 1) {
-      bcValueFactors = 0.; bcValueFactors[exactIndex] = 1.;
-      //bcValueFactorSum = 1.; // not used
-    }
+  }
+  // catch previous or current identification of exactIndex
+  if (exactIndex != _NPOS && (compute_order & 1)) {
+    bcValueFactors = 0.; bcValueFactors[exactIndex] = 1.;
+    //bcValueFactorSum = 1.; // not currently used if exactIndex
   }
 
-  // precompute gradient factors for 2nd form of barycentric interpolation
+  // second form of barycentric interpolation: precompute gradient factors
   if (compute_order & 2) {
     // bcGradFactors (like bcValueFactors) differ from the actual gradient
     // values by diffProduct, which gets applied after a tensor summation
