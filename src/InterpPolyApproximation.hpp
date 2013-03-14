@@ -595,7 +595,7 @@ set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
   unsigned short bi;
   for (size_t j=0; j<numVars; ++j) {
     bi = basis_index[j];
-    if (bi) // exclusion of pt must be sync'd with exclusion of factors/scalings
+    if (bi || (order & 2)) // exclusion of pt must be sync'd w/ factors/scalings
       polynomialBasis[bi][j].set_new_point(x[j], order);
   }
 }
@@ -608,7 +608,7 @@ set_new_point(const RealVector& x, const UShortArray& basis_index,
   SizetList::const_iterator cit; size_t j; unsigned short bi;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit; bi = basis_index[j];
-    if (bi) // exclusion of pt must be sync'd with exclusion of factors/scalings
+    if (bi || (order & 2)) // exclusion of pt must be sync'd w/ factors/scalings
       polynomialBasis[bi][j].set_new_point(x[j], order);
   }
 }

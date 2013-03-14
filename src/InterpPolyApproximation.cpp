@@ -197,7 +197,7 @@ void InterpPolyApproximation::compute_coefficients()
     PCout << std::scientific << std::setprecision(WRITE_PRECISION);
     for (i=offset; i<numCollocPts; ++i, ++index) {
       const RealVector& c_vars = surrData.continuous_variables(index);
-      const Real&      resp_fn = surrData.response_function(index);
+      Real      resp_fn = surrData.response_function(index);
       interp_val = value(c_vars);
       err = (std::abs(resp_fn) > DBL_MIN) ? std::abs(1. - interp_val/resp_fn) :
 	                                    std::abs(resp_fn - interp_val);
@@ -822,16 +822,59 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
-  size_t i, j, num_colloc_pts = key.size();
 
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, 3); // value+gradient factors needed
 
+    // for basis gradients, one cannot eliminate exact index dimensions,
+    // but perhaps can eliminate bi_j == 0...
+
+    /*
+    RealMatrix accumulator(numVars, numVars); // init to 0.
+    BasisPolynomial&   poly_0 = polynomialBasis[basis_index[0]][0];
+    const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
+    const RealVector& bc_gf_0 = poly_0.barycentric_gradient_factors();
+    size_t i, j, k, num_colloc_pts = key.size();
+    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      Real exp_t1_coeff = (colloc_index.empty()) ? exp_t1_coeffs[i] :
+	exp_t1_coeffs[colloc_index[i]];
+      Real* accum_0 = accumulator[0];
+      Real bc_vf_00 = bc_vf_0[key_i0], bc_gf_00 = bc_gf_0[key_i0];
+      accum_0[0]   += exp_t1_coeff * bc_gf_00; // TO DO: verify
+      for (j=1; j<numVars; ++j)
+	accum_0[j] += exp_t1_coeff * bc_vf_00; // TO DO: verify
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1; j<numVars; ++j) {
+	  BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
+	  key_ij = key_i[j];
+	  Real *accum_j = accumulator[j], *accum_jm1 = accumulator[j-1];
+	  Real bc_vf_jj = poly_j.barycentric_value_factor(key_ij),
+	    bc_gf_jj = poly_j.barycentric_gradient_factor(key_ij);
+	  for (k=0; k<numVars; ++k) {
+	    accum_j[k] += (j == k) ? accum_jm1[k] * bc_gf_jj : // TO DO
+	      accum_jm1[k] * bc_vf_jj;
+	    accum_jm1[k] = 0.;
+	  }
+	  if (key_ij + 1 != poly_j.interpolation_size())
+	    break;
+	}
+      }
+    }
+    Real bcg_scaling = barycentric_gradient_scaling(basis_index);
+    Real* accum = accumulator[numVars-1];
+    for (j=0; j<numVars; ++j)
+      tpGradient[j] = accum[j] * bcg_scaling;
+    */
+
+    size_t i, j, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
 	tpGradient[j] += exp_t1_coeff_i *
@@ -841,9 +884,10 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     tpGradient.scale(barycentric_gradient_scaling(basis_index));
   }
   else if (exp_t2_coeffs.empty()) {
+    size_t i, j, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
 	tpGradient[j] += exp_t1_coeff_i *
@@ -851,10 +895,10 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     }
   }
   else {
-    size_t k;
+    size_t i, j, k, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
 	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
@@ -892,7 +936,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
 	tpGradient[j] += exp_t1_coeff_i *
@@ -904,7 +948,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   else if (exp_t2_coeffs.empty()) {
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
 	tpGradient[j] += exp_t1_coeff_i *
@@ -915,7 +959,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
 	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
@@ -955,7 +999,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
@@ -969,7 +1013,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   else if (exp_t2_coeffs.empty()) {
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
@@ -982,7 +1026,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      const Real& exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real exp_t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
 	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
