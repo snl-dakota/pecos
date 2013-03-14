@@ -212,15 +212,6 @@ protected:
   Real barycentric_gradient_scaling(const UShortArray& basis_index,
 				    const SizetList& subset_indices);
 
-  /// aggregate an array of BasisPolynomials (with shared reps)
-  /// corresponding to basis_index
-  std::vector<BasisPolynomial>
-    basis_polynomials(const UShortArray& basis_index);
-  /// aggregate an array of active BasisPolynomials (with shared reps)
-  /// corresponding to basis_index
-  std::vector<BasisPolynomial>
-    active_basis_polynomials(const UShortArray& basis_index);
-
   /// return type 1 product weight from integration of type 1 interpolation
   /// polynomials using integrated dimension subset
   Real type1_weight(const UShortArray& key, const UShortArray& basis_index, 
@@ -601,8 +592,12 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 inline void InterpPolyApproximation::
 set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
 {
-  for (size_t j=0; j<numVars; ++j)
-    polynomialBasis[basis_index[j]][j].set_new_point(x[j], order);
+  unsigned short bi;
+  for (size_t j=0; j<numVars; ++j) {
+    bi = basis_index[j];
+    if (bi) // exclusion of pt must be sync'd with exclusion of factors/scalings
+      polynomialBasis[bi][j].set_new_point(x[j], order);
+  }
 }
 
 
@@ -610,20 +605,26 @@ inline void InterpPolyApproximation::
 set_new_point(const RealVector& x, const UShortArray& basis_index,
 	      const SizetList& subset_indices, short order)
 {
-  SizetList::const_iterator cit; size_t j;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit)
-    { j = *cit; polynomialBasis[basis_index[j]][j].set_new_point(x[j], order); }
+  SizetList::const_iterator cit; size_t j; unsigned short bi;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi = basis_index[j];
+    if (bi) // exclusion of pt must be sync'd with exclusion of factors/scalings
+      polynomialBasis[bi][j].set_new_point(x[j], order);
+  }
 }
 
 
 inline Real InterpPolyApproximation::
 barycentric_value_factor(const UShortArray& key, const UShortArray& basis_index)
 {
-  Real b1 = 1., vf;
+  Real b1 = 1., vf; unsigned short bi;
   for (size_t j=0; j<numVars; ++j) {
-    vf = polynomialBasis[basis_index[j]][j].barycentric_value_factor(key[j]);
-    if (vf == 0.)    { b1  = 0.; break; } // key[j] != exactIndex
-    else if (vf != 1.) b1 *= vf;          // exactIndex == _NPOS
+    bi = basis_index[j];
+    if (bi) { // exclusion of bi==0 must be sync'd with bc value scaling
+      vf = polynomialBasis[bi][j].barycentric_value_factor(key[j]);
+      if (vf == 0.)    { b1  = 0.; break; } // key[j] != exactIndex
+      else if (vf != 1.) b1 *= vf;          // exactIndex == _NPOS
+    }
   }
   return b1;
 }
@@ -633,12 +634,14 @@ inline Real InterpPolyApproximation::
 barycentric_value_factor(const UShortArray& key, const UShortArray& basis_index,
 			 const SizetList& subset_indices)
 {
-  Real b1 = 1., vf; SizetList::const_iterator cit; size_t j;
+  Real b1 = 1., vf; SizetList::const_iterator cit; size_t j; unsigned short bi;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    j = *cit;
-    vf = polynomialBasis[basis_index[j]][j].barycentric_value_factor(key[j]);
-    if (vf == 0.)    { b1  = 0.; break; } // key[j] != exactIndex
-    else if (vf != 1.) b1 *= vf;          // exactIndex == _NPOS
+    j = *cit; bi = basis_index[j];
+    if (bi) { // exclusion of bi==0 must be sync'd with bc value scaling
+      vf = polynomialBasis[bi][j].barycentric_value_factor(key[j]);
+      if (vf == 0.)    { b1  = 0.; break; } // key[j] != exactIndex
+      else if (vf != 1.) b1 *= vf;          // exactIndex == _NPOS
+    }
   }
   return b1;
 }
@@ -647,12 +650,15 @@ barycentric_value_factor(const UShortArray& key, const UShortArray& basis_index,
 inline Real InterpPolyApproximation::
 barycentric_value_scaling(const UShortArray& basis_index)
 {
-  Real scale = 1.;
+  Real scale = 1.; unsigned short bi;
   for (size_t j=0; j<numVars; ++j) {
-    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
-    if (pb_lv.exact_index() == _NPOS) // this dimension contributes to bc denom
-      scale /= pb_lv.barycentric_value_factor_sum();
-    //else (new pt is exact match) dimension doesn't contribute to bc denom
+    bi = basis_index[j];
+    if (bi) { // exclusion of bi==0 must be sync'd with bc value factors
+      BasisPolynomial& pb_lv = polynomialBasis[bi][j];
+      if (pb_lv.exact_index() == _NPOS) // this dim contributes to bc denom
+	scale /= pb_lv.barycentric_value_factor_sum();
+      //else (new pt is exact match) dim does not contribute to bc denom
+    }
   }
   return scale;
 }
@@ -662,13 +668,15 @@ inline Real InterpPolyApproximation::
 barycentric_value_scaling(const UShortArray& basis_index,
 			  const SizetList& subset_indices)
 {
-  Real scale = 1.; SizetList::const_iterator cit; size_t j;
+  Real scale = 1.; SizetList::const_iterator cit; size_t j; unsigned short bi;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    j = *cit;
-    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
-    if (pb_lv.exact_index() == _NPOS) // this dimension contributes to bc denom
-      scale /= pb_lv.barycentric_value_factor_sum();
-    //else (new pt is exact match) dimension doesn't contribute to bc denom
+    j = *cit; bi = basis_index[j];
+    if (bi) { // exclusion of bi==0 must be sync'd with bc value factors
+      BasisPolynomial& pb_lv = polynomialBasis[bi][j];
+      if (pb_lv.exact_index() == _NPOS) // this dim contributes to bc denom
+	scale /= pb_lv.barycentric_value_factor_sum();
+      //else (new pt is exact match) dim does not contribute to bc denom
+    }
   }
   return scale;
 }
@@ -755,29 +763,6 @@ barycentric_gradient_scaling(/* size_t deriv_index, */
     // irregardless of whether a gradient or value factor was applied.
   }
   return scale;
-}
-
-
-inline std::vector<BasisPolynomial> InterpPolyApproximation::
-basis_polynomials(const UShortArray& basis_index)
-{
-  std::vector<BasisPolynomial> bp_array(numVars);
-  for (size_t j=0; j<numVars; ++j)
-    bp_array[j] = polynomialBasis[basis_index[j]][j]; // shared rep
-  return bp_array;
-}
-
-
-inline std::vector<BasisPolynomial> InterpPolyApproximation::
-active_basis_polynomials(const UShortArray& basis_index)
-{
-  std::vector<BasisPolynomial> bp_array;
-  for (size_t j=0; j<numVars; ++j) {
-    BasisPolynomial& pb_lv = polynomialBasis[basis_index[j]][j];
-    if (pb_lv.exact_index() == _NPOS)
-      bp_array.push_back(pb_lv); // shared rep
-  }
-  return bp_array;
 }
 
 

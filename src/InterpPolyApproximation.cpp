@@ -482,7 +482,6 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 		     const UShortArray& basis_index, const UShort2DArray& key,
 		     const SizetArray& colloc_index)
 {
-  size_t i, num_colloc_pts = key.size();
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
@@ -490,16 +489,23 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
     // TO DO: max key limit not valid for delta_quad on closed rules
 
-    size_t num_act_v = 0;
-    for (i=0; i<numVars; ++i)
-      if (polynomialBasis[basis_index[i]][i].exact_index() == _NPOS) // active
+    size_t j, num_act_v = 0; unsigned short bi_j;
+    for (j=0; j<numVars; ++j) {
+      bi_j = basis_index[j]; // if 0, then constant interp with 1 pt
+      if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
 	++num_act_v;
+    }
     if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
       size_t pt_index = 0, prod = 1;
-      for (i=0; i<numVars; ++i) {
-	BasisPolynomial& poly_i = polynomialBasis[basis_index[i]][i];
-	pt_index += poly_i.exact_index() * prod;
-	prod     *= poly_i.interpolation_size();
+      for (j=0; j<numVars; ++j) {
+	bi_j = basis_index[j];
+	// if bi==0, then constant interp with 1 point: we can replace this
+	// constant interpolation with the value at the 1 colloc index (ei=0)
+	if (bi_j) {
+	  BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
+	  pt_index += poly_i.exact_index() * prod;
+	  prod     *= poly_i.interpolation_size();
+	}
       }
       return (colloc_index.empty()) ?
 	exp_t1_coeffs[pt_index] : exp_t1_coeffs[colloc_index[pt_index]];
@@ -508,20 +514,27 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
       RealVector accumulator(numVars); // init to 0.
       BasisPolynomial&   poly_0 = polynomialBasis[basis_index[0]][0];
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
-      size_t j;
+      size_t i, num_colloc_pts = key.size();//, ei0 = poly_0.exact_index(), eij;
       unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
       for (i=0; i<num_colloc_pts; ++i) {
 	const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+	//if (ei0 == _NPOS)
 	accumulator[0] += (colloc_index.empty()) ?
 	  exp_t1_coeffs[i]               * bc_vf_0[key_i0] :
 	  exp_t1_coeffs[colloc_index[i]] * bc_vf_0[key_i0];
+	//else if (ei0 == key_i0)                      // only 1 pt should match
+	//  accumulator[0]  = (colloc_index.empty()) ? // (= instead of +=)
+	//    exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
 	if (key_i0 == max0) {
 	  // accumulate sums over variables with max key value
 	  for (j=1; j<numVars; ++j) {
 	    BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
-	    key_ij = key_i[j];
+	    key_ij = key_i[j]; //eij = poly_j.exact_index();
+	    //if (eij == _NPOS)
 	    accumulator[j] += accumulator[j-1]
 	      * poly_j.barycentric_value_factor(key_ij);
+	    //else if (eij == key_ij)              // only 1 pt should match
+	    //  accumulator[j] = accumulator[j-1]; // (= instead of +=)
 	    accumulator[j-1] = 0.;
 	    if (key_ij + 1 != poly_j.interpolation_size())
 	      break;
@@ -531,59 +544,25 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
       return accumulator[numVars-1] * barycentric_value_scaling(basis_index);
     }
     else { // partial interpolation over active variables
-
-      /*
-      // Option 1: loop over all collocation points
-      RealVector accumulator(numVars); // init to 0.
-      BasisPolynomial&   poly_0 = polynomialBasis[basis_index[0]][0];
-      const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
-      size_t j,             ei0 = poly_0.exact_index(), eij;
-      unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
-      for (i=0; i<num_colloc_pts; ++i) {
-	const UShortArray& key_i = key[i]; key_i0 = key_i[0];
-	if (ei0 == _NPOS)
-	  accumulator[0] += (colloc_index.empty()) ?
-	    exp_t1_coeffs[i]               * bc_vf_0[key_i0] :
-	    exp_t1_coeffs[colloc_index[i]] * bc_vf_0[key_i0];
-	else if (ei0 == key_i0)                      // only 1 pt should match
-	  accumulator[0]  = (colloc_index.empty()) ? // (= instead of +=)
-	    exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
-	if (key_i0 == max0) {
-	  // accumulate sums over variables with max key value
-	  for (j=1; j<numVars; ++j) {
-	    BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
-	    key_ij = key_i[j]; eij = poly_j.exact_index();
-	    if (eij == _NPOS)
-	      accumulator[j] += accumulator[j-1]
-		* poly_j.barycentric_value_factor(key_ij);
-	    else if (eij == key_ij)              // only 1 pt should match
-	      accumulator[j] = accumulator[j-1]; // (= instead of +=)
-	    accumulator[j-1] = 0.;
-	    if (key_ij + 1 != poly_j.interpolation_size())
-	      break;
-	  }
-	}
-      }
-      return accumulator[numVars-1] * barycentric_value_scaling(basis_index);
-      */
-
-      // Option 2: loop over active point subset
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
-      size_t j, pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr, pt_index = 0;
+      size_t pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr, pt_index = 0;
       for (j=0, av_cntr=0; j<numVars; ++j) {
-	BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
-	ej = poly_j.exact_index(); pts_vj = poly_j.interpolation_size();
-	if (ej == _NPOS) { // active for interpolation
-	  pt_factors[av_cntr] = num_pts; act_v_set[av_cntr] = j;
-	  num_act_pts *= pts_vj; ++av_cntr;
+	bi_j = basis_index[j];
+	if (bi_j) { // else pts_vj = 1 and ej can be taken to be 0
+	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+	  ej = poly_j.exact_index(); pts_vj = poly_j.interpolation_size();
+	  if (ej == _NPOS) { // active for interpolation
+	    pt_factors[av_cntr] = num_pts; act_v_set[av_cntr] = j;
+	    num_act_pts *= pts_vj; ++av_cntr;
+	  }
+	  else             // inactive for interpolation
+	    pt_index += num_pts * ej;
+	  num_pts *= pts_vj;
 	}
-	else             // inactive for interpolation
-	  pt_index += num_pts * ej;
-	num_pts *= pts_vj;
       }
       // define initial pt_index offset
       RealVector accumulator(num_act_v); // init to 0.
-      size_t v0 = act_v_set[0], vj;
+      size_t i, v0 = act_v_set[0], vj;
       BasisPolynomial&   poly_v0 = polynomialBasis[basis_index[v0]][v0];
       const RealVector& bc_vf_v0 = poly_v0.barycentric_value_factors();
       size_t pts_v0 = poly_v0.interpolation_size(), pf0 = pt_factors[0],
@@ -598,7 +577,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	pt_index += pf0;
 	if (key_i0 == max0) {
 	  // accumulate sums over variables with max key value
-	  for (j=1, prev_pt_set = pts_v0_pf0; j<num_act_v; ++j) {
+	  for (j=1, prev_pt_set=pts_v0_pf0; j<num_act_v; ++j) {
 	    vj = act_v_set[j]; key_ij = key_i[vj]; pfj = pt_factors[j];
 	    BasisPolynomial& poly_vj = polynomialBasis[basis_index[vj]][vj];
 	    // update accumulators: push [j-1] entry up to [j] level
@@ -619,9 +598,9 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     }
 
     /*
-    // Option 3: delegate loops; cleaner, but some efficiency lost (and
+    // Simple bc option: delegate loops; cleaner, but some efficiency lost (and
     // precision as well due to subtractive cancellation among large products)
-    Real tp_val = 0.;
+    size_t i, num_colloc_pts = key.size(); Real tp_val = 0.;
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[i] *
@@ -636,7 +615,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     */
   }
   else if (exp_t2_coeffs.empty()) {
-    Real tp_val = 0.;
+    size_t i, num_colloc_pts = key.size(); Real tp_val = 0.;
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[i] * 
@@ -648,7 +627,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     return tp_val;
   }
   else {
-    size_t j, c_index; Real tp_val = 0.;
+    size_t i, num_colloc_pts = key.size(), j, c_index; Real tp_val = 0.;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
@@ -672,51 +651,53 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 		     const SizetArray& colloc_index,
 		     const SizetList& subset_indices)
 {
-  size_t i, num_colloc_pts = key.size();
+  // Note: exp_t1_coeffs, exp_t2_coeffs, key, and colloc_index are consistent
+  // with the reduced variable subset, but x and basis_index are full space.
+
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, subset_indices, 1); // value factors needed
 
-    /*
-    size_t num_act_v = 0;
+    size_t j, num_subset_v = subset_indices.size(), num_act_v = 0;
+    unsigned short bi_j; SizetList::const_iterator cit;
     for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      i = *cit;
-      if (polynomialBasis[basis_index[i]][i].exact_index() == _NPOS) // active
+      j = *cit; bi_j = basis_index[j];
+      if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
 	++num_act_v;
     }
     if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
       size_t pt_index = 0, prod = 1;
       for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-	i = *cit;
-	BasisPolynomial& poly_i = polynomialBasis[basis_index[i]][i];
-	pt_index += poly_i.exact_index() * prod;
-	prod     *= poly_i.interpolation_size();
+	j = *cit; bi_j = basis_index[j];
+	if (bi_j) {
+	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+	  pt_index += poly_j.exact_index() * prod;
+	  prod     *= poly_j.interpolation_size();
+	}
       }
-      // Note: exp coeffs have been defined consistent with subset_indices,
-      // allowing pt_index calculation to utilize only the subset_indices.
+      // Note: pt_index calculation utilizes only the subset variables
       return (colloc_index.empty()) ?
 	exp_t1_coeffs[pt_index] : exp_t1_coeffs[colloc_index[pt_index]];
     }
-    else if (num_act_v == numVars) { // interpolation over all variables
-
-      // TO DO
-
-      RealVector accumulator(numVars); // init to 0.
-      BasisPolynomial&   poly_0 = polynomialBasis[basis_index[0]][0];
+    else if (num_act_v == num_subset_v) { // interpolation over all of subset
+      SizetList::const_iterator cit = subset_indices.begin();
+      size_t i, num_colloc_pts = key.size(), v0 = *cit, vj;
+      RealVector accumulator(num_subset_v); // init to 0.
+      BasisPolynomial&   poly_0 = polynomialBasis[basis_index[v0]][v0];
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
-      size_t j;
       unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
       for (i=0; i<num_colloc_pts; ++i) {
-	const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+	// Note: key is reduced in first dimension (pts), but not second (vars)
+	const UShortArray& key_i = key[i]; key_i0 = key_i[v0];
 	accumulator[0] += (colloc_index.empty()) ?
 	  exp_t1_coeffs[i]               * bc_vf_0[key_i0] :
 	  exp_t1_coeffs[colloc_index[i]] * bc_vf_0[key_i0];
 	if (key_i0 == max0) {
 	  // accumulate sums over variables with max key value
-	  for (j=1; j<numVars; ++j) {
-	    BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
-	    key_ij = key_i[j];
+	  for (j=1, cit=++subset_indices.begin(); j<num_subset_v; ++j, ++cit) {
+	    vj = *cit; key_ij = key_i[vj];
+	    BasisPolynomial& poly_j = polynomialBasis[basis_index[vj]][vj];
 	    accumulator[j] += accumulator[j-1]
 	      * poly_j.barycentric_value_factor(key_ij);
 	    accumulator[j-1] = 0.;
@@ -725,24 +706,27 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	  }
 	}
       }
-      return accumulator[numVars-1] * barycentric_value_scaling(basis_index);
+      return accumulator[num_subset_v-1]
+	* barycentric_value_scaling(basis_index, subset_indices);
     }
     else { // partial interpolation over active variables
-
-      // TO DO
-
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
-      size_t j, pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr, pt_index = 0;
-      for (j=0, av_cntr=0; j<numVars; ++j) {
-	BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
-	ej = poly_j.exact_index(); pts_vj = poly_j.interpolation_size();
-	if (ej == _NPOS) { // active for interpolation
-	  pt_factors[av_cntr] = num_pts; act_v_set[av_cntr] = j;
-	  num_act_pts *= pts_vj; ++av_cntr;
+      size_t i, pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr = 0,
+	pt_index = 0;
+      // define interpolation set: in subset_indices, nonzero bi, and no ei
+      for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+	j = *cit; bi_j = basis_index[j];
+	if (bi_j) { // else pts_vj = 1 and ej can be taken to be 0
+	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+	  ej = poly_j.exact_index(); pts_vj = poly_j.interpolation_size();
+	  if (ej == _NPOS) { // active for interpolation
+	    pt_factors[av_cntr] = num_pts; act_v_set[av_cntr] = j;
+	    num_act_pts *= pts_vj; ++av_cntr;
+	  }
+	  else             // inactive for interpolation
+	    pt_index += num_pts * ej;
+	  num_pts *= pts_vj;
 	}
-	else             // inactive for interpolation
-	  pt_index += num_pts * ej;
-	num_pts *= pts_vj;
       }
       // define initial pt_index offset
       RealVector accumulator(num_act_v); // init to 0.
@@ -761,7 +745,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	pt_index += pf0;
 	if (key_i0 == max0) {
 	  // accumulate sums over variables with max key value
-	  for (j=1, prev_pt_set = pts_v0_pf0; j<num_act_v; ++j) {
+	  for (j=1, prev_pt_set=pts_v0_pf0; j<num_act_v; ++j) {
 	    vj = act_v_set[j]; key_ij = key_i[vj]; pfj = pt_factors[j];
 	    BasisPolynomial& poly_vj = polynomialBasis[basis_index[vj]][vj];
 	    // update accumulators: push [j-1] entry up to [j] level
@@ -778,11 +762,13 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	  }
 	}
       }
-      return accumulator[num_act_v-1] * barycentric_value_scaling(basis_index);
+      return accumulator[num_act_v-1]
+	* barycentric_value_scaling(basis_index, subset_indices);
     }
-    */
 
-    Real tp_val = 0.;
+    /*
+    // Simple bc option: delegate loops; cleaner, but less efficient/precise
+    size_t i, num_colloc_pts = key.size(); Real tp_val = 0.;
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[i] * 
@@ -794,9 +780,10 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
     // apply barycentric denominator
     return tp_val * barycentric_value_scaling(basis_index, subset_indices);
+    */
   }
   else if (exp_t2_coeffs.empty()) {
-    Real tp_val = 0.;
+    size_t i, num_colloc_pts = key.size(); Real tp_val = 0.;
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[i] * 
@@ -808,7 +795,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     return tp_val;
   }
   else {
-    size_t j, c_index; Real tp_val = 0.;
+    size_t i, num_colloc_pts = key.size(), j, c_index; Real tp_val = 0.;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
@@ -1020,8 +1007,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 					   const UShort2DArray& key,
 					   const SizetArray& colloc_index)
 {
-  size_t i, j, num_colloc_pts = key.size(),
-    num_deriv_vars = exp_t1_coeff_grads.numRows();
+  size_t j, num_deriv_vars = exp_t1_coeff_grads.numRows();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   tpGradient = 0.;
@@ -1030,6 +1016,128 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, 1); // value factors needed for coeff grads
 
+    size_t num_act_v = 0; unsigned short bi_j;
+    for (j=0; j<numVars; ++j) {
+      bi_j = basis_index[j]; // if 0, then constant interp with 1 pt
+      if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
+	++num_act_v;
+    }
+    if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
+      size_t pt_index = 0, prod = 1;
+      for (j=0; j<numVars; ++j) {
+	bi_j = basis_index[j];
+	// if bi==0, then constant interp with 1 point: we can replace this
+	// constant interpolation with the value at the 1 colloc index (ei=0)
+	if (bi_j) {
+	  BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
+	  pt_index += poly_i.exact_index() * prod;
+	  prod     *= poly_i.interpolation_size();
+	}
+      }
+      if (colloc_index.empty())
+	copy_data(exp_t1_coeff_grads[pt_index],(int)num_deriv_vars, tpGradient);
+      else
+	copy_data(exp_t1_coeff_grads[colloc_index[pt_index]],
+		  (int)num_deriv_vars, tpGradient);
+    }
+    else if (num_act_v == numVars) { // interpolation over all variables
+      RealMatrix accumulator(numVars, num_deriv_vars); // init to 0.
+      BasisPolynomial&   poly_0 = polynomialBasis[basis_index[0]][0];
+      const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
+      size_t i, k, num_colloc_pts = key.size();
+      unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+      for (i=0; i<num_colloc_pts; ++i) {
+	const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+	const Real* grad = (colloc_index.empty()) ? exp_t1_coeff_grads[i] :
+	  exp_t1_coeff_grads[colloc_index[i]];
+	Real* accum_0 = accumulator[0]; Real bc_vf_00 = bc_vf_0[key_i0];
+	for (j=0; j<num_deriv_vars; ++j)
+	  accum_0[j] += grad[j] * bc_vf_00;
+	if (key_i0 == max0) {
+	  // accumulate sums over variables with max key value
+	  for (j=1; j<numVars; ++j) {
+	    BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
+	    key_ij = key_i[j];
+	    Real *accum_j = accumulator[j], *accum_jm1 = accumulator[j-1];
+	    Real bc_vf_jj = poly_j.barycentric_value_factor(key_ij);
+	    for (k=0; k<num_deriv_vars; ++k) {
+	      accum_j[k]  += accum_jm1[k] * bc_vf_jj;
+	      accum_jm1[k] = 0.;
+	    }
+	    if (key_ij + 1 != poly_j.interpolation_size())
+	      break;
+	  }
+	}
+      }
+      Real bcv_scaling = barycentric_value_scaling(basis_index);
+      Real* accum = accumulator[numVars-1];
+      for (j=0; j<num_deriv_vars; ++j)
+	tpGradient[j] = accum[j] * bcv_scaling;
+    }
+    else { // partial interpolation over active variables
+      SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
+      size_t pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr, pt_index = 0;
+      for (j=0, av_cntr=0; j<numVars; ++j) {
+	bi_j = basis_index[j];
+	if (bi_j) { // else pts_vj = 1 and ej can be taken to be 0
+	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+	  ej = poly_j.exact_index(); pts_vj = poly_j.interpolation_size();
+	  if (ej == _NPOS) { // active for interpolation
+	    pt_factors[av_cntr] = num_pts; act_v_set[av_cntr] = j;
+	    num_act_pts *= pts_vj; ++av_cntr;
+	  }
+	  else             // inactive for interpolation
+	    pt_index += num_pts * ej;
+	  num_pts *= pts_vj;
+	}
+      }
+      // define initial pt_index offset
+      RealMatrix accumulator(num_deriv_vars, num_act_v); // init to 0.
+      size_t i, k, v0 = act_v_set[0], vj;
+      BasisPolynomial&   poly_v0 = polynomialBasis[basis_index[v0]][v0];
+      const RealVector& bc_vf_v0 = poly_v0.barycentric_value_factors();
+      size_t pts_v0 = poly_v0.interpolation_size(), pf0 = pt_factors[0],
+	 pts_v0_pf0 = pts_v0 * pf0, pfj, prev_pt_set;
+      unsigned short key_i0, key_ij, max0 = pts_v0 - 1;
+      // loop over active pts, summing contributions from active variables
+      for (i=0; i<num_act_pts; ++i) {
+	const UShortArray& key_i = key[pt_index]; key_i0 = key_i[v0];
+	const Real* grad = (colloc_index.empty()) ? exp_t1_coeff_grads[pt_index]
+	  : exp_t1_coeff_grads[colloc_index[pt_index]];
+	Real* accum_0 = accumulator[0]; Real bc_vf_00 = bc_vf_v0[key_i0];
+	for (j=0; j<num_deriv_vars; ++j)
+	  accum_0[j] += grad[j] * bc_vf_00;
+	pt_index += pf0;
+	if (key_i0 == max0) {
+	  // accumulate sums over variables with max key value
+	  for (j=1, prev_pt_set=pts_v0_pf0; j<num_act_v; ++j) {
+	    vj = act_v_set[j]; key_ij = key_i[vj]; pfj = pt_factors[j];
+	    BasisPolynomial& poly_vj = polynomialBasis[basis_index[vj]][vj];
+	    // update accumulators: push [j-1] entry up to [j] level
+	    Real *accum_j = accumulator[j], *accum_jm1 = accumulator[j-1];
+	    Real bc_vf_jj = poly_vj.barycentric_value_factor(key_ij);
+	    for (k=0; k<num_deriv_vars; ++k) {
+	      accum_j[k]  += accum_jm1[k] * bc_vf_jj;
+	      accum_jm1[k] = 0.;
+	    }
+	    // update pt_index: prev index rolls back to 0 and curr index +1.
+	    // index increment is zero unless active vars are nonconsecutive.
+	    if (pfj != prev_pt_set)
+	      pt_index += pfj - prev_pt_set;
+	    pts_vj = poly_vj.interpolation_size();
+	    if (key_ij + 1 == pts_vj) prev_pt_set = pts_vj * pfj;
+	    else                      break;
+	  }
+	}
+      }
+      Real bcv_scaling = barycentric_value_scaling(basis_index);
+      Real* accum = accumulator[num_act_v-1];
+      for (j=0; j<num_deriv_vars; ++j)
+	tpGradient[j] = accum[j] * bcv_scaling;
+    }
+
+    /*
+    size_t i, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
       const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
 	exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
@@ -1040,8 +1148,10 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 
     // apply barycentric denominator
     tpGradient.scale(barycentric_value_scaling(basis_index));
+    */
   }
   else {
+    size_t i, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
       const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
 	exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
