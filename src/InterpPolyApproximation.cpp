@@ -609,7 +609,6 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
       for (i=0; i<num_colloc_pts; ++i)
 	tp_val += exp_t1_coeffs[colloc_index[i]] *
 	  barycentric_value_factor(key[i], basis_index);
-
     // apply barycentric denominator
     return tp_val * barycentric_value_scaling(basis_index);
     */
@@ -645,14 +644,15 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
 /** All variables version. */
 Real InterpPolyApproximation::
-tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
-		     const RealMatrix& exp_t2_coeffs,
-		     const UShortArray& basis_index, const UShort2DArray& key,
-		     const SizetArray& colloc_index,
+tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
+		     const RealMatrix& subset_t2_coeffs,
+		     const UShortArray& basis_index,
+		     const UShort2DArray& subset_key,
+		     const SizetArray& subset_colloc_index,
 		     const SizetList& subset_indices)
 {
-  // Note: exp_t1_coeffs, exp_t2_coeffs, key, and colloc_index are consistent
-  // with the reduced variable subset, but x and basis_index are full space.
+  // Note: subset_* are consistent with the reduced variable subset,
+  // but x and basis_index are full space.
 
   if (barycentricFlag) {
 
@@ -677,22 +677,22 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	}
       }
       // Note: pt_index calculation utilizes only the subset variables
-      return (colloc_index.empty()) ?
-	exp_t1_coeffs[pt_index] : exp_t1_coeffs[colloc_index[pt_index]];
+      return (subset_colloc_index.empty()) ? subset_t1_coeffs[pt_index] :
+	subset_t1_coeffs[subset_colloc_index[pt_index]];
     }
     else if (num_act_v == num_subset_v) { // interpolation over all of subset
       SizetList::const_iterator cit = subset_indices.begin();
-      size_t i, num_colloc_pts = key.size(), v0 = *cit, vj;
+      size_t i, num_colloc_pts = subset_key.size(), v0 = *cit, vj;
       RealVector accumulator(num_subset_v); // init to 0.
       BasisPolynomial&   poly_0 = polynomialBasis[basis_index[v0]][v0];
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
       unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
       for (i=0; i<num_colloc_pts; ++i) {
 	// Note: key is reduced in first dimension (pts), but not second (vars)
-	const UShortArray& key_i = key[i]; key_i0 = key_i[v0];
-	accumulator[0] += (colloc_index.empty()) ?
-	  exp_t1_coeffs[i]               * bc_vf_0[key_i0] :
-	  exp_t1_coeffs[colloc_index[i]] * bc_vf_0[key_i0];
+	const UShortArray& key_i = subset_key[i]; key_i0 = key_i[v0];
+	accumulator[0] += (subset_colloc_index.empty()) ?
+	  subset_t1_coeffs[i]                      * bc_vf_0[key_i0] :
+	  subset_t1_coeffs[subset_colloc_index[i]] * bc_vf_0[key_i0];
 	if (key_i0 == max0) {
 	  // accumulate sums over variables with max key value
 	  for (j=1, cit=++subset_indices.begin(); j<num_subset_v; ++j, ++cit) {
@@ -738,10 +738,10 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
       unsigned short key_i0, key_ij, max0 = pts_v0 - 1;
       // loop over active pts, summing contributions from active variables
       for (i=0; i<num_act_pts; ++i) {
-	const UShortArray& key_i = key[pt_index]; key_i0 = key_i[v0];
-	accumulator[0] += (colloc_index.empty()) ? 
-	  exp_t1_coeffs[pt_index]               * bc_vf_v0[key_i0] :
-	  exp_t1_coeffs[colloc_index[pt_index]] * bc_vf_v0[key_i0];
+	const UShortArray& key_i = subset_key[pt_index]; key_i0 = key_i[v0];
+	accumulator[0] += (subset_colloc_index.empty()) ? 
+	  subset_t1_coeffs[pt_index]                      * bc_vf_v0[key_i0] :
+	  subset_t1_coeffs[subset_colloc_index[pt_index]] * bc_vf_v0[key_i0];
 	pt_index += pf0;
 	if (key_i0 == max0) {
 	  // accumulate sums over variables with max key value
@@ -768,42 +768,41 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
     /*
     // Simple bc option: delegate loops; cleaner, but less efficient/precise
-    size_t i, num_colloc_pts = key.size(); Real tp_val = 0.;
-    if (colloc_index.empty())
+    size_t i, num_colloc_pts = subset_key.size(); Real tp_val = 0.;
+    if (subset_colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
-	tp_val += exp_t1_coeffs[i] * 
-	  barycentric_value_factor(key[i], basis_index, subset_indices);
+	tp_val += subset_t1_coeffs[i] * 
+	  barycentric_value_factor(subset_key[i], basis_index, subset_indices);
     else
       for (i=0; i<num_colloc_pts; ++i)
-	tp_val += exp_t1_coeffs[colloc_index[i]] *
-	  barycentric_value_factor(key[i], basis_index, subset_indices);
-
+	tp_val += subset_t1_coeffs[subset_colloc_index[i]] *
+	  barycentric_value_factor(subset_key[i], basis_index, subset_indices);
     // apply barycentric denominator
     return tp_val * barycentric_value_scaling(basis_index, subset_indices);
     */
   }
-  else if (exp_t2_coeffs.empty()) {
-    size_t i, num_colloc_pts = key.size(); Real tp_val = 0.;
-    if (colloc_index.empty())
+  else if (subset_t2_coeffs.empty()) {
+    size_t i, num_colloc_pts = subset_key.size(); Real tp_val = 0.;
+    if (subset_colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
-	tp_val += exp_t1_coeffs[i] * 
-	  type1_interpolant_value(x, key[i], basis_index, subset_indices);
+	tp_val += subset_t1_coeffs[i] * 
+	  type1_interpolant_value(x, subset_key[i], basis_index,subset_indices);
     else
       for (i=0; i<num_colloc_pts; ++i)
-	tp_val += exp_t1_coeffs[colloc_index[i]] *
-	  type1_interpolant_value(x, key[i], basis_index, subset_indices);
+	tp_val += subset_t1_coeffs[subset_colloc_index[i]] *
+	  type1_interpolant_value(x, subset_key[i], basis_index,subset_indices);
     return tp_val;
   }
   else {
-    size_t i, num_colloc_pts = key.size(), j, c_index; Real tp_val = 0.;
+    size_t i, num_colloc_pts = subset_key.size(), j, c_index; Real tp_val = 0.;
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i];
-      c_index = (colloc_index.empty()) ? i : colloc_index[i];
-      tp_val += exp_t1_coeffs[c_index] *
+      const UShortArray& key_i = subset_key[i];
+      c_index = (subset_colloc_index.empty()) ? i : subset_colloc_index[i];
+      tp_val += subset_t1_coeffs[c_index] *
 	type1_interpolant_value(x, key_i, basis_index, subset_indices);
-      const Real* exp_t2_coeff_i = exp_t2_coeffs[c_index];
+      const Real* subset_t2_coeff_i = subset_t2_coeffs[c_index];
       for (j=0; j<numVars; ++j)
-	tp_val += exp_t2_coeff_i[j] *
+	tp_val += subset_t2_coeff_i[j] *
 	  type2_interpolant_value(x, j, key_i, basis_index, subset_indices);
     }
     return tp_val;
@@ -822,88 +821,121 @@ tensor_product_gradient_basis_variables(const RealVector& x,
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
+  size_t i, j, num_colloc_pts = key.size();
 
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, 3); // value+gradient factors needed
 
-    // for basis gradients, one cannot eliminate exact index dimensions,
-    // but perhaps can eliminate bi_j == 0...
+    // Note: for basis gradients, one cannot eliminate exact index dimensions
+    // as is managed in the barycentric case of tensor_product_value()
 
-    /*
-    RealMatrix accumulator(numVars, numVars); // init to 0.
-    BasisPolynomial&   poly_0 = polynomialBasis[basis_index[0]][0];
+    unsigned short key_i0, key_ij, bi0 = basis_index[0], bij;
+    BasisPolynomial&   poly_0 = polynomialBasis[bi0][0];
     const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
     const RealVector& bc_gf_0 = poly_0.barycentric_gradient_factors();
-    size_t i, j, k, num_colloc_pts = key.size();
-    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+    size_t k, ei0 = poly_0.exact_index(), eij;
+    unsigned short max0 = poly_0.interpolation_size() - 1;
+    RealMatrix accumulator(numVars, numVars); // init to 0.
+    Real *accum_0 = accumulator[0], *accum_j, *accum_jm1,
+      t1_coeff_bc_vf_00, bc_vf_jj, t1_coeff;
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
-      Real exp_t1_coeff = (colloc_index.empty()) ? exp_t1_coeffs[i] :
+      t1_coeff = (colloc_index.empty()) ? exp_t1_coeffs[i] :
 	exp_t1_coeffs[colloc_index[i]];
-      Real* accum_0 = accumulator[0];
-      Real bc_vf_00 = bc_vf_0[key_i0], bc_gf_00 = bc_gf_0[key_i0];
-      accum_0[0]   += exp_t1_coeff * bc_gf_00; // TO DO: verify
-      for (j=1; j<numVars; ++j)
-	accum_0[j] += exp_t1_coeff * bc_vf_00; // TO DO: verify
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      if (bi0) {
+	// accumulate grad factor for comp 0 and value factor for other comps
+	accum_0[0] += t1_coeff * bc_gf_0[key_i0];
+	if (ei0 == _NPOS) {
+	  t1_coeff_bc_vf_00 = t1_coeff * bc_vf_0[key_i0];
+	  for (j=1; j<numVars; ++j)
+	    accum_0[j] += t1_coeff_bc_vf_00;
+	}
+	else if (ei0 == key_i0) // value factor is 1
+	  for (j=1; j<numVars; ++j)
+	    accum_0[j] += t1_coeff;
+	//else value factor is 0
+      }
+      else // grad factor is zero, value factor is omitted
+	for (j=1; j<numVars; ++j)
+	  accum_0[j] += t1_coeff;
       if (key_i0 == max0) {
 	// accumulate sums over variables with max key value
 	for (j=1; j<numVars; ++j) {
-	  BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
-	  key_ij = key_i[j];
-	  Real *accum_j = accumulator[j], *accum_jm1 = accumulator[j-1];
-	  Real bc_vf_jj = poly_j.barycentric_value_factor(key_ij),
-	    bc_gf_jj = poly_j.barycentric_gradient_factor(key_ij);
-	  for (k=0; k<numVars; ++k) {
-	    accum_j[k] += (j == k) ? accum_jm1[k] * bc_gf_jj : // TO DO
-	      accum_jm1[k] * bc_vf_jj;
-	    accum_jm1[k] = 0.;
+	  bij     = basis_index[j]; key_ij    = key_i[j];
+	  accum_j = accumulator[j]; accum_jm1 = accumulator[j-1];
+	  BasisPolynomial& poly_j = polynomialBasis[bij][j];
+	  if (bij) {
+	    eij = poly_j.exact_index();
+	    accum_j[j] += accum_jm1[j] *
+	      poly_j.barycentric_gradient_factor(key_ij);
+	    if (eij == _NPOS) { // bc_vf_jj has general value
+	      bc_vf_jj = poly_j.barycentric_value_factor(key_ij);
+	      for (k=0; k<numVars; ++k) {
+		if (k != j) accum_j[k] += accum_jm1[k] * bc_vf_jj;
+		accum_jm1[k] = 0.;
+	      }
+	    }
+	    else if (eij == key_ij) { // bc_vf_jj is 1
+	      for (k=0; k<numVars; ++k) {
+		if (k != j) accum_j[k] += accum_jm1[k];
+		accum_jm1[k] = 0.;
+	      }
+	    }
+	    else // bc_vf_jj is 0
+	      for (k=0; k<numVars; ++k)
+		accum_jm1[k] = 0.;
+	  }
+	  else { // grad factor is zero, value factor is omitted
+	    for (k=0; k<numVars; ++k) {
+	      if (k != j) accum_j[k] += accum_jm1[k];
+	      accum_jm1[k] = 0.;
+	    }
 	  }
 	  if (key_ij + 1 != poly_j.interpolation_size())
 	    break;
 	}
       }
     }
-    Real bcg_scaling = barycentric_gradient_scaling(basis_index);
+    Real bcg_scale = barycentric_gradient_scaling(basis_index);
     Real* accum = accumulator[numVars-1];
     for (j=0; j<numVars; ++j)
-      tpGradient[j] = accum[j] * bcg_scaling;
-    */
+      tpGradient[j] = accum[j] * bcg_scale;
 
+    /*
     size_t i, j, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  barycentric_gradient_factor(j, key_i, basis_index);
     }
-
     tpGradient.scale(barycentric_gradient_scaling(basis_index));
+    */
   }
   else if (exp_t2_coeffs.empty()) {
-    size_t i, j, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j)
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  type1_interpolant_gradient(x, j, key_i, basis_index);
     }
   }
   else {
-    size_t i, j, k, num_colloc_pts = key.size();
+    size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
 	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
       for (j=0; j<numVars; ++j) { // ith contribution to jth grad component
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  type1_interpolant_gradient(x, j, key_i, basis_index);
 	for (k=0; k<numVars; ++k) // type2 interpolant for kth grad comp
 	  tpGradient[j] += exp_t2_coeff_i[k] *
@@ -917,57 +949,134 @@ tensor_product_gradient_basis_variables(const RealVector& x,
 
 const RealVector& InterpPolyApproximation::
 tensor_product_gradient_basis_variables(const RealVector& x,
-					const RealVector& exp_t1_coeffs,
-					const RealMatrix& exp_t2_coeffs,
+					const RealVector& subset_t1_coeffs,
+					const RealMatrix& subset_t2_coeffs,
 					const UShortArray& basis_index,
-					const UShort2DArray& key,
-					const SizetArray& colloc_index,
+					const UShort2DArray& subset_key,
+					const SizetArray& subset_colloc_index,
 					const SizetList& subset_indices)
 {
   if (tpGradient.length() != numVars)
     tpGradient.sizeUninitialized(numVars);
   tpGradient = 0.;
-  size_t i, j, num_colloc_pts = key.size();
+  size_t i, j, num_colloc_pts = subset_key.size();
 
   if (barycentricFlag) {
 
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, subset_indices, 3);//value+grad factors needed
 
+    // Note: for basis gradients, one cannot eliminate exact index dimensions
+    // as is managed in the barycentric case of tensor_product_value()
+
+    SizetList::const_iterator cit = subset_indices.begin();
+    size_t k, num_subset_v = subset_indices.size(), v0 = *cit, vj;
+    unsigned short key_i0, key_ij, bi0 = basis_index[v0], bij;
+    BasisPolynomial&   poly_v0 = polynomialBasis[bi0][v0];
+    const RealVector& bc_vf_v0 = poly_v0.barycentric_value_factors();
+    const RealVector& bc_gf_v0 = poly_v0.barycentric_gradient_factors();
+    size_t ei0 = poly_v0.exact_index(), eij;
+    unsigned short max0 = poly_v0.interpolation_size() - 1;
+    RealMatrix accumulator(numVars, num_subset_v); // init to 0.
+    Real *accum_0 = accumulator[0], *accum_j, *accum_jm1, bc_vf_00, bc_vf_jj,
+      t1_coeff;
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
-	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      const UShortArray& key_i = subset_key[i]; key_i0 = key_i[v0];
+      t1_coeff = (subset_colloc_index.empty()) ? subset_t1_coeffs[i] :
+	subset_t1_coeffs[subset_colloc_index[i]];
+      if (bi0) {
+	// accumulate grad factor for comp 0 and value factor for other comps
+	accum_0[0] += t1_coeff * bc_gf_v0[key_i0];
+	if (ei0 == _NPOS) {
+	  bc_vf_00 = bc_vf_v0[key_i0];
+	  for (j=1; j<numVars; ++j)
+	    accum_0[j] += t1_coeff * bc_vf_00;
+	}
+	else if (ei0 == key_i0) // value factor is 1, else value factor is 0
+	  for (j=1; j<numVars; ++j)
+	    accum_0[j] += t1_coeff;
+      }
+      else // grad factor is zero, value factor is omitted
+	for (j=1; j<numVars; ++j)
+	  accum_0[j] += t1_coeff;
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1, cit=++subset_indices.begin(); j<num_subset_v; ++j, ++cit) {
+	  vj = *cit; bij = basis_index[vj]; key_ij  = key_i[vj];
+	  accum_j = accumulator[j]; accum_jm1 = accumulator[j-1];
+	  BasisPolynomial& poly_vj = polynomialBasis[basis_index[vj]][vj];
+	  if (bij) {
+	    eij = poly_vj.exact_index();
+	    accum_j[j] += accum_jm1[j] *
+	      poly_vj.barycentric_gradient_factor(key_ij);
+	    if (eij == _NPOS) { // bc_vf_jj has general value
+	      bc_vf_jj = poly_vj.barycentric_value_factor(key_ij);
+	      for (k=0; k<numVars; ++k) {
+		if (k != j) accum_j[k] += accum_jm1[k] * bc_vf_jj;
+		accum_jm1[k] = 0.;
+	      }
+	    }
+	    else if (eij == key_ij) { // bc_vf_jj is 1
+	      for (k=0; k<numVars; ++k) {
+		if (k != j) accum_j[k] += accum_jm1[k];
+		accum_jm1[k] = 0.;
+	      }
+	    }
+	    else // bc_vf_jj is 0
+	      for (k=0; k<numVars; ++k)
+		accum_jm1[k] = 0.;
+	  }
+	  else { // grad factor is zero, value factor is omitted
+	    for (k=0; k<numVars; ++k) {
+	      if (k != j) accum_j[k] += accum_jm1[k];
+	      accum_jm1[k] = 0.;
+	    }
+	  }
+	  if (key_ij + 1 != poly_vj.interpolation_size())
+	    break;
+	}
+      }
+    }
+    Real bcg_scale = barycentric_gradient_scaling(basis_index, subset_indices);
+    Real* accum = accumulator[num_subset_v-1];
+    for (j=0; j<numVars; ++j)
+      tpGradient[j] = accum[j] * bcg_scale;
+
+    /*
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = subset_key[i];
+      Real t1_coeff_i = (subset_colloc_index.empty()) ?
+	subset_t1_coeffs[i] : subset_t1_coeffs[subset_colloc_index[i]];
       for (j=0; j<numVars; ++j)
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  barycentric_gradient_factor(j, key_i, basis_index, subset_indices);
     }
-
     tpGradient.scale(barycentric_gradient_scaling(basis_index, subset_indices));
+    */
   }
-  else if (exp_t2_coeffs.empty()) {
+  else if (subset_t2_coeffs.empty()) {
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
-	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      const UShortArray& key_i = subset_key[i];
+      Real t1_coeff_i = (subset_colloc_index.empty()) ?
+	subset_t1_coeffs[i] : subset_t1_coeffs[subset_colloc_index[i]];
       for (j=0; j<numVars; ++j)
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  type1_interpolant_gradient(x, j, key_i, basis_index, subset_indices);
     }
   }
   else {
     size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
-      const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
-	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
-      const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
-	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
+      const UShortArray& key_i = subset_key[i];
+      Real t1_coeff_i = (subset_colloc_index.empty()) ?
+	subset_t1_coeffs[i] : subset_t1_coeffs[subset_colloc_index[i]];
+      const Real* t2_coeff_i = (subset_colloc_index.empty()) ?
+	subset_t2_coeffs[i] : subset_t2_coeffs[subset_colloc_index[i]];
       for (j=0; j<numVars; ++j) { // ith contribution to jth grad component
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  type1_interpolant_gradient(x, j, key_i, basis_index, subset_indices);
 	for (k=0; k<numVars; ++k) // type2 interpolant for kth grad comp
-	  tpGradient[j] += exp_t2_coeff_i[k] *
+	  tpGradient[j] += t2_coeff_i[k] *
 	    type2_interpolant_gradient(x, j, k, key_i, basis_index,
 				       subset_indices);
       }
@@ -990,6 +1099,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     num_deriv_vars = dvv.size();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
+  if (!num_deriv_vars) return tpGradient;
   tpGradient = 0.;
 
   if (barycentricFlag) {
@@ -997,27 +1107,108 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, 3); // value+gradient factors needed
 
+    // Note: for basis gradients, one cannot eliminate exact index dimensions
+    // as is managed in the barycentric case of tensor_product_value()
+
+    unsigned short key_i0, key_ij, bi0 = basis_index[0], bij;
+    BasisPolynomial&   poly_0 = polynomialBasis[bi0][0];
+    const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
+    const RealVector& bc_gf_0 = poly_0.barycentric_gradient_factors();
+    size_t k, ei0 = poly_0.exact_index(), eij, d0_index = dvv[0] - 1, start;
+    unsigned short max0 = poly_0.interpolation_size() - 1;
+    RealMatrix accumulator(num_deriv_vars, numVars); // init to 0.
+    Real *accum_0 = accumulator[0], *accum_j, *accum_jm1,
+      t1_coeff_bc_vf_0, bc_vf_j, bc_gf_j, t1_coeff;
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      t1_coeff = (colloc_index.empty()) ? exp_t1_coeffs[i] :
+	exp_t1_coeffs[colloc_index[i]];
+      // mirror version w/o DVV, only logging a subset of accum components
+      start = 0;
+      if (bi0) {
+	if (d0_index == 0)
+	  { start = 1; accum_0[0] += t1_coeff * bc_gf_0[key_i0]; }
+        if (ei0 == _NPOS) {
+	  t1_coeff_bc_vf_0 = t1_coeff * bc_vf_0[key_i0];
+	  for (j=start; j<num_deriv_vars; ++j)
+	    accum_0[j] += t1_coeff_bc_vf_0;
+	}
+	else if (ei0 == key_i0) // value factor is 1, else value factor is 0
+	  for (j=start; j<num_deriv_vars; ++j)
+	    accum_0[j] += t1_coeff;
+      }
+      else { // grad factor is 0., value factor is omitted
+	if (d0_index == 0) start = 1;
+	for (j=start; j<num_deriv_vars; ++j)
+	  accum_0[j] += t1_coeff;
+      }
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1; j<numVars; ++j) {
+	  bij = basis_index[j]; key_ij = key_i[j];
+	  accum_j = accumulator[j]; accum_jm1 = accumulator[j-1];
+	  BasisPolynomial& poly_j = polynomialBasis[bij][j];
+	  if (bij) {
+	    eij = poly_j.exact_index();
+	    bc_gf_j = poly_j.barycentric_gradient_factor(key_ij);
+	    if (eij == _NPOS) { // bc_vf_j has general value
+	      bc_vf_j = poly_j.barycentric_value_factor(key_ij);
+	      for (k=0; k<num_deriv_vars; ++k) {
+		accum_j[k] += (j == dvv[k] - 1) ? accum_jm1[k] * bc_gf_j
+		                                : accum_jm1[k] * bc_vf_j;
+		accum_jm1[k] = 0.;
+	      }
+	    }
+	    else if (eij == key_ij) // bc_vf_j is 1
+	      for (k=0; k<num_deriv_vars; ++k) {
+		accum_j[k] += (j == dvv[k] - 1) ? accum_jm1[k] * bc_gf_j
+		                                : accum_jm1[k];
+		accum_jm1[k] = 0.;
+	      }
+	    else // bc_vf_j is 0
+	      for (k=0; k<num_deriv_vars; ++k) {
+		if (j == dvv[k] - 1) accum_j[k] += accum_jm1[k] * bc_gf_j;
+		accum_jm1[k] = 0.;
+	      }
+	  }
+	  else { // grad factor is zero, value factor is omitted
+	    for (k=0; k<num_deriv_vars; ++k) {
+	      if (j != dvv[k] - 1) accum_j[k] += accum_jm1[k];
+	      accum_jm1[k] = 0.;
+	    }
+	  }
+	  if (key_ij + 1 != poly_j.interpolation_size())
+	    break;
+	}
+      }
+    }
+    Real bcg_scale = barycentric_gradient_scaling(basis_index);
+    Real* accum = accumulator[numVars-1];
+    for (j=0; j<num_deriv_vars; ++j)
+      tpGradient[j] = accum[j] * bcg_scale;
+
+    /*
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  barycentric_gradient_factor(deriv_index, key_i, basis_index);
       }
     }
-
     tpGradient.scale(barycentric_gradient_scaling(basis_index));
+    */
   }
   else if (exp_t2_coeffs.empty()) {
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  type1_interpolant_gradient(x, deriv_index, key_i, basis_index);
       }
     }
@@ -1026,13 +1217,13 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     size_t k;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray&   key_i = key[i];
-      Real exp_t1_coeff_i = (colloc_index.empty()) ?
+      Real t1_coeff_i = (colloc_index.empty()) ?
 	exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
       const Real* exp_t2_coeff_i = (colloc_index.empty()) ?
 	exp_t2_coeffs[i] : exp_t2_coeffs[colloc_index[i]];
       for (j=0; j<num_deriv_vars; ++j) {
 	deriv_index = dvv[j] - 1; // requires an "All" view
-	tpGradient[j] += exp_t1_coeff_i *
+	tpGradient[j] += t1_coeff_i *
 	  type1_interpolant_gradient(x, deriv_index, key_i, basis_index);
 	for (k=0; k<numVars; ++k)
 	  tpGradient[j] += exp_t2_coeff_i[k] *
@@ -1090,11 +1281,12 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
       size_t i, k, num_colloc_pts = key.size();
       unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+      Real *accum_0, *accum_j, *accum_jm1, bc_vf_00, bc_vf_jj;
       for (i=0; i<num_colloc_pts; ++i) {
 	const UShortArray& key_i = key[i]; key_i0 = key_i[0];
 	const Real* grad = (colloc_index.empty()) ? exp_t1_coeff_grads[i] :
 	  exp_t1_coeff_grads[colloc_index[i]];
-	Real* accum_0 = accumulator[0]; Real bc_vf_00 = bc_vf_0[key_i0];
+	accum_0 = accumulator[0]; bc_vf_00 = bc_vf_0[key_i0];
 	for (j=0; j<num_deriv_vars; ++j)
 	  accum_0[j] += grad[j] * bc_vf_00;
 	if (key_i0 == max0) {
@@ -1102,8 +1294,8 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	  for (j=1; j<numVars; ++j) {
 	    BasisPolynomial& poly_j = polynomialBasis[basis_index[j]][j];
 	    key_ij = key_i[j];
-	    Real *accum_j = accumulator[j], *accum_jm1 = accumulator[j-1];
-	    Real bc_vf_jj = poly_j.barycentric_value_factor(key_ij);
+	    accum_j = accumulator[j]; accum_jm1 = accumulator[j-1];
+	    bc_vf_jj = poly_j.barycentric_value_factor(key_ij);
 	    for (k=0; k<num_deriv_vars; ++k) {
 	      accum_j[k]  += accum_jm1[k] * bc_vf_jj;
 	      accum_jm1[k] = 0.;
@@ -1113,10 +1305,10 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	  }
 	}
       }
-      Real bcv_scaling = barycentric_value_scaling(basis_index);
+      Real bcv_scale = barycentric_value_scaling(basis_index);
       Real* accum = accumulator[numVars-1];
       for (j=0; j<num_deriv_vars; ++j)
-	tpGradient[j] = accum[j] * bcv_scaling;
+	tpGradient[j] = accum[j] * bcv_scale;
     }
     else { // partial interpolation over active variables
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
@@ -1143,12 +1335,13 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
       size_t pts_v0 = poly_v0.interpolation_size(), pf0 = pt_factors[0],
 	 pts_v0_pf0 = pts_v0 * pf0, pfj, prev_pt_set;
       unsigned short key_i0, key_ij, max0 = pts_v0 - 1;
+      Real *accum_0, *accum_j, *accum_jm1, bc_vf_00, bc_vf_jj;
       // loop over active pts, summing contributions from active variables
       for (i=0; i<num_act_pts; ++i) {
 	const UShortArray& key_i = key[pt_index]; key_i0 = key_i[v0];
 	const Real* grad = (colloc_index.empty()) ? exp_t1_coeff_grads[pt_index]
 	  : exp_t1_coeff_grads[colloc_index[pt_index]];
-	Real* accum_0 = accumulator[0]; Real bc_vf_00 = bc_vf_v0[key_i0];
+	accum_0 = accumulator[0]; bc_vf_00 = bc_vf_v0[key_i0];
 	for (j=0; j<num_deriv_vars; ++j)
 	  accum_0[j] += grad[j] * bc_vf_00;
 	pt_index += pf0;
@@ -1158,8 +1351,8 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	    vj = act_v_set[j]; key_ij = key_i[vj]; pfj = pt_factors[j];
 	    BasisPolynomial& poly_vj = polynomialBasis[basis_index[vj]][vj];
 	    // update accumulators: push [j-1] entry up to [j] level
-	    Real *accum_j = accumulator[j], *accum_jm1 = accumulator[j-1];
-	    Real bc_vf_jj = poly_vj.barycentric_value_factor(key_ij);
+	    accum_j = accumulator[j]; accum_jm1 = accumulator[j-1];
+	    bc_vf_jj = poly_vj.barycentric_value_factor(key_ij);
 	    for (k=0; k<num_deriv_vars; ++k) {
 	      accum_j[k]  += accum_jm1[k] * bc_vf_jj;
 	      accum_jm1[k] = 0.;
@@ -1174,34 +1367,33 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	  }
 	}
       }
-      Real bcv_scaling = barycentric_value_scaling(basis_index);
+      Real bcv_scale = barycentric_value_scaling(basis_index);
       Real* accum = accumulator[num_act_v-1];
       for (j=0; j<num_deriv_vars; ++j)
-	tpGradient[j] = accum[j] * bcv_scaling;
+	tpGradient[j] = accum[j] * bcv_scale;
     }
 
     /*
     size_t i, num_colloc_pts = key.size();
     for (i=0; i<num_colloc_pts; ++i) {
-      const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
+      const Real* t1_coeff_grad_i = (colloc_index.empty()) ?
 	exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
       Real bc_fact = barycentric_value_factor(key[i], basis_index);
       for (j=0; j<num_deriv_vars; ++j)
-	tpGradient[j] += exp_t1_coeff_grad_i[j] * bc_fact;
+	tpGradient[j] += t1_coeff_grad_i[j] * bc_fact;
     }
-
     // apply barycentric denominator
     tpGradient.scale(barycentric_value_scaling(basis_index));
     */
   }
   else {
-    size_t i, num_colloc_pts = key.size();
+    size_t i, num_colloc_pts = key.size(); Real t1_val;
     for (i=0; i<num_colloc_pts; ++i) {
-      const Real* exp_t1_coeff_grad_i = (colloc_index.empty()) ?
+      const Real* t1_coeff_grad_i = (colloc_index.empty()) ?
 	exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
-      Real t1_val = type1_interpolant_value(x, key[i], basis_index);
+      t1_val = type1_interpolant_value(x, key[i], basis_index);
       for (j=0; j<num_deriv_vars; ++j)
-	tpGradient[j] += exp_t1_coeff_grad_i[j] * t1_val;
+	tpGradient[j] += t1_coeff_grad_i[j] * t1_val;
     }
   }
   return tpGradient;
