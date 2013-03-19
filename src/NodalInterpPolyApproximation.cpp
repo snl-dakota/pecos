@@ -236,9 +236,63 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
     abort_handler(-1);
   }
 
-  Real tp_mean = 0.;
-  size_t i, j, c_index, num_colloc_pts = key.size();
-  if (basisConfigOptions.useDerivs) {
+  size_t i, j, num_colloc_pts = key.size();
+  if (barycentricFlag) {
+
+    // For barycentric interpolation: track x != newPoint within 1D basis
+    set_new_point(x, lev_index, nonRandomIndices, 1); // value factors needed
+
+    // Since we need to include weights for integrated dimensions, loop over
+    // all collocation points even if some interpolated dimensions are inactive.
+    RealVector accumulator(numVars); // init to 0.
+    const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+    unsigned short       li_0 = lev_index[0], li_j;
+    BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
+    const RealArray& t1_wts_0 = t1_wts_1d[li_0][0];
+    const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
+    size_t i, c_index, num_colloc_pts = key.size(),
+      ei0 = poly_0.exact_index(), eij;
+    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+    bool rand_0 = randomVarsKey[0];
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      c_index = (colloc_index.empty()) ? i : colloc_index[i];
+      if (li_0 == 0)          // single integration/interpolation weight = 1
+	accumulator[0]  = expansionType1Coeffs[c_index];
+      else if (rand_0)        // integration
+	accumulator[0] += expansionType1Coeffs[c_index] * t1_wts_0[key_i0];
+      else if (ei0 == _NPOS)  // interpolation without exact match
+	accumulator[0] += expansionType1Coeffs[c_index] *  bc_vf_0[key_i0];
+      else if (ei0 == key_i0) // interpolation with exact match
+	accumulator[0]  = expansionType1Coeffs[c_index];
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1; j<numVars; ++j) {
+	  li_j = lev_index[j]; key_ij = key_i[j];
+	  BasisPolynomial& poly_j = polynomialBasis[li_j][j];
+	  if (li_j == 0) // single integration/interpolation weight = 1
+	    accumulator[j]  = accumulator[j-1];
+	  else if (randomVarsKey[j]) // integration
+	    accumulator[j] += accumulator[j-1] * t1_wts_1d[li_j][j][key_ij];
+	  else { 
+	    eij = poly_j.exact_index();
+	    if (eij == _NPOS)        // interpolation without exact match
+	      accumulator[j] += accumulator[j-1] *
+		poly_j.barycentric_value_factor(key_ij);
+	    else if (eij == key_ij)  // interpolation with exact match
+	      accumulator[j]  = accumulator[j-1];
+	  }
+	  accumulator[j-1] = 0.;
+	  if (key_ij + 1 != poly_j.interpolation_size())
+	    break;
+	}
+      }
+    }
+    return accumulator[numVars-1] *
+      barycentric_value_scaling(lev_index, nonRandomIndices);
+  }
+  else if (basisConfigOptions.useDerivs) { // TO DO: apply Horner's rule?
+    Real tp_mean = 0.; size_t c_index;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
@@ -251,16 +305,64 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
 	  * type2_interpolant_value(x, j, key_i, lev_index, nonRandomIndices)
 	  * type2_weight(j, key_i, lev_index, randomIndices);
     }
+    return tp_mean;
   }
-  else
-    for (i=0; i<num_colloc_pts; ++i) {
-      c_index = (colloc_index.empty()) ? i : colloc_index[i];
-      tp_mean += expansionType1Coeffs[c_index]
-	      *  type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
-	      *  type1_weight(key[i], lev_index, randomIndices);
-    }
+  else {
+    /*
+    // simple approach
+    Real tp_mean = 0.;
+    if (colloc_index.empty())
+      for (i=0; i<num_colloc_pts; ++i)
+	tp_mean += expansionType1Coeffs[i]
+	  * type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
+	  * type1_weight(key[i], lev_index, randomIndices);
+      else
+	for (i=0; i<num_colloc_pts; ++i)
+	  tp_mean += expansionType1Coeffs[colloc_index[i]]
+	    * type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
+	    * type1_weight(key[i], lev_index, randomIndices);
+    return tp_mean;
+    */
 
-  return tp_mean;
+    // Horner's rule approach
+    RealVector accumulator(numVars); // init to 0.
+    const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+    unsigned short       li_0 = lev_index[0], li_j;
+    BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
+    const RealArray& t1_wts_0 = t1_wts_1d[li_0][0];
+    size_t i, c_index, num_colloc_pts = key.size();
+    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+    bool rand_0 = randomVarsKey[0];
+    Real x0; if (!rand_0) x0 = x[0];
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      c_index = (colloc_index.empty()) ? i : colloc_index[i];
+      if (li_0 == 0)   // single integration/interpolation weight = 1
+	accumulator[0]  = expansionType1Coeffs[c_index];
+      else if (rand_0) // integration
+	accumulator[0] += expansionType1Coeffs[c_index] * t1_wts_0[key_i0];
+      else             // interpolation
+	accumulator[0] += expansionType1Coeffs[c_index] *
+	  poly_0.type1_value(x0, key_i0);
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1; j<numVars; ++j) {
+	  li_j = lev_index[j]; key_ij = key_i[j];
+	  BasisPolynomial& poly_j = polynomialBasis[li_j][j];
+	  if (li_j == 0)   // single integration/interpolation weight = 1
+	    accumulator[j]  = accumulator[j-1];
+	  else
+	    accumulator[j] += (randomVarsKey[j]) ?
+	      accumulator[j-1] * t1_wts_1d[li_j][j][key_ij] : // integration
+	      accumulator[j-1] * poly_j.type1_value(x[j], key_ij); // interp
+	  accumulator[j-1] = 0.;
+	  if (key_ij + 1 != poly_j.interpolation_size())
+	    break;
+	}
+      }
+    }
+    return accumulator[numVars-1];
+  }
 }
 
 

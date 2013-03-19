@@ -183,6 +183,22 @@ protected:
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     const SizetList& subset_indices, short order);
 
+  /// compute the number of variables that are active for barycentric
+  /// interpolation
+  size_t barycentric_active_variables(const UShortArray& basis_index);
+  /// compute the number of variables within subset_indices that are
+  /// active for barycentric interpolation
+  size_t barycentric_active_variables(const UShortArray& basis_index,
+				      const SizetList& subset_indices);
+
+  /// for an exact point match in all dimensions, return the
+  /// tensor-product index of the matching point
+  size_t barycentric_exact_index(const UShortArray& basis_index);
+  /// for an exact point match in all dimensions within subset_indices,
+  /// return the tensor-product index of the matching point
+  size_t barycentric_exact_index(const UShortArray& basis_index,
+				const SizetList& subset_indices);
+
   /// compute the product of 1D barycentric value factors
   Real barycentric_value_factor(const UShortArray& key,
 				const UShortArray& basis_index);
@@ -611,6 +627,71 @@ set_new_point(const RealVector& x, const UShortArray& basis_index,
     if (bi_j) // exclusion of pt must be sync'd w/ factors/scalings
       polynomialBasis[bi_j][j].set_new_point(x[j], order);
   }
+}
+
+
+inline size_t InterpPolyApproximation::
+barycentric_active_variables(const UShortArray& basis_index)
+{
+  size_t j, num_act_v = 0; unsigned short bi_j;
+  for (j=0; j<numVars; ++j) {
+    bi_j = basis_index[j]; // if 0, then constant interp with 1 pt
+    if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
+      ++num_act_v;
+  }
+  return num_act_v;
+}
+
+
+inline size_t InterpPolyApproximation::
+barycentric_active_variables(const UShortArray& basis_index,
+			     const SizetList& subset_indices)
+{
+  size_t j, num_act_v = 0; unsigned short bi_j; SizetList::const_iterator cit;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi_j = basis_index[j];
+    if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
+      ++num_act_v;
+  }
+  return num_act_v;
+}
+
+
+inline size_t InterpPolyApproximation::
+barycentric_exact_index(const UShortArray& basis_index)
+{
+  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
+  for (j=0; j<numVars; ++j) {
+    bi_j = basis_index[j];
+    // if bi_j == 0, then constant interp with 1 point: we can replace this
+    // constant interpolation with the value at the 1 colloc index (ei=0)
+    if (bi_j) {
+      BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
+      pt_index += poly_i.exact_index() * prod;
+      prod     *= poly_i.interpolation_size();
+    }
+  }
+  return pt_index;
+}
+
+
+inline size_t InterpPolyApproximation::
+barycentric_exact_index(const UShortArray& basis_index,
+			const SizetList& subset_indices)
+{
+  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
+  SizetList::const_iterator cit;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi_j = basis_index[j];
+    // if bi_j == 0, then constant interp with 1 point: we can replace this
+    // constant interpolation with the value at the 1 colloc index (ei=0)
+    if (bi_j) {
+      BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+      pt_index += poly_j.exact_index() * prod;
+      prod     *= poly_j.interpolation_size();
+    }
+  }
+  return pt_index;
 }
 
 

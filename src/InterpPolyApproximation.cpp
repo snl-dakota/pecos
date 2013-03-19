@@ -489,24 +489,9 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 
     // TO DO: max key limit not valid for delta_quad on closed rules
 
-    size_t j, num_act_v = 0; unsigned short bi_j;
-    for (j=0; j<numVars; ++j) {
-      bi_j = basis_index[j]; // if 0, then constant interp with 1 pt
-      if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
-	++num_act_v;
-    }
+    size_t j, num_act_v = barycentric_active_variables(basis_index);
     if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
-      size_t pt_index = 0, prod = 1;
-      for (j=0; j<numVars; ++j) {
-	bi_j = basis_index[j];
-	// if bi==0, then constant interp with 1 point: we can replace this
-	// constant interpolation with the value at the 1 colloc index (ei=0)
-	if (bi_j) {
-	  BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
-	  pt_index += poly_i.exact_index() * prod;
-	  prod     *= poly_i.interpolation_size();
-	}
-      }
+      size_t pt_index = barycentric_exact_index(basis_index);
       return (colloc_index.empty()) ?
 	exp_t1_coeffs[pt_index] : exp_t1_coeffs[colloc_index[pt_index]];
     }
@@ -546,6 +531,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     else { // partial interpolation over active variables
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
       size_t pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr, pt_index = 0;
+      unsigned short bi_j;
       for (j=0, av_cntr=0; j<numVars; ++j) {
 	bi_j = basis_index[j];
 	if (bi_j) { // else pts_vj = 1 and ej can be taken to be 0
@@ -659,30 +645,17 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, subset_indices, 1); // value factors needed
 
-    size_t j, num_subset_v = subset_indices.size(), num_act_v = 0;
-    unsigned short bi_j; SizetList::const_iterator cit;
-    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      j = *cit; bi_j = basis_index[j];
-      if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
-	++num_act_v;
-    }
+    size_t num_subset_v = subset_indices.size(),
+      num_act_v = barycentric_active_variables(basis_index, subset_indices);
     if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
-      size_t pt_index = 0, prod = 1;
-      for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-	j = *cit; bi_j = basis_index[j];
-	if (bi_j) {
-	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-	  pt_index += poly_j.exact_index() * prod;
-	  prod     *= poly_j.interpolation_size();
-	}
-      }
+      size_t pt_index = barycentric_exact_index(basis_index, subset_indices);
       // Note: pt_index calculation utilizes only the subset variables
       return (subset_colloc_index.empty()) ? subset_t1_coeffs[pt_index] :
 	subset_t1_coeffs[subset_colloc_index[pt_index]];
     }
     else if (num_act_v == num_subset_v) { // interpolation over all of subset
       SizetList::const_iterator cit = subset_indices.begin();
-      size_t i, num_colloc_pts = subset_key.size(), v0 = *cit, vj;
+      size_t i, j, num_colloc_pts = subset_key.size(), v0 = *cit, vj;
       RealVector accumulator(num_subset_v); // init to 0.
       BasisPolynomial&   poly_0 = polynomialBasis[basis_index[v0]][v0];
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
@@ -710,8 +683,9 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 	* barycentric_value_scaling(basis_index, subset_indices);
     }
     else { // partial interpolation over active variables
+      unsigned short bi_j; SizetList::const_iterator cit;
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
-      size_t i, pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr = 0,
+      size_t i, j, pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr = 0,
 	pt_index = 0;
       // define interpolation set: in subset_indices, nonzero bi, and no ei
       for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
@@ -794,7 +768,7 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
     return tp_val;
   }
   else {
-    size_t i, num_colloc_pts = subset_key.size(), j, c_index; Real tp_val = 0.;
+    size_t i, j, num_colloc_pts = subset_key.size(), c_index; Real tp_val = 0.;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = subset_key[i];
       c_index = (subset_colloc_index.empty()) ? i : subset_colloc_index[i];
@@ -1242,7 +1216,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 					   const UShort2DArray& key,
 					   const SizetArray& colloc_index)
 {
-  size_t j, num_deriv_vars = exp_t1_coeff_grads.numRows();
+  size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
   if (tpGradient.length() != num_deriv_vars)
     tpGradient.sizeUninitialized(num_deriv_vars);
   tpGradient = 0.;
@@ -1251,24 +1225,9 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
     // For barycentric interpolation: track x != newPoint within 1D basis
     set_new_point(x, basis_index, 1); // value factors needed for coeff grads
 
-    size_t num_act_v = 0; unsigned short bi_j;
-    for (j=0; j<numVars; ++j) {
-      bi_j = basis_index[j]; // if 0, then constant interp with 1 pt
-      if (bi_j && polynomialBasis[bi_j][j].exact_index() == _NPOS) // active
-	++num_act_v;
-    }
+    size_t num_act_v = barycentric_active_variables(basis_index);
     if (num_act_v == 0) { // convert 1-D exact indices into n-D colloc index
-      size_t pt_index = 0, prod = 1;
-      for (j=0; j<numVars; ++j) {
-	bi_j = basis_index[j];
-	// if bi==0, then constant interp with 1 point: we can replace this
-	// constant interpolation with the value at the 1 colloc index (ei=0)
-	if (bi_j) {
-	  BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
-	  pt_index += poly_i.exact_index() * prod;
-	  prod     *= poly_i.interpolation_size();
-	}
-      }
+      size_t pt_index = barycentric_exact_index(basis_index);
       if (colloc_index.empty())
 	copy_data(exp_t1_coeff_grads[pt_index],(int)num_deriv_vars, tpGradient);
       else
@@ -1279,7 +1238,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
       RealMatrix accumulator(numVars, num_deriv_vars); // init to 0.
       BasisPolynomial&   poly_0 = polynomialBasis[basis_index[0]][0];
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
-      size_t i, k, num_colloc_pts = key.size();
+      size_t i, j, k, num_colloc_pts = key.size();
       unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
       Real *accum_0, *accum_j, *accum_jm1, bc_vf_00, bc_vf_jj;
       for (i=0; i<num_colloc_pts; ++i) {
@@ -1312,7 +1271,8 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
     }
     else { // partial interpolation over active variables
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
-      size_t pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr, pt_index = 0;
+      unsigned short bi_j;
+      size_t j, pts_vj, num_act_pts = 1, num_pts = 1, ej, av_cntr, pt_index = 0;
       for (j=0, av_cntr=0; j<numVars; ++j) {
 	bi_j = basis_index[j];
 	if (bi_j) { // else pts_vj = 1 and ej can be taken to be 0
@@ -1387,7 +1347,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
     */
   }
   else {
-    size_t i, num_colloc_pts = key.size(); Real t1_val;
+    size_t i, j, num_colloc_pts = key.size(); Real t1_val;
     for (i=0; i<num_colloc_pts; ++i) {
       const Real* t1_coeff_grad_i = (colloc_index.empty()) ?
 	exp_t1_coeff_grads[i] : exp_t1_coeff_grads[colloc_index[i]];
