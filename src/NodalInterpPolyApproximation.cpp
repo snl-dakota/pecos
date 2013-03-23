@@ -250,8 +250,7 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
     BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
     const RealArray& t1_wts_0 = t1_wts_1d[li_0][0];
     const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
-    size_t i, c_index, num_colloc_pts = key.size(),
-      ei0 = poly_0.exact_index(), eij;
+    size_t c_index, ei0 = poly_0.exact_index(), eij;
     unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
     bool rand_0 = randomVarsKey[0];
     for (i=0; i<num_colloc_pts; ++i) {
@@ -288,10 +287,114 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
 	}
       }
     }
-    return accumulator[numVars-1] *
+    return accumulator[numVars-1] /
       barycentric_value_scaling(lev_index, nonRandomIndices);
   }
-  else if (basisConfigOptions.useDerivs) { // TO DO: apply Horner's rule?
+  else if (basisConfigOptions.useDerivs) {
+    // Horner's rule approach:
+    RealVector t1_accumulator(numVars);          // init to 0.
+    RealMatrix t2_accumulator(numVars, numVars); // init to 0.
+    Real *t2_accum_0 = t2_accumulator[0], *t2_accum_j, *t2_accum_jm1;
+    const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+    const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
+    unsigned short       li_0 = lev_index[0], li_j;
+    BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
+    const RealArray& t1_wts_0 = t1_wts_1d[li_0][0];
+    const RealArray& t2_wts_0 = t2_wts_1d[li_0][0];
+    size_t jm1, k, c_index;
+    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+    bool rand_0 = randomVarsKey[0];
+    Real t1_val, t1_wt, x0; if (!rand_0) x0 = x[0];
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      c_index = (colloc_index.empty()) ? i : colloc_index[i];
+      Real* t2_coeffs_i = expansionType2Coeffs[c_index];
+      if (rand_0) { // integration
+	if (li_0 == 0) {
+	  t1_accumulator[0]  = expansionType1Coeffs[c_index]; // t1 weight is 1
+	  t2_accum_0[0]      = 0.;                            // t2 weight is 0
+	  for (k=1; k<numVars; ++k)
+	    t2_accum_0[k]    = t2_coeffs_i[k];                // t1 weight is 1
+	}
+	else {
+	  t1_accumulator[0] += expansionType1Coeffs[c_index] * t1_wts_0[key_i0];
+	  t2_accum_0[0]     += t2_coeffs_i[0] * t2_wts_0[key_i0];
+	  for (k=1; k<numVars; ++k)
+	    t2_accum_0[k]   += t2_coeffs_i[k] * t1_wts_0[key_i0];
+	}
+      }
+      else {        // interpolation
+	if (li_0 == 0) {
+	  t1_accumulator[0]  = expansionType1Coeffs[c_index];  // t1 value is 1
+	  t2_accum_0[0]      = t2_coeffs_i[0] * poly_0.type2_value(x0, key_i0);
+	  for (k=1; k<numVars; ++k)
+	    t2_accum_0[k]    = t2_coeffs_i[k];                 // t1 value is 1
+	}
+	else {
+	  t1_val = poly_0.type1_value(x0, key_i0);
+          t1_accumulator[0] += expansionType1Coeffs[c_index] * t1_val;
+	  t2_accum_0[0]     += t2_coeffs_i[0] * poly_0.type2_value(x0, key_i0);
+	  for (k=1; k<numVars; ++k)
+	    t2_accum_0[k]   += t2_coeffs_i[k] * t1_val;
+	}
+      }
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1; j<numVars; ++j) {
+	  li_j = lev_index[j]; key_ij = key_i[j]; jm1 = j-1;
+	  t2_accum_j = t2_accumulator[j]; t2_accum_jm1 = t2_accumulator[jm1];
+	  BasisPolynomial& poly_j = polynomialBasis[li_j][j];
+	  if (randomVarsKey[j]) { // integration
+	    if (li_j == 0) {
+	      t1_accumulator[j]  = t1_accumulator[jm1];       // t1 weight is 1
+	      t2_accum_j[j]      = 0.;                        // t2 weight is 0
+	      for (k=0; k<numVars; ++k)
+		if (k != j)
+		  t2_accum_j[k]  = t2_accum_jm1[k];           // t1 weight is 1
+	    }
+	    else {
+	      t1_wt = t1_wts_1d[li_j][j][key_ij];
+	      t1_accumulator[j] += t1_accumulator[jm1] * t1_wt;
+	      t2_accum_j[j]     += t2_accum_jm1[j] * t2_wts_1d[li_j][j][key_ij];
+	      for (k=0; k<numVars; ++k)
+		if (k != j)
+		  t2_accum_j[k] += t2_accum_jm1[k] * t1_wt;
+	    }
+	  }
+	  else {                  // interpolation
+	    if (li_j == 0) {
+	      t1_accumulator[j] = t1_accumulator[jm1];         // t1 value is 1
+	      t2_accum_j[j] = t2_accum_jm1[j] * poly_j.type2_value(x[j],key_ij);
+	      for (k=0; k<numVars; ++k)
+		if (k != j)
+		  t2_accum_j[k] = t2_accum_jm1[k];             // t1 value is 1
+	    }
+	    else {
+	      t1_val = poly_j.type1_value(x[j], key_ij);
+	      t1_accumulator[j] += t1_accumulator[jm1] * t1_val;
+	      t2_accum_j[j]     += t2_accum_jm1[j] *
+		poly_j.type2_value(x[j], key_ij);
+	      for (k=0; k<numVars; ++k)
+		if (k != j)
+		  t2_accum_j[k] += t2_accum_jm1[k] * t1_val;
+	    }
+	  }
+	  t1_accumulator[jm1] = 0.;
+	  for (k=0; k<numVars; ++k)
+	    t2_accum_jm1[k] = 0.;
+	  if (key_ij + 1 != poly_j.interpolation_size())
+	    break;
+	}
+      }
+    }
+    Real  tp_val   = t1_accumulator[numVars-1];
+    Real* t2_accum = t2_accumulator[numVars-1];
+    for (j=0; j<numVars; ++j)
+      tp_val += t2_accum[j];
+    return tp_val;
+
+    /*
+    // Simpler but more expensive approach:
     Real tp_mean = 0.; size_t c_index;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
@@ -306,31 +409,16 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
 	  * type2_weight(j, key_i, lev_index, randomIndices);
     }
     return tp_mean;
+    */
   }
   else {
-    /*
-    // simple approach
-    Real tp_mean = 0.;
-    if (colloc_index.empty())
-      for (i=0; i<num_colloc_pts; ++i)
-	tp_mean += expansionType1Coeffs[i]
-	  * type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
-	  * type1_weight(key[i], lev_index, randomIndices);
-      else
-	for (i=0; i<num_colloc_pts; ++i)
-	  tp_mean += expansionType1Coeffs[colloc_index[i]]
-	    * type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
-	    * type1_weight(key[i], lev_index, randomIndices);
-    return tp_mean;
-    */
-
-    // Horner's rule approach
+    // Horner's rule approach:
     RealVector accumulator(numVars); // init to 0.
     const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
     unsigned short       li_0 = lev_index[0], li_j;
     BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
     const RealArray& t1_wts_0 = t1_wts_1d[li_0][0];
-    size_t i, c_index, num_colloc_pts = key.size();
+    size_t c_index;
     unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
     bool rand_0 = randomVarsKey[0];
     Real x0; if (!rand_0) x0 = x[0];
@@ -362,6 +450,22 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
       }
     }
     return accumulator[numVars-1];
+
+    /*
+    // Simpler but more expensive approach:
+    Real tp_mean = 0.;
+    if (colloc_index.empty())
+      for (i=0; i<num_colloc_pts; ++i)
+	tp_mean += expansionType1Coeffs[i]
+	  * type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
+	  * type1_weight(key[i], lev_index, randomIndices);
+      else
+	for (i=0; i<num_colloc_pts; ++i)
+	  tp_mean += expansionType1Coeffs[colloc_index[i]]
+	    * type1_interpolant_value(x, key[i], lev_index, nonRandomIndices)
+	    * type1_weight(key[i], lev_index, randomIndices);
+    return tp_mean;
+    */
   }
 }
 
@@ -508,26 +612,75 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 
     // integrate/interpolate over the new grid
     size_t reinterp_colloc_pts = reinterp_colloc_key.size();
-    for (i=0; i<reinterp_colloc_pts; ++i) {
-      const UShortArray& key_i = reinterp_colloc_key[i];
-      RealVector c_vars(Teuchos::View, const_cast<Real*>(reinterp_var_sets[i]),
-			numVars);
-      t1_coeff_1_mm1 = value(c_vars) - mean_1; // tensor_product_value() ?
-      t1_coeff_2_mm2 = (same) ? t1_coeff_1_mm1 :
-	nip_approx_2->value(c_vars) - mean_2;
-      tp_covar += t1_coeff_1_mm1 * t1_coeff_2_mm2
-	* type1_interpolant_value(x, key_i, reinterp_lev_index,nonRandomIndices)
-	* type1_weight(key_i, reinterp_lev_index, randomIndices);
-#ifdef DEBUG
-      PCout << "t1_coeff_1_mm1 = " << t1_coeff_1_mm1 << " t1_coeff_2_mm2 = "
-	    << t1_coeff_2_mm2 << " type1_weight() = "
-	    << type1_weight(key_i, reinterp_lev_index, randomIndices)
-	    << " type1_interpolant_value() = "
-	    << type1_interpolant_value(x, key_i, reinterp_lev_index,
-				       nonRandomIndices)
-	    << " sum = " << tp_covar << std::endl;
-#endif // DEBUG
-      if (basisConfigOptions.useDerivs) {
+    if (barycentricFlag) {
+
+      // For barycentric interpolation: track x != newPoint within 1D basis
+      set_new_point(x, reinterp_lev_index, nonRandomIndices, 1);
+
+      // Since we need to include weights for integrated dimensions, loop over
+      // all collocation pts even if some interpolated dimensions are inactive.
+      RealVector accumulator(numVars); // init to 0.
+      const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+      unsigned short      rli_0 = reinterp_lev_index[0], rli_j;
+      BasisPolynomial&   poly_0 = polynomialBasis[rli_0][0];
+      const RealArray& t1_wts_0 = t1_wts_1d[rli_0][0];
+      const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
+      size_t i, ei0 = poly_0.exact_index(), eij;
+      unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+      bool rand_0 = randomVarsKey[0];
+      for (i=0; i<reinterp_colloc_pts; ++i) {
+	RealVector c_vars(Teuchos::View,
+			  const_cast<Real*>(reinterp_var_sets[i]), numVars);
+	t1_coeff_1_mm1 = value(c_vars) - mean_1;
+	t1_coeff_2_mm2 = (same) ? t1_coeff_1_mm1 :
+	  nip_approx_2->value(c_vars) - mean_2;
+	const UShortArray& key_i = reinterp_colloc_key[i]; key_i0 = key_i[0];
+	if (rli_0 == 0)   // single integration/interpolation weight = 1
+	  accumulator[0]  = t1_coeff_1_mm1 * t1_coeff_2_mm2;
+	else if (rand_0) // integration
+	  accumulator[0] += t1_coeff_1_mm1 * t1_coeff_2_mm2 * t1_wts_0[key_i0];
+	else if (ei0 == key_i0) // interpolation w/ single pt or exact match
+	  accumulator[0]  = t1_coeff_1_mm1 * t1_coeff_2_mm2;
+	else if (ei0 == _NPOS)  // interpolation w/o exact match
+	  accumulator[0] += t1_coeff_1_mm1 * t1_coeff_2_mm2 * bc_vf_0[key_i0];
+	if (key_i0 == max0) {
+	  // accumulate sums over variables with max key value
+	  for (j=1; j<numVars; ++j) {
+	    rli_j = reinterp_lev_index[j]; key_ij = key_i[j];
+	    BasisPolynomial& poly_j = polynomialBasis[rli_j][j];
+	    if (rli_j == 0) // single integration/interpolation weight = 1
+	      accumulator[j]  = accumulator[j-1];
+	    else if (randomVarsKey[j]) // integration
+	      accumulator[j] += accumulator[j-1] * t1_wts_1d[rli_j][j][key_ij];
+	    else { 
+	      eij = poly_j.exact_index();
+	      if (eij == _NPOS)        // interpolation without exact match
+		accumulator[j] += accumulator[j-1] *
+		  poly_j.barycentric_value_factor(key_ij);
+	      else if (eij == key_ij)  // interpolation with exact match
+		accumulator[j]  = accumulator[j-1];
+	    }
+	    accumulator[j-1] = 0.;
+	    if (key_ij + 1 != poly_j.interpolation_size())
+	      break;
+	  }
+	}
+      }
+      return accumulator[numVars-1] /
+	barycentric_value_scaling(lev_index, nonRandomIndices);
+    }
+    else if (basisConfigOptions.useDerivs) {
+      for (i=0; i<reinterp_colloc_pts; ++i) {
+	const UShortArray& key_i = reinterp_colloc_key[i];
+	RealVector c_vars(Teuchos::View,
+			  const_cast<Real*>(reinterp_var_sets[i]), numVars);
+	t1_coeff_1_mm1 = value(c_vars) - mean_1; // tensor_product_value() ?
+	t1_coeff_2_mm2 = (same) ? t1_coeff_1_mm1 :
+	  nip_approx_2->value(c_vars) - mean_2;
+	tp_covar += t1_coeff_1_mm1 * t1_coeff_2_mm2
+	  * type1_interpolant_value(x, key_i, reinterp_lev_index,
+				    nonRandomIndices)
+	  * type1_weight(key_i, reinterp_lev_index, randomIndices);
 	const RealVector& t2_coeff_1 = gradient_basis_variables(c_vars);
 	const RealVector& t2_coeff_2 = (same) ? t2_coeff_1 :
 	  nip_approx_2->gradient_basis_variables(c_vars);
@@ -538,6 +691,75 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 				      nonRandomIndices)
 	    * type2_weight(j, key_i, reinterp_lev_index, randomIndices);
       }
+    }
+    else {
+      // Horner's rule approach:
+      RealVector accumulator(numVars); // init to 0.
+      const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+      unsigned short      rli_0 = reinterp_lev_index[0], rli_j;
+      BasisPolynomial&   poly_0 = polynomialBasis[rli_0][0];
+      const RealArray& t1_wts_0 = t1_wts_1d[rli_0][0];
+      unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+      bool rand_0 = randomVarsKey[0];
+      Real x0; if (!rand_0) x0 = x[0];
+      for (size_t i=0; i<reinterp_colloc_pts; ++i) {
+	RealVector c_vars(Teuchos::View,
+			  const_cast<Real*>(reinterp_var_sets[i]), numVars);
+	t1_coeff_1_mm1 = value(c_vars) - mean_1;
+	t1_coeff_2_mm2 = (same) ? t1_coeff_1_mm1 :
+	  nip_approx_2->value(c_vars) - mean_2;
+	const UShortArray& key_i = reinterp_colloc_key[i]; key_i0 = key_i[0];
+	if (rli_0 == 0)   // single integration/interpolation weight = 1
+	  accumulator[0]  = t1_coeff_1_mm1 * t1_coeff_2_mm2;
+	else if (rand_0) // integration
+	  accumulator[0] += t1_coeff_1_mm1 * t1_coeff_2_mm2 * t1_wts_0[key_i0];
+	else             // interpolation
+	  accumulator[0] += t1_coeff_1_mm1 * t1_coeff_2_mm2 *
+	    poly_0.type1_value(x0, key_i0);
+	if (key_i0 == max0) {
+	  // accumulate sums over variables with max key value
+	  for (j=1; j<numVars; ++j) {
+	    rli_j = reinterp_lev_index[j]; key_ij = key_i[j];
+	    BasisPolynomial& poly_j = polynomialBasis[rli_j][j];
+	    if (rli_j == 0) // single integration/interpolation weight = 1
+	      accumulator[j]  = accumulator[j-1];
+	    else if (randomVarsKey[j]) // integration
+	      accumulator[j] += accumulator[j-1] * t1_wts_1d[rli_j][j][key_ij];
+	    else                       // interpolation
+	      accumulator[j] += accumulator[j-1] *
+		poly_j.type1_value(x[j], key_ij);
+	    accumulator[j-1] = 0.;
+	    if (key_ij + 1 != poly_j.interpolation_size())
+	      break;
+	  }
+	}
+      }
+      return accumulator[numVars-1];
+
+      /*
+      // Simpler but more expensive approach:
+      for (i=0; i<reinterp_colloc_pts; ++i) {
+	const UShortArray& key_i = reinterp_colloc_key[i];
+	RealVector c_vars(Teuchos::View,
+			  const_cast<Real*>(reinterp_var_sets[i]), numVars);
+	t1_coeff_1_mm1 = value(c_vars) - mean_1; // tensor_product_value() ?
+	t1_coeff_2_mm2 = (same) ? t1_coeff_1_mm1 :
+	  nip_approx_2->value(c_vars) - mean_2;
+	tp_covar += t1_coeff_1_mm1 * t1_coeff_2_mm2
+	  * type1_interpolant_value(x, key_i, reinterp_lev_index,
+				    nonRandomIndices)
+	  * type1_weight(key_i, reinterp_lev_index, randomIndices);
+#ifdef DEBUG
+	PCout << "t1_coeff_1_mm1 = " << t1_coeff_1_mm1 << " t1_coeff_2_mm2 = "
+	      << t1_coeff_2_mm2 << " type1_weight() = "
+	      << type1_weight(key_i, reinterp_lev_index, randomIndices)
+	      << " type1_interpolant_value() = "
+	      << type1_interpolant_value(x, key_i, reinterp_lev_index,
+					 nonRandomIndices)
+	      << " sum = " << tp_covar << std::endl;
+#endif // DEBUG
+      }
+      */
     }
     break;
   }

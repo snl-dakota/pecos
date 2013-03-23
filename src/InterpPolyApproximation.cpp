@@ -526,7 +526,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	  }
 	}
       }
-      return accumulator[numVars-1] * barycentric_value_scaling(basis_index);
+      return accumulator[numVars-1] / barycentric_value_scaling(basis_index);
     }
     else { // partial interpolation over active variables
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
@@ -580,7 +580,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	  }
 	}
       }
-      return accumulator[num_act_v-1] * barycentric_value_scaling(basis_index);
+      return accumulator[num_act_v-1] / barycentric_value_scaling(basis_index);
     }
 
     /*
@@ -596,7 +596,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	tp_val += exp_t1_coeffs[colloc_index[i]] *
 	  barycentric_value_factor(key[i], basis_index);
     // apply barycentric denominator
-    return tp_val * barycentric_value_scaling(basis_index);
+    return tp_val / barycentric_value_scaling(basis_index);
     */
   }
   else if (exp_t2_coeffs.empty()) {
@@ -680,7 +680,7 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 	}
       }
       return accumulator[num_subset_v-1]
-	* barycentric_value_scaling(basis_index, subset_indices);
+	/ barycentric_value_scaling(basis_index, subset_indices);
     }
     else { // partial interpolation over active variables
       unsigned short bi_j; SizetList::const_iterator cit;
@@ -737,7 +737,7 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 	}
       }
       return accumulator[num_act_v-1]
-	* barycentric_value_scaling(basis_index, subset_indices);
+	/ barycentric_value_scaling(basis_index, subset_indices);
     }
 
     /*
@@ -752,7 +752,7 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 	tp_val += subset_t1_coeffs[subset_colloc_index[i]] *
 	  barycentric_value_factor(subset_key[i], basis_index, subset_indices);
     // apply barycentric denominator
-    return tp_val * barycentric_value_scaling(basis_index, subset_indices);
+    return tp_val / barycentric_value_scaling(basis_index, subset_indices);
     */
   }
   else if (subset_t2_coeffs.empty()) {
@@ -1264,10 +1264,10 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	  }
 	}
       }
-      Real bcv_scale = barycentric_value_scaling(basis_index);
+      Real scale = 1. / barycentric_value_scaling(basis_index);
       Real* accum = accumulator[numVars-1];
       for (j=0; j<num_deriv_vars; ++j)
-	tpGradient[j] = accum[j] * bcv_scale;
+	tpGradient[j] = accum[j] * scale;
     }
     else { // partial interpolation over active variables
       SizetArray pt_factors(num_act_v), act_v_set(num_act_v);
@@ -1327,10 +1327,10 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	  }
 	}
       }
-      Real bcv_scale = barycentric_value_scaling(basis_index);
+      Real scale = 1. / barycentric_value_scaling(basis_index);
       Real* accum = accumulator[num_act_v-1];
       for (j=0; j<num_deriv_vars; ++j)
-	tpGradient[j] = accum[j] * bcv_scale;
+	tpGradient[j] = accum[j] * scale;
     }
 
     /*
@@ -1343,7 +1343,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	tpGradient[j] += t1_coeff_grad_i[j] * bc_fact;
     }
     // apply barycentric denominator
-    tpGradient.scale(barycentric_value_scaling(basis_index));
+    tpGradient.scale(1. / barycentric_value_scaling(basis_index));
     */
   }
   else {

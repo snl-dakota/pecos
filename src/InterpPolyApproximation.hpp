@@ -738,7 +738,7 @@ barycentric_value_scaling(const UShortArray& basis_index)
     if (bi_j) { // exclusion of bi==0 must be sync'd with bc value factors
       BasisPolynomial& pb_lv = polynomialBasis[bi_j][j];
       if (pb_lv.exact_index() == _NPOS) // this dim contributes to bc denom
-	scale /= pb_lv.barycentric_value_factor_sum();
+	scale *= pb_lv.barycentric_value_factor_sum();
       //else (new pt is exact match) dim does not contribute to bc denom
     }
   }
@@ -756,7 +756,7 @@ barycentric_value_scaling(const UShortArray& basis_index,
     if (bi_j) { // exclusion of bi==0 must be sync'd with bc value factors
       BasisPolynomial& pb_lv = polynomialBasis[bi_j][j];
       if (pb_lv.exact_index() == _NPOS) // this dim contributes to bc denom
-	scale /= pb_lv.barycentric_value_factor_sum();
+	scale *= pb_lv.barycentric_value_factor_sum();
       //else (new pt is exact match) dim does not contribute to bc denom
     }
   }
