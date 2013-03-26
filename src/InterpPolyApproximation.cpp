@@ -600,6 +600,42 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     */
   }
   else if (exp_t2_coeffs.empty()) {
+    /*
+    // Horner's rule approach:
+    RealVector accumulator(numVars); // init to 0.
+    unsigned short bi_0 = basis_index[0], bi_j;
+    BasisPolynomial& poly_0 = polynomialBasis[bi_0][0];
+    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+    size_t i, j, num_colloc_pts = key.size(); Real x0 = x[0];
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      if (bi_0)
+	accumulator[0] += (colloc_index.empty()) ?
+	  exp_t1_coeffs[i]               * poly_0.type1_value(x0, key_i0) :
+	  exp_t1_coeffs[colloc_index[i]] * poly_0.type1_value(x0, key_i0);
+      else
+	accumulator[0] = (colloc_index.empty()) ?
+	  exp_t1_coeffs[i] : exp_t1_coeffs[colloc_index[i]];
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1; j<numVars; ++j) {
+	  key_ij = key_i[j]; bi_j = basis_index[j];
+	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+	  if (bi_j)
+	    accumulator[j] += accumulator[j-1] *
+	      poly_j.type1_value(x[j], key_ij);
+	  else
+	    accumulator[j]  = accumulator[j-1];
+	  accumulator[j-1] = 0.;
+	  if (key_ij + 1 != poly_j.interpolation_size())
+	    break;
+	}
+      }
+    }
+    return accumulator[numVars-1];
+    */
+
+    // Simpler but more expensive approach:
     size_t i, num_colloc_pts = key.size(); Real tp_val = 0.;
     if (colloc_index.empty())
       for (i=0; i<num_colloc_pts; ++i)
@@ -612,6 +648,70 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     return tp_val;
   }
   else {
+    /*
+    // Horner's rule approach:
+    RealVector t1_accumulator(numVars);          // init to 0.
+    RealMatrix t2_accumulator(numVars, numVars); // init to 0.
+    Real *t2_accum_0 = t2_accumulator[0], *t2_accum_j, *t2_accum_jm1;
+    unsigned short       bi_0 = basis_index[0], bi_j;
+    BasisPolynomial&   poly_0 = polynomialBasis[bi_0][0];
+    size_t i, j, jm1, k, c_index, num_colloc_pts = key.size();
+    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
+    Real t1_val, x0 = x[0];
+    for (i=0; i<num_colloc_pts; ++i) {
+      const UShortArray& key_i = key[i]; key_i0 = key_i[0];
+      c_index = (colloc_index.empty()) ? i : colloc_index[i];
+      const Real* t2_coeffs_i = exp_t2_coeffs[c_index];
+      if (bi_0 == 0) {
+	t1_accumulator[0]  = exp_t1_coeffs[c_index];  // t1 value is 1
+	t2_accum_0[0]      = t2_coeffs_i[0] * poly_0.type2_value(x0, key_i0);
+	for (k=1; k<numVars; ++k)
+	  t2_accum_0[k]    = t2_coeffs_i[k];                 // t1 value is 1
+      }
+      else {
+	t1_val = poly_0.type1_value(x0, key_i0);
+	t1_accumulator[0] += exp_t1_coeffs[c_index] * t1_val;
+	t2_accum_0[0]     += t2_coeffs_i[0] * poly_0.type2_value(x0, key_i0);
+	for (k=1; k<numVars; ++k)
+	  t2_accum_0[k]   += t2_coeffs_i[k] * t1_val;
+      }
+      if (key_i0 == max0) {
+	// accumulate sums over variables with max key value
+	for (j=1; j<numVars; ++j) {
+	  bi_j = basis_index[j]; key_ij = key_i[j]; jm1 = j-1;
+	  t2_accum_j = t2_accumulator[j]; t2_accum_jm1 = t2_accumulator[jm1];
+	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+	  if (bi_j == 0) {
+	    t1_accumulator[j] = t1_accumulator[jm1];         // t1 value is 1
+	    t2_accum_j[j] = t2_accum_jm1[j] * poly_j.type2_value(x[j], key_ij);
+	    for (k=0; k<numVars; ++k)
+	      if (k != j)
+		t2_accum_j[k] = t2_accum_jm1[k];             // t1 value is 1
+	  }
+	  else {
+	    t1_val = poly_j.type1_value(x[j], key_ij);
+	    t1_accumulator[j] += t1_accumulator[jm1] * t1_val;
+	    t2_accum_j[j] += t2_accum_jm1[j] * poly_j.type2_value(x[j], key_ij);
+	    for (k=0; k<numVars; ++k)
+	      if (k != j)
+		t2_accum_j[k] += t2_accum_jm1[k] * t1_val;
+	  }
+	  t1_accumulator[jm1] = 0.;
+	  for (k=0; k<numVars; ++k)
+	    t2_accum_jm1[k] = 0.;
+	  if (key_ij + 1 != poly_j.interpolation_size())
+	    break;
+	}
+      }
+    }
+    Real  tp_val   = t1_accumulator[numVars-1];
+    Real* t2_accum = t2_accumulator[numVars-1];
+    for (j=0; j<numVars; ++j)
+      tp_val += t2_accum[j];
+    return tp_val;
+    */
+
+    // Simpler but more expensive approach:
     size_t i, num_colloc_pts = key.size(), j, c_index; Real tp_val = 0.;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i];
