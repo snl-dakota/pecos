@@ -1340,12 +1340,12 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
       size_t i, j, k, num_colloc_pts = key.size();
       unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
-      Real *accum_0, *accum_j, *accum_jm1, bc_vf_00, bc_vf_jj;
+      Real *accum_0 = accumulator[0], *accum_j, *accum_jm1, bc_vf_00, bc_vf_jj;
       for (i=0; i<num_colloc_pts; ++i) {
 	const UShortArray& key_i = key[i]; key_i0 = key_i[0];
 	const Real* grad = (colloc_index.empty()) ? exp_t1_coeff_grads[i] :
 	  exp_t1_coeff_grads[colloc_index[i]];
-	accum_0 = accumulator[0]; bc_vf_00 = bc_vf_0[key_i0];
+	bc_vf_00 = bc_vf_0[key_i0];
 	for (j=0; j<num_deriv_vars; ++j)
 	  accum_0[j] += grad[j] * bc_vf_00;
 	if (key_i0 == max0) {
