@@ -137,6 +137,37 @@ private:
     const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
+  /// update accumulators for barycentric type1 contributions to moment value
+  void accumulate_barycentric(RealVector& t1_accumulator,
+			      const UShortArray& lev_index,
+			      const UShortArray& key_p);
+  /// update accumulators for type1 contributions to moment value
+  void accumulate_horners(RealVector& t1_accumulator,
+			  const UShortArray& lev_index,
+			  const UShortArray& key_p, const RealVector& x);
+  /// update accumulators for type1 + type2 contributions to moment value
+  void accumulate_horners(RealVector& t1_accumulator,
+			  RealMatrix& t2_accumulator,
+			  const UShortArray& lev_index,
+			  const UShortArray& key_p, const RealVector& x);
+
+  /// update accumulators for barycentric type1 contributions to moment gradient
+  void accumulate_barycentric_gradient(RealMatrix& t1_accumulator,
+				       const UShortArray& lev_index,
+				       const UShortArray& key_p,
+				       const SizetArray& dvv);
+  /// update accumulators for type1 contributions to moment gradient
+  void accumulate_horners_gradient(RealMatrix& t1_accumulator,
+				   const UShortArray& lev_index,
+				   const UShortArray& key_p,
+				   const SizetArray& dvv, const RealVector& x);
+  /// update accumulators for type1 + type2 contributions to moment gradient
+  void accumulate_horners_gradient(RealMatrix& t1_accumulator,
+				   RealMatrixArray& t2_accumulators,
+				   const UShortArray& lev_index,
+				   const UShortArray& key_p,
+				   const SizetArray& dvv, const RealVector& x);
+
   /// update precomputation of nonzero multidimensional integrals of
   /// products of interpolation polynomials
   void update_nonzero_basis_products(const UShort2DArray& sm_multi_index);

@@ -265,28 +265,8 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
 	accumulator[0] += expansionType1Coeffs[c_index] *  bc_vf_0[key_i0];
       else if (ei0 == key_i0) // interpolation with exact match
 	accumulator[0]  = expansionType1Coeffs[c_index];
-      if (key_i0 == max0) {
-	// accumulate sums over variables with max key value
-	for (j=1; j<numVars; ++j) {
-	  li_j = lev_index[j]; key_ij = key_i[j];
-	  BasisPolynomial& poly_j = polynomialBasis[li_j][j];
-	  if (li_j == 0) // single integration/interpolation weight = 1
-	    accumulator[j]  = accumulator[j-1];
-	  else if (randomVarsKey[j]) // integration
-	    accumulator[j] += accumulator[j-1] * t1_wts_1d[li_j][j][key_ij];
-	  else { 
-	    eij = poly_j.exact_index();
-	    if (eij == _NPOS)        // interpolation without exact match
-	      accumulator[j] += accumulator[j-1] *
-		poly_j.barycentric_value_factor(key_ij);
-	    else if (eij == key_ij)  // interpolation with exact match
-	      accumulator[j]  = accumulator[j-1];
-	  }
-	  accumulator[j-1] = 0.;
-	  if (key_ij + 1 != poly_j.interpolation_size())
-	    break;
-	}
-      }
+      if (key_i0 == max0)
+	accumulate_barycentric(accumulator, lev_index, key_i);
     }
     return accumulator[numVars-1] /
       barycentric_value_scaling(lev_index, nonRandomIndices);
@@ -299,17 +279,15 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
     // it n+1 times, value() and gradient() data would then have to be stored.
     RealVector t1_accumulator(numVars);          // init to 0.
     RealMatrix t2_accumulator(numVars, numVars); // init to 0.
-    Real *t2_accum_0 = t2_accumulator[0], *t2_accum_j, *t2_accum_jm1;
+    Real *t2_accum_0 = t2_accumulator[0], t1_val, x0 = x[0];
+    unsigned short       li_0 = lev_index[0];
+    BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
     const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
     const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
-    unsigned short       li_0 = lev_index[0], li_j;
-    BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
     const RealArray& t1_wts_0 = t1_wts_1d[li_0][0];
     const RealArray& t2_wts_0 = t2_wts_1d[li_0][0];
-    size_t jm1, k, c_index;
-    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
-    bool rand_0 = randomVarsKey[0];
-    Real t1_val, t1_wt, x0 = x[0];
+    size_t k, c_index; bool rand_0 = randomVarsKey[0];
+    unsigned short key_i0, max0 = poly_0.interpolation_size() - 1;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i]; key_i0 = key_i[0];
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
@@ -343,54 +321,8 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
 	    t2_accum_0[k]   += t2_coeffs_i[k] * t1_val;
 	}
       }
-      if (key_i0 == max0) {
-	// accumulate sums over variables with max key value
-	for (j=1; j<numVars; ++j) {
-	  li_j = lev_index[j]; key_ij = key_i[j]; jm1 = j-1;
-	  t2_accum_j = t2_accumulator[j]; t2_accum_jm1 = t2_accumulator[jm1];
-	  BasisPolynomial& poly_j = polynomialBasis[li_j][j];
-	  if (randomVarsKey[j]) { // integration
-	    if (li_j == 0) {
-	      t1_accumulator[j]  = t1_accumulator[jm1];       // t1 weight is 1
-	      //t2_accum_j[j]    = 0.;                        // t2 weight is 0
-	      for (k=0; k<numVars; ++k)
-		if (k != j)
-		  t2_accum_j[k]  = t2_accum_jm1[k];           // t1 weight is 1
-	    }
-	    else {
-	      t1_wt = t1_wts_1d[li_j][j][key_ij];
-	      t1_accumulator[j] += t1_accumulator[jm1] * t1_wt;
-	      t2_accum_j[j]     += t2_accum_jm1[j] * t2_wts_1d[li_j][j][key_ij];
-	      for (k=0; k<numVars; ++k)
-		if (k != j)
-		  t2_accum_j[k] += t2_accum_jm1[k] * t1_wt;
-	    }
-	  }
-	  else {                  // interpolation
-	    if (li_j == 0) {
-	      t1_accumulator[j] = t1_accumulator[jm1];         // t1 value is 1
-	      t2_accum_j[j] = t2_accum_jm1[j] * poly_j.type2_value(x[j],key_ij);
-	      for (k=0; k<numVars; ++k)
-		if (k != j)
-		  t2_accum_j[k] = t2_accum_jm1[k];             // t1 value is 1
-	    }
-	    else {
-	      t1_val = poly_j.type1_value(x[j], key_ij);
-	      t1_accumulator[j] += t1_accumulator[jm1] * t1_val;
-	      t2_accum_j[j]     += t2_accum_jm1[j] *
-		poly_j.type2_value(x[j], key_ij);
-	      for (k=0; k<numVars; ++k)
-		if (k != j)
-		  t2_accum_j[k] += t2_accum_jm1[k] * t1_val;
-	    }
-	  }
-	  t1_accumulator[jm1] = 0.;
-	  for (k=0; k<numVars; ++k)
-	    t2_accum_jm1[k] = 0.;
-	  if (key_ij + 1 != poly_j.interpolation_size())
-	    break;
-	}
-      }
+      if (key_i0 == max0)
+	accumulate_horners(t1_accumulator, t2_accumulator, lev_index, key_i, x);
     }
     Real  tp_mean  = t1_accumulator[numVars-1];
     Real* t2_accum = t2_accumulator[numVars-1];
@@ -422,13 +354,11 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
     //PCout << "tensor_product_mean(): Horner's no derivs." << std::endl;
     RealVector accumulator(numVars); // init to 0.
     const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
-    unsigned short       li_0 = lev_index[0], li_j;
+    unsigned short       li_0 = lev_index[0];
     BasisPolynomial&   poly_0 = polynomialBasis[li_0][0];
     const RealArray& t1_wts_0 = t1_wts_1d[li_0][0];
-    size_t c_index;
-    unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
-    bool rand_0 = randomVarsKey[0];
-    Real x0 = x[0];
+    size_t c_index; bool rand_0 = randomVarsKey[0]; Real x0 = x[0];
+    unsigned short key_i0, max0 = poly_0.interpolation_size() - 1;
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = key[i]; key_i0 = key_i[0];
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
@@ -439,22 +369,8 @@ tensor_product_mean(const RealVector&    x,   const UShortArray& lev_index,
       else             // interpolation
 	accumulator[0] += expansionType1Coeffs[c_index] *
 	  poly_0.type1_value(x0, key_i0);
-      if (key_i0 == max0) {
-	// accumulate sums over variables with max key value
-	for (j=1; j<numVars; ++j) {
-	  li_j = lev_index[j]; key_ij = key_i[j];
-	  BasisPolynomial& poly_j = polynomialBasis[li_j][j];
-	  if (li_j == 0)   // single integration/interpolation weight = 1
-	    accumulator[j]  = accumulator[j-1];
-	  else
-	    accumulator[j] += (randomVarsKey[j]) ?
-	      accumulator[j-1] * t1_wts_1d[li_j][j][key_ij] : // integration
-	      accumulator[j-1] * poly_j.type1_value(x[j], key_ij); // interp
-	  accumulator[j-1] = 0.;
-	  if (key_ij + 1 != poly_j.interpolation_size())
-	    break;
-	}
-      }
+      if (key_i0 == max0)
+	accumulate_horners(accumulator, lev_index, key_i, x);
     }
     return accumulator[numVars-1];
 #else
@@ -533,17 +449,17 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
     short order = (augment) ? 3 : 1;
     set_new_point(x, lev_index, nonRandomIndices, order);
 
-    unsigned short key_p0, key_pv, li_0 = lev_index[0], li_v;
+    unsigned short  key_p0, li_0 = lev_index[0];
     BasisPolynomial&      poly_0 = polynomialBasis[li_0][0];
     const RealVector&    bc_vf_0 = poly_0.barycentric_value_factors();
     const RealVector&    bc_gf_0 = poly_0.barycentric_gradient_factors();
     const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
     const RealArray&   t1_wts_0  = t1_wts_1d[li_0][0];
-    size_t ei_0 = poly_0.exact_index(), ei_v;
+    size_t ei_0 = poly_0.exact_index();
     unsigned short max0 = poly_0.interpolation_size() - 1;
     RealMatrix accumulator(num_deriv_vars, numVars); // init to 0.
-    Real *accum_0 = accumulator[0], *accum_v, *accum_vm1, *t1_coeff_grad,
-      t1_coeff, t1_wt_0, t1_wt_v, bc_vf_00, prod, bc_vf_v, bc_gf_v;
+    Real *accum_0 = accumulator[0], *t1_coeff_grad, t1_coeff, t1_wt_00,
+      bc_vf_00, prod;
     bool rand_0 = randomVarsKey[0];
     for (p=0; p<num_colloc_pts; ++p) {
       const UShortArray& key_p = key[p]; key_p0 = key_p[0];
@@ -557,20 +473,16 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	if (li_0 == 0) // t1 weight is 1
 	  for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	    deriv_index = dvv[d] - 1;
-	    if (randomVarsKey[deriv_index])
-	      accum_0[d] = t1_coeff_grad[insert_cntr++];            // case 1
-	    else
-	      accum_0[d] = t1_coeff;                                // case 2
+	    accum_0[d] = (randomVarsKey[deriv_index]) ?
+	      t1_coeff_grad[insert_cntr++] : t1_coeff;            // case 1:2
 	  }
 	else {
-	  t1_wt_0 = t1_wts_0[key_p0];
-	  if (augment) prod = t1_coeff * t1_wt_0;
+	  t1_wt_00 = t1_wts_0[key_p0];
+	  if (augment) prod = t1_coeff * t1_wt_00;
 	  for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	    deriv_index = dvv[d] - 1;
-	    if (randomVarsKey[deriv_index])
-	      accum_0[d] += t1_coeff_grad[insert_cntr++] * t1_wt_0; // case 1
-	    else
-	      accum_0[d] += prod;                                   // case 2
+	    accum_0[d] += (randomVarsKey[deriv_index]) ?
+	      t1_coeff_grad[insert_cntr++] * t1_wt_00 : prod;    // case 1:2
 	  }
 	}
       }
@@ -600,55 +512,8 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	  }
 	}
       }
-      if (key_p0 == max0) {
-	// accumulate sums over variables with max key value
-	for (v=1; v<numVars; ++v) {
-	  li_v    = lev_index[v];   key_pv    = key_p[v];
-	  accum_v = accumulator[v]; accum_vm1 = accumulator[v-1];
-	  BasisPolynomial& poly_v = polynomialBasis[li_v][v];
-	  if (randomVarsKey[v]) { // cases 1,2
-	    if (li_v) {
-	      t1_wt_v = t1_wts_1d[li_v][v][key_pv];
-	      for (d=0; d<num_deriv_vars; ++d)
-		{ accum_v[d] += accum_vm1[d] * t1_wt_v; accum_vm1[d] = 0.; }
-	    }
-	    else // t1 weight is 1
-	      for (d=0; d<num_deriv_vars; ++d)
-		{ accum_v[d]  = accum_vm1[d];           accum_vm1[d] = 0.; }
-	  }
-	  else if (li_v) {
-	    ei_v = poly_v.exact_index();
-	    bc_gf_v = poly_v.barycentric_gradient_factor(key_pv);
-	    if (ei_v == _NPOS) { // bc_vf_v has general value
-	      bc_vf_v = poly_v.barycentric_value_factor(key_pv);
-	      for (d=0; d<num_deriv_vars; ++d) {
-		accum_v[d] += (v == dvv[d] - 1) ? accum_vm1[d] * bc_gf_v
-		                                : accum_vm1[d] * bc_vf_v;
-		accum_vm1[d] = 0.;
-	      }
-	    }
-	    else if (ei_v == key_pv) // bc_vf_v is 1
-	      for (d=0; d<num_deriv_vars; ++d) {
-		accum_v[d] += (v == dvv[d] - 1) ? accum_vm1[d] * bc_gf_v
-		                                : accum_vm1[d];
-		accum_vm1[d] = 0.;
-	      }
-	    else // bc_vf_v is 0
-	      for (d=0; d<num_deriv_vars; ++d) {
-		if (v == dvv[d] - 1) accum_v[d] += accum_vm1[d] * bc_gf_v;
-		accum_vm1[d] = 0.;
-	      }
-	  }
-	  else { // grad factor is zero, value factor is omitted
-	    for (d=0; d<num_deriv_vars; ++d) {
-	      if (v != dvv[d] - 1) accum_v[d] += accum_vm1[d];
-	      accum_vm1[d] = 0.;
-	    }
-	  }
- 	  if (key_pv + 1 != poly_v.interpolation_size())
-	    break;
-	}
-      }
+      if (key_p0 == max0)
+	accumulate_barycentric_gradient(accumulator, lev_index, key_p, dvv);
     }
     Real  scale = barycentric_gradient_scaling(lev_index, nonRandomIndices);
     Real* accum = accumulator[numVars-1];
@@ -665,7 +530,7 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 
 #ifdef HORNER
     //PCout << "tensor_product_mean_gradient(): Horner's useDerivs."<<std::endl;
-    unsigned short key_p0, key_pv, li_0 = lev_index[0], li_v;
+    unsigned short key_p0, li_0 = lev_index[0];
     BasisPolynomial&      poly_0 = polynomialBasis[li_0][0];
     const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
     const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
@@ -676,11 +541,9 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
     RealMatrixArray t2_accumulators(num_deriv_vars);
     for (v=0; v<num_deriv_vars; ++v)
       t2_accumulators[v].shape(numVars, numVars); // init to 0.
-    Real *t1_accum_0 = t1_accumulator[0], *t1_accum_v, *t1_accum_vm1,
-      *t2_accum_0, *t2_accum_v, *t2_accum_vm1, t1_coeff, *t2_coeffs_p,
-      t1_wt_00, t1_wt_v, t2_wt_v, prod1, prod2, t1_val, t2_val, t1_grad,
-      x0 = x[0], xv;
-    bool rand_0 = randomVarsKey[0]; size_t v2, vm1;
+    Real *t1_accum_0 = t1_accumulator[0], *t2_accum_0, t1_coeff, *t2_coeffs_p,
+      t1_wt_00, t1_val, t2_val, t1_grad, prod1, prod2, x0 = x[0];
+    bool rand_0 = randomVarsKey[0];
     for (p=0; p<num_colloc_pts; ++p) {
       const UShortArray& key_p = key[p]; key_p0 = key_p[0];
       c_index     = (colloc_index.empty()) ? p : colloc_index[p];
@@ -752,100 +615,9 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	  }
 	}
       }
-      if (key_p0 == max0) {
-	// accumulate sums over variables with max key value
-	for (v=1; v<numVars; ++v) {
-	  li_v = lev_index[v]; key_pv = key_p[v]; xv = x[v]; vm1 = v - 1;
-	  t1_accum_v = t1_accumulator[v]; t1_accum_vm1 = t1_accumulator[vm1];
-	  BasisPolynomial& poly_v = polynomialBasis[li_v][v];
-	  if (randomVarsKey[v]) { // case 2
-	    if (li_v) {
-	      t1_wt_v = t1_wts_1d[li_v][v][key_pv];
-	      t2_wt_v = t2_wts_1d[li_v][v][key_pv];
-	      for (d=0; d<num_deriv_vars; ++d) {
-		t1_accum_v[d]  += t1_accum_vm1[d] * t1_wt_v;
-		t1_accum_vm1[d] = 0.;
-		t2_accum_v      = t2_accumulators[d][v];
-		t2_accum_vm1    = t2_accumulators[d][vm1];
-		t2_accum_v[v]  += t2_accum_vm1[v] * t2_wt_v;
-		for (v2=0; v2<numVars; ++v2) {
-		  if (v2 != v)
-		    t2_accum_v[v2] += t2_accum_vm1[v2] * t1_wt_v;
-		  t2_accum_vm1[v2]  = 0.;
-		}
-	      }
-	    }
-	    else { // case 2 with t1 weight = 1, t2 weight = 0
-	      for (d=0; d<num_deriv_vars; ++d) {
-		t1_accum_v[d] = t1_accum_vm1[d]; t1_accum_vm1[d] = 0.;
-		t2_accum_v    = t2_accumulators[d][v];
-		t2_accum_vm1  = t2_accumulators[d][vm1];
-		t2_accum_v[v] = 0.;
-		for (v2=0; v2<numVars; ++v2) {
-		  if (v2 != v)
-		    t2_accum_v[v2] = t2_accum_vm1[v2];
-		  t2_accum_vm1[v2] = 0.;
-		}
-	      }
-	    }
-	  }
-	  else if (li_v) { // case 4
-	    t1_val = poly_v.type1_value(xv, key_pv);
-	    t2_val = poly_v.type2_value(xv, key_pv);
-	    for (d=0; d<num_deriv_vars; ++d) {
-	      t2_accum_v   = t2_accumulators[d][v];
-	      t2_accum_vm1 = t2_accumulators[d][vm1];
-	      if (dvv[d] - 1 == v) {
-		t1_grad = poly_v.type1_gradient(xv, key_pv);
-		t1_accum_v[d]  += t1_accum_vm1[d] * t1_grad;
-		t1_accum_vm1[d] = 0.;
-		t2_accum_v[v]  += t2_accum_vm1[v] *
-		  poly_v.type2_gradient(xv, key_pv);
-		for (v2=0; v2<numVars; ++v2) {
-		  if (v2 != v)
-		    t2_accum_v[v2] += t2_accum_vm1[v2] * t1_grad;
-		  t2_accum_vm1[v2]  = 0.;
-		}
-	      }
-	      else {
-		t1_accum_v[d]  += t1_accum_vm1[d] * t1_val;
-		t1_accum_vm1[d] = 0.;
-		t2_accum_v[v]  += t2_accum_vm1[v] * t2_val;
-		for (v2=0; v2<numVars; ++v2) {
-		  if (v2 != v)
-		    t2_accum_v[v2] += t2_accum_vm1[v2] * t1_val;
-		  t2_accum_vm1[v2]  = 0.;
-		}
-	      }
-	    }
-	  }
-	  else { // case 4 with t1_val = 1., t1_grad = 0., t2_grad = 1
-	    t2_val = poly_v.type2_value(xv, key_pv);
-	    for (d=0; d<num_deriv_vars; ++d) {
-	      t2_accum_v   = t2_accumulators[d][v];
-	      t2_accum_vm1 = t2_accumulators[d][vm1];
-	      if (dvv[d] - 1 == v) {
-		t1_accum_v[d] = t1_accum_vm1[d] = 0.;
-		t2_accum_v[v] = t2_accum_vm1[v];
-		for (v2=0; v2<numVars; ++v2) {
-		  if (v2 != v) t2_accum_v[v2] = 0.;
-		  t2_accum_vm1[v2] = 0.;
-		}
-	      }
-	      else {
-		t1_accum_v[d] = t1_accum_vm1[d]; t1_accum_vm1[d] = 0.;
-		t2_accum_v[v] = t2_accum_vm1[v] * t2_val;
-		for (v2=0; v2<numVars; ++v2) {
-		  if (v2 != v) t2_accum_v[v2] = t2_accum_vm1[v2];
-		  t2_accum_vm1[v2] = 0.;
-		}
-	      }
-	    }
-	  }
- 	  if (key_pv + 1 != poly_v.interpolation_size())
-	    break;
-	}
-      }
+      if (key_p0 == max0)
+	accumulate_horners_gradient(t1_accumulator, t2_accumulators,
+				    lev_index, key_p, dvv, x);
     }
     Real *t1_accum = t1_accumulator[numVars-1], *t2_accum;
     for (d=0; d<num_deriv_vars; ++d) {
@@ -886,14 +658,14 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 #ifdef HORNER
     //PCout << "tensor_product_mean_gradient(): Horner's no derivs."<<std::endl;
     // Horner's rule approach:
-    unsigned short key_p0, key_pv, li_0 = lev_index[0], li_v;
+    unsigned short key_p0, li_0 = lev_index[0];
     BasisPolynomial&      poly_0 = polynomialBasis[li_0][0];
     const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
     const RealArray&   t1_wts_0  = t1_wts_1d[li_0][0];
     unsigned short max0 = poly_0.interpolation_size() - 1;
     RealMatrix accumulator(num_deriv_vars, numVars); // init to 0.
-    Real *accum_0 = accumulator[0], *accum_v, *accum_vm1, *t1_coeff_grad,
-      t1_coeff, t1_wt_0, t1_wt_v, prod, t1_val, x0 = x[0];
+    Real *accum_0 = accumulator[0], *t1_coeff_grad, t1_coeff, t1_wt_00,
+      prod, t1_val, x0 = x[0];
     bool rand_0 = randomVarsKey[0];
     for (p=0; p<num_colloc_pts; ++p) {
       const UShortArray& key_p = key[p]; key_p0 = key_p[0];
@@ -913,12 +685,12 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	      accum_0[d] = t1_coeff;                                // case 2
 	  }
 	else {
-	  t1_wt_0 = t1_wts_0[key_p0];
-	  if (augment) prod = t1_coeff * t1_wt_0;
+	  t1_wt_00 = t1_wts_0[key_p0];
+	  if (augment) prod = t1_coeff * t1_wt_00;
 	  for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	    deriv_index = dvv[d] - 1;
 	    if (randomVarsKey[deriv_index])
-	      accum_0[d] += t1_coeff_grad[insert_cntr++] * t1_wt_0; // case 1
+	      accum_0[d] += t1_coeff_grad[insert_cntr++] * t1_wt_00; // case 1
 	    else
 	      accum_0[d] += prod;                                   // case 2
 	  }
@@ -948,41 +720,8 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
 	  }
 	}
       }
-      if (key_p0 == max0) {
-	// accumulate sums over variables with max key value
-	for (v=1; v<numVars; ++v) {
-	  li_v    = lev_index[v];   key_pv    = key_p[v];
-	  accum_v = accumulator[v]; accum_vm1 = accumulator[v-1];
-	  BasisPolynomial& poly_v = polynomialBasis[li_v][v];
-	  if (randomVarsKey[v]) { // cases 1,2
-	    if (li_v) {
-	      t1_wt_v = t1_wts_1d[li_v][v][key_pv];
-	      for (d=0; d<num_deriv_vars; ++d)
-		{ accum_v[d] += accum_vm1[d] * t1_wt_v; accum_vm1[d] = 0.; }
-	    }
-	    else // t1 weight is 1
-	      for (d=0; d<num_deriv_vars; ++d)
-		{ accum_v[d]  = accum_vm1[d];           accum_vm1[d] = 0.; }
-	  }
-	  else if (li_v) {
-	    t1_val = poly_v.type1_value(x[v], key_pv);
-	    for (d=0; d<num_deriv_vars; ++d) {
-	      accum_v[d] += (v == dvv[d] - 1) ?
-		accum_vm1[d] * poly_v.type1_gradient(x[v], key_pv) :
-		accum_vm1[d] * t1_val;
-	      accum_vm1[d] = 0.;
-	    }
-	  }
-	  else { // t1_grad is zero, t1_val is 1
-	    for (d=0; d<num_deriv_vars; ++d) {
-	      if (v != dvv[d] - 1) accum_v[d] += accum_vm1[d];
-	      accum_vm1[d] = 0.;
-	    }
-	  }
- 	  if (key_pv + 1 != poly_v.interpolation_size())
-	    break;
-	}
-      }
+      if (key_p0 == max0)
+	accumulate_horners_gradient(accumulator, lev_index, key_p, dvv, x);
     }
     copy_data(accumulator[numVars-1], (int)num_deriv_vars, tpMeanGrad);
 #else
@@ -991,12 +730,14 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
     Real t1_coeff, *t1_coeff_grad, t1_wt, t1_val;
     for (p=0; p<num_colloc_pts; ++p) {
       const UShortArray& key_p = key[p];
-      c_index  = (colloc_index.empty()) ? p : colloc_index[p];
-      t1_coeff = expansionType1Coeffs[c_index];
-      t1_coeff_grad = expansionType1CoeffGrads[c_index];
-      t1_wt    = type1_weight(key_p, lev_index, randomIndices);
-      if (insert)
+      c_index = (colloc_index.empty()) ? p : colloc_index[p];
+      t1_wt   = type1_weight(key_p, lev_index, randomIndices);
+      if (insert) {
+	t1_coeff_grad = expansionType1CoeffGrads[c_index];
 	t1_val = type1_interpolant_value(x, key_p, lev_index, nonRandomIndices);
+      }
+      else
+	t1_coeff = expansionType1Coeffs[c_index];	
       for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	deriv_index = dvv[d] - 1; // OK since we are in an "All" view
 	tpMeanGrad[d] += (randomVarsKey[deriv_index]) ?
@@ -1048,7 +789,7 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
   }
   else                 // PRODUCT_OF_INTERPOLANTS_FULL
     { mean_1 = mean(x); mean_2 = (same) ? mean_1 : nip_approx_2->mean(x); }
-  size_t i, j, k, c_index_i, num_colloc_pts = key.size();
+  size_t i, c_index_i, num_colloc_pts = key.size();
 
   switch (momentInterpType) {
   case INTERPOLATION_OF_PRODUCTS: {
@@ -1075,13 +816,12 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
       // all collocation pts even if some interpolated dimensions are inactive.
       RealVector accumulator(numVars); // init to 0.
       const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
-      unsigned short      rli_0 = reinterp_lev_index[0], rli_j;
+      unsigned short      rli_0 = reinterp_lev_index[0];
       BasisPolynomial&   poly_0 = polynomialBasis[rli_0][0];
       const RealArray& t1_wts_0 = t1_wts_1d[rli_0][0]; // rli==li for integrated
       const RealVector& bc_vf_0 = poly_0.barycentric_value_factors();
-      size_t i, ei0 = poly_0.exact_index(), eij;
-      unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
-      bool rand_0 = randomVarsKey[0];
+      size_t ei0 = poly_0.exact_index(); bool rand_0 = randomVarsKey[0];
+      unsigned short key_i0, max0 = poly_0.interpolation_size() - 1;
       for (i=0; i<reinterp_colloc_pts; ++i) {
 	RealVector c_vars(Teuchos::View,
 			  const_cast<Real*>(reinterp_var_sets[i]), numVars);
@@ -1097,49 +837,28 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 	  accumulator[0]  = t1_coeff_1_mm1 * t1_coeff_2_mm2;
 	else if (ei0 == _NPOS)  // interpolation w/o exact match
 	  accumulator[0] += t1_coeff_1_mm1 * t1_coeff_2_mm2 * bc_vf_0[key_i0];
-	if (key_i0 == max0) {
-	  // accumulate sums over variables with max key value
-	  for (j=1; j<numVars; ++j) {
-	    rli_j = reinterp_lev_index[j]; key_ij = key_i[j];
-	    BasisPolynomial& poly_j = polynomialBasis[rli_j][j];
-	    if (rli_j == 0) // single integration/interpolation weight = 1
-	      accumulator[j]  = accumulator[j-1];
-	    else if (randomVarsKey[j]) // integration
-	      accumulator[j] += accumulator[j-1] * t1_wts_1d[rli_j][j][key_ij];
-	    else { 
-	      eij = poly_j.exact_index();
-	      if (eij == _NPOS)        // interpolation without exact match
-		accumulator[j] += accumulator[j-1] *
-		  poly_j.barycentric_value_factor(key_ij);
-	      else if (eij == key_ij)  // interpolation with exact match
-		accumulator[j]  = accumulator[j-1];
-	    }
-	    accumulator[j-1] = 0.;
-	    if (key_ij + 1 != poly_j.interpolation_size())
-	      break;
-	  }
-	}
+	if (key_i0 == max0)
+	  accumulate_barycentric(accumulator, reinterp_lev_index, key_i);
       }
       return accumulator[numVars-1] /
 	barycentric_value_scaling(lev_index, nonRandomIndices);
     }
     else if (basisConfigOptions.useDerivs) {
+#ifdef HORNER
       // Horner's rule approach:
       // Note: while possible to use a single accumulator vector and loop over
       // it n+1 times, value() and gradient() data would then have to be stored.
       RealVector t1_accumulator(numVars);          // init to 0.
       RealMatrix t2_accumulator(numVars, numVars); // init to 0.
-      Real *t2_accum_0 = t2_accumulator[0], *t2_accum_j, *t2_accum_jm1;
+      Real *t2_accum_0 = t2_accumulator[0], t1_val, x0 = x[0];
       const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
       const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
-      unsigned short      rli_0 = reinterp_lev_index[0], rli_j;
+      unsigned short      rli_0 = reinterp_lev_index[0];
       BasisPolynomial&   poly_0 = polynomialBasis[rli_0][0];
       const RealArray& t1_wts_0 = t1_wts_1d[rli_0][0]; // rli==li for integrated
       const RealArray& t2_wts_0 = t2_wts_1d[rli_0][0]; // rli==li for integrated
-      size_t jm1, k;
-      unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
-      bool rand_0 = randomVarsKey[0];
-      Real t1_val, t1_wt, x0 = x[0];
+      size_t k; bool rand_0 = randomVarsKey[0];
+      unsigned short key_i0, max0 = poly_0.interpolation_size() - 1;
       for (i=0; i<reinterp_colloc_pts; ++i) {
 	RealVector c_vars(Teuchos::View,
 			  const_cast<Real*>(reinterp_var_sets[i]), numVars);
@@ -1191,64 +910,18 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 				  t1_coeff_2_mm2 * t2_coeff_1[k]) * t1_val;
 	  }
 	}
-	if (key_i0 == max0) {
-	  // accumulate sums over variables with max key value
-	  for (j=1; j<numVars; ++j) {
-	    rli_j = reinterp_lev_index[j]; key_ij = key_i[j]; jm1 = j-1;
-	    t2_accum_j = t2_accumulator[j]; t2_accum_jm1 = t2_accumulator[jm1];
-	    BasisPolynomial& poly_j = polynomialBasis[rli_j][j];
-	    if (randomVarsKey[j]) { // integration
-	      if (rli_j == 0) {
-		t1_accumulator[j] = t1_accumulator[jm1];      // t1 weight is 1
-		t2_accum_j[j]     = 0.;                       // t2 weight is 0
-		for (k=0; k<numVars; ++k)
-		  if (k != j)
-		    t2_accum_j[k] = t2_accum_jm1[k];          // t1 weight is 1
-	      }
-	      else {
-		t1_wt = t1_wts_1d[rli_j][j][key_ij];
-		t1_accumulator[j] += t1_accumulator[jm1] * t1_wt;
-		t2_accum_j[j] += t2_accum_jm1[j] * t2_wts_1d[rli_j][j][key_ij];
-		for (k=0; k<numVars; ++k)
-		  if (k != j)
-		    t2_accum_j[k] += t2_accum_jm1[k] * t1_wt;
-	      }
-	    }
-	    else {                  // interpolation
-	      if (rli_j == 0) {
-		t1_accumulator[j] = t1_accumulator[jm1];        // t1 value is 1
-		t2_accum_j[j] = t2_accum_jm1[j]
-		  * poly_j.type2_value(x[j], key_ij);
-		for (k=0; k<numVars; ++k)
-		  if (k != j)
-		    t2_accum_j[k] = t2_accum_jm1[k];            // t1 value is 1
-	      }
-	      else {
-		t1_val = poly_j.type1_value(x[j], key_ij);
-		t1_accumulator[j] += t1_accumulator[jm1] * t1_val;
-		t2_accum_j[j]     += t2_accum_jm1[j] *
-		  poly_j.type2_value(x[j], key_ij);
-		for (k=0; k<numVars; ++k)
-		  if (k != j)
-		    t2_accum_j[k] += t2_accum_jm1[k] * t1_val;
-	      }
-	    }
-	    t1_accumulator[jm1] = 0.;
-	    for (k=0; k<numVars; ++k)
-	      t2_accum_jm1[k] = 0.;
-	    if (key_ij + 1 != poly_j.interpolation_size())
-	      break;
-	  }
-	}
+	if (key_i0 == max0)
+	  accumulate_horners(t1_accumulator, t2_accumulator,
+			     reinterp_lev_index, key_i, x);
       }
-      Real  tp_val   = t1_accumulator[numVars-1];
+      Real  tp_covar = t1_accumulator[numVars-1];
       Real* t2_accum = t2_accumulator[numVars-1];
-      for (j=0; j<numVars; ++j)
-	tp_val += t2_accum[j];
-      return tp_val;
-
-      /*
+      for (k=0; k<numVars; ++k)
+	tp_covar += t2_accum[k];
+      return tp_covar;
+#else
       // Simpler but more expensive approach:
+      Real tp_covar = 0.; size_t j;
       for (i=0; i<reinterp_colloc_pts; ++i) {
 	const UShortArray& key_i = reinterp_colloc_key[i];
 	RealVector c_vars(Teuchos::View,
@@ -1270,19 +943,20 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 				      nonRandomIndices)
 	    * type2_weight(j, key_i, reinterp_lev_index, randomIndices);
       }
-      */
+      return tp_covar;
+#endif
     }
     else {
+#ifdef HORNER
       // Horner's rule approach:
       RealVector accumulator(numVars); // init to 0.
       const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
-      unsigned short      rli_0 = reinterp_lev_index[0], rli_j;
+      unsigned short      rli_0 = reinterp_lev_index[0];
       BasisPolynomial&   poly_0 = polynomialBasis[rli_0][0];
       const RealArray& t1_wts_0 = t1_wts_1d[rli_0][0]; // rli==li for integrated
-      unsigned short key_i0, key_ij, max0 = poly_0.interpolation_size() - 1;
-      bool rand_0 = randomVarsKey[0];
-      Real x0 = x[0];
-      for (size_t i=0; i<reinterp_colloc_pts; ++i) {
+      unsigned short key_i0, max0 = poly_0.interpolation_size() - 1;
+      bool rand_0 = randomVarsKey[0]; Real x0 = x[0];
+      for (i=0; i<reinterp_colloc_pts; ++i) {
 	RealVector c_vars(Teuchos::View,
 			  const_cast<Real*>(reinterp_var_sets[i]), numVars);
 	t1_coeff_1_mm1 = value(c_vars) - mean_1;
@@ -1296,28 +970,13 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 	else             // interpolation
 	  accumulator[0] += t1_coeff_1_mm1 * t1_coeff_2_mm2 *
 	    poly_0.type1_value(x0, key_i0);
-	if (key_i0 == max0) {
-	  // accumulate sums over variables with max key value
-	  for (j=1; j<numVars; ++j) {
-	    rli_j = reinterp_lev_index[j]; key_ij = key_i[j];
-	    BasisPolynomial& poly_j = polynomialBasis[rli_j][j];
-	    if (rli_j == 0) // single integration/interpolation weight = 1
-	      accumulator[j]  = accumulator[j-1];
-	    else if (randomVarsKey[j]) // integration
-	      accumulator[j] += accumulator[j-1] * t1_wts_1d[rli_j][j][key_ij];
-	    else                       // interpolation
-	      accumulator[j] += accumulator[j-1] *
-		poly_j.type1_value(x[j], key_ij);
-	    accumulator[j-1] = 0.;
-	    if (key_ij + 1 != poly_j.interpolation_size())
-	      break;
-	  }
-	}
+	if (key_i0 == max0)
+	  accumulate_horners(accumulator, reinterp_lev_index, key_i, x);
       }
       return accumulator[numVars-1];
-
-      /*
+#else
       // Simpler but more expensive approach:
+      Real tp_covar = 0.;
       for (i=0; i<reinterp_colloc_pts; ++i) {
 	const UShortArray& key_i = reinterp_colloc_key[i];
 	RealVector c_vars(Teuchos::View,
@@ -1339,12 +998,13 @@ tensor_product_covariance(const RealVector& x, const UShortArray& lev_index,
 	      << " sum = " << tp_covar << std::endl;
 #endif // DEBUG
       }
-      */
+      return tp_covar;
+#endif // HORNER
     }
     break;
   }
   case PRODUCT_OF_INTERPOLANTS_FAST: case PRODUCT_OF_INTERPOLANTS_FULL: {
-    size_t c_index_j; Real t1_wt_Ls_prod_i;
+    size_t j, c_index_j; Real t1_wt_Ls_prod_i;
     const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
     const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
     for (i=0; i<num_colloc_pts; ++i) {
@@ -1528,42 +1188,228 @@ tensor_product_variance_gradient(const RealVector& x,
       = driverRep->reinterpolated_variable_sets();
     const UShort2DArray& reinterp_colloc_key
       = driverRep->reinterpolated_collocation_key();
+    size_t p, v, d, reinterp_colloc_pts = reinterp_colloc_key.size();
 
-    RealVector empty_rv; Real t1_coeff_p_mm;
-    size_t p, v, reinterp_colloc_pts = reinterp_colloc_key.size();
-    for (p=0; p<reinterp_colloc_pts; ++p) {
-      const UShortArray& key_p = reinterp_colloc_key[p];
-      RealVector c_vars(Teuchos::View, const_cast<Real*>(reinterp_var_sets[p]),
-			numVars);
-      t1_coeff_p_mm = value(c_vars) - mean_1;
-      // no DVV: all surrData response gradient vars -> expansionType1CoeffGrads
-      const RealVector& t1_coeff_grad_p = (insert) ?
-	gradient_nonbasis_variables(c_vars) : empty_rv;
-      // no DVV: need all grad components for R to expand type2 for (R-mu)^2
-      const RealVector& t2_coeff_p = (augment && basisConfigOptions.useDerivs) ?
-	gradient_basis_variables(c_vars)    : empty_rv;
+    // Four cases to manage in barycentric/Horner looping:
+    // 1:    random exp var,  inserted deriv: variance grad * type1_weight
+    // 2:    random exp var, augmented deriv: variance      * type1_weight
+    // 3: nonrandom exp var,  inserted deriv: variance grad * type1_value
+    // 4: nonrandom exp var, augmented deriv: variance      * type1_gradient
 
-      for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
-	deriv_index = dvv[d] - 1; // OK since we are in an "All" view
-	if (randomVarsKey[deriv_index]) {
-	  // ---------------------------------------------------------------
-	  // deriv of All var expansion w.r.t. random var (design insertion)
-	  // ---------------------------------------------------------------
-	  // d/dx[(R-mu)^2] = 2(R-mu)(dR/dx - dmu/dx)
-	  tpVarianceGrad[d] += 2. * t1_coeff_p_mm
-	    * (t1_coeff_grad_p[insert_cntr] - mean_grad[d])
-	    * type1_interpolant_value(x, key_p, reinterp_lev_index,
-				      nonRandomIndices)
-	    * type1_weight(key_p, reinterp_lev_index, randomIndices);
-	  if (basisConfigOptions.useDerivs) {
-	    PCerr << "Error: combination of coefficient gradients and "
-		  << "use_derivatives in NodalInterpPolyApproximation::"
-		  << "tensor_product_variance_gradient()" << std::endl;
-	    abort_handler(-1);
+    if (barycentricFlag) {
+      // For barycentric interpolation: track x != newPoint within 1D basis
+      short order = (augment) ? 3 : 1;
+      set_new_point(x, reinterp_lev_index, nonRandomIndices, order);
+
+      unsigned short key_p0, rli_0 = reinterp_lev_index[0];
+      BasisPolynomial&      poly_0 = polynomialBasis[rli_0][0];
+      const RealVector&    bc_vf_0 = poly_0.barycentric_value_factors();
+      const RealVector&    bc_gf_0 = poly_0.barycentric_gradient_factors();
+      const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+      const RealArray&   t1_wts_0  = t1_wts_1d[rli_0][0];
+      size_t ei_0 = poly_0.exact_index();
+      unsigned short max0 = poly_0.interpolation_size() - 1;
+      RealMatrix accumulator(num_deriv_vars, numVars); // init to 0.
+      Real *accum_0 = accumulator[0], t1_coeff_p_mm, t1_wt_00, bc_vf_00,
+	prod1, prod2, prod3;
+      bool rand_0 = randomVarsKey[0]; RealVector empty_rv;
+      for (p=0; p<reinterp_colloc_pts; ++p) {
+	const UShortArray& key_p = reinterp_colloc_key[p]; key_p0 = key_p[0];
+	RealVector c_vars(Teuchos::View,
+	  const_cast<Real*>(reinterp_var_sets[p]), numVars);
+	t1_coeff_p_mm = value(c_vars) - mean_1;
+	const RealVector& t1_coeff_grad_p = (insert) ?
+	  gradient_nonbasis_variables(c_vars) : empty_rv;
+	if (rand_0) { // integration: deriv of expect = expect of deriv
+	  if (rli_0) {
+	    t1_wt_00 = t1_wts_0[key_p0];
+	    if (insert)  prod1 = 2. * t1_coeff_p_mm * t1_wt_00;
+	    if (augment) prod2 = t1_coeff_p_mm * t1_coeff_p_mm * t1_wt_00;
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {       // case 1:2
+	      deriv_index = dvv[d] - 1;
+	      accum_0[d] += (randomVarsKey[deriv_index])        ? prod1 *
+		(t1_coeff_grad_p[insert_cntr++] - mean_grad[d]) : prod2;
+	    }
 	  }
-	  ++insert_cntr;
+	  else {
+	    if (insert)  prod1 = 2. * t1_coeff_p_mm;
+	    if (augment) prod2 = t1_coeff_p_mm * t1_coeff_p_mm;
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {       // case 1:2
+	      deriv_index = dvv[d] - 1;
+	      accum_0[d]  = (randomVarsKey[deriv_index])        ? prod1 *
+		(t1_coeff_grad_p[insert_cntr++] - mean_grad[d]) : prod2;
+	    }
+	  }
 	}
-	else {
+	else { // interpolation: deriv of interpolation of mean
+	  if (rli_0)  { // grad factor is 0., value factor is omitted
+	    bc_vf_00 = bc_vf_0[key_p0];
+	    if (insert) prod1  = 2. * t1_coeff_p_mm * bc_vf_00;
+	    if (augment) {
+	      prod2 = t1_coeff_p_mm * t1_coeff_p_mm;
+	      if (ei_0 == _NPOS) prod3 = prod2 * bc_vf_00;
+	    }
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
+	      deriv_index = dvv[d] - 1;
+	      if (randomVarsKey[deriv_index])                         // case 3
+		accum_0[d] += prod1 *
+		  (t1_coeff_grad_p[insert_cntr++] - mean_grad[d]);
+	      else if (deriv_index == 0)                              // case 4
+		accum_0[d] += prod2 * bc_gf_0[key_p0];
+	      else if (ei_0 == _NPOS)                                 // case 4
+		accum_0[d] += prod3;
+	      else if (ei_0 == key_p0)                                // case 4
+		accum_0[d] += prod2;
+	    }
+	  }
+	  else {
+	    if (insert)  prod1 = 2. * t1_coeff_p_mm;
+	    if (augment) prod2 = t1_coeff_p_mm * t1_coeff_p_mm;
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
+	      deriv_index = dvv[d] - 1;
+	      if (randomVarsKey[deriv_index])                         // case 3
+		accum_0[d] = prod1 *
+		  (t1_coeff_grad_p[insert_cntr++] - mean_grad[d]);
+	      else if (deriv_index)                                   // case 4
+		accum_0[d] = prod2;
+	    }
+	  }
+	}
+	if (key_p0 == max0) // accumulate sums over vars with max key value
+	  accumulate_barycentric_gradient(accumulator, reinterp_lev_index,
+					  key_p, dvv);
+      }
+      Real  scale = barycentric_gradient_scaling(lev_index, nonRandomIndices);
+      Real* accum = accumulator[numVars-1];
+      for (d=0; d<num_deriv_vars; ++d)
+	tpVarianceGrad[d] = accum[d] * scale;
+    }
+    else if (basisConfigOptions.useDerivs) {
+      if (insert) {
+	PCerr << "Error: combination of coefficient gradients and "
+	      << "use_derivatives in NodalInterpPolyApproximation::"
+	      << "tensor_product_mean_gradient()" << std::endl;
+	abort_handler(-1);
+      }
+
+#ifdef HORNER
+      //PCout << "tensor_product_variance_gradient(): Horner's useDerivs."
+      //      << std::endl;
+      unsigned short key_p0, rli_0 = reinterp_lev_index[0];
+      BasisPolynomial&      poly_0 = polynomialBasis[rli_0][0];
+      const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+      const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
+      const RealArray&   t1_wts_0  = t1_wts_1d[rli_0][0];
+      const RealArray&   t2_wts_0  = t2_wts_1d[rli_0][0];
+      unsigned short max0 = poly_0.interpolation_size() - 1;
+      RealMatrix t1_accumulator(num_deriv_vars, numVars); // init to 0.
+      RealMatrixArray t2_accumulators(num_deriv_vars);
+      for (v=0; v<num_deriv_vars; ++v)
+	t2_accumulators[v].shape(numVars, numVars); // init to 0.
+      Real *t1_accum_0 = t1_accumulator[0], *t2_accum_0, t1_coeff_p_mm,
+	t1_wt_00, t1_val, t2_val, t1_grad, prod1, prod2, prod3, prod4,
+	prod5,prod6, x0 = x[0];
+      bool rand_0 = randomVarsKey[0];
+      for (p=0; p<reinterp_colloc_pts; ++p) {
+	const UShortArray& key_p = reinterp_colloc_key[p]; key_p0 = key_p[0];
+	RealVector c_vars(Teuchos::View,
+	  const_cast<Real*>(reinterp_var_sets[p]), numVars);
+	t1_coeff_p_mm = value(c_vars) - mean_1;
+	// no DVV: need all grad components for R to expand type2 for (R-mu)^2
+	const RealVector& t2_coeff_p = gradient_basis_variables(c_vars);
+	prod1 = t1_coeff_p_mm * t1_coeff_p_mm;
+	prod2 = 2. * t1_coeff_p_mm;
+	if (rand_0) { // integration: deriv of expect = expect of deriv
+	  if (rli_0) {                                                 // case 2
+	    t1_wt_00 = t1_wts_0[key_p0];
+	    prod3 = prod1 * t1_wt_00;
+	    prod4 = prod2 * t2_coeff_p[0] * t2_wts_0[key_p0];
+	    for (d=0; d<num_deriv_vars; ++d) {
+	      t1_accum_0[d]            += prod3;
+	      t2_accumulators[d][0][0] += prod4;
+	    }
+	    prod3 = prod2 * t1_wt_00;
+	    for (v=1; v<numVars; ++v) {
+	      prod4 = prod3 * t2_coeff_p[v];
+	      for (d=0; d<num_deriv_vars; ++d)
+		t2_accumulators[d][0][v] += prod4;
+	    }
+	  }
+	  else { // t1 weight is 1, t2 weight is 0
+	    for (d=0; d<num_deriv_vars; ++d)
+	      t1_accum_0[d] = prod1;
+	    for (v=1; v<numVars; ++v) {
+	      prod4 = prod2 * t2_coeff_p[v];
+	      for (d=0; d<num_deriv_vars; ++d)
+		t2_accumulators[d][0][v] += prod4;
+	    }
+	  }
+	}
+	else if (rli_0) { // interpolation: deriv of interpolation of mean
+	  t1_val = poly_0.type1_value(x0, key_p0);
+	  t2_val = poly_0.type2_value(x0, key_p0);
+	  prod3 = prod1 * t1_val; prod4  = prod2 * t1_val;
+	  prod5 = prod2 * t2_val;
+	  for (d=0; d<num_deriv_vars; ++d) {                         // case 4
+	    t2_accum_0 = t2_accumulators[d][0];
+	    if (dvv[d] == 1) {
+	      t1_grad = poly_0.type1_gradient(x0, key_p0);
+	      t1_accum_0[d]   += prod1 * t1_grad;
+	      t2_accum_0[0]   += prod2 * t2_coeff_p[0] *
+		poly_0.type2_gradient(x0, key_p0);
+	      prod6 = prod2 * t1_grad;
+	      for (v=1; v<numVars; ++v)
+		t2_accum_0[v] += prod6 * t2_coeff_p[v];
+	    }
+	    else {
+	      t1_accum_0[d]   += prod3;
+	      t2_accum_0[0]   += prod5 * t2_coeff_p[0];
+	      for (v=1; v<numVars; ++v)
+		t2_accum_0[v] += prod4 * t2_coeff_p[v];
+	    }
+	  }
+	}
+	else { // t1 value is 1, t1 grad is 0., t2 grad is 1
+	  prod5 = prod2 * poly_0.type2_value(x0, key_p0);
+	  for (d=0; d<num_deriv_vars; ++d) {                         // case 4
+	    t2_accum_0 = t2_accumulators[d][0];
+	    if (dvv[d] == 1) {
+	      //t1_accum_0[d] = 0.;
+	      t2_accum_0[0] = prod2 * t2_coeff_p[0];
+	      //for (v=1; v<numVars; ++v)
+	      //  t2_accum_0[v] = 0.;
+	    }
+	    else {
+	      t1_accum_0[d]   = prod1;
+	      t2_accum_0[0]   = prod5 * t2_coeff_p[0];
+	      for (v=1; v<numVars; ++v)
+		t2_accum_0[v] = prod2 * t2_coeff_p[v];
+	    }
+	  }
+	}
+	if (key_p0 == max0)
+	  accumulate_horners_gradient(t1_accumulator, t2_accumulators,
+				      lev_index, key_p, dvv, x);
+      }
+      Real *t1_accum = t1_accumulator[numVars-1], *t2_accum;
+      for (d=0; d<num_deriv_vars; ++d) {
+	tpVarianceGrad[d] = t1_accum[d];
+	t2_accum = t2_accumulators[d][numVars-1];
+	for (v=0; v<numVars; ++v)
+	  tpVarianceGrad[d] += t2_accum[v];
+      }
+#else
+      Real t1_coeff_p_mm;
+      for (p=0; p<reinterp_colloc_pts; ++p) {
+	const UShortArray& key_p = reinterp_colloc_key[p];
+	RealVector c_vars(Teuchos::View,
+	  const_cast<Real*>(reinterp_var_sets[p]), numVars);
+	t1_coeff_p_mm = value(c_vars) - mean_1;
+	// no DVV: need all grad components for R to expand type2 for (R-mu)^2
+	const RealVector& t2_coeff_p = gradient_basis_variables(c_vars);
+
+	for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
+	  deriv_index = dvv[d] - 1; // OK since we are in an "All" view
 	  // ---------------------------------------------------------------
 	  // deriv of All var exp w.r.t. nonrandom var (design augmentation)
 	  // ---------------------------------------------------------------
@@ -1572,16 +1418,125 @@ tensor_product_variance_gradient(const RealVector& x,
 	    * type1_interpolant_gradient(x, deriv_index, key_p,
 					 reinterp_lev_index, nonRandomIndices)
 	    * type1_weight(key_p, reinterp_lev_index, randomIndices);
-	  if (basisConfigOptions.useDerivs) {
-	    for (v=0; v<numVars; ++v)
-	      grad_d += 2. * (t1_coeff_p_mm * t2_coeff_p[v])
-		* type2_interpolant_gradient(x, deriv_index, v, key_p,
-					     reinterp_lev_index,
-					     nonRandomIndices)
-		* type2_weight(v, key_p, reinterp_lev_index, randomIndices);
-	  }
+	  for (v=0; v<numVars; ++v)
+	    grad_d += 2. * t1_coeff_p_mm * t2_coeff_p[v]
+	      * type2_interpolant_gradient(x, deriv_index, v, key_p,
+					   reinterp_lev_index, nonRandomIndices)
+	      * type2_weight(v, key_p, reinterp_lev_index, randomIndices);
 	}
       }
+#endif // HORNER
+    }
+    else {
+#ifdef HORNER
+      //PCout << "tensor_product_variance_gradient(): Horner's no derivs."
+      //      << std::endl;
+      // Horner's rule approach:
+      unsigned short key_p0, rli_0 = reinterp_lev_index[0];
+      BasisPolynomial&      poly_0 = polynomialBasis[rli_0][0];
+      const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+      const RealArray&   t1_wts_0  = t1_wts_1d[rli_0][0];
+      size_t ei_0 = poly_0.exact_index();
+      unsigned short max0 = poly_0.interpolation_size() - 1;
+      RealMatrix accumulator(num_deriv_vars, numVars); // init to 0.
+      Real *accum_0 = accumulator[0], t1_coeff_p_mm, t1_wt_00, t1_val,
+	prod1, prod2, prod3, x0 = x[0];
+      bool rand_0 = randomVarsKey[0]; RealVector empty_rv;
+      for (p=0; p<reinterp_colloc_pts; ++p) {
+	const UShortArray& key_p = reinterp_colloc_key[p]; key_p0 = key_p[0];
+	RealVector c_vars(Teuchos::View,
+	  const_cast<Real*>(reinterp_var_sets[p]), numVars);
+	t1_coeff_p_mm = value(c_vars) - mean_1;
+	const RealVector& t1_coeff_grad_p = (insert) ?
+	  gradient_nonbasis_variables(c_vars) : empty_rv;
+	if (rand_0) { // integration: deriv of expect = expect of deriv
+	  if (rli_0) { // t1 weight is 1
+	    t1_wt_00 = t1_wts_0[key_p0];
+	    if (insert)  prod1 = 2. * t1_coeff_p_mm * t1_wt_00;
+	    if (augment) prod2 = t1_coeff_p_mm * t1_coeff_p_mm * t1_wt_00;
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {       // case 1:2
+	      deriv_index = dvv[d] - 1;
+	      accum_0[d] += (randomVarsKey[deriv_index])        ? prod1 *
+		(t1_coeff_grad_p[insert_cntr++] - mean_grad[d]) : prod2;
+	    }
+	  }
+	  else {
+	    if (insert)  prod1 = 2. * t1_coeff_p_mm;
+	    if (augment) prod2 = t1_coeff_p_mm * t1_coeff_p_mm;
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
+	      deriv_index = dvv[d] - 1;
+	      accum_0[d]  = (randomVarsKey[deriv_index])        ? prod1 *
+		(t1_coeff_grad_p[insert_cntr++] - mean_grad[d]) : prod2;
+	    }
+	  }
+	}
+	else { // interpolation: deriv of interpolation of mean
+	  if (rli_0) { // t1 grad is 0., t1 value is 1
+	    t1_val = poly_0.type1_value(x0, key_p0);
+	    if (insert) prod1  = 2. * t1_coeff_p_mm * t1_val;
+	    if (augment) {
+	      prod2 = t1_coeff_p_mm * t1_coeff_p_mm;
+	      if (ei_0 == _NPOS) prod3 = prod2 * t1_val;
+	    }
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
+	      deriv_index = dvv[d] - 1;
+	      if (randomVarsKey[deriv_index])                         // case 3
+		accum_0[d] += prod1 *
+		  (t1_coeff_grad_p[insert_cntr++] - mean_grad[d]);
+	      else if (deriv_index == 0)                              // case 4
+		accum_0[d] += prod2 * poly_0.type1_gradient(x0, key_p0);
+	      else                                                    // case 4
+		accum_0[d] += prod3;
+	    }
+	  }
+	  else {
+	    if (insert)  prod1 = 2. * t1_coeff_p_mm;
+	    if (augment) prod2 = t1_coeff_p_mm * t1_coeff_p_mm;
+	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
+	      deriv_index = dvv[d] - 1;
+	      if (randomVarsKey[deriv_index])                         // case 3
+		accum_0[d] = prod1 *
+		  (t1_coeff_grad_p[insert_cntr++] - mean_grad[d]);
+	      else if (deriv_index)                                   // case 4
+		accum_0[d] = prod2;
+	    }
+	  }
+	}
+	if (key_p0 == max0)
+	  accumulate_horners_gradient(accumulator, lev_index, key_p, dvv, x);
+      }
+      copy_data(accumulator[numVars-1], (int)num_deriv_vars, tpVarianceGrad);
+#else
+      RealVector empty_rv; Real t1_coeff_p_mm;
+      size_t p, v, reinterp_colloc_pts = reinterp_colloc_key.size();
+      for (p=0; p<reinterp_colloc_pts; ++p) {
+	const UShortArray& key_p = reinterp_colloc_key[p];
+	RealVector c_vars(Teuchos::View,
+	  const_cast<Real*>(reinterp_var_sets[p]), numVars);
+	t1_coeff_p_mm = value(c_vars) - mean_1;
+	const RealVector& t1_coeff_grad_p = (insert) ?
+	  gradient_nonbasis_variables(c_vars) : empty_rv;
+	for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
+	  deriv_index = dvv[d] - 1; // OK since we are in an "All" view
+	  tpVarianceGrad[d] += (randomVarsKey[deriv_index]) ?
+	    // ---------------------------------------------------------------
+	    // deriv of All var expansion w.r.t. random var (design insertion)
+	    // ---------------------------------------------------------------
+	    // d/dx[(R-mu)^2] = 2(R-mu)(dR/dx - dmu/dx)
+	    2. * t1_coeff_p_mm * (t1_coeff_grad_p[insert_cntr++] - mean_grad[d])
+	      * type1_interpolant_value(x, key_p, reinterp_lev_index,
+					nonRandomIndices)
+	      * type1_weight(key_p, reinterp_lev_index, randomIndices) :
+	    // ---------------------------------------------------------------
+	    // deriv of All var exp w.r.t. nonrandom var (design augmentation)
+	    // ---------------------------------------------------------------
+	    t1_coeff_p_mm * t1_coeff_p_mm
+	      * type1_interpolant_gradient(x, deriv_index, key_p,
+					   reinterp_lev_index, nonRandomIndices)
+	      * type1_weight(key_p, reinterp_lev_index, randomIndices);
+	}
+      }
+#endif // HORNER
     }
     break;
   }
@@ -1663,6 +1618,329 @@ tensor_product_variance_gradient(const RealVector& x,
   }
 
   return tpVarianceGrad;
+}
+
+
+void NodalInterpPolyApproximation::
+accumulate_barycentric(RealVector& t1_accumulator, const UShortArray& lev_index,
+		       const UShortArray& key_p)
+{
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  unsigned short li_v; size_t v, ei_v; unsigned short key_pv;
+  // accumulate sums over variables with max key value
+  for (v=1; v<numVars; ++v) {
+    li_v = lev_index[v]; key_pv = key_p[v];
+    BasisPolynomial& poly_v = polynomialBasis[li_v][v];
+    if (li_v == 0) // single integration/interpolation weight = 1
+      t1_accumulator[v]  = t1_accumulator[v-1];
+    else if (randomVarsKey[v]) // integration
+      t1_accumulator[v] += t1_accumulator[v-1] * t1_wts_1d[li_v][v][key_pv];
+    else { 
+      ei_v = poly_v.exact_index();
+      if (ei_v == _NPOS)        // interpolation without exact match
+	t1_accumulator[v] += t1_accumulator[v-1] *
+	  poly_v.barycentric_value_factor(key_pv);
+      else if (ei_v == key_pv)  // interpolation with exact match
+	t1_accumulator[v]  = t1_accumulator[v-1];
+    }
+    t1_accumulator[v-1] = 0.;
+    if (key_pv + 1 != poly_v.interpolation_size())
+      break;
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+accumulate_horners(RealVector& t1_accumulator, const UShortArray& lev_index,
+		   const UShortArray& key_p, const RealVector& x)
+{
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  unsigned short li_v, key_pv;
+  // accumulate sums over variables with max key value
+  for (size_t v=1; v<numVars; ++v) {
+    li_v = lev_index[v]; key_pv = key_p[v];
+    BasisPolynomial& poly_v = polynomialBasis[li_v][v];
+    if (li_v == 0)   // single integration/interpolation weight = 1
+      t1_accumulator[v]  = t1_accumulator[v-1];
+    else
+      t1_accumulator[v] += (randomVarsKey[v]) ?
+	t1_accumulator[v-1] * t1_wts_1d[li_v][v][key_pv] : // integration
+	t1_accumulator[v-1] * poly_v.type1_value(x[v], key_pv); // interp
+    t1_accumulator[v-1] = 0.;
+    if (key_pv + 1 != poly_v.interpolation_size())
+      break;
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+accumulate_horners(RealVector& t1_accumulator, RealMatrix& t2_accumulator,
+		   const UShortArray& lev_index, const UShortArray& key_p,
+		   const RealVector& x)
+{
+  Real *t2_accum_v, *t2_accum_vm1, t1_val, t1_wt;
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
+  unsigned short li_v; size_t v, vm1, k; unsigned short key_pv;
+  // accumulate sums over variables with max key value
+  for (v=1; v<numVars; ++v) {
+    li_v = lev_index[v]; key_pv = key_p[v]; vm1 = v-1;
+    t2_accum_v = t2_accumulator[v]; t2_accum_vm1 = t2_accumulator[vm1];
+    BasisPolynomial& poly_v = polynomialBasis[li_v][v];
+    if (randomVarsKey[v]) { // integration
+      if (li_v == 0) {
+	t1_accumulator[v]  = t1_accumulator[vm1];       // t1 weight is 1
+	//t2_accum_v[v]    = 0.;                        // t2 weight is 0
+	for (k=0; k<numVars; ++k)
+	  if (k != v)
+	    t2_accum_v[k]  = t2_accum_vm1[k];           // t1 weight is 1
+      }
+      else {
+	t1_wt = t1_wts_1d[li_v][v][key_pv];
+	t1_accumulator[v] += t1_accumulator[vm1] * t1_wt;
+	t2_accum_v[v]     += t2_accum_vm1[v] * t2_wts_1d[li_v][v][key_pv];
+	for (k=0; k<numVars; ++k)
+	  if (k != v)
+	    t2_accum_v[k] += t2_accum_vm1[k] * t1_wt;
+      }
+    }
+    else {                  // interpolation
+      if (li_v == 0) {
+	t1_accumulator[v] = t1_accumulator[vm1];         // t1 value is 1
+	t2_accum_v[v] = t2_accum_vm1[v] * poly_v.type2_value(x[v],key_pv);
+	for (k=0; k<numVars; ++k)
+	  if (k != v)
+	    t2_accum_v[k] = t2_accum_vm1[k];             // t1 value is 1
+      }
+      else {
+	t1_val = poly_v.type1_value(x[v], key_pv);
+	t1_accumulator[v] += t1_accumulator[vm1] * t1_val;
+	t2_accum_v[v]     += t2_accum_vm1[v] *
+	  poly_v.type2_value(x[v], key_pv);
+	for (k=0; k<numVars; ++k)
+	  if (k != v)
+	    t2_accum_v[k] += t2_accum_vm1[k] * t1_val;
+      }
+    }
+    t1_accumulator[vm1] = 0.;
+    for (k=0; k<numVars; ++k)
+      t2_accum_vm1[k] = 0.;
+    if (key_pv + 1 != poly_v.interpolation_size())
+      break;
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+accumulate_barycentric_gradient(RealMatrix& t1_accumulator,
+				const UShortArray& lev_index,
+				const UShortArray& key_p, const SizetArray& dvv)
+{
+  // accumulate sums over variables with max key value
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  Real *accum_v, *accum_vm1, t1_wt_v, bc_vf_v, bc_gf_v;
+  size_t v, d, ei_v, num_deriv_vars = dvv.size();
+  unsigned short li_v, key_pv;
+  for (v=1; v<numVars; ++v) {
+    li_v    = lev_index[v];      key_pv    = key_p[v];
+    accum_v = t1_accumulator[v]; accum_vm1 = t1_accumulator[v-1];
+    BasisPolynomial& poly_v = polynomialBasis[li_v][v];
+    if (randomVarsKey[v]) { // cases 1,2
+      if (li_v) {
+	t1_wt_v = t1_wts_1d[li_v][v][key_pv];
+	for (d=0; d<num_deriv_vars; ++d)
+	  { accum_v[d] += accum_vm1[d] * t1_wt_v; accum_vm1[d] = 0.; }
+      }
+      else // t1 weight is 1
+	for (d=0; d<num_deriv_vars; ++d)
+	  { accum_v[d]  = accum_vm1[d];           accum_vm1[d] = 0.; }
+    }
+    else if (li_v) {
+      ei_v = poly_v.exact_index();
+      bc_gf_v = poly_v.barycentric_gradient_factor(key_pv);
+      if (ei_v == _NPOS) { // bc_vf_v has general value
+	bc_vf_v = poly_v.barycentric_value_factor(key_pv);
+	for (d=0; d<num_deriv_vars; ++d) {
+	  accum_v[d] += (v == dvv[d] - 1) ? accum_vm1[d] * bc_gf_v
+	    : accum_vm1[d] * bc_vf_v;
+	  accum_vm1[d] = 0.;
+	}
+      }
+      else if (ei_v == key_pv) // bc_vf_v is 1
+	for (d=0; d<num_deriv_vars; ++d) {
+	  accum_v[d] += (v == dvv[d] - 1) ? accum_vm1[d] * bc_gf_v
+	    : accum_vm1[d];
+	  accum_vm1[d] = 0.;
+	}
+      else // bc_vf_v is 0
+	for (d=0; d<num_deriv_vars; ++d) {
+	  if (v == dvv[d] - 1) accum_v[d] += accum_vm1[d] * bc_gf_v;
+	  accum_vm1[d] = 0.;
+	}
+    }
+    else { // grad factor is zero, value factor is omitted
+      for (d=0; d<num_deriv_vars; ++d) {
+	if (v != dvv[d] - 1) accum_v[d] += accum_vm1[d];
+	accum_vm1[d] = 0.;
+      }
+    }
+    if (key_pv + 1 != poly_v.interpolation_size())
+      break;
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+accumulate_horners_gradient(RealMatrix& t1_accumulator,
+			    const UShortArray& lev_index,
+			    const UShortArray& key_p, const SizetArray& dvv,
+			    const RealVector& x)
+{
+  // accumulate sums over variables with max key value
+  unsigned short key_pv, li_v;
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  Real *accum_v, *accum_vm1, t1_wt_v, t1_val, t1_grad, xv;
+  size_t v, v2, d, num_deriv_vars = dvv.size();
+  for (v=1; v<numVars; ++v) {
+    li_v    = lev_index[v];      key_pv    = key_p[v];
+    accum_v = t1_accumulator[v]; accum_vm1 = t1_accumulator[v-1];
+    BasisPolynomial& poly_v = polynomialBasis[li_v][v];
+    if (randomVarsKey[v]) { // cases 1,2
+      if (li_v) {
+	t1_wt_v = t1_wts_1d[li_v][v][key_pv];
+	for (d=0; d<num_deriv_vars; ++d)
+	  { accum_v[d] += accum_vm1[d] * t1_wt_v; accum_vm1[d] = 0.; }
+      }
+      else // t1 weight is 1
+	for (d=0; d<num_deriv_vars; ++d)
+	  { accum_v[d]  = accum_vm1[d];           accum_vm1[d] = 0.; }
+    }
+    else if (li_v) {
+      t1_val = poly_v.type1_value(x[v], key_pv);
+      for (d=0; d<num_deriv_vars; ++d) {
+	accum_v[d] += (v == dvv[d] - 1) ?
+	  accum_vm1[d] * poly_v.type1_gradient(x[v], key_pv) :
+	  accum_vm1[d] * t1_val;
+	accum_vm1[d] = 0.;
+      }
+    }
+    else { // t1_grad is zero, t1_val is 1
+      for (d=0; d<num_deriv_vars; ++d) {
+	if (v != dvv[d] - 1) accum_v[d] += accum_vm1[d];
+	accum_vm1[d] = 0.;
+      }
+    }
+    if (key_pv + 1 != poly_v.interpolation_size())
+      break;
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+accumulate_horners_gradient(RealMatrix& t1_accumulator,
+			    RealMatrixArray& t2_accumulators,
+			    const UShortArray& lev_index,
+			    const UShortArray& key_p, const SizetArray& dvv,
+			    const RealVector& x)
+{
+  // accumulate sums over variables with max key value
+  unsigned short key_pv, li_v;
+  const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
+  const Real3DArray& t2_wts_1d = driverRep->type2_collocation_weights_1d();
+  Real *t1_accum_v, *t1_accum_vm1, *t2_accum_v, *t2_accum_vm1,
+    t1_wt_v, t2_wt_v, t1_val, t2_val, t1_grad, xv;
+  size_t v, v2, vm1, d, num_deriv_vars = dvv.size();
+  for (v=1; v<numVars; ++v) {
+    li_v = lev_index[v]; key_pv = key_p[v]; xv = x[v]; vm1 = v - 1;
+    t1_accum_v = t1_accumulator[v]; t1_accum_vm1 = t1_accumulator[vm1];
+    BasisPolynomial& poly_v = polynomialBasis[li_v][v];
+    if (randomVarsKey[v]) { // case 2
+      if (li_v) {
+	t1_wt_v = t1_wts_1d[li_v][v][key_pv];
+	t2_wt_v = t2_wts_1d[li_v][v][key_pv];
+	for (d=0; d<num_deriv_vars; ++d) {
+	  t1_accum_v[d]  += t1_accum_vm1[d] * t1_wt_v;
+	  t1_accum_vm1[d] = 0.;
+	  t2_accum_v      = t2_accumulators[d][v];
+	  t2_accum_vm1    = t2_accumulators[d][vm1];
+	  t2_accum_v[v]  += t2_accum_vm1[v] * t2_wt_v;
+	  for (v2=0; v2<numVars; ++v2) {
+	    if (v2 != v)
+	      t2_accum_v[v2] += t2_accum_vm1[v2] * t1_wt_v;
+	    t2_accum_vm1[v2]  = 0.;
+	  }
+	}
+      }
+      else { // case 2 with t1 weight = 1, t2 weight = 0
+	for (d=0; d<num_deriv_vars; ++d) {
+	  t1_accum_v[d] = t1_accum_vm1[d]; t1_accum_vm1[d] = 0.;
+	  t2_accum_v    = t2_accumulators[d][v];
+	  t2_accum_vm1  = t2_accumulators[d][vm1];
+	  t2_accum_v[v] = 0.;
+	  for (v2=0; v2<numVars; ++v2) {
+	    if (v2 != v)
+	      t2_accum_v[v2] = t2_accum_vm1[v2];
+	    t2_accum_vm1[v2] = 0.;
+	  }
+	}
+      }
+    }
+    else if (li_v) { // case 4
+      t1_val = poly_v.type1_value(xv, key_pv);
+      t2_val = poly_v.type2_value(xv, key_pv);
+      for (d=0; d<num_deriv_vars; ++d) {
+	t2_accum_v   = t2_accumulators[d][v];
+	t2_accum_vm1 = t2_accumulators[d][vm1];
+	if (dvv[d] - 1 == v) {
+	  t1_grad = poly_v.type1_gradient(xv, key_pv);
+	  t1_accum_v[d]  += t1_accum_vm1[d] * t1_grad;
+	  t1_accum_vm1[d] = 0.;
+	  t2_accum_v[v]  += t2_accum_vm1[v] *
+	    poly_v.type2_gradient(xv, key_pv);
+	  for (v2=0; v2<numVars; ++v2) {
+	    if (v2 != v)
+	      t2_accum_v[v2] += t2_accum_vm1[v2] * t1_grad;
+	    t2_accum_vm1[v2]  = 0.;
+	  }
+	}
+	else {
+	  t1_accum_v[d]  += t1_accum_vm1[d] * t1_val;
+	  t1_accum_vm1[d] = 0.;
+	  t2_accum_v[v]  += t2_accum_vm1[v] * t2_val;
+	  for (v2=0; v2<numVars; ++v2) {
+	    if (v2 != v)
+	      t2_accum_v[v2] += t2_accum_vm1[v2] * t1_val;
+	    t2_accum_vm1[v2]  = 0.;
+	  }
+	}
+      }
+    }
+    else { // case 4 with t1_val = 1., t1_grad = 0., t2_grad = 1
+      t2_val = poly_v.type2_value(xv, key_pv);
+      for (d=0; d<num_deriv_vars; ++d) {
+	t2_accum_v   = t2_accumulators[d][v];
+	t2_accum_vm1 = t2_accumulators[d][vm1];
+	if (dvv[d] - 1 == v) {
+	  t1_accum_v[d] = t1_accum_vm1[d] = 0.;
+	  t2_accum_v[v] = t2_accum_vm1[v];
+	  for (v2=0; v2<numVars; ++v2) {
+	    if (v2 != v) t2_accum_v[v2] = 0.;
+	    t2_accum_vm1[v2] = 0.;
+	  }
+	}
+	else {
+	  t1_accum_v[d] = t1_accum_vm1[d]; t1_accum_vm1[d] = 0.;
+	  t2_accum_v[v] = t2_accum_vm1[v] * t2_val;
+	  for (v2=0; v2<numVars; ++v2) {
+	    if (v2 != v) t2_accum_v[v2] = t2_accum_vm1[v2];
+	    t2_accum_vm1[v2] = 0.;
+	  }
+	}
+      }
+    }
+    if (key_pv + 1 != poly_v.interpolation_size())
+      break;
+  }
 }
 
 
