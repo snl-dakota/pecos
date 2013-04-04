@@ -1436,7 +1436,6 @@ tensor_product_variance_gradient(const RealVector& x,
       BasisPolynomial&      poly_0 = polynomialBasis[rli_0][0];
       const Real3DArray& t1_wts_1d = driverRep->type1_collocation_weights_1d();
       const RealArray&   t1_wts_0  = t1_wts_1d[rli_0][0];
-      size_t ei_0 = poly_0.exact_index();
       unsigned short max0 = poly_0.interpolation_size() - 1;
       RealMatrix accumulator(num_deriv_vars, numVars); // init to 0.
       Real *accum_0 = accumulator[0], t1_coeff_p_mm, t1_wt_00, t1_val,
@@ -1474,10 +1473,8 @@ tensor_product_variance_gradient(const RealVector& x,
 	  if (rli_0) { // t1 grad is 0., t1 value is 1
 	    t1_val = poly_0.type1_value(x0, key_p0);
 	    if (insert) prod1  = 2. * t1_coeff_p_mm * t1_val;
-	    if (augment) {
-	      prod2 = t1_coeff_p_mm * t1_coeff_p_mm;
-	      if (ei_0 == _NPOS) prod3 = prod2 * t1_val;
-	    }
+	    if (augment)
+	      { prod2 = t1_coeff_p_mm * t1_coeff_p_mm; prod3 = prod2 * t1_val; }
 	    for (d=0, insert_cntr=0; d<num_deriv_vars; ++d) {
 	      deriv_index = dvv[d] - 1;
 	      if (randomVarsKey[deriv_index])                         // case 3
