@@ -1279,7 +1279,8 @@ tensor_product_variance_gradient(const RealVector& x,
 	  accumulate_barycentric_gradient(accumulator, reinterp_lev_index,
 					  key_p, dvv);
       }
-      Real  scale = barycentric_gradient_scaling(lev_index, nonRandomIndices);
+      Real  scale
+	= barycentric_gradient_scaling(reinterp_lev_index, nonRandomIndices);
       Real* accum = accumulator[numVars-1];
       for (d=0; d<num_deriv_vars; ++d)
 	tpVarianceGrad[d] = accum[d] * scale;
@@ -1389,7 +1390,7 @@ tensor_product_variance_gradient(const RealVector& x,
 	}
 	if (key_p0 == max0)
 	  accumulate_horners_gradient(t1_accumulator, t2_accumulators,
-				      lev_index, key_p, dvv, x);
+				      reinterp_lev_index, key_p, dvv, x);
       }
       Real *t1_accum = t1_accumulator[numVars-1], *t2_accum;
       for (d=0; d<num_deriv_vars; ++d) {
@@ -1500,7 +1501,8 @@ tensor_product_variance_gradient(const RealVector& x,
 	  }
 	}
 	if (key_p0 == max0)
-	  accumulate_horners_gradient(accumulator, lev_index, key_p, dvv, x);
+	  accumulate_horners_gradient(accumulator, reinterp_lev_index,
+				      key_p, dvv, x);
       }
       copy_data(accumulator[numVars-1], (int)num_deriv_vars, tpVarianceGrad);
 #else
