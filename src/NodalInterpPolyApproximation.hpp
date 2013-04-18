@@ -272,7 +272,7 @@ private:
 inline NodalInterpPolyApproximation::
 NodalInterpPolyApproximation(short basis_type, size_t num_vars,
 			     bool use_derivs):
-  InterpPolyApproximation(basis_type, num_vars, use_derivs)
+  InterpPolyApproximation(basis_type, num_vars, use_derivs)//,
   // These 3 compile-time options are relevant for all-variables covariance
   // involving expectations over variable subsets.  Covariance for hierarchical
   // interpolants, nodal covariance in the standard view mode, uses of

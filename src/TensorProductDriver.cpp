@@ -181,15 +181,34 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
       reinterp_quad_order.resize(numVars);
     }
 
-    SizetList::const_iterator cit = reinterp_indices.begin(); size_t i;
-    for (i=0; i<numVars; ++i) {
+    SizetList::const_iterator cit = reinterp_indices.begin();
+    for (size_t i=0; i<numVars; ++i) {
       if (cit != reinterp_indices.end() && i == *cit) { // reinterpolated index
-	// quadrature order goal doubles the order of corresponding interpolant
-	unsigned short quad_goal = 2*quadOrder[i] - 1;
-	// satisfy nestedness constraints, if any
-	quadrature_goal_to_nested_quadrature_order(i, quad_goal,
-						   reinterp_quad_order[i]);
-	// update the interpolation level corresponding to this quad order
+	switch (collocRules[i]) {
+	// Note: stick with standard nonlinear progression, even though
+	//       CC/NC/F2 could admit other options.
+	case CLENSHAW_CURTIS: case NEWTON_COTES: // 1, 3, 5, 9 = 2^i+1
+	  reinterp_quad_order[i] = (quadOrder[i] == 1) ? 3 : 2*quadOrder[i] - 1;
+	  break;
+	case GAUSS_PATTERSON: case FEJER2: // 1, 3, 7, 15 = 2^{i+1}-1
+	  reinterp_quad_order[i] = 2*quadOrder[i] + 1;
+	  break;
+	case GENZ_KEISTER: {
+	  size_t index = find_index(orderGenzKeister, quadOrder[i]);
+	  if (index < orderGenzKeister.size() - 1) // also manages _NPOS
+	    reinterp_quad_order[i] = orderGenzKeister[++index];
+	  else {
+	    PCerr << "Error: Genz-Keister lookup failure in TensorProductDriver"
+		  << "::reinterpolated_tensor_grid()." << std::endl;
+	    abort_handler(-1);
+	  }
+	  break;
+	}
+	default: // Gauss rules
+	  // interp order = m-1; doubled interp order = 2m-2 = (2m-1)-1;
+	  // so a reinterp quad order of 2m-1 doubles the interpolant order:
+	  reinterp_quad_order[i] = 2*quadOrder[i] - 1;
+	}
 	reinterp_lev_index[i] = reinterp_quad_order[i] - 1;
 	// advance to the next reinterp index
 	++cit;

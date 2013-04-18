@@ -40,15 +40,15 @@ int HierarchSparseGridDriver::grid_size()
     else {
       update_smolyak_multi_index();
       // rather than full collocKey update, just sum grid sizes:
-      UShortArray delta_size(numVars);
+      UShortArray delta_sizes(numVars);
       unsigned short lev, set, num_sets;
       for (lev=0; lev<=ssgLevel; ++lev) {
 	UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
 	num_sets = sm_mi_l.size();
 	for (set=0; set<num_sets; ++set) {
-	  levels_to_delta_size(sm_mi_l[set], delta_size);
+	  levels_to_delta_sizes(sm_mi_l[set], delta_sizes);
 	  numCollocPts +=
-	    PolynomialApproximation::tensor_product_terms(delta_size, false);
+	    PolynomialApproximation::tensor_product_terms(delta_sizes, false);
 	}
       }
     }
@@ -158,16 +158,16 @@ void HierarchSparseGridDriver::assign_collocation_key()
   collocKey.resize(ssgLevel+1);
   if (nestedGrid) {
     size_t lev, set, num_sets;
-    UShort2DArray delta_quad(numVars);
+    UShort2DArray delta_keys(numVars);
     for (lev=0; lev<=ssgLevel; ++lev) {
       const UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
       UShort3DArray&         key_l = collocKey[lev];
       num_sets = sm_mi_l.size();
       key_l.resize(num_sets);
       for (set=0; set<num_sets; ++set) {
-	levels_to_delta_order(sm_mi_l[set], delta_quad);
+	levels_to_delta_keys(sm_mi_l[set], delta_keys);
 	PolynomialApproximation::hierarchical_tensor_product_multi_index(
-	  delta_quad, key_l[set]);
+	  delta_keys, key_l[set]);
       }
     }
   }
@@ -195,15 +195,15 @@ void HierarchSparseGridDriver::update_collocation_key()
   size_t sm_mi_len = smolyakMultiIndex.size();
   if (collocKey.size() < sm_mi_len)
     collocKey.resize(sm_mi_len);
-  UShort2DArray delta_quad(numVars), key_ls;
+  UShort2DArray delta_keys(numVars), key_ls;
   if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
-    levels_to_delta_order(trial_set(), delta_quad);
+    levels_to_delta_keys(trial_set(), delta_keys);
 
     UShort3DArray& key_l = collocKey[trialLevel];
     size_t set = key_l.size();
     key_l.push_back(key_ls); // update in place
     PolynomialApproximation::hierarchical_tensor_product_multi_index(
-      delta_quad, key_l[set]);
+      delta_keys, key_l[set]);
 
 #ifdef DEBUG
     PCout << "HierarchSparseGridDriver::update_collocation_key():\n";
@@ -225,10 +225,10 @@ void HierarchSparseGridDriver::update_collocation_key()
       UShort3DArray&   key_l = collocKey[lev];
       start_set = incrementSets[lev]; num_sets = sm_mi_l.size();
       for (set=start_set; set<num_sets; ++set) {
-	levels_to_delta_order(sm_mi_l[set], delta_quad);
+	levels_to_delta_keys(sm_mi_l[set], delta_keys);
 	key_l.push_back(key_ls); // update in place
 	PolynomialApproximation::hierarchical_tensor_product_multi_index(
-	  delta_quad, key_l[set]);
+	  delta_keys, key_l[set]);
       }
     }
 
@@ -341,95 +341,120 @@ void HierarchSparseGridDriver::update_collocation_indices()
 }
 
 
-void HierarchSparseGridDriver::
-levels_to_delta_size(const UShortArray& levels, UShortArray& delta_size)
+unsigned short HierarchSparseGridDriver::
+level_to_delta_size(size_t i, unsigned short level)
 {
-  size_t i, num_lev = levels.size();
-  if (delta_size.size() != num_lev)
-    delta_size.resize(num_lev);
-  for (i=0; i<num_lev; ++i)
-    level_to_delta_size(i, levels[i], delta_size[i]);
-}
-
-
-void HierarchSparseGridDriver::
-level_to_delta_size(size_t i, unsigned short level, unsigned short& num_delta)
-{
+  unsigned short num_delta;
   level_to_order(i, level, num_delta);
   if (level > 0) {
     unsigned short ord_lm1;
     level_to_order(i, level-1, ord_lm1);
     num_delta -= ord_lm1; // Note: num_delta = 0 in case of growth restriction
   }
+  return num_delta;
 }
 
 
 void HierarchSparseGridDriver::
-levels_to_delta_order(const UShortArray& levels, UShort2DArray& delta_quad)
+level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
 {
-  size_t i, j, num_lev = levels.size();
-  if (delta_quad.size() != num_lev)
-    delta_quad.resize(num_lev);
-  for (i=0; i<num_lev; ++i) {
-    unsigned short num_delta, lev_i = levels[i];
-    level_to_delta_size(i, lev_i, num_delta);
-    UShortArray& delta_quad_i = delta_quad[i];
-    delta_quad_i.resize(num_delta);
-    switch(collocRules[i]) {
-    case GAUSS_PATTERSON: // open nested
-      for (j=0; j<num_delta; ++j)
-	delta_quad_i[j] = 2*j; // new ends + new interior: 0,2,4,6,8,...
-      break;
-    case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
-      switch (lev_i) { // growth restriction should not occur for lev_i = 0 or 1
-      case 0: delta_quad_i[0] = 0;                      break; // center of 1 pt
-      case 1: delta_quad_i[0] = 0; delta_quad_i[1] = 2; break; // ends of 3 pt
-      default:
-	for (j=0; j<num_delta; ++j)
-	  delta_quad_i[j] = 2*j+1; // new interior: 1,3,5,7,9,...
-	break;
-      }
-      break;
-    case GENZ_KEISTER: // open nested table lookup
-      // switch on num_delta i/o lev_i due to possibility of growth restriction
-      switch (num_delta) {
-      case 1: delta_quad_i[0] = 0;                      break; // center of 1 pt
-      case 2: delta_quad_i[0] = 0; delta_quad_i[1] = 2; break; // ends of 3 pt
-      case 6:
-	delta_quad_i[0] = 0; delta_quad_i[1] = 1; delta_quad_i[2] = 3;
-	delta_quad_i[3] = 5; delta_quad_i[4] = 7; delta_quad_i[5] = 8;
-	break; // 9 pt rule reusing 2, 4 (center), 6
-      case 10:
-	delta_quad_i[0] =  0; delta_quad_i[1] =  1; delta_quad_i[2] =  3;
-	delta_quad_i[3] =  5; delta_quad_i[4] =  7; delta_quad_i[5] = 11;
-	delta_quad_i[6] = 13; delta_quad_i[7] = 15; delta_quad_i[8] = 17;
-	delta_quad_i[9] = 18;
-	break; // 19 pt rule reusing 
-      case 16:
-	delta_quad_i[0]  =  0; delta_quad_i[1]  =  1; delta_quad_i[2]  =  2;
-	delta_quad_i[3]  =  4; delta_quad_i[4]  =  6; delta_quad_i[5]  =  8;
-	delta_quad_i[6]  = 12; delta_quad_i[7]  = 16; delta_quad_i[8]  = 18;
-	delta_quad_i[9]  = 22; delta_quad_i[10] = 26; delta_quad_i[11] = 28;
-	delta_quad_i[12] = 30; delta_quad_i[13] = 32; delta_quad_i[14] = 33;
-	delta_quad_i[15] = 34;
-	break; // 35 pt rule reusing
-               // 3,5,7,9,10,11,13,14,15,17,19,20,21,23,24,25,27,29,31
-      //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
-      //  break; // disallow for hierarchical interpolation
-      default:
-	PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
-	      << "HierarchSparseGridDriver::levels_to_delta_order()"
-	      << std::endl;
-	abort_handler(-1);
-	break;
-      }
-      break;
+  unsigned short num_delta = level_to_delta_size(i, lev_i);
+  delta_key_i.resize(num_delta);
+  switch(collocRules[i]) {
+  case GAUSS_PATTERSON: // open nested
+    for (size_t j=0; j<num_delta; ++j)
+      delta_key_i[j] = 2*j; // new ends + new interior: 0,2,4,6,8,...
+    break;
+  case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
+    switch (lev_i) { // growth restriction should not occur for lev_i = 0 or 1
+    case 0: delta_key_i[0] = 0;                      break; // center of 1 pt
+    case 1: delta_key_i[0] = 0; delta_key_i[1] = 2; break; // ends of 3 pt
     default:
-      PCerr << "Error: bad rule type in levels_to_delta_order()" << std::endl;
+      for (size_t j=0; j<num_delta; ++j)
+	delta_key_i[j] = 2*j+1; // new interior: 1,3,5,7,9,...
+      break;
+    }
+    break;
+  case GENZ_KEISTER: // open nested table lookup
+    // switch on num_delta i/o lev_i due to possibility of growth restriction
+    switch (num_delta) {
+    case 1: delta_key_i[0] = 0;                      break; // center of 1 pt
+    case 2: delta_key_i[0] = 0; delta_key_i[1] = 2; break; // ends of 3 pt
+    case 6:
+      delta_key_i[0] = 0; delta_key_i[1] = 1; delta_key_i[2] = 3;
+      delta_key_i[3] = 5; delta_key_i[4] = 7; delta_key_i[5] = 8;
+      break; // 9 pt rule reusing 2, 4 (center), 6
+    case 10:
+      delta_key_i[0] =  0; delta_key_i[1] =  1; delta_key_i[2] =  3;
+      delta_key_i[3] =  5; delta_key_i[4] =  7; delta_key_i[5] = 11;
+      delta_key_i[6] = 13; delta_key_i[7] = 15; delta_key_i[8] = 17;
+      delta_key_i[9] = 18;
+      break; // 19 pt rule reusing 
+    case 16:
+      delta_key_i[0]  =  0; delta_key_i[1]  =  1; delta_key_i[2]  =  2;
+      delta_key_i[3]  =  4; delta_key_i[4]  =  6; delta_key_i[5]  =  8;
+      delta_key_i[6]  = 12; delta_key_i[7]  = 16; delta_key_i[8]  = 18;
+      delta_key_i[9]  = 22; delta_key_i[10] = 26; delta_key_i[11] = 28;
+      delta_key_i[12] = 30; delta_key_i[13] = 32; delta_key_i[14] = 33;
+      delta_key_i[15] = 34;
+      break; // 35 pt rule reusing
+      // 3,5,7,9,10,11,13,14,15,17,19,20,21,23,24,25,27,29,31
+    //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
+    //  break; // disallow for hierarchical interpolation
+    default:
+      PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
+	    << "HierarchSparseGridDriver::level_to_delta_key()"
+	    << std::endl;
       abort_handler(-1);
       break;
     }
+    break;
+  default:
+    PCerr << "Error: bad rule type in level_to_delta_key()" << std::endl;
+    abort_handler(-1);
+    break;
   }
+}
+
+
+unsigned short HierarchSparseGridDriver::
+level_to_max_delta_key(size_t i, unsigned short lev_i)
+{
+  unsigned short max_key_i;
+  switch(collocRules[i]) {
+  case GAUSS_PATTERSON:                    // open nested
+    max_key_i = 2 * level_to_delta_size(i, lev_i) - 2; break;    // new exterior
+  case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
+    switch (lev_i) { // growth restriction should not occur for lev_i = 0 or 1
+    case 0:  max_key_i = 0; break; // center of 1 pt
+    case 1:  max_key_i = 2; break; // ends of 3 pt
+    default: max_key_i = 2 * level_to_delta_size(i, lev_i) - 1; break;//interior
+    }
+    break;
+  case GENZ_KEISTER: // open nested table lookup
+    // switch on num_delta i/o lev_i due to possibility of growth restriction
+    switch (level_to_delta_size(i, lev_i)) {
+    case  1: max_key_i =  0; break; // center of 1 pt
+    case  2: max_key_i =  2; break; // end of 3 pt
+    case  6: max_key_i =  8; break; // 9 pt rule
+    case 10: max_key_i = 18; break; // 19 pt rule
+    case 16: max_key_i = 34; break; // 35 pt rule
+    //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
+    //  break; // disallow for hierarchical interpolation
+    default:
+      PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
+	    << "HierarchSparseGridDriver::level_to_max_delta_key()"
+	    << std::endl;
+      abort_handler(-1);
+      break;
+    }
+    break;
+  default:
+    PCerr << "Error: bad rule type in level_to_max_delta_key()" << std::endl;
+    abort_handler(-1);
+    break;
+  }
+  return max_key_i;
 }
 
 

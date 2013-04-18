@@ -647,10 +647,15 @@ standardize_moments(const RealVector& central_moments, RealVector& std_moments)
     if (num_moments > 3)
       std_moments[3] -= 3.;
   }
-  // special case of zero variance is OK for num_moments == 2, but not higher
-  else if ( !(num_moments == 2 && var == 0.) ) // std_dev OK for var == 0.
-    PCerr << "Warning: moments cannot be standardized due to non-positive "
-	  << "variance.\n         Skipping standardization." << std::endl;
+  else {
+    // don't leave uninitialized, even if undefined
+    for (size_t i=1; i<num_moments; ++i)
+      std_moments[i] = 0.;
+    // special case of zero variance is OK for num_moments == 2, but not higher
+    if ( !(num_moments == 2 && var == 0.) ) // std_dev OK for var == 0.
+      PCerr << "Warning: moments cannot be standardized due to non-positive "
+	    << "variance.\n         Skipping standardization." << std::endl;
+  }
 }
 
 

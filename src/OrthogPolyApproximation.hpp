@@ -182,6 +182,12 @@ private:
   //- Heading: Member functions
   //
 
+  /// Perform efficient calculation of tensor-product value via Horner's rule
+  Real tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
+			    const UShortArray& lev_index,
+			    const UShort2DArray& tp_mi,
+			    RealVector& accumulator);
+
   /// initialize multi_index using a sparse grid expansion
   void sparse_grid_multi_index(UShort2DArray& multi_index);
   // initialize tp_multi_index from tpMultiIndexMap

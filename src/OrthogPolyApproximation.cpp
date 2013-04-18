@@ -616,12 +616,19 @@ void OrthogPolyApproximation::store_coefficients()
   if (expConfigOptions.expansionCoeffGradFlag)
     storedExpCoeffGrads = expansionCoeffGrads;
   switch (expConfigOptions.expCoeffsSolnApproach) { // approach-specific storage
+  case QUADRATURE: { // tensor-product expansion
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    storedLevMultiIndex.resize(1);
+    storedLevMultiIndex[0] = tpq_driver->level_index();
+    storedApproxOrder = approxOrder;
+    break;
+  }
   case COMBINED_SPARSE_GRID: { // sum of tensor-product expansions
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     storedLevMultiIndex = csg_driver->smolyak_multi_index();
     break;
   }
-  default: // tensor-product and total-order expansions
+  default: // total-order expansions
     storedApproxOrder = approxOrder;
   }
 }
@@ -2350,10 +2357,51 @@ Real OrthogPolyApproximation::value(const RealVector& x)
   }
 
   // sum expansion to get response value prediction
-  Real approx_val = 0.;
-  for (size_t i=0; i<numExpansionTerms; ++i)
-    approx_val += expansionCoeffs[i]*multivariate_polynomial(x, multiIndex[i]);
-  return approx_val;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: { // Horner's rule approach
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    RealVector accumulator(numVars); // init to 0.
+    return tensor_product_value(x, expansionCoeffs, tpq_driver->level_index(),
+				multiIndex, accumulator);
+    break;
+  }
+  case COMBINED_SPARSE_GRID: {
+    // Horner's rule approach requires storage of tpExpansionCoeffs in
+    // compute_coefficients().  For now, leave store_tp as is and use
+    // default approach if tpExpansionCoeffs is empty.
+    Real approx_val = 0.;
+    if (tpExpansionCoeffs.empty()) // most sparse grid cases
+      for (size_t i=0; i<numExpansionTerms; ++i)
+	approx_val += expansionCoeffs[i]
+	           *  multivariate_polynomial(x, multiIndex[i]);
+    else { // generalized sparse grid case
+      CombinedSparseGridDriver* csg_driver
+	= (CombinedSparseGridDriver*)driverRep;
+      const UShort2DArray& sm_mi     = csg_driver->smolyak_multi_index();
+      const IntArray&      sm_coeffs = csg_driver->smolyak_coefficients();
+      RealVector accumulator(numVars); // init to 0.
+      size_t i, num_sm_mi = sm_mi.size(); int sm_coeff;
+      for (i=0; i<num_sm_mi; ++i) {
+	sm_coeff = sm_coeffs[i];
+	if (sm_coeff) {
+	  approx_val += sm_coeff *
+	    tensor_product_value(x, tpExpansionCoeffs[i], sm_mi[i],
+				 tpMultiIndex[i], accumulator);
+	  accumulator[numVars-1] = 0.;
+	}
+      }
+    }
+    return approx_val;
+    break;
+  }
+  default: // other cases are total-order expansions
+    Real approx_val = 0.;
+    for (size_t i=0; i<numExpansionTerms; ++i)
+      approx_val += expansionCoeffs[i]
+	         *  multivariate_polynomial(x, multiIndex[i]);
+    return approx_val;
+    break;
+  }
 }
 
 
@@ -2454,11 +2502,24 @@ Real OrthogPolyApproximation::stored_value(const RealVector& x)
   }
 
   // sum expansion to get response value prediction
-  Real approx_val = 0.;
-  for (i=0; i<num_stored_terms; ++i)
-    approx_val += storedExpCoeffs[i] *
-      multivariate_polynomial(x, storedMultiIndex[i]);
-  return approx_val;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: { // Horner's rule approach
+    RealVector accumulator(numVars); // init to 0.
+    return tensor_product_value(x, storedExpCoeffs, storedLevMultiIndex[0],
+				storedMultiIndex, accumulator);
+    break;
+  }
+  // Horner's rule approach would require storage of tensor product components
+  //case COMBINED_SPARSE_GRID:
+    //break;
+  default: // other cases are total-order expansions
+    Real approx_val = 0.;
+    for (size_t i=0; i<num_stored_terms; ++i)
+      approx_val += storedExpCoeffs[i]
+	         *  multivariate_polynomial(x, storedMultiIndex[i]);
+    return approx_val;
+    break;
+  }
 }
 
 
@@ -2515,6 +2576,39 @@ stored_gradient_nonbasis_variables(const RealVector& x)
       approxGradient[j] += coeff_grad_i[j] * term_i;
   }
   return approxGradient;
+}
+
+
+Real OrthogPolyApproximation::
+tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
+		     const UShortArray& lev_index, const UShort2DArray& tp_mi,
+		     RealVector& accumulator)
+{
+  unsigned short li_0 = lev_index[0], li_j, mi_i0, mi_ij;
+  size_t i, j, num_tp_coeffs = tp_coeffs.length();
+  BasisPolynomial& poly_0 = polynomialBasis[0]; Real x0 = x[0];
+  for (i=0; i<num_tp_coeffs; ++i) {
+    const UShortArray& tp_mi_i = tp_mi[i]; mi_i0 = tp_mi_i[0];
+    if (li_0)
+      accumulator[0] += tp_coeffs[i] * poly_0.type1_value(x0, mi_i0);
+    else
+      accumulator[0]  = tp_coeffs[i];
+    if (mi_i0 == li_0) {
+      // accumulate sums over variables with max key value
+      for (j=1; j<numVars; ++j) {
+	mi_ij = tp_mi_i[j]; li_j = lev_index[j];
+	if (li_j)
+	  accumulator[j] += accumulator[j-1] *
+	    polynomialBasis[j].type1_value(x[j], mi_ij);
+	else
+	  accumulator[j]  = accumulator[j-1];
+	accumulator[j-1] = 0.;
+	if (mi_ij != li_j)
+	  break;
+      }
+    }
+  }
+  return accumulator[numVars-1];
 }
 
 

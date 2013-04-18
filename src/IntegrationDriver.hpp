@@ -75,6 +75,15 @@ public:
   /// or concatenate type2WeightSets in HierarchSparseGrid
   virtual const RealMatrix& type2_weight_sets() const;
 
+  /// compute max hierarchical quadrature key for i-th Smolyak index value
+  virtual unsigned short level_to_max_delta_key(size_t i, unsigned short lev_i);
+  /// convert the i^{th} Smolyak index into the size of a hierarchical
+  /// quadrature increment
+  virtual unsigned short level_to_delta_size(size_t i, unsigned short lev_i);
+  /// convert i^{th} Smolyak index value into a hierarchical quadrature key set
+  virtual void level_to_delta_key(size_t i, unsigned short lev_i,
+				  UShortArray& delta_key_i);
+
   //
   //- Heading: Member functions
   //

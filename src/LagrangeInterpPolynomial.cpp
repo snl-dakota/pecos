@@ -21,27 +21,27 @@ namespace Pecos {
 void LagrangeInterpPolynomial::precompute_data()
 {
   // precompute w_j for all forms of Lagrange interpolation
-  size_t i, j, num_interp_pts = interpPts.size();
+  size_t i, j, num_interp_pts = interpPts.size(); Real prod;
   if (bcWeights.empty())
-    bcWeights.resize(num_interp_pts);
-  bcWeights = 1.;
+    bcWeights.sizeUninitialized(num_interp_pts);
   for (i=0; i<num_interp_pts; ++i) {
+    prod = 1.;
     Real interp_pt_i = interpPts[i];
-    Real&    bc_wt_i = bcWeights[i];
     for (j=0; j<num_interp_pts; ++j)
       if (i != j)
-	bc_wt_i /= interp_pt_i - interpPts[j];
+	prod *= interp_pt_i - interpPts[j];
+    bcWeights[i] = 1. / prod; // prefer repeated multiplication to division
   }
 }
 
 
-/** Define the bcValueFactors (and exactIndex if needed) corresponding to x. */
-void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
+/** Shared initialization code. */
+void LagrangeInterpPolynomial::
+init_new_point(Real x, short request_order, short& compute_order)
 {
   // define compute_order from requested and available data.  If grad factors
   // are requested, value factors will also be needed (multidimensional grad
   // components involve values in non-differentiated dimensions).
-  short compute_order;
   if (x == newPoint) {
     compute_order = request_order - (newPtOrder & request_order);
     if (request_order == 2 && !(newPtOrder & 1))
@@ -51,32 +51,29 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
   }
   else {
     newPtOrder = compute_order = (request_order & 2) ? 3 : request_order;
-    newPoint   = x; exactIndex = _NPOS;
+    newPoint   = x; exactIndex = exactDeltaIndex = _NPOS;
   }
+}
+
+
+/** Define the bcValueFactors (and exactIndex if needed) corresponding to x. */
+void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
+{
+  short compute_order;
+  init_new_point(x, request_order, compute_order);
+  allocate_factors(compute_order);
 
   size_t j, num_interp_pts = interpPts.size();
-  if (bcWeights.length() != num_interp_pts) {
-    PCerr << "Error: length of precomputed bcWeights (" << bcWeights.length()
-	  << ") is inconsistent with number of collocation points ("
-	  << num_interp_pts << ")." << std::endl;
-    abort_handler(-1);
-  }
-
   /*  first form of barycentric interpolation: precompute l(x)
   diffProduct = 1.;
   for (j=0; j<num_interp_pts; ++j) {
     Real diff = newPoint - interpPts[j];
     if (diff == 0.)
-      { exactIndex = j; break; }
+      { exactIndex = exactDeltaIndex = j; break; }
     else
       diffProduct *= diff;
   }
   */
-
-  if ( (compute_order & 1) && bcValueFactors.length() != num_interp_pts)
-    bcValueFactors.sizeUninitialized(num_interp_pts);
-  if ( (compute_order & 2) && bcGradFactors.length()  != num_interp_pts)
-    bcGradFactors.sizeUninitialized(num_interp_pts);
 
   // second form of barycentric interpolation: precompute value factors and
   // grad factor terms or identify exactIndex
@@ -87,7 +84,7 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
     for (j=0; j<num_interp_pts; ++j) {
       diffs[j] = newPoint - interpPts[j];
       if (diffs[j] == 0.) // no tolerance needed due to favorable stability
-	{ exactIndex = j; break; }
+	{ exactIndex = exactDeltaIndex = j; break; }
     }
 
     // now compute value factors and grad factor terms based on exactIndex
@@ -117,6 +114,76 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
       for (j=0; j<num_interp_pts; ++j) // bcValueFactors must be available
 	bcGradFactors[j] = bcValueFactors[j] // * diffProduct
 	  * (diff_inv_sum - 1. / diffs[j]); // back out jth inverse diff
+    else { // Berrut and Trefethen, 2004
+      // for this case, bcGradFactors are the actual gradient values
+      // and no diffProduct scaling needs to be subsequently applied
+      bcGradFactors[exactIndex] = 0.;
+      for (j=0; j<num_interp_pts; ++j)
+	if (j != exactIndex)
+	  bcGradFactors[exactIndex] -= bcGradFactors[j] = bcWeights[j]
+	    / bcWeights[exactIndex] / (interpPts[exactIndex] - interpPts[j]);
+    }
+  }
+}
+
+
+/** Define the bcValueFactors (and exactIndex if needed) corresponding to x. */
+void LagrangeInterpPolynomial::
+set_new_point(Real x, short request_order, const UShortArray& delta_key)
+{
+  short compute_order;
+  // TO DO: capture change in delta_key...
+  // Note: no longer any reuse --> just move code cases here and encapsulate
+  //       any lower level shared logic
+  init_new_point(x, request_order, compute_order);//, delta_key);
+  allocate_factors(compute_order);
+
+  // second form of barycentric interpolation: precompute value factors and
+  // grad factor terms or identify exactIndex
+  size_t j, vj, num_interp_pts = interpPts.size(),
+    num_delta_pts = delta_key.size();
+  Real diff_inv_sum; RealVector diffs;
+
+  if (exactIndex == _NPOS) { // exact match may have been previously detected
+    // compute diffs vector
+    diffs.sizeUninitialized(num_interp_pts);
+    for (j=0; j<num_interp_pts; ++j)
+      diffs[j] = newPoint - interpPts[j];
+    // detect exactIndex within delta points only
+    // (see, for example, InterpPolyApproximation::barycentric_exact_index())
+    for (j=0; j<num_delta_pts; ++j)
+      if (diffs[delta_key[j]] == 0.) // no tol reqd due to favorable stability
+	{ exactDeltaIndex = j; exactIndex = vj; break; }
+
+    // now compute value factors and grad factor terms based on exactIndex
+    if (exactIndex == _NPOS) {
+      if (compute_order & 1) bcValueFactorSum = 0.;
+      if (compute_order & 2) { diffProduct = 1.; diff_inv_sum = 0.; }
+      for (j=0; j<num_interp_pts; ++j) {
+	if (compute_order & 1)
+	  bcValueFactorSum += bcValueFactors[j] = bcWeights[j] / diffs[j];
+	if (compute_order & 2)
+	  { diffProduct *= diffs[j]; diff_inv_sum += 1. / diffs[j]; }
+      }
+    }
+  }
+  // catch previous or current identification of exactIndex
+  if (exactIndex != _NPOS && (compute_order & 1)) {
+    bcValueFactors = 0.; bcValueFactors[exactIndex] = 1.;
+    //bcValueFactorSum = 1.; // not currently used if exactIndex
+  }
+
+  // second form of barycentric interpolation: precompute gradient factors
+  if (compute_order & 2) {
+    // bcGradFactors (like bcValueFactors) differ from the actual gradient
+    // values by diffProduct, which gets applied after a tensor summation
+    // using the barycentric gradient scaling.
+    if (exactIndex == _NPOS)
+      for (j=0; j<num_delta_pts; ++j) { // bcValueFactors must be available
+	vj = delta_key[j];
+	bcGradFactors[vj] = bcValueFactors[vj] // * diffProduct
+	  * (diff_inv_sum - 1. / diffs[vj]); // back out vj-th inverse diff
+      }
     else { // Berrut and Trefethen, 2004
       // for this case, bcGradFactors are the actual gradient values
       // and no diffProduct scaling needs to be subsequently applied

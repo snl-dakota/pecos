@@ -68,7 +68,10 @@ public:
   Real type1_gradient(Real x, unsigned short i);
 
   void set_new_point(Real x, short request_order);
+  void set_new_point(Real x, short request_order, const UShortArray& delta_key);
+
   size_t exact_index() const;
+  size_t exact_delta_index() const;
 
   //const RealVector& barycentric_weights() const;
   const RealVector& barycentric_value_factors() const;
@@ -91,6 +94,15 @@ protected:
 private:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// define compute order from request order and newPoint match
+  void init_new_point(Real x, short request_order, short& compute_order);
+  /// based on compute order, size barycentric value/gradient factors
+  void allocate_factors(short compute_order);
+
+  //
   //- Heading: Data
   //
 
@@ -104,8 +116,11 @@ private:
   Real newPoint;
   /// order of data that has been precomputed at newPoint
   short newPtOrder;
-  /// index of interpolation point exactly matching the interpolated value x
+  /// index of interpolation point that exactly matches the interpolated value x
   size_t exactIndex;
+  /// index within a hierarchical increment to the interpolation points that
+  /// exactly matches the interpolated value x
+  size_t exactDeltaIndex;
 
   /// product of point differences (x-x_j) for a particular newPoint x
   /// and interpPts x_j
@@ -124,13 +139,15 @@ private:
 
 
 inline LagrangeInterpPolynomial::LagrangeInterpPolynomial():
-  InterpolationPolynomial(), newPoint(DBL_MAX), exactIndex(_NPOS)
+  InterpolationPolynomial(), newPoint(DBL_MAX), exactIndex(_NPOS),
+  exactDeltaIndex(_NPOS)
 { }
 
 
 inline LagrangeInterpPolynomial::
 LagrangeInterpPolynomial(const RealArray& interp_pts):
-  InterpolationPolynomial(interp_pts), newPoint(DBL_MAX), exactIndex(_NPOS)
+  InterpolationPolynomial(interp_pts), newPoint(DBL_MAX), exactIndex(_NPOS),
+  exactDeltaIndex(_NPOS)
 { }
 
 
@@ -138,8 +155,30 @@ inline LagrangeInterpPolynomial::~LagrangeInterpPolynomial()
 { }
 
 
+/** Shared initialization code. */
+inline void LagrangeInterpPolynomial::allocate_factors(short compute_order)
+{
+  size_t num_interp_pts = interpPts.size();
+  if (bcWeights.length() != num_interp_pts) {
+    PCerr << "Error: length of precomputed bcWeights (" << bcWeights.length()
+	  << ") is inconsistent with number of collocation points ("
+	  << num_interp_pts << ")." << std::endl;
+    abort_handler(-1);
+  }
+
+  if ( (compute_order & 1) && bcValueFactors.length() != num_interp_pts)
+    bcValueFactors.sizeUninitialized(num_interp_pts);
+  if ( (compute_order & 2) && bcGradFactors.length()  != num_interp_pts)
+    bcGradFactors.sizeUninitialized(num_interp_pts);
+}
+
+
 inline size_t LagrangeInterpPolynomial::exact_index() const
 { return exactIndex; }
+
+
+inline size_t LagrangeInterpPolynomial::exact_delta_index() const
+{ return exactDeltaIndex; }
 
 
 //inline const RealVector& LagrangeInterpPolynomial::

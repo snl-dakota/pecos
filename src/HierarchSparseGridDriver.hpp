@@ -73,6 +73,11 @@ public:
   // concatenate type2WeightSets for use in abstract integration functions
   //const RealMatrix& type2_weight_sets(); // const;
 
+  unsigned short level_to_max_delta_key(size_t i, unsigned short lev_i);
+  unsigned short level_to_delta_size(size_t i, unsigned short lev_i);
+  void level_to_delta_key(size_t i, unsigned short lev_i,
+			  UShortArray& delta_key_i);
+
   //
   //- Heading: Member functions
   //
@@ -101,16 +106,13 @@ public:
   /// return type2WeightSets for use in hierarchical integration functions
   const RealMatrix2DArray& type2_weight_set_arrays() const;
 
-  /// convert a Smolyak index set into hierarchical quadrature increments
-  void levels_to_delta_order(const UShortArray& levels,
-			    UShort2DArray& delta_quad);
+  /// convert a Smolyak index set into hierarchical quadrature keys
+  void levels_to_delta_keys(const UShortArray& levels,
+			    UShort2DArray& delta_keys);
   /// convert a Smolyak index set into the sizes of hierarchical
   /// quadrature increments
-  void levels_to_delta_size(const UShortArray& levels, UShortArray& delta_size);
-  /// convert the i^{th} Smolyak index into the size of a hierarchical
-  /// quadrature increment
-  void level_to_delta_size(size_t i, unsigned short level,
-			   unsigned short& num_delta);
+  void levels_to_delta_sizes(const UShortArray& levels,
+			     UShortArray& delta_sizes);
 
 private:
 
@@ -279,6 +281,28 @@ type1_weight_set_arrays() const
 inline const RealMatrix2DArray& HierarchSparseGridDriver::
 type2_weight_set_arrays() const
 { return type2WeightSets; }
+
+
+inline void HierarchSparseGridDriver::
+levels_to_delta_sizes(const UShortArray& levels, UShortArray& delta_sizes)
+{
+  size_t i, num_lev = levels.size();
+  if (delta_sizes.size() != num_lev)
+    delta_sizes.resize(num_lev);
+  for (i=0; i<num_lev; ++i)
+    delta_sizes[i] = level_to_delta_size(i, levels[i]);
+}
+
+
+inline void HierarchSparseGridDriver::
+levels_to_delta_keys(const UShortArray& levels, UShort2DArray& delta_keys)
+{
+  size_t i, num_lev = levels.size();
+  if (delta_keys.size() != num_lev)
+    delta_keys.resize(num_lev);
+  for (i=0; i<num_lev; ++i)
+    level_to_delta_key(i, levels[i], delta_keys[i]);
+}
 
 } // namespace Pecos
 

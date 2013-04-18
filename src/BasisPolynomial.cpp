@@ -328,6 +328,19 @@ void BasisPolynomial::set_new_point(Real x, short order)
 }
 
 
+void BasisPolynomial::
+set_new_point(Real x, short order, const UShortArray& delta_key)
+{
+  if (polyRep)
+    polyRep->set_new_point(x, order, delta_key);
+  else {
+    PCerr << "Error: set_new_point(Real, short, UShortArray) not available for "
+	  << "this basis polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 size_t BasisPolynomial::exact_index() const
 {
   if (!polyRep) {
@@ -336,6 +349,17 @@ size_t BasisPolynomial::exact_index() const
     abort_handler(-1);
   }
   return polyRep->exact_index();
+}
+
+
+size_t BasisPolynomial::exact_delta_index() const
+{
+  if (!polyRep) {
+    PCerr << "Error: exact_delta_index() not available for this basis "
+	  << "polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->exact_delta_index();
 }
 
 

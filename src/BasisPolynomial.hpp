@@ -114,12 +114,18 @@ public:
   virtual const RealArray& type2_collocation_weights(unsigned short order);
 
   /// for barycentric interpolation, set the point to be interpolated
-  /// for purposes of precomputation of weight factors
+  /// for purposes of precomputation of nodal value/gradient factors
   virtual void set_new_point(Real x, short order);
-  /// if an exact match between a collocation point and the point to be
-  /// interpolated (from set_new_point()) is detected, return the index of
-  /// the matching collocation point
+  /// for barycentric interpolation, set the point to be interpolated
+  /// for purposes of precomputation of hierarchical value/gradient factors
+  virtual void set_new_point(Real x, short order, const UShortArray& delta_key);
+  /// returns the index of a collocation point that is an exact match with the
+  /// point to be interpolated (from set_new_point()) if detected (_NPOS if not)
   virtual size_t exact_index() const;
+  /// returns the index of a hierarchical increment to the interpolation
+  /// points that is an exact match with the point to be interpolated
+  /// (from set_new_point()) if detected (_NPOS if not)
+  virtual size_t exact_delta_index() const;
   /// return the barycentric value factors
   virtual const RealVector& barycentric_value_factors() const;
   /// return a particular barycentric value factor

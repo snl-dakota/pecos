@@ -2108,7 +2108,7 @@ member_coefficients_weights(const BitArray& member_bits,
     num_sets, num_tp_pts, num_member_coeffs, v_cntr, p_cntr = 0, m_index;
   Real member_wt, nonmember_wt;
   SizetArray indexing_factor; // for indexing member coeffs,wts
-  UShortArray delta_size; UShort2DArray delta_order;
+  UShortArray delta_sizes; UShort2DArray delta_keys;
   member_t1_coeffs.resize(num_levels);  member_t1_wts.resize(num_levels);
   member_t2_coeffs.resize(num_levels);  member_t2_wts.resize(num_levels);
   member_colloc_key.resize(num_levels); member_colloc_index.resize(num_levels);
@@ -2133,13 +2133,13 @@ member_coefficients_weights(const BitArray& member_bits,
       // precompute sizes and indexing factors and init member arrays
       num_tp_pts = t1_coeffs_ls.length();
       if (num_tp_pts) { // can be zero in case of growth restriction
-	hsg_driver->levels_to_delta_order(sm_mi_ls, delta_order);
-	hsg_driver->levels_to_delta_size(sm_mi_ls, delta_size);
+	hsg_driver->levels_to_delta_keys(sm_mi_ls, delta_keys);
+	hsg_driver->levels_to_delta_sizes(sm_mi_ls, delta_sizes);
 	indexing_factor.clear();
 	for (v=0, num_member_coeffs=1; v<numVars; ++v)
 	  if (member_bits[v]) {
 	    indexing_factor.push_back(num_member_coeffs); // for m_index below
-	    num_member_coeffs *= delta_size[v];
+	    num_member_coeffs *= delta_sizes[v];
 	  }
 	m_t1_coeffs_ls.size(num_member_coeffs);
 	m_t1_wts_ls.size(num_member_coeffs);
@@ -2158,7 +2158,7 @@ member_coefficients_weights(const BitArray& member_bits,
 	const UShortArray& key_lsp = colloc_key[lev][set][pt];
 	for (v=0, m_index=0, v_cntr=0; v<numVars; ++v)
 	  if (member_bits[v]) // key_lsp spans all pts, not deltas
-	    m_index += find_index(delta_order[v], key_lsp[v])
+	    m_index += find_index(delta_keys[v], key_lsp[v])
 	            *  indexing_factor[v_cntr++];
 
 	// integrate out nonmember dimensions and aggregate with type1 coeffs
