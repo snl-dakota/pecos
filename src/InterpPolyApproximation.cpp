@@ -537,28 +537,10 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
       SizetList pt_factors, act_v_set; SizetList::iterator pf_it, av_it;
       UShortArray max_keys(num_act_v), num_keys(numVars);
       tensor_product_num_keys(basis_index, num_keys);
-      size_t pts_j, num_act_pts = 1, num_pts = 1, ei_j, edi_j, pt_index = 0;
-      unsigned short bi_j;
-      // define interpolation set and initial pt_index offset
-      for (j=0; j<numVars; ++j) {
-	bi_j = basis_index[j];
-	if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
-	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-	  ei_j = poly_j.exact_index(); pts_j = num_keys[j];
-	  if (ei_j == _NPOS) { // active for interpolation
-	    pt_factors.push_back(num_pts); act_v_set.push_back(j);
-	    num_act_pts *= pts_j;
-	  }
-	  else {             // inactive for interpolation
-	    edi_j = poly_j.exact_delta_index();
-	    if (edi_j == _NPOS) // exactIndex match but not exactDeltaIndex;
-	      return 0.;        // at least one dimension has value factor = 0.
-	    else
-	      pt_index += num_pts * edi_j;
-	  }
-	  num_pts *= pts_j;
-	}
-      }
+      size_t num_act_pts, pt_index =
+	barycentric_partial_indexing(basis_index, num_keys, pt_factors,
+				     act_v_set, num_act_pts);
+      if (pt_index == _NPOS) return 0.;
       tensor_product_max_keys(basis_index, act_v_set, max_keys);
       RealVector accumulator(num_act_v); // init to 0.
       size_t i, v0 = act_v_set.front(), vj;
@@ -805,35 +787,16 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 	/ barycentric_value_scaling(basis_index, subset_indices);
     }
     else { // partial interpolation over active variables
-      unsigned short bi_j; SizetList::const_iterator cit;
       SizetList pt_factors, act_v_set; SizetList::iterator pf_it, av_it;
       UShortArray max_keys(num_act_v), num_keys(numVars);
       tensor_product_num_keys(basis_index, num_keys);
-      size_t i, j, pts_j, num_act_pts = 1, num_pts = 1, ei_j, edi_j,
-	pt_index = 0;
-      // define interpolation set and initial pt_index offset
-      for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-	j = *cit; bi_j = basis_index[j];
-	if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
-	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-	  ei_j = poly_j.exact_index(); pts_j = num_keys[j];
-	  if (ei_j == _NPOS) { // active for interpolation
-	    pt_factors.push_back(num_pts); act_v_set.push_back(j);
-	    num_act_pts *= pts_j;
-	  }
-	  else {             // inactive for interpolation
-	    edi_j = poly_j.exact_delta_index();
-	    if (edi_j == _NPOS) // exactIndex match but not exactDeltaIndex;
-	      return 0.;        // at least one dimension has value factor = 0.
-	    else
-	      pt_index += num_pts * edi_j;
-	  }
-	  num_pts *= pts_j;
-	}
-      }
+      size_t num_act_pts, pt_index = 
+	barycentric_partial_indexing(basis_index, subset_indices, num_keys,
+				     pt_factors, act_v_set, num_act_pts);
+      if (pt_index == _NPOS) return 0.;
       tensor_product_max_keys(basis_index, act_v_set, max_keys);
       RealVector accumulator(num_act_v); // init to 0.
-      size_t v0 = act_v_set.front(), vj;
+      size_t i, j, v0 = act_v_set.front(), vj;
       const RealVector& bc_vf_v0
 	= polynomialBasis[basis_index[v0]][v0].barycentric_value_factors();
       size_t pf0 = pt_factors.front(), pfj, pts_v0_pf0 = num_keys[v0] * pf0,
@@ -1419,31 +1382,13 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
       SizetList pt_factors, act_v_set; SizetList::iterator pf_it, av_it;
       UShortArray max_keys(num_act_v), num_keys(numVars);
       tensor_product_num_keys(basis_index, num_keys);
-      unsigned short bi_j;
-      size_t j, pts_j, num_act_pts = 1, num_pts = 1, ei_j, edi_j, pt_index = 0;
-      // define interpolation set and initial pt_index offset
-      for (j=0; j<numVars; ++j) {
-	bi_j = basis_index[j];
-	if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
-	  BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-	  ei_j = poly_j.exact_index(); pts_j = num_keys[j];
-	  if (ei_j == _NPOS) { // active for interpolation
-	    pt_factors.push_back(num_pts); act_v_set.push_back(j);
-	    num_act_pts *= pts_j;
-	  }
-	  else {             // inactive for interpolation
-	    edi_j = poly_j.exact_delta_index();
-	    if (edi_j == _NPOS) // exactIndex match but not exactDeltaIndex;
-	      { tpGradient = 0.; return tpGradient; }
-	    else
-	      pt_index += num_pts * edi_j;
-	  }
-	  num_pts *= pts_j;
-	}
-      }
+      size_t num_act_pts, pt_index =
+	barycentric_partial_indexing(basis_index, num_keys, pt_factors,
+				     act_v_set, num_act_pts);
+      if (pt_index == _NPOS) { tpGradient = 0.; return tpGradient; }
       tensor_product_max_keys(basis_index, act_v_set, max_keys);
       RealMatrix accumulator(num_deriv_vars, num_act_v); // init to 0.
-      size_t i, k, v0 = act_v_set.front(), vj;
+      size_t i, j, k, v0 = act_v_set.front(), vj;
       const RealVector& bc_vf_v0
 	= polynomialBasis[basis_index[v0]][v0].barycentric_value_factors();
       size_t pf0 = pt_factors.front(), pfj, pts_v0_pf0 = num_keys[v0] * pf0,

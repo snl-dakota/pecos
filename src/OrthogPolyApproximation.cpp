@@ -2383,12 +2383,10 @@ Real OrthogPolyApproximation::value(const RealVector& x)
       size_t i, num_sm_mi = sm_mi.size(); int sm_coeff;
       for (i=0; i<num_sm_mi; ++i) {
 	sm_coeff = sm_coeffs[i];
-	if (sm_coeff) {
+	if (sm_coeff)
 	  approx_val += sm_coeff *
 	    tensor_product_value(x, tpExpansionCoeffs[i], sm_mi[i],
 				 tpMultiIndex[i], accumulator);
-	  accumulator[numVars-1] = 0.;
-	}
       }
     }
     return approx_val;
@@ -2608,7 +2606,9 @@ tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
       }
     }
   }
-  return accumulator[numVars-1];
+  Real tp_val = accumulator[numVars-1];
+  accumulator[numVars-1] = 0.;
+  return tp_val;
 }
 
 

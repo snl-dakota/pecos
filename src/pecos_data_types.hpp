@@ -168,16 +168,20 @@ inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
 
 
 template <typename PecosContainerType>
-inline typename PecosContainerType::difference_type
+//inline typename PecosContainerType::difference_type
+inline size_t 
 find_index(const PecosContainerType& v,
 	   const typename PecosContainerType::value_type& val)
 {
-  /*
+  /* Two partial traversals of container may be required in this approach:
   typename PecosContainerType::const_iterator cit
     = std::find(v.begin(), v.end(), val);
   return (cit == v.end()) ? _NPOS : std::distance(v.begin(), cit);
   */
-  typename PecosContainerType::difference_type cntr = 0;
+
+  //typename PecosContainerType::difference_type cntr = 0;
+  size_t cntr = 0; // force size_t to ensure that _NPOS is valid
+
   typename PecosContainerType::const_iterator cit = v.begin();
   for (cit=v.begin(); cit!=v.end(); ++cit, ++cntr)
     if (*cit == val)

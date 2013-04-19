@@ -369,6 +369,22 @@ private:
   bool barycentric_value_factor(BasisPolynomial& pb_lv, unsigned short key_lv,
 				Real& prod);
 
+  /// shared utility for barycentric interpolation over a partial variable
+  /// subset: define pt_factors, act_v_set, num_act_pts, and return pt_index
+  size_t barycentric_partial_indexing(const UShortArray& basis_index,
+				      const UShortArray& num_keys,
+				      SizetList& pt_factors,
+				      SizetList& act_v_set,
+				      size_t& num_act_pts);
+  /// shared utility for barycentric interpolation over a partial variable
+  /// subset: define pt_factors, act_v_set, num_act_pts, and return pt_index
+  size_t barycentric_partial_indexing(const UShortArray& basis_index,
+				      const SizetList& subset_indices,
+				      const UShortArray& num_keys,
+				      SizetList& pt_factors,
+				      SizetList& act_v_set,
+				      size_t& num_act_pts);
+
   /// recursively identifies constituent subsets that are children of
   /// a parent set
   void proper_subsets(const BitArray& parent_set, BitArraySet& children);
@@ -754,6 +770,73 @@ barycentric_exact_index(const UShortArray& basis_index,
 	prod     *= poly_j.interpolation_size();
       }
     }
+  return pt_index;
+}
+
+
+inline size_t InterpPolyApproximation::
+barycentric_partial_indexing(const UShortArray& basis_index,
+			     const UShortArray& num_keys,
+			     SizetList& pt_factors, SizetList& act_v_set,
+			     size_t& num_act_pts)
+{
+  // define interpolation set and initial pt_index offset
+  size_t j, pt_index = 0, num_pts = 1, ei_j, edi_j, pts_j;
+  unsigned short bi_j;
+  num_act_pts = 1;
+  for (j=0; j<numVars; ++j) {
+    bi_j = basis_index[j];
+    if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
+      BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+      ei_j = poly_j.exact_index(); pts_j = num_keys[j];
+      if (ei_j == _NPOS) { // active for interpolation
+	pt_factors.push_back(num_pts); act_v_set.push_back(j);
+	num_act_pts *= pts_j;
+      }
+      else {             // inactive for interpolation
+	edi_j = poly_j.exact_delta_index();
+	if (edi_j == _NPOS)          // exactIndex match but not exactDeltaIndex
+	  { pt_index = _NPOS; break; }   // at least 1 dim has value factor = 0.
+	else
+	  pt_index += num_pts * edi_j;
+      }
+      num_pts *= pts_j;
+    }
+  }
+  return pt_index;
+}
+
+
+inline size_t InterpPolyApproximation::
+barycentric_partial_indexing(const UShortArray& basis_index,
+			     const SizetList& subset_indices,
+			     const UShortArray& num_keys,
+			     SizetList& pt_factors, SizetList& act_v_set,
+			     size_t& num_act_pts)
+{
+  // define interpolation set and initial pt_index offset
+  size_t j, pt_index = 0, num_pts = 1, ei_j, edi_j, pts_j;
+  unsigned short bi_j; SizetList::const_iterator cit;
+  num_act_pts = 1;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi_j = basis_index[j];
+    if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
+      BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+      ei_j = poly_j.exact_index(); pts_j = num_keys[j];
+      if (ei_j == _NPOS) { // active for interpolation
+	pt_factors.push_back(num_pts); act_v_set.push_back(j);
+	num_act_pts *= pts_j;
+      }
+      else {             // inactive for interpolation
+	edi_j = poly_j.exact_delta_index();
+	if (edi_j == _NPOS) // exactIndex match but not exactDeltaIndex;
+	  return 0.;        // at least one dimension has value factor = 0.
+	else
+	  pt_index += num_pts * edi_j;
+      }
+      num_pts *= pts_j;
+    }
+  }
   return pt_index;
 }
 
