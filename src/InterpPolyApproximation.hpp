@@ -371,19 +371,39 @@ private:
 
   /// shared utility for barycentric interpolation over a partial variable
   /// subset: define pt_factors, act_v_set, num_act_pts, and return pt_index
-  size_t barycentric_partial_indexing(const UShortArray& basis_index,
-				      const UShortArray& num_keys,
-				      SizetList& pt_factors,
-				      SizetList& act_v_set,
-				      size_t& num_act_pts);
+  void barycentric_partial_indexing(const UShortArray& basis_index,
+				    const UShortArray& num_keys,
+				    SizetList& pt_factors, SizetList& act_v_set,
+				    size_t& num_act_pts, size_t& pt_index);
   /// shared utility for barycentric interpolation over a partial variable
   /// subset: define pt_factors, act_v_set, num_act_pts, and return pt_index
-  size_t barycentric_partial_indexing(const UShortArray& basis_index,
-				      const SizetList& subset_indices,
+  void barycentric_partial_indexing(const UShortArray& basis_index,
+				    const SizetList& subset_indices,
+				    const UShortArray& num_keys,
+				    SizetList& pt_factors, SizetList& act_v_set,
+				    size_t& num_act_pts, size_t& pt_index);
+
+  /// shared code for barycentric interpolation over an active variable subset
+  void accumulate_barycentric_partial(const RealVector& t1_coeffs,
+				      const UShortArray& basis_index,
+				      const UShort2DArray& key,
+				      const SizetArray& colloc_index,
 				      const UShortArray& num_keys,
-				      SizetList& pt_factors,
-				      SizetList& act_v_set,
-				      size_t& num_act_pts);
+				      const SizetList& pt_factors,
+				      const SizetList& act_v_set,
+				      size_t num_act_pts, size_t pt_index,
+				      RealVector& accumulator);
+  /// shared code for barycentric gradient evaluation for active variable 0
+  void accumulate_barycentric_gradient(unsigned short bi0,
+				       unsigned short key_i0,
+				       size_t ei_0, Real* accum_0,
+				       Real t1_coeff, const RealVector& bc_vf_0,
+				       const RealVector& bc_gf_0);
+  /// shared code for barycentric gradient evaluation for active variables 1:n
+  void accumulate_barycentric_gradient(size_t j, unsigned short bij,
+				       unsigned short key_ij,
+				       BasisPolynomial& poly_j,
+				       RealMatrix& accumulator);
 
   /// recursively identifies constituent subsets that are children of
   /// a parent set
@@ -774,16 +794,16 @@ barycentric_exact_index(const UShortArray& basis_index,
 }
 
 
-inline size_t InterpPolyApproximation::
+inline void InterpPolyApproximation::
 barycentric_partial_indexing(const UShortArray& basis_index,
 			     const UShortArray& num_keys,
 			     SizetList& pt_factors, SizetList& act_v_set,
-			     size_t& num_act_pts)
+			     size_t& num_act_pts, size_t& pt_index)
 {
   // define interpolation set and initial pt_index offset
-  size_t j, pt_index = 0, num_pts = 1, ei_j, edi_j, pts_j;
+  size_t j, num_pts = 1, ei_j, edi_j, pts_j;
   unsigned short bi_j;
-  num_act_pts = 1;
+  num_act_pts = 1; pt_index = 0;
   for (j=0; j<numVars; ++j) {
     bi_j = basis_index[j];
     if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
@@ -803,21 +823,20 @@ barycentric_partial_indexing(const UShortArray& basis_index,
       num_pts *= pts_j;
     }
   }
-  return pt_index;
 }
 
 
-inline size_t InterpPolyApproximation::
+inline void InterpPolyApproximation::
 barycentric_partial_indexing(const UShortArray& basis_index,
 			     const SizetList& subset_indices,
 			     const UShortArray& num_keys,
 			     SizetList& pt_factors, SizetList& act_v_set,
-			     size_t& num_act_pts)
+			     size_t& num_act_pts, size_t& pt_index)
 {
   // define interpolation set and initial pt_index offset
-  size_t j, pt_index = 0, num_pts = 1, ei_j, edi_j, pts_j;
+  size_t j, num_pts = 1, ei_j, edi_j, pts_j;
   unsigned short bi_j; SizetList::const_iterator cit;
-  num_act_pts = 1;
+  num_act_pts = 1; pt_index = 0;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit; bi_j = basis_index[j];
     if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
@@ -837,7 +856,6 @@ barycentric_partial_indexing(const UShortArray& basis_index,
       num_pts *= pts_j;
     }
   }
-  return pt_index;
 }
 
 
