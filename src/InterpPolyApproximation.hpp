@@ -693,7 +693,7 @@ barycentric_active_variables(const UShortArray& basis_index,
 inline size_t InterpPolyApproximation::
 barycentric_exact_index(const UShortArray& basis_index)
 {
-  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
+  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
   // Note: if bi_j == 0, then constant interp with 1 point: we can replace this
   // constant interpolation with the value at the 1 colloc index (ei=0)
   if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
@@ -701,8 +701,13 @@ barycentric_exact_index(const UShortArray& basis_index)
     for (j=0; j<numVars; ++j) {
       bi_j = basis_index[j];
       if (bi_j) {
-	pt_index += polynomialBasis[bi_j][j].exact_delta_index() * prod;
-	prod     *= driverRep->level_to_delta_size(j, bi_j);
+	edi_j = polynomialBasis[bi_j][j].exact_delta_index();
+	if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
+	  { pt_index = _NPOS; break; }
+	else {
+	  pt_index += edi_j * prod;
+	  prod     *= driverRep->level_to_delta_size(j, bi_j);
+	}
       }
     }
   else
@@ -722,7 +727,7 @@ inline size_t InterpPolyApproximation::
 barycentric_exact_index(const UShortArray& basis_index,
 			const SizetList& subset_indices)
 {
-  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
+  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
   SizetList::const_iterator cit;
   // Note: if bi_j == 0, then constant interp with 1 point: we can replace this
   // constant interpolation with the value at the 1 colloc index (ei=0)
@@ -731,8 +736,13 @@ barycentric_exact_index(const UShortArray& basis_index,
     for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
       j = *cit; bi_j = basis_index[j];
       if (bi_j) {
-	pt_index += polynomialBasis[bi_j][j].exact_delta_index() * prod;
-	prod     *= driverRep->level_to_delta_size(j, bi_j);
+	edi_j = polynomialBasis[bi_j][j].exact_delta_index();
+	if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
+	  { pt_index = _NPOS; break; }
+	else {
+	  pt_index += edi_j * prod;
+	  prod     *= driverRep->level_to_delta_size(j, bi_j);
+	}
       }
     }
   else

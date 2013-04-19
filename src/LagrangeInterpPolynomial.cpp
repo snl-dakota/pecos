@@ -63,20 +63,9 @@ void LagrangeInterpPolynomial::set_new_point(Real x, short request_order)
   init_new_point(x, request_order, compute_order);
   allocate_factors(compute_order);
 
-  size_t j, num_interp_pts = interpPts.size();
-  /*  first form of barycentric interpolation: precompute l(x)
-  diffProduct = 1.;
-  for (j=0; j<num_interp_pts; ++j) {
-    Real diff = newPoint - interpPts[j];
-    if (diff == 0.)
-      { exactIndex = exactDeltaIndex = j; break; }
-    else
-      diffProduct *= diff;
-  }
-  */
-
   // second form of barycentric interpolation: precompute value factors and
   // grad factor terms or identify exactIndex
+  size_t j, num_interp_pts = interpPts.size();
   Real diff_inv_sum; RealVector diffs;
   if (exactIndex == _NPOS) { // exact match may have been previously detected
     // first, compute diffs vector or exactIndex
@@ -145,15 +134,17 @@ set_new_point(Real x, short request_order, const UShortArray& delta_key)
   Real diff_inv_sum; RealVector diffs;
 
   if (exactIndex == _NPOS) { // exact match may have been previously detected
-    // compute diffs vector
+    // compute diffs vector and detect exactIndex within all of interpPts
     diffs.sizeUninitialized(num_interp_pts);
-    for (j=0; j<num_interp_pts; ++j)
+    for (j=0; j<num_interp_pts; ++j) {
       diffs[j] = newPoint - interpPts[j];
-    // detect exactIndex within delta points only
+      if (diffs[j] == 0.) // no tol reqd due to favorable stability
+	{ exactIndex = j; break; }
+    }
+    // detect exactDeltaIndex within delta points only
     // (see, for example, InterpPolyApproximation::barycentric_exact_index())
-    for (j=0; j<num_delta_pts; ++j)
-      if (diffs[delta_key[j]] == 0.) // no tol reqd due to favorable stability
-	{ exactDeltaIndex = j; exactIndex = vj; break; }
+    exactDeltaIndex = (exactIndex == _NPOS) ? _NPOS :
+      find_index(delta_key, exactIndex);
 
     // now compute value factors and grad factor terms based on exactIndex
     if (exactIndex == _NPOS) {

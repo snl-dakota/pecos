@@ -172,9 +172,17 @@ inline typename PecosContainerType::difference_type
 find_index(const PecosContainerType& v,
 	   const typename PecosContainerType::value_type& val)
 {
-  typename PecosContainerType::const_iterator iter
+  /*
+  typename PecosContainerType::const_iterator cit
     = std::find(v.begin(), v.end(), val);
-  return (iter == v.end()) ? _NPOS : std::distance(v.begin(), iter);
+  return (cit == v.end()) ? _NPOS : std::distance(v.begin(), cit);
+  */
+  typename PecosContainerType::difference_type cntr = 0;
+  typename PecosContainerType::const_iterator cit = v.begin();
+  for (cit=v.begin(); cit!=v.end(); ++cit, ++cntr)
+    if (*cit == val)
+      return cntr;
+  return _NPOS;
 }
 
 
