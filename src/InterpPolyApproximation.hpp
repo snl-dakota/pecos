@@ -795,7 +795,7 @@ barycentric_partial_indexing(const UShortArray& basis_index,
       }
       else {             // inactive for interpolation
 	edi_j = poly_j.exact_delta_index();
-	if (edi_j == _NPOS)          // exactIndex match but not exactDeltaIndex
+	if (edi_j == _NPOS)         // exactIndex match but not exactDeltaIndex;
 	  { pt_index = _NPOS; break; }   // at least 1 dim has value factor = 0.
 	else
 	  pt_index += num_pts * edi_j;
@@ -829,8 +829,8 @@ barycentric_partial_indexing(const UShortArray& basis_index,
       }
       else {             // inactive for interpolation
 	edi_j = poly_j.exact_delta_index();
-	if (edi_j == _NPOS) // exactIndex match but not exactDeltaIndex;
-	  return 0.;        // at least one dimension has value factor = 0.
+	if (edi_j == _NPOS)         // exactIndex match but not exactDeltaIndex;
+	  { pt_index = _NPOS; break; }   // at least 1 dim has value factor = 0.
 	else
 	  pt_index += num_pts * edi_j;
       }
