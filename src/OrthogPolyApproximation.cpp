@@ -637,6 +637,13 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
 
   switch (storedExpCombineType) {
   case ADD_COMBINE: {
+    // Note: would like to preserve tensor indexing (at least for QUADRATURE
+    // case) so that Horner's rule performance opt could be used within
+    // tensor_product_value()).  However, a tensor result in the overlay
+    // will not occur unless one expansion order dominates the other (partial
+    // domination results in sum of tensor expansions as for sparse grids).
+    // Therefore, stick with the general-purpose expansion overlay and exclude
+    // tensor_product_value() usage for combined coefficient sets.
 
     // update multiIndex with any storedMultiIndex terms not yet included
     Sizet2DArray stored_mi_map; SizetArray stored_mi_map_ref;
@@ -647,11 +654,6 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     // update expansion{Coeffs,CoeffGrads}
     overlay_expansion(stored_mi_map.back(), storedExpCoeffs,
 		      storedExpCoeffGrads, 1);
-    // update approxOrder for tensor expansion overlay (needed for Horner's
-    // rule approach to tensor_product_value())
-    if (expConfigOptions.expCoeffsSolnApproach == QUADRATURE)
-      for (size_t i=0; i<numVars; ++i)
-	approxOrder[i] = std::max(storedApproxOrder[i], approxOrder[i]);
     break;
   }
   case MULT_COMBINE: {
@@ -2356,13 +2358,22 @@ Real OrthogPolyApproximation::value(const RealVector& x)
 
   // sum expansion to get response value prediction
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: { // Horner's rule approach
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    RealVector accumulator(numVars); // init to 0.
-    return tensor_product_value(x, expansionCoeffs, approxOrder, multiIndex,
-				accumulator);
+  case QUADRATURE:
+    if (storedExpCombineType) {
+      // combined coefficients not guaranteed to use tensor indexing
+      Real approx_val = 0.;
+      for (size_t i=0; i<numExpansionTerms; ++i)
+	approx_val += expansionCoeffs[i]
+	           *  multivariate_polynomial(x, multiIndex[i]);
+      return approx_val;
+    }
+    else { // Horner's rule approach applicable for tensor indexing
+      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+      RealVector accumulator(numVars); // init to 0.
+      return tensor_product_value(x, expansionCoeffs, approxOrder, multiIndex,
+				  accumulator);
+    }
     break;
-  }
   /*
   case COMBINED_SPARSE_GRID: {
     // Horner's rule approach requires storage of tpExpansionCoeffs in
@@ -2386,7 +2397,7 @@ Real OrthogPolyApproximation::value(const RealVector& x)
 	if (sm_coeff)
 	  approx_val += sm_coeff *
 	    tensor_product_value(x, tpExpansionCoeffs[i],
-				 tpApproxOrders[i], // *** TO DO ***
+				 tpApproxOrders[i], // TO DO
 				 tpMultiIndex[i], accumulator);
       }
     }
@@ -2504,6 +2515,8 @@ Real OrthogPolyApproximation::stored_value(const RealVector& x)
   // sum expansion to get response value prediction
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: { // Horner's rule approach
+    // Note: requires tensor indexing in storedMultiIndex (see OPA::value(x)),
+    // which is safe to assume prior to support of >2 levels of fidelity.
     RealVector accumulator(numVars); // init to 0.
     return tensor_product_value(x, storedExpCoeffs, storedApproxOrder,
 				storedMultiIndex, accumulator);
