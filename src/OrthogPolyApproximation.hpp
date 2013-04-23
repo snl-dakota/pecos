@@ -184,7 +184,7 @@ private:
 
   /// Perform efficient calculation of tensor-product value via Horner's rule
   Real tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
-			    const UShortArray& lev_index,
+			    const UShortArray& approx_order,
 			    const UShort2DArray& tp_mi,
 			    RealVector& accumulator);
 

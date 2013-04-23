@@ -616,13 +616,6 @@ void OrthogPolyApproximation::store_coefficients()
   if (expConfigOptions.expansionCoeffGradFlag)
     storedExpCoeffGrads = expansionCoeffGrads;
   switch (expConfigOptions.expCoeffsSolnApproach) { // approach-specific storage
-  case QUADRATURE: { // tensor-product expansion
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    storedLevMultiIndex.resize(1);
-    storedLevMultiIndex[0] = tpq_driver->level_index();
-    storedApproxOrder = approxOrder;
-    break;
-  }
   case COMBINED_SPARSE_GRID: { // sum of tensor-product expansions
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     storedLevMultiIndex = csg_driver->smolyak_multi_index();
@@ -654,6 +647,11 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     // update expansion{Coeffs,CoeffGrads}
     overlay_expansion(stored_mi_map.back(), storedExpCoeffs,
 		      storedExpCoeffGrads, 1);
+    // update approxOrder for tensor expansion overlay (needed for Horner's
+    // rule approach to tensor_product_value())
+    if (expConfigOptions.expCoeffsSolnApproach == QUADRATURE)
+      for (size_t i=0; i<numVars; ++i)
+	approxOrder[i] = std::max(storedApproxOrder[i], approxOrder[i]);
     break;
   }
   case MULT_COMBINE: {
@@ -2361,16 +2359,18 @@ Real OrthogPolyApproximation::value(const RealVector& x)
   case QUADRATURE: { // Horner's rule approach
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     RealVector accumulator(numVars); // init to 0.
-    return tensor_product_value(x, expansionCoeffs, tpq_driver->level_index(),
-				multiIndex, accumulator);
+    return tensor_product_value(x, expansionCoeffs, approxOrder, multiIndex,
+				accumulator);
     break;
   }
+  /*
   case COMBINED_SPARSE_GRID: {
     // Horner's rule approach requires storage of tpExpansionCoeffs in
     // compute_coefficients().  For now, leave store_tp as is and use
-    // default approach if tpExpansionCoeffs is empty.
+    // default approach if tpExpansionCoeffs is empty.  In addition,
+    // tp arrays are not currently updated for expansion combinations.
     Real approx_val = 0.;
-    if (tpExpansionCoeffs.empty()) // most sparse grid cases
+    if (tpExpansionCoeffs.empty() || storedExpCombineType) // most cases
       for (size_t i=0; i<numExpansionTerms; ++i)
 	approx_val += expansionCoeffs[i]
 	           *  multivariate_polynomial(x, multiIndex[i]);
@@ -2385,13 +2385,15 @@ Real OrthogPolyApproximation::value(const RealVector& x)
 	sm_coeff = sm_coeffs[i];
 	if (sm_coeff)
 	  approx_val += sm_coeff *
-	    tensor_product_value(x, tpExpansionCoeffs[i], sm_mi[i],
+	    tensor_product_value(x, tpExpansionCoeffs[i],
+				 tpApproxOrders[i], // *** TO DO ***
 				 tpMultiIndex[i], accumulator);
       }
     }
     return approx_val;
     break;
   }
+  */
   default: // other cases are total-order expansions
     Real approx_val = 0.;
     for (size_t i=0; i<numExpansionTerms; ++i)
@@ -2503,7 +2505,7 @@ Real OrthogPolyApproximation::stored_value(const RealVector& x)
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: { // Horner's rule approach
     RealVector accumulator(numVars); // init to 0.
-    return tensor_product_value(x, storedExpCoeffs, storedLevMultiIndex[0],
+    return tensor_product_value(x, storedExpCoeffs, storedApproxOrder,
 				storedMultiIndex, accumulator);
     break;
   }
@@ -2579,29 +2581,30 @@ stored_gradient_nonbasis_variables(const RealVector& x)
 
 Real OrthogPolyApproximation::
 tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
-		     const UShortArray& lev_index, const UShort2DArray& tp_mi,
-		     RealVector& accumulator)
+		     const UShortArray& approx_order,
+		     const UShort2DArray& tp_mi, RealVector& accumulator)
 {
-  unsigned short li_0 = lev_index[0], li_j, mi_i0, mi_ij;
+  unsigned short ao_0 = approx_order[0], ao_j, mi_i0, mi_ij;
   size_t i, j, num_tp_coeffs = tp_coeffs.length();
   BasisPolynomial& poly_0 = polynomialBasis[0]; Real x0 = x[0];
   for (i=0; i<num_tp_coeffs; ++i) {
     const UShortArray& tp_mi_i = tp_mi[i]; mi_i0 = tp_mi_i[0];
-    if (li_0)
-      accumulator[0] += tp_coeffs[i] * poly_0.type1_value(x0, mi_i0);
+    if (ao_0)
+      accumulator[0] += (mi_i0) ? tp_coeffs[i] * poly_0.type1_value(x0, mi_i0)
+	                        : tp_coeffs[i];
     else
       accumulator[0]  = tp_coeffs[i];
-    if (mi_i0 == li_0) {
+    if (mi_i0 == ao_0) {
       // accumulate sums over variables with max key value
       for (j=1; j<numVars; ++j) {
-	mi_ij = tp_mi_i[j]; li_j = lev_index[j];
-	if (li_j)
-	  accumulator[j] += accumulator[j-1] *
-	    polynomialBasis[j].type1_value(x[j], mi_ij);
+	mi_ij = tp_mi_i[j]; ao_j = approx_order[j];
+	if (ao_j)
+	  accumulator[j] += (mi_ij) ? accumulator[j-1] *
+	    polynomialBasis[j].type1_value(x[j], mi_ij) : accumulator[j-1];
 	else
 	  accumulator[j]  = accumulator[j-1];
 	accumulator[j-1] = 0.;
-	if (mi_ij != li_j)
+	if (mi_ij != ao_j)
 	  break;
       }
     }
