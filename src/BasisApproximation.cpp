@@ -9,7 +9,8 @@
 #include "BasisApproximation.hpp"
 #include "NodalInterpPolyApproximation.hpp"
 #include "HierarchInterpPolyApproximation.hpp"
-#include "OrthogPolyApproximation.hpp"
+#include "RegressOrthogPolyApproximation.hpp"
+#include "ProjectOrthogPolyApproximation.hpp"
 
 static const char rcsId[]="@(#) $Id: BasisApproximation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -87,7 +88,20 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
   case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
     return new HierarchInterpPolyApproximation(basis_type, num_vars,use_derivs);
     break;
-  case GLOBAL_ORTHOGONAL_POLYNOMIAL: case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
+  case GLOBAL_REGRESSION_ORTHOGONAL_POLYNOMIAL:
+  //case PIECEWISE_REGRESSION_ORTHOGONAL_POLYNOMIAL:
+    // L1 or L2 regression
+    return new RegressOrthogPolyApproximation(approx_order, num_vars,
+					      use_derivs);
+    break;
+  case GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL:
+  //case PIECEWISE_PROJECTION_ORTHOGONAL_POLYNOMIAL:
+    // projection via numerical integration of inner products
+    return new ProjectOrthogPolyApproximation(approx_order, num_vars,
+					      use_derivs);
+    break;
+  case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
+    // coefficient import -- no coefficient computation required
     return new OrthogPolyApproximation(approx_order, num_vars, use_derivs);
     break;
   //case FOURIER_BASIS:

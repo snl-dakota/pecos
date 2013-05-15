@@ -16,16 +16,8 @@
 
 #include "PolynomialApproximation.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
-#include "CompressedSensing.hpp"
-#include "FaultTolerance.hpp"
 
 namespace Pecos {
-
-// special values for quadratureExpansion and sparseGridExpansion
-enum { TENSOR_INT_TOTAL_ORD_EXP,      TENSOR_INT_TENSOR_EXP,
-       TENSOR_INT_TENSOR_SUM_EXP,     SPARSE_INT_TOTAL_ORD_EXP,
-       SPARSE_INT_HEUR_TOTAL_ORD_EXP, SPARSE_INT_TENSOR_SUM_EXP,
-       SPARSE_INT_RESTR_TENSOR_SUM_EXP };
 
 /// Derived approximation class for orthogonal polynomials (global
 /// approximation).
@@ -71,18 +63,8 @@ public:
   /// set polynomialBasis
   void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
-  /// set crossValidation flag
-  void cross_validation(bool flag);
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
-
-  /// set the noise tolerance(s) for compressed sensing approaches
-  void noise_tolerance(const RealVector& noise_tol);
-  /// set the L2 penalty parameter for LASSO (elastic net variant)
-  void l2_penalty(Real l2_pen);
-
-  /// store the fault info about the response data
-  FaultInfo faultInfo;
 
 protected:
 
@@ -92,11 +74,6 @@ protected:
 
   int min_coefficients() const;
 
-  void compute_coefficients();
-  void increment_coefficients();
-  void decrement_coefficients();
-  void restore_coefficients();
-  void finalize_coefficients();
   void store_coefficients();
   void combine_coefficients(short combine_type);
 
@@ -107,10 +84,6 @@ protected:
 
   void coefficient_labels(std::vector<std::string>& all_coeff_tags) const;
 
-  /// initialize basis_types from u_types
-  bool initialize_basis_types(const ShortArray& u_types,
-			      ShortArray& basis_types);
-
   /// initialize polynomialBasis, multiIndex, et al.
   void allocate_arrays();
 
@@ -120,10 +93,6 @@ protected:
   /// Performs global sensitivity analysis using Sobol' Indices;
   /// computes total effects
   void compute_total_effects();
-
-  /// estimate chaos expansion coefficient decay rates for each random
-  /// variable dimension using linear least squares in semilog space
-  const RealVector& dimension_decay_rates();
 
   /// uniformly increment approxOrder
   void increment_order();
@@ -162,12 +131,26 @@ protected:
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
-  /// compute numerical moments to order 4 and expansion moments to order 2
+  /// compute expansion moments to order 2
   void compute_moments();
   /// compute expansion moments in all-variables mode to order 2
   void compute_moments(const RealVector& x);
+
   /// return expansionMoments
   const RealVector& moments() const;
+
+  //
+  //- Heading: Member functions
+  //
+
+  /// initialize basis_types from u_types
+  bool initialize_basis_types(const ShortArray& u_types,
+			      ShortArray& basis_types);
+
+  /// size expansion{Coeffs,CoeffGrads} based on multiIndex
+  void size_expansion();
+  /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
+  void resize_expansion();
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as probabilistic
@@ -175,84 +158,6 @@ protected:
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating a subset of the variables as probabilistic
   Real norm_squared(const UShortArray& indices, const SizetList& rand_indices);
-
-private:
-
-  //
-  //- Heading: Member functions
-  //
-
-  /// Perform efficient calculation of tensor-product value via Horner's rule
-  Real tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
-			    const UShortArray& approx_order,
-			    const UShort2DArray& tp_mi,
-			    RealVector& accumulator);
-
-  /// initialize multi_index using a sparse grid expansion
-  void sparse_grid_multi_index(UShort2DArray& multi_index);
-  // initialize tp_multi_index from tpMultiIndexMap
-  //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
-  //				        size_t tp_index);
-
-  /// convert quadrature orders to integrand orders using rigorous mappings
-  void quadrature_order_to_integrand_order(const UShortArray& quad_order,
-					   UShortArray& int_order);
-  /// convert integrand orders to expansion orders using rigorous mappings
-  void integrand_order_to_expansion_order(const UShortArray& int_order,
-					  UShortArray& exp_order);
-  /// convert sparse grid level to expansion orders using available heuristics
-  void heuristic_sparse_grid_level_to_expansion_order(unsigned short ssg_level,
-						      UShortArray& exp_order);
-  /// convert a sparse grid index set and a growth setting to an integrand_order
-  void sparse_grid_levels_to_expansion_order(const UShortArray& levels,
-    UShortArray& exp_order, short growth_rate = UNRESTRICTED_GROWTH);
-
-  /// append multi-indices from app_multi_index that do not already
-  /// appear in multi_index
-  void append_multi_index(const UShort2DArray& app_multi_index,
-			  UShort2DArray& multi_index);
-  /// append multi-indices from app_multi_index that do not already
-  /// appear in multi_index; define multi_index_map and multi_index_map_ref
-  void append_multi_index(const UShort2DArray& app_multi_index,
-			  UShort2DArray& multi_index,
-			  Sizet2DArray& multi_index_map,
-			  SizetArray& multi_index_map_ref);
-  /// append multi-indices from app_multi_index that do not already
-  /// appear in multi_index, using previously defined multi_index_map
-  /// and multi_index_map_ref for mapping
-  void append_multi_index(const UShort2DArray& app_multi_index,
-			  SizetArray& multi_index_map,
-			  size_t& multi_index_map_ref,
-			  UShort2DArray& multi_index);
-
-  /// overlay the passed tensor-product expansion with the aggregate
-  /// expansion{Coeffs,CoeffGrads}
-  void overlay_expansion(const SizetArray& multi_index_map,
-			 const RealVector& exp_coeffs,
-			 const RealMatrix& exp_grads, int coeff);
-  /// multiply current expansion ("a") with incoming expansion ("b")
-  /// and store in product expansion ("c")
-  void multiply_expansion(const UShort2DArray& multi_index_b,
-			  const RealVector& exp_coeffs_b,
-			  const RealMatrix& exp_grads_b,
-			  const UShort2DArray& multi_index_c);
-  /// update expansion{Coeffs,CoeffGrads} by adding one or more tensor-product
-  /// expansions and updating all Smolyak coefficients
-  void append_tensor_expansions(size_t start_index);
-  /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
-  void resize_expansion();
-
-  /// update the total Pareto set with new Pareto-optimal polynomial indices
-  void update_pareto(const UShort2DArray& new_pareto,
-		     UShort2DArray& total_pareto);
-  /// assess whether new_pareto is dominated by total_pareto
-  bool assess_dominance(const UShort2DArray& new_pareto,
-			const UShort2DArray& total_pareto);
-  /// assess bi-directional dominance for a new polynomial index set 
-  /// against an incumbent polynomial index set
-  void assess_dominance(const UShortArray& new_order,
-			const UShortArray& existing_order,
-			bool& new_dominated, bool& existing_dominated);
 
   /// calculate a particular multivariate orthogonal polynomial value
   /// evaluated at a particular parameter set
@@ -280,90 +185,52 @@ private:
   const RealVector& multivariate_polynomial_gradient_vector(const RealVector& x,
     const UShortArray& indices, const SizetArray& dvv);
 
-  /// computes the chaosCoeffs via linear regression (expCoeffsSolnApproach
-  /// is REGRESSION) using L1 or L2 minimization
-  void regression();
+  /// append multi-indices from app_multi_index that do not already
+  /// appear in multi_index
+  void append_multi_index(const UShort2DArray& app_multi_index,
+			  UShort2DArray& multi_index);
+  /// append multi-indices from app_multi_index that do not already
+  /// appear in multi_index; define multi_index_map and multi_index_map_ref
+  void append_multi_index(const UShort2DArray& app_multi_index,
+			  UShort2DArray& multi_index,
+			  Sizet2DArray& multi_index_map,
+			  SizetArray& multi_index_map_ref);
+  /// append multi-indices from app_multi_index that do not already
+  /// appear in multi_index, using previously defined multi_index_map
+  /// and multi_index_map_ref for mapping
+  void append_multi_index(const UShort2DArray& app_multi_index,
+			  SizetArray& multi_index_map,
+			  size_t& multi_index_map_ref,
+			  UShort2DArray& multi_index);
 
-  /// Run the regression method set in regression()
-  void run_regression();
+  /// overlay the passed expansion with the aggregate
+  /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
+  void overlay_expansion(const SizetArray& multi_index_map,
+			 const RealVector& exp_coeffs,
+			 const RealMatrix& exp_grads, int coeff);
+  /// multiply current expansion ("a") with incoming expansion ("b")
+  /// and store in product expansion ("c")
+  void multiply_expansion(const UShort2DArray& multi_index_b,
+			  const RealVector& exp_coeffs_b,
+			  const RealMatrix& exp_grads_b,
+			  const UShort2DArray& multi_index_c);
 
-  /// set the information needed to ensure fault tolerance
-  void set_fault_info();
-
-  /// Use cross validation to find the 'best' PCE degree
-  void run_cross_validation( RealMatrix &A, RealMatrix &B, 
-			     size_t num_data_pts_fn );
-
-  /// For a specific vandermonde matrix find the compressed sennsing 
-  // options that produce the best PCE
-  void estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history, size_t num_data_pts_fn );
-
-  /// computes the chaosCoeffs via averaging of samples
-  /// (expCoeffsSolnApproach is SAMPLING)
-  void expectation();
+  /// estimate chaos expansion coefficient decay rates for each random
+  /// variable dimension using linear least squares in semilog space
+  const RealVector& dimension_decay_rates();
 
   /// perform sanity checks prior to numerical integration
   void integration_checks();
-  /// extract tp_data_points from surrData and tp_weights from
-  /// driverRep->type1CollocWts1D
-  void integration_data(size_t tp_index, SDVArray& tp_data_vars,
-			SDRArray& tp_data_resp, RealVector& tp_weights);
-  /// computes the chaosCoeffs via numerical integration (expCoeffsSolnApproach
-  /// can be QUADRATURE, CUBATURE, or COMBINED_SPARSE_GRID)
-  void integrate_expansion(const UShort2DArray& multi_index,
-			   const SDVArray& data_vars, const SDRArray& data_resp,
-			   const RealVector& wt_sets, RealVector& exp_coeffs,
-			   RealMatrix& exp_coeff_grads);
-
-  /// update numericalMoments using numerical integration applied
-  /// directly to surrData
-  void compute_numerical_response_moments(size_t num_moments);
-
-  /// test for nonzero indices in random variable subset
-  bool zero_random(const UShortArray& indices) const;
-
-  /// cross-validates alternate gradient expressions
+  /// tests 1D gradient computations (active in DEBUG compile mode)
   void gradient_check();
 
-  /// pack polynomial contributions to Psi matrix for regression
-  void pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
-			    bool add_val,  double* pack_val,  size_t& pv_cntr,
-			    bool add_grad, double* pack_grad, size_t& pg_cntr);
-  /// pack response contributions to RHS for regression
-  void pack_response_data(const SurrogateDataResp& sdr,
-			  bool add_val,  double* pack_val,  size_t& pv_cntr,
-			  bool add_grad, double* pack_grad, size_t& pg_cntr);
   /// update add_val and add_gradient based on surrData's failure map
   void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		     bool& add_val, bool& add_grad);
 
-  /**
-   * \brief Define the set of options used in the cross validation grid search
-   * 
-   * \param opts (output) the options to be used in the grid search
-   * \param M The number of rows of the vandermonde matrix
-   * \param N The number of columns of the vandermonde matrix
-   */
-  void gridSearchFunction( RealMatrix &opts, int M, int N, 
-			   int num_function_samples );
-
-  /// Generate the coefficient tag for expansion term i, variable j
-  void get_tag(char* tag, size_t i, size_t j) const;
-
-
   //
   //- Heading: Data
   //
-
-  /// number of terms in orthogonal polynomial expansion (length of chaosCoeffs)
-  int numExpansionTerms;
-  /// order of orthogonal polynomial expansion
-  UShortArray approxOrder;
-  /// order of orthogonal best polynomial expansion found using cross validation
-  IntVector bestApproxOrder;
-  /// previous value of approxOrder; used for detecting when a multiIndex
-  /// update is needed
-  UShortArray approxOrderPrev;
 
   /// array of basis types for each one-dimensional orthogonal polynomial:
   /// HERMITE_ORTHOG, LEGENDRE_ORTHOG, LAGUERRE_ORTHOG, JACOBI_ORTHOG,
@@ -373,6 +240,12 @@ private:
   /// array of one-dimensional basis polynomial objects which are used in
   /// constructing the multivariate orthogonal/interpolation polynomials
   std::vector<BasisPolynomial> polynomialBasis;
+
+  /// order of orthogonal polynomial expansion
+  UShortArray approxOrder;
+
+  /// number of terms in orthogonal polynomial expansion (length of chaosCoeffs)
+  int numExpansionTerms;
 
   /// numExpansionTerms-by-numVars array for identifying the orders of
   /// the one-dimensional orthogonal polynomials contributing to each
@@ -390,44 +263,14 @@ private:
       for an expansion only over probabilistic variables). */
   RealMatrix expansionCoeffGrads;
 
-  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
-  /// identifying the orders of the one-dimensional orthogonal polynomials
-  /// contributing to each of the multivariate orthogonal polynomials.
-  /** For nested rules (GP, CC, or GK), the integration driver's collocKey
-      is insufficient and we must track expansion orders separately. */
-  UShort3DArray tpMultiIndex;
-  /// sparse grid bookkeeping: mapping from num tensor-products by 
-  /// tensor-product multi-indices into aggregated multiIndex
-  Sizet2DArray tpMultiIndexMap;
-  /// sparse grid bookkeeping: reference points for tpMultiIndexMap
-  SizetArray tpMultiIndexMapRef;
-  /// the set of tensor-product contributions to expansionCoeffs
-  RealVectorArray tpExpansionCoeffs;
-  /// the set of tensor-product contributions to expansionCoeffGrads
-  RealMatrixArray tpExpansionCoeffGrads;
-
-  /// saved instances of tpMultiIndex that were computed but not selected
-  std::deque<UShort2DArray> savedTPMultiIndex;
-  /// saved instances of tpMultiIndexMap that were computed but not selected
-  std::deque<SizetArray> savedTPMultiIndexMap;
-  /// saved instances of tpMultiIndexMapRef that were computed but not selected
-  std::deque<size_t> savedTPMultiIndexMapRef;
-  /// saved instances of tpExpansionCoeffs that were computed but not selected
-  std::deque<RealVector> savedTPExpCoeffs;
-  /// saved tpExpansionCoeffGrads instances that were computed but not selected
-  std::deque<RealMatrix> savedTPExpCoeffGrads;
-
-  /// storage of level multi-index (levels for tensor or sparse grids)
-  /// for subsequent restoration
-  UShort2DArray storedLevMultiIndex;
-  /// copy of multiIndex (aggregated total, not tensor-product contributions)
-  /// stored in store_coefficients() for use in combine_coefficients()
+  /// copy of multiIndex (aggregated expansion) stored in
+  /// store_coefficients() for use in combine_coefficients()
   UShort2DArray storedMultiIndex;
-  /// copy of expansionCoeffs (aggregated total, not tensor-product contribs)
-  /// stored in store_coefficients() for use in combine_coefficients()
+  /// copy of expansionCoeffs (aggregated expansion) stored in
+  /// store_coefficients() for use in combine_coefficients()
   RealVector storedExpCoeffs;
-  /// copy of expansionCoeffGrads (aggregated total, not indiv tensor-products)
-  /// stored in store_coefficients() for use in combine_coefficients()
+  /// copy of expansionCoeffGrads (aggregated expansion) stored in
+  /// store_coefficients() for use in combine_coefficients()
   RealMatrix storedExpCoeffGrads;
   /// copy of approxOrder stored in store_coefficients() for use in
   /// combine_coefficients()
@@ -436,44 +279,37 @@ private:
   /// combine_coefficients() and compute_numerical_response_moments()
   short storedExpCombineType;
 
-  /// previous expansionCoeffs (aggregated total, not tensor-product
-  /// contributions) prior to append_tensor_expansions()
-  RealVector prevExpCoeffs;
-  /// previous expansionCoeffGrads (aggregated total, not tensor-product
-  /// contributions) prior to append_tensor_expansions()
-  RealMatrix prevExpCoeffGrads;
+private:
+
+  //
+  //- Heading: Member functions
+  //
+
+  /// update numericalMoments using numerical integration applied
+  /// directly to surrData
+  void compute_numerical_response_moments(size_t num_moments);
+
+  /// test for nonzero indices in random variable subset
+  bool zero_random(const UShortArray& indices) const;
+
+  /// Generate the coefficient tag for expansion term i, variable j
+  void get_tag(char* tag, size_t i, size_t j) const;
+
+  //
+  //- Heading: Data
+  //
+
+  /// previous value of approxOrder; used for detecting when a multiIndex
+  /// update is needed
+  UShortArray approxOrderPrev;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
   RealVector mvpGradient;
 
-  /// switch for formulation of orthogonal polynomial expansion
-  /// integrated with tensor-product quadrature:
-  /// TENSOR_INT_TOTAL_ORD_EXP or TENSOR_INT_TENSOR_EXP expansion.
-  short quadratureExpansion;
-  /// switch for formulation of orthogonal polynomial expansion for
-  /// sparse grids: TENSOR_INT_TENSOR_SUM_EXP, SPARSE_INT_TENSOR_SUM_EXP,
-  /// SPARSE_INT_RESTR_TENSOR_SUM_EXP, SPARSE_INT_TOTAL_ORD_EXP, or
-  /// SPARSE_INT_HEUR_TOTAL_ORD_EXP expansion.
-  short sparseGridExpansion;
-
   /// spectral coefficient decay rates estimated by LLS on log of
   /// univariate expansion coefficients
   RealVector decayRates;
-
-  /// Wrapper class that is used to solve regression problems
-  CompressedSensingTool CSTool;
-  /// Stuct use to define the options of a compressed sensing solve
-  CompressedSensingOptions CSOpts;
-
-  /// flag for use of automatic cross-validation for parameter
-  /// selection in regression approaches
-  bool crossValidation;
-  /// noise tolerance(s) for compressed sensing algorithms; vector form
-  /// used in cross-validation
-  RealVector noiseTols;
-  /// the L2 penalty parameter for LASSO (elastic net variant)
-  Real l2Penalty;
 };
 
 
@@ -481,16 +317,7 @@ inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
 			bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
-  approxOrder(approx_order), storedExpCombineType(NO_COMBINE),
-  quadratureExpansion(TENSOR_INT_TENSOR_EXP),
-//quadratureExpansion(TENSOR_INT_TOTAL_ORDER_EXP),
-  sparseGridExpansion(TENSOR_INT_TENSOR_SUM_EXP)
-//sparseGridExpansion(SPARSE_INT_TOTAL_ORDER_EXP)
-//sparseGridExpansion(SPARSE_INT_HEUR_TOTAL_ORDER_EXP)
-//sparseGridExpansion(SPARSE_INT_TENSOR_SUM_EXP)
-//sparseGridExpansion(SPARSE_INT_RESTR_TENSOR_SUM_EXP)
-// Note: for sparseGridExpansion == SPARSE_INT_*, all_variables mode requires
-//       track_wts = true in Dakota::NonDExpansion::construct_sparse_grid().
+  approxOrder(approx_order), storedExpCombineType(NO_COMBINE)
 { }
 
 
@@ -515,10 +342,6 @@ inline void OrthogPolyApproximation::compute_moments()
   // standard variables mode supports two expansion and four numerical moments
   mean(); variance(); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
-  if (expConfigOptions.expCoeffsSolnApproach == QUADRATURE ||
-      expConfigOptions.expCoeffsSolnApproach == CUBATURE   ||
-      expConfigOptions.expCoeffsSolnApproach == COMBINED_SPARSE_GRID)
-    compute_numerical_response_moments(4);
 }
 
 
@@ -527,7 +350,6 @@ inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
   // all variables mode only supports first two moments
   mean(x); variance(x); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
-  //compute_numerical_response_moments(2, x); // TO DO
 }
 
 
@@ -573,10 +395,6 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
 { polynomialBasis = poly_basis; }
 
 
-inline void OrthogPolyApproximation::cross_validation(bool flag)
-{ crossValidation = flag; }
-
-
 inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
 {
   size_t i, num_basis = basisTypes.size();
@@ -587,15 +405,6 @@ inline void OrthogPolyApproximation::coefficients_norms_flag(bool flag)
 }
 
 
-inline void OrthogPolyApproximation::
-noise_tolerance(const RealVector& noise_tol)
-{ noiseTols = noise_tol; }
-
-
-inline void OrthogPolyApproximation::l2_penalty(Real l2_pen)
-{ l2Penalty = l2_pen; }
-
-
 inline const RealVector& OrthogPolyApproximation::
 approximation_coefficients() const
 { return expansionCoeffs; }
@@ -604,6 +413,21 @@ approximation_coefficients() const
 inline void OrthogPolyApproximation::
 approximation_coefficients(const RealVector& approx_coeffs)
 { expansionCoeffs = approx_coeffs; }
+
+
+inline void OrthogPolyApproximation::size_expansion()
+{
+  numExpansionTerms = multiIndex.size();
+  if (expConfigOptions.expansionCoeffFlag &&
+      expansionCoeffs.length() != numExpansionTerms)
+    expansionCoeffs.sizeUninitialized(numExpansionTerms);
+  if (expConfigOptions.expansionCoeffGradFlag) {
+    size_t num_deriv_vars = surrData.num_derivative_variables();
+    if (expansionCoeffGrads.numRows() != num_deriv_vars ||
+	expansionCoeffGrads.numCols() != numExpansionTerms)
+      expansionCoeffGrads.shapeUninitialized(num_deriv_vars, numExpansionTerms);
+  }
+}
 
 
 inline void OrthogPolyApproximation::resize_expansion()
@@ -745,37 +569,6 @@ norm_squared(const UShortArray& indices, const SizetList& rand_indices)
       norm_sq *= polynomialBasis[i].norm_squared(order_1d);
   }
   return norm_sq;
-}
-
-
-inline void OrthogPolyApproximation::
-pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
-		     bool add_val,  double* pack_val,  size_t& pv_cntr,
-		     bool add_grad, double* pack_grad, size_t& pg_cntr)
-{
-  if (add_val)
-    { pack_val[pv_cntr] = multivariate_polynomial(c_vars, mi); ++pv_cntr; }
-  if (add_grad) {
-    const RealVector& mvp_grad
-      = multivariate_polynomial_gradient_vector(c_vars, mi);
-    for (size_t j=0; j<numVars; ++j, ++pg_cntr)
-      pack_grad[pg_cntr] = mvp_grad[j];
-  }
-}
-
-
-inline void OrthogPolyApproximation::
-pack_response_data(const SurrogateDataResp& sdr,
-		   bool add_val,  double* pack_val,  size_t& pv_cntr,
-		   bool add_grad, double* pack_grad, size_t& pg_cntr)
-{
-  if (add_val)
-    { pack_val[pv_cntr] = sdr.response_function(); ++pv_cntr; }
-  if (add_grad) {
-    const RealVector& resp_grad = sdr.response_gradient();
-    for (size_t j=0; j<numVars; ++j, ++pg_cntr)
-      pack_grad[pg_cntr] = resp_grad[j];
-  }
 }
 
 
