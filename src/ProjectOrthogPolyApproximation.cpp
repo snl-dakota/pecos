@@ -43,12 +43,11 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 
     if (expansionMoments.empty())
       expansionMoments.sizeUninitialized(2);
-
-    // no combination by default, even if stored{MultiIndex,ExpCoeffs,
-    // ExpCoeffGrads} are defined.  Redefined by attribute passed in
-    // combine_coefficients(short).
-    storedExpCombineType = NO_COMBINE;
   }
+  // no combination by default, even if stored{MultiIndex,ExpCoeffs,
+  // ExpCoeffGrads} are defined.  Redefined by attribute passed in
+  // combine_coefficients(short).
+  storedExpCombineType = NO_COMBINE;
 
   // update_exp_form controls when to update (refinement) and when not to
   // update (subIterator execution) an expansion's multiIndex definition.
@@ -446,6 +445,9 @@ void ProjectOrthogPolyApproximation::combine_coefficients(short combine_type)
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
+  // storedExpCombineType used later in compute_numerical_response_moments()
+  storedExpCombineType = combine_type;
+
   switch (combine_type) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
@@ -464,9 +466,6 @@ void ProjectOrthogPolyApproximation::combine_coefficients(short combine_type)
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
-      // storedExpCombineType used later in compute_numerical_response_moments()
-      storedExpCombineType = combine_type;
-
       for (size_t i=0; i<numVars; ++i)
 	approxOrder[i] += storedApproxOrder[i];
       UShort2DArray multi_index_prod;
@@ -479,9 +478,6 @@ void ProjectOrthogPolyApproximation::combine_coefficients(short combine_type)
       break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
-      // storedExpCombineType used later in compute_numerical_response_moments()
-      storedExpCombineType = combine_type;
-
       CombinedSparseGridDriver* csg_driver
 	= (CombinedSparseGridDriver*)driverRep;
       // filter out dominated Smolyak multi-indices that don't contribute
@@ -1283,25 +1279,19 @@ compute_numerical_response_moments(size_t num_moments)
 
 Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 {
-  // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "ProjectOrthogPolyApproximation::value()" << std::endl;
-    abort_handler(-1);
-  }
-
   // sum expansion to get response value prediction
+
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    if (storedExpCombineType) {
-      // combined coefficients not guaranteed to use tensor indexing
-      Real approx_val = 0.;
-      for (size_t i=0; i<numExpansionTerms; ++i)
-	approx_val += expansionCoeffs[i]
-	           *  multivariate_polynomial(x, multiIndex[i]);
-      return approx_val;
-    }
+    if (storedExpCombineType) // not guaranteed to use tensor indexing
+      return OrthogPolyApproximation::value(x);
     else { // Horner's rule approach applicable for tensor indexing
+      // Error check for required data
+      if (!expConfigOptions.expansionCoeffFlag) {
+	PCerr << "Error: expansion coefficients not defined in "
+	      << "ProjectOrthogPolyApproximation::value()" << std::endl;
+	abort_handler(-1);
+      }
       TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
       RealVector accumulator(numVars); // init to 0.
       return tensor_product_value(x, expansionCoeffs, approxOrder, multiIndex,
@@ -1314,17 +1304,21 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
     // compute_coefficients().  For now, leave store_tp as is and use
     // default approach if tpExpansionCoeffs is empty.  In addition,
     // tp arrays are not currently updated for expansion combinations.
-    Real approx_val = 0.;
     if (tpExpansionCoeffs.empty() || storedExpCombineType) // most cases
-      for (size_t i=0; i<numExpansionTerms; ++i)
-	approx_val += expansionCoeffs[i]
-	           *  multivariate_polynomial(x, multiIndex[i]);
+      return OrthogPolyApproximation::value(x);
     else { // generalized sparse grid case
+      // Error check for required data
+      if (!expConfigOptions.expansionCoeffFlag) {
+	PCerr << "Error: expansion coefficients not defined in "
+	      << "ProjectOrthogPolyApproximation::value()" << std::endl;
+	abort_handler(-1);
+      }
       CombinedSparseGridDriver* csg_driver
 	= (CombinedSparseGridDriver*)driverRep;
       const UShort2DArray& sm_mi     = csg_driver->smolyak_multi_index();
       const IntArray&      sm_coeffs = csg_driver->smolyak_coefficients();
       RealVector accumulator(numVars); // init to 0.
+      Real approx_val = 0.;
       size_t i, num_sm_mi = sm_mi.size(); int sm_coeff;
       for (i=0; i<num_sm_mi; ++i) {
 	sm_coeff = sm_coeffs[i];
@@ -1334,18 +1328,13 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 				 tpApproxOrders[i], // TO DO
 				 tpMultiIndex[i], accumulator);
       }
+      return approx_val;
     }
-    return approx_val;
     break;
   }
   */
   default: // other cases are total-order expansions
-    //return OrthogPolyApproximation::value(x);
-    Real approx_val = 0.;
-    for (size_t i=0; i<numExpansionTerms; ++i)
-      approx_val += expansionCoeffs[i]
-	         *  multivariate_polynomial(x, multiIndex[i]);
-    return approx_val;
+    return OrthogPolyApproximation::value(x);
     break;
   }
 }
@@ -1353,17 +1342,17 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 
 Real ProjectOrthogPolyApproximation::stored_value(const RealVector& x)
 {
-  // Error check for required data
-  size_t i, num_stored_terms = storedMultiIndex.size();
-  if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
-    PCerr << "Error: stored expansion coefficients not available in "
-	  << "ProjectOrthogPolyApproximation::stored_value()" << std::endl;
-    abort_handler(-1);
-  }
-
   // sum expansion to get response value prediction
+
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: { // Horner's rule approach
+    // Error check for required data
+    size_t i, num_stored_terms = storedMultiIndex.size();
+    if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
+      PCerr << "Error: stored expansion coefficients not available in "
+	    << "ProjectOrthogPolyApproximation::stored_value()" << std::endl;
+      abort_handler(-1);
+    }
     // Note: requires tensor indexing in storedMultiIndex (see OPA::value(x)),
     // which is safe to assume prior to support of >2 levels of fidelity.
     RealVector accumulator(numVars); // init to 0.
@@ -1375,12 +1364,7 @@ Real ProjectOrthogPolyApproximation::stored_value(const RealVector& x)
   //case COMBINED_SPARSE_GRID:
     //break;
   default: // other cases are total-order expansions
-    //return OrthogPolyApproximation::stored_value(x);
-    Real approx_val = 0.;
-    for (size_t i=0; i<num_stored_terms; ++i)
-      approx_val += storedExpCoeffs[i]
-	         *  multivariate_polynomial(x, storedMultiIndex[i]);
-    return approx_val;
+    return OrthogPolyApproximation::stored_value(x);
     break;
   }
 }
