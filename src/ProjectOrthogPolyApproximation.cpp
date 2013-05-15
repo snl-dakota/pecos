@@ -1223,6 +1223,64 @@ assess_dominance(const UShortArray& new_order,
 }
 
 
+void ProjectOrthogPolyApproximation::
+compute_numerical_response_moments(size_t num_moments)
+{
+  size_t i, num_pts = surrData.size();
+  bool anchor_pt = surrData.anchor();
+  if (anchor_pt) ++num_pts;
+
+  // define data_coeffs
+  RealVector data_coeffs(num_pts);
+  if (anchor_pt) {
+    data_coeffs[0] = surrData.anchor_function();
+    for (i=1; i<num_pts; ++i)
+      data_coeffs[i] = surrData.response_function(i-1);
+  }
+  else
+    for (i=0; i<num_pts; ++i)
+      data_coeffs[i] = surrData.response_function(i);
+
+  if (storedExpCombineType && !storedExpCoeffs.empty()) {
+    // update data_coeffs using evaluations from stored expansions
+    switch (storedExpCombineType) {
+    case ADD_COMBINE:
+      if (anchor_pt) {
+	data_coeffs[0] += stored_value(surrData.anchor_continuous_variables());
+	for (i=1; i<num_pts; ++i)
+	  data_coeffs[i] += stored_value(surrData.continuous_variables(i-1));
+      }
+      else
+	for (i=0; i<num_pts; ++i)
+	  data_coeffs[i] += stored_value(surrData.continuous_variables(i));
+      break;
+    case MULT_COMBINE:
+      if (anchor_pt) {
+	data_coeffs[0] *= stored_value(surrData.anchor_continuous_variables());
+	for (i=1; i<num_pts; ++i)
+	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i-1));
+      }
+      else
+	for (i=0; i<num_pts; ++i)
+	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i));
+      break;
+    }
+    // stored data may now be cleared
+    storedMultiIndex.clear();
+    if (expConfigOptions.expansionCoeffFlag)
+      storedExpCoeffs.resize(0);
+    if (expConfigOptions.expansionCoeffGradFlag)
+      storedExpCoeffGrads.reshape(0,0);
+  }
+
+  // update numericalMoments based on data_coeffs
+  if (numericalMoments.length() != num_moments)
+    numericalMoments.sizeUninitialized(num_moments);
+  compute_numerical_moments(data_coeffs, driverRep->type1_weight_sets(),
+			    numericalMoments);
+}
+
+
 Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 {
   // Error check for required data

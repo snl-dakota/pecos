@@ -68,11 +68,6 @@ void OrthogPolyApproximation::allocate_arrays()
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
 
-  // no combination by default, even if stored{MultiIndex,ExpCoeffs,
-  // ExpCoeffGrads} are defined.  Redefined by attribute passed in
-  // combine_coefficients(short).
-  storedExpCombineType = NO_COMBINE;
-
   // For uniform refinement, all refinements are based off of approxOrder.
   // For PCBDO, numExpansionTerms and approxOrder are invariant and a
   // multiIndex update is prevented by update_exp_form.
@@ -96,11 +91,12 @@ void OrthogPolyApproximation::allocate_arrays()
       }
     }
     total_order_multi_index(approxOrder, multiIndex);
-    size_expansion();
+    //size_expansion(); // TO DO: activate
 
     // update reference point
     approxOrderPrev = approxOrder;
   }
+  size_expansion(); // TO DO: remove
 
   // output expansion form
   PCout << "Orthogonal polynomial approximation order = { ";
@@ -127,10 +123,7 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
-  // storedExpCombineType used later in compute_numerical_response_moments()
-  storedExpCombineType = combine_type;
-
-  switch (storedExpCombineType) {
+  switch (combine_type) {
   case ADD_COMBINE: {
     // update multiIndex with any storedMultiIndex terms not yet included
     Sizet2DArray stored_mi_map; SizetArray stored_mi_map_ref;
@@ -957,64 +950,6 @@ void OrthogPolyApproximation::gradient_check()
     chebyshev_poly.type1_gradient(x, n);
     PCout << "-------------------------------------------------\n";
   }
-}
-
-
-void OrthogPolyApproximation::
-compute_numerical_response_moments(size_t num_moments)
-{
-  size_t i, num_pts = surrData.size();
-  bool anchor_pt = surrData.anchor();
-  if (anchor_pt) ++num_pts;
-
-  // define data_coeffs
-  RealVector data_coeffs(num_pts);
-  if (anchor_pt) {
-    data_coeffs[0] = surrData.anchor_function();
-    for (i=1; i<num_pts; ++i)
-      data_coeffs[i] = surrData.response_function(i-1);
-  }
-  else
-    for (i=0; i<num_pts; ++i)
-      data_coeffs[i] = surrData.response_function(i);
-
-  if (storedExpCombineType && !storedExpCoeffs.empty()) {
-    // update data_coeffs using evaluations from stored expansions
-    switch (storedExpCombineType) {
-    case ADD_COMBINE:
-      if (anchor_pt) {
-	data_coeffs[0] += stored_value(surrData.anchor_continuous_variables());
-	for (i=1; i<num_pts; ++i)
-	  data_coeffs[i] += stored_value(surrData.continuous_variables(i-1));
-      }
-      else
-	for (i=0; i<num_pts; ++i)
-	  data_coeffs[i] += stored_value(surrData.continuous_variables(i));
-      break;
-    case MULT_COMBINE:
-      if (anchor_pt) {
-	data_coeffs[0] *= stored_value(surrData.anchor_continuous_variables());
-	for (i=1; i<num_pts; ++i)
-	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i-1));
-      }
-      else
-	for (i=0; i<num_pts; ++i)
-	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i));
-      break;
-    }
-    // stored data may now be cleared
-    storedMultiIndex.clear();
-    if (expConfigOptions.expansionCoeffFlag)
-      storedExpCoeffs.resize(0);
-    if (expConfigOptions.expansionCoeffGradFlag)
-      storedExpCoeffGrads.reshape(0,0);
-  }
-
-  // update numericalMoments based on data_coeffs
-  if (numericalMoments.length() != num_moments)
-    numericalMoments.sizeUninitialized(num_moments);
-  compute_numerical_moments(data_coeffs, driverRep->type1_weight_sets(),
-			    numericalMoments);
 }
 
 

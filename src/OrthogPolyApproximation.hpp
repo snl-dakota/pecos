@@ -275,19 +275,12 @@ protected:
   /// copy of approxOrder stored in store_coefficients() for use in
   /// combine_coefficients()
   UShortArray storedApproxOrder;
-  /// combination type for stored expansions; cached in class to bridge
-  /// combine_coefficients() and compute_numerical_response_moments()
-  short storedExpCombineType;
 
 private:
 
   //
   //- Heading: Member functions
   //
-
-  /// update numericalMoments using numerical integration applied
-  /// directly to surrData
-  void compute_numerical_response_moments(size_t num_moments);
 
   /// test for nonzero indices in random variable subset
   bool zero_random(const UShortArray& indices) const;
@@ -317,7 +310,7 @@ inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
 			bool use_derivs):
   PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
-  approxOrder(approx_order), storedExpCombineType(NO_COMBINE)
+  approxOrder(approx_order)
 { }
 
 

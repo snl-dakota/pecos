@@ -134,6 +134,10 @@ private:
 			const UShortArray& existing_order,
 			bool& new_dominated, bool& existing_dominated);
 
+  /// update numericalMoments using numerical integration applied
+  /// directly to surrData
+  void compute_numerical_response_moments(size_t num_moments);
+
   //
   //- Heading: Data
   //
@@ -148,6 +152,9 @@ private:
   /// storage of level multi-index (levels for tensor or sparse grids)
   /// for subsequent restoration
   UShort2DArray storedLevMultiIndex;
+  /// combination type for stored expansions; cached in class to bridge
+  /// combine_coefficients() and compute_numerical_response_moments()
+  short storedExpCombineType;
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials
@@ -181,7 +188,8 @@ private:
 inline ProjectOrthogPolyApproximation::
 ProjectOrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
 			       bool use_derivs):
-  OrthogPolyApproximation(approx_order, num_vars, use_derivs)
+  OrthogPolyApproximation(approx_order, num_vars, use_derivs),
+  storedExpCombineType(NO_COMBINE)
 { }
 
 
@@ -194,6 +202,7 @@ inline void ProjectOrthogPolyApproximation::compute_moments()
   // standard variables mode supports two expansion and four numerical moments
   mean(); variance(); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
+
   if (expConfigOptions.expCoeffsSolnApproach != SAMPLING)
     compute_numerical_response_moments(4);
 }
@@ -204,6 +213,7 @@ inline void ProjectOrthogPolyApproximation::compute_moments(const RealVector& x)
   // all variables mode only supports first two moments
   mean(x); variance(x); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
+
   //compute_numerical_response_moments(2, x); // TO DO
 }
 
