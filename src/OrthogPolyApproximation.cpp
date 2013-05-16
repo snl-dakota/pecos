@@ -91,12 +91,13 @@ void OrthogPolyApproximation::allocate_arrays()
       }
     }
     total_order_multi_index(approxOrder, multiIndex);
-    //size_expansion(); // TO DO: activate
 
     // update reference point
     approxOrderPrev = approxOrder;
   }
-  size_expansion(); // TO DO: remove
+  // size expansion even if !update_exp_form due to possibility of change
+  // to expansion{Coeff,GradFlag} settings
+  size_expansion();
 
   // output expansion form
   PCout << "Orthogonal polynomial approximation order = { ";
