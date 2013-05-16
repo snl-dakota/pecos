@@ -65,9 +65,12 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
       quadrature_order_to_integrand_order(quad_order, integrand_order);
       integrand_order_to_expansion_order(integrand_order, approxOrder);
       tensor_product_multi_index(approxOrder, multiIndex);
-      size_expansion();
       quadOrderPrev = quad_order; // update reference point
     }
+    // size expansion even if !update_exp_form due to possibility of
+    // change to expansion{Coeff,GradFlag} settings
+    size_expansion();
+
     PCout << "Orthogonal polynomial approximation order = { ";
     for (size_t i=0; i<numVars; ++i) PCout << approxOrder[i] << ' ';
     PCout << "} using tensor-product expansion of " << numExpansionTerms
@@ -83,9 +86,12 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
       integrand_order_to_expansion_order(integrand_order, approxOrder);
       total_order_multi_index(approxOrder, multiIndex);
-      size_expansion();
       //cubIntOrderPrev = cub_int_order; // update reference point
     //}
+    // size expansion even if !update_exp_form due to possibility of
+    // change to expansion{Coeff,GradFlag} settings
+    size_expansion();
+
     PCout << "Orthogonal polynomial approximation order = { ";
     for (size_t i=0; i<numVars; ++i)
       PCout << approxOrder[i] << ' ';
@@ -104,9 +110,12 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 
     if (update_exp_form) { // compute and output number of terms
       sparse_grid_multi_index(multiIndex);
-      size_expansion();
       ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts; // update ref pts
     }
+    // size expansion even if !update_exp_form due to possibility of
+    // change to expansion{Coeff,GradFlag} settings
+    size_expansion();
+
     PCout << "Orthogonal polynomial approximation level = " << ssg_level
 	  << " using tensor integration and tensor sum expansion of "
 	  << numExpansionTerms << " terms\n"; break;
