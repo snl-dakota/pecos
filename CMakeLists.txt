@@ -129,6 +129,10 @@ if ( NOT Trilinos_DIR )
     endif() # tribits source directory EXISTS
 
     message( "Setting Teuchos_DIR to ${Teuchos_DIR}" )
+
+    # Additional setting to prevent multiple targets with the same name
+    set(Trilinos_TARGETS_IMPORTED 1)
+
     add_subdirectory(packages/teuchos)
     #set(Teuchos_LIBRARY_DIRS "")
 
@@ -140,9 +144,6 @@ if ( NOT Trilinos_DIR )
     # Move the "TriBITS" config file to teuchos subdir (not the BuildRoot)
     file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/TrilinosConfig.cmake
       ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/TrilinosConfig.cmake)
-
-    # Additional setting to prevent multiple targets with the same name
-    set(Trilinos_TARGETS_IMPORTED 1)
   endif()
 
   #set(Teuchos_LIBRARIES teuchos)
