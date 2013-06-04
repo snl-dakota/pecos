@@ -98,6 +98,18 @@ protected:
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);
 
+  void set_new_point(const RealVector& x, const UShortArray& basis_index,
+		     short order);
+  void set_new_point(const RealVector& x, const UShortArray& basis_index,
+		     const SizetList& subset_indices, short order);
+
+  size_t barycentric_exact_index(const UShortArray& basis_index);
+  size_t barycentric_exact_index(const UShortArray& basis_index,
+				 const SizetList& subset_indices);
+
+  unsigned short tensor_product_num_key(size_t i, unsigned short level_i);
+  unsigned short tensor_product_max_key(size_t i, unsigned short level_i);
+
 private:
 
   //
@@ -382,6 +394,79 @@ update_member_key(const UShortArray& data,
        cit!=member_indices.end(); ++cit, ++cntr)
     member_map_key[cntr] = data[*cit];
 }
+
+
+inline void NodalInterpPolyApproximation::
+set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
+{
+  unsigned short bi_j;
+  for (size_t j=0; j<numVars; ++j) {
+    bi_j = basis_index[j];
+    if (bi_j) // exclusion of pt must be sync'd w/ factors/scalings
+      polynomialBasis[bi_j][j].set_new_point(x[j], order);
+  }
+}
+
+
+inline void NodalInterpPolyApproximation::
+set_new_point(const RealVector& x, const UShortArray& basis_index,
+	      const SizetList& subset_indices, short order)
+{
+  SizetList::const_iterator cit; size_t j; unsigned short bi_j;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi_j = basis_index[j];
+    if (bi_j) // exclusion of pt must be sync'd w/ factors/scalings
+      polynomialBasis[bi_j][j].set_new_point(x[j], order);
+  }
+}
+
+
+inline size_t NodalInterpPolyApproximation::
+barycentric_exact_index(const UShortArray& basis_index)
+{
+  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
+  for (j=0; j<numVars; ++j) {
+    bi_j = basis_index[j];
+    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
+    // this constant interpolation with the value at the 1 colloc index (ei=0)
+    if (bi_j) {
+      BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
+      pt_index += poly_i.exact_index() * prod;
+      prod     *= poly_i.interpolation_size();
+    }
+  }
+  return pt_index;
+}
+
+
+inline size_t NodalInterpPolyApproximation::
+barycentric_exact_index(const UShortArray& basis_index,
+			const SizetList& subset_indices)
+{
+  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
+  SizetList::const_iterator cit;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi_j = basis_index[j];
+    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
+    // this constant interpolation with the value at the 1 colloc index (ei=0)
+    if (bi_j) {
+      BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
+      pt_index += poly_j.exact_index() * prod;
+      prod     *= poly_j.interpolation_size();
+    }
+  }
+  return pt_index;
+}
+
+
+inline unsigned short NodalInterpPolyApproximation::
+tensor_product_num_key(size_t i, unsigned short level_i)
+{ return polynomialBasis[level_i][i].interpolation_size(); }
+
+
+inline unsigned short NodalInterpPolyApproximation::
+tensor_product_max_key(size_t i, unsigned short level_i)
+{ return polynomialBasis[level_i][i].interpolation_size() - 1; }
 
 } // namespace Pecos
 

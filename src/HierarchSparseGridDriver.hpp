@@ -78,6 +78,14 @@ public:
   void level_to_delta_key(size_t i, unsigned short lev_i,
 			  UShortArray& delta_key_i);
 
+  /// convert a Smolyak index set into hierarchical quadrature keys
+  void levels_to_delta_keys(const UShortArray& levels,
+			    UShort2DArray& delta_keys);
+  /// convert a Smolyak index set into the sizes of hierarchical
+  /// quadrature increments
+  void levels_to_delta_sizes(const UShortArray& levels,
+			     UShortArray& delta_sizes);
+
   //
   //- Heading: Member functions
   //
@@ -105,14 +113,6 @@ public:
   const RealVector2DArray& type1_weight_set_arrays() const;
   /// return type2WeightSets for use in hierarchical integration functions
   const RealMatrix2DArray& type2_weight_set_arrays() const;
-
-  /// convert a Smolyak index set into hierarchical quadrature keys
-  void levels_to_delta_keys(const UShortArray& levels,
-			    UShort2DArray& delta_keys);
-  /// convert a Smolyak index set into the sizes of hierarchical
-  /// quadrature increments
-  void levels_to_delta_sizes(const UShortArray& levels,
-			     UShortArray& delta_sizes);
 
 private:
 

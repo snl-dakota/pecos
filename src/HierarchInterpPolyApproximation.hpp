@@ -112,6 +112,18 @@ protected:
   void compute_total_sobol_indices();
   void compute_partial_variance(const BitArray& set_value);
 
+  void set_new_point(const RealVector& x, const UShortArray& basis_index,
+		     short order);
+  void set_new_point(const RealVector& x, const UShortArray& basis_index,
+		     const SizetList& subset_indices, short order);
+
+  size_t barycentric_exact_index(const UShortArray& basis_index);
+  size_t barycentric_exact_index(const UShortArray& basis_index,
+				 const SizetList& subset_indices);
+
+  unsigned short tensor_product_num_key(size_t i, unsigned short level_i);
+  unsigned short tensor_product_max_key(size_t i, unsigned short level_i);
+
 private:
 
   //
@@ -389,6 +401,104 @@ HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
 
 inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 {}
+
+
+inline void HierarchInterpPolyApproximation::
+set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
+{
+  unsigned short bi_j; UShortArray delta_key;
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  for (size_t j=0; j<numVars; ++j) {
+    bi_j = basis_index[j];
+    if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
+      hsg_driver->level_to_delta_key(j, bi_j, delta_key);
+      polynomialBasis[bi_j][j].set_new_point(x[j], order, delta_key);
+    }
+  }
+}
+
+
+inline void HierarchInterpPolyApproximation::
+set_new_point(const RealVector& x, const UShortArray& basis_index,
+	      const SizetList& subset_indices, short order)
+{
+  SizetList::const_iterator cit; size_t j; unsigned short bi_j;
+  UShortArray delta_key;
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi_j = basis_index[j];
+    if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
+      hsg_driver->level_to_delta_key(j, bi_j, delta_key);
+      polynomialBasis[bi_j][j].set_new_point(x[j], order, delta_key);
+    }
+  }
+}
+
+
+inline size_t HierarchInterpPolyApproximation::
+barycentric_exact_index(const UShortArray& basis_index)
+{
+  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  for (j=0; j<numVars; ++j) {
+    bi_j = basis_index[j];
+    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
+    // this constant interpolation with the value at the 1 colloc index (ei=0)
+    if (bi_j) {
+      edi_j = polynomialBasis[bi_j][j].exact_delta_index();
+      if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
+	{ pt_index = _NPOS; break; }
+      else {
+	pt_index += edi_j * prod;
+	prod     *= hsg_driver->level_to_delta_size(j, bi_j);
+      }
+    }
+  }
+  return pt_index;
+}
+
+
+inline size_t HierarchInterpPolyApproximation::
+barycentric_exact_index(const UShortArray& basis_index,
+			const SizetList& subset_indices)
+{
+  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
+  SizetList::const_iterator cit;
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    j = *cit; bi_j = basis_index[j];
+    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
+    // this constant interpolation with the value at the 1 colloc index (ei=0)
+    if (bi_j) {
+      edi_j = polynomialBasis[bi_j][j].exact_delta_index();
+      if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
+	{ pt_index = _NPOS; break; }
+      else {
+	pt_index += edi_j * prod;
+	prod     *= hsg_driver->level_to_delta_size(j, bi_j);
+      }
+    }
+  }
+  return pt_index;
+}
+
+
+// TO DO: optimize with precompute
+inline unsigned short HierarchInterpPolyApproximation::
+tensor_product_num_key(size_t i, unsigned short level_i)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  return hsg_driver->level_to_delta_size(i, level_i);
+}
+
+
+// TO DO: optimize with precompute
+inline unsigned short HierarchInterpPolyApproximation::
+tensor_product_max_key(size_t i, unsigned short level_i)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  return hsg_driver->level_to_max_delta_key(i, level_i);
+}
 
 
 inline Real HierarchInterpPolyApproximation::

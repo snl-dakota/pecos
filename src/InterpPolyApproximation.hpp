@@ -130,6 +130,33 @@ protected:
   virtual void compute_total_sobol_indices() = 0;
   virtual void compute_partial_variance(const BitArray& set_value);
 
+  /// set point values within 1D basis polynomials for purposes of
+  /// barycentric precomputation
+  virtual void set_new_point(const RealVector& x,
+			     const UShortArray& basis_index, short order) = 0;
+  /// set point values within subset of 1D basis polynomials for purposes of
+  /// barycentric precomputation
+  virtual void set_new_point(const RealVector& x,
+			     const UShortArray& basis_index,
+			     const SizetList& subset_indices, short order) = 0;
+
+  /// for an exact point match in all dimensions, return the
+  /// tensor-product index of the matching point
+  virtual size_t barycentric_exact_index(const UShortArray& basis_index) = 0;
+  /// for an exact point match in all dimensions within subset_indices,
+  /// return the tensor-product index of the matching point
+  virtual size_t barycentric_exact_index(const UShortArray& basis_index,
+					 const SizetList& subset_indices) = 0;
+
+  /// return the number of collocation keys for i^{th} variable and
+  /// level_i index set
+  virtual unsigned short tensor_product_num_key(size_t i,
+						unsigned short level_i) = 0;
+  /// return the maximum collocation key value for i^{th} variable and
+  /// level_i index set
+  virtual unsigned short tensor_product_max_key(size_t i,
+						unsigned short level_i) = 0;
+
   //
   //- Heading: Convenience functions
   //
@@ -174,15 +201,6 @@ protected:
 				  const UShortArray& basis_index,
 				  const SizetList& subset_indices);
 
-  /// set point values within 1D basis polynomials for purposes of
-  /// barycentric precomputation
-  void set_new_point(const RealVector& x, const UShortArray& basis_index,
-		     short order);
-  /// set point values within subset of 1D basis polynomials for purposes of
-  /// barycentric precomputation
-  void set_new_point(const RealVector& x, const UShortArray& basis_index,
-		     const SizetList& subset_indices, short order);
-
   /// compute the number of variables that are active for barycentric
   /// interpolation
   size_t barycentric_active_variables(const UShortArray& basis_index);
@@ -190,14 +208,6 @@ protected:
   /// active for barycentric interpolation
   size_t barycentric_active_variables(const UShortArray& basis_index,
 				      const SizetList& subset_indices);
-
-  /// for an exact point match in all dimensions, return the
-  /// tensor-product index of the matching point
-  size_t barycentric_exact_index(const UShortArray& basis_index);
-  /// for an exact point match in all dimensions within subset_indices,
-  /// return the tensor-product index of the matching point
-  size_t barycentric_exact_index(const UShortArray& basis_index,
-				const SizetList& subset_indices);
 
   /// compute the product of 1D barycentric value factors
   Real barycentric_value_factor(const UShortArray& key,
@@ -227,15 +237,6 @@ protected:
   /// compute the product of a subset of 1D barycentric gradient scalings
   Real barycentric_gradient_scaling(const UShortArray& basis_index,
 				    const SizetList& subset_indices);
-
-  void tensor_product_num_keys(const UShortArray& level_index,
-			       UShortArray& num_keys);
-
-  void tensor_product_max_keys(const UShortArray& level_index,
-			       UShortArray& max_keys);
-  void tensor_product_max_keys(const UShortArray& level_index,
-			       const SizetList& subset_indices,
-			       UShortArray& max_keys);
 
   /// return type 1 product weight from integration of type 1 interpolation
   /// polynomials using integrated dimension subset
@@ -372,23 +373,23 @@ private:
   /// shared utility for barycentric interpolation over a partial variable
   /// subset: define pt_factors, act_v_set, num_act_pts, and return pt_index
   void barycentric_partial_indexing(const UShortArray& basis_index,
-				    const UShortArray& num_keys,
-				    SizetList& pt_factors, SizetList& act_v_set,
-				    size_t& num_act_pts, size_t& pt_index);
+				    UShortList& num_keys, SizetList& pt_factors,
+				    SizetList& act_v_set, size_t& num_act_pts,
+				    size_t& pt_index);
   /// shared utility for barycentric interpolation over a partial variable
   /// subset: define pt_factors, act_v_set, num_act_pts, and return pt_index
   void barycentric_partial_indexing(const UShortArray& basis_index,
 				    const SizetList& subset_indices,
-				    const UShortArray& num_keys,
-				    SizetList& pt_factors, SizetList& act_v_set,
-				    size_t& num_act_pts, size_t& pt_index);
+				    UShortList& num_keys, SizetList& pt_factors,
+				    SizetList& act_v_set, size_t& num_act_pts,
+				    size_t& pt_index);
 
   /// shared code for barycentric interpolation over an active variable subset
   void accumulate_barycentric_partial(const RealVector& t1_coeffs,
 				      const UShortArray& basis_index,
 				      const UShort2DArray& key,
 				      const SizetArray& colloc_index,
-				      const UShortArray& num_keys,
+				      const UShortList& num_keys,
 				      const SizetList& pt_factors,
 				      const SizetList& act_v_set,
 				      size_t num_act_pts, size_t pt_index,
@@ -650,55 +651,6 @@ type2_interpolant_gradient(const RealVector& x, size_t deriv_index,
 }
 
 
-inline void InterpPolyApproximation::
-set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
-{
-  unsigned short bi_j;
-  if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL) {
-    UShortArray delta_key;
-    for (size_t j=0; j<numVars; ++j) {
-      bi_j = basis_index[j];
-      if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
-	driverRep->level_to_delta_key(j, bi_j, delta_key);
-	polynomialBasis[bi_j][j].set_new_point(x[j], order, delta_key);
-      }
-    }
-  }
-  else
-    for (size_t j=0; j<numVars; ++j) {
-      bi_j = basis_index[j];
-      if (bi_j) // exclusion of pt must be sync'd w/ factors/scalings
-	polynomialBasis[bi_j][j].set_new_point(x[j], order);
-    }
-}
-
-
-inline void InterpPolyApproximation::
-set_new_point(const RealVector& x, const UShortArray& basis_index,
-	      const SizetList& subset_indices, short order)
-{
-  SizetList::const_iterator cit; size_t j; unsigned short bi_j;
-  if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL) {
-    UShortArray delta_key;
-    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      j = *cit; bi_j = basis_index[j];
-      if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
-	driverRep->level_to_delta_key(j, bi_j, delta_key);
-	polynomialBasis[bi_j][j].set_new_point(x[j], order, delta_key);
-      }
-    }
-  }
-  else
-    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      j = *cit; bi_j = basis_index[j];
-      if (bi_j) // exclusion of pt must be sync'd w/ factors/scalings
-	polynomialBasis[bi_j][j].set_new_point(x[j], order);
-    }
-}
-
-
 inline size_t InterpPolyApproximation::
 barycentric_active_variables(const UShortArray& basis_index)
 {
@@ -726,92 +678,24 @@ barycentric_active_variables(const UShortArray& basis_index,
 }
 
 
-inline size_t InterpPolyApproximation::
-barycentric_exact_index(const UShortArray& basis_index)
-{
-  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
-  // Note: if bi_j == 0, then constant interp with 1 point: we can replace this
-  // constant interpolation with the value at the 1 colloc index (ei=0)
-  if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL)
-    for (j=0; j<numVars; ++j) {
-      bi_j = basis_index[j];
-      if (bi_j) {
-	edi_j = polynomialBasis[bi_j][j].exact_delta_index();
-	if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
-	  { pt_index = _NPOS; break; }
-	else {
-	  pt_index += edi_j * prod;
-	  prod     *= driverRep->level_to_delta_size(j, bi_j);
-	}
-      }
-    }
-  else
-    for (j=0; j<numVars; ++j) {
-      bi_j = basis_index[j];
-      if (bi_j) {
-	BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
-	pt_index += poly_i.exact_index() * prod;
-	prod     *= poly_i.interpolation_size();
-      }
-    }
-  return pt_index;
-}
-
-
-inline size_t InterpPolyApproximation::
-barycentric_exact_index(const UShortArray& basis_index,
-			const SizetList& subset_indices)
-{
-  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
-  SizetList::const_iterator cit;
-  // Note: if bi_j == 0, then constant interp with 1 point: we can replace this
-  // constant interpolation with the value at the 1 colloc index (ei=0)
-  if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL)
-    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      j = *cit; bi_j = basis_index[j];
-      if (bi_j) {
-	edi_j = polynomialBasis[bi_j][j].exact_delta_index();
-	if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
-	  { pt_index = _NPOS; break; }
-	else {
-	  pt_index += edi_j * prod;
-	  prod     *= driverRep->level_to_delta_size(j, bi_j);
-	}
-      }
-    }
-  else
-    for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-      j = *cit; bi_j = basis_index[j];
-      if (bi_j) {
-	BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-	pt_index += poly_j.exact_index() * prod;
-	prod     *= poly_j.interpolation_size();
-      }
-    }
-  return pt_index;
-}
-
-
 inline void InterpPolyApproximation::
 barycentric_partial_indexing(const UShortArray& basis_index,
-			     const UShortArray& num_keys,
-			     SizetList& pt_factors, SizetList& act_v_set,
-			     size_t& num_act_pts, size_t& pt_index)
+			     UShortList& num_keys, SizetList& pt_factors,
+			     SizetList& act_v_set, size_t& num_act_pts,
+			     size_t& pt_index)
 {
   // define interpolation set and initial pt_index offset
-  size_t j, num_pts = 1, ei_j, edi_j, pts_j;
-  unsigned short bi_j;
+  size_t j, num_pts = 1, ei_j, edi_j;
+  unsigned short pts_j, bi_j;
   num_act_pts = 1; pt_index = 0;
   for (j=0; j<numVars; ++j) {
     bi_j = basis_index[j];
     if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
       BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-      ei_j = poly_j.exact_index(); pts_j = num_keys[j];
+      ei_j = poly_j.exact_index(); pts_j = tensor_product_num_key(j, bi_j);
       if (ei_j == _NPOS) { // active for interpolation
 	pt_factors.push_back(num_pts); act_v_set.push_back(j);
-	num_act_pts *= pts_j;
+	num_keys.push_back(pts_j);     num_act_pts *= pts_j;
       }
       else {             // inactive for interpolation
 	edi_j = poly_j.exact_delta_index();
@@ -829,22 +713,22 @@ barycentric_partial_indexing(const UShortArray& basis_index,
 inline void InterpPolyApproximation::
 barycentric_partial_indexing(const UShortArray& basis_index,
 			     const SizetList& subset_indices,
-			     const UShortArray& num_keys,
-			     SizetList& pt_factors, SizetList& act_v_set,
-			     size_t& num_act_pts, size_t& pt_index)
+			     UShortList& num_keys, SizetList& pt_factors,
+			     SizetList& act_v_set, size_t& num_act_pts,
+			     size_t& pt_index)
 {
   // define interpolation set and initial pt_index offset
-  size_t j, num_pts = 1, ei_j, edi_j, pts_j;
-  unsigned short bi_j; SizetList::const_iterator cit;
+  size_t j, num_pts = 1, ei_j, edi_j;
+  unsigned short pts_j, bi_j; SizetList::const_iterator cit;
   num_act_pts = 1; pt_index = 0;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     j = *cit; bi_j = basis_index[j];
     if (bi_j) { // else pts_j = 1 and ei_j can be taken to be 0
       BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-      ei_j = poly_j.exact_index(); pts_j = num_keys[j];
+      ei_j = poly_j.exact_index(); pts_j = tensor_product_num_key(j, bi_j);
       if (ei_j == _NPOS) { // active for interpolation
 	pt_factors.push_back(num_pts); act_v_set.push_back(j);
-	num_act_pts *= pts_j;
+	num_keys.push_back(pts_j);     num_act_pts *= pts_j;
       }
       else {             // inactive for interpolation
 	edi_j = poly_j.exact_delta_index();
@@ -1024,51 +908,6 @@ barycentric_gradient_scaling(/* size_t deriv_index, */
     }
   }
   return scale;
-}
-
-
-inline void InterpPolyApproximation::
-tensor_product_num_keys(const UShortArray& level_index, UShortArray& num_keys)
-{
-  if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL)
-    for (size_t i=0; i<numVars; ++i)
-      num_keys[i] = driverRep->level_to_delta_size(i, level_index[i]);
-  else
-    for (size_t i=0; i<numVars; ++i)
-      num_keys[i] = polynomialBasis[level_index[i]][i].interpolation_size();
-}
-
-
-inline void InterpPolyApproximation::
-tensor_product_max_keys(const UShortArray& level_index, UShortArray& max_keys)
-{
-  if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL)
-    for (size_t i=0; i<numVars; ++i)
-      max_keys[i] = driverRep->level_to_max_delta_key(i, level_index[i]);
-  else
-    for (size_t i=0; i<numVars; ++i)
-      max_keys[i] = polynomialBasis[level_index[i]][i].interpolation_size() - 1;
-}
-
-
-inline void InterpPolyApproximation::
-tensor_product_max_keys(const UShortArray& level_index,
-			const SizetList& subset_indices, UShortArray& max_keys)
-{
-  size_t i, vi; SizetList::const_iterator cit;
-  if (basisType ==    GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL)
-    for (cit=subset_indices.begin(),i=0; cit!=subset_indices.end(); ++i,++cit) {
-      vi = *cit;
-      max_keys[i] = driverRep->level_to_max_delta_key(vi, level_index[vi]);
-    }
-  else
-    for (cit=subset_indices.begin(),i=0; cit!=subset_indices.end(); ++i,++cit) {
-      vi = *cit;
-      max_keys[i] = polynomialBasis[level_index[vi]][vi].interpolation_size()-1;
-    }
 }
 
 

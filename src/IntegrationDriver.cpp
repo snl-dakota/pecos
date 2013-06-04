@@ -267,43 +267,6 @@ const RealMatrix& IntegrationDriver::type2_weight_sets() const
 }
 
 
-unsigned short IntegrationDriver::
-level_to_max_delta_key(size_t i, unsigned short lev_i)
-{
-  if (!driverRep) {
-    PCerr << "Error: level_to_max_delta_key() not available for this driver "
-	  << "type." << std::endl;
-    abort_handler(-1);
-  }
-  return driverRep->level_to_max_delta_key(i, lev_i);
-}
-
-
-unsigned short IntegrationDriver::
-level_to_delta_size(size_t i, unsigned short lev_i)
-{
-  if (!driverRep) {
-    PCerr << "Error: level_to_delta_size() not available for this driver type."
-	  << std::endl;
-    abort_handler(-1);
-  }
-  return driverRep->level_to_delta_size(i, lev_i);
-}
-
-
-void IntegrationDriver::
-level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
-{
-  if (driverRep) // forward to letter
-    driverRep->level_to_delta_key(i, lev_i, delta_key_i);
-  else {
-    PCerr << "Error: level_to_delta_key() not available for this driver type."
-	  << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_rules(const ShortArray& u_types,

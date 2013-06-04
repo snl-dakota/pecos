@@ -75,6 +75,7 @@ typedef boost::dynamic_bitset<unsigned long> BitArray;
 
 typedef std::pair<Real, Real>        RealPair;
 typedef std::pair<Real, RealVector>  RealRealVectorPair;
+typedef std::list<unsigned short>    UShortList;
 typedef std::list<size_t>            SizetList;
 
 typedef std::vector<Real>            RealArray;
