@@ -107,9 +107,6 @@ protected:
   size_t barycentric_exact_index(const UShortArray& basis_index,
 				 const SizetList& subset_indices);
 
-  unsigned short tensor_product_num_key(size_t i, unsigned short level_i);
-  unsigned short tensor_product_max_key(size_t i, unsigned short level_i);
-
 private:
 
   //
@@ -457,16 +454,6 @@ barycentric_exact_index(const UShortArray& basis_index,
   }
   return pt_index;
 }
-
-
-inline unsigned short NodalInterpPolyApproximation::
-tensor_product_num_key(size_t i, unsigned short level_i)
-{ return polynomialBasis[level_i][i].interpolation_size(); }
-
-
-inline unsigned short NodalInterpPolyApproximation::
-tensor_product_max_key(size_t i, unsigned short level_i)
-{ return polynomialBasis[level_i][i].interpolation_size() - 1; }
 
 } // namespace Pecos
 

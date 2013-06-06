@@ -73,7 +73,7 @@ public:
   // concatenate type2WeightSets for use in abstract integration functions
   //const RealMatrix& type2_weight_sets(); // const;
 
-  unsigned short level_to_max_delta_key(size_t i, unsigned short lev_i);
+  UShortPair level_to_delta_pair(size_t i, unsigned short lev_i);
   unsigned short level_to_delta_size(size_t i, unsigned short lev_i);
   void level_to_delta_key(size_t i, unsigned short lev_i,
 			  UShortArray& delta_key_i);

@@ -73,8 +73,10 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // ---------------------------------------
 typedef boost::dynamic_bitset<unsigned long> BitArray;
 
-typedef std::pair<Real, Real>        RealPair;
-typedef std::pair<Real, RealVector>  RealRealVectorPair;
+typedef std::pair<unsigned short, unsigned short> UShortPair;
+typedef std::pair<Real, Real>                     RealPair;
+typedef std::pair<Real, RealVector>               RealRealVectorPair;
+
 typedef std::list<unsigned short>    UShortList;
 typedef std::list<size_t>            SizetList;
 

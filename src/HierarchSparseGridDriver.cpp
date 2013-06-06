@@ -344,14 +344,16 @@ void HierarchSparseGridDriver::update_collocation_indices()
 unsigned short HierarchSparseGridDriver::
 level_to_delta_size(size_t i, unsigned short level)
 {
-  unsigned short num_delta;
-  level_to_order(i, level, num_delta);
-  if (level > 0) {
-    unsigned short ord_lm1;
-    level_to_order(i, level-1, ord_lm1);
+  switch (level) { // growth restriction should not occur for lev_i = 0 or 1
+  case 0: return 1;   break; // 1 new pt
+  case 1: return 2;   break; // new ends of 3 pt (open or closed)
+  default: { // difference point counts for level & level-1
+    unsigned short num_delta, ord_lm1;
+    level_to_order(i, level, num_delta); level_to_order(i, level-1, ord_lm1);
     num_delta -= ord_lm1; // Note: num_delta = 0 in case of growth restriction
+    return num_delta; break;
   }
-  return num_delta;
+  }
 }
 
 
@@ -378,7 +380,7 @@ level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
   case GENZ_KEISTER: // open nested table lookup
     // switch on num_delta i/o lev_i due to possibility of growth restriction
     switch (num_delta) {
-    case 1: delta_key_i[0] = 0;                      break; // center of 1 pt
+    case 1: delta_key_i[0] = 0;                     break; // center of 1 pt
     case 2: delta_key_i[0] = 0; delta_key_i[1] = 2; break; // ends of 3 pt
     case 6:
       delta_key_i[0] = 0; delta_key_i[1] = 1; delta_key_i[2] = 3;
@@ -417,44 +419,45 @@ level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
 }
 
 
-unsigned short HierarchSparseGridDriver::
-level_to_max_delta_key(size_t i, unsigned short lev_i)
+UShortPair HierarchSparseGridDriver::
+level_to_delta_pair(size_t i, unsigned short level)
 {
-  unsigned short max_key_i;
-  switch(collocRules[i]) {
-  case GAUSS_PATTERSON:                    // open nested
-    max_key_i = 2 * level_to_delta_size(i, lev_i) - 2; break;    // new exterior
-  case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
-    switch (lev_i) { // growth restriction should not occur for lev_i = 0 or 1
-    case 0:  max_key_i = 0; break; // center of 1 pt
-    case 1:  max_key_i = 2; break; // ends of 3 pt
-    default: max_key_i = 2 * level_to_delta_size(i, lev_i) - 1; break;//interior
-    }
-    break;
-  case GENZ_KEISTER: // open nested table lookup
-    // switch on num_delta i/o lev_i due to possibility of growth restriction
-    switch (level_to_delta_size(i, lev_i)) {
-    case  1: max_key_i =  0; break; // center of 1 pt
-    case  2: max_key_i =  2; break; // end of 3 pt
-    case  6: max_key_i =  8; break; // 9 pt rule
-    case 10: max_key_i = 18; break; // 19 pt rule
-    case 16: max_key_i = 34; break; // 35 pt rule
-    //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
-    //  break; // disallow for hierarchical interpolation
+  switch (level) { // growth restriction should not occur for level = 0 or 1
+  case 0: // +1 pt,  max index = 0 for 1 pt rule
+    return UShortPair(1,0); break;
+  case 1: // +2 pts, max index = 2 for right end of 3 pt rule (open or closed)
+    return UShortPair(2,2); break;
+  default: {
+    unsigned short max_key, num_delta = level_to_delta_size(i, level);
+    switch(collocRules[i]) {
+    case GAUSS_PATTERSON:                    // open nested
+      max_key = 2 * num_delta - 2; break; // new exterior
+    case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
+      max_key = 2 * num_delta - 1; break; // new interior
+    case GENZ_KEISTER: // open nested table lookup
+      // switch on num_delta i/o level due to possibility of growth restriction
+      switch (num_delta) {
+      case  6: max_key =  8; break; // 9 pt rule
+      case 10: max_key = 18; break; // 19 pt rule
+      case 16: max_key = 34; break; // 35 pt rule
+      //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
+      //  break; // disallow for hierarchical interpolation
+      default:
+	PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
+	      << "HierarchSparseGridDriver::level_to_delta_pair()" << std::endl;
+	abort_handler(-1);
+	break;
+      }
+      break;
     default:
-      PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
-	    << "HierarchSparseGridDriver::level_to_max_delta_key()"
-	    << std::endl;
+      PCerr << "Error: bad rule type in level_to_delta_pair()" << std::endl;
       abort_handler(-1);
       break;
     }
-    break;
-  default:
-    PCerr << "Error: bad rule type in level_to_max_delta_key()" << std::endl;
-    abort_handler(-1);
+    return UShortPair(num_delta, max_key);
     break;
   }
-  return max_key_i;
+  }
 }
 
 

@@ -123,6 +123,12 @@ protected:
 
   unsigned short tensor_product_num_key(size_t i, unsigned short level_i);
   unsigned short tensor_product_max_key(size_t i, unsigned short level_i);
+  void precompute_keys(const UShortArray& basis_index);
+  void precompute_keys(const UShortArray& basis_index,
+		       const SizetList& subset_indices);
+  void precompute_max_keys(const UShortArray& basis_index);
+  void precompute_max_keys(const UShortArray& basis_index,
+			   const SizetList& subset_indices);
 
 private:
 
@@ -389,6 +395,13 @@ private:
   // storage of IntegrationDriver collocation indices state for
   // subsequent restoration
   //Sizet3DArray storedCollocIndices;
+
+  /// used for precomputation of the number of hierarchical keys for a
+  /// particular basis_index
+  UShortArray tpNumKeys;
+  /// used for precomputation of the maximum hierarchical key index
+  /// for a particular basis_index
+  UShortArray tpMaxKeys;
 };
 
 
@@ -483,21 +496,78 @@ barycentric_exact_index(const UShortArray& basis_index,
 }
 
 
-// TO DO: optimize with precompute
 inline unsigned short HierarchInterpPolyApproximation::
 tensor_product_num_key(size_t i, unsigned short level_i)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  return hsg_driver->level_to_delta_size(i, level_i);
+  // for the case of precomputed keys:
+  return tpNumKeys[i];
+
+  //HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  //return hsg_driver->level_to_delta_size(i, level_i);
 }
 
 
-// TO DO: optimize with precompute
 inline unsigned short HierarchInterpPolyApproximation::
 tensor_product_max_key(size_t i, unsigned short level_i)
 {
+  // for the case of precomputed keys:
+  return tpMaxKeys[i];
+
+  //HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  //return hsg_driver->level_to_delta_pair(i, level_i).second;
+}
+
+
+inline void HierarchInterpPolyApproximation::
+precompute_keys(const UShortArray& basis_index)
+{
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  return hsg_driver->level_to_max_delta_key(i, level_i);
+  if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
+  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
+  UShortPair key_pr;
+  for (size_t i=0; i<numVars; ++i) {
+    key_pr = hsg_driver->level_to_delta_pair(i, basis_index[i]);
+    tpNumKeys[i] = key_pr.first; tpMaxKeys[i] = key_pr.second;
+  }
+}
+
+
+inline void HierarchInterpPolyApproximation::
+precompute_keys(const UShortArray& basis_index, const SizetList& subset_indices)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
+  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
+  SizetList::const_iterator cit; size_t i; UShortPair key_pr;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    i = *cit;
+    key_pr = hsg_driver->level_to_delta_pair(i, basis_index[i]);
+    tpNumKeys[i] = key_pr.first; tpMaxKeys[i] = key_pr.second;
+  }
+}
+
+
+inline void HierarchInterpPolyApproximation::
+precompute_max_keys(const UShortArray& basis_index)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
+  for (size_t i=0; i<numVars; ++i)
+    tpMaxKeys[i] = hsg_driver->level_to_delta_pair(i, basis_index[i]).second;
+}
+
+
+inline void HierarchInterpPolyApproximation::
+precompute_max_keys(const UShortArray& basis_index,
+		    const SizetList& subset_indices)
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
+  SizetList::const_iterator cit; size_t i;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    i = *cit;
+    tpMaxKeys[i] = hsg_driver->level_to_delta_pair(i, basis_index[i]).second;
+  }
 }
 
 

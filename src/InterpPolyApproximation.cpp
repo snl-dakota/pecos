@@ -498,6 +498,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     }
     else if (num_act_v == numVars) { // interpolation over all variables
       RealVector accumulator(numVars); // init to 0.
+      precompute_max_keys(basis_index); // if needed for efficiency
       unsigned short key_i0, key_ij, bi_j, bi_0 = basis_index[0],
 	max0 = tensor_product_max_key(0, bi_0);
       const RealVector& bc_vf_0
@@ -531,14 +532,14 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
       return accumulator[numVars-1] / barycentric_value_scaling(basis_index);
     }
     else { // partial interpolation over active variables
-      SizetList pt_factors, act_v_set; UShortList num_keys;
+      SizetList pt_factors, act_v_set; //UShortList num_keys;
       size_t num_act_pts, pt_index;
-      barycentric_partial_indexing(basis_index, num_keys, pt_factors,
+      barycentric_partial_indexing(basis_index, /*num_keys,*/ pt_factors,
 				   act_v_set, num_act_pts, pt_index);
       if (pt_index == _NPOS) return 0.;
       RealVector accumulator(num_act_v); // init to 0.
       accumulate_barycentric_partial(exp_t1_coeffs, basis_index, key,
-				     colloc_index, num_keys, pt_factors,
+				     colloc_index, /*num_keys,*/ pt_factors,
 				     act_v_set, num_act_pts, pt_index,
 				     accumulator);
       return accumulator[num_act_v-1] / barycentric_value_scaling(basis_index);
@@ -563,6 +564,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
   else if (exp_t2_coeffs.empty()) {
     // Horner's rule approach:
     RealVector accumulator(numVars); // init to 0.
+    precompute_max_keys(basis_index); // if needed for efficiency
     unsigned short bi_0 = basis_index[0], bi_j, key_i0, key_ij,
       max0 = tensor_product_max_key(0, bi_0);
     BasisPolynomial& poly_0 = polynomialBasis[bi_0][0];
@@ -612,6 +614,7 @@ tensor_product_value(const RealVector& x, const RealVector& exp_t1_coeffs,
     RealVector t1_accumulator(numVars);          // init to 0.
     RealMatrix t2_accumulator(numVars, numVars); // init to 0.
     Real *t2_accum_0 = t2_accumulator[0], *t2_accum_j, *t2_accum_jm1;
+    precompute_max_keys(basis_index); // if needed for efficiency
     unsigned short     bi_0 = basis_index[0], bi_j, key_i0, key_ij,
       max0 = tensor_product_max_key(0, bi_0);
     BasisPolynomial& poly_0 = polynomialBasis[bi_0][0];
@@ -721,6 +724,7 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
       SizetList::const_iterator cit = subset_indices.begin();
       size_t i, j, num_colloc_pts = subset_key.size(), v0 = *cit, vj;
       RealVector accumulator(num_subset_v); // init to 0.
+      precompute_max_keys(basis_index, subset_indices); // if needed
       unsigned short bi_0 = basis_index[v0], bi_j, key_i0, key_ij,
 	max0 = tensor_product_max_key(v0, bi_0);
       const RealVector& bc_vf_0
@@ -747,16 +751,16 @@ tensor_product_value(const RealVector& x, const RealVector& subset_t1_coeffs,
 	/ barycentric_value_scaling(basis_index, subset_indices);
     }
     else { // partial interpolation over active variables
-      SizetList pt_factors, act_v_set; UShortList num_keys;
+      SizetList pt_factors, act_v_set; //UShortList num_keys;
       size_t num_act_pts, pt_index;
-      barycentric_partial_indexing(basis_index, subset_indices, num_keys,
+      barycentric_partial_indexing(basis_index, subset_indices, //num_keys,
 				   pt_factors, act_v_set, num_act_pts,pt_index);
       if (pt_index == _NPOS) return 0.;
       RealVector accumulator(num_act_v); // init to 0.
       accumulate_barycentric_partial(subset_t1_coeffs, basis_index, subset_key,
-				     subset_colloc_index, num_keys, pt_factors,
-				     act_v_set, num_act_pts, pt_index,
-				     accumulator);
+				     subset_colloc_index, //num_keys,
+				     pt_factors, act_v_set, num_act_pts,
+				     pt_index, accumulator);
       return accumulator[num_act_v-1]
 	/ barycentric_value_scaling(basis_index, subset_indices);
     }
@@ -825,6 +829,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     // Note: for basis gradients, one cannot eliminate exact index dimensions
     // as is managed in the barycentric case of tensor_product_value()
 
+    precompute_max_keys(basis_index); // if needed for efficiency
     unsigned short key_i0, key_ij, bi_0 = basis_index[0], bi_j,
       max0 = tensor_product_max_key(0, bi_0);
     BasisPolynomial&   poly_0 = polynomialBasis[bi_0][0];
@@ -930,6 +935,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     const RealVector& bc_vf_v0 = poly_v0.barycentric_value_factors();
     const RealVector& bc_gf_v0 = poly_v0.barycentric_gradient_factors();
     size_t ei_0 = poly_v0.exact_index();
+    precompute_max_keys(basis_index, subset_indices);// if needed for efficiency
     unsigned short max0 = tensor_product_max_key(v0, bi_0);
     RealMatrix accumulator(numVars, num_subset_v); // init to 0.
     Real *accum_0 = accumulator[0], t1_coeff;
@@ -1026,6 +1032,7 @@ tensor_product_gradient_basis_variables(const RealVector& x,
     // Note: for basis gradients, one cannot eliminate exact index dimensions
     // as is managed in the barycentric case of tensor_product_value()
 
+    precompute_max_keys(basis_index); // if needed for efficiency
     unsigned short key_i0, key_ij, bi_0 = basis_index[0], bi_j,
       max0 = tensor_product_max_key(0, bi_0);
     BasisPolynomial&   poly_0 = polynomialBasis[bi_0][0];
@@ -1183,6 +1190,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
     }
     else if (num_act_v == numVars) { // interpolation over all variables
       RealMatrix accumulator(numVars, num_deriv_vars); // init to 0.
+      precompute_max_keys(basis_index); // if needed for efficiency
       unsigned short key_i0, key_ij, bi_0 = basis_index[0], bi_j,
 	max0 = tensor_product_max_key(0, bi_0);
       const RealVector& bc_vf_0
@@ -1218,9 +1226,9 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	tpGradient[j] = accum[j] * scale;
     }
     else { // partial interpolation over active variables
-      SizetList pt_factors, act_v_set; UShortList num_keys;
+      SizetList pt_factors, act_v_set; //UShortList num_keys;
       size_t num_act_pts, pt_index;
-      barycentric_partial_indexing(basis_index, num_keys, pt_factors,
+      barycentric_partial_indexing(basis_index, /*num_keys,*/ pt_factors,
 				   act_v_set, num_act_pts, pt_index);
       if (pt_index == _NPOS) { tpGradient = 0.; return tpGradient; }
       RealMatrix accumulator(num_deriv_vars, num_act_v); // init to 0.
@@ -1229,10 +1237,10 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	max0 = tensor_product_max_key(v0, bi_0);
       const RealVector& bc_vf_v0
 	= polynomialBasis[bi_0][v0].barycentric_value_factors();
-      size_t pf0 = pt_factors.front(), pfj, pts_v0_pf0 = num_keys.front() * pf0,
-	prev_pt_set;
+      size_t pf0 = pt_factors.front(), pfj, prev_pt_set,
+	pts_v0_pf0 = pf0 * tensor_product_num_key(v0, bi_0);//*num_keys.front();
       Real *accum_0, *accum_j, *accum_jm1, bc_vf_00, bc_vf_jj;
-      SizetList::iterator pf_it, av_it; UShortList::iterator nk_it;
+      SizetList::iterator pf_it, av_it; //UShortList::iterator nk_it;
       // loop over active pts, summing contributions from active variables
       for (i=0; i<num_act_pts; ++i) {
 	const UShortArray& key_i = key[pt_index]; key_i0 = key_i[v0];
@@ -1244,9 +1252,9 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	pt_index += pf0;
 	if (key_i0 == max0) {
 	  // accumulate sums over variables with max key value
-	  for (j=1, prev_pt_set=pts_v0_pf0, nk_it=++num_keys.begin(),
+	  for (j=1, prev_pt_set=pts_v0_pf0, //nk_it=++num_keys.begin(),
 	       pf_it=++pt_factors.begin(), av_it=++act_v_set.begin();
-	       j<num_act_v; ++j, ++nk_it, ++pf_it, ++av_it) {
+	       j<num_act_v; ++j, /*++nk_it,*/ ++pf_it, ++av_it) {
 	    vj = *av_it; pfj = *pf_it;
 	    key_ij = key_i[vj]; bi_j = basis_index[vj];
 	    // update accumulators: push [j-1] entry up to [j] level
@@ -1262,7 +1270,7 @@ tensor_product_gradient_nonbasis_variables(const RealVector& x,
 	    if (pfj != prev_pt_set)
 	      pt_index += pfj - prev_pt_set;
 	    if (key_ij == tensor_product_max_key(vj, bi_j))
-	      prev_pt_set = *nk_it * pfj;
+	      prev_pt_set = tensor_product_num_key(vj, bi_j) * pfj;//*nk_it*pfj;
 	    else
 	      break;
 	  }
@@ -1308,7 +1316,7 @@ accumulate_barycentric_partial(const RealVector& t1_coeffs,
 			       const UShortArray& basis_index,
 			       const UShort2DArray& key,
 			       const SizetArray& colloc_index,
-			       const UShortList& num_keys,
+			       //const UShortList& num_keys,
 			       const SizetList& pt_factors,
 			       const SizetList& act_v_set,
 			       size_t num_act_pts, size_t pt_index,
@@ -1320,9 +1328,9 @@ accumulate_barycentric_partial(const RealVector& t1_coeffs,
     max0 = tensor_product_max_key(v0, bi_0);
   const RealVector& bc_vf_v0
     = polynomialBasis[bi_0][v0].barycentric_value_factors();
-  size_t pf0 = pt_factors.front(), pfj, pts_v0_pf0 = num_keys.front() * pf0,
-    prev_pt_set;
-  SizetList::const_iterator pf_it, av_it; UShortList::const_iterator nk_it;
+  size_t pf0 = pt_factors.front(), pfj, prev_pt_set,
+    pts_v0_pf0 = pf0 * tensor_product_num_key(v0, bi_0);// * num_keys.front();
+  SizetList::const_iterator pf_it, av_it; //UShortList::const_iterator nk_it;
   // loop over active pts, summing contributions from active variables
   for (i=0; i<num_act_pts; ++i) {
     const UShortArray& key_i = key[pt_index]; key_i0 = key_i[v0];
@@ -1332,9 +1340,9 @@ accumulate_barycentric_partial(const RealVector& t1_coeffs,
     pt_index += pf0;
     if (key_i0 == max0) {
       // accumulate sums over variables with max key value
-      for (j=1, prev_pt_set=pts_v0_pf0, nk_it=++num_keys.begin(),
+      for (j=1, prev_pt_set=pts_v0_pf0, //nk_it=++num_keys.begin(),
 	   pf_it=++pt_factors.begin(), av_it=++act_v_set.begin();
-	   j<num_act_v; ++j, ++nk_it, ++pf_it, ++av_it) {
+	   j<num_act_v; ++j, /*++nk_it,*/ ++pf_it, ++av_it) {
 	vj = *av_it; pfj = *pf_it; key_ij = key_i[vj]; bi_j = basis_index[vj];
 	// update accumulators: push [j-1] entry up to [j] level
 	accumulator[j]  += accumulator[j-1] *
@@ -1345,7 +1353,7 @@ accumulate_barycentric_partial(const RealVector& t1_coeffs,
 	if (pfj != prev_pt_set)
 	  pt_index += pfj - prev_pt_set;
 	if (key_ij == tensor_product_max_key(vj, bi_j))
-	  prev_pt_set = *nk_it * pfj;
+	  prev_pt_set = tensor_product_num_key(vj, bi_j) * pfj;//*nk_it * pfj;
 	else
 	  break;
       }
