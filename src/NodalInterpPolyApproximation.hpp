@@ -290,6 +290,7 @@ NodalInterpPolyApproximation(short basis_type, size_t num_vars,
   // setting is the most self-consistent.  Gradient enhancement is also not
   // currently supported for PRODUCT_OF_INTERPOLANTS approaches.
   //momentInterpType(INTERPOLATION_OF_PRODUCTS)
+  //momentInterpType(REINTERPOLATION_OF_PRODUCTS)
   //momentInterpType(PRODUCT_OF_INTERPOLANTS_FULL)
   //momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)
 {
@@ -298,7 +299,7 @@ NodalInterpPolyApproximation(short basis_type, size_t num_vars,
   // too slow for production usage.  Thus, we only activate it when needed to
   // support new capability, such as gradient-enhanced interpolation.
   momentInterpType = (use_derivs) ?
-    INTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+    REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
 }
 
 
