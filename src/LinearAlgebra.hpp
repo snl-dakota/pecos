@@ -17,6 +17,9 @@
 namespace Pecos{
 
 typedef Teuchos::SerialDenseMatrix<int,int> IntMatrix;
+typedef Teuchos::SerialDenseMatrix<int,Real> RealMatrix;
+typedef Teuchos::SerialDenseVector<int,int> IntVector;
+typedef Teuchos::SerialDenseVector<int,Real> RealVector;
 typedef std::vector<RealMatrix> RealMatrixList;
 
 /// Reshape a matrix only if the sizes of the matrices differ
@@ -32,6 +35,16 @@ template < typename O, typename T >
 void resize( Teuchos::SerialDenseVector<O,T> &v, O n )
 {
   if ( v.length() != n ) v.resize( n );
+};
+
+/// Append a column vector to a matrix.
+template < typename O, typename T >
+void append_column( const Teuchos::SerialDenseVector<O,T> &vector, 
+		    Teuchos::SerialDenseMatrix<O,T> &matrix )
+{
+  int N( matrix.numCols() );
+  matrix.reshape( vector.length(), N + 1 );
+  fill_column( N, vector, matrix );
 };
 
 /// Delete a column from a matrix
@@ -186,16 +199,6 @@ void fill_column( int col_number, const Teuchos::SerialDenseMatrix<O,T> &source,
     }
 };
 
-/// Append a column vector to a matrix.
-template < typename O, typename T >
-void append_column( const Teuchos::SerialDenseVector<O,T> &vector, 
-		    Teuchos::SerialDenseMatrix<O,T> &matrix )
-{
-  int N( matrix.numCols() );
-  matrix.reshape( vector.length(), N + 1 );
-  fill_column( N, vector, matrix );
-};
-
 /** \brief Fill a column of a matrix with the contents of an array.
  *
  * The user must ensure that the length of source is consistent 
@@ -255,20 +258,82 @@ bool weakScalarVectorLessThan( const Teuchos::SerialDenseVector<O,T>& v1,
   return false;
 };
 
+template <typename O, typename T>
+void permute_matrix_rows( Teuchos::SerialDenseMatrix<O,T> &A, IntVector &P )
+{
+  #ifdef DEBUG
+  if ( A.numRows() != P.length() )
+    throw( std::runtime_error("permute rows: A and P are inconsistent.") );
+  #endif
+  Teuchos::SerialDenseMatrix<O,T> tmp( A );
+  for ( int j = 0; j < A.numCols(); j++ )
+    {
+      for ( int i = 0; i < P.length(); i++ )
+	A(i,j) = tmp(P[i],j);
+    }
+};
+
+template <typename O, typename T>
+void permute_matrix_columns( Teuchos::SerialDenseMatrix<O,T> &A, IntVector &P )
+{
+  #ifdef DEBUG
+  if ( A.numCols() != P.length() )
+    throw( std::runtime_error("permute columns: A and P are inconsistent.") );
+  #endif
+  Teuchos::SerialDenseMatrix<O,T> tmp( A );
+  for ( int j = 0; j < P.length(); j++ )
+    {
+      for ( int i = 0; i < A.numRows(); i++ )
+	A(i,j) = tmp(i,P[j]);
+    }
+};
+
+/** \brief computes the Cholesky factorization of a real symmetric
+*  positive definite matrix A.
+*
+*  The factorization has the form
+*     A = U**T * U,  if UPLO = 'U', or
+*     A = L  * L**T,  if UPLO = 'L',
+*  where U is an upper triangular matrix and L is lower triangular.
+*
+*  \param A (input) DOUBLE PRECISION positive-definite matrix, dimension (N,N)
+*
+*  \param for_lapack flag specifying whether the cholesky factor is to be used 
+*  for a lapack function. If true then if A = L * L**T the upper part is not 
+*  referenced. If false the upper part is filled in with zeros. 
+*  Similarly for A = U**T * U
+*/
+int cholesky( RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo,
+	      bool for_lapack );
+
 /**
  * \brief Solves a system of linear equations A*X = B with a symmetric
- *  positive definite matrix A using the Cholesky factorization.
+ *  positive definite matrix A using a precomputed Cholesky factorization.
+ * 
+ *  Several right hand side vectors b and solution vectors x can be
+ *  handled in a single call; they are stored as the columns of the
+ *  M-by-NRHS right hand side matrix B and the N-by-NRHS solution
+ *  matrix X.
+ */
+int solve_using_cholesky_factor( RealMatrix &L, RealMatrix& B, 
+				 RealMatrix& result, Teuchos::EUplo uplo );
+
+/**
+ * \brief Solves a system of linear equations A*X = B with a symmetric
+ *  positive definite matrix A using the Cholesky factorization. The cholesky 
+ * factorization is computed internally.
  * 
  *  Several right hand side vectors b and solution vectors x can be
  *  handled in a single call; they are stored as the columns of the
  *  M-by-NRHS right hand side matrix B and the N-by-NRHS solution
  *  matrix X.
  *
- * \param (INPUT/OUTPUT) if rcond < 0 compute the reciprocal of the 
+ * \param rcond (INPUT/OUTPUT) if rcond < 0 compute the reciprocal of the 
  *                       condition number of A and store the result in rcond on 
  *			 output. if rcond > 0 rcond is not computed. 
  */
-int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& X,  Real &rcond );
+int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& result,  
+		    Real &rcond );
 
 /** \brief Solves overdetermined or underdetermined real linear systems
  *  involving an M-by-N matrix A, or its transpose, using a QR or LQ
@@ -281,7 +346,7 @@ int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& X,  Real &rcond );
  *
  * \todo at the moment A cannot be rank-defficient. implement using dgelsy.
  */
-void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X, 
+void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &result, 
 	       Teuchos::ETransp trans = Teuchos::NO_TRANS );
 
 /** \brief Compute the minimum-norm solution to a real linear least
@@ -305,7 +370,7 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
  *  \param B (input) DOUBLE PRECISION matrix, dimension (M,NRHS)
  *          On entry, the M-by-NRHS right hand side matrix B.
  *          
- *  \param S (output) DOUBLE PRECISION matrix, dimension (min(M,N))
+ *  \param result_1 (output) DOUBLE PRECISION matrix, dimension (min(M,N))
  *          The singular values of A in decreasing order.
  *          The condition number of A in the 2-norm = S(1)/S(min(m,n)).
  *
@@ -318,7 +383,7 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
  *          The effective rank of A, i.e., the number of singular values
  *          which are greater than RCOND*S(1).
  *
- *  \param X (output) DOUBLE PRECISION matrix, dimension (M,NRHS)
+ *  \param result_0 (output) DOUBLE PRECISION matrix, dimension (M,NRHS)
  *          On exit, X is the N-by-NRHS solution
  *          matrix.  If m >= n and RANK = n, the residual
  *          sum-of-squares for the solution in the i-th column is given
@@ -326,8 +391,8 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
  *
  *  \todo implement dgelsd which is faster than dgelss
  */
-void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
-	       RealVector &S, int &rank, Real rcond = -1 );
+void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &result_0,
+		RealVector &result_1, int &rank, Real rcond = -1 );
 
 /** \brief Solves a triangular system
  *
@@ -354,7 +419,7 @@ void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
  *          On entry, the right hand side matrix B.
  *          On exit, if INFO = 0, the solution matrix X.
  *
- *  \param X (output) DOUBLE PRECISION matrix, dimension (N,NRHS)
+ *  \param result (output) DOUBLE PRECISION matrix, dimension (N,NRHS)
  *          On exit, X is the N-by-NRHS solution
  *          matrix.
  *
@@ -367,12 +432,12 @@ void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
  *  \param diag Specifies if the matrix is unit diagonal
  *
  */
-void backward_substitution_solve( RealMatrix &A, 
-				  RealMatrix &B, 
-				  RealMatrix &X, 
-				  Teuchos::ETransp trans = Teuchos::NO_TRANS,
-				  Teuchos::EUplo uplo = Teuchos::UPPER_TRI,
-				  Teuchos::EDiag diag = Teuchos::NON_UNIT_DIAG );
+void substitution_solve( RealMatrix &A, 
+			 RealMatrix &B, 
+			 RealMatrix &result, 
+			 Teuchos::ETransp trans = Teuchos::NO_TRANS,
+			 Teuchos::EUplo uplo = Teuchos::UPPER_TRI,
+			 Teuchos::EDiag diag = Teuchos::NON_UNIT_DIAG );
 
 /**
  * \brief Returns the QR factorization of [A a] given a qr factorization of A
@@ -440,7 +505,7 @@ int cholesky_factorization_update_insert_column( RealMatrix &A, RealMatrix &U,
  * \parm givensMatrix (ouput) (2x2) Givens rotation matrix
  */
 void givens_rotation( RealVector &x, RealVector &x_rot, 
-		     RealMatrix &givensMatrix );
+		      RealMatrix &givensMatrix );
 
 /**
  * \brief Update the cholesky factorization of a positive definite grammian 
@@ -456,8 +521,8 @@ void givens_rotation( RealVector &x, RealVector &x_rot,
  * \param N the number of rows and columns of U
  */
 void cholesky_factorization_update_delete_column( RealMatrix &U, 
-					      int col_index,
-					      int N);
+						  int col_index,
+						  int N);
 
 // For qr updating for deleting and including a row go to
 // http://www.maths.manchester.ac.uk/~clucas/updating/
@@ -513,8 +578,55 @@ void equality_constrained_least_squares_solve( RealMatrix &A,
 					       RealVector &d,
 					       RealMatrix &x, 
 					       int verbosity = 0 );
+/**
+ * \brief Computes the inverse of a real symmetric positive definite
+ *  matrix A using the Cholesky factorization A = L*L**T or A = U**T*U
+ *
+ * \param U (input) DOUBLE PRECISION NxN matrix U. U is the  
+ * lower or upper traingular factor L or U from the Cholesky factorization 
+ * A = L*L**T or A = U**T*U
+ *
+ * \param result (output)  DOUBLE PRECISION NxN matrix. On exit result is the
+ * inverse of A
+ */
+void cholesky_inverse(  RealMatrix &L, RealMatrix &result,
+			Teuchos::EUplo uplo );
 
-} // namespace Pecos
+void pivoted_qr_factorization( RealMatrix &A, RealMatrix &result_0, 
+			       RealMatrix &result_1, IntVector &result );
+
+template<typename O, typename T>
+void eye( int N, Teuchos::SerialDenseMatrix<O,T> &result )
+{
+  result.shape( N, N );
+  for ( O i = 0; i < N; i++ )
+    result(i,i) = 1.;
+};
+
+template<typename O, typename T>
+void unit_vector( int n, int k, Teuchos::SerialDenseVector<O,T> &result )
+{
+#ifdef DEBUG
+  if ( k >=n ) 
+    {
+      std::string msg = "unit_vector() ensure k < n";
+      throw( std::runtime_error( msg ) );
+    }
+#endif
+  result.size( n );
+  result[k] = 1.;
+};
+
+void lu_inverse( RealMatrix &L, RealMatrix &U, IntVector &p, 
+		 RealMatrix &result );
+
+extern "C"
+{
+  void dgeqp3_( const int *M, const int *N, double *A, 
+		const int *LDA, int *JPVT, double *TAU, 
+		double *WORK, const int *LWORK, int *INFO );
+}
+
+}  // namespace Pecos
 
 #endif
-

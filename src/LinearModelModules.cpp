@@ -129,7 +129,8 @@ void linear_predictor_best_options_extractor( std::vector<RealMatrixList> &parti
 	{
 	  epsilons[i] = partition_options[i][k](2,argmin_k);
 	  ave_epsilon += epsilons[i];
-	  best_max_num_iterations += partition_options[i][k](4,argmin_k);
+	  //best_max_num_iterations += partition_options[i][k](4,argmin_k);
+	  best_max_num_iterations += argmin_k;
 	}
       double sample_size_ratio = (Real)num_samples / 
 	(Real)num_training_samples;

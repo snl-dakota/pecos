@@ -862,27 +862,27 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 
   int M( A.numRows() ), N( A.numCols() );
 
-  // \todo consider moving AtA outside function so it is only computed once
-  // regardless of the number of rhs
-  RealMatrix AtA; // basis gramian AtA_ij = <A_i,A_j>
-  AtA.shapeUninitialized( N, N );
-  AtA.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, A, A, 0.0 ); 
-
   // Determine the maximum number of iterations
+  //if ( max_num_non_zero_entries == 0 ) max_num_non_zero_entries = M;
   int max_num_indices( std::min( M, max_num_non_zero_entries ) );
   max_num_indices = std::min( N, max_num_indices );
 
-  // Initialise entries of all solutions to zero
-  solutions.shape( N, max_num_indices );
-
-  // Allocate memory to store solution metrics
-  solution_metrics.shapeUninitialized( 2, max_num_indices );
-
   // Vector to store non-zero solution entries
   RealVector x_sparse;	
-  
+
+  int memory_chunk_size = std::min( N, M );
+  // if I use min( tmp, M ) where tmp < M then seq faults will occur.
+  // Not sure why has something to do with resizing memory
+  int initial_N = std::min( memory_chunk_size, N );
+
+  // Initialise entries of all solutions to zero
+  solutions.shape( N, initial_N );
+
+  // Allocate memory to store solution metrics
+  solution_metrics.shapeUninitialized( 2, initial_N );
+
   // Matrix to store Q and R factorization
-  RealMatrix Q( M, N ), R( N, N );
+  RealMatrix Q( M, initial_N ), R( initial_N, initial_N );
 
   // Compute residual
   RealVector residual( b );
@@ -894,8 +894,15 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
   RealMatrix correlation( Teuchos::Copy, Atb, N, 1 );
   
   // Compute norm of residual
-  Real b_norm( b.dot( b ) ), residual_norm( b_norm );
+  Real b_norm_sq( b.dot( b ) ), residual_norm( std::sqrt( b_norm_sq ) );
 
+  // Matrix to store the full rank matrix associated with x_sparse
+  RealMatrix A_sparse_memory( M, initial_N, false );
+  RealMatrix AtA_sparse_memory( N, initial_N, false );
+  RealMatrix Atb_sparse_memory( N, 1, false );
+  bool residual_computed = false;
+
+  verbosity = 2;
   if ( verbosity > 1 )
     {
       PCout << "Orthogonal Matching Pursuit" << std::endl;
@@ -919,20 +926,30 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 	{
 	  if ( active_index_set[i] == active_index )
 	    {
-	      if ( verbosity > 1 )
-		{
-		  PCout << "Exiting: New active index has already been added. ";
-		  PCout << "This has likely occured because all correlations ";
-		  PCout << "are roughly the same size. ";
-		  PCout << "This means problem has been solved to roughly ";
-		  PCout << "machine precision. Check this before contiuing.";
-		  PCout << std::endl;
+	      if ( verbosity > 1 ){
+		PCout << "Exiting: New active index has already been added. ";
+		PCout << "This has likely occured because all correlations ";
+		PCout << "are roughly the same size. ";
+		PCout << "This means problem has been solved to roughly ";
+		PCout << "machine precision. Check this before continuing.";
+		PCout << std::endl;
 		}
 	      done = true;
 	    }
 	}
       if ( done ) break;
 
+      if ( Q.numCols() <= num_active_indices )
+	{
+	  Q.reshape( Q.numRows(), Q.numCols() + memory_chunk_size );
+	  R.reshape( R.numRows() + memory_chunk_size, 
+		     R.numCols() + memory_chunk_size );
+	  AtA_sparse_memory.reshape( N, 
+				     AtA_sparse_memory.numCols() + memory_chunk_size );
+	  A_sparse_memory.reshape( N, A_sparse_memory.numCols()+memory_chunk_size);
+	  solutions.reshape( N, solutions.numCols() + memory_chunk_size );
+	  solution_metrics.reshape( 2, solution_metrics.numCols() + memory_chunk_size );
+	}
       // Update the QR factorisation.	 
       RealMatrix A_col( Teuchos::View, A, M, 1, 0, active_index );
       int colinear = qr_factorization_update_insert_column( Q, R, A_col, 
@@ -942,6 +959,22 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 	{
 	  active_index_set[num_active_indices] = active_index;
 
+	  RealMatrix AtA_sparse( Teuchos::View, AtA_sparse_memory, N, 
+				 num_active_indices + 1, 0, 0 ),
+	    Atb_sparse( Teuchos::View, Atb_sparse_memory, 
+			num_active_indices + 1, 1, 0, 0 );
+	  
+	  int index( active_index_set[num_active_indices] );
+	  Atb_sparse(num_active_indices,0) = Atb(index,0);
+	  for ( int n = 0; n < N; n++ )
+	    {
+	      //AtA_sparse(n,num_active_indices) = AtA(n,index);
+	      RealVector a_n( Teuchos::View, A[n], A.numRows() ),
+		a_j( Teuchos::View, A[index], A.numRows() );
+	      AtA_sparse(n,num_active_indices) = a_n.dot( a_j );
+	    }
+
+	  /*
 	  // Create subset representations of Atb and AtA
 	  RealMatrix Atb_sparse( num_active_indices + 1, 1, false ), 
 	    AtA_sparse( N, num_active_indices + 1, false );
@@ -953,22 +986,67 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 		{
 		  AtA_sparse(n,i) = AtA(n,index);
 		}
-	    }
+		}*/
 
 	  //Solve R'z = A'b via back substitution
 	  RealMatrix z;
 	  RealMatrix R_new( Teuchos::View, R, num_active_indices+1, 
 			    num_active_indices+1, 0, 0 );
-	  backward_substitution_solve( R_new, Atb_sparse, z, Teuchos::TRANS );
+	  
+	  substitution_solve( R_new, Atb_sparse, z, Teuchos::TRANS );
 
 	  //Solve Rx = z via back substitution to obtain signal
-	  backward_substitution_solve( R_new, z, x_sparse );
+	  substitution_solve( R_new, z, x_sparse );
 
 	  correlation.assign( Atb );
 	  correlation.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
 				-1.0, AtA_sparse, x_sparse, 1.0 );
 	  Real z_norm = z.normFrobenius();
-	  residual_norm = b_norm - z_norm * z_norm;
+	  //residual_norm = std::sqrt( b_norm_sq - z_norm * z_norm );
+	  // the above suffers from numerical precion problems so
+	  // compute residual exactly. This is more expensive though
+	  // so only do when necessary
+	  if ( b_norm_sq - z_norm * z_norm  < 1e-8 )
+	    {
+
+	      // Create subset representations of A
+	      RealMatrix A_sparse( Teuchos::View, A_sparse_memory, 
+				   M, num_active_indices+1, 0, 0 );
+	      for ( int m = 0; m < M; m++ )
+		A_sparse(m,num_active_indices) = A(m,active_index);
+
+	      if ( !residual_computed )
+		{
+		  // This is the first time A_sparse has been needed, so 
+		  // update A_sparse_memory will all missing information
+		  for ( int i = 0; i < num_active_indices; i++ )
+		    {
+		      int index( active_index_set[i] );
+		      for ( int m = 0; m < M; m++ )
+			A_sparse(m,i) = A(m,index);
+		    }
+		  residual_computed = true;
+		}
+	      
+	      /*RealMatrix A_sparse( M, num_active_indices + 1, false );
+	      for ( int i = 0; i < num_active_indices + 1; i++ )
+		{
+		  int index( active_index_set[i] );
+		  for ( int m = 0; m < M; m++ )
+		    {
+		      A_sparse(m,i) = A(m,index);
+		    }
+		    }*/
+	      RealVector residual( b );
+	      residual.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
+				 -1.0, A_sparse, x_sparse, 1.0 );
+	      residual_norm = residual.normFrobenius();
+	    }
+	  else
+	    {
+	      residual_norm = std::sqrt( b_norm_sq - z_norm * z_norm );
+	    }
+	    
 	  num_active_indices++;   
 	}
       else
@@ -982,26 +1060,19 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
 	      PCout << msg.str();
 	    }
 	}
-
-      // At termination residual_norm can be slightly negative, e.g
-      // ~1e-12
-      if ( residual_norm < 0.0 )
-	residual_norm = 0.0;
-
       for ( int n = 0; n < num_active_indices; n++ )
 	{
 	  solutions(active_index_set[n],num_active_indices-1) = x_sparse[n];
 	}
-      solution_metrics(0,num_active_indices-1) = std::sqrt( residual_norm );
-      solution_metrics(1,num_active_indices-1) = num_active_indices;     
-
+      solution_metrics(0,num_active_indices-1) = residual_norm;
+      solution_metrics(1,num_active_indices-1) = active_index;     
 
       if ( verbosity > 1 )
 	std::printf( "%d\t%d\t%1.5e\t%1.5e\n", num_active_indices, 
-		     active_index, std::sqrt( residual_norm ),
+		     active_index, residual_norm, 
 		     x_sparse.normOne() );
  
-      if ( std::sqrt( residual_norm )  <= epsilon )
+      if ( residual_norm <= epsilon )
 	{
 	  if ( verbosity > 1 )
 	    PCout << "Exiting: residual norm lower than tolerance" << std::endl;
@@ -1011,7 +1082,7 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
       if ( num_active_indices >= max_num_indices )
 	{
 	  if ( verbosity > 1 )
-	     PCout << "Exiting: maximum number of covariates reached" << std::endl;
+	     PCout<<"Exiting: maximum number of covariates reached"<<std::endl;;
 	  done = true;
 	}
 
@@ -1029,7 +1100,7 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
   // remove unused memory
   solutions.reshape( N, num_active_indices );
   solution_metrics.reshape( 2, num_active_indices );
-};
+}
 
 // Need to add check for linear dependence to both lars and fast omp
 // LARS only adds one variable at a time. At the moment an error 
@@ -1056,7 +1127,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   if ( delta > std::numeric_limits<Real>::epsilon() )
     max_num_covariates = std::min( N, max_num_iterations );
   
-  int max_num_iter = std::min( 10*max_num_covariates, max_num_iterations );
+  int max_num_iter = std::min( 2*M, max_num_iterations );
 
   // Lasso will usually require more iterations than max covariates
   // as variables are added and deleted during the algorithm. However
@@ -1064,13 +1135,16 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   // max_num_iter to max_num_covariates. If I do not do this then
   // LASSO can use different iteration numbers for different training
   // data but the same cross validation model options
-  //if ( solver == LASSO_REGRESSION )
+  //if ( solver == LASSO )
   // max_num_iter *= 10;
 
-  // Initialise all entries of x to zero
-  solutions.shape( N, max_num_iter );
+  int memory_chunk_size = std::min( M, 500 );
 
   // Allocate memory to store solution metrics
+  PCout << max_num_iter << std::endl;
+  PCout << max_num_iterations << std::endl;
+  PCout << M << std::endl;
+  PCout << N << std::endl;
   solution_metrics.shapeUninitialized( 2, max_num_iter );
 
   // Memory for active indices
@@ -1086,7 +1160,13 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   RealMatrix A_sparse;
   
   // Matrix to store cholesky factorization of A'A and initialize to zero
-  RealMatrix U( N, N );
+  int size = std::min( N, memory_chunk_size );
+  RealMatrix U( size, size );
+  //RealMatrix U( N, N );
+
+  // Initialise all entries of x to zero
+  solutions.shape( N, memory_chunk_size );
+  //solutions.shape( N, max_num_iter );
   
   // Compute residual
   RealVector residual( b );
@@ -1127,9 +1207,11 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   while ( !done )
     {     
       int num_covariates( active_indices.size() );
-      Real max_abs_correlation( 0.0 );
+      // needs to be negative because if mean of b data is zero
+      // then the 0 variable will not be added because its abs_correlation
+      // will be 0 and a segfault will occur.
+      Real max_abs_correlation( -1.0 );
       int prev_iter( std::max( 0, homotopy_iter -1 ) );
-      
       for ( inactive_index_iter = inactive_indices.begin(); 
 	    inactive_index_iter != inactive_indices.end(); 
 	    inactive_index_iter++ )
@@ -1145,12 +1227,22 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	    }
 	}
 
+
+      if ( U.numRows() <= num_covariates )
+	{
+	  U.reshape( U.numRows() + memory_chunk_size, 
+		     U.numCols() + memory_chunk_size );
+	}
+      if ( solutions.numCols() <= homotopy_iter )
+	{
+	  solutions.reshape( N, solutions.numCols() + memory_chunk_size );
+	}
+
       // Add the new index ( if it exists ) to the active set and 
       // update the Cholesky factorization
       int colinear = 0;
       if ( !sign_condition_violated )
 	{
-
 	  RealMatrix A_col( Teuchos::View, A, M, 1, 0, 
 			    index_to_add );
 	  colinear = cholesky_factorization_update_insert_column( A_sparse, 
@@ -1176,12 +1268,14 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  if ( verbosity > 1 )
 	    std::printf( "%d\t%d\t\t\t%d\t\t", homotopy_iter, 
 			 index_to_add, (int)active_indices.size()+1  );
-	  
 	  column_append( A_col, A_sparse );
 	  active_indices.push_back( index_to_add );
-	  inactive_index_iter = inactive_indices.find( index_to_add);
-	  inactive_indices.erase ( inactive_index_iter );
+	  inactive_index_iter = inactive_indices.find( index_to_add );
+	  inactive_indices.erase( inactive_index_iter );
 	  num_covariates = (int)active_indices.size();
+
+	  // store which variable was added to the active index set
+	  solution_metrics(1,homotopy_iter) = index_to_add;
 	}
 	
       // Get the signs of the correlations
@@ -1197,11 +1291,12 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
       // so solve two problems w = U' \ s then z = U \ w
       RealMatrix w, z;	      
       RealMatrix U_old( Teuchos::View, U, num_covariates, num_covariates, 0, 0 );
-      backward_substitution_solve( U_old, s_sparse, w, Teuchos::TRANS );
-      backward_substitution_solve( U_old, w, z, Teuchos::NO_TRANS );
+      substitution_solve( U_old, s_sparse, w, Teuchos::TRANS );
+      substitution_solve( U_old, w, z, Teuchos::NO_TRANS );
       Real normalisation_factor = 1.0 / std::sqrt( blas.DOT( num_covariates, 
-							       s_sparse[0], 
-							       1, z[0], 1 ));
+							     s_sparse[0], 
+							     1, z[0], 1 ) );
+
 
       // Compute unit vector making equal angles, less than 90^o , 
       // with the columns of A_sparse
@@ -1287,14 +1382,14 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
       // b_new = b_old + gamma_min * u_sparse (2.12) (Efron 2004)
       // => r_new = b - b_new = b - ( b_old + gamma_min * u_sparse )
       //          = r_old - gamma_min * u_sparse
-      for ( int m = 0; m < M; m ++ )
+      for ( int m = 0; m < M; m++ )
 	{
 	  b_hat(m,0) += gamma_min * u_sparse(m,0);
 	  residual[m] -= gamma_min * u_sparse(m,0);
 	}
-
+      
       // Update the correlation (2.15) (Efron 2004)
-      for ( int n = 0; n < N; n ++ )
+      for ( int n = 0; n < N; n++ )
 	{
 	  correlation(n,0) -= ( gamma_min * angles(n,0) );
 	}
@@ -1303,9 +1398,9 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
       if (false)
 	{
 	  RealVector x( Teuchos::View, solutions[homotopy_iter], N );
-	  residual.assign(b);
+	  residual.assign( b );
 	  residual.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
-			     1.0, A, x, -1.0 );
+			     -1.0, A, x, 1.0 );
 	  correlation.multiply( Teuchos::TRANS, Teuchos::NO_TRANS,
 				1.0, A, residual, 0.0 );
 	}
@@ -1334,6 +1429,12 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  cholesky_factorization_update_delete_column( U, 
 						       index_to_drop, 
 						       num_covariates );
+	  
+	  
+	  // store which variable was removed from active index set
+	  // minus sign indicates variable was removed
+	  solution_metrics(1,homotopy_iter) =  -active_indices[index_to_drop];
+
 	  // delete column from A_sparse and resize
 	  delete_column( index_to_drop, A_sparse );
 	  inactive_indices.insert( active_indices[index_to_drop] );
@@ -1347,20 +1448,30 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
       	std::printf( "%1.5e\t%1.5e\t%1.5e\n", max_abs_correlation, 
 		     residual_norm, x.normOne() );
 
-      solution_metrics(0,homotopy_iter) = residual_norm;
-      solution_metrics(1,homotopy_iter) = homotopy_iter; 
+      if ( ( homotopy_iter > 0 ) && 
+	   ( residual_norm > solution_metrics(0,homotopy_iter-1 ) ) )
+	{
+	   if ( verbosity > 1 )
+	     PCout << "Exiting: Residues are small and started to increase due to numerical errors\n";
+	  done = true;
+	}
+      else
+	{
+	  solution_metrics(0,homotopy_iter) = residual_norm;
+	  homotopy_iter++;
+	}
  
       if ( residual_norm <= epsilon )
 	{
 	  if ( verbosity > 1 )
-	    PCout << "Exiting: residual norm lower than tolerance" << std::endl;
+	    PCout << "Exiting: residual norm lower than tolerance\n";
 	  done = true;
 	}
       
       if ( num_covariates >= max_num_covariates )
 	{
 	  if ( verbosity > 1 )
-	     PCout << "Exiting: maximum number of covariates reached" << std::endl;
+	    PCout << "Exiting: maximum number of covariates reached\n";
 	  done = true;
 	}
 
@@ -1371,17 +1482,17 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  // This condition should only occur when 
 	  // num_covariates = max_num_covariates - 1
 	   if ( verbosity > 1 )
-	     PCout << "Exiting: attempted to add colinear vector" << std::endl;
+	     PCout << "Exiting: attempted to add colinear vector\n";
 	  done = true;
 	}
-      
-      homotopy_iter++;
+     
       if ( homotopy_iter == max_num_iter )
 	{
 	  if ( verbosity > 1 )
-	    PCout << "Exiting: maximum number of iterations reached" << std::endl;
+	    PCout << "Exiting: maximum number of iterations reached\n";
 	  done = true;
 	}
+
     }
   // remove unused memory
   solutions.reshape( N, homotopy_iter );
@@ -1396,8 +1507,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  {
 	    solutions(n,iter) *= ( 1.0 + delta );
 	  }
-      }
-  
+      }  
 };
 //Check out for elastic nets
 //http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=3897

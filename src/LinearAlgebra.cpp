@@ -1,69 +1,111 @@
 #include "LinearAlgebra.hpp"
 
 namespace Pecos {
-int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& X, Real &rcond )
+int cholesky( RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo, 
+	      bool for_lapack )
 {
   Teuchos::LAPACK<int, Real> la;
-
-  int m( A.numRows() ), num_rhs( B.numCols() );
-  RealMatrix A_copy( A );
-  // reshape must be called before assign
-  X.reshape( m, num_rhs );
-  X.assign( B );
+  int M = A.numRows();
+  result.reshape( M, M );
+  result.assign( A );
+  
   int info;
-  char uplo( 'L' );
-  // Compute the Cholesky lower triangular factorisation of A
-  la.POTRF( uplo, m, A_copy.values(), A_copy.stride(), &info );
+  la.POTRF( Teuchos::EUploChar[uplo], M, result.values(), result.stride(), 
+	    &info );
+
   if ( info > 0 ) 
     {
-      std::cout << "cholesky_solve() The matrix A is not positive definite\n";
+      PCout << "cholesky() The matrix A is not positive definite\n";
       return info;
     }
   if ( info < 0 ) 
     {
-      std::cout << "cholesky_solve() Incorrect arguments specified to POTRF()\n";
+      PCout << "cholesky() Incorrect arguments specified to POTRF()\n";
       return info;
     }
+  
+  // lapack returns the lower/upper triangle of the (symmetric) inverse of A
+  // so we must use symmetry to fill in the entries above/below the diagonal
+  if ( !for_lapack )
+    {
+      if ( uplo == Teuchos::LOWER_TRI )
+	{
+	  for ( int j = 1; j < M; j++ )
+	    for ( int i = 0; i < j; i++ )
+	      result(i,j) = 0.;
+	}
+      else
+	{
+	  for ( int j = 1; j < M; j++ )
+	    for ( int i = 0; i < j; i++ )
+	      result(j,i) = 0.;
+	}
+    }
 
-  // Compute the reciprocal of the condition number of A 
+  return info;
+};
+
+int solve_using_cholesky_factor( RealMatrix &L, RealMatrix& B, 
+				 RealMatrix& result, Teuchos::EUplo uplo )
+{
+  Teuchos::LAPACK<int, Real> la;
+  int m( L.numRows() ), num_rhs( B.numCols() );
+  result.reshape( B.numRows(), num_rhs );
+  result.assign( B );
+
+  // Solves the system of linear equations A*X = B with a symmetric
+  // positive definite matrix A=LL' using the Cholesky factorization
+  int info;
+  la.POTRS( Teuchos::EUploChar[uplo], m, num_rhs, 
+	    L.values(), L.stride(), 
+	    result.values(), result.stride(), &info );
+  result.reshape( L.numRows(), num_rhs );
+
+  return info;
+};
+
+int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& result, Real &rcond )
+{
+  Teuchos::LAPACK<int, Real> la;
+
+  int m( A.numRows() );
+  RealMatrix L;
+  int info = cholesky( A, L, Teuchos::LOWER_TRI, true );
+
+  if ( info != 0 ) return info;
+
+  // Compute the reciprocal of the condition number of A = L*L**T or A = U**T*U 
   // from its cholesky decompostion computed by POTRF. 
-  // The cholesky decomposition is stored in  A_copy.
   if ( rcond < 0 )
     {
       Real *work = new Real [3*m]; // workspace array 
       int *iwork = new int [m];  // workspace array
-      la.POCON( uplo, m, A_copy.values(), A_copy.stride(), A.normOne(), 
-		&rcond, work, iwork, &info );
+      la.POCON( Teuchos::EUploChar[Teuchos::LOWER_TRI], m, L.values(), 
+		L.stride(), A.normOne(), &rcond, work, iwork, &info );
       delete [] work;
       delete [] iwork;
       if ( info < 0 ) 
 	{
-	  std::cout << "cholesky_solve() Incorrect arguments specified to ";
-	  std::cout << "POCON()\n";
+	  PCout << "cholesky_solve() Incorrect arguments specified to ";
+	  PCout << "POCON()\n";
 	  return info;
 	}
     }
 
-  // Solves the system of linear equations A*X = B with a symmetric
-  // positive definite matrix A=LL' using the Cholesky factorization
-  if ( info == 0 )
-    {
-      la.POTRS( uplo, m, num_rhs, A_copy.values(), A_copy.stride(), X.values(), 
-		X.stride(), &info );
-    }
-  
+  info = solve_using_cholesky_factor( L, B, result, Teuchos::LOWER_TRI );
+
   return info;
 };
 
-void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X, 
+void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &result, 
 	       Teuchos::ETransp trans )
 {
   Teuchos::LAPACK<int, Real> la;
 
   RealMatrix A_copy( A );
   int M( A.numRows() ), N( A.numCols() ), num_rhs( B.numCols() );
-  X.reshape( N, num_rhs );
-  X.assign( B );
+  result.reshape( N, num_rhs );
+  result.assign( B );
 
   //---------------------------------//
   // Get the optimal work array size //
@@ -73,12 +115,12 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
   Real *work;  // Teuchos::LAPACK work array
   int info;      // Teuchos::LAPACK output flag 
   int lda = A_copy.stride();
-  int ldb = X.stride();
+  int ldb = result.stride();
 
   lwork = -1;             // special code for workspace query
   work  = new Real [1]; // temporary work array
   la.GELS( Teuchos::ETranspChar[trans], M, N, num_rhs, A_copy.values(), 
-	   lda, X.values(), ldb, work, lwork, &info );
+	   lda, result.values(), ldb, work, lwork, &info );
   // Note la.GELS does not work because line 1358 in Teuchos_Teuchos::LAPACK.hpp 
   // last argument to DGELSS_F77 uses a & which should not be there
   lwork = (int)work[0];  // optimal work array size returned by query
@@ -90,7 +132,7 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
   //---------------------------------//
 
   la.GELS( Teuchos::ETranspChar[trans], M, N, num_rhs, A_copy.values(), lda, 
-	   X.values(), ldb, work, lwork, &info );
+	   result.values(), ldb, work, lwork, &info );
   if ( info < 0 )
     {
       std::stringstream msg;
@@ -112,10 +154,10 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
 };
 
 
-void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
-		RealVector &S, int &rank, Real rcond )
+void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &result_0,
+		RealVector &result_1, int &rank, Real rcond )
 {
-    Teuchos::LAPACK<int, Real> la;
+  Teuchos::LAPACK<int, Real> la;
 
   //-----------------//
   // Allocate memory //
@@ -123,7 +165,7 @@ void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
 
   int M( A.numRows() ),  N( A.numCols() ), num_rhs( B.numCols() );
   RealMatrix A_copy( A );
-  S.sizeUninitialized( std::min( M, N ) );
+  result_1.sizeUninitialized( std::min( M, N ) );
 
   //---------------------------------//
   // Get the optimal work array size //
@@ -135,15 +177,14 @@ void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
   int lda = A_copy.stride();
   int ldb = std::max( std::max( B.stride(), lda ), N );
 
-  X.shapeUninitialized( M, num_rhs );
-  X.assign( B );
-  X.reshape( ldb, num_rhs );
-;
+  result_0.shapeUninitialized( M, num_rhs );
+  result_0.assign( B );
+  result_0.reshape( ldb, num_rhs );
 
   lwork = -1;             // special code for workspace query
   work  = new Real [1]; // temporary work array
-  la.GELSS( M, N, num_rhs, A_copy.values(), lda, X.values(), ldb, 
-	    S.values(), rcond, &rank, work, lwork, &info );
+  la.GELSS( M, N, num_rhs, A_copy.values(), lda, result_0.values(), ldb, 
+	    result_1.values(), rcond, &rank, work, lwork, &info );
   lwork = (int)work[0];  // optimal work array size returned by query
 
   delete [] work;
@@ -152,36 +193,37 @@ void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &X,
   //---------------------------------//
   // Solve Ax = b                    //
   //---------------------------------//
-  la.GELSS( M, N, num_rhs, A_copy.values(), lda, X.values(), ldb, 
-	    S.values(), rcond, &rank, work, lwork, &info );
-  X.reshape( N, num_rhs );
+  la.GELSS( M, N, num_rhs, A_copy.values(), lda, result_0.values(), ldb, 
+	    result_1.values(), rcond, &rank, work, lwork, &info );
+
+  result_0.reshape( N, num_rhs );
 
   delete [] work;
 };
 
-void backward_substitution_solve( RealMatrix &A, 
-				  RealMatrix &B, 
-				  RealMatrix &X,
-				  Teuchos::ETransp trans,
-				  Teuchos::EUplo uplo,
-				  Teuchos::EDiag diag )
+void substitution_solve( RealMatrix &A, 
+			 RealMatrix &B, 
+			 RealMatrix &result,
+			 Teuchos::ETransp trans,
+			 Teuchos::EUplo uplo,
+			 Teuchos::EDiag diag )
 {
   int M( A.numRows() ), num_rhs( B.numCols() );
 
   Teuchos::LAPACK<int, Real> lapack;
-  X.reshape( M, num_rhs );
-  X.assign( B );
+  result.reshape( M, num_rhs );
+  result.assign( B );
 
   int info;
   lapack.TRTRS( Teuchos::EUploChar[uplo], Teuchos::ETranspChar[trans], 
 		Teuchos::EDiagChar[diag], 
 		M, num_rhs, A.values(), A.stride(), 
-		X.values(), X.stride(), &info );
+		result.values(), result.stride(), &info );
 
   if ( info < 0 )
     {
       std::stringstream msg;
-      msg << "backwardsSubstitutionSolve() dtrts failed. ";
+      msg << "substitution_solve() dtrtrs failed. ";
       msg << "The " << std::abs( info ) << "-th argument had an ";
       msg << "illegal value";
       throw( std::runtime_error( msg.str() ) );
@@ -189,7 +231,7 @@ void backward_substitution_solve( RealMatrix &A,
   if ( info > 0 )
     {
       std::stringstream msg;
-      msg << "backwardsSubstitutionSolve() dtrts failed. ";
+      msg << "substitution_solve() dtrtrs failed. ";
       msg << "The " << info << "-th diagonal element of A is zero ";
       msg << "indicating that the matrix is singular and the solutions ";
       msg << "X have not been computed.";
@@ -214,7 +256,7 @@ int qr_factorization_update_insert_column( RealMatrix &Q, RealMatrix &R,
   else
     {
       RealMatrix Q_old( Teuchos::View, Q, M, iter, 0, 0 );
-      RealMatrix w( iter, 1 ); 
+      RealMatrix w( iter, 1, false ); 
       w.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
 		  1.0, Q_old, col, 0.0 );
       Real w_norm = w.normFrobenius();
@@ -259,14 +301,14 @@ int cholesky_factorization_update_insert_column( RealMatrix &A, RealMatrix &U,
     }
   else
     {
-      RealMatrix w( iter, 1 );
+      RealMatrix w( iter, 1, false );
       RealMatrix U_old( Teuchos::View, U, iter, iter, 0, 0 );
       // compute column k in gramian matrix A'A
-      RealMatrix gramian_col( iter, 1 );
+      RealMatrix gramian_col( iter, 1, false );
       gramian_col.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 
 			    1.0, A, col, 0.0 );
-      backward_substitution_solve( U_old, gramian_col, w, Teuchos::TRANS,
-				   Teuchos::UPPER_TRI );
+      substitution_solve( U_old, gramian_col, w, Teuchos::TRANS,
+			  Teuchos::UPPER_TRI );
       Real w_norm = w.normFrobenius();
       
       if ( col_norm * col_norm + delta - w_norm*w_norm <= 
@@ -332,7 +374,7 @@ void cholesky_factorization_update_delete_column( RealMatrix &U,
       if ( n < N - 2 )
 	{
 	  RealMatrix U_sub( Teuchos::View, U, 2, N - n - 1, n, n + 1 );
-	  RealMatrix U_sub_rot( U_sub.numRows(), U_sub.numCols() );
+	  RealMatrix U_sub_rot( U_sub.numRows(), U_sub.numCols(), false );
 	  U_sub_rot.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
 			      1.0, givens_matrix, U_sub, 0.0 );
 	  U_sub.assign( U_sub_rot );
@@ -377,7 +419,7 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 	  std::stringstream msg;
 	  msg << "conjugate_gradient_solve() Warning: at least one of the ";
 	  msg << "matrix inputs contains nan and/or inf.\n";
-	  std::cout << msg.str();
+	  PCout << msg.str();
 	}
       info = 3;
       return info;
@@ -391,8 +433,8 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 
   if ( verbosity > 2 )
     {
-      std::cout << "CG iteration: " << 0 << ", residual: ";
-      std::cout << relative_residual_norm << "\n";
+      PCout << "CG iteration: " << 0 << ", residual: ";
+      PCout << relative_residual_norm << "\n";
     }
 
   RealVector p( residual );
@@ -419,7 +461,7 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 	      std::stringstream msg;
 	      msg << "conjugate_gradient_solve() Warning: A is not postive ";
 	      msg << "definite.\n";
-	      std::cout << msg.str();
+	      PCout << msg.str();
 	    }
 	  info = 2;
 	  return info;
@@ -459,8 +501,8 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 
       if ( verbosity > 2 )
 	{
-	  std::cout << "CG iteration: " << iter + 1<< ", residual: ";
-	  std::cout <<  current_relative_residual_norm << "\n";
+	  PCout << "CG iteration: " << iter + 1<< ", residual: ";
+	  PCout <<  current_relative_residual_norm << "\n";
 	}
 
       if ( current_relative_residual_norm < cg_tol )
@@ -470,7 +512,7 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 	      std::stringstream msg;
 	      msg << "conjugate_gradient_solve() Exiting residual below ";
 	      msg << "tolerance.\n";
-	      std::cout << msg.str();
+	      PCout << msg.str();
 	    }
 	  done = true;
 	  info = 0;
@@ -484,7 +526,7 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
 	      std::stringstream msg;
 	      msg << "conjugate_gradient_solve() Exiting maximum number of ";
 	      msg << "iterations reached.\n";
-	      std::cout << msg.str();
+	      PCout << msg.str();
 	    }
 	  done = true;
 	  info = 1;
@@ -492,6 +534,7 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
     }    
   return info;
 };
+
 
 void equality_constrained_least_squares_solve( RealMatrix &A, 
 					       RealVector &b,
@@ -559,7 +602,165 @@ void equality_constrained_least_squares_solve( RealMatrix &A,
       msg << "be computed.";
       throw( std::runtime_error( msg.str() ) );
     }
+}
+
+void cholesky_inverse( RealMatrix &U, RealMatrix &result, Teuchos::EUplo uplo  )
+{
+  Teuchos::LAPACK<int, Real> la;
+  int N = U.numRows();
+  // copy U into result. Lapack will compute result inplace
+  result.shapeUninitialized( N, N );
+  result.assign( U );
+  
+  // extract arguments needed for lapack call
+  int lda( result.stride() );
+  int info( 0 );
+  la.POTRI( Teuchos::EUploChar[uplo], N, result.values(), lda, &info );
+
+  if ( info < 0 )
+    {
+      std::stringstream msg;
+      msg << "cholesky_inverse() dpotri failed. ";
+      msg << "The " << std::abs( info ) << "-th argument had an ";
+      msg << "illegal value";
+      throw( std::runtime_error( msg.str() ) );
+    }
+  else if ( info > 0 )
+    {
+      std::stringstream msg;
+      msg << "cholesky_inverse() dpotri failed. ";
+      msg << "The (" << info << "," << info << ") element of the factor U or L is ";
+      msg << "zero and the inverse could not be computed";
+      throw( std::runtime_error( msg.str() ) );
+    }
+
+  // lapack returns the lower/upper triangle of the (symmetric) inverse of A
+  // so we must use symmetry to fill in the entries above/below the diagonal
+  if ( uplo == Teuchos::LOWER_TRI )
+    {
+      for ( int j = 1; j < N; j++ )
+	for ( int i = 0; i < j; i++ )
+	  result(i,j) = result(j,i);
+    }
+  else
+    {
+      for ( int j = 1; j < N; j++ )
+	for ( int i = 0; i < j; i++ )
+	  result(j,i) = result(i,j);
+    }
 };
 
+void pivoted_qr_factorization( RealMatrix &A, RealMatrix &Q, RealMatrix &R,
+			       IntVector &p )
+{
+  Teuchos::LAPACK<int, Real> la;
+
+  RealMatrix A_copy( A );
+  int M( A.numRows() ), N( A.numCols() ), K( std::min( M, N ) );
+
+  //Q.shapeUninitialized( M, K );
+  Q.shape( M, K );
+  R.shape( K, N ); // must be initialized to 0
+  p.size( N ); // must be initialized to 0
+
+  //---------------------------------//
+  // Get the optimal work array size //
+  //---------------------------------//
+  
+  int lwork;   // Size of Teuchos::LAPACK work array
+  Real *work;  // Teuchos::LAPACK work array
+  int info;    // Teuchos::LAPACK output flag 
+  int lda = std::max( 1, A_copy.stride() );
+  RealVector tau( K, true );
+
+  lwork = -1;           // special code for workspace query
+  work  = new Real [1]; // temporary work array
+  
+  dgeqp3_( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+	   work, &lwork, &info );
+
+  lwork = (int)work[0];  // optimal work array size returned by query
+  delete [] work;
+  work  = new Real [lwork]; // Optimal work array
+
+  //---------------------------------//
+  // Compute the QR factorization    //
+  //---------------------------------//
+
+  dgeqp3_( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+	   work, &lwork, &info );
+
+  if ( info < 0 )
+    {
+      std::stringstream msg;
+      msg << "privoted_qr_factorization() dgeqp3 failed. ";
+      msg << "The " << std::abs( info ) << "-th argument had an ";
+      msg << "illegal value";
+      throw( std::runtime_error( msg.str() ) );
+    }
+
+  delete [] work;
+
+  //---------------------------------//
+  // Form the Q and R matrices       //
+  //---------------------------------//
+  
+  for ( int m = 0; m < K; m++ )
+    {
+      for ( int n = m; n < N; n++ )
+	R(m,n) = A_copy(m,n);
+    }
+
+  lwork = -1;           // special code for workspace query
+  work  = new Real [1]; // temporary work array
+
+  la.ORGQR( M, K, K, A_copy.values(), lda, tau.values(), 
+	    work, lwork, &info );
+  
+  lwork = (int)work[0];  // optimal work array size returned by query
+  delete [] work;
+
+  work  = new Real [lwork]; // Optimal work array
+
+  la.ORGQR( M, K, K, A_copy.values(), lda, tau.values(), 
+	   work, lwork, &info );
+
+  for ( int n = 0; n < K; n++ )
+    {
+      for ( int m = 0; m < M; m++ )
+	{
+	  Q(m,n) = A_copy(m,n);
+	}
+    }
+
+  // fortran returns indices 1,...,N
+  // c++ requires 0,...,N-1
+  for ( int n = 0; n < N; n++ )
+    p[n]--;
+ 
+  delete [] work;
+}
+
+void lu_inverse( RealMatrix &L, RealMatrix &U, IntVector &p, RealMatrix &LU_inv )
+{
+  int M = L.numRows(), N = U.numCols();
+#ifdef DEBUG
+  if ( M != N ) 
+    {
+      std::string msg="LU_inverse() The dimensions of L and U are inconsistent";
+      throw( std::runtime_error( msg ) );
+    }
+#endif
+  LU_inv.shape( M, M );
+  RealMatrix I;
+  eye( M, I );
+  if ( p.length() != 0 )
+    permute_matrix_columns( I, p );
+  RealMatrix X;
+  substitution_solve( L, I, X, Teuchos::NO_TRANS,
+		      Teuchos::LOWER_TRI, Teuchos::NON_UNIT_DIAG ); 
+  substitution_solve( U, X, LU_inv, Teuchos::NO_TRANS,
+		      Teuchos::UPPER_TRI, Teuchos::NON_UNIT_DIAG );
+};
 
 } // namespace Pecos
