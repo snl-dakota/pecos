@@ -1119,6 +1119,8 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 						    int max_num_iterations,
 						    int verbosity )
 {
+  verbosity = 2;
+
   Teuchos::BLAS<int, Real> blas;
 
   int M( A.numRows() ), N( A.numCols() );
@@ -1141,10 +1143,6 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   int memory_chunk_size = std::min( M, 500 );
 
   // Allocate memory to store solution metrics
-  PCout << max_num_iter << std::endl;
-  PCout << max_num_iterations << std::endl;
-  PCout << M << std::endl;
-  PCout << N << std::endl;
   solution_metrics.shapeUninitialized( 2, max_num_iter );
 
   // Memory for active indices
