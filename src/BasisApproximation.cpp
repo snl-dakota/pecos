@@ -52,7 +52,7 @@ BasisApproximation::BasisApproximation():
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
 BasisApproximation(short basis_type, const UShortArray& approx_order,
-		   size_t num_vars, bool use_derivs):
+		   size_t num_vars, bool use_derivs, short output_level):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -61,8 +61,8 @@ BasisApproximation(short basis_type, const UShortArray& approx_order,
 #endif
 
   // Set the rep pointer to the appropriate derived type
-  basisApproxRep
-    = get_basis_approx(basis_type, approx_order, num_vars, use_derivs);
+  basisApproxRep = get_basis_approx(basis_type, approx_order, num_vars,
+				    use_derivs, output_level);
   if ( !basisApproxRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -72,7 +72,7 @@ BasisApproximation(short basis_type, const UShortArray& approx_order,
     appropriate derived type. */
 BasisApproximation* BasisApproximation::
 get_basis_approx(short basis_type, const UShortArray& approx_order,
-		 size_t num_vars, bool use_derivs)
+		 size_t num_vars, bool use_derivs, short output_level)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_basis_approx(string&)."
@@ -82,27 +82,30 @@ get_basis_approx(short basis_type, const UShortArray& approx_order,
   switch (basis_type) {
   case GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
-    return new NodalInterpPolyApproximation(basis_type, num_vars, use_derivs);
+    return new NodalInterpPolyApproximation(basis_type, num_vars,
+					    use_derivs, output_level);
     break;
   case GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    return new HierarchInterpPolyApproximation(basis_type, num_vars,use_derivs);
+    return new HierarchInterpPolyApproximation(basis_type, num_vars,
+					       use_derivs, output_level);
     break;
   case GLOBAL_REGRESSION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_REGRESSION_ORTHOGONAL_POLYNOMIAL:
     // L1 or L2 regression
     return new RegressOrthogPolyApproximation(approx_order, num_vars,
-					      use_derivs);
+					      use_derivs, output_level);
     break;
   case GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_PROJECTION_ORTHOGONAL_POLYNOMIAL:
     // projection via numerical integration of inner products
     return new ProjectOrthogPolyApproximation(approx_order, num_vars,
-					      use_derivs);
+					      use_derivs, output_level);
     break;
   case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     // coefficient import -- no coefficient computation required
-    return new OrthogPolyApproximation(approx_order, num_vars, use_derivs);
+    return new OrthogPolyApproximation(approx_order, num_vars,
+				       use_derivs, output_level);
     break;
   //case FOURIER_BASIS:
   //  return new FourierBasisApproximation(num_vars);             break;

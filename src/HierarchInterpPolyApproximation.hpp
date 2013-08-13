@@ -39,7 +39,7 @@ public:
 
   /// Default constructor
   HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
-				  bool use_derivs);
+				  bool use_derivs, short output_level);
   /// destructor
   ~HierarchInterpPolyApproximation();
 
@@ -407,8 +407,8 @@ private:
 
 inline HierarchInterpPolyApproximation::
 HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
-				bool use_derivs):
-  InterpPolyApproximation(basis_type, num_vars, use_derivs)
+				bool use_derivs, short output_level):
+  InterpPolyApproximation(basis_type, num_vars, use_derivs, output_level)
 {}
 
 

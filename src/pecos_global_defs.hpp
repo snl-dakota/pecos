@@ -43,6 +43,10 @@ const double LARGE_NUMBER = 1.e+50;
 // define special values for vector/matrix data copying modes
 enum { DEFAULT_COPY=0, SHALLOW_COPY, DEEP_COPY };
 
+// define special values for ExpansionConfigOptions::outputLevel
+enum { SILENT_OUTPUT, QUIET_OUTPUT, NORMAL_OUTPUT, VERBOSE_OUTPUT,
+       DEBUG_OUTPUT };
+
 // define special values for ranVarTypesX/U
 enum { NO_TYPE=0, CONTINUOUS_DESIGN, STD_NORMAL, NORMAL, BOUNDED_NORMAL,
        LOGNORMAL, BOUNDED_LOGNORMAL, STD_UNIFORM, UNIFORM, LOGUNIFORM,

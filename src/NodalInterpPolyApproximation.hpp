@@ -40,7 +40,7 @@ public:
 
   /// default constructor
   NodalInterpPolyApproximation(short basis_type, size_t num_vars,
-			       bool use_derivs);
+			       bool use_derivs, short output_level);
   /// destructor
   ~NodalInterpPolyApproximation();
 
@@ -280,8 +280,8 @@ private:
 
 inline NodalInterpPolyApproximation::
 NodalInterpPolyApproximation(short basis_type, size_t num_vars,
-			     bool use_derivs):
-  InterpPolyApproximation(basis_type, num_vars, use_derivs)//,
+			     bool use_derivs, short output_level):
+  InterpPolyApproximation(basis_type, num_vars, use_derivs, output_level),
   // These 3 compile-time options are relevant for all-variables covariance
   // involving expectations over variable subsets.  Covariance for hierarchical
   // interpolants, nodal covariance in the standard view mode, uses of
@@ -289,7 +289,7 @@ NodalInterpPolyApproximation(short basis_type, size_t num_vars,
   // calculations all employ an INTERPOLATION_OF_PRODUCTS approach, so that
   // setting is the most self-consistent.  Gradient enhancement is also not
   // currently supported for PRODUCT_OF_INTERPOLANTS approaches.
-  //momentInterpType(INTERPOLATION_OF_PRODUCTS)
+  momentInterpType(INTERPOLATION_OF_PRODUCTS)
   //momentInterpType(REINTERPOLATION_OF_PRODUCTS)
   //momentInterpType(PRODUCT_OF_INTERPOLANTS_FULL)
   //momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)
@@ -298,8 +298,8 @@ NodalInterpPolyApproximation(short basis_type, size_t num_vars,
   // but its usage of higher-order reinterpolation of covariance is currently
   // too slow for production usage.  Thus, we only activate it when needed to
   // support new capability, such as gradient-enhanced interpolation.
-  momentInterpType = (use_derivs) ?
-    REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+  //momentInterpType = (use_derivs) ?
+  //  REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
 }
 
 

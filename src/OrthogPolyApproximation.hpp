@@ -37,7 +37,7 @@ public:
 
   /// default constructor
   OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
-			  bool use_derivs);
+			  bool use_derivs, short output_level);
   /// destructor
   ~OrthogPolyApproximation();
 
@@ -308,9 +308,9 @@ private:
 
 inline OrthogPolyApproximation::
 OrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
-			bool use_derivs):
-  PolynomialApproximation(num_vars, use_derivs), numExpansionTerms(0),
-  approxOrder(approx_order)
+			bool use_derivs, short output_level):
+  PolynomialApproximation(num_vars, use_derivs, output_level),
+  numExpansionTerms(0), approxOrder(approx_order)
 { }
 
 

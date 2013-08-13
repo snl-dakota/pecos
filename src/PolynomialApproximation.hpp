@@ -51,7 +51,7 @@ public:
   ExpansionConfigOptions();
   /// constructor
   ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-			 bool  exp_grad_flag, //short output_level,
+			 bool  exp_grad_flag, short output_level,
 			 short vbd_cntl,      //short refine_type,
 			 short refine_cntl, int max_iter, Real conv_tol);
   /// destructor
@@ -70,8 +70,8 @@ public:
   /// response gradients
   bool expansionCoeffGradFlag;
 
-  // output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
-  //short outputLevel;
+  /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
+  short outputLevel;
 
   /// control for amount of data computed in variance-based decomposition:
   /// {NO,UNIVARIATE,ALL}_VBD
@@ -93,7 +93,7 @@ public:
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), //outputLevel(NORMAL_OUTPUT),
+  expansionCoeffGradFlag(false), outputLevel(NORMAL_OUTPUT),
   vbdControl(NO_VBD),            //refinementType(NO_REFINEMENT),
   refinementControl(NO_CONTROL), maxIterations(100), convergenceTol(1.e-4)
 { }
@@ -101,11 +101,11 @@ inline ExpansionConfigOptions::ExpansionConfigOptions():
 
 inline ExpansionConfigOptions::
 ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-		       bool  exp_grad_flag, //short output_level,
+		       bool  exp_grad_flag, short output_level,
 		       short vbd_cntl,      //short refine_type,
 		       short refine_cntl, int max_iter, Real conv_tol):
   expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
-  expansionCoeffGradFlag(exp_grad_flag), //outputLevel(output_level),
+  expansionCoeffGradFlag(exp_grad_flag), outputLevel(output_level),
   vbdControl(vbd_cntl),                  //refinementType(refine_type),
   refinementControl(refine_cntl), maxIterations(max_iter),
   convergenceTol(conv_tol)
@@ -193,7 +193,7 @@ public:
   /// default constructor
   PolynomialApproximation();
   /// standard constructor
-  PolynomialApproximation(size_t num_vars, bool use_derivs);
+  PolynomialApproximation(size_t num_vars, bool use_derivs, short output_level);
   /// destructorboth
   ~PolynomialApproximation();
 
@@ -583,10 +583,13 @@ inline PolynomialApproximation::PolynomialApproximation():
 
 
 inline PolynomialApproximation::
-PolynomialApproximation(size_t num_vars, bool use_derivs):
+PolynomialApproximation(size_t num_vars, bool use_derivs, short output_level):
   BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
   ssgLevelPrev(USHRT_MAX), computedMean(0), computedVariance(0)
-{ basisConfigOptions.useDerivs = use_derivs; }
+{
+  basisConfigOptions.useDerivs = use_derivs;
+  expConfigOptions.outputLevel = output_level;
+}
 
 
 inline PolynomialApproximation::~PolynomialApproximation()

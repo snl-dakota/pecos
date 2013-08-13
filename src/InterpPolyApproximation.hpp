@@ -36,7 +36,8 @@ public:
   //
 
   /// default constructor
-  InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs);
+  InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs,
+			  short output_level);
   /// destructor
   ~InterpPolyApproximation();
 
@@ -432,8 +433,9 @@ private:
 
 
 inline InterpPolyApproximation::
-InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs):
-  PolynomialApproximation(num_vars, use_derivs), numCollocPts(0),
+InterpPolyApproximation(short basis_type, size_t num_vars, bool use_derivs,
+			short output_level):
+  PolynomialApproximation(num_vars, use_derivs, output_level), numCollocPts(0),
   basisType(basis_type)
 {
   // barycentric for global Lagrange basis polynomials

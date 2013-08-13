@@ -39,7 +39,8 @@ public:
 
   /// default constructor
   RegressOrthogPolyApproximation(const UShortArray& approx_order,
-				 size_t num_vars, bool use_derivs);
+				 size_t num_vars, bool use_derivs,
+				 short output_level);
   /// destructor
   ~RegressOrthogPolyApproximation();
 
@@ -141,8 +142,8 @@ private:
 
 inline RegressOrthogPolyApproximation::
 RegressOrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
-			       bool use_derivs):
-  OrthogPolyApproximation(approx_order, num_vars, use_derivs)
+			       bool use_derivs, short output_level):
+  OrthogPolyApproximation(approx_order, num_vars, use_derivs, output_level)
 { }
 
 
