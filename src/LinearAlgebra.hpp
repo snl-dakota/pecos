@@ -37,6 +37,33 @@ void resize( Teuchos::SerialDenseVector<O,T> &v, O n )
   if ( v.length() != n ) v.resize( n );
 };
 
+/// Fill a column of a matrix with the contents of a flattened matrix.
+/// The matrix is flattened so that one column proceeds the next.
+template < typename O, typename T >
+void fill_column( int col_number, const Teuchos::SerialDenseMatrix<O,T> &source,
+		  Teuchos::SerialDenseMatrix<O,T> &target )
+{
+  if ( source.numRows() * source.numCols() != target.numRows() )
+    {
+      std::stringstream msg;
+      msg << "fill_column( matrix, matrix ) Matrix shapes are inconsistent.";
+      msg << "\nsource is " << source.numRows() << " x " << source.numCols();
+      msg << " and target is " << target.numRows() << " x " << target.numCols();
+      msg << "\n";
+      throw( std::runtime_error( msg.str() ) );
+    }
+
+  int iter( 0 );
+  for ( int j = 0; j < source.numCols(); j++ )
+    {
+      for ( int i = 0; i < source.numRows(); i++ )
+	{
+	  target(iter,col_number) = source(i,j);
+	  iter++;
+	}
+    }
+};
+
 /// Append a column vector to a matrix.
 template < typename O, typename T >
 void append_column( const Teuchos::SerialDenseVector<O,T> &vector, 
@@ -167,33 +194,6 @@ void fill_row( int row_number, const Teuchos::SerialDenseMatrix<O,T> &source,
       for ( int i = 0; i < source.numRows(); i++ )
 	{
 	  target(row_number,iter) = source(i,j);
-	  iter++;
-	}
-    }
-};
-
-/// Fill a column of a matrix with the contents of a flattened matrix.
-/// The matrix is flattened so that one column proceeds the next.
-template < typename O, typename T >
-void fill_column( int col_number, const Teuchos::SerialDenseMatrix<O,T> &source,
-		  Teuchos::SerialDenseMatrix<O,T> &target )
-{
-  if ( source.numRows() * source.numCols() != target.numRows() )
-    {
-      std::stringstream msg;
-      msg << "fill_column( matrix, matrix ) Matrix shapes are inconsistent.";
-      msg << "\nsource is " << source.numRows() << " x " << source.numCols();
-      msg << " and target is " << target.numRows() << " x " << target.numCols();
-      msg << "\n";
-      throw( std::runtime_error( msg.str() ) );
-    }
-
-  int iter( 0 );
-  for ( int j = 0; j < source.numCols(); j++ )
-    {
-      for ( int i = 0; i < source.numRows(); i++ )
-	{
-	  target(iter,col_number) = source(i,j);
 	  iter++;
 	}
     }
