@@ -69,7 +69,7 @@ void normalised_mean_selector( std::vector<RealMatrixList> &partition_indicators
 	  // of each cross validation partition;
 	  Real cv_mean = mean(  num_partitions, values[j] );
 	  Real cv_var = variance( num_partitions, values[j] );
-	  Real objective = std::abs( cv_mean ) * cv_var;
+	  Real objective = std::abs( cv_mean );// * cv_var;
 
 	  if (  objective < min_objective )
 	    {

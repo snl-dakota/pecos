@@ -512,6 +512,8 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
 		  best_cross_validation_orders[k] = order;
 		  bestCompressedSensingOpts_[k] = best_cs_opts[k];
 		}
+	      PCout << "Cross validation error for rhs " << k << " and degree ";
+	      PCout << order << ": " <<  best_predictor_indicators[k]<< "\n";
 	    }
 	}
       cnt++;
