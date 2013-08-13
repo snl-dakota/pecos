@@ -592,9 +592,6 @@ void equality_constrained_least_squares_solve( RealMatrix &A,
 void cholesky_inverse(  RealMatrix &L, RealMatrix &result,
 			Teuchos::EUplo uplo );
 
-void pivoted_qr_factorization( RealMatrix &A, RealMatrix &result_0, 
-			       RealMatrix &result_1, IntVector &result );
-
 template<typename O, typename T>
 void eye( int N, Teuchos::SerialDenseMatrix<O,T> &result )
 {
