@@ -85,9 +85,12 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
       // Initialise memory of A_fn and A_grad to largest possible sizes.
       // cross validation will result in not all entries being filled.
       // thus we must resize after the entries are added.
-      RealMatrix A_fn( fault_info.num_data_pts_fn, num_cols_A, false ), 
-	A_grad( fault_info.num_data_pts_grad*fault_info.num_vars, num_cols_A, 
-		false );
+      RealMatrix A_fn( fault_info.num_data_pts_fn, num_cols_A, false ), A_grad;
+
+      // bad alloc() can occur if fault_info.num_data_pts_grad*fault_info.num_vars, num_cols_A are both large. 
+      if ( fault_info.use_derivatives ) 
+	A_grad.shapeUninitialized(fault_info.num_data_pts_grad*fault_info.num_vars, num_cols_A );
+
       for (i=0; i<num_cols_A; ++i) {
 	a_fn_cntr = 0; a_grad_cntr = 0;
 	for ( j=0, l=0, fit=failed_resp_data.begin(); 
