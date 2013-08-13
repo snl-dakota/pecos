@@ -138,7 +138,7 @@ void RegressOrthogPolyApproximation::regression()
       CSOpts.solverTolerance = expConfigOptions.convergenceTol;
   else
     CSOpts.solverTolerance = -1.0;
-  CSOpts.verbosity = 0;
+  CSOpts.verbosity = std::max(0, expConfigOptions.outputLevel - 1);
   if ( expConfigOptions.maxIterations > 0 )
     CSOpts.maxNumIterations = expConfigOptions.maxIterations;
 
@@ -479,8 +479,9 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   predictorPartitionIndicatorsHistory_.resize( approxOrder[0] - min_order + 1 );
   int cnt( 0 );
   for ( int order = min_order; order <= approxOrder[0]; order++ )
-    {	
-      PCout << "Testing PCE order " << order << std::endl;
+    {
+      if (expConfigOptions.outputLevel > NORMAL_OUTPUT)
+	PCout << "Testing PCE order " << order << std::endl;
       int num_basis_terms = nchoosek( num_dims + order, order );
       RealMatrix vandermonde_submatrix( Teuchos::View, 
 					A_copy,
@@ -521,7 +522,8 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   bestApproxOrder = best_cross_validation_orders;
   int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
 				  bestApproxOrder[0] );
-  PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
+  if (expConfigOptions.outputLevel > NORMAL_OUTPUT)
+    PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
   RealMatrix vandermonde_submatrix( Teuchos::View, 
 				    A_copy,

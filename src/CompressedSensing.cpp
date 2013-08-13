@@ -902,7 +902,6 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
   RealMatrix Atb_sparse_memory( N, 1, false );
   bool residual_computed = false;
 
-  verbosity = 2;
   if ( verbosity > 1 )
     {
       PCout << "Orthogonal Matching Pursuit" << std::endl;
@@ -1119,8 +1118,6 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 						    int max_num_iterations,
 						    int verbosity )
 {
-  verbosity = 2;
-
   Teuchos::BLAS<int, Real> blas;
 
   int M( A.numRows() ), N( A.numCols() );
