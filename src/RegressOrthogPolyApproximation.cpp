@@ -480,7 +480,7 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   int cnt( 0 );
   for ( int order = min_order; order <= approxOrder[0]; order++ )
     {
-      if (expConfigOptions.outputLevel > NORMAL_OUTPUT)
+      if (expConfigOptions.outputLevel >= NORMAL_OUTPUT)
 	PCout << "Testing PCE order " << order << std::endl;
       int num_basis_terms = nchoosek( num_dims + order, order );
       RealMatrix vandermonde_submatrix( Teuchos::View, 
@@ -513,8 +513,11 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
 		  best_cross_validation_orders[k] = order;
 		  bestCompressedSensingOpts_[k] = best_cs_opts[k];
 		}
-	      PCout << "Cross validation error for rhs " << k << " and degree ";
-	      PCout << order << ": " <<  best_predictor_indicators[k]<< "\n";
+	      if (expConfigOptions.outputLevel >= NORMAL_OUTPUT)
+		{
+		  PCout<<"Cross validation error for rhs "<<k<<" and degree ";
+		  PCout << order << ": " <<  best_predictor_indicators[k]<< "\n";
+		}
 	    }
 	}
       cnt++;
@@ -522,8 +525,12 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   bestApproxOrder = best_cross_validation_orders;
   int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
 				  bestApproxOrder[0] );
-  if (expConfigOptions.outputLevel > NORMAL_OUTPUT)
-    PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
+  if (expConfigOptions.outputLevel >= NORMAL_OUTPUT)
+    {
+      PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
+      PCout << "Best cross validation error: ";
+      PCout <<  min_best_predictor_indicators[0]<< "\n";
+    }
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
   RealMatrix vandermonde_submatrix( Teuchos::View, 
 				    A_copy,
@@ -572,7 +579,7 @@ void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   opts1D[6].size( 1 );  // storeHistory
   opts1D[6] = true;  
   opts1D[7].size( 1 );  // Verbosity. Warnings on
-  opts1D[7] = 1;
+  opts1D[7] =  std::max(0, expConfigOptions.outputLevel - 1);
   opts1D[8].size( 1 );  // num function samples
   opts1D[8] = num_function_samples;
       
@@ -585,7 +592,7 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
   // Initialise the cross validation iterator
   CrossValidationIterator CV;
   CV.mpi_communicator( MPI_COMM_WORLD );
-  CV.verbosity( 1 );
+  CV.verbosity(  std::max(0, expConfigOptions.outputLevel - 1) );
   // Set and partition the data
   CV.set_data( vandermonde_matrix, rhs, num_data_pts_fn );
   int num_folds( 10 );
