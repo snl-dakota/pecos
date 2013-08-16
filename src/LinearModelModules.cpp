@@ -143,7 +143,7 @@ void linear_predictor_best_options_extractor( std::vector<RealMatrixList> &parti
       best_epsilon *= std::sqrt( sample_size_ratio );
       best_max_num_iterations /= num_partitions;
       best_max_num_iterations = std::ceil( (Real)best_max_num_iterations *
-					   sample_size_ratio );
+					   sample_size_ratio )+1;
       // Copy the partition_options of the best predictor for the
       // first parition. Then adjust the values that can vary with the
       // partition with their averages
