@@ -115,7 +115,7 @@ void receive( std::string &s, int source, MPI_Comm mpi_comm )
   delete [] buffer;
 };
 
-void send( RealMatrixList &list, int destination, MPI_Comm mpi_comm )
+void send( RealMatrixArray &list, int destination, MPI_Comm mpi_comm )
 {
   // Send list length
   int len( list.size() );
@@ -127,7 +127,7 @@ void send( RealMatrixList &list, int destination, MPI_Comm mpi_comm )
     }
 };
 
-void receive( RealMatrixList &list, int source, MPI_Comm mpi_comm )
+void receive( RealMatrixArray &list, int source, MPI_Comm mpi_comm )
 {
   // Send list length
   int len;

@@ -46,6 +46,44 @@ int RegressOrthogPolyApproximation::min_coefficients() const
 }
 
 
+void RegressOrthogPolyApproximation::allocate_arrays()
+{
+  allocate_total_sobol(); // no dependencies
+  bool update_exp_form = (approxOrder != approxOrderPrev);
+  allocate_total_order(); // numExpansionTerms needed in set_fault_info()
+  set_fault_info(); // needs numExpansionTerms; sets faultInfo.under_determined
+
+  // output candidate expansion form
+  PCout << "Orthogonal polynomial approximation order = { ";
+  for (size_t i=0; i<numVars; ++i)
+    PCout << approxOrder[i] << ' ';
+  if (faultInfo.under_determined) { // defer exp allocation until sparsity known
+
+    if (expConfigOptions.vbdControl == UNIVARIATE_VBD)
+      allocate_component_sobol();
+    // else defer until sparse recovery
+
+    //size_expansion(); // defer until sparse recovery
+
+    PCout << "} using candidate total-order expansion of ";
+  }
+  else { // pre-allocate total-order expansion
+    if (update_exp_form)
+      allocate_component_sobol();
+
+    // size expansion even if !update_exp_form due to possibility of change
+    // to expansion{Coeff,GradFlag} settings
+    size_expansion();
+
+    PCout << "} using total-order expansion of ";
+  }
+  PCout << numExpansionTerms << " terms\n";
+
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
+}
+
+
 void RegressOrthogPolyApproximation::compute_coefficients()
 {
   if (!expConfigOptions.expansionCoeffFlag &&
@@ -77,17 +115,16 @@ void RegressOrthogPolyApproximation::compute_coefficients()
     abort_handler(-1);
   }
 
-  // Array sizing can be divided into two parts:
-  // > data used in all cases (size in allocate_arrays())
-  // > data not used in expansion import case (size here)
-  allocate_arrays();
 #ifdef DEBUG
   gradient_check();
 #endif // DEBUG
 
-  // calculate polynomial chaos coefficients
+  // check data set for gradients/constraints/faults to determine settings
   surrData.data_checks();
-  regression();
+
+  allocate_arrays();
+  select_solver();
+  run_regression(); // calculate PCE coefficients
 
   computedMean = computedVariance = 0;
 }
@@ -99,83 +136,66 @@ void RegressOrthogPolyApproximation::compute_coefficients()
     best match a set of response samples.  The least squares estimation is
     performed using DGELSS (SVD) or DGGLSE (equality-constrained) from
     LAPACK, based on anchor point and derivative data availability. */
-void RegressOrthogPolyApproximation::regression()
+void RegressOrthogPolyApproximation::select_solver()
 {
-  set_fault_info();
-  
   CSOpts.solver = expConfigOptions.expCoeffsSolnApproach;
   bool fn_constrained_lls = (basisConfigOptions.useDerivs && 
-			     faultInfo.constr_eqns &&
-			     faultInfo.constr_eqns < numExpansionTerms);
-  if (CSOpts.solver==DEFAULT_REGRESSION)
-    if ((fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad) 
-	&& (!faultInfo.under_determined))
-      CSOpts.solver=EQ_CON_LEAST_SQ_REGRESSION;
-    else if (!faultInfo.under_determined)
-      CSOpts.solver=SVD_LEAST_SQ_REGRESSION;
-    else 
-      CSOpts.solver=LASSO_REGRESSION;
-
-  if (CSOpts.solver==DEFAULT_LEAST_SQ_REGRESSION)
-    if ((fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad) 
-	&& (!faultInfo.under_determined))
-      CSOpts.solver=EQ_CON_LEAST_SQ_REGRESSION;
+    faultInfo.constr_eqns && faultInfo.constr_eqns < numExpansionTerms);
+  bool eq_con = (fn_constrained_lls || faultInfo.anchor_fn ||
+		 faultInfo.anchor_grad);
+  if (CSOpts.solver==DEFAULT_REGRESSION) {
+    if (faultInfo.under_determined)
+      CSOpts.solver = LASSO_REGRESSION;
     else
-      CSOpts.solver=SVD_LEAST_SQ_REGRESSION;
+      CSOpts.solver = (eq_con) ? EQ_CON_LEAST_SQ_REGRESSION :
+	SVD_LEAST_SQ_REGRESSION;
+  }
+  else if (CSOpts.solver==DEFAULT_LEAST_SQ_REGRESSION)
+    CSOpts.solver = (eq_con && !faultInfo.under_determined)
+                  ? EQ_CON_LEAST_SQ_REGRESSION : SVD_LEAST_SQ_REGRESSION;
 
   // Set solver parameters
   if ( CSOpts.solver == LASSO_REGRESSION )
     CSOpts.delta = l2Penalty;
   if ( noiseTols.length() > 0 )
     CSOpts.epsilon = noiseTols[0];
-  else
-    {
-      noiseTols.size( 1 );
-      noiseTols[0] = CSOpts.epsilon;
-      if ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) noiseTols[0] = 1e-3;
-    }
-  if ( CSOpts.solver != SVD_LEAST_SQ_REGRESSION )
-      CSOpts.solverTolerance = expConfigOptions.convergenceTol;
-  else
-    CSOpts.solverTolerance = -1.0;
+  else {
+    noiseTols.size( 1 );
+    noiseTols[0] = CSOpts.epsilon;
+    if ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) noiseTols[0] = 1e-3;
+  }
+  CSOpts.solverTolerance = (CSOpts.solver == SVD_LEAST_SQ_REGRESSION)
+    ? -1.0 : expConfigOptions.convergenceTol;
   CSOpts.verbosity = std::max(0, expConfigOptions.outputLevel - 1);
   if ( expConfigOptions.maxIterations > 0 )
     CSOpts.maxNumIterations = expConfigOptions.maxIterations;
 
   // Solve the regression problem using L1 or L2 minimization approaches
-  bool regression_err = 0;
+  //bool regression_err = 0;
   if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION && !crossValidation){
-    if ((fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad) 
-	&& (!faultInfo.under_determined))
-      {
-	CSOpts.numFunctionSamples = surrData.size();
-	run_regression();
-      }
-    else{
+    if ( eq_con && !faultInfo.under_determined )
+      CSOpts.numFunctionSamples = surrData.size();
+    else {
       PCout << "Could not perform equality constrained least-squares. ";
-      if (faultInfo.under_determined){
+      if (faultInfo.under_determined) {
 	CSOpts.solver = LASSO_REGRESSION;
 	PCout << "Using LASSO regression instead\n";
       }
-      else
-	{
-	  CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
-	  PCout << "Using SVD least squares regression instead\n";
-	}
+      else {
+	CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
+	PCout << "Using SVD least squares regression instead\n";
+      }
       //regression_err = L2_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);
-      run_regression();
     }
   }
-  else{
+  //else
     //regression_err = L2_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);
-    run_regression();
-  }
 
-  if (regression_err) { // if numerical problems in LLS, abort with error
-    PCerr << "Error: nonzero return code from least squares solution in "
-	  << "RegressOrthogPolyApproximation::regression()" << std::endl;
-    abort_handler(-1);
-  }
+  //if (regression_err) { // if numerical problems in LLS, abort with error
+  //  PCerr << "Error: nonzero return code from least squares solution in "
+  //        << "RegressOrthogPolyApproximation::regression()" << std::endl;
+  //  abort_handler(-1);
+  //}
 }
 
 
@@ -289,7 +309,7 @@ void RegressOrthogPolyApproximation::run_regression()
   // validation. For this reason no modification is made as yet.
 
   size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.size(),
-    num_deriv_vars = expansionCoeffGrads.numRows();
+    num_deriv_vars = surrData.num_derivative_variables();
   int num_rows_A =  0, // number of rows in matrix A
       num_cols_A = numExpansionTerms, // number of columns in matrix A
       num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs;
@@ -302,10 +322,8 @@ void RegressOrthogPolyApproximation::run_regression()
        expConfigOptions.expansionCoeffGradFlag);
 
   bool anchor_fn = false, anchor_grad = false;
-  if (surrData.anchor()) {
-    anchor_fn = true;
-    anchor_grad = true;
-  }
+  if (surrData.anchor())
+    anchor_fn = anchor_grad = true;
 
   int num_data_pts_fn = num_surr_data_pts, 
     num_data_pts_grad = num_surr_data_pts;
@@ -313,7 +331,7 @@ void RegressOrthogPolyApproximation::run_regression()
   size_t a_grad_cntr = 0, b_grad_cntr = 0;
 
   CompressedSensingOptionsList opts_list;
-  RealMatrixList solutions;
+  RealMatrixArray solutions;
   CSOpts.standardizeInputs = false; // false essential when using derivatives
   
   if (expConfigOptions.expansionCoeffFlag) {
@@ -362,20 +380,19 @@ void RegressOrthogPolyApproximation::run_regression()
       // Perform cross validation loop over degrees here.
       // Current cross validation will not work for equality 
       // constrained least squares
-      if ( crossValidation )
-	// run cross validation
+      if ( crossValidation ) // run cross validation
 	run_cross_validation( A, B, num_data_pts_fn );
-      else
-	{
-	  
-	  IntVector index_mapping; 
-	  remove_faulty_data( A, B, index_mapping,
-			      faultInfo,
-			      surrData.failed_response_data() );
-	  CSTool.solve( A, B, solutions, CSOpts, opts_list );
-	  
+      else {
+	IntVector index_mapping; 
+	remove_faulty_data( A, B, index_mapping, faultInfo,
+			    surrData.failed_response_data() );
+	CSTool.solve( A, B, solutions, CSOpts, opts_list );
+
+	if (faultInfo.under_determined)
+	  update_sparse_coefficients(solutions[0][0]);
+	else
 	  copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
-	}
+      }
     }
   }
 
@@ -394,8 +411,8 @@ void RegressOrthogPolyApproximation::run_regression()
 	for (j=0; j<num_surr_data_pts; ++j) {
 	  add_val = false; add_grad = true;
 	  if (add_grad) {
-	    A_matrix[a_cntr] = multivariate_polynomial(
-						       surrData.continuous_variables(j), mi);
+	    A_matrix[a_cntr]
+	      = multivariate_polynomial(surrData.continuous_variables(j), mi);
 	    ++a_cntr;
 	  }
 	}
@@ -426,19 +443,44 @@ void RegressOrthogPolyApproximation::run_regression()
 			faultInfo, surrData.failed_response_data());
     CSTool.solve( A, B, solutions, CSOpts, opts_list );
     
-    if (multiple_rhs)
-      {
-	for ( int j = 0; j < numExpansionTerms; j++ )
-	  expansionCoeffs[j] = solutions[0](j,0);
-      }
-    
-    for (i=0; i<numExpansionTerms; ++i)
-      for (j=0; j<num_grad_rhs; ++j)
-	expansionCoeffGrads(j,i)
-	  = solutions[j+num_coeff_rhs](i,0);
-
+    if (multiple_rhs) {
+      Real* dense_coeffs = solutions[0][0];
+      for (j=0; j<numExpansionTerms; ++j)
+	expansionCoeffs[j] = dense_coeffs[j];
+      // *** and rest of allocate_arrays (multiIndex, sobol, etc.)
+    }
+    for (i=0; i<num_grad_rhs; ++i) {
+      Real* dense_coeffs = solutions[i+num_coeff_rhs][0];
+      for (j=0; j<numExpansionTerms; ++j)
+	expansionCoeffGrads(i,j) = dense_coeffs[j];
+      // *** and rest of allocate_arrays (multiIndex, sobol, etc.)
+    }
   }
 }
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_coefficients(Real* dense_coeffs)
+{
+  UShort2DArray old_multi_index = multiIndex;
+  size_t i;
+  // always retain leading coefficient (mean)
+  multiIndex.resize(1);
+  SizetArray dense_indices; dense_indices.push_back(0);
+  // update sparse multiIndex and track nonzero coeffs
+  for (i=1; i<numExpansionTerms; ++i)
+    if (std::abs(dense_coeffs[i]) > DBL_EPSILON)
+      { multiIndex.push_back(old_multi_index[i]); dense_indices.push_back(i); }
+  // build sparse expansionCoeffs
+  numExpansionTerms = multiIndex.size();
+  expansionCoeffs.sizeUninitialized(numExpansionTerms);
+  for (i=0; i<numExpansionTerms; ++i)
+    expansionCoeffs[i] = dense_coeffs[dense_indices[i]];
+
+  if (expConfigOptions.vbdControl == ALL_VBD)
+    allocate_component_sobol();
+}
+
 
 void RegressOrthogPolyApproximation::
 run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
@@ -456,16 +498,16 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
 
   /// The options of the best predictors of the predictors produced by each item
   /// in predictorOptionsList_. Information is stored for each PCE degree
-  std::vector<RealMatrixList> predictorOptionsHistory_;
+  RealMatrix2DArray predictorOptionsHistory_;
 
   /// The best predictors of the predictors produced by each item 
   /// in predictorOptionsList_. Information is stored for each PCE degree
-  std::vector<RealMatrixList> predictorIndicatorsHistory_;
+  RealMatrix2DArray predictorIndicatorsHistory_;
 
   /// The indicators of each partition for the best predictors of the 
   /// predictors produced by each item in predictorOptionsList_. 
   /// Information is stored for each PCE degree
-  std::vector<RealMatrixList> predictorPartitionIndicatorsHistory_;
+  RealMatrix2DArray predictorPartitionIndicatorsHistory_;
   bestCompressedSensingOpts_;
 
   std::vector<CompressedSensingOptions> best_cs_opts( num_rhs );
@@ -537,7 +579,7 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
 				    A_copy.numRows(),
 				    num_basis_terms, 0, 0 );
   CompressedSensingOptionsList opts_list;
-  RealMatrixList solutions;
+  RealMatrixArray solutions;
   bestCompressedSensingOpts_[0].storeHistory = false;
   bestCompressedSensingOpts_[0].print();
   IntVector index_mapping;
@@ -564,7 +606,7 @@ void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   
   // Define the 1D grids for under and over-determined LARS, LASSO, OMP, BP and 
   // LS
-  std::vector<RealVector> opts1D( 9 );
+  RealVectorArray opts1D( 9 );
   opts1D[0].size( 1 ); // solver type
   opts1D[0][0] = CSOpts.solver;
   opts1D[1].size( 1 ); // Solver tolerance. 
@@ -588,7 +630,7 @@ void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
 };
 
 void RegressOrthogPolyApproximation::
-estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history, size_t num_data_pts_fn ){
+estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixArray &predictor_options_history, RealMatrixArray &predictor_indicators_history, RealMatrixArray &predictor_partition_indicators_history, size_t num_data_pts_fn ){
   // Initialise the cross validation iterator
   CrossValidationIterator CV;
   CV.mpi_communicator( MPI_COMM_WORLD );

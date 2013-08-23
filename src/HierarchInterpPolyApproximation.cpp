@@ -21,6 +21,51 @@
 namespace Pecos {
 
 
+void HierarchInterpPolyApproximation::allocate_component_sobol()
+{
+  // Allocate memory specific to output control
+  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag) {
+    switch (expConfigOptions.vbdControl) {
+    case ALL_VBD: { // main + interaction effects
+
+      // One idea is to leverage PCE equivalence.  The exact order of the
+      // interpolation polynomial (e.g., for nested rules, local or
+      // gradient-enhanced interpolants) is not critical for defining
+      // interactions; the issue is more the presence of constant dimensions.
+      // While the collocation key has a very different meaning from the PCE
+      // multi-index, the presence of non-zero's still indicates multi-point
+      // interpolation and the presence of dimension effects.
+      sobolIndexMap.clear();
+      HierarchSparseGridDriver* hsg_driver
+	= (HierarchSparseGridDriver*)driverRep;
+      const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+      const UShort4DArray& key   = hsg_driver->collocation_key();
+      size_t lev, num_lev = sm_mi.size(), set, num_sets;
+      for (lev=0; lev<num_lev; ++lev) {
+	const UShort3DArray& key_l = key[lev];
+	num_sets = key_l.size();
+	for (set=0; set<num_sets; ++set)
+	  multi_index_to_sobol_index_map(key_l[set]);
+      }
+      sobol_index_map_to_sobol_indices();
+
+      // another idea is to interrogate polynomialBasis[].interpolation_size()
+      // or the quadrature/sparse level indices, again focusing on the presence
+      // of constant dimensions (size = 1, level = 0).  But given the need to
+      // regenerate the effect combinations from this reduced order data, the
+      // collocation key idea seems preferable since it's already available.
+      //polynomial_basis_to_sobol_indices();
+
+      break;
+    }
+    case UNIVARIATE_VBD: // main effects only
+      if (sobolIndices.empty()) allocate_main_sobol();
+      break;
+    }
+  }
+}
+
+
 void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
@@ -2062,7 +2107,7 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
   // iterate each variable 
   for (size_t v=0; v<numVars; ++v) {
     // define complement_set that includes all but index of interest
-    complement_set.set(); complement_set[v].flip();
+    complement_set.set(); complement_set.flip(v);
 
     // Perform inner integral over complementary set u' to form new weighted
     // coefficients h (stored as member_coeffs), stored hierarchically over

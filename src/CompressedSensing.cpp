@@ -1143,12 +1143,12 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   solution_metrics.shapeUninitialized( 2, max_num_iter );
 
   // Memory for active indices
-  std::vector<int>::iterator vec_iter;
-  std::vector<int> active_indices;
+  IntArray::iterator vec_iter;
+  IntArray active_indices;
   
   // Store inactive indices
-  std::set<int>::iterator inactive_index_iter;
-  std::set<int> inactive_indices;
+  IntSet::iterator inactive_index_iter;
+  IntSet inactive_indices;
   for ( int n = 0;  n < N; n++) inactive_indices.insert( n );
   
   // Matrix to store the full rank matrix associated with x_sparse
@@ -1433,7 +1433,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  // delete column from A_sparse and resize
 	  delete_column( index_to_drop, A_sparse );
 	  inactive_indices.insert( active_indices[index_to_drop] );
-	  std::vector<int>::iterator it;
+	  IntArray::iterator it;
 	  it =  active_indices.begin() + index_to_drop;
 	  active_indices.erase( active_indices.begin() + index_to_drop );
 	  num_covariates = (int)active_indices.size();
@@ -1581,7 +1581,7 @@ void CompressedSensingTool::standardize_inputs( RealMatrix &A, RealMatrix &B,
 };
 
 void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B, 
-				   RealMatrixList &solutions, 
+				   RealMatrixArray &solutions, 
 				   CompressedSensingOptions &opts,
 				   CompressedSensingOptionsList &opts_list )
 {

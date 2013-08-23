@@ -67,17 +67,19 @@ protected:
   int min_coefficients() const;
   void compute_coefficients();
 
+  void allocate_arrays();
+
 private:
 
   //
   //- Heading: Member functions
   //
 
-  /// computes the chaosCoeffs via linear regression (expCoeffsSolnApproach
-  /// is REGRESSION) using L1 or L2 minimization
-  void regression();
+  /// selects the solver for L1 or L2 minimization based on user input
+  void select_solver();
 
-  /// Run the regression method set in regression()
+  /// Run the regression method set in select_solver() to compute the
+  /// expansion coefficients using L1 or L2 minimization
   void run_regression();
 
   /// set the information needed to ensure fault tolerance
@@ -93,9 +95,9 @@ private:
     RealMatrix &vandermonde_matrix, RealMatrix &rhs,
     std::vector<CompressedSensingOptions> &best_cs_opts,
     RealVector &best_predictor_indicators,
-    RealMatrixList &predictor_options_history,
-    RealMatrixList &predictor_indicators_history,
-    RealMatrixList &predictor_partition_indicators_history,
+    RealMatrixArray &predictor_options_history,
+    RealMatrixArray &predictor_indicators_history,
+    RealMatrixArray &predictor_partition_indicators_history,
     size_t num_data_pts_fn );
 
   /// pack polynomial contributions to Psi matrix for regression
@@ -106,6 +108,9 @@ private:
   void pack_response_data(const SurrogateDataResp& sdr,
 			  bool add_val,  double* pack_val,  size_t& pv_cntr,
 			  bool add_grad, double* pack_grad, size_t& pg_cntr);
+
+  /// define multiIndex and expansionCoeffs from nonzero dense_coeffs
+  void update_sparse_coefficients(Real* dense_coeffs);
 
   /**
    * \brief Define the set of options used in the cross validation grid search

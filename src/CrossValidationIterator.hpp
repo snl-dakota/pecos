@@ -47,8 +47,8 @@ typedef void ( Analyser )( RealMatrix &training_samples,
 			   RealMatrix &validation_values,
 			   RealVector &predictor_opts,
 			   IndicatorFunction *indicator_function,
-			   RealMatrixList &indicators_list,
-			   RealMatrixList &predictor_options_list,
+			   RealMatrixArray &indicators_list,
+			   RealMatrixArray &predictor_options_list,
 			   FaultInfo &fault_info,
 			   const SizetShortMap& failed_resp_data,
 			   IntVector &training_indices,
@@ -74,7 +74,7 @@ typedef void ( Analyser )( RealMatrix &training_samples,
  * ( num_partitions x num_qoi ) matrix containing the indicators of the 'best' 
  * predictor for each quantity of interest and partition.
  */
-typedef void ( Selector )( std::vector<RealMatrixList> &partition_indicators, 
+typedef void ( Selector )( RealMatrix2DArray &partition_indicators, 
 			   IntVector &best_predictor_indices,
 			   RealVector &best_predictor_indicators,
 			   RealMatrix &best_predictor_partition_indicators );
@@ -111,7 +111,7 @@ typedef void ( Selector )( std::vector<RealMatrixList> &partition_indicators,
  * containg the options that will be used to build the best predictors on
  * the full data set.
  */
-typedef void ( BestOptionsExtractor )( std::vector<RealMatrixList> &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options );
+typedef void ( BestOptionsExtractor )( RealMatrix2DArray &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options );
 
 /**
  * \class CrossValidationIterator
@@ -158,15 +158,15 @@ protected:
 
   /// The options of the best predictors of the predictors produced by each item 
   /// in predictorOptionsList_.
-  RealMatrixList predictorOptionsHistory_;
+  RealMatrixArray predictorOptionsHistory_;
 
   /// The best predictors of the predictors produced by each item 
   /// in predictorOptionsList_.
-  RealMatrixList predictorIndicatorsHistory_;
+  RealMatrixArray predictorIndicatorsHistory_;
 
   /// The indicators of each partition for the best predictors of the 
   /// predictors produced by each item in predictorOptionsList_.
-  RealMatrixList predictorPartitionIndicatorsHistory_;
+  RealMatrixArray predictorPartitionIndicatorsHistory_;
   
   /// Controls the amount of information written to standard I/O
   int verbosity_;
@@ -202,9 +202,9 @@ protected:
   /** \brief reshape history data to a list of size num_rhs with each list item
       containing data realated to each predictorOptionsList_;
    */
-  void reshape_history_data( RealMatrixList &predictor_options_history,
-			     RealMatrixList &predictor_indicators_history, 
-			RealMatrixList &predictor_partition_indicators_history );
+  void reshape_history_data( RealMatrixArray &predictor_options_history,
+			     RealMatrixArray &predictor_indicators_history, 
+			RealMatrixArray &predictor_partition_indicators_history );
 
 public:
 
@@ -309,9 +309,9 @@ public:
    * partition for the best predictors of the predictors produced by each item 
    * in predictorOptionsList_
    */ 
-  void get_history_data( RealMatrixList &predictor_options_history,
-			 RealMatrixList &predictor_indicators_history,
-			 RealMatrixList &predictor_partition_indicators_history);
+  void get_history_data( RealMatrixArray &predictor_options_history,
+			 RealMatrixArray &predictor_indicators_history,
+			 RealMatrixArray &predictor_partition_indicators_history);
   
   
   /** \brief Set the data to be used in the cross validation study

@@ -50,6 +50,8 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void allocate_component_sobol();
+
   void allocate_expansion_coefficients();
   void compute_expansion_coefficients();
   void increment_expansion_coefficients();

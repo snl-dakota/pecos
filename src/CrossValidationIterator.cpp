@@ -220,14 +220,14 @@ void CrossValidationIterator::run( IndicatorFunction *indicator_function,
     {
       RealVector opts( Teuchos::View, predictorOptionsList_[opts_iter], 
 		       predictorOptionsList_.numRows() );
-      std::vector<RealMatrixList> all_partition_indicators( numPartitions_ );
-      std::vector<RealMatrixList> all_partition_options( numPartitions_ );
-      RealMatrixList predictor_options_list;
+      RealMatrix2DArray all_partition_indicators( numPartitions_ );
+      RealMatrix2DArray all_partition_options( numPartitions_ );
+      RealMatrixArray predictor_options_list;
       for ( int j = 0; j < numPartitions_; j++ )
 	{ 
 	  partition_data( training_samples, training_values,
 			  validation_samples, validation_values, j );
-	  RealMatrixList indicators_list;
+	  RealMatrixArray indicators_list;
 	  IntVector partition_training_indices( Teuchos::View, 
 						trainingIndices_[j],
 						trainingIndices_.numRows() );
@@ -379,7 +379,7 @@ void CrossValidationIterator::get_best_predictor_info( RealMatrix &best_predicto
 #endif
 };
 
-void CrossValidationIterator::get_history_data( RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history )
+void CrossValidationIterator::get_history_data( RealMatrixArray &predictor_options_history, RealMatrixArray &predictor_indicators_history, RealMatrixArray &predictor_partition_indicators_history )
 {
 #ifdef ENABLE_LIBHEAT_MPI
   if ( is_master() )
@@ -388,7 +388,7 @@ void CrossValidationIterator::get_history_data( RealMatrixList &predictor_option
       predictor_indicators_history.clear();
       predictor_partition_indicators_history.clear();
 
-      RealMatrixList slave_predictor_options_history,
+      RealMatrixArray slave_predictor_options_history,
 	slave_predictor_indicators_history,
 	slave_predictor_partition_indicators_history;
       for ( int proc_id = 1; proc_id < num_processors(); proc_id++ )
@@ -459,13 +459,13 @@ void CrossValidationIterator::get_history_data( RealMatrixList &predictor_option
 #endif
 };
 
-void CrossValidationIterator::reshape_history_data( RealMatrixList &predictor_options_history, RealMatrixList &predictor_indicators_history, RealMatrixList &predictor_partition_indicators_history )
+void CrossValidationIterator::reshape_history_data( RealMatrixArray &predictor_options_history, RealMatrixArray &predictor_indicators_history, RealMatrixArray &predictor_partition_indicators_history )
 {
   int num_opts( predictor_partition_indicators_history.size() );
   int num_rhs( predictor_partition_indicators_history[0].numCols() );
-  RealMatrixList partition_indicators_history( num_rhs );
-  RealMatrixList indicators_history( num_rhs );
-  RealMatrixList options_history( num_rhs );
+  RealMatrixArray partition_indicators_history( num_rhs );
+  RealMatrixArray indicators_history( num_rhs );
+  RealMatrixArray options_history( num_rhs );
   for ( int k = 0; k < num_rhs; k++ ) 
     {
       partition_indicators_history[k].shapeUninitialized( numPartitions_,

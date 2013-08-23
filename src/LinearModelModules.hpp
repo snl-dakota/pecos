@@ -10,7 +10,7 @@ void set_linear_predictor_options( RealVector &predictor_opts,
 				   CompressedSensingOptions &cs_opts );
 
 void extract_linear_predictor_options(CompressedSensingOptionsList &cs_opts_list,
-				      RealMatrixList &predictor_options_list );
+				      RealMatrixArray &predictor_options_list );
 
 /** \brief Given a realization of the predictor options, build
  * a set of predictors from training data and return
@@ -39,8 +39,8 @@ void linear_predictor_analyser( RealMatrix &A_training,
 				RealMatrix &B_validation,
 				RealVector &predictor_opts,
 				IndicatorFunction *indicator_function,
-				RealMatrixList &indicators_list,
-				RealMatrixList &predictor_options_list,
+				RealMatrixArray &indicators_list,
+				RealMatrixArray &predictor_options_list,
 				FaultInfo &fault_info,
 				const SizetShortMap& failed_resp_data,
 				IntVector &training_indices,
@@ -78,7 +78,7 @@ void linear_predictor_analyser( RealMatrix &A_training,
  * containg the options that will be used to build the best predictors on
  * the full data set.
  */
-void linear_predictor_best_options_extractor( std::vector<RealMatrixList> &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options );
+void linear_predictor_best_options_extractor( RealMatrix2DArray &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options );
 
 } // namespace Pecos
 

@@ -69,7 +69,7 @@ public:
 protected:
 
   //
-  //- Heading: Virtual function redefinitions and member functions
+  //- Heading: Virtual function redefinitions
   //
 
   int min_coefficients() const;
@@ -84,15 +84,15 @@ protected:
 
   void coefficient_labels(std::vector<std::string>& all_coeff_tags) const;
 
-  /// initialize polynomialBasis, multiIndex, et al.
+  /// initialize multiIndex, expansionCoeffs, et al.
   void allocate_arrays();
 
-  /// Performs global sensitivity analysis using Sobol' Indices;
-  /// computes component (main and interaction) effects
-  void compute_component_effects();
-  /// Performs global sensitivity analysis using Sobol' Indices;
-  /// computes total effects
-  void compute_total_effects();
+  /// Performs global sensitivity analysis via variance-based decomposition;
+  /// computes component (main and interaction) Sobol' indices
+  void compute_component_sobol();
+  /// Performs global sensitivity analysis via variance-based decomposition;
+  /// computes total Sobol' indices
+  void compute_total_sobol();
 
   /// uniformly increment approxOrder
   void increment_order();
@@ -146,6 +146,12 @@ protected:
   /// initialize basis_types from u_types
   bool initialize_basis_types(const ShortArray& u_types,
 			      ShortArray& basis_types);
+
+  /// update approxOrder and total-order multiIndex
+  void allocate_total_order();
+  /// define sobolIndexMap and allocate sobolIndices for main and
+  /// interaction effects
+  void allocate_component_sobol();
 
   /// size expansion{Coeffs,CoeffGrads} based on multiIndex
   void size_expansion();
@@ -243,6 +249,9 @@ protected:
 
   /// order of orthogonal polynomial expansion
   UShortArray approxOrder;
+  /// previous value of approxOrder; used for detecting when a multiIndex
+  /// update is needed
+  UShortArray approxOrderPrev;
 
   /// number of terms in orthogonal polynomial expansion (length of chaosCoeffs)
   int numExpansionTerms;
@@ -291,10 +300,6 @@ private:
   //
   //- Heading: Data
   //
-
-  /// previous value of approxOrder; used for detecting when a multiIndex
-  /// update is needed
-  UShortArray approxOrderPrev;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())

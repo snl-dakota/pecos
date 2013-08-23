@@ -201,12 +201,11 @@ public:
   //- Heading: Virtual member functions
   //
 
-  /// Computes sensitivity indices according to verbosity (from main
-  /// to higher order effects)
-  virtual void compute_component_effects() = 0;
-  /// Computes total sensitivity indices according to verbosity and
-  /// existing computations from compute_component_effects()
-  virtual void compute_total_effects() = 0;
+  /// Computes sensitivity indices according to VBD specification
+  virtual void compute_component_sobol() = 0;
+  /// Computes total sensitivity indices according to VBD specification
+  /// and existing computations from compute_component_sobol()
+  virtual void compute_total_sobol() = 0;
 
   /// size derived class data attributes
   virtual void allocate_arrays() = 0;
@@ -323,6 +322,9 @@ public:
   /// increment the approximation order (OrthogPolyApproximation only)
   virtual void increment_order();
 
+  /// size component Sobol arrays
+  virtual void allocate_component_sobol() = 0;
+
   //
   //- Heading: Member functions
   //
@@ -350,10 +352,8 @@ public:
   void standardize_moments(const RealVector& central_moments,
 			   RealVector& std_moments);
 
-  /// size component Sobol arrays
-  void allocate_component_effects();
   /// size total Sobol arrays
-  void allocate_total_effects();
+  void allocate_total_sobol();
 
   /// set surrData (shared representation)
   void surrogate_data(const SurrogateData& data);
@@ -449,8 +449,8 @@ public:
 				bool include_upper_bound);
   /// utility function for incrementing a set of multidimensional terms
   static void increment_terms(UShortArray& terms, size_t& last_index,
-			      size_t& prev_index, const size_t& term_limit,
-			      bool& order_complete);
+			      size_t& prev_index, size_t  term_limit,
+			      bool& order_complete);//,bool unique_terms=false);
 
 protected:
 
@@ -484,6 +484,18 @@ protected:
   /// return true if matching variable values within nonrandom variable subset
   bool match_nonrandom_vars(const RealVector& vars_1,
 			    const RealVector& vars_2) const;
+
+  /// allocate sobolIndices and sobolIndexMap for main effects only
+  void allocate_main_sobol();
+  // allocate sobolIndices and sobolIndexMap for main and interaction
+  // effects including m-way interactions for m <= max_order
+  //void allocate_main_interaction_sobol(unsigned short max_order);
+
+  /// Define the Sobol' index sets from the current (sparse) multiIndex
+  void multi_index_to_sobol_index_map(const UShort2DArray& mi);
+  /// Define the Sobol' index sets from the current (sparse) multiIndex
+  void sobol_index_map_to_sobol_indices();
+
 
   //
   //- Heading: Data
@@ -738,11 +750,11 @@ increment_indices(UShortArray& indices, const UShortArray& limits,
 
 inline void PolynomialApproximation::
 increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
-		const size_t& term_limit, bool& order_complete)
+		size_t term_limit, bool& order_complete)//, bool unique_terms)
 {
   bool increment_complete = false;
   while (!increment_complete) {
-    terms[last_index] = 1;
+    terms[last_index] = 1; // [1,limit] (not [0,limit-1])
     ++terms[prev_index];
     if (prev_index == 0) {
       increment_complete = true;
@@ -752,7 +764,9 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
     else {
       last_index = prev_index;
       --prev_index;
-      if (terms[last_index] <= terms[prev_index])
+      if ( //( unique_terms && terms[last_index] <  terms[prev_index]) ||
+	   //(!unique_terms &&
+	      terms[last_index] <= terms[prev_index]) //)
 	increment_complete = true;
     }
   }

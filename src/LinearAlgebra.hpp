@@ -16,11 +16,11 @@
 
 namespace Pecos{
 
-typedef Teuchos::SerialDenseMatrix<int,int> IntMatrix;
-typedef Teuchos::SerialDenseMatrix<int,Real> RealMatrix;
-typedef Teuchos::SerialDenseVector<int,int> IntVector;
-typedef Teuchos::SerialDenseVector<int,Real> RealVector;
-typedef std::vector<RealMatrix> RealMatrixList;
+// typedef Teuchos::SerialDenseMatrix<int,int> IntMatrix;
+// typedef Teuchos::SerialDenseMatrix<int,Real> RealMatrix;
+// typedef Teuchos::SerialDenseVector<int,int> IntVector;
+// typedef Teuchos::SerialDenseVector<int,Real> RealVector;
+// typedef std::vector<RealMatrix> RealMatrixArray;
 
 /// Reshape a matrix only if the sizes of the matrices differ
 template < typename O, typename T >

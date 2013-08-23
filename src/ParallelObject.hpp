@@ -31,9 +31,9 @@ void send( const std::string &s, int destination, MPI_Comm mpi_comm );
 
 void receive( std::string &s, int source, MPI_Comm mpi_comm );
 
-void send( RealMatrixList &list, int destination, MPI_Comm mpi_comm );
+void send( RealMatrixArray &list, int destination, MPI_Comm mpi_comm );
 
-void receive( RealMatrixList &list, int source, MPI_Comm mpi_comm );
+void receive( RealMatrixArray &list, int source, MPI_Comm mpi_comm );
 
 #endif // ENABLE_LIBHEAT_MPI
 

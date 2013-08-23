@@ -18,7 +18,7 @@ void set_linear_predictor_options( RealVector &predictor_opts,
 };
 
 void extract_linear_predictor_options(CompressedSensingOptionsList &cs_opts_list,
-				      RealMatrixList &predictor_options_list )
+				      RealMatrixArray &predictor_options_list )
 {
   int num_qoi( cs_opts_list.size() );
   predictor_options_list.resize( num_qoi );
@@ -47,8 +47,8 @@ void linear_predictor_analyser( RealMatrix &A_training,
 				RealMatrix &B_validation,
 				RealVector &predictor_opts,
 				IndicatorFunction *indicator_function,
-				RealMatrixList &indicators_list,
-				RealMatrixList &predictor_options_list,
+				RealMatrixArray &indicators_list,
+				RealMatrixArray &predictor_options_list,
 				FaultInfo &fault_info,
 				const SizetShortMap& failed_resp_data,
 				IntVector &training_indices,
@@ -62,7 +62,7 @@ void linear_predictor_analyser( RealMatrix &A_training,
   // Compute a set of coefficients that solve the linear system
   // Ax = b, where A = training_samples and b = training_values;
   CompressedSensingTool cs_tool;
-  RealMatrixList coefficient_sets;
+  RealMatrixArray coefficient_sets;
   CompressedSensingOptionsList cs_opts_list;
   remove_faulty_data( A_training, B_training, training_indices,
   		      fault_info, failed_resp_data );
@@ -111,14 +111,14 @@ void linear_predictor_analyser( RealMatrix &A_training,
     }
 };
 
-void linear_predictor_best_options_extractor( std::vector<RealMatrixList> &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options )
+void linear_predictor_best_options_extractor( RealMatrix2DArray &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options )
 {
   int num_partitions = partition_options.size(), 
     num_qoi = best_predictor_indices.length();
   
   for ( int k = 0; k < num_qoi; k++ )
     {
-      std::vector<Real> epsilons( num_partitions );
+      RealArray epsilons( num_partitions );
 
       // Get the average number of max_iterations and the average residual
       // for the best predictors

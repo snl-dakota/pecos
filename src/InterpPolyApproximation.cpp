@@ -96,8 +96,7 @@ int InterpPolyApproximation::min_coefficients() const
 
 void InterpPolyApproximation::allocate_arrays()
 {
-  allocate_component_effects();
-  allocate_total_effects();
+  allocate_total_sobol();
   allocate_expansion_coefficients();
 
   bool param_update = false;
@@ -126,8 +125,10 @@ void InterpPolyApproximation::allocate_arrays()
     bool update_basis_form = (quad_order != quadOrderPrev);
     if (update_basis_form || param_update)
       update_tensor_interpolation_basis(tpq_driver->level_index());
-
-    quadOrderPrev = quad_order;
+    if (update_basis_form) {
+      allocate_component_sobol();
+      quadOrderPrev = quad_order;
+    }
     break;
   }
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
@@ -143,8 +144,10 @@ void InterpPolyApproximation::allocate_arrays()
       = (ssgLevelPrev == USHRT_MAX || ssg_level > ssgLevelPrev);
     if (update_basis_form || param_update)
       update_sparse_interpolation_basis(ssg_level);
-
-    ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
+    if (update_basis_form) {
+      allocate_component_sobol();
+      ssgLevelPrev = ssg_level; // ssgAnisoWtsPrev = aniso_wts;
+    }
     break;
   }
   }
@@ -1422,12 +1425,13 @@ accumulate_barycentric_gradient(size_t j, unsigned short bi_j,
 }
 
 
-void InterpPolyApproximation::compute_component_effects()
+void InterpPolyApproximation::compute_component_sobol()
 {
   // initialize partialVariance
   if (partialVariance.empty()) partialVariance.size(sobolIndices.length());
   else                         partialVariance = 0.;
-  partialVariance[0] = numericalMoments[0]*numericalMoments[0];// init w/ mean^2
+  // gets subtracted as child in compute_partial_variance()
+  partialVariance[0] = numericalMoments[0]*numericalMoments[0];
 
   // Compute the total expansion variance.  For standard mode, the full variance
   // is likely already available, as managed by computedVariance in variance().
@@ -1439,19 +1443,19 @@ void InterpPolyApproximation::compute_component_effects()
   // Solve for partial variances
   for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it) {
     unsigned long index = it->second;
-    if (index) { // partialVariance[0] stores mean; no variance to calculate
+    if (index) { // partialVariance[0] stores mean^2 offset
       compute_partial_variance(it->first);
       sobolIndices[index] = partialVariance[index] / total_variance;
     }
   }
 #ifdef DEBUG
-  PCout << "In InterpPolyApproximation::compute_component_effects(), "
+  PCout << "In InterpPolyApproximation::compute_component_sobol(), "
 	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
 #endif // DEBUG
 }
 
 
-void InterpPolyApproximation::compute_total_effects()
+void InterpPolyApproximation::compute_total_sobol()
 {
   totalSobolIndices = 0.; // init total indices
 
@@ -1475,7 +1479,7 @@ void InterpPolyApproximation::compute_total_effects()
     compute_total_sobol_indices(); // virtual
 
 #ifdef DEBUG
-  PCout << "In InterpPolyApproximation::compute_total_effects(), "
+  PCout << "In InterpPolyApproximation::compute_total_sobol(), "
 	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
 #endif // DEBUG
 }
@@ -1483,7 +1487,7 @@ void InterpPolyApproximation::compute_total_effects()
 
 /** Computes the variance of component functions.  Assumes that partial
     variances of all subsets of set_value have been computed in advance:
-    compute_component_effects() calls compute_partial_variance() using
+    compute_component_sobol() calls compute_partial_variance() using
     the ordered set_value's in sobolIndexMap. */
 void InterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
@@ -1520,7 +1524,7 @@ proper_subsets(const BitArray& parent_set, BitArraySet& children)
   for (size_t k=0; k<numVars; ++k)
     if (parent_set[k]) { // check for membership of variable k in parent set
       // remove var k from parent set to create child set
-      BitArray child_set = parent_set; child_set[k].flip();
+      BitArray child_set = parent_set; child_set.flip(k);
       // if child set has not been stored previously, insert it and recurse
       if (children.find(child_set) == children.end()) {
 	children.insert(child_set);

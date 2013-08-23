@@ -87,6 +87,7 @@ typedef std::vector<int>             IntArray;
 typedef std::vector<IntArray>        Int2DArray;
 typedef std::vector<short>           ShortArray;
 typedef std::vector<unsigned short>  UShortArray;
+typedef std::vector<unsigned long>   ULongArray;
 typedef std::vector<UShortArray>     UShort2DArray;
 typedef std::vector<UShort2DArray>   UShort3DArray;
 typedef std::vector<UShort3DArray>   UShort4DArray;

@@ -36,14 +36,10 @@ int ProjectOrthogPolyApproximation::min_coefficients() const
 
 void ProjectOrthogPolyApproximation::allocate_arrays()
 {
-  // if base class version not invoked, invoke here
-  if (expConfigOptions.expCoeffsSolnApproach != SAMPLING) {
-    allocate_component_effects();
-    allocate_total_effects();
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
+  allocate_total_sobol();
 
-    if (expansionMoments.empty())
-      expansionMoments.sizeUninitialized(2);
-  }
   // no combination by default, even if stored{MultiIndex,ExpCoeffs,
   // ExpCoeffGrads} are defined.  Redefined by attribute passed in
   // combine_coefficients(short).
@@ -65,11 +61,14 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
       quadrature_order_to_integrand_order(quad_order, integrand_order);
       integrand_order_to_expansion_order(integrand_order, approxOrder);
       tensor_product_multi_index(approxOrder, multiIndex);
-      quadOrderPrev = quad_order; // update reference point
     }
     // size expansion even if !update_exp_form due to possibility of
     // change to expansion{Coeff,GradFlag} settings
     size_expansion();
+    if (update_exp_form) { // update reference point
+      allocate_component_sobol();
+      quadOrderPrev = quad_order;
+    }
 
     PCout << "Orthogonal polynomial approximation order = { ";
     for (size_t i=0; i<numVars; ++i) PCout << approxOrder[i] << ' ';
@@ -86,11 +85,14 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
       integrand_order_to_expansion_order(integrand_order, approxOrder);
       total_order_multi_index(approxOrder, multiIndex);
-      //cubIntOrderPrev = cub_int_order; // update reference point
     //}
     // size expansion even if !update_exp_form due to possibility of
     // change to expansion{Coeff,GradFlag} settings
     size_expansion();
+    //if (update_exp_form) {
+      allocate_component_sobol();
+      //cubIntOrderPrev = cub_int_order; // update reference point
+    //}
 
     PCout << "Orthogonal polynomial approximation order = { ";
     for (size_t i=0; i<numVars; ++i)
@@ -108,21 +110,34 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
       DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
-    if (update_exp_form) { // compute and output number of terms
+    if (update_exp_form) // compute and output number of terms
       sparse_grid_multi_index(multiIndex);
-      ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts; // update ref pts
-    }
     // size expansion even if !update_exp_form due to possibility of
     // change to expansion{Coeff,GradFlag} settings
     size_expansion();
-
+    if (update_exp_form) {
+      allocate_component_sobol();
+      ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
+    }
     PCout << "Orthogonal polynomial approximation level = " << ssg_level
 	  << " using tensor integration and tensor sum expansion of "
 	  << numExpansionTerms << " terms\n"; break;
     break;
   }
   default: // SAMPLING
-    OrthogPolyApproximation::allocate_arrays(); // default implementation
+    allocate_total_order();
+
+    // size expansion even if !update_exp_form due to possibility of change
+    // to expansion{Coeff,GradFlag} settings
+    size_expansion();
+    allocate_component_sobol();    // requires approxOrder
+
+    // output expansion form
+    PCout << "Orthogonal polynomial approximation order = { ";
+    for (size_t i=0; i<numVars; ++i)
+      PCout << approxOrder[i] << ' ';
+    PCout << "} using total-order expansion of " << numExpansionTerms
+	  << " terms\n";
     break;
   }
 }

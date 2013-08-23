@@ -199,41 +199,126 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 }
 
 
-void PolynomialApproximation::allocate_component_effects()
+/*
+void PolynomialApproximation::allocate_component_sobol()
 {
-  // Allocate memory specific to output control
+  // default implementation is reasonable for tensor expansions, but is
+  // wasteful (and should be overridden) for total-order and sparse 
+  // sum-of-tensor (which emulate total-order) expansions.
   if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
       sobolIndices.empty()) {
-    unsigned long index_length;
     switch (expConfigOptions.vbdControl) {
-    case UNIVARIATE_VBD: { // main effects only
-      index_length = numVars + 1;
-      // define binary sets corresponding to main effects
-      BitArray set(numVars, 0);
-      sobolIndexMap[set] = 0;
-      for (size_t v=0; v<numVars; ++v)
-	{ set.reset(); set[v] = 1; sobolIndexMap[set] = v+1; }
-      break;
+    case UNIVARIATE_VBD: // main effects only
+      allocate_main_sobol();                    break;
+    case ALL_VBD: // main + all n-way interactions
+      allocate_main_interaction_sobol(numVars); break;
     }
-    case ALL_VBD: // main + interaction effects
-      index_length = 1; // (unsigned long)std::pow(2., numVars);
-      for (size_t v=0; v<numVars; ++v) index_length *= 2;
-      for (unsigned long i=0; i<index_length; ++i)
-	{ BitArray set(numVars, i); sobolIndexMap[set] = i; }
-      break;
-    }
-    // sobolIndices[0] is reserved for mean 
-    sobolIndices.sizeUninitialized(index_length);
   }
+}
+*/
+
+
+void PolynomialApproximation::allocate_main_sobol()
+{
+  // define binary sets corresponding to main effects
+  BitArray set(numVars, 0);
+  for (size_t v=0; v<numVars; ++v) // activate bit for variable v
+    { set.set(v); sobolIndexMap[set] = v; set.reset(v); }
+  sobolIndices.sizeUninitialized(numVars);
 }
 
 
-void PolynomialApproximation::allocate_total_effects()
+/*
+void PolynomialApproximation::
+allocate_main_interaction_sobol(unsigned short max_order)
+{
+  // include m-way interactions for m <= max_order.  Note: sobol index 0 is
+  // unused (corresponds to constant exp term with no variable dependence).
+  unsigned long sobol_len = 0; size_t v;
+  BitArray set(numVars, 0);
+  if (max_order >= 1) {
+    sobol_len += numVars;
+    for (v=0; v<numVars; ++v)
+      { set.set(v); sobolIndexMap[set] = v; set.reset(v); }
+  }
+  unsigned long cntr = sobol_len;
+  for (unsigned short ord=2; ord<=max_order; ++ord) {
+    // compute number of terms from n_choose_k() for each exp order
+    sobol_len += BasisPolynomial::n_choose_k(numVars, ord);
+    // use increment_terms() and exclude term equalities to get interactions
+    UShortArray terms(ord, 1); // # of terms = level
+    bool order_complete = false;
+    while (!order_complete) {
+      size_t last_index = ord - 1, prev_index = ord - 2;
+      for (terms[last_index]=1; terms[last_index]<terms[prev_index];
+	   ++terms[last_index]) {
+	// convert orders (within terms) to variable indices (within set)
+	set.reset();
+	for (size_t i=0; i<ord; ++i)
+	  set.set(terms[i]-1);
+	sobolIndexMap[set] = cntr; ++cntr;
+      }
+      increment_terms(terms, last_index, prev_index, numVars,
+		      order_complete, true);
+    }
+  }
+
+  sobolIndices.sizeUninitialized(sobol_len);
+}
+*/
+
+
+void PolynomialApproximation::allocate_total_sobol()
 {
   // number of total indices independent of number of component indices
   if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
       totalSobolIndices.empty())
     totalSobolIndices.sizeUninitialized(numVars);
+}
+
+
+void PolynomialApproximation::
+multi_index_to_sobol_index_map(const UShort2DArray& mi)
+{
+  BitArray set(numVars); size_t i, j, num_mi = mi.size();
+  for (i=0; i<num_mi; ++i) {
+    // determine the bit set corresponding to this expansion term
+    for (j=0; j<numVars; ++j)
+      if (mi[i][j]) set.set(j);   //   activate bit j
+      else          set.reset(j); // deactivate bit j
+
+    // if set does not already exist, insert it.
+    // for value in key-value pr, initially use the interaction order;
+    // will be updated below in sobol_index_map_to_sobol_indices()
+    if (sobolIndexMap.find(set) == sobolIndexMap.end())
+      sobolIndexMap[set] = set.count(); // order of interaction
+  }
+}
+
+
+void PolynomialApproximation::sobol_index_map_to_sobol_indices()
+{
+  // compute total counts for interactions within each interaction group
+  ULongArray counters(numVars+1, 0);
+  for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+    ++counters[it->second];
+
+  // aggregate the totals into starting indices for each interaction group
+  ULongArray indices(numVars+1); indices[0] = 0;
+  for (size_t i=1; i<=numVars; ++i)
+    indices[i] = indices[i-1] + counters[i-1];
+  unsigned long sobol_len = indices[numVars] + counters[numVars];
+
+  // Now that the sobolIndexMap sets are fully defined and sorted, define the
+  // mapping of these sets to sobolIndices based on counters.  We choose to
+  // group the sobolIndices by the number of interactions to simplify output.
+  unsigned long interaction_order;
+  for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it) {
+    interaction_order = it->second;
+    it->second = indices[interaction_order]++;
+  }
+
+  sobolIndices.sizeUninitialized(sobol_len);
 }
 
 

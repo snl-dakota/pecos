@@ -124,7 +124,7 @@ public:
    */
   void solve( RealMatrix &A, 
 	      RealMatrix &B, 
-	      RealMatrixList &solutions,
+	      RealMatrixArray &solutions,
 	      CompressedSensingOptions &opts,
 	      CompressedSensingOptionsList &opts_list );
 

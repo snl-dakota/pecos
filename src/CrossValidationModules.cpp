@@ -21,7 +21,7 @@ void rmse_indicator( RealMatrix &validation_values,
     }
 };
 
-void normalised_mean_selector( std::vector<RealMatrixList> &partition_indicators,
+void normalised_mean_selector( RealMatrix2DArray &partition_indicators,
 			       IntVector &best_predictor_indices,
 			       RealVector &best_predictor_indicators,
 			       RealMatrix &best_predictor_partition_indicators )

@@ -90,10 +90,10 @@ protected:
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
-  /// computes component (main and interaction) effect Sobol' indices
-  void compute_component_effects();
-  /// computes total effect Sobol' indices
-  void compute_total_effects();
+  /// computes component (main and interaction) Sobol' indices
+  void compute_component_sobol();
+  /// computes total Sobol' indices
+  void compute_total_sobol();
 
   /// compute numerical moments to order 4
   void compute_moments();

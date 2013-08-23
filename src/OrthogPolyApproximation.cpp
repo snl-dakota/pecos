@@ -60,14 +60,30 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
-  // default implementation for SAMPLING and REGRESSION
+  // default implementation employs a total-order expansion
 
-  allocate_component_effects();
-  allocate_total_effects();
+  allocate_component_sobol();
+  allocate_total_sobol();
+  allocate_total_order();
 
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
 
+  // size expansion even if !update_exp_form due to possibility of change
+  // to expansion{Coeff,GradFlag} settings
+  size_expansion();
+
+  // output expansion form
+  PCout << "Orthogonal polynomial approximation order = { ";
+  for (size_t i=0; i<numVars; ++i)
+    PCout << approxOrder[i] << ' ';
+  PCout << "} using total-order expansion of " << numExpansionTerms
+	<< " terms\n";
+}
+
+
+void OrthogPolyApproximation::allocate_total_order()
+{
   // For uniform refinement, all refinements are based off of approxOrder.
   // For PCBDO, numExpansionTerms and approxOrder are invariant and a
   // multiIndex update is prevented by update_exp_form.
@@ -91,20 +107,45 @@ void OrthogPolyApproximation::allocate_arrays()
       }
     }
     total_order_multi_index(approxOrder, multiIndex);
+    numExpansionTerms = multiIndex.size();
 
-    // update reference point
+    // Note: defer this if update_exp_form is needed downstream
     approxOrderPrev = approxOrder;
   }
-  // size expansion even if !update_exp_form due to possibility of change
-  // to expansion{Coeff,GradFlag} settings
-  size_expansion();
+}
 
-  // output expansion form
-  PCout << "Orthogonal polynomial approximation order = { ";
-  for (size_t i=0; i<numVars; ++i)
-    PCout << approxOrder[i] << ' ';
-  PCout << "} using total-order expansion of " << numExpansionTerms
-	<< " terms\n";
+
+void OrthogPolyApproximation::allocate_component_sobol()
+{
+  // Allocate memory specific to output control
+  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag) {
+    switch (expConfigOptions.vbdControl) {
+    case ALL_VBD: { // main + interaction effects
+      sobolIndexMap.clear();
+      multi_index_to_sobol_index_map(multiIndex);
+      sobol_index_map_to_sobol_indices();
+      /*
+      unsigned short max_order = approxOrder[0]; size_t v;
+      for (v=1; v<numVars; ++v)
+	if (approxOrder[v] > max_order)
+	  max_order = approxOrder[v];
+      if (max_order >= numVars)	{
+	if (sobolIndices.empty())
+	  allocate_main_interaction_sobol(numVars); // all n-way interactions
+      }
+      else {
+	bool update_exp_form = (approxOrder != approxOrderPrev);
+	if (update_exp_form)
+	  allocate_main_interaction_sobol(max_order);
+      }
+      */
+      break;
+    }
+    case UNIVARIATE_VBD: // main effects only
+      if (sobolIndices.empty()) allocate_main_sobol();
+      break;
+    }
+  }
 }
 
 
@@ -954,7 +995,7 @@ void OrthogPolyApproximation::gradient_check()
 }
 
 
-void OrthogPolyApproximation::compute_component_effects()
+void OrthogPolyApproximation::compute_component_sobol()
 {
   // sobolIndices are indexed via a bit array, one bit per variable.
   // A bit is turned on for an expansion term if there is a variable
@@ -975,16 +1016,16 @@ void OrthogPolyApproximation::compute_component_effects()
     sum_p_var += p_var[k];
   }
 
-  // iterate through multiIndex and store sensitivities
-  sobolIndices = 0.; // initialize (Note: sobolIndices[0] is unused)
+  // iterate through multiIndex and store sensitivities.  Note: sobolIndices[0]
+  // (corresponding to constant exp term with no variable dependence) is unused.
+  sobolIndices = 0.; // initialize
   BitArray set(numVars);
   for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
 
     // determine the bit set corresponding to this expansion term
-    set.reset(); // return all bits to 0
     for (j=0; j<numVars; ++j)
-      if (multiIndex[i][j])
-	set[j].flip(); // expansion term includes var j: activate bit j
+      if (multiIndex[i][j]) set.set(j);   //   activate bit j
+      else                  set.reset(j); // deactivate bit j
 
     // lookup the bit set within sobolIndexMap --> increment the correct
     // Sobol' index with the variance contribution from this expansion term.
@@ -993,17 +1034,17 @@ void OrthogPolyApproximation::compute_component_effects()
       sobolIndices[it->second] += p_var[k] / sum_p_var;
   }
 #ifdef DEBUG
-  PCout << "In OrthogPolyApproximation::compute_component_effects(), "
+  PCout << "In OrthogPolyApproximation::compute_component_sobol(), "
 	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
 #endif // DEBUG
 }
 
 
-void OrthogPolyApproximation::compute_total_effects() 
+void OrthogPolyApproximation::compute_total_sobol() 
 {
   totalSobolIndices = 0.;
 
-  // iterate through main/interaction indices from compute_component_effects()
+  // iterate through main/interaction indices from compute_component_sobol()
   if (expConfigOptions.vbdControl == ALL_VBD) {
     for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
       for (size_t k=0; k<numVars; ++k) 
@@ -1033,7 +1074,7 @@ void OrthogPolyApproximation::compute_total_effects()
     }
   }
 #ifdef DEBUG
-  PCout << "In OrthogPolyApproximation::compute_total_effects(), "
+  PCout << "In OrthogPolyApproximation::compute_total_sobol(), "
 	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
 #endif // DEBUG
 }
