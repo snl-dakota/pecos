@@ -25,7 +25,6 @@ namespace Pecos {
 
 void NodalInterpPolyApproximation::allocate_component_sobol()
 {
-  // Allocate memory specific to output control
   if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag) {
     switch (expConfigOptions.vbdControl) {
     case ALL_VBD: { // main + interaction effects
@@ -70,6 +69,20 @@ void NodalInterpPolyApproximation::allocate_component_sobol()
     case UNIVARIATE_VBD: // main effects only
       if (sobolIndices.empty()) allocate_main_sobol();
       break;
+    }
+  }
+}
+
+
+void NodalInterpPolyApproximation::increment_component_sobol()
+{
+  if (expConfigOptions.vbdControl == ALL_VBD &&
+      expConfigOptions.expansionCoeffFlag) {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    if (csg_driver->smolyak_coefficients().back()) {
+      reset_sobol_index_map_values();
+      multi_index_to_sobol_index_map(csg_driver->collocation_key().back());
+      sobol_index_map_to_sobol_indices();
     }
   }
 }

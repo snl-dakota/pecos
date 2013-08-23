@@ -143,6 +143,17 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 }
 
 
+void ProjectOrthogPolyApproximation::increment_component_sobol()
+{
+  if (expConfigOptions.vbdControl == ALL_VBD &&
+      expConfigOptions.expansionCoeffFlag) {
+    reset_sobol_index_map_values();
+    multi_index_to_sobol_index_map(tpMultiIndex.back());
+    sobol_index_map_to_sobol_indices();
+  }
+}
+
+
 void ProjectOrthogPolyApproximation::compute_coefficients()
 {
   if (!expConfigOptions.expansionCoeffFlag &&
@@ -307,6 +318,9 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // update multiIndex and numExpansionTerms
   append_multi_index(tpMultiIndex[last_index], multiIndex, tpMultiIndexMap,
 		     tpMultiIndexMapRef);
+  // update Sobol' array sizes to pick up new interaction terms
+  increment_component_sobol();
+  // resize the PCE
   resize_expansion();
   // form tp_data_pts, tp_wts using collocKey et al.
   SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
@@ -344,8 +358,11 @@ void ProjectOrthogPolyApproximation::decrement_coefficients()
   // reset multiIndex and numExpansionTerms:
   numExpansionTerms   = tpMultiIndexMapRef.back();
   multiIndex.resize(numExpansionTerms); // truncate previous increment
-  // resize not necessary since (1) already updated from prevExp and 
-  // (2) not updating expansion on decrement (next increment updates).
+
+  // don't update Sobol' array sizes for decrement, restore, or finalize
+
+  // expansion resize not necessary since (1) already updated from prevExp
+  // and (2) not updating expansion on decrement (next increment updates).
   //resize_expansion();
 
   // reset tensor-product bookkeeping and save restorable data
@@ -395,6 +412,8 @@ void ProjectOrthogPolyApproximation::restore_coefficients()
   // update multiIndex and numExpansionTerms
   append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
 		     tpMultiIndexMapRef[last_index], multiIndex);
+  // don't update Sobol' array sizes for decrement, restore, or finalize
+  // resize the PCE
   resize_expansion();
   // sum trial expansion into expansionCoeffs/expansionCoeffGrads
   append_tensor_expansions(last_index);
@@ -418,6 +437,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
   for (; iit!=savedTPMultiIndex.end(); ++iit, ++mit, ++rit)
     append_multi_index(*iit, *mit, *rit, multiIndex);
+  // don't update Sobol' array sizes for decrement, restore, or finalize
   resize_expansion();
   // move previous expansion data to current expansion
   tpMultiIndex.insert(tpMultiIndex.end(), savedTPMultiIndex.begin(),

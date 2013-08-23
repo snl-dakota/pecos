@@ -218,6 +218,14 @@ void PolynomialApproximation::allocate_component_sobol()
 */
 
 
+void PolynomialApproximation::increment_component_sobol()
+{
+  PCerr << "Error: derived class does not redefine increment_component_sobol()."
+	<< std::endl;
+  abort_handler(-1);
+}
+
+
 void PolynomialApproximation::allocate_main_sobol()
 {
   // define binary sets corresponding to main effects
@@ -276,6 +284,13 @@ void PolynomialApproximation::allocate_total_sobol()
   if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
       totalSobolIndices.empty())
     totalSobolIndices.sizeUninitialized(numVars);
+}
+
+
+void PolynomialApproximation::reset_sobol_index_map_values()
+{
+  for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+    it->second = it->first.count(); // order of interaction
 }
 
 

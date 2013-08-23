@@ -50,6 +50,7 @@ protected:
   //
 
   void allocate_component_sobol();
+  void increment_component_sobol();
 
   void allocate_expansion_coefficients();
   void compute_expansion_coefficients();

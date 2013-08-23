@@ -118,7 +118,6 @@ void OrthogPolyApproximation::allocate_total_order()
 
 void OrthogPolyApproximation::allocate_component_sobol()
 {
-  // Allocate memory specific to output control
   if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag) {
     switch (expConfigOptions.vbdControl) {
     case ALL_VBD: { // main + interaction effects

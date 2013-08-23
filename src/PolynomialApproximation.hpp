@@ -324,6 +324,8 @@ public:
 
   /// size component Sobol arrays
   virtual void allocate_component_sobol() = 0;
+  /// size component Sobol arrays
+  virtual void increment_component_sobol();
 
   //
   //- Heading: Member functions
@@ -490,9 +492,12 @@ protected:
   // effects including m-way interactions for m <= max_order
   //void allocate_main_interaction_sobol(unsigned short max_order);
 
-  /// Define the Sobol' index sets from the current (sparse) multiIndex
+  /// return the sobolIndexMap values to interaction orders, prior to
+  /// updating with multi-index increments
+  void reset_sobol_index_map_values();
+  /// Define the Sobol' index sets from the incoming multi-index
   void multi_index_to_sobol_index_map(const UShort2DArray& mi);
-  /// Define the Sobol' index sets from the current (sparse) multiIndex
+  /// Define the mapping from sobolIndexMap into sobolIndices
   void sobol_index_map_to_sobol_indices();
 
 

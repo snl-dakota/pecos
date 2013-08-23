@@ -289,9 +289,10 @@ void InterpPolyApproximation::increment_coefficients()
     abort_handler(-1);
     break;
   }
-  update_sparse_interpolation_basis(max_set_index);
 
+  update_sparse_interpolation_basis(max_set_index);
   increment_expansion_coefficients();
+  increment_component_sobol();
   numCollocPts = surrData.size(); if (surrData.anchor()) ++numCollocPts;
 }
 
@@ -1428,8 +1429,9 @@ accumulate_barycentric_gradient(size_t j, unsigned short bi_j,
 void InterpPolyApproximation::compute_component_sobol()
 {
   // initialize partialVariance
-  if (partialVariance.empty()) partialVariance.size(sobolIndices.length());
-  else                         partialVariance = 0.;
+  size_t sobol_len = sobolIndices.length();
+  if (partialVariance.length() != sobol_len) partialVariance.size(sobol_len);
+  else                                       partialVariance = 0.;
   // gets subtracted as child in compute_partial_variance()
   partialVariance[0] = numericalMoments[0]*numericalMoments[0];
 

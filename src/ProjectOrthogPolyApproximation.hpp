@@ -66,6 +66,7 @@ protected:
 
   /// initialize polynomialBasis, multiIndex, et al.
   void allocate_arrays();
+  void increment_component_sobol();
 
   Real value(const RealVector& x);
   Real stored_value(const RealVector& x);

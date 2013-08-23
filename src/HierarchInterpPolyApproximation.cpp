@@ -66,6 +66,42 @@ void HierarchInterpPolyApproximation::allocate_component_sobol()
 }
 
 
+void HierarchInterpPolyApproximation::increment_component_sobol()
+{
+  // Allocate memory specific to output control
+  if (expConfigOptions.vbdControl == ALL_VBD &&
+      expConfigOptions.expansionCoeffFlag) {
+
+    // return existing sobolIndexMap values to interaction counts
+    reset_sobol_index_map_values();
+
+    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    const UShort4DArray&      key        = hsg_driver->collocation_key();
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+      size_t lev = hsg_driver->index_norm(hsg_driver->trial_set());
+      multi_index_to_sobol_index_map(key[lev].back());
+      break;
+    }
+    default: { // isotropic/anisotropic refinement
+      const UShortArray& incr_sets = hsg_driver->increment_sets();
+      size_t lev, num_lev = key.size(), set, start_set, num_sets;
+      for (lev=0; lev<num_lev; ++lev) {
+	const UShort3DArray& key_l = key[lev];
+	start_set = incr_sets[lev]; num_sets = key_l.size();
+	for (set=start_set; set<num_sets; ++set)
+	  multi_index_to_sobol_index_map(key_l[set]);
+      }
+      break;
+    }
+    }
+
+    // update aggregated sobolIndexMap to indices into sobolIndices array
+    sobol_index_map_to_sobol_indices();
+  }
+}
+
+
 void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
