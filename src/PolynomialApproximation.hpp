@@ -352,9 +352,6 @@ public:
   void standardize_moments(const RealVector& central_moments,
 			   RealVector& std_moments);
 
-  /// size total Sobol arrays
-  void allocate_total_sobol();
-
   /// set surrData (shared representation)
   void surrogate_data(const SurrogateData& data);
   /// get surrData
@@ -485,6 +482,8 @@ protected:
   bool match_nonrandom_vars(const RealVector& vars_1,
 			    const RealVector& vars_2) const;
 
+  /// size total Sobol arrays
+  void allocate_total_sobol();
   /// allocate sobolIndices and sobolIndexMap for main effects only
   void allocate_main_sobol();
   // allocate sobolIndices and sobolIndexMap for main and interaction

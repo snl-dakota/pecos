@@ -388,9 +388,9 @@ void RegressOrthogPolyApproximation::run_regression()
 			    surrData.failed_response_data() );
 	CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
-	if (faultInfo.under_determined)
+	if (faultInfo.under_determined) // exploit CS sparsity
 	  update_sparse_coefficients(solutions[0][0]);
-	else
+	else                            // retain full solution
 	  copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
       }
     }

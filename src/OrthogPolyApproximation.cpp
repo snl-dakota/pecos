@@ -60,11 +60,12 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
-  // default implementation employs a total-order expansion
+  // default implementation employs a total-order expansion (needed for
+  // PCE import case which instantiates an OrthogPolyApproximation).
 
-  allocate_component_sobol();
-  allocate_total_sobol();
   allocate_total_order();
+  allocate_total_sobol();
+  allocate_component_sobol(); // needs multiIndex from allocate_total_order()
 
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);

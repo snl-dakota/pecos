@@ -222,9 +222,11 @@ void PolynomialApproximation::allocate_main_sobol()
 {
   // define binary sets corresponding to main effects
   BitArray set(numVars, 0);
+  // prepend the 0-way interaction for indexing consistency
+  sobolIndexMap[set] = 0;
   for (size_t v=0; v<numVars; ++v) // activate bit for variable v
-    { set.set(v); sobolIndexMap[set] = v; set.reset(v); }
-  sobolIndices.sizeUninitialized(numVars);
+    { set.set(v); sobolIndexMap[set] = v+1; set.reset(v); }
+  sobolIndices.sizeUninitialized(numVars+1);
 }
 
 
@@ -287,9 +289,11 @@ multi_index_to_sobol_index_map(const UShort2DArray& mi)
       if (mi[i][j]) set.set(j);   //   activate bit j
       else          set.reset(j); // deactivate bit j
 
-    // if set does not already exist, insert it.
-    // for value in key-value pr, initially use the interaction order;
-    // will be updated below in sobol_index_map_to_sobol_indices()
+    // If set does not already exist, insert it.
+    // For value in key-value pair, initially use the interaction order;
+    // will be updated below in sobol_index_map_to_sobol_indices().  The
+    // 0-way interaction is included to support child lookup requirements
+    // in InterpPolyApproximation::compute_partial_variance().
     if (sobolIndexMap.find(set) == sobolIndexMap.end())
       sobolIndexMap[set] = set.count(); // order of interaction
   }
@@ -298,7 +302,9 @@ multi_index_to_sobol_index_map(const UShort2DArray& mi)
 
 void PolynomialApproximation::sobol_index_map_to_sobol_indices()
 {
-  // compute total counts for interactions within each interaction group
+  // Compute total counts for interactions within each interaction group.
+  // The 0-way interaction is included to support child lookup requirements
+  // in InterpPolyApproximation::compute_partial_variance().
   ULongArray counters(numVars+1, 0);
   for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
     ++counters[it->second];
