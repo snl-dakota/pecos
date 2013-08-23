@@ -286,7 +286,7 @@ void RegressOrthogPolyApproximation::set_fault_info()
 		      under_determined, num_data_pts_fn, num_data_pts_grad,
 		      reuse_solver_data, total_eqns, num_surr_data_pts,
 		      numVars, basisConfigOptions.useDerivs,
-		      expansionCoeffGrads.numRows() );
+		      surrData.num_derivative_variables() );
 };
 
 
