@@ -111,6 +111,7 @@ typedef std::vector<SDVArray>          SDV2DArray;
 typedef std::vector<SDRArray>          SDR2DArray;
 
 typedef std::set<int>                     IntSet;
+typedef std::set<size_t>                  SizetSet;
 typedef std::set<BitArray>                BitArraySet;
 typedef std::multiset<unsigned short>     UShortMultiSet;
 typedef std::multiset<UShortMultiSet>     UShort2DMultiSet;

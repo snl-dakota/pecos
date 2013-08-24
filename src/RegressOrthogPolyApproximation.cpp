@@ -389,7 +389,7 @@ void RegressOrthogPolyApproximation::run_regression()
 	CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
 	if (faultInfo.under_determined) // exploit CS sparsity
-	  update_sparse_coefficients(solutions[0][0]);
+	  update_sparse(solutions[0][0], numExpansionTerms);
 	else                            // retain full solution
 	  copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
       }
@@ -442,43 +442,93 @@ void RegressOrthogPolyApproximation::run_regression()
     remove_faulty_data( A, B, index_mapping,
 			faultInfo, surrData.failed_response_data());
     CSTool.solve( A, B, solutions, CSOpts, opts_list );
-    
-    if (multiple_rhs) {
-      Real* dense_coeffs = solutions[0][0];
-      for (j=0; j<numExpansionTerms; ++j)
-	expansionCoeffs[j] = dense_coeffs[j];
-      // *** and rest of allocate_arrays (multiIndex, sobol, etc.)
-    }
-    for (i=0; i<num_grad_rhs; ++i) {
-      Real* dense_coeffs = solutions[i+num_coeff_rhs][0];
-      for (j=0; j<numExpansionTerms; ++j)
-	expansionCoeffGrads(i,j) = dense_coeffs[j];
-      // *** and rest of allocate_arrays (multiIndex, sobol, etc.)
-    }
+
+    // overlay sparse solutions into an aggregated multiIndex and
+    // associated expansionCoeffs and expansionCoeffGrads
+    SizetSet sparse_indices;
+    if (multiple_rhs)
+      update_sparse_indices(solutions[0][0], numExpansionTerms, sparse_indices);
+    for (i=0; i<num_grad_rhs; ++i)
+      update_sparse_indices(solutions[i+num_coeff_rhs][0], numExpansionTerms,
+			    sparse_indices);
+
+    update_sparse_multi_index(sparse_indices);
+    if (multiple_rhs)
+      update_sparse_coeffs(solutions[0][0], sparse_indices);
+    for (i=0; i<num_grad_rhs; ++i)
+      update_sparse_coeff_grads(solutions[i+num_coeff_rhs][0], i,
+				sparse_indices);
   }
 }
 
 
 void RegressOrthogPolyApproximation::
-update_sparse_coefficients(Real* dense_coeffs)
+update_sparse(Real* dense_coeffs, size_t num_dense_terms)
+{
+  // just one pass through to define sparse_indices
+  SizetSet sparse_indices;
+  update_sparse_indices(dense_coeffs, num_dense_terms, sparse_indices);
+
+  // now update numExpansionTerms/multiIndex/expansionCoeffs
+  update_sparse_multi_index(sparse_indices);
+  update_sparse_coeffs(dense_coeffs, sparse_indices);
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms,
+		      SizetSet& sparse_indices)
+{
+  // always retain leading coefficient (mean)
+  if (sparse_indices.empty())
+    sparse_indices.insert(0);
+  // update sparse multiIndex and track nonzero coeffs
+  for (size_t i=1; i<num_dense_terms; ++i)
+    if (std::abs(dense_coeffs[i]) > DBL_EPSILON)
+      sparse_indices.insert(i);
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_multi_index(const SizetSet& sparse_indices)
 {
   UShort2DArray old_multi_index = multiIndex;
-  size_t i;
-  // always retain leading coefficient (mean)
-  multiIndex.resize(1);
-  SizetArray dense_indices; dense_indices.push_back(0);
-  // update sparse multiIndex and track nonzero coeffs
-  for (i=1; i<numExpansionTerms; ++i)
-    if (std::abs(dense_coeffs[i]) > DBL_EPSILON)
-      { multiIndex.push_back(old_multi_index[i]); dense_indices.push_back(i); }
-  // build sparse expansionCoeffs
-  numExpansionTerms = multiIndex.size();
-  expansionCoeffs.sizeUninitialized(numExpansionTerms);
-  for (i=0; i<numExpansionTerms; ++i)
-    expansionCoeffs[i] = dense_coeffs[dense_indices[i]];
 
+  // build sparse multiIndex
+  numExpansionTerms = sparse_indices.size();
+  multiIndex.resize(numExpansionTerms);
+  size_t i; SizetSet::iterator it;
+  for (i=0, it=sparse_indices.begin(); i<numExpansionTerms; ++i, ++it)
+    multiIndex[i] = old_multi_index[*it];
+
+  // now define the Sobol' indices based on the sparse multiIndex
   if (expConfigOptions.vbdControl == ALL_VBD)
     allocate_component_sobol();
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_coeffs(Real* dense_coeffs, const SizetSet& sparse_indices)
+{
+  // build sparse expansionCoeffs
+  expansionCoeffs.sizeUninitialized(numExpansionTerms);
+  size_t i; SizetSet::iterator it;
+  for (i=0, it=sparse_indices.begin(); i<numExpansionTerms; ++i, ++it)
+    expansionCoeffs[i] = dense_coeffs[*it];
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_coeff_grads(Real* dense_coeffs, int row,
+			  const SizetSet& sparse_indices)
+{
+  // build sparse expansionCoeffGrads
+  size_t num_deriv_vars = expansionCoeffGrads.numRows();
+  if (expansionCoeffGrads.numCols() != numExpansionTerms)
+    expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
+  int j; SizetSet::iterator it;
+  for (j=0, it=sparse_indices.begin(); j<numExpansionTerms; ++j, ++it)
+    expansionCoeffGrads(row, j) = dense_coeffs[*it];
 }
 
 
@@ -588,13 +638,15 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   CSTool.solve( vandermonde_submatrix, B_copy, solutions, 
 		bestCompressedSensingOpts_[0], opts_list );
 
-  // Resize solutions so that it can be used with large vandermonde.
-  if (expansionCoeffs.length()!=numExpansionTerms)
-    expansionCoeffs.sizeUninitialized(numExpansionTerms);
-  for ( int i=0; i<num_basis_terms; ++i)
-    expansionCoeffs[i] = solutions[0](i,0);
-  for ( int i=num_basis_terms; i < numExpansionTerms; ++i)
-    expansionCoeffs[i] = 0.0;
+  if (faultInfo.under_determined) // exploit CS sparsity
+    update_sparse(solutions[0][0], num_basis_terms);
+  else {
+    if (num_basis_terms < numExpansionTerms) { // truncate current arrays
+      multiIndex.resize(num_basis_terms);
+      numExpansionTerms = num_basis_terms;
+    }
+    copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
+  }
 };
 
 void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
