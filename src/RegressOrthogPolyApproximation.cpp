@@ -443,21 +443,32 @@ void RegressOrthogPolyApproximation::run_regression()
 			faultInfo, surrData.failed_response_data());
     CSTool.solve( A, B, solutions, CSOpts, opts_list );
 
-    // overlay sparse solutions into an aggregated multiIndex and
-    // associated expansionCoeffs and expansionCoeffGrads
-    SizetSet sparse_indices;
-    if (multiple_rhs)
-      update_sparse_indices(solutions[0][0], numExpansionTerms, sparse_indices);
-    for (i=0; i<num_grad_rhs; ++i)
-      update_sparse_indices(solutions[i+num_coeff_rhs][0], numExpansionTerms,
-			    sparse_indices);
-
-    update_sparse_multi_index(sparse_indices);
-    if (multiple_rhs)
-      update_sparse_coeffs(solutions[0][0], sparse_indices);
-    for (i=0; i<num_grad_rhs; ++i)
-      update_sparse_coeff_grads(solutions[i+num_coeff_rhs][0], i,
-				sparse_indices);
+    if (faultInfo.under_determined) { // exploit CS sparsity
+      // overlay sparse solutions into an aggregated set of sparse indices
+      SizetSet sparse_indices;
+      if (multiple_rhs)
+	update_sparse_indices(solutions[0][0], numExpansionTerms,
+			      sparse_indices);
+      for (i=0; i<num_grad_rhs; ++i)
+	update_sparse_indices(solutions[i+num_coeff_rhs][0], numExpansionTerms,
+			      sparse_indices);
+      // update multiIndex and expansion{Coeffs,CoeffGrads} from sparse indices
+      update_sparse_multi_index(sparse_indices);
+      if (multiple_rhs)
+	update_sparse_coeffs(solutions[0][0], sparse_indices);
+      for (i=0; i<num_grad_rhs; ++i)
+	update_sparse_coeff_grads(solutions[i+num_coeff_rhs][0], i,
+				  sparse_indices);
+    }
+    else { // retain original multiIndex layout
+      if (multiple_rhs)
+	copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
+      for (i=0; i<num_grad_rhs; ++i) {
+ 	Real* dense_coeffs = solutions[i+num_coeff_rhs][0];
+ 	for (j=0; j<numExpansionTerms; ++j)
+	  expansionCoeffGrads(i,j) = dense_coeffs[j];
+      }
+    }
   }
 }
 
@@ -641,7 +652,10 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   if (faultInfo.under_determined) // exploit CS sparsity
     update_sparse(solutions[0][0], num_basis_terms);
   else {
-    if (num_basis_terms < numExpansionTerms) { // truncate current arrays
+    // if best expansion order is less than maximum candidate, truncate
+    // expansion arrays.  Note that this requires care in cross-expansion
+    // evaluations such as off-diagonal covariance.
+    if (num_basis_terms < numExpansionTerms) {
       multiIndex.resize(num_basis_terms);
       numExpansionTerms = num_basis_terms;
     }
