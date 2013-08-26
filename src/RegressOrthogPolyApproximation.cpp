@@ -497,9 +497,9 @@ update_sparse_multi_index(const SizetSet& sparse_indices)
   // build sparse multiIndex
   numExpansionTerms = sparse_indices.size();
   multiIndex.resize(numExpansionTerms);
-  size_t i; SizetSet::iterator it;
-  for (i=0, it=sparse_indices.begin(); i<numExpansionTerms; ++i, ++it)
-    multiIndex[i] = old_multi_index[*it];
+  size_t i; SizetSet::const_iterator cit;
+  for (i=0, cit=sparse_indices.begin(); i<numExpansionTerms; ++i, ++cit)
+    multiIndex[i] = old_multi_index[*cit];
 
   // now define the Sobol' indices based on the sparse multiIndex
   if (expConfigOptions.vbdControl == ALL_VBD)
@@ -512,9 +512,9 @@ update_sparse_coeffs(Real* dense_coeffs, const SizetSet& sparse_indices)
 {
   // build sparse expansionCoeffs
   expansionCoeffs.sizeUninitialized(numExpansionTerms);
-  size_t i; SizetSet::iterator it;
-  for (i=0, it=sparse_indices.begin(); i<numExpansionTerms; ++i, ++it)
-    expansionCoeffs[i] = dense_coeffs[*it];
+  size_t i; SizetSet::const_iterator cit;
+  for (i=0, cit=sparse_indices.begin(); i<numExpansionTerms; ++i, ++cit)
+    expansionCoeffs[i] = dense_coeffs[*cit];
 }
 
 
@@ -526,9 +526,9 @@ update_sparse_coeff_grads(Real* dense_coeffs, int row,
   size_t num_deriv_vars = expansionCoeffGrads.numRows();
   if (expansionCoeffGrads.numCols() != numExpansionTerms)
     expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
-  int j; SizetSet::iterator it;
-  for (j=0, it=sparse_indices.begin(); j<numExpansionTerms; ++j, ++it)
-    expansionCoeffGrads(row, j) = dense_coeffs[*it];
+  int j; SizetSet::const_iterator cit;
+  for (j=0, cit=sparse_indices.begin(); j<numExpansionTerms; ++j, ++cit)
+    expansionCoeffGrads(row, j) = dense_coeffs[*cit];
 }
 
 
