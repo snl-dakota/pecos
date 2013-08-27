@@ -796,11 +796,35 @@ covariance(PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  const RealVector& exp_coeffs_2
-    = ((OrthogPolyApproximation*)poly_approx_2)->expansionCoeffs;
   Real var = 0.;
-  for (size_t i=1; i<numExpansionTerms; ++i)
-    var += expansionCoeffs[i] * exp_coeffs_2[i] * norm_squared(multiIndex[i]);
+  if (poly_approx_2 == this)
+    for (size_t i=1; i<numExpansionTerms; ++i)
+      var += expansionCoeffs[i] * expansionCoeffs[i]
+	  *  norm_squared(multiIndex[i]);
+  else {
+    OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+    const RealVector& exp_coeffs_2 = opa_2->expansionCoeffs;
+    if (sparseIndices.empty()) // dense indexing is consistent
+      for (size_t i=1; i<numExpansionTerms; ++i)
+	var += expansionCoeffs[i] * exp_coeffs_2[i]
+	    *  norm_squared(multiIndex[i]);
+    else { // for sparse PCE, multiIndex sequences may differ
+      const SizetSet& sparse_ind_2 = opa_2->sparseIndices;
+      SizetSet::const_iterator cit1 = ++sparseIndices.begin(),
+	cit2 = ++sparse_ind_2.begin();
+      size_t si1, si2, i1 = 1, i2 = 1;
+      while (cit1 != sparseIndices.end() && cit2 != sparse_ind_2.end()) {
+	si1 = *cit1; si2 = *cit2;
+	if (si1 == si2) {// equality in sparse index implies multiIndex equality
+	  var += expansionCoeffs[i1] * exp_coeffs_2[i2]
+	      *  norm_squared(multiIndex[i1]); // or multi_index_2[i2]
+	  ++cit1; ++cit2; ++i1; ++i2;
+	}
+	else if (si1 < si2) { ++cit1; ++i1; }
+	else                { ++cit2; ++i2; }
+      }
+    }
+  }
   return var;
 }
 
@@ -815,36 +839,30 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     abort_handler(-1);
   }
 
-  const RealVector& exp_coeffs_2
-    = ((OrthogPolyApproximation*)poly_approx_2)->expansionCoeffs;
-  Real var = 0.;
-  size_t i, j;
-  for (i=1; i<numExpansionTerms; ++i) {
+  Real var = 0.; size_t i, j;
+  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+  const RealVector&     exp_coeffs_2 = opa_2->expansionCoeffs;
+  const UShort2DArray& multi_index_2 = opa_2->multiIndex;
+  size_t i1, i2, num_i1 = multiIndex.size(), num_i2 = multi_index_2.size();
+  for (i1=1; i1<num_i1; ++i1) {
     // For r = random_vars and nr = non_random_vars,
     // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
-    // -> include only those terms from R(r,nr) which do not appear in \mu_R(nr)
-    if (!zero_random(multiIndex[i])) {
-      Real norm_sq_i = norm_squared(multiIndex[i], randomIndices);
-      for (j=1; j<numExpansionTerms; ++j) {
-	// random part of polynomial must be identical to contribute to variance
+    // -> only include terms from R(r,nr) which don't appear in \mu_R(nr)
+    if (!zero_random(multiIndex[i1])) {
+      Real norm_sq_i = norm_squared(multiIndex[i1], randomIndices);
+      for (i2=1; i2<num_i2; ++i2)
+	// random polynomial part must be identical to contribute to variance
 	// (else orthogonality drops term).  Note that it is not necessary to
 	// collapse terms with the same random basis subset, since cross term
 	// in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
 	// (following eval of non-random portions), the nested loop could be
 	// replaced with a single loop to evaluate (a+b)^2.
-	if (match_random_key(multiIndex[i], multiIndex[j])) {
-	  var += expansionCoeffs[i] * exp_coeffs_2[j] * norm_sq_i *
-	    multivariate_polynomial(x, multiIndex[i], nonRandomIndices) *
-	    multivariate_polynomial(x, multiIndex[j], nonRandomIndices);
-#ifdef DEBUG
-	  PCout << "Variance estimate inclusion: term index = " << i
-		<< " total variance = " << var <<'\n';
-#endif // DEBUG
-	}
-      }
+	if (match_random_key(multiIndex[i1], multi_index_2[i2]))
+	  var += expansionCoeffs[i1]  * exp_coeffs_2[i2] * norm_sq_i *
+	    multivariate_polynomial(x,    multiIndex[i1], nonRandomIndices) *
+	    multivariate_polynomial(x, multi_index_2[i2], nonRandomIndices);
     }
   }
-
   return var;
 }
 

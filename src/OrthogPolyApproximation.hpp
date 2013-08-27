@@ -260,6 +260,9 @@ protected:
   /// the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
   UShort2DArray multiIndex;
+  /// tracks sparse terms within multiIndex and expansion{Coeffs,CoeffGrads}
+  /// that are retained from an original candidate set
+  SizetSet sparseIndices;
 
   /// the coefficients of the expansion
   RealVector expansionCoeffs;

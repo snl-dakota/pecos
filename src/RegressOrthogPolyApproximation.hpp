@@ -112,16 +112,14 @@ private:
   /// define multiIndex and expansionCoeffs from nonzero dense_coeffs
   void update_sparse(Real* dense_coeffs, size_t num_dense_terms);
   /// augment sparse_indices based on nonzero dense_coeffs
-  void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms,
-			     SizetSet& sparse_indices);
+  void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms);
   /// define sparse multiIndex from sparse_indices
-  void update_sparse_multi_index(const SizetSet& sparse_indices);
+  void update_sparse_multi_index();
   /// define sparse expansionCoeffs from dense_coeffs and sparse_indices
-  void update_sparse_coeffs(Real* dense_coeffs, const SizetSet& sparse_indices);
+  void update_sparse_coeffs(Real* dense_coeffs);
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and
   /// sparse_indices
-  void update_sparse_coeff_grads(Real* dense_coeffs, int row,
-				 const SizetSet& sparse_indices);
+  void update_sparse_coeff_grads(Real* dense_coeffs, int row);
 
   /**
    * \brief Define the set of options used in the cross validation grid search
