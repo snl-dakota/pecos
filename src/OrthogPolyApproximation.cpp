@@ -93,8 +93,10 @@ void OrthogPolyApproximation::allocate_total_order()
 	  << "OrthogPolyApproximation::allocate_arrays()." << std::endl;
     abort_handler(-1);
   }
-  bool update_exp_form = (approxOrder != approxOrderPrev);
-  if (update_exp_form) {
+  // capture changes due to order increments or sparsity pruning
+  bool  update_exp_form = (approxOrder       != approxOrderPrev);
+  bool restore_exp_form = (numExpansionTerms != total_order_terms(approxOrder));
+  if (update_exp_form || restore_exp_form) {
     size_t order_len = approxOrder.size();
     if (order_len != numVars) {
       if (order_len == 1) {

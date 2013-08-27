@@ -530,9 +530,9 @@ void RegressOrthogPolyApproximation::
 update_sparse_coeff_grads(Real* dense_coeffs, int row)
 {
   // build sparse expansionCoeffGrads
-  size_t num_deriv_vars = expansionCoeffGrads.numRows();
   if (expansionCoeffGrads.numCols() != numExpansionTerms)
-    expansionCoeffGrads.reshape(num_deriv_vars, numExpansionTerms);
+    expansionCoeffGrads.reshape(surrData.num_derivative_variables(),
+				numExpansionTerms);
   int j; SizetSet::const_iterator cit;
   for (j=0, cit=sparseIndices.begin(); j<numExpansionTerms; ++j, ++cit)
     expansionCoeffGrads(row, j) = dense_coeffs[*cit];

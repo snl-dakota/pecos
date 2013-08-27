@@ -121,9 +121,6 @@ protected:
   /// number of variables used in the approximation
   size_t numVars;
 
-  /// gradient of the approximation returned by gradient()
-  RealVector approxGradient;
-
 private:
 
   //

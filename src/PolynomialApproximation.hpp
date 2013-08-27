@@ -548,6 +548,8 @@ protected:
   /// moments (std deviation, skewness, kurtosis) are performed elsewhere.
   RealVector numericalMoments;
 
+  /// gradient of the polynomial approximation returned by gradient()
+  RealVector approxGradient;
   /// gradient of the primary mean (expansion mean for OrthogPoly,
   /// numerical integration mean for InterpPoly)
   RealVector meanGradient;
