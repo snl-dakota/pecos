@@ -472,6 +472,32 @@ void argsort( Teuchos::SerialDenseVector<O,T> &v,
     }
 }
 
+template<typename T>
+class index_sorter {
+public:
+  index_sorter(T &values){ values_ = values; }
+  bool operator()( int lhs, int rhs) const {
+    return values_[lhs] < values_[rhs];
+  }
+private:
+  T values_;
+};
+
+template<typename O, typename T>
+void argsort( Teuchos::SerialDenseVector<O,T> &values, 
+	      IntVector &result )
+{
+  std::vector<O> indices( values.length() );
+  for ( O i = 0; i < values.length(); i++ )
+    indices[i] = i;
+  
+  std::sort( indices.begin(), indices.end(), index_sorter< Teuchos::SerialDenseVector<O,T> >( values ) );
+	     
+  result.sizeUninitialized( values.length() );
+  for ( O i = 0; i < values.length(); i++ )
+    result[i] = indices[i];
+}
+
 
 } // namespace Pecos
 

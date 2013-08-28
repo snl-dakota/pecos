@@ -650,6 +650,103 @@ void cholesky_inverse( RealMatrix &U, RealMatrix &result, Teuchos::EUplo uplo  )
     }
 };
 
+void pivoted_qr_factorization( RealMatrix &A, RealMatrix &Q, RealMatrix &R,
+			       IntVector &p )
+{
+  Teuchos::LAPACK<int, Real> la;
+
+  RealMatrix A_copy( A );
+  int M( A.numRows() ), N( A.numCols() ), K( std::min( M, N ) );
+
+  //Q.shapeUninitialized( M, K );
+  Q.shape( M, K );
+  R.shape( K, N ); // must be initialized to 0
+  p.size( N ); // must be initialized to 0
+
+  //---------------------------------//
+  // Get the optimal work array size //
+  //---------------------------------//
+  
+  int lwork;   // Size of Teuchos::LAPACK work array
+  Real *work;  // Teuchos::LAPACK work array
+  int info;    // Teuchos::LAPACK output flag 
+  int lda = std::max( 1, A_copy.stride() );
+  RealVector tau( K, true );
+
+  lwork = -1;           // special code for workspace query
+  work  = new Real [1]; // temporary work array
+  
+
+  DGEQP3_F77( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+	      work, &lwork, &info );
+  //dgeqp3_( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+  //work, &lwork, &info );
+
+  lwork = (int)work[0];  // optimal work array size returned by query
+  delete [] work;
+  work  = new Real [lwork]; // Optimal work array
+
+  //---------------------------------//
+  // Compute the QR factorization    //
+  //---------------------------------//
+
+  DGEQP3_F77( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+	      work, &lwork, &info );
+  //dgeqp3_( &M, &N, A_copy.values(), &lda, p.values(), tau.values(), 
+  //work, &lwork, &info );
+
+  if ( info < 0 )
+    {
+      std::stringstream msg;
+      msg << "privoted_qr_factorization() dgeqp3 failed. ";
+      msg << "The " << std::abs( info ) << "-th argument had an ";
+      msg << "illegal value";
+      throw( std::runtime_error( msg.str() ) );
+    }
+
+  delete [] work;
+
+  //---------------------------------//
+  // Form the Q and R matrices       //
+  //---------------------------------//
+  
+  for ( int m = 0; m < K; m++ )
+    {
+      for ( int n = m; n < N; n++ )
+	R(m,n) = A_copy(m,n);
+    }
+
+  lwork = -1;           // special code for workspace query
+  work  = new Real [1]; // temporary work array
+
+  la.ORGQR ( M, K, K, A_copy.values(), lda, tau.values(),
+	     work, lwork, &info );
+  
+  
+  lwork = (int)work[0];  // optimal work array size returned by query
+  delete [] work;
+
+  work  = new Real [lwork]; // Optimal work array
+
+  la.ORGQR( M, K, K, A_copy.values(), lda, tau.values(), 
+	   work, lwork, &info );
+
+  for ( int n = 0; n < K; n++ )
+    {
+      for ( int m = 0; m < M; m++ )
+	{
+	  Q(m,n) = A_copy(m,n);
+	}
+    }
+
+  // fortran returns indices 1,...,N
+  // c++ requires 0,...,N-1
+  for ( int n = 0; n < N; n++ )
+    p[n]--;
+ 
+  delete [] work;
+}
+
 void lu_inverse( RealMatrix &L, RealMatrix &U, IntVector &p, RealMatrix &LU_inv )
 {
   int M = L.numRows(), N = U.numCols();

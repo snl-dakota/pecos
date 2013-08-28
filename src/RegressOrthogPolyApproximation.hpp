@@ -131,6 +131,32 @@ private:
   void gridSearchFunction( RealMatrix &opts, int M, int N, 
 			   int num_function_samples );
 
+  size_t index_norm(const UShortArray& index_set) const;
+
+  void least_interpolation( RealMatrix &pts, 
+			    RealMatrix &vals );
+
+  void transform_least_interpolant( RealMatrix &L,
+				    RealMatrix &U,
+				    RealMatrix &H,
+				    IntVector &p,
+				    RealVector &v,
+				    RealMatrix &vals );
+
+  void least_factorization( RealMatrix &x,
+			    UShort2DArray &basis_indices,
+			    RealMatrix &l,
+			    RealMatrix &u, 
+			    RealMatrix &H, 
+			    IntVector &p,
+			    RealVector &v, 
+			    IntVector &k );
+
+  void get_least_polynomial_coefficients( RealVector &v, IntVector &k,
+					  UShort2DArray &basis_indices,
+					  int num_dims, int num_pts,
+					  RealMatrix &H );
+
   //
   //- Heading: Data
   //

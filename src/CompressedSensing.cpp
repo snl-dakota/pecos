@@ -902,6 +902,12 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
   RealMatrix Atb_sparse_memory( N, 1, false );
   bool residual_computed = false;
 
+  // always add the first column
+  // Warning: if necessary indices has unimportant indices then
+  // the accuracy of the computation can be severely degraded
+  IntVector necessary_indices( 1 );
+  int num_necessary_indices = necessary_indices.length();
+
   if ( verbosity > 1 )
     {
       PCout << "Orthogonal Matching Pursuit" << std::endl;
@@ -913,12 +919,18 @@ void CompressedSensingTool::orthogonal_matching_pursuit( RealMatrix &A,
   bool done = false;
   while ( !done )
     {
+
       // Find the column that has the largest inner product with
       // the residual
       // Warning IAMX returns the index of the element with the 
       // largest magnitude but IAMAX assumes indexing 1,..,N not 0,...,N-1
       int active_index = blas.IAMAX( correlation.numRows(), 
-				     correlation[0], 1 ) - 1;
+					 correlation[0], 1 ) - 1;
+      if ( num_necessary_indices > 0 )
+	{
+	  active_index = necessary_indices[num_necessary_indices-1];
+	  num_necessary_indices--;
+	}
 
       // todo define active_index_set as std::set and use find function
       for ( int i = 0; i < num_active_indices; i++ )
@@ -1172,6 +1184,12 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 		1.0, A, residual, 0.0 );
   RealMatrix correlation( Teuchos::Copy, Atb, N, 1 );
 
+  // always add the first column
+  // Warning: if necessary indices has unimportant indices then
+  // the accuracy of the computation can be severely degraded
+  IntVector necessary_indices( 1 );
+  int num_necessary_indices = necessary_indices.length();
+
   if ( verbosity > 1 )
     {
       PCout << "LASSO/LARS ( delta = " << delta << " )\n";
@@ -1222,6 +1240,11 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	    }
 	}
 
+      /*if ( num_necessary_indices > 0 )
+	{
+	  index_to_add = necessary_indices[num_necessary_indices-1];
+	  num_necessary_indices--;
+	  }*/
 
       if ( U.numRows() <= num_covariates )
 	{
@@ -1493,6 +1516,16 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   solutions.reshape( N, homotopy_iter );
   solution_metrics.reshape( 2, homotopy_iter );
 
+  bool zero_index_found = false;
+  for ( int iter = 0; iter < homotopy_iter; iter++ )
+    {
+      if ( solution_metrics(1,iter) == 0 )
+	{
+	  zero_index_found = true;
+	  break;
+	}
+    }
+
   // The current solutions are the naive elastic net esimates
   // Rescale to avoid Real shrinkage (12) (Zou 2005)
   if ( delta > 0 )
@@ -1503,6 +1536,9 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	    solutions(n,iter) *= ( 1.0 + delta );
 	  }
       }  
+
+  if ( !zero_index_found )
+    PCout << "Warning: zero index was not added. Consider using OMP\n";
 };
 //Check out for elastic nets
 //http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=3897
@@ -1534,9 +1570,10 @@ void CompressedSensingTool::standardize_inputs( RealMatrix &A, RealMatrix &B,
       if ( A_column_var[n] < 10*std::numeric_limits<Real>::epsilon() )
 	A_column_means[n] = 0.0;
       for ( int m = 0; m < M; m++ )
-	{
-	  A_stand(m,n) = A(m,n) - A_column_means[n];
-	}
+      	{
+      	  A_stand(m,n) = A(m,n);
+	  //A_stand(m,n) = A(m,n) - A_column_means[n];
+      	}
     }
 
   for ( int n = 0; n < N; n ++ )
@@ -1556,7 +1593,8 @@ void CompressedSensingTool::standardize_inputs( RealMatrix &A, RealMatrix &B,
   // If the first column is a vector of ones then center the rhs (B) values
   // That is only center values if A is a vandermonde matrix built by
   // a linear model
-  if ( ( A_column_var[0] < 10*std::numeric_limits<Real>::epsilon() ) )
+  //if ( ( A_column_var[0] < 10*std::numeric_limits<Real>::epsilon() ) )
+  if ( false )
     {
       B_means.sizeUninitialized( num_rhs );
       for ( int k = 0; k < num_rhs; k++ )
@@ -1587,19 +1625,6 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 {
   int M( A.numRows() ), N( A.numCols() ), num_rhs( B.numCols() );
 
-  RealMatrix A_stand, B_stand;
-  RealVector A_column_norms, A_column_means, B_means;
-  if ( opts.standardizeInputs )
-    {
-      standardize_inputs( A, B, A_stand, B_stand, A_column_norms, 
-			  A_column_means, B_means );
-    }
-  else
-    {
-      A_stand = A;
-      B_stand = B;
-    }
-
   //solverType solver( opts.solver );
   short solver( opts.solver );
   Real solver_tolerance( opts.solverTolerance );
@@ -1616,6 +1641,25 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	}
       solver = SVD_LEAST_SQ_REGRESSION;
       solver_tolerance = -1.0;
+    }
+
+  RealMatrix A_stand, B_stand;
+  RealVector A_column_norms, A_column_means, B_means;
+
+  // override opts.standardizeInputs
+  int standardize = true;
+  //int standardize = false;
+  if ( solver == SVD_LEAST_SQ_REGRESSION )
+    standardize = false;
+  if ( standardize )
+    {
+      standardize_inputs( A, B, A_stand, B_stand, A_column_norms, 
+			  A_column_means, B_means );
+    }
+  else
+    {
+      A_stand = A;
+      B_stand = B;
     }
 
   solutions.resize( num_rhs );
@@ -1818,7 +1862,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	}
     }
   
-  if ( opts.standardizeInputs )
+  if ( standardize )
     {
       for (int k = 0; k < num_rhs; k++ )
 	{
@@ -1832,10 +1876,10 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 		}
 	      RealVector solution_kl( Teuchos::View, solutions[k][l], N );
 	      // Readjust solution to account for centering of A
-	      solutions[k](0,l) -= A_column_means.dot( solution_kl );
+	      //solutions[k](0,l) -= A_column_means.dot( solution_kl );
 	      // Readjust solution to account for centering of B
-	      if ( B_means.length() == num_rhs )
-		solutions[k](0,l) += B_means[k];
+	      //if ( B_means.length() == num_rhs )
+	      //	solutions[k](0,l) += B_means[k];
 	    }
 	}
     }

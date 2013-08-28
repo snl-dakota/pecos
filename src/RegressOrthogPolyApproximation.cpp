@@ -50,13 +50,19 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 {
   allocate_total_sobol(); // no dependencies
   bool update_exp_form = (approxOrder != approxOrderPrev);
-  allocate_total_order(); // numExpansionTerms needed in set_fault_info()
+
+  if ( expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION )
+    {
+      allocate_total_order(); // numExpansionTerms needed in set_fault_info()
+      // output candidate expansion form
+      PCout << "Orthogonal polynomial approximation order = { ";
+      for (size_t i=0; i<numVars; ++i)
+	PCout << approxOrder[i] << ' ';
+    }
+
+
   set_fault_info(); // needs numExpansionTerms; sets faultInfo.under_determined
 
-  // output candidate expansion form
-  PCout << "Orthogonal polynomial approximation order = { ";
-  for (size_t i=0; i<numVars; ++i)
-    PCout << approxOrder[i] << ' ';
   if (faultInfo.under_determined) { // defer exp allocation until sparsity known
 
     if (expConfigOptions.vbdControl == UNIVARIATE_VBD)
@@ -383,17 +389,35 @@ void RegressOrthogPolyApproximation::run_regression()
       if ( crossValidation ) // run cross validation
 	run_cross_validation( A, B, num_data_pts_fn );
       else {
-	IntVector index_mapping; 
-	remove_faulty_data( A, B, index_mapping, faultInfo,
-			    surrData.failed_response_data() );
-	CSTool.solve( A, B, solutions, CSOpts, opts_list );
-
-	if (faultInfo.under_determined) // exploit CS sparsity
-	  update_sparse(solutions[0][0], numExpansionTerms);
-	else {                          // retain full solution
-	  copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
-	  sparseIndices.clear();
-	}
+	if ( CSOpts.solver != ORTHOG_LEAST_INTERPOLATION )
+	  {
+	    IntVector index_mapping; 
+	    remove_faulty_data( A, B, index_mapping, faultInfo,
+				surrData.failed_response_data() );
+	    CSTool.solve( A, B, solutions, CSOpts, opts_list );
+	    
+	    if (faultInfo.under_determined) // exploit CS sparsity
+	      update_sparse(solutions[0][0], numExpansionTerms);
+	    else {                          // retain full solution
+	      copy_data(solutions[0][0], numExpansionTerms, expansionCoeffs);
+	      sparseIndices.clear();
+	    }
+	  }
+	else
+	  {
+	    // todo: for least interpolation need to extract pts that do not fail
+	    // i.e. only want non failed data in surrData.continuous_variables(j)
+	    // and associated function vals
+	    RealMatrix pts(numVars, num_surr_data_pts, false ); 
+	    for (j=0;j<num_surr_data_pts; ++j)
+	      {
+		RealVector x = surrData.continuous_variables(j);
+		for (i=0;i<numVars;i++)
+		  pts(i,j) = x[i];
+	      };
+	    PCout << "using least interpolation\n";
+	    least_interpolation( pts, B );
+	  }
       }
     }
   }
@@ -772,6 +796,309 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
 
   //restore state
   CSOpts = cs_opts_copy;
+};
+
+inline size_t RegressOrthogPolyApproximation::index_norm(const UShortArray& index_set) const
+{
+  unsigned int i, norm = 0, len = index_set.size();
+  for (i=0; i<len; ++i)
+    norm += index_set[i];
+  return norm;
+}
+
+void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts, 
+							  RealMatrix &vals )
+{
+#ifdef DEBUG
+  if ( pts.numCols() != vals.numRows() ) 
+    {
+      std::string msg = "least_interpolation() dimensions of pts and vals ";
+      msg += "are inconsistent";
+      throw( std::runtime_error( msg ) );
+    }
+#endif
+
+  RealMatrix L, U, H;
+  IntVector p, k;
+  RealVector v; 
+
+
+  // must do this inside transform_least_interpolant
+  //RealVector domain;
+  //TensorProductBasis_ptr basis; 
+  //std::vector<PolyIndex_ptr> basis_indices;
+  //pce.get_domain( domain );
+  //pce.get_basis( basis );
+  //pce.get_basis_indices( basis_indices );
+
+  // This prevents the case where multiIndex is defined earlier in an efficient
+  // way to match the data
+  multiIndex.clear();
+
+  least_factorization( pts, multiIndex, L, U, H, p, v, k );
+
+  RealMatrix coefficients;
+  transform_least_interpolant( L, U, H, p, v, vals );
+
+  // must do this inside transform_least_interpolant
+  //pce.set_basis_indices( basis_indices );
+  //pce.set_coefficients( coefficients );
+}
+
+
+
+void RegressOrthogPolyApproximation::transform_least_interpolant( RealMatrix &L,
+						       RealMatrix &U,
+						       RealMatrix &H,
+						       IntVector &p,
+						       RealVector &v,
+						       RealMatrix &vals )
+{
+
+  int num_pts = vals.numRows(), num_qoi = vals.numCols();
+  
+  RealMatrix LU_inv;
+  IntVector dummy;
+  lu_inverse( L, U, dummy, LU_inv );
+
+  RealMatrix V_inv( H.numCols(), num_pts );
+  V_inv.multiply( Teuchos::TRANS, Teuchos::NO_TRANS, 1.0, H, 
+		  LU_inv, 0.0 );
+
+  IntVector p_col;
+  argsort( p, p_col );
+  permute_matrix_columns( V_inv, p_col );
+
+  RealMatrix coefficients;
+  coefficients.shapeUninitialized( V_inv.numRows(), num_qoi );
+  coefficients.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, V_inv, 
+			 vals, 0.0 );
+
+  numExpansionTerms = multiIndex.size();
+  copy_data(coefficients.values(), numExpansionTerms, expansionCoeffs);
+}
+
+void RegressOrthogPolyApproximation::least_factorization( RealMatrix &pts,
+						   UShort2DArray &basis_indices,
+							  RealMatrix &l,
+							  RealMatrix &u, 
+							  RealMatrix &H, 
+							  IntVector &p,
+							  RealVector &v, 
+							  IntVector &k )
+{
+  int num_vars = pts.numRows(), num_pts = pts.numCols();
+
+  eye( num_pts, l );
+  eye( num_pts, u );
+
+  range( p, 0, num_pts, 1 );
+
+  //This is just a guess: this vector could be much larger, or much smaller
+  v.size( 1000 );
+  int v_index = 0;
+
+  // Current polynomial degree
+  int k_counter = 0;
+  // k[q] gives the degree used to eliminate the q'th point
+  k.size( num_pts );
+
+  // The current LU row to factor out:
+  int lu_row = 0;
+
+  UShort2DArray internal_basis_indices;
+
+  // Current degree is k_counter, and we iterate on this
+  while ( lu_row < num_pts )
+    {
+      UShort2DArray new_indices;
+      if ( basis_indices.size() == 0 )
+	{
+	  total_order_multi_index( (unsigned short)k_counter, (size_t)num_vars, 
+				   new_indices );
+	  //get_hyperbolic_level_indices( num_vars,
+	  ///			k_counter,
+	  //				1.,
+	  //new_indices );
+
+	  int num_indices = internal_basis_indices.size();
+	  //for ( int i = 0; i < (int)new_indices.size(); i++ )
+	  // new_indices[i]->set_array_index( num_indices + i );
+	}
+      else
+	{
+	  //int cnt = internal_basis_indices.size();
+	  for ( int i = 0; i < (int)basis_indices.size(); i++ )
+	    {
+	      //if ( basis_indices[i]->get_level_sum() == k_counter )
+	      if ( index_norm( basis_indices[i] ) == k_counter )
+		{
+		  new_indices.push_back( basis_indices[i] );
+		  //basis_indices[i]->set_array_index( cnt );
+		  //cnt++;
+		}
+	    }
+	  // If the basis_indices set is very sparse then not all degrees may 
+	  // be represented in basis_indices. Thus increase degree counter
+	  if ( new_indices.size() == 0 )
+	    k_counter++;
+	  if ( ( basis_indices.size() == internal_basis_indices.size() ) && 
+	       ( new_indices.size() == 0 ) )
+	    {
+	      std::string msg = "least_factorization() the basis indices ";
+	      msg += "specified were insufficient to interpolate the data";
+	      throw( std::runtime_error( msg ) ); 
+	    }
+	}
+
+      if ( (  new_indices.size() > 0 ) )
+	{	
+      
+	  internal_basis_indices.insert( internal_basis_indices.end(), 
+					 new_indices.begin(), 
+					 new_indices.end() );
+      
+	  int current_dim = new_indices.size();
+
+	  // Evaluate the basis
+	  //RealMatrix W;
+	  //basis->value_set( pts, new_indices, W );
+	  RealMatrix W( num_pts, current_dim, false);
+	  for ( int j = 0; j < num_pts; j++ )
+	    {
+	      RealVector x( Teuchos::View, pts[j], num_vars );
+	      for ( int i = 0; i < (int)new_indices.size(); i++ )
+		{ 
+		  W(j,i) = multivariate_polynomial( x, new_indices[i] );
+		}
+	    }
+
+	  permute_matrix_rows( W, p );
+      
+	  // Row-reduce W according to previous elimination steps
+	  int m = W.numRows(), n = W.numCols();
+	  for ( int q = 0; q < lu_row; q++ )
+	    {
+	      for ( int i = 0; i < n; i++ )
+		W(q,i) /= l(q,q);
+
+	      RealMatrix tmp( Teuchos::View, W, m-q-1, n, q+1, 0 ),
+		l_col( Teuchos::View, l, m-q-1, 1, q+1, q ),
+		W_row( Teuchos::View, W, 1, n, q, 0 ); 
+	      tmp.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, -1.0, l_col, 
+			    W_row, 1.0 );
+	    }
+
+	  //RealMatrix wm( Teuchos::View, W, m-lu_row, n, lu_row, 0 );
+	  RealMatrix wm( n, m-lu_row );
+	  for ( int i = 0; i < m-lu_row; i++ )
+	    {
+	      for ( int j = 0; j < n; j++ )
+		wm(j,i) = W(lu_row+i,j);
+	    }
+	  RealMatrix Q, R;
+	  IntVector evec;
+	  pivoted_qr_factorization( wm, Q, R, evec );
+      
+	  // Compute rank
+	  int rnk = 0;
+	  for ( int i = 0; i < R.numRows(); i++ )
+	    {
+	      if ( std::fabs( R(i,i) ) < 0.001 * std::fabs( R(0,0) ) ) break;
+	      rnk += 1;
+	    }
+
+	  // Now first we must permute the rows by e
+	  IntMatrix p_sub( Teuchos::View, &p[lu_row], num_pts - lu_row, 
+			   num_pts - lu_row, 1 );
+	  permute_matrix_rows( p_sub, evec );
+      
+	  // And correct by permuting l as well
+ 
+	  RealMatrix l_sub( Teuchos::View, l, num_pts - lu_row, lu_row,lu_row,0);
+	  if ( ( l_sub.numRows() > 0 ) && ( l_sub.numCols() > 0 ) )
+	    permute_matrix_rows( l_sub, evec );
+
+	  // The matrix r gives us inner product information for all rows below 
+	  // these in W
+	  for ( int i = 0; i < rnk; i++ )
+	    {
+	      for ( int j = 0; j < num_pts - lu_row; j++ )
+		l(lu_row+j,lu_row+i) = R(i,j);
+	    }
+
+	  // Now we must find inner products of all the other rows above 
+	  // these in W
+	  RealMatrix W_sub( Teuchos::View, W, lu_row, W.numCols(), 0, 0 ),
+	    Q_sub( Teuchos::View, Q, Q.numRows(), rnk, 0, 0 ),
+	    u_sub( Teuchos::View, u, lu_row, rnk, 0, lu_row );
+
+	  if ( ( u_sub.numRows() > 0 ) && ( u_sub.numCols() > 0 ) )
+	    u_sub.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, W_sub, 
+			    Q_sub, 0.0 );
+
+	  if ( v_index+(current_dim*rnk) > v.length() )
+	    v.resize( v.length() + std::max( 1000, current_dim*rnk ) );
+	  // The matrix q must be saved in order to characterize basis
+	  int cnt = v_index;
+	  for ( int j = 0; j < rnk; j++ )
+	    {
+	      for ( int i = 0; i < Q.numRows(); i++ )
+		{
+		  v[cnt] = Q(i,j);
+		  cnt++;
+		}
+	    }
+	  v_index += ( current_dim * rnk );
+
+	  // Update degree markers, and node and degree count
+	  for ( int i = lu_row; i < lu_row+rnk; i++ )
+	    k[i] = k_counter;
+	  lu_row += rnk;
+	  k_counter++;
+	}
+    }
+  // Chop off parts of unnecessarily allocated vector v
+  v.resize( v_index );
+  
+  // Return the indices used by least interpolation. This may be different
+  // to the basis_indices specified on entry.
+  basis_indices = internal_basis_indices;
+
+  // Make matrix H
+  get_least_polynomial_coefficients( v, k, basis_indices, num_vars, num_pts,
+				     H );
+};
+
+void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
+				       RealVector &v, IntVector &k,
+				       UShort2DArray &basis_indices,
+				       int num_vars, int num_pts,
+				       RealMatrix &H )
+{
+  int num_basis_indices = basis_indices.size();
+  H.shape( num_pts, num_basis_indices );
+  int v_counter = 0, previous_dimension = 0, current_size = 0;
+  for ( int i = 0; i < num_pts; i++ )
+    {
+      if ( ( i == 0 ) || ( k[i] != k[i-1] ) )
+	{
+	  current_size = 0;
+	  for ( int j = 0; j < num_basis_indices; j++ )
+	    {
+	      //if ( basis_indices[j]->get_level_sum() == k[i] )
+	      if ( index_norm(  basis_indices[j] ) == k[i] )
+		current_size++;
+	    }
+	}
+      for ( int j = 0; j < current_size; j++ )
+	{
+	  H(i,previous_dimension+j) = v[v_counter+j];
+	}
+      v_counter += current_size;
+      if ( ( i+1 < num_pts ) && ( k[i] != k[i+1] ) )
+	previous_dimension += current_size;
+    }
 };
 
 } // namespace Pecos

@@ -11,6 +11,7 @@
 #include "Teuchos_SerialDenseVector.hpp"
 #include "Teuchos_BLAS.hpp"
 #include "Teuchos_LAPACK.hpp"
+#include "Teuchos_LAPACK_wrappers.hpp"
 
 #include "pecos_data_types.hpp"
 
@@ -592,6 +593,9 @@ void equality_constrained_least_squares_solve( RealMatrix &A,
 void cholesky_inverse(  RealMatrix &L, RealMatrix &result,
 			Teuchos::EUplo uplo );
 
+void pivoted_qr_factorization( RealMatrix &A, RealMatrix &result_0, 
+			       RealMatrix &result_1, IntVector &result );
+
 template<typename O, typename T>
 void eye( int N, Teuchos::SerialDenseMatrix<O,T> &result )
 {
@@ -617,12 +621,12 @@ void unit_vector( int n, int k, Teuchos::SerialDenseVector<O,T> &result )
 void lu_inverse( RealMatrix &L, RealMatrix &U, IntVector &p, 
 		 RealMatrix &result );
 
-extern "C"
+/*extern "C"
 {
   void dgeqp3_( const int *M, const int *N, double *A, 
 		const int *LDA, int *JPVT, double *TAU, 
 		double *WORK, const int *LWORK, int *INFO );
-}
+		}*/
 
 }  // namespace Pecos
 
