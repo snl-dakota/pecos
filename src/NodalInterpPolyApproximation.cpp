@@ -3486,7 +3486,7 @@ update_nonzero_basis_products(const UShort2DArray& sm_multi_index)
       if (!found)
 	nonZerosMapIndices[v1_cntr] = num_nz++;
     }
-    nonZerosMapMaxLevels.resize(num_nz);
+    //nonZerosMapMaxLevels.resize(num_nz);
     nonZerosMapMaxLevels.assign(num_nz, 0);
     nonZerosMapArray.resize(num_nz);
   }

@@ -208,6 +208,36 @@ inline bool real_compare(Real r1, Real r2)
 }
 
 
+/// compute 1-norm |i| (sum of indices) for the given index_set
+inline size_t index_norm(const UShortArray& index_set)
+{
+  unsigned int i, norm = 0, len = index_set.size();
+  for (i=0; i<len; ++i)
+    norm += index_set[i];
+  return norm;
+}
+
+
+/// compare two Real values using DBL_EPSILON relative tolerance
+template <typename OrdinalType, typename ScalarType> 
+void inflate_scalar(std::vector<ScalarType>& v, OrdinalType num_v)
+{
+  OrdinalType v_len = v.size();
+  if (v_len != num_v) {
+    if (v_len == 1) {
+      ScalarType v0 = v[0];
+      v.assign(num_v, v0);
+    }
+    else {
+      PCerr << "Error: specification length (" << v_len
+	    << ") does not match target length (" << num_v
+	    << ") in Pecos::inflate_scalar()." << std::endl;
+      abort_handler(-1);
+    }
+  }
+}
+
+
 /// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to
 /// std::vector<ScalarType>
 template <typename OrdinalType, typename ScalarType> 

@@ -88,19 +88,9 @@ void OrthogPolyApproximation::allocate_total_order()
   // For uniform refinement, all refinements are based off of approxOrder.
   // For PCBDO, numExpansionTerms and approxOrder are invariant and a
   // multiIndex update is prevented by update_exp_form.
-  size_t order_len = approxOrder.size();
-  if (order_len != numVars) {
-    if (order_len == 1) {
-      unsigned short ord0 = approxOrder[0];
-      approxOrder.assign(numVars, ord0);
-    }
-    else {
-      PCerr << "Error: expansion_order specification length (" << order_len
-	    << ") does not match number of active variables (" << numVars
-	    << ")." << std::endl;
-      abort_handler(-1);
-    }
-  }
+
+  // promote a scalar input into an isotropic vector
+  inflate_scalar(approxOrder, numVars);
 
   // capture changes due to order increments or sparsity pruning
   bool update_exp_form = (approxOrder       != approxOrderPrev),

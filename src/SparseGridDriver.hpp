@@ -168,9 +168,6 @@ public:
   /// return computedTrialSets
   const std::set<UShortArray>& computed_trial_sets() const;
 
-  /// compute 1-norm |i| (sum of indices) for the given index_set
-  size_t index_norm(const UShortArray& index_set) const;
-
 protected:
 
   //
@@ -377,15 +374,6 @@ level_to_order(const UShortArray& levels, UShortArray& orders)
     orders.resize(num_lev);
   for (i=0; i<num_lev; ++i)
     level_to_order(i, levels[i], orders[i]);
-}
-
-
-inline size_t SparseGridDriver::index_norm(const UShortArray& index_set) const
-{
-  unsigned int i, norm = 0, len = index_set.size();
-  for (i=0; i<len; ++i)
-    norm += index_set[i];
-  return norm;
 }
 
 } // namespace Pecos

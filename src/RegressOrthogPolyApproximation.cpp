@@ -51,15 +51,15 @@ void RegressOrthogPolyApproximation::allocate_arrays()
   allocate_total_sobol(); // no dependencies
   bool update_exp_form = (approxOrder != approxOrderPrev);
 
-  if ( expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION )
-    {
-      allocate_total_order(); // numExpansionTerms needed in set_fault_info()
-      // output candidate expansion form
-      PCout << "Orthogonal polynomial approximation order = { ";
-      for (size_t i=0; i<numVars; ++i)
-	PCout << approxOrder[i] << ' ';
-    }
-
+  if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION)
+    PCout << "Orthogonal polynomial approximation of least order\n";
+  else {
+    allocate_total_order(); // numExpansionTerms needed in set_fault_info()
+    // output candidate expansion form
+    PCout << "Orthogonal polynomial approximation order = { ";
+    for (size_t i=0; i<numVars; ++i)
+      PCout << approxOrder[i] << ' ';
+  }
 
   set_fault_info(); // needs numExpansionTerms; sets faultInfo.under_determined
 
@@ -71,7 +71,9 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 
     //size_expansion(); // defer until sparse recovery
 
-    PCout << "} using candidate total-order expansion of ";
+    if (expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION)
+      PCout << "} using candidate total-order expansion of "
+	    << numExpansionTerms << " terms\n";
   }
   else { // pre-allocate total-order expansion
     if (update_exp_form)
@@ -81,9 +83,10 @@ void RegressOrthogPolyApproximation::allocate_arrays()
     // to expansion{Coeff,GradFlag} settings
     size_expansion();
 
-    PCout << "} using total-order expansion of ";
+    if (expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION)
+      PCout << "} using total-order expansion of " << numExpansionTerms
+	    << " terms\n";
   }
-  PCout << numExpansionTerms << " terms\n";
 
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
@@ -798,13 +801,6 @@ estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermond
   CSOpts = cs_opts_copy;
 };
 
-inline size_t RegressOrthogPolyApproximation::index_norm(const UShortArray& index_set) const
-{
-  unsigned int i, norm = 0, len = index_set.size();
-  for (i=0; i<len; ++i)
-    norm += index_set[i];
-  return norm;
-}
 
 void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts, 
 							  RealMatrix &vals )
@@ -846,7 +842,6 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
 }
 
 
-
 void RegressOrthogPolyApproximation::transform_least_interpolant( RealMatrix &L,
 						       RealMatrix &U,
 						       RealMatrix &H,
@@ -877,6 +872,7 @@ void RegressOrthogPolyApproximation::transform_least_interpolant( RealMatrix &L,
   numExpansionTerms = multiIndex.size();
   copy_data(coefficients.values(), numExpansionTerms, expansionCoeffs);
 }
+
 
 void RegressOrthogPolyApproximation::least_factorization( RealMatrix &pts,
 						   UShort2DArray &basis_indices,
@@ -1070,6 +1066,7 @@ void RegressOrthogPolyApproximation::least_factorization( RealMatrix &pts,
 				     H );
 };
 
+
 void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
 				       RealVector &v, IntVector &k,
 				       UShort2DArray &basis_indices,
@@ -1087,7 +1084,7 @@ void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
 	  for ( int j = 0; j < num_basis_indices; j++ )
 	    {
 	      //if ( basis_indices[j]->get_level_sum() == k[i] )
-	      if ( index_norm(  basis_indices[j] ) == k[i] )
+	      if ( index_norm( basis_indices[j] ) == k[i] )
 		current_size++;
 	    }
 	}

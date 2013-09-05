@@ -131,8 +131,6 @@ private:
   void gridSearchFunction( RealMatrix &opts, int M, int N, 
 			   int num_function_samples );
 
-  size_t index_norm(const UShortArray& index_set) const;
-
   void least_interpolation( RealMatrix &pts, 
 			    RealMatrix &vals );
 

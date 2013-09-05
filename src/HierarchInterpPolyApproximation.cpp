@@ -79,7 +79,7 @@ void HierarchInterpPolyApproximation::increment_component_sobol()
     const UShort4DArray&      key        = hsg_driver->collocation_key();
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-      size_t lev = hsg_driver->index_norm(hsg_driver->trial_set());
+      size_t lev = index_norm(hsg_driver->trial_set());
       multi_index_to_sobol_index_map(key[lev].back());
       break;
     }
@@ -270,7 +270,7 @@ void HierarchInterpPolyApproximation::decrement_expansion_coefficients()
 {
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShortArray&        trial_set  = hsg_driver->trial_set();
-  size_t lev = hsg_driver->index_norm(trial_set);
+  size_t lev = index_norm(trial_set);
 
   if (expConfigOptions.expansionCoeffFlag) {
     savedExpT1Coeffs[trial_set] = expansionType1Coeffs[lev].back();
@@ -396,9 +396,7 @@ void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
 void HierarchInterpPolyApproximation::
 increment_expansion_coefficients(const UShortArray& index_set)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  size_t lev = hsg_driver->index_norm(index_set);
-
+  size_t lev = index_norm(index_set);
   if (lev >= expansionType1Coeffs.size()) {
     expansionType1Coeffs.resize(lev+1);
     expansionType2Coeffs.resize(lev+1);
@@ -414,6 +412,7 @@ increment_expansion_coefficients(const UShortArray& index_set)
   RealMatrix& t2_coeffs      = expansionType2Coeffs[lev][set];
   RealMatrix& t1_coeff_grads = expansionType1CoeffGrads[lev][set];
 
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray& key   = hsg_driver->collocation_key();
   size_t index, pt, num_trial_pts = key[lev][set].size(), v, num_deriv_vars = 0;
@@ -460,8 +459,7 @@ increment_expansion_coefficients(const UShortArray& index_set)
 void HierarchInterpPolyApproximation::
 restore_expansion_coefficients(const UShortArray& restore_set)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  size_t lev = hsg_driver->index_norm(restore_set);
+  size_t lev = index_norm(restore_set);
   if (expConfigOptions.expansionCoeffFlag) {
     expansionType1Coeffs[lev].push_back(savedExpT1Coeffs[restore_set]);
     savedExpT1Coeffs.erase(restore_set);
