@@ -51,41 +51,50 @@ void RegressOrthogPolyApproximation::allocate_arrays()
   allocate_total_sobol(); // no dependencies
   bool update_exp_form = (approxOrder != approxOrderPrev);
 
-  if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION)
-    PCout << "Orthogonal polynomial approximation of least order\n";
-  else {
+  if (expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION)
     allocate_total_order(); // numExpansionTerms needed in set_fault_info()
+
+  set_fault_info(); // needs numExpansionTerms; sets faultInfo.under_determined
+
+  if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
+    PCout << "Orthogonal polynomial approximation of least order\n";
+
+    if (expConfigOptions.vbdControl == UNIVARIATE_VBD)
+      allocate_component_sobol();
+    // else defer until transform_least_interpolant()
+
+    //size_expansion(); // defer until transform_least_interpolant()
+  }
+  else {
     // output candidate expansion form
     PCout << "Orthogonal polynomial approximation order = { ";
     for (size_t i=0; i<numVars; ++i)
       PCout << approxOrder[i] << ' ';
-  }
 
-  set_fault_info(); // needs numExpansionTerms; sets faultInfo.under_determined
+    if (faultInfo.under_determined) {
+      // under-determined regression: defer allocations until sparsity known
 
-  if (faultInfo.under_determined) { // defer exp allocation until sparsity known
+      if (expConfigOptions.vbdControl == UNIVARIATE_VBD)
+	allocate_component_sobol();
+      // else defer until sparse recovery
 
-    if (expConfigOptions.vbdControl == UNIVARIATE_VBD)
-      allocate_component_sobol();
-    // else defer until sparse recovery
+      //size_expansion(); // defer until sparse recovery
 
-    //size_expansion(); // defer until sparse recovery
+      PCout << "} using candidate total-order expansion of ";
+    }
+    else { // pre-allocate total-order expansion
+      // uniquely/over-determined regression: perform allocations now
 
-    if (expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION)
-      PCout << "} using candidate total-order expansion of "
-	    << numExpansionTerms << " terms\n";
-  }
-  else { // pre-allocate total-order expansion
-    if (update_exp_form)
-      allocate_component_sobol();
+      if (update_exp_form)
+	allocate_component_sobol();
 
-    // size expansion even if !update_exp_form due to possibility of change
-    // to expansion{Coeff,GradFlag} settings
-    size_expansion();
+      // size expansion even if !update_exp_form due to possibility of change
+      // to expansion{Coeff,GradFlag} settings
+      size_expansion();
 
-    if (expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION)
-      PCout << "} using total-order expansion of " << numExpansionTerms
-	    << " terms\n";
+      PCout << "} using total-order expansion of ";
+    }
+    PCout << numExpansionTerms << " terms\n";
   }
 
   if (expansionMoments.empty())
@@ -871,6 +880,10 @@ void RegressOrthogPolyApproximation::transform_least_interpolant( RealMatrix &L,
 
   numExpansionTerms = multiIndex.size();
   copy_data(coefficients.values(), numExpansionTerms, expansionCoeffs);
+
+  // now define the Sobol' indices based on the least polynomial multiIndex
+  if (expConfigOptions.vbdControl == ALL_VBD)
+    allocate_component_sobol();
 }
 
 
