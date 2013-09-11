@@ -86,7 +86,7 @@ private:
   void set_fault_info();
 
   /// Use cross validation to find the 'best' PCE degree
-  void run_cross_validation( RealMatrix &A, RealMatrix &B, 
+  void run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 			     size_t num_data_pts_fn );
 
   /// For a specific vandermonde matrix find the compressed sennsing 

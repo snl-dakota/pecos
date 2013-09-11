@@ -39,6 +39,7 @@ void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		   const SizetShortMap& failed_response_data );
 
 void remove_faulty_data( RealMatrix &A, RealMatrix &B, 
+			 RealMatrix &points,
 			 IntVector &index_mapping,
 			 FaultInfo fault_info,
 			 const SizetShortMap& failed_resp_data );

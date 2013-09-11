@@ -141,7 +141,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   surrData.data_checks();
 
   allocate_arrays();
-  select_solver();
+  //select_solver();
   run_regression(); // calculate PCE coefficients
 
   computedMean = computedVariance = 0;
@@ -351,6 +351,12 @@ void RegressOrthogPolyApproximation::run_regression()
   CompressedSensingOptionsList opts_list;
   RealMatrixArray solutions;
   CSOpts.standardizeInputs = false; // false essential when using derivatives
+
+  RealMatrix points( numVars, num_surr_data_pts, false );
+  for (i=0; i<num_surr_data_pts; ++i) {
+    for (j=0;j<numVars;j++)
+      points(j,i) = surrData.continuous_variables(i)[j];
+  }
   
   if (expConfigOptions.expansionCoeffFlag) {
 
@@ -359,8 +365,6 @@ void RegressOrthogPolyApproximation::run_regression()
       num_data_pts_fn + num_data_pts_grad * numVars : num_data_pts_fn;
     num_coeff_rhs = 1;
     num_rhs = (multiple_rhs) ? num_coeff_rhs + num_grad_rhs : num_coeff_rhs;
-    PCout << "Applying regression to compute " << numExpansionTerms
-	  << " chaos coefficients using " << num_rows_A << " equations.\n";
 
     A.shapeUninitialized(num_rows_A,num_cols_A);
     B.shapeUninitialized(num_rows_A,num_rhs);
@@ -399,13 +403,26 @@ void RegressOrthogPolyApproximation::run_regression()
       // Current cross validation will not work for equality 
       // constrained least squares
       if ( crossValidation ) // run cross validation
-	run_cross_validation( A, B, num_data_pts_fn );
+	{
+	  if ( expConfigOptions.expCoeffsSolnApproach == 
+	       ORTHOG_LEAST_INTERPOLATION )
+	    throw( std::runtime_error("Cannot use cross validation with least interpolation") );
+	  select_solver();
+	  run_cross_validation( A, B, points, num_data_pts_fn );
+	}
       else {
-	if ( CSOpts.solver != ORTHOG_LEAST_INTERPOLATION )
+	if ( expConfigOptions.expCoeffsSolnApproach != 
+	     ORTHOG_LEAST_INTERPOLATION )
 	  {
 	    IntVector index_mapping; 
-	    remove_faulty_data( A, B, index_mapping, faultInfo,
+	    RealMatrix points_dummy;
+	    remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
 				surrData.failed_response_data() );
+	    faultInfo.under_determined = A.numRows() < A.numCols();
+	    PCout << "Applying regression to compute " << numExpansionTerms
+		  << " chaos coefficients using " << A.numRows() 
+		  << " equations.\n";
+	    select_solver();
 	    CSTool.solve( A, B, solutions, CSOpts, opts_list );
 	    
 	    if (faultInfo.under_determined) // exploit CS sparsity
@@ -417,18 +434,12 @@ void RegressOrthogPolyApproximation::run_regression()
 	  }
 	else
 	  {
-	    // todo: for least interpolation need to extract pts that do not fail
-	    // i.e. only want non failed data in surrData.continuous_variables(j)
-	    // and associated function vals
-	    RealMatrix pts(numVars, num_surr_data_pts, false ); 
-	    for (j=0;j<num_surr_data_pts; ++j)
-	      {
-		RealVector x = surrData.continuous_variables(j);
-		for (i=0;i<numVars;i++)
-		  pts(i,j) = x[i];
-	      };
+	    IntVector index_mapping; 
+	    remove_faulty_data( A, B, points, index_mapping, faultInfo,
+				surrData.failed_response_data() );
+	    faultInfo.under_determined = false;
 	    PCout << "using least interpolation\n";
-	    least_interpolation( pts, B );
+	    least_interpolation( points, B );
 	  }
       }
     }
@@ -475,11 +486,29 @@ void RegressOrthogPolyApproximation::run_regression()
       }
     }
 
-    // solve
-    IntVector index_mapping; 
-    remove_faulty_data( A, B, index_mapping,
-			faultInfo, surrData.failed_response_data());
-    CSTool.solve( A, B, solutions, CSOpts, opts_list );
+    if ( expConfigOptions.expCoeffsSolnApproach != 
+	 ORTHOG_LEAST_INTERPOLATION )
+      {
+	// solve
+	IntVector index_mapping; 
+	remove_faulty_data( A, B, points, index_mapping,
+			    faultInfo, surrData.failed_response_data());
+	faultInfo.under_determined = A.numRows() < A.numCols();
+	PCout << "Applying regression to compute " << numExpansionTerms
+	      << " chaos coefficients using " << A.numRows() 
+	      << " equations.\n";
+	select_solver();
+	CSTool.solve( A, B, solutions, CSOpts, opts_list );
+      }
+    else
+      {
+	IntVector index_mapping; 
+	remove_faulty_data( A, B, points, index_mapping, faultInfo,
+			    surrData.failed_response_data() );
+	faultInfo.under_determined = false;
+	PCout << "using least interpolation\n";
+	least_interpolation( points, B );
+      }
 
     if (faultInfo.under_determined) { // exploit CS sparsity
       // overlay sparse solutions into an aggregated set of sparse indices
@@ -576,7 +605,8 @@ update_sparse_coeff_grads(Real* dense_coeffs, int row)
 
 
 void RegressOrthogPolyApproximation::
-run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
+run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points, 
+		      size_t num_data_pts_fn )
 {
   RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
   RealMatrix B_copy( Teuchos::Copy, B, B.numRows(), B.numCols() );
@@ -676,8 +706,14 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, size_t num_data_pts_fn )
   bestCompressedSensingOpts_[0].storeHistory = false;
   bestCompressedSensingOpts_[0].print();
   IntVector index_mapping;
-  remove_faulty_data( vandermonde_submatrix, B_copy, index_mapping,
+  RealMatrix points_dummy;
+  remove_faulty_data( vandermonde_submatrix, B_copy, points_dummy, index_mapping,
 		      faultInfo, surrData.failed_response_data() );
+  faultInfo.under_determined = vandermonde_submatrix.numRows() < vandermonde_submatrix.numCols();
+  PCout << "Applying regression to compute " << numExpansionTerms
+	<< " chaos coefficients using " <<   vandermonde_submatrix.numRows()
+	<< " equations.\n";
+  select_solver();
   CSTool.solve( vandermonde_submatrix, B_copy, solutions, 
 		bestCompressedSensingOpts_[0], opts_list );
 
@@ -844,6 +880,8 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
 
   RealMatrix coefficients;
   transform_least_interpolant( L, U, H, p, v, vals );
+  PCout << "@@@@@\n";
+  PCout << vals.numCols() << std::endl;
 
   // must do this inside transform_least_interpolant
   //pce.set_basis_indices( basis_indices );

@@ -18,6 +18,7 @@ void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 // specifying this. Then if flag is true a different solver can still be
 // used
 void remove_faulty_data( RealMatrix &A, RealMatrix &B, 
+			 RealMatrix &points,
 			 IntVector &index_mapping,
 			 FaultInfo fault_info,
 			 const SizetShortMap& failed_resp_data )
@@ -77,6 +78,35 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
     std::string msg = "remove_faulty_data. Fault_info is inconsistent with A";
     throw(std::runtime_error( msg ) );
   }
+
+  if ( points.numCols() > 0 )
+    {
+      size_t pts_cntr = 0;
+      RealMatrix pts( points.numRows(), fault_info.num_data_pts_fn, false );
+      int j, l;
+      for (j=0, l=0, fit=failed_resp_data.begin(); 
+	   j<fault_info.num_surr_data_pts; ++j) {
+	int index = I[l];
+	bool add_val = true, add_grad = fault_info.use_derivatives;
+	fail_booleans(fit, j, add_val, add_grad,
+		      failed_resp_data );
+	if ( sorted_indices[l] != j ) add_val = add_grad = false;
+	if ( add_val )
+	  { 
+	    for( int i = 0; i < points.numRows(); i++)
+	      {
+		pts(i,pts_cntr) = points(i,index); 
+	      }
+	    ++pts_cntr; 
+	  }
+	if ( l < index_map.length() && sorted_indices[l] == j ) l++;
+	if ( l >= index_map.length() ) break;
+      }
+      RealMatrix pts_tmp( Teuchos::View, pts, pts.numRows(), pts_cntr );
+      points.shapeUninitialized( pts.numRows(), pts_cntr );
+      points.assign( pts_tmp );
+    }
+
   RealMatrix B_grad;
   if ( ( multiple_rhs ) || ( num_coef_rhs == 1 ) )
     {

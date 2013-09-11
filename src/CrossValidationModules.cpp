@@ -57,7 +57,8 @@ void normalised_mean_selector( RealMatrix2DArray &partition_indicators,
 	    }
 	  for ( int j = num_predictors; j < max_num_predictors; j++ )
 	    {
-	      values(i,j) = std::numeric_limits<Real>::max();
+	      //values(i,j) = std::numeric_limits<Real>::max();
+	      values(i,j) = partition_indicators[i][k](num_predictors-1,0);
 	    }
 	}
 
@@ -82,7 +83,8 @@ void normalised_mean_selector( RealMatrix2DArray &partition_indicators,
       for ( int i = 0; i < num_partitions; i++ )
 	{
 	  best_predictor_partition_indicators(i,k) = 
-	    partition_indicators[i][k](argmin,0);
+	    partition_indicators[i][k](std::min(argmin,
+			    partition_indicators[i][k].numCols()-1),0);
 	}
     }
 };

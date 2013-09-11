@@ -41,93 +41,95 @@ void extract_linear_predictor_options(CompressedSensingOptionsList &cs_opts_list
     }
 };
 
-void linear_predictor_analyser( RealMatrix &A_training, 
-				RealMatrix &B_training, 
-				RealMatrix &A_validation,
-				RealMatrix &B_validation,
-				RealVector &predictor_opts,
-				IndicatorFunction *indicator_function,
-				RealMatrixArray &indicators_list,
-				RealMatrixArray &predictor_options_list,
-				FaultInfo &fault_info,
-				const SizetShortMap& failed_resp_data,
-				IntVector &training_indices,
-				IntVector &validation_indices )
-{
+  void linear_predictor_analyser( RealMatrix &A_training, 
+				  RealMatrix &B_training, 
+				  RealMatrix &A_validation,
+				  RealMatrix &B_validation,
+				  RealVector &predictor_opts,
+				  IndicatorFunction *indicator_function,
+				  RealMatrixArray &indicators_list,
+				  RealMatrixArray &predictor_options_list,
+				  FaultInfo &fault_info,
+				  const SizetShortMap& failed_resp_data,
+				  IntVector &training_indices,
+				  IntVector &validation_indices )
+  {
  
-  // Extract the predictor options and store in the format needed
-  CompressedSensingOptions cs_opts;
-  set_linear_predictor_options( predictor_opts, cs_opts );
+    // Extract the predictor options and store in the format needed
+    CompressedSensingOptions cs_opts;
+    set_linear_predictor_options( predictor_opts, cs_opts );
 
-  // Compute a set of coefficients that solve the linear system
-  // Ax = b, where A = training_samples and b = training_values;
-  CompressedSensingTool cs_tool;
-  RealMatrixArray coefficient_sets;
-  CompressedSensingOptionsList cs_opts_list;
-  remove_faulty_data( A_training, B_training, training_indices,
-  		      fault_info, failed_resp_data );
+    // Compute a set of coefficients that solve the linear system
+    // Ax = b, where A = training_samples and b = training_values;
+    CompressedSensingTool cs_tool;
+    RealMatrixArray coefficient_sets;
+    CompressedSensingOptionsList cs_opts_list;
+    RealMatrix points_dummy;
+    remove_faulty_data( A_training, B_training, points_dummy, training_indices,
+			fault_info, failed_resp_data );
 
-  remove_faulty_data( A_validation, B_validation, validation_indices,
-		      fault_info, failed_resp_data );
+    remove_faulty_data( A_validation, B_validation, points_dummy, 
+			validation_indices,
+			fault_info, failed_resp_data );
   
-  cs_tool.solve( A_training, B_training, coefficient_sets,
-		 cs_opts, cs_opts_list );
+    cs_tool.solve( A_training, B_training, coefficient_sets,
+		   cs_opts, cs_opts_list );
 
-  // Convert cs_opts_list into predictor_options_list
-  extract_linear_predictor_options( cs_opts_list, predictor_options_list );
+    // Convert cs_opts_list into predictor_options_list
+    extract_linear_predictor_options( cs_opts_list, predictor_options_list );
 
-  // Evaluate the predictor on the validation data
-  int num_qoi( coefficient_sets.size() );
-  int num_validation_samples( B_validation.numRows() );
+    // Evaluate the predictor on the validation data
+    int num_qoi( coefficient_sets.size() );
+    int num_validation_samples( B_validation.numRows() );
 
-  indicators_list.resize( num_qoi );
-  for ( int k = 0; k < num_qoi; k++ )
-    {
-      RealMatrix B_prediction( A_validation.numRows(), 
-			       coefficient_sets[k].numCols() );
-      // Use the linear model to predict at the validation points
-      B_prediction.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0,
-			     A_validation, coefficient_sets[k], 0.0 );
+    indicators_list.resize( num_qoi );
+    for ( int k = 0; k < num_qoi; k++ )
+      {
+	RealMatrix B_prediction( A_validation.numRows(), 
+				 coefficient_sets[k].numCols() );
+	// Use the linear model to predict at the validation points
+	B_prediction.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0,
+			       A_validation, coefficient_sets[k], 0.0 );
 
-      // Get view of validation data
-      RealMatrix b_validation( Teuchos::View, B_validation, 
-			       num_validation_samples, 1,
-			       0, k );
+	// Get view of validation data
+	RealMatrix b_validation( Teuchos::View, B_validation, 
+				 num_validation_samples, 1,
+				 0, k );
       
-      // The number of coefficients sets can be different for each QOI
-      int num_coefficient_sets( coefficient_sets[k].numCols() );
-      indicators_list[k].shapeUninitialized( num_coefficient_sets, 1 );
-      for ( int j = 0; j < num_coefficient_sets; j++ )
-	{
-	  // Get view of prediction data for the jth predictor created
-	  RealMatrix b_prediction( Teuchos::View, B_prediction, 
-				   num_validation_samples, 1,
-				   0, j );
-	  // Get view of indicator elements to avoid unnecessary copying
-	  RealMatrix indicators( Teuchos::View, indicators_list[k], 
-				 1, 1, j, 0 );
-	  indicator_function( b_validation, b_prediction, indicators );
-	}
-    }
-};
+	// The number of coefficients sets can be different for each QOI
+	int num_coefficient_sets( coefficient_sets[k].numCols() );
+	indicators_list[k].shapeUninitialized( num_coefficient_sets, 1 );
+	for ( int j = 0; j < num_coefficient_sets; j++ )
+	  {
+	    // Get view of prediction data for the jth predictor created
+	    RealMatrix b_prediction( Teuchos::View, B_prediction, 
+				     num_validation_samples, 1,
+				     0, j );
+	    // Get view of indicator elements to avoid unnecessary copying
+	    RealMatrix indicators( Teuchos::View, indicators_list[k], 
+				   1, 1, j, 0 );
+	    indicator_function( b_validation, b_prediction, indicators );
+	  }
+      }
+  };
 
-void linear_predictor_best_options_extractor( RealMatrix2DArray &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options )
-{
-  int num_partitions = partition_options.size(), 
-    num_qoi = best_predictor_indices.length();
+  void linear_predictor_best_options_extractor( RealMatrix2DArray &partition_options, IntVector &best_predictor_indices, int num_training_samples, int num_samples, RealMatrix &best_predictor_options )
+  {
+    int num_partitions = partition_options.size(), 
+      num_qoi = best_predictor_indices.length();
   
-  for ( int k = 0; k < num_qoi; k++ )
-    {
-      RealArray epsilons( num_partitions );
+    for ( int k = 0; k < num_qoi; k++ )
+      {
+	RealArray epsilons( num_partitions );
 
-      // Get the average number of max_iterations and the average residual
-      // for the best predictors
-      Real ave_epsilon( 0.0 );
-      int best_max_num_iterations( 0 );
-      int argmin_k = best_predictor_indices[k];
-      for ( int i = 0; i < num_partitions; i++ )
-	{
-	  epsilons[i] = partition_options[i][k](2,argmin_k);
+	// Get the average number of max_iterations and the average residual
+	// for the best predictors
+	Real ave_epsilon( 0.0 );
+	int best_max_num_iterations( 0 );
+	int argmin_k = best_predictor_indices[k];
+	for ( int i = 0; i < num_partitions; i++ )
+	  {
+	    epsilons[i] = partition_options[i][k](2,std::min(argmin_k, partition_options[i][k].numCols()-1) );
 	  ave_epsilon += epsilons[i];
 	  //best_max_num_iterations += partition_options[i][k](4,argmin_k);
 	  best_max_num_iterations += argmin_k;
@@ -144,11 +146,12 @@ void linear_predictor_best_options_extractor( RealMatrix2DArray &partition_optio
       best_max_num_iterations /= num_partitions;
       best_max_num_iterations = std::ceil( (Real)best_max_num_iterations *
 					   sample_size_ratio )+1;
+      best_max_num_iterations = std::numeric_limits<int>::max();
       // Copy the partition_options of the best predictor for the
       // first parition. Then adjust the values that can vary with the
       // partition with their averages
       RealVector best_opts_k( Teuchos::View, 
-			      partition_options[0][k][argmin_k],
+			      partition_options[0][k][std::min(argmin_k,partition_options[0][k].numCols()-1)],
 			      partition_options[0][k].numRows() );
       append_column( best_opts_k, best_predictor_options );
       best_predictor_options(2,k) = best_epsilon;

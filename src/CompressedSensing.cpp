@@ -1710,6 +1710,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	  {
 	    std::string msg = "CompressedSensingTool::solve() ";
 	    msg += " incorrect solver specified";
+	    PCout << "solver = " << solver << std::endl;
 	    throw( std::runtime_error( msg ) );
 	  }
 	}
@@ -1843,6 +1844,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	      {
 		std::string msg = "CompressedSensingTool::solve() ";
 		msg += " incorrect solver specified";
+		PCout << "solver = " << solver << std::endl;
 		throw( std::runtime_error( msg ) );
 	      }
 	    };
