@@ -75,7 +75,7 @@ SurrogateDataVarsRep(const RealVector& c_vars, const IntVector& di_vars,
     if (di_vars.length())
       discreteIntVars
 	= IntVector(Teuchos::View,  di_vars.values(), di_vars.length());
-    if (di_vars.length())
+    if (dr_vars.length())
       discreteRealVars
 	= RealVector(Teuchos::View, dr_vars.values(), dr_vars.length());
   }
