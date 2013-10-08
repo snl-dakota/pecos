@@ -85,10 +85,7 @@ Real (*BoostRNG_Monostate::randomNum2)() = BoostRNG_Monostate::random_num1;
 } // namespace Pecos
 
 
-#if ( defined(HAVE_LHS) && defined(HAVE_CONFIG_H) )
-#define rnum1 FC_FUNC(rnumlhs1,RNUMLHS1)
-#define rnum2 FC_FUNC(rnumlhs2,RNUMLHS2)
-#elif HAVE_LHS
+#ifdef HAVE_LHS
 #include "LHS.h"
 #define rnum1 LHS_GLOBAL(rnumlhs1,RNUMLHS1)
 #define rnum2 LHS_GLOBAL(rnumlhs2,RNUMLHS2)
