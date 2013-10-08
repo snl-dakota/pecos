@@ -125,34 +125,35 @@ void LHSDriver::seed(int seed)
 }
 
 
-void LHSDriver::rng(const String& unif_gen)
+void LHSDriver::rng(String unif_gen)
 {
-  static int first = 1;
-  static const char *s;
-  if (first) {
-    s = std::getenv("DAKOTA_LHS_UNIFGEN");
-    first = 0;
+
+  // check the environment (once only) for an RNG preference and cache it
+  static bool first_entry = true;
+  static const char *env_unifgen;
+  if (first_entry) {
+    env_unifgen = std::getenv("DAKOTA_LHS_UNIFGEN");
+    first_entry = false;
   }
-  if (s) {
-    if (!std::strcmp(s, "rnum2"))
-      goto use_rnum;
-    else if (!std::strcmp(s, "mt19937"))
-      goto use_mt;
-    else {
+
+  // the environment overrides the passed rng specification
+  if (env_unifgen) {
+    unif_gen = env_unifgen;
+    if (unif_gen != "rnum2" && unif_gen != "mt19937") {
       PCerr << "Error: LHSDriver::rng() expected $DAKOTA_LHS_UNIFGEN to be "
-	    << "\"rnum2\" or \"mt19937\", not \"" << s << "\".\n"
+	    << "\"rnum2\" or \"mt19937\", not \"" << env_unifgen << "\".\n"
 	    << std::endl;
       abort_handler(-1);
     }
   }
+
+  // now point the monostate RNG to the desired generator function
   if (unif_gen == "mt19937" || unif_gen.empty()) {
-  use_mt:
     BoostRNG_Monostate::randomNum  = BoostRNG_Monostate::random_num1;
     BoostRNG_Monostate::randomNum2 = BoostRNG_Monostate::random_num1;
     allowSeedAdvance &= ~2; // drop 2 bit: disallow repeated seed update
   }
   else if (unif_gen == "rnum2") {
-  use_rnum:
 #ifdef HAVE_LHS
     BoostRNG_Monostate::randomNum  = (Rfunc)rnumlhs10;
     BoostRNG_Monostate::randomNum2 = (Rfunc)rnumlhs20;

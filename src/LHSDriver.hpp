@@ -52,8 +52,11 @@ public:
   /// return randomSeed
   int seed() const;
 
-  /// set random number generator
-  void rng(const String& unif_gen);
+  /// set random number generator, passing the name of the uniform
+  /// generator: rnum2 or mt19937 (default).  Passed value is
+  /// superceded by environment variable DAKOTA_LHS_UNIFGEN, if
+  /// present
+  void rng(String unif_gen);
   // return name of uniform generator
   //String rng();
 
