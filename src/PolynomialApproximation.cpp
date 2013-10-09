@@ -874,4 +874,12 @@ void PolynomialApproximation::increment_order()
   abort_handler(-1);
 }
 
+
+void PolynomialApproximation::update_order(const UShortArray& order)
+{
+  PCerr << "Error: update_order() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+}
+
 } // namespace Pecos

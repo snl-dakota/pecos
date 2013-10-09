@@ -96,6 +96,8 @@ protected:
 
   /// uniformly increment approxOrder
   void increment_order();
+  /// replace approxOrder with incoming order
+  void update_order(const UShortArray& order);
 
   /// retrieve the response PCE value for a given parameter vector
   Real value(const RealVector& x);
@@ -335,6 +337,16 @@ inline void OrthogPolyApproximation::increment_order()
   // increment_expansion(), but multiIndex update can wait until
   // compute_coefficients() => allocate_arrays().
   numExpansionTerms = total_order_terms(approxOrder);
+}
+
+
+inline void OrthogPolyApproximation::update_order(const UShortArray& order)
+{
+  approxOrder = order;
+  // need numExpansionTerms updated for use in NonDPolynomialChaos::
+  // increment_expansion(), but multiIndex update can wait until
+  // compute_coefficients() => allocate_arrays().
+  //numExpansionTerms = total_order_terms(approxOrder);
 }
 
 

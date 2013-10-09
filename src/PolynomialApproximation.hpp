@@ -319,8 +319,11 @@ public:
   /// estimate expansion coefficient decay rates for each random
   /// variable dimension (OrthogPolyApproximation only)
   virtual const RealVector& dimension_decay_rates();
+
   /// increment the approximation order (OrthogPolyApproximation only)
   virtual void increment_order();
+  /// update the approximation order (OrthogPolyApproximation only)
+  virtual void update_order(const UShortArray& order);
 
   /// size component Sobol arrays
   virtual void allocate_component_sobol() = 0;
