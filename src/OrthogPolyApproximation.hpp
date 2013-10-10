@@ -47,6 +47,8 @@ public:
 
   /// get numExpansionTerms
   int expansion_terms() const;
+  /// get approxOrder
+  const UShortArray& expansion_order() const;
 
   /// invoke initialize_basis_types(), initialize_polynomial_basis(),
   /// and, if needed, update_basis_distribution_parameters()
@@ -372,6 +374,10 @@ inline const RealVector& OrthogPolyApproximation::moments() const
 
 inline int OrthogPolyApproximation::expansion_terms() const
 { return numExpansionTerms; }
+
+
+inline const UShortArray& OrthogPolyApproximation::expansion_order() const
+{ return approxOrder; }
 
 
 /** This function is invoked to create basisTypes and polynomialBasis
