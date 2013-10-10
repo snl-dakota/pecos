@@ -29,8 +29,8 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_CORR2_FC    FC_FUNC_(lhs_corr2,LHS_CORR2)
 #define LHS_FILES2_FC   FC_FUNC_(lhs_files2,LHS_FILES2)
 
-#define rnumlhs10       FC_FUNC(rnumlhs10,RNUMLHS10)
-#define rnumlhs20       FC_FUNC(rnumlhs20,RNUMLHS20)
+#define defaultrnum1       FC_FUNC(defaultrnum1,DEFAULTRNUM1)
+#define defaultrnum2       FC_FUNC(defaultrnum2,DEFAULTRNUM2)
 
 #else
 // Use the CMake-generated PREFIXED, fortran name mangling macros (no warnings)
@@ -44,9 +44,10 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_CONST2_FC   LHS_GLOBAL_(lhs_const2,LHS_CONST2)
 #define LHS_CORR2_FC    LHS_GLOBAL_(lhs_corr2,LHS_CORR2)
 #define LHS_FILES2_FC   LHS_GLOBAL_(lhs_files2,LHS_FILES2)
+#define defaultrnum1    LHS_GLOBAL(defaultrnum1,DEFAULTRNUM1)
+#define defaultrnum2    LHS_GLOBAL(defaultrnum2,DEFAULTRNUM2)
 
-#define rnumlhs10       LHS_GLOBAL(rnumlhs10,RNUMLHS10)
-#define rnumlhs20       LHS_GLOBAL(rnumlhs20,RNUMLHS20)
+
 
 #endif // HAVE_CONFIG_H
 
@@ -91,8 +92,11 @@ void LHS_FILES2_FC( const char* lhsout, const char* lhsmsg, const char* lhstitl,
 //               char* dist_names, int* name_order, double* ptvals,
 //               int* num_names, double* sample_matrix, int* num_vars );
 
-Pecos::Real rnumlhs10( void );
-Pecos::Real rnumlhs20( void );
+Pecos::Real defaultrnum1( void );
+Pecos::Real defaultrnum2( void );
+
+//Pecos::Real rnumlhs10( void );
+//Pecos::Real rnumlhs20( void );
 
 }
 #endif // HAVE_LHS
@@ -117,7 +121,7 @@ void LHSDriver::seed(int seed)
 {
   randomSeed = seed;
   // The Boost RNG is not set by LHS_INIT_MEM, so must be done here.
-  if (BoostRNG_Monostate::randomNum == BoostRNG_Monostate::random_num1)
+  if (BoostRNG_Monostate::randomNum == BoostRNG_Monostate::mt19937)
     BoostRNG_Monostate::seed(seed);
   // This would be redundant since the f77 ISeed is set in LHS_INIT_MEM:
   //else
@@ -149,14 +153,14 @@ void LHSDriver::rng(String unif_gen)
 
   // now point the monostate RNG to the desired generator function
   if (unif_gen == "mt19937" || unif_gen.empty()) {
-    BoostRNG_Monostate::randomNum  = BoostRNG_Monostate::random_num1;
-    BoostRNG_Monostate::randomNum2 = BoostRNG_Monostate::random_num1;
+    BoostRNG_Monostate::randomNum  = BoostRNG_Monostate::mt19937;
+    BoostRNG_Monostate::randomNum2 = BoostRNG_Monostate::mt19937;
     allowSeedAdvance &= ~2; // drop 2 bit: disallow repeated seed update
   }
   else if (unif_gen == "rnum2") {
 #ifdef HAVE_LHS
-    BoostRNG_Monostate::randomNum  = (Rfunc)rnumlhs10;
-    BoostRNG_Monostate::randomNum2 = (Rfunc)rnumlhs20;
+    BoostRNG_Monostate::randomNum  = (Rfunc)defaultrnum1;
+    BoostRNG_Monostate::randomNum2 = (Rfunc)defaultrnum2;
     allowSeedAdvance |= 2;  // add 2 bit: allow repeated seed update
 #else
     PCerr << "Error: LHSDriver::rng() Use of rnum2 for RNG selection is NOT "

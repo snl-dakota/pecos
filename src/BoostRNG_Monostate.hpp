@@ -22,24 +22,24 @@
 
 
 // BoostRNG_Monostate helps replace the default LHS rnumlhs1/rnumlhs2
-// RNGs. Summary of random number generator replacement call chain:
+// RNGs. In standalone LHS, these functions are provided by LHS (see 
+// Lhs_drv.f90), but BoostRNG_Monostate provides them when LHS is compiled as a
+// library for use by Dakota. This permits user-selectable RNG, either LHS
+// default or mt19937 provided by Boost.
+//
+// Summary of random number generator replacement call chain:
 //
 // * LHS calls to RNG call RNUMLHS1, RNUMLHS2, which return double
 //
-// * BoostRNG_Monostate defines global symbols RNUMLHS1, RNUMLHS2 to
-//   point to class BoostRNG_Monostate::randomNum(), randomNum2().
+// * BoostRNG_Monostate defines global symbols RNUMLHS1, RNUMLHS2 which
+//   forward calls to BoostRNG_Monostate::randomNum(), randomNum2().
 //   These replace those provided by LHS, so symbol resolution at link
 //   time remains important.
 //
 // * randomNum/randomNum2 default to point to
-//   BoostRNG_Monostate::random_num1 (Boost mt19937), but can be
-//   overridden by LHSDriver to point to rnumlhs10/rnumlhs20, provided
-//   by LHS
+//   BoostRNG_Monostate::mt19937 (Boost mt19937), but can be overridden by 
+//   LHSDriver to point to defaultrnum1, defaultrnum2, provided by LHS
 //
-// * RnumLHS10.f90 and RnumLHS20.f90 are copies of RnumLHS1.f90 and
-//   RnumLHS2.f90, respectively.  These provide the necessary
-//   redirection for Pecos to call back into LHS, without a cyclic
-//   call to rnumlhs1/rnumlhs2.
 
 
 namespace Pecos {
@@ -49,8 +49,8 @@ typedef Real (*Rfunc)();
 
 /** The monostate BoostRNG class provides static pointers randomNum
     and randomNum2 that at runtime will either point to
-    BoostRNG_Monostate::random_num1, or be overridden to point to
-    lhsrnum10 / lhsrnum20.  At construct time they point to the
+    BoostRNG_Monostate::mt19937, or be overridden to point to
+    defaultnum1 / defaultrnum2.  At construct time they point to the
     BoostRNG_Monostate generators. */
 class BoostRNG_Monostate
 {
@@ -76,7 +76,7 @@ public:
   /// return randomSeed
   static unsigned int seed();
 
-  static Real random_num1();
+  static Real mt19937();
 
   //
   //- Heading: Data
@@ -94,7 +94,7 @@ inline void BoostRNG_Monostate::seed(unsigned int rng_seed)
 inline unsigned int BoostRNG_Monostate::seed()
 { return rngSeed; }
 
-inline Real BoostRNG_Monostate::random_num1()
+inline Real BoostRNG_Monostate::mt19937()
 { return uniMT(); }
 
 unsigned int BoostRNG_Monostate::rngSeed(41u); // 41 used in the Boost examples
@@ -107,15 +107,15 @@ boost::variate_generator<boost::mt19937&, boost::uniform_real<> >
   BoostRNG_Monostate::uniMT(BoostRNG_Monostate::rnumGenerator,
                             BoostRNG_Monostate::uniDist);
  
-Real (*BoostRNG_Monostate::randomNum)()  = BoostRNG_Monostate::random_num1;
-Real (*BoostRNG_Monostate::randomNum2)() = BoostRNG_Monostate::random_num1;
+Real (*BoostRNG_Monostate::randomNum)()  = BoostRNG_Monostate::mt19937;
+Real (*BoostRNG_Monostate::randomNum2)() = BoostRNG_Monostate::mt19937;
 } // namespace Pecos
 
 
 // This section defines Fortran 90 functions rnumlhs1 and rnumlhs2,
 // which forward to the BoostRNG_Monostate randomNum and randomNum2
 // functions (which may further delegate to Boost or back to LHS
-// rnumlhs10/rnumlhs20).  LHS will call Fortran-mangled versions of
+// defaultrnum1/defaultrnum2).  LHS will call Fortran-mangled versions of
 // rnumlhs1 and rnumlhs2 throughout its code.
 
 #ifdef HAVE_LHS
