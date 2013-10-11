@@ -1138,7 +1138,7 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
   if ( delta > std::numeric_limits<Real>::epsilon() )
     max_num_covariates = std::min( N, max_num_iterations );
   
-  int max_num_iter = std::min( 2*M, max_num_iterations );
+  int max_num_iter = std::min( 10*M, max_num_iterations );
 
   // Lasso will usually require more iterations than max covariates
   // as variables are added and deleted during the algorithm. However
