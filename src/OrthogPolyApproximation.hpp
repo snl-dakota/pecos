@@ -79,7 +79,7 @@ protected:
   void store_coefficients();
   void combine_coefficients(short combine_type);
 
-  void print_coefficients(std::ostream& s) const;
+  void print_coefficients(std::ostream& s, bool normalized = false);
 
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);

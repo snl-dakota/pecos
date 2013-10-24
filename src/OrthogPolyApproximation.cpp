@@ -1184,14 +1184,19 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 }
 
 
-void OrthogPolyApproximation::print_coefficients(std::ostream& s) const
+void OrthogPolyApproximation::
+print_coefficients(std::ostream& s, bool normalized)
 {
   size_t i, j;
   char tag[10];
 
   // terms and term identifiers
   for (i=0; i<numExpansionTerms; ++i) {
-    s << "\n  " << std::setw(WRITE_PRECISION+7) << expansionCoeffs[i];
+    s << "\n  " << std::setw(WRITE_PRECISION+7);
+    if (normalized) // basis is divided by norm, so coeff is multiplied by norm
+      s << expansionCoeffs[i] * std::sqrt(norm_squared(multiIndex[i]));
+    else
+      s << expansionCoeffs[i];
     for (j=0; j<numVars; ++j) {
       get_tag(tag, i, j);
       s << std::setw(5) << tag;
@@ -1248,8 +1253,8 @@ void OrthogPolyApproximation::get_tag(char* tag, size_t i, size_t j) const
     std::sprintf(tag, "Num%i", multiIndex[i][j]);
     break;
   default:
-    PCerr << "Error: bad polynomial type = " << basisTypes[j] << " in "
-	  << "OrthogPolyApproximation::print_coefficients()." << std::endl;
+    PCerr << "Error: bad polynomial type = " << basisTypes[j]
+	  << " in OrthogPolyApproximation::get_tag()." << std::endl;
     abort_handler(-1);
     break; 
   }

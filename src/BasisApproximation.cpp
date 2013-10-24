@@ -347,10 +347,10 @@ size_t BasisApproximation::finalization_index(size_t i)
 }
 
 
-void BasisApproximation::print_coefficients(std::ostream& s) const
+void BasisApproximation::print_coefficients(std::ostream& s, bool normalized)
 {
   if (basisApproxRep)
-    basisApproxRep->print_coefficients(s);
+    basisApproxRep->print_coefficients(s, normalized);
   else {
     PCerr << "Error: print_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;

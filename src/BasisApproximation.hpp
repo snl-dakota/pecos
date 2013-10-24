@@ -84,7 +84,7 @@ public:
   virtual void combine_coefficients(short combine_type);
 
   /// print the coefficient array computed in compute_coefficients()
-  virtual void print_coefficients(std::ostream& s) const;
+  virtual void print_coefficients(std::ostream& s, bool normalized = false);
 
   /// return the coefficient array computed by compute_coefficients()
   virtual const RealVector& approximation_coefficients() const;
