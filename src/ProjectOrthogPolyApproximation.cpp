@@ -1413,7 +1413,6 @@ Real ProjectOrthogPolyApproximation::stored_value(const RealVector& x)
   }
 }
 
-
 Real ProjectOrthogPolyApproximation::
 tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
 		     const UShortArray& approx_order,
@@ -1449,4 +1448,63 @@ tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
   return tp_val;
 }
 
+
+/*
+Real ProjectOrthogPolyApproximation::
+tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
+		     const UShortArray& approx_order,
+		     const UShort2DArray& tp_mi, RealVector& accumulator)
+{
+  //PCout << "test\n";
+  unsigned short ao_0 = approx_order[0], ao_j, mi_i0, mi_ij;
+  size_t i, j, num_tp_coeffs = tp_coeffs.length();
+  BasisPolynomial& poly_0 = polynomialBasis[0]; Real x0 = x[0];
+  Teuchos::SerialDenseVector<unsigned short,unsigned short> 
+    max_order_1d( numVars );
+  std::vector< std::set<unsigned short> > orders_1d( numVars );
+  for (i=0; i<num_tp_coeffs; ++i) {
+    const UShortArray& tp_mi_i = tp_mi[i];
+    for (j=0; j<numVars; ++j) {
+      max_order_1d[j] = std::max( max_order_1d[j], tp_mi_i[j] );
+      orders_1d[j].insert( tp_mi_i[j] );
+    }
+  }
+  std::vector< RealVector > bases_1d( numVars );
+  std::set<unsigned short>::iterator it;
+  for (j=0; j<numVars; ++j) {
+    bases_1d[j].size( max_order_1d[j] );
+    for ( it = orders_1d[j].begin(); it != orders_1d[j].end(); ++it )
+      bases_1d[j][*it] = polynomialBasis[j].type1_value( x[j], *it );
+  }
+
+  for (i=0; i<num_tp_coeffs; ++i) {
+    const UShortArray& tp_mi_i = tp_mi[i]; mi_i0 = tp_mi_i[0];
+    if (ao_0)
+    //accumulator[0] += (mi_i0) ? tp_coeffs[i] * poly_0.type1_value(x0, mi_i0)
+      //: tp_coeffs[i];
+      accumulator[0] += (mi_i0) ? tp_coeffs[i] * bases_1d[0][mi_i0] :
+	tp_coeffs[i];
+    else
+      accumulator[0]  = tp_coeffs[i];
+    if (mi_i0 == ao_0) {
+      // accumulate sums over variables with max key value
+      for (j=1; j<numVars; ++j) {
+	mi_ij = tp_mi_i[j]; ao_j = approx_order[j];
+	if (ao_j)
+	  accumulator[j] += (mi_ij) ? accumulator[j-1] *
+	    //polynomialBasis[j].type1_value(x[j], mi_ij) : accumulator[j-1];
+	    bases_1d[j][mi_ij] : accumulator[j-1];
+	else
+	  accumulator[j]  = accumulator[j-1];
+	accumulator[j-1] = 0.;
+	if (mi_ij != ao_j)
+	  break;
+      }
+    }
+  }
+  Real tp_val = accumulator[numVars-1];
+  accumulator[numVars-1] = 0.;
+  return tp_val;
+}
+*/
 } // namespace Pecos
