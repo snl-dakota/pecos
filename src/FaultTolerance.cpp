@@ -111,7 +111,7 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
   if ( ( multiple_rhs ) || ( num_coef_rhs == 1 ) )
     {
       // A  = [A_fn; A_grad]
-      size_t i, j, k, l, a_fn_cntr, a_grad_cntr;
+      size_t i, j, k, l, a_fn_cntr=0, a_grad_cntr=0;
       // Initialise memory of A_fn and A_grad to largest possible sizes.
       // cross validation will result in not all entries being filled.
       // thus we must resize after the entries are added.
