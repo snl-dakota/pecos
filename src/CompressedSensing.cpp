@@ -1289,7 +1289,10 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  column_append( A_col, A_sparse );
 	  active_indices.push_back( index_to_add );
 	  inactive_index_iter = inactive_indices.find( index_to_add );
-	  inactive_indices.erase( inactive_index_iter );
+	  // BMA the index is not found for at least one instance when running
+	  // dakota_pcbdo_cantilever.in:4,5,6,7
+	  if (inactive_index_iter != inactive_indices.end())
+	    inactive_indices.erase( inactive_index_iter );
 	  num_covariates = (int)active_indices.size();
 
 	  // store which variable was added to the active index set
