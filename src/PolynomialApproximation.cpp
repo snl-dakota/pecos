@@ -205,12 +205,12 @@ void PolynomialApproximation::allocate_component_sobol()
   // default implementation is reasonable for tensor expansions, but is
   // wasteful (and should be overridden) for total-order and sparse 
   // sum-of-tensor (which emulate total-order) expansions.
-  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
+  if (expConfigOptions.vbdFlag && expConfigOptions.expansionCoeffFlag &&
       sobolIndices.empty()) {
-    switch (expConfigOptions.vbdControl) {
-    case UNIVARIATE_VBD: // main effects only
+    switch (expConfigOptions.vbdOrderLimit) {
+    case 1: // main effects only
       allocate_main_sobol();                    break;
-    case ALL_VBD: // main + all n-way interactions
+    default: // main + interactions
       allocate_main_interaction_sobol(numVars); break;
     }
   }
@@ -281,37 +281,47 @@ allocate_main_interaction_sobol(unsigned short max_order)
 void PolynomialApproximation::allocate_total_sobol()
 {
   // number of total indices independent of number of component indices
-  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag &&
+  if (expConfigOptions.vbdFlag && expConfigOptions.expansionCoeffFlag &&
       totalSobolIndices.empty())
     totalSobolIndices.sizeUninitialized(numVars);
-}
-
-
-void PolynomialApproximation::reset_sobol_index_map_values()
-{
-  for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
-    it->second = it->first.count(); // order of interaction
 }
 
 
 void PolynomialApproximation::
 multi_index_to_sobol_index_map(const UShort2DArray& mi)
 {
-  BitArray set(numVars); size_t i, j, num_mi = mi.size();
+  // component Sobol' indices are limited by two factors:
+  // (1) the terms appearing in the multi-index
+  // (2) an additional user specification (interactionOrderLimit)
+
+  BitArray set(numVars);
+  size_t i, j, interactions, num_mi = mi.size();
   for (i=0; i<num_mi; ++i) {
     // determine the bit set corresponding to this expansion term
+    interactions = 0;
     for (j=0; j<numVars; ++j)
-      if (mi[i][j]) set.set(j);   //   activate bit j
-      else          set.reset(j); // deactivate bit j
+      if (mi[i][j]) { set.set(j); ++interactions; } // activate bit j
+      else          set.reset(j);                 // deactivate bit j
 
     // If set does not already exist, insert it.
     // For value in key-value pair, initially use the interaction order;
     // will be updated below in sobol_index_map_to_sobol_indices().  The
     // 0-way interaction is included to support child lookup requirements
     // in InterpPolyApproximation::compute_partial_variance().
-    if (sobolIndexMap.find(set) == sobolIndexMap.end())
-      sobolIndexMap[set] = set.count(); // order of interaction
+    if ( ( !expConfigOptions.vbdOrderLimit ||                // no limit
+	   interactions <= expConfigOptions.vbdOrderLimit )  // within limit
+	 && sobolIndexMap.find(set) == sobolIndexMap.end() ) // new set
+      sobolIndexMap[set] = interactions; // order of interaction
   }
+}
+
+
+void PolynomialApproximation::reset_sobol_index_map_values()
+{
+  // return sobolIndexMap values to the order of interaction
+  // (the starting point for sobol_index_map_to_sobol_indices())
+  for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+    it->second = it->first.count(); // order of interaction
 }
 
 

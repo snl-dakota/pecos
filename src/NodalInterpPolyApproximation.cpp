@@ -25,11 +25,12 @@ namespace Pecos {
 
 void NodalInterpPolyApproximation::allocate_component_sobol()
 {
-  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag) {
-    switch (expConfigOptions.vbdControl) {
-    case ALL_VBD: { // main + interaction effects
+  if (expConfigOptions.vbdFlag && expConfigOptions.expansionCoeffFlag) {
+    if (expConfigOptions.vbdOrderLimit == 1) // main effects only
+      { if (sobolIndices.empty()) allocate_main_sobol(); }
+    else { // main + interaction effects
 
-      // One idea is to leverage PCE equivalence.  The exact order of the
+      // One approach is to leverage PCE equivalence.  The exact order of the
       // interpolation polynomial (e.g., for nested rules, local or
       // gradient-enhanced interpolants) is not critical for defining
       // interactions; the issue is more the presence of constant dimensions.
@@ -57,18 +58,12 @@ void NodalInterpPolyApproximation::allocate_component_sobol()
       }
       sobol_index_map_to_sobol_indices();
 
-      // another idea is to interrogate polynomialBasis[].interpolation_size()
+      // another approach: interrogate polynomialBasis[].interpolation_size()
       // or the quadrature/sparse level indices, again focusing on the presence
       // of constant dimensions (size = 1, level = 0).  But given the need to
       // regenerate the effect combinations from this reduced order data, the
       // collocation key idea seems preferable since it's already available.
       //polynomial_basis_to_sobol_indices();
-
-      break;
-    }
-    case UNIVARIATE_VBD: // main effects only
-      if (sobolIndices.empty()) allocate_main_sobol();
-      break;
     }
   }
 }
@@ -76,7 +71,7 @@ void NodalInterpPolyApproximation::allocate_component_sobol()
 
 void NodalInterpPolyApproximation::increment_component_sobol()
 {
-  if (expConfigOptions.vbdControl == ALL_VBD &&
+  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1 &&
       expConfigOptions.expansionCoeffFlag) {
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     if (csg_driver->smolyak_coefficients().back()) {

@@ -51,8 +51,8 @@ public:
   ExpansionConfigOptions();
   /// constructor
   ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-			 bool  exp_grad_flag, short output_level,
-			 short vbd_cntl,      //short refine_type,
+			 bool exp_grad_flag, short output_level, bool vbd_flag,
+			 unsigned short vbd_order, //short refine_type,
 			 short refine_cntl, int max_iter, Real conv_tol);
   /// destructor
   ~ExpansionConfigOptions();
@@ -73,9 +73,11 @@ public:
   /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   short outputLevel;
 
-  /// control for amount of data computed in variance-based decomposition:
-  /// {NO,UNIVARIATE,ALL}_VBD
-  short vbdControl;
+  /// flag indicated use of variance-based decomposition for computing
+  /// Sobol' indices
+  bool vbdFlag;
+  /// limit for order of interactions computed in variance-based decomposition
+  unsigned short vbdOrderLimit;
 
   // type of refinement: {NO,P,H}_REFINEMENT
   //short refinementType;
@@ -94,19 +96,19 @@ public:
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
   expansionCoeffGradFlag(false), outputLevel(NORMAL_OUTPUT),
-  vbdControl(NO_VBD),            //refinementType(NO_REFINEMENT),
+  vbdFlag(false), vbdOrderLimit(0), //refinementType(NO_REFINEMENT),
   refinementControl(NO_CONTROL), maxIterations(100), convergenceTol(1.e-4)
 { }
 
 
 inline ExpansionConfigOptions::
 ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-		       bool  exp_grad_flag, short output_level,
-		       short vbd_cntl,      //short refine_type,
+		       bool exp_grad_flag, short output_level, bool vbd_flag,
+		       unsigned short vbd_order, //short refine_type,
 		       short refine_cntl, int max_iter, Real conv_tol):
   expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
   expansionCoeffGradFlag(exp_grad_flag), outputLevel(output_level),
-  vbdControl(vbd_cntl),                  //refinementType(refine_type),
+  vbdFlag(vbd_flag), vbdOrderLimit(vbd_order), //refinementType(refine_type),
   refinementControl(refine_cntl), maxIterations(max_iter),
   convergenceTol(conv_tol)
 { }
@@ -381,10 +383,15 @@ public:
   /// get ExpansionConfigOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
-  /// set ExpansionConfigOptions::vbdControl
-  void vbd_control(short vbd_cntl);
-  /// get ExpansionConfigOptions::vbdControl
-  short vbd_control() const;
+  /// set ExpansionConfigOptions::vbdFlag
+  void vbd_flag(bool flag);
+  /// get ExpansionConfigOptions::vbdFlag
+  bool vbd_flag() const;
+
+  /// set ExpansionConfigOptions::vbdOrderLimit
+  void vbd_order_limit(unsigned short vbd_order);
+  /// get ExpansionConfigOptions::vbdOrderLimit
+  unsigned short vbd_order_limit() const;
 
   // set ExpansionConfigOptions::refinementType
   //void refinement_type(short refine_type);
@@ -495,11 +502,14 @@ protected:
   // effects including m-way interactions for m <= max_order
   //void allocate_main_interaction_sobol(unsigned short max_order);
 
-  /// return the sobolIndexMap values to interaction orders, prior to
-  /// updating with multi-index increments
-  void reset_sobol_index_map_values();
-  /// Define the Sobol' index sets from the incoming multi-index
+  /// Define the sobolIndexMap (which defines the set of Sobol' indices)
+  /// from the incoming multi-index.  sobolIndexMap values are initialized
+  /// to interaction orders, prior to updating with multi-index increments
+  /// in sobol_index_map_to_sobol_indices().
   void multi_index_to_sobol_index_map(const UShort2DArray& mi);
+  /// return the sobolIndexMap values to interaction orders, prior to updating
+  /// with multi-index increments in sobol_index_map_to_sobol_indices().
+  void reset_sobol_index_map_values();
   /// Define the mapping from sobolIndexMap into sobolIndices
   void sobol_index_map_to_sobol_indices();
 
@@ -666,12 +676,20 @@ expansion_coefficient_gradient_flag() const
 { return expConfigOptions.expansionCoeffGradFlag; }
 
 
-inline void PolynomialApproximation::vbd_control(short vbd_cntl)
-{ expConfigOptions.vbdControl = vbd_cntl; }
+inline void PolynomialApproximation::vbd_flag(bool flag)
+{ expConfigOptions.vbdFlag = flag; }
 
 
-inline short PolynomialApproximation::vbd_control() const
-{ return expConfigOptions.vbdControl; }
+inline bool PolynomialApproximation::vbd_flag() const
+{ return expConfigOptions.vbdFlag; }
+
+
+inline void PolynomialApproximation::vbd_order_limit(unsigned short vbd_order)
+{ expConfigOptions.vbdOrderLimit = vbd_order; }
+
+
+inline unsigned short PolynomialApproximation::vbd_order_limit() const
+{ return expConfigOptions.vbdOrderLimit; }
 
 
 //inline void PolynomialApproximation::refinement_type(short refine_type)

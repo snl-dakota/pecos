@@ -107,9 +107,10 @@ void OrthogPolyApproximation::allocate_total_order()
 
 void OrthogPolyApproximation::allocate_component_sobol()
 {
-  if (expConfigOptions.vbdControl && expConfigOptions.expansionCoeffFlag) {
-    switch (expConfigOptions.vbdControl) {
-    case ALL_VBD: { // main + interaction effects
+  if (expConfigOptions.vbdFlag && expConfigOptions.expansionCoeffFlag) {
+    if (expConfigOptions.vbdOrderLimit == 1) // main effects only
+      { if (sobolIndices.empty()) allocate_main_sobol(); }
+    else { // main + interaction effects
       sobolIndexMap.clear();
       multi_index_to_sobol_index_map(multiIndex);
       sobol_index_map_to_sobol_indices();
@@ -128,11 +129,6 @@ void OrthogPolyApproximation::allocate_component_sobol()
 	  allocate_main_interaction_sobol(max_order);
       }
       */
-      break;
-    }
-    case UNIVARIATE_VBD: // main effects only
-      if (sobolIndices.empty()) allocate_main_sobol();
-      break;
     }
   }
 }
@@ -1037,7 +1033,7 @@ void OrthogPolyApproximation::compute_component_sobol()
     // lookup the bit set within sobolIndexMap --> increment the correct
     // Sobol' index with the variance contribution from this expansion term.
     BAULMIter it = sobolIndexMap.find(set);
-    if (it != sobolIndexMap.end()) // may not be found if UNIVARIATE_VBD
+    if (it != sobolIndexMap.end()) // may not be found if vbdOrderLimit
       sobolIndices[it->second] += p_var[k] / sum_p_var;
   }
 #ifdef DEBUG
@@ -1051,17 +1047,10 @@ void OrthogPolyApproximation::compute_total_sobol()
 {
   totalSobolIndices = 0.;
 
-  // iterate through main/interaction indices from compute_component_sobol()
-  if (expConfigOptions.vbdControl == ALL_VBD) {
-    for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
-      for (size_t k=0; k<numVars; ++k) 
-        if (it->first[k]) // var k is present in this Sobol' index
-          totalSobolIndices[k] += sobolIndices[it->second];
-  }
-
-  // otherwise, iterate over the expansion terms
-  else {
-    // compute and sum the variance contributions for each expansion term
+  if (expConfigOptions.vbdOrderLimit) {
+    // all component indices may not be available, so compute total indices
+    // from scratch by computing and summing variance contributions for each
+    // expansion term
     size_t i, j, k;
     Real sum_p_var = 0., ratio_i;
     RealVector p_var(numExpansionTerms-1, false);
@@ -1070,7 +1059,6 @@ void OrthogPolyApproximation::compute_total_sobol()
                * norm_squared(multiIndex[i]);
       sum_p_var += p_var[k];
     }
-
     // for any constituent variable j in exansion term i, the expansion
     // term contributes to the total sensitivity of variable j
     for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
@@ -1080,6 +1068,16 @@ void OrthogPolyApproximation::compute_total_sobol()
           totalSobolIndices[j] += ratio_i;
     }
   }
+  else {
+    // all component effects are present, so simply add them up:
+    // totalSobolIndices parses the bit sets of each of the sobolIndices
+    // and adds them to each matching variable bin
+    for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
+      for (size_t k=0; k<numVars; ++k) 
+        if (it->first[k]) // var k is present in this Sobol' index
+          totalSobolIndices[k] += sobolIndices[it->second];
+  }
+
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::compute_total_sobol(), "
 	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);

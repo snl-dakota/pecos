@@ -1461,10 +1461,15 @@ void InterpPolyApproximation::compute_total_sobol()
 {
   totalSobolIndices = 0.; // init total indices
 
-  // iterate through existing indices if all component indices are available.
-  // totalSobolIndices simply parse the bit sets of each of the sobolIndices 
-  // and add them to each matching variable bin.
-  if (expConfigOptions.vbdControl == ALL_VBD) {
+  if (expConfigOptions.vbdOrderLimit)
+    // all component indices may not be available, so compute total indices
+    // independently.  This approach parallels partial_variance_integral()
+    // where the algorithm is separated by integration approach.
+    compute_total_sobol_indices(); // virtual
+  else {
+    // all component indices are available, so add them up: totalSobolIndices
+    // simply parses the bit sets of each of the sobolIndices and adds them to
+    // each matching variable bin
     for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it)
       for (size_t k=0; k<numVars; ++k)
         if (it->first[k]) // var k is present in this Sobol' index
@@ -1473,12 +1478,6 @@ void InterpPolyApproximation::compute_total_sobol()
     //for (size_t k=0; k<numVars; ++k)
     //  totalSobolIndices[k] = std::abs(totalSobolIndices[k]);
   }
-
-  // If not available, compute total indices independently.  This approach
-  // parallels partial_variance_integral where the algorithm is separated
-  // by integration approach.
-  else
-    compute_total_sobol_indices(); // virtual
 
 #ifdef DEBUG
   PCout << "In InterpPolyApproximation::compute_total_sobol(), "

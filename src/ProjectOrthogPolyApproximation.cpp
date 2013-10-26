@@ -145,7 +145,7 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 
 void ProjectOrthogPolyApproximation::increment_component_sobol()
 {
-  if (expConfigOptions.vbdControl == ALL_VBD &&
+  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1 &&
       expConfigOptions.expansionCoeffFlag) {
     reset_sobol_index_map_values();
     multi_index_to_sobol_index_map(tpMultiIndex.back());

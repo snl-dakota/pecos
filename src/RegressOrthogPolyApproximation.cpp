@@ -59,7 +59,7 @@ void RegressOrthogPolyApproximation::allocate_arrays()
   if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
     PCout << "Orthogonal polynomial approximation of least order\n";
 
-    if (expConfigOptions.vbdControl == UNIVARIATE_VBD)
+    if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit == 1)
       allocate_component_sobol();
     // else defer until transform_least_interpolant()
 
@@ -74,7 +74,7 @@ void RegressOrthogPolyApproximation::allocate_arrays()
     if (faultInfo.under_determined) {
       // under-determined regression: defer allocations until sparsity known
 
-      if (expConfigOptions.vbdControl == UNIVARIATE_VBD)
+      if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit == 1)
 	allocate_component_sobol();
       // else defer until sparse recovery
 
@@ -576,7 +576,7 @@ void RegressOrthogPolyApproximation::update_sparse_multi_index()
     multiIndex[i] = old_multi_index[*cit];
 
   // now define the Sobol' indices based on the sparse multiIndex
-  if (expConfigOptions.vbdControl == ALL_VBD)
+  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1)
     allocate_component_sobol();
 }
 
@@ -920,7 +920,7 @@ void RegressOrthogPolyApproximation::transform_least_interpolant( RealMatrix &L,
   copy_data(coefficients.values(), numExpansionTerms, expansionCoeffs);
 
   // now define the Sobol' indices based on the least polynomial multiIndex
-  if (expConfigOptions.vbdControl == ALL_VBD)
+  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1)
     allocate_component_sobol();
 }
 
