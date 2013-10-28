@@ -376,7 +376,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
     num_colloc_pts *= quad_order[i];
 
   // update collocPts1D only for the subset variables
-  update_1d_collocation_points(quad_order, lev_index, subset_indices);
+  update_1d_collocation_points_weights(quad_order, lev_index, subset_indices);
 
   // Tensor-product quadrature: Integral of f approximated by
   // Sum_i1 Sum_i2 ... Sum_in (w_i1 w_i2 ... w_in) f(x_i1, x_i2, ..., x_in)
@@ -431,6 +431,35 @@ update_1d_collocation_points_weights(const UShortArray& quad_order,
 
 
 void IntegrationDriver::
+update_1d_collocation_points_weights(const UShortArray& quad_order,
+				     const UShortArray& lev_index,
+				     const SizetList& subset_indices)
+{
+  // resize arrays (all variables for simplicity)
+  size_t i, size_1d = collocPts1D.size(), max_index = lev_index[0];
+  for (i=1; i<numVars; ++i)
+    if (lev_index[i] > max_index)
+      max_index = lev_index[i];
+  if (max_index >= size_1d) {
+    collocPts1D.resize(max_index+1); type1CollocWts1D.resize(max_index+1);
+    for (i=size_1d; i<=max_index; ++i)
+      { collocPts1D[i].resize(numVars); type1CollocWts1D[i].resize(numVars); }
+    if (computeType2Weights) {
+      type2CollocWts1D.resize(max_index+1);
+      for (i=size_1d; i<=max_index; ++i)
+	type2CollocWts1D[i].resize(numVars);
+    }
+  }
+  // assign values for subset variables (for memory efficiency)
+  SizetList::const_iterator cit;
+  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
+    i = *cit;
+    assign_1d_collocation_points_weights(i, quad_order[i], lev_index[i]);
+  }
+}
+
+
+void IntegrationDriver::
 assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 				     unsigned short lev_index)
 {
@@ -452,36 +481,6 @@ assign_1d_collocation_points_weights(size_t i, unsigned short quad_order,
 #ifdef DEBUG
     PCout << "type2CollocWts1D[" << lev_index << "][" << i << "]:\n"
 	  << t2_wts_1d;
-#endif // DEBUG
-  }
-}
-
-
-void IntegrationDriver::
-update_1d_collocation_points(const UShortArray& quad_order,
-			     const UShortArray& lev_index,
-			     const SizetList& subset_indices)
-{
-  // resize arrays (all variables for simplicity)
-  size_t i, size_1d = collocPts1D.size(), max_index = lev_index[0];
-  for (i=1; i<numVars; ++i)
-    if (lev_index[i] > max_index)
-      max_index = lev_index[i];
-  if (max_index >= size_1d) {
-    collocPts1D.resize(max_index+1);
-    for (i=size_1d; i<=max_index; ++i)
-      collocPts1D[i].resize(numVars);
-  }
-  // assign values for subset variables (for memory efficiency)
-  SizetList::const_iterator cit;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    i = *cit;
-    BasisPolynomial& poly_i = polynomialBasis[i];
-    RealArray&       pts_1d = collocPts1D[lev_index[i]][i];
-    if (poly_i.parametric_update() || pts_1d.empty())
-      pts_1d = poly_i.collocation_points(quad_order[i]);
-#ifdef DEBUG
-    PCout << "collocPts1D[" << lev_index[i] << "][" << i << "]:\n" << pts_1d;
 #endif // DEBUG
   }
 }
