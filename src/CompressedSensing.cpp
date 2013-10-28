@@ -1242,9 +1242,9 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 
       /*if ( num_necessary_indices > 0 )
 	{
-	  index_to_add = necessary_indices[num_necessary_indices-1];
-	  num_necessary_indices--;
-	  }*/
+	index_to_add = necessary_indices[num_necessary_indices-1];
+	num_necessary_indices--;
+	}*/
 
       if ( U.numRows() <= num_covariates )
 	{
@@ -1289,10 +1289,8 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  column_append( A_col, A_sparse );
 	  active_indices.push_back( index_to_add );
 	  inactive_index_iter = inactive_indices.find( index_to_add );
-	  // BMA the index is not found for at least one instance when running
-	  // dakota_pcbdo_cantilever.in:4,5,6,7
-	  if (inactive_index_iter != inactive_indices.end())
-	    inactive_indices.erase( inactive_index_iter );
+	  inactive_indices.erase( inactive_index_iter );
+
 	  num_covariates = (int)active_indices.size();
 
 	  // store which variable was added to the active index set
@@ -1472,8 +1470,8 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
       if ( ( homotopy_iter > 0 ) && 
 	   ( residual_norm > solution_metrics(0,homotopy_iter-1 ) ) )
 	{
-	   if ( verbosity > 1 )
-	     PCout << "Exiting: Residues are small and started to increase due to numerical errors\n";
+	  if ( verbosity > 1 )
+	    PCout << "Exiting: Residues are small and started to increase due to numerical errors\n";
 	  done = true;
 	}
       else
@@ -1502,8 +1500,8 @@ void CompressedSensingTool::least_angle_regression( RealMatrix &A,
 	  // have been standardized. The first column will be colinear
 	  // This condition should only occur when 
 	  // num_covariates = max_num_covariates - 1
-	   if ( verbosity > 1 )
-	     PCout << "Exiting: attempted to add colinear vector\n";
+	  if ( verbosity > 1 )
+	    PCout << "Exiting: attempted to add colinear vector\n";
 	  done = true;
 	}
      
@@ -1680,7 +1678,7 @@ void CompressedSensingTool::solve( RealMatrix &A, RealMatrix &B,
 	    RealVector singular_values;
 	    int rank(0);
 	    svd_solve( A_stand, B_stand, single_solution, singular_values, rank, 
-		      solver_tolerance );
+		       solver_tolerance );
 #ifdef DEBUG
 	    // For SVD, condition number can be extracted from singular values
 	    PCout << "\nCondition number for LLS using LAPACK SVD (GELSS) is "

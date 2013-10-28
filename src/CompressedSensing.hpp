@@ -18,8 +18,9 @@ namespace Pecos {
 /**
  * \brief Specify a set of options for using the CompressedSensingTool
  */
-struct CompressedSensingOptions
+class CompressedSensingOptions
 {
+public:
   //solverType solver; //!< Specify which regression solver to use. See solverType
   short solver; //!< Specify which regression solver to use: see pecos_global_defs
   Real solverTolerance; //!< Specify the internal tolerance of the solver
@@ -32,6 +33,8 @@ struct CompressedSensingOptions
   int verbosity;           //!< The verbosity level. 0: off, 1: warnings on,  2: all print statements on.
   int numFunctionSamples; //!< The number of function samples used to construct A and B. Used when A contains gradient information. If zero then numFunctionSamples = A.numRows()
 
+public:
+
   CompressedSensingOptions() : 
     solver( DEFAULT_LEAST_SQ_REGRESSION ), solverTolerance( -1. ),
     epsilon( 0.0 ), delta( 0.0 ),
@@ -39,6 +42,8 @@ struct CompressedSensingOptions
     standardizeInputs( false ), storeHistory( false ), 
     conjugateGradientsTolerance( -1 ), verbosity( 0 ), numFunctionSamples( 0 )
   {};
+
+  ~CompressedSensingOptions(){};
 
   void print()
   {
@@ -51,6 +56,37 @@ struct CompressedSensingOptions
     std::cout << "StoreHistory: " << storeHistory << "\n";
     std::cout << "Verbosity: " << verbosity << "\n";
   };
+
+  CompressedSensingOptions& operator=(const CompressedSensingOptions& source )
+  {
+    if(this == &source)
+      return (*this);
+    solver = source.solver;
+    solverTolerance = source.solverTolerance; 
+    epsilon = source.epsilon;         
+    delta = source.delta;
+    maxNumIterations = source.maxNumIterations; 
+    standardizeInputs = source.standardizeInputs;
+    storeHistory = source.storeHistory;     
+    conjugateGradientsTolerance = source.conjugateGradientsTolerance; 
+    verbosity = source.verbosity;
+    numFunctionSamples = source.numFunctionSamples;
+    return (*this);
+  }
+
+  CompressedSensingOptions( const CompressedSensingOptions& source )
+  {
+    solver = source.solver;
+    solverTolerance = source.solverTolerance; 
+    epsilon = source.epsilon;         
+    delta = source.delta;
+    maxNumIterations = source.maxNumIterations; 
+    standardizeInputs = source.standardizeInputs;
+    storeHistory = source.storeHistory;     
+    conjugateGradientsTolerance = source.conjugateGradientsTolerance; 
+    verbosity = source.verbosity;
+    numFunctionSamples = source.numFunctionSamples;
+  }
 };
 
 typedef std::vector< std::vector<CompressedSensingOptions> > CompressedSensingOptionsList;
