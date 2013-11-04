@@ -3706,6 +3706,9 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     total_variance = covariance(this);
   }
 
+  if (total_variance <= SMALL_NUMBER)
+    { totalSobolIndices = 0.; return; }
+
   BitArray complement_set(numVars);
   for (size_t j=0; j<numVars; ++j) {
     // define complement_set that includes all but index of interest

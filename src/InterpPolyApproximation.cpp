@@ -1442,14 +1442,16 @@ void InterpPolyApproximation::compute_component_sobol()
   Real total_variance = (nonRandomIndices.empty()) ? variance() : // std mode
                         covariance(this);                    // all vars mode
 
-  // Solve for partial variances
-  for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it) {
-    unsigned long index = it->second;
-    if (index) { // partialVariance[0] stores mean^2 offset
-      compute_partial_variance(it->first);
-      sobolIndices[index] = partialVariance[index] / total_variance;
+  if (total_variance > SMALL_NUMBER) // Solve for partial variances
+    for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it) {
+      unsigned long index = it->second;
+      if (index) { // partialVariance[0] stores mean^2 offset
+	compute_partial_variance(it->first);
+	sobolIndices[index] = partialVariance[index] / total_variance;
+      }
     }
-  }
+  else // don't perform variance attribution for zero/negligible variance
+    sobolIndices = 0.;
 #ifdef DEBUG
   PCout << "In InterpPolyApproximation::compute_component_sobol(), "
 	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);

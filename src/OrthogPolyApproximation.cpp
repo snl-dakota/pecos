@@ -1011,7 +1011,7 @@ void OrthogPolyApproximation::compute_component_sobol()
   // compute and sum the variance contributions for each expansion term.  For
   // all_vars mode, this approach picks up the total expansion variance, which
   // is the desired reference pt for type-agnostic global sensitivity analysis.
-  size_t i, j, k;
+  size_t i, j, k, sobol_len = sobolIndices.length();
   Real sum_p_var = 0.; RealVector p_var(numExpansionTerms-1, false);
   for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
     p_var[k] = expansionCoeffs(i) * expansionCoeffs(i)
@@ -1022,19 +1022,23 @@ void OrthogPolyApproximation::compute_component_sobol()
   // iterate through multiIndex and store sensitivities.  Note: sobolIndices[0]
   // (corresponding to constant exp term with no variable dependence) is unused.
   sobolIndices = 0.; // initialize
-  BitArray set(numVars);
-  for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
+  if (sum_p_var > SMALL_NUMBER) { // don't attribute variance if zero/negligible
+    BitArray set(numVars);
+    for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
 
-    // determine the bit set corresponding to this expansion term
-    for (j=0; j<numVars; ++j)
-      if (multiIndex[i][j]) set.set(j);   //   activate bit j
-      else                  set.reset(j); // deactivate bit j
+      // determine the bit set corresponding to this expansion term
+      for (j=0; j<numVars; ++j)
+	if (multiIndex[i][j]) set.set(j);   //   activate bit j
+	else                  set.reset(j); // deactivate bit j
 
-    // lookup the bit set within sobolIndexMap --> increment the correct
-    // Sobol' index with the variance contribution from this expansion term.
-    BAULMIter it = sobolIndexMap.find(set);
-    if (it != sobolIndexMap.end()) // may not be found if vbdOrderLimit
-      sobolIndices[it->second] += p_var[k] / sum_p_var;
+      // lookup the bit set within sobolIndexMap --> increment the correct
+      // Sobol' index with the variance contribution from this expansion term.
+      BAULMIter it = sobolIndexMap.find(set);
+      if (it != sobolIndexMap.end()) // may not be found if vbdOrderLimit
+	sobolIndices[it->second] += p_var[k];// divide by sum_p_var outside loop
+    }
+    for (i=0; i<sobol_len; ++i)
+      sobolIndices[i] /= sum_p_var;
   }
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::compute_component_sobol(), "
@@ -1061,11 +1065,17 @@ void OrthogPolyApproximation::compute_total_sobol()
     }
     // for any constituent variable j in exansion term i, the expansion
     // term contributes to the total sensitivity of variable j
-    for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
-      ratio_i = p_var[k] / sum_p_var;
+    if (sum_p_var > SMALL_NUMBER) { // avoid division by zero
+      Real p_var_k;
+      for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
+	p_var_k = p_var[k];
+	const UShortArray& mi_i = multiIndex[i];
+	for (j=0; j<numVars; ++j)
+	  if (mi_i[j])
+	    totalSobolIndices[j] += p_var_k; // divide by sum_p_var outside loop
+      }
       for (j=0; j<numVars; ++j)
-        if (multiIndex[i][j])
-          totalSobolIndices[j] += ratio_i;
+	totalSobolIndices[j] /= sum_p_var;
     }
   }
   else {

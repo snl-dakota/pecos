@@ -2128,6 +2128,9 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
     total_variance = covariance(this);
   }
 
+  if (total_variance <= SMALL_NUMBER)
+    { totalSobolIndices = 0.; return; }
+
   UShortArray quad_order; Real complement_variance;
   BitArray complement_set(numVars);
   RealVector2DArray member_t1_coeffs, member_t1_wts, cprod_member_t1_coeffs;
