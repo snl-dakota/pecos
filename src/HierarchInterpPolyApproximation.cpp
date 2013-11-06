@@ -1012,7 +1012,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   // around an invariant center.  For hierarchical covariance, one must
   // also account for the change in mean as in delta_covariance().
 
-  if (same)
+  if (same && nonRandomIndices.empty()) // std mode
     { numericalMoments[1] = covar; computedVariance |= 1; }
   return covar;
 }
@@ -1032,7 +1032,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
   // evaluate expectation of these t1/t2 coefficients
   Real covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
 
-  if (same)
+  if (same && !nonRandomIndices.empty()) // all vars mode
     { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
   return covar;
 }

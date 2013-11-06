@@ -3141,7 +3141,7 @@ covariance(PolynomialApproximation* poly_approx_2)
     break;
   }
   }
-  if (same)
+  if (same && nonRandomIndices.empty()) // std mode
     { numericalMoments[1] = covar; computedVariance |= 1; }
   return covar;
 }
@@ -3290,7 +3290,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     break;
   }
   }
-  if (this == nip_approx_2) // same resp fn --> variance
+  if (this == nip_approx_2 && !nonRandomIndices.empty()) // same resp, all mode
     { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
   return covar;
 }
