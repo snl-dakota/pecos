@@ -574,6 +574,14 @@ precompute_max_keys(const UShortArray& basis_index,
 }
 
 
+inline Real HierarchInterpPolyApproximation::variance()
+{ return covariance(this); }
+
+
+inline Real HierarchInterpPolyApproximation::variance(const RealVector& x)
+{ return covariance(x, this); }
+
+
 inline Real HierarchInterpPolyApproximation::
 delta_covariance(PolynomialApproximation* poly_approx_2)
 {

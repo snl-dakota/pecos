@@ -380,6 +380,19 @@ inline const UShortArray& OrthogPolyApproximation::expansion_order() const
 { return approxOrder; }
 
 
+/** In this case, all expansion variables are random variables and the
+    variance of the expansion is the sum over all but the first term
+    of the coefficients squared times the polynomial norms squared. */
+inline Real OrthogPolyApproximation::variance()
+{ return covariance(this); }
+
+
+/** In this case, a subset of the expansion variables are random variables
+    and the variance of the expansion involves summations over this subset. */
+inline Real OrthogPolyApproximation::variance(const RealVector& x)
+{ return covariance(x, this); }
+
+
 /** This function is invoked to create basisTypes and polynomialBasis
     for cases where they have not already been created by an
     IntegrationDriver (i.e., expansion_samples or regression). */

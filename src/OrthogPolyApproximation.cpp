@@ -605,9 +605,13 @@ Real OrthogPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  Real& mean = expansionMoments[0];
-  if ( !(computedMean & 1) )
-    { mean = expansionCoeffs[0]; computedMean |= 1; }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedMean & 1))
+    return expansionMoments[0];
+
+  Real mean = expansionCoeffs[0];
+  if (std_mode)
+    { expansionMoments[0] = mean; computedMean |= 1; }
   return mean;
 }
 
@@ -624,25 +628,26 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
     abort_handler(-1);
   }
 
-  Real& mean = expansionMoments[0];
-  if ( !(computedMean & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
-    // sum expansion to get response prediction
-    mean = expansionCoeffs[0];
-    for (size_t i=1; i<numExpansionTerms; ++i)
-      // expectations are zero for expansion terms with nonzero random indices
-      if (zero_random(multiIndex[i])) {
-	mean += expansionCoeffs[i]
-	     *  multivariate_polynomial(x, multiIndex[i], nonRandomIndices);
-#ifdef DEBUG
-	PCout << "Mean estimate inclusion: term index = " << i << " Psi = "
-	      << multivariate_polynomial(x, multiIndex[i], nonRandomIndices)
-	      << " PCE coeff = " << expansionCoeffs[i] << " total = " << mean
-	      << std::endl;
-#endif // DEBUG
-      }
+  bool all_mode = !nonRandomIndices.empty();
+  if (all_mode && (computedMean & 1) && match_nonrandom_vars(x, xPrevMean))
+    return expansionMoments[0];
 
-    computedMean |= 1; xPrevMean = x;
-  }
+  Real mean = expansionCoeffs[0];
+  for (size_t i=1; i<numExpansionTerms; ++i)
+    // expectations are zero for expansion terms with nonzero random indices
+    if (zero_random(multiIndex[i])) {
+      mean += expansionCoeffs[i]
+	   *  multivariate_polynomial(x, multiIndex[i], nonRandomIndices);
+#ifdef DEBUG
+      PCout << "Mean estimate inclusion: term index = " << i << " Psi = "
+	    << multivariate_polynomial(x, multiIndex[i], nonRandomIndices)
+	    << " PCE coeff = " << expansionCoeffs[i] << " total = " << mean
+	    << std::endl;
+#endif // DEBUG
+    }
+
+  if (all_mode)
+    { expansionMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
   return mean;
 }
 
@@ -663,10 +668,13 @@ const RealVector& OrthogPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  if ( !(computedMean & 2) ) {
-    meanGradient = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
-    computedMean |= 2;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedMean & 2))
+    return meanGradient;
+
+  meanGradient = Teuchos::getCol(Teuchos::Copy, expansionCoeffGrads, 0);
+  if (std_mode) computedMean |=  2; //   activate 2-bit
+  else          computedMean &= ~2; // deactivate 2-bit: protect mixed usage
   return meanGradient;
 }
 
@@ -685,7 +693,8 @@ const RealVector& OrthogPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  if ( (computedMean & 2) &&
+  bool all_mode = !nonRandomIndices.empty();
+  if ( all_mode && (computedMean & 2) &&
        match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
     return meanGradient;
 
@@ -738,61 +747,46 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     if (randomVarsKey[deriv_index]) // derivative w.r.t. design var insertion
       ++cntr;
   }
-  computedMean |= 2; xPrevMeanGrad = x;
-
+  if (all_mode) { computedMean |=  2; xPrevMeanGrad = x; }
+  else            computedMean &= ~2; // deactivate 2-bit: protect mixed usage
   return meanGradient;
-}
-
-
-/** In this case, all expansion variables are random variables and the
-    variance of the expansion is the sum over all but the first term
-    of the coefficients squared times the polynomial norms squared. */
-Real OrthogPolyApproximation::variance()
-{
-  Real& var = expansionMoments[1];
-  if ( !(computedVariance & 1) ) {
-    var = covariance(this);
-    computedVariance |= 1;
-  }
-  return var;
-}
-
-
-/** In this case, a subset of the expansion variables are random variables
-    and the variance of the expansion involves summations over this subset. */
-Real OrthogPolyApproximation::variance(const RealVector& x)
-{
-  Real& var = expansionMoments[1];
-  if ( !(computedVariance & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
-    var = covariance(x, this);
-    computedVariance |= 1; xPrevVar = x;
-  }
-  return var;
 }
 
 
 Real OrthogPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
+  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+  bool same = (opa_2 == this), std_mode = nonRandomIndices.empty();
+
   // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !opa_2->expConfigOptions.expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
 
-  Real var = 0.;
-  if (poly_approx_2 == this)
-    for (size_t i=1; i<numExpansionTerms; ++i)
-      var += expansionCoeffs[i] * expansionCoeffs[i]
-	  *  norm_squared(multiIndex[i]);
+  if (same) {
+    if (std_mode && (computedVariance & 1))
+      return expansionMoments[1];
+    else {
+      Real covar = 0.;
+      for (size_t i=1; i<numExpansionTerms; ++i)
+	covar += expansionCoeffs[i] * expansionCoeffs[i]
+	      *  norm_squared(multiIndex[i]);
+      if (std_mode)
+	{ expansionMoments[1] = covar; computedVariance |= 1; }
+      return covar;
+    }
+  }
   else {
-    OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
     const RealVector& exp_coeffs_2 = opa_2->expansionCoeffs;
+    Real covar = 0.;
     if (sparseIndices.empty()) // dense indexing is consistent
       for (size_t i=1; i<numExpansionTerms; ++i)
-	var += expansionCoeffs[i] * exp_coeffs_2[i]
-	    *  norm_squared(multiIndex[i]);
+	covar += expansionCoeffs[i] * exp_coeffs_2[i]
+	      *  norm_squared(multiIndex[i]);
     else { // for sparse PCE, multiIndex sequences may differ
       const SizetSet& sparse_ind_2 = opa_2->sparseIndices;
       SizetSet::const_iterator cit1 = ++sparseIndices.begin(),
@@ -801,34 +795,41 @@ covariance(PolynomialApproximation* poly_approx_2)
       while (cit1 != sparseIndices.end() && cit2 != sparse_ind_2.end()) {
 	si1 = *cit1; si2 = *cit2;
 	if (si1 == si2) {// equality in sparse index implies multiIndex equality
-	  var += expansionCoeffs[i1] * exp_coeffs_2[i2]
-	      *  norm_squared(multiIndex[i1]); // or multi_index_2[i2]
+	  covar += expansionCoeffs[i1] * exp_coeffs_2[i2]
+	        *  norm_squared(multiIndex[i1]); // or multi_index_2[i2]
 	  ++cit1; ++cit2; ++i1; ++i2;
 	}
 	else if (si1 < si2) { ++cit1; ++i1; }
 	else                { ++cit2; ++i2; }
       }
     }
+    return covar;
   }
-  return var;
 }
 
 
 Real OrthogPolyApproximation::
 covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
+  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+  bool same = (this == opa_2), all_mode = !nonRandomIndices.empty();
+
   // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !opa_2->expConfigOptions.expansionCoeffFlag )) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "OrthogPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
   }
 
-  Real var = 0.; size_t i, j;
-  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+  if ( same && all_mode && (computedVariance & 1) &&
+       match_nonrandom_vars(x, xPrevVar) )
+    return expansionMoments[1];
+
   const RealVector&     exp_coeffs_2 = opa_2->expansionCoeffs;
   const UShort2DArray& multi_index_2 = opa_2->multiIndex;
   size_t i1, i2, num_i1 = multiIndex.size(), num_i2 = multi_index_2.size();
+  Real covar = 0.;
   for (i1=1; i1<num_i1; ++i1) {
     // For r = random_vars and nr = non_random_vars,
     // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
@@ -843,12 +844,14 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 	// (following eval of non-random portions), the nested loop could be
 	// replaced with a single loop to evaluate (a+b)^2.
 	if (match_random_key(multiIndex[i1], multi_index_2[i2]))
-	  var += expansionCoeffs[i1]  * exp_coeffs_2[i2] * norm_sq_i *
+	  covar += expansionCoeffs[i1]  * exp_coeffs_2[i2] * norm_sq_i *
 	    multivariate_polynomial(x,    multiIndex[i1], nonRandomIndices) *
 	    multivariate_polynomial(x, multi_index_2[i2], nonRandomIndices);
     }
   }
-  return var;
+  if (same && all_mode)
+    { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
 }
 
 
@@ -862,30 +865,28 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
   //                 = 2 Sum_{j=1}^P \alpha_j <dR/ds, Psi_j>
 
   // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::variance_gradient()" << std::endl;
-    abort_handler(-1);
-  }
-  if (!expConfigOptions.expansionCoeffGradFlag) {
-    PCerr << "Error: expansion coefficient gradients not defined in "
+  if (!expConfigOptions.expansionCoeffFlag ||
+      !expConfigOptions.expansionCoeffGradFlag) {
+    PCerr << "Error: insufficient expansion coefficient data in "
 	  << "OrthogPolyApproximation::variance_gradient()." << std::endl;
     abort_handler(-1);
   }
 
-  if ( !(computedVariance & 2) ) {
-    size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
-    if (varianceGradient.length() != num_deriv_vars)
-      varianceGradient.sizeUninitialized(num_deriv_vars);
-    varianceGradient = 0.;
-    for (i=1; i<numExpansionTerms; ++i) {
-      Real term_i = 2. * expansionCoeffs[i] * norm_squared(multiIndex[i]);
-      for (j=0; j<num_deriv_vars; ++j)
-	varianceGradient[j] += term_i * expansionCoeffGrads[i][j];
-    }
-    computedVariance |= 2;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedVariance & 2))
+    return varianceGradient;
 
+  size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  varianceGradient = 0.;
+  for (i=1; i<numExpansionTerms; ++i) {
+    Real term_i = 2. * expansionCoeffs[i] * norm_squared(multiIndex[i]);
+    for (j=0; j<num_deriv_vars; ++j)
+      varianceGradient[j] += term_i * expansionCoeffGrads[i][j];
+  }
+  if (std_mode) computedVariance |=  2;
+  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
   return varianceGradient;
 }
 
@@ -908,7 +909,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   }
 
   // if already computed, return previous result
-  if ( (computedVariance & 2) &&
+  bool all_mode = !nonRandomIndices.empty();
+  if ( all_mode && (computedVariance & 2) &&
        match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
     return varianceGradient;
 
@@ -965,8 +967,8 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
     if (randomVarsKey[deriv_index]) // derivative w.r.t. design var insertion
       ++cntr;
   }
-  computedVariance |= 2; xPrevVarGrad = x;
-
+  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
+  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
   return varianceGradient;
 }
 
@@ -1063,13 +1065,17 @@ void OrthogPolyApproximation::compute_total_sobol()
                * norm_squared(multiIndex[i]);
       sum_p_var += p_var[k];
     }
-    // for any constituent variable j in exansion term i, the expansion
-    // term contributes to the total sensitivity of variable j
+    // if negligible variance (e.g., a deterministic test fn), then attribution
+    // of this variance is suspect.  Defaulting totalSobolIndices to zero is a
+    // good choice since it drops out from anisotropic refinement based on the
+    // response-average of these indices.
     if (sum_p_var > SMALL_NUMBER) { // avoid division by zero
       Real p_var_k;
       for (i=1, k=0; i<numExpansionTerms; ++i, ++k) {
 	p_var_k = p_var[k];
 	const UShortArray& mi_i = multiIndex[i];
+	// for any constituent variable j in exansion term i, the expansion
+	// term contributes to the total sensitivity of variable j
 	for (j=0; j<numVars; ++j)
 	  if (mi_i[j])
 	    totalSobolIndices[j] += p_var_k; // divide by sum_p_var outside loop

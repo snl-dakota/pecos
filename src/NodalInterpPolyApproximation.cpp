@@ -2903,12 +2903,13 @@ Real NodalInterpPolyApproximation::mean()
   //  abort_handler(-1);
   //}
 
-  Real& mean = numericalMoments[0];
-  if ( !(computedMean & 1) ) {
-    mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
-    computedMean |= 1;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedMean & 1))
+    return numericalMoments[0];
 
+  Real mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
+  if (std_mode)
+    { numericalMoments[0] = mean; computedMean |= 1; }
   return mean;
 }
 
@@ -2921,34 +2922,36 @@ Real NodalInterpPolyApproximation::mean()
     up the tensor mean contributions. */
 Real NodalInterpPolyApproximation::mean(const RealVector& x)
 {
-  Real& mean = numericalMoments[0];
-  if ( !(computedMean & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
-    switch (expConfigOptions.expCoeffsSolnApproach) {
-    case QUADRATURE: {
-      TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-      SizetArray colloc_index; // empty -> default indexing
-      mean = tensor_product_mean(x, tpq_driver->level_index(),
-				 tpq_driver->collocation_key(), colloc_index);
-      break;
-    }
-    case COMBINED_SPARSE_GRID: {
-      CombinedSparseGridDriver* csg_driver
-	= (CombinedSparseGridDriver*)driverRep;
-      const UShort2DArray& sm_mi        = csg_driver->smolyak_multi_index();
-      const IntArray&      sm_coeffs    = csg_driver->smolyak_coefficients();
-      const UShort3DArray& colloc_key   = csg_driver->collocation_key();
-      const Sizet2DArray&  colloc_index = csg_driver->collocation_indices();
-      size_t i, num_smolyak_indices = sm_coeffs.size();
-      mean = 0.;
-      for (i=0; i<num_smolyak_indices; ++i)
-	if (sm_coeffs[i])
-	  mean += sm_coeffs[i] *
-	    tensor_product_mean(x, sm_mi[i], colloc_key[i], colloc_index[i]);
-      break;
-    }
-    }
-    computedMean |= 1; xPrevMean = x;
+  bool all_mode = !nonRandomIndices.empty();
+  if (all_mode && (computedMean & 1) && match_nonrandom_vars(x, xPrevMean))
+    return numericalMoments[0];
+
+  Real mean;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
+    SizetArray colloc_index; // empty -> default indexing
+    mean = tensor_product_mean(x, tpq_driver->level_index(),
+			       tpq_driver->collocation_key(), colloc_index);
+    break;
   }
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    const UShort2DArray& sm_mi        = csg_driver->smolyak_multi_index();
+    const IntArray&      sm_coeffs    = csg_driver->smolyak_coefficients();
+    const UShort3DArray& colloc_key   = csg_driver->collocation_key();
+    const Sizet2DArray&  colloc_index = csg_driver->collocation_indices();
+    size_t i, num_smolyak_indices = sm_coeffs.size();
+    mean = 0.;
+    for (i=0; i<num_smolyak_indices; ++i)
+      if (sm_coeffs[i])
+	mean += sm_coeffs[i] *
+	  tensor_product_mean(x, sm_mi[i], colloc_key[i], colloc_index[i]);
+    break;
+  }
+  }
+  if (all_mode)
+    { numericalMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
 
   return mean;
 }
@@ -2970,20 +2973,22 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  if ( !(computedMean & 2) ) {
-    const RealVector& t1_wts = driverRep->type1_weight_sets();
-    size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
-    if (meanGradient.length() != num_deriv_vars)
-      meanGradient.sizeUninitialized(num_deriv_vars);
-    meanGradient = 0.;
-    for (i=0; i<numCollocPts; ++i) {
-      const Real& t1_wt_i = t1_wts[i];
-      for (j=0; j<num_deriv_vars; ++j)
-	meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
-    }
-    computedMean |= 2;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedMean & 2))
+    return meanGradient;
 
+  const RealVector& t1_wts = driverRep->type1_weight_sets();
+  size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
+  if (meanGradient.length() != num_deriv_vars)
+    meanGradient.sizeUninitialized(num_deriv_vars);
+  meanGradient = 0.;
+  for (i=0; i<numCollocPts; ++i) {
+    const Real& t1_wt_i = t1_wts[i];
+    for (j=0; j<num_deriv_vars; ++j)
+      meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
+  }
+  if (std_mode) computedMean |=  2; //   activate 2-bit
+  else          computedMean &= ~2; // deactivate 2-bit: protect mixed usage
   return meanGradient;
 }
 
@@ -3005,7 +3010,8 @@ const RealVector& NodalInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  if ( (computedMean & 2) &&
+  bool all_mode = !nonRandomIndices.empty();
+  if ( all_mode && (computedMean & 2) &&
        match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:           return tpMeanGrad;   break;
@@ -3013,7 +3019,8 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
     }
 
   // compute the gradient of the mean
-  computedMean |= 2; xPrevMeanGrad = x;
+  if (all_mode) { computedMean |=  2; xPrevMeanGrad = x; }
+  else            computedMean &= ~2; // deactivate 2-bit: protect mixed usage
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -3052,33 +3059,6 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 /** In this case, all expansion variables are random variables and the
-    variance of the expansion uses an interpolation of response products. */
-Real NodalInterpPolyApproximation::variance()
-{
-  Real& var = numericalMoments[1];
-  if ( !(computedVariance & 1) ) {
-    var = covariance(this);
-    computedVariance |= 1;
-  }
-  return var;
-}
-
-
-/** In this case, a subset of the expansion variables are random
-    variables and the variance of the expansion involves integration
-    over this subset and evaluation over the subset's complement. */
-Real NodalInterpPolyApproximation::variance(const RealVector& x)
-{
-  Real& var = numericalMoments[1];
-  if ( !(computedVariance & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
-    var = covariance(x, this);
-    computedVariance |= 1; xPrevVar = x;
-  }
-  return var;
-}
-
-
-/** In this case, all expansion variables are random variables and the
     variance of the expansion uses an interpolation of central
     products (INTERPOLATION_OF_PRODUCTS is the only option for the
     standard expansion mode).  Since we reinterpolate the central
@@ -3090,11 +3070,11 @@ covariance(PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
-  bool same = (this == nip_approx_2);
+  bool same = (this == nip_approx_2), std_mode = nonRandomIndices.empty();
 
   // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag ||
-      !nip_approx_2->expConfigOptions.expansionCoeffFlag) {
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !nip_approx_2->expConfigOptions.expansionCoeffFlag ) ) {
     PCerr << "Error: expansion coefficients not defined in "
 	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
     abort_handler(-1);
@@ -3106,6 +3086,9 @@ covariance(PolynomialApproximation* poly_approx_2)
   //	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
   //  abort_handler(-1);
   //}
+
+  if (same && std_mode && (computedVariance & 1))
+    return numericalMoments[1];
 
   // compute mean_1,mean_2 first, then compute covariance as
   // wt_prod*(coeff1-mean_1)*(coeff2-mean_2) in order to avoid precision
@@ -3141,7 +3124,7 @@ covariance(PolynomialApproximation* poly_approx_2)
     break;
   }
   }
-  if (same && nonRandomIndices.empty()) // std mode
+  if (same && std_mode)
     { numericalMoments[1] = covar; computedVariance |= 1; }
   return covar;
 }
@@ -3180,8 +3163,21 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   NodalInterpPolyApproximation* nip_approx_2
     = (NodalInterpPolyApproximation*)poly_approx_2;
-  Real covar;
+  bool same = (this == nip_approx_2), all_mode = !nonRandomIndices.empty();
 
+  // Error check for required data
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !nip_approx_2->expConfigOptions.expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if ( same && all_mode && (computedVariance & 1) &&
+       match_nonrandom_vars(x, xPrevVar) )
+    return numericalMoments[1];
+
+  Real covar;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -3290,7 +3286,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     break;
   }
   }
-  if (this == nip_approx_2 && !nonRandomIndices.empty()) // same resp, all mode
+  if (same && all_mode)
     { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
   return covar;
 }
@@ -3308,34 +3304,32 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 const RealVector& NodalInterpPolyApproximation::variance_gradient()
 {
   // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
-	  << "Approximation::variance_gradient()" << std::endl;
-    abort_handler(-1);
-  }
-  if (!expConfigOptions.expansionCoeffGradFlag) {
-    PCerr << "Error: expansion coefficient gradients not defined in Nodal"
-	  << "InterpPolyApproximation::variance_gradient()." << std::endl;
+  if (!expConfigOptions.expansionCoeffFlag ||
+      !expConfigOptions.expansionCoeffGradFlag) {
+    PCerr << "Error: insufficient expansion coefficient data in NodalInterp"
+	  << "PolyApproximation::variance_gradient()." << std::endl;
     abort_handler(-1);
   }
 
-  if ( !(computedVariance & 2) ) {
-    const RealVector& t1_wts = driverRep->type1_weight_sets();
-    size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
-    if (varianceGradient.length() != num_deriv_vars)
-      varianceGradient.sizeUninitialized(num_deriv_vars);
-    varianceGradient = 0.;
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedVariance & 2))
+    return varianceGradient;
 
-    Real mean_1 = mean();
-    // See Eq. 6.23 in Theory Manual: grad of variance incorporates grad of mean
-    for (i=0; i<numCollocPts; ++i) {
-      Real term_i = 2. * (expansionType1Coeffs[i] - mean_1) * t1_wts[i];
-      for (j=0; j<num_deriv_vars; ++j)
-	varianceGradient[j] += term_i * expansionType1CoeffGrads(j,i);
-    }
-    computedVariance |= 2;
+  const RealVector& t1_wts = driverRep->type1_weight_sets();
+  size_t i, j, num_deriv_vars = expansionType1CoeffGrads.numRows();
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  varianceGradient = 0.;
+
+  Real mean_1 = mean();
+  // See Eq. 6.23 in Theory Manual: grad of variance incorporates grad of mean
+  for (i=0; i<numCollocPts; ++i) {
+    Real term_i = 2. * (expansionType1Coeffs[i] - mean_1) * t1_wts[i];
+    for (j=0; j<num_deriv_vars; ++j)
+      varianceGradient[j] += term_i * expansionType1CoeffGrads(j,i);
   }
-
+  if (std_mode) computedVariance |=  2;
+  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
   return varianceGradient;
 }
 
@@ -3351,14 +3345,16 @@ const RealVector& NodalInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
   // if already computed, return previous result
-  if ( (computedVariance & 2) &&
+  bool all_mode = !nonRandomIndices.empty();
+  if ( all_mode && (computedVariance & 2) &&
        match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE:           return tpVarianceGrad;   break;
     case COMBINED_SPARSE_GRID: return varianceGradient; break;
     }
 
-  computedVariance |= 2; xPrevVarGrad = x;
+  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
+  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
@@ -3706,6 +3702,10 @@ void NodalInterpPolyApproximation::compute_total_sobol_indices()
     total_variance = covariance(this);
   }
 
+  // if negligible variance (deterministic test fn) or negative variance (poor
+  // sparse grid resolution), then attribution of this variance is suspect.
+  // Note: zero is a good choice since it drops out from anisotropic refinement
+  // based on the response-average of total Sobol' indices.
   if (total_variance <= SMALL_NUMBER)
     { totalSobolIndices = 0.; return; }
 

@@ -745,11 +745,13 @@ Real HierarchInterpPolyApproximation::mean()
     abort_handler(-1);
   }
 
-  Real& mean = numericalMoments[0];
-  if ( !(computedMean & 1) ) {
-    mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
-    computedMean |= 1;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedMean & 1))
+    return numericalMoments[0];
+
+  Real mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
+  if (std_mode)
+    { numericalMoments[0] = mean; computedMean |= 1; }
   return mean;
 }
 
@@ -757,11 +759,13 @@ Real HierarchInterpPolyApproximation::mean()
 
 Real HierarchInterpPolyApproximation::mean(const RealVector& x)
 {
-  Real& mean = numericalMoments[0];
-  if ( !(computedMean & 1) || !match_nonrandom_vars(x, xPrevMean) ) {
-    mean = expectation(x, expansionType1Coeffs, expansionType2Coeffs);
-    computedMean |= 1; xPrevMean = x;
-  }
+  bool all_mode = !nonRandomIndices.empty();
+  if (all_mode && (computedMean & 1) && match_nonrandom_vars(x, xPrevMean))
+    return numericalMoments[0];
+
+  Real mean = expectation(x, expansionType1Coeffs, expansionType2Coeffs);
+  if (all_mode)
+    { numericalMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
   return mean;
 }
 
@@ -780,10 +784,13 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
     abort_handler(-1);
   }
 
-  if ( !(computedMean & 2) ) {
-    meanGradient = expectation_gradient(expansionType1CoeffGrads);
-    computedMean |= 2;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedMean & 2))
+    return meanGradient;
+
+  meanGradient = expectation_gradient(expansionType1CoeffGrads);
+  if (std_mode) computedMean |=  2; //   activate 2-bit
+  else          computedMean &= ~2; // deactivate 2-bit: protect mixed usage
   return meanGradient;
 }
 
@@ -801,83 +808,133 @@ const RealVector& HierarchInterpPolyApproximation::mean_gradient()
 const RealVector& HierarchInterpPolyApproximation::
 mean_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  if ( !(computedMean & 2) || !match_nonrandom_vars(x, xPrevMeanGrad) ) {
-    // ---------------------------------------------------------------------
-    // For xi = ran vars, sa = augmented des vars, si = inserted design vars
-    // Active variable expansion:
-    //   R(xi, sa, si) = Sum_i r_i(sa, si) L_i(xi)
-    //   mu(sa, si)    = Sum_i r_i(sa, si) wt_prod_i
-    //   dmu/ds        = Sum_i dr_i/ds wt_prod_i
-    // All variable expansion:
-    //   R(xi, sa, si) = Sum_i r_i(si) L_i(xi, sa)
-    //   mu(sa, si)    = Sum_i r_i(si) Lsa_i wt_prod_i
-    //   dmu/dsa       = Sum_i r_i(si) dLsa_i/dsa wt_prod_i
-    //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
-    // ---------------------------------------------------------------------
-    size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
-    if (meanGradient.length() != num_deriv_vars)
-      meanGradient.sizeUninitialized(num_deriv_vars);
-    for (i=0; i<num_deriv_vars; ++i) {
-      deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-      if (randomVarsKey[deriv_index]) {
-	// --------------------------------------------------------------------
-	// derivative of All var expansion w.r.t. random var (design insertion)
-	// --------------------------------------------------------------------
-	if (!expConfigOptions.expansionCoeffGradFlag) { // required data check
-	  PCerr << "Error: expansion coefficient gradients not defined in "
-		<< "HierarchInterpPolyApproximation::mean_gradient()."
-		<< std::endl;
-	  abort_handler(-1);
-	}
-	if (basisConfigOptions.useDerivs) {
-	  PCerr << "Error: combination of coefficient gradients and use_"
-		<< "derivatives is not supported in HierarchInterpPoly"
-		<< "Approximation::mean_gradient()." << std::endl;
-	  abort_handler(-1);
-	}
-	meanGradient[i]
-	  = expectation_gradient(x, expansionType1CoeffGrads, cntr);
-	++cntr;
+  // if already computed, return previous result
+  bool all_mode = !nonRandomIndices.empty();
+  if ( all_mode && (computedMean & 2) &&
+       match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
+    return meanGradient;
+
+  // ---------------------------------------------------------------------
+  // For xi = ran vars, sa = augmented des vars, si = inserted design vars
+  // Active variable expansion:
+  //   R(xi, sa, si) = Sum_i r_i(sa, si) L_i(xi)
+  //   mu(sa, si)    = Sum_i r_i(sa, si) wt_prod_i
+  //   dmu/ds        = Sum_i dr_i/ds wt_prod_i
+  // All variable expansion:
+  //   R(xi, sa, si) = Sum_i r_i(si) L_i(xi, sa)
+  //   mu(sa, si)    = Sum_i r_i(si) Lsa_i wt_prod_i
+  //   dmu/dsa       = Sum_i r_i(si) dLsa_i/dsa wt_prod_i
+  //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
+  // ---------------------------------------------------------------------
+  size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
+  if (meanGradient.length() != num_deriv_vars)
+    meanGradient.sizeUninitialized(num_deriv_vars);
+  for (i=0; i<num_deriv_vars; ++i) {
+    deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    if (randomVarsKey[deriv_index]) {
+      // --------------------------------------------------------------------
+      // derivative of All var expansion w.r.t. random var (design insertion)
+      // --------------------------------------------------------------------
+      if (!expConfigOptions.expansionCoeffGradFlag) { // required data check
+	PCerr << "Error: expansion coefficient gradients not defined in "
+	      << "HierarchInterpPolyApproximation::mean_gradient()."
+	      << std::endl;
+	abort_handler(-1);
       }
-      else {
-	// ---------------------------------------------------------------------
-	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
-	// ---------------------------------------------------------------------
-	if (!expConfigOptions.expansionCoeffFlag) { // required data check
-	  PCerr << "Error: expansion coefficients not defined in HierarchInterp"
-		<< "PolyApproximation::mean_gradient()." << std::endl;
-	  abort_handler(-1);
-	}
-	meanGradient[i]
-	  = expectation_gradient(x, expansionType1Coeffs, expansionType2Coeffs,
-				 deriv_index);
+      if (basisConfigOptions.useDerivs) {
+	PCerr << "Error: combination of coefficient gradients and use_"
+	      << "derivatives is not supported in HierarchInterpPoly"
+	      << "Approximation::mean_gradient()." << std::endl;
+	abort_handler(-1);
       }
+      meanGradient[i] = expectation_gradient(x, expansionType1CoeffGrads, cntr);
+      ++cntr;
     }
-    computedMean |= 2; xPrevMeanGrad = x;
+    else {
+      // ---------------------------------------------------------------------
+      // deriv of All var expansion w.r.t. nonrandom var (design augmentation)
+      // ---------------------------------------------------------------------
+      if (!expConfigOptions.expansionCoeffFlag) { // required data check
+	PCerr << "Error: expansion coefficients not defined in HierarchInterp"
+	      << "PolyApproximation::mean_gradient()." << std::endl;
+	abort_handler(-1);
+      }
+      meanGradient[i] = expectation_gradient(x, expansionType1Coeffs,
+					     expansionType2Coeffs, deriv_index);
+    }
   }
+  if (all_mode) { computedMean |=  2; xPrevMeanGrad = x; }
+  else            computedMean &= ~2; // deactivate 2-bit: protect mixed usage
   return meanGradient;
 }
 
 
-Real HierarchInterpPolyApproximation::variance()
+Real HierarchInterpPolyApproximation::
+covariance(PolynomialApproximation* poly_approx_2)
 {
-  Real& var = numericalMoments[1];
-  if ( !(computedVariance & 1) ) {
-    var = covariance(this);
-    computedVariance |= 1;
+  HierarchInterpPolyApproximation* hip_approx_2 = 
+    (HierarchInterpPolyApproximation*)poly_approx_2;
+  bool same = (this == hip_approx_2), std_mode = nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !hip_approx_2->expConfigOptions.expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
   }
-  return var;
+
+  if (same && std_mode && (computedVariance & 1))
+    return numericalMoments[1];
+
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  Real mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
+  central_product_interpolant(hip_approx_2, mean_1, mean_2,
+			      cov_t1_coeffs, cov_t2_coeffs);
+
+  // evaluate expectation of these t1/t2 coefficients
+  Real covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
+  // Note: separation of reference and increment using cov_t{1,2}_coeffs
+  // with {ref,incr}_key would provide an increment of a central moment
+  // around an invariant center.  For hierarchical covariance, one must
+  // also account for the change in mean as in delta_covariance().
+
+  if (same && std_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; }
+  return covar;
 }
 
 
-Real HierarchInterpPolyApproximation::variance(const RealVector& x)
+Real HierarchInterpPolyApproximation::
+covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  Real& var = numericalMoments[1];
-  if ( !(computedVariance & 1) || !match_nonrandom_vars(x, xPrevVar) ) {
-    var = covariance(x, this);
-    computedVariance |= 1; xPrevVar = x;
+  HierarchInterpPolyApproximation* hip_approx_2 = 
+    (HierarchInterpPolyApproximation*)poly_approx_2;
+  bool same = (this == hip_approx_2), all_mode = !nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !hip_approx_2->expConfigOptions.expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
   }
-  return var;
+
+  if ( same && all_mode && (computedVariance & 1) &&
+       match_nonrandom_vars(x, xPrevVar) )
+    return numericalMoments[1];
+
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  Real mean_1 = mean(x), mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
+  central_product_interpolant(hip_approx_2, mean_1, mean_2,
+			      cov_t1_coeffs, cov_t2_coeffs);
+
+  // evaluate expectation of these t1/t2 coefficients
+  Real covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
+
+  if (same && all_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
 }
 
 
@@ -887,14 +944,25 @@ Real HierarchInterpPolyApproximation::variance(const RealVector& x)
     are augmented) requires no special treatment. */
 const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 {
-  if ( !(computedVariance & 2) ) {
-    Real mean_1 = mean(); const RealVector& mean1_grad = mean_gradient();
-    RealMatrix2DArray cov_t1_coeff_grads;
-    central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
-					 mean1_grad, cov_t1_coeff_grads);
-    varianceGradient = expectation_gradient(cov_t1_coeff_grads);
-    computedVariance |= 2;
+  // Error check for required data
+  if (!expConfigOptions.expansionCoeffFlag ||
+      !expConfigOptions.expansionCoeffGradFlag) {
+    PCerr << "Error: insufficient expansion coefficient data in HierarchInterp"
+	  << "PolyApproximation::variance_gradient()." << std::endl;
+    abort_handler(-1);
   }
+
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedVariance & 2))
+    return varianceGradient;
+
+  Real mean_1 = mean(); const RealVector& mean1_grad = mean_gradient();
+  RealMatrix2DArray cov_t1_coeff_grads;
+  central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
+				       mean1_grad, cov_t1_coeff_grads);
+  varianceGradient = expectation_gradient(cov_t1_coeff_grads);
+  if (std_mode) computedVariance |=  2;
+  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
   return varianceGradient;
 }
 
@@ -909,143 +977,98 @@ const RealVector& HierarchInterpPolyApproximation::variance_gradient()
 const RealVector& HierarchInterpPolyApproximation::
 variance_gradient(const RealVector& x, const SizetArray& dvv)
 {
-  if ( !(computedVariance & 2) || !match_nonrandom_vars(x, xPrevVarGrad) ) {
+  // if already computed, return previous result
+  bool all_mode = !nonRandomIndices.empty();
+  if ( all_mode && (computedVariance & 2) &&
+       match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
+    return varianceGradient;
 
-    // ---------------------------------------------------------------------
-    // For xi = ran vars, sa = augmented des vars, si = inserted design vars
-    // Active variable expansion:
-    //   R(xi, sa, si) = Sum_i r_i(sa, si) L_i(xi)
-    //   mu(sa, si)    = Sum_i r_i(sa, si) wt_prod_i
-    //   dmu/ds        = Sum_i dr_i/ds wt_prod_i
-    // All variable expansion:
-    //   R(xi, sa, si) = Sum_i r_i(si) L_i(xi, sa)
-    //   mu(sa, si)    = Sum_i r_i(si) Lsa_i wt_prod_i
-    //   dmu/dsa       = Sum_i r_i(si) dLsa_i/dsa wt_prod_i
-    //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
-    // ---------------------------------------------------------------------
-    size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
-    bool insert = false, augment = false;
-    for (i=0; i<num_deriv_vars; ++i) {
-      deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-      if (randomVarsKey[deriv_index]) insert = true;
-      else                           augment = true;
-    }
-
-    RealVector2DArray cov_t1_coeffs;
-    RealMatrix2DArray cov_t1_coeff_grads, cov_t2_coeffs;
-    Real mean_1 = mean(x);
-    if (insert) {
-      const RealVector& mean1_grad = mean_gradient(x, dvv);
-      central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
-					   mean1_grad, cov_t1_coeff_grads);
-    }
-    if (augment)
-      central_product_interpolant(this, mean_1, mean_1, cov_t1_coeffs,
-				  cov_t2_coeffs);
-
-    if (varianceGradient.length() != num_deriv_vars)
-      varianceGradient.sizeUninitialized(num_deriv_vars);
-    for (i=0; i<num_deriv_vars; ++i) {
-      deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-      Real& grad_i = varianceGradient[i];
-      if (randomVarsKey[deriv_index]) {
-	// --------------------------------------------------------------------
-	// derivative of All var expansion w.r.t. random var (design insertion)
-	// --------------------------------------------------------------------
-	if (!expConfigOptions.expansionCoeffGradFlag) { // required data check
-	  PCerr << "Error: expansion coefficient gradients not defined in "
-		<< "HierarchInterpPolyApproximation::variance_gradient()."
-		<< std::endl;
-	  abort_handler(-1);
-	}
-	if (basisConfigOptions.useDerivs) {
-	  PCerr << "Error: combination of coefficient gradients and use_"
-		<< "derivatives is not supported in HierarchInterpPoly"
-		<< "Approximation::variance_gradient()" << std::endl;
-	  abort_handler(-1);
-	}
-	varianceGradient[i] = expectation_gradient(x, cov_t1_coeff_grads, cntr);
-	++cntr;
-      }
-      else {
-	// ---------------------------------------------------------------------
-	// deriv of All var expansion w.r.t. nonrandom var (design augmentation)
-	// ---------------------------------------------------------------------
-	if (!expConfigOptions.expansionCoeffFlag) { // required data check
-	  PCerr << "Error: expansion coefficients not defined in Hierarch"
-		<< "InterpPolyApproximation::variance_gradient()." << std::endl;
-	  abort_handler(-1);
-	}
-	varianceGradient[i]
-	  = expectation_gradient(x, cov_t1_coeffs, cov_t2_coeffs, deriv_index);
-      }
-    }
-
-    computedVariance |= 2; xPrevVarGrad = x;
+  // ---------------------------------------------------------------------
+  // For xi = ran vars, sa = augmented des vars, si = inserted design vars
+  // Active variable expansion:
+  //   R(xi, sa, si) = Sum_i r_i(sa, si) L_i(xi)
+  //   mu(sa, si)    = Sum_i r_i(sa, si) wt_prod_i
+  //   dmu/ds        = Sum_i dr_i/ds wt_prod_i
+  // All variable expansion:
+  //   R(xi, sa, si) = Sum_i r_i(si) L_i(xi, sa)
+  //   mu(sa, si)    = Sum_i r_i(si) Lsa_i wt_prod_i
+  //   dmu/dsa       = Sum_i r_i(si) dLsa_i/dsa wt_prod_i
+  //   dmu/dsi       = Sum_i dr_i/dsi Lsa_i wt_prod_i
+  // ---------------------------------------------------------------------
+  size_t i, deriv_index, cntr = 0, num_deriv_vars = dvv.size();
+  bool insert = false, augment = false;
+  for (i=0; i<num_deriv_vars; ++i) {
+    deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    if (randomVarsKey[deriv_index]) insert = true;
+    else                           augment = true;
   }
+
+  RealVector2DArray cov_t1_coeffs;
+  RealMatrix2DArray cov_t1_coeff_grads, cov_t2_coeffs;
+  Real mean_1 = mean(x);
+  if (insert) {
+    const RealVector& mean1_grad = mean_gradient(x, dvv);
+    central_product_gradient_interpolant(this, mean_1, mean_1, mean1_grad,
+					 mean1_grad, cov_t1_coeff_grads);
+  }
+  if (augment)
+    central_product_interpolant(this, mean_1, mean_1, cov_t1_coeffs,
+				cov_t2_coeffs);
+
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  for (i=0; i<num_deriv_vars; ++i) {
+    deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    Real& grad_i = varianceGradient[i];
+    if (randomVarsKey[deriv_index]) {
+      // --------------------------------------------------------------------
+      // derivative of All var expansion w.r.t. random var (design insertion)
+      // --------------------------------------------------------------------
+      if (!expConfigOptions.expansionCoeffGradFlag) { // required data check
+	PCerr << "Error: expansion coefficient gradients not defined in "
+	      << "HierarchInterpPolyApproximation::variance_gradient()."
+	      << std::endl;
+	abort_handler(-1);
+      }
+      if (basisConfigOptions.useDerivs) {
+	PCerr << "Error: combination of coefficient gradients and use_"
+	      << "derivatives is not supported in HierarchInterpPoly"
+	      << "Approximation::variance_gradient()" << std::endl;
+	abort_handler(-1);
+      }
+      varianceGradient[i] = expectation_gradient(x, cov_t1_coeff_grads, cntr);
+      ++cntr;
+    }
+    else {
+      // ---------------------------------------------------------------------
+      // deriv of All var expansion w.r.t. nonrandom var (design augmentation)
+      // ---------------------------------------------------------------------
+      if (!expConfigOptions.expansionCoeffFlag) { // required data check
+	PCerr << "Error: expansion coefficients not defined in Hierarch"
+	      << "InterpPolyApproximation::variance_gradient()." << std::endl;
+	abort_handler(-1);
+      }
+      varianceGradient[i] = expectation_gradient(x, cov_t1_coeffs,
+						 cov_t2_coeffs, deriv_index);
+    }
+  }
+  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
+  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
   return varianceGradient;
-}
-
-
-Real HierarchInterpPolyApproximation::
-covariance(PolynomialApproximation* poly_approx_2)
-{
-  // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool same = (this == hip_approx_2);
-  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  Real mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
-  central_product_interpolant(hip_approx_2, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
-
-  // evaluate expectation of these t1/t2 coefficients
-  Real covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
-  // Note: separation of reference and increment using cov_t{1,2}_coeffs
-  // with {ref,incr}_key would provide an increment of a central moment
-  // around an invariant center.  For hierarchical covariance, one must
-  // also account for the change in mean as in delta_covariance().
-
-  if (same && nonRandomIndices.empty()) // std mode
-    { numericalMoments[1] = covar; computedVariance |= 1; }
-  return covar;
-}
-
-
-Real HierarchInterpPolyApproximation::
-covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
-{
-  HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
-  bool same = (this == hip_approx_2);
-  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  Real mean_1 = mean(x), mean_2 = (same) ? mean_1 : hip_approx_2->mean(x);
-  central_product_interpolant(hip_approx_2, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
-
-  // evaluate expectation of these t1/t2 coefficients
-  Real covar = expectation(x, cov_t1_coeffs, cov_t2_coeffs);
-
-  if (same && !nonRandomIndices.empty()) // all vars mode
-    { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
-  return covar;
 }
 
 
 Real HierarchInterpPolyApproximation::
 reference_mean(const UShort2DArray& ref_key)
 {
-  Real& ref_mean = referenceMoments[0];
-  if ( !(computedRefMean & 1) ) {
-    ref_mean = expectation(expansionType1Coeffs, expansionType2Coeffs, ref_key);
-    computedRefMean |= 1;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedRefMean & 1))
+    return referenceMoments[0];
+
+  Real ref_mean
+    = expectation(expansionType1Coeffs, expansionType2Coeffs, ref_key);
+  if (std_mode)
+    { referenceMoments[0] = ref_mean; computedRefMean |= 1; }
   return ref_mean;
 }
 
@@ -1053,12 +1076,15 @@ reference_mean(const UShort2DArray& ref_key)
 Real HierarchInterpPolyApproximation::
 reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 {
-  Real& ref_mean = referenceMoments[0];
-  if ( !(computedRefMean & 1) || !match_nonrandom_vars(x, xPrevRefMean) ) {
-    ref_mean
-      = expectation(x, expansionType1Coeffs, expansionType2Coeffs, ref_key);
-    computedRefMean |= 1; xPrevRefMean = x;
-  }
+  bool all_mode = !nonRandomIndices.empty();
+  if (all_mode && (computedRefMean & 1) &&
+      match_nonrandom_vars(x, xPrevRefMean))
+    return referenceMoments[0];
+
+  Real ref_mean
+    = expectation(x, expansionType1Coeffs, expansionType2Coeffs, ref_key);
+  if (all_mode)
+    { referenceMoments[0] = ref_mean; computedRefMean |= 1; xPrevRefMean = x; }
   return ref_mean;
 }
 
@@ -1066,15 +1092,17 @@ reference_mean(const RealVector& x, const UShort2DArray& ref_key)
 Real HierarchInterpPolyApproximation::
 reference_variance(const UShort2DArray& ref_key)
 {
-  Real& ref_var = referenceMoments[1];
-  if ( !(computedRefVariance & 1) ) {
-    Real ref_mean = reference_mean(ref_key);
-    RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
-				cov_t2_coeffs, ref_key);
-    ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key);
-    computedRefVariance |= 1;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedRefVariance & 1))
+    return referenceMoments[1];
+
+  Real ref_mean = reference_mean(ref_key);
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
+			      cov_t2_coeffs, ref_key);
+  Real ref_var = expectation(cov_t1_coeffs, cov_t2_coeffs, ref_key);
+  if (std_mode)
+    { referenceMoments[1] = ref_var; computedRefVariance |= 1; }
   return ref_var;
 }
 
@@ -1082,13 +1110,18 @@ reference_variance(const UShort2DArray& ref_key)
 Real HierarchInterpPolyApproximation::
 reference_variance(const RealVector& x, const UShort2DArray& ref_key)
 {
-  Real& ref_var = referenceMoments[1];
-  if ( !(computedRefVariance & 1) || !match_nonrandom_vars(x, xPrevRefVar) ) {
-    Real ref_mean = reference_mean(x, ref_key);
-    RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-    central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
-				cov_t2_coeffs, ref_key);
-    ref_var = expectation(x, cov_t1_coeffs, cov_t2_coeffs, ref_key);
+  bool all_mode = !nonRandomIndices.empty();
+  if (all_mode && (computedRefVariance & 1) &&
+      match_nonrandom_vars(x, xPrevRefVar))
+    return referenceMoments[1];
+
+  Real ref_mean = reference_mean(x, ref_key);
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  central_product_interpolant(this, ref_mean, ref_mean, cov_t1_coeffs,
+			      cov_t2_coeffs, ref_key);
+  Real ref_var = expectation(x, cov_t1_coeffs, cov_t2_coeffs, ref_key);
+  if (all_mode) {
+    referenceMoments[1] = ref_var;
     computedRefVariance |= 1; xPrevRefVar = x;
   }
   return ref_var;
@@ -1097,37 +1130,46 @@ reference_variance(const RealVector& x, const UShort2DArray& ref_key)
 
 Real HierarchInterpPolyApproximation::delta_mean(const UShort2DArray& incr_key)
 {
-  Real& delta_var = deltaMoments[0];
-  if ( !(computedDeltaMean & 1) ) {
-    delta_var
-      = expectation(expansionType1Coeffs, expansionType2Coeffs, incr_key);
-    computedDeltaMean |= 1;
-  }
-  return delta_var;
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedDeltaMean & 1))
+    return deltaMoments[0];
+
+  Real delta_mean
+    = expectation(expansionType1Coeffs, expansionType2Coeffs, incr_key);
+  if (std_mode)
+    { deltaMoments[0] = delta_mean; computedDeltaMean |= 1; }
+  return delta_mean;
 }
 
 
 Real HierarchInterpPolyApproximation::
 delta_mean(const RealVector& x, const UShort2DArray& incr_key)
 {
-  Real& delta_var = deltaMoments[0];
-  if ( !(computedDeltaMean & 1) || !match_nonrandom_vars(x, xPrevDeltaMean) ) {
-    delta_var
-      = expectation(x, expansionType1Coeffs, expansionType2Coeffs, incr_key);
+  bool all_mode = !nonRandomIndices.empty();
+  if (all_mode && (computedDeltaMean & 1) &&
+      match_nonrandom_vars(x, xPrevDeltaMean))
+    return deltaMoments[0];
+
+  Real delta_mean
+    = expectation(x, expansionType1Coeffs, expansionType2Coeffs, incr_key);
+  if (all_mode) {
+    deltaMoments[0] = delta_mean;
     computedDeltaMean |= 1; xPrevDeltaMean = x;
   }
-  return delta_var;
+  return delta_mean;
 }
 
 
 Real HierarchInterpPolyApproximation::
 delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
-  Real& delta_var = deltaMoments[1];
-  if ( !(computedDeltaVariance & 1) ) {
-    delta_var = delta_covariance(this, ref_key, incr_key);
-    computedDeltaVariance |= 1;
-  }
+  bool std_mode = nonRandomIndices.empty();
+  if (std_mode && (computedDeltaVariance & 1))
+    return deltaMoments[1];
+
+  Real delta_var = delta_covariance(this, ref_key, incr_key);
+  if (std_mode)
+    { deltaMoments[1] = delta_var; computedDeltaVariance |= 1; }
   return delta_var;
 }
 
@@ -1136,10 +1178,14 @@ Real HierarchInterpPolyApproximation::
 delta_variance(const RealVector& x, const UShort2DArray& ref_key,
 	       const UShort2DArray& incr_key)
 {
-  Real& delta_var = deltaMoments[1];
-  if ( !(computedDeltaVariance & 1) ||
-       !match_nonrandom_vars(x, xPrevDeltaVar) ) {
-    delta_var = delta_covariance(x, this, ref_key, incr_key);
+  bool all_mode = !nonRandomIndices.empty();
+  if (all_mode && (computedDeltaVariance & 1) &&
+      match_nonrandom_vars(x, xPrevDeltaVar))
+    return deltaMoments[1];
+
+  Real delta_var = delta_covariance(x, this, ref_key, incr_key);
+  if (all_mode) {
+    deltaMoments[1] = delta_var;
     computedDeltaVariance |= 1; xPrevDeltaVar = x;
   }
   return delta_var;
@@ -1288,13 +1334,6 @@ Real HierarchInterpPolyApproximation::
 delta_covariance(PolynomialApproximation* poly_approx_2,
 		 const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
-  // Error check for required data
-  if (!expConfigOptions.expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "HierarchInterpPolyApproximation::delta_covariance()" << std::endl;
-    abort_handler(-1);
-  }
-
   // Supports multiple grid increments in discerning nominal from delta based
   // on isotropic/anisotropic/generalized index set increments.  In current
   // use, 2D keys with set ranges are sufficient: level -> {start,end} set.
@@ -1302,6 +1341,15 @@ delta_covariance(PolynomialApproximation* poly_approx_2,
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
+
+  // Error check for required data
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !hip_approx_2->expConfigOptions.expansionCoeffFlag )) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "HierarchInterpPolyApproximation::delta_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
@@ -1326,7 +1374,7 @@ delta_covariance(PolynomialApproximation* poly_approx_2,
   //     - \DeltaE[Ri] \DeltaE[Rj]
   Real delta_covar = delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
      - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
-  if (same)
+  if (same && nonRandomIndices.empty()) // std mode
     { deltaMoments[1] = delta_covar; computedDeltaVariance |= 1; }
   return delta_covar;
 }
@@ -1339,6 +1387,15 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2,
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
+
+  // Error check for required data
+  if ( !expConfigOptions.expansionCoeffFlag ||
+       ( !same && !hip_approx_2->expConfigOptions.expansionCoeffFlag )) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "HierarchInterpPolyApproximation::delta_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(hip_approx_2, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
@@ -1356,7 +1413,7 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2,
   // same expression as standard expansion mode case above
   Real delta_covar = delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2
      - ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
-  if (same) {
+  if (same && !nonRandomIndices.empty()) { // all vars mode
     deltaMoments[1] = delta_covar;
     computedDeltaVariance |= 1; xPrevDeltaVar = x;
   }
@@ -2114,20 +2171,24 @@ void HierarchInterpPolyApproximation::compute_total_sobol_indices()
 {
   // Compute the total expansion mean and variance.  For standard mode, these
   // are likely already available, as managed by computedMean in mean() and
-  // computedVariance in variance().  For all vars mode, we use expectation()
-  // and covariance(this): nonRandomIndices are not passed (full expectation)
+  // computedVariance in variance(). For all vars mode, we use expectation()
+  // and covariance(this): nonRandomIndices is not passed (full expectation)
   // and computedMean and computedVariance checks are bypassed (since checks
   // are not specialized to mean() vs. mean(x) or variance() vs. variance(x)).
   Real total_mean, total_variance;
-  if (nonRandomIndices.empty()) { // std mode
+  if (nonRandomIndices.empty()) { // std mode: exploit reuse
     total_mean     = mean();
     total_variance = variance();
   }
-  else {                     // all vars mode
+  else {                     // all vars mode: bypass reuse checks
     total_mean     = expectation(expansionType1Coeffs, expansionType2Coeffs);
     total_variance = covariance(this);
   }
 
+  // if negligible variance (deterministic test fn) or negative variance (poor
+  // sparse grid resolution), then attribution of this variance is suspect.
+  // Note: zero is a good choice since it drops out from anisotropic refinement
+  // based on the response-average of total Sobol' indices.
   if (total_variance <= SMALL_NUMBER)
     { totalSobolIndices = 0.; return; }
 

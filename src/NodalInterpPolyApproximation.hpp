@@ -361,6 +361,19 @@ approximation_coefficients(const RealVector& approx_coeffs)
 }
 
 
+/** In this case, all expansion variables are random variables and the
+    variance of the expansion uses an interpolation of response products. */
+inline Real NodalInterpPolyApproximation::variance()
+{ return covariance(this); }
+
+
+/** In this case, a subset of the expansion variables are random
+    variables and the variance of the expansion involves integration
+    over this subset and evaluation over the subset's complement. */
+inline Real NodalInterpPolyApproximation::variance(const RealVector& x)
+{ return covariance(x, this); }
+
+
 inline bool NodalInterpPolyApproximation::
 basis_product_1d(InterpolationPolynomial* poly_rep_1,
 		 InterpolationPolynomial* poly_rep_2,
