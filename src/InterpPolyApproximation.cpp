@@ -1432,17 +1432,17 @@ void InterpPolyApproximation::compute_component_sobol()
   size_t sobol_len = sobolIndices.length();
   if (partialVariance.length() != sobol_len) partialVariance.size(sobol_len);
   else                                       partialVariance = 0.;
-  // gets subtracted as child in compute_partial_variance()
-  partialVariance[0] = numericalMoments[0]*numericalMoments[0];
 
-  // Compute the total expansion variance.  For standard mode, the full variance
-  // is likely already available, as managed by computedVariance in variance().
-  // For all variables mode, we use covariance(this) without passing x for the
-  // nonRandomIndices (bypass computedVariance checks by not using variance()).
-  Real total_variance = (nonRandomIndices.empty()) ? variance() : // std mode
-                        covariance(this);                    // all vars mode
-
-  if (total_variance > SMALL_NUMBER) // Solve for partial variances
+  // Compute the total expansion mean & variance.  For standard mode, these are
+  // likely already available, as managed by computed{Mean,Variance} data reuse
+  // trackers.  For all vars mode, they are computed without partial integration
+  // restricted to the random indices.
+  Real total_variance = variance();
+  if (total_variance > SMALL_NUMBER) { // Solve for partial variances
+    Real total_mean = mean();
+    // 0th term gets subtracted as child in compute_partial_variance()
+    partialVariance[0] = total_mean * total_mean;
+    // compute the partial variances corresponding to Sobol' indices
     for (BAULMIter it=sobolIndexMap.begin(); it!=sobolIndexMap.end(); ++it) {
       unsigned long index = it->second;
       if (index) { // partialVariance[0] stores mean^2 offset
@@ -1450,6 +1450,7 @@ void InterpPolyApproximation::compute_component_sobol()
 	sobolIndices[index] = partialVariance[index] / total_variance;
       }
     }
+  }
   else // don't perform variance attribution for zero/negligible variance
     sobolIndices = 0.;
 #ifdef DEBUG

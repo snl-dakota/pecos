@@ -3687,27 +3687,17 @@ compute_partial_variance(const BitArray& set_value)
 void NodalInterpPolyApproximation::compute_total_sobol_indices()
 {
   // Compute the total expansion mean and variance.  For standard mode, these
-  // are likely already available, as managed by computedMean in mean() and
-  // computedVariance in variance().  For all vars mode, we use expectation()
-  // and covariance(this): nonRandomIndices are not passed (full expectation)
-  // and computedMean and computedVariance checks are bypassed (since checks
-  // are not specialized to mean() vs. mean(x) or variance() vs. variance(x)).
-  Real total_mean, total_variance;
-  if (nonRandomIndices.empty()) { // std mode
-    total_mean     = mean();
-    total_variance = variance();
-  }
-  else {                     // all vars mode
-    total_mean     = expectation(expansionType1Coeffs, expansionType2Coeffs);
-    total_variance = covariance(this);
-  }
-
-  // if negligible variance (deterministic test fn) or negative variance (poor
-  // sparse grid resolution), then attribution of this variance is suspect.
-  // Note: zero is a good choice since it drops out from anisotropic refinement
-  // based on the response-average of total Sobol' indices.
+  // are likely already available, as managed by computed{Mean,Variance} data
+  // reuse trackers.  For all vars mode, they are computed without partial
+  // integration restricted to the random indices.  If negligible variance
+  // (deterministic test fn) or negative variance (poor sparse grid resolution),
+  // then attribution of this variance is suspect.  Note: zero is a good choice
+  // since it drops out from anisotropic refinement based on a response-average
+  // of total Sobol' indices.
+  Real total_variance = variance();
   if (total_variance <= SMALL_NUMBER)
     { totalSobolIndices = 0.; return; }
+  Real total_mean = mean();
 
   BitArray complement_set(numVars);
   for (size_t j=0; j<numVars; ++j) {
