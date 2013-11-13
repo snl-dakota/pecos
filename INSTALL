@@ -195,8 +195,8 @@ Generating Local Documentation
 
 To build a local copy of the Users Manual in HTML, LaTeX, and man page
 formats, you will need the doxygen tool available for download from
-http://www.doxygen.org under GNU GPL terms.  Once doxygen is downloaded 
-and installed, the commands are:
+http://www.doxygen.org.  Once doxygen is downloaded and installed, the
+commands are:
 
   cd Pecos/docs
   doxygen Doxyfile
