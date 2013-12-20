@@ -22,6 +22,12 @@ namespace Pecos {
 
 void SharedInterpPolyApproxData::allocate_data()
 {
+  // use barycentric formulation for global Lagrange basis polynomials.
+  // Note: flag needed for update_{tensor,sparse}_interpolation_basis().
+  barycentricFlag = ( !basisConfigOptions.useDerivs &&
+    ( basisType == GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL ||
+      basisType == GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ) );
+
   bool param_update = false;
   const std::vector<BasisPolynomial>& num_int_poly_basis
     = driverRep->polynomial_basis();
@@ -65,11 +71,6 @@ void SharedInterpPolyApproxData::allocate_data()
     break;
   }
   }
-
-  // use barycentric formulation for global Lagrange basis polynomials
-  barycentricFlag = false;//( !basisConfigOptions.useDerivs &&
-  //    ( basisType == GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL ||
-  //      basisType == GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ) );
 }
 
 
@@ -305,7 +306,7 @@ update_interpolation_basis(unsigned short lev_index, size_t var_index)
     short poly_type_1d, rule;
     // don't share reps in case of parameterized basis or barycentric interp,
     // due to need for individual updates to parameters or interpolated x value.
-    if (num_int_poly_basis_v.parameterized() || barycentricFlag) {
+    if (barycentricFlag || num_int_poly_basis_v.parameterized()) {
       if (poly_basis_lv.is_null()) {
 	initialize_polynomial_basis_type(poly_type_1d, rule);
 	poly_basis_lv = BasisPolynomial(poly_type_1d, rule);
