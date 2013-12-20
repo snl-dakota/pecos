@@ -67,9 +67,9 @@ void SharedInterpPolyApproxData::allocate_data()
   }
 
   // use barycentric formulation for global Lagrange basis polynomials
-  barycentricFlag = ( !basisConfigOptions.useDerivs &&
-    ( basisType == GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL ||
-      basisType == GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ) );
+  barycentricFlag = false;//( !basisConfigOptions.useDerivs &&
+  //    ( basisType == GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL ||
+  //      basisType == GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ) );
 }
 
 
