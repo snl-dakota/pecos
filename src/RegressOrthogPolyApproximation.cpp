@@ -94,31 +94,35 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 
 void RegressOrthogPolyApproximation::allocate_component_sobol()
 {
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& multi_index = data_rep->multiIndex;
-  BitArrayULongMap& sobol_map = data_rep->sobolIndexMap;
-  SizetSet::const_iterator cit;
-  size_t j, num_v = sharedDataRep->numVars;
-  BitArray set(num_v);
-  for (cit=++sparseIndices.begin(); cit!=sparseIndices.end(); ++cit) {
-    const UShortArray& sparse_mi = multi_index[*cit];
-    for (j=0; j<num_v; ++j)
-      if (sparse_mi[j]) set.set(j);   //   activate bit j
-      else              set.reset(j); // deactivate bit j
-    sparseSobolIndices.insert(sobol_map[set]); // discard duplicate indices
-    // TO DO: may be better to define a map from shared index to sparse index.
-    // the map value (sparse index) would be the position in the sorted sparse
-    // set --> issue is whether to incur this distance() overhead each time.
+  if (sparseIndices.empty())
+    PolynomialApproximation::allocate_component_sobol();
+  else {
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    const UShort2DArray& multi_index = data_rep->multiIndex;
+    BitArrayULongMap& sobol_map = data_rep->sobolIndexMap;
+    SizetSet::const_iterator cit;
+    size_t j, num_v = sharedDataRep->numVars;
+    BitArray set(num_v);
+    for (cit=++sparseIndices.begin(); cit!=sparseIndices.end(); ++cit) {
+      const UShortArray& sparse_mi = multi_index[*cit];
+      for (j=0; j<num_v; ++j)
+	if (sparse_mi[j]) set.set(j);   //   activate bit j
+	else              set.reset(j); // deactivate bit j
+      sparseSobolIndices.insert(sobol_map[set]); // discard duplicate indices
+      // TO DO: may be better to define a map from shared index to sparse index.
+      // the map value (sparse index) would be the position in the sorted sparse
+      // set --> issue is whether to incur this distance() overhead each time.
+    }
+    // TO DO: these changes need to be propagated elsewhere, potentially with
+    // additional fn specializations:
+    // > sobolIndexMap is now insufficient to describe component sobol indices
+    //   in all cases
+    // > multiIndex is now insufficient to describe expansion terms in all cases
+    size_t sobol_len = sparseSobolIndices.size();
+    if (sobolIndices.length() != sobol_len)
+      sobolIndices.sizeUninitialized(sobol_len);
   }
-  // TO DO: these changes need to be propagated elsewhere, potentially with
-  // additional fn specializations:
-  // > sobolIndexMap is now insufficient to describe component sobol indices
-  //   in all cases
-  // > multiIndex is now insufficient to describe expansion terms in all cases
-  size_t sobol_len = sparseSobolIndices.size();
-  if (sobolIndices.length() != sobol_len)
-    sobolIndices.sizeUninitialized(sobol_len);
 }
 
 
