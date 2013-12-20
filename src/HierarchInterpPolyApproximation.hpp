@@ -15,6 +15,7 @@
 #define HIERARCH_INTERP_POLY_APPROXIMATION_HPP
 
 #include "InterpPolyApproximation.hpp"
+#include "SharedHierarchInterpPolyApproxData.hpp"
 #include "HierarchSparseGridDriver.hpp"
 
 namespace Pecos {
@@ -38,8 +39,7 @@ public:
   //
 
   /// Default constructor
-  HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
-				  bool use_derivs, short output_level);
+  HierarchInterpPolyApproximation(const SharedBasisApproxData& shared_data);
   /// destructor
   ~HierarchInterpPolyApproximation();
 
@@ -48,9 +48,6 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
-
-  void allocate_component_sobol();
-  void increment_component_sobol();
 
   void allocate_expansion_coefficients();
   void compute_expansion_coefficients();
@@ -114,24 +111,6 @@ protected:
 
   void compute_total_sobol_indices();
   void compute_partial_variance(const BitArray& set_value);
-
-  void set_new_point(const RealVector& x, const UShortArray& basis_index,
-		     short order);
-  void set_new_point(const RealVector& x, const UShortArray& basis_index,
-		     const SizetList& subset_indices, short order);
-
-  size_t barycentric_exact_index(const UShortArray& basis_index);
-  size_t barycentric_exact_index(const UShortArray& basis_index,
-				 const SizetList& subset_indices);
-
-  unsigned short tensor_product_num_key(size_t i, unsigned short level_i);
-  unsigned short tensor_product_max_key(size_t i, unsigned short level_i);
-  void precompute_keys(const UShortArray& basis_index);
-  void precompute_keys(const UShortArray& basis_index,
-		       const SizetList& subset_indices);
-  void precompute_max_keys(const UShortArray& basis_index);
-  void precompute_max_keys(const UShortArray& basis_index,
-			   const SizetList& subset_indices);
 
 private:
 
@@ -323,9 +302,6 @@ private:
   //- Heading: Data
   //
 
-  /// Pecos:PIECEWISE_INTERP_POLYNOMIAL or Pecos:PIECEWISE_CUBIC_INTERP
-  short polyType;
-
   /// bookkeeping to track computation of reference mean to avoid
   /// unnecessary recomputation
   short computedRefMean;
@@ -389,189 +365,17 @@ private:
   RealMatrix2DArray storedExpType2Coeffs;
   /// storage of expansionType1CoeffGrads state for subsequent restoration
   RealMatrix2DArray storedExpType1CoeffGrads;
-  /// storage of level multi-index (levels for tensor or sparse grids)
-  /// for subsequent restoration
-  UShort3DArray storedLevMultiIndex;
-  /// storage of IntegrationDriver collocation key state for
-  /// subsequent restoration
-  UShort4DArray storedCollocKey;
-  // storage of IntegrationDriver collocation indices state for
-  // subsequent restoration
-  //Sizet3DArray storedCollocIndices;
-
-  /// used for precomputation of the number of hierarchical keys for a
-  /// particular basis_index
-  UShortArray tpNumKeys;
-  /// used for precomputation of the maximum hierarchical key index
-  /// for a particular basis_index
-  UShortArray tpMaxKeys;
 };
 
 
 inline HierarchInterpPolyApproximation::
-HierarchInterpPolyApproximation(short basis_type, size_t num_vars,
-				bool use_derivs, short output_level):
-  InterpPolyApproximation(basis_type, num_vars, use_derivs, output_level)
-{}
+HierarchInterpPolyApproximation(const SharedBasisApproxData& shared_data):
+  InterpPolyApproximation(shared_data)
+{ }
 
 
 inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
-{}
-
-
-inline void HierarchInterpPolyApproximation::
-set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
-{
-  unsigned short bi_j; UShortArray delta_key;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  for (size_t j=0; j<numVars; ++j) {
-    bi_j = basis_index[j];
-    if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
-      hsg_driver->level_to_delta_key(j, bi_j, delta_key);
-      polynomialBasis[bi_j][j].set_new_point(x[j], order, delta_key);
-    }
-  }
-}
-
-
-inline void HierarchInterpPolyApproximation::
-set_new_point(const RealVector& x, const UShortArray& basis_index,
-	      const SizetList& subset_indices, short order)
-{
-  SizetList::const_iterator cit; size_t j; unsigned short bi_j;
-  UShortArray delta_key;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    j = *cit; bi_j = basis_index[j];
-    if (bi_j) { // exclusion of pt must be sync'd w/ factors/scalings
-      hsg_driver->level_to_delta_key(j, bi_j, delta_key);
-      polynomialBasis[bi_j][j].set_new_point(x[j], order, delta_key);
-    }
-  }
-}
-
-
-inline size_t HierarchInterpPolyApproximation::
-barycentric_exact_index(const UShortArray& basis_index)
-{
-  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  for (j=0; j<numVars; ++j) {
-    bi_j = basis_index[j];
-    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
-    // this constant interpolation with the value at the 1 colloc index (ei=0)
-    if (bi_j) {
-      edi_j = polynomialBasis[bi_j][j].exact_delta_index();
-      if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
-	{ pt_index = _NPOS; break; }
-      else {
-	pt_index += edi_j * prod;
-	prod     *= hsg_driver->level_to_delta_size(j, bi_j);
-      }
-    }
-  }
-  return pt_index;
-}
-
-
-inline size_t HierarchInterpPolyApproximation::
-barycentric_exact_index(const UShortArray& basis_index,
-			const SizetList& subset_indices)
-{
-  size_t j, pt_index = 0, prod = 1, edi_j; unsigned short bi_j;
-  SizetList::const_iterator cit;
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    j = *cit; bi_j = basis_index[j];
-    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
-    // this constant interpolation with the value at the 1 colloc index (ei=0)
-    if (bi_j) {
-      edi_j = polynomialBasis[bi_j][j].exact_delta_index();
-      if (edi_j == _NPOS) // manage exactIndex match w/o exactDeltaIndex match
-	{ pt_index = _NPOS; break; }
-      else {
-	pt_index += edi_j * prod;
-	prod     *= hsg_driver->level_to_delta_size(j, bi_j);
-      }
-    }
-  }
-  return pt_index;
-}
-
-
-inline unsigned short HierarchInterpPolyApproximation::
-tensor_product_num_key(size_t i, unsigned short level_i)
-{
-  // for the case of precomputed keys:
-  return tpNumKeys[i];
-
-  //HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  //return hsg_driver->level_to_delta_size(i, level_i);
-}
-
-
-inline unsigned short HierarchInterpPolyApproximation::
-tensor_product_max_key(size_t i, unsigned short level_i)
-{
-  // for the case of precomputed keys:
-  return tpMaxKeys[i];
-
-  //HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  //return hsg_driver->level_to_delta_pair(i, level_i).second;
-}
-
-
-inline void HierarchInterpPolyApproximation::
-precompute_keys(const UShortArray& basis_index)
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
-  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
-  UShortPair key_pr;
-  for (size_t i=0; i<numVars; ++i) {
-    key_pr = hsg_driver->level_to_delta_pair(i, basis_index[i]);
-    tpNumKeys[i] = key_pr.first; tpMaxKeys[i] = key_pr.second;
-  }
-}
-
-
-inline void HierarchInterpPolyApproximation::
-precompute_keys(const UShortArray& basis_index, const SizetList& subset_indices)
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
-  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
-  SizetList::const_iterator cit; size_t i; UShortPair key_pr;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    i = *cit;
-    key_pr = hsg_driver->level_to_delta_pair(i, basis_index[i]);
-    tpNumKeys[i] = key_pr.first; tpMaxKeys[i] = key_pr.second;
-  }
-}
-
-
-inline void HierarchInterpPolyApproximation::
-precompute_max_keys(const UShortArray& basis_index)
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
-  for (size_t i=0; i<numVars; ++i)
-    tpMaxKeys[i] = hsg_driver->level_to_delta_pair(i, basis_index[i]).second;
-}
-
-
-inline void HierarchInterpPolyApproximation::
-precompute_max_keys(const UShortArray& basis_index,
-		    const SizetList& subset_indices)
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
-  SizetList::const_iterator cit; size_t i;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    i = *cit;
-    tpMaxKeys[i] = hsg_driver->level_to_delta_pair(i, basis_index[i]).second;
-  }
-}
+{ }
 
 
 inline Real HierarchInterpPolyApproximation::variance()
@@ -585,9 +389,10 @@ inline Real HierarchInterpPolyApproximation::variance(const RealVector& x)
 inline Real HierarchInterpPolyApproximation::
 delta_covariance(PolynomialApproximation* poly_approx_2)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_covariance(poly_approx_2, ref_key, incr_key);
 }
@@ -596,9 +401,10 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
 inline Real HierarchInterpPolyApproximation::
 delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_covariance(x, poly_approx_2, ref_key, incr_key);
 }
@@ -607,9 +413,10 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 inline Real HierarchInterpPolyApproximation::delta_mean()
 {
   if ( !(computedDeltaMean & 1) ) {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
     UShort2DArray ref_key, incr_key;
-    hsg_driver->partition_keys(ref_key, incr_key);
+    data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
     return delta_mean(incr_key);
   }
   else
@@ -620,9 +427,10 @@ inline Real HierarchInterpPolyApproximation::delta_mean()
 inline Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
 {
   if ( !(computedDeltaMean & 1) ) {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
     UShort2DArray ref_key, incr_key;
-    hsg_driver->partition_keys(ref_key, incr_key);
+    data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
     return delta_mean(x, incr_key);
   }
   else
@@ -632,9 +440,10 @@ inline Real HierarchInterpPolyApproximation::delta_mean(const RealVector& x)
 
 inline Real HierarchInterpPolyApproximation::delta_std_deviation()
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_std_deviation(ref_key, incr_key);
 }
@@ -643,9 +452,10 @@ inline Real HierarchInterpPolyApproximation::delta_std_deviation()
 inline Real HierarchInterpPolyApproximation::
 delta_std_deviation(const RealVector& x)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_std_deviation(x, ref_key, incr_key);
 }
@@ -654,9 +464,10 @@ delta_std_deviation(const RealVector& x)
 inline Real HierarchInterpPolyApproximation::
 delta_beta(bool cdf_flag, Real z_bar)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_beta(cdf_flag, z_bar, ref_key, incr_key);
 }
@@ -665,9 +476,10 @@ delta_beta(bool cdf_flag, Real z_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_beta(x, cdf_flag, z_bar, ref_key, incr_key);
 }
@@ -676,9 +488,10 @@ delta_beta(const RealVector& x, bool cdf_flag, Real z_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_z(bool cdf_flag, Real beta_bar)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_z(cdf_flag, beta_bar, ref_key, incr_key);
 }
@@ -687,9 +500,10 @@ delta_z(bool cdf_flag, Real beta_bar)
 inline Real HierarchInterpPolyApproximation::
 delta_z(const RealVector& x, bool cdf_flag, Real beta_bar)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   return delta_z(x, cdf_flag, beta_bar, ref_key, incr_key);
 }
@@ -701,7 +515,9 @@ expectation(const RealVector2DArray& t1_coeffs,
 	    const UShort2DArray& set_partition)
 {
   // This version defaults to type1/2 weights from HierarchSparseGridDriver
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   return expectation(t1_coeffs, hsg_driver->type1_weight_set_arrays(),
 		     t2_coeffs, hsg_driver->type2_weight_set_arrays(),
 		     set_partition);
@@ -711,23 +527,27 @@ expectation(const RealVector2DArray& t1_coeffs,
 inline const RealVector& HierarchInterpPolyApproximation::
 expectation_gradient(const RealMatrix2DArray& t1_coeff_grads)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   return expectation_gradient(t1_coeff_grads,
-			      hsg_driver->type1_weight_set_arrays());
+    data_rep->hsg_driver()->type1_weight_set_arrays());
 }
 
 
 inline void HierarchInterpPolyApproximation::restore_expansion_coefficients()
 {
-  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  restore_expansion_coefficients(sg_driver->trial_set());
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  restore_expansion_coefficients(data_rep->hsg_driver()->trial_set());
   increment_current_from_reference();
 }
 
 
 inline Real HierarchInterpPolyApproximation::value(const RealVector& x)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return value(x, sm_mi, hsg_driver->collocation_key(), expansionType1Coeffs,
@@ -738,7 +558,9 @@ inline Real HierarchInterpPolyApproximation::value(const RealVector& x)
 inline const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
@@ -750,7 +572,9 @@ gradient_basis_variables(const RealVector& x)
 inline const RealVector& HierarchInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
@@ -762,7 +586,9 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 inline const RealVector& HierarchInterpPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x)
 {
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_nonbasis_variables(x, sm_mi, hsg_driver->collocation_key(),
@@ -772,17 +598,22 @@ gradient_nonbasis_variables(const RealVector& x)
 
 inline Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
 {
-  unsigned short max_level = storedLevMultiIndex.size() - 1;
-  return value(x, storedLevMultiIndex, storedCollocKey, storedExpType1Coeffs,
-	       storedExpType2Coeffs, max_level);
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  unsigned short max_level = data_rep->storedLevMultiIndex.size() - 1;
+  return value(x, data_rep->storedLevMultiIndex, data_rep->storedCollocKey,
+	       storedExpType1Coeffs, storedExpType2Coeffs, max_level);
 }
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x)
 {
-  unsigned short max_level = storedLevMultiIndex.size() - 1;
-  return gradient_basis_variables(x, storedLevMultiIndex, storedCollocKey,
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  unsigned short max_level = data_rep->storedLevMultiIndex.size() - 1;
+  return gradient_basis_variables(x, data_rep->storedLevMultiIndex,
+				  data_rep->storedCollocKey,
 				  storedExpType1Coeffs, storedExpType2Coeffs,
 				  max_level);
 }
@@ -791,8 +622,11 @@ stored_gradient_basis_variables(const RealVector& x)
 inline const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x)
 {
-  unsigned short max_level = storedLevMultiIndex.size() - 1;
-  return gradient_nonbasis_variables(x, storedLevMultiIndex, storedCollocKey,
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  unsigned short max_level = data_rep->storedLevMultiIndex.size() - 1;
+  return gradient_nonbasis_variables(x, data_rep->storedLevMultiIndex,
+				     data_rep->storedCollocKey,
 				     storedExpType1CoeffGrads, max_level);
 }
 

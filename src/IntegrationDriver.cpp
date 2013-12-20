@@ -18,7 +18,7 @@
 #include "CombinedSparseGridDriver.hpp"
 #include "HierarchSparseGridDriver.hpp"
 //#include "LocalRefinableDriver.hpp"
-#include "PolynomialApproximation.hpp"
+#include "SharedPolyApproxData.hpp"
 
 static const char rcsId[]="@(#) $Id: IntegrationDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -203,8 +203,8 @@ initialize_grid_parameters(const ShortArray& u_types,
   if (driverRep)
     driverRep->initialize_grid_parameters(u_types, adp); // forward to letter
   else // default implementation
-    PolynomialApproximation::update_basis_distribution_parameters(u_types,
-      adp, polynomialBasis);
+    SharedPolyApproxData::update_basis_distribution_parameters(u_types, adp,
+							       polynomialBasis);
 }
 
 
@@ -275,13 +275,12 @@ initialize_rules(const ShortArray& u_types,
   numVars = u_types.size();
   ShortArray basis_types;
   // TO DO: will this require an OPA/IPA switch?
-  //PolynomialApproximation::initialize_basis_types(u_types, bc_options,
-  //                                                 basis_types);
-  PolynomialApproximation::initialize_collocation_rules(u_types, bc_options,
-							collocRules);
-  PolynomialApproximation::initialize_polynomial_basis(basis_types,
-						       collocRules,
-						       polynomialBasis);
+  //SharedPolyApproxData::initialize_basis_types(u_types, bc_options,
+  //                                             basis_types);
+  SharedPolyApproxData::initialize_collocation_rules(u_types, bc_options,
+						     collocRules);
+  SharedPolyApproxData::initialize_polynomial_basis(basis_types, collocRules,
+						    polynomialBasis);
   for (size_t i=0; i<numVars; i++)
     if (basis_types[i] == HERMITE_INTERP ||
 	basis_types[i] == PIECEWISE_CUBIC_INTERP)
@@ -350,8 +349,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
     colloc_key[i] = colloc_indices;
     // increment the n-dimensional collocation point index set
     if (i != num_colloc_pts-1)
-      PolynomialApproximation::increment_indices(colloc_indices,
-						 quad_order, false);
+      SharedPolyApproxData::increment_indices(colloc_indices, quad_order,false);
   }
 
 #ifdef DEBUG
@@ -394,8 +392,7 @@ compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
     colloc_key[i] = colloc_indices;
     // increment the n-dimensional collocation point index set
     if (i != num_colloc_pts-1)
-      PolynomialApproximation::increment_indices(colloc_indices,
-						 quad_order, false);
+      SharedPolyApproxData::increment_indices(colloc_indices, quad_order,false);
   }
 
 #ifdef DEBUG

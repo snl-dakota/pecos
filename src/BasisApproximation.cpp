@@ -24,8 +24,9 @@ namespace Pecos {
     base class constructor calling get_basis_approx() again).  Since the
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~BasisApproximation). */
-BasisApproximation::BasisApproximation(BaseConstructor, size_t num_vars):
-  numVars(num_vars), basisApproxRep(NULL), referenceCount(1)
+BasisApproximation::
+BasisApproximation(BaseConstructor, const SharedBasisApproxData& shared_data):
+  sharedDataRep(shared_data.data_rep()), basisApproxRep(NULL), referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "BasisApproximation::BasisApproximation(BaseConstructor) called to "
@@ -51,8 +52,7 @@ BasisApproximation::BasisApproximation():
     execute get_basis_approx, since BasisApproximation(BaseConstructor)
     builds the actual base class data for the derived basis functions. */
 BasisApproximation::
-BasisApproximation(short basis_type, const UShortArray& approx_order,
-		   size_t num_vars, bool use_derivs, short output_level):
+BasisApproximation(const SharedBasisApproxData& shared_data):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -61,8 +61,7 @@ BasisApproximation(short basis_type, const UShortArray& approx_order,
 #endif
 
   // Set the rep pointer to the appropriate derived type
-  basisApproxRep = get_basis_approx(basis_type, approx_order, num_vars,
-				    use_derivs, output_level);
+  basisApproxRep = get_basis_approx(shared_data);
   if ( !basisApproxRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -71,49 +70,38 @@ BasisApproximation(short basis_type, const UShortArray& approx_order,
 /** Used only by the envelope constructor to initialize basisApproxRep to the 
     appropriate derived type. */
 BasisApproximation* BasisApproximation::
-get_basis_approx(short basis_type, const UShortArray& approx_order,
-		 size_t num_vars, bool use_derivs, short output_level)
+get_basis_approx(const SharedBasisApproxData& shared_data)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_basis_approx(string&)."
         << std::endl;
 #endif
 
-  switch (basis_type) {
+  switch (shared_data.data_rep()->basisType) {
   case GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
-    return new NodalInterpPolyApproximation(basis_type, num_vars,
-					    use_derivs, output_level);
-    break;
+    return new NodalInterpPolyApproximation(shared_data);    break;
   case GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
   case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    return new HierarchInterpPolyApproximation(basis_type, num_vars,
-					       use_derivs, output_level);
-    break;
+    return new HierarchInterpPolyApproximation(shared_data); break;
   case GLOBAL_REGRESSION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_REGRESSION_ORTHOGONAL_POLYNOMIAL:
     // L1 or L2 regression
-    return new RegressOrthogPolyApproximation(approx_order, num_vars,
-					      use_derivs, output_level);
-    break;
+    return new RegressOrthogPolyApproximation(shared_data);  break;
   case GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_PROJECTION_ORTHOGONAL_POLYNOMIAL:
     // projection via numerical integration of inner products
-    return new ProjectOrthogPolyApproximation(approx_order, num_vars,
-					      use_derivs, output_level);
-    break;
+    return new ProjectOrthogPolyApproximation(shared_data);  break;
   case GLOBAL_ORTHOGONAL_POLYNOMIAL: //case PIECEWISE_ORTHOGONAL_POLYNOMIAL:
     // coefficient import -- no coefficient computation required
-    return new OrthogPolyApproximation(approx_order, num_vars,
-				       use_derivs, output_level);
-    break;
+    return new OrthogPolyApproximation(shared_data);         break;
   //case FOURIER_BASIS:
-  //  return new FourierBasisApproximation(num_vars);             break;
+  //  return new FourierBasisApproximation();                break;
   //case EIGEN_BASIS:
-  //  return new SVDLeftEigenBasisApproximation(num_vars);        break;
+  //  return new SVDLeftEigenBasisApproximation();           break;
   default:
-    PCerr << "Error: BasisApproximation type " << basis_type
-	  << " not available." << std::endl;
+    PCerr << "Error: BasisApproximation type "
+	  << shared_data.data_rep()->basisType << " not available."<< std::endl;
     return NULL; break;
   }
 }
@@ -318,32 +306,6 @@ void BasisApproximation::combine_coefficients(short combine_type)
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
-}
-
-
-bool BasisApproximation::restore_available()
-{ return (basisApproxRep) ? basisApproxRep->restore_available() : false; }
-
-
-size_t BasisApproximation::restoration_index()
-{
-  if (!basisApproxRep) {
-    PCerr << "Error: restoration_index() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-  return basisApproxRep->restoration_index(); 
-}
-
-
-size_t BasisApproximation::finalization_index(size_t i)
-{
-  if (!basisApproxRep) {
-    PCerr << "Error: finalization_index(size_t) not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-  return basisApproxRep->finalization_index(i); 
 }
 
 

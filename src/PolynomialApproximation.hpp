@@ -17,164 +17,11 @@
 
 #include "BasisApproximation.hpp"
 #include "SurrogateData.hpp"
-#include "SparseGridDriver.hpp"
-
+#include "SharedPolyApproxData.hpp"
 
 namespace Pecos {
 
-class IntegrationDriver;
-class SparseGridDriver;
 class AleatoryDistParams;
-
-
-/// Container class for various expansion configuration options
-
-/** The ExpansionConfigOptions class provides a simple container class
-    for expansion configuration options related to data modes, verbosity,
-    refinement, and VBD controls. */
-
-class ExpansionConfigOptions
-{
-  //
-  //- Heading: Friends
-  //
-
-  //friend class PolynomialApproximation;
-  //friend class InterpPolyApproximation;
-  //friend class NodalInterpPolyApproximation;
-  //friend class HierarchInterpPolyApproximation;
-  //friend class OrthogPolyApproximation;
-
-public:
-
-  /// default constructor
-  ExpansionConfigOptions();
-  /// constructor
-  ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-			 bool exp_grad_flag, short output_level, bool vbd_flag,
-			 unsigned short vbd_order, //short refine_type,
-			 short refine_cntl, int max_iter, Real conv_tol);
-  /// destructor
-  ~ExpansionConfigOptions();
-
-//private:
-
-  /// identifies the approach taken in compute_coefficients(): QUADRATURE,
-  /// CUBATURE, COMBINED_SPARSE_GRID, HIERARCHICAL_SPARSE_GRID, REGRESSION,
-  /// or SAMPLING
-  short expCoeffsSolnApproach;
-
-  /// flag for calculation of expansion coefficients from response values
-  bool expansionCoeffFlag;
-  /// flag for calculation of gradients of expansion coefficients from
-  /// response gradients
-  bool expansionCoeffGradFlag;
-
-  /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
-  short outputLevel;
-
-  /// flag indicated use of variance-based decomposition for computing
-  /// Sobol' indices
-  bool vbdFlag;
-  /// limit for order of interactions computed in variance-based decomposition
-  unsigned short vbdOrderLimit;
-
-  // type of refinement: {NO,P,H}_REFINEMENT
-  //short refinementType;
-  /// approach for control of refinement: {NO,UNIFORM,LOCAL_ADAPTIVE}_CONTROL
-  /// or DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY,GENERALIZED}
-  short refinementControl;
-
-  /// control for limiting the maximum number of iterations in adapted
-  /// or iterated approximation algorithms
-  int maxIterations;
-  /// convergence tolerance for adapted or iterated approximation algorithms
-  Real convergenceTol;
-};
-
-
-inline ExpansionConfigOptions::ExpansionConfigOptions():
-  expCoeffsSolnApproach(SAMPLING), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false), outputLevel(NORMAL_OUTPUT),
-  vbdFlag(false), vbdOrderLimit(0), //refinementType(NO_REFINEMENT),
-  refinementControl(NO_CONTROL), maxIterations(100), convergenceTol(1.e-4)
-{ }
-
-
-inline ExpansionConfigOptions::
-ExpansionConfigOptions(short exp_soln_approach, bool exp_coeff_flag,
-		       bool exp_grad_flag, short output_level, bool vbd_flag,
-		       unsigned short vbd_order, //short refine_type,
-		       short refine_cntl, int max_iter, Real conv_tol):
-  expCoeffsSolnApproach(exp_soln_approach), expansionCoeffFlag(exp_coeff_flag),
-  expansionCoeffGradFlag(exp_grad_flag), outputLevel(output_level),
-  vbdFlag(vbd_flag), vbdOrderLimit(vbd_order), //refinementType(refine_type),
-  refinementControl(refine_cntl), maxIterations(max_iter),
-  convergenceTol(conv_tol)
-{ }
-
-
-inline ExpansionConfigOptions::~ExpansionConfigOptions()
-{ }
-
-
-/// Container class for various basis configuration options
-
-/** The BasisConfigOptions class provides a simple container class
-    for basis configuration options related to rule nesting, 
-    piecewise basis polynomials, and derivative enhancement. */
-
-class BasisConfigOptions
-{
-  //
-  //- Heading: Friends
-  //
-
-  //friend class PolynomialApproximation;
-  //friend class InterpPolyApproximation;
-  //friend class NodalInterpPolyApproximation;
-  //friend class HierarchInterpPolyApproximation;
-  //friend class OrthogPolyApproximation;
-
-public:
-
-  /// default constructor
-  BasisConfigOptions();
-  /// constructor
-  BasisConfigOptions(bool nested_rules, bool piecewise_basis,
-		     bool equidistant_rules, bool use_derivs);
-  /// destructor
-  ~BasisConfigOptions();
-
-//private:
-
-  /// flag for use of nested integration rules
-  bool nestedRules;
-  /// flag for use of piecewise basis polynomials
-  bool piecewiseBasis;
-  /// flag for use of equidistant points for forming piecewise basis polynomials
-  bool equidistantRules;
-  /// flag for utilizing derivatives during formation/calculation of expansions
-  bool useDerivs;
-};
-
-
-inline BasisConfigOptions::BasisConfigOptions():
-  nestedRules(true), piecewiseBasis(false), equidistantRules(true),
-  useDerivs(false)
-{ }
-
-
-inline BasisConfigOptions::
-BasisConfigOptions(bool nested_rules, bool piecewise_basis,
-		   bool equidistant_rules, bool use_derivs):
-  nestedRules(nested_rules), piecewiseBasis(piecewise_basis),
-  equidistantRules(equidistant_rules), useDerivs(use_derivs)
-{ }
-
-
-inline BasisConfigOptions::~BasisConfigOptions()
-{ }
 
 
 /// Derived approximation class for global basis polynomials.
@@ -192,10 +39,8 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  /// default constructor
-  PolynomialApproximation();
   /// standard constructor
-  PolynomialApproximation(size_t num_vars, bool use_derivs, short output_level);
+  PolynomialApproximation(const SharedBasisApproxData& shared_data);
   /// destructorboth
   ~PolynomialApproximation();
 
@@ -203,14 +48,16 @@ public:
   //- Heading: Virtual member functions
   //
 
+  /// size derived class data attributes
+  virtual void allocate_arrays() = 0;
+  /// size component Sobol arrays
+  virtual void allocate_component_sobol();
+
   /// Computes sensitivity indices according to VBD specification
   virtual void compute_component_sobol() = 0;
   /// Computes total sensitivity indices according to VBD specification
   /// and existing computations from compute_component_sobol()
   virtual void compute_total_sobol() = 0;
-
-  /// size derived class data attributes
-  virtual void allocate_arrays() = 0;
 
   /// retrieve the gradient for a response expansion with respect to
   /// all variables included in the polynomial bases using the given
@@ -318,37 +165,14 @@ public:
   /// post-processing or numerical integration
   virtual const RealVector& moments() const = 0;
 
-  /// estimate expansion coefficient decay rates for each random
-  /// variable dimension (OrthogPolyApproximation only)
-  virtual const RealVector& dimension_decay_rates();
-
-  /// increment the approximation order (OrthogPolyApproximation only)
-  virtual void increment_order();
-  /// update the approximation order (OrthogPolyApproximation only)
-  virtual void update_order(const UShortArray& order);
-
-  /// size component Sobol arrays
-  virtual void allocate_component_sobol() = 0;
-  /// size component Sobol arrays
-  virtual void increment_component_sobol();
-
   //
   //- Heading: Member functions
   //
 
-  // allocate basis_types based on u_types
-  //static bool initialize_basis_types(const ShortArray& u_types,
-  //				       bool piecewise_basis, bool use_derivs,
-  //				       ShortArray& basis_types);
-  /// allocate colloc_rules based on u_types and rule options
-  static void initialize_collocation_rules(const ShortArray& u_types,
-    const BasisConfigOptions& bc_options, ShortArray& colloc_rules);
-  /// allocate poly_basis based on basis_types and colloc_rules
-  static void initialize_polynomial_basis(const ShortArray& basis_types,
-    const ShortArray& colloc_rules, std::vector<BasisPolynomial>& poly_basis);
-  /// pass distribution parameters from dp to poly_basis
-  static void update_basis_distribution_parameters(const ShortArray& u_types,
-    const AleatoryDistParams& dp, std::vector<BasisPolynomial>& poly_basis);
+  /// set surrData (shared representation)
+  void surrogate_data(const SurrogateData& data);
+  /// get surrData
+  const SurrogateData& surrogate_data() const;
 
   /// return expansionMoments
   const RealVector& expansion_moments() const;
@@ -359,19 +183,9 @@ public:
   void standardize_moments(const RealVector& central_moments,
 			   RealVector& std_moments);
 
-  /// set surrData (shared representation)
-  void surrogate_data(const SurrogateData& data);
-  /// get surrData
-  const SurrogateData& surrogate_data() const;
-
   // number of data points to remove in a decrement (implemented at this
   // intermediate level since surrData not defined at base level)
   //size_t pop_count();
-
-  /// set ExpansionConfigOptions::expCoeffsSolnApproach
-  void solution_approach(short soln_approach);
-  /// get ExpansionConfigOptions::expCoeffsSolnApproach
-  short solution_approach() const;
 
   /// set ExpansionConfigOptions::expansionCoeffFlag
   void expansion_coefficient_flag(bool coeff_flag);
@@ -383,83 +197,10 @@ public:
   /// get ExpansionConfigOptions::expansionCoeffGradFlag
   bool expansion_coefficient_gradient_flag() const;
 
-  /// set ExpansionConfigOptions::vbdFlag
-  void vbd_flag(bool flag);
-  /// get ExpansionConfigOptions::vbdFlag
-  bool vbd_flag() const;
-
-  /// set ExpansionConfigOptions::vbdOrderLimit
-  void vbd_order_limit(unsigned short vbd_order);
-  /// get ExpansionConfigOptions::vbdOrderLimit
-  unsigned short vbd_order_limit() const;
-
-  // set ExpansionConfigOptions::refinementType
-  //void refinement_type(short refine_type);
-  // get ExpansionConfigOptions::refinementType
-  //short refinement_type() const;
-
-  /// set ExpansionConfigOptions::refinementControl
-  void refinement_control(short refine_cntl);
-  /// get ExpansionConfigOptions::refinementControl
-  short refinement_control() const;
-
-  /// set ExpansionConfigOptions::maxIterations
-  void maximum_iterations(int max_iter);
-  /// get ExpansionConfigOptions::maxIterations
-  int maximum_iterations() const;
-
-  /// set ExpansionConfigOptions::convergenceTol
-  void convergence_tolerance(Real conv_tol);
-  /// get ExpansionConfigOptions::convergenceTol
-  Real convergence_tolerance() const;
-
-  /// return sobolIndexMap
-  const BitArrayULongMap& sobol_index_map() const;
   /// return sobolIndices
   const RealVector& sobol_indices() const;
   /// return totalSobolIndices
   const RealVector& total_sobol_indices() const;
-
-  /// set driverRep
-  void integration_driver_rep(IntegrationDriver* driver_rep);
-
-  /// set randomVarsKey
-  void random_variables_key(const BitArray& random_vars_key);
-
-  /// return the number of expansion terms for a total order expansion
-  /// with the provided (anisotropic) upper_bound array specification
-  static size_t total_order_terms(const UShortArray& upper_bound,
-				  short lower_bound_offset = -1);
-  /// return the number of expansion terms for a tensor-product expansion
-  /// with the provided (anisotropic) quadrature orders (default) or
-  /// expansion orders (offset = true)
-  static size_t tensor_product_terms(const UShortArray& order,
-				     bool include_upper_bound = true);
-
-  /// initialize expansion multi_index using a tensor-product expansion
-  static void tensor_product_multi_index(const UShortArray& order,
-					 UShort2DArray& multi_index,
-					 bool include_upper_bound = true);
-  /// initialize multi_index using a hierarchical tensor-product expansion
-  static void hierarchical_tensor_product_multi_index(
-    const UShort2DArray& delta_quad, UShort2DArray& multi_index);
-  /// initialize multi_index using a total-order expansion
-  /// from a scalar level
-  static void total_order_multi_index(unsigned short level, size_t num_vars, 
-				      UShort2DArray& multi_index);
-  /// initialize expansion multi_index using a total-order expansion
-  /// from an upper_bound array specification
-  static void total_order_multi_index(const UShortArray& upper_bound,
-    UShort2DArray& multi_index, short lower_bound_offset = -1,
-    size_t max_terms = _NPOS); // SIZE_MAX is a non-portable extension
-
-  /// utility function for incrementing a set of multidimensional indices
-  static void increment_indices(UShortArray& indices, const UShortArray& limits,
-				bool include_upper_bound);
-  /// utility function for incrementing a set of multidimensional terms
-  static void increment_terms(UShortArray& terms, size_t& last_index,
-			      size_t& prev_index, size_t  term_limit,
-			      bool& order_complete);//,bool unique_terms=false);
 
 protected:
 
@@ -469,10 +210,6 @@ protected:
 
   /// generic base class function mapped to gradient_basis_variables(x)
   const RealVector& gradient(const RealVector& x);
-
-  bool restore_available();
-  size_t restoration_index();
-  size_t finalization_index(size_t i);
 
   //
   //- Heading: Member functions
@@ -487,48 +224,22 @@ protected:
 				 const RealVector& t1_wts,
 				 const RealMatrix& t2_wts, RealVector& moments);
 
-  /// return true if matching key values within random variable subset
-  bool match_random_key(const UShortArray& key_1, 
-			const UShortArray& key_2) const;
-  /// return true if matching variable values within nonrandom variable subset
-  bool match_nonrandom_vars(const RealVector& vars_1,
-			    const RealVector& vars_2) const;
-
   /// size total Sobol arrays
   void allocate_total_sobol();
-  /// allocate sobolIndices and sobolIndexMap for main effects only
-  void allocate_main_sobol();
-  // allocate sobolIndices and sobolIndexMap for main and interaction
-  // effects including m-way interactions for m <= max_order
-  //void allocate_main_interaction_sobol(unsigned short max_order);
-
-  /// Define the sobolIndexMap (which defines the set of Sobol' indices)
-  /// from the incoming multi-index.  sobolIndexMap values are initialized
-  /// to interaction orders, prior to updating with multi-index increments
-  /// in sobol_index_map_to_sobol_indices().
-  void multi_index_to_sobol_index_map(const UShort2DArray& mi);
-  /// return the sobolIndexMap values to interaction orders, prior to updating
-  /// with multi-index increments in sobol_index_map_to_sobol_indices().
-  void reset_sobol_index_map_values();
-  /// Define the mapping from sobolIndexMap into sobolIndices
-  void sobol_index_map_to_sobol_indices();
-
 
   //
   //- Heading: Data
   //
 
-  /// instance containing the variables/response data arrays for
-  /// constructing a surrogate model
+  /// instance containing the variables (shared) and response (unique) data
+  /// arrays for constructing a surrogate of a single response function
   SurrogateData surrData;
 
-  /// pointer to integration driver instance
-  IntegrationDriver* driverRep;
-
-  /// an encapsulation of expansion configuration options
-  ExpansionConfigOptions expConfigOptions;
-  /// an encapsulation of basis configuration options
-  BasisConfigOptions basisConfigOptions;
+  /// flag for calculation of expansion coefficients from response values
+  bool expansionCoeffFlag;
+  /// flag for calculation of gradients of expansion coefficients from
+  /// response gradients
+  bool expansionCoeffGradFlag;
 
   /// previous quadrature order;
   /// used for tracking need for expansion form updates
@@ -539,16 +250,6 @@ protected:
   /// previous Smolyak sparse grid anisotropic weighting;
   /// used for tracking need for expansion form updates
   RealVector ssgAnisoWtsPrev;
-
-  /// array of bits identifying the random variable subset within the
-  /// active variables (used in all_variables mode)
-  BitArray randomVarsKey;
-  /// list of indices identifying the random variable subset within the active
-  /// variables (used in all_variables mode; defined from randomVarsKey)
-  SizetList randomIndices;
-  /// list of indices identifying the non-random variable subset within the
-  /// active variables (used in all_variables mode; defined from randomVarsKey)
-  SizetList nonRandomIndices;
 
   /// mean and central moments 2/3/4 computed from the stochastic expansion
   /// form.  For OrthogPolyApproximation, these are primary, and for
@@ -589,12 +290,6 @@ protected:
   /// gradient to avoid unnecessary recomputation
   RealVector xPrevVarGrad;
 
-  /// saved trial sets that were computed but not selected
-  std::deque<UShortArray> savedLevMultiIndex;
-
-  /// mapping to manage different global sensitivity index options
-  /// (e.g. univariate/main effects only vs all effects)
-  BitArrayULongMap sobolIndexMap;
   /// global sensitivities as given by Sobol'
   RealVector sobolIndices;
   /// total global sensitivities as given by Sobol'
@@ -608,31 +303,16 @@ private:
 };
 
 
-inline PolynomialApproximation::PolynomialApproximation():
-  driverRep(NULL), ssgLevelPrev(USHRT_MAX), computedMean(0), computedVariance(0)
-{ }
-
-
 inline PolynomialApproximation::
-PolynomialApproximation(size_t num_vars, bool use_derivs, short output_level):
-  BasisApproximation(BaseConstructor(), num_vars), driverRep(NULL),
-  ssgLevelPrev(USHRT_MAX), computedMean(0), computedVariance(0)
-{
-  basisConfigOptions.useDerivs = use_derivs;
-  expConfigOptions.outputLevel = output_level;
-}
+PolynomialApproximation(const SharedBasisApproxData& shared_data):
+  BasisApproximation(BaseConstructor(), shared_data), ssgLevelPrev(USHRT_MAX),
+  computedMean(0), computedVariance(0), expansionCoeffFlag(true),
+  expansionCoeffGradFlag(false)
+{ }
 
 
 inline PolynomialApproximation::~PolynomialApproximation()
 { }
-
-
-inline const RealVector& PolynomialApproximation::expansion_moments() const
-{ return expansionMoments; }
-
-
-inline const RealVector& PolynomialApproximation::numerical_moments() const
-{ return numericalMoments; }
 
 
 inline const SurrogateData& PolynomialApproximation::surrogate_data() const
@@ -643,89 +323,38 @@ inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
 { surrData = data; /* shared representation */ }
 
 
+inline const RealVector& PolynomialApproximation::expansion_moments() const
+{ return expansionMoments; }
+
+
+inline const RealVector& PolynomialApproximation::numerical_moments() const
+{ return numericalMoments; }
+
+
 //inline size_t PolynomialApproximation::pop_count()
 //{
-//  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+//  SharedPolyApproxData* spad_rep = (SharedPolyApproxData*)sharedDataRep;
+//  SparseGridDriver* ssg_driver = (SparseGridDriver*)(spad_rep->driverRep);
 //  return (size_t)ssg_driver->unique_trial_points();
 //}
 
 
-inline void PolynomialApproximation::solution_approach(short soln_approach)
-{ expConfigOptions.expCoeffsSolnApproach = soln_approach; }
-
-
-inline short PolynomialApproximation::solution_approach() const
-{ return expConfigOptions.expCoeffsSolnApproach; }
-
-
 inline void PolynomialApproximation::expansion_coefficient_flag(bool coeff_flag)
-{ expConfigOptions.expansionCoeffFlag = coeff_flag; }
+{ expansionCoeffFlag = coeff_flag; }
 
 
 inline bool PolynomialApproximation::expansion_coefficient_flag() const
-{ return expConfigOptions.expansionCoeffFlag; }
+{ return expansionCoeffFlag; }
 
 
 inline void PolynomialApproximation::
 expansion_coefficient_gradient_flag(bool grad_flag)
-{ expConfigOptions.expansionCoeffGradFlag = grad_flag; }
+{ expansionCoeffGradFlag = grad_flag; }
 
 
 inline bool PolynomialApproximation::
 expansion_coefficient_gradient_flag() const
-{ return expConfigOptions.expansionCoeffGradFlag; }
-
-
-inline void PolynomialApproximation::vbd_flag(bool flag)
-{ expConfigOptions.vbdFlag = flag; }
-
-
-inline bool PolynomialApproximation::vbd_flag() const
-{ return expConfigOptions.vbdFlag; }
-
-
-inline void PolynomialApproximation::vbd_order_limit(unsigned short vbd_order)
-{ expConfigOptions.vbdOrderLimit = vbd_order; }
-
-
-inline unsigned short PolynomialApproximation::vbd_order_limit() const
-{ return expConfigOptions.vbdOrderLimit; }
-
-
-//inline void PolynomialApproximation::refinement_type(short refine_type)
-//{ expConfigOptions.refinementType = refine_type; }
-
-
-//inline short PolynomialApproximation::refinement_type() const
-//{ return expConfigOptions.refinementType; }
-
-
-inline void PolynomialApproximation::refinement_control(short refine_cntl)
-{ expConfigOptions.refinementControl = refine_cntl; }
-
-
-inline short PolynomialApproximation::refinement_control() const
-{ return expConfigOptions.refinementControl; }
-
-
-inline void PolynomialApproximation::maximum_iterations(int max_iter)
-{ expConfigOptions.maxIterations = max_iter; }
-
-
-inline int PolynomialApproximation::maximum_iterations() const
-{ return expConfigOptions.maxIterations; }
-
-
-inline void PolynomialApproximation::convergence_tolerance(Real conv_tol)
-{ expConfigOptions.convergenceTol = conv_tol; }
-
-
-inline Real PolynomialApproximation::convergence_tolerance() const
-{ return expConfigOptions.convergenceTol; }
-
-
-inline const BitArrayULongMap& PolynomialApproximation::sobol_index_map() const
-{ return sobolIndexMap; }
+{ return expansionCoeffGradFlag; }
 
 
 inline const RealVector& PolynomialApproximation::sobol_indices() const
@@ -736,123 +365,8 @@ inline const RealVector& PolynomialApproximation::total_sobol_indices() const
 { return totalSobolIndices; }
 
 
-inline void PolynomialApproximation::
-integration_driver_rep(IntegrationDriver* driver_rep)
-{ driverRep = driver_rep; }
-
-
-inline void PolynomialApproximation::
-random_variables_key(const BitArray& random_vars_key)
-{
-  randomVarsKey = random_vars_key;
-  randomIndices.clear();
-  nonRandomIndices.clear();
-  for (size_t i=0; i<numVars; i++)
-    if (random_vars_key[i]) randomIndices.push_back(i);
-    else                 nonRandomIndices.push_back(i);
-}
-
-
-inline void PolynomialApproximation::
-increment_indices(UShortArray& indices, const UShortArray& limits,
-		  bool include_upper_bound)
-{
-  // perform increment
-  size_t n = indices.size(), increment_index = 0;
-  ++indices[increment_index];
-  // if limit exceeded (including or excluding upper bound value within
-  // range of indices), push to next index
-  while ( increment_index < n &&
-	  ( ( !include_upper_bound && 
-	       indices[increment_index] >= limits[increment_index] ) ||
-	    (  include_upper_bound && 
-	       indices[increment_index] >  limits[increment_index] ) ) ) {
-    indices[increment_index] = 0;
-    ++increment_index;
-    if (increment_index < n)
-      ++indices[increment_index];
-  }
-}
-
-
-inline void PolynomialApproximation::
-increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
-		size_t term_limit, bool& order_complete)//, bool unique_terms)
-{
-  bool increment_complete = false;
-  while (!increment_complete) {
-    terms[last_index] = 1; // [1,limit] (not [0,limit-1])
-    ++terms[prev_index];
-    if (prev_index == 0) {
-      increment_complete = true;
-      if (terms[prev_index] > term_limit)
-	order_complete = true;
-    }
-    else {
-      last_index = prev_index;
-      --prev_index;
-      if ( //( unique_terms && terms[last_index] <  terms[prev_index]) ||
-	   //(!unique_terms &&
-	      terms[last_index] <= terms[prev_index]) //)
-	increment_complete = true;
-    }
-  }
-}
-
-
 inline const RealVector& PolynomialApproximation::gradient(const RealVector& x)
 { return gradient_basis_variables(x); }
-
-
-inline bool PolynomialApproximation::restore_available()
-{
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return (std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
-		    ssg_driver->trial_set()) != savedLevMultiIndex.end());
-}
-
-
-inline size_t PolynomialApproximation::restoration_index()
-{
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return find_index(savedLevMultiIndex, ssg_driver->trial_set());
-}
-
-
-inline size_t PolynomialApproximation::finalization_index(size_t i)
-{
-  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  const std::set<UShortArray>& trial_sets = sg_driver->computed_trial_sets();
-  // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid data
-  // with remaining computed trial sets (in sorted order from SparseGridDriver::
-  // computedTrialSets).  Below, we determine the order with which these
-  // appended trial sets appear in savedLevMultiIndex.
-  std::set<UShortArray>::const_iterator cit = trial_sets.begin();
-  std::advance(cit, i);
-  return find_index(savedLevMultiIndex, *cit);
-}
-
-
-inline bool PolynomialApproximation::
-match_random_key(const UShortArray& key_1, const UShortArray& key_2) const
-{
-  SizetList::const_iterator cit;
-  for (cit=randomIndices.begin(); cit!=randomIndices.end(); ++cit)
-    if (key_1[*cit] != key_2[*cit])
-      return false;
-  return true;
-}
-
-
-inline bool PolynomialApproximation::
-match_nonrandom_vars(const RealVector& vars_1, const RealVector& vars_2) const
-{
-  SizetList::const_iterator cit;
-  for (cit=nonRandomIndices.begin(); cit!=nonRandomIndices.end(); ++cit)
-    if (vars_1[*cit] != vars_2[*cit]) // double match w/o tolerance
-      return false;
-  return true;
-}
 
 } // namespace Pecos
 

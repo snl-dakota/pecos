@@ -38,9 +38,7 @@ public:
   //
 
   /// default constructor
-  RegressOrthogPolyApproximation(const UShortArray& approx_order,
-				 size_t num_vars, bool use_derivs,
-				 short output_level);
+  RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data);
   /// destructor
   ~RegressOrthogPolyApproximation();
 
@@ -48,26 +46,21 @@ public:
   //- Heading: Member functions
   //
 
-  /// set crossValidation flag
-  void cross_validation(bool flag);
-  /// set the noise tolerance(s) for compressed sensing approaches
-  void noise_tolerance(const RealVector& noise_tol);
-  /// set the L2 penalty parameter for LASSO (elastic net variant)
-  void l2_penalty(Real l2_pen);
-
-  /// store the fault info about the response data
-  FaultInfo faultInfo;
-
 protected:
 
   //
-  //- Heading: Virtual function redefinitions and member functions
+  //- Heading: Virtual function redefinitions
   //
 
   int min_coefficients() const;
   void compute_coefficients();
-
   void allocate_arrays();
+  void allocate_component_sobol();
+
+  size_t expansion_terms() const;
+
+  Real covariance(PolynomialApproximation* poly_approx_2);
+  Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
 private:
 
@@ -100,26 +93,19 @@ private:
     RealMatrixArray &predictor_partition_indicators_history,
     size_t num_data_pts_fn );
 
-  /// pack polynomial contributions to Psi matrix for regression
-  void pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
-			    bool add_val,  double* pack_val,  size_t& pv_cntr,
-			    bool add_grad, double* pack_grad, size_t& pg_cntr);
-  /// pack response contributions to RHS for regression
-  void pack_response_data(const SurrogateDataResp& sdr,
-			  bool add_val,  double* pack_val,  size_t& pv_cntr,
-			  bool add_grad, double* pack_grad, size_t& pg_cntr);
-
   /// define multiIndex and expansionCoeffs from nonzero dense_coeffs
   void update_sparse(Real* dense_coeffs, size_t num_dense_terms);
   /// augment sparse_indices based on nonzero dense_coeffs
   void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms);
-  /// define sparse multiIndex from sparse_indices
-  void update_sparse_multi_index();
   /// define sparse expansionCoeffs from dense_coeffs and sparse_indices
   void update_sparse_coeffs(Real* dense_coeffs);
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and
   /// sparse_indices
   void update_sparse_coeff_grads(Real* dense_coeffs, int row);
+  // define sparse multiIndex from sparseIndices
+  //void update_sparse_multi_index();
+  /// define sparseSobolIndices from sparseIndices and multiIndex
+  void update_sparse_sobol();
 
   /**
    * \brief Define the set of options used in the cross validation grid search
@@ -162,27 +148,26 @@ private:
   /// order of orthogonal best polynomial expansion found using cross validation
   IntVector bestApproxOrder;
 
-  /// Wrapper class that is used to solve regression problems
-  CompressedSensingTool CSTool;
   /// Stuct use to define the options of a compressed sensing solve
   CompressedSensingOptions CSOpts;
 
-  /// flag for use of automatic cross-validation for parameter
-  /// selection in regression approaches
-  bool crossValidation;
-  /// noise tolerance(s) for compressed sensing algorithms; vector form
-  /// used in cross-validation
-  RealVector noiseTols;
-  /// the L2 penalty parameter for LASSO (elastic net variant)
-  Real l2Penalty;
+  /// store the fault info about the response data
+  FaultInfo faultInfo;
+
+  /// tracks sparse terms within multiIndex and expansion{Coeffs,CoeffGrads}
+  /// that are retained from an original candidate set
+  SizetSet sparseIndices;
+  /// copy of sparseIndices stored in store_coefficients() for use in
+  /// combine_coefficients()
+  SizetSet storedSparseIndices;
+  /// tracks sparse Sobol index terms, as a subset of sobolIndexMap
+  SizetSet sparseSobolIndices;
 };
 
 
 inline RegressOrthogPolyApproximation::
-RegressOrthogPolyApproximation(const UShortArray& approx_order, size_t num_vars,
-			       bool use_derivs, short output_level):
-  OrthogPolyApproximation(approx_order, num_vars, use_derivs, output_level),
-  l2Penalty(0.)
+RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
+  OrthogPolyApproximation(shared_data)
 { }
 
 
@@ -190,47 +175,10 @@ inline RegressOrthogPolyApproximation::~RegressOrthogPolyApproximation()
 { }
 
 
-inline void RegressOrthogPolyApproximation::cross_validation(bool flag)
-{ crossValidation = flag; }
-
-
-inline void RegressOrthogPolyApproximation::
-noise_tolerance(const RealVector& noise_tol)
-{ noiseTols = noise_tol; }
-
-
-inline void RegressOrthogPolyApproximation::l2_penalty(Real l2_pen)
-{ l2Penalty = l2_pen; }
-
-
-inline void RegressOrthogPolyApproximation::
-pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
-		     bool add_val,  double* pack_val,  size_t& pv_cntr,
-		     bool add_grad, double* pack_grad, size_t& pg_cntr)
+inline size_t RegressOrthogPolyApproximation::expansion_terms() const
 {
-  if (add_val)
-    { pack_val[pv_cntr] = multivariate_polynomial(c_vars, mi); ++pv_cntr; }
-  if (add_grad) {
-    const RealVector& mvp_grad
-      = multivariate_polynomial_gradient_vector(c_vars, mi);
-    for (size_t j=0; j<numVars; ++j, ++pg_cntr)
-      pack_grad[pg_cntr] = mvp_grad[j];
-  }
-}
-
-
-inline void RegressOrthogPolyApproximation::
-pack_response_data(const SurrogateDataResp& sdr,
-		   bool add_val,  double* pack_val,  size_t& pv_cntr,
-		   bool add_grad, double* pack_grad, size_t& pg_cntr)
-{
-  if (add_val)
-    { pack_val[pv_cntr] = sdr.response_function(); ++pv_cntr; }
-  if (add_grad) {
-    const RealVector& resp_grad = sdr.response_gradient();
-    for (size_t j=0; j<numVars; ++j, ++pg_cntr)
-      pack_grad[pg_cntr] = resp_grad[j];
-  }
+  return (sparseIndices.empty()) ? OrthogPolyApproximation::expansion_terms()
+                                 : sparseIndices.size();
 }
 
 } // namespace Pecos

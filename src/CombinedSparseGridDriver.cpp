@@ -13,7 +13,7 @@
 //- Version:
 
 #include "CombinedSparseGridDriver.hpp"
-#include "PolynomialApproximation.hpp"
+#include "SharedPolyApproxData.hpp"
 #include "sandia_sgmg.hpp"
 #include "sandia_sgmga.hpp"
 #include "sandia_sgmgg.hpp"
@@ -43,8 +43,8 @@ assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
   size_t i;
   if (dimIsotropic) { // initialize multi_index
     UShortArray levels(numVars, ssgLevel);
-    PolynomialApproximation::total_order_multi_index(levels, multi_index,
-						     numVars-1);
+    SharedPolyApproxData::total_order_multi_index(levels, multi_index,
+						  numVars-1);
     size_t num_terms = multi_index.size();
     // initialize coeffs
     coeffs.resize(num_terms);
@@ -148,8 +148,8 @@ void CombinedSparseGridDriver::assign_collocation_key()
   UShortArray quad_order(numVars); //, collocation_indices(numVars);
   for (i=0; i<num_smolyak_indices; ++i) {
     level_to_order(smolyakMultiIndex[i], quad_order);
-    PolynomialApproximation::tensor_product_multi_index(quad_order,
-							collocKey[i], false);
+    SharedPolyApproxData::tensor_product_multi_index(quad_order, collocKey[i],
+						     false);
   }
 }
 
@@ -161,8 +161,8 @@ void CombinedSparseGridDriver::update_collocation_key(size_t start_index)
   collocKey.resize(num_sm_mi);
   for (i=start_index; i<num_sm_mi; ++i) {
     level_to_order(smolyakMultiIndex[i], quad_order);
-    PolynomialApproximation::tensor_product_multi_index(quad_order,
-							collocKey[i], false);
+    SharedPolyApproxData::tensor_product_multi_index(quad_order, collocKey[i],
+						     false);
   }
 }
 
@@ -574,7 +574,7 @@ void CombinedSparseGridDriver::finalize_sets()
   smolyakMultiIndex.insert(smolyakMultiIndex.end(), computedTrialSets.begin(),
 			   computedTrialSets.end());
   activeMultiIndex.clear();
-  // defer since needed for PolynomialApproximation::finalization_index()
+  // defer since needed for SharedPolyApproxData::finalization_index()
   //computedTrialSets.clear();
 
   // update smolyakCoeffs from smolyakMultiIndex

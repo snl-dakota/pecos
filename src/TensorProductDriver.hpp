@@ -112,7 +112,7 @@ private:
   /// quadrature order offset by one for use as 0-based indices
   UShortArray levelIndex;
 
-  /// numCollocPts-by-numVars array for identifying the 1-D point
+  /// num points-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
 

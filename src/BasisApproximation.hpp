@@ -14,6 +14,9 @@
 
 namespace Pecos {
 
+class SharedBasisApproxData;
+
+
 /// Base class for multivariate basis approximations used for
 /// projection of random variables through time or space
 
@@ -31,8 +34,7 @@ public:
   /// default constructor
   BasisApproximation();
   /// standard constructor for envelope
-  BasisApproximation(short basis_type, const UShortArray& approx_order,
-		     size_t num_vars, bool use_derivs, short output_level);
+  BasisApproximation(const SharedBasisApproxData& shared_data);
   /// copy constructor
   BasisApproximation(const BasisApproximation& basis_approx);
 
@@ -66,16 +68,6 @@ public:
   /// restore the approximation coefficients to a previously incremented state
   /// as identified by the current data increment
   virtual void restore_coefficients();
-  /// test for whether current trial set requires a new approximation
-  /// increment or can be restored from a previous trial
-  virtual bool restore_available();
-  /// returns index of the data set to be restored from within saved
-  /// bookkeeping (e.g., PolynomialApproximation::savedLevMultiIndex)
-  virtual size_t restoration_index();
-  /// returns index of the i-th data set to be restored from within saved
-  /// bookkeeping (e.g., PolynomialApproximation::savedLevMultiIndex)
-  /// during finalization
-  virtual size_t finalization_index(size_t i);
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
   /// store the current coefficients for later combination
@@ -112,14 +104,14 @@ protected:
   /// constructor initializes the base class part of letter classes
   /// (BaseConstructor overloading avoids infinite recursion in the
   /// derived class constructors - Coplien, p. 139)
-  BasisApproximation(BaseConstructor, size_t num_vars);
+  BasisApproximation(BaseConstructor, const SharedBasisApproxData& shared_data);
 
   //
-  //- Heading: Data members
+  //- Heading: Data
   //
 
-  /// number of variables used in the approximation
-  size_t numVars;
+  /// contains the approximation data that is shared among the response set
+  SharedBasisApproxData* sharedDataRep;
 
 private:
 
@@ -130,8 +122,7 @@ private:
   /// Used only by the standard envelope constructor to initialize
   /// basisApproxRep to the appropriate derived type.
   BasisApproximation*
-    get_basis_approx(short basis_type, const UShortArray& approx_order,
-		     size_t num_vars, bool use_derivs, short output_level);
+    get_basis_approx(const SharedBasisApproxData& shared_data);
 
   //
   //- Heading: Data members

@@ -14,7 +14,7 @@
 
 #include "CubatureDriver.hpp"
 #include "sandia_cubature.hpp"
-#include "PolynomialApproximation.hpp"
+#include "SharedPolyApproxData.hpp"
 #include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
 //#include "pecos_stat_util.hpp"
@@ -47,12 +47,12 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
   // Cubature used for numerical integration of PCE --> no piecewise bases,
   // no deriv-based regression
   // *** TO DO ***: require OPA/IPA switch?
-  //PolynomialApproximation::initialize_basis_types(u_types, false, false,
-  //                                                basis_types);
+  //SharedPolyApproxData::initialize_basis_types(u_types, false, false,
+  //                                             basis_types);
   // TO DO: consider using a single BasisPolynomial for CubatureDriver (would
   // have to be expanded into array for PolynomialApproximation within NonDPCE).
-  PolynomialApproximation::initialize_polynomial_basis(basis_types, collocRules,
-						       polynomialBasis);
+  SharedPolyApproxData::initialize_polynomial_basis(basis_types, collocRules,
+						    polynomialBasis);
 }
 
 
@@ -142,8 +142,8 @@ initialize_grid_parameters(const ShortArray& u_types,
   // TO DO: consider using a single BasisPolynomial for CubatureDriver
   // (would have to be expanded into array for PolynomialApproximation
   // within NonDPCE).
-  PolynomialApproximation::update_basis_distribution_parameters(u_types,
-    adp, polynomialBasis);
+  SharedPolyApproxData::update_basis_distribution_parameters(u_types, adp,
+							     polynomialBasis);
 }
 
 

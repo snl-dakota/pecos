@@ -13,7 +13,7 @@
 //- Version:
 
 #include "HierarchSparseGridDriver.hpp"
-#include "PolynomialApproximation.hpp"
+#include "SharedPolyApproxData.hpp"
 #include "sandia_sgmga.hpp"
 #include "DistributionParams.hpp"
 #include "pecos_stat_util.hpp"
@@ -48,7 +48,7 @@ int HierarchSparseGridDriver::grid_size()
 	for (set=0; set<num_sets; ++set) {
 	  levels_to_delta_sizes(sm_mi_l[set], delta_sizes);
 	  numCollocPts +=
-	    PolynomialApproximation::tensor_product_terms(delta_sizes, false);
+	    SharedPolyApproxData::tensor_product_terms(delta_sizes, false);
 	}
       }
     }
@@ -101,8 +101,8 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
   smolyakMultiIndex.resize(ssgLevel+1);
   if (dimIsotropic)
     for (lev=prev_sm_len; lev<=ssgLevel; ++lev)
-      PolynomialApproximation::total_order_multi_index(lev, numVars,
-						       smolyakMultiIndex[lev]);
+      SharedPolyApproxData::total_order_multi_index(lev, numVars,
+						    smolyakMultiIndex[lev]);
   else { // utilize webbur::sandia_sgmga_vcn_ordered
 
     // With scaling alpha_min = 1: q_min < |alpha . j| <= q_max.
@@ -166,7 +166,7 @@ void HierarchSparseGridDriver::assign_collocation_key()
       key_l.resize(num_sets);
       for (set=0; set<num_sets; ++set) {
 	levels_to_delta_keys(sm_mi_l[set], delta_keys);
-	PolynomialApproximation::hierarchical_tensor_product_multi_index(
+	SharedPolyApproxData::hierarchical_tensor_product_multi_index(
 	  delta_keys, key_l[set]);
       }
     }
@@ -202,8 +202,8 @@ void HierarchSparseGridDriver::update_collocation_key()
     UShort3DArray& key_l = collocKey[trialLevel];
     size_t set = key_l.size();
     key_l.push_back(key_ls); // update in place
-    PolynomialApproximation::hierarchical_tensor_product_multi_index(
-      delta_keys, key_l[set]);
+    SharedPolyApproxData::hierarchical_tensor_product_multi_index(delta_keys,
+								  key_l[set]);
 
 #ifdef DEBUG
     PCout << "HierarchSparseGridDriver::update_collocation_key():\n";
@@ -227,7 +227,7 @@ void HierarchSparseGridDriver::update_collocation_key()
       for (set=start_set; set<num_sets; ++set) {
 	levels_to_delta_keys(sm_mi_l[set], delta_keys);
 	key_l.push_back(key_ls); // update in place
-	PolynomialApproximation::hierarchical_tensor_product_multi_index(
+	SharedPolyApproxData::hierarchical_tensor_product_multi_index(
 	  delta_keys, key_l[set]);
       }
     }
@@ -830,7 +830,7 @@ void HierarchSparseGridDriver::finalize_sets()
   */
 
   activeMultiIndex.clear(); savedT1WtSets.clear(); savedT2WtSets.clear();
-  // defer since needed for PolynomialApproximation::finalization_index()
+  // defer since needed for SharedPolyApproxData::finalization_index()
   //computedTrialSets.clear();
 }
 

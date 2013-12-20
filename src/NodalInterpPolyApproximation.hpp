@@ -15,8 +15,6 @@
 #define NODAL_INTERP_POLY_APPROXIMATION_HPP
 
 #include "InterpPolyApproximation.hpp"
-#include "InterpolationPolynomial.hpp"
-
 
 namespace Pecos {
 
@@ -39,8 +37,7 @@ public:
   //
 
   /// default constructor
-  NodalInterpPolyApproximation(short basis_type, size_t num_vars,
-			       bool use_derivs, short output_level);
+  NodalInterpPolyApproximation(const SharedBasisApproxData& shared_data);
   /// destructor
   ~NodalInterpPolyApproximation();
 
@@ -49,9 +46,6 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
-
-  void allocate_component_sobol();
-  void increment_component_sobol();
 
   void allocate_expansion_coefficients();
   void compute_expansion_coefficients();
@@ -101,15 +95,6 @@ protected:
   const RealVector& approximation_coefficients() const;
   void approximation_coefficients(const RealVector& approx_coeffs);
 
-  void set_new_point(const RealVector& x, const UShortArray& basis_index,
-		     short order);
-  void set_new_point(const RealVector& x, const UShortArray& basis_index,
-		     const SizetList& subset_indices, short order);
-
-  size_t barycentric_exact_index(const UShortArray& basis_index);
-  size_t barycentric_exact_index(const UShortArray& basis_index,
-				 const SizetList& subset_indices);
-
 private:
 
   //
@@ -149,59 +134,6 @@ private:
     const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
-  /// update accumulators for barycentric type1 contributions to moment value
-  void accumulate_barycentric(RealVector& t1_accumulator,
-			      const UShortArray& lev_index,
-			      const UShortArray& key_p);
-  /// update accumulators for type1 contributions to moment value
-  void accumulate_horners(RealVector& t1_accumulator,
-			  const UShortArray& lev_index,
-			  const UShortArray& key_p, const RealVector& x);
-  /// update accumulators for type1 + type2 contributions to moment value
-  void accumulate_horners(RealVector& t1_accumulator,
-			  RealMatrix& t2_accumulator,
-			  const UShortArray& lev_index,
-			  const UShortArray& key_p, const RealVector& x);
-
-  /// update accumulators for barycentric type1 contributions to moment gradient
-  void accumulate_barycentric_gradient(RealMatrix& t1_accumulator,
-				       const UShortArray& lev_index,
-				       const UShortArray& key_p,
-				       const SizetArray& dvv);
-  /// update accumulators for type1 contributions to moment gradient
-  void accumulate_horners_gradient(RealMatrix& t1_accumulator,
-				   const UShortArray& lev_index,
-				   const UShortArray& key_p,
-				   const SizetArray& dvv, const RealVector& x);
-  /// update accumulators for type1 + type2 contributions to moment gradient
-  void accumulate_horners_gradient(RealMatrix& t1_accumulator,
-				   RealMatrixArray& t2_accumulators,
-				   const UShortArray& lev_index,
-				   const UShortArray& key_p,
-				   const SizetArray& dvv, const RealVector& x);
-
-  /// update precomputation of nonzero multidimensional integrals of
-  /// products of interpolation polynomials
-  void update_nonzero_basis_products(const UShort2DArray& sm_multi_index);
-
-  /// evaluate 1D integral of product of interpolation polynomials
-  bool basis_product_1d(InterpolationPolynomial* poly_rep_1,
-			InterpolationPolynomial* poly_rep_2,
-			unsigned short key_1, unsigned short key_2,
-			const RealArray& pts, const RealArray& wts, Real& prod);
-  /// lookup multidimensional integral of products of interpolation polynomials
-  bool basis_product(const UShortArray& lev_index_1, const UShortArray& key_1,
-		     const UShortArray& lev_index_2, const UShortArray& key_2,
-		     Real& prod);
-
-  /// compute the expected value of the interpolant given by t{1,2}_coeffs
-  /// using weights from the CombinedSparseGridDriver
-  Real expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs);
-  /// compute the expected value of the interpolant given by t{1,2}_coeffs
-  /// using t{1,2}_wts
-  Real expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
-		   const RealMatrix& t2_coeffs, const RealMatrix& t2_wts);
-
   /// compute value of reduced-dimension interpolant
   Real value(const RealVector& x, const RealVectorArray& t1_coeffs,
 	     const RealMatrixArray& t2_coeffs, const UShort3DArray& colloc_key,
@@ -213,6 +145,14 @@ private:
 					     const RealMatrixArray& t2_coeffs,
 					     const UShort3DArray& colloc_key,
 					     const SizetList& subset_indices);
+
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using weights from the CombinedSparseGridDriver
+  Real expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs);
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using t{1,2}_wts
+  Real expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
+		   const RealMatrix& t2_coeffs, const RealMatrix& t2_wts);
 
   /// computes higher-order grid for tensor reinterpolation of the
   /// covariance fn for non-integrated dimensions in all_variables mode
@@ -236,9 +176,6 @@ private:
   //- Heading: Data
   //
 
-  /// type of interpolation for all-variables covariance and variance gradient
-  short momentInterpType;
-
   /// the type1 coefficients of the expansion for interpolating values
   RealVector expansionType1Coeffs;
   /// the type2 coefficients of the expansion for interpolating gradients
@@ -252,58 +189,26 @@ private:
       expansion only over the random variables). */
   RealMatrix expansionType1CoeffGrads;
 
-  /// map from random index to unique nonZerosMapArray
-  SizetArray nonZerosMapIndices;
-  /// tracks level maxima already populated within nonZerosMap
-  UShortArray nonZerosMapMaxLevels;
-  /// expectations of products of interpolation polynomials,
-  /// precomputed in update_nonzero_basis_products() for efficiency
-  std::vector<UShort2DMultiSetRealMap> nonZerosMapArray;
-
   /// storage of expansionType1Coeffs state for subsequent restoration
   RealVector storedExpType1Coeffs;
   /// storage of expansionType2Coeffs state for subsequent restoration
   RealMatrix storedExpType2Coeffs;
   /// storage of expansionType1CoeffGrads state for subsequent restoration
   RealMatrix storedExpType1CoeffGrads;
-  /// storage of level multi-index (levels for tensor or sparse grids)
-  /// for subsequent restoration
-  UShort2DArray storedLevMultiIndex;
-  /// storage of IntegrationDriver combinatorial coefficients state
-  /// for subsequent restoration
-  IntArray storedLevCoeffs;
-  /// storage of IntegrationDriver collocation key state for
-  /// subsequent restoration
-  UShort3DArray storedCollocKey;
-  /// storage of IntegrationDriver collocation indices state for
-  /// subsequent restoration
-  Sizet2DArray storedCollocIndices;
+
+  /// the gradient of the mean of a tensor-product interpolant; a
+  /// contributor to meanGradient
+  RealVector tpMeanGrad;     // TO DO: move to shared data? (2nd pass tuning)
+  /// the gradient of the variance of a tensor-product interpolant; a
+  /// contributor to varianceGradient
+  RealVector tpVarianceGrad; // TO DO: move to shared data? (2nd pass tuning)
 };
 
 
 inline NodalInterpPolyApproximation::
-NodalInterpPolyApproximation(short basis_type, size_t num_vars,
-			     bool use_derivs, short output_level):
-  InterpPolyApproximation(basis_type, num_vars, use_derivs, output_level)//,
-  // These 3 compile-time options are relevant for all-variables covariance
-  // involving expectations over variable subsets.  Covariance for hierarchical
-  // interpolants, nodal covariance in the standard view mode, uses of
-  // PolynomialApproximation::compute_numerical_moments(), and Sobol' index
-  // calculations all employ an INTERPOLATION_OF_PRODUCTS approach, so that
-  // setting is the most self-consistent.  Gradient enhancement is also not
-  // currently supported for PRODUCT_OF_INTERPOLANTS approaches.
-  //momentInterpType(INTERPOLATION_OF_PRODUCTS)
-  //momentInterpType(REINTERPOLATION_OF_PRODUCTS)
-  //momentInterpType(PRODUCT_OF_INTERPOLANTS_FULL)
-  //momentInterpType(PRODUCT_OF_INTERPOLANTS_FAST)
-{
-  // We are migrating towards consistent usage of INTERPOLATION_OF_PRODUCTS,
-  // but its usage of higher-order reinterpolation of covariance is currently
-  // too slow for production usage.  Thus, we only activate it when needed to
-  // support new capability, such as gradient-enhanced interpolation.
-  momentInterpType = (use_derivs) ?
-    REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
-}
+NodalInterpPolyApproximation(const SharedBasisApproxData& shared_data):
+  InterpPolyApproximation(shared_data)
+{ }
 
 
 inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
@@ -317,16 +222,18 @@ inline void NodalInterpPolyApproximation::increment_expansion_coefficients()
 inline void NodalInterpPolyApproximation::decrement_expansion_coefficients()
 {
   // not necessary to prune; next increment/restore/finalize takes care of this
+  //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  //size_t num_colloc_pts = data_rep->driverRep->grid_size();
   //if (expConfigOptions.expansionCoeffFlag) {
-  //  expansionType1Coeffs.resize(numCollocPts);
+  //  expansionType1Coeffs.resize(num_colloc_pts);
   //  if (basisConfigOptions.useDerivs) {
   //    size_t num_deriv_vars = expansionType2Coeffs.numRows();
-  //    expansionType2Coeffs.reshape(num_deriv_vars, numCollocPts);
+  //    expansionType2Coeffs.reshape(num_deriv_vars, num_colloc_pts);
   //  }
   //}
   //if (expConfigOptions.expansionCoeffGradFlag) {
   //  size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
-  //  expansionType1CoeffGrads.reshape(num_deriv_vars, numCollocPts);
+  //  expansionType1CoeffGrads.reshape(num_deriv_vars, num_colloc_pts);
   //}
 }
 
@@ -338,7 +245,8 @@ inline void NodalInterpPolyApproximation::finalize_expansion_coefficients()
 inline const RealVector& NodalInterpPolyApproximation::
 approximation_coefficients() const
 {
-  if (basisConfigOptions.useDerivs) {
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  if (data_rep->basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
 	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
     return abort_handler_t<const RealVector&>(-1);
@@ -351,7 +259,8 @@ approximation_coefficients() const
 inline void NodalInterpPolyApproximation::
 approximation_coefficients(const RealVector& approx_coeffs)
 {
-  if (basisConfigOptions.useDerivs) {
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  if (data_rep->basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
 	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
     abort_handler(-1);
@@ -374,28 +283,14 @@ inline Real NodalInterpPolyApproximation::variance(const RealVector& x)
 { return covariance(x, this); }
 
 
-inline bool NodalInterpPolyApproximation::
-basis_product_1d(InterpolationPolynomial* poly_rep_1,
-		 InterpolationPolynomial* poly_rep_2,
-		 unsigned short key_1, unsigned short key_2,
-		 const RealArray& pts, const RealArray& wts, Real& prod)
-{
-  Real tol = 1.e-12; // consistent with OrthogonalPolynomial triple product tol
-  prod = 0.;
-  size_t i, num_pts = pts.size();
-  for (i=0; i<num_pts; ++i)
-    prod += wts[i] * poly_rep_1->type1_value(pts[i], key_1)
-                   * poly_rep_2->type1_value(pts[i], key_2);
-  return (std::abs(prod) > tol) ? true : false;
-}
-
-
 inline Real NodalInterpPolyApproximation::
 expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs)
 {
   // This version defaults to type1/2 weights from CombinedSparseGridDriver
-  return expectation(t1_coeffs, driverRep->type1_weight_sets(),
-		     t2_coeffs, driverRep->type2_weight_sets());
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  IntegrationDriver* int_driver = data_rep->driverRep;
+  return expectation(t1_coeffs, int_driver->type1_weight_sets(),
+		     t2_coeffs, int_driver->type2_weight_sets());
 }
 
 
@@ -407,69 +302,6 @@ update_member_key(const UShortArray& data,
   for (SizetList::const_iterator cit=member_indices.begin();
        cit!=member_indices.end(); ++cit, ++cntr)
     member_map_key[cntr] = data[*cit];
-}
-
-
-inline void NodalInterpPolyApproximation::
-set_new_point(const RealVector& x, const UShortArray& basis_index, short order)
-{
-  unsigned short bi_j;
-  for (size_t j=0; j<numVars; ++j) {
-    bi_j = basis_index[j];
-    if (bi_j) // exclusion of pt must be sync'd w/ factors/scalings
-      polynomialBasis[bi_j][j].set_new_point(x[j], order);
-  }
-}
-
-
-inline void NodalInterpPolyApproximation::
-set_new_point(const RealVector& x, const UShortArray& basis_index,
-	      const SizetList& subset_indices, short order)
-{
-  SizetList::const_iterator cit; size_t j; unsigned short bi_j;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    j = *cit; bi_j = basis_index[j];
-    if (bi_j) // exclusion of pt must be sync'd w/ factors/scalings
-      polynomialBasis[bi_j][j].set_new_point(x[j], order);
-  }
-}
-
-
-inline size_t NodalInterpPolyApproximation::
-barycentric_exact_index(const UShortArray& basis_index)
-{
-  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
-  for (j=0; j<numVars; ++j) {
-    bi_j = basis_index[j];
-    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
-    // this constant interpolation with the value at the 1 colloc index (ei=0)
-    if (bi_j) {
-      BasisPolynomial& poly_i = polynomialBasis[bi_j][j];
-      pt_index += poly_i.exact_index() * prod;
-      prod     *= poly_i.interpolation_size();
-    }
-  }
-  return pt_index;
-}
-
-
-inline size_t NodalInterpPolyApproximation::
-barycentric_exact_index(const UShortArray& basis_index,
-			const SizetList& subset_indices)
-{
-  size_t j, pt_index = 0, prod = 1; unsigned short bi_j;
-  SizetList::const_iterator cit;
-  for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
-    j = *cit; bi_j = basis_index[j];
-    // Note: if bi_j == 0, then constant interp with 1 point: we can replace
-    // this constant interpolation with the value at the 1 colloc index (ei=0)
-    if (bi_j) {
-      BasisPolynomial& poly_j = polynomialBasis[bi_j][j];
-      pt_index += poly_j.exact_index() * prod;
-      prod     *= poly_j.interpolation_size();
-    }
-  }
-  return pt_index;
 }
 
 } // namespace Pecos
