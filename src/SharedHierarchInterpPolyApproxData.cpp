@@ -105,7 +105,7 @@ void SharedHierarchInterpPolyApproxData::store_data()
 }
 
 
-void SharedHierarchInterpPolyApproxData::combine_data(short combine_type)
+void SharedHierarchInterpPolyApproxData::post_combine_data(short combine_type)
 {
   storedLevMultiIndex.clear(); storedCollocKey.clear();
   //storedCollocIndices.clear();

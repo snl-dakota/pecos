@@ -94,7 +94,8 @@ protected:
   void allocate_data();
 
   void store_data();
-  void combine_data(short combine_type);
+  void pre_combine_data(short combine_type);
+  void post_combine_data(short combine_type);
 
   //
   //- Heading: Member functions

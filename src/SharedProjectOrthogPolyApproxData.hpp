@@ -69,11 +69,13 @@ protected:
 
   void increment_data();
   void decrement_data();
-  void restore_data();
-  void finalize_data();
+  void pre_restore_data();
+  void post_restore_data();
+  void pre_finalize_data();
+  void post_finalize_data();
 
   void store_data();
-  void combine_data(short combine_type);
+  void pre_combine_data(short combine_type);
 
   void increment_component_sobol();
 

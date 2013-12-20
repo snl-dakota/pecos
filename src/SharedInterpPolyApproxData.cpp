@@ -23,7 +23,7 @@ namespace Pecos {
 void SharedInterpPolyApproxData::allocate_data()
 {
   // use barycentric formulation for global Lagrange basis polynomials.
-  // Note: flag needed for update_{tensor,sparse}_interpolation_basis().
+  // Note: flag needed below in update_{tensor,sparse}_interpolation_basis().
   barycentricFlag = ( !basisConfigOptions.useDerivs &&
     ( basisType == GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL ||
       basisType == GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL ) );
@@ -144,7 +144,7 @@ void SharedInterpPolyApproxData::decrement_data()
 }
 
 
-void SharedInterpPolyApproxData::restore_data()
+void SharedInterpPolyApproxData::post_restore_data()
 {
   // leave polynomialBasis as is (a previous increment is being restored)
 
@@ -163,7 +163,7 @@ void SharedInterpPolyApproxData::restore_data()
 }
 
 
-void SharedInterpPolyApproxData::finalize_data()
+void SharedInterpPolyApproxData::post_finalize_data()
 {
   // leave polynomialBasis as is (all previous increments are being restored)
 

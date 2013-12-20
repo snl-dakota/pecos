@@ -84,7 +84,6 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     // perform the multiplication of current and stored expansions
     multiply_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
 		       storedExpCoeffGrads, data_rep->combinedMultiIndex);
-    data_rep->multiIndex = data_rep->combinedMultiIndex; // TO DO: bug for fn 2+ -> need SharedOrthogPolyApproxData::{pre,post}_combine_data()?
     break;
   }
   case ADD_MULT_COMBINE:
@@ -140,9 +139,9 @@ multiply_expansion(const UShort2DArray& multi_index_b,
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
 
-  UShort2DArray multi_index_a = data_rep->multiIndex; // copy, TO DO
-  RealVector     exp_coeffs_a = expansionCoeffs; // copy (both expConfigOptions)
-  RealMatrix     exp_grads_a;
+  const UShort2DArray& multi_index_a = data_rep->multiIndex;
+  RealVector exp_coeffs_a = expansionCoeffs; // copy (both expConfigOptions)
+  RealMatrix exp_grads_a;
   if (expansionCoeffGradFlag)
     exp_grads_a = expansionCoeffGrads;       // copy (CoeffGrads only)
   size_t i, j, k, v, num_v = sharedDataRep->numVars,

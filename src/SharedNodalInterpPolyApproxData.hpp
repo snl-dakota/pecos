@@ -65,7 +65,7 @@ protected:
   void allocate_component_sobol();
   void increment_component_sobol();
   void store_data();
-  void combine_data(short combine_type);
+  void post_combine_data(short combine_type);
 
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);

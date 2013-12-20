@@ -118,7 +118,7 @@ void SharedNodalInterpPolyApproxData::store_data()
 }
 
 
-void SharedNodalInterpPolyApproxData::combine_data(short combine_type)
+void SharedNodalInterpPolyApproxData::post_combine_data(short combine_type)
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE:

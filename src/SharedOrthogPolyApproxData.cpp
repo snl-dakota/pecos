@@ -126,7 +126,7 @@ void SharedOrthogPolyApproxData::store_data()
 { storedApproxOrder = approxOrder; storedMultiIndex = multiIndex; }
 
 
-void SharedOrthogPolyApproxData::combine_data(short combine_type)
+void SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -152,6 +152,16 @@ void SharedOrthogPolyApproxData::combine_data(short combine_type)
     PCerr << "Error : additive+multiplicative combination not yet implemented "
 	  << "in SharedOrthogPolyApproxData::combine_data()" << std::endl;
     abort_handler(-1);
+    break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
+{
+  switch (combine_type) {
+  case MULT_COMBINE:
+    multiIndex = combinedMultiIndex;
     break;
   }
 }

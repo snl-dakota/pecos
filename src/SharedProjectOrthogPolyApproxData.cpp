@@ -180,7 +180,7 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
 }
 
 
-void SharedProjectOrthogPolyApproxData::restore_data()
+void SharedProjectOrthogPolyApproxData::pre_restore_data()
 {
   if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
     PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
@@ -189,22 +189,17 @@ void SharedProjectOrthogPolyApproxData::restore_data()
   }
 
   // move previous expansion data to current expansion
-  size_t last_index = tpMultiIndex.size();
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  std::deque<UShortArray>::iterator sit
-    = std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
-		csg_driver->trial_set());
-  restoreIndex = std::distance(savedLevMultiIndex.begin(), sit);
-  savedLevMultiIndex.erase(sit);
+  restoreIndex = find_index(savedLevMultiIndex, csg_driver->trial_set());
+
   std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
   std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
   std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
-  std::advance(iit, restoreIndex);    std::advance(mit, restoreIndex);
-  std::advance(rit, restoreIndex);
 
-  tpMultiIndex.push_back(*iit);          savedTPMultiIndex.erase(iit);
-  tpMultiIndexMap.push_back(*mit);       savedTPMultiIndexMap.erase(mit);
-  tpMultiIndexMapRef.push_back(*rit);    savedTPMultiIndexMapRef.erase(rit);
+  size_t last_index = tpMultiIndex.size();
+  std::advance(iit, restoreIndex); tpMultiIndex.push_back(*iit);
+  std::advance(mit, restoreIndex); tpMultiIndexMap.push_back(*mit);
+  std::advance(rit, restoreIndex); tpMultiIndexMapRef.push_back(*rit);
 
   // update multiIndex
   append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
@@ -212,7 +207,20 @@ void SharedProjectOrthogPolyApproxData::restore_data()
 }
 
 
-void SharedProjectOrthogPolyApproxData::finalize_data()
+void SharedProjectOrthogPolyApproxData::post_restore_data()
+{
+  std::deque<UShortArray>::iterator   sit = savedLevMultiIndex.begin();
+  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
+  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
+  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
+  std::advance(sit, restoreIndex); savedLevMultiIndex.erase(sit);
+  std::advance(iit, restoreIndex); savedTPMultiIndex.erase(iit);
+  std::advance(mit, restoreIndex); savedTPMultiIndexMap.erase(mit);
+  std::advance(rit, restoreIndex); savedTPMultiIndexMapRef.erase(rit);
+}
+
+
+void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
   if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
     PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
@@ -220,7 +228,6 @@ void SharedProjectOrthogPolyApproxData::finalize_data()
     abort_handler(-1);
   }
 
-  size_t start_index = tpMultiIndex.size();
   // update multiIndex
   std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
   std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
@@ -234,8 +241,13 @@ void SharedProjectOrthogPolyApproxData::finalize_data()
     savedTPMultiIndexMap.end());
   tpMultiIndexMapRef.insert(tpMultiIndexMapRef.end(),
     savedTPMultiIndexMapRef.begin(), savedTPMultiIndexMapRef.end());
-  savedLevMultiIndex.clear();     savedTPMultiIndex.clear();
-  savedTPMultiIndexMap.clear();   savedTPMultiIndexMapRef.clear();
+}
+
+
+void SharedProjectOrthogPolyApproxData::post_finalize_data()
+{
+  savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
+  savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
 }
 
 
@@ -260,7 +272,7 @@ void SharedProjectOrthogPolyApproxData::store_data()
 }
 
 
-void SharedProjectOrthogPolyApproxData::combine_data(short combine_type)
+void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -279,7 +291,7 @@ void SharedProjectOrthogPolyApproxData::combine_data(short combine_type)
     // tensor_product_value() usage for combined coefficient sets.
 
     // base class version is sufficient; no specialization based on exp form
-    SharedOrthogPolyApproxData::combine_data(combine_type);
+    SharedOrthogPolyApproxData::pre_combine_data(combine_type);
     break;
   }
   case MULT_COMBINE: {
@@ -319,14 +331,14 @@ void SharedProjectOrthogPolyApproxData::combine_data(short combine_type)
     }
     default:
       // base class version supports product of two total-order expansions
-      SharedOrthogPolyApproxData::combine_data(combine_type);
+      SharedOrthogPolyApproxData::pre_combine_data(combine_type);
       break;
     }
     break;
   }
   case ADD_MULT_COMBINE:
     // base class manages this placeholder
-    SharedOrthogPolyApproxData::combine_data(combine_type);
+    SharedOrthogPolyApproxData::pre_combine_data(combine_type);
     break;
   }
 }

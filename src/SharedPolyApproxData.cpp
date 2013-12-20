@@ -233,18 +233,28 @@ void SharedPolyApproxData::decrement_data()
 }
 
 
-void SharedPolyApproxData::restore_data()
-{
-  PCerr << "Error: derived class does not redefine restore_data()."<< std::endl;
-  abort_handler(-1);
-}
+void SharedPolyApproxData::pre_restore_data()
+{ } // default implementation is no op
 
 
-void SharedPolyApproxData::finalize_data()
-{
-  PCerr << "Error: derived class does not redefine finalize_data()."<<std::endl;
-  abort_handler(-1);
-}
+void SharedPolyApproxData::post_restore_data()
+{ } // default implementation is no op
+
+
+void SharedPolyApproxData::pre_finalize_data()
+{ } // default implementation is no op
+
+
+void SharedPolyApproxData::post_finalize_data()
+{ } // default implementation is no op
+
+
+void SharedPolyApproxData::pre_combine_data(short combine_type)
+{ } // default implementation is no op
+
+
+void SharedPolyApproxData::post_combine_data(short combine_type)
+{ } // default implementation is no op
 
 
 void SharedPolyApproxData::increment_component_sobol()

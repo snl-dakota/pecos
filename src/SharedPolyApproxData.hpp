@@ -230,14 +230,20 @@ public:
   /// later restoration
   virtual void decrement_data();
   /// restores previously saved approximation data
-  virtual void restore_data();
+  virtual void pre_restore_data();
+  /// restores previously saved approximation data
+  virtual void post_restore_data();
   /// finalizes the shared approximation data following a set of increments
-  virtual void finalize_data();
+  virtual void pre_finalize_data();
+  /// finalizes the shared approximation data following a set of increments
+  virtual void post_finalize_data();
 
   /// stores current approximation data for later combination
   virtual void store_data() = 0;
   /// combines current and stored approximation data
-  virtual void combine_data(short combine_type) = 0;
+  virtual void pre_combine_data(short combine_type);
+  /// combines current and stored approximation data
+  virtual void post_combine_data(short combine_type);
 
   /// increment the Sobol' index bookkeeping due to expansion refinement
   virtual void allocate_component_sobol() = 0;
