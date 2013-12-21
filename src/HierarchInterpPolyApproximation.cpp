@@ -316,13 +316,22 @@ void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
 void HierarchInterpPolyApproximation::
 increment_expansion_coefficients(const UShortArray& index_set)
 {
-  size_t lev = index_norm(index_set);
-  if (lev >= expansionType1Coeffs.size()) {
+  size_t lev, old_levels = expansionType1Coeffs.size(), set, old_sets,
+    pt, old_pts = 0;
+  for (lev=0; lev<old_levels; ++lev) {
+    old_sets = expansionType1Coeffs[lev].size();
+    for (set=0; set<old_sets; ++set)
+      old_pts += (expansionCoeffFlag) ?
+	expansionType1Coeffs[lev][set].length()	:
+	expansionType1CoeffGrads[lev][set].numCols();
+  }
+  lev = index_norm(index_set);
+  if (lev >= old_levels) {
     expansionType1Coeffs.resize(lev+1);
     expansionType2Coeffs.resize(lev+1);
     expansionType1CoeffGrads.resize(lev+1);
   }
-  size_t set = expansionType1Coeffs[lev].size();
+  set = expansionType1Coeffs[lev].size();
   // append empty and update in place
   RealVector fns; RealMatrix grads;
   expansionType1Coeffs[lev].push_back(fns);
@@ -337,8 +346,7 @@ increment_expansion_coefficients(const UShortArray& index_set)
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   const UShort4DArray& key   = hsg_driver->collocation_key();
-  size_t index, pt, num_trial_pts = key[lev][set].size(), v, num_deriv_vars = 0,
-    start = hsg_driver->grid_size() - num_trial_pts;
+  size_t index, num_trial_pts = key[lev][set].size(), v, num_deriv_vars = 0;
   if (expansionCoeffFlag) {
     t1_coeffs.sizeUninitialized(num_trial_pts);
     if (data_rep->basisConfigOptions.useDerivs) {
@@ -351,7 +359,7 @@ increment_expansion_coefficients(const UShortArray& index_set)
     t1_coeff_grads.shapeUninitialized(num_deriv_vars, num_trial_pts);
   }
  
-  for (pt=0, index=start; pt<num_trial_pts; ++pt, ++index) {
+  for (pt=0, index=old_pts; pt<num_trial_pts; ++pt, ++index) {
     const RealVector& c_vars = surrData.continuous_variables(index);
     if (expansionCoeffFlag) {
       t1_coeffs[pt] = surrData.response_function(index) - value(c_vars, sm_mi,
