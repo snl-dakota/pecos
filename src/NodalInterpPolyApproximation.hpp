@@ -221,20 +221,19 @@ inline void NodalInterpPolyApproximation::increment_expansion_coefficients()
 
 inline void NodalInterpPolyApproximation::decrement_expansion_coefficients()
 {
-  // not necessary to prune; next increment/restore/finalize takes care of this
-  //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  //size_t num_colloc_pts = data_rep->driverRep->grid_size();
-  //if (expConfigOptions.expansionCoeffFlag) {
-  //  expansionType1Coeffs.resize(num_colloc_pts);
-  //  if (basisConfigOptions.useDerivs) {
-  //    size_t num_deriv_vars = expansionType2Coeffs.numRows();
-  //    expansionType2Coeffs.reshape(num_deriv_vars, num_colloc_pts);
-  //  }
-  //}
-  //if (expConfigOptions.expansionCoeffGradFlag) {
-  //  size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
-  //  expansionType1CoeffGrads.reshape(num_deriv_vars, num_colloc_pts);
-  //}
+  size_t new_colloc_pts = surrData.size();
+  if (expansionCoeffFlag) {
+   expansionType1Coeffs.resize(new_colloc_pts);
+   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+   if (data_rep->basisConfigOptions.useDerivs) {
+     size_t num_deriv_vars = expansionType2Coeffs.numRows();
+     expansionType2Coeffs.reshape(num_deriv_vars, new_colloc_pts);
+   }
+  }
+  if (expansionCoeffGradFlag) {
+   size_t num_deriv_vars = expansionType1CoeffGrads.numRows();
+   expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
+  }
 }
 
 
