@@ -241,16 +241,6 @@ protected:
   /// response gradients
   bool expansionCoeffGradFlag;
 
-  /// previous quadrature order;
-  /// used for tracking need for expansion form updates
-  UShortArray quadOrderPrev;
-  /// previous Smolyak sparse grid level;
-  /// used for tracking need for expansion form updates
-  unsigned short ssgLevelPrev;
-  /// previous Smolyak sparse grid anisotropic weighting;
-  /// used for tracking need for expansion form updates
-  RealVector ssgAnisoWtsPrev;
-
   /// mean and central moments 2/3/4 computed from the stochastic expansion
   /// form.  For OrthogPolyApproximation, these are primary, and for
   /// InterpPolyApproximation, they are secondary.  Conversions to standardized
@@ -305,9 +295,8 @@ private:
 
 inline PolynomialApproximation::
 PolynomialApproximation(const SharedBasisApproxData& shared_data):
-  BasisApproximation(BaseConstructor(), shared_data), ssgLevelPrev(USHRT_MAX),
-  computedMean(0), computedVariance(0), expansionCoeffFlag(true),
-  expansionCoeffGradFlag(false)
+  BasisApproximation(BaseConstructor(), shared_data), computedMean(0),
+  computedVariance(0), expansionCoeffFlag(true), expansionCoeffGradFlag(false)
 { }
 
 

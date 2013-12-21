@@ -445,14 +445,14 @@ private:
 
 
 inline SharedPolyApproxData::SharedPolyApproxData():
-  driverRep(NULL)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
 { }
 
 
 inline SharedPolyApproxData::
 SharedPolyApproxData(short basis_type, size_t num_vars):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  driverRep(NULL)
+  driverRep(NULL), ssgLevelPrev(USHRT_MAX)
 { }
 
 
@@ -461,7 +461,8 @@ SharedPolyApproxData(short basis_type, size_t num_vars,
 		     const ExpansionConfigOptions& ec_options,
 		     const BasisConfigOptions& bc_options):
   SharedBasisApproxData(BaseConstructor(), basis_type, num_vars),
-  expConfigOptions(ec_options), basisConfigOptions(bc_options), driverRep(NULL)
+  driverRep(NULL), expConfigOptions(ec_options), basisConfigOptions(bc_options),
+  ssgLevelPrev(USHRT_MAX)
 { }
 
 
