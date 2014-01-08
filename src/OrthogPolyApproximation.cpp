@@ -225,7 +225,7 @@ Real OrthogPolyApproximation::value(const RealVector& x)
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
   Real approx_val = 0.;
-  size_t i, num_exp_terms = expansion_terms();
+  size_t i, num_exp_terms = mi.size();
   for (i=0; i<num_exp_terms; ++i)
     approx_val += expansionCoeffs[i] *
       data_rep->multivariate_polynomial(x, mi[i]);
@@ -246,17 +246,16 @@ gradient_basis_variables(const RealVector& x)
     abort_handler(-1);
   }
 
-  size_t i, j, num_exp_terms = expansion_terms(),
-    num_v = sharedDataRep->numVars;
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   if (approxGradient.length() != num_v)
     approxGradient.size(num_v); // init to 0
   else
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
   for (i=0; i<num_exp_terms; ++i) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[i]);
@@ -278,16 +277,16 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
     abort_handler(-1);
   }
 
-  size_t i, j, num_deriv_vars = dvv.size(), num_exp_terms = expansion_terms();
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, j, num_deriv_vars = dvv.size(), num_exp_terms = mi.size();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.size(num_deriv_vars); // init to 0
   else
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
   for (i=0; i<num_exp_terms; ++i) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[i], dvv);
@@ -309,17 +308,17 @@ gradient_nonbasis_variables(const RealVector& x)
     abort_handler(-1);
   }
 
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows(),
-    num_exp_terms = expansion_terms();
+    num_exp_terms = mi.size();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.size(num_deriv_vars); // init to 0
   else
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
   for (i=0; i<num_exp_terms; ++i) {
     Real term_i = data_rep->multivariate_polynomial(x, mi[i]);
     const Real* exp_coeff_grad_i = expansionCoeffGrads[i];
@@ -461,8 +460,8 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
     return expansionMoments[0];
 
   Real mean = expansionCoeffs[0];
-  size_t i, num_exp_terms = expansion_terms();
   const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, num_exp_terms = mi.size();
   for (i=1; i<num_exp_terms; ++i)
     // expectations are zero for expansion terms with nonzero random indices
     if (data_rep->zero_random(mi[i])) {
@@ -533,16 +532,17 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
     return meanGradient;
 
+  const UShort2DArray& mi = data_rep->multiIndex;
   size_t i, j, deriv_index, num_deriv_vars = dvv.size(),
-    num_exp_terms = expansion_terms(),
+    num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
   if (meanGradient.length() != num_deriv_vars)
     meanGradient.sizeUninitialized(num_deriv_vars);
-  const UShort2DArray& mi = data_rep->multiIndex;
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    bool random = data_rep->randomVarsKey[deriv_index];
     Real& grad_i = meanGradient[i];
-    if (data_rep->randomVarsKey[deriv_index]) {// deriv w.r.t. des var insertion
+    if (random) {// deriv w.r.t. des var insertion
       // Error check for required data
       if (!expansionCoeffGradFlag) {
 	PCerr << "Error: expansion coefficient gradients not defined in "
@@ -566,7 +566,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 	// since <Psi_j>_xi = 1 for included terms.  The difference occurs
 	// based on whether a particular s_i dependence appears in alpha
 	// (for inserted) or Psi (for augmented).
-	if (data_rep->randomVarsKey[deriv_index])
+	if (random)
 	  // -------------------------------------------
 	  // derivative w.r.t. design variable insertion
 	  // -------------------------------------------
@@ -582,7 +582,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 	      data_rep->nonRandomIndices);
       }
     }
-    if (data_rep->randomVarsKey[deriv_index]) // deriv w.r.t. des var insertion
+    if (random) // deriv w.r.t. des var insertion
       ++cntr;
   }
   if (all_mode) { computedMean |=  2; xPrevMeanGrad = x; }
@@ -610,9 +610,9 @@ covariance(PolynomialApproximation* poly_approx_2)
   if (same && std_mode && (computedVariance & 1))
     return expansionMoments[1];
   else {
-    size_t i, num_exp_terms = expansion_terms();
-    const RealVector& exp_coeffs_2 = opa_2->expansionCoeffs;
     const UShort2DArray& mi = data_rep->multiIndex;
+    size_t i, num_exp_terms = mi.size();
+    const RealVector& exp_coeffs_2 = opa_2->expansionCoeffs;
     Real covar = 0.;
     for (i=1; i<num_exp_terms; ++i)
       covar += expansionCoeffs[i] * exp_coeffs_2[i]
@@ -645,28 +645,32 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     return expansionMoments[1];
 
   const RealVector& exp_coeffs_2 = opa_2->expansionCoeffs;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray&    mi = data_rep->multiIndex;
+  const SizetList&  rand_ind = data_rep->randomIndices;
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
   size_t i1, i2, num_mi = mi.size();
   Real covar = 0.;
   for (i1=1; i1<num_mi; ++i1) {
     // For r = random_vars and nr = non_random_vars,
     // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
     // -> only include terms from R(r,nr) which don't appear in \mu_R(nr)
-    if (!data_rep->zero_random(mi[i1])) {
-      Real norm_sq_i = data_rep->norm_squared(mi[i1], data_rep->randomIndices);
-      for (i2=1; i2<num_mi; ++i2)
+    const UShortArray& mi1 = mi[i1];
+    if (!data_rep->zero_random(mi1)) {
+      Real coeff_norm_poly = expansionCoeffs[i1] * 
+	  data_rep->norm_squared(mi1, rand_ind) *
+	  data_rep->multivariate_polynomial(x, mi1, nrand_ind);
+      for (i2=1; i2<num_mi; ++i2) {
 	// random polynomial part must be identical to contribute to variance
 	// (else orthogonality drops term).  Note that it is not necessary to
 	// collapse terms with the same random basis subset, since cross term
 	// in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
 	// (following eval of non-random portions), the nested loop could be
 	// replaced with a single loop to evaluate (a+b)^2.
-	if (data_rep->match_random_key(mi[i1], mi[i2]))
-	  covar += expansionCoeffs[i1] * exp_coeffs_2[i2] * norm_sq_i *
-	    data_rep->multivariate_polynomial(x, mi[i1],
-					      data_rep->nonRandomIndices) *
-	    data_rep->multivariate_polynomial(x, mi[i2],
-					      data_rep->nonRandomIndices);
+	const UShortArray& mi2 = mi[i2];
+	if (data_rep->match_random_key(mi1, mi2))
+	  covar += coeff_norm_poly * exp_coeffs_2[i2] *
+	    data_rep->multivariate_polynomial(x, mi2, nrand_ind);
+      }
     }
   }
   if (same && all_mode)
@@ -698,12 +702,12 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
   if (std_mode && (computedVariance & 2))
     return varianceGradient;
 
+  const UShort2DArray& mi = data_rep->multiIndex;
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows(),
-    num_exp_terms = expansion_terms();
+    num_exp_terms = mi.size();
   if (varianceGradient.length() != num_deriv_vars)
     varianceGradient.sizeUninitialized(num_deriv_vars);
   varianceGradient = 0.;
-  const UShort2DArray& mi = data_rep->multiIndex;
   for (i=1; i<num_exp_terms; ++i) {
     Real term_i = 2. * expansionCoeffs[i] * data_rep->norm_squared(mi[i]);
     for (j=0; j<num_deriv_vars; ++j)
@@ -735,68 +739,76 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   // if already computed, return previous result
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  bool all_mode = !data_rep->nonRandomIndices.empty();
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
+  bool all_mode = !nrand_ind.empty();
   if ( all_mode && (computedVariance & 2) &&
        data_rep->match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
     return varianceGradient;
 
+  const UShort2DArray&   mi = data_rep->multiIndex;
+  const SizetList& rand_ind = data_rep->randomIndices;
   size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
-    num_exp_terms = expansion_terms(),
+    num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
   if (varianceGradient.length() != num_deriv_vars)
     varianceGradient.sizeUninitialized(num_deriv_vars);
   varianceGradient = 0.;
 
-  const UShort2DArray& mi = data_rep->multiIndex;
+  Real norm_sq_j, poly_j, poly_grad_j, norm_poly_j, coeff_j, coeff_grad_j;
   for (i=0; i<num_deriv_vars; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
-    if (data_rep->randomVarsKey[deriv_index] && !expansionCoeffGradFlag){
+    bool random = data_rep->randomVarsKey[deriv_index];
+    if (random && !expansionCoeffGradFlag){
       PCerr << "Error: expansion coefficient gradients not defined in "
 	    << "OrthogPolyApproximation::variance_gradient()." << std::endl;
       abort_handler(-1);
     }
     for (j=1; j<num_exp_terms; ++j) {
-      if (!data_rep->zero_random(mi[j])) {
-	Real norm_sq_j = data_rep->norm_squared(mi[j], data_rep->randomIndices);
+      const UShortArray& mi_j = mi[j];
+      if (!data_rep->zero_random(mi_j)) {
+	coeff_j   = expansionCoeffs[j];
+	norm_sq_j = data_rep->norm_squared(mi_j, rand_ind);
+	poly_j    = data_rep->multivariate_polynomial(x, mi_j, nrand_ind);
+	if (random) {
+	  norm_poly_j  = norm_sq_j * poly_j;
+	  coeff_grad_j = expansionCoeffGrads[j][cntr];
+	}
+	else
+	  poly_grad_j = data_rep->
+	    multivariate_polynomial_gradient(x, deriv_index, mi_j, nrand_ind);
 	for (k=1; k<num_exp_terms; ++k) {
 	  // random part of polynomial must be identical to contribute to
 	  // variance (else orthogonality drops term)
-	  if (data_rep->match_random_key(mi[j], mi[k])) {
+	  const UShortArray& mi_k = mi[k];
+	  if (data_rep->match_random_key(mi_j, mi_k)) {
 	    // In both cases below, the term to differentiate is
 	    // alpha_j(s) alpha_k(s) <Psi_j^2>_xi Psi_j(s) Psi_k(s) and the
 	    // difference occurs based on whether a particular s_i dependence
 	    // appears in alpha (for inserted) or Psi (for augmented).
-	    if (data_rep->randomVarsKey[deriv_index])
+	    if (random)
 	      // -------------------------------------------
 	      // derivative w.r.t. design variable insertion
 	      // -------------------------------------------
-	      varianceGradient[i] += norm_sq_j *
-		(expansionCoeffs[j] * expansionCoeffGrads[k][cntr] +
-		 expansionCoeffs[k] * expansionCoeffGrads[j][cntr]) *
-		data_rep->multivariate_polynomial(x, mi[j],
-		  data_rep->nonRandomIndices) *
-		data_rep->multivariate_polynomial(x, mi[k],
-		  data_rep->nonRandomIndices);
+	      varianceGradient[i] += norm_poly_j *
+		(coeff_j * expansionCoeffGrads[k][cntr] +
+		 expansionCoeffs[k] * coeff_grad_j) *
+		data_rep->multivariate_polynomial(x, mi_k, nrand_ind);
 	    else
 	      // ----------------------------------------------
 	      // derivative w.r.t. design variable augmentation
 	      // ----------------------------------------------
 	      varianceGradient[i] +=
-		expansionCoeffs[j] * expansionCoeffs[k] * norm_sq_j *
+		coeff_j * expansionCoeffs[k] * norm_sq_j *
 		// Psi_j * dPsi_k_ds_i + dPsi_j_ds_i * Psi_k
-		(data_rep->multivariate_polynomial(x, mi[j],
-		   data_rep->nonRandomIndices) *
-		 data_rep->multivariate_polynomial_gradient(x, deriv_index,
-		   mi[k], data_rep->nonRandomIndices) +
-		 data_rep->multivariate_polynomial_gradient(x, deriv_index,
-		   mi[j], data_rep->nonRandomIndices) *
-		 data_rep->multivariate_polynomial(x, mi[k],
-		   data_rep->nonRandomIndices));
+		(poly_j * data_rep->multivariate_polynomial_gradient(x,
+		   deriv_index, mi_k, nrand_ind) +
+		 poly_grad_j * data_rep->multivariate_polynomial(x, mi_k,
+		   nrand_ind));
 	  }
 	}
       }
     }
-    if (data_rep->randomVarsKey[deriv_index]) // deriv w.r.t. des var insertion
+    if (random) // deriv w.r.t. des var insertion
       ++cntr;
   }
   if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }

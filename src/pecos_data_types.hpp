@@ -140,6 +140,8 @@ typedef SizetMultiArray::const_array_view<1>::type SizetMultiArrayConstView;
 // ---------
 typedef IntSet::iterator                 ISIter;
 typedef IntSet::const_iterator           ISCIter;
+typedef SizetSet::iterator               StSIter;
+typedef SizetSet::const_iterator         StSCIter;
 typedef BitArraySet::iterator            BASIter;
 typedef BitArraySet::const_iterator      BASCIter;
 typedef RealSet::iterator                RSIter;

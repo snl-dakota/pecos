@@ -171,6 +171,680 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 }
 
 
+Real RegressOrthogPolyApproximation::value(const RealVector& x)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::value(x);
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "RegressOrthogPolyApproximation::value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  Real approx_val = 0.;
+  size_t i; StSIter it;
+  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it)
+    approx_val += expansionCoeffs[i] *
+      data_rep->multivariate_polynomial(x, mi[*it]);
+  return approx_val;
+}
+
+
+const RealVector& RegressOrthogPolyApproximation::
+gradient_basis_variables(const RealVector& x)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::gradient_basis_variables(x);
+
+  // could define a default_dvv and call gradient_basis_variables(x, dvv),
+  // but we want this fn to be as fast as possible
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in RegressOrthogPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, j, num_v = sharedDataRep->numVars;
+  if (approxGradient.length() != num_v)
+    approxGradient.size(num_v); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  StSIter it;
+  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    const RealVector& term_i_grad
+      = data_rep->multivariate_polynomial_gradient_vector(x, mi[*it]);
+    Real coeff_i = expansionCoeffs[i];
+    for (j=0; j<num_v; ++j)
+      approxGradient[j] += coeff_i * term_i_grad[j];
+  }
+  return approxGradient;
+}
+
+
+const RealVector& RegressOrthogPolyApproximation::
+gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::gradient_basis_variables(x, dvv);
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in RegressOrthogPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, j, num_deriv_vars = dvv.size();
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.size(num_deriv_vars); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  StSIter it;
+  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    const RealVector& term_i_grad
+      = data_rep->multivariate_polynomial_gradient_vector(x, mi[*it], dvv);
+    Real coeff_i = expansionCoeffs[i];
+    for (j=0; j<num_deriv_vars; ++j)
+      approxGradient[j] += coeff_i * term_i_grad[j];
+  }
+  return approxGradient;
+}
+
+
+const RealVector& RegressOrthogPolyApproximation::
+gradient_nonbasis_variables(const RealVector& x)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::gradient_nonbasis_variables(x);
+
+  // Error check for required data
+  if (!expansionCoeffGradFlag) {
+    PCerr << "Error: expansion coefficient gradients not defined in Regress"
+	  << "OrthogPolyApproximation::gradient_coefficient_variables()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.size(num_deriv_vars); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  StSIter it;
+  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    Real term_i = data_rep->multivariate_polynomial(x, mi[*it]);
+    const Real* exp_coeff_grad_i = expansionCoeffGrads[i];
+    for (j=0; j<num_deriv_vars; ++j)
+      approxGradient[j] += exp_coeff_grad_i[j] * term_i;
+  }
+  return approxGradient;
+}
+
+
+Real RegressOrthogPolyApproximation::stored_value(const RealVector& x)
+{
+  if (storedSparseIndices.empty())
+    return OrthogPolyApproximation::stored_value(x);
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+
+  // Error check for required data
+  if (stored_mi.empty()) {
+    PCerr << "Error: stored expansion coefficients not available in "
+	  << "RegressOrthogPolyApproximation::stored_value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  Real approx_val = 0.;
+  size_t i; StSIter it;
+  for (i=0, it=storedSparseIndices.begin(); it!=storedSparseIndices.end();
+       ++i, ++it)
+    approx_val += storedExpCoeffs[i] *
+      data_rep->multivariate_polynomial(x, stored_mi[*it]);
+  return approx_val;
+}
+
+
+const RealVector& RegressOrthogPolyApproximation::
+stored_gradient_basis_variables(const RealVector& x)
+{
+  if (storedSparseIndices.empty())
+    return OrthogPolyApproximation::stored_gradient_basis_variables(x);
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+
+  // Error check for required data
+  size_t i, j, num_v = sharedDataRep->numVars;
+  if (stored_mi.empty()) {
+    PCerr << "Error: stored expansion coefficients not available in Regress"
+	  << "OrthogPolyApproximation::stored_gradient_basis_variables()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != num_v)
+    approxGradient.size(num_v); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  StSIter it;
+  for (i=0, it=storedSparseIndices.begin(); it!=storedSparseIndices.end();
+       ++i, ++it) {
+    const RealVector& term_i_grad
+      = data_rep->multivariate_polynomial_gradient_vector(x, stored_mi[*it]);
+    Real coeff_i = storedExpCoeffs[i];
+    for (j=0; j<num_v; ++j)
+      approxGradient[j] += coeff_i * term_i_grad[j];
+  }
+  return approxGradient;
+}
+
+
+const RealVector& RegressOrthogPolyApproximation::
+stored_gradient_nonbasis_variables(const RealVector& x)
+{
+  if (storedSparseIndices.empty())
+    return OrthogPolyApproximation::stored_gradient_nonbasis_variables(x);
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+
+  // Error check for required data
+  size_t i, j, num_deriv_vars = storedExpCoeffGrads.numRows();
+  if (stored_mi.empty()) {
+    PCerr << "Error: stored expansion coeff grads not available in Regress"
+	  << "OrthogPolyApproximation::stored_gradient_nonbasis_variables()"
+	  << std::endl;
+    abort_handler(-1);
+  }
+
+  if (approxGradient.length() != num_deriv_vars)
+    approxGradient.size(num_deriv_vars); // init to 0
+  else
+    approxGradient = 0.;
+
+  // sum expansion to get response gradient prediction
+  StSIter it;
+  for (i=0, it=storedSparseIndices.begin(); it!=storedSparseIndices.end();
+       ++i, ++it) {
+    Real term_i = data_rep->multivariate_polynomial(x, stored_mi[*it]);
+    const Real* coeff_grad_i = storedExpCoeffGrads[i];
+    for (j=0; j<num_deriv_vars; ++j)
+      approxGradient[j] += coeff_grad_i[j] * term_i;
+  }
+  return approxGradient;
+}
+
+
+/** In this case, a subset of the expansion variables are random
+    variables and the mean of the expansion involves evaluating the
+    expectation over this subset. */
+Real RegressOrthogPolyApproximation::mean(const RealVector& x)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::mean(x);
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "RegressOrthogPolyApproximation::mean()" << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
+  bool all_mode = !nrand_ind.empty();
+  if (all_mode && (computedMean & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean))
+    return expansionMoments[0];
+
+  const UShort2DArray& mi = data_rep->multiIndex;
+  Real mean = expansionCoeffs[0];
+  size_t i; StSIter it;
+  for (i=1, it=++sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    const UShortArray& mi_i = mi[*it];
+    // expectations are zero for expansion terms with nonzero random indices
+    if (data_rep->zero_random(mi_i)) {
+      mean += expansionCoeffs[i] *
+	data_rep->multivariate_polynomial(x, mi_i, nrand_ind);
+#ifdef DEBUG
+      PCout << "Mean estimate inclusion: term index = " << i << " Psi = "
+	    << data_rep->multivariate_polynomial(x, mi_i, nrand_ind)
+	    << " PCE coeff = " << expansionCoeffs[i] << " total = " << mean
+	    << std::endl;
+#endif // DEBUG
+    }
+  }
+
+  if (all_mode)
+    { expansionMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
+  return mean;
+}
+
+
+/** In this function, a subset of the expansion variables are random
+    variables and any augmented design/state variables (i.e., not
+    inserted as random variable distribution parameters) are included
+    in the expansion.  In this case, the mean of the expansion is the
+    expectation over the random subset and the derivative of the mean
+    is the derivative of the remaining expansion over the non-random
+    subset.  This function must handle the mixed case, where some
+    design/state variables are augmented (and are part of the
+    expansion: derivatives are evaluated as described above) and some
+    are inserted (derivatives are obtained from expansionCoeffGrads). */
+const RealVector& RegressOrthogPolyApproximation::
+mean_gradient(const RealVector& x, const SizetArray& dvv)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::mean_gradient(x, dvv);
+
+  // if already computed, return previous result
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
+  bool all_mode = !nrand_ind.empty();
+  if ( all_mode && (computedMean & 2) &&
+       data_rep->match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
+    return meanGradient;
+
+  size_t i, j, deriv_index, num_deriv_vars = dvv.size(),
+    cntr = 0; // insertions carried in order within expansionCoeffGrads
+  if (meanGradient.length() != num_deriv_vars)
+    meanGradient.sizeUninitialized(num_deriv_vars);
+  const UShort2DArray& mi = data_rep->multiIndex;
+  StSIter it;
+  for (i=0; i<num_deriv_vars; ++i) {
+    Real& grad_i = meanGradient[i];
+    deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    bool random = data_rep->randomVarsKey[deriv_index];
+    if (random) { // deriv w.r.t. des var insertion
+      if (!expansionCoeffGradFlag) { // error check for required data
+	PCerr << "Error: expansion coefficient gradients not defined in Regress"
+	      << "OrthogPolyApproximation::mean_gradient()." << std::endl;
+	abort_handler(-1);
+      }
+      grad_i = expansionCoeffGrads[0][cntr];
+    }
+    else {
+      grad_i = 0.;
+      if (!expansionCoeffFlag) { // check for reqd data
+	PCerr << "Error: expansion coefficients not defined in RegressOrthog"
+	      << "PolyApproximation::mean_gradient()" << std::endl;
+	abort_handler(-1);
+      }
+    }
+    for (j=1, it=++sparseIndices.begin(); it!=sparseIndices.end(); ++j, ++it) {
+      const UShortArray& mi_j = mi[*it];
+      // expectations are zero for expansion terms with nonzero random indices
+      if (data_rep->zero_random(mi_j)) {
+	// In both cases below, term to differentiate is alpha_j(s) Psi_j(s)
+	// since <Psi_j>_xi = 1 for included terms.  The difference occurs
+	// based on whether a particular s_i dependence appears in alpha
+	// (for inserted) or Psi (for augmented).
+	if (random)
+	  // -------------------------------------------
+	  // derivative w.r.t. design variable insertion
+	  // -------------------------------------------
+	  grad_i += expansionCoeffGrads[j][cntr] * data_rep->
+	    multivariate_polynomial(x, mi_j, nrand_ind);
+	else
+	  // ----------------------------------------------
+	  // derivative w.r.t. design variable augmentation
+	  // ----------------------------------------------
+	  grad_i += expansionCoeffs[j] * data_rep->
+	    multivariate_polynomial_gradient(x, deriv_index, mi_j, nrand_ind);
+      }
+    }
+    if (random) // deriv w.r.t. des var insertion
+      ++cntr;
+  }
+  if (all_mode) { computedMean |=  2; xPrevMeanGrad = x; }
+  else            computedMean &= ~2; // deactivate 2-bit: protect mixed usage
+  return meanGradient;
+}
+
+
+Real RegressOrthogPolyApproximation::
+covariance(PolynomialApproximation* poly_approx_2)
+{
+  RegressOrthogPolyApproximation* ropa_2
+    = (RegressOrthogPolyApproximation*)poly_approx_2;
+  const SizetSet& sparse_ind_2 = ropa_2->sparseIndices;
+  if (sparseIndices.empty() && sparse_ind_2.empty())
+    return OrthogPolyApproximation::covariance(poly_approx_2);
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  bool same = (ropa_2 == this), std_mode = data_rep->nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expansionCoeffFlag ||
+       ( !same && !ropa_2->expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "RegressOrthogPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (same && std_mode && (computedVariance & 1))
+    return expansionMoments[1];
+
+  size_t i1, i2, si1, si2; StSCIter cit1, cit2;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  const RealVector& exp_coeffs_2 = ropa_2->expansionCoeffs;
+  Real covar = 0.;
+  if (same)
+    for (i1=1, cit1=++sparseIndices.begin(); cit1!=sparseIndices.end();
+	 ++i1, ++cit1)
+      covar += expansionCoeffs[i1] * expansionCoeffs[i1]
+	    *  data_rep->norm_squared(mi[*cit1]);
+  else if (sparseIndices.empty()) // mixed mode
+    for (i2=1, cit2=++sparse_ind_2.begin(); cit2!=sparse_ind_2.end();
+	 ++i2, ++cit2) {
+      si2 = *cit2;
+      covar += expansionCoeffs[si2] * exp_coeffs_2[i2]
+	    *  data_rep->norm_squared(mi[si2]);
+    }
+  else if (sparse_ind_2.empty()) // mixed mode
+    for (i1=1, cit1=++sparseIndices.begin(); cit1!=sparseIndices.end();
+	 ++i1, ++cit1) {
+      si1 = *cit1;
+      covar += expansionCoeffs[i1] * exp_coeffs_2[si1]
+	    *  data_rep->norm_squared(mi[si1]);
+    }
+  else {
+    i1=1; i2=1; cit1=++sparseIndices.begin(); cit2=++sparse_ind_2.begin();
+    while (cit1!=sparseIndices.end() && cit2!=sparse_ind_2.end()) {
+      si1 = *cit1; si2 = *cit2;
+      if (si1 == si2) {
+	covar += expansionCoeffs[i1] * exp_coeffs_2[i2]
+	      *  data_rep->norm_squared(mi[si1]);
+	++i1; ++cit1; ++i2; ++cit2;
+      }
+      else if (si1 < si2) { ++i1; ++cit1; }
+      else                { ++i2; ++cit2; }
+    }
+  }
+  if (same && std_mode)
+    { expansionMoments[1] = covar; computedVariance |= 1; }
+  return covar;
+}
+
+
+Real RegressOrthogPolyApproximation::
+covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  RegressOrthogPolyApproximation* ropa_2
+    = (RegressOrthogPolyApproximation*)poly_approx_2;
+  const SizetSet& sparse_ind_2 = ropa_2->sparseIndices;
+  if (sparseIndices.empty() && sparse_ind_2.empty())
+    return OrthogPolyApproximation::covariance(x, poly_approx_2);
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
+  bool same = (this == ropa_2), all_mode = !nrand_ind.empty();
+
+  // Error check for required data
+  if ( !expansionCoeffFlag ||
+       ( !same && !ropa_2->expansionCoeffFlag )) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "RegressOrthogPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if ( same && all_mode && (computedVariance & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar) )
+    return expansionMoments[1];
+
+  const UShort2DArray&        mi = data_rep->multiIndex;
+  const SizetList&      rand_ind = data_rep->randomIndices;
+  const RealVector& exp_coeffs_2 = ropa_2->expansionCoeffs;
+  Real covar = 0.;
+  if (sparseIndices.empty()) { // mixed mode
+    size_t i1, i2, num_mi = mi.size(); StSCIter cit2;
+    for (i1=1; i1<num_mi; ++i1) {
+      const UShortArray& mi1 = mi[i1];
+      if (!data_rep->zero_random(mi1)) {
+	Real coeff_norm_poly = expansionCoeffs[i1] * 
+	  data_rep->norm_squared(mi1, rand_ind) *
+	  data_rep->multivariate_polynomial(x, mi1, nrand_ind);
+	for (cit2=++sparse_ind_2.begin(), i2=1; cit2!=sparse_ind_2.end();
+	     ++cit2, ++i2) {
+	  const UShortArray& mi2 = mi[*cit2];
+	  if (data_rep->match_random_key(mi1, mi2))
+	    covar += coeff_norm_poly * exp_coeffs_2[i2] * 
+	      data_rep->multivariate_polynomial(x, mi2, nrand_ind);
+	}
+      }
+    }
+  }
+  else if (sparse_ind_2.empty()) { // mixed mode
+    size_t i1, i2, num_mi = mi.size(); StSCIter cit1;
+    for (cit1=++sparseIndices.begin(), i1=1; cit1!=sparseIndices.end();
+	 ++cit1, ++i1) {
+      const UShortArray& mi1 = mi[*cit1];
+      if (!data_rep->zero_random(mi1)) {
+	Real coeff_norm_poly = expansionCoeffs[i1] * 
+	  data_rep->norm_squared(mi1, rand_ind) *
+	  data_rep->multivariate_polynomial(x, mi1, nrand_ind);
+	for (i2=1; i2<num_mi; ++i2) {
+	  const UShortArray& mi2 = mi[i2];
+	  if (data_rep->match_random_key(mi1, mi2))
+	    covar += coeff_norm_poly * exp_coeffs_2[i2] * 
+	      data_rep->multivariate_polynomial(x, mi2, nrand_ind);
+	}
+      }
+    }
+  }
+  else {
+    size_t i1, i2; StSCIter cit1, cit2;
+    for (cit1=++sparseIndices.begin(), i1=1; cit1!=sparseIndices.end();
+	 ++cit1, ++i1) {
+      // For r = random_vars and nr = non_random_vars,
+      // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
+      // -> only include terms from R(r,nr) which don't appear in \mu_R(nr)
+      const UShortArray& mi1 = mi[*cit1];
+      if (!data_rep->zero_random(mi1)) {
+	Real coeff_norm_poly = expansionCoeffs[i1] * 
+	  data_rep->norm_squared(mi1, rand_ind) *
+	  data_rep->multivariate_polynomial(x, mi1, nrand_ind);
+	for (cit2=++sparse_ind_2.begin(), i2=1; cit2!=sparse_ind_2.end();
+	     ++cit2, ++i2) {
+	  const UShortArray& mi2 = mi[*cit2];
+	  // random polynomial part must be identical to contribute to variance
+	  // (else orthogonality drops term).  Note that it is not necessary to
+	  // collapse terms with the same random basis subset, since cross term
+	  // in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
+	  // (following eval of non-random portions), the nested loop could be
+	  // replaced with a single loop to evaluate (a+b)^2.
+	  if (data_rep->match_random_key(mi1, mi2))
+	    covar += coeff_norm_poly * exp_coeffs_2[i2] * 
+	      data_rep->multivariate_polynomial(x, mi2, nrand_ind);
+	}
+      }
+    }
+  }
+
+  if (same && all_mode)
+    { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
+}
+
+
+/** In this function, all expansion variables are random variables and
+    any design/state variables are omitted from the expansion.  The
+    mixed derivative case (some design variables are inserted and some
+    are augmented) requires no special treatment. */
+const RealVector& RegressOrthogPolyApproximation::variance_gradient()
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::variance_gradient();
+
+  // d/ds \sigma^2_R = Sum_{j=1}^P <Psi^2_j> d/ds \alpha^2_j
+  //                 = 2 Sum_{j=1}^P \alpha_j <dR/ds, Psi_j>
+
+  // Error check for required data
+  if (!expansionCoeffFlag || !expansionCoeffGradFlag) {
+    PCerr << "Error: insufficient expansion coefficient data in RegressOrthog"
+	  << "PolyApproximation::variance_gradient()." << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedVariance & 2))
+    return varianceGradient;
+
+  size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows();
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  varianceGradient = 0.;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  StSIter it;
+  for (i=1, it=++sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    Real term_i = 2. * expansionCoeffs[i] * data_rep->norm_squared(mi[*it]);
+    for (j=0; j<num_deriv_vars; ++j)
+      varianceGradient[j] += term_i * expansionCoeffGrads[i][j];
+  }
+  if (std_mode) computedVariance |=  2;
+  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
+  return varianceGradient;
+}
+
+
+/** In this function, a subset of the expansion variables are random
+    variables and any augmented design/state variables (i.e., not
+    inserted as random variable distribution parameters) are included
+    in the expansion.  This function must handle the mixed case, where
+    some design/state variables are augmented (and are part of the
+    expansion) and some are inserted (derivatives are obtained from
+    expansionCoeffGrads). */
+const RealVector& RegressOrthogPolyApproximation::
+variance_gradient(const RealVector& x, const SizetArray& dvv)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::variance_gradient(x, dvv);
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "RegressOrthogPolyApproximation::variance_gradient()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // if already computed, return previous result
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
+  bool all_mode = !nrand_ind.empty();
+  if ( all_mode && (computedVariance & 2) &&
+       data_rep->match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
+    return varianceGradient;
+
+  size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
+    cntr = 0; // insertions carried in order within expansionCoeffGrads
+  if (varianceGradient.length() != num_deriv_vars)
+    varianceGradient.sizeUninitialized(num_deriv_vars);
+  varianceGradient = 0.;
+
+  const UShort2DArray&   mi = data_rep->multiIndex;
+  const SizetList& rand_ind = data_rep->randomIndices;
+  Real norm_sq_j, poly_j, poly_grad_j, norm_poly_j, coeff_j, coeff_grad_j;
+  StSIter jit, kit;
+  for (i=0; i<num_deriv_vars; ++i) {
+    deriv_index = dvv[i] - 1; // OK since we are in an "All" view
+    bool random = data_rep->randomVarsKey[deriv_index];
+    if (random && !expansionCoeffGradFlag){
+      PCerr << "Error: expansion coefficient gradients not defined in Regress"
+	    << "OrthogPolyApproximation::variance_gradient()." << std::endl;
+      abort_handler(-1);
+    }
+    for (j=1, jit=++sparseIndices.begin(); jit!=sparseIndices.end();
+	 ++j, ++jit) {
+      const UShortArray& mi_j = mi[*jit];
+      if (!data_rep->zero_random(mi_j)) {
+	coeff_j   = expansionCoeffs[j];
+	norm_sq_j = data_rep->norm_squared(mi_j, rand_ind);
+	poly_j    = data_rep->multivariate_polynomial(x, mi_j, nrand_ind);
+	if (random) {
+	  norm_poly_j  = norm_sq_j * poly_j;
+	  coeff_grad_j = expansionCoeffGrads[j][cntr];
+	}
+	else
+	  poly_grad_j = data_rep->
+	    multivariate_polynomial_gradient(x, deriv_index, mi_j, nrand_ind);
+	for (k=1, kit=++sparseIndices.begin(); kit!=sparseIndices.end();
+	     ++k, ++kit) {
+	  // random part of polynomial must be identical to contribute to
+	  // variance (else orthogonality drops term)
+	  const UShortArray& mi_k = mi[*kit];
+	  if (data_rep->match_random_key(mi_j, mi_k)) {
+	    // In both cases below, the term to differentiate is
+	    // alpha_j(s) alpha_k(s) <Psi_j^2>_xi Psi_j(s) Psi_k(s) and the
+	    // difference occurs based on whether a particular s_i dependence
+	    // appears in alpha (for inserted) or Psi (for augmented).
+	    if (random)
+	      // -------------------------------------------
+	      // derivative w.r.t. design variable insertion
+	      // -------------------------------------------
+	      varianceGradient[i] += norm_poly_j *
+		(coeff_j * expansionCoeffGrads[k][cntr] +
+		 expansionCoeffs[k] * coeff_grad_j) *
+		data_rep->multivariate_polynomial(x, mi_k, nrand_ind);
+	    else
+	      // ----------------------------------------------
+	      // derivative w.r.t. design variable augmentation
+	      // ----------------------------------------------
+	      varianceGradient[i] +=
+		coeff_j * expansionCoeffs[k] * norm_sq_j *
+		// Psi_j * dPsi_k_ds_i + dPsi_j_ds_i * Psi_k
+		(poly_j * data_rep->multivariate_polynomial_gradient(x,
+		   deriv_index, mi_k, nrand_ind) +
+		 poly_grad_j * data_rep->multivariate_polynomial(x, mi_k,
+		   nrand_ind));
+	  }
+	}
+      }
+    }
+    if (random) // deriv w.r.t. des var insertion
+      ++cntr;
+  }
+  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
+  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
+  return varianceGradient;
+}
+
+
 /** In this case, regression is used in place of spectral projection.  That
     is, instead of calculating the PCE coefficients using inner products, 
     linear least squares is used to estimate the PCE coefficients which
@@ -565,124 +1239,6 @@ void RegressOrthogPolyApproximation::run_regression()
       sparseIndices.clear();
     }
   }
-}
-
-
-Real RegressOrthogPolyApproximation::
-covariance(PolynomialApproximation* poly_approx_2)
-{
-  RegressOrthogPolyApproximation* ropa_2
-    = (RegressOrthogPolyApproximation*)poly_approx_2;
-  if (sparseIndices.empty()) // TO DO: support mixed case?
-    return OrthogPolyApproximation::covariance(poly_approx_2);
-  else if (ropa_2 == this) {
-    // Error check for required data
-    if ( !expansionCoeffFlag ) {
-      PCerr << "Error: expansion coefficients not defined in "
-	    << "RegressOrthogPolyApproximation::covariance()" << std::endl;
-      abort_handler(-1);
-    }
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-    const UShort2DArray& multi_index = data_rep->multiIndex; // shared
-    SizetSet::const_iterator cit; size_t i; Real covar = 0.;
-    for (cit=++sparseIndices.begin(), i=1; cit!=sparseIndices.end(); ++cit, ++i)
-      covar += expansionCoeffs[i] * expansionCoeffs[i] *
-	data_rep->norm_squared(multi_index[*cit]);
-    return covar;
-  }
-  else { // for sparse PCE, multiIndex sequences may differ for different resp
-    // Error check for required data
-    if ( !expansionCoeffFlag || !ropa_2->expansionCoeffFlag ) {
-      PCerr << "Error: expansion coefficients not defined in "
-	    << "RegressOrthogPolyApproximation::covariance()" << std::endl;
-      abort_handler(-1);
-    }
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-    const UShort2DArray& multi_index = data_rep->multiIndex; // shared
-    const RealVector& exp_coeffs_2 = ropa_2->expansionCoeffs;
-    const SizetSet&   sparse_ind_2 = ropa_2->sparseIndices;
-    SizetSet::const_iterator cit1 = ++sparseIndices.begin(),
-      cit2 = ++sparse_ind_2.begin();
-    size_t si1, si2, i1 = 1, i2 = 1;
-    Real covar = 0.;
-    while (cit1 != sparseIndices.end() && cit2 != sparse_ind_2.end()) {
-      si1 = *cit1; si2 = *cit2;
-      if (si1 == si2) { // equality in sparse index implies multiIndex equality
-	covar += expansionCoeffs[i1] * exp_coeffs_2[i2] *
-	  data_rep->norm_squared(multi_index[si1]); // or multi_index[si2]
-	++cit1; ++cit2; ++i1; ++i2;
-      }
-      else if (si1 < si2) { ++cit1; ++i1; }
-      else                { ++cit2; ++i2; }
-    }
-    return covar;
-  }
-}
-
-
-Real RegressOrthogPolyApproximation::
-covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
-{
-  if (sparseIndices.empty()) // full multiIndex in use for all resp fns
-    return OrthogPolyApproximation::covariance(x, poly_approx_2);
-  // TO DO: support mixed cases of sparseIndices for 1 resp but not another?
-
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  RegressOrthogPolyApproximation* ropa_2
-    = (RegressOrthogPolyApproximation*)poly_approx_2;
-  bool same = (this == ropa_2), all_mode = !data_rep->nonRandomIndices.empty();
-
-  // Error check for required data
-  if ( !expansionCoeffFlag ||
-       ( !same && !ropa_2->expansionCoeffFlag )) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::covariance()" << std::endl;
-    abort_handler(-1);
-  }
-
-  if ( same && all_mode && (computedVariance & 1) &&
-       data_rep->match_nonrandom_vars(x, xPrevVar) )
-    return expansionMoments[1];
-
-  const UShort2DArray& multi_index = data_rep->multiIndex; // shared
-  const SizetList&        rand_ind = data_rep->randomIndices;
-  const SizetList&       nrand_ind = data_rep->nonRandomIndices;
-  const RealVector&   exp_coeffs_2 = ropa_2->expansionCoeffs;
-  const SizetSet&     sparse_ind_2 = ropa_2->sparseIndices;
-  size_t i1, i2, si1, si2; Real covar = 0.;
-  SizetSet::const_iterator cit1, cit2;
-  for (cit1=++sparseIndices.begin(), i1=1; cit1!=sparseIndices.end();
-       ++cit1, ++i1) {
-    // For r = random_vars and nr = non_random_vars,
-    // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
-    // -> only include terms from R(r,nr) which don't appear in \mu_R(nr)
-    si1 = *cit1;
-    if (!data_rep->zero_random(multi_index[si1])) {
-      Real coeff_norm_poly = expansionCoeffs[i1] * 
-	data_rep->norm_squared(multi_index[si1], rand_ind) *
-	data_rep->multivariate_polynomial(x, multi_index[si1], nrand_ind);
-      const UShortArray& mi1 = multi_index[si1];
-      for (cit2=++sparse_ind_2.begin(), i2=1; cit2!=sparse_ind_2.end();
-	   ++cit2, ++i2) {
-	si2 = *cit2;
-	// random polynomial part must be identical to contribute to variance
-	// (else orthogonality drops term).  Note that it is not necessary to
-	// collapse terms with the same random basis subset, since cross term
-	// in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
-	// (following eval of non-random portions), the nested loop could be
-	// replaced with a single loop to evaluate (a+b)^2.
-	if (data_rep->match_random_key(mi1, multi_index[si2]))
-	  covar += coeff_norm_poly * exp_coeffs_2[i2] * 
-	    data_rep->multivariate_polynomial(x, multi_index[si2], nrand_ind);
-      }
-    }
-  }
-  if (same && all_mode)
-    { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
-  return covar;
 }
 
 

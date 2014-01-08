@@ -59,8 +59,24 @@ protected:
 
   size_t expansion_terms() const;
 
+  Real value(const RealVector& x);
+  const RealVector& gradient_basis_variables(const RealVector& x);
+  const RealVector& gradient_basis_variables(const RealVector& x,
+					     const SizetArray& dvv);
+  const RealVector& gradient_nonbasis_variables(const RealVector& x);
+
+  Real stored_value(const RealVector& x);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
+
+  Real mean(const RealVector& x);
+  const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
+
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
+  const RealVector& variance_gradient();
+  const RealVector& variance_gradient(const RealVector& x,
+				      const SizetArray& dvv);
 
 private:
 
