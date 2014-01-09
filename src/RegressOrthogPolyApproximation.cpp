@@ -95,34 +95,31 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 void RegressOrthogPolyApproximation::allocate_component_sobol()
 {
   if (sparseIndices.empty())
-    PolynomialApproximation::allocate_component_sobol();
-  else {
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-    const UShort2DArray& multi_index = data_rep->multiIndex;
-    BitArrayULongMap& sobol_map = data_rep->sobolIndexMap;
-    SizetSet::const_iterator cit;
-    size_t j, num_v = sharedDataRep->numVars;
-    BitArray set(num_v);
-    for (cit=++sparseIndices.begin(); cit!=sparseIndices.end(); ++cit) {
-      const UShortArray& sparse_mi = multi_index[*cit];
-      for (j=0; j<num_v; ++j)
-	if (sparse_mi[j]) set.set(j);   //   activate bit j
-	else              set.reset(j); // deactivate bit j
-      sparseSobolIndices.insert(sobol_map[set]); // discard duplicate indices
-      // TO DO: may be better to define a map from shared index to sparse index.
-      // the map value (sparse index) would be the position in the sorted sparse
-      // set --> issue is whether to incur this distance() overhead each time.
-    }
-    // TO DO: these changes need to be propagated elsewhere, potentially with
-    // additional fn specializations:
-    // > sobolIndexMap is now insufficient to describe component sobol indices
-    //   in all cases
-    // > multiIndex is now insufficient to describe expansion terms in all cases
-    size_t sobol_len = sparseSobolIndices.size();
-    if (sobolIndices.length() != sobol_len)
-      sobolIndices.sizeUninitialized(sobol_len);
+    { PolynomialApproximation::allocate_component_sobol(); return; }
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& multi_index = data_rep->multiIndex;
+  BitArrayULongMap& sobol_map = data_rep->sobolIndexMap;
+  StSIter sit;
+  size_t j, num_v = sharedDataRep->numVars;
+  BitArray set(num_v);
+  for (sit=sparseIndices.begin(); sit!=sparseIndices.end(); ++sit) {
+    const UShortArray& sparse_mi = multi_index[*sit];
+    for (j=0; j<num_v; ++j)
+      if (sparse_mi[j]) set.set(j);   //   activate bit j
+      else              set.reset(j); // deactivate bit j
+    // define map from shared index to sparse index
+    unsigned long shared_index = sobol_map[set];
+    sparseSobolIndexMap[shared_index] = 0; // value updated below
   }
+  // now that set of keys is complete, assign sequence of values
+  unsigned long sobol_len = 0; ULULMIter mit;
+  for (mit=sparseSobolIndexMap.begin(); mit!=sparseSobolIndexMap.end(); ++mit)
+    mit->second = sobol_len++;
+  // now size sobolIndices
+  if (sobolIndices.length() != sobol_len)
+    sobolIndices.sizeUninitialized(sobol_len);
 }
 
 
@@ -1193,7 +1190,8 @@ void RegressOrthogPolyApproximation::run_regression()
       }
     }
 
-    if (data_rep->expConfigOptions.expCoeffsSolnApproach != ORTHOG_LEAST_INTERPOLATION) {
+    if (data_rep->expConfigOptions.expCoeffsSolnApproach !=
+	ORTHOG_LEAST_INTERPOLATION) {
       // solve
       IntVector index_mapping; 
       remove_faulty_data( A, B, points, index_mapping,
@@ -1226,7 +1224,7 @@ void RegressOrthogPolyApproximation::run_regression()
       for (i=0; i<num_grad_rhs; ++i)
 	update_sparse_coeff_grads(solutions[i+num_coeff_rhs][0], i);
       // update sobol index bookkeeping
-      update_sparse_sobol();//update_sparse_multi_index();
+      update_sparse_sobol();
     }
     else { // retain original multiIndex layout
       if (multiple_rhs)
@@ -1249,9 +1247,10 @@ update_sparse(Real* dense_coeffs, size_t num_dense_terms)
   sparseIndices.clear();
   update_sparse_indices(dense_coeffs, num_dense_terms);
 
-  // now update expansionCoeffs
+  // update expansionCoeffs
   update_sparse_coeffs(dense_coeffs);
-  //update_sparse_multi_index();
+
+  // update the sparse Sobol' indices
   update_sparse_sobol();
 }
 
@@ -1292,21 +1291,6 @@ update_sparse_coeff_grads(Real* dense_coeffs, int row)
   for (j=0, cit=sparseIndices.begin(); j<num_exp_terms; ++j, ++cit)
     expansionCoeffGrads(row, j) = dense_coeffs[*cit];
 }
-
-
-/*
-void RegressOrthogPolyApproximation::update_sparse_multi_index()
-{
-  UShort2DArray old_multi_index = multiIndex;
-
-  // build sparse multiIndex
-  size_t num_exp_terms = sparseIndices.size();
-  multiIndex.resize(num_exp_terms);
-  size_t i; SizetSet::const_iterator cit;
-  for (i=0, cit=sparseIndices.begin(); i<num_exp_terms; ++i, ++cit)
-    multiIndex[i] = old_multi_index[*cit];
-}
-*/
 
 
 void RegressOrthogPolyApproximation::update_sparse_sobol()
@@ -1877,5 +1861,286 @@ void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
 	previous_dimension += current_size;
     }
 };
+
+
+void RegressOrthogPolyApproximation::compute_component_sobol()
+{
+  if (sparseIndices.empty())
+    { OrthogPolyApproximation::compute_component_sobol(); return; }
+
+  // sobolIndices are indexed via a bit array, one bit per variable.
+  // A bit is turned on for an expansion term if there is a variable
+  // dependence (i.e., its multi-index component is non-zero).  Since
+  // the Sobol' indices involve a consolidation of variance contributions
+  // from the expansion terms, we define a bit array from the multIndex
+  // and then use a lookup within sobolIndexMap to assign the expansion
+  // term contribution to the correct Sobol' index.
+
+  // iterate through multiIndex and store sensitivities.  Note: sobolIndices[0]
+  // (corresponding to constant exp term with no variable dependence) is unused.
+  sobolIndices = 0.; // initialize
+
+  // compute and sum the variance contributions for each expansion term.  For
+  // all_vars mode, this approach picks up the total expansion variance, which
+  // is the desired reference pt for type-agnostic global sensitivity analysis.
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  const BitArrayULongMap& index_map = data_rep->sobolIndexMap;
+  size_t i, j, num_v = sharedDataRep->numVars; StSIter it;
+  BitArray set(num_v);
+  Real p_var, sum_p_var = 0.;
+  for (i=1, it=++sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    const UShortArray& mi_i = mi[*it];
+    p_var = expansionCoeffs(i) * expansionCoeffs(i)
+          * data_rep->norm_squared(mi_i);
+    sum_p_var += p_var;
+
+    // determine the bit set corresponding to this expansion term
+    for (j=0; j<num_v; ++j)
+      if (mi_i[j]) set.set(j);   //   activate bit j
+      else         set.reset(j); // deactivate bit j
+
+    // lookup the bit set within sobolIndexMap --> increment the correct
+    // Sobol' index with the variance contribution from this expansion term.
+    BAULMCIter cit = index_map.find(set);
+    if (cit != index_map.end()) { // may not be found if vbdOrderLimit
+      unsigned long sp_index = sparseSobolIndexMap[cit->second];
+      sobolIndices[sp_index] += p_var; // divide by sum_p_var below
+    }
+  }
+  if (sum_p_var > SMALL_NUMBER) // don't attribute variance if zero/negligible
+    sobolIndices.scale(1./sum_p_var);
+
+#ifdef DEBUG
+  PCout << "In RegressOrthogPolyApproximation::compute_component_sobol(), "
+	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
+#endif // DEBUG
+}
+
+
+void RegressOrthogPolyApproximation::compute_total_sobol() 
+{
+  if (sparseIndices.empty())
+    { OrthogPolyApproximation::compute_total_sobol(); return; }
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  size_t j, num_v = sharedDataRep->numVars;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  totalSobolIndices = 0.;
+  if (data_rep->expConfigOptions.vbdOrderLimit) {
+    // all component indices may not be available, so compute total indices
+    // from scratch by computing and summing variance contributions for each
+    // expansion term
+    size_t i, num_exp_terms = sparseIndices.size();
+    Real p_var, sum_p_var = 0., ratio_i; StSIter it;
+    for (i=1, it=++sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+      const UShortArray& mi_i = mi[*it];
+      p_var = expansionCoeffs(i) * expansionCoeffs(i)
+	    * data_rep->norm_squared(mi_i);
+      sum_p_var += p_var;
+      // for any constituent variable j in exansion term i, the expansion
+      // term contributes to the total sensitivity of variable j
+      for (j=0; j<num_v; ++j)
+	if (mi_i[j])
+	  totalSobolIndices[j] += p_var; // divide by sum_p_var outside loop
+    }
+    // if negligible variance (e.g., a deterministic test fn), then attribution
+    // of this variance is suspect.  Defaulting totalSobolIndices to zero is a
+    // good choice since it drops out from anisotropic refinement based on the
+    // response-average of these indices.
+    if (sum_p_var > SMALL_NUMBER) // avoid division by zero
+      totalSobolIndices.scale(1./sum_p_var);
+  }
+  else {
+    const BitArrayULongMap& index_map = data_rep->sobolIndexMap;
+    // all component effects have been computed, so add them up:
+    // totalSobolIndices parses the bit sets of each of the sobolIndices
+    // and adds them to each matching variable bin
+    // Note: compact iteration over sparseSobolIndexMap could be done but
+    //       requires a value to key mapping to get from uit->first to set.
+    for (BAULMCIter cit=index_map.begin(); cit!=index_map.end(); ++cit) {
+      ULULMIter uit = sparseSobolIndexMap.find(cit->second);
+      if (uit != sparseSobolIndexMap.end()) {
+	const BitArray& set = cit->first;
+	Real comp_sobol = sobolIndices[uit->second];
+	for (j=0; j<num_v; ++j) 
+	  if (set[j]) // var j is present in this Sobol' index
+	    totalSobolIndices[j] += comp_sobol;
+      }
+    }
+  }
+
+#ifdef DEBUG
+  PCout << "In RegressOrthogPolyApproximation::compute_total_sobol(), "
+	<< "totalSobolIndices =\n"; write_data(PCout, totalSobolIndices);
+#endif // DEBUG
+}
+
+
+/*
+
+TO DO: also need combine_coefficients() and multiply_expansion()
+
+const RealVector& RegressOrthogPolyApproximation::dimension_decay_rates()
+{
+  size_t i, j, num_exp_terms = expansion_terms(),
+    num_v = sharedDataRep->numVars;
+  if (decayRates.empty())
+    decayRates.sizeUninitialized(num_v);
+
+  // define max_orders for each var for sizing LLS matrices/vectors
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  UShortArray max_orders(num_v, 0);
+  for (i=0; i<num_exp_terms; ++i)
+    for (j=0; j<num_v; ++j)
+      if (mi[i][j] > max_orders[j])
+	max_orders[j] = mi[i][j];
+  // size A_vectors and b_vectors
+  RealVectorArray A_vectors(num_v), b_vectors(num_v);
+  for (i=0; i<num_v; ++i) {
+    A_vectors[i].sizeUninitialized(max_orders[i]);
+    b_vectors[i].sizeUninitialized(max_orders[i]);
+  }
+
+  // populate A_vectors and b_vectors
+  unsigned short order, non_zero, var_index, order_index;
+  bool univariate;
+  for (i=1; i<num_exp_terms; ++i) {
+    univariate = true; non_zero = 0;
+    for (j=0; j<num_v; ++j) {
+      if (mi[i][j]) {
+	++non_zero;
+	if (non_zero > 1) { univariate = false; break; }
+	else { order = mi[i][j]; var_index = j; order_index = order-1; }
+      }
+    }
+    if (univariate) {
+      // find a for y = ax + b with x = term order, y = log(coeff), and
+      // b = known intercept for order x = 0
+      Real norm =
+	std::sqrt(data_rep->polynomialBasis[var_index].norm_squared(order)),
+	abs_coeff = std::abs(expansionCoeffs[i]);
+#ifdef DECAY_DEBUG
+      PCout << "Univariate contribution: order = " << order << " coeff = "
+	    << abs_coeff << " norm = " << norm << '\n';
+#endif // DECAY_DEBUG
+      A_vectors[var_index][order_index] = (Real)order;
+      b_vectors[var_index][order_index] = (abs_coeff > 1.e-25) ?
+	std::log10(abs_coeff * norm) : std::log10(norm) - 25.;
+    }
+  }
+#ifdef DECAY_DEBUG
+  PCout << "raw b_vectors:\n";
+  for (i=0; i<num_v; ++i)
+    { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
+#endif // DECAY_DEBUG
+
+  // first coefficient is used in each of the LLS solves
+  Real log_coeff0 = std::log10(std::abs(expansionCoeffs[0])), tol = -10.;
+  short last_index_above = -1, new_size;
+
+  for (i=0; i<num_v; ++i) {
+    RealVector& A_i = A_vectors[i]; RealVector& b_i = b_vectors[i];
+
+    // Handle case of flatline at numerical precision by ignoring subsequent
+    // values below a tolerance (allow first, prune second)
+    // > high decay rate will de-emphasize refinement, but consider zeroing
+    //   out refinement for a direction that is converged below tol (?)
+    // > for now, truncate max_orders and scale back {A,b}_vectors
+    order = max_orders[i];
+    for (j=0; j<order; ++j)
+      if (b_i[j] > tol)
+	last_index_above = j;
+    new_size = last_index_above+2; // include one value below tolerance
+    if (new_size < order) {
+      max_orders[i] = order = new_size;
+      A_i.resize(order); // needed for psuedo-inv but not LAPACK
+      b_i.resize(order); // needed for psuedo-inv but not LAPACK
+    }
+
+    // subtract intercept b for y = Ax+b  ==>  Ax = y-b
+    for (j=0; j<order; ++j)
+      b_i[j] -= log_coeff0;
+
+    // employ simple 1-D pseudo inverse for LLS:
+    //   A^T A x = A^T(y-b)  ==>  x = A^T(y-b) / A^T A
+    // negate negative slope in log space such that large>0 is fast
+    // convergence, small>0 is slow convergence, and <0 is divergence
+    decayRates[i] = -A_i.dot(b_i) / A_i.dot(A_i);
+  }
+
+#ifdef DECAY_DEBUG
+  PCout << "Intercept log(abs(coeff0)) = " << log_coeff0 << '\n';
+  PCout << "b_vectors after truncation & intercept subtraction:\n";
+  for (i=0; i<num_v; ++i)
+    { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
+  PCout << "Individual approximation decay:\n"; write_data(PCout, decayRates);
+#endif // DECAY_DEBUG
+
+  return decayRates;
+}
+*/
+
+
+void RegressOrthogPolyApproximation::
+print_coefficients(std::ostream& s, bool normalized)
+{
+  if (sparseIndices.empty())
+    { OrthogPolyApproximation::print_coefficients(s, normalized); return; }
+
+  size_t i, j, num_v = sharedDataRep->numVars;
+  StSIter it;
+  char tag[10];
+
+  // terms and term identifiers
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    const UShortArray& mi_i = mi[*it];
+    s << "\n  " << std::setw(WRITE_PRECISION+7);
+    if (normalized) // basis is divided by norm, so coeff is multiplied by norm
+      s << expansionCoeffs[i] * std::sqrt(data_rep->norm_squared(mi_i));
+    else
+      s << expansionCoeffs[i];
+    for (j=0; j<num_v; ++j) {
+      data_rep->get_tag(tag, j, mi_i[j]);
+      s << std::setw(5) << tag;
+    }
+  }
+  s << '\n';
+}
+
+
+void RegressOrthogPolyApproximation::
+coefficient_labels(std::vector<std::string>& coeff_labels) const
+{
+  if (sparseIndices.empty())
+    { OrthogPolyApproximation::coefficient_labels(coeff_labels); return; }
+
+  size_t i, j, num_v = sharedDataRep->numVars;
+  char tag[10];
+
+  coeff_labels.reserve(sparseIndices.size());
+
+  // terms and term identifiers
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  for (StSIter it=sparseIndices.begin(); it!=sparseIndices.end(); ++it) {
+    const UShortArray& mi_i = mi[*it];
+    std::string tags;
+    for (j=0; j<num_v; ++j) {
+      if (j) tags += ' ';
+      data_rep->get_tag(tag, j, mi_i[j]);
+      tags += tag;
+    }
+    coeff_labels.push_back(tags);
+  }
+}
 
 } // namespace Pecos

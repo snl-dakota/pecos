@@ -78,6 +78,12 @@ protected:
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
 
+  void compute_component_sobol();
+  void compute_total_sobol();
+
+  void print_coefficients(std::ostream& s, bool normalized = false);
+  void coefficient_labels(std::vector<std::string>& all_coeff_tags) const;
+
 private:
 
   //
@@ -176,8 +182,10 @@ private:
   /// copy of sparseIndices stored in store_coefficients() for use in
   /// combine_coefficients()
   SizetSet storedSparseIndices;
-  /// tracks sparse Sobol index terms, as a subset of sobolIndexMap
-  SizetSet sparseSobolIndices;
+
+  /// maps shared index from sobolIndexMap values to sparse index into
+  /// sparse sobolIndices
+  ULongULongMap sparseSobolIndexMap;
 };
 
 

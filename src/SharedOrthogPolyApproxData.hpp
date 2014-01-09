@@ -164,6 +164,9 @@ protected:
   /// test for nonzero indices in random variable subset
   bool zero_random(const UShortArray& indices) const;
 
+  /// Generate the coefficient tag for variable j of given expansion term order
+  void get_tag(char* tag, size_t j, unsigned short order) const;
+
   /// tests 1D gradient computations (active in DEBUG compile mode)
   void gradient_check();
 
@@ -212,8 +215,6 @@ private:
   //- Heading: Member functions
   //
 
-  /// Generate the coefficient tag for variable j of given expansion term order
-  void get_tag(char* tag, size_t j, unsigned short order) const;
 };
 
 

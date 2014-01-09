@@ -854,45 +854,40 @@ void OrthogPolyApproximation::compute_component_sobol()
   // and then use a lookup within sobolIndexMap to assign the expansion
   // term contribution to the correct Sobol' index.
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-
-  // compute and sum the variance contributions for each expansion term.  For
-  // all_vars mode, this approach picks up the total expansion variance, which
-  // is the desired reference pt for type-agnostic global sensitivity analysis.
-  size_t i, j, k, sobol_len = sobolIndices.length(),
-    num_exp_terms = expansion_terms(), num_v = sharedDataRep->numVars;
-  Real sum_p_var = 0.; RealVector p_var(num_exp_terms-1, false);
-  const UShort2DArray& mi = data_rep->multiIndex;
-  for (i=1, k=0; i<num_exp_terms; ++i, ++k) {
-    p_var[k] = expansionCoeffs(i) * expansionCoeffs(i)
-             * data_rep->norm_squared(mi[i]);
-    sum_p_var += p_var[k];
-  }
-
   // iterate through multiIndex and store sensitivities.  Note: sobolIndices[0]
   // (corresponding to constant exp term with no variable dependence) is unused.
   sobolIndices = 0.; // initialize
 
+  // compute and sum the variance contributions for each expansion term.  For
+  // all_vars mode, this approach picks up the total expansion variance, which
+  // is the desired reference pt for type-agnostic global sensitivity analysis.
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
   const BitArrayULongMap& index_map = data_rep->sobolIndexMap;
-  if (sum_p_var > SMALL_NUMBER) { // don't attribute variance if zero/negligible
-    BitArray set(num_v);
-    for (i=1, k=0; i<num_exp_terms; ++i, ++k) {
+  size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
+  Real p_var, sum_p_var = 0.;
+  BitArray set(num_v);
+  for (i=1; i<num_exp_terms; ++i) {
+    const UShortArray& mi_i = mi[i];
+    p_var = expansionCoeffs(i) * expansionCoeffs(i)
+          * data_rep->norm_squared(mi_i);
+    sum_p_var += p_var;
 
-      // determine the bit set corresponding to this expansion term
-      for (j=0; j<num_v; ++j)
-	if (mi[i][j]) set.set(j);   //   activate bit j
-	else          set.reset(j); // deactivate bit j
+    // determine the bit set corresponding to this expansion term
+    for (j=0; j<num_v; ++j)
+      if (mi_i[j]) set.set(j);   //   activate bit j
+      else         set.reset(j); // deactivate bit j
 
-      // lookup the bit set within sobolIndexMap --> increment the correct
-      // Sobol' index with the variance contribution from this expansion term.
-      BAULMCIter cit = index_map.find(set);
-      if (cit != index_map.end()) // may not be found if vbdOrderLimit
-	sobolIndices[cit->second] += p_var[k]; // divide by sum_p_var below
-    }
-    for (i=0; i<sobol_len; ++i)
-      sobolIndices[i] /= sum_p_var;
+    // lookup the bit set within sobolIndexMap --> increment the correct
+    // Sobol' index with the variance contribution from this expansion term.
+    BAULMCIter cit = index_map.find(set);
+    if (cit != index_map.end()) // may not be found if vbdOrderLimit
+      sobolIndices[cit->second] += p_var; // divide by sum_p_var below
   }
+  if (sum_p_var > SMALL_NUMBER) // don't attribute variance if zero/negligible
+    sobolIndices.scale(1./sum_p_var);
+
 #ifdef DEBUG
   PCout << "In OrthogPolyApproximation::compute_component_sobol(), "
 	<< "sobolIndices =\n"; write_data(PCout, sobolIndices);
@@ -913,31 +908,24 @@ void OrthogPolyApproximation::compute_total_sobol()
     // from scratch by computing and summing variance contributions for each
     // expansion term
     size_t i, j, num_exp_terms = expansion_terms();
-    Real sum_p_var = 0., ratio_i;
-    RealVector p_var(num_exp_terms-1, false);
-    for (i=1, k=0; i<num_exp_terms; ++i, ++k) {
-      p_var[k] = expansionCoeffs(i) * expansionCoeffs(i)
-               * data_rep->norm_squared(mi[i]);
-      sum_p_var += p_var[k];
+    Real p_var, sum_p_var = 0., ratio_i;
+    for (i=1; i<num_exp_terms; ++i) {
+      const UShortArray& mi_i = mi[i];
+      p_var = expansionCoeffs(i) * expansionCoeffs(i)
+            * data_rep->norm_squared(mi_i);
+      sum_p_var += p_var;
+      // for any constituent variable j in exansion term i, the expansion
+      // term contributes to the total sensitivity of variable j
+      for (j=0; j<num_v; ++j)
+	if (mi_i[j])
+	  totalSobolIndices[j] += p_var; // divide by sum_p_var outside loop
     }
     // if negligible variance (e.g., a deterministic test fn), then attribution
     // of this variance is suspect.  Defaulting totalSobolIndices to zero is a
     // good choice since it drops out from anisotropic refinement based on the
     // response-average of these indices.
-    if (sum_p_var > SMALL_NUMBER) { // avoid division by zero
-      Real p_var_k;
-      for (i=1, k=0; i<num_exp_terms; ++i, ++k) {
-	p_var_k = p_var[k];
-	const UShortArray& mi_i = mi[i];
-	// for any constituent variable j in exansion term i, the expansion
-	// term contributes to the total sensitivity of variable j
-	for (j=0; j<num_v; ++j)
-	  if (mi_i[j])
-	    totalSobolIndices[j] += p_var_k; // divide by sum_p_var outside loop
-      }
-      for (j=0; j<num_v; ++j)
-	totalSobolIndices[j] /= sum_p_var;
-    }
+    if (sum_p_var > SMALL_NUMBER) // avoid division by zero
+      totalSobolIndices.scale(1./sum_p_var);
   }
   else {
     const BitArrayULongMap& index_map = data_rep->sobolIndexMap;
@@ -1062,14 +1050,12 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 void OrthogPolyApproximation::
 print_coefficients(std::ostream& s, bool normalized)
 {
-  size_t i, j, num_exp_terms = expansion_terms(),
-    num_v = sharedDataRep->numVars;
-  char tag[10];
-
   // terms and term identifiers
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
+  char tag[10];
   for (i=0; i<num_exp_terms; ++i) {
     const UShortArray& mi_i = mi[i];
     s << "\n  " << std::setw(WRITE_PRECISION+7);
@@ -1089,16 +1075,13 @@ print_coefficients(std::ostream& s, bool normalized)
 void OrthogPolyApproximation::
 coefficient_labels(std::vector<std::string>& coeff_labels) const
 {
-  size_t i, j, num_exp_terms = expansion_terms(),
-    num_v = sharedDataRep->numVars;
-  char tag[10];
-
-  coeff_labels.reserve(num_exp_terms);
-
   // terms and term identifiers
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
+  coeff_labels.reserve(num_exp_terms);
+  char tag[10];
   for (i=0; i<num_exp_terms; ++i) {
     const UShortArray& mi_i = mi[i];
     std::string tags;
