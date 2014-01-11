@@ -907,7 +907,7 @@ void OrthogPolyApproximation::compute_total_sobol()
     // all component indices may not be available, so compute total indices
     // from scratch by computing and summing variance contributions for each
     // expansion term
-    size_t i, j, num_exp_terms = expansion_terms();
+    size_t i, j, num_exp_terms = mi.size();
     Real p_var, sum_p_var = 0., ratio_i;
     for (i=1; i<num_exp_terms; ++i) {
       const UShortArray& mi_i = mi[i];
@@ -947,15 +947,15 @@ void OrthogPolyApproximation::compute_total_sobol()
 
 const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 {
-  size_t i, j, num_exp_terms = expansion_terms(),
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, j, num_exp_terms = mi.size(),
     num_v = sharedDataRep->numVars;
   if (decayRates.empty())
     decayRates.sizeUninitialized(num_v);
 
   // define max_orders for each var for sizing LLS matrices/vectors
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
   UShortArray max_orders(num_v, 0);
   for (i=0; i<num_exp_terms; ++i)
     for (j=0; j<num_v; ++j)
@@ -1001,9 +1001,19 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
     { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
 #endif // DECAY_DEBUG
 
+  solve_decay_rates(A_vectors, b_vectors, max_orders);
+  return decayRates;
+}
+
+
+void OrthogPolyApproximation::
+solve_decay_rates(RealVectorArray& A_vectors, RealVectorArray& b_vectors,
+		  UShortArray& max_orders)
+{
   // first coefficient is used in each of the LLS solves
   Real log_coeff0 = std::log10(std::abs(expansionCoeffs[0])), tol = -10.;
   short last_index_above = -1, new_size;
+  size_t i, j, num_v = sharedDataRep->numVars;;
 
   for (i=0; i<num_v; ++i) {
     RealVector& A_i = A_vectors[i]; RealVector& b_i = b_vectors[i];
@@ -1013,7 +1023,7 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
     // > high decay rate will de-emphasize refinement, but consider zeroing
     //   out refinement for a direction that is converged below tol (?)
     // > for now, truncate max_orders and scale back {A,b}_vectors
-    order = max_orders[i];
+    unsigned short order = max_orders[i];
     for (j=0; j<order; ++j)
       if (b_i[j] > tol)
 	last_index_above = j;
@@ -1042,8 +1052,6 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
     { PCout << "Variable " << i+1 << '\n'; write_data(PCout, b_vectors[i]); }
   PCout << "Individual approximation decay:\n"; write_data(PCout, decayRates);
 #endif // DECAY_DEBUG
-
-  return decayRates;
 }
 
 

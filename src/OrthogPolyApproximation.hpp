@@ -49,13 +49,9 @@ public:
   /// retrieve number of terms in the orthogonal polynomial expansion
   virtual size_t expansion_terms() const;
 
-  //
-  //- Heading: Member functions
-  //
-
   /// estimate chaos expansion coefficient decay rates for each random
   /// variable dimension using linear least squares in semilog space
-  const RealVector& dimension_decay_rates();
+  virtual const RealVector& dimension_decay_rates();
 
 protected:
 
@@ -155,6 +151,10 @@ protected:
   /// perform sanity checks prior to numerical integration
   void integration_checks();
 
+  /// utility function for solving the least squares estimation of decay rates
+  void solve_decay_rates(RealVectorArray& A_vectors, RealVectorArray& b_vectors,
+			 UShortArray& max_orders);
+
   //
   //- Heading: Data
   //
@@ -177,15 +177,16 @@ protected:
   /// store_coefficients() for use in combine_coefficients()
   RealMatrix storedExpCoeffGrads;
 
+  /// spectral coefficient decay rates estimated by LLS on log of
+  /// univariate expansion coefficients
+  RealVector decayRates;
+
 private:
 
   //
   //- Heading: Data
   //
 
-  /// spectral coefficient decay rates estimated by LLS on log of
-  /// univariate expansion coefficients
-  RealVector decayRates;
 };
 
 

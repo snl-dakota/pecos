@@ -55,9 +55,9 @@ protected:
   int min_coefficients() const;
   void compute_coefficients();
   void allocate_arrays();
-  void allocate_component_sobol();
 
   size_t expansion_terms() const;
+  const RealVector& dimension_decay_rates();
 
   Real value(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x);
@@ -126,9 +126,8 @@ private:
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and
   /// sparse_indices
   void update_sparse_coeff_grads(Real* dense_coeffs, int row);
-  // define sparse multiIndex from sparseIndices
-  //void update_sparse_multi_index();
-  /// define sparseSobolIndices from sparseIndices and multiIndex
+  /// define sparseSobolIndexMap from sparseIndices, shared multiIndex,
+  /// and shared sobolIndexMap
   void update_sparse_sobol();
 
   /**

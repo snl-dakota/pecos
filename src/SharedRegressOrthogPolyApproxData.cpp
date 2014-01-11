@@ -20,8 +20,11 @@ namespace Pecos {
 
 void SharedRegressOrthogPolyApproxData::allocate_data()
 {
-  if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION)
+  if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
+    if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit == 1)
+      allocate_main_sobol(); // main effects only
     PCout << "Orthogonal polynomial approximation of least order\n";
+  }
   else
     SharedOrthogPolyApproxData::allocate_data();
 }

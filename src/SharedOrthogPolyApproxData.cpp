@@ -100,7 +100,7 @@ void SharedOrthogPolyApproxData::allocate_component_sobol()
     else { // main + interaction effects
       sobolIndexMap.clear();
       multi_index_to_sobol_index_map(multiIndex);
-      assign_sobol_index_map_values();      
+      assign_sobol_index_map_values();
       /*
       unsigned short max_order = approxOrder[0];
       size_t v, num_v = sharedDataRep->numVars;
