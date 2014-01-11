@@ -58,7 +58,6 @@ void RegressOrthogPolyApproximation::allocate_arrays()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   if (data_rep->expConfigOptions.expCoeffsSolnApproach ==
       ORTHOG_LEAST_INTERPOLATION) {
-    PCout << "Orthogonal polynomial approximation of least order\n";
 
     if (data_rep->expConfigOptions.vbdFlag &&
 	data_rep->expConfigOptions.vbdOrderLimit == 1)
@@ -1268,6 +1267,45 @@ update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms)
 }
 
 
+void RegressOrthogPolyApproximation::
+update_sparse_indices(const UShort2DArray& mi_subset)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  UShort2DArray& mi_shared = data_rep->multiIndex;
+
+  // update sparseIndices based on a local subset of shared multiIndex.
+  // OLI does not employ an upper bound candidate multiIndex, so we must
+  // incrementally define it here.
+  size_t i, num_mi_subset = mi_subset.size();
+  if (mi_shared.empty()) {
+    mi_shared = mi_subset;
+    // use sparseIndices even though not currently a subset, since
+    // subsequent QoI could render this a subset
+    for (i=0; i<num_mi_subset; ++i)
+      sparseIndices.insert(i);
+  }
+  else {
+    size_t num_mi_shared = mi_shared.size();
+    for (i=0; i<num_mi_subset; ++i) {
+      sparseIndices.insert(i);
+      if (i<num_mi_shared) {
+	// For efficiency in current use cases, assume/enforce that mi_subset
+	// is a leading subset with ordering that is consistent with mi_shared
+	if (mi_subset[i] != mi_shared[i]) {
+	  PCerr << "Error: simplifying assumption violated in RegressOrthogPoly"
+		<< "Approximation::update_sparse_indices(UShort2DArray&)."
+		<< std::endl;
+	  abort_handler(-1);
+	}
+      }
+      else
+	mi_shared.push_back(mi_subset[i]);
+    }
+  }
+}
+
+
 void RegressOrthogPolyApproximation::update_sparse_coeffs(Real* dense_coeffs)
 {
   // build sparse expansionCoeffs
@@ -1569,9 +1607,8 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
     }
 #endif
 
-  RealMatrix L, U, H;
-  IntVector p, k;
-  RealVector v; 
+  IntVector k;
+  RealVector v;
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -1584,17 +1621,22 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
   //pce.get_basis( basis );
   //pce.get_basis_indices( basis_indices );
 
-  // This prevents the case where multiIndex is defined earlier in an efficient
-  // way to match the data
-  data_rep->multiIndex.clear(); // TO DO
-
-  // TO DO:
-  // > if no sim faults, then this could be done once in SharedRegressOPAD
-  // > if there are sim faults, then can we leverage sparseIndices approach?
-  least_factorization( pts, data_rep->multiIndex, L, U, H, p, v, k );
+  // TO DO: if no/identical sim faults, then reuse factorization among the
+  // response QoI.  This requires changes to Dakota::ApproximationInterface
+  // to propagate differences in data faults among the QoI.
+  if (true) { //if (fault_differences_from_previous_qoi) {
+    UShort2DArray local_multi_index;
+    least_factorization( pts, local_multi_index, data_rep->lowerFactor,
+			 data_rep->upperFactor, data_rep->pivotHistory,
+			 data_rep->pivotVect, v, k );
+    sparseIndices.clear();
+    update_sparse_indices(local_multi_index);
+  }
 
   RealMatrix coefficients;
-  transform_least_interpolant( L, U, H, p, v, vals );
+  transform_least_interpolant( data_rep->lowerFactor, data_rep->upperFactor,
+			       data_rep->pivotHistory, data_rep->pivotVect,
+			       v, vals );
   PCout << "@@@@@\n";
   PCout << vals.numCols() << std::endl;
 
@@ -1629,8 +1671,7 @@ transform_least_interpolant( RealMatrix &L, RealMatrix &U, RealMatrix &H,
   // multiIndex should be consistent across QoI vector
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  copy_data(coefficients.values(), (int)data_rep->expansion_terms(),
-	    expansionCoeffs);
+  copy_data(coefficients.values(), (int)sparseIndices.size(), expansionCoeffs);
 
   // now define the Sobol' indices based on the least polynomial multiIndex
   if (data_rep->expConfigOptions.vbdFlag &&

@@ -119,6 +119,8 @@ private:
   void update_sparse(Real* dense_coeffs, size_t num_dense_terms);
   /// augment sparse_indices based on nonzero dense_coeffs
   void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms);
+  /// augment sparse_indices based on a subset of the shared multiIndex
+  void update_sparse_indices(const UShort2DArray& mi_subset);
   /// define sparse expansionCoeffs from dense_coeffs and sparse_indices
   void update_sparse_coeffs(Real* dense_coeffs);
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and

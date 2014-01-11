@@ -1354,8 +1354,8 @@ trans_grad_X_to_S(const RealVector& fn_grad_x, RealVector& fn_grad_s,
   if (mixed_s || !std_dvv) {
     size_t cntr = 0;
     for (i=0; i<s_len; i++) {
-      int acv_id = acv_ids[acv_map1_indices[i]];
-      size_t dvv_index = find_index(x_dvv, acv_id);
+      size_t acv_id = acv_ids[acv_map1_indices[i]],
+	dvv_index = find_index(x_dvv, acv_id);
       if (dvv_index != _NPOS)
 	fn_grad_s(cntr++) = (acv_map2_targets[i] == NO_TARGET) ?
 	  fn_grad_x(dvv_index) : // no distribution parameter: if the missing

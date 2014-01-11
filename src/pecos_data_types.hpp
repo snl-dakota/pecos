@@ -178,25 +178,39 @@ inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
 
 
 template <typename PecosContainerType>
-//inline typename PecosContainerType::difference_type
-inline size_t 
-find_index(const PecosContainerType& v,
-	   const typename PecosContainerType::value_type& val)
+inline size_t find_index(const PecosContainerType& c,
+			 const typename PecosContainerType::value_type& val)
 {
-  /* Two partial traversals of container may be required in this approach:
-  typename PecosContainerType::const_iterator cit
-    = std::find(v.begin(), v.end(), val);
-  return (cit == v.end()) ? _NPOS : std::distance(v.begin(), cit);
-  */
+  // For a default container, employ one traversal
 
-  //typename PecosContainerType::difference_type cntr = 0;
-  size_t cntr = 0; // force size_t to ensure that _NPOS is valid
-
-  typename PecosContainerType::const_iterator cit = v.begin();
-  for (cit=v.begin(); cit!=v.end(); ++cit, ++cntr)
+  typename PecosContainerType::const_iterator cit;
+  size_t cntr; // force size_t to ensure that _NPOS is valid
+  for (cit=c.begin(), cntr=0; cit!=c.end(); ++cit, ++cntr)
     if (*cit == val)
       return cntr;
   return _NPOS;
+}
+
+
+template <typename ValueType>
+inline size_t set_value_to_index(const std::set<ValueType>& s,
+				 const ValueType& val)
+{
+  // For a sorted container, use fast lookup + distance()
+
+  typename std::set<ValueType>::const_iterator cit = s.find(val);
+  return (cit == s.end()) ? _NPOS : std::distance(s.begin(), cit);
+}
+
+
+template <typename KeyType, typename ValueType>
+inline size_t map_key_to_index(const std::map<KeyType, ValueType>& m,
+			       const KeyType& key)
+{
+  // For a sorted container, use fast lookup + distance()
+
+  typename std::map<KeyType, ValueType>::const_iterator cit = m.find(key);
+  return (cit == m.end()) ? _NPOS : std::distance(m.begin(), cit);
 }
 
 

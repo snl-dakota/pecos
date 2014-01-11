@@ -63,7 +63,7 @@ void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
 
   // checking num_points is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total
-  //size_t num_points = data_rep->hsg_driver()->grid_size();
+  //size_t num_points = surrData.size();
   //bool update_exp_form =
   //  ( (expansionCoeffFlag && expansionType1Coeffs.length() != num_points) ||
   //    (expansionCoeffGradFlag &&

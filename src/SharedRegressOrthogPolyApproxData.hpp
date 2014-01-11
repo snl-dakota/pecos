@@ -111,6 +111,15 @@ private:
   RealVector noiseTols;
   /// the L2 penalty parameter for LASSO (elastic net variant)
   Real l2Penalty;
+
+  /// lower matrix factor in factorization
+  RealMatrix lowerFactor;
+  /// upper matrix factor in factorization
+  RealMatrix upperFactor;
+  /// pivoting history of block-LU factorization
+  RealMatrix pivotHistory;
+  /// pivoting vector
+  IntVector pivotVect;
 };
 
 
