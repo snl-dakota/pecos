@@ -1228,7 +1228,7 @@ update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms)
 
 
 void RegressOrthogPolyApproximation::
-update_sparse_indices(const UShort2DArray& mi_subset)
+update_multi_index(const UShort2DArray& mi_subset, bool track_sparse)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -1237,18 +1237,20 @@ update_sparse_indices(const UShort2DArray& mi_subset)
   // update sparseIndices based on a local subset of shared multiIndex.
   // OLI does not employ an upper bound candidate multiIndex, so we must
   // incrementally define it here.
-  size_t i, num_mi_subset = mi_subset.size();
-  if (mi_shared.empty()) {
+  sparseIndices.clear();
+  size_t i, num_mi_subset = mi_subset.size(), num_mi_shared = mi_shared.size();
+  if (!num_mi_shared) {
     mi_shared = mi_subset;
     // use sparseIndices even though not currently a subset, since
-    // subsequent QoI could render this a subset
-    for (i=0; i<num_mi_subset; ++i)
-      sparseIndices.insert(i);
+    // subsequent QoI could render this a subset.
+    if (track_sparse)
+      for (i=0; i<num_mi_subset; ++i)
+	sparseIndices.insert(i);
   }
   else {
-    size_t num_mi_shared = mi_shared.size();
     for (i=0; i<num_mi_subset; ++i) {
-      sparseIndices.insert(i);
+      if (track_sparse)
+	sparseIndices.insert(i);
       if (i<num_mi_shared) {
 	// For efficiency in current use cases, assume/enforce that mi_subset
 	// is a leading subset with ordering that is consistent with mi_shared
@@ -1300,20 +1302,33 @@ void RegressOrthogPolyApproximation::update_sparse_sobol()
         data_rep->expConfigOptions.vbdOrderLimit == 1 )
     return;
 
-  // update sparseSobolIndexMap from shared sobolIndexMap
-  const UShort2DArray& multi_index = data_rep->multiIndex;
-  BitArrayULongMap&    sobol_map   = data_rep->sobolIndexMap;
+  sparseSobolIndexMap.clear();
+  BitArrayULongMap& shared_sobol_map = data_rep->sobolIndexMap;
+  if (sparseIndices.empty()) {
+    size_t sobol_len = shared_sobol_map.size();
+    if (sobolIndices.length() != sobol_len)
+      sobolIndices.sizeUninitialized(sobol_len);
+    return;
+  }
+
+  // update sparseSobolIndexMap from shared sobolIndexMap.  Since
+  // sparseSobolIndexMap is sorted by the sobolIndexMap map-values
+  // (indices within a dense sobolIndices), we know that the ordering
+  // of the sparse interactions will be consistent, e.g.:
+  // sparseSobolIndexMap keys:   0, 2, 4, 5, 9, 11 (from sobolIndexMap)
+  // sparseSobolIndexMap values: 0, 1, 2, 3, 4, 5  (new sobolIndices sequence)
+  const UShort2DArray& shared_multi_index = data_rep->multiIndex;
   size_t j, num_v = sharedDataRep->numVars; StSIter sit; BitArray set(num_v);
   for (sit=sparseIndices.begin(); sit!=sparseIndices.end(); ++sit) {
-    const UShortArray& sparse_mi = multi_index[*sit];
+    const UShortArray& sparse_mi = shared_multi_index[*sit];
     for (j=0; j<num_v; ++j)
       if (sparse_mi[j]) set.set(j);   //   activate bit j
       else              set.reset(j); // deactivate bit j
     // define map from shared index to sparse index
-    unsigned long shared_index = sobol_map[set];
+    unsigned long shared_index = shared_sobol_map[set];
     sparseSobolIndexMap[shared_index] = 0; // to be updated below
   }
-  // now that set of keys is complete, assign sequence of values
+  // now that keys are complete, assign new sequence for sparse Sobol indices
   unsigned long sobol_len = 0; ULULMIter mit;
   for (mit=sparseSobolIndexMap.begin(); mit!=sparseSobolIndexMap.end(); ++mit)
     mit->second = sobol_len++;
@@ -1604,21 +1619,20 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
 
   // TO DO: if no/identical sim faults, then reuse factorization among the
   // response QoI.  This requires changes to Dakota::ApproximationInterface
-  // to propagate differences in data faults among the QoI.
-  if (true) { //if (fault_differences_from_previous_qoi) {
+  // to propagate data fault difference flags among the QoI.
+  bool fault_differences = true; // TO DO
+  if (fault_differences || data_rep->multiIndex.empty()) {// always for 1st QoI
     UShort2DArray local_multi_index;
     least_factorization( pts, local_multi_index, data_rep->lowerFactor,
 			 data_rep->upperFactor, data_rep->pivotHistory,
 			 data_rep->pivotVect, v, k );
-    sparseIndices.clear();
-    update_sparse_indices(local_multi_index);
-    // update sobolIndexMap
-    if (data_rep->expConfigOptions.vbdFlag &&
-	data_rep->expConfigOptions.vbdOrderLimit != 1) {
-      data_rep->reset_sobol_index_map_values();
-      data_rep->multi_index_to_sobol_index_map(local_multi_index);
-      data_rep->assign_sobol_index_map_values();
-    }
+    // update sparseIndices and shared multiIndex from local_multi_index
+    update_multi_index(local_multi_index, fault_differences);
+    // update shared sobolIndexMap from local_multi_index
+    data_rep->update_component_sobol(local_multi_index);
+    // define sparseSobolIndexMap from sparseIndices, shared multiIndex,
+    // and shared sobolIndexMap
+    update_sparse_sobol();
   }
 
   RealMatrix coefficients;
@@ -1660,9 +1674,6 @@ transform_least_interpolant( RealMatrix &L, RealMatrix &U, RealMatrix &H,
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   copy_data(coefficients.values(), (int)sparseIndices.size(), expansionCoeffs);
-
-  // now define the Sobol' indices based on the least polynomial multiIndex
-  update_sparse_sobol();
 }
 
 

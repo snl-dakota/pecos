@@ -189,6 +189,10 @@ void PolynomialApproximation::allocate_total_sobol()
 }
 
 
+ULongULongMap PolynomialApproximation::sparse_sobol_index_map() const
+{ return ULongULongMap(); } // default is empty map
+
+
 Real PolynomialApproximation::
 delta_covariance(PolynomialApproximation* poly_approx_2)
 {

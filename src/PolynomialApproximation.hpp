@@ -59,6 +59,9 @@ public:
   /// and existing computations from compute_component_sobol()
   virtual void compute_total_sobol() = 0;
 
+  /// return RegressOrthogPolyApproximation::sparseSobolIndexMap
+  virtual ULongULongMap sparse_sobol_index_map() const;
+
   /// retrieve the gradient for a response expansion with respect to
   /// all variables included in the polynomial bases using the given
   /// parameter vector and default DVV

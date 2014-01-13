@@ -80,6 +80,7 @@ protected:
 
   void compute_component_sobol();
   void compute_total_sobol();
+  ULongULongMap sparse_sobol_index_map() const;
 
   void print_coefficients(std::ostream& s, bool normalized = false);
   void coefficient_labels(std::vector<std::string>& all_coeff_tags) const;
@@ -119,8 +120,8 @@ private:
   void update_sparse(Real* dense_coeffs, size_t num_dense_terms);
   /// augment sparse_indices based on nonzero dense_coeffs
   void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms);
-  /// augment sparse_indices based on a subset of the shared multiIndex
-  void update_sparse_indices(const UShort2DArray& mi_subset);
+  /// augment the shared multiIndex and define sparseIndices if requested
+  void update_multi_index(const UShort2DArray& mi_subset, bool track_sparse);
   /// define sparse expansionCoeffs from dense_coeffs and sparse_indices
   void update_sparse_coeffs(Real* dense_coeffs);
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and
@@ -198,6 +199,11 @@ RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
 
 inline RegressOrthogPolyApproximation::~RegressOrthogPolyApproximation()
 { }
+
+
+inline ULongULongMap RegressOrthogPolyApproximation::
+sparse_sobol_index_map() const
+{ return sparseSobolIndexMap; }
 
 
 inline size_t RegressOrthogPolyApproximation::expansion_terms() const
