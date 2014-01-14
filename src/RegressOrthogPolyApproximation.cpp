@@ -2043,17 +2043,27 @@ const RealVector& RegressOrthogPolyApproximation::dimension_decay_rates()
       if (mi_i[j] > max_orders[j])
 	max_orders[j] = mi_i[j];
   }
-  // size A_vectors and b_vectors
+  // size and initialize A_vectors and b_vectors
   RealVectorArray A_vectors(num_v), b_vectors(num_v);
+  unsigned short order, non_zero, var_index, order_index;
+  Real norm;
   for (i=0; i<num_v; ++i) {
-    A_vectors[i].sizeUninitialized(max_orders[i]); // TO DO
-    b_vectors[i].sizeUninitialized(max_orders[i]); // TO DO
+    unsigned short max_ord = max_orders[i];
+    RealVector& A_i = A_vectors[i]; A_i.sizeUninitialized(max_ord);
+    RealVector& b_i = b_vectors[i]; b_i.sizeUninitialized(max_ord);
+    BasisPolynomial& poly_i = data_rep->polynomialBasis[i];
+    for (j=0; j<max_ord; ++j) {
+      order = j + 1;
+      A_i[j] = (Real)order;
+      // sparseIndices could leave gaps (initialize with defaults for gaps)
+      norm   = std::sqrt(poly_i.norm_squared(order));
+      b_i[j] = std::log10(norm) - 25.; // default if missing from sparse PCE
+    }
   }
 
   // populate A_vectors and b_vectors
-  unsigned short order, non_zero, var_index, order_index;
   bool univariate;
-  for (it=++sparseIndices.begin(); it!=sparseIndices.end(); ++it) {
+  for (it=++sparseIndices.begin(), i=1; it!=sparseIndices.end(); ++it, ++i) {
     const UShortArray& mi_i = mi[*it];
     univariate = true; non_zero = 0;
     for (j=0; j<num_v; ++j) {
@@ -2066,17 +2076,15 @@ const RealVector& RegressOrthogPolyApproximation::dimension_decay_rates()
     if (univariate) {
       // find a for y = ax + b with x = term order, y = log(coeff), and
       // b = known intercept for order x = 0
-      Real norm =
-	std::sqrt(data_rep->polynomialBasis[var_index].norm_squared(order)),
-	abs_coeff = std::abs(expansionCoeffs[i]);
+      Real abs_coeff = std::abs(expansionCoeffs[i]);
 #ifdef DECAY_DEBUG
       PCout << "Univariate contribution: order = " << order << " coeff = "
-	    << abs_coeff << " norm = " << norm << '\n';
+	    << abs_coeff << " norm = " << std::sqrt(data_rep->
+	       polynomialBasis[var_index].norm_squared(order)) << '\n';
 #endif // DECAY_DEBUG
-      // TO DO: sparseIndices could leave gaps! (need to pack available orders)
-      A_vectors[var_index][order_index] = (Real)order;
-      b_vectors[var_index][order_index] = (abs_coeff > 1.e-25) ?
-	std::log10(abs_coeff * norm) : std::log10(norm) - 25.;
+      if (abs_coeff > 1.e-25)
+	// b = std::log10(abs_coeff * norm), but don't recompute norm
+	b_vectors[var_index][order_index] += 25. + std::log10(abs_coeff);
     }
   }
 #ifdef DECAY_DEBUG
