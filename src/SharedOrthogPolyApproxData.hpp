@@ -109,24 +109,25 @@ protected:
   void allocate_total_order();
   /// allocate sobolIndexMap from multiIndex
   void allocate_component_sobol();
+  /// update sobolIndexMap using new multi_index terms (from multifidelity
+  /// overlay or a new QoI in orthogonal least interpolation)
+  void update_component_sobol(const UShort2DArray& multi_index);
 
   /// append multi-indices from app_multi_index that do not already
   /// appear in multi_index
-  void append_multi_index(const UShort2DArray& app_multi_index,
-			  UShort2DArray& multi_index);
+  void append_multi_index(const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi);
   /// append multi-indices from app_multi_index that do not already
   /// appear in multi_index; define multi_index_map and multi_index_map_ref
-  void append_multi_index(const UShort2DArray& app_multi_index,
-			  UShort2DArray& multi_index,
-			  SizetArray& multi_index_map,
-			  size_t& multi_index_map_ref);
+  void append_multi_index(const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi, SizetArray& append_mi_map,
+			  size_t& append_mi_map_ref);
   /// append multi-indices from app_multi_index that do not already
   /// appear in multi_index, using previously defined multi_index_map
   /// and multi_index_map_ref for mapping
-  void append_multi_index(const UShort2DArray& app_multi_index,
-			  SizetArray& multi_index_map,
-			  size_t& multi_index_map_ref,
-			  UShort2DArray& multi_index);
+  void append_multi_index(const UShort2DArray& append_mi,
+			  SizetArray& append_mi_map, size_t& append_mi_map_ref,
+			  UShort2DArray& combined_mi);
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as probabilistic

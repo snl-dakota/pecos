@@ -129,8 +129,12 @@ protected:
 
   /// size expansion{Coeffs,CoeffGrads} based on multiIndex
   void size_expansion();
+  /// size expansion{Coeffs,CoeffGrads} based on multiIndex
+  void size_expansion(size_t num_exp_terms);
   /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
   void resize_expansion();
+  /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
+  void resize_expansion(size_t num_exp_terms);
 
   /// overlay the passed expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
@@ -254,8 +258,11 @@ approximation_coefficients(const RealVector& approx_coeffs)
 
 
 inline void OrthogPolyApproximation::size_expansion()
+{ size_expansion(expansion_terms()); }
+
+
+inline void OrthogPolyApproximation::size_expansion(size_t num_exp_terms)
 {
-  size_t num_exp_terms = expansion_terms();
   if (expansionCoeffFlag && expansionCoeffs.length() != num_exp_terms)
     expansionCoeffs.sizeUninitialized(num_exp_terms);
   if (expansionCoeffGradFlag) {
@@ -268,8 +275,11 @@ inline void OrthogPolyApproximation::size_expansion()
 
 
 inline void OrthogPolyApproximation::resize_expansion()
+{ resize_expansion(expansion_terms()); }
+
+
+inline void OrthogPolyApproximation::resize_expansion(size_t num_exp_terms)
 {
-  size_t num_exp_terms = expansion_terms();
   if (expansionCoeffFlag)
     expansionCoeffs.resize(num_exp_terms); // new terms initialized to 0
   if (expansionCoeffGradFlag) {

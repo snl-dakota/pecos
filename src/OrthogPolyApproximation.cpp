@@ -61,6 +61,9 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
+  // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
+  // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
+
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   switch (combine_type) {

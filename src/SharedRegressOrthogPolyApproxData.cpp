@@ -31,17 +31,6 @@ void SharedRegressOrthogPolyApproxData::allocate_data()
 
 
 void SharedRegressOrthogPolyApproxData::
-update_component_sobol(const UShort2DArray& multi_index)
-{
-  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1) {
-    reset_sobol_index_map_values();
-    multi_index_to_sobol_index_map(multi_index);
-    assign_sobol_index_map_values();
-  }
-}
-
-
-void SharedRegressOrthogPolyApproxData::
 pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
 		     bool add_val,  double* pack_val,  size_t& pv_cntr,
 		     bool add_grad, double* pack_grad, size_t& pg_cntr)

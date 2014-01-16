@@ -54,6 +54,8 @@ protected:
 
   int min_coefficients() const;
   void compute_coefficients();
+  void store_coefficients();
+  void combine_coefficients(short combine_type);
   void allocate_arrays();
 
   size_t expansion_terms() const;
@@ -130,6 +132,21 @@ private:
   /// define sparseSobolIndexMap from sparseIndices, shared multiIndex,
   /// and shared sobolIndexMap
   void update_sparse_sobol();
+
+  /// overlay the passed expansion with the aggregate
+  /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
+  void overlay_expansion(const SizetSet& sparse_ind_2,
+			 const SizetArray& append_mi_map,
+			 const RealVector& exp_coeffs_2,
+			 const RealMatrix& exp_grads_2, int coeff_2);
+  /*
+  /// multiply current expansion ("a") with incoming expansion ("b")
+  /// and store in product expansion ("c")
+  void multiply_expansion(const UShort2DArray& multi_index_b,
+			  const RealVector& exp_coeffs_b,
+			  const RealMatrix& exp_grads_b,
+			  const UShort2DArray& multi_index_c);
+  */
 
   /**
    * \brief Define the set of options used in the cross validation grid search

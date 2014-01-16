@@ -96,10 +96,6 @@ private:
 			  bool add_val,  double* pack_val,  size_t& pv_cntr,
 			  bool add_grad, double* pack_grad, size_t& pg_cntr);
 
-  /// update sobolIndexMap using multi_index from a new QoI (used in
-  /// orthogonal least interpolation)
-  void update_component_sobol(const UShort2DArray& multi_index);
-
   //
   //- Heading: Data
   //

@@ -122,6 +122,17 @@ void SharedOrthogPolyApproxData::allocate_component_sobol()
 }
 
 
+void SharedOrthogPolyApproxData::
+update_component_sobol(const UShort2DArray& multi_index)
+{
+  if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1) {
+    reset_sobol_index_map_values();
+    multi_index_to_sobol_index_map(multi_index);
+    assign_sobol_index_map_values();
+  }
+}
+
+
 void SharedOrthogPolyApproxData::store_data()
 { storedApproxOrder = approxOrder; storedMultiIndex = multiIndex; }
 
@@ -137,6 +148,7 @@ void SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
     size_t stored_mi_map_ref;
     append_multi_index(storedMultiIndex, multiIndex, storedMultiIndexMap,
 		       stored_mi_map_ref);
+    update_component_sobol(storedMultiIndex);
     break;
   }
   case MULT_COMBINE: {
@@ -167,98 +179,197 @@ void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
 }
 
 
-/** Append to multi_index based on app_multi_index. */
+/** Append to combined_mi based on append_mi. */
 void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& app_multi_index,
-		   UShort2DArray& multi_index)
+append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi)
 {
-  if (multi_index.empty())
-    multi_index = app_multi_index;
+  if (combined_mi.empty())
+    combined_mi = append_mi;
   else {
-    size_t i, num_app_mi = app_multi_index.size();
+    size_t i, num_app_mi = append_mi.size();
     for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = app_multi_index[i];
-      if (std::find(multi_index.begin(), multi_index.end(), search_mi) ==
-	  multi_index.end()) // search_mi does not yet exist in multi_index
-	multi_index.push_back(search_mi);
+      const UShortArray& search_mi = append_mi[i];
+      if (std::find(combined_mi.begin(), combined_mi.end(), search_mi) ==
+	  combined_mi.end())
+	combined_mi.push_back(search_mi);
     }
   }
 }
 
 
-/** Append to multi_index, multi_index_map, and multi_index_map_ref
-    based on app_multi_index. */
+/** Append append_mi to combined_mi, and update append_mi_map and
+    append_mi_map_ref to facilitate related aggregations without
+    repeated searching. */
 void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& app_multi_index,
-		   UShort2DArray& multi_index, SizetArray& multi_index_map,
-		   size_t& multi_index_map_ref)
+append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
+		   SizetArray& append_mi_map, size_t& append_mi_map_ref)
 {
-  size_t i, num_app_mi = app_multi_index.size();
-  multi_index_map.resize(num_app_mi);
-  if (multi_index.empty()) {
-    multi_index = app_multi_index;
-    multi_index_map_ref = 0;
+  size_t i, num_app_mi = append_mi.size();
+  append_mi_map.resize(num_app_mi);
+  if (combined_mi.empty()) {
+    combined_mi = append_mi;
+    append_mi_map_ref = 0;
     for (i=0; i<num_app_mi; ++i)
-      multi_index_map[i] = i;
+      append_mi_map[i] = i;
   }
   else {
-    multi_index_map_ref = multi_index.size();
+    append_mi_map_ref = combined_mi.size();
     for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = app_multi_index[i];
-      size_t index = find_index(multi_index, search_mi);
+      const UShortArray& search_mi = append_mi[i];
+      size_t index = find_index(combined_mi, search_mi);
       if (index == _NPOS) { // search_mi does not yet exist in multi_index
-	multi_index_map[i] = multi_index.size();
-	multi_index.push_back(search_mi);
+	append_mi_map[i] = combined_mi.size();
+	combined_mi.push_back(search_mi);
       }
       else
-	multi_index_map[i] = index;
+	append_mi_map[i] = index;
     }
   }
 }
 
 
-/** Append to multi_index based on app_multi_index and previously
-    defined multi_index_map and multi_index_map_ref.  If necessary,
-    update multi_index_map and multi_index_map_ref. */
+/** Append to combined_mi based on append_mi and previously defined
+    append_mi_map and append_mi_map_ref.  If necessary, update
+    append_mi_map and append_mi_map_ref. */
 void SharedOrthogPolyApproxData::
-append_multi_index(const UShort2DArray& app_multi_index,
-		   SizetArray& multi_index_map, size_t& multi_index_map_ref,
-		   UShort2DArray& multi_index)
+append_multi_index(const UShort2DArray& append_mi, SizetArray& append_mi_map,
+		   size_t& append_mi_map_ref,   UShort2DArray& combined_mi)
 {
-  if (multi_index.empty())
-    multi_index = app_multi_index;
+  if (combined_mi.empty())
+    combined_mi = append_mi; // assume append_mi_map{,_ref} are up to date
   else {
-    size_t i, num_app_mi = app_multi_index.size(), num_mi = multi_index.size();
-    if (num_mi == multi_index_map_ref) { // current mi corresponds to ref
+    size_t i, num_app_mi = append_mi.size(), num_mi = combined_mi.size();
+    if (num_mi == append_mi_map_ref) { // current mi corresponds to ref
       for (i=0; i<num_app_mi; ++i)
-	if (multi_index_map[i] >= multi_index_map_ref)
-	  multi_index.push_back(app_multi_index[i]);
+	if (append_mi_map[i] >= append_mi_map_ref)
+	  combined_mi.push_back(append_mi[i]);
     }
-    else if (num_mi > multi_index_map_ref) { // mi has grown since ref taken
+    else if (num_mi > append_mi_map_ref) { // mi has grown since ref taken
       for (i=0; i<num_app_mi; ++i)
-	if (multi_index_map[i] >= multi_index_map_ref) { // previously appended
-	  const UShortArray& search_mi = app_multi_index[i];
+	if (append_mi_map[i] >= append_mi_map_ref) { // previously appended
+	  const UShortArray& search_mi = append_mi[i];
 	  // search from reference pt forward
-	  UShort2DArray::iterator it, it_start = multi_index.begin();
-	  std::advance(it_start, multi_index_map_ref);
-	  it = std::find(it_start, multi_index.end(), search_mi);
-	  if (it == multi_index.end()) { // still an append: update map, append
-	    multi_index_map[i] = multi_index.size();
-	    multi_index.push_back(app_multi_index[i]);
+	  UShort2DArray::iterator it, it_start = combined_mi.begin();
+	  std::advance(it_start, append_mi_map_ref);
+	  it = std::find(it_start, combined_mi.end(), search_mi);
+	  if (it == combined_mi.end()) { // still an append: update map, append
+	    append_mi_map[i] = combined_mi.size();
+	    combined_mi.push_back(append_mi[i]);
 	  }
 	  else // no longer an append: only update map
-	    multi_index_map[i] = multi_index_map_ref
-	                       + std::distance(it_start, it);
+	    append_mi_map[i] = append_mi_map_ref + std::distance(it_start, it);
 	}
-      multi_index_map_ref = num_mi; // reference point now updated
+      append_mi_map_ref = num_mi; // reference point now updated
     }
-    else { // multi_index is not allowed to shrink since ref taken
-      PCerr << "Error: multi_index inconsistent with reference size in "
+    else { // combined_mi is not allowed to shrink since ref taken
+      PCerr << "Error: combined_mi inconsistent with reference size in "
 	    << "OrthogPolyApproximation::append_multi_index()." << std::endl;
       abort_handler(-1);
     }
   }
 }
+
+
+// The following variants maintain a separation between ref_mi and combined_mi,
+// rather than updating in place.  In current use cases, append_mi_map has
+// provided sufficient bookkeeping to allow update of combined_mi in place.
+
+/*  Create combined_mi by appending append_mi to ref_mi.
+void SharedOrthogPolyApproxData::
+append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
+		   UShort2DArray& combined_mi)
+{
+  if (ref_mi.empty())
+    combined_mi = append_mi;
+  else {
+    combined_mi = ref_mi;
+    size_t i, num_app_mi = append_mi.size();
+    for (i=0; i<num_app_mi; ++i) {
+      const UShortArray& search_mi = append_mi[i];
+      if (std::find(combined_mi.begin(), combined_mi.end(),
+		    search_mi) == combined_mi.end())
+	combined_mi.push_back(search_mi);
+    }
+  }
+}
+*/
+
+/*  Append append_mi to ref_mi to create combined_mi, and update
+    append_mi_map and append_mi_map_ref to facilitate related
+    aggregations without repeated searching.
+void SharedOrthogPolyApproxData::
+append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
+		   UShort2DArray& combined_mi,  SizetArray& append_mi_map,
+		   size_t& append_mi_map_ref)
+{
+  size_t i, num_app_mi = append_mi.size();
+  append_mi_map.resize(num_app_mi);
+  if (ref_mi.empty()) {
+    combined_mi = append_mi;
+    append_mi_map_ref = 0;
+    for (i=0; i<num_app_mi; ++i)
+      append_mi_map[i] = i;
+  }
+  else {
+    combined_mi = ref_mi;
+    append_mi_map_ref = combined_mi.size();
+    for (i=0; i<num_app_mi; ++i) {
+      const UShortArray& search_mi = app_mi[i];
+      size_t index = find_index(combined_mi, search_mi);
+      if (index == _NPOS) { // search_mi does not yet exist in multi_index
+	append_mi_map[i] = combined_mi.size();
+	combined_mi.push_back(search_mi);
+      }
+      else
+	append_mi_map[i] = index;
+    }
+  }
+}
+*/
+
+/*  Append append_mi to rf_mi to create combined_mi using previously defined
+    append_mi_map and append_mi_map_ref.  If necessary, update
+    append_mi_map and append_mi_map_ref.
+void SharedOrthogPolyApproxData::
+append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
+		   SizetArray& append_mi_map, size_t& append_mi_map_ref,
+		   UShort2DArray& combined_mi)
+{
+  if (ref_mi.empty())
+    combined_mi = append_mi; // assume append_mi_map{,_ref} are up to date
+  else {
+    combined_mi = ref_mi;
+    size_t i, num_app_mi = append_mi.size(), num_mi = combined_mi.size();
+    if (num_mi == append_mi_map_ref) { // current mi corresponds to ref
+      for (i=0; i<num_app_mi; ++i)
+	if (append_mi_map[i] >= append_mi_map_ref)
+	  combined_mi.push_back(append_mi[i]);
+    }
+    else if (num_mi > append_mi_map_ref) { // mi has grown since ref taken
+      for (i=0; i<num_app_mi; ++i)
+	if (append_mi_map[i] >= append_mi_map_ref) { // previously appended
+	  const UShortArray& search_mi = append_mi[i];
+	  // search from reference pt forward
+	  UShort2DArray::iterator it, it_start = combined_mi.begin();
+	  std::advance(it_start, append_mi_map_ref);
+	  it = std::find(it_start, combined_mi.end(), search_mi);
+	  if (it == combined_mi.end()) { // still an append: update map, append
+	    append_mi_map[i] = combined_mi.size();
+	    combined_mi.push_back(append_mi[i]);
+	  }
+	  else // no longer an append: only update map
+	    append_mi_map[i] = append_mi_map_ref + std::distance(it_start, it);
+	}
+      append_mi_map_ref = num_mi; // reference point now updated
+    }
+    else { // combined_mi is not allowed to shrink since ref taken
+      PCerr << "Error: ref_mi inconsistent with reference size in "
+	    << "OrthogPolyApproximation::append_multi_index()." << std::endl;
+      abort_handler(-1);
+    }
+  }
+}
+*/
 
 
 /** This test works in combination with DEBUG settings in
