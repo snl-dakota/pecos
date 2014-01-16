@@ -85,6 +85,11 @@ protected:
   //- Heading: New virtual functions
   //
 
+  /// allocate sobolIndexMap based on collocation keys
+  virtual void allocate_component_sobol() = 0;
+  /// update sobolIndexMap based on a refinement increment
+  virtual void increment_component_sobol() = 0;
+
   /// set point values within 1D basis polynomials for purposes of
   /// barycentric precomputation
   virtual void set_new_point(const RealVector& x,

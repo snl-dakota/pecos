@@ -107,8 +107,8 @@ protected:
 
   /// update approxOrder and total-order multiIndex
   void allocate_total_order();
-  /// allocate sobolIndexMap from multiIndex
-  void allocate_component_sobol();
+  /// allocate sobolIndexMap from multi_index
+  void allocate_component_sobol(const UShort2DArray& multi_index);
   /// update sobolIndexMap using new multi_index terms (from multifidelity
   /// overlay or a new QoI in orthogonal least interpolation)
   void update_component_sobol(const UShort2DArray& multi_index);

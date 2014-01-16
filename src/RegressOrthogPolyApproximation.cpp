@@ -139,7 +139,7 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
-  if (sparseIndices.empty() && storedSparseIndices.empty())
+  if (sparseIndices.empty() && storedSparseIndices.empty()) // TO DO: mixed case
     { OrthogPolyApproximation::combine_coefficients(combine_type); return; }
 
   SharedRegressOrthogPolyApproxData* data_rep
@@ -156,9 +156,9 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
   }
   case MULT_COMBINE: {
     // perform the multiplication of current and stored expansions
-    multiply_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-		       storedExpCoeffGrads,
-		       data_rep->combinedMultiIndex); // TO DO: specialize
+    multiply_expansion(storedSparseIndices, data_rep->storedMultiIndex,
+		       storedExpCoeffs, storedExpCoeffGrads,
+		       data_rep->combinedMultiIndex);
     break;
   }
   case ADD_MULT_COMBINE:
@@ -243,24 +243,23 @@ overlay_expansion(const SizetSet& sparse_ind_2, const SizetArray& append_mi_map,
 }
 
 
-/*
 void RegressOrthogPolyApproximation::
-multiply_expansion(const UShort2DArray& multi_index_b,
+multiply_expansion(const SizetSet&      sparse_ind_b,
+		   const UShort2DArray& multi_index_b,
 		   const RealVector&    exp_coeffs_b,
 		   const RealMatrix&    exp_grads_b,
 		   const UShort2DArray& multi_index_c)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  // sparsity in exp_{coeffs,grads}_c determined *after* all multi_index_c
+  // projection terms have been computed
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
   const UShort2DArray& multi_index_a = data_rep->multiIndex;
-  RealVector exp_coeffs_a = expansionCoeffs; // copy (both expConfigOptions)
-  RealMatrix exp_grads_a;
-  if (expansionCoeffGradFlag)
-    exp_grads_a = expansionCoeffGrads;       // copy (CoeffGrads only)
-  size_t i, j, k, v, num_v = sharedDataRep->numVars,
-    num_a = multi_index_a.size(), num_b = multi_index_b.size(),
-    num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
+  size_t i, j, k, v, num_v = sharedDataRep->numVars, num_deriv_vars,
+    num_c = multi_index_c.size();
+  StSCIter ait, bit;
 
   // precompute 1D basis triple products required
   unsigned short max_a, max_b, max_c; UShortMultiSet max_abc;
@@ -271,15 +270,15 @@ multiply_expansion(const UShort2DArray& multi_index_b,
     // need max orders for each dimension for both factors plus their product.
     // Since this would be awkward and only marginally more efficient, just
     // compute them here from the available multi-index arrays.
-    for (i=0; i<num_a; ++i)
-      if (multi_index_a[i][v] > max_a)
-	max_a = multi_index_a[i][v];
-    for (i=0; i<num_b; ++i)
-      if (multi_index_b[i][v] > max_b)
-	max_b = multi_index_b[i][v];
-    for (i=0; i<num_c; ++i)
-      if (multi_index_c[i][v] > max_c)
-	max_c = multi_index_c[i][v];
+    for (ait=++sparseIndices.begin(); ait!=sparseIndices.end(); ++ait)
+      if (multi_index_a[*ait][v] > max_a)
+	max_a = multi_index_a[*ait][v];
+    for (bit=++sparse_ind_b.begin(); bit!=sparse_ind_b.end(); ++bit)
+      if (multi_index_b[*bit][v] > max_b)
+	max_b = multi_index_b[*bit][v];
+    for (k=1; k<num_c; ++k)
+      if (multi_index_c[k][v] > max_c)
+	max_c = multi_index_c[k][v];
     max_abc.insert(max_a); max_abc.insert(max_b); max_abc.insert(max_c); 
     poly_rep_v
       = (OrthogonalPolynomial*)(data_rep->polynomialBasis[v].polynomial_rep());
@@ -289,14 +288,21 @@ multiply_expansion(const UShort2DArray& multi_index_b,
   // For c = a * b, compute coefficient of product expansion as:
   // \Sum_k c_k \Psi_k = \Sum_i \Sum_j a_i b_j \Psi_i \Psi_j
   //    c_k <\Psi_k^2> = \Sum_i \Sum_j a_i b_j <\Psi_i \Psi_j \Psi_k>
+  RealVector exp_coeffs_c; RealVectorArray exp_grads_c;
   if (expansionCoeffFlag)
-    expansionCoeffs.size(num_c);                      // init to 0
-  if (expansionCoeffGradFlag)
-    expansionCoeffGrads.shape(num_deriv_vars, num_c); // init to 0
+    exp_coeffs_c.size(num_c);     // init to 0
+  if (expansionCoeffGradFlag) {
+    num_deriv_vars = expansionCoeffGrads.numRows();
+    exp_grads_c.resize(num_deriv_vars);
+    for (v=0; v<num_deriv_vars; ++v)
+      exp_grads_c[v].size(num_c); // init to 0
+  }
   Real trip_prod, trip_prod_v, norm_sq_k; bool non_zero;
   for (k=0; k<num_c; ++k) {
-    for (i=0; i<num_a; ++i) {
-      for (j=0; j<num_b; ++j) {
+    for (ait=sparseIndices.begin(); ait!=sparseIndices.end(); ++ait) {
+      i = *ait;
+      for (bit=++sparse_ind_b.begin(); bit!=sparse_ind_b.end(); ++bit) {
+	j = *bit;
 	trip_prod = 1.;
 	for (v=0; v<num_v; ++v) {
 	  poly_rep_v = (OrthogonalPolynomial*)
@@ -308,23 +314,41 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 	}
 	if (non_zero) {
 	  if (expansionCoeffFlag)
-	    expansionCoeffs[k] += exp_coeffs_a[i] * exp_coeffs_b[j] * trip_prod;
-	  if (expansionCoeffGradFlag)
+	    exp_coeffs_c[k] += expansionCoeffs[i] * exp_coeffs_b[j] * trip_prod;
+	  if (expansionCoeffGradFlag) {
+	    const Real* exp_grads_a_i = expansionCoeffGrads[i];
+	    const Real* exp_grads_b_j = exp_grads_b[j];
 	    for (v=0; v<num_deriv_vars; ++v)
-	      expansionCoeffGrads(v,k) += (exp_coeffs_a[i] * exp_grads_b(v,j)
-		+ exp_coeffs_b[j] * exp_grads_a(v,i)) * trip_prod;
+	      exp_grads_c[v][k] += (expansionCoeffs[i] * exp_grads_b_j[v]
+		+ exp_coeffs_b[j] * exp_grads_a_i[v]) * trip_prod;
+	  }
 	}
       }
     }
     norm_sq_k = data_rep->norm_squared(multi_index_c[k]);
     if (expansionCoeffFlag)
-      expansionCoeffs[k] /= norm_sq_k;
+      exp_coeffs_c[k] /= norm_sq_k;
     if (expansionCoeffGradFlag)
       for (v=0; v<num_deriv_vars; ++v)
-	expansionCoeffGrads(v,k) /= norm_sq_k;
+	exp_grads_c[v][k] /= norm_sq_k;
   }
+
+  // update sparse bookkeeping based on nonzero terms
+  sparseIndices.clear();
+  if (expansionCoeffFlag)
+    update_sparse_indices(exp_coeffs_c.values(), num_c);
+  if (expansionCoeffGradFlag)
+    for (v=0; v<num_deriv_vars; ++v)
+      update_sparse_indices(exp_grads_c[v].values(), num_c);
+  // update expansion{Coeffs,CoeffGrads} from sparse indices
+  if (expansionCoeffFlag)
+    update_sparse_coeffs(exp_coeffs_c.values());
+  if (expansionCoeffGradFlag)
+    for (v=0; v<num_deriv_vars; ++v)
+      update_sparse_coeff_grads(exp_grads_c[v].values(), v);
+  // update sobol index bookkeeping
+  update_sparse_sobol();
 }
-*/
 
 
 Real RegressOrthogPolyApproximation::value(const RealVector& x)

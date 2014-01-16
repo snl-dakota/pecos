@@ -245,11 +245,6 @@ public:
   /// combines current and stored approximation data
   virtual void post_combine_data(short combine_type);
 
-  /// increment the Sobol' index bookkeeping due to expansion refinement
-  virtual void allocate_component_sobol() = 0;
-  /// increment the Sobol' index bookkeeping due to expansion refinement
-  virtual void increment_component_sobol();
-
   //
   //- Heading: Member functions
   //

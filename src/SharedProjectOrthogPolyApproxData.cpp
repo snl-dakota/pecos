@@ -45,7 +45,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       quadrature_order_to_integrand_order(quad_order, integrand_order);
       integrand_order_to_expansion_order(integrand_order, approxOrder);
       tensor_product_multi_index(approxOrder, multiIndex);
-      allocate_component_sobol();
+      allocate_component_sobol(multiIndex);
       quadOrderPrev = quad_order;
     }
 
@@ -73,7 +73,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
       integrand_order_to_expansion_order(integrand_order, approxOrder);
       total_order_multi_index(approxOrder, multiIndex);
-      allocate_component_sobol();
+      allocate_component_sobol(multiIndex);
       //cubIntOrderPrev = cub_int_order; // update reference point
     //}
 
@@ -96,7 +96,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 
     if (update_exp_form) {
       sparse_grid_multi_index(multiIndex);
-      allocate_component_sobol();
+      allocate_component_sobol(multiIndex);
       ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     }
     PCout << "Orthogonal polynomial approximation level = " << ssg_level

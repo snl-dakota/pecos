@@ -79,8 +79,6 @@ protected:
   //void restore_data();
   //void finalize_data();
 
-  //void increment_component_sobol();
-
 private:
 
   //

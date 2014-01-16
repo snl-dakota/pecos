@@ -198,25 +198,6 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 }
 
 
-/*
-void SharedPolyApproxData::allocate_component_sobol()
-{
-  // default implementation is reasonable for tensor expansions, but is
-  // wasteful (and should be overridden) for total-order and sparse 
-  // sum-of-tensor (which emulate total-order) expansions.
-  if (expConfigOptions.vbdFlag && expConfigOptions.expansionCoeffFlag &&
-      sobolIndices.empty()) {
-    switch (expConfigOptions.vbdOrderLimit) {
-    case 1: // main effects only
-      allocate_main_sobol();                    break;
-    default: // main + interactions
-      allocate_main_interaction_sobol(numVars); break;
-    }
-  }
-}
-*/
-
-
 void SharedPolyApproxData::increment_data()
 {
   PCerr << "Error: derived class does not redefine increment_data()."
@@ -257,28 +238,23 @@ void SharedPolyApproxData::post_combine_data(short combine_type)
 { } // default implementation is no op
 
 
-void SharedPolyApproxData::increment_component_sobol()
+/*
+void SharedPolyApproxData::allocate_component_sobol()
 {
-  PCerr << "Error: derived class does not redefine increment_component_sobol()."
-	<< std::endl;
-  abort_handler(-1);
-}
-
-
-void SharedPolyApproxData::allocate_main_sobol()
-{
-  if (sobolIndexMap.empty()) {
-    // define binary sets corresponding to main effects
-    BitArray set(numVars, 0);
-    // prepend the 0-way interaction for indexing consistency
-    sobolIndexMap[set] = 0;
-    for (size_t v=0; v<numVars; ++v) // activate bit for variable v
-      { set.set(v); sobolIndexMap[set] = v+1; set.reset(v); }
+  // default implementation is reasonable for tensor expansions, but is
+  // wasteful (and should be overridden) for total-order and sparse 
+  // sum-of-tensor (which emulate total-order) expansions.
+  if (expConfigOptions.vbdFlag && expConfigOptions.expansionCoeffFlag &&
+      sobolIndices.empty()) {
+    switch (expConfigOptions.vbdOrderLimit) {
+    case 1: // main effects only
+      allocate_main_sobol();                    break;
+    default: // main + interactions
+      allocate_main_interaction_sobol(numVars); break;
+    }
   }
 }
 
-
-/*
 void SharedPolyApproxData::
 allocate_main_interaction_sobol(unsigned short max_order)
 {
@@ -316,6 +292,19 @@ allocate_main_interaction_sobol(unsigned short max_order)
   sobolIndices.sizeUninitialized(sobol_len);
 }
 */
+
+
+void SharedPolyApproxData::allocate_main_sobol()
+{
+  if (sobolIndexMap.empty()) {
+    // define binary sets corresponding to main effects
+    BitArray set(numVars, 0);
+    // prepend the 0-way interaction for indexing consistency
+    sobolIndexMap[set] = 0;
+    for (size_t v=0; v<numVars; ++v) // activate bit for variable v
+      { set.set(v); sobolIndexMap[set] = v+1; set.reset(v); }
+  }
+}
 
 
 void SharedPolyApproxData::

@@ -64,7 +64,7 @@ void SharedOrthogPolyApproxData::allocate_data()
 
   if (update_exp_form) { //|| restore_exp_form) {
     allocate_total_order(); // defines approxOrder and (candidate) multiIndex
-    allocate_component_sobol();
+    allocate_component_sobol(multiIndex);
     // Note: defer this if update_exp_form is needed downstream
     approxOrderPrev = approxOrder;
   }
@@ -92,14 +92,15 @@ void SharedOrthogPolyApproxData::allocate_total_order()
 }
 
 
-void SharedOrthogPolyApproxData::allocate_component_sobol()
+void SharedOrthogPolyApproxData::
+allocate_component_sobol(const UShort2DArray& multi_index)
 {
   if (expConfigOptions.vbdFlag) {
     if (expConfigOptions.vbdOrderLimit == 1) // main effects only
       allocate_main_sobol();
     else { // main + interaction effects
       sobolIndexMap.clear();
-      multi_index_to_sobol_index_map(multiIndex);
+      multi_index_to_sobol_index_map(multi_index);
       assign_sobol_index_map_values();
       /*
       unsigned short max_order = approxOrder[0];
@@ -133,6 +134,7 @@ update_component_sobol(const UShort2DArray& multi_index)
 }
 
 
+/** Default storage, specialized in derived classes. */
 void SharedOrthogPolyApproxData::store_data()
 { storedApproxOrder = approxOrder; storedMultiIndex = multiIndex; }
 
@@ -158,6 +160,7 @@ void SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
       approxOrder[i] += storedApproxOrder[i];
     UShort2DArray multi_index_prod;
     total_order_multi_index(approxOrder, combinedMultiIndex);
+    allocate_component_sobol(combinedMultiIndex);
     break;
   }
   case ADD_MULT_COMBINE:
@@ -272,7 +275,7 @@ append_multi_index(const UShort2DArray& append_mi, SizetArray& append_mi_map,
 
 // The following variants maintain a separation between ref_mi and combined_mi,
 // rather than updating in place.  In current use cases, append_mi_map has
-// provided sufficient bookkeeping to allow update of combined_mi in place.
+// provided sufficient bookkeeping to allow in-place updating.
 
 /*  Create combined_mi by appending append_mi to ref_mi.
 void SharedOrthogPolyApproxData::

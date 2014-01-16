@@ -39,9 +39,8 @@ void SharedHierarchInterpPolyApproxData::allocate_component_sobol()
       sobolIndexMap.clear();
       HierarchSparseGridDriver* hsg_driver
 	= (HierarchSparseGridDriver*)driverRep;
-      const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
-      const UShort4DArray& key   = hsg_driver->collocation_key();
-      size_t lev, num_lev = sm_mi.size(), set, num_sets;
+      const UShort4DArray& key = hsg_driver->collocation_key();
+      size_t lev, num_lev = key.size(), set, num_sets;
       for (lev=0; lev<num_lev; ++lev) {
 	const UShort3DArray& key_l = key[lev];
 	num_sets = key_l.size();
