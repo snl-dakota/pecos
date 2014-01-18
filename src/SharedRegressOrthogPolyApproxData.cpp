@@ -23,10 +23,19 @@ void SharedRegressOrthogPolyApproxData::allocate_data()
   if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
     if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit == 1)
       allocate_main_sobol(); // main effects only
+    approxOrder.clear(); // for expansion combination logic
     PCout << "Orthogonal polynomial approximation of least order\n";
   }
   else
     SharedOrthogPolyApproxData::allocate_data();
+}
+
+
+void SharedRegressOrthogPolyApproxData::
+update_approx_order(unsigned short new_order)
+{
+  if (approxOrder.empty() || new_order > approxOrder[0])
+    approxOrder.assign(numVars, new_order);
 }
 
 

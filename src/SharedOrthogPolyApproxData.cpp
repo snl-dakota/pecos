@@ -146,20 +146,27 @@ void SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 
   switch (combine_type) {
   case ADD_COMBINE: {
-    // update multiIndex with any storedMultiIndex terms not yet included
+    // update multiIndex with any storedMultiIndex terms not yet included.
+    // An update in place is sufficient.
     size_t stored_mi_map_ref;
+    //append_multi_index(multiIndex, storedMultiIndex, combinedMultiIndex,
+    //                   storedMultiIndexMap, stored_mi_map_ref);
     append_multi_index(storedMultiIndex, multiIndex, storedMultiIndexMap,
 		       stored_mi_map_ref);
+    // update sobolIndexMap with any storedMultiIndex terms not yet included
     update_component_sobol(storedMultiIndex);
     break;
   }
   case MULT_COMBINE: {
     // default implementation: product of two total-order expansions
-    // (specialized in ProjectOrthogPolyApproximation::combine_coefficients())
+    // (specialized in SharedProjectOrthogPolyApproxData::pre_combine_data())
+
+    // update approxOrder and define combinedMultiIndex
     for (size_t i=0; i<numVars; ++i)
       approxOrder[i] += storedApproxOrder[i];
     UShort2DArray multi_index_prod;
     total_order_multi_index(approxOrder, combinedMultiIndex);
+    // define sobolIndexMap from combinedMultiIndex
     allocate_component_sobol(combinedMultiIndex);
     break;
   }
@@ -330,8 +337,8 @@ append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
 }
 */
 
-/*  Append append_mi to rf_mi to create combined_mi using previously defined
-    append_mi_map and append_mi_map_ref.  If necessary, update
+/*  Append append_mi to ref_mi to create combined_mi using previously
+    defined append_mi_map and append_mi_map_ref.  If necessary, update
     append_mi_map and append_mi_map_ref.
 void SharedOrthogPolyApproxData::
 append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,

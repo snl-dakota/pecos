@@ -149,9 +149,8 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
     // update sparseIndices and expansionCoeff{s,Grads}
     overlay_expansion(storedSparseIndices, data_rep->storedMultiIndexMap,
 		      storedExpCoeffs, storedExpCoeffGrads, 1);
-    // update sparseSobolIndexMap from sparseIndices and shared
-    // {multiIndex,sobolIndexMap}
-    update_sparse_sobol();
+    // update sparseSobolIndexMap
+    update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
     break;
   }
   case MULT_COMBINE: {
@@ -159,6 +158,8 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
     multiply_expansion(storedSparseIndices, data_rep->storedMultiIndex,
 		       storedExpCoeffs, storedExpCoeffGrads,
 		       data_rep->combinedMultiIndex);
+    // update sparseSobolIndexMap
+    update_sparse_sobol(data_rep->combinedMultiIndex, data_rep->sobolIndexMap);
     break;
   }
   case ADD_MULT_COMBINE:
@@ -257,7 +258,7 @@ multiply_expansion(const SizetSet&      sparse_ind_b,
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
   const UShort2DArray& multi_index_a = data_rep->multiIndex;
-  size_t i, j, k, v, num_v = sharedDataRep->numVars, num_deriv_vars,
+  size_t i, j, k, v, si, sj, num_v = sharedDataRep->numVars, num_deriv_vars,
     num_c = multi_index_c.size();
   StSCIter ait, bit;
 
@@ -299,16 +300,16 @@ multiply_expansion(const SizetSet&      sparse_ind_b,
   }
   Real trip_prod, trip_prod_v, norm_sq_k; bool non_zero;
   for (k=0; k<num_c; ++k) {
-    for (ait=sparseIndices.begin(); ait!=sparseIndices.end(); ++ait) {
-      i = *ait;
-      for (bit=++sparse_ind_b.begin(); bit!=sparse_ind_b.end(); ++bit) {
-	j = *bit;
+    for (i=0, ait=sparseIndices.begin(); ait!=sparseIndices.end(); ++i, ++ait) {
+      si = *ait;
+      for (j=0, bit=sparse_ind_b.begin(); bit!=sparse_ind_b.end(); ++j, ++bit) {
+	sj = *bit;
 	trip_prod = 1.;
 	for (v=0; v<num_v; ++v) {
 	  poly_rep_v = (OrthogonalPolynomial*)
 	    (data_rep->polynomialBasis[v].polynomial_rep());
-	  non_zero = poly_rep_v->triple_product(multi_index_a[i][v],
-	    multi_index_b[j][v], multi_index_c[k][v], trip_prod_v);
+	  non_zero = poly_rep_v->triple_product(multi_index_a[si][v],
+	    multi_index_b[sj][v], multi_index_c[k][v], trip_prod_v);
 	  if (non_zero) trip_prod *= trip_prod_v;
 	  else          break;
 	}
@@ -346,8 +347,6 @@ multiply_expansion(const SizetSet&      sparse_ind_b,
   if (expansionCoeffGradFlag)
     for (v=0; v<num_deriv_vars; ++v)
       update_sparse_coeff_grads(exp_grads_c[v].values(), v);
-  // update sobol index bookkeeping
-  update_sparse_sobol();
 }
 
 
@@ -1407,7 +1406,7 @@ void RegressOrthogPolyApproximation::run_regression()
       for (i=0; i<num_grad_rhs; ++i)
 	update_sparse_coeff_grads(solutions[i+num_coeff_rhs][0], i);
       // update sobol index bookkeeping
-      update_sparse_sobol();
+      update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
     }
     else { // retain original multiIndex layout
       if (multiple_rhs)
@@ -1434,7 +1433,9 @@ update_sparse(Real* dense_coeffs, size_t num_dense_terms)
   update_sparse_coeffs(dense_coeffs);
 
   // update the sparse Sobol' indices
-  update_sparse_sobol();
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
 }
 
 
@@ -1517,7 +1518,9 @@ update_sparse_coeff_grads(Real* dense_coeffs, int row)
 }
 
 
-void RegressOrthogPolyApproximation::update_sparse_sobol()
+void RegressOrthogPolyApproximation::
+update_sparse_sobol(const UShort2DArray& shared_multi_index,
+		    const BitArrayULongMap& shared_sobol_map)
 {
   // define the Sobol' indices based on the sparse multiIndex
   SharedRegressOrthogPolyApproxData* data_rep
@@ -1527,7 +1530,6 @@ void RegressOrthogPolyApproximation::update_sparse_sobol()
     return;
 
   sparseSobolIndexMap.clear();
-  BitArrayULongMap& shared_sobol_map = data_rep->sobolIndexMap;
   if (sparseIndices.empty()) {
     size_t sobol_len = shared_sobol_map.size();
     if (sobolIndices.length() != sobol_len)
@@ -1541,16 +1543,22 @@ void RegressOrthogPolyApproximation::update_sparse_sobol()
   // of the sparse interactions will be consistent, e.g.:
   // sparseSobolIndexMap keys:   0, 2, 4, 5, 9, 11 (from sobolIndexMap)
   // sparseSobolIndexMap values: 0, 1, 2, 3, 4, 5  (new sobolIndices sequence)
-  const UShort2DArray& shared_multi_index = data_rep->multiIndex;
-  size_t j, num_v = sharedDataRep->numVars; StSIter sit; BitArray set(num_v);
+  size_t j, num_v = sharedDataRep->numVars;
+  StSIter sit; BAULMCIter cit; BitArray set(num_v);
   for (sit=sparseIndices.begin(); sit!=sparseIndices.end(); ++sit) {
     const UShortArray& sparse_mi = shared_multi_index[*sit];
     for (j=0; j<num_v; ++j)
       if (sparse_mi[j]) set.set(j);   //   activate bit j
       else              set.reset(j); // deactivate bit j
     // define map from shared index to sparse index
-    unsigned long shared_index = shared_sobol_map[set];
-    sparseSobolIndexMap[shared_index] = 0; // to be updated below
+    cit = shared_sobol_map.find(set);
+    if (cit == shared_sobol_map.end()) {
+      PCerr << "Error: sobolIndexMap lookup failure in RegressOrthogPoly"
+	    << "Approximation::update_sparse_sobol()" << std::endl;
+      abort_handler(-1);
+    }
+    // key = shared index, value = sparse index (init to 0, to be updated below)
+    sparseSobolIndexMap[cit->second] = 0;
   }
   // now that keys are complete, assign new sequence for sparse Sobol indices
   unsigned long sobol_len = 0; ULULMIter mit;
@@ -1827,9 +1835,6 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
     }
 #endif
 
-  IntVector k;
-  RealVector v;
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
@@ -1841,28 +1846,36 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
   //pce.get_basis( basis );
   //pce.get_basis_indices( basis_indices );
 
-  // TO DO: if no/identical sim faults, then reuse factorization among the
-  // response QoI.  This requires changes to Dakota::ApproximationInterface
-  // to propagate data fault difference flags among the QoI.
-  bool fault_differences = true; // TO DO
-  if (fault_differences || data_rep->multiIndex.empty()) {// always for 1st QoI
-    UShort2DArray local_multi_index;
+  // if no sim faults on subsequent QoI and previous QoI interp size matches,
+  // then reuse previous factorization.  Detecting non-null fault sets that are
+  // consistent is more complicated and would require changes to the Dakota::
+  // ApproximationInterface design to propagate fault deltas among the QoI.
+  bool faults = ( surrData.failed_anchor_data() ||
+		  surrData.failed_response_data().size() ),
+    inconsistent_prev = true, //( data_rep->multiIndex.empty() || // remove?
+    //data_rep->pivotHistory.numRows() != surrData.response_size() ); // TO DO;
+    refactor = (faults || inconsistent_prev);
+  if (refactor) {
+    UShort2DArray local_multi_index; IntVector k;
     least_factorization( pts, local_multi_index, data_rep->lowerFactor,
 			 data_rep->upperFactor, data_rep->pivotHistory,
-			 data_rep->pivotVect, v, k );
+			 data_rep->pivotVect, k );
+    // update approxOrder (for use in, e.g., combine_coefficients())
+    int last_index = k.length() - 1, new_order = k[last_index];
+    data_rep->update_approx_order(new_order);
     // update sparseIndices and shared multiIndex from local_multi_index
-    update_multi_index(local_multi_index, fault_differences);
+    update_multi_index(local_multi_index, true);
     // update shared sobolIndexMap from local_multi_index
     data_rep->update_component_sobol(local_multi_index);
     // define sparseSobolIndexMap from sparseIndices, shared multiIndex,
     // and shared sobolIndexMap
-    update_sparse_sobol();
+    update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
   }
 
   RealMatrix coefficients;
-  transform_least_interpolant( data_rep->lowerFactor, data_rep->upperFactor,
+  transform_least_interpolant( data_rep->lowerFactor,  data_rep->upperFactor,
 			       data_rep->pivotHistory, data_rep->pivotVect,
-			       v, vals );
+			       vals );
   PCout << "@@@@@\n";
   PCout << vals.numCols() << std::endl;
 
@@ -1874,7 +1887,7 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
 
 void RegressOrthogPolyApproximation::
 transform_least_interpolant( RealMatrix &L, RealMatrix &U, RealMatrix &H,
-			     IntVector &p,  RealVector &v, RealMatrix &vals )
+			     IntVector &p,  RealMatrix &vals )
 {
   int num_pts = vals.numRows(), num_qoi = vals.numCols();
   
@@ -1903,8 +1916,8 @@ transform_least_interpolant( RealMatrix &L, RealMatrix &U, RealMatrix &H,
 
 void RegressOrthogPolyApproximation::
 least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
-		     RealMatrix &l, RealMatrix &u, RealMatrix &H, IntVector &p,
-		     RealVector &v, IntVector &k )
+		     RealMatrix &l, RealMatrix &u, RealMatrix &H,
+		     IntVector &p, IntVector &k )
 {
   int num_vars = pts.numRows(), num_pts = pts.numCols();
 
@@ -1914,7 +1927,7 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
   range( p, 0, num_pts, 1 );
 
   //This is just a guess: this vector could be much larger, or much smaller
-  v.size( 1000 );
+  RealVector v( 1000 );
   int v_index = 0;
 
   // Current polynomial degree

@@ -129,9 +129,10 @@ private:
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and
   /// sparse_indices
   void update_sparse_coeff_grads(Real* dense_coeffs, int row);
-  /// define sparseSobolIndexMap from sparseIndices, shared multiIndex,
+  /// define sparseSobolIndexMap from sparseIndices, shared multi_index,
   /// and shared sobolIndexMap
-  void update_sparse_sobol();
+  void update_sparse_sobol(const UShort2DArray& shared_multi_index,
+			   const BitArrayULongMap& shared_sobol_map);
 
   /// overlay the passed expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
@@ -164,7 +165,6 @@ private:
 				    RealMatrix &U,
 				    RealMatrix &H,
 				    IntVector &p,
-				    RealVector &v,
 				    RealMatrix &vals );
 
   void least_factorization( RealMatrix &x,
@@ -173,7 +173,6 @@ private:
 			    RealMatrix &u, 
 			    RealMatrix &H, 
 			    IntVector &p,
-			    RealVector &v, 
 			    IntVector &k );
 
   void get_least_polynomial_coefficients( RealVector &v, IntVector &k,

@@ -85,6 +85,9 @@ private:
   //- Heading: Member functions
   //
 
+  /// update shared approxOrder based on settings computed for one of the QoI
+  void update_approx_order(unsigned short new_order);
+
   /// pack polynomial contributions to Psi matrix for regression
   void pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
 			    bool add_val,  double* pack_val,  size_t& pv_cntr,

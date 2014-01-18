@@ -735,7 +735,8 @@ private:
 };
 
 
-inline SurrogateDataRep::SurrogateDataRep(): referenceCount(1)
+inline SurrogateDataRep::SurrogateDataRep():
+  failedAnchorData(0), referenceCount(1)
 { }
 
 
