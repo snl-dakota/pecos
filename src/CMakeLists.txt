@@ -15,6 +15,8 @@ if (${CMAKE_CXX_COMPILER_ID} MATCHES "XL" OR
 endif()
 
 
+# --- Dependency configuration based on previously defined packages ---
+
 if(HAVE_LHS)
   include_directories(${LHS_BINARY_DIR}/include)
   list(APPEND Pecos_libs lhs mods mod)
@@ -27,9 +29,11 @@ endif()
 
 if(HAVE_FFT)
   if(HAVE_FFTW)
+    include_directories("${FFTW_SOURCE_DIR}/api")
+    link_directories("${FFTW_BINARY_DIR}/.libs")
     list(APPEND Pecos_libs fftw3)
-    include_directories(${Pecos_SOURCE_DIR}/packages/fftw/api)
-  elseif(HAVE_DFFTPACK)
+  endif()
+  if(HAVE_DFFTPACK)
     list(APPEND Pecos_libs dfftpack)
   endif()
 endif()
@@ -45,5 +49,8 @@ file(GLOB Pecos_hdr *.hpp)
 
 add_library(pecos_src ${Pecos_src})
 target_link_libraries(pecos_src ${Pecos_libs})
+if (HAVE_FFTW)
+  add_dependencies(pecos_src fftw)
+endif()
 install(TARGETS pecos_src EXPORT ${ExportTarget} DESTINATION lib)
 install(FILES ${Pecos_hdr} DESTINATION include)

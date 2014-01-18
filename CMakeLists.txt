@@ -2,10 +2,37 @@ cmake_minimum_required(VERSION 2.8)
 
 project("Pecos" C CXX Fortran)
 
+# --- CMake modules ---
 include(FortranCInterface)
+include(CTest)
+
+set( CMAKE_MODULE_PATH
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_arch
+  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config_tests
+  ${CMAKE_MODULE_PATH}
+)
+
+
+# --- Global options ---
 
 option(BUILD_SHARED_LIBS "Build Pecos with shared libraries?" ON)
+
 remove_definitions("-DHAVE_CONFIG_H")
+
+if(CMAKE_SYSTEM_NAME MATCHES Darwin)
+  set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
+      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
+endif()
+
+# Set the export name for install targets; parent packages likely want
+# to override this to the name of their target
+set(ExportTarget ${CMAKE_PROJECT_NAME}-targets CACHE STRING 
+  "Name for the export target for ${CMAKE_PROJECT_NAME}")
+
+
+# --- External TPLs ---
 
 # first check for a system blas and lapack
 if(NOT DEFINED BLAS_LIBS OR NOT DEFINED LAPACK_LIBS)
@@ -24,36 +51,76 @@ if(NOT DEFINED BLAS_LIBS OR NOT DEFINED LAPACK_LIBS)
   endif()
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES Darwin)
-  set(CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS
-      "${CMAKE_SHARED_LIBRARY_CREATE_CXX_FLAGS} -undefined dynamic_lookup")
-endif()
-
-
 # Mandate a system or user-provided Boost
 if(Boost_DIR)
-  #message( "in PECOS: Boost_DIR already set to ${Boost_DIR}" )
   include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
 else()
-  find_package(Boost REQUIRED)
+  find_package(Boost 1.37 REQUIRED)
   if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
   endif()
 endif(Boost_DIR)
 
+# when building inside Trilinos, the path to Teuchos will already be set
+if (NOT BUILD_IN_TRILINOS)
 
-include(CTest)
+  # first probe for system-installed Trilinos
+  # this will respect Trilinos_DIR if already set
+  find_package(Trilinos QUIET)
+  
+  if ( NOT Trilinos_DIR )
 
-set( CMAKE_MODULE_PATH
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/utils
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/package_arch
-  ${CMAKE_CURRENT_SOURCE_DIR}/cmake/config_tests
-  ${CMAKE_MODULE_PATH}
-)
+    # if no one has configured a local src Teuchos, do so
+    # this will respect Teuchos_DIR if already set
+    if( NOT Teuchos_DIR )
+      if( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/packages/teuchos/cmake/tribits )
+	set( Teuchos_DIR
+          ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/packages/teuchos )
+	set( Trilinos_ENABLE_Teuchos ON CACHE BOOL
+          "ENABLE TriBITS build of teuchos" FORCE )
+
+	# Map key Dakota variables to TriBITS variables
+	set( TPL_ENABLE_MPI ${DAKOTA_HAVE_MPI} )
+	set( TPL_BLAS_LIBRARIES ${BLAS_LIBS} )
+	set( TPL_LAPACK_LIBRARIES ${LAPACK_LIBS} )
+
+      else()
+	# Use "historical" directory hierarchy, before TriBITS
+	set( Teuchos_DIR ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos )
+      endif() # tribits source directory EXISTS
+
+      message( "Setting Teuchos_DIR to ${Teuchos_DIR}" )
+
+      # Additional setting to prevent multiple targets with the same name
+      set(Trilinos_TARGETS_IMPORTED 1)
+
+      add_subdirectory(packages/teuchos)
+      #set(Teuchos_LIBRARY_DIRS "")
+
+    else()
+      message( "in ${CMAKE_CURRENT_BINARY_DIR} Teuchos_DIR already set to ${Teuchos_DIR}" )
+    endif() # NOT Teuchos_DIR
+
+    if( EXISTS ${CMAKE_CURRENT_BINARY_DIR}/TrilinosConfig.cmake )
+      # Move the "TriBITS" config file to teuchos subdir (not the BuildRoot)
+      file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/TrilinosConfig.cmake
+	${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/TrilinosConfig.cmake)
+    endif()
+
+    #set(Teuchos_LIBRARIES teuchos)
+    find_package( Teuchos NO_MODULE REQUIRED )
+    message( STATUS "Teuchos_LIBRARIES for pecos link: ${Teuchos_LIBRARIES}" )
+    
+  else()
+    message( "Using system trilinos in ${Trilinos_DIR}" )
+  endif() # NOT Trilinos_DIR
+endif() # NOT BUILD_IN_TRILINOS
+
+link_directories(${Teuchos_LIBRARY_DIRS})
 
 
-# WJB - ToDo: test the (HAVE_FFT == OFF) case
+# --- Potential locally included packages ---
+
 option(HAVE_FFT "Use either the fftw or dfftpack packages" ON)
 option(HAVE_DFFTPACK "Build the dfftpack package.  This OPTION has no effect if
   HAVE_FFT is OFF" ON)
@@ -63,9 +130,13 @@ option(HAVE_FFTW "Find and use an installed fftw package. This OPTION has no
 option(HAVE_LHS "Build the LHS package." ON)
 option(HAVE_SPARSE_GRID "Build the VPISparseGrid package." ON)
 
-#Keep track of what libraries should be included in libpecos
-set(SUBLIBS pecos_src)
+add_subdirectory(packages)
 
+
+# --- Dependency configuration based on previously defined packages ---
+
+# Keep track of what libraries should be included in libpecos
+set(SUBLIBS pecos_src)
 
 function(CheckPackage package)
   if(HAVE_${package})
@@ -74,8 +145,6 @@ function(CheckPackage package)
     set(SUBLIBS ${SUBLIBS} ${package_lower} PARENT_SCOPE)
   endif()
 endfunction(CheckPackage)
-
-#Descend into source subdirectories based on user preference
 
 CheckPackage(LHS)
 if(HAVE_LHS)
@@ -88,8 +157,10 @@ if(HAVE_FFT)
   if(HAVE_FFTW)
     add_definitions("-DHAVE_FFTW")
     include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
-    #set(SUBLIBS ${SUBLIBS} fftw3)
-    find_package(Fftw3)
+    # BMA: I couldn't get this to work with the ExternalProject; commenting:
+    #find_package(Fftw3)
+    list(APPEND SUBLIBS fftw3)
+    link_directories("${FFTW_BINARY_DIR}/.libs")
   endif(HAVE_FFTW)
 
 endif(HAVE_FFT)
@@ -98,71 +169,6 @@ if(HAVE_SPARSE_GRID)
   add_definitions("-DHAVE_SPARSE_GRID")
   set(SUBLIBS ${SUBLIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
-
-
-# when building inside Trilinos, the path to Teuchos will already be set
-if (NOT BUILD_IN_TRILINOS)
-
-# first probe for system-installed Trilinos
-# this will respect Trilinos_DIR if already set
-find_package(Trilinos QUIET)
-
-if ( NOT Trilinos_DIR )
-
-  # if no one has configured a local src Teuchos, do so
-  # this will respect Teuchos_DIR if already set
-  if( NOT Teuchos_DIR )
-    if( EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/packages/teuchos/cmake/tribits )
-      set( Teuchos_DIR
-        ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/packages/teuchos )
-      set( Trilinos_ENABLE_Teuchos ON CACHE BOOL
-        "ENABLE TriBITS build of teuchos" FORCE )
-
-      # Map key Dakota variables to TriBITS variables
-      set( TPL_ENABLE_MPI ${DAKOTA_HAVE_MPI} )
-      set( TPL_BLAS_LIBRARIES ${BLAS_LIBS} )
-      set( TPL_LAPACK_LIBRARIES ${LAPACK_LIBS} )
-
-    else()
-      # Use "historical" directory hierarchy, before TriBITS
-      set( Teuchos_DIR ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos )
-    endif() # tribits source directory EXISTS
-
-    message( "Setting Teuchos_DIR to ${Teuchos_DIR}" )
-
-    # Additional setting to prevent multiple targets with the same name
-    set(Trilinos_TARGETS_IMPORTED 1)
-
-    add_subdirectory(packages/teuchos)
-    #set(Teuchos_LIBRARY_DIRS "")
-
-  else()
-    message( "in ${CMAKE_CURRENT_BINARY_DIR} Teuchos_DIR already set to ${Teuchos_DIR}" )
-  endif() # NOT Teuchos_DIR
-
-  if( EXISTS ${CMAKE_CURRENT_BINARY_DIR}/TrilinosConfig.cmake )
-    # Move the "TriBITS" config file to teuchos subdir (not the BuildRoot)
-    file(RENAME ${CMAKE_CURRENT_BINARY_DIR}/TrilinosConfig.cmake
-      ${CMAKE_CURRENT_BINARY_DIR}/packages/teuchos/TrilinosConfig.cmake)
-  endif()
-
-  #set(Teuchos_LIBRARIES teuchos)
-  find_package( Teuchos NO_MODULE REQUIRED )
-  message( STATUS "Teuchos_LIBRARIES for pecos link: ${Teuchos_LIBRARIES}" )
-
-else()
-  message( "Using system trilinos in ${Trilinos_DIR}" )
-endif() # NOT Trilinos_DIR
-endif() # NOT BUILD_IN_TRILINOS
-
-link_directories(${Teuchos_LIBRARY_DIRS})
-
-# Set the export name for install targets; parent packages likely want
-# to override this to the name of their target
-set(ExportTarget ${CMAKE_PROJECT_NAME}-targets CACHE STRING 
-  "Name for the export target for ${CMAKE_PROJECT_NAME}")
-
-add_subdirectory(packages)
 
 add_subdirectory(src)
 
@@ -181,14 +187,6 @@ configure_file("${Pecos_SOURCE_DIR}/cmake/empty.cxx.in"
 add_library(pecos empty.cxx)
 target_link_libraries(pecos ${SUBLIBS})
 install(TARGETS pecos EXPORT ${ExportTarget} DESTINATION lib)
-
-# WJB - ToDo: delete here to bottom once I am done debugging the bldSettings
-FILE(WRITE ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt "")
-GET_CMAKE_PROPERTY(res VARIABLES)
-FOREACH(var ${res})
-  FILE(APPEND ${CMAKE_CURRENT_BINARY_DIR}/AllVariables.txt
-             "${var} \"${${var}}\"\n")
-ENDFOREACH(var ${res})
 
 set(Pecos_LINK_LIBRARIES ${SUBLIBS} CACHE INTERNAL "Pecos link libraries")
 

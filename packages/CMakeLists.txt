@@ -1,41 +1,11 @@
-#if(NOT USE_SYSTEM_TEUCHOS)
-#  add_subdirectory(teuchos)
-#endif()
-
-include(ExternalProject)
+include(ManageRelocatablePackage)
+include(FftwExternalProject)
 
 if(HAVE_FFT)
-  if(HAVE_DFFTPACK)
-    add_subdirectory(dfftpack)
-  endif(HAVE_DFFTPACK)
-
-  if(HAVE_FFTW)
-    # WJB: use ExtProj feature (aka heterogeneous bld)  add_subdirectory(fftw)
-    set(EXTERNAL_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/fftw)
-    execute_process(
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${EXTERNAL_BINARY_DIR}
-    )
-    find_program(sh sh)
-    if(${sh} MATCHES "sh-NOTFOUND")
-      message(FATAL_ERROR
-        "Cannot build fftw as an external project without sh")
-    else()
-      #build FFTW as an external project
-      externalproject_add(fftw
-        DOWNLOAD_COMMAND ""
-        CONFIGURE_COMMAND ${sh} ${CMAKE_CURRENT_SOURCE_DIR}/fftw/configure
-        BINARY_DIR ${EXTERNAL_BINARY_DIR}
-        INSTALL_COMMAND ""
-      )
-    endif() #sh
-  endif(HAVE_FFTW)
+  ManageRelocatablePackage(DFFTPACK dfftpack)
+  FftwExternalProject()
 endif(HAVE_FFT)
 
-if(HAVE_LHS)
-  add_subdirectory(LHS)
-endif(HAVE_LHS)
+ManageRelocatablePackage(LHS LHS)
 
-if(HAVE_SPARSE_GRID)
-  add_subdirectory(VPISparseGrid)
-endif(HAVE_SPARSE_GRID)
-
+ManageRelocatablePackage(SPARSE_GRID VPISparseGrid)
