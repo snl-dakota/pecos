@@ -155,8 +155,6 @@ if(HAVE_FFT)
   CheckPackage(DFFTPACK)
 
   if(HAVE_FFTW)
-    add_definitions("-DHAVE_FFTW")
-    include_directories(${PROJECT_SOURCE_DIR}/packages/fftw/api)
     # BMA: I couldn't get this to work with the ExternalProject; commenting:
     #find_package(Fftw3)
     list(APPEND SUBLIBS fftw3)

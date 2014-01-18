@@ -8,7 +8,8 @@ function(ManageRelocatablePackage package dirname)
       "Finding relocatable package ${package} with directory ${dirname}")
     if(NOT ${package}_DIR)
       if (IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/${dirname}")
-        set(${package}_DIR "${CMAKE_CURRENT_BINARY_DIR}/${dirname}")
+	# Need PARENT_SCOPE since this is a function
+        set(${package}_DIR "${CMAKE_CURRENT_BINARY_DIR}/${dirname}" PARENT_SCOPE)
 	message(STATUS 
 	  "Setting ${package}_DIR = ${CMAKE_CURRENT_BINARY_DIR}/${dirname}")
 	add_subdirectory(${dirname})
