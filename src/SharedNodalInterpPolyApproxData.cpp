@@ -120,12 +120,10 @@ void SharedNodalInterpPolyApproxData::store_data()
 
 void SharedNodalInterpPolyApproxData::post_combine_data(short combine_type)
 {
+  storedLevMultiIndex.clear(); storedCollocKey.clear(); 
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    storedCollocKey.clear(); break;
   case COMBINED_SPARSE_GRID:
-    storedLevMultiIndex.clear(); storedLevCoeffs.clear();
-    storedCollocKey.clear(); storedCollocIndices.clear();
+    storedLevCoeffs.clear(); storedCollocIndices.clear();
     break;
   }
 }

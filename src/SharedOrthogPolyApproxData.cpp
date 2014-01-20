@@ -181,9 +181,13 @@ void SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 
 void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
 {
+  storedApproxOrder.clear();
+  storedMultiIndex.clear(); storedMultiIndexMap.clear();
+
   switch (combine_type) {
   case MULT_COMBINE:
-    multiIndex = combinedMultiIndex;
+    std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
+    combinedMultiIndex.clear();
     break;
   }
 }

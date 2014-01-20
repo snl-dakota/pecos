@@ -140,48 +140,48 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
   // by store_coefficients()
 
   if (sparseIndices.empty() && storedSparseIndices.empty()) // TO DO: mixed case
-    { OrthogPolyApproximation::combine_coefficients(combine_type); return; }
+    OrthogPolyApproximation::combine_coefficients(combine_type);
+    // augment base implementation with clear of storedExpCoeff{s,Grads}
+  else {
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    switch (combine_type) {
+    case ADD_COMBINE: {
+      // update sparseIndices and expansionCoeff{s,Grads}
+      overlay_expansion(storedSparseIndices, data_rep->storedMultiIndexMap,
+			storedExpCoeffs, storedExpCoeffGrads, 1);
+      // update sparseSobolIndexMap
+      update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
+      break;
+    }
+    case MULT_COMBINE: {
+      // perform the multiplication of current and stored expansions
+      multiply_expansion(storedSparseIndices, data_rep->storedMultiIndex,
+			 storedExpCoeffs, storedExpCoeffGrads,
+			 data_rep->combinedMultiIndex);
+      // update sparseSobolIndexMap
+      update_sparse_sobol(data_rep->combinedMultiIndex,data_rep->sobolIndexMap);
+      break;
+    }
+    case ADD_MULT_COMBINE:
+      //overlay_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
+      //                  storedExpCoeffGrads, addCoeffs, addCoeffGrads);
+      //multiply_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
+      //                   storedExpCoeffGrads, multCoeffs, multCoeffGrads);
+      //compute_combine_factors(addCoeffs, multCoeffs);
+      //apply_combine_factors();
+      PCerr << "Error : additive+multiplicative combination not yet "
+	    << "implemented in OrthogPolyApproximation::combine_coefficients()"
+	    << std::endl;
+      abort_handler(-1);
+      break;
+    }
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  switch (combine_type) {
-  case ADD_COMBINE: {
-    // update sparseIndices and expansionCoeff{s,Grads}
-    overlay_expansion(storedSparseIndices, data_rep->storedMultiIndexMap,
-		      storedExpCoeffs, storedExpCoeffGrads, 1);
-    // update sparseSobolIndexMap
-    update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
-    break;
-  }
-  case MULT_COMBINE: {
-    // perform the multiplication of current and stored expansions
-    multiply_expansion(storedSparseIndices, data_rep->storedMultiIndex,
-		       storedExpCoeffs, storedExpCoeffGrads,
-		       data_rep->combinedMultiIndex);
-    // update sparseSobolIndexMap
-    update_sparse_sobol(data_rep->combinedMultiIndex, data_rep->sobolIndexMap);
-    break;
-  }
-  case ADD_MULT_COMBINE:
-    //overlay_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-    //                  storedExpCoeffGrads, addCoeffs, addCoeffGrads);
-    //multiply_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-    //                   storedExpCoeffGrads, multCoeffs, multCoeffGrads);
-    //compute_combine_factors(addCoeffs, multCoeffs);
-    //apply_combine_factors();
-    PCerr << "Error : additive+multiplicative combination not yet implemented "
-	  << "in OrthogPolyApproximation::combine_coefficients()" << std::endl;
-    abort_handler(-1);
-    break;
+    computedMean = computedVariance = 0;
   }
 
-  /* Code below moved to compute_numerical_response_moments()
-  data_rep->storedMultiIndex.clear();
   if (expansionCoeffFlag)     storedExpCoeffs.resize(0);
   if (expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
-  */
-
-  computedMean = computedVariance = 0;
 }
 
 

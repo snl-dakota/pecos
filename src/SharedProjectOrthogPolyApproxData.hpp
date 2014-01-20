@@ -76,6 +76,7 @@ protected:
 
   void store_data();
   void pre_combine_data(short combine_type);
+  void post_combine_data(short combine_type);
 
   void increment_component_sobol();
 

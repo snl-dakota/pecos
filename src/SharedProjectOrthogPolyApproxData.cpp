@@ -277,7 +277,6 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
-  // storedExpCombineType used later in compute_numerical_response_moments()
   storedExpCombineType = combine_type;
 
   switch (combine_type) {
@@ -339,6 +338,33 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
   case ADD_MULT_COMBINE:
     // base class manages this placeholder
     SharedOrthogPolyApproxData::pre_combine_data(combine_type);
+    break;
+  }
+}
+
+
+void SharedProjectOrthogPolyApproxData::post_combine_data(short combine_type)
+{
+  // storedMultiIndex and storedApproxOrder used downstream in
+  // ProjectOrthogPolyApproximation::compute_numerical_response_moments(),
+  // which calls ProjectOrthogPolyApproximation::stored_value()
+
+  //storedMultiIndex.clear(); // needed in ProjectOPA::stored_value()
+  storedMultiIndexMap.clear();
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID:
+    storedLevMultiIndex.clear();     break;
+  case QUADRATURE:
+    //storedApproxOrder.clear(); // needed in ProjectOPA::stored_value()
+    break;
+  default: // total-order expansions
+    storedApproxOrder.clear();       break;
+  }
+
+  switch (combine_type) {
+  case MULT_COMBINE:
+    std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
+    combinedMultiIndex.clear();
     break;
   }
 }

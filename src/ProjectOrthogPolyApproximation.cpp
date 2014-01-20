@@ -176,11 +176,6 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
 	overlay_expansion(data_rep->tpMultiIndexMap[i],
 			  tp_coeffs_i, tp_grads_i, coeff);
     }
-    //if (!reEntrantFlag) {
-    //  csg_driver->clear_smolyak_arrays();
-    //  csg_driver->clear_collocation_arrays();
-    //  data_rep->tpMultiIndex.clear(); data_rep->tpMultiIndexMap.clear();
-    //}
     break;
   }
   case SAMPLING:
@@ -688,11 +683,8 @@ compute_numerical_response_moments(size_t num_moments)
       break;
     }
     // stored data may now be cleared
-    data_rep->storedMultiIndex.clear();
-    if (expansionCoeffFlag)
-      storedExpCoeffs.resize(0);
-    if (expansionCoeffGradFlag)
-      storedExpCoeffGrads.reshape(0,0);
+    if (expansionCoeffFlag)     storedExpCoeffs.resize(0);
+    if (expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
   }
 
   // update numericalMoments based on data_coeffs
