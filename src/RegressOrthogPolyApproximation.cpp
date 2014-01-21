@@ -152,11 +152,13 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
       size_t i, num_mi = data_rep->multiIndex.size();
       for (i=0; i<num_mi; ++i)
 	sparseIndices.insert(i);
+      //update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
     }
     if (storedSparseIndices.empty()) {
       size_t i, num_st_mi = data_rep->storedMultiIndex.size();
       for (i=0; i<num_st_mi; ++i)
 	storedSparseIndices.insert(i);
+      //update_sparse_sobol(); // no storedSparseSobolIndexMap to update
     }
 
     switch (combine_type) {
@@ -1874,6 +1876,7 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
     inconsistent_prev = ( data_rep->multiIndex.empty() ||
       surrData.active_response_size() != data_rep->pivotHistory.numRows() );
   if (faults || inconsistent_prev) {
+    // compute the least factorization that interpolates this data set
     UShort2DArray local_multi_index; IntVector k;
     least_factorization( pts, local_multi_index, data_rep->lowerFactor,
 			 data_rep->upperFactor, data_rep->pivotHistory,
@@ -1885,10 +1888,16 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
     update_multi_index(local_multi_index, true);
     // update shared sobolIndexMap from local_multi_index
     data_rep->update_component_sobol(local_multi_index);
-    // define sparseSobolIndexMap from sparseIndices, shared multiIndex,
-    // and shared sobolIndexMap
-    update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
   }
+  else {
+    // define sparseIndices for this QoI (sparseSobolIndexMap updated below)
+    size_t i, num_mi = data_rep->multiIndex.size();
+    for (i=0; i<num_mi; ++i)
+      sparseIndices.insert(i);
+  }
+  // define sparseSobolIndexMap from sparseIndices, shared multiIndex,
+  // and shared sobolIndexMap
+  update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
 
   RealMatrix coefficients;
   transform_least_interpolant( data_rep->lowerFactor,  data_rep->upperFactor,
