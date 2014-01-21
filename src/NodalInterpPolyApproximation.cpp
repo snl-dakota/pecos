@@ -26,7 +26,7 @@ namespace Pecos {
 
 void NodalInterpPolyApproximation::allocate_expansion_coefficients()
 {
-  size_t num_colloc_pts = surrData.size(),
+  size_t num_colloc_pts = surrData.points(),
     num_deriv_vars = surrData.num_derivative_variables();
   if (surrData.anchor()) ++num_colloc_pts;
   if (expansionCoeffFlag) {
@@ -57,7 +57,7 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  size_t index = 0, num_colloc_pts = surrData.size(), offset = 0;
+  size_t index = 0, num_colloc_pts = surrData.points(), offset = 0;
   if (surrData.anchor()) {
     offset = 1; ++num_colloc_pts;
     if (expansionCoeffFlag) {
@@ -111,7 +111,7 @@ void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
   // multiplying stored expansion evaluated at current collocation points
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  size_t i, j, offset = 0, num_pts = surrData.size();
+  size_t i, j, offset = 0, num_pts = surrData.points();
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) { offset = 1; ++num_pts; }
   Real lf_val, discrep_val;
@@ -178,7 +178,7 @@ void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
 
 void NodalInterpPolyApproximation::restore_expansion_coefficients()
 {
-  size_t index, offset = 0, old_colloc_pts, new_colloc_pts = surrData.size();
+  size_t index, offset = 0, old_colloc_pts, new_colloc_pts = surrData.points();
   if (surrData.anchor())
     { offset = 1; ++new_colloc_pts; }
 
@@ -3237,7 +3237,7 @@ compute_numerical_expansion_moments(size_t num_moments)
   // The following approach just replaces the values of the response with the 
   // values of the interpolant (integrates powers of the interpolant using
   // the same grid that was used to form the interpolant).
-  size_t i, offset = 0, num_pts = surrData.size(), num_v = data_rep->numVars;
+  size_t i, offset = 0, num_pts = surrData.points(), num_v = data_rep->numVars;
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) { offset = 1; ++num_pts; }
   RealVector t1_exp(num_pts);

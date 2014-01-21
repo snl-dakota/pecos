@@ -73,7 +73,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   }
 
   // For testing of anchor point logic:
-  //size_t index = surrData.size() - 1;
+  //size_t index = surrData.points() - 1;
   //surrData.anchor_point(surrData.variables_data()[index],
   //                      surrData.response_data()[index]);
   //surrData.pop(1);
@@ -83,7 +83,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   //   SAMPLING:   treat it as another data point
   //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
   //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  size_t i, j, num_total_pts = surrData.size(), num_v = sharedDataRep->numVars;
+  size_t i, j, num_total_pts = surrData.points(),
+    num_v = sharedDataRep->numVars;
   if (surrData.anchor())
     ++num_total_pts;
   if (!num_total_pts) {
@@ -489,7 +490,7 @@ integrate_expansion(const UShort2DArray& multi_index,
 void ProjectOrthogPolyApproximation::expectation()
 {
   // "lhs" or "random", no weights needed
-  size_t i, j, k, num_surr_data_pts = surrData.size(), num_failed_surr_fn = 0,
+  size_t i, j, k, num_surr_data_pts = surrData.points(), num_failed_surr_fn = 0,
     num_failed_surr_grad = 0, num_deriv_vars = expansionCoeffGrads.numRows();
   SizetShortMap::const_iterator fit;
   short                failed_anchor_data = surrData.failed_anchor_data();
@@ -641,7 +642,7 @@ void ProjectOrthogPolyApproximation::expectation()
 void ProjectOrthogPolyApproximation::
 compute_numerical_response_moments(size_t num_moments)
 {
-  size_t i, num_pts = surrData.size();
+  size_t i, num_pts = surrData.points();
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) ++num_pts;
 

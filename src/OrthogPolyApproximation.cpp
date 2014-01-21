@@ -836,7 +836,8 @@ void OrthogPolyApproximation::integration_checks()
 	  << "SharedOrthogPolyApproxData::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
-  size_t num_data_pts = surrData.size(), num_grid_pts = driver_rep->grid_size();
+  size_t num_data_pts = surrData.points(),
+    num_grid_pts = driver_rep->grid_size();
   if (num_data_pts != num_grid_pts) {
     PCerr << "Error: number of current points (" << num_data_pts << ") is "
 	  << "not consistent with\n       number of points/weights ("

@@ -63,7 +63,7 @@ void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
 
   // checking num_points is insufficient due to anisotropy --> changes in
   // anisotropic weights could move points around without changing the total
-  //size_t num_points = surrData.size();
+  //size_t num_points = surrData.points();
   //bool update_exp_form =
   //  ( (expansionCoeffFlag && expansionType1Coeffs.length() != num_points) ||
   //    (expansionCoeffGradFlag &&
@@ -256,7 +256,7 @@ void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
 {
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
-  size_t i, j, num_pts = surrData.size();
+  size_t i, j, num_pts = surrData.points();
   Real lf_val, discrep_val;
   /*
   for (i=0; i<num_pts; ++i) {

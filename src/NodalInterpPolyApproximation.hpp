@@ -221,7 +221,7 @@ inline void NodalInterpPolyApproximation::increment_expansion_coefficients()
 
 inline void NodalInterpPolyApproximation::decrement_expansion_coefficients()
 {
-  size_t new_colloc_pts = surrData.size();
+  size_t new_colloc_pts = surrData.points();
   if (expansionCoeffFlag) {
    expansionType1Coeffs.resize(new_colloc_pts);
    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;

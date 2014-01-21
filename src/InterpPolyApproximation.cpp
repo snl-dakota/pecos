@@ -54,12 +54,12 @@ void InterpPolyApproximation::compute_coefficients()
   }
 
   // For testing of anchor point logic:
-  //size_t index = surrData.size() - 1;
+  //size_t index = surrData.points() - 1;
   //surrData.anchor_point(surrData.variables_data()[index],
   //                      surrData.response_data()[index]);
   //surrData.pop(1);
 
-  size_t num_colloc_pts = surrData.size();
+  size_t num_colloc_pts = surrData.points();
   if (surrData.anchor()) // anchor point, if present, is first expansionSample
     ++num_colloc_pts;
   if (!num_colloc_pts) {

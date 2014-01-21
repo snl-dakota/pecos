@@ -842,7 +842,15 @@ public:
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
   /// return size of {vars,resp}Data arrays (neglecting anchor point)
-  size_t /*data_*/size() const;
+  size_t points() const;
+
+  /// return total number of available data components
+  size_t response_size() const;
+  /// return number of failed data components
+  size_t failed_response_size() const;
+  /// return net number of active data components (total minus failed)
+  size_t active_response_size() const;
+
   /// return number of 1D arrays within saved{Vars,Resp}Trials 2D arrays
   size_t saved_trials() const;
   /// return number of derivative variables as indicated by size of
@@ -855,9 +863,9 @@ public:
   /// defines failedAnchorData and failedRespData
   void data_checks();
   /// return failedAnchorData
-  short failed_anchor_data();
+  short failed_anchor_data() const;
   /// return failedRespData
-  const SizetShortMap& failed_response_data();
+  const SizetShortMap& failed_response_data() const;
 
   /// clear anchor{Vars,Resp}
   void clear_anchor();
@@ -1030,7 +1038,7 @@ push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
 inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
 {
   if (num_pop_pts) {
-    size_t data_size = size();
+    size_t data_size = points();
     if (data_size >= num_pop_pts) {
       if (save_data) {
 	// append empty arrays and then update them in place
@@ -1101,8 +1109,64 @@ inline bool SurrogateData::anchor() const
 { return (!sdRep->anchorVars.is_null() && !sdRep->anchorResp.is_null()); }
 
 
-inline size_t SurrogateData::/*data_*/size() const
+inline size_t SurrogateData::points() const
 { return std::min(sdRep->varsData.size(), sdRep->respData.size()); }
+
+
+inline size_t SurrogateData::response_size() const
+{
+  size_t i, data_size = 0, num_resp = sdRep->respData.size(), nh;
+  short active_bits;
+  if (!anchor_response().is_null()) {
+    active_bits = anchor_active_bits();
+    if (active_bits & 1) ++data_size;
+    if (active_bits & 2) data_size += anchor_gradient().length();
+    if (active_bits & 4) {
+      nh = anchor_hessian().numRows();
+      if (nh) data_size += nh * (nh + 1) / 2;
+    }
+  }
+  for (i=0; i<num_resp; ++i) {
+    active_bits = response_active_bits(i);
+    if (active_bits & 1) ++data_size;
+    if (active_bits & 2) data_size += response_gradient(i).length();
+    if (active_bits & 4) {
+      nh = response_hessian(i).numRows();
+      if (nh) data_size += nh * (nh + 1) / 2;
+    }
+  }
+  return data_size;
+}
+
+
+inline size_t SurrogateData::failed_response_size() const
+{
+  size_t failed_size = 0, nh; short fail_bits;
+  if (!anchor_response().is_null()) {
+    fail_bits = failed_anchor_data();
+    if (fail_bits & 1) ++failed_size;
+    if (fail_bits & 2) failed_size += anchor_gradient().length();
+    if (fail_bits & 4) {
+      nh = anchor_hessian().numRows();
+      if (nh) failed_size += nh * (nh + 1) / 2;
+    }
+  }
+  const SizetShortMap& failed_resp = failed_response_data();
+  for (StShMCIter cit=failed_resp.begin(); cit!=failed_resp.end(); ++cit) {
+    fail_bits = cit->second;
+    if (fail_bits & 1) ++failed_size;
+    if (fail_bits & 2) failed_size += response_gradient(cit->first).length();
+    if (fail_bits & 4) {
+      nh = response_hessian(cit->first).numRows();
+      if (nh) failed_size += nh * (nh + 1) / 2;
+    }
+  }
+  return failed_size;
+}
+
+
+inline size_t SurrogateData::active_response_size() const
+{ return response_size() - failed_response_size(); }
 
 
 inline size_t SurrogateData::saved_trials() const
@@ -1177,11 +1241,11 @@ inline void SurrogateData::data_checks()
 }
 
 
-inline short SurrogateData::failed_anchor_data()
+inline short SurrogateData::failed_anchor_data() const
 { return sdRep->failedAnchorData; }
 
 
-inline const SizetShortMap& SurrogateData::failed_response_data()
+inline const SizetShortMap& SurrogateData::failed_response_data() const
 { return sdRep->failedRespData; }
 
 

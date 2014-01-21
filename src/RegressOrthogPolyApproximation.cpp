@@ -93,7 +93,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   }
 
   // For testing of anchor point logic:
-  //size_t index = surrData.size() - 1;
+  //size_t index = surrData.points() - 1;
   //surrData.anchor_point(surrData.variables_data()[index],
   //                      surrData.response_data()[index]);
   //surrData.pop(1);
@@ -103,7 +103,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   //   SAMPLING:   treat it as another data point
   //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
   //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  size_t i, j, num_total_pts = surrData.size();
+  size_t i, j, num_total_pts = surrData.points();
   if (surrData.anchor())
     ++num_total_pts;
   if (!num_total_pts) {
@@ -139,12 +139,26 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
-  if (sparseIndices.empty() && storedSparseIndices.empty()) // TO DO: mixed case
+  if (sparseIndices.empty() && storedSparseIndices.empty())
     OrthogPolyApproximation::combine_coefficients(combine_type);
     // augment base implementation with clear of storedExpCoeff{s,Grads}
   else {
     SharedRegressOrthogPolyApproxData* data_rep
       = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+    // support mixed case using simple approach of populating the missing
+    // sparse indices array; not optimal for performance but a lot less code.
+    if (sparseIndices.empty()) {
+      size_t i, num_mi = data_rep->multiIndex.size();
+      for (i=0; i<num_mi; ++i)
+	sparseIndices.insert(i);
+    }
+    if (storedSparseIndices.empty()) {
+      size_t i, num_st_mi = data_rep->storedMultiIndex.size();
+      for (i=0; i<num_st_mi; ++i)
+	storedSparseIndices.insert(i);
+    }
+
     switch (combine_type) {
     case ADD_COMBINE: {
       // update sparseIndices and expansionCoeff{s,Grads}
@@ -1072,7 +1086,7 @@ void RegressOrthogPolyApproximation::select_solver()
   //bool regression_err = 0;
   if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION && !data_rep->crossValidation){
     if ( eq_con && !faultInfo.under_determined )
-      CSOpts.numFunctionSamples = surrData.size();
+      CSOpts.numFunctionSamples = surrData.points();
     else {
       PCout << "Could not perform equality constrained least-squares. ";
       if (faultInfo.under_determined) {
@@ -1153,7 +1167,7 @@ void RegressOrthogPolyApproximation::set_fault_info()
     // if failure omissions are not consistent, manage differing Psi matrices
     if ( (fail_bits & data_order) != data_order ) faults_differ = true;
   }
-  num_surr_data_pts = surrData.size();
+  num_surr_data_pts = surrData.points();
   num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn;
   num_data_pts_grad = num_surr_data_pts - num_failed_surr_grad;
   anchor_fn = false;
@@ -1213,7 +1227,7 @@ void RegressOrthogPolyApproximation::run_regression()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.size(),
+  size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.points(),
     num_deriv_vars = surrData.num_derivative_variables(),
     num_v = sharedDataRep->numVars;
   int num_rows_A =  0, // number of rows in matrix A
@@ -1850,12 +1864,16 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
   // then reuse previous factorization.  Detecting non-null fault sets that are
   // consistent is more complicated and would require changes to the Dakota::
   // ApproximationInterface design to propagate fault deltas among the QoI.
+  // Note 1: size logic is more general than currently necessary since OLI does
+  //         not currently support deriv enhancement.
+  // Note 2: multiIndex size check captures first QoI pass as well as reentrancy
+  //         (changes in points sets for OUU and mixed UQ) due to clear() in
+  //         SharedRegressOrthogPolyApproxData::allocate_data()
   bool faults = ( surrData.failed_anchor_data() ||
 		  surrData.failed_response_data().size() ),
-    inconsistent_prev = true, //( data_rep->multiIndex.empty() || // remove?
-    //data_rep->pivotHistory.numRows() != surrData.response_size() ); // TO DO;
-    refactor = (faults || inconsistent_prev);
-  if (refactor) {
+    inconsistent_prev = ( data_rep->multiIndex.empty() ||
+      surrData.active_response_size() != data_rep->pivotHistory.numRows() );
+  if (faults || inconsistent_prev) {
     UShort2DArray local_multi_index; IntVector k;
     least_factorization( pts, local_multi_index, data_rep->lowerFactor,
 			 data_rep->upperFactor, data_rep->pivotHistory,

@@ -21,9 +21,14 @@ namespace Pecos {
 void SharedRegressOrthogPolyApproxData::allocate_data()
 {
   if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
+    // clear history from previous expansion; new pts -> new least interpolant
+    approxOrder.clear();   // for update_approx_order() -> exp combination logic
+    multiIndex.clear();    // for reuse check in ROPA::least_interpolation()
+    sobolIndexMap.clear(); // for update_component_sobol()
+
     if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit == 1)
       allocate_main_sobol(); // main effects only
-    approxOrder.clear(); // for expansion combination logic
+
     PCout << "Orthogonal polynomial approximation of least order\n";
   }
   else
