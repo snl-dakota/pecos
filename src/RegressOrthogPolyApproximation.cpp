@@ -147,18 +147,18 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
       = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
     // support mixed case using simple approach of populating the missing
-    // sparse indices array; not optimal for performance but a lot less code.
+    // sparse indices arrays (not optimal for performance but a lot less code),
+    // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
+    // following aggregation.
     if (sparseIndices.empty()) {
       size_t i, num_mi = data_rep->multiIndex.size();
       for (i=0; i<num_mi; ++i)
 	sparseIndices.insert(i);
-      //update_sparse_sobol(data_rep->multiIndex, data_rep->sobolIndexMap);
     }
     if (storedSparseIndices.empty()) {
       size_t i, num_st_mi = data_rep->storedMultiIndex.size();
       for (i=0; i<num_st_mi; ++i)
 	storedSparseIndices.insert(i);
-      //update_sparse_sobol(); // no storedSparseSobolIndexMap to update
     }
 
     switch (combine_type) {
@@ -1870,7 +1870,7 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
   //         not currently support deriv enhancement.
   // Note 2: multiIndex size check captures first QoI pass as well as reentrancy
   //         (changes in points sets for OUU and mixed UQ) due to clear() in
-  //         SharedRegressOrthogPolyApproxData::allocate_data()
+  //         SharedRegressOrthogPolyApproxData::allocate_data().
   bool faults = ( surrData.failed_anchor_data() ||
 		  surrData.failed_response_data().size() ),
     inconsistent_prev = ( data_rep->multiIndex.empty() ||
@@ -1903,8 +1903,6 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
   transform_least_interpolant( data_rep->lowerFactor,  data_rep->upperFactor,
 			       data_rep->pivotHistory, data_rep->pivotVect,
 			       vals );
-  PCout << "@@@@@\n";
-  PCout << vals.numCols() << std::endl;
 
   // must do this inside transform_least_interpolant
   //pce.set_basis_indices( basis_indices );
