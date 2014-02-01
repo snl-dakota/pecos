@@ -56,6 +56,12 @@ public:
   //- Heading: Member functions
   //
 
+  /// alternative form for setting multiIndex (expansion import) and
+  /// allocating related arrays
+  void allocate_data(const UShort2DArray& mi);
+  /// get multiIndex
+  const UShort2DArray& multi_index() const;
+
   /// retrieve size of multiIndex
   size_t expansion_terms() const;
 
@@ -200,8 +206,8 @@ protected:
   /// copy of multiIndex (aggregated expansion) stored in store_coefficients()
   /// for use in combine_coefficients()
   UShort2DArray storedMultiIndex;
-  /// copy of multiIndex (aggregated expansion) stored in store_coefficients()
-  /// for use in combine_coefficients()
+  /// mapping of terms when aggregating storedMultiIndex with multiIndex in
+  /// pre_combine_data()
   SizetArray storedMultiIndexMap;
   /// multi-index that is the result of expansion combination
   UShort2DArray combinedMultiIndex;
@@ -238,6 +244,10 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 
 inline SharedOrthogPolyApproxData::~SharedOrthogPolyApproxData()
 { }
+
+
+inline const UShort2DArray& SharedOrthogPolyApproxData::multi_index() const
+{ return multiIndex; }
 
 
 inline size_t SharedOrthogPolyApproxData::expansion_terms() const

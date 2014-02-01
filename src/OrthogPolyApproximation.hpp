@@ -254,7 +254,16 @@ approximation_coefficients() const
 
 inline void OrthogPolyApproximation::
 approximation_coefficients(const RealVector& approx_coeffs)
-{ expansionCoeffs = approx_coeffs; }
+{
+  expansionCoeffs = approx_coeffs;
+
+  // allocate arrays in support of external coefficient import (mirrors
+  // allocate_arrays() except for redundant size_expansion())
+  allocate_total_sobol();
+  allocate_component_sobol();
+  if (expansionMoments.empty())
+    expansionMoments.sizeUninitialized(2);
+}
 
 
 inline void OrthogPolyApproximation::size_expansion()

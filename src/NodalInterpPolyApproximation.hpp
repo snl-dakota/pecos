@@ -264,8 +264,18 @@ approximation_coefficients(const RealVector& approx_coeffs)
 	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
     abort_handler(-1);
   }
-  else
+  else {
     expansionType1Coeffs = approx_coeffs;
+
+    allocate_total_sobol();
+    allocate_component_sobol();
+
+    if (numericalMoments.empty()) {
+      SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+      size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
+      numericalMoments.sizeUninitialized(num_moments);
+    }
+  }
 }
 
 

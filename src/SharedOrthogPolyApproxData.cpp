@@ -78,6 +78,17 @@ void SharedOrthogPolyApproxData::allocate_data()
 }
 
 
+void SharedOrthogPolyApproxData::allocate_data(const UShort2DArray& mi)
+{
+  multiIndex = mi;
+  allocate_component_sobol(mi);
+
+  // output form of imported expansion
+  PCout << "Orthogonal polynomial approximation using imported expansion of "
+	<< multiIndex.size() << " terms\n";
+}
+
+
 void SharedOrthogPolyApproxData::allocate_total_order()
 {
   // For uniform refinement, all refinements are based off of approxOrder.
