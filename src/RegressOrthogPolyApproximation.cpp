@@ -2356,6 +2356,22 @@ const RealVector& RegressOrthogPolyApproximation::dimension_decay_rates()
 }
 
 
+RealVector RegressOrthogPolyApproximation::dense_coefficients() const
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::dense_coefficients();
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  RealVector dense_coeffs(mi.size()); // init to 0
+  size_t i; StSIter it;
+  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it)
+    dense_coeffs[*it] = expansionCoeffs[i];
+  return dense_coeffs;
+}
+
+
 void RegressOrthogPolyApproximation::
 print_coefficients(std::ostream& s, bool normalized)
 {

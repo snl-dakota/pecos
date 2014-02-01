@@ -53,6 +53,10 @@ public:
   /// variable dimension using linear least squares in semilog space
   virtual const RealVector& dimension_decay_rates();
 
+  /// retrieve or form a set of dense coefficients that correspond to
+  /// SharedOrthogPolyApproxData::multiIndex
+  virtual RealVector dense_coefficients() const;
+
 protected:
 
   //
@@ -263,6 +267,14 @@ approximation_coefficients(const RealVector& approx_coeffs)
   allocate_component_sobol();
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
+}
+
+
+inline RealVector OrthogPolyApproximation::dense_coefficients() const
+{
+  // default implementation
+  return RealVector(Teuchos::View, expansionCoeffs.values(),
+		    expansionCoeffs.length());
 }
 
 
