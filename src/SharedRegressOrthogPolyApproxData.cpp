@@ -31,20 +31,7 @@ void SharedRegressOrthogPolyApproxData::allocate_data()
 
     PCout << "Orthogonal polynomial approximation of least order\n";
   }
-  else if (expConfigOptions.expBasisType == ADAPTED_BASIS) {
-    // *** TO DO ***: build up from tensor index sets (generalized sparse grid)
-  }
-  else if (expConfigOptions.expBasisType == TENSOR_PRODUCT_BASIS /* || 
-	   expConfigOptions.expBasisType == DEFAULT_BASIS && tensor_grid */ ) {
-    // for tensor samples, seems like a good idea to use tensor candidate exp
-    // *** only for CS candidate? or true basis for Least sq as well? ***
-
-    inflate_scalar(approxOrder, numVars); // promote scalar to vector, if needed
-    tensor_product_multi_index(approxOrder, multiIndex);
-    allocate_component_sobol(multiIndex);
-    approxOrderPrev = approxOrder;// Note: defer if update_exp_form needed later
-  }
-  else // use default total-order for unstructured data sets w/o adaptation
+  else 
     SharedOrthogPolyApproxData::allocate_data();
 }
 

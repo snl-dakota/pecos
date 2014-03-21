@@ -338,9 +338,9 @@ public:
   /// with the provided (anisotropic) upper_bound array specification
   static size_t total_order_terms(const UShortArray& upper_bound,
 				  short lower_bound_offset = -1);
-  /// return the number of expansion terms for a tensor-product expansion
-  /// with the provided (anisotropic) quadrature orders (default) or
-  /// expansion orders (offset = true)
+  /// return the number of expansion terms for a tensor-product
+  /// expansion with the provided (anisotropic) quadrature orders
+  /// (include_upper_bound = false) or expansion orders (default)
   static size_t tensor_product_terms(const UShortArray& order,
 				     bool include_upper_bound = true);
 

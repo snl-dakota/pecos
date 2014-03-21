@@ -58,13 +58,21 @@ void SharedOrthogPolyApproxData::allocate_data()
 {
   // detect changes since previous construction
   bool update_exp_form = (approxOrder != approxOrderPrev);
-  // multiIndex is now a shared reference --> sparsity pruning is no longer
-  // an issue at this level
-  //bool restore_exp_form = (multiIndex.size()!=total_order_terms(approxOrder));
+  //bool restore_exp_form = (multiIndex.size() != t*_*_terms(approxOrder));
 
   if (update_exp_form) { //|| restore_exp_form) {
-    // default implementation employs a total-order expansion
-    allocate_total_order(); // defines approxOrder and (candidate) multiIndex
+    switch (expConfigOptions.expBasisType) {
+    // ADAPTED starts from total-order basis, like generalized sparse grid
+    case TOTAL_ORDER_BASIS: case ADAPTED_BASIS:
+      allocate_total_order(); // defines approxOrder and (candidate) multiIndex
+      break;
+    case TENSOR_PRODUCT_BASIS:
+      inflate_scalar(approxOrder, numVars); // promote scalar->vector, if needed
+      tensor_product_multi_index(approxOrder, multiIndex);
+      break;
+    //case DEFAULT_BASIS: // reassigned in NonDPolynomialChaos ctor
+    //  break;
+    }
     allocate_component_sobol(multiIndex);
     // Note: defer this if update_exp_form is needed downstream
     approxOrderPrev = approxOrder;
