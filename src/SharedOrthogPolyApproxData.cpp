@@ -63,6 +63,7 @@ void SharedOrthogPolyApproxData::allocate_data()
   //bool restore_exp_form = (multiIndex.size()!=total_order_terms(approxOrder));
 
   if (update_exp_form) { //|| restore_exp_form) {
+    // default implementation employs a total-order expansion
     allocate_total_order(); // defines approxOrder and (candidate) multiIndex
     allocate_component_sobol(multiIndex);
     // Note: defer this if update_exp_form is needed downstream

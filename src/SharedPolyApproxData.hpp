@@ -40,9 +40,9 @@ public:
   /// default constructor
   ExpansionConfigOptions();
   /// constructor
-  ExpansionConfigOptions(short exp_soln_approach, short output_level,
-			 bool vbd_flag, unsigned short vbd_order,
-			 //short refine_type,
+  ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
+			 short output_level, bool vbd_flag,
+			 unsigned short vbd_order, //short refine_type,
 			 short refine_cntl, int max_iter, Real conv_tol);
   /// copy constructor
   ExpansionConfigOptions(const ExpansionConfigOptions& ec_options);
@@ -55,6 +55,11 @@ public:
   /// CUBATURE, COMBINED_SPARSE_GRID, HIERARCHICAL_SPARSE_GRID, REGRESSION,
   /// or SAMPLING
   short expCoeffsSolnApproach;
+
+  /// identifies the type of basis for the expansion: DEFAULT_BASIS or
+  /// {NODAL,HIERARCHICAL}_INTERPOLANT for SC or
+  /// {TENSOR_PRODUCT,TOTAL_ORDER,ADAPTED}_BASIS for PCE regression
+  short expBasisType;
 
   /// output verbosity level: {SILENT,QUIET,NORMAL,VERBOSE,DEBUG}_OUTPUT
   short outputLevel;
@@ -80,19 +85,21 @@ public:
 
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
-  expCoeffsSolnApproach(SAMPLING), outputLevel(NORMAL_OUTPUT),
-  vbdFlag(false), vbdOrderLimit(0), //refinementType(NO_REFINEMENT),
+  expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
+  outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
+  //refinementType(NO_REFINEMENT),
   refinementControl(NO_CONTROL), maxIterations(100), convergenceTol(1.e-4)
 { }
 
 
 inline ExpansionConfigOptions::
-ExpansionConfigOptions(short exp_soln_approach, short output_level,
-		       bool vbd_flag, unsigned short vbd_order,
-		       //short refine_type,
+ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
+		       short output_level, bool vbd_flag,
+		       unsigned short vbd_order, //short refine_type,
 		       short refine_cntl, int max_iter, Real conv_tol):
-  expCoeffsSolnApproach(exp_soln_approach), outputLevel(output_level),
-  vbdFlag(vbd_flag), vbdOrderLimit(vbd_order), //refinementType(refine_type),
+  expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
+  outputLevel(output_level), vbdFlag(vbd_flag), vbdOrderLimit(vbd_order),
+  //refinementType(refine_type),
   refinementControl(refine_cntl), maxIterations(max_iter),
   convergenceTol(conv_tol)
 { }
@@ -101,8 +108,8 @@ ExpansionConfigOptions(short exp_soln_approach, short output_level,
 inline ExpansionConfigOptions::
 ExpansionConfigOptions(const ExpansionConfigOptions& ec_options):
   expCoeffsSolnApproach(ec_options.expCoeffsSolnApproach),
-  outputLevel(ec_options.outputLevel), vbdFlag(ec_options.vbdFlag),
-  vbdOrderLimit(ec_options.vbdOrderLimit),
+  expBasisType(ec_options.expBasisType), outputLevel(ec_options.outputLevel),
+  vbdFlag(ec_options.vbdFlag), vbdOrderLimit(ec_options.vbdOrderLimit),
   //refinementType(ec_options.refinementType),
   refinementControl(ec_options.refinementControl),
   maxIterations(ec_options.maxIterations),

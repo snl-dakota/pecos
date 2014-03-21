@@ -28,8 +28,8 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
-  // default implementation employs a total-order expansion (needed for
-  // PCE import case which instantiates an OrthogPolyApproximation).
+  // expansion formulation has been defined in Shared*OrthogPolyApproxData::
+  // allocate_data(), and its results are employed below
 
   allocate_total_sobol();
   allocate_component_sobol();

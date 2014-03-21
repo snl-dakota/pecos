@@ -50,8 +50,9 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 {
   allocate_total_sobol(); // no dependencies
 
-  // multiIndex size needed to set faultInfo.under_determined
-  // Note: OLI's multiIndex is empty, but must ignore this flag
+  // multiIndex size (from Shared allocate_data()) used to set
+  // faultInfo.under_determined
+  // Note: OLI's multiIndex is empty, but does not use under_determined flag
   set_fault_info();
 
   SharedRegressOrthogPolyApproxData* data_rep
