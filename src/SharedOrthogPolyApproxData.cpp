@@ -82,8 +82,15 @@ void SharedOrthogPolyApproxData::allocate_data()
   PCout << "Orthogonal polynomial approximation order = { ";
   for (size_t i=0; i<numVars; ++i)
     PCout << approxOrder[i] << ' ';
-  PCout << "} using total-order expansion of " << multiIndex.size()
-	<< " terms\n";
+  switch (expConfigOptions.expBasisType) {
+  case ADAPTED_BASIS:
+    PCout << "} using adapted total-order expansion of "; break;
+  case TOTAL_ORDER_BASIS:
+    PCout << "} using total-order expansion of ";         break;
+  case TENSOR_PRODUCT_BASIS:
+    PCout << "} using tensor-product expansion of ";      break;
+  }
+  PCout << multiIndex.size() << " terms\n";
 }
 
 
