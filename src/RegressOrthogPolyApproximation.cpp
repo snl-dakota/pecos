@@ -19,9 +19,7 @@
 
 // headers necessary for cross validation
 #include "MathTools.hpp"
-#include "CrossValidationIterator.hpp"
-#include "LinearModelModules.hpp"
-#include "CrossValidationModules.hpp"
+#include "CrossValidation.hpp"
 
 //#define DEBUG
 
@@ -1068,12 +1066,27 @@ void RegressOrthogPolyApproximation::select_solver()
     CSOpts.solver = (eq_con && !faultInfo.under_determined) ?
       EQ_CON_LEAST_SQ_REGRESSION : SVD_LEAST_SQ_REGRESSION;
 
+  if ( ( !faultInfo.under_determined ) && 
+       ( ( CSOpts.solver == BASIS_PURSUIT ) || 
+	 ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) ) )
+    {
+      CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
+      CSOpts.solverTolerance = -1.;
+    }
+
   // Set solver parameters
-  RealVector& noise_tols = data_rep->noiseTols;
+  RealVector noise_tols;
+  if ( data_rep->noiseTols.length() > 0 )
+    {
+      // data->rep noiseTols is being set will very long length. This must
+      // be a bug
+      noise_tols.sizeUninitialized( data_rep->noiseTols.length() );
+      noise_tols.assign( data_rep->noiseTols );
+    }
   if ( CSOpts.solver == LASSO_REGRESSION )
     CSOpts.delta = data_rep->l2Penalty;
   if ( noise_tols.length() > 0 )
-    CSOpts.epsilon = noise_tols[0];
+      CSOpts.epsilon = noise_tols[0];
   else {
     noise_tols.size( 1 );
     noise_tols[0] = CSOpts.epsilon;
@@ -1100,17 +1113,8 @@ void RegressOrthogPolyApproximation::select_solver()
 	CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
 	PCout << "Using SVD least squares regression instead\n";
       }
-      //regression_err = L2_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);
     }
   }
-  //else
-    //regression_err = L2_regression(num_data_pts_fn, num_data_pts_grad, reuse_solver_data);
-
-  //if (regression_err) { // if numerical problems in LLS, abort with error
-  //  PCerr << "Error: nonzero return code from least squares solution in "
-  //        << "RegressOrthogPolyApproximation::regression()" << std::endl;
-  //  abort_handler(-1);
-  //}
 }
 
 
@@ -1260,7 +1264,7 @@ void RegressOrthogPolyApproximation::run_regression()
     for (j=0;j<num_v;j++)
       points(j,i) = surrData.continuous_variables(i)[j];
   }
-  
+ 
   if (expansionCoeffFlag) {
 
     // matrix/vector sizing
@@ -1311,6 +1315,10 @@ void RegressOrthogPolyApproximation::run_regression()
 	  if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
 	       ORTHOG_LEAST_INTERPOLATION )
 	    throw( std::runtime_error("Cannot use cross validation with least interpolation") );
+	  if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
+	       EQ_CON_LEAST_SQ_REGRESSION )
+	    throw( std::runtime_error("Cannot use cross validation with equality constrained least squares regression") );
+	  
 	  select_solver();
 	  run_cross_validation( A, B, points, num_data_pts_fn );
 	}
@@ -1322,9 +1330,9 @@ void RegressOrthogPolyApproximation::run_regression()
 	    RealMatrix points_dummy;
 	    remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
 				surrData.failed_response_data() );
-	    faultInfo.under_determined = num_rows_A < num_cols_A;
-	    PCout << "Applying regression to compute " << num_cols_A << " chaos"
-		  << " coefficients using " << num_rows_A << " equations.\n";
+	    faultInfo.under_determined = A.numRows() < A.numCols();
+	    PCout << "Applying regression to compute " << A.numCols()
+		  << " chaos coefficients using " <<A.numRows()<<" equations.\n";
 	    select_solver();
 	    data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
 	    
@@ -1395,9 +1403,9 @@ void RegressOrthogPolyApproximation::run_regression()
       IntVector index_mapping; 
       remove_faulty_data( A, B, points, index_mapping,
 			  faultInfo, surrData.failed_response_data());
-      faultInfo.under_determined = num_rows_A < num_cols_A;
-      PCout << "Applying regression to compute " << num_cols_A
-	    << " chaos coefficients using " << num_rows_A << " equations.\n";
+      faultInfo.under_determined = A.numRows() < A.numCols();
+      PCout << "Applying regression to compute " << A.numCols()
+	    << " chaos coefficients using " << A.numRows() << " equations.\n";
       select_solver();
       data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
     }
@@ -1592,7 +1600,7 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 		      size_t num_data_pts_fn )
 {
   RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
-  RealMatrix B_copy( Teuchos::Copy, B, B.numRows(), B.numCols() );
+  RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& approx_order = data_rep->approxOrder;
@@ -1602,34 +1610,25 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
   unsigned short min_order = 1, ao0 = approx_order[0];
   if ( min_order > ao0 ) min_order = ao0;
 
-  /// The options used to create the best PCE for each QOI
-  std::vector<CompressedSensingOptions> bestCompressedSensingOpts_;
-
-  /// The options of the best predictors of the predictors produced by each item
-  /// in predictorOptionsList_. Information is stored for each PCE degree
-  RealMatrix2DArray predictorOptionsHistory_;
-
-  /// The best predictors of the predictors produced by each item 
-  /// in predictorOptionsList_. Information is stored for each PCE degree
-  RealMatrix2DArray predictorIndicatorsHistory_;
-
-  /// The indicators of each partition for the best predictors of the 
-  /// predictors produced by each item in predictorOptionsList_. 
-  /// Information is stored for each PCE degree
-  RealMatrix2DArray predictorPartitionIndicatorsHistory_;
-  bestCompressedSensingOpts_;
-
-  std::vector<CompressedSensingOptions> best_cs_opts( num_rhs );
+  Real best_score = std::numeric_limits<Real>::max(), best_tolerance = 0.;
+  int best_basis_parameters_index = 0;
+  int num_build_points = num_data_pts_fn;
+  bool use_gradients = false;
+  if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
+  MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
+  cv_iterator.set_fault_data( faultInfo,
+			      surrData.failed_response_data() );
   
-  RealVector min_best_predictor_indicators( num_rhs );
-  min_best_predictor_indicators = std::numeric_limits<Real>::max();
-  bestCompressedSensingOpts_.resize( num_rhs );
-  IntVector best_cross_validation_orders( num_rhs );
-  unsigned short len = ao0 - min_order + 1;
-  predictorOptionsHistory_.resize( len );
-  predictorIndicatorsHistory_.resize( len );
-  predictorPartitionIndicatorsHistory_.resize( len );
-  int cnt( 0 );
+  RealVector basis_scores;
+  basis_scores.sizeUninitialized( ao0 - min_order + 1 );
+  basis_scores = std::numeric_limits<double>::max();
+
+  data_rep->CSTool.set_linear_solver( CSOpts );
+  LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
+  cv_iterator.set_solver( linear_solver );
+
+  int i = 0;
+  bestApproxOrder.size( 1 ); 
   for ( int order = min_order; order <= ao0; order++ )
     {
       if (data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT)
@@ -1640,73 +1639,82 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 					A_copy.numRows(),
 					num_basis_terms, 0, 0 );
 
-      RealVector best_predictor_indicators;
-      estimate_compressed_sensing_options_via_cross_validation( 
-							       vandermonde_submatrix, 
-							       B_copy, 
-							       best_cs_opts,
-							       best_predictor_indicators,
-							       predictorOptionsHistory_[cnt], 
-							       predictorIndicatorsHistory_[cnt],  
-							       predictorPartitionIndicatorsHistory_[cnt],
-							       num_data_pts_fn );
 
-      // Only execute on master processor
-      //      if ( is_master() )
-      if ( true )
-	{
-	  for ( int k = 0; k < num_rhs; k++ )
-	    {
-	      if ( best_predictor_indicators[k] < 
-		   min_best_predictor_indicators[k] )
-		{
-		  min_best_predictor_indicators[k] = 
-		    best_predictor_indicators[k];
-		  best_cross_validation_orders[k] = order;
-		  bestCompressedSensingOpts_[k] = best_cs_opts[k];
-		}
-	      if (data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT)
-		{
-		  PCout<<"Cross validation error for rhs "<<k<<" and degree ";
-		  PCout << order << ": " <<  best_predictor_indicators[k]<< "\n";
-		}
-	    }
+      int num_folds = 10;
+      int max_num_pts_per_fold = num_data_pts_fn / num_folds;
+      if ( num_data_pts_fn % num_folds != 0 ); max_num_pts_per_fold++;
+      if ( ( num_data_pts_fn - max_num_pts_per_fold < vandermonde_submatrix.numCols() ) && ( num_data_pts_fn >= vandermonde_submatrix.numCols() ) ) {
+	  // use one at a time cross validation
+	PCout << "The linear system will switch from over-determined to " << 
+	  " under-determined when K = 10 cross validation is employed. " <<
+	  " Switching to one at a time cross validation to avoid this\n";
+	num_folds = num_data_pts_fn;
+
+	if ( num_data_pts_fn == vandermonde_submatrix.numCols() )
+	  PCout << "Warning: The linear system will switch from exactly " <<
+	    " determined to under-determined when leave one out cross " << 
+	    " validation is employed\n.";
 	}
-      cnt++;
+
+
+      cv_iterator.set_num_folds( num_folds );
+      cv_iterator.set_num_points( num_build_points );
+      if ( use_gradients )
+	cv_iterator.set_num_equations_per_point( sharedDataRep->numVars + 1 );
+      else 
+	cv_iterator.set_num_equations_per_point( 1 );
+
+
+      Real score = cv_iterator.run_cross_validation( vandermonde_submatrix, b );
+
+      if ( score < best_score )
+	{
+	  best_score = score;
+	  best_tolerance = cv_iterator.get_best_residual_tolerance();
+	  best_basis_parameters_index = i;
+	  bestApproxOrder[0] = order;
+	}
+      basis_scores[i] = score;
+
+      if ( ( score >= best_score ) && ( i - best_basis_parameters_index >= 2 ) )
+	break;
+
+      if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
+	{
+	  PCout << "Cross validation error for degree ";
+	  PCout << order << ": " << score << "\n";
+	}
+      i++;
     }
-  bestApproxOrder = best_cross_validation_orders;
+
   int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
 				  bestApproxOrder[0] );
   if (data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT)
     {
       PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
-      PCout << "Best cross validation error: ";
-      PCout <<  min_best_predictor_indicators[0]<< "\n";
+      PCout << "Best cross validation error: " << best_score << "\n";
     }
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
   RealMatrix vandermonde_submatrix( Teuchos::View, 
 				    A_copy,
 				    A_copy.numRows(),
 				    num_basis_terms, 0, 0 );
-  CompressedSensingOptionsList opts_list;
-  RealMatrixArray solutions;
-  bestCompressedSensingOpts_[0].storeHistory = false;
-  bestCompressedSensingOpts_[0].print();
   IntVector index_mapping;
   RealMatrix points_dummy;
-  remove_faulty_data(vandermonde_submatrix, B_copy, points_dummy, index_mapping,
-		     faultInfo, surrData.failed_response_data());
+  remove_faulty_data( vandermonde_submatrix, b, points_dummy, index_mapping,
+		      faultInfo, surrData.failed_response_data() );
   int num_rows_V = vandermonde_submatrix.numRows(),
-      num_cols_V = vandermonde_submatrix.numCols();
+    num_cols_V = vandermonde_submatrix.numCols();
   faultInfo.under_determined = num_rows_V < num_cols_V;
   PCout << "Applying regression to compute " << num_cols_V
 	<< " chaos coefficients using " << num_rows_V << " equations.\n";
   select_solver();
-  data_rep->CSTool.solve( vandermonde_submatrix, B_copy, solutions, 
-			  bestCompressedSensingOpts_[0], opts_list );
+  RealMatrix solutions, metrics;
+  linear_solver->set_residual_tolerance( best_tolerance );
+  linear_solver->solve( vandermonde_submatrix, b, solutions, metrics );
 
   if (faultInfo.under_determined) // exploit CS sparsity
-    update_sparse(solutions[0][0], num_basis_terms);
+    update_sparse(solutions[solutions.numCols()-1], num_basis_terms);
   else {
     // if best expansion order is less than maximum candidate, truncate
     // expansion arrays.  Note that this requires care in cross-expansion
@@ -1714,7 +1722,7 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
     if (num_basis_terms < data_rep->multiIndex.size()) // candidate exp size
       for (size_t i=0; i<num_basis_terms; ++i)
 	sparseIndices.insert(i); // sparse subset is first num_basis_terms
-    copy_data(solutions[0][0], num_basis_terms, expansionCoeffs);
+    copy_data(solutions[solutions.numCols()-1], num_basis_terms,expansionCoeffs);
   }
 };
 
@@ -1750,93 +1758,11 @@ void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   opts1D[8] = num_function_samples;
       
   // Form the multi-dimensional grid
-  cartesian_product( opts1D, opts );
+  cartesian_product( opts1D, opts, 1 );
 };
 
 void RegressOrthogPolyApproximation::
 estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixArray &predictor_options_history, RealMatrixArray &predictor_indicators_history, RealMatrixArray &predictor_partition_indicators_history, size_t num_data_pts_fn ){
-
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-
-  // Initialise the cross validation iterator
-  CrossValidationIterator CV;
-  CV.mpi_communicator( MPI_COMM_WORLD );
-  CV.verbosity(  std::max(0, data_rep->expConfigOptions.outputLevel - 1) );
-  // Set and partition the data
-  CV.set_data( vandermonde_matrix, rhs, num_data_pts_fn );
-  int num_folds( 10 );
-  // Keep copy of state
-  CompressedSensingOptions cs_opts_copy = CSOpts;
-  
-  if ( ( ( num_data_pts_fn / num_folds == 1 ) && 
-	 ( num_data_pts_fn - 3 < vandermonde_matrix.numCols() ) )  || 
-       ( num_data_pts_fn / num_folds == 0 ) )
-    // use one at a time cross validation
-    num_folds = num_data_pts_fn;
-  if ( num_data_pts_fn == vandermonde_matrix.numCols() )
-    {
-      PCout << "Warning: The cross validation results will not be consistent. ";
-      PCout << "The number of function samples = the number of basis terms, ";
-      PCout << "thus only underdetermined matrices will be generated during ";
-      PCout << "cross validation even though the system is fully determined.\n";
-    }
-
-  if ( ( CSOpts.solver == EQ_CON_LEAST_SQ_REGRESSION ) &&
-       ( num_folds = num_data_pts_fn ) && 
-       ( vandermonde_matrix.numRows() * ( num_data_pts_fn - 1 ) / num_data_pts_fn  <= vandermonde_matrix.numCols() ) )
-    // includes exactly determined case
-    {
-      PCout << "EQ_CON_LEAST_SQ_REGRESSION could not be used. ";
-      PCout << "The cross validation training vandermonde matrix is ";
-      PCout << "under-determined\n";
-      CSOpts.solver = LASSO_REGRESSION;
-    }
-  if ( ( CSOpts.solver == EQ_CON_LEAST_SQ_REGRESSION ) && ( num_folds = num_data_pts_fn ) &&  ( num_data_pts_fn - 1 >= vandermonde_matrix.numCols() ) )
-    {
-      PCout << "EQ_CON_LEAST_SQ_REGRESSION could not be used. ";
-      PCout << "The cross validation training vandermonde matrix is ";
-      PCout << "over-determined\n";
-      CSOpts.solver = DEFAULT_REGRESSION;
-    }
-    
-  CV.setup_k_folds( num_folds );
-  
-  // Tell the cross validation iterator what options to test
-  RealMatrix opts;
-  gridSearchFunction( opts, vandermonde_matrix.numRows(),
-		      vandermonde_matrix.numCols(), num_data_pts_fn );
-  CV.predictor_options_list( opts );
-
-  // Perform cross validation
-  CV.run( &rmse_indicator, &linear_predictor_analyser, 
-	  &normalised_mean_selector,
-	  &linear_predictor_best_options_extractor,
-	  faultInfo, surrData.failed_response_data() );
-
-  // Get results of cross validation
-  RealMatrix best_predictor_options;
-  CV.get_best_predictor_info( best_predictor_options, 
-			      best_predictor_indicators );
-
-  CV.get_history_data( predictor_options_history, 
-		       predictor_indicators_history,
-		       predictor_partition_indicators_history );
-
-  //if ( CV.is_master() )
-  if ( true )
-    {
-      int len_opts(  best_predictor_options.numRows() ), 
-	num_rhs( rhs.numCols() );
-      for ( int k = 0; k < num_rhs; k++ )
-	{
-	  RealVector col( Teuchos::View,  best_predictor_options[k], len_opts );
-	  set_linear_predictor_options( col, best_cs_opts[k] );
-	}
-    }
-
-  //restore state
-  CSOpts = cs_opts_copy;
 };
 
 
@@ -1854,14 +1780,6 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-
-  // must do this inside transform_least_interpolant
-  //RealVector domain;
-  //TensorProductBasis_ptr basis; 
-  //std::vector<PolyIndex_ptr> basis_indices;
-  //pce.get_domain( domain );
-  //pce.get_basis( basis );
-  //pce.get_basis_indices( basis_indices );
 
   // if no sim faults on subsequent QoI and previous QoI interp size matches,
   // then reuse previous factorization.  Detecting non-null fault sets that are
@@ -1904,10 +1822,6 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
   transform_least_interpolant( data_rep->lowerFactor,  data_rep->upperFactor,
 			       data_rep->pivotHistory, data_rep->pivotVect,
 			       vals );
-
-  // must do this inside transform_least_interpolant
-  //pce.set_basis_indices( basis_indices );
-  //pce.set_coefficients( coefficients );
 }
 
 
@@ -1976,26 +1890,15 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
 	{
 	  data_rep->total_order_multi_index( (unsigned short)k_counter,
 					     (size_t)num_vars, new_indices );
-	  //get_hyperbolic_level_indices( num_vars,
-	  ///			k_counter,
-	  //				1.,
-	  //new_indices );
-
 	  int num_indices = internal_basis_indices.size();
-	  //for ( int i = 0; i < (int)new_indices.size(); i++ )
-	  // new_indices[i]->set_array_index( num_indices + i );
 	}
       else
 	{
-	  //int cnt = internal_basis_indices.size();
 	  for ( int i = 0; i < (int)basis_indices.size(); i++ )
 	    {
-	      //if ( basis_indices[i]->get_level_sum() == k_counter )
 	      if ( index_norm( basis_indices[i] ) == k_counter )
 		{
 		  new_indices.push_back( basis_indices[i] );
-		  //basis_indices[i]->set_array_index( cnt );
-		  //cnt++;
 		}
 	    }
 	  // If the basis_indices set is very sparse then not all degrees may 
@@ -2148,7 +2051,6 @@ void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
 	  current_size = 0;
 	  for ( int j = 0; j < num_basis_indices; j++ )
 	    {
-	      //if ( basis_indices[j]->get_level_sum() == k[i] )
 	      if ( index_norm( basis_indices[j] ) == k[i] )
 		current_size++;
 	    }

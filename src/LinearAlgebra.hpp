@@ -289,6 +289,20 @@ void permute_matrix_columns( Teuchos::SerialDenseMatrix<O,T> &A, IntVector &P )
     }
 };
 
+template <typename O, typename T>
+T trace( Teuchos::SerialDenseMatrix<O,T> &A )
+{
+  if ( A.numRows() != A.numCols() )
+    {
+      std::string msg = "trace() A must be square";
+      throw( std::runtime_error( msg ) );
+    }
+  T result = 0;
+  for ( int i = 0; i < A.numRows(); i++ )
+    result +=  A(i,i);
+  return result;
+}
+
 /** \brief computes the Cholesky factorization of a real symmetric
 *  positive definite matrix A.
 *

@@ -15,7 +15,7 @@
 #define REGRESS_ORTHOG_POLY_APPROXIMATION_HPP
 
 #include "OrthogPolyApproximation.hpp"
-#include "CompressedSensing.hpp"
+#include "LinearSolver.hpp"
 #include "FaultTolerance.hpp"
 
 namespace Pecos {

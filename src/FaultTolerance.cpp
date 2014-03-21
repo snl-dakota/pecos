@@ -36,7 +36,6 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
 	msg += "inconsistent";
 	throw( std::runtime_error( msg ) );
       }
-
       range(index_mapping,0,(int)fault_info.num_surr_data_pts);  
     }
   // compute the number of rows in a that are function values. The remainder
@@ -248,9 +247,10 @@ void remove_faulty_data( RealMatrix &A, RealMatrix &B,
       }
     }
 
-  A = A_new;
-  B = B_new;
-
+  A.shapeUninitialized( A_new.numRows(), A_new.numCols() );
+  A.assign( A_new );
+  B.shapeUninitialized( B_new.numRows(), B_new.numCols() );
+  B.assign( B_new );
   if ( B_new.numRows() == 0 )
     {
       PCerr << "Error: pecos::remove_faulty_data() All data was faulty.\n";

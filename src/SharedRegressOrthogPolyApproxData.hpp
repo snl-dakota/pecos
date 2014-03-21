@@ -15,7 +15,7 @@
 #define SHARED_REGRESS_ORTHOG_POLY_APPROX_DATA_HPP
 
 #include "SharedOrthogPolyApproxData.hpp"
-#include "CompressedSensing.hpp"
+#include "LinearSolver.hpp"
 
 namespace Pecos {
 
