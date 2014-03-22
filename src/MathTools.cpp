@@ -436,7 +436,7 @@ void compute_combinations( int num_dims, int level, IntMatrix &indices )
 	    indices( i, d ) = index[d];
 	  i++;
 
-	  if ( not extend ) break;
+	  if ( !extend ) break;
 	}
     }
   else
