@@ -1212,25 +1212,10 @@ void RegressOrthogPolyApproximation::set_fault_info()
 		      surrData.num_derivative_variables() );
 };
 
-
-void RegressOrthogPolyApproximation::run_regression()
+void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A,
+							  RealMatrix &B,
+							  RealMatrix &points )
 {
-  // Assume all function values are stored in top block of matrix in rows
-  // 0 to num_surr_data_pts-1. Gradient information will be stored
-  // in the bottom block of the matrix in rows num_surr_data_pts to
-  // num_surr_data_pts + num_data_pts_grad * num_v. All the gradient 
-  // information of point 0 will be stored consecutively then all the gradient
-  // data of point 1, and so on.
-
-  // Currently nothing is done  to modify the regression linear system matrices
-  // A and B if surrData.anchor() is true, as currently surrData.anchor()
-  // is always false. If in the future surrData.anchor() is enabled then
-  // A must be adjusted to include the extra constraint information associated
-  // with the anchor data. That is, if using EQ_CON_LEAST_SQUARES C matrix 
-  // (top block of A ) must contain the fn and grad data of anchor point.
-  // This will violate the first assumption discussed above and effect cross
-  // validation. For this reason no modification is made as yet.
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
@@ -1238,11 +1223,9 @@ void RegressOrthogPolyApproximation::run_regression()
     num_deriv_vars = surrData.num_derivative_variables(),
     num_v = sharedDataRep->numVars;
   int num_rows_A =  0, // number of rows in matrix A
-      num_cols_A = data_rep->multiIndex.size(), // candidate expansion size
-      num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs;
+    num_cols_A = data_rep->multiIndex.size(), // candidate expansion size
+    num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs;
   bool add_val, add_grad;
-
-  RealMatrix A, B;
   
   bool multiple_rhs = (expansionCoeffFlag && expansionCoeffGradFlag);
 
@@ -1255,18 +1238,14 @@ void RegressOrthogPolyApproximation::run_regression()
 
   size_t a_grad_cntr = 0, b_grad_cntr = 0;
 
-  CompressedSensingOptionsList opts_list;
-  RealMatrixArray solutions;
-  CSOpts.standardizeInputs = false; // false essential when using derivatives
-
-  RealMatrix points( num_v, num_surr_data_pts, false );
+  points.shapeUninitialized( num_v, num_surr_data_pts );
   for (i=0; i<num_surr_data_pts; ++i) {
     for (j=0;j<num_v;j++)
       points(j,i) = surrData.continuous_variables(i)[j];
   }
- 
-  if (expansionCoeffFlag) {
 
+  if (expansionCoeffFlag) {
+    
     // matrix/vector sizing
     num_rows_A = (data_rep->basisConfigOptions.useDerivs) ?
       num_data_pts_fn + num_data_pts_grad * num_v : num_data_pts_fn;
@@ -1303,58 +1282,7 @@ void RegressOrthogPolyApproximation::run_regression()
       data_rep->pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr,
 				   add_grad, b_vectors, b_grad_cntr);
     }
-
-    // if no RHS augmentation, then solve for coeffs now
-    if (!multiple_rhs) {
-
-      // Perform cross validation loop over degrees here.
-      // Current cross validation will not work for equality 
-      // constrained least squares
-      if ( data_rep->crossValidation ) // run cross validation
-	{
-	  if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
-	       ORTHOG_LEAST_INTERPOLATION )
-	    throw( std::runtime_error("Cannot use cross validation with least interpolation") );
-	  if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
-	       EQ_CON_LEAST_SQ_REGRESSION )
-	    throw( std::runtime_error("Cannot use cross validation with equality constrained least squares regression") );
-	  
-	  select_solver();
-	  degree_search( A, B, points, num_data_pts_fn );
-	}
-      else {
-	if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
-	     ORTHOG_LEAST_INTERPOLATION )
-	  {
-	    IntVector index_mapping; 
-	    RealMatrix points_dummy;
-	    remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
-				surrData.failed_response_data() );
-	    faultInfo.under_determined = A.numRows() < A.numCols();
-	    PCout << "Applying regression to compute " << A.numCols()
-		  << " chaos coefficients using " <<A.numRows()<<" equations.\n";
-	    select_solver();
-	    data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
-	    if (faultInfo.under_determined) // exploit CS sparsity
-	      update_sparse(solutions[0][0], num_cols_A);
-	    else {                          // retain full solution
-	      copy_data(solutions[0][0], num_cols_A, expansionCoeffs);
-	      sparseIndices.clear();
-	    }
-	  }
-	else
-	  {
-	    IntVector index_mapping; 
-	    remove_faulty_data( A, B, points, index_mapping, faultInfo,
-				surrData.failed_response_data() );
-	    faultInfo.under_determined = false;
-	    PCout << "using least interpolation\n";
-	    least_interpolation( points, B );
-	  }
-      }
-    }
   }
-
   if (expansionCoeffGradFlag) {
     if (!multiple_rhs) {
       num_rows_A = num_data_pts_grad;
@@ -1395,35 +1323,105 @@ void RegressOrthogPolyApproximation::run_regression()
 	++b_cntr;
       }
     }
+  }
+}
 
-    if (data_rep->expConfigOptions.expCoeffsSolnApproach !=
-	ORTHOG_LEAST_INTERPOLATION) {
-      // solve
-      IntVector index_mapping; 
-      remove_faulty_data( A, B, points, index_mapping,
-			  faultInfo, surrData.failed_response_data());
-      faultInfo.under_determined = A.numRows() < A.numCols();
-      PCout << "Applying regression to compute " << A.numCols()
-	    << " chaos coefficients using " << A.numRows() << " equations.\n";
+void RegressOrthogPolyApproximation::run_regression()
+{
+  // Assume all function values are stored in top block of matrix in rows
+  // 0 to num_surr_data_pts-1. Gradient information will be stored
+  // in the bottom block of the matrix in rows num_surr_data_pts to
+  // num_surr_data_pts + num_data_pts_grad * num_v. All the gradient 
+  // information of point 0 will be stored consecutively then all the gradient
+  // data of point 1, and so on.
+
+  // Currently nothing is done  to modify the regression linear system matrices
+  // A and B if surrData.anchor() is true, as currently surrData.anchor()
+  // is always false. If in the future surrData.anchor() is enabled then
+  // A must be adjusted to include the extra constraint information associated
+  // with the anchor data. That is, if using EQ_CON_LEAST_SQUARES C matrix 
+  // (top block of A ) must contain the fn and grad data of anchor point.
+  // This will violate the first assumption discussed above and effect cross
+  // validation. For this reason no modification is made as yet.
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  int num_expansion_terms = data_rep->multiIndex.size();
+  bool multiple_rhs = (expansionCoeffFlag && expansionCoeffGradFlag);
+
+  CompressedSensingOptionsList opts_list;
+  RealMatrixArray solutions;
+  CSOpts.standardizeInputs = false; // false essential when using derivatives
+
+  // Perform cross validation loop over degrees here.
+  // Current cross validation will not work for equality 
+  // constrained least squares
+  if ( data_rep->crossValidation ) // run cross validation
+    {
+      if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
+	   ORTHOG_LEAST_INTERPOLATION )
+	throw( std::runtime_error("Cannot use cross validation with least interpolation") );
+      if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
+	   EQ_CON_LEAST_SQ_REGRESSION )
+	throw( std::runtime_error("Cannot use cross validation with equality constrained least squares regression") );
+	  
       select_solver();
-      data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
+      run_cross_validation_expansion();
     }
-    else {
-      IntVector index_mapping; 
-      remove_faulty_data( A, B, points, index_mapping, faultInfo,
-			  surrData.failed_response_data() );
-      faultInfo.under_determined = false;
-      PCout << "using least interpolation\n";
-      least_interpolation( points, B );
-    }
+  else {
 
+    RealMatrix A, B, points;
+    build_linear_system( A, B, points );
+
+    if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
+	 ORTHOG_LEAST_INTERPOLATION )
+      {
+	IntVector index_mapping; 
+	RealMatrix points_dummy;
+	remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
+			    surrData.failed_response_data() );
+	faultInfo.under_determined = A.numRows() < A.numCols();
+	PCout << "Applying regression to compute " << num_expansion_terms
+	      << " chaos coefficients using " <<A.numRows()<<" equations.\n";
+	select_solver();
+	data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
+      }
+    else
+      {
+	IntVector index_mapping; 
+	remove_faulty_data( A, B, points, index_mapping, faultInfo,
+			    surrData.failed_response_data() );
+	faultInfo.under_determined = false;
+	PCout << "using least interpolation\n";
+	least_interpolation( points, B );
+      }
+  }
+ 
+  int i, j;
+  int num_grad_rhs = surrData.num_derivative_variables();
+  int num_coeff_rhs = 1;
+  if ( !multiple_rhs && expansionCoeffGradFlag ) num_coeff_rhs = 0;
+
+  if ( expansionCoeffFlag && !multiple_rhs ) {
+    if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
+	 ORTHOG_LEAST_INTERPOLATION && !data_rep->crossValidation )
+    {
+      if (faultInfo.under_determined) // exploit CS sparsity
+	update_sparse(solutions[0][0], num_expansion_terms);
+      else {                          // retain full solution
+	copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
+	sparseIndices.clear();
+      }
+    }
+  }
+  else {
     if (faultInfo.under_determined) { // exploit CS sparsity
       // overlay sparse solutions into an aggregated set of sparse indices
       sparseIndices.clear();
       if (multiple_rhs)
-	update_sparse_indices(solutions[0][0], num_cols_A);
+	update_sparse_indices(solutions[0][0], num_expansion_terms);
       for (i=0; i<num_grad_rhs; ++i)
-	update_sparse_indices(solutions[i+num_coeff_rhs][0], num_cols_A);
+	update_sparse_indices(solutions[i+num_coeff_rhs][0], num_expansion_terms);
       // update expansion{Coeffs,CoeffGrads} from sparse indices
       if (multiple_rhs)
 	update_sparse_coeffs(solutions[0][0]);
@@ -1434,15 +1432,17 @@ void RegressOrthogPolyApproximation::run_regression()
     }
     else { // retain original multiIndex layout
       if (multiple_rhs)
-	copy_data(solutions[0][0], num_cols_A, expansionCoeffs);
+	copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
       for (i=0; i<num_grad_rhs; ++i) {
- 	Real* dense_coeffs = solutions[i+num_coeff_rhs][0];
- 	for (j=0; j<num_cols_A; ++j)
+	Real* dense_coeffs = solutions[i+num_coeff_rhs][0];
+	for (j=0; j<num_expansion_terms; ++j)
 	  expansionCoeffGrads(i,j) = dense_coeffs[j];
       }
       sparseIndices.clear();
     }
   }
+  std::cout << "C " << expansionCoeffs.numRows() << std::endl;
+  std::cout << "C " << data_rep->multiIndex.size() << std::endl;
 }
 
 
@@ -1593,11 +1593,13 @@ update_sparse_sobol(const UShort2DArray& shared_multi_index,
     sobolIndices.sizeUninitialized(sobol_len);
 }
 
-void RegressOrthogPolyApproximation::
-run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points, 
-	       size_t num_data_pts_fn )
+void RegressOrthogPolyApproximation::run_cross_validation_solver()
 {
-  RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
+  RealMatrix A, B, points;
+  build_linear_system( A, B, points );
+
+  int num_data_pts_fn = surrData.points();
+
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -1620,14 +1622,14 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
   int num_folds = 10;
   int max_num_pts_per_fold = num_data_pts_fn / num_folds;
   if ( num_data_pts_fn % num_folds != 0 ); max_num_pts_per_fold++;
-  if ( ( num_data_pts_fn - max_num_pts_per_fold < A_copy.numCols() ) && ( num_data_pts_fn >= A_copy.numCols() ) ) {
+  if ( ( num_data_pts_fn - max_num_pts_per_fold < A.numCols() ) && ( num_data_pts_fn >= A.numCols() ) ) {
     // use one at a time cross validation
     PCout << "The linear system will switch from over-determined to " << 
       " under-determined when K = 10 cross validation is employed. " <<
       " Switching to one at a time cross validation to avoid this\n";
     num_folds = num_data_pts_fn;
 
-    if ( num_data_pts_fn == A_copy.numCols() )
+    if ( num_data_pts_fn == A.numCols() )
       PCout << "Warning: The linear system will switch from exactly " <<
 	" determined to under-determined when leave one out cross " << 
 	" validation is employed\n.";
@@ -1641,44 +1643,46 @@ run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
     cv_iterator.set_num_equations_per_point( 1 );
 
 
-  Real score = cv_iterator.run_cross_validation( A_copy, b );
+  Real score = cv_iterator.run_cross_validation( A, b );
 
   if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
     PCout << "Cross validation score: " << score << "\n";
 
   IntVector index_mapping;
   RealMatrix points_dummy;
-  remove_faulty_data( A_copy, b, points_dummy, index_mapping,
+  remove_faulty_data( A, b, points_dummy, index_mapping,
 		      faultInfo, surrData.failed_response_data() );
-  int num_rows_V = A_copy.numRows(),
-    num_cols_V = A_copy.numCols();
+  int num_rows_V = A.numRows(),
+    num_cols_V = A.numCols();
   faultInfo.under_determined = num_rows_V < num_cols_V;
   PCout << "Applying regression to compute " << num_cols_V
 	<< " chaos coefficients using " << num_rows_V << " equations.\n";
   select_solver();
   RealMatrix solutions, metrics;
   linear_solver->set_residual_tolerance( best_tolerance );
-  linear_solver->solve( A_copy, b, solutions, metrics );
+  linear_solver->solve( A, b, solutions, metrics );
 
   if (faultInfo.under_determined) // exploit CS sparsity
-    update_sparse(solutions[solutions.numCols()-1], A_copy.numCols() );
+    update_sparse(solutions[solutions.numCols()-1], A.numCols() );
   else {
     // if best expansion order is less than maximum candidate, truncate
     // expansion arrays.  Note that this requires care in cross-expansion
     // evaluations such as off-diagonal covariance.
-    if (A_copy.numCols() < data_rep->multiIndex.size()) // candidate exp size
-      for (size_t i=0; i<A_copy.numCols(); ++i)
+    if (A.numCols() < data_rep->multiIndex.size()) // candidate exp size
+      for (size_t i=0; i<A.numCols(); ++i)
 	sparseIndices.insert(i); // sparse subset is first num_basis_terms
-    copy_data(solutions[solutions.numCols()-1],A_copy.numCols(),expansionCoeffs);
+    copy_data(solutions[solutions.numCols()-1],A.numCols(),expansionCoeffs);
   }
 }
 
 
-void RegressOrthogPolyApproximation::
-degree_search( RealMatrix &A, RealMatrix &B, RealMatrix &points, 
-		      size_t num_data_pts_fn )
+void RegressOrthogPolyApproximation::run_cross_validation_expansion()
 {
-  RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
+  RealMatrix A, B, points;
+  build_linear_system( A, B, points );
+
+  int num_data_pts_fn = surrData.points();
+
   RealVector b( Teuchos::Copy, B.values(), B.numRows() );
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -1714,8 +1718,8 @@ degree_search( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 	PCout << "Testing PCE order " << order << std::endl;
       int num_basis_terms = nchoosek( num_dims + order, order );
       RealMatrix vandermonde_submatrix( Teuchos::View, 
-					A_copy,
-					A_copy.numRows(),
+					A,
+					A.numRows(),
 					num_basis_terms, 0, 0 );
 
 
@@ -1775,8 +1779,8 @@ degree_search( RealMatrix &A, RealMatrix &B, RealMatrix &points,
     }
   // set CSOpts so that best PCE can be built. We are assuming num_rhs=1
   RealMatrix vandermonde_submatrix( Teuchos::View, 
-				    A_copy,
-				    A_copy.numRows(),
+				    A,
+				    A.numRows(),
 				    num_basis_terms, 0, 0 );
   IntVector index_mapping;
   RealMatrix points_dummy;

@@ -104,13 +104,14 @@ private:
   /// set the information needed to ensure fault tolerance
   void set_fault_info();
 
-  /// Estimate the cross validation error when solving the linear system Ax=b if the linear solver has a epsilon tolerance internally select the best epsilon and return the corresponding solution
-  void run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
-			     size_t num_data_pts_fn );
+  /// Use cross validation to choose solver hyper-parameters when solving the linear system Ax=b. e.g. if the linear solver has a epsilon tolerance internally select the best epsilon and return the corresponding solution
+  void run_cross_validation_solver();
 
-  /// Use cross validation to find the 'best' PCE degree
-  void degree_search( RealMatrix &A, RealMatrix &B, RealMatrix &points,
-			     size_t num_data_pts_fn );
+  /// Use cross validation to find the hyper-parameters of the polynomial chaos expansion. e.g. find the 'best' total degree basis
+  void run_cross_validation_expansion();
+
+  /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b
+  void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points );
 
   /// For a specific vandermonde matrix find the compressed sennsing 
   // options that produce the best PCE
