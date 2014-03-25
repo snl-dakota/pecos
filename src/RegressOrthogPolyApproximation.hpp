@@ -104,8 +104,12 @@ private:
   /// set the information needed to ensure fault tolerance
   void set_fault_info();
 
-  /// Use cross validation to find the 'best' PCE degree
+  /// Estimate the cross validation error when solving the linear system Ax=b if the linear solver has a epsilon tolerance internally select the best epsilon and return the corresponding solution
   void run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points,
+			     size_t num_data_pts_fn );
+
+  /// Use cross validation to find the 'best' PCE degree
+  void degree_search( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 			     size_t num_data_pts_fn );
 
   /// For a specific vandermonde matrix find the compressed sennsing 

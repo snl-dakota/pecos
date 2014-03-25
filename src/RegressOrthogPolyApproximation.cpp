@@ -1320,7 +1320,7 @@ void RegressOrthogPolyApproximation::run_regression()
 	    throw( std::runtime_error("Cannot use cross validation with equality constrained least squares regression") );
 	  
 	  select_solver();
-	  run_cross_validation( A, B, points, num_data_pts_fn );
+	  degree_search( A, B, points, num_data_pts_fn );
 	}
       else {
 	if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
@@ -1593,9 +1593,89 @@ update_sparse_sobol(const UShort2DArray& shared_multi_index,
     sobolIndices.sizeUninitialized(sobol_len);
 }
 
-
 void RegressOrthogPolyApproximation::
 run_cross_validation( RealMatrix &A, RealMatrix &B, RealMatrix &points, 
+	       size_t num_data_pts_fn )
+{
+  RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
+  RealVector b( Teuchos::Copy, B.values(), B.numRows() );
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& approx_order = data_rep->approxOrder;
+  int num_rhs = B.numCols(), num_dims( approx_order.size() );
+
+  Real best_score = std::numeric_limits<Real>::max(), best_tolerance = 0.;
+  int best_basis_parameters_index = 0;
+  int num_build_points = num_data_pts_fn;
+  bool use_gradients = false;
+  if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
+  MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
+  cv_iterator.set_fault_data( faultInfo,
+			      surrData.failed_response_data() );
+  
+  data_rep->CSTool.set_linear_solver( CSOpts );
+  LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
+  cv_iterator.set_solver( linear_solver );
+
+  int num_folds = 10;
+  int max_num_pts_per_fold = num_data_pts_fn / num_folds;
+  if ( num_data_pts_fn % num_folds != 0 ); max_num_pts_per_fold++;
+  if ( ( num_data_pts_fn - max_num_pts_per_fold < A_copy.numCols() ) && ( num_data_pts_fn >= A_copy.numCols() ) ) {
+    // use one at a time cross validation
+    PCout << "The linear system will switch from over-determined to " << 
+      " under-determined when K = 10 cross validation is employed. " <<
+      " Switching to one at a time cross validation to avoid this\n";
+    num_folds = num_data_pts_fn;
+
+    if ( num_data_pts_fn == A_copy.numCols() )
+      PCout << "Warning: The linear system will switch from exactly " <<
+	" determined to under-determined when leave one out cross " << 
+	" validation is employed\n.";
+  }
+
+  cv_iterator.set_num_folds( num_folds );
+  cv_iterator.set_num_points( num_build_points );
+  if ( use_gradients )
+    cv_iterator.set_num_equations_per_point( sharedDataRep->numVars + 1 );
+  else 
+    cv_iterator.set_num_equations_per_point( 1 );
+
+
+  Real score = cv_iterator.run_cross_validation( A_copy, b );
+
+  if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
+    PCout << "Cross validation score: " << score << "\n";
+
+  IntVector index_mapping;
+  RealMatrix points_dummy;
+  remove_faulty_data( A_copy, b, points_dummy, index_mapping,
+		      faultInfo, surrData.failed_response_data() );
+  int num_rows_V = A_copy.numRows(),
+    num_cols_V = A_copy.numCols();
+  faultInfo.under_determined = num_rows_V < num_cols_V;
+  PCout << "Applying regression to compute " << num_cols_V
+	<< " chaos coefficients using " << num_rows_V << " equations.\n";
+  select_solver();
+  RealMatrix solutions, metrics;
+  linear_solver->set_residual_tolerance( best_tolerance );
+  linear_solver->solve( A_copy, b, solutions, metrics );
+
+  if (faultInfo.under_determined) // exploit CS sparsity
+    update_sparse(solutions[solutions.numCols()-1], A_copy.numCols() );
+  else {
+    // if best expansion order is less than maximum candidate, truncate
+    // expansion arrays.  Note that this requires care in cross-expansion
+    // evaluations such as off-diagonal covariance.
+    if (A_copy.numCols() < data_rep->multiIndex.size()) // candidate exp size
+      for (size_t i=0; i<A_copy.numCols(); ++i)
+	sparseIndices.insert(i); // sparse subset is first num_basis_terms
+    copy_data(solutions[solutions.numCols()-1],A_copy.numCols(),expansionCoeffs);
+  }
+}
+
+
+void RegressOrthogPolyApproximation::
+degree_search( RealMatrix &A, RealMatrix &B, RealMatrix &points, 
 		      size_t num_data_pts_fn )
 {
   RealMatrix A_copy( Teuchos::Copy, A, A.numRows(), A.numCols() );
