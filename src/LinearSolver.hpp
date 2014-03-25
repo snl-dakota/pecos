@@ -444,8 +444,11 @@ public:
 
     RealVector singular_values;
     int rank(0);
+    PCout << "A norm " << A_copy.normFrobenius() << std::endl;
+    PCout << "B norm " << b.normFrobenius() << std::endl;
     svd_solve( A_copy, b, result_0, singular_values, rank, 
 	       solverTol_ );
+    PCout << "X norm " << result_0.normFrobenius() << std::endl;
     
     result_1.shapeUninitialized( 2, 1 );
     RealVector residual( b );

@@ -1335,7 +1335,6 @@ void RegressOrthogPolyApproximation::run_regression()
 		  << " chaos coefficients using " <<A.numRows()<<" equations.\n";
 	    select_solver();
 	    data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
-	    
 	    if (faultInfo.under_determined) // exploit CS sparsity
 	      update_sparse(solutions[0][0], num_cols_A);
 	    else {                          // retain full solution
