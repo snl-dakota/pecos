@@ -103,17 +103,6 @@ private:
   //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
   //				        size_t tp_index);
 
-  /// convert quadrature orders to integrand orders using rigorous mappings
-  void quadrature_order_to_integrand_order(const UShortArray& quad_order,
-					   UShortArray& int_order);
-  /// convert integrand orders to expansion orders using rigorous mappings
-  void integrand_order_to_expansion_order(const UShortArray& int_order,
-					  UShortArray& exp_order);
-  /// convert a sparse grid index set and a growth setting to an integrand_order
-  void sparse_grid_level_to_expansion_order(const UShortArray& levels,
-					    UShortArray& exp_order);
-                       //, short growth_rate = UNRESTRICTED_GROWTH);
-
   /// update the total Pareto set with new Pareto-optimal polynomial indices
   void update_pareto(const UShort2DArray& new_pareto,
 		     UShort2DArray& total_pareto);
@@ -142,29 +131,6 @@ private:
   /// combination type for stored expansions; cached in class to bridge
   /// combine_coefficients() and compute_numerical_response_moments()
   short storedExpCombineType;
-
-  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
-  /// identifying the orders of the one-dimensional orthogonal polynomials
-  /// contributing to each of the multivariate orthogonal polynomials.
-  /** For nested rules (GP, CC, or GK), the integration driver's collocKey
-      is insufficient and we must track expansion orders separately. */
-  UShort3DArray tpMultiIndex;
-  /// sparse grid bookkeeping: mapping from num tensor-products by 
-  /// tensor-product multi-indices into aggregated multiIndex
-  Sizet2DArray tpMultiIndexMap;
-  /// sparse grid bookkeeping: reference points for tpMultiIndexMap
-  SizetArray tpMultiIndexMapRef;
-
-  /// saved instances of tpMultiIndex that were computed but not selected
-  std::deque<UShort2DArray> savedTPMultiIndex;
-  /// saved instances of tpMultiIndexMap that were computed but not selected
-  std::deque<SizetArray> savedTPMultiIndexMap;
-  /// saved instances of tpMultiIndexMapRef that were computed but not selected
-  std::deque<size_t> savedTPMultiIndexMapRef;
-
-  /// index into saved sets of data to be restored (stored in this
-  /// class for used by each ProjectOrthogPolyApproximation)
-  size_t restoreIndex;
 };
 
 

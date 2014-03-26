@@ -399,6 +399,9 @@ protected:
   /// Define the mapping from sobolIndexMap into sobolIndices
   void assign_sobol_index_map_values();
 
+  /// check for the presence of trial_set within savedLevMultiIndex
+  bool restore_available(const UShortArray& trial_set);
+
   //
   //- Heading: Data
   //
@@ -618,25 +621,32 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 }
 
 
+inline bool SharedPolyApproxData::
+restore_available(const UShortArray& trial_set)
+{
+  return (std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
+		    trial_set) != savedLevMultiIndex.end());
+}
+
+
 inline bool SharedPolyApproxData::restore_available()
 {
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return (std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
-		    ssg_driver->trial_set()) != savedLevMultiIndex.end());
+  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+  restore_available(sg_driver->trial_set());
 }
 
 
 inline size_t SharedPolyApproxData::restoration_index()
 {
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  return find_index(savedLevMultiIndex, ssg_driver->trial_set());
+  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+  return find_index(savedLevMultiIndex, sg_driver->trial_set());
 }
 
 
 inline size_t SharedPolyApproxData::finalization_index(size_t i)
 {
-  SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-  const std::set<UShortArray>& trial_sets = ssg_driver->computed_trial_sets();
+  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+  const std::set<UShortArray>& trial_sets = sg_driver->computed_trial_sets();
   // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid data
   // with remaining computed trial sets (in sorted order from SparseGridDriver::
   // computedTrialSets).  Below, we determine the order with which these

@@ -12,7 +12,6 @@
 //- Owner:        John Jakeman
 
 #include "RegressOrthogPolyApproximation.hpp"
-#include "SharedRegressOrthogPolyApproxData.hpp"
 #include "pecos_global_defs.hpp"
 #include "Teuchos_LAPACK.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
@@ -118,11 +117,125 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   // check data set for gradients/constraints/faults to determine settings
   surrData.data_checks();
 
-  allocate_arrays();
-  //select_solver();
-  run_regression(); // calculate PCE coefficients
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  switch (data_rep->expConfigOptions.expBasisType) {
+  case TOTAL_ORDER_BASIS: case TENSOR_PRODUCT_BASIS:
+    allocate_arrays();
+    //select_solver();
+    run_regression(); // solve for PCE coefficients, optionally with cross valid
+    break;
+  case ADAPTED_BASIS:
+    allocate_arrays();
+    adapt_regression(); // adapt for the best multiIndex for a fixed data set
+    break;
+  }
 
   computedMean = computedVariance = 0;
+}
+
+
+void RegressOrthogPolyApproximation::adapt_regression()
+{
+  // For now, we assume that the CV error for a level 0 sparse grid will not be
+  // low enough to trigger immediate termination.  Thus, we will always do one
+  // cycle of select_best_active() with level 1 index sets.  If we move to
+  // supporting general reference points, then we should obtain the CV err for
+  // this initial sparse grid candidate basis.
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  data_rep->cvErrorRef = DBL_MAX;
+  data_rep->csgDriver.initialize_sets(); // initialize the active sets
+
+  int soft_conv_count = 0, soft_conv_limit = 1; // for now
+  Real delta_star; bool converged = false;
+  while (!converged) {
+    // invoke run_regression() for each index set candidate and select best
+    delta_star = select_best_active();
+    // increase in CV error results in negative delta_star and trips conv count
+    if (delta_star < data_rep->expConfigOptions.convergenceTol)
+      ++soft_conv_count;
+    if (soft_conv_count > soft_conv_limit)
+      converged = true;
+  }
+
+  // different finalize: don't add in any remaining evaluated sets;
+  // rather, we need to backtrack and restore the best cvErrorRef solution
+  data_rep->restore_best_solution(adaptedMultiIndex);
+  // Once done for this QoI, append adaptedMultiIndex to shared multiIndex,
+  // define sparseIndices, and clear adaptedMultiIndex
+  size_t append_ref;
+  data_rep->append_multi_index(adaptedMultiIndex, data_rep->multiIndex,
+			       sparseIndices, append_ref);
+  adaptedMultiIndex.clear();
+}
+
+
+Real RegressOrthogPolyApproximation::select_best_active()
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const std::set<UShortArray>& active_mi
+    = data_rep->csgDriver.active_multi_index();
+  std::set<UShortArray>::const_iterator cit, cit_star;
+  Real cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
+  CombinedSparseGridDriver* csg_driver = &data_rep->csgDriver;
+  // Reevaluate the effect of every active set every time
+  for (cit=active_mi.begin(); cit!=active_mi.end(); ++cit) {
+
+    // increment grid with current candidate
+    PCout << "\n>>>>> Evaluating trial index set:\n" << *cit;
+    csg_driver->push_trial_set(*cit);
+
+    // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
+    const UShortArray& trial_set = csg_driver->trial_set();
+    if (data_rep->restore_available(trial_set))
+      data_rep->restore_trial_set(trial_set, adaptedMultiIndex);
+    else
+      data_rep->increment_trial_set(csg_driver, adaptedMultiIndex);
+
+    // number of unique points added is equivalent to number of candidate exp
+    // terms added for Gauss quadrature, but not other cases
+    //int new_terms = csg_driver->unique_trial_points();
+    const SizetArray& tp_mi_map_ref = data_rep->tpMultiIndexMapRef;
+    size_t last_index = tp_mi_map_ref.size() - 1,
+      new_terms = tp_mi_map_ref[last_index] - tp_mi_map_ref[last_index - 1];
+
+    // Solve CS with cross-validation applied to solver settings (e.g., noise
+    // tolerance), but not expansion order (since we are manually adapting it).
+    // We pass false to defer finalization (shared multiIndex, sparseIndices).
+    cv_err = run_cross_validation_solver(adaptedMultiIndex, false);
+
+    // Smallest absolute error is largest decrease from consistent ref.  delta
+    // is a signed quantity in order to detect when best case error increases
+    // relative to ref -> terminate or increment soft conv counter (allow some
+    // number of successive increases before abandoning hope).  Normalize delta
+    // based on size of candidate basis expansion (increment must be nonzero
+    // since growth restriction is precluded for generalized sparse grids).
+    delta = (data_rep->cvErrorRef - cv_err) / new_terms;
+    PCout << "\n<<<<< Trial set refinement metric = " << delta << '\n';
+
+    // track best increment evaluated thus far
+    if (delta > delta_star)
+      { cit_star = cit; delta_star = delta; cv_err_star = cv_err; }
+
+    // restore previous state (destruct order is reversed from construct order)
+    data_rep->decrement_trial_set(trial_set, adaptedMultiIndex);
+    csg_driver->pop_trial_set();
+  }
+  PCout << "\n<<<<< Evaluation of active index sets completed.\n"
+	<< "\n<<<<< Index set selection:\n" << *cit_star;
+
+  // permanently apply best increment and update ref points for next increment
+  const UShortArray& best_set = *cit_star;
+  csg_driver->update_sets(best_set);
+  data_rep->restore_trial_set(best_set, adaptedMultiIndex);
+
+  // update CV error reference, but only if CV error has been reduced
+  if (delta_star > 0.)
+    data_rep->update_reference(cv_err_star);
+
+  return delta_star;
 }
 
 
@@ -1212,9 +1325,9 @@ void RegressOrthogPolyApproximation::set_fault_info()
 		      surrData.num_derivative_variables() );
 };
 
-void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A,
-							  RealMatrix &B,
-							  RealMatrix &points )
+void RegressOrthogPolyApproximation::
+build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
+		     const UShort2DArray& multi_index)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -1223,7 +1336,7 @@ void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A,
     num_deriv_vars = surrData.num_derivative_variables(),
     num_v = sharedDataRep->numVars;
   int num_rows_A =  0, // number of rows in matrix A
-    num_cols_A = data_rep->multiIndex.size(), // candidate expansion size
+    num_cols_A = multi_index.size(), // candidate expansion size
     num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs;
   bool add_val, add_grad;
   
@@ -1262,7 +1375,7 @@ void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A,
     for (i=0; i<num_cols_A; ++i) {
       a_cntr = num_rows_A*i;
       a_grad_cntr = a_cntr + num_data_pts_fn;
-      const UShortArray& mi_i = data_rep->multiIndex[i];
+      const UShortArray& mi_i = multi_index[i];
       for (j=0;j<num_surr_data_pts; ++j) {
 	add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
 	data_rep->pack_polynomial_data(surrData.continuous_variables(j), mi_i,
@@ -1294,7 +1407,7 @@ void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A,
       // repack "A" matrix with different Psi omissions
       a_cntr = 0;
       for (i=0; i<num_cols_A; ++i) {
-	const UShortArray& mi_i = data_rep->multiIndex[i];
+	const UShortArray& mi_i = multi_index[i];
 	for (j=0; j<num_surr_data_pts; ++j) {
 	  add_val = false; add_grad = true;
 	  if (add_grad) {
@@ -1476,47 +1589,6 @@ update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms)
 }
 
 
-void RegressOrthogPolyApproximation::
-update_multi_index(const UShort2DArray& mi_subset, bool track_sparse)
-{
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  UShort2DArray& mi_shared = data_rep->multiIndex;
-
-  // update sparseIndices based on a local subset of shared multiIndex.
-  // OLI does not employ an upper bound candidate multiIndex, so we must
-  // incrementally define it here.
-  sparseIndices.clear();
-  size_t i, num_mi_subset = mi_subset.size(), num_mi_shared = mi_shared.size();
-  if (!num_mi_shared) {
-    mi_shared = mi_subset;
-    // use sparseIndices even though not currently a subset, since
-    // subsequent QoI could render this a subset.
-    if (track_sparse)
-      for (i=0; i<num_mi_subset; ++i)
-	sparseIndices.insert(i);
-  }
-  else {
-    for (i=0; i<num_mi_subset; ++i) {
-      if (track_sparse)
-	sparseIndices.insert(i);
-      if (i<num_mi_shared) {
-	// For efficiency in current use cases, assume/enforce that mi_subset
-	// is a leading subset with ordering that is consistent with mi_shared
-	if (mi_subset[i] != mi_shared[i]) {
-	  PCerr << "Error: simplifying assumption violated in RegressOrthogPoly"
-		<< "Approximation::update_sparse_indices(UShort2DArray&)."
-		<< std::endl;
-	  abort_handler(-1);
-	}
-      }
-      else
-	mi_shared.push_back(mi_subset[i]);
-    }
-  }
-}
-
-
 void RegressOrthogPolyApproximation::update_sparse_coeffs(Real* dense_coeffs)
 {
   // build sparse expansionCoeffs
@@ -1593,10 +1665,12 @@ update_sparse_sobol(const UShort2DArray& shared_multi_index,
     sobolIndices.sizeUninitialized(sobol_len);
 }
 
-void RegressOrthogPolyApproximation::run_cross_validation_solver()
+
+Real RegressOrthogPolyApproximation::
+run_cross_validation_solver(const UShort2DArray& multi_index, bool finalize)
 {
   RealMatrix A, B, points;
-  build_linear_system( A, B, points );
+  build_linear_system( A, B, points, multi_index );
 
   int num_data_pts_fn = surrData.points();
 
@@ -1662,21 +1736,26 @@ void RegressOrthogPolyApproximation::run_cross_validation_solver()
   linear_solver->set_residual_tolerance( best_tolerance );
   linear_solver->solve( A, b, solutions, metrics );
 
-  if (faultInfo.under_determined) // exploit CS sparsity
-    update_sparse(solutions[solutions.numCols()-1], A.numCols() );
-  else {
-    // if best expansion order is less than maximum candidate, truncate
-    // expansion arrays.  Note that this requires care in cross-expansion
-    // evaluations such as off-diagonal covariance.
-    if (A.numCols() < data_rep->multiIndex.size()) // candidate exp size
-      for (size_t i=0; i<A.numCols(); ++i)
-	sparseIndices.insert(i); // sparse subset is first num_basis_terms
-    copy_data(solutions[solutions.numCols()-1],A.numCols(),expansionCoeffs);
+  // TO DO: employ this fn in primary CV context, with finalize = true
+  if (finalize) {
+    if (faultInfo.under_determined) // exploit CS sparsity
+      update_sparse(solutions[solutions.numCols()-1], A.numCols() );
+    else {
+      // if best expansion order is less than maximum candidate, truncate
+      // expansion arrays.  Note that this requires care in cross-expansion
+      // evaluations such as off-diagonal covariance.
+      if (A.numCols() < data_rep->multiIndex.size()) // candidate exp size
+	for (size_t i=0; i<A.numCols(); ++i)
+	  sparseIndices.insert(i); // sparse subset is first num_basis_terms
+      copy_data(solutions[solutions.numCols()-1],A.numCols(),expansionCoeffs);
+    }
   }
+
+  return score;
 }
 
 
-void RegressOrthogPolyApproximation::run_cross_validation_expansion()
+Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 {
   RealMatrix A, B, points;
   build_linear_system( A, B, points );
@@ -1807,6 +1886,8 @@ void RegressOrthogPolyApproximation::run_cross_validation_expansion()
 	sparseIndices.insert(i); // sparse subset is first num_basis_terms
     copy_data(solutions[solutions.numCols()-1], num_basis_terms,expansionCoeffs);
   }
+
+  return best_score;
 };
 
 void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
@@ -1887,7 +1968,10 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
     int last_index = k.length() - 1, new_order = k[last_index];
     data_rep->update_approx_order(new_order);
     // update sparseIndices and shared multiIndex from local_multi_index
-    update_multi_index(local_multi_index, true);
+    size_t local_mi_ref;
+    data_rep->append_leading_multi_index(local_multi_index,
+					 data_rep->multiIndex,
+					 sparseIndices, local_mi_ref);
     // update shared sobolIndexMap from local_multi_index
     data_rep->update_component_sobol(local_multi_index);
   }

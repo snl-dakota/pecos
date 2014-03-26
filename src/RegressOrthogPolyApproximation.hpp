@@ -17,8 +17,10 @@
 #include "OrthogPolyApproximation.hpp"
 #include "LinearSolver.hpp"
 #include "FaultTolerance.hpp"
+#include "SharedRegressOrthogPolyApproxData.hpp"
 
 namespace Pecos {
+
 
 /// Derived approximation class for multivariate orthogonal polynomial
 /// approximation with coefficient estimation via regression.
@@ -94,6 +96,9 @@ private:
   //- Heading: Member functions
   //
 
+  /// set the information needed to ensure fault tolerance
+  void set_fault_info();
+
   /// selects the solver for L1 or L2 minimization based on user input
   void select_solver();
 
@@ -101,17 +106,26 @@ private:
   /// expansion coefficients using L1 or L2 minimization
   void run_regression();
 
-  /// set the information needed to ensure fault tolerance
-  void set_fault_info();
+  /// perform an adaptive selection of candidate basis for fixed data,
+  /// employing a generalized sparse grid to define the candidate basis
+  /// index sets
+  void adapt_regression();
+  /// from among the active index sets, select the candidate refinement that
+  /// provides the greatest reduction in cross-validation error
+  Real select_best_active();
 
   /// Use cross validation to choose solver hyper-parameters when solving the linear system Ax=b. e.g. if the linear solver has a epsilon tolerance internally select the best epsilon and return the corresponding solution
-  void run_cross_validation_solver();
+  Real run_cross_validation_solver(const UShort2DArray& multi_index,
+				   bool finalize = true);
 
   /// Use cross validation to find the hyper-parameters of the polynomial chaos expansion. e.g. find the 'best' total degree basis
-  void run_cross_validation_expansion();
+  Real run_cross_validation_expansion();
 
   /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b
   void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points );
+  /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b
+  void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
+			    const UShort2DArray& multi_index );
 
   /// For a specific vandermonde matrix find the compressed sennsing 
   // options that produce the best PCE
@@ -128,8 +142,6 @@ private:
   void update_sparse(Real* dense_coeffs, size_t num_dense_terms);
   /// augment sparse_indices based on nonzero dense_coeffs
   void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms);
-  /// augment the shared multiIndex and define sparseIndices if requested
-  void update_multi_index(const UShort2DArray& mi_subset, bool track_sparse);
   /// define sparse expansionCoeffs from dense_coeffs and sparse_indices
   void update_sparse_coeffs(Real* dense_coeffs);
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and
@@ -209,6 +221,10 @@ private:
   /// maps shared index from sobolIndexMap values to sparse index into
   /// sparse sobolIndices
   ULongULongMap sparseSobolIndexMap;
+
+  /// PCE multi-index during adapted basis solution process.  Once complete,
+  /// the shared multiIndex and saprseIndices are updated.
+  UShort2DArray adaptedMultiIndex;
 };
 
 
@@ -220,6 +236,15 @@ RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
 
 inline RegressOrthogPolyApproximation::~RegressOrthogPolyApproximation()
 { }
+
+
+inline void RegressOrthogPolyApproximation::
+build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points )
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  build_linear_system( A, B, points, data_rep->multiIndex );
+}
 
 
 inline ULongULongMap RegressOrthogPolyApproximation::

@@ -41,9 +41,9 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
-      UShortArray integrand_order(numVars);
-      quadrature_order_to_integrand_order(quad_order, integrand_order);
-      integrand_order_to_expansion_order(integrand_order, approxOrder);
+      UShortArray int_order(numVars);
+      quadrature_order_to_integrand_order(driverRep, quad_order, int_order);
+      integrand_order_to_expansion_order(int_order, approxOrder);
       tensor_product_multi_index(approxOrder, multiIndex);
       allocate_component_sobol(multiIndex);
       quadOrderPrev = quad_order;
@@ -119,20 +119,10 @@ void SharedProjectOrthogPolyApproxData::increment_data()
     abort_handler(-1);
   }
 
-  size_t last_index = tpMultiIndex.size();
-  // increment tpMultiIndex{,Map,MapRef} arrays
-  UShort2DArray new_us2a; SizetArray new_sa;
-  tpMultiIndex.push_back(new_us2a);
-  tpMultiIndexMap.push_back(new_sa); tpMultiIndexMapRef.push_back(0);
-  // update tpMultiIndex
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  UShortArray exp_order(numVars);
-  sparse_grid_level_to_expansion_order(csg_driver->trial_set(), exp_order);
-  tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
+  // increment tpMultiIndex{,Map,MapRef} arrays, update tpMultiIndex,
   // update multiIndex and append bookkeeping
-  append_multi_index(tpMultiIndex[last_index], multiIndex,
-		     tpMultiIndexMap[last_index],
-		     tpMultiIndexMapRef[last_index]);
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  increment_trial_set(csg_driver, multiIndex);
   // update Sobol' array sizes to pick up new interaction terms
   increment_component_sobol();
 
@@ -163,20 +153,8 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
     abort_handler(-1);
   }
 
-  // reset multiIndex
-  size_t num_exp_terms = tpMultiIndexMapRef.back();
-  multiIndex.resize(num_exp_terms); // truncate previous increment
-
-  // reset tensor-product bookkeeping and save restorable data
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  savedLevMultiIndex.push_back(csg_driver->trial_set());
-  savedTPMultiIndex.push_back(tpMultiIndex.back());
-  savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
-  savedTPMultiIndexMapRef.push_back(num_exp_terms);
-
-  tpMultiIndex.pop_back();
-  tpMultiIndexMap.pop_back();
-  tpMultiIndexMapRef.pop_back();
+  decrement_trial_set(csg_driver->trial_set(), multiIndex);
 }
 
 
@@ -188,35 +166,15 @@ void SharedProjectOrthogPolyApproxData::pre_restore_data()
     abort_handler(-1);
   }
 
-  // move previous expansion data to current expansion
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  restoreIndex = find_index(savedLevMultiIndex, csg_driver->trial_set());
-
-  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
-  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
-  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
-
-  size_t last_index = tpMultiIndex.size();
-  std::advance(iit, restoreIndex); tpMultiIndex.push_back(*iit);
-  std::advance(mit, restoreIndex); tpMultiIndexMap.push_back(*mit);
-  std::advance(rit, restoreIndex); tpMultiIndexMapRef.push_back(*rit);
-
-  // update multiIndex
-  append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
-		     tpMultiIndexMapRef[last_index], multiIndex);
+  pre_restore_trial_set(csg_driver->trial_set(), multiIndex);
 }
 
 
 void SharedProjectOrthogPolyApproxData::post_restore_data()
 {
-  std::deque<UShortArray>::iterator   sit = savedLevMultiIndex.begin();
-  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
-  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
-  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
-  std::advance(sit, restoreIndex); savedLevMultiIndex.erase(sit);
-  std::advance(iit, restoreIndex); savedTPMultiIndex.erase(iit);
-  std::advance(mit, restoreIndex); savedTPMultiIndexMap.erase(mit);
-  std::advance(rit, restoreIndex); savedTPMultiIndexMapRef.erase(rit);
+  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  post_restore_trial_set(csg_driver->trial_set(), multiIndex);
 }
 
 
@@ -317,9 +275,11 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
       UShortArray exp_order_i, exp_order_j, exp_order_prod(numVars);
       UShort2DArray multi_index_prod, tp_multi_index_prod;
       for (i=0; i<num_stored_mi; ++i) {
-	sparse_grid_level_to_expansion_order(stored_pareto[i], exp_order_i);
+	sparse_grid_level_to_expansion_order(csg_driver, stored_pareto[i],
+					     exp_order_i);
 	for (j=0; j<num_curr_mi; ++j) {
-	  sparse_grid_level_to_expansion_order(curr_pareto[j], exp_order_j);
+	  sparse_grid_level_to_expansion_order(csg_driver, curr_pareto[j],
+					       exp_order_j);
 	  for (k=0; k<numVars; ++k)
 	    exp_order_prod[k] = exp_order_i[k] + exp_order_j[k];
 	  tensor_product_multi_index(exp_order_prod, tp_multi_index_prod);
@@ -388,7 +348,8 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     // regenerate i-th exp_order as collocKey[i] cannot be used in general case
     // (i.e., for nested rules GP, CC, F2, or GK).  Rather, collocKey[i] is to
     // be used only as the key to the collocation pts.
-    sparse_grid_level_to_expansion_order(sm_multi_index[i], exp_order);
+    sparse_grid_level_to_expansion_order(csg_driver, sm_multi_index[i],
+					 exp_order);
     tensor_product_multi_index(exp_order, tpMultiIndex[i]);
     append_multi_index(tpMultiIndex[i], multi_index, tpMultiIndexMap[i],
 		       tpMultiIndexMapRef[i]);
@@ -416,8 +377,8 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     short exp_growth = (sparseGridExpansion == SPARSE_INT_RESTR_TENSOR_SUM_EXP)
       ? MODERATE_RESTRICTED_GROWTH : UNRESTRICTED_GROWTH;
     for (i=0; i<num_smolyak_indices; ++i) {
-      sparse_grid_level_to_expansion_order(sm_multi_index[i], exp_order,
-					   exp_growth);
+      sparse_grid_level_to_expansion_order(csg_driver, sm_multi_index[i],
+                                           exp_order,  exp_growth);
       tensor_product_multi_index(exp_order, tp_multi_index);
       append_multi_index(tp_multi_index, multi_index);
 #ifdef DEBUG
@@ -435,7 +396,8 @@ sparse_grid_multi_index(UShort2DArray& multi_index)
     UShort2DArray pareto(1), total_pareto;
     for (i=0; i<num_smolyak_indices; ++i) {
       csg_driver->level_to_order(sm_multi_index[i], quad_order);
-      quadrature_order_to_integrand_order(quad_order, integrand_order);
+      quadrature_order_to_integrand_order(driverRep, quad_order,
+                                          integrand_order);
       // maintain an n-dimensional Pareto front of nondominated multi-indices
       pareto[0] = integrand_order;
       update_pareto(pareto, total_pareto);
@@ -501,151 +463,6 @@ map_tensor_product_multi_index(UShort2DArray& tp_multi_index, size_t tp_index)
     tp_multi_index[i] = multiIndex[tp_mi_map[i]];
 }
 */
-
-
-/** The optional growth_rate supports the option of forcing the computed
-    integrand order to be conservative in the presence of exponential growth
-    due to nested quadrature rules.  This avoids aggressive formulation of PCE
-    expansion orders when an exponential rule takes a large jump that is not
-    balanced by the other index set component mappings.  Note that restricting
-    the expansion growth directly from the level (*_RESTRICTED_GROWTH cases
-    below used by SPARSE_INT_RESTR_TENSOR_SUM_EXP) is similar but not identical
-    to restricting the quadrature order growth from the level and then computing
-    the integrand and expansion orders from the restricted quadrature order
-    (default UNRESTRICTED_GROWTH case below used by SPARSE_INT_TENSOR_SUM_EXP
-    and TENSOR_INT_TENSOR_SUM_EXP, where quadrature rule restriction happens
-    elsewhere).  In particular, these approaches differ in granularity of
-    control, since the former approach grows linearly and the latter approach
-    selects the minimal quadrature order (from nonlinear growth or lookup) that
-    meets a linear target. */
-void SharedProjectOrthogPolyApproxData::
-sparse_grid_level_to_expansion_order(const UShortArray& level,
-				     UShortArray& exp_order)
-                                     //,short growth_rate)
-{
-  size_t n = level.size();
-  UShortArray int_order(n);
-  //switch (growth_rate) {
-  //case UNRESTRICTED_GROWTH: { // used for {SPARSE,TENSOR}_INT_TENSOR_SUM_EXP
-    // Best option for TENSOR_INT_TENSOR_SUM_EXP, but SPARSE_INT_TENSOR_SUM_EXP
-    // is generally too aggressive for nested rules and exponential growth
-    // (SPARSE_INT_RESTR_TENSOR_SUM_EXP is preferred).
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    UShortArray quad_order(n);
-    csg_driver->level_to_order(level, quad_order);
-    quadrature_order_to_integrand_order(quad_order, int_order);
-    //break;
-  //}
-  /*
-  case SLOW_RESTRICTED_GROWTH: // not currently used
-    for (size_t i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
-      int_order[i] =  2*level[i] + 1;
-    break;
-  case MODERATE_RESTRICTED_GROWTH: // used for SPARSE_INT_RESTR_TENSOR_SUM_EXP
-    // mitigate uneven integrand coverage due to exponential rule growth by
-    // enforcing moderate linear expansion growth.
-    for (size_t i=0; i<n; ++i) // synch with moderate linear growth: i = 4l + 1
-      int_order[i] =  4*level[i] + 1;
-    break;
-  }
-  */
-  integrand_order_to_expansion_order(int_order, exp_order);
-}
-
-
-void SharedProjectOrthogPolyApproxData::
-quadrature_order_to_integrand_order(const UShortArray& quad_order,
-				    UShortArray& int_order)
-{
-  // Need to know exact polynomial resolution for each mixed tensor grid:
-  //   Gaussian integrand resolution:        2m-1
-  //   Gauss-Patterson integrand resolution: 2m-1 - previous constraints + 1
-  //   Clenshaw-Curtis integrand resolution: m (odd m), m-1 (even m)
-
-  // Burkardt monomial test logic:
-  //   sparse_grid_monomial_test: resolve monomials of total degree 2*level + 1
-  //   for all rules --> doesn't make sense for exponential growth rules where
-  //   order grows faster for Gauss than CC (level_to_order exponential is
-  //   2^{w+1}-1 for Gauss and 2^w+1 for CC) --> estimate appears valid for CC
-  //   (although it does not define a crisp boundary, since some monomials above
-  //   the boundary are resolved) but overly conservative for Gauss (whole
-  //   orders above the boundary estimate are resolved).
-
-  size_t i, n = quad_order.size();
-  if (int_order.size() != n)
-    int_order.resize(n);
-  const ShortArray& colloc_rules = driverRep->collocation_rules();
-  if (colloc_rules.empty()) // use orthogPolyTypes with default modes
-    for (i=0; i<n; ++i)
-      switch (orthogPolyTypes[i]) {
-      case CHEBYSHEV_ORTHOG: // default mode is Clenshaw-Curtis
-	int_order[i] = (quad_order[i] % 2) ? quad_order[i] : quad_order[i] - 1;
-	break;
-      default: // default mode is standard non-nested Gauss rules
-	int_order[i] =  2*quad_order[i] - 1; // i = 2m - 1
-	break;
-      }
-  else {
-    const UShortArray& gk_order = driverRep->genz_keister_order();
-    const UShortArray& gk_prec  = driverRep->genz_keister_precision();
-    for (i=0; i<n; ++i)
-      switch (colloc_rules[i]) {
-      case CLENSHAW_CURTIS: case FEJER2:
-	// i = m (odd m), m-1 (even m).  Note that growth rule enforces odd.
-	// TO DO: verify FEJER2 same as CC
-	int_order[i] = (quad_order[i] % 2) ? quad_order[i] : quad_order[i] - 1;
-	break;
-      case GAUSS_PATTERSON: {
-	// for o(l)=2^{l+1}-1, o(l-1) = (o(l)-1)/2
-	unsigned short prev_o = std::max(1,(quad_order[i] - 1)/2);
-	int_order[i] = 2*quad_order[i] - prev_o;
-	break;
-      }
-      case GENZ_KEISTER: {
-	// same relationship as Gauss-Patterson, except prev_o does not follow
-	// simple pattern and requires lookup
-	unsigned short lev = 0, max_lev = 5;
-	for (lev=0; lev<=max_lev; ++lev)
-	  if (gk_order[lev] == quad_order[i])
-	    { int_order[i] = gk_prec[lev]; break; }
-	/*
-	int lev, o, prev_o = 1, max_lev = 4, i_rule = GENZ_KEISTER,
-	  g_rule = FULL_EXPONENTIAL; // map l->o directly without restriction
-	for (lev=0; lev<=max_lev; ++lev) {
-	  webbur::level_growth_to_order(1, &lev, &i_rule, &g_rule, &o);
-	  if (o == quad_order[i])
-	    { int_order[i] = 2*quad_order[i] - prev_o; break; }
-	  else
-	    prev_o = o;
-	}
-	*/
-	if (lev > max_lev) {
-	  PCerr << "Error: maximum GENZ_KEISTER level exceeded in ProjectOrthog"
-		<< "PolyApproximation::quadrature_order_to_integrand_order()."
-		<< std::endl;
-	  abort_handler(-1);
-	}
-	break;
-      }
-      default: // standard non-nested Gauss rules
-	int_order[i] =  2*quad_order[i] - 1; break; // i = 2m - 1
-      }
-  }
-}
-
-
-void SharedProjectOrthogPolyApproxData::
-integrand_order_to_expansion_order(const UShortArray& int_order,
-				   UShortArray& exp_order)
-{
-  // reserve half of the integrand order for the expansion and half for the
-  // response function (integrand = 2p)
-  size_t i, n = int_order.size();
-  if (exp_order.size() != n)
-    exp_order.resize(n);
-  for (i=0; i<n; ++i)
-    exp_order[i] = int_order[i] / 2; // remainder truncated
-}
 
 
 void SharedProjectOrthogPolyApproxData::

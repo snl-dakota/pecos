@@ -63,7 +63,31 @@ void SharedOrthogPolyApproxData::allocate_data()
   if (update_exp_form) { //|| restore_exp_form) {
     switch (expConfigOptions.expBasisType) {
     // ADAPTED starts from total-order basis, like generalized sparse grid
-    case TOTAL_ORDER_BASIS: case ADAPTED_BASIS:
+    case ADAPTED_BASIS: {
+      // We could assume that:
+      // (1) exp_order defines the upper bound of the basis (not the starting
+      //     point) --> e.g., we are in 100D and would like to recover terms up
+      //     to order 5, but can't form a candidate multiIndex that large. So we
+      //     start from SGL 0 and select components up to this upper bnd.  In 
+      //     this case, we specify either colloc_points or colloc_ratio << 1.
+      // (2) exp_order defines the starting point and there is no explicit
+      //     upper bound --> colloc_ratio is more (initially) meaningful.
+      // (3) neither: exp_order only used to define colloc_pts from colloc_ratio
+      //     and we hard-wire the starting point (e.g., level 0) for adaptation
+      // For now, we use case 3 as it is the simplest
+      UShortArray order0(numVars, 0);
+      tpMultiIndex.resize(1);
+      tpMultiIndexMap.resize(1); tpMultiIndexMapRef.resize(1);
+      tensor_product_multi_index(order0, tpMultiIndex[0]);
+      append_multi_index(tpMultiIndex[0], multiIndex, tpMultiIndexMap[0],
+			 tpMultiIndexMapRef[0]);
+      // initialize the sparse grid driver
+      csgDriver.initialize_grid(polynomialBasis);
+      //csgDriver.level(0); // level defaults to 0
+      csgDriver.assign_smolyak_arrays();
+      break;
+    }
+    case TOTAL_ORDER_BASIS:
       allocate_total_order(); // defines approxOrder and (candidate) multiIndex
       break;
     case TENSOR_PRODUCT_BASIS:
@@ -151,6 +175,99 @@ allocate_component_sobol(const UShort2DArray& multi_index)
 
 
 void SharedOrthogPolyApproxData::
+increment_trial_set(CombinedSparseGridDriver* csg_driver,
+		    UShort2DArray& aggregated_mi)
+{
+  size_t last_index = tpMultiIndex.size();
+  // increment tpMultiIndex{,Map,MapRef} arrays
+  UShort2DArray new_us2a; SizetArray new_sa;
+  tpMultiIndex.push_back(new_us2a);
+  tpMultiIndexMap.push_back(new_sa); tpMultiIndexMapRef.push_back(0);
+  // update tpMultiIndex
+  UShortArray exp_order(numVars);
+  sparse_grid_level_to_expansion_order(csg_driver, csg_driver->trial_set(),
+				       exp_order);
+  tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
+  // update multiIndex and append bookkeeping
+  append_multi_index(tpMultiIndex[last_index], aggregated_mi,
+		     tpMultiIndexMap[last_index],
+		     tpMultiIndexMapRef[last_index]);
+}
+
+
+void SharedOrthogPolyApproxData::
+decrement_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
+{
+  // reset the aggregated multi-index
+  size_t num_exp_terms = tpMultiIndexMapRef.back();
+  aggregated_mi.resize(num_exp_terms); // truncate previous increment
+
+  // reset tensor-product bookkeeping and save restorable data
+  savedLevMultiIndex.push_back(trial_set);
+  savedTPMultiIndex.push_back(tpMultiIndex.back());
+  savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
+  savedTPMultiIndexMapRef.push_back(num_exp_terms);
+
+  tpMultiIndex.pop_back();
+  tpMultiIndexMap.pop_back();
+  tpMultiIndexMapRef.pop_back();
+}
+
+
+void SharedOrthogPolyApproxData::
+pre_restore_trial_set(const UShortArray& trial_set,
+		      UShort2DArray& aggregated_mi)
+{
+  restoreIndex = find_index(savedLevMultiIndex, trial_set);
+
+  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
+  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
+  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
+
+  size_t last_index = tpMultiIndex.size();
+  std::advance(iit, restoreIndex); tpMultiIndex.push_back(*iit);
+  std::advance(mit, restoreIndex); tpMultiIndexMap.push_back(*mit);
+  std::advance(rit, restoreIndex); tpMultiIndexMapRef.push_back(*rit);
+
+  // update multiIndex
+  append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
+		     tpMultiIndexMapRef[last_index], aggregated_mi);
+}
+
+
+void SharedOrthogPolyApproxData::
+post_restore_trial_set(const UShortArray& trial_set,
+		       UShort2DArray& aggregated_mi)
+{
+  std::deque<UShortArray>::iterator   sit = savedLevMultiIndex.begin();
+  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
+  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
+  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
+  std::advance(sit, restoreIndex); savedLevMultiIndex.erase(sit);
+  std::advance(iit, restoreIndex); savedTPMultiIndex.erase(iit);
+  std::advance(mit, restoreIndex); savedTPMultiIndexMap.erase(mit);
+  std::advance(rit, restoreIndex); savedTPMultiIndexMapRef.erase(rit);
+}
+
+
+void SharedOrthogPolyApproxData::
+restore_best_solution(UShort2DArray& aggregated_mi)
+{
+  // reset the aggregated multi-index
+  size_t num_exp_terms = tpMultiIndexMapRef[bestTPIndex];
+  aggregated_mi.resize(num_exp_terms); // truncate previous increments
+
+  // reset tensor-product bookkeeping and save restorable data
+  savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
+  savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
+
+  tpMultiIndex.resize(1);       // save level 0 index set
+  tpMultiIndexMap.resize(1);    // save level 0 index set
+  tpMultiIndexMapRef.resize(1); // save level 0 index set
+}
+
+
+void SharedOrthogPolyApproxData::
 update_component_sobol(const UShort2DArray& multi_index)
 {
   if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1) {
@@ -220,6 +337,152 @@ void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
 }
 
 
+/** The optional growth_rate supports the option of forcing the computed
+    integrand order to be conservative in the presence of exponential growth
+    due to nested quadrature rules.  This avoids aggressive formulation of PCE
+    expansion orders when an exponential rule takes a large jump that is not
+    balanced by the other index set component mappings.  Note that restricting
+    the expansion growth directly from the level (*_RESTRICTED_GROWTH cases
+    below used by SPARSE_INT_RESTR_TENSOR_SUM_EXP) is similar but not identical
+    to restricting the quadrature order growth from the level and then computing
+    the integrand and expansion orders from the restricted quadrature order
+    (default UNRESTRICTED_GROWTH case below used by SPARSE_INT_TENSOR_SUM_EXP
+    and TENSOR_INT_TENSOR_SUM_EXP, where quadrature rule restriction happens
+    elsewhere).  In particular, these approaches differ in granularity of
+    control, since the former approach grows linearly and the latter approach
+    selects the minimal quadrature order (from nonlinear growth or lookup) that
+    meets a linear target. */
+void SharedOrthogPolyApproxData::
+sparse_grid_level_to_expansion_order(CombinedSparseGridDriver* csg_driver,
+				     const UShortArray& level,
+				     UShortArray& exp_order)
+                                     //,short growth_rate)
+{
+  size_t n = level.size();
+  UShortArray int_order(n);
+  //switch (growth_rate) {
+  //case UNRESTRICTED_GROWTH: { // used for {SPARSE,TENSOR}_INT_TENSOR_SUM_EXP
+    // Best option for TENSOR_INT_TENSOR_SUM_EXP, but SPARSE_INT_TENSOR_SUM_EXP
+    // is generally too aggressive for nested rules and exponential growth
+    // (SPARSE_INT_RESTR_TENSOR_SUM_EXP is preferred).
+    UShortArray quad_order(n);
+    csg_driver->level_to_order(level, quad_order);
+    quadrature_order_to_integrand_order(csg_driver, quad_order, int_order);
+    //break;
+  //}
+  /*
+  case SLOW_RESTRICTED_GROWTH: // not currently used
+    for (size_t i=0; i<n; ++i) // synch with slow linear growth: i = 2l + 1
+      int_order[i] =  2*level[i] + 1;
+    break;
+  case MODERATE_RESTRICTED_GROWTH: // used for SPARSE_INT_RESTR_TENSOR_SUM_EXP
+    // mitigate uneven integrand coverage due to exponential rule growth by
+    // enforcing moderate linear expansion growth.
+    for (size_t i=0; i<n; ++i) // synch with moderate linear growth: i = 4l + 1
+      int_order[i] =  4*level[i] + 1;
+    break;
+  }
+  */
+  integrand_order_to_expansion_order(int_order, exp_order);
+}
+
+
+void SharedOrthogPolyApproxData::
+quadrature_order_to_integrand_order(IntegrationDriver* int_driver,
+				    const UShortArray& quad_order,
+				    UShortArray& int_order)
+{
+  // Need to know exact polynomial resolution for each mixed tensor grid:
+  //   Gaussian integrand resolution:        2m-1
+  //   Gauss-Patterson integrand resolution: 2m-1 - previous constraints + 1
+  //   Clenshaw-Curtis integrand resolution: m (odd m), m-1 (even m)
+
+  // Burkardt monomial test logic:
+  //   sparse_grid_monomial_test: resolve monomials of total degree 2*level + 1
+  //   for all rules --> doesn't make sense for exponential growth rules where
+  //   order grows faster for Gauss than CC (level_to_order exponential is
+  //   2^{w+1}-1 for Gauss and 2^w+1 for CC) --> estimate appears valid for CC
+  //   (although it does not define a crisp boundary, since some monomials above
+  //   the boundary are resolved) but overly conservative for Gauss (whole
+  //   orders above the boundary estimate are resolved).
+
+  size_t i, n = quad_order.size();
+  if (int_order.size() != n)
+    int_order.resize(n);
+  const ShortArray& colloc_rules = int_driver->collocation_rules();
+  if (colloc_rules.empty()) // use orthogPolyTypes with default modes
+    for (i=0; i<n; ++i)
+      switch (orthogPolyTypes[i]) {
+      case CHEBYSHEV_ORTHOG: // default mode is Clenshaw-Curtis
+	int_order[i] = (quad_order[i] % 2) ? quad_order[i] : quad_order[i] - 1;
+	break;
+      default: // default mode is standard non-nested Gauss rules
+	int_order[i] =  2*quad_order[i] - 1; // i = 2m - 1
+	break;
+      }
+  else {
+    const UShortArray& gk_order = int_driver->genz_keister_order();
+    const UShortArray& gk_prec  = int_driver->genz_keister_precision();
+    for (i=0; i<n; ++i)
+      switch (colloc_rules[i]) {
+      case CLENSHAW_CURTIS: case FEJER2:
+	// i = m (odd m), m-1 (even m).  Note that growth rule enforces odd.
+	// TO DO: verify FEJER2 same as CC
+	int_order[i] = (quad_order[i] % 2) ? quad_order[i] : quad_order[i] - 1;
+	break;
+      case GAUSS_PATTERSON: {
+	// for o(l)=2^{l+1}-1, o(l-1) = (o(l)-1)/2
+	unsigned short prev_o = std::max(1,(quad_order[i] - 1)/2);
+	int_order[i] = 2*quad_order[i] - prev_o;
+	break;
+      }
+      case GENZ_KEISTER: {
+	// same relationship as Gauss-Patterson, except prev_o does not follow
+	// simple pattern and requires lookup
+	unsigned short lev = 0, max_lev = 5;
+	for (lev=0; lev<=max_lev; ++lev)
+	  if (gk_order[lev] == quad_order[i])
+	    { int_order[i] = gk_prec[lev]; break; }
+	/*
+	int lev, o, prev_o = 1, max_lev = 4, i_rule = GENZ_KEISTER,
+	  g_rule = FULL_EXPONENTIAL; // map l->o directly without restriction
+	for (lev=0; lev<=max_lev; ++lev) {
+	  webbur::level_growth_to_order(1, &lev, &i_rule, &g_rule, &o);
+	  if (o == quad_order[i])
+	    { int_order[i] = 2*quad_order[i] - prev_o; break; }
+	  else
+	    prev_o = o;
+	}
+	*/
+	if (lev > max_lev) {
+	  PCerr << "Error: maximum GENZ_KEISTER level exceeded in ProjectOrthog"
+		<< "PolyApproximation::quadrature_order_to_integrand_order()."
+		<< std::endl;
+	  abort_handler(-1);
+	}
+	break;
+      }
+      default: // standard non-nested Gauss rules
+	int_order[i] =  2*quad_order[i] - 1; break; // i = 2m - 1
+      }
+  }
+}
+
+
+void SharedOrthogPolyApproxData::
+integrand_order_to_expansion_order(const UShortArray& int_order,
+				   UShortArray& exp_order)
+{
+  // reserve half of the integrand order for the expansion and half for the
+  // response function (integrand = 2p)
+  size_t i, n = int_order.size();
+  if (exp_order.size() != n)
+    exp_order.resize(n);
+  for (i=0; i<n; ++i)
+    exp_order[i] = int_order[i] / 2; // remainder truncated
+}
+
+
 /** Append to combined_mi based on append_mi. */
 void SharedOrthogPolyApproxData::
 append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi)
@@ -264,6 +527,72 @@ append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
       }
       else
 	append_mi_map[i] = index;
+    }
+  }
+}
+
+
+/** Append append_mi to combined_mi, and update append_mi_map and
+    append_mi_map_ref to facilitate related aggregations without
+    repeated searching. */
+void SharedOrthogPolyApproxData::
+append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
+		   SizetSet& append_mi_map, size_t& append_mi_map_ref)
+{
+  size_t i, num_app_mi = append_mi.size();
+  append_mi_map.clear();
+  if (combined_mi.empty()) {
+    combined_mi = append_mi;
+    append_mi_map_ref = 0;
+    for (i=0; i<num_app_mi; ++i)
+      append_mi_map.insert(i);
+  }
+  else {
+    append_mi_map_ref = combined_mi.size();
+    for (i=0; i<num_app_mi; ++i) {
+      const UShortArray& search_mi = append_mi[i];
+      size_t index = find_index(combined_mi, search_mi);
+      if (index == _NPOS) { // search_mi does not yet exist in multi_index
+	append_mi_map.insert(combined_mi.size());
+	combined_mi.push_back(search_mi);
+      }
+      else
+	append_mi_map.insert(index);
+    }
+  }
+}
+
+
+/** Append append_mi to combined_mi, and update append_mi_map and
+    append_mi_map_ref to facilitate related aggregations without
+    repeated searching. */
+void SharedOrthogPolyApproxData::
+append_leading_multi_index(const UShort2DArray& append_mi,
+			   UShort2DArray& combined_mi,
+			   SizetSet& append_mi_map, size_t& append_mi_map_ref)
+{
+  size_t i, num_app_mi = append_mi.size();
+  append_mi_map.clear();
+  if (combined_mi.empty()) {
+    combined_mi = append_mi;
+    append_mi_map_ref = 0;
+    for (i=0; i<num_app_mi; ++i)
+      append_mi_map.insert(i);
+  }
+  else {
+    append_mi_map_ref = combined_mi.size();
+    for (i=0; i<num_app_mi; ++i) {
+      append_mi_map.insert(i);
+      if (i < append_mi_map_ref) {
+	// verify that append_mi is a leading subset with consistent ordering
+	if (append_mi[i] != combined_mi[i]) {
+	  PCerr << "Error: leading subset assumption violated in SharedOrthog"
+		<< "PolyApproxData::append_leading_multi_index()." << std::endl;
+	  abort_handler(-1);
+	}
+      }
+      else
+	combined_mi.push_back(append_mi[i]);
     }
   }
 }

@@ -16,8 +16,10 @@
 
 #include "SharedPolyApproxData.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
+#include "CombinedSparseGridDriver.hpp"
 
 namespace Pecos {
+
 
 /// Derived approximation class for orthogonal polynomials (global
 /// approximation).
@@ -111,6 +113,40 @@ protected:
   bool initialize_orthog_poly_basis_types(const ShortArray& u_types,
 					  ShortArray& opb_types);
 
+  /// convert a sparse grid index set and a growth setting to an integrand_order
+  void sparse_grid_level_to_expansion_order(
+    CombinedSparseGridDriver* csg_driver, const UShortArray& levels,
+    UShortArray& exp_order);//, short growth_rate = UNRESTRICTED_GROWTH);
+  /// convert quadrature orders to integrand orders using rigorous mappings
+  void quadrature_order_to_integrand_order(IntegrationDriver* int_driver,
+					   const UShortArray& quad_order,
+					   UShortArray& int_order);
+  /// convert integrand orders to expansion orders using rigorous mappings
+  void integrand_order_to_expansion_order(const UShortArray& int_order,
+					  UShortArray& exp_order);
+
+  /// helper function for incrementing that is modular on trial set
+  /// and multi-index
+  void increment_trial_set(CombinedSparseGridDriver* csg_driver,
+			   UShort2DArray& aggregated_mi);
+  /// helper function for decrementing that is modular on trial set
+  /// and multi-index
+  void decrement_trial_set(const UShortArray& trial_set,
+			   UShort2DArray& aggregated_mi);
+  /// helper function for restoring that is modular on trial set and multi-index
+  void pre_restore_trial_set(const UShortArray& trial_set,
+			     UShort2DArray& aggregated_mi);
+  /// helper function for restoring that is modular on trial set and multi-index
+  void post_restore_trial_set(const UShortArray& trial_set,
+			      UShort2DArray& aggregated_mi);
+  /// helper function for restoring that is modular on trial set and multi-index
+  void restore_trial_set(const UShortArray& trial_set,
+			 UShort2DArray& aggregated_mi);
+  /// update cvErrorRef and bestTPIndex after improvement in solution
+  void update_reference(Real cv_error);
+  /// update cvErrorRef and bestTPIndex after improvement in solution
+  void restore_best_solution(UShort2DArray& aggregated_mi);
+
   /// update approxOrder and total-order multiIndex
   void allocate_total_order();
   /// allocate sobolIndexMap from multi_index
@@ -123,14 +159,26 @@ protected:
   /// appear in multi_index
   void append_multi_index(const UShort2DArray& append_mi,
 			  UShort2DArray& combined_mi);
-  /// append multi-indices from app_multi_index that do not already
-  /// appear in multi_index; define multi_index_map and multi_index_map_ref
+  /// append multi-indices from append_mi that do not already appear
+  /// in combined_mi; define append_mi_map and append_mi_map_ref
   void append_multi_index(const UShort2DArray& append_mi,
 			  UShort2DArray& combined_mi, SizetArray& append_mi_map,
 			  size_t& append_mi_map_ref);
-  /// append multi-indices from app_multi_index that do not already
-  /// appear in multi_index, using previously defined multi_index_map
-  /// and multi_index_map_ref for mapping
+  /// append multi-indices from append_mi that do not already appear
+  /// in combined_mi; define append_mi_map and append_mi_map_ref
+  void append_multi_index(const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi, SizetSet& append_mi_map,
+			  size_t& append_mi_map_ref);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi (consistent ordering assumed); define append_mi_map
+  /// and append_mi_map_ref
+  void append_leading_multi_index(const UShort2DArray& append_mi,
+				  UShort2DArray& combined_mi,
+				  SizetSet& append_mi_map,
+				  size_t& append_mi_map_ref);
+  /// append multi-indices from append_mi that do not already appear
+  /// in combined_mi, using previously defined append_mi_map and
+  /// append_mi_map_ref for mapping
   void append_multi_index(const UShort2DArray& append_mi,
 			  SizetArray& append_mi_map, size_t& append_mi_map_ref,
 			  UShort2DArray& combined_mi);
@@ -211,6 +259,40 @@ protected:
   SizetArray storedMultiIndexMap;
   /// multi-index that is the result of expansion combination
   UShort2DArray combinedMultiIndex;
+
+  /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
+  /// identifying the orders of the one-dimensional orthogonal polynomials
+  /// contributing to each of the multivariate orthogonal polynomials.
+  /** For nested rules (GP, CC, or GK), the integration driver's collocKey
+      is insufficient and we must track expansion orders separately. */
+  UShort3DArray tpMultiIndex;
+  /// sparse grid bookkeeping: mapping from num tensor-products by 
+  /// tensor-product multi-indices into aggregated multiIndex
+  Sizet2DArray tpMultiIndexMap;
+  /// sparse grid bookkeeping: reference points for tpMultiIndexMap
+  SizetArray tpMultiIndexMapRef;
+
+  /// saved instances of tpMultiIndex that were computed but not selected
+  std::deque<UShort2DArray> savedTPMultiIndex;
+  /// saved instances of tpMultiIndexMap that were computed but not selected
+  std::deque<SizetArray> savedTPMultiIndexMap;
+  /// saved instances of tpMultiIndexMapRef that were computed but not selected
+  std::deque<size_t> savedTPMultiIndexMapRef;
+
+  /// index into saved sets of data to be restored (stored in this
+  /// class for used by each ProjectOrthogPolyApproximation)
+  size_t restoreIndex;
+
+  /// sparse grid driver for adapting a CS candidate basis using greedy
+  /// adaptation via the generalized sparse grid algorithm; it's state
+  /// is reset for each response QoI
+  CombinedSparseGridDriver csgDriver;
+  /// the cross validation error reference point for adapting a CS
+  /// candidate basis; it's state is reset for each response QoI
+  Real cvErrorRef;
+  /// index into tpMultiIndexMapRef that defines the best solution
+  /// (may not be the last solution)
+  size_t bestTPIndex;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
@@ -314,6 +396,21 @@ inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
     if (orthogPolyTypes[i] == NUM_GEN_ORTHOG)
       ((NumericGenOrthogPolynomial*)polynomialBasis[i].polynomial_rep())
 	->coefficients_norms_flag(flag);
+}
+
+
+inline void SharedOrthogPolyApproxData::
+restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
+{
+  pre_restore_trial_set(trial_set, aggregated_mi);
+  post_restore_trial_set(trial_set, aggregated_mi);
+}
+
+
+inline void SharedOrthogPolyApproxData::update_reference(Real cv_error)
+{
+  cvErrorRef  = cv_error;
+  bestTPIndex = tpMultiIndexMapRef.size() - 1; // last entry
 }
 
 
