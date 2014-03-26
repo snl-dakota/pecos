@@ -451,8 +451,6 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
 	      remove_faulty_data( A_valid, b_valid, points_dummy, 
 				  validation_indices,
 				  faultInfo_, failedRespData_ );
-	      std::cout << "valid " << b_valid.numRows() << std::endl;
-
 	      solver_->solve( A_train, b_train, coeff, metrics );
 	    }
 	  else
