@@ -87,6 +87,7 @@ void SharedOrthogPolyApproxData::allocate_data()
       csgDriver.assign_smolyak_arrays();
       break;
     }
+    case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
     case TOTAL_ORDER_BASIS:
       allocate_total_order(); // defines approxOrder and (candidate) multiIndex
       break;
@@ -94,8 +95,6 @@ void SharedOrthogPolyApproxData::allocate_data()
       inflate_scalar(approxOrder, numVars); // promote scalar->vector, if needed
       tensor_product_multi_index(approxOrder, multiIndex);
       break;
-    //case DEFAULT_BASIS: // reassigned in NonDPolynomialChaos ctor
-    //  break;
     }
     allocate_component_sobol(multiIndex);
     // Note: defer this if update_exp_form is needed downstream
@@ -108,7 +107,8 @@ void SharedOrthogPolyApproxData::allocate_data()
     PCout << approxOrder[i] << ' ';
   switch (expConfigOptions.expBasisType) {
   case ADAPTED_BASIS:
-    PCout << "} using adapted total-order expansion of "; break;
+    PCout << "} using adapted expansion initiated from "; break;
+  case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
   case TOTAL_ORDER_BASIS:
     PCout << "} using total-order expansion of ";         break;
   case TENSOR_PRODUCT_BASIS:

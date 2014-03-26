@@ -632,7 +632,7 @@ restore_available(const UShortArray& trial_set)
 inline bool SharedPolyApproxData::restore_available()
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  restore_available(sg_driver->trial_set());
+  return restore_available(sg_driver->trial_set());
 }
 
 
