@@ -120,6 +120,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expBasisType) {
+  case DEFAULT_BASIS: // least interpolation case
   case TOTAL_ORDER_BASIS: case TENSOR_PRODUCT_BASIS:
     allocate_arrays();
     //select_solver();
