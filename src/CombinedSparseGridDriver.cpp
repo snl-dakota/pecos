@@ -31,6 +31,104 @@ CombinedSparseGridDriver* CombinedSparseGridDriver::sgdInstance(NULL);
 
 
 void CombinedSparseGridDriver::
+initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
+		const RealVector& dim_pref,
+		Pecos::BasisConfigOptions& bc_options,
+		/*short refine_type,*/ short refine_control, bool store_colloc,
+		bool track_uniq_prod_wts, short growth_rate)
+{
+  lightweightMode = false;
+  SparseGridDriver::initialize_grid(u_types, ssg_level, dim_pref, bc_options,
+				    refine_control, store_colloc, 
+				    track_uniq_prod_wts, growth_rate);
+
+  // set compute1D{Points,Type1Weights,Type2Weights}
+  initialize_rule_pointers();
+  // set levelGrowthToOrder
+  initialize_growth_pointers();
+}
+
+
+void CombinedSparseGridDriver::
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
+{
+  lightweightMode = false;
+  SparseGridDriver::initialize_grid(poly_basis);
+
+  // set compute1D{Points,Type1Weights,Type2Weights}
+  initialize_rule_pointers();
+  // set levelGrowthToOrder
+  initialize_growth_pointers();
+}
+
+
+void CombinedSparseGridDriver::
+initialize_grid(size_t num_v, unsigned short ssg_level)
+{
+  lightweightMode = true;
+  numVars         = num_v;
+  ssgLevel        = ssg_level;
+  // leave trackUniqueProdWeights as false
+  // leave dimIsotropic as true
+
+  assign_smolyak_arrays();
+
+  //SparseGridDriver::initialize_grid(mi_growth_factor);
+}
+
+
+void CombinedSparseGridDriver::initialize_rule_pointers()
+{
+  size_t i, j;
+  // compute1DPoints needed for grid_size() and for sgmg/sgmga
+  compute1DPoints.resize(numVars);
+  for (i=0; i<numVars; ++i)
+    compute1DPoints[i] = basis_collocation_points;
+  // compute1D{Type1,Type2}Weights only needed for sgmg/sgmga
+  if (refineControl != DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
+    compute1DType1Weights.resize(numVars);
+    for (i=0; i<numVars; i++)
+      compute1DType1Weights[i] = basis_type1_collocation_weights;
+    /*
+    if (computeType2Weights) {
+      compute1DType2Weights.resize(numVars);
+      for (i=0; i<numVars; ++i) {
+	std::vector<CollocFnPtr>& comp_1d_t2_wts_i = compute1DType2Weights[i];
+	comp_1d_t2_wts_i.resize(numVars);
+	for (j=0; j<numVars; ++j)
+	  comp_1d_t2_wts_i[j] = (j==i) ? basis_type2_collocation_weights :
+	                                 basis_type1_collocation_weights;
+      }
+    }
+    */
+  }
+}
+
+
+void CombinedSparseGridDriver::initialize_growth_pointers()
+{
+  levelGrowthToOrder.resize(numVars);
+  for (size_t i=0; i<numVars; ++i)
+    switch (collocRules[i]) {
+    // nested rules with exponential growth:
+    case GAUSS_PATTERSON:
+      levelGrowthToOrder[i] = webbur::level_to_order_exp_gp;    break;
+    case GENZ_KEISTER:
+      levelGrowthToOrder[i] = webbur::level_to_order_exp_hgk;   break;
+    case CLENSHAW_CURTIS: case NEWTON_COTES:
+      levelGrowthToOrder[i] = webbur::level_to_order_exp_cc;    break;
+    case FEJER2:
+      levelGrowthToOrder[i] = webbur::level_to_order_exp_f2;    break;
+    // non-nested or weakly-nested Gauss rules with linear growth
+    case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
+      levelGrowthToOrder[i] = webbur::level_to_order_linear_wn; break;
+    default: // asymmetric Gaussian linear growth
+      levelGrowthToOrder[i] = webbur::level_to_order_linear_nn; break;
+    }
+}
+
+
+void CombinedSparseGridDriver::
 assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
 {
   // Populate smolyakMultiIndex and smolyakCoeffs.  Identifies
@@ -186,102 +284,6 @@ void CombinedSparseGridDriver::assign_collocation_indices()
 #endif // DEBUG
     }
   }
-}
-
-
-void CombinedSparseGridDriver::
-initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-		const RealVector& dim_pref,
-		Pecos::BasisConfigOptions& bc_options,
-		/*short refine_type,*/ short refine_control, bool store_colloc,
-		bool track_uniq_prod_wts, short growth_rate)
-{
-  lightweightMode = false;
-  SparseGridDriver::initialize_grid(u_types, ssg_level, dim_pref, bc_options,
-				    refine_control, store_colloc, 
-				    track_uniq_prod_wts, growth_rate);
-
-  // set compute1D{Points,Type1Weights,Type2Weights}
-  initialize_rule_pointers();
-  // set levelGrowthToOrder
-  initialize_growth_pointers();
-}
-
-
-void CombinedSparseGridDriver::
-initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
-{
-  lightweightMode = false;
-  SparseGridDriver::initialize_grid(poly_basis);
-
-  // set compute1D{Points,Type1Weights,Type2Weights}
-  initialize_rule_pointers();
-  // set levelGrowthToOrder
-  initialize_growth_pointers();
-}
-
-
-void CombinedSparseGridDriver::initialize_grid(unsigned short ssg_level)
-{
-  lightweightMode = true;
-  ssgLevel        = ssg_level;
-  // leave trackUniqueProdWeights as false
-  // leave dimIsotropic as true
-
-  assign_smolyak_arrays();
-
-  //SparseGridDriver::initialize_grid(mi_growth_factor);
-}
-
-
-void CombinedSparseGridDriver::initialize_rule_pointers()
-{
-  size_t i, j;
-  // compute1DPoints needed for grid_size() and for sgmg/sgmga
-  compute1DPoints.resize(numVars);
-  for (i=0; i<numVars; ++i)
-    compute1DPoints[i] = basis_collocation_points;
-  // compute1D{Type1,Type2}Weights only needed for sgmg/sgmga
-  if (refineControl != DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
-    compute1DType1Weights.resize(numVars);
-    for (i=0; i<numVars; i++)
-      compute1DType1Weights[i] = basis_type1_collocation_weights;
-    /*
-    if (computeType2Weights) {
-      compute1DType2Weights.resize(numVars);
-      for (i=0; i<numVars; ++i) {
-	std::vector<CollocFnPtr>& comp_1d_t2_wts_i = compute1DType2Weights[i];
-	comp_1d_t2_wts_i.resize(numVars);
-	for (j=0; j<numVars; ++j)
-	  comp_1d_t2_wts_i[j] = (j==i) ? basis_type2_collocation_weights :
-	                                 basis_type1_collocation_weights;
-      }
-    }
-    */
-  }
-}
-
-
-void CombinedSparseGridDriver::initialize_growth_pointers()
-{
-  levelGrowthToOrder.resize(numVars);
-  for (size_t i=0; i<numVars; ++i)
-    switch (collocRules[i]) {
-    // nested rules with exponential growth:
-    case GAUSS_PATTERSON:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_gp;    break;
-    case GENZ_KEISTER:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_hgk;   break;
-    case CLENSHAW_CURTIS: case NEWTON_COTES:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_cc;    break;
-    case FEJER2:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_f2;    break;
-    // non-nested or weakly-nested Gauss rules with linear growth
-    case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
-      levelGrowthToOrder[i] = webbur::level_to_order_linear_wn; break;
-    default: // asymmetric Gaussian linear growth
-      levelGrowthToOrder[i] = webbur::level_to_order_linear_nn; break;
-    }
 }
 
 

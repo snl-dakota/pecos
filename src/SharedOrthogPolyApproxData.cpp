@@ -81,9 +81,10 @@ void SharedOrthogPolyApproxData::allocate_data()
       tensor_product_multi_index(order0, tpMultiIndex[0]);
       append_multi_index(tpMultiIndex[0], multiIndex, tpMultiIndexMap[0],
 			 tpMultiIndexMapRef[0]);
-      // initialize the sparse grid driver
+      // initialize the sparse grid driver (lightweight mode) for generating
+      // candidate index sets
       multiIndexGrowthFactor = 2;
-      csgDriver.initialize_grid(0); // level 0
+      csgDriver.initialize_grid(numVars, 0); // level 0
       break;
     }
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)

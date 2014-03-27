@@ -222,7 +222,8 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // remove set_star from set A by erasing from activeMultiIndex:
   activeMultiIndex.erase(tr_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  computedTrialSets.erase(tr_set);
+  if (!computedTrialSets.empty()) // lightweight mode for CSGDriver
+    computedTrialSets.erase(tr_set);
 
   // update set A (activeMultiIndex) based on neighbors of set_star:
   add_active_neighbors(tr_set);

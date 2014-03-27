@@ -148,6 +148,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   data_rep->cvErrorRef = DBL_MAX;
   data_rep->csgDriver.initialize_sets(); // initialize the active sets
+  adaptedMultiIndex = data_rep->multiIndex; // level 0 multiIndex
 
   int soft_conv_count = 0, soft_conv_limit = 1; // for now
   Real delta_star; bool converged = false;
@@ -229,8 +230,8 @@ Real RegressOrthogPolyApproximation::select_best_active()
 
   // permanently apply best increment and update ref points for next increment
   const UShortArray& best_set = *cit_star;
-  csg_driver->update_sets(best_set);
   data_rep->restore_trial_set(best_set, adaptedMultiIndex);
+  csg_driver->update_sets(best_set); // invalidates cit_star
 
   // update CV error reference, but only if CV error has been reduced
   if (delta_star > 0.)
