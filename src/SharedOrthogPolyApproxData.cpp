@@ -277,8 +277,7 @@ void SharedOrthogPolyApproxData::
 restore_best_solution(UShort2DArray& aggregated_mi)
 {
   // reset the aggregated multi-index
-  size_t num_exp_terms = tpMultiIndexMapRef[bestTPIndex];
-  aggregated_mi.resize(num_exp_terms); // truncate previous increments
+  aggregated_mi.resize(bestExpTerms); // truncate previous increments
 
   // reset tensor-product bookkeeping and save restorable data
   savedLevMultiIndex.clear();   savedTPMultiIndex.clear();

@@ -158,7 +158,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
     // increase in CV error results in negative delta_star and trips conv count
     if (delta_star < data_rep->expConfigOptions.convergenceTol)
       ++soft_conv_count;
-    if (soft_conv_count > soft_conv_limit)
+    if (soft_conv_count >= soft_conv_limit)
       converged = true;
   }
 
@@ -187,11 +187,11 @@ Real RegressOrthogPolyApproximation::select_best_active()
   for (cit=active_mi.begin(); cit!=active_mi.end(); ++cit) {
 
     // increment grid with current candidate
-    PCout << "\n>>>>> Evaluating trial index set:\n" << *cit;
-    csg_driver->push_trial_set(*cit);
+    const UShortArray& trial_set = *cit;
+    PCout << "\n>>>>> Evaluating trial index set:\n" << trial_set;
+    csg_driver->push_trial_set(trial_set);
 
     // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
-    const UShortArray& trial_set = csg_driver->trial_set();
     if (data_rep->restore_available(trial_set))
       data_rep->restore_trial_set(trial_set, adaptedMultiIndex);
     else
@@ -225,17 +225,17 @@ Real RegressOrthogPolyApproximation::select_best_active()
     data_rep->decrement_trial_set(trial_set, adaptedMultiIndex);
     csg_driver->pop_trial_set();
   }
+  const UShortArray& best_set = *cit_star;
   PCout << "\n<<<<< Evaluation of active index sets completed.\n"
-	<< "\n<<<<< Index set selection:\n" << *cit_star;
+	<< "\n<<<<< Index set selection:\n" << best_set;
 
   // permanently apply best increment and update ref points for next increment
-  const UShortArray& best_set = *cit_star;
   data_rep->restore_trial_set(best_set, adaptedMultiIndex);
   csg_driver->update_sets(best_set); // invalidates cit_star
 
   // update CV error reference, but only if CV error has been reduced
   if (delta_star > 0.)
-    data_rep->update_reference(cv_err_star);
+    data_rep->update_reference(cv_err_star, adaptedMultiIndex);
 
   return delta_star;
 }
@@ -1724,6 +1724,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index, bool finalize)
   if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
     PCout << "Cross validation score: " << score << "\n";
 
+  // CV is complete, now compute final solution with all data points:
   IntVector index_mapping;
   RealMatrix points_dummy;
   remove_faulty_data( A, b, points_dummy, index_mapping,

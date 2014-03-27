@@ -146,9 +146,9 @@ protected:
   /// helper function for restoring that is modular on trial set and multi-index
   void restore_trial_set(const UShortArray& trial_set,
 			 UShort2DArray& aggregated_mi);
-  /// update cvErrorRef and bestTPIndex after improvement in solution
-  void update_reference(Real cv_error);
-  /// update cvErrorRef and bestTPIndex after improvement in solution
+  /// update cvErrorRef and bestExpTerms after improvement in solution
+  void update_reference(Real cv_error, const UShort2DArray& aggregated_mi);
+  /// update cvErrorRef and bestExpTerms after improvement in solution
   void restore_best_solution(UShort2DArray& aggregated_mi);
 
   /// update approxOrder and total-order multiIndex
@@ -297,9 +297,9 @@ protected:
   /// the cross validation error reference point for adapting a CS
   /// candidate basis; it's state is reset for each response QoI
   Real cvErrorRef;
-  /// index into tpMultiIndexMapRef that defines the best solution
+  /// size of expansion that corresponds to the best solution identified
   /// (may not be the last solution)
-  size_t bestTPIndex;
+  size_t bestExpTerms;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
@@ -414,10 +414,11 @@ restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 }
 
 
-inline void SharedOrthogPolyApproxData::update_reference(Real cv_error)
+inline void SharedOrthogPolyApproxData::
+update_reference(Real cv_error, const UShort2DArray& aggregated_mi)
 {
-  cvErrorRef  = cv_error;
-  bestTPIndex = tpMultiIndexMapRef.size() - 1; // last entry
+  cvErrorRef   = cv_error;
+  bestExpTerms = aggregated_mi.size();
 }
 
 
