@@ -190,12 +190,13 @@ void CombinedSparseGridDriver::assign_collocation_indices()
 
 
 void CombinedSparseGridDriver::
-initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
+initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
 		const RealVector& dim_pref,
 		Pecos::BasisConfigOptions& bc_options,
 		/*short refine_type,*/ short refine_control, bool store_colloc,
 		bool track_uniq_prod_wts, short growth_rate)
 {
+  lightweightMode = false;
   SparseGridDriver::initialize_grid(u_types, ssg_level, dim_pref, bc_options,
 				    refine_control, store_colloc, 
 				    track_uniq_prod_wts, growth_rate);
@@ -210,12 +211,26 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 void CombinedSparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
+  lightweightMode = false;
   SparseGridDriver::initialize_grid(poly_basis);
 
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
   // set levelGrowthToOrder
   initialize_growth_pointers();
+}
+
+
+void CombinedSparseGridDriver::initialize_grid(unsigned short ssg_level)
+{
+  lightweightMode = true;
+  ssgLevel        = ssg_level;
+  // leave trackUniqueProdWeights as false
+  // leave dimIsotropic as true
+
+  assign_smolyak_arrays();
+
+  //SparseGridDriver::initialize_grid(mi_growth_factor);
 }
 
 
@@ -540,24 +555,28 @@ void CombinedSparseGridDriver::restore_set()
 {
   // SparseGridDriver currently retains no memory, so updates are recomputed
 
-  size_t last_index = smolyakMultiIndex.size() - 1;
-  // update collocKey
-  update_collocation_key(last_index);
-  // compute a2; update collocIndices and uniqueIndexMapping; don't
-  // update pt/wt sets
-  RealMatrix dummy_set;
-  increment_unique(true, false, dummy_set);
+  if (!lightweightMode) {
+    size_t last_index = smolyakMultiIndex.size() - 1;
+    // update collocKey
+    update_collocation_key(last_index);
+    // compute a2; update collocIndices and uniqueIndexMapping; don't
+    // update pt/wt sets
+    RealMatrix dummy_set;
+    increment_unique(true, false, dummy_set);
+  }
 }
 
 
 void CombinedSparseGridDriver::pop_trial_set()
 {
-  numCollocPts -= numUnique2; // subtract number of trial points
-  uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
   smolyakMultiIndex.pop_back();
   smolyakCoeffs = smolyakCoeffsRef;
-  collocKey.pop_back();
-  collocIndices.pop_back();
+  if (!lightweightMode) {
+    numCollocPts -= numUnique2; // subtract number of trial points
+    uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
+    collocKey.pop_back();
+    collocIndices.pop_back();
+  }
 }
 
 

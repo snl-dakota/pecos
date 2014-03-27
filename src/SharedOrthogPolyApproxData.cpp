@@ -82,9 +82,8 @@ void SharedOrthogPolyApproxData::allocate_data()
       append_multi_index(tpMultiIndex[0], multiIndex, tpMultiIndexMap[0],
 			 tpMultiIndexMapRef[0]);
       // initialize the sparse grid driver
-      csgDriver.initialize_grid(polynomialBasis);
-      //csgDriver.level(0); // level defaults to 0
-      csgDriver.assign_smolyak_arrays();
+      multiIndexGrowthFactor = 2;
+      csgDriver.initialize_grid(0); // level 0
       break;
     }
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
@@ -187,6 +186,29 @@ increment_trial_set(CombinedSparseGridDriver* csg_driver,
   UShortArray exp_order(numVars);
   sparse_grid_level_to_expansion_order(csg_driver, csg_driver->trial_set(),
 				       exp_order);
+  tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
+  // update multiIndex and append bookkeeping
+  append_multi_index(tpMultiIndex[last_index], aggregated_mi,
+		     tpMultiIndexMap[last_index],
+		     tpMultiIndexMapRef[last_index]);
+}
+
+
+void SharedOrthogPolyApproxData::
+increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
+{
+  size_t i, last_index = tpMultiIndex.size();
+  // increment tpMultiIndex{,Map,MapRef} arrays
+  UShort2DArray new_us2a; SizetArray new_sa;
+  tpMultiIndex.push_back(new_us2a);
+  tpMultiIndexMap.push_back(new_sa); tpMultiIndexMapRef.push_back(0);
+  // update tpMultiIndex
+  UShortArray exp_order(numVars);
+  // linear growth in Gaussian rules would normally result in a factor of 2:
+  //   m = 2l+1 -> i = 2m-1 = 4l+1 -> o = i/2 = 2l
+  // This is the default, but finer and coarser grain growth can be used.
+  for (i=0; i<numVars; ++i)
+    exp_order[i] = multiIndexGrowthFactor * trial_set[i];
   tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
   // update multiIndex and append bookkeeping
   append_multi_index(tpMultiIndex[last_index], aggregated_mi,

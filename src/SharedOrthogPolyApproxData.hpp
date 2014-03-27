@@ -125,9 +125,13 @@ protected:
   void integrand_order_to_expansion_order(const UShortArray& int_order,
 					  UShortArray& exp_order);
 
-  /// helper function for incrementing that is modular on trial set
+  /// helper function for incrementing that is modular on sparse grid driver
   /// and multi-index
   void increment_trial_set(CombinedSparseGridDriver* csg_driver,
+			   UShort2DArray& aggregated_mi);
+  /// helper function for incrementing that is modular on trial set and
+  /// multi-index
+  void increment_trial_set(const UShortArray& trial_set,
 			   UShort2DArray& aggregated_mi);
   /// helper function for decrementing that is modular on trial set
   /// and multi-index
@@ -287,6 +291,9 @@ protected:
   /// adaptation via the generalized sparse grid algorithm; it's state
   /// is reset for each response QoI
   CombinedSparseGridDriver csgDriver;
+  /// a scalar growth factor for defining the tpMultiIndex contribution
+  /// from a particular trial index set in adapted basis mode
+  unsigned short multiIndexGrowthFactor;
   /// the cross validation error reference point for adapting a CS
   /// candidate basis; it's state is reset for each response QoI
   Real cvErrorRef;

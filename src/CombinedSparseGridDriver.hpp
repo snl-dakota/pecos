@@ -72,6 +72,9 @@ public:
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
+  /// initialize a lightweight instance that only generates index sets
+  /// using the provided multi-index growth factor
+  void initialize_grid(unsigned short ssg_level);
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
@@ -205,6 +208,11 @@ private:
 
   /// pointer to instance of this class for use in statis member functions
   static CombinedSparseGridDriver* sgdInstance;
+
+  /// flag indicating the use of a lightweight sparse grid mode that only
+  /// generates index sets and defines a multiIndex based on a scalar growth
+  /// factor (no polynomial basis required, no points/weights generated)
+  bool lightweightMode;
 
   /// numSmolyakIndices-by-numVars array for identifying the index to use
   /// within the polynomialBasis for a particular variable
@@ -349,7 +357,7 @@ update_smolyak_coefficients(size_t start_index)
 
 
 inline void CombinedSparseGridDriver::merge_set()
-{ merge_unique(); }
+{ if (!lightweightMode) merge_unique(); }
 
 
 inline void CombinedSparseGridDriver::update_reference()
