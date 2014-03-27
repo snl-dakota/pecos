@@ -128,6 +128,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
     break;
   case ADAPTED_BASIS:
     allocate_arrays();
+    select_solver();
     adapt_regression(); // adapt for the best multiIndex for a fixed data set
     break;
   }
@@ -186,7 +187,7 @@ Real RegressOrthogPolyApproximation::select_best_active()
 
     // increment grid with current candidate
     PCout << "\n>>>>> Evaluating trial index set:\n" << *cit;
-    csg_driver->push_trial_set(*cit);
+    csg_driver->push_trial_set(*cit); // TO DO
 
     // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
     const UShortArray& trial_set = csg_driver->trial_set();
@@ -199,8 +200,8 @@ Real RegressOrthogPolyApproximation::select_best_active()
     // terms added for Gauss quadrature, but not other cases
     //int new_terms = csg_driver->unique_trial_points();
     const SizetArray& tp_mi_map_ref = data_rep->tpMultiIndexMapRef;
-    size_t last_index = tp_mi_map_ref.size() - 1,
-      new_terms = tp_mi_map_ref[last_index] - tp_mi_map_ref[last_index - 1];
+    size_t last_index = tp_mi_map_ref.size() - 1, new_terms
+      = tp_mi_map_ref[last_index] - tp_mi_map_ref[last_index - 1]; // TO DO
 
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
@@ -222,14 +223,14 @@ Real RegressOrthogPolyApproximation::select_best_active()
 
     // restore previous state (destruct order is reversed from construct order)
     data_rep->decrement_trial_set(trial_set, adaptedMultiIndex);
-    csg_driver->pop_trial_set();
+    csg_driver->pop_trial_set(); // TO DO
   }
   PCout << "\n<<<<< Evaluation of active index sets completed.\n"
 	<< "\n<<<<< Index set selection:\n" << *cit_star;
 
   // permanently apply best increment and update ref points for next increment
   const UShortArray& best_set = *cit_star;
-  csg_driver->update_sets(best_set);
+  csg_driver->update_sets(best_set); // TO DO
   data_rep->restore_trial_set(best_set, adaptedMultiIndex);
 
   // update CV error reference, but only if CV error has been reduced
