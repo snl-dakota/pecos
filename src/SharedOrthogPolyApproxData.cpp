@@ -283,9 +283,9 @@ restore_best_solution(UShort2DArray& aggregated_mi)
   savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
   savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
 
-  tpMultiIndex.resize(1);       // save level 0 index set
-  tpMultiIndexMap.resize(1);    // save level 0 index set
-  tpMultiIndexMapRef.resize(1); // save level 0 index set
+  tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
+  tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
+  tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
 }
 
 
@@ -523,9 +523,9 @@ append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi)
 }
 
 
-/** Append append_mi to combined_mi, and update append_mi_map and
-    append_mi_map_ref to facilitate related aggregations without
-    repeated searching. */
+/** Append append_mi to combined_mi, and update append_mi_map
+    (SizetArray) and append_mi_map_ref to facilitate related
+    aggregations without repeated searching. */
 void SharedOrthogPolyApproxData::
 append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
 		   SizetArray& append_mi_map, size_t& append_mi_map_ref)
@@ -554,9 +554,9 @@ append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
 }
 
 
-/** Append append_mi to combined_mi, and update append_mi_map and
-    append_mi_map_ref to facilitate related aggregations without
-    repeated searching. */
+/** Append append_mi to combined_mi, and update append_mi_map
+    (SizetSet) and append_mi_map_ref to facilitate related
+    aggregations without repeated searching. */
 void SharedOrthogPolyApproxData::
 append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
 		   SizetSet& append_mi_map, size_t& append_mi_map_ref)
@@ -585,9 +585,10 @@ append_multi_index(const UShort2DArray& append_mi, UShort2DArray& combined_mi,
 }
 
 
-/** Append append_mi to combined_mi, and update append_mi_map and
-    append_mi_map_ref to facilitate related aggregations without
-    repeated searching. */
+/** Append append_mi to combined_mi, and update append_mi_map (SizetSet)
+    and append_mi_map_ref to facilitate related aggregations without
+    repeated searching.  This case is used when append_mi and
+    combined_mi follow a consistent order without gaps. */
 void SharedOrthogPolyApproxData::
 append_leading_multi_index(const UShort2DArray& append_mi,
 			   UShort2DArray& combined_mi,

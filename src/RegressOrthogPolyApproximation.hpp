@@ -116,7 +116,8 @@ private:
 
   /// Use cross validation to choose solver hyper-parameters when solving the linear system Ax=b. e.g. if the linear solver has a epsilon tolerance internally select the best epsilon and return the corresponding solution
   Real run_cross_validation_solver(const UShort2DArray& multi_index,
-				   bool finalize = true);
+				   RealVector& exp_coeffs,
+				   SizetSet& sparse_indices);
 
   /// Use cross validation to find the hyper-parameters of the polynomial chaos expansion. e.g. find the 'best' total degree basis
   Real run_cross_validation_expansion();
@@ -139,17 +140,23 @@ private:
     size_t num_data_pts_fn );
 
   /// define multiIndex and expansionCoeffs from nonzero dense_coeffs
-  void update_sparse(Real* dense_coeffs, size_t num_dense_terms);
+  void update_sparse(Real* dense_coeffs, size_t num_dense_terms,
+		     RealVector& exp_coeffs, SizetSet& sparse_indices);
   /// augment sparse_indices based on nonzero dense_coeffs
-  void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms);
+  void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms,
+			     SizetSet& sparse_indices);
   /// define sparse expansionCoeffs from dense_coeffs and sparse_indices
-  void update_sparse_coeffs(Real* dense_coeffs);
+  void update_sparse_coeffs(Real* dense_coeffs, RealVector& exp_coeffs,
+			    const SizetSet& sparse_indices);
   /// define a row of sparse expansionCoeffGrads from dense_coeffs and
   /// sparse_indices
-  void update_sparse_coeff_grads(Real* dense_coeffs, int row);
+  void update_sparse_coeff_grads(Real* dense_coeffs, int row,
+				 RealMatrix& exp_coeff_grads,
+				 const SizetSet& sparse_indices);
   /// define sparseSobolIndexMap from sparseIndices, shared multi_index,
   /// and shared sobolIndexMap
-  void update_sparse_sobol(const UShort2DArray& shared_multi_index,
+  void update_sparse_sobol(const SizetSet& sparse_indices,
+			   const UShort2DArray& shared_multi_index,
 			   const BitArrayULongMap& shared_sobol_map);
 
   /// overlay the passed expansion with the aggregate
