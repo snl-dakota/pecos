@@ -139,31 +139,41 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 
 void RegressOrthogPolyApproximation::adapt_regression()
 {
-  // For now, we assume that the CV error for a level 0 sparse grid will not be
-  // low enough to trigger immediate termination.  Thus, we will always do one
-  // cycle of select_best_active() with level 1 index sets.  If we move to
-  // supporting general reference points, then we should obtain the CV err for
-  // this initial sparse grid candidate basis.
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  data_rep->csgDriver.initialize_sets(); // initialize the active sets
-  adaptedMultiIndex = data_rep->multiIndex; // level 0 multiIndex
+  Real delta_star, tol = data_rep->expConfigOptions.convergenceTol;
+  int soft_conv_count = 0, soft_conv_limit = 2; // for now
 
-  // initial CV error for reference grid
+  adaptedMultiIndex = data_rep->multiIndex; // starting point for adaptation
+
+  // For a level 0 reference multi-index, we could safely omit evaluating the
+  // initial CV error and always perform one cycle of select_best_active(),
+  // since the CV error would presumably not be low enough to trigger immediate
+  // termination.  However, this requires care in selecting the lowest CV error
+  // on the first cycle (largest CV change would need to utilize worst - best;
+  // DBL_MAX cannot be used as an error ref due to loss of precision).  We also
+  // need to support general reference points, since adaptive algorithms can
+  // stall without good starting points.  Therefore, go ahead and compute the
+  // CV err for the reference candidate basis.
   data_rep->cvErrorRef
     = run_cross_validation_solver(adaptedMultiIndex, expansionCoeffs,
 				  sparseIndices);
+  // absolute error instead of delta error for initial tolerance check
+  if (data_rep->cvErrorRef < tol)
+    ++soft_conv_count;
 
-  int soft_conv_count = 0, soft_conv_limit = 2; // for now
-  Real delta_star; bool converged = false;
-  while (!converged) {
+  data_rep->csgDriver.initialize_sets(); // initialize the active sets
+
+  while (soft_conv_count < soft_conv_limit) {
     // invoke run_regression() for each index set candidate and select best
     delta_star = select_best_active();
-    // increase in CV error results in negative delta_star and trips conv count
-    if (delta_star < data_rep->expConfigOptions.convergenceTol)
+    // increase in CV error results in negative delta_star and trips conv count.
+    // CV error change is not generally on the other of 1.e-x, so really we're
+    // just capturing when no CV error reduction is obtained for any candidate.
+    if (delta_star < tol) // or just < 0.
       ++soft_conv_count;
-    if (soft_conv_count >= soft_conv_limit)
-      converged = true;
+    else
+      soft_conv_count = 0;
   }
 
   // different finalize: don't add in any remaining evaluated sets;
