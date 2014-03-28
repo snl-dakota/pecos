@@ -1706,7 +1706,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   const UShortArray& approx_order = data_rep->approxOrder;
   int num_rhs = B.numCols(), num_dims( approx_order.size() );
 
-  Real best_score = std::numeric_limits<Real>::max(), best_tolerance = 0.;
+  Real best_score = std::numeric_limits<Real>::max();
   int best_basis_parameters_index = 0;
   int num_build_points = num_data_pts_fn;
   bool use_gradients = false;
@@ -1748,6 +1748,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
 
 
   Real score = cv_iterator.run_cross_validation( A, b );
+  Real best_tolerance = cv_iterator.get_best_residual_tolerance();
 
   if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
     PCout << "Cross validation score: " << score << "\n";
