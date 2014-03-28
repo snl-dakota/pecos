@@ -146,9 +146,13 @@ void RegressOrthogPolyApproximation::adapt_regression()
   // this initial sparse grid candidate basis.
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  data_rep->cvErrorRef = DBL_MAX;
   data_rep->csgDriver.initialize_sets(); // initialize the active sets
   adaptedMultiIndex = data_rep->multiIndex; // level 0 multiIndex
+
+  // initial CV error for reference grid
+  data_rep->cvErrorRef
+    = run_cross_validation_solver(adaptedMultiIndex, expansionCoeffs,
+				  sparseIndices);
 
   int soft_conv_count = 0, soft_conv_limit = 2; // for now
   Real delta_star; bool converged = false;
