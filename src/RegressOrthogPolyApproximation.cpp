@@ -180,11 +180,17 @@ void RegressOrthogPolyApproximation::adapt_regression()
   // rather, we need to backtrack and restore the best cvErrorRef solution
   data_rep->restore_best_solution(adaptedMultiIndex);
   // Once done for this QoI, append adaptedMultiIndex to shared multiIndex,
-  // define sparseIndices, and clear adaptedMultiIndex
-  size_t append_ref; SizetSet append_map;
-  data_rep->append_multi_index(adaptedMultiIndex, data_rep->multiIndex,
-			       append_map, append_ref); // TO DO
+  // update sparseIndices (which corresponds to best adaptedMultiIndex) to
+  // point into shared multiIndex, reorder expansionCoeff{s,Grads} as needed,
+  // and clear adaptedMultiIndex
+  data_rep->append_multi_index(sparseIndices, adaptedMultiIndex,
+			       data_rep->multiIndex, expansionCoeffs,
+			       expansionCoeffGrads);
   adaptedMultiIndex.clear();
+  // now update sobolIndexMap and sparseSobolIndexMap
+  data_rep->update_component_sobol(data_rep->multiIndex);
+  update_sparse_sobol(sparseIndices, data_rep->multiIndex,
+		      data_rep->sobolIndexMap);
 }
 
 

@@ -663,6 +663,57 @@ append_multi_index(const UShort2DArray& append_mi, SizetArray& append_mi_map,
 }
 
 
+/** Append to combined_mi based on append_mi and previously defined
+    append_mi_map and append_mi_map_ref.  If necessary, update
+    append_mi_map and append_mi_map_ref. */
+void SharedOrthogPolyApproxData::
+append_multi_index(SizetSet& sparse_indices, const UShort2DArray& append_mi,
+		   UShort2DArray& combined_mi, RealVector& exp_coeffs,
+		   RealMatrix& exp_coeff_grads)
+{
+  if (combined_mi.empty())
+    combined_mi = append_mi; // sparse_indices is up to date
+  else {
+    // augment combined_mi with new terms in append_mi and track the mapping
+    size_t i, index, num_app_mi = append_mi.size();
+    SizetArray append_mi_map(num_app_mi);
+    for (i=0; i<num_app_mi; ++i) {
+      const UShortArray& search_mi = append_mi[i];
+      index = find_index(combined_mi, search_mi);
+      if (index == _NPOS) { // search_mi does not yet exist in multi_index
+	append_mi_map[i] = combined_mi.size();
+	combined_mi.push_back(search_mi);
+      }
+      else
+	append_mi_map[i] = index;
+    }
+    // replace sparse_indices (since this is an ordered set) based on the
+    // mapping tracked above
+    SizetSet old_sparse_indices = sparse_indices;
+    sparse_indices.clear();
+    SizetSet::iterator it;
+    for (it=old_sparse_indices.begin(); it!=old_sparse_indices.end(); ++it)
+      sparse_indices.insert(append_mi_map[*it]); // becomes resorted!
+    // now that resorting is completed, reorder exp_coeff{s,_grads} to match
+    bool coeff_flag = !exp_coeffs.empty(), grad_flag = !exp_coeff_grads.empty();
+    RealVector old_exp_coeffs; RealMatrix old_exp_coeff_grads;
+    if (coeff_flag) old_exp_coeffs      = exp_coeffs;
+    if (grad_flag)  old_exp_coeff_grads = exp_coeff_grads;
+    for (i=0, it=old_sparse_indices.begin(); it!=old_sparse_indices.end();
+	 ++i, ++it) {
+      index = find_index(sparse_indices, append_mi_map[*it]);
+      if (coeff_flag) exp_coeffs[index] = old_exp_coeffs[i];
+      if (grad_flag) {
+	Real *exp_coeff_grad     = exp_coeff_grads[index],
+	     *old_exp_coeff_grad = old_exp_coeff_grads[i];
+	for (size_t j=0; j<numVars; ++j)
+	  exp_coeff_grad[j] = old_exp_coeff_grad[j];
+      }
+    }
+  }
+}
+
+
 // The following variants maintain a separation between ref_mi and combined_mi,
 // rather than updating in place.  In current use cases, append_mi_map has
 // provided sufficient bookkeeping to allow in-place updating.

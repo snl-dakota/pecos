@@ -168,7 +168,7 @@ private:
   /// multiply current expansion ("a") with incoming expansion ("b")
   /// and store in product expansion ("c")
   void multiply_expansion(const SizetSet& sparse_ind_b,
-			 const UShort2DArray& multi_index_b,
+			  const UShort2DArray& multi_index_b,
 			  const RealVector& exp_coeffs_b,
 			  const RealMatrix& exp_grads_b,
 			  const UShort2DArray& multi_index_c);
@@ -220,6 +220,10 @@ private:
 
   /// tracks sparse terms within multiIndex and expansion{Coeffs,CoeffGrads}
   /// that are retained from an original candidate set
+  /** a set is used to manage unique indices among expansionCoeff{s,Grads}.
+      Sorting also simplifies covariance calculations, but care must be 
+      exercised to retain synchronization with expansionCoeff{s,Grads}
+      ordering when merging sparse multi-indices. */
   SizetSet sparseIndices;
   /// copy of sparseIndices stored in store_coefficients() for use in
   /// combine_coefficients()

@@ -186,6 +186,12 @@ protected:
   void append_multi_index(const UShort2DArray& append_mi,
 			  SizetArray& append_mi_map, size_t& append_mi_map_ref,
 			  UShort2DArray& combined_mi);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi, updating sparse_indices, exp_coeffs, and exp_coeff_grads
+  void append_multi_index(SizetSet& sparse_indices,
+			  const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi, RealVector& exp_coeffs,
+			  RealMatrix& exp_coeff_grads);
 
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as probabilistic
