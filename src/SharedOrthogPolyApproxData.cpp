@@ -672,7 +672,7 @@ append_multi_index(SizetSet& sparse_indices, const UShort2DArray& append_mi,
 		   RealMatrix& exp_coeff_grads)
 {
   if (combined_mi.empty())
-    combined_mi = append_mi; // sparse_indices is up to date
+    combined_mi = append_mi; // sparse indices & exp coeffs are up to date
   else {
     // augment combined_mi with new terms in append_mi and track the mapping
     size_t i, index, num_app_mi = append_mi.size();
@@ -701,7 +701,8 @@ append_multi_index(SizetSet& sparse_indices, const UShort2DArray& append_mi,
     if (grad_flag)  old_exp_coeff_grads = exp_coeff_grads;
     for (i=0, it=old_sparse_indices.begin(); it!=old_sparse_indices.end();
 	 ++i, ++it) {
-      index = find_index(sparse_indices, append_mi_map[*it]);
+      index = std::distance(sparse_indices.begin(),
+			    sparse_indices.find(append_mi_map[*it]));
       if (coeff_flag) exp_coeffs[index] = old_exp_coeffs[i];
       if (grad_flag) {
 	Real *exp_coeff_grad     = exp_coeff_grads[index],
