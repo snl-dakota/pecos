@@ -1552,8 +1552,7 @@ void RegressOrthogPolyApproximation::run_regression()
 	 ORTHOG_LEAST_INTERPOLATION && !data_rep->crossValidation )
     {
       if (faultInfo.under_determined) // exploit CS sparsity
-	update_sparse(solutions[0][0], num_expansion_terms, expansionCoeffs,
-		      sparseIndices);
+	update_sparse(solutions[0][0], num_expansion_terms);
       else {                          // retain full solution
 	copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
 	sparseIndices.clear();
@@ -1597,20 +1596,19 @@ void RegressOrthogPolyApproximation::run_regression()
 
 
 void RegressOrthogPolyApproximation::
-update_sparse(Real* dense_coeffs, size_t num_dense_terms,
-	      RealVector& exp_coeffs, SizetSet& sparse_indices)
+update_sparse(Real* dense_coeffs, size_t num_dense_terms)
 {
   // just one pass through to define sparse_indices
-  sparse_indices.clear();
-  update_sparse_indices(dense_coeffs, num_dense_terms, sparse_indices);
+  sparseIndices.clear();
+  update_sparse_indices(dense_coeffs, num_dense_terms, sparseIndices);
 
   // update exp_coeffs
-  update_sparse_coeffs(dense_coeffs, exp_coeffs, sparse_indices);
+  update_sparse_coeffs(dense_coeffs, expansionCoeffs, sparseIndices);
 
   // update the sparse Sobol' indices
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  update_sparse_sobol(sparse_indices, data_rep->multiIndex,
+  update_sparse_sobol(sparseIndices, data_rep->multiIndex,
 		      data_rep->sobolIndexMap);
 }
 
@@ -1789,9 +1787,12 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   linear_solver->solve( A, b, solutions, metrics );
 
   // TO DO: employ this fn in primary CV context
-  if (faultInfo.under_determined) // exploit CS sparsity
-    update_sparse(solutions[solutions.numCols()-1], A.numCols(),
-		  best_exp_coeffs, best_sparse_indices);
+  if (faultInfo.under_determined) { // exploit CS sparsity
+    best_sparse_indices.clear();
+    Real* dense_coeffs = solutions[solutions.numCols()-1];
+    update_sparse_indices(dense_coeffs, A.numCols(), best_sparse_indices);
+    update_sparse_coeffs(dense_coeffs, best_exp_coeffs, best_sparse_indices);
+  }
   else { // least sq case does not require sparse indices
     best_sparse_indices.clear();
     copy_data(solutions[solutions.numCols()-1], A.numCols(), best_exp_coeffs);
@@ -1926,8 +1927,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   linear_solver->solve( vandermonde_submatrix, b, solutions, metrics );
 
   if (faultInfo.under_determined) // exploit CS sparsity
-    update_sparse(solutions[solutions.numCols()-1], num_basis_terms,
-		  expansionCoeffs, sparseIndices);
+    update_sparse(solutions[solutions.numCols()-1], num_basis_terms);
   else {
     // if best expansion order is less than maximum candidate, truncate
     // expansion arrays.  Note that this requires care in cross-expansion

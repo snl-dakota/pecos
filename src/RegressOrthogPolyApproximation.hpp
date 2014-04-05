@@ -140,8 +140,7 @@ private:
     size_t num_data_pts_fn );
 
   /// define multiIndex and expansionCoeffs from nonzero dense_coeffs
-  void update_sparse(Real* dense_coeffs, size_t num_dense_terms,
-		     RealVector& exp_coeffs, SizetSet& sparse_indices);
+  void update_sparse(Real* dense_coeffs, size_t num_dense_terms);
   /// augment sparse_indices based on nonzero dense_coeffs
   void update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms,
 			     SizetSet& sparse_indices);

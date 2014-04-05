@@ -673,39 +673,47 @@ append_multi_index(SizetSet& sparse_indices, const UShort2DArray& append_mi,
 {
   if (combined_mi.empty())
     combined_mi = append_mi; // sparse indices & exp coeffs are up to date
-  else {
-    // augment combined_mi with new terms in append_mi and track the mapping
-    size_t i, index, num_app_mi = append_mi.size();
-    SizetArray append_mi_map(num_app_mi);
-    for (i=0; i<num_app_mi; ++i) {
-      const UShortArray& search_mi = append_mi[i];
-      index = find_index(combined_mi, search_mi);
-      if (index == _NPOS) { // search_mi does not yet exist in multi_index
-	append_mi_map[i] = combined_mi.size();
-	combined_mi.push_back(search_mi);
-      }
-      else
-	append_mi_map[i] = index;
-    }
-    // replace sparse_indices (since this is an ordered set) based on the
-    // mapping tracked above
-    SizetSet old_sparse_indices = sparse_indices;
-    sparse_indices.clear();
-    SizetSet::iterator it;
-    for (it=old_sparse_indices.begin(); it!=old_sparse_indices.end(); ++it)
-      sparse_indices.insert(append_mi_map[*it]); // becomes resorted!
-    // now that resorting is completed, reorder exp_coeff{s,_grads} to match
+  else { // merge multi-indices; update sparse_indices and exp coeffs
+
+    bool sparse_append = !sparse_indices.empty(); // empty if over-determined LS
     bool coeff_flag = !exp_coeffs.empty(), grad_flag = !exp_coeff_grads.empty();
     RealVector old_exp_coeffs; RealMatrix old_exp_coeff_grads;
     if (coeff_flag) old_exp_coeffs      = exp_coeffs;
     if (grad_flag)  old_exp_coeff_grads = exp_coeff_grads;
-    for (i=0, it=old_sparse_indices.begin(); it!=old_sparse_indices.end();
-	 ++i, ++it) {
-      index = std::distance(sparse_indices.begin(),
-			    sparse_indices.find(append_mi_map[*it]));
-      if (coeff_flag) exp_coeffs[index] = old_exp_coeffs[i];
+ 
+    size_t i, combined_index, coeff_index, num_app_mi = append_mi.size(),
+      num_coeff = (sparse_append) ? sparse_indices.size() : num_app_mi;
+    SizetArray append_mi_map(num_app_mi);
+    for (i=0; i<num_app_mi; ++i) {
+      const UShortArray& search_mi = append_mi[i];
+      combined_index = find_index(combined_mi, search_mi);
+      if (combined_index == _NPOS) { // search_mi does not exist in combined_mi
+	combined_index = combined_mi.size();
+	combined_mi.push_back(search_mi);
+      }
+      append_mi_map[i] = combined_index;
+      if (!sparse_append)
+	sparse_indices.insert(combined_index); // becomes resorted
+    }
+
+    SizetSet old_sparse_indices; SizetSet::iterator it;
+    if (sparse_append) {
+      old_sparse_indices = sparse_indices;
+      sparse_indices.clear();
+      for (it=old_sparse_indices.begin(); it!=old_sparse_indices.end(); ++it)
+	sparse_indices.insert(append_mi_map[*it]); // becomes resorted
+      it = old_sparse_indices.begin(); // reset for loop to follow
+    }
+
+    // now that resorting is completed, reorder exp_coeff{s,_grads} to match
+    for (i=0; i<num_coeff; ++i) {
+      if (sparse_append) { combined_index = append_mi_map[*it]; ++it; }
+      else                 combined_index = append_mi_map[i];
+      coeff_index = std::distance(sparse_indices.begin(),
+				  sparse_indices.find(combined_index));
+      if (coeff_flag) exp_coeffs[coeff_index] = old_exp_coeffs[i];
       if (grad_flag) {
-	Real *exp_coeff_grad     = exp_coeff_grads[index],
+	Real *exp_coeff_grad     = exp_coeff_grads[coeff_index],
 	     *old_exp_coeff_grad = old_exp_coeff_grads[i];
 	for (size_t j=0; j<numVars; ++j)
 	  exp_coeff_grad[j] = old_exp_coeff_grad[j];
