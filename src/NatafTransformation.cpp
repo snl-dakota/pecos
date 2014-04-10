@@ -525,16 +525,12 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
       const Real& upr = ranVarUpperBndsX[i];
       if (ranVarTypesU[i] == STD_BETA) // scale to beta on [-1,1]
 	z_vars[i] = 2.*(x_vars[i] - lwr)/(upr - lwr) - 1.;
-      else if (ranVarTypesU[i] == STD_NORMAL) { // transform to std normal
-	Real scaled_x = (x_vars[i]-lwr)/(upr - lwr);
-	z_vars[i] = Phi_inverse(std_beta_cdf(scaled_x, ranVarAddtlParamsX[i][0],
-					     ranVarAddtlParamsX[i][1]));
-      }
-      else if (ranVarTypesU[i] == STD_UNIFORM) {
-	Real scaled_x = (x_vars[i]-lwr)/(upr - lwr);
-	z_vars[i] = std_uniform_cdf_inverse(std_beta_cdf(scaled_x,
-	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1]));
-      }
+      else if (ranVarTypesU[i] == STD_NORMAL) // transform to std normal
+	z_vars[i] = Phi_inverse(beta_cdf(x_vars[i], ranVarAddtlParamsX[i][0],
+					 ranVarAddtlParamsX[i][1], lwr, upr));
+      else if (ranVarTypesU[i] == STD_UNIFORM)
+	z_vars[i] = std_uniform_cdf_inverse(beta_cdf(x_vars[i],
+	  ranVarAddtlParamsX[i][0], ranVarAddtlParamsX[i][1], lwr, upr));
       else
 	err_flag = true;
       break;
@@ -1689,13 +1685,11 @@ jacobian_dX_dZ(const RealVector& x_vars, RealMatrix& jacobian_xz)
     case BETA: {
       const Real& lwr = ranVarLowerBndsX[i];
       const Real& upr = ranVarUpperBndsX[i];
-      Real scale = upr - lwr;
       if (ranVarTypesU[i] == STD_BETA) // linear scaling
-	jacobian_xz(i, i) = scale/2.;
+	jacobian_xz(i, i) = (upr - lwr)/2.;
       else { 
-	Real scaled_x = (x_vars[i]-lwr)/scale,
-	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i][0],
-			     ranVarAddtlParamsX[i][1]) / scale;
+	Real pdf = beta_pdf(x_vars[i], ranVarAddtlParamsX[i][0],
+			    ranVarAddtlParamsX[i][1], lwr, upr);
 	if (ranVarTypesU[i] == STD_NORMAL) // nonlinear transformation
 	  jacobian_xz(i, i) = phi(z_vars[i]) / pdf;
 	else if (ranVarTypesU[i] == STD_UNIFORM) // nonlinear transformation
@@ -1926,13 +1920,11 @@ jacobian_dZ_dX(const RealVector& x_vars, RealMatrix& jacobian_zx)
     case BETA: {
       const Real& lwr = ranVarLowerBndsX[i];
       const Real& upr = ranVarUpperBndsX[i];
-      Real scale = upr - lwr;
       if (ranVarTypesU[i] == STD_BETA) // linear scaling
-	jacobian_zx(i, i) = 2./scale;
+	jacobian_zx(i, i) = 2./(upr - lwr);
       else {
-	Real scaled_x = (x_vars[i]-lwr)/scale,
-	  pdf = std_beta_pdf(scaled_x, ranVarAddtlParamsX[i][0],
-			     ranVarAddtlParamsX[i][1]) / scale;
+	Real pdf = beta_pdf(x_vars[i], ranVarAddtlParamsX[i][0],
+			    ranVarAddtlParamsX[i][1], lwr, upr);
 	if (ranVarTypesU[i] == STD_NORMAL)
 	  jacobian_zx(i, i) = pdf / phi(z_vars[i]);
 	else if (ranVarTypesU[i] == STD_UNIFORM)
@@ -3032,8 +3024,7 @@ hessian_d2X_dZ2(const RealVector& x_vars, RealSymMatrixArray& hessian_xz)
 	const Real& lwr   = ranVarLowerBndsX[i];
 	const Real& upr   = ranVarUpperBndsX[i];
 	const Real& z = z_vars[i]; const Real& x = x_vars[i];
-	Real scale = upr - lwr, scaled_x = (x-lwr)/scale,
-	  pdf = std_beta_pdf(scaled_x, alpha, beta)/scale,
+	Real pdf = beta_pdf(x, alpha, beta, lwr, upr),
 	  pdf_deriv = pdf*((alpha-1.)/(x-lwr) - (beta-1.)/(upr-x));
 	if (ranVarTypesU[i] == STD_NORMAL) {
 	  Real dx_dz = phi(z) / pdf;

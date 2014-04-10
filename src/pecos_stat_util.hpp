@@ -409,6 +409,22 @@ inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
 }
 
 
+inline Real normal_pdf(Real x, Real mean, Real std_dev)
+{
+  normal_dist norm(mean, std_dev);
+  return bmth::pdf(norm, x);
+  //return phi((x-mean)/std_dev)/std_dev;
+}
+
+
+inline Real normal_cdf(Real x, Real mean, Real std_dev)
+{
+  normal_dist norm(mean, std_dev);
+  return bmth::cdf(norm, x);
+  //return Phi((x-mean)/std_dev);
+}
+
+
 inline Real bounded_normal_pdf(Real x, Real mean, Real std_dev, Real lwr,
 			       Real upr)
 {
@@ -569,6 +585,20 @@ inline Real std_beta_cdf(Real x, Real alpha, Real beta)
   return gsl_cdf_beta_P(x, alpha, beta);
 #endif //HAVE_GSL or HAVE_BOOST
 */
+}
+
+
+inline Real beta_pdf(Real x, Real alpha, Real beta, Real lwr, Real upr)
+{
+  Real scale = upr - lwr, scaled_x = (x - lwr)/scale;
+  return std_beta_pdf(scaled_x, alpha, beta) / scale;
+}
+
+
+inline Real beta_cdf(Real x, Real alpha, Real beta, Real lwr, Real upr)
+{
+  Real scaled_x = (x - lwr)/(upr - lwr);
+  return std_beta_cdf(scaled_x, alpha, beta);
 }
 
 
