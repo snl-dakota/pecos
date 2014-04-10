@@ -73,7 +73,6 @@ public:
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
   /// initialize a lightweight instance that only generates index sets
-  /// using the provided multi-index growth factor
   void initialize_grid(size_t num_v, unsigned short ssg_level);
 
   void initialize_sets();

@@ -142,7 +142,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   Real delta_star, tol = data_rep->expConfigOptions.convergenceTol;
-  int soft_conv_count = 0, soft_conv_limit = 2; // for now
+  unsigned short soft_conv_count = 0;
 
   adaptedMultiIndex = data_rep->multiIndex; // starting point for adaptation
 
@@ -164,7 +164,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
 
   data_rep->csgDriver.initialize_sets(); // initialize the active sets
 
-  while (soft_conv_count < soft_conv_limit) {
+  while (soft_conv_count < data_rep->softConvLimit) {
     // invoke run_regression() for each index set candidate and select best
     delta_star = select_best_active();
     // increase in CV error results in negative delta_star and trips conv count.
@@ -218,12 +218,6 @@ Real RegressOrthogPolyApproximation::select_best_active()
     else
       data_rep->increment_trial_set(trial_set, adaptedMultiIndex);
 
-    // number of unique points added is equivalent to number of candidate exp
-    // terms added for Gauss quadrature, but not other cases
-    //int new_terms = csg_driver->unique_trial_points();
-    size_t new_terms = adaptedMultiIndex.size()
-                     - data_rep->tpMultiIndexMapRef.back();
-
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
     // We pass false to defer finalization (shared multiIndex, sparseIndices).
@@ -236,7 +230,15 @@ Real RegressOrthogPolyApproximation::select_best_active()
     // number of successive increases before abandoning hope).  Normalize delta
     // based on size of candidate basis expansion (increment must be nonzero
     // since growth restriction is precluded for generalized sparse grids).
-    delta = (data_rep->cvErrorRef - cv_err) / new_terms;
+    delta = data_rep->cvErrorRef - cv_err;
+    if (data_rep->normalizeCV) {
+      // number of unique points added is equivalent to number of candidate exp
+      // terms added for Gauss quadrature, but not other cases
+      //int new_terms = csg_driver->unique_trial_points();
+      size_t new_terms = adaptedMultiIndex.size()
+	               - data_rep->tpMultiIndexMapRef.back();
+      delta /= new_terms;
+    }
     PCout << "\n<<<<< Trial set refinement metric = " << delta << '\n';
 
     // track best increment evaluated thus far

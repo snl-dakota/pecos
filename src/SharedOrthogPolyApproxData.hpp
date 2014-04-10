@@ -297,15 +297,24 @@ protected:
   /// adaptation via the generalized sparse grid algorithm; it's state
   /// is reset for each response QoI
   CombinedSparseGridDriver csgDriver;
-  /// a scalar growth factor for defining the tpMultiIndex contribution
-  /// from a particular trial index set in adapted basis mode
-  unsigned short multiIndexGrowthFactor;
   /// the cross validation error reference point for adapting a CS
   /// candidate basis; it's state is reset for each response QoI
   Real cvErrorRef;
   /// size of expansion that corresponds to the best solution identified
   /// (may not be the last solution)
   size_t bestExpTerms;
+  /// a scalar growth factor for defining the tpMultiIndex contribution
+  /// from a particular trial index set in adapted basis mode
+  unsigned short multiIndexGrowthFactor;
+  /// initial sparse grid level that provides the starting point for basis
+  /// adaptation
+  unsigned short referenceSGLevel;
+  /// flag indicating whether to apply normalization to CV error estimates
+  /// within select_best_active()
+  bool normalizeCV;
+  /// number of consecutive cycles for which convergence criterion
+  /// must be met prior to termination
+  unsigned short softConvLimit;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
@@ -323,7 +332,10 @@ private:
 inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
-  SharedPolyApproxData(basis_type, num_vars), approxOrder(approx_order)
+  SharedPolyApproxData(basis_type, num_vars), approxOrder(approx_order),
+  multiIndexGrowthFactor(2),
+  referenceSGLevel(2), normalizeCV(false), softConvLimit(3) // paper consistency
+  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2)// normal settings
 { }
 
 
@@ -333,7 +345,9 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options),
-  approxOrder(approx_order)
+  approxOrder(approx_order), multiIndexGrowthFactor(2),
+  referenceSGLevel(2), normalizeCV(false), softConvLimit(3) // paper consistency
+  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2)// normal settings
 { }
 
 

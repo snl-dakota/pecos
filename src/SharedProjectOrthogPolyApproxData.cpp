@@ -95,7 +95,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
-      sparse_grid_multi_index(multiIndex);
+      sparse_grid_multi_index(csg_driver, multiIndex);
       allocate_component_sobol(multiIndex);
       ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     }
@@ -331,10 +331,10 @@ void SharedProjectOrthogPolyApproxData::post_combine_data(short combine_type)
 
 
 void SharedProjectOrthogPolyApproxData::
-sparse_grid_multi_index(UShort2DArray& multi_index)
+sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+			UShort2DArray& multi_index)
 {
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  const UShort2DArray&  sm_multi_index = csg_driver->smolyak_multi_index();
+  const UShort2DArray& sm_multi_index = csg_driver->smolyak_multi_index();
   size_t i, num_smolyak_indices = sm_multi_index.size();
 
   // assemble a complete list of individual polynomial coverage

@@ -98,7 +98,8 @@ private:
   //
 
   /// initialize multi_index using a sparse grid expansion
-  void sparse_grid_multi_index(UShort2DArray& multi_index);
+  void sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+			       UShort2DArray& multi_index);
   // initialize tp_multi_index from tpMultiIndexMap
   //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
   //				        size_t tp_index);

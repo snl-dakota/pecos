@@ -75,16 +75,20 @@ void SharedOrthogPolyApproxData::allocate_data()
       // (3) neither: exp_order only used to define colloc_pts from colloc_ratio
       //     and we hard-wire the starting point (e.g., level 0) for adaptation
       // For now, we use case 3 as it is the simplest
-      UShortArray order0(numVars, 0);
-      tpMultiIndex.resize(1);
-      tpMultiIndexMap.resize(1); tpMultiIndexMapRef.resize(1);
-      tensor_product_multi_index(order0, tpMultiIndex[0]);
-      append_multi_index(tpMultiIndex[0], multiIndex, tpMultiIndexMap[0],
-			 tpMultiIndexMapRef[0]);
+
       // initialize the sparse grid driver (lightweight mode) for generating
       // candidate index sets
-      multiIndexGrowthFactor = 2;
-      csgDriver.initialize_grid(numVars, 0); // level 0
+      csgDriver.initialize_grid(numVars, referenceSGLevel);
+
+      // define reference multiIndex and tpMultiIndex{,Map,MapRef} from 
+      // initial sparse grid level
+      //sparse_grid_multi_index(&csgDriver, multiIndex); // heavyweight mapping
+      const UShort2DArray& sm_multi_index = csgDriver.smolyak_multi_index();
+      size_t i, num_sm_mi = sm_multi_index.size();
+      multiIndex.clear();
+      tpMultiIndex.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
+      for (i=0; i<num_sm_mi; ++i)
+	increment_trial_set(sm_multi_index[i], multiIndex); // lightwt mapping
       break;
     }
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
