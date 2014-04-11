@@ -86,6 +86,7 @@ inline Real gamma_function(Real x)
 }
 
 
+/** Univariate standard normal density function. */
 inline Real phi(Real beta)
 {
 //#ifdef HAVE_BOOST
@@ -98,6 +99,30 @@ inline Real phi(Real beta)
   return std::exp(-beta*beta/2.)/std::sqrt(2.*PI);
 #endif
 */
+}
+
+
+/** Multivariate standard normal density function with aggregate distance. */
+inline Real phi(Real beta, size_t n)
+{
+  // need n instances of 1/sqrt(2Pi), but 1D pdf only includes 1:
+  Real factor = (n > 1) ? std::pow(2.*PI, -((Real)(n-1))/2.) : 1.;
+  normal_dist norm(0., 1.);
+  return bmth::pdf(norm, beta) * factor; // 1D -> nD
+}
+
+
+/** Multivariate standard normal density function from vector. */
+inline Real phi(const RealVector& u)
+{
+  return phi(u.normFrobenius(), u.length());
+
+  // Alternate implementation invokes exp() repeatedly:
+  //normal_dist norm(0., 1.);
+  //size_t i, n = u.length();
+  //Real pdf = 1.;
+  //for (i=0; i<n; ++i)
+  //  pdf *= bmth::pdf(norm, u[i])
 }
 
 
