@@ -227,13 +227,12 @@ Real RegressOrthogPolyApproximation::select_best_active()
     // Smallest absolute error is largest decrease from consistent ref.  delta
     // is a signed quantity in order to detect when best case error increases
     // relative to ref -> terminate or increment soft conv counter (allow some
-    // number of successive increases before abandoning hope).  Normalize delta
-    // based on size of candidate basis expansion (increment must be nonzero
-    // since growth restriction is precluded for generalized sparse grids).
+    // number of successive increases before abandoning hope).
     delta = data_rep->cvErrorRef - cv_err;
     if (data_rep->normalizeCV) {
-      // number of unique points added is equivalent to number of candidate exp
-      // terms added for Gauss quadrature, but not other cases
+      // Normalize delta based on size of candidate basis expansion
+      // (number of unique points added is equivalent to number of candidate
+      // expansion terms added for Gauss quadrature, but not other cases)
       //int new_terms = csg_driver->unique_trial_points();
       size_t new_terms = adaptedMultiIndex.size()
 	               - data_rep->tpMultiIndexMapRef.back();
