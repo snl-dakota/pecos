@@ -132,7 +132,8 @@ inline SharedRegressOrthogPolyApproxData::
 SharedRegressOrthogPolyApproxData(short basis_type,
 				  const UShortArray& approx_order,
 				  size_t num_vars):
-  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars), l2Penalty(0.)
+  SharedOrthogPolyApproxData(basis_type, approx_order, num_vars),
+  randomSeed(0), crossValidation(false), l2Penalty(0.)
 { }
 
 
@@ -143,7 +144,8 @@ SharedRegressOrthogPolyApproxData(short basis_type,
 				  const ExpansionConfigOptions& ec_options,
 				  const BasisConfigOptions& bc_options):
   SharedOrthogPolyApproxData(basis_type, approx_order, num_vars,
-			     ec_options, bc_options), l2Penalty(0.)
+			     ec_options, bc_options),
+  randomSeed(0), crossValidation(false), l2Penalty(0.)
 { }
 
 
