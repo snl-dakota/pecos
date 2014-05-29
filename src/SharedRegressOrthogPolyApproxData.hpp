@@ -60,6 +60,8 @@ public:
   //- Heading: Member functions
   //
 
+  /// set randomSeed
+  void random_seed(int seed);
   /// set crossValidation flag
   void cross_validation(bool flag);
   /// set the noise tolerance(s) for compressed sensing approaches
@@ -104,6 +106,8 @@ private:
   /// Wrapper class that is used to solve regression problems
   CompressedSensingTool CSTool;
 
+  /// random seed for data fold definition within cross validation
+  int randomSeed;
   /// flag for use of automatic cross-validation for parameter
   /// selection in regression approaches
   bool crossValidation;
@@ -145,6 +149,10 @@ SharedRegressOrthogPolyApproxData(short basis_type,
 
 inline SharedRegressOrthogPolyApproxData::~SharedRegressOrthogPolyApproxData()
 { }
+
+
+inline void SharedRegressOrthogPolyApproxData::random_seed(int seed)
+{ randomSeed = seed; }
 
 
 inline void SharedRegressOrthogPolyApproxData::cross_validation(bool flag)
