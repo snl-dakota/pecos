@@ -115,8 +115,8 @@ void RandomNumberGenerator::permutation( IntMatrix &permutations,
 					 int M, int N,
 					 unsigned int seed )
 {
-  boost::random::mt19937 generator( seed );
-  boost::random::uniform_int_distribution<> dist( 0, M-1 );
+  boost::mt19937 generator( seed );
+  boost::uniform_int<> dist( 0, M-1 );
   permutations.shapeUninitialized( M, N );
   for ( int j = 0; j < N; j++ )
     {
