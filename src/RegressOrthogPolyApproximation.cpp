@@ -1389,6 +1389,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
     for (j=0;j<num_v;j++)
       points(j,i) = surrData.continuous_variables(i)[j];
   }
+  //points.print(std::cout);
 
   if (expansionCoeffFlag) {
     
@@ -1518,7 +1519,6 @@ void RegressOrthogPolyApproximation::run_regression()
 
     RealMatrix A, B, points;
     build_linear_system( A, B, points );
-
     if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
 	 ORTHOG_LEAST_INTERPOLATION )
       {
@@ -1591,10 +1591,7 @@ void RegressOrthogPolyApproximation::run_regression()
       sparseIndices.clear();
     }
   }
-  std::cout << "C " << expansionCoeffs.numRows() << std::endl;
-  std::cout << "C " << data_rep->multiIndex.size() << std::endl;
 }
-
 
 void RegressOrthogPolyApproximation::
 update_sparse(Real* dense_coeffs, size_t num_dense_terms)
@@ -1731,6 +1728,8 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   bool use_gradients = false;
   if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
   MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
+  int cv_seed = data_rep->randomSeed; 
+  cv_iterator.set_seed( cv_seed );
   cv_iterator.set_fault_data( faultInfo,
 			      surrData.failed_response_data() );
   
@@ -1739,6 +1738,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   cv_iterator.set_solver( linear_solver );
 
   int num_folds = 10;
+  //int num_folds = num_data_pts_fn; //HACK
   int max_num_pts_per_fold = num_data_pts_fn / num_folds;
   if ( num_data_pts_fn % num_folds != 0 ); max_num_pts_per_fold++;
   if ( CSOpts.solver != ORTHOG_MATCH_PURSUIT   &&
@@ -1770,7 +1770,12 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   Real best_tolerance = cv_iterator.get_best_residual_tolerance();
 
   if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
-    PCout << "Cross validation score: " << score << "\n";
+    {
+      PCout << "Cross validation score: " << score << "\n";
+      PCout << "Best tolerance chosen by cross validation: " << 
+	best_tolerance << "\n";
+    }
+
 
   // CV is complete, now compute final solution with all data points:
   IntVector index_mapping;
@@ -1826,6 +1831,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   bool use_gradients = false;
   if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
   MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
+  int cv_seed = data_rep->randomSeed; 
+  cv_iterator.set_seed( cv_seed );
   cv_iterator.set_fault_data( faultInfo,
 			      surrData.failed_response_data() );
   

@@ -51,9 +51,11 @@ void CrossValidationIterator::set_num_points( int num_points )
 
   if ( seed_ < 0 )
     range( indices_, 0, numPts_, 1 );
+  else if ( seed_ == 0 )
+    RNG_.permutation( indices_, numPts_, 1, (unsigned int)std::time(0) );
   else
-    get_permutations( indices_, numPts_, 1, (unsigned int )seed_ );
-  
+    //get_permutations( indices_, numPts_, 1, (unsigned int)seed_ );
+    RNG_.permutation( indices_, numPts_, 1, (unsigned int)seed_ );
 };
 
 void CrossValidationIterator::set_num_equations_per_point( int num_eq )
@@ -436,7 +438,7 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
 	  get_fold_indices( iter, training_indices, validation_indices );
 	  extract_values( b, training_indices, b_train );
 	  extract_values( b, validation_indices, b_valid );
-	  int num_validation_indices = validation_indices.length();
+	  //int num_validation_indices = validation_indices.length();
 	  RealMatrix coeff, metrics;
 	  if ( dataType_ == 0 )
 	    {

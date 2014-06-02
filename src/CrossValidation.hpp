@@ -2,6 +2,7 @@
 #define CROSS_VALIDATION_HPP
 
 #include "MathTools.hpp"
+#include "RandomNumberGenerator.hpp"
 #include "LinearSolver.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "FaultTolerance.hpp"
@@ -25,6 +26,8 @@ protected:
   int dataType_;
 
   int numEquationsPerPoint_;
+
+  RandomNumberGenerator RNG_;
   
   // Dakota specific member variables
   FaultInfo faultInfo_;
