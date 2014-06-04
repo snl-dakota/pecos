@@ -14,7 +14,6 @@
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/math/distributions/beta.hpp>
-#include <sys/time.h>
 
 #include "MathTools.hpp"
 
