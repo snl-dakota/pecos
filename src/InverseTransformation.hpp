@@ -42,11 +42,11 @@ protected:
 
   void power_spectral_density(const String& psd_name, const Real& param = 0.);
   //void power_spectral_density(fn_ptr);
-  void power_spectral_density(const RealPairArray& psd);
+  void power_spectral_density(const RealRealPairArray& psd);
 
   //void correlation_function(const String& fn_name, Real param = 0.);
   //void correlation_function(fn_ptr);
-  //void correlation_function(const RealPairArray& corr_fn);
+  //void correlation_function(const RealRealPairArray& corr_fn);
 
   // return inverseSample
   //const RealVector& sample() const;

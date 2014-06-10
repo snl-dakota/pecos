@@ -59,7 +59,7 @@ public:
   //virtual void correlation_function(const String& fn_name,
   //                                  const Real& param = 0.);
   //virtual void correlation_function(fn_ptr);
-  //virtual void correlation_function(const RealPairArray& corr_fn);
+  //virtual void correlation_function(const RealRealPairArray& corr_fn);
 
   /// compute and return InverseTransformation::inverseSample
   virtual const RealVector& compute_sample();

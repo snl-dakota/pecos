@@ -73,8 +73,8 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 // ---------------------------------------
 typedef boost::dynamic_bitset<unsigned long> BitArray;
 
-typedef std::pair<unsigned short, unsigned short> UShortPair;
-typedef std::pair<Real, Real>                     RealPair;
+typedef std::pair<unsigned short, unsigned short> UShortUShortPair;
+typedef std::pair<Real, Real>                     RealRealPair;
 typedef std::pair<Real, RealVector>               RealRealVectorPair;
 
 typedef std::list<unsigned short>    UShortList;
@@ -95,7 +95,7 @@ typedef std::vector<size_t>          SizetArray;
 typedef std::vector<SizetArray>      Sizet2DArray;
 typedef std::vector<Sizet2DArray>    Sizet3DArray;
 typedef std::vector<std::complex<Real> > ComplexArray;
-typedef std::vector<RealPair>        RealPairArray;
+typedef std::vector<RealRealPair>    RealRealPairArray;
 typedef std::vector<String>          StringArray;
 typedef std::vector<RealVector>      RealVectorArray;
 typedef std::vector<RealVectorArray> RealVector2DArray;
@@ -124,9 +124,15 @@ typedef std::map<BitArray, unsigned long> BitArrayULongMap;
 typedef std::map<unsigned long, unsigned long> ULongULongMap;
 typedef std::map<int, int>                IntIntMap;
 typedef std::map<int, Real>               IntRealMap;
+typedef std::map<String, Real>            StringRealMap;
 typedef std::map<Real, Real>              RealRealMap;
+typedef std::map<RealRealPair, Real>      RealRealPairRealMap;
+typedef std::map<IntIntPair, Real>        IntIntPairRealMap;
 typedef std::vector<IntRealMap>           IntRealMapArray;
+typedef std::vector<StringRealMap>        StringRealMapArray;
 typedef std::vector<RealRealMap>          RealRealMapArray;
+typedef std::vector<RealRealPairRealMap>  RealRealPairRealMapArray;
+typedef std::vector<IntIntPairRealMap>    IntIntPairRealMapArray;
 typedef std::map<int, RealVector>         IntRealVectorMap;
 typedef std::map<UShortMultiSet,   Real>  UShortMultiSetRealMap;
 typedef std::map<UShort2DMultiSet, Real>  UShort2DMultiSetRealMap;

@@ -194,7 +194,7 @@ precompute_keys(const UShortArray& basis_index)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
   if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
-  UShortPair key_pr;
+  UShortUShortPair key_pr;
   for (size_t i=0; i<numVars; ++i) {
     key_pr = hsg_driver->level_to_delta_pair(i, basis_index[i]);
     tpNumKeys[i] = key_pr.first; tpMaxKeys[i] = key_pr.second;
@@ -208,7 +208,7 @@ precompute_keys(const UShortArray& basis_index, const SizetList& subset_indices)
   HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
   if (tpNumKeys.empty()) tpNumKeys.resize(numVars);
   if (tpMaxKeys.empty()) tpMaxKeys.resize(numVars);
-  SizetList::const_iterator cit; size_t i; UShortPair key_pr;
+  SizetList::const_iterator cit; size_t i; UShortUShortPair key_pr;
   for (cit=subset_indices.begin(); cit!=subset_indices.end(); ++cit) {
     i = *cit;
     key_pr = hsg_driver->level_to_delta_pair(i, basis_index[i]);

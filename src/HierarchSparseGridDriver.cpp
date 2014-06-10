@@ -419,14 +419,14 @@ level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
 }
 
 
-UShortPair HierarchSparseGridDriver::
+UShortUShortPair HierarchSparseGridDriver::
 level_to_delta_pair(size_t i, unsigned short level)
 {
   switch (level) { // growth restriction should not occur for level = 0 or 1
   case 0: // +1 pt,  max index = 0 for 1 pt rule
-    return UShortPair(1,0); break;
+    return UShortUShortPair(1,0); break;
   case 1: // +2 pts, max index = 2 for right end of 3 pt rule (open or closed)
-    return UShortPair(2,2); break;
+    return UShortUShortPair(2,2); break;
   default: {
     unsigned short max_key, num_delta = level_to_delta_size(i, level);
     switch(collocRules[i]) {
@@ -454,7 +454,7 @@ level_to_delta_pair(size_t i, unsigned short level)
       abort_handler(-1);
       break;
     }
-    return UShortPair(num_delta, max_key);
+    return UShortUShortPair(num_delta, max_key);
     break;
   }
   }

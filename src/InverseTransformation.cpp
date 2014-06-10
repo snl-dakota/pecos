@@ -123,7 +123,7 @@ power_spectral_density(const String& psd_name, const Real& param)
     The incoming discretization cannot be assumed to match that selected
     for psdSequence; therefore, linear interpolation is performed in any
     combination of log or linear scales for the two axes. */
-void InverseTransformation::power_spectral_density(const RealPairArray& psd)
+void InverseTransformation::power_spectral_density(const RealRealPairArray& psd)
 {
   // Interpolation: psd[i].second -> psdSequence
 

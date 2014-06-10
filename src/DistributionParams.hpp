@@ -55,12 +55,13 @@ private:
     const RealVector& guuv_alphas,      const RealVector& guuv_betas,
     const RealVector& fuv_alphas,       const RealVector& fuv_betas,
     const RealVector& wuv_alphas,       const RealVector& wuv_betas,
-    const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
+    const RealRealMapArray& hbuv_prs,   const RealVector& puv_lambdas,
     const RealVector& biuv_p_per_tr,    const IntVector& biuv_num_trials, 
     const RealVector& nbuv_p_per_tr,    const IntVector& nbuv_num_trials, 
     const RealVector& geuv_p_per_tr,    const IntVector& hguv_tot_pop,
     const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr);
+    const IntRealMapArray& hpuiv_prs,   const StringRealMapArray& hpusv_prs,
+    const RealRealMapArray& hpurv_prs,  const RealSymMatrix& uv_corr);
   /// destructor
   ~AleatoryDistParamsRep();
 
@@ -131,7 +132,7 @@ private:
   /// weibull uncertain variable betas
   RealVector weibullBetas;
   /// histogram uncertain (x,y) bin pairs (continuous linear histogram)
-  RealVectorArray histogramBinPairs;
+  RealRealMapArray histogramBinPairs;
 
   /// poisson uncertain variable lambdas
   RealVector poissonLambdas;
@@ -151,8 +152,12 @@ private:
   IntVector hyperGeomSelectedPopulation;
   /// hypergeometric uncertain variable numbers failed in population
   IntVector hyperGeomNumDrawn;
+  /// histogram uncertain (i,y) point pairs (discrete histogram)
+  IntRealMapArray histogramPointIntPairs;
+  /// histogram uncertain (s,y) point pairs (discrete histogram)
+  StringRealMapArray histogramPointStringPairs;
   /// histogram uncertain (x,y) point pairs (discrete histogram)
-  RealVectorArray histogramPointPairs;
+  RealRealMapArray histogramPointRealPairs;
 
   /// uncertain variable correlation matrix (rank correlations for sampling
   /// and correlation coefficients for reliability)
@@ -184,12 +189,13 @@ AleatoryDistParamsRep(const RealVector& nuv_means,
   const RealVector& guuv_alphas,      const RealVector& guuv_betas,
   const RealVector& fuv_alphas,       const RealVector& fuv_betas,
   const RealVector& wuv_alphas,       const RealVector& wuv_betas,
-  const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
-  const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
-  const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
-  const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
+  const RealRealMapArray& hbuv_prs,   const RealVector& puv_lambdas,
+  const RealVector& biuv_p_per_tr,    const IntVector& biuv_num_trials, 
+  const RealVector& nbuv_p_per_tr,    const IntVector& nbuv_num_trials, 
+  const RealVector& geuv_p_per_tr,    const IntVector& hguv_tot_pop,
   const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr):
+  const IntRealMapArray& hpuiv_prs,   const StringRealMapArray& hpusv_prs,
+  const RealRealMapArray& hpurv_prs,  const RealSymMatrix& uv_corr):
   normalMeans(nuv_means), normalStdDevs(nuv_std_devs),
   normalLowerBnds(nuv_l_bnds), normalUpperBnds(nuv_u_bnds),
   lognormalMeans(lnuv_means), lognormalStdDevs(lnuv_std_devs),
@@ -209,7 +215,8 @@ AleatoryDistParamsRep(const RealVector& nuv_means,
   negBinomialProbPerTrial(nbuv_p_per_tr), negBinomialNumTrials(nbuv_num_trials),
   geometricProbPerTrial(geuv_p_per_tr), hyperGeomTotalPopulation(hguv_tot_pop),
   hyperGeomSelectedPopulation(hguv_sel_pop),  hyperGeomNumDrawn(hguv_num_drawn),
-  histogramPointPairs(hpuv_prs), uncertainCorrelations(uv_corr),
+  histogramPointIntPairs(hpuiv_prs), histogramPointStringPairs(hpusv_prs),
+  histogramPointRealPairs(hpurv_prs), uncertainCorrelations(uv_corr),
   referenceCount(1)
 { }
 
@@ -243,11 +250,11 @@ private:
   /// default constructor
   EpistemicDistParamsRep();
   /// constructor
-  EpistemicDistParamsRep(const RealVectorArray& ciuv_probs, 
-    const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
-    const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
-    const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
-    const RealRealMapArray& dusrv_vals_probs);
+  EpistemicDistParamsRep(const RealRealPairRealMapArray& ceuv_bpas,
+    const IntIntPairRealMapArray& deuiv_bpas,
+    const IntRealMapArray&    deusiv_vals_probs,
+    const StringRealMapArray& deussv_vals_probs,
+    const RealRealMapArray&   deusrv_vals_probs);
   /// destructor
   ~EpistemicDistParamsRep();
 
@@ -255,24 +262,38 @@ private:
   //- Heading: Private data members
   //
 
+  /*
   /// basic probability values for continuous interval uncertain variables
   RealVectorArray contIntervalProbs;
   /// lower bounds for continuous interval uncertain variables
   RealVectorArray contIntervalLowerBnds;
   /// upper bounds for continuous interval uncertain variables
   RealVectorArray contIntervalUpperBnds;
+  */
+  /// basic probability assignments (continuous interval bounds + probability)
+  /// for continuous interval uncertain variables
+  RealRealPairRealMapArray contIntervalBPA; // consider multimap from exp elicit
 
+  /*
   /// basic probability values for discrete interval uncertain variables
   RealVectorArray discIntervalProbs;
   /// lower bounds for discrete interval uncertain variables
   IntVectorArray discIntervalLowerBnds;
   /// upper bounds for discrete interval uncertain variables
   IntVectorArray discIntervalUpperBnds;
+  */
+  /// basic probability assignments (discrete range bounds + probability)
+  /// for discrete interval uncertain variables
+  IntIntPairRealMapArray discIntervalBPA; // consider multimap from exp elicit
+
   /// admissible values and basic probability assignments for discrete
-  /// uncertain integer set variables
+  /// uncertain set integer variables
   IntRealMapArray discSetIntValsProbs;
   /// admissible values and basic probability assignments for discrete
-  /// uncertain real set variables
+  /// uncertain set string variables
+  StringRealMapArray discSetStringValsProbs;
+  /// admissible values and basic probability assignments for discrete
+  /// uncertain set real variables
   RealRealMapArray discSetRealValsProbs;
 
   /// number of handle objects sharing edpRep
@@ -285,16 +306,15 @@ inline EpistemicDistParamsRep::EpistemicDistParamsRep() : referenceCount(1)
 
 
 inline EpistemicDistParamsRep::
-EpistemicDistParamsRep(const RealVectorArray& ciuv_probs,
-  const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
-  const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
-  const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
-  const RealRealMapArray& dusrv_vals_probs):
-  contIntervalProbs(ciuv_probs), contIntervalLowerBnds(ciuv_l_bnds),
-  contIntervalUpperBnds(ciuv_u_bnds), discIntervalProbs(diuv_probs),
-  discIntervalLowerBnds(diuv_l_bnds), discIntervalUpperBnds(diuv_u_bnds),
-  discSetIntValsProbs(dusiv_vals_probs), discSetRealValsProbs(dusrv_vals_probs),
-  referenceCount(1)
+EpistemicDistParamsRep(const RealRealPairRealMapArray& ceuv_bpas,
+		       const IntIntPairRealMapArray& deuiv_bpas,
+		       const IntRealMapArray& deusiv_vals_probs,
+		       const StringRealMapArray& deussv_vals_probs,
+		       const RealRealMapArray& deusrv_vals_probs):
+  contIntervalBPA(ceuv_bpas), discIntervalBPA(deuiv_bpas),
+  discSetIntValsProbs(deusiv_vals_probs),
+  discSetStringValsProbs(deussv_vals_probs),
+  discSetRealValsProbs(deusrv_vals_probs), referenceCount(1)
 { }
 
 
@@ -335,12 +355,13 @@ public:
     const RealVector& guuv_alphas,      const RealVector& guuv_betas,
     const RealVector& fuv_alphas,       const RealVector& fuv_betas,
     const RealVector& wuv_alphas,       const RealVector& wuv_betas,
-    const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
-    const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
-    const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
-    const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
+    const RealRealMapArray& hbuv_prs,   const RealVector& puv_lambdas,
+    const RealVector& biuv_p_per_tr,    const IntVector& biuv_num_trials, 
+    const RealVector& nbuv_p_per_tr,    const IntVector& nbuv_num_trials, 
+    const RealVector& geuv_p_per_tr,    const IntVector& hguv_tot_pop,
     const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-    const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr);
+    const IntRealMapArray& hpuiv_prs,   const StringRealMapArray& hpusv_prs,
+    const RealRealMapArray& hpurv_prs,  const RealSymMatrix& uv_corr);
   /// copy constructor
   AleatoryDistParams(const AleatoryDistParams& adp);
   /// destructor
@@ -356,10 +377,12 @@ public:
   /// return total number of continuous aleatory uncertain variables
   size_t cauv()  const;
 
-  /// return total number of discrete integer aleatory uncertain variables
-  size_t diauv() const;
-  /// return total number of discrete real aleatory uncertain variables
-  size_t drauv() const;
+  /// return total number of discrete aleatory uncertain integer variables
+  size_t dauiv() const;
+  /// return total number of discrete aleatory uncertain string variables
+  size_t dausv() const;
+  /// return total number of discrete aleatory uncertain real variables
+  size_t daurv() const;
   /// return total number of discrete aleatory uncertain variables
   size_t dauv()   const;
 
@@ -633,13 +656,13 @@ public:
   void weibull_beta(const Real& w_beta, size_t i);
 
   /// return the histogram uncertain bin pairs
-  const RealVectorArray& histogram_bin_pairs() const;
+  const RealRealMapArray& histogram_bin_pairs() const;
   /// return the ith histogram uncertain bin pair
-  const RealVector& histogram_bin_pairs(size_t i) const;
+  const RealRealMap& histogram_bin_pairs(size_t i) const;
   /// set the histogram uncertain bin pairs
-  void histogram_bin_pairs(const RealVectorArray& h_bin_pairs);
+  void histogram_bin_pairs(const RealRealMapArray& h_bin_pairs);
   /// set the ith histogram uncertain bin pair
-  void histogram_bin_pairs(const RealVector& h_bin_pairs_i, size_t i);
+  void histogram_bin_pairs(const RealRealMap& h_bin_pairs_i, size_t i);
 
   /// return the poisson uncertain variable lambda parameters
   const RealVector& poisson_lambdas() const;
@@ -721,13 +744,32 @@ public:
   void hypergeometric_num_drawn(int num_drawn, size_t i);
 
   /// return the histogram uncertain point pairs
-  const RealVectorArray& histogram_point_pairs() const;
+  const IntRealMapArray& histogram_point_int_pairs() const;
   /// return the ith histogram uncertain point pair
-  const RealVector& histogram_point_pairs(size_t i) const;
+  const IntRealMap& histogram_point_int_pairs(size_t i) const;
   /// set the histogram uncertain point pairs
-  void histogram_point_pairs(const RealVectorArray& h_pt_pairs);
+  void histogram_point_int_pairs(const IntRealMapArray& h_pt_pairs);
   /// set the ith histogram uncertain point pair
-  void histogram_point_pairs(const RealVector& h_pt_pairs_i, size_t i);
+  void histogram_point_int_pairs(const IntRealMap& h_pt_pairs_i, size_t i);
+
+  /// return the histogram uncertain point pairs
+  const StringRealMapArray& histogram_point_string_pairs() const;
+  /// return the ith histogram uncertain point pair
+  const StringRealMap& histogram_point_string_pairs(size_t i) const;
+  /// set the histogram uncertain point pairs
+  void histogram_point_string_pairs(const StringRealMapArray& h_pt_pairs);
+  /// set the ith histogram uncertain point pair
+  void histogram_point_string_pairs(const StringRealMap& h_pt_pairs_i,
+				    size_t i);
+
+  /// return the histogram uncertain point pairs
+  const RealRealMapArray& histogram_point_real_pairs() const;
+  /// return the ith histogram uncertain point pair
+  const RealRealMap& histogram_point_real_pairs(size_t i) const;
+  /// set the histogram uncertain point pairs
+  void histogram_point_real_pairs(const RealRealMapArray& h_pt_pairs);
+  /// set the ith histogram uncertain point pair
+  void histogram_point_real_pairs(const RealRealMap& h_pt_pairs_i, size_t i);
 
   /// return the uncertain variable correlations
   const RealSymMatrix& uncertain_correlations() const;
@@ -770,12 +812,13 @@ AleatoryDistParams(const RealVector& nuv_means,
   const RealVector& guuv_alphas,      const RealVector& guuv_betas,
   const RealVector& fuv_alphas,       const RealVector& fuv_betas,
   const RealVector& wuv_alphas,       const RealVector& wuv_betas,
-  const RealVectorArray& hbuv_prs,    const RealVector& puv_lambdas,
-  const RealVector& biuv_p_per_tr,    const IntVector&  biuv_num_trials, 
-  const RealVector& nbuv_p_per_tr,    const IntVector&  nbuv_num_trials, 
-  const RealVector& geuv_p_per_tr,    const IntVector&  hguv_tot_pop,
+  const RealRealMapArray& hbuv_prs,   const RealVector& puv_lambdas,
+  const RealVector& biuv_p_per_tr,    const IntVector& biuv_num_trials, 
+  const RealVector& nbuv_p_per_tr,    const IntVector& nbuv_num_trials, 
+  const RealVector& geuv_p_per_tr,    const IntVector& hguv_tot_pop,
   const IntVector& hguv_sel_pop,      const IntVector& hguv_num_drawn,
-  const RealVectorArray& hpuv_prs,    const RealSymMatrix& uv_corr):
+  const IntRealMapArray& hpuiv_prs,   const StringRealMapArray& hpusv_prs,
+  const RealRealMapArray& hpurv_prs,  const RealSymMatrix& uv_corr):
   adpRep(new AleatoryDistParamsRep(nuv_means, nuv_std_devs, nuv_l_bnds,
 	 nuv_u_bnds, lnuv_means, lnuv_std_devs, lnuv_lambdas, lnuv_zetas,
 	 lnuv_err_facts, lnuv_l_bnds, lnuv_u_bnds, uuv_l_bnds, uuv_u_bnds,
@@ -784,7 +827,8 @@ AleatoryDistParams(const RealVector& nuv_means,
 	 gauv_betas, guuv_alphas, guuv_betas, fuv_alphas, fuv_betas, wuv_alphas,
 	 wuv_betas, hbuv_prs, puv_lambdas, biuv_p_per_tr, biuv_num_trials,
 	 nbuv_p_per_tr, nbuv_num_trials, geuv_p_per_tr, hguv_tot_pop,
-	 hguv_sel_pop, hguv_num_drawn, hpuv_prs, uv_corr))
+	 hguv_sel_pop, hguv_num_drawn, hpuiv_prs, hpusv_prs, hpurv_prs,
+	 uv_corr))
 { }
 
 
@@ -833,20 +877,26 @@ inline size_t AleatoryDistParams::cauv() const
 }
 
 
-inline size_t AleatoryDistParams::diauv() const
+inline size_t AleatoryDistParams::dauiv() const
 {
-  return adpRep->poissonLambdas.length() + adpRep->binomialProbPerTrial.length() +
+  return adpRep->poissonLambdas.length() +
+    adpRep->binomialProbPerTrial.length() +
     adpRep->negBinomialProbPerTrial.length() +
-    adpRep->geometricProbPerTrial.length() + adpRep->hyperGeomNumDrawn.length();
+    adpRep->geometricProbPerTrial.length() +
+    adpRep->hyperGeomNumDrawn.length() + adpRep->histogramPointIntPairs.size();
 }
 
 
-inline size_t AleatoryDistParams::drauv() const
-{ return adpRep->histogramPointPairs.size(); }
+inline size_t AleatoryDistParams::dausv() const
+{ return adpRep->histogramPointStringPairs.size(); }
+
+
+inline size_t AleatoryDistParams::daurv() const
+{ return adpRep->histogramPointRealPairs.size(); }
 
 
 inline size_t AleatoryDistParams::dauv()  const
-{ return diauv() + drauv(); }
+{ return dauiv() + dausv() + daurv(); }
 
 
 inline void AleatoryDistParams::copy(const AleatoryDistParams& adp)
@@ -875,7 +925,8 @@ inline void AleatoryDistParams::copy(const AleatoryDistParams& adp)
     adp.negative_binomial_num_trials(), adp.geometric_probability_per_trial(),
     adp.hypergeometric_total_population(),
     adp.hypergeometric_selected_population(), adp.hypergeometric_num_drawn(),
-    adp.histogram_point_pairs(), adp.uncertain_correlations());
+    adp.histogram_point_int_pairs(), adp.histogram_point_string_pairs(),
+    adp.histogram_point_real_pairs(), adp.uncertain_correlations());
 }
 
 
@@ -1406,21 +1457,22 @@ inline void AleatoryDistParams::weibull_beta(const Real& beta, size_t i)
 { adpRep->weibullBetas[i] = beta; }
 
 
-inline const RealVectorArray& AleatoryDistParams::histogram_bin_pairs() const
+inline const RealRealMapArray& AleatoryDistParams::histogram_bin_pairs() const
 { return adpRep->histogramBinPairs; }
 
 
-inline const RealVector& AleatoryDistParams::histogram_bin_pairs(size_t i) const
+inline const RealRealMap& AleatoryDistParams::
+histogram_bin_pairs(size_t i) const
 { return adpRep->histogramBinPairs[i]; }
 
 
 inline void AleatoryDistParams::
-histogram_bin_pairs(const RealVectorArray& h_bin_pairs)
+histogram_bin_pairs(const RealRealMapArray& h_bin_pairs)
 { adpRep->histogramBinPairs = h_bin_pairs; }
 
 
 inline void AleatoryDistParams::
-histogram_bin_pairs(const RealVector& h_bin_pr, size_t i)
+histogram_bin_pairs(const RealRealMap& h_bin_pr, size_t i)
 { adpRep->histogramBinPairs[i] = h_bin_pr; }
 
 
@@ -1594,23 +1646,64 @@ hypergeometric_num_drawn(int num_drawn, size_t i)
 { adpRep->hyperGeomNumDrawn[i] = num_drawn; }
 
 
-inline const RealVectorArray& AleatoryDistParams::histogram_point_pairs() const
-{ return adpRep->histogramPointPairs; }
+inline const IntRealMapArray& AleatoryDistParams::
+histogram_point_int_pairs() const
+{ return adpRep->histogramPointIntPairs; }
 
 
-inline const RealVector& AleatoryDistParams::
-histogram_point_pairs(size_t i) const
-{ return adpRep->histogramPointPairs[i]; }
-
-
-inline void AleatoryDistParams::
-histogram_point_pairs(const RealVectorArray& h_pt_pairs)
-{ adpRep->histogramPointPairs = h_pt_pairs; }
+inline const IntRealMap& AleatoryDistParams::
+histogram_point_int_pairs(size_t i) const
+{ return adpRep->histogramPointIntPairs[i]; }
 
 
 inline void AleatoryDistParams::
-histogram_point_pairs(const RealVector& h_pt_pairs_i, size_t i)
-{ adpRep->histogramPointPairs[i] = h_pt_pairs_i; }
+histogram_point_int_pairs(const IntRealMapArray& h_pt_int_pairs)
+{ adpRep->histogramPointIntPairs = h_pt_int_pairs; }
+
+
+inline void AleatoryDistParams::
+histogram_point_int_pairs(const IntRealMap& h_pt_int_pairs_i, size_t i)
+{ adpRep->histogramPointIntPairs[i] = h_pt_int_pairs_i; }
+
+
+inline const StringRealMapArray& AleatoryDistParams::
+histogram_point_string_pairs() const
+{ return adpRep->histogramPointStringPairs; }
+
+
+inline const StringRealMap& AleatoryDistParams::
+histogram_point_string_pairs(size_t i) const
+{ return adpRep->histogramPointStringPairs[i]; }
+
+
+inline void AleatoryDistParams::
+histogram_point_string_pairs(const StringRealMapArray& h_pt_string_pairs)
+{ adpRep->histogramPointStringPairs = h_pt_string_pairs; }
+
+
+inline void AleatoryDistParams::
+histogram_point_string_pairs(const StringRealMap& h_pt_string_pairs_i, size_t i)
+{ adpRep->histogramPointStringPairs[i] = h_pt_string_pairs_i; }
+
+
+inline const RealRealMapArray& AleatoryDistParams::
+histogram_point_real_pairs() const
+{ return adpRep->histogramPointRealPairs; }
+
+
+inline const RealRealMap& AleatoryDistParams::
+histogram_point_real_pairs(size_t i) const
+{ return adpRep->histogramPointRealPairs[i]; }
+
+
+inline void AleatoryDistParams::
+histogram_point_real_pairs(const RealRealMapArray& h_pt_real_pairs)
+{ adpRep->histogramPointRealPairs = h_pt_real_pairs; }
+
+
+inline void AleatoryDistParams::
+histogram_point_real_pairs(const RealRealMap& h_pt_real_pairs_i, size_t i)
+{ adpRep->histogramPointRealPairs[i] = h_pt_real_pairs_i; }
 
 
 inline const RealSymMatrix& AleatoryDistParams::uncertain_correlations() const
@@ -1670,7 +1763,9 @@ inline void AleatoryDistParams::update(const AleatoryDistParams& adp)
     hypergeometric_selected_population(
       adp.hypergeometric_selected_population());
     hypergeometric_num_drawn(adp.hypergeometric_num_drawn());
-    histogram_point_pairs(adp.histogram_point_pairs());
+    histogram_point_int_pairs(adp.histogram_point_int_pairs());
+    histogram_point_string_pairs(adp.histogram_point_string_pairs());
+    histogram_point_real_pairs(adp.histogram_point_real_pairs());
     uncertain_correlations(adp.uncertain_correlations());
   }
 }
@@ -1787,11 +1882,11 @@ public:
   /// default constructor
   EpistemicDistParams();
   /// standard constructor
-  EpistemicDistParams(const RealVectorArray& ciuv_probs,
-    const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
-    const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
-    const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
-    const RealRealMapArray& dusrv_vals_probs);
+  EpistemicDistParams(const RealRealPairRealMapArray& ceuv_bpas,
+		      const IntIntPairRealMapArray& deuiv_bpas,
+		      const IntRealMapArray& deusiv_vals_probs,
+		      const StringRealMapArray& deussv_vals_probs,
+		      const RealRealMapArray& deusrv_vals_probs);
   /// copy constructor
   EpistemicDistParams(const EpistemicDistParams& edp);
   /// destructor
@@ -1807,10 +1902,12 @@ public:
   /// return total number of continuous epistemic uncertain variables
   size_t ceuv()  const;
 
-  /// return total number of discrete integer epistemic uncertain variables
-  size_t dieuv() const;
-  /// return total number of discrete real epistemic uncertain variables
-  size_t dreuv() const;
+  /// return total number of discrete epistemic uncertain integer variables
+  size_t deuiv() const;
+  /// return total number of discrete epistemic uncertain string variables
+  size_t deusv() const;
+  /// return total number of discrete epistemic uncertain real variables
+  size_t deurv() const;
   /// return total number of discrete epistemic uncertain variables
   size_t deuv()   const;
 
@@ -1820,14 +1917,19 @@ public:
   void update(const EpistemicDistParams& edp);
 
   /// return the interval basic probability values
-  const RealVectorArray& continuous_interval_probabilities() const;
+  const RealRealPairRealMapArray&
+    continuous_interval_basic_probabilities() const;
   /// return the ith interval basic probability value
-  const RealVector& continuous_interval_probabilities(size_t i) const;
+  const RealRealPairRealMap&
+    continuous_interval_basic_probabilities(size_t i) const;
   /// set the interval basic probability values
-  void continuous_interval_probabilities(const RealVectorArray& ci_probs);
+  void continuous_interval_basic_probabilities(
+    const RealRealPairRealMapArray& ci_probs);
   /// set the ith interval basic probability value
-  void continuous_interval_probabilities(const RealVector& ci_probs_i,
-					 size_t i);
+  void continuous_interval_basic_probabilities(
+    const RealRealPairRealMap& ci_probs_i, size_t i);
+
+  /*
   /// return the interval bounds
   const RealVectorArray& continuous_interval_lower_bounds() const;
   /// return the ith interval bound
@@ -1846,15 +1948,21 @@ public:
   /// set the ith interval bound
   void continuous_interval_upper_bounds(const RealVector& ci_u_bnds_i,
 					size_t i);
+  */
 
   /// return the interval basic probability values
-  const RealVectorArray& discrete_interval_probabilities() const;
+  const IntIntPairRealMapArray& discrete_interval_basic_probabilities() const;
   /// return the ith interval basic probability value
-  const RealVector& discrete_interval_probabilities(size_t i) const;
+  const IntIntPairRealMap&
+    discrete_interval_basic_probabilities(size_t i) const;
   /// set the interval basic probability values
-  void discrete_interval_probabilities(const RealVectorArray& di_probs);
+  void discrete_interval_basic_probabilities(
+    const IntIntPairRealMapArray& di_bpa);
   /// set the ith interval basic probability value
-  void discrete_interval_probabilities(const RealVector& di_probs_i, size_t i);
+  void discrete_interval_basic_probabilities(
+    const IntIntPairRealMap& di_bpa_i, size_t i);
+
+  /*
   /// return the interval bounds
   const IntVectorArray& discrete_interval_lower_bounds() const;
   /// return the ith interval bound
@@ -1871,12 +1979,20 @@ public:
   void discrete_interval_upper_bounds(const IntVectorArray& di_u_bnds);
   /// set the ith interval bound
   void discrete_interval_upper_bounds(const IntVector& di_u_bnds_i, size_t i);
+  */
 
   /// get the discrete integer set values and probabilities
   const IntRealMapArray& discrete_set_int_values_probabilities() const;
   /// set the discrete integer set values and probabilities
   void discrete_set_int_values_probabilities(const IntRealMapArray&
 					     dsi_vals_probs);
+
+  /// get the discrete string set values and probabilities
+  const IntRealMapArray& discrete_set_string_values_probabilities() const;
+  /// set the discrete string set values and probabilities
+  void discrete_set_string_values_probabilities(const StringRealMapArray&
+						dss_vals_probs);
+
   /// get the discrete real set values and probabilities
   const RealRealMapArray& discrete_set_real_values_probabilities() const;
   /// set the discrete real set values and probabilities
@@ -1903,13 +2019,13 @@ inline EpistemicDistParams::EpistemicDistParams():
 
 
 inline EpistemicDistParams::
-EpistemicDistParams(const RealVectorArray& ciuv_probs,
-  const RealVectorArray& ciuv_l_bnds, const RealVectorArray& ciuv_u_bnds,
-  const RealVectorArray& diuv_probs,  const IntVectorArray& diuv_l_bnds,
-  const IntVectorArray& diuv_u_bnds,  const IntRealMapArray& dusiv_vals_probs,
-  const RealRealMapArray& dusrv_vals_probs):
-  edpRep(new EpistemicDistParamsRep(ciuv_probs, ciuv_l_bnds, ciuv_u_bnds,
-    diuv_probs, diuv_l_bnds, diuv_u_bnds, dusiv_vals_probs, dusrv_vals_probs))
+EpistemicDistParams(const RealRealPairRealMapArray& ceuv_bpas,
+		    const IntIntPairRealMapArray& deuiv_bpas,
+		    const IntRealMapArray& deusiv_vals_probs,
+		    const StringRealMapArray& deussv_vals_probs,
+		    const RealRealMapArray& deusrv_vals_probs):
+  edpRep(new EpistemicDistParamsRep(ceuv_bpas, deuiv_bpas, deusiv_vals_probs,
+				    deussv_vals_probs, deusrv_vals_probs))
 { }
 
 
@@ -1948,19 +2064,23 @@ operator=(const EpistemicDistParams& edp)
 
 
 inline size_t EpistemicDistParams::ceuv() const
-{ return edpRep->contIntervalProbs.size(); }
+{ return edpRep->contIntervalBPA.size(); }
 
 
-inline size_t EpistemicDistParams::dieuv() const
-{ return edpRep->discIntervalProbs.size() + edpRep->discSetIntValsProbs.size();}
+inline size_t EpistemicDistParams::deuiv() const
+{ return edpRep->discIntervalBPA.size() + edpRep->discSetIntValsProbs.size();}
 
 
-inline size_t EpistemicDistParams::dreuv() const
+inline size_t EpistemicDistParams::deusv() const
+{ return edpRep->discSetStringValsProbs.size(); }
+
+
+inline size_t EpistemicDistParams::deurv() const
 { return edpRep->discSetRealValsProbs.size(); }
 
 
 inline size_t EpistemicDistParams::deuv()  const
-{ return dieuv() + dreuv(); }
+{ return deuiv() + deusv() + deurv(); }
 
 
 inline void EpistemicDistParams::copy(const EpistemicDistParams& edp)
@@ -1970,36 +2090,42 @@ inline void EpistemicDistParams::copy(const EpistemicDistParams& edp)
     if ( --edpRep->referenceCount == 0 ) 
       delete edpRep;
   // Create new
-  edpRep = new EpistemicDistParamsRep(edp.continuous_interval_probabilities(),
-    edp.continuous_interval_lower_bounds(),
-    edp.continuous_interval_upper_bounds(),
-    edp.discrete_interval_probabilities(),
-    edp.discrete_interval_lower_bounds(), edp.discrete_interval_upper_bounds(),
+  edpRep = new EpistemicDistParamsRep(
+    edp.continuous_interval_basic_probabilities(),
+    //edp.continuous_interval_lower_bounds(),
+    //edp.continuous_interval_upper_bounds(),
+    edp.discrete_interval_basic_probabilities(),
+    //edp.discrete_interval_lower_bounds(),
+    //edp.discrete_interval_upper_bounds(),
     edp.discrete_set_int_values_probabilities(),
+    edp.discrete_set_string_values_probabilities(),
     edp.discrete_set_real_values_probabilities());
 }
 
 
-inline const RealVectorArray& EpistemicDistParams::
-continuous_interval_probabilities() const
-{ return edpRep->contIntervalProbs; }
+inline const RealRealPairRealMapArray& EpistemicDistParams::
+continuous_interval_basic_probabilities() const
+{ return edpRep->contIntervalBPA; }
 
 
-inline const RealVector& EpistemicDistParams::
-continuous_interval_probabilities(size_t i) const
-{ return edpRep->contIntervalProbs[i]; }
-
-
-inline void EpistemicDistParams::
-continuous_interval_probabilities(const RealVectorArray& ci_probs)
-{ edpRep->contIntervalProbs = ci_probs; }
+inline const RealRealPairRealMap& EpistemicDistParams::
+continuous_interval_basic_probabilities(size_t i) const
+{ return edpRep->contIntervalBPA[i]; }
 
 
 inline void EpistemicDistParams::
-continuous_interval_probabilities(const RealVector& ci_probs_i, size_t i)
-{ edpRep->contIntervalProbs[i] = ci_probs_i; }
+continuous_interval_basic_probabilities(
+  const RealRealPairRealMapArray& ci_bpa)
+{ edpRep->contIntervalBPA = ci_bpa; }
 
 
+inline void EpistemicDistParams::
+continuous_interval_basic_probabilities(const RealRealPairRealMap& ci_bpa_i,
+					size_t i)
+{ edpRep->contIntervalBPA[i] = ci_bpa_i; }
+
+
+/*
 inline const RealVectorArray& EpistemicDistParams::
 continuous_interval_lower_bounds() const
 { return edpRep->contIntervalLowerBnds; }
@@ -2038,28 +2164,31 @@ continuous_interval_upper_bounds(const RealVectorArray& ci_u_bnds)
 inline void EpistemicDistParams::
 continuous_interval_upper_bounds(const RealVector& ci_u_bnds_i, size_t i)
 { edpRep->contIntervalUpperBnds[i] = ci_u_bnds_i; }
+*/
 
 
-inline const RealVectorArray& EpistemicDistParams::
-discrete_interval_probabilities() const
-{ return edpRep->discIntervalProbs; }
+inline const IntIntPairRealMapArray& EpistemicDistParams::
+discrete_interval_basic_probabilities() const
+{ return edpRep->discIntervalBPA; }
 
 
-inline const RealVector& EpistemicDistParams::
-discrete_interval_probabilities(size_t i) const
-{ return edpRep->discIntervalProbs[i]; }
-
-
-inline void EpistemicDistParams::
-discrete_interval_probabilities(const RealVectorArray& di_probs)
-{ edpRep->discIntervalProbs = di_probs; }
+inline const IntIntPairRealMap& EpistemicDistParams::
+discrete_interval_basic_probabilities(size_t i) const
+{ return edpRep->discIntervalBPA[i]; }
 
 
 inline void EpistemicDistParams::
-discrete_interval_probabilities(const RealVector& di_probs_i, size_t i)
-{ edpRep->discIntervalProbs[i] = di_probs_i; }
+discrete_interval_basic_probabilities(const IntIntPairRealMapArray& di_bpa)
+{ edpRep->discIntervalBPA = di_bpa; }
 
 
+inline void EpistemicDistParams::
+discrete_interval_basic_probabilities(const IntIntPairRealMap& di_bpa_i,
+				      size_t i)
+{ edpRep->discIntervalBPA[i] = di_bpa_i; }
+
+
+/*
 inline const IntVectorArray& EpistemicDistParams::
 discrete_interval_lower_bounds() const
 { return edpRep->discIntervalLowerBnds; }
@@ -2098,6 +2227,7 @@ discrete_interval_upper_bounds(const IntVectorArray& di_u_bnds)
 inline void EpistemicDistParams::
 discrete_interval_upper_bounds(const IntVector& di_u_bnds_i, size_t i)
 { edpRep->discIntervalUpperBnds[i] = di_u_bnds_i; }
+*/
 
 
 inline const IntRealMapArray& EpistemicDistParams::
@@ -2108,6 +2238,17 @@ discrete_set_int_values_probabilities() const
 inline void EpistemicDistParams::
 discrete_set_int_values_probabilities(const IntRealMapArray& dsi_vals_probs)
 { edpRep->discSetIntValsProbs = dsi_vals_probs; }
+
+
+inline const StringRealMapArray& EpistemicDistParams::
+discrete_set_string_values_probabilities() const
+{ return edpRep->discSetStringValsProbs; }
+
+
+inline void EpistemicDistParams::
+discrete_set_string_values_probabilities(
+  const StringRealMapArray& dsi_vals_probs)
+{ edpRep->discSetStringValsProbs = dsi_vals_probs; }
 
 
 inline const RealRealMapArray& EpistemicDistParams::
@@ -2125,14 +2266,18 @@ inline void EpistemicDistParams::update(const EpistemicDistParams& edp)
   if (!edpRep) // if no rep, create a new instance
     copy(edp);
   else {      // update data of existing instance
-    continuous_interval_probabilities(edp.continuous_interval_probabilities());
-    continuous_interval_lower_bounds(edp.continuous_interval_lower_bounds());
-    continuous_interval_upper_bounds(edp.continuous_interval_upper_bounds());
-    discrete_interval_probabilities(edp.discrete_interval_probabilities());
-    discrete_interval_lower_bounds(edp.discrete_interval_lower_bounds());
-    discrete_interval_upper_bounds(edp.discrete_interval_upper_bounds());
+    continuous_interval_basic_probabilities(
+      edp.continuous_interval_basic_probabilities());
+    //continuous_interval_lower_bounds(edp.continuous_interval_lower_bounds());
+    //continuous_interval_upper_bounds(edp.continuous_interval_upper_bounds());
+    discrete_interval_basic_probabilities(
+      edp.discrete_interval_basic_probabilities());
+    //discrete_interval_lower_bounds(edp.discrete_interval_lower_bounds());
+    //discrete_interval_upper_bounds(edp.discrete_interval_upper_bounds());
     discrete_set_int_values_probabilities(
       edp.discrete_set_int_values_probabilities());
+    discrete_set_string_values_probabilities(
+      edp.discrete_set_string_values_probabilities());
     discrete_set_real_values_probabilities(
       edp.discrete_set_real_values_probabilities());
   }
