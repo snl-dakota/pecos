@@ -1988,7 +1988,7 @@ public:
 					     dsi_vals_probs);
 
   /// get the discrete string set values and probabilities
-  const IntRealMapArray& discrete_set_string_values_probabilities() const;
+  const StringRealMapArray& discrete_set_string_values_probabilities() const;
   /// set the discrete string set values and probabilities
   void discrete_set_string_values_probabilities(const StringRealMapArray&
 						dss_vals_probs);

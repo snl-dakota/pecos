@@ -66,17 +66,19 @@ public:
   /// generates the desired set of parameter samples from within general
   /// user-specified probabilistic distributions (AleatoryDistParams and
   /// EpistemicDistParams instances augmented with design and state variables)
-  void generate_samples(const RealVector&   cd_l_bnds,
-			const RealVector&   cd_u_bnds,
-			const IntVector&    ddr_l_bnds,
-			const IntVector&    ddr_u_bnds,
-			const IntSetArray&  ddsi_values,
+  void generate_samples(const RealVector& cd_l_bnds,
+			const RealVector& cd_u_bnds,
+			const IntVector& ddr_l_bnds,
+			const IntVector& ddr_u_bnds,
+			const IntSetArray& ddsi_values,
+			const StringSetArray& ddss_values,
 			const RealSetArray& ddsr_values,
-			const RealVector&   cs_l_bnds,
-			const RealVector&   cs_u_bnds,
-			const IntVector&    dsr_l_bnds,
-			const IntVector&    dsr_u_bnds,
-			const IntSetArray&  dssi_values,
+			const RealVector& cs_l_bnds,
+			const RealVector& cs_u_bnds,
+			const IntVector& dsr_l_bnds,
+			const IntVector& dsr_u_bnds,
+			const IntSetArray& dssi_values,
+			const StringSetArray& dsss_values,
 			const RealSetArray& dssr_values,
 			const AleatoryDistParams& adp,
 			const EpistemicDistParams& edp, int num_samples,
@@ -216,11 +218,12 @@ generate_samples(const AleatoryDistParams& adp, const EpistemicDistParams& edp,
 	  << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  IntVector    empty_iv; RealMatrix empty_rm;
-  IntSetArray empty_isa; RealSetArray empty_rsa;
-  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   adp, edp, num_samples, samples_array, empty_rm);
+  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
+  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
+		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
+		   empty_ssa, empty_rsa, adp, edp, num_samples, samples_array,
+		   empty_rm);
 }
 
 
@@ -233,12 +236,13 @@ generate_samples(const AleatoryDistParams& adp, int num_samples,
 	  << "sample rank input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  IntVector    empty_iv; RealMatrix empty_rm;
-  IntSetArray empty_isa; RealSetArray empty_rsa;
+  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
+  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
   EpistemicDistParams edp;
-  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   adp, edp, num_samples, samples_array, empty_rm);
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
+		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
+		   empty_ssa, empty_rsa, adp, edp, num_samples, samples_array,
+		   empty_rm);
 }
 
 
@@ -251,12 +255,13 @@ generate_samples(const EpistemicDistParams& edp, int num_samples,
 	  << "sample rank input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector  empty_rv;  IntVector    empty_iv; RealMatrix empty_rm;
-  IntSetArray empty_isa; RealSetArray empty_rsa;
+  RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
+  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
   AleatoryDistParams adp;
-  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   adp, edp, num_samples, samples_array, empty_rm);
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
+		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
+		   empty_ssa, empty_rsa, adp, edp, num_samples, samples_array,
+		   empty_rm);
 }
 
 
@@ -270,22 +275,26 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector empty_rv; RealVectorArray empty_rva; RealSetArray empty_rsa;
-  IntVector  empty_iv; IntSetArray     empty_isa;
-  RealMatrix empty_rm; RealSymMatrix   empty_rsm;
+  RealVector     empty_rv;  IntVector          empty_iv;
+  RealMatrix     empty_rm;  RealSymMatrix      empty_rsm;
+  IntSetArray    empty_isa; IntRealMapArray    empty_irma;
+  StringSetArray empty_ssa; StringRealMapArray empty_srma;
+  RealSetArray   empty_rsa; RealRealMapArray   empty_rrma;
   AleatoryDistParams adp(n_means, n_std_devs, n_l_bnds, n_u_bnds, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rva, empty_rv, empty_rv, empty_iv,
+			 empty_rv, empty_rrma, empty_rv, empty_rv, empty_iv,
 			 empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			 empty_iv, empty_rva, empty_rsm);
+			 empty_iv, empty_irma, empty_srma, empty_rrma,
+			 empty_rsm);
   EpistemicDistParams edp;
-  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   adp, edp, num_samples, samples_array, empty_rm);
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
+		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
+		   empty_ssa, empty_rsa, adp, edp, num_samples, samples_array,
+		   empty_rm);
 }
 
 
@@ -298,23 +307,26 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 	  << "input/output." << std::endl;
     abort_handler(-1);
   }
-  RealVector      empty_rv;   RealVectorArray  empty_rva;
-  IntVector       empty_iv;
-  RealMatrix      empty_rm;   RealSymMatrix    empty_rsm; 
-  IntSetArray     empty_isa;  RealSetArray     empty_rsa;
+  RealVector     empty_rv;  IntVector          empty_iv;
+  RealMatrix     empty_rm;  RealSymMatrix      empty_rsm; 
+  IntSetArray    empty_isa; IntRealMapArray    empty_irma;
+  StringSetArray empty_ssa; StringRealMapArray empty_srma;
+  RealSetArray   empty_rsa; RealRealMapArray   empty_rrma;
   AleatoryDistParams adp(empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, u_l_bnds, u_u_bnds, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
 			 empty_rv, empty_rv, empty_rv, empty_rv, empty_rv,
-			 empty_rv, empty_rva, empty_rv, empty_rv, empty_iv,
+			 empty_rv, empty_rrma, empty_rv, empty_rv, empty_iv,
 			 empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
-			 empty_iv, empty_rva, empty_rsm);
+			 empty_iv, empty_irma, empty_srma, empty_rrma,
+			 empty_rsm);
   EpistemicDistParams edp;
-  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_rsa,
-		   adp, edp, num_samples, samples_array, empty_rm);
+  generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
+		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
+		   empty_ssa, empty_rsa, adp, edp, num_samples, samples_array,
+		   empty_rm);
 }
 
 
@@ -330,12 +342,13 @@ generate_uniform_index_samples(const IntVector& index_l_bnds,
   }
   // For    uniform probability, model as discrete design range (this fn).
   // For nonuniform probability, model as discrete uncertain set integer.
-  RealVector empty_rv; RealSetArray empty_rsa; RealMatrix empty_rm, samples_rm;
-  IntVector  empty_iv; IntSetArray empty_isa;
+  RealVector empty_rv; IntVector empty_iv; RealMatrix empty_rm, samples_rm;
+  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
   AleatoryDistParams adp; EpistemicDistParams edp;
-  generate_samples(empty_rv,  empty_rv, index_l_bnds, index_u_bnds,   empty_isa,
-		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
-		   empty_rsa, adp, edp, num_samples, samples_rm, empty_rm);
+  generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
+		   empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
+		   empty_isa, empty_ssa, empty_rsa, adp, edp, num_samples,
+		   samples_rm, empty_rm);
   copy_data(samples_rm, index_samples);
 }
 

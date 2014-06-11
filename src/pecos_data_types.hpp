@@ -74,6 +74,7 @@ typedef Teuchos::SerialSpdDenseSolver<int, Real> RealSpdSolver;
 typedef boost::dynamic_bitset<unsigned long> BitArray;
 
 typedef std::pair<unsigned short, unsigned short> UShortUShortPair;
+typedef std::pair<int, int>                       IntIntPair;
 typedef std::pair<Real, Real>                     RealRealPair;
 typedef std::pair<Real, RealVector>               RealRealVectorPair;
 
@@ -110,13 +111,15 @@ typedef std::vector<SurrogateDataResp> SDRArray;
 typedef std::vector<SDVArray>          SDV2DArray;
 typedef std::vector<SDRArray>          SDR2DArray;
 
-typedef std::set<int>                     IntSet;
 typedef std::set<size_t>                  SizetSet;
+typedef std::set<int>                     IntSet;
+typedef std::set<String>                  StringSet;
+typedef std::set<Real>                    RealSet;
 typedef std::set<BitArray>                BitArraySet;
 typedef std::multiset<unsigned short>     UShortMultiSet;
 typedef std::multiset<UShortMultiSet>     UShort2DMultiSet;
-typedef std::set<Real>                    RealSet;
 typedef std::vector<IntSet>               IntSetArray;
+typedef std::vector<StringSet>            StringSetArray;
 typedef std::vector<RealSet>              RealSetArray;
 typedef std::map<int, short>              IntShortMap;
 typedef std::map<size_t, short>           SizetShortMap;

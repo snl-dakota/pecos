@@ -209,13 +209,15 @@ void LHSDriver::abort_if_no_lhs()
     re-seed multiple generate_samples() calls, rather than continuing
     an existing random number sequence. */
 void LHSDriver::
-generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
-		 const IntVector&    ddri_l_bnds, const IntVector&  ddri_u_bnds,
-		 const IntSetArray&  ddsi_values,
+generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
+		 const IntVector&  ddri_l_bnds, const IntVector&  ddri_u_bnds,
+		 const IntSetArray& ddsi_values,
+		 const StringSetArray& ddss_values,
 		 const RealSetArray& ddsr_values,
-		 const RealVector&   cs_l_bnds,   const RealVector& cs_u_bnds,
-		 const IntVector&    dsri_l_bnds, const IntVector&  dsri_u_bnds,
-		 const IntSetArray&  dssi_values,
+		 const RealVector& cs_l_bnds,   const RealVector& cs_u_bnds,
+		 const IntVector&  dsri_l_bnds, const IntVector&  dsri_u_bnds,
+		 const IntSetArray& dssi_values,
+		 const StringSetArray& dsss_values,
 		 const RealSetArray& dssr_values, const AleatoryDistParams& adp,
 		 const EpistemicDistParams& edp, int num_samples,
 		 RealMatrix& samples, RealMatrix& sample_ranks)
@@ -261,7 +263,7 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   const RealVector& f_betas  = adp.frechet_betas();
   const RealVector& w_alphas = adp.weibull_alphas();
   const RealVector& w_betas = adp.weibull_betas();
-  const RealVectorArray& h_bin_prs = adp.histogram_bin_pairs();
+  const RealRealMapArray& h_bin_prs = adp.histogram_bin_pairs();
   const RealVector& p_lambdas = adp.poisson_lambdas();
   const RealVector& bi_prob_per_tr = adp.binomial_probability_per_trial();
   const IntVector&  bi_num_tr = adp.binomial_num_trials();
@@ -272,46 +274,53 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
   const IntVector&  hg_total_pop = adp.hypergeometric_total_population();
   const IntVector&  hg_selected_pop = adp.hypergeometric_selected_population();
   const IntVector&  hg_num_drawn = adp.hypergeometric_num_drawn();
-  const RealVectorArray& h_pt_prs = adp.histogram_point_pairs();
+  const IntRealMapArray& h_pt_int_prs = adp.histogram_point_int_pairs();
+  const StringRealMapArray& h_pt_string_prs
+    = adp.histogram_point_string_pairs();
+  const RealRealMapArray& h_pt_real_prs = adp.histogram_point_real_pairs();
   const RealSymMatrix& correlations = adp.uncertain_correlations();
 
-  const RealVectorArray& ci_probs    = edp.continuous_interval_probabilities();
-  const RealVectorArray& ci_l_bnds   = edp.continuous_interval_lower_bounds();
-  const RealVectorArray& ci_u_bnds   = edp.continuous_interval_upper_bounds();
-  const RealVectorArray& di_probs    = edp.discrete_interval_probabilities();
-  const IntVectorArray&  di_l_bnds   = edp.discrete_interval_lower_bounds();
-  const IntVectorArray&  di_u_bnds   = edp.discrete_interval_upper_bounds();
+  const RealRealPairRealMapArray& ci_bpa
+    = edp.continuous_interval_basic_probabilities();
+  const IntIntPairRealMapArray&   di_bpa
+    = edp.discrete_interval_basic_probabilities();
   const IntRealMapArray& dusi_vals_probs
     = edp.discrete_set_int_values_probabilities();
+  const StringRealMapArray& duss_vals_probs
+    = edp.discrete_set_string_values_probabilities();
   const RealRealMapArray& dusr_vals_probs
     = edp.discrete_set_real_values_probabilities();
 
   bool correlation_flag = !correlations.empty();
-  size_t i, j, num_cdv = cd_l_bnds.length(), num_nuv  = n_means.length(),
-    num_lnuv = std::max(ln_means.length(), ln_lambdas.length()),
-    num_uuv  = u_l_bnds.length(),   num_luuv = lu_l_bnds.length(),
-    num_tuv  = t_modes.length(),    num_exuv  = e_betas.length(),
-    num_beuv = b_alphas.length(),   num_gauv = ga_alphas.length(),
-    num_guuv = gu_alphas.length(),  num_fuv  = f_alphas.length(),
-    num_wuv  = w_alphas.length(),   num_hbuv = h_bin_prs.size(),
-    num_csv  = cs_l_bnds.length(),  num_ddriv = ddri_l_bnds.length(),
-    num_ddsiv = ddsi_values.size(), num_puv  = p_lambdas.length(),
-    num_biuv = bi_prob_per_tr.length(), num_nbuv = nb_prob_per_tr.length(),
-    num_geuv = ge_prob_per_tr.length(), num_hguv = hg_num_drawn.length(),
-    num_dsriv = dsri_l_bnds.length(), num_dssiv = dssi_values.size(),
-    num_ddsrv = ddsr_values.size(), num_hpuv = h_pt_prs.size(),
-    num_dssrv = dssr_values.size(),
-    num_ciuv  = ci_probs.size(), num_diuv  = di_probs.size(),
-    num_dusiv = dusi_vals_probs.size(), num_dusrv = dusr_vals_probs.size(),
-    num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddsrv,
+  size_t i, j, num_cdv = cd_l_bnds.length(), num_ddriv = ddri_l_bnds.length(),
+    num_ddsiv = ddsi_values.size(), num_ddssv = ddss_values.size(),
+    num_ddsrv = ddsr_values.size(), num_nuv  = n_means.length(),
+    num_lnuv  = std::max(ln_means.length(), ln_lambdas.length()),
+    num_uuv   = u_l_bnds.length(),  num_luuv = lu_l_bnds.length(),
+    num_tuv   = t_modes.length(),   num_exuv = e_betas.length(),
+    num_beuv  = b_alphas.length(),  num_gauv = ga_alphas.length(),
+    num_guuv  = gu_alphas.length(), num_fuv  = f_alphas.length(),
+    num_wuv   = w_alphas.length(),  num_hbuv = h_bin_prs.size(),
+    num_puv   = p_lambdas.length(),      num_biuv  = bi_prob_per_tr.length(),
+    num_nbuv  = nb_prob_per_tr.length(), num_geuv  = ge_prob_per_tr.length(),
+    num_hguv  = hg_num_drawn.length(),   num_hpuiv = h_pt_int_prs.size(),
+    num_hpusv = h_pt_string_prs.size(),  num_hpurv = h_pt_real_prs.size(),
+    num_ciuv  = ci_bpa.size(), num_diuv = di_bpa.size(),
+    num_dusiv = dusi_vals_probs.size(),  num_dussv = duss_vals_probs.size(),
+    num_dusrv = dusr_vals_probs.size(),  num_csv   = cs_l_bnds.length(),
+    num_dsriv = dsri_l_bnds.length(),    num_dssiv = dssi_values.size(),
+    num_dsssv = dsss_values.size(), num_dssrv = dssr_values.size(),
+    num_dv   = num_cdv  + num_ddriv + num_ddsiv + num_ddssv + num_ddsrv,
     num_cauv = num_nuv  + num_lnuv + num_uuv  + num_luuv + num_tuv + num_exuv
              + num_beuv + num_gauv + num_guuv + num_fuv  + num_wuv + num_hbuv,
-    num_dauiv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv,
-    num_daurv = num_hpuv, num_auv = num_cauv + num_dauiv + num_daurv,
+    num_dauiv = num_puv + num_biuv + num_nbuv + num_geuv + num_hguv + num_hpuiv,
+    num_dausv = num_hpusv, num_daurv = num_hpurv,
+    num_auv = num_cauv + num_dauiv + num_dausv + num_daurv,
     num_ceuv  = num_ciuv, num_deuiv = num_diuv + num_dusiv,
-    num_deurv = num_dusrv, num_euv = num_ceuv + num_deuiv + num_deurv,
+    num_deusv = num_dussv, num_deurv = num_dusrv, 
+    num_euv = num_ceuv + num_deuiv + num_deusv + num_deurv,
     num_uv = num_auv + num_euv,
-    num_sv = num_csv + num_dsriv + num_dssiv + num_dssrv,
+    num_sv = num_csv + num_dsriv + num_dssiv + num_dsssv + num_dssrv,
     num_av = num_dv  + num_uv    + num_sv;
 
   int err_code = 0, max_var = num_av, max_obs = num_samples,
@@ -622,19 +631,19 @@ generate_samples(const RealVector&   cd_l_bnds,   const RealVector& cd_u_bnds,
     name_string = f77name16("HistogramBin", cntr, lhs_names);
     String dist_string("continuous linear");
     dist_string.resize(32, ' ');
-    num_params = h_bin_prs[i].length()/2;
+    num_params = h_bin_prs[i].size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
     // LHS requires accumulation of CDF with first y at 0 and last y at 1
     for (j=0; j<num_params; ++j)
-      x_val[j] = h_bin_prs[i][2*j];
+      x_val[j] = h_bin_prs[i][j];
     // Assume already normalized with sum = 1
     //Real sum = 0.;
     //for (j=1; j<num_params; ++j)
-    //  sum += h_bin_prs[i][2*j-1]; // last y from DAKOTA must be zero
+    //  sum += h_bin_prs[i][j-1]; // last y from DAKOTA must be zero
     y_val[0] = 0.;
     for (j=1; j<num_params; ++j)
-      y_val[j] = y_val[j-1] + h_bin_prs[i][2*j-1];// / sum;
+      y_val[j] = y_val[j-1] + h_bin_prs[i][j-1];// / sum;
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(histogram bin)");
@@ -1262,8 +1271,9 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
   }
   // For    uniform probability, model as discrete design range (this fn).
   // For nonuniform probability, model as discrete uncertain set integer.
-  RealVector empty_rv; RealSetArray empty_rsa; RealMatrix empty_rm, samples_rm;
-  IntVector  empty_iv; IntSetArray  empty_isa; IntArray sample;
+  RealVector  empty_rv;  RealMatrix empty_rm, samples_rm;
+  IntVector   empty_iv;  IntArray sample;
+  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
   AleatoryDistParams adp; EpistemicDistParams edp;
   std::set<IntArray>::iterator it;
   // Eliminate redundant samples by resampling if necessary.  Could pad
@@ -1273,9 +1283,9 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
   size_t i, num_vars = std::min(index_l_bnds.length(), index_u_bnds.length());
   while (!complete) {
     generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
-		     empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
-		     empty_isa, empty_rsa, adp, edp, num_samples, samples_rm,
-		     empty_rm);
+		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv,
+		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
+		     num_samples, samples_rm, empty_rm);
     if (initial) { // pack initial sample set
       for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
 	copy_data(samples_rm[i], num_vars, sample);
