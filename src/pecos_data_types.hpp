@@ -148,28 +148,32 @@ typedef SizetMultiArray::const_array_view<1>::type SizetMultiArrayConstView;
 // ---------
 // Iterators
 // ---------
-typedef IntSet::iterator                 ISIter;
-typedef IntSet::const_iterator           ISCIter;
-typedef SizetSet::iterator               StSIter;
-typedef SizetSet::const_iterator         StSCIter;
-typedef BitArraySet::iterator            BASIter;
-typedef BitArraySet::const_iterator      BASCIter;
-typedef RealSet::iterator                RSIter;
-typedef RealSet::const_iterator          RSCIter;
-typedef IntShortMap::iterator            IShMIter;
-typedef IntShortMap::const_iterator      IShMCIter;
-typedef SizetShortMap::iterator          StShMIter;
-typedef SizetShortMap::const_iterator    StShMCIter;
-typedef IntIntMap::iterator              IIMIter;
-typedef IntIntMap::const_iterator        IIMCIter;
-typedef BitArrayULongMap::iterator       BAULMIter;
-typedef BitArrayULongMap::const_iterator BAULMCIter;
-typedef ULongULongMap::iterator          ULULMIter;
-typedef ULongULongMap::const_iterator    ULULMCIter;
-typedef IntRealMap::iterator             IRMIter;
-typedef IntRealMap::const_iterator       IRMCIter;
-typedef RealRealMap::iterator            RRMIter;
-typedef RealRealMap::const_iterator      RRMCIter;
+typedef IntSet::iterator                    ISIter;
+typedef IntSet::const_iterator              ISCIter;
+typedef SizetSet::iterator                  StSIter;
+typedef SizetSet::const_iterator            StSCIter;
+typedef BitArraySet::iterator               BASIter;
+typedef BitArraySet::const_iterator         BASCIter;
+typedef RealSet::iterator                   RSIter;
+typedef RealSet::const_iterator             RSCIter;
+typedef IntShortMap::iterator               IShMIter;
+typedef IntShortMap::const_iterator         IShMCIter;
+typedef SizetShortMap::iterator             StShMIter;
+typedef SizetShortMap::const_iterator       StShMCIter;
+typedef IntIntMap::iterator                 IIMIter;
+typedef IntIntMap::const_iterator           IIMCIter;
+typedef BitArrayULongMap::iterator          BAULMIter;
+typedef BitArrayULongMap::const_iterator    BAULMCIter;
+typedef ULongULongMap::iterator             ULULMIter;
+typedef ULongULongMap::const_iterator       ULULMCIter;
+typedef IntRealMap::iterator                IRMIter;
+typedef IntRealMap::const_iterator          IRMCIter;
+typedef RealRealMap::iterator               RRMIter;
+typedef RealRealMap::const_iterator         RRMCIter;
+typedef IntIntPairRealMap::iterator         IIPRMIter;
+typedef IntIntPairRealMap::const_iterator   IIPRMCIter;
+typedef RealRealPairRealMap::iterator       RRPRMIter;
+typedef RealRealPairRealMap::const_iterator RRPRMCIter;
 
 
 /// equality operator for SizetArray and SizetMultiArrayConstView

@@ -627,23 +627,25 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
   // histogram bin uncertain: pairs are defined from an abscissa in the first
   // field and a count (not a density) in the second field.  The distinction
   // in the second field is only important for unequal bin widths.
+  RRMCIter cit;
   for (i=0; i<num_hbuv; ++i, ++cntr) {
     name_string = f77name16("HistogramBin", cntr, lhs_names);
     String dist_string("continuous linear");
     dist_string.resize(32, ' ');
-    num_params = h_bin_prs[i].size();
+    const RealRealMap& h_bin_prs_i = h_bin_prs[i];
+    num_params = h_bin_prs_i.size();
     Real* x_val = new Real [num_params];
     Real* y_val = new Real [num_params];
     // LHS requires accumulation of CDF with first y at 0 and last y at 1
-    for (j=0; j<num_params; ++j)
-      x_val[j] = h_bin_prs[i][j];
     // Assume already normalized with sum = 1
     //Real sum = 0.;
-    //for (j=1; j<num_params; ++j)
-    //  sum += h_bin_prs[i][j-1]; // last y from DAKOTA must be zero
-    y_val[0] = 0.;
-    for (j=1; j<num_params; ++j)
-      y_val[j] = y_val[j-1] + h_bin_prs[i][j-1];// / sum;
+    //RRMCIter end = --h_bin_prs_i.end(); // last y from DAKOTA must be zero
+    //for (cit=h_bin_prs_i.begin(); cit!=end; ++cit)
+    //  sum += cit->second;
+    for (j=0, cit=h_bin_prs_i.begin(); j<num_params; ++j, ++cit) {
+      x_val[j] = cit->first;
+      y_val[j] = (j) ? y_val[j-1] + cit->second/*/sum*/ : 0.;
+    }
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(histogram bin)");
@@ -657,24 +659,24 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("continuous linear");
     dist_string.resize(32, ' ');
 
+    const RealRealPairRealMap& ci_bpa_i = ci_bpa[i];
+    RRPRMCIter cit;
+
     // x_sort_unique is a set with ALL of the interval bounds for this variable
     // in increasing order and unique.  For example, if there are 2 intervals
     // for a variable, and the bounds are (1,4) and (3,6), x_sorted will be
     // (1, 3, 4, 6).  If the intervals are contiguous, e.g. one interval is
     // (1,3) and the next is (3,5), x_sort_unique is (1,3,5).
-    const RealVector&  ci_probs_i = ci_probs[i];
-    const RealVector& ci_l_bnds_i = ci_l_bnds[i];
-    const RealVector& ci_u_bnds_i = ci_u_bnds[i];
     RealSet x_sort_unique;
-    int num_intervals_i = ci_probs_i.length();
-    for (j=0; j<num_intervals_i; ++j) {
-      x_sort_unique.insert(ci_l_bnds_i[j]);
-      x_sort_unique.insert(ci_u_bnds_i[j]);
+    for (cit=ci_bpa_i.begin(); cit!=ci_bpa_i.end(); ++cit) {
+      const RealRealPair& bounds = cit->first;
+      x_sort_unique.insert(bounds.first);
+      x_sort_unique.insert(bounds.second);
     }
     // convert sorted RealSet to x_val
     num_params = x_sort_unique.size();
     Real* x_val = new Real [num_params];
-    RealSet::iterator it = x_sort_unique.begin();
+    RSIter it = x_sort_unique.begin();
     for (j=0; j<num_params; ++j, ++it)
       x_val[j] = *it;
 
@@ -683,10 +685,10 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     // through the original intervals and see where they fall relative to the
     // new, sorted intervals for the density calculation.
     RealVector prob_dens(num_params); // initialize to 0.
-    for (j=0; j<num_intervals_i; ++j) {
-      const Real& l_bnd = ci_l_bnds_i[j];
-      const Real& u_bnd = ci_u_bnds_i[j];
-      Real ci_density = ci_probs_i[j] / (u_bnd - l_bnd);
+    for (cit=ci_bpa_i.begin(); cit!=ci_bpa_i.end(); ++cit) {
+      const RealRealPair& bounds = cit->first;
+      Real l_bnd = bounds.first, u_bnd = bounds.second;
+      Real ci_density = cit->second / (u_bnd - l_bnd);
       int cum_int_index = 0;
       while (l_bnd > x_val[cum_int_index])
 	++cum_int_index;
@@ -706,7 +708,7 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
 	y_val[j] = y_val[j-1] + 0.0001;
     }
     // normalize if necessary
-    if (y_val[num_params-1] != 1.0) {
+    if (y_val[num_params-1] != 1.) {
       Real y_total = y_val[num_params-1];
       for (j=1; j<num_params; ++j)
 	y_val[j] /= y_total;
@@ -885,28 +887,33 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     check_error(err_code, "lhs_dist(hypergeometric)");
   }
 
+  // histogram point int
+  // TO DO
+
   // discrete interval uncertain
   for (i=0; i<num_diuv; ++i, ++cntr) {
     name_string = f77name16("DiscInterval", cntr, lhs_names);
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
 
+    const IntIntPairRealMap& di_bpa_i = di_bpa[i];
+    IIPRMCIter cit;
+
     // x_sort_unique contains ALL of the unique integer values for this
     // discrete interval variable in increasing order.  For example, if
     // there are 3 intervals for a variable and the bounds are (1,4),
     // (3,6), and [9,10], x_sorted will be (1,2,3,4,5,6,9,10).
-    const RealVector& di_probs_i = di_probs[i];
-    const IntVector& di_l_bnds_i = di_l_bnds[i];
-    const IntVector& di_u_bnds_i = di_u_bnds[i];
     IntSet x_sort_unique;
-    int k, ke, num_intervals_i = di_probs_i.length();
-    for (j=0; j<num_intervals_i; ++j)
-      for (k=di_l_bnds_i[j], ke=di_u_bnds_i[j]; k<=ke; ++k)
-	x_sort_unique.insert(k);
+    for (cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
+      const RealRealPair& bounds = cit->first;
+      int val, u_bnd = bounds.second;
+      for (val=bounds.first; val<=u_bnd; ++val)
+	x_sort_unique.insert(val);
+    }
     // copy sorted IntSet to x_val
     num_params = x_sort_unique.size();
     Real* x_val = new Real [num_params];
-    IntSet::iterator it = x_sort_unique.begin();
+    ISIter it = x_sort_unique.begin();
     for (j=0; j<num_params; ++j, ++it)
       x_val[j] = *it;
 
@@ -916,9 +923,10 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     Real* y_val = new Real [num_params];
     for (j=0; j<num_params; ++j) y_val[j] = 0.;
     int l_bnd, u_bnd; size_t index;
-    for (j=0; j<num_intervals_i; ++j) {
-      l_bnd = di_l_bnds_i[j]; u_bnd = di_u_bnds_i[j];
-      Real di_density = di_probs_i[j] / (u_bnd - l_bnd + 1); // p/#integers
+    for (cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
+      const RealRealPair& bounds = cit->first;
+      int val, l_bnd = bounds.first, u_bnd = bounds.second;
+      Real di_density = cit->second / (u_bnd - l_bnd + 1); // prob/#integers
       it = x_sort_unique.find(l_bnd);
       if (it == x_sort_unique.end()) {
 	PCerr << "Error: lower bound not found in sorted set within LHSDriver "
@@ -926,7 +934,7 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
 	abort_handler(-1);
       }
       index = std::distance(x_sort_unique.begin(), it);
-      for (k=l_bnd; k<=u_bnd; ++k, ++index)
+      for (val=l_bnd; val<=u_bnd; ++val, ++index)
 	y_val[index] += di_density;
     }
 
@@ -1037,6 +1045,12 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     }
   }
 
+  // -------------------------
+  // DISCRETE STRING VARIABLES
+  // -------------------------
+
+  // TO DO
+
   // -----------------------
   // DISCRETE REAL VARIABLES
   // -----------------------
@@ -1069,29 +1083,32 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
 
   // histogram point uncertain: pairs are defined from an abscissa in
   // the first field and a count in the second field.
-  for (i=0; i<num_hpuv; ++i, ++cntr) {
+  for (i=0; i<num_hpurv; ++i, ++cntr) {
     name_string = f77name16("HistogramPt", cntr, lhs_names);
     String dist_string("discrete histogram");
     dist_string.resize(32, ' ');
-    num_params = h_pt_prs[i].length()/2;
-    if (num_params > 1) {
+
+    const RealRealMap& h_pt_real_prs_i = h_pt_real_prs[i];
+    num_params = h_pt_real_prs_i.size();
+
+    if (num_params == 1) {
+      Real pt_val = h_pt_real_prs_i.begin()->first; // frequency is 1
+      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
+      check_error(err_code, "lhs_const(histogram pt)");
+    }
+    else {
       Real* x_val = new Real [num_params];
       Real* y_val = new Real [num_params];
       // LHS can use discrete frequency information directly
-      for (j=0; j<num_params; ++j) {
-	x_val[j] = h_pt_prs[i][2*j];
-	y_val[j] = h_pt_prs[i][2*j+1];
+      for (j=0, cit=h_pt_real_prs_i.begin(); j<num_params; ++j, ++cit) {
+	x_val[j] = cit->first;
+	y_val[j] = cit->second;
       }
       LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		    num_params, x_val, y_val, err_code, dist_num, pv_num);
       check_error(err_code, "lhs_udist(histogram pt)");
       delete [] x_val;
       delete [] y_val;
-    }
-    else if (num_params == 1) {
-      Real pt_val = h_pt_prs[i][0]; // frequency is 1
-      LHS_CONST2_FC(name_string, pt_val, err_code, pv_num);
-      check_error(err_code, "lhs_const(histogram pt)");
     }
   }
 
