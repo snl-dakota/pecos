@@ -168,6 +168,8 @@ typedef ULongULongMap::iterator             ULULMIter;
 typedef ULongULongMap::const_iterator       ULULMCIter;
 typedef IntRealMap::iterator                IRMIter;
 typedef IntRealMap::const_iterator          IRMCIter;
+typedef StringRealMap::iterator             SRMIter;
+typedef StringRealMap::const_iterator       SRMCIter;
 typedef RealRealMap::iterator               RRMIter;
 typedef RealRealMap::const_iterator         RRMCIter;
 typedef IntIntPairRealMap::iterator         IIPRMIter;
