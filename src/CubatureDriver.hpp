@@ -80,7 +80,7 @@ private:
   /// verify that all values within params are identical
   bool verify_homogeneity(const RealVector& params) const;
   /// verify that all vectors within params are identical
-  bool verify_homogeneity(const RealVectorArray& params) const;
+  bool verify_homogeneity(const RealRealMapArray& params) const;
 
   /// size collocRules and set first entry
   void collocation_rule(unsigned short rule);
@@ -158,11 +158,11 @@ inline bool CubatureDriver::verify_homogeneity(const RealVector& params) const
 
 
 inline bool CubatureDriver::
-verify_homogeneity(const RealVectorArray& params) const
+verify_homogeneity(const RealRealMapArray& params) const
 {
   bool err_flag = false;
   if (!params.empty()) {
-    const RealVector& param0 = params[0];
+    const RealRealMap& param0 = params[0];
     for (size_t i=1; i<numVars; ++i)
       if (params[i] != param0)
 	{ err_flag = true; break; }

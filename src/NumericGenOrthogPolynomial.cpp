@@ -595,15 +595,15 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
   const RealArray& colloc_wts
     = legendre_poly.type1_collocation_weights(quad_order);
 
-  Real sum = 0., unscaled_gp_i, v1, range_over_2 = (end - start) / 2.;
+  Real sum = 0., unscaled_gp_i, v1, half_range = (end - start) / 2.;
   for (size_t i=0; i<quad_order; ++i) {
-    unscaled_gp_i = start + range_over_2 * (colloc_pts[i]+1.);
-    // change of variables: dx/dz = range_over_2
+    unscaled_gp_i = start + half_range * (colloc_pts[i]+1.);
+    // change of variables: dx/dz = half_range
     v1 = type1_value(unscaled_gp_i, poly_coeffs1);// cached: update of const ref
     sum += colloc_wts[i] * v1 * type1_value(unscaled_gp_i, poly_coeffs2)
         *  weight_fn(unscaled_gp_i, distParams);
   }
-  return sum / std_uniform_pdf() * range_over_2;
+  return sum / std_uniform_pdf() * half_range;
 }
 
 
@@ -623,10 +623,10 @@ cc_bounded_integral(const RealVector& poly_coeffs1,
   abort_handler(-1);
 #endif // HAVE_SPARSE_GRID
 
-  Real sum = 0., unscaled_cc_i, v1, range_over_2 = (end - start) / 2.;
+  Real sum = 0., unscaled_cc_i, v1, half_range = (end - start) / 2.;
   for (size_t i=0; i<quad_order; ++i) {
-    unscaled_cc_i = start + range_over_2 * (cc_pts[i]+1.);
-    // change of variables: dx/dz = range_over_2
+    unscaled_cc_i = start + half_range * (cc_pts[i]+1.);
+    // change of variables: dx/dz = half_range
     v1 = type1_value(unscaled_cc_i, poly_coeffs1);// cached: update of const ref
     sum += cc_wts[i] * v1 * type1_value(unscaled_cc_i, poly_coeffs2)
         *  weight_fn(unscaled_cc_i, distParams);
@@ -638,7 +638,7 @@ cc_bounded_integral(const RealVector& poly_coeffs1,
   // (2) could correct cc_wts to PDF weighting by dividing by 2. and then
   //     divide sum by std_uniform_pdf() as in legendre_bounded_integral above
   //     --> cancels out.
-  return sum * range_over_2;
+  return sum * half_range;
 }
 
 

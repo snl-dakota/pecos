@@ -352,18 +352,19 @@ inline void moments_from_weibull_params(Real alpha, Real beta, Real& mean,
 }
 
 
-inline void moments_from_histogram_bin_params(const RealVector& hist_bin_prs,
+inline void moments_from_histogram_bin_params(const RealRealMap& hist_bin_prs,
 					      Real& mean, Real& std_dev)
 {
   // in bin case, (x,y) and (x,c) are not equivalent since bins have non-zero
   // width -> assume (x,c) count/frequency-based (already converted from (x,y)
   // skyline/density-based) with normalization (counts sum to 1.)
   mean = std_dev = 0.;
-  size_t num_bins = hist_bin_prs.length() / 2 - 1;
+  size_t i, num_bins = hist_bin_prs.size() - 1;
   Real lwr, count, upr;//, clu;
-  for (int i=0; i<num_bins; ++i) {
-    lwr = hist_bin_prs[2*i]; count = hist_bin_prs[2*i+1];
-    upr = hist_bin_prs[2*i+2];
+  RRMCIter cit = hist_bin_prs.begin();
+  for (i=0; i<num_bins; ++i) {
+    lwr = cit->first; count = cit->second; ++cit;
+    upr = cit->first;
     //clu = count * (lwr + upr);
     mean    += count * (lwr + upr); // clu
     std_dev += count * (upr*upr + upr*lwr + lwr*lwr); // upr*clu + count*lwr*lwr
@@ -418,19 +419,20 @@ inline void moments_from_hypergeometric_params(int num_total_pop,
 }
 
 
-inline void moments_from_histogram_pt_params(const RealVector& hist_pt_prs,
+inline void moments_from_histogram_pt_params(const RealRealMap& hist_pt_prs,
 					     Real& mean, Real& std_dev)
 {
   // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
   // assume normalization (counts sum to 1.).
   mean = std_dev = 0.;
-  size_t num_pts = hist_pt_prs.length() / 2; Real val, cv;
-  for (int i=0; i<num_pts; ++i) {
-    val = hist_pt_prs[2*i]; cv = hist_pt_prs[2*i+1]*val; // count * val
-    mean    += cv;
-    std_dev += cv*val;
+  size_t i, num_pts = hist_pt_prs.size(); Real val, count, prod;
+  RRMCIter cit = hist_pt_prs.begin();
+  for (i=0; i<num_pts; ++i, ++cit) {
+    val = cit->first; count = cit->second; prod = count * val;
+    mean    += prod;
+    std_dev += prod * val;
   }
-  std_dev = std::sqrt(std_dev - mean*mean);
+  std_dev = std::sqrt(std_dev - mean * mean);
 }
 
 
@@ -749,11 +751,37 @@ inline Real weibull_cdf(Real x, Real alpha, Real beta)
 }
 
 
-inline Real histogram_bin_pdf(Real x, const RealVector& hist_bin_prs)
+inline Real histogram_bin_pdf(Real x, const RealRealMap& hist_bin_prs)
 {
   // The PDF is discontinuous at the bin bounds.  To resolve this, this
   // function employs an (arbitrary) convention: closed/inclusive lower bound
   // and open/exclusive upper bound.
+  size_t i, num_bins = hist_bin_prs.size() - 1;
+  RRMCIter cit = hist_bin_prs.begin();
+  if (x < cit->first || x >= (--hist_bin_prs.end())->first) // outside support
+    return 0.;
+  else {
+    Real lwr, upr, count;
+    for (i=0; i<num_bins; ++i) {
+      lwr = cit->first; count = cit->second; ++cit;
+      upr = cit->first;
+      if (x < upr) // return density
+	return count / (upr - lwr);
+    }
+    return 0.;
+  }
+}
+
+
+inline Real histogram_bin_pdf(Real x, const RealVector& hist_bin_prs)
+{
+  // Need this case to be fast for usage in NumericGenOrthogPolynomial...
+  /* Cleaner, but induces unnecessary copy overhead:
+  RealRealMap hist_bin_prs_rrm;
+  copy_data(hist_bin_prs_rv, hist_bin_prs_rrm);
+  return histogram_bin_pdf(x, hist_bin_prs_rrm);
+  */
+
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
   if (x < hist_bin_prs[0] || x >= hist_bin_prs[2*num_bins])
     return 0.;
@@ -769,8 +797,39 @@ inline Real histogram_bin_pdf(Real x, const RealVector& hist_bin_prs)
 }
 
 
+inline Real histogram_bin_cdf(Real x, const RealRealMap& hist_bin_prs)
+{
+  size_t i, num_bins = hist_bin_prs.size() - 1;
+  RRMCIter cit = hist_bin_prs.begin();
+  if (x <= cit->first)
+    return 0.;
+  else if (x >= (--hist_bin_prs.end())->first)
+    return 1.;
+  else {
+    Real cdf = 0., count, upr, lwr;
+    for (i=0; i<num_bins; ++i) {
+      lwr = cit->first; count = cit->second; ++cit;
+      upr = cit->first;
+      if (x < upr) {
+	cdf += count * (x - lwr) / (upr - lwr);
+	break;
+      }
+      else
+	cdf += count;
+    }
+    return cdf;
+  }
+}
+
+
 inline Real histogram_bin_cdf(Real x, const RealVector& hist_bin_prs)
 {
+  /* Cleaner, but induces unnecessary copy overhead:
+  RealRealMap hist_bin_prs_rrm;
+  copy_data(hist_bin_prs_rv, hist_bin_prs_rrm);
+  return histogram_bin_cdf(x, hist_bin_prs_rrm);
+  */
+
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
   if (x <= hist_bin_prs[0])
     return 0.;
@@ -793,8 +852,38 @@ inline Real histogram_bin_cdf(Real x, const RealVector& hist_bin_prs)
 }
 
 
-inline Real histogram_bin_cdf_inverse(Real cdf, const RealVector& hist_bin_prs)
+inline Real histogram_bin_cdf_inverse(Real cdf, const RealRealMap& hist_bin_prs)
 {
+  size_t i, num_bins = hist_bin_prs.size() - 1;
+  RRMCIter cit = hist_bin_prs.begin();
+  if (cdf <= 0.)
+    return cit->first;                    // lower bound abscissa
+  else if (cdf >= 1.)
+    return (--hist_bin_prs.end())->first; // upper bound abscissa
+  else {
+    Real upr_cdf = 0., count, upr, lwr;
+    for (i=0; i<num_bins; ++i) {
+      lwr = cit->first; count = cit->second; ++cit;
+      upr = cit->first;
+      upr_cdf += count;
+      if (cdf < upr_cdf)
+	return lwr + (upr_cdf - cdf) / count * (upr - lwr);
+    }
+    // If still no return due to numerical roundoff, return upper bound
+    return (--hist_bin_prs.end())->first; // upper bound abscissa
+  }
+}
+
+
+inline Real histogram_bin_cdf_inverse(Real cdf,
+				      const RealVector& hist_bin_prs)
+{
+  /* Cleaner, but induces unnecessary copy overhead:
+  RealRealMap hist_bin_prs_rrm;
+  copy_data(hist_bin_prs_rv, hist_bin_prs_rrm);
+  return histogram_bin_cdf_inverse(cdf, hist_bin_prs_rrm);
+  */
+
   size_t num_bins = hist_bin_prs.length() / 2 - 1;
   if (cdf <= 0.)
     return hist_bin_prs[0];          // lower bound abscissa

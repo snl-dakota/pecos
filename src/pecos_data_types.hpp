@@ -195,6 +195,29 @@ inline bool operator==(const SizetArray& sa, SizetMultiArrayConstView smav)
 }
 
 
+/// equality operator for SizetArray and SizetMultiArrayConstView
+template <typename OrdinalType, typename ScalarType>
+bool equivalent(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
+		const std::map<ScalarType, ScalarType>& m)
+{
+  // Check for equality in array lengths
+  size_t i, m_len = m.size();
+  OrdinalType v_len = v.length();
+  if ( m_len * 2 != v_len )
+    return false;
+
+  // Check each key,value pair
+  typename std::map<ScalarType, ScalarType>::const_iterator cit;
+  OrdinalType cntr = 0;
+  for (cit=m.begin(); cit!=m.end(); ++cit) {
+    if (v[cntr] != cit->first)  return false; ++cntr;
+    if (v[cntr] != cit->second) return false; ++cntr;
+  }
+
+  return true;
+}
+
+
 template <typename PecosContainerType>
 inline size_t find_index(const PecosContainerType& c,
 			 const typename PecosContainerType::value_type& val)
@@ -428,6 +451,39 @@ void copy_data(const BitArray& ba, bool* ptr, //ScalarType* ptr,
 {
   for (OrdinalType i=0; i<ptr_len; ++i)
     ptr[i] = ba[i]; // or static_cast<ScalarType>(ba[i])
+}
+
+
+template <typename OrdinalType, typename ScalarType>
+void copy_data(const Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v,
+	       std::map<ScalarType, ScalarType>& m)
+{
+  OrdinalType v_len = v.length();
+  if (v_len % 2) {
+    PCerr << "Error: vector length (" << v_len << ") must be multiple of 2 in "
+	  << "Pecos::copy_data(std::vector, std::map)." << std::endl;
+    abort_handler(-1);
+  }
+  // convert vector of concatenated (x,y) pairs to map[x] = y
+  OrdinalType i, j, m_len = v_len / 2;
+  m.clear();
+  for (i=0; i<m_len; ++i)
+    { j = 2*i; m[v[j]] = v[j+1]; }
+}
+
+
+template <typename OrdinalType, typename ScalarType>
+void copy_data(const std::map<ScalarType, ScalarType>& m,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
+{
+  // convert map[x] = y to vector of concatenated (x,y) pairs
+  v.sizeUninitialized(m.size() * 2);
+  typename std::map<ScalarType, ScalarType>::const_iterator cit;
+  OrdinalType cntr = 0;
+  for (cit=m.begin(); cit!=m.end(); ++cit) {
+    v[cntr] = cit->first;  ++cntr;
+    v[cntr] = cit->second; ++cntr;
+  }
 }
 
 

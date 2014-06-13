@@ -77,7 +77,7 @@ public:
   /// set distribution type and parameters for a WEIBULL distribution
   void weibull_distribution(Real alpha, Real beta);
   /// set distribution type and parameters for a WEIBULL distribution
-  void histogram_bin_distribution(const RealVector& bin_pairs);
+  void histogram_bin_distribution(const RealRealMap& bin_pairs);
 
   /// set coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
@@ -433,20 +433,20 @@ weibull_distribution(Real alpha, Real beta)
 
 
 inline void NumericGenOrthogPolynomial::
-histogram_bin_distribution(const RealVector& bin_pairs)
+histogram_bin_distribution(const RealRealMap& bin_pairs)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
   parametricUpdate = false;
   if (distributionType == HISTOGRAM_BIN) {
-    if (distParams != bin_pairs)
+    if (!equivalent(distParams, bin_pairs))
       parametricUpdate = true;
   }
   else
     { distributionType = HISTOGRAM_BIN; parametricUpdate = true; }
   if (parametricUpdate)
-    { distParams = bin_pairs; reset_gauss(); }
+    { copy_data(bin_pairs, distParams); reset_gauss(); }
 }
 
 
