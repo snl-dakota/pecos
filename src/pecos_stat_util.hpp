@@ -360,6 +360,15 @@ inline void moments_from_histogram_bin_params(const RealRealMap& hist_bin_prs,
   // skyline/density-based) with normalization (counts sum to 1.)
   mean = std_dev = 0.;
   size_t i, num_bins = hist_bin_prs.size() - 1;
+//  RRMCIter it_lwr = hist_bin_prs.begin();
+//  RRMCIter it_upr = ++hist_bin_prs.begin();
+//  RRMCIter it_end = --(hist_bin_prs.end());
+//  for (; it_lwr != it_end; ++it_lwr, ++it_upr) {
+//    lwr = it_lwr->first;
+//    count = it_lwr->second;
+//    upr = it_upr->first;
+//    ...
+//  }
   Real lwr, count, upr;//, clu;
   RRMCIter cit = hist_bin_prs.begin();
   for (i=0; i<num_bins; ++i) {
@@ -419,15 +428,57 @@ inline void moments_from_hypergeometric_params(int num_total_pop,
 }
 
 
+/// for integer-valued histogram, return a real-valued mean and std dev
+inline void moments_from_histogram_pt_params(const IntRealMap& hist_pt_prs,
+					     Real& mean, Real& std_dev)
+{
+  // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
+  // assume normalization (counts sum to 1.).
+  mean = std_dev = 0.;
+  Real val, count, prod;
+  IRMCIter cit = hist_pt_prs.begin();
+  IRMCIter cit_end = hist_pt_prs.end();
+  for ( ; cit != cit_end; ++cit) {
+    val = cit->first; count = cit->second; prod = count * val;
+    mean    += prod;
+    std_dev += prod * val;
+  }
+  std_dev = std::sqrt(std_dev - mean * mean);
+}
+
+
+/// for string variables, define the mean as the count-weighted mean
+/// of a zero-based index
+inline void moments_from_histogram_pt_params(const StringRealMap& hist_pt_prs,
+					     Real& mean, Real& std_dev)
+{
+  // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
+  // assume normalization (counts sum to 1.).
+  mean = std_dev = 0.;
+  Real val, count, prod;
+  size_t index = 0;
+  SRMCIter cit = hist_pt_prs.begin();
+  SRMCIter cit_end = hist_pt_prs.end();
+  for ( ; cit != cit_end; ++cit, ++index) {
+    val = index; count = cit->second; prod = count * val;
+    mean    += prod;
+    std_dev += prod * val;
+  }
+  std_dev = std::sqrt(std_dev - mean * mean);
+}
+
+
+/// return the mean and standard deviation of a real-valued point histogram
 inline void moments_from_histogram_pt_params(const RealRealMap& hist_pt_prs,
 					     Real& mean, Real& std_dev)
 {
   // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
   // assume normalization (counts sum to 1.).
   mean = std_dev = 0.;
-  size_t i, num_pts = hist_pt_prs.size(); Real val, count, prod;
+  Real val, count, prod;
   RRMCIter cit = hist_pt_prs.begin();
-  for (i=0; i<num_pts; ++i, ++cit) {
+  RRMCIter cit_end = hist_pt_prs.end();
+  for ( ; cit != cit_end; ++cit) {
     val = cit->first; count = cit->second; prod = count * val;
     mean    += prod;
     std_dev += prod * val;
