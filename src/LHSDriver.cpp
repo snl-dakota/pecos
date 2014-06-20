@@ -645,9 +645,11 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     //RRMCIter end = --h_bin_prs_i.end(); // last y from DAKOTA must be zero
     //for (cit=h_bin_prs_i.begin(); cit!=end; ++cit)
     //  sum += cit->second;
+    y_val[0] = 0.;
     for (j=0, cit=h_bin_prs_i.begin(); j<num_params; ++j, ++cit) {
       x_val[j] = cit->first;
-      y_val[j] = (j) ? y_val[j-1] + cit->second/*/sum*/ : 0.;
+      if (j+1 < num_params)
+	y_val[j+1] = y_val[j] + cit->second/* /sum */;
     }
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
