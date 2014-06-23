@@ -645,12 +645,13 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     //RRMCIter end = --h_bin_prs_i.end(); // last y from DAKOTA must be zero
     //for (cit=h_bin_prs_i.begin(); cit!=end; ++cit)
     //  sum += cit->second;
+    size_t end = num_params - 1;
     y_val[0] = 0.;
-    for (j=0, cit=h_bin_prs_i.begin(); j<num_params; ++j, ++cit) {
-      x_val[j] = cit->first;
-      if (j+1 < num_params)
-	y_val[j+1] = y_val[j] + cit->second/* /sum */;
+    for (j=0, cit=h_bin_prs_i.begin(); j<end; ++j, ++cit) {
+      x_val[j]   = cit->first;
+      y_val[j+1] = y_val[j] + cit->second/* /sum */;
     }
+    x_val[end] = cit->first; // last prob value (cit->second) must be zero
     LHS_UDIST2_FC(name_string, ptval_flag, ptval, dist_string.data(),
 		  num_params, x_val, y_val, err_code, dist_num, pv_num);
     check_error(err_code, "lhs_udist(histogram bin)");
