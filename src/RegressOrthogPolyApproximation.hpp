@@ -112,7 +112,10 @@ private:
   void adapt_regression();
   /// from among the active index sets, select the candidate refinement that
   /// provides the greatest reduction in cross-validation error
-  Real select_best_active();
+  Real select_best_active_multi_index();
+  /// from among the candidate basis expansions, select the option that
+  /// provides the greatest reduction in cross-validation error
+  Real select_best_basis_expansion();
 
   /// Use cross validation to choose solver hyper-parameters when solving the linear system Ax=b. e.g. if the linear solver has a epsilon tolerance internally select the best epsilon and return the corresponding solution
   Real run_cross_validation_solver(const UShort2DArray& multi_index,
@@ -157,6 +160,15 @@ private:
   void update_sparse_sobol(const SizetSet& sparse_indices,
 			   const UShort2DArray& shared_multi_index,
 			   const BitArrayULongMap& shared_sobol_map);
+
+  /// Contract dense arrays + sparse_indices key into packed arrays without key
+  void contract(UShort2DArray& multi_index, RealVector& exp_coeffs,
+		SizetSet& sparse_indices);
+
+  /// perform SharedOrthogPolyApproxData::numAdvancements expansions of 
+  /// multi_index to create the candidates array
+  void advance_multi_index_front(const UShort2DArray& multi_index,
+				 UShort3DArray& candidates);
 
   /// overlay the passed expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
@@ -235,6 +247,8 @@ private:
   /// PCE multi-index during adapted basis solution process.  Once complete,
   /// the shared multiIndex and saprseIndices are updated.
   UShort2DArray adaptedMultiIndex;
+  /// array of candidate basis expansions for ADAPTED_BASIS_EXPANDING_FRONT
+  UShort3DArray candidateBasisExp;
 };
 
 

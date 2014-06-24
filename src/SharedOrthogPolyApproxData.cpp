@@ -62,8 +62,11 @@ void SharedOrthogPolyApproxData::allocate_data()
 
   if (update_exp_form) { //|| restore_exp_form) {
     switch (expConfigOptions.expBasisType) {
-    // ADAPTED starts from total-order basis, like generalized sparse grid
-    case ADAPTED_BASIS: {
+    // ADAPTED_BASIS_GENERALIZED starts from a reference sparse grid basis
+    // (level from referenceSGLevel), as for generalized sparse grids.  A
+    // key difference is the use of multiIndexGrowthFactor, since the actual
+    // quadrature growth rules provide no benefit in this context.
+    case ADAPTED_BASIS_GENERALIZED: {
       // We could assume that:
       // (1) exp_order defines the upper bound of the basis (not the starting
       //     point) --> e.g., we are in 100D and would like to recover terms up
@@ -93,6 +96,7 @@ void SharedOrthogPolyApproxData::allocate_data()
     }
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
     case TOTAL_ORDER_BASIS:
+    case ADAPTED_BASIS_EXPANDING_FRONT:
       allocate_total_order(); // defines approxOrder and (candidate) multiIndex
       break;
     case TENSOR_PRODUCT_BASIS:
@@ -110,7 +114,7 @@ void SharedOrthogPolyApproxData::allocate_data()
   for (size_t i=0; i<numVars; ++i)
     PCout << approxOrder[i] << ' ';
   switch (expConfigOptions.expBasisType) {
-  case ADAPTED_BASIS:
+  case ADAPTED_BASIS_GENERALIZED: case ADAPTED_BASIS_EXPANDING_FRONT:
     PCout << "} using adapted expansion initiated from "; break;
   case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
   case TOTAL_ORDER_BASIS:
@@ -283,13 +287,17 @@ restore_best_solution(UShort2DArray& aggregated_mi)
   // reset the aggregated multi-index
   aggregated_mi.resize(bestExpTerms); // truncate previous increments
 
-  // reset tensor-product bookkeeping and save restorable data
-  savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
-  savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
+  switch (expConfigOptions.expBasisType) {
+  case ADAPTED_BASIS_GENERALIZED:
+    // reset tensor-product bookkeeping and save restorable data
+    savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
+    savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
 
-  tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
-  tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
-  tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
+    tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
+    tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
+    tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
+    break;
+  }
 }
 
 

@@ -126,7 +126,7 @@ void RegressOrthogPolyApproximation::compute_coefficients()
     //select_solver();
     run_regression(); // solve for PCE coefficients, optionally with cross valid
     break;
-  case ADAPTED_BASIS:
+  case ADAPTED_BASIS_GENERALIZED: case ADAPTED_BASIS_EXPANDING_FRONT:
     allocate_arrays();
     select_solver();
     adapt_regression(); // adapt for the best multiIndex for a fixed data set
@@ -143,6 +143,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   Real delta_star, tol = data_rep->expConfigOptions.convergenceTol;
   unsigned short soft_conv_count = 0;
+  short basis_type = data_rep->expConfigOptions.expBasisType;
 
   adaptedMultiIndex = data_rep->multiIndex; // starting point for adaptation
 
@@ -162,11 +163,23 @@ void RegressOrthogPolyApproximation::adapt_regression()
   if (data_rep->cvErrorRef < tol)
     ++soft_conv_count;
 
-  data_rep->csgDriver.initialize_sets(); // initialize the active sets
+  if (soft_conv_count < data_rep->softConvLimit)
+    switch (basis_type) {
+    case ADAPTED_BASIS_GENERALIZED:
+      data_rep->csgDriver.initialize_sets(); // initialize the active sets
+      break;
+    case ADAPTED_BASIS_EXPANDING_FRONT:
+      // TO DO: contract adaptedMultiIndex based on initial CV solve, then
+      // advance this contracted soln
+      contract(adaptedMultiIndex, expansionCoeffs, sparseIndices);
+      advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
+      break;
+    }
 
   while (soft_conv_count < data_rep->softConvLimit) {
     // invoke run_regression() for each index set candidate and select best
-    delta_star = select_best_active();
+    delta_star = (basis_type == ADAPTED_BASIS_GENERALIZED) ?
+      select_best_active_multi_index() : select_best_basis_expansion();
     // increase in CV error results in negative delta_star and trips conv count.
     // CV error change is not generally on the other of 1.e-x, so really we're
     // just capturing when no CV error reduction is obtained for any candidate.
@@ -194,7 +207,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
 }
 
 
-Real RegressOrthogPolyApproximation::select_best_active()
+Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
@@ -264,6 +277,72 @@ Real RegressOrthogPolyApproximation::select_best_active()
   // update reference points and current best soln if CV error has been reduced
   if (delta_star > 0.)
     data_rep->update_reference(cv_err_star, adaptedMultiIndex);
+
+  return delta_star;
+}
+
+
+Real RegressOrthogPolyApproximation::select_best_basis_expansion()
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // don't sort candidateBasisExp in set -> apply expansions incrementally!
+
+  // Evaluate the effect of each candidate basis expansion
+  size_t i, i_star = 0, num_candidates = candidateBasisExp.size();
+  Real cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
+  RealVectorArray exp_coeffs(num_candidates);
+  SizetSetArray   sparse_ind(num_candidates);
+  for (i=0; i<num_candidates; ++i) {
+
+    // increment multi-index with current candidate
+    const UShort2DArray& trial_exp = candidateBasisExp[i];
+    PCout << "\n>>>>> Evaluating trial basis expansion:\n" << trial_exp;
+
+    // append trial to (local) adaptedMultiIndex, storing reference point
+    data_rep->append_multi_index(trial_exp, adaptedMultiIndex);
+
+    // Solve CS with cross-validation applied to solver settings (e.g., noise
+    // tolerance), but not expansion order (since we are manually adapting it).
+    // We pass false to defer finalization (shared multiIndex, sparseIndices).
+    cv_err = run_cross_validation_solver(adaptedMultiIndex, exp_coeffs[i],
+					 sparse_ind[i]);
+
+    // Smallest absolute error is largest decrease from consistent ref.  delta
+    // is a signed quantity in order to detect when best case error increases
+    // relative to ref -> terminate or increment soft conv counter (allow some
+    // number of successive increases before abandoning hope).
+    delta = data_rep->cvErrorRef - cv_err;
+    if (data_rep->normalizeCV)
+      // Normalize delta based on size of candidate basis expansion
+      // (number of unique points added is equivalent to number of candidate
+      // expansion terms added for Gauss quadrature, but not other cases)
+      delta /= trial_exp.size();
+    PCout << "\n<<<<< Trial set refinement metric = " << delta << '\n';
+
+    // track best increment evaluated thus far
+    if (delta > delta_star) {
+      i_star = i; delta_star = delta;
+      if (delta_star > 0.) {
+	cv_err_star = cv_err;
+	//expansionCoeffs = exp_coeffs; sparseIndices = sparse_ind;
+      }
+    }
+  }
+  //const UShort2DArray& best_set = candidateBasisExp[i_star];
+  PCout << "\n<<<<< Evaluation of candidate basis expansions completed.\n"
+	<< "\n<<<<< Selection of basis expansion set " << i_star + 1 << '\n';
+
+  // rewind to best candidate and contract based on its sparse indices
+  //for (i=num_candidates-1; i>i_star; --i)
+  //  data_rep->decrement_trial_set(candidateBasisExp[i], adaptedMultiIndex);
+  contract(adaptedMultiIndex, exp_coeffs[i_star], sparse_ind[i_star]);
+  // update reference points and current best soln if CV error has been reduced
+  if (delta_star > 0.) {
+    expansionCoeffs = exp_coeffs[i_star]; // sparseIndices removed in contract()
+    data_rep->update_reference(cv_err_star, adaptedMultiIndex); // TO DO
+  }
 
   return delta_star;
 }
@@ -1703,6 +1782,41 @@ update_sparse_sobol(const SizetSet& sparse_indices,
   // now size sobolIndices
   if (sobolIndices.length() != sobol_len)
     sobolIndices.sizeUninitialized(sobol_len);
+}
+
+
+void RegressOrthogPolyApproximation::
+contract(UShort2DArray& multi_index, RealVector& exp_coeffs,
+	 SizetSet& sparse_indices)
+{
+  RealVector    dense_ep(exp_coeffs);  // copy
+  UShort2DArray dense_mi(multi_index); // copy
+
+  // resize arrays into packed format and copy entries from dense data
+  size_t num_exp_terms = sparse_indices.size();
+  multi_index.resize(num_exp_terms);
+  exp_coeffs.sizeUninitialized(num_exp_terms);
+  size_t i; SizetSet::const_iterator cit;
+  for (i=0, cit=sparse_indices.begin(); i<num_exp_terms; ++i, ++cit) {
+    size_t dense_index = *cit;
+    exp_coeffs[i]  = dense_ep[dense_index];
+    multi_index[i] = dense_mi[dense_index];
+  }
+  sparse_indices.clear();
+}
+
+
+void RegressOrthogPolyApproximation::
+advance_multi_index_front(const UShort2DArray& multi_index,
+			  UShort3DArray& candidates)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  size_t i, num_advance = data_rep->numAdvancements;
+  candidates.resize(num_advance);
+  for (i=0; i<num_advance; ++i)
+    ; // TO DO
 }
 
 

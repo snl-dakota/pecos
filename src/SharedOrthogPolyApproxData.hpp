@@ -315,6 +315,9 @@ protected:
   /// number of consecutive cycles for which convergence criterion
   /// must be met prior to termination
   unsigned short softConvLimit;
+  /// number of consecutive cycles for which convergence criterion
+  /// must be met prior to termination
+  unsigned short numAdvancements;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
@@ -334,8 +337,10 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
   SharedPolyApproxData(basis_type, num_vars), approxOrder(approx_order),
   multiIndexGrowthFactor(2),
-  referenceSGLevel(2), normalizeCV(false), softConvLimit(3) // paper consistency
-  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2)// normal settings
+  // paper consistency:
+  referenceSGLevel(2), normalizeCV(false), softConvLimit(3), numAdvancements(3)
+  // normal settings:
+  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2), numAdvancements(2)
 { }
 
 
