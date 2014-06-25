@@ -246,7 +246,7 @@ void SparseGridDriver::update_reference()
 void SparseGridDriver::print_final_sets(bool converged_within_tol) const
 {
   // base class version invoked by derived versions for common output
-  std::set<UShortArray>::const_iterator cit;
+  UShortArraySet::const_iterator cit;
   for (cit=computedTrialSets.begin(); cit!=computedTrialSets.end(); ++cit) {
     const UShortArray& mi = *cit;
     for (size_t j=0; j<numVars; ++j)
@@ -259,9 +259,9 @@ void SparseGridDriver::print_final_sets(bool converged_within_tol) const
 void SparseGridDriver::add_active_neighbors(const UShortArray& set)
 {
   UShortArray trial_set = set;
-  std::set<UShortArray>::const_iterator cit;
-  size_t i, j;
-  for (i=0; i<numVars; ++i) {
+  UShortArraySet::const_iterator cit;
+  size_t i, j, num_v = set.size();
+  for (i=0; i<num_v; ++i) {
     // i^{th} candidate for set A (active) computed from forward neighbor:
     // increment by 1 in dimension i
     unsigned short& trial_set_i = trial_set[i];
@@ -271,7 +271,7 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
     if (dimIsotropic || oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
       // test all backwards neighbors for membership in set O (old)
       bool backward_old = true;
-      for (j=0; j<numVars; ++j) {
+      for (j=0; j<num_v; ++j) {
 	unsigned short& trial_set_j = trial_set[j];
 	if (trial_set_j) { // if 0, then admissible by default
 	  trial_set_j -= 1;

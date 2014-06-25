@@ -646,12 +646,12 @@ inline size_t SharedPolyApproxData::restoration_index()
 inline size_t SharedPolyApproxData::finalization_index(size_t i)
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  const std::set<UShortArray>& trial_sets = sg_driver->computed_trial_sets();
+  const UShortArraySet& trial_sets = sg_driver->computed_trial_sets();
   // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid data
   // with remaining computed trial sets (in sorted order from SparseGridDriver::
   // computedTrialSets).  Below, we determine the order with which these
   // appended trial sets appear in savedLevMultiIndex.
-  std::set<UShortArray>::const_iterator cit = trial_sets.begin();
+  UShortArraySet::const_iterator cit = trial_sets.begin();
   std::advance(cit, i);
   return find_index(savedLevMultiIndex, *cit);
 }

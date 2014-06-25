@@ -159,9 +159,13 @@ protected:
   /// overlay or a new QoI in orthogonal least interpolation)
   void update_component_sobol(const UShort2DArray& multi_index);
 
-  /// append multi-indices from app_multi_index that do not already
-  /// appear in multi_index
+  /// append multi-indices from append_mi that do not already appear
+  /// in combined_mi
   void append_multi_index(const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi);
+  /// append multi-indices from append_mi that do not already appear
+  /// in combined_mi
+  void append_multi_index(const UShortArraySet& append_mi,
 			  UShort2DArray& combined_mi);
   /// append multi-indices from append_mi that do not already appear
   /// in combined_mi; define append_mi_map and append_mi_map_ref
@@ -225,6 +229,21 @@ protected:
   /// respect to specified dvv and evaluated at a particular parameter set
   const RealVector& multivariate_polynomial_gradient_vector(const RealVector& x,
     const UShortArray& indices, const SizetArray& dvv);
+
+  /// update the total Pareto set with new Pareto-optimal polynomial indices
+  void update_pareto(const UShort2DArray& new_pareto,
+		     UShort2DArray& total_pareto);
+  /// update the total Pareto set with new Pareto-optimal polynomial indices
+  void update_pareto(const UShort2DArray& new_pareto,
+		     UShortArraySet& total_pareto);
+  // assess whether new_pareto is dominated by total_pareto
+  //bool assess_dominance(const UShort2DArray& new_pareto,
+  //			  const UShort2DArray& total_pareto);
+  /// assess bi-directional dominance for a new polynomial index set 
+  /// against an incumbent polynomial index set
+  void assess_dominance(const UShortArray& new_order,
+			const UShortArray& existing_order,
+			bool& new_dominated, bool& existing_dominated);
 
   /// test for nonzero indices in random variable subset
   bool zero_random(const UShortArray& indices) const;

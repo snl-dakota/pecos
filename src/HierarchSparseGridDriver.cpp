@@ -806,7 +806,7 @@ void HierarchSparseGridDriver::finalize_sets()
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); use computedTrialSets
   if (nestedGrid) {
-    std::set<UShortArray>::iterator it;
+    UShortArraySet::iterator it;
     for (it=computedTrialSets.begin(); it!=computedTrialSets.end(); ++it) {
       const UShortArray& tr_set = *it;
       trialLevel = index_norm(tr_set);

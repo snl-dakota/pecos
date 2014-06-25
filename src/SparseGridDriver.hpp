@@ -162,11 +162,11 @@ public:
   bool track_collocation_indices() const;
 
   /// return activeMultiIndex
-  const std::set<UShortArray>& active_multi_index() const;
+  const UShortArraySet& active_multi_index() const;
   /// return oldMultiIndex
-  const std::set<UShortArray>& old_multi_index() const;
+  const UShortArraySet& old_multi_index() const;
   /// return computedTrialSets
-  const std::set<UShortArray>& computed_trial_sets() const;
+  const UShortArraySet& computed_trial_sets() const;
 
 protected:
 
@@ -209,13 +209,13 @@ protected:
   bool trackCollocIndices;
 
   /// old reference index sets for generalized sparse grids
-  std::set<UShortArray> oldMultiIndex; // or UShort2DArray
+  UShortArraySet oldMultiIndex; // or UShort2DArray
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid
-  std::set<UShortArray> activeMultiIndex; // or UShort2DArray
+  UShortArraySet activeMultiIndex; // or UShort2DArray
   /// subset of active set that have been evaluated as trial sets
   /// (incremented in compute_trial_grid() and decremented in update_sets())
-  std::set<UShortArray> computedTrialSets; // or UShort2DArray
+  UShortArraySet computedTrialSets; // or UShort2DArray
 
 private:
 
@@ -328,16 +328,15 @@ inline short SparseGridDriver::growth_rate() const
 { return growthRate; }
 
 
-inline const std::set<UShortArray>& SparseGridDriver::active_multi_index() const
+inline const UShortArraySet& SparseGridDriver::active_multi_index() const
 { return activeMultiIndex; }
 
 
-inline const std::set<UShortArray>& SparseGridDriver::old_multi_index() const
+inline const UShortArraySet& SparseGridDriver::old_multi_index() const
 { return oldMultiIndex; }
 
 
-inline const std::set<UShortArray>& SparseGridDriver::
-computed_trial_sets() const
+inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
 { return computedTrialSets; }
 
 

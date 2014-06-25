@@ -148,7 +148,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
   adaptedMultiIndex = data_rep->multiIndex; // starting point for adaptation
 
   // For a level 0 reference multi-index, we could safely omit evaluating the
-  // initial CV error and always perform one cycle of select_best_active(),
+  // initial CV error and always perform one cycle of select_best_active_mi(),
   // since the CV error would presumably not be low enough to trigger immediate
   // termination.  However, this requires care in selecting the lowest CV error
   // on the first cycle (largest CV change would need to utilize worst - best;
@@ -168,12 +168,8 @@ void RegressOrthogPolyApproximation::adapt_regression()
     case ADAPTED_BASIS_GENERALIZED:
       data_rep->csgDriver.initialize_sets(); // initialize the active sets
       break;
-    case ADAPTED_BASIS_EXPANDING_FRONT:
-      // TO DO: contract adaptedMultiIndex based on initial CV solve, then
-      // advance this contracted soln
-      contract(adaptedMultiIndex, expansionCoeffs, sparseIndices);
-      advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
-      break;
+    //case ADAPTED_BASIS_EXPANDING_FRONT:
+      //break;
     }
 
   while (soft_conv_count < data_rep->softConvLimit) {
@@ -211,9 +207,8 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const std::set<UShortArray>& active_mi
-    = data_rep->csgDriver.active_multi_index();
-  std::set<UShortArray>::const_iterator cit, cit_star;
+  const UShortArraySet& active_mi = data_rep->csgDriver.active_multi_index();
+  UShortArraySet::const_iterator cit, cit_star;
   Real cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
   RealVector exp_coeffs; SizetSet sparse_ind;
   CombinedSparseGridDriver* csg_driver = &data_rep->csgDriver;
@@ -287,7 +282,15 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  // don't sort candidateBasisExp in set -> apply expansions incrementally!
+  // contract adaptedMultiIndex and then advance this contracted soln
+  // Notes:
+  // > candidateBasisExp is not a sorted set so that expansions can be
+  //   stored/applied incrementally.
+  // > input/output from this function is a candidate multi_index along with 
+  //   its sparse solution (expansionCoeffs + sparseIndices key).  Thus, the
+  //   contracted representation is only used internal to this fn.
+  contract(adaptedMultiIndex, expansionCoeffs, sparseIndices); // TO DO: combine with pareto...
+  advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
 
   // Evaluate the effect of each candidate basis expansion
   size_t i, i_star = 0, num_candidates = candidateBasisExp.size();
@@ -297,7 +300,7 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   for (i=0; i<num_candidates; ++i) {
 
     // increment multi-index with current candidate
-    const UShort2DArray& trial_exp = candidateBasisExp[i];
+    const UShortArraySet& trial_exp = candidateBasisExp[i];
     PCout << "\n>>>>> Evaluating trial basis expansion:\n" << trial_exp;
 
     // append trial to (local) adaptedMultiIndex, storing reference point
@@ -309,12 +312,12 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
     cv_err = run_cross_validation_solver(adaptedMultiIndex, exp_coeffs[i],
 					 sparse_ind[i]);
 
-    // Smallest absolute error is largest decrease from consistent ref.  delta
-    // is a signed quantity in order to detect when best case error increases
-    // relative to ref -> terminate or increment soft conv counter (allow some
-    // number of successive increases before abandoning hope).
+    // Smallest absolute error is largest decrease from consistent ref.
+    // delta is a signed quantity in order to detect when best case error
+    // increases relative to ref -> terminate or increment soft conv counter
+    // (allow some number of successive increases before abandoning hope).
     delta = data_rep->cvErrorRef - cv_err;
-    if (data_rep->normalizeCV)
+    if (data_rep->normalizeCV) // normalization logic not as well justified
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
@@ -334,13 +337,17 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   PCout << "\n<<<<< Evaluation of candidate basis expansions completed.\n"
 	<< "\n<<<<< Selection of basis expansion set " << i_star + 1 << '\n';
 
-  // rewind to best candidate and contract based on its sparse indices
+  // rewind to best candidate
   //for (i=num_candidates-1; i>i_star; --i)
   //  data_rep->decrement_trial_set(candidateBasisExp[i], adaptedMultiIndex);
-  contract(adaptedMultiIndex, exp_coeffs[i_star], sparse_ind[i_star]);
+  //
+  // OR contract from final aggregate mi and best solution
+  //contract(adaptedMultiIndex, exp_coeffs[i_star], sparse_ind[i_star]);
+
   // update reference points and current best soln if CV error has been reduced
   if (delta_star > 0.) {
-    expansionCoeffs = exp_coeffs[i_star]; // sparseIndices removed in contract()
+    expansionCoeffs = exp_coeffs[i_star];
+    sparseIndices   = sparse_ind[i_star]; // if not contract() ?
     data_rep->update_reference(cv_err_star, adaptedMultiIndex); // TO DO
   }
 
@@ -1808,15 +1815,62 @@ contract(UShort2DArray& multi_index, RealVector& exp_coeffs,
 
 void RegressOrthogPolyApproximation::
 advance_multi_index_front(const UShort2DArray& multi_index,
-			  UShort3DArray& candidates)
+			  UShortArraySetArray& mi_advancements)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  size_t i, num_advance = data_rep->numAdvancements;
-  candidates.resize(num_advance);
-  for (i=0; i<num_advance; ++i)
-    ; // TO DO
+  // Design is to contract back to a Pareto frontier IGNORING ANY GAPS!
+  // > this simplifies bookkeeping and makes the neighbor search more efficient
+  // > JDJ: this is consistent with the observation that the algorithm fails
+  //        when there isn't a simple tree structure to the recovered coeffs
+
+  // condense multi_index to nondominated frontier, ignoring any internal gaps
+  UShortArraySet pareto_mi;
+  data_rep->update_pareto(multi_index, pareto_mi);
+
+  // create a et of advancements of this original frontier
+  size_t i, num_mi, num_advance = data_rep->numAdvancements;
+  mi_advancements.resize(num_advance);
+  for (i=0; i<num_advance; ++i) {
+    UShortArraySet& mi_ref = (i) ? mi_advancements[i-1] : pareto_mi;
+    add_admissible_forward_neighbors(mi_ref, mi_advancements[i]);
+  }
+}
+
+
+void RegressOrthogPolyApproximation::
+add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
+				 UShortArraySet& fwd_neighbors)
+{
+  // This function is similar to SparseGridDriver::add_active_neighbors()
+
+  UShortArraySet::const_iterator ref_cit, find_cit;
+  size_t s, i, j, num_v = sharedDataRep->numVars;
+  for (ref_cit=reference_mi.begin(); ref_cit!=reference_mi.end(); ++ref_cit) {
+    UShortArray trial_set = *ref_cit; // mutable copy
+    for (i=0; i<num_v; ++i) {
+      // i^{th} candidate for set A (active) computed from forward neighbor:
+      // increment by 1 in dimension i
+      unsigned short& trial_set_i = trial_set[i];
+      trial_set_i += 1;
+      // test all backwards neighbors for membership in set O (old)
+      bool backward_old = true;
+      for (j=0; j<num_v; ++j) {
+	unsigned short& trial_set_j = trial_set[j];
+	if (trial_set_j) { // if 0, then admissible by default
+	  trial_set_j -= 1;
+	  find_cit = reference_mi.find(trial_set);
+	  trial_set_j += 1; // restore
+	  if (find_cit == reference_mi.end())
+	    { backward_old = false; break; }
+	}
+      }
+      if (backward_old) // std::set<> will discard any active duplicates
+	fwd_neighbors.insert(trial_set);
+      trial_set_i -= 1; // restore
+    }
+  }
 }
 
 

@@ -168,7 +168,11 @@ private:
   /// perform SharedOrthogPolyApproxData::numAdvancements expansions of 
   /// multi_index to create the candidates array
   void advance_multi_index_front(const UShort2DArray& multi_index,
-				 UShort3DArray& candidates);
+				 UShortArraySetArray& candidates);
+  /// generate a set of admissible forward neighbors from a reference
+  /// multi-index
+  void add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
+					UShortArraySet& fwd_neighbors);
 
   /// overlay the passed expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
@@ -248,7 +252,7 @@ private:
   /// the shared multiIndex and saprseIndices are updated.
   UShort2DArray adaptedMultiIndex;
   /// array of candidate basis expansions for ADAPTED_BASIS_EXPANDING_FRONT
-  UShort3DArray candidateBasisExp;
+  UShortArraySetArray candidateBasisExp;
 };
 
 

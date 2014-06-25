@@ -104,18 +104,6 @@ private:
   //void map_tensor_product_multi_index(UShort2DArray& tp_multi_index,
   //				        size_t tp_index);
 
-  /// update the total Pareto set with new Pareto-optimal polynomial indices
-  void update_pareto(const UShort2DArray& new_pareto,
-		     UShort2DArray& total_pareto);
-  /// assess whether new_pareto is dominated by total_pareto
-  bool assess_dominance(const UShort2DArray& new_pareto,
-			const UShort2DArray& total_pareto);
-  /// assess bi-directional dominance for a new polynomial index set 
-  /// against an incumbent polynomial index set
-  void assess_dominance(const UShortArray& new_order,
-			const UShortArray& existing_order,
-			bool& new_dominated, bool& existing_dominated);
-
   /// Perform efficient calculation of tensor-product value via Horner's rule
   Real tensor_product_value(const RealVector& x, const RealVector& tp_coeffs,
 			    const UShortArray& approx_order,
