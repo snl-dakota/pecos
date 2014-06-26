@@ -282,15 +282,15 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  // contract adaptedMultiIndex and then advance this contracted soln
-  // Notes:
-  // > candidateBasisExp is not a sorted set so that expansions can be
-  //   stored/applied incrementally.
+  // restrict adaptedMultiIndex and then advance this frontier.  Notes:
+  // > candidateBasisExp is an array of sets that store multi-index increments;
+  //   thus, the adaptedMultiIndex reference must be preserved to recover best.
   // > input/output from this function is a candidate multi_index along with 
   //   its sparse solution (expansionCoeffs + sparseIndices key).  Thus, the
-  //   contracted representation is only used internal to this fn.
-  contract(adaptedMultiIndex, expansionCoeffs, sparseIndices); // TO DO: combine with pareto...
-  advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
+  //   restricted representation is only used internal to this fn.
+  UShortArraySet pareto_mi;
+  restriction(adaptedMultiIndex, sparseIndices, pareto_mi);
+  advance_multi_index_front(pareto_mi, candidateBasisExp);
 
   // Evaluate the effect of each candidate basis expansion
   size_t i, i_star = 0, num_candidates = candidateBasisExp.size();
@@ -300,11 +300,11 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   for (i=0; i<num_candidates; ++i) {
 
     // increment multi-index with current candidate
-    const UShortArraySet& trial_exp = candidateBasisExp[i];
-    PCout << "\n>>>>> Evaluating trial basis expansion:\n" << trial_exp;
+    const UShortArraySet& trial_increment = candidateBasisExp[i];
+    PCout << "\n>>>>> Evaluating trial basis expansion:\n" << trial_increment;
 
     // append trial to (local) adaptedMultiIndex, storing reference point
-    data_rep->append_multi_index(trial_exp, adaptedMultiIndex);
+    data_rep->append_multi_index(trial_increment, adaptedMultiIndex);
 
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
@@ -321,7 +321,7 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
-      delta /= trial_exp.size();
+      delta /= trial_increment.size();
     PCout << "\n<<<<< Trial set refinement metric = " << delta << '\n';
 
     // track best increment evaluated thus far
@@ -341,13 +341,13 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   //for (i=num_candidates-1; i>i_star; --i)
   //  data_rep->decrement_trial_set(candidateBasisExp[i], adaptedMultiIndex);
   //
-  // OR contract from final aggregate mi and best solution
-  //contract(adaptedMultiIndex, exp_coeffs[i_star], sparse_ind[i_star]);
+  // OR restrict from final aggregate mi and best solution
+  //restriction(adaptedMultiIndex, exp_coeffs[i_star], sparse_ind[i_star]);
 
   // update reference points and current best soln if CV error has been reduced
   if (delta_star > 0.) {
     expansionCoeffs = exp_coeffs[i_star];
-    sparseIndices   = sparse_ind[i_star]; // if not contract() ?
+    sparseIndices   = sparse_ind[i_star]; // if not restriction() ?
     data_rep->update_reference(cv_err_star, adaptedMultiIndex); // TO DO
   }
 
@@ -1792,48 +1792,101 @@ update_sparse_sobol(const SizetSet& sparse_indices,
 }
 
 
+/** This version clears out all terms not recovered in CS and may
+    leave multi-index gaps. */
 void RegressOrthogPolyApproximation::
-contract(UShort2DArray& multi_index, RealVector& exp_coeffs,
-	 SizetSet& sparse_indices)
+restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
 {
-  RealVector    dense_ep(exp_coeffs);  // copy
+  if (sparse_indices.empty())
+    return; // no further restriction possible
+
   UShort2DArray dense_mi(multi_index); // copy
 
   // resize arrays into packed format and copy entries from dense data
-  size_t num_exp_terms = sparse_indices.size();
+  size_t i, num_exp_terms = sparse_indices.size(); SizetSet::const_iterator cit;
   multi_index.resize(num_exp_terms);
-  exp_coeffs.sizeUninitialized(num_exp_terms);
-  size_t i; SizetSet::const_iterator cit;
-  for (i=0, cit=sparse_indices.begin(); i<num_exp_terms; ++i, ++cit) {
-    size_t dense_index = *cit;
-    exp_coeffs[i]  = dense_ep[dense_index];
-    multi_index[i] = dense_mi[dense_index];
-  }
+  for (i=0, cit=sparse_indices.begin(); i<num_exp_terms; ++i, ++cit)
+    multi_index[i] = dense_mi[*cit];
   sparse_indices.clear();
 }
 
 
+/** This version clears out only the dominated multi-index terms not
+    recovered in CS to avoid multi-index gaps; it provides a frontier
+    with all supporting terms. */
 void RegressOrthogPolyApproximation::
-advance_multi_index_front(const UShort2DArray& multi_index,
+restriction(UShort2DArray& multi_index, SizetSet& sparse_indices,
+	    UShortArraySet& pareto_mi)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  if (sparse_indices.empty()) { // no further restriction possible
+    data_rep->update_pareto(multi_index, pareto_mi);
+    return;
+  }
+
+  // first define pareto_mi from the recovered mi terms
+  size_t i, num_exp_terms = sparse_indices.size(), num_mi = multi_index.size(),
+    new_si;
+  SizetSet::const_iterator si_it;
+  for (i=0, si_it=sparse_indices.begin(); i<num_exp_terms; ++i, ++si_it)
+    data_rep->update_pareto(multi_index[*si_it], pareto_mi);
+
+  UShort2DArray orig_multi_index(multi_index);  // copy
+  SizetSet orig_sparse_indices(sparse_indices); // copy
+  multi_index.clear(); sparse_indices.clear();
+
+  // prune out only the multi_index terms that dominate pareto_mi,
+  // while updating sparse indices for the pruned mi
+  UShortArraySet::iterator j_it;
+  bool i_dominated, j_dominated;
+  for (i=0, si_it=orig_sparse_indices.begin(), new_si=0; i<num_mi; ++i) {
+    const UShortArray& mi_i = orig_multi_index[i];
+    for (j_it=pareto_mi.begin(); j_it!=pareto_mi.end(); ++j_it) {
+      // manage tie: pareto_mi is "incumbent" and is not dominated if equal
+      data_rep->assess_dominance(mi_i, *j_it, i_dominated, j_dominated);
+      if (i_dominated) break;
+    }
+#ifdef DEBUG
+    PCout << "orig mi[" << i << "] dominated = " << i_dominated << std::endl;
+#endif // DEBUG
+    if (i_dominated) {  // within pareto set
+      multi_index.push_back(mi_i);
+      if (*si_it == i) { // a recovered term
+	sparse_indices.insert(new_si); // reindex within pruned multi_index
+	++si_it;         // advance to next original sparse index
+      }
+      ++new_si;
+    }
+  }
+#ifdef DEBUG
+  PCout << "RegressOPA::restriction(): original multi_index =\n"
+	<< orig_multi_index << "original sparse_indices =\n"
+	<< orig_sparse_indices << "pareto set =\n" << pareto_mi
+	<< "new multi_index =\n" << multi_index << "new sparse_indices =\n"
+	<< sparse_indices << std::endl;
+#endif // DEBUG
+}
+
+
+void RegressOrthogPolyApproximation::
+advance_multi_index_front(const UShortArraySet& pareto_mi,
 			  UShortArraySetArray& mi_advancements)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  // Design is to contract back to a Pareto frontier IGNORING ANY GAPS!
+  // Design is to restrict back to a Pareto frontier IGNORING ANY GAPS!
   // > this simplifies bookkeeping and makes the neighbor search more efficient
   // > JDJ: this is consistent with the observation that the algorithm fails
   //        when there isn't a simple tree structure to the recovered coeffs
-
-  // condense multi_index to nondominated frontier, ignoring any internal gaps
-  UShortArraySet pareto_mi;
-  data_rep->update_pareto(multi_index, pareto_mi);
 
   // create a et of advancements of this original frontier
   size_t i, num_mi, num_advance = data_rep->numAdvancements;
   mi_advancements.resize(num_advance);
   for (i=0; i<num_advance; ++i) {
-    UShortArraySet& mi_ref = (i) ? mi_advancements[i-1] : pareto_mi;
+    const UShortArraySet& mi_ref = (i) ? mi_advancements[i-1] : pareto_mi;
     add_admissible_forward_neighbors(mi_ref, mi_advancements[i]);
   }
 }
@@ -1871,6 +1924,10 @@ add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
       trial_set_i -= 1; // restore
     }
   }
+//#ifdef DEBUG
+  PCout << "RegressOPA::add_admissible_forward_neighbors(): reference_mi =\n"
+	<< reference_mi << "fwd_neighbors =\n" << fwd_neighbors << std::endl;
+//#endif // DEBUG
 }
 
 

@@ -161,13 +161,18 @@ private:
 			   const UShort2DArray& shared_multi_index,
 			   const BitArrayULongMap& shared_sobol_map);
 
-  /// Contract dense arrays + sparse_indices key into packed arrays without key
-  void contract(UShort2DArray& multi_index, RealVector& exp_coeffs,
-		SizetSet& sparse_indices);
+  /// Perform restriction from dense arrays + sparse_indices key into
+  /// packed arrays without key
+  void restriction(UShort2DArray& multi_index, SizetSet& sparse_indices);
+  /// Perform restriction from original multi_index by defining a Pareto
+  /// frontier of recovered terms and then pruning multi_index back to a
+  /// complete set (no gaps) within this Pareto frontier
+  void restriction(UShort2DArray& multi_index, SizetSet& sparse_indices,
+		   UShortArraySet& pareto_mi);
 
   /// perform SharedOrthogPolyApproxData::numAdvancements expansions of 
   /// multi_index to create the candidates array
-  void advance_multi_index_front(const UShort2DArray& multi_index,
+  void advance_multi_index_front(const UShortArraySet& multi_index,
 				 UShortArraySetArray& candidates);
   /// generate a set of admissible forward neighbors from a reference
   /// multi-index

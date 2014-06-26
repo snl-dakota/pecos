@@ -230,15 +230,17 @@ protected:
   const RealVector& multivariate_polynomial_gradient_vector(const RealVector& x,
     const UShortArray& indices, const SizetArray& dvv);
 
-  /// update the total Pareto set with new Pareto-optimal polynomial indices
-  void update_pareto(const UShort2DArray& new_pareto,
-		     UShort2DArray& total_pareto);
-  /// update the total Pareto set with new Pareto-optimal polynomial indices
-  void update_pareto(const UShort2DArray& new_pareto,
-		     UShortArraySet& total_pareto);
+  /// update the combined Pareto set with a new multi_index
+  void update_pareto(const UShort2DArray& multi_index,
+		     UShort2DArray& combined_pareto);
+  /// update the combined Pareto set with a new multi_index
+  void update_pareto(const UShort2DArray& multi_index,
+		     UShortArraySet& combined_pareto);
+  /// update the combined Pareto set with a new multi_index term
+  void update_pareto(const UShortArray& mi_i, UShortArraySet& combined_pareto);
   // assess whether new_pareto is dominated by total_pareto
-  //bool assess_dominance(const UShort2DArray& new_pareto,
-  //			  const UShort2DArray& total_pareto);
+  //bool assess_dominance(const UShort2DArray& pareto,
+  //			  const UShort2DArray& combined_pareto);
   /// assess bi-directional dominance for a new polynomial index set 
   /// against an incumbent polynomial index set
   void assess_dominance(const UShortArray& new_order,
@@ -370,8 +372,10 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options),
   approxOrder(approx_order), multiIndexGrowthFactor(2),
-  referenceSGLevel(2), normalizeCV(false), softConvLimit(3) // paper consistency
-  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2)// normal settings
+  // paper consistency:
+  referenceSGLevel(2), normalizeCV(false), softConvLimit(3), numAdvancements(3)
+  // normal settings:
+  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2), numAdvancements(2)
 { }
 
 
