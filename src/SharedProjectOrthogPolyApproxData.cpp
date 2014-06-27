@@ -267,8 +267,8 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
       UShort2DArray curr_pareto, stored_pareto;
-      update_pareto(csg_driver->smolyak_multi_index(), curr_pareto);
-      update_pareto(storedLevMultiIndex,             stored_pareto);
+      update_pareto_set(csg_driver->smolyak_multi_index(), curr_pareto);
+      update_pareto_set(storedLevMultiIndex,             stored_pareto);
       size_t i, j, k, num_stored_mi = stored_pareto.size(),
 	num_curr_mi = curr_pareto.size();
       // overlay each product expansion from the tensor-product combinations
@@ -400,7 +400,7 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
                                           integrand_order);
       // maintain an n-dimensional Pareto front of nondominated multi-indices
       pareto[0] = integrand_order;
-      update_pareto(pareto, total_pareto);
+      update_pareto_set(pareto, total_pareto);
 #ifdef DEBUG
       PCout << "level =\n" << sm_multi_index[i] << "\nquad_order =\n"
 	    << quad_order << "\nintegrand_order =\n" << integrand_order << '\n';

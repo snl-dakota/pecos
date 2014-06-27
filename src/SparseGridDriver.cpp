@@ -265,7 +265,7 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
     // i^{th} candidate for set A (active) computed from forward neighbor:
     // increment by 1 in dimension i
     unsigned short& trial_set_i = trial_set[i];
-    trial_set_i += 1;
+    ++trial_set_i;
     // anisotropic initialize_sets() candidates could be in oldMultiIndex
     // since smolyakCoeffs[i]==1 test is necessary but not sufficient
     if (dimIsotropic || oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
@@ -274,9 +274,9 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
       for (j=0; j<num_v; ++j) {
 	unsigned short& trial_set_j = trial_set[j];
 	if (trial_set_j) { // if 0, then admissible by default
-	  trial_set_j -= 1;
+	  --trial_set_j;
 	  cit = oldMultiIndex.find(trial_set);
-	  trial_set_j += 1; // restore
+	  ++trial_set_j; // restore
 	  if (cit == oldMultiIndex.end())
 	    { backward_old = false; break; }
 	}
@@ -284,7 +284,7 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
       if (backward_old) // std::set<> will discard any active duplicates
 	activeMultiIndex.insert(trial_set);
     }
-    trial_set_i -= 1; // restore
+    --trial_set_i; // restore
   }
 }
 

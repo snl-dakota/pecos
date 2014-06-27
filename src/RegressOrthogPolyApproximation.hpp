@@ -163,21 +163,32 @@ private:
 
   /// Perform restriction from dense arrays + sparse_indices key into
   /// packed arrays without key
-  void restriction(UShort2DArray& multi_index, SizetSet& sparse_indices);
+  void sparse_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices);
   /// Perform restriction from original multi_index by defining a Pareto
   /// frontier of recovered terms and then pruning multi_index back to a
   /// complete set (no gaps) within this Pareto frontier
-  void restriction(UShort2DArray& multi_index, SizetSet& sparse_indices,
-		   UShortArraySet& pareto_mi);
+  void frontier_restriction(UShort2DArray& multi_index,
+			    SizetSet& sparse_indices);
 
   /// perform SharedOrthogPolyApproxData::numAdvancements expansions of 
   /// multi_index to create the candidates array
-  void advance_multi_index_front(const UShortArraySet& multi_index,
-				 UShortArraySetArray& candidates);
+  void advance_multi_index_front(const UShort2DArray& multi_index,
+				 UShortArraySetArray& mi_advancements);
   /// generate a set of admissible forward neighbors from a reference
   /// multi-index
   void add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
 					UShortArraySet& fwd_neighbors);
+
+  /// define a multi-index frontier from the incoming multi_index.  This differs
+  /// from a Pareto frontier in that the definition of dominated is relaxed
+  /// (must not be < another term in all dimensions, but can be equal).
+  void define_frontier(const UShort2DArray& multi_index,
+		       UShortArraySet& combined_pareto);
+  /// update a multi-index frontier from an incoming multi_index term.  This
+  /// differs from a Pareto frontier in that the definition of dominated is
+  /// relaxed (must not be < another term in all dimensions, but can be equal).
+  void define_frontier(const UShortArray& mi_i,
+		       UShortArraySet& combined_pareto);
 
   /// overlay the passed expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map

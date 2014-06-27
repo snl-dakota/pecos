@@ -230,22 +230,37 @@ protected:
   const RealVector& multivariate_polynomial_gradient_vector(const RealVector& x,
     const UShortArray& indices, const SizetArray& dvv);
 
-  /// update the combined Pareto set with a new multi_index
-  void update_pareto(const UShort2DArray& multi_index,
-		     UShort2DArray& combined_pareto);
-  /// update the combined Pareto set with a new multi_index
-  void update_pareto(const UShort2DArray& multi_index,
-		     UShortArraySet& combined_pareto);
-  /// update the combined Pareto set with a new multi_index term
-  void update_pareto(const UShortArray& mi_i, UShortArraySet& combined_pareto);
+  /// define/update a combined Pareto set with a new multi_index by
+  /// omitting terms that are weakly Pareto dominated (more omissions
+  /// = smaller resulting set)
+  void update_pareto_set(const UShort2DArray& multi_index,
+			 UShort2DArray& combined_pareto);
+  /// define/update a combined Pareto set for a new multi_index term
+  void update_pareto_set(const UShortArray& mi_i,
+			 UShort2DArray& combined_pareto);
+  /// define/update a leading multi_index frontier omitting points that are
+  /// strongly Pareto dominated (fewer omissions = larger resulting set)
+  void update_frontier(const UShortArraySet& multi_index,
+		       UShortArraySet& mi_frontier);
+  /// define/update a leading multi_index frontier omitting points that are
+  /// strongly Pareto dominated (fewer omissions = larger resulting set)
+  void update_frontier(const UShort2DArray& multi_index,
+		       UShortArraySet& mi_frontier);
+  /// update/update a leading multi_index frontier for a new multi_index term
+  void update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier);
+
   // assess whether new_pareto is dominated by total_pareto
   //bool assess_dominance(const UShort2DArray& pareto,
   //			  const UShort2DArray& combined_pareto);
-  /// assess bi-directional dominance for a new polynomial index set 
-  /// against an incumbent polynomial index set
+  /// assess bi-directional weak dominance for a "challenger" polynomial
+  /// index set against an "incumbent" polynomial index set
   void assess_dominance(const UShortArray& new_order,
 			const UShortArray& existing_order,
 			bool& new_dominated, bool& existing_dominated);
+  /// assess bi-directional strong dominance between two polynomial index sets
+  void assess_strong_dominance(const UShortArray& order_a,
+			       const UShortArray& order_b,
+			       bool& a_dominated, bool& b_dominated);
 
   /// test for nonzero indices in random variable subset
   bool zero_random(const UShortArray& indices) const;
@@ -554,6 +569,46 @@ multivariate_polynomial_gradient_vector(const RealVector& x,
     mvpGradient[i] = multivariate_polynomial_gradient(x, deriv_index, indices);
   }
   return mvpGradient;
+}
+
+
+inline void SharedOrthogPolyApproxData::
+update_pareto_set(const UShort2DArray& multi_index,
+		  UShort2DArray& combined_pareto)
+{
+  // This function can be used for update or for initial definition:
+  // > supports the case where the incoming array is a multi-index with
+  //   dominated terms --> performs conversion to a non-dominated frontier.
+
+  size_t i, num_p = multi_index.size();
+  for (i=0; i<num_p; ++i)
+    update_pareto_set(multi_index[i], combined_pareto);
+}
+
+
+inline void SharedOrthogPolyApproxData::
+update_frontier(const UShort2DArray& multi_index, UShortArraySet& mi_frontier)
+{
+  // This function can be used for update or for initial definition:
+  // > supports the case where the incoming array is a multi-index with
+  //   dominated terms --> performs conversion to a non-dominated frontier.
+
+  size_t i, num_p = multi_index.size();
+  for (i=0; i<num_p; ++i)
+    update_frontier(multi_index[i], mi_frontier);
+}
+
+
+inline void SharedOrthogPolyApproxData::
+update_frontier(const UShortArraySet& multi_index, UShortArraySet& mi_frontier)
+{
+  // This function can be used for update or for initial definition:
+  // > supports the case where the incoming array is a multi-index with
+  //   dominated terms --> performs conversion to a non-dominated frontier.
+
+  UShortArraySet::const_iterator cit;
+  for (cit=multi_index.begin(); cit!=multi_index.end(); ++cit)
+    update_frontier(*cit, mi_frontier);
 }
 
 

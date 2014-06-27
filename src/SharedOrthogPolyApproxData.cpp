@@ -852,87 +852,45 @@ append_multi_index(const UShort2DArray& ref_mi, const UShort2DArray& append_mi,
 
 
 void SharedOrthogPolyApproxData::
-update_pareto(const UShort2DArray& multi_index, UShort2DArray& combined_pareto)
+update_pareto_set(const UShortArray& mi_i, UShort2DArray& combined_pareto)
 {
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  size_t i, num_p = multi_index.size();
   std::list<UShort2DArray::iterator> removes;
   UShort2DArray::iterator jit;
-  bool i_dominated, j_dominated;
-  for (i=0; i<num_p; ++i) {
-    const UShortArray& mi_i = multi_index[i];
-    for (jit=combined_pareto.begin(); jit!=combined_pareto.end(); ++jit) {
-      assess_dominance(mi_i, *jit, i_dominated, j_dominated);
-      if (i_dominated) break;
-      if (j_dominated) removes.push_back(jit);
-    }
-    // 
-    // prune newly dominated in reverse order (vector iterators
-    // following a point of insertion or deletion are invalidated)
-    while (!removes.empty())
-      { combined_pareto.erase(removes.back()); removes.pop_back(); }
-    // add nondominated
-    if (!i_dominated)
-      combined_pareto.push_back(mi_i);
-  }
-}
-
-
-void SharedOrthogPolyApproxData::
-update_pareto(const UShort2DArray& multi_index, UShortArraySet& combined_pareto)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  size_t i, num_p = multi_index.size();
-  std::list<UShortArraySet::iterator> removes;
-  std::list<UShortArraySet::iterator>::iterator rm_iter;
-  UShortArraySet::iterator jit;
-  bool i_dominated, j_dominated;
-  for (i=0; i<num_p; ++i) {
-    const UShortArray& mi_i = multi_index[i];
-    for (jit=combined_pareto.begin(); jit!=combined_pareto.end(); ++jit) {
-      assess_dominance(mi_i, *jit, i_dominated, j_dominated);
-      if (i_dominated) break;
-      if (j_dominated) removes.push_back(jit);
-    }
-    // prune newly dominated in any order
-    for (rm_iter=removes.begin(); rm_iter!=removes.end(); ++rm_iter)
-      combined_pareto.erase(*rm_iter);
-    removes.clear();
-    // add nondominated
-    if (!i_dominated)
-      combined_pareto.insert(mi_i);
-  }
-}
-
-
-void SharedOrthogPolyApproxData::
-update_pareto(const UShortArray& mi_i, UShortArraySet& combined_pareto)
-{
-  // This function can be used for update or for initial definition:
-  // > supports the case where the incoming array is a multi-index with
-  //   dominated terms --> performs conversion to a non-dominated frontier.
-
-  std::list<UShortArraySet::iterator> removes;
-  UShortArraySet::iterator jit;
   bool i_dominated, j_dominated;
   for (jit=combined_pareto.begin(); jit!=combined_pareto.end(); ++jit) {
     assess_dominance(mi_i, *jit, i_dominated, j_dominated);
     if (i_dominated) break;
     if (j_dominated) removes.push_back(jit);
   }
+  // 
+  // prune newly dominated in reverse order (vector iterators
+  // following a point of insertion or deletion are invalidated)
+  while (!removes.empty())
+    { combined_pareto.erase(removes.back()); removes.pop_back(); }
+  // add nondominated
+  if (!i_dominated)
+    combined_pareto.push_back(mi_i);
+}
+
+
+void SharedOrthogPolyApproxData::
+update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier)
+{
+  std::list<UShortArraySet::iterator> removes;
+  UShortArraySet::iterator jit;
+  bool i_dominated, j_dominated;
+  for (jit=mi_frontier.begin(); jit!=mi_frontier.end(); ++jit) {
+    assess_strong_dominance(mi_i, *jit, i_dominated, j_dominated);
+    if (i_dominated) break;
+    if (j_dominated) removes.push_back(jit);
+  }
   // prune newly dominated in any order
   std::list<UShortArraySet::iterator>::iterator rm_iter;
   for (rm_iter=removes.begin(); rm_iter!=removes.end(); ++rm_iter)
-    combined_pareto.erase(*rm_iter);
+    mi_frontier.erase(*rm_iter);
   // add nondominated
   if (!i_dominated)
-    combined_pareto.insert(mi_i);
+    mi_frontier.insert(mi_i);
 }
 
 
@@ -963,7 +921,12 @@ assess_dominance(const UShort2DArray& pareto,
 }
 */
 
-// new = 3 1, pareto = 0 3, 2 2, 4 0
+
+/** Weak Pareto dominance: multi_index a weakly dominates multi_index b
+    iff a_i >= b_i for all i and a_i > b_i for at least one dimension.
+    Here we add the additional distinction of a challenger versus an 
+    incumbent: tie goes to the incumbent (the challenger is dominated
+    and is not added redundantly to the Pareto set). */
 void SharedOrthogPolyApproxData::
 assess_dominance(const UShortArray& new_order,
 		 const UShortArray& existing_order,
@@ -980,6 +943,27 @@ assess_dominance(const UShortArray& new_order,
       { equal = false; existing_dominated_temp = false; }
   // asymmetric logic since incumbent wins a tie
   existing_dominated = (!equal && existing_dominated_temp);
+}
+
+
+/** Strong Pareto dominance: multi_index a strongly dominates
+    multi_index b iff a_i > b_i for all i.  This case needs no notion
+    of challenger versus incumbent. */
+void SharedOrthogPolyApproxData::
+assess_strong_dominance(const UShortArray& order_a,
+			const UShortArray& order_b,
+			bool& a_dominated, bool& b_dominated)
+{
+  // can't use std::vector::operator< (used for component-wise sorting)
+  size_t i, n = order_a.size();
+  a_dominated = b_dominated = true;
+  for (i=0; i<n; ++i)
+    if (order_a[i] == order_b[i])
+      { a_dominated = b_dominated = false; break; }
+    else if (order_a[i] > order_b[i])
+      a_dominated = false;
+    else // order_b[i] > order_a[i]
+      b_dominated = false;
 }
 
 
