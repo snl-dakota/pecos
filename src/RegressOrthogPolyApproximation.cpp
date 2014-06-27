@@ -142,7 +142,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   Real delta_star, tol = data_rep->expConfigOptions.convergenceTol;
-  unsigned short soft_conv_count = 0;
+  unsigned short soft_conv_count = 0, soft_conv_limit = data_rep->softConvLimit;
   short basis_type = data_rep->expConfigOptions.expBasisType;
 
   adaptedMultiIndex = data_rep->multiIndex; // starting point for adaptation
@@ -156,14 +156,16 @@ void RegressOrthogPolyApproximation::adapt_regression()
   // need to support general reference points, since adaptive algorithms can
   // stall without good starting points.  Therefore, go ahead and compute the
   // CV err for the reference candidate basis.
-  data_rep->cvErrorRef
+  Real init_cv_err
     = run_cross_validation_solver(adaptedMultiIndex, expansionCoeffs,
 				  sparseIndices);
+  data_rep->update_reference(init_cv_err, adaptedMultiIndex);
+
   // absolute error instead of delta error for initial tolerance check
-  if (data_rep->cvErrorRef < tol)
+  if (init_cv_err < tol)
     ++soft_conv_count;
 
-  if (soft_conv_count < data_rep->softConvLimit)
+  if (soft_conv_count < soft_conv_limit)
     switch (basis_type) {
     case ADAPTED_BASIS_GENERALIZED:
       data_rep->csgDriver.initialize_sets(); // initialize the active sets
@@ -172,7 +174,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
       //break;
     }
 
-  while (soft_conv_count < data_rep->softConvLimit) {
+  while (soft_conv_count < soft_conv_limit) {
     // invoke run_regression() for each index set candidate and select best
     delta_star = (basis_type == ADAPTED_BASIS_GENERALIZED) ?
       select_best_active_multi_index() : select_best_basis_expansion();
@@ -185,8 +187,8 @@ void RegressOrthogPolyApproximation::adapt_regression()
       soft_conv_count = 0;
   }
 
-  // different finalize: don't add in any remaining evaluated sets;
-  // rather, we need to backtrack and restore the best cvErrorRef solution
+  // different finalize: don't add in any remaining evaluated sets; rather,
+  // we need to backtrack and restore the best solution with lowest CV error
   data_rep->restore_best_solution(adaptedMultiIndex);
   // Once done for this QoI, append adaptedMultiIndex to shared multiIndex,
   // update sparseIndices (which corresponds to best adaptedMultiIndex) to
