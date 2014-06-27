@@ -196,6 +196,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
 			       data_rep->multiIndex, expansionCoeffs,
 			       expansionCoeffGrads);
   adaptedMultiIndex.clear();
+
   // now update sobolIndexMap and sparseSobolIndexMap
   data_rep->update_component_sobol(data_rep->multiIndex);
   update_sparse_sobol(sparseIndices, data_rep->multiIndex,
@@ -292,23 +293,23 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
 
   // Evaluate the effect of each candidate basis expansion
-  size_t i, i_star = 0, num_candidates = candidateBasisExp.size();
+  size_t i, i_star = 0, num_candidates = candidateBasisExp.size(), 
+    size_star = adaptedMultiIndex.size();
   Real cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
-  RealVector exp_coeffs; SizetSetArray sparse_ind(num_candidates);
+  RealVector exp_coeffs; SizetSet sparse_ind;
   for (i=0; i<num_candidates; ++i) {
 
-    // increment multi-index with current candidate
-    const UShortArraySet& trial_increment = candidateBasisExp[i];
-    PCout << "\n>>>>> Evaluating trial basis expansion:\n" << trial_increment;
-
-    // append trial to (local) adaptedMultiIndex, storing reference point
-    data_rep->append_multi_index(trial_increment, adaptedMultiIndex);
+    // append candidate expansion to adaptedMultiIndex
+    const UShortArraySet& candidate_exp = candidateBasisExp[i];
+    data_rep->append_multi_index(candidate_exp, adaptedMultiIndex);
+    PCout << "\n>>>>> Evaluating trial basis expansion " << i+1 << '\n';
+      //":\n" << adaptedMultiIndex;
 
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
     // We pass false to defer finalization (shared multiIndex, sparseIndices).
-    cv_err = run_cross_validation_solver(adaptedMultiIndex, exp_coeffs,
-					 sparse_ind[i]);
+    cv_err = run_cross_validation_solver(adaptedMultiIndex,
+					 exp_coeffs, sparse_ind);
 
     // Smallest absolute error is largest decrease from consistent ref.
     // delta is a signed quantity in order to detect when best case error
@@ -319,34 +320,32 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
-      delta /= trial_increment.size();
+      delta /= candidate_exp.size();
     PCout << "\n<<<<< Trial set refinement metric = " << delta << '\n';
 
-    // track best increment evaluated thus far
+    // track best increment evaluated thus far.  Note: an increment is always
+    // selected even if no improvement in CV error --> rely on soft convergence
+    // and best solution tracking.
     if (delta > delta_star) {
-      i_star = i; delta_star = delta;
-      if (delta_star > 0.) {
-	cv_err_star = cv_err;
-	expansionCoeffs = exp_coeffs; //sparseIndices = sparse_ind;
+      i_star = i; delta_star = delta; size_star = adaptedMultiIndex.size();
+      if (delta_star > 0.) { // track reduction in best CV error
+	cv_err_star     = cv_err;
+	expansionCoeffs = exp_coeffs;
+	sparseIndices   = sparse_ind;
       }
     }
   }
+
   //const UShort2DArray& best_set = candidateBasisExp[i_star];
+  size_t id_star = i_star + 1;
   PCout << "\n<<<<< Evaluation of candidate basis expansions completed.\n"
-	<< "\n<<<<< Selection of basis expansion set " << i_star + 1 << '\n';
-
+	<< "\n<<<<< Selection of basis expansion set " << id_star << '\n';
   // rewind to best candidate
-  //for (i=num_candidates-1; i>i_star; --i)
-  //  data_rep->decrement_trial_set(candidateBasisExp[i], adaptedMultiIndex);
-  //
-  // OR restrict from final aggregate mi and best solution
-  //frontier_restriction(adaptedMultiIndex, sparse_ind[i_star]);
-
+  if (id_star != num_candidates)
+    adaptedMultiIndex.resize(size_star);
   // update reference points and current best soln if CV error has been reduced
-  if (delta_star > 0.) {
-    sparseIndices = sparse_ind[i_star]; // if not restriction() ?
-    data_rep->update_reference(cv_err_star, adaptedMultiIndex); // TO DO
-  }
+  if (delta_star > 0.)
+    data_rep->update_reference(cv_err_star, adaptedMultiIndex);
 
   return delta_star;
 }
@@ -1821,6 +1820,9 @@ frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
     return;
 
   // first define pareto_mi from the recovered mi terms
+  // Note: a complete frontier_mi cannot be defined from recovered sparse terms.
+  // Therefore, we employ pareto_mi here for purposes of restriction (+ sparse
+  // re-indexing). See advance_multi_index_front() for later use of frontier_mi.
   size_t i, j, num_exp_terms = sparse_indices.size(),
     num_mi = multi_index.size(), new_si;
   UShort2DArray pareto_mi;
@@ -1833,8 +1835,12 @@ frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
   SizetSet orig_sparse_indices(sparse_indices); // copy
   multi_index.clear(); sparse_indices.clear();
 
-  // prune out only the multi_index terms that dominate pareto_mi,
-  // while updating sparse indices for the pruned mi
+  // prune out only the multi_index terms that dominate pareto_mi, while
+  // updating sparse indices for this pruned multi_index.  We restrict back
+  // to the Pareto frontier while ignoring any gaps due to sparse recovery.
+  // > this simplifies bookkeeping and forward neighbor searches
+  // > JDJ: this is consistent with the observation that the algorithm fails
+  //        when there isn't a simple tree structure to the recovered coeffs
   bool i_dominated, j_dominated;
   for (i=0, si_it=orig_sparse_indices.begin(), new_si=0; i<num_mi; ++i) {
     const UShortArray& mi_i = orig_multi_index[i];
@@ -1873,11 +1879,8 @@ advance_multi_index_front(const UShort2DArray& multi_index,
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  // Design is to restrict back to a Pareto frontier IGNORING ANY GAPS!
-  // > this simplifies bookkeeping and makes the neighbor search more efficient
-  // > JDJ: this is consistent with the observation that the algorithm fails
-  //        when there isn't a simple tree structure to the recovered coeffs
-
+  // Compute frontier_mi from the restricted (but complete) multi_index.  This
+  // provides a reduced multi_index for purposes of fwd neighbor expansion.
   UShortArraySet mi_frontier;
   data_rep->update_frontier(multi_index, mi_frontier);
 
@@ -1925,10 +1928,10 @@ add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
       --neighbor_i; // restore
     }
   }
-//#ifdef DEBUG
+#ifdef DEBUG
   PCout << "RegressOPA::add_admissible_forward_neighbors(): reference_mi =\n"
 	<< reference_mi << "fwd_neighbors =\n" << fwd_neighbors << std::endl;
-//#endif // DEBUG
+#endif // DEBUG
 }
 
 
