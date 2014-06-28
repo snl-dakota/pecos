@@ -129,10 +129,6 @@ protected:
   /// and multi-index
   void increment_trial_set(CombinedSparseGridDriver* csg_driver,
 			   UShort2DArray& aggregated_mi);
-  /// helper function for incrementing that is modular on trial set and
-  /// multi-index
-  void increment_trial_set(const UShortArray& trial_set,
-			   UShort2DArray& aggregated_mi);
   /// helper function for decrementing that is modular on trial set
   /// and multi-index
   void decrement_trial_set(const UShortArray& trial_set,
@@ -146,10 +142,6 @@ protected:
   /// helper function for restoring that is modular on trial set and multi-index
   void restore_trial_set(const UShortArray& trial_set,
 			 UShort2DArray& aggregated_mi);
-  /// update cvErrorRef and bestExpTerms after improvement in solution
-  void update_reference(Real cv_error, const UShort2DArray& aggregated_mi);
-  /// update cvErrorRef and bestExpTerms after improvement in solution
-  void restore_best_solution(UShort2DArray& aggregated_mi);
 
   /// update approxOrder and total-order multiIndex
   void allocate_total_order();
@@ -329,32 +321,6 @@ protected:
   /// class for used by each ProjectOrthogPolyApproximation)
   size_t restoreIndex;
 
-  /// sparse grid driver for adapting a CS candidate basis using greedy
-  /// adaptation via the generalized sparse grid algorithm; it's state
-  /// is reset for each response QoI
-  CombinedSparseGridDriver csgDriver;
-  /// the cross validation error reference point for adapting a CS
-  /// candidate basis; it's state is reset for each response QoI
-  Real cvErrorRef;
-  /// size of expansion that corresponds to the best solution identified
-  /// (may not be the last solution)
-  size_t bestExpTerms;
-  /// a scalar growth factor for defining the tpMultiIndex contribution
-  /// from a particular trial index set in adapted basis mode
-  unsigned short multiIndexGrowthFactor;
-  /// initial sparse grid level that provides the starting point for basis
-  /// adaptation
-  unsigned short referenceSGLevel;
-  /// flag indicating whether to apply normalization to CV error estimates
-  /// within select_best_active()
-  bool normalizeCV;
-  /// number of consecutive cycles for which convergence criterion
-  /// must be met prior to termination
-  unsigned short softConvLimit;
-  /// number of consecutive cycles for which convergence criterion
-  /// must be met prior to termination
-  unsigned short numAdvancements;
-
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
   RealVector mvpGradient;
@@ -371,12 +337,7 @@ private:
 inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
-  SharedPolyApproxData(basis_type, num_vars), approxOrder(approx_order),
-  multiIndexGrowthFactor(2),
-  // paper consistency:
-  referenceSGLevel(2), normalizeCV(false), softConvLimit(3), numAdvancements(3)
-  // normal settings:
-  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2), numAdvancements(2)
+  SharedPolyApproxData(basis_type, num_vars), approxOrder(approx_order)
 { }
 
 
@@ -386,11 +347,7 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options),
-  approxOrder(approx_order), multiIndexGrowthFactor(2),
-  // paper consistency:
-  referenceSGLevel(2), normalizeCV(false), softConvLimit(3), numAdvancements(3)
-  // normal settings:
-  //referenceSGLevel(0), normalizeCV(true), softConvLimit(2), numAdvancements(2)
+  approxOrder(approx_order)
 { }
 
 
@@ -474,14 +431,6 @@ restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 {
   pre_restore_trial_set(trial_set, aggregated_mi);
   post_restore_trial_set(trial_set, aggregated_mi);
-}
-
-
-inline void SharedOrthogPolyApproxData::
-update_reference(Real cv_error, const UShort2DArray& aggregated_mi)
-{
-  cvErrorRef   = cv_error;
-  bestExpTerms = aggregated_mi.size();
 }
 
 

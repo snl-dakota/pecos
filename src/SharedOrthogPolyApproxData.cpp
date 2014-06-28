@@ -62,41 +62,8 @@ void SharedOrthogPolyApproxData::allocate_data()
 
   if (update_exp_form) { //|| restore_exp_form) {
     switch (expConfigOptions.expBasisType) {
-    // ADAPTED_BASIS_GENERALIZED starts from a reference sparse grid basis
-    // (level from referenceSGLevel), as for generalized sparse grids.  A
-    // key difference is the use of multiIndexGrowthFactor, since the actual
-    // quadrature growth rules provide no benefit in this context.
-    case ADAPTED_BASIS_GENERALIZED: {
-      // We could assume that:
-      // (1) exp_order defines the upper bound of the basis (not the starting
-      //     point) --> e.g., we are in 100D and would like to recover terms up
-      //     to order 5, but can't form a candidate multiIndex that large. So we
-      //     start from SGL 0 and select components up to this upper bnd.  In 
-      //     this case, we specify either colloc_points or colloc_ratio << 1.
-      // (2) exp_order defines the starting point and there is no explicit
-      //     upper bound --> colloc_ratio is more (initially) meaningful.
-      // (3) neither: exp_order only used to define colloc_pts from colloc_ratio
-      //     and we hard-wire the starting point (e.g., level 0) for adaptation
-      // For now, we use case 3 as it is the simplest
-
-      // initialize the sparse grid driver (lightweight mode) for generating
-      // candidate index sets
-      csgDriver.initialize_grid(numVars, referenceSGLevel);
-
-      // define reference multiIndex and tpMultiIndex{,Map,MapRef} from 
-      // initial sparse grid level
-      //sparse_grid_multi_index(&csgDriver, multiIndex); // heavyweight mapping
-      const UShort2DArray& sm_multi_index = csgDriver.smolyak_multi_index();
-      size_t i, num_sm_mi = sm_multi_index.size();
-      multiIndex.clear();
-      tpMultiIndex.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
-      for (i=0; i<num_sm_mi; ++i)
-	increment_trial_set(sm_multi_index[i], multiIndex); // lightwt mapping
-      break;
-    }
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
     case TOTAL_ORDER_BASIS:
-    case ADAPTED_BASIS_EXPANDING_FRONT:
       allocate_total_order(); // defines approxOrder and (candidate) multiIndex
       break;
     case TENSOR_PRODUCT_BASIS:
@@ -114,8 +81,6 @@ void SharedOrthogPolyApproxData::allocate_data()
   for (size_t i=0; i<numVars; ++i)
     PCout << approxOrder[i] << ' ';
   switch (expConfigOptions.expBasisType) {
-  case ADAPTED_BASIS_GENERALIZED: case ADAPTED_BASIS_EXPANDING_FRONT:
-    PCout << "} using adapted expansion initiated from "; break;
   case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
   case TOTAL_ORDER_BASIS:
     PCout << "} using total-order expansion of ";         break;
@@ -204,29 +169,6 @@ increment_trial_set(CombinedSparseGridDriver* csg_driver,
 
 
 void SharedOrthogPolyApproxData::
-increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
-{
-  size_t i, last_index = tpMultiIndex.size();
-  // increment tpMultiIndex{,Map,MapRef} arrays
-  UShort2DArray new_us2a; SizetArray new_sa;
-  tpMultiIndex.push_back(new_us2a);
-  tpMultiIndexMap.push_back(new_sa); tpMultiIndexMapRef.push_back(0);
-  // update tpMultiIndex
-  UShortArray exp_order(numVars);
-  // linear growth in Gaussian rules would normally result in a factor of 2:
-  //   m = 2l+1 -> i = 2m-1 = 4l+1 -> o = i/2 = 2l
-  // This is the default, but finer and coarser grain growth can be used.
-  for (i=0; i<numVars; ++i)
-    exp_order[i] = multiIndexGrowthFactor * trial_set[i];
-  tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
-  // update multiIndex and append bookkeeping
-  append_multi_index(tpMultiIndex[last_index], aggregated_mi,
-		     tpMultiIndexMap[last_index],
-		     tpMultiIndexMapRef[last_index]);
-}
-
-
-void SharedOrthogPolyApproxData::
 decrement_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 {
   // reset the aggregated multi-index
@@ -278,26 +220,6 @@ post_restore_trial_set(const UShortArray& trial_set,
   std::advance(iit, restoreIndex); savedTPMultiIndex.erase(iit);
   std::advance(mit, restoreIndex); savedTPMultiIndexMap.erase(mit);
   std::advance(rit, restoreIndex); savedTPMultiIndexMapRef.erase(rit);
-}
-
-
-void SharedOrthogPolyApproxData::
-restore_best_solution(UShort2DArray& aggregated_mi)
-{
-  // reset the aggregated multi-index
-  aggregated_mi.resize(bestExpTerms); // truncate previous increments
-
-  switch (expConfigOptions.expBasisType) {
-  case ADAPTED_BASIS_GENERALIZED:
-    // reset tensor-product bookkeeping and save restorable data
-    savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
-    savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
-
-    tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
-    tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
-    tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
-    break;
-  }
 }
 
 

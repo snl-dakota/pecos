@@ -142,8 +142,9 @@ void RegressOrthogPolyApproximation::adapt_regression()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   Real delta_star, tol = data_rep->expConfigOptions.convergenceTol;
-  unsigned short soft_conv_count = 0, soft_conv_limit = data_rep->softConvLimit;
-  short basis_type = data_rep->expConfigOptions.expBasisType;
+  unsigned short soft_conv_count = 0,
+    soft_conv_limit = data_rep->expConfigOptions.softConvLimit;
+  short basis_type  = data_rep->expConfigOptions.expBasisType;
 
   adaptedMultiIndex = data_rep->multiIndex; // starting point for adaptation
 
@@ -240,7 +241,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
     // relative to ref -> terminate or increment soft conv counter (allow some
     // number of successive increases before abandoning hope).
     delta = data_rep->cvErrorRef - cv_err;
-    if (data_rep->normalizeCV) {
+    if (data_rep->regressConfigOptions.normalizeCV) {
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
@@ -318,7 +319,7 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
     // increases relative to ref -> terminate or increment soft conv counter
     // (allow some number of successive increases before abandoning hope).
     delta = data_rep->cvErrorRef - cv_err;
-    if (data_rep->normalizeCV) // normalization logic not as well justified
+    if (data_rep->regressConfigOptions.normalizeCV) // not as well justified
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
@@ -1305,16 +1306,18 @@ void RegressOrthogPolyApproximation::select_solver()
     }
 
   // Set solver parameters
-  RealVector noise_tols;
+  RealVector noise_tols = data_rep->regressConfigOptions.noiseTols; // copy
+  /*
   if ( data_rep->noiseTols.length() > 0 )
     {
-      // data->rep noiseTols is being set will very long length. This must
+      // data_rep->noiseTols is being set will very long length. This must
       // be a bug
       noise_tols.sizeUninitialized( data_rep->noiseTols.length() );
       noise_tols.assign( data_rep->noiseTols );
     }
+  */
   if ( CSOpts.solver == LASSO_REGRESSION )
-    CSOpts.delta = data_rep->l2Penalty;
+    CSOpts.delta = data_rep->regressConfigOptions.l2Penalty;
   if ( noise_tols.length() > 0 )
       CSOpts.epsilon = noise_tols[0];
   else {
@@ -1330,7 +1333,8 @@ void RegressOrthogPolyApproximation::select_solver()
 
   // Solve the regression problem using L1 or L2 minimization approaches
   //bool regression_err = 0;
-  if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION && !data_rep->crossValidation){
+  if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION &&
+      !data_rep->regressConfigOptions.crossValidation){
     if ( eq_con && !faultInfo.under_determined )
       CSOpts.numFunctionSamples = surrData.points();
     else {
@@ -1587,7 +1591,7 @@ void RegressOrthogPolyApproximation::run_regression()
   // Perform cross validation loop over degrees here.
   // Current cross validation will not work for equality 
   // constrained least squares
-  if ( data_rep->crossValidation ) // run cross validation
+  if ( data_rep->regressConfigOptions.crossValidation ) // run cross validation
     {
       if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
 	   ORTHOG_LEAST_INTERPOLATION )
@@ -1634,7 +1638,8 @@ void RegressOrthogPolyApproximation::run_regression()
 
   if ( expansionCoeffFlag && !multiple_rhs ) {
     if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
-	 ORTHOG_LEAST_INTERPOLATION && !data_rep->crossValidation )
+	 ORTHOG_LEAST_INTERPOLATION &&
+	 !data_rep->regressConfigOptions.crossValidation )
     {
       if (faultInfo.under_determined) // exploit CS sparsity
 	update_sparse(solutions[0][0], num_expansion_terms);
@@ -1887,7 +1892,8 @@ advance_multi_index_front(const UShort2DArray& multi_index,
   data_rep->update_frontier(multi_index, mi_frontier);
 
   // create a set of advancements from this reference frontier
-  size_t i, num_mi, num_advance = data_rep->numAdvancements;
+  size_t i, num_mi,
+    num_advance = data_rep->regressConfigOptions.numAdvancements;
   mi_advancements.resize(num_advance);
   for (i=0; i<num_advance; ++i) {
     UShortArraySet& mi_adv_i = mi_advancements[i];
@@ -1959,7 +1965,7 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   bool use_gradients = false;
   if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
   MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
-  int cv_seed = data_rep->randomSeed; 
+  int cv_seed = data_rep->regressConfigOptions.randomSeed; 
   cv_iterator.set_seed( cv_seed );
   cv_iterator.set_fault_data( faultInfo,
 			      surrData.failed_response_data() );
@@ -2062,7 +2068,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   bool use_gradients = false;
   if ( A.numRows() > num_data_pts_fn ) use_gradients = true;
   MultipleSolutionLinearModelCrossValidationIterator cv_iterator;
-  int cv_seed = data_rep->randomSeed; 
+  int cv_seed = data_rep->regressConfigOptions.randomSeed; 
   cv_iterator.set_seed( cv_seed );
   cv_iterator.set_fault_data( faultInfo,
 			      surrData.failed_response_data() );
@@ -2199,7 +2205,7 @@ void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
   opts1D[0][0] = CSOpts.solver;
   opts1D[1].size( 1 ); // Solver tolerance. 
   opts1D[1][0] = CSOpts.solverTolerance;
-  opts1D[2] = data_rep->noiseTols; // epsilon.
+  opts1D[2] = data_rep->regressConfigOptions.noiseTols; // epsilon.
   opts1D[3].size( 1 ); // delta
   opts1D[3] = CSOpts.delta;
   opts1D[4].size( 1 ); // max_number of non_zeros

@@ -43,7 +43,8 @@ public:
   ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 			 short output_level, bool vbd_flag,
 			 unsigned short vbd_order, //short refine_type,
-			 short refine_cntl, int max_iter, Real conv_tol);
+			 short refine_cntl, int max_iter, Real conv_tol,
+			 unsigned short sc_limit);
   /// copy constructor
   ExpansionConfigOptions(const ExpansionConfigOptions& ec_options);
   /// destructor
@@ -81,14 +82,17 @@ public:
   int maxIterations;
   /// convergence tolerance for adapted or iterated approximation algorithms
   Real convergenceTol;
+  /// number of consecutive cycles for which convergence criterion
+  /// must be met prior to termination
+  unsigned short softConvLimit;
 };
 
 
 inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
-  //refinementType(NO_REFINEMENT),
-  refinementControl(NO_CONTROL), maxIterations(100), convergenceTol(1.e-4)
+  /*refinementType(NO_REFINEMENT),*/ refinementControl(NO_CONTROL),
+  maxIterations(100), convergenceTol(1.e-4), softConvLimit(3)
 { }
 
 
@@ -96,12 +100,12 @@ inline ExpansionConfigOptions::
 ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 		       short output_level, bool vbd_flag,
 		       unsigned short vbd_order, //short refine_type,
-		       short refine_cntl, int max_iter, Real conv_tol):
+		       short refine_cntl, int max_iter, Real conv_tol,
+		       unsigned short sc_limit):
   expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
   outputLevel(output_level), vbdFlag(vbd_flag), vbdOrderLimit(vbd_order),
-  //refinementType(refine_type),
-  refinementControl(refine_cntl), maxIterations(max_iter),
-  convergenceTol(conv_tol)
+  /*refinementType(refine_type),*/ refinementControl(refine_cntl),
+  maxIterations(max_iter), convergenceTol(conv_tol), softConvLimit(sc_limit)
 { }
 
 
@@ -113,7 +117,8 @@ ExpansionConfigOptions(const ExpansionConfigOptions& ec_options):
   //refinementType(ec_options.refinementType),
   refinementControl(ec_options.refinementControl),
   maxIterations(ec_options.maxIterations),
-  convergenceTol(ec_options.convergenceTol)
+  convergenceTol(ec_options.convergenceTol),
+  softConvLimit(ec_options.softConvLimit)
 { }
 
 
@@ -290,6 +295,7 @@ public:
   /// set basisConfigOptions (instead of per option below)
   void configuration_options(const BasisConfigOptions& bc_options);
 
+  /*
   /// set ExpansionConfigOptions::expCoeffsSolnApproach
   void solution_approach(short soln_approach);
   /// get ExpansionConfigOptions::expCoeffsSolnApproach
@@ -324,6 +330,7 @@ public:
   void convergence_tolerance(Real conv_tol);
   /// get ExpansionConfigOptions::convergenceTol
   Real convergence_tolerance() const;
+  */
 
   /// return sobolIndexMap
   const BitArrayULongMap& sobol_index_map() const;
@@ -497,6 +504,7 @@ configuration_options(const BasisConfigOptions& bc_options)
 }
 
 
+/*
 inline void SharedPolyApproxData::solution_approach(short soln_approach)
 { expConfigOptions.expCoeffsSolnApproach = soln_approach; }
 
@@ -551,6 +559,7 @@ inline void SharedPolyApproxData::convergence_tolerance(Real conv_tol)
 
 inline Real SharedPolyApproxData::convergence_tolerance() const
 { return expConfigOptions.convergenceTol; }
+*/
 
 
 inline const BitArrayULongMap& SharedPolyApproxData::sobol_index_map() const
