@@ -120,7 +120,8 @@ get_shared_data(short basis_type, const UShortArray& approx_order,
 SharedBasisApproxData::
 SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 		      size_t num_vars, const ExpansionConfigOptions& ec_options,
-		      const BasisConfigOptions& bc_options):
+		      const BasisConfigOptions& bc_options,
+		      const RegressionConfigOptions& rc_options):
   referenceCount(1)
 {
 #ifdef REFCOUNT_DEBUG
@@ -130,7 +131,7 @@ SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 
   // Set the rep pointer to the appropriate derived type
   dataRep = get_shared_data(basis_type, approx_order, num_vars,
-			    ec_options, bc_options);
+			    ec_options, bc_options, rc_options);
   if ( !dataRep ) // bad type or insufficient memory
     abort_handler(-1);
 }
@@ -141,7 +142,8 @@ SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 SharedBasisApproxData* SharedBasisApproxData::
 get_shared_data(short basis_type, const UShortArray& approx_order,
 		size_t num_vars, const ExpansionConfigOptions& ec_options,
-		const BasisConfigOptions& bc_options)
+		const BasisConfigOptions& bc_options,
+		const RegressionConfigOptions& rc_options)
 {
 #ifdef REFCOUNT_DEBUG
   PCout << "Envelope instantiating letter in get_shared_data()." << std::endl;
@@ -163,7 +165,7 @@ get_shared_data(short basis_type, const UShortArray& approx_order,
     // L1 or L2 regression
     return new SharedRegressOrthogPolyApproxData(basis_type, approx_order,
 						 num_vars, ec_options,
-						 bc_options);
+						 bc_options, rc_options);
     break;
   case GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL:
   //case PIECEWISE_PROJECTION_ORTHOGONAL_POLYNOMIAL:

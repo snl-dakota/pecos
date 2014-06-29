@@ -16,6 +16,7 @@ namespace Pecos {
 
 class ExpansionConfigOptions;
 class BasisConfigOptions;
+class RegressionConfigOptions;
 
 
 /// Base class for multivariate basis approximations used for
@@ -54,7 +55,8 @@ public:
   SharedBasisApproxData(short basis_type, const UShortArray& approx_order,
 			size_t num_vars,
 			const ExpansionConfigOptions& ec_options,
-			const BasisConfigOptions& bc_options);
+			const BasisConfigOptions& bc_options,
+			const RegressionConfigOptions& rc_options);
   /// copy constructor
   SharedBasisApproxData(const SharedBasisApproxData& shared_data);
 
@@ -109,7 +111,8 @@ private:
   SharedBasisApproxData*
     get_shared_data(short basis_type, const UShortArray& approx_order,
 		    size_t num_vars, const ExpansionConfigOptions& ec_options,
-		    const BasisConfigOptions& bc_options);
+		    const BasisConfigOptions& bc_options,
+		    const RegressionConfigOptions& rc_options);
 
   //
   //- Heading: Data members

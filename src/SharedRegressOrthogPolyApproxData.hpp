@@ -143,7 +143,8 @@ public:
 				    const UShortArray& approx_order,
 				    size_t num_vars,
 				    const ExpansionConfigOptions& ec_options,
-				    const BasisConfigOptions& bc_options);
+				    const BasisConfigOptions& bc_options,
+				    const RegressionConfigOptions& rc_options);
   /// destructor
   ~SharedRegressOrthogPolyApproxData();
 
@@ -239,9 +240,11 @@ SharedRegressOrthogPolyApproxData(short basis_type,
 				  const UShortArray& approx_order,
 				  size_t num_vars,
 				  const ExpansionConfigOptions& ec_options,
-				  const BasisConfigOptions& bc_options):
+				  const BasisConfigOptions& bc_options,
+				  const RegressionConfigOptions& rc_options):
   SharedOrthogPolyApproxData(basis_type, approx_order, num_vars,
-			     ec_options, bc_options)
+			     ec_options, bc_options),
+  regressConfigOptions(rc_options)
 { }
 
 
