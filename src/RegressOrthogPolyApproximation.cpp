@@ -349,6 +349,12 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   // update reference points and current best soln if CV error has been reduced
   if (delta_star > 0.)
     data_rep->update_reference(cv_err_star, adaptedMultiIndex);
+  // if no improvement, define sparseIndices for use in subsequent restriction:
+  // prevents adaptedMultiIndex from falling out of sync with expansionCoeffs
+  // and sparseIndices (empty sparse_indices would be misinterpreted for an
+  // expanded adaptedMultiIndex and restriction would not occur)
+  else if (sparseIndices.empty())
+    inflate(sparseIndices, data_rep->bestExpTerms);
 
   return delta_star;
 }
@@ -377,16 +383,10 @@ void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
     // sparse indices arrays (not optimal for performance but a lot less code),
     // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
     // following aggregation.
-    if (sparseIndices.empty()) {
-      size_t i, num_mi = data_rep->multiIndex.size();
-      for (i=0; i<num_mi; ++i)
-	sparseIndices.insert(i);
-    }
-    if (storedSparseIndices.empty()) {
-      size_t i, num_st_mi = data_rep->storedMultiIndex.size();
-      for (i=0; i<num_st_mi; ++i)
-	storedSparseIndices.insert(i);
-    }
+    if (sparseIndices.empty())
+      inflate(sparseIndices, data_rep->multiIndex.size());
+    if (storedSparseIndices.empty())
+      inflate(storedSparseIndices, data_rep->storedMultiIndex.size());
 
     switch (combine_type) {
     case ADD_COMBINE: {
@@ -2180,8 +2180,8 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
     // evaluations such as off-diagonal covariance.
     sparseIndices.clear();
     if (num_basis_terms < data_rep->multiIndex.size()) // candidate exp size
-      for (size_t i=0; i<num_basis_terms; ++i)
-	sparseIndices.insert(i); // sparse subset is first num_basis_terms
+      inflate(sparseIndices, num_basis_terms); // sparse subset is first
+                                               // num_basis_terms
     copy_data(solutions[solutions.numCols()-1], num_basis_terms,
 	      expansionCoeffs);
   }
@@ -2275,13 +2275,9 @@ void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts,
     // update shared sobolIndexMap from local_multi_index
     data_rep->update_component_sobol(local_multi_index);
   }
-  else {
-    // define sparseIndices for this QoI (sparseSobolIndexMap updated below)
-    sparseIndices.clear();
-    size_t i, num_mi = data_rep->multiIndex.size();
-    for (i=0; i<num_mi; ++i)
-      sparseIndices.insert(i);
-  }
+  else // define sparseIndices for this QoI (sparseSobolIndexMap updated below)
+    inflate(sparseIndices, data_rep->multiIndex.size());
+
   // define sparseSobolIndexMap from sparseIndices, shared multiIndex,
   // and shared sobolIndexMap
   update_sparse_sobol(sparseIndices, data_rep->multiIndex,

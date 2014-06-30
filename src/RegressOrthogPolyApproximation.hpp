@@ -190,6 +190,9 @@ private:
   void define_frontier(const UShortArray& mi_i,
 		       UShortArraySet& combined_pareto);
 
+  /// define a default definition for sparse_ind: 0 to num_terms-1
+  void inflate(SizetSet& sparse_ind, size_t num_terms);
+
   /// overlay the passed expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
   void overlay_expansion(const SizetSet& sparse_ind_2,
@@ -288,6 +291,15 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points )
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   build_linear_system( A, B, points, data_rep->multiIndex );
+}
+
+
+inline void RegressOrthogPolyApproximation::
+inflate(SizetSet& sparse_ind, size_t num_terms)
+{
+  sparse_ind.clear();
+  for (size_t i=0; i<num_terms; ++i)
+    sparse_ind.insert(i);
 }
 
 
