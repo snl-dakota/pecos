@@ -1912,6 +1912,7 @@ add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
 
   UShortArraySet::const_iterator ref_cit, find_cit;
   size_t s, i, j, num_v = sharedDataRep->numVars;
+  fwd_neighbors.clear();
   for (ref_cit=reference_mi.begin(); ref_cit!=reference_mi.end(); ++ref_cit) {
     UShortArray neighbor = *ref_cit; // mutable copy
     for (i=0; i<num_v; ++i) {
