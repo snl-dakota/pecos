@@ -1444,7 +1444,8 @@ void RegressOrthogPolyApproximation::set_fault_info()
 		      reuse_solver_data, total_eqns, num_surr_data_pts,
 		      num_v, data_rep->basisConfigOptions.useDerivs,
 		      surrData.num_derivative_variables() );
-};
+}
+
 
 void RegressOrthogPolyApproximation::
 build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
@@ -1561,6 +1562,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
   }
 }
 
+
 void RegressOrthogPolyApproximation::run_regression()
 {
   // Assume all function values are stored in top block of matrix in rows
@@ -1597,8 +1599,7 @@ void RegressOrthogPolyApproximation::run_regression()
 	  
     select_solver();
     run_cross_validation_expansion(); // updates all global bookkeeping
-
-    // multiple RHS not currently supported
+                                      // multiple RHS not currently supported
   }
   else {
 
@@ -1613,8 +1614,7 @@ void RegressOrthogPolyApproximation::run_regression()
       PCout << "Forming least interpolant for " << points.numCols()
 	    << " points.\n";
       least_interpolation( points, B ); // updates all global bookkeeping
-
-      // multiple RHS not currently supported
+                                        // multiple RHS not currently supported
     }
     else { // SINGLE CS SOLVE
       IntVector index_mapping; 
@@ -1626,8 +1626,7 @@ void RegressOrthogPolyApproximation::run_regression()
 	    << " chaos coefficients using " << A.numRows() << " equations.\n";
 
       compressed_sensing(A, B); // updates all global bookkeeping
-
-      // includes support for multiple RHS
+                                // includes support for multiple RHS
     }
   }
 }
