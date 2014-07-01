@@ -176,7 +176,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
     }
 
   while (soft_conv_count < soft_conv_limit) {
-    // invoke run_regression() for each index set candidate and select best
+    // invoke run_cross_validation_solver() for each candidate and select best
     delta_star = (basis_type == ADAPTED_BASIS_GENERALIZED) ?
       select_best_active_multi_index() : select_best_basis_expansion();
     // increase in CV error results in negative delta_star and trips conv count.
@@ -1581,366 +1581,55 @@ void RegressOrthogPolyApproximation::run_regression()
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  int num_expansion_terms = data_rep->multiIndex.size();
-  bool multiple_rhs = (expansionCoeffFlag && expansionCoeffGradFlag);
-
-  CompressedSensingOptionsList opts_list;
-  RealMatrixArray solutions;
-  CSOpts.standardizeInputs = false; // false essential when using derivatives
 
   // Perform cross validation loop over degrees here.
   // Current cross validation will not work for equality 
   // constrained least squares
-  if ( data_rep->regressConfigOptions.crossValidation ) // run cross validation
-    {
-      if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
-	   ORTHOG_LEAST_INTERPOLATION )
-	throw( std::runtime_error("Cannot use cross validation with least interpolation") );
-      if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
-	   EQ_CON_LEAST_SQ_REGRESSION )
-	throw( std::runtime_error("Cannot use cross validation with equality constrained least squares regression") );
+  if (data_rep->regressConfigOptions.crossValidation) {// CV: MULTIPLE CS SOLVES
+    if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
+	 ORTHOG_LEAST_INTERPOLATION )
+      throw( std::runtime_error(
+	"Cannot use cross validation with least interpolation") );
+    if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
+	 EQ_CON_LEAST_SQ_REGRESSION )
+      throw( std::runtime_error(
+	"Cannot use cross validation with equality constrained least squares regression") );
 	  
-      select_solver();
-      run_cross_validation_expansion();
-    }
+    select_solver();
+    run_cross_validation_expansion(); // updates all global bookkeeping
+
+    // multiple RHS not currently supported
+  }
   else {
 
     RealMatrix A, B, points;
     build_linear_system( A, B, points );
-    if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
-	 ORTHOG_LEAST_INTERPOLATION )
-      {
-	IntVector index_mapping; 
-	RealMatrix points_dummy;
-	remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
-			    surrData.failed_response_data() );
-	faultInfo.under_determined = A.numRows() < A.numCols();
-	PCout << "Applying regression to compute " << num_expansion_terms
-	      << " chaos coefficients using " <<A.numRows()<<" equations.\n";
-	select_solver();
-	data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
-      }
-    else
-      {
-	IntVector index_mapping; 
-	remove_faulty_data( A, B, points, index_mapping, faultInfo,
-			    surrData.failed_response_data() );
-	faultInfo.under_determined = false;
-	PCout << "using least interpolation\n";
-	least_interpolation( points, B );
-      }
-  }
- 
-  int i, j;
-  int num_grad_rhs = surrData.num_derivative_variables();
-  int num_coeff_rhs = 1;
-  if ( !multiple_rhs && expansionCoeffGradFlag ) num_coeff_rhs = 0;
+    if ( data_rep->expConfigOptions.expCoeffsSolnApproach == 
+	 ORTHOG_LEAST_INTERPOLATION ) { // SINGLE OLI SOLVE
+      IntVector index_mapping; 
+      remove_faulty_data( A, B, points, index_mapping, faultInfo,
+			  surrData.failed_response_data() );
+      faultInfo.under_determined = false;
+      PCout << "Forming least interpolant for " << points.numCols()
+	    << " points.\n";
+      least_interpolation( points, B ); // updates all global bookkeeping
 
-  if ( expansionCoeffFlag && !multiple_rhs ) {
-    if ( data_rep->expConfigOptions.expCoeffsSolnApproach != 
-	 ORTHOG_LEAST_INTERPOLATION &&
-	 !data_rep->regressConfigOptions.crossValidation )
-    {
-      if (faultInfo.under_determined) // exploit CS sparsity
-	update_sparse(solutions[0][0], num_expansion_terms);
-      else {                          // retain full solution
-	copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
-	sparseIndices.clear();
-      }
+      // multiple RHS not currently supported
+    }
+    else { // SINGLE CS SOLVE
+      IntVector index_mapping; 
+      RealMatrix points_dummy;
+      remove_faulty_data( A, B, points_dummy, index_mapping, faultInfo,
+			  surrData.failed_response_data() );
+      faultInfo.under_determined = A.numRows() < A.numCols();
+      PCout << "Applying regression to compute " << data_rep->multiIndex.size()
+	    << " chaos coefficients using " << A.numRows() << " equations.\n";
+
+      compressed_sensing(A, B); // updates all global bookkeeping
+
+      // includes support for multiple RHS
     }
   }
-  else {
-    if (faultInfo.under_determined) { // exploit CS sparsity
-      // overlay sparse solutions into an aggregated set of sparse indices
-      sparseIndices.clear();
-      if (multiple_rhs)
-	update_sparse_indices(solutions[0][0], num_expansion_terms,
-			      sparseIndices);
-      for (i=0; i<num_grad_rhs; ++i)
-	update_sparse_indices(solutions[i+num_coeff_rhs][0],
-			      num_expansion_terms, sparseIndices);
-      // update expansion{Coeffs,CoeffGrads} from sparse indices
-      if (multiple_rhs)
-	update_sparse_coeffs(solutions[0][0], expansionCoeffs, sparseIndices);
-      for (i=0; i<num_grad_rhs; ++i)
-	update_sparse_coeff_grads(solutions[i+num_coeff_rhs][0], i,
-				  expansionCoeffGrads, sparseIndices);
-      // update sobol index bookkeeping
-      update_sparse_sobol(sparseIndices, data_rep->multiIndex,
-			  data_rep->sobolIndexMap);
-    }
-    else { // retain original multiIndex layout
-      if (multiple_rhs)
-	copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
-      for (i=0; i<num_grad_rhs; ++i) {
-	Real* dense_coeffs = solutions[i+num_coeff_rhs][0];
-	for (j=0; j<num_expansion_terms; ++j)
-	  expansionCoeffGrads(i,j) = dense_coeffs[j];
-      }
-      sparseIndices.clear();
-    }
-  }
-}
-
-void RegressOrthogPolyApproximation::
-update_sparse(Real* dense_coeffs, size_t num_dense_terms)
-{
-  // just one pass through to define sparse_indices
-  sparseIndices.clear();
-  update_sparse_indices(dense_coeffs, num_dense_terms, sparseIndices);
-
-  // update exp_coeffs
-  update_sparse_coeffs(dense_coeffs, expansionCoeffs, sparseIndices);
-
-  // update the sparse Sobol' indices
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  update_sparse_sobol(sparseIndices, data_rep->multiIndex,
-		      data_rep->sobolIndexMap);
-}
-
-
-void RegressOrthogPolyApproximation::
-update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms,
-		      SizetSet& sparse_indices)
-{
-  // always retain leading coefficient (mean)
-  if (sparse_indices.empty())
-    sparse_indices.insert(0);
-  // update sparse_indices based on nonzero coeffs
-  for (size_t i=1; i<num_dense_terms; ++i)
-    if (std::abs(dense_coeffs[i]) > DBL_EPSILON)
-      sparse_indices.insert(i); // discards duplicates (coeffs, coeffgrads)
-}
-
-
-void RegressOrthogPolyApproximation::
-update_sparse_coeffs(Real* dense_coeffs, RealVector& exp_coeffs,
-		     const SizetSet& sparse_indices)
-{
-  // build sparse exp_coeffs
-  size_t num_exp_terms = sparse_indices.size();
-  exp_coeffs.sizeUninitialized(num_exp_terms);
-  size_t i; SizetSet::const_iterator cit;
-  for (i=0, cit=sparse_indices.begin(); i<num_exp_terms; ++i, ++cit)
-    exp_coeffs[i] = dense_coeffs[*cit];
-}
-
-
-void RegressOrthogPolyApproximation::
-update_sparse_coeff_grads(Real* dense_coeffs, int row,
-			  RealMatrix& exp_coeff_grads,
-			  const SizetSet& sparse_indices)
-{
-  // build sparse exp_coeff_grads
-  size_t num_exp_terms = sparse_indices.size();
-  if (exp_coeff_grads.numCols() != num_exp_terms)
-    exp_coeff_grads.reshape(surrData.num_derivative_variables(), num_exp_terms);
-  int j; SizetSet::const_iterator cit;
-  for (j=0, cit=sparse_indices.begin(); j<num_exp_terms; ++j, ++cit)
-    exp_coeff_grads(row, j) = dense_coeffs[*cit];
-}
-
-
-void RegressOrthogPolyApproximation::
-update_sparse_sobol(const SizetSet& sparse_indices,
-		    const UShort2DArray& shared_multi_index,
-		    const BitArrayULongMap& shared_sobol_map)
-{
-  // define the Sobol' indices based on the sparse multiIndex
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  if ( !data_rep->expConfigOptions.vbdFlag ||
-        data_rep->expConfigOptions.vbdOrderLimit == 1 )
-    return;
-
-  sparseSobolIndexMap.clear();
-  if (sparse_indices.empty()) {
-    size_t sobol_len = shared_sobol_map.size();
-    if (sobolIndices.length() != sobol_len)
-      sobolIndices.sizeUninitialized(sobol_len);
-    return;
-  }
-
-  // update sparseSobolIndexMap from shared sobolIndexMap.  Since
-  // sparseSobolIndexMap is sorted by the sobolIndexMap map-values
-  // (indices within a dense sobolIndices), we know that the ordering
-  // of the sparse interactions will be consistent, e.g.:
-  // sparseSobolIndexMap keys:   0, 2, 4, 5, 9, 11 (from sobolIndexMap)
-  // sparseSobolIndexMap values: 0, 1, 2, 3, 4, 5  (new sobolIndices sequence)
-  size_t j, num_v = sharedDataRep->numVars;
-  StSIter sit; BAULMCIter cit; BitArray set(num_v);
-  for (sit=sparse_indices.begin(); sit!=sparse_indices.end(); ++sit) {
-    const UShortArray& sparse_mi = shared_multi_index[*sit];
-    for (j=0; j<num_v; ++j)
-      if (sparse_mi[j]) set.set(j);   //   activate bit j
-      else              set.reset(j); // deactivate bit j
-    // define map from shared index to sparse index
-    cit = shared_sobol_map.find(set);
-    if (cit == shared_sobol_map.end()) {
-      PCerr << "Error: sobolIndexMap lookup failure in RegressOrthogPoly"
-	    << "Approximation::update_sparse_sobol()" << std::endl;
-      abort_handler(-1);
-    }
-    // key = shared index, value = sparse index (init to 0, to be updated below)
-    sparseSobolIndexMap[cit->second] = 0;
-  }
-  // now that keys are complete, assign new sequence for sparse Sobol indices
-  unsigned long sobol_len = 0; ULULMIter mit;
-  for (mit=sparseSobolIndexMap.begin(); mit!=sparseSobolIndexMap.end(); ++mit)
-    mit->second = sobol_len++;
-  // now size sobolIndices
-  if (sobolIndices.length() != sobol_len)
-    sobolIndices.sizeUninitialized(sobol_len);
-}
-
-
-/** This version clears out all terms not recovered in CS and may
-    leave multi-index gaps. */
-void RegressOrthogPolyApproximation::
-sparse_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
-{
-  if (sparse_indices.empty())
-    return; // no further restriction possible
-
-  UShort2DArray dense_mi(multi_index); // copy
-
-  // resize arrays into packed format and copy entries from dense data
-  size_t i, num_exp_terms = sparse_indices.size(); SizetSet::const_iterator cit;
-  multi_index.resize(num_exp_terms);
-  for (i=0, cit=sparse_indices.begin(); i<num_exp_terms; ++i, ++cit)
-    multi_index[i] = dense_mi[*cit];
-  sparse_indices.clear();
-}
-
-
-/** This version clears out only the dominated multi-index terms not
-    recovered in CS to avoid multi-index gaps; it provides a frontier
-    with all supporting terms. */
-void RegressOrthogPolyApproximation::
-frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
-{
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-
-  if (sparse_indices.empty()) // no further restriction possible
-    return;
-
-  // first define pareto_mi from the recovered mi terms
-  // Note: a complete frontier_mi cannot be defined from recovered sparse terms.
-  // Therefore, we employ pareto_mi here for purposes of restriction (+ sparse
-  // re-indexing). See advance_multi_index_front() for later use of frontier_mi.
-  size_t i, j, num_exp_terms = sparse_indices.size(),
-    num_mi = multi_index.size(), new_si;
-  UShort2DArray pareto_mi;
-  SizetSet::const_iterator si_it;
-  for (i=0, si_it=sparse_indices.begin(); i<num_exp_terms; ++i, ++si_it)
-    data_rep->update_pareto_set(multi_index[*si_it], pareto_mi);
-  size_t num_pareto_mi = pareto_mi.size();
-
-  UShort2DArray orig_multi_index(multi_index);  // copy
-  SizetSet orig_sparse_indices(sparse_indices); // copy
-  multi_index.clear(); sparse_indices.clear();
-
-  // prune out only the multi_index terms that dominate pareto_mi, while
-  // updating sparse indices for this pruned multi_index.  We restrict back
-  // to the Pareto frontier while ignoring any gaps due to sparse recovery.
-  // > this simplifies bookkeeping and forward neighbor searches
-  // > JDJ: this is consistent with the observation that the algorithm fails
-  //        when there isn't a simple tree structure to the recovered coeffs
-  bool i_dominated, j_dominated;
-  for (i=0, si_it=orig_sparse_indices.begin(), new_si=0; i<num_mi; ++i) {
-    const UShortArray& mi_i = orig_multi_index[i];
-    for (j=0; j<num_pareto_mi; ++j) {
-      // manage tie: i is "challenger" and is dominated if == frontier member;
-      // j is "incumbent" and is not dominated if equal to challenger
-      data_rep->assess_dominance(mi_i, pareto_mi[j], i_dominated, j_dominated);
-      if (i_dominated) break;
-    }
-#ifdef DEBUG
-    PCout << "orig mi[" << i << "] dominated = " << i_dominated << std::endl;
-#endif // DEBUG
-    if (i_dominated) {  // within pareto set
-      multi_index.push_back(mi_i);
-      if (*si_it == i) { // a recovered term
-	sparse_indices.insert(new_si); // reindex within pruned multi_index
-	++si_it;         // advance to next original sparse index
-      }
-      ++new_si;
-    }
-  }
-#ifdef DEBUG
-  PCout << "RegressOPA::frontier_restriction(): original multi_index =\n"
-	<< orig_multi_index << "original sparse_indices =\n"
-	<< orig_sparse_indices << "pareto set =\n" << pareto_mi
-	<< "new multi_index =\n" << multi_index << "new sparse_indices =\n"
-	<< sparse_indices << std::endl;
-#endif // DEBUG
-}
-
-
-void RegressOrthogPolyApproximation::
-advance_multi_index_front(const UShort2DArray& multi_index,
-			  UShortArraySetArray& mi_advancements)
-{
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-
-  // Compute frontier_mi from the restricted (but complete) multi_index.  This
-  // provides a reduced multi_index for purposes of fwd neighbor expansion.
-  UShortArraySet mi_frontier;
-  data_rep->update_frontier(multi_index, mi_frontier);
-
-  // create a set of advancements from this reference frontier
-  size_t i, num_mi,
-    num_advance = data_rep->regressConfigOptions.numAdvancements;
-  mi_advancements.resize(num_advance);
-  for (i=0; i<num_advance; ++i) {
-    UShortArraySet& mi_adv_i = mi_advancements[i];
-    add_admissible_forward_neighbors(mi_frontier, mi_adv_i);
-    if (i+1 < num_advance)
-      data_rep->update_frontier(mi_adv_i, mi_frontier);
-  }
-}
-
-
-void RegressOrthogPolyApproximation::
-add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
-				 UShortArraySet& fwd_neighbors)
-{
-  // This function is similar to SparseGridDriver::add_active_neighbors()
-
-  UShortArraySet::const_iterator ref_cit, find_cit;
-  size_t s, i, j, num_v = sharedDataRep->numVars;
-  fwd_neighbors.clear();
-  for (ref_cit=reference_mi.begin(); ref_cit!=reference_mi.end(); ++ref_cit) {
-    UShortArray neighbor = *ref_cit; // mutable copy
-    for (i=0; i<num_v; ++i) {
-      // i^{th} candidate for set A (active) computed from forward neighbor:
-      // increment by 1 in dimension i
-      unsigned short& neighbor_i = neighbor[i];
-      ++neighbor_i;
-      // test all backwards neighbors for membership in set O (old)
-      bool backward_old = true;
-      for (j=0; j<num_v; ++j) {
-	unsigned short& neighbor_j = neighbor[j];
-	if (neighbor_j) { // if 0, then admissible by default
-	  --neighbor_j;
-	  find_cit = reference_mi.find(neighbor);
-	  ++neighbor_j; // restore
-	  if (find_cit == reference_mi.end())
-	    { backward_old = false; break; }
-	}
-      }
-      if (backward_old && reference_mi.find(neighbor) == reference_mi.end())
-	fwd_neighbors.insert(neighbor); // std::set will discard any duplicates
-      --neighbor_i; // restore
-    }
-  }
-#ifdef DEBUG
-  PCout << "RegressOPA::add_admissible_forward_neighbors(): reference_mi =\n"
-	<< reference_mi << "fwd_neighbors =\n" << fwd_neighbors << std::endl;
-#endif // DEBUG
 }
 
 
@@ -1949,6 +1638,8 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
 			    RealVector& best_exp_coeffs,
 			    SizetSet& best_sparse_indices)
 {
+  // TO DO: employ this fn as component within primary CV context
+
   RealMatrix A, B, points;
   build_linear_system( A, B, points, multi_index );
 
@@ -2030,7 +1721,9 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   linear_solver->set_residual_tolerance( best_tolerance );
   linear_solver->solve( A, b, solutions, metrics );
 
-  // TO DO: employ this fn in primary CV context
+  // In current usage, global (shared multiIndex/sobolIndexMap) and local
+  // (sparseSobolIndexMap) bookkeeping are *not* updated since higher level
+  // logic (select_best_*()) determines acceptance of candidate solutions.
   if (faultInfo.under_determined) { // exploit CS sparsity
     best_sparse_indices.clear();
     Real* dense_coeffs = solutions[solutions.numCols()-1];
@@ -2172,65 +1865,91 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   linear_solver->set_residual_tolerance( best_tolerance );
   linear_solver->solve( vandermonde_submatrix, b, solutions, metrics );
 
+  int last_index = solutions.numCols() - 1;
   if (faultInfo.under_determined) // exploit CS sparsity
-    update_sparse(solutions[solutions.numCols()-1], num_basis_terms);
+    update_sparse(solutions[last_index], num_basis_terms);
   else {
-    // if best expansion order is less than maximum candidate, truncate
-    // expansion arrays.  Note that this requires care in cross-expansion
-    // evaluations such as off-diagonal covariance.
+    copy_data(solutions[last_index], num_basis_terms, expansionCoeffs);
+    // if best expansion order is less than maximum candidate, define
+    // sparseIndices to define active subset within data_rep->multiIndex.
+    // Note that this requires care in cross-expansion evaluations such as
+    // off-diagonal covariance.
     sparseIndices.clear();
-    if (num_basis_terms < data_rep->multiIndex.size()) // candidate exp size
-      inflate(sparseIndices, num_basis_terms); // sparse subset is first
-                                               // num_basis_terms
-    copy_data(solutions[solutions.numCols()-1], num_basis_terms,
-	      expansionCoeffs);
+    if (num_basis_terms < data_rep->multiIndex.size()) { // candidate exp size
+      inflate(sparseIndices, num_basis_terms); // define from leading subset
+      update_sparse_sobol(sparseIndices, data_rep->multiIndex,
+			  data_rep->sobolIndexMap);
+    }
   }
 
   return best_score;
-};
+}
 
-void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
-						  int M, int N, 
-						  int num_function_samples )
+
+void RegressOrthogPolyApproximation::
+compressed_sensing( RealMatrix &A, RealMatrix &B )
 {
-  // Setup a grid based search
-  bool is_under_determined = M < N;
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  // Define the 1D grids for under and over-determined LARS, LASSO, OMP, BP and 
-  // LS
-  RealVectorArray opts1D( 9 );
-  opts1D[0].size( 1 ); // solver type
-  opts1D[0][0] = CSOpts.solver;
-  opts1D[1].size( 1 ); // Solver tolerance. 
-  opts1D[1][0] = CSOpts.solverTolerance;
-  opts1D[2] = data_rep->regressConfigOptions.noiseTols; // epsilon.
-  opts1D[3].size( 1 ); // delta
-  opts1D[3] = CSOpts.delta;
-  opts1D[4].size( 1 ); // max_number of non_zeros
-  opts1D[4] = CSOpts.maxNumIterations; 
-  opts1D[5].size( 1 );  // standardizeInputs
-  opts1D[5] = false;
-  opts1D[6].size( 1 );  // storeHistory
-  opts1D[6] = true;  
-  opts1D[7].size( 1 );  // Verbosity. Warnings on
-  opts1D[7] =  std::max(0, data_rep->expConfigOptions.outputLevel - 1);
-  opts1D[8].size( 1 );  // num function samples
-  opts1D[8] = num_function_samples;
-      
-  // Form the multi-dimensional grid
-  cartesian_product( opts1D, opts, 1 );
-};
+  CSOpts.standardizeInputs = false;// false essential when using derivatives
+
+  select_solver();
+
+  CompressedSensingOptionsList opts_list;
+  RealMatrixArray solutions;
+  data_rep->CSTool.solve( A, B, solutions, CSOpts, opts_list );
+
+  // update bookkeeping for sparse solutions
+  bool multiple_rhs = (expansionCoeffFlag && expansionCoeffGradFlag);
+  int num_expansion_terms = data_rep->multiIndex.size();
+  if ( expansionCoeffFlag && !multiple_rhs ) {
+    if (faultInfo.under_determined) // exploit CS sparsity
+      update_sparse(solutions[0][0], num_expansion_terms);
+    else {                          // retain full solution
+      copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
+      sparseIndices.clear();
+    }
+  }
+  else {
+    int i, j, num_grad_rhs = surrData.num_derivative_variables(),
+      num_coeff_rhs = ( !multiple_rhs && expansionCoeffGradFlag ) ? 0 : 1;
+    if (faultInfo.under_determined) { // exploit CS sparsity
+      // overlay sparse solutions into an aggregated set of sparse indices
+      sparseIndices.clear();
+      if (multiple_rhs)
+	update_sparse_indices(solutions[0][0], num_expansion_terms,
+			      sparseIndices);
+      for (i=0; i<num_grad_rhs; ++i)
+	update_sparse_indices(solutions[i+num_coeff_rhs][0],
+			      num_expansion_terms, sparseIndices);
+      // update expansion{Coeffs,CoeffGrads} from sparse indices
+      if (multiple_rhs)
+	update_sparse_coeffs(solutions[0][0], expansionCoeffs,
+			     sparseIndices);
+      for (i=0; i<num_grad_rhs; ++i)
+	update_sparse_coeff_grads(solutions[i+num_coeff_rhs][0], i,
+				  expansionCoeffGrads, sparseIndices);
+      // update sobol index bookkeeping
+      update_sparse_sobol(sparseIndices, data_rep->multiIndex,
+			  data_rep->sobolIndexMap);
+    }
+    else { // retain original multiIndex layout
+      if (multiple_rhs)
+	copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
+      for (i=0; i<num_grad_rhs; ++i) {
+	Real* dense_coeffs = solutions[i+num_coeff_rhs][0];
+	for (j=0; j<num_expansion_terms; ++j)
+	  expansionCoeffGrads(i,j) = dense_coeffs[j];
+      }
+      sparseIndices.clear();
+    }
+  }
+}
+
 
 void RegressOrthogPolyApproximation::
-estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixArray &predictor_options_history, RealMatrixArray &predictor_indicators_history, RealMatrixArray &predictor_partition_indicators_history, size_t num_data_pts_fn ){
-};
-
-
-void RegressOrthogPolyApproximation::least_interpolation( RealMatrix &pts, 
-							  RealMatrix &vals )
+least_interpolation( RealMatrix &pts, RealMatrix &vals )
 {
 #ifdef DEBUG
   if ( pts.numCols() != vals.numRows() ) 
@@ -2497,7 +2216,7 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
   // Make matrix H
   get_least_polynomial_coefficients( v, k, basis_indices, num_vars, num_pts,
 				     H );
-};
+}
 
 
 void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
@@ -2528,6 +2247,308 @@ void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
       if ( ( i+1 < num_pts ) && ( k[i] != k[i+1] ) )
 	previous_dimension += current_size;
     }
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse(Real* dense_coeffs, size_t num_dense_terms)
+{
+  // just one pass through to define sparse_indices
+  sparseIndices.clear();
+  update_sparse_indices(dense_coeffs, num_dense_terms, sparseIndices);
+
+  // update exp_coeffs
+  update_sparse_coeffs(dense_coeffs, expansionCoeffs, sparseIndices);
+
+  // update the sparse Sobol' indices
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  update_sparse_sobol(sparseIndices, data_rep->multiIndex,
+		      data_rep->sobolIndexMap);
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_indices(Real* dense_coeffs, size_t num_dense_terms,
+		      SizetSet& sparse_indices)
+{
+  // always retain leading coefficient (mean)
+  if (sparse_indices.empty())
+    sparse_indices.insert(0);
+  // update sparse_indices based on nonzero coeffs
+  for (size_t i=1; i<num_dense_terms; ++i)
+    if (std::abs(dense_coeffs[i]) > DBL_EPSILON)
+      sparse_indices.insert(i); // discards duplicates (coeffs, coeffgrads)
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_coeffs(Real* dense_coeffs, RealVector& exp_coeffs,
+		     const SizetSet& sparse_indices)
+{
+  // build sparse exp_coeffs
+  size_t num_exp_terms = sparse_indices.size();
+  exp_coeffs.sizeUninitialized(num_exp_terms);
+  size_t i; SizetSet::const_iterator cit;
+  for (i=0, cit=sparse_indices.begin(); i<num_exp_terms; ++i, ++cit)
+    exp_coeffs[i] = dense_coeffs[*cit];
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_coeff_grads(Real* dense_coeffs, int row,
+			  RealMatrix& exp_coeff_grads,
+			  const SizetSet& sparse_indices)
+{
+  // build sparse exp_coeff_grads
+  size_t num_exp_terms = sparse_indices.size();
+  if (exp_coeff_grads.numCols() != num_exp_terms)
+    exp_coeff_grads.reshape(surrData.num_derivative_variables(), num_exp_terms);
+  int j; SizetSet::const_iterator cit;
+  for (j=0, cit=sparse_indices.begin(); j<num_exp_terms; ++j, ++cit)
+    exp_coeff_grads(row, j) = dense_coeffs[*cit];
+}
+
+
+void RegressOrthogPolyApproximation::
+update_sparse_sobol(const SizetSet& sparse_indices,
+		    const UShort2DArray& shared_multi_index,
+		    const BitArrayULongMap& shared_sobol_map)
+{
+  // define the Sobol' indices based on the sparse multiIndex
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  if ( !data_rep->expConfigOptions.vbdFlag ||
+        data_rep->expConfigOptions.vbdOrderLimit == 1 )
+    return;
+
+  sparseSobolIndexMap.clear();
+  if (sparse_indices.empty()) {
+    size_t sobol_len = shared_sobol_map.size();
+    if (sobolIndices.length() != sobol_len)
+      sobolIndices.sizeUninitialized(sobol_len);
+    return;
+  }
+
+  // update sparseSobolIndexMap from shared sobolIndexMap.  Since
+  // sparseSobolIndexMap is sorted by the sobolIndexMap map-values
+  // (indices within a dense sobolIndices), we know that the ordering
+  // of the sparse interactions will be consistent, e.g.:
+  // sparseSobolIndexMap keys:   0, 2, 4, 5, 9, 11 (from sobolIndexMap)
+  // sparseSobolIndexMap values: 0, 1, 2, 3, 4, 5  (new sobolIndices sequence)
+  size_t j, num_v = sharedDataRep->numVars;
+  StSIter sit; BAULMCIter cit; BitArray set(num_v);
+  for (sit=sparse_indices.begin(); sit!=sparse_indices.end(); ++sit) {
+    const UShortArray& sparse_mi = shared_multi_index[*sit];
+    for (j=0; j<num_v; ++j)
+      if (sparse_mi[j]) set.set(j);   //   activate bit j
+      else              set.reset(j); // deactivate bit j
+    // define map from shared index to sparse index
+    cit = shared_sobol_map.find(set);
+    if (cit == shared_sobol_map.end()) {
+      PCerr << "Error: sobolIndexMap lookup failure in RegressOrthogPoly"
+	    << "Approximation::update_sparse_sobol()" << std::endl;
+      abort_handler(-1);
+    }
+    // key = shared index, value = sparse index (init to 0, to be updated below)
+    sparseSobolIndexMap[cit->second] = 0;
+  }
+  // now that keys are complete, assign new sequence for sparse Sobol indices
+  unsigned long sobol_len = 0; ULULMIter mit;
+  for (mit=sparseSobolIndexMap.begin(); mit!=sparseSobolIndexMap.end(); ++mit)
+    mit->second = sobol_len++;
+  // now size sobolIndices
+  if (sobolIndices.length() != sobol_len)
+    sobolIndices.sizeUninitialized(sobol_len);
+}
+
+
+/** This version clears out all terms not recovered in CS and may
+    leave multi-index gaps. */
+void RegressOrthogPolyApproximation::
+sparse_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
+{
+  if (sparse_indices.empty())
+    return; // no further restriction possible
+
+  UShort2DArray dense_mi(multi_index); // copy
+
+  // resize arrays into packed format and copy entries from dense data
+  size_t i, num_exp_terms = sparse_indices.size(); SizetSet::const_iterator cit;
+  multi_index.resize(num_exp_terms);
+  for (i=0, cit=sparse_indices.begin(); i<num_exp_terms; ++i, ++cit)
+    multi_index[i] = dense_mi[*cit];
+  sparse_indices.clear();
+}
+
+
+/** This version clears out only the dominated multi-index terms not
+    recovered in CS to avoid multi-index gaps; it provides a frontier
+    with all supporting terms. */
+void RegressOrthogPolyApproximation::
+frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  if (sparse_indices.empty()) // no further restriction possible
+    return;
+
+  // first define pareto_mi from the recovered mi terms
+  // Note: a complete frontier_mi cannot be defined from recovered sparse terms.
+  // Therefore, we employ pareto_mi here for purposes of restriction (+ sparse
+  // re-indexing). See advance_multi_index_front() for later use of frontier_mi.
+  size_t i, j, num_exp_terms = sparse_indices.size(),
+    num_mi = multi_index.size(), new_si;
+  UShort2DArray pareto_mi;
+  SizetSet::const_iterator si_it;
+  for (i=0, si_it=sparse_indices.begin(); i<num_exp_terms; ++i, ++si_it)
+    data_rep->update_pareto_set(multi_index[*si_it], pareto_mi);
+  size_t num_pareto_mi = pareto_mi.size();
+
+  UShort2DArray orig_multi_index(multi_index);  // copy
+  SizetSet orig_sparse_indices(sparse_indices); // copy
+  multi_index.clear(); sparse_indices.clear();
+
+  // prune out only the multi_index terms that dominate pareto_mi, while
+  // updating sparse indices for this pruned multi_index.  We restrict back
+  // to the Pareto frontier while ignoring any gaps due to sparse recovery.
+  // > this simplifies bookkeeping and forward neighbor searches
+  // > JDJ: this is consistent with the observation that the algorithm fails
+  //        when there isn't a simple tree structure to the recovered coeffs
+  bool i_dominated, j_dominated;
+  for (i=0, si_it=orig_sparse_indices.begin(), new_si=0; i<num_mi; ++i) {
+    const UShortArray& mi_i = orig_multi_index[i];
+    for (j=0; j<num_pareto_mi; ++j) {
+      // manage tie: i is "challenger" and is dominated if == frontier member;
+      // j is "incumbent" and is not dominated if equal to challenger
+      data_rep->assess_dominance(mi_i, pareto_mi[j], i_dominated, j_dominated);
+      if (i_dominated) break;
+    }
+#ifdef DEBUG
+    PCout << "orig mi[" << i << "] dominated = " << i_dominated << std::endl;
+#endif // DEBUG
+    if (i_dominated) {  // within pareto set
+      multi_index.push_back(mi_i);
+      if (*si_it == i) { // a recovered term
+	sparse_indices.insert(new_si); // reindex within pruned multi_index
+	++si_it;         // advance to next original sparse index
+      }
+      ++new_si;
+    }
+  }
+#ifdef DEBUG
+  PCout << "RegressOPA::frontier_restriction(): original multi_index =\n"
+	<< orig_multi_index << "original sparse_indices =\n"
+	<< orig_sparse_indices << "pareto set =\n" << pareto_mi
+	<< "new multi_index =\n" << multi_index << "new sparse_indices =\n"
+	<< sparse_indices << std::endl;
+#endif // DEBUG
+}
+
+
+void RegressOrthogPolyApproximation::
+advance_multi_index_front(const UShort2DArray& multi_index,
+			  UShortArraySetArray& mi_advancements)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // Compute frontier_mi from the restricted (but complete) multi_index.  This
+  // provides a reduced multi_index for purposes of fwd neighbor expansion.
+  UShortArraySet mi_frontier;
+  data_rep->update_frontier(multi_index, mi_frontier);
+
+  // create a set of advancements from this reference frontier
+  size_t i, num_mi,
+    num_advance = data_rep->regressConfigOptions.numAdvancements;
+  mi_advancements.resize(num_advance);
+  for (i=0; i<num_advance; ++i) {
+    UShortArraySet& mi_adv_i = mi_advancements[i];
+    add_admissible_forward_neighbors(mi_frontier, mi_adv_i);
+    if (i+1 < num_advance)
+      data_rep->update_frontier(mi_adv_i, mi_frontier);
+  }
+}
+
+
+void RegressOrthogPolyApproximation::
+add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
+				 UShortArraySet& fwd_neighbors)
+{
+  // This function is similar to SparseGridDriver::add_active_neighbors()
+
+  UShortArraySet::const_iterator ref_cit, find_cit;
+  size_t s, i, j, num_v = sharedDataRep->numVars;
+  fwd_neighbors.clear();
+  for (ref_cit=reference_mi.begin(); ref_cit!=reference_mi.end(); ++ref_cit) {
+    UShortArray neighbor = *ref_cit; // mutable copy
+    for (i=0; i<num_v; ++i) {
+      // i^{th} candidate for set A (active) computed from forward neighbor:
+      // increment by 1 in dimension i
+      unsigned short& neighbor_i = neighbor[i];
+      ++neighbor_i;
+      // test all backwards neighbors for membership in set O (old)
+      bool backward_old = true;
+      for (j=0; j<num_v; ++j) {
+	unsigned short& neighbor_j = neighbor[j];
+	if (neighbor_j) { // if 0, then admissible by default
+	  --neighbor_j;
+	  find_cit = reference_mi.find(neighbor);
+	  ++neighbor_j; // restore
+	  if (find_cit == reference_mi.end())
+	    { backward_old = false; break; }
+	}
+      }
+      if (backward_old && reference_mi.find(neighbor) == reference_mi.end())
+	fwd_neighbors.insert(neighbor); // std::set will discard any duplicates
+      --neighbor_i; // restore
+    }
+  }
+#ifdef DEBUG
+  PCout << "RegressOPA::add_admissible_forward_neighbors(): reference_mi =\n"
+	<< reference_mi << "fwd_neighbors =\n" << fwd_neighbors << std::endl;
+#endif // DEBUG
+}
+
+
+void RegressOrthogPolyApproximation::gridSearchFunction( RealMatrix &opts,
+						  int M, int N, 
+						  int num_function_samples )
+{
+  // Setup a grid based search
+  bool is_under_determined = M < N;
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // Define the 1D grids for under and over-determined LARS, LASSO, OMP, BP and 
+  // LS
+  RealVectorArray opts1D( 9 );
+  opts1D[0].size( 1 ); // solver type
+  opts1D[0][0] = CSOpts.solver;
+  opts1D[1].size( 1 ); // Solver tolerance. 
+  opts1D[1][0] = CSOpts.solverTolerance;
+  opts1D[2] = data_rep->regressConfigOptions.noiseTols; // epsilon.
+  opts1D[3].size( 1 ); // delta
+  opts1D[3] = CSOpts.delta;
+  opts1D[4].size( 1 ); // max_number of non_zeros
+  opts1D[4] = CSOpts.maxNumIterations; 
+  opts1D[5].size( 1 );  // standardizeInputs
+  opts1D[5] = false;
+  opts1D[6].size( 1 );  // storeHistory
+  opts1D[6] = true;  
+  opts1D[7].size( 1 );  // Verbosity. Warnings on
+  opts1D[7] =  std::max(0, data_rep->expConfigOptions.outputLevel - 1);
+  opts1D[8].size( 1 );  // num function samples
+  opts1D[8] = num_function_samples;
+      
+  // Form the multi-dimensional grid
+  cartesian_product( opts1D, opts, 1 );
+};
+
+void RegressOrthogPolyApproximation::
+estimate_compressed_sensing_options_via_cross_validation( RealMatrix &vandermonde_matrix, RealMatrix &rhs, std::vector<CompressedSensingOptions> &best_cs_opts, RealVector &best_predictor_indicators, RealMatrixArray &predictor_options_history, RealMatrixArray &predictor_indicators_history, RealMatrixArray &predictor_partition_indicators_history, size_t num_data_pts_fn ){
 };
 
 

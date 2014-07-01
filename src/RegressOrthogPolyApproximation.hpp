@@ -125,6 +125,9 @@ private:
   /// Use cross validation to find the hyper-parameters of the polynomial chaos expansion. e.g. find the 'best' total degree basis
   Real run_cross_validation_expansion();
 
+  /// encapsulate usage of CSTool.solve() and bookkeeping of its sparse solution
+  void compressed_sensing(RealMatrix &A, RealMatrix &B);
+
   /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b
   void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points );
   /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b
