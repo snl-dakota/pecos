@@ -66,6 +66,9 @@ void CrossValidationIterator::set_num_equations_per_point( int num_eq )
 void CrossValidationIterator::set_seed( int seed )
 {
   seed_ = seed;
+  // if permutations have already computed then recompute
+  if ( numPts_ > 0 )
+    set_num_points( numPts_ );
 }
 
 void CrossValidationIterator::clear()

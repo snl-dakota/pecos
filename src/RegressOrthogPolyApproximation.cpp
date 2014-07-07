@@ -1778,7 +1778,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   bestApproxOrder.size( 1 ); 
   for ( int order = min_order; order <= ao0; order++ )
     {
-      if (data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT)
+      if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
 	PCout << "Testing PCE order " << order << std::endl;
       int num_basis_terms = nchoosek( num_dims + order, order );
       RealMatrix vandermonde_submatrix( Teuchos::View, 
@@ -1827,10 +1827,10 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 	}
       basis_scores[i] = score;
 
-      if ( ( score >= best_score ) && ( i - best_basis_parameters_index >= 2 ) )
-	break;
+      //if ( ( score >= best_score ) && ( i - best_basis_parameters_index >= 2 ) )
+      //break;
 
-      if ( data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT )
+      if ( data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT )
 	{
 	  PCout << "Cross validation error for degree ";
 	  PCout << order << ": " << score << "\n";
@@ -1840,7 +1840,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 
   int num_basis_terms = nchoosek( num_dims + bestApproxOrder[0], 
 				  bestApproxOrder[0] );
-  if (data_rep->expConfigOptions.outputLevel >= NORMAL_OUTPUT)
+  if (data_rep->expConfigOptions.outputLevel >= QUIET_OUTPUT)
     {
       PCout << "Best approximation order: " << bestApproxOrder[0]<< "\n";
       PCout << "Best cross validation error: " << best_score << "\n";
