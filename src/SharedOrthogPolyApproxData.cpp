@@ -745,7 +745,7 @@ update_pareto_set(const UShortArray& mi_i, UShort2DArray& combined_pareto)
 {
   std::list<UShort2DArray::iterator> removes;
   UShort2DArray::iterator jit;
-  bool i_dominated, j_dominated;
+  bool i_dominated = false, j_dominated;
   for (jit=combined_pareto.begin(); jit!=combined_pareto.end(); ++jit) {
     assess_dominance(mi_i, *jit, i_dominated, j_dominated);
     if (i_dominated) break;
@@ -767,7 +767,7 @@ update_frontier(const UShortArray& mi_i, UShortArraySet& mi_frontier)
 {
   std::list<UShortArraySet::iterator> removes;
   UShortArraySet::iterator jit;
-  bool i_dominated, j_dominated;
+  bool i_dominated = false, j_dominated;
   for (jit=mi_frontier.begin(); jit!=mi_frontier.end(); ++jit) {
     assess_strong_dominance(mi_i, *jit, i_dominated, j_dominated);
     if (i_dominated) break;
@@ -793,6 +793,7 @@ assess_dominance(const UShort2DArray& pareto,
     num_combined_p = combined_pareto.size();
   for (i=0; i<num_p; ++i) {
     const UShortArray& pareto_i = pareto[i];
+    i_dominated = false;
     for (j=0; j<num_combined_p; ++j) {
       assess_dominance(pareto_i, combined_pareto[j], i_dominated, j_dominated);
       if (i_dominated) break;
