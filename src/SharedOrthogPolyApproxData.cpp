@@ -21,39 +21,6 @@
 namespace Pecos {
 
 
-/** This version supports only orthogonal polynomial types.  In this case,
-    the polynomial types needed for an orthogonal basis and for computing
-    collocation points and weights in an integration driver are the same. */
-bool SharedOrthogPolyApproxData::
-initialize_orthog_poly_basis_types(const ShortArray& u_types,
-				   ShortArray& opb_types)
-{
-  bool extra_dist_params = false;
-
-  // Initialize opb_types and extra_dist_params from u_types.
-  size_t i, num_vars = u_types.size();
-  if (opb_types.size() != num_vars)
-    opb_types.resize(num_vars);
-  for (i=0; i<num_vars; ++i) {
-    switch (u_types[i]) {
-    case STD_NORMAL:      opb_types[i] = HERMITE_ORTHOG;            break;
-    case STD_UNIFORM:     opb_types[i] = LEGENDRE_ORTHOG;           break;
-    // weight fn = 1/sqrt(1-x^2); same as BETA/Jacobi for alpha=beta=-1/2
-    //case xxx:           opb_types[i] = CHEBYSHEV_ORTHOG;          break;
-    case STD_EXPONENTIAL: opb_types[i] = LAGUERRE_ORTHOG;           break;
-    case STD_BETA:
-      opb_types[i] = JACOBI_ORTHOG;       extra_dist_params = true; break;
-    case STD_GAMMA:
-      opb_types[i] = GEN_LAGUERRE_ORTHOG; extra_dist_params = true; break;
-    default:
-      opb_types[i] = NUM_GEN_ORTHOG;      extra_dist_params = true; break;
-    }
-  }
-
-  return extra_dist_params;
-}
-
-
 void SharedOrthogPolyApproxData::allocate_data()
 {
   // detect changes since previous construction

@@ -44,10 +44,11 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
     }
 
   ShortArray basis_types;
-  // Cubature used for numerical integration of PCE --> no piecewise bases,
-  // no deriv-based regression
-  // *** TO DO ***: require OPA/IPA switch?
-  //SharedPolyApproxData::initialize_basis_types(u_types, false, false,
+  // Cubature used for numerical integration of PCE
+  // *** TO DO ***: require OPA/IPA switch? (see
+  //                IntegrationDriver::initialize_rules())
+  //BasisConfigOptions bc_options(false, false, false, false);
+  //SharedPolyApproxData::initialize_basis_types(u_types, bc_options,
   //                                             basis_types);
   // TO DO: consider using a single BasisPolynomial for CubatureDriver (would
   // have to be expanded into array for PolynomialApproximation within NonDPCE).

@@ -21,39 +21,76 @@
 
 namespace Pecos {
 
-void SharedPolyApproxData::
-initialize_collocation_rules(const ShortArray& u_types,
-			     const BasisConfigOptions& bc_options,
-			     ShortArray& colloc_rules)
+/** This version supports only orthogonal polynomial types.  In this case,
+    the polynomial types needed for an orthogonal basis and for computing
+    collocation points and weights in an integration driver are the same. */
+bool SharedPolyApproxData::
+initialize_orthogonal_basis_types_rules(const ShortArray& u_types,
+					const BasisConfigOptions& bc_options,
+					ShortArray& basis_types,
+					ShortArray& colloc_rules)
 {
-  size_t num_vars = u_types.size();
-  colloc_rules.resize(num_vars);
+  bool extra_dist_params = false;
+  size_t i, num_vars = u_types.size();
+  basis_types.resize(num_vars); colloc_rules.resize(num_vars);
 
-  // set colloc_rules based on u_types: open Gauss rules are used for all
-  // global cases; nested closed rules are used for piecewise approximations.
-  for (size_t i=0; i<num_vars; ++i) {
-    switch (u_types[i]) {
-    case STD_NORMAL:
-      colloc_rules[i] = (bc_options.nestedRules) ? GENZ_KEISTER : GAUSS_HERMITE;
-      break;
-    case STD_UNIFORM:
-      if (bc_options.piecewiseBasis) // closed nested rules required
-	colloc_rules[i] = (bc_options.equidistantRules) ? NEWTON_COTES :
-	  CLENSHAW_CURTIS;
-      else
-	colloc_rules[i] = (bc_options.nestedRules) ? GAUSS_PATTERSON :
-	  GAUSS_LEGENDRE;
-      // For tensor-product quadrature without refinement, Gauss-Legendre
-      // is preferred due to greater polynomial exactness since nesting is
-      // not a concern.  For sparse grids and quadrature with refinement,
-      // Gauss-Patterson or Clenshaw-Curtis can be better options.
-      break;
-    case STD_EXPONENTIAL: colloc_rules[i] = GAUSS_LAGUERRE;     break;
-    case STD_BETA:        colloc_rules[i] = GAUSS_JACOBI;       break;
-    case STD_GAMMA:       colloc_rules[i] = GEN_GAUSS_LAGUERRE; break;
-    default:              colloc_rules[i] = GOLUB_WELSCH;       break;
-    }
+  // Initialize basis_types, colloc_rules, and extra_dist_params from u_types:
+  for (i=0; i<num_vars; ++i)
+    if (initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
+					      basis_types[i], colloc_rules[i]))
+      extra_dist_params = true;
+
+  return extra_dist_params;
+}
+
+
+bool SharedPolyApproxData::
+initialize_orthogonal_basis_type_rule(short u_type,
+				      const BasisConfigOptions& bc_options,
+				      short& basis_type, short& colloc_rule)
+{
+  // > open Gauss rules are used for all global cases
+  // > nested closed rules are used for piecewise approximations
+  bool extra_dist_params;
+  switch (u_type) {
+  case STD_NORMAL:
+    basis_type  = HERMITE_ORTHOG;
+    colloc_rule = (bc_options.nestedRules) ? GENZ_KEISTER : GAUSS_HERMITE;
+    extra_dist_params = false; break;
+  case STD_UNIFORM:
+    basis_type = LEGENDRE_ORTHOG;
+    // no piecewise orthogonal polynomial bases at this time
+    //if (bc_options.piecewiseBasis) // closed nested rules required
+    //  colloc_rule = (bc_options.equidistantRules) ?
+    //    NEWTON_COTES : CLENSHAW_CURTIS;
+    //else
+    colloc_rule = (bc_options.nestedRules) ? GAUSS_PATTERSON : GAUSS_LEGENDRE;
+    extra_dist_params = false; break;
+  case STD_EXPONENTIAL:
+    basis_type = LAGUERRE_ORTHOG; colloc_rule = GAUSS_LAGUERRE;
+    extra_dist_params = false; break;
+  case STD_BETA:
+    basis_type = JACOBI_ORTHOG;   colloc_rule = GAUSS_JACOBI;
+    extra_dist_params = true; break;
+    // a special case of Jacobi is Chebyshev polynomials for alpha=beta=-1/2,
+    // which are orthogonal to the weight fn 1/sqrt(1-x^2).
+    //case BETA_CHEBY:
+    //  basis_type = CHEBYSHEV_ORTHOG; colloc_rule = CLENSHAW_CURTIS; break;
+    // Note 1: CLENSHAW_CURTIS/FEJER2 are not currently used for orthogonal
+    // projection in Pecos, although they *ARE* used for interpolation (see
+    // SharedInterpPolyApproxData::initialize_interpolation_rules()).
+    // Note 2: CLENSHAW_CURTIS/FEJER2 are not Gauss rules for Chebyshev
+    // polynomials, as these points correspond to extrema rather than roots
+    // (point sets from Fejer's first rule are roots, but are not nested).
+  case STD_GAMMA:
+    basis_type = GEN_LAGUERRE_ORTHOG; colloc_rule = GEN_GAUSS_LAGUERRE;
+    extra_dist_params = true; break;
+  default:
+    basis_type = NUM_GEN_ORTHOG;      colloc_rule = GOLUB_WELSCH;
+    extra_dist_params = true; break;
   }
+
+  return extra_dist_params;
 }
 
 

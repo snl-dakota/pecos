@@ -180,7 +180,7 @@ public:
   /// return expansionMoments
   const RealVector& expansion_moments() const;
   /// return numericalMoments
-  const RealVector& numerical_moments() const;
+  const RealVector& numerical_integration_moments() const;
 
   /// standardize central moments 2-n and eliminate excess kurtosis
   void standardize_moments(const RealVector& central_moments,
@@ -319,7 +319,8 @@ inline const RealVector& PolynomialApproximation::expansion_moments() const
 { return expansionMoments; }
 
 
-inline const RealVector& PolynomialApproximation::numerical_moments() const
+inline const RealVector& PolynomialApproximation::
+numerical_integration_moments() const
 { return numericalMoments; }
 
 

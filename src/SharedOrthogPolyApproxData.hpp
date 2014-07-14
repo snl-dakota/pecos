@@ -74,16 +74,16 @@ public:
   /// uniformly increment approxOrder
   void increment_order();
 
-  /// invoke initialize_orthog_poly_basis_types(),
+  /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters()
   void construct_basis(const ShortArray& u_types,
 		       const AleatoryDistParams& adp);
 
   /// set orthogPolyTypes
-  void orthog_poly_basis_types(const ShortArray& opb_types);
+  void orthogonal_basis_types(const ShortArray& opb_types);
   /// get orthogPolyTypes
-  const ShortArray& orthog_poly_basis_types() const;
+  const ShortArray& orthogonal_basis_types() const;
 
   /// get polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
@@ -108,10 +108,6 @@ protected:
   //
   //- Heading: Member functions
   //
-
-  /// initialize orthogonal polynomial basis types from u_types
-  bool initialize_orthog_poly_basis_types(const ShortArray& u_types,
-					  ShortArray& opb_types);
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(
@@ -386,10 +382,10 @@ inline void SharedOrthogPolyApproxData::increment_order()
 inline void SharedOrthogPolyApproxData::
 construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
 {
-  bool dist_params
-    = initialize_orthog_poly_basis_types(u_types, orthogPolyTypes);
   ShortArray colloc_rules;
-  initialize_collocation_rules(u_types, basisConfigOptions, colloc_rules);
+  bool dist_params
+    = initialize_orthogonal_basis_types_rules(u_types, basisConfigOptions,
+					      orthogPolyTypes, colloc_rules);
   initialize_polynomial_basis(orthogPolyTypes, colloc_rules, polynomialBasis);
   if (dist_params)
     update_basis_distribution_parameters(u_types, adp, polynomialBasis);
@@ -397,12 +393,12 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
 
 
 inline void SharedOrthogPolyApproxData::
-orthog_poly_basis_types(const ShortArray& opb_types)
+orthogonal_basis_types(const ShortArray& opb_types)
 { orthogPolyTypes = opb_types; }
 
 
 inline const ShortArray& SharedOrthogPolyApproxData::
-orthog_poly_basis_types() const
+orthogonal_basis_types() const
 { return orthogPolyTypes; }
 
 

@@ -65,10 +65,10 @@ public:
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-    const RealVector& dim_pref, Pecos::BasisConfigOptions& bc_options,
-    /*short refine_type = NO_REFINEMENT,*/ short refine_control = NO_CONTROL,
-    bool store_colloc = false, bool track_uniq_prod_wts = true,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH);
+    const RealVector& dim_pref, const ExpansionConfigOptions& ec_options,
+    BasisConfigOptions& bc_options,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH, bool store_colloc = false,
+    bool track_uniq_prod_wts = true, bool track_colloc_indices = true);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);

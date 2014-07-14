@@ -52,9 +52,8 @@ public:
   /// initialize all sparse grid settings except for distribution params
   virtual void initialize_grid(const ShortArray& u_types,
     unsigned short ssg_level, const RealVector& dim_pref,
-    Pecos::BasisConfigOptions& bc_options,
+    const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
     short growth_rate = MODERATE_RESTRICTED_GROWTH,
-    /*short refine_type = NO_REFINEMENT,*/ short refine_control = NO_CONTROL,
     bool store_colloc = false, bool track_uniq_prod_wts = true,
     bool track_colloc_indices = true);
   /// initialize all sparse grid settings (distribution params already

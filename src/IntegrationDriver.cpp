@@ -18,7 +18,8 @@
 #include "CombinedSparseGridDriver.hpp"
 #include "HierarchSparseGridDriver.hpp"
 //#include "LocalRefinableDriver.hpp"
-#include "SharedPolyApproxData.hpp"
+#include "SharedInterpPolyApproxData.hpp"
+#include "SharedOrthogPolyApproxData.hpp"
 
 static const char rcsId[]="@(#) $Id: IntegrationDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -270,17 +271,22 @@ const RealMatrix& IntegrationDriver::type2_weight_sets() const
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
 initialize_rules(const ShortArray& u_types,
+		 const Pecos::ExpansionConfigOptions& ec_options,
 		 const Pecos::BasisConfigOptions& bc_options)
 {
   numVars = u_types.size();
   ShortArray basis_types;
-  // TO DO: will this require an OPA/IPA switch?
-  //SharedPolyApproxData::initialize_basis_types(u_types, bc_options,
-  //                                             basis_types);
-  SharedPolyApproxData::initialize_collocation_rules(u_types, bc_options,
-						     collocRules);
-  SharedPolyApproxData::initialize_polynomial_basis(basis_types, collocRules,
-						    polynomialBasis);
+  if (ec_options.expBasisType == NODAL_INTERPOLANT ||
+      ec_options.expBasisType == HIERARCHICAL_INTERPOLANT)
+    SharedInterpPolyApproxData::initialize_driver_types_rules(u_types,
+      bc_options, basis_types, collocRules); // discard extra_dist_params rtn
+  else
+    SharedPolyApproxData::initialize_orthogonal_basis_types_rules(u_types,
+      bc_options, basis_types, collocRules); // discard extra_dist_params rtn
+
+  SharedPolyApproxData::
+    initialize_polynomial_basis(basis_types, collocRules, polynomialBasis);
+
   for (size_t i=0; i<numVars; i++)
     if (basis_types[i] == HERMITE_INTERP ||
 	basis_types[i] == PIECEWISE_CUBIC_INTERP)

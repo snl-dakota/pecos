@@ -164,13 +164,14 @@ void SparseGridDriver::update_axis_lower_bounds()
 void SparseGridDriver::
 initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
 		const RealVector& dim_pref,
-		Pecos::BasisConfigOptions& bc_options, short growth_rate,
-		/*short refine_type,*/ short refine_control, bool store_colloc,
-		bool track_uniq_prod_wts, bool track_colloc_indices)
+		const ExpansionConfigOptions& ec_options,
+		BasisConfigOptions& bc_options, short growth_rate,
+		bool store_colloc, bool track_uniq_prod_wts,
+		bool track_colloc_indices)
 {
   growthRate             = growth_rate;
-  //refineType           = refine_type;
-  refineControl          = refine_control;
+  //refineType           = ec_options.refinementType;
+  refineControl          = ec_options.refinementControl;
   storeCollocDetails     = store_colloc;
   trackUniqueProdWeights = track_uniq_prod_wts;
   trackCollocIndices     = track_colloc_indices;
@@ -188,7 +189,7 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   // linear growth, respectively.
 
   // define collocRules
-  initialize_rules(u_types, bc_options);
+  initialize_rules(u_types, ec_options, bc_options);
 
   level(ssg_level);
   dimension_preference(dim_pref);

@@ -20,6 +20,81 @@
 namespace Pecos {
 
 
+/** This version provides the polynomial types needed to retrieve
+    collocation points and weights by an integration driver.  These
+    may involve orthogonal polynomials which will differ from the
+    interpolation polynomial types used in the basis. */
+bool SharedInterpPolyApproxData::
+initialize_driver_types_rules(const ShortArray& u_types,
+			      const BasisConfigOptions& bc_options,
+			      ShortArray& basis_types, ShortArray& colloc_rules)
+{
+  bool extra_dist_params = false;
+  size_t i, num_vars = u_types.size();
+  basis_types.resize(num_vars); colloc_rules.resize(num_vars);
+
+  // Initialize basis_types, colloc_rules, and extra_dist_params from u_types.
+  // interpolation has different requirements from integration/projection; i.e,
+  // a good choice for interpolation nodes minimize the Lebesgue constant.  This
+  // goal is reflected in the STD_UNIFORM case below.
+  for (i=0; i<num_vars; ++i)
+    switch (u_types[i]) {
+    case STD_UNIFORM: // specialized for interpolation (min Lebesgue constant)
+      if (bc_options.piecewiseBasis) {
+	basis_types[i] = (bc_options.useDerivs) ?
+	  PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
+	//if (bc_options.openOverride) { // closed nested rules required
+	//  PCerr << "Error: open rules not currently supported for piecewise "
+	//	<< "polynomial interpolants." << std::endl;
+	//  abort_handler(-1);
+	//}
+	colloc_rules[i] = (bc_options.equidistantRules) ?
+	  NEWTON_COTES : CLENSHAW_CURTIS;
+      }
+      else if (true) { //(bc_options.gaussOverride) {
+        basis_types[i] = (bc_options.useDerivs) ?
+          HERMITE_INTERP : LEGENDRE_ORTHOG;
+        colloc_rules[i] = (bc_options.nestedRules) ?
+          GAUSS_PATTERSON : GAUSS_LEGENDRE;
+      }
+      else {
+	basis_types[i] = (bc_options.useDerivs) ?
+	  HERMITE_INTERP : CHEBYSHEV_ORTHOG;
+	colloc_rules[i] = /*(bc_options.openOverride) ? FEJER2 : */
+	  CLENSHAW_CURTIS;
+      }
+      break;
+    default: // all other cases currently rely on Gaussian quadrature rules
+      if (initialize_orthogonal_basis_type_rule(u_types[i], bc_options,
+						basis_types[i],colloc_rules[i]))
+	extra_dist_params = true;
+      break;
+    }
+
+  return extra_dist_params;
+}
+
+
+void SharedInterpPolyApproxData::
+initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
+{
+  switch (basisType) {
+  case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
+  case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
+    poly_type_1d = (basisConfigOptions.useDerivs) ?
+      PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
+    rule = NEWTON_COTES;                    break;
+  case GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL:
+  case GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
+    poly_type_1d = (basisConfigOptions.useDerivs) ?
+      HERMITE_INTERP : LAGRANGE_INTERP;
+    rule = NO_RULE;                         break;
+  default:
+    poly_type_1d = NO_POLY; rule = NO_RULE; break;
+  }
+}
+
+
 void SharedInterpPolyApproxData::allocate_data()
 {
   // use barycentric formulation for global Lagrange basis polynomials.
@@ -172,68 +247,6 @@ void SharedInterpPolyApproxData::post_finalize_data()
     // move previous expansion data to current expansion
     savedLevMultiIndex.clear();
     break;
-  }
-}
-
-
-/** This version provides the polynomial types needed to retrieve
-    collocation points and weights by an integration driver.  These
-    may involve orthogonal polynomials which will differ from the
-    interpolation polynomial types used in the basis. */
-bool SharedInterpPolyApproxData::
-initialize_integration_basis_types(const ShortArray& u_types,
-				   const BasisConfigOptions& bc_options,
-				   ShortArray& basis_types)
-{
-  bool extra_dist_params = false;
-
-  // Initialize basis_types and extra_dist_params from u_types.
-  size_t i, num_vars = u_types.size();
-  if (basis_types.size() != num_vars)
-    basis_types.resize(num_vars);
-  for (i=0; i<num_vars; ++i) {
-    switch (u_types[i]) {
-    case STD_NORMAL:
-      basis_types[i] = HERMITE_ORTHOG;                                break;
-    case STD_UNIFORM:
-      if (bc_options.piecewiseBasis)
-	basis_types[i] = (bc_options.useDerivs) ? PIECEWISE_CUBIC_INTERP :
-	  PIECEWISE_LINEAR_INTERP;
-      else
-	basis_types[i] = (bc_options.useDerivs) ? HERMITE_INTERP :
-	  LEGENDRE_ORTHOG;
-      break;
-    case STD_EXPONENTIAL:
-      basis_types[i] = LAGUERRE_ORTHOG;                               break;
-    case STD_BETA:
-      basis_types[i] = JACOBI_ORTHOG;       extra_dist_params = true; break;
-    case STD_GAMMA:
-      basis_types[i] = GEN_LAGUERRE_ORTHOG; extra_dist_params = true; break;
-    default:
-      basis_types[i] = NUM_GEN_ORTHOG;      extra_dist_params = true; break;
-    }
-  }
-
-  return extra_dist_params;
-}
-
-
-void SharedInterpPolyApproxData::
-initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
-{
-  switch (basisType) {
-  case PIECEWISE_NODAL_INTERPOLATION_POLYNOMIAL:
-  case PIECEWISE_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    poly_type_1d = (basisConfigOptions.useDerivs) ?
-      PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
-    rule = NEWTON_COTES;                    break;
-  case GLOBAL_NODAL_INTERPOLATION_POLYNOMIAL:
-  case GLOBAL_HIERARCHICAL_INTERPOLATION_POLYNOMIAL:
-    poly_type_1d = (basisConfigOptions.useDerivs) ?
-      HERMITE_INTERP : LAGRANGE_INTERP;
-    rule = NO_RULE;                         break;
-  default:
-    poly_type_1d = NO_POLY; rule = NO_RULE; break;
   }
 }
 

@@ -261,13 +261,16 @@ public:
   //- Heading: Member functions
   //
 
-  // allocate basis_types based on u_types
-  //static bool initialize_basis_types(const ShortArray& u_types,
-  //				       const BasisConfigOptions& bc_options,
-  //				       ShortArray& basis_types);
-  /// allocate colloc_rules based on u_types and rule options
-  static void initialize_collocation_rules(const ShortArray& u_types,
-    const BasisConfigOptions& bc_options, ShortArray& colloc_rules);
+  /// allocate orthogonal polynomial basis types and integration rules
+  /// based on u_types and rule options
+  static bool initialize_orthogonal_basis_types_rules(const ShortArray& u_types,
+    const BasisConfigOptions& bc_options, ShortArray& basis_types,
+    ShortArray& colloc_rules);
+  /// assign orthogonal polynomial basis type and integration rule based
+  /// on u_type and basis configuration options
+  static bool initialize_orthogonal_basis_type_rule(short u_type,
+    const BasisConfigOptions& bc_options, short& basis_type,
+    short& colloc_rule);
   /// allocate poly_basis based on basis_types and colloc_rules
   static void initialize_polynomial_basis(const ShortArray& basis_types,
     const ShortArray& colloc_rules, std::vector<BasisPolynomial>& poly_basis);

@@ -21,6 +21,7 @@
 namespace Pecos {
 
 class AleatoryDistParams;
+class ExpansionConfigOptions;
 class BasisConfigOptions;
 
 
@@ -143,7 +144,8 @@ protected:
 
   /// set int_rules and growth_rules from u_types and mode booleans
   void initialize_rules(const ShortArray& u_types,
-			const Pecos::BasisConfigOptions& bc_options);
+			const ExpansionConfigOptions& ec_options,
+			const BasisConfigOptions& bc_options);
   /// set int_rules and growth_rules from poly_basis and growth_rate
   void initialize_rules(const std::vector<BasisPolynomial>& poly_basis);
 

@@ -33,14 +33,15 @@ CombinedSparseGridDriver* CombinedSparseGridDriver::sgdInstance(NULL);
 void CombinedSparseGridDriver::
 initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
 		const RealVector& dim_pref,
-		Pecos::BasisConfigOptions& bc_options,
-		/*short refine_type,*/ short refine_control, bool store_colloc,
-		bool track_uniq_prod_wts, short growth_rate)
+		const ExpansionConfigOptions& ec_options,
+		BasisConfigOptions& bc_options, short growth_rate,
+		bool store_colloc, bool track_uniq_prod_wts,
+		bool track_colloc_indices)
 {
   lightweightMode = false;
-  SparseGridDriver::initialize_grid(u_types, ssg_level, dim_pref, bc_options,
-				    refine_control, store_colloc, 
-				    track_uniq_prod_wts, growth_rate);
+  SparseGridDriver::initialize_grid(u_types, ssg_level, dim_pref, ec_options,
+				    bc_options, growth_rate, store_colloc,
+				    track_uniq_prod_wts, track_colloc_indices);
 
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();

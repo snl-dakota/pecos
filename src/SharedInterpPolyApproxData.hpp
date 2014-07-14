@@ -54,14 +54,15 @@ public:
   //- Heading: member functions
   //
 
-  /// define n-D basis types from u_types and mode booleans for use in
-  /// defining quadrature rules used by integration drivers
-  /** These basis types may include orthogonal polynomials for
-      purposes of computing their Gauss points and weights within
-      integration drivers; thus they differ in general from the
-      interpolation polynomial basis used for approximation. */
-  static bool initialize_integration_basis_types(const ShortArray& u_types,
-    const BasisConfigOptions& bc_options, ShortArray& basis_types);
+  /// define n-D basis types and collocation rules based on u_types and
+  /// basis configuration options for use in configuring integration drivers
+  /** These basis types may include orthogonal polynomials for purposes of
+      computing their Gauss points and weights within integration drivers;
+      thus they differ in general from the interpolation polynomial basis
+      used for approximation. */
+  static bool initialize_driver_types_rules(const ShortArray& u_types,
+    const BasisConfigOptions& bc_options, ShortArray& basis_types,
+    ShortArray& colloc_rules);
   /// initialize basis types and collocation rules, construct the polynomial
   /// basis, and initialize the distribution parameters within this basis
   static void construct_basis(const ShortArray& u_types,
@@ -393,9 +394,8 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 		std::vector<Pecos::BasisPolynomial>& poly_basis)
 {
   ShortArray basis_types, colloc_rules;
-  bool dist_params
-    = initialize_integration_basis_types(u_types, bc_options, basis_types);
-  initialize_collocation_rules(u_types, bc_options, colloc_rules);
+  bool dist_params = initialize_driver_types_rules(u_types, bc_options,
+						   basis_types, colloc_rules);
   initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
   if (dist_params)
     update_basis_distribution_parameters(u_types, adp, poly_basis);

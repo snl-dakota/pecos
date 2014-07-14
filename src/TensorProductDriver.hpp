@@ -87,7 +87,8 @@ public:
 
   /// invoke initialize_rules() to set collocation rules
   void initialize_grid(const ShortArray& u_types,
-		       const Pecos::BasisConfigOptions& bc_options);
+		       const ExpansionConfigOptions& ec_options,
+		       const BasisConfigOptions& bc_options);
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 

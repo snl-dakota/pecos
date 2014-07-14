@@ -25,9 +25,10 @@ namespace Pecos {
 
 void TensorProductDriver::
 initialize_grid(const ShortArray& u_types,
-		const Pecos::BasisConfigOptions& bc_options)
+		const ExpansionConfigOptions& ec_options,
+		const BasisConfigOptions& bc_options)
 {
-  initialize_rules(u_types, bc_options);
+  initialize_rules(u_types, ec_options, bc_options);
   quadOrder.resize(numVars); levelIndex.resize(numVars);
 }
 

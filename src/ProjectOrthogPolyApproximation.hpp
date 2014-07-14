@@ -156,7 +156,9 @@ inline void ProjectOrthogPolyApproximation::compute_moments(const RealVector& x)
   mean(x); variance(x); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
 
-  //compute_numerical_response_moments(2, x); // TO DO
+  //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  //if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
+  //  compute_numerical_response_moments(2, x); // TO DO
 }
 
 } // namespace Pecos
