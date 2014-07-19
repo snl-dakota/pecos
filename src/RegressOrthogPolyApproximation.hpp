@@ -175,10 +175,18 @@ private:
 
   /// perform SharedOrthogPolyApproxData::numAdvancements expansions of 
   /// multi_index to create the candidates array
+  void advance_multi_index(const UShort2DArray& multi_index,
+			   UShortArraySetArray& mi_advancements);
+  /// perform SharedOrthogPolyApproxData::numAdvancements expansions of 
+  /// multi_index to create the candidates array
   void advance_multi_index_front(const UShort2DArray& multi_index,
 				 UShortArraySetArray& mi_advancements);
   /// generate a set of admissible forward neighbors from a reference
-  /// multi-index
+  /// multi-index (non-frontier version)
+  void add_admissible_forward_neighbors(const UShort2DArray& reference_mi,
+					UShortArraySet& fwd_neighbors);
+  /// generate a set of admissible forward neighbors from a reference
+  /// multi-index (frontier version)
   void add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
 					UShortArraySet& fwd_neighbors);
 
@@ -246,6 +254,13 @@ private:
   //- Heading: Data
   //
 
+  /// flag indicating restriction and front expansion using a multi-index
+  /// frontier
+  /** This option reduces memory requirements somewhat, but allowing
+      multi-index gaps in the general case results in reduced mutual
+      coherence and better numerical performance. */
+  bool advanceByFrontier;
+
   /// order of orthogonal best polynomial expansion found using cross validation
   IntVector bestApproxOrder;
 
@@ -280,7 +295,7 @@ private:
 
 inline RegressOrthogPolyApproximation::
 RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
-  OrthogPolyApproximation(shared_data)
+  OrthogPolyApproximation(shared_data), advanceByFrontier(false)
 { }
 
 

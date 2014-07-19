@@ -292,8 +292,14 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   // > input/output from this function is a candidate multi_index along with 
   //   its sparse solution (expansionCoeffs + sparseIndices key).  Thus, the
   //   restricted representation is only used internal to this fn.
-  frontier_restriction(adaptedMultiIndex, sparseIndices);
-  advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
+  if (advanceByFrontier) { // define and advance a frontier without gaps
+    frontier_restriction(adaptedMultiIndex, sparseIndices);
+    advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
+  }
+  else { // advance complete adaptedMultiIndex, including any gaps
+    sparse_restriction(adaptedMultiIndex, sparseIndices);
+    advance_multi_index(adaptedMultiIndex, candidateBasisExp);
+  }
 
   // Evaluate the effect of each candidate basis expansion
   size_t i, i_star = 0, num_candidates = candidateBasisExp.size(), 
@@ -2447,6 +2453,28 @@ frontier_restriction(UShort2DArray& multi_index, SizetSet& sparse_indices)
 
 
 void RegressOrthogPolyApproximation::
+advance_multi_index(const UShort2DArray& multi_index,
+		    UShortArraySetArray& mi_advancements)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // create a set of advancements from this reference frontier
+  size_t i, num_mi,
+    num_advance = data_rep->regressConfigOptions.numAdvancements;
+  mi_advancements.resize(num_advance);
+  add_admissible_forward_neighbors(multi_index, mi_advancements[0]);
+  if (num_advance > 1) {
+    UShort2DArray combined_mi = multi_index; // copy
+    for (i=1; i<num_advance; ++i) {
+      data_rep->append_multi_index(mi_advancements[i-1], combined_mi);
+      add_admissible_forward_neighbors(combined_mi, mi_advancements[i]);
+    }
+  }
+}
+
+
+void RegressOrthogPolyApproximation::
 advance_multi_index_front(const UShort2DArray& multi_index,
 			  UShortArraySetArray& mi_advancements)
 {
@@ -2462,12 +2490,39 @@ advance_multi_index_front(const UShort2DArray& multi_index,
   size_t i, num_mi,
     num_advance = data_rep->regressConfigOptions.numAdvancements;
   mi_advancements.resize(num_advance);
+
+  add_admissible_forward_neighbors(mi_frontier, mi_advancements[0]);
+  for (i=1; i<num_advance; ++i) {
+    data_rep->update_frontier(mi_advancements[i-1], mi_frontier);
+    add_admissible_forward_neighbors(mi_frontier, mi_advancements[i]);
+  }
+  /*
   for (i=0; i<num_advance; ++i) {
     UShortArraySet& mi_adv_i = mi_advancements[i];
     add_admissible_forward_neighbors(mi_frontier, mi_adv_i);
     if (i+1 < num_advance)
       data_rep->update_frontier(mi_adv_i, mi_frontier);
   }
+  */
+}
+
+
+void RegressOrthogPolyApproximation::
+add_admissible_forward_neighbors(const UShort2DArray& reference_mi,
+				 UShortArraySet& fwd_neighbors)
+{
+  // In current usage, this version does not use a frontier; i.e., reference_mi
+  // reflects the full expansion and may contain gaps.  However, both frontier
+  // and gappy cases must additionally check for presence of an admissible fwd
+  // neighbor within the reference_mi.  Since there is no functional difference,
+  // sort ref_mi into a set for find efficiency and employ the frontier version.
+  UShortArraySet reference_mi_set(reference_mi.begin(), reference_mi.end());
+  add_admissible_forward_neighbors(reference_mi_set, fwd_neighbors);
+
+#ifdef DEBUG
+  PCout << "RegressOPA::add_admissible_forward_neighbors(): reference_mi =\n"
+	<< reference_mi << "fwd_neighbors =\n" << fwd_neighbors << std::endl;
+#endif // DEBUG
 }
 
 
