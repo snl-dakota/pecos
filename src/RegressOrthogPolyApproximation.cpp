@@ -2542,20 +2542,22 @@ add_admissible_forward_neighbors(const UShortArraySet& reference_mi,
       // increment by 1 in dimension i
       unsigned short& neighbor_i = neighbor[i];
       ++neighbor_i;
-      // test all backwards neighbors for membership in set O (old)
-      bool backward_old = true;
-      for (j=0; j<num_v; ++j) {
-	unsigned short& neighbor_j = neighbor[j];
-	if (neighbor_j) { // if 0, then admissible by default
-	  --neighbor_j;
-	  find_cit = reference_mi.find(neighbor);
-	  ++neighbor_j; // restore
-	  if (find_cit == reference_mi.end())
-	    { backward_old = false; break; }
+      if (reference_mi.find(neighbor) == reference_mi.end()) {
+	// test all backwards neighbors for membership in set O (old)
+	bool backward_old = true;
+	for (j=0; j<num_v; ++j) {
+	  unsigned short& neighbor_j = neighbor[j];
+	  if (neighbor_j) { // if 0, then admissible by default
+	    --neighbor_j;
+	    find_cit = reference_mi.find(neighbor);
+	    ++neighbor_j; // restore
+	    if (find_cit == reference_mi.end())
+	      { backward_old = false; break; }
+	  }
 	}
+	if (backward_old)
+	  fwd_neighbors.insert(neighbor);// std::set will discard any duplicates
       }
-      if (backward_old && reference_mi.find(neighbor) == reference_mi.end())
-	fwd_neighbors.insert(neighbor); // std::set will discard any duplicates
       --neighbor_i; // restore
     }
   }
