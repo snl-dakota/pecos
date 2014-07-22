@@ -360,7 +360,7 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   // and sparseIndices (empty sparse_indices would be misinterpreted for an
   // expanded adaptedMultiIndex and restriction would not occur)
   else if (sparseIndices.empty())
-    inflate(sparseIndices, data_rep->bestExpTerms);
+    inflate(sparseIndices, expansionCoeffs.length());
 
   return delta_star;
 }
