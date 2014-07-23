@@ -254,13 +254,6 @@ private:
   //- Heading: Data
   //
 
-  /// flag indicating restriction and front expansion using a multi-index
-  /// frontier
-  /** This option reduces memory requirements somewhat, but allowing
-      multi-index gaps in the general case results in reduced mutual
-      coherence and better numerical performance. */
-  bool advanceByFrontier;
-
   /// order of orthogonal best polynomial expansion found using cross validation
   IntVector bestApproxOrder;
 
@@ -285,17 +278,26 @@ private:
   /// sparse sobolIndices
   ULongULongMap sparseSobolIndexMap;
 
-  /// PCE multi-index during adapted basis solution process.  Once complete,
-  /// the shared multiIndex and saprseIndices are updated.
+  /// PCE multi-index during the basis adaptation process.  Once complete,
+  /// the shared multiIndex and sparseIndices are updated.
   UShort2DArray adaptedMultiIndex;
-  /// array of candidate basis expansions for ADAPTED_BASIS_EXPANDING_FRONT
-  UShortArraySetArray candidateBasisExp;
+  /// sparse indices idnetifying receoivered expansion coefficients within
+  /// adaptedMultiIndex during the basis adaptation process.  Once complete,
+  /// the shared multiIndex and sparseIndices are updated.
+  SizetSet adaptedSparseIndices;
+  /// the adapted multi-index that corresponds to the best solution identified
+  /// Due to frontier/sparse restriction operations, bestAdaptedMultiIndex
+  /// cannot be assumed to be a subset of adaptedMultiIndex.
+  UShort2DArray bestAdaptedMultiIndex;
+  /// the cross validation error reference point for adapting a CS
+  /// candidate basis; it's state is reset for each response QoI
+  Real cvErrorRef;
 };
 
 
 inline RegressOrthogPolyApproximation::
 RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
-  OrthogPolyApproximation(shared_data), advanceByFrontier(false)
+  OrthogPolyApproximation(shared_data)
 { }
 
 

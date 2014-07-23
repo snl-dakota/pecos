@@ -146,8 +146,6 @@ void RegressOrthogPolyApproximation::adapt_regression()
     soft_conv_limit = data_rep->expConfigOptions.softConvLimit;
   short basis_type  = data_rep->expConfigOptions.expBasisType;
 
-  adaptedMultiIndex = data_rep->multiIndex; // starting point for adaptation
-
   // For a level 0 reference multi-index, we could safely omit evaluating the
   // initial CV error and always perform one cycle of select_best_active_mi(),
   // since the CV error would presumably not be low enough to trigger immediate
@@ -157,23 +155,26 @@ void RegressOrthogPolyApproximation::adapt_regression()
   // need to support general reference points, since adaptive algorithms can
   // stall without good starting points.  Therefore, go ahead and compute the
   // CV err for the reference candidate basis.
-  Real init_cv_err
-    = run_cross_validation_solver(adaptedMultiIndex, expansionCoeffs,
-				  sparseIndices);
-  data_rep->update_reference(init_cv_err, adaptedMultiIndex);
+  bestAdaptedMultiIndex = data_rep->multiIndex;
+  cvErrorRef = run_cross_validation_solver(bestAdaptedMultiIndex,
+					   expansionCoeffs, sparseIndices);
 
   // absolute error instead of delta error for initial tolerance check
-  if (init_cv_err < tol)
+  if (cvErrorRef < tol)
     ++soft_conv_count;
 
-  if (soft_conv_count < soft_conv_limit)
+  if (soft_conv_count < soft_conv_limit) {
+    adaptedMultiIndex = bestAdaptedMultiIndex; // starting point for adaptation
     switch (basis_type) {
     case ADAPTED_BASIS_GENERALIZED:
       data_rep->csgDriver.initialize_sets(); // initialize the active sets
       break;
-    //case ADAPTED_BASIS_EXPANDING_FRONT:
-      //break;
+    case ADAPTED_BASIS_EXPANDING_FRONT:
+      adaptedSparseIndices = sparseIndices; // not needed yet for GSG, prior to
+                                            // adding restriction operator
+      break;
     }
+  }
 
   while (soft_conv_count < soft_conv_limit) {
     // invoke run_cross_validation_solver() for each candidate and select best
@@ -190,15 +191,17 @@ void RegressOrthogPolyApproximation::adapt_regression()
 
   // different finalize: don't add in any remaining evaluated sets; rather,
   // we need to backtrack and restore the best solution with lowest CV error
-  data_rep->restore_best_solution(adaptedMultiIndex);
+  adaptedMultiIndex.clear(); adaptedSparseIndices.clear();
+  data_rep->clear_adapted();
+
   // Once done for this QoI, append adaptedMultiIndex to shared multiIndex,
-  // update sparseIndices (which corresponds to best adaptedMultiIndex) to
+  // update sparseIndices (which corresponds to bestAdaptedMultiIndex) to
   // point into shared multiIndex, reorder expansionCoeff{s,Grads} as needed,
-  // and clear adaptedMultiIndex
-  data_rep->append_multi_index(sparseIndices, adaptedMultiIndex,
+  // and clear bestAdaptedMultiIndex
+  data_rep->append_multi_index(sparseIndices, bestAdaptedMultiIndex,
 			       data_rep->multiIndex, expansionCoeffs,
 			       expansionCoeffGrads);
-  adaptedMultiIndex.clear();
+  bestAdaptedMultiIndex.clear();
 
   // now update sobolIndexMap and sparseSobolIndexMap
   data_rep->update_component_sobol(data_rep->multiIndex);
@@ -211,10 +214,14 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // TO DO: add (coarse-grained) restriction operation
+  // This will require heavyweight bestAdaptedMultiIndex update at bottom.
+
   const UShortArraySet& active_mi = data_rep->csgDriver.active_multi_index();
   UShortArraySet::const_iterator cit, cit_star;
-  Real cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
-  RealVector exp_coeffs; SizetSet sparse_ind;
+  Real curr_cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
+  RealVector curr_exp_coeffs; SizetSet curr_sparse_ind;
   CombinedSparseGridDriver* csg_driver = &data_rep->csgDriver;
   // Reevaluate the effect of every active set every time
   for (cit=active_mi.begin(); cit!=active_mi.end(); ++cit) {
@@ -233,14 +240,14 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
     // We pass false to defer finalization (shared multiIndex, sparseIndices).
-    cv_err = run_cross_validation_solver(adaptedMultiIndex, exp_coeffs,
-					 sparse_ind);
+    curr_cv_err = run_cross_validation_solver(adaptedMultiIndex,
+					      curr_exp_coeffs, curr_sparse_ind);
 
     // Smallest absolute error is largest decrease from consistent ref.  delta
     // is a signed quantity in order to detect when best case error increases
     // relative to ref -> terminate or increment soft conv counter (allow some
     // number of successive increases before abandoning hope).
-    delta = data_rep->cvErrorRef - cv_err;
+    delta = cvErrorRef - curr_cv_err;
     if (data_rep->regressConfigOptions.normalizeCV) {
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
@@ -254,10 +261,11 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
     // track best increment evaluated thus far
     if (delta > delta_star) {
-      cit_star = cit; delta_star = delta;
+      cit_star = cit; delta_star = delta;  // best for this iteration
       if (delta_star > 0.) {
-	cv_err_star = cv_err;
-	expansionCoeffs = exp_coeffs; sparseIndices = sparse_ind;
+	cv_err_star     = curr_cv_err;     // best overall
+	expansionCoeffs = curr_exp_coeffs; // best overall
+	sparseIndices   = curr_sparse_ind; // best overall
       }
     }
 
@@ -274,8 +282,10 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
   csg_driver->update_sets(best_set); // invalidates cit_star
 
   // update reference points and current best soln if CV error has been reduced
+  // Note: bestAdaptedMultiIndex assignment is heavier weight than currently
+  // required, prior to use of restriction at top of this fn.
   if (delta_star > 0.)
-    data_rep->update_reference(cv_err_star, adaptedMultiIndex);
+    { cvErrorRef = cv_err_star; bestAdaptedMultiIndex = adaptedMultiIndex; }
 
   return delta_star;
 }
@@ -292,75 +302,83 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   // > input/output from this function is a candidate multi_index along with 
   //   its sparse solution (expansionCoeffs + sparseIndices key).  Thus, the
   //   restricted representation is only used internal to this fn.
-  if (advanceByFrontier) { // define and advance a frontier without gaps
-    frontier_restriction(adaptedMultiIndex, sparseIndices);
-    advance_multi_index_front(adaptedMultiIndex, candidateBasisExp);
+  // > for soft convergence to be meaningful (allow the adaptation to step over
+  //   deadspots), the restriction must be applied to the selected increment
+  //   from the previous iteration, even if was not an improvement in CV error.
+  //   Thus, we use adaptedSparseIndices below instead of sparseIndices.
+  UShortArraySetArray candidate_basis_exp;
+  if (data_rep->regressConfigOptions.advanceByFrontier) {
+    // define and advance a frontier without gaps
+    frontier_restriction(adaptedMultiIndex, adaptedSparseIndices);
+    advance_multi_index_front(adaptedMultiIndex, candidate_basis_exp);
   }
   else { // advance complete adaptedMultiIndex, including any gaps
-    sparse_restriction(adaptedMultiIndex, sparseIndices);
-    advance_multi_index(adaptedMultiIndex, candidateBasisExp);
+    sparse_restriction(adaptedMultiIndex, adaptedSparseIndices);
+    advance_multi_index(adaptedMultiIndex, candidate_basis_exp);
   }
 
   // Evaluate the effect of each candidate basis expansion
-  size_t i, i_star = 0, num_candidates = candidateBasisExp.size(), 
+  size_t i, i_star = 0, num_candidates = candidate_basis_exp.size(), 
     size_star = adaptedMultiIndex.size();
-  Real cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
-  RealVector exp_coeffs; SizetSet sparse_ind;
+  Real curr_cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
+  RealVector curr_exp_coeffs; SizetSet curr_sparse_ind;
   for (i=0; i<num_candidates; ++i) {
 
-    // append candidate expansion to adaptedMultiIndex
-    const UShortArraySet& candidate_exp = candidateBasisExp[i];
-    data_rep->append_multi_index(candidate_exp, adaptedMultiIndex);
-    PCout << "\n>>>>> Evaluating trial basis expansion " << i+1 << '\n';
-      //":\n" << adaptedMultiIndex;
+    // append candidate expansion to adaptedMultiIndex.  advance_multi_index()
+    // already provides unique additions --> append_multi_index() is inefficient
+    // since duplication checks are redundant.
+    const UShortArraySet& candidate_exp = candidate_basis_exp[i];
+    //data_rep->append_multi_index(candidate_exp, adaptedMultiIndex);
+    PCout << "\n>>>>> Evaluating trial basis " << i+1 << " expanded from "
+	  << adaptedMultiIndex.size() << " to ";
+    adaptedMultiIndex.insert(adaptedMultiIndex.end(), candidate_exp.begin(),
+			     candidate_exp.end());
+    PCout << adaptedMultiIndex.size() << " terms\n";
 
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
     // We pass false to defer finalization (shared multiIndex, sparseIndices).
-    cv_err = run_cross_validation_solver(adaptedMultiIndex,
-					 exp_coeffs, sparse_ind);
+    curr_cv_err = run_cross_validation_solver(adaptedMultiIndex,
+					      curr_exp_coeffs, curr_sparse_ind);
 
     // Smallest absolute error is largest decrease from consistent ref.
     // delta is a signed quantity in order to detect when best case error
     // increases relative to ref -> terminate or increment soft conv counter
     // (allow some number of successive increases before abandoning hope).
-    delta = data_rep->cvErrorRef - cv_err;
+    delta = cvErrorRef - curr_cv_err;
     if (data_rep->regressConfigOptions.normalizeCV) // not as well justified
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
       delta /= candidate_exp.size();
-    PCout << "\n<<<<< Trial set refinement metric = " << delta << '\n';
+    PCout << "\n<<<<< Trial set refinement metric = " << delta
+	  << " (large positive change desired)\n";
 
     // track best increment evaluated thus far.  Note: an increment is always
     // selected even if no improvement in CV error --> rely on soft convergence
     // and best solution tracking.
     if (delta > delta_star) {
-      i_star = i; delta_star = delta; size_star = adaptedMultiIndex.size();
-      if (delta_star > 0.) { // track reduction in best CV error
-	cv_err_star     = cv_err;
-	expansionCoeffs = exp_coeffs;
-	sparseIndices   = sparse_ind;
+      i_star = i; delta_star = delta;         // best for this iteration
+      size_star = adaptedMultiIndex.size();   // best for this iteration
+      adaptedSparseIndices = curr_sparse_ind; // best for this iteration
+      if (delta_star > 0.) {                  // reduction in best CV error
+	cv_err_star     = curr_cv_err;        // best overall
+	expansionCoeffs = curr_exp_coeffs;    // best overall
+	sparseIndices   = curr_sparse_ind;    // best overall
       }
     }
   }
 
-  //const UShort2DArray& best_set = candidateBasisExp[i_star];
+  //const UShort2DArray& best_set = candidate_basis_exp[i_star];
   size_t id_star = i_star + 1;
   PCout << "\n<<<<< Evaluation of candidate basis expansions completed.\n"
 	<< "\n<<<<< Selection of basis expansion set " << id_star << '\n';
-  // rewind to best candidate
+  // rewind adaptedMultiIndex to best candidate
   if (id_star != num_candidates)
     adaptedMultiIndex.resize(size_star);
-  // update reference points and current best soln if CV error has been reduced
+  // update reference points for best solution if CV error has been reduced
   if (delta_star > 0.)
-    data_rep->update_reference(cv_err_star, adaptedMultiIndex);
-  // if no improvement, define sparseIndices for use in subsequent restriction:
-  // prevents adaptedMultiIndex from falling out of sync with expansionCoeffs
-  // and sparseIndices (empty sparse_indices would be misinterpreted for an
-  // expanded adaptedMultiIndex and restriction would not occur)
-  else if (sparseIndices.empty())
-    inflate(sparseIndices, expansionCoeffs.length());
+    { cvErrorRef = cv_err_star; bestAdaptedMultiIndex = adaptedMultiIndex; }
 
   return delta_star;
 }

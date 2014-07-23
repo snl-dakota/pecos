@@ -127,26 +127,6 @@ increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 
 
 void SharedRegressOrthogPolyApproxData::
-restore_best_solution(UShort2DArray& aggregated_mi)
-{
-  // reset the aggregated multi-index
-  aggregated_mi.resize(bestExpTerms); // truncate previous increments
-
-  switch (expConfigOptions.expBasisType) {
-  case ADAPTED_BASIS_GENERALIZED:
-    // reset tensor-product bookkeeping and save restorable data
-    savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
-    savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
-
-    tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
-    tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
-    tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
-    break;
-  }
-}
-
-
-void SharedRegressOrthogPolyApproxData::
 pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
 		     bool add_val,  double* pack_val,  size_t& pv_cntr,
 		     bool add_grad, double* pack_grad, size_t& pg_cntr)

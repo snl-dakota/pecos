@@ -76,12 +76,20 @@ public:
   /// number of front expansions per iteration for basis adaptation in
   /// ADAPTED_BASIS_EXPANDING_FRONT mode
   unsigned short numAdvancements;
+
+  /// flag indicating restriction and front expansion using a multi-index
+  /// frontier
+  /** This option reduces memory requirements somewhat, but allowing
+      multi-index gaps in the general case results in reduced mutual
+      coherence and better numerical performance. */
+  bool advanceByFrontier;
 };
 
 
 inline RegressionConfigOptions::RegressionConfigOptions():
   crossValidation(false), randomSeed(0), l2Penalty(0.), normalizeCV(false),
-  initSGLevel(0), multiIndexGrowthFactor(2), numAdvancements(3)
+  initSGLevel(0), multiIndexGrowthFactor(2), numAdvancements(3),
+  advanceByFrontier(false)
 { }
 
 
@@ -92,7 +100,8 @@ RegressionConfigOptions(bool cv, int seed, const RealVector& noise_tols,
 			unsigned short num_advance):
   crossValidation(cv), randomSeed(seed), noiseTols(noise_tols),
   l2Penalty(l2_penalty), normalizeCV(normalize_cv), initSGLevel(init_lev),
-  multiIndexGrowthFactor(growth_fact), numAdvancements(num_advance)
+  multiIndexGrowthFactor(growth_fact), numAdvancements(num_advance),
+  advanceByFrontier(false)
 { }
 
 
@@ -103,7 +112,8 @@ RegressionConfigOptions(const RegressionConfigOptions& rc_options):
   l2Penalty(rc_options.l2Penalty), normalizeCV(rc_options.normalizeCV),
   initSGLevel(rc_options.initSGLevel),
   multiIndexGrowthFactor(rc_options.multiIndexGrowthFactor),
-  numAdvancements(rc_options.numAdvancements)
+  numAdvancements(rc_options.numAdvancements),
+  advanceByFrontier(rc_options.advanceByFrontier)
 { }
 
 
@@ -157,10 +167,8 @@ public:
   void increment_trial_set(const UShortArray& trial_set,
 			   UShort2DArray& aggregated_mi);
 
-  /// update cvErrorRef and bestExpTerms after improvement in solution
-  void update_reference(Real cv_error, const UShort2DArray& aggregated_mi);
-  /// update cvErrorRef and bestExpTerms after improvement in solution
-  void restore_best_solution(UShort2DArray& aggregated_mi);
+  /// clear adapted basis bookkeeping
+  void clear_adapted();
 
   /// set regressConfigOptions
   void configuration_options(const RegressionConfigOptions& rc_options);
@@ -218,12 +226,6 @@ private:
   /// adaptation via the generalized sparse grid algorithm; it's state
   /// is reset for each response QoI
   CombinedSparseGridDriver csgDriver;
-  /// the cross validation error reference point for adapting a CS
-  /// candidate basis; it's state is reset for each response QoI
-  Real cvErrorRef;
-  /// size of expansion that corresponds to the best solution identified
-  /// (may not be the last solution)
-  size_t bestExpTerms;
 };
 
 
@@ -257,11 +259,19 @@ configuration_options(const RegressionConfigOptions& rc_options)
 { regressConfigOptions = rc_options; }
 
 
-inline void SharedRegressOrthogPolyApproxData::
-update_reference(Real cv_error, const UShort2DArray& aggregated_mi)
+inline void SharedRegressOrthogPolyApproxData::clear_adapted()
 {
-  cvErrorRef   = cv_error;
-  bestExpTerms = aggregated_mi.size();
+  switch (expConfigOptions.expBasisType) {
+  case ADAPTED_BASIS_GENERALIZED:
+    // reset tensor-product bookkeeping and save restorable data
+    savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
+    savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
+
+    tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
+    tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
+    tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
+    break;
+  }
 }
 
 } // namespace Pecos
