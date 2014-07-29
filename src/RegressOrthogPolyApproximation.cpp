@@ -1710,13 +1710,13 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
 	" validation is employed\n.";
   }
 
+  cv_iterator.set_max_num_unique_tolerances( 100 );
   cv_iterator.set_num_folds( num_folds );
   cv_iterator.set_num_points( num_build_points );
   if ( use_gradients )
     cv_iterator.set_num_equations_per_point( sharedDataRep->numVars + 1 );
   else 
     cv_iterator.set_num_equations_per_point( 1 );
-
 
   Real score = cv_iterator.run_cross_validation( A, b );
   Real best_tolerance = cv_iterator.get_best_residual_tolerance();
@@ -1727,7 +1727,6 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
       PCout << "Best tolerance chosen by cross validation: " << 
 	best_tolerance << "\n";
     }
-
 
   // CV is complete, now compute final solution with all data points:
   IntVector index_mapping;
@@ -1747,16 +1746,16 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   // In current usage, global (shared multiIndex/sobolIndexMap) and local
   // (sparseSobolIndexMap) bookkeeping are *not* updated since higher level
   // logic (select_best_*()) determines acceptance of candidate solutions.
-  if (faultInfo.under_determined) { // exploit CS sparsity
-    best_sparse_indices.clear();
-    Real* dense_coeffs = solutions[solutions.numCols()-1];
-    update_sparse_indices(dense_coeffs, A.numCols(), best_sparse_indices);
-    update_sparse_coeffs(dense_coeffs, best_exp_coeffs, best_sparse_indices);
-  }
-  else { // least sq case does not require sparse indices
-    best_sparse_indices.clear();
-    copy_data(solutions[solutions.numCols()-1], A.numCols(), best_exp_coeffs);
-  }
+  best_sparse_indices.clear();
+  Real* dense_coeffs = solutions[solutions.numCols()-1];
+  update_sparse_indices(dense_coeffs, A.numCols(), best_sparse_indices);
+  update_sparse_coeffs(dense_coeffs, best_exp_coeffs, best_sparse_indices);  
+
+  // JDJ: We always want to only keep sparse indices
+  //else { // least sq case does not require sparse indices
+  //  best_sparse_indices.clear();
+  //  copy_data(solutions[solutions.numCols()-1], A.numCols(), best_exp_coeffs);
+  //}
 
   return score;
 }
@@ -1831,7 +1830,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 	    " validation is employed\n.";
 	}
 
-
+      cv_iterator.set_max_num_unique_tolerances( 100 );
       cv_iterator.set_num_folds( num_folds );
       cv_iterator.set_num_points( num_build_points );
       if ( use_gradients )
@@ -1892,6 +1891,12 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   if (faultInfo.under_determined) // exploit CS sparsity
     update_sparse(solutions[last_index], num_basis_terms);
   else {
+    // JDJ: Mike this means if we try to force omp for over-determined system
+    // then sparse indices will not be taken full advantage of. Should we 
+    // modify the logic here so that this section is only entered if using
+    // least squares or BP or BPDN ( the later revert to least squares for
+    // over determinde systems. Same argument for line 1935 and 1945 in 
+    //compresed_sensing() function
     copy_data(solutions[last_index], num_basis_terms, expansionCoeffs);
     // if best expansion order is less than maximum candidate, define
     // sparseIndices to define active subset within data_rep->multiIndex.
