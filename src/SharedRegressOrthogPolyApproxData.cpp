@@ -126,6 +126,59 @@ increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 }
 
 
+bool SharedRegressOrthogPolyApproxData::
+set_restriction(UShort2DArray& aggregated_mi, SizetSet& sparse_indices,
+		SizetSet& save_tp)
+{
+  if (sparse_indices.empty()) // dense multi-index: no restriction possible
+    return false;
+
+  // determine the TP multi-indices to save
+  StSCIter cit;
+  size_t i, num_tp_mi = tpMultiIndexMapRef.size(), last_index = num_tp_mi - 1,
+    sparse_ind, save_tp_cntr, new_tp_cntr;
+  bool map_ref_find;
+  for (cit=sparse_indices.begin(); cit!=sparse_indices.end(); ++cit) {
+    sparse_ind = *cit; map_ref_find = false;
+    for (i=0; i<last_index; ++i)
+      // upper bound for i-th multi-index append defined by MapRef[i+1]
+      if (sparse_ind < tpMultiIndexMapRef[i+1])
+	{ map_ref_find = true; break; }
+    if (map_ref_find) save_tp.insert(i); // occurs within i-th appended TP
+    else              save_tp.insert(last_index); // must be last TP
+  }
+
+  // prune unneeded TP multi-index sets and update Map, MapRef, sparse_indices
+  size_t num_save = save_tp.size();
+  if (num_save == num_tp_mi)
+    return false;
+  else {
+    UShort2DArray old_aggregated_mi(aggregated_mi);   aggregated_mi.clear();
+    SizetSet      old_sparse_indices(sparse_indices); sparse_indices.clear();
+    for (cit=save_tp.begin(), new_tp_cntr=0; cit!=save_tp.end();
+	 ++cit, ++new_tp_cntr) {
+      save_tp_cntr = *cit;
+      if (save_tp_cntr != new_tp_cntr) // reuse previous tpMultiIndex entries
+	tpMultiIndex[new_tp_cntr] = tpMultiIndex[save_tp_cntr];
+      append_multi_index(tpMultiIndex[new_tp_cntr], aggregated_mi,
+			 tpMultiIndexMap[new_tp_cntr],
+			 tpMultiIndexMapRef[new_tp_cntr]);
+    }
+    // prune old records off the end
+    tpMultiIndex.resize(num_save);
+    tpMultiIndexMap.resize(num_save);
+    tpMultiIndexMapRef.resize(num_save);
+    // update sparse_indices using old_aggregated_mi
+    // TO DO: review SharedOrthogPolyApproxData::append_multi_index(SizetSet&)
+    //        for more efficient logic?
+    for (cit=old_sparse_indices.begin(); cit!=old_sparse_indices.end(); ++cit)
+      sparse_indices.insert(find_index(aggregated_mi, old_aggregated_mi[*cit]));
+
+    return true;
+  }
+}
+
+
 void SharedRegressOrthogPolyApproxData::
 pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,
 		     bool add_val,  double* pack_val,  size_t& pv_cntr,

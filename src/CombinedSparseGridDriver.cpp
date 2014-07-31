@@ -531,7 +531,7 @@ void CombinedSparseGridDriver::initialize_sets()
   for (i=0; i<num_old_sets; ++i)
     if ( smolyakCoeffs[i] == 1 && ( !dimIsotropic || // imperfect for aniso
 	 ( dimIsotropic && index_norm(smolyakMultiIndex[i]) == ssgLevel ) ) )
-	add_active_neighbors(smolyakMultiIndex[i]);
+      add_active_neighbors(smolyakMultiIndex[i], dimIsotropic);
 
 #ifdef DEBUG
   PCout << "CombinedSparseGridDriver::initialize_sets():\nold sets:\n"
@@ -580,6 +580,28 @@ void CombinedSparseGridDriver::pop_trial_set()
     collocKey.pop_back();
     collocIndices.pop_back();
   }
+}
+
+
+void CombinedSparseGridDriver::prune_sets(const SizetSet& save_tp)
+{
+  // prune oldMultiIndex back (as part of a sparse restriction operation);
+  // we prune back smolyakMultiIndex as well for internal consistency,
+  // even if unused in CS basis adaptation context.
+  UShort2DArray old_sm_mi(smolyakMultiIndex);
+  StSCIter cit;
+  size_t i, new_cntr, num_old_sm_mi = old_sm_mi.size(),
+    num_new_sm_mi = save_tp.size();
+  smolyakMultiIndex.resize(num_new_sm_mi);
+  for (i=0, new_cntr=0; i<num_old_sm_mi; ++i)
+    if (save_tp.find(i) == save_tp.end())
+      oldMultiIndex.erase(old_sm_mi[i]);
+    else
+      { smolyakMultiIndex[new_cntr] = old_sm_mi[i]; ++new_cntr; }
+
+  // redefine activeMultiIndex from the pruned oldMultiIndex
+  activeMultiIndex.clear();
+  update_active();
 }
 
 

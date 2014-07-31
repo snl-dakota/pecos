@@ -165,14 +165,13 @@ void RegressOrthogPolyApproximation::adapt_regression()
 
   if (soft_conv_count < soft_conv_limit) {
     adaptedMultiIndex = bestAdaptedMultiIndex; // starting point for adaptation
+    adaptedSparseIndices = sparseIndices; // needed when using restriction
     switch (basis_type) {
     case ADAPTED_BASIS_GENERALIZED:
       data_rep->csgDriver.initialize_sets(); // initialize the active sets
       break;
-    case ADAPTED_BASIS_EXPANDING_FRONT:
-      adaptedSparseIndices = sparseIndices; // not needed yet for GSG, prior to
-                                            // adding restriction operator
-      break;
+    //case ADAPTED_BASIS_EXPANDING_FRONT:
+    //  break;
     }
   }
 
@@ -214,15 +213,21 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  CombinedSparseGridDriver* csg_driver = &data_rep->csgDriver;
 
-  // TO DO: add (coarse-grained) restriction operation
-  // This will require heavyweight bestAdaptedMultiIndex update at bottom.
+  // Perform a (coarse-grained) restriction operation that updates
+  // oldMultiIndex and activeMultiIndex. This requires the same heavyweight
+  // update of bestAdaptedMultiIndex used for expanding front (bottom of fn).
+  SizetSet save_tp; // set of tensor products to retain
+  bool mi_restricted = data_rep->
+    set_restriction(adaptedMultiIndex, adaptedSparseIndices, save_tp);
+  if (mi_restricted)
+    csg_driver->prune_sets(save_tp); // update from scratch
 
-  const UShortArraySet& active_mi = data_rep->csgDriver.active_multi_index();
+  const UShortArraySet& active_mi = csg_driver->active_multi_index();
   UShortArraySet::const_iterator cit, cit_star;
   Real curr_cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
   RealVector curr_exp_coeffs; SizetSet curr_sparse_ind;
-  CombinedSparseGridDriver* csg_driver = &data_rep->csgDriver;
   // Reevaluate the effect of every active set every time
   for (cit=active_mi.begin(); cit!=active_mi.end(); ++cit) {
 
@@ -257,11 +262,13 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 	               - data_rep->tpMultiIndexMapRef.back();
       delta /= new_terms;
     }
-    PCout << "\n<<<<< Trial set refinement metric = " << delta << '\n';
+    PCout << "\n<<<<< Trial set refinement metric = " << delta
+	  << " (large positive change desired)\n";
 
     // track best increment evaluated thus far
     if (delta > delta_star) {
-      cit_star = cit; delta_star = delta;  // best for this iteration
+      cit_star = cit; delta_star = delta;     // best for this iteration
+      adaptedSparseIndices = curr_sparse_ind; // best for this iteration
       if (delta_star > 0.) {
 	cv_err_star     = curr_cv_err;     // best overall
 	expansionCoeffs = curr_exp_coeffs; // best overall
@@ -277,9 +284,10 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
   PCout << "\n<<<<< Evaluation of active index sets completed.\n"
 	<< "\n<<<<< Index set selection:\n" << best_set;
 
-  // permanently apply best increment and update ref points for next increment
+  // apply best increment
   data_rep->restore_trial_set(best_set, adaptedMultiIndex);
-  csg_driver->update_sets(best_set); // invalidates cit_star
+  //csg_driver->promote_set(best_set); // invalidates cit_star
+  csg_driver->update_sets(best_set); // may be pruned & rebuilt on next iter
 
   // update reference points and current best soln if CV error has been reduced
   // Note: bestAdaptedMultiIndex assignment is heavier weight than currently
@@ -300,11 +308,11 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   // > candidateBasisExp is an array of sets that store multi-index increments;
   //   thus, the adaptedMultiIndex reference must be preserved to recover best.
   // > input/output from this function is a candidate multi_index along with 
-  //   its sparse solution (expansionCoeffs + sparseIndices key).  Thus, the
-  //   restricted representation is only used internal to this fn.
-  // > for soft convergence to be meaningful (allow the adaptation to step over
-  //   deadspots), the restriction must be applied to the selected increment
-  //   from the previous iteration, even if was not an improvement in CV error.
+  //   its sparse solution (expansionCoeffs + sparseIndices key); multi-index
+  //   frontiers and advancement sets are only used internal to this fn.
+  // > for soft convergence to be meaningful (allowing adaptation to step over
+  //   dead spots), the restriction must be applied to the selected increment
+  //   from the previous iteration, even if not an improvement in CV error.
   //   Thus, we use adaptedSparseIndices below instead of sparseIndices.
   UShortArraySetArray candidate_basis_exp;
   if (data_rep->regressConfigOptions.advanceByFrontier) {

@@ -106,12 +106,18 @@ public:
   /// update axisLowerBounds
   void update_axis_lower_bounds();
 
-  /// update activeMultiIndex from the passed trial set for use within
-  /// the generalized sparse grid procedure
-  void add_active_neighbors(const UShortArray& set);
+  /// promote set_star from activeMultiIndex into oldMultiIndex and update
+  /// associated bookkeeping
+  void promote_set(const UShortArray& set_star);
+  /// redefine the activeMultiIndex based on all admissible forward
+  /// neighbors for oldMultiIndex
+  void update_active();
   /// accept the best of several trial sets and update old/active
   /// within the generalized sparse grid procedure
   void update_sets(const UShortArray& set_star);
+  /// update activeMultiIndex from the passed trial set for use within
+  /// the generalized sparse grid procedure
+  void add_active_neighbors(const UShortArray& set, bool frontier);
 
   /// converts an array of sparse grid levels to an array of
   /// quadrature orders based on apiIntegrationRules/apiGrowthRules

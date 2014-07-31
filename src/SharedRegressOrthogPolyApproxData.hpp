@@ -167,6 +167,12 @@ public:
   void increment_trial_set(const UShortArray& trial_set,
 			   UShort2DArray& aggregated_mi);
 
+  /// define the TP index sets that can be removed from a generalized
+  /// sparse grid based on the recovered sparse_indices; used for the
+  /// restriction operation within basis adaptation
+  bool set_restriction(UShort2DArray& aggregated_mi, SizetSet& sparse_indices,
+		       SizetSet& save_tp);
+
   /// clear adapted basis bookkeeping
   void clear_adapted();
 
@@ -225,7 +231,7 @@ private:
   /// sparse grid driver for adapting a CS candidate basis using greedy
   /// adaptation via the generalized sparse grid algorithm; it's state
   /// is reset for each response QoI
-  CombinedSparseGridDriver csgDriver;
+  CombinedSparseGridDriver csgDriver; // TO DO: use SparseGridDriver base
 };
 
 

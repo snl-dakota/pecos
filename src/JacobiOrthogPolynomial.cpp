@@ -68,8 +68,6 @@ Real JacobiOrthogPolynomial::type1_gradient(Real x, unsigned short order)
   Real t1_grad;
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
-  //t1_grad = (order) ?
-  //  (g1*type1_value(x,order) + g0*type1_value(x,order-1))/g2 :0.;
   if (order) {
     Real ab2n = 2.*order+alphaPoly+betaPoly,
       g0 = 2.*(order+alphaPoly)*(order+betaPoly),

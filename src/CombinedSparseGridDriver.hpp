@@ -135,6 +135,9 @@ public:
   /// apply all remaining trial sets
   void finalize_unique(size_t start_index);
 
+  /// prune sets from oldMultiIndex and redefine activeMultiIndex
+  void prune_sets(const SizetSet& save_tp);
+
   void compute_tensor_points_weights(size_t start_index,
     size_t num_indices, RealMatrix& pts, RealVector& t1_wts,
     RealMatrix& t2_wts);
@@ -205,7 +208,7 @@ private:
   //- Heading: Data
   //
 
-  /// pointer to instance of this class for use in statis member functions
+  /// pointer to instance of this class for use in static member functions
   static CombinedSparseGridDriver* sgdInstance;
 
   /// flag indicating the use of a lightweight sparse grid mode that only

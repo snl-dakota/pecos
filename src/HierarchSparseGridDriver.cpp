@@ -707,7 +707,7 @@ void HierarchSparseGridDriver::initialize_sets()
     const UShort2DArray& sm_mi_l = smolyakMultiIndex[ssgLevel];
     size_t i, num_old_sets = sm_mi_l.size();
     for (i=0; i<num_old_sets; ++i)
-      add_active_neighbors(sm_mi_l[i]);
+      add_active_neighbors(sm_mi_l[i], true); // on frontier
   }
   else { // TO DO
     // For anisotropic, need to compute Pareto set.

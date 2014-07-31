@@ -92,8 +92,6 @@ Real LegendreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
   Real t1_grad;
 #ifdef DEBUG
   // See Abramowitz & Stegun, Section 22.8, p.783
-  //t1_grad = (order) ?
-  //  order*(x*type1_value(x, order) - type1_value(x, order-1))/(x*x - 1.) : 0.;
   if (order) {
     Real P_n = type1_value(x, order), P_nminus1 = type1_value(x, order-1);
     t1_grad = order*(x*P_n - P_nminus1)/(x*x - 1.);

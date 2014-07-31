@@ -204,7 +204,7 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
-void SparseGridDriver::update_sets(const UShortArray& set_star)
+void SparseGridDriver::promote_set(const UShortArray& set_star)
 {
   // set_star is passed as *cit_star from the best entry in activeMultiIndex.
   // Therefore, we must use caution in updates to activeMultiIndex that can
@@ -218,16 +218,33 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // use trial set rather than incoming set_star due to iterator invalidation
   const UShortArray& tr_set = trial_set();
 
-  // update set O by adding set_star to oldMultiIndex:
+  // update set O by adding the trial set to oldMultiIndex:
   oldMultiIndex.insert(tr_set);
-  // remove set_star from set A by erasing from activeMultiIndex:
+  // remove the trial set from set A by erasing from activeMultiIndex:
   activeMultiIndex.erase(tr_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
   if (!computedTrialSets.empty()) // lightweight mode for CSGDriver
     computedTrialSets.erase(tr_set);
+}
 
-  // update set A (activeMultiIndex) based on neighbors of set_star:
-  add_active_neighbors(tr_set);
+
+void SparseGridDriver::update_active()
+{
+  // redefine set A (activeMultiIndex) based on all admissible forward
+  // neighbors for ref_mi
+  UShortArraySet::const_iterator cit;
+  for (cit=oldMultiIndex.begin(); cit!=oldMultiIndex.end(); ++cit)
+    add_active_neighbors(*cit, false); // not exclusively frontier
+}
+
+
+void SparseGridDriver::update_sets(const UShortArray& set_star)
+{
+  promote_set(set_star); // invalidates cit_star -> set_star
+
+  // update set A (activeMultiIndex) based on neighbors of set_star.
+  // use trial_set() rather than set_star due to iterator invalidation
+  add_active_neighbors(trial_set(), dimIsotropic);
 
   // Note: pruning irrelevant sets that have Coeff = 0 would be tricky,
   //       since a 0 close to the frontier can become nonzero
@@ -257,7 +274,8 @@ void SparseGridDriver::print_final_sets(bool converged_within_tol) const
 }
 
 
-void SparseGridDriver::add_active_neighbors(const UShortArray& set)
+void SparseGridDriver::
+add_active_neighbors(const UShortArray& set, bool frontier)
 {
   UShortArray trial_set = set;
   UShortArraySet::const_iterator cit;
@@ -267,9 +285,8 @@ void SparseGridDriver::add_active_neighbors(const UShortArray& set)
     // increment by 1 in dimension i
     unsigned short& trial_set_i = trial_set[i];
     ++trial_set_i;
-    // anisotropic initialize_sets() candidates could be in oldMultiIndex
-    // since smolyakCoeffs[i]==1 test is necessary but not sufficient
-    if (dimIsotropic || oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
+    // if !frontier, then candidates could exist in oldMultiIndex
+    if (frontier || oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
       // test all backwards neighbors for membership in set O (old)
       bool backward_old = true;
       for (j=0; j<num_v; ++j) {
