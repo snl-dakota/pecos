@@ -5,7 +5,7 @@ namespace Pecos {
 
 CrossValidationIterator::CrossValidationIterator() : 
   numFolds_( 0 ), numPts_( 0 ), seed_( 0 ), dataType_( 0 ),
-  numEquationsPerPoint_( 0 ) {};
+  numEquationsPerPoint_( 0 ), faultInfoActive_(false) {};
 
 CrossValidationIterator::~CrossValidationIterator()
 { clear(); }
@@ -450,12 +450,14 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
 	      extract_matrix( A, validation_indices, A_valid );
 
 	      RealMatrix points_dummy;
-	      remove_faulty_data( A_train, b_train, points_dummy, 
-				  training_indices,
-				  faultInfo_, failedRespData_ );
-	      remove_faulty_data( A_valid, b_valid, points_dummy, 
-				  validation_indices,
-				  faultInfo_, failedRespData_ );
+	      if (faultInfoActive_) {
+		remove_faulty_data( A_train, b_train, points_dummy, 
+				    training_indices,
+				    faultInfo_, failedRespData_ );
+		remove_faulty_data( A_valid, b_valid, points_dummy, 
+				    validation_indices,
+				    faultInfo_, failedRespData_ );
+	      }
 	      solver_->solve( A_train, b_train, coeff, metrics );
 	    }
 	  else

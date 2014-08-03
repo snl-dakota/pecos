@@ -30,6 +30,7 @@ protected:
   RandomNumberGenerator RNG_;
   
   // Dakota specific member variables
+  bool faultInfoActive_;
   FaultInfo faultInfo_;
   SizetShortMap failedRespData_;
 
@@ -85,6 +86,7 @@ public:
   void set_fault_data( FaultInfo &fault_info,
 		       const SizetShortMap& failed_resp_data )
   {
+    faultInfoActive_ = true;
     faultInfo_ = fault_info;
     failedRespData_ = failed_resp_data;
   };
