@@ -2373,7 +2373,7 @@ update_sparse_sobol(const SizetSet& sparse_indices,
   // sparseSobolIndexMap keys:   0, 2, 4, 5, 9, 11 (from sobolIndexMap)
   // sparseSobolIndexMap values: 0, 1, 2, 3, 4, 5  (new sobolIndices sequence)
   size_t j, num_v = sharedDataRep->numVars;
-  StSIter sit; BAULMCIter cit; BitArray set(num_v);
+  StSCIter sit; BAULMCIter cit; BitArray set(num_v);
   for (sit=sparse_indices.begin(); sit!=sparse_indices.end(); ++sit) {
     const UShortArray& sparse_mi = shared_multi_index[*sit];
     for (j=0; j<num_v; ++j)
@@ -2841,7 +2841,7 @@ RealVector RegressOrthogPolyApproximation::dense_coefficients() const
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
   RealVector dense_coeffs(mi.size()); // init to 0
-  size_t i; StSIter it;
+  size_t i; StSCIter it;
   for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it)
     dense_coeffs[*it] = expansionCoeffs[i];
   return dense_coeffs;
@@ -2893,7 +2893,7 @@ coefficient_labels(std::vector<std::string>& coeff_labels) const
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
-  for (StSIter it=sparseIndices.begin(); it!=sparseIndices.end(); ++it) {
+  for (StSCIter it=sparseIndices.begin(); it!=sparseIndices.end(); ++it) {
     const UShortArray& mi_i = mi[*it];
     std::string tags;
     for (j=0; j<num_v; ++j) {
