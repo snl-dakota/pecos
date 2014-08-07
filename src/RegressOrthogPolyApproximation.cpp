@@ -141,7 +141,8 @@ void RegressOrthogPolyApproximation::adapt_regression()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  Real delta_star, tol = data_rep->expConfigOptions.convergenceTol;
+  Real delta_star, conv_metric, 
+    conv_tol = data_rep->expConfigOptions.convergenceTol;
   unsigned short soft_conv_count = 0,
     soft_conv_limit = data_rep->expConfigOptions.softConvLimit;
   short basis_type  = data_rep->expConfigOptions.expBasisType;
@@ -160,8 +161,8 @@ void RegressOrthogPolyApproximation::adapt_regression()
 					   expansionCoeffs, sparseIndices);
 
   // absolute error instead of delta error for initial tolerance check
-  if (cvErrorRef < tol)
-    ++soft_conv_count;
+  //if (cvErrorRef <= DBL_EPSILON)
+  //  ++soft_conv_count;
 
   if (soft_conv_count < soft_conv_limit) {
     adaptedMultiIndex = bestAdaptedMultiIndex; // starting point for adaptation
@@ -180,12 +181,15 @@ void RegressOrthogPolyApproximation::adapt_regression()
     delta_star = (basis_type == ADAPTED_BASIS_GENERALIZED) ?
       select_best_active_multi_index() : select_best_basis_expansion();
     // increase in CV error results in negative delta_star and trips conv count.
-    // CV error change is not generally on the other of 1.e-x, so really we're
+    // CV error change is not generally on the order of 1.e-x, so really we're
     // just capturing when no CV error reduction is obtained for any candidate.
-    if (delta_star < tol) // or just < 0.
-      ++soft_conv_count;
-    else
+    conv_metric = /*(cvErrorRef > 0.) ? delta_star / cvErrorRef :*/ delta_star;
+    //PCout << "delta_star = " << delta_star << " cvErrorRef = " << cvErrorRef
+    //	  << " conv metric = " << conv_metric << std::endl;
+    if (conv_metric > conv_tol) // relative change
       soft_conv_count = 0;
+    else
+      ++soft_conv_count;
   }
 
   // different finalize: don't add in any remaining evaluated sets; rather,
