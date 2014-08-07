@@ -361,12 +361,11 @@ public:
   /// initialize multi_index using a hierarchical tensor-product expansion
   static void hierarchical_tensor_product_multi_index(
     const UShort2DArray& delta_quad, UShort2DArray& multi_index);
-  /// initialize multi_index using a total-order expansion
-  /// from a scalar level
+  /// initialize multi_index using a total-order expansion from a scalar level
   static void total_order_multi_index(unsigned short level, size_t num_vars, 
 				      UShort2DArray& multi_index);
-  /// initialize expansion multi_index using a total-order expansion
-  /// from an upper_bound array specification
+  /// initialize expansion multi_index using a total-order expansion from an
+  /// upper_bound array specification
   static void total_order_multi_index(const UShortArray& upper_bound,
     UShort2DArray& multi_index, short lower_bound_offset = -1,
     size_t max_terms = _NPOS); // SIZE_MAX is a non-portable extension

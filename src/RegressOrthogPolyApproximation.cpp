@@ -168,7 +168,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
     adaptedSparseIndices = sparseIndices; // needed when using restriction
     switch (basis_type) {
     case ADAPTED_BASIS_GENERALIZED:
-      data_rep->csgDriver.initialize_sets(); // initialize the active sets
+      data_rep->lsgDriver.initialize_sets(); // initialize the active sets
       break;
     //case ADAPTED_BASIS_EXPANDING_FRONT:
     //  break;
@@ -213,7 +213,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  CombinedSparseGridDriver* csg_driver = &data_rep->csgDriver;
+  LightweightSparseGridDriver* lsg_driver = &data_rep->lsgDriver;
 
   // Perform a (coarse-grained) restriction operation that updates
   // oldMultiIndex and activeMultiIndex. This requires the same heavyweight
@@ -222,9 +222,9 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
   bool mi_restricted = data_rep->
     set_restriction(adaptedMultiIndex, adaptedSparseIndices, save_tp);
   if (mi_restricted)
-    csg_driver->prune_sets(save_tp); // update from scratch
+    lsg_driver->prune_sets(save_tp); // update from scratch
 
-  const UShortArraySet& active_mi = csg_driver->active_multi_index();
+  const UShortArraySet& active_mi = lsg_driver->active_multi_index();
   UShortArraySet::const_iterator cit, cit_star;
   Real curr_cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
   RealVector curr_exp_coeffs; SizetSet curr_sparse_ind;
@@ -234,7 +234,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
     // increment grid with current candidate
     const UShortArray& trial_set = *cit;
     PCout << "\n>>>>> Evaluating trial index set:\n" << trial_set;
-    csg_driver->push_trial_set(trial_set);
+    //lsg_driver->push_trial_set(trial_set);
 
     // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
     if (data_rep->restore_available(trial_set))
@@ -257,7 +257,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
       // Normalize delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
-      //int new_terms = csg_driver->unique_trial_points();
+      //int new_terms = lsg_driver->unique_trial_points();
       size_t new_terms = adaptedMultiIndex.size()
 	               - data_rep->tpMultiIndexMapRef.back();
       delta /= new_terms;
@@ -278,7 +278,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
     // restore previous state (destruct order is reversed from construct order)
     data_rep->decrement_trial_set(trial_set, adaptedMultiIndex);
-    csg_driver->pop_trial_set();
+    //lsg_driver->pop_trial_set();
   }
   const UShortArray& best_set = *cit_star;
   PCout << "\n<<<<< Evaluation of active index sets completed.\n"
@@ -286,8 +286,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
   // apply best increment
   data_rep->restore_trial_set(best_set, adaptedMultiIndex);
-  //csg_driver->promote_set(best_set); // invalidates cit_star
-  csg_driver->update_sets(best_set); // may be pruned & rebuilt on next iter
+  lsg_driver->update_sets(best_set); // if restriction: rebuilt on next iter
 
   // update reference points and current best soln if CV error has been reduced
   // Note: bestAdaptedMultiIndex assignment is heavier weight than currently
@@ -2841,9 +2840,9 @@ RealVector RegressOrthogPolyApproximation::dense_coefficients() const
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
   RealVector dense_coeffs(mi.size()); // init to 0
-  size_t i; StSCIter it;
-  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it)
-    dense_coeffs[*it] = expansionCoeffs[i];
+  size_t i; StSCIter cit;
+  for (i=0, cit=sparseIndices.begin(); cit!=sparseIndices.end(); ++i, ++cit)
+    dense_coeffs[*cit] = expansionCoeffs[i];
   return dense_coeffs;
 }
 
@@ -2893,8 +2892,8 @@ coefficient_labels(std::vector<std::string>& coeff_labels) const
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
-  for (StSCIter it=sparseIndices.begin(); it!=sparseIndices.end(); ++it) {
-    const UShortArray& mi_i = mi[*it];
+  for (StSCIter cit=sparseIndices.begin(); cit!=sparseIndices.end(); ++cit) {
+    const UShortArray& mi_i = mi[*cit];
     std::string tags;
     for (j=0; j<num_v; ++j) {
       if (j) tags += ' ';

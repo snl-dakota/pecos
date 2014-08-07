@@ -68,17 +68,17 @@ public:
   virtual void push_trial_set(const UShortArray& set) = 0;
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex
-  virtual void restore_set() = 0;
+  virtual void restore_set();
   /// computes the tensor grid for the index set from push_trial_set()
-  virtual void compute_trial_grid(RealMatrix& var_sets) = 0;
+  virtual void compute_trial_grid(RealMatrix& var_sets);
   /// remove the previously pushed trial set from smolyakMultiIndex
   /// during the course of the generalized sparse grid procedure
   virtual void pop_trial_set() = 0;
   /// merge reference sets with trial set and update reference set
-  virtual void merge_set() = 0;
+  virtual void merge_set();
   /// accept all remaining trial sets within the generalized sparse
   /// grid procedure
-  virtual void finalize_sets() = 0;
+  virtual void finalize_sets();
 
   /// update derived reference data, if required
   virtual void update_reference();
@@ -86,10 +86,11 @@ public:
   /// return the trial index set from push_trial_set()
   virtual const UShortArray& trial_set() const = 0;
   /// return the number of unique collocation points in the trial index set
-  virtual int unique_trial_points() const = 0;
+  virtual int unique_trial_points() const;
 
-  /// computes tensor grids for the index sets due to a isotropic/anisotropic
-  virtual void compute_grid_increment(RealMatrix& var_sets) = 0;
+  /// computes tensor grids for new index sets due to an isotropic/anisotropic
+  /// refinement
+  virtual void compute_grid_increment(RealMatrix& var_sets);
 
   /// print the final accepted and trial sets prior to set finalization
   virtual void print_final_sets(bool converged_within_tol) const;
@@ -106,12 +107,6 @@ public:
   /// update axisLowerBounds
   void update_axis_lower_bounds();
 
-  /// promote set_star from activeMultiIndex into oldMultiIndex and update
-  /// associated bookkeeping
-  void promote_set(const UShortArray& set_star);
-  /// redefine the activeMultiIndex based on all admissible forward
-  /// neighbors for oldMultiIndex
-  void update_active();
   /// accept the best of several trial sets and update old/active
   /// within the generalized sparse grid procedure
   void update_sets(const UShortArray& set_star);
@@ -343,6 +338,42 @@ inline const UShortArraySet& SparseGridDriver::old_multi_index() const
 
 inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
 { return computedTrialSets; }
+
+
+inline void SparseGridDriver::update_reference()
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::push_trial_set(const UShortArray& set)
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::restore_set()
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::pop_trial_set()
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::merge_set()
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::finalize_sets()
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
+{ /* default implementation is no-op */ }
+
+
+inline int SparseGridDriver::unique_trial_points() const
+{ return 0; /* default implementation */ }
 
 
 inline void SparseGridDriver::

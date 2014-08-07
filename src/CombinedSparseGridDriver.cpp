@@ -38,7 +38,6 @@ initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
 		bool store_colloc, bool track_uniq_prod_wts,
 		bool track_colloc_indices)
 {
-  lightweightMode = false;
   SparseGridDriver::initialize_grid(u_types, ssg_level, dim_pref, ec_options,
 				    bc_options, growth_rate, store_colloc,
 				    track_uniq_prod_wts, track_colloc_indices);
@@ -53,28 +52,12 @@ initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
 void CombinedSparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
-  lightweightMode = false;
   SparseGridDriver::initialize_grid(poly_basis);
 
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
   // set levelGrowthToOrder
   initialize_growth_pointers();
-}
-
-
-void CombinedSparseGridDriver::
-initialize_grid(size_t num_v, unsigned short ssg_level)
-{
-  lightweightMode = true;
-  numVars         = num_v;
-  ssgLevel        = ssg_level;
-  // leave trackUniqueProdWeights as false
-  // leave dimIsotropic as true
-
-  assign_smolyak_arrays();
-
-  //SparseGridDriver::initialize_grid(mi_growth_factor);
 }
 
 
@@ -558,50 +541,23 @@ void CombinedSparseGridDriver::restore_set()
 {
   // SparseGridDriver currently retains no memory, so updates are recomputed
 
-  if (!lightweightMode) {
-    size_t last_index = smolyakMultiIndex.size() - 1;
-    // update collocKey
-    update_collocation_key(last_index);
-    // compute a2; update collocIndices and uniqueIndexMapping; don't
-    // update pt/wt sets
-    RealMatrix dummy_set;
-    increment_unique(true, false, dummy_set);
-  }
+  size_t last_index = smolyakMultiIndex.size() - 1;
+  // update collocKey
+  update_collocation_key(last_index);
+  // compute a2; update collocIndices & uniqueIndexMapping; don't update pts/wts
+  RealMatrix dummy_set;
+  increment_unique(true, false, dummy_set);
 }
 
 
 void CombinedSparseGridDriver::pop_trial_set()
 {
   smolyakMultiIndex.pop_back();
+  collocKey.pop_back(); collocIndices.pop_back();
   smolyakCoeffs = smolyakCoeffsRef;
-  if (!lightweightMode) {
-    numCollocPts -= numUnique2; // subtract number of trial points
-    uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
-    collocKey.pop_back();
-    collocIndices.pop_back();
-  }
-}
 
-
-void CombinedSparseGridDriver::prune_sets(const SizetSet& save_tp)
-{
-  // prune oldMultiIndex back (as part of a sparse restriction operation);
-  // we prune back smolyakMultiIndex as well for internal consistency,
-  // even if unused in CS basis adaptation context.
-  UShort2DArray old_sm_mi(smolyakMultiIndex);
-  StSCIter cit;
-  size_t i, new_cntr, num_old_sm_mi = old_sm_mi.size(),
-    num_new_sm_mi = save_tp.size();
-  smolyakMultiIndex.resize(num_new_sm_mi);
-  for (i=0, new_cntr=0; i<num_old_sm_mi; ++i)
-    if (save_tp.find(i) == save_tp.end())
-      oldMultiIndex.erase(old_sm_mi[i]);
-    else
-      { smolyakMultiIndex[new_cntr] = old_sm_mi[i]; ++new_cntr; }
-
-  // redefine activeMultiIndex from the pruned oldMultiIndex
-  activeMultiIndex.clear();
-  update_active();
+  numCollocPts -= numUnique2; // subtract number of trial points
+  uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
 }
 
 

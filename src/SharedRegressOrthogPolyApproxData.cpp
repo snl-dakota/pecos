@@ -64,17 +64,17 @@ void SharedRegressOrthogPolyApproxData::allocate_data()
 
       // initialize the sparse grid driver (lightweight mode) for generating
       // candidate index sets
-      csgDriver.initialize_grid(numVars, regressConfigOptions.initSGLevel);
+      lsgDriver.initialize_grid(numVars, regressConfigOptions.initSGLevel);
 
       // define reference multiIndex and tpMultiIndex{,Map,MapRef} from 
       // initial sparse grid level
-      //sparse_grid_multi_index(&csgDriver, multiIndex); // heavyweight mapping
-      const UShort2DArray& sm_multi_index = csgDriver.smolyak_multi_index();
-      size_t i, num_sm_mi = sm_multi_index.size();
+      //sparse_grid_multi_index(&lsgDriver, multiIndex); // heavyweight mapping
       multiIndex.clear();
       tpMultiIndex.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
+      const UShort2DArray& sm_mi = lsgDriver.smolyak_multi_index();
+      size_t i, num_sm_mi = sm_mi.size();
       for (i=0; i<num_sm_mi; ++i)
-	increment_trial_set(sm_multi_index[i], multiIndex); // lightwt mapping
+	increment_trial_set(sm_mi[i], multiIndex); // lightweight mapping
       break;
     }
     case ADAPTED_BASIS_EXPANDING_FRONT:

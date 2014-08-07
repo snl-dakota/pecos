@@ -15,6 +15,7 @@
 #define SHARED_REGRESS_ORTHOG_POLY_APPROX_DATA_HPP
 
 #include "SharedOrthogPolyApproxData.hpp"
+#include "LightweightSparseGridDriver.hpp"
 #include "LinearSolver.hpp"
 
 namespace Pecos {
@@ -231,7 +232,7 @@ private:
   /// sparse grid driver for adapting a CS candidate basis using greedy
   /// adaptation via the generalized sparse grid algorithm; it's state
   /// is reset for each response QoI
-  CombinedSparseGridDriver csgDriver; // TO DO: use SparseGridDriver base
+  LightweightSparseGridDriver lsgDriver;
 };
 
 

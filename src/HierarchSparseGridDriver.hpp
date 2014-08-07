@@ -57,7 +57,7 @@ public:
   void restore_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_trial_set();
-  void merge_set();
+  //void merge_set();
   void finalize_sets();
 
   const UShortArray& trial_set() const;

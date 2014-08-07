@@ -786,6 +786,7 @@ void HierarchSparseGridDriver::pop_trial_set()
 }
 
 
+/*
 void HierarchSparseGridDriver::merge_set()
 {
   if (nestedGrid) {
@@ -794,6 +795,7 @@ void HierarchSparseGridDriver::merge_set()
   //else
   //  merge_unique();
 }
+*/
 
 
 void HierarchSparseGridDriver::finalize_sets()
