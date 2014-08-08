@@ -141,10 +141,8 @@ void RegressOrthogPolyApproximation::adapt_regression()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  Real delta_star, conv_metric, 
-    conv_tol = data_rep->expConfigOptions.convergenceTol;
-  unsigned short soft_conv_count = 0,
-    soft_conv_limit = data_rep->expConfigOptions.softConvLimit;
+  Real rel_delta_star, abs_conv_tol = DBL_EPSILON, // for now
+    rel_conv_tol = data_rep->expConfigOptions.convergenceTol;
   short basis_type  = data_rep->expConfigOptions.expBasisType;
 
   // For a level 0 reference multi-index, we could safely omit evaluating the
@@ -159,10 +157,11 @@ void RegressOrthogPolyApproximation::adapt_regression()
   bestAdaptedMultiIndex = data_rep->multiIndex;
   cvErrorRef = run_cross_validation_solver(bestAdaptedMultiIndex,
 					   expansionCoeffs, sparseIndices);
+  PCout << "<<<<< Cross validation error reference = " << cvErrorRef << '\n';
 
   // absolute error instead of delta error for initial tolerance check
-  //if (cvErrorRef <= DBL_EPSILON)
-  //  ++soft_conv_count;
+  unsigned short soft_conv_limit = data_rep->expConfigOptions.softConvLimit,
+    soft_conv_count = (cvErrorRef > abs_conv_tol) ? 0 : 1;
 
   if (soft_conv_count < soft_conv_limit) {
     adaptedMultiIndex = bestAdaptedMultiIndex; // starting point for adaptation
@@ -178,15 +177,16 @@ void RegressOrthogPolyApproximation::adapt_regression()
 
   while (soft_conv_count < soft_conv_limit) {
     // invoke run_cross_validation_solver() for each candidate and select best
-    delta_star = (basis_type == ADAPTED_BASIS_GENERALIZED) ?
+    rel_delta_star = (basis_type == ADAPTED_BASIS_GENERALIZED) ?
       select_best_active_multi_index() : select_best_basis_expansion();
-    // increase in CV error results in negative delta_star and trips conv count.
-    // CV error change is not generally on the order of 1.e-x, so really we're
-    // just capturing when no CV error reduction is obtained for any candidate.
-    conv_metric = /*(cvErrorRef > 0.) ? delta_star / cvErrorRef :*/ delta_star;
-    //PCout << "delta_star = " << delta_star << " cvErrorRef = " << cvErrorRef
-    //	  << " conv metric = " << conv_metric << std::endl;
-    if (conv_metric > conv_tol) // relative change
+    // Several possible convergence assessment approaches:
+    // > capture when no CV error reduction is obtained for any candidate:
+    //   no reduction --> rel_delta_star <= 0 --> increment soft conv count.
+    // > relative change (rel_delta_star): a good conv_tol might be O(1);
+    //   the Dakota default 1.e-4 may be too tight.
+    // > absolute change (delta_star): a good conv_tol might be O(10^{-16});
+    //   the Dakota 1.e-4 default is definitely too loose.
+    if (rel_delta_star > rel_conv_tol)
       soft_conv_count = 0;
     else
       ++soft_conv_count;
@@ -230,7 +230,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
   const UShortArraySet& active_mi = lsg_driver->active_multi_index();
   UShortArraySet::const_iterator cit, cit_star;
-  Real curr_cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
+  Real curr_cv_err, cv_err_star, rel_delta, rel_delta_star = -DBL_MAX;
   RealVector curr_exp_coeffs; SizetSet curr_sparse_ind;
   // Reevaluate the effect of every active set every time
   for (cit=active_mi.begin(); cit!=active_mi.end(); ++cit) {
@@ -248,32 +248,33 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
-    // We pass false to defer finalization (shared multiIndex, sparseIndices).
+    // The CV error is L2 (sum of squares of mismatch) and is non-negative.
     curr_cv_err = run_cross_validation_solver(adaptedMultiIndex,
 					      curr_exp_coeffs, curr_sparse_ind);
 
-    // Smallest absolute error is largest decrease from consistent ref.  delta
-    // is a signed quantity in order to detect when best case error increases
-    // relative to ref -> terminate or increment soft conv counter (allow some
-    // number of successive increases before abandoning hope).
-    delta = cvErrorRef - curr_cv_err;
+    // Smallest absolute error is largest decrease from consistent ref.
+    // rel_delta is a signed quantity in order to detect when best case error
+    // increases relative to ref -> terminate or increment soft conv counter
+    // (allow some number of successive increases before abandoning hope).
+    rel_delta = (cvErrorRef > 0.) ? 1. - curr_cv_err / cvErrorRef
+                                  : cvErrorRef - curr_cv_err;
     if (data_rep->regressConfigOptions.normalizeCV) {
-      // Normalize delta based on size of candidate basis expansion
+      // Normalize rel_delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
       //int new_terms = lsg_driver->unique_trial_points();
       size_t new_terms = adaptedMultiIndex.size()
 	               - data_rep->tpMultiIndexMapRef.back();
-      delta /= new_terms;
+      rel_delta /= new_terms;
     }
-    PCout << "\n<<<<< Trial set refinement metric = " << delta
-	  << " (large positive change desired)\n";
+    PCout << "\n<<<<< Trial set refinement metric = " << rel_delta
+	  << " (relative error reduction)\n";
 
     // track best increment evaluated thus far
-    if (delta > delta_star) {
-      cit_star = cit; delta_star = delta;     // best for this iteration
+    if (rel_delta > rel_delta_star) {
+      cit_star = cit; rel_delta_star = rel_delta;     // best for this iteration
       adaptedSparseIndices = curr_sparse_ind; // best for this iteration
-      if (delta_star > 0.) {
+      if (rel_delta_star > 0.) {
 	cv_err_star     = curr_cv_err;     // best overall
 	expansionCoeffs = curr_exp_coeffs; // best overall
 	sparseIndices   = curr_sparse_ind; // best overall
@@ -295,10 +296,13 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
   // update reference points and current best soln if CV error has been reduced
   // Note: bestAdaptedMultiIndex assignment is heavier weight than currently
   // required, prior to use of restriction at top of this fn.
-  if (delta_star > 0.)
-    { cvErrorRef = cv_err_star; bestAdaptedMultiIndex = adaptedMultiIndex; }
+  if (rel_delta_star > 0.) {
+    cvErrorRef = cv_err_star; bestAdaptedMultiIndex = adaptedMultiIndex;
+    PCout << "<<<<< New cross validation error reference = " << cvErrorRef
+	  << '\n';
+  }
 
-  return delta_star;
+  return rel_delta_star;
 }
 
 
@@ -331,7 +335,7 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   // Evaluate the effect of each candidate basis expansion
   size_t i, i_star = 0, num_candidates = candidate_basis_exp.size(), 
     size_star = adaptedMultiIndex.size();
-  Real curr_cv_err, cv_err_star, delta, delta_star = -DBL_MAX;
+  Real curr_cv_err, cv_err_star, rel_delta, rel_delta_star = -DBL_MAX;
   RealVector curr_exp_coeffs; SizetSet curr_sparse_ind;
   for (i=0; i<num_candidates; ++i) {
 
@@ -348,31 +352,32 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
 
     // Solve CS with cross-validation applied to solver settings (e.g., noise
     // tolerance), but not expansion order (since we are manually adapting it).
-    // We pass false to defer finalization (shared multiIndex, sparseIndices).
+    // The CV error is L2 (sum of squares of mismatch) and is non-negative.
     curr_cv_err = run_cross_validation_solver(adaptedMultiIndex,
 					      curr_exp_coeffs, curr_sparse_ind);
 
     // Smallest absolute error is largest decrease from consistent ref.
-    // delta is a signed quantity in order to detect when best case error
+    // rel_delta is a signed quantity in order to detect when best case error
     // increases relative to ref -> terminate or increment soft conv counter
     // (allow some number of successive increases before abandoning hope).
-    delta = cvErrorRef - curr_cv_err;
+    rel_delta = (cvErrorRef > 0.) ? 1. - curr_cv_err / cvErrorRef
+                                  : cvErrorRef - curr_cv_err;
     if (data_rep->regressConfigOptions.normalizeCV) // not as well justified
-      // Normalize delta based on size of candidate basis expansion
+      // Normalize rel_delta based on size of candidate basis expansion
       // (number of unique points added is equivalent to number of candidate
       // expansion terms added for Gauss quadrature, but not other cases)
-      delta /= candidate_exp.size();
-    PCout << "\n<<<<< Trial set refinement metric = " << delta
-	  << " (large positive change desired)\n";
+      rel_delta /= candidate_exp.size();
+    PCout << "\n<<<<< Trial set refinement metric = " << rel_delta
+	  << " (relative error reduction)\n";
 
     // track best increment evaluated thus far.  Note: an increment is always
     // selected even if no improvement in CV error --> rely on soft convergence
     // and best solution tracking.
-    if (delta > delta_star) {
-      i_star = i; delta_star = delta;         // best for this iteration
+    if (rel_delta > rel_delta_star) {
+      i_star = i; rel_delta_star = rel_delta; // best for this iteration
       size_star = adaptedMultiIndex.size();   // best for this iteration
       adaptedSparseIndices = curr_sparse_ind; // best for this iteration
-      if (delta_star > 0.) {                  // reduction in best CV error
+      if (rel_delta_star > 0.) {              // reduction in best CV error
 	cv_err_star     = curr_cv_err;        // best overall
 	expansionCoeffs = curr_exp_coeffs;    // best overall
 	sparseIndices   = curr_sparse_ind;    // best overall
@@ -388,10 +393,13 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
   if (id_star != num_candidates)
     adaptedMultiIndex.resize(size_star);
   // update reference points for best solution if CV error has been reduced
-  if (delta_star > 0.)
-    { cvErrorRef = cv_err_star; bestAdaptedMultiIndex = adaptedMultiIndex; }
+  if (rel_delta_star > 0.) {
+    cvErrorRef = cv_err_star; bestAdaptedMultiIndex = adaptedMultiIndex;
+    PCout << "<<<<< New cross validation error reference = " << cvErrorRef
+	  << '\n';
+  }
 
-  return delta_star;
+  return rel_delta_star;
 }
 
 
