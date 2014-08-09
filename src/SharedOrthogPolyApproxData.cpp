@@ -136,7 +136,8 @@ increment_trial_set(CombinedSparseGridDriver* csg_driver,
 
 
 void SharedOrthogPolyApproxData::
-decrement_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
+decrement_trial_set(const UShortArray& trial_set,
+		    UShort2DArray& aggregated_mi)//, bool monotonic)
 {
   // reset the aggregated multi-index
   size_t num_exp_terms = tpMultiIndexMapRef.back();
@@ -145,8 +146,10 @@ decrement_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
   // reset tensor-product bookkeeping and save restorable data
   savedLevMultiIndex.push_back(trial_set);
   savedTPMultiIndex.push_back(tpMultiIndex.back());
-  savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
-  savedTPMultiIndexMapRef.push_back(num_exp_terms);
+  //if (monotonic) { // always needed if we want to mix and match
+    savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
+    savedTPMultiIndexMapRef.push_back(num_exp_terms);
+  //}
 
   tpMultiIndex.pop_back();
   tpMultiIndexMap.pop_back();
@@ -156,37 +159,47 @@ decrement_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 
 void SharedOrthogPolyApproxData::
 pre_restore_trial_set(const UShortArray& trial_set,
-		      UShort2DArray& aggregated_mi)
+		      UShort2DArray& aggregated_mi, bool monotonic)
 {
   restoreIndex = find_index(savedLevMultiIndex, trial_set);
+  size_t last_index = tpMultiIndex.size();
 
   std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
-  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
-  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
-
-  size_t last_index = tpMultiIndex.size();
   std::advance(iit, restoreIndex); tpMultiIndex.push_back(*iit);
-  std::advance(mit, restoreIndex); tpMultiIndexMap.push_back(*mit);
-  std::advance(rit, restoreIndex); tpMultiIndexMapRef.push_back(*rit);
 
   // update multiIndex
-  append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
-		     tpMultiIndexMapRef[last_index], aggregated_mi);
+  if (monotonic) { // reuse previous Map,MapRef bookkeeping if possible
+    std::deque<SizetArray>::iterator mit = savedTPMultiIndexMap.begin();
+    std::deque<size_t>::iterator     rit = savedTPMultiIndexMapRef.begin();
+    std::advance(mit, restoreIndex); tpMultiIndexMap.push_back(*mit);
+    std::advance(rit, restoreIndex); tpMultiIndexMapRef.push_back(*rit);
+    append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
+		       tpMultiIndexMapRef[last_index], aggregated_mi);
+  }
+  else { // replace previous Map,MapRef bookkeeping with new
+    SizetArray sa; tpMultiIndexMap.push_back(sa);
+    tpMultiIndexMapRef.push_back(0);
+    append_multi_index(tpMultiIndex[last_index], aggregated_mi,
+		       tpMultiIndexMap[last_index],
+		       tpMultiIndexMapRef[last_index]);
+  }
 }
 
 
 void SharedOrthogPolyApproxData::
 post_restore_trial_set(const UShortArray& trial_set,
-		       UShort2DArray& aggregated_mi)
+		       UShort2DArray& aggregated_mi)//, bool monotonic)
 {
   std::deque<UShortArray>::iterator   sit = savedLevMultiIndex.begin();
   std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
-  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
-  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
-  std::advance(sit, restoreIndex); savedLevMultiIndex.erase(sit);
-  std::advance(iit, restoreIndex); savedTPMultiIndex.erase(iit);
-  std::advance(mit, restoreIndex); savedTPMultiIndexMap.erase(mit);
-  std::advance(rit, restoreIndex); savedTPMultiIndexMapRef.erase(rit);
+  std::advance(sit, restoreIndex);    savedLevMultiIndex.erase(sit);
+  std::advance(iit, restoreIndex);    savedTPMultiIndex.erase(iit);
+  //if (monotonic) { // always needed if we want to mix and match
+    std::deque<SizetArray>::iterator  mit = savedTPMultiIndexMap.begin();
+    std::deque<size_t>::iterator      rit = savedTPMultiIndexMapRef.begin();
+    std::advance(mit, restoreIndex);  savedTPMultiIndexMap.erase(mit);
+    std::advance(rit, restoreIndex);  savedTPMultiIndexMapRef.erase(rit);
+  //}
 }
 
 
