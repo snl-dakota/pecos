@@ -135,17 +135,19 @@ protected:
   /// helper function for decrementing that is modular on trial set
   /// and multi-index
   void decrement_trial_set(const UShortArray& trial_set,
-			   UShort2DArray& aggregated_mi);//, bool monotonic = true);
+			   UShort2DArray& aggregated_mi, bool store_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void pre_restore_trial_set(const UShortArray& trial_set,
 			     UShort2DArray& aggregated_mi,
 			     bool monotonic = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void post_restore_trial_set(const UShortArray& trial_set,
-			      UShort2DArray& aggregated_mi);//, bool monotonic = true);
+			      UShort2DArray& aggregated_mi,
+			      bool store_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void restore_trial_set(const UShortArray& trial_set,
-			 UShort2DArray& aggregated_mi, bool monotonic = true);
+			 UShort2DArray& aggregated_mi,
+			 bool monotonic = true, bool store_map = true);
 
   /// update approxOrder and total-order multiIndex
   void allocate_total_order();
@@ -450,10 +452,10 @@ inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
 
 inline void SharedOrthogPolyApproxData::
 restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
-		  bool monotonic)
+		  bool monotonic, bool store_map)
 {
   pre_restore_trial_set(trial_set, aggregated_mi, monotonic);
-  post_restore_trial_set(trial_set, aggregated_mi);//, monotonic);
+  post_restore_trial_set(trial_set, aggregated_mi, store_map);
 }
 
 

@@ -137,7 +137,7 @@ increment_trial_set(CombinedSparseGridDriver* csg_driver,
 
 void SharedOrthogPolyApproxData::
 decrement_trial_set(const UShortArray& trial_set,
-		    UShort2DArray& aggregated_mi)//, bool monotonic)
+		    UShort2DArray& aggregated_mi, bool store_map)
 {
   // reset the aggregated multi-index
   size_t num_exp_terms = tpMultiIndexMapRef.back();
@@ -146,10 +146,10 @@ decrement_trial_set(const UShortArray& trial_set,
   // reset tensor-product bookkeeping and save restorable data
   savedLevMultiIndex.push_back(trial_set);
   savedTPMultiIndex.push_back(tpMultiIndex.back());
-  //if (monotonic) { // always needed if we want to mix and match
+  if (store_map) { // always needed if we want to mix and match
     savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
     savedTPMultiIndexMapRef.push_back(num_exp_terms);
-  //}
+  }
 
   tpMultiIndex.pop_back();
   tpMultiIndexMap.pop_back();
@@ -188,18 +188,18 @@ pre_restore_trial_set(const UShortArray& trial_set,
 
 void SharedOrthogPolyApproxData::
 post_restore_trial_set(const UShortArray& trial_set,
-		       UShort2DArray& aggregated_mi)//, bool monotonic)
+		       UShort2DArray& aggregated_mi, bool store_map)
 {
   std::deque<UShortArray>::iterator   sit = savedLevMultiIndex.begin();
   std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
   std::advance(sit, restoreIndex);    savedLevMultiIndex.erase(sit);
   std::advance(iit, restoreIndex);    savedTPMultiIndex.erase(iit);
-  //if (monotonic) { // always needed if we want to mix and match
+  if (store_map) { // always needed if we want to mix and match
     std::deque<SizetArray>::iterator  mit = savedTPMultiIndexMap.begin();
     std::deque<size_t>::iterator      rit = savedTPMultiIndexMapRef.begin();
     std::advance(mit, restoreIndex);  savedTPMultiIndexMap.erase(mit);
     std::advance(rit, restoreIndex);  savedTPMultiIndexMapRef.erase(rit);
-  //}
+  }
 }
 
 

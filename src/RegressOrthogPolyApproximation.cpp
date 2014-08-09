@@ -242,7 +242,8 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 
     // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
     if (data_rep->restore_available(trial_set))
-      data_rep->restore_trial_set(trial_set, adaptedMultiIndex, false); // cannot assume monotonicity in bookkeeping due to restriction above
+      // cannot assume monotonicity in bookkeeping due to restriction above
+      data_rep->restore_trial_set(trial_set, adaptedMultiIndex, false);
     else
       data_rep->increment_trial_set(trial_set, adaptedMultiIndex);
 
@@ -282,14 +283,14 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
     }
 
     // restore previous state (destruct order is reversed from construct order)
-    data_rep->decrement_trial_set(trial_set, adaptedMultiIndex);//, false); // TO DO
+    data_rep->decrement_trial_set(trial_set, adaptedMultiIndex);
     //lsg_driver->pop_trial_set();
   }
   const UShortArray& best_set = *cit_star;
   PCout << "\n<<<<< Evaluation of active index sets completed.\n"
 	<< "\n<<<<< Index set selection:\n" << best_set;
 
-  // apply best increment: can assume monotonicity in bookkeeping so long as
+  // apply best increment; can assume monotonicity in bookkeeping so long as
   // Map,MapRef are updated for all candidates by restore/increment above
   data_rep->restore_trial_set(best_set, adaptedMultiIndex, true);
   lsg_driver->update_sets(best_set); // if restriction: rebuilt on next iter
