@@ -162,8 +162,8 @@ void SparseGridDriver::update_axis_lower_bounds()
 
 
 void SparseGridDriver::
-initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
-		const RealVector& dim_pref,
+initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
+		const ShortArray& u_types,
 		const ExpansionConfigOptions& ec_options,
 		BasisConfigOptions& bc_options, short growth_rate,
 		bool store_colloc, bool track_uniq_prod_wts,
@@ -188,19 +188,10 @@ initialize_grid(const ShortArray& u_types,  unsigned short ssg_level,
   // can be used heterogeneously and synchronized with STANDARD and SLOW
   // linear growth, respectively.
 
-  // define collocRules
-  initialize_rules(u_types, ec_options, bc_options);
+  IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
 
   level(ssg_level);
   dimension_preference(dim_pref);
-}
-
-
-void SparseGridDriver::
-initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
-{
-  // define collocRules
-  initialize_rules(poly_basis);
 }
 
 
@@ -282,6 +273,77 @@ add_active_neighbors(const UShortArray& set, bool frontier)
 	activeMultiIndex.insert(trial_set);
     }
     --trial_set_i; // restore
+  }
+}
+
+
+int SparseGridDriver::level_to_order_exp_hgk_interp(int level, int growth)
+{
+  if (level == 0) return 1;
+
+  switch (growth) {
+  case SLOW_RESTRICTED_GROWTH: {
+    unsigned short level = 0, max_level = 5;
+    int m = 1, m_goal = level + 1;
+    while (level <= max_level && m < m_goal)
+      { ++level; m = orderGenzKeister[level]; }
+    return m; break;
+  }
+  case MODERATE_RESTRICTED_GROWTH: {
+    unsigned short level = 0, max_level = 5;
+    int m = 1, m_goal = 2 * level + 1;
+    while (level <= max_level && m < m_goal)
+      { ++level; m = orderGenzKeister[level]; }
+    return m; break;
+  }
+  case UNRESTRICTED_GROWTH:
+    return orderGenzKeister[std::min(level, 5)]; break;
+  }
+}
+
+
+int SparseGridDriver::level_to_order_exp_closed_interp(int level, int growth)
+{
+  if (level == 0) return 1;
+
+  switch (growth) {
+  case SLOW_RESTRICTED_GROWTH: {
+    int m = 1, lev_pow = 1, m_goal = level + 1;
+    while (m < m_goal)
+      { lev_pow *= 2; m = lev_pow + 1; } //std::pow(2.,level) + 1;
+    return m; break;
+  }
+  case MODERATE_RESTRICTED_GROWTH: {
+    int m = 1, lev_pow = 1, m_goal = 2 * level + 1;
+    while (m < m_goal)
+      { lev_pow *= 2; m = lev_pow + 1; } //std::pow(2.,level) + 1;
+    return m; break;
+  }
+  case UNRESTRICTED_GROWTH:
+    return (int)std::pow(2., level) + 1; break;
+  }
+}
+
+
+int SparseGridDriver::level_to_order_exp_open_interp(int level, int growth)
+{
+  if (level == 0) return 1;
+
+  switch (growth) {
+  case SLOW_RESTRICTED_GROWTH: {
+    int m = 1, lev_pow = 2, m_goal = level + 1;
+    while (m < m_goal)
+      { lev_pow *= 2; m = lev_pow - 1; } //std::pow(2.,level+1) - 1;
+    return m; break;
+  }
+  case MODERATE_RESTRICTED_GROWTH: {
+    int m = 1, lev_pow = 2, m_goal = 2 * level + 1;
+    while (m < m_goal)
+      { lev_pow *= 2; m = lev_pow - 1; } //std::pow(2.,level+1) - 1;
+    return m; break;
+  }
+  case UNRESTRICTED_GROWTH:
+    return (int)std::pow(2., level+1) - 1; break;
   }
 }
 

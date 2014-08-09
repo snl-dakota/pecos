@@ -33,6 +33,87 @@ void SharedNodalInterpPolyApproxData::allocate_data()
   // support new capability, such as gradient-enhanced interpolation.
   momentInterpType = (basisConfigOptions.useDerivs) ?
     REINTERPOLATION_OF_PRODUCTS : PRODUCT_OF_INTERPOLANTS_FAST;
+
+  // Map out current flow to integration driver:
+  // > NonDStochCollocation::initialize_u_space_model() constructs driver_basis
+  //   which is passed along to Pecos::*Driver::initialize_grid(poly_basis) at
+  //   construct time
+  // > this function is invoked at run time as part of ApproximationInterface::
+  //   build_approximation()
+
+  // need full integrand precision 2m-1 for interpolant order m-1
+  // TO DO: discrepancies in growth will necessitate management of alternate
+  // quad orders.  For example, an interpolatory nested rule has grown to 9
+  // points at level 3 --> order 8 interpolant, but the non-nested level 3
+  // Gauss rule only has 7 pts with prec = 13 --> insufficient for variance.
+
+  // Determine if alt grid is necessary (interpolatory rules, nested Gauss,
+  // etc.) and appropriate (smooth global basis; not piecewise).
+  // basisConfigOptions.piecewiseBasis is strictly enforced, but 
+  // basisConfigOptions.{useDerivs,nestedRules} are requests that may not
+  // be acted upon depending on driverMode and u_types (resort to checking
+  // collocation rules for these cases).
+  bool alt_moment_grid = false;
+  const std::vector<BasisPolynomial>& driver_basis
+    = driverRep->polynomial_basis();
+  /* TO DO: re-activate this block
+  if (!basisConfigOptions.piecewiseBasis) {
+    // check for interpolatory / nested rules or grad-enhanced interpolants
+    for (size_t i=0; i<numVars; ++i) {
+      short rule = driver_basis[i].collocation_rule();
+      if (rule == CLENSHAW_CURTIS || rule == FEJER2       ||
+	  rule == GAUSS_PATTERSON || rule == GENZ_KEISTER ||
+	  driver_basis[i].basis_type() == HERMITE_INTERP)
+	{ alt_moment_grid = true; break; }
+    }
+  }
+  */
+
+  // initialize expMomentIntDriver if needed
+  if (alt_moment_grid) { // modify driver_basis to employ Gaussian integration
+    // This approach reduces data reqmts (u_types, adp) and increases reuse,
+    // relative to building from scratch using SharedOPAData::construct_basis().
+    std::vector<BasisPolynomial> alt_driver_basis(numVars);
+    for (size_t i=0; i<numVars; ++i) {
+      const BasisPolynomial& basis_i =     driver_basis[i];
+      BasisPolynomial&   alt_basis_i = alt_driver_basis[i];
+      switch (basis_i.collocation_rule()) {
+      case GENZ_KEISTER:
+	alt_basis_i = BasisPolynomial(HERMITE_ORTHOG,  GAUSS_HERMITE);  break;
+      case CLENSHAW_CURTIS: case FEJER2: case GAUSS_PATTERSON:
+	alt_basis_i = BasisPolynomial(LEGENDRE_ORTHOG, GAUSS_LEGENDRE);	break;
+      default: // no change: use shallow copy (includes all parametric cases!)
+	alt_basis_i = (basis_i.basis_type() == HERMITE_INTERP) ?
+	  BasisPolynomial(LEGENDRE_ORTHOG, GAUSS_LEGENDRE) : basis_i;
+	break;
+      }
+      // TO DO: any quad order modifications need to be handled downstream
+    }
+    /* This approach requires u_types and adp, which aren't readily available
+    BasisConfigOptions bc_options(false, false, false, false);
+    SharedOrthogPolyApproxData::
+      construct_basis(u_types, adp, bc_options, alt_driver_basis);
+    */
+
+    // suppress hierarchical sparse grid driver for this purpose
+    short driver_type = (expConfigOptions.expCoeffsSolnApproach == QUADRATURE)
+                      ? QUADRATURE : COMBINED_SPARSE_GRID;
+    expMomentIntDriver = IntegrationDriver(driver_type);
+    expMomentIntDriver.mode(INTEGRATION_MODE);
+    if (driver_type == COMBINED_SPARSE_GRID) {
+      SparseGridDriver* driver = (SparseGridDriver*)driverRep;
+      SparseGridDriver* alt_driver
+	= (SparseGridDriver*)expMomentIntDriver.driver_rep();
+      alt_driver->growth_rate(driver->growth_rate());
+      //alt_driver->refinement_control(driver->refinement_control());
+      alt_driver->store_collocation_details(false);
+      alt_driver->track_unique_product_weights(true); // non-default
+      alt_driver->track_collocation_indices(false);   // non-default
+    }
+    expMomentIntDriver.initialize_grid(alt_driver_basis);
+    // Note: rule/growth pointers initialized in CombinedSparseGridDriver::
+    // initialize_grid()
+  }
 }
 
 

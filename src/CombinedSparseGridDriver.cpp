@@ -31,14 +31,14 @@ CombinedSparseGridDriver* CombinedSparseGridDriver::sgdInstance(NULL);
 
 
 void CombinedSparseGridDriver::
-initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
-		const RealVector& dim_pref,
+initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
+		const ShortArray& u_types,
 		const ExpansionConfigOptions& ec_options,
 		BasisConfigOptions& bc_options, short growth_rate,
 		bool store_colloc, bool track_uniq_prod_wts,
 		bool track_colloc_indices)
 {
-  SparseGridDriver::initialize_grid(u_types, ssg_level, dim_pref, ec_options,
+  SparseGridDriver::initialize_grid(ssg_level, dim_pref, u_types, ec_options,
 				    bc_options, growth_rate, store_colloc,
 				    track_uniq_prod_wts, track_colloc_indices);
 
@@ -52,7 +52,7 @@ initialize_grid(const ShortArray& u_types, unsigned short ssg_level,
 void CombinedSparseGridDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
-  SparseGridDriver::initialize_grid(poly_basis);
+  IntegrationDriver::initialize_grid(poly_basis);
 
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
@@ -92,23 +92,44 @@ void CombinedSparseGridDriver::initialize_rule_pointers()
 void CombinedSparseGridDriver::initialize_growth_pointers()
 {
   levelGrowthToOrder.resize(numVars);
-  for (size_t i=0; i<numVars; ++i)
-    switch (collocRules[i]) {
-    // nested rules with exponential growth:
-    case GAUSS_PATTERSON:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_gp;    break;
-    case GENZ_KEISTER:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_hgk;   break;
-    case CLENSHAW_CURTIS: case NEWTON_COTES:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_cc;    break;
-    case FEJER2:
-      levelGrowthToOrder[i] = webbur::level_to_order_exp_f2;    break;
-    // non-nested or weakly-nested Gauss rules with linear growth
-    case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gaussian linear growth
-      levelGrowthToOrder[i] = webbur::level_to_order_linear_wn; break;
-    default: // asymmetric Gaussian linear growth
-      levelGrowthToOrder[i] = webbur::level_to_order_linear_nn; break;
-    }
+
+  // if INTEGRATION with restricted growth, sync on integrand precision.
+  // if INTERPOLATION with restricted growth, sync on number of points
+  // (or Lagrange interpolant order = #pts - 1).
+  if (driverMode == INTERPOLATION_MODE)
+    for (size_t i=0; i<numVars; ++i)
+      switch (collocRules[i]) {
+      // nested rules with exponential growth:
+      case GENZ_KEISTER:
+	levelGrowthToOrder[i] = level_to_order_exp_hgk_interp;    break;
+      case CLENSHAW_CURTIS: case NEWTON_COTES:
+	levelGrowthToOrder[i] = level_to_order_exp_closed_interp; break;
+      case GAUSS_PATTERSON: case FEJER2:
+	levelGrowthToOrder[i] = level_to_order_exp_open_interp;   break;
+      // non-nested or weakly-nested Gauss rules with linear growth
+      case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gauss linear growth
+	levelGrowthToOrder[i] = webbur::level_to_order_linear_wn; break;
+      default: // asymmetric Gauss linear growth
+	levelGrowthToOrder[i] = webbur::level_to_order_linear_nn; break;
+      }
+  else // INTEGRATION_MODE or DEFAULT_MODE
+    for (size_t i=0; i<numVars; ++i)
+      switch (collocRules[i]) {
+      // nested rules with exponential growth:
+      case GAUSS_PATTERSON:
+	levelGrowthToOrder[i] = webbur::level_to_order_exp_gp;    break;
+      case GENZ_KEISTER:
+	levelGrowthToOrder[i] = webbur::level_to_order_exp_hgk;   break;
+      case CLENSHAW_CURTIS: case NEWTON_COTES:
+	levelGrowthToOrder[i] = webbur::level_to_order_exp_cc;    break;
+      case FEJER2:
+	levelGrowthToOrder[i] = webbur::level_to_order_exp_f2;    break;
+      // non-nested or weakly-nested Gauss rules with linear growth
+      case GAUSS_HERMITE: case GAUSS_LEGENDRE: // symmetric Gauss linear growth
+	levelGrowthToOrder[i] = webbur::level_to_order_linear_wn; break;
+      default: // asymmetric Gauss linear growth
+	levelGrowthToOrder[i] = webbur::level_to_order_linear_nn; break;
+      }
 }
 
 

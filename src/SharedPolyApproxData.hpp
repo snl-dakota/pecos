@@ -154,36 +154,46 @@ public:
 
 //private:
 
-  /// flag for use of nested integration rules
-  bool nestedRules;
   /// flag for use of piecewise basis polynomials
   bool piecewiseBasis;
-  /// flag for use of equidistant points for forming piecewise basis polynomials
-  bool equidistantRules;
   /// flag for utilizing derivatives during formation/calculation of expansions
   bool useDerivs;
+
+  /// flag for use of nested integration rules
+  bool nestedRules;
+  /// flag for use of equidistant points for forming piecewise basis polynomials
+  bool equidistantRules;
+  /// override interpolation rules to employ Gaussian quadrature
+  bool gaussRuleOverride;
+  /// override interpolation rules to employ open rules (e.g., Fejer2)
+  bool openRuleOverride;
 };
 
 
 inline BasisConfigOptions::BasisConfigOptions():
-  nestedRules(true), piecewiseBasis(false), equidistantRules(true),
-  useDerivs(false)
+  piecewiseBasis(false), useDerivs(false), nestedRules(true),
+  equidistantRules(true), gaussRuleOverride(true)/*(false)*/, // TO DO: replace
+  openRuleOverride(false)
 { }
 
 
 inline BasisConfigOptions::
 BasisConfigOptions(bool nested_rules, bool piecewise_basis,
 		   bool equidistant_rules, bool use_derivs):
-  nestedRules(nested_rules), piecewiseBasis(piecewise_basis),
-  equidistantRules(equidistant_rules), useDerivs(use_derivs)
+  piecewiseBasis(piecewise_basis), useDerivs(use_derivs),
+  nestedRules(nested_rules), equidistantRules(equidistant_rules),
+  gaussRuleOverride(true)/*(false)*/, // TO DO: replace
+  openRuleOverride(false)
 { }
 
 
 inline BasisConfigOptions::
 BasisConfigOptions(const BasisConfigOptions& bc_options):
+  piecewiseBasis(bc_options.piecewiseBasis), useDerivs(bc_options.useDerivs),
   nestedRules(bc_options.nestedRules),
-  piecewiseBasis(bc_options.piecewiseBasis),
-  equidistantRules(bc_options.equidistantRules), useDerivs(bc_options.useDerivs)
+  equidistantRules(bc_options.equidistantRules),
+  gaussRuleOverride(true)/*(false)*/, // TO DO: replace
+  openRuleOverride(false)
 { }
 
 

@@ -306,7 +306,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
 void SharedProjectOrthogPolyApproxData::post_combine_data(short combine_type)
 {
   // storedMultiIndex and storedApproxOrder used downstream in
-  // ProjectOrthogPolyApproximation::compute_numerical_response_moments(),
+  // ProjectOrthogPolyApproximation::integrate_response_moments(),
   // which calls ProjectOrthogPolyApproximation::stored_value()
 
   //storedMultiIndex.clear(); // needed in ProjectOPA::stored_value()

@@ -124,9 +124,6 @@ protected:
   /// compute expansion moments in all-variables mode to order 2
   void compute_moments(const RealVector& x);
 
-  /// return expansionMoments
-  const RealVector& moments() const;
-
   //
   //- Heading: Member functions
   //
@@ -222,10 +219,6 @@ inline void OrthogPolyApproximation::compute_moments(const RealVector& x)
   mean(x); variance(x); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
 }
-
-
-inline const RealVector& OrthogPolyApproximation::moments() const
-{ return expansionMoments; }
 
 
 /** default implementation if no sparsity (overridden in

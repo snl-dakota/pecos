@@ -43,25 +43,25 @@ initialize_driver_types_rules(const ShortArray& u_types,
       if (bc_options.piecewiseBasis) {
 	basis_types[i] = (bc_options.useDerivs) ?
 	  PIECEWISE_CUBIC_INTERP : PIECEWISE_LINEAR_INTERP;
-	//if (bc_options.openOverride) { // closed nested rules required
-	//  PCerr << "Error: open rules not currently supported for piecewise "
-	//	<< "polynomial interpolants." << std::endl;
-	//  abort_handler(-1);
-	//}
+	if (bc_options.openRuleOverride) // closed nested rules required
+	  PCerr << "Warning: open rules not currently supported for piecewise "
+		<< "polynomial interpolants.  Ignoring override." << std::endl;
 	colloc_rules[i] = (bc_options.equidistantRules) ?
 	  NEWTON_COTES : CLENSHAW_CURTIS;
       }
-      else if (true) { //(bc_options.gaussOverride) {
-        basis_types[i] = (bc_options.useDerivs) ?
+      else if (bc_options.gaussRuleOverride) {
+        basis_types[i]  = (bc_options.useDerivs) ?
           HERMITE_INTERP : LEGENDRE_ORTHOG;
         colloc_rules[i] = (bc_options.nestedRules) ?
           GAUSS_PATTERSON : GAUSS_LEGENDRE;
       }
       else {
-	basis_types[i] = (bc_options.useDerivs) ?
-	  HERMITE_INTERP : CHEBYSHEV_ORTHOG;
-	colloc_rules[i] = /*(bc_options.openOverride) ? FEJER2 : */
-	  CLENSHAW_CURTIS;
+	// LEGENDRE_ORTHOG provides more rule options than CHEBYSHEV_ORTHOG
+	// if driver mode is changed (removing need to update basis_types)
+	basis_types[i]  = (bc_options.useDerivs) ?
+	  HERMITE_INTERP : LEGENDRE_ORTHOG;//CHEBYSHEV_ORTHOG;
+	colloc_rules[i] = (bc_options.openRuleOverride) ?
+	  FEJER2 : CLENSHAW_CURTIS;
       }
       break;
     default: // all other cases currently rely on Gaussian quadrature rules

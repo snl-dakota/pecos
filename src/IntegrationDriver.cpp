@@ -39,8 +39,8 @@ UShortArray IntegrationDriver::precGenzKeister;
     letter IS the representation, its rep pointer is set to NULL (an
     uninitialized pointer causes problems in ~IntegrationDriver). */
 IntegrationDriver::IntegrationDriver(BaseConstructor):
-  computeType2Weights(false), activeReinterpIndex(0),
-  driverRep(NULL), referenceCount(1)
+  driverMode(DEFAULT_MODE), computeType2Weights(false),
+  activeReinterpIndex(0), driverRep(NULL), referenceCount(1)
 {
   /* Standard 5 step sequence is fully nested (1+2+6+10+16 = 1, 3, 9, 19, 35)
   if (orderGenzKeister.empty()) {
@@ -271,22 +271,32 @@ const RealMatrix& IntegrationDriver::type2_weight_sets() const
 
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
-initialize_rules(const ShortArray& u_types,
-		 const Pecos::ExpansionConfigOptions& ec_options,
-		 const Pecos::BasisConfigOptions& bc_options)
+initialize_grid(const ShortArray& u_types,
+		const ExpansionConfigOptions& ec_options,
+		const BasisConfigOptions& bc_options)
 {
   numVars = u_types.size();
-  ShortArray basis_types;
+  ShortArray basis_types; bool dist_params;
   if (ec_options.expBasisType == NODAL_INTERPOLANT ||
-      ec_options.expBasisType == HIERARCHICAL_INTERPOLANT)
-    SharedInterpPolyApproxData::initialize_driver_types_rules(u_types,
-      bc_options, basis_types, collocRules); // discard extra_dist_params rtn
-  else
-    SharedPolyApproxData::initialize_orthogonal_basis_types_rules(u_types,
-      bc_options, basis_types, collocRules); // discard extra_dist_params rtn
+      ec_options.expBasisType == HIERARCHICAL_INTERPOLANT) {
+    driverMode = INTERPOLATION_MODE;
+    dist_params = SharedInterpPolyApproxData::
+      initialize_driver_types_rules(u_types, bc_options, basis_types,
+				    collocRules);
+  }
+  else {
+    driverMode = INTEGRATION_MODE;
+    dist_params = SharedPolyApproxData::
+      initialize_orthogonal_basis_types_rules(u_types, bc_options, basis_types,
+					      collocRules);
+  }
 
   SharedPolyApproxData::
     initialize_polynomial_basis(basis_types, collocRules, polynomialBasis);
+  // TO DO: need AleatoryDistParams instance
+  //if (dist_params)
+  //  SharedPolyApproxData::
+  //    update_basis_distribution_parameters(u_types, adp, polynomialBasis);
 
   for (size_t i=0; i<numVars; i++)
     if (basis_types[i] == HERMITE_INTERP ||
@@ -297,18 +307,31 @@ initialize_rules(const ShortArray& u_types,
 
 /** protected function called only from derived class letters. */
 void IntegrationDriver::
-initialize_rules(const std::vector<BasisPolynomial>& poly_basis)
+initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
-  numVars         = poly_basis.size();
-  polynomialBasis = poly_basis; // shallow copy
-  collocRules.resize(numVars);
-  for (size_t i=0; i<numVars; i++) {
-    // update collocRules
-    collocRules[i] = poly_basis[i].collocation_rule();
-    // define computeType2Weights
-    short basis_type = poly_basis[i].basis_type();
-    if (basis_type == HERMITE_INTERP || basis_type == PIECEWISE_CUBIC_INTERP)
-      computeType2Weights = true;
+  if (driverRep)
+    driverRep->initialize_grid(poly_basis);
+  else {
+    numVars         = poly_basis.size();
+    polynomialBasis = poly_basis; // shallow copy
+
+    // For setting driverMode, basis_type is insufficient since incoming basis
+    // is the driver basis (not the interp poly basis).  collocRules is also
+    // insufficient since we want to sync on #pts (not integrand precision) for
+    // nested Gauss as well.  Currently, it is set separately via driver.mode().
+    //driverMode = (ec_options.expBasisType == NODAL_INTERPOLANT ||
+    //		    ec_options.expBasisType == HIERARCHICAL_INTERPOLANT)
+    //           ? INTERPOLATION_MODE : INTEGRATION_MODE;
+
+    collocRules.resize(numVars);
+    for (size_t i=0; i<numVars; i++) {
+      // update collocRules
+      collocRules[i] = poly_basis[i].collocation_rule();
+      // define computeType2Weights
+      short basis_type = poly_basis[i].basis_type();
+      if (basis_type == HERMITE_INTERP || basis_type == PIECEWISE_CUBIC_INTERP)
+	computeType2Weights = true;
+    }
   }
 }
 

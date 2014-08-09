@@ -76,9 +76,16 @@ public:
 
   /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
-  /// update_basis_distribution_parameters()
+  /// update_basis_distribution_parameters() using class member data
   void construct_basis(const ShortArray& u_types,
 		       const AleatoryDistParams& adp);
+  /// invoke initialize_orthogonal_basis_types_rules(),
+  /// initialize_polynomial_basis(), and, if needed,
+  /// update_basis_distribution_parameters() using passed data
+  static void construct_basis(const ShortArray& u_types,
+			      const AleatoryDistParams& adp,
+			      const BasisConfigOptions& bc_options,
+			      std::vector<BasisPolynomial>& poly_basis);
 
   /// set orthogPolyTypes
   void orthogonal_basis_types(const ShortArray& opb_types);
@@ -389,6 +396,24 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
   initialize_polynomial_basis(orthogPolyTypes, colloc_rules, polynomialBasis);
   if (dist_params)
     update_basis_distribution_parameters(u_types, adp, polynomialBasis);
+}
+
+
+/** This function is invoked to create orthogPolyTypes and polynomialBasis
+    for cases where they have not already been created by an
+    IntegrationDriver (i.e., expansion_samples or regression). */
+inline void SharedOrthogPolyApproxData::
+construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
+		const BasisConfigOptions& bc_options,
+		std::vector<BasisPolynomial>& poly_basis)
+{
+  ShortArray basis_types, colloc_rules;
+  bool dist_params
+    = initialize_orthogonal_basis_types_rules(u_types, bc_options,
+					      basis_types, colloc_rules);
+  initialize_polynomial_basis(basis_types, colloc_rules, poly_basis);
+  if (dist_params)
+    update_basis_distribution_parameters(u_types, adp, poly_basis);
 }
 
 

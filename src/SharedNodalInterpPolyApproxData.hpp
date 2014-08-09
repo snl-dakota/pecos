@@ -152,6 +152,11 @@ private:
   /// type of interpolation for all-variables covariance and variance gradient
   short momentInterpType;
 
+  /// special tensor/sparse integration driver for (exactly) computing
+  /// expansion moments using sufficiently high-order Gaussian quadrature
+  /// rules on the interpolant
+  IntegrationDriver expMomentIntDriver;
+
   /// map from random index to unique nonZerosMapArray
   SizetArray nonZerosMapIndices;
   /// tracks level maxima already populated within nonZerosMap
@@ -193,7 +198,7 @@ SharedNodalInterpPolyApproxData(short basis_type, size_t num_vars,
   // These 4 compile-time options are relevant for all-variables covariance
   // involving expectations over variable subsets.  Covariance for hierarchical
   // interpolants, nodal covariance in the standard view mode, uses of
-  // PolynomialApproximation::compute_numerical_moments(), and Sobol' index
+  // PolynomialApproximation::integrate_moments(), and Sobol' index
   // calculations all employ an INTERPOLATION_OF_PRODUCTS approach, so that
   // setting is the most self-consistent.  Gradient enhancement is also not
   // currently supported for PRODUCT_OF_INTERPOLANTS approaches.

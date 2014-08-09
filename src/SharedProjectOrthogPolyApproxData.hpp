@@ -118,7 +118,7 @@ private:
   /// for subsequent restoration
   UShort2DArray storedLevMultiIndex;
   /// combination type for stored expansions; cached in class to bridge
-  /// combine_coefficients() and compute_numerical_response_moments()
+  /// combine_coefficients() and integrate_response_moments()
   short storedExpCombineType;
 };
 

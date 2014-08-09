@@ -103,7 +103,7 @@ private:
 
   /// update numericalMoments using numerical integration applied
   /// directly to surrData
-  void compute_numerical_response_moments(size_t num_moments);
+  void integrate_response_moments(size_t num_moments);
 
   //
   //- Heading: Data
@@ -146,7 +146,7 @@ inline void ProjectOrthogPolyApproximation::compute_moments()
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
-    compute_numerical_response_moments(4);
+    integrate_response_moments(4);
 }
 
 
@@ -158,7 +158,7 @@ inline void ProjectOrthogPolyApproximation::compute_moments(const RealVector& x)
 
   //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   //if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
-  //  compute_numerical_response_moments(2, x); // TO DO
+  //  integrate_response_moments(2, x); // TO DO
 }
 
 } // namespace Pecos

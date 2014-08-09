@@ -45,8 +45,7 @@ initialize_grid(const ShortArray& u_types, unsigned short order,
 
   ShortArray basis_types;
   // Cubature used for numerical integration of PCE
-  // *** TO DO ***: require OPA/IPA switch? (see
-  //                IntegrationDriver::initialize_rules())
+  // TO DO: require OPA/IPA switch? (see IntegrationDriver::initialize_grid())
   //BasisConfigOptions bc_options(false, false, false, false);
   //SharedPolyApproxData::initialize_basis_types(u_types, bc_options,
   //                                             basis_types);

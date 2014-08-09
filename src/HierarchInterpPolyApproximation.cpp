@@ -1994,12 +1994,12 @@ central_product_gradient_interpolant(
 
 
 void HierarchInterpPolyApproximation::
-compute_numerical_response_moments(size_t num_moments)
+integrate_response_moments(size_t num_moments)
 {
   // Error check for required data
   if (!expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in InterpPoly"
-	  << "Approximation::compute_numerical_response_moments()" << std::endl;
+	  << "Approximation::integrate_response_moments()" << std::endl;
     abort_handler(-1);
   }
 
@@ -2111,20 +2111,18 @@ compute_numerical_response_moments(size_t num_moments)
   if (numericalMoments.size() != num_moments)
     numericalMoments.size(num_moments);
   if (data_rep->basisConfigOptions.useDerivs)
-    compute_numerical_moments(expansionType1Coeffs, expansionType2Coeffs,
-			      hsg_driver->type1_weight_set_arrays(),
-			      hsg_driver->type2_weight_set_arrays(),
-			      numericalMoments);
+    integrate_moments(expansionType1Coeffs, expansionType2Coeffs,
+		      hsg_driver->type1_weight_set_arrays(),
+		      hsg_driver->type2_weight_set_arrays(), numericalMoments);
   else
-    compute_numerical_moments(expansionType1Coeffs,
-			      hsg_driver->type1_weight_set_arrays(),
-			      numericalMoments);
+    integrate_moments(expansionType1Coeffs,
+		      hsg_driver->type1_weight_set_arrays(), numericalMoments);
   */
 }
 
 
 void HierarchInterpPolyApproximation::
-compute_numerical_expansion_moments(size_t num_moments)
+integrate_expansion_moments(size_t num_moments)
 {
   // for now: nested interpolation is exact
   expansionMoments = numericalMoments;

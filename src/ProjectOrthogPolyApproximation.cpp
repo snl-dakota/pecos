@@ -640,7 +640,7 @@ void ProjectOrthogPolyApproximation::expectation()
 
 
 void ProjectOrthogPolyApproximation::
-compute_numerical_response_moments(size_t num_moments)
+integrate_response_moments(size_t num_moments)
 {
   size_t i, num_pts = surrData.points();
   bool anchor_pt = surrData.anchor();
@@ -691,9 +691,8 @@ compute_numerical_response_moments(size_t num_moments)
   // update numericalMoments based on data_coeffs
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
-  compute_numerical_moments(data_coeffs,
-			    data_rep->driverRep->type1_weight_sets(),
-			    numericalMoments);
+  integrate_moments(data_coeffs, data_rep->driverRep->type1_weight_sets(),
+		    numericalMoments);
 }
 
 

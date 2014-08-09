@@ -23,8 +23,8 @@
 namespace Pecos {
 
 void PolynomialApproximation::
-compute_numerical_moments(const RealVector& coeffs, const RealVector& t1_wts,
-			  RealVector& moments)
+integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
+		  RealVector& moments)
 {
   // computes and stores the following moments:
   // > mean     (1st raw moment)
@@ -37,15 +37,14 @@ compute_numerical_moments(const RealVector& coeffs, const RealVector& t1_wts,
   size_t num_moments = moments.length();
   if (num_moments < 1 || num_moments > 4) {
     PCerr << "Error: unsupported number of moments requested in Polynomial"
-	  << "Approximation::compute_numerical_moments()" << std::endl;
+	  << "Approximation::integrate_moments()" << std::endl;
     abort_handler(-1);
   }
   size_t i, j, num_pts = coeffs.length();
   if (t1_wts.length() != num_pts) {
     PCerr << "Error: mismatch in array lengths between integration driver "
-	  << "weights ("  << t1_wts.length() << ") and coefficients ("
-	  << num_pts << ") in PolynomialApproximation::compute_numerical_"
-	  << "moments()." << std::endl;
+	  << "weights (" << t1_wts.length() << ") and coefficients (" << num_pts
+	  << ") in PolynomialApproximation::integrate_moments()." << std::endl;
     abort_handler(-1);
   }
 
@@ -73,9 +72,9 @@ compute_numerical_moments(const RealVector& coeffs, const RealVector& t1_wts,
 
 
 void PolynomialApproximation::
-compute_numerical_moments(const RealVector& t1_coeffs,
-			  const RealMatrix& t2_coeffs, const RealVector& t1_wts,
-			  const RealMatrix& t2_wts, RealVector& moments)
+integrate_moments(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs,
+		  const RealVector& t1_wts, const RealMatrix& t2_wts,
+		  RealVector& moments)
 {
   // computes and stores the following moments:
   // > mean     (1st raw moment)
@@ -88,7 +87,7 @@ compute_numerical_moments(const RealVector& t1_coeffs,
   size_t num_moments = moments.length();
   if (num_moments < 1 || num_moments > 4) {
     PCerr << "Error: unsupported number of moments requested in Polynomial"
-	  << "Approximation::compute_numerical_moments()" << std::endl;
+	  << "Approximation::integrate_moments()" << std::endl;
     abort_handler(-1);
   }
   size_t i, j, k, num_pts = t1_coeffs.length(), num_v = sharedDataRep->numVars;
@@ -97,8 +96,7 @@ compute_numerical_moments(const RealVector& t1_coeffs,
     PCerr << "Error: mismatch in array lengths among integration driver "
 	  << "weights ("  << t1_wts.length() << ", " << t2_wts.numCols()
 	  << ") and coefficients (" << num_pts << ", " << t2_coeffs.numCols()
-	  << ") in PolynomialApproximation::compute_numerical_moments()."
-	  << std::endl;
+	  << ") in PolynomialApproximation::integrate_moments()." << std::endl;
     abort_handler(-1);
   }
 

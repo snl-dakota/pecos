@@ -62,8 +62,8 @@ protected:
   /// and storedLev{MultiIndex,Coeffs}
   void combine_coefficients(short combine_type);
 
-  void compute_numerical_response_moments(size_t num_moments);
-  void compute_numerical_expansion_moments(size_t num_moments);
+  void integrate_response_moments(size_t num_moments);
+  void integrate_expansion_moments(size_t num_moments);
 
   Real value(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x);

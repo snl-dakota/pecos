@@ -55,7 +55,14 @@ public:
   //- Heading: Virtual functions
   //
 
-  /// update polynomialBasis with data from dist_params
+  /// initialize all grid settings (distribution params already
+  /// set within poly_basis)
+  virtual void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
+  /// set int_rules and growth_rules from u_types and mode booleans
+  virtual void initialize_grid(const ShortArray& u_types,
+			       const ExpansionConfigOptions& ec_options,
+			       const BasisConfigOptions& bc_options);
+  /// update polynomialBasis with data from AleatoryDistParams
   virtual void initialize_grid_parameters(const ShortArray& u_types,
 					  const AleatoryDistParams& adp);
 
@@ -93,6 +100,11 @@ public:
 
   /// return polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
+
+  /// set driverMode
+  void mode(short driver_mode);
+  /// get driverMode
+  short mode() const;
 
   // append to end of type1WeightSets
   //void append_type1_weight_sets(const RealVector& t1_wts);
@@ -142,13 +154,6 @@ protected:
   //- Heading: Member functions
   //
 
-  /// set int_rules and growth_rules from u_types and mode booleans
-  void initialize_rules(const ShortArray& u_types,
-			const ExpansionConfigOptions& ec_options,
-			const BasisConfigOptions& bc_options);
-  /// set int_rules and growth_rules from poly_basis and growth_rate
-  void initialize_rules(const std::vector<BasisPolynomial>& poly_basis);
-
   /// compute variable and weight sets for a tensor-product grid
   void compute_tensor_grid(const UShortArray& quad_order,
 			   const UShortArray& lev_index,
@@ -171,6 +176,9 @@ protected:
 
   /// number of variables in the tensor-product grid
   size_t numVars;
+
+  /// enumeration value indicating INTEGRATION_MODE or INTERPOLATION_MODE
+  short driverMode;
 
   /// enumeration codes for integration rule options.  Manages internal
   /// mode switches for 1D polynomial types: e.g., GAUSS_LEGENDRE or
@@ -242,6 +250,17 @@ private:
 inline const std::vector<BasisPolynomial>& 
 IntegrationDriver::polynomial_basis() const
 { return (driverRep) ? driverRep->polynomialBasis : polynomialBasis; }
+
+
+inline void IntegrationDriver::mode(short driver_mode)
+{
+  if (driverRep) driverRep->driverMode = driver_mode;
+  else           driverMode = driver_mode;
+}
+
+
+inline short IntegrationDriver::mode() const
+{ return (driverRep) ? driverRep->driverMode : driverMode; }
 
 
 /*

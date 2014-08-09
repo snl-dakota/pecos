@@ -393,8 +393,7 @@ public:
   /// partial data update of the distribution data not affected by an
   /// x->u variable transformation
   void update_partial(const AleatoryDistParams& adp_x,
-		      const Pecos::ShortArray& x_types,
-		      const Pecos::ShortArray& u_types);
+		      const ShortArray& x_types, const ShortArray& u_types);
 
   /// return the normal uncertain variable means
   const RealVector& normal_means() const;
@@ -1772,9 +1771,8 @@ inline void AleatoryDistParams::update(const AleatoryDistParams& adp)
 
 
 inline void AleatoryDistParams::
-update_partial(const AleatoryDistParams& adp_x,
-	       const Pecos::ShortArray& x_types,
-	       const Pecos::ShortArray& u_types)
+update_partial(const AleatoryDistParams& adp_x, const ShortArray& x_types,
+	       const ShortArray& u_types)
 {
   if (!adpRep) { // if no rep, error 
     PCerr << "Error: AleatoryDistParams::update_partial() requires a valid "

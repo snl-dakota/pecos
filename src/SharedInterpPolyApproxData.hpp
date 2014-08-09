@@ -63,12 +63,13 @@ public:
   static bool initialize_driver_types_rules(const ShortArray& u_types,
     const BasisConfigOptions& bc_options, ShortArray& basis_types,
     ShortArray& colloc_rules);
-  /// initialize basis types and collocation rules, construct the polynomial
-  /// basis, and initialize the distribution parameters within this basis
+  /// initialize basis types and collocation rules, construct a vector of basis
+  /// polynomials for driver usage (not the vector<vector<BasisPolynomial> >
+  /// used herein), and initialize distribution parameters within this basis
   static void construct_basis(const ShortArray& u_types,
 			      const AleatoryDistParams& adp,
 			      const BasisConfigOptions& bc_options,
-			      std::vector<Pecos::BasisPolynomial>& poly_basis);
+			      std::vector<BasisPolynomial>& poly_basis);
 
 protected:
 
@@ -391,7 +392,7 @@ inline SharedInterpPolyApproxData::~SharedInterpPolyApproxData()
 inline void SharedInterpPolyApproxData::
 construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 		const BasisConfigOptions& bc_options,
-		std::vector<Pecos::BasisPolynomial>& poly_basis)
+		std::vector<BasisPolynomial>& poly_basis)
 {
   ShortArray basis_types, colloc_rules;
   bool dist_params = initialize_driver_types_rules(u_types, bc_options,

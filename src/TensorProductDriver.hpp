@@ -85,11 +85,12 @@ public:
   /// return collocKey
   const UShort2DArray& collocation_key() const;
 
-  /// invoke initialize_rules() to set collocation rules
+  /// stand-alone initializer of tensor grid settings (except for
+  /// distribution params)
   void initialize_grid(const ShortArray& u_types,
 		       const ExpansionConfigOptions& ec_options,
 		       const BasisConfigOptions& bc_options);
-  /// initialize all sparse grid settings except for distribution params
+  /// helper initializer of tensor grid settings (except distribution params)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
 private:
@@ -160,10 +161,22 @@ inline void TensorProductDriver::
 nested_quadrature_order(const UShortArray& ref_quad_order)
 {
   unsigned short nested_order;
-  for (size_t i=0; i<numVars; ++i) {
-    integrand_goal_to_nested_quadrature_order(i, 2*ref_quad_order[i] - 1,
-					      nested_order);
-    quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+  switch (driverMode) {
+  case INTERPOLATION_MODE: // synchronize on number of points
+                           // (Lagrange interpolant order = #pts - 1)
+    for (size_t i=0; i<numVars; ++i) {
+      quadrature_goal_to_nested_quadrature_order(i, ref_quad_order[i],
+						 nested_order);
+      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+    }
+    break;
+  default: // {INTEGRATION,DEFAULT}_MODE: synchronize on integrand prec 2m-1
+    for (size_t i=0; i<numVars; ++i) {
+      integrand_goal_to_nested_quadrature_order(i, 2 * ref_quad_order[i] - 1,
+						nested_order);
+      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
+    }
+    break;
   }
 }
 

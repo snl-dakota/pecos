@@ -164,9 +164,6 @@ public:
   /// compute central response moments in all-variables mode using some
   /// combination of expansion post-processing and numerical integration
   virtual void compute_moments(const RealVector& x) = 0;
-  /// return central response moments defined from either expansion
-  /// post-processing or numerical integration
-  virtual const RealVector& moments() const = 0;
 
   //
   //- Heading: Member functions
@@ -181,6 +178,9 @@ public:
   const RealVector& expansion_moments() const;
   /// return numericalMoments
   const RealVector& numerical_integration_moments() const;
+  /// return preferred response moments (either expansion or numerical
+  /// integration, depending on approximation type)
+  const RealVector& moments() const;
 
   /// standardize central moments 2-n and eliminate excess kurtosis
   void standardize_moments(const RealVector& central_moments,
@@ -219,13 +219,12 @@ protected:
   //
 
   /// compute central moments of response using type1 numerical integration
-  void compute_numerical_moments(const RealVector& coeffs,
-				 const RealVector& t1_wts, RealVector& moments);
+  void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
+			 RealVector& moments);
   /// compute central moments of response using type1/2 numerical integration
-  void compute_numerical_moments(const RealVector& t1_coeffs,
-				 const RealMatrix& t2_coeffs,
-				 const RealVector& t1_wts,
-				 const RealMatrix& t2_wts, RealVector& moments);
+  void integrate_moments(const RealVector& t1_coeffs,
+			 const RealMatrix& t2_coeffs, const RealVector& t1_wts,
+			 const RealMatrix& t2_wts, RealVector& moments);
 
   /// size total Sobol arrays
   void allocate_total_sobol();
@@ -322,6 +321,23 @@ inline const RealVector& PolynomialApproximation::expansion_moments() const
 inline const RealVector& PolynomialApproximation::
 numerical_integration_moments() const
 { return numericalMoments; }
+
+
+/** All current cases prefer expansionMoments (with the distinction
+    drawn between interpolation and integration rules, we prefer Gauss
+    integration rules on interpolant expansions). */
+inline const RealVector& PolynomialApproximation::moments() const
+{
+  // TO DO: return to this (will require activation of exp moments for all view)
+  //return expansionMoments;
+
+  // TO DO: remove this temp hack
+  // (avoids returning to derived class specialization)
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  short exp_type = data_rep->expConfigOptions.expBasisType;
+  return (exp_type == NODAL_INTERPOLANT || exp_type == HIERARCHICAL_INTERPOLANT)
+    ? numericalMoments : expansionMoments;
+}
 
 
 //inline size_t PolynomialApproximation::pop_count()

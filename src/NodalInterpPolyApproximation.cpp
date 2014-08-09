@@ -3189,12 +3189,19 @@ reinterpolated_level(const UShortArray& lev_index)
 
 
 void NodalInterpPolyApproximation::
-compute_numerical_response_moments(size_t num_moments)
+integrate_response_moments(size_t num_moments)
 {
+  // In this case, we are constrained to use the original collocation points
+  // (for which response values are available) within the numerical integration.
+  // In the case where interpolatory rules (e.g., Clenshaw-Curtis) have been 
+  // used, the integrand accuracy may suffer.  For this reason, the expansion
+  // moments (which integrate the interpolant expansion instead of the response,
+  // and therefore may employ alternate rules) are preferred.
+
   // Error check for required data
   if (!expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in InterpPoly"
-	  << "Approximation::compute_numerical_response_moments()" << std::endl;
+	  << "Approximation::integrate_response_moments()" << std::endl;
     abort_handler(-1);
   }
 
@@ -3204,22 +3211,31 @@ compute_numerical_response_moments(size_t num_moments)
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
   if (data_rep->basisConfigOptions.useDerivs)
-    compute_numerical_moments(expansionType1Coeffs, expansionType2Coeffs,
-			      driver_rep->type1_weight_sets(),
-			      driver_rep->type2_weight_sets(),numericalMoments);
+    integrate_moments(expansionType1Coeffs, expansionType2Coeffs,
+		      driver_rep->type1_weight_sets(),
+		      driver_rep->type2_weight_sets(), numericalMoments);
   else
-    compute_numerical_moments(expansionType1Coeffs,
-			      driver_rep->type1_weight_sets(),numericalMoments);
+    integrate_moments(expansionType1Coeffs, driver_rep->type1_weight_sets(),
+		      numericalMoments);
 }
 
 
 void NodalInterpPolyApproximation::
-compute_numerical_expansion_moments(size_t num_moments)
+integrate_expansion_moments(size_t num_moments)
 {
+  // In this case, we are integrating the interpolant expansion instead of the
+  // response and are *not* constrained to use the original collocation points
+  // within the numerical integration.  Thererfore, we replace any interpolatory
+  // rules (e.g., Clenshaw-Curtis) with integration rules to improve the
+  // integrand accuracy; for this reason, the expansion moments are preferred.
+  // Since we are limiting expansion integration to second moments, Gaussian
+  // rules of comparable order are generally sufficient (skewness and kurtosis
+  // would require higher order rules).
+
   // Error check for required data
   if (!expansionCoeffFlag) {
     PCerr << "Error: expansion coefficients not defined in InterpPoly"
-	  << "Approximation::compute_numerical_expansion_moments()"<< std::endl;
+	  << "Approximation::integrate_expansion_moments()"<< std::endl;
     abort_handler(-1);
   }
   if (expansionMoments.length() != num_moments)
@@ -3232,43 +3248,77 @@ compute_numerical_expansion_moments(size_t num_moments)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
+  IntegrationDriver *alt_driver = data_rep->expMomentIntDriver.driver_rep();
+  bool alt_grid = (alt_driver != NULL);
 
-  // The following approach just replaces the values of the response with the 
-  // values of the interpolant (integrates powers of the interpolant using
-  // the same grid that was used to form the interpolant).
-  size_t i, offset = 0, num_pts = surrData.points(), num_v = data_rep->numVars;
-  bool anchor_pt = surrData.anchor();
-  if (anchor_pt) { offset = 1; ++num_pts; }
-  RealVector t1_exp(num_pts);
-  if (data_rep->basisConfigOptions.useDerivs) {
-    RealMatrix t2_exp(num_v, num_pts);
-    for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = (anchor_pt && i == 0) ?
-	surrData.anchor_continuous_variables() :
-	surrData.continuous_variables(i-offset);
-      t1_exp[i] = value(c_vars);
-      Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
+  // Alternate quadrature on interpolant is strictly value-based.  A shared
+  // level/order definition could occur in SharedNIPAData::allocate_data(),
+  // but we initially compute level/order here on the fly on each QoI.
+  if (alt_grid) {
+    // synchronize the level/order between alternate and original driver
+    if (data_rep->expConfigOptions.expCoeffsSolnApproach == QUADRATURE) {
+      TensorProductDriver* tp_driver
+	= (TensorProductDriver*)data_rep->driverRep;
+      TensorProductDriver* tp_alt_driver = (TensorProductDriver*)alt_driver;
+      // match #quad pts: new precision >= old precision
+      // Note: Dakota uses quad scalar + dim_pref, Pecos uses aniso quad vector
+      tp_alt_driver->quadrature_order(tp_driver->quadrature_order());
     }
-    compute_numerical_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
-			      driver_rep->type2_weight_sets(),expansionMoments);
+    else {
+      SparseGridDriver*     sg_driver = (SparseGridDriver*)data_rep->driverRep;
+      SparseGridDriver* sg_alt_driver = (SparseGridDriver*)alt_driver;
+      // level is matched for now; ignores nonlinear/linear growth mismatch
+      sg_alt_driver->level(sg_driver->level());
+      sg_alt_driver->anisotropic_weights(sg_driver->anisotropic_weights());
+    }
+    // compute the points and weights
+    RealMatrix alt_pts;
+    alt_driver->compute_grid(alt_pts);
+    // integrate the interpolant through eval at the quadrature points
+    size_t i, num_pts = alt_pts.numCols();
+    RealVector t1_exp(num_pts);
+    for (i=0; i<num_pts; ++i)
+      t1_exp[i] = value(Teuchos::getCol(Teuchos::View, alt_pts, (int)i));
+    integrate_moments(t1_exp, alt_driver->type1_weight_sets(),expansionMoments);
   }
+  // Native quadrature on interpolant can be value-based or gradient-enhanced.
+  // These approaches just replace the values of the response with the values
+  // of the interpolant (integrates powers of the interpolant using the same
+  // collocation rules/orders used to form the interpolant).
   else {
-    for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = (anchor_pt && i == 0) ?
-	surrData.anchor_continuous_variables() :
-	surrData.continuous_variables(i-offset);
-      t1_exp[i] = value(c_vars);
+    size_t i, offset = 0, num_pts = surrData.points();
+    bool anchor_pt = surrData.anchor();
+    if (anchor_pt) { offset = 1; ++num_pts; }
+    RealVector t1_exp(num_pts);
+    if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native
+      size_t num_v = data_rep->numVars;
+      RealMatrix t2_exp(num_v, num_pts);
+      for (i=0; i<num_pts; ++i) {
+	const RealVector& c_vars = (anchor_pt && i == 0) ?
+	  surrData.anchor_continuous_variables() :
+	  surrData.continuous_variables(i-offset);
+	t1_exp[i] = value(c_vars);
+	Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
+      }
+      IntegrationDriver* driver_rep = data_rep->driverRep;
+      integrate_moments(t1_exp, t2_exp, driver_rep->type1_weight_sets(),
+			driver_rep->type2_weight_sets(), expansionMoments);
     }
-    compute_numerical_moments(t1_exp, driver_rep->type1_weight_sets(),
-			      expansionMoments);
-#ifdef DEBUG
-    PCout << "Expansion moments type 1 coefficients:\n";
-    write_data(PCout, t1_exp);
-    PCout << "Expansion moments type 1 weight sets:\n";
-    write_data(PCout, driver_rep->type1_weight_sets());
-#endif // DEBUG
+    else { // value-based native quadrature
+      for (i=0; i<num_pts; ++i)
+	t1_exp[i] = (anchor_pt && i == 0) ? 
+	  value(surrData.anchor_continuous_variables()) :
+	  value(surrData.continuous_variables(i-offset));
+      integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
+			expansionMoments);
+    }
   }
+#ifdef DEBUG
+  PCout << "Expansion moments type 1 coefficients:\n";
+  write_data(PCout, t1_exp);
+  PCout << "Expansion moments:\n";
+  write_data(PCout, expansionMoments);
+#endif // DEBUG
 }
 
 

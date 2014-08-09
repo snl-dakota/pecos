@@ -83,8 +83,6 @@ protected:
   void compute_moments();
   /// compute numerical moments in all-variables mode to order 2
   void compute_moments(const RealVector& x);
-  /// return numericalMoments
-  const RealVector& moments() const;
 
   //
   //- Heading: New virtual functions
@@ -108,9 +106,9 @@ protected:
   virtual void finalize_expansion_coefficients() = 0;
 
   /// compute moments of response using numerical integration
-  virtual void compute_numerical_response_moments(size_t num_moments) = 0;
+  virtual void integrate_response_moments(size_t num_moments) = 0;
   /// compute moments of expansion using numerical integration
-  virtual void compute_numerical_expansion_moments(size_t num_moments) = 0;
+  virtual void integrate_expansion_moments(size_t num_moments) = 0;
 
   virtual void compute_total_sobol_indices() = 0;
   virtual void compute_partial_variance(const BitArray& set_value);
@@ -154,13 +152,13 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 
 inline void InterpPolyApproximation::compute_moments()
 {
-  // standard variables mode supports four moments
-  compute_numerical_response_moments(4);
+  // standard variables mode supports four moments using the collocation rules
+  // as integration rules
+  integrate_response_moments(4);
+
+  // do this second so that clearing any existing rules does not cause rework
   //if (expConfigOptions.outputLevel >= VERBOSE_OUTPUT)
-    compute_numerical_expansion_moments(4);
-  // numericalMoments and expansionMoments should be the same for faithful
-  // interpolants (TPQ and SSG with nested rules), but will differ for other
-  // cases (SSG with non-nested rules)
+    integrate_expansion_moments(4);
 }
 
 
@@ -169,20 +167,15 @@ inline void InterpPolyApproximation::compute_moments(const RealVector& x)
   // all variables mode only supports first two moments
   mean(x); variance(x);
   //standardize_moments(numericalMoments);
-  //compute_numerical_expansion_moments(4, x);
+  //integrate_expansion_moments(4, x);
 
   // Note: it would be feasible to implement an all_variables version of
-  // compute_numerical_expansion_moments() by evaluating the combined
-  // expansion at {design/epistemic=initialPtU,aleatory=Gauss points}
-  // --> cannot do this for compute_numerical_response_moments()
-  //     (lacking required response data)
+  // integrate_expansion_moments() by evaluating the combined expansion at
+  // {design/epistemic=initialPtU,aleatory=Gauss points}
+  // --> can't do this for integrate_response_moments() (lacking reqd resp data)
   // --> would require generation of new TPQ/SSG grid only over aleatory vars
   // --> could possibly retire redundant all_vars functions
 }
-
-
-inline const RealVector& InterpPolyApproximation::moments() const
-{ return numericalMoments; }
 
 } // namespace Pecos
 

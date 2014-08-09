@@ -28,7 +28,7 @@ initialize_grid(const ShortArray& u_types,
 		const ExpansionConfigOptions& ec_options,
 		const BasisConfigOptions& bc_options)
 {
-  initialize_rules(u_types, ec_options, bc_options);
+  IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
   quadOrder.resize(numVars); levelIndex.resize(numVars);
 }
 
@@ -36,7 +36,7 @@ initialize_grid(const ShortArray& u_types,
 void TensorProductDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
-  initialize_rules(poly_basis);
+  IntegrationDriver::initialize_grid(poly_basis);
   quadOrder.resize(numVars); levelIndex.resize(numVars);
 }
 
@@ -52,10 +52,10 @@ integrand_goal_to_nested_quadrature_order(size_t i,
   switch (collocRules[i]) {
   case CLENSHAW_CURTIS: case NEWTON_COTES: { // closed rules
     nested_quad_order = 1; // in case while loop falls through
-    unsigned short level = 0, integrand_actual = 1;
+    unsigned short /*level = 0,*/ lev_pow = 1, integrand_actual = 1;
     while (integrand_actual < integrand_goal) {
-      ++level;
-      nested_quad_order = (unsigned short)std::pow(2., (int)level) + 1;
+      lev_pow *= 2; //++level;
+      nested_quad_order = lev_pow + 1; //std::pow(2.,level) + 1;
       // integrand exactness for CC; also used for NC
       integrand_actual = (nested_quad_order % 2) ?
 	nested_quad_order : nested_quad_order - 1;
@@ -64,10 +64,10 @@ integrand_goal_to_nested_quadrature_order(size_t i,
   }
   case FEJER2: { // open rule (integrand exactness for CC also used for F2)
     nested_quad_order = 1; // in case while loop falls through
-    unsigned short level = 0, integrand_actual = 1;
+    unsigned short /*level = 0,*/ lev_pow = 2, integrand_actual = 1;
     while (integrand_actual < integrand_goal) {
-      ++level;
-      nested_quad_order = (unsigned short)std::pow(2., (int)level+1) - 1;
+      lev_pow *= 2; //++level;
+      nested_quad_order = lev_pow - 1; //std::pow(2.,level+1) - 1;
       integrand_actual = (nested_quad_order % 2) ?
 	nested_quad_order : nested_quad_order - 1;
     }
@@ -75,12 +75,12 @@ integrand_goal_to_nested_quadrature_order(size_t i,
   }
   case GAUSS_PATTERSON: { // open rule
     nested_quad_order = 1; // in case while loop falls through
-    unsigned short level = 0, integrand_actual = 1,
+    unsigned short /*level = 0,*/ lev_pow = 2, integrand_actual = 1,
       previous = nested_quad_order;
     while (integrand_actual < integrand_goal) {
-      ++level;
+      lev_pow *= 2; //++level;
       // exponential growth
-      nested_quad_order = (unsigned short)std::pow(2., (int)level+1) - 1;
+      nested_quad_order = lev_pow - 1; //std::pow(2.,level+1) - 1;
       integrand_actual = 2*nested_quad_order - previous;//2m-1 - constraints + 1
       previous = nested_quad_order;
     }
@@ -129,18 +129,18 @@ quadrature_goal_to_nested_quadrature_order(size_t i, unsigned short quad_goal,
 {
   switch (collocRules[i]) {
   case CLENSHAW_CURTIS: case NEWTON_COTES: { // closed nested rules
-    nested_quad_order = 1; unsigned short level = 0;
+    nested_quad_order = 1; unsigned short /*level = 0,*/ lev_pow = 1;
     while (nested_quad_order < quad_goal) {
-      ++level;
-      nested_quad_order = (unsigned short)std::pow(2., (int)level) + 1;
+      lev_pow *= 2; //++level;
+      nested_quad_order = lev_pow + 1; //std::pow(2.,level) + 1;
     }
     break;
   }
   case FEJER2: case GAUSS_PATTERSON:{ // open nested rules
-    nested_quad_order = 1; unsigned short level = 0;
+    nested_quad_order = 1; unsigned short /*level = 0,*/ lev_pow = 2;
     while (nested_quad_order < quad_goal) {
-      ++level;
-      nested_quad_order = (unsigned short)std::pow(2., (int)level+1) - 1;
+      lev_pow *= 2; //++level;
+      nested_quad_order = lev_pow - 1; //std::pow(2.,level+1) - 1;
     }
     break;
   }

@@ -102,8 +102,7 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
     break;
   }
 
-  /* Code below moved to ProjectOrthogPolyApproximation::
-     compute_numerical_response_moments()
+  /* Code moved to ProjectOrthogPolyApproximation::integrate_response_moments()
   if (expansionCoeffFlag)     storedExpCoeffs.resize(0);
   if (expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
   */

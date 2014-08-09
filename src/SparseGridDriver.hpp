@@ -50,15 +50,11 @@ public:
   //
 
   /// initialize all sparse grid settings except for distribution params
-  virtual void initialize_grid(const ShortArray& u_types,
-    unsigned short ssg_level, const RealVector& dim_pref,
+  virtual void initialize_grid(unsigned short ssg_level,
+    const RealVector& dim_pref, const ShortArray& u_types,
     const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH,
-    bool store_colloc = false, bool track_uniq_prod_wts = true,
-    bool track_colloc_indices = true);
-  /// initialize all sparse grid settings (distribution params already
-  /// set within poly_basis)
-  virtual void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
+    short growth_rate = MODERATE_RESTRICTED_GROWTH, bool store_colloc = false,
+    bool track_uniq_prod_wts = true, bool track_colloc_indices = true);
 
   /// initializes old/active/evaluation sets for use within the 
   /// generalized sparse grid procedure
@@ -169,6 +165,17 @@ public:
   const UShortArraySet& computed_trial_sets() const;
 
 protected:
+
+  //
+  //- Heading: Convenience functions
+  //
+
+  /// level to order mapping for interpolation with nested Genz-Keister rules
+  static int level_to_order_exp_hgk_interp(int level, int growth);
+  /// level to order mapping for interpolation with nested closed rules
+  static int level_to_order_exp_closed_interp(int level, int growth);
+  /// level to order mapping for interpolation with nested open rules
+  static int level_to_order_exp_open_interp(int level, int growth);
 
   //
   //- Heading: Data
@@ -379,25 +386,36 @@ inline int SparseGridDriver::unique_trial_points() const
 inline void SparseGridDriver::
 level_to_order(size_t i, unsigned short level, unsigned short& order)
 {
+  //int ilevel = level, iorder;
+  //webbur::level_growth_to_order(1, &ilevel, &apiIntegrationRules[i],
+  //				  &apiGrowthRules[i], &iorder);
+  //order = iorder;
+
+  // if INTERPOLATION_MODE, use mappings that synchronize on the number of
+  // interpolated points.  For INTEGRATION_MODE or DEFAULT_MODE, use mappings
+  // that synchronize on integrand precision.
   switch (collocRules[i]) {
   case GAUSS_PATTERSON:
-    order = webbur::level_to_order_exp_gp(level, growthRate);    break;
+    order = (driverMode == INTERPOLATION_MODE) ?
+      level_to_order_exp_open_interp(level, growthRate) :
+      webbur::level_to_order_exp_gp(level, growthRate);          break;
   case GENZ_KEISTER:
-    order = webbur::level_to_order_exp_hgk(level, growthRate);   break;
+    order = (driverMode == INTERPOLATION_MODE) ?
+      level_to_order_exp_hgk_interp(level, growthRate) :
+      webbur::level_to_order_exp_hgk(level, growthRate);         break;
   case CLENSHAW_CURTIS: case NEWTON_COTES:
-    order = webbur::level_to_order_exp_cc(level, growthRate);    break;
+    order = (driverMode == INTERPOLATION_MODE) ?
+      level_to_order_exp_closed_interp(level, growthRate) :
+      webbur::level_to_order_exp_cc(level, growthRate);          break;
   case FEJER2:
-    order = webbur::level_to_order_exp_f2(level, growthRate);    break;
+    order = (driverMode == INTERPOLATION_MODE) ?
+      level_to_order_exp_open_interp(level, growthRate) :
+      webbur::level_to_order_exp_f2(level, growthRate);          break;
   case GAUSS_HERMITE: case GAUSS_LEGENDRE: // weakly nested Gaussian
     order = webbur::level_to_order_linear_wn(level, growthRate); break;
   default:                                 // non-nested Gaussian
     order = webbur::level_to_order_linear_nn(level, growthRate); break;
   }
-
-  //int ilevel = level, iorder;
-  //webbur::level_growth_to_order(1, &ilevel, &apiIntegrationRules[i],
-  //				  &apiGrowthRules[i], &iorder);
-  //order = iorder;
 }
 
 
