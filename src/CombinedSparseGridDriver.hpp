@@ -152,8 +152,8 @@ public:
   const Sizet2DArray& collocation_indices() const;
   /// return uniqueIndexMapping
   const IntArray& unique_index_mapping() const;
-  /// return duplicateTol
-  const Real& duplicate_tolerance() const;
+  // return duplicateTol
+  //Real duplicate_tolerance() const;
 
   /// return type1WeightSets
   const RealVector& type1_weight_sets() const;
@@ -192,6 +192,9 @@ private:
   /// weights for polynomialBasis[index]
   static void basis_type2_collocation_weights(int order,int index,double* data);
 
+  /// set duplicateTol based on the content of collocRules: table lookups will
+  /// generally be more precise/repeatable than numerically-generated rules
+  void initialize_duplicate_tolerance();
   /// initialize compute1D{Points,Type1Weights,Type2Weights} function pointer
   /// arrays for use within webbur::sgmg() and webbur::sgmga() routines
   void initialize_rule_pointers();
@@ -335,8 +338,8 @@ inline int CombinedSparseGridDriver::unique_trial_points() const
 { return numUnique2; }
 
 
-inline const Real& CombinedSparseGridDriver::duplicate_tolerance() const
-{ return duplicateTol; }
+//inline Real CombinedSparseGridDriver::duplicate_tolerance() const
+//{ return duplicateTol; }
 
 
 inline void CombinedSparseGridDriver::assign_smolyak_arrays()

@@ -42,6 +42,8 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 				    bc_options, growth_rate, store_colloc,
 				    track_uniq_prod_wts, track_colloc_indices);
 
+  // set a rule-dependent duplicateTol
+  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
   // set levelGrowthToOrder
@@ -54,10 +56,40 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
 
+  // set a rule-dependent duplicateTol
+  initialize_duplicate_tolerance();
   // set compute1D{Points,Type1Weights,Type2Weights}
   initialize_rule_pointers();
   // set levelGrowthToOrder
   initialize_growth_pointers();
+}
+
+
+void CombinedSparseGridDriver::initialize_duplicate_tolerance()
+{
+  bool parameterized_basis = false, numerical_basis = false;
+  for (size_t i=0; i<numVars; ++i) {
+    short rule = collocRules[i];
+    if (rule == GOLUB_WELSCH)
+      { numerical_basis = true; break; }
+    else if (rule == GEN_GAUSS_LAGUERRE || rule == GAUSS_JACOBI)
+      parameterized_basis = true;
+  }
+
+  // Allow a looser duplication tolerance for numerically-generated rules than
+  // for lookup tables.  Choices are based on limited testing and have been
+  // observed to be scale dependent; current choices seem to work for variables
+  // scaled to O(1).
+
+  // TO DO: could choose to scale the random vars prior to NumGenOrthogPoly,
+  // or likely simpler, modify sgmg,sgmga to use a relative tolerance.
+
+  // rules from eigensolves:
+  if (numerical_basis)          duplicateTol = 1.e-13;
+  // rules from parameterized solves:
+  else if (parameterized_basis) duplicateTol = 1.e-14;
+  // rules mostly from lookup tables:
+  else                          duplicateTol = 1.e-15;
 }
 
 
