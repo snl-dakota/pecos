@@ -55,6 +55,8 @@ protected:
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
+  Real length_scale() const;
+
 private:
 
   //
@@ -74,6 +76,11 @@ inline ChebyshevOrthogPolynomial::ChebyshevOrthogPolynomial()
 
 inline ChebyshevOrthogPolynomial::~ChebyshevOrthogPolynomial()
 { }
+
+
+/** [-1,1]: mean is zero; return std deviation = 2/sqrt(12). */
+inline Real ChebyshevOrthogPolynomial::length_scale() const
+{ return std::pow(3., -0.5); }
 
 } // namespace Pecos
 

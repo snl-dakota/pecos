@@ -56,6 +56,8 @@ protected:
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
+  Real length_scale() const;
+
 private:
 
   //
@@ -71,6 +73,11 @@ inline LaguerreOrthogPolynomial::LaguerreOrthogPolynomial()
 
 inline LaguerreOrthogPolynomial::~LaguerreOrthogPolynomial()
 { }
+
+
+/** return mean value */
+inline Real LaguerreOrthogPolynomial::length_scale() const
+{ return 1.; } // mean = std dev = 1
 
 } // namespace Pecos
 

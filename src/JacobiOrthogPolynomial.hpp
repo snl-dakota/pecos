@@ -15,6 +15,7 @@
 #define JACOBI_ORTHOG_POLYNOMIAL_HPP
 
 #include "OrthogonalPolynomial.hpp"
+#include "pecos_stat_util.hpp"
 
 
 namespace Pecos {
@@ -85,6 +86,8 @@ protected:
 
   /// override default definition (false) since Jacobi is parameterized
   bool parameterized() const;
+
+  Real length_scale() const;
 
 private:
 
@@ -165,6 +168,16 @@ inline void JacobiOrthogPolynomial::beta_stat(Real beta)
 
 inline bool JacobiOrthogPolynomial::parameterized() const
 { return true; }
+
+
+/** return max(mean, stdev) on [-1,1]. */
+inline Real JacobiOrthogPolynomial::length_scale() const
+{
+  Real mean, stdev;
+  // pecos_stat_util accept alpha_stat, beta_stat
+  moments_from_beta_params(-1., 1., betaPoly+1., alphaPoly+1., mean, stdev);
+  return std::max(mean, stdev);
+}
 
 } // namespace Pecos
 

@@ -570,4 +570,15 @@ bool BasisPolynomial::parameterized() const
     return false; // default if not overridden
 }
 
+
+Real BasisPolynomial::length_scale() const
+{
+  if (!polyRep) {
+    PCerr << "Error: length_scale() not available for this basis polynomial "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->length_scale();
+}
+
 } // namespace Pecos

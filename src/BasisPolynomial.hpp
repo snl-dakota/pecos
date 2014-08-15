@@ -182,6 +182,10 @@ public:
   /// return whether a derived BasisPolynomial type supports parameterization
   virtual bool parameterized() const;
 
+  /// return a characteristic length scale for the probability distribution
+  /// associated with an orthogonal polynomial basis
+  virtual Real length_scale() const;
+
   //
   //- Heading: Member functions
   //

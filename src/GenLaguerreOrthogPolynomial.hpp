@@ -15,6 +15,7 @@
 #define GEN_LAGUERRE_ORTHOG_POLYNOMIAL_HPP
 
 #include "OrthogonalPolynomial.hpp"
+#include "pecos_stat_util.hpp"
 
 
 namespace Pecos {
@@ -47,9 +48,9 @@ public:
   //- Heading: Constructor and destructor
   //
 
-  GenLaguerreOrthogPolynomial();                       ///< default constructor
+  GenLaguerreOrthogPolynomial();                ///< default constructor
   GenLaguerreOrthogPolynomial(Real alpha_stat); ///< standard constructor
-  ~GenLaguerreOrthogPolynomial();                      ///< destructor
+  ~GenLaguerreOrthogPolynomial();               ///< destructor
 
   //
   //- Heading: Virtual function redefinitions
@@ -78,6 +79,8 @@ protected:
 
   /// override default definition (false) since GenLaguerre is parameterized
   bool parameterized() const;
+
+  Real length_scale() const;
 
 private:
 
@@ -130,6 +133,19 @@ inline void GenLaguerreOrthogPolynomial::alpha_stat(Real alpha)
 
 inline bool GenLaguerreOrthogPolynomial::parameterized() const
 { return true; }
+
+
+/** return max(mean,stdev) */
+inline Real GenLaguerreOrthogPolynomial::length_scale() const
+{
+  Real mean, stdev;
+  // pecos_stat_util accept alpha_stat, beta_stat
+  moments_from_gamma_params(alphaPoly + 1., 1., mean, stdev);
+  return std::max(mean, stdev);
+
+  //Real alpha_stat = alphaPoly + 1.;
+  //return std::max(alpha_stat, std::sqrt(alpha_stat)); // too opaque
+}
 
 } // namespace Pecos
 

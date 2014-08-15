@@ -97,6 +97,8 @@ protected:
 
   bool parameterized() const;
 
+  Real length_scale() const;
+
 private:
 
   //
@@ -186,8 +188,8 @@ private:
   //
 
   /// the type of non-Askey distribution: BOUNDED_NORMAL, LOGNORMAL,
-  /// BOUNDED_LOGNORMAL, LOGUNIFORM, TRIANGULAR, GUMBEL, FRECHET,
-  /// WEIBULL, or STOCHASTIC_EXPANSION
+  /// BOUNDED_LOGNORMAL, LOGUNIFORM, TRIANGULAR, GUMBEL, FRECHET, WEIBULL,
+  /// HISTOGRAM_BIN, or STOCHASTIC_EXPANSION
   short distributionType;
 
   /// distribution parameters (e.g., mean, std_dev, alpha, beta)
@@ -502,6 +504,43 @@ inline void NumericGenOrthogPolynomial::coefficients_norms_flag(bool flag)
 
 inline bool NumericGenOrthogPolynomial::parameterized() const
 { return true; }
+
+
+/** return max(mean,stdev) */
+inline Real NumericGenOrthogPolynomial::length_scale() const
+{
+  Real mean, stdev;
+  switch (distributionType) {
+  case BOUNDED_NORMAL: case LOGNORMAL: case BOUNDED_LOGNORMAL:
+    mean = distParams[0]; stdev = distParams[1]; break;
+  case LOGUNIFORM:
+    moments_from_loguniform_params(distParams[0], distParams[1], mean, stdev);
+    break;
+  case TRIANGULAR:
+    moments_from_triangular_params(distParams[1], distParams[2],
+				   distParams[0], mean, stdev);
+    break;
+  case GUMBEL:
+    moments_from_gumbel_params(distParams[0], distParams[1], mean, stdev);
+    break;
+  case FRECHET:
+    moments_from_frechet_params(distParams[0], distParams[1], mean, stdev);
+    break;
+  case WEIBULL:
+    moments_from_weibull_params(distParams[0], distParams[1], mean, stdev);
+    break;
+  case HISTOGRAM_BIN: {
+    RealRealMap hist_bin_prs_rrm;
+    copy_data(distParams, hist_bin_prs_rrm);
+    moments_from_histogram_bin_params(hist_bin_prs_rrm, mean, stdev); break;
+  }
+  default:
+    PCerr << "Error: distributionType " << distributionType << " not supported "
+	  << "in NumericGenOrthogPolynomial::length_scale()." << std::endl;
+    abort_handler(-1);
+  }
+  return std::max(mean, stdev);
+}
 
 } // namespace Pecos
 

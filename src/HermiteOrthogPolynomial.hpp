@@ -55,6 +55,8 @@ protected:
   const RealArray& collocation_points(unsigned short order);
   const RealArray& type1_collocation_weights(unsigned short order);
 
+  Real length_scale() const;
+
 private:
 
   //
@@ -82,6 +84,11 @@ inline HermiteOrthogPolynomial::HermiteOrthogPolynomial()
 
 inline HermiteOrthogPolynomial::~HermiteOrthogPolynomial()
 { }
+
+
+/** mean is zero; return std deviation = 1. */
+inline Real HermiteOrthogPolynomial::length_scale() const
+{ return 1.; }
 
 } // namespace Pecos
 

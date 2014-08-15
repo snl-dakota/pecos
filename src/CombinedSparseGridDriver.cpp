@@ -77,19 +77,29 @@ void CombinedSparseGridDriver::initialize_duplicate_tolerance()
   }
 
   // Allow a looser duplication tolerance for numerically-generated rules than
-  // for lookup tables.  Choices are based on limited testing and have been
-  // observed to be scale dependent; current choices seem to work for variables
-  // scaled to O(1).
+  // for lookup tables.  sgmg,sgmga use an absolute tolerance which is fine for
+  // standardized probability distributions (scaled to O(1)), but exhibits scale
+  // dependence for numerically-generated quadrature rules.
 
-  // TO DO: could choose to scale the random vars prior to NumGenOrthogPoly,
-  // or likely simpler, modify sgmg,sgmga to use a relative tolerance.
-
-  // rules from eigensolves:
-  if (numerical_basis)          duplicateTol = 1.e-13;
-  // rules from parameterized solves:
-  else if (parameterized_basis) duplicateTol = 1.e-14;
+  // rules from eigensolves or parameterized solves:
+  if (numerical_basis || parameterized_basis) duplicateTol = 1.e-14;
   // rules mostly from lookup tables:
-  else                          duplicateTol = 1.e-15;
+  else duplicateTol = 1.e-15; // ~= 4.5 * DBL_EPSILON
+
+  // For numerically-generated rules, convert duplicateTol to a relative tol by
+  // using a length scale.  sandia_rules.cpp uses "(dist <= tol)", so we could
+  // modify sandia_rules (in many places) to use "(dist / length_scale <= tol)"
+  // or just modify duplicateTol such that new_tol = tol * length_scale.  The
+  // length_scale() function returns max(mean,stdev) in u-space (stdev provides
+  // a backup for small/zero mean).
+  if (numerical_basis) {
+    Real length_scale = 0.;
+    for (size_t i=0; i<numVars; ++i)
+      length_scale += std::pow(polynomialBasis[i].length_scale(), 2);
+                    //std::pow(std::max(ranVarMeansU[i], ranVarStdDevsU[i]), 2);
+    if (length_scale > DBL_MIN)
+      duplicateTol *= std::sqrt(length_scale);
+  }
 }
 
 
