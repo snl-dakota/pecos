@@ -123,6 +123,17 @@ public:
     const IntVector& index_u_bnds, int num_samples,
     std::set<IntArray>& sorted_samples);
 
+  void generate_unique_samples( const RealVector& cd_l_bnds,
+     const RealVector& cd_u_bnds, const IntVector&  ddri_l_bnds, 
+     const IntVector&  ddri_u_bnds, const IntSetArray& ddsi_values,
+     const StringSetArray& ddss_values, const RealSetArray& ddsr_values,
+     const RealVector& cs_l_bnds, const RealVector& cs_u_bnds,
+     const IntVector&  dsri_l_bnds, const IntVector&  dsri_u_bnds,
+     const IntSetArray& dssi_values, const StringSetArray& dsss_values,
+     const RealSetArray& dssr_values, const AleatoryDistParams& adp,
+     const EpistemicDistParams& edp, int num_samples,
+     RealMatrix& samples, RealMatrix& sample_ranks );
+
 private:
 
   //

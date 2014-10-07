@@ -1445,6 +1445,169 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
 #endif // HAVE_LHS
 }
 
+void LHSDriver::
+generate_unique_samples( const RealVector& cd_l_bnds,
+			 const RealVector& cd_u_bnds,
+			 const IntVector&  ddri_l_bnds, 
+			 const IntVector&  ddri_u_bnds,
+			 const IntSetArray& ddsi_values,
+			 const StringSetArray& ddss_values,
+			 const RealSetArray& ddsr_values,
+			 const RealVector& cs_l_bnds,
+			 const RealVector& cs_u_bnds,
+			 const IntVector&  dsri_l_bnds,
+			 const IntVector&  dsri_u_bnds,
+			 const IntSetArray& dssi_values,
+			 const StringSetArray& dsss_values,
+			 const RealSetArray& dssr_values, 
+			 const AleatoryDistParams& adp,
+			 const EpistemicDistParams& edp, int num_samples,
+			 RealMatrix& samples, RealMatrix& sample_ranks )
+{
+  // NonDSampling ordering of variables
+  // Design    - continuous, discrete range, discrete set integer, 
+  //             discrete set string, discrete set real
+  // Aleatory  - continuous, discrete range, discrete set integer, 
+  //             discrete set string, discrete set real
+  // Epistemic - continuous, discrete range, discrete set integer, 
+  //             discrete set string, discrete set real
+  // State     - continuous, discrete range, discrete set integer, 
+  //             discrete set string, discrete set real
+ 
+  // LHSDriver ordering of variables returned in allSamples matrix:
+  // Continuous - design, aleatory, epistemic, state
+  // Discrete range - design,    Discrete set int - design
+  // Discrete range - aleatory,  Discrete set int - aleatory
+  // Discrete range - epistemic, Discrete set int - epistemic
+  // Discrete range - state,     Discrete set int - state
+  // Discrete set string - design, aleatory, epistemic, state
+  // Discrete set real   - design, aleatory, epistemic, state
+
+  // allSamples is a num_dims x num_samples RealMatrix
+  // the values are stored in the following manner:
+  // continuous: value
+  // discrete set string: integer (mapped to Real) 
+  //   I think an alphabetical ordering is applied internally by dakota so string
+  //   values input with order 'b' 'a' are assigned int values of 1 0
+  // discrete set int: value (mapped to Real)
+  // discrete integer range: value (mapped to Real)
+  // discrete set real: value
+
+  // get total number of variables and number of discrete variables
+  size_t num_cd_vars = cd_l_bnds.length(), num_cs_vars = cs_l_bnds.length(),
+    num_cau_vars = adp.cauv(), num_ceu_vars = edp.ceuv(), 
+    num_dau_vars = adp.dauv(), num_deu_vars = edp.deuv(),
+    //num_daui_vars=adp.dauiv(),num_dausv_vars=adp.dausv(),num_daur_vars=daurv(),
+    num_ddri_vars = ddri_l_bnds.length(), num_ddsi_vars = ddsi_values.size(),
+    num_ddss_vars = ddss_values.size(), num_ddsr_vars = ddsr_values.size(),
+    num_dsri_vars = dsri_l_bnds.length(), num_dssi_vars = dssi_values.size(),
+    num_dsss_vars = dsss_values.size(), num_dssr_vars = dssr_values.size();
+  size_t num_continuous_vars = num_cd_vars + num_cs_vars + num_cau_vars + 
+    num_ceu_vars;
+  size_t num_discrete_vars = num_dau_vars + num_deu_vars + num_ddri_vars + 
+    num_ddsi_vars + num_ddss_vars + num_ddsr_vars + num_dsri_vars + 
+    num_dssi_vars + num_dsss_vars + num_dssr_vars;
+  size_t num_vars = num_continuous_vars + num_discrete_vars;
+
+  samples.shapeUninitialized( num_vars, num_samples );
+
+  RealMatrix sample_ranks_rm, samples_rm;
+
+  // unique index of all discrete variables if any
+  std::set<RealArray>::iterator it;
+  std::set<RealArray> sorted_discrete_samples; 
+  RealArray discrete_sample( num_discrete_vars );
+
+  // Determine the columns in samples_rm that contain discrete variables
+  IntVector discrete_samples_map( num_discrete_vars, false );
+  for (int i=0; i<num_discrete_vars; i++)
+    discrete_samples_map[i]=num_continuous_vars+i;
+  
+  // Eliminate redundant samples by resampling if necessary.  Could pad
+  // num_samples in anticipation of duplicates, but this would alter LHS
+  // stratification that could be intended, so use num_samples for now.
+  bool complete = false, initial = true;
+  int num_unique_samples = 0;
+  while (!complete) {
+    generate_samples(cd_l_bnds, cd_u_bnds, ddri_l_bnds, ddri_u_bnds, 
+		     ddsi_values, ddss_values, ddsr_values, 
+		     cs_l_bnds, cs_u_bnds, dsri_l_bnds, dsri_u_bnds,
+		     dssi_values, dsss_values, dssr_values, adp, edp,
+		     num_samples, samples_rm, sample_ranks_rm);
+
+    samples_rm.print(std::cout);
+    discrete_samples_map.print(std::cout);
+    if (initial) { // pack initial sample set
+      for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
+	std::cout << "[";
+	for (int j=0; j<num_discrete_vars; j++) {
+	  int index = discrete_samples_map[j];
+	  discrete_sample[j] = samples_rm(index,i);
+	  std::cout << discrete_sample[j] << ",";
+	}
+	std::cout << "]\n";
+	sorted_discrete_samples.insert(discrete_sample);
+	if ( sorted_discrete_samples.size() > num_unique_samples ){
+	  // copy sample into samples matrix
+	  for (int j=0; j<num_vars; j++)
+	    samples(j,num_unique_samples) = samples_rm(j,i);
+	  num_unique_samples++;
+	}
+      }
+      if (num_unique_samples == num_samples) complete = true;
+      else initial = false;
+    }
+    else { // backfill duplicates with new samples
+      for (int i=0; i<num_samples; ++i) {
+	std::cout << num_unique_samples << "," << sorted_discrete_samples.size() << "," << num_discrete_vars << "," << num_vars << "," << num_continuous_vars << std::endl;
+	
+	if (num_unique_samples < num_samples) {
+	  std::cout << "[";
+	  for (int j=0; j<num_discrete_vars; j++) {
+	    int index = discrete_samples_map[j];
+	    discrete_sample[j] = samples_rm(index,i);
+	    std::cout << discrete_sample[j] << ",";
+	  }
+	  std::cout << "]\n";
+	  sorted_discrete_samples.insert(discrete_sample);
+	  if ( sorted_discrete_samples.size() > num_unique_samples ){
+	    // copy sample into samples matrix
+	    for (int j=0; j<num_vars; j++)
+	      samples(j,num_unique_samples) = samples_rm(j,i);
+	    num_unique_samples++;
+	  }
+	}
+	else
+	  { complete = true; break; }
+      }
+    }
+  }
+}
+
+/*
+void LHSDriver::
+generate_unique_index_samples(const IntVector& index_l_bnds,
+			      const IntVector& index_u_bnds, int num_samples,
+			      std::set<IntArray>& sorted_samples)
+{
+  // For    uniform probability, model as discrete design range (this fn).
+  // For nonuniform probability, model as discrete uncertain set integer.
+
+  RealVector  empty_rv;  RealMatrix empty_rm, samples_rm;
+  IntVector   empty_iv;  IntArray sample;
+  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
+  AleatoryDistParams adp; EpistemicDistParams edp;
+  generate_unique_samples( empty_rv, empty_rv, index_l_bnds, index_u_bnds,
+			   empty_isa, empty_ssa, empty_rsa, empty_rv, empty_rv,
+			   empty_iv, empty_iv, empty_isa, empty_ssa, empty_rsa,
+			   adp, edp, num_samples, samples_rm, empty_rm);
+  
+  // TODO decide whether to cast samples rm to set<IntArray> here or
+  // change api to either return samples_rm and cast when chosing 
+  // sub tensor points or return std::vector<IntArray> and keep choice of 
+  // subtensor points the same
+}*/
+
 
 void LHSDriver::
 generate_unique_index_samples(const IntVector& index_l_bnds,
