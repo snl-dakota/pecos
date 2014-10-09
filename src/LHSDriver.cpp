@@ -1611,9 +1611,9 @@ generate_unique_samples( const RealVector& cd_l_bnds,
   RealVector pl = adp.poisson_lambdas();
   RealVector nbppt = adp.negative_binomial_probability_per_trial();
   RealVector gppt = adp.geometric_probability_per_trial();
-  if ( pl.length() > 1 ) max_num_unique_discrete_samples = INT_MAX;
-  else if ( nbppt.length() > 1 ) max_num_unique_discrete_samples = INT_MAX;
-  else if ( gppt.length() > 1 ) max_num_unique_discrete_samples = INT_MAX;
+  if ( pl.length() > 0 ) max_num_unique_discrete_samples = INT_MAX;
+  else if ( nbppt.length() > 0 ) max_num_unique_discrete_samples = INT_MAX;
+  else if ( gppt.length() > 0 ) max_num_unique_discrete_samples = INT_MAX;
   else
     {
       num_discrete_strata_1d.resize( num_discrete_vars-pl.length()-
@@ -1621,7 +1621,7 @@ generate_unique_samples( const RealVector& cd_l_bnds,
       for (int k=0; k < num_discrete_strata_1d.length(); k++)
 	  max_num_unique_discrete_samples *= num_discrete_strata_1d[k];
     }
-
+  
   if ( max_num_unique_discrete_samples >= num_samples )
     // If the number of samples requested is greater than the maximum possible
     // number of discrete samples then we must allow replicates of the 
@@ -1708,9 +1708,10 @@ generate_unique_samples( const RealVector& cd_l_bnds,
   else
     {
       PCout << "LHS backfill was requested, but the discrete variables "
-	    << "specified do not have enough unique values to obtain the "
-	    << "number of samples requested so replicated discrete samples "
-	    << "have been allowed.\n";
+	    << "specified do not have enough unique values ("
+	    << max_num_unique_discrete_samples
+	    << ") to obtain the number of samples requested so replicated "
+	    << "discrete samples have been allowed.\n";
       generate_samples( cd_l_bnds, cd_u_bnds, ddri_l_bnds, ddri_u_bnds,
 			ddsi_values, ddss_values, ddsr_values, cs_l_bnds,
 			cs_u_bnds, dsri_l_bnds, dsri_u_bnds, dssi_values,
