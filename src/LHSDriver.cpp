@@ -1483,6 +1483,12 @@ generate_unique_samples( const RealVector& cd_l_bnds,
   // Discrete set string - design, aleatory, epistemic, state
   // Discrete set real   - design, aleatory, epistemic, state
 
+  // LHSDriver ordering of discrete uncertain variables returned in 
+  // allSamples matrix
+  // poisson uncertain, binomial uncertain, negative binomial uncertain, 
+  // geometric uncertain, hypergeometric uncertain, histogram point int, 
+  // discrete interval uncertain, discrete uncertain set integer
+
   // allSamples is a num_dims x num_samples RealMatrix
   // the values are stored in the following manner:
   // continuous: value
@@ -1509,86 +1515,215 @@ generate_unique_samples( const RealVector& cd_l_bnds,
     num_dssi_vars + num_dsss_vars + num_dssr_vars;
   size_t num_vars = num_continuous_vars + num_discrete_vars;
 
-  samples.shapeUninitialized( num_vars, num_samples );
+  // compute the number of total possible combinations of discrete variables
+  // TODO Must look over all data structures passed into function
+  // for range variables use ub-lb+1
+  // for set variables use sum_i (ddsi_values[i].size())
+  // if num_values**d < num_samples then call generate_samples
+  int k=0;
+  IntVector num_discrete_strata_1d( num_discrete_vars, false );
+  // Discrete design variables
+  for (int i=0; i<num_ddri_vars; i++)
+    {  num_discrete_strata_1d[k] = ddri_u_bnds[i]-ddri_l_bnds[i]+1; k++; }
+  for (int i=0; i<num_ddsi_vars; i++)
+    {  num_discrete_strata_1d[k] = ddsi_values[i].size(); k++; }
+  for (int i=0; i<num_ddss_vars; i++)
+    {  num_discrete_strata_1d[k] = ddss_values[i].size(); k++; }
+  for (int i=0; i<num_ddsr_vars; i++)
+    {  num_discrete_strata_1d[k] = ddsr_values[i].size(); k++; }
+  for (int i=0; i<num_dsri_vars; i++)
 
-  RealMatrix sample_ranks_rm, samples_rm;
+  // Discrete state variables
+    {  num_discrete_strata_1d[k] = dsri_u_bnds[i]-dsri_l_bnds[i]+1; k++; }
+  for (int i=0; i<num_dssi_vars; i++)
+    {  num_discrete_strata_1d[k] = dssi_values.size(); k++; }
+  for (int i=0; i<num_dsss_vars; i++)
+    {  num_discrete_strata_1d[k] = dsss_values.size(); k++; }
+  for (int i=0; i<num_dssr_vars; i++)
+    {  num_discrete_strata_1d[k] = dssr_values.size(); k++; }
 
-  // unique index of all discrete variables if any
-  std::set<RealArray>::iterator it;
-  std::set<RealArray> sorted_discrete_samples; 
-  RealArray discrete_sample( num_discrete_vars );
-
-  // Determine the columns in samples_rm that contain discrete variables
-  IntVector discrete_samples_map( num_discrete_vars, false );
-  for (int i=0; i<num_discrete_vars; i++)
-    discrete_samples_map[i]=num_continuous_vars+i;
-  
-  // Eliminate redundant samples by resampling if necessary.  Could pad
-  // num_samples in anticipation of duplicates, but this would alter LHS
-  // stratification that could be intended, so use num_samples for now.
-  bool complete = false, initial = true;
-  int num_unique_samples = 0;
-  while (!complete) {
-    generate_samples(cd_l_bnds, cd_u_bnds, ddri_l_bnds, ddri_u_bnds, 
-		     ddsi_values, ddss_values, ddsr_values, 
-		     cs_l_bnds, cs_u_bnds, dsri_l_bnds, dsri_u_bnds,
-		     dssi_values, dsss_values, dssr_values, adp, edp,
-		     num_samples, samples_rm, sample_ranks_rm);
-
-    samples_rm.print(std::cout);
-    discrete_samples_map.print(std::cout);
-    if (initial) { // pack initial sample set
-      for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
-	std::cout << "[";
-	for (int j=0; j<num_discrete_vars; j++) {
-	  int index = discrete_samples_map[j];
-	  discrete_sample[j] = samples_rm(index,i);
-	  std::cout << discrete_sample[j] << ",";
-	}
-	std::cout << "]\n";
-	sorted_discrete_samples.insert(discrete_sample);
-	if ( sorted_discrete_samples.size() > num_unique_samples ){
-	  // copy sample into samples matrix
-	  for (int j=0; j<num_vars; j++)
-	    samples(j,num_unique_samples) = samples_rm(j,i);
-	  num_unique_samples++;
-	}
-      }
-      if (num_unique_samples == num_samples) complete = true;
-      else initial = false;
+  // Epistemic discrete variables
+  IntIntPairRealMapArray di_bpa = edp.discrete_interval_basic_probabilities();
+  int num_diuv = di_bpa.size();
+  for (int i=0; i<num_diuv; ++i){
+    const IntIntPairRealMap& di_bpa_i = di_bpa[i];
+    IIPRMCIter cit;
+    // x_sort_unique contains ALL of the unique integer values for this
+    // discrete interval variable in increasing order.  For example, if
+    // there are 3 intervals for a variable and the bounds are (1,4),
+    // (3,6), and [9,10], x_sorted will be (1,2,3,4,5,6,9,10).
+    IntSet x_sort_unique;
+    for (cit=di_bpa_i.begin(); cit!=di_bpa_i.end(); ++cit) {
+      const RealRealPair& bounds = cit->first;
+      int val, u_bnd = bounds.second;
+      for (val=bounds.first; val<=u_bnd; ++val)
+	x_sort_unique.insert(val);
     }
-    else { // backfill duplicates with new samples
-      for (int i=0; i<num_samples; ++i) {
-	std::cout << num_unique_samples << "," << sorted_discrete_samples.size() << "," << num_discrete_vars << "," << num_vars << "," << num_continuous_vars << std::endl;
-	
-	if (num_unique_samples < num_samples) {
-	  std::cout << "[";
-	  for (int j=0; j<num_discrete_vars; j++) {
-	    int index = discrete_samples_map[j];
-	    discrete_sample[j] = samples_rm(index,i);
-	    std::cout << discrete_sample[j] << ",";
-	  }
-	  std::cout << "]\n";
-	  sorted_discrete_samples.insert(discrete_sample);
-	  if ( sorted_discrete_samples.size() > num_unique_samples ){
-	    // copy sample into samples matrix
-	    for (int j=0; j<num_vars; j++)
-	      samples(j,num_unique_samples) = samples_rm(j,i);
-	    num_unique_samples++;
-	  }
-	}
-	else
-	  { complete = true; break; }
-      }
-    }
+    int num_vals = x_sort_unique.size();
+    num_discrete_strata_1d[k] = num_vals;
+    k++;
   }
+  IntRealMapArray dusi_vals_probs = edp.discrete_set_int_values_probabilities();
+  int num_dusiv = dusi_vals_probs.size();
+  for (int i=0; i<num_dusiv; ++i){
+    const IntRealMap& dusi_v_p_i = dusi_vals_probs[i];
+    int num_vals = dusi_v_p_i.size();
+    num_discrete_strata_1d[k] = num_vals;
+    k++;
+  }
+  StringRealMapArray duss_vals_probs = 
+    edp.discrete_set_string_values_probabilities();
+  int num_dussv = duss_vals_probs.size();
+  for (int i=0; i<num_dussv; ++i){
+    const StringRealMap& duss_v_p_i = duss_vals_probs[i];
+    int num_vals = duss_v_p_i.size();
+    num_discrete_strata_1d[k] = num_vals;
+    k++;
+  }
+  RealRealMapArray dusr_vals_probs = 
+    edp.discrete_set_real_values_probabilities();
+  int num_dusrv = dusr_vals_probs.size();
+  for (int i=0; i<num_dusrv; ++i){
+    const RealRealMap& dusr_v_p_i = dusr_vals_probs[i];
+    int num_vals = dusr_v_p_i.size();
+    num_discrete_strata_1d[k] = num_vals;
+    k++;
+  }
+
+  // Aleatory discrete variables with finite support
+  IntVector bnt = adp.binomial_num_trials();
+  for ( int i=0; i < bnt.length(); i++ )
+    { num_discrete_strata_1d[k] = bnt[i]+1; k++;}
+  IntVector htp = adp.hypergeometric_total_population();
+  IntVector hsp = adp.hypergeometric_selected_population();
+  IntVector hnd = adp.hypergeometric_num_drawn();
+  for ( int i=0; i < htp.length(); i++ )
+    { int num_fail=hnd[i], num_total_pop=htp[i], num_sel_pop=hsp[i]; 
+      // Todo confirm this
+      num_discrete_strata_1d[k] = std::min(num_fail,num_sel_pop)-
+	std::max(0,num_sel_pop+num_fail-num_total_pop)+1;
+      k++;
+    }
+
+  // Aleatory discrete variables with infinite support. If any of these variables
+  // are present then backfill can always be used.
+  int max_num_unique_discrete_samples = 1;
+  RealVector pl = adp.poisson_lambdas();
+  RealVector nbppt = adp.negative_binomial_probability_per_trial();
+  RealVector gppt = adp.geometric_probability_per_trial();
+  if ( pl.length() > 1 ) max_num_unique_discrete_samples = INT_MAX;
+  else if ( nbppt.length() > 1 ) max_num_unique_discrete_samples = INT_MAX;
+  else if ( gppt.length() > 1 ) max_num_unique_discrete_samples = INT_MAX;
+  else
+    {
+      num_discrete_strata_1d.resize( num_discrete_vars-pl.length()-
+				     nbppt.length()- gppt.length());
+      for (int k=0; k < num_discrete_strata_1d.length(); k++)
+	  max_num_unique_discrete_samples *= num_discrete_strata_1d[k];
+    }
+
+  if ( max_num_unique_discrete_samples >= num_samples )
+    // If the number of samples requested is greater than the maximum possible
+    // number of discrete samples then we must allow replicates of the 
+    // disscrete variables to obtain the desired number of variables. 
+    // If not then we can proceed with generating a unique set of discrete 
+    // samples.
+    {
+      samples.shapeUninitialized( num_vars, num_samples );
+      // Currently sample_ranks will always be returned empty. It should only be 
+      // filled when NonDSampling.sampleRanksMode>0. But I cannot see anywhere
+      // in the code where this is true.
+      //sample_ranks.shapeUninitialized( num_vars, num_samples );
+
+      RealMatrix sample_ranks_rm, samples_rm;
+
+      // unique index of all discrete variables if any
+      std::set<RealArray>::iterator it;
+      std::set<RealArray> sorted_discrete_samples; 
+      RealArray discrete_sample( num_discrete_vars );
+
+      // Determine the columns in samples_rm that contain discrete variables
+      IntVector discrete_samples_map( num_discrete_vars, false );
+      for (int i=0; i<num_discrete_vars; i++)
+	discrete_samples_map[i]=num_continuous_vars+i;
+  
+      // Eliminate redundant samples by resampling if necessary.  Could pad
+      // num_samples in anticipation of duplicates, but this would alter LHS
+      // stratification that could be intended, so use num_samples for now.
+      bool complete = false, initial = true;
+      int num_unique_samples = 0;
+      while (!complete) {
+	generate_samples(cd_l_bnds, cd_u_bnds, ddri_l_bnds, ddri_u_bnds, 
+			 ddsi_values, ddss_values, ddsr_values, 
+			 cs_l_bnds, cs_u_bnds, dsri_l_bnds, dsri_u_bnds,
+			 dssi_values, dsss_values, dssr_values, adp, edp,
+			 num_samples, samples_rm, sample_ranks_rm);
+
+	if (initial) { // pack initial sample set
+	  for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
+	    //std::cout << "[";
+	    for (int j=0; j<num_discrete_vars; j++) {
+	      int index = discrete_samples_map[j];
+	      discrete_sample[j] = samples_rm(index,i);
+	      //std::cout << discrete_sample[j] << ",";
+	    }
+	    //std::cout << "]\n";
+	    sorted_discrete_samples.insert(discrete_sample);
+	    if ( sorted_discrete_samples.size() > num_unique_samples ){
+	      // copy sample into samples matrix
+	      for (int j=0; j<num_vars; j++)
+		samples(j,num_unique_samples) = samples_rm(j,i);
+	      num_unique_samples++;
+	    }
+	  }
+	  if (num_unique_samples == num_samples) complete = true;
+	  else initial = false;
+	}
+	else { // backfill duplicates with new samples
+	  //std::cout << num_unique_samples << "," << sorted_discrete_samples.size() << "," << num_discrete_vars << "," << num_vars << "," << num_continuous_vars << std::endl;
+
+	  for (int i=0; i<num_samples; ++i) {
+	    if (num_unique_samples < num_samples) {
+	      //std::cout << "[";
+	      for (int j=0; j<num_discrete_vars; j++) {
+		int index = discrete_samples_map[j];
+		discrete_sample[j] = samples_rm(index,i);
+		//std::cout << discrete_sample[j] << ",";
+	      }
+	      //std::cout << "]\n";
+	      sorted_discrete_samples.insert(discrete_sample);
+	      if ( sorted_discrete_samples.size() > num_unique_samples ){
+		// copy sample into samples matrix
+		for (int j=0; j<num_vars; j++)
+		  samples(j,num_unique_samples) = samples_rm(j,i);
+		num_unique_samples++;
+	      }
+	    }
+	    else
+	      { complete = true; break; }
+	  }
+	}
+      }
+    }
+  else
+    {
+      PCout << "LHS backfill was requested, but the discrete variables "
+	    << "specified do not have enough unique values to obtain the "
+	    << "number of samples requested so replicated discrete samples "
+	    << "have been allowed.\n";
+      generate_samples( cd_l_bnds, cd_u_bnds, ddri_l_bnds, ddri_u_bnds,
+			ddsi_values, ddss_values, ddsr_values, cs_l_bnds,
+			cs_u_bnds, dsri_l_bnds, dsri_u_bnds, dssi_values,
+			dsss_values,dssr_values, adp, edp, num_samples,
+			samples, sample_ranks );
+    }
 }
 
 /*
 void LHSDriver::
 generate_unique_index_samples(const IntVector& index_l_bnds,
 			      const IntVector& index_u_bnds, int num_samples,
-			      std::set<IntArray>& sorted_samples)
+			      IntMatrix& index_samples )
 {
   // For    uniform probability, model as discrete design range (this fn).
   // For nonuniform probability, model as discrete uncertain set integer.
@@ -1602,10 +1737,11 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
 			   empty_iv, empty_iv, empty_isa, empty_ssa, empty_rsa,
 			   adp, edp, num_samples, samples_rm, empty_rm);
   
-  // TODO decide whether to cast samples rm to set<IntArray> here or
-  // change api to either return samples_rm and cast when chosing 
-  // sub tensor points or return std::vector<IntArray> and keep choice of 
-  // subtensor points the same
+  index_samples.shapeUninitialized( samples_rm.numRows(), samples_rm.numCols() );
+  for (int j=0; j<samples_rm.numCols(); j++){
+    for (int i=0; i<samples_rm.numRows(); i++)
+      index_samples(i,j) = (int)samples_rm(i,j);
+  }
 }*/
 
 
