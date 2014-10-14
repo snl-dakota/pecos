@@ -1720,7 +1720,7 @@ generate_unique_samples( const RealVector& cd_l_bnds,
     }
 }
 
-/*
+
 void LHSDriver::
 generate_unique_index_samples(const IntVector& index_l_bnds,
 			      const IntVector& index_u_bnds, int num_samples,
@@ -1742,54 +1742,6 @@ generate_unique_index_samples(const IntVector& index_l_bnds,
   for (int j=0; j<samples_rm.numCols(); j++){
     for (int i=0; i<samples_rm.numRows(); i++)
       index_samples(i,j) = (int)samples_rm(i,j);
-  }
-}*/
-
-
-void LHSDriver::
-generate_unique_index_samples(const IntVector& index_l_bnds,
-			      const IntVector& index_u_bnds, int num_samples,
-			      std::set<IntArray>& sorted_samples)
-{
-  if (sampleRanksMode) {
-    PCerr << "Error: generate_unique_index_samples() does not support sample "
-	  << "rank input/output." << std::endl;
-    abort_handler(-1);
-  }
-  // For    uniform probability, model as discrete design range (this fn).
-  // For nonuniform probability, model as discrete uncertain set integer.
-  RealVector  empty_rv;  RealMatrix empty_rm, samples_rm;
-  IntVector   empty_iv;  IntArray sample;
-  IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  AleatoryDistParams adp; EpistemicDistParams edp;
-  std::set<IntArray>::iterator it;
-  // Eliminate redundant samples by resampling if necessary.  Could pad
-  // num_samples in anticipation of duplicates, but this would alter LHS
-  // stratification that could be intended, so use num_samples for now.
-  bool complete = false, initial = true;
-  size_t i, num_vars = std::min(index_l_bnds.length(), index_u_bnds.length());
-  while (!complete) {
-    generate_samples(empty_rv, empty_rv, index_l_bnds, index_u_bnds, empty_isa,
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv,
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-		     num_samples, samples_rm, empty_rm);
-    if (initial) { // pack initial sample set
-      for (int i=0; i<num_samples; ++i) { // or matrix->set<vector> ?
-	copy_data(samples_rm[i], num_vars, sample);
-	sorted_samples.insert(sample);
-      }
-      if (sorted_samples.size() == num_samples) complete = true;
-      else initial = false;
-    }
-    else { // backfill duplicates with new samples
-      for (int i=0; i<num_samples; ++i)
-	if (sorted_samples.size() < num_samples) {
-	  copy_data(samples_rm[i], num_vars, sample);
-	  sorted_samples.insert(sample);
-	}
-	else
-	  { complete = true; break; }
-    }
   }
 }
 

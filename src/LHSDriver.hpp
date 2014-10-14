@@ -120,9 +120,12 @@ public:
 
   /// generates unique integer index samples from within uncorrelated
   /// uniform distributions (more expensive than non-unique case)
+  //  void generate_unique_index_samples(const IntVector& index_l_bnds,
+  //  const IntVector& index_u_bnds, int num_samples,
+    //				     std::set<IntArray>& sorted_samples);
   void generate_unique_index_samples(const IntVector& index_l_bnds,
     const IntVector& index_u_bnds, int num_samples,
-    std::set<IntArray>& sorted_samples);
+    IntMatrix& sorted_samples);
 
   /// Similar to generate_samples but this function ensures that all discrete 
   /// samples are unique
