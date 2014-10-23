@@ -19,7 +19,7 @@ endif()
 
 if(HAVE_LHS)
   include_directories(${LHS_BINARY_DIR}/include)
-  list(APPEND Pecos_libs lhs mods mod)
+  list(APPEND Pecos_libs lhs lhs_mods lhs_mod)
 endif()
 
 if(HAVE_SPARSE_GRID)

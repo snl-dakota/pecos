@@ -148,7 +148,7 @@ endfunction(CheckPackage)
 
 CheckPackage(LHS)
 if(HAVE_LHS)
-  list(APPEND SUBLIBS mods mod)
+  list(APPEND SUBLIBS lhs_mods lhs_mod)
 endif(HAVE_LHS)
 
 if(HAVE_FFT)
