@@ -2845,19 +2845,56 @@ const RealVector& RegressOrthogPolyApproximation::dimension_decay_rates()
 }
 
 
-RealVector RegressOrthogPolyApproximation::dense_coefficients() const
+RealVector RegressOrthogPolyApproximation::
+approximation_coefficients(bool normalized) const
 {
   if (sparseIndices.empty())
-    return OrthogPolyApproximation::dense_coefficients();
+    return OrthogPolyApproximation::approximation_coefficients(normalized);
 
+  // synchronize the expansion coeffs with the length of the shared multi-index
+  // approx_coeffs is an inflation of expansionCoeffs
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multiIndex;
-  RealVector dense_coeffs(mi.size()); // init to 0
+  RealVector approx_coeffs(mi.size()); // init to 0
   size_t i; StSCIter cit;
   for (i=0, cit=sparseIndices.begin(); cit!=sparseIndices.end(); ++i, ++cit)
-    dense_coeffs[*cit] = expansionCoeffs[i];
-  return dense_coeffs;
+    approx_coeffs[*cit] = (normalized) ?
+      // basis is divided by norm, so coeff is multiplied by norm
+      expansionCoeffs[i] * std::sqrt(data_rep->norm_squared(mi[*cit])) :
+      expansionCoeffs[i];
+  return approx_coeffs;
+}
+
+
+void RegressOrthogPolyApproximation::
+approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
+{
+  if (sparseIndices.empty())
+    OrthogPolyApproximation::approximation_coefficients(approx_coeffs, 
+							normalized);
+  else { // won't happen with current import use cases
+
+    // synchronize the expansion coeffs with the shared multi-index length
+    // expansionCoeffs is a deflation of approx_coeffs
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    const UShort2DArray& mi = data_rep->multiIndex;
+    size_t i, num_sparse = sparseIndices.size(); StSCIter cit;
+    if (expansionCoeffs.length() != num_sparse)
+      expansionCoeffs.sizeUninitialized(num_sparse);
+    for (i=0, cit=sparseIndices.begin(); cit!=sparseIndices.end(); ++i, ++cit)
+      expansionCoeffs[i] = (normalized) ?
+	approx_coeffs[*cit] / std::sqrt(data_rep->norm_squared(mi[*cit])) :
+	approx_coeffs[*cit];
+
+    // allocate arrays in support of external coefficient import (mirrors
+    // allocate_arrays() except for redundant size_expansion())
+    allocate_total_sobol();
+    allocate_component_sobol();
+    if (expansionMoments.empty())
+      expansionMoments.sizeUninitialized(2);
+  }
 }
 
 

@@ -86,8 +86,11 @@ protected:
   void compute_total_sobol();
   ULongULongMap sparse_sobol_index_map() const;
 
-  RealVector dense_coefficients() const;
-  void print_coefficients(std::ostream& s, bool normalized = false);
+  RealVector approximation_coefficients(bool normalized) const;
+  void approximation_coefficients(const RealVector& approx_coeffs,
+				  bool normalized);
+
+  void print_coefficients(std::ostream& s, bool normalized);
   void coefficient_labels(std::vector<std::string>& all_coeff_tags) const;
 
 private:

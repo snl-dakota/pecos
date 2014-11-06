@@ -53,10 +53,6 @@ public:
   /// variable dimension using linear least squares in semilog space
   virtual const RealVector& dimension_decay_rates();
 
-  /// retrieve or form a set of dense coefficients that correspond to
-  /// SharedOrthogPolyApproxData::multiIndex
-  virtual RealVector dense_coefficients() const;
-
 protected:
 
   //
@@ -68,10 +64,15 @@ protected:
   void store_coefficients();
   void combine_coefficients(short combine_type);
 
-  void print_coefficients(std::ostream& s, bool normalized = false);
+  void print_coefficients(std::ostream& s, bool normalized);
 
-  const RealVector& approximation_coefficients() const;
-  void approximation_coefficients(const RealVector& approx_coeffs);
+  /// retrieve or form a set of dense coefficients that correspond to
+  /// SharedOrthogPolyApproxData::multiIndex
+  RealVector approximation_coefficients(bool normalized) const;
+  /// set an array of dense coefficients corresponding to
+  /// SharedOrthogPolyApproxData::multiIndex
+  void approximation_coefficients(const RealVector& approx_coeffs,
+				  bool normalized);
 
   void coefficient_labels(std::vector<std::string>& all_coeff_tags) const;
 
@@ -189,6 +190,17 @@ protected:
 private:
 
   //
+  //- Heading: Member functions
+  //
+
+  // apply normalization to std_coeffs to create normalized_coeffs
+  void normalize(const RealVector& std_coeffs,
+		 RealVector& normalized_coeffs) const;
+  // remove normalization from normalized_coeffs to create std_coeffs
+  void denormalize(const RealVector& normalized_coeffs,
+		   RealVector& std_coeffs) const;
+
+  //
   //- Heading: Data
   //
 
@@ -244,15 +256,56 @@ inline Real OrthogPolyApproximation::variance(const RealVector& x)
 { return covariance(x, this); }
 
 
-inline const RealVector& OrthogPolyApproximation::
-approximation_coefficients() const
-{ return expansionCoeffs; }
+inline void OrthogPolyApproximation::
+normalize(const RealVector& std_coeffs, RealVector& normalized_coeffs) const
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, num_mi = mi.size();
+  if (normalized_coeffs.length() != num_mi)
+    normalized_coeffs.sizeUninitialized(num_mi);
+  // basis is divided by norm, so coeff is multiplied by norm
+  for (i=0; i<num_mi; ++i)
+    normalized_coeffs[i] = std_coeffs[i]
+                         * std::sqrt(data_rep->norm_squared(mi[i]));
+}
 
 
 inline void OrthogPolyApproximation::
-approximation_coefficients(const RealVector& approx_coeffs)
+denormalize(const RealVector& normalized_coeffs, RealVector& std_coeffs) const
 {
-  expansionCoeffs = approx_coeffs;
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  size_t i, num_mi = mi.size();
+  if (std_coeffs.length() != num_mi)
+    std_coeffs.sizeUninitialized(num_mi);
+  for (i=0; i<num_mi; ++i)
+    std_coeffs[i] = normalized_coeffs[i]
+                  / std::sqrt(data_rep->norm_squared(mi[i]));
+}
+
+
+inline RealVector OrthogPolyApproximation::
+approximation_coefficients(bool normalized) const
+{
+  if (normalized) {
+    RealVector normalized_coeffs;
+    normalize(expansionCoeffs, normalized_coeffs);
+    return normalized_coeffs;
+  }
+  else
+    return RealVector(Teuchos::View, expansionCoeffs.values(),
+		      expansionCoeffs.length());
+}
+
+
+inline void OrthogPolyApproximation::
+approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
+{
+  if (normalized) denormalize(approx_coeffs, expansionCoeffs);
+  else            expansionCoeffs = approx_coeffs;
 
   // allocate arrays in support of external coefficient import (mirrors
   // allocate_arrays() except for redundant size_expansion())
@@ -260,14 +313,6 @@ approximation_coefficients(const RealVector& approx_coeffs)
   allocate_component_sobol();
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
-}
-
-
-inline RealVector OrthogPolyApproximation::dense_coefficients() const
-{
-  // default implementation
-  return RealVector(Teuchos::View, expansionCoeffs.values(),
-		    expansionCoeffs.length());
 }
 
 

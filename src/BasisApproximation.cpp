@@ -321,7 +321,7 @@ void BasisApproximation::print_coefficients(std::ostream& s, bool normalized)
 }
 
 
-const RealVector& BasisApproximation::approximation_coefficients() const
+RealVector BasisApproximation::approximation_coefficients(bool normalized) const
 {
   if (!basisApproxRep) {
     PCerr << "Error: approximation_coefficients() not available for this "
@@ -329,15 +329,15 @@ const RealVector& BasisApproximation::approximation_coefficients() const
     abort_handler(-1);
   }
    
-  return basisApproxRep->approximation_coefficients(); // fwd to letter
+  return basisApproxRep->approximation_coefficients(normalized);// fwd to letter
 }
 
 
 void BasisApproximation::
-approximation_coefficients(const RealVector& approx_coeffs)
+approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 {
-  if (basisApproxRep)
-    basisApproxRep->approximation_coefficients(approx_coeffs); // fwd to letter
+  if (basisApproxRep) // fwd to letter
+    basisApproxRep->approximation_coefficients(approx_coeffs, normalized);
   else {
     PCerr << "Error: approximation_coefficients() not available for this "
 	  << "basis approximation type." << std::endl;

@@ -76,13 +76,14 @@ public:
   virtual void combine_coefficients(short combine_type);
 
   /// print the coefficient array computed in compute_coefficients()
-  virtual void print_coefficients(std::ostream& s, bool normalized = false);
+  virtual void print_coefficients(std::ostream& s, bool normalized);
 
   /// return the coefficient array computed by compute_coefficients()
-  virtual const RealVector& approximation_coefficients() const;
+  virtual RealVector approximation_coefficients(bool normalized) const;
   /// set the coefficient array from external sources, rather than
   /// computing with compute_coefficients()
-  virtual void approximation_coefficients(const RealVector& approx_coeffs);
+  virtual void approximation_coefficients(const RealVector& approx_coeffs,
+					  bool normalized);
 
   /// retrieve a vector of coefficient label strings, one per expansion term
   virtual void coefficient_labels(std::vector<std::string>& coeff_labels) const;

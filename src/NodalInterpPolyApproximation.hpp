@@ -92,8 +92,9 @@ protected:
   void compute_total_sobol_indices();
   void compute_partial_variance(const BitArray& set_value);
 
-  const RealVector& approximation_coefficients() const;
-  void approximation_coefficients(const RealVector& approx_coeffs);
+  RealVector approximation_coefficients(bool normalized) const;
+  void approximation_coefficients(const RealVector& approx_coeffs,
+				  bool normalized);
 
 private:
 
@@ -241,9 +242,12 @@ inline void NodalInterpPolyApproximation::finalize_expansion_coefficients()
 { restore_expansion_coefficients(); }
 
 
-inline const RealVector& NodalInterpPolyApproximation::
-approximation_coefficients() const
+inline RealVector NodalInterpPolyApproximation::
+approximation_coefficients(bool normalized) const
 {
+  if (normalized)
+    PCerr << "Warning: normalized coefficients not supported in "
+	  << "InterpPolyApproximation export." << std::endl;
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (data_rep->basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
@@ -251,13 +255,17 @@ approximation_coefficients() const
     return abort_handler_t<const RealVector&>(-1);
   }
   else
-    return expansionType1Coeffs;
+    return RealVector(Teuchos::View, expansionType1Coeffs.values(),
+		      expansionType1Coeffs.length());
 }
 
 
 inline void NodalInterpPolyApproximation::
-approximation_coefficients(const RealVector& approx_coeffs)
+approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 {
+  if (normalized)
+    PCerr << "Warning: normalized coefficients not supported in "
+	  << "InterpPolyApproximation import." << std::endl;
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (data_rep->basisConfigOptions.useDerivs) {
     PCerr << "Error: approximation_coefficients() not supported in "
