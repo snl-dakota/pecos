@@ -130,6 +130,14 @@ Real ChebyshevOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 }
 
 
+Real ChebyshevOrthogPolynomial::type1_hessian(Real x, unsigned short order)
+{
+  PCerr << "Error: ChebyshevOrthogPolynomial::type1_hessian() not yet "
+	<< "implemented." << std::endl;
+  abort_handler(-1);
+}
+
+
 Real ChebyshevOrthogPolynomial::norm_squared(unsigned short order)
 { return (order) ? PI/2. : PI; }
 

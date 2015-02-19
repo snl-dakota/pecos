@@ -117,6 +117,14 @@ Real GenLaguerreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 }
 
 
+Real GenLaguerreOrthogPolynomial::type1_hessian(Real x, unsigned short order)
+{
+  PCerr << "Error: GenLaguerreOrthogPolynomial::type1_hessian() not yet "
+	<< "implemented." << std::endl;
+  abort_handler(-1);
+}
+
+
 Real GenLaguerreOrthogPolynomial::norm_squared(unsigned short order)
 {
   // For integer alphaPoly, Gamma(alphaPoly+n+1)/n!/Gamma(alphaPoly+1)

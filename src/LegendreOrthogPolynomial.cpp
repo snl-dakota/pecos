@@ -146,6 +146,14 @@ Real LegendreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 }
 
 
+Real LegendreOrthogPolynomial::type1_hessian(Real x, unsigned short order)
+{
+  PCerr << "Error: LegendreOrthogPolynomial::type1_hessian() not yet "
+	<< "implemented." << std::endl;
+  abort_handler(-1);
+}
+
+
 Real LegendreOrthogPolynomial::norm_squared(unsigned short order)
 {
   // Abramowitz & Stegun: w(x) = 1

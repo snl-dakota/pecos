@@ -121,6 +121,14 @@ Real JacobiOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 }
 
 
+Real JacobiOrthogPolynomial::type1_hessian(Real x, unsigned short order)
+{
+  PCerr << "Error: JacobiOrthogPolynomial::type1_hessian() not yet "
+	<< "implemented." << std::endl;
+  abort_handler(-1);
+}
+
+
 Real JacobiOrthogPolynomial::norm_squared(unsigned short order)
 {
   Real apbp1 = alphaPoly + betaPoly + 1.;
