@@ -75,6 +75,8 @@ protected:
 
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
 
+  const RealSymMatrix& hessian_basis_variables(const RealVector& x);
+
   Real stored_value(const RealVector& x);
   const RealVector& stored_gradient_basis_variables(const RealVector& x);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);

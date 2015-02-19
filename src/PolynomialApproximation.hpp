@@ -72,10 +72,16 @@ public:
   virtual const RealVector& gradient_basis_variables(const RealVector& x,
 						     const SizetArray& dvv) = 0;
   /// retrieve the gradient for a response expansion with respect to
-  /// all variables not included in the polynomial bases using the
-  /// given parameter vector and default DVV
+  /// all variables not included in the polynomial bases
+  /// (nonprobabilistic variables such as design or epistemic when not
+  /// in "all" mode) using the given parameter vector and default DVV
   virtual const RealVector&
     gradient_nonbasis_variables(const RealVector& x) = 0;
+
+  /// retrieve the Hessian of the response expansion with respect to all
+  /// variables included in the polynomial basis (e.g., probabilistic
+  /// variables) for a given parameter vector
+  virtual const RealSymMatrix& hessian_basis_variables(const RealVector& x) = 0;
 
   /// retrieve the response value for a stored expansion using the
   /// given parameter vector
@@ -213,6 +219,8 @@ protected:
 
   /// generic base class function mapped to gradient_basis_variables(x)
   const RealVector& gradient(const RealVector& x);
+  /// generic base class function mapped to hessian_basis_variables(x)
+  const RealSymMatrix& hessian(const RealVector& x);
 
   //
   //- Heading: Member functions
@@ -256,6 +264,8 @@ protected:
 
   /// gradient of the polynomial approximation returned by gradient()
   RealVector approxGradient;
+  /// gradient of the polynomial approximation returned by gradient()
+  RealSymMatrix approxHessian;
   /// gradient of the primary mean (expansion mean for OrthogPoly,
   /// numerical integration mean for InterpPoly)
   RealVector meanGradient;
@@ -376,6 +386,11 @@ inline const RealVector& PolynomialApproximation::total_sobol_indices() const
 
 inline const RealVector& PolynomialApproximation::gradient(const RealVector& x)
 { return gradient_basis_variables(x); }
+
+
+inline const RealSymMatrix& PolynomialApproximation::
+hessian(const RealVector& x)
+{ return hessian_basis_variables(x); }
 
 } // namespace Pecos
 

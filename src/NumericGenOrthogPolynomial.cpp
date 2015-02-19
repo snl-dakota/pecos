@@ -762,12 +762,32 @@ Real NumericGenOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 Real NumericGenOrthogPolynomial::
 type1_gradient(Real x, const RealVector& poly_coeffs)
 {
-  // differentiate poly_coeffs with respect to x
+  // differentiate poly_coeffs with respect to x once
   size_t num_terms = poly_coeffs.length();
   Real t1_grad = (num_terms > 1) ? poly_coeffs[1] : 0.;
   for (int i=2; i<num_terms; ++i)
     t1_grad += i*poly_coeffs[i]*std::pow(x,i-1);
   return t1_grad;
+}
+
+
+Real NumericGenOrthogPolynomial::type1_hessian(Real x, unsigned short order)
+{
+  if (polyCoeffs.size() <= order)
+    solve_eigenproblem(order);
+  return type1_hessian(x, polyCoeffs[order]);
+}
+
+
+Real NumericGenOrthogPolynomial::
+type1_hessian(Real x, const RealVector& poly_coeffs)
+{
+  // differentiate poly_coeffs with respect to x twice
+  size_t num_terms = poly_coeffs.length();
+  Real t1_hess = (num_terms > 2) ? poly_coeffs[2] : 0.;
+  for (int i=3; i<num_terms; ++i)
+    t1_hess += i*(i-1)*poly_coeffs[i]*std::pow(x,i-2);
+  return t1_hess;
 }
 
 

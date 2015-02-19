@@ -86,21 +86,12 @@ protected:
   /// computes total Sobol' indices
   void compute_total_sobol();
 
-  /// retrieve the response PCE value for a given parameter vector
   Real value(const RealVector& x);
-  /// retrieve the gradient of the response PCE with respect to all
-  /// variables included in the polynomial basis (e.g., probabilistic
-  /// variables) for a given parameter vector
   const RealVector& gradient_basis_variables(const RealVector& x);
-  /// retrieve the gradient of the response PCE with respect to variables
-  /// included in the polynomial basis (e.g., probabilistic or "all"
-  /// variables) for a given parameter vector and a given DVV subset
   const RealVector& gradient_basis_variables(const RealVector& x,
 					     const SizetArray& dvv);
-  /// retrieve the gradient of the response PCE with respect to variables not
-  /// included in the polynomial basis (nonprobabilistic variables such as
-  /// design or epistemic when not in "all" mode) for a given parameter vector
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
+  const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
   Real stored_value(const RealVector& x);
   const RealVector& stored_gradient_basis_variables(const RealVector& x);

@@ -97,7 +97,7 @@ Real GenLaguerreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
     // Support higher order polynomials using the 3 point recursion formula
     Real ap3 = alphaPoly+3., ap2 = alphaPoly+2.,
       dLadx_n   = (x*(-x + 2.*ap3) - ap2*ap3)/2., // L'a_3
-      dLadx_nm1 = x - ap2;                         // L'a_2
+      dLadx_nm1 = x - ap2;                        // L'a_2
     for (size_t i=3; i<order; i++) {
       t1_grad = ( (2.*i+1.+alphaPoly-x)*dLadx_n - type1_value(x,i) -
 		  (i+alphaPoly)*dLadx_nm1 ) / (i+1.); // dLadx_np1

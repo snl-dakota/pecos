@@ -773,6 +773,49 @@ gradient_nonbasis_variables(const RealVector& x)
 }
 
 
+const RealSymMatrix& RegressOrthogPolyApproximation::
+hessian_basis_variables(const RealVector& x)
+{
+  if (sparseIndices.empty())
+    return OrthogPolyApproximation::hessian_basis_variables(x);
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in RegressOrthogPoly"
+	  << "Approximation::hessian_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  size_t i, row, col, num_v = sharedDataRep->numVars;
+  if (approxHessian.numRows() != num_v)
+    approxHessian.shape(num_v); // init to 0
+  else
+    approxHessian = 0.;
+
+  // sum expansion to get response hessian prediction
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multiIndex;
+  StSIter it;
+  for (i=0, it=sparseIndices.begin(); it!=sparseIndices.end(); ++i, ++it) {
+    const RealSymMatrix& term_i_hess
+      = data_rep->multivariate_polynomial_hessian_matrix(x, mi[*it]);
+    Real coeff_i = expansionCoeffs[i];
+    for (row=0; row<num_v; ++row)
+      for (col=0; col<=row; ++col)
+        approxHessian(row,col) += coeff_i * term_i_hess(row,col);
+    // no operator[] provided for SymMatrix:
+    //for (col=0; col<num_v; ++col) {
+    //  Real*       approx_hess_col = approxHessian[col];
+    //  const Real* term_i_hess_col = term_i_hess[col];
+    //  for (row=col; row<num_v; ++row) // lower triangle
+    //    approx_hess_col[row] += coeff_i * term_i_hess_col[row];
+    //}
+  }
+  return approxHessian;
+}
+
+
 Real RegressOrthogPolyApproximation::stored_value(const RealVector& x)
 {
   if (storedSparseIndices.empty())

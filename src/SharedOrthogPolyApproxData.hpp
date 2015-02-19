@@ -210,14 +210,20 @@ protected:
   Real multivariate_polynomial(const RealVector& x,const UShortArray& indices,
 			       const SizetList& non_rand_indices);
 
-  /// compute multivariate orthogonal polynomial gradient for term
-  /// corresponding to deriv_index, evaluated at x
+  /// compute multivariate orthogonal polynomial gradient evaluated at x 
+  /// for term corresponding to indices and derivative variable deriv_index
   Real multivariate_polynomial_gradient(const RealVector& x, size_t deriv_index,
     const UShortArray& indices);
-  /// compute multivariate orthogonal polynomial gradient for term corresponding
-  /// to deriv_index, for nonrandom variable subset, and evaluated at x
+  /// compute multivariate orthogonal polynomial gradient evaluated at x for
+  /// term corresponding to indices, for derivative variable deriv_index, and
+  /// for a nonrandom variable subset
   Real multivariate_polynomial_gradient(const RealVector& x, size_t deriv_index,
     const UShortArray& indices, const SizetList& non_rand_indices);
+
+  /// compute multivariate orthogonal polynomial Hessian for term
+  /// corresponding to deriv_index, evaluated at x
+  Real multivariate_polynomial_hessian(const RealVector& x,
+    size_t deriv_index_i, size_t deriv_index_j, const UShortArray& indices);
 
   /// calculate multivariate orthogonal polynomial gradient vector
   /// evaluated at a particular parameter set
@@ -227,6 +233,11 @@ protected:
   /// respect to specified dvv and evaluated at a particular parameter set
   const RealVector& multivariate_polynomial_gradient_vector(const RealVector& x,
     const UShortArray& indices, const SizetArray& dvv);
+
+  /// calculate multivariate orthogonal polynomial gradient vector
+  /// evaluated at a particular parameter set
+  const RealSymMatrix& multivariate_polynomial_hessian_matrix(
+    const RealVector& x, const UShortArray& indices);
 
   /// define/update a combined Pareto set with a new multi_index by
   /// omitting terms that are weakly Pareto dominated (more omissions
@@ -330,6 +341,9 @@ protected:
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
   RealVector mvpGradient;
+  /// Data matrix for storing the Hessians of individual expansion term
+  /// polynomials (see multivariate_polynomial_hessian_matrix())
+  RealSymMatrix mvpHessian;
 
 private:
 
@@ -543,6 +557,45 @@ multivariate_polynomial_gradient_vector(const RealVector& x,
     mvpGradient[i] = multivariate_polynomial_gradient(x, deriv_index, indices);
   }
   return mvpGradient;
+}
+
+
+inline Real SharedOrthogPolyApproxData::
+multivariate_polynomial_hessian(const RealVector& x, size_t deriv_index_i,
+				size_t deriv_index_j,
+				const UShortArray& indices)
+{
+  Real mvp_hess = 1.;
+  for (size_t k=0; k<numVars; ++k)
+    if (k == deriv_index_i)
+      mvp_hess *= (k == deriv_index_j) ?
+	polynomialBasis[k].type1_hessian(x[k],  indices[k]) :
+	polynomialBasis[k].type1_gradient(x[k], indices[k]);
+    else
+      mvp_hess *= (k == deriv_index_j) ?
+	polynomialBasis[k].type1_gradient(x[k], indices[k]) :
+	polynomialBasis[k].type1_value(x[k],    indices[k]);
+  return mvp_hess;
+}
+
+
+inline const RealSymMatrix& SharedOrthogPolyApproxData::
+multivariate_polynomial_hessian_matrix(const RealVector& x,
+				       const UShortArray& indices)
+{
+  if (mvpHessian.numRows() != numVars)
+    mvpHessian.shapeUninitialized(numVars);
+  size_t r, c;
+  for (r=0; r<numVars; ++r)
+    for (c=0; c<=r; ++c) // lower triangle
+      mvpHessian(r,c) = multivariate_polynomial_hessian(x, r, c, indices);
+  // no operator[] provided for SymMatrix:
+  //for (c=0; c<numVars; ++c) {
+  //  Real* mvp_hess_col = mvpHessian[c];
+  //  for (r=c; r<numVars; ++r) // lower triangle
+  //    mvp_hess_col[r] = multivariate_polynomial_hessian(x, r, c, indices);
+  //}
+  return mvpHessian;
 }
 
 

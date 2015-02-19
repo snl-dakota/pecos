@@ -272,6 +272,17 @@ Real BasisPolynomial::type2_gradient(Real x, unsigned short n)
 }
 
 
+Real BasisPolynomial::type1_hessian(Real x, unsigned short n)
+{
+  if (!polyRep) {
+    PCerr << "Error: type1_hessian(Real, unsigned short) not available for "
+	  << "this basis polynomial type." << std::endl;
+    abort_handler(-1);
+  }
+  return polyRep->type1_hessian(x, n);
+}
+
+
 Real BasisPolynomial::norm_squared(unsigned short n)
 {
   if (!polyRep) {

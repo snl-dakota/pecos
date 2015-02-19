@@ -52,6 +52,7 @@ protected:
 
   Real type1_value(Real x, unsigned short order);
   Real type1_gradient(Real x, unsigned short order);
+  Real type1_hessian(Real x, unsigned short order);
   Real norm_squared(unsigned short order);
 
   const RealArray& collocation_points(unsigned short order);

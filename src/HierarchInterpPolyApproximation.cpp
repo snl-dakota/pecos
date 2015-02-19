@@ -688,6 +688,17 @@ gradient_nonbasis_variables(const RealVector& x, const UShort3DArray& sm_mi,
 }
 
 
+const RealSymMatrix& HierarchInterpPolyApproximation::
+hessian_basis_variables(const RealVector& x)
+{
+  PCerr << "Error: HierarchInterpPolyApproximation::hessian_basis_variables() "
+	<< "not yet implemented." << std::endl;
+  abort_handler(-1);
+
+  return approxHessian;
+}
+
+
 Real HierarchInterpPolyApproximation::mean()
 {
   // Error check for required data

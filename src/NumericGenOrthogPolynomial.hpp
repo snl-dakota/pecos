@@ -90,6 +90,7 @@ protected:
 
   Real type1_value(Real x, unsigned short order);
   Real type1_gradient(Real x, unsigned short order);
+  Real type1_hessian(Real x, unsigned short order);
   Real norm_squared(unsigned short order);
 
   const RealArray& collocation_points(unsigned short order);
@@ -182,6 +183,9 @@ private:
   /// retrieve the gradient of the 1-D generated polynomial (of given
   /// coefficients) with respect to its dimension for a given parameter value
   Real type1_gradient(Real x, const RealVector& poly_coeffs);
+  /// retrieve the Hessian of the 1-D generated polynomial (of given
+  /// coefficients) with respect to its dimension for a given parameter value
+  Real type1_hessian(Real x, const RealVector& poly_coeffs);
 
   //
   //- Heading: Data

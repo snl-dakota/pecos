@@ -96,6 +96,13 @@ public:
       for the n-th point. */
   virtual Real type2_gradient(Real x, unsigned short n);
 
+  /// retrieve the Hessian of the n_th type 1 polynomial for a given
+  /// parameter x using traditional characteristic polynomial formulation
+  /** For orthogonal polynomials, n specifies the order of the polynomial,
+      whereas for interpolation polynomials, it identifies the interpolant
+      for the n-th point. */
+  virtual Real type1_hessian(Real x, unsigned short n);
+
   /// returns the norm-squared of the n_th order polynomial defined by the
   /// inner product <Poly_n, Poly_n> = ||Poly_n||^2
   /** This is defined only for orthogonal polynomials. */

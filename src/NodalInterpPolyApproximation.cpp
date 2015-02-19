@@ -2443,6 +2443,17 @@ gradient_nonbasis_variables(const RealVector& x)
 }
 
 
+const RealSymMatrix& NodalInterpPolyApproximation::
+hessian_basis_variables(const RealVector& x)
+{
+  PCerr << "Error: NodalInterpPolyApproximation::hessian_basis_variables() "
+	<< "not yet implemented." << std::endl;
+  abort_handler(-1);
+
+  return approxHessian;
+}
+
+
 Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
 {
   // Error check for required data

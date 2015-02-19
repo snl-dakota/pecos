@@ -95,6 +95,10 @@ Real HermiteOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 { return (order) ? order*type1_value(x, order-1) : 0.; }
 
 
+Real HermiteOrthogPolynomial::type1_hessian(Real x, unsigned short order)
+{ return (order>1) ? order*(order-1)*type1_value(x, order-2) : 0.; }
+
+
 Real HermiteOrthogPolynomial::norm_squared(unsigned short order)
 { return factorial(order); }
 
