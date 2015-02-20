@@ -148,9 +148,38 @@ Real LegendreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 
 Real LegendreOrthogPolynomial::type1_hessian(Real x, unsigned short order)
 {
-  PCerr << "Error: LegendreOrthogPolynomial::type1_hessian() not yet "
-	<< "implemented." << std::endl;
-  abort_handler(-1);
+  Real t1_hess;
+  switch (order) {
+  case 0: case 1:
+    t1_hess = 0.;                                                         break;
+  case 2:
+    t1_hess = 3.;                                                         break;
+  case 3:
+    t1_hess = 15.*x;                                                      break;
+  case 4:
+    t1_hess = (105.*x*x - 15.)/2.;                                        break;
+  case 5:
+    t1_hess = x*(315.*x*x - 105.)/2.;                                     break;
+  case 6: {
+    Real x2 = x*x;
+    t1_hess = (x2*(3465.*x2 - 1890.) + 105.)/8.;                          break;
+  }
+  default:
+    // Support higher order polynomials using a 3 point recursion formula:
+    Real x2 = x*x, d2Pdx2_n = (x2*(3465.*x2 - 1890.) + 105.)/8., // P''_6
+      d2Pdx2_nminus1 = x*(315.*x*x - 105.)/2.;                   // P''_5
+    for (size_t i=6; i<order; i++) {
+      t1_hess = ((2.*i+1.)*(x*d2Pdx2_n + 2.*type1_gradient(x,i)) -
+		 i*d2Pdx2_nminus1) / (i+1.); // d2Pdx2_nplus1
+      if (i != order-1) {
+	d2Pdx2_nminus1 = d2Pdx2_n;
+	d2Pdx2_n       = t1_hess;
+      }
+    }
+    break;
+  }
+
+  return t1_hess;
 }
 
 
