@@ -119,9 +119,30 @@ Real GenLaguerreOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 
 Real GenLaguerreOrthogPolynomial::type1_hessian(Real x, unsigned short order)
 {
-  PCerr << "Error: GenLaguerreOrthogPolynomial::type1_hessian() not yet "
-	<< "implemented." << std::endl;
-  abort_handler(-1);
+  Real t1_hess;
+  switch (order) {
+  case 0: case 1:
+    t1_hess = 0.;                                                         break;
+  case 2:
+    t1_hess = 1.;                                                         break;
+  case 3:
+    t1_hess = alphaPoly + 3. - x;                                         break;
+  default: {
+    // Support higher order polynomials using the 3 point recursion formula
+    Real d2Ladx2_n = alphaPoly + 3. - x, d2Ladx2_nm1 = 1.; // L''a_3, L''a_2
+    for (size_t i=3; i<order; i++) {
+      t1_hess = ( (2.*i+1.+alphaPoly-x)*d2Ladx2_n - type1_gradient(x,i) -
+		  (i+alphaPoly)*d2Ladx2_nm1 ) / (i+1.); // dLadx_np1
+      if (i != order-1) {
+	d2Ladx2_nm1 = d2Ladx2_n;
+	d2Ladx2_n   = t1_hess;
+      }
+    }
+    break;
+  }
+  }
+
+  return t1_hess;
 }
 
 

@@ -123,9 +123,36 @@ Real JacobiOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 
 Real JacobiOrthogPolynomial::type1_hessian(Real x, unsigned short order)
 {
-  PCerr << "Error: JacobiOrthogPolynomial::type1_hessian() not yet "
-	<< "implemented." << std::endl;
-  abort_handler(-1);
+  Real t1_hess;
+  switch (order) {
+  case 0: case 1:
+    t1_hess = 0.;                                                         break;
+  case 2: {
+    Real apbp = alphaPoly + betaPoly;
+    t1_hess = (apbp + 3.) * (apbp + 4.);
+    break;
+  }
+  default: {
+    // Support higher order polynomials using the 3 point recursion formula:
+    Real xm1 = x - 1., apbp = alphaPoly + betaPoly,
+      d2Pabdx2_n = (apbp + 3.)*(apbp + 4.), d2Pabdx2_nm1 = 0.; // P''_2, P''_1
+    for (size_t i=2; i<order; i++) {
+      Real ab2i = apbp + 2.*i, pab2i3 = pochhammer(ab2i, 3);
+      t1_hess // d2Pabdx2_np1
+	= ( ( (ab2i+1.)*apbp*(alphaPoly-betaPoly) + x*pab2i3 )
+	    * d2Pabdx2_n + pab2i3*type1_gradient(x,i)
+	    - 2.*(i+alphaPoly)*(i+betaPoly)*(ab2i+2.)*d2Pabdx2_nm1 )
+	/ ( 2.*(i+1.)*(i+apbp+1.)*ab2i );
+      if (i != order-1) {
+	d2Pabdx2_nm1 = d2Pabdx2_n;
+	d2Pabdx2_n   = t1_hess;
+      }
+    }
+    break;
+  }
+  }
+
+  return t1_hess;
 }
 
 

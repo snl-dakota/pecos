@@ -117,7 +117,7 @@ Real ChebyshevOrthogPolynomial::type1_gradient(Real x, unsigned short order)
       dTdx_nminus1 = x*(x2*(x2*(1024.*x2 - 1536.) + 640.) - 64.);   // P'_8
     for (size_t i=9; i<order; i++) {
       // dTdx_nplus1:
-      t1_grad	= 2.*x*dTdx_n + 2.*type1_value(x,i) - dTdx_nminus1;
+      t1_grad = 2.*x*dTdx_n + 2.*type1_value(x,i) - dTdx_nminus1;
       if (i != order-1) {
 	dTdx_nminus1 = dTdx_n;
 	dTdx_n       = t1_grad;
@@ -132,9 +132,51 @@ Real ChebyshevOrthogPolynomial::type1_gradient(Real x, unsigned short order)
 
 Real ChebyshevOrthogPolynomial::type1_hessian(Real x, unsigned short order)
 {
-  PCerr << "Error: ChebyshevOrthogPolynomial::type1_hessian() not yet "
-	<< "implemented." << std::endl;
-  abort_handler(-1);
+  Real t1_hess;
+  switch (order) {
+  case 0: case 1:
+    t1_hess = 0.;                                                         break;
+  case 2:
+    t1_hess = 4.;                                                         break;
+  case 3:
+    t1_hess = 24.*x;                                                      break;
+  case 4:
+    t1_hess = 96.*x*x - 16.;                                              break;
+  case 5:
+    t1_hess = x*(320.*x*x - 120.);                                        break;
+  case 6: {
+    Real x2 = x*x;
+    t1_hess = x2*(960.*x2 - 576.) + 36.;                                  break;
+  }
+  case 7: {
+    Real x2 = x*x;
+    t1_hess = x*(x2*(2688.*x2 - 2240.) + 336.);                           break;
+  }
+  case 8: {
+    Real x2 = x*x;
+    t1_hess = x2*(x2*(7168.*x2 - 7680.) + 1920.) - 64.;                   break;
+  }
+  case 9: {
+    Real x2 = x*x;
+    t1_hess = x*(x2*(x2*(18432.*x2 - 24192.) + 8640.) - 720.);        break;
+  }
+  default:
+    // Support higher order polynomials using a 3 point recursion formula:
+    Real x2 = x*x,
+      d2Tdx2_n = x*(x2*(x2*(18432.*x2 - 24192.) + 8640.) - 720.), // P'_9
+      d2Tdx2_nminus1 = x2*(x2*(7168.*x2 - 7680.) + 1920.) - 64.;   // P'_8
+    for (size_t i=9; i<order; i++) {
+      // d2Tdx2_nplus1:
+      t1_hess = 2.*x*d2Tdx2_n + 4.*type1_gradient(x,i) - d2Tdx2_nminus1;
+      if (i != order-1) {
+	d2Tdx2_nminus1 = d2Tdx2_n;
+	d2Tdx2_n       = t1_hess;
+      }
+    }
+    break;
+  }
+
+  return t1_hess;
 }
 
 
