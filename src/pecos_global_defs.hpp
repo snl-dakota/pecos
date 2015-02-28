@@ -14,7 +14,6 @@
 #include <cmath>
 #include <cstdlib>
 
-#define BOOST_MATH_PROMOTE_DOUBLE_POLICY false
 #include <boost/math/constants/constants.hpp>
 
 namespace Pecos {
