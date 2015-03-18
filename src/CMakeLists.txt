@@ -1,6 +1,7 @@
 # CMakeLists.txt for pecos source (WJB: Note the source file GLOB below)
 
-include_directories(${Boost_INCLUDE_DIRS} ${Teuchos_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS}
+  ${Teuchos_INCLUDE_DIRS})
 
 remove_definitions("-DHAVE_CONFIG_H")
 

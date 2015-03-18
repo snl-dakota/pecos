@@ -57,7 +57,7 @@ if(Boost_DIR)
 else()
   find_package(Boost REQUIRED)
   if(Boost_FOUND)
-    include_directories(${Boost_INCLUDE_DIRS})
+    include_directories(${Boost_INCLUDE_DIR} ${Boost_INCLUDE_DIRS})
   endif()
 endif(Boost_DIR)
 
