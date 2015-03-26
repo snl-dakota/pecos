@@ -56,8 +56,11 @@ protected:
 
   int min_coefficients() const;
   void compute_coefficients();
+
+  void increment_coefficients();
   void store_coefficients();
   void combine_coefficients(short combine_type);
+
   void allocate_arrays();
 
   size_t expansion_terms() const;

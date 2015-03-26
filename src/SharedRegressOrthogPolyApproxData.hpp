@@ -187,7 +187,7 @@ protected:
   //
 
   void allocate_data();
-  //void increment_data();
+  void increment_data();
   //void decrement_data();
   //void restore_data();
   //void finalize_data();

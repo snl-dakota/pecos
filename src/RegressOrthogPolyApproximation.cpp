@@ -137,6 +137,12 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 }
 
 
+void RegressOrthogPolyApproximation::increment_coefficients()
+{
+  compute_coefficients(); // a first cut
+}
+
+
 void RegressOrthogPolyApproximation::adapt_regression()
 {
   SharedRegressOrthogPolyApproxData* data_rep

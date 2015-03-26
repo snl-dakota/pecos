@@ -102,6 +102,12 @@ update_approx_order(unsigned short new_order)
 }
 
 
+void SharedRegressOrthogPolyApproxData::increment_data()
+{
+  // no-op
+}
+
+
 void SharedRegressOrthogPolyApproxData::
 increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 {
