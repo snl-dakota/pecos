@@ -241,11 +241,8 @@ void BasisApproximation::increment_coefficients()
 {
   if (basisApproxRep)
     basisApproxRep->increment_coefficients(); 
-  else {
-    PCerr << "Error: increment_coefficients() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
+  else // default to recomputation (RegressOrthogPoly)
+    compute_coefficients(); 
 }
 
 
