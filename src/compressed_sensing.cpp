@@ -86,7 +86,7 @@ void BP_primal_dual_interior_point_method( RealMatrix &A,
   // Check whether starting point is in the feasiable region  //
   // If not use the least squares solution as new start point //
   //----------------------------------------------------------//
-  RealVector r( b );
+  RealVector r(Teuchos::Copy, b.values(), b.length());
   //Not necessary because X is set to zero( uninitialized ) above
   //r.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, x, -1.0 );
 
@@ -436,7 +436,7 @@ int BPDN_compute_central_point( RealMatrix &A,
   int M  ( A.numRows() );
 
   // Compute the residual
-  RealVector r( b );
+  RealVector r(Teuchos::Copy, b.values(), b.length());
   r.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, x, -1.0 );
 
   // Set up variables necessary for initialising loop.
@@ -702,7 +702,7 @@ void BPDN_log_barrier_interior_point_method( RealMatrix &A, RealVector &b,
   // If not use the least squares solution as new start point X //
   //------------------------------------------------------------//
   RealVector x( N, false ); // solution
-  RealVector r( b );       // residual
+  RealVector r(Teuchos::Copy, b.values(), b.length());       // residual
   //Not necessary because X is set to zero( uninitialized) above
   //r.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 1.0, A, x, -1.0 );
 
@@ -815,7 +815,7 @@ void orthogonal_matching_pursuit( RealMatrix &A,
   RealMatrix Q( M, initial_N ), R( initial_N, initial_N );
 
   // Compute residual
-  RealVector residual( b );
+  RealVector residual(Teuchos::Copy, b.values(), b.length());
 
   // Compute correlation of columns with residual
   RealMatrix Atb( N, 1, false );
@@ -961,7 +961,7 @@ void orthogonal_matching_pursuit( RealMatrix &A,
 		    }
 		  residual_computed = true;
 		}
-	      RealVector residual( b );
+	      RealVector residual(Teuchos::Copy, b.values(), b.length());
 	      residual.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
 				 -1.0, A_sparse, x_sparse, 1.0 );
 	      residual_norm = residual.normFrobenius();
@@ -975,7 +975,7 @@ void orthogonal_matching_pursuit( RealMatrix &A,
 			       M, num_active_indices+1, 0, 0 );
 	  for ( int m = 0; m < M; m++ )
 	    A_sparse(m,num_active_indices) = A(m,active_index);
-	  RealVector residual( b );
+	  RealVector residual(Teuchos::Copy, b.values(), b.length());
 	  // residual = b - A_sparse * x_sparse: O(Mk) k < M
 	  blas.GEMV( Teuchos::NO_TRANS, M, num_active_indices+1, -1., 
 		     A_sparse.values(), A_sparse.stride(), 
@@ -1084,7 +1084,7 @@ void orthogonal_matching_pursuit_cholesky( RealMatrix &A,
   RealMatrix U( N, N );
 
   // Compute residual
-  RealVector residual( b );
+  RealVector residual(Teuchos::Copy, b.values(), b.length());
 
   // Compute correlation of columns with residual
   RealMatrix Atb( N, 1, false );
@@ -1425,7 +1425,7 @@ void least_angle_regression( RealMatrix &A,
   //result_0.shape( N, max_num_iter );
   
   // Compute residual
-  RealVector residual( b );
+  RealVector residual(Teuchos::Copy, b.values(), b.length());
 
   // Compute correlation of columns with residual
   RealMatrix Atb( N, 1, false );
@@ -1910,7 +1910,8 @@ void cosamp( RealMatrix &A,
   solutions.shape( N, memory_chunk_size ); // must initialise to zero
   solution_metrics.shapeUninitialized( 1, memory_chunk_size );
   
-  RealVector residual( b ), correlation( N, false );
+  RealVector residual(Teuchos::Copy, b.values(), b.length()), 
+    correlation( N, false );
   RealMatrix A_sparse_memory( M, 3*sparsity );
 
   RealMatrix b_mat( Teuchos::View, b, M, 1, 0, 0 ); 

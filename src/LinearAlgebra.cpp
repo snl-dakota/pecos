@@ -102,7 +102,7 @@ void qr_solve( RealMatrix &A, RealMatrix &B, RealMatrix &result,
 {
   Teuchos::LAPACK<int, Real> la;
 
-  RealMatrix A_copy( A );
+  RealMatrix A_copy(Teuchos::Copy, A, A.numRows(), A.numCols());
   int M( A.numRows() ), N( A.numCols() ), num_rhs( B.numCols() );
   result.reshape( N, num_rhs );
   result.assign( B );
@@ -164,7 +164,7 @@ void svd_solve( RealMatrix &A, RealMatrix &B, RealMatrix &result_0,
   //-----------------//
 
   int M( A.numRows() ),  N( A.numCols() ), num_rhs( B.numCols() );
-  RealMatrix A_copy( A );
+  RealMatrix A_copy(Teuchos::Copy, A, A.numRows(), A.numCols());
   result_1.sizeUninitialized( std::min( M, N ) );
 
   //---------------------------------//
@@ -399,10 +399,10 @@ int conjugate_gradients_solve( RealMatrix &A, RealVector &b, RealVector &x,
     // Initialize to zero
     x.size( N );
 
-  RealVector current_x( x );
+  RealVector current_x(Teuchos::Copy, x.values(), x.length());
 
   Real b_norm = b.normFrobenius();
-  RealVector residual( b );
+  RealVector residual(Teuchos::Copy, b.values(), b.length());
   residual.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
 		     -1.0, A, current_x, 1.0 );
 
@@ -543,8 +543,10 @@ void equality_constrained_least_squares_solve( RealMatrix &A,
 					       RealMatrix &x, 
 					       int verbosity )
 {
-  RealMatrix A_copy( A ), C_copy( C );
-  RealVector b_copy( b ), d_copy( d );
+  RealMatrix A_copy(Teuchos::Copy, A, A.numRows(), A.numCols()), 
+    C_copy(Teuchos::Copy, C, C.numRows(), C.numCols());
+  RealVector b_copy(Teuchos::Copy, b.values(), b.length()), 
+    d_copy(Teuchos::Copy, d.values(), d.length());
 
   int M( A_copy.numRows() ), N( A_copy.numCols() ), lda( A_copy.stride() ), 
     ldc( C_copy.stride() );
@@ -655,7 +657,7 @@ void pivoted_qr_factorization( RealMatrix &A, RealMatrix &Q, RealMatrix &R,
 {
   Teuchos::LAPACK<int, Real> la;
 
-  RealMatrix A_copy( A );
+  RealMatrix A_copy(Teuchos::Copy, A, A.numRows(), A.numCols());
   int M( A.numRows() ), N( A.numCols() ), K( std::min( M, N ) );
 
   //Q.shapeUninitialized( M, K );
