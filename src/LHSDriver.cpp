@@ -1606,8 +1606,8 @@ generate_unique_samples( const RealVector& cd_l_bnds,
       k++;
     }
 
-  // Aleatory discrete variables with infinite support. If any of these variables
-  // are present then backfill can always be used.
+  // Aleatory discrete variables with infinite support.  If any of these
+  // variables are present then backfill can always be used.
   int max_num_unique_discrete_samples = 1;
   RealVector pl = adp.poisson_lambdas();
   RealVector nbppt = adp.negative_binomial_probability_per_trial();
@@ -1631,7 +1631,7 @@ generate_unique_samples( const RealVector& cd_l_bnds,
     // samples.
     {
       samples.shapeUninitialized( num_vars, num_samples );
-      // Currently sample_ranks will always be returned empty. It should only be 
+      // Currently sample_ranks will always be returned empty. It should only be
       // filled when NonDSampling.sampleRanksMode>0. But I cannot see anywhere
       // in the code where this is true.
       //sample_ranks.shapeUninitialized( num_vars, num_samples );

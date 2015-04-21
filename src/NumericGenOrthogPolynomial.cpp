@@ -307,10 +307,10 @@ inner_product(const RealVector& poly_coeffs1,
     //                but we would need to add an option for [-inf, ub]:
     //                monotone mapping from [-inf, ub] to [-1,1] using
     //                x = ub + (1-z)/(1+z); dx/dz = -2/(1+z)^2
-    Real lb = (distParams[2] > -dbl_inf) ? distParams[2] :
-      distParams[0] - 15. * distParams[1];
-    Real ub = (distParams[3] <  dbl_inf) ? distParams[3] :
-      distParams[0] + 15. * distParams[1];
+    Real lb = (real_compare(distParams[2], -dbl_inf)) ?
+      distParams[0] - 15. * distParams[1] : distParams[2];
+    Real ub = (real_compare(distParams[3],  dbl_inf)) ?
+      distParams[0] + 15. * distParams[1] : distParams[3];
 
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
@@ -329,8 +329,8 @@ inner_product(const RealVector& poly_coeffs1,
     //                but we would need to add an option for [-inf, ub]:
     //                monotone mapping from [-inf, ub] to [-1,1] using
     //                x = ub + (1-z)/(1+z); dx/dz = -2/(1+z)^2
-    Real ub = (distParams[3] < dbl_inf) ? distParams[3] :
-      distParams[0] + 15. * distParams[1];
+    Real ub = (real_compare(distParams[3], dbl_inf)) ?
+      distParams[0] + 15. * distParams[1] : distParams[3];
 
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
