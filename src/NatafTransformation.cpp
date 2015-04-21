@@ -75,6 +75,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
   int z_len = z_vars.length();
   if (x_vars.length() != z_len)
     x_vars.size(z_len);
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
 
   for (int i=0; i<z_len; i++) {
     bool err_flag = false;
@@ -99,13 +100,13 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& z   = z_vars[i];
-	if      (z ==  DBL_MAX) x_vars[i] = upr;
-	else if (z == -DBL_MAX) x_vars[i] = lwr;
+	if      (z ==  dbl_inf) x_vars[i] = upr;
+	else if (z == -dbl_inf) x_vars[i] = lwr;
 	else {
 	  const Real& mean  = ranVarMeansX[i];
 	  const Real& stdev = ranVarStdDevsX[i];
-	  Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/stdev) : 0.;
-	  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/stdev) : 1.;
+	  Real Phi_lms = (lwr > -dbl_inf) ? Phi((lwr-mean)/stdev) : 0.;
+	  Real Phi_ums = (upr <  dbl_inf) ? Phi((upr-mean)/stdev) : 1.;
 	  x_vars[i]
 	    = Phi_inverse(Phi(z)*(Phi_ums - Phi_lms) + Phi_lms) * stdev + mean;
 	}
@@ -119,8 +120,8 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	else {
 	  const Real& mean  = ranVarMeansX[i];
 	  const Real& stdev = ranVarStdDevsX[i];
-	  Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/stdev) : 0.;
-	  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/stdev) : 1.;
+	  Real Phi_lms = (lwr > -dbl_inf) ? Phi((lwr-mean)/stdev) : 0.;
+	  Real Phi_ums = (upr <  dbl_inf) ? Phi((upr-mean)/stdev) : 1.;
 	  x_vars[i] = Phi_inverse(std_uniform_cdf(z_vars[i])*
 				  (Phi_ums - Phi_lms) + Phi_lms) * stdev + mean;
 	}
@@ -144,13 +145,13 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& z   = z_vars[i];
-	if      (z ==  DBL_MAX) x_vars[i] = upr;
-	else if (z == -DBL_MAX) x_vars[i] = lwr;
+	if      (z ==  dbl_inf) x_vars[i] = upr;
+	else if (z == -dbl_inf) x_vars[i] = lwr;
 	else {
 	  const Real& lambda = ranVarAddtlParamsX[i][0];
 	  const Real& zeta   = ranVarAddtlParamsX[i][1];
 	  Real Phi_lms = (lwr > 0.)      ? Phi((log(lwr)-lambda)/zeta) : 0.;
-	  Real Phi_ums = (upr < DBL_MAX) ? Phi((log(upr)-lambda)/zeta) : 1.;
+	  Real Phi_ums = (upr < dbl_inf) ? Phi((log(upr)-lambda)/zeta) : 1.;
 	  x_vars[i] = std::exp(Phi_inverse(Phi(z)*(Phi_ums - Phi_lms) + Phi_lms)
 		    * zeta + lambda);
 	}
@@ -165,7 +166,7 @@ trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars)
 	  const Real& lambda = ranVarAddtlParamsX[i][0];
 	  const Real& zeta   = ranVarAddtlParamsX[i][1];
 	  Real Phi_lms = (lwr > 0.)      ? Phi((log(lwr)-lambda)/zeta) : 0.;
-	  Real Phi_ums = (upr < DBL_MAX) ? Phi((log(upr)-lambda)/zeta) : 1.;
+	  Real Phi_ums = (upr < dbl_inf) ? Phi((log(upr)-lambda)/zeta) : 1.;
 	  x_vars[i] = std::exp(Phi_inverse(std_uniform_cdf(z_vars[i])
 		    * (Phi_ums-Phi_lms) + Phi_lms) * zeta + lambda);
 	}
@@ -386,6 +387,7 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
   int x_len = x_vars.length();
   if (z_vars.length() != x_len)
     z_vars.size(x_len);
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
 
   for (int i=0; i<x_len; i++) {
     bool err_flag = false;
@@ -410,8 +412,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& x   = x_vars[i];
-	if      (x <= lwr) z_vars[i] = -DBL_MAX;
-	else if (x >= upr) z_vars[i] =  DBL_MAX;
+	if      (x <= lwr) z_vars[i] = -dbl_inf;
+	else if (x >= upr) z_vars[i] =  dbl_inf;
 	else
 	  z_vars[i] = Phi_inverse(bounded_normal_cdf(x, ranVarMeansX[i],
 	    ranVarStdDevsX[i], lwr, upr));
@@ -445,8 +447,8 @@ trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars)
 	const Real& lwr = ranVarLowerBndsX[i];
 	const Real& upr = ranVarUpperBndsX[i];
 	const Real& x   = x_vars[i];
-	if      (x <= lwr) z_vars[i] = -DBL_MAX;
-	else if (x >= upr) z_vars[i] =  DBL_MAX;
+	if      (x <= lwr) z_vars[i] = -dbl_inf;
+	else if (x >= upr) z_vars[i] =  dbl_inf;
 	else
 	  z_vars[i] = Phi_inverse(bounded_lognormal_cdf(x, ranVarMeansX[i],
 	    ranVarStdDevsX[i], lwr, upr));
@@ -2078,6 +2080,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
     }
   }
 
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
   for (i=0; i<num_var_map_1c; i++) { // loop over S
     size_t cv_index = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
     // If x_dvv were passed, it would be possible to distinguish different
@@ -2143,13 +2146,13 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  const Real& lwr   = ranVarLowerBndsX[j];
 	  const Real& upr   = ranVarUpperBndsX[j];
 	  const Real& x     = x_vars[j]; const Real& z = z_vars[j];
-	  Real lms = (lwr > -DBL_MAX) ? (lwr-mean)/stdev : -DBL_MAX;
-	  Real ums = (upr <  DBL_MAX) ? (upr-mean)/stdev :  DBL_MAX;
+	  Real lms = (lwr > -dbl_inf) ? (lwr-mean)/stdev : -dbl_inf;
+	  Real ums = (upr <  dbl_inf) ? (upr-mean)/stdev :  dbl_inf;
 	  Real xms = (x-mean)/stdev, phi_x = phi(xms);
 	  if (ranVarTypesU[j] == STD_NORMAL) {
 	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
-	      Real phi_lms = (lwr > -DBL_MAX) ? phi(lms) : 0.;
-	      Real phi_ums = (upr <  DBL_MAX) ? phi(ums) : 0.;
+	      Real phi_lms = (lwr > -dbl_inf) ? phi(lms) : 0.;
+	      Real phi_ums = (upr <  dbl_inf) ? phi(ums) : 0.;
 	      Real normcdf_comp = (z > 0.) ? Phi(-z) : 1. - Phi(z);
 	      switch (target2) {
 	      case N_MEAN: // Deriv of Bounded Normal w.r.t. its Mean
@@ -2175,8 +2178,8 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    }
 	    // Deriv of Normal w.r.t. any distribution parameter
 	    if (correlationFlagX) {
-	      Real Phi_lms = (lwr > -DBL_MAX) ? Phi(lms) : 0.;
-	      Real Phi_ums = (upr <  DBL_MAX) ? Phi(ums) : 1.;
+	      Real Phi_lms = (lwr > -dbl_inf) ? Phi(lms) : 0.;
+	      Real Phi_ums = (upr <  dbl_inf) ? Phi(ums) : 1.;
 	      jacobian_xs(j, i)
 		+= stdev*phi(z)*(Phi_ums - Phi_lms)/phi_x*num_dz_ds(j, i);
 	    }
@@ -2269,12 +2272,12 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	  const Real& upr    = ranVarUpperBndsX[j];
 	  const Real& x      = x_vars[j]; const Real& z = z_vars[j];
 	  Real xms = (log(x)-lambda)/zeta, phi_xms = phi(xms);
-	  Real lms = (lwr > 0.)      ? (log(lwr)-lambda)/zeta : -DBL_MAX;
-	  Real ums = (upr < DBL_MAX) ? (log(upr)-lambda)/zeta :  DBL_MAX;
+	  Real lms = (lwr > 0.)      ? (log(lwr)-lambda)/zeta : -dbl_inf;
+	  Real ums = (upr < dbl_inf) ? (log(upr)-lambda)/zeta :  dbl_inf;
 	  if (ranVarTypesU[j] == STD_NORMAL) {
 	    if (j == cv_index) { // corresp var has deriv w.r.t. its dist param
 	      Real phi_lms = (lwr > 0.)      ? phi(lms) : 0.;
-	      Real phi_ums = (upr < DBL_MAX) ? phi(ums) : 0.;
+	      Real phi_ums = (upr < dbl_inf) ? phi(ums) : 0.;
 	      Real dlambda_ds = 0., dzeta_ds = 0., dlwr_ds = 0., dupr_ds = 0.,
 		mean_sq = mean*mean, var = stdev*stdev;
 	      bool ln_err_fact = (ranVarAddtlParamsX[j].length() > 2);
@@ -2328,7 +2331,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	      }
 	      Real dlms_ds = (lwr > 0.) ?
 		(dlwr_ds/lwr - dlambda_ds - lms*dzeta_ds)/zeta : 0.;
-	      Real dums_ds = (upr < DBL_MAX) ?
+	      Real dums_ds = (upr < dbl_inf) ?
 		(dupr_ds/upr - dlambda_ds - ums*dzeta_ds)/zeta : 0.;
 	      Real dxms_ds = Phi(z)/phi_xms*(phi_ums*dums_ds - phi_lms*dlms_ds)
 		+ phi_lms/phi_xms*dlms_ds;
@@ -2337,7 +2340,7 @@ jacobian_dX_dS(const RealVector& x_vars, RealMatrix& jacobian_xs,
 	    // Deriv of Lognormal w.r.t. any distribution parameter
 	    if (correlationFlagX) {
 	      Real Phi_lms = (lwr > 0.)      ? Phi(lms) : 0.;
-	      Real Phi_ums = (upr < DBL_MAX) ? Phi(ums) : 1.;
+	      Real Phi_ums = (upr < dbl_inf) ? Phi(ums) : 1.;
 	      jacobian_xs(j, i)
 		+= (Phi_ums - Phi_lms)*phi(z)/phi_xms*num_dz_ds(j, i);
 	    }

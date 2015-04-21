@@ -506,8 +506,9 @@ inline Real normal_cdf(Real x, Real mean, Real std_dev)
 inline Real bounded_normal_pdf(Real x, Real mean, Real std_dev, Real lwr,
 			       Real upr)
 {
-  Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/std_dev) : 0.;
-  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/std_dev) : 1.;
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  Real Phi_lms = (lwr > -dbl_inf) ? Phi((lwr-mean)/std_dev) : 0.;
+  Real Phi_ums = (upr <  dbl_inf) ? Phi((upr-mean)/std_dev) : 1.;
   return phi((x-mean)/std_dev)/(Phi_ums - Phi_lms)/std_dev;
 }
 
@@ -515,8 +516,9 @@ inline Real bounded_normal_pdf(Real x, Real mean, Real std_dev, Real lwr,
 inline Real bounded_normal_cdf(Real x, Real mean, Real std_dev, Real lwr,
 			       Real upr)
 {
-  Real Phi_lms = (lwr > -DBL_MAX) ? Phi((lwr-mean)/std_dev) : 0.;
-  Real Phi_ums = (upr <  DBL_MAX) ? Phi((upr-mean)/std_dev) : 1.;
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  Real Phi_lms = (lwr > -dbl_inf) ? Phi((lwr-mean)/std_dev) : 0.;
+  Real Phi_ums = (upr <  dbl_inf) ? Phi((upr-mean)/std_dev) : 1.;
   return (Phi((x-mean)/std_dev) - Phi_lms)/(Phi_ums - Phi_lms);
 }
 
@@ -557,8 +559,9 @@ inline Real bounded_lognormal_pdf(Real x, Real mean, Real std_dev, Real lwr,
 {
   Real lambda, zeta;
   lognormal_params_from_moments(mean, std_dev, lambda, zeta);
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
   Real Phi_lms = (lwr > 0.)      ? Phi((std::log(lwr)-lambda)/zeta) : 0.;
-  Real Phi_ums = (upr < DBL_MAX) ? Phi((std::log(upr)-lambda)/zeta) : 1.;
+  Real Phi_ums = (upr < dbl_inf) ? Phi((std::log(upr)-lambda)/zeta) : 1.;
   return phi((std::log(x)-lambda)/zeta)/(Phi_ums-Phi_lms)/x/zeta;
 }
 
@@ -568,8 +571,9 @@ inline Real bounded_lognormal_cdf(Real x, Real mean, Real std_dev, Real lwr,
 {
   Real lambda, zeta;
   lognormal_params_from_moments(mean, std_dev, lambda, zeta);
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
   Real Phi_lms = (lwr > 0.)      ? Phi((std::log(lwr)-lambda)/zeta) : 0.;
-  Real Phi_ums = (upr < DBL_MAX) ? Phi((std::log(upr)-lambda)/zeta) : 1.;
+  Real Phi_ums = (upr < dbl_inf) ? Phi((std::log(upr)-lambda)/zeta) : 1.;
   return (Phi((std::log(x)-lambda)/zeta) - Phi_lms)/(Phi_ums - Phi_lms);
 }
 

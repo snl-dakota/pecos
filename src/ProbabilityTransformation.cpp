@@ -709,12 +709,6 @@ distribution_parameter(size_t index, short target, const Real& param)
 	    << std::endl;
       abort_handler(-1);
     }
-    //if (ranVarLowerBndsX[index] == -DBL_MAX && param != -DBL_MAX) {
-    //  PCerr << "Error: for BOUNDED_NORMAL, activating an inactive lower bound"
-    //        << " is not allowed." << std::endl;
-    //  abort_handler(-1);
-    //}
-    //else
     ranVarLowerBndsX[index] = param; break;
   case LN_LWR_BND:
     if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
@@ -722,12 +716,6 @@ distribution_parameter(size_t index, short target, const Real& param)
 	    << "BOUNDED_LOGNORMAL." << std::endl;
       abort_handler(-1);
     }
-    //if (ranVarLowerBndsX[index] == 0. && param != 0.) {
-    //  PCerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive lower "
-    //        << "bound is not allowed." << std::endl;
-    //  abort_handler(-1);
-    //}
-    //else
     ranVarLowerBndsX[index] = param; break;
   case LU_LWR_BND:
     ranVarLowerBndsX[index] = param;
@@ -761,12 +749,6 @@ distribution_parameter(size_t index, short target, const Real& param)
 	    << std::endl;
       abort_handler(-1);
     }
-    //if (ranVarUpperBndsX[index] == DBL_MAX && param != DBL_MAX) {
-    //  PCerr << "Error: for BOUNDED_NORMAL, activating an inactive upper "
-    //        << "bound is not allowed." << std::endl;
-    //  abort_handler(-1);
-    //}
-    //else
     ranVarUpperBndsX[index] = param; break;
   case LN_UPR_BND:
     if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
@@ -774,12 +756,6 @@ distribution_parameter(size_t index, short target, const Real& param)
 	    << "BOUNDED_LOGNORMAL." << std::endl;
       abort_handler(-1);
     }
-    //if (ranVarUpperBndsX[index] == DBL_MAX && param != DBL_MAX) {
-    //  PCerr << "Error: for BOUNDED_LOGNORMAL, activating an inactive upper "
-    //        << "bound is not allowed." << std::endl;
-    //  abort_handler(-1);
-    //}
-    //else
     ranVarUpperBndsX[index] = param; break;
   case LU_UPR_BND:
     ranVarUpperBndsX[index] = param;

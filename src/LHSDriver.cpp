@@ -367,6 +367,7 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
   Real ptval = 0., dist_params[4];
   StringArray lhs_names(num_av);
   const char *name_string, *distname;
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
 
   // --------------------
   // CONTINUOUS VARIABLES
@@ -378,7 +379,7 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     dist_string.resize(32, ' ');
     num_params = 2;
     Real l_bnd = cd_l_bnds[i], u_bnd = cd_u_bnds[i];
-    if (l_bnd > -DBL_MAX && u_bnd < DBL_MAX) {
+    if (l_bnd > -dbl_inf && u_bnd < dbl_inf) {
       if (l_bnd >= u_bnd) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
 	      << "less than upper bounds to\n       sample continuous design "
@@ -405,7 +406,7 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     dist_params[0] = n_means[i];
     dist_params[1] = n_std_devs[i];
     // check for bounded normal
-    if (n_bnd_spec && (n_l_bnds[i] > -DBL_MAX || n_u_bnds[i] < DBL_MAX) ) {
+    if (n_bnd_spec && (n_l_bnds[i] > -dbl_inf || n_u_bnds[i] < dbl_inf) ) {
       if (n_l_bnds[i] >= n_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
 	      << "less than upper bounds to\n       sample using bounded "
@@ -453,7 +454,7 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
       dist_params[1] = ln_err_facts[i];
     }
     // check for bounded lognormal
-    if (ln_bnd_spec && (ln_l_bnds[i] > 0.0 || ln_u_bnds[i] < DBL_MAX) ) {
+    if (ln_bnd_spec && (ln_l_bnds[i] > 0. || ln_u_bnds[i] < dbl_inf) ) {
       if (ln_l_bnds[i] >= ln_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
 	      << "less than upper bounds to\n       sample using bounded "
@@ -738,7 +739,7 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     String dist_string("uniform");
     dist_string.resize(32, ' ');
     num_params = 2;
-    if (cs_l_bnds[i] > -DBL_MAX && cs_u_bnds[i] < DBL_MAX) {
+    if (cs_l_bnds[i] > -dbl_inf && cs_u_bnds[i] < dbl_inf) {
       if (cs_l_bnds[i] >= cs_u_bnds[i]) {
 	PCerr << "\nError: Pecos::LHSDriver requires lower bounds strictly "
 	      << "less than upper bounds to\n       sample state variables "

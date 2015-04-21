@@ -294,22 +294,23 @@ inner_product(const RealVector& poly_coeffs1,
   // Laguerre/Gen Laguerre, and Hermite) or discrete sums for bounded,
   // semi-bounded, and unbounded integration domains corresponding to
   // supported PDFs.
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
   switch (distributionType) {
   // *************************
   // * BOUNDED DISTRIBUTIONS *
   // *************************
   case BOUNDED_NORMAL: {
     // We must trap the case where only one finite bound has been specified:
-    // Quick & dirty: trap +/- DBL_MAX and replace with mu +/- x sigma
+    // Quick & dirty: trap +/-inf and replace with mu +/- x sigma
     //                with x sufficiently large [phi(15) ~ 5.53e-50].
     // More involved: replace bounded integral with semibounded integral;
     //                but we would need to add an option for [-inf, ub]:
     //                monotone mapping from [-inf, ub] to [-1,1] using
     //                x = ub + (1-z)/(1+z); dx/dz = -2/(1+z)^2
-    Real lb = (real_compare(distParams[2], -DBL_MAX)) ?
-      distParams[0] - 15. * distParams[1] : distParams[2];
-    Real ub = (real_compare(distParams[3],  DBL_MAX)) ?
-      distParams[0] + 15. * distParams[1] : distParams[3];
+    Real lb = (distParams[2] > -dbl_inf) ? distParams[2] :
+      distParams[0] - 15. * distParams[1];
+    Real ub = (distParams[3] <  dbl_inf) ? distParams[3] :
+      distParams[0] + 15. * distParams[1];
 
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
@@ -322,14 +323,14 @@ inner_product(const RealVector& poly_coeffs1,
   }
   case BOUNDED_LOGNORMAL: {
     // We must trap the case where a finite upper bound has not been specified:
-    // Quick & dirty: trap +/- DBL_MAX and replace with mu +/- x sigma
+    // Quick & dirty: trap +/-inf and replace with mu +/- x sigma
     //                with x sufficiently large [phi(15) ~ 5.53e-50].
     // More involved: replace bounded integral with semibounded integral;
     //                but we would need to add an option for [-inf, ub]:
     //                monotone mapping from [-inf, ub] to [-1,1] using
     //                x = ub + (1-z)/(1+z); dx/dz = -2/(1+z)^2
-    Real ub = (real_compare(distParams[3], DBL_MAX)) ?
-      distParams[0] + 15. * distParams[1] : distParams[3];
+    Real ub = (distParams[3] < dbl_inf) ? distParams[3] :
+      distParams[0] + 15. * distParams[1];
 
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
