@@ -6,10 +6,10 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:        SharedRegressOrthogPolyApproxData
-//- Description:  Implementation code for SharedRegressOrthogPolyApproxData class
+//- Class:       SharedRegressOrthogPolyApproxData
+//- Description: Implementation code for SharedRegressOrthogPolyApproxData class
 //-               
-//- Owner:        John Jakeman
+//- Owner:       John Jakeman
 
 #include "SharedRegressOrthogPolyApproxData.hpp"
 #include "pecos_global_defs.hpp"
@@ -104,7 +104,40 @@ update_approx_order(unsigned short new_order)
 
 void SharedRegressOrthogPolyApproxData::increment_data()
 {
-  // no-op
+  //if (test_collocation_ratio_for_appended_dataset)
+  //  increment_order();
+  //-or-
+  //  ratio_samples_to_order(); // see NonDPolynomialChaos
+  // Note: this will place additional reqmts on emulator convergence assessment
+
+  // Idea: infer a collocation ratio based on initial data size & approxOrder.
+  // Then increment_order() if justified by incremented data size.
+  // Better: set colloc ratio from NonDPCE due to rounding effects with
+  // discrete sample counts
+  /*
+  bool autoOrderUpdate = true;
+  if (autoOrderUpdate) {
+    size_t data_size = surrData.data_size(),
+      terms_up_bnd = (size_t)((Real)data_size / collocRatio);
+    // data_size = exp_terms * colloc_ratio
+
+    while (exp_terms <= terms_up_bnd) {
+    }
+
+  }
+  */
+
+  // Or could add PCE-specialized logic in NonDQUESOBayesCalibration::
+  // update_model() to increment the order, but...
+  //
+  // Note: NonDPolynomialChaos::increment_order() is not the desired
+  // functionality since it is order driven rather than data driven
+  // (increments order and then defines the refinement set)
+  //
+  // Could add additional options from NonDPCE and invoke first from NonDQUESO:
+  //NonDPolynomialChaos::increment_order_from_data()? (follows model.append())
+  //NonDPolynomialChaos::increment_order_and_data() ?
+  //NonDPolynomialChaos::increment_data_from_order()?
 }
 
 

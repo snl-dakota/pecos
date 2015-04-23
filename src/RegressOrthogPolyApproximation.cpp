@@ -139,6 +139,12 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 
 void RegressOrthogPolyApproximation::increment_coefficients()
 {
+  //if (test_collocation_ratio_for_appended_dataset)
+  //  increment_order();
+  // -or-
+  //ratio_samples_to_order(); // see NonDPolynomialChaos
+  // Note: this will place additional reqmts on emulator convergence assessment
+
   compute_coefficients(); // a first cut
 }
 
