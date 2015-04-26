@@ -264,7 +264,7 @@ inline bool real_compare(Real r1, Real r2)
 {
   if (r2 >= DBL_MAX || r2 <= -DBL_MAX) // +/-DBL_MAX or +/-dbl_inf
     return (r1 == r2);
-  else if  (std::abs(r2) < DBL_MIN) // protect division by 0
+  else if  (std::abs(r2) < DBL_MIN)    // +/-0 (see IEEE 754)
     return (std::abs(r1) < DBL_MIN);
   else
     return (std::abs(1. - r1/r2) <= DBL_EPSILON); // relative

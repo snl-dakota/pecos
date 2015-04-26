@@ -28,15 +28,13 @@ void SharedOrthogPolyApproxData::allocate_data()
   //bool restore_exp_form = (multiIndex.size() != t*_*_terms(approxOrder));
 
   if (update_exp_form) { //|| restore_exp_form) {
+    inflate_scalar(approxOrder, numVars); // promote scalar->vector, if needed
     switch (expConfigOptions.expBasisType) {
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
     case TOTAL_ORDER_BASIS:
-      allocate_total_order(); // defines approxOrder and (candidate) multiIndex
-      break;
+      total_order_multi_index(approxOrder, multiIndex);    break;
     case TENSOR_PRODUCT_BASIS:
-      inflate_scalar(approxOrder, numVars); // promote scalar->vector, if needed
-      tensor_product_multi_index(approxOrder, multiIndex);
-      break;
+      tensor_product_multi_index(approxOrder, multiIndex); break;
     }
     allocate_component_sobol(multiIndex);
     // Note: defer this if update_exp_form is needed downstream
@@ -66,20 +64,6 @@ void SharedOrthogPolyApproxData::allocate_data(const UShort2DArray& mi)
   // output form of imported expansion
   PCout << "Orthogonal polynomial approximation using imported expansion of "
 	<< multiIndex.size() << " terms\n";
-}
-
-
-void SharedOrthogPolyApproxData::allocate_total_order()
-{
-  // For uniform refinement, all refinements are based off of approxOrder.
-  // For PCBDO, approxOrder is invariant and a multiIndex update is prevented
-  // by update_exp_form.
-
-  // promote a scalar input into an isotropic vector
-  inflate_scalar(approxOrder, numVars);
-
-  // define (candidate) multiIndex
-  total_order_multi_index(approxOrder, multiIndex);
 }
 
 

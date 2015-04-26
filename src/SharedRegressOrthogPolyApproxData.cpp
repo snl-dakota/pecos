@@ -78,7 +78,8 @@ void SharedRegressOrthogPolyApproxData::allocate_data()
       break;
     }
     case ADAPTED_BASIS_EXPANDING_FRONT:
-      allocate_total_order(); // defines approxOrder and (candidate) multiIndex
+      inflate_scalar(approxOrder, numVars); // promote scalar->vector, if needed
+      total_order_multi_index(approxOrder, multiIndex);
       break;
     }
     allocate_component_sobol(multiIndex);
@@ -104,40 +105,28 @@ update_approx_order(unsigned short new_order)
 
 void SharedRegressOrthogPolyApproxData::increment_data()
 {
-  //if (test_collocation_ratio_for_appended_dataset)
-  //  increment_order();
-  //-or-
-  //  ratio_samples_to_order(); // see NonDPolynomialChaos
-  // Note: this will place additional reqmts on emulator convergence assessment
+  // To automatically update approxOrder, would need to either infer a
+  // collocation ratio (based on initial data size + initial approxOrder)
+  // or have it set from NonDPCE.  Inferring is problematic due to rounding 
+  // effects with discrete sample counts and access to settings for the 
+  // general case (useDerivs, termsOrder).  Then increment_order() would be
+  // justified by incremented data size.
 
-  // Idea: infer a collocation ratio based on initial data size & approxOrder.
-  // Then increment_order() if justified by incremented data size.
-  // Better: set colloc ratio from NonDPCE due to rounding effects with
-  // discrete sample counts
-  /*
-  bool autoOrderUpdate = true;
-  if (autoOrderUpdate) {
-    size_t data_size = surrData.data_size(),
-      terms_up_bnd = (size_t)((Real)data_size / collocRatio);
-    // data_size = exp_terms * colloc_ratio
+  // Better: manage increments from NonDPCE using ratio_samples_to_order()
+  //         (e.g., see NonDQUESOBayesCalibration::update_model())
 
-    while (exp_terms <= terms_up_bnd) {
+  // approxOrder updated from NonDPolynomialChaos --> propagate to multiIndex
+  bool update_exp_form = (approxOrder != approxOrderPrev);
+  if (update_exp_form) {
+    switch (expConfigOptions.expBasisType) {
+    case TENSOR_PRODUCT_BASIS:
+      tensor_product_multi_index(approxOrder, multiIndex); break;
+    default:
+      total_order_multi_index(approxOrder, multiIndex);    break;
     }
-
+    allocate_component_sobol(multiIndex);
+    approxOrderPrev = approxOrder;
   }
-  */
-
-  // Or could add PCE-specialized logic in NonDQUESOBayesCalibration::
-  // update_model() to increment the order, but...
-  //
-  // Note: NonDPolynomialChaos::increment_order() is not the desired
-  // functionality since it is order driven rather than data driven
-  // (increments order and then defines the refinement set)
-  //
-  // Could add additional options from NonDPCE and invoke first from NonDQUESO:
-  //NonDPolynomialChaos::increment_order_from_data()? (follows model.append())
-  //NonDPolynomialChaos::increment_order_and_data() ?
-  //NonDPolynomialChaos::increment_data_from_order()?
 }
 
 

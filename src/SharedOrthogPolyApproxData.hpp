@@ -149,8 +149,6 @@ protected:
 			 UShort2DArray& aggregated_mi,
 			 bool monotonic = true, bool store_map = true);
 
-  /// update approxOrder and total-order multiIndex
-  void allocate_total_order();
   /// allocate sobolIndexMap from multi_index
   void allocate_component_sobol(const UShort2DArray& multi_index);
   /// update sobolIndexMap using new multi_index terms (from multifidelity
@@ -396,7 +394,7 @@ inline void SharedOrthogPolyApproxData::increment_order()
 {
   // increment approxOrder (multiIndex updated in allocate_arrays())
   for (size_t i=0; i<numVars; ++i)
-    approxOrder[i] += 1;
+    ++approxOrder[i];
 }
 
 
