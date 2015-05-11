@@ -224,6 +224,8 @@ protected:
   //- Heading: Data members
   //
 
+  //RandomVariableArray randomVars;
+
   // the following attributes are the required data for performing
   // transformations from X -> Z -> U and back.
 

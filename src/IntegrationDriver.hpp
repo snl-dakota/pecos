@@ -6,7 +6,7 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-//- Class:	 TensorProductDriver
+//- Class:	 IntegrationDriver
 //- Description: 
 //- Owner:       Mike Eldred
 //- Revised by:  
@@ -135,7 +135,7 @@ public:
   /// return precGenzKeister
   const UShortArray& genz_keister_precision() const;
 
-  /// returns approxRep for access to derived class member functions
+  /// returns driverRep for access to derived class member functions
   /// that are not mapped to the base level
   IntegrationDriver* driver_rep() const;
 
@@ -233,7 +233,7 @@ private:
   //
 
   /// Used only by the standard envelope constructor to initialize
-  /// basisApproxRep to the appropriate derived type.
+  /// driverRep to the appropriate derived type.
   IntegrationDriver* get_driver(short driver_type);
 
   //
