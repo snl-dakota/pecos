@@ -1,3 +1,4 @@
+
 /*  _______________________________________________________________________
 
     PECOS: Parallel Environment for Creation Of Stochastics
@@ -270,6 +271,28 @@ Real RandomVariable::log_pdf(Real x) const
     return ranVarRep->log_pdf(x); // forward to letter
   else
     return std::log(pdf(x)); // default (overriden for exponential pdf cases)
+}
+
+
+Real RandomVariable::to_std(Real x) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: to_std() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->to_std(x); // forward to letter
+}
+
+
+Real RandomVariable::from_std(Real x) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: from_std() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->from_std(x); // forward to letter
 }
 
 } // namespace Pecos
