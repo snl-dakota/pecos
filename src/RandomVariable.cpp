@@ -13,20 +13,16 @@
 //- Version:
 
 #include "RandomVariable.hpp"
-#include "NormalRandomVariable.hpp"
 #include "BoundedNormalRandomVariable.hpp"
-#include "LognormalRandomVariable.hpp"
 #include "BoundedLognormalRandomVariable.hpp"
-#include "UniformRandomVariable.hpp"
 #include "LoguniformRandomVariable.hpp"
 #include "TriangularRandomVariable.hpp"
 #include "BetaRandomVariable.hpp"
-#include "HistogramBinRandomVariable.hpp"
-#include "ExponentialRandomVariable.hpp"
 #include "GammaRandomVariable.hpp"
 #include "GumbelRandomVariable.hpp"
 #include "FrechetRandomVariable.hpp"
 #include "WeibullRandomVariable.hpp"
+#include "HistogramBinRandomVariable.hpp"
 
 static const char rcsId[]="@(#) $Id: RandomVariable.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -98,7 +94,8 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case LOGNORMAL:        ran_var_rep = new LognormalRandomVariable();     break;
   case BOUNDED_LOGNORMAL:
     ran_var_rep = new BoundedLognormalRandomVariable();                   break;
-  case STD_UNIFORM: case UNIFORM:
+  case STD_UNIFORM: case UNIFORM: case CONTINUOUS_DESIGN:
+  case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
     ran_var_rep = new UniformRandomVariable();                            break;
   case LOGUNIFORM:          ran_var_rep = new LoguniformRandomVariable(); break;
   case TRIANGULAR:          ran_var_rep = new TriangularRandomVariable(); break;
@@ -205,14 +202,32 @@ Real RandomVariable::cdf(Real x) const
 }
 
 
-Real RandomVariable::cdf_inverse(Real p) const
+Real RandomVariable::ccdf(Real x) const
+{
+  if (ranVarRep)
+    return ranVarRep->ccdf(x); // forward to letter
+  else
+    return 1. - cdf(x); // default (overriden in most cases)
+}
+
+
+Real RandomVariable::inverse_cdf(Real p_cdf) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: cdf_inverse() not supported for this random variable type."
+    PCerr << "Error: inverse_cdf() not supported for this random variable type."
 	  << std::endl;
     abort_handler(-1);
   }
-  return ranVarRep->cdf(p); // forward to letter
+  return ranVarRep->inverse_cdf(p_cdf); // forward to letter
+}
+
+
+Real RandomVariable::inverse_ccdf(Real p_ccdf) const
+{
+  if (ranVarRep)
+    return ranVarRep->inverse_ccdf(p_ccdf); // forward to letter
+  else
+    return inverse_cdf(1. - p_ccdf); // default (overriden in most cases)
 }
 
 
@@ -246,6 +261,15 @@ Real RandomVariable::pdf_hessian(Real x) const
     abort_handler(-1);
   }
   return ranVarRep->pdf_hessian(x); // forward to letter
+}
+
+
+Real RandomVariable::log_pdf(Real x) const
+{
+  if (ranVarRep)
+    return ranVarRep->log_pdf(x); // forward to letter
+  else
+    return std::log(pdf(x)); // default (overriden for exponential pdf cases)
 }
 
 } // namespace Pecos

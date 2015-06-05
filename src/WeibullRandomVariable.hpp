@@ -44,11 +44,28 @@ public:
   //
 
   Real cdf(Real x) const;
-  Real cdf_inverse(Real p) const;
+  Real ccdf(Real x) const;
+  Real inverse_cdf(Real p_cdf) const;
+  Real inverse_ccdf(Real p_ccdf) const;
 
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
+
+  Real inverse_log_ccdf(Real log_p_ccdf) const;
+  Real log_pdf(Real x) const;
+
+  void update(Real alpha, Real beta);
+
+  //
+  //- Heading: Static member functions (global utilities)
+  //
+
+  static Real pdf(Real x, Real alpha, Real beta);
+  static Real cdf(Real x, Real alpha, Real beta);
+
+  static void moments_from_params(Real alpha, Real beta,
+				  Real& mean, Real& std_dev);
 
 protected:
 
@@ -56,20 +73,25 @@ protected:
   //- Heading: Data
   //
 
-  /// alpha parameter of weibull random variable
+  /// alpha parameter of weibull random variable (shape)
   Real alphaStat;
-  /// beta parameter of weibull random variable
+  /// beta parameter of weibull random variable (scale)
   Real betaStat;
+
+  /// pointer to the Boost weibull_distribution instance
+  weibull_dist* weibullDist;
 };
 
 
 inline WeibullRandomVariable::WeibullRandomVariable():
-  RandomVariable(BaseConstructor()), alphaStat(0), betaStat(0.)
+  RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(1.),
+  weibullDist(NULL)
 { }
 
 
 inline WeibullRandomVariable::WeibullRandomVariable(Real alpha, Real beta):
-  RandomVariable(BaseConstructor()), alphaStat(alpha), betaStat(beta)
+  RandomVariable(BaseConstructor()), alphaStat(alpha), betaStat(beta),
+  weibullDist(new weibull_dist(alpha, beta))
 { }
 
 
@@ -78,18 +100,37 @@ inline WeibullRandomVariable::~WeibullRandomVariable()
 
 
 inline Real WeibullRandomVariable::cdf(Real x) const
-{ return weibull_cdf(x, alphaStat, betaStat); }
+{ return bmth::cdf(*weibullDist, x); }
 
 
-inline Real WeibullRandomVariable::cdf_inverse(Real p) const
+inline Real WeibullRandomVariable::ccdf(Real x) const
+{ return bmth::cdf(complement(*weibullDist, x)); }
+
+
+inline Real WeibullRandomVariable::inverse_cdf(Real p_cdf) const
 {
-  // p = 1 - e^(-(x/beta)^alpha)
-  return betaStat * std::pow(-bmth::log1p(-p), 1./alphaStat);
+  return bmth::quantile(*weibullDist, p_cdf);
+  //return betaStat * std::pow(-bmth::log1p(-p), 1./alphaStat);
 }
 
 
+inline Real WeibullRandomVariable::inverse_ccdf(Real p_ccdf) const
+{
+  return bmth::quantile(complement(*weibullDist, p_ccdf));
+  //return betaStat * std::pow(-std::log(p_ccdf), 1./alphaStat);
+}
+
+
+inline Real WeibullRandomVariable::inverse_log_ccdf(Real log_p_ccdf) const
+{ return betaStat * std::pow(-log_p_ccdf, 1./alphaStat); }
+
+
 inline Real WeibullRandomVariable::pdf(Real x) const
-{ return weibull_pdf(x, alphaStat, betaStat); }
+{
+  return bmth::pdf(*weibullDist, x);
+  //return alpha/beta * std::pow(x/beta,alpha-1.) *
+  //  std::exp(-std::pow(x/beta,alpha));
+}
 
 
 inline Real WeibullRandomVariable::pdf_gradient(Real x) const
@@ -105,9 +146,56 @@ inline Real WeibullRandomVariable::pdf_gradient(Real x) const
 
 //inline Real WeibullRandomVariable::pdf_hessian(Real x) const
 //{
-//  return weibull_pdf(x, alphaStat, betaStat);
-// * ...; // TO DO
+//  return pdf(x) * ...; // TO DO
 //}
+
+
+inline Real WeibullRandomVariable::log_pdf(Real x) const
+{
+  Real num = x/betaStat;
+  return std::log(alphaStat/betaStat) + (alphaStat-1.) * std::log(num)
+    - std::pow(num,alphaStat);
+}
+
+
+inline void WeibullRandomVariable::update(Real alpha, Real beta)
+{
+  if (!weibullDist || alphaStat != alpha || betaStat != beta) {
+    alphaStat = alpha; betaStat = beta;
+    if (weibullDist) delete weibullDist;
+    weibullDist = new weibull_dist(alphaStat, betaStat);
+  }
+}
+
+// Static member functions:
+
+inline Real WeibullRandomVariable::pdf(Real x, Real alpha, Real beta)
+{
+  weibull_dist weibull1(alpha, beta);
+  return bmth::pdf(weibull1, x);
+  //return alpha/beta * std::pow(x/beta,alpha-1.) *
+  //  std::exp(-std::pow(x/beta,alpha));
+}
+
+
+inline Real WeibullRandomVariable::cdf(Real x, Real alpha, Real beta)
+{
+  weibull_dist weibull1(alpha, beta);
+  return bmth::cdf(weibull1, x);
+  // avoid numerical probs when exp()~1
+  //return -std::expm1(-std::pow(x/beta, alpha));
+}
+
+
+inline void WeibullRandomVariable::
+moments_from_params(Real alpha, Real beta, Real& mean, Real& std_dev)
+{
+  // See Haldar and Mahadevan, p. 97
+  Real gam = bmth::tgamma(1.+1./alpha),
+    cf_var = std::sqrt(bmth::tgamma(1.+2./alpha)/gam/gam - 1.);
+  mean     = beta*gam;
+  std_dev  = cf_var*mean;
+}
 
 } // namespace Pecos
 

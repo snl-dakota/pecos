@@ -44,11 +44,28 @@ public:
   //
 
   Real cdf(Real x) const;
-  Real cdf_inverse(Real p) const;
+  Real ccdf(Real x) const;
+  Real inverse_cdf(Real p_cdf) const;
+  Real inverse_ccdf(Real p_ccdf) const;
 
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
+
+  Real inverse_log_cdf(Real log_p) const;
+  Real log_pdf(Real x) const;
+
+  void update(Real alpha, Real beta);
+
+  //
+  //- Heading: Static member functions (global utilities)
+  //
+
+  static Real pdf(Real x, Real alpha, Real beta);
+  static Real cdf(Real x, Real alpha, Real beta);
+
+  static void moments_from_params(Real alpha, Real beta,
+				  Real& mean, Real& std_dev);
 
 protected:
 
@@ -56,15 +73,15 @@ protected:
   //- Heading: Data
   //
 
-  /// alpha parameter of frechet random variable
+  /// alpha parameter of frechet random variable (shape)
   Real alphaStat;
-  /// beta parameter of frechet random variable
+  /// beta parameter of frechet random variable (scale)
   Real betaStat;
 };
 
 
 inline FrechetRandomVariable::FrechetRandomVariable():
-  RandomVariable(BaseConstructor()), alphaStat(0), betaStat(0.)
+  RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(1.)
 { }
 
 
@@ -78,19 +95,34 @@ inline FrechetRandomVariable::~FrechetRandomVariable()
 
 
 inline Real FrechetRandomVariable::cdf(Real x) const
-{ return frechet_cdf(x, alphaStat, betaStat); }
+{ return std::exp(-std::pow(betaStat/x, alphaStat)); }
 
 
-inline Real FrechetRandomVariable::cdf_inverse(Real p) const
+inline Real FrechetRandomVariable::ccdf(Real x) const
+{ return -bmth::expm1(-std::pow(betaStat/x, alphaStat)); }
+
+
+inline Real FrechetRandomVariable::inverse_cdf(Real p_cdf) const
 {
   // p = std::exp(-std::pow(beta/x, alpha))
   // beta/x = std::pow( -log p, 1/alpha)
-  return betaStat * std::pow(-std::log(p), -1./alphaStat);
+  return betaStat * std::pow(-std::log(p_cdf), -1./alphaStat);
 }
 
 
+inline Real FrechetRandomVariable::inverse_ccdf(Real p_ccdf) const
+{ return betaStat * std::pow(-bmth::log1p(-p_ccdf), -1./alphaStat); }
+
+
+inline Real FrechetRandomVariable::inverse_log_cdf(Real log_p) const
+{ return betaStat * std::pow(-log_p, -1./alphaStat); }
+
+
 inline Real FrechetRandomVariable::pdf(Real x) const
-{ return frechet_pdf(x, alphaStat, betaStat); }
+{
+  Real num = std::pow(betaStat/x, alphaStat);
+  return alphaStat/x*num*std::exp(-num);
+}
 
 
 inline Real FrechetRandomVariable::pdf_gradient(Real x) const
@@ -105,8 +137,46 @@ inline Real FrechetRandomVariable::pdf_gradient(Real x) const
 
 //inline Real FrechetRandomVariable::pdf_hessian(Real x) const
 //{
-//  return frechet_pdf(x, alphaStat, betaStat); // * ...; // TO DO
+//  return pdf(x, alphaStat, betaStat) * ...; // TO DO
 //}
+
+
+inline Real FrechetRandomVariable::log_pdf(Real x) const
+{
+  Real num = std::pow(betaStat/x, alphaStat);
+  return std::log(alphaStat/x*num) - num; // fewer operations
+
+  // more decomposed -> less likelihood of overflow?
+  //Real num = betaStat/x;
+  //return std::log(alphaStat/x) + alphaStat * std::log(num)
+  //  - std::pow(num, alphaStat);
+}
+
+
+inline void FrechetRandomVariable::update(Real alpha, Real beta)
+{ alphaStat = alpha; betaStat = beta; }
+
+// static functions:
+
+inline Real FrechetRandomVariable::pdf(Real x, Real alpha, Real beta)
+{
+  Real num = std::pow(beta/x, alpha);
+  return alpha/x*num*std::exp(-num);
+}
+
+
+inline Real FrechetRandomVariable::cdf(Real x, Real alpha, Real beta)
+{ return std::exp(-std::pow(beta/x, alpha)); }
+
+
+inline void FrechetRandomVariable::
+moments_from_params(Real alpha, Real beta, Real& mean, Real& std_dev)
+{
+  // See Haldar and Mahadevan, p. 91-92
+  Real gam = bmth::tgamma(1.-1./alpha);
+  mean     = beta*gam;
+  std_dev  = beta*std::sqrt(bmth::tgamma(1.-2./alpha)-gam*gam);
+}
 
 } // namespace Pecos
 

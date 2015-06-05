@@ -16,18 +16,72 @@
 #define RANDOM_VARIABLE_HPP
 
 #include "pecos_data_types.hpp"
-#include "pecos_stat_util.hpp"
+#include <boost/math/distributions.hpp>
+#include <boost/math/special_functions/sqrt1pm1.hpp> // includes expm1,log1p
+
+namespace bmth = boost::math;
+namespace bmp  = bmth::policies;
+
 
 namespace Pecos {
 
+// -----------------------------------
+// Non-default boost math/policy types
+// -----------------------------------
 
-/// base class for random variable classes
+typedef bmth::
+  normal_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  normal_dist;
+typedef bmth::
+  lognormal_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  lognormal_dist;
+typedef bmth::
+  triangular_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  triangular_dist;
+typedef bmth::
+  exponential_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  exponential_dist;
+typedef bmth::
+  beta_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  beta_dist;
+typedef bmth::
+  gamma_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  gamma_dist;
+typedef bmth::
+  extreme_value_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  extreme_value_dist;
+typedef bmth::
+  weibull_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  weibull_dist;
+typedef bmth::
+  chi_squared_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  chi_squared_dist;
+typedef bmth::
+  students_t_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  students_t_dist;
+typedef bmth::
+  fisher_f_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  fisher_f_dist;
 
-/** This class enables cdf(), cdf_inverse(), pdf(), pdf_gradient(),
-    and pdf_hessian() from contained distribution parameters. */
 
-// ExtremeValueBase: Gumbel, Frechet, Weibull
-//   > alpha, beta, no bounds
+/// base class for random variable hierarchy
+
+/** This class enables cdf(), ccdf(), inverse_cdf(), inverse_ccdf(),
+    pdf(), pdf_gradient(), pdf_hessian(), and related random variable
+    utilities from contained distribution parameters. */
+
+// ExtremeValueBase: Gumbel, Frechet, Weibull -> alpha, beta, no bounds
 // EmpiricalBase: histogram bin, KDE, ...
 
 class RandomVariable
@@ -59,27 +113,39 @@ public:
   /// variable at x
   virtual Real cdf(Real x) const;
   /// return the x value corresponding to a cumulative probability
-  virtual Real cdf_inverse(Real p) const;
+  virtual Real inverse_cdf(Real p_cdf) const;
 
-  /// return the probability density function value of the random
-  /// variable at x
+  /// return the complementary cumulative distribution function value
+  /// of the random variable at x
+  virtual Real ccdf(Real x) const;
+  /// return the x value corresponding to a complementary cumulative probability
+  virtual Real inverse_ccdf(Real p_ccdf) const;
+
+  /// return the value of the random variable's probability density
+  /// function at x
   virtual Real pdf(Real x) const;
-  /// return the gradient of the probability density function value of
-  /// the random variable at x
+  /// return the gradient of the random variable's probability density
+  /// function at x
   virtual Real pdf_gradient(Real x) const;
-  /// return the hessian of the probability density function value of
-  /// the random variable at x
+  /// return the hessian of the random variable's probability density
+  /// function at x
   virtual Real pdf_hessian(Real x) const;
+
+  /// return the natural logarithm of the random variable's
+  /// probability density function at x (useful for calculations of
+  /// log prior, log posterior, etc.)
+  virtual Real log_pdf(Real x) const;
+
+  /// scale variable value x from current distribution to standardized
+  /// distribution
+  virtual Real to_std(Real x) const;
+  /// scale variable value z from standardized distribution to current
+  /// distribution
+  virtual Real from_std(Real z) const;
 
   //
   //- Heading: Member functions
   //
-
-  /// return the complementary cumulative distribution function value
-  /// of the random variable at x
-  Real ccdf(Real x) const;
-  /// return the x value corresponding to a complementary cumulative probability
-  Real ccdf_inverse(Real p) const;
 
   /// set ranVarType
   void type(short ran_var_type);
@@ -131,14 +197,6 @@ private:
   /// number of objects sharing ranVarRep
   int referenceCount;
 };
-
-
-inline Real RandomVariable::ccdf(Real x) const
-{ return (ranVarRep) ? 1. - ranVarRep->cdf(x) : 1. - cdf(x); }
-
-
-inline Real RandomVariable::ccdf_inverse(Real p) const
-{ return (ranVarRep) ? ranVarRep->cdf_inverse(1. - p) : cdf_inverse(1. - p); }
 
 
 inline void RandomVariable::type(short ran_var_type)
