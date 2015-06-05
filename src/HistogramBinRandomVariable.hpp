@@ -44,9 +44,9 @@ public:
   //
 
   Real cdf(Real x) const;
-  //Real ccdf(Real x) const;
+  Real ccdf(Real x) const;
   Real inverse_cdf(Real p_cdf) const;
-  //Real inverse_ccdf(Real p_ccdf) const;
+  Real inverse_ccdf(Real p_ccdf) const;
 
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
@@ -95,28 +95,110 @@ inline HistogramBinRandomVariable::~HistogramBinRandomVariable()
 { }
 
 
+inline Real HistogramBinRandomVariable::
+cdf(Real x, const RealRealMap& bin_prs)
+{
+  size_t i, num_bins = bin_prs.size() - 1;
+  RRMCIter cit = bin_prs.begin();
+  if (x <= cit->first)
+    return 0.;
+  else if (x >= (--bin_prs.end())->first)
+    return 1.;
+  else {
+    Real p_cdf = 0., count, upr, lwr;
+    for (i=0; i<num_bins; ++i) {
+      lwr = cit->first; count = cit->second; ++cit;
+      upr = cit->first;
+      if (x < upr) {
+	p_cdf += count * (x - lwr) / (upr - lwr);
+	break;
+      }
+      else
+	p_cdf += count;
+    }
+    return p_cdf;
+  }
+}
+
+
 inline Real HistogramBinRandomVariable::cdf(Real x) const
 { return cdf(x, binPairs); }
 
 
-inline Real HistogramBinRandomVariable::inverse_cdf(Real p) const
-{ return inverse_cdf(p, binPairs); }
+inline Real HistogramBinRandomVariable::ccdf(Real x) const
+{
+  size_t i, num_bins = binPairs.size() - 1;
+  RRMCIter cit = binPairs.begin();
+  if (x <= cit->first)
+    return 1.;
+  else if (x >= (--binPairs.end())->first)
+    return 0.;
+  else {
+    Real p_ccdf = 1., count, upr, lwr;
+    for (i=0; i<num_bins; ++i) {
+      lwr = cit->first; count = cit->second; ++cit;
+      upr = cit->first;
+      if (x < upr) {
+	p_ccdf -= count * (x - lwr) / (upr - lwr);
+	break;
+      }
+      else
+	p_ccdf -= count;
+    }
+    return p_ccdf;
+  }
+}
 
 
-inline Real HistogramBinRandomVariable::pdf(Real x) const
-{ return pdf(x, binPairs); }
+inline Real HistogramBinRandomVariable::
+inverse_cdf(Real p_cdf, const RealRealMap& bin_prs)
+{
+  size_t i, num_bins = bin_prs.size() - 1;
+  RRMCIter cit = bin_prs.begin();
+  if (p_cdf <= 0.)
+    return cit->first;               // lower bound abscissa
+  else if (p_cdf >= 1.)
+    return (--bin_prs.end())->first; // upper bound abscissa
+  else {
+    Real upr_cdf = 0., count, upr, lwr;
+    for (i=0; i<num_bins; ++i) {
+      lwr = cit->first; count = cit->second; ++cit;
+      upr = cit->first;
+      upr_cdf += count;
+      if (p_cdf < upr_cdf)
+	return upr - (upr_cdf - p_cdf) / count * (upr - lwr);
+    }
+    // If still no return due to numerical roundoff, return upper bound
+    return (--bin_prs.end())->first; // upper bound abscissa
+  }
+}
 
 
-inline Real HistogramBinRandomVariable::pdf_gradient(Real x) const
-{ return 0.; }
+inline Real HistogramBinRandomVariable::inverse_cdf(Real p_cdf) const
+{ return inverse_cdf(p_cdf, binPairs); }
 
 
-inline Real HistogramBinRandomVariable::pdf_hessian(Real x) const
-{ return 0.; }
-
-
-inline void HistogramBinRandomVariable::update(const RealRealMap& bin_prs)
-{ binPairs = bin_prs; }
+inline Real HistogramBinRandomVariable::inverse_ccdf(Real p_ccdf) const
+{
+  size_t i, num_bins = binPairs.size() - 1;
+  RRMCIter cit = binPairs.begin();
+  if (p_ccdf >= 1.)
+    return cit->first;                // lower bound abscissa
+  else if (p_ccdf <= 0.)
+    return (--binPairs.end())->first; // upper bound abscissa
+  else {
+    Real upr_ccdf = 1., count, upr, lwr;
+    for (i=0; i<num_bins; ++i) {
+      lwr = cit->first; count = cit->second; ++cit;
+      upr = cit->first;
+      upr_ccdf -= count;
+      if (p_ccdf > upr_ccdf)
+	return upr - (p_ccdf - upr_ccdf) * (upr - lwr) / count;
+    }
+    // If still no return due to numerical roundoff, return upper bound
+    return (--binPairs.end())->first; // upper bound abscissa
+  }
+}
 
 
 inline Real HistogramBinRandomVariable::
@@ -142,54 +224,20 @@ pdf(Real x, const RealRealMap& bin_prs)
 }
 
 
-inline Real HistogramBinRandomVariable::
-cdf(Real x, const RealRealMap& bin_prs)
-{
-  size_t i, num_bins = bin_prs.size() - 1;
-  RRMCIter cit = bin_prs.begin();
-  if (x <= cit->first)
-    return 0.;
-  else if (x >= (--bin_prs.end())->first)
-    return 1.;
-  else {
-    Real cdf = 0., count, upr, lwr;
-    for (i=0; i<num_bins; ++i) {
-      lwr = cit->first; count = cit->second; ++cit;
-      upr = cit->first;
-      if (x < upr) {
-	cdf += count * (x - lwr) / (upr - lwr);
-	break;
-      }
-      else
-	cdf += count;
-    }
-    return cdf;
-  }
-}
+inline Real HistogramBinRandomVariable::pdf(Real x) const
+{ return pdf(x, binPairs); }
 
 
-inline Real HistogramBinRandomVariable::
-inverse_cdf(Real cdf, const RealRealMap& bin_prs)
-{
-  size_t i, num_bins = bin_prs.size() - 1;
-  RRMCIter cit = bin_prs.begin();
-  if (cdf <= 0.)
-    return cit->first;                    // lower bound abscissa
-  else if (cdf >= 1.)
-    return (--bin_prs.end())->first; // upper bound abscissa
-  else {
-    Real upr_cdf = 0., count, upr, lwr;
-    for (i=0; i<num_bins; ++i) {
-      lwr = cit->first; count = cit->second; ++cit;
-      upr = cit->first;
-      upr_cdf += count;
-      if (cdf < upr_cdf)
-	return lwr + (upr_cdf - cdf) / count * (upr - lwr);
-    }
-    // If still no return due to numerical roundoff, return upper bound
-    return (--bin_prs.end())->first; // upper bound abscissa
-  }
-}
+inline Real HistogramBinRandomVariable::pdf_gradient(Real x) const
+{ return 0.; }
+
+
+inline Real HistogramBinRandomVariable::pdf_hessian(Real x) const
+{ return 0.; }
+
+
+inline void HistogramBinRandomVariable::update(const RealRealMap& bin_prs)
+{ binPairs = bin_prs; }
 
 
 inline Real HistogramBinRandomVariable::
@@ -232,44 +280,44 @@ cdf(Real x, const RealVector& bin_prs)
   else if (x >= bin_prs[2*num_bins])
     return 1.;
   else {
-    Real cdf = 0., count, upr, lwr;
+    Real p_cdf = 0., count, upr, lwr;
     for (int i=0; i<num_bins; ++i) {
       count = bin_prs[2*i+1]; upr = bin_prs[2*i+2];
       if (x < upr) {
         lwr = bin_prs[2*i];
-	cdf += count * (x - lwr) / (upr - lwr);
+	p_cdf += count * (x - lwr) / (upr - lwr);
 	break;
       }
       else
-	cdf += count;
+	p_cdf += count;
     }
-    return cdf;
+    return p_cdf;
   }
 }
 
 
 inline Real HistogramBinRandomVariable::
-inverse_cdf(Real cdf, const RealVector& bin_prs)
+inverse_cdf(Real p_cdf, const RealVector& bin_prs)
 {
   /* Cleaner, but induces unnecessary copy overhead:
   RealRealMap bin_prs_rrm;
   copy_data(bin_prs_rv, bin_prs_rrm);
-  return HistogramBinRandomVariable::inverse_cdf(cdf, bin_prs_rrm);
+  return HistogramBinRandomVariable::inverse_cdf(p_cdf, bin_prs_rrm);
   */
 
   size_t num_bins = bin_prs.length() / 2 - 1;
-  if (cdf <= 0.)
+  if (p_cdf <= 0.)
     return bin_prs[0];          // lower bound abscissa
-  else if (cdf >= 1.)
+  else if (p_cdf >= 1.)
     return bin_prs[2*num_bins]; // upper bound abscissa
   else {
     Real upr_cdf = 0., count, upr, lwr;
     for (int i=0; i<num_bins; ++i) {
       count = bin_prs[2*i+1];
       upr_cdf += count;
-      if (cdf < upr_cdf) {
+      if (p_cdf < upr_cdf) {
         upr = bin_prs[2*i+2]; lwr = bin_prs[2*i];
-	return lwr + (upr_cdf - cdf) / count * (upr - lwr);
+	return upr - (upr_cdf - p_cdf) / count * (upr - lwr);
       }
     }
     // If still no return due to numerical roundoff, return upper bound
