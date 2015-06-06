@@ -186,10 +186,6 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   Real COV = coefficient_of_variation(), COV_rv;
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
-  // Der Kiureghian & Liu: Table 3
-  case NORMAL:
-    return COV/std::sqrt(bmth::log1p(COV*COV)); break; // Exact
-
   // Der Kiureghian & Liu: Table 5 (quadratic approx in corr,COV)
   case UNIFORM: // Max Error 0.7%
     return 1.019 + (0.014 + 0.249*COV)*COV + 0.01*corr*corr; break;
@@ -220,6 +216,10 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
     return 1.031 + (0.052 + 0.002*corr)*corr
       + (0.011 + 0.22*COV + 0.005*corr)*COV
       + (-0.21 + 0.35*COV_rv +  0.009*COV - 0.174*corr)*COV_rv; break;
+
+  // warping factors are defined once for lower triangle based on uv order
+  case NORMAL:
+    return rv.correlation_warping_factor(*this, corr); break;
 
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for LognormalRV."

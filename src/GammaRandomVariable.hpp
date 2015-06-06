@@ -159,23 +159,11 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
   // Der Kiureghian & Liu: Table 3 (quadratic approximations in COV)
-  case NORMAL: // Max Error 0.0%
-    return 1.001 + (-0.007 + 0.118*COV)*COV; break;
-  case UNIFORM: // Max Error 0.1%
-    return 1.023 + (-0.007 + 0.127*COV)*COV + 0.002*corr*corr; break;
-  case EXPONENTIAL: // Max Error 0.9%
-    return 1.104 + (0.003 + 0.014*corr)*corr
-      + (-0.008 + 0.173*COV - 0.296*corr)*COV; break;
   case GUMBEL: // Max Error 0.3%
     return 1.031 + (0.001 +  0.003*corr)*corr
       + (-0.007 + 0.131*COV - 0.132*corr)*COV; break;
 
   // Der Kiureghian & Liu: Table 6
-  case LOGNORMAL: // Max Error 4.0%
-    COV_rv = rv.coefficient_of_variation();
-    return 1.001 + (0.033 + 0.002*corr)*corr
-      + (0.004 + 0.223*COV_rv - 0.104*corr)*COV_rv
-      + (0.016 + 0.13*COV + 0.029*COV_rv - 0.119*corr)*COV; break;
   case GAMMA: // Max Error 4.0%
     COV_rv = rv.coefficient_of_variation();
     return 1.002 + 0.022*corr - 0.012*(COV + COV_rv) + 0.001*corr*corr
@@ -192,8 +180,12 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
       + (-0.007 + 0.121*COV - 0.006*corr + 0.003*COV_rv)*COV
       + (-0.202 + 0.339*COV_rv - 0.111*corr)*COV_rv; break;
 
+  // warping factors are defined once for lower triangle based on uv order
+  case NORMAL: case LOGNORMAL: case UNIFORM: case EXPONENTIAL:
+    return rv.correlation_warping_factor(*this, corr); break;
+
   default: // Unsupported warping (should be prevented upsteam)
-    PCerr << "Error: unsupported correlation warping for GammaRV."<< std::endl;
+    PCerr << "Error: unsupported correlation warping for GammaRV." << std::endl;
     abort_handler(-1); return 1.; break;
   }
 }

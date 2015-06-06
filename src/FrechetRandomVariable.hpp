@@ -176,31 +176,7 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   Real COV = coefficient_of_variation(), COV_rv;
   switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
 
-  // Der Kiureghian & Liu: Table 3 (quadratic approximations in COV)
-  case NORMAL: // Max Error 0.1%
-    return 1.03  + ( 0.238 + 0.364*COV)*COV; break;
-
-  // Der Kiureghian & Liu: Table 5 (quadratic approximations in COV,corr)
-  case UNIFORM: // Max Error 2.1%
-    return 1.033 + ( 0.305 + 0.405*COV)*COV + 0.074*corr*corr; break;
-  case EXPONENTIAL: // Max Error 4.5%
-    return 1.109 + (-0.152 + 0.130*corr)*corr
-      + ( 0.361 + 0.455*COV - 0.728*corr)*COV; break;
-  case GUMBEL: // Max Error 1.0%
-    return 1.056 + (-0.06 + 0.02*corr)*corr
-      + (0.263 + 0.383*COV - 0.332*corr)*COV; break;
-
   // Der Kiureghian & Liu: Table 6
-  case LOGNORMAL: // Max Error 4.3%
-    COV_rv = rv.coefficient_of_variation();
-    return 1.026 + (0.082 + 0.018*corr)*corr
-      + (-0.019 + 0.288*COV_rv - 0.441*corr)*COV_rv
-      + ( 0.222 + 0.379*COV + 0.126*COV_rv - 0.277*corr)*COV; break;
-  case GAMMA: // Max Error 4.2%
-    COV_rv = rv.coefficient_of_variation();
-    return 1.029 + (0.056 +  0.012*corr)*corr
-      + (-0.03 + 0.174*COV_rv - 0.313*corr)*COV_rv
-      + (0.225 + 0.379*COV +  0.075*COV_rv - 0.182*corr)*COV; break;
   case FRECHET: { // Max Error 4.3%
     COV_rv = rv.coefficient_of_variation();
     Real COV2 = COV*COV, COV_rv2 = COV_rv*COV_rv, corr2 = corr*corr;
@@ -215,6 +191,11 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
     return 1.065 + (0.146 + 0.013*corr)*corr
       + (-0.259 + 0.435*COV_rv + 0.034*COV - 0.481*corr)*COV_rv
       + ( 0.241 + 0.372*COV + 0.005*corr)*COV; break;
+
+  // warping factors are defined once for lower triangle based on uv order
+  case NORMAL: case LOGNORMAL: case UNIFORM: case EXPONENTIAL: case GAMMA:
+  case GUMBEL:
+    return rv.correlation_warping_factor(*this, corr); break;
 
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for FrechetRV."<<std::endl;
