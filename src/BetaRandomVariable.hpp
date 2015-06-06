@@ -41,7 +41,7 @@ public:
   ~BetaRandomVariable();
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -56,6 +56,10 @@ public:
   // inherited from UniformRandomVariable
   //Real to_std(Real x) const;
   //Real from_std(Real z) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(Real alpha, Real beta, Real lwr, Real upr);
 

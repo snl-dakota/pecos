@@ -95,8 +95,7 @@ inline HistogramBinRandomVariable::~HistogramBinRandomVariable()
 { }
 
 
-inline Real HistogramBinRandomVariable::
-cdf(Real x, const RealRealMap& bin_prs)
+inline Real HistogramBinRandomVariable::cdf(Real x, const RealRealMap& bin_prs)
 {
   size_t i, num_bins = bin_prs.size() - 1;
   RRMCIter cit = bin_prs.begin();
@@ -193,7 +192,7 @@ inline Real HistogramBinRandomVariable::inverse_ccdf(Real p_ccdf) const
       upr = cit->first;
       upr_ccdf -= count;
       if (p_ccdf > upr_ccdf)
-	return upr - (p_ccdf - upr_ccdf) * (upr - lwr) / count;
+	return upr - (p_ccdf - upr_ccdf) / count * (upr - lwr);
     }
     // If still no return due to numerical roundoff, return upper bound
     return (--binPairs.end())->first; // upper bound abscissa
@@ -201,8 +200,7 @@ inline Real HistogramBinRandomVariable::inverse_ccdf(Real p_ccdf) const
 }
 
 
-inline Real HistogramBinRandomVariable::
-pdf(Real x, const RealRealMap& bin_prs)
+inline Real HistogramBinRandomVariable::pdf(Real x, const RealRealMap& bin_prs)
 {
   // The PDF is discontinuous at the bin bounds.  To resolve this, this
   // function employs an (arbitrary) convention: closed/inclusive lower bound
@@ -240,8 +238,7 @@ inline void HistogramBinRandomVariable::update(const RealRealMap& bin_prs)
 { binPairs = bin_prs; }
 
 
-inline Real HistogramBinRandomVariable::
-pdf(Real x, const RealVector& bin_prs)
+inline Real HistogramBinRandomVariable::pdf(Real x, const RealVector& bin_prs)
 {
   // Need this case to be fast for usage in NumericGenOrthogPolynomial...
   /* Cleaner, but induces unnecessary copy overhead:
@@ -265,8 +262,7 @@ pdf(Real x, const RealVector& bin_prs)
 }
 
 
-inline Real HistogramBinRandomVariable::
-cdf(Real x, const RealVector& bin_prs)
+inline Real HistogramBinRandomVariable::cdf(Real x, const RealVector& bin_prs)
 {
   /* Cleaner, but induces unnecessary copy overhead:
   RealRealMap bin_prs_rrm;

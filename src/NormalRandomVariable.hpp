@@ -37,7 +37,7 @@ public:
   ~NormalRandomVariable();                     ///< destructor
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -53,6 +53,12 @@ public:
 
   Real to_std(Real x) const;
   Real from_std(Real z) const;
+
+  Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(Real mean, Real stdev);
 
@@ -173,6 +179,42 @@ inline Real NormalRandomVariable::to_std(Real x) const
 
 inline Real NormalRandomVariable::from_std(Real z) const
 { return z * gaussStdDev + gaussMean; }
+
+
+inline Real NormalRandomVariable::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{
+  // correlation warping factor for transformations to STD_NORMAL space
+  // Der Kiureghian and Liu, ASCE JEM 112:1, 1986
+  Real COV;
+  switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
+
+  case NORMAL:      return 1.; break; // No warping
+
+  // Der Kiureghian & Liu: Table 2 (constants)
+  case UNIFORM:     return 1.023326707946488488; break; // Max Error 0.0%
+  case EXPONENTIAL: return 1.107; break;                // Max Error 0.0%
+  case GUMBEL:      return 1.031; break;                // Max Error 0.0%
+
+  // Der Kiureghian & Liu: Table 3 (quadratic approximations in COV)
+  case LOGNORMAL:
+    COV = rv.coefficient_of_variation();
+    return COV/std::sqrt(bmth::log1p(COV*COV)); break; // Exact
+  case GAMMA:
+    COV = rv.coefficient_of_variation();
+    return 1.001 + (-0.007 + 0.118*COV)*COV; break; // Max Error 0.0%
+  case FRECHET:
+    COV = rv.coefficient_of_variation();
+    return 1.03  + ( 0.238 + 0.364*COV)*COV; break; // Max Error 0.1%
+  case WEIBULL:
+    COV = rv.coefficient_of_variation();
+    return 1.031 + (-0.195 + 0.328*COV)*COV; break; // Max Error 0.1%
+
+  default: // Unsupported warping (should be prevented upsteam)
+    PCerr << "Error: unsupported correlation warping for NormalRV."<< std::endl;
+    abort_handler(-1); return 1.; break;
+  }
+}
 
 
 inline void NormalRandomVariable::update(Real mean, Real stdev)

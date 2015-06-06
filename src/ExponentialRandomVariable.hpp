@@ -42,7 +42,7 @@ public:
   ~ExponentialRandomVariable();
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -59,6 +59,13 @@ public:
 
   Real to_std(Real x) const;
   Real from_std(Real z) const;
+
+  Real coefficient_of_variation() const;
+  Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(Real beta);
 
@@ -144,6 +151,55 @@ inline Real ExponentialRandomVariable::to_std(Real x) const
 
 inline Real ExponentialRandomVariable::from_std(Real z) const
 { return z * betaStat; }
+
+
+inline Real ExponentialRandomVariable::coefficient_of_variation() const
+{ return 1.; }
+
+
+inline Real ExponentialRandomVariable::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{
+  // correlation warping factor for transformations to STD_NORMAL space
+  // Der Kiureghian and Liu, ASCE JEM 112:1, 1986
+  Real COV;
+  switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
+
+  // Der Kiureghian & Liu: Table 2 (constants)
+  case NORMAL:  return 1.107; break;                // Max Error 0.0%
+
+  // Der Kiureghian & Liu: Table 4 (quadratic approximations in corr)
+  case UNIFORM:
+    return 1.133 + 0.029*corr*corr;                 break; // Max Error 0.0%
+  case EXPONENTIAL:
+    return 1.229 + (-0.367 + 0.153*corr)*corr;      break; // Max Error 1.5%
+  case GUMBEL:
+    return 1.142 + (-0.154*corr + 0.031*corr)*corr; break; // Max Error 0.2%
+
+  // Der Kiureghian & Liu: Table 5 (quadratic approximations in corr,COV)
+  case LOGNORMAL:
+    COV = rv.coefficient_of_variation();
+    return 1.098 + (0.003 + 0.025*corr)*corr
+      + ( 0.019 + 0.303*COV - 0.437*corr)*COV; break; // Max Error 1.6%
+  case GAMMA:
+    COV = rv.coefficient_of_variation();
+    return 1.104 + (0.003 + 0.014*corr)*corr
+      + (-0.008 + 0.173*COV - 0.296*corr)*COV; break; // Max Error 0.9%
+  case FRECHET:
+    COV = rv.coefficient_of_variation();
+    return 1.109 + (-0.152 + 0.130*corr)*corr
+      + ( 0.361 + 0.455*COV - 0.728*corr)*COV; break; // Max Error 4.5%
+  case WEIBULL:
+    COV = rv.coefficient_of_variation();
+    return 1.147 + (0.145 + 0.010*corr)*corr
+      + (-0.271 + 0.459*COV - 0.467*corr)*COV; break; // Max Error 0.4%
+
+  default: // Unsupported warping (should be prevented upsteam)
+    PCerr << "Error: unsupported correlation warping for ExponentialRV."
+	  << std::endl;
+    abort_handler(-1); return 1.; break;
+  }
+}
 
 
 inline void ExponentialRandomVariable::update(Real beta)

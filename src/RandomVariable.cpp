@@ -98,17 +98,16 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case STD_UNIFORM: case UNIFORM: case CONTINUOUS_DESIGN:
   case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
     ran_var_rep = new UniformRandomVariable();                            break;
-  case LOGUNIFORM:          ran_var_rep = new LoguniformRandomVariable(); break;
-  case TRIANGULAR:          ran_var_rep = new TriangularRandomVariable(); break;
+  case LOGUNIFORM:       ran_var_rep = new LoguniformRandomVariable();    break;
+  case TRIANGULAR:       ran_var_rep = new TriangularRandomVariable();    break;
   case STD_EXPONENTIAL: case EXPONENTIAL:
     ran_var_rep = new ExponentialRandomVariable();                        break;
   case STD_BETA:  case BETA:  ran_var_rep = new BetaRandomVariable();     break;
   case STD_GAMMA: case GAMMA: ran_var_rep = new GammaRandomVariable();    break;
-  case GUMBEL:                ran_var_rep = new GumbelRandomVariable();   break;
-  case FRECHET:               ran_var_rep = new FrechetRandomVariable();  break;
-  case WEIBULL:               ran_var_rep = new WeibullRandomVariable();  break;
-  case HISTOGRAM_BIN:
-    ran_var_rep = new HistogramBinRandomVariable();                       break;
+  case GUMBEL:           ran_var_rep = new GumbelRandomVariable();        break;
+  case FRECHET:          ran_var_rep = new FrechetRandomVariable();       break;
+  case WEIBULL:          ran_var_rep = new WeibullRandomVariable();       break;
+  case HISTOGRAM_BIN:    ran_var_rep = new HistogramBinRandomVariable();  break;
   default:
     PCerr << "Error: RandomVariable type " << ran_var_type << " not available."
 	  << std::endl;
@@ -293,6 +292,29 @@ Real RandomVariable::from_std(Real x) const
     abort_handler(-1);
   }
   return ranVarRep->from_std(x); // forward to letter
+}
+
+
+Real RandomVariable::coefficient_of_variation() const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: coefficient_of_variation() not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->coefficient_of_variation(); // forward to letter
+}
+
+
+Real RandomVariable::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: correlation_warping_factor() not supported for this "
+	  << "random variable type." << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->correlation_warping_factor(rv, corr); // forward to letter
 }
 
 } // namespace Pecos

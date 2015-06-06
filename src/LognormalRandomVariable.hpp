@@ -38,7 +38,7 @@ public:
   ~LognormalRandomVariable();                     ///< destructor
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -51,6 +51,13 @@ public:
   //Real pdf_hessian(Real x) const;
 
   Real log_pdf(Real x) const;
+
+  Real coefficient_of_variation() const;
+  Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(Real lambda, Real zeta);
 
@@ -163,6 +170,65 @@ inline Real LognormalRandomVariable::log_pdf(Real x) const
 }
 
 
+inline Real LognormalRandomVariable::coefficient_of_variation() const
+{
+  Real mean, std_dev;
+  moments_from_params(lnLambda, lnZeta, mean, std_dev);
+  return std_dev / mean;
+}
+
+
+inline Real LognormalRandomVariable::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{
+  // correlation warping factor for transformations to STD_NORMAL space
+  // Der Kiureghian and Liu, ASCE JEM 112:1, 1986
+  Real COV = coefficient_of_variation(), COV_rv;
+  switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
+
+  // Der Kiureghian & Liu: Table 3
+  case NORMAL:
+    return COV/std::sqrt(bmth::log1p(COV*COV)); break; // Exact
+
+  // Der Kiureghian & Liu: Table 5 (quadratic approx in corr,COV)
+  case UNIFORM: // Max Error 0.7%
+    return 1.019 + (0.014 + 0.249*COV)*COV + 0.01*corr*corr; break;
+  case EXPONENTIAL: // Max Error 1.6%
+    return 1.098 + (0.003 + 0.025*corr)*corr
+      + ( 0.019 + 0.303*COV - 0.437*corr)*COV; break;
+  case GUMBEL: // Max Error 0.3%
+    return 1.029 + (0.001 +  0.004*corr)*corr
+      + ( 0.014 + 0.233*COV - 0.197*corr)*COV; break;
+
+  // Der Kiureghian & Liu: Table 6 (quadratic approx in corr,COV,COV_rv)
+  case LOGNORMAL: // Exact
+    COV_rv = rv.coefficient_of_variation();
+    return bmth::log1p(COV*COV_rv*corr) / corr /
+      std::sqrt(bmth::log1p(COV*COV)*bmth::log1p(COV_rv*COV_rv)); break;
+  case GAMMA: // Max Error 4.0%
+    COV_rv = rv.coefficient_of_variation();
+    return 1.001 + (0.033 + 0.002*corr)*corr
+      + (0.004 + 0.223*COV - 0.104*corr)*COV
+      + (0.016 + 0.13*COV_rv + 0.029*COV - 0.119*corr)*COV_rv; break;
+  case FRECHET: // Max Error 4.3%
+    COV_rv = rv.coefficient_of_variation();
+    return  1.026 + (0.082 + 0.018*corr)*corr
+      + (-0.019 + 0.288*COV - 0.441*corr)*COV
+      + ( 0.222 + 0.379*COV_rv + 0.126*COV - 0.277*corr)*COV_rv; break;
+  case WEIBULL: // Max Error 2.4%
+    COV_rv = rv.coefficient_of_variation();
+    return 1.031 + (0.052 + 0.002*corr)*corr
+      + (0.011 + 0.22*COV + 0.005*corr)*COV
+      + (-0.21 + 0.35*COV_rv +  0.009*COV - 0.174*corr)*COV_rv; break;
+
+  default: // Unsupported warping (should be prevented upsteam)
+    PCerr << "Error: unsupported correlation warping for LognormalRV."
+	  << std::endl;
+    abort_handler(-1); return 1.; break;
+  }
+}
+
+
 inline void LognormalRandomVariable::update(Real lambda, Real zeta)
 { lnLambda = lambda; lnZeta = zeta; }
 
@@ -198,7 +264,7 @@ std_deviation_from_err_factor(Real mean, Real err_fact, Real& std_dev)
 inline void LognormalRandomVariable::
 err_factor_from_std_deviation(Real mean, Real std_dev, Real& err_fact)
 {
-  Real cf_var = std_dev/mean, zeta = std::sqrt(std::log(1. + cf_var*cf_var));
+  Real COV = std_dev/mean, zeta = std::sqrt(bmth::log1p(COV*COV));
   err_fact = std::exp(NormalRandomVariable::Phi_inverse(0.95)*zeta);
 }
 
@@ -215,8 +281,8 @@ moments_from_params(Real lambda, Real zeta, Real& mean, Real& std_dev)
 inline void LognormalRandomVariable::
 zeta_sq_from_moments(Real mean, Real std_dev, Real& zeta_sq)
 {
-  Real cf_var = std_dev/mean;
-  zeta_sq = std::log(1. + cf_var*cf_var);
+  Real COV = std_dev/mean;
+  zeta_sq = bmth::log1p(COV*COV);
 }
 
 

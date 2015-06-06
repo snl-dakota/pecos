@@ -29,7 +29,7 @@ class GumbelRandomVariable: public RandomVariable
 public:
 
   //
-  //- Heading: Constructors and destructor
+  //- Heading: Virtual function redefinitions
   //
 
   /// default constructor
@@ -54,6 +54,12 @@ public:
 
   Real inverse_log_cdf(Real log_p) const;
   Real log_pdf(Real x) const;
+
+  Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(Real alpha, Real beta);
 
@@ -155,6 +161,50 @@ inline Real GumbelRandomVariable::log_pdf(Real x) const
 {
   Real num = -alphaStat*(x-betaStat);
   return std::log(alphaStat) + num - std::exp(num);
+}
+
+
+inline Real GumbelRandomVariable::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{
+  // correlation warping factor for transformations to STD_NORMAL space
+  // Der Kiureghian and Liu, ASCE JEM 112:1, 1986
+  Real COV;
+  switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
+
+  // Der Kiureghian & Liu: Table 2 (constants)
+  case NORMAL:      return 1.031; break; // Max Error 0.0%
+
+  // Der Kiureghian & Liu: Table 4 (quadratic approx in corr)
+  case UNIFORM:     // Max Error 0.0%
+    return 1.055 + 0.015*corr*corr;            break;
+  case EXPONENTIAL: // Max Error 0.2%
+    return 1.142 + (-0.154 + 0.031*corr)*corr; break;
+  case GUMBEL:      // Max Error 0.0%
+    return 1.064 + (-0.069 + 0.005*corr)*corr; break;
+
+  // Der Kiureghian & Liu: Table 5 (quadratic approx in COV,corr)
+  case LOGNORMAL: // Max Error 0.3%
+    COV = rv.coefficient_of_variation();
+    return 1.029 + (0.001 +  0.004*corr)*corr
+      + ( 0.014 + 0.233*COV - 0.197*corr)*COV; break;
+  case GAMMA: // Max Error 0.3%
+    COV = rv.coefficient_of_variation();
+    return 1.031 + (0.001 +  0.003*corr)*corr
+      + (-0.007 + 0.131*COV -  0.132*corr)*COV; break;
+  case FRECHET: // Max Error 1.0%
+    COV = rv.coefficient_of_variation();
+    return 1.056 + (-0.06 + 0.02*corr)*corr
+      + (0.263 + 0.383*COV - 0.332*corr)*COV; break;
+  case WEIBULL: // Max Error 0.2%
+    COV = rv.coefficient_of_variation();
+    return 1.064 + (0.065 +  0.003*corr)*corr
+      + (-0.21 + 0.356*COV - 0.211*corr)*COV; break;
+
+  default: // Unsupported warping (should be prevented upsteam)
+    PCerr << "Error: unsupported correlation warping for GumbelRV."<< std::endl;
+    abort_handler(-1); return 1.; break;
+  }
 }
 
 

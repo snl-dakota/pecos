@@ -37,7 +37,7 @@ public:
   ~UniformRandomVariable();                  ///< destructor
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -51,6 +51,12 @@ public:
 
   Real to_std(Real x) const;
   Real from_std(Real z) const;
+
+  Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(Real lwr, Real upr);
 
@@ -206,6 +212,42 @@ inline Real UniformRandomVariable::from_std(Real z) const
   if      (z >=  1.) return upperBnd;
   else if (z <= -1.) return lowerBnd;
   else               return lowerBnd + (upperBnd - lowerBnd) * (z + 1.) / 2.;
+}
+
+
+inline Real UniformRandomVariable::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{
+  // correlation warping factor for transformations to STD_NORMAL space
+  // Der Kiureghian and Liu, ASCE JEM 112:1, 1986
+  Real COV;
+  switch (rv.type()) { // x-space types mapped to STD_NORMAL u-space
+
+  // Der Kiureghian & Liu: Table 2
+  case NORMAL:      return 1.023326707946488488;    break; // Max Error 0.0%
+
+  // Der Kiureghian & Liu: Table 4
+  case UNIFORM:     return 1.047 - 0.047*corr*corr; break; // Max Error 0.0%
+  case EXPONENTIAL: return 1.133 + 0.029*corr*corr; break; // Max Error 0.0%
+  case GUMBEL:      return 1.055 + 0.015*corr*corr; break; // Max Error 0.0%
+
+  // Der Kiureghian & Liu: Table 5 (quadratic approximations in COV,corr)
+  case LOGNORMAL: // Max Error 0.7%
+    COV = rv.coefficient_of_variation();
+    return 1.019 + ( 0.014 + 0.249*COV)*COV + 0.01*corr*corr;  break;
+  case GAMMA:     // Max Error 0.1%
+    COV = rv.coefficient_of_variation();
+    return 1.023 + (-0.007 + 0.127*COV)*COV + 0.002*corr*corr; break;
+  case FRECHET:   // Max Error 2.1%
+    COV = rv.coefficient_of_variation();
+    return 1.033 + ( 0.305 + 0.405*COV)*COV + 0.074*corr*corr; break;
+  case WEIBULL:   // Max Error 0.5%
+    COV = rv.coefficient_of_variation();
+    return 1.061 + (-0.237 + 0.379*COV)*COV - 0.005*corr*corr; break;
+  default: // Unsupported warping (should be prevented upsteam)
+    PCerr << "Error: unsupported correlation warping for UniformRV."<<std::endl;
+    abort_handler(-1); return 1.; break;
+  }
 }
 
 

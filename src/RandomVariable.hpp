@@ -143,6 +143,15 @@ public:
   /// distribution
   virtual Real from_std(Real z) const;
 
+  /// compute the coefficient of variation (used to compute selected
+  /// correlation warping factors); generally defined for semi-infinite
+  /// distributions with nonzero mean (lognormal, gamma, frechet, weibull)
+  virtual Real coefficient_of_variation() const;
+  /// compute the warping factor for correlation between the current
+  /// variable and the one passed in (used in NatafTransformation)
+  virtual Real correlation_warping_factor(const RandomVariable& rv,
+					  Real corr) const;
+
   //
   //- Heading: Member functions
   //
