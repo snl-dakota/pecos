@@ -14,16 +14,7 @@
 //- Version:
 
 #include "RandomVariable.hpp"
-#include "BoundedNormalRandomVariable.hpp"
-#include "BoundedLognormalRandomVariable.hpp"
-#include "LoguniformRandomVariable.hpp"
-#include "TriangularRandomVariable.hpp"
-#include "BetaRandomVariable.hpp"
-#include "GammaRandomVariable.hpp"
-#include "GumbelRandomVariable.hpp"
-#include "FrechetRandomVariable.hpp"
-#include "WeibullRandomVariable.hpp"
-#include "HistogramBinRandomVariable.hpp"
+#include "pecos_stat_util.hpp"
 
 static const char rcsId[]="@(#) $Id: RandomVariable.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
@@ -295,6 +286,51 @@ Real RandomVariable::from_std(Real x) const
 }
 
 
+Real RandomVariable::parameter(short dist_param) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: parameter() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->parameter(dist_param); // forward to letter
+}
+
+
+void RandomVariable::parameter(short dist_param, Real val)
+{
+  if (ranVarRep)
+    ranVarRep->parameter(dist_param, val); // forward to letter
+  else {
+    PCerr << "Error: parameter() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+RealRealPair RandomVariable::moments() const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: moments() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->moments(); // forward to letter
+}
+
+
+RealRealPair RandomVariable::bounds() const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: bounds() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->bounds(); // forward to letter
+}
+
+
 Real RandomVariable::coefficient_of_variation() const
 {
   if (!ranVarRep) {
@@ -315,6 +351,28 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
     abort_handler(-1);
   }
   return ranVarRep->correlation_warping_factor(rv, corr); // forward to letter
+}
+
+
+Real RandomVariable::dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: dx_ds() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->dx_ds(dist_param, u_type, x, z); // forward to letter
+}
+
+
+Real RandomVariable::dz_ds_factor(short u_type, Real x, Real z) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: dz_ds_factor() not supported for this random variable "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->dz_ds_factor(u_type, x, z); // forward to letter
 }
 
 } // namespace Pecos

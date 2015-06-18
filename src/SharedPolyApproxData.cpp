@@ -15,6 +15,7 @@
 #include "BasisPolynomial.hpp"
 #include "DistributionParams.hpp"
 #include "NumericGenOrthogPolynomial.hpp"
+#include "pecos_stat_util.hpp"
 
 //#define DEBUG
 
@@ -171,27 +172,25 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 				    adp.normal_upper_bound(nuv_cntr));
       ++nuv_cntr; break;
     case LOGNORMAL: {
-      Real mean, stdev;
-      moments_from_lognormal_spec(adp.lognormal_means(),
-				  adp.lognormal_std_deviations(),
-				  adp.lognormal_lambdas(),
-				  adp.lognormal_zetas(),
-				  adp.lognormal_error_factors(), lnuv_cntr,
-				  mean, stdev);
+      Real lambda, zeta;
+      params_from_lognormal_spec(adp.lognormal_means(),
+				 adp.lognormal_std_deviations(),
+				 adp.lognormal_lambdas(), adp.lognormal_zetas(),
+				 adp.lognormal_error_factors(), lnuv_cntr,
+				 lambda, zeta);
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	lognormal_distribution(mean, stdev);
+	lognormal_distribution(lambda, zeta);
       ++lnuv_cntr; break;
     }
     case BOUNDED_LOGNORMAL: {
-      Real mean, stdev;
-      moments_from_lognormal_spec(adp.lognormal_means(),
-				  adp.lognormal_std_deviations(),
-				  adp.lognormal_lambdas(),
-				  adp.lognormal_zetas(),
-				  adp.lognormal_error_factors(), lnuv_cntr,
-				  mean, stdev);
+      Real lambda, zeta;
+      params_from_lognormal_spec(adp.lognormal_means(),
+				 adp.lognormal_std_deviations(),
+				 adp.lognormal_lambdas(), adp.lognormal_zetas(),
+				 adp.lognormal_error_factors(), lnuv_cntr,
+				 lambda, zeta);
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	bounded_lognormal_distribution(mean, stdev,
+	bounded_lognormal_distribution(lambda, zeta,
 				       adp.lognormal_lower_bound(lnuv_cntr),
 				       adp.lognormal_upper_bound(lnuv_cntr));
       ++lnuv_cntr; break;
@@ -203,8 +202,8 @@ update_basis_distribution_parameters(const ShortArray& u_types,
       ++luuv_cntr; break;
     case TRIANGULAR:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
-	triangular_distribution(adp.triangular_mode(tuv_cntr),
-				adp.triangular_lower_bound(tuv_cntr),
+	triangular_distribution(adp.triangular_lower_bound(tuv_cntr),
+				adp.triangular_mode(tuv_cntr),
 				adp.triangular_upper_bound(tuv_cntr));
       ++tuv_cntr; break;
     case GUMBEL:

@@ -8,7 +8,7 @@
 
 #include "LHSDriver.hpp"
 #include "BoostRNG_Monostate.hpp"
-#include "pecos_stat_util.hpp"
+#include "LognormalRandomVariable.hpp"
 #include <boost/lexical_cast.hpp>
 
 static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjbohnh $";
@@ -444,8 +444,8 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
 	dist_params[1] = ln_zetas[i];
       }
       else
-	lognormal_params_from_moments(ln_means[i], ln_std_devs[i],
-				      dist_params[0], dist_params[1]);
+	LognormalRandomVariable::params_from_moments(ln_means[i],
+	  ln_std_devs[i], dist_params[0], dist_params[1]);
     }
     else {
       // In the mean/err factor specification case, DAKOTA and LHS are

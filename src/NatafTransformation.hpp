@@ -134,10 +134,16 @@ private:
   /// Transformation routine from z-space of correlated standard normal
   /// variables to x-space of correlated random variables
   void trans_Z_to_X(const RealVector& z_vars, RealVector& x_vars);
+  /// Transformation routine from a single z-space variable to a
+  /// corresponding x-space variable
+  void trans_Z_to_X(Real z, Real& x, size_t i);
 
   /// Transformation routine from x-space of correlated random variables
   /// to z-space of correlated standard normal variables
   void trans_X_to_Z(const RealVector& x_vars, RealVector& z_vars);
+  /// Transformation routine from a single x-space random variable to
+  /// a corresponding z-space variable
+  void trans_X_to_Z(Real x, Real& z, size_t i);
 
   /// Transformation routine from z-space of correlated standard normal
   /// variables to u-space of uncorrelated standard normal variables

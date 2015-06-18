@@ -62,14 +62,14 @@ public:
   void bounded_normal_distribution(Real mean,  Real std_dev,
 				   Real l_bnd, Real u_bnd);
   /// set distribution type and parameters for a LOGNORMAL distribution
-  void lognormal_distribution(Real mean, Real std_dev);
+  void lognormal_distribution(Real lambda, Real zeta);
   /// set distribution type and parameters for a BOUNDED_LOGNORMAL distribution
-  void bounded_lognormal_distribution(Real mean,  Real std_dev,
-				      Real l_bnd, Real u_bnd);
+  void bounded_lognormal_distribution(Real lambda, Real zeta,
+				      Real l_bnd,  Real u_bnd);
   /// set distribution type and parameters for a LOGUNIFORM distribution
   void loguniform_distribution(Real l_bnd, Real u_bnd);
   /// set distribution type and parameters for a TRIANGULAR distribution
-  void triangular_distribution(Real mode, Real l_bnd, Real u_bnd);
+  void triangular_distribution(Real l_bnd, Real mode, Real u_bnd);
   /// set distribution type and parameters for a GUMBEL distribution
   void gumbel_distribution(Real alpha, Real beta);
   /// set distribution type and parameters for a FRECHET distribution
@@ -284,15 +284,15 @@ bounded_normal_distribution(Real mean,  Real std_dev, Real l_bnd, Real u_bnd)
 
 
 inline void NumericGenOrthogPolynomial::
-lognormal_distribution(Real mean, Real std_dev)
+lognormal_distribution(Real lambda, Real zeta)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
   parametricUpdate = false;
   if (distributionType == LOGNORMAL) {
-    if ( !real_compare(distParams[0], mean) ||
-	 !real_compare(distParams[1], std_dev) )
+    if ( !real_compare(distParams[0], lambda) ||
+	 !real_compare(distParams[1], zeta) )
       parametricUpdate = true;
   }
   else {
@@ -300,20 +300,20 @@ lognormal_distribution(Real mean, Real std_dev)
     parametricUpdate = true;
   }
   if (parametricUpdate)
-    { distParams[0] = mean; distParams[1] = std_dev; reset_gauss(); }
+    { distParams[0] = lambda; distParams[1] = zeta; reset_gauss(); }
 }
 
 
 inline void NumericGenOrthogPolynomial::
-bounded_lognormal_distribution(Real mean,  Real std_dev, Real l_bnd, Real u_bnd)
+bounded_lognormal_distribution(Real lambda, Real zeta, Real l_bnd, Real u_bnd)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
   parametricUpdate = false;
   if (distributionType == BOUNDED_LOGNORMAL) {
-    if ( !real_compare(distParams[0], mean)    ||
-	 !real_compare(distParams[1], std_dev) ||
+    if ( !real_compare(distParams[0], lambda)    ||
+	 !real_compare(distParams[1], zeta) ||
 	 !real_compare(distParams[2], l_bnd)   ||
 	 !real_compare(distParams[3], u_bnd) )
       parametricUpdate = true;
@@ -323,8 +323,8 @@ bounded_lognormal_distribution(Real mean,  Real std_dev, Real l_bnd, Real u_bnd)
     parametricUpdate = true;
   }
   if (parametricUpdate) {
-    distParams[0] = mean;  distParams[1] = std_dev;
-    distParams[2] = l_bnd; distParams[3] = u_bnd;
+    distParams[0] = lambda; distParams[1] = zeta;
+    distParams[2] = l_bnd;  distParams[3] = u_bnd;
     reset_gauss();
   }
 }
@@ -352,15 +352,15 @@ loguniform_distribution(Real l_bnd, Real u_bnd)
 
 
 inline void NumericGenOrthogPolynomial::
-triangular_distribution(Real mode, Real l_bnd, Real u_bnd)
+triangular_distribution(Real l_bnd, Real mode, Real u_bnd)
 {
   // *_distribution() routines are called for each approximation build
   // from PolynomialApproximation::update_basis_distribution_parameters().
   // Therefore, set parametricUpdate to false unless an actual parameter change.
   parametricUpdate = false;
   if (distributionType == TRIANGULAR) {
-    if ( !real_compare(distParams[0], mode)  ||
-	 !real_compare(distParams[1], l_bnd) ||
+    if ( !real_compare(distParams[0], l_bnd) ||
+	 !real_compare(distParams[1], mode)  ||
 	 !real_compare(distParams[2], u_bnd) )
       parametricUpdate = true;
   }
@@ -369,7 +369,7 @@ triangular_distribution(Real mode, Real l_bnd, Real u_bnd)
     parametricUpdate = true;
   }
   if (parametricUpdate) {
-    distParams[0] = mode; distParams[1] = l_bnd; distParams[2] = u_bnd;
+    distParams[0] = l_bnd; distParams[1] = mode; distParams[2] = u_bnd;
     reset_gauss();
   }
 }
@@ -459,47 +459,47 @@ histogram_bin_distribution(const RealRealMap& bin_pairs)
 inline Real NumericGenOrthogPolynomial::
 bounded_normal_pdf(Real x, const RealVector& params)
 {
-  return Pecos::bounded_normal_pdf(x, params[0], params[1],
-				   params[2], params[3]);
+  return BoundedNormalRandomVariable::pdf(x, params[0], params[1],
+					  params[2], params[3]);
 }
 
 
 inline Real NumericGenOrthogPolynomial::
 lognormal_pdf(Real x, const RealVector& params)
-{ return Pecos::lognormal_pdf(x, params[0], params[1]); }
+{ return LognormalRandomVariable::pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
 bounded_lognormal_pdf(Real x, const RealVector& params)
 {
-  return Pecos::bounded_lognormal_pdf(x, params[0], params[1],
-				      params[2], params[3]);
+  return BoundedLognormalRandomVariable::pdf(x, params[0], params[1],
+					     params[2], params[3]);
 }
 
 
 inline Real NumericGenOrthogPolynomial::
 loguniform_pdf(Real x, const RealVector& params)
-{ return Pecos::loguniform_pdf(x, params[0], params[1]); }
+{ return LoguniformRandomVariable::pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
 triangular_pdf(Real x, const RealVector& params)
-{ return Pecos::triangular_pdf(x, params[0], params[1], params[2]); }
+{ return TriangularRandomVariable::pdf(x, params[0], params[1], params[2]); }
 
 
 inline Real NumericGenOrthogPolynomial::
 gumbel_pdf(Real x, const RealVector& params)
-{ return Pecos::gumbel_pdf(x, params[0], params[1]); }
+{ return GumbelRandomVariable::pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
 frechet_pdf(Real x, const RealVector& params)
-{ return Pecos::frechet_pdf(x, params[0], params[1]); }
+{ return FrechetRandomVariable::pdf(x, params[0], params[1]); }
 
 
 inline Real NumericGenOrthogPolynomial::
 weibull_pdf(Real x, const RealVector& params)
-{ return Pecos::weibull_pdf(x, params[0], params[1]); }
+{ return WeibullRandomVariable::pdf(x, params[0], params[1]); }
 
 
 inline void NumericGenOrthogPolynomial::coefficients_norms_flag(bool flag)
@@ -515,28 +515,36 @@ inline Real NumericGenOrthogPolynomial::length_scale() const
 {
   Real mean, stdev;
   switch (distributionType) {
-  case BOUNDED_NORMAL: case LOGNORMAL: case BOUNDED_LOGNORMAL:
-    mean = distParams[0]; stdev = distParams[1]; break;
+  case BOUNDED_NORMAL: mean = distParams[0]; stdev = distParams[1]; break;
+  case LOGNORMAL: case BOUNDED_LOGNORMAL:
+    LognormalRandomVariable::
+      moments_from_params(distParams[0], distParams[1], mean, stdev);
+    break;
   case LOGUNIFORM:
-    moments_from_loguniform_params(distParams[0], distParams[1], mean, stdev);
+    LoguniformRandomVariable::
+      moments_from_params(distParams[0], distParams[1], mean, stdev);
     break;
   case TRIANGULAR:
-    moments_from_triangular_params(distParams[1], distParams[2],
-				   distParams[0], mean, stdev);
+    TriangularRandomVariable::moments_from_params(distParams[0], distParams[1],
+						  distParams[2], mean, stdev);
     break;
   case GUMBEL:
-    moments_from_gumbel_params(distParams[0], distParams[1], mean, stdev);
+    GumbelRandomVariable::
+      moments_from_params(distParams[0], distParams[1], mean, stdev);
     break;
   case FRECHET:
-    moments_from_frechet_params(distParams[0], distParams[1], mean, stdev);
+    FrechetRandomVariable::
+      moments_from_params(distParams[0], distParams[1], mean, stdev);
     break;
   case WEIBULL:
-    moments_from_weibull_params(distParams[0], distParams[1], mean, stdev);
+    WeibullRandomVariable::
+      moments_from_params(distParams[0], distParams[1], mean, stdev);
     break;
   case HISTOGRAM_BIN: {
     RealRealMap hist_bin_prs_rrm;
     copy_data(distParams, hist_bin_prs_rrm);
-    moments_from_histogram_bin_params(hist_bin_prs_rrm, mean, stdev); break;
+    HistogramBinRandomVariable::
+      moments_from_params(hist_bin_prs_rrm, mean, stdev); break;
   }
   default:
     PCerr << "Error: distributionType " << distributionType << " not supported "

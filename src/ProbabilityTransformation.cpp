@@ -8,6 +8,7 @@
 
 #include "pecos_stat_util.hpp"
 #include "NatafTransformation.hpp"
+#include "DistributionParams.hpp"
 
 static const char rcsId[]="@(#) $Id: ProbabilityTransformation.cpp 4768 2007-12-17 17:49:32Z mseldre $";
 
@@ -158,7 +159,10 @@ ProbabilityTransformation::~ProbabilityTransformation()
     the Model variables are in a transformed space (e.g., u-space) and
     ranVarTypes et al. may not be generated directly.  This allows for
     the use of inverse transformations to return the transformed space
-    variables to their original states. */
+    variables to their original states.
+    
+    The copy constructor can be used for shallow copies.  This function
+    provides a deep copy. */
 void ProbabilityTransformation::
 initialize_random_variables(const ProbabilityTransformation& prob_trans)
 {
@@ -166,25 +170,15 @@ initialize_random_variables(const ProbabilityTransformation& prob_trans)
     probTransRep->initialize_random_variables(prob_trans);
   else {
     if (prob_trans.probTransRep) { // source is envelope
-      ranVarTypesX        = prob_trans.probTransRep->ranVarTypesX;
+      randomVarsX = prob_trans.probTransRep->randomVarsX;//TO DO:shallow copies?
       ranVarTypesU        = prob_trans.probTransRep->ranVarTypesU;
-      ranVarMeansX        = prob_trans.probTransRep->ranVarMeansX;
-      ranVarStdDevsX      = prob_trans.probTransRep->ranVarStdDevsX;
-      ranVarLowerBndsX    = prob_trans.probTransRep->ranVarLowerBndsX;
-      ranVarUpperBndsX    = prob_trans.probTransRep->ranVarUpperBndsX;
-      ranVarAddtlParamsX  = prob_trans.probTransRep->ranVarAddtlParamsX;
       correlationFlagX    = prob_trans.probTransRep->correlationFlagX;
       corrMatrixX         = prob_trans.probTransRep->corrMatrixX;
       corrCholeskyFactorZ = prob_trans.probTransRep->corrCholeskyFactorZ;
     }
     else { // source is letter
-      ranVarTypesX        = prob_trans.ranVarTypesX;
+      randomVarsX         = prob_trans.randomVarsX;//TO DO: want shallow copies?
       ranVarTypesU        = prob_trans.ranVarTypesU;
-      ranVarMeansX        = prob_trans.ranVarMeansX;
-      ranVarStdDevsX      = prob_trans.ranVarStdDevsX;
-      ranVarLowerBndsX    = prob_trans.ranVarLowerBndsX;
-      ranVarUpperBndsX    = prob_trans.ranVarUpperBndsX;
-      ranVarAddtlParamsX  = prob_trans.ranVarAddtlParamsX;
       correlationFlagX    = prob_trans.correlationFlagX;
       corrMatrixX         = prob_trans.corrMatrixX;
       corrCholeskyFactorZ = prob_trans.corrCholeskyFactorZ;
@@ -197,34 +191,173 @@ void ProbabilityTransformation::
 initialize_random_variable_types(const ShortArray& x_types,
 				 const ShortArray& u_types)
 {
-  if (probTransRep) {
-    probTransRep->ranVarTypesX  = x_types;
-    probTransRep->ranVarTypesU  = u_types;
-  }
+  if (probTransRep)
+    probTransRep->initialize_random_variable_types(x_types, u_types);
   else {
-    ranVarTypesX  = x_types;
-    ranVarTypesU  = u_types;
+    ranVarTypesU = u_types;
+    // (default) construction of x-space random variables occurs once
+    // (updates to distribution parameters can occur repeatedly)
+    size_t i, num_v = x_types.size();
+    randomVarsX.resize(num_v);
+    for (i=0; i<num_v; ++i)
+      randomVarsX[i] = RandomVariable(x_types[i]);
   }
 }
 
 
 void ProbabilityTransformation::
-initialize_random_variable_parameters(const RealVector& x_means,
-				      const RealVector& x_std_devs,
-				      const RealVector& x_l_bnds,
-				      const RealVector& x_u_bnds,
-				      const RealVectorArray& x_addtl)
+initialize_random_variable_parameters(const RealVector& cd_l_bnds,
+				      const RealVector& cd_u_bnds,
+				      const AleatoryDistParams& adp,
+				      const EpistemicDistParams& edp,
+				      const RealVector& cs_l_bnds,
+				      const RealVector& cs_u_bnds)
 {
   if (probTransRep) // envelope fwd to letter
-    probTransRep->initialize_random_variable_parameters(x_means,  x_std_devs,
-							x_l_bnds, x_u_bnds,
-							x_addtl);
+    probTransRep->
+      initialize_random_variable_parameters(cd_l_bnds, cd_u_bnds, adp, edp,
+					    cs_l_bnds, cs_u_bnds);
   else {
-    ranVarMeansX       = x_means;
-    ranVarStdDevsX     = x_std_devs;
-    ranVarLowerBndsX   = x_l_bnds;
-    ranVarUpperBndsX   = x_u_bnds;
-    ranVarAddtlParamsX = x_addtl;
+    size_t i, num_v = randomVarsX.size(), cd_cntr = 0, n_cntr = 0, ln_cntr = 0,
+      u_cntr = 0, lu_cntr = 0, t_cntr = 0, e_cntr = 0, b_cntr = 0, ga_cntr = 0,
+      gu_cntr = 0, f_cntr = 0, w_cntr = 0, h_cntr = 0, ci_cntr = 0, cs_cntr = 0;
+    Real dbl_inf = std::numeric_limits<Real>::infinity();
+    RandomVariable* rv_rep_i;
+    const RealVector& ln_means     = adp.lognormal_means();
+    const RealVector& ln_std_devs  = adp.lognormal_std_deviations();
+    const RealVector& ln_lambdas   = adp.lognormal_lambdas();
+    const RealVector& ln_zetas     = adp.lognormal_zetas();
+    const RealVector& ln_err_facts = adp.lognormal_error_factors();
+    for (i=0; i<num_v; ++i) {
+      rv_rep_i = randomVarsX[i].random_variable_rep();
+      switch (rv_rep_i->type()) {
+      case CONTINUOUS_DESIGN: {
+	Real lwr = cd_l_bnds[cd_cntr], upr = cd_u_bnds[cd_cntr];
+	if (lwr == -dbl_inf || upr == dbl_inf) {
+	  PCerr << "Error: bounds specification required for design variable "
+	       << "transformation to standard uniform." << std::endl;
+	  abort_handler(-1);
+	}
+	((UniformRandomVariable*)rv_rep_i)->update(lwr, upr);
+	++cd_cntr; break;
+      }
+      case NORMAL:
+	((NormalRandomVariable*)rv_rep_i)->
+	  update(adp.normal_mean(n_cntr), adp.normal_std_deviation(n_cntr));
+	++n_cntr; break;
+      case BOUNDED_NORMAL:
+	((BoundedNormalRandomVariable*)rv_rep_i)->
+	  update(adp.normal_mean(n_cntr), adp.normal_std_deviation(n_cntr),
+		 adp.normal_lower_bound(n_cntr),adp.normal_upper_bound(n_cntr));
+	++n_cntr; break;
+      case LOGNORMAL: {
+	Real lambda, zeta;
+	params_from_lognormal_spec(ln_means, ln_std_devs, ln_lambdas, ln_zetas,
+				   ln_err_facts, ln_cntr, lambda, zeta);
+        ((LognormalRandomVariable*)rv_rep_i)->update(lambda, zeta);
+	++ln_cntr; break;
+      }
+      case BOUNDED_LOGNORMAL: {
+	Real lambda, zeta;
+	params_from_lognormal_spec(ln_means, ln_std_devs, ln_lambdas, ln_zetas,
+				   ln_err_facts, ln_cntr, lambda, zeta);
+	((BoundedLognormalRandomVariable*)rv_rep_i)->
+	  update(lambda, zeta, adp.lognormal_lower_bound(ln_cntr),
+		 adp.lognormal_upper_bound(ln_cntr));
+	++ln_cntr; break;
+      }
+      case UNIFORM:
+	((UniformRandomVariable*)rv_rep_i)->
+	  update(adp.uniform_lower_bound(u_cntr),
+		 adp.uniform_upper_bound(u_cntr));
+	++u_cntr; break;
+      case LOGUNIFORM:
+	((LoguniformRandomVariable*)rv_rep_i)->
+	  update(adp.loguniform_lower_bound(lu_cntr),
+		 adp.loguniform_upper_bound(lu_cntr));
+	++lu_cntr; break;
+      case TRIANGULAR:
+	((TriangularRandomVariable*)rv_rep_i)->
+	  update(adp.triangular_lower_bound(t_cntr),
+		 adp.triangular_mode(t_cntr),
+		 adp.triangular_upper_bound(t_cntr));
+	++t_cntr; break;
+      case EXPONENTIAL:
+	((ExponentialRandomVariable*)rv_rep_i)->
+	  update(adp.exponential_beta(e_cntr));
+	++e_cntr; break;
+      case BETA:
+	((BetaRandomVariable*)rv_rep_i)->
+	  update(adp.beta_alpha(b_cntr), adp.beta_beta(b_cntr),
+		 adp.beta_lower_bound(b_cntr), adp.beta_upper_bound(b_cntr));
+	++b_cntr; break;
+      case GAMMA:
+	((GammaRandomVariable*)rv_rep_i)->
+	  update(adp.gamma_alpha(ga_cntr), adp.gamma_beta(ga_cntr));
+	+ga_cntr; break;
+      case GUMBEL:
+	((GumbelRandomVariable*)rv_rep_i)->
+	  update(adp.gumbel_alpha(gu_cntr), adp.gumbel_beta(gu_cntr));
+	++gu_cntr; break;
+      case FRECHET:
+	((FrechetRandomVariable*)rv_rep_i)->
+	  update(adp.frechet_alpha(f_cntr), adp.frechet_beta(f_cntr));
+	++f_cntr; break;
+      case WEIBULL:
+	((WeibullRandomVariable*)rv_rep_i)->
+	  update(adp.weibull_alpha(w_cntr), adp.weibull_beta(w_cntr));
+	++w_cntr; break;
+      case HISTOGRAM_BIN:
+	((HistogramBinRandomVariable*)rv_rep_i)->
+	  update(adp.histogram_bin_pairs(h_cntr));
+	++h_cntr; break;
+
+      // discrete int aleatory uncertain
+
+      // discrete string aleatory uncertain
+
+      // discrete real aleatory uncertain
+
+      case CONTINUOUS_INTERVAL: {
+	const RealRealPairRealMap& ci_bp
+	  = edp.continuous_interval_basic_probabilities(ci_cntr);
+	// process interval sets for overall bounds; since intervals are sorted,
+	// lb should be in 1st interval but go ahead and process lb same as ub
+	Real lb = dbl_inf, ub = -dbl_inf;
+	RealRealPairRealMap::const_iterator cit;
+	for (cit=ci_bp.begin(); cit!=ci_bp.end(); ++cit) {
+	  const RealRealPair& bnds = cit->first;
+	  if (bnds.first  < lb) lb = bnds.first;
+	  if (bnds.second > ub) ub = bnds.second;
+	}
+	((UniformRandomVariable*)rv_rep_i)->update(lb, ub);
+	++ci_cntr; break;
+      }
+
+      // discrete int epistemic uncertain
+
+      // discrete string epistemic uncertain
+
+      // discrete real epistemic uncertain
+
+      case CONTINUOUS_STATE: {
+	Real lwr = cs_l_bnds[cs_cntr], upr = cs_u_bnds[cs_cntr];
+	if (lwr == -dbl_inf || upr == dbl_inf) {
+	  PCerr << "Error: bounds specification required for state variable "
+	       << "transformation to standard uniform." << std::endl;
+	  abort_handler(-1);
+	}
+	((UniformRandomVariable*)rv_rep_i)->update(lwr, upr);
+	++cs_cntr; break;
+      }
+      case STD_NORMAL:      ++n_cntr; break;
+      case STD_UNIFORM:     ++u_cntr; break;
+      case STD_EXPONENTIAL: ++e_cntr; break;
+      case STD_BETA:        ++b_cntr; break;
+      case STD_GAMMA:      ++ga_cntr; break;
+      //default:
+      }
+    }
   }
 }
 
@@ -587,13 +720,14 @@ numerical_design_jacobian(const RealVector& x_vars,
   trans_X_to_U(x_vars, u_vars);
 
   Real fd_grad_ss = 1.e-4;
+  RealMatrix chol_z0(corrCholeskyFactorZ);
   for (i=0; i<num_var_map_1c; i++) {
 
     size_t cv_index        = find_index(cv_ids, acv_ids[acv_map1_indices[i]]);
     short  acv_map2_target = acv_map2_targets[i];
     if (cv_index != _NPOS && acv_map2_target != NO_TARGET) {
 
-      Real s0 = distribution_parameter(cv_index, acv_map2_target);
+      Real s0 = randomVarsX[cv_index].parameter(acv_map2_target);
 
       // Compute the offset for the ith gradient variable.
       // Enforce a minimum delta of fdgss*.01
@@ -604,8 +738,9 @@ numerical_design_jacobian(const RealVector& x_vars,
       // Evaluate (L/z_vars/x_vars)_s_plus_h
       // -----------------------------------
       Real s1 = s0 + h;
-      // updates ranVars & corrCholeskyFactorZ:
-      distribution_parameter(cv_index, acv_map2_target, s1);
+      // update randomVars & corrCholeskyFactorZ:
+      randomVarsX[cv_index].parameter(acv_map2_target, s1);
+      transform_correlations();
       if (zs) {
 	L_s_plus_h = corrCholeskyFactorZ;        // L
 	//trans_U_to_Z(u_vars, z_vars_s_plus_h); // z
@@ -617,8 +752,9 @@ numerical_design_jacobian(const RealVector& x_vars,
       // Evaluate (L/z_vars/x_vars)_s_minus_h
       // ------------------------------------
       s1 = s0 - h;
-      // updates ranVars & corrCholeskyFactorZ:
-      distribution_parameter(cv_index, acv_map2_target, s1);
+      // update randomVars & corrCholeskyFactorZ:
+      randomVarsX[cv_index].parameter(acv_map2_target, s1);
+      transform_correlations();
       //if (zs) {
         // utilize corrCholeskyFactorZ below      // L
         //trans_U_to_Z(u_vars, z_vars_s_minus_h); // z
@@ -644,260 +780,12 @@ numerical_design_jacobian(const RealVector& x_vars,
 	for (j=0; j<x_len; j++)                            // dx/ds
 	  num_jacobian_xs(j,i) = (x_vars_s_plus_h(j)-x_vars_s_minus_h(j))/2./h;
 
-      // resets s0 & corrCholeskyFactorZ:
-      distribution_parameter(cv_index, acv_map2_target, s0);
+      // reset s0 (corrCholeskyFactorZ reset can be deferred):
+      randomVarsX[cv_index].parameter(acv_map2_target, s0);
     }
   }
-}
-
-
-/** This function accommodates the native Model space (X, Z, or U)
-    through the use of num[Distribution]Vars counts and
-    iteratedModel.some_distribution_parameter(), but is tied to
-    x-space through the VarMapIndices user specifications. */
-const Real& ProbabilityTransformation::
-distribution_parameter(size_t index, short target)
-{
-  switch (target) {
-  case CDV_LWR_BND: case N_LWR_BND: case LN_LWR_BND: case   U_LWR_BND:
-  case  LU_LWR_BND: case T_LWR_BND: case BE_LWR_BND: case CSV_LWR_BND:
-    return ranVarLowerBndsX[index];      break;
-  case CDV_UPR_BND: case N_UPR_BND: case LN_UPR_BND: case   U_UPR_BND:
-  case  LU_UPR_BND: case T_UPR_BND: case BE_UPR_BND: case CSV_UPR_BND:
-    return ranVarUpperBndsX[index];      break;
-  case N_MEAN:      case LN_MEAN:
-    return ranVarMeansX[index];          break;
-  case N_STD_DEV:   case LN_STD_DEV:
-    return ranVarStdDevsX[index];        break;
-  case LN_LAMBDA:   case T_MODE:    case E_BETA:  case BE_ALPHA: case GA_ALPHA:
-  case GU_ALPHA:    case F_ALPHA:   case W_ALPHA:
-    return ranVarAddtlParamsX[index][0]; break;
-  case LN_ZETA:     case BE_BETA:   case GA_BETA: case GU_BETA:  case F_BETA:
-  case W_BETA:
-    return ranVarAddtlParamsX[index][1]; break;
-  case LN_ERR_FACT:
-    if (ranVarAddtlParamsX[index].length() < 3) {
-      PCerr << "Error: LN_ERR_FACT cannot be returned in Probability"
-	    << "Transformation::distribution_parameter()." << std::endl;
-      abort_handler(-1);
-    }
-    return ranVarAddtlParamsX[index][2];
-    break;
-  }
-}
-
-
-/** This function accommodates the native Model space (X, Z, or U)
-    through the use of num[Distribution]Vars counts and
-    iteratedModel.some_distribution_parameter(), but is tied to
-    x-space through the VarMapIndices user specifications. */
-void ProbabilityTransformation::
-distribution_parameter(size_t index, short target, const Real& param)
-{
-  switch (target) {
-  // -------------------------
-  // Distribution lower bounds
-  // -------------------------
-  case CDV_LWR_BND: case U_LWR_BND: case CSV_LWR_BND:
-    ranVarLowerBndsX[index] = param;
-    moments_from_uniform_params(param, ranVarUpperBndsX[index],
-				ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case N_LWR_BND:
-    if (ranVarTypesX[index] != BOUNDED_NORMAL) { // protect this for now
-      PCerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
-	    << std::endl;
-      abort_handler(-1);
-    }
-    ranVarLowerBndsX[index] = param; break;
-  case LN_LWR_BND:
-    if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
-      PCerr << "Error: setting lognormal bounds only allowed for "
-	    << "BOUNDED_LOGNORMAL." << std::endl;
-      abort_handler(-1);
-    }
-    ranVarLowerBndsX[index] = param; break;
-  case LU_LWR_BND:
-    ranVarLowerBndsX[index] = param;
-    moments_from_loguniform_params(param, ranVarUpperBndsX[index],
-				   ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case T_LWR_BND:
-    ranVarLowerBndsX[index] = param;
-    moments_from_triangular_params(param, ranVarUpperBndsX[index],
-				   ranVarAddtlParamsX[index][0],
-				   ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case BE_LWR_BND:
-    ranVarLowerBndsX[index] = param;
-    moments_from_beta_params(param, ranVarUpperBndsX[index],
-			     ranVarAddtlParamsX[index][0],
-			     ranVarAddtlParamsX[index][1],
-			     ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  // -------------------------
-  // Distribution upper bounds
-  // -------------------------
-  case CDV_UPR_BND: case U_UPR_BND: case CSV_UPR_BND:
-    ranVarUpperBndsX[index] = param;
-    moments_from_uniform_params(ranVarLowerBndsX[index], param,
-				ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case N_UPR_BND:
-    if (ranVarTypesX[index] != BOUNDED_NORMAL) { // protect this for now
-      PCerr << "Error: setting normal bounds only allowed for BOUNDED_NORMAL."
-	    << std::endl;
-      abort_handler(-1);
-    }
-    ranVarUpperBndsX[index] = param; break;
-  case LN_UPR_BND:
-    if (ranVarTypesX[index] != BOUNDED_LOGNORMAL) { // protect this for now
-      PCerr << "Error: setting lognormal bounds only allowed for "
-	    << "BOUNDED_LOGNORMAL." << std::endl;
-      abort_handler(-1);
-    }
-    ranVarUpperBndsX[index] = param; break;
-  case LU_UPR_BND:
-    ranVarUpperBndsX[index] = param;
-    moments_from_loguniform_params(ranVarLowerBndsX[index], param,
-				   ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case T_UPR_BND:
-    ranVarUpperBndsX[index] = param;
-    moments_from_triangular_params(ranVarLowerBndsX[index], param,
-				   ranVarAddtlParamsX[index][0],
-				   ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case BE_UPR_BND:
-    ranVarUpperBndsX[index] = param;
-    moments_from_beta_params(ranVarLowerBndsX[index], param,
-			     ranVarAddtlParamsX[index][0],
-			     ranVarAddtlParamsX[index][1],
-			     ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  // -------------------------
-  // Distribution shape params
-  // -------------------------
-  case N_MEAN:
-    ranVarMeansX[index]   = param; break;
-  case N_STD_DEV:
-    ranVarStdDevsX[index] = param; break;
-  case LN_MEAN:
-    ranVarMeansX[index] = param;
-    lognormal_params_from_moments(param, ranVarStdDevsX[index],
-				  ranVarAddtlParamsX[index][0],
-				  ranVarAddtlParamsX[index][1]);
-    if (ranVarAddtlParamsX[index].length() > 2)
-      lognormal_err_factor_from_std_deviation(param, ranVarStdDevsX[index],
-					      ranVarAddtlParamsX[index][2]);
-    break;
-  case LN_STD_DEV:
-    ranVarStdDevsX[index] = param;
-    lognormal_params_from_moments(ranVarMeansX[index], param,
-				  ranVarAddtlParamsX[index][0],
-				  ranVarAddtlParamsX[index][1]);
-    if (ranVarAddtlParamsX[index].length() > 2)
-      lognormal_err_factor_from_std_deviation(ranVarMeansX[index], param,
-					      ranVarAddtlParamsX[index][2]);
-    break;
-  case LN_LAMBDA:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_lognormal_params(param, ranVarAddtlParamsX[index][1],
-				  ranVarMeansX[index], ranVarStdDevsX[index]);
-    if (ranVarAddtlParamsX[index].length() > 2)
-      lognormal_err_factor_from_std_deviation(ranVarMeansX[index],
-					      ranVarStdDevsX[index],
-					      ranVarAddtlParamsX[index][2]);
-    break;
-  case LN_ZETA:
-    ranVarAddtlParamsX[index][1] = param;
-    moments_from_lognormal_params(ranVarAddtlParamsX[index][0], param,
-				  ranVarMeansX[index], ranVarStdDevsX[index]);
-    if (ranVarAddtlParamsX[index].length() > 2)
-      lognormal_err_factor_from_std_deviation(ranVarMeansX[index],
-					      ranVarStdDevsX[index],
-					      ranVarAddtlParamsX[index][2]);
-    break;
-  case LN_ERR_FACT:
-    if (ranVarAddtlParamsX[index].length() < 3) {
-      PCerr << "Error: LN_ERR_FACT cannot be set in Probability"
-	    << "Transformation::distribution_parameter()." << std::endl;
-      abort_handler(-1);
-    }
-    ranVarAddtlParamsX[index][2] = param;
-    lognormal_std_deviation_from_err_factor(ranVarMeansX[index], param,
-					    ranVarStdDevsX[index]);
-    lognormal_params_from_moments(ranVarMeansX[index], ranVarStdDevsX[index],
-				  ranVarAddtlParamsX[index][0],
-				  ranVarAddtlParamsX[index][1]);
-    break;
-  case T_MODE:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_triangular_params(ranVarLowerBndsX[index],
-				   ranVarUpperBndsX[index], param,
-				   ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case E_BETA:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_exponential_params(param, ranVarMeansX[index],
-				    ranVarStdDevsX[index]);
-    break;
-  case BE_ALPHA:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_beta_params(ranVarLowerBndsX[index], ranVarUpperBndsX[index],
-			     param, ranVarAddtlParamsX[index][1],
-			     ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case GA_ALPHA:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_gamma_params(param, ranVarAddtlParamsX[index][1],
-			      ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case GU_ALPHA:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_gumbel_params(param, ranVarAddtlParamsX[index][1],
-			       ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case F_ALPHA:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_frechet_params(param, ranVarAddtlParamsX[index][1],
-				ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case W_ALPHA:
-    ranVarAddtlParamsX[index][0] = param;
-    moments_from_weibull_params(param, ranVarAddtlParamsX[index][1],
-				ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case BE_BETA:
-    ranVarAddtlParamsX[index][1] = param;
-    moments_from_beta_params(ranVarLowerBndsX[index], ranVarUpperBndsX[index],
-			     ranVarAddtlParamsX[index][0], param,
-			     ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case GA_BETA:
-    ranVarAddtlParamsX[index][1] = param;
-    moments_from_gamma_params(ranVarAddtlParamsX[index][0], param,
-			      ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case GU_BETA:
-    ranVarAddtlParamsX[index][1] = param;
-    moments_from_gumbel_params(ranVarAddtlParamsX[index][0], param,
-			       ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  case F_BETA:
-    ranVarAddtlParamsX[index][1] = param;
-    moments_from_frechet_params(ranVarAddtlParamsX[index][0], param,
-				ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;  
-  case W_BETA:
-    ranVarAddtlParamsX[index][1] = param;
-    moments_from_weibull_params(ranVarAddtlParamsX[index][0], param,
-				ranVarMeansX[index], ranVarStdDevsX[index]);
-    break;
-  }
-
-  // update corrCholeskyFactorZ for new ranVarMeans/ranVarStdDevs
-  transform_correlations();
+  // reset corrCholeskyFactorZ:
+  corrCholeskyFactorZ = chol_z0;
 }
 
 

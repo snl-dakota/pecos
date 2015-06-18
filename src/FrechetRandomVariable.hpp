@@ -55,8 +55,17 @@ public:
   Real inverse_log_cdf(Real log_p) const;
   Real log_pdf(Real x) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
   Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -125,6 +134,11 @@ inline Real FrechetRandomVariable::inverse_log_cdf(Real log_p) const
 { return betaStat * std::pow(-log_p, -1./alphaStat); }
 
 
+//  F(x) = e^(-(beta/x)^alpha)
+//  f(x) = F(x) alpha (beta/x)^(alpha-1) beta/x^2
+//       = F(x) alpha/beta (beta/x)^(alpha+1)
+// f'(x) = alpha/beta ((beta/x)^(alpha+1) f(x) -
+//                     F(x) (alpha+1)/beta (beta/x)^(alpha+2))
 inline Real FrechetRandomVariable::pdf(Real x) const
 {
   Real num = std::pow(betaStat/x, alphaStat);
@@ -158,6 +172,44 @@ inline Real FrechetRandomVariable::log_pdf(Real x) const
   //return std::log(alphaStat/x) + alphaStat * std::log(num)
   //  - std::pow(num, alphaStat);
 }
+
+
+inline Real FrechetRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case F_ALPHA: return alphaStat; break;
+  case F_BETA:  return betaStat;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in FrechetRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void FrechetRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case F_ALPHA: alphaStat = val; break;
+  case F_BETA:  betaStat  = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in FrechetRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair FrechetRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(alphaStat, betaStat, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+inline RealRealPair FrechetRandomVariable::bounds() const
+{ return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
 inline Real FrechetRandomVariable::coefficient_of_variation() const
@@ -200,6 +252,64 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for FrechetRV."<<std::endl;
     abort_handler(-1); return 1.; break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real FrechetRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // to STD_NORMAL: x = beta (-ln(Phi(z)))^(-1/alpha)
+  bool u_type_err = false, dist_err = false;
+  switch (u_type) {
+  case STD_NORMAL: {
+    switch (dist_param) {
+    case F_ALPHA:
+      return x * std::log(-NormalRandomVariable::log_std_cdf(z)) /
+	(alphaStat*alphaStat);         break;
+    case F_BETA:  return x / betaStat; break;
+    // Frechet Mean          - TO DO
+    // Frechet Std Deviation - TO DO
+    default: dist_err = true;          break;
+    }
+    break;
+  }
+  //case FRECHET:  TO DO;              break;
+  default:         u_type_err = true;  break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in FrechetRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in FrechetRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real FrechetRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  switch (u_type) {
+  case STD_NORMAL:
+    return -x * NormalRandomVariable::std_pdf(z) / (alphaStat *
+      NormalRandomVariable::std_cdf(z) * NormalRandomVariable::log_std_cdf(z));
+    break;
+  //case FRECHET: TO DO; break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in FrechetRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
   }
 }
 

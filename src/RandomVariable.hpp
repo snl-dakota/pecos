@@ -143,6 +143,16 @@ public:
   /// distribution
   virtual Real from_std(Real z) const;
 
+  /// return the value of the named distribution parameter
+  virtual Real parameter(short dist_param) const;
+  /// update the value of the named distribution parameter
+  virtual void parameter(short dist_param, Real val);
+
+  /// return the value of the named distribution parameter
+  virtual RealRealPair moments() const;
+  /// update the value of the named distribution parameter
+  virtual RealRealPair bounds() const;
+
   /// compute the coefficient of variation (used to compute selected
   /// correlation warping factors); defined for semi-infinite distributions
   /// with nonzero mean (lognormal, exponential, gamma, frechet, weibull)
@@ -151,6 +161,15 @@ public:
   /// variable and the one passed in (used in NatafTransformation)
   virtual Real correlation_warping_factor(const RandomVariable& rv,
 					  Real corr) const;
+
+  /// compute the design Jacobian from differentiating the X->Z mapping with
+  /// respect to the distibution parameter s
+  virtual Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  /// compute the mapping-specific factor that is multiplied by dz/ds for
+  /// contributions to the dx/ds design Jacobian in the case of correlated
+  /// random variables (dz/ds is evaluated numerically and multiplied by
+  /// this analytic factor)
+  virtual Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions

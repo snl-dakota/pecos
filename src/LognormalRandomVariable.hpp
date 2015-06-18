@@ -16,6 +16,7 @@
 #define LOGNORMAL_RANDOM_VARIABLE_HPP
 
 #include "RandomVariable.hpp"
+#include "NormalRandomVariable.hpp"
 
 namespace Pecos {
 
@@ -52,8 +53,17 @@ public:
 
   Real log_pdf(Real x) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
   Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -68,10 +78,12 @@ public:
   static Real pdf(Real x, Real lambda, Real zeta);
   static Real cdf(Real x, Real lambda, Real zeta);
 
-  static void std_deviation_from_err_factor(Real mean, Real err_fact,
-					    Real& std_dev);
-  static void err_factor_from_std_deviation(Real mean, Real std_dev,
-					    Real& err_fact);
+  static void zeta_from_error_factor(Real err_fact, Real& zeta);
+  static void error_factor_from_zeta(Real zeta, Real& err_fact);
+  static void std_deviation_from_error_factor(Real mean, Real err_fact,
+					      Real& std_dev);
+  static void error_factor_from_std_deviation(Real mean, Real std_dev,
+					      Real& err_fact);
   static void moments_from_params(Real lambda, Real zeta, Real& mean,
 				  Real& std_dev);
   static void zeta_sq_from_moments(Real mean, Real std_dev, Real& zeta_sq);
@@ -170,6 +182,66 @@ inline Real LognormalRandomVariable::log_pdf(Real x) const
 }
 
 
+inline Real LognormalRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case LN_MEAN:    return std::exp(lnLambda + lnZeta*lnZeta/2.); break;
+  case LN_STD_DEV: {
+    Real zeta_sq = lnZeta*lnZeta;
+    return std::exp(lnLambda + zeta_sq/2.) * std::sqrt(bmth::expm1(zeta_sq));
+    break;
+  }
+  case LN_ERR_FACT: {
+    Real err_fact; error_factor_from_zeta(lnZeta, err_fact);
+    return err_fact; break;
+  }
+  case LN_LAMBDA:  return lnLambda; break;
+  case LN_ZETA:    return lnZeta;   break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in LognormalRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void LognormalRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case LN_MEAN: {    // assume stdev is invariant from previous params
+    Real zeta_sq = lnZeta*lnZeta,
+      stdev = std::exp(lnLambda + zeta_sq/2.) * std::sqrt(bmth::expm1(zeta_sq));
+    params_from_moments(val, stdev, lnLambda, lnZeta);    // new params
+    break;
+  }
+  case LN_STD_DEV: { // assume mean is invariant from previous params
+    Real mean = std::exp(lnLambda + lnZeta * lnZeta/2.); // previous params
+    params_from_moments(mean, val, lnLambda, lnZeta);    // new params
+    break;
+  }
+  case LN_ERR_FACT: zeta_from_error_factor(val, lnZeta); break;
+  case LN_LAMBDA:   lnLambda = val;                      break;
+  case LN_ZETA:     lnZeta   = val;                      break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in LognormalRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair LognormalRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(lnLambda, lnZeta, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+inline RealRealPair LognormalRandomVariable::bounds() const
+{ return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
+
+
 inline Real LognormalRandomVariable::coefficient_of_variation() const
 {
   Real mean, std_dev;
@@ -229,6 +301,72 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 }
 
 
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real LognormalRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // x = exp(lambda + z zeta)
+  bool u_type_err = false, dist_err = false;
+  switch (u_type) {
+  case STD_NORMAL:
+    switch (dist_param) {
+    case LN_MEAN: {
+      Real mean, stdev;
+      moments_from_params(lnLambda, lnZeta, mean, stdev);
+      Real mean_sq = mean*mean, var = stdev*stdev;
+      return x/mean - var*x*(z-lnZeta) / (mean*lnZeta*(mean_sq + var)); break;
+    }
+    case LN_STD_DEV: {
+      Real mean, stdev;
+      moments_from_params(lnLambda, lnZeta, mean, stdev);
+      return x*stdev*(z-lnZeta)/(lnZeta*(mean*mean + stdev*stdev));     break;
+    }
+    case LN_ERR_FACT: {
+      Real inv_95 = NormalRandomVariable::inverse_std_cdf(0.95),
+	err_fact = std::exp(inv_95 * lnZeta);
+      return x * (z - lnZeta) / (inv_95 * err_fact);                    break;
+    }
+    case LN_LAMBDA: return x;                                           break;
+    case LN_ZETA:   return x * z;                                       break;
+    default:        dist_err = true;                                    break;
+    }
+    break;
+  //case LOGNORMAL: TO DO;    break;
+  default: u_type_err = true; break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in LognormalRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in LognormalRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real LognormalRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  switch (u_type) {
+  case STD_NORMAL:  return x * lnZeta; break;
+  //case LOGNORMAL: TO DO;             break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in LognormalRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
 inline void LognormalRandomVariable::update(Real lambda, Real zeta)
 { lnLambda = lambda; lnZeta = zeta; }
 
@@ -253,19 +391,29 @@ inline Real LognormalRandomVariable::cdf(Real x, Real lambda, Real zeta)
 
 
 inline void LognormalRandomVariable::
-std_deviation_from_err_factor(Real mean, Real err_fact, Real& std_dev)
+zeta_from_error_factor(Real err_fact, Real& zeta)
+{ zeta = std::log(err_fact)/NormalRandomVariable::inverse_std_cdf(0.95); }
+
+
+inline void LognormalRandomVariable::
+error_factor_from_zeta(Real zeta, Real& err_fact)
+{ err_fact = std::exp(NormalRandomVariable::inverse_std_cdf(0.95)*zeta); }
+
+
+inline void LognormalRandomVariable::
+std_deviation_from_error_factor(Real mean, Real err_fact, Real& std_dev)
 {
   // Phi^{-1}(0.95) ~= 1.645
-  Real zeta = std::log(err_fact)/NormalRandomVariable::Phi_inverse(0.95);
+  Real zeta = std::log(err_fact)/NormalRandomVariable::inverse_std_cdf(0.95);
   std_dev   = mean * std::sqrt(bmth::expm1(zeta*zeta));
 }
 
 
 inline void LognormalRandomVariable::
-err_factor_from_std_deviation(Real mean, Real std_dev, Real& err_fact)
+error_factor_from_std_deviation(Real mean, Real std_dev, Real& err_fact)
 {
   Real COV = std_dev/mean, zeta = std::sqrt(bmth::log1p(COV*COV));
-  err_fact = std::exp(NormalRandomVariable::Phi_inverse(0.95)*zeta);
+  err_fact = std::exp(NormalRandomVariable::inverse_std_cdf(0.95)*zeta);
 }
 
 

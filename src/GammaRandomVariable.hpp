@@ -58,8 +58,16 @@ public:
   //Real to_std(Real x) const;
   //Real from_std(Real z) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+
   Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -124,6 +132,10 @@ inline Real GammaRandomVariable::inverse_ccdf(Real p_ccdf) const
 { return bmth::quantile(complement(*gammaDist, p_ccdf)); }
 
 
+//  F(x) = Boost
+//  f(x) = beta^(-alpha) x^(alpha-1) e^(-x/beta) / GammaFn(alpha)
+// f'(x) = beta^(-alpha)/GammaFn(alpha) (e^(-x/beta) (alpha-1) x^(alpha-2)
+//                                       - x^(alpha-1) e^(-x/beta)/beta)
 inline Real GammaRandomVariable::pdf(Real x) const
 { return bmth::pdf(*gammaDist, x); }
 
@@ -138,8 +150,42 @@ inline Real GammaRandomVariable::pdf_gradient(Real x) const
 
 //inline Real GammaRandomVariable::pdf_hessian(Real x) const
 //{
-//  return gamma_pdf(x, alphaStat, betaStat); // * ...; // TO DO
+//  return pdf(x) * ...; // TO DO
 //}
+
+
+inline Real GammaRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case GA_ALPHA: return alphaStat; break;
+  case GA_BETA:  return betaStat;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in GammaRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void GammaRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case GA_ALPHA: alphaStat = val; break;
+  case GA_BETA:  betaStat  = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in GammaRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair GammaRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(alphaStat, betaStat, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
 
 
 inline Real GammaRandomVariable::coefficient_of_variation() const
@@ -187,6 +233,58 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for GammaRV." << std::endl;
     abort_handler(-1); return 1.; break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real GammaRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  bool u_type_err = false, dist_err = false;
+  switch (u_type) {
+  case STD_GAMMA:
+    switch (dist_param) { // x = z*beta
+    // For distributions without simple closed-form CDFs (beta, gamma), dx/ds
+    // is computed numerically in NatafTransformation::jacobian_dX_dS():
+    //case GA_ALPHA:
+    case GA_BETA: return z;   break;
+    //case GA_LOCATION: - TO DO
+    //case GA_SCALE:    - TO DO
+    default: dist_err = true; break;
+    }
+    break;
+  default: u_type_err = true; break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in GammaRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in GammaRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real GammaRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  // x = z*beta --> add beta * dz/ds for nonzero dz/ds arising from correlation
+  switch (u_type) {
+  case STD_GAMMA: return betaStat; break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in GammaRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
   }
 }
 

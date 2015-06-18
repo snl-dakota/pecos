@@ -57,6 +57,14 @@ public:
   //Real to_std(Real x) const;
   //Real from_std(Real z) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
+
   //
   //- Heading: Member functions
   //
@@ -74,7 +82,7 @@ public:
   static Real pdf(Real x, Real alpha, Real beta, Real lwr, Real upr);
   static Real cdf(Real x, Real alpha, Real beta, Real lwr, Real upr);
 
-  static void moments_from_params(Real lwr, Real upr, Real alpha, Real beta,
+  static void moments_from_params(Real alpha, Real beta, Real lwr, Real upr,
 				  Real& mean, Real& std_dev);
 
 protected:
@@ -113,7 +121,7 @@ inline BetaRandomVariable::~BetaRandomVariable()
 
 inline Real BetaRandomVariable::cdf(Real x) const
 {
-  //return beta_cdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
+  //return cdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
 
   Real std_x = (x - lowerBnd)/(upperBnd - lowerBnd);// scale from [L,U] to [0,1]
   return bmth::cdf(*betaDist, std_x);
@@ -122,7 +130,7 @@ inline Real BetaRandomVariable::cdf(Real x) const
 
 inline Real BetaRandomVariable::ccdf(Real x) const
 {
-  //return beta_cdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
+  //return cdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
 
   Real std_x = (x - lowerBnd)/(upperBnd - lowerBnd);// scale from [L,U] to [0,1]
   return bmth::cdf(complement(*betaDist, std_x));
@@ -147,9 +155,12 @@ inline Real BetaRandomVariable::inverse_ccdf(Real p_ccdf) const
 }
 
 
+//  F(x) = Boost
+//  f(x) = Boost
+// f'(x) = f(x) ((alpha-1)/(x-lwr) - (beta-1)/(upr-x))
 inline Real BetaRandomVariable::pdf(Real x) const
 {
-  //return beta_pdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
+  //return pdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
 
   Real scale = upperBnd - lowerBnd, scaled_x = (x - lowerBnd)/scale;
   return bmth::pdf(*betaDist, scaled_x) / scale;
@@ -167,6 +178,104 @@ inline Real BetaRandomVariable::pdf_gradient(Real x) const
 //{
 //  return pdf(x) * ...; // TO DO
 //}
+
+
+inline Real BetaRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case BE_ALPHA:   return alphaStat; break;
+  case BE_BETA:    return betaStat;  break;
+  case BE_LWR_BND: return lowerBnd;  break;
+  case BE_UPR_BND: return upperBnd;  break;
+  //case BE_LOCATION: - TO DO
+  //case BE_SCALE:    - TO DO
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in BetaRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void BetaRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case BE_ALPHA:   alphaStat = val; break;
+  case BE_BETA:    betaStat  = val; break;
+  case BE_LWR_BND: lowerBnd  = val; break;
+  case BE_UPR_BND: upperBnd  = val; break;
+  //case BE_LOCATION: - TO DO
+  //case BE_SCALE:    - TO DO
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in BetaRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair BetaRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(alphaStat, betaStat, lowerBnd, upperBnd, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real BetaRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  bool u_type_err = false, dist_err = false;
+  switch (u_type) {
+  case STD_BETA:
+    switch (dist_param) { // x = lwr + (upr - lwr)*(z+1.)/2.
+    // For distributions without simple closed-form CDFs (beta, gamma), dx/ds
+    // is computed numerically in NatafTransformation::jacobian_dX_dS():
+    //case BE_ALPHA: case BE_BETA:
+    case BE_LWR_BND: return (1. - z)/2.; break;
+    case BE_UPR_BND: return (z + 1.)/2.; break;
+    //case BE_LOCATION: - TO DO
+    //case BE_SCALE:    - TO DO
+    default: dist_err = true;                    break;
+    }
+    break;
+  default:
+    u_type_err = true; break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in BetaRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in BetaRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real BetaRandomVariable::dz_ds_factor(short u_type, Real x, Real z) const
+{
+  switch (u_type) {
+  //case STD_NORMAL:
+  //case STD_UNIFORM:
+  case STD_BETA: // x = lwr + (upr - lwr)*(z+1.)/2.
+    // --> add (upr - lwr)/2. * dz/ds for nonzero dz/ds arising from correlation
+    return (upperBnd-lowerBnd)/2.; break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in BetaRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1);
+  }
+}
 
 
 inline void BetaRandomVariable::
@@ -219,7 +328,7 @@ cdf(Real x, Real alpha, Real beta, Real lwr, Real upr)
 
 
 inline void BetaRandomVariable::
-moments_from_params(Real lwr, Real upr, Real alpha, Real beta,
+moments_from_params(Real alpha, Real beta, Real lwr, Real upr,
 		    Real& mean, Real& std_dev)
 {
   Real range = upr - lwr;

@@ -12,6 +12,7 @@
 //- Owner:        Mike Eldred, Sandia National Laboratories
 
 #include "NumericGenOrthogPolynomial.hpp"
+#include "ExponentialRandomVariable.hpp"
 #include "Teuchos_LAPACK.hpp"
 #ifdef HAVE_SPARSE_GRID
 #include "sandia_rules.hpp"
@@ -314,11 +315,11 @@ inner_product(const RealVector& poly_coeffs1,
 
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_normal_pdf, lb, ub);
-    return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-			       bounded_normal_pdf, lb, ub, 500);
+    //  BoundedNormalRandomVariable::pdf, lb, ub);
+    return cc_bounded_integral(poly_coeffs1, poly_coeffs2, bounded_normal_pdf,
+			       lb, ub, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_normal_pdf, lb, ub);
+    //  BoundedNormalRandomVariable::pdf, lb, ub);
     break;
   }
   case BOUNDED_LOGNORMAL: {
@@ -334,39 +335,40 @@ inner_product(const RealVector& poly_coeffs1,
 
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_lognormal_pdf, distParams[2], ub);
+    //  BoundedLognormalRandomVariable::pdf, distParams[2], ub);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      bounded_lognormal_pdf, distParams[2], ub, 500);
+			       bounded_lognormal_pdf, distParams[2], ub, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  bounded_lognormal_pdf, distParams[2], ub);
+    //  BoundedLognormalRandomVariable::pdf, distParams[2], ub);
     break;
   }
   case LOGUNIFORM:
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  loguniform_pdf, distParams[0], distParams[1]);
-    return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      loguniform_pdf, distParams[0], distParams[1], 500);
+    //  LoguniformRandomVariable::pdf, distParams[0], distParams[1]);
+    return cc_bounded_integral(poly_coeffs1, poly_coeffs2, loguniform_pdf,
+			       distParams[0], distParams[1], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  loguniform_pdf, distParams[0], distParams[1]);
+    //  LoguniformRandomVariable::pdf, distParams[0], distParams[1]);
     break;
   case TRIANGULAR:
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  triangular_pdf, distParams[1], distParams[2]);
-    return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
-      triangular_pdf, distParams[1], distParams[2], 500);
+    //  TriangularRandomVariable::pdf, distParams[1], distParams[2]);
+    return cc_bounded_integral(poly_coeffs1, poly_coeffs2, triangular_pdf,
+			       distParams[1], distParams[2], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  triangular_pdf, distParams[1], distParams[2]);
+    //  TriangularRandomVariable::pdf, distParams[1], distParams[2]);
     break;
   case HISTOGRAM_BIN: {
     size_t dp_len = distParams.length(),
       u_bnd_index = (dp_len>=2) ? dp_len-2 : 0;
     // Alternate integrations:
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //  histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
-    return cc_bounded_integral(poly_coeffs1, poly_coeffs2, histogram_bin_pdf,
-      distParams[0], distParams[u_bnd_index], 50*dp_len); // 100 per bin
+    //  HistogramBinRandomVariable::pdf,distParams[0],distParams[u_bnd_index]);
+    return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
+      HistogramBinRandomVariable::pdf, distParams[0], distParams[u_bnd_index],
+      50*dp_len); // 100 per bin
 
     // TO DO: consider FACTOR*ORDER1*ORDER2(*DP_LEN?); POLY ORDER IS MAIN ISSUE
 
@@ -375,7 +377,7 @@ inner_product(const RealVector& poly_coeffs1,
     // --> consider throwing an error (at a higher level) for order > #bins
 
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
-    //	histogram_bin_pdf, distParams[0], distParams[u_bnd_index]);
+    //	HistogramBinRandomVariable::pdf,distParams[0],distParams[u_bnd_index]);
     break;
   }
   // ******************************
@@ -385,54 +387,63 @@ inner_product(const RealVector& poly_coeffs1,
   case LOGNORMAL:
     // Alternate integrations:
     //return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
-    //					   lognormal_pdf);
+    //					   LognormalRandomVariable::pdf);
     return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2,
 				      lognormal_pdf, 500);
     // medium left & right tail;
-    // start is offset to avoid division by 0. in lognormal_pdf
-    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,lognormal_pdf,
+    // start is offset to avoid division by 0. in LognormalRandomVariable::pdf
+    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                 LognormalRandomVariable::pdf,
     //				       1.e-5, distParams[0]+60.*distParams[1]);
-    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, lognormal_pdf,
+    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                           LognormalRandomVariable::pdf,
     //			         1.e-5, distParams[0] + 60.*distParams[1], 500);
-    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, lognormal_pdf,
+    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                LognormalRandomVariable::pdf,
     //                                1.e-5, distParams[0] + 60.*distParams[1]);
     break;
   case FRECHET: {
     // Alternate integration:
     // Better stability w/ Laguerre for Rosenbrock Frechet (infinite variance?)
     return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
-                                         frechet_pdf);
+					 frechet_pdf);
     //return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2,
-    //                                  frechet_pdf, 500);
+    //                                  FrechetRandomVariable::pdf, 500);
     //Real mean, stdev;
     //moments_from_frechet_params(distParams[0], distParams[1],
     //				         mean, stdev);
     // minimal left tail with heavy right tail;
-    // start is offset to avoid division by 0. in frechet_pdf
-    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2, frechet_pdf,
+    // start is offset to avoid division by 0. in FrechetRandomVariable::pdf
+    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                 FrechetRandomVariable::pdf,
     //				       0.1, mean+300.*stdev);
-    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, frechet_pdf, 0.1,
+    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                           FrechetRandomVariable::pdf, 0.1,
     //			         mean+300.*stdev, 500);
-    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, frechet_pdf,
+    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                FrechetRandomVariable::pdf,
     //                                0.1, mean+300.*stdev);
     break;
   }
   case WEIBULL: {
     // Alternate integration:
     //return laguerre_semibounded_integral(poly_coeffs1, poly_coeffs2,
-    //                                     weibull_pdf);
+    //                                     WeibullRandomVariable::pdf);
     return fejer_semibounded_integral(poly_coeffs1, poly_coeffs2,
 				      weibull_pdf, 500);
     //Real mean, stdev;
-    //moments_from_weibull_params(distParams[0], distParams[1],
-    //				       mean, stdev);
+    //moments_from_weibull_params(distParams[0], distParams[1], mean, stdev);
     // heavy left tail with minimal right tail;
-    // start is offset to avoid division by negative power of 0. in weibull_pdf
-    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf,
+    // start is offset to avoid division by negative power of 0. in
+    // WeibullRandomVariable::pdf
+    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                 WeibullRandomVariable::pdf,
     //				       1.e-50, mean+30.*stdev);
-    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf,
-    //			       1.e-50, mean+30.*stdev, 500);
-    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, weibull_pdf,
+    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                           WeibullRandomVariable::pdf,
+    //			         1.e-50, mean+30.*stdev, 500);
+    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                WeibullRandomVariable::pdf,
     //                                1.e-50, mean+30.*stdev);
     break;
   }
@@ -441,18 +452,22 @@ inner_product(const RealVector& poly_coeffs1,
   // ***************************
   case GUMBEL: {
     // Alternate integration:
-    //return hermite_unbounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf);
+    //return hermite_unbounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                  GumbelRandomVariable::pdf);
     return fejer_unbounded_integral(poly_coeffs1, poly_coeffs2,
 				    gumbel_pdf, 500);
     //Real mean, stdev;
     //moments_from_gumbel_params(distParams[0], distParams[1],
     //				        mean, stdev);
     // left and right tail treated equally
-    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf,
+    //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                 GumbelRandomVariable::pdf,
     //				       mean-25.*stdev, mean+25.*stdev);
-    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf,
+    //return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                           GumbelRandomVariable::pdf,
     //			         mean-25.*stdev, mean+25.*stdev, 500);
-    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2, gumbel_pdf,
+    //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
+    //                                GumbelRandomVariable::pdf,
     //			              mean-25.*stdev, mean+25.*stdev);
     break;
   }
@@ -482,7 +497,7 @@ hermite_unbounded_integral(const RealVector& poly_coeffs1,
     gp_i = colloc_pts[i];
     v1 = type1_value(gp_i, poly_coeffs1); // cached due to update of const ref
     sum += colloc_wts[i] * v1 * type1_value(gp_i, poly_coeffs2)
-        *  weight_fn(gp_i, distParams) / phi(gp_i);
+        *  weight_fn(gp_i, distParams) / NormalRandomVariable::std_pdf(gp_i);
   }
   return sum;
 }
@@ -519,8 +534,8 @@ fejer_unbounded_integral(const RealVector& poly_coeffs1,
   //     poly1(x) * poly2(x) * weight_fn(x) * dx/dz where x ~ (-inf,inf) and
   //     z ~ (-1,1) on open intervals.
   // (2) could correct fejer_wts to PDF weighting by dividing by 2. and then
-  //     divide sum by std_uniform_pdf() as in legendre_bounded_integral below
-  //     --> cancels out.
+  //     divide sum by UniformRV::std_pdf() as in legendre_bounded_integral
+  //     below --> cancels out.
   return sum;
 }
 
@@ -542,7 +557,7 @@ laguerre_semibounded_integral(const RealVector& poly_coeffs1,
     gp_i = colloc_pts[i];
     v1 = type1_value(gp_i, poly_coeffs1); // cached: update of const ref
     sum += colloc_wts[i] * v1 * type1_value(gp_i, poly_coeffs2)
-        *  weight_fn(gp_i, distParams) / std_exponential_pdf(gp_i);
+      *  weight_fn(gp_i, distParams) / ExponentialRandomVariable::std_pdf(gp_i);
   }
   return sum;
 }
@@ -579,8 +594,8 @@ fejer_semibounded_integral(const RealVector& poly_coeffs1,
   //     poly1(x) * poly2(x) * weight_fn(x) * dx/dz where x ~ (0,inf) and
   //     z ~ (-1,1) on open intervals.
   // (2) could correct fejer_wts to PDF weighting by dividing by 2. and then
-  //     divide sum by std_uniform_pdf() as in legendre_bounded_integral below
-  //     --> cancels out.
+  //     divide sum by UniformRV::std_pdf() as in legendre_bounded_integral
+  //     below --> cancels out.
   return sum;
 }
 
@@ -604,7 +619,7 @@ legendre_bounded_integral(const RealVector& poly_coeffs1,
     sum += colloc_wts[i] * v1 * type1_value(unscaled_gp_i, poly_coeffs2)
         *  weight_fn(unscaled_gp_i, distParams);
   }
-  return sum / std_uniform_pdf() * half_range;
+  return sum / UniformRandomVariable::std_pdf() * half_range;
 }
 
 
@@ -637,8 +652,8 @@ cc_bounded_integral(const RealVector& poly_coeffs1,
   //     ~burkardt/cpp_src/sandia_rules/sandia_rules.html) -> integrand is just
   //     poly1 * poly2 * weight_fn.
   // (2) could correct cc_wts to PDF weighting by dividing by 2. and then
-  //     divide sum by std_uniform_pdf() as in legendre_bounded_integral above
-  //     --> cancels out.
+  //     divide sum by UniformRV::std_pdf() as in legendre_bounded_integral
+  //     above --> cancels out.
   return sum * half_range;
 }
 

@@ -55,8 +55,17 @@ public:
   Real inverse_log_ccdf(Real log_p_ccdf) const;
   Real log_pdf(Real x) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
   Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -132,6 +141,10 @@ inline Real WeibullRandomVariable::inverse_log_ccdf(Real log_p_ccdf) const
 { return betaStat * std::pow(-log_p_ccdf, 1./alphaStat); }
 
 
+//  F(x) = 1.-e^(-(x/beta)^alpha)
+//  f(x) = alpha/beta e^(-(x/beta)^alpha) (x/beta)^(alpha-1)
+// f'(x) = alpha/beta (e^(-(x/beta)^alpha) (alpha-1)/beta
+//                     (x/beta)^(alpha-2) - (x/beta)^(alpha-1) f(x))
 inline Real WeibullRandomVariable::pdf(Real x) const
 {
   return bmth::pdf(*weibullDist, x);
@@ -163,6 +176,44 @@ inline Real WeibullRandomVariable::log_pdf(Real x) const
   return std::log(alphaStat/betaStat) + (alphaStat-1.) * std::log(num)
     - std::pow(num,alphaStat);
 }
+
+
+inline Real WeibullRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case W_ALPHA: return alphaStat; break;
+  case W_BETA:  return betaStat;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in WeibullRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void WeibullRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case W_ALPHA: alphaStat = val; break;
+  case W_BETA:  betaStat  = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in WeibullRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair WeibullRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(alphaStat, betaStat, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+inline RealRealPair WeibullRandomVariable::bounds() const
+{ return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
 inline Real WeibullRandomVariable::coefficient_of_variation() const
@@ -197,6 +248,63 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for WeibullRV."<<std::endl;
     abort_handler(-1); return 1.; break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real WeibullRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // to STD_NORMAL: x = beta (-ln(1-Phi(z)))^(1/alpha)
+  bool u_type_err = false, dist_err = false;
+  switch (u_type) {
+  case STD_NORMAL:
+    switch (dist_param) {
+    case W_ALPHA:
+      return -x * std::log(-NormalRandomVariable::log_std_ccdf(z)) /
+	(alphaStat*alphaStat);        break;
+    case W_BETA: return x / betaStat; break;
+    // Weibull Mean          - TO DO
+    // Weibull Std Deviation - TO DO
+    default:      dist_err = true;    break;
+    }
+    break;
+  //case WEIBULL: TO DO;              break;
+  default:        u_type_err = true;  break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in WeibullRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in WeibullRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real WeibullRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  switch (u_type) {
+  case STD_NORMAL:
+    return -x * NormalRandomVariable::std_pdf(z) / (alphaStat *
+      NormalRandomVariable::std_ccdf(z) *
+      NormalRandomVariable::log_std_ccdf(z)); break;
+  //case WEIBULL:   TO DO;                    break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in WeibullRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
   }
 }
 

@@ -54,7 +54,16 @@ public:
   Real to_std(Real x) const;
   Real from_std(Real z) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -72,23 +81,21 @@ public:
   // standard normal distributions
 
   static Real std_pdf(Real beta);
+  //static Real phi(Real beta);
+  static Real mvn_std_pdf(Real beta, size_t n);
+  static Real mvn_std_pdf(const RealVector& u);
 
   static Real std_cdf(Real beta);
   static Real std_ccdf(Real beta);
+  //static Real Phi(Real beta);
   static Real inverse_std_cdf(Real p_cdf);
   static Real inverse_std_ccdf(Real p_ccdf);
+  //static Real Phi_inverse(Real p_cdf);
 
-  //static Real log_std_cdf(Real beta);
-  //static Real log_std_ccdf(Real beta);
+  static Real log_std_cdf(Real beta);
+  static Real log_std_ccdf(Real beta);
   //static Real inverse_log_std_cdf(Real p_cdf);
   //static Real inverse_log_std_ccdf(Real p_ccdf);
-
-  static Real phi(Real beta);
-  static Real phi(Real beta, size_t n);
-  static Real phi(const RealVector& u);
-
-  static Real Phi(Real beta);
-  static Real Phi_inverse(Real p_cdf);
 
 protected:
 
@@ -181,6 +188,17 @@ inline Real NormalRandomVariable::from_std(Real z) const
 { return z * gaussStdDev + gaussMean; }
 
 
+inline RealRealPair NormalRandomVariable::moments() const
+{ return RealRealPair(gaussMean, gaussStdDev); }
+
+
+inline RealRealPair NormalRandomVariable::bounds() const
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  return RealRealPair(-dbl_inf, dbl_inf);
+}
+
+
 inline Real NormalRandomVariable::
 correlation_warping_factor(const RandomVariable& rv, Real corr) const
 {
@@ -217,6 +235,77 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
 }
 
 
+inline Real NormalRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case N_MEAN:    case N_LOCATION: return gaussMean;   break;
+  case N_STD_DEV: case N_SCALE:    return gaussStdDev; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in NormalRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void NormalRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case N_MEAN:    case N_LOCATION: gaussMean   = val; break;
+  case N_STD_DEV: case N_SCALE:    gaussStdDev = val; break;
+  // Note: bounded normal case would translate/scale bounds for
+  // N_LOCATION,N_SCALE (see NestedModel::real_variable_mapping())
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in NormalRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real NormalRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  if (u_type != STD_NORMAL) {
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in NormalRandomVariable::dx_ds()." << std::endl;
+    abort_handler(-1);
+  }
+  // x = mean + sigma * z
+  // dx/ds = dmean/ds + dsigma/ds z + sigma dz/ds
+  switch (dist_param) {
+  case N_MEAN: case N_LOCATION: return 1.; break;// Deriv of Normal w.r.t. mean
+  case N_STD_DEV: case N_SCALE: return z;  break;// Deriv of Normal w.r.t. stdev
+  default:
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in NormalRandomVariable::dx_ds()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real NormalRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  if (u_type == STD_NORMAL) // x = mean + sigma * z
+    // dx/ds = dmean/ds + dsigma/ds z + sigma dz/ds
+    // --> sigma is the factor multiplied by dz/ds
+    return gaussStdDev;
+  else {
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in NormalRandomVariable::dx_ds()." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 inline void NormalRandomVariable::update(Real mean, Real stdev)
 { gaussMean = mean; gaussStdDev = stdev; }
 
@@ -245,6 +334,29 @@ inline Real NormalRandomVariable::std_pdf(Real beta)
   normal_dist norm(0., 1.);
   return bmth::pdf(norm, beta);
   //return std::exp(-beta*beta/2.)/std::sqrt(2.*PI);
+}
+
+
+// Multivariate standard normal density function with aggregate distance.
+inline Real NormalRandomVariable::mvn_std_pdf(Real beta, size_t n)
+{
+  // need n instances of 1/sqrt(2Pi), but 1D pdf only includes 1:
+  return (n > 1) ?
+    std_pdf(beta) * std::pow(2.*PI, -((Real)(n-1))/2.) :// correct 1D pdf for nD
+    std_pdf(beta);
+}
+
+
+// Multivariate standard normal density function from vector.
+inline Real NormalRandomVariable::mvn_std_pdf(const RealVector& u)
+{
+  return mvn_std_pdf(u.normFrobenius(), u.length());
+
+  // Alternate implementation invokes exp() repeatedly:
+  //normal_dist norm(0., 1.);
+  //size_t i, n = u.length(); Real pdf = 1.;
+  //for (i=0; i<n; ++i)
+  //  pdf *= bmth::pdf(norm, u[i]);
 }
 
 
@@ -280,13 +392,21 @@ inline Real NormalRandomVariable::inverse_std_ccdf(Real p_ccdf)
 }
 
 
-/** log pdf would be useful for NormalRandomVariable, but log cdf offers
-    no discernible benefit due to the presence of the error function. 
-
 // avoid precision loss for large beta > 0 (cdf indistinguishable from 1)
 inline Real NormalRandomVariable::log_std_cdf(Real beta)
 { return (beta > 0.) ? bmth::log1p(-std_cdf(-beta)) : std::log(std_cdf(beta)); }
 
+
+// avoid precision loss for large beta < 0 (ccdf indistinguishable from 1)
+inline Real NormalRandomVariable::log_std_ccdf(Real beta)
+{
+  return (beta < 0.) ?
+    bmth::log1p(-std_ccdf(-beta)) : std::log(std_ccdf(beta));
+}
+
+
+/* log pdf has stong utility for NormalRandomVariable, but log cdf offers
+   little benefit due to the presence of the error function. 
 
 inline Real NormalRandomVariable::inverse_log_std_cdf(Real log_p_cdf)
 {
@@ -298,14 +418,6 @@ inline Real NormalRandomVariable::inverse_log_std_cdf(Real log_p_cdf)
 }
 
 
-// avoid precision loss for large beta < 0 (ccdf indistinguishable from 1)
-inline Real NormalRandomVariable::log_std_ccdf(Real beta)
-{
-  return (beta < 0.) ?
-    bmth::log1p(-std_ccdf(-beta)) : std::log(std_ccdf(beta));
-}
-
-
 inline Real NormalRandomVariable::inverse_log_std_ccdf(Real log_p_ccdf)
 {
   normal_dist norm(0., 1.);
@@ -313,46 +425,24 @@ inline Real NormalRandomVariable::inverse_log_std_ccdf(Real log_p_ccdf)
     bmth::quantile(norm, -bmth::expm1(log_p_ccdf)) :
     bmth::quantile(complement(norm, std::exp(log_p_ccdf)));
 }
-*/
 
 
-/** Univariate standard normal density function. */
+// Univariate standard normal density function.
 inline Real NormalRandomVariable::phi(Real beta)
 { return std_pdf(beta); }
 
 
-/** Multivariate standard normal density function with aggregate distance. */
-inline Real NormalRandomVariable::phi(Real beta, size_t n)
-{
-  // need n instances of 1/sqrt(2Pi), but 1D pdf only includes 1:
-  return (n > 1) ?
-    std_pdf(beta) * std::pow(2.*PI, -((Real)(n-1))/2.) :// correct 1D pdf for nD
-    std_pdf(beta);
-}
-
-
-/** Multivariate standard normal density function from vector. */
-inline Real NormalRandomVariable::phi(const RealVector& u)
-{
-  return phi(u.normFrobenius(), u.length());
-
-  // Alternate implementation invokes exp() repeatedly:
-  //normal_dist norm(0., 1.);
-  //size_t i, n = u.length(); Real pdf = 1.;
-  //for (i=0; i<n; ++i)
-  //  pdf *= bmth::pdf(norm, u[i]);
-}
-
-
-/** returns a cumulative probability < 0.5 for negative beta and a
-    cumulative probability > 0.5 for positive beta. */
+// returns a cumulative probability < 0.5 for negative beta and a
+// cumulative probability > 0.5 for positive beta.
 inline Real NormalRandomVariable::Phi(Real beta)
 { return std_cdf(beta); }
 
-/** returns a negative beta for cumulative probability < 0.5 and a
-    positive beta for cumulative probability > 0.5. */
+
+// returns a negative beta for cumulative probability < 0.5 and a
+// positive beta for cumulative probability > 0.5.
 inline Real NormalRandomVariable::Phi_inverse(Real p_cdf)
 { return inverse_std_cdf(p_cdf); }
+*/
 
 } // namespace Pecos
 

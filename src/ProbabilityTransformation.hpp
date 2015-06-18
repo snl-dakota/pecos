@@ -10,8 +10,12 @@
 #define PROBABILITY_TRANSFORMATION_HPP
 
 #include "pecos_data_types.hpp"
+#include "RandomVariable.hpp"
 
 namespace Pecos {
+
+class AleatoryDistParams;
+class EpistemicDistParams;
 
 
 /// Base class for all nonlinear distribution transformations
@@ -150,11 +154,12 @@ public:
 					const ShortArray& u_types);
   /// initializes ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
   /// ranVarUpperBndsX, and ranVarAddtlParamsX
-  void initialize_random_variable_parameters(const RealVector& x_means,
-					     const RealVector& x_std_devs,
-					     const RealVector& x_l_bnds,
-					     const RealVector& x_u_bnds,
-					     const RealVectorArray& x_addtl);
+  void initialize_random_variable_parameters(const RealVector& cd_l_bnds,
+					     const RealVector& cd_u_bnds,
+					     const AleatoryDistParams& adp,
+					     const EpistemicDistParams& edp,
+					     const RealVector& cs_l_bnds,
+					     const RealVector& cs_u_bnds);
   /// initializes corrMatrixX and correlationFlagX
   void initialize_random_variable_correlations(const RealSymMatrix& x_corr);
 
@@ -163,20 +168,25 @@ public:
 				  size_t num_probabilistic_vars,
 				  size_t num_trailing_vars);
 
-  /// return ranVarTypesX
-  const ShortArray& x_types() const;
+  /// return randomVarsX
+  const std::vector<RandomVariable>& x_random_variables() const;
+
+  /// assemble means from RandomVariable::moments()
+  RealVector x_means() const;
+  /// assemble standard deviations from RandomVariable::moments()
+  RealVector x_std_deviations() const;
+  /// assemble lower bounds from RandomVariable::bounds()
+  RealVector x_lower_bounds() const;
+  /// assemble upper bounds from RandomVariable::bounds()
+  RealVector x_upper_bounds() const;
+
   /// return ranVarTypesU
   const ShortArray& u_types() const;
-  /// return ranVarMeansX
-  const RealVector& x_means() const;
-  /// return ranVarStdDevsX
-  const RealVector& x_std_deviations() const;
-  /// return ranVarLowerBndsX
-  const RealVector& x_lower_bounds() const;
-  /// return ranVarUpperBndsX
-  const RealVector& x_upper_bounds() const;
-  /// return ranVarAddtlParamsX
-  const RealVectorArray& x_additional_parameters() const;
+  /// set ranVarTypesU
+  void u_types(const ShortArray& types);
+  /// set ranVarTypesU[i]
+  void u_type(short type, size_t i);
+
   /// return correlationFlagX
   bool x_correlation() const;
   /// return corrMatrixX
@@ -224,27 +234,13 @@ protected:
   //- Heading: Data members
   //
 
-  //RandomVariableArray randomVars;
-
-  // the following attributes are the required data for performing
-  // transformations from X -> Z -> U and back.
-
-  /// vector of indices indicating the type of each x-space uncertain variable
-  ShortArray ranVarTypesX;
-  /// vector of indices indicating the type of standard uncertain variable to
+  /// vector of random variables encapsulating distribution parameters and
+  /// statistical functions (pdf, cdf, etc.)
+  std::vector<RandomVariable> randomVarsX;
+  /// vector of types of each u-space standardized uncertain variable to
   /// which each x-space variable is transformed
   ShortArray ranVarTypesU;
-  /// vector of means for all x-space uncertain variables
-  RealVector ranVarMeansX;
-  /// vector of standard deviations for all x-space uncertain variables
-  RealVector ranVarStdDevsX;
-  /// vector of distribution lower bounds for selected x-space uncertain vars
-  RealVector ranVarLowerBndsX;
-  /// vector of distribution upper bounds for selected x-space uncertain vars
-  RealVector ranVarUpperBndsX;
-  /// vector of additional distribution parameters (e.g., alphas, betas, modes)
-  /// for selected x-space uncertain variables
-  RealVectorArray ranVarAddtlParamsX;
+
   /// flag for indicating if correlation exists among the x-space
   /// uncertain variables
   bool correlationFlagX;
@@ -259,12 +255,6 @@ private:
   //
   //- Heading: Member functions
   //
-
-  /// return a particular random variable distribution parameter
-  const Real& distribution_parameter(size_t index, short target);
-  /// set a particular random variable distribution parameter and
-  /// update derived quantities
-  void distribution_parameter(size_t index, short target, const Real& param);
 
   /// Used only by the standard envelope constructor to initialize
   /// probTransRep to the appropriate derived type.
@@ -282,34 +272,78 @@ private:
 };
 
 
-inline const ShortArray& ProbabilityTransformation::x_types() const
-{ return (probTransRep) ? probTransRep->ranVarTypesX : ranVarTypesX; }
+inline const std::vector<RandomVariable>& ProbabilityTransformation::
+x_random_variables() const
+{ return (probTransRep) ? probTransRep->randomVarsX : randomVarsX; }
+
+
+inline RealVector ProbabilityTransformation::x_means() const
+{
+  if (probTransRep) return probTransRep->x_means();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealVector means(num_v, false);
+    for (i=0; i<num_v; ++i)
+      means[i] = randomVarsX[i].moments().first;
+    return means;
+  }
+}
+
+
+inline RealVector ProbabilityTransformation::x_std_deviations() const
+{
+  if (probTransRep) return probTransRep->x_std_deviations();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealVector std_devs(num_v, false);
+    for (i=0; i<num_v; ++i)
+      std_devs[i] = randomVarsX[i].moments().second;
+    return std_devs;
+  }
+}
+
+
+inline RealVector ProbabilityTransformation::x_lower_bounds() const
+{
+  if (probTransRep) return probTransRep->x_lower_bounds();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealVector lwr_bnds(num_v, false);
+    for (i=0; i<num_v; ++i)
+      lwr_bnds[i] = randomVarsX[i].bounds().first;
+    return lwr_bnds;
+  }
+}
+
+
+inline RealVector ProbabilityTransformation::x_upper_bounds() const
+{
+  if (probTransRep) return probTransRep->x_upper_bounds();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealVector upr_bnds(num_v, false);
+    for (i=0; i<num_v; ++i)
+      upr_bnds[i] = randomVarsX[i].bounds().second;
+    return upr_bnds;
+  }
+}
 
 
 inline const ShortArray& ProbabilityTransformation::u_types() const
 { return (probTransRep) ? probTransRep->ranVarTypesU : ranVarTypesU; }
 
 
-inline const RealVector& ProbabilityTransformation::x_means() const
-{ return (probTransRep) ? probTransRep->ranVarMeansX : ranVarMeansX; }
-
-
-inline const RealVector& ProbabilityTransformation::x_std_deviations() const
-{ return (probTransRep) ? probTransRep->ranVarStdDevsX : ranVarStdDevsX; }
-
-
-inline const RealVector& ProbabilityTransformation::x_lower_bounds() const
-{ return (probTransRep) ? probTransRep->ranVarLowerBndsX : ranVarLowerBndsX; }
-
-
-inline const RealVector& ProbabilityTransformation::x_upper_bounds() const
-{ return (probTransRep) ? probTransRep->ranVarUpperBndsX : ranVarUpperBndsX; }
-
-
-inline const RealVectorArray& ProbabilityTransformation::
-x_additional_parameters() const
+inline void ProbabilityTransformation::u_types(const ShortArray& types)
 {
-  return (probTransRep) ? probTransRep->ranVarAddtlParamsX : ranVarAddtlParamsX;
+  if (probTransRep) probTransRep->ranVarTypesU = types;
+  else              ranVarTypesU = types;
+}
+
+
+inline void ProbabilityTransformation::u_type(short type, size_t i)
+{
+  if (probTransRep) probTransRep->ranVarTypesU[i] = type;
+  else              ranVarTypesU[i] = type;
 }
 
 

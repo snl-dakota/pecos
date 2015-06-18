@@ -55,7 +55,16 @@ public:
   Real inverse_log_cdf(Real log_p) const;
   Real log_pdf(Real x) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -139,6 +148,9 @@ inline Real GumbelRandomVariable::inverse_log_cdf(Real log_p) const
 { return betaStat - std::log(-log_p) / alphaStat; }
 
 
+//  F(x) = e^(-e^(-alpha*(x-u)))
+//  f(x) = alpha e^(-alpha*(x-u)) F(x)
+// f'(x) = alpha (e^(-alpha*(x-u)) f(x) - alpha F(x) e^(-alpha*(x-u)))
 inline Real GumbelRandomVariable::pdf(Real x) const
 { return bmth::pdf(*gumbelDist, x); }
 
@@ -161,6 +173,47 @@ inline Real GumbelRandomVariable::log_pdf(Real x) const
 {
   Real num = -alphaStat*(x-betaStat);
   return std::log(alphaStat) + num - std::exp(num);
+}
+
+
+inline Real GumbelRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case GU_ALPHA: return alphaStat; break;
+  case GU_BETA:  return betaStat;  break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in GumbelRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void GumbelRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case GU_ALPHA: alphaStat = val; break;
+  case GU_BETA:  betaStat  = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in GumbelRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair GumbelRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(alphaStat, betaStat, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+inline RealRealPair GumbelRandomVariable::bounds() const
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  return RealRealPair(-dbl_inf, dbl_inf);
 }
 
 
@@ -193,6 +246,63 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for GumbelRV."<< std::endl;
     abort_handler(-1); return 1.; break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real GumbelRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // to STD_NORMAL: x = beta - ln(-ln(Phi(z)))/alpha
+  bool u_type_err = false, dist_err = false;
+  switch (u_type) {
+  case STD_NORMAL:
+    switch (dist_param) {
+    case GU_ALPHA: return (betaStat - x) / alphaStat; break; // ln(-ln Phi)/a^2
+    case GU_BETA:  return 1.;                         break;
+    // Gumbel Mean:
+    //   num = -alpha*(x-z); return -alpha*exp(num-exp(num))/phi(z); break;
+    // Gumbel Standard Deviation:
+    //   num = -alpha*(x-z); return num*exp(num-exp(num))/stdev/phi(z); break;
+    default:      dist_err = true; break;
+    }
+    break;
+  //case GUMBEL:  TO DO;                                        break;
+  default:        u_type_err = true;                            break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in GumbelRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in GumbelRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real GumbelRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  switch (u_type) {
+  case STD_NORMAL:
+    return -NormalRandomVariable::std_pdf(z) / (alphaStat *
+      NormalRandomVariable::std_cdf(z) * NormalRandomVariable::log_std_cdf(z));
+    break;
+  //case GUMBEL: TO DO; break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in GumbelRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
   }
 }
 

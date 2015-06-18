@@ -16,6 +16,7 @@
 #define EXPONENTIAL_RANDOM_VARIABLE_HPP
 
 #include "RandomVariable.hpp"
+#include "NormalRandomVariable.hpp"
 
 namespace Pecos {
 
@@ -60,8 +61,17 @@ public:
   Real to_std(Real x) const;
   Real from_std(Real z) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
   Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -129,6 +139,9 @@ inline Real ExponentialRandomVariable::inverse_log_ccdf(Real log_p_ccdf) const
 { return -betaStat * log_p_ccdf; }
 
 
+//  F(x) = 1. - e^(-x/beta)
+//  f(x) = e^(-x/beta) / beta
+// f'(x) = - e^(-x/beta) / beta^2
 inline Real ExponentialRandomVariable::pdf(Real x) const
 { return std::exp(-x/betaStat)/betaStat; }
 
@@ -151,6 +164,38 @@ inline Real ExponentialRandomVariable::to_std(Real x) const
 
 inline Real ExponentialRandomVariable::from_std(Real z) const
 { return z * betaStat; }
+
+
+inline Real ExponentialRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case E_BETA: return betaStat; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in ExponentialRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void ExponentialRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case E_BETA: betaStat = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in ExponentialRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair ExponentialRandomVariable::moments() const
+{ return RealRealPair(betaStat, betaStat); }
+
+
+inline RealRealPair ExponentialRandomVariable::bounds() const
+{ return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
 inline Real ExponentialRandomVariable::coefficient_of_variation() const
@@ -193,6 +238,61 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
     PCerr << "Error: unsupported correlation warping for ExponentialRV."
 	  << std::endl;
     abort_handler(-1); return 1.; break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real ExponentialRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // to STD_EXPONENTIAL: x = beta*z
+  // to STD_NORMAL:      Phi(z) = 1. - exp(-x/beta)
+  //                     x = -beta ln(1. - Phi(z))
+  bool u_type_err = false, dist_err = false;
+  switch (dist_param) {
+  case E_BETA: // Deriv of exponential w.r.t. beta
+    switch (u_type) {
+    case STD_NORMAL:      return x / betaStat; break;
+    //case STD_UNIFORM:   TO DO;               break;
+    case STD_EXPONENTIAL: return z;            break;
+    default:              u_type_err = true;   break;
+    }
+    break;
+  default:                dist_err = true;     break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in ExponentialRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in ExponentialRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real ExponentialRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  switch (u_type) {
+  case STD_NORMAL:
+    return betaStat * NormalRandomVariable::std_pdf(z) /
+      NormalRandomVariable::std_ccdf(z);                    break;
+  //case STD_UNIFORM:   TO DO;                              break;
+  case STD_EXPONENTIAL: return betaStat;                    break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in ExponentialRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
   }
 }
 

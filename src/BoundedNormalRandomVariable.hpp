@@ -54,6 +54,14 @@ public:
 
   //Real log_pdf(Real x) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair bounds() const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
+
   void update(Real mean, Real stdev, Real lwr, Real upr);
 
   //
@@ -184,6 +192,133 @@ inline Real BoundedNormalRandomVariable::pdf_gradient(Real x) const
 //{
 //  return pdf(x) * ...; // TO DO
 //}
+
+
+inline Real BoundedNormalRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case N_MEAN:    case N_LOCATION: return gaussMean;   break;
+  case N_STD_DEV: case N_SCALE:    return gaussStdDev; break;
+  case N_LWR_BND:                  return lowerBnd; break;
+  case N_UPR_BND:                  return upperBnd; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in BoundedNormalRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void BoundedNormalRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case N_MEAN:    gaussMean   = val; break;
+  case N_STD_DEV: gaussStdDev = val; break;
+  // Bounded normal case must translate/scale bounds for N_LOCATION,N_SCALE
+  // (see NestedModel::real_variable_mapping())
+  //case N_LOCATION: TO DO; break;
+  //case N_SCALE:    TO DO; break;
+  case N_LWR_BND: lowerBnd = val;    break;
+  case N_UPR_BND: upperBnd = val;    break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in BoundedNormalRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair BoundedNormalRandomVariable::bounds() const
+{ return RealRealPair(lowerBnd, upperBnd); }
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real BoundedNormalRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  bool u_type_err = false, dist_err = false;
+  switch (u_type) {
+  case STD_NORMAL: {
+    Real num, lms, ums, xms = (x-gaussMean)/gaussStdDev, phi_x = std_pdf(xms),
+      dbl_inf = std::numeric_limits<Real>::infinity();
+    switch (dist_param) {
+    case N_MEAN:
+      num = 0.;
+      if (lowerBnd > -dbl_inf) {
+	lms = (lowerBnd-gaussMean)/gaussStdDev;
+	num += std_ccdf(z) * std_pdf(lms);
+      }
+      if (upperBnd <  dbl_inf) {
+	ums = (upperBnd-gaussMean)/gaussStdDev;
+	num += std_cdf(z)  * std_pdf(ums);
+      }
+      return 1. - num / phi_x;                                           break;
+    case N_STD_DEV:
+      num = 0.;
+      if (lowerBnd > -dbl_inf) {
+        lms = (lowerBnd-gaussMean)/gaussStdDev;
+	num += std_ccdf(z) * std_pdf(lms) * lms;
+      }
+      if (upperBnd <  dbl_inf) {
+        ums = (upperBnd-gaussMean)/gaussStdDev;
+	num += std_cdf(z)  * std_pdf(ums) * ums;
+      }
+      return xms - num / phi_x;                                          break;
+    case N_LWR_BND:
+      lms = (lowerBnd-gaussMean)/gaussStdDev;
+      return std_ccdf(z) * std_pdf(lms) / phi_x;                         break;
+    case N_UPR_BND:
+      ums = (upperBnd-gaussMean)/gaussStdDev;
+      return std_cdf(z)  * std_pdf(ums) / phi_x;                         break;
+    //case N_LOCATION:
+    //case N_SCALE:
+    default: dist_err = true;                                            break;
+    }
+    break;
+  }
+  //case BOUNDED_NORMAL: TO DO;                                        break;
+  default: u_type_err = true;                                          break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in BoundedNormalRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in BoundedNormalRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real BoundedNormalRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  Real num = 0., lms, ums, xms = (x-gaussMean)/gaussStdDev,
+    dbl_inf = std::numeric_limits<Real>::infinity();
+  switch (u_type) {
+  case STD_NORMAL:
+    if (upperBnd <  dbl_inf)
+      { ums = (upperBnd-gaussMean)/gaussStdDev; num += std_cdf(ums); }
+    else num += 1.;
+    if (lowerBnd > -dbl_inf)
+      { lms = (lowerBnd-gaussMean)/gaussStdDev; num -= std_cdf(lms); }
+    return gaussStdDev * std_pdf(z) * num / std_pdf(xms);
+    break;
+  //case BOUNDED_NORMAL: TO DO; break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in BoundedNormalRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
 
 
 inline void BoundedNormalRandomVariable::

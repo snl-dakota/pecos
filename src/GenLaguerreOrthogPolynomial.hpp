@@ -15,7 +15,7 @@
 #define GEN_LAGUERRE_ORTHOG_POLYNOMIAL_HPP
 
 #include "OrthogonalPolynomial.hpp"
-#include "pecos_stat_util.hpp"
+#include "GammaRandomVariable.hpp"
 
 
 namespace Pecos {
@@ -140,8 +140,8 @@ inline bool GenLaguerreOrthogPolynomial::parameterized() const
 inline Real GenLaguerreOrthogPolynomial::length_scale() const
 {
   Real mean, stdev;
-  // pecos_stat_util accept alpha_stat, beta_stat
-  moments_from_gamma_params(alphaPoly + 1., 1., mean, stdev);
+  // GammaRandomVariable uses alpha_stat, beta_stat
+  GammaRandomVariable::moments_from_params(alphaPoly + 1., 1., mean, stdev);
   return std::max(mean, stdev);
 
   //Real alpha_stat = alphaPoly + 1.;

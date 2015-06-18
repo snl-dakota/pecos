@@ -136,7 +136,7 @@ public:
       {
 	RealVector col( Teuchos::View, A[i], M );
 	result[i] = col.normFrobenius();
-	col *= 1./result[i];
+	col.scale(1./result[i]);
       }
   };
 

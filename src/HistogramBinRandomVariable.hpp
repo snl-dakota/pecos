@@ -40,7 +40,7 @@ public:
   ~HistogramBinRandomVariable();
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -51,6 +51,13 @@ public:
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(const RealRealMap& bin_prs);
 
@@ -232,6 +239,18 @@ inline Real HistogramBinRandomVariable::pdf_gradient(Real x) const
 
 inline Real HistogramBinRandomVariable::pdf_hessian(Real x) const
 { return 0.; }
+
+
+inline RealRealPair HistogramBinRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(binPairs, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+inline RealRealPair HistogramBinRandomVariable::bounds() const
+{ return RealRealPair(binPairs.begin()->first, (--binPairs.end())->first); }
 
 
 inline void HistogramBinRandomVariable::update(const RealRealMap& bin_prs)

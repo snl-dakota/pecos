@@ -37,7 +37,7 @@ public:
   ~LoguniformRandomVariable();                  ///< destructor
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -47,7 +47,19 @@ public:
 
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
-  //Real pdf_hessian(Real x) const;
+  Real pdf_hessian(Real x) const;
+
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   //void update(Real lwr, Real upr); // inherits from UniformRV
 
@@ -112,16 +124,121 @@ inline Real LoguniformRandomVariable::inverse_ccdf(Real p_ccdf) const
 }
 
 
+//  F(x) = (ln x - ln L)/(ln U - ln L)
+//  f(x) =  1/(ln U - ln L)/x
+// f'(x) = -1/(ln U - ln L)/x^2
+// f'(x) =  2/(ln U - ln L)/x^3
 inline Real LoguniformRandomVariable::pdf(Real x) const
-{ return 1./(std::log(upperBnd) - std::log(lowerBnd))/x; }
+{ return  1./((std::log(upperBnd) - std::log(lowerBnd)) * x); }
 
 
 inline Real LoguniformRandomVariable::pdf_gradient(Real x) const
-{ return -pdf(x, lowerBnd, upperBnd) / x; }
+{ return -1./((std::log(upperBnd) - std::log(lowerBnd)) * x * x); }
 
 
-//inline Real LoguniformRandomVariable::pdf_hessian(Real x) const
-//{ return pdf(x) * ; }
+inline Real LoguniformRandomVariable::pdf_hessian(Real x) const
+{ return  2./((std::log(upperBnd) - std::log(lowerBnd)) * x * x * x); }
+
+
+inline Real LoguniformRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case LU_LWR_BND: return lowerBnd; break;
+  case LU_UPR_BND: return upperBnd; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in LoguniformRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void LoguniformRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case LU_LWR_BND: lowerBnd = val; break;
+  case LU_UPR_BND: upperBnd = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in LoguniformRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair LoguniformRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(lowerBnd, upperBnd, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real LoguniformRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // to STD_NORMAL:  ln x = ln L +  Phi(z) (ln U - ln L)
+  // to STD_UNIFORM: ln x = ln L + (z+1)/2 (ln U - ln L)
+  bool u_type_err = false, dist_err = false;
+  switch (dist_param) {
+  case LU_LWR_BND: // Deriv of Loguniform w.r.t. its Lower Bound
+    switch (u_type) {
+    case STD_UNIFORM:
+      return x*UniformRandomVariable::std_ccdf(z)/lowerBnd; break;
+    case STD_NORMAL:
+      return x* NormalRandomVariable::std_ccdf(z)/lowerBnd; break;
+    //case LOGUNIFORM:  TO DO; break;
+    default: u_type_err = true;                             break;
+    }
+    break;
+  case LU_UPR_BND: // Deriv of Loguniform w.r.t. its Upper Bound
+    switch (u_type) {
+    case STD_NORMAL:
+      return x* NormalRandomVariable::std_cdf(z)/upperBnd;  break;
+    case STD_UNIFORM:
+      return x*UniformRandomVariable::std_cdf(z)/upperBnd;  break;
+    //case LOGUNIFORM:  TO DO; break;
+    default: u_type_err = true;                             break;
+    }
+    break;
+  default:   dist_err = true;                               break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in LoguniformRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in LoguniformRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real LoguniformRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  // to STD_NORMAL:  ln x = ln L +  Phi(z) (ln U - ln L)
+  // to STD_UNIFORM: ln x = ln L + (z+1)/2 (ln U - ln L)
+  Real log_range = std::log(upperBnd)-std::log(lowerBnd);
+  switch (u_type) {
+  case STD_NORMAL:  return x*log_range*NormalRandomVariable::std_pdf(z); break;
+  case STD_UNIFORM: return x*log_range*UniformRandomVariable::std_pdf(); break;
+  //case LOGUNIFORM:  TO DO; break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in LoguniformRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
 
 // static functions:
 

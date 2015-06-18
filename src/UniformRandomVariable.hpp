@@ -16,6 +16,7 @@
 #define UNIFORM_RANDOM_VARIABLE_HPP
 
 #include "RandomVariable.hpp"
+#include "NormalRandomVariable.hpp"
 
 namespace Pecos {
 
@@ -52,7 +53,16 @@ public:
   Real to_std(Real x) const;
   Real from_std(Real z) const;
 
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+  RealRealPair bounds() const;
+
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -215,6 +225,48 @@ inline Real UniformRandomVariable::from_std(Real z) const
 }
 
 
+inline Real UniformRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND: return lowerBnd; break;
+  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND: return upperBnd; break;
+  //case U_LOCATION: - TO DO
+  //case U_SCALE:    - TO DO
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in UniformRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline RealRealPair UniformRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(lowerBnd, upperBnd, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+inline RealRealPair UniformRandomVariable::bounds() const
+{ return RealRealPair(lowerBnd, upperBnd); }
+
+
+inline void UniformRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND: lowerBnd = val; break;
+  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND: upperBnd = val; break;
+  //case U_LOCATION: - TO DO
+  //case U_SCALE:    - TO DO
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in UniformRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
 inline Real UniformRandomVariable::
 correlation_warping_factor(const RandomVariable& rv, Real corr) const
 {
@@ -246,6 +298,82 @@ correlation_warping_factor(const RandomVariable& rv, Real corr) const
   default: // Unsupported warping (should be prevented upsteam)
     PCerr << "Error: unsupported correlation warping for UniformRV."<<std::endl;
     abort_handler(-1); return 1.; break;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real UniformRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // to STD_NORMAL:  x = L + Phi(z) (U - L)
+  // to STD_UNIFORM: x = L + (z + 1)*(U - L)/2
+  bool u_type_err = false, dist_err = false;
+  switch (dist_param) {
+  case U_LWR_BND: case CDV_LWR_BND: case CSV_LWR_BND:
+    // Deriv of Uniform w.r.t. its Lower Bound
+    switch (u_type) {
+    //case STD_NORMAL:  return NormalRandomVariable::std_ccdf(z); break;
+    //case STD_UNIFORM: return std_ccdf(z); break;
+    // The following is equivalent with fewer operations:
+    case STD_NORMAL: case STD_UNIFORM: return ccdf(x); break;
+    default: u_type_err = true;                        break;
+    }
+    break;
+  case U_UPR_BND: case CDV_UPR_BND: case CSV_UPR_BND:
+    // Deriv of Uniform w.r.t. its Upper Bound
+    switch (u_type) {
+    //case STD_NORMAL:  return NormalRandomVariable::std_cdf(z); break;
+    //case STD_UNIFORM: return std_cdf(z);                       break;
+    // The following is equivalent with fewer operations:
+    case STD_NORMAL: case STD_UNIFORM: return cdf(x); break;
+    default:          u_type_err = true;                       break;
+    }
+    break;
+  //case U_LOCATION: - TO DO
+  //case U_SCALE:    - TO DO
+  case NO_TARGET: // can occur for all_variables Jacobians
+    if (ranVarType == CONTINUOUS_DESIGN || ranVarType == CONTINUOUS_INTERVAL ||
+	ranVarType == CONTINUOUS_STATE)
+      return 0.;
+    else dist_err = true;
+    break;
+  default:
+    dist_err = true; break;
+  }
+
+  if (u_type_err)
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in UniformRandomVariable::dx_ds()." << std::endl;
+  if (dist_err)
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in UniformRandomVariable::dx_ds()." << std::endl;
+  if (u_type_err || dist_err)
+    abort_handler(-1);
+  return 0.;
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real UniformRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  // to STD_NORMAL:  x = L + Phi(z) (U - L)
+  // to STD_UNIFORM: x = L + (z + 1)*(U - L)/2
+  switch (u_type) {
+  case STD_NORMAL:
+    return (upperBnd-lowerBnd) * NormalRandomVariable::std_pdf(z); break;
+  case STD_UNIFORM:
+    return (upperBnd-lowerBnd) * std_pdf();                        break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in UniformRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); return 0.; break;
   }
 }
 

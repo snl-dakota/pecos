@@ -40,7 +40,7 @@ public:
   ~TriangularRandomVariable();
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
   Real cdf(Real x) const;
@@ -51,6 +51,18 @@ public:
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
+
+  Real parameter(short dist_param) const;
+  void parameter(short dist_param, Real val);
+
+  RealRealPair moments() const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
+
+  //
+  //- Heading: Member functions
+  //
 
   void update(Real lwr, Real mode, Real upr);
 
@@ -144,6 +156,11 @@ inline Real TriangularRandomVariable::inverse_ccdf(Real p_ccdf) const
 { return bmth::quantile(complement(*triangDist, p_ccdf)); }
 
 
+//             x < M                        x > M
+//  F(x): (x-L)^2/(U-L)/(M-L)    (M-L)/(U-L) - (x+M-2U)(x-M)/(U-L)/(U-M)
+//  f(x): 2(x-L)/(U-L)/(M-L)     2(U-x)/(U-L)/(U-M)
+// f'(x): 2/(U-L)/(M-L)          -2/(U-L)/(U-M)
+// Note: at x=M, F(x) and f(x) are continuous but f'(x) is not
 inline Real TriangularRandomVariable::pdf(Real x) const
 { return bmth::pdf(*triangDist, x); }
 
@@ -162,6 +179,125 @@ inline Real TriangularRandomVariable::pdf_gradient(Real x) const
 
 inline Real TriangularRandomVariable::pdf_hessian(Real x) const
 { return 0.; }
+
+
+inline Real TriangularRandomVariable::parameter(short dist_param) const
+{
+  switch (dist_param) {
+  case T_MODE:    return triangularMode; break;
+  case T_LWR_BND: return lowerBnd;       break;
+  case T_UPR_BND: return upperBnd;       break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in TriangularRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); return 0.; break;
+  }
+}
+
+
+inline void TriangularRandomVariable::parameter(short dist_param, Real val)
+{
+  switch (dist_param) {
+  case T_MODE:    triangularMode = val; break;
+  case T_LWR_BND: lowerBnd       = val; break;
+  case T_UPR_BND: upperBnd       = val; break;
+  default:
+    PCerr << "Error: update failure for distribution parameter " << dist_param
+	  << " in TriangularRandomVariable::parameter()." << std::endl;
+    abort_handler(-1); break;
+  }
+}
+
+
+inline RealRealPair TriangularRandomVariable::moments() const
+{
+  Real mean, std_dev;
+  moments_from_params(lowerBnd, triangularMode, upperBnd, mean, std_dev);
+  return RealRealPair(mean, std_dev);
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  dz/ds is zero if uncorrelated, 
+    while dz_ds_factor() manages contributions in the correlated case. */
+inline Real TriangularRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  bool u_type_err = false, dist_error = false; Real sdf;
+  if (x < triangularMode)
+    switch (u_type) {
+    case STD_NORMAL:  sdf =  NormalRandomVariable::std_cdf(z);  break;
+    case STD_UNIFORM: sdf = UniformRandomVariable::std_cdf(z);  break;
+    //case TRIANGULAR: break;
+    default: u_type_err = true; break;
+    }
+  else
+    switch (u_type) {
+    case STD_NORMAL:  sdf =  NormalRandomVariable::std_ccdf(z); break;
+    case STD_UNIFORM: sdf = UniformRandomVariable::std_ccdf(z); break;
+    //case TRIANGULAR: break;
+    default: u_type_err = true; break;
+    }
+  if (u_type_err) {
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in TriangularRandomVariable::dx_ds()." << std::endl;
+    abort_handler(-1);
+  }
+
+  if (x < triangularMode) {
+    Real denom = 2.*(x-lowerBnd);
+    switch (dist_param) {
+    case T_MODE:    return sdf*(upperBnd-lowerBnd)/denom;        break;
+    case T_LWR_BND:
+      return 1.+sdf*(2.*lowerBnd-upperBnd-triangularMode)/denom; break;
+    case T_UPR_BND: return sdf*(triangularMode-lowerBnd)/denom;  break;
+    // Triangular Mean          - TO DO
+    // Triangular Std Deviation - TO DO
+    default:        dist_error = true;                           break;
+    }
+  }
+  else {
+    Real denom = 2.*(upperBnd-x);
+    switch (dist_param) {
+    case T_MODE:    return sdf*(upperBnd-lowerBnd)/denom;        break;
+    case T_LWR_BND: return (upperBnd-triangularMode)*sdf/denom;  break;
+    case T_UPR_BND:
+      return 1.-sdf*(2.*upperBnd-lowerBnd-triangularMode)/denom; break;
+    // Triangular Mean          - TO DO
+    // Triangular Std Deviation - TO DO
+    default:        dist_error = true;                           break;
+    }
+  }
+  if (dist_error) {
+    PCerr << "Error: mapping failure for distribution parameter " << dist_param
+	  << " in TriangularRandomVariable::dx_ds()." << std::endl;
+    abort_handler(-1); return 0.;
+  }
+}
+
+
+/** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
+    with respect to distribution parameter s.  For the uncorrelated case,
+    u and z are constants.  For the correlated case, u is a constant, but 
+    z(s) = L(s) u due to Nataf dependence on s and dz/ds = dL/ds u. */
+inline Real TriangularRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  Real pdf;
+  switch (u_type) {
+  case STD_NORMAL:  pdf = NormalRandomVariable::std_pdf(z); break;
+  case STD_UNIFORM: pdf = UniformRandomVariable::std_pdf(); break;
+  //case TRIANGULAR: break;
+  default:
+    PCerr << "Error: unsupported u-space type " << u_type
+	  << " in TriangularRandomVariable::dz_ds_factor()." << std::endl;
+    abort_handler(-1); break;
+  }
+
+  return (x < triangularMode) ?
+    (upperBnd-lowerBnd)*(triangularMode-lowerBnd)*pdf/(2.*(x-lowerBnd)) :
+    (upperBnd-triangularMode)*(upperBnd-lowerBnd)*pdf/(2.*(upperBnd-x));
+}
 
 
 inline void TriangularRandomVariable::update(Real lwr, Real mode, Real upr)
