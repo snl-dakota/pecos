@@ -93,6 +93,9 @@ protected:
   /// beta parameter of gumbel random variable (location)
   Real betaStat;
 
+  /// overflow and underflow values for argument of std::exp
+  RealRealPair expLimits;
+
   /// pointer to the Boost weibull_distribution instance
   extreme_value_dist* gumbelDist;
 };
@@ -100,13 +103,14 @@ protected:
 
 inline GumbelRandomVariable::GumbelRandomVariable():
   RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(0.),
-  gumbelDist(NULL)
+  expLimits(std::log(DBL_MAX),std::log(DBL_MIN)), gumbelDist(NULL)
 { }
 
 
 inline GumbelRandomVariable::GumbelRandomVariable(Real alpha, Real beta):
   RandomVariable(BaseConstructor()), alphaStat(alpha), betaStat(beta),
-  gumbelDist(new extreme_value_dist(1./alpha, beta)) // note alpha inversion
+  expLimits(std::log(DBL_MAX),std::log(DBL_MIN)),
+  gumbelDist(new extreme_value_dist(beta, 1./alpha)) // location, scale
 { }
 
 
@@ -312,7 +316,7 @@ inline void GumbelRandomVariable::update(Real alpha, Real beta)
   if (!gumbelDist || alphaStat != alpha || betaStat != beta) {
     alphaStat = alpha; betaStat = beta;
     if (gumbelDist) delete gumbelDist;
-    gumbelDist = new extreme_value_dist(1./alpha, beta); // note alpha inversion
+    gumbelDist = new extreme_value_dist(beta, 1./alpha); // location, scale
   }
 }
 
@@ -320,20 +324,44 @@ inline void GumbelRandomVariable::update(Real alpha, Real beta)
 
 inline Real GumbelRandomVariable::pdf(Real x, Real alpha, Real beta)
 {
-  extreme_value_dist gumbel1(1./alpha, beta);
-  return bmth::pdf(gumbel1, x);
+  /*
+  // Unprotected implementation observed to generate nans
+  extreme_value_dist gumbel1(beta, 1./alpha); // location, scale
+  Real pdf1 = bmth::pdf(gumbel1, x);
 
-  //Real num = std::exp(-alpha*(x-beta));
+  Real num = std::exp(alpha*(beta-x));
   // if num overflows, apply l'Hopital's rule
-  //return (num > DBL_MAX) ? 0. : alpha*num*std::exp(-num);
+  Real pdf2 = (num > DBL_MAX) ? 0. : alpha*num*std::exp(-num);
+
+  //  std::log(DBL_MAX) = 709.783 std::log(DBL_MIN) = -708.396
+
+  PCout << "x = " << x << " num = " << num << " Boost pdf = " << pdf1
+	<< " Pecos pdf = " << pdf2 << " abs diff = " << std::abs(pdf1-pdf2)
+	<< '\n';
+    // yields "num = inf Boost EVD pdf = -nan explicit pdf = 0 abs diff = nan"
+  // for small x
+
+  return pdf2;
+  */
+  ///////////////////
+
+  Real num = alpha*(beta-x);
+  if (num > 700.) // 1st exp overflows; log(DBL_MAX) = 709.783
+    return 0.; // Boost generates nan; use l'Hopital's rule: denominator exp(-num) grows faster
+  //else if (num < -700.)) // underflows; log(DBL_MIN) = -708.396
+  //  return 0.; // Boost handles this case OK
+  else {
+    extreme_value_dist gumbel1(beta, 1./alpha); // location, scale
+    return bmth::pdf(gumbel1, x);
+  }
 }
 
 
 inline Real GumbelRandomVariable::cdf(Real x, Real alpha, Real beta)
 {
-  extreme_value_dist gumbel1(1./alpha, beta);
+  extreme_value_dist gumbel1(beta, 1./alpha); // location, scale
   return bmth::cdf(gumbel1, x);
-  //return std::exp(-std::exp(-alpha * (x - beta)));
+  //return std::exp(-std::exp(alpha*(beta-x)));
 }
 
 
