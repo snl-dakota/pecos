@@ -96,10 +96,9 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     //     containing a lognormal weighting function," Aerosol Science 32,
     //     pp. 1111-1116, 2001.
     // -----------------------------------------------------------------------
-    Real cf_var = distParams[1]/distParams[0], e_zeta_sq = 1. + cf_var*cf_var, 
-      zeta_sq  = std::log(e_zeta_sq), // denoted as "u" in Simpson
-      lambda   = std::log(distParams[0]) - zeta_sq/2.,
-      e_lambda = std::exp(lambda);    // denoted as "m" in Simpson
+    Real zeta_sq = distParams[1]*distParams[1], // denoted as "u" in Simpson
+       e_zeta_sq = std::exp(zeta_sq), lambda = distParams[0],
+       e_lambda  = std::exp(lambda);            // denoted as "m" in Simpson
     beta3TR[0] = 0.; // both Simpson and Wilck
     // compute analytic recursion coefficients alpha_i and beta_i
     for (i=0; i<m; ++i) {
@@ -154,9 +153,8 @@ void NumericGenOrthogPolynomial::solve_eigenproblem(unsigned short m)
     raw_moments[0] = 1.; // integral of 1*PDF is 1
 
     // LOGNORMAL:
-    //Real cf_var  = distParams[1]/distParams[0],
-    //     zeta_sq = std::log(1. + cf_var*cf_var),
-    //     lambda  = std::log(distParams[0]) - zeta_sq/2.;
+    //Real zeta_sq = distParams[1]*distParams[1],
+    //     lambda  = distParams[0];
     //for (i=1; i<=2*m; ++i)
     //  raw_moments[i] = std::exp(i*lambda+i*i*zeta_sq/2.);
 
@@ -356,7 +354,7 @@ inner_product(const RealVector& poly_coeffs1,
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  TriangularRandomVariable::pdf, distParams[1], distParams[2]);
     return cc_bounded_integral(poly_coeffs1, poly_coeffs2, triangular_pdf,
-			       distParams[1], distParams[2], 500);
+			       distParams[0], distParams[2], 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //  TriangularRandomVariable::pdf, distParams[1], distParams[2]);
     break;
@@ -394,13 +392,13 @@ inner_product(const RealVector& poly_coeffs1,
     // start is offset to avoid division by 0. in LognormalRandomVariable::pdf
     //return legendre_bounded_integral(poly_coeffs1, poly_coeffs2,
     //                                 LognormalRandomVariable::pdf,
-    //				       1.e-5, distParams[0]+60.*distParams[1]);
+    //				       1.e-5, mean+60.*stdev);
     //return cc_bounded_integral(poly_coeffs1, poly_coeffs2,
     //                           LognormalRandomVariable::pdf,
-    //			         1.e-5, distParams[0] + 60.*distParams[1], 500);
+    //			         1.e-5, mean+60.*stdev, 500);
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //                                LognormalRandomVariable::pdf,
-    //                                1.e-5, distParams[0] + 60.*distParams[1]);
+    //                                1.e-5, mean+60.*stdev);
     break;
   case FRECHET: {
     // Alternate integration:
