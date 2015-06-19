@@ -120,19 +120,19 @@ inline GumbelRandomVariable::~GumbelRandomVariable()
 
 inline Real GumbelRandomVariable::cdf(Real x) const
 {
-  Real num = alphaStat*(betaStat-x);
-  if      (num > expLimits.first)  return 0.; // ~log(DBL_MAX)
-  else if (num < expLimits.second) return 1.; // ~log(DBL_MIN)
-  else return std::exp(-std::exp(num)); //return bmth::cdf(*gumbelDist, x);
+  Real abx = alphaStat*(betaStat-x);
+  if      (abx > expLimits.first)  return 0.; // ~log(DBL_MAX)
+  else if (abx < expLimits.second) return 1.; // ~log(DBL_MIN)
+  else return std::exp(-std::exp(abx)); //return bmth::cdf(*gumbelDist, x);
 }
 
 
 inline Real GumbelRandomVariable::ccdf(Real x) const
 {
-  Real num = alphaStat*(betaStat-x);
-  if      (num > expLimits.first)  return 1.; // ~log(DBL_MAX)
-  else if (num < expLimits.second) return 0.; // ~log(DBL_MIN)
-  else return -bmth::expm1(-std::exp(num));
+  Real abx = alphaStat*(betaStat-x);
+  if      (abx > expLimits.first)  return 1.; // ~log(DBL_MAX)
+  else if (abx < expLimits.second) return 0.; // ~log(DBL_MIN)
+  else return -bmth::expm1(-std::exp(abx));
      //return bmth::cdf(complement(*gumbelDist, x));
 }
 
@@ -162,9 +162,12 @@ inline Real GumbelRandomVariable::inverse_log_cdf(Real log_p) const
 // f'(x) = alpha (e^(-alpha*(x-u)) f(x) - alpha F(x) e^(-alpha*(x-u)))
 inline Real GumbelRandomVariable::pdf(Real x) const
 {
-  Real num = alphaStat*(betaStat-x);
-  return (num > expLimits.first || num < expLimits.second) ? 0. :
-    alphaStat * num * std::exp(-num); //bmth::pdf(*gumbelDist, x);
+  Real abx = alphaStat*(betaStat-x);
+  if (abx > expLimits.first || abx < expLimits.second) return 0.;
+  else {
+    Real exp_abx = std::exp(abx);
+    return alphaStat * exp_abx * std::exp(-exp_abx); //bmth::pdf(*gumbelDist,x);
+  }
 }
 
 
@@ -184,8 +187,8 @@ inline Real GumbelRandomVariable::pdf_gradient(Real x) const
 
 inline Real GumbelRandomVariable::log_pdf(Real x) const
 {
-  Real num = alphaStat*(betaStat-x);
-  return std::log(alphaStat) + num - std::exp(num);
+  Real abx = alphaStat*(betaStat-x);
+  return std::log(alphaStat) + abx - std::exp(abx);
 }
 
 
@@ -337,16 +340,17 @@ inline Real GumbelRandomVariable::pdf(Real x, Real alpha, Real beta)
   // if num overflows, apply l'Hopital's rule
   //return (num > DBL_MAX) ? 0. : alpha*num*std::exp(-num);
 
-  Real num = alpha*(beta-x);
+  Real abx = alpha*(beta-x);
   // 1st exp {overflows,underflows} at {log(DBL_MAX),log(DBL_MIN)} =
   // {709.783,-708.396}.  Boost generates a nan pdf for the former, but
   // correctly generates 0 pdf for the latter (by l'Hopital's rule,
-  // exp(num) in denominator grows faster).  Trap both cases to be safe
+  // exp(abx) in denominator grows faster).  Trap both cases to be safe
   // (note: static fn cannot access expLimits and don't want to recompute 
   // each time, so +/- 700 is hardwired).
-  if (num > 700. || num < -700.) return 0.;
+  if (abx > 700. || abx < -700.) return 0.;
   else {
-    return alpha * num * std::exp(-num);
+    Real exp_abx = std::exp(abx);
+    return alpha * exp_abx * std::exp(-exp_abx);
     //extreme_value_dist gumbel1(beta, 1./alpha); // location, scale
     //return bmth::pdf(gumbel1, x);
   }
@@ -357,11 +361,11 @@ inline Real GumbelRandomVariable::cdf(Real x, Real alpha, Real beta)
 {
   //return std::exp(-std::exp(alpha*(beta-x)));
 
-  Real num = alpha*(beta-x);
-  if      (num >  700.) return 0.; // ~log(DBL_MAX)
-  else if (num < -700.) return 1.; // ~log(DBL_MIN)
+  Real abx = alpha*(beta-x);
+  if      (abx >  700.) return 0.; // ~log(DBL_MAX)
+  else if (abx < -700.) return 1.; // ~log(DBL_MIN)
   else {
-    return std::exp(-std::exp(num));
+    return std::exp(-std::exp(abx));
     //extreme_value_dist gumbel1(beta, 1./alpha); // location, scale
     //return bmth::cdf(gumbel1, x);
   }
