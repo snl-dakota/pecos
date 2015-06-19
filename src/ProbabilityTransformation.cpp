@@ -418,6 +418,64 @@ reshape_correlation_matrix(size_t num_leading_vars,
 }
 
 
+RealRealPairArray ProbabilityTransformation::u_moments() const
+{
+  if (probTransRep) return probTransRep->u_moments();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealRealPairArray u_mom(num_v);
+    Real unif_stdev = 1./std::sqrt(3.);
+    for (i=0; i<num_v; ++i)
+      switch (ranVarTypesU[i]) {
+      case STD_NORMAL:      u_mom[i] = RealRealPair(0., 1.);         break;
+      case STD_UNIFORM:     u_mom[i] = RealRealPair(0., unif_stdev); break;
+      case STD_EXPONENTIAL: u_mom[i] = RealRealPair(1., 1.);         break;
+      case STD_BETA: {
+	Real mean, stdev;
+	BetaRandomVariable::
+	  moments_from_params(randomVarsX[i].parameter(BE_ALPHA),
+			      randomVarsX[i].parameter(BE_BETA), -1., 1.,
+			      mean, stdev);
+        u_mom[i] = RealRealPair(mean, stdev); break;
+      }
+      case STD_GAMMA: {
+	Real mean, stdev;
+	GammaRandomVariable::
+	  moments_from_params(randomVarsX[i].parameter(GA_ALPHA), 1.,
+			      mean, stdev);
+        u_mom[i] = RealRealPair(mean, stdev); break;
+      }
+      default: // no transformation (e.g., PCE w/ numerically-generated basis)
+	u_mom[i] = randomVarsX[i].moments(); break;
+      }
+    return u_mom;
+  }
+}
+
+
+RealRealPairArray ProbabilityTransformation::u_bounds() const
+{
+  if (probTransRep) return probTransRep->u_bounds();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealRealPairArray u_bnds(num_v);
+    Real dbl_inf = std::numeric_limits<Real>::infinity();
+    for (i=0; i<num_v; ++i)
+      switch (ranVarTypesU[i]) {
+      case STD_NORMAL:
+	u_bnds[i] = RealRealPair(-dbl_inf, dbl_inf); break;
+      case STD_UNIFORM:     case STD_BETA:
+	u_bnds[i] = RealRealPair(-1., 1.);           break;
+      case STD_EXPONENTIAL: case STD_GAMMA:
+	u_bnds[i] = RealRealPair(0., dbl_inf);       break;
+      default: // no transformation (e.g., PCE w/ numerically-generated basis)
+	u_bnds[i] = randomVarsX[i].bounds();         break;
+      }
+    return u_bnds;
+  }
+}
+
+
 void ProbabilityTransformation::
 trans_U_to_X(const RealVector& u_vars, RealVector& x_vars)
 {

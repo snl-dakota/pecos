@@ -148,9 +148,9 @@ public:
   /// update the value of the named distribution parameter
   virtual void parameter(short dist_param, Real val);
 
-  /// return the value of the named distribution parameter
+  /// return the distribution mean and standard deviation as a pair
   virtual RealRealPair moments() const;
-  /// update the value of the named distribution parameter
+  /// return the distribution lower and upper bounds as a pair
   virtual RealRealPair bounds() const;
 
   /// compute the coefficient of variation (used to compute selected

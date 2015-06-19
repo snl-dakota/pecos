@@ -171,10 +171,23 @@ public:
   /// return randomVarsX
   const std::vector<RandomVariable>& x_random_variables() const;
 
-  /// assemble means from RandomVariable::moments()
+  /// assemble means and standard deviations in original space from
+  /// RandomVariable::moments()
+  RealRealPairArray x_moments() const;
+  /// assemble means and standard deviations in transformed space
+  /// combining data from ranVarTypesU with RandomVariable::moments()
+  RealRealPairArray u_moments() const;
+  /// assemble means in original space from RandomVariable::moments()
   RealVector x_means() const;
-  /// assemble standard deviations from RandomVariable::moments()
+  /// assemble standard deviations in original space from
+  /// RandomVariable::moments()
   RealVector x_std_deviations() const;
+
+  /// assemble lower and upper bounds from RandomVariable::bounds()
+  RealRealPairArray x_bounds() const;
+  /// assemble lower and upper bounds in transformed space combining
+  /// data from ranVarTypesU with RandomVariable::bounds()
+  RealRealPairArray u_bounds() const;
   /// assemble lower bounds from RandomVariable::bounds()
   RealVector x_lower_bounds() const;
   /// assemble upper bounds from RandomVariable::bounds()
@@ -277,6 +290,19 @@ x_random_variables() const
 { return (probTransRep) ? probTransRep->randomVarsX : randomVarsX; }
 
 
+inline RealRealPairArray ProbabilityTransformation::x_moments() const
+{
+  if (probTransRep) return probTransRep->x_moments();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealRealPairArray x_mom(num_v);
+    for (i=0; i<num_v; ++i)
+      x_mom[i] = randomVarsX[i].moments();
+    return x_mom;
+  }
+}
+
+
 inline RealVector ProbabilityTransformation::x_means() const
 {
   if (probTransRep) return probTransRep->x_means();
@@ -299,6 +325,19 @@ inline RealVector ProbabilityTransformation::x_std_deviations() const
     for (i=0; i<num_v; ++i)
       std_devs[i] = randomVarsX[i].moments().second;
     return std_devs;
+  }
+}
+
+
+inline RealRealPairArray ProbabilityTransformation::x_bounds() const
+{
+  if (probTransRep) return probTransRep->x_bounds();
+  else {
+    size_t i, num_v = randomVarsX.size();
+    RealRealPairArray x_bnds(num_v);
+    for (i=0; i<num_v; ++i)
+      x_bnds[i] = randomVarsX[i].bounds();
+    return x_bnds;
   }
 }
 

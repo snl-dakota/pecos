@@ -173,9 +173,9 @@ inline Real GumbelRandomVariable::pdf(Real x) const
 
 inline Real GumbelRandomVariable::pdf_gradient(Real x) const
 {
-  Real num = std::exp(-alphaStat*(x-betaStat)),
-    cdf = std::exp(-num), pdf = alphaStat * num * cdf;
-  return alphaStat * num * (pdf - alphaStat * cdf);
+  Real exp_abx = std::exp(alphaStat*(betaStat-x)),
+    cdf = std::exp(-exp_abx), pdf = alphaStat * exp_abx * cdf;
+  return alphaStat * exp_abx * (pdf - alphaStat * cdf);
 }
 
 
@@ -336,9 +336,9 @@ inline void GumbelRandomVariable::update(Real alpha, Real beta)
 
 inline Real GumbelRandomVariable::pdf(Real x, Real alpha, Real beta)
 {
-  //Real num = std::exp(alpha*(beta-x));
-  // if num overflows, apply l'Hopital's rule
-  //return (num > DBL_MAX) ? 0. : alpha*num*std::exp(-num);
+  //Real exp_abx = std::exp(alpha*(beta-x));
+  // if exp_abx overflows, apply l'Hopital's rule
+  //return (exp_abx > DBL_MAX) ? 0. : alpha*exp_abx*std::exp(-exp_abx);
 
   Real abx = alpha*(beta-x);
   // 1st exp {overflows,underflows} at {log(DBL_MAX),log(DBL_MIN)} =
