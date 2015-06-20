@@ -48,11 +48,13 @@ public:
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
-
   Real log_pdf(Real x) const;
 
-  Real to_std(Real x) const;
-  Real from_std(Real z) const;
+  Real standard_pdf(Real z) const;
+  Real log_standard_pdf(Real z) const;
+
+  Real to_standard(Real x) const;
+  Real from_standard(Real z) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -180,11 +182,19 @@ inline Real NormalRandomVariable::log_pdf(Real x) const
 }
 
 
-inline Real NormalRandomVariable::to_std(Real x) const
+inline Real NormalRandomVariable::standard_pdf(Real z) const
+{ return std_pdf(z); }
+
+
+inline Real NormalRandomVariable::log_standard_pdf(Real z) const
+{ return (-z*z - std::log(2.*PI))/2.; }
+
+
+inline Real NormalRandomVariable::to_standard(Real x) const
 { return (x - gaussMean) / gaussStdDev; }
 
 
-inline Real NormalRandomVariable::from_std(Real z) const
+inline Real NormalRandomVariable::from_standard(Real z) const
 { return z * gaussStdDev + gaussMean; }
 
 

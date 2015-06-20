@@ -130,18 +130,22 @@ public:
   /// return the hessian of the random variable's probability density
   /// function at x
   virtual Real pdf_hessian(Real x) const;
-
-  /// return the natural logarithm of the random variable's
-  /// probability density function at x (useful for calculations of
-  /// log prior, log posterior, etc.)
+  /// return the natural log of the random variable's probability density
+  /// function at x (useful for calculations of log density in Bayesian methods)
   virtual Real log_pdf(Real x) const;
 
-  /// scale variable value x from current distribution to standardized
-  /// distribution
-  virtual Real to_std(Real x) const;
-  /// scale variable value z from standardized distribution to current
-  /// distribution
-  virtual Real from_std(Real z) const;
+  /// return the value of a standardized random variable's probability density
+  /// function at x
+  virtual Real standard_pdf(Real z) const;
+  /// return the natural log of a standardized random variable's probability
+  /// density function at x (useful for calculations of log density in
+  /// Bayesian methods)
+  virtual Real log_standard_pdf(Real z) const;
+
+  /// scale variable value x from current to standardized distribution
+  virtual Real to_standard(Real x) const;
+  /// scale variable value z from standardized to current distribution
+  virtual Real from_standard(Real z) const;
 
   /// return the value of the named distribution parameter
   virtual Real parameter(short dist_param) const;

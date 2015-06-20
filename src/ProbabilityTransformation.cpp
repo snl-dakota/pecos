@@ -170,14 +170,14 @@ initialize_random_variables(const ProbabilityTransformation& prob_trans)
     probTransRep->initialize_random_variables(prob_trans);
   else {
     if (prob_trans.probTransRep) { // source is envelope
-      randomVarsX = prob_trans.probTransRep->randomVarsX;//TO DO:shallow copies?
+      randomVarsX = prob_trans.probTransRep->randomVarsX;//[i].copy(); TO DO
       ranVarTypesU        = prob_trans.probTransRep->ranVarTypesU;
       correlationFlagX    = prob_trans.probTransRep->correlationFlagX;
       corrMatrixX         = prob_trans.probTransRep->corrMatrixX;
       corrCholeskyFactorZ = prob_trans.probTransRep->corrCholeskyFactorZ;
     }
     else { // source is letter
-      randomVarsX         = prob_trans.randomVarsX;//TO DO: want shallow copies?
+      randomVarsX         = prob_trans.randomVarsX;//[i].copy(); TO DO
       ranVarTypesU        = prob_trans.ranVarTypesU;
       correlationFlagX    = prob_trans.correlationFlagX;
       corrMatrixX         = prob_trans.corrMatrixX;

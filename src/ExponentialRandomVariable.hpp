@@ -54,12 +54,13 @@ public:
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
-
-  Real inverse_log_ccdf(Real log_p_ccdf) const;
   Real log_pdf(Real x) const;
 
-  Real to_std(Real x) const;
-  Real from_std(Real z) const;
+  Real standard_pdf(Real z) const;
+  Real log_standard_pdf(Real z) const;
+
+  Real to_standard(Real x) const;
+  Real from_standard(Real z) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -78,6 +79,8 @@ public:
   //
 
   void update(Real beta);
+
+  Real inverse_log_ccdf(Real log_p_ccdf) const;
 
   //
   //- Heading: Static member functions (global utilities)
@@ -158,11 +161,19 @@ inline Real ExponentialRandomVariable::log_pdf(Real x) const
 { return -x / betaStat - std::log(betaStat); }
 
 
-inline Real ExponentialRandomVariable::to_std(Real x) const
+inline Real ExponentialRandomVariable::standard_pdf(Real z) const
+{ return std::exp(-z); }
+
+
+inline Real ExponentialRandomVariable::log_standard_pdf(Real z) const
+{ return -z; }
+
+
+inline Real ExponentialRandomVariable::to_standard(Real x) const
 { return x / betaStat; }
 
 
-inline Real ExponentialRandomVariable::from_std(Real z) const
+inline Real ExponentialRandomVariable::from_standard(Real z) const
 { return z * betaStat; }
 
 

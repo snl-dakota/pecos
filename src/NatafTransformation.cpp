@@ -93,7 +93,7 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
     x = z;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    x = rv_i.from_std(z);            break;
+    case NORMAL:    x = rv_i.from_standard(z); break;
     case LOGNORMAL:
       x = std::exp(rv_i.parameter(LN_LAMBDA) + rv_i.parameter(LN_ZETA) * z);
       break;
@@ -116,7 +116,7 @@ void NatafTransformation::trans_Z_to_X(Real z, Real& x, size_t i)
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    x = rv_i.from_std(z);
+    x = rv_i.from_standard(z);
   else {
     PCerr << "Error: unsupported variable mapping for variable " << i
 	  << " in NatafTransformation::trans_Z_to_X()" << std::endl;
@@ -183,7 +183,7 @@ void NatafTransformation::trans_X_to_Z(Real x, Real& z, size_t i)
     z = x;
   else if (u_type == STD_NORMAL) {
     switch (x_type) {
-    case NORMAL:    z = rv_i.to_std(x);                break;
+    case NORMAL:    z = rv_i.to_standard(x); break;
     case LOGNORMAL:
       z = (std::log(x) - rv_i.parameter(LN_LAMBDA)) / rv_i.parameter(LN_ZETA);
       break;      
@@ -211,7 +211,7 @@ void NatafTransformation::trans_X_to_Z(Real x, Real& z, size_t i)
   else if ( (u_type == STD_EXPONENTIAL && x_type == EXPONENTIAL) ||
 	    (u_type == STD_GAMMA       && x_type == GAMMA) ||
 	    (u_type == STD_BETA        && x_type == BETA) )
-    z = rv_i.to_std(x);
+    z = rv_i.to_standard(x);
   else {
     PCerr << "Error: unsupported variable mapping for variable " << i
 	  << " in NatafTransformation::trans_X_to_Z()" << std::endl;

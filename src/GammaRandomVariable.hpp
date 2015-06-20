@@ -54,9 +54,11 @@ public:
   Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
 
+  Real standard_pdf(Real z) const;
+
   // inherited from ExponentialRandomVariable
-  //Real to_std(Real x) const;
-  //Real from_std(Real z) const;
+  //Real to_standard(Real x) const;
+  //Real from_standard(Real z) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -152,6 +154,13 @@ inline Real GammaRandomVariable::pdf_gradient(Real x) const
 //{
 //  return pdf(x) * ...; // TO DO
 //}
+
+
+inline Real GammaRandomVariable::standard_pdf(Real z) const
+{
+  gamma_dist gamma1(alphaStat, 1.);
+  return bmth::pdf(gamma1, z);
+}
 
 
 inline Real GammaRandomVariable::parameter(short dist_param) const

@@ -50,8 +50,10 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
 
-  Real to_std(Real x) const;
-  Real from_std(Real z) const;
+  Real standard_pdf(Real z) const;
+
+  Real to_standard(Real x) const;
+  Real from_standard(Real z) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -207,7 +209,11 @@ inline Real UniformRandomVariable::pdf_hessian(Real x) const
 { return 0.; }
 
 
-inline Real UniformRandomVariable::to_std(Real x) const
+inline Real UniformRandomVariable::standard_pdf(Real z) const
+{ return std_pdf(); }
+
+
+inline Real UniformRandomVariable::to_standard(Real x) const
 {
   // [L,U] -> [-1,1]
   if      (x >= upperBnd) return  1.;
@@ -216,7 +222,7 @@ inline Real UniformRandomVariable::to_std(Real x) const
 }
 
 
-inline Real UniformRandomVariable::from_std(Real z) const
+inline Real UniformRandomVariable::from_standard(Real z) const
 {
   // [-1,1] -> [L,U]
   if      (z >=  1.) return upperBnd;

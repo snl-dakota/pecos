@@ -193,6 +193,24 @@ public:
   /// assemble upper bounds from RandomVariable::bounds()
   RealVector x_upper_bounds() const;
 
+  /// return the univariate PDF value for an x-space random variable
+  Real x_pdf(Real x_val, size_t i) const;
+  /// return the univariate log PDF value for an x-space random variable
+  Real x_log_pdf(Real x_val, size_t i) const;
+  /// return the univariate PDF value for a u-space random variable
+  Real u_pdf(Real u_val, size_t i) const;
+  /// return the univariate log PDF value for a u-space random variable
+  Real u_log_pdf(Real u_val, size_t i) const;
+
+  /// return the multivariate PDF value for x-space random variables
+  Real x_pdf(const RealVector& x_pt) const;
+  /// return the multivariate log PDF value for x-space random variables
+  Real x_log_pdf(const RealVector& x_pt) const;
+  /// return the multivariate PDF value for u-space random variables
+  Real u_pdf(const RealVector& u_pt) const;
+  /// return the multivariate log PDF value for u-space random variables
+  Real u_log_pdf(const RealVector& u_pt) const;
+
   /// return ranVarTypesU
   const ShortArray& u_types() const;
   /// set ranVarTypesU
@@ -364,6 +382,118 @@ inline RealVector ProbabilityTransformation::x_upper_bounds() const
     for (i=0; i<num_v; ++i)
       upr_bnds[i] = randomVarsX[i].bounds().second;
     return upr_bnds;
+  }
+}
+
+
+inline Real ProbabilityTransformation::x_pdf(Real x_val, size_t i) const
+{
+  return (probTransRep) ? probTransRep->randomVarsX[i].pdf(x_val) :
+    randomVarsX[i].pdf(x_val);
+}
+
+
+inline Real ProbabilityTransformation::x_log_pdf(Real x_val, size_t i) const
+{
+  return (probTransRep) ? probTransRep->randomVarsX[i].log_pdf(x_val) :
+    randomVarsX[i].log_pdf(x_val);
+}
+
+
+inline Real ProbabilityTransformation::u_pdf(Real u_val, size_t i) const
+{
+  if (probTransRep) return probTransRep->u_pdf(u_val, i);
+  else {
+    switch (ranVarTypesU[i]) {
+    case STD_NORMAL: case STD_UNIFORM: case STD_EXPONENTIAL:
+    case STD_BETA:   case STD_GAMMA:
+      return randomVarsX[i].standard_pdf(u_val);
+    default: // no transformation (e.g., PCE with numerically-generated bases)
+      return randomVarsX[i].pdf(u_val);
+    }
+  }
+}
+
+
+inline Real ProbabilityTransformation::u_log_pdf(Real u_val, size_t i) const
+{
+  if (probTransRep) return probTransRep->u_log_pdf(u_val, i);
+  else {
+    switch (ranVarTypesU[i]) {
+    case STD_NORMAL: case STD_UNIFORM: case STD_EXPONENTIAL:
+    case STD_BETA:   case STD_GAMMA:
+      return randomVarsX[i].log_standard_pdf(u_val);
+    default: // no transformation (e.g., PCE with numerically-generated bases)
+      return randomVarsX[i].log_pdf(u_val);
+    }
+  }
+}
+
+
+inline Real ProbabilityTransformation::x_pdf(const RealVector& x_pt) const
+{
+  if (probTransRep) return probTransRep->x_pdf(x_pt);
+  else {
+    // TO DO: add support for evaluation of correlated MVN density
+    if (correlationFlagX) {
+      PCerr << "Error: ProbabilityTransformation::x_pdf() currently uses a "
+	    << "product of marginal densities\n       and can only be used for "
+	    << "independent random variables." << std::endl;
+      abort_handler(-1);
+    }
+    size_t i, num_v = randomVarsX.size();
+    Real density = 1.;
+    for (i=0; i<num_v; ++i)
+      density *= x_pdf(x_pt[i], i);
+    return density;
+  }
+}
+
+
+inline Real ProbabilityTransformation::x_log_pdf(const RealVector& x_pt) const
+{
+  if (probTransRep) return probTransRep->x_log_pdf(x_pt);
+  else {
+    // TO DO: add support for evaluation of correlated MVN density
+    if (correlationFlagX) {
+      PCerr << "Error: ProbabilityTransformation::x_log_pdf() currently uses a "
+	    << "sum of log marginal densities\n       and can only be used for "
+	    << "independent random variables." << std::endl;
+      abort_handler(-1);
+    }
+    size_t i, num_v = randomVarsX.size();
+    Real log_density = 0.;
+    for (i=0; i<num_v; ++i)
+      log_density += x_log_pdf(x_pt[i], i);
+    return log_density;
+  }
+}
+
+
+inline Real ProbabilityTransformation::u_pdf(const RealVector& u_pt) const
+{
+  if (probTransRep) return probTransRep->u_pdf(u_pt);
+  else {
+    // u-space is independent -> use product of marginals
+    size_t i, num_v = randomVarsX.size();
+    Real density = 1.;
+    for (i=0; i<num_v; ++i)
+      density *= u_pdf(u_pt[i], i);
+    return density;
+  }
+}
+
+
+inline Real ProbabilityTransformation::u_log_pdf(const RealVector& u_pt) const
+{
+  if (probTransRep) return probTransRep->u_log_pdf(u_pt);
+  else {
+    // u-space is independent -> use sum of log marginals
+    size_t i, num_v = randomVarsX.size();
+    Real log_density = 0.;
+    for (i=0; i<num_v; ++i)
+      log_density += u_log_pdf(u_pt[i], i);
+    return log_density;
   }
 }
 

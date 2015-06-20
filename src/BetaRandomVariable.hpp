@@ -53,9 +53,11 @@ public:
   Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
 
+  Real standard_pdf(Real z) const;
+
   // inherited from UniformRandomVariable
-  //Real to_std(Real x) const;
-  //Real from_std(Real z) const;
+  //Real to_standard(Real x) const;
+  //Real from_standard(Real z) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -162,8 +164,8 @@ inline Real BetaRandomVariable::pdf(Real x) const
 {
   //return pdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
 
-  Real scale = upperBnd - lowerBnd, scaled_x = (x - lowerBnd)/scale;
-  return bmth::pdf(*betaDist, scaled_x) / scale;
+  Real range = upperBnd - lowerBnd, scaled_x = (x - lowerBnd)/range;
+  return bmth::pdf(*betaDist, scaled_x) / range;
 }
 
 
@@ -178,6 +180,13 @@ inline Real BetaRandomVariable::pdf_gradient(Real x) const
 //{
 //  return pdf(x) * ...; // TO DO
 //}
+
+
+inline Real BetaRandomVariable::standard_pdf(Real z) const
+{
+  Real scaled_z = (z + 1.)/2.; // [-1,1] to [0,1]
+  return bmth::pdf(*betaDist, scaled_z) / 2.;
+}
 
 
 inline Real BetaRandomVariable::parameter(short dist_param) const
@@ -290,40 +299,44 @@ update(Real alpha, Real beta, Real lwr, Real upr)
 }
 
 
-inline Real BetaRandomVariable::std_pdf(Real x, Real alpha, Real beta)
+inline Real BetaRandomVariable::std_pdf(Real z, Real alpha, Real beta)
 {
   beta_dist beta1(alpha, beta);
-  return bmth::pdf(beta1, x);
+  Real scaled_z = (z + 1.)/2.; // [-1,1] to [0,1]
+  return bmth::pdf(beta1, scaled_z) / 2.;
 }
 
 
-inline Real BetaRandomVariable::std_cdf(Real x, Real alpha, Real beta)
+inline Real BetaRandomVariable::std_cdf(Real z, Real alpha, Real beta)
 {
   beta_dist beta1(alpha, beta);
-  return bmth::cdf(beta1, x);
+  Real scaled_z = (z + 1.)/2.; // [-1,1] to [0,1]
+  return bmth::cdf(beta1, scaled_z);
 }
 
 
 inline Real BetaRandomVariable::inverse_std_cdf(Real cdf, Real alpha, Real beta)
 {
   beta_dist beta1(alpha, beta);
-  return bmth::quantile(beta1, cdf);
+  return 2.*bmth::quantile(beta1, cdf) - 1.; // [0,1] to [-1,1]
 }
 
 
 inline Real BetaRandomVariable::
 pdf(Real x, Real alpha, Real beta, Real lwr, Real upr)
 {
-  Real scale = upr - lwr, scaled_x = (x - lwr)/scale;
-  return std_pdf(scaled_x, alpha, beta) / scale;
+  beta_dist beta1(alpha, beta);
+  Real range = upr - lwr, scaled_x = (x - lwr)/range; // from [L,U] to [0,1]
+  return bmth::pdf(beta1, scaled_x) / range;
 }
 
 
 inline Real BetaRandomVariable::
 cdf(Real x, Real alpha, Real beta, Real lwr, Real upr)
 {
-  Real scaled_x = (x - lwr)/(upr - lwr);
-  return std_cdf(scaled_x, alpha, beta);
+  beta_dist beta1(alpha, beta);
+  Real scaled_x = (x - lwr)/(upr - lwr); // from [L,U] to [0,1]
+  return bmth::cdf(beta1, scaled_x);
 }
 
 

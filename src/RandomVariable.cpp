@@ -264,25 +264,45 @@ Real RandomVariable::log_pdf(Real x) const
 }
 
 
-Real RandomVariable::to_std(Real x) const
+Real RandomVariable::standard_pdf(Real z) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: to_std() not supported for this random variable type."
-	  << std::endl;
+    PCerr << "Error: standard_pdf() not supported for this random variable "
+	  << "type." << std::endl;
     abort_handler(-1);
   }
-  return ranVarRep->to_std(x); // forward to letter
+  return ranVarRep->standard_pdf(z); // forward to letter
 }
 
 
-Real RandomVariable::from_std(Real x) const
+Real RandomVariable::log_standard_pdf(Real z) const
+{
+  if (ranVarRep) // forward to letter
+    return ranVarRep->log_standard_pdf(z);
+  else // default (overriden for exponential standard_pdf)
+    return std::log(standard_pdf(z));
+}
+
+
+Real RandomVariable::to_standard(Real x) const
 {
   if (!ranVarRep) {
-    PCerr << "Error: from_std() not supported for this random variable type."
+    PCerr << "Error: to_standard() not supported for this random variable type."
 	  << std::endl;
     abort_handler(-1);
   }
-  return ranVarRep->from_std(x); // forward to letter
+  return ranVarRep->to_standard(x); // forward to letter
+}
+
+
+Real RandomVariable::from_standard(Real x) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: from_standard() not supported for this random variable "
+	  << "type." << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->from_standard(x); // forward to letter
 }
 
 
