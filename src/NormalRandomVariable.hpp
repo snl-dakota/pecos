@@ -82,20 +82,21 @@ public:
 
   // standard normal distributions
 
-  static Real std_pdf(Real beta);
-  //static Real phi(Real beta);
+  static Real std_pdf(Real z);
+  //static Real phi(Real z);
   static Real mvn_std_pdf(Real beta, size_t n);
   static Real mvn_std_pdf(const RealVector& u);
 
-  static Real std_cdf(Real beta);
-  static Real std_ccdf(Real beta);
-  //static Real Phi(Real beta);
+  static Real std_cdf(Real z);
+  static Real std_ccdf(Real z);
+  //static Real Phi(Real z);
   static Real inverse_std_cdf(Real p_cdf);
   static Real inverse_std_ccdf(Real p_ccdf);
   //static Real Phi_inverse(Real p_cdf);
 
-  static Real log_std_cdf(Real beta);
-  static Real log_std_ccdf(Real beta);
+  static Real log_std_pdf(Real z);
+  static Real log_std_cdf(Real z);
+  static Real log_std_ccdf(Real z);
   //static Real inverse_log_std_cdf(Real p_cdf);
   //static Real inverse_log_std_ccdf(Real p_ccdf);
 
@@ -337,13 +338,13 @@ inline Real NormalRandomVariable::cdf(Real x, Real mean, Real std_dev)
 }
 
 
-/** returns a cumulative probability < 0.5 for negative beta and a
-    cumulative probability > 0.5 for positive beta. */
-inline Real NormalRandomVariable::std_pdf(Real beta)
+/** returns a cumulative probability < 0.5 for negative z and a
+    cumulative probability > 0.5 for positive z. */
+inline Real NormalRandomVariable::std_pdf(Real z)
 {
   normal_dist norm(0., 1.);
-  return bmth::pdf(norm, beta);
-  //return std::exp(-beta*beta/2.)/std::sqrt(2.*PI);
+  return bmth::pdf(norm, z);
+  //return std::exp(-z*z/2.)/std::sqrt(2.*PI);
 }
 
 
@@ -370,13 +371,13 @@ inline Real NormalRandomVariable::mvn_std_pdf(const RealVector& u)
 }
 
 
-/** returns a cumulative probability < 0.5 for negative beta and a
-    cumulative probability > 0.5 for positive beta. */
-inline Real NormalRandomVariable::std_cdf(Real beta)
+/** returns a cumulative probability < 0.5 for negative z and a
+    cumulative probability > 0.5 for positive z. */
+inline Real NormalRandomVariable::std_cdf(Real z)
 {
   normal_dist norm(0., 1.);
-  return bmth::cdf(norm, beta);
-  //return .5 + .5*erf(beta/std::sqrt(2.));
+  return bmth::cdf(norm, z);
+  //return .5 + .5*erf(z/std::sqrt(2.));
 }
 
 
@@ -388,10 +389,10 @@ inline Real NormalRandomVariable::inverse_std_cdf(Real p_cdf)
 }
 
 
-inline Real NormalRandomVariable::std_ccdf(Real beta)
+inline Real NormalRandomVariable::std_ccdf(Real z)
 {
   normal_dist norm(0., 1.);
-  return bmth::cdf(complement(norm, beta)); //bmth::cdf(norm, -beta);
+  return bmth::cdf(complement(norm, z)); //bmth::cdf(norm, -z);
 }
 
 
@@ -402,16 +403,20 @@ inline Real NormalRandomVariable::inverse_std_ccdf(Real p_ccdf)
 }
 
 
-// avoid precision loss for large beta > 0 (cdf indistinguishable from 1)
-inline Real NormalRandomVariable::log_std_cdf(Real beta)
-{ return (beta > 0.) ? bmth::log1p(-std_cdf(-beta)) : std::log(std_cdf(beta)); }
+inline Real NormalRandomVariable::log_std_pdf(Real z)
+{ return (-z*z - std::log(2.*PI))/2.; }
 
 
-// avoid precision loss for large beta < 0 (ccdf indistinguishable from 1)
-inline Real NormalRandomVariable::log_std_ccdf(Real beta)
+// avoid precision loss for large z > 0 (cdf indistinguishable from 1)
+inline Real NormalRandomVariable::log_std_cdf(Real z)
+{ return (z > 0.) ? bmth::log1p(-std_cdf(-z)) : std::log(std_cdf(z)); }
+
+
+// avoid precision loss for large z < 0 (ccdf indistinguishable from 1)
+inline Real NormalRandomVariable::log_std_ccdf(Real z)
 {
-  return (beta < 0.) ?
-    bmth::log1p(-std_ccdf(-beta)) : std::log(std_ccdf(beta));
+  return (z < 0.) ?
+    bmth::log1p(-std_ccdf(-z)) : std::log(std_ccdf(z));
 }
 
 
@@ -438,18 +443,18 @@ inline Real NormalRandomVariable::inverse_log_std_ccdf(Real log_p_ccdf)
 
 
 // Univariate standard normal density function.
-inline Real NormalRandomVariable::phi(Real beta)
-{ return std_pdf(beta); }
+inline Real NormalRandomVariable::phi(Real z)
+{ return std_pdf(z); }
 
 
-// returns a cumulative probability < 0.5 for negative beta and a
-// cumulative probability > 0.5 for positive beta.
-inline Real NormalRandomVariable::Phi(Real beta)
-{ return std_cdf(beta); }
+// returns a cumulative probability < 0.5 for negative z and a
+// cumulative probability > 0.5 for positive z.
+inline Real NormalRandomVariable::Phi(Real z)
+{ return std_cdf(z); }
 
 
-// returns a negative beta for cumulative probability < 0.5 and a
-// positive beta for cumulative probability > 0.5.
+// returns a negative z for cumulative probability < 0.5 and a
+// positive z for cumulative probability > 0.5.
 inline Real NormalRandomVariable::Phi_inverse(Real p_cdf)
 { return inverse_std_cdf(p_cdf); }
 */

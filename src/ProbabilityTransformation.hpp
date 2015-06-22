@@ -218,6 +218,9 @@ public:
   /// set ranVarTypesU[i]
   void u_type(short type, size_t i);
 
+  /// verify that randomVarsX[i].type() equals x_type
+  void check_x_type(size_t i, short x_type) const;
+
   /// return correlationFlagX
   bool x_correlation() const;
   /// return corrMatrixX
@@ -306,6 +309,18 @@ private:
 inline const std::vector<RandomVariable>& ProbabilityTransformation::
 x_random_variables() const
 { return (probTransRep) ? probTransRep->randomVarsX : randomVarsX; }
+
+
+inline void ProbabilityTransformation::
+check_x_type(size_t i, short x_type) const
+{
+  if (probTransRep) probTransRep->check_x_type(i, x_type);
+  else if (randomVarsX[i].type() != x_type) {
+    PCerr << "Error: failure in x_type check in ProbabilityTransformation."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
 
 
 inline RealRealPairArray ProbabilityTransformation::x_moments() const
@@ -397,36 +412,6 @@ inline Real ProbabilityTransformation::x_log_pdf(Real x_val, size_t i) const
 {
   return (probTransRep) ? probTransRep->randomVarsX[i].log_pdf(x_val) :
     randomVarsX[i].log_pdf(x_val);
-}
-
-
-inline Real ProbabilityTransformation::u_pdf(Real u_val, size_t i) const
-{
-  if (probTransRep) return probTransRep->u_pdf(u_val, i);
-  else {
-    switch (ranVarTypesU[i]) {
-    case STD_NORMAL: case STD_UNIFORM: case STD_EXPONENTIAL:
-    case STD_BETA:   case STD_GAMMA:
-      return randomVarsX[i].standard_pdf(u_val);
-    default: // no transformation (e.g., PCE with numerically-generated bases)
-      return randomVarsX[i].pdf(u_val);
-    }
-  }
-}
-
-
-inline Real ProbabilityTransformation::u_log_pdf(Real u_val, size_t i) const
-{
-  if (probTransRep) return probTransRep->u_log_pdf(u_val, i);
-  else {
-    switch (ranVarTypesU[i]) {
-    case STD_NORMAL: case STD_UNIFORM: case STD_EXPONENTIAL:
-    case STD_BETA:   case STD_GAMMA:
-      return randomVarsX[i].log_standard_pdf(u_val);
-    default: // no transformation (e.g., PCE with numerically-generated bases)
-      return randomVarsX[i].log_pdf(u_val);
-    }
-  }
 }
 
 

@@ -86,8 +86,9 @@ public:
   //- Heading: Static member functions (global utilities)
   //
 
-  static Real std_pdf(Real x);
-  static Real std_cdf(Real x);
+  static Real std_pdf(Real z);
+  static Real log_std_pdf(Real z);
+  static Real std_cdf(Real z);
 
   static Real pdf(Real x, Real beta);
   static Real cdf(Real x, Real beta);
@@ -313,14 +314,18 @@ inline void ExponentialRandomVariable::update(Real beta)
 
 // static functions:
 
-inline Real ExponentialRandomVariable::std_pdf(Real x)
-{ return std::exp(-x); }
+inline Real ExponentialRandomVariable::std_pdf(Real z)
+{ return std::exp(-z); }
 
 
-inline Real ExponentialRandomVariable::std_cdf(Real x)
+inline Real ExponentialRandomVariable::log_std_pdf(Real z)
+{ return -z; }
+
+
+inline Real ExponentialRandomVariable::std_cdf(Real z)
 {
   // as with log1p(), avoid numerical probs when exp(~0) is ~ 1
-  return -bmth::expm1(-x); //1. - std::exp(-x);
+  return -bmth::expm1(-z); //1. - std::exp(-z);
 }
 
 

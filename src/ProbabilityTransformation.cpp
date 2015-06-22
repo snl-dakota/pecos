@@ -431,6 +431,7 @@ RealRealPairArray ProbabilityTransformation::u_moments() const
       case STD_UNIFORM:     u_mom[i] = RealRealPair(0., unif_stdev); break;
       case STD_EXPONENTIAL: u_mom[i] = RealRealPair(1., 1.);         break;
       case STD_BETA: {
+	check_x_type(i, BETA);
 	Real mean, stdev;
 	BetaRandomVariable::
 	  moments_from_params(randomVarsX[i].parameter(BE_ALPHA),
@@ -439,6 +440,7 @@ RealRealPairArray ProbabilityTransformation::u_moments() const
         u_mom[i] = RealRealPair(mean, stdev); break;
       }
       case STD_GAMMA: {
+	check_x_type(i, GAMMA);
 	Real mean, stdev;
 	GammaRandomVariable::
 	  moments_from_params(randomVarsX[i].parameter(GA_ALPHA), 1.,
@@ -446,6 +448,7 @@ RealRealPairArray ProbabilityTransformation::u_moments() const
         u_mom[i] = RealRealPair(mean, stdev); break;
       }
       default: // no transformation (e.g., PCE w/ numerically-generated basis)
+	check_x_type(i, ranVarTypesU[i]);
 	u_mom[i] = randomVarsX[i].moments(); break;
       }
     return u_mom;
@@ -469,9 +472,58 @@ RealRealPairArray ProbabilityTransformation::u_bounds() const
       case STD_EXPONENTIAL: case STD_GAMMA:
 	u_bnds[i] = RealRealPair(0., dbl_inf);       break;
       default: // no transformation (e.g., PCE w/ numerically-generated basis)
+	check_x_type(i, ranVarTypesU[i]);
 	u_bnds[i] = randomVarsX[i].bounds();         break;
       }
     return u_bnds;
+  }
+}
+
+
+Real ProbabilityTransformation::u_pdf(Real u_val, size_t i) const
+{
+  if (probTransRep) return probTransRep->u_pdf(u_val, i);
+  else {
+    // can only use randomVarsX[i].standard_pdf() for cases where u_type is a
+    // standardized form of the x_type.  For STD_NORMAL and STD_UNIFORM, many
+    // x_types can be mapped to these u_types, so use global utility fns
+    // whenever there are no auxilliary parameters to manage.
+    switch (ranVarTypesU[i]) {
+    case STD_NORMAL:  return  NormalRandomVariable::std_pdf(u_val); break;
+    case STD_UNIFORM: return UniformRandomVariable::std_pdf();      break;
+    case STD_EXPONENTIAL:
+      return ExponentialRandomVariable::std_pdf(u_val);             break;
+    case STD_BETA:
+      check_x_type(i, BETA);  return randomVarsX[i].standard_pdf(u_val); break;
+    case STD_GAMMA:
+      check_x_type(i, GAMMA); return randomVarsX[i].standard_pdf(u_val); break;
+    default: // no transformation (e.g., PCE with numerically-generated bases)
+      check_x_type(i, ranVarTypesU[i]);
+      return randomVarsX[i].pdf(u_val); break;
+    }
+  }
+}
+
+
+Real ProbabilityTransformation::u_log_pdf(Real u_val, size_t i) const
+{
+  if (probTransRep) return probTransRep->u_log_pdf(u_val, i);
+  else {
+    switch (ranVarTypesU[i]) {
+    case STD_NORMAL:  return  NormalRandomVariable::log_std_pdf(u_val); break;
+    case STD_UNIFORM: return UniformRandomVariable::log_std_pdf();      break;
+    case STD_EXPONENTIAL:
+      return ExponentialRandomVariable::log_std_pdf(u_val);             break;
+    case STD_BETA:
+      check_x_type(i, BETA);
+      return randomVarsX[i].log_standard_pdf(u_val); break;
+    case STD_GAMMA:
+      check_x_type(i, GAMMA);
+      return randomVarsX[i].log_standard_pdf(u_val); break;
+    default: // no transformation (e.g., PCE with numerically-generated bases)
+      check_x_type(i, ranVarTypesU[i]);
+      return randomVarsX[i].log_pdf(u_val);          break;
+    }
   }
 }
 

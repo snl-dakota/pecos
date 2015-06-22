@@ -81,6 +81,7 @@ public:
   static Real inverse_cdf(Real p_cdf, Real lwr, Real upr);
 
   static Real std_pdf();
+  static Real log_std_pdf();
 
   static Real std_cdf(Real beta);
   static Real std_ccdf(Real beta);
@@ -119,6 +120,10 @@ inline UniformRandomVariable::~UniformRandomVariable()
 
 inline Real UniformRandomVariable::std_pdf()
 { return 0.5; } // equal probability on [-1,1]
+
+
+inline Real UniformRandomVariable::log_std_pdf()
+{ return std::log(std_pdf()); }
 
 
 inline Real UniformRandomVariable::std_cdf(Real x)
