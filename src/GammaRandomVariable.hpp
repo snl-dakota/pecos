@@ -52,9 +52,13 @@ public:
 
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
-  //Real pdf_hessian(Real x) const;
+  Real pdf_hessian(Real x) const;
+  Real log_pdf(Real x) const;
+  Real log_pdf_hessian(Real x) const;
 
   Real standard_pdf(Real z) const;
+  Real log_standard_pdf(Real z) const;
+  Real log_standard_pdf_hessian(Real z) const;
 
   // inherited from ExponentialRandomVariable
   //Real to_standard(Real x) const;
@@ -135,25 +139,34 @@ inline Real GammaRandomVariable::inverse_ccdf(Real p_ccdf) const
 
 
 //  F(x) = Boost
-//  f(x) = beta^(-alpha) x^(alpha-1) e^(-x/beta) / GammaFn(alpha)
-// f'(x) = beta^(-alpha)/GammaFn(alpha) (e^(-x/beta) (alpha-1) x^(alpha-2)
-//                                       - x^(alpha-1) e^(-x/beta)/beta)
+//  f(x) = x^(alpha-1) e^(-x/beta) / GammaFn(alpha) / beta^alpha
+// f'(x) = [e^(-x/beta) (alpha-1) x^(alpha-2) - x^(alpha-1) e^(-x/beta)/beta]
+//       / GammaFn(alpha) / beta^alpha
+//       = f(x) [ (alpha-1)/x - 1/beta ]
 inline Real GammaRandomVariable::pdf(Real x) const
 { return bmth::pdf(*gammaDist, x); }
 
 
 inline Real GammaRandomVariable::pdf_gradient(Real x) const
+{ return pdf(x) * ((alphaStat-1.)/x - 1./betaStat); }
+
+
+inline Real GammaRandomVariable::pdf_hessian(Real x) const
 {
-  return std::pow(betaStat,-alphaStat) / bmth::tgamma(alphaStat) *
-    (std::exp(-x/betaStat)*(alphaStat-1.) * std::pow(x,alphaStat-2.) -
-     std::pow(x,alphaStat-1.) * std::exp(-x/betaStat)/betaStat);
+  Real am1 = alphaStat - 1., term = am1 / x - 1. / betaStat;
+  return pdf(x) * (term*term - am1 / (x*x));
 }
 
 
-//inline Real GammaRandomVariable::pdf_hessian(Real x) const
-//{
-//  return pdf(x) * ...; // TO DO
-//}
+inline Real GammaRandomVariable::log_pdf(Real x) const
+{
+  return (alphaStat-1.)*std::log(x) - x/betaStat
+    - std::log(bmth::tgamma(alphaStat)) - alphaStat*std::log(betaStat);
+}
+
+
+inline Real GammaRandomVariable::log_pdf_hessian(Real x) const
+{ return (1.-alphaStat)/(x*x); }
 
 
 inline Real GammaRandomVariable::standard_pdf(Real z) const
@@ -161,6 +174,14 @@ inline Real GammaRandomVariable::standard_pdf(Real z) const
   gamma_dist gamma1(alphaStat, 1.);
   return bmth::pdf(gamma1, z);
 }
+
+
+inline Real GammaRandomVariable::log_standard_pdf(Real z) const
+{ return (alphaStat-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaStat)); }
+
+
+inline Real GammaRandomVariable::log_standard_pdf_hessian(Real z) const
+{ return (1.-alphaStat)/(z*z); }
 
 
 inline Real GammaRandomVariable::parameter(short dist_param) const

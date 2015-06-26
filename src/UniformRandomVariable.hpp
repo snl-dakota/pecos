@@ -49,8 +49,10 @@ public:
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
+  Real log_pdf_hessian(Real x) const;
 
   Real standard_pdf(Real z) const;
+  Real log_standard_pdf_hessian(Real x) const;
 
   Real to_standard(Real x) const;
   Real from_standard(Real z) const;
@@ -82,6 +84,7 @@ public:
 
   static Real std_pdf();
   static Real log_std_pdf();
+  static Real log_std_pdf_hessian();
 
   static Real std_cdf(Real beta);
   static Real std_ccdf(Real beta);
@@ -124,6 +127,10 @@ inline Real UniformRandomVariable::std_pdf()
 
 inline Real UniformRandomVariable::log_std_pdf()
 { return std::log(std_pdf()); }
+
+
+inline Real UniformRandomVariable::log_std_pdf_hessian()
+{ return 0.; }
 
 
 inline Real UniformRandomVariable::std_cdf(Real x)
@@ -214,8 +221,16 @@ inline Real UniformRandomVariable::pdf_hessian(Real x) const
 { return 0.; }
 
 
+inline Real UniformRandomVariable::log_pdf_hessian(Real x) const
+{ return 0.; }
+
+
 inline Real UniformRandomVariable::standard_pdf(Real z) const
 { return std_pdf(); }
+
+
+inline Real UniformRandomVariable::log_standard_pdf_hessian(Real x) const
+{ return 0.; }
 
 
 inline Real UniformRandomVariable::to_standard(Real x) const

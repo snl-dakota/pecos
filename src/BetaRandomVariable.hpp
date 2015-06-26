@@ -51,9 +51,13 @@ public:
 
   Real pdf(Real x) const;
   Real pdf_gradient(Real x) const;
-  //Real pdf_hessian(Real x) const;
+  Real pdf_hessian(Real x) const;
+  Real log_pdf(Real x) const;
+  Real log_pdf_hessian(Real x) const;
 
   Real standard_pdf(Real z) const;
+  Real log_standard_pdf(Real z) const;
+  Real log_standard_pdf_hessian(Real z) const;
 
   // inherited from UniformRandomVariable
   //Real to_standard(Real x) const;
@@ -158,13 +162,15 @@ inline Real BetaRandomVariable::inverse_ccdf(Real p_ccdf) const
 
 
 //  F(x) = Boost
-//  f(x) = Boost
+//  f(x) = (x-L)^{alpha-1} (U-x)^{beta-1}
+//       / Beta(alpha,beta) / (U-L)^{alpha+beta-1}
 // f'(x) = f(x) ((alpha-1)/(x-lwr) - (beta-1)/(upr-x))
 inline Real BetaRandomVariable::pdf(Real x) const
 {
   //return pdf(x, alphaStat, betaStat, lowerBnd, upperBnd);
 
-  Real range = upperBnd - lowerBnd, scaled_x = (x - lowerBnd)/range;
+  Real range = upperBnd - lowerBnd,
+    scaled_x = (x - lowerBnd)/range; // from [L,U] to [0,1]
   return bmth::pdf(*betaDist, scaled_x) / range;
 }
 
@@ -176,16 +182,50 @@ inline Real BetaRandomVariable::pdf_gradient(Real x) const
 }
 
 
-//inline Real BetaRandomVariable::pdf_hessian(Real x) const
-//{
-//  return pdf(x) * ...; // TO DO
-//}
+inline Real BetaRandomVariable::pdf_hessian(Real x) const
+{
+  Real umx = upperBnd  - x,  xml = x - lowerBnd,
+       am1 = alphaStat - 1., bm1 = betaStat - 1., 
+    term = am1 / xml - bm1 / umx;
+  return pdf(x) * (term * term - bm1/(umx*umx) - am1/(xml*xml));
+}
+
+
+inline Real BetaRandomVariable::log_pdf(Real x) const
+{
+  return (alphaStat-1.)*std::log(x-lowerBnd)
+    + (betaStat-1.)*std::log(upperBnd-x)
+    - (alphaStat+betaStat-1.)*std::log(upperBnd-lowerBnd)
+    - std::log(bmth::beta(alphaStat,betaStat));
+}
+
+
+inline Real BetaRandomVariable::log_pdf_hessian(Real x) const
+{
+  Real umx = upperBnd - x,  xml = x - lowerBnd;
+  return (1.-alphaStat)/(xml*xml) + (1.-betaStat)/(umx*umx);
+}
 
 
 inline Real BetaRandomVariable::standard_pdf(Real z) const
 {
   Real scaled_z = (z + 1.)/2.; // [-1,1] to [0,1]
   return bmth::pdf(*betaDist, scaled_z) / 2.;
+}
+
+
+inline Real BetaRandomVariable::log_standard_pdf(Real z) const
+{
+  return (alphaStat-1.)*bmth::log1p(z) + (betaStat-1.)*bmth::log1p(-z)
+    - (alphaStat+betaStat-1.)*std::log(2.)
+    - std::log(bmth::beta(alphaStat,betaStat));
+}
+
+
+inline Real BetaRandomVariable::log_standard_pdf_hessian(Real z) const
+{
+  Real umz = 1. - z,  zml = z + 1.;
+  return (1.-alphaStat)/(zml*zml) + (1.-betaStat)/(umz*umz);
 }
 
 

@@ -55,9 +55,11 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
+  Real log_pdf_hessian(Real x) const;
 
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
+  Real log_standard_pdf_hessian(Real z) const;
 
   Real to_standard(Real x) const;
   Real from_standard(Real z) const;
@@ -88,7 +90,10 @@ public:
 
   static Real std_pdf(Real z);
   static Real log_std_pdf(Real z);
+  static Real log_std_pdf_hessian(Real z);
+
   static Real std_cdf(Real z);
+  static Real std_ccdf(Real z);
 
   static Real pdf(Real x, Real beta);
   static Real cdf(Real x, Real beta);
@@ -162,12 +167,20 @@ inline Real ExponentialRandomVariable::log_pdf(Real x) const
 { return -x / betaStat - std::log(betaStat); }
 
 
+inline Real ExponentialRandomVariable::log_pdf_hessian(Real x) const
+{ return 0.; }
+
+
 inline Real ExponentialRandomVariable::standard_pdf(Real z) const
 { return std::exp(-z); }
 
 
 inline Real ExponentialRandomVariable::log_standard_pdf(Real z) const
 { return -z; }
+
+
+inline Real ExponentialRandomVariable::log_standard_pdf_hessian(Real x) const
+{ return 0.; }
 
 
 inline Real ExponentialRandomVariable::to_standard(Real x) const
@@ -322,11 +335,19 @@ inline Real ExponentialRandomVariable::log_std_pdf(Real z)
 { return -z; }
 
 
+inline Real ExponentialRandomVariable::log_std_pdf_hessian(Real z)
+{ return 0.; }
+
+
 inline Real ExponentialRandomVariable::std_cdf(Real z)
 {
   // as with log1p(), avoid numerical probs when exp(~0) is ~ 1
   return -bmth::expm1(-z); //1. - std::exp(-z);
 }
+
+
+inline Real ExponentialRandomVariable::std_ccdf(Real z)
+{ return std::exp(-z); }
 
 
 inline Real ExponentialRandomVariable::pdf(Real x, Real beta)
