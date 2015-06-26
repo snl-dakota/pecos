@@ -90,7 +90,7 @@ public:
 
   static Real std_pdf(Real z);
   static Real log_std_pdf(Real z);
-  static Real log_std_pdf_hessian(Real z);
+  static Real log_std_pdf_hessian();
 
   static Real std_cdf(Real z);
   static Real std_ccdf(Real z);
@@ -335,7 +335,7 @@ inline Real ExponentialRandomVariable::log_std_pdf(Real z)
 { return -z; }
 
 
-inline Real ExponentialRandomVariable::log_std_pdf_hessian(Real z)
+inline Real ExponentialRandomVariable::log_std_pdf_hessian()
 { return 0.; }
 
 

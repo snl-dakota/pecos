@@ -97,7 +97,7 @@ public:
   //static Real Phi_inverse(Real p_cdf);
 
   static Real log_std_pdf(Real z);
-  static Real log_std_pdf_hessian(Real z);
+  static Real log_std_pdf_hessian();
 
   static Real log_std_cdf(Real z);
   static Real log_std_ccdf(Real z);
@@ -188,10 +188,7 @@ inline Real NormalRandomVariable::log_pdf(Real x) const
 
 
 inline Real NormalRandomVariable::log_pdf_hessian(Real x) const
-{
-  Real xms = (x - gaussMean) / gaussStdDev;
-  return -1. / (gaussStdDev * gaussStdDev);
-}
+{ return -1. / (gaussStdDev * gaussStdDev); }
 
 
 inline Real NormalRandomVariable::standard_pdf(Real z) const
@@ -422,7 +419,7 @@ inline Real NormalRandomVariable::log_std_pdf(Real z)
 { return (-z*z - std::log(2.*PI))/2.; }
 
 
-inline Real NormalRandomVariable::log_std_pdf_hessian(Real z)
+inline Real NormalRandomVariable::log_std_pdf_hessian()
 { return -1.; }
 
 

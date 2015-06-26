@@ -532,11 +532,11 @@ Real ProbabilityTransformation::u_log_pdf_hessian(Real u_val, size_t i) const
   else {
     switch (ranVarTypesU[i]) {
     case STD_NORMAL:
-      return      NormalRandomVariable::log_std_pdf_hessian(u_val); break;
+      return      NormalRandomVariable::log_std_pdf_hessian(); break;
     case STD_UNIFORM:
-      return     UniformRandomVariable::log_std_pdf_hessian();      break;
+      return     UniformRandomVariable::log_std_pdf_hessian(); break;
     case STD_EXPONENTIAL:
-      return ExponentialRandomVariable::log_std_pdf_hessian(u_val); break;
+      return ExponentialRandomVariable::log_std_pdf_hessian(); break;
     case STD_BETA:
       check_x_type(i, BETA);  // need alphaStat,betaStat for variable i
       return randomVarsX[i].log_standard_pdf_hessian(u_val); break;
