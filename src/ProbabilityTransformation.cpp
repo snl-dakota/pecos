@@ -528,7 +528,7 @@ Real ProbabilityTransformation::u_log_pdf(Real u_val, size_t i) const
 
 Real ProbabilityTransformation::u_log_pdf_hessian(Real u_val, size_t i) const
 {
-  if (probTransRep) return probTransRep->u_log_pdf(u_val, i);
+  if (probTransRep) return probTransRep->u_log_pdf_hessian(u_val, i);
   else {
     switch (ranVarTypesU[i]) {
     case STD_NORMAL:
