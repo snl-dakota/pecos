@@ -155,20 +155,18 @@ ProbabilityTransformation::~ProbabilityTransformation()
 }
 
 
-/** This function is commonly used to publish tranformation data when
-    the Model variables are in a transformed space (e.g., u-space) and
-    ranVarTypes et al. may not be generated directly.  This allows for
-    the use of inverse transformations to return the transformed space
-    variables to their original states.
-    
-    The copy constructor can be used for shallow copies.  This function
-    provides a deep copy. */
+/** This function provides a deep copy (the copy constructor supports
+    shallow copies with shared reps) and is commonly used to publish
+    tranformation data when the Model variables are in a transformed
+    space (e.g., u-space) and x-space data may not be generated
+    directly.  This allows for the use of inverse transformations to
+    return the transformed space variables to their original states. */
 void ProbabilityTransformation::
-initialize_random_variables(const ProbabilityTransformation& prob_trans)
+copy(const ProbabilityTransformation& prob_trans)
 {
   if (probTransRep) // target is envelope
-    probTransRep->initialize_random_variables(prob_trans);
-  else {
+    probTransRep->copy(prob_trans);
+  else { // target is letter
     if (prob_trans.probTransRep) { // source is envelope
       randomVarsX = prob_trans.probTransRep->randomVarsX;//[i].copy(); TO DO
       ranVarTypesU        = prob_trans.probTransRep->ranVarTypesU;

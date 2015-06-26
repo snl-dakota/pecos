@@ -145,15 +145,13 @@ public:
   //- Heading: Member functions
   //
 
-  /// set ranVarTypesX/U, ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
-  /// ranVarUpperBndsX, ranVarAddtlParamsX, corrMatrixX, and correlationFlagX
-  /// based on incoming data
-  void initialize_random_variables(const ProbabilityTransformation& prob_trans);
-  /// initializes ranVarTypesX and ranVarTypesU
+  /// perform a deep copy of incoming prob_trans
+  void copy(const ProbabilityTransformation& prob_trans);
+
+  /// initializes randomVarsX and ranVarTypesU
   void initialize_random_variable_types(const ShortArray& x_types,
 					const ShortArray& u_types);
-  /// initializes ranVarMeansX, ranVarStdDevsX, ranVarLowerBndsX,
-  /// ranVarUpperBndsX, and ranVarAddtlParamsX
+  /// updates parameters within randomVarsX
   void initialize_random_variable_parameters(const RealVector& cd_l_bnds,
 					     const RealVector& cd_u_bnds,
 					     const AleatoryDistParams& adp,
