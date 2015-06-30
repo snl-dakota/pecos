@@ -148,6 +148,8 @@ public:
   /// perform a deep copy of incoming prob_trans
   void copy(const ProbabilityTransformation& prob_trans);
 
+  /// initializes randomVarsX (no transformation: u-space not needed)
+  void initialize_random_variable_types(const ShortArray& x_types);
   /// initializes randomVarsX and ranVarTypesU
   void initialize_random_variable_types(const ShortArray& x_types,
 					const ShortArray& u_types);

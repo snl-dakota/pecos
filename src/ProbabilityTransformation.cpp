@@ -186,6 +186,22 @@ copy(const ProbabilityTransformation& prob_trans)
 
 
 void ProbabilityTransformation::
+initialize_random_variable_types(const ShortArray& x_types)
+{
+  if (probTransRep)
+    probTransRep->initialize_random_variable_types(x_types);
+  else {
+    // (default) construction of x-space random variables occurs once
+    // (updates to distribution parameters can occur repeatedly)
+    size_t i, num_v = x_types.size();
+    randomVarsX.resize(num_v);
+    for (i=0; i<num_v; ++i)
+      randomVarsX[i] = RandomVariable(x_types[i]);
+  }
+}
+
+
+void ProbabilityTransformation::
 initialize_random_variable_types(const ShortArray& x_types,
 				 const ShortArray& u_types)
 {
@@ -193,12 +209,7 @@ initialize_random_variable_types(const ShortArray& x_types,
     probTransRep->initialize_random_variable_types(x_types, u_types);
   else {
     ranVarTypesU = u_types;
-    // (default) construction of x-space random variables occurs once
-    // (updates to distribution parameters can occur repeatedly)
-    size_t i, num_v = x_types.size();
-    randomVarsX.resize(num_v);
-    for (i=0; i<num_v; ++i)
-      randomVarsX[i] = RandomVariable(x_types[i]);
+    initialize_random_variable_types(x_types);
   }
 }
 
