@@ -287,14 +287,14 @@ generate_samples(const EpistemicDistParams& edp, int num_samples,
   AleatoryDistParams adp;
   if (!backfillflag)
     generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa,empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
-		     empty_isa, empty_ssa, empty_rsa, adp, edp, num_samples, 
-		     samples_array, empty_rm);
+		     empty_ssa,empty_rsa, empty_rv, empty_rv, empty_iv,
+		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
+		     num_samples, samples_array, empty_rm);
   else
     generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa,empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv,
-		     empty_isa, empty_ssa, empty_rsa, adp, edp, num_samples, 
-		     samples_array, empty_rm);
+			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv,
+			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
+			    num_samples, samples_array, empty_rm);
 }
 
 
@@ -365,7 +365,7 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
   else
     generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
 			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
+			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
 			    num_samples, samples_array, empty_rm);
 
 }
