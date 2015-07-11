@@ -49,10 +49,10 @@ public:
   Real inverse_ccdf(Real p_ccdf) const;
 
   Real pdf(Real x) const;
-  Real pdf_gradient(Real x) const;
+  //Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
-
-  //Real log_pdf(Real x) const;
+  Real log_pdf(Real x) const;
+  Real log_pdf_hessian(Real x) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -184,14 +184,39 @@ inline Real BoundedNormalRandomVariable::pdf(Real x) const
 { return pdf(x, gaussMean, gaussStdDev, lowerBnd, upperBnd); }
 
 
-inline Real BoundedNormalRandomVariable::pdf_gradient(Real x) const
-{ return pdf(x) * (gaussMean - x) / (gaussStdDev * gaussStdDev); }
+// Same form as base definition for different virtual pdf(x):
+//inline Real BoundedNormalRandomVariable::pdf_gradient(Real x) const
+//{ return pdf(x) * (gaussMean - x) / (gaussStdDev * gaussStdDev); }
 
 
+// Same form as base definition for different virtual pdf(x):
 //inline Real BoundedNormalRandomVariable::pdf_hessian(Real x) const
 //{
-//  return pdf(x) * ...; // TO DO
+//  Real var = gaussStdDev * gaussStdDev, mu_minus_x = gaussMean - x;
+//  return pdf(x) * ( mu_minus_x * mu_minus_x / var - 1. ) / var;
 //}
+
+
+inline Real BoundedNormalRandomVariable::log_pdf(Real x) const
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  if (x < lowerBnd || x > upperBnd) return -dbl_inf;
+  else {
+    Real Phi_lms = (lowerBnd > -dbl_inf) ?
+      std_cdf((lowerBnd-gaussMean)/gaussStdDev) : 0.;
+    Real Phi_ums = (upperBnd <  dbl_inf) ?
+      std_cdf((upperBnd-gaussMean)/gaussStdDev) : 1.;
+    return NormalRandomVariable::log_pdf(x) - std::log(Phi_ums-Phi_lms);
+  }
+}
+
+
+inline Real BoundedNormalRandomVariable::log_pdf_hessian(Real x) const
+{
+  if (x < lowerBnd || x > upperBnd) return 0.;
+  else // same as base definition since std::log(Phi_ums-Phi_lms) term drops
+    return NormalRandomVariable::log_pdf_hessian(x);
+}
 
 
 inline Real BoundedNormalRandomVariable::parameter(short dist_param) const

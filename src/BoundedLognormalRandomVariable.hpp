@@ -49,10 +49,10 @@ public:
   Real inverse_ccdf(Real p_ccdf) const;
 
   Real pdf(Real x) const;
-  Real pdf_gradient(Real x) const;
+  //Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
-
-  //Real log_pdf(Real x) const;
+  Real log_pdf(Real x) const;
+  Real log_pdf_hessian(Real x) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -158,9 +158,9 @@ inline Real BoundedLognormalRandomVariable::inverse_cdf(Real p_cdf) const
     // p = (Phi((log(x)-lambda)/zeta) - Phi_lms)/(Phi_ums - Phi_lms)
     // log(x) = Phi_inverse[p * (Phi_ums - Phi_lms) + Phi_lms] * zeta + lambda
     Real Phi_lms = (lowerBnd > 0.) ?
-      NormalRandomVariable::std_cdf((log(lowerBnd)-lnLambda)/lnZeta) : 0.;
+      NormalRandomVariable::std_cdf((std::log(lowerBnd)-lnLambda)/lnZeta) : 0.;
     Real Phi_ums = (upperBnd < std::numeric_limits<Real>::infinity()) ?
-      NormalRandomVariable::std_cdf((log(upperBnd)-lnLambda)/lnZeta) : 1.;
+      NormalRandomVariable::std_cdf((std::log(upperBnd)-lnLambda)/lnZeta) : 1.;
     return std::exp(lnLambda + lnZeta * NormalRandomVariable::
 		    inverse_std_cdf(p_cdf * (Phi_ums - Phi_lms) + Phi_lms));
   }
@@ -175,9 +175,9 @@ inline Real BoundedLognormalRandomVariable::inverse_ccdf(Real p_ccdf) const
     // p = (Phi_ums - Phi((log(x)-lambda)/zeta))/(Phi_ums - Phi_lms)
     // log(x) = lambda + zeta * Phi_inverse[Phi_ums - p * (Phi_ums - Phi_lms)]
     Real Phi_lms = (lowerBnd > 0.) ?
-      NormalRandomVariable::std_cdf((log(lowerBnd)-lnLambda)/lnZeta) : 0.;
+      NormalRandomVariable::std_cdf((std::log(lowerBnd)-lnLambda)/lnZeta) : 0.;
     Real Phi_ums = (upperBnd < std::numeric_limits<Real>::infinity()) ?
-      NormalRandomVariable::std_cdf((log(upperBnd)-lnLambda)/lnZeta) : 1.;
+      NormalRandomVariable::std_cdf((std::log(upperBnd)-lnLambda)/lnZeta) : 1.;
     return std::exp(lnLambda + lnZeta * NormalRandomVariable::
 		    inverse_std_cdf(Phi_ums - p_ccdf * (Phi_ums - Phi_lms)));
   }
@@ -188,14 +188,39 @@ inline Real BoundedLognormalRandomVariable::pdf(Real x) const
 { return pdf(x, lnLambda, lnZeta, lowerBnd, upperBnd); }
 
 
-inline Real BoundedLognormalRandomVariable::pdf_gradient(Real x) const
-{ return -pdf(x) * (lnZeta + (log(x) - lnLambda) / lnZeta) / (lnZeta * x); }
+// Same form as base definition for different virtual pdf(x):
+//inline Real BoundedLognormalRandomVariable::pdf_gradient(Real x) const
+//{ return -pdf(x) / x * (1. + (std::log(x) - lnLambda) / (lnZeta*lnZeta) ); }
 
 
+// Same form as base definition for different virtual pdf(x):
 //inline Real BoundedLognormalRandomVariable::pdf_hessian(Real x) const
 //{
-//  return pdf(x) * ...; // TO DO
+//  Real zeta_sq = lnZeta*lnZeta, num = (std::log(x) - lnLambda) / zeta_sq;
+//  return pdf(x) / (x*x) * (num * (1. + num) - 1. / zeta_sq);
 //}
+
+
+inline Real BoundedLognormalRandomVariable::log_pdf(Real x) const
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity();
+  if (x < lowerBnd || x > upperBnd) return -dbl_inf;
+  else {
+    Real Phi_lms = (lowerBnd > 0.) ?
+      NormalRandomVariable::std_cdf((std::log(lowerBnd)-lnLambda)/lnZeta) : 0.;
+    Real Phi_ums = (upperBnd < dbl_inf) ?
+      NormalRandomVariable::std_cdf((std::log(upperBnd)-lnLambda)/lnZeta) : 1.;
+    return LognormalRandomVariable::log_pdf(x) - std::log(Phi_ums-Phi_lms);
+  }
+}
+
+
+inline Real BoundedLognormalRandomVariable::log_pdf_hessian(Real x) const
+{
+  if (x < lowerBnd || x > upperBnd) return 0.;
+  else // same as base definition since std::log(Phi_ums-Phi_lms) term drops
+    return LognormalRandomVariable::log_pdf_hessian(x);
+}
 
 
 inline Real BoundedLognormalRandomVariable::parameter(short dist_param) const

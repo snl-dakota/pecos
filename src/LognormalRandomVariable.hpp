@@ -48,10 +48,10 @@ public:
   Real inverse_ccdf(Real p_ccdf) const;
 
   Real pdf(Real x) const;
-  //Real pdf_gradient(Real x) const;
-  //Real pdf_hessian(Real x) const;
-
+  Real pdf_gradient(Real x) const;
+  Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
+  Real log_pdf_hessian(Real x) const;
 
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
@@ -163,22 +163,30 @@ inline Real LognormalRandomVariable::pdf(Real x) const
 }
 
 
-//inline Real LognormalRandomVariable::pdf_gradient(Real x) const
-//{
-//  return pdf(x) * ...; // TO DO
-//}
+inline Real LognormalRandomVariable::pdf_gradient(Real x) const
+{
+  return -pdf(x) / x * (1. + (std::log(x) - lnLambda) / (lnZeta*lnZeta) );
+}
 
 
-//inline Real LognormalRandomVariable::pdf_hessian(Real x) const
-//{
-//  return pdf(x) * ...; // TO DO
-//}
+inline Real LognormalRandomVariable::pdf_hessian(Real x) const
+{
+  Real zeta_sq = lnZeta*lnZeta, num = (std::log(x) - lnLambda) / zeta_sq;
+  return pdf(x) / (x*x) * (num * (1. + num) - 1. / zeta_sq);
+}
 
 
 inline Real LognormalRandomVariable::log_pdf(Real x) const
 {
   Real num = (std::log(x) - lnLambda) / lnZeta;
   return -std::log(std::sqrt(2.*PI) * lnZeta * x) - num*num/2.;
+}
+
+
+inline Real LognormalRandomVariable::log_pdf_hessian(Real x) const
+{
+  Real zeta_sq = lnZeta*lnZeta, lnxml = std::log(x) - lnLambda;
+  return (1. + (lnxml - 1.) / zeta_sq) / (x*x);
 }
 
 
