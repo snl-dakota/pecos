@@ -20,6 +20,10 @@
 #include "FrechetRandomVariable.hpp"
 #include "WeibullRandomVariable.hpp"
 #include "HistogramBinRandomVariable.hpp"
+#include "PoissonRandomVariable.hpp"
+#include "BinomialRandomVariable.hpp"
+#include "NegBinomialRandomVariable.hpp"
+#include "GeometricRandomVariable.hpp"
 
 
 namespace Pecos {
@@ -112,39 +116,6 @@ inline void all_from_lognormal_spec(const RealVector& ln_means,
       std_deviation_from_error_factor(mean, err_fact, std_dev);
     LognormalRandomVariable::params_from_moments(mean, std_dev, lambda, zeta);
   }
-}
-
-
-inline void moments_from_poisson_params(Real lambda, Real& mean, Real& std_dev)
-{
-  mean    = lambda;
-  std_dev = std::sqrt(lambda);
-}
-
-
-inline void moments_from_binomial_params(Real prob_pertrial, int num_trials, 
-                                         Real& mean, Real& std_dev)
-{
-  mean    = prob_pertrial * num_trials;
-  std_dev = std::sqrt(prob_pertrial * num_trials *(1.-prob_pertrial));
-}
-
-
-inline void moments_from_negative_binomial_params(Real prob_pertrial,
-						  int num_trials, Real& mean,
-						  Real& std_dev)
-{
-  mean    = (Real)num_trials * (1.-prob_pertrial)/prob_pertrial;
-  std_dev = std::sqrt((Real)num_trials * (1.-prob_pertrial) /
-		      std::pow(prob_pertrial,2));
-}
-
-
-inline void moments_from_geometric_params(Real prob_pertrial,
-					  Real& mean, Real& std_dev)
-{
-  mean    = (1.-prob_pertrial)/prob_pertrial;
-  std_dev = std::sqrt((1.-prob_pertrial)/std::pow(prob_pertrial,2));
 }
 
 

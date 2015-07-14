@@ -29,6 +29,7 @@ namespace Pecos {
 // Non-default boost math/policy types
 // -----------------------------------
 
+// continuous random variable types:
 typedef bmth::
   normal_distribution< Real,
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
@@ -61,6 +62,28 @@ typedef bmth::
   weibull_distribution< Real,
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
   weibull_dist;
+// discrete random variable types:
+typedef bmth::
+  poisson_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  poisson_dist;
+typedef bmth::
+  binomial_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  binomial_dist;
+typedef bmth::
+  negative_binomial_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  negative_binomial_dist;
+typedef bmth::
+  geometric_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  geometric_dist;
+typedef bmth::
+  hypergeometric_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  hypergeometric_dist;
+// distributions used in statistical utilities (e.g., confidence intervals):
 typedef bmth::
   chi_squared_distribution< Real,
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
@@ -69,10 +92,10 @@ typedef bmth::
   students_t_distribution< Real,
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
   students_t_dist;
-typedef bmth::
-  fisher_f_distribution< Real,
-                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-  fisher_f_dist;
+//typedef bmth::
+//  fisher_f_distribution< Real,
+//                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+//  fisher_f_dist;
 
 
 /// base class for random variable hierarchy

@@ -1,4 +1,3 @@
-
 /*  _______________________________________________________________________
 
     PECOS: Parallel Environment for Creation Of Stochastics
@@ -81,24 +80,32 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
 
   RandomVariable* ran_var_rep;
   switch (ran_var_type) {
+  // continuous random variables:
   case STD_NORMAL: case NORMAL: ran_var_rep = new NormalRandomVariable(); break;
-  case BOUNDED_NORMAL:   ran_var_rep = new BoundedNormalRandomVariable(); break;
-  case LOGNORMAL:        ran_var_rep = new LognormalRandomVariable();     break;
+  case BOUNDED_NORMAL: ran_var_rep = new BoundedNormalRandomVariable();   break;
+  case LOGNORMAL:      ran_var_rep = new LognormalRandomVariable();       break;
   case BOUNDED_LOGNORMAL:
     ran_var_rep = new BoundedLognormalRandomVariable();                   break;
   case STD_UNIFORM: case UNIFORM: case CONTINUOUS_DESIGN:
   case CONTINUOUS_STATE: case CONTINUOUS_INTERVAL:
     ran_var_rep = new UniformRandomVariable();                            break;
-  case LOGUNIFORM:       ran_var_rep = new LoguniformRandomVariable();    break;
-  case TRIANGULAR:       ran_var_rep = new TriangularRandomVariable();    break;
+  case LOGUNIFORM:     ran_var_rep = new LoguniformRandomVariable();      break;
+  case TRIANGULAR:     ran_var_rep = new TriangularRandomVariable();      break;
   case STD_EXPONENTIAL: case EXPONENTIAL:
     ran_var_rep = new ExponentialRandomVariable();                        break;
   case STD_BETA:  case BETA:  ran_var_rep = new BetaRandomVariable();     break;
   case STD_GAMMA: case GAMMA: ran_var_rep = new GammaRandomVariable();    break;
-  case GUMBEL:           ran_var_rep = new GumbelRandomVariable();        break;
-  case FRECHET:          ran_var_rep = new FrechetRandomVariable();       break;
-  case WEIBULL:          ran_var_rep = new WeibullRandomVariable();       break;
-  case HISTOGRAM_BIN:    ran_var_rep = new HistogramBinRandomVariable();  break;
+  case GUMBEL:         ran_var_rep = new GumbelRandomVariable();          break;
+  case FRECHET:        ran_var_rep = new FrechetRandomVariable();         break;
+  case WEIBULL:        ran_var_rep = new WeibullRandomVariable();         break;
+  case HISTOGRAM_BIN:  ran_var_rep = new HistogramBinRandomVariable();    break;
+  // discrete random variables:
+  case POISSON:        ran_var_rep = new PoissonRandomVariable();         break;
+  case BINOMIAL:       ran_var_rep = new BinomialRandomVariable();        break;
+  case NEGATIVE_BINOMIAL: ran_var_rep = new NegBinomialRandomVariable();  break;
+  case GEOMETRIC:      ran_var_rep = new GeometricRandomVariable();       break;
+  //case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
+  //case HISTOGRAM_PT:   ran_var_rep = new HistogramPtRandomVariable();     break;
   default:
     PCerr << "Error: RandomVariable type " << ran_var_type << " not available."
 	  << std::endl;
