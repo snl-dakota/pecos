@@ -92,10 +92,10 @@ typedef bmth::
   students_t_distribution< Real,
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
   students_t_dist;
-//typedef bmth::
-//  fisher_f_distribution< Real,
-//                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
-//  fisher_f_dist;
+typedef bmth::
+  fisher_f_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  fisher_f_dist;
 
 
 /// base class for random variable hierarchy
