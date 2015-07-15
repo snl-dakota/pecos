@@ -73,8 +73,8 @@ public:
   static Real pdf(Real x, Real lwr, Real mode, Real upr);
   static Real cdf(Real x, Real lwr, Real mode, Real upr);
 
-  static void moments_from_params(Real lwr, Real upr, Real mode, Real& mean,
-				  Real& std_dev);
+  static void moments_from_params(Real lwr, Real mode, Real upr,
+				  Real& mean, Real& std_dev);
 
 protected:
 
