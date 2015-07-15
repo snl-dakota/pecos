@@ -112,7 +112,7 @@ inline WeibullRandomVariable::WeibullRandomVariable(Real alpha, Real beta):
 
 
 inline WeibullRandomVariable::~WeibullRandomVariable()
-{ }
+{ if (weibullDist) delete weibullDist; }
 
 
 inline Real WeibullRandomVariable::cdf(Real x) const

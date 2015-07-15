@@ -55,7 +55,8 @@ enum { NO_TYPE=0,
        GAMMA, GUMBEL, FRECHET, WEIBULL, HISTOGRAM_BIN, CONTINUOUS_INTERVAL,
        CONTINUOUS_STATE, STOCHASTIC_EXPANSION,
        // discrete random variable types:
-       POISSON, BINOMIAL, NEGATIVE_BINOMIAL, GEOMETRIC, HYPERGEOMETRIC };
+       POISSON, BINOMIAL, NEGATIVE_BINOMIAL, GEOMETRIC, HYPERGEOMETRIC,
+       HISTOGRAM_PT };
 
 // define special values for secondaryACVarMapTargets/secondaryADVarMapTargets
 enum { NO_TARGET=0, CDV_LWR_BND, CDV_UPR_BND, DDRIV_LWR_BND, DDRIV_UPR_BND,
@@ -143,6 +144,9 @@ enum { INTERPOLATION_OF_PRODUCTS, REINTERPOLATION_OF_PRODUCTS,
 
 /// special values for polynomial expansion combination
 enum { NO_COMBINE=0,  ADD_COMBINE, MULT_COMBINE, ADD_MULT_COMBINE };
+
+/// special values for data types within discrete sets
+enum { NO_DATA=0, INT_DATA, STRING_DATA, REAL_DATA };
 
 
 // ----------------

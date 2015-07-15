@@ -99,7 +99,7 @@ GeometricRandomVariable(Real prob_per_trial):
 
 
 inline GeometricRandomVariable::~GeometricRandomVariable()
-{ }
+{ if (geometricDist) delete geometricDist; }
 
 
 inline Real GeometricRandomVariable::cdf(Real x) const

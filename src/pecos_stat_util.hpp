@@ -24,6 +24,8 @@
 #include "BinomialRandomVariable.hpp"
 #include "NegBinomialRandomVariable.hpp"
 #include "GeometricRandomVariable.hpp"
+#include "HypergeometricRandomVariable.hpp"
+#include "HistogramPtRandomVariable.hpp"
 
 
 namespace Pecos {
@@ -116,77 +118,6 @@ inline void all_from_lognormal_spec(const RealVector& ln_means,
       std_deviation_from_error_factor(mean, err_fact, std_dev);
     LognormalRandomVariable::params_from_moments(mean, std_dev, lambda, zeta);
   }
-}
-
-
-inline void moments_from_hypergeometric_params(int num_total_pop,
-					       int num_sel_pop, 
-					       int num_fail, 
-					       Real& mean, Real& std_dev)
-{
-  mean    = (Real)(num_fail*num_sel_pop)/(Real)num_total_pop;
-  std_dev = std::sqrt((Real)(num_fail*num_sel_pop*(num_total_pop-num_fail)*
-			     (num_total_pop-num_sel_pop))/
-		      (Real)(num_total_pop*num_total_pop*(num_total_pop-1)));
-}
-
-
-/// for integer-valued histogram, return a real-valued mean and std dev
-inline void moments_from_histogram_pt_params(const IntRealMap& hist_pt_prs,
-					     Real& mean, Real& std_dev)
-{
-  // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
-  // assume normalization (counts sum to 1.).
-  mean = std_dev = 0.;
-  Real val, count, prod;
-  IRMCIter cit = hist_pt_prs.begin();
-  IRMCIter cit_end = hist_pt_prs.end();
-  for ( ; cit != cit_end; ++cit) {
-    val = cit->first; count = cit->second; prod = count * val;
-    mean    += prod;
-    std_dev += prod * val;
-  }
-  std_dev = std::sqrt(std_dev - mean * mean);
-}
-
-
-/// for string variables, define the mean as the count-weighted mean
-/// of a zero-based index
-inline void moments_from_histogram_pt_params(const StringRealMap& hist_pt_prs,
-					     Real& mean, Real& std_dev)
-{
-  // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
-  // assume normalization (counts sum to 1.).
-  mean = std_dev = 0.;
-  Real val, count, prod;
-  size_t index = 0;
-  SRMCIter cit = hist_pt_prs.begin();
-  SRMCIter cit_end = hist_pt_prs.end();
-  for ( ; cit != cit_end; ++cit, ++index) {
-    val = index; count = cit->second; prod = count * val;
-    mean    += prod;
-    std_dev += prod * val;
-  }
-  std_dev = std::sqrt(std_dev - mean * mean);
-}
-
-
-/// return the mean and standard deviation of a real-valued point histogram
-inline void moments_from_histogram_pt_params(const RealRealMap& hist_pt_prs,
-					     Real& mean, Real& std_dev)
-{
-  // in point case, (x,y) and (x,c) are equivalent since bins have zero-width.
-  // assume normalization (counts sum to 1.).
-  mean = std_dev = 0.;
-  Real val, count, prod;
-  RRMCIter cit = hist_pt_prs.begin();
-  RRMCIter cit_end = hist_pt_prs.end();
-  for ( ; cit != cit_end; ++cit) {
-    val = cit->first; count = cit->second; prod = count * val;
-    mean    += prod;
-    std_dev += prod * val;
-  }
-  std_dev = std::sqrt(std_dev - mean * mean);
 }
 
 } // namespace Pecos

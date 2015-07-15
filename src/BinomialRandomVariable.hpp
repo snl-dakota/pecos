@@ -35,7 +35,7 @@ public:
   /// default constructor
   BinomialRandomVariable();
   /// alternate constructor
-  BinomialRandomVariable(int num_trials, Real prob_per_trial);
+  BinomialRandomVariable(unsigned int num_trials, Real prob_per_trial);
   /// destructor
   ~BinomialRandomVariable();
 
@@ -60,16 +60,16 @@ public:
   //- Heading: Member functions
   //
 
-  void update(int num_trials, Real prob_per_trial);
+  void update(unsigned int num_trials, Real prob_per_trial);
 
   //
   //- Heading: Static member functions (global utilities)
   //
 
-  static Real pdf(Real x, int num_trials, Real prob_per_trial);
-  static Real cdf(Real x, int num_trials, Real prob_per_trial);
+  static Real pdf(Real x, unsigned int num_trials, Real prob_per_trial);
+  static Real cdf(Real x, unsigned int num_trials, Real prob_per_trial);
 
-  static void moments_from_params(int num_trials, Real prob_per_trial,
+  static void moments_from_params(unsigned int num_trials, Real prob_per_trial,
 				  Real& mean, Real& std_dev);
 
 protected:
@@ -79,7 +79,7 @@ protected:
   //
 
   /// n parameter of binomial random variable
-  int numTrials;
+  unsigned int numTrials;
   /// p parameter of binomial random variable
   Real probPerTrial;
 
@@ -95,7 +95,7 @@ inline BinomialRandomVariable::BinomialRandomVariable():
 
 
 inline BinomialRandomVariable::
-BinomialRandomVariable(int num_trials, Real prob_per_trial):
+BinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
   RandomVariable(BaseConstructor()),
   numTrials(num_trials), probPerTrial(prob_per_trial),
   binomialDist(new binomial_dist((Real)num_trials, prob_per_trial))
@@ -103,7 +103,7 @@ BinomialRandomVariable(int num_trials, Real prob_per_trial):
 
 
 inline BinomialRandomVariable::~BinomialRandomVariable()
-{ }
+{ if (binomialDist) delete binomialDist; }
 
 
 inline Real BinomialRandomVariable::cdf(Real x) const
@@ -142,8 +142,8 @@ inline Real BinomialRandomVariable::parameter(short dist_param) const
 inline void BinomialRandomVariable::parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case BI_TRIALS:      numTrials = (int)val; break;
-  case BI_P_PER_TRIAL: probPerTrial = val;   break;
+  case BI_TRIALS:      numTrials = (unsigned int)std::floor(val+.5); break;
+  case BI_P_PER_TRIAL: probPerTrial = val;                           break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in BinomialRandomVariable::parameter()." << std::endl;
@@ -164,7 +164,8 @@ inline RealRealPair BinomialRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
-inline void BinomialRandomVariable::update(int num_trials, Real prob_per_trial)
+inline void BinomialRandomVariable::
+update(unsigned int num_trials, Real prob_per_trial)
 {
   if (!binomialDist ||
       numTrials != num_trials || probPerTrial != prob_per_trial) {
@@ -177,7 +178,7 @@ inline void BinomialRandomVariable::update(int num_trials, Real prob_per_trial)
 // Static member functions:
 
 inline Real BinomialRandomVariable::
-pdf(Real x, int num_trials, Real prob_per_trial)
+pdf(Real x, unsigned int num_trials, Real prob_per_trial)
 {
   binomial_dist binomial1((Real)num_trials, prob_per_trial);
   return bmth::pdf(binomial1, x);
@@ -185,7 +186,7 @@ pdf(Real x, int num_trials, Real prob_per_trial)
 
 
 inline Real BinomialRandomVariable::
-cdf(Real x, int num_trials, Real prob_per_trial)
+cdf(Real x, unsigned int num_trials, Real prob_per_trial)
 {
   binomial_dist binomial1((Real)num_trials, prob_per_trial);
   return bmth::cdf(binomial1, x);
@@ -193,7 +194,7 @@ cdf(Real x, int num_trials, Real prob_per_trial)
 
 
 inline void BinomialRandomVariable::
-moments_from_params(int num_trials, Real prob_per_trial,
+moments_from_params(unsigned int num_trials, Real prob_per_trial,
 		    Real& mean, Real& std_dev)
 {
   mean    = (Real)num_trials * prob_per_trial;

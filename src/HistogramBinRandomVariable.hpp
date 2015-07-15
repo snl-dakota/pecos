@@ -82,7 +82,7 @@ protected:
   //- Heading: Data
   //
 
-  /// alpha parameter of gumbel random variable
+  /// pairings of abscissas to bin counts
   RealRealMap binPairs;
 };
 

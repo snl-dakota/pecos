@@ -97,7 +97,7 @@ inline PoissonRandomVariable::PoissonRandomVariable(Real lambda):
 
 
 inline PoissonRandomVariable::~PoissonRandomVariable()
-{ }
+{ if (poissonDist) delete poissonDist; }
 
 
 inline Real PoissonRandomVariable::cdf(Real x) const

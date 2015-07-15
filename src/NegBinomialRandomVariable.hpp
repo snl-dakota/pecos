@@ -35,7 +35,7 @@ public:
   /// default constructor
   NegBinomialRandomVariable();
   /// alternate constructor
-  NegBinomialRandomVariable(int num_trials, Real prob_per_trial);
+  NegBinomialRandomVariable(unsigned int num_trials, Real prob_per_trial);
   /// destructor
   ~NegBinomialRandomVariable();
 
@@ -60,16 +60,16 @@ public:
   //- Heading: Member functions
   //
 
-  void update(int num_trials, Real prob_per_trial);
+  void update(unsigned int num_trials, Real prob_per_trial);
 
   //
   //- Heading: Static member functions (global utilities)
   //
 
-  static Real pdf(Real x, int num_trials, Real prob_per_trial);
-  static Real cdf(Real x, int num_trials, Real prob_per_trial);
+  static Real pdf(Real x, unsigned int num_trials, Real prob_per_trial);
+  static Real cdf(Real x, unsigned int num_trials, Real prob_per_trial);
 
-  static void moments_from_params(int num_trials, Real prob_per_trial,
+  static void moments_from_params(unsigned int num_trials, Real prob_per_trial,
 				  Real& mean, Real& std_dev);
 
 protected:
@@ -79,7 +79,7 @@ protected:
   //
 
   /// r parameter of negative binomial random variable
-  int numTrials;
+  unsigned int numTrials;
   /// p parameter of negative binomial random variable
   Real probPerTrial;
 
@@ -95,7 +95,7 @@ inline NegBinomialRandomVariable::NegBinomialRandomVariable():
 
 
 inline NegBinomialRandomVariable::
-NegBinomialRandomVariable(int num_trials, Real prob_per_trial):
+NegBinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
   RandomVariable(BaseConstructor()),
   numTrials(num_trials), probPerTrial(prob_per_trial),
   negBinomialDist(new negative_binomial_dist((Real)num_trials, prob_per_trial))
@@ -103,7 +103,7 @@ NegBinomialRandomVariable(int num_trials, Real prob_per_trial):
 
 
 inline NegBinomialRandomVariable::~NegBinomialRandomVariable()
-{ }
+{ if (negBinomialDist) delete negBinomialDist; }
 
 
 inline Real NegBinomialRandomVariable::cdf(Real x) const
@@ -142,8 +142,8 @@ inline Real NegBinomialRandomVariable::parameter(short dist_param) const
 inline void NegBinomialRandomVariable::parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case NBI_TRIALS:      numTrials = (int)val; break;
-  case NBI_P_PER_TRIAL: probPerTrial = val;   break;
+  case NBI_TRIALS:      numTrials = (unsigned int)std::floor(val+.5); break;
+  case NBI_P_PER_TRIAL: probPerTrial = val;                           break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in NegBinomialRandomVariable::parameter()." << std::endl;
@@ -165,7 +165,7 @@ inline RealRealPair NegBinomialRandomVariable::bounds() const
 
 
 inline void NegBinomialRandomVariable::
-update(int num_trials, Real prob_per_trial)
+update(unsigned int num_trials, Real prob_per_trial)
 {
   if (!negBinomialDist ||
       numTrials != num_trials || probPerTrial != prob_per_trial) {
@@ -178,7 +178,7 @@ update(int num_trials, Real prob_per_trial)
 // Static member functions:
 
 inline Real NegBinomialRandomVariable::
-pdf(Real x, int num_trials, Real prob_per_trial)
+pdf(Real x, unsigned int num_trials, Real prob_per_trial)
 {
   negative_binomial_dist neg_binomial1((Real)num_trials, prob_per_trial);
   return bmth::pdf(neg_binomial1, x);
@@ -186,7 +186,7 @@ pdf(Real x, int num_trials, Real prob_per_trial)
 
 
 inline Real NegBinomialRandomVariable::
-cdf(Real x, int num_trials, Real prob_per_trial)
+cdf(Real x, unsigned int num_trials, Real prob_per_trial)
 {
   negative_binomial_dist neg_binomial1((Real)num_trials, prob_per_trial);
   return bmth::cdf(neg_binomial1, x);
@@ -194,7 +194,7 @@ cdf(Real x, int num_trials, Real prob_per_trial)
 
 
 inline void NegBinomialRandomVariable::
-moments_from_params(int num_trials, Real prob_per_trial,
+moments_from_params(unsigned int num_trials, Real prob_per_trial,
 		    Real& mean, Real& std_dev)
 {
   Real n1mp = (Real)num_trials * (1. - prob_per_trial);

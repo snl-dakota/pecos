@@ -104,8 +104,8 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case BINOMIAL:       ran_var_rep = new BinomialRandomVariable();        break;
   case NEGATIVE_BINOMIAL: ran_var_rep = new NegBinomialRandomVariable();  break;
   case GEOMETRIC:      ran_var_rep = new GeometricRandomVariable();       break;
-  //case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
-  //case HISTOGRAM_PT:   ran_var_rep = new HistogramPtRandomVariable();     break;
+  case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
+  case HISTOGRAM_PT:   ran_var_rep = new HistogramPtRandomVariable();     break;
   default:
     PCerr << "Error: RandomVariable type " << ran_var_type << " not available."
 	  << std::endl;

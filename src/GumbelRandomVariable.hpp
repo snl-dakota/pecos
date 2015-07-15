@@ -115,7 +115,9 @@ inline GumbelRandomVariable::GumbelRandomVariable(Real alpha, Real beta):
 
 
 inline GumbelRandomVariable::~GumbelRandomVariable()
-{ }
+{
+  //if (gumbelDist) delete gumbelDist;
+}
 
 
 inline Real GumbelRandomVariable::cdf(Real x) const
