@@ -105,14 +105,16 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case NEGATIVE_BINOMIAL: ran_var_rep = new NegBinomialRandomVariable();  break;
   case GEOMETRIC:      ran_var_rep = new GeometricRandomVariable();       break;
   case HYPERGEOMETRIC: ran_var_rep = new HypergeometricRandomVariable();  break;
-  case HISTOGRAM_PT:   ran_var_rep = new HistogramPtRandomVariable();     break;
+  case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL:
+    ran_var_rep = new HistogramPtRandomVariable();                        break;
   default:
     PCerr << "Error: RandomVariable type " << ran_var_type << " not available."
 	  << std::endl;
     ran_var_rep = NULL;                                                   break;
   }
 
-  // derived classes cover multiple ranVarTypes, so best to update here:
+  // some derived classes cover multiple ranVarTypes, so override ctor
+  // assignments for those cases:
   if (ran_var_rep)
     ran_var_rep->ranVarType = ran_var_type;
 

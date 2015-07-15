@@ -22,7 +22,8 @@ namespace Pecos {
 
 /// Derived random variable class for geometric random variables.
 
-/** Manages alpha and beta parameters. */
+/** Manages the probPerTrial parameter.  The geometric distribution is a
+    special case of the negative binomial distribution for numTrials = 1. */
 
 class GeometricRandomVariable: public RandomVariable
 {
@@ -88,14 +89,14 @@ protected:
 
 inline GeometricRandomVariable::GeometricRandomVariable():
   RandomVariable(BaseConstructor()), probPerTrial(1.), geometricDist(NULL)
-{ }
+{ ranVarType = GEOMETRIC; }
 
 
 inline GeometricRandomVariable::
 GeometricRandomVariable(Real prob_per_trial):
   RandomVariable(BaseConstructor()), probPerTrial(prob_per_trial),
   geometricDist(new geometric_dist(prob_per_trial))
-{ }
+{ ranVarType = GEOMETRIC; }
 
 
 inline GeometricRandomVariable::~GeometricRandomVariable()

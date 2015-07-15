@@ -22,7 +22,7 @@ namespace Pecos {
 
 /// Derived random variable class for binomial random variables.
 
-/** Manages alpha and beta parameters. */
+/** Manages numTrials and probPerTrial parameters. */
 
 class BinomialRandomVariable: public RandomVariable
 {
@@ -91,7 +91,7 @@ protected:
 inline BinomialRandomVariable::BinomialRandomVariable():
   RandomVariable(BaseConstructor()), numTrials(1), probPerTrial(1.),
   binomialDist(NULL)
-{ }
+{ ranVarType = BINOMIAL; }
 
 
 inline BinomialRandomVariable::
@@ -99,7 +99,7 @@ BinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
   RandomVariable(BaseConstructor()),
   numTrials(num_trials), probPerTrial(prob_per_trial),
   binomialDist(new binomial_dist((Real)num_trials, prob_per_trial))
-{ }
+{ ranVarType = BINOMIAL; }
 
 
 inline BinomialRandomVariable::~BinomialRandomVariable()

@@ -98,12 +98,12 @@ protected:
 
 inline FrechetRandomVariable::FrechetRandomVariable():
   RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(1.)
-{ }
+{ ranVarType = FRECHET; }
 
 
 inline FrechetRandomVariable::FrechetRandomVariable(Real alpha, Real beta):
   RandomVariable(BaseConstructor()), alphaStat(alpha), betaStat(beta)
-{ }
+{ ranVarType = FRECHET; }
 
 
 inline FrechetRandomVariable::~FrechetRandomVariable()

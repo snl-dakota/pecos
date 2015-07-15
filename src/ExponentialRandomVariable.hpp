@@ -25,7 +25,7 @@ namespace Pecos {
 
 /** Manages beta parameter.  Pecos employs the 1/beta exp(-x/beta)
     definition, which differs from the lambda exp(-lambda x) LHS
-    definition (lambda_LHS = 1/beta_PECOS). */
+    and Boost exponential_distribution definitions. */
 
 class ExponentialRandomVariable: public RandomVariable
 {
@@ -113,12 +113,12 @@ protected:
 
 inline ExponentialRandomVariable::ExponentialRandomVariable():
   RandomVariable(BaseConstructor()), betaStat(1.)
-{ }
+{ ranVarType = EXPONENTIAL; }
 
 
 inline ExponentialRandomVariable::ExponentialRandomVariable(Real beta):
   RandomVariable(BaseConstructor()), betaStat(beta)
-{ }
+{ ranVarType = EXPONENTIAL; }
 
 
 inline ExponentialRandomVariable::~ExponentialRandomVariable()

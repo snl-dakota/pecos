@@ -22,7 +22,7 @@ namespace Pecos {
 
 /// Derived random variable class for hypergeometric random variables.
 
-/** Manages alpha and beta parameters. */
+/** Manages numTotalPop, numSelectPop, and numFail parameters. */
 
 class HypergeometricRandomVariable: public RandomVariable
 {
@@ -99,7 +99,7 @@ protected:
 inline HypergeometricRandomVariable::HypergeometricRandomVariable():
   RandomVariable(BaseConstructor()), numTotalPop(1), numSelectPop(1),
   numFail(1), hypergeomDist(NULL)
-{ }
+{ ranVarType = HYPERGEOMETRIC; }
 
 
 inline HypergeometricRandomVariable::
@@ -108,7 +108,7 @@ HypergeometricRandomVariable(unsigned int num_total_pop,
   RandomVariable(BaseConstructor()), numTotalPop(num_total_pop),
   numSelectPop(num_sel_pop), numFail(num_fail),
   hypergeomDist(new hypergeometric_dist(numFail, numSelectPop, numTotalPop))
-{ }
+{ ranVarType = HYPERGEOMETRIC; }
 
 
 inline HypergeometricRandomVariable::~HypergeometricRandomVariable()

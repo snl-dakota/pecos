@@ -109,12 +109,12 @@ protected:
 
 inline UniformRandomVariable::UniformRandomVariable():
   RandomVariable(BaseConstructor()), lowerBnd(-1.), upperBnd(1.)
-{ }
+{ ranVarType = UNIFORM; }
 
 
 inline UniformRandomVariable::UniformRandomVariable(Real lwr, Real upr):
   RandomVariable(BaseConstructor()), lowerBnd(lwr), upperBnd(upr)
-{ }
+{ ranVarType = UNIFORM; }
 
 
 inline UniformRandomVariable::~UniformRandomVariable()

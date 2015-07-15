@@ -22,7 +22,7 @@ namespace Pecos {
 
 /// Derived random variable class for poisson random variables.
 
-/** Manages alpha and beta parameters. */
+/** Manages the lambda parameter. */
 
 class PoissonRandomVariable: public RandomVariable
 {
@@ -87,13 +87,13 @@ protected:
 
 inline PoissonRandomVariable::PoissonRandomVariable():
   RandomVariable(BaseConstructor()), poissonLambda(1.), poissonDist(NULL)
-{ }
+{ ranVarType = POISSON; }
 
 
 inline PoissonRandomVariable::PoissonRandomVariable(Real lambda):
   RandomVariable(BaseConstructor()), poissonLambda(lambda),
   poissonDist(new poisson_dist(lambda))
-{ }
+{ ranVarType = POISSON; }
 
 
 inline PoissonRandomVariable::~PoissonRandomVariable()

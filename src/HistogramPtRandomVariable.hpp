@@ -22,7 +22,8 @@ namespace Pecos {
 
 /// Derived random variable class for gumbel random variables.
 
-/** Manages alpha and beta parameters. */
+/** Manages int, string, or real PtPairs mappings.  At most, one
+    mapping is active at a time. */
 
 class HistogramPtRandomVariable: public RandomVariable
 {
@@ -81,36 +82,30 @@ protected:
   StringRealMap stringPtPairs;
   /// value-count pairs for real values within a set
   RealRealMap realPtPairs;
-
-  /// INT_DATA or STRING_DATA or REAL_DATA
-  short abscissaDataType;
 };
 
 
 inline HistogramPtRandomVariable::HistogramPtRandomVariable():
-  RandomVariable(BaseConstructor()), abscissaDataType(NO_DATA)
+  RandomVariable(BaseConstructor())
 { }
 
 
 inline HistogramPtRandomVariable::
 HistogramPtRandomVariable(const IntRealMap& i_prs):
-  RandomVariable(BaseConstructor()), intPtPairs(i_prs),
-  abscissaDataType(INT_DATA)
-{ }
+  RandomVariable(BaseConstructor()), intPtPairs(i_prs)
+{ ranVarType = HISTOGRAM_PT_INT; }
 
 
 inline HistogramPtRandomVariable::
 HistogramPtRandomVariable(const StringRealMap& s_prs):
-  RandomVariable(BaseConstructor()), stringPtPairs(s_prs),
-  abscissaDataType(STRING_DATA)
-{ }
+  RandomVariable(BaseConstructor()), stringPtPairs(s_prs)
+{ ranVarType = HISTOGRAM_PT_STRING; }
 
 
 inline HistogramPtRandomVariable::
 HistogramPtRandomVariable(const RealRealMap& r_prs):
-  RandomVariable(BaseConstructor()), realPtPairs(r_prs),
-  abscissaDataType(REAL_DATA)
-{ }
+  RandomVariable(BaseConstructor()), realPtPairs(r_prs)
+{ ranVarType = HISTOGRAM_PT_REAL; }
 
 
 inline HistogramPtRandomVariable::~HistogramPtRandomVariable()
@@ -120,10 +115,13 @@ inline HistogramPtRandomVariable::~HistogramPtRandomVariable()
 inline RealRealPair HistogramPtRandomVariable::moments() const
 {
   Real mean, std_dev;
-  switch (abscissaDataType) {
-  case INT_DATA:    moments_from_params(intPtPairs,    mean, std_dev); break;
-  case STRING_DATA: moments_from_params(stringPtPairs, mean, std_dev); break;
-  case REAL_DATA:   moments_from_params(realPtPairs,   mean, std_dev); break;
+  switch (ranVarType) {
+  case HISTOGRAM_PT_INT:
+    moments_from_params(intPtPairs,    mean, std_dev); break;
+  case HISTOGRAM_PT_STRING:
+    moments_from_params(stringPtPairs, mean, std_dev); break;
+  case HISTOGRAM_PT_REAL:
+    moments_from_params(realPtPairs,   mean, std_dev); break;
   }    
   return RealRealPair(mean, std_dev);
 }
@@ -132,13 +130,13 @@ inline RealRealPair HistogramPtRandomVariable::moments() const
 inline RealRealPair HistogramPtRandomVariable::bounds() const
 {
   Real l_bnd, u_bnd;
-  switch (abscissaDataType) {
-  case INT_DATA:    // moments and bounds based on values
+  switch (ranVarType) {
+  case HISTOGRAM_PT_INT:    // moments and bounds based on values
     l_bnd = (Real)intPtPairs.begin()->first;
     u_bnd = (Real)(--intPtPairs.end())->first;    break;
-  case STRING_DATA: // moments and bounds based on indices
+  case HISTOGRAM_PT_STRING: // moments and bounds based on indices
     l_bnd = 0.; u_bnd = (Real)(stringPtPairs.size() - 1); break;
-  case REAL_DATA:   // moments and bounds based on values
+  case HISTOGRAM_PT_REAL:   // moments and bounds based on values
     l_bnd = realPtPairs.begin()->first;
     u_bnd = (--realPtPairs.end())->first;         break;
   }    
@@ -149,21 +147,21 @@ inline RealRealPair HistogramPtRandomVariable::bounds() const
 inline void HistogramPtRandomVariable::update(const IntRealMap& i_prs)
 {
   intPtPairs = i_prs; stringPtPairs.clear(); realPtPairs.clear();
-  abscissaDataType = INT_DATA;
+  ranVarType = HISTOGRAM_PT_INT;
 }
 
 
 inline void HistogramPtRandomVariable::update(const StringRealMap& s_prs)
 {
   stringPtPairs = s_prs; intPtPairs.clear(); realPtPairs.clear();
-  abscissaDataType = STRING_DATA;
+  ranVarType = HISTOGRAM_PT_STRING;
 }
 
 
 inline void HistogramPtRandomVariable::update(const RealRealMap& r_prs)
 {
   realPtPairs = r_prs; intPtPairs.clear(); stringPtPairs.clear(); 
-  abscissaDataType = REAL_DATA;
+  ranVarType = HISTOGRAM_PT_REAL;
 }
 
 

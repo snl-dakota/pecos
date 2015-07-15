@@ -111,14 +111,14 @@ protected:
 
 inline BetaRandomVariable::BetaRandomVariable():
   UniformRandomVariable(), alphaStat(1.), betaStat(1.), betaDist(NULL)
-{ }
+{ ranVarType = BETA; }
 
 
 inline BetaRandomVariable::
 BetaRandomVariable(Real alpha, Real beta, Real lwr, Real upr):
   UniformRandomVariable(lwr, upr), alphaStat(alpha), betaStat(beta),
   betaDist(new beta_dist(alphaStat, betaStat))
-{ }
+{ ranVarType = BETA; }
 
 
 inline BetaRandomVariable::~BetaRandomVariable()

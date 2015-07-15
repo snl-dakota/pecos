@@ -104,14 +104,14 @@ protected:
 inline GumbelRandomVariable::GumbelRandomVariable():
   RandomVariable(BaseConstructor()), alphaStat(1.), betaStat(0.),
   expLimits(std::log(DBL_MAX),std::log(DBL_MIN))//, gumbelDist(NULL)
-{ }
+{ ranVarType = GUMBEL; }
 
 
 inline GumbelRandomVariable::GumbelRandomVariable(Real alpha, Real beta):
   RandomVariable(BaseConstructor()), alphaStat(alpha), betaStat(beta),
   expLimits(std::log(DBL_MAX),std::log(DBL_MIN))
   //gumbelDist(new extreme_value_dist(beta, 1./alpha)) // location, scale
-{ }
+{ ranVarType = GUMBEL; }
 
 
 inline GumbelRandomVariable::~GumbelRandomVariable()

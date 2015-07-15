@@ -109,13 +109,13 @@ protected:
 
 inline GammaRandomVariable::GammaRandomVariable():
   ExponentialRandomVariable(), alphaStat(1.), gammaDist(NULL)
-{ }
+{ ranVarType = GAMMA; }
 
 
 inline GammaRandomVariable::GammaRandomVariable(Real alpha, Real beta):
   ExponentialRandomVariable(beta), alphaStat(alpha),
   gammaDist(new gamma_dist(alphaStat, betaStat))
-{ }
+{ ranVarType = GAMMA; }
 
 
 inline GammaRandomVariable::~GammaRandomVariable()

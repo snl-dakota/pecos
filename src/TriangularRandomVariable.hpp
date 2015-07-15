@@ -92,14 +92,14 @@ protected:
 
 inline TriangularRandomVariable::TriangularRandomVariable():
   UniformRandomVariable(), triangularMode(0), triangDist(NULL)
-{ }
+{ ranVarType = TRIANGULAR; }
 
 
 inline TriangularRandomVariable::
 TriangularRandomVariable(Real lwr, Real mode, Real upr):
   UniformRandomVariable(lwr, upr), triangularMode(mode),
   triangDist(new triangular_dist(lwr, mode, upr))
-{ }
+{ ranVarType = TRIANGULAR; }
 
 
 inline TriangularRandomVariable::~TriangularRandomVariable()

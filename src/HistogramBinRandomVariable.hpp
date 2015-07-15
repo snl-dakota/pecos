@@ -22,7 +22,7 @@ namespace Pecos {
 
 /// Derived random variable class for gumbel random variables.
 
-/** Manages alpha and beta parameters. */
+/** Manages the binPairs mapping. */
 
 class HistogramBinRandomVariable: public RandomVariable
 {
@@ -89,13 +89,13 @@ protected:
 
 inline HistogramBinRandomVariable::HistogramBinRandomVariable():
   RandomVariable(BaseConstructor())
-{ }
+{ ranVarType = HISTOGRAM_BIN; }
 
 
 inline HistogramBinRandomVariable::
 HistogramBinRandomVariable(const RealRealMap& bin_prs):
   RandomVariable(BaseConstructor()), binPairs(bin_prs)
-{ }
+{ ranVarType = HISTOGRAM_BIN; }
 
 
 inline HistogramBinRandomVariable::~HistogramBinRandomVariable()

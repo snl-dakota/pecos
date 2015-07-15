@@ -83,12 +83,12 @@ protected:
 
 inline LoguniformRandomVariable::LoguniformRandomVariable():
   UniformRandomVariable()
-{ }
+{ ranVarType = LOGUNIFORM; }
 
 
 inline LoguniformRandomVariable::LoguniformRandomVariable(Real lwr, Real upr):
   UniformRandomVariable(lwr, upr)
-{ }
+{ ranVarType = LOGUNIFORM; }
 
 
 inline LoguniformRandomVariable::~LoguniformRandomVariable()

@@ -229,7 +229,9 @@ initialize_random_variable_parameters(const RealVector& cd_l_bnds,
   else {
     size_t i, num_v = randomVarsX.size(), cd_cntr = 0, n_cntr = 0, ln_cntr = 0,
       u_cntr = 0, lu_cntr = 0, t_cntr = 0, e_cntr = 0, b_cntr = 0, ga_cntr = 0,
-      gu_cntr = 0, f_cntr = 0, w_cntr = 0, h_cntr = 0, ci_cntr = 0, cs_cntr = 0;
+      gu_cntr = 0, f_cntr = 0, w_cntr = 0, h_cntr = 0, p_cntr = 0, bi_cntr = 0,
+      nbi_cntr = 0, ge_cntr = 0, hge_cntr = 0, hpi_cntr = 0, hps_cntr = 0,
+      hpr_cntr = 0, ci_cntr = 0, cs_cntr = 0;
     Real dbl_inf = std::numeric_limits<Real>::infinity();
     RandomVariable* rv_rep_i;
     const RealVector& ln_means     = adp.lognormal_means();
@@ -322,10 +324,45 @@ initialize_random_variable_parameters(const RealVector& cd_l_bnds,
 	++h_cntr; break;
 
       // discrete int aleatory uncertain
+      case POISSON:
+	((PoissonRandomVariable*)rv_rep_i)->update(adp.poisson_lambda(p_cntr));
+	++p_cntr; break;
+      case BINOMIAL:
+ 	((BinomialRandomVariable*)rv_rep_i)->
+	  update(adp.binomial_num_trials(bi_cntr),
+		 adp.binomial_probability_per_trial(bi_cntr));
+	++bi_cntr; break;
+      case NEGATIVE_BINOMIAL:
+ 	((NegBinomialRandomVariable*)rv_rep_i)->
+	  update(adp.negative_binomial_num_trials(nbi_cntr),
+		 adp.negative_binomial_probability_per_trial(nbi_cntr));
+	++nbi_cntr; break;
+      case GEOMETRIC:
+ 	((GeometricRandomVariable*)rv_rep_i)->
+	  update(adp.geometric_probability_per_trial(ge_cntr));
+	++ge_cntr; break;
+      case HYPERGEOMETRIC:
+ 	((HypergeometricRandomVariable*)rv_rep_i)->
+	  update(adp.hypergeometric_total_population(hge_cntr),
+		 adp.hypergeometric_selected_population(hge_cntr),
+		 adp.hypergeometric_num_drawn(hge_cntr));
+	++hge_cntr; break;
+      case HISTOGRAM_PT_INT:
+ 	((HistogramPtRandomVariable*)rv_rep_i)->
+	  update(adp.histogram_point_int_pairs(hpi_cntr));
+	++hpi_cntr; break;
 
       // discrete string aleatory uncertain
+      case HISTOGRAM_PT_STRING:
+ 	((HistogramPtRandomVariable*)rv_rep_i)->
+	  update(adp.histogram_point_string_pairs(hps_cntr));
+	++hps_cntr; break;
 
       // discrete real aleatory uncertain
+      case HISTOGRAM_PT_REAL:
+ 	((HistogramPtRandomVariable*)rv_rep_i)->
+	  update(adp.histogram_point_real_pairs(hpr_cntr));
+	++hpr_cntr; break;
 
       case CONTINUOUS_INTERVAL: {
 	const RealRealPairRealMap& ci_bp

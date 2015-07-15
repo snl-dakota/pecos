@@ -20,9 +20,13 @@
 namespace Pecos {
 
 
-/// Derived random variable class for binomial random variables.
+/// Derived random variable class for negative binomial random variables.
 
-/** Manages alpha and beta parameters. */
+/** Manages numTrials and probPerTrial parameters.  Note that the geometric
+    distribution is a special case of the negative binomial distribution
+    for numTrials = 1; however, there is currently little benefit to
+    deriving NegBinomialRandomVariable from GeometricRandomVariable (e.g.,
+    the Boost distribution pointers are distinct). */
 
 class NegBinomialRandomVariable: public RandomVariable
 {
@@ -91,7 +95,7 @@ protected:
 inline NegBinomialRandomVariable::NegBinomialRandomVariable():
   RandomVariable(BaseConstructor()), numTrials(1), probPerTrial(1.),
   negBinomialDist(NULL)
-{ }
+{ ranVarType = NEGATIVE_BINOMIAL; }
 
 
 inline NegBinomialRandomVariable::
@@ -99,7 +103,7 @@ NegBinomialRandomVariable(unsigned int num_trials, Real prob_per_trial):
   RandomVariable(BaseConstructor()),
   numTrials(num_trials), probPerTrial(prob_per_trial),
   negBinomialDist(new negative_binomial_dist((Real)num_trials, prob_per_trial))
-{ }
+{ ranVarType = NEGATIVE_BINOMIAL; }
 
 
 inline NegBinomialRandomVariable::~NegBinomialRandomVariable()

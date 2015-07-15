@@ -122,12 +122,12 @@ protected:
 
 inline NormalRandomVariable::NormalRandomVariable():
   RandomVariable(BaseConstructor()), gaussMean(0), gaussStdDev(1.)
-{ }
+{ ranVarType = NORMAL; }
 
 
 inline NormalRandomVariable::NormalRandomVariable(Real mean, Real stdev):
   RandomVariable(BaseConstructor()), gaussMean(mean), gaussStdDev(stdev)
-{ }
+{ ranVarType = NORMAL; }
 
 
 inline NormalRandomVariable::~NormalRandomVariable()

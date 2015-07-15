@@ -105,12 +105,12 @@ protected:
 
 inline LognormalRandomVariable::LognormalRandomVariable():
   RandomVariable(BaseConstructor())
-{ params_from_moments(0., 1., lnLambda, lnZeta); }
+{ ranVarType = LOGNORMAL; params_from_moments(0., 1., lnLambda, lnZeta); }
 
 
 inline LognormalRandomVariable::LognormalRandomVariable(Real lambda, Real zeta):
   RandomVariable(BaseConstructor()), lnLambda(lambda), lnZeta(zeta)
-{ }
+{ ranVarType = LOGNORMAL; }
 
 
 inline LognormalRandomVariable::~LognormalRandomVariable()

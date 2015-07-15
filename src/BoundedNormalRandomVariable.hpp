@@ -87,13 +87,13 @@ protected:
 inline BoundedNormalRandomVariable::BoundedNormalRandomVariable():
   NormalRandomVariable(), lowerBnd(-std::numeric_limits<Real>::infinity()),
   upperBnd(std::numeric_limits<Real>::infinity())
-{ }
+{ ranVarType = BOUNDED_NORMAL; }
 
 
 inline BoundedNormalRandomVariable::
 BoundedNormalRandomVariable(Real mean, Real stdev, Real lwr, Real upr):
   NormalRandomVariable(mean, stdev), lowerBnd(lwr), upperBnd(upr)
-{ }
+{ ranVarType = BOUNDED_NORMAL; }
 
 
 inline BoundedNormalRandomVariable::~BoundedNormalRandomVariable()

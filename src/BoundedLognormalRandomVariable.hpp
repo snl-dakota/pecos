@@ -87,13 +87,13 @@ protected:
 inline BoundedLognormalRandomVariable::BoundedLognormalRandomVariable():
   LognormalRandomVariable(), lowerBnd(0.),
   upperBnd(std::numeric_limits<Real>::infinity())
-{ }
+{ ranVarType = BOUNDED_LOGNORMAL; }
 
 
 inline BoundedLognormalRandomVariable::
 BoundedLognormalRandomVariable(Real lambda, Real zeta, Real lwr, Real upr):
   LognormalRandomVariable(lambda, zeta), lowerBnd(lwr), upperBnd(upr)
-{ }
+{ ranVarType = BOUNDED_LOGNORMAL; }
 
 
 inline BoundedLognormalRandomVariable::~BoundedLognormalRandomVariable()
