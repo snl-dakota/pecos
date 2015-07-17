@@ -771,4 +771,95 @@ void lu_inverse( RealMatrix &L, RealMatrix &U, IntVector &p, RealMatrix &LU_inv 
 		      Teuchos::UPPER_TRI, Teuchos::NON_UNIT_DIAG );
 };
 
+
+void truncated_pivoted_lu_factorization( RealMatrix &A,
+					 RealMatrix &L_factor, 
+					 RealMatrix &U_factor,
+					 IntVector &pivots,
+					 int max_iters,
+					 int num_initial_rows )
+{
+
+  Teuchos::BLAS<int, Real> blas;
+  int num_rows = A.numRows(), num_cols = A.numCols();
+  int min_num_rows_cols = std::min( num_rows, num_cols );
+  max_iters = std::min( max_iters, num_rows );
+
+  // Use L to store both L and U during factoriation then copy out U in post
+  // proccesing
+  L_factor.shapeUninitialized( num_rows, min_num_rows_cols ); 
+  L_factor.assign( A );
+  pivots.sizeUninitialized( num_rows );
+  for ( int i = 0; i < num_rows; i++ )
+    pivots[i] = i;
+
+  int iter = 0;
+  for ( iter = 0; iter < min_num_rows_cols; iter++ )
+    {
+      // find best pivot
+      int pivot =-1;
+      if ( iter < num_initial_rows ){
+	pivot = blas.IAMAX( num_initial_rows-iter, &(L_factor[iter][iter]), 1 )
+	  -1+iter;	
+      }else{
+	pivot = blas.IAMAX( num_rows-iter, &(L_factor[iter][iter]), 1 )-1+iter;	
+      }
+      
+      // update pivots vector
+      int temp_index = pivots[iter];
+      pivots[iter] = pivots[pivot];
+      pivots[pivot] = temp_index;
+      // apply pivots(swap rows) in L factorization
+      for ( int j = 0; j < num_cols; j++ ){
+	Real temp_value = L_factor(iter,j);
+	L_factor(iter,j) = L_factor(pivot,j);
+	L_factor(pivot,j) = temp_value;
+      }
+
+      // check for singularity
+      if ( std::abs( L_factor(iter,iter) ) < 1e-15 ){
+	std::cout << "pivot " << std::abs( L_factor(iter,iter) ) 
+		  << " is to small. Stopping factorization.\n";
+	break;
+      }
+      // update L_factor factoization
+      for ( int i = iter+1; i < num_rows; i++ )
+	L_factor(i,iter) /= L_factor(iter,iter);
+      
+      RealMatrix sub_matrix( Teuchos::View, L_factor, num_rows-iter-1, 
+			     num_cols-iter-1,
+			     iter+1, iter+1 );
+      RealMatrix col_vector( Teuchos::View, L_factor, num_rows-iter-1, 1, 
+			     iter+1, iter );
+      RealMatrix row_vector( Teuchos::View, L_factor, 1, num_cols-iter-1, iter, 
+			     iter+1 );
+
+      sub_matrix.multiply( Teuchos::NO_TRANS, Teuchos::NO_TRANS, 
+			   -1.0, col_vector, row_vector, 1.0 );
+      if ( iter >= max_iters )
+	break;
+    }
+
+  // build L and U matrices
+
+  // extract entries of U from L
+  U_factor.shape( min_num_rows_cols, num_cols );
+  for ( int j = 0; j < num_cols; j++ )
+    {
+      for ( int i = 0; i < std::min( min_num_rows_cols, j+1 ); i++ )
+	U_factor(i,j) = L_factor(i,j);
+    }
+
+  // zero out U entries in L
+  L_factor.reshape( iter, min_num_rows_cols );
+  for ( int j = 0; j < min_num_rows_cols; j++ )
+    {
+      if ( j < iter ) L_factor(j,j) = 1.;
+      for ( int i = 0; i<std::min(j,iter); i++ )
+	L_factor(i,j) = 0.;
+    }
+  // remove unused pivot entries
+  pivots.resize( iter );
+}
+
 } // namespace Pecos

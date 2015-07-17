@@ -5,7 +5,7 @@
  **************************************************************************** */
 // @author Fabian Franzelin (fabian.franzelin@ipvs.uni-stuttgart.de)
 #include "GaussianKDE.hpp"
-#include "RosenblattTransformationGaussianKDE.hpp"
+#include "RosenblattTransformation.hpp"
 #include <cmath>
 #include <limits>
 #include <iostream>

@@ -610,6 +610,24 @@ void cholesky_inverse(  RealMatrix &L, RealMatrix &result,
 void pivoted_qr_factorization( RealMatrix &A, RealMatrix &result_0, 
 			       RealMatrix &result_1, IntVector &result );
 
+/**
+ * \brief Compute an LU factorization with parital row pivoting of the
+ * m-by-n matrix A. The factorization has the form A = P * L * U
+ * where P is the permutation matrix, L is lower triangular with
+ * unit diagonal elements and U is upper triangular.
+
+ * /param max_iters the maximum number of pivots to perform. This is 
+                    distinguishing feature from pivoted_lu_factorization()
+ * /param num_initial_rows The first n rows of A which must be included in the
+ * factorization before any other row can be included
+ */
+void truncated_pivoted_lu_factorization( RealMatrix &A,
+					 RealMatrix &result_0, 
+					 RealMatrix &result_1,
+					 IntVector &values_0,
+					 int max_iters,
+					 int num_initial_rows );
+
 template<typename O, typename T>
 void eye( int N, Teuchos::SerialDenseMatrix<O,T> &result )
 {
