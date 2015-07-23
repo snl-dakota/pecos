@@ -1540,49 +1540,24 @@ void RegressOrthogPolyApproximation::set_fault_info()
 
 
 void RegressOrthogPolyApproximation::
-build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
-		     const UShort2DArray& multi_index)
+build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
-  size_t i, j, a_cntr = 0, b_cntr = 0, num_surr_data_pts = surrData.points(),
-    num_deriv_vars = surrData.num_derivative_variables(),
-    num_v = sharedDataRep->numVars;
-  int num_rows_A =  0, // number of rows in matrix A
-    num_cols_A = multi_index.size(), // candidate expansion size
-    num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs;
+  size_t i, j, a_cntr = 0, num_surr_data_pts = surrData.points(),
+    num_v = sharedDataRep->numVars,  a_grad_cntr = 0;
+  int num_rows_A, num_cols_A = multi_index.size(), // candidate expansion size
+    num_data_pts_fn = num_surr_data_pts, num_data_pts_grad = num_surr_data_pts;
   bool add_val, add_grad;
-  
-  bool multiple_rhs = (expansionCoeffFlag && expansionCoeffGradFlag);
-
-  bool anchor_fn = false, anchor_grad = false;
-  if (surrData.anchor())
-    anchor_fn = anchor_grad = true;
-
-  int num_data_pts_fn = num_surr_data_pts, 
-    num_data_pts_grad = num_surr_data_pts;
-
-  size_t a_grad_cntr = 0, b_grad_cntr = 0;
-
-  points.shapeUninitialized( num_v, num_surr_data_pts );
-  for (i=0; i<num_surr_data_pts; ++i) {
-    for (j=0;j<num_v;j++)
-      points(j,i) = surrData.continuous_variables(i)[j];
-  }
-  //points.print(std::cout);
 
   if (expansionCoeffFlag) {
-    
     // matrix/vector sizing
     num_rows_A = (data_rep->basisConfigOptions.useDerivs) ?
       num_data_pts_fn + num_data_pts_grad * num_v : num_data_pts_fn;
-    num_coeff_rhs = 1;
-    num_rhs = (multiple_rhs) ? num_coeff_rhs + num_grad_rhs : num_coeff_rhs;
 
-    A.shapeUninitialized(num_rows_A,num_cols_A);
-    B.shapeUninitialized(num_rows_A,num_rhs);
-    Real *A_matrix = A.values(), *b_vectors = B.values();
+    A.shapeUninitialized(num_rows_A, num_cols_A);
+    Real *A_matrix = A.values();
     // The "A" matrix is a contiguous block of memory packed in column-major
     // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
     // example, the 6 elements of A(2,3) are stored in the order A(1,1),
@@ -1598,12 +1573,62 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 				       A_matrix, a_grad_cntr);
       }
     }
+  }
+  else if (expansionCoeffGradFlag) {
+    num_rows_A = num_data_pts_grad;
+    A.shapeUninitialized(num_rows_A, num_cols_A);
+    Real *A_matrix = A.values();
+
+    // repack "A" matrix with different Psi omissions
+    a_cntr = 0;
+    for (i=0; i<num_cols_A; ++i) {
+      const UShortArray& mi_i = multi_index[i];
+      for (j=0; j<num_surr_data_pts; ++j) {
+	add_val = false; add_grad = true;
+	if (add_grad) {
+	  A_matrix[a_cntr] = data_rep->
+	    multivariate_polynomial(surrData.continuous_variables(j), mi_i);
+	  ++a_cntr;
+	}
+      }
+    }
+  }
+}
+
+
+void RegressOrthogPolyApproximation::
+build_linear_system( RealMatrix &A, RealMatrix &B,
+		     const UShort2DArray& multi_index)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  size_t i, j, b_cntr = 0, num_surr_data_pts = surrData.points(),
+    num_deriv_vars = surrData.num_derivative_variables(),
+    num_v = sharedDataRep->numVars, b_grad_cntr = 0;
+  int num_rows_B, num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs,
+    num_data_pts_fn = num_surr_data_pts, num_data_pts_grad = num_surr_data_pts;
+  bool add_val, add_grad;
+
+  // populate A
+  build_linear_system(A, multi_index);
+
+  if (expansionCoeffFlag) {
+    
+    // matrix/vector sizing
+    num_rows_B = (data_rep->basisConfigOptions.useDerivs) ?
+      num_data_pts_fn + num_data_pts_grad * num_v : num_data_pts_fn;
+    num_coeff_rhs = 1;
+    num_rhs = (expansionCoeffGradFlag) ?
+      num_coeff_rhs + num_grad_rhs : num_coeff_rhs;
+
+    B.shapeUninitialized(num_rows_B, num_rhs);
+    Real *b_vectors = B.values();
     
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
-    b_cntr = 0;
-    b_grad_cntr = num_data_pts_fn;
+    b_cntr = 0; b_grad_cntr = num_data_pts_fn;
     const SDRArray& sdr_array = surrData.response_data();
     for (i=0; i<num_surr_data_pts; ++i) {
       add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
@@ -1611,36 +1636,18 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 				   add_grad, b_vectors, b_grad_cntr);
     }
   }
-  if (expansionCoeffGradFlag) {
-    if (!multiple_rhs) {
-      num_rows_A = num_data_pts_grad;
-      num_rhs    = num_grad_rhs; num_coeff_rhs = 0;
-      A.shapeUninitialized(num_rows_A,num_cols_A);
-      B.shapeUninitialized(num_rows_A,num_rhs);
-      Real *A_matrix   = A.values();
 
-      // repack "A" matrix with different Psi omissions
-      a_cntr = 0;
-      for (i=0; i<num_cols_A; ++i) {
-	const UShortArray& mi_i = multi_index[i];
-	for (j=0; j<num_surr_data_pts; ++j) {
-	  add_val = false; add_grad = true;
-	  if (add_grad) {
-	    A_matrix[a_cntr] = data_rep->
-	      multivariate_polynomial(surrData.continuous_variables(j), mi_i);
-	    ++a_cntr;
-	  }
-	}
-      }
+  if (expansionCoeffGradFlag) {
+
+    if (!expansionCoeffFlag) {
+      num_rows_B = num_data_pts_grad; num_rhs = num_grad_rhs; num_coeff_rhs = 0;
+      B.shapeUninitialized(num_rows_B, num_rhs);
     }
     
-    PCout << "Applying regression to compute gradients of " << num_cols_A
-	  << " chaos coefficients using " << num_rows_A << " equations.\n";
-
     // response data (values/gradients) define the multiple RHS which are
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
-    Real *b_vectors  = B.values();
+    Real *b_vectors = B.values();
     b_cntr = 0;
     for (i=0; i<num_surr_data_pts; ++i) {
       add_val = false; add_grad = true;
@@ -1652,6 +1659,24 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
       }
     }
   }
+}
+
+
+void RegressOrthogPolyApproximation::
+build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
+		     const UShort2DArray& multi_index)
+{
+  // populate A and B
+  build_linear_system(A, B, multi_index);
+
+  // populate points
+  size_t i, j, num_surr_data_pts = surrData.points(),
+    num_v = sharedDataRep->numVars;
+  points.shapeUninitialized( num_v, num_surr_data_pts );
+  for (i=0; i<num_surr_data_pts; ++i)
+    for (j=0; j<num_v; ++j)
+      points(j,i) = surrData.continuous_variables(i)[j];
+  //points.print(std::cout);
 }
 
 
@@ -1731,8 +1756,8 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
 {
   // TO DO: employ this fn as component within primary CV context
 
-  RealMatrix A, B, points;
-  build_linear_system( A, B, points, multi_index );
+  RealMatrix A, B;
+  build_linear_system( A, B, multi_index );
 
   int num_data_pts_fn = surrData.points();
 
@@ -1831,8 +1856,8 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
 
 Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
 {
-  RealMatrix A, B, points;
-  build_linear_system( A, B, points );
+  RealMatrix A, B;
+  build_linear_system( A, B );
 
   int num_data_pts_fn = surrData.points();
 
