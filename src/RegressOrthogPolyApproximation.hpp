@@ -48,6 +48,37 @@ public:
   //- Heading: Member functions
   //
 
+  /// Build the pce vandermonde matrix A and extract the function (and gradient)
+  /// data b so that we can solve (possible approximately) Ax=b; also populate
+  /// the matrix of points corresponding to the random variable sample set
+  void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points );
+  /// Build the pce vandermonde matrix A and extract the function (and gradient)
+  /// data b so that we can solve (possible approximately) Ax=b using the
+  /// provided multi-index; also populate the matrix of points corresponding
+  /// to the random variable sample set
+  void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
+			    const UShort2DArray& multi_index );
+
+  /// Build the pce vandermonde matrix A and extract the function (and
+  /// gradient) data b so that we can solve (possible approximately) Ax=b
+  void build_linear_system( RealMatrix &A, RealMatrix &B );
+  /// Build the pce vandermonde matrix A and extract the function (and
+  /// gradient) data b so that we can solve (possible approximately)
+  /// Ax=b using the provided multi-index
+  void build_linear_system( RealMatrix &A, RealMatrix &B,
+			    const UShort2DArray& multi_index );
+
+  /// Build the pce vandermonde matrix A used in solving the system Ax=b
+  void build_linear_system( RealMatrix &A );
+  /// Build the pce vandermonde matrix A used in solving the system Ax=b
+  /// using the provided multi-index
+  void build_linear_system( RealMatrix &A, const UShort2DArray& multi_index );
+
+  /// augment a Vandermonde matrix with additional sample points for a fixed
+  /// multi-index
+  void augment_linear_system(const RealMatrix& samples, RealMatrix& A,
+			     const UShort2DArray& multi_index);
+
 protected:
 
   //
@@ -134,23 +165,6 @@ private:
 
   /// encapsulate usage of CSTool.solve() and bookkeeping of its sparse solution
   void compressed_sensing(RealMatrix &A, RealMatrix &B);
-
-  /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b; also populate the matrix of points corresponding to the random variable sample set
-  void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points );
-  /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b using the provided multi-index; also populate the matrix of points corresponding to the random variable sample set
-  void build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
-			    const UShort2DArray& multi_index );
-
-  /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b
-  void build_linear_system( RealMatrix &A, RealMatrix &B );
-  /// Build the pce vandermonde matrix A and extract the function (and gradient) data b so that we can solve (possible approximately) Ax=b using the provided multi-index
-  void build_linear_system( RealMatrix &A, RealMatrix &B,
-			    const UShort2DArray& multi_index );
-
-  /// Build the pce vandermonde matrix A used in solving the system Ax=b
-  void build_linear_system( RealMatrix &A );
-  /// Build the pce vandermonde matrix A used in solving the system Ax=b using the provided multi-index
-  void build_linear_system( RealMatrix &A, const UShort2DArray& multi_index );
 
   /// For a specific vandermonde matrix find the compressed sennsing 
   // options that produce the best PCE

@@ -1566,7 +1566,7 @@ build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
       a_cntr = num_rows_A*i;
       a_grad_cntr = a_cntr + num_data_pts_fn;
       const UShortArray& mi_i = multi_index[i];
-      for (j=0;j<num_surr_data_pts; ++j) {
+      for (j=0; j<num_surr_data_pts; ++j) {
 	add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
 	data_rep->pack_polynomial_data(surrData.continuous_variables(j), mi_i,
 				       add_val, A_matrix, a_cntr, add_grad,
@@ -1584,12 +1584,12 @@ build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
     for (i=0; i<num_cols_A; ++i) {
       const UShortArray& mi_i = multi_index[i];
       for (j=0; j<num_surr_data_pts; ++j) {
-	add_val = false; add_grad = true;
-	if (add_grad) {
+	//add_val = false; add_grad = true;
+	//if (add_grad) {
 	  A_matrix[a_cntr] = data_rep->
 	    multivariate_polynomial(surrData.continuous_variables(j), mi_i);
 	  ++a_cntr;
-	}
+	//}
       }
     }
   }
@@ -1650,13 +1650,13 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
     Real *b_vectors = B.values();
     b_cntr = 0;
     for (i=0; i<num_surr_data_pts; ++i) {
-      add_val = false; add_grad = true;
-      if (add_grad) {
+      //add_val = false; add_grad = true;
+      //if (add_grad) {
 	const RealVector& resp_grad = surrData.response_gradient(i);
 	for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
 	  b_vectors[(j+num_coeff_rhs)*num_data_pts_grad+b_cntr] = resp_grad[j];
 	++b_cntr;
-      }
+      //}
     }
   }
 }
@@ -1677,6 +1677,65 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
     for (j=0; j<num_v; ++j)
       points(j,i) = surrData.continuous_variables(i)[j];
   //points.print(std::cout);
+}
+
+
+void RegressOrthogPolyApproximation::
+augment_linear_system( const RealMatrix& samples, RealMatrix &A,
+		       const UShort2DArray& multi_index)
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  size_t i, j, a_cntr = 0, num_v = sharedDataRep->numVars, a_grad_cntr = 0;
+  int orig_rows_A = A.numRows(), num_rows_A,
+    num_cols_A = multi_index.size(), // candidate expansion size
+    num_samp = samples.numCols();
+  bool add_val, add_grad;
+
+  if (expansionCoeffFlag) {
+    // matrix/vector sizing
+    num_rows_A += (data_rep->basisConfigOptions.useDerivs) ?
+      orig_rows_A + num_samp*(1+num_v) : orig_rows_A + num_samp;
+
+    A.reshape(num_rows_A, num_cols_A);
+    Real *A_matrix = A.values();
+    // The "A" matrix is a contiguous block of memory packed in column-major
+    // ordering as required by F77 for the GELSS subroutine from LAPACK.  For
+    // example, the 6 elements of A(2,3) are stored in the order A(1,1),
+    // A(2,1), A(1,2), A(2,2), A(1,3), A(2,3).
+    for (i=0; i<num_cols_A; ++i) {
+      a_cntr = orig_rows_A + num_rows_A*i; // offset by original rows
+      a_grad_cntr = a_cntr + num_samp;
+      const UShortArray& mi_i = multi_index[i];
+      for (j=0; j<num_samp; ++j) {
+	add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
+	RealVector samp(Teuchos::View, const_cast<Real*>(samples[j]), num_v);
+	data_rep->pack_polynomial_data(samp, mi_i, add_val, A_matrix, a_cntr,
+				       add_grad, A_matrix, a_grad_cntr);
+      }
+    }
+  }
+  else if (expansionCoeffGradFlag) {
+    num_rows_A = orig_rows_A + num_samp;
+    A.reshape(num_rows_A, num_cols_A);
+    Real *A_matrix = A.values();
+
+    // repack "A" matrix with different Psi omissions
+    a_cntr = 0;
+    for (i=0; i<num_cols_A; ++i) {
+      const UShortArray& mi_i = multi_index[i];
+      a_cntr += orig_rows_A; // TO DO: verify offset
+      for (j=0; j<num_samp; ++j) {
+	//add_val = false; add_grad = true;
+	//if (add_grad) {
+	  RealVector samp(Teuchos::View, const_cast<Real*>(samples[j]), num_v);
+	  A_matrix[a_cntr] = data_rep->multivariate_polynomial(samp, mi_i);
+	  ++a_cntr;
+        //}
+      }
+    }
+  }
 }
 
 
