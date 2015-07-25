@@ -76,7 +76,7 @@ public:
 
   /// augment a Vandermonde matrix with additional sample points for a fixed
   /// multi-index
-  void augment_linear_system(const RealMatrix& samples, RealMatrix& A,
+  void augment_linear_system(const RealVectorArray& samples, RealMatrix& A,
 			     const UShort2DArray& multi_index);
 
 protected:

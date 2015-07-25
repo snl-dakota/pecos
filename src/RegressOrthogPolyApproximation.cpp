@@ -1548,7 +1548,8 @@ build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
   size_t i, j, a_cntr = 0, num_surr_data_pts = surrData.points(),
     num_v = sharedDataRep->numVars,  a_grad_cntr = 0;
   int num_rows_A, num_cols_A = multi_index.size(), // candidate expansion size
-    num_data_pts_fn = num_surr_data_pts, num_data_pts_grad = num_surr_data_pts;
+    num_data_pts_fn   = num_surr_data_pts, // failed data is removed downstream
+    num_data_pts_grad = num_surr_data_pts; // failed data is removed downstream
   bool add_val, add_grad;
 
   if (expansionCoeffFlag) {
@@ -1607,7 +1608,8 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
     num_deriv_vars = surrData.num_derivative_variables(),
     num_v = sharedDataRep->numVars, b_grad_cntr = 0;
   int num_rows_B, num_coeff_rhs, num_grad_rhs = num_deriv_vars, num_rhs,
-    num_data_pts_fn = num_surr_data_pts, num_data_pts_grad = num_surr_data_pts;
+    num_data_pts_fn   = num_surr_data_pts, // failed data is removed downstream
+    num_data_pts_grad = num_surr_data_pts; // failed data is removed downstream
   bool add_val, add_grad;
 
   // populate A
@@ -1681,16 +1683,15 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
 
 
 void RegressOrthogPolyApproximation::
-augment_linear_system( const RealMatrix& samples, RealMatrix &A,
+augment_linear_system( const RealVectorArray& samples, RealMatrix &A,
 		       const UShort2DArray& multi_index)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
   size_t i, j, a_cntr = 0, num_v = sharedDataRep->numVars, a_grad_cntr = 0;
-  int orig_rows_A = A.numRows(), num_rows_A,
-    num_cols_A = multi_index.size(), // candidate expansion size
-    num_samp = samples.numCols();
+  int num_samp = samples.size(), orig_rows_A = A.numRows(), num_rows_A,
+    num_cols_A = multi_index.size(); // candidate expansion size
   bool add_val, add_grad;
 
   if (expansionCoeffFlag) {
@@ -1710,9 +1711,8 @@ augment_linear_system( const RealMatrix& samples, RealMatrix &A,
       const UShortArray& mi_i = multi_index[i];
       for (j=0; j<num_samp; ++j) {
 	add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
-	RealVector samp(Teuchos::View, const_cast<Real*>(samples[j]), num_v);
-	data_rep->pack_polynomial_data(samp, mi_i, add_val, A_matrix, a_cntr,
-				       add_grad, A_matrix, a_grad_cntr);
+	data_rep->pack_polynomial_data(samples[j], mi_i, add_val, A_matrix,
+				       a_cntr, add_grad, A_matrix, a_grad_cntr);
       }
     }
   }
@@ -1729,8 +1729,7 @@ augment_linear_system( const RealMatrix& samples, RealMatrix &A,
       for (j=0; j<num_samp; ++j) {
 	//add_val = false; add_grad = true;
 	//if (add_grad) {
-	  RealVector samp(Teuchos::View, const_cast<Real*>(samples[j]), num_v);
-	  A_matrix[a_cntr] = data_rep->multivariate_polynomial(samp, mi_i);
+	  A_matrix[a_cntr] = data_rep->multivariate_polynomial(samples[j],mi_i);
 	  ++a_cntr;
         //}
       }
