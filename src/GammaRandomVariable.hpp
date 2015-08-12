@@ -54,10 +54,12 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
+  Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
+  Real log_standard_pdf_gradient(Real z) const;
   Real log_standard_pdf_hessian(Real z) const;
 
   // inherited from ExponentialRandomVariable
@@ -165,6 +167,10 @@ inline Real GammaRandomVariable::log_pdf(Real x) const
 }
 
 
+inline Real GammaRandomVariable::log_pdf_gradient(Real x) const
+{ return (alphaStat-1.)/x - 1./betaStat; }
+
+
 inline Real GammaRandomVariable::log_pdf_hessian(Real x) const
 { return (1.-alphaStat)/(x*x); }
 
@@ -178,6 +184,10 @@ inline Real GammaRandomVariable::standard_pdf(Real z) const
 
 inline Real GammaRandomVariable::log_standard_pdf(Real z) const
 { return (alphaStat-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaStat)); }
+
+
+inline Real GammaRandomVariable::log_standard_pdf_gradient(Real z) const
+{ return (alphaStat-1.)/z - 1.; }
 
 
 inline Real GammaRandomVariable::log_standard_pdf_hessian(Real z) const

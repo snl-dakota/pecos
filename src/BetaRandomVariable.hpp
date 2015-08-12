@@ -53,10 +53,12 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
+  Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
+  Real log_standard_pdf_gradient(Real z) const;
   Real log_standard_pdf_hessian(Real z) const;
 
   // inherited from UniformRandomVariable
@@ -200,6 +202,10 @@ inline Real BetaRandomVariable::log_pdf(Real x) const
 }
 
 
+inline Real BetaRandomVariable::log_pdf_gradient(Real x) const
+{ return (alphaStat-1.)/(x - lowerBnd) + (1.-betaStat)/(upperBnd - x); }
+
+
 inline Real BetaRandomVariable::log_pdf_hessian(Real x) const
 {
   Real umx = upperBnd - x,  xml = x - lowerBnd;
@@ -220,6 +226,10 @@ inline Real BetaRandomVariable::log_standard_pdf(Real z) const
     - (alphaStat+betaStat-1.)*std::log(2.)
     - std::log(bmth::beta(alphaStat,betaStat));
 }
+
+
+inline Real BetaRandomVariable::log_standard_pdf_gradient(Real z) const
+{ return (alphaStat-1.)/(z + 1.) + (1.-betaStat)/(1. - z); }
 
 
 inline Real BetaRandomVariable::log_standard_pdf_hessian(Real z) const

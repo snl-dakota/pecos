@@ -191,10 +191,7 @@ inline Real NormalRandomVariable::log_pdf(Real x) const
 
 
 inline Real NormalRandomVariable::log_pdf_gradient(Real x) const
-{
-  Real xms = (x - gaussMean) / gaussStdDev;
-  return -xms / gaussStdDev;
-}
+{ return (gaussMean - x) / (gaussStdDev * gaussStdDev); }
 
 
 inline Real NormalRandomVariable::log_pdf_hessian(Real x) const

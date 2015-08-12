@@ -52,6 +52,7 @@ public:
   //Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
+  Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
   Real parameter(short dist_param) const;
@@ -212,6 +213,14 @@ inline Real BoundedLognormalRandomVariable::log_pdf(Real x) const
       NormalRandomVariable::std_cdf((std::log(upperBnd)-lnLambda)/lnZeta) : 1.;
     return LognormalRandomVariable::log_pdf(x) - std::log(Phi_ums-Phi_lms);
   }
+}
+
+
+inline Real BoundedLognormalRandomVariable::log_pdf_gradient(Real x) const
+{
+  if (x < lowerBnd || x > upperBnd) return 0.;
+  else // same as base definition since std::log(Phi_ums-Phi_lms) term drops
+    return LognormalRandomVariable::log_pdf_gradient(x);
 }
 
 

@@ -51,6 +51,7 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
+  Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
   Real parameter(short dist_param) const;
@@ -180,6 +181,13 @@ inline Real LognormalRandomVariable::log_pdf(Real x) const
 {
   Real num = (std::log(x) - lnLambda) / lnZeta;
   return -std::log(std::sqrt(2.*PI) * lnZeta * x) - num*num/2.;
+}
+
+
+inline Real LognormalRandomVariable::log_pdf_gradient(Real x) const
+{
+  Real zeta_sq = lnZeta*lnZeta, lnxml = std::log(x) - lnLambda;
+  return -(1. + lnxml / zeta_sq) / x;
 }
 
 
