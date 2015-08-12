@@ -157,6 +157,10 @@ public:
   /// density function at x (useful for calculations of log density in Bayesian
   /// methods)
   virtual Real log_pdf(Real x) const;
+  /// return the gradient of the natural log of the random variable's
+  /// probability density function at x (useful for defining MCMC proposal
+  /// distributions in Bayesian methods)
+  virtual Real log_pdf_gradient(Real x) const;
   /// return the Hessian of the natural log of the random variable's probability
   /// density function at x (useful for defining MCMC proposal distributions in
   /// Bayesian methods)
@@ -169,6 +173,10 @@ public:
   /// density function at x (useful for calculations of log density in
   /// Bayesian methods)
   virtual Real log_standard_pdf(Real z) const;
+  /// return the gradient of the natural log of a standardized random
+  /// variable's probability density function at x (useful for
+  /// calculations of log density in Bayesian methods)
+  virtual Real log_standard_pdf_gradient(Real z) const;
   /// return the Hessian of the natural log of a standardized random
   /// variable's probability density function at x (useful for
   /// calculations of log density in Bayesian methods)

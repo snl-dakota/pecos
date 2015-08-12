@@ -49,10 +49,12 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
+  Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
+  Real log_standard_pdf_gradient(Real z) const;
   Real log_standard_pdf_hessian(Real z) const;
 
   Real to_standard(Real x) const;
@@ -97,6 +99,7 @@ public:
   //static Real Phi_inverse(Real p_cdf);
 
   static Real log_std_pdf(Real z);
+  static Real log_std_pdf_gradient(Real z);
   static Real log_std_pdf_hessian();
 
   static Real log_std_cdf(Real z);
@@ -187,6 +190,13 @@ inline Real NormalRandomVariable::log_pdf(Real x) const
 }
 
 
+inline Real NormalRandomVariable::log_pdf_gradient(Real x) const
+{
+  Real xms = (x - gaussMean) / gaussStdDev;
+  return -xms / gaussStdDev;
+}
+
+
 inline Real NormalRandomVariable::log_pdf_hessian(Real x) const
 { return -1. / (gaussStdDev * gaussStdDev); }
 
@@ -197,6 +207,10 @@ inline Real NormalRandomVariable::standard_pdf(Real z) const
 
 inline Real NormalRandomVariable::log_standard_pdf(Real z) const
 { return (-z*z - std::log(2.*PI))/2.; }
+
+
+inline Real NormalRandomVariable::log_standard_pdf_gradient(Real z) const
+{ return -z; }
 
 
 inline Real NormalRandomVariable::log_standard_pdf_hessian(Real z) const
@@ -417,6 +431,10 @@ inline Real NormalRandomVariable::inverse_std_ccdf(Real p_ccdf)
 
 inline Real NormalRandomVariable::log_std_pdf(Real z)
 { return (-z*z - std::log(2.*PI))/2.; }
+
+
+inline Real NormalRandomVariable::log_std_pdf_gradient(Real z)
+{ return -z; }
 
 
 inline Real NormalRandomVariable::log_std_pdf_hessian()

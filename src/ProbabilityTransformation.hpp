@@ -197,6 +197,9 @@ public:
   Real x_pdf(Real x_val, size_t i) const;
   /// return the univariate log PDF value for an x-space random variable
   Real x_log_pdf(Real x_val, size_t i) const;
+  /// return the gradient of the univariate log PDF for an x-space
+  /// random variable
+  Real x_log_pdf_gradient(Real x_val, size_t i) const;
   /// return the Hessian of the univariate log PDF for an x-space
   /// random variable
   Real x_log_pdf_hessian(Real x_val, size_t i) const;
@@ -204,6 +207,9 @@ public:
   Real u_pdf(Real u_val, size_t i) const;
   /// return the univariate log PDF value for a u-space random variable
   Real u_log_pdf(Real u_val, size_t i) const;
+  /// return the gradient of the univariate log PDF for a u-space
+  /// random variable
+  Real u_log_pdf_gradient(Real u_val, size_t i) const;
   /// return the Hessian of the univariate log PDF for a u-space random variable
   Real u_log_pdf_hessian(Real u_val, size_t i) const;
 
@@ -417,6 +423,14 @@ inline Real ProbabilityTransformation::x_log_pdf(Real x_val, size_t i) const
 {
   return (probTransRep) ? probTransRep->randomVarsX[i].log_pdf(x_val) :
     randomVarsX[i].log_pdf(x_val);
+}
+
+
+inline Real ProbabilityTransformation::
+x_log_pdf_gradient(Real x_val, size_t i) const
+{
+  return (probTransRep) ? probTransRep->randomVarsX[i].log_pdf_gradient(x_val) :
+    randomVarsX[i].log_pdf_gradient(x_val);
 }
 
 

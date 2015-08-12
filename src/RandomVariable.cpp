@@ -273,6 +273,15 @@ Real RandomVariable::log_pdf(Real x) const
 }
 
 
+Real RandomVariable::log_pdf_gradient(Real x) const
+{
+  if (ranVarRep)
+    return ranVarRep->log_pdf_gradient(x); // forward to letter
+  else // nabla [log pi] = nabla pi / pi
+    return pdf_gradient(x) / pdf(x); // default
+}
+
+
 Real RandomVariable::log_pdf_hessian(Real x) const
 {
   if (ranVarRep)
@@ -306,6 +315,20 @@ Real RandomVariable::log_standard_pdf(Real z) const
 }
 
 
+Real RandomVariable::log_standard_pdf_gradient(Real z) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: log_standard_pdf_gradient() not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+  // default usage of standard_pdf() and standard_pdf_gradient() does
+  // not need to be supported since all standard PDF cases implement
+  // log_standard_pdf_gradient()
+  return ranVarRep->log_standard_pdf_gradient(z); // forward to letter
+}
+
+
 Real RandomVariable::log_standard_pdf_hessian(Real z) const
 {
   if (!ranVarRep) {
@@ -313,6 +336,9 @@ Real RandomVariable::log_standard_pdf_hessian(Real z) const
 	  << "variable type." << std::endl;
     abort_handler(-1);
   }
+  // default usage of standard_pdf{,_gradient,_hessian}() does not
+  // need to be supported since all standard PDF cases implement
+  // log_standard_pdf_hessian()
   return ranVarRep->log_standard_pdf_hessian(z); // forward to letter
 }
 
