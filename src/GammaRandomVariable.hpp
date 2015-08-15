@@ -150,29 +150,33 @@ inline Real GammaRandomVariable::pdf(Real x) const
 
 
 inline Real GammaRandomVariable::pdf_gradient(Real x) const
-{ return pdf(x) * ((alphaStat-1.)/x - 1./betaStat); }
+{ return (x <= 0.) ? 0. : pdf(x) * ((alphaStat-1.)/x - 1./betaStat); }
 
 
 inline Real GammaRandomVariable::pdf_hessian(Real x) const
 {
-  Real am1 = alphaStat - 1., term = am1 / x - 1. / betaStat;
-  return pdf(x) * (term*term - am1 / (x*x));
+  if (x <= 0.) return 0.;
+  else {
+    Real am1 = alphaStat - 1., term = am1 / x - 1. / betaStat;
+    return pdf(x) * (term*term - am1 / (x*x));
+  }
 }
 
 
 inline Real GammaRandomVariable::log_pdf(Real x) const
 {
-  return (alphaStat-1.)*std::log(x) - x/betaStat
-    - std::log(bmth::tgamma(alphaStat)) - alphaStat*std::log(betaStat);
+  return (x <= 0.) ? -std::numeric_limits<Real>::infinity() :
+    (alphaStat-1.)*std::log(x) - x/betaStat - std::log(bmth::tgamma(alphaStat))
+    - alphaStat*std::log(betaStat);
 }
 
 
 inline Real GammaRandomVariable::log_pdf_gradient(Real x) const
-{ return (alphaStat-1.)/x - 1./betaStat; }
+{ return (x <= 0.) ? 0. : (alphaStat-1.)/x - 1./betaStat; }
 
 
 inline Real GammaRandomVariable::log_pdf_hessian(Real x) const
-{ return (1.-alphaStat)/(x*x); }
+{ return (x <= 0.) ? 0. : (1.-alphaStat)/(x*x); }
 
 
 inline Real GammaRandomVariable::standard_pdf(Real z) const
@@ -183,15 +187,17 @@ inline Real GammaRandomVariable::standard_pdf(Real z) const
 
 
 inline Real GammaRandomVariable::log_standard_pdf(Real z) const
-{ return (alphaStat-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaStat)); }
+{
+  return (z <= 0.) ? -std::numeric_limits<Real>::infinity() :
+    (alphaStat-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaStat)); }
 
 
 inline Real GammaRandomVariable::log_standard_pdf_gradient(Real z) const
-{ return (alphaStat-1.)/z - 1.; }
+{ return (z <= 0.) ? 0. : (alphaStat-1.)/z - 1.; }
 
 
 inline Real GammaRandomVariable::log_standard_pdf_hessian(Real z) const
-{ return (1.-alphaStat)/(z*z); }
+{ return (z <= 0.) ? 0. : (1.-alphaStat)/(z*z); }
 
 
 inline Real GammaRandomVariable::parameter(short dist_param) const

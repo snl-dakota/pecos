@@ -139,12 +139,18 @@ inline Real ExponentialRandomVariable::ccdf(Real x) const
 inline Real ExponentialRandomVariable::inverse_cdf(Real p_cdf) const
 {
   // p_cdf = 1 - exp(-x/beta)  -->  -x/beta = log(1-p_cdf)
-  return -betaStat * bmth::log1p(-p_cdf);
+  if (p_cdf <= 0.)      return 0.;
+  else if (p_cdf >= 1.) return std::numeric_limits<Real>::infinity();
+  else return -betaStat * bmth::log1p(-p_cdf);
 }
 
 
 inline Real ExponentialRandomVariable::inverse_ccdf(Real p_ccdf) const
-{ return -betaStat * std::log(p_ccdf); }
+{
+  if (p_ccdf >= 1.)      return 0.;
+  else if (p_ccdf <= 0.) return std::numeric_limits<Real>::infinity();
+  else return -betaStat * std::log(p_ccdf);
+}
 
 
 inline Real ExponentialRandomVariable::inverse_log_ccdf(Real log_p_ccdf) const

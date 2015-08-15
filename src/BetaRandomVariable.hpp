@@ -179,37 +179,50 @@ inline Real BetaRandomVariable::pdf(Real x) const
 
 inline Real BetaRandomVariable::pdf_gradient(Real x) const
 {
-  return pdf(x) *
-    ( (alphaStat-1.) / (x-lowerBnd) - (betaStat-1.) / (upperBnd-x) );
+  // beta PDF is defined on an open interval (l,u)
+  return (x <= lowerBnd || x >= upperBnd) ? 0. :
+    pdf(x) * ( (alphaStat-1.) / (x-lowerBnd) - (betaStat-1.) / (upperBnd-x) );
 }
 
 
 inline Real BetaRandomVariable::pdf_hessian(Real x) const
 {
-  Real umx = upperBnd  - x,  xml = x - lowerBnd,
-       am1 = alphaStat - 1., bm1 = betaStat - 1., 
-    term = am1 / xml - bm1 / umx;
-  return pdf(x) * (term * term - bm1/(umx*umx) - am1/(xml*xml));
+  // beta PDF is defined on an open interval (l,u)
+  if (x <= lowerBnd || x >= upperBnd) return 0.;
+  else {
+    Real umx = upperBnd - x,  xml = x - lowerBnd, am1 = alphaStat - 1.,
+         bm1 = betaStat - 1., term = am1 / xml - bm1 / umx;
+    return pdf(x) * (term * term - bm1/(umx*umx) - am1/(xml*xml));
+  }
 }
 
 
 inline Real BetaRandomVariable::log_pdf(Real x) const
 {
-  return (alphaStat-1.)*std::log(x-lowerBnd)
-    + (betaStat-1.)*std::log(upperBnd-x)
-    - (alphaStat+betaStat-1.)*std::log(upperBnd-lowerBnd)
-    - std::log(bmth::beta(alphaStat,betaStat));
+  // beta PDF is defined on an open interval (l,u)
+  return (x <= lowerBnd || x >= upperBnd) ?
+    -std::numeric_limits<Real>::infinity() :
+    (alphaStat-1.)*std::log(x-lowerBnd) + (betaStat-1.)*std::log(upperBnd-x)
+      - (alphaStat+betaStat-1.)*std::log(upperBnd-lowerBnd)
+      - std::log(bmth::beta(alphaStat,betaStat));
 }
 
 
 inline Real BetaRandomVariable::log_pdf_gradient(Real x) const
-{ return (alphaStat-1.)/(x - lowerBnd) + (1.-betaStat)/(upperBnd - x); }
+{
+  // beta PDF is defined on an open interval (l,u)
+  return (x <= lowerBnd || x >= upperBnd) ? 0. :
+    (alphaStat-1.)/(x - lowerBnd) + (1.-betaStat)/(upperBnd - x);
+}
 
 
 inline Real BetaRandomVariable::log_pdf_hessian(Real x) const
 {
-  Real umx = upperBnd - x,  xml = x - lowerBnd;
-  return (1.-alphaStat)/(xml*xml) + (1.-betaStat)/(umx*umx);
+  if (x <= lowerBnd || x >= upperBnd) return 0.;
+  else {
+    Real umx = upperBnd - x,  xml = x - lowerBnd;
+    return (1.-alphaStat)/(xml*xml) + (1.-betaStat)/(umx*umx);
+  }
 }
 
 
@@ -222,20 +235,27 @@ inline Real BetaRandomVariable::standard_pdf(Real z) const
 
 inline Real BetaRandomVariable::log_standard_pdf(Real z) const
 {
-  return (alphaStat-1.)*bmth::log1p(z) + (betaStat-1.)*bmth::log1p(-z)
+  return (z <= -1 || z >= 1.) ? -std::numeric_limits<Real>::infinity() :
+    (alphaStat-1.)*bmth::log1p(z) + (betaStat-1.)*bmth::log1p(-z)
     - (alphaStat+betaStat-1.)*std::log(2.)
     - std::log(bmth::beta(alphaStat,betaStat));
 }
 
 
 inline Real BetaRandomVariable::log_standard_pdf_gradient(Real z) const
-{ return (alphaStat-1.)/(z + 1.) + (1.-betaStat)/(1. - z); }
+{
+  return (z <= -1 || z >= 1.) ? 0. :
+    (alphaStat-1.)/(z + 1.) + (1.-betaStat)/(1. - z);
+}
 
 
 inline Real BetaRandomVariable::log_standard_pdf_hessian(Real z) const
 {
-  Real umz = 1. - z,  zml = z + 1.;
-  return (1.-alphaStat)/(zml*zml) + (1.-betaStat)/(umz*umz);
+  if (z <= -1 || z >= 1.) return 0.;
+  else {
+    Real umz = 1. - z,  zml = z + 1.;
+    return (1.-alphaStat)/(zml*zml) + (1.-betaStat)/(umz*umz);
+  }
 }
 
 
