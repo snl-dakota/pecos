@@ -180,15 +180,45 @@ inline Real BetaRandomVariable::pdf(Real x) const
 inline Real BetaRandomVariable::pdf_gradient(Real x) const
 {
   // beta PDF is defined on an open interval (l,u)
-  return (x <= lowerBnd || x >= upperBnd) ? 0. :
-    pdf(x) * ( (alphaStat-1.) / (x-lowerBnd) - (betaStat-1.) / (upperBnd-x) );
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (x <= lowerBnd) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return  std::numeric_limits<Real>::quiet_NaN();
+    else if (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
+    else // x=L, alphaStat=1: drop (x-L)^{alpha-1}
+      return pdf(x) * (1.-betaStat) / (upperBnd-x);
+  }
+  else if (x >= upperBnd) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return  std::numeric_limits<Real>::quiet_NaN();
+    else if (betaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=U, betaStat=1: drop (U-x)^{beta-1}
+      return pdf(x) * (alphaStat-1.) / (x-lowerBnd);
+  }
+  else
+    return pdf(x) *
+      ( (alphaStat-1.) / (x-lowerBnd) - (betaStat-1.) / (upperBnd-x) );
 }
 
 
 inline Real BetaRandomVariable::pdf_hessian(Real x) const
 {
   // beta PDF is defined on an open interval (l,u)
-  if (x <= lowerBnd || x >= upperBnd) return 0.;
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (x <= lowerBnd) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return std::numeric_limits<Real>::quiet_NaN();
+    else if (alphaStat < 1.) return std::numeric_limits<Real>::infinity();
+    else { // x=L, alphaStat=1: drop (x-L)^{alpha-1}
+      Real umx = upperBnd - x,  bm1 = betaStat - 1., term =  -bm1 / umx;
+      return pdf(x) * (term * term - bm1/(umx*umx));
+    }
+  }
+  else if (x >= upperBnd) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return std::numeric_limits<Real>::quiet_NaN();
+    else if (betaStat < 1.) return std::numeric_limits<Real>::infinity();
+    else { // x=U, betaStat=1: drop (U-x)^{beta-1}
+      Real xml = x - lowerBnd, am1 = alphaStat - 1., term = am1 / xml;
+      return pdf(x) * (term * term - am1/(xml*xml));
+    }
+  }
   else {
     Real umx = upperBnd - x,  xml = x - lowerBnd, am1 = alphaStat - 1.,
          bm1 = betaStat - 1., term = am1 / xml - bm1 / umx;
@@ -200,9 +230,24 @@ inline Real BetaRandomVariable::pdf_hessian(Real x) const
 inline Real BetaRandomVariable::log_pdf(Real x) const
 {
   // beta PDF is defined on an open interval (l,u)
-  return (x <= lowerBnd || x >= upperBnd) ?
-    -std::numeric_limits<Real>::infinity() :
-    (alphaStat-1.)*std::log(x-lowerBnd) + (betaStat-1.)*std::log(upperBnd-x)
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (x <= lowerBnd) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=L, alphaStat=1: drop (x-L)^{alpha-1} and combine log(range)
+      return -std::log(upperBnd-lowerBnd)
+	- std::log(bmth::beta(alphaStat,betaStat));
+  }
+  else if (x >= upperBnd) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (betaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=U, betaStat=1: drop (U-x)^{beta-1} and combine log(range)
+      return -std::log(upperBnd-lowerBnd)
+	- std::log(bmth::beta(alphaStat,betaStat));
+  }
+  else
+    return (alphaStat-1.)*std::log(x-lowerBnd)
+      + (betaStat-1.)*std::log(upperBnd-x)
       - (alphaStat+betaStat-1.)*std::log(upperBnd-lowerBnd)
       - std::log(bmth::beta(alphaStat,betaStat));
 }
@@ -210,15 +255,41 @@ inline Real BetaRandomVariable::log_pdf(Real x) const
 
 inline Real BetaRandomVariable::log_pdf_gradient(Real x) const
 {
-  // beta PDF is defined on an open interval (l,u)
-  return (x <= lowerBnd || x >= upperBnd) ? 0. :
-    (alphaStat-1.)/(x - lowerBnd) + (1.-betaStat)/(upperBnd - x);
+  // beta PDF is defined on an open interval (l,u).
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (x <= lowerBnd) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
+    else // x=L, alphaStat=1: drop (x-L)^{alpha-1}
+      return (1.-betaStat)/(upperBnd - x);
+  }
+  else if (x >= upperBnd) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (betaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=U, betaStat=1: drop (U-x)^{beta-1}
+      return (alphaStat-1.)/(x - lowerBnd);
+  }
+  else
+    return (alphaStat-1.)/(x - lowerBnd) + (1.-betaStat)/(upperBnd - x);
 }
 
 
 inline Real BetaRandomVariable::log_pdf_hessian(Real x) const
 {
-  if (x <= lowerBnd || x >= upperBnd) return 0.;
+  // beta PDF is defined on an open interval (l,u).
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (x <= lowerBnd) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=L, alphaStat=1: drop (x-L)^{alpha-1}
+      { Real umx = upperBnd-x; return (1.-betaStat)/(umx*umx); }
+  }
+  else if (x >= upperBnd) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (betaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=U, betaStat=1: drop (U-x)^{beta-1}
+      { Real xml = x-lowerBnd; return (1.-alphaStat)/(xml*xml); }
+  }
   else {
     Real umx = upperBnd - x,  xml = x - lowerBnd;
     return (1.-alphaStat)/(xml*xml) + (1.-betaStat)/(umx*umx);
@@ -235,25 +306,66 @@ inline Real BetaRandomVariable::standard_pdf(Real z) const
 
 inline Real BetaRandomVariable::log_standard_pdf(Real z) const
 {
-  return (z <= -1 || z >= 1.) ? -std::numeric_limits<Real>::infinity() :
-    (alphaStat-1.)*bmth::log1p(z) + (betaStat-1.)*bmth::log1p(-z)
-    - (alphaStat+betaStat-1.)*std::log(2.)
-    - std::log(bmth::beta(alphaStat,betaStat));
+  // beta PDF is defined on an open interval (-1,1)
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (z <= -1.) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // z=L, alphaStat=1: drop (z-L)^{alpha-1} and combine log(range)
+      return -std::log(2.) - std::log(bmth::beta(alphaStat,betaStat));
+  }
+  else if (z >= 1.) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (betaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // z=U, betaStat=1: drop (U-z)^{beta-1} and combine log(range)
+      return -std::log(2.) - std::log(bmth::beta(alphaStat,betaStat));
+  }
+  else
+    return (alphaStat-1.)*bmth::log1p(z) + (betaStat-1.)*bmth::log1p(-z)
+      - (alphaStat+betaStat-1.)*std::log(2.)
+      - std::log(bmth::beta(alphaStat,betaStat));
 }
 
 
 inline Real BetaRandomVariable::log_standard_pdf_gradient(Real z) const
 {
-  return (z <= -1 || z >= 1.) ? 0. :
-    (alphaStat-1.)/(z + 1.) + (1.-betaStat)/(1. - z);
+  // beta PDF is defined on an open interval (l,u).
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (z <= -1.) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
+    else // z=L, alphaStat=1: drop (z-L)^{alpha-1}
+      return (1.-betaStat)/(1. - z);
+  }
+  else if (z >= 1.) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (betaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // z=U, betaStat=1: drop (U-z)^{beta-1}
+      return (alphaStat-1.)/(z + 1.);
+  }
+  else
+    return (alphaStat-1.)/(z + 1.) + (1.-betaStat)/(1. - z);
 }
 
 
 inline Real BetaRandomVariable::log_standard_pdf_hessian(Real z) const
 {
-  if (z <= -1 || z >= 1.) return 0.;
+  // beta PDF is defined on an open interval (l,u).
+  // (see also boost/math/special_functions/beta.hpp:ibeta_derivative_imp())
+  if (z <= -1.) { // eval @lowerBnd as approached from above
+    if      (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=L, alphaStat=1: drop (x-L)^{alpha-1}
+      { Real umz = 1. - z; return (1.-betaStat)/(umz*umz); }
+  }
+  else if (z >= 1.) { // eval @upperBnd as approached from below
+    if      (betaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else if (betaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else // x=U, betaStat=1: drop (U-x)^{beta-1}
+      { Real zml = z + 1.; return (1.-alphaStat)/(zml*zml); }
+  }
   else {
-    Real umz = 1. - z,  zml = z + 1.;
+    Real umz = 1. - z, zml = z + 1.;
     return (1.-alphaStat)/(zml*zml) + (1.-betaStat)/(umz*umz);
   }
 }
