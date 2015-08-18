@@ -150,12 +150,24 @@ inline Real GammaRandomVariable::pdf(Real x) const
 
 
 inline Real GammaRandomVariable::pdf_gradient(Real x) const
-{ return (x <= 0.) ? 0. : pdf(x) * ((alphaStat-1.)/x - 1./betaStat); }
+{
+  if (x <= 0.) {
+    if      (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return  std::numeric_limits<Real>::quiet_NaN();
+    else return -ExponentialRandomVariable::pdf(x) / betaStat;
+  }
+  else
+    return pdf(x) * ((alphaStat-1.)/x - 1./betaStat);
+}
 
 
 inline Real GammaRandomVariable::pdf_hessian(Real x) const
 {
-  if (x <= 0.) return 0.;
+  if (x <= 0.) {
+    if      (alphaStat < 1.) return std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return std::numeric_limits<Real>::quiet_NaN();
+    else return ExponentialRandomVariable::pdf(x) / (betaStat*betaStat);
+  }
   else {
     Real am1 = alphaStat - 1., term = am1 / x - 1. / betaStat;
     return pdf(x) * (term*term - am1 / (x*x));
@@ -165,18 +177,39 @@ inline Real GammaRandomVariable::pdf_hessian(Real x) const
 
 inline Real GammaRandomVariable::log_pdf(Real x) const
 {
-  return (x <= 0.) ? -std::numeric_limits<Real>::infinity() :
-    (alphaStat-1.)*std::log(x) - x/betaStat - std::log(bmth::tgamma(alphaStat))
-    - alphaStat*std::log(betaStat);
+  if (x <= 0.) {
+    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else return ExponentialRandomVariable::log_pdf(x);
+  }
+  else
+    return (alphaStat-1.)*std::log(x) - x/betaStat
+      - std::log(bmth::tgamma(alphaStat)) - alphaStat*std::log(betaStat);
 }
 
 
 inline Real GammaRandomVariable::log_pdf_gradient(Real x) const
-{ return (x <= 0.) ? 0. : (alphaStat-1.)/x - 1./betaStat; }
+{
+  if (x <= 0.) {
+    if      (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return  std::numeric_limits<Real>::infinity();
+    else return ExponentialRandomVariable::log_pdf_gradient(x);
+  }
+  else
+    return (alphaStat-1.)/x - 1./betaStat;
+}
 
 
 inline Real GammaRandomVariable::log_pdf_hessian(Real x) const
-{ return (x <= 0.) ? 0. : (1.-alphaStat)/(x*x); }
+{
+  if (x <= 0.) {
+    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else return ExponentialRandomVariable::log_pdf_hessian(x);
+  }
+  else
+    return (1.-alphaStat)/(x*x);
+}
 
 
 inline Real GammaRandomVariable::standard_pdf(Real z) const
@@ -188,16 +221,38 @@ inline Real GammaRandomVariable::standard_pdf(Real z) const
 
 inline Real GammaRandomVariable::log_standard_pdf(Real z) const
 {
-  return (z <= 0.) ? -std::numeric_limits<Real>::infinity() :
-    (alphaStat-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaStat)); }
+  if (z <= 0.) {
+    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else return ExponentialRandomVariable::log_standard_pdf(z);
+  }
+  else
+    return (alphaStat-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaStat)); 
+}
 
 
 inline Real GammaRandomVariable::log_standard_pdf_gradient(Real z) const
-{ return (z <= 0.) ? 0. : (alphaStat-1.)/z - 1.; }
+{
+  if (z <= 0.) {
+    if      (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return  std::numeric_limits<Real>::infinity();
+    else return ExponentialRandomVariable::log_standard_pdf_gradient(z);
+  }
+  else
+    return (alphaStat-1.)/z - 1.;
+}
 
 
 inline Real GammaRandomVariable::log_standard_pdf_hessian(Real z) const
-{ return (z <= 0.) ? 0. : (1.-alphaStat)/(z*z); }
+{
+  if (z <= 0.) {
+    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    else return ExponentialRandomVariable::log_standard_pdf_hessian(z);
+  }
+  else
+    return (1.-alphaStat)/(z*z);
+}
 
 
 inline Real GammaRandomVariable::parameter(short dist_param) const
