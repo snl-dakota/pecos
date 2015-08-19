@@ -12,10 +12,10 @@
 
 namespace Pecos {
 
-/// Base class for density estimation strategies
+  /// Base class for density estimation strategies
 
-class DensityEstimator {
-public:
+  class DensityEstimator {
+  public:
     /// default constructor
     DensityEstimator();
     /// standard constructor for envelope
@@ -30,7 +30,8 @@ public:
     DensityEstimator operator=(const DensityEstimator& density_estimator);
 
     /// initialize the densities
-    virtual void initialize(RealMatrix& samples);
+    virtual void initialize(RealMatrix& samples,  
+			    Teuchos::ETransp trans = Teuchos::NO_TRANS );
     virtual void initialize(RealVectorArray& samples);
 
     /// get the dimensionality
@@ -48,9 +49,10 @@ public:
     virtual void corrcoeff(RealMatrix& corr);
 
     /// operations for one sample
-    virtual Real pdf(RealVector& x);
+    virtual Real pdf(const RealVector& x) const;
     /// operations for a set of samples
-    virtual void pdf(RealMatrix& data, RealVector& res);
+    virtual void pdf(const RealMatrix& data, RealVector& res,
+		     Teuchos::ETransp trans = Teuchos::NO_TRANS ) const;
 
     /// marginalization operations
 
@@ -58,32 +60,32 @@ public:
     virtual void marginalize(size_t dim, DensityEstimator& estimator);
     /// creates a maginalized density with remaining dims
     virtual void margToDimXs(const IntVector& dims,
-            DensityEstimator& estimator);
+			     DensityEstimator& estimator);
     /// creates a maginalized density with one remaining dimension
     virtual void margToDimX(size_t dim, DensityEstimator& estimator);
 
     /// conditionalization operations
     virtual void conditionalize(const RealVector& x, const IntVector& dims,
-            DensityEstimator& estimator);
+				DensityEstimator& estimator);
     virtual void condToDimX(const RealVector& x, size_t dim,
-            DensityEstimator& estimator);
+			    DensityEstimator& estimator);
 
     String getType();
     DensityEstimator* getEnvelope();
     bool is_null();
 
-protected:
+  protected:
     String density_estimator_type;
 
-private:
+  private:
     static DensityEstimator* get_density_estimator(
-            const String& density_estimator_type);
+						   const String& density_estimator_type);
 
     DensityEstimator* densityEstimator;
 
     /// number of objects sharing samples
     int referenceCount;
-};
+  };
 
 } /* namespace Pecos */
 

@@ -1,10 +1,10 @@
 /*  _______________________________________________________________________
 
- PECOS: Parallel Environment for Creation Of Stochastics
- Copyright (c) 2011, Sandia National Laboratories.
- This software is distributed under the GNU Lesser General Public License.
- For more information, see the README file in the top Pecos directory.
- _______________________________________________________________________ */
+    PECOS: Parallel Environment for Creation Of Stochastics
+    Copyright (c) 2011, Sandia National Laboratories.
+    This software is distributed under the GNU Lesser General Public License.
+    For more information, see the README file in the top Pecos directory.
+    _______________________________________________________________________ */
 
 #ifndef GAUSSIAN_KDE_HPP_
 #define GAUSSIAN_KDE_HPP_
@@ -19,20 +19,20 @@ namespace Pecos {
 #define M_SQRT2PI       2.5066282746310002             /* sqrt(2*pi) */
 #endif
 
-/// Class for kernel density estimation with gaussian kernels.
+  /// Class for kernel density estimation with gaussian kernels.
 
-/** The kernel density estimation method estimates an unknown density based
- * on realizations of it. The estimated probability density function is
- * defined as
- *
- *        f(x) = 1/n \sum_{i=1}^n K((x - \mu_i) / \sigma)
- *
- * where \mu_i are the realizations and \sigma is the bandwidth of the gaussian
- * kernels K.
- **/
+  /** The kernel density estimation method estimates an unknown density based
+   * on realizations of it. The estimated probability density function is
+   * defined as
+   *
+   *        f(x) = 1/n \sum_{i=1}^n K((x - \mu_i) / \sigma)
+   *
+   * where \mu_i are the realizations and \sigma is the bandwidth of the gaussian
+   * kernels K.
+   **/
 
-class GaussianKDE: public DensityEstimator {
-public:
+  class GaussianKDE: public DensityEstimator {
+  public:
 
     //
     //- Heading: Constructors and destructor
@@ -45,7 +45,8 @@ public:
     ~GaussianKDE();
 
     /// initialize the density estimator
-    void initialize(RealMatrix& samples);
+    void initialize(RealMatrix& samples,
+		    Teuchos::ETransp trans = Teuchos::NO_TRANS );
     void initialize(RealVectorArray& samples);
 
     /// get the dimensionality
@@ -62,22 +63,23 @@ public:
     void cov(RealMatrix& cov);
 
     /// operations for single samples
-    Real pdf(RealVector& x);
+    Real pdf(const RealVector& x) const;
 
     /// operations for a set of samples
-    void pdf(RealMatrix& data, RealVector& res);
+    void pdf(const RealMatrix& data, RealVector& res,
+	     Teuchos::ETransp trans = Teuchos::NO_TRANS) const;
 
     /// marginalization operations
     virtual void marginalize(size_t dim, DensityEstimator& estimator);
     virtual void margToDimXs(const IntVector& dims,
-            DensityEstimator& estimator);
+			     DensityEstimator& estimator);
     virtual void margToDimX(size_t dim, DensityEstimator& estimator);
 
     /// conditionalization operations
     virtual void conditionalize(const RealVector& x, const IntVector& dims,
-            DensityEstimator& estimator);
+				DensityEstimator& estimator);
     virtual void condToDimX(const RealVector& x, size_t dim,
-            DensityEstimator& estimator);
+			    DensityEstimator& estimator);
 
     /// getter and setter functions
     void getConditionalizationFactor(RealVector& pcond);
@@ -87,7 +89,7 @@ public:
     /// get samples
     const RealVectorArray& getSamples() const;
 
-private:
+  private:
     void computeOptKDEbdwth();
 
     Real getSampleMean(RealVector& data);
@@ -95,9 +97,10 @@ private:
     Real getSampleStd(RealVector& data);
 
     void updateConditionalizationFactors(const RealVector& x,
-            const IntVector& dims, RealVector& cond);
+					 const IntVector& dims, 
+					 RealVector& cond);
 
-protected:
+  protected:
     /// samples
     RealVectorArray samplesVec;
 
@@ -111,8 +114,8 @@ protected:
     /// conditionalization factors
     RealVector cond;
     Real sumCond;
-}
-;
+  }
+    ;
 
 } /* namespace Pecos */
 

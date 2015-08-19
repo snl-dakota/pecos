@@ -151,9 +151,9 @@ bool DensityEstimator::is_null() {
     return densityEstimator == NULL;
 }
 
-void DensityEstimator::initialize(RealMatrix& samples) {
+  void DensityEstimator::initialize(RealMatrix& samples,Teuchos::ETransp trans){
     if (densityEstimator) { // envelope fwd to letter
-        densityEstimator->initialize(samples);
+      densityEstimator->initialize(samples, trans);
     } else { // letter lacking redefinition of virtual fn
         PCerr
                 << "Error: derived class does not redefine initialize(RealMatrix& samples) virtual fn.\n"
@@ -264,7 +264,7 @@ void DensityEstimator::corrcoeff(RealMatrix& corr) {
 }
 
 /// operations for one sample
-Real DensityEstimator::pdf(RealVector& x) {
+Real DensityEstimator::pdf(const RealVector& x) const{
     if (densityEstimator) { // envelope fwd to letter
         return densityEstimator->pdf(x);
     } else { // letter lacking redefinition of virtual fn
@@ -276,9 +276,10 @@ Real DensityEstimator::pdf(RealVector& x) {
 }
 
 /// operations for a set of samples
-void DensityEstimator::pdf(RealMatrix& data, RealVector& res) {
+void DensityEstimator::pdf(const RealMatrix& data,RealVector& res,
+			   Teuchos::ETransp trans) const{
     if (densityEstimator) { // envelope fwd to letter
-        densityEstimator->pdf(data, res);
+      densityEstimator->pdf(data, res, trans);
     } else { // letter lacking redefinition of virtual fn
         PCerr << "Error: derived class does not redefine pdf() virtual fn.\n"
                 << "       No default defined at DensityEstimator base class.\n"

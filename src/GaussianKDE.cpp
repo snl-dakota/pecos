@@ -67,20 +67,30 @@ void GaussianKDE::initialize(RealVectorArray& samples) {
     }
 }
 
-void GaussianKDE::initialize(RealMatrix& samples) {
-    nsamples = samples.numRows();
-    ndim = samples.numCols();
+  void GaussianKDE::initialize(RealMatrix& samples, Teuchos::ETransp trans ) {
+    if ( trans == Teuchos::NO_TRANS ){
+      nsamples = samples.numRows();
+      ndim = samples.numCols();
+    }else{
+      nsamples = samples.numCols();
+      ndim = samples.numRows();
+    }
 
     if (ndim > 0) {
         if (nsamples > 1) {
+	  
             // copy 1d samples to vector
             samplesVec.resize(ndim);
-            for (size_t idim = 0; idim < ndim; idim++) {
-                samplesVec[idim].resize(nsamples);
-                for (size_t isample = 0; isample < nsamples; isample++) {
-                    samplesVec[idim][isample] = samples(isample, idim);
-                }
-            }
+
+	    for (size_t idim = 0; idim < ndim; idim++) {
+	      samplesVec[idim].resize(nsamples);
+	      for (size_t isample = 0; isample < nsamples; isample++) {
+		if ( trans == Teuchos::NO_TRANS )
+		  samplesVec[idim][isample] = samples(isample, idim);
+		else
+		  samplesVec[idim][isample] = samples(idim, isample);
+	      }
+	    }
 
             // init the bandwidths
             bandwidths.resize(ndim);
@@ -120,25 +130,31 @@ void GaussianKDE::getBandwidths(RealVector& bandwidths) {
     }
 }
 
-void GaussianKDE::pdf(RealMatrix& data, RealVector& res) {
+  void GaussianKDE::pdf(const RealMatrix& data,RealVector& res,
+			Teuchos::ETransp trans ) const {
     // init variables
     RealVector x(ndim);
 
+    int num_data = ( trans==Teuchos::NO_TRANS ) ? data.numRows():data.numCols();
+
     // resize result vector
-    res.resize(data.numRows());
+    res.resize(num_data);
     res.putScalar(0.0);
 
     // run over all data points
-    for (size_t idata = 0; idata < data.numRows(); idata++) {
+    for (size_t idata = 0; idata < num_data; idata++) {
         // copy samples
-        for (size_t idim = 0; idim < ndim; idim++) {
-            x[idim] = data(idata, idim);
-        }
-        res[idata] = pdf(x);
+      for (size_t idim = 0; idim < ndim; idim++) {
+	if ( trans==Teuchos::NO_TRANS )
+	  x[idim] = data(idata, idim);
+	else
+	  x[idim] = data(idim, idata);
+      }
+      res[idata] = pdf(x);
     }
 }
 
-Real GaussianKDE::pdf(RealVector& x) {
+Real GaussianKDE::pdf(const RealVector& x) const {
     // init variables
     Real res = 0.0;
     Real kern = 0, y = 0.0;
