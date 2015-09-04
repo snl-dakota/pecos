@@ -2824,7 +2824,9 @@ void RegressOrthogPolyApproximation::compute_component_sobol()
     // Sobol' index with the variance contribution from this expansion term.
     BAULMCIter cit = index_map.find(set);
     if (cit != index_map.end()) { // may not be found if vbdOrderLimit
-      unsigned long sp_index = sparseSobolIndexMap[cit->second];
+      // sparseSobolIndexMap definition is bypassed when vbdOrderLimit == 1
+      unsigned long sp_index = (data_rep->expConfigOptions.vbdOrderLimit == 1) ?
+	cit->second : sparseSobolIndexMap[cit->second];
       sobolIndices[sp_index] += p_var; // divide by sum_p_var below
     }
   }
