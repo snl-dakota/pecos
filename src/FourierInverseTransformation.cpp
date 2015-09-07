@@ -201,10 +201,11 @@ void FourierInverseTransformation::compute_sample_grigoriu()
 
   size_t i, num_terms = omegaSequence.length();
   RealVector empty_rv;
+  RealSymMatrix empty_correl;
   if (ifftSampleCntr)
     lhsSampler.advance_seed_sequence();
   lhsSampler.generate_normal_samples(lhsParam1, lhsParam2, empty_rv, empty_rv,
-				     num_terms, lhsSamples);
+				     num_terms, empty_correl, lhsSamples);
 
   for (i=0; i<num_terms; i++) {
     const Real& v_i = lhsSamples(i, 0);

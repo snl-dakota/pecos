@@ -104,6 +104,7 @@ public:
 			       const RealVector& n_std_devs,
 			       const RealVector& n_l_bnds,
 			       const RealVector& n_u_bnds, int num_samples,
+                               RealSymMatrix& correl_matrix,
 			       RealMatrix& samples_array);
 
   /// generates the desired set of parameter samples from within
@@ -301,15 +302,16 @@ generate_samples(const EpistemicDistParams& edp, int num_samples,
 inline void LHSDriver::
 generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			const RealVector& n_l_bnds, const RealVector& n_u_bnds,
-			int num_samples, RealMatrix& samples_array)
+			int num_samples, RealSymMatrix& correl, RealMatrix& samples_array)
 {
-  if (sampleRanksMode) {
-    PCerr << "Error: generate_normal_samples() does not support sample rank "
-	  << "input/output." << std::endl;
-    abort_handler(-1);
-  }
+  std::cout << "sampleRanksMode " << sampleRanksMode;
+  //if (sampleRanksMode) {
+  //  PCerr << "Error: generate_normal_samples() does not support sample rank "
+  //	  << "input/output." << std::endl;
+  //  abort_handler(-1);
+  //}
   RealVector     empty_rv;  IntVector          empty_iv;
-  RealMatrix     empty_rm;  RealSymMatrix      empty_rsm;
+  RealMatrix     empty_rm;  //RealSymMatrix      empty_rsm;
   IntSetArray    empty_isa; IntRealMapArray    empty_irma;
   StringSetArray empty_ssa; StringRealMapArray empty_srma;
   RealSetArray   empty_rsa; RealRealMapArray   empty_rrma;
@@ -322,7 +324,7 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 			 empty_rv, empty_rrma, empty_rv, empty_rv, empty_iv,
 			 empty_rv, empty_iv, empty_rv, empty_iv, empty_iv,
 			 empty_iv, empty_irma, empty_srma, empty_rrma,
-			 empty_rsm);
+			 correl);
   EpistemicDistParams edp;
   generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, empty_ssa,
 		   empty_rsa, empty_rv, empty_rv, empty_iv, empty_iv, empty_isa,
