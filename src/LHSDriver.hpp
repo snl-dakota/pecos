@@ -88,15 +88,15 @@ public:
   /// AleatoryDistParams and EpistemicDistParams specifications
   void generate_samples(const AleatoryDistParams&  adp,
 			const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, bool backfillflag=false);
+			RealMatrix& samples_array, bool backfill_flag=false);
   /// generates the desired set of parameter samples from within an
   /// AleatoryDistParams specification
   void generate_samples(const AleatoryDistParams& adp, int num_samples,
-			RealMatrix& samples_array, bool backfillflag=false);
+			RealMatrix& samples_array, bool backfill_flag=false);
   /// generates the desired set of parameter samples from within a
   /// EpistemicDistParams specification
   void generate_samples(const EpistemicDistParams& edp, int num_samples,
-			RealMatrix& samples_array, bool backfillflag=false);
+			RealMatrix& samples_array, bool backfill_flag=false);
 
   /// generates the desired set of parameter samples from within
   /// uncorrelated normal distributions
@@ -112,7 +112,7 @@ public:
   void generate_uniform_samples(const RealVector& u_l_bnds,
 				const RealVector& u_u_bnds, int num_samples,
 				RealMatrix& samples_array, 
-				bool backfillflag=false);
+				bool backfill_flag=false);
 
   /// generates integer index samples from within uncorrelated uniform
   /// distributions
@@ -228,7 +228,7 @@ inline void LHSDriver::advance_seed_sequence()
 
 inline void LHSDriver::
 generate_samples(const AleatoryDistParams& adp, const EpistemicDistParams& edp,
-		 int num_samples, RealMatrix& samples_array, bool backfillflag)
+		 int num_samples, RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_samples(AleatoryDistParams&, "
@@ -238,21 +238,21 @@ generate_samples(const AleatoryDistParams& adp, const EpistemicDistParams& edp,
   }
   RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
   IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
-  if (!backfillflag)
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
-  else
+  if (backfill_flag)
     generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
 			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
 			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
 			    num_samples, samples_array, empty_rm);
+  else
+    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
+		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
+		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
+		     num_samples, samples_array, empty_rm);
 }
 
 inline void LHSDriver::
 generate_samples(const AleatoryDistParams& adp, int num_samples,
-		 RealMatrix& samples_array, bool backfillflag)
+		 RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_samples(AleatoryDistParams&) does not support "
@@ -262,21 +262,21 @@ generate_samples(const AleatoryDistParams& adp, int num_samples,
   RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
   IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
   EpistemicDistParams edp;
-  if (!backfillflag)
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
-  else
+  if (backfill_flag)
     generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
 			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
 			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
 			    num_samples, samples_array, empty_rm);
+  else
+    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
+		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
+		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
+		     num_samples, samples_array, empty_rm);
 }
 
 inline void LHSDriver::
 generate_samples(const EpistemicDistParams& edp, int num_samples,
-		 RealMatrix& samples_array, bool backfillflag)
+		 RealMatrix& samples_array, bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_samples(EpistemicDistParams&) does not support "
@@ -286,16 +286,16 @@ generate_samples(const EpistemicDistParams& edp, int num_samples,
   RealVector  empty_rv;  IntVector      empty_iv;  RealMatrix   empty_rm;
   IntSetArray empty_isa; StringSetArray empty_ssa; RealSetArray empty_rsa;
   AleatoryDistParams adp;
-  if (!backfillflag)
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa,empty_rsa, empty_rv, empty_rv, empty_iv,
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
-		     num_samples, samples_array, empty_rm);
-  else
+  if (backfill_flag)
     generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
 			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv,
 			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
 			    num_samples, samples_array, empty_rm);
+  else
+    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
+		     empty_ssa,empty_rsa, empty_rv, empty_rv, empty_iv,
+		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
+		     num_samples, samples_array, empty_rm);
 }
 
 
@@ -335,7 +335,7 @@ generate_normal_samples(const RealVector& n_means, const RealVector& n_std_devs,
 inline void LHSDriver::
 generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 			 int num_samples, RealMatrix& samples_array, 
-			 bool backfillflag)
+			 bool backfill_flag)
 {
   if (sampleRanksMode) {
     PCerr << "Error: generate_uniform_samples() does not support sample rank "
@@ -358,17 +358,16 @@ generate_uniform_samples(const RealVector& u_l_bnds, const RealVector& u_u_bnds,
 			 empty_iv, empty_irma, empty_srma, empty_rrma,
 			 empty_rsm);
   EpistemicDistParams edp;
-  if (!backfillflag)
-    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
-		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
-		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
-		     num_samples, samples_array, empty_rm);
-  else
+  if (backfill_flag)
     generate_unique_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
 			    empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
 			    empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp,
 			    num_samples, samples_array, empty_rm);
-
+  else
+    generate_samples(empty_rv, empty_rv, empty_iv, empty_iv, empty_isa, 
+		     empty_ssa, empty_rsa, empty_rv, empty_rv, empty_iv, 
+		     empty_iv, empty_isa, empty_ssa, empty_rsa, adp, edp, 
+		     num_samples, samples_array, empty_rm);
 }
 
 inline void LHSDriver::
