@@ -278,8 +278,10 @@ inline size_t l1_norm(const std::vector<OrdinalType>& index_set)
   // hardwire to size_t instead of OrdinalType since could be a large sum
   // of smaller types
   size_t i, norm = 0, len = index_set.size();
+  // assume unsigned types since std::abs(index_set[i]) will not compile
+  // for unsigned types on some platforms
   for (i=0; i<len; ++i)
-    norm += std::abs(index_set[i]);
+    norm += index_set[i];//std::abs(index_set[i]);
   return norm;
 }
 
