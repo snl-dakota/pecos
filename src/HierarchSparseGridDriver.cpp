@@ -127,7 +127,7 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
     while (more) {
       for (size_t i=0; i<numVars; ++i)
 	index_set[i] = (unsigned short)x[i];
-      lev = index_norm(index_set);
+      lev = l1_norm(index_set);
       UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
       if (from_scratch ||
 	  std::find(sm_mi_l.begin(), sm_mi_l.end(), index_set) == sm_mi_l.end())
@@ -722,7 +722,7 @@ void HierarchSparseGridDriver::initialize_sets()
 
 void HierarchSparseGridDriver::push_trial_set(const UShortArray& set)
 {
-  trialLevel = index_norm(set);
+  trialLevel = l1_norm(set);
   if (smolyakMultiIndex.size() <= trialLevel)
     smolyakMultiIndex.resize(trialLevel+1);
   smolyakMultiIndex[trialLevel].push_back(set);
@@ -811,7 +811,7 @@ void HierarchSparseGridDriver::finalize_sets()
     UShortArraySet::iterator it;
     for (it=computedTrialSets.begin(); it!=computedTrialSets.end(); ++it) {
       const UShortArray& tr_set = *it;
-      trialLevel = index_norm(tr_set);
+      trialLevel = l1_norm(tr_set);
       smolyakMultiIndex[trialLevel].push_back(tr_set);
       update_collocation_key();       // update collocKey
       if (trackCollocIndices)

@@ -272,11 +272,14 @@ inline bool real_compare(Real r1, Real r2)
 
 
 /// compute 1-norm |i| (sum of indices) for the given index_set
-inline size_t index_norm(const UShortArray& index_set)
+template <typename OrdinalType> 
+inline size_t l1_norm(const std::vector<OrdinalType>& index_set)
 {
-  unsigned int i, norm = 0, len = index_set.size();
+  // hardwire to size_t instead of OrdinalType since could be a large sum
+  // of smaller types
+  size_t i, norm = 0, len = index_set.size();
   for (i=0; i<len; ++i)
-    norm += index_set[i];
+    norm += std::abs(index_set[i]);
   return norm;
 }
 

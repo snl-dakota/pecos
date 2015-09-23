@@ -272,7 +272,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
     {
       switch ( error_norms[j] )
 	{
-	case linf_norm:
+	case mt_linf_norm:
 	  {
 	    // Infinity norm
 	    for ( int i = 0; i < activeColumns.length(); i++ )
@@ -297,7 +297,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
 	      }
 	    break;
 	  }
-	case l1_norm:
+	case mt_l1_norm:
 	  {
 	    // L1 norm
 	    for ( int i = 0; i < activeColumns.length(); i++ )
@@ -310,7 +310,7 @@ void lp_error( RealMatrix &referenceValues, RealMatrix &approximateValues,
 	      }
 	    break;
 	  }
-	case l2_norm:
+	case mt_l2_norm:
 	  {
 	    // L2 norm
 	    for ( int i = 0; i < activeColumns.length(); i++ )

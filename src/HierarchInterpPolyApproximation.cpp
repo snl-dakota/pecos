@@ -196,7 +196,7 @@ void HierarchInterpPolyApproximation::decrement_expansion_coefficients()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& trial_set = data_rep->hsg_driver()->trial_set();
-  size_t lev = index_norm(trial_set);
+  size_t lev = l1_norm(trial_set);
 
   if (expansionCoeffFlag) {
     savedExpT1Coeffs[trial_set] = expansionType1Coeffs[lev].back();
@@ -325,7 +325,7 @@ increment_expansion_coefficients(const UShortArray& index_set)
 	expansionType1Coeffs[lev][set].length()	:
 	expansionType1CoeffGrads[lev][set].numCols();
   }
-  lev = index_norm(index_set);
+  lev = l1_norm(index_set);
   if (lev >= old_levels) {
     expansionType1Coeffs.resize(lev+1);
     expansionType2Coeffs.resize(lev+1);
@@ -389,7 +389,7 @@ increment_expansion_coefficients(const UShortArray& index_set)
 void HierarchInterpPolyApproximation::
 restore_expansion_coefficients(const UShortArray& restore_set)
 {
-  size_t lev = index_norm(restore_set);
+  size_t lev = l1_norm(restore_set);
   if (expansionCoeffFlag) {
     expansionType1Coeffs[lev].push_back(savedExpT1Coeffs[restore_set]);
     savedExpT1Coeffs.erase(restore_set);

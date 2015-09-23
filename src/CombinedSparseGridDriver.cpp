@@ -194,7 +194,7 @@ assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
     // initialize coeffs
     coeffs.resize(num_terms);
     for (i=0; i<num_terms; i++) {
-      int wpNmi = ssgLevel - index_norm(multi_index[i]); // w+N-|i| = w-|j|
+      int wpNmi = ssgLevel - l1_norm(multi_index[i]); // w+N-|i| = w-|j|
       coeffs[i] = (int)std::pow(-1., wpNmi)
 	* (int)std::floor(BasisPolynomial::n_choose_k(numVars - 1, wpNmi)+.5);
     }
@@ -576,7 +576,7 @@ void CombinedSparseGridDriver::initialize_sets()
   // set may differ from the level --> need to compute Pareto set.
   for (i=0; i<num_old_sets; ++i)
     if ( smolyakCoeffs[i] == 1 && ( !dimIsotropic || // imperfect for aniso
-	 ( dimIsotropic && index_norm(smolyakMultiIndex[i]) == ssgLevel ) ) )
+	 ( dimIsotropic && l1_norm(smolyakMultiIndex[i]) == ssgLevel ) ) )
       add_active_neighbors(smolyakMultiIndex[i], dimIsotropic);
 
 #ifdef DEBUG

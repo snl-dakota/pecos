@@ -314,11 +314,11 @@ void compute_anisotropic_hyperbolic_indices( int num_dims, int level, Real p,
 					     RealVector &weights,
 					     IntMatrix &result );
 
-enum lp_norm
-  {
-    l1_norm,
-    l2_norm,
-    linf_norm,
+enum lp_norm // prepend "mt_" for MathTools to avoid name clash
+  { 
+    mt_l1_norm,
+    mt_l2_norm,
+    mt_linf_norm,
   };
 
 /**

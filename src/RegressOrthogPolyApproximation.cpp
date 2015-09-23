@@ -2259,7 +2259,7 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
 	{
 	  for ( int i = 0; i < (int)basis_indices.size(); i++ )
 	    {
-	      if ( index_norm( basis_indices[i] ) == k_counter )
+	      if ( l1_norm( basis_indices[i] ) == k_counter )
 		{
 		  new_indices.push_back( basis_indices[i] );
 		}
@@ -2414,7 +2414,7 @@ void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
 	  current_size = 0;
 	  for ( int j = 0; j < num_basis_indices; j++ )
 	    {
-	      if ( index_norm( basis_indices[j] ) == k[i] )
+	      if ( l1_norm( basis_indices[j] ) == k[i] )
 		current_size++;
 	    }
 	}

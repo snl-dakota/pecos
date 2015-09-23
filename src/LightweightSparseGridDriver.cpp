@@ -48,7 +48,7 @@ void LightweightSparseGridDriver::initialize_sets()
   activeMultiIndex.clear();
   UShortArraySet::const_iterator cit;
   for (cit=oldMultiIndex.begin(); cit!=oldMultiIndex.end(); ++cit)
-    if ( /*!dimIsotropic ||*/ index_norm(*cit) == ssgLevel )
+    if ( /*!dimIsotropic ||*/ l1_norm(*cit) == ssgLevel )
       add_active_neighbors(*cit, true);//dimIsotropic);
 }
 
