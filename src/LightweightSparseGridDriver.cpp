@@ -76,17 +76,4 @@ void LightweightSparseGridDriver::prune_sets(const SizetSet& save_tp)
     add_active_neighbors(*oit, false); // not exclusively frontier
 }
 
-
-void LightweightSparseGridDriver::print_smolyak_multi_index() const
-{
-  size_t i, j, sm_mi_len = smolyakMultiIndex.size();
-  for (i=0; i<sm_mi_len; ++i) {
-    PCout << "Smolyak index set " << i << ':';
-    const UShortArray& sm_mi_i = smolyakMultiIndex[i];
-    for (j=0; j<numVars; ++j)
-      PCout << ' ' << sm_mi_i[j];
-    PCout << '\n';
-  }
-}
-
 } // namespace Pecos

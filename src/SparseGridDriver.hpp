@@ -74,7 +74,7 @@ public:
   virtual void merge_set();
   /// accept all remaining trial sets within the generalized sparse
   /// grid procedure
-  virtual void finalize_sets();
+  virtual void finalize_sets(bool output_sets, bool converged_within_tol);
 
   /// update derived reference data, if required
   virtual void update_reference();
@@ -88,8 +88,6 @@ public:
   /// refinement
   virtual void compute_grid_increment(RealMatrix& var_sets);
 
-  /// print the final accepted and trial sets prior to set finalization
-  virtual void print_final_sets(bool converged_within_tol) const;
   /// print smolyakMultiIndex
   virtual void print_smolyak_multi_index() const = 0;
 
@@ -174,6 +172,9 @@ protected:
   static int level_to_order_exp_closed_interp(int level, int growth);
   /// level to order mapping for interpolation with nested open rules
   static int level_to_order_exp_open_interp(int level, int growth);
+
+  /// print an index set
+  void print_index_set(std::ostream& s, const UShortArray& mi) const;
 
   //
   //- Heading: Data
@@ -361,7 +362,8 @@ inline void SparseGridDriver::merge_set()
 { /* default implementation is no-op */ }
 
 
-inline void SparseGridDriver::finalize_sets()
+inline void SparseGridDriver::
+finalize_sets(bool output_sets, bool converged_within_tol)
 { /* default implementation is no-op */ }
 
 
@@ -421,6 +423,16 @@ level_to_order(const UShortArray& levels, UShortArray& orders)
     orders.resize(num_lev);
   for (i=0; i<num_lev; ++i)
     level_to_order(i, levels[i], orders[i]);
+}
+
+
+inline void SparseGridDriver::
+print_index_set(std::ostream& s, const UShortArray& mi) const
+{
+  size_t j, num_mi = mi.size();
+  for (j=0; j<num_mi; ++j)
+    s << std::setw(5) << mi[j];
+  s << '\n';
 }
 
 } // namespace Pecos

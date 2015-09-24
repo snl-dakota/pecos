@@ -798,8 +798,23 @@ void HierarchSparseGridDriver::merge_set()
 */
 
 
-void HierarchSparseGridDriver::finalize_sets()
+void HierarchSparseGridDriver::
+finalize_sets(bool output_sets, bool converged_within_tol)
 {
+  if (output_sets && converged_within_tol) {
+    size_t i, j, num_lev = smolyakMultiIndex.size();
+    PCout << "Above tolerance index sets:\n";
+    for (i=0; i<num_lev; ++i) {
+      const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
+      size_t num_sets = sm_mi_i.size();
+      if (i==trialLevel) --num_sets; // omit trial set
+      for (j=0; j<num_sets; ++j)
+	print_index_set(PCout, sm_mi_i[j]);
+    }
+    PCout << "Below tolerance index sets:\n";
+    print_index_set(PCout, smolyakMultiIndex[trialLevel].back());
+  }
+
   // For final answer, push all evaluated sets into old and clear active.
   // Multiple trial insertion approach must be compatible with
   // Dakota::Approximation::savedSDPSet behavior (i.e., inc2/inc3 set 
@@ -819,6 +834,8 @@ void HierarchSparseGridDriver::finalize_sets()
       type1WeightSets[trialLevel].push_back(savedT1WtSets[tr_set]);
       if (computeType2Weights)
 	type2WeightSets[trialLevel].push_back(savedT2WtSets[tr_set]);
+      if (output_sets && converged_within_tol) // print trials below tol
+	print_index_set(PCout, tr_set);
     }
   }
   /*
@@ -830,6 +847,17 @@ void HierarchSparseGridDriver::finalize_sets()
     //update_reference();
   }
   */
+
+  if (output_sets && !converged_within_tol) { // print all together in order
+    PCout << "Final index sets:\n";
+    size_t i, j, num_lev = smolyakMultiIndex.size();
+    for (i=0; i<num_lev; ++i) {
+      const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
+      size_t num_sets = sm_mi_i.size();
+      for (j=0; j<num_sets; ++j)
+	print_index_set(PCout, sm_mi_i[j]);
+    }
+  }
 
   activeMultiIndex.clear(); savedT1WtSets.clear(); savedT2WtSets.clear();
   // defer since needed for SharedPolyApproxData::finalization_index()
@@ -888,66 +916,6 @@ partition_keys(UShort3DArray& reference_pt_range,
       else
       */
 	ref_ls[1] = incr_ls[0] = num_tp_pts;
-    }
-  }
-}
-
-
-void HierarchSparseGridDriver::print_final_sets(bool converged_within_tol) const
-{
-  // this call should precede finalize_sets()
-  size_t i, j, k, num_lev = smolyakMultiIndex.size();
-  if (converged_within_tol) {
-    PCout << "Above tolerance index sets:\n";
-    for (i=0; i<num_lev; ++i) {
-      const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
-      size_t num_sets = sm_mi_i.size();
-      if (i==trialLevel) --num_sets; // omit trial set
-      for (j=0; j<num_sets; ++j) {
-	const UShortArray& sm_mi_ij = sm_mi_i[j];
-	for (k=0; k<numVars; ++k)
-	  PCout << std::setw(5) << sm_mi_ij[k];
-	PCout << '\n';
-      }
-    }
-    PCout << "Below tolerance index sets:\n";
-    const UShort2DArray& sm_mi_l = smolyakMultiIndex[trialLevel];
-    size_t last_set = sm_mi_l.size(); --last_set;
-    const UShortArray& sm_mi_ls = sm_mi_l[last_set];
-    for (k=0; k<numVars; ++k)
-      PCout << std::setw(5) << sm_mi_ls[k];
-    PCout << '\n';
-  }
-  else {
-    PCout << "Final index sets:\n";
-    for (i=0; i<num_lev; ++i) {
-      const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
-      size_t num_sets = sm_mi_i.size();
-      for (j=0; j<num_sets; ++j) {
-	const UShortArray& sm_mi_ij = sm_mi_i[j];
-	for (k=0; k<numVars; ++k)
-	  PCout << std::setw(5) << sm_mi_ij[k];
-	PCout << '\n';
-      }
-    }
-  }
-  // now print the trial sets
-  SparseGridDriver::print_final_sets(converged_within_tol);
-}
-
-
-void HierarchSparseGridDriver::print_smolyak_multi_index() const
-{
-  size_t i, j, k, num_lev = smolyakMultiIndex.size(), cntr = 1;
-  for (i=0; i<num_lev; ++i) {
-    const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
-    size_t num_sets = sm_mi_i.size();
-    for (j=0; j<num_sets; ++j, ++cntr) {
-      PCout << "Smolyak index set " << cntr << ':';
-      const UShortArray& sm_mi_ij = sm_mi_i[j];
-      for (k=0; k<numVars; ++k)
-	PCout << ' ' << sm_mi_ij[k];
-      PCout << '\n';
     }
   }
 }

@@ -231,19 +231,6 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 }
 
 
-void SparseGridDriver::print_final_sets(bool converged_within_tol) const
-{
-  // base class version invoked by derived versions for common output
-  UShortArraySet::const_iterator cit;
-  for (cit=computedTrialSets.begin(); cit!=computedTrialSets.end(); ++cit) {
-    const UShortArray& mi = *cit;
-    for (size_t j=0; j<numVars; ++j)
-      PCout << std::setw(5) << mi[j];
-    PCout << '\n';
-  }
-}
-
-
 void SparseGridDriver::
 add_active_neighbors(const UShortArray& set, bool frontier)
 {

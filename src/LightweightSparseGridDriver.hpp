@@ -111,6 +111,16 @@ inline const UShortArray& LightweightSparseGridDriver::trial_set() const
 { return smolyakMultiIndex.back(); }
 
 
+inline void LightweightSparseGridDriver::print_smolyak_multi_index() const
+{
+  size_t i, sm_mi_len = smolyakMultiIndex.size();
+  for (i=0; i<sm_mi_len; ++i) {
+    PCout << "Smolyak index set " << i << ':';
+    print_index_set(PCout, smolyakMultiIndex[i]);
+  }
+}
+
+
 inline const UShort2DArray& LightweightSparseGridDriver::
 smolyak_multi_index() const
 { return smolyakMultiIndex; }

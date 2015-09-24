@@ -58,14 +58,13 @@ public:
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_trial_set();
   //void merge_set();
-  void finalize_sets();
+  void finalize_sets(bool output_sets, bool converged_within_tol);
 
   const UShortArray& trial_set() const;
   int unique_trial_points() const;
 
   void compute_grid_increment(RealMatrix& var_sets);
 
-  void print_final_sets(bool converged_within_tol) const;
   void print_smolyak_multi_index() const;
 
   // concatenate type1WeightSets for use in abstract integration functions
@@ -211,6 +210,20 @@ inline int HierarchSparseGridDriver::unique_trial_points() const
 
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
 { return incrementSets; }
+
+
+inline void HierarchSparseGridDriver::print_smolyak_multi_index() const
+{
+  size_t i, j, k, num_lev = smolyakMultiIndex.size(), cntr = 1;
+  for (i=0; i<num_lev; ++i) {
+    const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
+    size_t num_sets = sm_mi_i.size();
+    for (j=0; j<num_sets; ++j, ++cntr) {
+      PCout << "Smolyak index set " << cntr << ':';
+      print_index_set(PCout, sm_mi_i[j]);
+    }
+  }
+}
 
 
 inline const UShort3DArray& HierarchSparseGridDriver::

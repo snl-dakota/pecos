@@ -624,7 +624,8 @@ void CombinedSparseGridDriver::pop_trial_set()
 }
 
 
-void CombinedSparseGridDriver::finalize_sets()
+void CombinedSparseGridDriver::
+finalize_sets(bool output_sets, bool converged_within_tol)
 {
   // For final answer, push all evaluated sets into old and clear active.
   // Multiple trial insertion approach must be compatible with
@@ -648,51 +649,22 @@ void CombinedSparseGridDriver::finalize_sets()
   finalize_unique(start_index);// assure no mixing of discrete a2's
   //merge_unique(); // a1 reference update not needed, no addtnl increments
   //update_reference();
-}
 
-
-void CombinedSparseGridDriver::print_final_sets(bool converged_within_tol) const
-{
-  // this call should precede finalize_sets()
-  size_t i, j;
-  if (converged_within_tol) {
-    PCout << "Above tolerance index sets:\n";
-    size_t last = smolyakMultiIndex.size() - 1;
-    for (i=0; i<last; ++i) {
-      for (j=0; j<numVars; ++j)
-	PCout << std::setw(5) << smolyakMultiIndex[i][j];
-      PCout << '\n';
+  if (output_sets) {
+    size_t i, j, num_sm_mi = smolyakMultiIndex.size();
+    if (converged_within_tol) {
+      PCout << "Above tolerance index sets:\n";
+      size_t last = start_index - 1;
+      for (i=0; i<last; ++i)
+	print_index_set(PCout, smolyakMultiIndex[i]);
+      PCout << "Below tolerance index sets:\n";
+      for (i=last; i<num_sm_mi; ++i)
+	print_index_set(PCout, smolyakMultiIndex[i]);
     }
-    PCout << "Below tolerance index sets:\n";
-    for (j=0; j<numVars; ++j)
-      PCout << std::setw(5) << smolyakMultiIndex[last][j];
-    PCout << '\n';
-  }
-  else {
-    PCout << "Final index sets:\n";
-    size_t num_sm_mi = smolyakMultiIndex.size();
-    for (i=0; i<num_sm_mi; ++i) {
-      for (j=0; j<numVars; ++j)
-	PCout << std::setw(5) << smolyakMultiIndex[i][j];
-      PCout << '\n';
-    }
-  }
-  // now print the trial sets
-  SparseGridDriver::print_final_sets(converged_within_tol);
-}
-
-
-void CombinedSparseGridDriver::print_smolyak_multi_index() const
-{
-  size_t i, j, sm_mi_len = smolyakMultiIndex.size(), cntr = 0;
-  for (i=0; i<sm_mi_len; ++i) {
-    if (smolyakCoeffs[i]) {
-      ++cntr;
-      PCout << "Smolyak index set " << cntr << ':';
-      const UShortArray& sm_mi_i = smolyakMultiIndex[i];
-      for (j=0; j<numVars; ++j)
-	PCout << ' ' << sm_mi_i[j];
-      PCout << '\n';
+    else {
+      PCout << "Final index sets:\n";
+      for (i=0; i<num_sm_mi; ++i)
+	print_index_set(PCout, smolyakMultiIndex[i]);
     }
   }
 }

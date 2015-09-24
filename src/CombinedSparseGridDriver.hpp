@@ -79,7 +79,7 @@ public:
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_trial_set();
   void merge_set();
-  void finalize_sets();
+  void finalize_sets(bool output_sets, bool converged_within_tol);
 
   /// update smolyakCoeffsRef and type{1,2}WeightSetsRef for use within the
   /// generalized sparse grid procedure
@@ -92,7 +92,6 @@ public:
 
   void compute_grid_increment(RealMatrix& var_sets);
 
-  void print_final_sets(bool converged_within_tol) const;
   void print_smolyak_multi_index() const;
 
   //
@@ -340,6 +339,18 @@ inline int CombinedSparseGridDriver::unique_trial_points() const
 
 //inline Real CombinedSparseGridDriver::duplicate_tolerance() const
 //{ return duplicateTol; }
+
+
+inline void CombinedSparseGridDriver::print_smolyak_multi_index() const
+{
+  size_t i, sm_mi_len = smolyakMultiIndex.size(), cntr = 0;
+  for (i=0; i<sm_mi_len; ++i) {
+    if (smolyakCoeffs[i]) {
+      PCout << "Smolyak index set " << ++cntr << ':';
+      print_index_set(PCout, smolyakMultiIndex[i]);
+    }
+  }
+}
 
 
 inline void CombinedSparseGridDriver::assign_smolyak_arrays()
