@@ -579,7 +579,7 @@ void write_data(std::ostream& s,
 
 
 /// global std::ostream insertion operator for std::vector
-template <class T>
+template <typename T>
 std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 {
   s << std::scientific << std::setprecision(WRITE_PRECISION);
@@ -592,7 +592,7 @@ std::ostream& operator<<(std::ostream& s, const std::vector<T>& data)
 
 
 /// global std::ostream insertion operator for std::set
-template <class T>
+template <typename T>
 std::ostream& operator<<(std::ostream& s, const std::set<T>& data)
 {
   for (typename std::set<T>::const_iterator cit = data.begin();

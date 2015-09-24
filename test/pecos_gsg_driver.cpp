@@ -24,49 +24,48 @@ void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 
 int main(int argc, char* argv[])
 {
+  using namespace Pecos;
 
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = STARTLEV;  // reference grid level
-  Pecos::RealVector dimension_pref; // empty -> isotropic
-  Pecos::CombinedSparseGridDriver csg_driver(level, dimension_pref);
+  RealVector dimension_pref; // empty -> isotropic
+  CombinedSparseGridDriver csg_driver(level, dimension_pref);
 
   std::cout << "Instantiating basis:\n";
   size_t num_vars = NUMVARS;
-  std::vector<Pecos::BasisPolynomial> poly_basis(num_vars);
+  std::vector<BasisPolynomial> poly_basis(num_vars);
   for (int i=0; i<num_vars; ++i)
-    poly_basis[i] = Pecos::BasisPolynomial(Pecos::LEGENDRE_ORTHOG);
+    poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG);
   csg_driver.initialize_grid(poly_basis);
 
   // initial grid
-  Pecos::RealMatrix variable_sets;
-  csg_driver.refinement_control(Pecos::DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
+  RealMatrix variable_sets;
+  csg_driver.refinement_control(DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
   csg_driver.compute_grid(variable_sets);
 
 #define DEBUG
 #ifdef DEBUG
-  Pecos::write_data(std::cout, variable_sets, true, true, true);
+  write_data(std::cout, variable_sets, true, true, true);
 #endif
 
   // start refinement
   csg_driver.initialize_sets();
 
 #ifdef DEBUG
-  Pecos::UShortArraySet aold = csg_driver.old_multi_index();
-  write_USAS(std::cout, aold) ;
+  UShortArraySet aold = csg_driver.old_multi_index();
+  write_USAS(std::cout, aold);
 #endif
 
-  Pecos::UShortArraySet a;
+  UShortArraySet a;
   for ( int iter = 0; iter<NITER; iter++) {
-    std::cout<<"Refine, iteration:"<<iter+1<<std::endl;
     a = csg_driver.active_multi_index();
+    std::cout<<"Refine, iteration: "<<iter+1<<'\n';
     write_USAS(std::cout, a) ;
-    //std::cout<<a<<std::endl;
-    //std::cout<<a.size()<<std::endl;
   
     std::vector<short unsigned int> asave;
-    Pecos::RealMatrix vsets1;
+    RealMatrix vsets1;
     int choose = 0;
-    for (Pecos::UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
+    for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
       int pick = std::rand();
       if ( pick > choose) {
         asave = *it;
@@ -75,30 +74,31 @@ int main(int argc, char* argv[])
       csg_driver.push_trial_set(*it);
       csg_driver.compute_trial_grid(vsets1); 
       //std::cout << "Sparse grid points:\n";
-      //Pecos::write_data(std::cout, vsets1, false, true, true);
+      //write_data(std::cout, vsets1, false, true, true);
       csg_driver.pop_trial_set();
     }
     csg_driver.update_sets(asave);
     csg_driver.update_reference();
   }
+  csg_driver.finalize_sets();
 
-  // Print final set
-  aold = csg_driver.old_multi_index();
-  std::cout<<"Final set:"<<std::endl;
-  write_USAS(std::cout, aold) ;
+  // Print final sets
+  std::cout<<"Final set:\n";
+  //aold = csg_driver.old_multi_index();
+  //write_USAS(std::cout, aold);
+  csg_driver.print_final_sets(false);
   
   return (0);
-
 }
 
-void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a) {
-
+void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a)
+{
   s << "-----------------------------------------\n";
   Pecos::UShortArraySet::iterator it;
   for (it=a.begin(); it!=a.end(); it++) {
     Pecos::UShortArray aa = *it;
     for (int i=0; i < aa.size(); i++ )
-      s<<aa[i]<<" ";
+      s<<std::setw(5)<<aa[i];
     s<<"\n";
   }
   s << "-----------------------------------------\n";

@@ -56,6 +56,11 @@ target_link_libraries(pecos_int_driver ${pecos_libs})
 add_test(pecos_int_driver pecos_int_driver)
 
 # Complete these for each specific test.
+add_executable(pecos_gsg_driver pecos_gsg_driver.cpp)
+target_link_libraries(pecos_gsg_driver ${pecos_libs})
+add_test(pecos_gsg_driver pecos_gsg_driver)
+
+# Complete these for each specific test.
 add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
 target_link_libraries(pecos_lhs_driver ${pecos_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
