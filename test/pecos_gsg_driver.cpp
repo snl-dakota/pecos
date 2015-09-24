@@ -19,9 +19,10 @@
 #define STARTLEV 1
 #define NITER    10
 
-/// A driver program for PECOS.
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
+void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
 
+/// A driver program for PECOS.
 int main(int argc, char* argv[])
 {
   using namespace Pecos;
@@ -46,15 +47,11 @@ int main(int argc, char* argv[])
 #define DEBUG
 #ifdef DEBUG
   write_data(std::cout, variable_sets, true, true, true);
+  write_US2A(std::cout, csg_driver.smolyak_multi_index());
 #endif
 
   // start refinement
   csg_driver.initialize_sets();
-
-#ifdef DEBUG
-  UShortArraySet aold = csg_driver.old_multi_index();
-  write_USAS(std::cout, aold);
-#endif
 
   UShortArraySet a;
   for ( int iter = 0; iter<NITER; iter++) {
@@ -84,22 +81,35 @@ int main(int argc, char* argv[])
 
   // Print final sets
   std::cout<<"Final set:\n";
-  //aold = csg_driver.old_multi_index();
-  //write_USAS(std::cout, aold);
-  csg_driver.print_final_sets(false);
+  write_US2A(std::cout, csg_driver.smolyak_multi_index());
+  //csg_driver.print_final_sets(false);
   
   return (0);
+}
+
+void write_US2A(std::ostream& s, const Pecos::UShort2DArray &a)
+{
+  s << "-----------------------------------------\n";
+  size_t i, j, num_a = a.size();
+  for (i=0; i<num_a; ++i) {
+    const Pecos::UShortArray& aa = a[i];
+    for (j=0; j < aa.size(); ++j)
+      s<<std::setw(5)<<aa[j];
+    s<<"\n";
+  }
+  s << "-----------------------------------------\n";
+  return ;
 }
 
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a)
 {
   s << "-----------------------------------------\n";
-  Pecos::UShortArraySet::iterator it;
-  for (it=a.begin(); it!=a.end(); it++) {
-    Pecos::UShortArray aa = *it;
-    for (int i=0; i < aa.size(); i++ )
-      s<<std::setw(5)<<aa[i];
-    s<<"\n";
+  Pecos::UShortArraySet::const_iterator cit;
+  for (cit=a.begin(); cit!=a.end(); ++cit) {
+    const Pecos::UShortArray& aa = *cit;
+    for (size_t j=0; j < aa.size(); ++j)
+      s<<std::setw(5)<<aa[j];
+    s<<'\n';
   }
   s << "-----------------------------------------\n";
   return ;

@@ -159,8 +159,6 @@ public:
 
   /// return activeMultiIndex
   const UShortArraySet& active_multi_index() const;
-  /// return oldMultiIndex
-  const UShortArraySet& old_multi_index() const;
   /// return computedTrialSets
   const UShortArraySet& computed_trial_sets() const;
 
@@ -337,10 +335,6 @@ inline short SparseGridDriver::growth_rate() const
 
 inline const UShortArraySet& SparseGridDriver::active_multi_index() const
 { return activeMultiIndex; }
-
-
-inline const UShortArraySet& SparseGridDriver::old_multi_index() const
-{ return oldMultiIndex; }
 
 
 inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
