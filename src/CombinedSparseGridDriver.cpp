@@ -558,6 +558,17 @@ void CombinedSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
 
 void CombinedSparseGridDriver::initialize_sets()
 {
+  // provide a helpful error message in the case where refineControl is not
+  // set for generalized adaptation
+  // > this traps the error where the reference grid was computed
+  //   inconsistently (see logic in compute_grid())
+  if (refineControl != DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
+    PCerr << "Error: CombinedSparseGridDriver::initialize_sets() called for "
+	  << "inconsistent refinement control setting (" << refineControl
+	  << ")." << std::endl;
+    abort_handler(-1);
+  }
+
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
   //oldMultiIndex = smolyakMultiIndex;
   oldMultiIndex.clear();
