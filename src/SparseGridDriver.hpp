@@ -41,7 +41,8 @@ public:
   /// default constructor
   SparseGridDriver();
   /// constructor
-  SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref);
+  SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
+		   short refine_control);
   /// destructor
   ~SparseGridDriver();
 
@@ -249,11 +250,12 @@ inline SparseGridDriver::SparseGridDriver():
 
 
 inline SparseGridDriver::
-SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref):
+SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
+		 short refine_control):
   IntegrationDriver(BaseConstructor()), ssgLevel(ssg_level),
   growthRate(MODERATE_RESTRICTED_GROWTH), storeCollocDetails(false),
   numCollocPts(0), updateGridSize(true), trackUniqueProdWeights(false),
-  trackCollocIndices(true), refineControl(NO_CONTROL)
+  trackCollocIndices(true), refineControl(refine_control)
   //refineType(NO_REFINEMENT),
 {
   if (dim_pref.empty())

@@ -38,7 +38,8 @@ public:
   LightweightSparseGridDriver();
   /// constructor
   LightweightSparseGridDriver(unsigned short ssg_level,
-			      const RealVector& dim_pref);
+			      const RealVector& dim_pref = RealVector(),
+			      short refine_control = NO_CONTROL);
   /// destructor
   ~LightweightSparseGridDriver();
 
@@ -90,8 +91,8 @@ inline LightweightSparseGridDriver::LightweightSparseGridDriver():
 
 inline LightweightSparseGridDriver::
 LightweightSparseGridDriver(unsigned short ssg_level,
-			    const RealVector& dim_pref):
-  SparseGridDriver(ssg_level, dim_pref)
+			    const RealVector& dim_pref, short refine_control):
+  SparseGridDriver(ssg_level, dim_pref, refine_control)
 { }
 
 

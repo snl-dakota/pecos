@@ -30,8 +30,8 @@ int main(int argc, char* argv[])
 
   // Smolyak sparse grid
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
-  unsigned short level = 3; Pecos::RealVector dimension_pref; // isotropic
-  Pecos::CombinedSparseGridDriver csg_driver(level, dimension_pref);
+  unsigned short level = 3; //Pecos::RealVector dimension_pref; // isotropic
+  Pecos::CombinedSparseGridDriver csg_driver(level);//, dimension_pref);
   csg_driver.initialize_grid(poly_basis);
   csg_driver.compute_grid(variable_sets);
   std::cout << "Sparse grid points:\n";

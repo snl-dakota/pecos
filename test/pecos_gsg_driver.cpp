@@ -30,7 +30,8 @@ int main(int argc, char* argv[])
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = STARTLEV;  // reference grid level
   RealVector dimension_pref; // empty -> isotropic
-  CombinedSparseGridDriver csg_driver(level, dimension_pref);
+  short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
+  CombinedSparseGridDriver csg_driver(level, dimension_pref, refine_cntl);
 
   std::cout << "Instantiating basis:\n";
   size_t num_vars = NUMVARS;
@@ -41,7 +42,6 @@ int main(int argc, char* argv[])
 
   // initial grid
   RealMatrix variable_sets;
-  csg_driver.refinement_control(DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
   csg_driver.compute_grid(variable_sets);
 
 #define DEBUG
@@ -77,12 +77,11 @@ int main(int argc, char* argv[])
     csg_driver.update_sets(asave);
     csg_driver.update_reference();
   }
-  csg_driver.finalize_sets();
+  csg_driver.finalize_sets(true, false); // use embedded output option
 
   // Print final sets
-  std::cout<<"Final set:\n";
-  write_US2A(std::cout, csg_driver.smolyak_multi_index());
-  //csg_driver.print_final_sets(false);
+  //std::cout<<"Final set:\n";
+  //write_US2A(std::cout, csg_driver.smolyak_multi_index());
   
   return (0);
 }

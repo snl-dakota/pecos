@@ -405,9 +405,9 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 {
   assign_smolyak_arrays();
 
-  // For efficiency reasons, incremental sparse grid definition uses different
-  // point orderings than sgmg/sgmga.  Therefore, the reference grid
-  // computations are kept completely separate.
+  // For efficiency reasons, incremental sparse grid definition uses
+  // different point orderings than sgmg/sgmga.  Therefore, the
+  // reference grid computations are kept completely separate.
 
   if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
     // compute reference grid only

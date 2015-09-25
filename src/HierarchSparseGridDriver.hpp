@@ -41,7 +41,8 @@ public:
   HierarchSparseGridDriver();
   /// constructor
   HierarchSparseGridDriver(unsigned short ssg_level,
-			   const RealVector& dim_pref);
+			   const RealVector& dim_pref = RealVector(),
+			   short refine_control = NO_CONTROL);
   /// destructor
   ~HierarchSparseGridDriver();
 
@@ -191,8 +192,9 @@ inline HierarchSparseGridDriver::HierarchSparseGridDriver():
 
 
 inline HierarchSparseGridDriver::
-HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref):
-  SparseGridDriver(ssg_level, dim_pref), nestedGrid(true)
+HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
+			 short refine_control):
+  SparseGridDriver(ssg_level, dim_pref, refine_control), nestedGrid(true)
 { }
 
 
