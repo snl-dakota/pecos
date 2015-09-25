@@ -30,8 +30,10 @@ int main(int argc, char* argv[])
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = STARTLEV;  // reference grid level
   RealVector dimension_pref; // empty -> isotropic
+  short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
-  CombinedSparseGridDriver csg_driver(level, dimension_pref, refine_cntl);
+  CombinedSparseGridDriver
+    csg_driver(level, dimension_pref, growth_rate, refine_cntl);
 
   std::cout << "Instantiating basis:\n";
   size_t num_vars = NUMVARS;

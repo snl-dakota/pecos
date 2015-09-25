@@ -49,6 +49,7 @@ public:
   /// constructor
   CombinedSparseGridDriver(unsigned short ssg_level,
 			   const RealVector& dim_pref = RealVector(),
+			   short growth_rate = MODERATE_RESTRICTED_GROWTH,
 			   short refine_control = NO_CONTROL);
   /// destructor
   ~CombinedSparseGridDriver();
@@ -293,8 +294,9 @@ inline CombinedSparseGridDriver::CombinedSparseGridDriver():
 
 inline CombinedSparseGridDriver::
 CombinedSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
-			 short refine_control):
-  SparseGridDriver(ssg_level, dim_pref, refine_control), duplicateTol(1.e-15)
+			 short growth_rate, short refine_control):
+  SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
+  duplicateTol(1.e-15)
 { }
 
 

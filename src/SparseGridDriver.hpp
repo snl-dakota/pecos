@@ -42,7 +42,7 @@ public:
   SparseGridDriver();
   /// constructor
   SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
-		   short refine_control);
+		   short growth_rate, short refine_control);
   /// destructor
   ~SparseGridDriver();
 
@@ -244,19 +244,17 @@ inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), ssgLevel(0), dimIsotropic(true),
   growthRate(MODERATE_RESTRICTED_GROWTH), storeCollocDetails(false),
   numCollocPts(0), updateGridSize(true), trackUniqueProdWeights(false),
-  trackCollocIndices(true), refineControl(NO_CONTROL)
-  //refineType(NO_REFINEMENT),
+  trackCollocIndices(true), refineControl(NO_CONTROL)//refineType(NO_REFINEMENT)
 { }
 
 
 inline SparseGridDriver::
 SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
-		 short refine_control):
+		 short growth_rate, short refine_control):
   IntegrationDriver(BaseConstructor()), ssgLevel(ssg_level),
-  growthRate(MODERATE_RESTRICTED_GROWTH), storeCollocDetails(false),
-  numCollocPts(0), updateGridSize(true), trackUniqueProdWeights(false),
-  trackCollocIndices(true), refineControl(refine_control)
-  //refineType(NO_REFINEMENT),
+  growthRate(growth_rate), storeCollocDetails(false), numCollocPts(0),
+  updateGridSize(true), trackUniqueProdWeights(false), trackCollocIndices(true),
+  refineControl(refine_control) //refineType(NO_REFINEMENT)
 {
   if (dim_pref.empty())
     dimIsotropic = true;
