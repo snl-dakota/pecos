@@ -79,6 +79,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new triangDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -206,6 +213,7 @@ inline void TriangularRandomVariable::parameter(short dist_param, Real val)
 	  << " in TriangularRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new triangDist instance
 }
 
 
@@ -300,14 +308,18 @@ dz_ds_factor(short u_type, Real x, Real z) const
 }
 
 
+inline void TriangularRandomVariable::update_boost()
+{
+  if (triangDist) delete triangDist;
+  triangDist = new triangular_dist(lowerBnd, triangularMode, upperBnd);
+}
+
+
 inline void TriangularRandomVariable::update(Real lwr, Real mode, Real upr)
 {
   if (!triangDist ||
-      lowerBnd != lwr || triangularMode != mode || upperBnd != upr) {
-    lowerBnd = lwr; triangularMode = mode; upperBnd = upr;
-    if (triangDist) delete triangDist;
-    triangDist = new triangular_dist(lwr, mode, upr);
-  }
+      lowerBnd != lwr || triangularMode != mode || upperBnd != upr)
+    { lowerBnd = lwr; triangularMode = mode; upperBnd = upr; update_boost(); }
 }
 
 

@@ -79,6 +79,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new negBinomialDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -153,6 +160,7 @@ inline void NegBinomialRandomVariable::parameter(short dist_param, Real val)
 	  << " in NegBinomialRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new negBinomialDist instance
 }
 
 
@@ -168,15 +176,19 @@ inline RealRealPair NegBinomialRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
+inline void NegBinomialRandomVariable::update_boost()
+{
+  if (negBinomialDist) delete negBinomialDist;
+  negBinomialDist = new negative_binomial_dist((Real)numTrials, probPerTrial);
+}
+
+
 inline void NegBinomialRandomVariable::
 update(unsigned int num_trials, Real prob_per_trial)
 {
   if (!negBinomialDist ||
-      numTrials != num_trials || probPerTrial != prob_per_trial) {
-    numTrials = num_trials; probPerTrial = prob_per_trial;
-    if (negBinomialDist) delete negBinomialDist;
-    negBinomialDist = new negative_binomial_dist((Real)numTrials, probPerTrial);
-  }
+      numTrials != num_trials || probPerTrial != prob_per_trial)
+    { numTrials = num_trials; probPerTrial = prob_per_trial; update_boost(); }
 }
 
 // Static member functions:

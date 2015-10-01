@@ -75,6 +75,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new binomialDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -149,6 +156,7 @@ inline void BinomialRandomVariable::parameter(short dist_param, Real val)
 	  << " in BinomialRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new binomialDist instance
 }
 
 
@@ -164,15 +172,19 @@ inline RealRealPair BinomialRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
+inline void BinomialRandomVariable::update_boost()
+{
+  if (binomialDist) delete binomialDist;
+  binomialDist = new binomial_dist((Real)numTrials, probPerTrial);
+}
+
+
 inline void BinomialRandomVariable::
 update(unsigned int num_trials, Real prob_per_trial)
 {
   if (!binomialDist ||
-      numTrials != num_trials || probPerTrial != prob_per_trial) {
-    numTrials = num_trials; probPerTrial = prob_per_trial;
-    if (binomialDist) delete binomialDist;
-    binomialDist = new binomial_dist((Real)numTrials, probPerTrial);
-  }
+      numTrials != num_trials || probPerTrial != prob_per_trial)
+    { numTrials = num_trials; probPerTrial = prob_per_trial; update_boost(); }
 }
 
 // Static member functions:

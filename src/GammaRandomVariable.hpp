@@ -97,6 +97,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new gammaDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -278,6 +285,7 @@ inline void GammaRandomVariable::parameter(short dist_param, Real val)
 	  << " in GammaRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new gammaDist instance
 }
 
 
@@ -390,13 +398,17 @@ dz_ds_factor(short u_type, Real x, Real z) const
 }
 
 
+inline void GammaRandomVariable::update_boost()
+{
+  if (gammaDist) delete gammaDist;
+  gammaDist = new gamma_dist(alphaStat, betaStat);
+}
+
+
 inline void GammaRandomVariable::update(Real alpha, Real beta)
 {
-  if (!gammaDist || alphaStat != alpha || betaStat != beta) {
-    alphaStat = alpha; betaStat = beta;
-    if (gammaDist) delete gammaDist;
-    gammaDist = new gamma_dist(alphaStat, betaStat);
-  }
+  if (!gammaDist || alphaStat != alpha || betaStat != beta)
+    { alphaStat = alpha; betaStat = beta; update_boost(); }
 }
 
 

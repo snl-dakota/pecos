@@ -81,6 +81,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new hypergeomDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -160,6 +167,7 @@ inline void HypergeometricRandomVariable::parameter(short dist_param, Real val)
 	  << " in HypergeometricRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new hypergeomDist instance
 }
 
 
@@ -180,6 +188,13 @@ inline RealRealPair HypergeometricRandomVariable::bounds() const
 }
 
 
+inline void HypergeometricRandomVariable::update_boost()
+{
+  if (hypergeomDist) delete hypergeomDist;
+  hypergeomDist = new hypergeometric_dist(numFail, numSelectPop, numTotalPop);
+}
+
+
 inline void HypergeometricRandomVariable::
 update(unsigned int num_total_pop, unsigned int num_sel_pop,
        unsigned int num_fail)
@@ -187,8 +202,7 @@ update(unsigned int num_total_pop, unsigned int num_sel_pop,
   if (!hypergeomDist || numTotalPop != num_total_pop ||
       numSelectPop != num_sel_pop || numFail != num_fail) {
     numTotalPop = num_total_pop; numSelectPop = num_sel_pop; numFail = num_fail;
-    if (hypergeomDist) delete hypergeomDist;
-    hypergeomDist = new hypergeometric_dist(numFail, numSelectPop, numTotalPop);
+    update_boost();
   }
 }
 

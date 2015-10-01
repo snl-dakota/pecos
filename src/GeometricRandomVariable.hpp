@@ -76,6 +76,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new geometricDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -144,6 +151,7 @@ inline void GeometricRandomVariable::parameter(short dist_param, Real val)
 	  << " in GeometricRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new geometricDist instance
 }
 
 
@@ -159,13 +167,17 @@ inline RealRealPair GeometricRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
+inline void GeometricRandomVariable::update_boost()
+{
+  if (geometricDist) delete geometricDist;
+  geometricDist = new geometric_dist(probPerTrial);
+}
+
+
 inline void GeometricRandomVariable::update(Real prob_per_trial)
 {
-  if (!geometricDist || probPerTrial != prob_per_trial) {
-    probPerTrial = prob_per_trial;
-    if (geometricDist) delete geometricDist;
-    geometricDist = new geometric_dist(probPerTrial);
-  }
+  if (!geometricDist || probPerTrial != prob_per_trial)
+    { probPerTrial = prob_per_trial; update_boost(); }
 }
 
 // Static member functions:

@@ -96,6 +96,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new betaDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -391,8 +398,8 @@ inline Real BetaRandomVariable::parameter(short dist_param) const
 inline void BetaRandomVariable::parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case BE_ALPHA:   alphaStat = val; break;
-  case BE_BETA:    betaStat  = val; break;
+  case BE_ALPHA:   alphaStat = val; update_boost(); break;
+  case BE_BETA:    betaStat  = val; update_boost(); break;
   case BE_LWR_BND: lowerBnd  = val; break;
   case BE_UPR_BND: upperBnd  = val; break;
   //case BE_LOCATION: - TO DO
@@ -469,15 +476,19 @@ inline Real BetaRandomVariable::dz_ds_factor(short u_type, Real x, Real z) const
 }
 
 
+inline void BetaRandomVariable::update_boost()
+{
+  if (betaDist) delete betaDist;
+  betaDist = new beta_dist(alphaStat, betaStat);
+}
+
+
 inline void BetaRandomVariable::
 update(Real alpha, Real beta, Real lwr, Real upr)
 {
   lowerBnd = lwr; upperBnd = upr; // don't affect betaDist
-  if (!betaDist || alphaStat != alpha || betaStat != beta) {
-    alphaStat = alpha; betaStat = beta;
-    if (betaDist) delete betaDist;
-    betaDist = new beta_dist(alphaStat, betaStat);
-  }
+  if (!betaDist || alphaStat != alpha || betaStat != beta)
+    { alphaStat = alpha; betaStat = beta; update_boost(); }
 }
 
 

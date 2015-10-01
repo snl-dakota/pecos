@@ -74,6 +74,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new poissonDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -141,6 +148,7 @@ inline void PoissonRandomVariable::parameter(short dist_param, Real val)
 	  << " in PoissonRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new poissonDist instance
 }
 
 
@@ -156,13 +164,17 @@ inline RealRealPair PoissonRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
 
 
+inline void PoissonRandomVariable::update_boost()
+{
+  if (poissonDist) delete poissonDist;
+  poissonDist = new poisson_dist(poissonLambda);
+}
+
+
 inline void PoissonRandomVariable::update(Real lambda)
 {
-  if (!poissonDist || poissonLambda != lambda) {
-    poissonLambda = lambda;
-    if (poissonDist) delete poissonDist;
-    poissonDist = new poisson_dist(poissonLambda);
-  }
+  if (!poissonDist || poissonLambda != lambda)
+    { poissonLambda = lambda; update_boost(); }
 }
 
 // Static member functions:

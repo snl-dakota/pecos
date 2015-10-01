@@ -86,6 +86,13 @@ public:
 protected:
 
   //
+  //- Heading: Member functions
+  //
+
+  /// create a new weibullDist instance
+  void update_boost();
+
+  //
   //- Heading: Data
   //
 
@@ -201,6 +208,7 @@ inline void WeibullRandomVariable::parameter(short dist_param, Real val)
 	  << " in WeibullRandomVariable::parameter()." << std::endl;
     abort_handler(-1); break;
   }
+  update_boost(); // create a new weibullDist instance
 }
 
 
@@ -309,13 +317,17 @@ dz_ds_factor(short u_type, Real x, Real z) const
 }
 
 
+inline void WeibullRandomVariable::update_boost()
+{
+  if (weibullDist) delete weibullDist;
+  weibullDist = new weibull_dist(alphaStat, betaStat);
+}
+
+
 inline void WeibullRandomVariable::update(Real alpha, Real beta)
 {
-  if (!weibullDist || alphaStat != alpha || betaStat != beta) {
-    alphaStat = alpha; betaStat = beta;
-    if (weibullDist) delete weibullDist;
-    weibullDist = new weibull_dist(alphaStat, betaStat);
-  }
+  if (!weibullDist || alphaStat != alpha || betaStat != beta)
+    { alphaStat = alpha; betaStat = beta; update_boost(); }
 }
 
 // Static member functions:
