@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
       int pick = std::rand();
       if ( pick > choose) {
-        asave = *it;
+        asave  = *it;
         choose = pick;
       }
       csg_driver.push_trial_set(*it);
