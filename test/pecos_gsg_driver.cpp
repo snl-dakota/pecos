@@ -14,7 +14,7 @@
 #include "CubatureDriver.hpp"
 #include "pecos_data_types.hpp"
 //#include "LocalRefinableDriver.hpp"
-#include "TestFunctions.hpp"
+//#include "TestFunctions.hpp"
 
 
 #define NUMVARS  3
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
       }
       csg_driver.push_trial_set(*it);
       csg_driver.compute_trial_grid(vsets1); 
-      RealVector fev = feval(vsets1);
+      //RealVector fev = feval(vsets1);
       //std::cout << "Sparse grid points:\n";
       //write_data(std::cout, vsets1, false, true, true);
       csg_driver.pop_trial_set();
