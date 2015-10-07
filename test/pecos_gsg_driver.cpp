@@ -14,6 +14,8 @@
 #include "CubatureDriver.hpp"
 #include "pecos_data_types.hpp"
 //#include "LocalRefinableDriver.hpp"
+#include "TestFunctions.hpp"
+
 
 #define NUMVARS  3
 #define STARTLEV 1
@@ -25,13 +27,15 @@ void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
 /// A driver program for PECOS.
 int main(int argc, char* argv[])
 {
+
   using namespace Pecos;
 
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = STARTLEV;  // reference grid level
-  RealVector dimension_pref; // empty -> isotropic
+  RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
+
   CombinedSparseGridDriver
     csg_driver(level, dimension_pref, growth_rate, refine_cntl);
 
@@ -72,6 +76,7 @@ int main(int argc, char* argv[])
       }
       csg_driver.push_trial_set(*it);
       csg_driver.compute_trial_grid(vsets1); 
+      RealVector fev = feval(vsets1);
       //std::cout << "Sparse grid points:\n";
       //write_data(std::cout, vsets1, false, true, true);
       csg_driver.pop_trial_set();
@@ -115,3 +120,4 @@ void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a)
   s << "-----------------------------------------\n";
   return ;
 }
+
