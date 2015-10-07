@@ -1,5 +1,7 @@
 #include "pecos_data_types.hpp"
 
+using namespace Pecos;
+
 void get_genz_coefficients( int num_dims, Real factor, int c_type, RealVector &c, RealVector &w )
 {
   c.resize( num_dims );
@@ -56,7 +58,7 @@ void get_genz_coefficients( int num_dims, Real factor, int c_type, RealVector &c
     };
 }
 
-double genz(string an_comp, RealVector &xC)
+double genz(String an_comp, RealVector &xC)
 {
   int coeff_type, fn_type;
   Real factor;
@@ -73,14 +75,14 @@ double genz(string an_comp, RealVector &xC)
   else if (an_comp == "cp3")
     { coeff_type = 2; fn_type = 1; factor = .25; }
   else {
-    Cerr << "Error: option for genz() is not yet implemented : "<<an_comp
+    std::cerr << "Error: option for genz() is not yet implemented : "<<an_comp
 	 << std::endl;
     std::terminate();
   } 
 
   RealVector c, w;
-  get_genz_coefficients( numVars, factor, 
-			 coeff_type, c, w );
+  int numVars = xC.length();
+  get_genz_coefficients( numVars, factor, coeff_type, c, w );
   Real fnVals, pi = 4.0 * std::atan( 1.0 );
 
   // **** f:
