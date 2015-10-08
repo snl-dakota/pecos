@@ -34,10 +34,12 @@ void restartGSGdriver(const char *grid, const char *fcnvals,
                       &storedVals) ;
 int checkSetsInStoredSet(const Pecos::RealMatrix &storedSets, const Pecos::RealMatrix &variable_sets, 
 			 std::vector<bool> &computedGridIDs);
+void addNewSets(Pecos::RealMatrix &storedSets,RealVector &storedVals,
+		Pecos::RealMatrix &newSets, RealVector &fev, std::vector<bool> &computedGridIDs);
 
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
-RealVector feval(const RealMatrix &dataMat, void *funInfo)  ;
+RealVector feval(const RealMatrix &dataMat, std::vector<bool> &computedGridIDs, void *funInfo)  ;
 
 /// A driver program for PECOS.
 int main(int argc, char* argv[])
@@ -88,6 +90,8 @@ int main(int argc, char* argv[])
   else
   {
     computedGridIDs.resize(variable_sets.numCols(),false);
+    RealVector fev = feval(variable_sets,computedGridIDs,NULL);
+    addNewSets(storedSets,storedVals,variable_sets,fev,computedGridIDs);
   }
 
 
@@ -118,7 +122,13 @@ int main(int argc, char* argv[])
       csg_driver.push_trial_set(*it);
       csg_driver.compute_trial_grid(vsets1); 
 
-      
+      int numHits = checkSetsInStoredSet(storedSets,vsets1,computedGridIDs);
+      if (numHits<vsets1.numCols())
+      {
+        RealVector fev = feval(vsets1,computedGridIDs,NULL);
+        addNewSets(storedSets,storedVals,vsets1,fev,computedGridIDs);
+      }
+
       //RealVector fev = feval(vsets1,NULL);
       //write_data(std::cout, vsets1, false, true, true);
       //write_data(std::cout, fev, false, true, true);
@@ -169,7 +179,7 @@ void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a)
   return ;
 }
 
-RealVector feval(const RealMatrix &dataMat, void *funInfo) 
+RealVector feval(const RealMatrix &dataMat, std::vector<bool> &computedGridIDs, void *funInfo) 
 {
 
   int i, j, numPts, numDim ;
@@ -177,12 +187,24 @@ RealVector feval(const RealMatrix &dataMat, void *funInfo)
   numDim = dataMat.numRows(); // Dimensionality
   numPts = dataMat.numCols(); // Number of function evaluations
 
-  RealVector fev(numPts);
+  // Count the number of function evaluations;
+  RealVector fev;
+
+  int nEval=0;
+  for (i=0; i<numPts; ++i) 
+    if (computedGridIDs[i]) nEval++;
+  if (nEval==0)
+    return fev;
+
+  fev.resize(nEval);
+  int ieval=0;
   for (i=0; i<numPts; ++i) {
+    if (!computedGridIDs[i]) continue;
     RealVector xIn(numDim);
     for (j=0; j<numDim; ++j)
       xIn[j] = dataMat(j,i);
-    fev[i] = genz(String("cp1"), xIn);   
+    fev[ieval]=genz(String("cp1"), xIn);
+    ieval++;   
   }
   
   return fev;
@@ -274,4 +296,40 @@ int checkSetsInStoredSet(const Pecos::RealMatrix &storedSets, const Pecos::RealM
     }
   }
   return (nHits);
+}
+
+void addNewSets(Pecos::RealMatrix &storedSets,RealVector &storedVals,
+		Pecos::RealMatrix &newSets, RealVector &fev,
+		std::vector<bool> &computedGridIDs)
+{
+    using namespace Pecos;
+
+    
+    RealMatrix storedSetsBkp = storedSets;
+   
+    // resize
+    storedSets.shape(storedSetsBkp.numRows()+fev.length(),storedSetsBkp.numCols());
+
+    // copy old data
+    for (int i=0; i<storedSetsBkp.numRows(); i++ )
+      for (int j=0;j<storedSetsBkp.numCols(); j++ )
+	storedSets(i,j) = storedSetsBkp(i,j);
+
+    // add new data
+    int irow = storedSetsBkp.numRows();
+    for  (int i=0; i<computedGridIDs.size(); i++)
+    {
+      if (computedGridIDs[i]) {
+        for (int j=0;j<storedSets.numCols(); j++ )
+	  storedSets(irow,j) = newSets(j,i);
+	irow++;
+      }
+    }
+
+    storedVals.resize(storedVals.length()+fev.length());
+    for  (int i=0; i<fev.length(); i++) 
+      storedVals[storedSetsBkp.numRows()+i]=fev[i];
+
+    return ;
+
 }
