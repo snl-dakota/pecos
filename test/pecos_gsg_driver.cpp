@@ -6,8 +6,12 @@
     For more information, see the README file in the top Pecos directory.
     _______________________________________________________________________ */
 
-/** \file pecos_int_driver.cpp
+/** \file pecos_gsg_driver.cpp
     \brief A driver program for PECOS */
+
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include "CombinedSparseGridDriver.hpp"
 #include "TensorProductDriver.hpp"
@@ -17,11 +21,16 @@
 
 #include "TestFunctions.hpp"
 
-
+#define MAX_CHARS_PER_LINE 1000
 #define NUMVARS  3
 #define STARTLEV 1
 #define NITER    10
+#define GRIDFILE "savedgrid.dat"
+#define FCNFILE  "savedfcn.dat"
 
+
+void restartGSGdriver(const char *grid, const char *fcnvals, 
+                      Pecos::RealMatrix &storedSets, Pecos::RealVector &storedVals) ;
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
 RealVector feval(const RealMatrix &dataMat, void *funInfo)  ;
@@ -32,12 +41,22 @@ int main(int argc, char* argv[])
 
   using namespace Pecos;
 
+
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = STARTLEV;  // reference grid level
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
 
+  // Store grid and model evaluations 
+  RealMatrix storedSets;
+  RealVector storedVals;   
+
+  // Restart is data available 
+  restartGSGdriver((char *)GRIDFILE, (char *)FCNFILE, storedSets, storedVals);
+
+
+  // 
   CombinedSparseGridDriver
     csg_driver(level, dimension_pref, growth_rate, refine_cntl);
 
@@ -79,15 +98,19 @@ int main(int argc, char* argv[])
       csg_driver.push_trial_set(*it);
       csg_driver.compute_trial_grid(vsets1); 
 
-      RealVector fev = feval(vsets1,NULL);
-      //std::cout << "Sparse grid points:\n";
+      
+      //RealVector fev = feval(vsets1,NULL);
       //write_data(std::cout, vsets1, false, true, true);
+      //write_data(std::cout, fev, false, true, true);
 
       csg_driver.pop_trial_set();
-
+    
     }
+    std::cout<<asave<<std::endl ;
     csg_driver.update_sets(asave);
     csg_driver.update_reference();
+
+
   }
   csg_driver.finalize_sets(true, false); // use embedded output option
 
@@ -131,17 +154,73 @@ RealVector feval(const RealMatrix &dataMat, void *funInfo)
 
   int i, j, numPts, numDim ;
 
-  numPts = dataMat.numRows(); // Number of function evaluations
-  numDim = dataMat.numCols(); // Dimensionality
+  numDim = dataMat.numRows(); // Dimensionality
+  numPts = dataMat.numCols(); // Number of function evaluations
 
   RealVector fev(numPts);
   for (i=0; i<numPts; ++i) {
     RealVector xIn(numDim);
     for (j=0; j<numDim; ++j)
-      xIn[j] = dataMat(i,j);
+      xIn[j] = dataMat(j,i);
     fev[i] = genz(String("cp1"), xIn);   
   }
   
   return fev;
 
 }
+
+// Restart if data available 
+void restartGSGdriver(const char *grid, const char *fcnvals, 
+                      Pecos::RealMatrix &storedSets, Pecos::RealVector &storedVals) 
+{
+
+  std::ifstream fin ;
+  fin.open(grid);
+  if (!fin.good()) return; // No restart file available
+
+  std::vector<String> ftext;
+  while (!fin.eof())
+  {
+    // read an entire line into memory
+    char buf[MAX_CHARS_PER_LINE];
+    fin.getline(buf, MAX_CHARS_PER_LINE);
+    String bufstr(buf) ;
+    ftext.push_back(bufstr);
+  }
+  fin.close();
+
+  // get the number of sets and dimensionality 
+  int numSets = ftext.size();
+  int numVars = 0 ;
+  double tmp; 
+  std::stringstream parseDbl(ftext[0]);
+  while( parseDbl >> tmp ) numVars++ ;
+
+  // get sets from stored text
+  storedSets.reshape(numSets,numVars);
+  for (int i=0; i<numSets; i++) {
+    parseDbl.str(ftext[i]);
+    int j = 0;
+    while( parseDbl >> storedSets(i,j) ) j++ ;
+    assert (j==numVars);
+  }
+  
+  fin.open(fcnvals);
+  if (!fin.good()) {
+    std::cout<<"restartGSGdriver(): Error: found sets but no function values !" <<std::endl;
+    std::terminate();
+  }
+
+  int i=0;
+  for(std::string line; std::getline(fin, line); )   //read stream line by line
+  {
+    std::istringstream in(line);      //make a stream for the line itself
+    in >> storedVals[i];
+    i++;
+  }
+  assert(i==numSets);
+
+  return ;
+
+}
+
