@@ -30,7 +30,11 @@
 
 
 void restartGSGdriver(const char *grid, const char *fcnvals, 
-                      Pecos::RealMatrix &storedSets, Pecos::RealVector &storedVals) ;
+                      Pecos::RealMatrix &storedSets, Pecos::RealVector
+                      &storedVals) ;
+int checkSetsInStoredSet(const Pecos::RealMatrix &storedSets, const Pecos::RealMatrix &variable_sets, 
+			 std::vector<bool> &computedGridIDs);
+
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
 RealVector feval(const RealMatrix &dataMat, void *funInfo)  ;
@@ -55,8 +59,7 @@ int main(int argc, char* argv[])
   // Restart is data available 
   restartGSGdriver((char *)GRIDFILE, (char *)FCNFILE, storedSets, storedVals);
 
-
-  // 
+  // Start 
   CombinedSparseGridDriver
     csg_driver(level, dimension_pref, growth_rate, refine_cntl);
 
@@ -70,6 +73,23 @@ int main(int argc, char* argv[])
   // initial grid
   RealMatrix variable_sets;
   csg_driver.compute_grid(variable_sets);
+  
+  // if restart, check if grid is in the restart
+  std::vector<bool> computedGridIDs ;
+  if (storedVals.length() > 0) {
+    int numHits = checkSetsInStoredSet(storedSets,variable_sets,computedGridIDs);
+    if ( numHits != variable_sets.numCols() )
+    {
+      std::cout<<"main() error: initial sets not found in restart"
+               <<std::endl;
+      std::terminate();
+    }
+  } 
+  else
+  {
+    computedGridIDs.resize(variable_sets.numCols(),false);
+  }
+
 
 #define DEBUG
 #ifdef DEBUG
@@ -224,3 +244,34 @@ void restartGSGdriver(const char *grid, const char *fcnvals,
 
 }
 
+int checkSetsInStoredSet(const Pecos::RealMatrix &storedSets, const Pecos::RealMatrix &newSets, 
+			 std::vector<bool> &computedGridIDs)
+{
+  // warning: in storedSets each line is a grid point, while in variable_sets each column is a point
+  // need to reconcile this at some point
+  assert (storedSets.numCols() == newSets.numRows());
+
+  int nHits;
+  computedGridIDs.resize(newSets.numCols(),false);
+  for (int i=0; i<newSets.numRows(); i++ )
+  {
+    int numMatch;
+    for (int j=0;j<storedSets.numCols(); j++ )
+    {
+      numMatch = 0;
+      for (int k=0;k<storedSets.numRows(); k++ )
+      {
+	if (storedSets(k,j) != newSets(i,k) )
+          break;
+        else
+	  numMatch++ ;
+      }
+      if (numMatch == storedSets.numRows()) {
+        computedGridIDs[j] = true;
+        nHits++;
+        break;
+      } 
+    }
+  }
+  return (nHits);
+}
