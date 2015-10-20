@@ -229,15 +229,25 @@ void NatafTransformation::trans_Z_to_U(RealVector& z_vars, RealVector& u_vars)
   // corrCholeskyFactorZ: the Cholesky factor of the modified correlation matrix
 
   int z_len = z_vars.length();
+  // The inbound u_vars object may be a Teuchos::View we want to
+  // update with the solution.  However SerialDenseSolver::solve(),
+  // line 647 will call (LHS_ = u_vars) = RHS_, disconnecting the
+  // view.  To work around, we use a temporary.
+  RealVector tmp_u_vars(z_len);
+  // WARNING: this could also disconnect a view...
   if (u_vars.length() != z_len)
     u_vars.size(z_len);
 
+
   RealSolver corr_solver;
   corr_solver.setMatrix(  Teuchos::rcp(&corrCholeskyFactorZ, false) );
-  corr_solver.setVectors( Teuchos::rcp(&u_vars, false),
+  corr_solver.setVectors( Teuchos::rcp(&tmp_u_vars, false),
 			  Teuchos::rcp(&z_vars, false) );
   corr_solver.solveToRefinedSolution(true);
   corr_solver.solve();
+  // Assign into u_vars, which may be a Teuchos::View
+  u_vars.assign(tmp_u_vars);
+
 }
 
 
@@ -809,12 +819,22 @@ jacobian_dU_dX(const RealVector& x_vars, RealMatrix& jacobian_ux)
     RealSolver corr_solver;
     corr_solver.setMatrix( Teuchos::rcp(&corrCholeskyFactorZ, false) );
     int num_v = x_vars.length();
+    // The inbound jacobian_ux object may be a Teuchos::View we want
+    // to update with the solution.  However
+    // SerialDenseSolver::solve(), line 647 will call (LHS_ =
+    // jacobian_ux) = RHS_, disconnecting the view.  To work around,
+    // we use a temporary.  At this writing there are no such use
+    // cases, but we don't want to have a latent bug.
+    RealMatrix tmp_jac_ux(num_v, num_v);
+    // WARNING: this could also disconnect a view...
     if (jacobian_ux.numRows() != num_v || jacobian_ux.numCols() != num_v)
       jacobian_ux.shape(num_v, num_v);
-    corr_solver.setVectors( Teuchos::rcp(&jacobian_ux, false),
+    corr_solver.setVectors( Teuchos::rcp(&tmp_jac_ux, false),
                             Teuchos::rcp(&jacobian_zx, false) );
     corr_solver.solveToRefinedSolution(true);
     corr_solver.solve();
+    // Assign into jacobian_ux, which may be a Teuchos::View
+    jacobian_ux.assign(tmp_jac_ux);
   }
   else // dU/dX = dZ/dX since dU/dZ = I
     jacobian_dZ_dX(x_vars, jacobian_ux);
