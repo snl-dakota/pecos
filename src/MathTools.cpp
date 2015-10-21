@@ -88,6 +88,19 @@ int nchoosek(int n, int k)
   //return (int)(Factorial(n)/(Factorial(n-k)*Factorial(k)));
 };
 
+int get_total_degree_from_num_samples( int num_dims,
+				       int num_samples ){
+  int degree = 0;
+  while ( true ){
+    int num_terms = nchoosek(degree+num_dims,num_dims);
+    if ( num_terms >= num_samples ){
+      break;
+    }
+    degree++;
+  }
+  return degree;
+}
+
 Real rescale( Real x, Real a, Real b, int dir )
 {
   if ( dir == 0 )
@@ -436,7 +449,7 @@ void compute_combinations( int num_dims, int level, IntMatrix &indices )
 	    indices( i, d ) = index[d];
 	  i++;
 
-	  if ( !extend ) break;
+	  if ( not extend ) break;
 	}
     }
   else
@@ -604,6 +617,17 @@ void compute_anisotropic_hyperbolic_indices( int num_dims, int level, Real p,
 	}
     } 
   indices.reshape( num_indices, num_dims );
+}
+
+void get_column_norms( RealMatrix &A, RealVector &result )
+{
+  int M = A.numRows(), N = A.numCols();
+  result.sizeUninitialized( N );
+  for ( int i = 0; i < N; i++ )
+    {
+      RealVector col( Teuchos::View, A[i], M );
+      result[i] = col.normFrobenius();
+    }
 }
 
 } // namespace Pecos

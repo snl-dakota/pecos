@@ -94,6 +94,7 @@ public:
 
   /// get polynomialBasis
   const std::vector<BasisPolynomial>& polynomial_basis() const;
+  std::vector<BasisPolynomial>& polynomial_basis();
   /// set polynomialBasis
   void polynomial_basis(const std::vector<BasisPolynomial>& poly_basis);
 
@@ -207,6 +208,17 @@ protected:
   /// the nonrandom variable subset evaluated at a particular parameter set
   Real multivariate_polynomial(const RealVector& x,const UShortArray& indices,
 			       const SizetList& non_rand_indices);
+  /// calculate a particular multivariate orthogonal polynomial value
+  /// evaluated at a particular parameter set
+  static Real multivariate_polynomial(const RealVector& x,
+				      const UShortArray& indices,
+	       std::vector<BasisPolynomial> &polynomial_basis);
+  /// calculate a particular multivariate orthogonal polynomial value over
+  /// the nonrandom variable subset evaluated at a particular parameter set
+  static Real multivariate_polynomial(const RealVector& x,
+				      const UShortArray& indices,
+				      const SizetList& non_rand_indices,
+	       std::vector<BasisPolynomial> &polynomial_basis);
 
   /// compute multivariate orthogonal polynomial gradient evaluated at x 
   /// for term corresponding to indices and derivative variable deriv_index
@@ -431,7 +443,6 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
     update_basis_distribution_parameters(u_types, adp, poly_basis);
 }
 
-
 inline void SharedOrthogPolyApproxData::
 orthogonal_basis_types(const ShortArray& opb_types)
 { orthogPolyTypes = opb_types; }
@@ -446,6 +457,9 @@ inline const std::vector<BasisPolynomial>& SharedOrthogPolyApproxData::
 polynomial_basis() const
 { return polynomialBasis; }
 
+inline std::vector<BasisPolynomial>& SharedOrthogPolyApproxData::
+polynomial_basis()
+{ return polynomialBasis; }
 
 inline void SharedOrthogPolyApproxData::
 polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
@@ -474,11 +488,18 @@ restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
 inline Real SharedOrthogPolyApproxData::
 multivariate_polynomial(const RealVector& x, const UShortArray& indices)
 {
-  Real mvp = 1.; unsigned short order_1d;
-  for (size_t i=0; i<numVars; ++i) {
+  return multivariate_polynomial(x, indices, polynomialBasis);
+}
+
+inline Real SharedOrthogPolyApproxData::
+multivariate_polynomial(const RealVector& x, const UShortArray& indices, 
+			std::vector<BasisPolynomial> &polynomial_basis )
+{
+  Real mvp = 1.; unsigned short order_1d; int num_vars = x.length();
+  for (size_t i=0; i<num_vars; ++i) {
     order_1d = indices[i];
     if (order_1d)
-      mvp *= polynomialBasis[i].type1_value(x[i], order_1d);
+      mvp *= polynomial_basis[i].type1_value(x[i], order_1d);
   }
   return mvp;
 }
@@ -489,12 +510,21 @@ inline Real SharedOrthogPolyApproxData::
 multivariate_polynomial(const RealVector& x, const UShortArray& indices,
 			const SizetList& non_rand_indices)
 {
+  return multivariate_polynomial(x, indices, non_rand_indices, polynomialBasis);
+}
+
+/** All variables version. */
+inline Real SharedOrthogPolyApproxData::
+multivariate_polynomial(const RealVector& x, const UShortArray& indices,
+			const SizetList& non_rand_indices,
+			std::vector<BasisPolynomial> &polynomial_basis)
+{
   Real mvp = 1.; SizetList::const_iterator cit;
   unsigned short order_1d; size_t i;
   for (cit=non_rand_indices.begin(); cit!=non_rand_indices.end(); ++cit) {
     i = *cit; order_1d = indices[i];
     if (order_1d)
-      mvp *= polynomialBasis[i].type1_value(x[i], order_1d);
+      mvp *= polynomial_basis[i].type1_value(x[i], order_1d);
   }
   return mvp;
 }
@@ -504,7 +534,7 @@ inline Real SharedOrthogPolyApproxData::
 multivariate_polynomial_gradient(const RealVector& x, size_t deriv_index,
 				 const UShortArray& indices)
 {
-  Real mvp_grad = 1.;
+  Real mvp_grad = 1.; 
   for (size_t k=0; k<numVars; ++k)
     mvp_grad *= (k == deriv_index) ?
       polynomialBasis[k].type1_gradient(x[k], indices[k]) :

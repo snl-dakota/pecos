@@ -234,6 +234,37 @@ Real OrthogPolyApproximation::value(const RealVector& x)
   return approx_val;
 }
 
+void OrthogPolyApproximation::basis_value(const RealVector& x,
+		       std::vector<BasisPolynomial> &polynomial_basis,
+					  const UShort2DArray &multi_index,
+					  RealVector &basis_values)
+{
+  size_t i, num_exp_terms = multi_index.size();
+  for (i=0; i<num_exp_terms; ++i)
+    basis_values[i] = 
+      SharedOrthogPolyApproxData::multivariate_polynomial(x, multi_index[i],
+							  polynomial_basis);
+}
+
+void OrthogPolyApproximation::basis_matrix(const RealMatrix& x,
+		       std::vector<BasisPolynomial> &polynomial_basis,
+					  const UShort2DArray &multi_index,
+					  RealMatrix &basis_values)
+{
+  size_t i, j, num_exp_terms = multi_index.size(), num_samples = x.numCols(),
+    num_vars = x.numRows();
+  basis_values.shapeUninitialized(num_samples,num_exp_terms);
+  for (j=0; j<num_exp_terms; ++j){
+    for (i=0; i<num_samples; ++i){
+      RealVector sample( Teuchos::View, const_cast<double*>(x[i]), num_vars);
+      basis_values(i,j) = 
+	SharedOrthogPolyApproxData::multivariate_polynomial(sample, 
+							    multi_index[j],
+							    polynomial_basis);
+    }
+  }
+}
+
 
 const RealVector& OrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x)

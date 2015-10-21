@@ -9,8 +9,15 @@
 #define MATH_TOOLS_HPP
 
 #include "LinearAlgebra.hpp"
+#include <algorithm>
+#include <functional>
+#include <ctime>
+#include <boost/functional/hash.hpp>
+#include <ext/hash_set>
+#include <boost/unordered_set.hpp>
 
 namespace Pecos {
+
 /**
  * \brief Map a scalar index of a flat 1D array to the equivalent
  *        d-dimensional index
@@ -147,10 +154,10 @@ template<typename O, typename T>
 void range( Teuchos::SerialDenseVector<O,T> &result, T m, T n, T incr = 1 )
 {
   T i = m;
-  int j = 0;
-  int len = (int)( n - m ) / (int)incr;
-  if ( ( (int)( n - m ) % (int)incr ) != 0 ) len++;
-  result.size( len );
+  O j = 0;
+  O len = (O)( n - m ) / (O)incr;
+  if ( (O)( n - m ) % (O)incr != 0 ) len++;
+  result.sizeUninitialized( len );
   while( i < n )
     {
       result[j] = i;
@@ -284,6 +291,11 @@ void get_multi_dimensional_polynomial_subspace_indices( IntMatrix &B,
 void get_multi_dimensional_polynomial_indices( int num_dims, int degree, 
 					       IntMatrix &result );
 
+/**
+ * \brief Get the smallest degree of the total degree polynomial such that the
+ * number of terms in the basis is larger than or equal to num_samples
+*/
+int get_total_degree_from_num_samples( int num_dims, int num_samples );
 
 /**
  * \brief Get the multi-dimensional hypercube \f$[a,b]^d\f$
@@ -314,7 +326,8 @@ void compute_anisotropic_hyperbolic_indices( int num_dims, int level, Real p,
 					     RealVector &weights,
 					     IntMatrix &result );
 
-enum lp_norm // prepend "mt_" for MathTools to avoid name clash
+// prepend "mt_" for MathTools to avoid name clash
+enum lp_norm
   { 
     mt_l1_norm,
     mt_l2_norm,
@@ -328,7 +341,7 @@ enum lp_norm // prepend "mt_" for MathTools to avoid name clash
  \arg \! \min_i x_i\quad i=1,\ldots,n
  \f] 
 */
-template<typename T>
+ template<typename T>
 int argmin( int n, T* x )
 {
   int amin( 0 );
@@ -361,6 +374,23 @@ int argmax( int n, T* x )
       if ( x[i] > max )
 	{
 	  max = x[i];
+	  amax = i;
+	}
+    }
+  return amax;
+};
+
+template<typename T>
+int magnitude_argmax( int n, T* x )
+{
+  int amax( 0 );
+  T max = std::abs( x[0] );
+  for ( int i = 1; i < n; i++ )
+    {
+      Real abs_x = std::abs( x[i] );
+      if ( abs_x > max )
+	{
+	  max = abs_x;
 	  amax = i;
 	}
     }
@@ -574,7 +604,7 @@ void lhs( int num_dims, int num_pts, int seed,
 template<typename T>
 class index_sorter {
 public:
-  index_sorter(T &values){ values_ = values; }
+  index_sorter(const T &values){ values_ = values; }
   bool operator()( int lhs, int rhs) const {
     return values_[lhs] < values_[rhs];
   }
@@ -585,7 +615,7 @@ private:
 template<typename T>
 class magnitude_index_sorter {
 public:
-  magnitude_index_sorter(T &values){ values_ = values; }
+  magnitude_index_sorter(const T &values){ values_ = values; }
   bool operator()( int lhs, int rhs) const {
     return std::abs( values_[lhs] ) > std::abs( values_[rhs] );
   }
@@ -595,7 +625,7 @@ private:
 
 // sorts in ascending order
 template<typename O, typename T>
-void argsort( Teuchos::SerialDenseVector<O,T> &values, 
+void argsort( const Teuchos::SerialDenseVector<O,T> &values, 
 	      IntVector &result )
 {
   std::vector<O> indices( values.length() );
@@ -622,7 +652,7 @@ void argsort( Teuchos::SerialDenseVector<O,T> &v,
 
 // sorts in descending order absolute value of entries
 template<typename O, typename T>
-void magnitude_argsort( Teuchos::SerialDenseVector<O,T> &values, 
+void magnitude_argsort( const Teuchos::SerialDenseVector<O,T> &values, 
 			IntVector &result )
 {
   std::vector<O> indices( values.length() );
@@ -708,6 +738,249 @@ void reverse( Teuchos::SerialDenseVector<O,T> &v )
   for ( O i = 0; i < n; i++ )
     v[i] = tmp[n-i-1];
 }
+
+template <typename O, typename T>
+struct VectorEqual{
+  /*
+   * \brief Determine if two vectors of doubles are equal
+   */
+  typedef Teuchos::SerialDenseVector<O,T> VectorType;
+  bool operator()( const VectorType &v1, const VectorType &v2 ) const{
+    if ( v1.length() != v2.length() )
+      return false;
+    else{
+      Real tol = std::numeric_limits<T>::epsilon();
+      Real dist = 0.;
+      for ( int i = 0; i < v1.length(); i++ )
+	dist += ( v1[i]-v2[i] )*( v1[i]-v2[i] );
+      dist = std::sqrt( dist );
+      if ( dist > tol )
+	return false;
+    }
+    return true;
+  }
+};
+
+template<typename VectorType >
+struct VectorHash{
+  int operator()( const VectorType &v ) const{
+    return (int)boost::hash_range(v.values(), v.values() + v.length() );
+  }
+};
+
+/*
+ * \brief Get the columns in A that are not in B
+ */
+template <typename O, typename T>
+void set_difference_matrix_columns( const Teuchos::SerialDenseMatrix<O,T> &A,
+				    const Teuchos::SerialDenseMatrix<O,T> &B,
+				    IntVector &result ){
+  if ( B.numCols() == 0 ){
+    range( result, 0, A.numCols() );
+    return;
+  }
+
+  int num_rows = A.numRows(), num_cols = A.numCols();
+  if ( num_rows != B.numRows() ){
+    std::string msg = "set_difference_matrix_columns: A and B are inconsistent";
+    throw(std::runtime_error( msg ) );
+  }
+  typedef Teuchos::SerialDenseVector<O,T> VectorType;
+
+  // Hash columns of the matrix B
+  boost::unordered_set< VectorType,VectorHash<VectorType>,
+			VectorEqual<O,T> > col_set;
+  for ( int i = 0; i < B.numCols(); i++ ){
+    VectorType col( Teuchos::View, const_cast<T*>(B[i]), num_rows );
+    col_set.insert( col );
+  }
+
+  // Find columns of A not in B
+  int num_result = 0;
+  typename boost::unordered_set< VectorType,VectorHash<VectorType>,
+				 VectorEqual<O,T> >::const_iterator it;
+  result.sizeUninitialized( num_cols );
+  for ( int i = 0; i < num_cols; i++ ){
+    VectorType col( Teuchos::View, const_cast<T*>(A[i]), num_rows );
+    it = col_set.find( col );
+    if ( it == col_set.end() ){
+      // Column is not in B
+      result[num_result] = i;
+      num_result++;
+    }
+  }
+  
+  // Remove unused memory
+  result.resize( num_result );
+}
+
+template<typename MatrixType>
+void extract_submatrix_from_column_indices( const MatrixType &A,
+					    const IntVector &column_indices,
+					    MatrixType &submatrix ){
+  int num_rows = A.numRows(), num_indices = column_indices.length();
+  reshape( submatrix, num_rows, num_indices );
+
+  for ( int j = 0; j < num_indices; j++ )
+    for ( int i = 0; i < num_rows; i++ )
+      submatrix(i,j) = A(i,column_indices[j]);
+}
+
+template<typename MatrixType>
+void copy_matrix( const MatrixType &source, MatrixType &dest, 
+	   int num_rows, int num_cols, int start_row=0, int start_col=0 ){
+
+  MatrixType source_subset( Teuchos::View, source, num_rows, num_cols, 
+			    start_row, start_col );
+  reshape( dest, num_rows, num_cols );
+  dest.assign( source_subset );
+}
+
+template<typename VectorType>
+void copy_vector( const VectorType &source, VectorType &dest, 
+	   int num_rows, int start_row=0 ){
+  VectorType source_subset( Teuchos::View, source.values()+start_row, num_rows );
+  resize( dest, num_rows );
+  dest.assign( source_subset );
+}
+
+template<typename MatrixType>
+void hstack( const MatrixType &source1, const MatrixType &source2,
+	     MatrixType &dest ){
+  if ( ( source1.numRows() != source2.numRows() ) && 
+       ( ( source1.numCols()!=0 ) && ( source2.numCols()!=0 ) ) )
+    throw( std::runtime_error("hstack: matrices are inconsistent") );
+  int num_rows = source1.numRows() ? source1.numRows() : source2.numRows();
+  reshape( dest, num_rows, source1.numCols()+source2.numCols() );
+  int cntr = 0;
+  for ( int j = 0; j < source1.numCols(); j++, cntr++ )
+    for ( int i = 0; i < num_rows; i++ )
+      dest(i,cntr) = source1(i,j);
+  for ( int j = 0; j < source2.numCols(); j++, cntr++ )
+    for ( int i = 0; i < num_rows; i++ )
+      dest(i,cntr) = source2(i,j);
+}
+
+/**
+ * Convert a static array to a "Vector.hpp" of vectors.
+ * @param a array to be converted
+ * @param n the number of vectors
+ * @param m the size of each "Vector.hpp"
+ * @return v the "Vector.hpp" of vectors
+ */
+template <typename O, typename T>
+void convert(T a[], int m, int n, std::vector< Teuchos::SerialDenseVector<O,T> > &v)
+{
+  v.resize( m );
+  for ( int i = 0; i < m; i++ )
+    {
+      Teuchos::SerialDenseVector<O,T> tmp( Teuchos::View, a + i * n, n );
+      v[i] = tmp;
+    }
+};
+
+/**
+ * Convert a static array to a weakly ordered multiset of vectors.
+ * Set allows for multiple keys with the same value.
+ * @param a array to be converted
+ * @param n the number of vectors
+ * @param m the size of each "Vector.hpp"
+ * @return s the set
+ */
+template <typename O, typename T>
+void convert(T a[], int m, int n, std::set< Teuchos::SerialDenseVector<O,T> > &s)
+{
+  for ( int i = 0; i < m; i++ )
+    {
+      Teuchos::SerialDenseVector<O,T> v( Teuchos::View, a+i*n, n );
+      s.insert( v );
+    }
+};
+
+/**
+ * \brief Convert a std::vector of vectors to a matrix
+ *
+ * Each element of the std::vector becomes a column of the matrix
+ */
+template <typename O, typename T>
+void convert( const std::vector< Teuchos::SerialDenseVector<O,T> > &V, 
+	      Teuchos::SerialDenseMatrix<O,T> &M )
+{
+  M.shapeUninitialized( V[0].length(), (int)V.size() );
+  for ( int i = 0; i < (int)V.size(); i++ )
+    {
+      for ( int j = 0; j < V[0].length(); j++ )
+	{
+	  M(j,i) = V[i][j];
+	}
+    };
+};
+
+/**
+ * Add a set of vectors together.
+ * @param vectors set of vectors to be added
+ * @param result the accumualted values
+ */
+template< typename T, typename Operator>
+void accumulate( const std::vector< std::vector<T> > &vectors, 
+		 std::vector<T> &result, Operator op)
+{
+  if( !vectors.empty() )
+    {
+	//invariant: all vectors are of the same size
+      result = vectors[0] ;
+      int N = result.size() ;
+      for( int i = 1 ; i < vectors.size() ; ++i )
+	{
+	  #ifdef DEBUG
+	  if ( vectors[i].size() != N ) 
+	    {
+	      throw(std::runtime_error("Accumulate() vectors must all have the same size"));
+	    }
+	  #endif
+	  std::transform( result.begin(), result.end(), vectors[i].begin(),
+			  result.begin(), op );
+	}
+    }
+  else
+    {
+      result.clear();
+    }
+};
+
+
+template< typename T >
+bool is_nan_or_inf( T x )
+{
+  if ( x != x || 
+       x >= std::numeric_limits<T>::infinity() || 
+       x <= -std::numeric_limits<T>::infinity() || 
+       x >= std::numeric_limits<T>::max() ||
+       x <= -std::numeric_limits<T>::max() )
+    return true;
+  return false;
+}
+
+template <typename O, typename T>
+bool has_nan_or_inf( const Teuchos::SerialDenseMatrix<O,T> &matrix )
+{
+  for ( O j = 0 ; j < matrix.numCols(); j++ )
+    {
+      for ( O i = 0 ; i < matrix.numRows(); i++ )
+	{
+	  if ( is_nan_or_inf<T>( matrix(i,j ) ) )
+	    {
+	      disp( matrix(i,j) );
+	      return true;
+	    }
+	}
+    }
+  return false;
+}
+
+
+void get_column_norms( RealMatrix &A, RealVector &result );
+
 
 }  // namespace Pecos
 

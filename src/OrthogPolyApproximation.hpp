@@ -53,6 +53,17 @@ public:
   /// variable dimension using linear least squares in semilog space
   virtual const RealVector& dimension_decay_rates();
 
+  /// evaluate all pce basis functions at a single point
+  static void basis_value(const RealVector& x,
+			  std::vector<BasisPolynomial> &polynomial_basis,
+			  const UShort2DArray &multi_index,
+			  RealVector &basis_values);
+  /// evaluate all pce basis functions at a set of points
+  static void basis_matrix(const RealMatrix& x,
+			   std::vector<BasisPolynomial> &polynomial_basis,
+			   const UShort2DArray &multi_index,
+			   RealMatrix &basis_values);
+
 protected:
 
   //
@@ -233,7 +244,7 @@ inline size_t OrthogPolyApproximation::expansion_terms() const
   return data_rep->multiIndex.size();
 }
 
-
+  
 /** In this case, all expansion variables are random variables and the
     variance of the expansion is the sum over all but the first term
     of the coefficients squared times the polynomial norms squared. */
