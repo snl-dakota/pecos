@@ -13,7 +13,6 @@
 #include <functional>
 #include <ctime>
 #include <boost/functional/hash.hpp>
-#include <ext/hash_set>
 #include <boost/unordered_set.hpp>
 
 namespace Pecos {
