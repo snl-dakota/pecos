@@ -52,7 +52,6 @@ public:
   Real pdf_gradient(Real x) const;
   //Real pdf_hessian(Real x) const;
 
-  Real inverse_log_cdf(Real log_p) const;
   Real log_pdf(Real x) const;
 
   Real parameter(short dist_param) const;
@@ -71,6 +70,9 @@ public:
   //
 
   void update(Real alpha, Real beta);
+
+  /// inactive Z_to_X mapping option in NatafTransformation
+  Real inverse_log_cdf(Real log_p) const;
 
   //
   //- Heading: Static member functions (global utilities)

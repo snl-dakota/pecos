@@ -51,7 +51,6 @@ public:
   Real inverse_ccdf(Real p_ccdf) const;
 
   Real pdf(Real x) const;
-  /*
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
   Real log_pdf(Real x) const;
@@ -62,7 +61,6 @@ public:
   Real log_standard_pdf(Real z) const;
   Real log_standard_pdf_gradient(Real z) const;
   Real log_standard_pdf_hessian(Real z) const;
-  */
 
   // inherited from ExponentialRandomVariable
   //Real to_standard(Real x) const;
@@ -149,9 +147,9 @@ inline Real InvGammaRandomVariable::pdf(Real x) const
 { return bmth::pdf(*invGammaDist, x); }
 
 
-/*
 inline Real InvGammaRandomVariable::pdf_gradient(Real x) const
 {
+  /*
   if (x <= 0.) {
     if      (alphaShape < 1.) return -std::numeric_limits<Real>::infinity();
     else if (alphaShape > 1.) return  std::numeric_limits<Real>::quiet_NaN();
@@ -159,11 +157,16 @@ inline Real InvGammaRandomVariable::pdf_gradient(Real x) const
   }
   else
     return pdf(x) * ((alphaShape-1.)/x - 1./betaScale);
+  */
+  PCerr << "Error: InvGammaRandomVariable::pdf_gradient() not implemented."
+	<< std::endl;
+  abort_handler(-1);
 }
 
 
 inline Real InvGammaRandomVariable::pdf_hessian(Real x) const
 {
+  /*
   if (x <= 0.) {
     if      (alphaShape < 1.) return std::numeric_limits<Real>::infinity();
     else if (alphaShape > 1.) return std::numeric_limits<Real>::quiet_NaN();
@@ -173,43 +176,38 @@ inline Real InvGammaRandomVariable::pdf_hessian(Real x) const
     Real am1 = alphaShape - 1., term = am1 / x - 1. / betaScale;
     return pdf(x) * (term*term - am1 / (x*x));
   }
+  */
+  PCerr << "Error: InvGammaRandomVariable::pdf_hessian() not implemented."
+	<< std::endl;
+  abort_handler(-1);
 }
 
 
 inline Real InvGammaRandomVariable::log_pdf(Real x) const
 {
-  if (x <= 0.) {
-    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
-    else return ExponentialRandomVariable::log_pdf(x);
-  }
+  if (x <= 0.) // throw domain error?
+    return std::numeric_limits<Real>::quiet_NaN();
   else
-    return (alphaShape-1.)*std::log(x) - x/betaScale
-      - std::log(bmth::tgamma(alphaShape)) - alphaShape*std::log(betaScale);
+    return alphaShape*std::log(betaScale) - std::log(bmth::tgamma(alphaShape))
+      - (alphaShape+1.)*std::log(x) - betaScale / x;
 }
 
 
 inline Real InvGammaRandomVariable::log_pdf_gradient(Real x) const
 {
-  if (x <= 0.) {
-    if      (alphaShape < 1.) return -std::numeric_limits<Real>::infinity();
-    else if (alphaShape > 1.) return  std::numeric_limits<Real>::infinity();
-    else return ExponentialRandomVariable::log_pdf_gradient(x);
-  }
+  if (x <= 0.) // throw domain error?
+    return std::numeric_limits<Real>::quiet_NaN();
   else
-    return (alphaShape-1.)/x - 1./betaScale;
+    return (betaScale / x - alphaShape - 1.) / x;
 }
 
 
 inline Real InvGammaRandomVariable::log_pdf_hessian(Real x) const
 {
-  if (x <= 0.) {
-    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
-    else return ExponentialRandomVariable::log_pdf_hessian(x);
-  }
+  if (x <= 0.) // throw domain error?
+    return std::numeric_limits<Real>::quiet_NaN();
   else
-    return (1.-alphaShape)/(x*x);
+    return (alphaShape + 1. - 2.*betaScale / x) / (x*x);
 }
 
 
@@ -222,39 +220,31 @@ inline Real InvGammaRandomVariable::standard_pdf(Real z) const
 
 inline Real InvGammaRandomVariable::log_standard_pdf(Real z) const
 {
-  if (z <= 0.) {
-    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
-    else return ExponentialRandomVariable::log_standard_pdf(z);
-  }
+  if (z <= 0.) // throw domain error?
+    return std::numeric_limits<Real>::quiet_NaN();
   else
-    return (alphaShape-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaShape)); 
+    return -std::log(bmth::tgamma(alphaShape))
+      - (alphaShape+1.)*std::log(z) - 1. / z;
 }
 
 
 inline Real InvGammaRandomVariable::log_standard_pdf_gradient(Real z) const
 {
-  if (z <= 0.) {
-    if      (alphaShape < 1.) return -std::numeric_limits<Real>::infinity();
-    else if (alphaShape > 1.) return  std::numeric_limits<Real>::infinity();
-    else return ExponentialRandomVariable::log_standard_pdf_gradient(z);
-  }
+  if (z <= 0.) // throw domain error?
+    return std::numeric_limits<Real>::quiet_NaN();
   else
-    return (alphaShape-1.)/z - 1.;
+    return (1. / z - alphaShape - 1.) / z;
 }
 
 
 inline Real InvGammaRandomVariable::log_standard_pdf_hessian(Real z) const
 {
-  if (z <= 0.) {
-    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
-    else return ExponentialRandomVariable::log_standard_pdf_hessian(z);
-  }
+  if (z <= 0.) // throw domain error?
+    return std::numeric_limits<Real>::quiet_NaN();
   else
-    return (1.-alphaShape)/(z*z);
+    return (alphaShape + 1. - 2. / z) / (z*z);
 }
-*/
+
 
 inline Real InvGammaRandomVariable::parameter(short dist_param) const
 {
@@ -285,18 +275,13 @@ inline void InvGammaRandomVariable::parameter(short dist_param, Real val)
 
 inline RealRealPair InvGammaRandomVariable::moments() const
 {
-  Real mean, std_dev;
-  moments_from_params(alphaShape, betaScale, mean, std_dev);
-  return RealRealPair(mean, std_dev);
+  return RealRealPair(bmth::mean(*invGammaDist),
+		      std::sqrt(bmth::variance(*invGammaDist)));
 }
 
 
 inline Real InvGammaRandomVariable::coefficient_of_variation() const
-{
-  Real mean, std_dev;
-  moments_from_params(alphaShape, betaScale, mean, std_dev);
-  return std_dev / mean;
-}
+{ return std::sqrt(bmth::variance(*invGammaDist)) / bmth::mean(*invGammaDist); }
 
 
 inline void InvGammaRandomVariable::update_boost()

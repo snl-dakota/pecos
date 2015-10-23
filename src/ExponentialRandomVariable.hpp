@@ -84,6 +84,7 @@ public:
 
   void update(Real beta);
 
+  /// inactive Z_to_X mapping option in NatafTransformation
   Real inverse_log_ccdf(Real log_p_ccdf) const;
 
   //
