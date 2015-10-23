@@ -55,6 +55,10 @@ typedef bmth::
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
   gamma_dist;
 typedef bmth::
+  inverse_gamma_distribution< Real,
+                       bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
+  inv_gamma_dist;
+typedef bmth::
   extreme_value_distribution< Real,
                        bmp::policy< bmp::overflow_error<bmp::ignore_error> > >
   extreme_value_dist;

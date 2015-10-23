@@ -109,18 +109,18 @@ protected:
   //- Heading: Data
   //
 
-  /// beta parameter of exponential random variable
-  Real betaStat;
+  /// beta scale parameter of exponential random variable
+  Real betaScale;
 };
 
 
 inline ExponentialRandomVariable::ExponentialRandomVariable():
-  RandomVariable(BaseConstructor()), betaStat(1.)
+  RandomVariable(BaseConstructor()), betaScale(1.)
 { ranVarType = EXPONENTIAL; }
 
 
 inline ExponentialRandomVariable::ExponentialRandomVariable(Real beta):
-  RandomVariable(BaseConstructor()), betaStat(beta)
+  RandomVariable(BaseConstructor()), betaScale(beta)
 { ranVarType = EXPONENTIAL; }
 
 
@@ -129,11 +129,11 @@ inline ExponentialRandomVariable::~ExponentialRandomVariable()
 
 
 inline Real ExponentialRandomVariable::cdf(Real x) const
-{ return -bmth::expm1(-x/betaStat); }
+{ return -bmth::expm1(-x/betaScale); }
 
 
 inline Real ExponentialRandomVariable::ccdf(Real x) const
-{ return std::exp(-x/betaStat); }
+{ return std::exp(-x/betaScale); }
 
 
 inline Real ExponentialRandomVariable::inverse_cdf(Real p_cdf) const
@@ -141,7 +141,7 @@ inline Real ExponentialRandomVariable::inverse_cdf(Real p_cdf) const
   // p_cdf = 1 - exp(-x/beta)  -->  -x/beta = log(1-p_cdf)
   if (p_cdf <= 0.)      return 0.;
   else if (p_cdf >= 1.) return std::numeric_limits<Real>::infinity();
-  else return -betaStat * bmth::log1p(-p_cdf);
+  else return -betaScale * bmth::log1p(-p_cdf);
 }
 
 
@@ -149,35 +149,35 @@ inline Real ExponentialRandomVariable::inverse_ccdf(Real p_ccdf) const
 {
   if (p_ccdf >= 1.)      return 0.;
   else if (p_ccdf <= 0.) return std::numeric_limits<Real>::infinity();
-  else return -betaStat * std::log(p_ccdf);
+  else return -betaScale * std::log(p_ccdf);
 }
 
 
 inline Real ExponentialRandomVariable::inverse_log_ccdf(Real log_p_ccdf) const
-{ return -betaStat * log_p_ccdf; }
+{ return -betaScale * log_p_ccdf; }
 
 
 //  F(x) = 1. - e^(-x/beta)
 //  f(x) = e^(-x/beta) / beta
 // f'(x) = - e^(-x/beta) / beta^2
 inline Real ExponentialRandomVariable::pdf(Real x) const
-{ return std::exp(-x/betaStat)/betaStat; }
+{ return std::exp(-x/betaScale)/betaScale; }
 
 
 inline Real ExponentialRandomVariable::pdf_gradient(Real x) const
-{ return -pdf(x, betaStat) / betaStat; }
+{ return -pdf(x, betaScale) / betaScale; }
 
 
 inline Real ExponentialRandomVariable::pdf_hessian(Real x) const
-{ return pdf(x, betaStat) / (betaStat * betaStat); }
+{ return pdf(x, betaScale) / (betaScale * betaScale); }
 
 
 inline Real ExponentialRandomVariable::log_pdf(Real x) const
-{ return -x / betaStat - std::log(betaStat); }
+{ return -x / betaScale - std::log(betaScale); }
 
 
 inline Real ExponentialRandomVariable::log_pdf_gradient(Real x) const
-{ return -1. / betaStat; }
+{ return -1. / betaScale; }
 
 
 inline Real ExponentialRandomVariable::log_pdf_hessian(Real x) const
@@ -201,17 +201,17 @@ inline Real ExponentialRandomVariable::log_standard_pdf_hessian(Real x) const
 
 
 inline Real ExponentialRandomVariable::to_standard(Real x) const
-{ return x / betaStat; }
+{ return x / betaScale; }
 
 
 inline Real ExponentialRandomVariable::from_standard(Real z) const
-{ return z * betaStat; }
+{ return z * betaScale; }
 
 
 inline Real ExponentialRandomVariable::parameter(short dist_param) const
 {
   switch (dist_param) {
-  case E_BETA: return betaStat; break;
+  case E_BETA: return betaScale; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in ExponentialRandomVariable::parameter()." << std::endl;
@@ -223,7 +223,7 @@ inline Real ExponentialRandomVariable::parameter(short dist_param) const
 inline void ExponentialRandomVariable::parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case E_BETA: betaStat = val; break;
+  case E_BETA: betaScale = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in ExponentialRandomVariable::parameter()." << std::endl;
@@ -233,7 +233,7 @@ inline void ExponentialRandomVariable::parameter(short dist_param, Real val)
 
 
 inline RealRealPair ExponentialRandomVariable::moments() const
-{ return RealRealPair(betaStat, betaStat); }
+{ return RealRealPair(betaScale, betaScale); }
 
 
 inline RealRealPair ExponentialRandomVariable::bounds() const
@@ -297,13 +297,13 @@ dx_ds(short dist_param, short u_type, Real x, Real z) const
   switch (dist_param) {
   case E_BETA: // Deriv of exponential w.r.t. beta
     switch (u_type) {
-    case STD_NORMAL:      return x / betaStat; break;
-    //case STD_UNIFORM:   TO DO;               break;
-    case STD_EXPONENTIAL: return z;            break;
-    default:              u_type_err = true;   break;
+    case STD_NORMAL:      return x / betaScale; break;
+    //case STD_UNIFORM:   TO DO;                break;
+    case STD_EXPONENTIAL: return z;             break;
+    default:              u_type_err = true;    break;
     }
     break;
-  default:                dist_err = true;     break;
+  default:                dist_err = true;      break;
   }
 
   if (u_type_err)
@@ -327,10 +327,10 @@ dz_ds_factor(short u_type, Real x, Real z) const
 {
   switch (u_type) {
   case STD_NORMAL:
-    return betaStat * NormalRandomVariable::std_pdf(z) /
+    return betaScale * NormalRandomVariable::std_pdf(z) /
       NormalRandomVariable::std_ccdf(z);                    break;
   //case STD_UNIFORM:   TO DO;                              break;
-  case STD_EXPONENTIAL: return betaStat;                    break;
+  case STD_EXPONENTIAL: return betaScale;                   break;
   default:
     PCerr << "Error: unsupported u-space type " << u_type
 	  << " in ExponentialRandomVariable::dz_ds_factor()." << std::endl;
@@ -340,7 +340,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
 
 
 inline void ExponentialRandomVariable::update(Real beta)
-{ betaStat = beta; }
+{ betaScale = beta; }
 
 // static functions:
 

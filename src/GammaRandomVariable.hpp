@@ -107,9 +107,9 @@ protected:
   //- Heading: Data
   //
 
-  /// alpha parameter of gamma random variable (statistical PDF
+  /// alpha shape parameter of gamma random variable (statistical PDF
   /// convention; differs from GenLaguerre polynomial convention)
-  Real alphaStat;
+  Real alphaShape;
 
   /// pointer to the Boost gamma_distribution instance
   gamma_dist* gammaDist;
@@ -117,13 +117,13 @@ protected:
 
 
 inline GammaRandomVariable::GammaRandomVariable():
-  ExponentialRandomVariable(), alphaStat(1.), gammaDist(NULL)
+  ExponentialRandomVariable(), alphaShape(1.), gammaDist(NULL)
 { ranVarType = GAMMA; }
 
 
 inline GammaRandomVariable::GammaRandomVariable(Real alpha, Real beta):
-  ExponentialRandomVariable(beta), alphaStat(alpha),
-  gammaDist(new gamma_dist(alphaStat, betaStat))
+  ExponentialRandomVariable(beta), alphaShape(alpha),
+  gammaDist(new gamma_dist(alphaShape, betaScale))
 { ranVarType = GAMMA; }
 
 
@@ -159,24 +159,24 @@ inline Real GammaRandomVariable::pdf(Real x) const
 inline Real GammaRandomVariable::pdf_gradient(Real x) const
 {
   if (x <= 0.) {
-    if      (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return  std::numeric_limits<Real>::quiet_NaN();
-    else return -ExponentialRandomVariable::pdf(x) / betaStat;
+    if      (alphaShape < 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return  std::numeric_limits<Real>::quiet_NaN();
+    else return -ExponentialRandomVariable::pdf(x) / betaScale;
   }
   else
-    return pdf(x) * ((alphaStat-1.)/x - 1./betaStat);
+    return pdf(x) * ((alphaShape-1.)/x - 1./betaScale);
 }
 
 
 inline Real GammaRandomVariable::pdf_hessian(Real x) const
 {
   if (x <= 0.) {
-    if      (alphaStat < 1.) return std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return std::numeric_limits<Real>::quiet_NaN();
-    else return ExponentialRandomVariable::pdf(x) / (betaStat*betaStat);
+    if      (alphaShape < 1.) return std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return std::numeric_limits<Real>::quiet_NaN();
+    else return ExponentialRandomVariable::pdf(x) / (betaScale*betaScale);
   }
   else {
-    Real am1 = alphaStat - 1., term = am1 / x - 1. / betaStat;
+    Real am1 = alphaShape - 1., term = am1 / x - 1. / betaScale;
     return pdf(x) * (term*term - am1 / (x*x));
   }
 }
@@ -185,43 +185,43 @@ inline Real GammaRandomVariable::pdf_hessian(Real x) const
 inline Real GammaRandomVariable::log_pdf(Real x) const
 {
   if (x <= 0.) {
-    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
     else return ExponentialRandomVariable::log_pdf(x);
   }
   else
-    return (alphaStat-1.)*std::log(x) - x/betaStat
-      - std::log(bmth::tgamma(alphaStat)) - alphaStat*std::log(betaStat);
+    return (alphaShape-1.)*std::log(x) - x/betaScale
+      - std::log(bmth::tgamma(alphaShape)) - alphaShape*std::log(betaScale);
 }
 
 
 inline Real GammaRandomVariable::log_pdf_gradient(Real x) const
 {
   if (x <= 0.) {
-    if      (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return  std::numeric_limits<Real>::infinity();
+    if      (alphaShape < 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return  std::numeric_limits<Real>::infinity();
     else return ExponentialRandomVariable::log_pdf_gradient(x);
   }
   else
-    return (alphaStat-1.)/x - 1./betaStat;
+    return (alphaShape-1.)/x - 1./betaScale;
 }
 
 
 inline Real GammaRandomVariable::log_pdf_hessian(Real x) const
 {
   if (x <= 0.) {
-    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
     else return ExponentialRandomVariable::log_pdf_hessian(x);
   }
   else
-    return (1.-alphaStat)/(x*x);
+    return (1.-alphaShape)/(x*x);
 }
 
 
 inline Real GammaRandomVariable::standard_pdf(Real z) const
 {
-  gamma_dist gamma1(alphaStat, 1.);
+  gamma_dist gamma1(alphaShape, 1.);
   return bmth::pdf(gamma1, z);
 }
 
@@ -229,44 +229,44 @@ inline Real GammaRandomVariable::standard_pdf(Real z) const
 inline Real GammaRandomVariable::log_standard_pdf(Real z) const
 {
   if (z <= 0.) {
-    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
     else return ExponentialRandomVariable::log_standard_pdf(z);
   }
   else
-    return (alphaStat-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaStat)); 
+    return (alphaShape-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaShape));
 }
 
 
 inline Real GammaRandomVariable::log_standard_pdf_gradient(Real z) const
 {
   if (z <= 0.) {
-    if      (alphaStat < 1.) return -std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return  std::numeric_limits<Real>::infinity();
+    if      (alphaShape < 1.) return -std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return  std::numeric_limits<Real>::infinity();
     else return ExponentialRandomVariable::log_standard_pdf_gradient(z);
   }
   else
-    return (alphaStat-1.)/z - 1.;
+    return (alphaShape-1.)/z - 1.;
 }
 
 
 inline Real GammaRandomVariable::log_standard_pdf_hessian(Real z) const
 {
   if (z <= 0.) {
-    if      (alphaStat < 1.) return  std::numeric_limits<Real>::infinity();
-    else if (alphaStat > 1.) return -std::numeric_limits<Real>::infinity();
+    if      (alphaShape < 1.) return  std::numeric_limits<Real>::infinity();
+    else if (alphaShape > 1.) return -std::numeric_limits<Real>::infinity();
     else return ExponentialRandomVariable::log_standard_pdf_hessian(z);
   }
   else
-    return (1.-alphaStat)/(z*z);
+    return (1.-alphaShape)/(z*z);
 }
 
 
 inline Real GammaRandomVariable::parameter(short dist_param) const
 {
   switch (dist_param) {
-  case GA_ALPHA: return alphaStat; break;
-  case GA_BETA:  return betaStat;  break;
+  case GA_ALPHA: return alphaShape; break;
+  case GA_BETA:  return betaScale;  break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in GammaRandomVariable::parameter()." << std::endl;
@@ -278,8 +278,8 @@ inline Real GammaRandomVariable::parameter(short dist_param) const
 inline void GammaRandomVariable::parameter(short dist_param, Real val)
 {
   switch (dist_param) {
-  case GA_ALPHA: alphaStat = val; break;
-  case GA_BETA:  betaStat  = val; break;
+  case GA_ALPHA: alphaShape = val; break;
+  case GA_BETA:  betaScale  = val; break;
   default:
     PCerr << "Error: update failure for distribution parameter " << dist_param
 	  << " in GammaRandomVariable::parameter()." << std::endl;
@@ -292,7 +292,7 @@ inline void GammaRandomVariable::parameter(short dist_param, Real val)
 inline RealRealPair GammaRandomVariable::moments() const
 {
   Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, mean, std_dev);
+  moments_from_params(alphaShape, betaScale, mean, std_dev);
   return RealRealPair(mean, std_dev);
 }
 
@@ -300,7 +300,7 @@ inline RealRealPair GammaRandomVariable::moments() const
 inline Real GammaRandomVariable::coefficient_of_variation() const
 {
   Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, mean, std_dev);
+  moments_from_params(alphaShape, betaScale, mean, std_dev);
   return std_dev / mean;
 }
 
@@ -389,7 +389,7 @@ dz_ds_factor(short u_type, Real x, Real z) const
 {
   // x = z*beta --> add beta * dz/ds for nonzero dz/ds arising from correlation
   switch (u_type) {
-  case STD_GAMMA: return betaStat; break;
+  case STD_GAMMA: return betaScale; break;
   default:
     PCerr << "Error: unsupported u-space type " << u_type
 	  << " in GammaRandomVariable::dz_ds_factor()." << std::endl;
@@ -401,14 +401,14 @@ dz_ds_factor(short u_type, Real x, Real z) const
 inline void GammaRandomVariable::update_boost()
 {
   if (gammaDist) delete gammaDist;
-  gammaDist = new gamma_dist(alphaStat, betaStat);
+  gammaDist = new gamma_dist(alphaShape, betaScale);
 }
 
 
 inline void GammaRandomVariable::update(Real alpha, Real beta)
 {
-  if (!gammaDist || alphaStat != alpha || betaStat != beta)
-    { alphaStat = alpha; betaStat = beta; update_boost(); }
+  if (!gammaDist || alphaShape != alpha || betaScale != beta)
+    { alphaShape = alpha; betaScale = beta; update_boost(); }
 }
 
 

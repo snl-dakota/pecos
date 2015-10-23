@@ -20,6 +20,7 @@
 #include "FrechetRandomVariable.hpp"
 #include "WeibullRandomVariable.hpp"
 #include "HistogramBinRandomVariable.hpp"
+#include "InvGammaRandomVariable.hpp"
 #include "PoissonRandomVariable.hpp"
 #include "BinomialRandomVariable.hpp"
 #include "NegBinomialRandomVariable.hpp"

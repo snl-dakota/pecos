@@ -99,6 +99,8 @@ RandomVariable* RandomVariable::get_random_variable(short ran_var_type)
   case FRECHET:        ran_var_rep = new FrechetRandomVariable();         break;
   case WEIBULL:        ran_var_rep = new WeibullRandomVariable();         break;
   case HISTOGRAM_BIN:  ran_var_rep = new HistogramBinRandomVariable();    break;
+  // hyper-parameter distributions:
+  case INV_GAMMA:      ran_var_rep = new InvGammaRandomVariable();        break;
   // discrete random variables:
   case POISSON:        ran_var_rep = new PoissonRandomVariable();         break;
   case BINOMIAL:       ran_var_rep = new BinomialRandomVariable();        break;
