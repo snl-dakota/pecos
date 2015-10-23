@@ -22,9 +22,9 @@ namespace Pecos {
 
 /// Derived random variable class for gamma random variables.
 
-/** Manages alpha and inherits beta.  This follows the
-    Gamma(alpha,beta) definition in Law & Kelton, which differs from
-    the LHS definition (beta_LK = 1/beta_LHS). */
+/** Manages alphaShape and inherits betaScale.  This follows the definition 
+    at https://en.wikipedia.org/wiki/Inverse-gamma_distribution.  This 
+    implementation also supports a standard inverse-gamma with beta = 1. */
 
 class InvGammaRandomVariable: public ExponentialRandomVariable
 {
@@ -72,6 +72,10 @@ public:
   RealRealPair moments() const;
 
   Real coefficient_of_variation() const;
+  Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
+
+  Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
+  Real dz_ds_factor(short u_type, Real x, Real z) const;
 
   //
   //- Heading: Member functions
@@ -282,6 +286,35 @@ inline RealRealPair InvGammaRandomVariable::moments() const
 
 inline Real InvGammaRandomVariable::coefficient_of_variation() const
 { return std::sqrt(bmth::variance(*invGammaDist)) / bmth::mean(*invGammaDist); }
+
+
+inline Real InvGammaRandomVariable::
+correlation_warping_factor(const RandomVariable& rv, Real corr) const
+{
+  // hide ExponentialRandomVariable implementation
+  PCerr << "Error: InvGammaRandomVariable::correlation_warping_factor() not "
+	<< "implemented." << std::endl;
+  abort_handler(-1);
+}
+
+
+inline Real InvGammaRandomVariable::
+dx_ds(short dist_param, short u_type, Real x, Real z) const
+{
+  // hide ExponentialRandomVariable implementation
+  PCerr << "Error: InvGammaRandomVariable::dx_ds() not implemented."<<std::endl;
+  abort_handler(-1);
+}
+
+
+inline Real InvGammaRandomVariable::
+dz_ds_factor(short u_type, Real x, Real z) const
+{
+  // hide ExponentialRandomVariable implementation
+  PCerr << "Error: InvGammaRandomVariable::dz_ds_factor() not implemented."
+	<< std::endl;
+  abort_handler(-1);
+}
 
 
 inline void InvGammaRandomVariable::update_boost()
