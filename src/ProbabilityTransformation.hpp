@@ -177,10 +177,10 @@ public:
   /// assemble means and standard deviations in transformed space
   /// combining data from ranVarTypesU with RandomVariable::moments()
   RealRealPairArray u_moments() const;
-  /// assemble means in original space from RandomVariable::moments()
+  /// assemble means in original space from RandomVariable::mean()
   RealVector x_means() const;
   /// assemble standard deviations in original space from
-  /// RandomVariable::moments()
+  /// RandomVariable::standard_deviation()
   RealVector x_std_deviations() const;
 
   /// assemble lower and upper bounds from RandomVariable::bounds()
@@ -354,7 +354,7 @@ inline RealVector ProbabilityTransformation::x_means() const
     size_t i, num_v = randomVarsX.size();
     RealVector means(num_v, false);
     for (i=0; i<num_v; ++i)
-      means[i] = randomVarsX[i].moments().first;
+      means[i] = randomVarsX[i].mean();
     return means;
   }
 }
@@ -367,7 +367,7 @@ inline RealVector ProbabilityTransformation::x_std_deviations() const
     size_t i, num_v = randomVarsX.size();
     RealVector std_devs(num_v, false);
     for (i=0; i<num_v; ++i)
-      std_devs[i] = randomVarsX[i].moments().second;
+      std_devs[i] = randomVarsX[i].standard_deviation();
     return std_devs;
   }
 }
