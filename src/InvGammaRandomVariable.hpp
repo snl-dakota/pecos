@@ -69,9 +69,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
 
-  Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -277,15 +280,24 @@ inline void InvGammaRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair InvGammaRandomVariable::moments() const
-{
-  return RealRealPair(bmth::mean(*invGammaDist),
-		      std::sqrt(bmth::variance(*invGammaDist)));
-}
+inline Real InvGammaRandomVariable::mean() const
+{ return bmth::mean(*invGammaDist); }
 
 
-inline Real InvGammaRandomVariable::coefficient_of_variation() const
-{ return std::sqrt(bmth::variance(*invGammaDist)) / bmth::mean(*invGammaDist); }
+inline Real InvGammaRandomVariable::median() const
+{ return bmth::median(*invGammaDist); }
+
+
+inline Real InvGammaRandomVariable::mode() const
+{ return bmth::mode(*invGammaDist); }
+
+
+inline Real InvGammaRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*invGammaDist); }
+
+
+inline Real InvGammaRandomVariable::variance() const
+{ return bmth::variance(*invGammaDist); }
 
 
 inline Real InvGammaRandomVariable::

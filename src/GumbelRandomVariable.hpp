@@ -17,6 +17,8 @@
 
 #include "RandomVariable.hpp"
 
+#define EULER_MASCHERONI 0.57721566490153286
+
 namespace Pecos {
 
 
@@ -57,7 +59,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  //Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+  
   RealRealPair bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
@@ -222,12 +229,24 @@ inline void GumbelRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair GumbelRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real GumbelRandomVariable::mean() const
+{ return betaStat + EULER_MASCHERONI/alphaStat; }
+
+
+//inline Real GumbelRandomVariable::median() const
+//{ return inverse_cdf(.5); } // same as base class definition
+
+
+inline Real GumbelRandomVariable::mode() const
+{ return betaStat; } // location
+
+
+inline Real GumbelRandomVariable::standard_deviation() const
+{ return PI/(alphaStat*std::sqrt(6.)); }
+
+
+inline Real GumbelRandomVariable::variance() const
+{ return PI*PI/(6.*alphaStat*alphaStat); }
 
 
 inline RealRealPair GumbelRandomVariable::bounds() const
@@ -378,8 +397,7 @@ inline Real GumbelRandomVariable::cdf(Real x, Real alpha, Real beta)
 
 inline void GumbelRandomVariable::
 moments_from_params(Real alpha, Real beta, Real& mean, Real& std_dev)
-{ mean = beta + 0.57721566490153286/alpha; std_dev = PI/std::sqrt(6.)/alpha; }
-/* Euler-Mascheroni constant is 0.5772... */
+{ mean = beta + EULER_MASCHERONI/alpha; std_dev = PI/std::sqrt(6.)/alpha; }
 
 } // namespace Pecos
 

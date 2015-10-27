@@ -57,10 +57,14 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+
   RealRealPair bounds() const;
 
-  Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -214,24 +218,28 @@ inline void WeibullRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair WeibullRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real WeibullRandomVariable::mean() const
+{ return bmth::mean(*weibullDist); }
+
+
+inline Real WeibullRandomVariable::median() const
+{ return bmth::median(*weibullDist); }
+
+
+inline Real WeibullRandomVariable::mode() const
+{ return bmth::mode(*weibullDist); }
+
+
+inline Real WeibullRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*weibullDist); }
+
+
+inline Real WeibullRandomVariable::variance() const
+{ return bmth::variance(*weibullDist); }
 
 
 inline RealRealPair WeibullRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
-
-
-inline Real WeibullRandomVariable::coefficient_of_variation() const
-{
-  Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, mean, std_dev);
-  return std_dev / mean;
-}
 
 
 inline Real WeibullRandomVariable::

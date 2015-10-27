@@ -390,14 +390,63 @@ void RandomVariable::parameter(short dist_param, Real val)
 }
 
 
-RealRealPair RandomVariable::moments() const
+Real RandomVariable::mean() const
 {
   if (!ranVarRep) {
-    PCerr << "Error: moments() not supported for this random variable type."
+    PCerr << "Error: mean() not supported for this random variable type."
 	  << std::endl;
     abort_handler(-1);
   }
-  return ranVarRep->moments(); // forward to letter
+  return ranVarRep->mean(); // forward to letter
+}
+
+
+Real RandomVariable::median() const
+{
+  if (ranVarRep)
+    return ranVarRep->median(); // forward to letter
+  else
+    return inverse_cdf(.5);
+}
+
+
+Real RandomVariable::mode() const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: mode() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->mode(); // forward to letter
+}
+
+
+Real RandomVariable::standard_deviation() const
+{
+  if (ranVarRep)
+    return ranVarRep->standard_deviation(); // forward to letter
+  else
+    return std::sqrt(variance());
+}
+
+
+Real RandomVariable::variance() const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: variance() not supported for this random variable type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->variance(); // forward to letter
+}
+
+
+RealRealPair RandomVariable::moments() const
+{
+  if (ranVarRep)
+    return ranVarRep->moments(); // forward to letter
+  else
+    return RealRealPair(mean(), standard_deviation()); // default used by most
 }
 
 
@@ -414,12 +463,10 @@ RealRealPair RandomVariable::bounds() const
 
 Real RandomVariable::coefficient_of_variation() const
 {
-  if (!ranVarRep) {
-    PCerr << "Error: coefficient_of_variation() not supported for this "
-	  << "random variable type." << std::endl;
-    abort_handler(-1);
-  }
-  return ranVarRep->coefficient_of_variation(); // forward to letter
+  if (ranVarRep)
+    return ranVarRep->coefficient_of_variation(); // forward to letter
+  else
+    return standard_deviation() / mean(); // default used by most
 }
 
 

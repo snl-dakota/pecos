@@ -58,6 +58,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+  
   RealRealPair bounds() const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -261,6 +267,31 @@ parameter(short dist_param, Real val)
     abort_handler(-1); break;
   }
 }
+
+
+inline Real BoundedLognormalRandomVariable::mean() const
+{ return LognormalRandomVariable::mean(); } // TODO
+
+
+inline Real BoundedLognormalRandomVariable::median() const
+{ return inverse_cdf(.5); }
+
+
+inline Real BoundedLognormalRandomVariable::mode() const
+{
+  Real ln_mode = LognormalRandomVariable::mode();
+  if      (ln_mode < lowerBnd) return lowerBnd;
+  else if (ln_mode > upperBnd) return upperBnd;
+  else                         return ln_mode;
+}
+
+
+inline Real BoundedLognormalRandomVariable::standard_deviation() const
+{ return LognormalRandomVariable::standard_deviation(); } // TODO
+
+
+inline Real BoundedLognormalRandomVariable::variance() const
+{ return LognormalRandomVariable::variance(); } // TODO
 
 
 inline RealRealPair BoundedLognormalRandomVariable::bounds() const

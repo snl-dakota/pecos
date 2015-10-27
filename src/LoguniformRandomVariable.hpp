@@ -52,8 +52,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
-
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+  
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
   Real dz_ds_factor(short u_type, Real x, Real z) const;
 
@@ -166,11 +170,31 @@ inline void LoguniformRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair LoguniformRandomVariable::moments() const
+inline Real LoguniformRandomVariable::mean() const
+{ return (upperBnd - lowerBnd)/(std::log(upperBnd) - std::log(lowerBnd)); }
+
+
+inline Real LoguniformRandomVariable::median() const
+{ return inverse_cdf(.5); }
+
+
+inline Real LoguniformRandomVariable::mode() const
+{ return lowerBnd; }
+
+
+inline Real LoguniformRandomVariable::standard_deviation() const
 {
-  Real mean, std_dev;
-  moments_from_params(lowerBnd, upperBnd, mean, std_dev);
-  return RealRealPair(mean, std_dev);
+  Real  range = upperBnd - lowerBnd,
+    log_range = std::log(upperBnd) - std::log(lowerBnd);
+  return std::sqrt(range*(log_range*(upperBnd+lowerBnd)/2.-range))/log_range;
+}
+
+
+inline Real LoguniformRandomVariable::variance() const
+{
+  Real  range = upperBnd - lowerBnd,
+    log_range = std::log(upperBnd) - std::log(lowerBnd);
+  return range*(log_range*(upperBnd+lowerBnd)/2.-range)/(log_range*log_range);
 }
 
 
@@ -255,7 +279,7 @@ moments_from_params(Real lwr, Real upr, Real& mean, Real& std_dev)
 {
   Real range = upr - lwr, log_range = std::log(upr) - std::log(lwr);
   mean       = range/log_range;
-  std_dev    = std::sqrt(range*(log_range*(upr+lwr)-2.*range)/2.)/log_range;
+  std_dev    = std::sqrt(range*(log_range*(upr+lwr)/2.-range))/log_range;
 }
 
 } // namespace Pecos

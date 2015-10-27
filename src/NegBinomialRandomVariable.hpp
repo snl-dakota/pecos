@@ -57,7 +57,11 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
   RealRealPair bounds() const;
 
   //
@@ -164,12 +168,24 @@ inline void NegBinomialRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair NegBinomialRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(numTrials, probPerTrial, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real NegBinomialRandomVariable::mean() const
+{ return bmth::mean(*negBinomialDist); }
+
+
+inline Real NegBinomialRandomVariable::median() const
+{ return bmth::median(*negBinomialDist); }
+
+
+inline Real NegBinomialRandomVariable::mode() const
+{ return bmth::mode(*negBinomialDist); }
+
+
+inline Real NegBinomialRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*negBinomialDist); }
+
+
+inline Real NegBinomialRandomVariable::variance() const
+{ return bmth::variance(*negBinomialDist); }
 
 
 inline RealRealPair NegBinomialRandomVariable::bounds() const

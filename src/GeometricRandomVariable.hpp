@@ -54,7 +54,11 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
   RealRealPair bounds() const;
 
   //
@@ -155,12 +159,24 @@ inline void GeometricRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair GeometricRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(probPerTrial, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real GeometricRandomVariable::mean() const
+{ return bmth::mean(*geometricDist); }
+
+
+inline Real GeometricRandomVariable::median() const
+{ return bmth::median(*geometricDist); }
+
+
+inline Real GeometricRandomVariable::mode() const
+{ return bmth::mode(*geometricDist); }
+
+
+inline Real GeometricRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*geometricDist); }
+
+
+inline Real GeometricRandomVariable::variance() const
+{ return bmth::variance(*geometricDist); }
 
 
 inline RealRealPair GeometricRandomVariable::bounds() const

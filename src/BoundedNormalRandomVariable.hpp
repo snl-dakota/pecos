@@ -58,6 +58,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+
   RealRealPair bounds() const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -260,6 +266,30 @@ inline void BoundedNormalRandomVariable::parameter(short dist_param, Real val)
     abort_handler(-1); break;
   }
 }
+
+  
+inline Real BoundedNormalRandomVariable::mean() const
+{ return gaussMean; } // TODO
+
+
+inline Real BoundedNormalRandomVariable::median() const
+{ return inverse_cdf(.5); }
+
+
+inline Real BoundedNormalRandomVariable::mode() const
+{
+  if      (gaussMean < lowerBnd) return lowerBnd;
+  else if (gaussMean > upperBnd) return upperBnd;
+  else                           return gaussMean;
+}
+
+
+inline Real BoundedNormalRandomVariable::standard_deviation() const
+{ return gaussStdDev; } // TODO
+
+
+inline Real BoundedNormalRandomVariable::variance() const
+{ return gaussStdDev*gaussStdDev; } // TODO
 
 
 inline RealRealPair BoundedNormalRandomVariable::bounds() const

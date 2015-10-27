@@ -63,7 +63,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+
   RealRealPair bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
@@ -222,8 +227,24 @@ inline Real NormalRandomVariable::from_standard(Real z) const
 { return z * gaussStdDev + gaussMean; }
 
 
-inline RealRealPair NormalRandomVariable::moments() const
-{ return RealRealPair(gaussMean, gaussStdDev); }
+inline Real NormalRandomVariable::mean() const
+{ return gaussMean; }
+
+
+inline Real NormalRandomVariable::median() const
+{ return gaussMean; }
+
+
+inline Real NormalRandomVariable::mode() const
+{ return gaussMean; }
+
+
+inline Real NormalRandomVariable::standard_deviation() const
+{ return gaussStdDev; }
+
+
+inline Real NormalRandomVariable::variance() const
+{ return gaussStdDev * gaussStdDev; }
 
 
 inline RealRealPair NormalRandomVariable::bounds() const

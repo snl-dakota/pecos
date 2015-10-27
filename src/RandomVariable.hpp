@@ -196,7 +196,19 @@ public:
   /// update the value of the named distribution parameter
   virtual void parameter(short dist_param, Real val);
 
+  /// return the distribution mean
+  virtual Real mean() const;
+  /// return the distribution mode
+  virtual Real median() const;
+  /// return the distribution mode
+  virtual Real mode() const;
+  /// return the distribution variance
+  virtual Real standard_deviation() const;
+  /// return the distribution variance
+  virtual Real variance() const;
+
   /// return the distribution mean and standard deviation as a pair
+  /** default is only overridden when more efficient to compute together */
   virtual RealRealPair moments() const;
   /// return the distribution lower and upper bounds as a pair
   virtual RealRealPair bounds() const;
@@ -204,6 +216,7 @@ public:
   /// compute the coefficient of variation (used to compute selected
   /// correlation warping factors); defined for semi-infinite distributions
   /// with nonzero mean (lognormal, exponential, gamma, frechet, weibull)
+  /** default is only overridden when more efficient to compute together */
   virtual Real coefficient_of_variation() const;
   /// compute the warping factor for correlation between the current
   /// variable and the one passed in (used in NatafTransformation)

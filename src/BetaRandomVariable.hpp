@@ -68,7 +68,11 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
   Real dz_ds_factor(short u_type, Real x, Real z) const;
@@ -412,11 +416,26 @@ inline void BetaRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair BetaRandomVariable::moments() const
+inline Real BetaRandomVariable::mean() const
+{ return lowerBnd + bmth::mean(*betaDist) * (upperBnd - lowerBnd); }
+
+
+inline Real BetaRandomVariable::median() const
+{ return lowerBnd + bmth::median(*betaDist) * (upperBnd - lowerBnd); }
+
+
+inline Real BetaRandomVariable::mode() const
+{ return lowerBnd + bmth::mode(*betaDist) * (upperBnd - lowerBnd); }
+
+
+inline Real BetaRandomVariable::standard_deviation() const
+{ return (upperBnd - lowerBnd) * bmth::standard_deviation(*betaDist); }
+
+
+inline Real BetaRandomVariable::variance() const
 {
-  Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, lowerBnd, upperBnd, mean, std_dev);
-  return RealRealPair(mean, std_dev);
+  Real range = upperBnd - lowerBnd;
+  return range * range * bmth::variance(*betaDist);
 }
 
 

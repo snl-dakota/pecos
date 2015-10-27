@@ -48,8 +48,16 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
+  Real mean() const;
+  //Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+  
   RealRealPair moments() const;
   RealRealPair bounds() const;
+
+  Real coefficient_of_variation() const;
 
   //
   //- Heading: Member functions
@@ -112,6 +120,55 @@ inline HistogramPtRandomVariable::~HistogramPtRandomVariable()
 { }
 
 
+inline Real HistogramPtRandomVariable::mean() const
+{ return moments().first; }
+
+
+//inline Real HistogramPtRandomVariable::median() const
+//{ return inverse_cdf(.5); } // default
+
+
+inline Real HistogramPtRandomVariable::mode() const
+{
+  Real mode, mode_cnt;
+  switch (ranVarType) {
+  case HISTOGRAM_PT_INT: {
+    IRMCIter cit = intPtPairs.begin();
+    mode = (Real)cit->first; mode_cnt = cit->second; ++cit;
+    for (; cit!=intPtPairs.end(); ++cit)
+      if (cit->second > mode_cnt)
+        { mode = (Real)cit->first; mode_cnt = cit->second; }
+    break;
+  }
+  case HISTOGRAM_PT_STRING: {
+    SRMCIter cit = stringPtPairs.begin();
+    mode = 0.; mode_cnt = cit->second; ++cit;
+    for (size_t index=1; cit!=stringPtPairs.end(); ++cit, ++index)
+      if (cit->second > mode_cnt)
+        { mode = (Real)index; mode_cnt = cit->second; }
+    break;
+  }
+  case HISTOGRAM_PT_REAL: {
+    RRMCIter cit = realPtPairs.begin();
+    mode = cit->first; mode_cnt = cit->second; ++cit;
+    for (; cit!=realPtPairs.end(); ++cit)
+      if (cit->second > mode_cnt)
+        { mode = cit->first; mode_cnt = cit->second; }
+    break;
+  }
+  }
+  return mode;
+}
+
+
+inline Real HistogramPtRandomVariable::standard_deviation() const
+{ return moments().second; }
+
+
+inline Real HistogramPtRandomVariable::variance() const
+{ Real std_dev = moments().second; return std_dev * std_dev; }
+
+
 inline RealRealPair HistogramPtRandomVariable::moments() const
 {
   Real mean, std_dev;
@@ -142,6 +199,10 @@ inline RealRealPair HistogramPtRandomVariable::bounds() const
   }    
   return RealRealPair(l_bnd, u_bnd);
 }
+
+
+inline Real HistogramPtRandomVariable::coefficient_of_variation() const
+{ RealRealPair mom = moments(); return mom.second / mom.first; }
 
 
 inline void HistogramPtRandomVariable::update(const IntRealMap& i_prs)

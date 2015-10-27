@@ -52,8 +52,16 @@ public:
   Real pdf_gradient(Real x) const;
   Real pdf_hessian(Real x) const;
 
+  Real mean() const;
+  //Real median() const;
+  Real mode() const;
+  //Real standard_deviation() const;
+  Real variance() const;
+  
   RealRealPair moments() const;
   RealRealPair bounds() const;
+
+  Real coefficient_of_variation() const;
 
   //
   //- Heading: Member functions
@@ -241,16 +249,91 @@ inline Real HistogramBinRandomVariable::pdf_hessian(Real x) const
 { return 0.; }
 
 
+inline Real HistogramBinRandomVariable::mean() const
+{
+  Real sum = 0., lwr, count, upr;
+  size_t i, num_bins = binPairs.size() - 1;
+  RRMCIter cit = binPairs.begin();
+  for (i=0; i<num_bins; ++i) {
+    lwr  = cit->first; count = cit->second; ++cit;
+    upr  = cit->first;
+    sum += count * (lwr + upr);
+  }
+  return sum / 2.;
+}
+
+
+//inline Real HistogramBinRandomVariable::median() const
+//{ return inverse_cdf(.5); } // default
+
+
+inline Real HistogramBinRandomVariable::mode() const
+{
+  size_t i, num_bins = binPairs.size() - 1;
+  RRMCIter cit = binPairs.begin();
+  Real mode = cit->first, mode_p = 0., density, lwr, count, upr;
+  for (i=0; i<num_bins; ++i) {
+    lwr  = cit->first; count   = cit->second; ++cit;
+    upr  = cit->first; density = count / (upr - lwr);
+    if (density > mode_p)
+      { mode_p = density; mode = (lwr+upr)/2.; }
+  }
+  return mode;
+}
+
+
+//inline Real HistogramBinRandomVariable::standard_deviation() const
+//{ return std::sqrt(variance()); } // default
+
+
+inline Real HistogramBinRandomVariable::variance() const
+{
+  Real sum1 = 0., sum2 = 0., lwr, count, upr, clu;
+  size_t i, num_bins = binPairs.size() - 1;
+  RRMCIter cit = binPairs.begin();
+  for (i=0; i<num_bins; ++i) {
+    lwr  = cit->first; count = cit->second; ++cit;
+    upr  = cit->first; clu   = count * (lwr + upr);
+    sum1 += clu;
+    sum2 += upr*clu + count*lwr*lwr;
+  }
+  return sum2 / 3. - sum1 * sum1 / 4.;// raw - mean * mean, for mean = sum1 / 2
+}
+
+
 inline RealRealPair HistogramBinRandomVariable::moments() const
 {
-  Real mean, std_dev;
-  moments_from_params(binPairs, mean, std_dev);
-  return RealRealPair(mean, std_dev);
+  Real sum1 = 0., sum2 = 0., lwr, count, upr, clu;
+  size_t i, num_bins = binPairs.size() - 1;
+  RRMCIter cit = binPairs.begin();
+  for (i=0; i<num_bins; ++i) {
+    lwr  = cit->first; count = cit->second; ++cit;
+    upr  = cit->first; clu   = count * (lwr + upr);
+    sum1 += clu;
+    sum2 += upr*clu + count*lwr*lwr;
+  }
+  Real mean = sum1 / 2.;
+  return RealRealPair(mean, std::sqrt(sum2 / 3. - mean * mean));
 }
 
 
 inline RealRealPair HistogramBinRandomVariable::bounds() const
 { return RealRealPair(binPairs.begin()->first, (--binPairs.end())->first); }
+
+
+inline Real HistogramBinRandomVariable::coefficient_of_variation() const
+{
+  Real sum1 = 0., sum2 = 0., lwr, count, upr, clu;
+  size_t i, num_bins = binPairs.size() - 1;
+  RRMCIter cit = binPairs.begin();
+  for (i=0; i<num_bins; ++i) {
+    lwr  = cit->first; count = cit->second; ++cit;
+    upr  = cit->first; clu   = count * (lwr + upr);
+    sum1 += clu;
+    sum2 += upr*clu + count*lwr*lwr;
+  }
+  return std::sqrt(1.25 * sum2 / (sum1 * sum1) - 1.);
+}
 
 
 inline void HistogramBinRandomVariable::update(const RealRealMap& bin_prs)

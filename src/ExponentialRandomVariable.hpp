@@ -69,7 +69,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+
   RealRealPair bounds() const;
 
   Real coefficient_of_variation() const;
@@ -233,8 +238,24 @@ inline void ExponentialRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair ExponentialRandomVariable::moments() const
-{ return RealRealPair(betaScale, betaScale); }
+inline Real ExponentialRandomVariable::mean() const
+{ return betaScale; }
+
+
+inline Real ExponentialRandomVariable::median() const
+{ return -betaScale * std::log(.5); } // inverse_cdf(.5)
+
+
+inline Real ExponentialRandomVariable::mode() const
+{ return 0.; }
+
+
+inline Real ExponentialRandomVariable::standard_deviation() const
+{ return betaScale; }
+
+
+inline Real ExponentialRandomVariable::variance() const
+{ return betaScale*betaScale; }
 
 
 inline RealRealPair ExponentialRandomVariable::bounds() const

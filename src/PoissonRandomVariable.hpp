@@ -53,7 +53,11 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
   RealRealPair bounds() const;
 
   //
@@ -152,12 +156,24 @@ inline void PoissonRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair PoissonRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(poissonLambda, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real PoissonRandomVariable::mean() const
+{ return bmth::mean(*poissonDist); }
+
+
+inline Real PoissonRandomVariable::median() const
+{ return bmth::median(*poissonDist); }
+
+
+inline Real PoissonRandomVariable::mode() const
+{ return bmth::mode(*poissonDist); }
+
+
+inline Real PoissonRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*poissonDist); }
+
+
+inline Real PoissonRandomVariable::variance() const
+{ return bmth::variance(*poissonDist); }
 
 
 inline RealRealPair PoissonRandomVariable::bounds() const

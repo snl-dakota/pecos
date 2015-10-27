@@ -57,10 +57,14 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+
   RealRealPair bounds() const;
 
-  Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -246,24 +250,34 @@ inline void LognormalRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair LognormalRandomVariable::moments() const
+inline Real LognormalRandomVariable::mean() const
+{ return std::exp(lnLambda + lnZeta*lnZeta/2.); }
+
+
+inline Real LognormalRandomVariable::median() const
+{ return std::exp(lnLambda); }
+
+
+inline Real LognormalRandomVariable::mode() const
+{ return std::exp(lnLambda - lnZeta*lnZeta); }
+
+
+inline Real LognormalRandomVariable::standard_deviation() const
 {
-  Real mean, std_dev;
-  moments_from_params(lnLambda, lnZeta, mean, std_dev);
-  return RealRealPair(mean, std_dev);
+  Real zeta_sq = lnZeta*lnZeta, mean = std::exp(lnLambda + zeta_sq/2.);
+  return mean * std::sqrt(bmth::expm1(zeta_sq));
+}
+
+
+inline Real LognormalRandomVariable::variance() const
+{
+  Real zeta_sq = lnZeta*lnZeta, mean = std::exp(lnLambda + zeta_sq/2.);
+  return mean * mean * bmth::expm1(zeta_sq);
 }
 
 
 inline RealRealPair LognormalRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
-
-
-inline Real LognormalRandomVariable::coefficient_of_variation() const
-{
-  Real mean, std_dev;
-  moments_from_params(lnLambda, lnZeta, mean, std_dev);
-  return std_dev / mean;
-}
 
 
 inline Real LognormalRandomVariable::

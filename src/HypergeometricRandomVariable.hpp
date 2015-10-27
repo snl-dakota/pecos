@@ -54,7 +54,11 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
   RealRealPair bounds() const;
 
   //
@@ -171,12 +175,24 @@ inline void HypergeometricRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair HypergeometricRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(numTotalPop, numSelectPop, numFail, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real HypergeometricRandomVariable::mean() const
+{ return bmth::mean(*hypergeomDist); }
+
+
+inline Real HypergeometricRandomVariable::median() const
+{ return bmth::median(*hypergeomDist); }
+
+
+inline Real HypergeometricRandomVariable::mode() const
+{ return bmth::mode(*hypergeomDist); }
+
+
+inline Real HypergeometricRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*hypergeomDist); }
+
+
+inline Real HypergeometricRandomVariable::variance() const
+{ return bmth::variance(*hypergeomDist); }
 
 
 inline RealRealPair HypergeometricRandomVariable::bounds() const

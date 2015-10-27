@@ -62,7 +62,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+  
   RealRealPair bounds() const;
 
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
@@ -281,18 +286,6 @@ inline Real UniformRandomVariable::parameter(short dist_param) const
 }
 
 
-inline RealRealPair UniformRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(lowerBnd, upperBnd, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
-
-
-inline RealRealPair UniformRandomVariable::bounds() const
-{ return RealRealPair(lowerBnd, upperBnd); }
-
-
 inline void UniformRandomVariable::parameter(short dist_param, Real val)
 {
   switch (dist_param) {
@@ -306,6 +299,33 @@ inline void UniformRandomVariable::parameter(short dist_param, Real val)
     abort_handler(-1); break;
   }
 }
+
+
+inline Real UniformRandomVariable::mean() const
+{ return (lowerBnd + upperBnd)/2.; }
+
+
+inline Real UniformRandomVariable::median() const
+{ return mean(); }
+
+
+inline Real UniformRandomVariable::mode() const
+{ return mean(); } // not well-defined: any value in [L,U] is valid
+
+
+inline Real UniformRandomVariable::standard_deviation() const
+{ return (upperBnd - lowerBnd)/std::sqrt(12.); }
+
+
+inline Real UniformRandomVariable::variance() const
+{
+  Real range = upperBnd - lowerBnd;
+  return range*range/12.;
+}
+
+
+inline RealRealPair UniformRandomVariable::bounds() const
+{ return RealRealPair(lowerBnd, upperBnd); }
 
 
 inline Real UniformRandomVariable::

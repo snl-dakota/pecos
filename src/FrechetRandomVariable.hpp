@@ -57,10 +57,14 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
+  
   RealRealPair bounds() const;
 
-  Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -202,24 +206,34 @@ inline void FrechetRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair FrechetRandomVariable::moments() const
+inline Real FrechetRandomVariable::mean() const
+{ return betaStat * bmth::tgamma(1.-1./alphaStat); }
+
+
+inline Real FrechetRandomVariable::median() const
+{ return betaStat / std::pow(std::log(2.), 1./alphaStat); } //inverse_cdf(.5)
+
+
+inline Real FrechetRandomVariable::mode() const
+{ return betaStat * std::pow(alphaStat/(1.+alphaStat), 1./alphaStat); }
+
+
+inline Real FrechetRandomVariable::standard_deviation() const
 {
-  Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, mean, std_dev);
-  return RealRealPair(mean, std_dev);
+  Real gam = bmth::tgamma(1.-1./alphaStat);
+  return betaStat*std::sqrt(bmth::tgamma(1.-2./alphaStat)-gam*gam);
+}
+
+
+inline Real FrechetRandomVariable::variance() const
+{
+  Real gam = bmth::tgamma(1.-1./alphaStat);
+  return betaStat*betaStat*(bmth::tgamma(1.-2./alphaStat)-gam*gam);
 }
 
 
 inline RealRealPair FrechetRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
-
-
-inline Real FrechetRandomVariable::coefficient_of_variation() const
-{
-  Real mean, std_dev;
-  moments_from_params(alphaStat, betaStat, mean, std_dev);
-  return std_dev / mean;
-}
 
 
 inline Real FrechetRandomVariable::

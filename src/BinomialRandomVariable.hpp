@@ -53,7 +53,11 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
   RealRealPair bounds() const;
 
   //
@@ -160,12 +164,24 @@ inline void BinomialRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair BinomialRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(numTrials, probPerTrial, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real BinomialRandomVariable::mean() const
+{ return bmth::mean(*binomialDist); }
+
+
+inline Real BinomialRandomVariable::median() const
+{ return bmth::median(*binomialDist); }
+
+
+inline Real BinomialRandomVariable::mode() const
+{ return bmth::mode(*binomialDist); }
+
+
+inline Real BinomialRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*binomialDist); }
+
+
+inline Real BinomialRandomVariable::variance() const
+{ return bmth::variance(*binomialDist); }
 
 
 inline RealRealPair BinomialRandomVariable::bounds() const

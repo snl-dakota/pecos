@@ -55,7 +55,11 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
   Real dz_ds_factor(short u_type, Real x, Real z) const;
@@ -217,12 +221,24 @@ inline void TriangularRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair TriangularRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(lowerBnd, triangularMode, upperBnd, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real TriangularRandomVariable::mean() const
+{ return bmth::mean(*triangDist); }
+
+
+inline Real TriangularRandomVariable::median() const
+{ return bmth::median(*triangDist); }
+
+
+inline Real TriangularRandomVariable::mode() const
+{ return bmth::mode(*triangDist); }
+
+
+inline Real TriangularRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*triangDist); }
+
+
+inline Real TriangularRandomVariable::variance() const
+{ return bmth::variance(*triangDist); }
 
 
 /** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()

@@ -69,9 +69,12 @@ public:
   Real parameter(short dist_param) const;
   void parameter(short dist_param, Real val);
 
-  RealRealPair moments() const;
+  Real mean() const;
+  Real median() const;
+  Real mode() const;
+  Real standard_deviation() const;
+  Real variance() const;
 
-  Real coefficient_of_variation() const;
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -289,20 +292,24 @@ inline void GammaRandomVariable::parameter(short dist_param, Real val)
 }
 
 
-inline RealRealPair GammaRandomVariable::moments() const
-{
-  Real mean, std_dev;
-  moments_from_params(alphaShape, betaScale, mean, std_dev);
-  return RealRealPair(mean, std_dev);
-}
+inline Real GammaRandomVariable::mean() const
+{ return bmth::mean(*gammaDist); }
 
 
-inline Real GammaRandomVariable::coefficient_of_variation() const
-{
-  Real mean, std_dev;
-  moments_from_params(alphaShape, betaScale, mean, std_dev);
-  return std_dev / mean;
-}
+inline Real GammaRandomVariable::median() const
+{ return bmth::median(*gammaDist); }
+
+
+inline Real GammaRandomVariable::mode() const
+{ return bmth::mode(*gammaDist); }
+
+
+inline Real GammaRandomVariable::standard_deviation() const
+{ return bmth::standard_deviation(*gammaDist); }
+
+
+inline Real GammaRandomVariable::variance() const
+{ return bmth::variance(*gammaDist); }
 
 
 inline Real GammaRandomVariable::
