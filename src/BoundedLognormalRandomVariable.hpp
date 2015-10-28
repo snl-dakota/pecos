@@ -64,7 +64,10 @@ public:
   Real standard_deviation() const;
   Real variance() const;
   
+  RealRealPair moments() const;
   RealRealPair bounds() const;
+
+  Real coefficient_of_variation() const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
   Real dz_ds_factor(short u_type, Real x, Real z) const;
@@ -270,7 +273,20 @@ parameter(short dist_param, Real val)
 
 
 inline Real BoundedLognormalRandomVariable::mean() const
-{ return LognormalRandomVariable::mean(); } // TODO
+{
+  Real Phi_lms = 0., Phi_ums = 1., term = 0.;
+  if (lowerBnd > 0.) {
+    Real lms = (std::log(lowerBnd)-lnLambda)/lnZeta;
+    Phi_lms = NormalRandomVariable::std_cdf(lms);
+    term += NormalRandomVariable::std_cdf(lnZeta - lms);
+  }
+  if (upperBnd < std::numeric_limits<Real>::infinity()) {
+    Real ums = (std::log(upperBnd)-lnLambda)/lnZeta;
+    Phi_ums = NormalRandomVariable::std_cdf(ums);
+    term -= NormalRandomVariable::std_cdf(lnZeta - ums);
+  }
+  return LognormalRandomVariable::mean() * term / (Phi_ums - Phi_lms);
+}
 
 
 inline Real BoundedLognormalRandomVariable::median() const
@@ -287,15 +303,55 @@ inline Real BoundedLognormalRandomVariable::mode() const
 
 
 inline Real BoundedLognormalRandomVariable::standard_deviation() const
-{ return LognormalRandomVariable::standard_deviation(); } // TODO
+{ return std::sqrt(variance()); }
 
 
 inline Real BoundedLognormalRandomVariable::variance() const
-{ return LognormalRandomVariable::variance(); } // TODO
+{
+  Real Phi_lms = 0., Phi_ums = 1., term = 0.;
+  if (lowerBnd > 0.) {
+    Real lms = (std::log(lowerBnd)-lnLambda)/lnZeta;
+    Phi_lms = NormalRandomVariable::std_cdf(lms);
+    term += NormalRandomVariable::std_cdf(2.*lnZeta - lms);
+  }
+  if (upperBnd < std::numeric_limits<Real>::infinity()) {
+    Real ums = (std::log(upperBnd)-lnLambda)/lnZeta;
+    Phi_ums = NormalRandomVariable::std_cdf(ums);
+    term -= NormalRandomVariable::std_cdf(2.*lnZeta - ums);
+  }
+  return LognormalRandomVariable::variance() * term / (Phi_ums - Phi_lms);
+         // TO DO: - mean * mean? need LN raw moment?
+}
+
+
+inline RealRealPair BoundedLognormalRandomVariable::moments() const
+{
+  Real Phi_lms = 0., Phi_ums = 1., term1 = 0., term2 = 0.;
+  if (lowerBnd > 0.) {
+    Real lms = (std::log(lowerBnd)-lnLambda)/lnZeta;
+    Phi_lms = NormalRandomVariable::std_cdf(lms);
+    term1 += NormalRandomVariable::std_cdf(lnZeta - lms);
+    term2 += NormalRandomVariable::std_cdf(2.*lnZeta - lms);
+  }
+  if (upperBnd < std::numeric_limits<Real>::infinity()) {
+    Real ums = (std::log(upperBnd)-lnLambda)/lnZeta;
+    Phi_ums = NormalRandomVariable::std_cdf(ums);
+    term1 -= NormalRandomVariable::std_cdf(lnZeta - ums);
+    term2 -= NormalRandomVariable::std_cdf(2.*lnZeta - ums);
+  }
+  Real Phi_range = Phi_ums - Phi_lms;
+  return RealRealPair(LognormalRandomVariable::mean()     * term1 / Phi_range,
+		      LognormalRandomVariable::variance() * term2 / Phi_range);
+                      // TO DO: - mean * mean? need LN raw moment?
+}
 
 
 inline RealRealPair BoundedLognormalRandomVariable::bounds() const
 { return RealRealPair(lowerBnd, upperBnd); }
+
+
+inline Real BoundedLognormalRandomVariable::coefficient_of_variation() const
+{ RealRealPair mom = moments(); return mom.second / mom.first; }
 
 
 /** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()

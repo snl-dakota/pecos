@@ -283,7 +283,7 @@ inline Real BoundedNormalRandomVariable::mean() const
     Real ums = (upperBnd-gaussMean)/gaussStdDev;
     phi_ums = std_pdf(ums); Phi_ums = std_cdf(ums);
   }
-  return gaussMean + gaussStdDev * (phi_lms - phi_ums) / (Phi_ums - Phi_lms);
+  return gaussMean - gaussStdDev * (phi_ums - phi_lms) / (Phi_ums - Phi_lms);
 }
 
 
@@ -310,17 +310,17 @@ inline Real BoundedNormalRandomVariable::variance() const
   if (lowerBnd > -dbl_inf) {
     Real lms = (lowerBnd-gaussMean)/gaussStdDev;
     phi_lms = std_pdf(lms); Phi_lms = std_cdf(lms);
-    term += lms * phi_lms;
+    term -= lms * phi_lms;
   }
   if (upperBnd <  dbl_inf) {
     Real ums = (upperBnd-gaussMean)/gaussStdDev;
     phi_ums = std_pdf(ums); Phi_ums = std_cdf(ums);
-    term -= ums * phi_ums;
+    term += ums * phi_ums;
   }
   Real Phi_range = Phi_ums - Phi_lms, phi_range = phi_lms - phi_ums,
     range_ratio  = phi_range / Phi_range;
   return gaussStdDev * gaussStdDev *
-    (1. + term / Phi_range - range_ratio * range_ratio);
+    (1. - term / Phi_range - range_ratio * range_ratio);
 }
 
 
@@ -331,18 +331,18 @@ inline RealRealPair BoundedNormalRandomVariable::moments() const
   if (lowerBnd > -dbl_inf) {
     Real lms = (lowerBnd-gaussMean)/gaussStdDev;
     phi_lms = std_pdf(lms); Phi_lms = std_cdf(lms);
-    term += lms * phi_lms;
+    term -= lms * phi_lms;
   }
   if (upperBnd <  dbl_inf) {
     Real ums = (upperBnd-gaussMean)/gaussStdDev;
     phi_ums = std_pdf(ums); Phi_ums = std_cdf(ums);
-    term -= ums * phi_ums;
+    term += ums * phi_ums;
   }
   Real Phi_range = Phi_ums - Phi_lms, phi_range = phi_lms - phi_ums,
     range_ratio  = phi_range / Phi_range;
   return RealRealPair(gaussMean + gaussStdDev * range_ratio,
 		      gaussStdDev * gaussStdDev *
-		      (1. + term / Phi_range - range_ratio * range_ratio));
+		      (1. - term / Phi_range - range_ratio * range_ratio));
 }
 
 
