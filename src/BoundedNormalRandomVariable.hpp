@@ -64,7 +64,10 @@ public:
   Real standard_deviation() const;
   Real variance() const;
 
+  RealRealPair moments() const;
   RealRealPair bounds() const;
+
+  Real coefficient_of_variation() const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
   Real dz_ds_factor(short u_type, Real x, Real z) const;
@@ -269,7 +272,19 @@ inline void BoundedNormalRandomVariable::parameter(short dist_param, Real val)
 
   
 inline Real BoundedNormalRandomVariable::mean() const
-{ return gaussMean; } // TODO
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity(),
+    phi_lms = 0., phi_ums = 0., Phi_lms = 0., Phi_ums = 1.;
+  if (lowerBnd > -dbl_inf) {
+    Real lms = (lowerBnd-gaussMean)/gaussStdDev;
+    phi_lms = std_pdf(lms); Phi_lms = std_cdf(lms);
+  }
+  if (upperBnd <  dbl_inf) {
+    Real ums = (upperBnd-gaussMean)/gaussStdDev;
+    phi_ums = std_pdf(ums); Phi_ums = std_cdf(ums);
+  }
+  return gaussMean + gaussStdDev * (phi_lms - phi_ums) / (Phi_ums - Phi_lms);
+}
 
 
 inline Real BoundedNormalRandomVariable::median() const
@@ -285,15 +300,58 @@ inline Real BoundedNormalRandomVariable::mode() const
 
 
 inline Real BoundedNormalRandomVariable::standard_deviation() const
-{ return gaussStdDev; } // TODO
+{ return std::sqrt(variance()); }
 
 
 inline Real BoundedNormalRandomVariable::variance() const
-{ return gaussStdDev*gaussStdDev; } // TODO
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity(), term = 0.,
+    phi_lms = 0., phi_ums = 0., Phi_lms = 0., Phi_ums = 1.;
+  if (lowerBnd > -dbl_inf) {
+    Real lms = (lowerBnd-gaussMean)/gaussStdDev;
+    phi_lms = std_pdf(lms); Phi_lms = std_cdf(lms);
+    term += lms * phi_lms;
+  }
+  if (upperBnd <  dbl_inf) {
+    Real ums = (upperBnd-gaussMean)/gaussStdDev;
+    phi_ums = std_pdf(ums); Phi_ums = std_cdf(ums);
+    term -= ums * phi_ums;
+  }
+  Real Phi_range = Phi_ums - Phi_lms, phi_range = phi_lms - phi_ums,
+    range_ratio  = phi_range / Phi_range;
+  return gaussStdDev * gaussStdDev *
+    (1. + term / Phi_range - range_ratio * range_ratio);
+}
+
+
+inline RealRealPair BoundedNormalRandomVariable::moments() const
+{
+  Real dbl_inf = std::numeric_limits<Real>::infinity(), term = 0.,
+    phi_lms = 0., phi_ums = 0., Phi_lms = 0., Phi_ums = 1.;
+  if (lowerBnd > -dbl_inf) {
+    Real lms = (lowerBnd-gaussMean)/gaussStdDev;
+    phi_lms = std_pdf(lms); Phi_lms = std_cdf(lms);
+    term += lms * phi_lms;
+  }
+  if (upperBnd <  dbl_inf) {
+    Real ums = (upperBnd-gaussMean)/gaussStdDev;
+    phi_ums = std_pdf(ums); Phi_ums = std_cdf(ums);
+    term -= ums * phi_ums;
+  }
+  Real Phi_range = Phi_ums - Phi_lms, phi_range = phi_lms - phi_ums,
+    range_ratio  = phi_range / Phi_range;
+  return RealRealPair(gaussMean + gaussStdDev * range_ratio,
+		      gaussStdDev * gaussStdDev *
+		      (1. + term / Phi_range - range_ratio * range_ratio));
+}
 
 
 inline RealRealPair BoundedNormalRandomVariable::bounds() const
 { return RealRealPair(lowerBnd, upperBnd); }
+
+
+inline Real BoundedNormalRandomVariable::coefficient_of_variation() const
+{ RealRealPair mom = moments(); return mom.second / mom.first; }
 
 
 /** dx/ds is derived by differentiating NatafTransformation::trans_Z_to_X()
