@@ -65,6 +65,8 @@ public:
 
   RealRealPair bounds() const;
 
+  Real coefficient_of_variation() const;
+
   Real correlation_warping_factor(const RandomVariable& rv, Real corr) const;
 
   Real dx_ds(short dist_param, short u_type, Real x, Real z) const;
@@ -271,13 +273,18 @@ inline Real LognormalRandomVariable::standard_deviation() const
 
 inline Real LognormalRandomVariable::variance() const
 {
-  Real zeta_sq = lnZeta*lnZeta, mean = std::exp(lnLambda + zeta_sq/2.);
-  return mean * mean * bmth::expm1(zeta_sq);
+  Real zeta_sq = lnZeta*lnZeta, mean_sq = std::exp(2.*lnLambda + zeta_sq);
+  return mean_sq * bmth::expm1(zeta_sq);
+  // = raw moment of e^{2lambda + 2zeta_sq} - mean^2
 }
 
 
 inline RealRealPair LognormalRandomVariable::bounds() const
 { return RealRealPair(0., std::numeric_limits<Real>::infinity()); }
+
+
+inline Real LognormalRandomVariable::coefficient_of_variation() const
+{ return std::sqrt(bmth::expm1(lnZeta*lnZeta)); }
 
 
 inline Real LognormalRandomVariable::

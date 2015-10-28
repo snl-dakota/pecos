@@ -277,13 +277,13 @@ inline Real BoundedLognormalRandomVariable::mean() const
   Real Phi_lms = 0., Phi_ums = 1., term = 0.;
   if (lowerBnd > 0.) {
     Real lms = (std::log(lowerBnd)-lnLambda)/lnZeta;
-    Phi_lms = NormalRandomVariable::std_cdf(lms);
-    term += NormalRandomVariable::std_cdf(lnZeta - lms);
+    Phi_lms  = NormalRandomVariable::std_cdf(lms);
+    term    += NormalRandomVariable::std_cdf(lnZeta - lms);
   }
   if (upperBnd < std::numeric_limits<Real>::infinity()) {
     Real ums = (std::log(upperBnd)-lnLambda)/lnZeta;
-    Phi_ums = NormalRandomVariable::std_cdf(ums);
-    term -= NormalRandomVariable::std_cdf(lnZeta - ums);
+    Phi_ums  = NormalRandomVariable::std_cdf(ums);
+    term    -= NormalRandomVariable::std_cdf(lnZeta - ums);
   }
   return LognormalRandomVariable::mean() * term / (Phi_ums - Phi_lms);
 }
@@ -307,21 +307,7 @@ inline Real BoundedLognormalRandomVariable::standard_deviation() const
 
 
 inline Real BoundedLognormalRandomVariable::variance() const
-{
-  Real Phi_lms = 0., Phi_ums = 1., term = 0.;
-  if (lowerBnd > 0.) {
-    Real lms = (std::log(lowerBnd)-lnLambda)/lnZeta;
-    Phi_lms = NormalRandomVariable::std_cdf(lms);
-    term += NormalRandomVariable::std_cdf(2.*lnZeta - lms);
-  }
-  if (upperBnd < std::numeric_limits<Real>::infinity()) {
-    Real ums = (std::log(upperBnd)-lnLambda)/lnZeta;
-    Phi_ums = NormalRandomVariable::std_cdf(ums);
-    term -= NormalRandomVariable::std_cdf(2.*lnZeta - ums);
-  }
-  return LognormalRandomVariable::variance() * term / (Phi_ums - Phi_lms);
-         // TO DO: - mean * mean? need LN raw moment?
-}
+{ return moments().second; } // variance computation requires mean computation
 
 
 inline RealRealPair BoundedLognormalRandomVariable::moments() const
@@ -329,20 +315,20 @@ inline RealRealPair BoundedLognormalRandomVariable::moments() const
   Real Phi_lms = 0., Phi_ums = 1., term1 = 0., term2 = 0.;
   if (lowerBnd > 0.) {
     Real lms = (std::log(lowerBnd)-lnLambda)/lnZeta;
-    Phi_lms = NormalRandomVariable::std_cdf(lms);
-    term1 += NormalRandomVariable::std_cdf(lnZeta - lms);
-    term2 += NormalRandomVariable::std_cdf(2.*lnZeta - lms);
+    Phi_lms  = NormalRandomVariable::std_cdf(lms);
+    term1   += NormalRandomVariable::std_cdf(lnZeta - lms);
+    term2   += NormalRandomVariable::std_cdf(2.*lnZeta - lms);
   }
   if (upperBnd < std::numeric_limits<Real>::infinity()) {
     Real ums = (std::log(upperBnd)-lnLambda)/lnZeta;
-    Phi_ums = NormalRandomVariable::std_cdf(ums);
-    term1 -= NormalRandomVariable::std_cdf(lnZeta - ums);
-    term2 -= NormalRandomVariable::std_cdf(2.*lnZeta - ums);
+    Phi_ums  = NormalRandomVariable::std_cdf(ums);
+    term1   -= NormalRandomVariable::std_cdf(lnZeta - ums);
+    term2   -= NormalRandomVariable::std_cdf(2.*lnZeta - ums);
   }
-  Real Phi_range = Phi_ums - Phi_lms;
-  return RealRealPair(LognormalRandomVariable::mean()     * term1 / Phi_range,
-		      LognormalRandomVariable::variance() * term2 / Phi_range);
-                      // TO DO: - mean * mean? need LN raw moment?
+  Real Phi_range  = Phi_ums - Phi_lms,
+       mean       = LognormalRandomVariable::mean() * term1 / Phi_range,
+       ln_raw_mom = std::exp(2.*(lnLambda+lnZeta*lnZeta));
+  return RealRealPair(mean, ln_raw_mom * term2 / Phi_range - mean * mean);
 }
 
 
