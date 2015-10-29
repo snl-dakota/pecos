@@ -194,7 +194,7 @@ inline Real GammaRandomVariable::log_pdf(Real x) const
   }
   else
     return (alphaShape-1.)*std::log(x) - x/betaScale
-      - std::log(bmth::tgamma(alphaShape)) - alphaShape*std::log(betaScale);
+      - bmth::lgamma(alphaShape) - alphaShape*std::log(betaScale);
 }
 
 
@@ -237,7 +237,7 @@ inline Real GammaRandomVariable::log_standard_pdf(Real z) const
     else return ExponentialRandomVariable::log_standard_pdf(z);
   }
   else
-    return (alphaShape-1.)*std::log(z) - z - std::log(bmth::tgamma(alphaShape));
+    return (alphaShape-1.)*std::log(z) - z - bmth::lgamma(alphaShape);
 }
 
 
