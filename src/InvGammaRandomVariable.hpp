@@ -192,10 +192,13 @@ inline Real InvGammaRandomVariable::pdf_hessian(Real x) const
 
 inline Real InvGammaRandomVariable::log_pdf(Real x) const
 {
+  // BMA TODO: This function should be reimplemented in terms of
+  // gamma_p_derivative to avoid overflow.  For now, I made a small
+  // improvement: log(tgamma(alpha)) -> lgamma(alpha)
   if (x <= 0.) // throw domain error?
     return std::numeric_limits<Real>::quiet_NaN();
   else
-    return alphaShape*std::log(betaScale) - std::log(bmth::tgamma(alphaShape))
+    return alphaShape*std::log(betaScale) - bmth::lgamma(alphaShape)
       - (alphaShape+1.)*std::log(x) - betaScale / x;
 }
 
@@ -230,7 +233,7 @@ inline Real InvGammaRandomVariable::log_standard_pdf(Real z) const
   if (z <= 0.) // throw domain error?
     return std::numeric_limits<Real>::quiet_NaN();
   else
-    return -std::log(bmth::tgamma(alphaShape))
+    return -bmth::lgamma(alphaShape)  // log(gamma(alpha))
       - (alphaShape+1.)*std::log(z) - 1. / z;
 }
 
