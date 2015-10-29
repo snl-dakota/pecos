@@ -303,17 +303,9 @@ inline Real HistogramBinRandomVariable::variance() const
 
 inline RealRealPair HistogramBinRandomVariable::moments() const
 {
-  Real sum1 = 0., sum2 = 0., lwr, count, upr, clu;
-  size_t i, num_bins = binPairs.size() - 1;
-  RRMCIter cit = binPairs.begin();
-  for (i=0; i<num_bins; ++i) {
-    lwr  = cit->first; count = cit->second; ++cit;
-    upr  = cit->first; clu   = count * (lwr + upr);
-    sum1 += clu;
-    sum2 += upr*clu + count*lwr*lwr;
-  }
-  Real mean = sum1 / 2.;
-  return RealRealPair(mean, std::sqrt(sum2 / 3. - mean * mean));
+  Real mean, std_dev;
+  moments_from_params(binPairs, mean, std_dev);
+  return RealRealPair(mean, std_dev);
 }
 
 
@@ -430,28 +422,17 @@ moments_from_params(const RealRealMap& bin_prs, Real& mean, Real& std_dev)
   // in bin case, (x,y) and (x,c) are not equivalent since bins have non-zero
   // width -> assume (x,c) count/frequency-based (already converted from (x,y)
   // skyline/density-based) with normalization (counts sum to 1.)
-  mean = std_dev = 0.;
+  Real sum1 = 0., sum2 = 0., lwr, count, upr, clu;
   size_t i, num_bins = bin_prs.size() - 1;
-  //RRMCIter it_lwr = bin_prs.begin();
-  //RRMCIter it_upr = ++bin_prs.begin();
-  //RRMCIter it_end = --(bin_prs.end());
-  //for (; it_lwr != it_end; ++it_lwr, ++it_upr) {
-  //  lwr = it_lwr->first;
-  //  count = it_lwr->second;
-  //  upr = it_upr->first;
-  //  ...
-  //}
-  Real lwr, count, upr;//, clu;
   RRMCIter cit = bin_prs.begin();
   for (i=0; i<num_bins; ++i) {
-    lwr = cit->first; count = cit->second; ++cit;
-    upr = cit->first;
-    //clu = count * (lwr + upr);
-    mean    += count * (lwr + upr); // clu
-    std_dev += count * (upr*upr + upr*lwr + lwr*lwr); // upr*clu + count*lwr*lwr
+    lwr   = cit->first; count = cit->second; ++cit;
+    upr   = cit->first; clu   = count * (lwr + upr);
+    sum1 += clu;
+    sum2 += upr*clu + count*lwr*lwr;
   }
-  mean   /= 2.;
-  std_dev = std::sqrt(std_dev/3. - mean*mean);
+  mean    = sum1 / 2.;
+  std_dev = std::sqrt(sum2 / 3. - mean * mean);
 }
 
 } // namespace Pecos
