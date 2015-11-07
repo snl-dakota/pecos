@@ -2818,13 +2818,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   const RealVector& t1_wts      = driver_rep->type1_weight_sets();
   Real covar = 0.;
   size_t i, j, num_colloc_pts = t1_wts.length(), num_v = sharedDataRep->numVars;
-  switch (data_rep->basisConfigOptions.useDerivs) {
-  case false: // type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-    for (i=0; i<num_colloc_pts; ++i)
-      covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
-	    *  t1_wts[i];
-    break;
-  case true: {
+  if (data_rep->basisConfigOptions.useDerivs) {
     const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
     const RealMatrix& t2_wts      = driver_rep->type2_weight_sets();
     for (i=0; i<num_colloc_pts; ++i) {
@@ -2840,9 +2834,12 @@ covariance(PolynomialApproximation* poly_approx_2)
 	covar  += (coeff1_i_mm1 * coeff2_2i[j] + coeff1_2i_mm2 * coeff2_i[j])
 	       *  t2_wt_i[j];
     }
-    break;
   }
-  }
+  else
+    for (i=0; i<num_colloc_pts; ++i)
+      covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
+	*  t1_wts[i];
+
   if (same && std_mode)
     { numericalMoments[1] = covar; computedVariance |= 1; }
   return covar;

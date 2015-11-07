@@ -1434,24 +1434,7 @@ expectation(const RealVector2DArray& t1_coeffs, const RealVector2DArray& t1_wts,
   size_t lev, set, pt, num_levels = t1_coeffs.size(), set_start = 0, set_end,
     num_tp_pts;
   bool partial = !set_partition.empty();
-  switch (data_rep->basisConfigOptions.useDerivs) {
-  case false:
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
-      if (partial)
-	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
-      else
-	set_end = t1_coeffs_l.size();
-      for (set=set_start; set<set_end; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const RealVector&    t1_wts_ls = t1_wts[lev][set];
-	num_tp_pts = t1_coeffs_ls.length();
-	for (pt=0; pt<num_tp_pts; ++pt) // omitted if empty surplus vector
-	  integral += t1_coeffs_ls[pt] * t1_wts_ls[pt];
-      }
-    }
-    break;
-  case true: {
+  if (data_rep->basisConfigOptions.useDerivs) {
     size_t v, num_v = sharedDataRep->numVars;
     for (lev=0; lev<num_levels; ++lev) {
       const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
@@ -1474,10 +1457,23 @@ expectation(const RealVector2DArray& t1_coeffs, const RealVector2DArray& t1_wts,
 	}
       }
     }
-    break;
   }
+  else {
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+      if (partial)
+	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+      else
+	set_end = t1_coeffs_l.size();
+      for (set=set_start; set<set_end; ++set) {
+	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
+	const RealVector&    t1_wts_ls = t1_wts[lev][set];
+	num_tp_pts = t1_coeffs_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) // omitted if empty surplus vector
+	  integral += t1_coeffs_ls[pt] * t1_wts_ls[pt];
+      }
+    }
   }
-
   return integral;
 }
 
@@ -1565,30 +1561,7 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
   size_t lev, set, pt, num_levels = t1_coeffs.size(), set_start = 0, set_end,
     num_tp_pts;
   bool partial = !set_partition.empty();
-  switch (data_rep->basisConfigOptions.useDerivs) {
-  case false:
-    for (lev=0; lev<num_levels; ++lev) {
-      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
-      if (partial)
-	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
-      else
-	set_end = t1_coeffs_l.size();
-      for (set=set_start; set<set_end; ++set) {
-	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
-	const UShortArray&    sm_mi_ls = sm_mi[lev][set];
-	num_tp_pts = t1_coeffs_ls.length();
-	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
-	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
-	  integral += t1_coeffs_ls[pt]
-	    * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls,
-						data_rep->nonRandomIndices)
-	    * data_rep->type1_weight(key_lsp, sm_mi_ls,
-				     data_rep->randomIndices);
-	}
-      }
-    }
-    break;
-  case true: {
+  if (data_rep->basisConfigOptions.useDerivs) {
     size_t v, num_v = sharedDataRep->numVars;
     for (lev=0; lev<num_levels; ++lev) {
       const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
@@ -1618,10 +1591,29 @@ expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 	}
       }
     }
-    break;
   }
+  else {
+    for (lev=0; lev<num_levels; ++lev) {
+      const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
+      if (partial)
+	{ set_start = set_partition[lev][0]; set_end = set_partition[lev][1]; }
+      else
+	set_end = t1_coeffs_l.size();
+      for (set=set_start; set<set_end; ++set) {
+	const RealVector& t1_coeffs_ls = t1_coeffs_l[set];
+	const UShortArray&    sm_mi_ls = sm_mi[lev][set];
+	num_tp_pts = t1_coeffs_ls.length();
+	for (pt=0; pt<num_tp_pts; ++pt) { // omitted if empty surplus vector
+	  const UShortArray& key_lsp = colloc_key[lev][set][pt];
+	  integral += t1_coeffs_ls[pt]
+	    * data_rep->type1_interpolant_value(x, key_lsp, sm_mi_ls,
+						data_rep->nonRandomIndices)
+	    * data_rep->type1_weight(key_lsp, sm_mi_ls,
+				     data_rep->randomIndices);
+	}
+      }
+    }
   }
-
   return integral;
 }
 
@@ -1762,34 +1754,7 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   r1r2_t1_coeffs.resize(num_levels); r1r2_t1_coeffs[0].resize(1);
   r1r2_t2_coeffs.resize(num_levels); r1r2_t2_coeffs[0].resize(1);
   r1r2_t1_coeffs[0][0].sizeUninitialized(1);
-  switch (data_rep->basisConfigOptions.useDerivs) {
-  case false:
-    // level 0 (assume this is always contained in a partial reference_key)
-    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    r1r2_t1_coeffs[0][0][0]
-      = surrData.response_function(index) * s_data_2.response_function(index);
-    ++cntr;
-    // levels 1:w
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
-      r1r2_t1_coeffs[lev].resize(num_sets);
-      r1r2_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = key[lev][set].size();
-	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
-	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	// type1 hierarchical interpolation of R1 R2
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  r1r2_t1_coeffs_ls[pt] = surrData.response_function(index)
-	    * s_data_2.response_function(index)
-	    - value(surrData.continuous_variables(index), sm_mi, key,
-		    r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
-	}
-      }
-    }
-    break;
-  case true:
+  if (data_rep->basisConfigOptions.useDerivs) {
     size_t v, num_v = sharedDataRep->numVars;
     // level 0 (assume this is always contained in a partial reference_key)
     index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
@@ -1836,8 +1801,34 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	}
       }
     }
-    break;
   }
+  else {
+    // level 0 (assume this is always contained in a partial reference_key)
+    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+    r1r2_t1_coeffs[0][0][0]
+      = surrData.response_function(index) * s_data_2.response_function(index);
+    ++cntr;
+    // levels 1:w
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
+      r1r2_t1_coeffs[lev].resize(num_sets);
+      r1r2_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = key[lev][set].size();
+	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
+	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	// type1 hierarchical interpolation of R1 R2
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	  r1r2_t1_coeffs_ls[pt] = surrData.response_function(index)
+	    * s_data_2.response_function(index)
+	    - value(surrData.continuous_variables(index), sm_mi, key,
+		    r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
+	}
+      }
+    }
+  }
+
 }
 
 
@@ -1867,34 +1858,7 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   cov_t1_coeffs.resize(num_levels); cov_t1_coeffs[0].resize(1);
   cov_t2_coeffs.resize(num_levels); cov_t2_coeffs[0].resize(1);
   cov_t1_coeffs[0][0].sizeUninitialized(1);
-  switch (data_rep->basisConfigOptions.useDerivs) {
-  case false:
-    // level 0 (assume this is always contained in a partial reference_key)
-    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    cov_t1_coeffs[0][0][0] = (surrData.response_function(index) - mean_1) *
-                             (s_data_2.response_function(index) - mean_2);
-    ++cntr;
-    // levels 1:w
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
-      cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = key[lev][set].size();
-	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
-	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	// type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  cov_t1_coeffs_ls[pt]
-	    = (surrData.response_function(index) - mean_1)
-	    * (s_data_2.response_function(index) - mean_2)
-	    - value(surrData.continuous_variables(index), sm_mi, key,
-		    cov_t1_coeffs, cov_t2_coeffs, lev-1);
-	}
-      }
-    }
-    break;
-  case true:
+  if (data_rep->basisConfigOptions.useDerivs) {
     size_t v, num_v = sharedDataRep->numVars;
     // level 0 (assume this is always contained in a partial reference_key)
     index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
@@ -1940,7 +1904,32 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	}
       }
     }
-    break;
+  }
+  else {
+    // level 0 (assume this is always contained in a partial reference_key)
+    index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+    cov_t1_coeffs[0][0][0] = (surrData.response_function(index) - mean_1) *
+                             (s_data_2.response_function(index) - mean_2);
+    ++cntr;
+    // levels 1:w
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = (partial) ? reference_key[lev][1] : key[lev].size();
+      cov_t1_coeffs[lev].resize(num_sets); cov_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = key[lev][set].size();
+	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
+	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	// type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	  cov_t1_coeffs_ls[pt]
+	    = (surrData.response_function(index) - mean_1)
+	    * (s_data_2.response_function(index) - mean_2)
+	    - value(surrData.continuous_variables(index), sm_mi, key,
+		    cov_t1_coeffs, cov_t2_coeffs, lev-1);
+	}
+      }
+    }
   }
 }
 
@@ -2046,31 +2035,7 @@ integrate_response_moments(size_t num_moments)
 
   for (m_index=1; m_index<num_moments; ++m_index) {
     moment = m_index+1; cntr = 0;
-    switch (data_rep->basisConfigOptions.useDerivs) {
-    case false:
-      // level 0
-      index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-      mom_t1_coeffs[0][0][0]
-	= std::pow(surrData.response_function(index) - mean, moment);
-      ++cntr;
-      // levels 1:w
-      for (lev=1; lev<num_levels; ++lev) {
-	num_sets = key[lev].size();
-	for (set=0; set<num_sets; ++set) {
-	  RealVector& mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
-	  num_tp_pts = key[lev][set].size();
-	  // type1 hierarchical interpolation of (R - \mu)^moment
-	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	    index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	    mom_t1_coeffs_ls[pt]
-	      = std::pow(surrData.response_function(index) - mean, moment)
-	      - value(surrData.continuous_variables(index), sm_mi, key,
-		      mom_t1_coeffs, mom_t2_coeffs, lev-1);
-	  }
-	}
-      }
-      break;
-    case true:
+    if (data_rep->basisConfigOptions.useDerivs) {
       size_t v;
       // level 0
       index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
@@ -2108,7 +2073,29 @@ integrate_response_moments(size_t num_moments)
 	  }
 	}
       }
-      break;
+    }
+    else {
+      // level 0
+      index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+      mom_t1_coeffs[0][0][0]
+	= std::pow(surrData.response_function(index) - mean, moment);
+      ++cntr;
+      // levels 1:w
+      for (lev=1; lev<num_levels; ++lev) {
+	num_sets = key[lev].size();
+	for (set=0; set<num_sets; ++set) {
+	  RealVector& mom_t1_coeffs_ls = mom_t1_coeffs[lev][set];
+	  num_tp_pts = key[lev][set].size();
+	  // type1 hierarchical interpolation of (R - \mu)^moment
+	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	    index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	    mom_t1_coeffs_ls[pt]
+	      = std::pow(surrData.response_function(index) - mean, moment)
+	      - value(surrData.continuous_variables(index), sm_mi, key,
+		      mom_t1_coeffs, mom_t2_coeffs, lev-1);
+	  }
+	}
+      }
     }
 
     // pass these exp coefficients into a general expectation fn
@@ -2404,36 +2391,7 @@ central_product_member_coefficients(const BitArray& m_bits,
     value(surrData.continuous_variables(index), sm_mi, m_colloc_key,
 	  m_t1_coeffs, m_t2_coeffs, h_level, member_indices) - mean;
   cprod_m_t1_coeffs[0][0][0] = h_val_mm * h_val_mm;
-  switch (data_rep->basisConfigOptions.useDerivs) {
-  case false:
-    // levels 1:w type1
-    for (lev=1; lev<num_levels; ++lev) {
-      num_sets = m_colloc_key[lev].size();
-      cprod_m_t1_coeffs[lev].resize(num_sets);
-      cprod_m_t2_coeffs[lev].resize(num_sets);
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = m_colloc_key[lev][set].size();
-	RealVector& cprod_m_t1_coeffs_ls = cprod_m_t1_coeffs[lev][set];
-	cprod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
-	// type1 hierarchical interpolation of (h - mean)^2
-	for (pt=0; pt<num_tp_pts; ++pt) {
-	  index = m_colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
-	  h_val_mm = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs,
-			   m_t2_coeffs, h_level, member_indices) - mean;
-	  cprod_m_t1_coeffs_ls[pt] = h_val_mm * h_val_mm -
-	    value(c_vars, sm_mi, m_colloc_key, cprod_m_t1_coeffs,
-		  cprod_m_t2_coeffs, lev-1, member_indices);
-	}
-#ifdef VBD_DEBUG
-	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n";
-	write_data(PCout, cprod_m_t1_coeffs[lev][set]);
-	PCout << std::endl;
-#endif // VBD_DEBUG
-      }
-    }
-    break;
-  case true: {
+  if (data_rep->basisConfigOptions.useDerivs) {
     // level 0 type2
     const RealVector& h_grad_000 =
       gradient_basis_variables(surrData.continuous_variables(index), sm_mi,
@@ -2483,8 +2441,34 @@ central_product_member_coefficients(const BitArray& m_bits,
 #endif // VBD_DEBUG
       }
     }
-    break;
   }
+  else {
+    // levels 1:w type1
+    for (lev=1; lev<num_levels; ++lev) {
+      num_sets = m_colloc_key[lev].size();
+      cprod_m_t1_coeffs[lev].resize(num_sets);
+      cprod_m_t2_coeffs[lev].resize(num_sets);
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = m_colloc_key[lev][set].size();
+	RealVector& cprod_m_t1_coeffs_ls = cprod_m_t1_coeffs[lev][set];
+	cprod_m_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
+	// type1 hierarchical interpolation of (h - mean)^2
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  index = m_colloc_index[lev][set][pt];
+	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  h_val_mm = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs,
+			   m_t2_coeffs, h_level, member_indices) - mean;
+	  cprod_m_t1_coeffs_ls[pt] = h_val_mm * h_val_mm -
+	    value(c_vars, sm_mi, m_colloc_key, cprod_m_t1_coeffs,
+		  cprod_m_t2_coeffs, lev-1, member_indices);
+	}
+#ifdef VBD_DEBUG
+	PCout << "cprod_m_t1_coeffs[" << lev << "][" << set << "]:\n";
+	write_data(PCout, cprod_m_t1_coeffs[lev][set]);
+	PCout << std::endl;
+#endif // VBD_DEBUG
+      }
+    }
   }
 }
 
