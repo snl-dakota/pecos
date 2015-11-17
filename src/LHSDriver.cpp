@@ -1630,7 +1630,8 @@ generate_unique_samples( const RealVector& cd_l_bnds,
     // If not then we can proceed with generating a unique set of discrete 
     // samples.
     {
-      samples.shapeUninitialized( num_vars, num_samples );
+      if (samples.numRows() != num_vars || samples.numCols() != num_samples)
+	samples.shapeUninitialized(num_vars, num_samples);
       // Currently sample_ranks will always be returned empty. It should only be
       // filled when NonDSampling.sampleRanksMode>0. But I cannot see anywhere
       // in the code where this is true.
