@@ -387,6 +387,47 @@ public:
   /// return total number of discrete aleatory uncertain variables
   size_t dauv()   const;
 
+  /// size the number of normal uncertain variables
+  void nuv(size_t num_nuv);
+  /// size the number of lognormal uncertain variables (mean, std deviation)
+  void lnuv_ms(size_t num_lnuv);
+  /// size the number of lognormal uncertain variables (lambda, zeta)
+  void lnuv_lz(size_t num_lnuv);
+  /// size the number of lognormal uncertain variables (mean, error factor)
+  void lnuv_me(size_t num_lnuv);
+  /// size the number of uniform uncertain variables
+  void uuv(size_t num_uuv);
+  /// size the number of loguniform uncertain variables
+  void luuv(size_t num_luuv);
+  /// size the number of triangular uncertain variables
+  void tuv(size_t num_tuv);
+  /// size the number of exponential uncertain variables
+  void euv(size_t num_euv);
+  /// size the number of beta uncertain variables
+  void buv(size_t num_buv);
+  /// size the number of gamma uncertain variables
+  void gauv(size_t num_gauv);
+  /// size the number of gumbel uncertain variables
+  void guuv(size_t num_guuv);
+  /// size the number of frechet uncertain variables
+  void fuv(size_t num_nuv);
+  /// size the number of weibull uncertain variables
+  void wuv(size_t num_nuv);
+  /// size the number of histogram bin uncertain variables
+  void hbuv(size_t num_nuv);
+  /// size the number of poisson uncertain variables
+  void puv(size_t num_nuv);
+  /// size the number of binominal uncertain variables
+  void biuv(size_t num_nuv);
+  /// size the number of negative binominal uncertain variables
+  void nbuv(size_t num_nuv);
+  /// size the number of geometric uncertain variables
+  void geuv(size_t num_nuv);
+  /// size the number of hypergeometric uncertain variables
+  void hguv(size_t num_nuv);
+  /// size the number of histogram point uncertain variables
+  void hpuv(size_t num_hpiuv, size_t num_hpsuv, size_t num_hpruv);
+
   /// deep copy (as opposed to operator= shallow copy)
   void copy(const AleatoryDistParams& adp);
   /// data update (no changes to representation (unless null))
@@ -898,6 +939,142 @@ inline size_t AleatoryDistParams::daurv() const
 
 inline size_t AleatoryDistParams::dauv()  const
 { return dauiv() + dausv() + daurv(); }
+
+
+inline void AleatoryDistParams::nuv(size_t num_nuv)
+{
+  adpRep->normalMeans.sizeUninitialized(num_nuv);
+  adpRep->normalStdDevs.sizeUninitialized(num_nuv);
+  adpRep->normalLowerBnds.sizeUninitialized(num_nuv);
+  adpRep->normalUpperBnds.sizeUninitialized(num_nuv);
+}
+
+
+inline void AleatoryDistParams::lnuv_ms(size_t num_lnuv)
+{
+  adpRep->lognormalMeans.sizeUninitialized(num_lnuv);
+  adpRep->lognormalStdDevs.sizeUninitialized(num_lnuv);
+}
+
+
+inline void AleatoryDistParams::lnuv_lz(size_t num_lnuv)
+{
+  adpRep->lognormalLambdas.sizeUninitialized(num_lnuv);
+  adpRep->lognormalZetas.sizeUninitialized(num_lnuv);
+}
+
+
+inline void AleatoryDistParams::lnuv_me(size_t num_lnuv)
+{
+  adpRep->lognormalMeans.sizeUninitialized(num_lnuv);
+  adpRep->lognormalErrFacts.sizeUninitialized(num_lnuv);
+}
+
+
+inline void AleatoryDistParams::uuv(size_t num_uuv)
+{
+  adpRep->uniformLowerBnds.sizeUninitialized(num_uuv);
+  adpRep->uniformUpperBnds.sizeUninitialized(num_uuv);
+}
+
+
+inline void AleatoryDistParams::luuv(size_t num_luuv)
+{
+  adpRep->loguniformLowerBnds.sizeUninitialized(num_luuv);
+  adpRep->loguniformUpperBnds.sizeUninitialized(num_luuv);
+}
+
+
+inline void AleatoryDistParams::tuv(size_t num_tuv)
+{
+  adpRep->triangularModes.sizeUninitialized(num_tuv);
+  adpRep->triangularLowerBnds.sizeUninitialized(num_tuv);
+  adpRep->triangularUpperBnds.sizeUninitialized(num_tuv);
+}
+
+
+inline void AleatoryDistParams::euv(size_t num_euv)
+{ adpRep->exponentialBetas.sizeUninitialized(num_euv); }
+
+
+inline void AleatoryDistParams::buv(size_t num_buv)
+{
+  adpRep->betaAlphas.sizeUninitialized(num_buv);
+  adpRep->betaBetas.sizeUninitialized(num_buv);
+  adpRep->betaLowerBnds.sizeUninitialized(num_buv);
+  adpRep->betaUpperBnds.sizeUninitialized(num_buv);
+}
+
+
+inline void AleatoryDistParams::gauv(size_t num_gauv)
+{
+  adpRep->gammaAlphas.sizeUninitialized(num_gauv);
+  adpRep->gammaBetas.sizeUninitialized(num_gauv);
+}
+
+
+inline void AleatoryDistParams::guuv(size_t num_guuv)
+{
+  adpRep->gumbelAlphas.sizeUninitialized(num_guuv);
+  adpRep->gumbelBetas.sizeUninitialized(num_guuv);
+}
+
+
+inline void AleatoryDistParams::fuv(size_t num_fuv)
+{
+  adpRep->frechetAlphas.sizeUninitialized(num_fuv);
+  adpRep->frechetBetas.sizeUninitialized(num_fuv);
+}
+
+
+inline void AleatoryDistParams::wuv(size_t num_wuv)
+{
+  adpRep->weibullAlphas.sizeUninitialized(num_wuv);
+  adpRep->weibullBetas.sizeUninitialized(num_wuv);
+}
+
+
+inline void AleatoryDistParams::hbuv(size_t num_hbuv)
+{ adpRep->histogramBinPairs.resize(num_hbuv); }
+
+
+inline void AleatoryDistParams::puv(size_t num_puv)
+{ adpRep->poissonLambdas.sizeUninitialized(num_puv); }
+
+
+inline void AleatoryDistParams::biuv(size_t num_biuv)
+{
+  adpRep->binomialProbPerTrial.sizeUninitialized(num_biuv);
+  adpRep->binomialNumTrials.sizeUninitialized(num_biuv);
+}
+
+
+inline void AleatoryDistParams::nbuv(size_t num_nbuv)
+{
+  adpRep->negBinomialProbPerTrial.sizeUninitialized(num_nbuv);
+  adpRep->negBinomialNumTrials.sizeUninitialized(num_nbuv);
+}
+
+
+inline void AleatoryDistParams::geuv(size_t num_geuv)
+{ adpRep->geometricProbPerTrial.sizeUninitialized(num_geuv); }
+
+
+inline void AleatoryDistParams::hguv(size_t num_hguv)
+{
+  adpRep->hyperGeomTotalPopulation.sizeUninitialized(num_hguv);
+  adpRep->hyperGeomSelectedPopulation.sizeUninitialized(num_hguv);
+  adpRep->hyperGeomNumDrawn.sizeUninitialized(num_hguv);
+}
+
+
+inline void AleatoryDistParams::
+hpuv(size_t num_hpiuv, size_t num_hpsuv, size_t num_hpruv)
+{
+  adpRep->histogramPointIntPairs.resize(num_hpiuv);
+  adpRep->histogramPointStringPairs.resize(num_hpsuv);
+  adpRep->histogramPointRealPairs.resize(num_hpruv);
+}
 
 
 inline void AleatoryDistParams::copy(const AleatoryDistParams& adp)
