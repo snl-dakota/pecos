@@ -18,10 +18,11 @@
 #include "pecos_data_types.hpp"
 #include <boost/math/distributions.hpp>
 #include <boost/math/special_functions/sqrt1pm1.hpp> // includes expm1,log1p
+//#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_real.hpp>
 
 namespace bmth = boost::math;
 namespace bmp  = bmth::policies;
-
 
 namespace Pecos {
 
@@ -236,6 +237,9 @@ public:
   //- Heading: Member functions
   //
 
+  /// Draw a sample from the distribution using inverse_cdf on uniform[0,1]
+  template <typename Engine> Real draw_sample(Engine& rng);
+  
   /// set ranVarType
   void type(short ran_var_type);
   /// get ranVarType
@@ -281,11 +285,27 @@ private:
   //- Heading: Data members
   //
 
+  /// draws real samples on [0,1]
+  boost::uniform_real<Real> uniformSampler;
+  
   /// pointer to the letter (initialized only for the envelope)
   RandomVariable* ranVarRep;
   /// number of objects sharing ranVarRep
   int referenceCount;
 };
+
+
+template <typename Engine> 
+Real RandomVariable::draw_sample(Engine& rng)
+{
+  if (ranVarRep)
+    return ranVarRep->draw_sample(rng);
+  else {
+    // draw random number on [0,1] from a persistent RNG sequence
+    Real u01 = uniformSampler(rng);
+    return inverse_cdf(u01);
+  }
+}
 
 
 inline void RandomVariable::type(short ran_var_type)
