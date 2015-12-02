@@ -58,6 +58,8 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
+  Real inverse_standard_cdf(Real p_cdf) const;
+
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
   Real log_standard_pdf_gradient(Real z) const;
@@ -103,9 +105,13 @@ public:
 
   static Real std_cdf(Real z);
   static Real std_ccdf(Real z);
+  static Real inverse_std_cdf(Real p_cdf);
 
   static Real pdf(Real x, Real beta);
   static Real cdf(Real x, Real beta);
+
+  template <typename Engine> 
+  static Real draw_std_sample(Engine& rng);
 
   static void moments_from_params(Real beta, Real& mean, Real& std_dev);
 
@@ -188,6 +194,10 @@ inline Real ExponentialRandomVariable::log_pdf_gradient(Real x) const
 
 inline Real ExponentialRandomVariable::log_pdf_hessian(Real x) const
 { return 0.; }
+
+
+inline Real ExponentialRandomVariable::inverse_standard_cdf(Real p_cdf) const
+{ return inverse_std_cdf(p_cdf); }
 
 
 inline Real ExponentialRandomVariable::standard_pdf(Real z) const
@@ -393,6 +403,15 @@ inline Real ExponentialRandomVariable::std_ccdf(Real z)
 { return std::exp(-z); }
 
 
+inline Real ExponentialRandomVariable::inverse_std_cdf(Real p_cdf)
+{
+  // p_cdf = 1 - exp(-z)  -->  -z = log(1-p_cdf)
+  if (p_cdf <= 0.)      return 0.;
+  else if (p_cdf >= 1.) return std::numeric_limits<Real>::infinity();
+  else return -bmth::log1p(-p_cdf);
+}
+
+
 inline Real ExponentialRandomVariable::pdf(Real x, Real beta)
 { return std::exp(-x/beta)/beta; }
 
@@ -401,6 +420,16 @@ inline Real ExponentialRandomVariable::cdf(Real x, Real beta)
 {
   // as with log1p(), avoid numerical probs when exp(~0) is ~ 1
   return -bmth::expm1(-x/beta);
+}
+
+
+template <typename Engine> 
+Real ExponentialRandomVariable::draw_std_sample(Engine& rng)
+{
+  // draw random number on [0,1] from a persistent RNG sequence
+  boost::uniform_real<Real> uniform_sampler;
+  Real u01 = uniform_sampler(rng);
+  return inverse_std_cdf(u01);
 }
 
 

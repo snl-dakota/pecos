@@ -57,6 +57,8 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
+  Real inverse_standard_cdf(Real p_cdf) const;
+
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
   Real log_standard_pdf_gradient(Real z) const;
@@ -218,6 +220,13 @@ inline Real InvGammaRandomVariable::log_pdf_hessian(Real x) const
     return std::numeric_limits<Real>::quiet_NaN();
   else
     return (alphaShape + 1. - 2.*betaScale / x) / (x*x);
+}
+
+
+inline Real InvGammaRandomVariable::inverse_standard_cdf(Real p_cdf) const
+{
+  inv_gamma_dist inv_gamma1(alphaShape, 1.);
+  return bmth::quantile(inv_gamma1, p_cdf);
 }
 
 

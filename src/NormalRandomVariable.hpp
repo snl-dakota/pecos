@@ -52,6 +52,8 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
+  Real inverse_standard_cdf(Real p_cdf) const;
+
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
   Real log_standard_pdf_gradient(Real z) const;
@@ -112,6 +114,9 @@ public:
   //static Real inverse_log_std_cdf(Real p_cdf);
   //static Real inverse_log_std_ccdf(Real p_ccdf);
 
+  template <typename Engine> 
+  static Real draw_std_sample(Engine& rng);
+  
 protected:
 
   //
@@ -201,6 +206,10 @@ inline Real NormalRandomVariable::log_pdf_gradient(Real x) const
 
 inline Real NormalRandomVariable::log_pdf_hessian(Real x) const
 { return -1. / (gaussStdDev * gaussStdDev); }
+
+
+inline Real NormalRandomVariable::inverse_standard_cdf(Real p_cdf) const
+{ return inverse_std_cdf(p_cdf); }
 
 
 inline Real NormalRandomVariable::standard_pdf(Real z) const
@@ -510,6 +519,16 @@ inline Real NormalRandomVariable::Phi(Real z)
 inline Real NormalRandomVariable::Phi_inverse(Real p_cdf)
 { return inverse_std_cdf(p_cdf); }
 */
+
+
+template <typename Engine> 
+Real NormalRandomVariable::draw_std_sample(Engine& rng)
+{
+  // draw random number on [0,1] from a persistent RNG sequence
+  boost::uniform_real<Real> uniform_sampler;
+  Real u01 = uniform_sampler(rng);
+  return inverse_std_cdf(u01);
+}
 
 } // namespace Pecos
 

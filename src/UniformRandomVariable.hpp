@@ -52,6 +52,8 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
+  Real inverse_standard_cdf(Real p_cdf) const;
+
   Real standard_pdf(Real z) const;
   Real log_standard_pdf_gradient(Real z) const;
   Real log_standard_pdf_hessian(Real x) const;
@@ -98,6 +100,9 @@ public:
   static Real std_ccdf(Real beta);
   static Real inverse_std_cdf(Real p_cdf);
   static Real inverse_std_ccdf(Real p_ccdf);
+
+  template <typename Engine> 
+  static Real draw_std_sample(Engine& rng);
 
   static void moments_from_params(Real lwr, Real upr, Real& mean,
 				  Real& std_dev);
@@ -239,6 +244,10 @@ inline Real UniformRandomVariable::log_pdf_gradient(Real x) const
 
 inline Real UniformRandomVariable::log_pdf_hessian(Real x) const
 { return 0.; }
+
+
+inline Real UniformRandomVariable::inverse_standard_cdf(Real p_cdf) const
+{ return inverse_std_cdf(p_cdf); }
 
 
 inline Real UniformRandomVariable::standard_pdf(Real z) const
@@ -441,6 +450,16 @@ dz_ds_factor(short u_type, Real x, Real z) const
 
 inline void UniformRandomVariable::update(Real lwr, Real upr)
 { lowerBnd = lwr; upperBnd = upr; }
+
+
+template <typename Engine> 
+Real UniformRandomVariable::draw_std_sample(Engine& rng)
+{
+  // draw random number on [0,1] from a persistent RNG sequence
+  boost::uniform_real<Real> uniform_sampler;
+  Real u01 = uniform_sampler(rng);
+  return inverse_std_cdf(u01);
+}
 
 
 inline void UniformRandomVariable::

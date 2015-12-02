@@ -297,6 +297,17 @@ Real RandomVariable::log_pdf_hessian(Real x) const
 }
 
 
+Real RandomVariable::inverse_standard_cdf(Real p_cdf) const
+{
+  if (!ranVarRep) {
+    PCerr << "Error: inverse_standard_cdf() not supported for this random "
+	  << "variable type." << std::endl;
+    abort_handler(-1);
+  }
+  return ranVarRep->inverse_standard_cdf(p_cdf); // forward to letter
+}
+
+
 Real RandomVariable::standard_pdf(Real z) const
 {
   if (!ranVarRep) {

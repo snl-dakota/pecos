@@ -10,7 +10,9 @@
 #define PROBABILITY_TRANSFORMATION_HPP
 
 #include "pecos_data_types.hpp"
-#include "RandomVariable.hpp"
+#include "NormalRandomVariable.hpp"
+#include "UniformRandomVariable.hpp"
+#include "ExponentialRandomVariable.hpp"
 
 namespace Pecos {
 
@@ -221,6 +223,13 @@ public:
   Real u_pdf(const RealVector& u_pt) const;
   /// return the multivariate log PDF value for u-space random variables
   Real u_log_pdf(const RealVector& u_pt) const;
+
+  /// draw a sample from an x-space random variable
+  template <typename Engine>
+  Real draw_x_sample(size_t i, Engine& rng) const;
+  /// draw a sample from a u-space random variable
+  template <typename Engine>
+  Real draw_u_sample(size_t i, Engine& rng) const;
 
   /// return ranVarTypesU
   const ShortArray& u_types() const;
@@ -506,6 +515,44 @@ inline Real ProbabilityTransformation::u_log_pdf(const RealVector& u_pt) const
     for (i=0; i<num_v; ++i)
       log_density += u_log_pdf(u_pt[i], i);
     return log_density;
+  }
+}
+
+
+template <typename Engine> 
+Real ProbabilityTransformation::draw_x_sample(size_t i, Engine& rng) const
+{
+  return (probTransRep) ? probTransRep->randomVarsX[i].draw_sample(rng) :
+    randomVarsX[i].draw_sample(rng);
+}
+
+
+template <typename Engine> 
+Real ProbabilityTransformation::draw_u_sample(size_t i, Engine& rng) const
+{
+  if (probTransRep) return probTransRep->draw_u_sample(i, rng);
+  else {
+    // can only use randomVarsX[i].standard_pdf() for cases where u_type is a
+    // standardized form of the x_type.  For STD_NORMAL and STD_UNIFORM, many
+    // x_types can be mapped to these u_types, so use global utility fns
+    // whenever there are no auxilliary parameters to manage.
+    switch (ranVarTypesU[i]) {
+    // these cases require static fns since U type may not correspond to X type
+    case STD_NORMAL:  return  NormalRandomVariable::draw_std_sample(rng); break;
+    case STD_UNIFORM: return UniformRandomVariable::draw_std_sample(rng); break;
+    case STD_EXPONENTIAL:
+      return ExponentialRandomVariable::draw_std_sample(rng);             break;
+    // these cases can rely on correspondence between X and U types
+    case STD_BETA:
+      check_x_type(i, BETA);
+      return randomVarsX[i].draw_standard_sample(rng); break;
+    case STD_GAMMA:
+      check_x_type(i, GAMMA);
+      return randomVarsX[i].draw_standard_sample(rng); break;
+    default: // no transformation (e.g., PCE with numerically-generated bases)
+      check_x_type(i, ranVarTypesU[i]);
+      return randomVarsX[i].draw_sample(rng);          break;
+    }
   }
 }
 

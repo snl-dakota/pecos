@@ -57,6 +57,8 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
+  Real inverse_standard_cdf(Real p_cdf) const;
+
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
   Real log_standard_pdf_gradient(Real z) const;
@@ -219,6 +221,13 @@ inline Real GammaRandomVariable::log_pdf_hessian(Real x) const
   }
   else
     return (1.-alphaShape)/(x*x);
+}
+
+
+inline Real GammaRandomVariable::inverse_standard_cdf(Real p_cdf) const
+{
+  gamma_dist gamma1(alphaShape, 1.);
+  return bmth::quantile(gamma1, p_cdf);
 }
 
 

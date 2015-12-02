@@ -56,6 +56,8 @@ public:
   Real log_pdf_gradient(Real x) const;
   Real log_pdf_hessian(Real x) const;
 
+  Real inverse_standard_cdf(Real p_cdf) const;
+
   Real standard_pdf(Real z) const;
   Real log_standard_pdf(Real z) const;
   Real log_standard_pdf_gradient(Real z) const;
@@ -305,6 +307,13 @@ inline Real BetaRandomVariable::log_pdf_hessian(Real x) const
     Real umx = upperBnd - x,  xml = x - lowerBnd;
     return (1.-alphaStat)/(xml*xml) + (1.-betaStat)/(umx*umx);
   }
+}
+
+
+inline Real BetaRandomVariable::inverse_standard_cdf(Real p_cdf) const
+{
+  Real scaled_z = bmth::quantile(*betaDist, p_cdf); // [0,1]
+  return 2.*scaled_z - 1.; // [0,1] to [-1,1]
 }
 
 

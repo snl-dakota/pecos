@@ -18,7 +18,6 @@
 #include "pecos_data_types.hpp"
 #include <boost/math/distributions.hpp>
 #include <boost/math/special_functions/sqrt1pm1.hpp> // includes expm1,log1p
-//#include <boost/random/mersenne_twister.hpp>
 #include <boost/random/uniform_real.hpp>
 
 namespace bmth = boost::math;
@@ -171,6 +170,10 @@ public:
   /// Bayesian methods)
   virtual Real log_pdf_hessian(Real x) const;
 
+  /// return the x value for a standardized probability distribution
+  /// corresponding to a cumulative probability
+  virtual Real inverse_standard_cdf(Real p_cdf) const;
+
   /// return the value of a standardized random variable's probability density
   /// function at x
   virtual Real standard_pdf(Real z) const;
@@ -238,7 +241,11 @@ public:
   //
 
   /// Draw a sample from the distribution using inverse_cdf on uniform[0,1]
-  template <typename Engine> Real draw_sample(Engine& rng);
+  template <typename Engine>
+  Real draw_sample(Engine& rng) const;
+  /// Draw a sample from the distribution using inverse_cdf on uniform[0,1]
+  template <typename Engine>
+  Real draw_standard_sample(Engine& rng) const;
   
   /// set ranVarType
   void type(short ran_var_type);
@@ -296,7 +303,7 @@ private:
 
 
 template <typename Engine> 
-Real RandomVariable::draw_sample(Engine& rng)
+Real RandomVariable::draw_sample(Engine& rng) const
 {
   if (ranVarRep)
     return ranVarRep->draw_sample(rng);
@@ -304,6 +311,19 @@ Real RandomVariable::draw_sample(Engine& rng)
     // draw random number on [0,1] from a persistent RNG sequence
     Real u01 = uniformSampler(rng);
     return inverse_cdf(u01);
+  }
+}
+
+
+template <typename Engine> 
+Real RandomVariable::draw_standard_sample(Engine& rng) const
+{
+  if (ranVarRep)
+    return ranVarRep->draw_standard_sample(rng);
+  else {
+    // draw random number on [0,1] from a persistent RNG sequence
+    Real u01 = uniformSampler(rng);
+    return inverse_standard_cdf(u01);
   }
 }
 
