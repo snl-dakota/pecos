@@ -23,6 +23,7 @@
 #include "HermiteInterpPolynomial.hpp"
 #include "PiecewiseInterpPolynomial.hpp"
 #include "KrawtchoukOrthogPolynomial.hpp"
+#include "MeixnerOrthogPolynomial.hpp"
 
 
 namespace Pecos {
@@ -135,6 +136,9 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
   // Some Discrete orthogonal polynomials
   case KRAWTCHOUK_DISCRETE:   // var_type == "binomial"
     polynomial = new KrawtchoukOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
+  case MEIXNER_DISCRETE:   // var_type == "negative binomial"
+    polynomial = new MeixnerOrthogPolynomial();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
   default:
     PCerr << "Error: BasisPolynomial type " << poly_type << " not available."

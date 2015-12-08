@@ -15,10 +15,22 @@ TEUCHOS_UNIT_TEST(pochhammer, simple1)
 {
 
   Real testval = -5.0;
-  for( unsigned short n = 0; n < 10; ++n )
-    std::cout << n << "\t" << BasisPolynomial::pochhammer(testval, n) << std::endl;
+  std::vector<Real> values;
+  for( unsigned short n = 0; n < 10; ++n ) {
+    values.push_back(BasisPolynomial::pochhammer(testval, n));
+    //std::cout << n << "\t" << values[n] << std::endl;
+  }
 
-  TEST_ASSERT( true );
+  TEST_EQUALITY(    1,  values[0] );
+  TEST_EQUALITY(   -5,  values[1] );
+  TEST_EQUALITY(   20,  values[2] );
+  TEST_EQUALITY(  -60,  values[3] );
+  TEST_EQUALITY(  120,  values[4] );
+  TEST_EQUALITY( -120,  values[5] );
+  TEST_EQUALITY(    0,  values[6] );
+  TEST_EQUALITY(    0,  values[7] );
+  TEST_EQUALITY(    0,  values[8] );
+  TEST_EQUALITY(    0,  values[9] );
 }
 
 //----------------------------------------------------------------
