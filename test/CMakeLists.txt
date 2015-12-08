@@ -64,3 +64,25 @@ add_test(pecos_gsg_driver pecos_gsg_driver)
 add_executable(pecos_lhs_driver pecos_lhs_driver.cpp)
 target_link_libraries(pecos_lhs_driver ${pecos_libs})
 add_test(pecos_lhs_driver pecos_lhs_driver)
+
+if(PECOS_ENABLE_TEUCHOS_UNIT_TESTS)
+  set(pecos_teuchos_unit_tests
+    pecos_pochhammer.cpp
+    )
+  add_executable(pecos_teuchos_unit_tests teuchos_unit_test_driver.cpp ${pecos_teuchos_unit_tests} )
+  target_link_libraries(pecos_teuchos_unit_tests ${pecos_libs} ${Teuchos_LIBRARIES})
+  add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
+  #  dakota_add_unit_test(NAME teuchos_unit_tests
+#    SOURCES teuchos_unit_test_driver.cpp ${dakota_teuchos_unit_tests}
+#    LINK_DAKOTA_LIBS
+#    )
+#  dakota_copy_test_file("${CMAKE_CURRENT_SOURCE_DIR}/expt_data_test_files"
+#    "${CMAKE_CURRENT_BINARY_DIR}/expt_data_test_files"
+#    dakota_unit_test_copied_files
+#    )
+#  FILE( COPY
+#    "${CMAKE_CURRENT_SOURCE_DIR}/dakota_tabular_svd.dat"
+#    DESTINATION "${CMAKE_CURRENT_BINARY_DIR}"
+#    )
+endif() # DAKOTA_ENABLE_TEUCHOS_UNIT_TESTS
+
