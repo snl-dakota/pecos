@@ -14,6 +14,7 @@
 #include <sstream>
 
 #include "CombinedSparseGridDriver.hpp"
+#include "SharedProjectOrthogPolyApproxData.hpp"
 #include "TensorProductDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "pecos_data_types.hpp"
@@ -22,9 +23,11 @@
 #include "TestFunctions.hpp"
 
 #define MAX_CHARS_PER_LINE 1000
+#define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
 #define NUMVARS  3
 #define STARTLEV 1
 #define NITER    10
+#define MAXORD   5
 #define GRIDFILE "savedgrid.dat"
 #define FCNFILE  "savedfcn.dat"
 
@@ -72,6 +75,11 @@ int main(int argc, char* argv[])
     poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG);
   csg_driver.initialize_grid(poly_basis);
 
+  // Instantiate Pecos Orthog Poly
+  UShortArray aord(MAXORD,NUMVARS);
+  SharedProjectOrthogPolyApproxData polyapprox(BTYPE,aord,NUMVARS);
+  polyapprox.integration_driver_rep(&csg_driver);
+
   // initial grid
   RealMatrix variable_sets;
   csg_driver.compute_grid(variable_sets);
@@ -94,6 +102,7 @@ int main(int argc, char* argv[])
     addNewSets(storedSets,storedVals,variable_sets,fev,computedGridIDs);
   }
 
+  
 
 #define DEBUG
 #ifdef DEBUG
