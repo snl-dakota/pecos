@@ -86,8 +86,17 @@ initialize_orthogonal_basis_type_rule(short u_type,
   case STD_GAMMA:
     basis_type = GEN_LAGUERRE_ORTHOG; colloc_rule = GEN_GAUSS_LAGUERRE;
     extra_dist_params = true; break;
+  case POISSON:
+    basis_type = CHARLIER_DISCRETE; colloc_rule = GAUSS_CHARLIER;
+    extra_dist_params = true; break;
+  case BINOMIAL:
+    basis_type = KRAWTCHOUK_DISCRETE; colloc_rule = GAUSS_KRAWTCHOUK;
+    extra_dist_params = true; break;
+  case NEGATIVE_BINOMIAL:
+    basis_type = MEIXNER_DISCRETE; colloc_rule = GAUSS_MEIXNER;
+    extra_dist_params = true; break;
   default:
-    basis_type = NUM_GEN_ORTHOG;      colloc_rule = GOLUB_WELSCH;
+    basis_type = NUM_GEN_ORTHOG; colloc_rule = GOLUB_WELSCH;
     extra_dist_params = true; break;
   }
 
@@ -148,7 +157,8 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 {
   size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
     luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
-    fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0;
+    fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0, biuv_cntr=0, nbuv_cntr=0,
+    puv_cntr=0;
 
   // update poly_basis using distribution data from dp
   for (i=0; i<num_vars; ++i)
@@ -225,6 +235,18 @@ update_basis_distribution_parameters(const ShortArray& u_types,
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
 	histogram_bin_distribution(adp.histogram_bin_pairs(hbuv_cntr));
       ++hbuv_cntr; break;
+    case BINOMIAL:
+      poly_basis[i].alpha_stat(adp.binomial_probability_per_trial(biuv_cntr));
+      poly_basis[i].beta_stat(adp.binomial_num_trials(biuv_cntr));
+      ++biuv_cntr; break;
+    case NEGATIVE_BINOMIAL:
+      poly_basis[i].alpha_stat(
+	   adp.negative_binomial_probability_per_trial(nbuv_cntr));
+      poly_basis[i].beta_stat(adp.negative_binomial_num_trials(nbuv_cntr));
+      ++nbuv_cntr; break;
+    case POISSON:
+      poly_basis[i].alpha_stat(adp.poisson_lambda(puv_cntr));
+      ++puv_cntr; break;
     default:
       PCerr << "Error: unsupported u-space type in SharedPolyApproxData::"
 	    << "distribution_parameters()" << std::endl;

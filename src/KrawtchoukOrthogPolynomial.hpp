@@ -49,11 +49,6 @@ public:
   //
   //- Heading: Noninherited memeber functions
   //
-  void set_N(short Nval);
-  void set_p(Real pval);
-
-  short get_N();
-  Real get_p();
 
 protected:
 
@@ -62,6 +57,15 @@ protected:
   //
   Real type1_value(Real x, unsigned short order);
 
+  /// return alphaPoly
+  Real alpha_polynomial() const;
+  /// return betaPoly
+  Real beta_polynomial() const;
+
+  /// set alphaPoly
+  void alpha_stat(Real alpha);
+  /// set betaPoly
+  void beta_stat(Real beta);
 
 private:
 
@@ -69,31 +73,61 @@ private:
   //- Heading: Data
   //
 
-  /// the number of discrete points on which to base the polynomial 
-  short N;
   /// the probability of a "success" for each experiment
-  Real p;
+  Real alphaPoly;
+  /// the number of discrete points on which to base the polynomial 
+  short betaPoly;
 };
 
 
 inline KrawtchoukOrthogPolynomial::KrawtchoukOrthogPolynomial() :
-  N(0), p(-1.0)
+  alphaPoly(0), betaPoly(-1.0)
 { }
 
 inline KrawtchoukOrthogPolynomial::~KrawtchoukOrthogPolynomial()
 { }
 
-inline void KrawtchoukOrthogPolynomial::set_N(short Nval)
-{ N = Nval; }
+inline void KrawtchoukOrthogPolynomial::alpha_stat(Real alpha)
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+    parametricUpdate = true; // prevent false if default value assigned
+    alphaPoly = alpha;
+  }
+  else {
+    parametricUpdate = false;
+    Real ap = alpha;
+    if (!real_compare(alphaPoly, ap))
+      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+  }
+}
 
-inline void KrawtchoukOrthogPolynomial::set_p(Real pval)
-{ p = pval; }
+inline void KrawtchoukOrthogPolynomial::beta_stat(Real beta)
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+    parametricUpdate = true; // prevent false if default value assigned
+    betaPoly = beta;
+  }
+  else {
+    parametricUpdate = false;
+    Real bp = beta;
+    if (!real_compare(betaPoly, bp))
+      { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
+  }
+}
 
-inline short KrawtchoukOrthogPolynomial::get_N()
-{ return N; }
+inline Real KrawtchoukOrthogPolynomial::alpha_polynomial() const
+{ return alphaPoly; }
 
-inline Real KrawtchoukOrthogPolynomial::get_p()
-{ return p; }
+inline Real KrawtchoukOrthogPolynomial::beta_polynomial() const
+{ return betaPoly; }
 
 } // namespace Pecos
 

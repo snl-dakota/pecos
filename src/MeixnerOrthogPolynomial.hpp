@@ -53,11 +53,6 @@ public:
   //
   //- Heading: Noninherited memeber functions
   //
-  void set_c(Real cval);
-  void set_beta(Real betaval);
-
-  Real get_c();
-  Real get_beta();
 
 protected:
 
@@ -66,6 +61,15 @@ protected:
   //
   Real type1_value(Real x, unsigned short order);
 
+  /// return alphaPoly
+  Real alpha_polynomial() const;
+  /// return betaPoly
+  Real beta_polynomial() const;
+  
+  /// set alphaPoly
+  void alpha_stat(Real alpha);
+  /// set betaPoly
+  void beta_stat(Real beta);
 
 private:
 
@@ -73,31 +77,61 @@ private:
   //- Heading: Data
   //
 
-  /// the c-parameter associated with a negative binomial distribution
-  Real c;
-  /// the beta-parameter associated with a negative binomial distribution
-  Real beta;
+  /// the probability of a "success" for each experiment
+  Real alphaPoly;
+  /// the number of failures allowed
+  Real betaPoly;
 };
 
 
 inline MeixnerOrthogPolynomial::MeixnerOrthogPolynomial() :
-  c(-1.0), beta(-1.0)
+  alphaPoly(-1.0), betaPoly(-1.0)
 { }
 
 inline MeixnerOrthogPolynomial::~MeixnerOrthogPolynomial()
 { }
 
-inline void MeixnerOrthogPolynomial::set_c(Real cval)
-{ c = cval; }
+inline void MeixnerOrthogPolynomial::alpha_stat(Real alpha)
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+    parametricUpdate = true; // prevent false if default value assigned
+    alphaPoly = alpha;
+  }
+  else {
+    parametricUpdate = false;
+    Real ap = alpha;
+    if (!real_compare(alphaPoly, ap))
+      { alphaPoly = ap; parametricUpdate = true; reset_gauss(); }
+  }
+}
 
-inline void MeixnerOrthogPolynomial::set_beta(Real betaval)
-{ beta = betaval; }
+inline void MeixnerOrthogPolynomial::beta_stat(Real beta)
+{
+  // *_stat() routines are called for each approximation build from
+  // PolynomialApproximation::update_basis_distribution_parameters().
+  // Therefore, set parametricUpdate to false unless an actual parameter change.
+  // Logic for first pass included for completeness, but should not be needed.
+  if (collocPoints.empty() || collocWeights.empty()) { // first pass
+    parametricUpdate = true; // prevent false if default value assigned
+    betaPoly = beta;
+  }
+  else {
+    parametricUpdate = false;
+    Real bp = beta;
+    if (!real_compare(betaPoly, bp))
+      { betaPoly = bp; parametricUpdate = true; reset_gauss(); }
+  }
+}
 
-inline Real MeixnerOrthogPolynomial::get_c()
-{ return c; }
+inline Real MeixnerOrthogPolynomial::alpha_polynomial() const
+{ return alphaPoly; }
 
-inline Real MeixnerOrthogPolynomial::get_beta()
-{ return beta; }
+inline Real MeixnerOrthogPolynomial::beta_polynomial() const
+{ return betaPoly; }
 
 } // namespace Pecos
 

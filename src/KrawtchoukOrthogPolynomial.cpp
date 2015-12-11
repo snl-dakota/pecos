@@ -20,7 +20,7 @@ namespace Pecos {
 Real KrawtchoukOrthogPolynomial::type1_value(Real x, unsigned short order)
 {
   Real t1_val;
-  Real rN = Real(N);
+  Real rN = Real(betaPoly);
   Real omN = 1.0 - rN;
   Real om1 = Real(order) - 1.0;
 
@@ -30,18 +30,18 @@ Real KrawtchoukOrthogPolynomial::type1_value(Real x, unsigned short order)
       break;
 
     case 1:
-      t1_val = (p*Real(N) - x)/(p*Real(N));
+      t1_val = (alphaPoly*Real(betaPoly) - x)/(alphaPoly*Real(betaPoly));
       break;
 
     case 2:
-      t1_val = (p*p*rN*omN + (1.0-2.0*p*omN)*x - x*x)/(p*p*rN*omN);
+      t1_val = (alphaPoly*alphaPoly*rN*omN + (1.0-2.0*alphaPoly*omN)*x - x*x)/(alphaPoly*alphaPoly*rN*omN);
       break;
 
     default: {
       // Support higher order polynomials using the 3 point recursion formula:
       Real fm2 = type1_value(x, order-2);
       Real fm1 = type1_value(x, order-1);
-      t1_val = ((p*(rN-om1)+om1*(1.0-p)-x)*fm1 - om1*(1.0-p)*fm2)/(p*(rN-om1));
+      t1_val = ((alphaPoly*(rN-om1)+om1*(1.0-alphaPoly)-x)*fm1 - om1*(1.0-alphaPoly)*fm2)/(alphaPoly*(rN-om1));
       break;
     }
   }
