@@ -24,7 +24,7 @@
 #include "PiecewiseInterpPolynomial.hpp"
 #include "KrawtchoukOrthogPolynomial.hpp"
 #include "MeixnerOrthogPolynomial.hpp"
-//#include "CharlierOrthogPolynomial.hpp"
+#include "CharlierOrthogPolynomial.hpp"
 #include "HahnOrthogPolynomial.hpp"
 
 
@@ -142,9 +142,9 @@ BasisPolynomial* BasisPolynomial::get_polynomial(short poly_type, short rule)
   case MEIXNER_DISCRETE:   // var_type == "negative binomial"
     polynomial = new MeixnerOrthogPolynomial();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
-  //case CHARLIER_DISCRETE:   // var_type == "poisson"
-  //  polynomial = new CharlierOrthogPolynomial();
-  //  if (polynomial) polynomial->basisPolyType = poly_type;                break;
+  case CHARLIER_DISCRETE:   // var_type == "poisson"
+    polynomial = new CharlierOrthogPolynomial();
+    if (polynomial) polynomial->basisPolyType = poly_type;                break;
   case HAHN_DISCRETE:   // var_type == "hygergeometric"
     polynomial = new HahnOrthogPolynomial();
     if (polynomial) polynomial->basisPolyType = poly_type;                break;
