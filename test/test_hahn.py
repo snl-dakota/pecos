@@ -80,4 +80,6 @@ def main():
   print 'Exact = '+str(exact(order))
 
 
+#print fval(5.0,5)
+#print nCr(a+5,5)*nCr(b+N-5,N-5)*fval(5.0,0)*fval(5.0,0)
 main()
