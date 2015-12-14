@@ -12,15 +12,19 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 #include "CombinedSparseGridDriver.hpp"
 #include "SharedProjectOrthogPolyApproxData.hpp"
+#include "ProjectOrthogPolyApproximation.hpp"
 #include "TensorProductDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "pecos_data_types.hpp"
 //#include "LocalRefinableDriver.hpp"
 
 #include "TestFunctions.hpp"
+
+using namespace std;
 
 #define MAX_CHARS_PER_LINE 1000
 #define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
@@ -51,6 +55,10 @@ int main(int argc, char* argv[])
 
   using namespace Pecos;
 
+  // Define defaults
+  int nQoI = NQOI;
+
+  // Command-line arguments
 
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = STARTLEV;  // reference grid level
@@ -78,38 +86,46 @@ int main(int argc, char* argv[])
 
   // Instantiate Pecos Objects
   UShortArray aord(MAXORD,NUMVARS);
-  SharedProjectOrthogPolyApproxData polyapprox(BTYPE,aord,NUMVARS);
-  polyapprox.integration_driver_rep(&csg_driver);
+  SharedProjectOrthogPolyApproxData srdPolyApprox(BTYPE,aord,NUMVARS);
+  srdPolyApprox.integration_driver_rep(&csg_driver);
 
-  // // Instantiate Project poly approx
-  // vector< ProjectOrthogPolyApproximation > polyProjApprox;
-  // for ( int iQoI=0; iQoi<nQoI; iQoi) {
-  //   ProjectOrthogPolyApproximation 
-  // }
-  
+  // Instantiate Project poly approx
+  vector<ProjectOrthogPolyApproximation> polyProjApproxVec;
+  for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+    ProjectOrthogPolyApproximation polyProjApprox(srdPolyApprox);
+    polyProjApproxVec.push_back(polyProjApprox);
+  }
+  // Cosmin: Need to create SurrogateData 
 
   // initial grid and compute reference approximation
   RealMatrix variable_sets;
   csg_driver.compute_grid(variable_sets);
-  //polyapprox.allocate_data();
+
+#ifdef NOTPFUNC
+  srdPolyApprox.allocate_data(); // Cosmin both here and in the loop
+                                    // below functions are protected
+  for ( int iQoI=0; iQoI<nQoI; iQoI++) 
+     polyProjApproxVec[iQoI].compute_coefficients();
+#endif
   
-  // if restart, check if grid is in the restart
-  std::vector<bool> computedGridIDs ;
-  if (storedVals.length() > 0) {
-    int numHits = checkSetsInStoredSet(storedSets,variable_sets,computedGridIDs);
-    if ( numHits != variable_sets.numCols() )
-    {
-      std::cout<<"main() error: initial sets not found in restart"
-               <<std::endl;
-      std::terminate();
-    }
-  } 
-  else
-  {
-    computedGridIDs.resize(variable_sets.numCols(),false);
-    RealVector fev = feval(variable_sets,computedGridIDs,NULL);
-    addNewSets(storedSets,storedVals,variable_sets,fev,computedGridIDs);
-  }
+  // ----------------- Comment from now restarts/etc------------------------
+  // // if restart, check if grid is in the restart
+  // std::vector<bool> computedGridIDs ;
+  // if (storedVals.length() > 0) {
+  //   int numHits = checkSetsInStoredSet(storedSets,variable_sets,computedGridIDs);
+  //   if ( numHits != variable_sets.numCols() )
+  //   {
+  //     std::cout<<"main() error: initial sets not found in restart"
+  //              <<std::endl;
+  //     std::terminate();
+  //   }
+  // } 
+  // else
+  // {
+  //   computedGridIDs.resize(variable_sets.numCols(),false);
+  //   RealVector fev = feval(variable_sets,computedGridIDs,NULL);
+  //   addNewSets(storedSets,storedVals,variable_sets,fev,computedGridIDs);
+  // }
 
   
 
@@ -124,43 +140,87 @@ int main(int argc, char* argv[])
 
   UShortArraySet a;
   for ( int iter = 0; iter<NITER; iter++) {
+
     a = csg_driver.active_multi_index();
     std::cout<<"Refine, iteration: "<<iter+1<<'\n';
     write_USAS(std::cout, a) ;
-  
+
     std::vector<short unsigned int> asave;
     RealMatrix vsets1;
     int choose = 0;
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
+
       int pick = std::rand();
       if ( pick > choose) {
         asave  = *it;
         choose = pick;
       }
       csg_driver.push_trial_set(*it);
-      csg_driver.compute_trial_grid(vsets1); 
+      csg_driver.compute_trial_grid(vsets1);
 
-      int numHits = checkSetsInStoredSet(storedSets,vsets1,computedGridIDs);
-      if (numHits<vsets1.numCols())
-      {
-        RealVector fev = feval(vsets1,computedGridIDs,NULL);
-        addNewSets(storedSets,storedVals,vsets1,fev,computedGridIDs);
+#ifdef NOTPFUNC
+      // Restore available sets
+      if (srdPolyApprox.restore_available()) {
+	srdPolyApprox.pre_restore_data();
+	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+	  polyProjApproxVec[iQoI].restore_coefficients();
+	}
+	srdPolyApprox.post_restore_data();
       }
+      // Append sets
+      else {
+	srdPolyApprox.increment_data();
+	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+	  polyProjApproxVec[iQoI].increment_coefficients();
+	}
+      }
+#endif
+
+      // ----------------- Comment from now restarts/etc------------------------
+      // int numHits = checkSetsInStoredSet(storedSets,vsets1,computedGridIDs);
+      // if (numHits<vsets1.numCols())
+      // {
+      //   RealVector fev = feval(vsets1,computedGridIDs,NULL);
+      //   addNewSets(storedSets,storedVals,vsets1,fev,computedGridIDs);
+      // }
 
       //RealVector fev = feval(vsets1,NULL);
       //write_data(std::cout, vsets1, false, true, true);
       //write_data(std::cout, fev, false, true, true);
 
       csg_driver.pop_trial_set();
+
+#ifdef NOTPFUNC
+      srdPolyApprox.decrement_data();
+      for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+	polyProjApproxVec[iQoI].decrement_coefficients();
+      }
+#endif
     
     }
+
     std::cout<<asave<<std::endl ;
+
     csg_driver.update_sets(asave);
     csg_driver.update_reference();
 
+#ifdef NOTPFUNC
+    srdPolyApprox.pre_restore_data();
+    for ( int iQoI=0; iQoI<nQoI; iQoI++)
+      polyProjApproxVec[iQoI].restore_coefficients();
+    srdPolyApprox.post_restore_data();
+#endif
 
   }
+
   csg_driver.finalize_sets(true, false); // use embedded output option
+
+#ifdef NOTPFUNC
+  srdPolyApprox.pre_finalize_data();
+  for ( int iQoI=0; iQoI<nQoI; iQoI++)
+    polyProjApproxVec[iQoI].finalize_coefficients();
+  srdPolyApprox.post_finalize_data();
+#endif
 
   // Print final sets
   //std::cout<<"Final set:\n";
