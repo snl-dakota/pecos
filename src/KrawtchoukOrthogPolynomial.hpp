@@ -81,7 +81,7 @@ private:
 
 
 inline KrawtchoukOrthogPolynomial::KrawtchoukOrthogPolynomial() :
-  alphaPoly(0), betaPoly(-1.0)
+  alphaPoly(-1.0), betaPoly(-1.0)
 { }
 
 inline KrawtchoukOrthogPolynomial::~KrawtchoukOrthogPolynomial()

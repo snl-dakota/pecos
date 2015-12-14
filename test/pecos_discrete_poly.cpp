@@ -47,15 +47,15 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, krawtchouck1)
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
-  TEST_EQUALITY( ptr->get_N(), 0 );
-  TEST_EQUALITY( ptr->get_p(), -1.0 );
+  TEST_EQUALITY( poly_basis.alpha_polynomial(), -1.0 );
+  TEST_EQUALITY( poly_basis.beta_polynomial(), -1.0 );
 
-  const short N = 15;
-  const Real  p = 0.1;
+  const Real p = 0.1;
+  const Real N = 15.0;
   const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
 
-  ptr->set_N(N);
-  ptr->set_p(p);
+  poly_basis.alpha_stat(p);
+  poly_basis.beta_stat(N);
 
   // Test orthogonality of first 10 polynomials - covers hardcoded 1st and 2nd orders and recursion-based orders
   for( short i=0; i<11; ++i ) {
@@ -112,16 +112,16 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, meixner1)
   TEST_ASSERT( ptr != NULL );
 
   // Test deafult settings and accessors
-  TEST_EQUALITY( ptr->get_c(), -1.0 );
-  TEST_EQUALITY( ptr->get_beta(), -1.0 );
+  TEST_EQUALITY( poly_basis.alpha_polynomial(), -1.0 );
+  TEST_EQUALITY( poly_basis.alpha_polynomial(), -1.0 );
 
   const Real c    = 0.1;
   const Real beta = 1.5;
   const Real TEST_TOL = 1.e-9; // a relative tolerance based on the exact answers
   const unsigned NUM_TERMS_TO_SUM = 40; // the number of terms needed for the orthogonality sum to converge
 
-  ptr->set_c(c);
-  ptr->set_beta(beta);
+  poly_basis.alpha_stat(c);
+  poly_basis.beta_stat(beta);
 
   // Test orthogonality of first 10 polynomials - covers hardcoded 1st and 2nd orders and recursion-based orders
   for( short i=0; i<7; ++i ) {
