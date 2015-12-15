@@ -64,6 +64,9 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
+  // shared sobolIndexMap has been updated; now update sobolIndices per approx
+  allocate_component_sobol();
+
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   switch (combine_type) {

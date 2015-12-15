@@ -49,12 +49,24 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void allocate_expansion_coefficients();
+  /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
+  void allocate_arrays();
+
   void compute_expansion_coefficients();
-  void increment_expansion_coefficients();
-  void decrement_expansion_coefficients();
-  void restore_expansion_coefficients();
-  void finalize_expansion_coefficients();
+
+  /// update the coefficients for the expansion of interpolation polynomials:
+  /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void increment_coefficients();
+  /// restore the coefficients to their previous state prior to last increment:
+  /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void decrement_coefficients();
+  /// restore the coefficients to a previously incremented state as
+  /// identified by the current increment to the Smolyak multi index:
+  /// restore expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void restore_coefficients();
+  /// finalize the coefficients by applying all previously evaluated increments:
+  /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void finalize_coefficients();
 
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
   /// storedColloc{Key,Indices}, and storedLevMultiIndex
@@ -280,12 +292,12 @@ private:
 
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   /// for a single index_set
-  void increment_expansion_coefficients(const UShortArray& index_set);
+  void increment_coefficients(const UShortArray& index_set);
 
   /// move the expansion coefficients for restore_set from
   /// savedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
   /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void restore_expansion_coefficients(const UShortArray& restore_set);
+  void restore_coefficients(const UShortArray& restore_set);
 
   /// compute member expansion for Sobol' index integration
   void member_coefficients_weights(const BitArray&    member_bits,
@@ -536,11 +548,11 @@ expectation_gradient(const RealMatrix2DArray& t1_coeff_grads)
 }
 
 
-inline void HierarchInterpPolyApproximation::restore_expansion_coefficients()
+inline void HierarchInterpPolyApproximation::restore_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  restore_expansion_coefficients(data_rep->hsg_driver()->trial_set());
+  restore_coefficients(data_rep->hsg_driver()->trial_set());
   increment_current_from_reference();
 }
 

@@ -21,8 +21,10 @@
 namespace Pecos {
 
 
-void HierarchInterpPolyApproximation::allocate_expansion_coefficients()
+void HierarchInterpPolyApproximation::allocate_arrays()
 {
+  InterpPolyApproximation::allocate_arrays();
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const ExpansionConfigOptions& ec_options = data_rep->expConfigOptions;
@@ -160,7 +162,7 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 }
 
 
-void HierarchInterpPolyApproximation::increment_expansion_coefficients()
+void HierarchInterpPolyApproximation::increment_coefficients()
 {
   increment_current_from_reference();
 
@@ -169,7 +171,7 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   switch (data_rep->expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
-    increment_expansion_coefficients(hsg_driver->trial_set());
+    increment_coefficients(hsg_driver->trial_set());
     break;
   default: {
     const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
@@ -178,11 +180,14 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
     for (lev=0; lev<num_lev; ++lev) {
       start_set = incr_sets[lev]; num_sets = sm_mi[lev].size();
       for (set=start_set; set<num_sets; ++set)
-	increment_expansion_coefficients(sm_mi[lev][set]);
+	increment_coefficients(sm_mi[lev][set]);
     }
     break;
   }
   }
+
+  // size sobolIndices based on shared sobolIndexMap
+  allocate_component_sobol();
 }
 
 
@@ -191,7 +196,7 @@ void HierarchInterpPolyApproximation::increment_expansion_coefficients()
 // ******************************************************************
 
 
-void HierarchInterpPolyApproximation::decrement_expansion_coefficients()
+void HierarchInterpPolyApproximation::decrement_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -215,7 +220,7 @@ void HierarchInterpPolyApproximation::decrement_expansion_coefficients()
 }
 
 
-void HierarchInterpPolyApproximation::finalize_expansion_coefficients()
+void HierarchInterpPolyApproximation::finalize_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -229,7 +234,7 @@ void HierarchInterpPolyApproximation::finalize_expansion_coefficients()
     num_coeff_sets = (expansionCoeffFlag) ? expansionType1Coeffs[lev].size() :
       expansionType1CoeffGrads[lev].size();
     for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
-      restore_expansion_coefficients(sm_mi_l[set]);
+      restore_coefficients(sm_mi_l[set]);
   }
   savedExpT1Coeffs.clear(); savedExpT2Coeffs.clear();
   savedExpT1CoeffGrads.clear();
@@ -254,6 +259,9 @@ void HierarchInterpPolyApproximation::store_coefficients()
 
 void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
 {
+  // shared sobolIndexMap has been updated; now update sobolIndices per approx
+  allocate_component_sobol();
+
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
   size_t i, j, num_pts = surrData.points();
@@ -314,7 +322,7 @@ void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
 
 /** Lower level helper function to process a single index set. */
 void HierarchInterpPolyApproximation::
-increment_expansion_coefficients(const UShortArray& index_set)
+increment_coefficients(const UShortArray& index_set)
 {
   size_t lev, old_levels = expansionType1Coeffs.size(), set, old_sets,
     pt, old_pts = 0;
@@ -387,7 +395,7 @@ increment_expansion_coefficients(const UShortArray& index_set)
 
 /** Lower level helper function to process a single index set. */
 void HierarchInterpPolyApproximation::
-restore_expansion_coefficients(const UShortArray& restore_set)
+restore_coefficients(const UShortArray& restore_set)
 {
   size_t lev = l1_norm(restore_set);
   if (expansionCoeffFlag) {

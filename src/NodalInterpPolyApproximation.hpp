@@ -47,12 +47,24 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void allocate_expansion_coefficients();
+  /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
+  void allocate_arrays();
+
   void compute_expansion_coefficients();
-  void increment_expansion_coefficients();
-  void decrement_expansion_coefficients();
-  void restore_expansion_coefficients();
-  void finalize_expansion_coefficients();
+
+  /// update the coefficients for the expansion of interpolation polynomials:
+  /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void increment_coefficients();
+  /// restore the coefficients to their previous state prior to last increment:
+  /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void decrement_coefficients();
+  /// restore the coefficients to a previously incremented state as
+  /// identified by the current increment to the Smolyak multi index:
+  /// restore expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void restore_coefficients();
+  /// finalize the coefficients by applying all previously evaluated increments:
+  /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void finalize_coefficients();
 
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
   /// storedColloc{Key,Indices}, and storedLev{MultiIndex,Coeffs}
@@ -217,11 +229,11 @@ inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 { }
 
 
-inline void NodalInterpPolyApproximation::increment_expansion_coefficients()
-{ restore_expansion_coefficients(); }
+inline void NodalInterpPolyApproximation::increment_coefficients()
+{ restore_coefficients(); allocate_component_sobol(); }
 
 
-inline void NodalInterpPolyApproximation::decrement_expansion_coefficients()
+inline void NodalInterpPolyApproximation::decrement_coefficients()
 {
   size_t new_colloc_pts = surrData.points();
   if (expansionCoeffFlag) {
@@ -239,8 +251,8 @@ inline void NodalInterpPolyApproximation::decrement_expansion_coefficients()
 }
 
 
-inline void NodalInterpPolyApproximation::finalize_expansion_coefficients()
-{ restore_expansion_coefficients(); }
+inline void NodalInterpPolyApproximation::finalize_coefficients()
+{ restore_coefficients(); }
 
 
 inline RealVector NodalInterpPolyApproximation::

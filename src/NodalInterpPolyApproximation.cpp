@@ -24,8 +24,10 @@
 namespace Pecos {
 
 
-void NodalInterpPolyApproximation::allocate_expansion_coefficients()
+void NodalInterpPolyApproximation::allocate_arrays()
 {
+  InterpPolyApproximation::allocate_arrays();
+
   size_t num_colloc_pts = surrData.points(),
     num_deriv_vars = surrData.num_derivative_variables();
   if (surrData.anchor()) ++num_colloc_pts;
@@ -107,6 +109,9 @@ void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
   write_data(PCout, expansionType1Coeffs);
 #endif // DEBUG
 
+  // shared sobolIndexMap has been updated; now update sobolIndices per approx
+  allocate_component_sobol();
+
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
   SharedNodalInterpPolyApproxData* data_rep
@@ -176,7 +181,7 @@ void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
 }
 
 
-void NodalInterpPolyApproximation::restore_expansion_coefficients()
+void NodalInterpPolyApproximation::restore_coefficients()
 {
   size_t index, offset = 0, old_colloc_pts, new_colloc_pts = surrData.points();
   if (surrData.anchor())

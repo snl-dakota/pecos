@@ -60,18 +60,6 @@ protected:
 
   int min_coefficients() const;
 
-  /// update the coefficients for the expansion of multivariate Lagrange
-  /// interpolation polynomials
-  void increment_coefficients();
-  /// restore the coefficients to their previous state prior to last increment
-  void decrement_coefficients();
-  /// restore the coefficients to a previously incremented state as
-  /// identified by the current increment to the Smolyak multi index
-  void restore_coefficients();
-  /// finalize the coefficients by applying all previously evaluated increments
-  void finalize_coefficients();
-
-  /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
   /// computes component (main and interaction) Sobol' indices
@@ -88,22 +76,8 @@ protected:
   //- Heading: New virtual functions
   //
 
-  /// derived portion of allocate_arrays()
-  virtual void allocate_expansion_coefficients() = 0;
   /// derived portion of compute_coefficients()
   virtual void compute_expansion_coefficients() = 0;
-  /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  /// within increment_coefficients()
-  virtual void increment_expansion_coefficients() = 0;
-  /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  /// within decrement_coefficients()
-  virtual void decrement_expansion_coefficients() = 0;
-  /// restore expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  /// within restore_coefficients()
-  virtual void restore_expansion_coefficients() = 0;
-  /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  /// within finalize_coefficients()
-  virtual void finalize_expansion_coefficients() = 0;
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;

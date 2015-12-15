@@ -32,7 +32,6 @@ void InterpPolyApproximation::allocate_arrays()
 {
   allocate_total_sobol();
   allocate_component_sobol();
-  allocate_expansion_coefficients();
 
   if (numericalMoments.empty()) {
     SharedInterpPolyApproxData* data_rep
@@ -121,25 +120,6 @@ void InterpPolyApproximation::compute_coefficients()
   }
 #endif // INTERPOLATION_TEST
 }
-
-
-void InterpPolyApproximation::increment_coefficients()
-{
-  increment_expansion_coefficients();
-  allocate_component_sobol();
-}
-
-
-void InterpPolyApproximation::decrement_coefficients()
-{ decrement_expansion_coefficients(); }
-
-
-void InterpPolyApproximation::restore_coefficients()
-{ restore_expansion_coefficients(); }
-
-
-void InterpPolyApproximation::finalize_coefficients()
-{ finalize_expansion_coefficients(); }
 
 
 void InterpPolyApproximation::compute_component_sobol()
