@@ -21,6 +21,7 @@
 #include "CubatureDriver.hpp"
 #include "pecos_data_types.hpp"
 //#include "LocalRefinableDriver.hpp"
+#include "Teuchos_SerialDenseHelpers.hpp"
 
 #include "TestFunctions.hpp"
 
@@ -47,7 +48,7 @@ void addNewSets(Pecos::RealMatrix &storedSets,RealVector &storedVals,
 
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
-RealVector feval(const RealMatrix &dataMat, std::vector<bool> &computedGridIDs, void *funInfo)  ;
+RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, void *funInfo)  ;
 
 /// A driver program for PECOS.
 int main(int argc, char* argv[])
@@ -59,7 +60,7 @@ int main(int argc, char* argv[])
   int nQoI = NQOI;
 
   // Command-line arguments
-
+  
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
   unsigned short level = STARTLEV;  // reference grid level
   RealVector dimension_pref;        // empty -> isotropic
@@ -97,13 +98,27 @@ int main(int argc, char* argv[])
   }
   // Cosmin: Need to create SurrogateData 
 
-  // initial grid and compute reference approximation
+  //initial grid and compute reference approximation
   RealMatrix variable_sets;
   csg_driver.compute_grid(variable_sets);
 
+  std::vector<bool> computedGridIDs(variable_sets.numCols(),false) ; 
+  RealMatrix fev = feval(variable_sets,nQoI,computedGridIDs,NULL);
+  for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+    SurrogateDataVars sdv(variable_sets.numRows(),0,0);
+    SurrogateDataResp sdr;
+    SurrogateData     sdi;
+    for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
+      sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
+      sdr.response_function(fev(iQoI,jCol));
+      sdi.push_back(sdv,sdr);
+    }
+    polyProjApproxVec[nQoI].surrogate_data(sdi);
+  }
+
 #ifdef NOTPFUNC
   srdPolyApprox.allocate_data(); // Cosmin both here and in the loop
-                                    // below functions are protected
+                                 // below functions are protected
   for ( int iQoI=0; iQoI<nQoI; iQoI++) 
      polyProjApproxVec[iQoI].compute_coefficients();
 #endif
@@ -157,6 +172,8 @@ int main(int argc, char* argv[])
       }
       csg_driver.push_trial_set(*it);
       csg_driver.compute_trial_grid(vsets1);
+
+      // Surrogate data needs to be updated 
 
 #ifdef NOTPFUNC
       // Restore available sets
@@ -257,8 +274,10 @@ void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a)
   return ;
 }
 
-RealVector feval(const RealMatrix &dataMat, std::vector<bool> &computedGridIDs, void *funInfo) 
+RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, void *funInfo) 
 {
+
+  assert(nQoI==1);
 
   int i, j, numPts, numDim ;
 
@@ -266,7 +285,7 @@ RealVector feval(const RealMatrix &dataMat, std::vector<bool> &computedGridIDs, 
   numPts = dataMat.numCols(); // Number of function evaluations
 
   // Count the number of function evaluations;
-  RealVector fev;
+  RealMatrix fev;
 
   int nEval=0;
   for (i=0; i<numPts; ++i) 
@@ -274,14 +293,14 @@ RealVector feval(const RealMatrix &dataMat, std::vector<bool> &computedGridIDs, 
   if (nEval==0)
     return fev;
 
-  fev.resize(nEval);
+  fev.shape(nEval,nQoI);
   int ieval=0;
   for (i=0; i<numPts; ++i) {
     if (!computedGridIDs[i]) continue;
     RealVector xIn(numDim);
     for (j=0; j<numDim; ++j)
       xIn[j] = dataMat(j,i);
-    fev[ieval]=genz(String("cp1"), xIn);
+    fev(ieval,0)=genz(String("cp1"), xIn);
     ieval++;   
   }
   
