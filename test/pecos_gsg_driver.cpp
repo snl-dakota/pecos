@@ -96,12 +96,12 @@ int main(int argc, char* argv[])
     ProjectOrthogPolyApproximation polyProjApprox(srdPolyApprox);
     polyProjApproxVec.push_back(polyProjApprox);
   }
-  // Cosmin: Need to create SurrogateData 
 
   //initial grid and compute reference approximation
   RealMatrix variable_sets;
   csg_driver.compute_grid(variable_sets);
 
+  // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
   std::vector<bool> computedGridIDs(variable_sets.numCols(),false) ; 
   RealMatrix fev = feval(variable_sets,nQoI,computedGridIDs,NULL);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -142,8 +142,6 @@ int main(int argc, char* argv[])
   //   addNewSets(storedSets,storedVals,variable_sets,fev,computedGridIDs);
   // }
 
-  
-
 #define DEBUG
 #ifdef DEBUG
   write_data(std::cout, variable_sets, true, true, true);
@@ -176,16 +174,31 @@ int main(int argc, char* argv[])
       // Surrogate data needs to be updated 
 
 #ifdef NOTPFUNC
-      // Restore available sets
       if (srdPolyApprox.restore_available()) {
+        // Set available -> restore
 	srdPolyApprox.pre_restore_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  polyProjApproxVec[iQoI].restore_coefficients();
 	}
 	srdPolyApprox.post_restore_data();
       }
-      // Append sets
       else {
+	// New set -> compute
+	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
+	computedGridIDs.resize(vsets1.numCols(),false) ; 
+        fev = feval(vsets1,nQoI,computedGridIDs,NULL);
+	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+	  SurrogateDataVars sdv(variable_sets.numRows(),0,0);
+	  SurrogateDataResp sdr;
+	  SurrogateData     sdi;
+	  for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
+	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
+	    sdr.response_function(fev(iQoI,jCol));
+	    sdi.push_back(sdv,sdr);
+	  }
+	  polyProjApproxVec[nQoI].surrogate_data(sdi);
+	}
+        
 	srdPolyApprox.increment_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  polyProjApproxVec[iQoI].increment_coefficients();
@@ -244,6 +257,7 @@ int main(int argc, char* argv[])
   //write_US2A(std::cout, csg_driver.smolyak_multi_index());
   
   return (0);
+
 }
 
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray &a)
