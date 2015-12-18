@@ -102,20 +102,21 @@ int main(int argc, char* argv[])
   csg_driver.compute_grid(variable_sets);
 
   // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
-  std::vector<bool> computedGridIDs(variable_sets.numCols(),false) ; 
+  std::vector<bool> computedGridIDs(variable_sets.numCols(),true) ; 
   RealMatrix fev = feval(variable_sets,nQoI,computedGridIDs,NULL);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     SurrogateDataVars sdv(variable_sets.numRows(),0,0);
-    SurrogateDataResp sdr;
+    SurrogateDataResp sdr(4,variable_sets.numRows()); // no gradient or hessian
     SurrogateData     sdi;
     for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
-      sdr.response_function(fev(iQoI,jCol));
+      sdr.response_function(fev(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
     polyProjApproxVec[nQoI].surrogate_data(sdi);
   }
 
+  //return(0);
 #ifdef NOTPFUNC
   srdPolyApprox.allocate_data(); // Cosmin both here and in the loop
                                  // below functions are protected
@@ -137,7 +138,7 @@ int main(int argc, char* argv[])
   // } 
   // else
   // {
-  //   computedGridIDs.resize(variable_sets.numCols(),false);
+  //   computedGridIDs.resize(variable_sets.numCols(),true);
   //   RealVector fev = feval(variable_sets,computedGridIDs,NULL);
   //   addNewSets(storedSets,storedVals,variable_sets,fev,computedGridIDs);
   // }
@@ -184,16 +185,18 @@ int main(int argc, char* argv[])
       }
       else {
 	// New set -> compute
+
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 	computedGridIDs.resize(vsets1.numCols(),false) ; 
         fev = feval(vsets1,nQoI,computedGridIDs,NULL);
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  SurrogateDataVars sdv(variable_sets.numRows(),0,0);
-	  SurrogateDataResp sdr;
+	  SurrogateDataResp sdr(4,variable_sets.numRows()); // no gradient or hessian
 	  SurrogateData     sdi;
 	  for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
 	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
-	    sdr.response_function(fev(iQoI,jCol));
+	    sdr.response_function(fev(jCol,iQoI));
+	    std::cout<<fev(jCol,iQoI)<<std::endl;
 	    sdi.push_back(sdv,sdr);
 	  }
 	  polyProjApproxVec[nQoI].surrogate_data(sdi);
