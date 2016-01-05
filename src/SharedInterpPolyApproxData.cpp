@@ -260,13 +260,12 @@ void SharedInterpPolyApproxData::pre_combine_data(short combine_type, bool swap)
   // if current expansion is not maximal, then activate maximal by swapping 
   // stored and active --> downstream code overlays stored values on active
   // maximal grid
-  if (swap) driverRep->swap_grid();
+  if (swap) { driverRep->swap_grid(); allocate_component_sobol(); }
   // TO DO: a more rigorous approach would overlay multiple grids to create the
   // maximal grid, but for now, it is sufficient to pick 1 from those available.
-  //
   // Need to support general case where both expansions are refined with GSG:
-  // initial level/order is insufficient; assume for now that multiIndex
-  // subsets are enforced across hierarchy.
+  // initial level/order is insufficient; assume for now that multiIndex subsets
+  // are enforced across hierarchy such that picking maximal is sufficient.
 }
 
 

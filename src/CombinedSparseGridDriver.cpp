@@ -69,8 +69,9 @@ void CombinedSparseGridDriver::store_grid()
 {
   storedLevMultiIndex = smolyakMultiIndex; storedLevCoeffs     = smolyakCoeffs;
   storedCollocKey     = collocKey;         storedCollocIndices = collocIndices;
+
   storedType1WeightSets = type1WeightSets;
-  storedType2WeightSets = type2WeightSets;
+  if (computeType2Weights) storedType2WeightSets = type2WeightSets;
 }
 
 
@@ -78,8 +79,9 @@ void CombinedSparseGridDriver::clear_stored()
 {
   storedLevMultiIndex.clear(); storedLevCoeffs.clear();
   storedCollocKey.clear();     storedCollocIndices.clear();
+
   storedType1WeightSets.resize(0);
-  storedType2WeightSets.reshape(0,0);
+  if (computeType2Weights) storedType2WeightSets.reshape(0,0);
 }
 
 
@@ -98,9 +100,11 @@ void CombinedSparseGridDriver::swap_grid()
   type1WeightSets = storedType1WeightSets;
   storedType1WeightSets = tmp_vec;
 
-  RealMatrix tmp_mat(type2WeightSets);
-  type2WeightSets = storedType2WeightSets;
-  storedType2WeightSets = tmp_mat;
+  if (computeType2Weights) {
+    RealMatrix tmp_mat(type2WeightSets);
+    type2WeightSets = storedType2WeightSets;
+    storedType2WeightSets = tmp_mat;
+  }
 }
 
 

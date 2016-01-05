@@ -244,7 +244,8 @@ void SharedOrthogPolyApproxData::pre_combine_data(short combine_type, bool swap)
     //                   storedMultiIndexMap, stored_mi_map_ref);
     append_multi_index(storedMultiIndex, multiIndex, storedMultiIndexMap,
 		       stored_mi_map_ref);
-    // update sobolIndexMap with any storedMultiIndex terms not yet included
+    // reset sobolIndexMap from multiIndex and augment from storedMultiIndex
+    allocate_component_sobol(multiIndex);
     update_component_sobol(storedMultiIndex);
     break;
   }
