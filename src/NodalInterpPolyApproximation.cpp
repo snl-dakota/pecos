@@ -91,7 +91,7 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
 void NodalInterpPolyApproximation::store_coefficients()
 {
   if (expansionCoeffFlag) {
-    storedExpType1Coeffs   = expansionType1Coeffs;
+    storedExpType1Coeffs = expansionType1Coeffs;
     SharedNodalInterpPolyApproxData* data_rep
       = (SharedNodalInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs)
@@ -102,20 +102,48 @@ void NodalInterpPolyApproximation::store_coefficients()
 }
 
 
-void NodalInterpPolyApproximation::combine_coefficients(short combine_type)
+void NodalInterpPolyApproximation::swap_coefficients()
+{
+  if (expansionCoeffFlag) {
+    RealVector tmp_vec(expansionType1Coeffs);
+    expansionType1Coeffs = storedExpType1Coeffs;
+    storedExpType1Coeffs = tmp_vec;
+    SharedNodalInterpPolyApproxData* data_rep
+      = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+    if (data_rep->basisConfigOptions.useDerivs) {
+      RealMatrix tmp_mat(expansionType2Coeffs);
+      expansionType2Coeffs = storedExpType2Coeffs;
+      storedExpType2Coeffs = tmp_mat;
+    }
+  }
+  if (expansionCoeffGradFlag) {
+    RealMatrix tmp_mat(expansionType1CoeffGrads);
+    expansionType1CoeffGrads = storedExpType1CoeffGrads;
+    storedExpType1CoeffGrads = tmp_mat;
+  }
+}
+
+
+void NodalInterpPolyApproximation::
+combine_coefficients(short combine_type, bool swap)
 {
 #ifdef DEBUG
   PCout << "Original type1 expansion coefficients prior to combination:\n";
   write_data(PCout, expansionType1Coeffs);
 #endif // DEBUG
 
-  // shared sobolIndexMap has been updated; now update sobolIndices per approx
-  allocate_component_sobol();
+  // SharedNodalInterpPolyApproxData::pre_combine_data() has already swapped
+  //bool swap = ( surrData.stored_points() > surrData.points() );
+  if (swap) {
+    swap_coefficients();
+    allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
+  }
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
 
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   size_t i, j, offset = 0, num_pts = surrData.points();
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) { offset = 1; ++num_pts; }
@@ -2149,7 +2177,7 @@ tensor_product_variance_gradient(const RealVector& x,
 	  }
 	}
       }
-      if (data_rep->randomVarsKey[deriv_index]) // deriv w.r.t. design var insertion
+      if (data_rep->randomVarsKey[deriv_index])// deriv w.r.t. des var insertion
 	++insert_cntr;
     }
     break;
@@ -2423,11 +2451,11 @@ gradient_nonbasis_variables(const RealVector& x)
       approxGradient.sizeUninitialized(num_deriv_vars);
     approxGradient = 0.;
     // Smolyak recursion of anisotropic tensor products
-    CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
-    const UShort2DArray& sm_mi           = csg_driver->smolyak_multi_index();
-    const IntArray&      sm_coeffs       = csg_driver->smolyak_coefficients();
-    const UShort3DArray& colloc_key      = csg_driver->collocation_key();
-    const Sizet2DArray&  colloc_index    = csg_driver->collocation_indices();
+    CombinedSparseGridDriver* csg_driver   = data_rep->csg_driver();
+    const UShort2DArray&      sm_mi        = csg_driver->smolyak_multi_index();
+    const IntArray&           sm_coeffs    = csg_driver->smolyak_coefficients();
+    const UShort3DArray&      colloc_key   = csg_driver->collocation_key();
+    const Sizet2DArray&       colloc_index = csg_driver->collocation_indices();
     size_t i, j, num_smolyak_indices = sm_coeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
       int coeff_i = sm_coeffs[i];
@@ -2473,25 +2501,29 @@ Real NodalInterpPolyApproximation::stored_value(const RealVector& x)
   // sum expansion to get response prediction
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
+    TensorProductDriver* tpq_driver = data_rep->tpq_driver();
     SizetArray colloc_index; // empty -> default indexing
     return data_rep->
       tensor_product_value(x, storedExpType1Coeffs, storedExpType2Coeffs,
-			   data_rep->storedLevMultiIndex[0],
-			   data_rep->storedCollocKey[0], colloc_index);
+			   tpq_driver->stored_level_index(),
+			   tpq_driver->stored_collocation_key(), colloc_index);
     break;
   }
   case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
+    const IntArray&  sm_coeffs = csg_driver->stored_smolyak_coefficients();
+    const UShort2DArray& sm_mi = csg_driver->stored_smolyak_multi_index();
+    const UShort3DArray&  colloc_key = csg_driver->stored_collocation_key();
+    const Sizet2DArray& colloc_index = csg_driver->stored_collocation_indices();
     // Smolyak recursion of anisotropic tensor products
+    size_t i, num_smolyak_indices = sm_coeffs.size();
     Real approx_val = 0.;
-    size_t i, num_smolyak_indices = data_rep->storedLevCoeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
-      int coeff_i = data_rep->storedLevCoeffs[i];
+      int coeff_i = sm_coeffs[i];
       if (coeff_i)
 	approx_val += coeff_i * data_rep->
 	  tensor_product_value(x, storedExpType1Coeffs, storedExpType2Coeffs,
-			       data_rep->storedLevMultiIndex[i],
-			       data_rep->storedCollocKey[i],
-			       data_rep->storedCollocIndices[i]);
+			       sm_mi[i], colloc_key[i], colloc_index[i]);
     }
     return approx_val;
     break;
@@ -2514,27 +2546,32 @@ stored_gradient_basis_variables(const RealVector& x)
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
+    TensorProductDriver* tpq_driver = data_rep->tpq_driver();
     SizetArray colloc_index; // empty -> default indexing
     return data_rep->
       tensor_product_gradient_basis_variables(x, storedExpType1Coeffs,
-	storedExpType2Coeffs, data_rep->storedLevMultiIndex[0],
-	data_rep->storedCollocKey[0], colloc_index);
+	storedExpType2Coeffs, tpq_driver->stored_level_index(),
+	tpq_driver->stored_collocation_key(), colloc_index);
     break;
   }
   case COMBINED_SPARSE_GRID: {
-    size_t num_v = sharedDataRep->numVars;
+    CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
+    const IntArray&  sm_coeffs = csg_driver->stored_smolyak_coefficients();
+    const UShort2DArray& sm_mi = csg_driver->stored_smolyak_multi_index();
+    const UShort3DArray&  colloc_key = csg_driver->stored_collocation_key();
+    const Sizet2DArray& colloc_index = csg_driver->stored_collocation_indices();
+    // Smolyak recursion of anisotropic tensor products
+    size_t i, j, num_smolyak_indices = sm_coeffs.size(),
+      num_v = sharedDataRep->numVars;
     if (approxGradient.length() != num_v)
       approxGradient.sizeUninitialized(num_v);
     approxGradient = 0.;
-    // Smolyak recursion of anisotropic tensor products
-    size_t i, j, num_smolyak_indices = data_rep->storedLevCoeffs.size();
     for (i=0; i<num_smolyak_indices; ++i) {
-      int coeff_i = data_rep->storedLevCoeffs[i];
+      int coeff_i = sm_coeffs[i];
       if (coeff_i) {
 	const RealVector& tp_grad = data_rep->
 	  tensor_product_gradient_basis_variables(x, storedExpType1Coeffs,
-	    storedExpType2Coeffs, data_rep->storedLevMultiIndex[i],
-	    data_rep->storedCollocKey[i], data_rep->storedCollocIndices[i]);
+	    storedExpType2Coeffs, sm_mi[i], colloc_key[i], colloc_index[i]);
 	for (j=0; j<num_v; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }
@@ -2561,26 +2598,31 @@ stored_gradient_nonbasis_variables(const RealVector& x)
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
+    TensorProductDriver* tpq_driver = data_rep->tpq_driver();
     SizetArray colloc_index; // empty -> default indexing
     return data_rep->tensor_product_gradient_nonbasis_variables(x,
-      storedExpType1CoeffGrads, data_rep->storedLevMultiIndex[0],
-      data_rep->storedCollocKey[0], colloc_index);
+      storedExpType1CoeffGrads, tpq_driver->stored_level_index(),
+      tpq_driver->stored_collocation_key(), colloc_index);
     break;
   }
   case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
+    const IntArray&  sm_coeffs = csg_driver->stored_smolyak_coefficients();
+    const UShort2DArray& sm_mi = csg_driver->stored_smolyak_multi_index();
+    const UShort3DArray&  colloc_key = csg_driver->stored_collocation_key();
+    const Sizet2DArray& colloc_index = csg_driver->stored_collocation_indices();
     // Smolyak recursion of anisotropic tensor products
-    size_t i, j, num_smolyak_indices = data_rep->storedLevCoeffs.size(),
+    size_t i, j, num_smolyak_indices = sm_coeffs.size(),
       num_deriv_vars = storedExpType1CoeffGrads.numRows();
     if (approxGradient.length() != num_deriv_vars)
       approxGradient.sizeUninitialized(num_deriv_vars);
     approxGradient = 0.;
     for (i=0; i<num_smolyak_indices; ++i) {
-      int coeff_i = data_rep->storedLevCoeffs[i];
+      int coeff_i = sm_coeffs[i];
       if (coeff_i) {
 	const RealVector& tp_grad = data_rep->
 	  tensor_product_gradient_nonbasis_variables(x,
-	    storedExpType1CoeffGrads, data_rep->storedLevMultiIndex[i],
-	    data_rep->storedCollocKey[i], data_rep->storedCollocIndices[i]);
+	    storedExpType1CoeffGrads, sm_mi[i], colloc_key[i], colloc_index[i]);
 	for (j=0; j<num_deriv_vars; ++j)
 	  approxGradient[j] += coeff_i * tp_grad[j];
       }

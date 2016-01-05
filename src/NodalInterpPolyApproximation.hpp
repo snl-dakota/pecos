@@ -66,13 +66,13 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
-  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
-  /// storedColloc{Key,Indices}, and storedLev{MultiIndex,Coeffs}
+  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void store_coefficients();
   /// augment current interpolant using
-  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
-  /// and storedLev{MultiIndex,Coeffs}
-  void combine_coefficients(short combine_type);
+  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void combine_coefficients(short combine_type, bool swap);
+  /// swap current with storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void swap_coefficients();
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);

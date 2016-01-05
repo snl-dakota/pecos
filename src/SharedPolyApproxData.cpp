@@ -288,7 +288,7 @@ void SharedPolyApproxData::post_finalize_data()
 { } // default implementation is no op
 
 
-void SharedPolyApproxData::pre_combine_data(short combine_type)
+void SharedPolyApproxData::pre_combine_data(short combine_type, bool swap)
 { } // default implementation is no op
 
 

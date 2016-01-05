@@ -209,28 +209,8 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
 }
 
 
-void SharedProjectOrthogPolyApproxData::store_data()
-{
-  // Store the aggregated expansion data.  This approach is preferred to
-  // appending to savedTP{MultiIndex,Coeffs,CoeffGrads} since the savedTP
-  // approach is less general (TP and sum of TP only), less memory
-  // efficient (tensor redundancies in sparse grids), and causes ambiguity
-  // in finalize_coefficients() for generalized sparse grids.
-  storedMultiIndex = multiIndex;
-
-  // approach-specific storage
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: { // sum of tensor-product expansions
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    storedLevMultiIndex = csg_driver->smolyak_multi_index(); break;
-  }
-  default: // tensor and total-order expansions
-    storedApproxOrder = approxOrder;                         break;
-  }
-}
-
-
-void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
+void SharedProjectOrthogPolyApproxData::
+pre_combine_data(short combine_type, bool swap)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -248,10 +228,11 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
     // tensor_product_value() usage for combined coefficient sets.
 
     // base class version is sufficient; no specialization based on exp form
-    SharedOrthogPolyApproxData::pre_combine_data(combine_type);
+    SharedOrthogPolyApproxData::pre_combine_data(combine_type, swap);
     break;
   }
   case MULT_COMBINE: {
+    if (swap) swap_data();
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
@@ -267,8 +248,8 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
       UShort2DArray curr_pareto, stored_pareto;
-      update_pareto_set(csg_driver->smolyak_multi_index(), curr_pareto);
-      update_pareto_set(storedLevMultiIndex,             stored_pareto);
+      update_pareto_set(csg_driver->smolyak_multi_index(),         curr_pareto);
+      update_pareto_set(csg_driver->stored_smolyak_multi_index(),stored_pareto);
       size_t i, j, k, num_stored_mi = stored_pareto.size(),
 	num_curr_mi = curr_pareto.size();
       // overlay each product expansion from the tensor-product combinations
@@ -290,41 +271,14 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
     }
     default:
       // base class version supports product of two total-order expansions
-      SharedOrthogPolyApproxData::pre_combine_data(combine_type);
+      SharedOrthogPolyApproxData::pre_combine_data(combine_type, swap);
       break;
     }
     break;
   }
   case ADD_MULT_COMBINE:
     // base class manages this placeholder
-    SharedOrthogPolyApproxData::pre_combine_data(combine_type);
-    break;
-  }
-}
-
-
-void SharedProjectOrthogPolyApproxData::post_combine_data(short combine_type)
-{
-  // storedMultiIndex and storedApproxOrder used downstream in
-  // ProjectOrthogPolyApproximation::integrate_response_moments(),
-  // which calls ProjectOrthogPolyApproximation::stored_value()
-
-  //storedMultiIndex.clear(); // needed in ProjectOPA::stored_value()
-  storedMultiIndexMap.clear();
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID:
-    storedLevMultiIndex.clear();     break;
-  case QUADRATURE:
-    //storedApproxOrder.clear(); // needed in ProjectOPA::stored_value()
-    break;
-  default: // total-order expansions
-    storedApproxOrder.clear();       break;
-  }
-
-  switch (combine_type) {
-  case MULT_COMBINE:
-    std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
-    combinedMultiIndex.clear();
+    SharedOrthogPolyApproxData::pre_combine_data(combine_type, swap);
     break;
   }
 }

@@ -65,15 +65,13 @@ public:
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
 
-  /// initialize all sparse grid settings except for distribution params
-  void initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
-    const ShortArray& u_types, const ExpansionConfigOptions& ec_options,
-    BasisConfigOptions& bc_options,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH, bool store_colloc = false,
-    bool track_uniq_prod_wts = true, bool track_colloc_indices = true);
   /// initialize all sparse grid settings (distribution params already
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
+
+  void store_grid();
+  void clear_stored();
+  void swap_grid();
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
@@ -99,6 +97,13 @@ public:
   //
   //- Heading: Member functions
   //
+
+  /// initialize all sparse grid settings except for distribution params
+  void initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
+    const ShortArray& u_types, const ExpansionConfigOptions& ec_options,
+    BasisConfigOptions& bc_options,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH, bool track_colloc = false,
+    bool track_uniq_prod_wts = true);
 
   /// overloaded form initializes smolyakMultiIndex and smolyakCoeffs
   void assign_smolyak_arrays();
@@ -147,6 +152,15 @@ public:
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
 
+  /// set trackCollocDetails
+  void track_collocation_details(bool track_colloc);
+  /// get trackCollocDetails
+  bool track_collocation_details() const;
+  /// set trackUniqueProdWeights
+  void track_unique_product_weights(bool track_uniq_prod_wts);
+  /// get trackUniqueProdWeights
+  bool track_unique_product_weights() const;
+
   /// return collocKey
   const UShort3DArray& collocation_key() const;
   /// return collocIndices
@@ -155,6 +169,15 @@ public:
   const IntArray& unique_index_mapping() const;
   // return duplicateTol
   //Real duplicate_tolerance() const;
+
+  /// return storedLevMultiIndex
+  const UShort2DArray& stored_smolyak_multi_index() const;
+  /// return storedLevCoeffs
+  const IntArray& stored_smolyak_coefficients() const;
+  /// return storedCollocKey
+  const UShort3DArray& stored_collocation_key() const;
+  /// return storedCollocIndices
+  const Sizet2DArray& stored_collocation_indices() const;
 
   /// return type1WeightSets
   const RealVector& type1_weight_sets() const;
@@ -224,6 +247,13 @@ private:
   /// used in incremental approaches that update smolyakCoeffs
   IntArray smolyakCoeffsRef;
 
+  /// flag controls conditional population of collocKey, collocIndices,
+  /// collocPts1D and type{1,2}CollocWts1D
+  bool trackCollocDetails;
+  /// flag indicating need to track {type1,type2}WeightSets (product weights for
+  /// each unique grid point) as opposed to relying on collections of 1D weights
+  bool trackUniqueProdWeights;
+
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
   UShort3DArray collocKey;
@@ -235,6 +265,15 @@ private:
 
   /// trial evaluation set from push_trial_set()
   UShortArray trialSet;
+
+  /// stored driver state: copy of smolyakMultiIndex
+  UShort2DArray storedLevMultiIndex;
+  /// stored driver state: copy of smolyakCoeffs
+  IntArray storedLevCoeffs;
+  /// stored driver state: copy of collocKey
+  UShort3DArray storedCollocKey;
+  /// stored driver state: copy of collocIndices
+  Sizet2DArray storedCollocIndices;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -249,6 +288,11 @@ private:
   /// reference values for the type2 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type2WeightSets
   RealMatrix type2WeightSetsRef;
+
+  /// stored driver state: copy of type1WeightSets
+  RealVector storedType1WeightSets;
+  /// stored driver state: copy of type2WeightSets
+  RealMatrix storedType2WeightSets;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<CollocFnPtr> compute1DPoints;
@@ -288,7 +332,8 @@ private:
 
 
 inline CombinedSparseGridDriver::CombinedSparseGridDriver():
-  SparseGridDriver(), duplicateTol(1.e-15)
+  SparseGridDriver(), trackCollocDetails(false), trackUniqueProdWeights(false),
+  duplicateTol(1.e-15)
 { }
 
 
@@ -296,7 +341,7 @@ inline CombinedSparseGridDriver::
 CombinedSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
-  duplicateTol(1.e-15)
+  trackCollocDetails(false), trackUniqueProdWeights(false), duplicateTol(1.e-15)
 { }
 
 
@@ -319,6 +364,24 @@ smolyak_multi_index() const
 
 inline const IntArray& CombinedSparseGridDriver::smolyak_coefficients() const
 { return smolyakCoeffs; }
+
+
+inline void CombinedSparseGridDriver::
+track_collocation_details(bool track_colloc)
+{ trackCollocDetails = track_colloc; }
+
+
+inline bool CombinedSparseGridDriver::track_collocation_details() const
+{ return trackCollocDetails; }
+
+
+inline void CombinedSparseGridDriver::
+track_unique_product_weights(bool track_uniq_prod_wts)
+{ trackUniqueProdWeights = track_uniq_prod_wts; }
+
+
+inline bool CombinedSparseGridDriver::track_unique_product_weights() const
+{ return trackUniqueProdWeights; }
 
 
 inline const UShort3DArray& CombinedSparseGridDriver::collocation_key() const
@@ -384,6 +447,26 @@ inline void CombinedSparseGridDriver::update_reference()
 inline const IntArray& CombinedSparseGridDriver::
 smolyak_coefficients_reference() const
 { return smolyakCoeffsRef; }
+
+
+inline const UShort2DArray& CombinedSparseGridDriver::
+stored_smolyak_multi_index() const
+{ return storedLevMultiIndex; }
+
+
+inline const IntArray& CombinedSparseGridDriver::
+stored_smolyak_coefficients() const
+{ return storedLevCoeffs; }
+
+
+inline const UShort3DArray& CombinedSparseGridDriver::
+stored_collocation_key() const
+{ return storedCollocKey; }
+
+
+inline const Sizet2DArray& CombinedSparseGridDriver::
+stored_collocation_indices() const
+{ return storedCollocIndices; }
 
 
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const

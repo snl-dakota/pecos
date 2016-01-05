@@ -82,6 +82,9 @@ protected:
   void decrement_data();
   void post_restore_data();
   void post_finalize_data();
+  void pre_combine_data(short combine_type, bool swap);
+  void post_combine_data(short combine_type);
+  void store_data();
 
   //
   //- Heading: New virtual functions

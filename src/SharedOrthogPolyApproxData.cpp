@@ -200,13 +200,40 @@ update_component_sobol(const UShort2DArray& multi_index)
 
 /** Default storage, specialized in derived classes. */
 void SharedOrthogPolyApproxData::store_data()
-{ storedApproxOrder = approxOrder; storedMultiIndex = multiIndex; }
+{
+  // Storing is district from appending to savedTP{MultiIndex,Coeffs,CoeffGrads}
+  // since the savedTP approach is less general (TP and sum of TP only), less
+  // memory efficient (tensor redundancies in sparse grids), and causes
+  // ambiguity in finalize_coefficients() for generalized sparse grids.
+
+  storedMultiIndex = multiIndex;
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE:
+    storedApproxOrder = approxOrder; driverRep->store_grid(); break;
+  case COMBINED_SPARSE_GRID:         driverRep->store_grid(); break;
+  default:                   storedApproxOrder = approxOrder; break;
+  }
+}
 
 
-void SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
+void SharedOrthogPolyApproxData::swap_data()
+{
+  std::swap(storedMultiIndex, multiIndex);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE:
+    std::swap(storedApproxOrder, approxOrder); driverRep->swap_grid(); break;
+  case COMBINED_SPARSE_GRID:                   driverRep->swap_grid(); break;
+  default:                  std::swap(storedApproxOrder, approxOrder); break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::pre_combine_data(short combine_type, bool swap)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
+
+  if (swap) swap_data();
 
   switch (combine_type) {
   case ADD_COMBINE: {
@@ -245,8 +272,21 @@ void SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 
 void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
 {
-  storedApproxOrder.clear();
-  storedMultiIndex.clear(); storedMultiIndexMap.clear();
+  // storedMultiIndex and storedApproxOrder used downstream in
+  // ProjectOrthogPolyApproximation::integrate_response_moments(),
+  // which calls ProjectOrthogPolyApproximation::stored_value()
+
+  //storedMultiIndex.clear(); // needed in {OPA,POPA,ROPA}::stored_value()
+  storedMultiIndexMap.clear();
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID:
+    driverRep->clear_stored(); break;
+  case QUADRATURE:
+    //storedApproxOrder.clear(); // needed in ProjectOPA::stored_value()
+    driverRep->clear_stored(); break;
+  default: // total-order expansions
+    storedApproxOrder.clear(); break;
+  }
 
   switch (combine_type) {
   case MULT_COMBINE:

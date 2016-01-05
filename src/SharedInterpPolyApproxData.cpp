@@ -117,10 +117,10 @@ void SharedInterpPolyApproxData::allocate_data()
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
 
     // can't use quad_order > quadOrderPrev logic since only 1 pt set is stored
-    bool update_basis_form = (quad_order != quadOrderPrev);
-    if (update_basis_form || param_update)
+    bool change_order = (quad_order != quadOrderPrev);
+    if (change_order || param_update)
       update_tensor_interpolation_basis(tpq_driver->level_index());
-    if (update_basis_form) {
+    if (change_order) {
       allocate_component_sobol();
       quadOrderPrev = quad_order;
     }
@@ -135,13 +135,13 @@ void SharedInterpPolyApproxData::allocate_data()
     // level and the basis update uses a coarse increment based on level.  This
     // matches isotropic sparse grids, but forces fewer and larger updates in
     // the case of anisotropic or generalized grids.
-    bool update_basis_form
-      = (ssgLevelPrev == USHRT_MAX || ssg_level > ssgLevelPrev);
-    if (update_basis_form || param_update)
+    bool change_lev = (ssg_level != ssgLevelPrev), 
+       increase_lev = (ssgLevelPrev == USHRT_MAX || ssg_level > ssgLevelPrev);
+    if (increase_lev || param_update)
       update_sparse_interpolation_basis(ssg_level);
-    if (update_basis_form) {
+    if (change_lev) {
       allocate_component_sobol();
-      ssgLevelPrev = ssg_level; // ssgAnisoWtsPrev = aniso_wts;
+      ssgLevelPrev = ssg_level; //ssgAnisoWtsPrev = aniso_wts;
     }
     break;
   }
@@ -251,6 +251,29 @@ void SharedInterpPolyApproxData::post_finalize_data()
 }
 
 
+void SharedInterpPolyApproxData::store_data()
+{ driverRep->store_grid(); }
+
+
+void SharedInterpPolyApproxData::pre_combine_data(short combine_type, bool swap)
+{
+  // if current expansion is not maximal, then activate maximal by swapping 
+  // stored and active --> downstream code overlays stored values on active
+  // maximal grid
+  if (swap) driverRep->swap_grid();
+  // TO DO: a more rigorous approach would overlay multiple grids to create the
+  // maximal grid, but for now, it is sufficient to pick 1 from those available.
+  //
+  // Need to support general case where both expansions are refined with GSG:
+  // initial level/order is insufficient; assume for now that multiIndex
+  // subsets are enforced across hierarchy.
+}
+
+
+void SharedInterpPolyApproxData::post_combine_data(short combine_type)
+{ driverRep->clear_stored(); }
+
+
 void SharedInterpPolyApproxData::
 update_tensor_interpolation_basis(const UShortArray& lev_index)
 {
@@ -282,7 +305,7 @@ update_sparse_interpolation_basis(unsigned short max_level)
 {
   // resize if needed (leaving previous levels unmodified)
   // j range is 0:w inclusive; i range is 1:w+1 inclusive
-  size_t l, v, orig_size = polynomialBasis.size();
+  size_t l, v;//, orig_size = polynomialBasis.size();
   resize_polynomial_basis(max_level);
 
   const std::vector<BasisPolynomial>& num_int_poly_basis

@@ -68,13 +68,13 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
-  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads},
-  /// storedColloc{Key,Indices}, and storedLevMultiIndex
+  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void store_coefficients();
   /// augment current interpolant using
-  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}, storedColloc{Key,Indices},
-  /// and storedLevMultiIndex
-  void combine_coefficients(short combine_type);
+  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void combine_coefficients(short combine_type, bool swap);
+  /// swap current with storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void swap_coefficients();
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
@@ -614,8 +614,10 @@ inline Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  unsigned short max_level = data_rep->storedLevMultiIndex.size() - 1;
-  return value(x, data_rep->storedLevMultiIndex, data_rep->storedCollocKey,
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return value(x, sm_mi, hsg_driver->stored_collocation_key(),
 	       storedExpType1Coeffs, storedExpType2Coeffs, max_level);
 }
 
@@ -625,9 +627,11 @@ stored_gradient_basis_variables(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  unsigned short max_level = data_rep->storedLevMultiIndex.size() - 1;
-  return gradient_basis_variables(x, data_rep->storedLevMultiIndex,
-				  data_rep->storedCollocKey,
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return gradient_basis_variables(x, sm_mi,
+				  hsg_driver->stored_collocation_key(),
 				  storedExpType1Coeffs, storedExpType2Coeffs,
 				  max_level);
 }
@@ -638,9 +642,11 @@ stored_gradient_nonbasis_variables(const RealVector& x)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  unsigned short max_level = data_rep->storedLevMultiIndex.size() - 1;
-  return gradient_nonbasis_variables(x, data_rep->storedLevMultiIndex,
-				     data_rep->storedCollocKey,
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return gradient_nonbasis_variables(x, sm_mi,
+				     hsg_driver->stored_collocation_key(),
 				     storedExpType1CoeffGrads, max_level);
 }
 

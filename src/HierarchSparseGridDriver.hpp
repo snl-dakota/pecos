@@ -54,6 +54,10 @@ public:
   void compute_grid(RealMatrix& var_sets);
   int grid_size();
 
+  void store_grid();
+  void clear_stored();
+  void swap_grid();
+
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
   void restore_set();
@@ -91,15 +95,35 @@ public:
   //- Heading: Member functions
   //
 
+  /// initialize all sparse grid settings except for distribution params
+  void initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
+    const ShortArray& u_types, const ExpansionConfigOptions& ec_options,
+    BasisConfigOptions& bc_options,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH,
+    bool track_colloc_indices = true);
+
   /// return incrementSets
   const UShortArray& increment_sets() const;
 
   /// return smolyakMultiIndex
   const UShort3DArray& smolyak_multi_index() const;
+
+  /// set trackCollocIndices
+  void track_collocation_indices(bool track_colloc_indices);
+  /// get trackCollocIndices
+  bool track_collocation_indices() const;
+
   /// return collocKey
   const UShort4DArray& collocation_key() const;
   /// return collocIndices
   const Sizet3DArray& collocation_indices() const;
+
+  /// return storedLevMultiIndex
+  const UShort3DArray& stored_smolyak_multi_index() const;
+  /// return storedCollocKey
+  const UShort4DArray& stored_collocation_key() const;
+  // return storedCollocIndices
+  //const Sizet3DArray& stored_collocation_indices() const;
 
   /// discriminate portions of the level-set hierarchy that are
   /// reference sets from those in the current increment
@@ -161,12 +185,24 @@ private:
   /// due to an isotropic/anistropic grid refinement
   UShortArray incrementSets;
 
+  /// due to the hierarchical structure, collocation indices only need
+  /// to be defined in special cases (e.g., generalized sparse grids
+  /// for which index sets can appear in different orders).
+  bool trackCollocIndices;
+
   /// levels-by-index sets-by-numDeltaPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
   UShort4DArray collocKey;
   /// levels-by-index sets-by-numTensorProductPts array for linking the
   /// set of tensor products to the unique collocation points evaluated
   Sizet3DArray collocIndices;
+
+  /// stored driver state: copy of smolyakMultiIndex
+  UShort3DArray storedLevMultiIndex;
+  /// stored driver state: copy of collocKey
+  UShort4DArray storedCollocKey;
+  // stored driver state: copy of collocIndices
+  //Sizet3DArray storedCollocIndices;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -180,6 +216,11 @@ private:
   // concatenation of type2WeightSets RealMatrix2DArray into a RealMatrix
   //RealMatrix concatT2WeightSets;
 
+  /// stored driver state: copy of type1WeightSets
+  RealVector2DArray storedType1WeightSets;
+  /// stored driver state: copy of type2WeightSets
+  RealMatrix2DArray storedType2WeightSets;
+
   /// stored type 1 weight sets for restoration to type1WeightSets
   std::map<UShortArray, RealVector> savedT1WtSets;
   /// stored type 2 weight sets for restoration to type2WeightSets
@@ -188,7 +229,7 @@ private:
 
 
 inline HierarchSparseGridDriver::HierarchSparseGridDriver():
-  SparseGridDriver(), nestedGrid(true)
+  SparseGridDriver(), nestedGrid(true), trackCollocIndices(true)
 { }
 
 
@@ -196,7 +237,7 @@ inline HierarchSparseGridDriver::
 HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
-  nestedGrid(true)
+  nestedGrid(true), trackCollocIndices(true)
 { }
 
 
@@ -235,12 +276,36 @@ smolyak_multi_index() const
 { return smolyakMultiIndex; }
 
 
+inline void HierarchSparseGridDriver::
+track_collocation_indices(bool track_colloc_indices)
+{ trackCollocIndices = track_colloc_indices; }
+
+
+inline bool HierarchSparseGridDriver::track_collocation_indices() const
+{ return trackCollocIndices; }
+
+
 inline const UShort4DArray& HierarchSparseGridDriver::collocation_key() const
 { return collocKey; }
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
 { return collocIndices; }
+
+
+inline const UShort3DArray& HierarchSparseGridDriver::
+stored_smolyak_multi_index() const
+{ return storedLevMultiIndex; }
+
+
+inline const UShort4DArray& HierarchSparseGridDriver::
+stored_collocation_key() const
+{ return storedCollocKey; }
+
+
+//inline const Sizet3DArray& HierarchSparseGridDriver::
+//stored_collocation_indices() const
+//{ return storedCollocIndices; }
 
 
 /*

@@ -90,7 +90,8 @@ protected:
 
   void increment_coefficients();
   void store_coefficients();
-  void combine_coefficients(short combine_type);
+  void combine_coefficients(short combine_type, bool swap);
+  void swap_coefficients();
 
   void allocate_arrays();
 

@@ -47,6 +47,9 @@ public:
   int  grid_size();
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
+  void store_grid();
+  void clear_stored();
+  void swap_grid();
 
   //
   //- Heading: Member functions
@@ -81,9 +84,13 @@ public:
 
   /// return levelIndex
   const UShortArray& level_index() const;
-
   /// return collocKey
   const UShort2DArray& collocation_key() const;
+
+  /// return storedLevelIndex
+  const UShortArray& stored_level_index() const;
+  /// return storedCollocKey
+  const UShort2DArray& stored_collocation_key() const;
 
   /// stand-alone initializer of tensor grid settings (except for
   /// distribution params)
@@ -100,9 +107,12 @@ private:
   //
 
   /// update levelIndex from quadOrder
-  void update_level_index();
+  void update_level_index_from_quadrature_order();
   /// update levelIndex[i] from quadOrder[i]
-  void update_level_index(size_t i);
+  void update_level_index_from_quadrature_order(size_t i);
+
+  /// update quadOrder from levelIndex
+  void update_quadrature_order_from_level_index();
 
   //
   //- Heading: Data
@@ -113,10 +123,14 @@ private:
 
   /// quadrature order offset by one for use as 0-based indices
   UShortArray levelIndex;
-
   /// num points-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
+
+  /// stored driver state: copy of levelIndex
+  UShortArray storedLevelIndex;
+  /// stored driver state: copy of collocKey
+  UShort2DArray storedCollocKey;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the tensor grid
@@ -124,10 +138,15 @@ private:
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the tensor grid
   RealMatrix type2WeightSets;
+
+  /// stored driver state: copy of type1WeightSets
+  RealVector storedType1WeightSets;
+  /// stored driver state: copy of type2WeightSets
+  RealMatrix storedType2WeightSets;
 };
 
 
-inline void TensorProductDriver::update_level_index()
+inline void TensorProductDriver::update_level_index_from_quadrature_order()
 {
   size_t i, len = quadOrder.size();
   if (levelIndex.size() != len) levelIndex.resize(len);
@@ -136,17 +155,27 @@ inline void TensorProductDriver::update_level_index()
 }
 
 
-inline void TensorProductDriver::update_level_index(size_t i)
+inline void TensorProductDriver::
+update_level_index_from_quadrature_order(size_t i)
 { levelIndex[i] = quadOrder[i] - 1; }
 
 
+inline void TensorProductDriver::update_quadrature_order_from_level_index()
+{
+  size_t i, len = levelIndex.size();
+  if (quadOrder.size() != len) quadOrder.resize(len);
+  for (i=0; i<len; ++i)
+    quadOrder[i] = levelIndex[i] + 1;
+}
+
+
 inline void TensorProductDriver::quadrature_order(const UShortArray& quad_order)
-{ quadOrder = quad_order; update_level_index(); }
+{ quadOrder = quad_order; update_level_index_from_quadrature_order(); }
 
 
 inline void TensorProductDriver::
 quadrature_order(unsigned short order, size_t i)
-{ quadOrder[i] = order; update_level_index(i); }
+{ quadOrder[i] = order; update_level_index_from_quadrature_order(i); }
 
 
 inline const UShortArray& TensorProductDriver::quadrature_order() const
@@ -195,6 +224,14 @@ inline const UShortArray& TensorProductDriver::level_index() const
 
 inline const UShort2DArray& TensorProductDriver::collocation_key() const
 { return collocKey; }
+
+
+inline const UShortArray& TensorProductDriver::stored_level_index() const
+{ return storedLevelIndex; }
+
+
+inline const UShort2DArray& TensorProductDriver::stored_collocation_key() const
+{ return storedCollocKey; }
 
 
 inline int TensorProductDriver::grid_size()

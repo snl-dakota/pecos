@@ -50,13 +50,6 @@ public:
   //- Heading: Virtual functions
   //
 
-  /// initialize all sparse grid settings except for distribution params
-  virtual void initialize_grid(unsigned short ssg_level,
-    const RealVector& dim_pref, const ShortArray& u_types,
-    const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH, bool store_colloc = false,
-    bool track_uniq_prod_wts = true, bool track_colloc_indices = true);
-
   /// initializes old/active/evaluation sets for use within the 
   /// generalized sparse grid procedure
   virtual void initialize_sets() = 0;
@@ -95,6 +88,12 @@ public:
   //
   //- Heading: Member functions
   //
+
+  /// initialize all sparse grid settings except for distribution params
+  void initialize_grid(unsigned short ssg_level,
+    const RealVector& dim_pref, const ShortArray& u_types,
+    const ExpansionConfigOptions& ec_options, BasisConfigOptions& bc_options,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH);
 
   /// initialize collocPts1D and type{1,2}CollocWts1D
   void assign_1d_collocation_points_weights();
@@ -143,19 +142,6 @@ public:
   /// get refineControl
   short refinement_control() const;
 
-  /// set storeCollocDetails
-  void store_collocation_details(bool store_colloc);
-  /// get storeCollocDetails
-  bool store_collocation_details() const;
-  /// set trackUniqueProdWeights
-  void track_unique_product_weights(bool track_uniq_prod_wts);
-  /// get trackUniqueProdWeights
-  bool track_unique_product_weights() const;
-  /// set trackCollocIndices
-  void track_collocation_indices(bool track_colloc_indices);
-  /// get trackCollocIndices
-  bool track_collocation_indices() const;
-
   /// return activeMultiIndex
   const UShortArraySet& active_multi_index() const;
   /// return computedTrialSets
@@ -198,22 +184,12 @@ protected:
   //short refineType;
   /// algorithm control governing expansion refinement
   short refineControl;
-  /// controls conditional population of collocPts1D and type{1,2}CollocWts1D
-  bool storeCollocDetails;
 
   /// the current number of unique points in the grid
   int numCollocPts;
   /// flag indicating when numCollocPts needs to be recomputed due to an
   /// update to the sparse grid settings
   bool updateGridSize;
-
-  /// flag indicating need to track {type1,type2}WeightSets (product weights for
-  /// each unique grid point) as opposed to relying on collections of 1D weights
-  bool trackUniqueProdWeights;
-  /// due to the hierarchical structure, collocation indices only need
-  /// to be defined in special cases (e.g., generalized sparse grids
-  /// for which index sets can appear in different orders).
-  bool trackCollocIndices;
 
   /// old reference index sets for generalized sparse grids
   UShortArraySet oldMultiIndex; // or UShort2DArray
@@ -242,9 +218,8 @@ private:
 
 inline SparseGridDriver::SparseGridDriver():
   IntegrationDriver(BaseConstructor()), ssgLevel(0), dimIsotropic(true),
-  growthRate(MODERATE_RESTRICTED_GROWTH), storeCollocDetails(false),
-  numCollocPts(0), updateGridSize(true), trackUniqueProdWeights(false),
-  trackCollocIndices(true), refineControl(NO_CONTROL)//refineType(NO_REFINEMENT)
+  growthRate(MODERATE_RESTRICTED_GROWTH), numCollocPts(0), updateGridSize(true),
+  refineControl(NO_CONTROL)//refineType(NO_REFINEMENT)
 { }
 
 
@@ -252,8 +227,7 @@ inline SparseGridDriver::
 SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 		 short growth_rate, short refine_control):
   IntegrationDriver(BaseConstructor()), ssgLevel(ssg_level),
-  growthRate(growth_rate), storeCollocDetails(false), numCollocPts(0),
-  updateGridSize(true), trackUniqueProdWeights(false), trackCollocIndices(true),
+  growthRate(growth_rate), numCollocPts(0), updateGridSize(true),
   refineControl(refine_control) //refineType(NO_REFINEMENT)
 {
   if (dim_pref.empty())
@@ -298,32 +272,6 @@ inline void SparseGridDriver::refinement_control(short cntl)
 
 inline short SparseGridDriver::refinement_control() const
 { return refineControl; }
-
-
-inline void SparseGridDriver::store_collocation_details(bool store_colloc)
-{ storeCollocDetails = store_colloc; }
-
-
-inline bool SparseGridDriver::store_collocation_details() const
-{ return storeCollocDetails; }
-
-
-inline void SparseGridDriver::
-track_unique_product_weights(bool track_uniq_prod_wts)
-{ trackUniqueProdWeights = track_uniq_prod_wts; }
-
-
-inline bool SparseGridDriver::track_unique_product_weights() const
-{ return trackUniqueProdWeights; }
-
-
-inline void SparseGridDriver::
-track_collocation_indices(bool track_colloc_indices)
-{ trackCollocIndices = track_colloc_indices; }
-
-
-inline bool SparseGridDriver::track_collocation_indices() const
-{ return trackCollocIndices; }
 
 
 inline void SparseGridDriver::growth_rate(short growth_rate)

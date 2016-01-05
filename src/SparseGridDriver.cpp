@@ -30,17 +30,17 @@ void SparseGridDriver::assign_1d_collocation_points_weights()
 {
   // resize arrays
   size_t i, num_levels = ssgLevel + 1;
-  if (collocPts1D.size() != num_levels) {
+  if (num_levels > collocPts1D.size()) {
     collocPts1D.resize(num_levels);
     for (i=0; i<num_levels; ++i)
       collocPts1D[i].resize(numVars);
   }
-  if (type1CollocWts1D.size() != num_levels) {
+  if (num_levels > type1CollocWts1D.size()) {
     type1CollocWts1D.resize(num_levels);
     for (i=0; i<num_levels; ++i)
       type1CollocWts1D[i].resize(numVars);
   }
-  if (computeType2Weights && type2CollocWts1D.size() != num_levels) {
+  if (computeType2Weights && num_levels > type2CollocWts1D.size()) {
     type2CollocWts1D.resize(num_levels);
     for (i=0; i<num_levels; ++i)
       type2CollocWts1D[i].resize(numVars);
@@ -165,16 +165,11 @@ void SparseGridDriver::
 initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 		const ShortArray& u_types,
 		const ExpansionConfigOptions& ec_options,
-		BasisConfigOptions& bc_options, short growth_rate,
-		bool store_colloc, bool track_uniq_prod_wts,
-		bool track_colloc_indices)
+		BasisConfigOptions& bc_options, short growth_rate)
 {
   growthRate             = growth_rate;
   //refineType           = ec_options.refinementType;
   refineControl          = ec_options.refinementControl;
-  storeCollocDetails     = store_colloc;
-  trackUniqueProdWeights = track_uniq_prod_wts;
-  trackCollocIndices     = track_colloc_indices;
 
   // For unrestricted exponential growth, use of nested rules is restricted
   // to uniform/normal in order to enforce similar growth rates:

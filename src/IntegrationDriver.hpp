@@ -76,6 +76,14 @@ public:
   virtual void reinterpolated_tensor_grid(const UShortArray& lev_index,
 					  const SizetList& reinterp_indices);
 
+  /// store configuration settings for the current grid (for use within a
+  /// prescribed grid sequence)
+  virtual void store_grid();
+  /// clear stored grid settings following their usage/combination
+  virtual void clear_stored();
+  /// swap current and stored grid settings
+  virtual void swap_grid();
+
   /// return type1WeightSets from Cubature/TensorProduct/CombinedSparseGrid
   /// or concatenate type1WeightSets in HierarchSparseGrid
   virtual const RealVector& type1_weight_sets() const;

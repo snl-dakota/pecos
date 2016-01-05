@@ -74,9 +74,7 @@ protected:
   void pre_finalize_data();
   void post_finalize_data();
 
-  void store_data();
-  void pre_combine_data(short combine_type);
-  void post_combine_data(short combine_type);
+  void pre_combine_data(short combine_type, bool swap);
 
   void increment_component_sobol();
 
@@ -114,9 +112,6 @@ private:
   //- Heading: Data
   //
 
-  /// storage of level multi-index (levels for tensor or sparse grids)
-  /// for subsequent restoration
-  UShort2DArray storedLevMultiIndex;
   /// combination type for stored expansions; cached in class to bridge
   /// combine_coefficients() and integrate_response_moments()
   short storedExpCombineType;

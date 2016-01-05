@@ -297,12 +297,24 @@ void BasisApproximation::store_coefficients()
 }
 
 
-void BasisApproximation::combine_coefficients(short combine_type)
+void BasisApproximation::combine_coefficients(short combine_type, bool swap)
 {
   if (basisApproxRep)
-    basisApproxRep->combine_coefficients(combine_type);
+    basisApproxRep->combine_coefficients(combine_type, swap);
   else {
     PCerr << "Error: combine_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisApproximation::swap_coefficients()
+{
+  if (basisApproxRep)
+    basisApproxRep->swap_coefficients();
+  else {
+    PCerr << "Error: swap_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }

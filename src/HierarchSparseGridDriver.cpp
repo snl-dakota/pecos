@@ -25,6 +25,55 @@ static const char rcsId[]="@(#) $Id: HierarchSparseGridDriver.C,v 1.57 2004/06/2
 namespace Pecos {
 
 
+void HierarchSparseGridDriver::
+initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
+		const ShortArray& u_types,
+		const ExpansionConfigOptions& ec_options,
+		BasisConfigOptions& bc_options, short growth_rate,
+		bool track_colloc_indices)
+{
+  SparseGridDriver::initialize_grid(ssg_level, dim_pref, u_types, ec_options,
+				    bc_options, growth_rate);
+  trackCollocIndices = track_colloc_indices;
+}
+
+
+void HierarchSparseGridDriver::store_grid()
+{
+  storedLevMultiIndex = smolyakMultiIndex;
+  storedCollocKey     = collocKey;
+  //storedCollocIndices = collocIndices;
+
+  storedType1WeightSets = type1WeightSets;
+  storedType2WeightSets = type2WeightSets;
+}
+
+
+void HierarchSparseGridDriver::clear_stored()
+{
+  storedLevMultiIndex.clear(); storedCollocKey.clear();
+  //storedCollocIndices.clear();
+
+  storedType1WeightSets.clear();
+  storedType2WeightSets.clear();
+}
+
+
+// TO DO: swap logic for maximal grid:
+//bool swap = (storedCollocKey.size() > collocKey.size());
+
+
+void HierarchSparseGridDriver::swap_grid()
+{
+  std::swap(storedLevMultiIndex, smolyakMultiIndex);
+  std::swap(storedCollocKey,     collocKey);
+  //std::swap(storedCollocIndices, collocIndices);
+
+  std::swap(storedType1WeightSets, type1WeightSets);
+  std::swap(storedType2WeightSets, type2WeightSets);
+}
+
+
 int HierarchSparseGridDriver::grid_size()
 {
   if (updateGridSize) {

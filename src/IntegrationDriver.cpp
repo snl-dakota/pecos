@@ -336,6 +336,18 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
+void IntegrationDriver::store_grid()
+{ } // default is no-op
+
+
+void IntegrationDriver::clear_stored()
+{ } // default is no-op
+
+
+void IntegrationDriver::swap_grid()
+{ } // default is no-op
+
+
 void IntegrationDriver::
 compute_tensor_grid(const UShortArray& quad_order, const UShortArray& lev_index,
 		    RealMatrix& variable_sets,  RealVector& t1_weight_sets,

@@ -35,12 +35,12 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 		const ShortArray& u_types,
 		const ExpansionConfigOptions& ec_options,
 		BasisConfigOptions& bc_options, short growth_rate,
-		bool store_colloc, bool track_uniq_prod_wts,
-		bool track_colloc_indices)
+		bool track_colloc, bool track_uniq_prod_wts)
 {
   SparseGridDriver::initialize_grid(ssg_level, dim_pref, u_types, ec_options,
-				    bc_options, growth_rate, store_colloc,
-				    track_uniq_prod_wts, track_colloc_indices);
+				    bc_options, growth_rate);
+  trackCollocDetails     = track_colloc;
+  trackUniqueProdWeights = track_uniq_prod_wts;
 
   // set a rule-dependent duplicateTol
   initialize_duplicate_tolerance();
@@ -62,6 +62,45 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
   initialize_rule_pointers();
   // set levelGrowthToOrder
   initialize_growth_pointers();
+}
+
+
+void CombinedSparseGridDriver::store_grid()
+{
+  storedLevMultiIndex = smolyakMultiIndex; storedLevCoeffs     = smolyakCoeffs;
+  storedCollocKey     = collocKey;         storedCollocIndices = collocIndices;
+  storedType1WeightSets = type1WeightSets;
+  storedType2WeightSets = type2WeightSets;
+}
+
+
+void CombinedSparseGridDriver::clear_stored()
+{
+  storedLevMultiIndex.clear(); storedLevCoeffs.clear();
+  storedCollocKey.clear();     storedCollocIndices.clear();
+  storedType1WeightSets.resize(0);
+  storedType2WeightSets.reshape(0,0);
+}
+
+
+// TO DO: swap logic for maximal grid:
+//bool swap = (storedCollocKey.size() > collocKey.size());
+
+
+void CombinedSparseGridDriver::swap_grid()
+{
+  std::swap(storedLevMultiIndex, smolyakMultiIndex);
+  std::swap(storedLevCoeffs,     smolyakCoeffs);
+  std::swap(storedCollocKey,     collocKey);
+  std::swap(storedCollocIndices, collocIndices);
+
+  RealVector tmp_vec(type1WeightSets);
+  type1WeightSets = storedType1WeightSets;
+  storedType1WeightSets = tmp_vec;
+
+  RealMatrix tmp_mat(type2WeightSets);
+  type2WeightSets = storedType2WeightSets;
+  storedType2WeightSets = tmp_mat;
 }
 
 
@@ -500,7 +539,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
     delete [] sparse_order;
     delete [] sparse_index;
 
-    if (storeCollocDetails) {
+    if (trackCollocDetails) {
       assign_collocation_key();               // compute collocKey
       assign_collocation_indices();           // compute collocIndices
       assign_1d_collocation_points_weights(); // define 1-D point/weight sets

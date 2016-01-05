@@ -110,12 +110,15 @@ protected:
   void allocate_data();
 
   void store_data();
-  void pre_combine_data(short combine_type);
+  void pre_combine_data(short combine_type, bool swap);
   void post_combine_data(short combine_type);
 
   //
   //- Heading: Member functions
   //
+
+  /// swap current/active and stored/inactive data sets
+  void swap_data();
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(
@@ -308,22 +311,23 @@ protected:
   /// previous value of approxOrder; used for detecting when a multiIndex
   /// update is needed
   UShortArray approxOrderPrev;
-  /// copy of approxOrder stored in store_coefficients() for use in
-  /// combine_coefficients()
-  UShortArray storedApproxOrder;
 
   /// number of exp terms-by-number of vars array for identifying the orders
   /// of the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
   UShort2DArray multiIndex;
+  /// multi-index that is the result of expansion combination
+  UShort2DArray combinedMultiIndex;
+
+  /// copy of approxOrder stored in store_coefficients() for use in
+  /// combine_coefficients()
+  UShortArray storedApproxOrder;
   /// copy of multiIndex (aggregated expansion) stored in store_coefficients()
   /// for use in combine_coefficients()
   UShort2DArray storedMultiIndex;
   /// mapping of terms when aggregating storedMultiIndex with multiIndex in
   /// pre_combine_data()
   SizetArray storedMultiIndexMap;
-  /// multi-index that is the result of expansion combination
-  UShort2DArray combinedMultiIndex;
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials

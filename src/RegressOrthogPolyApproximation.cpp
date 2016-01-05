@@ -416,22 +416,34 @@ void RegressOrthogPolyApproximation::store_coefficients()
 }
 
 
-void RegressOrthogPolyApproximation::combine_coefficients(short combine_type)
+void RegressOrthogPolyApproximation::swap_coefficients()
+{
+  std::swap(sparseIndices, storedSparseIndices);
+  OrthogPolyApproximation::swap_coefficients(); // expansion coeff{s,Grads}
+}
+
+
+void RegressOrthogPolyApproximation::
+combine_coefficients(short combine_type, bool swap)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
   if (sparseIndices.empty() && storedSparseIndices.empty())
-    OrthogPolyApproximation::combine_coefficients(combine_type);
+    OrthogPolyApproximation::combine_coefficients(combine_type, swap);
     // augment base implementation with clear of storedExpCoeff{s,Grads}
   else {
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    if (swap) {
+      swap_coefficients();
+      allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
+    }
 
     // support mixed case using simple approach of populating the missing
     // sparse indices arrays (not optimal for performance but a lot less code),
     // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
     // following aggregation.
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
     if (sparseIndices.empty())
       inflate(sparseIndices, data_rep->multiIndex.size());
     if (storedSparseIndices.empty())

@@ -41,6 +41,42 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
+// TO DO: swap logic for maximal grid:
+//bool swap = (storedCollocKey.size() > collocKey.size());
+
+
+void TensorProductDriver::store_grid()
+{
+  storedCollocKey = collocKey; storedLevelIndex = levelIndex;
+  storedType1WeightSets = type1WeightSets;
+  storedType2WeightSets = type2WeightSets;
+}
+
+
+void TensorProductDriver::clear_stored()
+{
+  storedLevelIndex.clear(); storedCollocKey.clear();
+  storedType1WeightSets.resize(0);
+  storedType2WeightSets.reshape(0,0);
+}
+
+
+void TensorProductDriver::swap_grid()
+{
+  std::swap(storedCollocKey,  collocKey);
+  std::swap(storedLevelIndex, levelIndex);
+  update_quadrature_order_from_level_index();
+
+  RealVector tmp_vec(type1WeightSets);
+  type1WeightSets = storedType1WeightSets;
+  storedType1WeightSets = tmp_vec;
+
+  RealMatrix tmp_mat(type2WeightSets);
+  type2WeightSets = storedType2WeightSets;
+  storedType2WeightSets = tmp_mat;
+}
+
+
 /** This function selects the smallest nested rule order that meets the
     integrand precision of a corresponding Gauss rule.  It is similar to
     the moderate exponential growth option in sparse grids. */

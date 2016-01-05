@@ -60,8 +60,6 @@ protected:
 
   void allocate_component_sobol();
   void increment_component_sobol();
-  void store_data();
-  void post_combine_data(short combine_type);
 
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);
@@ -96,16 +94,6 @@ private:
 
   /// Pecos:PIECEWISE_INTERP_POLYNOMIAL or Pecos:PIECEWISE_CUBIC_INTERP
   short polyType;
-
-  /// storage of level multi-index (levels for tensor or sparse grids)
-  /// for subsequent restoration
-  UShort3DArray storedLevMultiIndex;
-  /// storage of IntegrationDriver collocation key state for
-  /// subsequent restoration
-  UShort4DArray storedCollocKey;
-  // storage of IntegrationDriver collocation indices state for
-  // subsequent restoration
-  //Sizet3DArray storedCollocIndices;
 
   /// used for precomputation of the number of hierarchical keys for a
   /// particular basis_index

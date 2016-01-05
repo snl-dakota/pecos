@@ -101,14 +101,13 @@ void SharedNodalInterpPolyApproxData::allocate_data()
     expMomentIntDriver = IntegrationDriver(driver_type);
     expMomentIntDriver.mode(INTEGRATION_MODE);
     if (driver_type == COMBINED_SPARSE_GRID) {
-      SparseGridDriver* driver = (SparseGridDriver*)driverRep;
-      SparseGridDriver* alt_driver
-	= (SparseGridDriver*)expMomentIntDriver.driver_rep();
+      CombinedSparseGridDriver* driver = (CombinedSparseGridDriver*)driverRep;
+      CombinedSparseGridDriver* alt_driver
+	= (CombinedSparseGridDriver*)expMomentIntDriver.driver_rep();
       alt_driver->growth_rate(driver->growth_rate());
       //alt_driver->refinement_control(driver->refinement_control());
-      alt_driver->store_collocation_details(false);
+      alt_driver->track_collocation_details(false);
       alt_driver->track_unique_product_weights(true); // non-default
-      alt_driver->track_collocation_indices(false);   // non-default
     }
     expMomentIntDriver.initialize_grid(alt_driver_basis);
     // Note: rule/growth pointers initialized in CombinedSparseGridDriver::
@@ -172,40 +171,6 @@ void SharedNodalInterpPolyApproxData::increment_component_sobol()
       multi_index_to_sobol_index_map(csg_driver->collocation_key().back());
       assign_sobol_index_map_values();
     }
-  }
-}
-
-
-void SharedNodalInterpPolyApproxData::store_data()
-{
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: {
-    TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
-    storedCollocKey.resize(1);
-    storedLevMultiIndex.resize(1);
-    storedCollocKey[0]     = tpq_driver->collocation_key();
-    storedLevMultiIndex[0] = tpq_driver->level_index();
-    break;
-  }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    storedLevMultiIndex = csg_driver->smolyak_multi_index();
-    storedLevCoeffs     = csg_driver->smolyak_coefficients();
-    storedCollocKey     = csg_driver->collocation_key();
-    storedCollocIndices = csg_driver->collocation_indices();
-    break;
-  }
-  }
-}
-
-
-void SharedNodalInterpPolyApproxData::post_combine_data(short combine_type)
-{
-  storedLevMultiIndex.clear(); storedCollocKey.clear(); 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID:
-    storedLevCoeffs.clear(); storedCollocIndices.clear();
-    break;
   }
 }
 

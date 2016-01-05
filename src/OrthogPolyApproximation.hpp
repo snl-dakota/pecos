@@ -73,7 +73,8 @@ protected:
   int min_coefficients() const;
 
   void store_coefficients();
-  void combine_coefficients(short combine_type);
+  void combine_coefficients(short combine_type, bool swap);
+  void swap_coefficients();
 
   void print_coefficients(std::ostream& s, bool normalized);
 

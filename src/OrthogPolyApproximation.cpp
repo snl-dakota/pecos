@@ -56,7 +56,23 @@ void OrthogPolyApproximation::store_coefficients()
 }
 
 
-void OrthogPolyApproximation::combine_coefficients(short combine_type)
+void OrthogPolyApproximation::swap_coefficients()
+{
+  if (expansionCoeffFlag) {
+    RealVector tmp_vec(expansionCoeffs);
+    expansionCoeffs = storedExpCoeffs;
+    storedExpCoeffs = tmp_vec;
+  }
+  if (expansionCoeffGradFlag) {
+    RealMatrix tmp_mat(expansionCoeffGrads);
+    expansionCoeffGrads = storedExpCoeffGrads;
+    storedExpCoeffGrads = tmp_mat;
+  }
+}
+
+
+void OrthogPolyApproximation::
+combine_coefficients(short combine_type, bool swap)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -64,8 +80,10 @@ void OrthogPolyApproximation::combine_coefficients(short combine_type)
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  // shared sobolIndexMap has been updated; now update sobolIndices per approx
-  allocate_component_sobol();
+  if (swap) {
+    swap_coefficients();
+    allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
+  }
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;

@@ -257,10 +257,27 @@ void HierarchInterpPolyApproximation::store_coefficients()
 }
 
 
-void HierarchInterpPolyApproximation::combine_coefficients(short combine_type)
+void HierarchInterpPolyApproximation::swap_coefficients()
 {
-  // shared sobolIndexMap has been updated; now update sobolIndices per approx
-  allocate_component_sobol();
+  if (expansionCoeffFlag) {
+    std::swap(expansionType1Coeffs, storedExpType1Coeffs);
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    if (data_rep->basisConfigOptions.useDerivs)
+      std::swap(expansionType2Coeffs, storedExpType2Coeffs);
+  }
+  if (expansionCoeffGradFlag)
+    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads);
+}
+
+
+void HierarchInterpPolyApproximation::
+combine_coefficients(short combine_type, bool swap)
+{
+  if (swap) {
+    swap_coefficients();
+    allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
+  }
 
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points

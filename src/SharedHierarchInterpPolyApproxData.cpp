@@ -95,22 +95,6 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 }
 
 
-void SharedHierarchInterpPolyApproxData::store_data()
-{
-  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-  storedLevMultiIndex = hsg_driver->smolyak_multi_index();
-  storedCollocKey     = hsg_driver->collocation_key();
-  //storedCollocIndices = hsg_driver->collocation_indices();
-}
-
-
-void SharedHierarchInterpPolyApproxData::post_combine_data(short combine_type)
-{
-  storedLevMultiIndex.clear(); storedCollocKey.clear();
-  //storedCollocIndices.clear();
-}
-
-
 size_t SharedHierarchInterpPolyApproxData::
 barycentric_exact_index(const UShortArray& basis_index)
 {

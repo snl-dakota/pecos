@@ -838,6 +838,8 @@ public:
   void restore();
   /// remove num_pop_pts entries from ends of {vars,resp}Data
   size_t restore(size_t index, bool erase_saved = true);
+  /// swap stored and active data sets (variables and response)
+  void swap();
 
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
@@ -1073,6 +1075,14 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
 }
 
 
+inline void SurrogateData::store()
+{
+  sdRep->storedVarsData = sdRep->varsData; // shallow copies
+  sdRep->storedRespData = sdRep->respData; // shallow copies
+  clear_data();
+}
+
+
 inline size_t SurrogateData::restore(size_t index, bool erase_saved)
 {
   SDV2DArray::iterator vit = sdRep->savedVarsTrials.begin();
@@ -1087,14 +1097,6 @@ inline size_t SurrogateData::restore(size_t index, bool erase_saved)
 }
 
 
-inline void SurrogateData::store()
-{
-  sdRep->storedVarsData = sdRep->varsData; // shallow copies
-  sdRep->storedRespData = sdRep->respData; // shallow copies
-  clear_data();
-}
-
-
 inline void SurrogateData::restore()
 {
   sdRep->varsData.insert(sdRep->varsData.end(), sdRep->storedVarsData.begin(),
@@ -1102,6 +1104,21 @@ inline void SurrogateData::restore()
   sdRep->respData.insert(sdRep->respData.end(), sdRep->storedRespData.begin(),
 			 sdRep->storedRespData.end());
   clear_stored();
+}
+
+
+inline void SurrogateData::swap()
+{
+  // swap stored and active using shallow copies
+
+  SDVArray tmp_vars_data = sdRep->varsData;
+  SDRArray tmp_resp_data = sdRep->respData;
+
+  sdRep->varsData = sdRep->storedVarsData;
+  sdRep->respData = sdRep->storedRespData;
+
+  sdRep->storedVarsData = tmp_vars_data;
+  sdRep->storedRespData = tmp_resp_data;
 }
 
 

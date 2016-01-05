@@ -263,7 +263,7 @@ public:
   /// stores current approximation data for later combination
   virtual void store_data() = 0;
   /// combines current and stored approximation data
-  virtual void pre_combine_data(short combine_type);
+  virtual void pre_combine_data(short combine_type, bool swap);
   /// combines current and stored approximation data
   virtual void post_combine_data(short combine_type);
 

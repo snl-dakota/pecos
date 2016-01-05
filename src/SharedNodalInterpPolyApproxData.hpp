@@ -64,8 +64,6 @@ protected:
   void allocate_data();
   void allocate_component_sobol();
   void increment_component_sobol();
-  void store_data();
-  void post_combine_data(short combine_type);
 
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);
@@ -164,19 +162,6 @@ private:
   /// expectations of products of interpolation polynomials,
   /// precomputed in update_nonzero_basis_products() for efficiency
   std::vector<UShort2DMultiSetRealMap> nonZerosMapArray;
-
-  /// storage of level multi-index (levels for tensor or sparse grids)
-  /// for subsequent restoration
-  UShort2DArray storedLevMultiIndex;
-  /// storage of IntegrationDriver combinatorial coefficients state
-  /// for subsequent restoration
-  IntArray storedLevCoeffs;
-  /// storage of IntegrationDriver collocation key state for
-  /// subsequent restoration
-  UShort3DArray storedCollocKey;
-  /// storage of IntegrationDriver collocation indices state for
-  /// subsequent restoration
-  Sizet2DArray storedCollocIndices;
 };
 
 
