@@ -240,6 +240,7 @@ pre_combine_data(short combine_type, bool swap)
 	approxOrder[i] += storedApproxOrder[i];
       UShort2DArray multi_index_prod;
       tensor_product_multi_index(approxOrder, combinedMultiIndex);
+      allocate_component_sobol(combinedMultiIndex);
       break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
@@ -267,6 +268,7 @@ pre_combine_data(short combine_type, bool swap)
 	  append_multi_index(tp_multi_index_prod, combinedMultiIndex);
 	}
       }
+      allocate_component_sobol(combinedMultiIndex);
       break;
     }
     default:
