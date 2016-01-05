@@ -232,10 +232,10 @@ pre_combine_data(short combine_type, bool swap)
     break;
   }
   case MULT_COMBINE: {
-    if (swap) swap_data();
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
+      if (swap) swap_data();
       for (size_t i=0; i<numVars; ++i)
 	approxOrder[i] += storedApproxOrder[i];
       UShort2DArray multi_index_prod;
@@ -244,11 +244,12 @@ pre_combine_data(short combine_type, bool swap)
       break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
-      CombinedSparseGridDriver* csg_driver
-	= (CombinedSparseGridDriver*)driverRep;
+      if (swap) swap_data();
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
       UShort2DArray curr_pareto, stored_pareto;
+      CombinedSparseGridDriver* csg_driver
+	= (CombinedSparseGridDriver*)driverRep;
       update_pareto_set(csg_driver->smolyak_multi_index(),         curr_pareto);
       update_pareto_set(csg_driver->stored_smolyak_multi_index(),stored_pareto);
       size_t i, j, k, num_stored_mi = stored_pareto.size(),
