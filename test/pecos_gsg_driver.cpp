@@ -106,20 +106,20 @@ int main(int argc, char* argv[])
   RealMatrix fev = feval(variable_sets,nQoI,computedGridIDs,NULL);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     SurrogateDataVars sdv(variable_sets.numRows(),0,0);
-    SurrogateDataResp sdr(4,variable_sets.numRows()); // no gradient or hessian
+    SurrogateDataResp sdr(1,variable_sets.numRows()); // no gradient or hessian
     SurrogateData     sdi;
     for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
-      sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
+      sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::View,variable_sets,jCol));
       sdr.response_function(fev(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
-    polyProjApproxVec[nQoI].surrogate_data(sdi);
-  }
+    polyProjApproxVec[iQoI].surrogate_data(sdi);
+  } 
 
   //return(0);
 #ifdef NOTPFUNC
   srdPolyApprox.allocate_data(); // Cosmin both here and in the loop
-                                 // below functions are protected
+                                 // below functions are protected   
   for ( int iQoI=0; iQoI<nQoI; iQoI++) 
      polyProjApproxVec[iQoI].compute_coefficients();
 #endif
@@ -170,36 +170,42 @@ int main(int argc, char* argv[])
         choose = pick;
       }
       csg_driver.push_trial_set(*it);
-      csg_driver.compute_trial_grid(vsets1);
 
       // Surrogate data needs to be updated 
 
-#ifdef NOTPFUNC
+#ifdef NOTPFUNC //need to bring surrogate data up2date: restoration index
+      int numPts = 0;
       if (srdPolyApprox.restore_available()) {
         // Set available -> restore
+        size_t idxRestore = srdPolyApprox.restoreIndex;
 	srdPolyApprox.pre_restore_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  polyProjApproxVec[iQoI].restore_coefficients();
+          // Also restore the corresponding surrogate data
+	  SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+	  numPts = sdi.restore(idxRestore,True);
 	}
 	srdPolyApprox.post_restore_data();
+
       }
       else {
 	// New set -> compute
-
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
+	csg_driver.compute_trial_grid(vsets1);
+        numPts = vsets1.numCols();
 	computedGridIDs.resize(vsets1.numCols(),false) ; 
         fev = feval(vsets1,nQoI,computedGridIDs,NULL);
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  SurrogateDataVars sdv(variable_sets.numRows(),0,0);
-	  SurrogateDataResp sdr(4,variable_sets.numRows()); // no gradient or hessian
-	  SurrogateData     sdi;
-	  for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
+	  SurrogateDataResp sdr(1,variable_sets.numRows()); // no gradient or hessian
+	  SurrogateData     sdi = polyProjApproxVec[iQoI].surrogate_data();
+	  for( int jCol=0; jCol<numPts; jCol++) {
 	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
 	    sdr.response_function(fev(jCol,iQoI));
 	    std::cout<<fev(jCol,iQoI)<<std::endl;
 	    sdi.push_back(sdv,sdr);
 	  }
-	  polyProjApproxVec[nQoI].surrogate_data(sdi);
+	  //polyProjApproxVec[iQoI].surrogate_data(sdi);
 	}
         
 	srdPolyApprox.increment_data();
@@ -207,6 +213,7 @@ int main(int argc, char* argv[])
 	  polyProjApproxVec[iQoI].increment_coefficients();
 	}
       }
+
 #endif
 
       // ----------------- Comment from now restarts/etc------------------------
@@ -222,11 +229,13 @@ int main(int argc, char* argv[])
       //write_data(std::cout, fev, false, true, true);
 
       csg_driver.pop_trial_set();
-
 #ifdef NOTPFUNC
       srdPolyApprox.decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	polyProjApproxVec[iQoI].decrement_coefficients();
+	// Also restore the corresponding surrogate data
+	SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+	numPts = sdi.pop(numPts,True);
       }
 #endif
     
@@ -237,10 +246,14 @@ int main(int argc, char* argv[])
     csg_driver.update_sets(asave);
     csg_driver.update_reference();
 
-#ifdef NOTPFUNC
+#ifdef NOTPFUNC //need to restore the data
+    size_t idxRestore = srdPolyApprox.restoreIndex;
     srdPolyApprox.pre_restore_data();
-    for ( int iQoI=0; iQoI<nQoI; iQoI++)
+    for ( int iQoI=0; iQoI<nQoI; iQoI++) {
       polyProjApproxVec[iQoI].restore_coefficients();
+      SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+      numPts = sdi.restore(idxRestore,True);
+    }
     srdPolyApprox.post_restore_data();
 #endif
 
@@ -248,7 +261,7 @@ int main(int argc, char* argv[])
 
   csg_driver.finalize_sets(true, false); // use embedded output option
 
-#ifdef NOTPFUNC
+#ifdef NOTPFUNC //DakotaApprox look at finalize
   srdPolyApprox.pre_finalize_data();
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
     polyProjApproxVec[iQoI].finalize_coefficients();
