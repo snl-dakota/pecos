@@ -27,6 +27,8 @@
 
 using namespace std;
 
+//#define CHGPROTFUNCS
+
 #define MAX_CHARS_PER_LINE 1000
 #define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
 #define NUMVARS            3
@@ -117,7 +119,7 @@ int main(int argc, char* argv[])
   } 
 
   //return(0);
-#ifdef NOTPFUNC
+#ifdef CHGPROTFUNCS
   srdPolyApprox.allocate_data(); // Cosmin both here and in the loop
                                  // below functions are protected   
   for ( int iQoI=0; iQoI<nQoI; iQoI++) 
@@ -173,17 +175,17 @@ int main(int argc, char* argv[])
 
       // Surrogate data needs to be updated 
 
-#ifdef NOTPFUNC //need to bring surrogate data up2date: restoration index
+#ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
       int numPts = 0;
       if (srdPolyApprox.restore_available()) {
         // Set available -> restore
-        size_t idxRestore = srdPolyApprox.restoreIndex;
+        size_t idxRestore = srdPolyApprox.restoration_index();
 	srdPolyApprox.pre_restore_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  polyProjApproxVec[iQoI].restore_coefficients();
           // Also restore the corresponding surrogate data
 	  SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
-	  numPts = sdi.restore(idxRestore,True);
+	  numPts = sdi.restore(idxRestore,true);
 	}
 	srdPolyApprox.post_restore_data();
 
@@ -235,7 +237,7 @@ int main(int argc, char* argv[])
 	polyProjApproxVec[iQoI].decrement_coefficients();
 	// Also restore the corresponding surrogate data
 	SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
-	numPts = sdi.pop(numPts,True);
+	sdi.pop(numPts,True);
       }
 #endif
     
@@ -247,7 +249,7 @@ int main(int argc, char* argv[])
     csg_driver.update_reference();
 
 #ifdef NOTPFUNC //need to restore the data
-    size_t idxRestore = srdPolyApprox.restoreIndex;
+    size_t idxRestore = srdPolyApprox.restoration_index();
     srdPolyApprox.pre_restore_data();
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
       polyProjApproxVec[iQoI].restore_coefficients();
@@ -266,6 +268,15 @@ int main(int argc, char* argv[])
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
     polyProjApproxVec[iQoI].finalize_coefficients();
   srdPolyApprox.post_finalize_data();
+
+  for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+    SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+    size_t i, num_restore = sdi.saved_trials(); // # of saved trial sets
+    for (i=0; i<num_restore; ++i)
+      sdi.restore(polyProjApproxVec[iQoI]->finalization_index(i),false);
+    sdi.clear_saved();
+  }
+  
 #endif
 
   // Print final sets
