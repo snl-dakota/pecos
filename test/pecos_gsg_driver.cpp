@@ -174,10 +174,10 @@ int main(int argc, char* argv[])
       csg_driver.push_trial_set(*it);
 
       // Surrogate data needs to be updated 
-
 #ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
       int numPts = 0;
       if (srdPolyApprox.restore_available()) {
+
         // Set available -> restore
         size_t idxRestore = srdPolyApprox.restoration_index();
 	srdPolyApprox.pre_restore_data();
@@ -231,13 +231,13 @@ int main(int argc, char* argv[])
       //write_data(std::cout, fev, false, true, true);
 
       csg_driver.pop_trial_set();
-#ifdef NOTPFUNC
+#ifdef CHGPROTFUNCS
       srdPolyApprox.decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	polyProjApproxVec[iQoI].decrement_coefficients();
 	// Also restore the corresponding surrogate data
 	SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
-	sdi.pop(numPts,True);
+	sdi.pop(numPts,true);
       }
 #endif
     
@@ -248,13 +248,13 @@ int main(int argc, char* argv[])
     csg_driver.update_sets(asave);
     csg_driver.update_reference();
 
-#ifdef NOTPFUNC //need to restore the data
+#ifdef CHGPROTFUNCS //need to restore the data
     size_t idxRestore = srdPolyApprox.restoration_index();
     srdPolyApprox.pre_restore_data();
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
       polyProjApproxVec[iQoI].restore_coefficients();
       SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
-      numPts = sdi.restore(idxRestore,True);
+      int numPts = sdi.restore(idxRestore,true);
     }
     srdPolyApprox.post_restore_data();
 #endif
@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
 
   csg_driver.finalize_sets(true, false); // use embedded output option
 
-#ifdef NOTPFUNC //DakotaApprox look at finalize
+#ifdef CHGPROTFUNCS //DakotaApprox look at finalize
   srdPolyApprox.pre_finalize_data();
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
     polyProjApproxVec[iQoI].finalize_coefficients();
@@ -273,7 +273,7 @@ int main(int argc, char* argv[])
     SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
     size_t i, num_restore = sdi.saved_trials(); // # of saved trial sets
     for (i=0; i<num_restore; ++i)
-      sdi.restore(polyProjApproxVec[iQoI]->finalization_index(i),false);
+      sdi.restore(srdPolyApprox.finalization_index(i),false);
     sdi.clear_saved();
   }
   
