@@ -551,7 +551,7 @@ void write_data(std::ostream& s,
     for (j=0; j<ncols; ++j)
       s << std::setw(WRITE_PRECISION+7) << m(i,j) << ' ';
     if (row_rtn && i!=m.numRows()-1)
-      s << "\n   ";
+      s << "\n";
   }
   if (brackets)  s << "]] ";
   if (final_rtn) s << '\n';
