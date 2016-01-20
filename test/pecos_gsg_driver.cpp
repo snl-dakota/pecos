@@ -28,6 +28,7 @@
 using namespace std;
 
 //#define CHGPROTFUNCS
+//#define VERB
 
 #define MAX_CHARS_PER_LINE 1000
 #define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
@@ -60,10 +61,14 @@ int main(int argc, char* argv[])
 
   // Define defaults
   int nQoI = NQOI;
+  short btype = (short) BTYPE;
 
   // Command-line arguments
-  
+  // empty for now
+
+#ifdef VERB
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
+#endif
   unsigned short level = STARTLEV;  // reference grid level
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
@@ -74,35 +79,57 @@ int main(int argc, char* argv[])
   RealVector storedVals;   
 
   // Restart is data available 
-  restartGSGdriver((char *)GRIDFILE, (char *)FCNFILE, storedSets, storedVals);
+  // restartGSGdriver((char *)GRIDFILE, (char *)FCNFILE, storedSets, storedVals);
 
   // Start 
   CombinedSparseGridDriver
     csg_driver(level, dimension_pref, growth_rate, refine_cntl);
 
-  std::cout << "Instantiating basis:\n";
+#ifdef VERB
+  std::cout << "Instantiating basis...\n";
+#endif
   size_t num_vars = NUMVARS;
   std::vector<BasisPolynomial> poly_basis(num_vars);
   for (int i=0; i<num_vars; ++i)
     poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG);
   csg_driver.initialize_grid(poly_basis);
+#ifdef VERB
+  std::cout << "  - done\n";
+#endif
 
   // Instantiate Pecos Objects
+#ifdef VERB
+  std::cout << "Instantiating pecos objects...\n";
+#endif
+  ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID,DEFAULT_BASIS,
+                                   SILENT_OUTPUT,true,2,refine_cntl,100,1.e-5,2);
+  BasisConfigOptions bcopt;
   UShortArray aord(MAXORD,NUMVARS);
-  SharedProjectOrthogPolyApproxData srdPolyApprox(BTYPE,aord,NUMVARS);
+  SharedProjectOrthogPolyApproxData srdPolyApprox(BTYPE,aord,NUMVARS,expcfgopt,bcopt);
+  //PCout<<srdPolyApprox.numVars<<std::endl;
+  //PCout<<srdPolyApprox.data_rep()<<std::endl;
   srdPolyApprox.integration_driver_rep(&csg_driver);
 
   // Instantiate Project poly approx
   vector<ProjectOrthogPolyApproximation> polyProjApproxVec;
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    ProjectOrthogPolyApproximation polyProjApprox(srdPolyApprox);
+    ProjectOrthogPolyApproximation
+      polyProjApprox((SharedBasisApproxData) srdPolyApprox);
     polyProjApproxVec.push_back(polyProjApprox);
+    //std::cout<<polyProjApproxVec[iQoI].sharedDataRep<<std::endl;
+    //std::cout<<polyProjApproxVec[iQoI].sharedDataRep->numVars<<std::endl;
   }
-
+#ifdef VERB
+  std::cout << "  - done\n";
+#endif
+ 
   //initial grid and compute reference approximation
   RealMatrix variable_sets;
   csg_driver.compute_grid(variable_sets);
 
+#ifdef VERB
+  std::cout << "Evaluate function on reference grid and instantiate SurrogateData...\n";
+#endif
   // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
   std::vector<bool> computedGridIDs(variable_sets.numCols(),true) ; 
   RealMatrix fev = feval(variable_sets,nQoI,computedGridIDs,NULL);
@@ -111,19 +138,26 @@ int main(int argc, char* argv[])
     SurrogateDataResp sdr(1,variable_sets.numRows()); // no gradient or hessian
     SurrogateData     sdi;
     for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
+      //cout<<jCol<<" out of "<<variable_sets.numCols()<<":"<<fev(jCol,iQoI)<<endl;
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::View,variable_sets,jCol));
       sdr.response_function(fev(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
     polyProjApproxVec[iQoI].surrogate_data(sdi);
   } 
+#ifdef VERB
+  std::cout << "  - done\n";
+#endif
 
   //return(0);
 #ifdef CHGPROTFUNCS
   srdPolyApprox.allocate_data(); // Cosmin both here and in the loop
                                  // below functions are protected   
-  for ( int iQoI=0; iQoI<nQoI; iQoI++) 
+  std::cout << "  - done\n";
+  for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+    PCout<<"QoI="<<iQoI<<std::endl;
      polyProjApproxVec[iQoI].compute_coefficients();
+  }
 #endif
   
   // ----------------- Comment from now restarts/etc------------------------
@@ -172,6 +206,8 @@ int main(int argc, char* argv[])
         choose = pick;
       }
       csg_driver.push_trial_set(*it);
+      csg_driver.compute_trial_grid(vsets1); // Cosmin
+      PCout<<*it<<std::endl;
 
       // Surrogate data needs to be updated 
 #ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
@@ -215,7 +251,6 @@ int main(int argc, char* argv[])
 	  polyProjApproxVec[iQoI].increment_coefficients();
 	}
       }
-
 #endif
 
       // ----------------- Comment from now restarts/etc------------------------
@@ -230,7 +265,10 @@ int main(int argc, char* argv[])
       //write_data(std::cout, vsets1, false, true, true);
       //write_data(std::cout, fev, false, true, true);
 
+      PCout<<"a"<<*it<<std::endl;
       csg_driver.pop_trial_set();
+      PCout<<"b"<<*it<<std::endl;
+
 #ifdef CHGPROTFUNCS
       srdPolyApprox.decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -240,7 +278,7 @@ int main(int argc, char* argv[])
 	sdi.pop(numPts,true);
       }
 #endif
-    
+      PCout<<*it<<std::endl;
     }
 
     std::cout<<asave<<std::endl ;
