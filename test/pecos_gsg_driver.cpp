@@ -27,7 +27,7 @@
 
 using namespace std;
 
-#define CHGPROTFUNCS
+//#define CHGPROTFUNCS
 //#define VERB
 
 #define MAX_CHARS_PER_LINE 1000
@@ -102,9 +102,17 @@ int main(int argc, char* argv[])
   std::cout << "Instantiating pecos objects...\n";
 #endif
 
-  ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID,DEFAULT_BASIS,
-                                   SILENT_OUTPUT,true,2,refine_cntl,100,1.e-5,2);
+  ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID, // expsolnapp
+                                   DEFAULT_BASIS,        // expbassus
+                                   SILENT_OUTPUT,        // output level
+                                   true,                 // vbd flag
+                                   2,                    // vbd order
+                                   refine_cntl,          // refinement control
+                                   100,                  // max iter
+                                   1.e-5,                // conv tol
+                                   2);                   // soft conv limit
   BasisConfigOptions bcopt;
+
   UShortArray aord(MAXORD,NUMVARS);
   SharedProjectOrthogPolyApproxData srdPolyApprox(BTYPE,aord,NUMVARS,expcfgopt,bcopt);
   //PCout<<srdPolyApprox.numVars<<std::endl;
