@@ -27,7 +27,7 @@
 
 using namespace std;
 
-//#define CHGPROTFUNCS
+#define CHGPROTFUNCS
 //#define VERB
 
 #define MAX_CHARS_PER_LINE 1000
@@ -101,6 +101,7 @@ int main(int argc, char* argv[])
 #ifdef VERB
   std::cout << "Instantiating pecos objects...\n";
 #endif
+
   ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID,DEFAULT_BASIS,
                                    SILENT_OUTPUT,true,2,refine_cntl,100,1.e-5,2);
   BasisConfigOptions bcopt;
@@ -116,8 +117,8 @@ int main(int argc, char* argv[])
     ProjectOrthogPolyApproximation
       polyProjApprox((SharedBasisApproxData) srdPolyApprox);
     polyProjApproxVec.push_back(polyProjApprox);
-    //std::cout<<polyProjApproxVec[iQoI].sharedDataRep<<std::endl;
-    //std::cout<<polyProjApproxVec[iQoI].sharedDataRep->numVars<<std::endl;
+    std::cout<<"Pointer to sharedDataRep: "<<polyProjApproxVec[iQoI].sharedDataRep<<std::endl;
+    std::cout<<"numVars: "<<polyProjApproxVec[iQoI].sharedDataRep->numVars<<std::endl;
   }
 #ifdef VERB
   std::cout << "  - done\n";
@@ -205,16 +206,18 @@ int main(int argc, char* argv[])
         asave  = *it;
         choose = pick;
       }
+
       csg_driver.push_trial_set(*it);
-      csg_driver.compute_trial_grid(vsets1); // Cosmin
       PCout<<*it<<std::endl;
 
       // Surrogate data needs to be updated 
-#ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
       int numPts = 0;
+#ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
       if (srdPolyApprox.restore_available()) {
 
-        // Set available -> restore
+        // Set available -> restore in csg and the rest
+	csg_driver.restore_set();
+
         size_t idxRestore = srdPolyApprox.restoration_index();
 	srdPolyApprox.pre_restore_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -229,10 +232,12 @@ int main(int argc, char* argv[])
       else {
 	// New set -> compute
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
+#endif
 	csg_driver.compute_trial_grid(vsets1);
         numPts = vsets1.numCols();
 	computedGridIDs.resize(vsets1.numCols(),false) ; 
         fev = feval(vsets1,nQoI,computedGridIDs,NULL);
+#ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  SurrogateDataVars sdv(variable_sets.numRows(),0,0);
 	  SurrogateDataResp sdr(1,variable_sets.numRows()); // no gradient or hessian
@@ -265,9 +270,7 @@ int main(int argc, char* argv[])
       //write_data(std::cout, vsets1, false, true, true);
       //write_data(std::cout, fev, false, true, true);
 
-      PCout<<"a"<<*it<<std::endl;
       csg_driver.pop_trial_set();
-      PCout<<"b"<<*it<<std::endl;
 
 #ifdef CHGPROTFUNCS
       srdPolyApprox.decrement_data();
