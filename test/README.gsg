@@ -23,16 +23,3 @@ Moved functions below from protected to public
   void pre_finalize_data();
   void post_finalize_data();
 
-
-SharedBasisApproxData.hpp
--------------------------
-
-  from protected to public
-  size_t numVars;
-
-BasisApproximation.hpp
-----------------------
-
-  from protected to public
-  SharedBasisApproxData* sharedDataRep;
-
