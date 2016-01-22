@@ -122,11 +122,10 @@ int main(int argc, char* argv[])
   // Instantiate Project poly approx
   vector<ProjectOrthogPolyApproximation> polyProjApproxVec;
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    ProjectOrthogPolyApproximation
-      polyProjApprox((SharedBasisApproxData) srdPolyApprox);
+    ProjectOrthogPolyApproximation polyProjApprox(srdPolyApprox);
     polyProjApproxVec.push_back(polyProjApprox);
-    std::cout<<"Pointer to sharedDataRep: "<<polyProjApproxVec[iQoI].sharedDataRep<<std::endl;
-    std::cout<<"numVars: "<<polyProjApproxVec[iQoI].sharedDataRep->numVars<<std::endl;
+    //std::cout<<"Pointer to sharedDataRep: "<<polyProjApproxVec[iQoI].sharedDataRep<<std::endl;
+    //std::cout<<"numVars: "<<polyProjApproxVec[iQoI].sharedDataRep->numVars<<std::endl;
   }
 #ifdef VERB
   std::cout << "  - done\n";
