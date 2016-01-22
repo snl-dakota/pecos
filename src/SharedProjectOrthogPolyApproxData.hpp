@@ -59,20 +59,22 @@ public:
   /// destructor
   ~SharedProjectOrthogPolyApproxData();
 
+  //
+  //- Cosmin Heading: Virtual function redefinitions
+  //
+  void allocate_data();
+  void pre_restore_data();
+  void post_restore_data();
+  void increment_data();
+  void decrement_data();
+  void pre_finalize_data();
+  void post_finalize_data();
+
 protected:
 
   //
   //- Heading: Virtual function redefinitions
   //
-
-  void allocate_data();
-
-  void increment_data();
-  void decrement_data();
-  void pre_restore_data();
-  void post_restore_data();
-  void pre_finalize_data();
-  void post_finalize_data();
 
   void pre_combine_data(short combine_type, bool swap);
 
