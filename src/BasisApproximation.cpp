@@ -26,8 +26,12 @@ namespace Pecos {
     uninitialized pointer causes problems in ~BasisApproximation). */
 BasisApproximation::
 BasisApproximation(BaseConstructor, const SharedBasisApproxData& shared_data):
-  sharedDataRep(shared_data.data_rep()), basisApproxRep(NULL), referenceCount(1)
+  sharedDataRep(NULL), basisApproxRep(NULL), referenceCount(1)
 {
+  sharedDataRep = (shared_data.data_rep() == NULL) ?
+    const_cast<SharedBasisApproxData*>(&shared_data) : // use letter instance
+    shared_data.data_rep();                   // extract letter from envelope
+
 #ifdef REFCOUNT_DEBUG
   PCout << "BasisApproximation::BasisApproximation(BaseConstructor) called to "
         << "build base class for letter." << std::endl;
