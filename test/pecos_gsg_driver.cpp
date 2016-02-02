@@ -27,8 +27,8 @@
 
 using namespace std;
 
-//#define CHGPROTFUNCS
-//#define VERB
+#define CHGPROTFUNCS
+#define VERB
 
 #define MAX_CHARS_PER_LINE 1000
 #define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
@@ -81,18 +81,24 @@ int main(int argc, char* argv[])
   // Restart is data available 
   // restartGSGdriver((char *)GRIDFILE, (char *)FCNFILE, storedSets, storedVals);
 
-  // Start 
-  CombinedSparseGridDriver
-    csg_driver(level, dimension_pref, growth_rate, refine_cntl);
+  // Start
+  // Can either use IntegrationDriver(driver_type) and then assign data or
+  // use IntegrationDriver() and then assign letter.
+  IntegrationDriver int_driver; // empty envelope
+  // assign letter using assign_rep()
+  CombinedSparseGridDriver* csg_driver
+    = new CombinedSparseGridDriver(level, dimension_pref, growth_rate,
+				   refine_cntl);
+  int_driver.assign_rep(csg_driver, false); // don't increment ref count
 
 #ifdef VERB
   std::cout << "Instantiating basis...\n";
 #endif
   size_t num_vars = NUMVARS;
-  std::vector<BasisPolynomial> poly_basis(num_vars);
+  std::vector<BasisPolynomial> poly_basis(num_vars); // array of envelopes
   for (int i=0; i<num_vars; ++i)
-    poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG);
-  csg_driver.initialize_grid(poly_basis);
+    poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG); // envelope operator=
+  csg_driver->initialize_grid(poly_basis);
 #ifdef VERB
   std::cout << "  - done\n";
 #endif
@@ -112,28 +118,28 @@ int main(int argc, char* argv[])
                                    1.e-5,                // conv tol
                                    2);                   // soft conv limit
   BasisConfigOptions bcopt;
-
   UShortArray aord(MAXORD,NUMVARS);
-  SharedProjectOrthogPolyApproxData srdPolyApprox(BTYPE,aord,NUMVARS,expcfgopt,bcopt);
-  //PCout<<srdPolyApprox.numVars<<std::endl;
-  //PCout<<srdPolyApprox.data_rep()<<std::endl;
-  srdPolyApprox.integration_driver_rep(&csg_driver);
+  // Envelope:
+  SharedBasisApproxData shared_data;
+  // Letter:
+  SharedProjectOrthogPolyApproxData* shared_poly_data = new
+    SharedProjectOrthogPolyApproxData(BTYPE,aord,NUMVARS,expcfgopt,bcopt);
+  shared_data.assign_rep(shared_poly_data, false); // don't increment ref count
+  shared_poly_data->integration_driver_rep(csg_driver);
+  shared_poly_data->polynomial_basis(poly_basis);
 
   // Instantiate Project poly approx
-  vector<ProjectOrthogPolyApproximation> polyProjApproxVec;
-  for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    ProjectOrthogPolyApproximation polyProjApprox(srdPolyApprox);
-    polyProjApproxVec.push_back(polyProjApprox);
-    //std::cout<<"Pointer to sharedDataRep: "<<polyProjApproxVec[iQoI].sharedDataRep<<std::endl;
-    //std::cout<<"numVars: "<<polyProjApproxVec[iQoI].sharedDataRep->numVars<<std::endl;
-  }
+  std::vector<BasisApproximation> poly_approx(nQoI); // array of envelopes
+  for ( int iQoI=0; iQoI<nQoI; iQoI++)
+    poly_approx[iQoI].assign_rep(new 
+      ProjectOrthogPolyApproximation(shared_data), false); // assign letter
 #ifdef VERB
   std::cout << "  - done\n";
 #endif
  
   //initial grid and compute reference approximation
   RealMatrix variable_sets;
-  csg_driver.compute_grid(variable_sets);
+  csg_driver->compute_grid(variable_sets);
 
 #ifdef VERB
   std::cout << "Evaluate function on reference grid and instantiate SurrogateData...\n";
@@ -151,7 +157,7 @@ int main(int argc, char* argv[])
       sdr.response_function(fev(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
-    polyProjApproxVec[iQoI].surrogate_data(sdi);
+    poly_approx[iQoI].surrogate_data(sdi);
   } 
 #ifdef VERB
   std::cout << "  - done\n";
@@ -159,12 +165,12 @@ int main(int argc, char* argv[])
 
   //return(0);
 #ifdef CHGPROTFUNCS
-  srdPolyApprox.allocate_data(); // Cosmin both here and in the loop
+  shared_poly_data->allocate_data(); // Cosmin both here and in the loop
                                  // below functions are protected   
   std::cout << "  - done\n";
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     PCout<<"QoI="<<iQoI<<std::endl;
-     polyProjApproxVec[iQoI].compute_coefficients();
+    poly_approx[iQoI].compute_coefficients();
   }
 #endif
   
@@ -190,16 +196,16 @@ int main(int argc, char* argv[])
 #define DEBUG
 #ifdef DEBUG
   write_data(std::cout, variable_sets, true, true, true);
-  write_US2A(std::cout, csg_driver.smolyak_multi_index());
+  write_US2A(std::cout, csg_driver->smolyak_multi_index());
 #endif
 
   // start refinement
-  csg_driver.initialize_sets();
+  csg_driver->initialize_sets();
 
   UShortArraySet a;
   for ( int iter = 0; iter<NITER; iter++) {
 
-    a = csg_driver.active_multi_index();
+    a = csg_driver->active_multi_index();
     std::cout<<"Refine, iteration: "<<iter+1<<'\n';
     write_USAS(std::cout, a) ;
 
@@ -214,33 +220,33 @@ int main(int argc, char* argv[])
         choose = pick;
       }
 
-      csg_driver.push_trial_set(*it);
+      csg_driver->push_trial_set(*it);
       PCout<<*it<<std::endl;
 
       // Surrogate data needs to be updated 
       int numPts = 0;
 #ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
-      if (srdPolyApprox.restore_available()) {
+      if (shared_poly_data->restore_available()) {
 
         // Set available -> restore in csg and the rest
-	csg_driver.restore_set();
+	csg_driver->restore_set();
 
-        size_t idxRestore = srdPolyApprox.restoration_index();
-	srdPolyApprox.pre_restore_data();
+        size_t idxRestore = shared_poly_data->restoration_index();
+	shared_poly_data->pre_restore_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  polyProjApproxVec[iQoI].restore_coefficients();
+	  poly_approx[iQoI].restore_coefficients();
           // Also restore the corresponding surrogate data
-	  SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
 	  numPts = sdi.restore(idxRestore,true);
 	}
-	srdPolyApprox.post_restore_data();
+	shared_poly_data->post_restore_data();
 
       }
       else {
 	// New set -> compute
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 #endif
-	csg_driver.compute_trial_grid(vsets1);
+	csg_driver->compute_trial_grid(vsets1);
         numPts = vsets1.numCols();
 	computedGridIDs.resize(vsets1.numCols(),false) ; 
         fev = feval(vsets1,nQoI,computedGridIDs,NULL);
@@ -248,19 +254,19 @@ int main(int argc, char* argv[])
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  SurrogateDataVars sdv(variable_sets.numRows(),0,0);
 	  SurrogateDataResp sdr(1,variable_sets.numRows()); // no gradient or hessian
-	  SurrogateData     sdi = polyProjApproxVec[iQoI].surrogate_data();
+	  SurrogateData     sdi = poly_approx[iQoI].surrogate_data();
 	  for( int jCol=0; jCol<numPts; jCol++) {
 	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
 	    sdr.response_function(fev(jCol,iQoI));
 	    std::cout<<fev(jCol,iQoI)<<std::endl;
 	    sdi.push_back(sdv,sdr);
 	  }
-	  //polyProjApproxVec[iQoI].surrogate_data(sdi);
+	  //poly_approx[iQoI].surrogate_data(sdi);
 	}
         
-	srdPolyApprox.increment_data();
+	shared_poly_data->increment_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  polyProjApproxVec[iQoI].increment_coefficients();
+	  poly_approx[iQoI].increment_coefficients();
 	}
       }
 #endif
@@ -277,14 +283,14 @@ int main(int argc, char* argv[])
       //write_data(std::cout, vsets1, false, true, true);
       //write_data(std::cout, fev, false, true, true);
 
-      csg_driver.pop_trial_set();
+      csg_driver->pop_trial_set();
 
 #ifdef CHGPROTFUNCS
-      srdPolyApprox.decrement_data();
+      shared_poly_data->decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	polyProjApproxVec[iQoI].decrement_coefficients();
+	poly_approx[iQoI].decrement_coefficients();
 	// Also restore the corresponding surrogate data
-	SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+	SurrogateData sdi = poly_approx[iQoI].surrogate_data();
 	sdi.pop(numPts,true);
       }
 #endif
@@ -293,35 +299,35 @@ int main(int argc, char* argv[])
 
     std::cout<<asave<<std::endl ;
 
-    csg_driver.update_sets(asave);
-    csg_driver.update_reference();
+    csg_driver->update_sets(asave);
+    csg_driver->update_reference();
 
 #ifdef CHGPROTFUNCS //need to restore the data
-    size_t idxRestore = srdPolyApprox.restoration_index();
-    srdPolyApprox.pre_restore_data();
+    size_t idxRestore = shared_poly_data->restoration_index();
+    shared_poly_data->pre_restore_data();
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-      polyProjApproxVec[iQoI].restore_coefficients();
-      SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+      poly_approx[iQoI].restore_coefficients();
+      SurrogateData sdi = poly_approx[iQoI].surrogate_data();
       int numPts = sdi.restore(idxRestore,true);
     }
-    srdPolyApprox.post_restore_data();
+    shared_poly_data->post_restore_data();
 #endif
 
   }
 
-  csg_driver.finalize_sets(true, false); // use embedded output option
+  csg_driver->finalize_sets(true, false); // use embedded output option
 
 #ifdef CHGPROTFUNCS //DakotaApprox look at finalize
-  srdPolyApprox.pre_finalize_data();
+  shared_poly_data->pre_finalize_data();
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    polyProjApproxVec[iQoI].finalize_coefficients();
-  srdPolyApprox.post_finalize_data();
+    poly_approx[iQoI].finalize_coefficients();
+  shared_poly_data->post_finalize_data();
 
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    SurrogateData sdi = polyProjApproxVec[iQoI].surrogate_data();
+    SurrogateData sdi = poly_approx[iQoI].surrogate_data();
     size_t i, num_restore = sdi.saved_trials(); // # of saved trial sets
     for (i=0; i<num_restore; ++i)
-      sdi.restore(srdPolyApprox.finalization_index(i),false);
+      sdi.restore(shared_poly_data->finalization_index(i),false);
     sdi.clear_saved();
   }
   
@@ -329,7 +335,7 @@ int main(int argc, char* argv[])
 
   // Print final sets
   //std::cout<<"Final set:\n";
-  //write_US2A(std::cout, csg_driver.smolyak_multi_index());
+  //write_US2A(std::cout, csg_driver->smolyak_multi_index());
   
   return (0);
 

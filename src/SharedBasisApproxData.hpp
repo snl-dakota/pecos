@@ -70,6 +70,9 @@ public:
   //- Heading: Member functions
   //
 
+  /// assign letter or replace existing letter with a new one
+  void assign_rep(SharedBasisApproxData* data_rep, bool ref_count_incr);
+
   /// returns dataRep for access to derived class member functions
   /// that are not mapped to the top Approximation level
   SharedBasisApproxData* data_rep() const;

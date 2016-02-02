@@ -260,4 +260,38 @@ SharedBasisApproxData::~SharedBasisApproxData()
   }
 }
 
+
+void SharedBasisApproxData::
+assign_rep(SharedBasisApproxData* data_rep, bool ref_count_incr)
+{
+  if (dataRep == data_rep) {
+    // if ref_count_incr = true (rep from another envelope), do nothing as
+    // referenceCount should already be correct (see also operator= logic).
+    // if ref_count_incr = false (rep from on the fly), then this is an error.
+    if (!ref_count_incr) {
+      PCerr << "Error: duplicated data_rep pointer assignment without "
+	    << "reference count increment in SharedBasisApproxData::"
+	    << "assign_rep()." << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else { // normal case: old != new
+    // Decrement old
+    if (dataRep) // Check for NULL
+      if ( --dataRep->referenceCount == 0 ) 
+	delete dataRep;
+    // Assign new
+    dataRep = data_rep;
+    // Increment new
+    if (dataRep && ref_count_incr) // Check for NULL & honor ref_count_incr
+      dataRep->referenceCount++;
+  }
+
+#ifdef REFCOUNT_DEBUG
+  PCout << "SharedBasisApproxData::assign_rep(BasisApproximation*)" <<std::endl;
+  if (dataRep)
+    PCout << "dataRep referenceCount = " << dataRep->referenceCount <<std::endl;
+#endif
+}
+
 } // namespace Pecos

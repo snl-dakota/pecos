@@ -95,6 +95,9 @@ public:
   //- Heading: Member functions
   //
 
+  /// assign letter or replace existing letter with a new one
+  void assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr);
+
   /// compute variable sets for a tensor-product grid
   void compute_tensor_grid(const UShortArray& quad_order,
 			   const UShortArray& lev_index,

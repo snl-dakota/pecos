@@ -26,12 +26,8 @@ namespace Pecos {
     uninitialized pointer causes problems in ~BasisApproximation). */
 BasisApproximation::
 BasisApproximation(BaseConstructor, const SharedBasisApproxData& shared_data):
-  sharedDataRep(NULL), basisApproxRep(NULL), referenceCount(1)
+  sharedDataRep(shared_data.data_rep()), basisApproxRep(NULL), referenceCount(1)
 {
-  sharedDataRep = (shared_data.data_rep() == NULL) ?
-    const_cast<SharedBasisApproxData*>(&shared_data) : // use letter instance
-    shared_data.data_rep();                   // extract letter from envelope
-
 #ifdef REFCOUNT_DEBUG
   PCout << "BasisApproximation::BasisApproximation(BaseConstructor) called to "
         << "build base class for letter." << std::endl;
@@ -181,6 +177,41 @@ BasisApproximation::~BasisApproximation()
 }
 
 
+void BasisApproximation::
+assign_rep(BasisApproximation* approx_rep, bool ref_count_incr)
+{
+  if (basisApproxRep == approx_rep) {
+    // if ref_count_incr = true (rep from another envelope), do nothing as
+    // referenceCount should already be correct (see also operator= logic).
+    // if ref_count_incr = false (rep from on the fly), then this is an error.
+    if (!ref_count_incr) {
+      PCerr << "Error: duplicated approx_rep pointer assignment without "
+	    << "reference count increment in BasisApproximation::assign_rep()."
+	    << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else { // normal case: old != new
+    // Decrement old
+    if (basisApproxRep) // Check for NULL
+      if ( --basisApproxRep->referenceCount == 0 ) 
+	delete basisApproxRep;
+    // Assign new
+    basisApproxRep = approx_rep;
+    // Increment new
+    if (basisApproxRep && ref_count_incr)// Check for NULL; honor ref_count_incr
+      basisApproxRep->referenceCount++;
+  }
+
+#ifdef REFCOUNT_DEBUG
+  PCout << "BasisApproximation::assign_rep(BasisApproximation*)" << std::endl;
+  if (basisApproxRep)
+    PCout << "basisApproxRep referenceCount = "
+	  << basisApproxRep->referenceCount << std::endl;
+#endif
+}
+
+
 Real BasisApproximation::value(const RealVector& x)
 {
   if (!basisApproxRep) {
@@ -214,6 +245,30 @@ const RealSymMatrix& BasisApproximation::hessian(const RealVector& x)
   }
     
   return basisApproxRep->hessian(x);
+}
+
+
+void BasisApproximation::surrogate_data(const SurrogateData& data)
+{
+  if (basisApproxRep)
+    basisApproxRep->surrogate_data(data);
+  else {
+    PCerr << "Error: surrogate_data(SurrogateData&) not available for this "
+	  << "basis approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+const SurrogateData& BasisApproximation::surrogate_data() const
+{
+  if (!basisApproxRep) {
+    PCerr << "Error: surrogate_data() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+    
+  return basisApproxRep->surrogate_data();
 }
 
 

@@ -199,6 +199,41 @@ IntegrationDriver::~IntegrationDriver()
 
 
 void IntegrationDriver::
+assign_rep(IntegrationDriver* driver_rep, bool ref_count_incr)
+{ 
+  if (driverRep == driver_rep) {
+    // if ref_count_incr = true (rep from another envelope), do nothing as
+    // referenceCount should already be correct (see also operator= logic).
+    // if ref_count_incr = false (rep from on the fly), then this is an error.
+    if (!ref_count_incr) {
+      PCerr << "Error: duplicated driver_rep pointer assignment without "
+	    << "reference count increment in IntegrationDriver::assign_rep()."
+	    << std::endl;
+      abort_handler(-1);
+    }
+  }
+  else { // normal case: old != new
+    // Decrement old
+    if (driverRep) // Check for NULL
+      if ( --driverRep->referenceCount == 0 ) 
+	delete driverRep;
+    // Assign new
+    driverRep = driver_rep;
+    // Increment new
+    if (driverRep && ref_count_incr) // Check for NULL & honor ref_count_incr
+      driverRep->referenceCount++;
+  }
+
+#ifdef REFCOUNT_DEBUG
+  PCout << "IntegrationDriver::assign_rep(IntegrationDriver*)" << std::endl;
+  if (driverRep)
+    PCout << "driverRep referenceCount = " << driverRep->referenceCount
+	  << std::endl;
+#endif
+}
+
+
+void IntegrationDriver::
 initialize_grid_parameters(const ShortArray& u_types, 
 			   const AleatoryDistParams& adp)
 {
