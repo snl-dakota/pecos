@@ -318,20 +318,26 @@ int main(int argc, char* argv[])
 
   csg_driver->finalize_sets(true, false); // use embedded output option
 
-#ifdef CHGPROTFUNCS //DakotaApprox look at finalize
-  shared_poly_data->pre_finalize_data();
-  for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    poly_approx[iQoI].finalize_coefficients();
-  shared_poly_data->post_finalize_data();
+#ifdef CHGPROTFUNCS
+  // sequence from ApproximationInterface::finalize_approximation():
 
+  // shared pre-finalize:
+  shared_poly_data->pre_finalize_data();
+
+  // per-approximation finalize:
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+    // from Approximation::finalize() called from PecosApproximation::finalize()
     SurrogateData sdi = poly_approx[iQoI].surrogate_data();
     size_t i, num_restore = sdi.saved_trials(); // # of saved trial sets
     for (i=0; i<num_restore; ++i)
       sdi.restore(shared_poly_data->finalization_index(i),false);
     sdi.clear_saved();
+    // from PecosApproximation::finalize()
+    poly_approx[iQoI].finalize_coefficients();
   }
-  
+
+  // shared post-finalize:
+  shared_poly_data->post_finalize_data();
 #endif
 
   // Print final sets
