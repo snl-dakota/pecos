@@ -27,7 +27,6 @@
 
 using namespace std;
 
-#define CHGPROTFUNCS
 #define VERB
 
 #define MAX_CHARS_PER_LINE 1000
@@ -140,7 +139,9 @@ int main(int argc, char* argv[])
   //initial grid and compute reference approximation
   RealMatrix var_sets0;
   csg_driver->compute_grid(var_sets0);
-
+  int numPts = var_sets0.numCols();
+  assert(num_vars==var_sets0.numRows());
+  
 #ifdef VERB
   std::cout << "Evaluate function on reference grid and instantiate SurrogateData...\n";
 #endif
@@ -148,13 +149,11 @@ int main(int argc, char* argv[])
   std::vector<bool> computedGridIDs(var_sets0.numCols(),true) ; 
   RealMatrix fev0 = feval(var_sets0,nQoI,computedGridIDs,NULL);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    SurrogateDataVars sdv(var_sets0.numRows(),0,0);
-    SurrogateDataResp sdr(1,var_sets0.numRows()); // no gradient or hessian
+    SurrogateDataVars sdv(num_vars,0,0);
+    SurrogateDataResp sdr(1,num_vars); // no gradient or hessian
     SurrogateData     sdi;
-    for( int jCol=0; jCol<var_sets0.numCols(); jCol++) {
-      //cout<<jCol<<" out of "<<var_sets0.numCols()<<":"<<fev0(jCol,iQoI)<<endl;
+    for( int jCol = 0; jCol < numPts; jCol++) {
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::View,var_sets0,jCol));
-      PCout<<fev0.numRows()<<" "<<fev0.numCols()<<": "<<jCol<<" "<<iQoI<<endl;
       sdr.response_function(fev0(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
@@ -165,14 +164,12 @@ int main(int argc, char* argv[])
 #endif
 
   //return(0);
-#ifdef CHGPROTFUNCS
   shared_poly_data->allocate_data();    
   std::cout << "  - done\n";
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     PCout<<"QoI="<<iQoI<<std::endl;
     poly_approx[iQoI].compute_coefficients();
   }
-#endif
   
   // ----------------- Comment from now restarts/etc------------------------
   // // if restart, check if grid is in the restart
@@ -207,7 +204,7 @@ int main(int argc, char* argv[])
 
     a = csg_driver->active_multi_index();
     std::cout<<"Refine, iteration: "<<iter+1<<'\n';
-    write_USAS(std::cout, a) ;
+    //write_USAS(std::cout, a) ;
 
     std::vector<short unsigned int> asave;
     RealMatrix var_sets;
@@ -221,11 +218,9 @@ int main(int argc, char* argv[])
       }
 
       csg_driver->push_trial_set(*it);
-      PCout<<*it<<std::endl;
 
       // Surrogate data needs to be updated 
-      int numPts = 0;
-#ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
+      numPts = 0;
       if (shared_poly_data->restore_available()) {
 
         // Set available -> restore in csg and the rest
@@ -245,20 +240,17 @@ int main(int argc, char* argv[])
       else {
 	// New set -> compute
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
-#endif
 	csg_driver->compute_trial_grid(var_sets);
         numPts = var_sets.numCols();
 	computedGridIDs.resize(var_sets.numCols(),true) ; 
         RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
-	PCout<<"----------"<<fev.numRows()<<" "<<fev.numCols()<<std::endl;
-#ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
+
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  SurrogateDataVars sdv(var_sets.numRows(),0,0);
-	  SurrogateDataResp sdr(1,var_sets.numRows()); // no gradient or hessian
+	  SurrogateDataVars sdv(num_vars,0,0);
+	  SurrogateDataResp sdr(1,num_vars); // no gradient or hessian
 	  SurrogateData     sdi = poly_approx[iQoI].surrogate_data();
-	  for( int jCol=0; jCol<numPts; jCol++) {
+	  for( int jCol = 0; jCol < numPts; jCol++) {
 	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
-            PCout<<fev.numRows()<<" "<<fev.numCols()<<": "<<numPts<<": "<<jCol<<" "<<iQoI<<" "<<fev(jCol,iQoI)<<std::endl;
 	    sdr.response_function(fev(jCol,iQoI));
 	    sdi.push_back(sdv,sdr);
 	  } // done loop over number of points
@@ -270,7 +262,6 @@ int main(int argc, char* argv[])
 	  poly_approx[iQoI].increment_coefficients();
 	}
       }
-#endif
 
       // ----------------- Comment from now restarts/etc------------------------
       // int numHits = checkSetsInStoredSet(storedSets,var_sets,computedGridIDs);
@@ -280,13 +271,8 @@ int main(int argc, char* argv[])
       //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
       // }
 
-      //RealVector fev = feval(var_sets,NULL);
-      //write_data(std::cout, var_sets, false, true, true);
-      //write_data(std::cout, fev, false, true, true);
-
       csg_driver->pop_trial_set();
 
-#ifdef CHGPROTFUNCS
       shared_poly_data->decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	poly_approx[iQoI].decrement_coefficients();
@@ -294,8 +280,7 @@ int main(int argc, char* argv[])
 	SurrogateData sdi = poly_approx[iQoI].surrogate_data();
 	sdi.pop(numPts,true);
       }
-#endif
-      PCout<<*it<<std::endl;
+
     }
 
     std::cout<<asave<<std::endl ;
@@ -303,7 +288,7 @@ int main(int argc, char* argv[])
     csg_driver->update_sets(asave);
     csg_driver->update_reference();
 
-#ifdef CHGPROTFUNCS //need to restore the data
+     //need to restore the data
     size_t idxRestore = shared_poly_data->restoration_index();
     shared_poly_data->pre_restore_data();
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -312,13 +297,11 @@ int main(int argc, char* argv[])
       int numPts = sdi.restore(idxRestore,true);
     }
     shared_poly_data->post_restore_data();
-#endif
 
   }
 
   csg_driver->finalize_sets(true, false); // use embedded output option
 
-#ifdef CHGPROTFUNCS
   // sequence from ApproximationInterface::finalize_approximation():
 
   // shared pre-finalize:
@@ -338,7 +321,10 @@ int main(int argc, char* argv[])
 
   // shared post-finalize:
   shared_poly_data->post_finalize_data();
-#endif
+
+  for ( int iQoI=0; iQoI<nQoI; iQoI++)
+    poly_approx[iQoI].print_coefficients(PCout,true);
+
 
   // Print final sets
   //std::cout<<"Final set:\n";
