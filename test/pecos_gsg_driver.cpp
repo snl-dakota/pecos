@@ -138,24 +138,24 @@ int main(int argc, char* argv[])
 #endif
  
   //initial grid and compute reference approximation
-  RealMatrix variable_sets;
-  csg_driver->compute_grid(variable_sets);
+  RealMatrix var_sets0;
+  csg_driver->compute_grid(var_sets0);
 
 #ifdef VERB
   std::cout << "Evaluate function on reference grid and instantiate SurrogateData...\n";
 #endif
   // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
-  std::vector<bool> computedGridIDs(variable_sets.numCols(),true) ; 
-  RealMatrix fev = feval(variable_sets,nQoI,computedGridIDs,NULL);
+  std::vector<bool> computedGridIDs(var_sets0.numCols(),true) ; 
+  RealMatrix fev0 = feval(var_sets0,nQoI,computedGridIDs,NULL);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    SurrogateDataVars sdv(variable_sets.numRows(),0,0);
-    SurrogateDataResp sdr(1,variable_sets.numRows()); // no gradient or hessian
+    SurrogateDataVars sdv(var_sets0.numRows(),0,0);
+    SurrogateDataResp sdr(1,var_sets0.numRows()); // no gradient or hessian
     SurrogateData     sdi;
-    for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
-      //cout<<jCol<<" out of "<<variable_sets.numCols()<<":"<<fev(jCol,iQoI)<<endl;
-      sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::View,variable_sets,jCol));
-      PCout<<fev.numRows()<<" "<<fev.numCols()<<": "<<jCol<<" "<<iQoI<<endl;
-      sdr.response_function(fev(jCol,iQoI));
+    for( int jCol=0; jCol<var_sets0.numCols(); jCol++) {
+      //cout<<jCol<<" out of "<<var_sets0.numCols()<<":"<<fev0(jCol,iQoI)<<endl;
+      sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::View,var_sets0,jCol));
+      PCout<<fev0.numRows()<<" "<<fev0.numCols()<<": "<<jCol<<" "<<iQoI<<endl;
+      sdr.response_function(fev0(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
     poly_approx[iQoI].surrogate_data(sdi);
@@ -178,8 +178,8 @@ int main(int argc, char* argv[])
   // // if restart, check if grid is in the restart
   // std::vector<bool> computedGridIDs ;
   // if (storedVals.length() > 0) {
-  //   int numHits = checkSetsInStoredSet(storedSets,variable_sets,computedGridIDs);
-  //   if ( numHits != variable_sets.numCols() )
+  //   int numHits = checkSetsInStoredSet(storedSets,var_sets0,computedGridIDs);
+  //   if ( numHits != var_sets0.numCols() )
   //   {
   //     std::cout<<"main() error: initial sets not found in restart"
   //              <<std::endl;
@@ -188,14 +188,14 @@ int main(int argc, char* argv[])
   // } 
   // else
   // {
-  //   computedGridIDs.resize(variable_sets.numCols(),true);
-  //   RealVector fev = feval(variable_sets,computedGridIDs,NULL);
-  //   addNewSets(storedSets,storedVals,variable_sets,fev,computedGridIDs);
+  //   computedGridIDs.resize(var_sets0.numCols(),true);
+  //   RealVector fev = feval(var_sets0,computedGridIDs,NULL);
+  //   addNewSets(storedSets,storedVals,var_sets0,fev,computedGridIDs);
   // }
 
 #define DEBUG
 #ifdef DEBUG
-  write_data(std::cout, variable_sets, true, true, true);
+  write_data(std::cout, var_sets0, true, true, true);
   write_US2A(std::cout, csg_driver->smolyak_multi_index());
 #endif
 
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
     write_USAS(std::cout, a) ;
 
     std::vector<short unsigned int> asave;
-    RealMatrix vsets1;
+    RealMatrix var_sets;
     int choose = 0;
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
 
@@ -246,19 +246,18 @@ int main(int argc, char* argv[])
 	// New set -> compute
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 #endif
-	csg_driver->compute_trial_grid(vsets1);
-        numPts = vsets1.numCols();
-	computedGridIDs.resize(vsets1.numCols(),true) ; 
-        RealMatrix fev1 = feval(vsets1,nQoI,computedGridIDs,NULL);
-        fev = fev1;
-	PCout<<"----------"<<fev1.numRows()<<" "<<fev1.numCols()<<std::endl;
+	csg_driver->compute_trial_grid(var_sets);
+        numPts = var_sets.numCols();
+	computedGridIDs.resize(var_sets.numCols(),true) ; 
+        RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
+	PCout<<"----------"<<fev.numRows()<<" "<<fev.numCols()<<std::endl;
 #ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  SurrogateDataVars sdv(variable_sets.numRows(),0,0);
-	  SurrogateDataResp sdr(1,variable_sets.numRows()); // no gradient or hessian
+	  SurrogateDataVars sdv(var_sets.numRows(),0,0);
+	  SurrogateDataResp sdr(1,var_sets.numRows()); // no gradient or hessian
 	  SurrogateData     sdi = poly_approx[iQoI].surrogate_data();
 	  for( int jCol=0; jCol<numPts; jCol++) {
-	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
+	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
             PCout<<fev.numRows()<<" "<<fev.numCols()<<": "<<numPts<<": "<<jCol<<" "<<iQoI<<" "<<fev(jCol,iQoI)<<std::endl;
 	    sdr.response_function(fev(jCol,iQoI));
 	    sdi.push_back(sdv,sdr);
@@ -274,15 +273,15 @@ int main(int argc, char* argv[])
 #endif
 
       // ----------------- Comment from now restarts/etc------------------------
-      // int numHits = checkSetsInStoredSet(storedSets,vsets1,computedGridIDs);
-      // if (numHits<vsets1.numCols())
+      // int numHits = checkSetsInStoredSet(storedSets,var_sets,computedGridIDs);
+      // if (numHits<var_sets.numCols())
       // {
-      //   RealVector fev = feval(vsets1,computedGridIDs,NULL);
-      //   addNewSets(storedSets,storedVals,vsets1,fev,computedGridIDs);
+      //   RealVector fev = feval(var_sets,computedGridIDs,NULL);
+      //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
       // }
 
-      //RealVector fev = feval(vsets1,NULL);
-      //write_data(std::cout, vsets1, false, true, true);
+      //RealVector fev = feval(var_sets,NULL);
+      //write_data(std::cout, var_sets, false, true, true);
       //write_data(std::cout, fev, false, true, true);
 
       csg_driver->pop_trial_set();
