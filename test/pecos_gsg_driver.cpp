@@ -154,6 +154,7 @@ int main(int argc, char* argv[])
     for( int jCol=0; jCol<variable_sets.numCols(); jCol++) {
       //cout<<jCol<<" out of "<<variable_sets.numCols()<<":"<<fev(jCol,iQoI)<<endl;
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::View,variable_sets,jCol));
+      PCout<<fev.numRows()<<" "<<fev.numCols()<<": "<<jCol<<" "<<iQoI<<endl;
       sdr.response_function(fev(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
@@ -165,8 +166,7 @@ int main(int argc, char* argv[])
 
   //return(0);
 #ifdef CHGPROTFUNCS
-  shared_poly_data->allocate_data(); // Cosmin both here and in the loop
-                                 // below functions are protected   
+  shared_poly_data->allocate_data();    
   std::cout << "  - done\n";
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     PCout<<"QoI="<<iQoI<<std::endl;
@@ -248,8 +248,10 @@ int main(int argc, char* argv[])
 #endif
 	csg_driver->compute_trial_grid(vsets1);
         numPts = vsets1.numCols();
-	computedGridIDs.resize(vsets1.numCols(),false) ; 
-        fev = feval(vsets1,nQoI,computedGridIDs,NULL);
+	computedGridIDs.resize(vsets1.numCols(),true) ; 
+        RealMatrix fev1 = feval(vsets1,nQoI,computedGridIDs,NULL);
+        fev = fev1;
+	PCout<<"----------"<<fev1.numRows()<<" "<<fev1.numCols()<<std::endl;
 #ifdef CHGPROTFUNCS //need to bring surrogate data up2date: restoration index
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  SurrogateDataVars sdv(variable_sets.numRows(),0,0);
@@ -257,12 +259,12 @@ int main(int argc, char* argv[])
 	  SurrogateData     sdi = poly_approx[iQoI].surrogate_data();
 	  for( int jCol=0; jCol<numPts; jCol++) {
 	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,variable_sets,jCol));
+            PCout<<fev.numRows()<<" "<<fev.numCols()<<": "<<numPts<<": "<<jCol<<" "<<iQoI<<" "<<fev(jCol,iQoI)<<std::endl;
 	    sdr.response_function(fev(jCol,iQoI));
-	    std::cout<<fev(jCol,iQoI)<<std::endl;
 	    sdi.push_back(sdv,sdr);
-	  }
+	  } // done loop over number of points
 	  //poly_approx[iQoI].surrogate_data(sdi);
-	}
+	} // done loop over QoIs
         
 	shared_poly_data->increment_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -374,19 +376,18 @@ RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &c
 
   assert(nQoI==1);
 
-  int i, j, numPts, numDim ;
+  int i, j ;
 
-  numDim = dataMat.numRows(); // Dimensionality
-  numPts = dataMat.numCols(); // Number of function evaluations
+  int numDim = dataMat.numRows(); // Dimensionality
+  int numPts = dataMat.numCols(); // Number of function evaluations
 
-  // Count the number of function evaluations;
+  /* Count the number of function evaluations; */
   RealMatrix fev;
 
   int nEval=0;
   for (i=0; i<numPts; ++i) 
     if (computedGridIDs[i]) nEval++;
-  if (nEval==0)
-    return fev;
+  if (nEval==0) return fev;
 
   fev.shape(nEval,nQoI);
   int ieval=0;
