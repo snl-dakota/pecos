@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
   shared_poly_data->allocate_data();    
   std::cout << "  - done\n";
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    PCout<<"QoI="<<iQoI<<std::endl;
+    std::cout<<"QoI="<<iQoI<<std::endl;
     poly_approx[iQoI].compute_coefficients();
   }
   
@@ -323,7 +323,7 @@ int main(int argc, char* argv[])
   shared_poly_data->post_finalize_data();
 
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    poly_approx[iQoI].print_coefficients(PCout,true);
+    poly_approx[iQoI].print_coefficients(std::cout,true);
 
 
   // Print final sets

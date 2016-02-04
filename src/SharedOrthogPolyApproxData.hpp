@@ -447,6 +447,7 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
     update_basis_distribution_parameters(u_types, adp, poly_basis);
 }
 
+
 inline void SharedOrthogPolyApproxData::
 orthogonal_basis_types(const ShortArray& opb_types)
 { orthogPolyTypes = opb_types; }
@@ -461,13 +462,21 @@ inline const std::vector<BasisPolynomial>& SharedOrthogPolyApproxData::
 polynomial_basis() const
 { return polynomialBasis; }
 
+
 inline std::vector<BasisPolynomial>& SharedOrthogPolyApproxData::
 polynomial_basis()
 { return polynomialBasis; }
 
+
 inline void SharedOrthogPolyApproxData::
 polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
-{ polynomialBasis = poly_basis; }
+{
+  polynomialBasis = poly_basis;
+  size_t i, num_vars = poly_basis.size();
+  orthogPolyTypes.resize(num_vars);
+  for (i=0; i<num_vars; ++i)
+    orthogPolyTypes[i] = poly_basis[i].basis_type();
+}
 
 
 inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
@@ -491,9 +500,8 @@ restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
 
 inline Real SharedOrthogPolyApproxData::
 multivariate_polynomial(const RealVector& x, const UShortArray& indices)
-{
-  return multivariate_polynomial(x, indices, polynomialBasis);
-}
+{ return multivariate_polynomial(x, indices, polynomialBasis); }
+
 
 inline Real SharedOrthogPolyApproxData::
 multivariate_polynomial(const RealVector& x, const UShortArray& indices, 
@@ -516,6 +524,7 @@ multivariate_polynomial(const RealVector& x, const UShortArray& indices,
 {
   return multivariate_polynomial(x, indices, non_rand_indices, polynomialBasis);
 }
+
 
 /** All variables version. */
 inline Real SharedOrthogPolyApproxData::
