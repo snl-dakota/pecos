@@ -93,11 +93,13 @@ int main(int argc, char* argv[])
 #ifdef VERB
   std::cout << "Instantiating basis...\n";
 #endif
+
   size_t num_vars = NUMVARS;
   std::vector<BasisPolynomial> poly_basis(num_vars); // array of envelopes
   for (int i=0; i<num_vars; ++i)
     poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG); // envelope operator=
   csg_driver->initialize_grid(poly_basis);
+
 #ifdef VERB
   std::cout << "  - done\n";
 #endif
@@ -118,10 +120,8 @@ int main(int argc, char* argv[])
                                    2);                   // soft conv limit
   BasisConfigOptions bcopt;
   UShortArray aord(MAXORD,NUMVARS);
-  // Envelope:
-  SharedBasisApproxData shared_data;
-  // Letter:
-  SharedProjectOrthogPolyApproxData* shared_poly_data = new
+  SharedBasisApproxData shared_data;                          // Envelope
+  SharedProjectOrthogPolyApproxData* shared_poly_data = new   // Letter
     SharedProjectOrthogPolyApproxData(BTYPE,aord,NUMVARS,expcfgopt,bcopt);
   shared_data.assign_rep(shared_poly_data, false); // don't increment ref count
   shared_poly_data->integration_driver_rep(csg_driver);
@@ -132,18 +132,19 @@ int main(int argc, char* argv[])
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
     poly_approx[iQoI].assign_rep(new 
       ProjectOrthogPolyApproximation(shared_data), false); // assign letter
+
 #ifdef VERB
   std::cout << "  - done\n";
 #endif
  
-  //initial grid and compute reference approximation
+  // initial grid and compute reference approximation
   RealMatrix var_sets;
   csg_driver->compute_grid(var_sets);
   int numPts = var_sets.numCols();
   assert(num_vars==var_sets.numRows());
   
 #ifdef VERB
-  std::cout << "Evaluate function on reference grid and instantiate SurrogateData...\n";
+  std::cout << "Evaluate function on reference grid, instantiate SurrogateData and compute coefficients ...\n"; 
 #endif
   // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
   std::vector<bool> computedGridIDs(numPts,true) ; 
@@ -159,11 +160,7 @@ int main(int argc, char* argv[])
     }
     poly_approx[iQoI].surrogate_data(sdi);
   } 
-#ifdef VERB
-  std::cout << "  - done\n";
-#endif
 
-  //return(0);
   shared_poly_data->allocate_data();    
   std::cout << "  - done\n";
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -171,6 +168,10 @@ int main(int argc, char* argv[])
     poly_approx[iQoI].compute_coefficients();
   }
   
+#ifdef VERB
+  std::cout << "  - done\n";
+#endif
+
   // ----------------- Comment from now restarts/etc------------------------
   // // if restart, check if grid is in the restart
   // std::vector<bool> computedGridIDs ;
@@ -190,7 +191,6 @@ int main(int argc, char* argv[])
   //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
   // }
 
-#define DEBUG
 #ifdef DEBUG
   write_data(std::cout, var_sets, true, true, true);
   write_US2A(std::cout, csg_driver->smolyak_multi_index());
@@ -198,13 +198,11 @@ int main(int argc, char* argv[])
 
   // start refinement
   csg_driver->initialize_sets();
-
   UShortArraySet a;
   for ( int iter = 0; iter<NITER; iter++) {
 
     a = csg_driver->active_multi_index();
     std::cout<<"Refine, iteration: "<<iter+1<<'\n';
-    //write_USAS(std::cout, a) ;
 
     std::vector<short unsigned int> asave;
     int choose = 0;
@@ -218,7 +216,7 @@ int main(int argc, char* argv[])
 
       csg_driver->push_trial_set(*it);
 
-      // Surrogate data needs to be updated 
+      // Update surrogate data
       numPts = 0;
       if (shared_poly_data->restore_available()) {
 
@@ -237,6 +235,7 @@ int main(int argc, char* argv[])
 
       }
       else {
+
 	// New set -> compute
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 	csg_driver->compute_trial_grid(var_sets);
