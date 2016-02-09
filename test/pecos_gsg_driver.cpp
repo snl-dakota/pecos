@@ -291,6 +291,9 @@ int main(int argc, char* argv[])
     shared_poly_data->pre_restore_data();
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
       poly_approx[iQoI].restore_coefficients();
+      //ProjectOrthogPolyApproximation* poly_approx_rep =
+      //(ProjectOrthogPolyApproximation*)poly_approx[iQoI].approx_rep();
+      //PCout<<poly_approx_rep->variance()<<endl;
       SurrogateData sdi = poly_approx[iQoI].surrogate_data();
       int numPts = sdi.restore(idxRestore,true);
     }
