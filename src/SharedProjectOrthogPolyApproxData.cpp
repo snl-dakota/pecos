@@ -209,8 +209,7 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
 }
 
 
-void SharedProjectOrthogPolyApproxData::
-pre_combine_data(short combine_type, bool swap)
+bool SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -228,22 +227,25 @@ pre_combine_data(short combine_type, bool swap)
     // tensor_product_value() usage for combined coefficient sets.
 
     // base class version is sufficient; no specialization based on exp form
-    SharedOrthogPolyApproxData::pre_combine_data(combine_type, swap);
+    return SharedOrthogPolyApproxData::pre_combine_data(combine_type);
     break;
   }
   case MULT_COMBINE: {
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
+      bool swap = !driverRep->maximal_grid();
       if (swap) swap_data();
       for (size_t i=0; i<numVars; ++i)
 	approxOrder[i] += storedApproxOrder[i];
       UShort2DArray multi_index_prod;
       tensor_product_multi_index(approxOrder, combinedMultiIndex);
       allocate_component_sobol(combinedMultiIndex);
+      return swap;
       break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
+      bool swap = !driverRep->maximal_grid();
       if (swap) swap_data();
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
@@ -270,18 +272,19 @@ pre_combine_data(short combine_type, bool swap)
 	}
       }
       allocate_component_sobol(combinedMultiIndex);
+      return swap;
       break;
     }
     default:
       // base class version supports product of two total-order expansions
-      SharedOrthogPolyApproxData::pre_combine_data(combine_type, swap);
+      return SharedOrthogPolyApproxData::pre_combine_data(combine_type);
       break;
     }
     break;
   }
   case ADD_MULT_COMBINE:
     // base class manages this placeholder
-    SharedOrthogPolyApproxData::pre_combine_data(combine_type, swap);
+    return SharedOrthogPolyApproxData::pre_combine_data(combine_type);
     break;
   }
 }

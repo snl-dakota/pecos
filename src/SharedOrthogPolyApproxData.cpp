@@ -216,6 +216,34 @@ void SharedOrthogPolyApproxData::store_data()
 }
 
 
+bool SharedOrthogPolyApproxData::maximal_expansion()
+{
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case COMBINED_SPARSE_GRID:
+    return driverRep->maximal_grid(); break;
+  //case : Not supported: different expansionSamples with same exp order
+  default:
+    if (storedApproxOrder.size() != approxOrder.size()) return true;
+    else {
+      size_t i, len = approxOrder.size();
+      // first test for strict =, < , or >
+      bool strict_eq = true, strict_less_eq = true, strict_great_eq = true;
+      for (i=0; i<len; ++i) {
+	if (approxOrder[i] > storedApproxOrder[i])
+	  strict_eq = strict_less_eq  = false;
+	else if (approxOrder[i] < storedApproxOrder[i])
+	  strict_eq = strict_great_eq = false;
+      }
+      if (strict_eq || strict_great_eq) return true;
+      else if (strict_less_eq)          return false;
+      // if no strict order, resort to calculation of total_order_terms()
+      else return (total_order_terms(approxOrder) >=
+		   total_order_terms(storedApproxOrder));
+    }
+  }
+}
+
+
 void SharedOrthogPolyApproxData::swap_data()
 {
   std::swap(storedMultiIndex, multiIndex);
@@ -228,10 +256,23 @@ void SharedOrthogPolyApproxData::swap_data()
 }
 
 
-void SharedOrthogPolyApproxData::pre_combine_data(short combine_type, bool swap)
+bool SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
+
+  // Adequate for now: if not currently the maximal grid, then swap with the
+  // stored grid (one option only)
+  bool swap = !maximal_expansion();
+
+  // More general: retrieve the most refined from the existing grids,
+  // as initiated from the set of sequence specifications:
+  //size_t max_index = maximal_grid_index();
+  //swap_data(max_index);
+
+  // Most general: overlay all grid refinement levels to create a new superset
+  //size_t new_index = overlay_maximal_grid();
+  //swap_data(new_index);
 
   if (swap) swap_data();
 
@@ -268,6 +309,8 @@ void SharedOrthogPolyApproxData::pre_combine_data(short combine_type, bool swap)
     abort_handler(-1);
     break;
   }
+
+  return swap;
 }
 
 

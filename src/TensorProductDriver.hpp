@@ -100,6 +100,9 @@ public:
   /// helper initializer of tensor grid settings (except distribution params)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
+  /// test if the current grid state is the maximal grid state
+  bool maximal_grid() const;
+
 private:
 
   //
@@ -216,6 +219,10 @@ inline const RealVector& TensorProductDriver::type1_weight_sets() const
 
 inline const RealMatrix& TensorProductDriver::type2_weight_sets() const
 { return type2WeightSets; }
+
+
+inline bool TensorProductDriver::maximal_grid() const
+{ return (type1WeightSets.length() > storedType1WeightSets.length()); }
 
 
 inline const UShortArray& TensorProductDriver::level_index() const

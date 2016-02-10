@@ -255,17 +255,33 @@ void SharedInterpPolyApproxData::store_data()
 { driverRep->store_grid(); }
 
 
-void SharedInterpPolyApproxData::pre_combine_data(short combine_type, bool swap)
+bool SharedInterpPolyApproxData::maximal_expansion()
+{ return driverRep->maximal_grid(); }
+
+
+bool SharedInterpPolyApproxData::pre_combine_data(short combine_type)
 {
-  // if current expansion is not maximal, then activate maximal by swapping 
-  // stored and active --> downstream code overlays stored values on active
-  // maximal grid
+  // Adequate for now: if not currently the maximal grid, then swap with the
+  // stored grid (one option only).  Supports case where both expansions are
+  // refined with GSG (initial level/order is insufficient; need to compare
+  // final refined states).
+  // Note: if we assume that multiIndex subsets are enforced across hierarchy,
+  // then maximal grid is sufficient to allow reinterpolation of all data.
+  bool swap = !maximal_expansion();
+  // if current is not maximal, then activate maximal by swapping stored and
+  // active --> downstream code overlays stored values on active maximal grid
   if (swap) { driverRep->swap_grid(); allocate_component_sobol(); }
-  // TO DO: a more rigorous approach would overlay multiple grids to create the
-  // maximal grid, but for now, it is sufficient to pick 1 from those available.
-  // Need to support general case where both expansions are refined with GSG:
-  // initial level/order is insufficient; assume for now that multiIndex subsets
-  // are enforced across hierarchy such that picking maximal is sufficient.
+
+  // More general: retrieve the most refined from the existing grids,
+  // as initiated from the set of sequence specifications:
+  //size_t max_index = maximal_grid_index();
+  //driverRep->swap_grid(max_index);
+
+  // Most general: overlay all grid refinement levels to create a new superset
+  //size_t new_index = overlay_maximal_grid();
+  //driverRep->swap_grid(new_index);
+
+  return swap;
 }
 
 

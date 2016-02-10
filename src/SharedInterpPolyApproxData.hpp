@@ -82,7 +82,7 @@ protected:
   void decrement_data();
   void post_restore_data();
   void post_finalize_data();
-  void pre_combine_data(short combine_type, bool swap);
+  bool pre_combine_data(short combine_type);
   void post_combine_data(short combine_type);
   void store_data();
 
@@ -290,6 +290,8 @@ protected:
 					 const SizetList& subset_indices);
   /// for a particular level, test for equality between basis v2 and basis v1
   bool same_basis(unsigned short level, size_t v1, size_t v2);
+  /// detect whether current expansion settings are the most refined
+  bool maximal_expansion();
 
   //
   //- Heading: Data

@@ -69,6 +69,9 @@ public:
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
+  /// test if the current grid state is the maximal grid state
+  bool maximal_grid() const;
+
   void store_grid();
   void clear_stored();
   void swap_grid();
@@ -349,12 +352,8 @@ inline CombinedSparseGridDriver::~CombinedSparseGridDriver()
 { }
 
 
-//inline const IntArray& CombinedSparseGridDriver::api_integration_rules() const
-//{ return apiIntegrationRules; }
-
-
-//inline const IntArray& CombinedSparseGridDriver::api_growth_rules() const
-//{ return apiGrowthRules; }
+inline bool CombinedSparseGridDriver::maximal_grid() const
+{ return (type1WeightSets.length() > storedType1WeightSets.length()); }
 
 
 inline const UShort2DArray& CombinedSparseGridDriver::

@@ -371,6 +371,17 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
+bool IntegrationDriver::maximal_grid() const
+{
+  if (!driverRep) {
+    PCerr << "Error: maximal_grid() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return driverRep->maximal_grid();
+}
+
+
 void IntegrationDriver::store_grid()
 { } // default is no-op
 

@@ -110,13 +110,15 @@ protected:
   void allocate_data();
 
   void store_data();
-  void pre_combine_data(short combine_type, bool swap);
+  bool pre_combine_data(short combine_type);
   void post_combine_data(short combine_type);
 
   //
   //- Heading: Member functions
   //
 
+  /// detect whether current expansion settings are the most refined
+  bool maximal_expansion();
   /// swap current/active and stored/inactive data sets
   void swap_data();
 

@@ -76,6 +76,8 @@ public:
   virtual void reinterpolated_tensor_grid(const UShortArray& lev_index,
 					  const SizetList& reinterp_indices);
 
+  /// test if the current grid state is the maximal grid state
+  virtual bool maximal_grid() const;
   /// store configuration settings for the current grid (for use within a
   /// prescribed grid sequence)
   virtual void store_grid();
