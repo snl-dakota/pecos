@@ -223,23 +223,21 @@ bool SharedOrthogPolyApproxData::maximal_expansion()
     return driverRep->maximal_grid(); break;
   //case : Not supported: different expansionSamples with same exp order
   default:
-    if (storedApproxOrder.size() != approxOrder.size()) return true;
-    else {
-      size_t i, len = approxOrder.size();
-      // first test for strict =, < , or >
-      bool strict_eq = true, strict_less_eq = true, strict_great_eq = true;
-      for (i=0; i<len; ++i) {
-	if (approxOrder[i] > storedApproxOrder[i])
-	  strict_eq = strict_less_eq  = false;
-	else if (approxOrder[i] < storedApproxOrder[i])
-	  strict_eq = strict_great_eq = false;
-      }
-      if (strict_eq || strict_great_eq) return true;
-      else if (strict_less_eq)          return false;
-      // if no strict order, resort to calculation of total_order_terms()
-      else return (total_order_terms(approxOrder) >=
-		   total_order_terms(storedApproxOrder));
+    if (storedApproxOrder.empty()) return true;
+    size_t i, len = approxOrder.size();
+    // first test for strict =, < , or >
+    bool strict_eq = true, strict_less_eq = true, strict_great_eq = true;
+    for (i=0; i<len; ++i) {
+      if (approxOrder[i] > storedApproxOrder[i])
+	strict_eq = strict_less_eq  = false;
+      else if (approxOrder[i] < storedApproxOrder[i])
+	strict_eq = strict_great_eq = false;
     }
+    if (strict_eq || strict_great_eq) return true;
+    else if (strict_less_eq)          return false;
+    // if no strict order, resort to calculation of total_order_terms()
+    else return (total_order_terms(approxOrder) >=
+		 total_order_terms(storedApproxOrder));
   }
 }
 
@@ -262,19 +260,18 @@ bool SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
   // by store_coefficients()
 
   // Adequate for now: if not currently the maximal grid, then swap with the
-  // stored grid (one option only)
+  // stored grid (only one is stored for now)
   bool swap = !maximal_expansion();
+  if (swap) swap_data();
 
   // More general: retrieve the most refined from the existing grids,
-  // as initiated from the set of sequence specifications:
+  // as initiated from the sequence specification and subsequently refined:
   //size_t max_index = maximal_grid_index();
-  //swap_data(max_index);
+  //if (current_grid_index() != max_index) swap_data(max_index);
 
   // Most general: overlay all grid refinement levels to create a new superset
   //size_t new_index = overlay_maximal_grid();
-  //swap_data(new_index);
-
-  if (swap) swap_data();
+  //if (current_grid_index() != new_index) swap_data(new_index);
 
   switch (combine_type) {
   case ADD_COMBINE: {

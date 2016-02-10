@@ -290,8 +290,6 @@ protected:
 					 const SizetList& subset_indices);
   /// for a particular level, test for equality between basis v2 and basis v1
   bool same_basis(unsigned short level, size_t v1, size_t v2);
-  /// detect whether current expansion settings are the most refined
-  bool maximal_expansion();
 
   //
   //- Heading: Data
