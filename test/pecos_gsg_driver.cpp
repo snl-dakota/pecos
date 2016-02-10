@@ -201,18 +201,27 @@ int main(int argc, char* argv[])
   UShortArraySet a;
   for ( int iter = 0; iter<NITER; iter++) {
 
+    /* Compute base variance */
+    RealVector respVariance(nQoI,0.0);  
+    for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+      PolynomialApproximation* poly_approx_rep =
+	(PolynomialApproximation *) poly_approx[iQoI].approx_rep();
+      respVariance[iQoI] = poly_approx_rep->variance() ;
+    }
+    Real deltaVar = 0.0;
+    std::vector<short unsigned int> asave;
+
     a = csg_driver->active_multi_index();
     std::cout<<"Refine, iteration: "<<iter+1<<'\n';
 
-    std::vector<short unsigned int> asave;
     int choose = 0;
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
 
-      int pick = std::rand();
-      if ( pick > choose) {
-        asave  = *it;
-        choose = pick;
-      }
+      // int pick = std::rand();
+      // if ( pick > choose) {
+      //   asave  = *it;
+      //   choose = pick;
+      // }
 
       csg_driver->push_trial_set(*it);
 
@@ -261,6 +270,21 @@ int main(int argc, char* argv[])
 	}
       }
 
+
+      /* Compute (normalized) change in variance */
+      RealVector respVarianceNew(nQoI,0.0);  
+      for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+	PolynomialApproximation* poly_approx_rep =
+	  (PolynomialApproximation *) poly_approx[iQoI].approx_rep();
+	respVarianceNew[iQoI] = poly_approx_rep->variance() ;
+      }
+      respVarianceNew -= respVariance;
+      Real normChange = respVarianceNew.normFrobenius()/csg_driver->unique_trial_points();
+      if (normChange > deltaVar) {
+        deltaVar = normChange;
+        asave = *it;
+      }
+
       // ----------------- Comment from now restarts/etc------------------------
       // int numHits = checkSetsInStoredSet(storedSets,var_sets,computedGridIDs);
       // if (numHits<var_sets.numCols())
@@ -281,7 +305,7 @@ int main(int argc, char* argv[])
 
     }
 
-    std::cout<<asave<<std::endl ;
+    std::cout<<"Choosing "<<asave<<std::endl ;
 
     csg_driver->update_sets(asave);
     csg_driver->update_reference();
@@ -291,9 +315,6 @@ int main(int argc, char* argv[])
     shared_poly_data->pre_restore_data();
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
       poly_approx[iQoI].restore_coefficients();
-      //ProjectOrthogPolyApproximation* poly_approx_rep =
-      //(ProjectOrthogPolyApproximation*)poly_approx[iQoI].approx_rep();
-      //PCout<<poly_approx_rep->variance()<<endl;
       SurrogateData sdi = poly_approx[iQoI].surrogate_data();
       int numPts = sdi.restore(idxRestore,true);
     }
@@ -324,7 +345,7 @@ int main(int argc, char* argv[])
   shared_poly_data->post_finalize_data();
 
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    poly_approx[iQoI].print_coefficients(std::cout,true);
+    poly_approx[iQoI].print_coefficients(std::cout,false);
 
 
   // Print final sets
