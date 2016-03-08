@@ -100,7 +100,7 @@ public:
     numPrimaryEqs_  = num_primary_eqs;
   };
 
-  Real get_residual_tolerance()
+  Real get_residual_tolerance() const
   {
     return residualTols_[0];
   };
