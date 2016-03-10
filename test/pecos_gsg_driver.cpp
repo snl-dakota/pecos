@@ -37,9 +37,9 @@ using namespace std;
 #define MAXORD             5
 #define NQOI               1
 #define VERBOSE            1
-#define GRIDFILE           "savedgrid.dat"
-#define FCNFILE            "savedfcn.dat"
-
+#define INDEXFILE          "savedIndex.dat"
+#define GRIDFILE           "savedGrid.dat"
+#define FCNFILE            "savedFeval.dat"
 
 void restartGSGdriver(const char *grid, const char *fcnvals, 
                       Pecos::RealMatrix &storedSets, Pecos::RealVector
@@ -65,30 +65,34 @@ int main(int argc, char* argv[])
   using namespace Pecos;
 
   // Define defaults
-  int            nQoI    = NQOI;      /* No of Quantities of Interest (model outputs) */
-  size_t         nvar = NUMVARS ;  /* Dimensionality of input space                */
-  unsigned short strtlev = STARTLEV ; /* Starting quadrature level                    */
-  unsigned short verb    = VERBOSE ; /* Starting quadrature level                    */
+  int            nQoI    = NQOI;      /* no. of Quantities of Interest (model outputs) */
+  size_t         nvar    = NUMVARS ;  /* dimensionality of input space */
+  unsigned short mOrd    = MAXORD ;   /* maximum order */
+  unsigned short strtlev = STARTLEV ; /* starting quadrature level */
+  unsigned short verb    = VERBOSE  ; /* verbosity  */
   short btype = (short) BTYPE;
 
   // Command-line arguments: read user input
   int c; 
-  while ((c=getopt(argc,(char **)argv,"hd:n:l:v:"))!=-1){
+  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:"))!=-1){
      switch (c) {
      case 'h':
        usage();
        break;
      case 'd':
-       nvar =  strtol(optarg, (char **)NULL,0);  
+       nvar    = strtol(optarg, (char **)NULL,0);  
        break;
      case 'n':
-       nQoI =  strtol(optarg, (char **)NULL,0);  
+       nQoI    = strtol(optarg, (char **)NULL,0);  
+       break;
+     case 'm':
+       mOrd    = strtol(optarg, (char **)NULL,0);  
        break;
      case 'l':
-       strtlev =  strtol(optarg, (char **)NULL,0);
+       strtlev = strtol(optarg, (char **)NULL,0);
        break;
      case 'v':
-       verb =  strtol(optarg, (char **)NULL,0);
+       verb    = strtol(optarg, (char **)NULL,0);
        break;
     default :
       break;
@@ -98,7 +102,6 @@ int main(int argc, char* argv[])
 #ifdef VERB
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
 #endif
-  unsigned short level = STARTLEV;  // reference grid level
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
@@ -150,10 +153,10 @@ int main(int argc, char* argv[])
                                    1.e-5,                // conv tol
                                    2);                   // soft conv limit
   BasisConfigOptions bcopt;
-  UShortArray aord(MAXORD,NUMVARS);
+  UShortArray aord(mOrd,nvar);
   SharedBasisApproxData shared_data;                          // Envelope
   SharedProjectOrthogPolyApproxData* shared_poly_data = new   // Letter
-    SharedProjectOrthogPolyApproxData(BTYPE,aord,NUMVARS,expcfgopt,bcopt);
+    SharedProjectOrthogPolyApproxData(BTYPE,aord,nvar,expcfgopt,bcopt);
   shared_data.assign_rep(shared_poly_data, false); // don't increment ref count
   shared_poly_data->integration_driver_rep(csg_driver);
   shared_poly_data->polynomial_basis(poly_basis);
@@ -178,6 +181,7 @@ int main(int argc, char* argv[])
 #ifdef VERB
   std::cout << "Evaluate function on reference grid, instantiate SurrogateData and compute coefficients ...\n"; 
 #endif
+
   // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
   std::vector<bool> computedGridIDs(numPts,true) ; 
   RealMatrix fev0 = feval(var_sets,nQoI,computedGridIDs,NULL);
@@ -283,7 +287,7 @@ int main(int argc, char* argv[])
         numPts = var_sets.numCols();
 
         PCout<<*it<<endl;
-        PCout<<var_sets<<endl;
+        PCout<<RealMatrix(var_sets,Teuchos::TRANS)<<endl;
 
 	computedGridIDs.resize(numPts,true) ; 
         RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
@@ -341,7 +345,7 @@ int main(int argc, char* argv[])
 
     }
 
-    std::cout<<"Choosing "<<asave<<std::endl ;
+    std::cout<<"Choosing :\n"<<asave<<std::endl ;
 
     csg_driver->push_trial_set(asave);
     csg_driver->compute_trial_grid(var_sets);
