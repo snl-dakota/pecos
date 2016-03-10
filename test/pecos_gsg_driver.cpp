@@ -33,9 +33,10 @@ using namespace std;
 #define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
 #define NUMVARS            3
 #define STARTLEV           1
-#define NITER              10
+#define NITER              6
 #define MAXORD             5
 #define NQOI               1
+#define VERBOSE            1
 #define GRIDFILE           "savedgrid.dat"
 #define FCNFILE            "savedfcn.dat"
 
@@ -52,6 +53,11 @@ void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
 RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, void *funInfo)  ;
 
+int usage(){
+  printf("usage: pecos_gsg_driver [-h] [-d<nvar>] [-n<nQoI>]  [-l<strtlev>] [-v <verb>]\n");
+  return (0);
+}
+
 /// A driver program for PECOS.
 int main(int argc, char* argv[])
 {
@@ -59,11 +65,35 @@ int main(int argc, char* argv[])
   using namespace Pecos;
 
   // Define defaults
-  int nQoI = NQOI;
+  int            nQoI    = NQOI;      /* No of Quantities of Interest (model outputs) */
+  size_t         nvar = NUMVARS ;  /* Dimensionality of input space                */
+  unsigned short strtlev = STARTLEV ; /* Starting quadrature level                    */
+  unsigned short verb    = VERBOSE ; /* Starting quadrature level                    */
   short btype = (short) BTYPE;
 
-  // Command-line arguments
-  // empty for now
+  // Command-line arguments: read user input
+  int c; 
+  while ((c=getopt(argc,(char **)argv,"hd:n:l:v:"))!=-1){
+     switch (c) {
+     case 'h':
+       usage();
+       break;
+     case 'd':
+       nvar =  strtol(optarg, (char **)NULL,0);  
+       break;
+     case 'n':
+       nQoI =  strtol(optarg, (char **)NULL,0);  
+       break;
+     case 'l':
+       strtlev =  strtol(optarg, (char **)NULL,0);
+       break;
+     case 'v':
+       verb =  strtol(optarg, (char **)NULL,0);
+       break;
+    default :
+      break;
+     }
+  }
 
 #ifdef VERB
   std::cout << "Instantiating CombinedSparseGridDriver:\n";
@@ -86,7 +116,7 @@ int main(int argc, char* argv[])
   IntegrationDriver int_driver; // empty envelope
   // assign letter using assign_rep()
   CombinedSparseGridDriver* csg_driver
-    = new CombinedSparseGridDriver(level, dimension_pref, growth_rate,
+    = new CombinedSparseGridDriver(strtlev, dimension_pref, growth_rate,
 				   refine_cntl);
   int_driver.assign_rep(csg_driver, false); // don't increment ref count
 
@@ -94,10 +124,11 @@ int main(int argc, char* argv[])
   std::cout << "Instantiating basis...\n";
 #endif
 
-  size_t num_vars = NUMVARS;
-  std::vector<BasisPolynomial> poly_basis(num_vars); // array of envelopes
-  for (int i=0; i<num_vars; ++i)
+  std::vector<BasisPolynomial> poly_basis(nvar); // array of envelopes
+  for (int i=0; i<nvar; ++i) {
     poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG); // envelope operator=
+    poly_basis[i].collocation_rule(GAUSS_PATTERSON);
+  }
   csg_driver->initialize_grid(poly_basis);
 
 #ifdef VERB
@@ -141,7 +172,8 @@ int main(int argc, char* argv[])
   RealMatrix var_sets;
   csg_driver->compute_grid(var_sets);
   int numPts = var_sets.numCols();
-  assert(num_vars==var_sets.numRows());
+  assert(nvar==var_sets.numRows());
+  PCout<<var_sets<<endl;
   
 #ifdef VERB
   std::cout << "Evaluate function on reference grid, instantiate SurrogateData and compute coefficients ...\n"; 
@@ -150,8 +182,8 @@ int main(int argc, char* argv[])
   std::vector<bool> computedGridIDs(numPts,true) ; 
   RealMatrix fev0 = feval(var_sets,nQoI,computedGridIDs,NULL);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    SurrogateDataVars sdv(num_vars,0,0);
-    SurrogateDataResp sdr(1,num_vars); // no gradient or hessian
+    SurrogateDataVars sdv(nvar,0,0);
+    SurrogateDataResp sdr(1,nvar); // no gradient or hessian
     SurrogateData     sdi;
     for( int jCol = 0; jCol < numPts; jCol++) {
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
@@ -249,12 +281,16 @@ int main(int argc, char* argv[])
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 	csg_driver->compute_trial_grid(var_sets);
         numPts = var_sets.numCols();
+
+        PCout<<*it<<endl;
+        PCout<<var_sets<<endl;
+
 	computedGridIDs.resize(numPts,true) ; 
         RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
 
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  SurrogateDataVars sdv(num_vars,0,0);
-	  SurrogateDataResp sdr(1,num_vars); // no gradient or hessian
+	  SurrogateDataVars sdv(nvar,0,0);
+	  SurrogateDataResp sdr(1,nvar); // no gradient or hessian
 	  SurrogateData     sdi = poly_approx[iQoI].surrogate_data();
 	  for( int jCol = 0; jCol < numPts; jCol++) {
 	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
@@ -306,6 +342,11 @@ int main(int argc, char* argv[])
     }
 
     std::cout<<"Choosing "<<asave<<std::endl ;
+
+    csg_driver->push_trial_set(asave);
+    csg_driver->compute_trial_grid(var_sets);
+    PCout<<var_sets<<endl;
+    csg_driver->pop_trial_set();
 
     csg_driver->update_sets(asave);
     csg_driver->update_reference();
