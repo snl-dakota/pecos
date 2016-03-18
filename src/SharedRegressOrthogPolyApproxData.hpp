@@ -39,9 +39,10 @@ public:
   /// default constructor
   RegressionConfigOptions();
   /// constructor
-  RegressionConfigOptions(bool cv, int seed, const RealVector& noise_tols,
-			  Real l2_penalty, bool normalize_cv,
-			  unsigned short init_lev, unsigned short growth_fact,
+  RegressionConfigOptions(bool cv, bool cv_noise_only, int seed,
+			  const RealVector& noise_tols, Real l2_penalty,
+			  bool normalize_cv, unsigned short init_lev,
+			  unsigned short growth_fact,
 			  unsigned short num_advance);
   /// copy constructor
   RegressionConfigOptions(const RegressionConfigOptions& rc_options);
@@ -53,6 +54,10 @@ public:
   /// flag for use of automatic cross-validation for parameter
   /// selection in regression approaches
   bool crossValidation;
+  /// flag to restrict cross-validation to only estimate the noise
+  /// tolerance in order to manage computational cost
+  bool crossValidNoiseOnly;
+
   /// random seed for data fold definition within cross validation
   int randomSeed;
 
@@ -88,27 +93,29 @@ public:
 
 
 inline RegressionConfigOptions::RegressionConfigOptions():
-  crossValidation(false), randomSeed(0), l2Penalty(0.), normalizeCV(false),
-  initSGLevel(0), multiIndexGrowthFactor(2), numAdvancements(3),
-  advanceByFrontier(false)
+  crossValidation(false), crossValidNoiseOnly(false), randomSeed(0),
+  l2Penalty(0.), normalizeCV(false), initSGLevel(0), multiIndexGrowthFactor(2),
+  numAdvancements(3), advanceByFrontier(false)
 { }
 
 
 inline RegressionConfigOptions::
-RegressionConfigOptions(bool cv, int seed, const RealVector& noise_tols,
+RegressionConfigOptions(bool cv, bool cv_noise_only, int seed,
+			const RealVector& noise_tols,
 			Real l2_penalty, bool normalize_cv,
 			unsigned short init_lev, unsigned short growth_fact,
 			unsigned short num_advance):
-  crossValidation(cv), randomSeed(seed), noiseTols(noise_tols),
-  l2Penalty(l2_penalty), normalizeCV(normalize_cv), initSGLevel(init_lev),
-  multiIndexGrowthFactor(growth_fact), numAdvancements(num_advance),
-  advanceByFrontier(false)
+  crossValidation(cv), crossValidNoiseOnly(cv_noise_only), randomSeed(seed),
+  noiseTols(noise_tols), l2Penalty(l2_penalty), normalizeCV(normalize_cv),
+  initSGLevel(init_lev), multiIndexGrowthFactor(growth_fact),
+  numAdvancements(num_advance), advanceByFrontier(false)
 { }
 
 
 inline RegressionConfigOptions::
 RegressionConfigOptions(const RegressionConfigOptions& rc_options):
   crossValidation(rc_options.crossValidation),
+  crossValidNoiseOnly(rc_options.crossValidNoiseOnly),
   randomSeed(rc_options.randomSeed), noiseTols(rc_options.noiseTols),
   l2Penalty(rc_options.l2Penalty), normalizeCV(rc_options.normalizeCV),
   initSGLevel(rc_options.initSGLevel),

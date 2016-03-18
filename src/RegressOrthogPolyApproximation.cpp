@@ -1938,8 +1938,10 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   int num_rhs = B.numCols(), num_dims( approx_order.size() );
   // Do cross validation for varing polynomial orders up to 
   // a maximum order defined by approxOrder[0]
-  unsigned short min_order = 1, ao0 = approx_order[0];
-  if ( min_order > ao0 ) min_order = ao0;
+  unsigned short ao0 = approx_order[0],
+    min_order = (data_rep->regressConfigOptions.crossValidNoiseOnly)
+    ? ao0 : std::min((unsigned short)1, ao0);
+  //if ( min_order > ao0 ) min_order = ao0;
 
   Real best_score = std::numeric_limits<Real>::max(), best_tolerance = 0.;
   int best_basis_parameters_index = 0;
