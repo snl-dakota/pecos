@@ -14,7 +14,7 @@ void get_genz_coefficients( int num_dims, Real factor, int c_type, RealVector &c
 	for ( int d = 0; d < num_dims; d++ )
 	  {
 	    w[d] = 0.0;
-	    c[d] = ( (Real)d + 0.5 ) / (Real)num_dims;
+	    c[d] = ( (Real)d + 4.5 ) / (Real)num_dims;
 	    csum += c[d]; 
 	  }
 	for ( int d = 0; d < num_dims; d++ )
@@ -102,6 +102,57 @@ double genz(String an_comp, RealVector &xC)
 	  fnVals += c[d]* xC[d];
 	}
       fnVals = 1.0 / std::pow( fnVals, (Real)(numVars+1) );
+      break;
+    }
+  }
+
+  return fnVals; // no failure
+}
+
+double custPol(String an_comp, RealVector &xC)
+{
+  int fn_type;
+  RealVector cMain, cCross;
+  int numVars = xC.length();
+
+  cMain.resize( 2*numVars );
+  cCross.resize( numVars*(numVars-1)/2 );
+
+  if (an_comp == "pol2") { 
+    /* 2-nd order polynomial */
+    fn_type = 0;
+    for ( int d = 0; d < numVars; d++ ) {
+      cMain[d        ] = ( (Real) d + 1.0 ) / (Real) numVars ;
+      cMain[d+numVars] = ( (Real) d + 5.0 ) / (Real) numVars ;
+    }
+    int idx=0;
+    for ( int d1 = 1; d1 < numVars; d1++ ) {
+      for ( int d2 = 0; d2 < d1; d2++,idx++ ) {
+        cCross[idx] = ( (Real) (d1+1.0)*(d2+1.0) + 1.0 ) / ((Real) numVars*numVars) ; ;
+      }
+    }
+  }
+  else {
+    std::cerr << "Error: option for custPol() is not yet implemented : "<<an_comp
+	 << std::endl;
+    std::terminate();
+  } 
+
+  // **** f:
+  Real fnVals;
+  switch (fn_type) {
+    case 0: {
+      fnVals = 0.0;
+      for ( int d = 0; d < numVars; d++ ){
+	fnVals += cMain[d        ] * xC[d] * xC[d];
+	fnVals += cMain[d+numVars] * xC[d] ;
+      }
+      int idx=0;
+      for ( int d1 = 1; d1 < numVars; d1++ ) {
+        for ( int d2 = 0; d2 < d1; d2++,idx++ ) {
+          fnVals += cCross[idx] * xC[d1] * xC[d2] ;
+        }
+      }
       break;
     }
   }

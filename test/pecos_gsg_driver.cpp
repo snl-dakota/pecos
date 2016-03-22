@@ -452,9 +452,9 @@ RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &c
   for (i=0; i<numPts; ++i) {
     if (!computedGridIDs[i]) continue;
     RealVector xIn(numDim);
-    for (j=0; j<numDim; ++j)
-      xIn[j] = dataMat(j,i);
-    fev(ieval,0)=genz(String("cp1"), xIn);
+    for (j=0; j<numDim; ++j) xIn[j] = dataMat(j,i);
+    //fev(ieval,0)=genz(String("cp1"), xIn);
+    fev(ieval,0)=custPol(String("pol2"), xIn);
     ieval++;   
   }
   
