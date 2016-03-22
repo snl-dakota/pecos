@@ -38,15 +38,23 @@ static const char rcsId[]="@(#) $Id: LHSDriver.cpp 5248 2008-09-05 18:51:52Z wjb
 #define LHS_PREP_FC     LHS_GLOBAL_(lhs_prep,LHS_PREP)
 #define LHS_RUN_FC      LHS_GLOBAL_(lhs_run,LHS_RUN)
 #define LHS_CLOSE_FC    LHS_GLOBAL_(lhs_close,LHS_CLOSE)
-#define LHS_OPTIONS2_FC LHS_GLOBAL_(lhs_options2,LHS_OPTIONS2)
-#define LHS_DIST2_FC    LHS_GLOBAL_(lhs_dist2,LHS_DIST2)
-#define LHS_UDIST2_FC   LHS_GLOBAL_(lhs_udist2,LHS_UDIST2)
-#define LHS_CONST2_FC   LHS_GLOBAL_(lhs_const2,LHS_CONST2)
-#define LHS_CORR2_FC    LHS_GLOBAL_(lhs_corr2,LHS_CORR2)
-#define LHS_FILES2_FC   LHS_GLOBAL_(lhs_files2,LHS_FILES2)
+//#define LHS_OPTIONS2_FC LHS_GLOBAL_(lhs_options2,LHS_OPTIONS2)
+//#define LHS_DIST2_FC    LHS_GLOBAL_(lhs_dist2,LHS_DIST2)
+//#define LHS_UDIST2_FC   LHS_GLOBAL_(lhs_udist2,LHS_UDIST2)
+//#define LHS_CONST2_FC   LHS_GLOBAL_(lhs_const2,LHS_CONST2)
+//#define LHS_CORR2_FC    LHS_GLOBAL_(lhs_corr2,LHS_CORR2)
+//#define LHS_FILES2_FC   LHS_GLOBAL_(lhs_files2,LHS_FILES2)
 #define defaultrnum1    LHS_GLOBAL(defaultrnum1,DEFAULTRNUM1)
 #define defaultrnum2    LHS_GLOBAL(defaultrnum2,DEFAULTRNUM2)
 
+// BMA (20160315): Changed to use Fortran 2003 ISO C bindings.
+// The Fortran symbol will be lowercase with same name as if in C
+#define  LHS_OPTIONS2_FC lhs_options2
+#define  LHS_DIST2_FC lhs_dist2
+#define  LHS_UDIST2_FC lhs_udist2
+#define  LHS_CONST2_FC lhs_const2
+#define  LHS_CORR2_FC lhs_corr2
+#define  LHS_FILES2_FC lhs_files2
 
 
 #endif // HAVE_CONFIG_H
