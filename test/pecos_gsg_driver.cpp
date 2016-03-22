@@ -29,6 +29,8 @@ using namespace std;
 
 #define VERB
 
+#define POLYTYPE           LEGENDRE_ORTHOG
+#define QUADRULE           GAUSS_PATTERSON
 #define MAX_CHARS_PER_LINE 1000
 #define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
 #define NUMVARS            3
@@ -65,16 +67,19 @@ int main(int argc, char* argv[])
   using namespace Pecos;
 
   // Define defaults
-  int            nQoI    = NQOI;      /* no. of Quantities of Interest (model outputs) */
-  size_t         nvar    = NUMVARS ;  /* dimensionality of input space */
-  unsigned short mOrd    = MAXORD ;   /* maximum order */
-  unsigned short strtlev = STARTLEV ; /* starting quadrature level */
-  unsigned short verb    = VERBOSE  ; /* verbosity  */
+  int            polyType = POLYTYPE ;
+  int            quadRule = QUADRULE ;
+  int            nQoI     = NQOI;      /* no. of Quantities of Interest (model outputs) */
+  size_t         nvar     = NUMVARS ;  /* dimensionality of input space */
+  unsigned short mOrd     = MAXORD ;   /* maximum order */
+  unsigned short strtlev  = STARTLEV ; /* starting quadrature level */
+  unsigned short verb     = VERBOSE  ; /* verbosity  */
   short btype = (short) BTYPE;
 
+  String pstring, qstring;
   // Command-line arguments: read user input
   int c; 
-  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:"))!=-1){
+  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:p:"))!=-1){
      switch (c) {
      case 'h':
        usage();
@@ -91,12 +96,25 @@ int main(int argc, char* argv[])
      case 'l':
        strtlev = strtol(optarg, (char **)NULL,0);
        break;
+     case 'p':
+       pstring = String(optarg);
+       break;
      case 'v':
        verb    = strtol(optarg, (char **)NULL,0);
        break;
     default :
       break;
      }
+  }
+
+  // Retrieve command-line setup
+  if (pstring == String("LEGENDRE")) {
+    polyType = LEGENDRE_ORTHOG ;
+    quadRule = GAUSS_PATTERSON ;
+  }
+  else if (pstring == String("HERMITE")) {
+    polyType = HERMITE_ORTHOG ;
+    quadRule = GENZ_KEISTER   ;
   }
 
 #ifdef VERB
@@ -129,8 +147,8 @@ int main(int argc, char* argv[])
 
   std::vector<BasisPolynomial> poly_basis(nvar); // array of envelopes
   for (int i=0; i<nvar; ++i) {
-    poly_basis[i] = BasisPolynomial(LEGENDRE_ORTHOG); // envelope operator=
-    poly_basis[i].collocation_rule(GAUSS_PATTERSON);
+    poly_basis[i] = BasisPolynomial(polyType); // envelope operator=
+    poly_basis[i].collocation_rule(quadRule);
   }
   csg_driver->initialize_grid(poly_basis);
 
