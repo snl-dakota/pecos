@@ -285,6 +285,7 @@ void MultipleSolutionLinearModelCrossValidationIterator::collect_fold_data()
 #ifdef HEAT_ENABLE_MPI
       send( foldTols_, master_processor_id(), MPICommunicator_ ); 
       send( foldErrors_, master_processor_id(), MPICommunicator_ );
+      send( foldCoefficientStats_, master_processor_id(), MPICommunicator_ );
 #endif
     }
   else 
@@ -294,12 +295,15 @@ void MultipleSolutionLinearModelCrossValidationIterator::collect_fold_data()
 	  if ( p != master_processor_id() )
 	    {
 	      std::vector<RealVector> fold_tols, fold_errors;
+	      std::vector<RealMatrix> fold_coefficient_stats;
+	      
 	      //std::cout << "Master process receiving data from processor "
 	      //	  << p << std::endl;
 
 #ifdef HEAT_ENABLE_MPI //hack 
 	      receive( fold_tols, p, MPICommunicator_ ); 
 	      receive( fold_errors, p, MPICommunicator_ );
+	      receive( fold_coefficient_stats, p, MPICommunicator_ );
 #endif
 	      for ( int iter = 0; iter < numFolds_; iter++ )
 		{
@@ -307,6 +311,7 @@ void MultipleSolutionLinearModelCrossValidationIterator::collect_fold_data()
 		    {
 		      foldTols_[iter] = fold_tols[iter];
 		      foldErrors_[iter] = fold_errors[iter];
+		      foldCoefficientStats_[iter] = fold_coefficient_stats[iter];
 		    }
 		}
 	    }
@@ -431,6 +436,7 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
   foldDiffs_.resize( num_folds() );
   foldTols_.resize( num_folds() );
   foldErrors_.resize( num_folds() );
+  foldCoefficientStats_.resize(num_folds());
   for ( int iter = 0; iter < num_folds(); iter++ )
     {
       if ( ( (iter+1) % num_processors() ) == processor_id() ) 
@@ -475,6 +481,11 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
 	    }
 
 	  int num_path_steps = coeff.numCols();
+
+	  foldCoefficientStats_[iter].shapeUninitialized(num_path_steps,
+							   1);
+	  for ( int j = 0; j < num_path_steps; j++ )
+	    foldCoefficientStats_[iter](j,0) = coeff(0,j);
 
 	  // only keep values associated with primary equations.
 	  // assumes if faulty data exists then all data associated with 
@@ -531,6 +542,30 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
       bestResidualTol_ *= std::sqrt( (Real)num_pts() / (Real)training_size );
 
       //solver_->set_residual_tolerance( best_tol );
+
+      // for each fold find coefficient stat that corresponds to the
+      // residual which is closest to the chosen residual. The chosen
+      // residual is interpolated so the choice may not be the same for
+      // each fold.
+      coefficientStats_.shapeUninitialized(num_folds(),1);
+      for ( int iter = 0; iter < num_folds(); iter++ ){
+	int chosen_idx = -1;
+	int resid_distance = std::numeric_limits<double>::max();
+	for ( int i = 0; i < foldCoefficientStats_[iter].numRows(); i++ ){
+	  Real dist=std::abs(
+		foldCoefficientStats_[iter](i,0)-bestResidualTol_);
+	  if (dist <= resid_distance){
+	    resid_distance = dist;
+	    chosen_idx = i;
+	  }else{
+	    coefficientStats_(iter,0) =
+	      foldCoefficientStats_[iter](chosen_idx,0);
+	    break;
+	  }
+	}
+      }
+
+      
       return scores_[argmin_index];
     }
   else return -1;
@@ -544,5 +579,9 @@ boost::shared_ptr<LinearModelCrossValidationIterator> MultipleSolutionLinearMode
     
   return cv_iterator;
 };
+
+void MultipleSolutionLinearModelCrossValidationIterator::get_coefficient_stats(RealMatrix &coeff_stats){
+  coeff_stats = coefficientStats_;
+}
 
 } // namespace Pecos

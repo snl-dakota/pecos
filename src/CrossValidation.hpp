@@ -120,6 +120,15 @@ protected:
   /// The residual tolerance that minimizes the cross validation score
   Real bestResidualTol_;
 
+  /// statistics of the coefficients generated on the solution path. This is
+  /// useful if using cross validation to estimate variance in a moment, e.g
+  /// the variance of the mean of a PCE 
+  std::vector< RealMatrix > foldCoefficientStats_;
+
+  /// statistics of the coefficients generated corresponding to the best
+  /// residual chosen by cross validation.
+  RealMatrix coefficientStats_;
+  
 public:
 
   LinearModelCrossValidationIterator() : bestResidualTol_( 0.0 ) {};
@@ -185,6 +194,8 @@ public:
   void compute_scores();
 
   Real run_cross_validation( RealMatrix &A, RealVector &b );
+
+  void get_coefficient_stats(RealMatrix &coeff_stats);
 
    /// Copy only the solver of the cross validation iterator;
   boost::shared_ptr<LinearModelCrossValidationIterator> copy();
