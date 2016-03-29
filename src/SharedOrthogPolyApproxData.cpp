@@ -121,18 +121,18 @@ increment_trial_set(CombinedSparseGridDriver* csg_driver,
 
 void SharedOrthogPolyApproxData::
 decrement_trial_set(const UShortArray& trial_set,
-		    UShort2DArray& aggregated_mi, bool store_map)
+		    UShort2DArray& aggregated_mi, bool save_map)
 {
   // reset the aggregated multi-index
   size_t num_exp_terms = tpMultiIndexMapRef.back();
   aggregated_mi.resize(num_exp_terms); // truncate previous increment
 
   // reset tensor-product bookkeeping and save restorable data
-  savedLevMultiIndex.push_back(trial_set);
-  savedTPMultiIndex.push_back(tpMultiIndex.back());
-  if (store_map) { // always needed if we want to mix and match
-    savedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
-    savedTPMultiIndexMapRef.push_back(num_exp_terms);
+  poppedLevMultiIndex.push_back(trial_set);
+  poppedTPMultiIndex.push_back(tpMultiIndex.back());
+  if (save_map) { // always needed if we want to mix and match
+    poppedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
+    poppedTPMultiIndexMapRef.push_back(num_exp_terms);
   }
 
   tpMultiIndex.pop_back();
@@ -145,16 +145,16 @@ void SharedOrthogPolyApproxData::
 pre_restore_trial_set(const UShortArray& trial_set,
 		      UShort2DArray& aggregated_mi, bool monotonic)
 {
-  restoreIndex = find_index(savedLevMultiIndex, trial_set);
+  restoreIndex = find_index(poppedLevMultiIndex, trial_set);
   size_t last_index = tpMultiIndex.size();
 
-  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
+  std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
   std::advance(iit, restoreIndex); tpMultiIndex.push_back(*iit);
 
   // update multiIndex
   if (monotonic) { // reuse previous Map,MapRef bookkeeping if possible
-    std::deque<SizetArray>::iterator mit = savedTPMultiIndexMap.begin();
-    std::deque<size_t>::iterator     rit = savedTPMultiIndexMapRef.begin();
+    std::deque<SizetArray>::iterator mit = poppedTPMultiIndexMap.begin();
+    std::deque<size_t>::iterator     rit = poppedTPMultiIndexMapRef.begin();
     std::advance(mit, restoreIndex); tpMultiIndexMap.push_back(*mit);
     std::advance(rit, restoreIndex); tpMultiIndexMapRef.push_back(*rit);
     append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
@@ -172,17 +172,17 @@ pre_restore_trial_set(const UShortArray& trial_set,
 
 void SharedOrthogPolyApproxData::
 post_restore_trial_set(const UShortArray& trial_set,
-		       UShort2DArray& aggregated_mi, bool store_map)
+		       UShort2DArray& aggregated_mi, bool save_map)
 {
-  std::deque<UShortArray>::iterator   sit = savedLevMultiIndex.begin();
-  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
-  std::advance(sit, restoreIndex);    savedLevMultiIndex.erase(sit);
-  std::advance(iit, restoreIndex);    savedTPMultiIndex.erase(iit);
-  if (store_map) { // always needed if we want to mix and match
-    std::deque<SizetArray>::iterator  mit = savedTPMultiIndexMap.begin();
-    std::deque<size_t>::iterator      rit = savedTPMultiIndexMapRef.begin();
-    std::advance(mit, restoreIndex);  savedTPMultiIndexMap.erase(mit);
-    std::advance(rit, restoreIndex);  savedTPMultiIndexMapRef.erase(rit);
+  std::deque<UShortArray>::iterator   sit = poppedLevMultiIndex.begin();
+  std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
+  std::advance(sit, restoreIndex);    poppedLevMultiIndex.erase(sit);
+  std::advance(iit, restoreIndex);    poppedTPMultiIndex.erase(iit);
+  if (save_map) { // always needed if we want to mix and match
+    std::deque<SizetArray>::iterator  mit = poppedTPMultiIndexMap.begin();
+    std::deque<size_t>::iterator      rit = poppedTPMultiIndexMapRef.begin();
+    std::advance(mit, restoreIndex);  poppedTPMultiIndexMap.erase(mit);
+    std::advance(rit, restoreIndex);  poppedTPMultiIndexMapRef.erase(rit);
   }
 }
 
@@ -201,73 +201,76 @@ update_component_sobol(const UShort2DArray& multi_index)
 /** Default storage, specialized in derived classes. */
 void SharedOrthogPolyApproxData::store_data()
 {
-  // Storing is district from appending to savedTP{MultiIndex,Coeffs,CoeffGrads}
-  // since the savedTP approach is less general (TP and sum of TP only), less
-  // memory efficient (tensor redundancies in sparse grids), and causes
-  // ambiguity in finalize_coefficients() for generalized sparse grids.
+  // Storing used for multifidelity; popping used for generalized sparse grids
 
-  storedMultiIndex = multiIndex;
+  storedMultiIndex.push_back(multiIndex);
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    storedApproxOrder = approxOrder; driverRep->store_grid(); break;
-  case COMBINED_SPARSE_GRID:         driverRep->store_grid(); break;
-  default:                   storedApproxOrder = approxOrder; break;
+    storedApproxOrder.push_back(approxOrder); driverRep->store_grid(); break;
+  case COMBINED_SPARSE_GRID:                  driverRep->store_grid(); break;
+  default:                   storedApproxOrder.push_back(approxOrder); break;
   }
 }
 
 
-bool SharedOrthogPolyApproxData::maximal_expansion()
+size_t SharedOrthogPolyApproxData::maximal_expansion()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case COMBINED_SPARSE_GRID:
     return driverRep->maximal_grid(); break;
   //case : Not supported: different expansionSamples with same exp order
-  default:
-    if (storedApproxOrder.empty()) return true;
-    size_t i, len = approxOrder.size();
-    // first test for strict =, < , or >
-    bool strict_eq = true, strict_less_eq = true, strict_great_eq = true;
-    for (i=0; i<len; ++i) {
-      if (approxOrder[i] > storedApproxOrder[i])
-	strict_eq = strict_less_eq  = false;
-      else if (approxOrder[i] < storedApproxOrder[i])
-	strict_eq = strict_great_eq = false;
+  default: {
+    if (storedApproxOrder.empty()) return _NPOS; // active is maximal
+    size_t i, j, max_index = _NPOS, num_stored = storedApproxOrder.size(),
+      len = approxOrder.size();
+    UShortArray max_ao = approxOrder;
+    for (i=0; i<num_stored; ++i) {
+      // first test for strict =, < , or >.  If inconclusive, resort to
+      // computing total_order_terms().
+      bool strict_eq = true, strict_less_eq = true, strict_great_eq = true;
+      UShortArray& stored_ao = storedApproxOrder[i];
+      for (j=0; j<len; ++j) {
+	if      (stored_ao[j] < max_ao[j]) strict_eq = strict_great_eq = false;
+	else if (stored_ao[j] > max_ao[j]) strict_eq = strict_less_eq  = false;
+      }
+      if (strict_eq || strict_less_eq) { }
+      else if (strict_great_eq ||
+	       total_order_terms(stored_ao) > total_order_terms(max_ao))
+	{ max_index = i; max_ao = stored_ao; }
     }
-    if (strict_eq || strict_great_eq) return true;
-    else if (strict_less_eq)          return false;
-    // if no strict order, resort to calculation of total_order_terms()
-    else return (total_order_terms(approxOrder) >=
-		 total_order_terms(storedApproxOrder));
+    return max_index; break;
+  }
   }
 }
 
 
-void SharedOrthogPolyApproxData::swap_data()
+void SharedOrthogPolyApproxData::swap_data(size_t index)
 {
-  std::swap(storedMultiIndex, multiIndex);
+  std::swap(storedMultiIndex[index], multiIndex);
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    std::swap(storedApproxOrder, approxOrder); driverRep->swap_grid(); break;
-  case COMBINED_SPARSE_GRID:                   driverRep->swap_grid(); break;
-  default:                  std::swap(storedApproxOrder, approxOrder); break;
+    std::swap(storedApproxOrder[index], approxOrder);
+    driverRep->swap_grid(index);                             break;
+  case COMBINED_SPARSE_GRID: driverRep->swap_grid(index);    break;
+  default: std::swap(storedApproxOrder[index], approxOrder); break;
   }
 }
 
 
-bool SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
-  // Adequate for now: if not currently the maximal grid, then swap with the
-  // stored grid (only one is stored for now)
-  bool swap = !maximal_expansion();
-  if (swap) swap_data();
-
-  // More general: retrieve the most refined from the existing grids,
-  // as initiated from the sequence specification and subsequently refined:
-  //size_t max_index = maximal_grid_index();
-  //if (current_grid_index() != max_index) swap_data(max_index);
+  // Sufficient for two grids: if not currently the maximal grid, then swap
+  // with the stored grid (only one is stored)
+  //bool swap = !maximal_expansion();
+  //if (swap) swap_data();
+  
+  // For open-ended number of stored grids: retrieve the most refined from the
+  // existing grids (from sequence specification + any subsequent refinement)
+  size_t max_index = maximal_expansion();
+  if (max_index != _NPOS) swap_data(max_index);
 
   // Most general: overlay all grid refinement levels to create a new superset
   //size_t new_index = overlay_maximal_grid();
@@ -277,24 +280,26 @@ bool SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
   case ADD_COMBINE: {
     // update multiIndex with any storedMultiIndex terms not yet included.
     // An update in place is sufficient.
-    size_t stored_mi_map_ref;
-    //append_multi_index(multiIndex, storedMultiIndex, combinedMultiIndex,
-    //                   storedMultiIndexMap, stored_mi_map_ref);
-    append_multi_index(storedMultiIndex, multiIndex, storedMultiIndexMap,
-		       stored_mi_map_ref);
-    // reset sobolIndexMap from multiIndex and augment from storedMultiIndex
+    size_t i, stored_mi_map_ref, num_stored = storedMultiIndex.size();
+    storedMultiIndexMap.resize(num_stored);
+    for (i=0; i<num_stored; ++i)
+      //append_multi_index(multiIndex, storedMultiIndex[i], combinedMultiIndex,
+      //                   storedMultiIndexMap[i], stored_mi_map_ref);
+      append_multi_index(storedMultiIndex[i], multiIndex,
+			 storedMultiIndexMap[i], stored_mi_map_ref);
+    // reset sobolIndexMap from aggregated multiIndex
     allocate_component_sobol(multiIndex);
-    update_component_sobol(storedMultiIndex);
     break;
   }
   case MULT_COMBINE: {
-    // default implementation: product of two total-order expansions
+    // default implementation: product of total-order expansions
     // (specialized in SharedProjectOrthogPolyApproxData::pre_combine_data())
 
     // update approxOrder and define combinedMultiIndex
-    for (size_t i=0; i<numVars; ++i)
-      approxOrder[i] += storedApproxOrder[i];
-    UShort2DArray multi_index_prod;
+    size_t i, j, num_stored = storedApproxOrder.size();
+    for (i=0; i<num_stored; ++i)
+      for (j=0; j<numVars; ++j)
+	approxOrder[j] += storedApproxOrder[i][j];
     total_order_multi_index(approxOrder, combinedMultiIndex);
     // define sobolIndexMap from combinedMultiIndex
     allocate_component_sobol(combinedMultiIndex);
@@ -307,7 +312,7 @@ bool SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
     break;
   }
 
-  return swap;
+  return max_index;
 }
 
 

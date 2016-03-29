@@ -41,39 +41,45 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
-// TO DO: swap logic for maximal grid:
-//bool swap = (storedCollocKey.size() > collocKey.size());
-
-
 void TensorProductDriver::store_grid()
 {
-  storedCollocKey = collocKey; storedLevelIndex = levelIndex;
-  storedType1WeightSets = type1WeightSets;
-  storedType2WeightSets = type2WeightSets;
+  storedCollocKey.push_back(collocKey); storedLevelIndex.push_back(levelIndex);
+  storedType1WeightSets.push_back(type1WeightSets);
+  storedType2WeightSets.push_back(type2WeightSets);
 }
 
 
 void TensorProductDriver::clear_stored()
 {
-  storedLevelIndex.clear(); storedCollocKey.clear();
-  storedType1WeightSets.resize(0);
-  storedType2WeightSets.reshape(0,0);
+  storedLevelIndex.clear();      storedCollocKey.clear();
+  storedType1WeightSets.clear(); storedType2WeightSets.clear();
 }
 
 
-void TensorProductDriver::swap_grid()
+size_t TensorProductDriver::maximal_grid() const
 {
-  std::swap(storedCollocKey,  collocKey);
-  std::swap(storedLevelIndex, levelIndex);
+  size_t i, num_stored = storedType1WeightSets.size(),
+    max_index = _NPOS, max_wts = type1WeightSets.length();
+  for (i=0; i<num_stored; ++i)
+    if (storedType1WeightSets[i].length() > max_wts)
+      { max_index = i; max_wts = storedType1WeightSets[i].length(); }
+  return max_index;
+}
+
+
+void TensorProductDriver::swap_grid(size_t index)
+{
+  std::swap(storedCollocKey[index],  collocKey);
+  std::swap(storedLevelIndex[index], levelIndex);
   update_quadrature_order_from_level_index();
 
   RealVector tmp_vec(type1WeightSets);
-  type1WeightSets = storedType1WeightSets;
-  storedType1WeightSets = tmp_vec;
+  type1WeightSets = storedType1WeightSets[index];
+  storedType1WeightSets[index] = tmp_vec;
 
   RealMatrix tmp_mat(type2WeightSets);
-  type2WeightSets = storedType2WeightSets;
-  storedType2WeightSets = tmp_mat;
+  type2WeightSets = storedType2WeightSets[index];
+  storedType2WeightSets[index] = tmp_mat;
 }
 
 

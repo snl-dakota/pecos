@@ -1502,8 +1502,8 @@ generate_unique_samples( const RealVector& cd_l_bnds,
   // the values are stored in the following manner:
   // continuous: value
   // discrete set string: integer (mapped to Real) 
-  //   I think an alphabetical ordering is applied internally by dakota so string
-  //   values input with order 'b' 'a' are assigned int values of 1 0
+  //   I think an alphabetical ordering is applied internally by dakota so
+  //   string values input with order 'b' 'a' are assigned int values of 1 0
   // discrete set int: value (mapped to Real)
   // discrete integer range: value (mapped to Real)
   // discrete set real: value

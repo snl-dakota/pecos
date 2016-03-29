@@ -69,12 +69,11 @@ public:
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
-  /// test if the current grid state is the maximal grid state
-  bool maximal_grid() const;
-
   void store_grid();
   void clear_stored();
-  void swap_grid();
+
+  size_t maximal_grid() const;
+  void swap_grid(size_t index);
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
@@ -173,14 +172,14 @@ public:
   // return duplicateTol
   //Real duplicate_tolerance() const;
 
-  /// return storedLevMultiIndex
-  const UShort2DArray& stored_smolyak_multi_index() const;
-  /// return storedLevCoeffs
-  const IntArray& stored_smolyak_coefficients() const;
-  /// return storedCollocKey
-  const UShort3DArray& stored_collocation_key() const;
-  /// return storedCollocIndices
-  const Sizet2DArray& stored_collocation_indices() const;
+  /// return storedLevMultiIndex[index]
+  const UShort2DArray& stored_smolyak_multi_index(size_t index) const;
+  /// return storedLevCoeffs[index]
+  const IntArray& stored_smolyak_coefficients(size_t index) const;
+  /// return storedCollocKey[index]
+  const UShort3DArray& stored_collocation_key(size_t index) const;
+  /// return storedCollocIndices[index]
+  const Sizet2DArray& stored_collocation_indices(size_t index) const;
 
   /// return type1WeightSets
   const RealVector& type1_weight_sets() const;
@@ -269,14 +268,14 @@ private:
   /// trial evaluation set from push_trial_set()
   UShortArray trialSet;
 
-  /// stored driver state: copy of smolyakMultiIndex
-  UShort2DArray storedLevMultiIndex;
-  /// stored driver state: copy of smolyakCoeffs
-  IntArray storedLevCoeffs;
-  /// stored driver state: copy of collocKey
-  UShort3DArray storedCollocKey;
-  /// stored driver state: copy of collocIndices
-  Sizet2DArray storedCollocIndices;
+  /// stored driver states: copies of smolyakMultiIndex
+  UShort3DArray storedLevMultiIndex;
+  /// stored driver states: copies of smolyakCoeffs
+  Int2DArray storedLevCoeffs;
+  /// stored driver states: copies of collocKey
+  UShort4DArray storedCollocKey;
+  /// stored driver states: copies of collocIndices
+  Sizet3DArray storedCollocIndices;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -292,10 +291,10 @@ private:
   /// reference grid; used in incremental approaches that update type2WeightSets
   RealMatrix type2WeightSetsRef;
 
-  /// stored driver state: copy of type1WeightSets
-  RealVector storedType1WeightSets;
-  /// stored driver state: copy of type2WeightSets
-  RealMatrix storedType2WeightSets;
+  /// stored driver states: copies of type1WeightSets
+  RealVectorArray storedType1WeightSets;
+  /// stored driver states: copies of type2WeightSets
+  RealMatrixArray storedType2WeightSets;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<CollocFnPtr> compute1DPoints;
@@ -350,10 +349,6 @@ CombinedSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 
 inline CombinedSparseGridDriver::~CombinedSparseGridDriver()
 { }
-
-
-inline bool CombinedSparseGridDriver::maximal_grid() const
-{ return (type1WeightSets.length() > storedType1WeightSets.length()); }
 
 
 inline const UShort2DArray& CombinedSparseGridDriver::
@@ -449,23 +444,23 @@ smolyak_coefficients_reference() const
 
 
 inline const UShort2DArray& CombinedSparseGridDriver::
-stored_smolyak_multi_index() const
-{ return storedLevMultiIndex; }
+stored_smolyak_multi_index(size_t index) const
+{ return storedLevMultiIndex[index]; }
 
 
 inline const IntArray& CombinedSparseGridDriver::
-stored_smolyak_coefficients() const
-{ return storedLevCoeffs; }
+stored_smolyak_coefficients(size_t index) const
+{ return storedLevCoeffs[index]; }
 
 
 inline const UShort3DArray& CombinedSparseGridDriver::
-stored_collocation_key() const
-{ return storedCollocKey; }
+stored_collocation_key(size_t index) const
+{ return storedCollocKey[index]; }
 
 
 inline const Sizet2DArray& CombinedSparseGridDriver::
-stored_collocation_indices() const
-{ return storedCollocIndices; }
+stored_collocation_indices(size_t index) const
+{ return storedCollocIndices[index]; }
 
 
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const

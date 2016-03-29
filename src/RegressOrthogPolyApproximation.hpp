@@ -90,8 +90,8 @@ protected:
 
   void increment_coefficients();
   void store_coefficients();
-  void combine_coefficients(short combine_type, bool swap);
-  void swap_coefficients();
+  void combine_coefficients(short combine_type, size_t swap_index);
+  void swap_coefficients(size_t index);
 
   void allocate_arrays();
 
@@ -105,9 +105,11 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x);
-  const RealVector& stored_gradient_basis_variables(const RealVector& x);
-  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
+  Real stored_value(const RealVector& x, size_t index);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+						    size_t index);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
+						       size_t index);
 
   Real mean(const RealVector& x);
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
@@ -305,7 +307,7 @@ private:
   SizetSet sparseIndices;
   /// copy of sparseIndices stored in store_coefficients() for use in
   /// combine_coefficients()
-  SizetSet storedSparseIndices;
+  SizetSetArray storedSparseIndices;
 
   /// maps shared index from sobolIndexMap values to sparse index into
   /// sparse sobolIndices

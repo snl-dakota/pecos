@@ -82,7 +82,7 @@ protected:
   void decrement_data();
   void post_restore_data();
   void post_finalize_data();
-  bool pre_combine_data(short combine_type);
+  size_t pre_combine_data(short combine_type);
   void post_combine_data(short combine_type);
   void store_data();
 

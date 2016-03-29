@@ -698,12 +698,13 @@ private:
   /// sets of variables samples that have been popped off varsData but
   /// which are available for future restoration.  The granularity of
   /// this 2D array corresponds to multiple trial sets, each
-  /// contributing a SDVArray.
-  SDV2DArray savedVarsTrials;
+  /// contributing an SDVArray.
+  SDV2DArray poppedVarsTrials;
   /// a set of variables samples that have been stored for future
-  /// restoration.  The granularity of this array corresponds to a
-  /// wholesale storage of the current varsData state.
-  SDVArray storedVarsData;
+  /// restoration.  The granularity of this 2D array corresponds to a
+  /// wholesale caching of the current varsData state, where each of
+  /// multiple cachings contributes an SDVArray.
+  SDV2DArray storedVarsData;
 
   /// a special response sample (often at the center of the
   /// approximation region) for which exact matching is enforced
@@ -717,11 +718,12 @@ private:
   /// which are available for future restoration.  The granularity of
   /// this 2D array corresponds to multiple trial sets, each
   /// contributing a SDRArray.
-  SDR2DArray savedRespTrials;
+  SDR2DArray poppedRespTrials;
   /// a set of response samples that have been stored for future
-  /// restoration.  The granularity of this array corresponds to a
-  /// wholesale storage of the current respData state.
-  SDRArray storedRespData;
+  /// restoration.  The granularity of this 2D array corresponds to a
+  /// wholesale caching of the current respData state, where each of
+  /// multiple cachings contributes an SDRArray.
+  SDR2DArray storedRespData;
 
   /// failed anchor data bits; defined in sample_checks() and used for
   /// fault tolerance in regression() and expectation()
@@ -832,14 +834,15 @@ public:
   void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// remove num_pop_pts entries from ends of {vars,resp}Data
   void pop(size_t num_pop_pts, bool save_data = true);
-  /// move all entries from {vars,resp}Data to saved{Vars,Resp}Data
+  /// move all entries from {vars,resp}Data to stored{Vars,Resp}Data
   void store();
-  /// move all entries from saved{Vars,Resp}Data to {vars,resp}Data
-  void restore();
-  /// remove num_pop_pts entries from ends of {vars,resp}Data
-  size_t restore(size_t index, bool erase_saved = true);
+  /// return an entry set from stored{Vars,Resp}Data to {vars,resp}Data
+  void restore(size_t index, bool erase_stored = true);
+  /// return a previously popped data set (identified by index) to the
+  /// ends of {vars,resp}Data
+  size_t push(size_t index, bool erase_popped = true);
   /// swap stored and active data sets (variables and response)
-  void swap();
+  void swap(size_t index);
 
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
@@ -853,8 +856,8 @@ public:
   /// return net number of active data components (total minus failed)
   size_t active_response_size() const;
 
-  /// return number of 1D arrays within saved{Vars,Resp}Trials 2D arrays
-  size_t saved_trials() const;
+  /// return number of 1D arrays within popped{Vars,Resp}Trials 2D arrays
+  size_t popped_trials() const;
   /// return number of derivative variables as indicated by size of
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
@@ -873,8 +876,8 @@ public:
   void clear_anchor();
   /// clear {vars,resp}Data
   void clear_data();
-  /// clear saved{Vars,Resp}Trials
-  void clear_saved();
+  /// clear popped{Vars,Resp}Trials
+  void clear_popped();
   /// clear stored{Vars,Resp}Data
   void clear_stored();
 
@@ -1041,84 +1044,86 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
 {
   if (num_pop_pts) {
     size_t data_size = points();
-    if (data_size >= num_pop_pts) {
-      if (save_data) {
-	// append empty arrays and then update them in place
-	SDVArray sdv_array; SDRArray sdr_array;
-	sdRep->savedVarsTrials.push_back(sdv_array);
-	sdRep->savedRespTrials.push_back(sdr_array);
-	SDVArray& last_sdv_array = sdRep->savedVarsTrials.back();
-	SDRArray& last_sdr_array = sdRep->savedRespTrials.back();
-	/*
-	// prevent underflow portability issue w/ compiler coercion of -num_pop
-	SDVArray::difference_type reverse_adv_vars = num_pop_pts;
-	SDRArray::difference_type reverse_adv_resp = num_pop_pts;
-	SDVIter vit = varsData.end(); std::advance(vit, -reverse_adv_vars);
-	SDRIter rit = respData.end(); std::advance(rit, -reverse_adv_resp);
-	*/
-	last_sdv_array.insert(last_sdv_array.begin(), //vit,
-			      sdRep->varsData.end() - num_pop_pts,
-			      sdRep->varsData.end());
-	last_sdr_array.insert(last_sdr_array.begin(), //rit,
-			      sdRep->respData.end() - num_pop_pts,
-			      sdRep->respData.end());
-      }
-      size_t new_size = data_size - num_pop_pts;
-      sdRep->varsData.resize(new_size); sdRep->respData.resize(new_size);
-    }
-    else {
+    if (data_size < num_pop_pts) {
       PCerr << "Error: pop count (" << num_pop_pts << ") exceeds data size ("
 	    << data_size << ") in SurrogateData::pop(size_t)." << std::endl;
       abort_handler(-1);
     }
+    if (save_data) {
+      // append empty arrays and then update them in place
+      SDVArray sdv_array; SDRArray sdr_array;
+      sdRep->poppedVarsTrials.push_back(sdv_array);
+      sdRep->poppedRespTrials.push_back(sdr_array);
+      SDVArray& last_sdv_array = sdRep->poppedVarsTrials.back();
+      SDRArray& last_sdr_array = sdRep->poppedRespTrials.back();
+      /*
+      // prevent underflow portability issue w/ compiler coercion of -num_pop
+      SDVArray::difference_type reverse_adv_vars = num_pop_pts;
+      SDRArray::difference_type reverse_adv_resp = num_pop_pts;
+      SDVIter vit = varsData.end(); std::advance(vit, -reverse_adv_vars);
+      SDRIter rit = respData.end(); std::advance(rit, -reverse_adv_resp);
+      */
+      last_sdv_array.insert(last_sdv_array.begin(), //vit,
+			    sdRep->varsData.end() - num_pop_pts,
+			    sdRep->varsData.end());
+      last_sdr_array.insert(last_sdr_array.begin(), //rit,
+			    sdRep->respData.end() - num_pop_pts,
+			    sdRep->respData.end());
+    }
+    size_t new_size = data_size - num_pop_pts;
+    sdRep->varsData.resize(new_size); sdRep->respData.resize(new_size);
   }
 }
 
 
 inline void SurrogateData::store()
 {
-  sdRep->storedVarsData = sdRep->varsData; // shallow copies
-  sdRep->storedRespData = sdRep->respData; // shallow copies
+  sdRep->storedVarsData.push_back(sdRep->varsData); // shallow copies
+  sdRep->storedRespData.push_back(sdRep->respData); // shallow copies
   clear_data();
 }
 
 
-inline size_t SurrogateData::restore(size_t index, bool erase_saved)
+inline size_t SurrogateData::push(size_t index, bool erase_popped)
 {
-  SDV2DArray::iterator vit = sdRep->savedVarsTrials.begin();
-  SDR2DArray::iterator rit = sdRep->savedRespTrials.begin();
+  SDV2DArray::iterator vit = sdRep->poppedVarsTrials.begin();
+  SDR2DArray::iterator rit = sdRep->poppedRespTrials.begin();
   std::advance(vit, index); std::advance(rit, index);
   size_t num_pts = std::min(vit->size(), rit->size());
   sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
   sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
-  if (erase_saved)
-    { sdRep->savedVarsTrials.erase(vit); sdRep->savedRespTrials.erase(rit); }
+  if (erase_popped)
+    { sdRep->poppedVarsTrials.erase(vit); sdRep->poppedRespTrials.erase(rit); }
   return num_pts;
 }
 
 
-inline void SurrogateData::restore()
+inline void SurrogateData::restore(size_t index, bool erase_stored)
 {
-  sdRep->varsData.insert(sdRep->varsData.end(), sdRep->storedVarsData.begin(),
-			 sdRep->storedVarsData.end());
-  sdRep->respData.insert(sdRep->respData.end(), sdRep->storedRespData.begin(),
-			 sdRep->storedRespData.end());
-  clear_stored();
+  SDV2DArray::iterator vit = sdRep->storedVarsData.begin();
+  SDR2DArray::iterator rit = sdRep->storedRespData.begin();
+  std::advance(vit, index); std::advance(rit, index);
+
+  sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
+  sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
+
+  if (erase_stored)
+    { sdRep->storedVarsData.erase(vit); sdRep->storedRespData.erase(rit); }
 }
 
 
-inline void SurrogateData::swap()
+inline void SurrogateData::swap(size_t index)
 {
   // swap stored and active using shallow copies
 
   SDVArray tmp_vars_data = sdRep->varsData;
   SDRArray tmp_resp_data = sdRep->respData;
 
-  sdRep->varsData = sdRep->storedVarsData;
-  sdRep->respData = sdRep->storedRespData;
+  sdRep->varsData = sdRep->storedVarsData[index];
+  sdRep->respData = sdRep->storedRespData[index];
 
-  sdRep->storedVarsData = tmp_vars_data;
-  sdRep->storedRespData = tmp_resp_data;
+  sdRep->storedVarsData[index] = tmp_vars_data;
+  sdRep->storedRespData[index] = tmp_resp_data;
 }
 
 
@@ -1186,9 +1191,10 @@ inline size_t SurrogateData::active_response_size() const
 { return response_size() - failed_response_size(); }
 
 
-inline size_t SurrogateData::saved_trials() const
+inline size_t SurrogateData::popped_trials() const
 {
-  return std::min(sdRep->savedVarsTrials.size(), sdRep->savedRespTrials.size());
+  return std::min(sdRep->poppedVarsTrials.size(),
+		  sdRep->poppedRespTrials.size());
 }
 
 
@@ -1277,8 +1283,8 @@ inline void SurrogateData::clear_data()
 { sdRep->varsData.clear(); sdRep->respData.clear(); }
 
 
-inline void SurrogateData::clear_saved()
-{ sdRep->savedVarsTrials.clear(); sdRep->savedRespTrials.clear(); }
+inline void SurrogateData::clear_popped()
+{ sdRep->poppedVarsTrials.clear(); sdRep->poppedRespTrials.clear(); }
 
 
 inline void SurrogateData::clear_stored()

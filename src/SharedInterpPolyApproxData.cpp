@@ -212,7 +212,7 @@ void SharedInterpPolyApproxData::decrement_data()
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    savedLevMultiIndex.push_back(ssg_driver->trial_set());
+    poppedLevMultiIndex.push_back(ssg_driver->trial_set());
     break;
   }
   }
@@ -228,10 +228,10 @@ void SharedInterpPolyApproxData::post_restore_data()
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     std::deque<UShortArray>::iterator sit
-      = std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
+      = std::find(poppedLevMultiIndex.begin(), poppedLevMultiIndex.end(),
 		  ssg_driver->trial_set());
-    if (sit != savedLevMultiIndex.end())
-      savedLevMultiIndex.erase(sit);
+    if (sit != poppedLevMultiIndex.end())
+      poppedLevMultiIndex.erase(sit);
     break;
   }
   }
@@ -245,7 +245,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID:
     // move previous expansion data to current expansion
-    savedLevMultiIndex.clear();
+    poppedLevMultiIndex.clear();
     break;
   }
 }
@@ -255,28 +255,26 @@ void SharedInterpPolyApproxData::store_data()
 { driverRep->store_grid(); }
 
 
-bool SharedInterpPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedInterpPolyApproxData::pre_combine_data(short combine_type)
 {
-  // Adequate for now: if current grid is not maximal, then activate maximal by
-  // swapping stored and active (only one is stored for now) --> downstream code
-  // overlays stored values on active maximal grid.  Supports case where both
-  // expansions are refined (initial level/order is insufficient; need to
-  // compare final refined states).
+  // Sufficient for two grids: if not currently the maximal grid, then swap
+  // with the stored grid (only one is stored)
+  //bool swap = !driverRep->maximal_grid();
+  //if (swap) { driverRep->swap_grid(); allocate_component_sobol(); }
+
+  // For open-ended number of stored grids: retrieve the most refined from the
+  // existing grids (from sequence specification + any subsequent refinement).
   // Note: if we assume that multiIndex subsets are enforced across a hierarchy,
   // then the maximal grid is sufficient to allow reinterpolation of all data.
-  bool swap = !driverRep->maximal_grid();
-  if (swap) { driverRep->swap_grid(); allocate_component_sobol(); }
-
-  // More general: retrieve the most refined from the existing grids, as
-  // initiated from the set of sequence specifications:
-  //size_t max_index = maximal_grid_index();
-  //if (current_grid_index() != max_index) driverRep->swap_grid(max_index);
+  size_t max_index = driverRep->maximal_grid();
+  if (max_index != _NPOS)
+    { driverRep->swap_grid(max_index); allocate_component_sobol(); }
 
   // Most general: overlay all grid refinement levels to create a new superset:
-  //size_t new_index = overlay_maximal_grid();
+  //size_t new_index = driverRep->overlay_maximal_grid();
   //if (current_grid_index() != new_index) driverRep->swap_grid(new_index);
 
-  return swap;
+  return max_index;
 }
 
 

@@ -251,9 +251,9 @@ public:
   /// decrement the previous increment and store its shared data for
   /// later restoration
   virtual void decrement_data();
-  /// restores previously saved approximation data
+  /// restores previously popped approximation data
   virtual void pre_restore_data();
-  /// restores previously saved approximation data
+  /// restores previously popped approximation data
   virtual void post_restore_data();
   /// finalizes the shared approximation data following a set of increments
   virtual void pre_finalize_data();
@@ -263,7 +263,7 @@ public:
   /// stores current approximation data for later combination
   virtual void store_data() = 0;
   /// combines current and stored approximation data
-  virtual bool pre_combine_data(short combine_type);
+  virtual size_t pre_combine_data(short combine_type);
   /// combines current and stored approximation data
   virtual void post_combine_data(short combine_type);
 
@@ -291,11 +291,11 @@ public:
   /// test for whether current trial set requires a new approximation
   /// increment or can be restored from a previous trial
   bool restore_available();
-  /// returns index of the data set to be restored from within saved
-  /// bookkeeping (e.g., PolynomialApproximation::savedLevMultiIndex)
+  /// returns index of the data set to be restored from within popped
+  /// bookkeeping (e.g., PolynomialApproximation::poppedLevMultiIndex)
   size_t restoration_index();
-  /// returns index of the i-th data set to be restored from within saved
-  /// bookkeeping (e.g., PolynomialApproximation::savedLevMultiIndex)
+  /// returns index of the i-th data set to be restored from within popped
+  /// bookkeeping (e.g., PolynomialApproximation::poppedLevMultiIndex)
   /// during finalization
   size_t finalization_index(size_t i);
 
@@ -418,7 +418,7 @@ protected:
   /// Define the mapping from sobolIndexMap into sobolIndices
   void assign_sobol_index_map_values();
 
-  /// check for the presence of trial_set within savedLevMultiIndex
+  /// check for the presence of trial_set within poppedLevMultiIndex
   bool restore_available(const UShortArray& trial_set);
 
   //
@@ -453,8 +453,8 @@ protected:
   /// active variables (used in all_variables mode; defined from randomVarsKey)
   SizetList nonRandomIndices;
 
-  /// saved trial sets that were computed but not selected
-  std::deque<UShortArray> savedLevMultiIndex;
+  /// popped trial sets that were computed but not selected
+  std::deque<UShortArray> poppedLevMultiIndex;
 
   /// mapping to manage different global sensitivity index options
   /// (e.g. univariate/main effects only vs all effects)
@@ -645,8 +645,8 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 inline bool SharedPolyApproxData::
 restore_available(const UShortArray& trial_set)
 {
-  return (std::find(savedLevMultiIndex.begin(), savedLevMultiIndex.end(),
-		    trial_set) != savedLevMultiIndex.end());
+  return (std::find(poppedLevMultiIndex.begin(), poppedLevMultiIndex.end(),
+		    trial_set) != poppedLevMultiIndex.end());
 }
 
 
@@ -660,7 +660,7 @@ inline bool SharedPolyApproxData::restore_available()
 inline size_t SharedPolyApproxData::restoration_index()
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  return find_index(savedLevMultiIndex, sg_driver->trial_set());
+  return find_index(poppedLevMultiIndex, sg_driver->trial_set());
 }
 
 
@@ -671,10 +671,10 @@ inline size_t SharedPolyApproxData::finalization_index(size_t i)
   // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid data
   // with remaining computed trial sets (in sorted order from SparseGridDriver::
   // computedTrialSets).  Below, we determine the order with which these
-  // appended trial sets appear in savedLevMultiIndex.
+  // appended trial sets appear in poppedLevMultiIndex.
   UShortArraySet::const_iterator cit = trial_sets.begin();
   std::advance(cit, i);
-  return find_index(savedLevMultiIndex, *cit);
+  return find_index(poppedLevMultiIndex, *cit);
 }
 
 

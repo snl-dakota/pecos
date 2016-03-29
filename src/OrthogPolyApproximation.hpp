@@ -73,8 +73,8 @@ protected:
   int min_coefficients() const;
 
   void store_coefficients();
-  void combine_coefficients(short combine_type, bool swap);
-  void swap_coefficients();
+  void combine_coefficients(short combine_type, size_t swap_index);
+  void swap_coefficients(size_t index);
 
   void print_coefficients(std::ostream& s, bool normalized);
 
@@ -105,9 +105,11 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x);
-  const RealVector& stored_gradient_basis_variables(const RealVector& x);
-  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
+  Real stored_value(const RealVector& x, size_t index);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+						    size_t index);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
+						       size_t index);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -179,12 +181,12 @@ protected:
       for an expansion only over probabilistic variables). */
   RealMatrix expansionCoeffGrads;
 
-  /// copy of expansionCoeffs (aggregated expansion) stored in
-  /// store_coefficients() for use in combine_coefficients()
-  RealVector storedExpCoeffs;
-  /// copy of expansionCoeffGrads (aggregated expansion) stored in
-  /// store_coefficients() for use in combine_coefficients()
-  RealMatrix storedExpCoeffGrads;
+  /// copies of expansionCoeffs stored in store_coefficients() for use
+  /// in combine_coefficients()
+  RealVectorArray storedExpCoeffs;
+  /// copies of expansionCoeffGrads stored in store_coefficients() for
+  /// use in combine_coefficients()
+  RealMatrixArray storedExpCoeffGrads;
 
   /// spectral coefficient decay rates estimated by LLS on log of
   /// univariate expansion coefficients

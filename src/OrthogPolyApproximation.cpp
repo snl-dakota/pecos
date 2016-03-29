@@ -45,34 +45,36 @@ void OrthogPolyApproximation::allocate_arrays()
 
 void OrthogPolyApproximation::store_coefficients()
 {
-  // Store the aggregated expansion data.  For ProjectOPA, this approach is
-  // preferred to appending to savedTP{MultiIndex,Coeffs,CoeffGrads} since the
-  // savedTP approach is less general (TP and sum of TP only), less memory
-  // efficient (tensor redundancies in sparse grids), and causes ambiguity
-  // in finalize_coefficients() for generalized sparse grids.
+  // Store the aggregated expansion data.  This is used for multifidelity
+  // combination, separate from poppedTP{MultiIndex,Coeffs,CoeffGrads} used
+  // for generalized sparse grids.
 
-  if (expansionCoeffFlag)     storedExpCoeffs     = expansionCoeffs;
-  if (expansionCoeffGradFlag) storedExpCoeffGrads = expansionCoeffGrads;
+  if (expansionCoeffFlag) storedExpCoeffs.push_back(expansionCoeffs);
+  else                    storedExpCoeffs.push_back(RealVector());
+  if (expansionCoeffGradFlag)
+    storedExpCoeffGrads.push_back(expansionCoeffGrads);
+  else
+    storedExpCoeffGrads.push_back(RealMatrix());
 }
 
 
-void OrthogPolyApproximation::swap_coefficients()
+void OrthogPolyApproximation::swap_coefficients(size_t index)
 {
   if (expansionCoeffFlag) {
     RealVector tmp_vec(expansionCoeffs);
-    expansionCoeffs = storedExpCoeffs;
-    storedExpCoeffs = tmp_vec;
+    expansionCoeffs = storedExpCoeffs[index];
+    storedExpCoeffs[index] = tmp_vec;
   }
   if (expansionCoeffGradFlag) {
     RealMatrix tmp_mat(expansionCoeffGrads);
-    expansionCoeffGrads = storedExpCoeffGrads;
-    storedExpCoeffGrads = tmp_mat;
+    expansionCoeffGrads = storedExpCoeffGrads[index];
+    storedExpCoeffGrads[index] = tmp_mat;
   }
 }
 
 
 void OrthogPolyApproximation::
-combine_coefficients(short combine_type, bool swap)
+combine_coefficients(short combine_type, size_t swap_index)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -80,13 +82,14 @@ combine_coefficients(short combine_type, bool swap)
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  if (swap) {
-    swap_coefficients();
+  if (swap_index != _NPOS) {
+    swap_coefficients(swap_index);
     allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
   }
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
+  size_t i, num_stored = storedExpCoeffs.size();
   switch (combine_type) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
@@ -100,21 +103,23 @@ combine_coefficients(short combine_type, bool swap)
     // resize expansion{Coeffs,CoeffGrads} based on updated multiIndex
     resize_expansion();
     // update expansion{Coeffs,CoeffGrads}
-    overlay_expansion(data_rep->storedMultiIndexMap, storedExpCoeffs,
-		      storedExpCoeffGrads, 1);
+    for (i=0; i<num_stored; ++i)
+      overlay_expansion(data_rep->storedMultiIndexMap[i], storedExpCoeffs[i],
+			storedExpCoeffGrads[i], 1);
     break;
   }
   case MULT_COMBINE: {
     // perform the multiplication of current and stored expansions
-    multiply_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-		       storedExpCoeffGrads, data_rep->combinedMultiIndex);
+    for (i=0; i<num_stored; ++i)
+      multiply_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
+			 storedExpCoeffGrads[i], data_rep->combinedMultiIndex);
     break;
   }
   case ADD_MULT_COMBINE:
-    //overlay_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-    //                  storedExpCoeffGrads, addCoeffs, addCoeffGrads);
-    //multiply_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-    //                   storedExpCoeffGrads, multCoeffs, multCoeffGrads);
+    //overlay_expansion(data_rep->storedMultiIndexMap[i], storedExpCoeffs[i],
+    //                  storedExpCoeffGrads[i], addCoeffs, addCoeffGrads);
+    //multiply_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
+    //                   storedExpCoeffGrads[i], multCoeffs, multCoeffGrads);
     //compute_combine_factors(addCoeffs, multCoeffs);
     //apply_combine_factors();
     PCerr << "Error : additive+multiplicative combination not yet implemented "
@@ -124,8 +129,8 @@ combine_coefficients(short combine_type, bool swap)
   }
 
   /* Code moved to ProjectOrthogPolyApproximation::integrate_response_moments()
-  if (expansionCoeffFlag)     storedExpCoeffs.resize(0);
-  if (expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
+  if (expansionCoeffFlag)     storedExpCoeffs.clear();
+  if (expansionCoeffGradFlag) storedExpCoeffGrads.clear();
   */
 
   computedMean = computedVariance = 0;
@@ -422,15 +427,16 @@ hessian_basis_variables(const RealVector& x)
 }
 
 
-Real OrthogPolyApproximation::stored_value(const RealVector& x)
+Real OrthogPolyApproximation::stored_value(const RealVector& x, size_t index)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
+  const RealVector& stored_coeffs = storedExpCoeffs[index];
 
   // Error check for required data
   size_t i, num_stored_terms = stored_mi.size();
-  if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
+  if (!num_stored_terms || stored_coeffs.length() != num_stored_terms) {
     PCerr << "Error: stored expansion coefficients not available in "
 	  << "OrthogPolyApproximation::stored_value()" << std::endl;
     abort_handler(-1);
@@ -438,23 +444,24 @@ Real OrthogPolyApproximation::stored_value(const RealVector& x)
 
   Real approx_val = 0.;
   for (size_t i=0; i<num_stored_terms; ++i)
-    approx_val += storedExpCoeffs[i] *
+    approx_val += stored_coeffs[i] *
       data_rep->multivariate_polynomial(x, stored_mi[i]);
   return approx_val;
 }
 
 
 const RealVector& OrthogPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x)
+stored_gradient_basis_variables(const RealVector& x, size_t index)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
+  const RealVector& stored_coeffs = storedExpCoeffs[index];
 
   // Error check for required data
   size_t i, j, num_stored_terms = stored_mi.size(),
     num_v = sharedDataRep->numVars;
-  if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
+  if (!num_stored_terms || stored_coeffs.length() != num_stored_terms) {
     PCerr << "Error: stored expansion coefficients not available in OrthogPoly"
 	  << "Approximation::stored_gradient_basis_variables()" << std::endl;
     abort_handler(-1);
@@ -469,7 +476,7 @@ stored_gradient_basis_variables(const RealVector& x)
   for (i=0; i<num_stored_terms; ++i) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, stored_mi[i]);
-    Real& coeff_i = storedExpCoeffs[i];
+    Real coeff_i = stored_coeffs[i];
     for (j=0; j<num_v; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
   }
@@ -478,16 +485,17 @@ stored_gradient_basis_variables(const RealVector& x)
 
 
 const RealVector& OrthogPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x)
+stored_gradient_nonbasis_variables(const RealVector& x, size_t index)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
+  const RealMatrix& stored_grads = storedExpCoeffGrads[index];
 
   // Error check for required data
   size_t i, j, num_stored_terms = stored_mi.size(),
-    num_deriv_vars = storedExpCoeffGrads.numRows();
-  if (!num_stored_terms || storedExpCoeffGrads.numCols() != num_stored_terms) {
+    num_deriv_vars = stored_grads.numRows();
+  if (!num_stored_terms || stored_grads.numCols() != num_stored_terms) {
     PCerr << "Error: stored expansion coeff grads not available in OrthogPoly"
 	  << "Approximation::stored_gradient_nonbasis_variables()" << std::endl;
     abort_handler(-1);
@@ -501,9 +509,9 @@ stored_gradient_nonbasis_variables(const RealVector& x)
   // sum expansion to get response gradient prediction
   for (i=0; i<num_stored_terms; ++i) {
     Real term_i = data_rep->multivariate_polynomial(x, stored_mi[i]);
-    const Real* coeff_grad_i = storedExpCoeffGrads[i];
+    const Real* stored_grad_i = stored_grads[i];
     for (j=0; j<num_deriv_vars; ++j)
-      approxGradient[j] += coeff_grad_i[j] * term_i;
+      approxGradient[j] += stored_grad_i[j] * term_i;
   }
   return approxGradient;
 }

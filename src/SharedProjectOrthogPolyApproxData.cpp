@@ -187,29 +187,29 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
   }
 
   // update multiIndex
-  std::deque<UShort2DArray>::iterator iit = savedTPMultiIndex.begin();
-  std::deque<SizetArray>::iterator    mit = savedTPMultiIndexMap.begin();
-  std::deque<size_t>::iterator        rit = savedTPMultiIndexMapRef.begin();
-  for (; iit!=savedTPMultiIndex.end(); ++iit, ++mit, ++rit)
+  std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
+  std::deque<SizetArray>::iterator    mit = poppedTPMultiIndexMap.begin();
+  std::deque<size_t>::iterator        rit = poppedTPMultiIndexMapRef.begin();
+  for (; iit!=poppedTPMultiIndex.end(); ++iit, ++mit, ++rit)
     append_multi_index(*iit, *mit, *rit, multiIndex);
   // move previous expansion data to current expansion
-  tpMultiIndex.insert(tpMultiIndex.end(), savedTPMultiIndex.begin(),
-    savedTPMultiIndex.end());
-  tpMultiIndexMap.insert(tpMultiIndexMap.end(), savedTPMultiIndexMap.begin(),
-    savedTPMultiIndexMap.end());
+  tpMultiIndex.insert(tpMultiIndex.end(), poppedTPMultiIndex.begin(),
+    poppedTPMultiIndex.end());
+  tpMultiIndexMap.insert(tpMultiIndexMap.end(), poppedTPMultiIndexMap.begin(),
+    poppedTPMultiIndexMap.end());
   tpMultiIndexMapRef.insert(tpMultiIndexMapRef.end(),
-    savedTPMultiIndexMapRef.begin(), savedTPMultiIndexMapRef.end());
+    poppedTPMultiIndexMapRef.begin(), poppedTPMultiIndexMapRef.end());
 }
 
 
 void SharedProjectOrthogPolyApproxData::post_finalize_data()
 {
-  savedLevMultiIndex.clear();   savedTPMultiIndex.clear();
-  savedTPMultiIndexMap.clear(); savedTPMultiIndexMapRef.clear();
+  poppedLevMultiIndex.clear();   poppedTPMultiIndex.clear();
+  poppedTPMultiIndexMap.clear(); poppedTPMultiIndexMapRef.clear();
 }
 
 
-bool SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -234,46 +234,63 @@ bool SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
-      bool swap = !driverRep->maximal_grid();
-      if (swap) swap_data();
-      for (size_t i=0; i<numVars; ++i)
-	approxOrder[i] += storedApproxOrder[i];
+      size_t max_index = driverRep->maximal_grid();
+      if (max_index != _NPOS) swap_data(max_index);
+
+      size_t i, j, num_stored = storedApproxOrder.size();
+      for (i=0; i<num_stored; ++i)
+	for (j=0; j<numVars; ++j)
+	  approxOrder[j] += storedApproxOrder[i][j];
+
       UShort2DArray multi_index_prod;
       tensor_product_multi_index(approxOrder, combinedMultiIndex);
       allocate_component_sobol(combinedMultiIndex);
-      return swap;
-      break;
+      return max_index; break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
-      bool swap = !driverRep->maximal_grid();
-      if (swap) swap_data();
+      size_t max_index = driverRep->maximal_grid();
+      if (max_index != _NPOS) swap_data(max_index);
+
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
-      UShort2DArray curr_pareto, stored_pareto;
+      size_t s, i, v, index, num_stored = storedMultiIndex.size();
+      UShort2DArray curr_pareto; UShort3DArray stored_pareto(num_stored);
       CombinedSparseGridDriver* csg_driver
 	= (CombinedSparseGridDriver*)driverRep;
-      update_pareto_set(csg_driver->smolyak_multi_index(),         curr_pareto);
-      update_pareto_set(csg_driver->stored_smolyak_multi_index(),stored_pareto);
-      size_t i, j, k, num_stored_mi = stored_pareto.size(),
-	num_curr_mi = curr_pareto.size();
-      // overlay each product expansion from the tensor-product combinations
-      UShortArray exp_order_i, exp_order_j, exp_order_prod(numVars);
-      UShort2DArray multi_index_prod, tp_multi_index_prod;
-      for (i=0; i<num_stored_mi; ++i) {
-	sparse_grid_level_to_expansion_order(csg_driver, stored_pareto[i],
-					     exp_order_i);
-	for (j=0; j<num_curr_mi; ++j) {
-	  sparse_grid_level_to_expansion_order(csg_driver, curr_pareto[j],
-					       exp_order_j);
-	  for (k=0; k<numVars; ++k)
-	    exp_order_prod[k] = exp_order_i[k] + exp_order_j[k];
-	  tensor_product_multi_index(exp_order_prod, tp_multi_index_prod);
-	  append_multi_index(tp_multi_index_prod, combinedMultiIndex);
+      update_pareto_set(csg_driver->smolyak_multi_index(), curr_pareto);
+      for (s=0; s<num_stored; ++s)
+	update_pareto_set(csg_driver->stored_smolyak_multi_index(s),
+			  stored_pareto[s]);
+      // define a combined multi-index that can enumerate each pareto term;
+      // since these are indices and not orders, we exclude the upper bound.
+      UShortArray pareto_terms(num_stored+1); UShort2DArray pareto_indices;
+      for (s=0; s<num_stored; ++s)
+	pareto_terms[s] = stored_pareto[s].size();
+      pareto_terms[num_stored] = curr_pareto.size();
+      tensor_product_multi_index(pareto_terms, pareto_indices, false);
+      // now enumerate all combinations of the non-dominated Smolyak index sets
+      size_t num_combinations = pareto_indices.size();
+      UShortArray exp_order_prod, stored_order;
+      UShort2DArray tp_multi_index_prod;
+      for (i=0; i<num_combinations; ++i) {
+	UShortArray& pareto_ind_i = pareto_indices[i];
+	index = pareto_ind_i[num_stored];
+	sparse_grid_level_to_expansion_order(csg_driver, curr_pareto[index],
+					     exp_order_prod);
+	for (s=0; s<num_stored; ++s) {
+	  index = pareto_ind_i[s];
+	  sparse_grid_level_to_expansion_order(csg_driver,
+					       stored_pareto[s][index],
+					       stored_order);
+	  for (v=0; v<numVars; ++v)
+	    exp_order_prod[v] += stored_order[v];
 	}
-      }
+	// overlay each product expansion from the tensor-product combinations
+	tensor_product_multi_index(exp_order_prod, tp_multi_index_prod);
+	append_multi_index(tp_multi_index_prod, combinedMultiIndex);
+      }	  
       allocate_component_sobol(combinedMultiIndex);
-      return swap;
-      break;
+      return max_index; break;
     }
     default:
       // base class version supports product of two total-order expansions

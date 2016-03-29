@@ -56,7 +56,9 @@ public:
 
   void store_grid();
   void clear_stored();
-  void swap_grid();
+
+  size_t maximal_grid() const;
+  void swap_grid(size_t index);
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
@@ -119,11 +121,11 @@ public:
   const Sizet3DArray& collocation_indices() const;
 
   /// return storedLevMultiIndex
-  const UShort3DArray& stored_smolyak_multi_index() const;
+  const UShort3DArray& stored_smolyak_multi_index(size_t index) const;
   /// return storedCollocKey
-  const UShort4DArray& stored_collocation_key() const;
+  const UShort4DArray& stored_collocation_key(size_t index) const;
   // return storedCollocIndices
-  //const Sizet3DArray& stored_collocation_indices() const;
+  //const Sizet3DArray& stored_collocation_indices(size_t index) const;
 
   /// discriminate portions of the level-set hierarchy that are
   /// reference sets from those in the current increment
@@ -197,12 +199,12 @@ private:
   /// set of tensor products to the unique collocation points evaluated
   Sizet3DArray collocIndices;
 
-  /// stored driver state: copy of smolyakMultiIndex
-  UShort3DArray storedLevMultiIndex;
-  /// stored driver state: copy of collocKey
-  UShort4DArray storedCollocKey;
-  // stored driver state: copy of collocIndices
-  //Sizet3DArray storedCollocIndices;
+  /// stored driver states: copies of smolyakMultiIndex
+  UShort4DArray storedLevMultiIndex;
+  /// stored driver states: copies of collocKey
+  UShort5DArray storedCollocKey;
+  // stored driver states: copies of collocIndices
+  //Sizet4DArray storedCollocIndices;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -217,14 +219,16 @@ private:
   //RealMatrix concatT2WeightSets;
 
   /// stored driver state: copy of type1WeightSets
-  RealVector2DArray storedType1WeightSets;
+  RealVector3DArray storedType1WeightSets;
   /// stored driver state: copy of type2WeightSets
-  RealMatrix2DArray storedType2WeightSets;
+  RealMatrix3DArray storedType2WeightSets;
 
-  /// stored type 1 weight sets for restoration to type1WeightSets
-  std::map<UShortArray, RealVector> savedT1WtSets;
-  /// stored type 2 weight sets for restoration to type2WeightSets
-  std::map<UShortArray, RealMatrix> savedT2WtSets;
+  /// type 1 weight sets popped during decrement for later restoration
+  /// to type1WeightSets
+  std::map<UShortArray, RealVector> poppedT1WtSets;
+  /// type 2 weight sets popped during decrement for later restoration
+  /// to type2WeightSets
+  std::map<UShortArray, RealMatrix> poppedT2WtSets;
 };
 
 
@@ -294,18 +298,18 @@ inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
 
 
 inline const UShort3DArray& HierarchSparseGridDriver::
-stored_smolyak_multi_index() const
-{ return storedLevMultiIndex; }
+stored_smolyak_multi_index(size_t index) const
+{ return storedLevMultiIndex[index]; }
 
 
 inline const UShort4DArray& HierarchSparseGridDriver::
-stored_collocation_key() const
-{ return storedCollocKey; }
+stored_collocation_key(size_t index) const
+{ return storedCollocKey[index]; }
 
 
 //inline const Sizet3DArray& HierarchSparseGridDriver::
-//stored_collocation_indices() const
-//{ return storedCollocIndices; }
+//stored_collocation_indices(size_t index) const
+//{ return storedCollocIndices[index]; }
 
 
 /*

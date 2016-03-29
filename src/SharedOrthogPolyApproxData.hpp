@@ -110,7 +110,7 @@ protected:
   void allocate_data();
 
   void store_data();
-  bool pre_combine_data(short combine_type);
+  size_t pre_combine_data(short combine_type);
   void post_combine_data(short combine_type);
 
   //
@@ -118,9 +118,9 @@ protected:
   //
 
   /// detect whether current expansion settings are the most refined
-  bool maximal_expansion();
-  /// swap current/active and stored/inactive data sets
-  void swap_data();
+  size_t maximal_expansion();
+  /// swap current data and the stored data set identified by index
+  void swap_data(size_t index);
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(
@@ -141,7 +141,7 @@ protected:
   /// helper function for decrementing that is modular on trial set
   /// and multi-index
   void decrement_trial_set(const UShortArray& trial_set,
-			   UShort2DArray& aggregated_mi, bool store_map = true);
+			   UShort2DArray& aggregated_mi, bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void pre_restore_trial_set(const UShortArray& trial_set,
 			     UShort2DArray& aggregated_mi,
@@ -149,11 +149,11 @@ protected:
   /// helper function for restoring that is modular on trial set and multi-index
   void post_restore_trial_set(const UShortArray& trial_set,
 			      UShort2DArray& aggregated_mi,
-			      bool store_map = true);
+			      bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
   void restore_trial_set(const UShortArray& trial_set,
 			 UShort2DArray& aggregated_mi,
-			 bool monotonic = true, bool store_map = true);
+			 bool monotonic = true, bool save_map = true);
 
   /// allocate sobolIndexMap from multi_index
   void allocate_component_sobol(const UShort2DArray& multi_index);
@@ -321,15 +321,15 @@ protected:
   /// multi-index that is the result of expansion combination
   UShort2DArray combinedMultiIndex;
 
-  /// copy of approxOrder stored in store_coefficients() for use in
+  /// array of stored approxOrder's cached in store_coefficients() for use in
   /// combine_coefficients()
-  UShortArray storedApproxOrder;
-  /// copy of multiIndex (aggregated expansion) stored in store_coefficients()
-  /// for use in combine_coefficients()
-  UShort2DArray storedMultiIndex;
+  UShort2DArray storedApproxOrder;
+  /// array of stored multiIndex's cached in store_coefficients() for use in
+  /// combine_coefficients()
+  UShort3DArray storedMultiIndex;
   /// mapping of terms when aggregating storedMultiIndex with multiIndex in
   /// pre_combine_data()
-  SizetArray storedMultiIndexMap;
+  Sizet2DArray storedMultiIndexMap;
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials
@@ -343,14 +343,14 @@ protected:
   /// sparse grid bookkeeping: reference points for tpMultiIndexMap
   SizetArray tpMultiIndexMapRef;
 
-  /// saved instances of tpMultiIndex that were computed but not selected
-  std::deque<UShort2DArray> savedTPMultiIndex;
-  /// saved instances of tpMultiIndexMap that were computed but not selected
-  std::deque<SizetArray> savedTPMultiIndexMap;
-  /// saved instances of tpMultiIndexMapRef that were computed but not selected
-  std::deque<size_t> savedTPMultiIndexMapRef;
+  /// popped instances of tpMultiIndex that were computed but not selected
+  std::deque<UShort2DArray> poppedTPMultiIndex;
+  /// popped instances of tpMultiIndexMap that were computed but not selected
+  std::deque<SizetArray> poppedTPMultiIndexMap;
+  /// popped instances of tpMultiIndexMapRef that were computed but not selected
+  std::deque<size_t> poppedTPMultiIndexMapRef;
 
-  /// index into saved sets of data to be restored (stored in this
+  /// index into popped sets of data to be restored (stored in this
   /// class for used by each ProjectOrthogPolyApproximation)
   size_t restoreIndex;
 
@@ -493,10 +493,10 @@ inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
 
 inline void SharedOrthogPolyApproxData::
 restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
-		  bool monotonic, bool store_map)
+		  bool monotonic, bool save_map)
 {
   pre_restore_trial_set(trial_set, aggregated_mi, monotonic);
-  post_restore_trial_set(trial_set, aggregated_mi, store_map);
+  post_restore_trial_set(trial_set, aggregated_mi, save_map);
 }
 
 

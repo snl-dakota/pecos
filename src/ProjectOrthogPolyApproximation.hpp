@@ -67,7 +67,7 @@ protected:
   void allocate_arrays();
 
   Real value(const RealVector& x);
-  Real stored_value(const RealVector& x);
+  Real stored_value(const RealVector& x, size_t index);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
   void compute_moments();
@@ -125,10 +125,10 @@ private:
   /// the set of tensor-product contributions to expansionCoeffGrads
   RealMatrixArray tpExpansionCoeffGrads;
 
-  /// saved instances of tpExpansionCoeffs that were computed but not selected
-  std::deque<RealVector> savedTPExpCoeffs;
-  /// saved tpExpansionCoeffGrads instances that were computed but not selected
-  std::deque<RealMatrix> savedTPExpCoeffGrads;
+  /// popped instances of tpExpansionCoeffs that were computed but not selected
+  std::deque<RealVector> poppedTPExpCoeffs;
+  /// popped tpExpansionCoeffGrads instances that were computed but not selected
+  std::deque<RealMatrix> poppedTPExpCoeffGrads;
 };
 
 

@@ -85,17 +85,17 @@ public:
 
   /// retrieve the response value for a stored expansion using the
   /// given parameter vector
-  virtual Real stored_value(const RealVector& x) = 0;
+  virtual Real stored_value(const RealVector& x, size_t index) = 0;
   /// retrieve the response gradient for a stored expansion with
   /// respect to all variables included in the polynomial bases;
   /// evaluate for the given parameter vector.
   virtual const RealVector&
-    stored_gradient_basis_variables(const RealVector& x) = 0;
+    stored_gradient_basis_variables(const RealVector& x, size_t index) = 0;
   /// retrieve the response gradient for a stored expansion with
   /// respect to all variables not included in the polynomial bases;
   /// evaluate for the given parameter vector.
   virtual const RealVector&
-    stored_gradient_nonbasis_variables(const RealVector& x) = 0;
+    stored_gradient_nonbasis_variables(const RealVector& x, size_t index) = 0;
 
   /// return the mean of the expansion, treating all variables as random
   virtual Real mean() = 0;

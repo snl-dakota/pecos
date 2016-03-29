@@ -204,15 +204,15 @@ void HierarchInterpPolyApproximation::decrement_coefficients()
   size_t lev = l1_norm(trial_set);
 
   if (expansionCoeffFlag) {
-    savedExpT1Coeffs[trial_set] = expansionType1Coeffs[lev].back();
+    poppedExpT1Coeffs[trial_set] = expansionType1Coeffs[lev].back();
     expansionType1Coeffs[lev].pop_back();
     if (data_rep->basisConfigOptions.useDerivs) {
-      savedExpT2Coeffs[trial_set] = expansionType2Coeffs[lev].back();
+      poppedExpT2Coeffs[trial_set] = expansionType2Coeffs[lev].back();
       expansionType2Coeffs[lev].pop_back();
     }
   }
   if (expansionCoeffGradFlag) {
-    savedExpT1CoeffGrads[trial_set] = expansionType1CoeffGrads[lev].back();
+    poppedExpT1CoeffGrads[trial_set] = expansionType1CoeffGrads[lev].back();
     expansionType1CoeffGrads[lev].pop_back();
   }
 
@@ -236,8 +236,8 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
     for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
       restore_coefficients(sm_mi_l[set]);
   }
-  savedExpT1Coeffs.clear(); savedExpT2Coeffs.clear();
-  savedExpT1CoeffGrads.clear();
+  poppedExpT1Coeffs.clear(); poppedExpT2Coeffs.clear();
+  poppedExpT1CoeffGrads.clear();
 
   computedMean = computedVariance = 0;
 }
@@ -245,86 +245,93 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 
 void HierarchInterpPolyApproximation::store_coefficients()
 {
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   if (expansionCoeffFlag) {
-    storedExpType1Coeffs   = expansionType1Coeffs;
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    storedExpType1Coeffs.push_back(expansionType1Coeffs);
     if (data_rep->basisConfigOptions.useDerivs)
-      storedExpType2Coeffs = expansionType2Coeffs;
+      storedExpType2Coeffs.push_back(expansionType2Coeffs);
+  }
+  else { // keep index lookups consistent
+    storedExpType1Coeffs.push_back(RealVector2DArray());
+    if (data_rep->basisConfigOptions.useDerivs)
+      storedExpType2Coeffs.push_back(RealMatrix2DArray());
   }
   if (expansionCoeffGradFlag)
-    storedExpType1CoeffGrads = expansionType1CoeffGrads;
+    storedExpType1CoeffGrads.push_back(expansionType1CoeffGrads);
+  else // keep index lookups consistent
+    storedExpType1CoeffGrads.push_back(RealMatrix2DArray());
 }
 
 
-void HierarchInterpPolyApproximation::swap_coefficients()
+void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
 {
   if (expansionCoeffFlag) {
-    std::swap(expansionType1Coeffs, storedExpType1Coeffs);
+    std::swap(expansionType1Coeffs, storedExpType1Coeffs[index]);
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs)
-      std::swap(expansionType2Coeffs, storedExpType2Coeffs);
+      std::swap(expansionType2Coeffs, storedExpType2Coeffs[index]);
   }
   if (expansionCoeffGradFlag)
-    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads);
+    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads[index]);
 }
 
 
 void HierarchInterpPolyApproximation::
-combine_coefficients(short combine_type, bool swap)
+combine_coefficients(short combine_type, size_t swap_index)
 {
-  if (swap) {
-    swap_coefficients();
+  if (swap_index != _NPOS) {
+    swap_coefficients(swap_index);
     allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
   }
 
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
   size_t i, j, num_pts = surrData.points();
-  Real lf_val, discrep_val;
+  Real curr_val, stored_val;
   /*
   for (i=0; i<num_pts; ++i) {
     const RealVector& c_vars = (anchor_pt && i == 0) ?
       surrData.anchor_continuous_variables() :
       surrData.continuous_variables(i);
     if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
-      discrep_val = stored_value(c_vars);
-      lf_val = expansionType1Coeffs[i]; // copy prior to update
+      stored_val = stored_value(c_vars);
+      curr_val = expansionType1Coeffs[i]; // copy prior to update
     }
     if (expansionCoeffFlag) {
       // split up type1/type2 contribs so increments are performed properly
       if (combine_type == ADD_COMBINE)
 	expansionType1Coeffs[i] += stored_value(c_vars);
       else if (combine_type == MULT_COMBINE)
-	expansionType1Coeffs[i] *= discrep_val;
+	expansionType1Coeffs[i] *= stored_val;
       if (data_rep->basisConfigOptions.useDerivs) {
-	const RealVector& discrep_grad
+	const RealVector& stored_grad
 	  = stored_gradient_basis_variables(c_vars);
 	Real* exp_t2_coeffs_i = expansionType2Coeffs[i];
-	size_t num_deriv_vars = discrep_grad.length();
+	size_t num_deriv_vars = stored_grad.length();
 	if (combine_type == ADD_COMBINE)
 	  for (j=0; j<num_deriv_vars; ++j)
-	    exp_t2_coeffs_i[j] += discrep_grad[j];
+	    exp_t2_coeffs_i[j] += stored_grad[j];
 	else if (combine_type == MULT_COMBINE)
-	  // hf = lf*discrep --> dhf/dx = dlf/dx*discrep + lf*ddiscrep/dx
+	  // hf = curr*stored --> dhf/dx = dcurr/dx*stored + curr*dstored/dx
 	  for (j=0; j<num_deriv_vars; ++j)
-	    exp_t2_coeffs_i[j] = exp_t2_coeffs_i[j] * discrep_val
-	                       + discrep_grad[j]    * lf_val;
+	    exp_t2_coeffs_i[j] = exp_t2_coeffs_i[j] * stored_val
+	                       + stored_grad[j]     * curr_val;
       }
     }
     if (expansionCoeffGradFlag) {
       Real* exp_t1_grad_i = expansionType1CoeffGrads[i];
-      const RealVector& discrep_grad
+      const RealVector& stored_grad
 	= stored_gradient_nonbasis_variables(c_vars);
-      size_t num_deriv_vars = discrep_grad.length();
+      size_t num_deriv_vars = stored_grad.length();
       if (combine_type == ADD_COMBINE)
 	for (j=0; j<num_deriv_vars; ++j)
-	  exp_t1_grad_i[j] += discrep_grad[j];
+	  exp_t1_grad_i[j] += stored_grad[j];
       else if (combine_type == MULT_COMBINE)
 	for (j=0; j<num_deriv_vars; ++j)
-	  exp_t1_grad_i[j] = exp_t1_grad_i[j] * discrep_val
-	                   + discrep_grad[j]  * lf_val;
+	  exp_t1_grad_i[j] = exp_t1_grad_i[j] * stored_val
+	                   + stored_grad[j]   * curr_val;
     }
   }
   */
@@ -416,18 +423,18 @@ restore_coefficients(const UShortArray& restore_set)
 {
   size_t lev = l1_norm(restore_set);
   if (expansionCoeffFlag) {
-    expansionType1Coeffs[lev].push_back(savedExpT1Coeffs[restore_set]);
-    savedExpT1Coeffs.erase(restore_set);
+    expansionType1Coeffs[lev].push_back(poppedExpT1Coeffs[restore_set]);
+    poppedExpT1Coeffs.erase(restore_set);
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
-      expansionType2Coeffs[lev].push_back(savedExpT2Coeffs[restore_set]);
-      savedExpT2Coeffs.erase(restore_set);
+      expansionType2Coeffs[lev].push_back(poppedExpT2Coeffs[restore_set]);
+      poppedExpT2Coeffs.erase(restore_set);
     }
   }
   if (expansionCoeffGradFlag) {
-    expansionType1CoeffGrads[lev].push_back(savedExpT1CoeffGrads[restore_set]);
-    savedExpT1CoeffGrads.erase(restore_set);
+    expansionType1CoeffGrads[lev].push_back(poppedExpT1CoeffGrads[restore_set]);
+    poppedExpT1CoeffGrads.erase(restore_set);
   }
 }
 

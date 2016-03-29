@@ -79,9 +79,9 @@ public:
   /// store the current coefficients for later combination
   virtual void store_coefficients();
   /// combine the current coefficients with a previously stored set
-  virtual void combine_coefficients(short combine_type, bool swap);
+  virtual void combine_coefficients(short combine_type, size_t swap_index);
   /// swap the current coefficients with a previously stored set
-  virtual void swap_coefficients();
+  virtual void swap_coefficients(size_t index);
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s, bool normalized);

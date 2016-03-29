@@ -411,30 +411,37 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
 
 void RegressOrthogPolyApproximation::store_coefficients()
 {
-  storedSparseIndices = sparseIndices;
+  storedSparseIndices.push_back(sparseIndices);
   OrthogPolyApproximation::store_coefficients(); // storedExpCoeff{s,Grads}
 }
 
 
-void RegressOrthogPolyApproximation::swap_coefficients()
+void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
 {
-  std::swap(sparseIndices, storedSparseIndices);
-  OrthogPolyApproximation::swap_coefficients(); // expansion coeff{s,Grads}
+  std::swap(sparseIndices, storedSparseIndices[index]);
+  OrthogPolyApproximation::swap_coefficients(index); // expansion coeff{s,Grads}
 }
 
 
 void RegressOrthogPolyApproximation::
-combine_coefficients(short combine_type, bool swap)
+combine_coefficients(short combine_type, size_t swap_index)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
 
-  if (sparseIndices.empty() && storedSparseIndices.empty())
-    OrthogPolyApproximation::combine_coefficients(combine_type, swap);
+  size_t i, num_stored = storedExpCoeffs.size();
+  bool stored_sparse_empty = true;
+  for (i=0; i<num_stored; ++i)
+    if (!storedSparseIndices[i].empty())
+      { stored_sparse_empty = false; break; }
+
+  if (sparseIndices.empty() && stored_sparse_empty) {
+    OrthogPolyApproximation::combine_coefficients(combine_type, swap_index);
     // augment base implementation with clear of storedExpCoeff{s,Grads}
+  }
   else {
-    if (swap) {
-      swap_coefficients();
+    if (swap_index != _NPOS) {
+      swap_coefficients(swap_index);
       allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
     }
 
@@ -446,14 +453,17 @@ combine_coefficients(short combine_type, bool swap)
       = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
     if (sparseIndices.empty())
       inflate(sparseIndices, data_rep->multiIndex.size());
-    if (storedSparseIndices.empty())
-      inflate(storedSparseIndices, data_rep->storedMultiIndex.size());
+    for (i=0; i<num_stored; ++i)
+      if (storedSparseIndices[i].empty())
+	inflate(storedSparseIndices[i], data_rep->storedMultiIndex[i].size());
 
     switch (combine_type) {
     case ADD_COMBINE: {
       // update sparseIndices and expansionCoeff{s,Grads}
-      overlay_expansion(storedSparseIndices, data_rep->storedMultiIndexMap,
-			storedExpCoeffs, storedExpCoeffGrads, 1);
+      for (i=0; i<num_stored; ++i)
+	overlay_expansion(storedSparseIndices[i],
+			  data_rep->storedMultiIndexMap[i],
+			  storedExpCoeffs[i], storedExpCoeffGrads[i], 1);
       // update sparseSobolIndexMap
       update_sparse_sobol(sparseIndices, data_rep->multiIndex,
 			  data_rep->sobolIndexMap);
@@ -461,19 +471,21 @@ combine_coefficients(short combine_type, bool swap)
     }
     case MULT_COMBINE: {
       // perform the multiplication of current and stored expansions
-      multiply_expansion(storedSparseIndices, data_rep->storedMultiIndex,
-			 storedExpCoeffs, storedExpCoeffGrads,
-			 data_rep->combinedMultiIndex);
+      for (i=0; i<num_stored; ++i)
+	multiply_expansion(storedSparseIndices[i],
+			   data_rep->storedMultiIndex[i],
+			   storedExpCoeffs[i], storedExpCoeffGrads[i],
+			   data_rep->combinedMultiIndex);
       // update sparseSobolIndexMap
       update_sparse_sobol(sparseIndices, data_rep->combinedMultiIndex,
 			  data_rep->sobolIndexMap);
       break;
     }
     case ADD_MULT_COMBINE:
-      //overlay_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-      //                  storedExpCoeffGrads, addCoeffs, addCoeffGrads);
-      //multiply_expansion(data_rep->storedMultiIndex, storedExpCoeffs,
-      //                   storedExpCoeffGrads, multCoeffs, multCoeffGrads);
+      //overlay_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
+      //                  storedExpCoeffGrads[i], addCoeffs, addCoeffGrads);
+      //multiply_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
+      //                   storedExpCoeffGrads[i], multCoeffs, multCoeffGrads);
       //compute_combine_factors(addCoeffs, multCoeffs);
       //apply_combine_factors();
       PCerr << "Error : additive+multiplicative combination not yet "
@@ -486,8 +498,8 @@ combine_coefficients(short combine_type, bool swap)
     computedMean = computedVariance = 0;
   }
 
-  if (expansionCoeffFlag)     storedExpCoeffs.resize(0);
-  if (expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
+  if (expansionCoeffFlag)     storedExpCoeffs.clear();
+  if (expansionCoeffGradFlag) storedExpCoeffGrads.clear();
 }
 
 
@@ -832,14 +844,17 @@ hessian_basis_variables(const RealVector& x)
 }
 
 
-Real RegressOrthogPolyApproximation::stored_value(const RealVector& x)
+Real RegressOrthogPolyApproximation::
+stored_value(const RealVector& x, size_t index)
 {
-  if (storedSparseIndices.empty())
-    return OrthogPolyApproximation::stored_value(x);
+  const SizetSet& stored_sp_ind = storedSparseIndices[index];
+  if (stored_sp_ind.empty())
+    return OrthogPolyApproximation::stored_value(x, index);
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
+  const RealVector& stored_coeffs = storedExpCoeffs[index];
 
   // Error check for required data
   if (stored_mi.empty()) {
@@ -849,24 +864,25 @@ Real RegressOrthogPolyApproximation::stored_value(const RealVector& x)
   }
 
   Real approx_val = 0.;
-  size_t i; StSIter it;
-  for (i=0, it=storedSparseIndices.begin(); it!=storedSparseIndices.end();
-       ++i, ++it)
-    approx_val += storedExpCoeffs[i] *
-      data_rep->multivariate_polynomial(x, stored_mi[*it]);
+  size_t i; StSCIter cit;
+  for (i=0, cit=stored_sp_ind.begin(); cit!=stored_sp_ind.end(); ++i, ++cit)
+    approx_val += stored_coeffs[i] *
+      data_rep->multivariate_polynomial(x, stored_mi[*cit]);
   return approx_val;
 }
 
 
 const RealVector& RegressOrthogPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x)
+stored_gradient_basis_variables(const RealVector& x, size_t index)
 {
-  if (storedSparseIndices.empty())
-    return OrthogPolyApproximation::stored_gradient_basis_variables(x);
+  const SizetSet& stored_sp_ind = storedSparseIndices[index];
+  if (stored_sp_ind.empty())
+    return OrthogPolyApproximation::stored_gradient_basis_variables(x, index);
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
+  const RealVector& stored_coeffs = storedExpCoeffs[index];
 
   // Error check for required data
   size_t i, j, num_v = sharedDataRep->numVars;
@@ -883,12 +899,11 @@ stored_gradient_basis_variables(const RealVector& x)
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  StSIter it;
-  for (i=0, it=storedSparseIndices.begin(); it!=storedSparseIndices.end();
-       ++i, ++it) {
+  StSCIter cit;
+  for (i=0, cit=stored_sp_ind.begin(); cit!=stored_sp_ind.end(); ++i, ++cit) {
     const RealVector& term_i_grad
-      = data_rep->multivariate_polynomial_gradient_vector(x, stored_mi[*it]);
-    Real coeff_i = storedExpCoeffs[i];
+      = data_rep->multivariate_polynomial_gradient_vector(x, stored_mi[*cit]);
+    Real coeff_i = stored_coeffs[i];
     for (j=0; j<num_v; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
   }
@@ -897,17 +912,19 @@ stored_gradient_basis_variables(const RealVector& x)
 
 
 const RealVector& RegressOrthogPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x)
+stored_gradient_nonbasis_variables(const RealVector& x, size_t index)
 {
-  if (storedSparseIndices.empty())
-    return OrthogPolyApproximation::stored_gradient_nonbasis_variables(x);
+  const SizetSet& stored_sp_ind = storedSparseIndices[index];
+  if (stored_sp_ind.empty())
+    return OrthogPolyApproximation::stored_gradient_nonbasis_variables(x,index);
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex;
+  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
+  const RealMatrix& stored_grads = storedExpCoeffGrads[index];
 
   // Error check for required data
-  size_t i, j, num_deriv_vars = storedExpCoeffGrads.numRows();
+  size_t i, j, num_deriv_vars = stored_grads.numRows();
   if (stored_mi.empty()) {
     PCerr << "Error: stored expansion coeff grads not available in Regress"
 	  << "OrthogPolyApproximation::stored_gradient_nonbasis_variables()"
@@ -921,11 +938,10 @@ stored_gradient_nonbasis_variables(const RealVector& x)
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  StSIter it;
-  for (i=0, it=storedSparseIndices.begin(); it!=storedSparseIndices.end();
-       ++i, ++it) {
-    Real term_i = data_rep->multivariate_polynomial(x, stored_mi[*it]);
-    const Real* coeff_grad_i = storedExpCoeffGrads[i];
+  StSCIter cit;
+  for (i=0, cit=stored_sp_ind.begin(); cit!=stored_sp_ind.end(); ++i, ++cit) {
+    Real term_i = data_rep->multivariate_polynomial(x, stored_mi[*cit]);
+    const Real* coeff_grad_i = stored_grads[i];
     for (j=0; j<num_deriv_vars; ++j)
       approxGradient[j] += coeff_grad_i[j] * term_i;
   }

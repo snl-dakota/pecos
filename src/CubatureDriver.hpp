@@ -66,8 +66,8 @@ public:
   // return type2WeightSets
   //const RealMatrix& type2_weight_sets() const;
 
-  // test if the current grid state is the maximal grid state
-  //bool maximal_grid() const;
+  // return index of the maximal stored grid state (_NPOS if current grid)
+  //size_t maximal_grid() const;
 
   /// number of collocation points with duplicates removed
   int grid_size();
@@ -141,10 +141,6 @@ inline const RealVector& CubatureDriver::type1_weight_sets() const
 
 //inline const RealMatrix& CubatureDriver::type2_weight_sets() const
 //{ return type2WeightSets; }
-
-
-//inline bool CubatureDriver::maximal_grid() const
-//{ return (type1WeightSets.length() > storedType1WeightSets.length()); }
 
 
 inline void CubatureDriver::collocation_rule(unsigned short rule)

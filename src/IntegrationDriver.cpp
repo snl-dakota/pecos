@@ -371,7 +371,15 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
-bool IntegrationDriver::maximal_grid() const
+void IntegrationDriver::store_grid()
+{ } // default is no-op
+
+
+void IntegrationDriver::clear_stored()
+{ } // default is no-op
+
+
+size_t IntegrationDriver::maximal_grid() const
 {
   if (!driverRep) {
     PCerr << "Error: maximal_grid() not available for this driver type."
@@ -382,16 +390,16 @@ bool IntegrationDriver::maximal_grid() const
 }
 
 
-void IntegrationDriver::store_grid()
-{ } // default is no-op
-
-
-void IntegrationDriver::clear_stored()
-{ } // default is no-op
-
-
-void IntegrationDriver::swap_grid()
-{ } // default is no-op
+void IntegrationDriver::swap_grid(size_t index)
+{
+  if (driverRep)
+    driverRep->swap_grid(index);
+  else {
+    PCerr << "Error: swap_grid() not available for this driver type."
+	  << std::endl;
+    abort_handler(-1);
+  }
+}
 
 
 void IntegrationDriver::

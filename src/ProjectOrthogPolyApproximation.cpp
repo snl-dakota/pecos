@@ -237,8 +237,8 @@ void ProjectOrthogPolyApproximation::decrement_coefficients()
   //resize_expansion();
 
   // reset tensor-product bookkeeping and save restorable data
-  savedTPExpCoeffs.push_back(tpExpansionCoeffs.back());
-  savedTPExpCoeffGrads.push_back(tpExpansionCoeffGrads.back());
+  poppedTPExpCoeffs.push_back(tpExpansionCoeffs.back());
+  poppedTPExpCoeffGrads.push_back(tpExpansionCoeffGrads.back());
   tpExpansionCoeffs.pop_back();  tpExpansionCoeffGrads.pop_back();
 
   computedMean = computedVariance = 0;
@@ -254,12 +254,12 @@ void ProjectOrthogPolyApproximation::restore_coefficients()
   size_t last_index = tpExpansionCoeffs.size();
   size_t index_star = data_rep->restoreIndex;
 
-  std::deque<RealVector>::iterator cit = savedTPExpCoeffs.begin();
-  std::deque<RealMatrix>::iterator git = savedTPExpCoeffGrads.begin();
+  std::deque<RealVector>::iterator cit = poppedTPExpCoeffs.begin();
+  std::deque<RealMatrix>::iterator git = poppedTPExpCoeffGrads.begin();
   std::advance(cit, index_star); std::advance(git, index_star);
 
-  tpExpansionCoeffs.push_back(*cit);     savedTPExpCoeffs.erase(cit);
-  tpExpansionCoeffGrads.push_back(*git); savedTPExpCoeffGrads.erase(git);
+  tpExpansionCoeffs.push_back(*cit);     poppedTPExpCoeffs.erase(cit);
+  tpExpansionCoeffGrads.push_back(*git); poppedTPExpCoeffGrads.erase(git);
 
   // don't update Sobol' array sizes for decrement, restore, or finalize
 
@@ -280,12 +280,12 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   // don't update Sobol' array sizes for decrement, restore, or finalize
   resize_expansion();
   // move previous expansion data to current expansion
-  tpExpansionCoeffs.insert(tpExpansionCoeffs.end(), savedTPExpCoeffs.begin(),
-    savedTPExpCoeffs.end());
+  tpExpansionCoeffs.insert(tpExpansionCoeffs.end(), poppedTPExpCoeffs.begin(),
+    poppedTPExpCoeffs.end());
   tpExpansionCoeffGrads.insert(tpExpansionCoeffGrads.end(),
-    savedTPExpCoeffGrads.begin(), savedTPExpCoeffGrads.end());
+    poppedTPExpCoeffGrads.begin(), poppedTPExpCoeffGrads.end());
 
-  savedTPExpCoeffs.clear();       savedTPExpCoeffGrads.clear();
+  poppedTPExpCoeffs.clear();       poppedTPExpCoeffGrads.clear();
   // sum remaining trial expansions into expansionCoeffs/expansionCoeffGrads
   append_tensor_expansions(start_index);
 
@@ -642,7 +642,7 @@ void ProjectOrthogPolyApproximation::expectation()
 void ProjectOrthogPolyApproximation::
 integrate_response_moments(size_t num_moments)
 {
-  size_t i, num_pts = surrData.points();
+  size_t i, s, num_pts = surrData.points(), num_stored = storedExpCoeffs.size();
   bool anchor_pt = surrData.anchor();
   if (anchor_pt) ++num_pts;
 
@@ -659,33 +659,49 @@ integrate_response_moments(size_t num_moments)
 
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  if (data_rep->storedExpCombineType && !storedExpCoeffs.empty()) {
+  if (data_rep->storedExpCombineType && num_stored) {
     // update data_coeffs using evaluations from stored expansions
     switch (data_rep->storedExpCombineType) {
     case ADD_COMBINE:
       if (anchor_pt) {
-	data_coeffs[0] += stored_value(surrData.anchor_continuous_variables());
-	for (i=1; i<num_pts; ++i)
-	  data_coeffs[i] += stored_value(surrData.continuous_variables(i-1));
+	const RealVector& a_c_vars = surrData.anchor_continuous_variables();
+	for (s=0; s<num_stored; ++s)
+	  data_coeffs[0] += stored_value(a_c_vars, s);
+	for (i=1; i<num_pts; ++i) {
+	  const RealVector& c_vars = surrData.continuous_variables(i-1);
+	  for (s=0; s<num_stored; ++s)
+	    data_coeffs[i] += stored_value(c_vars, s);
+	}
       }
       else
-	for (i=0; i<num_pts; ++i)
-	  data_coeffs[i] += stored_value(surrData.continuous_variables(i));
+	for (i=0; i<num_pts; ++i) {
+	  const RealVector& c_vars = surrData.continuous_variables(i);
+	  for (s=0; s<num_stored; ++s)
+	    data_coeffs[i] += stored_value(c_vars, s);
+	}
       break;
     case MULT_COMBINE:
       if (anchor_pt) {
-	data_coeffs[0] *= stored_value(surrData.anchor_continuous_variables());
-	for (i=1; i<num_pts; ++i)
-	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i-1));
+	const RealVector& a_c_vars = surrData.anchor_continuous_variables();
+	for (s=0; s<num_stored; ++s)
+	  data_coeffs[0] *= stored_value(a_c_vars, s);
+	for (i=1; i<num_pts; ++i) {
+	  const RealVector& c_vars = surrData.continuous_variables(i-1);
+	  for (s=0; s<num_stored; ++s)
+	    data_coeffs[i] *= stored_value(c_vars, s);
+	}
       }
       else
-	for (i=0; i<num_pts; ++i)
-	  data_coeffs[i] *= stored_value(surrData.continuous_variables(i));
+	for (i=0; i<num_pts; ++i) {
+	  const RealVector& c_vars = surrData.continuous_variables(i);
+	  for (s=0; s<num_stored; ++s)
+	    data_coeffs[i] *= stored_value(c_vars, s);
+	}
       break;
     }
     // stored data may now be cleared
-    if (expansionCoeffFlag)     storedExpCoeffs.resize(0);
-    if (expansionCoeffGradFlag) storedExpCoeffGrads.reshape(0,0);
+    if (expansionCoeffFlag)     storedExpCoeffs.clear();
+    if (expansionCoeffGradFlag) storedExpCoeffGrads.clear();
   }
 
   // update numericalMoments based on data_coeffs
@@ -760,7 +776,8 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 }
 
 
-Real ProjectOrthogPolyApproximation::stored_value(const RealVector& x)
+Real ProjectOrthogPolyApproximation::
+stored_value(const RealVector& x, size_t index)
 {
   // sum expansion to get response value prediction
 
@@ -769,8 +786,9 @@ Real ProjectOrthogPolyApproximation::stored_value(const RealVector& x)
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: { // Horner's rule approach
     // Error check for required data
-    size_t i, num_stored_terms = data_rep->storedMultiIndex.size();
-    if (!num_stored_terms || storedExpCoeffs.length() != num_stored_terms) {
+    size_t i, num_stored_terms = data_rep->storedMultiIndex[index].size();
+    if (!num_stored_terms ||
+	storedExpCoeffs[index].length() != num_stored_terms) {
       PCerr << "Error: stored expansion coefficients not available in "
 	    << "ProjectOrthogPolyApproximation::stored_value()" << std::endl;
       abort_handler(-1);
@@ -779,15 +797,16 @@ Real ProjectOrthogPolyApproximation::stored_value(const RealVector& x)
     // which is safe to assume prior to support of >2 levels of fidelity.
     RealVector accumulator(sharedDataRep->numVars); // init to 0.
     return data_rep->
-      tensor_product_value(x, storedExpCoeffs, data_rep->storedApproxOrder,
-			   data_rep->storedMultiIndex, accumulator);
+      tensor_product_value(x, storedExpCoeffs[index],
+			   data_rep->storedApproxOrder[index],
+			   data_rep->storedMultiIndex[index], accumulator);
     break;
   }
   // Horner's rule approach would require storage of tensor product components
   //case COMBINED_SPARSE_GRID:
     //break;
   default: // other cases are total-order expansions
-    return OrthogPolyApproximation::stored_value(x);
+    return OrthogPolyApproximation::stored_value(x, index);
     break;
   }
 }

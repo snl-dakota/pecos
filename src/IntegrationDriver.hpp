@@ -76,15 +76,18 @@ public:
   virtual void reinterpolated_tensor_grid(const UShortArray& lev_index,
 					  const SizetList& reinterp_indices);
 
-  /// test if the current grid state is the maximal grid state
-  virtual bool maximal_grid() const;
   /// store configuration settings for the current grid (for use within a
   /// prescribed grid sequence)
   virtual void store_grid();
   /// clear stored grid settings following their usage/combination
   virtual void clear_stored();
-  /// swap current and stored grid settings
-  virtual void swap_grid();
+
+  /// return the index of the maximal stored grid state (_NPOS if the
+  /// current unstored grid state)
+  virtual size_t maximal_grid() const;
+  /// swap settings between the current grid and the stored grid
+  /// identified by index
+  virtual void swap_grid(size_t index);
 
   /// return type1WeightSets from Cubature/TensorProduct/CombinedSparseGrid
   /// or concatenate type1WeightSets in HierarchSparseGrid

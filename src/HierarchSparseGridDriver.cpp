@@ -40,12 +40,12 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 
 void HierarchSparseGridDriver::store_grid()
 {
-  storedLevMultiIndex = smolyakMultiIndex;
-  storedCollocKey     = collocKey;
-  //storedCollocIndices = collocIndices;
+  storedLevMultiIndex.push_back(smolyakMultiIndex);
+  storedCollocKey.push_back(collocKey);
+  //storedCollocIndices.push_back(collocIndices);
 
-  storedType1WeightSets = type1WeightSets;
-  storedType2WeightSets = type2WeightSets;
+  storedType1WeightSets.push_back(type1WeightSets);
+  storedType2WeightSets.push_back(type2WeightSets);
 }
 
 
@@ -59,18 +59,40 @@ void HierarchSparseGridDriver::clear_stored()
 }
 
 
-// TO DO: swap logic for maximal grid:
-//bool swap = (storedCollocKey.size() > collocKey.size());
-
-
-void HierarchSparseGridDriver::swap_grid()
+size_t HierarchSparseGridDriver::maximal_grid() const
 {
-  std::swap(storedLevMultiIndex, smolyakMultiIndex);
-  std::swap(storedCollocKey,     collocKey);
-  //std::swap(storedCollocIndices, collocIndices);
+  size_t i, j, k, num_stored = storedType1WeightSets.size(), max_index = _NPOS,
+    num_max_wts = 0, num_stored_wts, num_lev = type1WeightSets.size(), num_sets;
+  for (j=0; j<num_lev; ++j) {
+    const RealVectorArray& curr_wts_j = type1WeightSets[j];
+    num_sets = curr_wts_j.size();
+    for (k=0; k<num_sets; ++k)
+      num_max_wts += curr_wts_j[k].length();
+  }
+  for (i=0; i<num_stored; ++i) {
+    const RealVector2DArray& stored_wts = storedType1WeightSets[i];
+    num_lev = stored_wts.size(); num_stored_wts = 0;
+    for (j=0; j<num_lev; ++j) {
+      const RealVectorArray& stored_wts_j = stored_wts[j];
+      num_sets = stored_wts_j.size();
+      for (k=0; k<num_sets; ++k)
+	num_stored_wts += stored_wts_j[k].length();
+    }
+    if (num_stored_wts > num_max_wts)
+      { max_index = i; num_max_wts = num_stored_wts; }
+  }
+  return max_index;
+}
 
-  std::swap(storedType1WeightSets, type1WeightSets);
-  std::swap(storedType2WeightSets, type2WeightSets);
+
+void HierarchSparseGridDriver::swap_grid(size_t index)
+{
+  std::swap(storedLevMultiIndex[index], smolyakMultiIndex);
+  std::swap(storedCollocKey[index],     collocKey);
+  //std::swap(storedCollocIndices[index], collocIndices);
+
+  std::swap(storedType1WeightSets[index], type1WeightSets);
+  std::swap(storedType2WeightSets[index], type2WeightSets);
 }
 
 
@@ -790,11 +812,11 @@ void HierarchSparseGridDriver::restore_set()
       update_collocation_indices();
     // This approach stores less history than WeightSetsRef approach
     const UShortArray& tr_set = trial_set();
-    type1WeightSets[trialLevel].push_back(savedT1WtSets[tr_set]);
-    savedT1WtSets.erase(tr_set);
+    type1WeightSets[trialLevel].push_back(poppedT1WtSets[tr_set]);
+    poppedT1WtSets.erase(tr_set);
     if (computeType2Weights) {
-      type2WeightSets[trialLevel].push_back(savedT2WtSets[tr_set]);
-      savedT2WtSets.erase(tr_set);
+      type2WeightSets[trialLevel].push_back(poppedT2WtSets[tr_set]);
+      poppedT2WtSets.erase(tr_set);
     }
   }
   /*
@@ -819,12 +841,12 @@ void HierarchSparseGridDriver::pop_trial_set()
   }
   */
 
-  // migrate weights from saved to active status
+  // migrate weights from popped to active status
   const UShortArray& tr_set = trial_set(); // valid prior to smolyakMI pop
-  savedT1WtSets[tr_set] = type1WeightSets[trialLevel].back();
+  poppedT1WtSets[tr_set] = type1WeightSets[trialLevel].back();
   type1WeightSets[trialLevel].pop_back();
   if (computeType2Weights) {
-    savedT2WtSets[tr_set] = type2WeightSets[trialLevel].back();
+    poppedT2WtSets[tr_set] = type2WeightSets[trialLevel].back();
     type2WeightSets[trialLevel].pop_back();
   }
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
@@ -865,9 +887,9 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   }
 
   // For final answer, push all evaluated sets into old and clear active.
-  // Multiple trial insertion approach must be compatible with
-  // Dakota::Approximation::savedSDPSet behavior (i.e., inc2/inc3 set 
-  // insertions must occur one at a time without mixing).
+  // Multiple trial insertion approach must be compatible with bookkeeping
+  // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
+  // occur one at a time without mixing.
 
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); use computedTrialSets
@@ -880,9 +902,9 @@ finalize_sets(bool output_sets, bool converged_within_tol)
       update_collocation_key();       // update collocKey
       if (trackCollocIndices)
 	update_collocation_indices(); // update collocIndices and numCollocPts
-      type1WeightSets[trialLevel].push_back(savedT1WtSets[tr_set]);
+      type1WeightSets[trialLevel].push_back(poppedT1WtSets[tr_set]);
       if (computeType2Weights)
-	type2WeightSets[trialLevel].push_back(savedT2WtSets[tr_set]);
+	type2WeightSets[trialLevel].push_back(poppedT2WtSets[tr_set]);
       if (output_sets && converged_within_tol) // print trials below tol
 	print_index_set(PCout, tr_set);
     }
@@ -908,7 +930,7 @@ finalize_sets(bool output_sets, bool converged_within_tol)
     }
   }
 
-  activeMultiIndex.clear(); savedT1WtSets.clear(); savedT2WtSets.clear();
+  activeMultiIndex.clear(); poppedT1WtSets.clear(); poppedT2WtSets.clear();
   // defer since needed for SharedPolyApproxData::finalization_index()
   //computedTrialSets.clear();
 }

@@ -76,7 +76,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  bool pre_combine_data(short combine_type);
+  size_t pre_combine_data(short combine_type);
 
   void increment_component_sobol();
 

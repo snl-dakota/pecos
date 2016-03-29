@@ -292,7 +292,7 @@ int main(int argc, char* argv[])
 	  poly_approx[iQoI].restore_coefficients();
           // Also restore the corresponding surrogate data
 	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-	  numPts = sdi.restore(idxRestore,true);
+	  numPts = sdi.push(idxRestore,true);
 	}
 	shared_poly_data->post_restore_data();
 
@@ -379,7 +379,7 @@ int main(int argc, char* argv[])
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
       poly_approx[iQoI].restore_coefficients();
       SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-      int numPts = sdi.restore(idxRestore,true);
+      int numPts = sdi.push(idxRestore,true);
     }
     shared_poly_data->post_restore_data();
 
@@ -396,10 +396,10 @@ int main(int argc, char* argv[])
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     // from Approximation::finalize() called from PecosApproximation::finalize()
     SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-    size_t i, num_restore = sdi.saved_trials(); // # of saved trial sets
+    size_t i, num_restore = sdi.popped_trials(); // # of popped trial sets
     for (i=0; i<num_restore; ++i)
-      sdi.restore(shared_poly_data->finalization_index(i),false);
-    sdi.clear_saved();
+      sdi.push(shared_poly_data->finalization_index(i),false);
+    sdi.clear_popped();
     // from PecosApproximation::finalize()
     poly_approx[iQoI].finalize_coefficients();
   }

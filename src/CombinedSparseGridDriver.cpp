@@ -67,11 +67,13 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 
 void CombinedSparseGridDriver::store_grid()
 {
-  storedLevMultiIndex = smolyakMultiIndex; storedLevCoeffs     = smolyakCoeffs;
-  storedCollocKey     = collocKey;         storedCollocIndices = collocIndices;
+  storedLevMultiIndex.push_back(smolyakMultiIndex);
+  storedLevCoeffs.push_back(smolyakCoeffs);
+  storedCollocKey.push_back(collocKey);
+  storedCollocIndices.push_back(collocIndices);
 
-  storedType1WeightSets = type1WeightSets;
-  if (computeType2Weights) storedType2WeightSets = type2WeightSets;
+  storedType1WeightSets.push_back(type1WeightSets);
+  if (computeType2Weights) storedType2WeightSets.push_back(type2WeightSets);
 }
 
 
@@ -80,30 +82,37 @@ void CombinedSparseGridDriver::clear_stored()
   storedLevMultiIndex.clear(); storedLevCoeffs.clear();
   storedCollocKey.clear();     storedCollocIndices.clear();
 
-  storedType1WeightSets.resize(0);
-  if (computeType2Weights) storedType2WeightSets.reshape(0,0);
+  storedType1WeightSets.clear();
+  if (computeType2Weights) storedType2WeightSets.clear();
 }
 
 
-// TO DO: swap logic for maximal grid:
-//bool swap = (storedCollocKey.size() > collocKey.size());
-
-
-void CombinedSparseGridDriver::swap_grid()
+size_t CombinedSparseGridDriver::maximal_grid() const
 {
-  std::swap(storedLevMultiIndex, smolyakMultiIndex);
-  std::swap(storedLevCoeffs,     smolyakCoeffs);
-  std::swap(storedCollocKey,     collocKey);
-  std::swap(storedCollocIndices, collocIndices);
+  size_t i, num_stored = storedType1WeightSets.size(),
+    max_index = _NPOS, max_wts = type1WeightSets.length();
+  for (i=0; i<num_stored; ++i)
+    if (storedType1WeightSets[i].length() > max_wts)
+      { max_index = i; max_wts = storedType1WeightSets[i].length(); }
+  return max_index;
+}
+
+
+void CombinedSparseGridDriver::swap_grid(size_t index)
+{
+  std::swap(storedLevMultiIndex[index], smolyakMultiIndex);
+  std::swap(storedLevCoeffs[index],     smolyakCoeffs);
+  std::swap(storedCollocKey[index],     collocKey);
+  std::swap(storedCollocIndices[index], collocIndices);
 
   RealVector tmp_vec(type1WeightSets);
-  type1WeightSets = storedType1WeightSets;
-  storedType1WeightSets = tmp_vec;
+  type1WeightSets = storedType1WeightSets[index];
+  storedType1WeightSets[index] = tmp_vec;
 
   if (computeType2Weights) {
     RealMatrix tmp_mat(type2WeightSets);
-    type2WeightSets = storedType2WeightSets;
-    storedType2WeightSets = tmp_mat;
+    type2WeightSets = storedType2WeightSets[index];
+    storedType2WeightSets[index] = tmp_mat;
   }
 }
 
@@ -682,9 +691,9 @@ void CombinedSparseGridDriver::
 finalize_sets(bool output_sets, bool converged_within_tol)
 {
   // For final answer, push all evaluated sets into old and clear active.
-  // Multiple trial insertion approach must be compatible with
-  // Dakota::Approximation::savedSDPSet behavior (i.e., inc2/inc3 set 
-  // insertions must occur one at a time without mixing).
+  // Multiple trial insertion approach must be compatible with bookkeeping
+  // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
+  // occur one at a time without mixing.
 
   size_t start_index = smolyakMultiIndex.size();
   // don't insert activeMultiIndex, as this may include sets which have not
@@ -902,8 +911,7 @@ void CombinedSparseGridDriver::merge_unique()
 void CombinedSparseGridDriver::finalize_unique(size_t start_index)
 {
   // This fn supports multiple indices and ensures no order mixing among sets
-  // (which causes a bookkeeping mismatch with Dakota::Approximation::
-  // savedSDPSets) by using inc2/inc3 in careful succession.
+  // by using inc2/inc3 in careful succession.
 
   // *** TO DO ***: This doesn't address issue of potential point replication
   // changes between initial trial set status and finalization.  Need an

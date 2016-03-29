@@ -69,10 +69,10 @@ protected:
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void store_coefficients();
   /// augment current interpolant using
-  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void combine_coefficients(short combine_type, bool swap);
-  /// swap current with storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void swap_coefficients();
+  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index]
+  void combine_coefficients(short combine_type, size_t swap_index);
+  /// swap current with storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index]
+  void swap_coefficients(size_t index);
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
@@ -84,9 +84,11 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x);
-  const RealVector& stored_gradient_basis_variables(const RealVector& x);
-  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
+  Real stored_value(const RealVector& x, size_t index);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+						    size_t index);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
+						       size_t index);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -203,12 +205,12 @@ private:
       expansion only over the random variables). */
   RealMatrix expansionType1CoeffGrads;
 
-  /// storage of expansionType1Coeffs state for subsequent restoration
-  RealVector storedExpType1Coeffs;
-  /// storage of expansionType2Coeffs state for subsequent restoration
-  RealMatrix storedExpType2Coeffs;
-  /// storage of expansionType1CoeffGrads state for subsequent restoration
-  RealMatrix storedExpType1CoeffGrads;
+  /// copies of expansionType1Coeffs state for subsequent restoration
+  RealVectorArray storedExpType1Coeffs;
+  /// copies of expansionType2Coeffs state for subsequent restoration
+  RealMatrixArray storedExpType2Coeffs;
+  /// copies of expansionType1CoeffGrads state for subsequent restoration
+  RealMatrixArray storedExpType1CoeffGrads;
 
   /// the gradient of the mean of a tensor-product interpolant; a
   /// contributor to meanGradient

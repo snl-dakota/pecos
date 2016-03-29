@@ -49,7 +49,9 @@ public:
 				  const SizetList& reinterp_indices);
   void store_grid();
   void clear_stored();
-  void swap_grid();
+
+  size_t maximal_grid() const;
+  void swap_grid(size_t index);
 
   //
   //- Heading: Member functions
@@ -87,10 +89,10 @@ public:
   /// return collocKey
   const UShort2DArray& collocation_key() const;
 
-  /// return storedLevelIndex
-  const UShortArray& stored_level_index() const;
-  /// return storedCollocKey
-  const UShort2DArray& stored_collocation_key() const;
+  /// return storedLevelIndex[index]
+  const UShortArray& stored_level_index(size_t index) const;
+  /// return storedCollocKey[index]
+  const UShort2DArray& stored_collocation_key(size_t index) const;
 
   /// stand-alone initializer of tensor grid settings (except for
   /// distribution params)
@@ -99,9 +101,6 @@ public:
 		       const BasisConfigOptions& bc_options);
   /// helper initializer of tensor grid settings (except distribution params)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
-
-  /// test if the current grid state is the maximal grid state
-  bool maximal_grid() const;
 
 private:
 
@@ -130,10 +129,10 @@ private:
   /// indices for sets of tensor-product collocation points
   UShort2DArray collocKey;
 
-  /// stored driver state: copy of levelIndex
-  UShortArray storedLevelIndex;
-  /// stored driver state: copy of collocKey
-  UShort2DArray storedCollocKey;
+  /// stored driver states: copies of levelIndex
+  UShort2DArray storedLevelIndex;
+  /// stored driver states: copies of collocKey
+  UShort3DArray storedCollocKey;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the tensor grid
@@ -142,10 +141,10 @@ private:
   /// for each derivative component and for each point in the tensor grid
   RealMatrix type2WeightSets;
 
-  /// stored driver state: copy of type1WeightSets
-  RealVector storedType1WeightSets;
-  /// stored driver state: copy of type2WeightSets
-  RealMatrix storedType2WeightSets;
+  /// stored driver states: copies of type1WeightSets
+  RealVectorArray storedType1WeightSets;
+  /// stored driver states: copies of type2WeightSets
+  RealMatrixArray storedType2WeightSets;
 };
 
 
@@ -221,10 +220,6 @@ inline const RealMatrix& TensorProductDriver::type2_weight_sets() const
 { return type2WeightSets; }
 
 
-inline bool TensorProductDriver::maximal_grid() const
-{ return (type1WeightSets.length() > storedType1WeightSets.length()); }
-
-
 inline const UShortArray& TensorProductDriver::level_index() const
 { return levelIndex; }
 
@@ -233,12 +228,14 @@ inline const UShort2DArray& TensorProductDriver::collocation_key() const
 { return collocKey; }
 
 
-inline const UShortArray& TensorProductDriver::stored_level_index() const
-{ return storedLevelIndex; }
+inline const UShortArray& TensorProductDriver::
+stored_level_index(size_t index) const
+{ return storedLevelIndex[index]; }
 
 
-inline const UShort2DArray& TensorProductDriver::stored_collocation_key() const
-{ return storedCollocKey; }
+inline const UShort2DArray& TensorProductDriver::
+stored_collocation_key(size_t index) const
+{ return storedCollocKey[index]; }
 
 
 inline int TensorProductDriver::grid_size()

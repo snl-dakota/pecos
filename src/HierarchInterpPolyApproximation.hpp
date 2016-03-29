@@ -72,15 +72,15 @@ protected:
   void store_coefficients();
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void combine_coefficients(short combine_type, bool swap);
+  void combine_coefficients(short combine_type, size_t swap_index);
   /// swap current with storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void swap_coefficients();
+  void swap_coefficients(size_t index);
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
 
   Real value(const RealVector& x);
-  
+
   const RealVector& gradient_basis_variables(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x,
 					     const SizetArray& dvv);
@@ -89,9 +89,11 @@ protected:
 
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x);
-  const RealVector& stored_gradient_basis_variables(const RealVector& x);
-  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x);
+  Real stored_value(const RealVector& x, size_t index);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+						    size_t index);
+  const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
+						       size_t index);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -295,7 +297,7 @@ private:
   void increment_coefficients(const UShortArray& index_set);
 
   /// move the expansion coefficients for restore_set from
-  /// savedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
+  /// poppedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
   /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void restore_coefficients(const UShortArray& restore_set);
 
@@ -363,22 +365,25 @@ private:
       design variables for an expansion only over the random variables). */
   RealMatrix2DArray expansionType1CoeffGrads;
 
-  /// saved type 1 expansion coefficients for restoration to
-  /// expansionType1Coeffs
-  std::map<UShortArray, RealVector> savedExpT1Coeffs;
-  /// saved type 2 expansion coefficients for restoration to
-  /// expansionType2Coeffs
-  std::map<UShortArray, RealMatrix> savedExpT2Coeffs;
-  /// saved type 1 expansion coefficient gradients for restoration to
-  /// expansionType1CoeffGrads
-  std::map<UShortArray, RealMatrix> savedExpT1CoeffGrads;
+  /// type 1 expansion coefficients popped during decrement for later
+  /// restoration to expansionType1Coeffs
+  std::map<UShortArray, RealVector> poppedExpT1Coeffs;
+  /// type 2 expansion coefficients popped during decrement for later
+  /// restoration to expansionType2Coeffs
+  std::map<UShortArray, RealMatrix> poppedExpT2Coeffs;
+  /// type 1 expansion coefficient gradients popped during decrement
+  /// for later restoration to expansionType1CoeffGrads
+  std::map<UShortArray, RealMatrix> poppedExpT1CoeffGrads;
 
-  /// storage of expansionType1Coeffs state for subsequent restoration
-  RealVector2DArray storedExpType1Coeffs;
-  /// storage of expansionType2Coeffs state for subsequent restoration
-  RealMatrix2DArray storedExpType2Coeffs;
-  /// storage of expansionType1CoeffGrads state for subsequent restoration
-  RealMatrix2DArray storedExpType1CoeffGrads;
+  /// storage of expansionType1Coeffs state for subsequent
+  /// restoration/combination
+  RealVector3DArray storedExpType1Coeffs;
+  /// storage of expansionType2Coeffs state for subsequent
+  /// restoration/combination
+  RealMatrix3DArray storedExpType2Coeffs;
+  /// storage of expansionType1CoeffGrads state for subsequent
+  /// restoration/combination
+  RealMatrix3DArray storedExpType1CoeffGrads;
 };
 
 
@@ -610,44 +615,46 @@ gradient_nonbasis_variables(const RealVector& x)
 }
 
 
-inline Real HierarchInterpPolyApproximation::stored_value(const RealVector& x)
+inline Real HierarchInterpPolyApproximation::
+stored_value(const RealVector& x, size_t index)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index();
+  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index(index);
   unsigned short   max_level = sm_mi.size() - 1;
-  return value(x, sm_mi, hsg_driver->stored_collocation_key(),
-	       storedExpType1Coeffs, storedExpType2Coeffs, max_level);
+  return value(x, sm_mi, hsg_driver->stored_collocation_key(index),
+	       storedExpType1Coeffs[index], storedExpType2Coeffs[index],
+	       max_level);
 }
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x)
+stored_gradient_basis_variables(const RealVector& x, size_t index)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index();
+  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index(index);
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi,
-				  hsg_driver->stored_collocation_key(),
-				  storedExpType1Coeffs, storedExpType2Coeffs,
-				  max_level);
+				  hsg_driver->stored_collocation_key(index),
+				  storedExpType1Coeffs[index],
+				  storedExpType2Coeffs[index], max_level);
 }
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x)
+stored_gradient_nonbasis_variables(const RealVector& x, size_t index)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index();
+  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index(index);
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_nonbasis_variables(x, sm_mi,
-				     hsg_driver->stored_collocation_key(),
-				     storedExpType1CoeffGrads, max_level);
+				     hsg_driver->stored_collocation_key(index),
+				     storedExpType1CoeffGrads[index],max_level);
 }
 
 } // namespace Pecos
