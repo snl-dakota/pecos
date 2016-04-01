@@ -251,10 +251,6 @@ void SharedInterpPolyApproxData::post_finalize_data()
 }
 
 
-void SharedInterpPolyApproxData::store_data()
-{ driverRep->store_grid(); }
-
-
 size_t SharedInterpPolyApproxData::pre_combine_data(short combine_type)
 {
   // Sufficient for two grids: if not currently the maximal grid, then swap

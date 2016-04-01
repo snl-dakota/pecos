@@ -43,38 +43,65 @@ void OrthogPolyApproximation::allocate_arrays()
 }
 
 
-void OrthogPolyApproximation::store_coefficients()
+void OrthogPolyApproximation::store_coefficients(size_t index)
 {
   // Store the aggregated expansion data.  This is used for multifidelity
   // combination, separate from poppedTP{MultiIndex,Coeffs,CoeffGrads} used
   // for generalized sparse grids.
 
-  if (expansionCoeffFlag) storedExpCoeffs.push_back(expansionCoeffs);
-  else                    storedExpCoeffs.push_back(RealVector());
-  if (expansionCoeffGradFlag)
-    storedExpCoeffGrads.push_back(expansionCoeffGrads);
-  else
-    storedExpCoeffGrads.push_back(RealMatrix());
+  size_t stored_len = storedExpCoeffs.size();
+  if (index == _NPOS || index == stored_len) { // append
+    if (expansionCoeffFlag) storedExpCoeffs.push_back(expansionCoeffs);
+    else storedExpCoeffs.push_back(RealVector()); // keep indexing consistent
+    if (expansionCoeffGradFlag)
+      storedExpCoeffGrads.push_back(expansionCoeffGrads);
+    else // keep indexing consistent
+      storedExpCoeffGrads.push_back(RealMatrix());
+  }
+  else if (index < stored_len) { // replace
+    if (expansionCoeffFlag) storedExpCoeffs[index] = expansionCoeffs;
+    if (expansionCoeffGradFlag)
+      storedExpCoeffGrads[index] = expansionCoeffGrads;
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in OrthogPoly"
+	  << "Approximation::store_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
 }
 
 
-void OrthogPolyApproximation::swap_coefficients(size_t index)
+void OrthogPolyApproximation::swap_coefficients(size_t maximal_index)
 {
   if (expansionCoeffFlag) {
     RealVector tmp_vec(expansionCoeffs);
-    expansionCoeffs = storedExpCoeffs[index];
-    storedExpCoeffs[index] = tmp_vec;
+    expansionCoeffs = storedExpCoeffs[maximal_index];
+    storedExpCoeffs[maximal_index] = tmp_vec;
   }
   if (expansionCoeffGradFlag) {
     RealMatrix tmp_mat(expansionCoeffGrads);
-    expansionCoeffGrads = storedExpCoeffGrads[index];
-    storedExpCoeffGrads[index] = tmp_mat;
+    expansionCoeffGrads = storedExpCoeffGrads[maximal_index];
+    storedExpCoeffGrads[maximal_index] = tmp_mat;
+  }
+}
+
+
+void OrthogPolyApproximation::remove_stored_coefficients(size_t index)
+{
+  size_t stored_len = storedExpCoeffs.size();
+  if (index == _NPOS || index == stored_len)
+    { storedExpCoeffs.pop_back(); storedExpCoeffGrads.pop_back(); }
+  else if (index < stored_len) {
+    RealVectorArray::iterator vit = storedExpCoeffs.begin();
+    std::advance(vit, index); storedExpCoeffs.erase(vit);
+    RealMatrixArray::iterator mit = storedExpCoeffGrads.begin();
+    std::advance(mit, index); storedExpCoeffGrads.erase(mit);
   }
 }
 
 
 void OrthogPolyApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+combine_coefficients(short combine_type, size_t maximal_index)
 {
   // based on incoming combine_type, combine the data stored previously
   // by store_coefficients()
@@ -82,8 +109,8 @@ combine_coefficients(short combine_type, size_t swap_index)
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  if (swap_index != _NPOS) {
-    swap_coefficients(swap_index);
+  if (maximal_index != _NPOS) {
+    swap_coefficients(maximal_index);
     allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
   }
 

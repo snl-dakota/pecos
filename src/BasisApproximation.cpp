@@ -344,25 +344,12 @@ void BasisApproximation::finalize_coefficients()
 }
 
 
-void BasisApproximation::store_coefficients()
+void BasisApproximation::store_coefficients(size_t index)
 {
   if (basisApproxRep)
-    basisApproxRep->store_coefficients(); 
+    basisApproxRep->store_coefficients(index); 
   else {
     PCerr << "Error: store_coefficients() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void BasisApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
-{
-  if (basisApproxRep)
-    basisApproxRep->combine_coefficients(combine_type, swap_index);
-  else {
-    PCerr << "Error: combine_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
@@ -375,6 +362,31 @@ void BasisApproximation::swap_coefficients(size_t index)
     basisApproxRep->swap_coefficients(index);
   else {
     PCerr << "Error: swap_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisApproximation::remove_stored_coefficients(size_t index)
+{
+  if (basisApproxRep)
+    basisApproxRep->remove_stored_coefficients(index); 
+  else {
+    PCerr << "Error: remove_stored_coefficients() not available for this "
+	  << "basis approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisApproximation::
+combine_coefficients(short combine_type, size_t swap_index)
+{
+  if (basisApproxRep)
+    basisApproxRep->combine_coefficients(combine_type, swap_index);
+  else {
+    PCerr << "Error: combine_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }

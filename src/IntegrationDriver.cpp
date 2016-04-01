@@ -371,7 +371,11 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
-void IntegrationDriver::store_grid()
+void IntegrationDriver::store_grid(size_t index)
+{ } // default is no-op
+
+
+void IntegrationDriver::remove_stored_grid(size_t index)
 { } // default is no-op
 
 

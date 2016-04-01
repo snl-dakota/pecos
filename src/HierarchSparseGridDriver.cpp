@@ -38,14 +38,53 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 }
 
 
-void HierarchSparseGridDriver::store_grid()
+void HierarchSparseGridDriver::store_grid(size_t index)
 {
-  storedLevMultiIndex.push_back(smolyakMultiIndex);
-  storedCollocKey.push_back(collocKey);
-  //storedCollocIndices.push_back(collocIndices);
+  size_t stored_len = storedType1WeightSets.size();
+  if (index == _NPOS || index == stored_len) { // append
+    storedLevMultiIndex.push_back(smolyakMultiIndex);
+    storedCollocKey.push_back(collocKey);
+    //storedCollocIndices.push_back(collocIndices);
+    storedType1WeightSets.push_back(type1WeightSets);
+    storedType2WeightSets.push_back(type2WeightSets);
+  }
+  else if (index < stored_len) {
+    storedLevMultiIndex[index]   = smolyakMultiIndex;
+    storedCollocKey[index]       = collocKey;
+    //storedCollocIndices[index] = collocIndices;
+    storedType1WeightSets[index] = type1WeightSets;
+    storedType2WeightSets[index] = type2WeightSets;
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in "
+	  << "HierarchSparseGridDriver::store_grid()" << std::endl;
+    abort_handler(-1);
+  }
+}
 
-  storedType1WeightSets.push_back(type1WeightSets);
-  storedType2WeightSets.push_back(type2WeightSets);
+
+void HierarchSparseGridDriver::remove_stored_grid(size_t index)
+{
+  size_t stored_len = storedType1WeightSets.size();
+  if (index == _NPOS || index == stored_len) {
+    storedLevMultiIndex.pop_back();
+    storedCollocKey.pop_back();
+    //storedCollocIndices.pop_back();
+    storedType1WeightSets.pop_back();
+    storedType2WeightSets.pop_back();
+  }
+  else if (index < stored_len) {
+    UShort4DArray::iterator u4it = storedLevMultiIndex.begin();
+    std::advance(u4it, index); storedLevMultiIndex.erase(u4it);
+    UShort5DArray::iterator u5it = storedCollocKey.begin();
+    std::advance(u5it, index); storedCollocKey.erase(u5it);
+    //Sizet4DArray::iterator s4it = storedCollocIndices.begin();
+    //std::advance(s4it, index); storedCollocIndices.erase(s4it);
+    RealVector3DArray::iterator vit = storedType1WeightSets.begin();
+    std::advance(vit, index); storedType1WeightSets.erase(vit);
+    RealMatrix3DArray::iterator mit = storedType2WeightSets.begin();
+    std::advance(mit, index); storedType2WeightSets.erase(mit);
+  }
 }
 
 

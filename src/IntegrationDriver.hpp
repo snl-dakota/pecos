@@ -76,9 +76,11 @@ public:
   virtual void reinterpolated_tensor_grid(const UShortArray& lev_index,
 					  const SizetList& reinterp_indices);
 
-  /// store configuration settings for the current grid (for use within a
-  /// prescribed grid sequence)
-  virtual void store_grid();
+  /// store configuration settings for the current grid before advancing to the
+  /// next settings within a prescribed grid sequence (default is push_back)
+  virtual void store_grid(size_t index = _NPOS);
+  /// remove configuration settings for a stored grid (default is pop_back)
+  virtual void remove_stored_grid(size_t index = _NPOS);
   /// clear stored grid settings following their usage/combination
   virtual void clear_stored();
 

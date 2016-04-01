@@ -88,24 +88,39 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
 }
 
 
-void NodalInterpPolyApproximation::store_coefficients()
+void NodalInterpPolyApproximation::store_coefficients(size_t index)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  if (expansionCoeffFlag) {
-    storedExpType1Coeffs.push_back(expansionType1Coeffs);
-    if (data_rep->basisConfigOptions.useDerivs)
+
+  size_t stored_len = storedExpType1Coeffs.size();
+  if (index == _NPOS || index == stored_len) { // append
+    if (expansionCoeffFlag) {
+      storedExpType1Coeffs.push_back(expansionType1Coeffs);
       storedExpType2Coeffs.push_back(expansionType2Coeffs);
-  }
-  else { // keep index lookups consistent
-    storedExpType1Coeffs.push_back(RealVector());
-    if (data_rep->basisConfigOptions.useDerivs)
+    }
+    else { // keep indexing consistent
+      storedExpType1Coeffs.push_back(RealVector());
       storedExpType2Coeffs.push_back(RealMatrix());
+    }
+    if (expansionCoeffGradFlag)
+      storedExpType1CoeffGrads.push_back(expansionType1CoeffGrads);
+    else // keep indexing consistent
+      storedExpType1CoeffGrads.push_back(RealMatrix());
   }
-  if (expansionCoeffGradFlag)
-    storedExpType1CoeffGrads.push_back(expansionType1CoeffGrads);
-  else // keep index lookups consistent
-    storedExpType1CoeffGrads.push_back(RealMatrix());
+  else if (index < stored_len) { // replace
+    if (expansionCoeffFlag) {
+      storedExpType1Coeffs[index] = expansionType1Coeffs;
+      storedExpType2Coeffs[index] = expansionType2Coeffs;
+    }
+    if (expansionCoeffGradFlag)
+      storedExpType1CoeffGrads[index] = expansionType1CoeffGrads;
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in NodalInterpPoly"
+	  << "Approximation::store_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
 }
 
 
@@ -131,8 +146,26 @@ void NodalInterpPolyApproximation::swap_coefficients(size_t index)
 }
 
 
+void NodalInterpPolyApproximation::remove_stored_coefficients(size_t index)
+{
+  size_t stored_len = storedExpType1Coeffs.size();
+  if (index == _NPOS || index == stored_len) {
+    storedExpType1Coeffs.pop_back(); storedExpType2Coeffs.pop_back();
+    storedExpType1CoeffGrads.pop_back();
+  }
+  else if (index < stored_len) {
+    RealVectorArray::iterator vit = storedExpType1Coeffs.begin();
+    std::advance(vit, index); storedExpType1Coeffs.erase(vit);
+    RealMatrixArray::iterator mit = storedExpType2Coeffs.begin();
+    std::advance(mit, index); storedExpType2Coeffs.erase(mit);
+    mit = storedExpType1CoeffGrads.begin();
+    std::advance(mit, index); storedExpType1CoeffGrads.erase(mit);
+  }
+}
+
+
 void NodalInterpPolyApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+combine_coefficients(short combine_type, size_t maximal_index)
 {
 #ifdef DEBUG
   PCout << "Original type1 expansion coefficients prior to combination:\n";
@@ -140,8 +173,8 @@ combine_coefficients(short combine_type, size_t swap_index)
 #endif // DEBUG
 
   // SharedNodalInterpPolyApproxData::pre_combine_data() has already swapped
-  if (swap_index != _NPOS) {
-    swap_coefficients(swap_index);
+  if (maximal_index != _NPOS) {
+    swap_coefficients(maximal_index);
     allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
   }
 

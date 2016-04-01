@@ -199,16 +199,55 @@ update_component_sobol(const UShort2DArray& multi_index)
 
 
 /** Default storage, specialized in derived classes. */
-void SharedOrthogPolyApproxData::store_data()
+void SharedOrthogPolyApproxData::store_data(size_t index)
 {
   // Storing used for multifidelity; popping used for generalized sparse grids
 
-  storedMultiIndex.push_back(multiIndex);
+  bool push = (index == _NPOS || index == storedMultiIndex.size());
+  if (push) storedMultiIndex.push_back(multiIndex);
+  else      storedMultiIndex[index] = multiIndex;
+  
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    storedApproxOrder.push_back(approxOrder); driverRep->store_grid(); break;
-  case COMBINED_SPARSE_GRID:                  driverRep->store_grid(); break;
-  default:                   storedApproxOrder.push_back(approxOrder); break;
+  case QUADRATURE: // both approx order and driver
+    if (push) storedApproxOrder.push_back(approxOrder);
+    else      storedApproxOrder[index] = approxOrder;
+    driverRep->store_grid(index); break;
+  case COMBINED_SPARSE_GRID: // driver only
+    driverRep->store_grid(index); break;
+  default: // approx order only
+    if (push) storedApproxOrder.push_back(approxOrder);
+    else      storedApproxOrder[index] = approxOrder;
+    break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::remove_stored_data(size_t index)
+{
+  bool pop = (index == _NPOS || index == storedMultiIndex.size() - 1);
+  if (pop) storedMultiIndex.pop_back();
+  else {
+    UShort3DArray::iterator it = storedMultiIndex.begin();
+    std::advance(it, index); storedMultiIndex.erase(it);
+  }
+  
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: // both approx order and driver
+    if (pop) storedApproxOrder.pop_back();
+    else {
+      UShort2DArray::iterator it = storedApproxOrder.begin();
+      std::advance(it, index); storedApproxOrder.erase(it);
+    }
+    driverRep->remove_stored_grid(index); break;
+  case COMBINED_SPARSE_GRID: // driver only
+    driverRep->remove_stored_grid(index); break;
+  default: // approx order only
+    if (pop) storedApproxOrder.pop_back();
+    else {
+      UShort2DArray::iterator it = storedApproxOrder.begin();
+      std::advance(it, index); storedApproxOrder.erase(it);
+    }
+    break;
   }
 }
 

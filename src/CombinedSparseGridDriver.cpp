@@ -65,15 +65,58 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
-void CombinedSparseGridDriver::store_grid()
+void CombinedSparseGridDriver::store_grid(size_t index)
 {
-  storedLevMultiIndex.push_back(smolyakMultiIndex);
-  storedLevCoeffs.push_back(smolyakCoeffs);
-  storedCollocKey.push_back(collocKey);
-  storedCollocIndices.push_back(collocIndices);
+  size_t stored_len = storedType1WeightSets.size();
+  if (index == _NPOS || index == stored_len) { // append
+    storedLevMultiIndex.push_back(smolyakMultiIndex);
+    storedLevCoeffs.push_back(smolyakCoeffs);
+    storedCollocKey.push_back(collocKey);
+    storedCollocIndices.push_back(collocIndices);
+    storedType1WeightSets.push_back(type1WeightSets);
+    storedType2WeightSets.push_back(type2WeightSets);
+  }
+  else if (index < stored_len) {
+    storedLevMultiIndex[index]   = smolyakMultiIndex;
+    storedLevCoeffs[index]       = smolyakCoeffs;
+    storedCollocKey[index]       = collocKey;
+    storedCollocIndices[index]   = collocIndices;
+    storedType1WeightSets[index] = type1WeightSets;
+    storedType2WeightSets[index] = type2WeightSets;
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in "
+	  << "CombinedSparseGridDriver::store_grid()" << std::endl;
+    abort_handler(-1);
+  }
+}
 
-  storedType1WeightSets.push_back(type1WeightSets);
-  if (computeType2Weights) storedType2WeightSets.push_back(type2WeightSets);
+
+void CombinedSparseGridDriver::remove_stored_grid(size_t index)
+{
+  size_t stored_len = storedType1WeightSets.size();
+  if (index == _NPOS || index == stored_len) {
+    storedLevMultiIndex.pop_back();
+    storedLevCoeffs.pop_back();
+    storedCollocKey.pop_back();
+    storedCollocIndices.pop_back();
+    storedType1WeightSets.pop_back();
+    storedType2WeightSets.pop_back();
+  }
+  else if (index < stored_len) {
+    UShort3DArray::iterator u3it = storedLevMultiIndex.begin();
+    std::advance(u3it, index); storedLevMultiIndex.erase(u3it);
+    Int2DArray::iterator i2it = storedLevCoeffs.begin();
+    std::advance(i2it, index); storedLevCoeffs.erase(i2it);
+    UShort4DArray::iterator u4it = storedCollocKey.begin();
+    std::advance(u4it, index); storedCollocKey.erase(u4it);
+    Sizet3DArray::iterator s3it = storedCollocIndices.begin();
+    std::advance(s3it, index); storedCollocIndices.erase(s3it);
+    RealVectorArray::iterator vit = storedType1WeightSets.begin();
+    std::advance(vit, index); storedType1WeightSets.erase(vit);
+    RealMatrixArray::iterator mit = storedType2WeightSets.begin();
+    std::advance(mit, index); storedType2WeightSets.erase(mit);
+  }
 }
 
 

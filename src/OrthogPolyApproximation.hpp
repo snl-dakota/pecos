@@ -72,9 +72,11 @@ protected:
 
   int min_coefficients() const;
 
-  void store_coefficients();
+  void store_coefficients(size_t index = _NPOS);
+  void swap_coefficients(size_t maximal_index);
+  void remove_stored_coefficients(size_t index = _NPOS);
+
   void combine_coefficients(short combine_type, size_t swap_index);
-  void swap_coefficients(size_t index);
 
   void print_coefficients(std::ostream& s, bool normalized);
 

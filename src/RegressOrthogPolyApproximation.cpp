@@ -409,10 +409,20 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
 }
 
 
-void RegressOrthogPolyApproximation::store_coefficients()
+void RegressOrthogPolyApproximation::store_coefficients(size_t index)
 {
-  storedSparseIndices.push_back(sparseIndices);
-  OrthogPolyApproximation::store_coefficients(); // storedExpCoeff{s,Grads}
+  size_t stored_len = storedSparseIndices.size();
+  if (index == _NPOS || index == stored_len) // append
+    storedSparseIndices.push_back(sparseIndices);
+  else if (index < stored_len) // replace
+    storedSparseIndices[index] = sparseIndices;
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in RegressOrthogPoly"
+	  << "Approximation::store_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+
+  OrthogPolyApproximation::store_coefficients(index); // storedExpCoeff{s,Grads}
 }
 
 
@@ -420,6 +430,20 @@ void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
 {
   std::swap(sparseIndices, storedSparseIndices[index]);
   OrthogPolyApproximation::swap_coefficients(index); // expansion coeff{s,Grads}
+}
+
+
+void RegressOrthogPolyApproximation::remove_stored_coefficients(size_t index)
+{
+  size_t stored_len = storedSparseIndices.size();
+  if (index == _NPOS || index == stored_len)
+    storedSparseIndices.pop_back();
+  else if (index < stored_len) {
+    SizetSetArray::iterator vit = storedSparseIndices.begin();
+    std::advance(vit, index); storedSparseIndices.erase(vit);
+  }
+
+  OrthogPolyApproximation::remove_stored_coefficients(index);
 }
 
 

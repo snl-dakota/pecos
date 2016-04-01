@@ -261,7 +261,9 @@ public:
   virtual void post_finalize_data();
 
   /// stores current approximation data for later combination
-  virtual void store_data() = 0;
+  virtual void store_data(size_t index = _NPOS) = 0;
+  /// removes a redundant stored approximation data prior to combination
+  virtual void remove_stored_data(size_t index = _NPOS) = 0;
   /// combines current and stored approximation data
   virtual size_t pre_combine_data(short combine_type);
   /// combines current and stored approximation data

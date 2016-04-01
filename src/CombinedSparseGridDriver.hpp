@@ -69,7 +69,8 @@ public:
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
-  void store_grid();
+  void store_grid(size_t index = _NPOS);
+  void remove_stored_grid(size_t index = _NPOS);
   void clear_stored();
 
   size_t maximal_grid() const;

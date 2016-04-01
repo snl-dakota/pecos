@@ -54,7 +54,8 @@ public:
   void compute_grid(RealMatrix& var_sets);
   int grid_size();
 
-  void store_grid();
+  void store_grid(size_t index = _NPOS);
+  void remove_stored_grid(size_t index = _NPOS);
   void clear_stored();
 
   size_t maximal_grid() const;

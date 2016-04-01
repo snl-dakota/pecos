@@ -84,7 +84,8 @@ protected:
   void post_finalize_data();
   size_t pre_combine_data(short combine_type);
   void post_combine_data(short combine_type);
-  void store_data();
+  void store_data(size_t index = _NPOS);
+  void remove_stored_data(size_t index = _NPOS);
 
   //
   //- Heading: New virtual functions
@@ -428,6 +429,14 @@ resize_polynomial_basis(const UShortArray& lev_index)
   // For tensor quadrature, order range is 1:m; level range is 0:m-1
   resize_polynomial_basis(max_level);
 }
+
+
+inline void SharedInterpPolyApproxData::store_data(size_t index)
+{ driverRep->store_grid(index); }
+
+
+inline void SharedInterpPolyApproxData::remove_stored_data(size_t index)
+{ driverRep->remove_stored_grid(index); }
 
 
 inline Real SharedInterpPolyApproxData::

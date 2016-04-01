@@ -109,7 +109,9 @@ protected:
 
   void allocate_data();
 
-  void store_data();
+  void store_data(size_t index = _NPOS);
+  void remove_stored_data(size_t index = _NPOS);
+  
   size_t pre_combine_data(short combine_type);
   void post_combine_data(short combine_type);
 

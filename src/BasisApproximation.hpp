@@ -76,12 +76,17 @@ public:
   virtual void restore_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
+
   /// store the current coefficients for later combination
-  virtual void store_coefficients();
-  /// combine the current coefficients with a previously stored set
-  virtual void combine_coefficients(short combine_type, size_t swap_index);
+  virtual void store_coefficients(size_t index = _NPOS);
   /// swap the current coefficients with a previously stored set
   virtual void swap_coefficients(size_t index);
+  /// remove a redundant stored entry prior to combine_coefficients
+  /// (default is pop_back)
+  virtual void remove_stored_coefficients(size_t index = _NPOS);
+
+  /// combine the current coefficients with a previously stored set
+  virtual void combine_coefficients(short combine_type, size_t swap_index);
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s, bool normalized);

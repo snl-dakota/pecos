@@ -69,12 +69,17 @@ protected:
   void finalize_coefficients();
 
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void store_coefficients();
+  void store_coefficients(size_t index = _NPOS);
+  /// swap storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index] with active
+  /// current data
+  void swap_coefficients(size_t index);
+  /// remove a redundant entry from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  /// prior to combine_coefficients (default is pop_back)
+  void remove_stored_coefficients(size_t index = _NPOS);
+
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void combine_coefficients(short combine_type, size_t swap_index);
-  /// swap current with storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void swap_coefficients(size_t index);
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
