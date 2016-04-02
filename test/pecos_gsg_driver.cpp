@@ -281,20 +281,20 @@ int main(int argc, char* argv[])
 
       // Update surrogate data
       numPts = 0;
-      if (shared_poly_data->restore_available()) {
+      if (shared_poly_data->push_available()) {
 
         // Set available -> restore in csg and the rest
 	csg_driver->restore_set();
 
-        size_t idxRestore = shared_poly_data->restoration_index();
-	shared_poly_data->pre_restore_data();
+        size_t idxRestore = shared_poly_data->retrieval_index();
+	shared_poly_data->pre_push_data();
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  poly_approx[iQoI].restore_coefficients();
+	  poly_approx[iQoI].push_coefficients();
           // Also restore the corresponding surrogate data
 	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
 	  numPts = sdi.push(idxRestore,true);
 	}
-	shared_poly_data->post_restore_data();
+	shared_poly_data->post_push_data();
 
       }
       else {
@@ -374,14 +374,14 @@ int main(int argc, char* argv[])
     csg_driver->update_reference();
 
      //need to restore the data
-    size_t idxRestore = shared_poly_data->restoration_index();
-    shared_poly_data->pre_restore_data();
+    size_t idxRestore = shared_poly_data->retrieval_index();
+    shared_poly_data->pre_push_data();
     for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-      poly_approx[iQoI].restore_coefficients();
+      poly_approx[iQoI].push_coefficients();
       SurrogateData sdi = poly_approx[iQoI].surrogate_data();
       int numPts = sdi.push(idxRestore,true);
     }
-    shared_poly_data->post_restore_data();
+    shared_poly_data->post_push_data();
 
   }
 
