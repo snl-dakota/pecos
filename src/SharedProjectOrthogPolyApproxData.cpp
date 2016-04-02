@@ -158,23 +158,23 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
 }
 
 
-void SharedProjectOrthogPolyApproxData::pre_restore_data()
+void SharedProjectOrthogPolyApproxData::pre_push_data()
 {
   if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
     PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
-	  << "ApproxDataP::restore_coefficients()" << std::endl;
+	  << "ApproxData::pre_push_data()" << std::endl;
     abort_handler(-1);
   }
 
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  pre_restore_trial_set(csg_driver->trial_set(), multiIndex);
+  pre_push_trial_set(csg_driver->trial_set(), multiIndex);
 }
 
 
-void SharedProjectOrthogPolyApproxData::post_restore_data()
+void SharedProjectOrthogPolyApproxData::post_push_data()
 {
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  post_restore_trial_set(csg_driver->trial_set(), multiIndex);
+  post_push_trial_set(csg_driver->trial_set(), multiIndex);
 }
 
 
@@ -182,7 +182,7 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
   if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
     PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
-	  << "ApproxData" << "::finalize_data()" << std::endl;
+	  << "ApproxData::finalize_data()" << std::endl;
     abort_handler(-1);
   }
 

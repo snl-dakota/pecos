@@ -63,8 +63,8 @@ public:
   //- Cosmin Heading: Virtual function redefinitions
   //
   void allocate_data();
-  void pre_restore_data();
-  void post_restore_data();
+  void pre_push_data();
+  void post_push_data();
   void increment_data();
   void decrement_data();
   void pre_finalize_data();

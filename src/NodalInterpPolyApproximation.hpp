@@ -60,14 +60,16 @@ protected:
   void decrement_coefficients();
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index:
-  /// restore expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void restore_coefficients();
+  /// push expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void push_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void store_coefficients(size_t index = _NPOS);
+  /// restore previous state from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void restore_coefficients(size_t index = _NPOS);
   /// swap storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index] with active
   /// current data
   void swap_coefficients(size_t index);
@@ -237,7 +239,7 @@ inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 
 
 inline void NodalInterpPolyApproximation::increment_coefficients()
-{ restore_coefficients(); allocate_component_sobol(); }
+{ push_coefficients(); allocate_component_sobol(); }
 
 
 inline void NodalInterpPolyApproximation::decrement_coefficients()
@@ -259,7 +261,7 @@ inline void NodalInterpPolyApproximation::decrement_coefficients()
 
 
 inline void NodalInterpPolyApproximation::finalize_coefficients()
-{ restore_coefficients(); }
+{ push_coefficients(); }
 
 
 inline RealVector NodalInterpPolyApproximation::

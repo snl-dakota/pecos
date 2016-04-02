@@ -272,11 +272,11 @@ void SharedPolyApproxData::decrement_data()
 }
 
 
-void SharedPolyApproxData::pre_restore_data()
+void SharedPolyApproxData::pre_push_data()
 { } // default implementation is no op
 
 
-void SharedPolyApproxData::post_restore_data()
+void SharedPolyApproxData::post_push_data()
 { } // default implementation is no op
 
 

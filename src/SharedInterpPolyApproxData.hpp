@@ -80,11 +80,12 @@ protected:
   void allocate_data();
   void increment_data();
   void decrement_data();
-  void post_restore_data();
+  void post_push_data();
   void post_finalize_data();
   size_t pre_combine_data(short combine_type);
   void post_combine_data(short combine_type);
   void store_data(size_t index = _NPOS);
+  void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
 
   //
@@ -433,6 +434,10 @@ resize_polynomial_basis(const UShortArray& lev_index)
 
 inline void SharedInterpPolyApproxData::store_data(size_t index)
 { driverRep->store_grid(index); }
+
+
+inline void SharedInterpPolyApproxData::restore_data(size_t index)
+{ driverRep->restore_grid(index); }
 
 
 inline void SharedInterpPolyApproxData::remove_stored_data(size_t index)

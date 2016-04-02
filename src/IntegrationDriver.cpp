@@ -375,6 +375,10 @@ void IntegrationDriver::store_grid(size_t index)
 { } // default is no-op
 
 
+void IntegrationDriver::restore_grid(size_t index)
+{ } // default is no-op
+
+
 void IntegrationDriver::remove_stored_grid(size_t index)
 { } // default is no-op
 

@@ -70,6 +70,7 @@ public:
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
   void store_grid(size_t index = _NPOS);
+  void restore_grid(size_t index = _NPOS);
   void remove_stored_grid(size_t index = _NPOS);
   void clear_stored();
 

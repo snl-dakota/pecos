@@ -219,7 +219,7 @@ void SharedInterpPolyApproxData::decrement_data()
 }
 
 
-void SharedInterpPolyApproxData::post_restore_data()
+void SharedInterpPolyApproxData::post_push_data()
 {
   // leave polynomialBasis as is (a previous increment is being restored)
 

@@ -48,7 +48,7 @@ void HierarchSparseGridDriver::store_grid(size_t index)
     storedType1WeightSets.push_back(type1WeightSets);
     storedType2WeightSets.push_back(type2WeightSets);
   }
-  else if (index < stored_len) {
+  else if (index < stored_len) { // replace
     storedLevMultiIndex[index]   = smolyakMultiIndex;
     storedCollocKey[index]       = collocKey;
     //storedCollocIndices[index] = collocIndices;
@@ -58,6 +58,31 @@ void HierarchSparseGridDriver::store_grid(size_t index)
   else {
     PCerr << "Error: bad index (" << index << ") passed in "
 	  << "HierarchSparseGridDriver::store_grid()" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void HierarchSparseGridDriver::restore_grid(size_t index)
+{
+  size_t stored_len = storedType1WeightSets.size();
+  if (index == _NPOS) {
+    smolyakMultiIndex = storedLevMultiIndex.back();
+    collocKey       = storedCollocKey.back();
+    //collocIndices = storedCollocIndices.back();
+    type1WeightSets = storedType1WeightSets.back();
+    type2WeightSets = storedType2WeightSets.back();
+  }
+  else if (index < stored_len) {
+    smolyakMultiIndex = storedLevMultiIndex[index];
+    collocKey       = storedCollocKey[index];
+    //collocIndices = storedCollocIndices[index];
+    type1WeightSets = storedType1WeightSets[index];
+    type2WeightSets = storedType2WeightSets[index];
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in "
+	  << "HierarchSparseGridDriver::restore_grid()" << std::endl;
     abort_handler(-1);
   }
 }

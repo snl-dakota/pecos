@@ -60,12 +60,33 @@ void OrthogPolyApproximation::store_coefficients(size_t index)
   }
   else if (index < stored_len) { // replace
     if (expansionCoeffFlag) storedExpCoeffs[index] = expansionCoeffs;
+    else storedExpCoeffs[index] = RealVector();
     if (expansionCoeffGradFlag)
       storedExpCoeffGrads[index] = expansionCoeffGrads;
+    else storedExpCoeffGrads[index] = RealMatrix();
   }
   else {
     PCerr << "Error: bad index (" << index << ") passed in OrthogPoly"
 	  << "Approximation::store_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void OrthogPolyApproximation::restore_coefficients(size_t index)
+{
+  size_t stored_len = storedExpCoeffs.size();
+  if (index == _NPOS) {
+    expansionCoeffs     = storedExpCoeffs.back();
+    expansionCoeffGrads = storedExpCoeffGrads.back();
+  }
+  else if (index < stored_len) {
+    expansionCoeffs     = storedExpCoeffs[index];
+    expansionCoeffGrads = storedExpCoeffGrads[index];
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in OrthogPoly"
+	  << "Approximation::restore_coefficients()" << std::endl;
     abort_handler(-1);
   }
 }

@@ -245,9 +245,9 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
     //lsg_driver->push_trial_set(trial_set);
 
     // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
-    if (data_rep->restore_available(trial_set))
+    if (data_rep->push_available(trial_set))
       // cannot assume monotonicity in bookkeeping due to restriction above
-      data_rep->restore_trial_set(trial_set, adaptedMultiIndex, false);
+      data_rep->push_trial_set(trial_set, adaptedMultiIndex, false);
     else
       data_rep->increment_trial_set(trial_set, adaptedMultiIndex);
 
@@ -295,8 +295,8 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
 	<< "\n<<<<< Index set selection:\n" << best_set;
 
   // apply best increment; can assume monotonicity in bookkeeping so long as
-  // Map,MapRef are updated for all candidates by restore/increment above
-  data_rep->restore_trial_set(best_set, adaptedMultiIndex, true);
+  // Map,MapRef are updated for all candidates by push/increment above
+  data_rep->push_trial_set(best_set, adaptedMultiIndex, true);
   lsg_driver->update_sets(best_set); // if restriction: rebuilt on next iter
 
   // update reference points and current best soln if CV error has been reduced
@@ -423,6 +423,22 @@ void RegressOrthogPolyApproximation::store_coefficients(size_t index)
   }
 
   OrthogPolyApproximation::store_coefficients(index); // storedExpCoeff{s,Grads}
+}
+
+
+void RegressOrthogPolyApproximation::restore_coefficients(size_t index)
+{
+  if (index == _NPOS)
+    sparseIndices = storedSparseIndices.back();
+  else if (index < storedSparseIndices.size())
+    sparseIndices = storedSparseIndices[index];
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in RegressOrthogPoly"
+	  << "Approximation::restore_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+
+  OrthogPolyApproximation::restore_coefficients(index);
 }
 
 

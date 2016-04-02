@@ -249,12 +249,12 @@ public:
   /// update the shared data prior to rebuilding the set of approximations
   virtual void increment_data();
   /// decrement the previous increment and store its shared data for
-  /// later restoration
+  /// later retrieval
   virtual void decrement_data();
   /// restores previously popped approximation data
-  virtual void pre_restore_data();
+  virtual void pre_push_data();
   /// restores previously popped approximation data
-  virtual void post_restore_data();
+  virtual void post_push_data();
   /// finalizes the shared approximation data following a set of increments
   virtual void pre_finalize_data();
   /// finalizes the shared approximation data following a set of increments
@@ -262,6 +262,8 @@ public:
 
   /// stores current approximation data for later combination
   virtual void store_data(size_t index = _NPOS) = 0;
+  /// restores previously stored approximation data
+  virtual void restore_data(size_t index = _NPOS) = 0;
   /// removes a redundant stored approximation data prior to combination
   virtual void remove_stored_data(size_t index = _NPOS) = 0;
   /// combines current and stored approximation data
@@ -292,10 +294,10 @@ public:
 
   /// test for whether current trial set requires a new approximation
   /// increment or can be restored from a previous trial
-  bool restore_available();
+  bool push_available();
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (e.g., PolynomialApproximation::poppedLevMultiIndex)
-  size_t restoration_index();
+  size_t retrieval_index();
   /// returns index of the i-th data set to be restored from within popped
   /// bookkeeping (e.g., PolynomialApproximation::poppedLevMultiIndex)
   /// during finalization
@@ -421,7 +423,7 @@ protected:
   void assign_sobol_index_map_values();
 
   /// check for the presence of trial_set within poppedLevMultiIndex
-  bool restore_available(const UShortArray& trial_set);
+  bool push_available(const UShortArray& trial_set);
 
   //
   //- Heading: Data
@@ -645,21 +647,21 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 
 
 inline bool SharedPolyApproxData::
-restore_available(const UShortArray& trial_set)
+push_available(const UShortArray& trial_set)
 {
   return (std::find(poppedLevMultiIndex.begin(), poppedLevMultiIndex.end(),
 		    trial_set) != poppedLevMultiIndex.end());
 }
 
 
-inline bool SharedPolyApproxData::restore_available()
+inline bool SharedPolyApproxData::push_available()
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  return restore_available(sg_driver->trial_set());
+  return push_available(sg_driver->trial_set());
 }
 
 
-inline size_t SharedPolyApproxData::restoration_index()
+inline size_t SharedPolyApproxData::retrieval_index()
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
   return find_index(poppedLevMultiIndex, sg_driver->trial_set());

@@ -62,14 +62,16 @@ protected:
   void decrement_coefficients();
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index:
-  /// restore expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void restore_coefficients();
+  /// push expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
+  void push_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void store_coefficients(size_t index = _NPOS);
+  /// restore previous state from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void restore_coefficients(size_t index = _NPOS);
   /// swap storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index] with active
   /// current data
   void swap_coefficients(size_t index);
@@ -301,10 +303,10 @@ private:
   /// for a single index_set
   void increment_coefficients(const UShortArray& index_set);
 
-  /// move the expansion coefficients for restore_set from
+  /// move the expansion coefficients for push_set from
   /// poppedExp{T1Coeffs,T2Coeffs,T1CoeffGrads} to
   /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void restore_coefficients(const UShortArray& restore_set);
+  void push_coefficients(const UShortArray& push_set);
 
   /// compute member expansion for Sobol' index integration
   void member_coefficients_weights(const BitArray&    member_bits,
@@ -558,11 +560,11 @@ expectation_gradient(const RealMatrix2DArray& t1_coeff_grads)
 }
 
 
-inline void HierarchInterpPolyApproximation::restore_coefficients()
+inline void HierarchInterpPolyApproximation::push_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  restore_coefficients(data_rep->hsg_driver()->trial_set());
+  push_coefficients(data_rep->hsg_driver()->trial_set());
   increment_current_from_reference();
 }
 

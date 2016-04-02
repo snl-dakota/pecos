@@ -230,7 +230,7 @@ void ProjectOrthogPolyApproximation::decrement_coefficients()
   expansionCoeffs     = prevExpCoeffs;
   expansionCoeffGrads = prevExpCoeffGrads;
 
-  // don't update Sobol' array sizes for decrement, restore, or finalize
+  // don't update Sobol' array sizes for decrement, push, or finalize
 
   // expansion resize not necessary since (1) already updated from prevExp
   // and (2) not updating expansion on decrement (next increment updates).
@@ -245,14 +245,14 @@ void ProjectOrthogPolyApproximation::decrement_coefficients()
 }
 
 
-void ProjectOrthogPolyApproximation::restore_coefficients()
+void ProjectOrthogPolyApproximation::push_coefficients()
 {
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
 
   // move previous expansion data to current expansion
   size_t last_index = tpExpansionCoeffs.size();
-  size_t index_star = data_rep->restoreIndex;
+  size_t index_star = data_rep->pushIndex;
 
   std::deque<RealVector>::iterator cit = poppedTPExpCoeffs.begin();
   std::deque<RealMatrix>::iterator git = poppedTPExpCoeffGrads.begin();
@@ -261,7 +261,7 @@ void ProjectOrthogPolyApproximation::restore_coefficients()
   tpExpansionCoeffs.push_back(*cit);     poppedTPExpCoeffs.erase(cit);
   tpExpansionCoeffGrads.push_back(*git); poppedTPExpCoeffGrads.erase(git);
 
-  // don't update Sobol' array sizes for decrement, restore, or finalize
+  // don't update Sobol' array sizes for decrement, push, or finalize
 
   // resize the PCE
   resize_expansion();
@@ -277,7 +277,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 {
   size_t start_index = tpExpansionCoeffs.size();
 
-  // don't update Sobol' array sizes for decrement, restore, or finalize
+  // don't update Sobol' array sizes for decrement, push, or finalize
   resize_expansion();
   // move previous expansion data to current expansion
   tpExpansionCoeffs.insert(tpExpansionCoeffs.end(), poppedTPExpCoeffs.begin(),

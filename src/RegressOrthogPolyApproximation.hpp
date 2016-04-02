@@ -90,6 +90,7 @@ protected:
 
   void increment_coefficients();
   void store_coefficients(size_t index = _NPOS);
+  void restore_coefficients(size_t index = _NPOS);
   void swap_coefficients(size_t index);
   void remove_stored_coefficients(size_t index = _NPOS);
 

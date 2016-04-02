@@ -320,12 +320,12 @@ void BasisApproximation::decrement_coefficients()
 }
 
 
-void BasisApproximation::restore_coefficients()
+void BasisApproximation::push_coefficients()
 {
   if (basisApproxRep)
-    basisApproxRep->restore_coefficients(); 
+    basisApproxRep->push_coefficients(); 
   else {
-    PCerr << "Error: restore_coefficients() not available for this basis "
+    PCerr << "Error: push_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
@@ -350,6 +350,18 @@ void BasisApproximation::store_coefficients(size_t index)
     basisApproxRep->store_coefficients(index); 
   else {
     PCerr << "Error: store_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void BasisApproximation::restore_coefficients(size_t index)
+{
+  if (basisApproxRep)
+    basisApproxRep->restore_coefficients(index); 
+  else {
+    PCerr << "Error: restore_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }

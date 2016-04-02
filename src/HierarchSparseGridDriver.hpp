@@ -55,6 +55,7 @@ public:
   int grid_size();
 
   void store_grid(size_t index = _NPOS);
+  void restore_grid(size_t index = _NPOS);
   void remove_stored_grid(size_t index = _NPOS);
   void clear_stored();
 

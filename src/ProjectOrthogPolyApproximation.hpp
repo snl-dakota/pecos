@@ -49,7 +49,7 @@ public:
   //- Cosmin Heading: Virtual function redefinitions and member functions
   //
   void compute_coefficients();
-  void restore_coefficients();
+  void push_coefficients();
   void increment_coefficients();
   void decrement_coefficients();
   void finalize_coefficients();
@@ -61,7 +61,6 @@ protected:
   //
 
   int  min_coefficients() const;
-
 
   /// initialize polynomialBasis, multiIndex, et al.
   void allocate_arrays();

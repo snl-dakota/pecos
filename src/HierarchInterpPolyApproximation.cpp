@@ -191,9 +191,9 @@ void HierarchInterpPolyApproximation::increment_coefficients()
 }
 
 
-// ******************************************************************
-// TO DO: verify that decrement/restore is always valid for surpluses
-// ******************************************************************
+// ***************************************************************
+// TO DO: verify that decrement/push is always valid for surpluses
+// ***************************************************************
 
 
 void HierarchInterpPolyApproximation::decrement_coefficients()
@@ -234,7 +234,7 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
     num_coeff_sets = (expansionCoeffFlag) ? expansionType1Coeffs[lev].size() :
       expansionType1CoeffGrads[lev].size();
     for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
-      restore_coefficients(sm_mi_l[set]);
+      push_coefficients(sm_mi_l[set]);
   }
   poppedExpT1Coeffs.clear(); poppedExpT2Coeffs.clear();
   poppedExpT1CoeffGrads.clear();
@@ -252,13 +252,11 @@ void HierarchInterpPolyApproximation::store_coefficients(size_t index)
   if (index == _NPOS || index == stored_len) { // append
     if (expansionCoeffFlag) {
       storedExpType1Coeffs.push_back(expansionType1Coeffs);
-      if (data_rep->basisConfigOptions.useDerivs)
-	storedExpType2Coeffs.push_back(expansionType2Coeffs);
+      storedExpType2Coeffs.push_back(expansionType2Coeffs);
     }
     else { // keep indexing consistent
       storedExpType1Coeffs.push_back(RealVector2DArray());
-      if (data_rep->basisConfigOptions.useDerivs)
-	storedExpType2Coeffs.push_back(RealMatrix2DArray());
+      storedExpType2Coeffs.push_back(RealMatrix2DArray());
     }
     if (expansionCoeffGradFlag)
       storedExpType1CoeffGrads.push_back(expansionType1CoeffGrads);
@@ -268,15 +266,44 @@ void HierarchInterpPolyApproximation::store_coefficients(size_t index)
   else if (index < stored_len) { // replace
     if (expansionCoeffFlag) {
       storedExpType1Coeffs[index] = expansionType1Coeffs;
-      if (data_rep->basisConfigOptions.useDerivs)
-	storedExpType2Coeffs[index] = expansionType2Coeffs;
+      storedExpType2Coeffs[index] = expansionType2Coeffs;
+    }
+    else { // keep indexing consistent
+      storedExpType1Coeffs[index] = RealVector2DArray();
+      storedExpType2Coeffs[index] = RealMatrix2DArray();
     }
     if (expansionCoeffGradFlag)
       storedExpType1CoeffGrads[index] = expansionType1CoeffGrads;
+    else // keep indexing consistent
+      storedExpType1CoeffGrads[index] = RealMatrix2DArray();
   }
   else {
     PCerr << "Error: bad index (" << index << ") passed in HierarchInterpPoly"
 	  << "Approximation::store_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void HierarchInterpPolyApproximation::restore_coefficients(size_t index)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+
+  size_t stored_len = storedExpType1Coeffs.size();
+  if (index == _NPOS) {
+    expansionType1Coeffs = storedExpType1Coeffs.back();
+    expansionType2Coeffs = storedExpType2Coeffs.back();
+    expansionType1CoeffGrads = storedExpType1CoeffGrads.back();
+  }
+  else if (index < stored_len) {
+    expansionType1Coeffs = storedExpType1Coeffs[index];
+    expansionType2Coeffs = storedExpType2Coeffs[index];
+    expansionType1CoeffGrads = storedExpType1CoeffGrads[index];
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in HierarchInterpPoly"
+	  << "Approximation::restore_coefficients()" << std::endl;
     abort_handler(-1);
   }
 }
@@ -458,22 +485,22 @@ increment_coefficients(const UShortArray& index_set)
 
 /** Lower level helper function to process a single index set. */
 void HierarchInterpPolyApproximation::
-restore_coefficients(const UShortArray& restore_set)
+push_coefficients(const UShortArray& push_set)
 {
-  size_t lev = l1_norm(restore_set);
+  size_t lev = l1_norm(push_set);
   if (expansionCoeffFlag) {
-    expansionType1Coeffs[lev].push_back(poppedExpT1Coeffs[restore_set]);
-    poppedExpT1Coeffs.erase(restore_set);
+    expansionType1Coeffs[lev].push_back(poppedExpT1Coeffs[push_set]);
+    poppedExpT1Coeffs.erase(push_set);
     SharedHierarchInterpPolyApproxData* data_rep
       = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
-      expansionType2Coeffs[lev].push_back(poppedExpT2Coeffs[restore_set]);
-      poppedExpT2Coeffs.erase(restore_set);
+      expansionType2Coeffs[lev].push_back(poppedExpT2Coeffs[push_set]);
+      poppedExpT2Coeffs.erase(push_set);
     }
   }
   if (expansionCoeffGradFlag) {
-    expansionType1CoeffGrads[lev].push_back(poppedExpT1CoeffGrads[restore_set]);
-    poppedExpT1CoeffGrads.erase(restore_set);
+    expansionType1CoeffGrads[lev].push_back(poppedExpT1CoeffGrads[push_set]);
+    poppedExpT1CoeffGrads.erase(push_set);
   }
 }
 

@@ -142,21 +142,21 @@ decrement_trial_set(const UShortArray& trial_set,
 
 
 void SharedOrthogPolyApproxData::
-pre_restore_trial_set(const UShortArray& trial_set,
+pre_push_trial_set(const UShortArray& trial_set,
 		      UShort2DArray& aggregated_mi, bool monotonic)
 {
-  restoreIndex = find_index(poppedLevMultiIndex, trial_set);
+  pushIndex = find_index(poppedLevMultiIndex, trial_set);
   size_t last_index = tpMultiIndex.size();
 
   std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
-  std::advance(iit, restoreIndex); tpMultiIndex.push_back(*iit);
+  std::advance(iit, pushIndex); tpMultiIndex.push_back(*iit);
 
   // update multiIndex
   if (monotonic) { // reuse previous Map,MapRef bookkeeping if possible
     std::deque<SizetArray>::iterator mit = poppedTPMultiIndexMap.begin();
     std::deque<size_t>::iterator     rit = poppedTPMultiIndexMapRef.begin();
-    std::advance(mit, restoreIndex); tpMultiIndexMap.push_back(*mit);
-    std::advance(rit, restoreIndex); tpMultiIndexMapRef.push_back(*rit);
+    std::advance(mit, pushIndex);    tpMultiIndexMap.push_back(*mit);
+    std::advance(rit, pushIndex);    tpMultiIndexMapRef.push_back(*rit);
     append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
 		       tpMultiIndexMapRef[last_index], aggregated_mi);
   }
@@ -171,18 +171,18 @@ pre_restore_trial_set(const UShortArray& trial_set,
 
 
 void SharedOrthogPolyApproxData::
-post_restore_trial_set(const UShortArray& trial_set,
+post_push_trial_set(const UShortArray& trial_set,
 		       UShort2DArray& aggregated_mi, bool save_map)
 {
   std::deque<UShortArray>::iterator   sit = poppedLevMultiIndex.begin();
   std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
-  std::advance(sit, restoreIndex);    poppedLevMultiIndex.erase(sit);
-  std::advance(iit, restoreIndex);    poppedTPMultiIndex.erase(iit);
+  std::advance(sit, pushIndex);       poppedLevMultiIndex.erase(sit);
+  std::advance(iit, pushIndex);       poppedTPMultiIndex.erase(iit);
   if (save_map) { // always needed if we want to mix and match
     std::deque<SizetArray>::iterator  mit = poppedTPMultiIndexMap.begin();
     std::deque<size_t>::iterator      rit = poppedTPMultiIndexMapRef.begin();
-    std::advance(mit, restoreIndex);  poppedTPMultiIndexMap.erase(mit);
-    std::advance(rit, restoreIndex);  poppedTPMultiIndexMapRef.erase(rit);
+    std::advance(mit, pushIndex);     poppedTPMultiIndexMap.erase(mit);
+    std::advance(rit, pushIndex);     poppedTPMultiIndexMapRef.erase(rit);
   }
 }
 
@@ -217,6 +217,26 @@ void SharedOrthogPolyApproxData::store_data(size_t index)
   default: // approx order only
     if (push) storedApproxOrder.push_back(approxOrder);
     else      storedApproxOrder[index] = approxOrder;
+    break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::restore_data(size_t index)
+{
+  multiIndex = (index == _NPOS)
+    ? storedMultiIndex.back() : storedMultiIndex[index];
+  
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: // both approx order and driver
+    approxOrder = (index == _NPOS)
+      ? storedApproxOrder.back() : storedApproxOrder[index];
+    driverRep->restore_grid(index); break;
+  case COMBINED_SPARSE_GRID: // driver only
+    driverRep->restore_grid(index); break;
+  default: // approx order only
+    approxOrder = (index == _NPOS)
+      ? storedApproxOrder.back() : storedApproxOrder[index];
     break;
   }
 }

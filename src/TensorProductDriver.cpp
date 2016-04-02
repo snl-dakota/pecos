@@ -50,7 +50,7 @@ void TensorProductDriver::store_grid(size_t index)
     storedType1WeightSets.push_back(type1WeightSets);
     storedType2WeightSets.push_back(type2WeightSets);
   }
-  else if (index < stored_len) {
+  else if (index < stored_len) { // replace
     storedCollocKey[index] = collocKey; storedLevelIndex[index] = levelIndex;
     storedType1WeightSets[index] = type1WeightSets;
     storedType2WeightSets[index] = type2WeightSets;
@@ -58,6 +58,27 @@ void TensorProductDriver::store_grid(size_t index)
   else {
     PCerr << "Error: bad index (" << index << ") passed in TensorProductDriver"
 	  << "::store_grid()" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void TensorProductDriver::restore_grid(size_t index)
+{
+  size_t stored_len = storedType1WeightSets.size();
+  if (index == _NPOS) {
+    collocKey = storedCollocKey.back(); levelIndex = storedLevelIndex.back();
+    type1WeightSets = storedType1WeightSets.back();
+    type2WeightSets = storedType2WeightSets.back();
+  }
+  else if (index < stored_len) {
+    collocKey = storedCollocKey[index]; levelIndex = storedLevelIndex[index];
+    type1WeightSets = storedType1WeightSets[index];
+    type2WeightSets = storedType2WeightSets[index];
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in TensorProductDriver"
+	  << "::restore_grid()" << std::endl;
     abort_handler(-1);
   }
 }

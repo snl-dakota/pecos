@@ -843,7 +843,7 @@ public:
   /// (default is push_back)
   void store(size_t index = _NPOS);
   /// return an entry set from stored{Vars,Resp}Data to {vars,resp}Data
-  void restore(size_t index, bool erase_stored = true);
+  void restore(size_t index = _NPOS);
   /// remove an entry from stored{Vars,Resp}Data (default is pop_back)
   void remove_stored(size_t index = _NPOS);
   /// swap stored and active data sets (variables and response)
@@ -1116,17 +1116,23 @@ inline void SurrogateData::store(size_t index)
 }
 
 
-inline void SurrogateData::restore(size_t index, bool erase_stored)
+inline void SurrogateData::restore(size_t index)
 {
-  SDV2DArray::iterator vit = sdRep->storedVarsData.begin();
-  SDR2DArray::iterator rit = sdRep->storedRespData.begin();
-  std::advance(vit, index); std::advance(rit, index);
-
-  sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
-  sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
-
-  if (erase_stored)
-    { sdRep->storedVarsData.erase(vit); sdRep->storedRespData.erase(rit); }
+  size_t stored_len = std::min(sdRep->storedVarsData.size(),
+			       sdRep->storedRespData.size());
+  if (index == _NPOS) {
+    sdRep->varsData = sdRep->storedVarsData.back(); // shallow copies
+    sdRep->respData = sdRep->storedRespData.back(); // shallow copies
+  }
+  else if (index < stored_len) { // replace
+    sdRep->varsData = sdRep->storedVarsData[index]; // shallow copies
+    sdRep->respData = sdRep->storedRespData[index]; // shallow copies
+  }
+  else {
+    PCerr << "Error: bad index (" << index
+	  << ") passed in SurrogateData::store()" << std::endl;
+    abort_handler(-1);
+  }
 }
 
 

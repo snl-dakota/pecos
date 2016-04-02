@@ -110,6 +110,7 @@ protected:
   void allocate_data();
 
   void store_data(size_t index = _NPOS);
+  void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
   
   size_t pre_combine_data(short combine_type);
@@ -145,15 +146,15 @@ protected:
   void decrement_trial_set(const UShortArray& trial_set,
 			   UShort2DArray& aggregated_mi, bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
-  void pre_restore_trial_set(const UShortArray& trial_set,
+  void pre_push_trial_set(const UShortArray& trial_set,
 			     UShort2DArray& aggregated_mi,
 			     bool monotonic = true);
   /// helper function for restoring that is modular on trial set and multi-index
-  void post_restore_trial_set(const UShortArray& trial_set,
+  void post_push_trial_set(const UShortArray& trial_set,
 			      UShort2DArray& aggregated_mi,
 			      bool save_map = true);
   /// helper function for restoring that is modular on trial set and multi-index
-  void restore_trial_set(const UShortArray& trial_set,
+  void push_trial_set(const UShortArray& trial_set,
 			 UShort2DArray& aggregated_mi,
 			 bool monotonic = true, bool save_map = true);
 
@@ -354,7 +355,7 @@ protected:
 
   /// index into popped sets of data to be restored (stored in this
   /// class for used by each ProjectOrthogPolyApproximation)
-  size_t restoreIndex;
+  size_t pushIndex;
 
   /// Data vector for storing the gradients of individual expansion term
   /// polynomials (see multivariate_polynomial_gradient_vector())
@@ -494,11 +495,11 @@ inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
 
 
 inline void SharedOrthogPolyApproxData::
-restore_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
+push_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi,
 		  bool monotonic, bool save_map)
 {
-  pre_restore_trial_set(trial_set, aggregated_mi, monotonic);
-  post_restore_trial_set(trial_set, aggregated_mi, save_map);
+  pre_push_trial_set(trial_set, aggregated_mi, monotonic);
+  post_push_trial_set(trial_set, aggregated_mi, save_map);
 }
 
 

@@ -113,12 +113,42 @@ void NodalInterpPolyApproximation::store_coefficients(size_t index)
       storedExpType1Coeffs[index] = expansionType1Coeffs;
       storedExpType2Coeffs[index] = expansionType2Coeffs;
     }
+    else { // keep indexing consistent
+      storedExpType1Coeffs[index] = RealVector();
+      storedExpType2Coeffs[index] = RealMatrix();
+    }
     if (expansionCoeffGradFlag)
       storedExpType1CoeffGrads[index] = expansionType1CoeffGrads;
+    else // keep indexing consistent
+      storedExpType1CoeffGrads[index] = RealMatrix();
   }
   else {
     PCerr << "Error: bad index (" << index << ") passed in NodalInterpPoly"
 	  << "Approximation::store_coefficients()" << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
+void NodalInterpPolyApproximation::restore_coefficients(size_t index)
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+
+  size_t stored_len = storedExpType1Coeffs.size();
+  if (index == _NPOS) {
+    expansionType1Coeffs = storedExpType1Coeffs.back();
+    expansionType2Coeffs = storedExpType2Coeffs.back();
+    expansionType1CoeffGrads = storedExpType1CoeffGrads.back();
+  }
+  else if (index < stored_len) {
+    expansionType1Coeffs = storedExpType1Coeffs[index];
+    expansionType2Coeffs = storedExpType2Coeffs[index];
+    expansionType1CoeffGrads = storedExpType1CoeffGrads[index];
+  }
+  else {
+    PCerr << "Error: bad index (" << index << ") passed in NodalInterpPoly"
+	  << "Approximation::restore_coefficients()" << std::endl;
     abort_handler(-1);
   }
 }
@@ -290,7 +320,7 @@ combine_coefficients(short combine_type, size_t maximal_index)
 }
 
 
-void NodalInterpPolyApproximation::restore_coefficients()
+void NodalInterpPolyApproximation::push_coefficients()
 {
   size_t index, offset = 0, old_colloc_pts, new_colloc_pts = surrData.points();
   if (surrData.anchor())

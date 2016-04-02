@@ -73,12 +73,14 @@ public:
   virtual void decrement_coefficients();
   /// restore the approximation coefficients to a previously incremented state
   /// as identified by the current data increment
-  virtual void restore_coefficients();
+  virtual void push_coefficients();
   /// finalize the coefficients by applying all previously evaluated increments
   virtual void finalize_coefficients();
 
   /// store the current coefficients for later combination
   virtual void store_coefficients(size_t index = _NPOS);
+  /// restore a previously stored coefficient state
+  virtual void restore_coefficients(size_t index = _NPOS);
   /// swap the current coefficients with a previously stored set
   virtual void swap_coefficients(size_t index);
   /// remove a redundant stored entry prior to combine_coefficients
