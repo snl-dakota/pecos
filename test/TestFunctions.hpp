@@ -158,4 +158,5 @@ double custPol(String an_comp, RealVector &xC)
   }
 
   return fnVals; // no failure
+
 }

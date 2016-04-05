@@ -20,14 +20,11 @@
 #include "TensorProductDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "pecos_data_types.hpp"
-//#include "LocalRefinableDriver.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 
 #include "TestFunctions.hpp"
 
 using namespace std;
-
-#define VERB
 
 #define POLYTYPE           LEGENDRE_ORTHOG
 #define QUADRULE           GAUSS_PATTERSON
@@ -72,6 +69,7 @@ int main(int argc, char* argv[])
   int            nQoI     = NQOI;      /* no. of Quantities of Interest (model outputs) */
   size_t         nvar     = NUMVARS ;  /* dimensionality of input space */
   unsigned short mOrd     = MAXORD ;   /* maximum order */
+  unsigned short nIter    = NITER ;    /* maximum no. of iterations */
   unsigned short strtlev  = STARTLEV ; /* starting quadrature level */
   unsigned short verb     = VERBOSE  ; /* verbosity  */
   short btype = (short) BTYPE;
@@ -79,7 +77,7 @@ int main(int argc, char* argv[])
   String pstring, qstring;
   // Command-line arguments: read user input
   int c; 
-  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:p:"))!=-1){
+  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:p:i:"))!=-1){
      switch (c) {
      case 'h':
        usage();
@@ -95,6 +93,9 @@ int main(int argc, char* argv[])
        break;
      case 'l':
        strtlev = strtol(optarg, (char **)NULL,0);
+       break;
+     case 'i':
+       nIter = strtol(optarg, (char **)NULL,0);
        break;
      case 'p':
        pstring = String(optarg);
@@ -117,9 +118,9 @@ int main(int argc, char* argv[])
     quadRule = GENZ_KEISTER   ;
   }
 
-#ifdef VERB
-  std::cout << "Instantiating CombinedSparseGridDriver:\n";
-#endif
+  if ( verb>2) {
+    std::cout << "Instantiating CombinedSparseGridDriver:\n";
+  }
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
@@ -141,9 +142,9 @@ int main(int argc, char* argv[])
 				   refine_cntl);
   int_driver.assign_rep(csg_driver, false); // don't increment ref count
 
-#ifdef VERB
-  std::cout << "Instantiating basis...\n";
-#endif
+  if (verb>2) { 
+    std::cout << "Instantiating basis...\n";
+  }
 
   std::vector<BasisPolynomial> poly_basis(nvar); // array of envelopes
   for (int i=0; i<nvar; ++i) {
@@ -152,15 +153,14 @@ int main(int argc, char* argv[])
   }
   csg_driver->initialize_grid(poly_basis);
 
-#ifdef VERB
-  std::cout << "  - done\n";
-#endif
+  if ( verb > 2 ) {
+    std::cout << "  - done\n";
+  }
 
   // Instantiate Pecos Objects
-#ifdef VERB
-  std::cout << "Instantiating pecos objects...\n";
-#endif
-
+  if ( verb > 2 ) {
+    std::cout << "Instantiating pecos objects...\n";
+  }
   ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID, // expsolnapp
                                    DEFAULT_BASIS,        // expbassus
                                    SILENT_OUTPUT,        // output level
@@ -185,20 +185,19 @@ int main(int argc, char* argv[])
     poly_approx[iQoI].assign_rep(new 
       ProjectOrthogPolyApproximation(shared_data), false); // assign letter
 
-#ifdef VERB
-  std::cout << "  - done\n";
-#endif
+  if ( verb > 2 ) {
+    std::cout << "  - done\n";
+  }
  
   // initial grid and compute reference approximation
   RealMatrix var_sets;
   csg_driver->compute_grid(var_sets);
   int numPts = var_sets.numCols();
   assert(nvar==var_sets.numRows());
-  PCout<<var_sets<<endl;
-  
-#ifdef VERB
-  std::cout << "Evaluate function on reference grid, instantiate SurrogateData and compute coefficients ...\n"; 
-#endif
+  if ( verb > 1 ) { PCout<<var_sets<<endl; }
+  if ( verb > 2 ) {
+    std::cout << "Evaluate function on reference grid, instantiate SurrogateData and compute coefficients ...\n"; 
+  }
 
   // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
   std::vector<bool> computedGridIDs(numPts,true) ; 
@@ -216,15 +215,13 @@ int main(int argc, char* argv[])
   } 
 
   shared_poly_data->allocate_data();    
-  std::cout << "  - done\n";
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    std::cout<<"QoI="<<iQoI<<std::endl;
     poly_approx[iQoI].compute_coefficients();
   }
   
-#ifdef VERB
-  std::cout << "  - done\n";
-#endif
+  if ( verb > 2 ) {
+    std::cout << "  - done\n";
+  }
 
   // ----------------- Comment from now restarts/etc------------------------
   // // if restart, check if grid is in the restart
@@ -253,7 +250,7 @@ int main(int argc, char* argv[])
   // start refinement
   csg_driver->initialize_sets();
   UShortArraySet a;
-  for ( int iter = 0; iter<NITER; iter++) {
+  for ( size_t iter = 0; iter < nIter; iter++) {
 
     /* Compute base variance */
     RealVector respVariance(nQoI,0.0);  
@@ -266,8 +263,10 @@ int main(int argc, char* argv[])
     std::vector<short unsigned int> asave;
 
     a = csg_driver->active_multi_index();
-    std::cout<<"Refine, iteration: "<<iter+1<<'\n';
-
+    if ( verb > 1 ) {
+      std::cout<<"Refine, iteration: "<<iter+1<<'\n';
+      std::cout<<"  ... starting variance:\n"<<respVariance<<'\n';
+    }
     int choose = 0;
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
 
@@ -282,6 +281,10 @@ int main(int argc, char* argv[])
       // Update surrogate data
       numPts = 0;
       if (shared_poly_data->push_available()) {
+
+        if ( verb>1 ) {
+          PCout<<"Restoring existing index set:\n"<<*it<<endl;
+	}
 
         // Set available -> restore in csg and the rest
 	csg_driver->restore_set();
@@ -303,9 +306,10 @@ int main(int argc, char* argv[])
 	// Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
 	csg_driver->compute_trial_grid(var_sets);
         numPts = var_sets.numCols();
-
-        PCout<<*it<<endl;
-        PCout<<RealMatrix(var_sets,Teuchos::TRANS)<<endl;
+        if ( verb>1 ) {
+          PCout<<"Computing new index set:\n"<<*it<<endl;
+          //PCout<<RealMatrix(var_sets,Teuchos::TRANS)<<endl;
+	}
 
 	computedGridIDs.resize(numPts,true) ; 
         RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
@@ -336,7 +340,9 @@ int main(int argc, char* argv[])
 	  (PolynomialApproximation *) poly_approx[iQoI].approx_rep();
 	respVarianceNew[iQoI] = poly_approx_rep->variance() ;
       }
+      std::cout<<"  ... new variance:\n"<<respVarianceNew<<'\n';
       respVarianceNew -= respVariance;
+      std::cout<<"  ... delta variance:\n"<<respVarianceNew<<'\n';
       Real normChange = respVarianceNew.normFrobenius()/csg_driver->unique_trial_points();
       if (normChange > deltaVar) {
         deltaVar = normChange;
@@ -361,13 +367,16 @@ int main(int argc, char* argv[])
 	sdi.pop(numPts,true);
       }
 
+    } /* End iteration over proposed sets */
+
+    if ( verb>1 ) {
+      std::cout<<"Choosing :\n"<<asave<<std::endl ;
+      std::cout<<"  ... with relative variance: "<<deltaVar<<std::endl ;
     }
-
-    std::cout<<"Choosing :\n"<<asave<<std::endl ;
-
+    
     csg_driver->push_trial_set(asave);
     csg_driver->compute_trial_grid(var_sets);
-    PCout<<var_sets<<endl;
+    //PCout<<var_sets<<endl;
     csg_driver->pop_trial_set();
 
     csg_driver->update_sets(asave);
@@ -383,7 +392,7 @@ int main(int argc, char* argv[])
     }
     shared_poly_data->post_push_data();
 
-  }
+  } /* end iteration loop */
 
   csg_driver->finalize_sets(true, false); // use embedded output option
 
