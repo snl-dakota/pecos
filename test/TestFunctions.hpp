@@ -109,6 +109,54 @@ double genz(String an_comp, RealVector &xC)
   return fnVals; // no failure
 }
 
+double gerstner(String an_comp, RealVector &xC)
+{
+
+  if (xC.length() != 2 )
+    throw(std::runtime_error("Pecos::gerstner() needs 2 variables\n"));
+
+  short test_fn;
+  Real x_coeff, y_coeff, xy_coeff;
+  if (an_comp        == "iso1") {
+    test_fn = 1; x_coeff = y_coeff = 10.;
+  }
+  else if (an_comp   == "iso2") {
+    test_fn = 2; x_coeff = y_coeff = xy_coeff = 1.;
+  }
+  else if (an_comp   == "iso3") {
+    test_fn = 3; x_coeff = y_coeff = 10.;
+  }
+  else if (an_comp == "aniso1") {
+    test_fn = 1; x_coeff =  1.; y_coeff = 10.;
+  }
+  else if (an_comp == "aniso2") {
+    test_fn = 2; x_coeff =  1.; y_coeff = xy_coeff = 10.;
+  }
+  else if (an_comp == "aniso3") {
+    test_fn = 3; x_coeff = 10.; y_coeff = 5.;
+  }
+  else {
+    throw(std::runtime_error("Pecos::gerstner() ensure type is iso1...3/aniso1...3\n"));
+  }
+
+  Real fnVals, x=xC[0], y=xC[1];
+  switch (test_fn) {
+    case 1:
+      fnVals = x_coeff * std::exp(-x*x) + y_coeff * std::exp(-y*y);
+      break;
+    case 2:
+      fnVals = x_coeff * std::exp(x) + y_coeff * std::exp(y)
+              + xy_coeff * std::exp(x*y);
+      break;
+    case 3:
+      fnVals = std::exp(-x_coeff * x * x - y_coeff * y * y);
+      break;
+  }
+
+  return fnVals;
+
+}
+
 double custPol(String an_comp, RealVector &xC)
 {
   int fn_type;
