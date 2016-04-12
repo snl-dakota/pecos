@@ -76,3 +76,4 @@ if(PECOS_ENABLE_TEUCHOS_UNIT_TESTS)
   add_test(pecos_teuchos_unit_tests pecos_teuchos_unit_tests)
 endif() # PECOS_ENABLE_TEUCHOS_UNIT_TESTS
 
+install(TARGETS pecos_gsg_driver DESTINATION bin)

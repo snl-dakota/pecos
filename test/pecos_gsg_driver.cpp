@@ -111,7 +111,8 @@ int main(int argc, char* argv[])
   // Retrieve command-line setup
   if (pstring == String("LEGENDRE")) {
     polyType = LEGENDRE_ORTHOG ;
-    quadRule = GAUSS_PATTERSON ;
+    //quadRule = GAUSS_PATTERSON ;
+    quadRule = GAUSS_LEGENDRE ;
   }
   else if (pstring == String("HERMITE")) {
     polyType = HERMITE_ORTHOG ;
@@ -209,6 +210,7 @@ int main(int argc, char* argv[])
     for( int jCol = 0; jCol < numPts; jCol++) {
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
       sdr.response_function(fev0(jCol,iQoI));
+      //printf("%d: %e\n",fev0(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
     poly_approx[iQoI].surrogate_data(sdi);
@@ -217,6 +219,7 @@ int main(int argc, char* argv[])
   shared_poly_data->allocate_data();    
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     poly_approx[iQoI].compute_coefficients();
+    //poly_approx[iQoI].print_coefficients(std::cout,false);
   }
   
   if ( verb > 2 ) {
@@ -241,6 +244,7 @@ int main(int argc, char* argv[])
   //   RealVector fev = feval(var_sets,computedGridIDs,NULL);
   //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
   // }
+
 
 #ifdef DEBUG
   write_data(std::cout, var_sets, true, true, true);
@@ -417,7 +421,7 @@ int main(int argc, char* argv[])
   shared_poly_data->post_finalize_data();
 
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    poly_approx[iQoI].print_coefficients(std::cout,false);
+    poly_approx[iQoI].print_coefficients(std::cout,true);
 
 
   // Print final sets

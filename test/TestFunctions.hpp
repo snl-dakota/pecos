@@ -170,13 +170,15 @@ double custPol(String an_comp, RealVector &xC)
     /* 2-nd order polynomial */
     fn_type = 0;
     for ( int d = 0; d < numVars; d++ ) {
-      cMain[d        ] = ( (Real) d + 1.0 ) / (Real) numVars ;
+      //cMain[d        ] = ( (Real) d + 1.0 ) / (Real) numVars ;
+      cMain[d        ] = 0.0;
       cMain[d+numVars] = ( (Real) d + 5.0 ) / (Real) numVars ;
     }
     int idx=0;
     for ( int d1 = 1; d1 < numVars; d1++ ) {
       for ( int d2 = 0; d2 < d1; d2++,idx++ ) {
-        cCross[idx] = ( (Real) (d1+1.0)*(d2+1.0) + 1.0 ) / ((Real) numVars*numVars) ; ;
+        //cCross[idx] = ( (Real) (d1+1.0)*(d2+1.0) + 1.0 ) / ((Real) numVars*numVars) ;
+        cCross[idx] = 0.0;
       }
     }
   }
@@ -194,13 +196,16 @@ double custPol(String an_comp, RealVector &xC)
       for ( int d = 0; d < numVars; d++ ){
 	fnVals += cMain[d        ] * xC[d] * xC[d];
 	fnVals += cMain[d+numVars] * xC[d] ;
+        printf("%d: %e x %e\n",d,cMain[d+numVars],xC[d]);
       }
       int idx=0;
       for ( int d1 = 1; d1 < numVars; d1++ ) {
         for ( int d2 = 0; d2 < d1; d2++,idx++ ) {
           fnVals += cCross[idx] * xC[d1] * xC[d2] ;
+          printf("%d,%d: %e x %e x %e\n",d1,d2,cCross[idx],xC[d1],xC[d2]);
         }
       }
+      printf("fnct=%e\n----------------\n",fnVals);
       break;
     }
   }
