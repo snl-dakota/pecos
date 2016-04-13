@@ -111,8 +111,8 @@ int main(int argc, char* argv[])
   // Retrieve command-line setup
   if (pstring == String("LEGENDRE")) {
     polyType = LEGENDRE_ORTHOG ;
-    //quadRule = GAUSS_PATTERSON ;
-    quadRule = GAUSS_LEGENDRE ;
+    quadRule = GAUSS_PATTERSON ;
+    //quadRule = GAUSS_LEGENDRE ;
   }
   else if (pstring == String("HERMITE")) {
     polyType = HERMITE_ORTHOG ;
