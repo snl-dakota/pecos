@@ -30,9 +30,9 @@ using namespace std;
 #define QUADRULE           GAUSS_PATTERSON
 #define MAX_CHARS_PER_LINE 1000
 #define BTYPE              GLOBAL_PROJECTION_ORTHOGONAL_POLYNOMIAL
-#define NUMVARS            3
+#define NUMVARS            2
 #define STARTLEV           1
-#define NITER              6
+#define NITER              0
 #define MAXORD             5
 #define NQOI               1
 #define VERBOSE            1
