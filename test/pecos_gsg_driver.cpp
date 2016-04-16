@@ -319,7 +319,7 @@ int main(int argc, char* argv[])
         RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
 
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  SurrogateData     sdi = poly_approx[iQoI].surrogate_data();
+	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
 	  for( int jCol = 0; jCol < numPts; jCol++) {
   	    SurrogateDataVars sdv(nvar,0,0);
 	    SurrogateDataResp sdr(1,nvar); // no gradient or hessian
@@ -378,13 +378,12 @@ int main(int argc, char* argv[])
       std::cout<<"  ... with relative variance: "<<deltaVar<<std::endl ;
     }
     
-    csg_driver->push_trial_set(asave);
-    csg_driver->compute_trial_grid(var_sets);
-    //PCout<<var_sets<<endl;
-    csg_driver->pop_trial_set();
+    //csg_driver->push_trial_set(asave);
+    //csg_driver->compute_trial_grid(var_sets);
+    //csg_driver->pop_trial_set();
 
     csg_driver->update_sets(asave);
-    csg_driver->update_reference();
+    //csg_driver->update_reference();
 
      //need to restore the data
     size_t idxRestore = shared_poly_data->retrieval_index();
@@ -395,6 +394,8 @@ int main(int argc, char* argv[])
       int numPts = sdi.push(idxRestore,true);
     }
     shared_poly_data->post_push_data();
+
+    csg_driver->update_reference();
 
   } /* end iteration loop */
 
