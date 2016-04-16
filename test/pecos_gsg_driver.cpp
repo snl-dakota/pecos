@@ -204,10 +204,10 @@ int main(int argc, char* argv[])
   std::vector<bool> computedGridIDs(numPts,true) ; 
   RealMatrix fev0 = feval(var_sets,nQoI,computedGridIDs,NULL);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-    SurrogateDataVars sdv(nvar,0,0);
-    SurrogateDataResp sdr(1,nvar); // no gradient or hessian
     SurrogateData     sdi;
     for( int jCol = 0; jCol < numPts; jCol++) {
+      SurrogateDataVars sdv(nvar,0,0);
+      SurrogateDataResp sdr(1,nvar); // no gradient or hessian
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
       sdr.response_function(fev0(jCol,iQoI));
       //printf("%d: %e\n",fev0(jCol,iQoI));
@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
   shared_poly_data->allocate_data();    
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     poly_approx[iQoI].compute_coefficients();
-    //poly_approx[iQoI].print_coefficients(std::cout,false);
+    poly_approx[iQoI].print_coefficients(std::cout,false);
   }
   
   if ( verb > 2 ) {
@@ -319,10 +319,10 @@ int main(int argc, char* argv[])
         RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
 
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  SurrogateDataVars sdv(nvar,0,0);
-	  SurrogateDataResp sdr(1,nvar); // no gradient or hessian
 	  SurrogateData     sdi = poly_approx[iQoI].surrogate_data();
 	  for( int jCol = 0; jCol < numPts; jCol++) {
+  	    SurrogateDataVars sdv(nvar,0,0);
+	    SurrogateDataResp sdr(1,nvar); // no gradient or hessian
 	    sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
 	    sdr.response_function(fev(jCol,iQoI));
 	    sdi.push_back(sdv,sdr);
@@ -421,7 +421,7 @@ int main(int argc, char* argv[])
   shared_poly_data->post_finalize_data();
 
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    poly_approx[iQoI].print_coefficients(std::cout,true);
+    poly_approx[iQoI].print_coefficients(std::cout,false);
 
 
   // Print final sets
