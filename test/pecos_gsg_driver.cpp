@@ -382,21 +382,21 @@ int main(int argc, char* argv[])
     //csg_driver->compute_trial_grid(var_sets);
     //csg_driver->pop_trial_set();
 
-    csg_driver->update_sets(asave);
-    //csg_driver->update_reference();
+    if ( asave.size() > 0 ) {
+      csg_driver->update_sets(asave);
+      //csg_driver->update_reference();
 
-     //need to restore the data
-    size_t idxRestore = shared_poly_data->retrieval_index();
-    shared_poly_data->pre_push_data();
-    for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-      poly_approx[iQoI].push_coefficients();
-      SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-      int numPts = sdi.push(idxRestore,true);
+      //need to restore the data
+      size_t idxRestore = shared_poly_data->retrieval_index();
+      shared_poly_data->pre_push_data();
+      for ( int iQoI=0; iQoI<nQoI; iQoI++) {
+        poly_approx[iQoI].push_coefficients();
+        SurrogateData sdi = poly_approx[iQoI].surrogate_data();
+        int numPts = sdi.push(idxRestore,true);
+      }
+      shared_poly_data->post_push_data();
+      csg_driver->update_reference();
     }
-    shared_poly_data->post_push_data();
-
-    csg_driver->update_reference();
-
   } /* end iteration loop */
 
   csg_driver->finalize_sets(true, false); // use embedded output option
