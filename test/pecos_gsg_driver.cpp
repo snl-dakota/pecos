@@ -39,6 +39,8 @@ using namespace std;
 #define INDEXFILE          "savedIndex.dat"
 #define GRIDFILE           "savedGrid.dat"
 #define FCNFILE            "savedFeval.dat"
+#define FCNTYPE            "gerstner-iso1"
+#define VARTHRLD           1.e-2
 
 void restartGSGdriver(const char *grid, const char *fcnvals, 
                       Pecos::RealMatrix &storedSets, Pecos::RealVector
@@ -50,7 +52,7 @@ void addNewSets(Pecos::RealMatrix &storedSets,RealVector &storedVals,
 
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
-RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, void *funInfo)  ;
+RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, String ftype)  ;
 
 int usage(){
   printf("usage: pecos_gsg_driver [-h] [-d<nvar>] [-n<nQoI>]  [-l<strtlev>] [-v <verb>]\n");
@@ -66,18 +68,20 @@ int main(int argc, char* argv[])
   // Define defaults
   int            polyType = POLYTYPE ;
   int            quadRule = QUADRULE ;
-  int            nQoI     = NQOI;      /* no. of Quantities of Interest (model outputs) */
-  size_t         nvar     = NUMVARS ;  /* dimensionality of input space */
-  unsigned short mOrd     = MAXORD ;   /* maximum order */
-  unsigned short nIter    = NITER ;    /* maximum no. of iterations */
-  unsigned short strtlev  = STARTLEV ; /* starting quadrature level */
-  unsigned short verb     = VERBOSE  ; /* verbosity  */
+  int            nQoI     = NQOI     ;  /* no. of Quantities of Interest (model outputs) */
+  size_t         nvar     = NUMVARS  ;  /* dimensionality of input space */
+  unsigned short mOrd     = MAXORD   ;  /* maximum order */
+  unsigned short nIter    = NITER    ;  /* maximum no. of iterations */
+  unsigned short strtlev  = STARTLEV ;  /* starting quadrature level */
+  unsigned short verb     = VERBOSE  ;  /* verbosity  */
+  double         varEps   = VARTHRLD ;
+  String         ftype    = String(FCNTYPE);
   short btype = (short) BTYPE;
 
   String pstring, qstring;
   // Command-line arguments: read user input
   int c; 
-  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:p:i:"))!=-1){
+  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:p:i:t:e:"))!=-1){
      switch (c) {
      case 'h':
        usage();
@@ -97,8 +101,14 @@ int main(int argc, char* argv[])
      case 'i':
        nIter = strtol(optarg, (char **)NULL,0);
        break;
+     case 'e':
+       varEps = strtod(optarg, (char **)NULL);
+       break;
      case 'p':
        pstring = String(optarg);
+       break;
+     case 't':
+       ftype = String(optarg);
        break;
      case 'v':
        verb    = strtol(optarg, (char **)NULL,0);
@@ -202,7 +212,7 @@ int main(int argc, char* argv[])
 
   // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
   std::vector<bool> computedGridIDs(numPts,true) ; 
-  RealMatrix fev0 = feval(var_sets,nQoI,computedGridIDs,NULL);
+  RealMatrix fev0 = feval(var_sets,nQoI,computedGridIDs,ftype);
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     SurrogateData     sdi;
     for( int jCol = 0; jCol < numPts; jCol++) {
@@ -241,7 +251,7 @@ int main(int argc, char* argv[])
   // else
   // {
   //   computedGridIDs.resize(var_sets.numCols(),true);
-  //   RealVector fev = feval(var_sets,computedGridIDs,NULL);
+  //   RealVector fev = feval(var_sets,computedGridIDs,ftype);
   //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
   // }
 
@@ -316,7 +326,7 @@ int main(int argc, char* argv[])
 	}
 
 	computedGridIDs.resize(numPts,true) ; 
-        RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,NULL);
+        RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,ftype);
 
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
@@ -357,7 +367,7 @@ int main(int argc, char* argv[])
       // int numHits = checkSetsInStoredSet(storedSets,var_sets,computedGridIDs);
       // if (numHits<var_sets.numCols())
       // {
-      //   RealVector fev = feval(var_sets,computedGridIDs,NULL);
+      //   RealVector fev = feval(var_sets,computedGridIDs,ftype);
       //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
       // }
 
@@ -397,6 +407,9 @@ int main(int argc, char* argv[])
       shared_poly_data->post_push_data();
       csg_driver->update_reference();
     }
+
+    if ( deltaVar < varEps ) break ;
+
   } /* end iteration loop */
 
   csg_driver->finalize_sets(true, false); // use embedded output option
@@ -461,7 +474,8 @@ void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a)
   return ;
 }
 
-RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, void *funInfo) 
+RealMatrix feval(const RealMatrix &dataMat, const int nQoI,
+                 std::vector<bool> &computedGridIDs, String ftype) 
 {
 
   assert(nQoI==1);
@@ -469,7 +483,7 @@ RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &c
   int i, j ;
 
   int numDim = dataMat.numRows(); // Dimensionality
-  int numPts = dataMat.numCols(); // Number of function evaluations
+  int numPts = dataMat.numCols(); // Number of pts
 
   /* Count the number of function evaluations; */
   RealMatrix fev;
@@ -486,7 +500,22 @@ RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &c
     RealVector xIn(numDim);
     for (j=0; j<numDim; ++j) xIn[j] = dataMat(j,i);
     //fev(ieval,0)=genz(String("cp1"), xIn);
-    fev(ieval,0)=custPol(String("pol2"), xIn);
+    if ( ftype == String("pol2") )
+      fev(ieval,0) = custPol(ftype, xIn);
+    else if ( ftype == String("gerstner-iso1") )
+      fev(ieval,0) = gerstner(String("iso1"), xIn);
+    else if ( ftype == String("gerstner-iso2") )
+      fev(ieval,0) = gerstner(String("iso2"), xIn);
+    else if ( ftype == String("gerstner-iso3") )
+      fev(ieval,0) = gerstner(String("iso3"), xIn);
+    else if ( ftype == String("gerstner-aniso1") )
+      fev(ieval,0) = gerstner(String("aniso1"), xIn);
+    else if ( ftype == String("gerstner-aniso2") )
+      fev(ieval,0) = gerstner(String("aniso2"), xIn);
+    else if ( ftype == String("gerstner-aniso3") )
+      fev(ieval,0) = gerstner(String("aniso3"), xIn);
+    else
+      throw(std::runtime_error("Pecos::feval() unknown ftype\n"));
     ieval++;   
   }
   
