@@ -52,10 +52,22 @@ void addNewSets(Pecos::RealMatrix &storedSets,RealVector &storedVals,
 
 void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
 void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
+
 RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, String ftype)  ;
 
 int usage(){
-  printf("usage: pecos_gsg_driver [-h] [-d<nvar>] [-n<nQoI>]  [-l<strtlev>] [-v <verb>]\n");
+  printf("usage: pecos_gsg_driver [options]\n");
+  printf(" -h         : print out this help message \n");
+  printf(" -d <nvar>  : dimensionality of parameter space (default=%d) \n",NUMVARS);
+  printf(" -e <veps>  : tolerance for incremental variance threshold  (default=%lg) \n",VARTHRLD);
+  printf(" -i <niter> : maximum no. of iterations (default=%d) \n",NITER);
+  printf(" -l <stlev> : starting quadrature level (default=%d) \n",STARTLEV);
+  printf(" -m <mord>  : not used - maximum order for shared-poly-data (default=%d) \n",MAXORD);
+  printf(" -n <nqoi>  : no. of outputs (default=%d) \n",NQOI);
+  printf(" -p <ptype> : type of basis (default=LEGENDRE) \n");
+  printf(" -t <ftype> : test function (default=%s) \n",FCNTYPE);
+  printf(" -v <verb>  : verbosity level (default=%d) \n",VERBOSE);
+  exit(0);
   return (0);
 }
 
@@ -81,28 +93,28 @@ int main(int argc, char* argv[])
   String pstring, qstring;
   // Command-line arguments: read user input
   int c; 
-  while ((c=getopt(argc,(char **)argv,"hd:n:m:l:v:p:i:t:e:"))!=-1){
+  while ((c=getopt(argc,(char **)argv,"hd:e:i:l:m:n:p:t:v:"))!=-1){
      switch (c) {
      case 'h':
        usage();
        break;
      case 'd':
-       nvar    = strtol(optarg, (char **)NULL,0);  
+       nvar = strtol(optarg, (char **)NULL,0);  
        break;
-     case 'n':
-       nQoI    = strtol(optarg, (char **)NULL,0);  
-       break;
-     case 'm':
-       mOrd    = strtol(optarg, (char **)NULL,0);  
-       break;
-     case 'l':
-       strtlev = strtol(optarg, (char **)NULL,0);
+     case 'e':
+       varEps = strtod(optarg, (char **)NULL);
        break;
      case 'i':
        nIter = strtol(optarg, (char **)NULL,0);
        break;
-     case 'e':
-       varEps = strtod(optarg, (char **)NULL);
+     case 'l':
+       strtlev = strtol(optarg, (char **)NULL,0);
+       break;
+     case 'm':
+       mOrd    = strtol(optarg, (char **)NULL,0);  
+       break;
+     case 'n':
+       nQoI = strtol(optarg, (char **)NULL,0);  
        break;
      case 'p':
        pstring = String(optarg);
@@ -111,7 +123,7 @@ int main(int argc, char* argv[])
        ftype = String(optarg);
        break;
      case 'v':
-       verb    = strtol(optarg, (char **)NULL,0);
+       verb = strtol(optarg, (char **)NULL,0);
        break;
     default :
       break;
