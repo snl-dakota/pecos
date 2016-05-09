@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
   }
 
   if ( verb>2) {
-    std::cout << "Instantiating CombinedSparseGridDriver:\n";
+    PCout << "Instantiating CombinedSparseGridDriver:\n";
   }
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
@@ -162,7 +162,7 @@ int main(int argc, char* argv[])
   int_driver.assign_rep(csg_driver, false); // don't increment ref count
 
   if (verb>2) { 
-    std::cout << "Instantiating basis...\n";
+    PCout << "Instantiating basis...\n";
   }
 
   std::vector<BasisPolynomial> poly_basis(nvar); // array of envelopes
@@ -173,12 +173,12 @@ int main(int argc, char* argv[])
   csg_driver->initialize_grid(poly_basis);
 
   if ( verb > 2 ) {
-    std::cout << "  - done\n";
+    PCout << "  - done\n";
   }
 
   // Instantiate Pecos Objects
   if ( verb > 2 ) {
-    std::cout << "Instantiating pecos objects...\n";
+    PCout << "Instantiating pecos objects...\n";
   }
   ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID, // expsolnapp
                                    DEFAULT_BASIS,        // expbassus
@@ -205,7 +205,7 @@ int main(int argc, char* argv[])
       ProjectOrthogPolyApproximation(shared_data), false); // assign letter
 
   if ( verb > 2 ) {
-    std::cout << "  - done\n";
+    PCout << "  - done\n";
   }
  
 #ifdef GSGREST
@@ -227,8 +227,8 @@ int main(int argc, char* argv[])
   if ( verb > 1 ) { 
     PCout<<var_sets<<endl; 
     if ( verb > 2 ) {
-      std::cout << "Evaluate function on reference grid, ";
-      std::cout << "instantiate SurrogateData and compute coefficients ...\n"; 
+      PCout << "Evaluate function on reference grid, ";
+      PCout << "instantiate SurrogateData and compute coefficients ...\n"; 
     }
   }
 
@@ -260,11 +260,11 @@ int main(int argc, char* argv[])
   shared_poly_data->allocate_data();    
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     poly_approx[iQoI].compute_coefficients();
-    poly_approx[iQoI].print_coefficients(std::cout,false);
+    poly_approx[iQoI].print_coefficients(PCout,false);
   }
   
   if ( verb > 2 ) {
-    std::cout << "  - done\n";
+    PCout << "  - done\n";
   }
 
   // start refinement
@@ -284,8 +284,8 @@ int main(int argc, char* argv[])
 
     a = csg_driver->active_multi_index();
     if ( verb > 1 ) {
-      std::cout<<"Refine, iteration: "<<iter+1<<'\n';
-      std::cout<<"  ... starting variance:\n"<<respVariance<<'\n';
+      PCout<<"Refine, iteration: "<<iter+1<<'\n';
+      PCout<<"  ... starting variance:\n"<<respVariance<<'\n';
     }
  
 #ifdef GSGREST
@@ -381,9 +381,19 @@ int main(int argc, char* argv[])
 	  (PolynomialApproximation *) poly_approx[iQoI].approx_rep();
 	respVarianceNew[iQoI] = poly_approx_rep->variance() ;
       }
-      std::cout<<"  ... new variance:\n"<<respVarianceNew<<'\n';
+      if ( verb > 1 ) {
+        PCout<<"  ... new variance:\n";
+	for ( int iQoI=0; iQoI<nQoI; iQoI++) 
+	  PCout<<respVarianceNew[iQoI]<<" ";
+	PCout<<"\n";
+      }
       respVarianceNew -= respVariance;
-      std::cout<<"  ... delta variance:\n"<<respVarianceNew<<'\n';
+      if ( verb > 1 ) {
+        PCout<<"  ... delta variance:\n";
+	for ( int iQoI=0; iQoI<nQoI; iQoI++) 
+	  PCout<<respVarianceNew[iQoI]<<" ";
+	PCout<<"\n";
+      }
       Real normChange = respVarianceNew.normFrobenius()/csg_driver->unique_trial_points();
       if (normChange > deltaVar) {
         deltaVar = normChange;
@@ -403,8 +413,8 @@ int main(int argc, char* argv[])
     } /* End iteration over proposed sets */
 
     if ( verb>1 ) {
-      std::cout<<"Choosing :\n"<<asave<<std::endl ;
-      std::cout<<"  ... with relative variance: "<<deltaVar<<std::endl ;
+      PCout<<"Choosing :\n"<<asave<<std::endl ;
+      PCout<<"  ... with relative variance: "<<deltaVar<<std::endl ;
     }
     
     if ( asave.size() > 0 ) {
@@ -449,7 +459,7 @@ int main(int argc, char* argv[])
   shared_poly_data->post_finalize_data();
 
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
-    poly_approx[iQoI].print_coefficients(std::cout,false);
+    poly_approx[iQoI].print_coefficients(PCout,false);
 
   return (0);
 
@@ -684,7 +694,6 @@ void getMatrix(const char *fname, RealMatrix &dataIn) {
     exit(1);
   }
   in.close();
-  std::cout<<ix<<" "<<nCols<<std::endl;
 
   return;
 
@@ -822,12 +831,12 @@ void loadData(const char *fbase, RealMatrix &evalGrid,
   bool allEvals = true ;
   for (size_t i=0;i<nPts;i++) 
     if (evalFlag(i) != 1) {
-      std::cout<<" Point "<<i<<" is not evaluated!"<<std::endl;
+      PCout<<" Point "<<i<<" is not evaluated!"<<std::endl;
       allEvals = false;
     }
 
   if (!allEvals) {
-      std::cout<<"  -> Exit !"<<std::endl;    
+      PCout<<"  -> Exit !"<<std::endl;    
       std::terminate() ;
   }
 
