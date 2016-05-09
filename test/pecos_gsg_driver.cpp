@@ -36,24 +36,23 @@ using namespace std;
 #define MAXORD             5
 #define NQOI               1
 #define VERBOSE            1
-#define INDEXFILE          "savedIndex.dat"
-#define GRIDFILE           "savedGrid.dat"
-#define FCNFILE            "savedFeval.dat"
 #define FCNTYPE            "gerstner-iso1"
 #define VARTHRLD           1.e-2
 
-void restartGSGdriver(const char *grid, const char *fcnvals, 
-                      Pecos::RealMatrix &storedSets, Pecos::RealVector
-                      &storedVals) ;
-int checkSetsInStoredSet(const Pecos::RealMatrix &storedSets, const Pecos::RealMatrix &variable_sets, 
-			 std::vector<bool> &computedGridIDs);
-void addNewSets(Pecos::RealMatrix &storedSets,RealVector &storedVals,
-		Pecos::RealMatrix &newSets, RealVector &fev, std::vector<bool> &computedGridIDs);
+#ifdef GSGREST
+inline bool fileExist (const char *fname) {
+  std::ifstream in(fname);
+  return in.good();
+}
 
-void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a);
-void write_US2A(std::ostream& s, const Pecos::UShort2DArray  &a);
-
-RealMatrix feval(const RealMatrix &dataMat, const int nQoI, std::vector<bool> &computedGridIDs, String ftype)  ;
+void saveData(const char *fbase, const RealMatrix &evalGrid, const IntVector &evalFlag, const RealMatrix &evalData) ;
+void loadData(const char *fbase, RealMatrix &evalGrid, IntVector &evalFlag, RealMatrix &evalData) ;
+RealMatrix getFeval(RealMatrix &evalGrid, IntVector  &evalFlag,
+                    RealMatrix &evalData, const RealMatrix &var_sets,
+	            bool &foundFlag);
+#else
+RealMatrix feval(const RealMatrix &dataMat, const int nQoI, String ftype);
+#endif
 
 int usage(){
   printf("usage: pecos_gsg_driver [options]\n");
@@ -88,24 +87,28 @@ int main(int argc, char* argv[])
   unsigned short verb     = VERBOSE  ;  /* verbosity  */
   double         varEps   = VARTHRLD ;
   String         ftype    = String(FCNTYPE);
+  bool           extFunc  = false ;
   short btype = (short) BTYPE;
 
   String pstring, qstring;
   // Command-line arguments: read user input
   int c; 
-  while ((c=getopt(argc,(char **)argv,"hd:e:i:l:m:n:p:t:v:"))!=-1){
+  while ((c=getopt(argc,(char **)argv,"hfd:e:i:l:m:n:p:t:v:"))!=-1){
      switch (c) {
      case 'h':
        usage();
        break;
+     case 'f':
+       extFunc = true;
+       break;
      case 'd':
-       nvar = strtol(optarg, (char **)NULL,0);  
+       nvar    = strtol(optarg, (char **)NULL,0);  
        break;
      case 'e':
-       varEps = strtod(optarg, (char **)NULL);
+       varEps  = strtod(optarg, (char **)NULL);
        break;
      case 'i':
-       nIter = strtol(optarg, (char **)NULL,0);
+       nIter   = strtol(optarg, (char **)NULL,0);
        break;
      case 'l':
        strtlev = strtol(optarg, (char **)NULL,0);
@@ -114,16 +117,16 @@ int main(int argc, char* argv[])
        mOrd    = strtol(optarg, (char **)NULL,0);  
        break;
      case 'n':
-       nQoI = strtol(optarg, (char **)NULL,0);  
+       nQoI    = strtol(optarg, (char **)NULL,0);  
        break;
      case 'p':
        pstring = String(optarg);
        break;
      case 't':
-       ftype = String(optarg);
+       ftype   = String(optarg);
        break;
      case 'v':
-       verb = strtol(optarg, (char **)NULL,0);
+       verb    = strtol(optarg, (char **)NULL,0);
        break;
     default :
       break;
@@ -147,13 +150,6 @@ int main(int argc, char* argv[])
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
   short refine_cntl = DIMENSION_ADAPTIVE_CONTROL_GENERALIZED;
-
-  // Store grid and model evaluations 
-  RealMatrix storedSets;
-  RealVector storedVals;   
-
-  // Restart is data available 
-  // restartGSGdriver((char *)GRIDFILE, (char *)FCNFILE, storedSets, storedVals);
 
   // Start
   // Can either use IntegrationDriver(driver_type) and then assign data or
@@ -212,27 +208,50 @@ int main(int argc, char* argv[])
     std::cout << "  - done\n";
   }
  
+#ifdef GSGREST
+  /* Define saved data*/
+  RealMatrix evalGrid;
+  IntVector  evalFlag;
+  RealMatrix evalData(1,nQoI);
+  loadData((char *)"func",evalGrid,evalFlag,evalData);
+  PCout<<evalGrid;
+  PCout<<evalFlag;
+  PCout<<evalData;
+#endif
+
   // initial grid and compute reference approximation
   RealMatrix var_sets;
   csg_driver->compute_grid(var_sets);
   int numPts = var_sets.numCols();
   assert(nvar==var_sets.numRows());
-  if ( verb > 1 ) { PCout<<var_sets<<endl; }
-  if ( verb > 2 ) {
-    std::cout << "Evaluate function on reference grid, instantiate SurrogateData and compute coefficients ...\n"; 
+  if ( verb > 1 ) { 
+    PCout<<var_sets<<endl; 
+    if ( verb > 2 ) {
+      std::cout << "Evaluate function on reference grid, ";
+      std::cout << "instantiate SurrogateData and compute coefficients ...\n"; 
+    }
   }
 
-  // Create SurrogateData instances and assign to ProjectOrthogPolyApproximation instances
-  std::vector<bool> computedGridIDs(numPts,true) ; 
-  RealMatrix fev0 = feval(var_sets,nQoI,computedGridIDs,ftype);
+#ifdef GSGREST
+  bool foundFlag ;
+  RealMatrix fev = getFeval(evalGrid,evalFlag,evalData,var_sets,foundFlag);
+  if ( !foundFlag ) {
+    saveData((char *)"func",evalGrid,evalFlag,evalData);
+    return (0);
+  } 
+#else
+  RealMatrix fev = feval(var_sets,nQoI,ftype);
+#endif
+
+  // Create SurrogateData instances and assign to 
+  // ProjectOrthogPolyApproximation instances
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     SurrogateData     sdi;
     for( int jCol = 0; jCol < numPts; jCol++) {
       SurrogateDataVars sdv(nvar,0,0);
       SurrogateDataResp sdr(1,nvar); // no gradient or hessian
       sdv.continuous_variables(Teuchos::getCol<int,double>(Teuchos::Copy,var_sets,jCol));
-      sdr.response_function(fev0(jCol,iQoI));
-      //printf("%d: %e\n",fev0(jCol,iQoI));
+      sdr.response_function(fev(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
     poly_approx[iQoI].surrogate_data(sdi);
@@ -247,31 +266,6 @@ int main(int argc, char* argv[])
   if ( verb > 2 ) {
     std::cout << "  - done\n";
   }
-
-  // ----------------- Comment from now restarts/etc------------------------
-  // // if restart, check if grid is in the restart
-  // std::vector<bool> computedGridIDs ;
-  // if (storedVals.length() > 0) {
-  //   int numHits = checkSetsInStoredSet(storedSets,var_sets,computedGridIDs);
-  //   if ( numHits != var_sets.numCols() )
-  //   {
-  //     std::cout<<"main() error: initial sets not found in restart"
-  //              <<std::endl;
-  //     std::terminate();
-  //   }
-  // } 
-  // else
-  // {
-  //   computedGridIDs.resize(var_sets.numCols(),true);
-  //   RealVector fev = feval(var_sets,computedGridIDs,ftype);
-  //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
-  // }
-
-
-#ifdef DEBUG
-  write_data(std::cout, var_sets, true, true, true);
-  write_US2A(std::cout, csg_driver->smolyak_multi_index());
-#endif
 
   // start refinement
   csg_driver->initialize_sets();
@@ -293,14 +287,30 @@ int main(int argc, char* argv[])
       std::cout<<"Refine, iteration: "<<iter+1<<'\n';
       std::cout<<"  ... starting variance:\n"<<respVariance<<'\n';
     }
+ 
+#ifdef GSGREST
+    /* Iterate through all proposed sets and save/exit if some vals
+    are not available */
+    bool foundAllSets = true ;
+    for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
+      csg_driver->push_trial_set(*it);
+      if (!shared_poly_data->push_available()) {
+    	csg_driver->compute_trial_grid(var_sets);
+    	fev = getFeval(evalGrid,evalFlag,evalData,var_sets,foundFlag);
+        if ( !foundFlag ) foundAllSets = false ;
+      } else {
+	csg_driver->restore_set();
+      }
+      csg_driver->pop_trial_set();
+    }
+    if ( !foundAllSets ) {
+      saveData((char *)"func",evalGrid,evalFlag,evalData);
+      return (0);
+    } 
+#endif    
+
     int choose = 0;
     for (UShortArraySet::iterator it=a.begin(); it!=a.end(); ++it) {
-
-      // int pick = std::rand();
-      // if ( pick > choose) {
-      //   asave  = *it;
-      //   choose = pick;
-      // }
 
       csg_driver->push_trial_set(*it);
 
@@ -336,9 +346,15 @@ int main(int argc, char* argv[])
           PCout<<"Computing new index set:\n"<<*it<<endl;
           //PCout<<RealMatrix(var_sets,Teuchos::TRANS)<<endl;
 	}
-
-	computedGridIDs.resize(numPts,true) ; 
-        RealMatrix fev = feval(var_sets,nQoI,computedGridIDs,ftype);
+#ifdef GSGREST
+	fev = getFeval(evalGrid,evalFlag,evalData,var_sets,foundFlag);
+	if ( !foundFlag ) {
+	  saveData((char *)"func",evalGrid,evalFlag,evalData);
+	  return (0);
+	} 
+#else
+        fev = feval(var_sets,nQoI,ftype);
+#endif
 
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
@@ -358,7 +374,6 @@ int main(int argc, char* argv[])
 	}
       }
 
-
       /* Compute (normalized) change in variance */
       RealVector respVarianceNew(nQoI,0.0);  
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
@@ -374,14 +389,6 @@ int main(int argc, char* argv[])
         deltaVar = normChange;
         asave = *it;
       }
-
-      // ----------------- Comment from now restarts/etc------------------------
-      // int numHits = checkSetsInStoredSet(storedSets,var_sets,computedGridIDs);
-      // if (numHits<var_sets.numCols())
-      // {
-      //   RealVector fev = feval(var_sets,computedGridIDs,ftype);
-      //   addNewSets(storedSets,storedVals,var_sets,fev,computedGridIDs);
-      // }
 
       csg_driver->pop_trial_set();
 
@@ -400,13 +407,8 @@ int main(int argc, char* argv[])
       std::cout<<"  ... with relative variance: "<<deltaVar<<std::endl ;
     }
     
-    //csg_driver->push_trial_set(asave);
-    //csg_driver->compute_trial_grid(var_sets);
-    //csg_driver->pop_trial_set();
-
     if ( asave.size() > 0 ) {
       csg_driver->update_sets(asave);
-      //csg_driver->update_reference();
 
       //need to restore the data
       size_t idxRestore = shared_poly_data->retrieval_index();
@@ -449,45 +451,393 @@ int main(int argc, char* argv[])
   for ( int iQoI=0; iQoI<nQoI; iQoI++)
     poly_approx[iQoI].print_coefficients(std::cout,false);
 
-
-  // Print final sets
-  //std::cout<<"Final set:\n";
-  //write_US2A(std::cout, csg_driver->smolyak_multi_index());
-  
   return (0);
 
 }
 
-void write_US2A(std::ostream& s, const Pecos::UShort2DArray &a)
-{
-  s << "-----------------------------------------\n";
-  size_t i, j, num_a = a.size();
-  for (i=0; i<num_a; ++i) {
-    const Pecos::UShortArray& aa = a[i];
-    for (j=0; j < aa.size(); ++j)
-      s<<std::setw(5)<<aa[j];
-    s<<"\n";
+#ifdef GSGREST
+/* Retrieve feval from saved data */
+RealMatrix getFeval(RealMatrix &evalGrid, IntVector  &evalFlag,
+                    RealMatrix &evalData, const RealMatrix &var_sets,
+	            bool &foundFlag) {
+
+  int numDim = var_sets.numRows(); // Dimensionality
+  int numPts = var_sets.numCols(); // Number of pts
+  int nouts  = evalData.numCols(); // Dimensionality of dependent variables
+
+  RealMatrix fev(numPts,nouts);
+  if (evalGrid.numCols() == 0) {
+    /* Empty data, probably first call */
+    evalGrid = var_sets ;
+    evalFlag.size(numPts);
+    evalData.shape(numPts,nouts);
+    foundFlag = false;
+    return fev ;
   }
-  s << "-----------------------------------------\n";
-  return ;
+
+  /* check consistency */
+  assert( numDim == evalGrid.numRows());
+  assert( evalGrid.numCols() == evalFlag.length()  );
+  assert( evalGrid.numCols() == evalData.numRows() );
+
+  foundFlag = true;
+  /* Loop over all grid points requested */
+  for (size_t i=0; i<numPts; i++) {
+    bool foundPt = false;
+
+    /* Loop over all saved grid points */
+    for (size_t j=0; j<evalGrid.numCols(); j++) {
+
+      /* compute L1 norm */
+      double dsum = 0.0;
+      for (size_t k = 0; k<numDim ; k++ ) 
+        dsum += fabs(var_sets(k,i)-evalGrid(k,j));
+
+      if ( dsum < 1.e-10 ) {
+
+        if (evalFlag(j) == 1 ) {
+          /* found saved point */
+          foundPt = true ;
+          for (size_t k = 0; k<nouts ; k++ ) 
+            fev(i,k) = evalData(j,k);
+	}
+
+      }
+
+      if (foundPt) break ;
+
+    } /* end loop over stored points */
+
+    if ( !foundPt ) {
+
+      /* missing point, add it to the list */
+      foundFlag = false;
+      /* Increment Grid */
+      RealMatrix evalGridSave = evalGrid;
+      evalGrid.shapeUninitialized(evalGridSave.numRows(),evalGridSave.numCols()+1);
+      for ( int j1 = 0; j1<evalGridSave.numCols(); j1++ )
+        for ( int i1 = 0; i1<evalGridSave.numRows(); i1++ )
+          evalGrid(i1,j1) = evalGridSave(i1,j1);
+      for ( int i1 = 0; i1<evalGridSave.numRows(); i1++ )
+        evalGrid(i1,evalGridSave.numCols()) = var_sets(i1,i);
+      /* Increment eval flag */
+      IntVector evalFlagSave = evalFlag;
+      evalFlag.size(evalFlagSave.length()+1);
+      for ( int i1 = 0; i1<evalFlagSave.length(); i1++ )
+        evalFlag(i1) = evalFlagSave(i1);
+      evalFlag(evalFlagSave.length()) = 0;
+      /* Increment eval func dimensions */
+      RealMatrix evalDataSave = evalData;
+      evalData.shape(evalDataSave.numRows()+1,evalDataSave.numCols());
+      for ( int j1 = 0; j1<evalDataSave.numCols(); j1++ )
+        for ( int i1 = 0; i1<evalDataSave.numRows(); i1++ )
+          evalData(i1,j1) = evalDataSave(i1,j1);
+    }
+
+  } /* end loop over stored points */
+
+  
+  return fev;
+
 }
 
-void write_USAS(std::ostream& s, const Pecos::UShortArraySet &a)
-{
-  s << "-----------------------------------------\n";
-  Pecos::UShortArraySet::const_iterator cit;
-  for (cit=a.begin(); cit!=a.end(); ++cit) {
-    const Pecos::UShortArray& aa = *cit;
-    for (size_t j=0; j < aa.size(); ++j)
-      s<<std::setw(5)<<aa[j];
-    s<<'\n';
+void getMatrixSize(const char *fname, int &nRows, int &nCols) {
+
+
+  std::ifstream in(fname);
+  
+  if(!in){
+    printf("getMatrixSize() : the requested file %s does not exist !\n",fname) ;
+    exit(1) ;
   }
-  s << "-----------------------------------------\n";
+  
+  String theLine="";
+
+  // figure out number of lines and columns
+  int ix = 0 ;
+  while(in.good()) {
+
+    getline(in,theLine);
+    
+    if ( theLine == "" ) break;
+    if ( theLine.compare(0,1,"#") == 0 ) continue ;
+
+    istringstream s(theLine);
+    int    iy = 0 ;
+    double tmp    ;
+    while( s >> tmp ) iy++ ;
+
+    if ( ( ix > 0 ) && ( iy != nCols ) )
+    {
+      printf("getMatrixSize() : Error at line %d !!!\n",ix+1) ;
+      printf("                  no. of columns should be %d instead of %d\n",nCols,iy) ;
+      exit(1) ;
+    }
+    
+    nCols = iy ;
+
+    ix++ ;
+
+  }
+
+  nRows = ix ;
+  in.close();
+
   return ;
+
 }
 
-RealMatrix feval(const RealMatrix &dataMat, const int nQoI,
-                 std::vector<bool> &computedGridIDs, String ftype) 
+void getMatrixTrans(const char *fname, RealMatrix &dataIn) {
+
+  int nRows = dataIn.numRows();
+  int nCols = dataIn.numCols();  
+
+  if (nRows==0 || nCols==0){
+    printf("getMatrixTrans() : the requested data matrix is empty\n") ;
+    exit(1) ;
+  }
+
+  std::ifstream in(fname);
+  
+  if(!in){
+    printf("getMatrixTrans() : the requested file %s does not exist\n",fname) ;
+    exit(1) ;
+  }
+  
+  String theLine="";
+  int ix = 0;
+
+  while(in.good()){
+
+    getline(in,theLine);
+
+    if (theLine=="") break;
+    if ( theLine.compare(0, 1, "#") == 0 ) continue ;
+
+    istringstream s(theLine);
+    int  iy = 0;
+    Real tmp;
+    while(s >> tmp){
+      dataIn(iy,ix)=tmp;
+      iy++;
+    }
+    if ( iy != nRows ) {
+      printf("getMatrixTrans(): Error at line %d while reading %s; number of columns should be %d\n", 
+             ix+1, fname,nRows); 
+      exit(1);
+    }
+    ix++;
+  }
+  if ( ix != nCols ) {
+    printf("getMatrixTrans(): Error while reading %s; number of rows should be %d\n",fname,nCols); 
+    exit(1);
+  }
+  in.close();
+
+  return;
+
+}
+
+void getMatrix(const char *fname, RealMatrix &dataIn) {
+
+  int nRows = dataIn.numRows();
+  int nCols = dataIn.numCols();  
+
+  if (nRows==0 || nCols==0){
+    printf("getMatrixTrans() : the requested data matrix is empty\n") ;
+    exit(1) ;
+  }
+
+  std::ifstream in(fname);
+  
+  if(!in){
+    printf("getMatrixTrans() : the requested file %s does not exist\n",fname) ;
+    exit(1) ;
+  }
+  
+  String theLine="";
+  int ix = 0;
+
+  while(in.good()){
+
+    getline(in,theLine);
+
+    if (theLine=="") break;
+    if ( theLine.compare(0, 1, "#") == 0 ) continue ;
+
+    istringstream s(theLine);
+    int  iy = 0;
+    Real tmp;
+    while(s >> tmp){
+      dataIn(ix,iy)=tmp;
+      iy++;
+    }
+    if ( iy != nCols ) {
+      printf("getMatrixTrans(): Error at line %d while reading %s; number of columns should be %d\n", 
+             ix+1, fname,nRows); 
+      exit(1);
+    }
+    ix++;
+  }
+  if ( ix != nRows ) {
+    printf("getMatrixTrans(): Error while reading %s; number of rows should be %d\n",fname,nCols); 
+    exit(1);
+  }
+  in.close();
+  std::cout<<ix<<" "<<nCols<<std::endl;
+
+  return;
+
+}
+
+void getIntVector(const char *fname, IntVector &dataIn) {
+
+  int nvals=dataIn.length();
+
+  if (nvals==0){
+    printf("getIntVector() : the requested data array is empty\n") ;
+    exit(1) ;
+  }
+
+  int nCols=1;
+
+  std::ifstream in(fname);
+  
+  if(!in){
+    printf("getIntVector() : the requested file %s does not exist\n",fname) ;
+    exit(1) ;
+  }
+  
+  string theLine="";
+  int ix=0;
+  
+  while( in.good() ){
+
+    getline(in,theLine);
+    
+    if (theLine=="") break;
+
+    istringstream s(theLine);
+    int iy=0;
+    int tmp;
+    s >> tmp;
+    dataIn(ix) = tmp;
+    iy++;
+    if (s>>tmp) {
+      printf("getIntVector(): Error at line %d while reading %s; number of columns should be %d\n", 
+              ix+1, fname,nCols); 
+      exit(1);
+    }
+    ix++;
+  }
+  if ( ix != nvals ) {
+    printf("getIntVector(): Error while reading %s; number of rows should be %d\n",
+           fname,nvals); 
+    exit(1);
+  }
+  in.close();
+
+  return ;
+
+}
+
+/* Save feval to files */
+void saveData(const char *fbase, const RealMatrix &evalGrid,
+               const IntVector &evalFlag, const RealMatrix &evalData) {
+
+  char fname[100];
+
+  std::ofstream fout;
+
+  /* save grid */
+  sprintf(fname,"%s_grid.dat",fbase);  
+  fout.open(fname);
+  for (size_t i=0; i < evalGrid.numCols(); i++ ) {
+    for (size_t j=0; j < evalGrid.numRows(); j++ ) {
+      fout.precision(16);
+      fout << std::scientific << std::setw(24) << evalGrid(j,i) << " ";
+    }
+    fout << std::endl ;
+  }
+  fout.close() ;
+
+  /* save evalFlag */
+  sprintf(fname,"%s_flag.dat",fbase);  
+  fout.open(fname);
+  for (size_t i=0; i < evalFlag.length(); i++ ) 
+    fout << evalFlag(i) << std::endl;
+  fout.close() ;
+
+  /* save output matrix */
+  sprintf(fname,"%s_data.dat",fbase);  
+  fout.open(fname);
+  fout.precision(16);
+  for (size_t j=0; j < evalData.numRows(); j++ ) {
+    for (size_t i=0; i < evalData.numCols(); i++ ) {
+      fout << std::scientific << std::setw(24) << evalData(j,i) << " ";
+    }
+    fout << std::endl ;
+  }
+  fout.close() ;
+
+  return ;
+
+}
+
+/* Load feval from files */
+void loadData(const char *fbase, RealMatrix &evalGrid,
+               IntVector &evalFlag, RealMatrix &evalData) {
+
+  char fname[100];
+
+  /* Check if all files exist */
+  sprintf(fname,"%s_grid.dat",fbase);  
+  if ( !fileExist(fname) ) return ;
+  sprintf(fname,"%s_flag.dat",fbase);  
+  if ( !fileExist(fname) ) return ;
+  sprintf(fname,"%s_data.dat",fbase);  
+  if ( !fileExist(fname) ) return ;
+
+
+  /* load grid */
+  sprintf(fname,"%s_grid.dat",fbase);  
+  int nDims, nPts ;
+  getMatrixSize(fname, nPts, nDims) ;
+  evalGrid.shapeUninitialized(nDims,nPts);
+  getMatrixTrans(fname, evalGrid);
+
+  /* load eval flag */
+  evalFlag.sizeUninitialized(nPts);
+  sprintf(fname,"%s_flag.dat",fbase);  
+  getIntVector(fname, evalFlag);
+
+  /* load function outputs */
+  int nOuts ;
+  sprintf(fname,"%s_data.dat",fbase);  
+  getMatrixSize(fname, nPts, nOuts) ;
+  evalData.shapeUninitialized(nPts,nOuts);
+  assert(nPts == evalGrid.numCols());
+  getMatrix(fname, evalData);
+
+  bool allEvals = true ;
+  for (size_t i=0;i<nPts;i++) 
+    if (evalFlag(i) != 1) {
+      std::cout<<" Point "<<i<<" is not evaluated!"<<std::endl;
+      allEvals = false;
+    }
+
+  if (!allEvals) {
+      std::cout<<"  -> Exit !"<<std::endl;    
+      std::terminate() ;
+  }
+
+  return ;
+
+}
+
+#else
+
+RealMatrix feval(const RealMatrix &dataMat, const int nQoI, String ftype) 
 {
 
   assert(nQoI==1);
@@ -498,162 +848,31 @@ RealMatrix feval(const RealMatrix &dataMat, const int nQoI,
   int numPts = dataMat.numCols(); // Number of pts
 
   /* Count the number of function evaluations; */
-  RealMatrix fev;
-
-  int nEval=0;
-  for (i=0; i<numPts; ++i) 
-    if (computedGridIDs[i]) nEval++;
-  if (nEval==0) return fev;
-
-  fev.shape(nEval,nQoI);
-  int ieval=0;
+  RealMatrix fev(numPts,nQoI);
   for (i=0; i<numPts; ++i) {
-    if (!computedGridIDs[i]) continue;
     RealVector xIn(numDim);
     for (j=0; j<numDim; ++j) xIn[j] = dataMat(j,i);
     //fev(ieval,0)=genz(String("cp1"), xIn);
     if ( ftype == String("pol2") )
-      fev(ieval,0) = custPol(ftype, xIn);
+      fev(i,0) = custPol(ftype, xIn);
     else if ( ftype == String("gerstner-iso1") )
-      fev(ieval,0) = gerstner(String("iso1"), xIn);
+      fev(i,0) = gerstner(String("iso1"), xIn);
     else if ( ftype == String("gerstner-iso2") )
-      fev(ieval,0) = gerstner(String("iso2"), xIn);
+      fev(i,0) = gerstner(String("iso2"), xIn);
     else if ( ftype == String("gerstner-iso3") )
-      fev(ieval,0) = gerstner(String("iso3"), xIn);
+      fev(i,0) = gerstner(String("iso3"), xIn);
     else if ( ftype == String("gerstner-aniso1") )
-      fev(ieval,0) = gerstner(String("aniso1"), xIn);
+      fev(i,0) = gerstner(String("aniso1"), xIn);
     else if ( ftype == String("gerstner-aniso2") )
-      fev(ieval,0) = gerstner(String("aniso2"), xIn);
+      fev(i,0) = gerstner(String("aniso2"), xIn);
     else if ( ftype == String("gerstner-aniso3") )
-      fev(ieval,0) = gerstner(String("aniso3"), xIn);
+      fev(i,0) = gerstner(String("aniso3"), xIn);
     else
       throw(std::runtime_error("Pecos::feval() unknown ftype\n"));
-    ieval++;   
   }
   
   return fev;
 
 }
 
-// Restart if data available 
-void restartGSGdriver(const char *grid, const char *fcnvals, 
-                      Pecos::RealMatrix &storedSets, Pecos::RealVector &storedVals) 
-{
-
-  std::ifstream fin ;
-  fin.open(grid);
-  if (!fin.good()) return; // No restart file available
-
-  std::vector<String> ftext;
-  while (!fin.eof())
-  {
-    // read an entire line into memory
-    char buf[MAX_CHARS_PER_LINE];
-    fin.getline(buf, MAX_CHARS_PER_LINE);
-    String bufstr(buf) ;
-    ftext.push_back(bufstr);
-  }
-  fin.close();
-
-  // get the number of sets and dimensionality 
-  int numSets = ftext.size();
-  int numVars = 0 ;
-  double tmp; 
-  std::stringstream parseDbl(ftext[0]);
-  while( parseDbl >> tmp ) numVars++ ;
-
-  // get sets from stored text
-  storedSets.reshape(numSets,numVars);
-  for (int i=0; i<numSets; i++) {
-    parseDbl.str(ftext[i]);
-    int j = 0;
-    while( parseDbl >> storedSets(i,j) ) j++ ;
-    assert (j==numVars);
-  }
-  
-  fin.open(fcnvals);
-  if (!fin.good()) {
-    std::cout<<"restartGSGdriver(): Error: found sets but no function values !" <<std::endl;
-    std::terminate();
-  }
-
-  int i=0;
-  for(std::string line; std::getline(fin, line); )   //read stream line by line
-  {
-    std::istringstream in(line);      //make a stream for the line itself
-    in >> storedVals[i];
-    i++;
-  }
-  assert(i==numSets);
-
-  return ;
-
-}
-
-int checkSetsInStoredSet(const Pecos::RealMatrix &storedSets, const Pecos::RealMatrix &newSets, 
-			 std::vector<bool> &computedGridIDs)
-{
-  // warning: in storedSets each line is a grid point, while in variable_sets each column is a point
-  // need to reconcile this at some point
-  assert (storedSets.numCols() == newSets.numRows());
-
-  int nHits;
-  computedGridIDs.resize(newSets.numCols(),false);
-  for (int i=0; i<newSets.numRows(); i++ )
-  {
-    int numMatch;
-    for (int j=0;j<storedSets.numCols(); j++ )
-    {
-      numMatch = 0;
-      for (int k=0;k<storedSets.numRows(); k++ )
-      {
-	if (storedSets(k,j) != newSets(i,k) )
-          break;
-        else
-	  numMatch++ ;
-      }
-      if (numMatch == storedSets.numRows()) {
-        computedGridIDs[j] = true;
-        nHits++;
-        break;
-      } 
-    }
-  }
-  return (nHits);
-}
-
-void addNewSets(Pecos::RealMatrix &storedSets,RealVector &storedVals,
-		Pecos::RealMatrix &newSets, RealVector &fev,
-		std::vector<bool> &computedGridIDs)
-{
-    using namespace Pecos;
-
-    
-    RealMatrix storedSetsBkp = storedSets;
-   
-    // resize
-    storedSets.shape(storedSetsBkp.numRows()+fev.length(),storedSetsBkp.numCols());
-
-    // copy old data
-    for (int i=0; i<storedSetsBkp.numRows(); i++ )
-      for (int j=0;j<storedSetsBkp.numCols(); j++ )
-	storedSets(i,j) = storedSetsBkp(i,j);
-
-    // add new data
-    int irow = storedSetsBkp.numRows();
-    for  (int i=0; i<computedGridIDs.size(); i++)
-    {
-      if (computedGridIDs[i]) {
-        for (int j=0;j<storedSets.numCols(); j++ )
-	  storedSets(irow,j) = newSets(j,i);
-	irow++;
-      }
-    }
-
-    storedVals.resize(storedVals.length()+fev.length());
-    for  (int i=0; i<fev.length(); i++) 
-      storedVals[storedSetsBkp.numRows()+i]=fev[i];
-
-    return ;
-
-}
+#endif
