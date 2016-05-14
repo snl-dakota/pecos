@@ -186,7 +186,8 @@ int main(int argc, char* argv[])
                                    true,                 // vbd flag
                                    2,                    // vbd order
                                    refine_cntl,          // refinement control
-                                   100,                  // max iter
+                                   100,                  // max refine iter
+                                   100,                  // max solver iter
                                    1.e-5,                // conv tol
                                    2);                   // soft conv limit
   BasisConfigOptions bcopt;

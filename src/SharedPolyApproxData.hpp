@@ -43,7 +43,8 @@ public:
   ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 			 short output_level, bool vbd_flag,
 			 unsigned short vbd_order, //short refine_type,
-			 short refine_cntl, int max_iter, Real conv_tol,
+			 short refine_cntl, int max_refine_iter,
+			 int max_solver_iter, Real conv_tol,
 			 unsigned short sc_limit);
   /// copy constructor
   ExpansionConfigOptions(const ExpansionConfigOptions& ec_options);
@@ -77,9 +78,12 @@ public:
   /// or DIMENSION_ADAPTIVE_CONTROL_{SOBOL,DECAY,GENERALIZED}
   short refinementControl;
 
-  /// control for limiting the maximum number of iterations in adapted
-  /// or iterated approximation algorithms
-  int maxIterations;
+  /// control for limiting the maximum number of refinement iterations
+  /// in adapted approximation algorithms
+  int maxRefineIterations;
+  /// control for limiting the maximum number of solver iterations in iterative
+  /// solver-based approximation algorithms (e.g., regularized regression)
+  int maxSolverIterations;
   /// convergence tolerance for adapted or iterated approximation algorithms
   Real convergenceTol;
   /// number of consecutive cycles for which convergence criterion
@@ -92,7 +96,8 @@ inline ExpansionConfigOptions::ExpansionConfigOptions():
   expCoeffsSolnApproach(QUADRATURE), expBasisType(DEFAULT_BASIS),
   outputLevel(NORMAL_OUTPUT), vbdFlag(false), vbdOrderLimit(0),
   /*refinementType(NO_REFINEMENT),*/ refinementControl(NO_CONTROL),
-  maxIterations(100), convergenceTol(1.e-4), softConvLimit(3)
+  maxRefineIterations(100), maxSolverIterations(100),
+  convergenceTol(1.e-4), softConvLimit(3)
 { }
 
 
@@ -100,12 +105,14 @@ inline ExpansionConfigOptions::
 ExpansionConfigOptions(short exp_soln_approach, short exp_basis_type,
 		       short output_level, bool vbd_flag,
 		       unsigned short vbd_order, //short refine_type,
-		       short refine_cntl, int max_iter, Real conv_tol,
+		       short refine_cntl, int max_refine_iter,
+		       int max_solver_iter, Real conv_tol,
 		       unsigned short sc_limit):
   expCoeffsSolnApproach(exp_soln_approach), expBasisType(exp_basis_type),
   outputLevel(output_level), vbdFlag(vbd_flag), vbdOrderLimit(vbd_order),
   /*refinementType(refine_type),*/ refinementControl(refine_cntl),
-  maxIterations(max_iter), convergenceTol(conv_tol), softConvLimit(sc_limit)
+  maxRefineIterations(max_refine_iter), maxSolverIterations(max_solver_iter),
+  convergenceTol(conv_tol), softConvLimit(sc_limit)
 { }
 
 
@@ -116,7 +123,8 @@ ExpansionConfigOptions(const ExpansionConfigOptions& ec_options):
   vbdFlag(ec_options.vbdFlag), vbdOrderLimit(ec_options.vbdOrderLimit),
   //refinementType(ec_options.refinementType),
   refinementControl(ec_options.refinementControl),
-  maxIterations(ec_options.maxIterations),
+  maxRefineIterations(ec_options.maxRefineIterations),
+  maxSolverIterations(ec_options.maxSolverIterations),
   convergenceTol(ec_options.convergenceTol),
   softConvLimit(ec_options.softConvLimit)
 { }

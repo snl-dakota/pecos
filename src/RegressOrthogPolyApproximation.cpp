@@ -1488,8 +1488,8 @@ void RegressOrthogPolyApproximation::select_solver()
   CSOpts.solverTolerance = (CSOpts.solver == SVD_LEAST_SQ_REGRESSION)
     ? -1.0 : data_rep->expConfigOptions.convergenceTol;
   CSOpts.verbosity = std::max(0, data_rep->expConfigOptions.outputLevel - 1);
-  if ( data_rep->expConfigOptions.maxIterations > 0 )
-    CSOpts.maxNumIterations = data_rep->expConfigOptions.maxIterations;
+  if ( data_rep->expConfigOptions.maxSolverIterations > 0 )
+    CSOpts.maxNumIterations = data_rep->expConfigOptions.maxSolverIterations;
 
   // Solve the regression problem using L1 or L2 minimization approaches
   //bool regression_err = 0;
