@@ -826,6 +826,9 @@ void orthogonal_matching_pursuit( RealMatrix &A,
   // Compute norm of residual
   Real b_norm_sq( b.dot( b ) ), residual_norm( std::sqrt( b_norm_sq ) );
 
+  // track previous residual norm to enforce monotonic convergence
+  Real residual_norm_prev = std::numeric_limits<Real>::max();
+
   // Matrix to store the full rank matrix associated with x_sparse
   RealMatrix A_sparse_memory( M, initial_N, false );
   RealMatrix AtA_sparse_memory( N, initial_N, false );
@@ -1027,6 +1030,15 @@ void orthogonal_matching_pursuit( RealMatrix &A,
 	    std::cout << "Exiting: residual norm lower than tolerance\n";
 	  done = true;
 	}
+      
+      if ( residual_norm > residual_norm_prev )
+	{
+	  if ( verbosity > 1 )
+	    std::cout << "Exiting: residual norm has increased\n";
+	  done = true;
+	}
+      else
+	residual_norm_prev = residual_norm;
       
       if ( num_active_indices >= max_num_indices )
 	{
