@@ -321,6 +321,14 @@ void OrthogPolyApproximation::basis_value(const RealVector& x,
 }
 
 void OrthogPolyApproximation::basis_matrix(const RealMatrix& x,
+					   RealMatrix &basis_values){
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  basis_matrix(x,data_rep->polynomialBasis,data_rep->multiIndex,
+	       basis_values);
+}
+
+void OrthogPolyApproximation::basis_matrix(const RealMatrix& x,
 		       std::vector<BasisPolynomial> &polynomial_basis,
 					  const UShort2DArray &multi_index,
 					  RealMatrix &basis_values)

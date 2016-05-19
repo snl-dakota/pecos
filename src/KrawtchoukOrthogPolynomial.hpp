@@ -23,9 +23,10 @@ namespace Pecos {
 
 /** The KrawtchoukOrthogPolynomial class evaluates a univariate Krawtchouk
     polynomial K^(p,N)_n of a particular order.  These polynomials
-    are orthogonal with respect to the weight function (N choose
-    k)*p^k*(1-p)^(n-k) hen summed over the discrete points, N.
-    This corresponds to the binomial probability mass function.
+    are orthogonal with respect to the weight function 
+    (N choose k)*p^k*(1-p)^(n-k).
+    This corresponds to the binomial probability mass function,  
+    which is the probability of k successes from N trials.
     See appendix in Xiu & Karniadakis, Siam J. Sci. Comp., v24, n2,
     pp. 619-644, 2002 for more details.  */
 
@@ -62,9 +63,9 @@ protected:
   /// return betaPoly
   Real beta_polynomial() const;
 
-  /// set alphaPoly
+  /// set alphaStat (probability per trial)
   void alpha_stat(Real alpha);
-  /// set betaPoly
+  /// set betaStat (num_trials)
   void beta_stat(Real beta);
 
 private:

@@ -64,6 +64,8 @@ public:
 			   const UShort2DArray &multi_index,
 			   RealMatrix &basis_values);
 
+  void basis_matrix(const RealMatrix& x, RealMatrix &basis_values);
+
 protected:
 
   //

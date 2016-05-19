@@ -79,6 +79,7 @@ public:
   /// update_basis_distribution_parameters() using class member data
   void construct_basis(const ShortArray& u_types,
 		       const AleatoryDistParams& adp);
+  
   /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
   /// update_basis_distribution_parameters() using passed data
@@ -86,6 +87,15 @@ public:
 			      const AleatoryDistParams& adp,
 			      const BasisConfigOptions& bc_options,
 			      std::vector<BasisPolynomial>& poly_basis);
+
+  /// invoke initialize_orthogonal_basis_types_rules(),
+  /// initialize_polynomial_basis(), and, if needed,
+  /// update_basis_distribution_parameters() using passed data
+  static void construct_basis(const ShortArray& u_types,
+			      const AleatoryDistParams& adp,
+			      const BasisConfigOptions& bc_options,
+			      std::vector<BasisPolynomial>& poly_basis,
+			      ShortArray &basis_types,ShortArray &colloc_rules);
 
   /// set orthogPolyTypes
   void orthogonal_basis_types(const ShortArray& opb_types);
@@ -100,6 +110,11 @@ public:
 
   /// set NumericGenOrthogPolynomial::coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
+
+  /// set NumericGenOrthogPolynomial::coeffsNormsFlag
+  static void coefficients_norms_flag(bool flag,
+				      ShortArray &poly_types,
+				      std::vector<BasisPolynomial> &poly_basis);
 
 protected:
 
@@ -426,12 +441,9 @@ inline void SharedOrthogPolyApproxData::
 construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp)
 {
   ShortArray colloc_rules;
-  bool dist_params
-    = initialize_orthogonal_basis_types_rules(u_types, basisConfigOptions,
-					      orthogPolyTypes, colloc_rules);
-  initialize_polynomial_basis(orthogPolyTypes, colloc_rules, polynomialBasis);
-  if (dist_params)
-    update_basis_distribution_parameters(u_types, adp, polynomialBasis);
+  BasisConfigOptions bc_options;
+  construct_basis(u_types, adp, basisConfigOptions, polynomialBasis,
+		  orthogPolyTypes, colloc_rules);		  
 }
 
 
@@ -444,6 +456,19 @@ construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
 		std::vector<BasisPolynomial>& poly_basis)
 {
   ShortArray basis_types, colloc_rules;
+  construct_basis(u_types, adp, bc_options, poly_basis,
+		  basis_types, colloc_rules);
+}
+
+/** This function is invoked to create orthogPolyTypes and polynomialBasis
+    for cases where they have not already been created by an
+    IntegrationDriver (i.e., expansion_samples or regression). */
+inline void SharedOrthogPolyApproxData::
+construct_basis(const ShortArray& u_types, const AleatoryDistParams& adp,
+		const BasisConfigOptions& bc_options,
+		std::vector<BasisPolynomial>& poly_basis,
+		ShortArray &basis_types, ShortArray &colloc_rules)
+{
   bool dist_params
     = initialize_orthogonal_basis_types_rules(u_types, bc_options,
 					      basis_types, colloc_rules);
@@ -486,10 +511,18 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
 
 inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
 {
-  size_t i, num_basis = orthogPolyTypes.size();
+  coefficients_norms_flag(flag,orthogPolyTypes,polynomialBasis);
+}
+
+inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag,
+		  ShortArray &poly_types,
+		  std::vector<BasisPolynomial> &poly_basis)
+{
+  //size_t i, num_basis = orthogPolyTypes.size();
+  size_t i, num_basis = poly_basis.size();
   for (i=0; i<num_basis; ++i)
-    if (orthogPolyTypes[i] == NUM_GEN_ORTHOG)
-      ((NumericGenOrthogPolynomial*)polynomialBasis[i].polynomial_rep())
+    if (poly_types[i] == NUM_GEN_ORTHOG)
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())
 	->coefficients_norms_flag(flag);
 }
 

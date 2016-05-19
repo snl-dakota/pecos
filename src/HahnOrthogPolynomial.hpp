@@ -23,13 +23,14 @@ namespace Pecos {
 
 /** The HahnOrthogPolynomial class evaluates a univariate Hahn
     polynomial Q^(alpha,beta,N)_n of a particular order.  These polynomials
-    are orthogonal with respect to the weight function ...
-    
-    EDIT FROM HERE - RWH
-    
-    (N choose
-    k)*p^k*(1-p)^(n-k) hen summed over the discrete points, N.
-    This corresponds to the binomial probability mass function.
+    are orthogonal with respect to the weight function 
+
+    (K choose k)(N-K choose n-k)/( N choose n).
+
+    This corresponds to the hypergeometric probability mass function, which
+    describes the probability of k successes in n draws, without 
+    replacement, from a finite population of size N that contains exactly 
+    K successes.
     See appendix in Xiu & Karniadakis, Siam J. Sci. Comp., v24, n2,
     pp. 619-644, 2002 for more details.  */
 
@@ -57,7 +58,7 @@ public:
   //  These will need to be rolled into the API - RWH
   /// return gammaPoly
   Real gamma_polynomial() const;
-  /// set gammaPoly
+  /// set gammaStat (total population)
   void gamma_stat(Real gamma);
 
 protected:
@@ -72,9 +73,9 @@ protected:
   /// return betaPoly
   Real beta_polynomial() const;
 
-  /// set alphaPoly
+  /// set alphaStat (selected population)
   void alpha_stat(Real alpha);
-  /// set betaPoly
+  /// set betaStat (num draws)
   void beta_stat(Real beta);
 
 private:

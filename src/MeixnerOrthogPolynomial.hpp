@@ -24,12 +24,12 @@ namespace Pecos {
 /** The MeixnerOrthogPolynomial class evaluates a univariate Meixner
     polynomial M^(c,Beta)_n of a particular order.  These polynomials
     are orthogonal with respect to the weight function 
-    
-    EDIT HERE:
 
-    (N choose
-    k)*p^k*(1-p)^(n-k) hen summed over the discrete points, N.
-    This corresponds to the binomial probability mass function.
+    (k+r-1 choose k)*p^k*(1-p)^n, where p is the the probability of success
+    of a trial, n is the number of total successes and k is the trial number.
+    The geometric distribution (n==1) is a special case of the negative 
+    binomial distribution.
+    This corresponds to the negative binomial probability mass function.
     See appendix in Xiu & Karniadakis, Siam J. Sci. Comp., v24, n2,
     pp. 619-644, 2002 for more details.  */
 
@@ -66,9 +66,9 @@ protected:
   /// return betaPoly
   Real beta_polynomial() const;
   
-  /// set alphaPoly
+  /// set alphaStat (probability per trial)
   void alpha_stat(Real alpha);
-  /// set betaPoly
+  /// set betaStat (num trials)
   void beta_stat(Real beta);
 
 private:
