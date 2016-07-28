@@ -862,4 +862,66 @@ void truncated_pivoted_lu_factorization( RealMatrix &A,
   pivots.resize( iter );
 }
 
+void lu_solve( RealMatrix &A, 
+	       RealMatrix &B, 
+	       RealMatrix &result,
+	       bool copy,
+	       Teuchos::ETransp trans )
+{
+  Teuchos::LAPACK<int, Real> la;
+  int M = A.numRows(), N = A.numCols();
+
+  RealMatrix A_copy;
+  if ( copy )
+    {
+      A_copy.shapeUninitialized( M, N );
+      A_copy.assign( A );
+    }
+
+  IntVector ipiv( std::min( M, N ), false );
+  int info;
+  if ( copy )
+    la.GETRF( M, N, A_copy.values(), A_copy.stride(), ipiv.values(), &info );
+  else
+    la.GETRF( M, N, A.values(), A.stride(), ipiv.values(), &info );
+
+  if ( info < 0 )
+    {
+      std::stringstream msg;
+      msg << "GETRF: The " << std::abs(info) <<  "ith argument had " <<
+	"an illegal value";
+      throw( std::runtime_error( msg.str() ) );
+    }
+  if ( info > 0 )
+    {
+      std::stringstream msg;
+	msg << "U(" <<  info << "," << info << ") is exactly zero. " << 
+	"The factorization has been completed, but the factor U is exactly " <<
+	"singular, and division by zero will occur if it is used " <<
+	"to solve a system of equations";
+      throw( std::runtime_error( msg.str() ) );
+    }
+  result.shapeUninitialized( B.numRows(), B.numCols() );
+  result.assign( B );
+
+  if ( copy )
+    la.GETRS( Teuchos::ETranspChar[trans], M, result.numCols(), A_copy.values(),
+	      A_copy.stride(), ipiv.values(), result.values(), result.stride(), 
+	      &info );
+  else
+    la.GETRS( Teuchos::ETranspChar[trans], M, result.numCols(), A.values(),
+	      A.stride(), ipiv.values(), result.values(), result.stride(), 
+	      &info );
+
+
+  if ( info < 0 )
+    {
+      std::stringstream msg;
+      msg << "GETRS: The " <<std::abs(info) <<  "ith argument had " <<
+	"an illegal value";
+      throw( std::runtime_error( msg.str() ) );
+    }
+};
+
+
 } // namespace Pecos

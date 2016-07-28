@@ -653,6 +653,13 @@ void unit_vector( int n, int k, Teuchos::SerialDenseVector<O,T> &result )
 void lu_inverse( RealMatrix &L, RealMatrix &U, IntVector &p, 
 		 RealMatrix &result );
 
+void lu_solve( RealMatrix &A, 
+	       RealMatrix &B, 
+	       RealMatrix &result,
+	       bool copy,
+	       Teuchos::ETransp trans );
+
+
 /*extern "C"
 {
   void dgeqp3_( const int *M, const int *N, double *A, 
