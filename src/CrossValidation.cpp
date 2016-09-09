@@ -487,6 +487,13 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
 	  for ( int j = 0; j < num_path_steps; j++ )
 	    foldCoefficientStats_[iter](j,0) = coeff(0,j);
 
+	  // FIXME (BMA/JDJ): The following num_validation_primary_eqs
+	  // is incorrect in the case of mixed function and gradient
+	  // data with failures.  Want to compute cross validation
+	  // differences w.r.t. function values only, but that set may
+	  // be empty.  The number of valid function vs. gradient rows
+	  // needs to be tracked from remove_faulty_data.
+
 	  // only keep values associated with primary equations.
 	  // assumes if faulty data exists then all data associated with 
 	  // the primary equation is removed. E.g. If the primary data
@@ -550,7 +557,7 @@ Real MultipleSolutionLinearModelCrossValidationIterator::run_cross_validation( R
       coefficientStats_.shapeUninitialized(num_folds(),1);
       for ( int iter = 0; iter < num_folds(); iter++ ){
 	int chosen_idx = -1;
-	int resid_distance = std::numeric_limits<double>::max();
+	Real resid_distance = std::numeric_limits<Real>::max();
 	for ( int i = 0; i < foldCoefficientStats_[iter].numRows(); i++ ){
 	  Real dist=std::abs(
 		foldCoefficientStats_[iter](i,0)-bestResidualTol_);
