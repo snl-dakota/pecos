@@ -1908,7 +1908,9 @@ run_cross_validation_solver(const UShort2DArray& multi_index,
   LinearSolver_ptr linear_solver = data_rep->CSTool.get_linear_solver();
   cv_iterator.set_solver( linear_solver );
 
-  int num_folds = 10;
+  // default to 10 folds and revert to leave-one-out for fewer than 10
+  // data points
+  int num_folds = std::min(10, num_data_pts_fn);
   //int num_folds = num_data_pts_fn; //HACK
   int max_num_pts_per_fold = num_data_pts_fn / num_folds;
   if ( num_data_pts_fn % num_folds != 0 ); max_num_pts_per_fold++;
