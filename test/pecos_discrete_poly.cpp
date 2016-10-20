@@ -9,6 +9,7 @@
 #include "KrawtchoukOrthogPolynomial.hpp"
 #include "MeixnerOrthogPolynomial.hpp"
 #include "HahnOrthogPolynomial.hpp"
+#include "NumericGenOrthogPolynomial.hpp"
 
 using namespace Pecos;
 
@@ -216,3 +217,76 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
 }
 
 //----------------------------------------------------------------
+
+// Test numerically-generated distributions for histogram point
+// variables
+
+TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt)
+{
+  BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
+  NumericGenOrthogPolynomial * ptr = dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
+  TEST_ASSERT( ptr != NULL );
+
+  // Test orthogonality to discrete data; using 20 randomly generated
+  // points on [0,2]
+  size_t num_vals = 20;
+  // must be sorted
+  double pt_vals[] = {
+    1.563510575063674e-01,  1.676427559938651e-01,  3.047560379384460e-01,
+    3.243646163864855e-01,  3.312974589995619e-01,  4.579539374336377e-01,
+    5.259425690802886e-01,  6.224300840896098e-01,  8.853565395508927e-01,
+    9.010831970049955e-01,  1.057066271012425e+00,  1.076684870520114e+00,
+    1.203963882803273e+00,  1.308158196953565e+00,  1.378429006280016e+00,
+    1.496303185647419e+00,  1.588569081367814e+00,  1.651633954979095e+00,
+    1.826674723003339e+00,  1.992269433253771e+00
+  };
+  // BMA TODO: int, string valued distributions
+  // int pt_vals = { 1, 2, 3, 5, 6, 8, 10, 13, 14, 18,
+  // 		     21, 22, 26, 30, 34, 38, 42, 46, 50, 54 };
+  // masses must sum to 1.0
+  double pt_mass[] = {
+    7.421166048564262e-02,  2.519880495959160e-02,  4.997944801838294e-02,
+    6.905619480130368e-02,  8.800520252258573e-02,  9.476072279800409e-02,
+    5.405504290268991e-02,  1.369359931170338e-02,  1.474756002656411e-02,
+    2.543717961618541e-02,  8.304772955591133e-02,  2.511850146980441e-02,
+    8.043668134029533e-02,  2.405588275825480e-02,  9.179451654564216e-02,
+    3.457209536214227e-02,  1.942007146110596e-02,  2.480256493445103e-02,
+    6.085412342241643e-02,  4.675241770732283e-02
+  };
+
+  RealRealMap pt_pairs;
+  for (size_t i=0; i<num_vals; ++i)
+    pt_pairs[pt_vals[i]] = pt_mass[i];
+
+  ptr->histogram_pt_distribution(pt_pairs);
+  ptr->coefficients_norms_flag(true);
+
+  // check orthogonality to self and other orders without using the
+  // inner product, since that's what we're checking...
+  //
+  // int_x { p_i(x) * p_j(x) * d(x) } = sum_k { p_i(x_k) * p_j(x_k) * m_k }
+
+  //  std::cerr << "i\t" << "j\t" << "integral\t" << "norm_sq" << '\n';
+  for (unsigned short i = 0; i<11; ++i) {
+    for (unsigned short j = 0; j<=i; ++j) {
+      double integral = 0.0;
+      for (size_t k=0; k<num_vals; ++k) {
+	double p_i_k = poly_basis.type1_value(pt_vals[k], i);
+	double p_j_k = poly_basis.type1_value(pt_vals[k], j);
+	integral += p_i_k * p_j_k * pt_mass[k];
+      }
+      const Real TEST_TOL = 1.0e-12;
+      if (i == j) {
+	double norm_sq = poly_basis.norm_squared(i);
+	TEST_FLOATING_EQUALITY( integral, norm_sq, TEST_TOL );
+	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << norm_sq << '\n';
+      }
+      else {
+	// shift from 0.0 to avoid numerical issues
+	TEST_FLOATING_EQUALITY( 1.0 + integral, 1.0, TEST_TOL );
+	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << 0.0 << '\n';
+      }
+    }
+  }
+
+}

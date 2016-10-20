@@ -359,6 +359,12 @@ inner_product(const RealVector& poly_coeffs1,
     //  TriangularRandomVariable::pdf, distParams[1], distParams[2]);
     break;
   case HISTOGRAM_BIN: {
+
+    // BMA TODO: Use Gauss-Legendre integral on each uniform bin with
+    // a number of points sufficient to exactly integrate p(x), q(x)
+    // against a constant function (bin value).  Though see note about
+    // Gautschi below...
+
     size_t dp_len = distParams.length(),
       u_bnd_index = (dp_len>=2) ? dp_len-2 : 0;
     // Alternate integrations:
@@ -376,6 +382,24 @@ inner_product(const RealVector& poly_coeffs1,
 
     //return riemann_bounded_integral(poly_coeffs1, poly_coeffs2,
     //	HistogramBinRandomVariable::pdf,distParams[0],distParams[u_bnd_index]);
+    break;
+  }
+  case HISTOGRAM_PT_INT: case HISTOGRAM_PT_STRING: case HISTOGRAM_PT_REAL: {
+    // TOP: https://www.math.lsu.edu/~xlwan/papers/journal/megpc2.pdf
+    // https://www.math.lsu.edu/~xlwan/papers/journal/beyondAskey.pdf
+    // https://www.cs.purdue.edu/homes/wxg/Madrid.pdf
+    // https://www.math.lsu.edu/~xlwan/publication.html
+
+    // Discrete integral sum_i { w_i * p(x_i) * q(x_i) } for the
+    // histogram points (x_i, w_i).  Assumes weights sum to 1.0.
+
+    // distParams[even]: abscissas; distParams[odd]: weights (masses)
+    Real sum = 0.0;
+    for (size_t i=0; i<distParams.length(); i+=2) {
+      Real v1 = type1_value(distParams[i], poly_coeffs1);
+      sum += distParams[i+1] * v1 * type1_value(distParams[i], poly_coeffs2);
+    }
+    return sum;
     break;
   }
   // ******************************

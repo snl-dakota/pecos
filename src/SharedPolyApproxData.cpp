@@ -166,7 +166,8 @@ update_basis_distribution_parameters(const ShortArray& u_types,
   size_t i, num_vars = u_types.size(), nuv_cntr = 0, lnuv_cntr = 0,
     luuv_cntr = 0, tuv_cntr = 0, beuv_cntr = 0, gauv_cntr = 0, guuv_cntr = 0,
     fuv_cntr = 0, wuv_cntr = 0, hbuv_cntr = 0, biuv_cntr=0, nbuv_cntr=0,
-    puv_cntr=0, geuv_cntr=0, hguv_cntr=0;
+    puv_cntr=0, geuv_cntr=0, hguv_cntr=0, 
+    hpiuv_cntr=0, hpsuv_cntr=0, hpruv_cntr=0;
 
   // update poly_basis using distribution data from dp
   for (i=0; i<num_vars; ++i)
@@ -266,6 +267,18 @@ update_basis_distribution_parameters(const ShortArray& u_types,
       poly_basis[i].beta_stat(adp.hypergeometric_selected_population(hguv_cntr));
       ((HahnOrthogPolynomial*)poly_basis[i].polynomial_rep())->gamma_stat(adp.hypergeometric_num_drawn(hguv_cntr));
       ++hguv_cntr; break;
+    case HISTOGRAM_PT_INT:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+        histogram_pt_distribution(adp.histogram_point_int_pairs(hpiuv_cntr));
+      ++hpiuv_cntr; break;
+    case HISTOGRAM_PT_STRING:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+        histogram_pt_distribution(adp.histogram_point_string_pairs(hpsuv_cntr));
+      ++hpsuv_cntr; break;
+    case HISTOGRAM_PT_REAL:
+      ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+        histogram_pt_distribution(adp.histogram_point_real_pairs(hpruv_cntr));
+      ++hpruv_cntr; break;
     default:
       PCerr << "Error: unsupported u-space type in SharedPolyApproxData::"
 	    << "distribution_parameters()" << std::endl;

@@ -497,6 +497,38 @@ void copy_data(const std::map<ScalarType, ScalarType>& m,
   }
 }
 
+/// specialization for IntScalarTypeMap 
+template <typename OrdinalType, typename ScalarType>
+void copy_data(const std::map<int, ScalarType>& m,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
+{
+  // convert map[x] = y to vector of concatenated (x,y) pairs
+  v.sizeUninitialized(m.size() * 2);
+  typename std::map<int, ScalarType>::const_iterator cit;
+  OrdinalType cntr = 0;
+  for (cit=m.begin(); cit!=m.end(); ++cit) {
+    // possibly promote int to double
+    v[cntr] = cit->first;  ++cntr;
+    v[cntr] = cit->second; ++cntr;
+  }
+}
+
+/// specialization for StringScalarTypeMap: store index of string value 
+template <typename OrdinalType, typename ScalarType>
+void copy_data(const std::map<String, ScalarType>& m,
+	       Teuchos::SerialDenseVector<OrdinalType, ScalarType>& v)
+{
+  // convert map[x] = y to vector of concatenated (x,y) pairs
+  v.sizeUninitialized(m.size() * 2);
+  typename std::map<String, ScalarType>::const_iterator cit;
+  size_t str_index = 0;
+  OrdinalType cntr = 0;
+  for (cit=m.begin(); cit!=m.end(); ++cit) {
+    // possibly promote string index to double for dist params
+    v[cntr] = str_index;   ++cntr; ++str_index;
+    v[cntr] = cit->second; ++cntr;
+  }
+}
 
 /// copy Teuchos::SerialDenseVector<OrdinalType, ScalarType> to
 /// ith row of Teuchos::SerialDenseMatrix<OrdinalType, ScalarType>

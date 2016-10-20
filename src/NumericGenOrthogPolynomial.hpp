@@ -76,8 +76,15 @@ public:
   void frechet_distribution(Real alpha, Real beta);
   /// set distribution type and parameters for a WEIBULL distribution
   void weibull_distribution(Real alpha, Real beta);
-  /// set distribution type and parameters for a WEIBULL distribution
+  /// set distribution type and parameters for a HISTOGRAM_BIN distribution
   void histogram_bin_distribution(const RealRealMap& bin_pairs);
+
+  /// set distribution type and parameters for a HISTOGRAM_PT_INT distribution
+  void histogram_pt_distribution(const IntRealMap& bin_pairs);
+  /// set distribution type and parameters for a HISTOGRAM_PT_STRING distribution
+  void histogram_pt_distribution(const StringRealMap& bin_pairs);
+  /// set distribution type and parameters for a HISTOGRAM_PT_REAL distribution
+  void histogram_pt_distribution(const RealRealMap& bin_pairs);
 
   /// set coeffsNormsFlag
   void coefficients_norms_flag(bool flag);
@@ -455,6 +462,50 @@ histogram_bin_distribution(const RealRealMap& bin_pairs)
     { copy_data(bin_pairs, distParams); reset_gauss(); }
 }
 
+inline void NumericGenOrthogPolynomial::
+histogram_pt_distribution(const IntRealMap& pt_pairs)
+{
+  parametricUpdate = false;
+  if (distributionType == HISTOGRAM_PT_INT) {
+    // BMA TODO: handle differential data types
+    //    if (!equivalent(distParams, pt_pairs))
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = HISTOGRAM_PT_INT; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(pt_pairs, distParams); reset_gauss(); }
+}
+
+inline void NumericGenOrthogPolynomial::
+histogram_pt_distribution(const StringRealMap& pt_pairs)
+{
+  parametricUpdate = false;
+  if (distributionType == HISTOGRAM_PT_STRING) {
+    // BMA TODO: handle differential data types
+    //    if (!equivalent(distParams, pt_pairs))
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = HISTOGRAM_PT_STRING; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(pt_pairs, distParams); reset_gauss(); }
+}
+
+inline void NumericGenOrthogPolynomial::
+histogram_pt_distribution(const RealRealMap& pt_pairs)
+{
+  parametricUpdate = false;
+  if (distributionType == HISTOGRAM_PT_REAL) {
+    // BMA TODO: handle differential data types
+    //    if (!equivalent(distParams, pt_pairs))
+      parametricUpdate = true;
+  }
+  else
+    { distributionType = HISTOGRAM_PT_REAL; parametricUpdate = true; }
+  if (parametricUpdate)
+    { copy_data(pt_pairs, distParams); reset_gauss(); }
+}
 
 inline Real NumericGenOrthogPolynomial::
 bounded_normal_pdf(Real x, const RealVector& params)
