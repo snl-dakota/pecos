@@ -910,7 +910,9 @@ operator=(const AleatoryDistParams& adp)
 
 inline size_t AleatoryDistParams::cauv() const
 {
-  return adpRep->normalMeans.length() + adpRep->lognormalMeans.length() +
+  return adpRep->normalMeans.length() +
+    // only one of means / lambdas should be sized
+    adpRep->lognormalMeans.length() + adpRep->lognormalLambdas.length() +
     adpRep->uniformLowerBnds.length() + adpRep->loguniformLowerBnds.length() +
     adpRep->triangularModes.length() + adpRep->exponentialBetas.length() + 
     adpRep->betaAlphas.length() + adpRep->gammaAlphas.length() +
