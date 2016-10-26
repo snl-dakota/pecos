@@ -221,16 +221,152 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hahn1)
 // Test numerically-generated distributions for histogram point
 // variables
 
-TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt)
+namespace {
+
+/// populate a map of int, str, real to real
+template<typename ScalarType>
+void array_to_map(size_t num_vals, ScalarType pt_vals[], double pt_mass[],
+		  std::map<ScalarType, double>& output_map)
+{
+  for (size_t i=0; i<num_vals; ++i)
+    output_map[pt_vals[i]] = pt_mass[i];
+}
+
+
+/// check pairwise orthogonality of all polynomials in the basis
+template<typename ScalarType>
+void histpt_check_orthog(size_t num_vals, ScalarType pt_vals[],
+			 double pt_mass[], BasisPolynomial& poly_basis,
+			 const unsigned short max_order, const double tol,
+			 Teuchos::FancyOStream &out, bool &success)
+{
+  // check orthogonality to self and other orders without using the
+  // inner product, since that's what we're checking...
+  //
+  // int_x { p_i(x) * p_j(x) * d(x) } = sum_k { p_i(x_k) * p_j(x_k) * m_k }
+
+  //std::cerr << "i\t" << "j\t" << "integral\t" << "norm_sq" << '\n';
+  for (unsigned short i = 0; i<=max_order; ++i) {
+    for (unsigned short j = 0; j<=i; ++j) {
+      double integral = 0.0;
+      for (size_t k=0; k<num_vals; ++k) {
+	double p_i_k = poly_basis.type1_value(pt_vals[k], i);
+	double p_j_k = poly_basis.type1_value(pt_vals[k], j);
+	integral += p_i_k * p_j_k * pt_mass[k];
+      }
+      if (i == j) {
+	double norm_sq = poly_basis.norm_squared(i);
+	TEUCHOS_TEST_FLOATING_EQUALITY( integral, norm_sq, tol, out, success );
+	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << norm_sq << '\n';
+      }
+      else {
+	// shift from 0.0 to avoid numerical issues
+	TEUCHOS_TEST_FLOATING_EQUALITY( 1.0 + integral, 1.0, tol, out, success );
+	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << 0.0 << '\n';
+      }
+    }
+  }
+}
+
+} // namespace
+
+
+TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_int)
 {
   BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
-  NumericGenOrthogPolynomial * ptr = dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
+  NumericGenOrthogPolynomial * ptr =
+    dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
   TEST_ASSERT( ptr != NULL );
 
-  // Test orthogonality to discrete data; using 20 randomly generated
-  // points on [0,2]
+  // Test orthogonality to discrete data
   size_t num_vals = 20;
-  // must be sorted
+    // 20 not-so-randomly generated points (must be sorted)
+  int pt_vals[] = {
+    1, 2, 3, 5, 6, 8, 10, 13, 14, 18,
+    21, 22, 26, 30, 34, 38, 42, 46, 50, 54
+  };
+  //  masses must sum to 1.0
+  double pt_mass[] = {
+    7.421166048564262e-02,  2.519880495959160e-02,  4.997944801838294e-02,
+    6.905619480130368e-02,  8.800520252258573e-02,  9.476072279800409e-02,
+    5.405504290268991e-02,  1.369359931170338e-02,  1.474756002656411e-02,
+    2.543717961618541e-02,  8.304772955591133e-02,  2.511850146980441e-02,
+    8.043668134029533e-02,  2.405588275825480e-02,  9.179451654564216e-02,
+    3.457209536214227e-02,  1.942007146110596e-02,  2.480256493445103e-02,
+    6.085412342241643e-02,  4.675241770732283e-02
+  };
+
+  IntRealMap pt_pairs;
+  array_to_map(num_vals, pt_vals, pt_mass, pt_pairs);
+
+  ptr->histogram_pt_distribution(pt_pairs);
+  ptr->coefficients_norms_flag(true);
+
+  // discrete data is more challenging
+  const unsigned short max_order = 4;
+  const double tol = 1.0e-6;
+  histpt_check_orthog(num_vals, pt_vals, pt_mass, poly_basis, max_order, tol,
+		      out, success);
+}
+
+
+TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_str)
+{
+  BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
+  NumericGenOrthogPolynomial * ptr =
+    dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
+  TEST_ASSERT( ptr != NULL );
+
+  // Test orthogonality to discrete data
+  size_t num_vals = 20;
+  // 20 not-so-randomly generated points (must be sorted)
+  String pt_vals[] = {
+    "aa", "bb",  "cc",  "dd",  "ee",  "ff",  "gg",  "hh",  "ii",  "jj",
+    "kk",  "ll",  "mm",  "nn",  "oo",  "pp",  "qq",  "rr",  "ss",  "tt"
+  };
+  // string data are mapped to 0-based indices; use indices to evaluate
+  int pt_inds[] = {
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+  };
+
+  //  masses must sum to 1.0
+  double pt_mass[] = {
+    7.421166048564262e-02,  2.519880495959160e-02,  4.997944801838294e-02,
+    6.905619480130368e-02,  8.800520252258573e-02,  9.476072279800409e-02,
+    5.405504290268991e-02,  1.369359931170338e-02,  1.474756002656411e-02,
+    2.543717961618541e-02,  8.304772955591133e-02,  2.511850146980441e-02,
+    8.043668134029533e-02,  2.405588275825480e-02,  9.179451654564216e-02,
+    3.457209536214227e-02,  1.942007146110596e-02,  2.480256493445103e-02,
+    6.085412342241643e-02,  4.675241770732283e-02
+  };
+
+  StringRealMap pt_pairs;
+  array_to_map(num_vals, pt_vals, pt_mass, pt_pairs);
+
+  ptr->histogram_pt_distribution(pt_pairs);
+  ptr->coefficients_norms_flag(true);
+
+  // discrete data is more challenging, since well-distributed can
+  // have slightly tighter tolerance
+  const unsigned short max_order = 4;
+  const double tol = 1.0e-6;
+  // use indices for pointwise evaluation
+  histpt_check_orthog(num_vals, pt_inds, pt_mass, poly_basis, max_order, tol,
+		      out, success);
+}
+
+
+TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt_real)
+{
+  BasisPolynomial poly_basis = BasisPolynomial(NUM_GEN_ORTHOG);
+  NumericGenOrthogPolynomial * ptr =
+    dynamic_cast<NumericGenOrthogPolynomial*>(poly_basis.polynomial_rep());
+  TEST_ASSERT( ptr != NULL );
+
+  // Test orthogonality to discrete data
+  size_t num_vals = 20;
+  // 20 randomly generated points on [0,2] (must be sorted)
   double pt_vals[] = {
     1.563510575063674e-01,  1.676427559938651e-01,  3.047560379384460e-01,
     3.243646163864855e-01,  3.312974589995619e-01,  4.579539374336377e-01,
@@ -240,9 +376,6 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt)
     1.496303185647419e+00,  1.588569081367814e+00,  1.651633954979095e+00,
     1.826674723003339e+00,  1.992269433253771e+00
   };
-  // BMA TODO: int, string valued distributions
-  // int pt_vals = { 1, 2, 3, 5, 6, 8, 10, 13, 14, 18,
-  // 		     21, 22, 26, 30, 34, 38, 42, 46, 50, 54 };
   // masses must sum to 1.0
   double pt_mass[] = {
     7.421166048564262e-02,  2.519880495959160e-02,  4.997944801838294e-02,
@@ -255,38 +388,13 @@ TEUCHOS_UNIT_TEST(discrete_orthog_poly, hist_pt)
   };
 
   RealRealMap pt_pairs;
-  for (size_t i=0; i<num_vals; ++i)
-    pt_pairs[pt_vals[i]] = pt_mass[i];
+  array_to_map(num_vals, pt_vals, pt_mass, pt_pairs);
 
   ptr->histogram_pt_distribution(pt_pairs);
   ptr->coefficients_norms_flag(true);
 
-  // check orthogonality to self and other orders without using the
-  // inner product, since that's what we're checking...
-  //
-  // int_x { p_i(x) * p_j(x) * d(x) } = sum_k { p_i(x_k) * p_j(x_k) * m_k }
-
-  //  std::cerr << "i\t" << "j\t" << "integral\t" << "norm_sq" << '\n';
-  for (unsigned short i = 0; i<11; ++i) {
-    for (unsigned short j = 0; j<=i; ++j) {
-      double integral = 0.0;
-      for (size_t k=0; k<num_vals; ++k) {
-	double p_i_k = poly_basis.type1_value(pt_vals[k], i);
-	double p_j_k = poly_basis.type1_value(pt_vals[k], j);
-	integral += p_i_k * p_j_k * pt_mass[k];
-      }
-      const Real TEST_TOL = 1.0e-12;
-      if (i == j) {
-	double norm_sq = poly_basis.norm_squared(i);
-	TEST_FLOATING_EQUALITY( integral, norm_sq, TEST_TOL );
-	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << norm_sq << '\n';
-      }
-      else {
-	// shift from 0.0 to avoid numerical issues
-	TEST_FLOATING_EQUALITY( 1.0 + integral, 1.0, TEST_TOL );
-	//std::cerr << i << "\t" << j << "\t" << integral << "\t" << 0.0 << '\n';
-      }
-    }
-  }
-
+  const unsigned short max_order = 10;
+  const double tol = 1.0e-12;
+  histpt_check_orthog(num_vals, pt_vals, pt_mass, poly_basis, max_order, tol,
+		      out, success);
 }

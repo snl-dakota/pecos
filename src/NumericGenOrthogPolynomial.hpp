@@ -467,8 +467,11 @@ histogram_pt_distribution(const IntRealMap& pt_pairs)
 {
   parametricUpdate = false;
   if (distributionType == HISTOGRAM_PT_INT) {
-    // BMA TODO: handle differential data types
+    // BMA TODO: handle differential data types in equivalent?
     //    if (!equivalent(distParams, pt_pairs))
+    RealVector dist_params_tmp;
+    copy_data(pt_pairs, dist_params_tmp);
+    if (distParams != dist_params_tmp)
       parametricUpdate = true;
   }
   else
@@ -482,8 +485,11 @@ histogram_pt_distribution(const StringRealMap& pt_pairs)
 {
   parametricUpdate = false;
   if (distributionType == HISTOGRAM_PT_STRING) {
-    // BMA TODO: handle differential data types
+    // BMA TODO: handle differential data types in equivalent?
     //    if (!equivalent(distParams, pt_pairs))
+    RealVector dist_params_tmp;
+    copy_data(pt_pairs, dist_params_tmp);
+    if (distParams != dist_params_tmp)
       parametricUpdate = true;
   }
   else
