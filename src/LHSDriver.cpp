@@ -370,6 +370,36 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
     check_error(err_code, "lhs_options");
   }
 
+  // Create files showing distributions and associated statistics.  Avoid
+  // issues with null-terminated strings from C++ (which mess up the Fortran
+  // output) by using std::string::data().
+  String output_string("LHS_samples.out");
+  output_string.resize(32, ' ');
+  String message_string("LHS_distributions.out");
+  message_string.resize(32, ' ');
+  String title_string("Pecos::LHSDriver");
+  title_string.resize(32, ' ');
+  // From the LHS manual (p. 100): LHSRPTS is used to specify which reports LHS
+  // will print in the message output file. If LHSRPTS is omitted, the message
+  // file will contain only the title, run specifications, and descriptions of
+  // the distributions sampled. If LHSRPTS is included, it must be followed by
+  // one or more of the following three additional keywords:
+  //   > CORR: Print both the achieved raw correlation matrix and the achieved
+  //           rank correlation matrix.
+  //   > HIST: Print a text-based histogram for each random variable.
+  //   > DATA: Print the complete set of all data samples and their ranks.
+  // Pecos::LHSDriver::reportFlag is set from Dakota::Iterator::subIteratorFlag,
+  // which accomplishes two things: (1) it reduces some output when generating
+  // multiple sample sets (the report files get overwritten anyway), and (2) it
+  // avoids numerical problems with generating input variable histogram plots
+  // as trust regions become small in SBO (mainly an issue before conversion of
+  // f90 LHS to double precision).
+  String options_string = (reportFlag) ? "LHSRPTS CORR HIST DATA" : " ";
+  options_string.resize(32, ' ');
+  LHS_FILES2_FC(output_string.data(), message_string.data(),
+                title_string.data(), options_string.data(), err_code);
+  check_error(err_code, "lhs_files");
+
   int num_params, cntr = 0, ptval_flag = 0;
   int dist_num, pv_num; // outputs (ignored)
   Real ptval = 0., dist_params[4];
@@ -1372,36 +1402,6 @@ generate_samples(const RealVector& cd_l_bnds,   const RealVector& cd_u_bnds,
       }
     }
   }
-
-  // Create files showing distributions and associated statistics.  Avoid
-  // issues with null-terminated strings from C++ (which mess up the Fortran
-  // output) by using std::string::data().
-  String output_string("LHS_samples.out");
-  output_string.resize(32, ' ');
-  String message_string("LHS_distributions.out");
-  message_string.resize(32, ' ');
-  String title_string("Pecos::LHSDriver");
-  title_string.resize(32, ' ');
-  // From the LHS manual (p. 100): LHSRPTS is used to specify which reports LHS
-  // will print in the message output file. If LHSRPTS is omitted, the message
-  // file will contain only the title, run specifications, and descriptions of
-  // the distributions sampled. If LHSRPTS is included, it must be followed by
-  // one or more of the following three additional keywords:
-  //   > CORR: Print both the achieved raw correlation matrix and the achieved
-  //           rank correlation matrix.
-  //   > HIST: Print a text-based histogram for each random variable.
-  //   > DATA: Print the complete set of all data samples and their ranks.
-  // Pecos::LHSDriver::reportFlag is set from Dakota::Iterator::subIteratorFlag,
-  // which accomplishes two things: (1) it reduces some output when generating
-  // multiple sample sets (the report files get overwritten anyway), and (2) it
-  // avoids numerical problems with generating input variable histogram plots
-  // as trust regions become small in SBO (mainly an issue before conversion of
-  // f90 LHS to double precision).
-  String options_string = (reportFlag) ? "LHSRPTS CORR HIST DATA" : " ";
-  options_string.resize(32, ' ');
-  LHS_FILES2_FC(output_string.data(), message_string.data(),
-                title_string.data(), options_string.data(), err_code);
-  check_error(err_code, "lhs_files");
 
   // perform internal checks on input to LHS
   int num_nam = num_av, num_var = num_av;
