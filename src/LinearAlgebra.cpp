@@ -575,6 +575,7 @@ void equality_constrained_least_squares_solve( RealMatrix &A,
   la.GGLSE( M, N, num_cons, A_copy.values(), lda, C_copy.values(),
 	    ldc, b_copy.values(), d_copy.values(), x.values(), 
 	    work, lwork, &info );
+  delete [] work;
 
   if ( info < 0 )
     {
