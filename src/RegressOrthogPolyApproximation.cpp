@@ -45,8 +45,6 @@ int RegressOrthogPolyApproximation::min_coefficients() const
 
 void RegressOrthogPolyApproximation::allocate_arrays()
 {
-  allocate_total_sobol(); // no dependencies
-
   // multiIndex size (from Shared allocate_data()) used to set
   // faultInfo.under_determined
   // Note: OLI's multiIndex is empty, but does not use under_determined flag
@@ -56,27 +54,22 @@ void RegressOrthogPolyApproximation::allocate_arrays()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   if (faultInfo.under_determined || data_rep->
       expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
-    // defer allocations until sparsity is known
 
+    allocate_total_sobol(); // no dependencies
+
+    // defer allocations until sparsity is known
     if (data_rep->expConfigOptions.vbdFlag && 
 	data_rep->expConfigOptions.vbdOrderLimit == 1)
       allocate_component_sobol(); // no dependence on multiIndex for order 1
     // else defer until sparse recovery
 
     //size_expansion(); // defer until sparse recovery
+
+    if (expansionMoments.empty())
+      expansionMoments.sizeUninitialized(2);
   }
-  else { // pre-allocate total-order expansion
-    // uniquely/over-determined regression: perform allocations now
-
-    allocate_component_sobol();
-
-    // size expansion even if !update_exp_form due to possibility of change
-    // to expansion{Coeff,GradFlag} settings
-    size_expansion();
-  }
-
-  if (expansionMoments.empty())
-    expansionMoments.sizeUninitialized(2);
+  else // pre-allocate total-order expansion
+    OrthogPolyApproximation::allocate_arrays();
 }
 
 
