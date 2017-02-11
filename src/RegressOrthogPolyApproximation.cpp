@@ -1433,75 +1433,72 @@ void RegressOrthogPolyApproximation::select_solver()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  CSOpts.solver = data_rep->expConfigOptions.expCoeffsSolnApproach;
+  short ec_options_solver = data_rep->expConfigOptions.expCoeffsSolnApproach;
   bool fn_constrained_lls
     = (data_rep->basisConfigOptions.useDerivs && faultInfo.constr_eqns &&
        faultInfo.constr_eqns < data_rep->multiIndex.size()); // candidate exp
   bool eq_con
     = (fn_constrained_lls || faultInfo.anchor_fn || faultInfo.anchor_grad);
-  if (CSOpts.solver==DEFAULT_REGRESSION) {
+
+  // **************************
+  // Algorithm selection logic:
+  // **************************
+  // Assign defaults:
+  if (ec_options_solver == DEFAULT_REGRESSION) {
     if (faultInfo.under_determined)
       CSOpts.solver = LASSO_REGRESSION;
     else
       CSOpts.solver = (eq_con) ? EQ_CON_LEAST_SQ_REGRESSION :
 	SVD_LEAST_SQ_REGRESSION;
   }
-  else if (CSOpts.solver==DEFAULT_LEAST_SQ_REGRESSION)
+  else if (ec_options_solver == DEFAULT_LEAST_SQ_REGRESSION)
     CSOpts.solver = (eq_con && !faultInfo.under_determined) ?
       EQ_CON_LEAST_SQ_REGRESSION : SVD_LEAST_SQ_REGRESSION;
-
-  if ( ( !faultInfo.under_determined ) && 
-       ( ( CSOpts.solver == BASIS_PURSUIT ) || 
-	 ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) ) )
-    {
-      CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
-      CSOpts.solverTolerance = -1.;
-    }
-
-  // Set solver parameters
-  RealVector noise_tols = data_rep->regressConfigOptions.noiseTols; // copy
-  /*
-  if ( data_rep->noiseTols.length() > 0 )
-    {
-      // data_rep->noiseTols is being set will very long length. This must
-      // be a bug
-      noise_tols.sizeUninitialized( data_rep->noiseTols.length() );
-      noise_tols.assign( data_rep->noiseTols );
-    }
-  */
-  if ( CSOpts.solver == LASSO_REGRESSION )
-    CSOpts.delta = data_rep->regressConfigOptions.l2Penalty;
-  if ( noise_tols.length() > 0 )
-      CSOpts.epsilon = noise_tols[0];
-  else {
-    noise_tols.size( 1 );
-    noise_tols[0] = CSOpts.epsilon;
-    if ( CSOpts.solver == BASIS_PURSUIT_DENOISING ) noise_tols[0] = 1e-3;
+  // Manage overrides for BP, BPDN, equality-constrained least sq:
+  else if ( ( ec_options_solver == BASIS_PURSUIT || 
+	      ec_options_solver == BASIS_PURSUIT_DENOISING ) &&
+	    !faultInfo.under_determined ) {  // no BP/BPDN for over-determined
+    CSOpts.solver = SVD_LEAST_SQ_REGRESSION; // -> force override to least sq
+    PCout << "Could not perform BP/BPDN for over-determined system. "
+	  << "Using SVD least squares regression instead.\n";
   }
-  CSOpts.solverTolerance = (CSOpts.solver == SVD_LEAST_SQ_REGRESSION)
-    ? -1.0 : data_rep->expConfigOptions.convergenceTol;
-  CSOpts.verbosity = std::max(0, data_rep->expConfigOptions.outputLevel - 1);
-  if ( data_rep->expConfigOptions.maxSolverIterations > 0 )
-    CSOpts.maxNumIterations = data_rep->expConfigOptions.maxSolverIterations;
-
-  // Solve the regression problem using L1 or L2 minimization approaches
-  //bool regression_err = 0;
-  if (CSOpts.solver==EQ_CON_LEAST_SQ_REGRESSION &&
-      !data_rep->regressConfigOptions.crossValidation){
-    if ( eq_con && !faultInfo.under_determined )
+  else if ( ec_options_solver == EQ_CON_LEAST_SQ_REGRESSION ) {
+    if (data_rep->regressConfigOptions.crossValidation)
+      throw( std::runtime_error("Cannot use cross validation with equality constrained least squares regression") );
+    else if ( eq_con && !faultInfo.under_determined )
       CSOpts.numFunctionSamples = surrData.points();
     else {
       PCout << "Could not perform equality constrained least-squares. ";
       if (faultInfo.under_determined) {
 	CSOpts.solver = LASSO_REGRESSION;
-	PCout << "Using LASSO regression instead\n";
+	PCout << "Using LASSO regression instead.\n";
       }
       else {
 	CSOpts.solver = SVD_LEAST_SQ_REGRESSION;
-	PCout << "Using SVD least squares regression instead\n";
+	PCout << "Using SVD least squares regression instead.\n";
       }
     }
   }
+  // Assign user's selection (not a default, not a forced override)
+  else
+    CSOpts.solver = ec_options_solver;
+
+  // Set solver parameters
+  RealVector noise_tols = data_rep->regressConfigOptions.noiseTols; // copy
+  if ( CSOpts.solver == LASSO_REGRESSION )
+    CSOpts.delta = data_rep->regressConfigOptions.l2Penalty;
+  if ( noise_tols.empty() ) {
+    noise_tols.size( 1 );
+    noise_tols[0] = (CSOpts.solver == BASIS_PURSUIT_DENOISING) ? 1.e-3 :
+      CSOpts.epsilon;
+  }
+  else
+    CSOpts.epsilon = noise_tols[0];
+  CSOpts.solverTolerance = (CSOpts.solver == SVD_LEAST_SQ_REGRESSION) ? -1. :
+    data_rep->expConfigOptions.convergenceTol;
+  CSOpts.verbosity = std::max(0, data_rep->expConfigOptions.outputLevel - 1);
+  if ( data_rep->expConfigOptions.maxSolverIterations > 0 )
+    CSOpts.maxNumIterations = data_rep->expConfigOptions.maxSolverIterations;
 }
 
 
@@ -2094,7 +2091,7 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   remove_faulty_data( vandermonde_submatrix, b, points_dummy, index_mapping,
 		      faultInfo, surrData.failed_response_data() );
   int num_rows_V = vandermonde_submatrix.numRows(),
-    num_cols_V = vandermonde_submatrix.numCols();
+      num_cols_V = vandermonde_submatrix.numCols();
   faultInfo.under_determined = num_rows_V < num_cols_V;
   PCout << "Applying regression to compute " << num_cols_V
 	<< " chaos coefficients using " << num_rows_V << " equations.\n";
@@ -2104,15 +2101,16 @@ Real RegressOrthogPolyApproximation::run_cross_validation_expansion()
   linear_solver->solve( vandermonde_submatrix, b, solutions, metrics );
 
   int last_index = solutions.numCols() - 1;
-  if (faultInfo.under_determined) // exploit CS sparsity
+  // exploit CS sparsity for OMP,LASSO,LARS regardless of data size 
+  // and for BP,BPDN if under-determined (these revert to least squares for
+  // over determined)
+  if ( ( faultInfo.under_determined &&
+	 CSOpts.solver != SVD_LEAST_SQ_REGRESSION ) ||
+       ( CSOpts.solver == ORTHOG_MATCH_PURSUIT ||
+	 CSOpts.solver == LASSO_REGRESSION     || 
+	 CSOpts.solver == LEAST_ANGLE_REGRESSION ) )
     update_sparse(solutions[last_index], num_basis_terms);
   else {
-    // JDJ: Mike this means if we try to force omp for over-determined system
-    // then sparse indices will not be taken full advantage of. Should we 
-    // modify the logic here so that this section is only entered if using
-    // least squares or BP or BPDN ( the later revert to least squares for
-    // over determinde systems. Same argument for line 1935 and 1945 in 
-    //compresed_sensing() function
     copy_data(solutions[last_index], num_basis_terms, expansionCoeffs);
     // if best expansion order is less than maximum candidate, define
     // sparseIndices to define active subset within data_rep->multiIndex.
@@ -2146,9 +2144,14 @@ compressed_sensing( RealMatrix &A, RealMatrix &B )
 
   // update bookkeeping for sparse solutions
   bool multiple_rhs = (expansionCoeffFlag && expansionCoeffGradFlag);
+  bool sparse_soln  = ( ( faultInfo.under_determined &&
+			  CSOpts.solver != SVD_LEAST_SQ_REGRESSION ) ||
+			( CSOpts.solver == ORTHOG_MATCH_PURSUIT ||
+			  CSOpts.solver == LASSO_REGRESSION     || 
+			  CSOpts.solver == LEAST_ANGLE_REGRESSION ) );
   int num_expansion_terms = data_rep->multiIndex.size();
   if ( expansionCoeffFlag && !multiple_rhs ) {
-    if (faultInfo.under_determined) // exploit CS sparsity
+    if (sparse_soln) // exploit CS sparsity
       update_sparse(solutions[0][0], num_expansion_terms);
     else {                          // retain full solution
       copy_data(solutions[0][0], num_expansion_terms, expansionCoeffs);
@@ -2158,7 +2161,7 @@ compressed_sensing( RealMatrix &A, RealMatrix &B )
   else {
     int i, j, num_grad_rhs = surrData.num_derivative_variables(),
       num_coeff_rhs = ( !multiple_rhs && expansionCoeffGradFlag ) ? 0 : 1;
-    if (faultInfo.under_determined) { // exploit CS sparsity
+    if (sparse_soln) { // exploit CS sparsity
       // overlay sparse solutions into an aggregated set of sparse indices
       sparseIndices.clear();
       if (multiple_rhs)
@@ -2590,12 +2593,16 @@ update_sparse_sobol(const SizetSet& sparse_indices,
     // define map from shared index to sparse index
     cit = shared_sobol_map.find(set);
     if (cit == shared_sobol_map.end()) {
-      PCerr << "Error: sobolIndexMap lookup failure in RegressOrthogPoly"
-	    << "Approximation::update_sparse_sobol()" << std::endl;
-      abort_handler(-1);
+      if (set.count() <= data_rep->expConfigOptions.vbdOrderLimit) {
+	PCerr << "Error: sobolIndexMap lookup failure in RegressOrthogPoly"
+	      << "Approximation::update_sparse_sobol() for multi-index\n"
+	      << sparse_mi << std::endl;
+	abort_handler(-1);
+      }
+      // else contributions to this set are not tracked
     }
-    // key = shared index, value = sparse index (init to 0, to be updated below)
-    sparseSobolIndexMap[cit->second] = 0;
+    else // {key,val} = {shared,sparse} index: init sparse to 0 (updated below)
+      sparseSobolIndexMap[cit->second] = 0;
   }
   // now that keys are complete, assign new sequence for sparse Sobol indices
   unsigned long sobol_len = 0; ULULMIter mit;
