@@ -30,7 +30,7 @@ public:
   T get(const std::string& name) const{
     opts_map::const_iterator iter = map_.find(name);
     if (iter==map_.end()){
-      std::string msg = "Item not found in options";
+      std::string msg = "Item "+name+" not found in options";
       throw(std::runtime_error(msg));
     }
     try{

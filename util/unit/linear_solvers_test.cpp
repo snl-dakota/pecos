@@ -71,7 +71,7 @@ namespace {
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers2, ompsolver)
+TEUCHOS_UNIT_TEST(linear_solvers, ompsolver)
 {
   LinearSystemSolver * psol = new OMPSolver;
   //params.set("Normalize Inputs", true);
@@ -85,7 +85,7 @@ TEUCHOS_UNIT_TEST(linear_solvers2, ompsolver)
 
 //----------------------------------------------------------------
 
-TEUCHOS_UNIT_TEST(linear_solvers2, larssolver)
+TEUCHOS_UNIT_TEST(linear_solvers, larssolver)
 {
   LinearSystemSolver * psol = new LARSolver;
   OptionsList params;
@@ -99,38 +99,3 @@ TEUCHOS_UNIT_TEST(linear_solvers2, larssolver)
 }
 
 //----------------------------------------------------------------
-
-//TEUCHOS_UNIT_TEST(linear_solvers2, cosampsolver)
-//{
-//  LinearSystemSolver * psol = new COSAMPSolver;
-//  OptionsList params;
-//  Real diff = test_solver(psol, params, false);
-//
-//  Real tol = params.get<Real>("Solver Tolerance");
-//  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
-//}
-
-//----------------------------------------------------------------
-
-TEUCHOS_UNIT_TEST(linear_solvers2, lsqsolver)
-{
-  LinearSystemSolver * psol = new LSQSolver;
-  OptionsList params;
-  Real diff = test_solver(psol, params, false);
-
-  Real tol = params.get<Real>("Solver Tolerance");
-  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
-}
-
-//----------------------------------------------------------------
-
-TEUCHOS_UNIT_TEST(linear_solvers2, equalityconstrainedlsqsolver)
-{
-  LinearSystemSolver * psol = new EqConstrainedLSQSolver;
-  OptionsList params;
-  params.set("Num Primary Equations", NUMROWS-2); // need to setup some meaningful constraints (dummy 2 for now)
-  Real diff = test_solver(psol, params, false);
-
-  Real tol = params.get<Real>("Solver Tolerance", 1.e-8);
-  TEST_FLOATING_EQUALITY( 1.0, diff, tol )
-}

@@ -94,7 +94,7 @@ public:
     case SVD_LEAST_SQ_REGRESSION:{
       int rank(0);
       RealVector singular_values;
-      Real solver_tol = opts.get("Solver Tolerance", 1.e-6);
+      Real solver_tol = opts.get("rcond_tol", 1.e-6);
       svd_solve( A, B, solutions_, singular_values, rank, solver_tol );
       break;
     }

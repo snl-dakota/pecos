@@ -3,8 +3,7 @@
 include_directories(${Pecos_SOURCE_DIR}/util/src)
 set(pecos_util_unit_tests
   linear_algebra_test.cpp
-  linear_solvers.cpp
-  linear_solvers2.cpp
+  linear_solvers_test.cpp
   math_tools_test.cpp
   )
 add_executable(pecos_util_unit_tests 
