@@ -1,0 +1,22 @@
+PyDakota
+
+Python wrapper of Dakota surrogate and linear algebra utilities.
+
+//----------------//
+// SYSTEM INSTALL //
+//----------------//
+To Install run to site-packages
+python setup.py install
+
+To uninstall from site packages
+rm -r path/to/site-packges/PyDakota*
+
+To get location of site-packages use
+python -m site
+
+//----------------//
+// LOCAL INSTALL  //
+//----------------//
+python setup.py install -prefix=/path/to/local/install
+To uninstall
+rm -r /path/to/local/install/PyDakota*

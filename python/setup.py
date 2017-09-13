@@ -1,5 +1,6 @@
 # setup.py
-from distutils.core import setup, Extension
+#from distutils.core import setup, Extension
+from setuptools import setup, Extension
 import distutils
 from os.path import join
 import numpy
@@ -161,14 +162,27 @@ univariate_polynomials = Extension(
     swig_opts=swig_opts+['-I%s'%include_dir for include_dir in pecos_include_dirs]+
 ['-I%s'%include_dir for include_dir in teuchos_include_dirs])
 
+import unittest
+def PyDakota_test_suite():
+    test_loader = unittest.TestLoader()
+    test_suite = test_loader.discover(distutils_build_dir, pattern='test_*.py')
+    return test_suite
 
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 setup(
     name = package_name,
     version = "1.0",
     description="Python wrapper of Dakota surrogate and linear algebra utilities",
     author="John Jakeman",
+    author_email='dakota-users@sandia.gov',
+    license='GNU Lesser General Public License (LGPL)',
+    url='https://dakota.sandia.gov',
+    keywords='Approximation, Surrogates, Uncertainty Quantification, Polynomial Chaos',
+    long_description=read('README'),
     packages=[package_name,package_name+'.unit'],
+    package_dir = {'': 'src'},
     ext_package=package_name,
     ext_modules=[
         options_list,
@@ -176,8 +190,8 @@ setup(
         regression,
         approximation,
         univariate_polynomials],
-    package_data={package_name:[join('unit','data/*.gz')]}
-)
+    package_data={package_name:[join('unit','data/*.gz')]},
+    test_suite='setup.PyDakota_test_suite')
 
 print join(pecos_root,'surrogates','models','unit')
 
