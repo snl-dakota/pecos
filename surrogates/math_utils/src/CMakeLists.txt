@@ -1,0 +1,5 @@
+SET(SOURCES linear_algebra.cpp math_tools.cpp space_filling_sampling.cpp RandomNumberGenerator.cpp RandomVariables.cpp)
+SET(HEADERS linear_algebra.hpp math_tools.hpp space_filling_sampling.hpp RandomNumberGenerator.hpp TypeDefinitions.hpp RandomVariables.hpp)
+add_library(math_utils ${SOURCES} ${HEADERS})
+SET(CMAKE_INCLUDE_CURRENT_DIR ON)
+target_link_libraries(teuchos)
