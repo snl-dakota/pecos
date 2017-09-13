@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.12)
 
 project("Pecos" C CXX Fortran)
 
@@ -168,6 +168,10 @@ if(HAVE_SPARSE_GRID)
   set(SUBLIBS ${SUBLIBS} sparsegrid)
 endif(HAVE_SPARSE_GRID)
 
+# Foundational utilities
+add_subdirectory(util)
+
+# Core Pecos
 add_subdirectory(src)
 
 option(PECOS_ENABLE_TESTS "Enable Pecos-specific tests?" ON)
@@ -188,3 +192,16 @@ install(TARGETS pecos EXPORT ${ExportTarget} DESTINATION lib)
 
 set(Pecos_LINK_LIBRARIES ${SUBLIBS} CACHE INTERNAL "Pecos link libraries")
 
+# Modular surrogate model library
+# TODO: optionally depences on Pecos core (need tests with and without)
+add_subdirectory(surrogates)
+
+# Python wrappers are optional. Must add subdirectory after all other core
+# libraries
+# TODO: document SWIG_EXECUTABLE to help find
+option(DAKOTA_API_PYTHON "Enable Python API (requires SWIG)" OFF)
+if(DAKOTA_API_PYTHON)
+  dakota_api_python()
+  # Python/SWIG wrapper tests
+  add_subdirectory(python)
+endif()
