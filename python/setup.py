@@ -162,6 +162,18 @@ univariate_polynomials = Extension(
     swig_opts=swig_opts+['-I%s'%include_dir for include_dir in pecos_include_dirs]+
 ['-I%s'%include_dir for include_dir in teuchos_include_dirs])
 
+std_vector_example = Extension(
+    '_std_vector_example',
+    ['std_vector_example.i'],
+    include_dirs = include_dirs+pecos_include_dirs+teuchos_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = [],
+    libraries = [],
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=swig_opts+['-I%s'%include_dir for include_dir in pecos_include_dirs]+['-I%s'%include_dir for include_dir in teuchos_include_dirs])
+
 import unittest
 def PyDakota_test_suite():
     test_loader = unittest.TestLoader()
@@ -189,6 +201,7 @@ setup(
         math_tools,
         regression,
         approximation,
+        std_vector_example,
         univariate_polynomials],
     package_data={package_name:[join('unit','data/*.gz')]},
     test_suite='setup.PyDakota_test_suite')

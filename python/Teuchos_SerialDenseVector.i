@@ -215,7 +215,7 @@ using Teuchos::SerialDenseVector;
   PyObject* npArray = PyArray_SimpleNew( 1, dims, TYPECODE );
   if (!$result) SWIG_fail;
   SCALAR_TYPE *array = (SCALAR_TYPE *)PyArray_DATA( npArray );
-  for ( int i = 0; i < $1->length(); i++ )
+  for ( ORDINAL_TYPE i = 0; i < $1->length(); i++ )
     *array++ = $1->values()[i];
   $result = SWIG_Python_AppendOutput($result,npArray);
 }
