@@ -106,7 +106,7 @@ math_tools_include_dirs=base_include_dirs+surrogates_include_dirs+\
   teuchos_include_dirs
 math_tools = Extension(
     '_math_tools',
-    [join('cpp_src','math_tools.i')],
+    [join('cpp_src','math_tools.i')]+pydakota_srcs,
     include_dirs = math_tools_include_dirs,
     define_macros =[('COMPILE_WITH_PYTHON',None)],
     undef_macros = [],
@@ -205,6 +205,21 @@ options_list_interface = Extension(
     extra_compile_args = ['-std=c++11'],
     swig_opts=swig_opts+['-I%s'%include_dir for include_dir in options_list_interface_include_dirs])
 
+enum_example_include_dirs=['cpp_src/swig_examples_src']
+swig_opts = ['-c++','-outdir','%s'%join(
+    distutils_build_dir,package_name,subpackage_name)]
+enum_example = Extension(
+    '%s._enum_example'%subpackage_name,
+    [join('cpp_src','swig_examples_src','enum_example.i')],
+    include_dirs = enum_example_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = [],
+    libraries = [],
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=swig_opts+['-I%s'%include_dir for include_dir in enum_example_include_dirs])
+
 import unittest
 def PyDakota_test_suite():
     test_loader = unittest.TestLoader()
@@ -234,6 +249,7 @@ setup(
         approximation,
         std_vector_example,
         options_list_interface,
+        enum_example,
         univariate_polynomials],
     package_data={package_name:[join('unit','data/*.gz')]},
     test_suite='setup.PyDakota_test_suite')

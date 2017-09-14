@@ -43,15 +43,12 @@ approximation packages:
 
 // How do I make math_tools a separate module of submodule?
 %include "fundamentals.i"
- //%include "math_tools.i"
- //%include "regression.i"
 
 %shared_ptr(Surrogates::Function)
 %shared_ptr(Surrogates::CppFunction)
 %shared_ptr(Surrogates::Approximation)
 %shared_ptr(Surrogates::PolynomialApproximation)
 %shared_ptr(Surrogates::Monomial)
- //%shared_ptr(Surrogates::PolynomialChaosExpansion)
 %shared_ptr(Surrogates::Variables)
 %shared_ptr(Surrogates::BoundedVariables)
 %shared_ptr(Surrogates::VariableTransformation)
@@ -72,9 +69,10 @@ approximation packages:
 %include "Approximation.hpp"
 %include "PolynomialApproximation.hpp"
 %include "Monomial.hpp"
- //%include "PolynomialChaosExpansion.hpp"
 %include "SurrogateBuilder.hpp"
 %include "RegressionBuilder.hpp"
+
+%include "polynomial_approximation_drivers.hpp"
 
 %pythoncode %{
 import numpy

@@ -1,5 +1,5 @@
 /* math_tools.i */
-%module(directors=1,package="PyDakota",autodoc=1) math_tools
+%module(directors=1,implicitconv="1", package="PyDakota",autodoc=1) math_tools
 %{
 #include <Python.h>
 #include <numpy/arrayobject.h>
@@ -8,13 +8,13 @@
 // Local includes
 #include "math_tools.hpp"
 #include "linear_algebra.hpp"
-
 %}
 
 // %ignore and rename must be included before the function decleration, i.e.
 // before the %include
 %ignore Surrogates::qr_solve( const RealMatrix &, const RealMatrix &, RealMatrix & );
 
+%include "Teuchos_BLAS_types.hpp"
 %include "fundamentals.i"
 %include "math_tools.hpp"
 %include "linear_algebra.hpp"
