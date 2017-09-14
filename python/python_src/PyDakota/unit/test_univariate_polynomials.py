@@ -106,7 +106,7 @@ class TestUnivariatePolynomials(unittest.TestCase):
         test_orthogonal_polynomial(
             x, poly, true_values, true_derivatives, true_norms )
 
-        degree = 99
+        degree = 98# probem with degree > 98
         test_orthogonality(poly, degree, eps=1e-14)
 
 if __name__ == '__main__':

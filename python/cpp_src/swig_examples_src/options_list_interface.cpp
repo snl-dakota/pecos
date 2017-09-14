@@ -1,4 +1,4 @@
-#include "test_options_list.hpp"
+#include "options_list_interface.hpp"
 
 #define TEST_FUNCS(TYPE, SNAME)					\
 								\

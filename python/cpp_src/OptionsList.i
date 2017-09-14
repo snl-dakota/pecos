@@ -11,7 +11,7 @@
 
 #include "OptionsList.hpp"
 #include "python_helpers.hpp"
-#include "test_options_list.hpp" 
+  //#include "test_options_list.hpp" 
 %}
 
 %feature("docstring") Teuchos::OptionsList
@@ -140,7 +140,7 @@ options to functions."
 %rename(_print) OptionsList::print() const;
 
 %include "OptionsList.hpp"
-%include "test_options_list.hpp"
+ //%include "test_options_list.hpp"
 
 %extend OptionsList
 {
