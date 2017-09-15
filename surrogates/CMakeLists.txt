@@ -39,7 +39,7 @@ include_directories(
 
 add_subdirectory(models)
 
-#add_subdirectory(pecos_wrapper)
+add_subdirectory(pecos_wrapper)
 
 #message("ind dir1 ${INCLUDE_DIRECTORIES}")
 #get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)

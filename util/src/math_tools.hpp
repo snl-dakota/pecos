@@ -18,7 +18,6 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "Teuchos_Array.hpp"
 #include "OptionsList.hpp"
-#define PI 4.0*atan(1.0)
 
 namespace Surrogates {
 /**

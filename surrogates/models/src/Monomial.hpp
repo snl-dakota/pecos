@@ -1,6 +1,6 @@
 #ifndef MONOMIAL_HPP
 #define MONOMIAL_HPP
-#include <PolynomialApproximation.hpp>
+#include "PolynomialApproximation.hpp"
 
 namespace Surrogates {
 /**
@@ -24,5 +24,5 @@ public:
 
 }; // class Monomial
 
-}; // namespace Surrogates
+} // namespace Surrogates
 #endif // MONOMIAL_HPP
