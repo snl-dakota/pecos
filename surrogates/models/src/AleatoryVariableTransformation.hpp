@@ -1,9 +1,9 @@
 #ifndef ALEATORY_VARIABLE_TRANSFORMATION_HPP
 #define ALEATORY_VARIABLE_TRANSFORMATION_HPP
 
-#include <BoundedVariables.hpp>
-#include <teuchos_data_types.hpp>
-#include <VariableTransformation.hpp>
+#include "BoundedVariables.hpp"
+#include "teuchos_data_types.hpp"
+#include "VariableTransformation.hpp"
 namespace Surrogates {
 
   /**
@@ -16,10 +16,16 @@ namespace Surrogates {
      from user defined x-space \f$[a_i,b_i,\ldots,a_d,b_d]\f$
      to standardized u-space \f$[-1,1]^d\f$
   */
+  class AleatoryVariableTransformation : public VariableTransformation{
+    AleatoryVariableTransformation(){};
 
+    virtual ~AleatoryVariableTransformation(){};
+  };
+
+#ifdef DEPENDENCIES_NOT_IMPLEMENTED
   class AleatoryVariableTransformation : public VariableTransformation{
   protected:
-    boost::shared_ptr<Surrogates::AelatoryVariables> aleatoryVars_;
+    boost::shared_ptr<Surrogates::AleatoryVariables> aleatoryVars_;
 
   public:
     AleatoryVariableTransformation();
@@ -56,7 +62,7 @@ namespace Surrogates {
     virtual void set_options(OptionsList &opts){};
 
   };
-
-}; // namespace Surrogates
+#endif // DEPENDENCIES_NOT_IMPLEMENTED
+} // namespace Surrogates
 
 #endif // ALEATORY_VARIABLE_TRANSFORMATION_HPP

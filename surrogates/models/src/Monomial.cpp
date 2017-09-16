@@ -7,7 +7,7 @@ Monomial::Monomial(){}
 Monomial::~Monomial(){}
 
 void Monomial::set_options(const OptionsList &opts){
-  PolynomialApproximation::set_options(opts);
+  PolyApproximation::set_options(opts);
 }
 
 void Monomial::

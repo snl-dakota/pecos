@@ -85,7 +85,13 @@ class TestMonomialApproximation(unittest.TestCase):
 
         # Define the approximation
         degree = 3
-        approx = Monomial()
+        #approx = Monomial()
+        from PyDakota.univariate_polynomials import LEGENDRE_ORTHOG
+        approx = PolynomialChaosExpansion()
+        #basis_types = numpy.array([LEGENDRE_ORTHOG]*num_vars)
+        basis_types = [LEGENDRE_ORTHOG]*num_vars
+        print basis_types
+        approx.initialize_polynomial_basis_from_basis_types(basis_types)
         basis_indices = compute_hyperbolic_indices(num_vars, degree, 1.)
         # Check exception is thrown in basis_indices is set before variable
         # transformation

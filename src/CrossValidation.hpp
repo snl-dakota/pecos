@@ -3,7 +3,7 @@
 
 #include "MathTools.hpp"
 #include "RandomNumberGenerator.hpp"
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "FaultTolerance.hpp"
 #include "pecos_data_types.hpp"

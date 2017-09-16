@@ -1,12 +1,12 @@
 SET(SOURCES Function.cpp CppFunction.cpp
 	    Approximation.cpp	
-	    PolynomialApproximation.cpp Monomial.cpp
+	    PolyApproximation.cpp Monomial.cpp
             Variables.cpp BoundedVariables.cpp
 	    VariableTransformation.cpp AffineVariableTransformation.cpp
 	    RegressionBuilder.cpp)
 SET(HEADERS Function.hpp CppFunction.hpp
 	    Approximation.hpp
-	    PolynomialApproximation.hpp Monomial.hpp
+	    PolyApproximation.hpp Monomial.hpp
             Variables.hpp BoundedVariables.hpp
 	    VariableTransformation.hpp AffineVariableTransformation.hpp
 	    RegressionBuilder.hpp)

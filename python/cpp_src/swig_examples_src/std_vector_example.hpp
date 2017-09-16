@@ -12,5 +12,11 @@ public:
   virtual const RealArray& get(unsigned short n) {
     result.resize(n);
     return result;};
+  void set(const Other::ShortArray &vec){
+    std::cout << "[" ;
+    for (size_t i=0; i< vec.size(); ++i)
+      std::cout << vec[i] << " " ;
+    std::cout << "]\n" ;
+  }
 };
 }

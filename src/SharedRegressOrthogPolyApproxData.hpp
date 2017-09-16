@@ -16,7 +16,7 @@
 
 #include "SharedOrthogPolyApproxData.hpp"
 #include "LightweightSparseGridDriver.hpp"
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 
 namespace Pecos {
 

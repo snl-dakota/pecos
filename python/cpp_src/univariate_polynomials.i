@@ -13,8 +13,6 @@
   //#include "numpy_include.hpp"
 #include <vector>
 #include "BasisPolynomial.hpp"
-typedef double Real;
-typedef std::vector<double>                RealArray;
 using namespace Pecos;
 %}
 

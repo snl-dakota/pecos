@@ -21,7 +21,7 @@ class PCEFactory {
       opts.get<std::string>("construction method");
     switch (construction_type){
       case "regression" : {
-        // boost::shared_ptr<PolynomialApproximation> PCE
+        // boost::shared_ptr<PolyApproximation> PCE
   //       break;
   //     }
   //     case "spectral": { 

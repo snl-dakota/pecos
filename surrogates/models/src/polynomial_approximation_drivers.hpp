@@ -1,7 +1,7 @@
 #ifndef POLYNOMIAL_APPROXIMATION_DRIVERS_HPP
 #define POLYNOMIAL_APPROXIMATION_DRIVERS_HPP
 
-#include "PolynomialApproximation.hpp"
+#include "PolyApproximation.hpp"
 #include "RegressionBuilder.hpp"
 #include "math_tools.hpp"
 // TODO: to be removed
@@ -28,7 +28,7 @@ void regression_solve(const RealMatrix &matrix, const RealMatrix &rhs,
 }
 
 
-void regression_driver(Function &target_function, PolynomialApproximation &approx, OptionsList &opts ){
+void regression_driver(Function &target_function, PolyApproximation &approx, OptionsList &opts ){
 
   // Generate samples to build approximation
   int num_samples = opts.get<int>("num_samples");

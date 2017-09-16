@@ -4,7 +4,7 @@
 // Local includes
 #define NO_IMPORT_ARRAY
 #include "numpy_include.hpp"
- 
+#include <vector> 
 // Namespace flattening
 using std::string;
 %}

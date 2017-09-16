@@ -1,5 +1,5 @@
 #include "RegressionBuilder.hpp"
-#include "PolynomialApproximation.hpp"
+#include "PolyApproximation.hpp"
 
 namespace Surrogates {
 
@@ -38,8 +38,8 @@ void solve_regression(const RealMatrix &samples,
 		      OptionsList &opts,
 		      Approximation &approx){
 
-  PolynomialApproximation& poly_approx = 
-    dynamic_cast<PolynomialApproximation&>(approx);
+  PolyApproximation& poly_approx = 
+    dynamic_cast<PolyApproximation&>(approx);
     
   // Generate matrix of the linear system to be used in
   // regression solve

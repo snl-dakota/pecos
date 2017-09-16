@@ -1,6 +1,6 @@
 #ifndef MONOMIAL_HPP
 #define MONOMIAL_HPP
-#include "PolynomialApproximation.hpp"
+#include "PolyApproximation.hpp"
 
 namespace Surrogates {
 /**
@@ -11,7 +11,7 @@ This class was generated mainly for unit-testing purposes. Much greater
 functionality can be reached by including the PECOS library and utilizing
 the polynomial chaos wrappers.
 */
-class Monomial : public PolynomialApproximation {
+class Monomial : public PolyApproximation {
 public:
   Monomial();
 
@@ -19,7 +19,7 @@ public:
 
   void set_options(const OptionsList &opts);
 
-  /** \copydoc PolynomialApproximation::generate_basis_matrix() */
+  /** \copydoc PolyApproximation::generate_basis_matrix() */
   void generate_basis_matrix(const RealMatrix &samples, RealMatrix &result_0);
 
 }; // class Monomial

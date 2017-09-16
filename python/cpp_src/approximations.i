@@ -27,9 +27,9 @@ approximation packages:
 #include "Function.hpp"
 #include "CppFunction.hpp"
 #include "Approximation.hpp"
-#include "PolynomialApproximation.hpp"
+#include "PolyApproximation.hpp"
 #include "Monomial.hpp"
-  //#include "PolynomialChaosExpansion.hpp"
+#include "PolynomialChaosExpansion.hpp"
 #include "Variables.hpp"
 #include "BoundedVariables.hpp"
 #include "VariableTransformation.hpp"
@@ -37,18 +37,24 @@ approximation packages:
 #include "polynomial_approximation_drivers.hpp"
 #include "RegressionBuilder.hpp"
   using std::string;
+  using namespace Pecos;
+#include "typedefs_for_python_wrapper.hpp"
 %}
 
 %ignore *::operator[];
 
 // How do I make math_tools a separate module of submodule?
 %include "fundamentals.i"
+%include "stl.i"
+%template() std::vector<short>;
+%include "typedefs_for_python_wrapper.hpp"
 
 %shared_ptr(Surrogates::Function)
 %shared_ptr(Surrogates::CppFunction)
 %shared_ptr(Surrogates::Approximation)
-%shared_ptr(Surrogates::PolynomialApproximation)
+%shared_ptr(Surrogates::PolyApproximation)
 %shared_ptr(Surrogates::Monomial)
+%shared_ptr(Surrogates::PolynomialChaosExpansion)
 %shared_ptr(Surrogates::Variables)
 %shared_ptr(Surrogates::BoundedVariables)
 %shared_ptr(Surrogates::VariableTransformation)
@@ -67,8 +73,9 @@ approximation packages:
 // base class The base class must be %include so that python can see the
  // virtual function
 %include "Approximation.hpp"
-%include "PolynomialApproximation.hpp"
+%include "PolyApproximation.hpp"
 %include "Monomial.hpp"
+%include "PolynomialChaosExpansion.hpp"
 %include "SurrogateBuilder.hpp"
 %include "RegressionBuilder.hpp"
 

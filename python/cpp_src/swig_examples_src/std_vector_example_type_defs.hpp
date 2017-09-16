@@ -6,3 +6,7 @@ namespace Pecos{
   enum animal_enum {Monkey, Gorilla};
   
 }
+
+namespace Other{
+  typedef std::vector<short> ShortArray;
+}

@@ -1,5 +1,5 @@
-#ifndef LINEAR_SOLVERS_HPP
-#define LINEAR_SOLVERS_HPP
+#ifndef LINEAR_SOLVERS_PECOS_SRC_HPP
+#define LINEAR_SOLVERS_PECOS_SRC_HPP
 
 #include "compressed_sensing.hpp"
 #include <boost/shared_ptr.hpp>
@@ -660,4 +660,4 @@ public:
 
 } // namespace Pecos
 
-#endif //LINEAR_SOLVERS_HPP
+#endif //LINEAR_SOLVERS_PECOS_SRC_HPP

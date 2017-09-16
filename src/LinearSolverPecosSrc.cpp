@@ -1,4 +1,4 @@
-#include "LinearSolver.hpp"
+#include "LinearSolverPecosSrc.hpp"
 #include "MathTools.hpp"
 
 namespace Pecos {

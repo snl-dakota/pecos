@@ -5,8 +5,8 @@
  * \brief Functions used to solve systems of linear equations.
  */
 
-#ifndef LINEAR_ALGEBRA_HPP
-#define LINEAR_ALGEBRA_HPP
+#ifndef LINEAR_ALGEBRA_PECOS_SRC_HPP
+#define LINEAR_ALGEBRA_PECOS_SRC_HPP
 
 #include "Teuchos_SerialDenseVector.hpp"
 #include "Teuchos_BLAS.hpp"
@@ -669,4 +669,4 @@ void lu_solve( RealMatrix &A,
 
 }  // namespace Pecos
 
-#endif
+#endif // LINEAR_ALGEBRA_PECOS_SRC_HPP

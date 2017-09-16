@@ -1,5 +1,5 @@
-#ifndef POLYNOMIAL_APPROXIMATION_HPP
-#define POLYNOMIAL_APPROXIMATION_HPP
+#ifndef POLY_APPROXIMATION_HPP
+#define POLY_APPROXIMATION_HPP
 
 #include <Approximation.hpp>
 #include <OptionsList.hpp>
@@ -8,7 +8,7 @@
 namespace Surrogates {
 
 /**
-\class PolynomialApproximation
+\class PolyApproximation
 
 \brief A polynomial approximation \f$p(x)\f$ of a function \f$f(x)\f$.
 
@@ -23,7 +23,7 @@ for some set of \f$\boldsymbol{\Lambda}\f$ of multivariate indices
 This class provides an interface to the polynomial chaos expansion software
 implemented in Pecos
  */
-class PolynomialApproximation : public Approximation {
+class PolyApproximation : public Approximation {
 protected:
 
   IntMatrix basisIndices_;
@@ -33,10 +33,10 @@ protected:
 public:
 
   /// Default constructor
-  PolynomialApproximation();
+  PolyApproximation();
 
   /// Destructor
-  virtual ~PolynomialApproximation();
+  virtual ~PolyApproximation();
 
   /** \copydoc Function::value() */
   virtual void value(const RealMatrix &samples, RealMatrix &result_0);
@@ -93,8 +93,8 @@ public:
   */
   void get_basis_indices(IntMatrix &basis_indices) const;
 
-}; // class PolynomialApproximation
+}; // class PolyApproximation
 
 }; // namespace Surrogates
 
-#endif // POLYNOMIAL_APPROXIMATION_HPP
+#endif // POLY_APPROXIMATION_HPP

@@ -1,7 +1,7 @@
 #ifndef POLYNOMIAL_CHAOS_EXPANSION_WRAP_HPP
 #define POLYNOMIAL_CHAOS_EXPANSION_WRAP_HPP
 
-#include "PolynomialApproximation.hpp"
+#include "PolyApproximation.hpp"
 #include "BasisApproximation.hpp"
 #include "OptionsList.hpp"
 #include "teuchos_data_types.hpp"
@@ -15,7 +15,7 @@ namespace Surrogates{
 
 \brief Polynomial chaos expansion of a \f$L^2\f$ function, i.e a function with finite variance.
 */
-class  PolynomialChaosExpansionWrap: public PolynomialApproximation{
+class  PolynomialChaosExpansionWrap: public PolyApproximation{
 protected:
 /// TODO Do I need this???
 Pecos::SharedBasisApproxData sharedData_;
@@ -37,7 +37,7 @@ public:
   virtual ~PolynomialChaosExpansionWrap();
 
 
-  /** \copydoc PolynomialApproximation::generate_basis_matrix() */
+  /** \copydoc PolyApproximation::generate_basis_matrix() */
   void generate_basis_matrix(const RealMatrix &samples, RealMatrix &result_0);
 
 }; // class PolynomialChaosExpansionWrap

@@ -16,6 +16,7 @@ home = expanduser("~")
 
 pecos_root = join(home,'software','pecos')
 pecos_build_dir = join(home,'software','pecos','build')
+include_pecos=True
 
 #boost_include = join(home,'local/boost-1.61.0/include')
 boost_include = join(home,'modules-gnu-4.8.5/boost-1.54.0/include')
@@ -42,7 +43,8 @@ base_include_dirs = [
 
 surrogates_include_dirs=[
     join(pecos_root,'util','src'),
-    join(pecos_root,'surrogates','models','src')]
+    join(pecos_root,'surrogates','models','src'),
+    ]
 
 pecos_include_dirs=[
     join(pecos_root,'src')
@@ -137,15 +139,25 @@ regression = Extension(
 approximation_include_dirs=base_include_dirs+surrogates_include_dirs+\
   teuchos_include_dirs
 approximation_library_dirs = regression_library_dirs
+approximation_libraries = ['models','pecos_util','teuchos','blas','lapack']
+if include_pecos:
+    approximation_include_dirs+=[join(pecos_root,'surrogates','pecos_wrapper','src')]+pecos_include_dirs+[join(pecos_root,'packages','teuchos','packages','teuchos','src'),join(pecos_root,'packages','VPISparseGrid','src')]
+    approximation_library_dirs += [
+        join(pecos_build_dir,'src'),
+        join(pecos_build_dir,'packages','VPISparseGrid','src'),
+        join(pecos_build_dir,'surrogates','pecos_wrapper','src')]
+approximation_libraries = ['pecos_wrapper','pecos_src','sparsegrid']+approximation_libraries#order of libraries is important
+approximation_srcs=[join('cpp_src','approximations.i')]+pydakota_srcs
+print approximation_srcs
 approximation = Extension(
     '_approximation',
-    [join('cpp_src','approximations.i')]+pydakota_srcs,
+    approximation_srcs,
     include_dirs = approximation_include_dirs,
     define_macros =[('COMPILE_WITH_PYTHON',None)],
     undef_macros = [],
     language='c++',
     library_dirs = approximation_library_dirs,
-    libraries = ['models','pecos_util','teuchos','blas','lapack'],
+    libraries = approximation_libraries,
     extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in approximation_include_dirs])
 

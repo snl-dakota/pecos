@@ -3,6 +3,7 @@
 %include <std_vector.i>
 %template(DoubleStdVector) std::vector<double>;
 %template(IntStdVector) std::vector<int>;
+%template() std::vector<short>;
 %{
 #include <Python.h> 
 #include <numpy/arrayobject.h>
@@ -24,5 +25,8 @@
 %include "stl.i"
 %include "std_vector_example_type_defs.hpp"
 %include "std_vector_example.hpp"
-   
-typedef double Real;
+
+ // I cannot make following work. only can make work import typedefs file
+ //typedef double Real; */
+ //typedef std::vector<short> Other::ShortArray; */
+ //typedef std::vector<Real> RealArray; */
