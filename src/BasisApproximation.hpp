@@ -56,9 +56,9 @@ public:
   /// retrieve the approximate function Hessian for a given parameter vector
   virtual const RealSymMatrix& hessian(const RealVector& x);
 
-  /// set PolynomialApproximation::surrData
+  /// set PolynomialApproximation::origSurrData
   virtual void surrogate_data(const SurrogateData& data);
-  /// get PolynomialApproximation::surrData
+  /// get PolynomialApproximation::origSurrData
   virtual const SurrogateData& surrogate_data() const;
 
   /// return the minimum number of samples (unknowns) required to

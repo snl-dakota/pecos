@@ -96,6 +96,10 @@ protected:
   /// initialize multiIndex, expansionCoeffs, et al.
   void allocate_arrays();
 
+  /// modify origSurrData to create hierarchical surplus response data
+  /// within surrData
+  void response_data_to_surplus_data();
+
   /// Performs global sensitivity analysis via variance-based decomposition;
   /// computes component (main and interaction) Sobol' indices
   void compute_component_sobol();
@@ -175,6 +179,14 @@ protected:
   //- Heading: Data
   //
 
+  /// instance of SurrogateData used in current approximation builds,
+  /// potentially reflecting data modifications relative to origSurrData
+  SurrogateData surrData;
+  /// index of current level within approximation hierarchy; triggers
+  /// modification of surrData to reflect hierarchical surplus differences
+  /// between the response data and the previous level approximations
+  size_t hierarchIndex;
+
   /// the coefficients of the expansion
   RealVector expansionCoeffs;
   /// the gradients of the expansion coefficients
@@ -219,7 +231,7 @@ private:
 
 inline OrthogPolyApproximation::
 OrthogPolyApproximation(const SharedBasisApproxData& shared_data):
-  PolynomialApproximation(shared_data)
+  PolynomialApproximation(shared_data), hierarchIndex(_NPOS)
 { }
 
 

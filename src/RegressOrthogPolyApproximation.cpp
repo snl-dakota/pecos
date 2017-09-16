@@ -213,6 +213,11 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   // array allocations dependent on solver type
   allocate_arrays();
 
+  // when using a hierarchical approximation, subtract current PCE prediction
+  // from the surrData so that we form a regression PCE on the surplus
+  if (hierarchIndex == _NPOS) surrData = origSurrData; // shared rep
+  else                        response_data_to_surplus_data();
+
   switch (data_rep->expConfigOptions.expBasisType) {
   case DEFAULT_BASIS: // least interpolation case
   case TOTAL_ORDER_BASIS: case TENSOR_PRODUCT_BASIS:
@@ -292,7 +297,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   Real rel_delta_star, abs_conv_tol = DBL_EPSILON, // for now
     rel_conv_tol = data_rep->expConfigOptions.convergenceTol;
-  short basis_type  = data_rep->expConfigOptions.expBasisType;
+  short basis_type = data_rep->expConfigOptions.expBasisType;
 
   // For a level 0 reference multi-index, we could safely omit evaluating the
   // initial CV error and always perform one cycle of select_best_active_mi(),

@@ -93,6 +93,11 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   gradient_check();
 #endif // DEBUG
 
+  // when using a hierarchical approximation, subtract current PCE prediction
+  // from the surrData so that we form a regression PCE on the surplus
+  if (hierarchIndex == _NPOS) surrData = origSurrData; // shared rep
+  else                        response_data_to_surplus_data();
+
   // calculate polynomial chaos coefficients
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;

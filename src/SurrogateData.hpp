@@ -137,8 +137,11 @@ public:
   //- Heading: member functions
   //
 
+  /// return deep copy of SurrogateDataVars instance
+  SurrogateDataVars copy() const;
+
   /// set i^{th} entry within continuousVars
-  void continuous_variable(const Real& c_var, size_t i);
+  void continuous_variable(Real c_var, size_t i);
   /// set continuousVars
   void continuous_variables(const RealVector& c_vars,
 			    short mode = DEFAULT_COPY);
@@ -158,7 +161,7 @@ public:
   IntVector discrete_int_variables_view();
 
   /// set i^{th} entry within discreteRealVars
-  void discrete_real_variable(const Real& dr_var, size_t i);
+  void discrete_real_variable(Real dr_var, size_t i);
   /// set discreteRealVars
   void discrete_real_variables(const RealVector& dr_vars,
 			       short mode = DEFAULT_COPY);
@@ -241,7 +244,16 @@ operator=(const SurrogateDataVars& sdv)
 //}
 
 
-inline void SurrogateDataVars::continuous_variable(const Real& c_var, size_t i)
+/// deep copy of SurrogateDataVars instance
+inline SurrogateDataVars SurrogateDataVars::copy() const
+{
+  SurrogateDataVars sdv(sdvRep->continuousVars,   sdvRep->discreteIntVars,
+			sdvRep->discreteRealVars, DEEP_COPY);
+  return sdv;
+}
+
+
+inline void SurrogateDataVars::continuous_variable(Real c_var, size_t i)
 { sdvRep->continuousVars[i] = c_var; }
 
 
@@ -297,8 +309,7 @@ inline IntVector SurrogateDataVars::discrete_int_variables_view()
 }
 
 
-inline void SurrogateDataVars::
-discrete_real_variable(const Real& dr_var, size_t i)
+inline void SurrogateDataVars::discrete_real_variable(Real dr_var, size_t i)
 { sdvRep->discreteRealVars[i] = dr_var; }
 
 
@@ -352,7 +363,7 @@ private:
   //
 
   /// constructor
-  SurrogateDataRespRep(const Real& fn_val, const RealVector& fn_grad,
+  SurrogateDataRespRep(Real fn_val, const RealVector& fn_grad,
 		       const RealSymMatrix& fn_hess, short bits, short mode);
   /// alternate constructor (data sizing only)
   SurrogateDataRespRep(short data_order, size_t num_vars);
@@ -373,7 +384,7 @@ private:
 
 
 inline SurrogateDataRespRep::
-SurrogateDataRespRep(const Real& fn_val, const RealVector& fn_grad,
+SurrogateDataRespRep(Real fn_val, const RealVector& fn_grad,
 		     const RealSymMatrix& fn_hess, short bits, short mode):
   responseFn(fn_val), // always deep copy for scalars
   activeBits(bits), referenceCount(1)
@@ -432,7 +443,7 @@ public:
   /// default constructor
   SurrogateDataResp();
   /// standard constructor
-  SurrogateDataResp(const Real& fn_val, const RealVector& fn_grad,
+  SurrogateDataResp(Real fn_val, const RealVector& fn_grad,
 		    const RealSymMatrix& fn_hess, short bits,
 		    short mode = DEFAULT_COPY);
   /// alternate constructor (data sizing only)
@@ -451,20 +462,23 @@ public:
   //- Heading: member functions
   //
 
+  /// return deep copy of SurrogateDataResp instance
+  SurrogateDataResp copy() const;
+
   /// set activeBits
   void active_bits(short val);
   /// get activeBits
   short active_bits() const;
 
   /// set responseFn
-  void response_function(const Real& fn);
+  void response_function(Real fn);
   /// get responseFn
-  const Real& response_function() const;
+  Real response_function() const;
   /// get "view" of responseFn for updating in place
   Real& response_function_view();
 
   /// set i^{th} entry within responseGrad
-  void response_gradient(const Real& grad_i, size_t i);
+  void response_gradient(Real grad_i, size_t i);
   /// set responseGrad
   void response_gradient(const RealVector& grad, short mode = DEFAULT_COPY);
   /// get responseGrad
@@ -473,7 +487,7 @@ public:
   RealVector response_gradient_view();
 
   /// set i-j^{th} entry within responseHess
-  void response_hessian(const Real& hess_ij, size_t i, size_t j);
+  void response_hessian(Real hess_ij, size_t i, size_t j);
   /// set responseHess
   void response_hessian(const RealSymMatrix& hess, short mode = DEFAULT_COPY);
   /// get responseHess
@@ -502,7 +516,7 @@ inline SurrogateDataResp::SurrogateDataResp(): sdrRep(NULL)
 
 
 inline SurrogateDataResp::
-SurrogateDataResp(const Real& fn_val, const RealVector& fn_grad,
+SurrogateDataResp(Real fn_val, const RealVector& fn_grad,
 		  const RealSymMatrix& fn_hess, short bits, short mode):
   sdrRep(new SurrogateDataRespRep(fn_val, fn_grad, fn_hess, bits, mode))
 { }
@@ -556,6 +570,15 @@ operator=(const SurrogateDataResp& sdr)
 //}
 
 
+/// deep copy of SurrogateDataResp instance
+inline SurrogateDataResp SurrogateDataResp::copy() const
+{
+  SurrogateDataResp sdr(sdrRep->responseFn,   sdrRep->responseGrad,
+			sdrRep->responseHess, sdrRep->activeBits, DEEP_COPY);
+  return sdr;
+}
+
+
 inline void SurrogateDataResp::active_bits(short val)
 { sdrRep->activeBits = val; }
 
@@ -564,11 +587,11 @@ inline short SurrogateDataResp::active_bits() const
 { return sdrRep->activeBits; }
 
 
-inline void SurrogateDataResp::response_function(const Real& fn)
+inline void SurrogateDataResp::response_function(Real fn)
 { sdrRep->responseFn = fn; }
 
 
-inline const Real& SurrogateDataResp::response_function() const
+inline Real SurrogateDataResp::response_function() const
 { return sdrRep->responseFn; }
 
 
@@ -576,8 +599,7 @@ inline Real& SurrogateDataResp::response_function_view()
 { return sdrRep->responseFn; }
 
 
-inline void SurrogateDataResp::
-response_gradient(const Real& grad_i, size_t i)
+inline void SurrogateDataResp::response_gradient(Real grad_i, size_t i)
 { sdrRep->responseGrad[i] = grad_i; }
 
 
@@ -606,7 +628,7 @@ inline RealVector SurrogateDataResp::response_gradient_view()
 
 
 inline void SurrogateDataResp::
-response_hessian(const Real& hess_ij, size_t i, size_t j)
+response_hessian(Real hess_ij, size_t i, size_t j)
 { sdrRep->responseHess(i,j) = hess_ij; }
 
 
@@ -776,6 +798,11 @@ public:
   //- Heading: Member functions
   //
 
+  /// deep copy of SurrogateData instance with options for shallow copies
+  /// of the SurrogateData{Vars,Resp} objects
+  SurrogateData copy(short sdv_mode = DEEP_COPY,
+		     short sdr_mode = DEEP_COPY) const;
+
   /// set anchor{Vars,Resp}
   void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// set {vars,resp}Data
@@ -808,7 +835,7 @@ public:
   /// get anchorResp.active_bits()
   short anchor_active_bits() const;
   /// get anchorResp.response_function()
-  const Real& anchor_function() const;
+  Real anchor_function() const;
   /// get anchorResp.response_gradient()
   const RealVector& anchor_gradient() const;
   /// get anchorResp.response_hessian()
@@ -822,10 +849,17 @@ public:
   const RealVector& discrete_real_variables(size_t i) const;
   /// get respData[i].active_bits()
   short response_active_bits(size_t i) const;
+
+  /// set respData[i].response_function()
+  void response_function(Real fn_val, size_t i);
   /// get respData[i].response_function()
-  const Real& response_function(size_t i) const;
+  Real response_function(size_t i) const;
+  /// set respData[i].response_gradient()
+  void response_gradient(const RealVector& fn_grad, size_t i);
   /// get respData[i].response_gradient()
   const RealVector& response_gradient(size_t i) const;
+  /// set respData[i].response_hessian()
+  void response_hessian(const RealSymMatrix& fn_hess, size_t i);
   /// get respData[i].response_hessian()
   const RealSymMatrix& response_hessian(size_t i) const;
 
@@ -864,8 +898,10 @@ public:
   /// return net number of active data components (total minus failed)
   size_t active_response_size() const;
 
+  /// return number of 1D arrays within stored{Vars,Resp}Data 2D arrays
+  size_t stored_sets() const;
   /// return number of 1D arrays within popped{Vars,Resp}Trials 2D arrays
-  size_t popped_trials() const;
+  size_t popped_sets() const;
   /// return number of derivative variables as indicated by size of
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
@@ -890,6 +926,33 @@ public:
   void clear_stored();
 
 private:
+
+  //
+  //- Heading: Member functions
+  //
+
+  /// set failedAnchorData
+  void failed_anchor_data(short fail_anchor);
+  /// set failedRespData
+  void failed_response_data(const SizetShortMap& fail_resp);
+
+  /// get storedVarsData
+  const SDV2DArray& stored_variables_data() const;
+  /// set storedVarsData
+  void stored_variables_data(const SDV2DArray& stored_vars);
+  /// get storedRespData
+  const SDR2DArray& stored_response_data() const;
+  /// set storedRespData
+  void stored_response_data(const SDR2DArray& stored_resp);
+
+  /// get poppedVarsTrials
+  const SDV2DArray& popped_variables_trials() const;
+  /// set poppedVarsTrials
+  void popped_variables_trials(const SDV2DArray& popped_vars);
+  /// get poppedRespTrials
+  const SDR2DArray& popped_response_trials() const;
+  /// set poppedRespTrials
+  void popped_response_trials(const SDR2DArray& popped_resp);
 
   //
   //- Heading: Private data members
@@ -1011,7 +1074,7 @@ inline short SurrogateData::response_active_bits(size_t i) const
 { return sdRep->respData[i].active_bits(); }
 
 
-inline const Real& SurrogateData::anchor_function() const
+inline Real SurrogateData::anchor_function() const
 { return sdRep->anchorResp.response_function(); }
 
 
@@ -1023,12 +1086,26 @@ inline const RealSymMatrix& SurrogateData::anchor_hessian() const
 { return sdRep->anchorResp.response_hessian(); }
 
 
-inline const Real& SurrogateData::response_function(size_t i) const
+inline void SurrogateData::response_function(Real fn_val, size_t i)
+{ sdRep->respData[i].response_function(fn_val); }
+
+
+inline Real SurrogateData::response_function(size_t i) const
 { return sdRep->respData[i].response_function(); }
+
+
+inline void SurrogateData::
+response_gradient(const RealVector& fn_grad, size_t i)
+{ sdRep->respData[i].response_gradient(fn_grad); }
 
 
 inline const RealVector& SurrogateData::response_gradient(size_t i) const
 { return sdRep->respData[i].response_gradient(); }
+
+
+inline void SurrogateData::
+response_hessian(const RealSymMatrix& fn_hess, size_t i)
+{ sdRep->respData[i].response_hessian(fn_hess); }
 
 
 inline const RealSymMatrix& SurrogateData::response_hessian(size_t i) const
@@ -1241,7 +1318,11 @@ inline size_t SurrogateData::active_response_size() const
 { return response_size() - failed_response_size(); }
 
 
-inline size_t SurrogateData::popped_trials() const
+inline size_t SurrogateData::stored_sets() const
+{ return std::min(sdRep->storedVarsData.size(), sdRep->storedRespData.size()); }
+
+
+inline size_t SurrogateData::popped_sets() const
 {
   return std::min(sdRep->poppedVarsTrials.size(),
 		  sdRep->poppedRespTrials.size());
@@ -1339,6 +1420,135 @@ inline void SurrogateData::clear_popped()
 
 inline void SurrogateData::clear_stored()
 { sdRep->storedVarsData.clear(); sdRep->storedRespData.clear(); }
+
+
+inline void SurrogateData::failed_anchor_data(short fail_anchor)
+{ sdRep->failedAnchorData = fail_anchor; }
+
+
+inline void SurrogateData::failed_response_data(const SizetShortMap& fail_resp)
+{ sdRep->failedRespData = fail_resp; }
+
+
+inline const SDV2DArray& SurrogateData::stored_variables_data() const
+{ return sdRep->storedVarsData; }
+
+
+inline void SurrogateData::stored_variables_data(const SDV2DArray& stored_vars)
+{ sdRep->storedVarsData = stored_vars; }
+
+
+inline const SDR2DArray& SurrogateData::stored_response_data() const
+{ return sdRep->storedRespData; }
+
+
+inline void SurrogateData::stored_response_data(const SDR2DArray& stored_resp)
+{ sdRep->storedRespData = stored_resp; }
+
+
+inline const SDV2DArray& SurrogateData::popped_variables_trials() const
+{ return sdRep->poppedVarsTrials; }
+
+
+inline void SurrogateData::
+popped_variables_trials(const SDV2DArray& popped_vars)
+{ sdRep->poppedVarsTrials = popped_vars; }
+
+
+inline const SDR2DArray& SurrogateData::popped_response_trials() const
+{ return sdRep->poppedRespTrials; }
+
+
+inline void SurrogateData::
+popped_response_trials(const SDR2DArray& popped_resp)
+{ sdRep->poppedRespTrials = popped_resp; }
+
+
+inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
+{
+  SurrogateData sd;
+
+  if (sdv_mode == DEEP_COPY) {
+    sd.anchor_variables(sdRep->anchorVars.copy());
+
+    size_t i, num_pts = sdRep->varsData.size();
+    SDVArray sdv_array(num_pts);
+    for (i=0; i<num_pts; ++i)
+      sdv_array[i] = sdRep->varsData[i].copy();
+    sd.variables_data(sdv_array);
+
+    size_t j, num_sdva = sdRep->storedVarsData.size();
+    SDV2DArray stored_sdv(num_sdva);
+    for (i=0; i<num_sdva; ++i) {
+      const SDVArray& rep_stored_i = sdRep->storedVarsData[i];
+      num_pts = rep_stored_i.size();
+      stored_sdv[i].resize(num_pts);
+      for (j=0; j<num_pts; ++j)
+	stored_sdv[i][j] = rep_stored_i[j].copy();
+    }
+    sd.stored_variables_data(stored_sdv);
+
+    num_sdva = sdRep->poppedVarsTrials.size();
+    SDV2DArray popped_sdv(num_sdva);
+    for (i=0; i<num_sdva; ++i) {
+      const SDVArray& rep_popped_i = sdRep->poppedVarsTrials[i];
+      num_pts = rep_popped_i.size();
+      popped_sdv[i].resize(num_pts);
+      for (j=0; j<num_pts; ++j)
+	popped_sdv[i][j] = rep_popped_i[j].copy();
+    }
+    sd.popped_variables_trials(popped_sdv);
+  }
+  else { // shallow SDV copies based on operator=
+    sd.anchor_variables(sdRep->anchorVars);
+    sd.variables_data(sdRep->varsData);
+    sd.stored_variables_data(sdRep->storedVarsData);
+    sd.popped_variables_trials(sdRep->poppedVarsTrials);
+  }
+
+  if (sdr_mode == DEEP_COPY) {
+    sd.anchor_response(sdRep->anchorResp.copy());
+
+    size_t i, num_pts = sdRep->respData.size();
+    SDRArray sdr_array(num_pts);
+    for (i=0; i<num_pts; ++i)
+      sdr_array[i] = sdRep->respData[i].copy();
+    sd.response_data(sdr_array);
+
+    size_t j, num_sdra = sdRep->storedRespData.size();
+    SDR2DArray stored_sdr(num_sdra);
+    for (i=0; i<num_sdra; ++i) {
+      const SDRArray& rep_stored_i = sdRep->storedRespData[i];
+      num_pts = rep_stored_i.size();
+      stored_sdr[i].resize(num_pts);
+      for (j=0; j<num_pts; ++j)
+	stored_sdr[i][j] = rep_stored_i[j].copy();
+    }
+    sd.stored_response_data(stored_sdr);
+
+    num_sdra = sdRep->poppedRespTrials.size();
+    SDR2DArray popped_sdr(num_sdra);
+    for (i=0; i<num_sdra; ++i) {
+      const SDRArray& rep_popped_i = sdRep->poppedRespTrials[i];
+      num_pts = rep_popped_i.size();
+      popped_sdr[i].resize(num_pts);
+      for (j=0; j<num_pts; ++j)
+	popped_sdr[i][j] = rep_popped_i[j].copy();
+    }
+    sd.popped_response_trials(popped_sdr);
+  }
+  else { // shallow SDR copies based on operator=
+    sd.anchor_response(sdRep->anchorResp);
+    sd.response_data(sdRep->respData);
+    sd.stored_response_data(sdRep->storedRespData);
+    sd.popped_response_trials(sdRep->poppedRespTrials);
+  }
+
+  sd.failed_anchor_data(sd.failed_anchor_data());
+  sd.failed_response_data(sd.failed_response_data());
+
+  return sd;
+}
 
 } // namespace Pecos
 

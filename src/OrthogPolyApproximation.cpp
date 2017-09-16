@@ -43,6 +43,48 @@ void OrthogPolyApproximation::allocate_arrays()
 }
 
 
+void OrthogPolyApproximation::response_data_to_surplus_data()
+{
+  // We will only modify the response to reflect hierarchical surpluses,
+  // so initialize surrData with shared vars and unique resp instances
+  surrData = origSurrData.copy(SHALLOW_COPY, DEEP_COPY);
+
+  // More efficient to roll up contributions from each level expansion than
+  // to combine expansions and then eval once.  Approaches are equivalent for
+  // linear addition.
+
+  // TO DO; MULTIPLICATIVE EXPANSION?
+  // > NonDExpansion::multifidelity_expansion() supports it
+  // > HierarchInterpPolyApproximation::compute_expansion_coefficients() doesn't
+
+  size_t i, j, num_pts = origSurrData.points();
+  for (i=0; i<num_pts; ++i) {
+    const RealVector& c_vars = origSurrData.continuous_variables(i);
+    if (expansionCoeffFlag) {
+      Real fn_val = origSurrData.response_function(i);
+      //if ( == ADDITIVE_CORRECTION)
+      for (j=0; j<hierarchIndex; ++j)
+	fn_val -= stored_value(c_vars, j);
+      //else if ( == MULTIPLICATIVE_CORRECTION) // TO DO
+      //for (j=0; j<hierarchIndex; ++j)
+      //  fn_val /= stored_value(c_vars, j);
+      surrData.response_function(fn_val, i);
+    }
+    if (expansionCoeffGradFlag) {
+      RealVector fn_grad;
+      copy_data(origSurrData.response_gradient(i), fn_grad);
+      //if ( == ADDITIVE_CORRECTION)
+      for (j=0; j<hierarchIndex; ++j)
+	fn_grad -= stored_gradient_nonbasis_variables(c_vars, j);
+      //else if ( == MULTIPLICATIVE_CORRECTION) // TO DO
+      //for (j=0; j<hierarchIndex; ++j)
+      //  fn_grad /= ; // see DiscrepancyCorrection::compute_multiplicative()
+      surrData.response_gradient(fn_grad, i);
+    }
+  }
+}
+
+
 void OrthogPolyApproximation::store_coefficients(size_t index)
 {
   // Store the aggregated expansion data.  This is used for multifidelity
@@ -313,10 +355,10 @@ Real OrthogPolyApproximation::value(const RealVector& x)
   return approx_val;
 }
 
-void OrthogPolyApproximation::basis_value(const RealVector& x,
-		       std::vector<BasisPolynomial> &polynomial_basis,
-					  const UShort2DArray &multi_index,
-					  RealVector &basis_values)
+
+void OrthogPolyApproximation::
+basis_value(const RealVector& x, std::vector<BasisPolynomial> &polynomial_basis,
+	    const UShort2DArray &multi_index, RealVector &basis_values)
 {
   size_t i, num_exp_terms = multi_index.size();
   for (i=0; i<num_exp_terms; ++i)
@@ -325,18 +367,20 @@ void OrthogPolyApproximation::basis_value(const RealVector& x,
 							  polynomial_basis);
 }
 
-void OrthogPolyApproximation::basis_matrix(const RealMatrix& x,
-					   RealMatrix &basis_values){
+
+void OrthogPolyApproximation::
+basis_matrix(const RealMatrix& x, RealMatrix &basis_values){
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   basis_matrix(x,data_rep->polynomialBasis,data_rep->multiIndex,
 	       basis_values);
 }
 
-void OrthogPolyApproximation::basis_matrix(const RealMatrix& x,
-		       std::vector<BasisPolynomial> &polynomial_basis,
-					  const UShort2DArray &multi_index,
-					  RealMatrix &basis_values)
+
+void OrthogPolyApproximation::
+basis_matrix(const RealMatrix& x,
+	     std::vector<BasisPolynomial> &polynomial_basis,
+	     const UShort2DArray &multi_index, RealMatrix &basis_values)
 {
   size_t i, j, num_exp_terms = multi_index.size(), num_samples = x.numCols(),
     num_vars = x.numRows();

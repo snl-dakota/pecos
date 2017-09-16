@@ -175,9 +175,9 @@ public:
   //- Heading: Member functions
   //
 
-  /// set surrData (shared representation)
+  /// set origSurrData (shared representation)
   void surrogate_data(const SurrogateData& data);
-  /// get surrData
+  /// get origSurrData
   const SurrogateData& surrogate_data() const;
 
   /// return expansionMoments
@@ -192,8 +192,7 @@ public:
   void standardize_moments(const RealVector& central_moments,
 			   RealVector& std_moments);
 
-  // number of data points to remove in a decrement (implemented at this
-  // intermediate level since surrData not defined at base level)
+  // number of data points to remove in a decrement
   //size_t pop_count();
 
   /// set ExpansionConfigOptions::expansionCoeffFlag
@@ -242,8 +241,10 @@ protected:
   //
 
   /// instance containing the variables (shared) and response (unique) data
-  /// arrays for constructing a surrogate of a single response function
-  SurrogateData surrData;
+  /// arrays for constructing a surrogate of a single response function;
+  /// this is the original unmodified data set, prior to any potential
+  /// manipulations by the approximation classes
+  SurrogateData origSurrData;
 
   /// flag for calculation of expansion coefficients from response values
   bool expansionCoeffFlag;
@@ -264,7 +265,7 @@ protected:
 
   /// gradient of the polynomial approximation returned by gradient()
   RealVector approxGradient;
-  /// gradient of the polynomial approximation returned by gradient()
+  /// Hessian of the polynomial approximation returned by hessian()
   RealSymMatrix approxHessian;
   /// gradient of the primary mean (expansion mean for OrthogPoly,
   /// numerical integration mean for InterpPoly)
@@ -317,11 +318,11 @@ inline PolynomialApproximation::~PolynomialApproximation()
 
 
 inline const SurrogateData& PolynomialApproximation::surrogate_data() const
-{ return surrData; }
+{ return origSurrData; }
 
 
 inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
-{ surrData = data; /* shared representation */ }
+{ origSurrData = data; /* shared representation */ }
 
 
 inline const RealVector& PolynomialApproximation::expansion_moments() const
