@@ -24,6 +24,26 @@ class OptionsListTestCase(unittest.TestCase):
         opts.set("key1",{})
         assert opts.get("key1")=={}
 
+        array = numpy.array([1,2,3],dtype=numpy.int64)
+        opts.set("key3",array)
+        assert numpy.allclose(opts.get("key3"),array)
+
+        array = numpy.array([1,2,3],dtype=numpy.int32)
+        opts.set("key3",array)
+        assert numpy.allclose(opts.get("key3"),array)
+
+        array = numpy.array([1,2,3],dtype=numpy.double)
+        opts.set("key3",array)
+        assert numpy.allclose(opts.get("key3"),array)
+
+        array = [1,2,3]
+        opts.set("key3",array)
+        assert numpy.allclose(opts.get("key3"),array)
+
+        array = [1.,2.,3.]
+        opts.set("key3",array)
+        assert numpy.allclose(opts.get("key3"),array)
+
     def test_len(self):
         opts = OptionsList()
         assert len(opts)==0
@@ -39,9 +59,12 @@ class OptionsListTestCase(unittest.TestCase):
     def test__eq__(self):
         opts1 = OptionsList()
         opts1.set("key1",{})
+        array = [1.,2.,3.]
+        opts1.set("key2",array)
 
         opts2 = OptionsList()
         opts2.set("key1",{})
+        opts2.set("key2",array)
 
         assert opts1==opts2
 
@@ -66,9 +89,11 @@ class OptionsListTestCase(unittest.TestCase):
         opts["key1"]==2.
 
     def test__str__(self):
+        opts = OptionsList()
+        opts.set("key1",[1,2,3])
         #print opts
         #print opts.__repr__
-        pass
+
 
 if __name__ == "__main__":
 

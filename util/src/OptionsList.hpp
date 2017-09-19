@@ -6,6 +6,7 @@
 #include <map>
 #include <boost/any.hpp>
 #include <vector>
+#include "Teuchos_SerialDenseVector.hpp"
 
 typedef std::map<std::string, boost::any> opts_map;
 
@@ -36,7 +37,9 @@ public:
     try{
       return boost::any_cast<T>(iter->second);
     }catch (boost::bad_any_cast &e){
-      throw(std::runtime_error(e.what()));
+      std::string msg = e.what() + std::string(" in OptionsList::get(") +
+	name+")";
+      throw(std::runtime_error(msg));
     }
   };
 
@@ -169,6 +172,10 @@ bool equal_any(const boost::any& lhs, const boost::any& rhs){
     return boost::any_cast<std::string>(lhs)==boost::any_cast<std::string>(rhs);
   else if (lhs.type()==typeid(OptionsList))
     return boost::any_cast<OptionsList>(lhs)==boost::any_cast<OptionsList>(rhs);
+  else if (lhs.type()==typeid(Teuchos::SerialDenseVector<int,int>))
+    return boost::any_cast< Teuchos::SerialDenseVector<int,int> >(lhs)==boost::any_cast< Teuchos::SerialDenseVector<int,int> >(rhs);
+    else if (lhs.type()==typeid(Teuchos::SerialDenseVector<int,double>))
+      return boost::any_cast< Teuchos::SerialDenseVector<int,double> >(lhs)==boost::any_cast< Teuchos::SerialDenseVector<int,double> >(rhs);
   else{
     std::string msg = "Comparion of any not implemented for specified type";
     throw(std::runtime_error(msg));
@@ -185,6 +192,10 @@ std::ostream& operator<<(std::ostream& os, const boost::any& item){
     os << boost::any_cast<std::string>(item);
   else if (item.type()==typeid(OptionsList))
     os << boost::any_cast<OptionsList>(item);
+  else if (item.type()==typeid(Teuchos::SerialDenseVector<int,int>))
+    os << boost::any_cast< Teuchos::SerialDenseVector<int,int> >(item);
+  else if (item.type()==typeid(Teuchos::SerialDenseVector<int,double>))
+    os << boost::any_cast< Teuchos::SerialDenseVector<int,double> >(item);
   else{
     std::string msg = "Print of any not implemented for specified type";
     throw(std::runtime_error(msg));

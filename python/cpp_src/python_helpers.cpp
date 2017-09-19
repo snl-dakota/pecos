@@ -1,6 +1,46 @@
 #include "python_helpers.hpp"
 #include "swigpyrun.h"
 
+template<>
+int NumPy_TypeCode<int>(){
+  return NPY_INT;
+}
+
+template<>
+int NumPy_TypeCode<long>(){
+  return NPY_LONG;
+}
+
+
+template<>
+int NumPy_TypeCode<double>(){
+  return NPY_DOUBLE;
+}
+
+template< typename T, typename S >
+void copyNumPyToTeuchosVector(PyObject * pyArray,
+			      Teuchos::SerialDenseVector<int,T > & tvec){
+  int length = PyArray_DIM((PyArrayObject*) pyArray, 0);
+  tvec.resize(length);
+  S * data = (S*) PyArray_DATA((PyArrayObject*) pyArray);
+  for (int i=0; i<length; ++i){
+    // static cast need because we are casting npy_long and npy_int to int
+    tvec[i] = static_cast<T>(*(data++));
+  }
+}
+
+template< typename T >
+PyObject * copyTeuchosVectorToNumPy(Teuchos::SerialDenseVector< int,T > &tvec)
+{
+  int typecode = NumPy_TypeCode< T >();
+  npy_intp dims[] = { tvec.length() };
+  PyObject * pyArray = PyArray_SimpleNew(1, dims, typecode);
+  T * data = (T*) PyArray_DATA((PyArrayObject*) pyArray);
+  for (int i=0; i<tvec.length(); ++i)
+    *(data++) = tvec[i];
+  return pyArray;
+}
+
 bool setPythonParameter(OptionsList & opts_list,
 			const std::string      & name,
 			PyObject               * value)
@@ -77,6 +117,40 @@ bool setPythonParameter(OptionsList & opts_list,
       boost::shared_ptr< OptionsList > * smartarg =
 	reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
       if (smartarg) opts_list.set(name, *(smartarg->get()));
+    }
+  }
+  else if (PyArray_Check(value) || PySequence_Check(value)){
+    PyObject * pyArray =
+      PyArray_CheckFromAny(value,
+                           NULL,
+                           1,
+                           1,
+                           NPY_ARRAY_DEFAULT | NPY_ARRAY_NOTSWAPPED,
+                           NULL);
+    if (!pyArray) return false;
+    if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<int>())
+      {
+	Teuchos::SerialDenseVector<int,int> tvec;
+	copyNumPyToTeuchosVector<int,int>(pyArray, tvec);
+	opts_list.set(name, tvec);
+      }
+    else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<long>())
+      {
+	Teuchos::SerialDenseVector<int,int> tvec;
+	copyNumPyToTeuchosVector<int,long>(pyArray, tvec);
+	opts_list.set(name, tvec);
+      }
+    else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<double>())
+      {
+	Teuchos::SerialDenseVector< int,double > tvec;
+	copyNumPyToTeuchosVector<double,double>(pyArray, tvec);
+	opts_list.set(name, tvec);
+      }
+    else
+    {
+      // Unsupported data type
+      if (pyArray != value) Py_DECREF(pyArray);
+      return false;
     }
   }
   // All other value types are unsupported
@@ -292,6 +366,26 @@ PyObject * getPythonParameter(const OptionsList & opts_list,
     // // Bill uses this but I get a segfault unless I used above. Why?
     // //return SWIG_NewPointerObj((void*)valuercp, swig_TPL_ptr, SWIG_POINTER_OWN);
     return optionsListToNewPyDict(boost::any_cast< OptionsList >(*entry));
+  }
+  else if (entry->type()==typeid(Teuchos::SerialDenseVector<int,int>))
+  {
+    try
+      {
+        Teuchos::SerialDenseVector< int,int > tvec =
+          boost::any_cast< Teuchos::SerialDenseVector< int,int > >(*entry);
+        return copyTeuchosVectorToNumPy(tvec);
+      }
+    catch(boost::bad_any_cast &e) {return NULL;}
+  }
+  else if (entry->type()==typeid(Teuchos::SerialDenseVector<int,double>))
+  {
+    try
+      {
+	Teuchos::SerialDenseVector< int,double > tvec =
+	  boost::any_cast< Teuchos::SerialDenseVector< int,double > >(*entry);
+	return copyTeuchosVectorToNumPy(tvec);
+      }
+    catch(boost::bad_any_cast &e) {return NULL;}
   }
   // All  other types are unsupported
   return NULL;

@@ -1,10 +1,10 @@
 #ifndef APPROXIMATION_HPP
 #define APPROXIMATION_HPP
 
-#include <Function.hpp>
-#include <VariableTransformation.hpp>
-#include <OptionsList.hpp>
-#include <teuchos_data_types.hpp>
+#include "Function.hpp"
+#include "VariableTransformation.hpp"
+#include "OptionsList.hpp"
+#include "teuchos_data_types.hpp"
 
 namespace Surrogates {
 

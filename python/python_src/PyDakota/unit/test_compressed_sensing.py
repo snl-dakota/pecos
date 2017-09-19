@@ -341,7 +341,7 @@ class TestOMP(unittest.TestCase):
 
 def single_test_suite():
     suite = unittest.TestSuite()
-    suite.addTest( TestLASSO( "test_lar_last_step" ) )
+    suite.addTest( TestLASSO( "test_lar_last_step" ) ) 
    
     return suite      
 

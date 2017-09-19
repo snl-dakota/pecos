@@ -7,10 +7,23 @@
 // warning: "_POSIX_C_SOURCE" redefined. 
 // Python.h is included in numpy_include.hpp
 #include "numpy_include.hpp"
+#include "Teuchos_SerialDenseVector.hpp"
 
 
 #include "OptionsList.hpp"
 #include <boost/shared_ptr.hpp>
+
+/** \brief Copy a numpy ndarray into a Teuchos SerialDenseVector (SDV).
+ * T is the scalar type of the SDV and S is the scalar type of the numpy array
+ * Having these two template parameters instead of just one T allows the
+ # conversion of both NPY_INT and NPY_LONG into A SDV<int,int>.
+ */
+template< typename T, typename S >
+void copyNumPyToTeuchosVector(PyObject * pyArray,
+			      Teuchos::SerialDenseVector<int,T > & tvec);
+
+template< typename T >
+PyObject * copyTeuchosVectorToNumPy(Teuchos::SerialDenseVector< int,T > &tvec);
 
 bool setPythonParameter(OptionsList & opts_list,
 			const std::string      & name,
@@ -29,4 +42,7 @@ bool updatePyDictWithOptionsList(PyObject          * dict,
 				 const OptionsList & opts_list);
 
 PyObject * optionsListToNewPyDict(const OptionsList & opts_list);
+
+template< typename TYPE >
+int NumPy_TypeCode();
 #endif // PYTHON_HELPERS_HPP

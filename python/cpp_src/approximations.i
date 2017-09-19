@@ -36,6 +36,7 @@ approximation packages:
 #include "AffineVariableTransformation.hpp"
 #include "polynomial_approximation_drivers.hpp"
 #include "RegressionBuilder.hpp"
+#include "PCEFactory.hpp"
   using std::string;
   using namespace Pecos;
 #include "typedefs_for_python_wrapper.hpp"
@@ -80,6 +81,7 @@ approximation packages:
 %include "RegressionBuilder.hpp"
 
 %include "polynomial_approximation_drivers.hpp"
+%include "PCEFactory.hpp"
 
 %pythoncode %{
 import numpy

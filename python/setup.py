@@ -93,7 +93,10 @@ package_swig_opts = base_swig_opts+[
     '%s'%join(distutils_build_dir,package_name)]
 
 options_list_include_dirs = base_include_dirs+[join(pecos_root,'util','src')]+\
-  surrogates_include_dirs
+  surrogates_include_dirs + teuchos_include_dirs
+options_list_library_dirs = [
+    join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')]
+options_list_libraries = ['teuchos']
 options_list = Extension(
     '_options_list',
     [join('cpp_src','OptionsList.i')]+pydakota_srcs,
@@ -101,8 +104,8 @@ options_list = Extension(
     define_macros =[('COMPILE_WITH_PYTHON',None)],
     undef_macros = [],
     language='c++',
-    library_dirs = [],
-    libraries = [],
+    library_dirs = options_list_library_dirs,
+    libraries = options_list_libraries,
     extra_compile_args = ['-std=c++11'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in options_list_include_dirs]
 )
@@ -264,14 +267,15 @@ setup(
     package_dir = {'': 'python_src'},
     ext_package=package_name,
     ext_modules=[
-        options_list,
-        math_tools,
-        regression,
-        approximation,
-        std_vector_example,
-        options_list_interface,
-        enum_example,
-        univariate_polynomials],
+        options_list#,
+        #math_tools,
+        #regression,
+        #approximation,
+        #std_vector_example,
+        #options_list_interface,
+        #enum_example,
+        #univariate_polynomials
+    ],
     package_data={package_name:[join('unit','data/*.gz')]},
     test_suite='setup.PyDakota_test_suite')
 
@@ -295,7 +299,3 @@ print (string)
 # If get an error cannot import _modulename.so then this may be due to a
 # linking error. E.g. forgot to link in a required library using the libraries
 # keywork in Extension
-
-# on osx use
-# conda install numpy scipy matplotlib cmake boost=1.61.0 openblas=0.2.19 gcc swig
-# need to do export DYLD_FALLBACK_LIBRARY_PATH=~/miniconda2/envs/fenics/lib # this gets gfotran library on  library path

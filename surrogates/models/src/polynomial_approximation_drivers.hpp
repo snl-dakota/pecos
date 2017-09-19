@@ -41,7 +41,7 @@ void regression_driver(Function &target_function, PolyApproximation &approx, Opt
   boost::shared_ptr<VariableTransformation> var_transform=
     approx.get_variable_transformation();
   generate_uniform_samples(approx.num_vars(), num_samples, seed,
-                      *var_transform, samples);
+			   *var_transform, samples);
 
   // Evaluate the function at the build samples
   RealMatrix values;
@@ -61,7 +61,7 @@ void regression_driver(Function &target_function, PolyApproximation &approx, Opt
   approx.set_coefficients(coeffs);
 
   // figure out how to return class using swig argout
-  // Then consider returning a status parameterList
+  // Then consider returning a status OptionsList
 }
 
 } // namespace Surrogates
