@@ -11,7 +11,7 @@ void Monomial::set_options(const OptionsList &opts){
 }
 
 void Monomial::
-generate_basis_matrix(const RealMatrix &samples, RealMatrix &basis_matrix){
+generate_canonical_basis_matrix(const RealMatrix &samples, RealMatrix &basis_matrix){
   int num_vars = varTransform_->num_vars();
   resize_if_needed(basis_matrix, samples.numCols(), basisIndices_.numCols());
   for(int j=0; j<basisIndices_.numCols(); ++j){

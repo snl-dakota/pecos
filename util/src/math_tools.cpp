@@ -605,4 +605,12 @@ void random_permutation(int M, int N, unsigned int seed,
     }
 }
 
+void tensor_product_indices(const IntVector levels, IntMatrix &indices){
+  int num_dims = levels.length();
+  std::vector< IntVector > index_sets_1d;
+  index_sets_1d.resize(num_dims);
+  for (int d=0; d<num_dims; ++d)
+    Surrogates::range( index_sets_1d[d], 0, levels[d]+1, 1 );
+  Surrogates::cartesian_product( index_sets_1d, indices, 1 );
+}
 } //namespace Surrogates

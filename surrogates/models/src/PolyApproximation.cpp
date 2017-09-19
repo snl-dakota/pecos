@@ -16,6 +16,13 @@ void PolyApproximation::value(const RealMatrix &samples, RealMatrix &approx_vals
   multiply(basis_matrix,basisCoeffs_,approx_vals,1.0,0.0);
 }
 
+void PolyApproximation::
+generate_basis_matrix(const RealMatrix &samples, RealMatrix &basis_matrix){
+  RealMatrix transformed_samples;
+  varTransform_->map_samples_from_user_space(samples,transformed_samples);
+  generate_canonical_basis_matrix(transformed_samples, basis_matrix);
+}
+
 
 void PolyApproximation::set_coefficients(const RealMatrix &coeffs) {
     basisCoeffs_.shapeUninitialized(coeffs.numRows(), coeffs.numCols());
@@ -48,6 +55,10 @@ void PolyApproximation::jacobian(const RealVector &sample, RealMatrix &jacobian)
 
 void PolyApproximation::hessian(const RealMatrix &samples, int qoi, RealMatrixList &hessians) {
   throw(std::string("This Function type does not provide gradients"));
+}
+
+int PolyApproximation::num_terms() const{
+  return basisIndices_.numCols();
 }
 
 } // namespace Surrogates

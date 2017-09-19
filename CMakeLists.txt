@@ -201,7 +201,7 @@ add_subdirectory(surrogates)
 # TODO: document SWIG_EXECUTABLE to help find
 option(DAKOTA_API_PYTHON "Enable Python API (requires SWIG)" OFF)
 if(DAKOTA_API_PYTHON)
-  dakota_api_python()
+  #dakota_api_python()
   # Python/SWIG wrapper tests
-  add_subdirectory(python)
+  #add_subdirectory(python)
 endif()

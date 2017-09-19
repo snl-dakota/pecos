@@ -125,7 +125,7 @@ void cartesian_product( const std::vector< Teuchos::SerialDenseVector<O,T> > &in
  * @return result the outer product
  */
 template<typename O, typename T>
-void outer_product( const std::vector< Teuchos::SerialDenseVector<O,T> > &input_sets, Teuchos::SerialDenseVector<O,T> &result )
+void outer_product( const std::vector< Teuchos::SerialDenseVector<O,T> > &input_sets, Teuchos::SerialDenseVector<O,T> &argout )
 {
   int num_elems = 1;
   int num_sets = input_sets.size();
@@ -136,13 +136,13 @@ void outer_product( const std::vector< Teuchos::SerialDenseVector<O,T> > &input_
       num_elems *= sizes[i];
     }
   IntVector multi_index( num_sets, false );
-  result.sizeUninitialized( num_elems );
+  argout.sizeUninitialized( num_elems );
   for ( int i = 0; i < num_elems; i++ )
     {
-      result[i] = 1.0;
+      argout[i] = 1.0;
       ind2sub( sizes, i, num_elems, multi_index );
       for ( int j = 0; j < num_sets; j++ )
-	result[i] *= input_sets[j][multi_index[j]];
+	argout[i] *= input_sets[j][multi_index[j]];
     }
 }
 
@@ -1122,6 +1122,16 @@ T get_enum_enforce_existance(const OptionsList &opts,
       << " does not exist in " << "OptionsList"; 
   throw(std::runtime_error(msg.str()));
 }
+/** \brief Get the tensor product index set with a possibly different level 
+ * for each dimension.
+ 
+ * \param[in] levels
+ *     The maximum level (inclusive of the indices in each dimension)
+ * \return indices
+ *     The multivariate indices
+*/  
+void tensor_product_indices(const IntVector levels,
+			    IntMatrix &result);
 
 } // namespace Surrogates
 

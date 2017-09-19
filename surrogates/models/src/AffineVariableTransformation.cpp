@@ -16,7 +16,7 @@ set_variables(const boost::shared_ptr<Surrogates::Variables> &vars){
 }
 
 void AffineVariableTransformation::
-map_samples_to_user_space(const RealMatrix &samples,
+map_samples_from_user_space(const RealMatrix &samples,
 			  RealMatrix &transformed_samples) const {
   int num_vars = boundedVars_->num_vars();
   
@@ -35,7 +35,7 @@ map_samples_to_user_space(const RealMatrix &samples,
 }
 
 void AffineVariableTransformation::
-map_samples_from_user_space(const RealMatrix &samples, RealMatrix &transformed_samples) const {
+map_samples_to_user_space(const RealMatrix &samples, RealMatrix &transformed_samples) const {
   int num_vars = boundedVars_->num_vars();
   if ( samples.numRows() != boundedVars_->num_vars() )
     throw( std::runtime_error("Samples have incorrect number of random variables") );
@@ -44,7 +44,7 @@ map_samples_from_user_space(const RealMatrix &samples, RealMatrix &transformed_s
   transformed_samples.shapeUninitialized(num_vars, num_samples);
   for ( int j=0; j<num_samples; j++ ){
     for ( int i=0; i<num_vars; i++ ){
-      transformed_samples(j,i) =
+      transformed_samples(i,j) =
 	(samples(i,j)+1)/2.*(boundedVars_->ub(i)-boundedVars_->lb(i))+boundedVars_->lb(i);
     }
   }

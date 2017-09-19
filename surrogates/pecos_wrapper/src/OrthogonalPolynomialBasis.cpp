@@ -102,21 +102,18 @@ value(const RealVector& sample, const IntVector& indices){
 
 void OrthogonalPolynomialBasis::
 value(const RealMatrix& samples, const IntMatrix& indices, RealMatrix &values){
-  std::cout << "A" << std::endl;
   if (polynomialBasis_.size()==0)
     throw(std::runtime_error("polynomialBasis_ has not been initialized"));
   unsigned short order_1d; int num_vars = samples.numRows();
   int i,j,d, num_exp_terms = indices.numCols(), num_samples=samples.numCols();
-  std::cout << num_samples << "," << num_exp_terms << std::endl;
   resize_if_needed(values, num_samples, num_exp_terms);
-  std::cout << num_samples << "," << num_exp_terms << std::endl;
   for (j=0; j<num_exp_terms; ++j){
-    values(i,j) = 1.;
-    for (d=0; d<num_vars; ++d) {
-      order_1d = indices(d,j);
-      if (order_1d)
-        for (i=0; i<num_samples; ++i){
-          values(i,j) *= polynomialBasis_[i].type1_value(samples(i,j),order_1d);
+    for (i=0; i<num_samples; ++i){
+      values(i,j) = 1.;
+      for (d=0; d<num_vars; ++d) {
+	order_1d = indices(d,j);
+	if (order_1d)
+	  values(i,j) *= polynomialBasis_[d].type1_value(samples(d,i),order_1d);
         }
     }
   }

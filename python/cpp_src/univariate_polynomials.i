@@ -51,7 +51,7 @@ using namespace Pecos;
 %define %std_vector_typemaps(SCALAR_TYPE, TYPECODE)
 %typemap(out) std::vector<SCALAR_TYPE> const &
 {
-  npy_intp dims[1] = { $1->size() };
+  npy_intp dims[1] = {static_cast<npy_intp>($1->size())};
   $result = PyArray_SimpleNew( 1, dims, TYPECODE );
   if (!$result) SWIG_fail;
   SCALAR_TYPE *array = (SCALAR_TYPE *)PyArray_DATA( $result );

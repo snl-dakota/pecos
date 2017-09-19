@@ -1,9 +1,9 @@
 #ifndef POLY_APPROXIMATION_HPP
 #define POLY_APPROXIMATION_HPP
 
-#include <Approximation.hpp>
-#include <OptionsList.hpp>
-#include <teuchos_data_types.hpp>
+#include "Approximation.hpp"
+#include "OptionsList.hpp"
+#include "teuchos_data_types.hpp"
 
 namespace Surrogates {
 
@@ -50,17 +50,34 @@ public:
   /** \copydoc Function::hessian() */
   virtual void hessian(const RealMatrix &samples, int qoi, RealMatrixList &hessians);
 
-  /**\brief Evaluate each basis function at a set of samples.
+  /**\brief Evaluate each basis function at a set of samples in the 
+     canonical space of the polynomial basis
 
    Build the matrix \f$V\f$, where \f$V_{ij}=\phi_j(x^{(i)})\f$.
 
    \param[in] samples (num_vars x num_samples) matrix
-       The coordindates of the samples x.
+       The coordindates of the samples x in the canonical space of 
+       the polynomial basis.
 
    \param[out] result_0
        The matrix \f$V\f$, where \f$V_{ij}=\phi_j(x^{(i)})\f$.
    */
-  virtual void generate_basis_matrix(const RealMatrix &samples, RealMatrix &result_0)=0;
+  virtual void generate_canonical_basis_matrix(const RealMatrix &samples, RealMatrix &result_0)=0;
+
+
+/**\brief Evaluate each basis function at a set of samples in the 
+     user-defined space.
+
+   Build the matrix \f$V\f$, where \f$V_{ij}=\phi_j(x^{(i)})\f$.
+
+   \param[in] samples (num_vars x num_samples) matrix
+       The coordindates of the samples x in the user-defined space.
+
+   \param[out] result_0
+       The matrix \f$V\f$, where \f$V_{ij}=\phi_j(x^{(i)})\f$.
+   */
+  
+  void generate_basis_matrix(const RealMatrix &samples, RealMatrix &result_0);
 
   /**
   \brief Set the coefficients of the polynomial expansion.
@@ -88,13 +105,19 @@ public:
 
   /* \brief Get the multivariate index of the polynomial basis
 
-   \param[out] basis_indices (num_dims x num_indices) matrix
+   \param[out] result (num_dims x num_indices) matrix
        The multivariate indices
   */
-  void get_basis_indices(IntMatrix &basis_indices) const;
+  void get_basis_indices(IntMatrix &result) const;
+
+  /* \brief Get the number of terms in the polynomial
+
+   \return num_terms
+  */
+  int num_terms() const;
 
 }; // class PolyApproximation
 
-}; // namespace Surrogates
+} // namespace Surrogates
 
 #endif // POLY_APPROXIMATION_HPP

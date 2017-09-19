@@ -10,8 +10,7 @@ void PolynomialChaosExpansion::set_options(const OptionsList &opts){
 }
 
 void PolynomialChaosExpansion::
-generate_basis_matrix(const RealMatrix &samples, RealMatrix &basis_matrix){
-  std::cout << "B" << std::endl;
+generate_canonical_basis_matrix(const RealMatrix &samples, RealMatrix &basis_matrix){
   orthogPolyBasis_.value(samples, basisIndices_, basis_matrix);
 }
 

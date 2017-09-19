@@ -13,6 +13,7 @@
 // %ignore and rename must be included before the function decleration, i.e.
 // before the %include
 %ignore Surrogates::qr_solve( const RealMatrix &, const RealMatrix &, RealMatrix & );
+%rename(tensor_product_indices_cpp) tensor_product_indices;
 
 %include "Teuchos_BLAS_types.hpp"
 %include "fundamentals.i"
@@ -22,6 +23,8 @@
 namespace Surrogates{
 %template(cartesian_product_int) cartesian_product<int,int>;
 %template(cartesian_product_double) cartesian_product<int,double>;
+%template(outer_product_int) outer_product<int,int>;
+%template(outer_product_double) outer_product<int,double>;
 }
 
 %pythoncode %{
@@ -53,12 +56,33 @@ def unique_matrix_cols(A):
     return unique_matrix_cols(A.T).T
 
 def cartesian_product(input_sets,elem_size=1):
-    if type(input_sets[0][0])==float:
+    """Wrapper of cpp function that converts to accepted types."""
+    if input_sets[0].dtype==float or input_sets[0].dtype==numpy.float64:
         return cartesian_product_double(input_sets,elem_size)
-    else:
+    elif (input_sets[0].dtype==numpy.int64 or input_sets[0].dtype==numpy.int32 or input_sets[0].dtype==int):
         for i in xrange(len(input_sets)):
-            if input_sets[i].dtype==numpy.int64:
+            if input_sets[i].dtype!=numpy.int32:
                 input_sets[i] = numpy.asarray(input_sets[i],dtype=numpy.int32)
         return cartesian_product_int(input_sets,elem_size)
+    else:
+        raise Exception, 'element type not supported'
 
+def outer_product(input_sets,elem_size=1):
+    """Wrapper of cpp function that converts to accepted types."""
+    if input_sets[0].dtype==float or input_sets[0].dtype==numpy.float64:
+        return outer_product_double(input_sets)
+    elif (input_sets[0].dtype==numpy.int64 or input_sets[0].dtype==numpy.int32 or input_sets[0].dtype==int):
+        for i in xrange(len(input_sets)):
+            if input_sets[i].dtype!=numpy.int32:
+                input_sets[i] = numpy.asarray(input_sets[i],dtype=numpy.int32)
+        return outer_product_int(input_sets)
+    else:
+        raise Exception, 'element type not supported'
+
+def tensor_product_indices(degrees):
+    """Wrapper of cpp function that converts to accepted integer type."""
+    assert degrees.dtype==numpy.int32 or degrees.dtype==numpy.int64
+    if degrees.dtype!=numpy.int32:
+        degrees = numpy.asarray(degrees,dtype=numpy.int32)
+    return tensor_product_indices_cpp(degrees)
 %}

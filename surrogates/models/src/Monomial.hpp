@@ -19,8 +19,8 @@ public:
 
   void set_options(const OptionsList &opts);
 
-  /** \copydoc PolyApproximation::generate_basis_matrix() */
-  void generate_basis_matrix(const RealMatrix &samples, RealMatrix &result_0);
+  /** \copydoc PolyApproximation::generate_canonical_basis_matrix() */
+  void generate_canonical_basis_matrix(const RealMatrix &samples, RealMatrix &result_0);
 
 }; // class Monomial
 

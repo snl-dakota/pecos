@@ -10,20 +10,29 @@ import sysconfig
 import sys
 from distutils.sysconfig import get_python_inc
 
+include_pecos=True
 
 from os.path import expanduser
 home = expanduser("~")
 
-pecos_root = join(home,'software','pecos')
-pecos_build_dir = join(home,'software','pecos','build')
-include_pecos=True
+pecos_root = os.path.join(os.path.split(os.path.abspath(__file__))[0],'..')
+#pecos_root = os.path.join(home,'software','pecos')
 
-#boost_include = join(home,'local/boost-1.61.0/include')
-boost_include = join(home,'modules-gnu-4.8.5/boost-1.54.0/include')
+# asssumes pecos is built in a subdirectory pecos/build
+pecos_build_dir = join(pecos_root,'build')
+
+# Get location of boost include from Pecos CMakeCache.txt generated when Pecos
+# libraries was built
+cmakecache_filename = os.path.join(pecos_build_dir,'CMakeCache.txt')
+with open(cmakecache_filename, 'r') as f:
+    file_string = f.read()
+    index1=file_string.find('Boost_INCLUDE_DIR:PATH=')
+    index2=file_string.find('=',index1)+1
+    index3=file_string.find('\n',index2)
+    boost_include=file_string[index2:index3]
 
 package_name="PyDakota"
 
-#swig_src_include = os.getcwd()#join(pecos_root,'surrogates/python/src')
 distutils.log.set_verbosity(1)
 try:
     numpy_include = numpy.get_include()
@@ -286,3 +295,7 @@ print (string)
 # If get an error cannot import _modulename.so then this may be due to a
 # linking error. E.g. forgot to link in a required library using the libraries
 # keywork in Extension
+
+# on osx use
+# conda install numpy scipy matplotlib cmake boost=1.61.0 openblas=0.2.19 gcc swig
+# need to do export DYLD_FALLBACK_LIBRARY_PATH=~/miniconda2/envs/fenics/lib # this gets gfotran library on  library path
