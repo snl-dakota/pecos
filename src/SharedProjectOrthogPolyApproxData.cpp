@@ -22,7 +22,7 @@
 namespace Pecos {
 
 
-void SharedProjectOrthogPolyApproxData::allocate_data()
+void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 {
   // no combination by default, even if stored{MultiIndex,ExpCoeffs,
   // ExpCoeffGrads} are defined.  Redefined by attribute passed in
@@ -123,7 +123,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 }
 
 
-void SharedProjectOrthogPolyApproxData::increment_data()
+void SharedProjectOrthogPolyApproxData::increment_data(size_t index)
 {
   if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
     PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"

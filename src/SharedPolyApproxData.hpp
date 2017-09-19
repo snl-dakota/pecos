@@ -252,10 +252,10 @@ public:
   //
 
   /// allocate the shared data prior to building the set of approximations
-  virtual void allocate_data() = 0;
+  virtual void allocate_data(size_t index = _NPOS) = 0;
 
   /// update the shared data prior to rebuilding the set of approximations
-  virtual void increment_data();
+  virtual void increment_data(size_t index = _NPOS);
   /// decrement the previous increment and store its shared data for
   /// later retrieval
   virtual void decrement_data();

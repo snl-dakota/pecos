@@ -81,7 +81,8 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 }
 
 
-void HierarchInterpPolyApproximation::compute_expansion_coefficients()
+void HierarchInterpPolyApproximation::
+compute_expansion_coefficients(size_t index)
 {
   if (origSurrData.anchor()) {
     PCerr << "Error: anchor point not supported in HierarchInterpPoly"
@@ -107,18 +108,18 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
   const UShort4DArray&      key          = hsg_driver->collocation_key();
   const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, v, num_levels = key.size(), num_sets, num_tp_pts,
-    cntr = 0, index, num_deriv_vars = origSurrData.num_derivative_variables();
+    cntr = 0, c_index, num_deriv_vars = origSurrData.num_derivative_variables();
 
   // level 0
-  index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
   if (expansionCoeffFlag) {
-    expansionType1Coeffs[0][0][0] = origSurrData.response_function(index);
+    expansionType1Coeffs[0][0][0] = origSurrData.response_function(c_index);
     if (data_rep->basisConfigOptions.useDerivs)
-      Teuchos::setCol(origSurrData.response_gradient(index), 0,
+      Teuchos::setCol(origSurrData.response_gradient(c_index), 0,
 		      expansionType2Coeffs[0][0]);
   }
   if (expansionCoeffGradFlag)
-    Teuchos::setCol(origSurrData.response_gradient(index), 0,
+    Teuchos::setCol(origSurrData.response_gradient(c_index), 0,
 		    expansionType1CoeffGrads[0][0]);
   ++cntr;
   // levels 1 to num_levels
@@ -128,16 +129,17 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
     for (set=0; set<num_sets; ++set) {
       num_tp_pts = key_l[set].size();
       for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	const RealVector& c_vars = origSurrData.continuous_variables(index);
+	c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	const RealVector& c_vars = origSurrData.continuous_variables(c_index);
 	// coefficients are hierarchical surpluses
 	if (expansionCoeffFlag) {
 	  expansionType1Coeffs[lev][set][pt]
-	    = origSurrData.response_function(index)
+	    = origSurrData.response_function(c_index)
 	    - value(c_vars, sm_mi, key, expansionType1Coeffs,
 		    expansionType2Coeffs, lev-1);
 	  if (data_rep->basisConfigOptions.useDerivs) {
-	    const RealVector& data_grad = origSurrData.response_gradient(index);
+	    const RealVector& data_grad
+	      = origSurrData.response_gradient(c_index);
 	    const RealVector& prev_grad = gradient_basis_variables(c_vars,
 	      sm_mi, key, expansionType1Coeffs, expansionType2Coeffs, lev-1);
 	    Real* hier_grad = expansionType2Coeffs[lev][set][pt];
@@ -146,7 +148,7 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 	  }
 	}
 	if (expansionCoeffGradFlag) {
-	  const RealVector& data_grad = origSurrData.response_gradient(index);
+	  const RealVector& data_grad = origSurrData.response_gradient(c_index);
 	  const RealVector& prev_grad = gradient_nonbasis_variables(c_vars,
 	    sm_mi, key, expansionType1CoeffGrads, lev-1);
 	  Real* hier_grad = expansionType1CoeffGrads[lev][set][pt];
@@ -163,7 +165,7 @@ void HierarchInterpPolyApproximation::compute_expansion_coefficients()
 }
 
 
-void HierarchInterpPolyApproximation::increment_coefficients()
+void HierarchInterpPolyApproximation::increment_coefficients(size_t index)
 {
   increment_current_from_reference();
 

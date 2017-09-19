@@ -165,7 +165,7 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 }
 
 
-void RegressOrthogPolyApproximation::compute_coefficients()
+void RegressOrthogPolyApproximation::compute_coefficients(size_t index)
 {
   if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
@@ -176,9 +176,9 @@ void RegressOrthogPolyApproximation::compute_coefficients()
   }
 
   // For testing of anchor point logic:
-  //size_t index = surrData.points() - 1;
-  //surrData.anchor_point(surrData.variables_data()[index],
-  //                      surrData.response_data()[index]);
+  //size_t last_index = surrData.points() - 1;
+  //surrData.anchor_point(surrData.variables_data()[last_index],
+  //                      surrData.response_data()[last_index]);
   //surrData.pop(1);
 
   // anchor point, if present, is handled differently for different
@@ -215,8 +215,8 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 
   // when using a hierarchical approximation, subtract current PCE prediction
   // from the surrData so that we form a regression PCE on the surplus
-  if (hierarchIndex == _NPOS) surrData = origSurrData; // shared rep
-  else                        response_data_to_surplus_data();
+  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
+  else response_data_to_surplus_data(index);
 
   switch (data_rep->expConfigOptions.expBasisType) {
   case DEFAULT_BASIS: // least interpolation case
@@ -232,8 +232,8 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 }
 
 
-void RegressOrthogPolyApproximation::increment_coefficients()
-{ compute_coefficients(); } // sufficient for now
+void RegressOrthogPolyApproximation::increment_coefficients(size_t index)
+{ compute_coefficients(index); } // sufficient for now
 
 
 void RegressOrthogPolyApproximation::run_regression()

@@ -65,9 +65,9 @@ public:
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;
   /// calculate the approximation coefficients using the SurrogateData
-  virtual void compute_coefficients();
+  virtual void compute_coefficients(size_t index = _NPOS);
   /// recalculate the approximation coefficients following SurrogateData update
-  virtual void increment_coefficients();
+  virtual void increment_coefficients(size_t index = _NPOS);
   /// restore the approximation coefficients to the state preceding the last
   /// increment
   virtual void decrement_coefficients();

@@ -42,7 +42,7 @@ void InterpPolyApproximation::allocate_arrays()
 }
 
 
-void InterpPolyApproximation::compute_coefficients()
+void InterpPolyApproximation::compute_coefficients(size_t index)
 {
   if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
@@ -75,7 +75,7 @@ void InterpPolyApproximation::compute_coefficients()
   //surrData.pop(1);
 
   allocate_arrays();
-  compute_expansion_coefficients();
+  compute_expansion_coefficients(index);
 
 #ifdef INTERPOLATION_TEST
   // SC should accurately interpolate the collocation data for TPQ and

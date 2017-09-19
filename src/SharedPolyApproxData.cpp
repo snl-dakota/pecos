@@ -261,8 +261,10 @@ update_basis_distribution_parameters(const ShortArray& u_types,
       ++geuv_cntr; break;
     case HYPERGEOMETRIC:
       poly_basis[i].alpha_stat(adp.hypergeometric_total_population(hguv_cntr));
-      poly_basis[i].beta_stat(adp.hypergeometric_selected_population(hguv_cntr));
-      ((HahnOrthogPolynomial*)poly_basis[i].polynomial_rep())->gamma_stat(adp.hypergeometric_num_drawn(hguv_cntr));
+      poly_basis[i].beta_stat(
+	adp.hypergeometric_selected_population(hguv_cntr));
+      ((HahnOrthogPolynomial*)poly_basis[i].polynomial_rep())->
+	gamma_stat(adp.hypergeometric_num_drawn(hguv_cntr));
       ++hguv_cntr; break;
     case HISTOGRAM_PT_INT:
       ((NumericGenOrthogPolynomial*)poly_basis[i].polynomial_rep())->
@@ -285,8 +287,10 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 }
 
 
-void SharedPolyApproxData::increment_data()
+void SharedPolyApproxData::increment_data(size_t index)
 {
+  // Run-time error instead of compile-time (not pure virtual)
+
   PCerr << "Error: derived class does not redefine increment_data()."
 	<< std::endl;
   abort_handler(-1);
@@ -295,6 +299,8 @@ void SharedPolyApproxData::increment_data()
 
 void SharedPolyApproxData::decrement_data()
 {
+  // Run-time error instead of compile-time (not pure virtual)
+
   PCerr << "Error: derived class does not redefine decrement_data()."
 	<< std::endl;
   abort_handler(-1);

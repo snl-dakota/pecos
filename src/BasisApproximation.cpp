@@ -284,10 +284,10 @@ int BasisApproximation::min_coefficients() const
 }
 
 
-void BasisApproximation::compute_coefficients()
+void BasisApproximation::compute_coefficients(size_t index)
 {
   if (basisApproxRep)
-    basisApproxRep->compute_coefficients(); 
+    basisApproxRep->compute_coefficients(index); 
   else {
     PCerr << "Error: compute_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
@@ -296,10 +296,10 @@ void BasisApproximation::compute_coefficients()
 }
 
 
-void BasisApproximation::increment_coefficients()
+void BasisApproximation::increment_coefficients(size_t index)
 {
   if (basisApproxRep)
-    basisApproxRep->increment_coefficients(); 
+    basisApproxRep->increment_coefficients(index); 
   else {
     PCerr << "Error: increment_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;

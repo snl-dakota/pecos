@@ -55,11 +55,11 @@ void NodalInterpPolyApproximation::allocate_arrays()
 }
 
 
-void NodalInterpPolyApproximation::compute_expansion_coefficients()
+void NodalInterpPolyApproximation::compute_expansion_coefficients(size_t index)
 {
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  size_t index = 0, num_colloc_pts = origSurrData.points(), offset = 0;
+  size_t c_index = 0, num_colloc_pts = origSurrData.points(), offset = 0;
   if (origSurrData.anchor()) {
     offset = 1; ++num_colloc_pts;
     if (expansionCoeffFlag) {
@@ -72,16 +72,16 @@ void NodalInterpPolyApproximation::compute_expansion_coefficients()
 		      expansionType1CoeffGrads);
   }
 
-  for (int i=offset; i<num_colloc_pts; ++i, ++index) {
+  for (int i=offset; i<num_colloc_pts; ++i, ++c_index) {
     if (expansionCoeffFlag) {
-      expansionType1Coeffs[i] = origSurrData.response_function(index);
+      expansionType1Coeffs[i] = origSurrData.response_function(c_index);
       // Note: gradients from DAKOTA already scaled in u-space Recast
       if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(origSurrData.response_gradient(index), i,
+	Teuchos::setCol(origSurrData.response_gradient(c_index), i,
 			expansionType2Coeffs);
     }
     if (expansionCoeffGradFlag)
-      Teuchos::setCol(origSurrData.response_gradient(index), i,
+      Teuchos::setCol(origSurrData.response_gradient(c_index), i,
 		      expansionType1CoeffGrads);
   }
 

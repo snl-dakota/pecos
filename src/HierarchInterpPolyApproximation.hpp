@@ -52,11 +52,11 @@ protected:
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
-  void compute_expansion_coefficients();
+  void compute_expansion_coefficients(size_t index = _NPOS);
 
   /// update the coefficients for the expansion of interpolation polynomials:
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void increment_coefficients();
+  void increment_coefficients(size_t index = _NPOS);
   /// restore the coefficients to their previous state prior to last increment:
   /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void decrement_coefficients();

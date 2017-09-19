@@ -48,9 +48,9 @@ public:
   //
   //- Cosmin Heading: Virtual function redefinitions and member functions
   //
-  void compute_coefficients();
+  void compute_coefficients(size_t index = _NPOS);
   void push_coefficients();
-  void increment_coefficients();
+  void increment_coefficients(size_t index = _NPOS);
   void decrement_coefficients();
   void finalize_coefficients();
 

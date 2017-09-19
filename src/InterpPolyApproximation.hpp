@@ -50,7 +50,7 @@ public:
 
   /// compute the coefficients for the expansion of multivariate
   /// interpolation polynomials
-  void compute_coefficients();
+  void compute_coefficients(size_t index = _NPOS);
 
 protected:
 
@@ -77,7 +77,7 @@ protected:
   //
 
   /// derived portion of compute_coefficients()
-  virtual void compute_expansion_coefficients() = 0;
+  virtual void compute_expansion_coefficients(size_t index = _NPOS) = 0;
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;

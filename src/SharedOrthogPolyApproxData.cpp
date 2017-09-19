@@ -21,7 +21,7 @@
 namespace Pecos {
 
 
-void SharedOrthogPolyApproxData::allocate_data()
+void SharedOrthogPolyApproxData::allocate_data(size_t index)
 {
   // detect changes since previous construction
   bool update_exp_form = (approxOrder != approxOrderPrev);

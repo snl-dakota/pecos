@@ -43,7 +43,7 @@ void OrthogPolyApproximation::allocate_arrays()
 }
 
 
-void OrthogPolyApproximation::response_data_to_surplus_data()
+void OrthogPolyApproximation::response_data_to_surplus_data(size_t index)
 {
   // We will only modify the response to reflect hierarchical surpluses,
   // so initialize surrData with shared vars and unique resp instances
@@ -63,10 +63,10 @@ void OrthogPolyApproximation::response_data_to_surplus_data()
     if (expansionCoeffFlag) {
       Real fn_val = origSurrData.response_function(i);
       //if ( == ADDITIVE_CORRECTION)
-      for (j=0; j<hierarchIndex; ++j)
+      for (j=0; j<index; ++j)
 	fn_val -= stored_value(c_vars, j);
       //else if ( == MULTIPLICATIVE_CORRECTION) // TO DO
-      //for (j=0; j<hierarchIndex; ++j)
+      //for (j=0; j<index; ++j)
       //  fn_val /= stored_value(c_vars, j);
       surrData.response_function(fn_val, i);
     }
@@ -74,10 +74,10 @@ void OrthogPolyApproximation::response_data_to_surplus_data()
       RealVector fn_grad;
       copy_data(origSurrData.response_gradient(i), fn_grad);
       //if ( == ADDITIVE_CORRECTION)
-      for (j=0; j<hierarchIndex; ++j)
+      for (j=0; j<index; ++j)
 	fn_grad -= stored_gradient_nonbasis_variables(c_vars, j);
       //else if ( == MULTIPLICATIVE_CORRECTION) // TO DO
-      //for (j=0; j<hierarchIndex; ++j)
+      //for (j=0; j<index; ++j)
       //  fn_grad /= ; // see DiscrepancyCorrection::compute_multiplicative()
       surrData.response_gradient(fn_grad, i);
     }
