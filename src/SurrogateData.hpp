@@ -1467,9 +1467,10 @@ popped_response_trials(const SDR2DArray& popped_resp)
 inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
 {
   SurrogateData sd;
+  bool anchor_pt = anchor();
 
   if (sdv_mode == DEEP_COPY) {
-    sd.anchor_variables(sdRep->anchorVars.copy());
+    if (anchor_pt) sd.anchor_variables(sdRep->anchorVars.copy());
 
     size_t i, num_pts = sdRep->varsData.size();
     SDVArray sdv_array(num_pts);
@@ -1500,14 +1501,14 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
     sd.popped_variables_trials(popped_sdv);
   }
   else { // shallow SDV copies based on operator=
-    sd.anchor_variables(sdRep->anchorVars);
+    if (anchor_pt) sd.anchor_variables(sdRep->anchorVars);
     sd.variables_data(sdRep->varsData);
     sd.stored_variables_data(sdRep->storedVarsData);
     sd.popped_variables_trials(sdRep->poppedVarsTrials);
   }
 
   if (sdr_mode == DEEP_COPY) {
-    sd.anchor_response(sdRep->anchorResp.copy());
+    if (anchor_pt) sd.anchor_response(sdRep->anchorResp.copy());
 
     size_t i, num_pts = sdRep->respData.size();
     SDRArray sdr_array(num_pts);
@@ -1538,13 +1539,13 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
     sd.popped_response_trials(popped_sdr);
   }
   else { // shallow SDR copies based on operator=
-    sd.anchor_response(sdRep->anchorResp);
+    if (anchor_pt) sd.anchor_response(sdRep->anchorResp);
     sd.response_data(sdRep->respData);
     sd.stored_response_data(sdRep->storedRespData);
     sd.popped_response_trials(sdRep->poppedRespTrials);
   }
 
-  sd.failed_anchor_data(sd.failed_anchor_data());
+  if (anchor_pt) sd.failed_anchor_data(sd.failed_anchor_data());
   sd.failed_response_data(sd.failed_response_data());
 
   return sd;

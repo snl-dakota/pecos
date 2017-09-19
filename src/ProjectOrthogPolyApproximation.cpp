@@ -64,6 +64,11 @@ void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
     return;
   }
 
+  // when using a hierarchical approximation, subtract current PCE prediction
+  // from the surrData so that we form a regression PCE on the surplus
+  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
+  else response_data_to_surplus_data(index);
+
   // For testing of anchor point logic:
   //size_t last_index = surrData.points() - 1;
   //surrData.anchor_point(surrData.variables_data()[last_index],
@@ -89,18 +94,14 @@ void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
   // > data used in all cases (size in allocate_arrays())
   // > data not used in expansion import case (size here)
   allocate_arrays();
-#ifdef DEBUG
-  gradient_check();
-#endif // DEBUG
 
-  // when using a hierarchical approximation, subtract current PCE prediction
-  // from the surrData so that we form a regression PCE on the surplus
-  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
-  else response_data_to_surplus_data(index);
-
-  // calculate polynomial chaos coefficients
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+#ifdef DEBUG
+  data_rep->gradient_check();
+#endif // DEBUG
+
+  // calculate polynomial chaos coefficients
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     // verify quad_order stencil matches num_total_pts

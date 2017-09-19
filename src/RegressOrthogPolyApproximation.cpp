@@ -175,6 +175,11 @@ void RegressOrthogPolyApproximation::compute_coefficients(size_t index)
     return;
   }
 
+  // when using a hierarchical approximation, subtract current PCE prediction
+  // from the surrData so that we form a regression PCE on the surplus
+  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
+  else response_data_to_surplus_data(index);
+
   // For testing of anchor point logic:
   //size_t last_index = surrData.points() - 1;
   //surrData.anchor_point(surrData.variables_data()[last_index],
@@ -195,15 +200,14 @@ void RegressOrthogPolyApproximation::compute_coefficients(size_t index)
     abort_handler(-1);
   }
 
-#ifdef DEBUG
-  gradient_check();
-#endif // DEBUG
-
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
   // check data set for gradients/constraints/faults to determine settings
   surrData.data_checks();
+#ifdef DEBUG
+  data_rep->gradient_check();
+#endif // DEBUG
   // multiIndex size (from Shared allocate_data()) used to set
   // faultInfo.under_determined.  Note: OLI's multiIndex is empty,
   // but does not use under_determined flag.
@@ -212,11 +216,6 @@ void RegressOrthogPolyApproximation::compute_coefficients(size_t index)
   select_solver(data_rep->regressConfigOptions.crossValidation);
   // array allocations dependent on solver type
   allocate_arrays();
-
-  // when using a hierarchical approximation, subtract current PCE prediction
-  // from the surrData so that we form a regression PCE on the surplus
-  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
-  else response_data_to_surplus_data(index);
 
   switch (data_rep->expConfigOptions.expBasisType) {
   case DEFAULT_BASIS: // least interpolation case
