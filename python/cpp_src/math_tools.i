@@ -1,22 +1,80 @@
 /* math_tools.i */
 %module(directors=1,implicitconv="1", package="PyDakota",autodoc=1) math_tools
 %{
-#include <Python.h>
-#include <numpy/arrayobject.h>
-#include "numpy_include.hpp"//gets rid of deprecated warnings
   
 // Local includes
 #include "math_tools.hpp"
 #include "linear_algebra.hpp"
+  
+#include "numpy_include.hpp"//gets rid of deprecated warnings
+#include "python_helpers.hpp"
 %}
 
 // %ignore and rename must be included before the function decleration, i.e.
 // before the %include
+%ignore *::operator[];
+%ignore *::operator=;
+%ignore *::print;
+
 %ignore Surrogates::qr_solve( const RealMatrix &, const RealMatrix &, RealMatrix & );
 %rename(tensor_product_indices_cpp) tensor_product_indices;
 
+%include "numpy.i"
+/* %fragment("NumPy_Fragments"); */
+/* %init %{ */
+/*   import_array(); */
+/* %} */
+
+//%include "teuchos_data_types.hpp"
+
+// include Teuchos enums, such as TRANS, NO_TRANS
 %include "Teuchos_BLAS_types.hpp"
-%include "fundamentals.i"
+%include "stl.i"
+%include "Teuchos_SerialDenseVector.i"
+ //%include "Teuchos_SerialDenseMatrix.i"
+ //%include "data_structures.i"
+
+// Must specify here to ensure that functions involving the function with
+// parameters renamed using typedef can be wrapped.
+// If no match is found using the above rules SWIG applies a typedef
+// reduction to the type and repeats the typemap search for the reduced type
+/* typedef double Real; */
+/* typedef Teuchos::SerialDenseVector<int,double> RealVector; */
+/* typedef Teuchos::SerialDenseVector<int,int> IntVector; */
+/* typedef Teuchos::SerialDenseVector<int,Complex> ComplexVector; */
+/* typedef Teuchos::SerialDenseMatrix<int,double> RealMatrix; */
+/* typedef Teuchos::SerialDenseMatrix<int,int> IntMatrix; */
+/* typedef Teuchos::SerialDenseMatrix<int,Complex> ComplexMatrix; */
+
+/* %apply IntVector &argout { IntVector &result } */
+/* %apply IntVector &argout { IntVector &result_0 } */
+/* %apply IntVector &argout { IntVector &result_1 } */
+/* %apply IntMatrix &argout { IntMatrix &result } */
+/* %apply IntMatrix &argout { IntMatrix &result_0 } */
+/* %apply IntMatrix &argout { IntMatrix &result_1 } */
+
+/* %apply RealVector &argout { RealVector &result } */
+/* %apply RealVector &argout { RealVector &result_0 } */
+/* %apply RealVector &argout { RealVector &result_1 } */
+/* %apply RealMatrix &argout { RealMatrix &result } */
+/* %apply RealMatrix &argout { RealMatrix &result_0 } */
+/* %apply RealMatrix &argout { RealMatrix &result_1 } */
+
+/* %apply std::vector<RealVector> &argout {std::vector<RealVector> &result} */
+/* %apply std::vector<RealVector> &argout {std::vector<RealVector> &result_0} */
+/* %apply std::vector<RealVector> &argout {std::vector<RealVector> &result_1} */
+/* %apply std::vector<RealMatrix>  &argout {std::vector<RealMatrix> &result} */
+/* %apply std::vector<RealMatrix>  &argout {std::vector<RealMatrix> &result_0} */
+/* %apply std::vector<RealMatrix>  &argout {std::vector<RealMatrix> &result_1} */
+
+/* %apply std::vector<IntVector> &argout {std::vector<IntVector> &result} */
+/* %apply std::vector<IntVector> &argout {std::vector<IntVector> &result_0} */
+/* %apply std::vector<IntVector> &argout {std::vector<IntVector> &result_1} */
+/* %apply std::vector<IntMatrix>  &argout {std::vector<IntMatrix> &result} */
+/* %apply std::vector<IntMatrix>  &argout {std::vector<IntMatrix> &result_0} */
+/* %apply std::vector<IntMatrix>  &argout {std::vector<IntMatrix> &result_1} */
+
+ //%include "fundamentals.i"
 %include "math_tools.hpp"
 %include "linear_algebra.hpp"
 
@@ -26,6 +84,7 @@ namespace Surrogates{
 %template(outer_product_int) outer_product<int,int>;
 %template(outer_product_double) outer_product<int,double>;
 }
+
 
 %pythoncode %{
 import numpy

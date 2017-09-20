@@ -92,8 +92,7 @@ package_swig_opts = base_swig_opts+[
     '-outdir',
     '%s'%join(distutils_build_dir,package_name)]
 
-options_list_include_dirs = base_include_dirs+[join(pecos_root,'util','src')]+\
-  surrogates_include_dirs + teuchos_include_dirs
+options_list_include_dirs = base_include_dirs+[join(pecos_root,'util','src')]+surrogates_include_dirs + teuchos_include_dirs
 options_list_library_dirs = [
     join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')]
 options_list_libraries = ['teuchos']
@@ -111,13 +110,12 @@ options_list = Extension(
 )
 
 # link to teuchos library dir need to get typeinfo for Teuchos::CompObject
+math_tools_include_dirs=base_include_dirs+[join(pecos_root,'util','src')]+surrogates_include_dirs+teuchos_include_dirs
 math_tools_library_dirs=[
     join(pecos_build_dir,'util','src'),
-    join(pecos_build_dir,'packages','teuchos','packages','teuchos','src'),
-    join(pecos_build_dir,'surrogates','models','src')]
-
-math_tools_include_dirs=base_include_dirs+surrogates_include_dirs+\
-  teuchos_include_dirs
+   # join(pecos_build_dir,'surrogates','models','src'),
+    join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')]
+math_tools_libraries=['pecos_util','teuchos','blas','lapack']
 math_tools = Extension(
     '_math_tools',
     [join('cpp_src','math_tools.i')]+pydakota_srcs,
@@ -126,8 +124,8 @@ math_tools = Extension(
     undef_macros = [],
     language='c++',
     library_dirs = math_tools_library_dirs,
-    libraries = ['models','pecos_util','teuchos','blas','lapack'],
-    extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
+    libraries = math_tools_libraries,
+    extra_compile_args = ['-std=c++11'],#,'-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in math_tools_include_dirs])
 
 regression_include_dirs = base_include_dirs+surrogates_include_dirs+\
@@ -244,6 +242,22 @@ enum_example = Extension(
     extra_compile_args = ['-std=c++11'],
     swig_opts=swig_opts+['-I%s'%include_dir for include_dir in enum_example_include_dirs])
 
+dot_include_dirs=['cpp_src/swig_examples_src']+base_include_dirs
+swig_opts = ['-c++','-outdir','%s'%join(
+    distutils_build_dir,package_name,subpackage_name)]
+dot = Extension(
+    '%s._dot'%subpackage_name,
+    [join('cpp_src','swig_examples_src','dot.i'),
+     join('cpp_src','swig_examples_src','dot.cpp')],
+    include_dirs = dot_include_dirs,
+    define_macros =[('COMPILE_WITH_PYTHON',None)],
+    undef_macros = [],
+    language='c++',
+    library_dirs = [],
+    libraries = [],
+    extra_compile_args = ['-std=c++11'],
+    swig_opts=swig_opts+['-I%s'%include_dir for include_dir in dot_include_dirs])
+
 import unittest
 def PyDakota_test_suite():
     test_loader = unittest.TestLoader()
@@ -267,14 +281,15 @@ setup(
     package_dir = {'': 'python_src'},
     ext_package=package_name,
     ext_modules=[
-        options_list#,
-        #math_tools,
+        options_list,
+        #math_tools#,
         #regression,
         #approximation,
+        #univariate_polynomials
         #std_vector_example,
         #options_list_interface,
-        #enum_example,
-        #univariate_polynomials
+        enum_example,
+        dot#,
     ],
     package_data={package_name:[join('unit','data/*.gz')]},
     test_suite='setup.PyDakota_test_suite')

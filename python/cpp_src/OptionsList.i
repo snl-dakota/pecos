@@ -1,18 +1,17 @@
 %module(implicitconv="1", autodoc="1",package="PyDakota") options_list
-
-%include <boost_shared_ptr.i>
-%shared_ptr(OptionsList)
-
-%{  
+%{
+#define SWIG_FILE_WITH_INIT
 // Required for interfacing with NumPy
-//#include <Python.h>
-  //#include <numpy/arrayobject.h>
 #include "numpy_include.hpp"//gets rid of deprecated warnings
 
 #include "OptionsList.hpp"
 #include "python_helpers.hpp"
-  //#include "test_options_list.hpp" 
 %}
+
+
+%include <boost_shared_ptr.i>
+%shared_ptr(OptionsList)
+
 
 %feature("docstring") Teuchos::OptionsList
 "The ``OptionsList`` class is used for communicating arbitrary-type
