@@ -6,7 +6,7 @@
 // Python.h must be included before any headers to avoid 
 // warning: "_POSIX_C_SOURCE" redefined. 
 // Python.h is included in numpy_include.hpp
-//#include "numpy_include.hpp"
+#include "numpy_include.hpp"
 #include "Teuchos_SerialDenseVector.hpp"
 
 

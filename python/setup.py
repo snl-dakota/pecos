@@ -282,7 +282,7 @@ setup(
     ext_package=package_name,
     ext_modules=[
         options_list,
-        #math_tools#,
+        math_tools,
         #regression,
         #approximation,
         #univariate_polynomials
