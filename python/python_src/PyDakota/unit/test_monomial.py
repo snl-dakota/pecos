@@ -2,6 +2,7 @@ import unittest, numpy
 from PyDakota.approximation import *
 from PyDakota.regression import *
 from PyDakota.math_tools import *
+from PyDakota.options_list import *
 class TestMonomialApproximation(unittest.TestCase):
     def setUp(self):
         pass
@@ -114,10 +115,6 @@ class TestMonomialApproximation(unittest.TestCase):
         basis_types = numpy.asarray([LEGENDRE_ORTHOG]*num_vars,dtype=numpy.int32)
         opts = {'poly_type':poly_type,'basis_types':basis_types}
         approx = polynomial_approximation_factory(var_transform, opts)
-        # if poly_type==PCE:
-
-        #     approx.initialize_polynomial_basis_from_basis_types(
-        #         basis_types)
 
         if use_tensor_product_indices:
             degrees = numpy.array([degree]*num_vars,dtype=numpy.int32)
@@ -179,7 +176,6 @@ class TestMonomialApproximation(unittest.TestCase):
         build_samples = numpy.random.uniform(0,1,(num_vars,num_build_samples))
         build_function_vals = function.value(build_samples)
         basis_matrix = approx.generate_basis_matrix(build_samples)
-        #coeffs = qr_solve(basis_matrix,build_function_vals,NO_TRANS)
         opts_dict = {'regression_type':SVD_LEAST_SQ_REGRESSION}
         linsys_opts = OptionsList(opts_dict)
         solver = regression_solver_factory(linsys_opts);
