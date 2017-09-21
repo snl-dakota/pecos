@@ -197,24 +197,24 @@ using Teuchos::SerialDenseMatrix;
   // ENFORCE that $input is contiguous and has fortran (column-major ordering)
   // If it is not the matrix is copied into fortran format, else a view is taken
   // and the reference count is incremented
-  PyObject *npArray = PyArray_FROM_OTF($input, TYPECODE, NPY_F_CONTIGUOUS);
+  PyObject *npArray = PyArray_FROM_OTF($input, TYPECODE, NPY_ARRAY_F_CONTIGUOUS);
   if ( npArray == NULL ) SWIG_fail;
 
   // Now we need to check that the NumPy array that we have is 2D.
-  if ( PyArray_NDIM( npArray ) != 2 ) {
+  if ( PyArray_NDIM( (PyArrayObject*)npArray ) != 2 ) {
     PyErr_SetString(PyExc_ValueError, "Array data must be two dimensional");
     SWIG_fail;
   }
 
   // Get array shape
-  ORDINAL_TYPE m = (ORDINAL_TYPE)PyArray_DIM(npArray,0),
-    n = (ORDINAL_TYPE)PyArray_DIM(npArray,1),
-    stride = (ORDINAL_TYPE)( PyArray_STRIDE(npArray,1) /
-				 PyArray_ITEMSIZE(npArray) );
+  ORDINAL_TYPE m = (ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)npArray,0),
+    n = (ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)npArray,1),
+    stride = (ORDINAL_TYPE)( PyArray_STRIDE((PyArrayObject*)npArray,1) /
+				 PyArray_ITEMSIZE((PyArrayObject*)npArray) );
 
   $1 = Teuchos::SerialDenseMatrix<ORDINAL_TYPE,SCALAR_TYPE>(
 		Teuchos::View,
-		(SCALAR_TYPE*)PyArray_DATA(npArray),
+		(SCALAR_TYPE*)PyArray_DATA((PyArrayObject*)npArray),
 		stride, m, n);
 }
 
@@ -248,24 +248,24 @@ using Teuchos::SerialDenseMatrix;
   // ENFORCE that $input is contiguous and has fortran (column-major ordering)
   // If it is not the matrix is copied into fortran format, else a view is taken
   // and the reference count is incremented
-  PyObject *npArray = PyArray_FROM_OTF($input, TYPECODE, NPY_F_CONTIGUOUS);
+  PyObject *npArray = PyArray_FROM_OTF($input, TYPECODE, NPY_ARRAY_F_CONTIGUOUS);
   if ( npArray == NULL ) SWIG_fail;
 
   // Now we need to check that the NumPy array that we have is 2D.
-  if ( PyArray_NDIM( npArray ) != 2 ) {
+  if ( PyArray_NDIM( (PyArrayObject*)npArray ) != 2 ) {
     PyErr_SetString(PyExc_ValueError, "Array data must be two dimensional");
     SWIG_fail;
   }
 
   // Get array shape
-  ORDINAL_TYPE m = (ORDINAL_TYPE)PyArray_DIM(npArray,0),
-    n = (ORDINAL_TYPE)PyArray_DIM(npArray,1),
-    stride = (ORDINAL_TYPE)( PyArray_STRIDE(npArray,1) /
-				 PyArray_ITEMSIZE(npArray) );
+  ORDINAL_TYPE m = (ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)npArray,0),
+    n = (ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)npArray,1),
+    stride = (ORDINAL_TYPE)( PyArray_STRIDE((PyArrayObject*)npArray,1) /
+				 PyArray_ITEMSIZE((PyArrayObject*)npArray) );
 
   temp = Teuchos::SerialDenseMatrix<ORDINAL_TYPE,SCALAR_TYPE>(
 		Teuchos::View,
-		(SCALAR_TYPE*)PyArray_DATA(npArray),
+		(SCALAR_TYPE*)PyArray_DATA((PyArrayObject*)npArray),
 		stride, m, n);
 
   // The use of & is important
@@ -299,7 +299,7 @@ using Teuchos::SerialDenseMatrix;
   npy_intp dims[2] = { m, n };
   PyObject *npArray = PyArray_EMPTY( 2, dims, TYPECODE, 1 );
   if (!npArray) SWIG_fail;
-  SCALAR_TYPE *buffer = (SCALAR_TYPE *)PyArray_DATA( npArray );
+  SCALAR_TYPE *buffer = (SCALAR_TYPE *)PyArray_DATA( (PyArrayObject*)npArray );
   for ( int j = 0; j < n; j++ ){
     for ( int i = 0; i < m; i++ ){
       buffer[j*m+i] = $1->operator()(i,j);
@@ -341,26 +341,26 @@ using Teuchos::SerialDenseMatrix;
   // ENFORCE that $result is contiguous and has fortran (column-major ordering)
   // If it is not the matrix is copied into fortran format, else a view is taken
   // and the reference count is incremented
-  PyObject *npArray$argnum=PyArray_FROM_OTF($result,TYPECODE,NPY_F_CONTIGUOUS);
+  PyObject *npArray$argnum=PyArray_FROM_OTF($result,TYPECODE,NPY_ARRAY_F_CONTIGUOUS);
   if ( npArray$argnum == NULL )
     throw( std::runtime_error( "Conversion to fortran array failed" ) );
 
   // Now we need to check that the NumPy array that we have is 2D.
-  if ( PyArray_NDIM( npArray$argnum ) != 2 ) {
+  if ( PyArray_NDIM( (PyArrayObject*)npArray$argnum ) != 2 ) {
     throw( std::runtime_error( " Values out must be 2 dimensional" ) );
     //PyErr_SetString(PyExc_ValueError, "Array data must be two dimensional");
     //SWIG_fail;
   }
 
   // Get array shape
-  ORDINAL_TYPE m$argnum = (ORDINAL_TYPE)PyArray_DIM(npArray$argnum,0),
-    n$argnum = (ORDINAL_TYPE)PyArray_DIM(npArray$argnum,1),
-    stride$argnum = (ORDINAL_TYPE)( PyArray_STRIDE(npArray$argnum,1) /
-				    PyArray_ITEMSIZE(npArray$argnum) );
+  ORDINAL_TYPE m$argnum = (ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)npArray$argnum,0),
+    n$argnum = (ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)npArray$argnum,1),
+    stride$argnum = (ORDINAL_TYPE)( PyArray_STRIDE((PyArrayObject*)npArray$argnum,1) /
+				    PyArray_ITEMSIZE((PyArrayObject*)npArray$argnum) );
 
   Teuchos::SerialDenseMatrix<ORDINAL_TYPE,SCALAR_TYPE> temp$argnum(
 		Teuchos::View,
-		(SCALAR_TYPE*)PyArray_DATA(npArray$argnum),
+		(SCALAR_TYPE*)PyArray_DATA((PyArrayObject*)npArray$argnum),
 		stride$argnum, m$argnum, n$argnum);
 
   $1.shapeUninitialized(m$argnum,n$argnum);

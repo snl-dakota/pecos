@@ -44,7 +44,7 @@ options to functions."
 {
   if (PyDict_Check($input))
   {
-    $1 = pyDictToNewOptionsList($input);
+    $1 = Surrogates::pyDictToNewOptionsList($input);
     if (!$1) SWIG_fail;
     cleanup = true;
   }
@@ -105,7 +105,7 @@ options to functions."
 {
   if (PyDict_Check($input))
   {
-    tempshared = boost::shared_ptr<OptionsList>(pyDictToNewOptionsList($input));
+    tempshared = boost::shared_ptr<OptionsList>(Surrogates::pyDictToNewOptionsList($input));
     if (!tempshared) SWIG_fail;
     $1 = &tempshared;
   }
@@ -154,7 +154,7 @@ options to functions."
       throw(std::runtime_error("Argument must be a Python dictionary"));
     }
     opts_list =
-      pyDictToNewOptionsList(dict);
+      Surrogates::pyDictToNewOptionsList(dict);
     if (opts_list == NULL) goto fail;
     return opts_list;
   fail:
@@ -165,7 +165,7 @@ options to functions."
   // Set method: accept only python objects as values
   void set(const std::string &name, PyObject *value)
   {
-    if (!setPythonParameter(*self,name,value))
+    if (!Surrogates::setPythonParameter(*self,name,value))
     {
       PyErr_SetString(PyExc_TypeError, "OptionsList value type not supported");
     }
@@ -175,7 +175,7 @@ options to functions."
   // Get method: return entries as python objects
   PyObject * get(const std::string &name, PyObject * default_value=NULL) const
   {
-    PyObject * value = getPythonParameter(*self, name);
+    PyObject * value = Surrogates::getPythonParameter(*self, name);
     // Type not supported
     if (value == NULL)
     {
@@ -220,7 +220,7 @@ options to functions."
 
   PyObject * __eq__(PyObject * obj) const
   {
-    PyObject * dict   = optionsListToNewPyDict(*self);
+    PyObject * dict   = Surrogates::optionsListToNewPyDict(*self);
     PyObject * result = 0;
     if (dict == NULL) goto fail;
     result = PyObject_RichCompare(dict,obj,Py_EQ);
@@ -234,7 +234,7 @@ options to functions."
   // GetItem operator
   PyObject * __getitem__(const std::string & name) const
   {
-    PyObject * value = getPythonParameter(*self, name);
+    PyObject * value = Surrogates::getPythonParameter(*self, name);
     // Type not supported
     if (value == NULL)
     {
@@ -266,7 +266,7 @@ options to functions."
   // SetItem operator
   void __setitem__(const std::string & name, PyObject * value)
   {
-    if (!setPythonParameter(*self,name,value))
+    if (!Surrogates::setPythonParameter(*self,name,value))
     {
       PyErr_SetString(PyExc_TypeError, "OptionsList value type not supported");
     }
@@ -276,7 +276,7 @@ options to functions."
   // String conversion method
   PyObject * __str__() const
   {
-    PyObject * dict = optionsListToNewPyDict(*self);
+    PyObject * dict = Surrogates::optionsListToNewPyDict(*self);
     PyObject * str  = 0;
     if (dict == NULL) goto fail;
     str = PyObject_Str(dict);
@@ -291,7 +291,7 @@ options to functions."
   PyObject * __repr__() const
   {
     std::string reprStr;
-    PyObject * dict    = optionsListToNewPyDict(*self);
+    PyObject * dict    = Surrogates::optionsListToNewPyDict(*self);
     PyObject * dictStr = 0;
     PyObject * result = 0;
     if (dict == NULL) goto fail;

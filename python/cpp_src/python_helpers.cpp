@@ -1,6 +1,8 @@
 #include "python_helpers.hpp"
 #include "swigpyrun.h"
 
+namespace Surrogates{
+
 template<>
 int NumPy_TypeCode<int>(){
   return NPY_INT;
@@ -390,3 +392,5 @@ PyObject * getPythonParameter(const OptionsList & opts_list,
   // All  other types are unsupported
   return NULL;
 }
+
+}//  namespace Surrogates

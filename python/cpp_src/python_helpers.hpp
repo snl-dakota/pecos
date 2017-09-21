@@ -9,9 +9,10 @@
 #include "numpy_include.hpp"
 #include "Teuchos_SerialDenseVector.hpp"
 
-
 #include "OptionsList.hpp"
 #include <boost/shared_ptr.hpp>
+
+namespace Surrogates{
 
 /** \brief Copy a numpy ndarray into a Teuchos SerialDenseVector (SDV).
  * T is the scalar type of the SDV and S is the scalar type of the numpy array
@@ -45,4 +46,7 @@ PyObject * optionsListToNewPyDict(const OptionsList & opts_list);
 
 template< typename TYPE >
 int NumPy_TypeCode();
+
+
+} //namespace Surrogates
 #endif // PYTHON_HELPERS_HPP

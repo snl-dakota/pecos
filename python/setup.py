@@ -115,10 +115,10 @@ math_tools_library_dirs=[
     join(pecos_build_dir,'util','src'),
    # join(pecos_build_dir,'surrogates','models','src'),
     join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')]
-math_tools_libraries=['pecos_util','teuchos','blas','lapack']
+math_tools_libraries=['pecos_util','teuchos','lapack','blas']
 math_tools = Extension(
     '_math_tools',
-    [join('cpp_src','math_tools.i')]+pydakota_srcs,
+    [join('cpp_src','math_tools.i')],#+pydakota_srcs,
     include_dirs = math_tools_include_dirs,
     define_macros =[('COMPILE_WITH_PYTHON',None)],
     undef_macros = [],

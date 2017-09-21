@@ -1,14 +1,21 @@
 /* math_tools.i */
 %module(directors=1,implicitconv="1", package="PyDakota",autodoc=1) math_tools
 %{
-  //#include <Python.h>
-#include <numpy/arrayobject.h>
-#include "numpy_include.hpp"//gets rid of deprecated warnings
+  #define SWIG_FILE_WITH_INIT
+  
+  // #define NO_IMPORT_ARRAY causes missing symbol error when loading
+  // _math_tools module when used with %fragment("NumPy_Fragments");
+  #include "numpy_include.hpp"
   
 // Local includes
 #include "math_tools.hpp"
 #include "linear_algebra.hpp"
+#include "Teuchos_SerialDenseVector.hpp"
 %}
+
+// Global swig features
+%feature("autodoc", "1");
+%feature("compactdefaultargs");
 
 // %ignore and rename must be included before the function decleration, i.e.
 // before the %include
@@ -16,14 +23,60 @@
 %ignore *::operator=;
 %ignore *::print;
 
-%ignore Surrogates::qr_solve( const RealMatrix &, const RealMatrix &, RealMatrix & );
-%rename(tensor_product_indices_cpp) tensor_product_indices;
-
-//%include "teuchos_data_types.hpp"
+// We utilize very little of numpy.i, so some of the fragments
+// do not get automatically instantiated.  This forces the issue.
+%include "numpy.i"
+%fragment("NumPy_Fragments"); //needed to include obj_to_array_fortran_allow_conversion
 
 // include Teuchos enums, such as TRANS, NO_TRANS
 %include "Teuchos_BLAS_types.hpp"
-%include "fundamentals.i"
+%include "Teuchos_SerialDenseVector.i"
+%include "Teuchos_SerialDenseMatrix.i"
+%include "data_structures.i"
+
+%ignore Surrogates::qr_solve( const RealMatrix &, const RealMatrix &, RealMatrix & );
+%rename(tensor_product_indices_cpp) tensor_product_indices;
+
+// Must specify here to ensure that functions involving the function with
+// parameters renamed using typedef can be wrapped.
+// If no match is found using the above rules SWIG applies a typedef
+// reduction to the type and repeats the typemap search for the reduced type
+typedef double Real;
+typedef Teuchos::SerialDenseVector<int,double> RealVector;
+typedef Teuchos::SerialDenseVector<int,int> IntVector;
+typedef Teuchos::SerialDenseVector<int,Complex> ComplexVector;
+typedef Teuchos::SerialDenseMatrix<int,double> RealMatrix;
+typedef Teuchos::SerialDenseMatrix<int,int> IntMatrix;
+typedef Teuchos::SerialDenseMatrix<int,Complex> ComplexMatrix;
+
+%apply IntVector &argout { IntVector &result }
+%apply IntVector &argout { IntVector &result_0 }
+%apply IntVector &argout { IntVector &result_1 }
+%apply IntMatrix &argout { IntMatrix &result }
+%apply IntMatrix &argout { IntMatrix &result_0 }
+%apply IntMatrix &argout { IntMatrix &result_1 }
+
+%apply RealVector &argout { RealVector &result }
+%apply RealVector &argout { RealVector &result_0 }
+%apply RealVector &argout { RealVector &result_1 }
+%apply RealMatrix &argout { RealMatrix &result }
+%apply RealMatrix &argout { RealMatrix &result_0 }
+%apply RealMatrix &argout { RealMatrix &result_1 }
+
+%apply std::vector<RealVector> &argout {std::vector<RealVector> &result}
+%apply std::vector<RealVector> &argout {std::vector<RealVector> &result_0}
+%apply std::vector<RealVector> &argout {std::vector<RealVector> &result_1}
+%apply std::vector<RealMatrix>  &argout {std::vector<RealMatrix> &result}
+%apply std::vector<RealMatrix>  &argout {std::vector<RealMatrix> &result_0}
+%apply std::vector<RealMatrix>  &argout {std::vector<RealMatrix> &result_1}
+
+%apply std::vector<IntVector> &argout {std::vector<IntVector> &result}
+%apply std::vector<IntVector> &argout {std::vector<IntVector> &result_0}
+%apply std::vector<IntVector> &argout {std::vector<IntVector> &result_1}
+%apply std::vector<IntMatrix>  &argout {std::vector<IntMatrix> &result}
+%apply std::vector<IntMatrix>  &argout {std::vector<IntMatrix> &result_0}
+%apply std::vector<IntMatrix>  &argout {std::vector<IntMatrix> &result_1}
+
 %include "math_tools.hpp"
 %include "linear_algebra.hpp"
 

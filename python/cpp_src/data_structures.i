@@ -1,11 +1,10 @@
 %{
-#include "numpy_include.hpp"//gets rid of deprecated warnings
 #include "Teuchos_SerialDenseVector.hpp"
 using Teuchos::SerialDenseVector;
 using Teuchos::SerialDenseMatrix;
 %}
 %import  "Teuchos_SerialDenseVector.hpp"
-#include "Teuchos_SerialDenseMatrix.hpp"
+%import "Teuchos_SerialDenseMatrix.hpp"
 
 ////////////////////////////////////////////////////////////////////////
 // The philosophy is that wherever std::vector of Teuchos SerialDenseVector
@@ -41,7 +40,7 @@ using Teuchos::SerialDenseMatrix;
       npy_intp dims[1] = { (*$1)[j].length() };
       PyObject* array = PyArray_SimpleNew( 1, dims, NPYTYPE );
       if (!array) SWIG_fail;
-      CPP_SCALAR_TYPE *array_j = (CPP_SCALAR_TYPE *)PyArray_DATA( array );
+      CPP_SCALAR_TYPE *array_j = (CPP_SCALAR_TYPE *)PyArray_DATA( (PyArrayObject*)array );
       for ( int k = 0; k < dims[0]; k++ )
 	*array_j++ = (*$1)[j].values()[k];
       PyList_SET_ITEM( list, j, array );
@@ -72,20 +71,20 @@ using Teuchos::SerialDenseMatrix;
       // a new array is constructed. When the requirements are satisfied
       // and the new reference is returned we must call DECREF in the
       // corresponding freearg typemap on item.
-      PyObject * py_array = PyArray_FROM_OTF( item , NPYTYPE, NPY_IN_ARRAY );
-      if ( PyArray_NDIM( py_array ) != 1 )
+      PyObject * py_array = PyArray_FROM_OTF( item , NPYTYPE, NPY_ARRAY_IN_ARRAY );
+      if ( PyArray_NDIM( (PyArrayObject*)py_array ) != 1 )
 	throw( std::runtime_error( "list element must be 1 dimensional" ) );
       if ( py_array != item ) new_array_built[i] = true;
       else new_array_built[i] = false;
       if ( py_array == NULL ) SWIG_fail;
       // Now we need to check that the NumPy array that we have is 1D.  If
       // it is higher dimension, we will raise a Python exception.
-      if (PyArray_NDIM(py_array) > 1)
+      if (PyArray_NDIM((PyArrayObject*)py_array) > 1)
 	{
 	  PyErr_SetString(PyExc_ValueError,"Array data must be one dimensional");
 	  SWIG_fail;
 	}
-      TSDVL[i] = Teuchos::SerialDenseVector<CPP_ORDINAL_TYPE,CPP_SCALAR_TYPE>(Teuchos::View, (CPP_SCALAR_TYPE*)PyArray_DATA(py_array), (CPP_ORDINAL_TYPE)PyArray_DIM(py_array,0));
+      TSDVL[i] = Teuchos::SerialDenseVector<CPP_ORDINAL_TYPE,CPP_SCALAR_TYPE>(Teuchos::View, (CPP_SCALAR_TYPE*)PyArray_DATA((PyArrayObject*)py_array), (CPP_ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)py_array,0));
     }
   $1 = &TSDVL;
 };
@@ -130,7 +129,7 @@ using Teuchos::SerialDenseMatrix;
       // Create a fortran ordered numpy array
       PyObject* array = PyArray_EMPTY( 2, dims, NPYTYPE, 1 );
       if (!array) SWIG_fail;
-      CPP_SCALAR_TYPE *matrix = (CPP_SCALAR_TYPE *)PyArray_DATA( array );
+      CPP_SCALAR_TYPE *matrix = (CPP_SCALAR_TYPE *)PyArray_DATA( (PyArrayObject*)array );
       for ( int j = 0; j < n; j++ ){
 	for ( int i = 0; i < m; i++ ){
 	  matrix[j*m+i] = (*$1)[k](i,j);
@@ -164,24 +163,24 @@ using Teuchos::SerialDenseMatrix;
       // a new array is constructed. When the requirements are satisfied
       // and the new reference is returned we must call DECREF in the
       // corresponding freearg typemap on item.
-      PyObject *py_array = PyArray_FROM_OTF( item , NPYTYPE, NPY_IN_ARRAY );
-      if ( PyArray_NDIM( py_array ) != 2 )
+      PyObject *py_array = PyArray_FROM_OTF( item , NPYTYPE, NPY_ARRAY_IN_ARRAY );
+      if ( PyArray_NDIM( (PyArrayObject*)py_array ) != 2 )
 	throw( std::runtime_error( "list element must be 2 dimensional" ) );
       if ( py_array != item ) new_array_built[i] = true;
       else new_array_built[i] = false;
       if ( py_array == NULL ) SWIG_fail;
       // Now we need to check that the NumPy array that we have is 1D.  If
       // it is higher dimension, we will raise a Python exception.
-      if (PyArray_NDIM(py_array) > 1)
+      if (PyArray_NDIM((PyArrayObject*)py_array) > 1)
 	{
 	  PyErr_SetString(PyExc_ValueError,"Array data must be one dimensional");
 	  SWIG_fail;
 	}
       CPP_ORDINAL_TYPE stride = (CPP_ORDINAL_TYPE)( PyArray_STRIDE(py_array,1) /
 						    PyArray_ITEMSIZE(py_array) ),
-	m = (CPP_ORDINAL_TYPE)PyArray_DIM(py_array,0),
-	n = (CPP_ORDINAL_TYPE)PyArray_DIM(py_array,1);
-      TSDML[i] = Teuchos::SerialDenseMatrix<CPP_ORDINAL_TYPE,CPP_SCALAR_TYPE>(Teuchos::View, (CPP_SCALAR_TYPE*)PyArray_DATA(py_array), stride, m, n );
+	m = (CPP_ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)py_array,0),
+	n = (CPP_ORDINAL_TYPE)PyArray_DIM((PyArrayObject*)py_array,1);
+      TSDML[i] = Teuchos::SerialDenseMatrix<CPP_ORDINAL_TYPE,CPP_SCALAR_TYPE>(Teuchos::View, (CPP_SCALAR_TYPE*)PyArray_DATA((PyArrayObject*)py_array), stride, m, n );
     }
   $1 = &TSDML;
 };
