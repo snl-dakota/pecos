@@ -125,7 +125,7 @@ math_tools = Extension(
     language='c++',
     library_dirs = math_tools_library_dirs,
     libraries = math_tools_libraries,
-    extra_compile_args = ['-std=c++11'],#,'-Wno-unused-local-typedefs'],
+    extra_compile_args = ['-std=c++11','-Wno-unused-local-typedefs'],
     swig_opts=package_swig_opts+['-I%s'%include_dir for include_dir in math_tools_include_dirs])
 
 regression_include_dirs = base_include_dirs+surrogates_include_dirs+\

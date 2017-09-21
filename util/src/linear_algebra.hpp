@@ -444,8 +444,8 @@ T trace( Teuchos::SerialDenseMatrix<O,T> &A )
 *  referenced. If false the upper part is filled in with zeros. 
 *  Similarly for A = U**T * U
 */
-int cholesky( RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo,
-	      bool for_lapack );
+int cholesky( const RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo,
+              bool for_lapack );
 
 /**
  * \brief Solves a system of linear equations A*X = B with a symmetric
@@ -456,8 +456,8 @@ int cholesky( RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo,
  *  M-by-NRHS right hand side matrix B and the N-by-NRHS solution
  *  matrix X.
  */
-int solve_using_cholesky_factor( RealMatrix &L, RealMatrix& B, 
-				 RealMatrix& result, Teuchos::EUplo uplo );
+int solve_using_cholesky_factor( const RealMatrix &L, const RealMatrix& B,
+                                 RealMatrix& result, Teuchos::EUplo uplo );
 
 /**
  * \brief Solves a system of linear equations A*X = B with a symmetric
@@ -473,8 +473,8 @@ int solve_using_cholesky_factor( RealMatrix &L, RealMatrix& B,
  *                       condition number of A and store the result in rcond on 
  *			 output. if rcond > 0 rcond is not computed. 
  */
-int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& result,  
-		    Real &rcond );
+int cholesky_solve(const RealMatrix& A, const RealMatrix& B,
+                   RealMatrix& result, Real &rcond );
 
 
 /**
@@ -856,8 +856,8 @@ void equality_constrained_least_squares_solve(const RealMatrix &A,
 void cholesky_inverse(  RealMatrix &L, RealMatrix &result,
 			Teuchos::EUplo uplo );
 
-void pivoted_qr_factorization( RealMatrix &A, RealMatrix &result_0, 
-			       RealMatrix &result_1, IntVector &result );
+void pivoted_qr_factorization( const RealMatrix &A, RealMatrix &result_0,
+                               RealMatrix &result_1, IntVector &result );
 
 void lu_solve( RealMatrix &A, 
 	       const RealMatrix &B, 
@@ -1001,8 +1001,8 @@ Real cholesky_condition_number( RealMatrix &L );
 void complete_pivoted_lu_factorization( const RealMatrix &A, 
 					RealMatrix &result_0, 
 					RealMatrix &result_1,
-					IntVector &values_0,
-					IntVector &values_1,
+					IntVector &result_2,
+					IntVector &result_3,
 					int max_iters );
 
 /**
@@ -1011,9 +1011,9 @@ void complete_pivoted_lu_factorization( const RealMatrix &A,
  *
  * Eigenvalues are returned in ascending order.
  */
-void symmetric_eigenvalue_decomposition( RealMatrix &A, 
-					 RealVector &result, 
-					 RealMatrix &result_0 );
+void symmetric_eigenvalue_decomposition( const RealMatrix &A,
+                                         RealVector &result,
+                                         RealMatrix &result_0 );
 
 /**
  * \brief Compute an LU factorization with parital row pivoting of the
@@ -1029,7 +1029,7 @@ void symmetric_eigenvalue_decomposition( RealMatrix &A,
 void truncated_pivoted_lu_factorization( const RealMatrix &A,
 					 RealMatrix &result_0, 
 					 RealMatrix &result_1,
-					 IntVector &values_0,
+					 IntVector &result_2,
 					 int max_iters,
 					 int num_initial_rows );
 

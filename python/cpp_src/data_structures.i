@@ -212,3 +212,25 @@ using Teuchos::SerialDenseMatrix;
 %teuchos_serial_dense_matrix_list( int, double, NPY_DOUBLE );
 %teuchos_serial_dense_matrix_list( int, int, NPY_INT );
 %teuchos_serial_dense_matrix_list( int, Complex, NPY_CDOUBLE );
+
+// ---------------------------------------------------------------------//
+// have typemaps be applied to classes named result, result_0, result_1 //
+// ---------------------------------------------------------------------//
+
+// for int,int templates
+%apply std::vector<Teuchos::SerialDenseVector<int,int> > &argout {std::vector<Teuchos::SerialDenseVector<int,int> > &result}
+%apply std::vector<Teuchos::SerialDenseVector<int,int> > &argout {std::vector<Teuchos::SerialDenseVector<int,int> > &result_0}
+%apply std::vector<Teuchos::SerialDenseVector<int,int> > &argout {std::vector<Teuchos::SerialDenseVector<int,int> > &result_1}
+%apply std::vector<Teuchos::SerialDenseMatrix<int,int> >  &argout {std::vector<Teuchos::SerialDenseMatrix<int,int> > &result}
+%apply std::vector<Teuchos::SerialDenseMatrix<int,int> >  &argout {std::vector<Teuchos::SerialDenseMatrix<int,int> > &result_0}
+%apply std::vector<Teuchos::SerialDenseMatrix<int,int> >  &argout {std::vector<Teuchos::SerialDenseMatrix<int,int> > &result_1}
+
+// for int,double templates
+%apply std::vector<Teuchos::SerialDenseVector<int,double> > &argout {std::vector<Teuchos::SerialDenseVector<int,double> > &result}
+%apply std::vector<Teuchos::SerialDenseVector<int,double> > &argout {std::vector<Teuchos::SerialDenseVector<int,double> > &result_0}
+%apply std::vector<Teuchos::SerialDenseVector<int,double> > &argout {std::vector<Teuchos::SerialDenseVector<int,double> > &result_1}
+%apply std::vector<Teuchos::SerialDenseMatrix<int,double> >  &argout {std::vector<Teuchos::SerialDenseMatrix<int,double> > &result}
+%apply std::vector<Teuchos::SerialDenseMatrix<int,double> >  &argout {std::vector<Teuchos::SerialDenseMatrix<int,double> > &result_0}
+%apply std::vector<Teuchos::SerialDenseMatrix<int,double> >  &argout {std::vector<Teuchos::SerialDenseMatrix<int,double> > &result_1}
+
+

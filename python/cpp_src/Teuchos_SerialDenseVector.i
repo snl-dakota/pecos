@@ -1,47 +1,3 @@
-// -*- c++ -*-
-
-// @HEADER
-// ***********************************************************************
-//
-//          PyTrilinos: Python Interfaces to Trilinos Packages
-//                 Copyright (2014) Sandia Corporation
-//
-// Under the terms of Contract DE-AC04-94AL85000 with Sandia
-// Corporation, the U.S. Government retains certain rights in this
-// software.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-//
-// 1. Redistributions of source code must retain the above copyright
-// notice, this list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright
-// notice, this list of conditions and the following disclaimer in the
-// documentation and/or other materials provided with the distribution.
-//
-// 3. Neither the name of the Corporation nor the names of the
-// contributors may be used to endorse or promote products derived from
-// this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY SANDIA CORPORATION "AS IS" AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-// PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL SANDIA CORPORATION OR THE
-// CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
-// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-// PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-// PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-// LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-// NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-// Questions? Contact William F. Spotz (wfspotz@sandia.gov)
-//
-// ***********************************************************************
-// @HEADER
-
 // Teuchos_SerialDenseVector.i is a SWIG interface file that provides SWIG
 // directives to handle Teuchos SerialDenseVector types.  This class is not
 // wrapped, but instead typemaps are defined so that the python user
@@ -72,69 +28,6 @@ using Teuchos::SerialDenseVector;
 // construct the SerialDenseVector.  If the conversion creates a new
 // PyArrayObject, then we have to be sure to decrement its reference
 // count once the SerialDenseVector has been used.
-
-//////////////////////////////////////
-// Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE> //
-//////////////////////////////////////
-%typecheck(SWIG_TYPECHECK_DOUBLE_ARRAY,
-           fragment="NumPy_Macros")
-  (Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE>)
-{
-  $1 = is_array($input) || PySequence_Check($input);
-}
-
-%typemap(in) Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE>
-(int is_new = 0,
- PyArrayObject * npArray = NULL)
-{
-  npArray = obj_to_array_fortran_allow_conversion($input, TYPECODE, &is_new);
-  if (!npArray) SWIG_fail;
-  $1 = Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE>(
-	       Teuchos::Copy,
-	       (SCALAR_TYPE*) array_data(npArray),
-	       array_size(npArray, 0));
-}
-
-%typemap(freearg) Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE>
-{
-  if (is_new$argnum) Py_DECREF(npArray$argnum);
-}
-
-%typemap(out) Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE>
-{
-  npy_intp dims[1] = { $1.length() };
-  $result = PyArray_SimpleNewFromData(1, dims, TYPECODE, (void*) $1.values());
-  if (!$result) SWIG_fail;
-}
-
-//////////////////////////////////////////////
-// Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE> const & //
-//////////////////////////////////////////////
-%typecheck(SWIG_TYPECHECK_DOUBLE_ARRAY,
-           fragment="NumPy_Macros")
-  (Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE> const &)
-{
-  $1 = is_array($input) || PySequence_Check($input);
-}
-
-%typemap(in) Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE> const &
-(int is_new = 0,
- PyArrayObject * npArray = NULL,
- Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE> temp)
-{
-  npArray = obj_to_array_fortran_allow_conversion($input, TYPECODE, &is_new);
-  if (!npArray) SWIG_fail;
-  temp = Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE>(
-		 Teuchos::Copy,
-		 (SCALAR_TYPE*) array_data(npArray),
-		 array_size(npArray, 0));
-  $1 = &temp;
-}
-
-%typemap(freearg) Teuchos::SerialDenseVector<const ORDINAL_TYPE,const SCALAR_TYPE> const &
-{
-  if (is_new$argnum) Py_DECREF(npArray$argnum);
-}
 
 // If an SerialDenseVector argument has template parameter argument that is a
 // non-const TYPE, then the default behavior is to assume that the
@@ -184,7 +77,8 @@ using Teuchos::SerialDenseVector;
 (Teuchos::SerialDenseVector<ORDINAL_TYPE, SCALAR_TYPE> temp)
 {
   int is_new = 0;
-  PyArrayObject * npArray = obj_to_array_fortran_allow_conversion(
+  //PyArrayObject * npArray = obj_to_array_fortran_allow_conversion(
+  PyArrayObject * npArray = obj_to_array_contiguous_allow_conversion(
       $input, TYPECODE, &is_new);
   if (!npArray) SWIG_fail;
   temp = Teuchos::SerialDenseVector<ORDINAL_TYPE, SCALAR_TYPE>(
@@ -276,3 +170,18 @@ using Teuchos::SerialDenseVector;
 %teuchos_sdv_typemaps(int, unsigned long long, NPY_ULONGLONG)
 %teuchos_sdv_typemaps(int, float             , NPY_FLOAT    )
 %teuchos_sdv_typemaps(int, double            , NPY_DOUBLE   )
+
+
+// ---------------------------------------------------------------------//
+// have typemaps be applied to classes named result, result_0, result_1 //
+// ---------------------------------------------------------------------//
+%apply Teuchos::SerialDenseVector<int,int> &argout { Teuchos::SerialDenseVector<int,int> &result }
+%apply Teuchos::SerialDenseVector<int,int> &argout { Teuchos::SerialDenseVector<int,int> &result_0 }
+%apply Teuchos::SerialDenseVector<int,int> &argout { Teuchos::SerialDenseVector<int,int> &result_1 }
+%apply Teuchos::SerialDenseVector<int,int> &argout { Teuchos::SerialDenseVector<int,int> &result_2 }
+%apply Teuchos::SerialDenseVector<int,int> &argout { Teuchos::SerialDenseVector<int,int> &result_3 }
+%apply Teuchos::SerialDenseVector<int,double> &argout { Teuchos::SerialDenseVector<int,double> &result }
+%apply Teuchos::SerialDenseVector<int,double> &argout { Teuchos::SerialDenseVector<int,double> &result_0 }
+%apply Teuchos::SerialDenseVector<int,double> &argout { Teuchos::SerialDenseVector<int,double> &result_1 }
+%apply Teuchos::SerialDenseVector<int,double> &argout { Teuchos::SerialDenseVector<int,double> &result_2 }
+%apply Teuchos::SerialDenseVector<int,double> &argout { Teuchos::SerialDenseVector<int,double> &result_3 }

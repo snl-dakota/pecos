@@ -16,7 +16,6 @@
 #include <boost/functional/hash.hpp>
 #include <boost/unordered_set.hpp>
 #include "Teuchos_SerialDenseHelpers.hpp"
-#include "Teuchos_Array.hpp"
 #include "OptionsList.hpp"
 
 namespace Surrogates {
@@ -618,7 +617,7 @@ void magnitude_argsort( const Teuchos::SerialDenseVector<O,T> &values,
  * in ascending order
  */
 template<typename O, typename T>
-int binary_search( T target, Teuchos::SerialDenseVector<O,T> &data )
+int binary_search( T target, const Teuchos::SerialDenseVector<O,T> &data )
 {
   O low = 0, high = data.length()-1, mid;
   while ( low <= high )
@@ -1002,40 +1001,6 @@ bool allclose(const RealMatrix &A, const RealMatrix &B, Real tol);
 
 void random_permutation(int M, int N, unsigned int seed, IntMatrix &result);
 
-
-/** \brief  Extract an Teuchos::SerialDenseVector from a list of options and
- * throw a runtime error if it does not exist.
- * 
- * 1D NumPy arrays are converted to Teuchos::Arrays. So when setting a
- * OptionsList with a 1D NumPy array in python we must extract it as
- * a Teuchos::Array and convert it to a Teuchos::SerialDenseVector. 
- * This function hides this complexity.
- *
- * \param[in] opts
- *     List of options
- * \param[in] name 
- *      name of enum we want to extract
- * \param[out] item
- *      value of enum
- * \return exists
- *     True if enum with name exists, false otherwise
- */  
-template < typename O, typename T >
-bool extract_vector(OptionsList& opts, const std::string &name,
-		    Teuchos::SerialDenseVector<O,T> &vector ){
-  if ( opts.isType<Teuchos::SerialDenseVector<O,T> >(name) ){
-    vector = *(&opts.get<Teuchos::SerialDenseVector<O,T> >(name));
-    return true;
-  }else if(opts.isType< Teuchos::Array<T> >(name)){
-    Teuchos::Array<T>* array = &opts.get< Teuchos::Array<T> >(name);
-    size_uninitialized(vector, (O)array->size());
-    for (O i=0; i<vector.length(); ++i)
-      vector[i] = (*array)[i];
-    return true;
-  }else{
-    return false;
-  }
-}
 
 /** \brief  Extract an enum from a list of options if it exists and return
  * falg specifying if it exists. 

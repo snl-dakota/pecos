@@ -59,8 +59,8 @@ template<> void GEMV<int,std::complex<double> >(
 }
 
 
-int cholesky( RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo, 
-	      bool for_lapack )
+int cholesky( const RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo, 
+              bool for_lapack )
 {
   Teuchos::LAPACK<int, Real> la;
   int M = A.numRows();
@@ -107,8 +107,8 @@ int cholesky( RealMatrix &A, RealMatrix &result, Teuchos::EUplo uplo,
   return info;
 };
 
-int solve_using_cholesky_factor( RealMatrix &L, RealMatrix& B, 
-				 RealMatrix& result, Teuchos::EUplo uplo )
+int solve_using_cholesky_factor( const RealMatrix &L, const RealMatrix& B,
+                                 RealMatrix& result, Teuchos::EUplo uplo )
 {
   Teuchos::LAPACK<int, Real> la;
   int m( L.numRows() ), num_rhs( B.numCols() );
@@ -118,8 +118,8 @@ int solve_using_cholesky_factor( RealMatrix &L, RealMatrix& B,
   // Solves the system of linear equations A*X = B with a symmetric
   // positive definite matrix A=LL' using the Cholesky factorization
   int info;
-  la.POTRS( Teuchos::EUploChar[uplo], m, num_rhs, 
-	    L.values(), L.stride(), 
+  la.POTRS( Teuchos::EUploChar[uplo], m, num_rhs,
+	    L.values(), L.stride(),
 	    result.values(), result.stride(), &info );
   result.reshape( L.numRows(), num_rhs );
 
@@ -127,8 +127,7 @@ int solve_using_cholesky_factor( RealMatrix &L, RealMatrix& B,
 };
 
 int teuchos_cholesky_solve( RealMatrix &A, RealMatrix &B, 
-			    RealMatrix& result, Real &rcond )
-{
+                            RealMatrix& result, Real &rcond ){
   // Copy A so that it is not affected outside the scope of this function
   RealSymMatrix chol_factor( A.numRows() );
   for (int j=0; j<A.numRows(); j++)
@@ -156,7 +155,8 @@ int teuchos_cholesky_solve( RealMatrix &A, RealMatrix &B,
   return info;
 }
 
-int cholesky_solve( RealMatrix& A, RealMatrix& B, RealMatrix& result, Real &rcond )
+int cholesky_solve(const RealMatrix& A, const RealMatrix& B,
+                   RealMatrix& result, Real &rcond)
 {
   Teuchos::LAPACK<int, Real> la;
 
@@ -796,8 +796,8 @@ void cholesky_inverse( RealMatrix &U, RealMatrix &result, Teuchos::EUplo uplo  )
     }
 };
 
-void pivoted_qr_factorization( RealMatrix &A, RealMatrix &Q, RealMatrix &R,
-			       IntVector &p )
+void pivoted_qr_factorization( const RealMatrix &A, RealMatrix &Q, RealMatrix &R,
+                               IntVector &p )
 {
   Teuchos::LAPACK<int, Real> la;
 
@@ -1118,9 +1118,9 @@ Real cholesky_condition_number( RealMatrix &L )
   return  rcond;
 }
 
-void symmetric_eigenvalue_decomposition( RealMatrix &A, 
-					 RealVector &eigenvalues, 
-					 RealMatrix &eigenvectors )
+void symmetric_eigenvalue_decomposition( const RealMatrix &A,
+                                         RealVector &eigenvalues,
+                                         RealMatrix &eigenvectors )
 {
   Teuchos::LAPACK<int, Real> la;
 

@@ -384,3 +384,14 @@ using Teuchos::SerialDenseMatrix;
 %teuchos_sdm_typemaps(int, unsigned long long, NPY_ULONGLONG)
 %teuchos_sdm_typemaps(int, float             , NPY_FLOAT    )
 %teuchos_sdm_typemaps(int, double            , NPY_DOUBLE   )
+
+
+// ---------------------------------------------------------------------//
+// have typemaps be applied to classes named result, result_0, result_1 //
+// ---------------------------------------------------------------------//
+%apply Teuchos::SerialDenseMatrix<int,int> &argout { Teuchos::SerialDenseMatrix<int,int> &result }
+%apply Teuchos::SerialDenseMatrix<int,int> &argout { Teuchos::SerialDenseMatrix<int,int> &result_0 }
+%apply Teuchos::SerialDenseMatrix<int,int> &argout { Teuchos::SerialDenseMatrix<int,int> &result_1 }
+%apply Teuchos::SerialDenseMatrix<int,double> &argout { Teuchos::SerialDenseMatrix<int,double> &result }
+%apply Teuchos::SerialDenseMatrix<int,double> &argout { Teuchos::SerialDenseMatrix<int,double> &result_0 }
+%apply Teuchos::SerialDenseMatrix<int,double> &argout { Teuchos::SerialDenseMatrix<int,double> &result_1 }
