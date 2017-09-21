@@ -1,26 +1,22 @@
 /* approximations.i */
 
-%define %pydakota_docstring
+%define %approximation_docstring
 "
-PyDakota.surrogates is the python interface to the Dakota tools and
-approximation packages:
-
-    https://dakota.sandia.gov/
+PyDakota.approximations is the python interface to the Dakota approximation
+classes and training methods.
 "
 %enddef
 
 %module(package      = "PyDakota",
-	directors    = "1",
-	autodoc      = "1",
-	implicitconv = "1",
-	docstring    = %pydakota_docstring) approximation
+        directors    = "1",
+        autodoc      = "1",
+        implicitconv = "1",
+        docstring    = %approximation_docstring) approximation
 
 %feature("director") Function;
 
 // The following code is inserted directly into the wrapper file
 %{
-#include <Python.h> 
-#include <numpy/arrayobject.h>
 #include "numpy_include.hpp"//gets rid of deprecated warnings
 
 // Approximation includes
@@ -37,18 +33,66 @@ approximation packages:
 #include "polynomial_approximation_drivers.hpp"
 #include "RegressionBuilder.hpp"
 #include "PCEFactory.hpp"
-  using std::string;
-  using namespace Pecos;
+  //  using std::string;
+  //  using namespace Pecos;
+
 #include "typedefs_for_python_wrapper.hpp"
+#include <vector> 
+
+  // Following needed to allow OptionsList to be used and function such as
+  // pyDictToNewOptionsList to be found
+  #include "python_helpers.hpp"
 %}
 
-%ignore *::operator[];
+// We utilize very little of numpy.i, so some of the fragments
+// do not get automatically instantiated.  This forces the issue.
+%include "numpy.i"
+// Following is needed otherwise will get segfault when wrapped functions in */
+// module is run
+%init %{
+  import_array();
+%}
+// Standard exception handling
+%include "exception.i"
+%include "std_except.i"
+%exception
+{
+  try{
+    // use these print statements to debug
+    //printf("Entering function : $name\n");
+    $action
+      if (PyErr_Occurred()) SWIG_fail;
+    //else    printf("Exiting function : $name\n");
+  }
+  SWIG_CATCH_STDEXCEPT
+    catch (...) {
+    SWIG_exception(SWIG_UnknownError, "unknown C++ exception");
+    throw(std::runtime_error(""));
+  }
+}
 
-// How do I make math_tools a separate module of submodule?
-%include "fundamentals.i"
-%include "stl.i"
+// %ignore and rename must be included before the function decleration, i.e.
+// before the %include
+%ignore *::operator[];
+%ignore *::operator=;
+%ignore *::print;
+
+// include Teuchos enums, such as TRANS, NO_TRANS
+%include "Teuchos_BLAS_types.hpp"
+
+// include typemaps to convert to from NumPy Arrays to
+// Teuchos::SerialDenseVector/Matrix
+/* %include "Teuchos_SerialDenseVector.i" */
+/* %include "Teuchos_SerialDenseMatrix.i" */
+/* %include "data_structures.i" */
+
+%include "std_vector.i"
 %template() std::vector<short>;
 %include "typedefs_for_python_wrapper.hpp"
+
+%include <boost_shared_ptr.i>
+%shared_ptr(std::basic_ostream)
+%shared_ptr(std::ostream)
 
 %shared_ptr(Surrogates::Function)
 %shared_ptr(Surrogates::CppFunction)
@@ -61,7 +105,12 @@ approximation packages:
 %shared_ptr(Surrogates::VariableTransformation)
 %shared_ptr(Surrogates::AffineVariableTransformation)
 
-%include "OptionsList.i"
+// importing math_tools.i avoids need to %include
+// Teuchos_SerialDenseVector?Matrix.i and data_Structures.i
+%import "math_tools.i"
+
+%import "OptionsList.i"
+
 %include "Function.hpp"
 %include "CppFunction.hpp"
 %include "Variables.hpp"

@@ -283,13 +283,13 @@ setup(
     ext_modules=[
         options_list,
         math_tools,
-        #regression,
-        #approximation,
-        #univariate_polynomials
+        regression,
+        approximation,
+        univariate_polynomials
         #std_vector_example,
         #options_list_interface,
-        enum_example,
-        dot#,
+        #enum_example,
+        #dot#,
     ],
     package_data={package_name:[join('unit','data/*.gz')]},
     test_suite='setup.PyDakota_test_suite')

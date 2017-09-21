@@ -331,7 +331,7 @@ using Teuchos::SerialDenseMatrix;
   PyArrayObject* py_array$argnum =
     (PyArrayObject*) PyArray_NewFromDescr( &PyArray_Type, dtype$argnum, 2,
 					   dims$argnum, NULL, (void*)data$argnum,
-					   NPY_FARRAY, NULL );
+					   NPY_ARRAY_F_CONTIGUOUS, NULL );
   // Cast to (PyObject*) is necessary
   $input = (PyObject*)py_array$argnum;
   %}

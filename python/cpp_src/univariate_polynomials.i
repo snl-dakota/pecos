@@ -1,25 +1,29 @@
 /* univariate_polynomials.i */
-%module(directors=1,package="PyDakota",autodoc=1) univariate_polynomials
 
-/* %include <std_vector.i> */
-/* %template() std::vector<double>; */
-/* %template() std::vector<int>; */
+%define %univariate_polynomials_docstring
+"
+PyDakota.univariate_polynomials is the python interface to the Dakota
+univariate polynomial classes.
+"
+%enddef
+
+%module(package="PyDakota",
+        directors=1,
+        autodoc=1,
+        implicitconv = "1",
+        doc_string=%univariate_polynomials_docstring) univariate_polynomials
+
 %{
-#include <Python.h> 
-#include <numpy/arrayobject.h>
-#define NO_IMPORT_ARRAY
 #include "numpy_include.hpp"//gets rid of deprecated warnings
 
-  //#include "numpy_include.hpp"
+  //#include "pecos_data_types.hpp"
 #include <vector>
 #include "BasisPolynomial.hpp"
-using namespace Pecos;
+
+  // needed because of confusion induced by surrogates and Pecos namespaces
+  // when defining Real
+  using namespace Pecos;
 %}
-
-//%include "fundamentals.i"
-
-//%include "pecos_data_types.hpp"
-//%ignore type1_value(unsigned_short);
 
 %include "numpy.i"
 %fragment("NumPy_Fragments");
@@ -29,14 +33,15 @@ using namespace Pecos;
 
 // Standard exception handling
 %include "exception.i"
+%include "std_except.i"
 %exception
 {
-  try{                                          
+  try{
     // use these print statements to debug
     //printf("Entering function : $name\n");
-   $action
-   if (PyErr_Occurred()) SWIG_fail;
-   //else    printf("Exiting function : $name\n");
+    $action
+      if (PyErr_Occurred()) SWIG_fail;
+    //else    printf("Exiting function : $name\n");
   }
   SWIG_CATCH_STDEXCEPT
     catch (...) {
@@ -44,17 +49,21 @@ using namespace Pecos;
     throw(std::runtime_error(""));
   }
 }
-// If get
-// SystemError: return without exception seterror
-// this can mean swig_fail is being called but not working for some reason
 
+// importing math_tools.i avoids need to %include
+// Teuchos_SerialDenseVector?Matrix.i and data_Structures.i
+%import "math_tools.i"
+
+
+// custom std vector typemap needed for returning values of 
+// Pecos::ApproximationBasis
 %define %std_vector_typemaps(SCALAR_TYPE, TYPECODE)
 %typemap(out) std::vector<SCALAR_TYPE> const &
 {
   npy_intp dims[1] = {static_cast<npy_intp>($1->size())};
   $result = PyArray_SimpleNew( 1, dims, TYPECODE );
   if (!$result) SWIG_fail;
-  SCALAR_TYPE *array = (SCALAR_TYPE *)PyArray_DATA( $result );
+  SCALAR_TYPE *array = (SCALAR_TYPE *)PyArray_DATA((PyArrayObject*)$result );
   for (std::vector<SCALAR_TYPE>::iterator it=$1->begin() ; it!=$1->end(); ++it){
     *array++ = *it;
   }

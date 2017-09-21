@@ -1,5 +1,6 @@
 import unittest, numpy, os
 from PyDakota.regression import *
+from PyDakota.options_list import OptionsList
 class TestLASSO(unittest.TestCase):
     def setUp( self ):
         self.diabetes_matrix, self.diabetes_rhs = self.load_diabetes_data()

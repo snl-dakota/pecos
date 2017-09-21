@@ -2,7 +2,7 @@
 
 %define %math_tools_docstring
 "
-PyDakota.math_tools is the python interface to the Dakota miscelanrous math
+PyDakota.math_tools is the python interface to the Dakota miscelaneous math
 tools and utilities
 
 The purpose of this package is to provide a number of utilities often

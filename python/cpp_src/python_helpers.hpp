@@ -2,10 +2,10 @@
 #define PYTHON_HELPERS_HPP
 
 // NumPy include
-#define NO_IMPORT_ARRAY
 // Python.h must be included before any headers to avoid 
 // warning: "_POSIX_C_SOURCE" redefined. 
 // Python.h is included in numpy_include.hpp
+#define NO_IMPORT_ARRAY
 #include "numpy_include.hpp"
 #include "Teuchos_SerialDenseVector.hpp"
 

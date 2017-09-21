@@ -1,10 +1,28 @@
 /* regression.i */
-%module(directors="1", implicitconv="1", autodoc="1",package="PyDakota") regression
+
+%define %regression_docstring
+"
+PyDakota.regression is the python interface to the Dakota utilities for
+solving  regression problems.
+
+This package provides tools for
+  * Least squares regression, using SVD, QR, CHOLESKY, and LU decompositions
+  * Orthgonal matching pursuit (OMP)
+  * Least angle regession (LAR)
+"
+%enddef
+
+%module(package="PyDakota",
+        directors="1",
+        implicitconv="1",
+        autodoc="1",
+        docstring=%regression_docstring) regression
+
 %feature("director") LinearSystemSolver;
 %{
-// Required for interfacing with NumPy
-#include <Python.h>
-#include <numpy/arrayobject.h>
+  #define SWIG_FILE_WITH_INIT
+  //unlike math_tools we must include following file here
+  #include "numpy_include.hpp"
 
 // Local includes
 #include "linear_solvers.hpp"
@@ -18,22 +36,57 @@
 #include "LSQCrossValidationIterator.hpp"
 #include "CrossValidatedSolver.hpp"
 
-using namespace Surrogates;
+  // Following needed to allow OptionsList to be used and function such as
+  // pyDictToNewOptionsList to be found
+  #include "python_helpers.hpp"
 %}
+
+// We utilize very little of numpy.i, so some of the fragments
+// do not get automatically instantiated.  This forces the issue.
+%include "numpy.i"
+// Following is needed otherwise will get segfault when wrapped functions in */
+// module is run
+%init %{
+  import_array();
+%}
+
+// Standard exception handling
+%include "exception.i"
+%include "std_except.i"
+%exception
+{
+  try{
+    // use these print statements to debug
+    //printf("Entering function : $name\n");
+    $action
+      if (PyErr_Occurred()) SWIG_fail;
+    //else    printf("Exiting function : $name\n");
+  }
+  SWIG_CATCH_STDEXCEPT
+    catch (...) {
+    SWIG_exception(SWIG_UnknownError, "unknown C++ exception");
+    throw(std::runtime_error(""));
+  }
+}
+
+// %ignore and rename must be included before the function decleration, i.e.
+// before the %include
+%ignore *::operator[];
+%ignore *::operator=;
+%ignore *::print;
+
+// include Teuchos enums, such as TRANS, NO_TRANS
+%include "Teuchos_BLAS_types.hpp"
 
 %rename(extract_values_cpp) extract_values;
 // note following is applied to that class and all derived classes
 %rename(solve_cpp) Surrogates::LinearSystemSolver::solve;
 %rename(run_cpp) Surrogates::LinearSystemCrossValidationIterator::run;
-%ignore *::operator[];
 
-%include "fundamentals.i"
-%import "math_tools.i" // If I create math_tools as a seperate module I start
- // getting errors when trying to import both regression and math_tools
- // and creating a ParameterList from a python dictionary.
- // The error looks like Warning! The following Teuchos::RCPNode objects
- // were created but have...
-%include "OptionsList.i"
+// importing math_tools.i avoids need to %include
+// Teuchos_SerialDenseVector?Matrix.i and data_Structures.i
+%import "math_tools.i"
+%import "OptionsList.i"
 
 %shared_ptr(Surrogates::LinearSystemSolver)
 %shared_ptr(Surrogates::SparseSolver)
