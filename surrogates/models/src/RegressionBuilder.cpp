@@ -45,21 +45,22 @@ void solve_regression(const RealMatrix &samples,
   // regression solve
   RealMatrix basis_matrix;
   poly_approx.generate_basis_matrix(samples,basis_matrix);
+
+  samples.print(std::cout);
+  basis_matrix.print(std::cout);
     
   // Solve regression problem to get coefficients
   boost::shared_ptr<LinearSystemSolver> solver = regression_solver_factory(opts);
   RealMatrix coeffs;
   solver->solve(basis_matrix, values, opts);
-  // todo replace following with a function that extracts coeffs for all rhs
-  // need to consider when cross validation is used and not. e.g do we take 
-  // solution corresponding to last regularization param
+
   solver->get_final_solutions(coeffs);
   // Set the approximation coefficients
   poly_approx.set_coefficients(coeffs);
 }
 
 void RegressionBuilder::
-build(OptionsList &opts, Approximation &approx){
+build(OptionsList &opts, Approximation &approx, OptionsList &result){
   // Generate samples to build approximation
   int num_samples = opts.get<int>("num_samples");
   std::string sample_type = opts.get<std::string>("sample_type");
@@ -71,16 +72,19 @@ build(OptionsList &opts, Approximation &approx){
   boost::shared_ptr<VariableTransformation> var_transform =
     approx.get_variable_transformation();
   generate_uniform_samples(approx.num_vars(), num_samples, seed,
-			   *var_transform, samples);
-  
+                           *var_transform, samples);
+
   // Evaluate the function at the build samples
   RealMatrix values;
   targetFunction_->value(samples, values);
-    
+
   //\todo consider having opts have multiple parameterLists
   //each associated with a particular aspect of build
   //e.g. opts = (sample_opts, regression_opts)
   solve_regression(samples, values, opts, approx);
+
+  result.set("training_samples",samples);
+  result.set("training_values",values);
 }
 
 } //namespace Surrogates

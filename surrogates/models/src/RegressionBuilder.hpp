@@ -49,7 +49,8 @@ public:
    * \param[in] opts Spefications used to build the surrogate
    *
    */
-  virtual void build(OptionsList &opts, Approximation &approx);
+  virtual void build(OptionsList &opts, Approximation &approx,
+                     OptionsList &result);
 };
 
 }; // namespace surrogates

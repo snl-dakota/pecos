@@ -22,7 +22,7 @@ namespace {
 
 /**
 \brief Evaluate a quadratic polynomial with no interaction terms, i.e.
-*  \[q_i = (i+1) + \sum_j (i+1)*x_j^2+(i+2)x_j\]
+*  \[q_i = (i+1) + \sum_j (i+1)*(2*x_j-1)^2+(i+2)*(2*x_j-1)\]
 */
 void additive_quadratic_function(const Real* sample, Real* func_vals, const OptionsList &opts){
    const int num_vars = opts.get<int>("num_vars");
@@ -31,12 +31,13 @@ void additive_quadratic_function(const Real* sample, Real* func_vals, const Opti
    for (int i=0; i<num_qoi; i++){
      func_vals[i] = (Real)(i+1);
      for (int j=0; j<num_vars; j++){
-       func_vals[i] += (Real)(i+1)*sample[j]*sample[j]+(Real)(i+2)*sample[j];
+       Real x = (2*sample[j]-1);
+       func_vals[i] += (Real)(i+1)*x*x+(Real)(i+2)*x;
      }
    }
 }
 
-bool test_polynomial_regression_builder(RegressionType regression_type, Real atol){
+int test_polynomial_regression_builder(RegressionType regression_type, Real atol){
   int num_vars = 2, num_qoi = 2, num_samples = 20;
   int degree = 3;
 
@@ -59,7 +60,6 @@ bool test_polynomial_regression_builder(RegressionType regression_type, Real ato
   var_transform->set_variables(variables);
 
   // Define the function to approximate
-  RealMatrix func_vals;
   CppFunction model;
   OptionsList model_opts;
   model_opts.set("num_vars",num_vars);//total number of variables
@@ -86,7 +86,10 @@ bool test_polynomial_regression_builder(RegressionType regression_type, Real ato
   regression_opts.set("sample_type","probabilistic_MC");
   RegressionBuilder builder;
   builder.set_target_function(model);
-  builder.build(regression_opts, monomial);
+  OptionsList result;
+  builder.build(regression_opts, monomial, result);
+  RealMatrix training_samples = result.get<RealMatrix>("training_samples");
+  RealMatrix training_vals  = result.get<RealMatrix>("training_values");
   
 
   // Check that approximation is an interpolant
@@ -94,31 +97,40 @@ bool test_polynomial_regression_builder(RegressionType regression_type, Real ato
   // in status opts so that they can be accessed outide driver like here.
   // requires wrapping or serial dense matrix for parameter list
   RealMatrix approx_vals;
-  //monomial.value(samples,approx_vals);
-  if (!allclose(approx_vals,func_vals,atol))
-    return false;
+  monomial.value(training_samples,approx_vals);
+  if (!allclose(approx_vals,training_vals,atol)){
+    std::cout << "1\n";
+    return 1;
+  }
 
   // Check that approximation is exact everywhere
-  RealMatrix test_samples;
+  RealMatrix test_samples, test_vals;
   int num_test_samples = 100;
   int seed = 1337;
   generate_uniform_samples(num_vars, num_test_samples, seed, *var_transform,
-		      test_samples);
+                           test_samples);
+  
 
-  model.value(test_samples, func_vals);
+  model.value(test_samples, test_vals);
   monomial.value(test_samples,approx_vals);
-  if (!allclose(approx_vals,func_vals,atol))
-    return false;
+  if (!allclose(approx_vals,test_vals,atol)){
+    std::cout << "2\n";
+    return 2;
+  }
 
   // Check the monomial coefficients
   RealMatrix coeffs;
   monomial.get_coefficients(coeffs);
   Real true_coeffs_array[] = {1, 2, 2, 1, 1, 0, 0, 0, 0, 0,
-			      2, 3, 3, 2, 2, 0, 0, 0, 0, 0, };
+                              2, 3, 3, 2, 2, 0, 0, 0, 0, 0 };
   RealMatrix true_coeffs(Teuchos::Copy,true_coeffs_array,10,10,2);
-  //coeffs.print(std::cout);
-  //true_coeffs.print(std::cout);
-  return allclose(coeffs,true_coeffs,atol);
+  coeffs.print(std::cout);
+  true_coeffs.print(std::cout);
+  if (!allclose(coeffs,true_coeffs,atol)){
+    std::cout << "3\n";
+    return 3;
+  }else 
+    return 0;
 
 }
 
@@ -133,13 +145,13 @@ and c is the vector of monomial coefficients
 */
 TEUCHOS_UNIT_TEST(polynomial_approximation, monomial)
 {
-  TEST_ASSERT(test_polynomial_regression_builder(ORTHOG_MATCH_PURSUIT, 1e-8));
+  TEST_ASSERT(!test_polynomial_regression_builder(ORTHOG_MATCH_PURSUIT, 1e-8));
 
-  TEST_ASSERT(test_polynomial_regression_builder(LEAST_ANGLE_REGRESSION, 1e-8));
+  TEST_ASSERT(!test_polynomial_regression_builder(LEAST_ANGLE_REGRESSION, 1e-8));
 
-  TEST_ASSERT(test_polynomial_regression_builder(LASSO_REGRESSION, 1e-8));
+  TEST_ASSERT(!test_polynomial_regression_builder(LASSO_REGRESSION, 1e-8));
 
-  TEST_ASSERT(test_polynomial_regression_builder(SVD_LEAST_SQ_REGRESSION, 1e-8));
+  TEST_ASSERT(!test_polynomial_regression_builder(SVD_LEAST_SQ_REGRESSION, 1e-8));
 }
 
 }

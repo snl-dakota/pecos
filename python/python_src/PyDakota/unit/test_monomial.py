@@ -155,10 +155,11 @@ class TestMonomialApproximation(unittest.TestCase):
                 basis_matrix[i,:],outer_product(basis_vals_1d,1))
         
 
-    def test_build_polynomial(self):
+    def test_train_polynomial_using_fine_grained_regression_tools(self):
         num_vars = 2; degree = 3; use_tensor_product_indices=False
         approx = self.initialize_homogeneous_polynomial_01(
             num_vars, degree, use_tensor_product_indices, poly_type=PCE)
+        num_training_samples = 2*approx.num_terms()
 
         # Define the function to approximate
         additive_quadratic_function = \
@@ -172,21 +173,20 @@ class TestMonomialApproximation(unittest.TestCase):
         self.assertRaises(RuntimeError,approx.value,samples)
 
         # Construct the approximation
-        num_build_samples = 2*approx.num_terms()
-        build_samples = numpy.random.uniform(0,1,(num_vars,num_build_samples))
-        build_function_vals = function.value(build_samples)
-        basis_matrix = approx.generate_basis_matrix(build_samples)
+        training_samples = numpy.random.uniform(0,1,(num_vars,num_training_samples))
+        training_function_vals = function.value(training_samples)
+        basis_matrix = approx.generate_basis_matrix(training_samples)
         opts_dict = {'regression_type':SVD_LEAST_SQ_REGRESSION}
         linsys_opts = OptionsList(opts_dict)
         solver = regression_solver_factory(linsys_opts);
         solver.solve(
-            basis_matrix, build_function_vals, linsys_opts);
+            basis_matrix, training_function_vals, linsys_opts);
         coeffs = solver.get_final_solutions();
         approx.set_coefficients(coeffs)
 
         # Check that approximation is an interpolant
-        approx_vals = approx.value(build_samples)
-        assert numpy.allclose(approx_vals,build_function_vals)
+        approx_vals = approx.value(training_samples)
+        assert numpy.allclose(approx_vals,training_function_vals)
 
         # Check that approximation is exact everywhere
         num_samples = 100
@@ -194,17 +194,34 @@ class TestMonomialApproximation(unittest.TestCase):
         approx_vals = approx.value(samples)
         function_vals = function.value(samples)
         assert numpy.allclose(approx_vals,function_vals)
-        opts_dict = {'num_samples':num_build_samples,
+
+    def test_train_polynomial_using_regression_builder(self):
+        num_vars = 2; degree = 3; use_tensor_product_indices=False
+        approx = self.initialize_homogeneous_polynomial_01(
+            num_vars, degree, use_tensor_product_indices, poly_type=PCE)
+        num_training_samples = 2*approx.num_terms()
+
+        # Define the function to approximate
+        additive_quadratic_function = \
+          lambda x: numpy.sum(x**2)*numpy.arange(1,3) + \
+          numpy.sum(x)*numpy.arange(2,4) + numpy.arange(1,3)
+        function = PyFunction(additive_quadratic_function)
+
+
+        opts_dict = {'num_samples':num_training_samples,
                      'regression_type':SVD_LEAST_SQ_REGRESSION,
                      'sample_type':'probabilistic_MC'}
         regression_opts = OptionsList(opts_dict)
         builder = RegressionBuilder()
         builder.set_target_function(function)
-        builder.build(regression_opts, approx)
+        result = OptionsList()
+        builder.build(regression_opts, approx, result)
+        training_samples = result['training_samples']
+        training_function_vals = result['training_values']
 
         # Check that approximation is an interpolant
-        approx_vals = approx.value(build_samples)
-        assert numpy.allclose(approx_vals,build_function_vals)
+        approx_vals = approx.value(training_samples)
+        assert numpy.allclose(approx_vals,training_function_vals)
 
         # Check that approximation is exact everywhere
         num_samples = 100

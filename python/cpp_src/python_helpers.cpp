@@ -23,11 +23,28 @@ template< typename T, typename S >
 void copyNumPyToTeuchosVector(PyObject * pyArray,
 			      Teuchos::SerialDenseVector<int,T > & tvec){
   int length = PyArray_DIM((PyArrayObject*) pyArray, 0);
-  tvec.resize(length);
+  tvec.sizeUninitialized(length);
   S * data = (S*) PyArray_DATA((PyArrayObject*) pyArray);
   for (int i=0; i<length; ++i){
     // static cast need because we are casting npy_long and npy_int to int
     tvec[i] = static_cast<T>(*(data++));
+  }
+}
+
+template< typename T, typename S >
+void copyNumPyToTeuchosMatrix(PyObject * pyArray,
+			      Teuchos::SerialDenseMatrix<int,T > & tmat){
+  int num_rows = PyArray_DIM((PyArrayObject*) pyArray, 0),
+    num_cols = PyArray_DIM((PyArrayObject*) pyArray, 1);
+  tmat.shapeUninitialized(num_rows,num_cols);
+  S * data = (S*) PyArray_DATA((PyArrayObject*) pyArray);
+  for (int j=0; j<num_cols; ++j){
+    for (int i=0; i<num_rows; ++i){
+      // static cast need because we are casting npy_long and npy_int to int
+      // unlike all other matrix based functions here we 
+      // assume c ordering of numpy array
+      tmat(i,j) = static_cast<T>(data[i*num_cols+j]);
+    }
   }
 }
 
@@ -40,6 +57,22 @@ PyObject * copyTeuchosVectorToNumPy(Teuchos::SerialDenseVector< int,T > &tvec)
   T * data = (T*) PyArray_DATA((PyArrayObject*) pyArray);
   for (int i=0; i<tvec.length(); ++i)
     *(data++) = tvec[i];
+  return pyArray;
+}
+
+template< typename T >
+PyObject * copyTeuchosMatrixToNumPy(Teuchos::SerialDenseMatrix< int,T > &tmat)
+{
+  int m = tmat.numRows(), n = tmat.numCols();
+  int typecode = NumPy_TypeCode< T >();
+  npy_intp dims[] = { m,n };
+  PyObject * pyArray = PyArray_SimpleNew(2, dims, typecode);
+  T * data = (T*) PyArray_DATA((PyArrayObject*) pyArray);
+  for ( int j = 0; j < n; j++ ){
+    for ( int i = 0; i < m; i++ ){
+      data[j*m+i] = tmat(i,j);
+    }
+  }
   return pyArray;
 }
 
@@ -126,33 +159,51 @@ bool setPythonParameter(OptionsList & opts_list,
       PyArray_CheckFromAny(value,
                            NULL,
                            1,
-                           1,
+                           2,
                            NPY_ARRAY_DEFAULT | NPY_ARRAY_NOTSWAPPED,
                            NULL);
     if (!pyArray) return false;
-    if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<int>())
-      {
-	Teuchos::SerialDenseVector<int,int> tvec;
-	copyNumPyToTeuchosVector<int,int>(pyArray, tvec);
-	opts_list.set(name, tvec);
+    if ( PyArray_NDIM( (PyArrayObject*)pyArray)==1 ) {
+      if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<int>()){
+        Teuchos::SerialDenseVector<int,int> tvec;
+        copyNumPyToTeuchosVector<int,int>(pyArray, tvec);
+        opts_list.set(name, tvec);
       }
-    else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<long>())
-      {
-	Teuchos::SerialDenseVector<int,int> tvec;
-	copyNumPyToTeuchosVector<int,long>(pyArray, tvec);
-	opts_list.set(name, tvec);
+      else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<long>()){
+        Teuchos::SerialDenseVector<int,int> tvec;
+        copyNumPyToTeuchosVector<int,long>(pyArray, tvec);
+        opts_list.set(name, tvec);
       }
-    else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<double>())
-      {
-	Teuchos::SerialDenseVector< int,double > tvec;
-	copyNumPyToTeuchosVector<double,double>(pyArray, tvec);
-	opts_list.set(name, tvec);
+      else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<double>()){
+        Teuchos::SerialDenseVector< int,double > tvec;
+        copyNumPyToTeuchosVector<double,double>(pyArray, tvec);
+        opts_list.set(name, tvec);
+      }else{
+        // Unsupported data type
+        if (pyArray != value) Py_DECREF(pyArray);
+        return false;
       }
-    else
-    {
-      // Unsupported data type
-      if (pyArray != value) Py_DECREF(pyArray);
-      return false;
+    }
+    if ( PyArray_NDIM( (PyArrayObject*)pyArray)==2 ) {
+      if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<int>()){
+        Teuchos::SerialDenseMatrix<int,int> tmat;
+        copyNumPyToTeuchosMatrix<int,int>(pyArray, tmat);
+        opts_list.set(name, tmat);
+      }
+      else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<long>()){
+        Teuchos::SerialDenseMatrix<int,int> tmat;
+        copyNumPyToTeuchosMatrix<int,long>(pyArray, tmat);
+        opts_list.set(name, tmat);
+      }
+      else if (PyArray_TYPE((PyArrayObject*) pyArray) == NumPy_TypeCode<double>()){
+        Teuchos::SerialDenseMatrix< int,double > tmat;
+        copyNumPyToTeuchosMatrix<double,double>(pyArray, tmat);
+        opts_list.set(name, tmat);
+      }else{
+        // Unsupported data type
+        if (pyArray != value) Py_DECREF(pyArray);
+        return false;
+      }
     }
   }
   // All other value types are unsupported
@@ -386,6 +437,26 @@ PyObject * getPythonParameter(const OptionsList & opts_list,
 	Teuchos::SerialDenseVector< int,double > tvec =
 	  boost::any_cast< Teuchos::SerialDenseVector< int,double > >(*entry);
 	return copyTeuchosVectorToNumPy(tvec);
+      }
+    catch(boost::bad_any_cast &e) {return NULL;}
+  }
+  else if (entry->type()==typeid(Teuchos::SerialDenseMatrix<int,int>))
+  {
+    try
+      {
+        Teuchos::SerialDenseMatrix< int,int > tmat =
+          boost::any_cast< Teuchos::SerialDenseMatrix< int,int > >(*entry);
+        return copyTeuchosMatrixToNumPy(tmat);
+      }
+    catch(boost::bad_any_cast &e) {return NULL;}
+  }
+  else if (entry->type()==typeid(Teuchos::SerialDenseMatrix<int,double>))
+  {
+    try
+      {
+	Teuchos::SerialDenseMatrix< int,double > tmat =
+	  boost::any_cast< Teuchos::SerialDenseMatrix< int,double > >(*entry);
+	return copyTeuchosMatrixToNumPy(tmat);
       }
     catch(boost::bad_any_cast &e) {return NULL;}
   }

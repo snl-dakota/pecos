@@ -28,7 +28,8 @@ public:
    * \param[in] opts Spefications used to build the surrogate
    *
    */
-  virtual void build(OptionsList &opts, Approximation &approx) = 0;
+  virtual void build(OptionsList &opts, Approximation &approx,
+                     OptionsList &result) = 0;
 
   void set_target_function(Function &target_function){
     targetFunction_ = &target_function;};

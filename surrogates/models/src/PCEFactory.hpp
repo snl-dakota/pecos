@@ -25,7 +25,7 @@ boost::shared_ptr<PolyApproximation> polynomial_approximation_factory(
     basis_types = opts.get("basis_types", basis_types);
     if (basis_types.length()>0){
       // OptionsList can only pass in Teuchos Vectors so convert
-      to std::vector here
+      // to std::vector here
       Pecos::ShortArray short_basis_types(basis_types.length());
       for (int i=0; i<basis_types.length(); ++i)
         short_basis_types[i]=static_cast<short>(basis_types[i]);

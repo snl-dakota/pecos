@@ -26,6 +26,14 @@ void copyNumPyToTeuchosVector(PyObject * pyArray,
 template< typename T >
 PyObject * copyTeuchosVectorToNumPy(Teuchos::SerialDenseVector< int,T > &tvec);
 
+
+template< typename T, typename S >
+void copyNumPyToTeuchosMatrix(PyObject * pyArray,
+			      Teuchos::SerialDenseMatrix<int,T > & tmat);
+
+template< typename T >
+PyObject * copyTeuchosMatrixToNumPy(Teuchos::SerialDenseMatrix< int,T > &tmat);
+
 bool setPythonParameter(OptionsList & opts_list,
 			const std::string      & name,
 			PyObject               * value);
