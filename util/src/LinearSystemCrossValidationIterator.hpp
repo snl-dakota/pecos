@@ -15,13 +15,13 @@ namespace Surrogates {
 class LinearSystemCrossValidationIteratorBase : public CrossValidationIterator {
 protected:
 
-  /// The cross validation scores at each of the unique tolerances and rhs
+  /// The cross validation scores at each of the unique tolerances and RHS
   /// List of num RHS vectors of size (num_unique_tolsx1)
   std::vector<RealVector> scores_;
 
   /// The difference between the validation value and the approximation 
   /// at each validation point and for each solution generated on the 
-  /// solution path for last rhs column accessed
+  /// solution path for last RHS column accessed
   std::vector< RealMatrix > foldDiffs_;
 
   /// Set the cross validation parameters specified in opts 
@@ -101,25 +101,25 @@ public:
   virtual void run(const RealMatrix &A, const RealMatrix &B,
 		   OptionsList& opts)=0;
 
-  /**\brief
+  /**\brief Get the cross validation scores for each tolerance considered
+   * in cross validation
    */
   void get_scores(std::vector<RealVector> &result) const;
 
-  
   /**\brief
    */
   void get_fold_validation_residuals(std::vector< RealMatrix > &result) const;
 
-  /**\brief Get the best cross validation scores for each rhs
+  /**\brief Get the best cross validation scores for each RHS
    * \param[out] result vector (num_rhs x 1)
-   *    The best cross validation scores for each rhs 
+   *    The best cross validation scores for each RHS 
    */
   void get_best_scores(RealVector &result) const;
 
   /**\brief Get the indices in scores_ of the best cross validation scores 
-   * for each rhs
+   * for each RHS
    * \param[out] scores vector (num_rhs x 1)
-   *    The index of the best cross validation scores for each rhs 
+   *    The index of the best cross validation scores for each RHS 
    */
   void get_best_score_indices(IntVector & result) const;
 
@@ -129,7 +129,7 @@ public:
    * \param[in] A matrix (num_rows x num_cols)
    *     The matrix A
    * \param[in] B vector (num_cols x num_rhs)
-   *     The rhs B
+   *     The RHS B
    * \param[inout] opts  
    *     List of options. On exit opts will contain the best residual tolerances
    * \param[out] best_solutions matrix (num_cols x num_rhs)
@@ -153,21 +153,21 @@ class LinearSystemCrossValidationIterator : public LinearSystemCrossValidationIt
 protected:
   
   /// The maximum number of unique tolerances for which cross validation scores
-  /// will be computed for last rhs column accessed
+  /// will be computed
   int maxNumUniqueTols_;
 
-  /// The unique tolerances for which cross validation scores
-  /// will be computed for last rhs column accessed
-  RealVector uniqueTols_;
+  /// The unique tolerances for each RHS
+  /// List of num RHS vectors of size (num_unique_tolsx1)
+  std::vector<RealVector> uniqueTols_;
 
   
   /// The solver tolerances corresponding to each solution generated on the 
-  /// solution path for last rhs column accessed. List of num RHS vectors of
+  /// solution path for last RHS column accessed. List of num RHS vectors of
   /// size (num_unique_toleraces x 1)
   std::vector< RealVector > foldTols_;
 
   /// The cross validation scores ( a function of foldDiffs_ ) for each fold
-  /// and solution generated on solution path for last rhs column accessed
+  /// and solution generated on solution path for last RHS column accessed
   std::vector< RealVector > foldScores_;
 
   
@@ -179,7 +179,7 @@ protected:
    * \brief Once cross validation has been run, compute the cross validation
    * scores.
    */
-  void compute_scores(RealVector &scores);
+  void compute_scores(RealVector &scores, RealVector &unique_tols);
 
   /**
    * \brief Return a subset of the tolerances (used to terminate method for 
@@ -189,11 +189,11 @@ protected:
    * a thinned subset of these. The size of the subset is controlled by
    * max_num_unique_tols
    */
-  void define_unique_tolerances();
+  void define_unique_tolerances(RealVector &unique_tols);
 
   
   /**
-   * \brief Run the cross validation for a single rhs
+   * \brief Run the cross validation for a single RHS
    */
   void run_single_rhs(const RealMatrix &A, const RealVector &b,
 		      OptionsList &opts);
@@ -222,6 +222,11 @@ public:
    */
   void get_fold_scores(std::vector< RealVector > &result) const;
 
+  /**\brief Get the unique tolerances for which the cross validation scores in
+     get_scores() correspond.
+   */
+  void get_unique_tolerances(std::vector<RealVector> &result) const;
+
   /**
    * \brief Set the linear system solver which will be used to solve Ax~b.
    *
@@ -229,13 +234,6 @@ public:
    * solve_single_rhs(A,b,x,metrics,opts);
    */
   void set_linear_system_solver(const boost::shared_ptr<LinearSystemSolver> &solver);
-
-      
-  /**\brief Get the unique tolerances for which the cross validation scores in
-     scores_ correspond.
-   */
-  void get_unique_tolerances(RealVector &result) const;
-
   
   /**
    * \brief Run the cross validation.
@@ -244,13 +242,13 @@ public:
 	   OptionsList& opts);
 
   /**\brief Get the l2 norm of the residuals associated with the solutions
-     with the best cross validation scores for each rhs
+     with the best cross validation scores for each RHS
    *
    * Needs to return a matrix (not a vector) because of use with 
    * OptionsList where options assumes a matrix not a a vector
    *
    * \param[out] result matrix (num_rhs x 1)
-   *    The best cross validation scores for each rhs 
+   *    The best cross validation scores for each RHS 
    */
   void get_best_residual_tolerances(RealMatrix &result) const;
 
@@ -275,7 +273,7 @@ public:
    * OptionsList where options assumes a matrix not a a vector
    *
    * \param[out] result matrix (num_rhs x 1)
-   *    The best cross validation scores for each rhs  adjusted by multiplying by
+   *    The best cross validation scores for each RHS adjusted by multiplying by
    *    num_folds/(num-folds-1)
    */
   void get_adjusted_best_residual_tolerances(RealMatrix &result) const;

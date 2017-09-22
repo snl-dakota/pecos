@@ -277,7 +277,7 @@ setup(
     url='https://dakota.sandia.gov',
     keywords='Approximation, Surrogates, Uncertainty Quantification, Polynomial Chaos',
     long_description=read('README'),
-    packages=[package_name,package_name+'.unit',package_name+'.swig_examples'],
+    packages=[package_name,package_name+'.unit',package_name+'.swig_examples',package_name+'.models'],
     package_dir = {'': 'python_src'},
     ext_package=package_name,
     ext_modules=[

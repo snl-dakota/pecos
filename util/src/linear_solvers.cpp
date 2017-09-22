@@ -1,8 +1,5 @@
 #include "linear_solvers.hpp"
 
-//#include "linear_algebra.hpp"
-//#include "OptionsList.hpp"
-
 namespace Surrogates {
 
 boost::shared_ptr<LinearSystemSolver> regression_solver_factory(OptionsList &opts){

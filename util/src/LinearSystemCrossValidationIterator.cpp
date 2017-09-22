@@ -99,8 +99,9 @@ get_fold_validation_residuals(std::vector< RealMatrix > &result) const{
 
 void LinearSystemCrossValidationIteratorBase::
 get_best_score_indices(IntVector &best_indices) const{
-  size_uninitialized(best_indices, (int)scores_.size());
-  for (int i=0; i<best_indices.length(); i++){
+  int num_rhs=scores_.size(); 
+  size_uninitialized(best_indices, num_rhs);
+  for (int i=0; i<num_rhs; i++){
     best_indices[i] = 0;
     Real best_score = scores_[i][0];
     for (int j=1; j<scores_[i].length(); j++){
@@ -121,7 +122,6 @@ get_best_scores(RealVector & scores) const{
     scores[i] = scores_[i][best_indices[i]];
   }
 }
-
 
 
 LinearSystemCrossValidationIterator::LinearSystemCrossValidationIterator() :
@@ -146,10 +146,9 @@ get_fold_scores(std::vector< RealVector > &result) const{
 };
 
 void LinearSystemCrossValidationIterator::
-get_unique_tolerances(RealVector &result) const{
+get_unique_tolerances(std::vector<RealVector> &result) const{
   result = uniqueTols_;
 }
-
   
 void LinearSystemCrossValidationIterator::
 run(const RealMatrix &A, const RealMatrix &B, OptionsList &opts){
@@ -166,10 +165,11 @@ run(const RealMatrix &A, const RealMatrix &B, OptionsList &opts){
   
   int num_rhs = B.numCols();
   scores_.resize(num_rhs);
+  uniqueTols_.resize(num_rhs);
   for (int i=0; i<num_rhs; ++i){
     RealVector b = Teuchos::getCol(Teuchos::View, const_cast<RealMatrix &>(B), i);
     run_single_rhs(A, b, regression_opts);
-    compute_scores(scores_[i]);
+    compute_scores(scores_[i], uniqueTols_[i]);
   }
 }
 
@@ -245,7 +245,7 @@ set_max_num_unique_tolerances( int max_num_tols ){
 }
 
   
-void LinearSystemCrossValidationIterator::define_unique_tolerances(){
+void LinearSystemCrossValidationIterator::define_unique_tolerances(RealVector &unique_tols){
   int max_num_unique_tols = 0;
   std::set<Real> unique_tols_set;
   for ( int iter = 0; iter < num_folds(); iter++ ){
@@ -267,30 +267,31 @@ void LinearSystemCrossValidationIterator::define_unique_tolerances(){
   if (  unique_tols_set.size() % stride != 0 )
     num_unique_tols += 1;
 
-  uniqueTols_.sizeUninitialized( num_unique_tols );
+  unique_tols.sizeUninitialized( num_unique_tols );
   std::set<Real>::iterator it = unique_tols_set.begin();
   int i = 0, j = 0;
   for (it=unique_tols_set.begin(); it!=unique_tols_set.end(); ++it){
     if ( j % stride == 0 ){
-      uniqueTols_[i] = *it; 
+      unique_tols[i] = *it; 
       i++;
     }
     j++;
   }
 }
 
-void LinearSystemCrossValidationIterator::compute_scores(RealVector &scores){
+void LinearSystemCrossValidationIterator::compute_scores(RealVector &scores,
+							 RealVector &unique_tols){
   // Each path will have a different set of parameters. Consequently
   // we need to use interpolation to compute the parameters at 
-  // a set of common points. These commone points are contained in 
-  // uniqueTols_
+  // a set of common points. These common points are contained in 
+  // unique_tols
 
-  define_unique_tolerances();  
-  int num_unique_tols = uniqueTols_.length();
+  define_unique_tolerances(unique_tols);  
+  int num_unique_tols = unique_tols.length();
   RealMatrix unique_fold_scores( num_unique_tols, num_folds(), false );
   for (int iter=0; iter<num_folds(); iter++){
     // LinearInterpolant1D requires increasing x values
-    // uniqueTols_ is in ascending order
+    // unique_tols_ is in ascending order
     // but foldTols_[iter] and foldScores_[iter] are in descending order
     // so we must reverse their order
     reverse( foldTols_[iter] );
@@ -299,7 +300,7 @@ void LinearSystemCrossValidationIterator::compute_scores(RealVector &scores){
     RealVector unique_fold_scores_col( Teuchos::View, 
 				       unique_fold_scores[iter],
 				       num_unique_tols );
-    interp.interpolate( uniqueTols_, unique_fold_scores_col );
+    interp.interpolate( unique_tols, unique_fold_scores_col );
   }
   accumulate_fold_scores(unique_fold_scores, scores);
 }
@@ -308,9 +309,10 @@ void LinearSystemCrossValidationIterator::
 get_best_residual_tolerances(RealMatrix & residual_tols) const{
   IntVector best_indices;
   get_best_score_indices(best_indices);
-  shape_uninitialized(residual_tols, best_indices.length(),1);
-  for (int i=0; i<best_indices.length(); i++){
-    residual_tols(i,0) = uniqueTols_[best_indices[i]];
+  int num_rhs = best_indices.length();
+  shape_uninitialized(residual_tols, num_rhs,1);
+  for (int i=0; i<num_rhs; i++){
+    residual_tols(i,0) = uniqueTols_[i][best_indices[i]];
   }
 }
 

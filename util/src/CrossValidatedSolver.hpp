@@ -5,8 +5,8 @@
 #include "LinearSystemCrossValidationIterator.hpp"
 #include <boost/shared_ptr.hpp>
 
-namespace Surrogates {
 
+namespace Surrogates{
 /**
  * \class CrossValidatedSolver
  * \brief A wrapper for generating cross validated solutions to lineaer 

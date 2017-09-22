@@ -44,12 +44,8 @@ multi_rhs_solve(const RealMatrix &A, const RealMatrix &B,
   cvIterator_->run(A, B, cv_opts_copy);
   cvIterator_->generate_best_solutions(A, B, solutions_, residualNorms_,
 				       regression_opts);
-  
-  RealVector cv_scores;
-  get_best_scores(cv_scores);
-  opts.set("cv-scores",cv_scores);
 }
-  
+
 void CrossValidatedSolver::get_best_scores(RealVector &result) const{
   cvIterator_->get_best_scores(result);
 }

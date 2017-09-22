@@ -6,9 +6,7 @@
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "linear_algebra.hpp"
 
-// Use following to allow conversion of size_t to int needed for 
-// SerialDenseVector<int,double/int>
-#include <boost/numeric/conversion/cast.hpp> 
+#include <boost/numeric/conversion/cast.hpp>
 
 namespace Surrogates {
 

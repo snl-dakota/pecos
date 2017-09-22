@@ -1,6 +1,7 @@
 import numpy, unittest
 from scipy import interpolate
 from PyDakota.regression import *
+from PyDakota.options_list import OptionsList
 def get_linear_system(num_pts, num_eq_per_pt, num_cols, num_rhs,
                       num_nonzeros, noise_std):
     """
@@ -359,8 +360,8 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
            an arbitray set of residual tolerances onto a common (unique)
            set of tolerances.
         """
-        rhs = rhs.squeeze()
-        assert rhs.ndim==1
+        #rhs = rhs.squeeze()
+        #assert rhs.ndim==1
         assert vand.shape[0]%num_eq_per_pt==0
         num_build_pts = vand.shape[0]/num_eq_per_pt
         #################################
@@ -382,85 +383,90 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
         #################################
         # Use brute force cross validation and use as reference `truth'
         #################################
-        k = 0
         # cv_iterator randomizes points incase there is a pattern, e.g
         # the points are from a tensor grid, to do test we must know what
         # random permutation of the points was used
 
-        fold_tols = []
-        for i in xrange( num_folds ):
-            # partition the data into a training and validation set
-            A_train, b_train, valid_ind = partition_data(
-                vand, rhs, cv_iterator, i, num_build_pts, num_eq_per_pt,
-                fault_data)
-            # Compute the solution on the training data
-            solver.solve(A_train, b_train, regression_opts)
-            x = solver.get_solutions_for_all_regularization_params(0)
-            # Test that the validation residual is stored correctly for
-            # each linear model
-            assert numpy.allclose( ( numpy.tile( rhs.reshape(rhs.shape[0],1),
-                   (1,x.shape[1]) )-numpy.dot( vand, x ) )[valid_ind],
-                                   cv_fold_diffs[i] )
-            fold_tols.append(solver.get_residuals_for_all_regularization_params(0))
+        for rhs_num in range(rhs.shape[1]):        
+            fold_tols = []
+            fold_diffs = []
+            for i in xrange( num_folds ):
+                # partition the data into a training and validation set
+                A_train, b_train, valid_ind = partition_data(
+                    vand, rhs[:,rhs_num], cv_iterator, i, num_build_pts, num_eq_per_pt,
+                    fault_data)
+                # Compute the solution on the training data
+                solver.solve(A_train, b_train, regression_opts)
+                x = solver.get_solutions_for_all_regularization_params(0)
+                # Test that the validation residual is stored correctly for
+                # each linear model.
+                fold_diffs.append((numpy.tile( rhs[:,rhs_num].reshape(rhs.shape[0],1),
+                                      (1,x.shape[1]) )-numpy.dot( vand, x ) )[valid_ind])
+                if rhs_num==rhs.shape[1]-1:
+                    #cv_fold_diffs is only stored for last RHS
+                    assert numpy.allclose(fold_diffs[i], cv_fold_diffs[i] )
+                fold_tols.append(solver.get_residuals_for_all_regularization_params(0))
 
-        # Determine the unique tolerances at which to compute cross
-        # validation errors
-        max_num_path_steps = 0
-        unique_tols = numpy.empty((0), numpy.double)
-        for i in xrange(num_folds):
-            assert numpy.allclose(fold_tols[i][::-1],cv_fold_tols[i])
-            
-            unique_tols = numpy.concatenate((unique_tols,cv_fold_tols[i]))
-            num_path_steps = cv_fold_diffs[i].shape[1]
-            max_num_path_steps = max( max_num_path_steps,
-                                       num_path_steps )
-        unique_tols = numpy.unique( unique_tols )
+            # Determine the unique tolerances at which to compute cross
+            # validation errors
+            max_num_path_steps = 0
+            unique_tols = numpy.empty((0), numpy.double)
+            for i in xrange(num_folds):
+                fold_tols[i]=fold_tols[i][::-1]
+                if rhs_num==rhs.shape[1]-1:
+                    # cv_fold_tols is only stored for last RHS
+                    assert numpy.allclose(fold_tols[i],cv_fold_tols[i])
 
-        # There are often thousands of unique parameter values so take
-        # a thinned subset of these. The size of the subset is controlled by
-        # max_num_path_steps
-        num_unique_res = unique_tols.shape[0]
-        stride = num_unique_res / max_num_path_steps
-        unique_tols = unique_tols[::stride]
-        assert numpy.allclose(cv_unique_tols,unique_tols)
+                unique_tols = numpy.concatenate((unique_tols,fold_tols[i]))
+                num_path_steps = fold_diffs[i].shape[1]
+                max_num_path_steps = max( max_num_path_steps,
+                                           num_path_steps )
+            unique_tols = numpy.unique( unique_tols )
 
-        unique_cv_errors = numpy.empty( ( unique_tols.shape[0],
-                                          num_folds ), numpy.double )
-        for i in xrange( num_folds ):
-            # for the current fold compute the cross validation error
-            fold_tols_i = cv_fold_tols[i]
-            cv_errors_i = numpy.sum( cv_fold_diffs[i]**2,
-                                     axis = 0 )
+            # There are often thousands of unique parameter values so take
+            # a thinned subset of these. The size of the subset is controlled by
+            # max_num_path_steps
+            num_unique_res = unique_tols.shape[0]
+            stride = num_unique_res / max_num_path_steps
+            unique_tols = unique_tols[::stride]
+            assert numpy.allclose(cv_unique_tols[rhs_num],unique_tols)
 
-            if unique_tols.shape[0] > 1:
-                # fold_tols is reversed internally by c++ code
-                # so we must reverse cv_errors_i to be consistent
-                cv_errors_i = cv_errors_i[::-1]
-                assert numpy.allclose(cv_errors_i,cv_fold_scores[i])
+            unique_errors = numpy.empty( ( unique_tols.shape[0],
+                                           num_folds ), numpy.double )
+            for i in xrange( num_folds ):
+                # for the current fold compute the cross validation error
+                fold_tols_i = fold_tols[i]
+                errors_i = numpy.sum(fold_diffs[i]**2, axis = 0)
 
-                # Enforce constant interpolation when interpolation is
-                # outside the range of fold_tols_i
-                if ( fold_tols_i[0] > unique_tols[0] ):
-                    fold_tols_i = numpy.r_[ unique_tols[0], fold_tols_i ]
-                    cv_errors_i = numpy.r_[ cv_errors_i[0], cv_errors_i ]
-                if  ( fold_tols_i[-1] < unique_tols[-1] ):
-                    fold_tols_i = numpy.r_[ fold_tols_i, unique_tols[-1] ]
-                    cv_errors_i = numpy.r_[ cv_errors_i, cv_errors_i[-1] ]
+                if unique_tols.shape[0] > 1:
+                    # fold_tols is reversed internally by c++ code
+                    # so we must reverse errors_i to be consistent
+                    errors_i = errors_i[::-1]
+                    if rhs_num==rhs.shape[1]-1:
+                        # cv_errors only stored for last RHS
+                        assert numpy.allclose(errors_i,cv_fold_scores[i])
 
-                # Interpolate the cross validation errors onto a unique
-                # set of tolerances
-                poly = interpolate.interp1d( fold_tols_i,
-                                             cv_errors_i )
-                unique_cv_errors[:,i] = poly( unique_tols )
-            else:
-                unique_cv_errors[:,i] = cv_errors_i
-        #print unique_cv_errors
-            
-        # Test that the cross validation scores computed by the `truth'
-        # and the internal linear solver cross validation module are the same
-        scores = numpy.sum( unique_cv_errors, axis = 1 ) / num_build_pts
-        assert numpy.allclose( scores, cv_scores )
-        
+                    # Enforce constant interpolation when interpolation is
+                    # outside the range of fold_tols_i
+                    if ( fold_tols_i[0] > unique_tols[0] ):
+                        fold_tols_i = numpy.r_[ unique_tols[0], fold_tols_i ]
+                        errors_i = numpy.r_[ errors_i[0], errors_i ]
+                    if  ( fold_tols_i[-1] < unique_tols[-1] ):
+                        fold_tols_i = numpy.r_[ fold_tols_i, unique_tols[-1] ]
+                        errors_i = numpy.r_[ errors_i, errors_i[-1] ]
+
+                    # Interpolate the cross validation errors onto a unique
+                    # set of tolerances
+                    poly = interpolate.interp1d( fold_tols_i, errors_i )
+                    unique_errors[:,i] = poly( unique_tols )
+                else:
+                    unique_errors[:,i] = errors_i
+
+            # Test that the cross validation scores computed by the `truth'
+            # and the internal linear solver cross validation module are the same
+            scores = numpy.sum( unique_errors, axis = 1 ) / num_build_pts
+            assert numpy.allclose( scores, cv_scores[rhs_num] )
+
 
     def test_linear_system_cross_validation(self):
         """
@@ -472,7 +478,7 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
         using x = inv(A'A)*A'*b computing inv(A'A) using cholesky factorization
         """
         num_pts = 11; num_eq_per_pt = 1 
-        num_nonzeros = 3; num_cols = 10; num_rhs=1; noise_std=0.1
+        num_nonzeros = 3; num_cols = 10; num_rhs=2; noise_std=0.1
         num_folds = num_pts
         regression_types = [SVD_LEAST_SQ_REGRESSION, QR_LEAST_SQ_REGRESSION,
                             ORTHOG_MATCH_PURSUIT, LEAST_ANGLE_REGRESSION,
@@ -495,7 +501,7 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
             self.linear_system_cross_validation_test(
                 A, rhs, num_folds, num_eq_per_pt, solver, regression_opts)
 
-    def test_equality_constrained_least_squares_cross_validation(self):
+    def xtest_equality_constrained_least_squares_cross_validation(self):
         """
         Test cross validation applied to equality constrained regression
         """
@@ -526,7 +532,7 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
         Test that error is thrown when cross validation applied to 
         equality constrained regression induces an underdetermined system
         """
-        num_pts = 11; num_eq_per_pt = 1 
+        num_pts = 101; num_eq_per_pt = 1 
         num_nonzeros = 3; num_cols = 10; num_rhs=1; noise_std=0.1
         num_folds = num_pts; num_primary_eq = 10
         regression_type = EQ_CONS_LEAST_SQ_REGRESSION
@@ -542,8 +548,7 @@ class TestLinearSystemCrossValidation(unittest.TestCase):
         x = solver.get_solutions_for_all_regularization_params(0)
         # todo make my own allclose function that calls squeeze before
         # comparison, like i do here
-        #assert numpy.allclose(x.squeeze(),x_truth)
-        opts = OptionsList()
+        assert numpy.allclose(x.squeeze(),x_truth)
         self.assertRaises(RuntimeError,self.linear_system_cross_validation_test,
                           A, rhs, num_folds, num_eq_per_pt, solver,
                           regression_opts)
