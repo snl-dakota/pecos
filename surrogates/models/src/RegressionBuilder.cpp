@@ -45,9 +45,6 @@ void solve_regression(const RealMatrix &samples,
   // regression solve
   RealMatrix basis_matrix;
   poly_approx.generate_basis_matrix(samples,basis_matrix);
-
-  samples.print(std::cout);
-  basis_matrix.print(std::cout);
     
   // Solve regression problem to get coefficients
   boost::shared_ptr<LinearSystemSolver> solver = regression_solver_factory(opts);

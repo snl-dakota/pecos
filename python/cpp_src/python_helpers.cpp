@@ -66,7 +66,7 @@ PyObject * copyTeuchosMatrixToNumPy(Teuchos::SerialDenseMatrix< int,T > &tmat)
   int m = tmat.numRows(), n = tmat.numCols();
   int typecode = NumPy_TypeCode< T >();
   npy_intp dims[] = { m,n };
-  PyObject * pyArray = PyArray_SimpleNew(2, dims, typecode);
+  PyObject * pyArray = PyArray_EMPTY( 2, dims, typecode,  NPY_FORTRANORDER);
   T * data = (T*) PyArray_DATA((PyArrayObject*) pyArray);
   for ( int j = 0; j < n; j++ ){
     for ( int i = 0; i < m; i++ ){

@@ -44,6 +44,14 @@ class OptionsListTestCase(unittest.TestCase):
         opts.set("key3",array)
         assert numpy.allclose(opts.get("key3"),array)
 
+        array = numpy.arange(10,dtype=numpy.double).reshape(2,5)
+        opts.set("key4",array)
+        assert numpy.allclose(opts.get("key4"),array)
+
+        array = [[1,2,3,4],[5,6,7,8]]
+        opts.set("key4",array)
+        assert numpy.allclose(opts.get("key4"),array)
+
     def test_len(self):
         opts = OptionsList()
         assert len(opts)==0
