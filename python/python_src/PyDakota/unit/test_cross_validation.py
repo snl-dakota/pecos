@@ -750,6 +750,7 @@ class TestCrossValidatedSolver(unittest.TestCase):
             I = numpy.where(residuals>=cv_adjusted_residuals[i])[0]
             I = I[-1]+1
             assert cv_residual_norms[i]>=residuals[I]
+            print  cv_residual_norms[i],residuals[I],residuals[I-1],I
             solver_solutions = \
               solver.get_solutions_for_all_regularization_params(i)[:,I]
 

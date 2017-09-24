@@ -329,7 +329,7 @@ generate_best_solutions(const RealMatrix &A, const RealMatrix &B,
   RealMatrix best_residual_tolerances;
   get_adjusted_best_residual_tolerances(best_residual_tolerances);
   opts.set("residual-tolerances", best_residual_tolerances);
-  opts.set("store-history", false);
+  //opts.set("store-history", false);
   linearSystemSolver_->multi_rhs_solve(A, B, opts);
   linearSystemSolver_->get_final_solutions(best_solutions);
   linearSystemSolver_->get_final_residuals(residuals);

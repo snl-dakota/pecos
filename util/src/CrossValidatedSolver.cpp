@@ -59,7 +59,7 @@ get_solutions_for_all_regularization_params(RealMatrix &result_0,
 
 void CrossValidatedSolver::get_residuals_for_all_regularization_params(
       RealVector &result_0, int rhs_num) const{
-    throw(std::runtime_error("This function does not make sense for this class. consider refining class hierarchy"));
+  throw(std::runtime_error("This function does not make sense for all solvers. consider refining class hierarchy"));
 }
 
 void CrossValidatedSolver::get_final_solutions(RealMatrix &result_0) const{
