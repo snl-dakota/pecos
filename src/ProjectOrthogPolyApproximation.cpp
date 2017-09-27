@@ -56,39 +56,7 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 
 void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
 {
-  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
-    PCerr << "Warning: neither expansion coefficients nor expansion "
-	  << "coefficient gradients\n         are active in "
-	  << "ProjectOrthogPolyApproximation::compute_coefficients().\n"
-	  << "         Bypassing approximation construction." << std::endl;
-    return;
-  }
-
-  // when using a hierarchical approximation, subtract current PCE prediction
-  // from the surrData so that we form a regression PCE on the surplus
-  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
-  else response_data_to_surplus_data(index);
-
-  // For testing of anchor point logic:
-  //size_t last_index = surrData.points() - 1;
-  //surrData.anchor_point(surrData.variables_data()[last_index],
-  //                      surrData.response_data()[last_index]);
-  //surrData.pop(1);
-
-  // anchor point, if present, is handled differently for different
-  // expCoeffsSolnApproach settings:
-  //   SAMPLING:   treat it as another data point
-  //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
-  //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  size_t i, j, num_total_pts = surrData.points(),
-    num_v = sharedDataRep->numVars;
-  if (surrData.anchor())
-    ++num_total_pts;
-  if (!num_total_pts) {
-    PCerr << "Error: nonzero number of sample points required in ProjectOrthog"
-	  << "PolyApproximation::compute_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
+  OrthogPolyApproximation::compute_coefficients(index);
 
   // Array sizing can be divided into two parts:
   // > data used in all cases (size in allocate_arrays())
@@ -102,6 +70,9 @@ void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
 #endif // DEBUG
 
   // calculate polynomial chaos coefficients
+  size_t i, num_v = sharedDataRep->numVars,
+    num_total_pts = surrData.points();
+  if (surrData.anchor()) ++num_total_pts;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     // verify quad_order stencil matches num_total_pts

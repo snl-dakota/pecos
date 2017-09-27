@@ -74,6 +74,8 @@ protected:
 
   int min_coefficients() const;
 
+  void compute_coefficients(size_t index = _NPOS);
+
   void store_coefficients(size_t index = _NPOS);
   void restore_coefficients(size_t index = _NPOS);
   void swap_coefficients(size_t maximal_index);

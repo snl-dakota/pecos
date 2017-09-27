@@ -167,38 +167,7 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 
 void RegressOrthogPolyApproximation::compute_coefficients(size_t index)
 {
-  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
-    PCerr << "Warning: neither expansion coefficients nor expansion "
-	  << "coefficient gradients\n         are active in "
-	  << "RegressOrthogPolyApproximation::compute_coefficients().\n"
-	  << "         Bypassing approximation construction." << std::endl;
-    return;
-  }
-
-  // when using a hierarchical approximation, subtract current PCE prediction
-  // from the surrData so that we form a regression PCE on the surplus
-  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
-  else response_data_to_surplus_data(index);
-
-  // For testing of anchor point logic:
-  //size_t last_index = surrData.points() - 1;
-  //surrData.anchor_point(surrData.variables_data()[last_index],
-  //                      surrData.response_data()[last_index]);
-  //surrData.pop(1);
-
-  // anchor point, if present, is handled differently for different
-  // expCoeffsSolnApproach settings:
-  //   SAMPLING:   treat it as another data point
-  //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
-  //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  size_t i, j, num_total_pts = surrData.points();
-  if (surrData.anchor())
-    ++num_total_pts;
-  if (!num_total_pts) {
-    PCerr << "Error: nonzero number of sample points required in RegressOrthog"
-	  << "PolyApproximation::compute_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
+  OrthogPolyApproximation::compute_coefficients(index);
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;

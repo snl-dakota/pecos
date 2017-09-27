@@ -42,17 +42,18 @@ public:
   ~ProjectOrthogPolyApproximation();
 
   //
-  //- Heading: Member functions
+  //- Heading: Virtual function redefinitions
   //
 
-  //
-  //- Cosmin Heading: Virtual function redefinitions and member functions
-  //
   void compute_coefficients(size_t index = _NPOS);
   void push_coefficients();
   void increment_coefficients(size_t index = _NPOS);
   void decrement_coefficients();
   void finalize_coefficients();
+
+  //
+  //- Heading: Member functions
+  //
 
 protected:
 
