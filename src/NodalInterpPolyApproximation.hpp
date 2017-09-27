@@ -50,7 +50,7 @@ protected:
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
-  void compute_expansion_coefficients(size_t index = _NPOS);
+  void compute_coefficients(size_t index = _NPOS);
 
   /// update the coefficients for the expansion of interpolation polynomials:
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -244,7 +244,7 @@ inline void NodalInterpPolyApproximation::increment_coefficients(size_t index)
 
 inline void NodalInterpPolyApproximation::decrement_coefficients()
 {
-  size_t new_colloc_pts = origSurrData.points();
+  size_t new_colloc_pts = surrData.points();
   if (expansionCoeffFlag) {
    expansionType1Coeffs.resize(new_colloc_pts);
    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;

@@ -48,10 +48,6 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  /// compute the coefficients for the expansion of multivariate
-  /// interpolation polynomials
-  void compute_coefficients(size_t index = _NPOS);
-
 protected:
 
   //
@@ -76,9 +72,6 @@ protected:
   //- Heading: New virtual functions
   //
 
-  /// derived portion of compute_coefficients()
-  virtual void compute_expansion_coefficients(size_t index = _NPOS) = 0;
-
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;
   /// compute moments of expansion using numerical integration
@@ -90,6 +83,9 @@ protected:
   //
   //- Heading: Convenience functions
   //
+
+  /// test accuracy of the interpolants
+  void test_interpolation();
 
   //
   //- Heading: Data

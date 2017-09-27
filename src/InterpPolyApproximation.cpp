@@ -15,7 +15,6 @@
 #include "SharedInterpPolyApproxData.hpp"
 
 //#define DEBUG
-//#define INTERPOLATION_TEST
 
 namespace Pecos {
 
@@ -42,54 +41,24 @@ void InterpPolyApproximation::allocate_arrays()
 }
 
 
-void InterpPolyApproximation::compute_coefficients(size_t index)
+void InterpPolyApproximation::test_interpolation()
 {
-  if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
-    PCerr << "Warning: neither expansion coefficients nor expansion "
-	  << "coefficient gradients\n         are active in "
-	  << "InterpPolyApproximation::compute_coefficients().\n         "
-	  << "Bypassing approximation construction." << std::endl;
-    return;
-  }
-
-  size_t num_colloc_pts = origSurrData.points();
-  if (origSurrData.anchor()) // anchor pt, if present, is first expansionSample
-    ++num_colloc_pts;
-  if (!num_colloc_pts) {
-    PCerr << "Error: nonzero number of sample points required in "
-	  << "InterpPolyApproximation::compute_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-
-  // perform any manipulations to the incoming data set (see OrthogPolyApprox)
-  //if (someFlag)
-  //  modify_surrogate_data();
-  //else
-  //  surrData = origSurrData; // shared rep
-
-  // For testing of anchor point logic:
-  //surrData.copy(origSurrData, SHALLOW_COPY, SHALLOW_COPY)
-  //size_t index = origSurrData.points() - 1;
-  //surrData.anchor_point(origSurrData.variables_data()[index],
-  //                      origSurrData.response_data()[index]);
-  //surrData.pop(1);
-
-  allocate_arrays();
-  compute_expansion_coefficients(index);
-
-#ifdef INTERPOLATION_TEST
   // SC should accurately interpolate the collocation data for TPQ and
   // SSG with fully nested rules, but will exhibit interpolation error
   // for SSG with other rules.
   if (expansionCoeffFlag) {
-    size_t i, index = 0, offset = (origSurrData.anchor()) ? 1 : 0,
-      w7 = WRITE_PRECISION+7, num_v = sharedDataRep->numVars;
+    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+    bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+
+    size_t i, index = 0, offset = (surrData.anchor()) ? 1 : 0,
+      w7 = WRITE_PRECISION+7, num_v = sharedDataRep->numVars,
+      num_colloc_pts = surrData.points() + offset;
     Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
       val_rmse = 0., grad_rmse = 0.;
     PCout << std::scientific << std::setprecision(WRITE_PRECISION);
     for (i=offset; i<num_colloc_pts; ++i, ++index) {
-      const RealVector& c_vars = origSurrData.continuous_variables(index);
-      Real      resp_fn = origSurrData.response_function(index);
+      const RealVector& c_vars = surrData.continuous_variables(index);
+      Real      resp_fn = surrData.response_function(index);
       interp_val = value(c_vars);
       err = (std::abs(resp_fn) > DBL_MIN) ? std::abs(1. - interp_val/resp_fn) :
 	                                    std::abs(resp_fn - interp_val);
@@ -99,8 +68,8 @@ void InterpPolyApproximation::compute_coefficients(size_t index)
 	    << " relative error = " << std::setw(w7) << err <<'\n';
       if (err > val_max_err) val_max_err = err;
       val_rmse += err * err;
-      if (basisConfigOptions.useDerivs) {
-	const RealVector& resp_grad   = origSurrData.response_gradient(index);
+      if (use_derivs) {
+	const RealVector& resp_grad   = surrData.response_gradient(index);
 	const RealVector& interp_grad = gradient_basis_variables(c_vars);
 	for (size_t j=0; j<num_v; ++j) {
 	  err = (std::abs(resp_grad[j]) > DBL_MIN) ?
@@ -118,14 +87,13 @@ void InterpPolyApproximation::compute_coefficients(size_t index)
     val_rmse = std::sqrt(val_rmse/(num_colloc_pts-offset));
     PCout << "\nValue interpolation errors:    " << std::setw(w7) << val_max_err
 	  << " (max) " << std::setw(w7) << val_rmse << " (RMS)\n";
-    if (basisConfigOptions.useDerivs) {
+    if (use_derivs) {
       grad_rmse = std::sqrt(grad_rmse/(num_colloc_pts-offset)/num_v);
       PCout << "Gradient interpolation errors: " << std::setw(w7)
 	    << grad_max_err << " (max) " << std::setw(w7) << grad_rmse
 	    << " (RMS)\n";
     }
   }
-#endif // INTERPOLATION_TEST
 }
 
 

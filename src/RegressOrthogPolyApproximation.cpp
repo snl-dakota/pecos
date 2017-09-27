@@ -167,7 +167,9 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 
 void RegressOrthogPolyApproximation::compute_coefficients(size_t index)
 {
-  OrthogPolyApproximation::compute_coefficients(index);
+  PolynomialApproximation::compute_coefficients(index);
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag)
+    return;
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;

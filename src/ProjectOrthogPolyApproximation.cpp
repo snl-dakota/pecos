@@ -56,7 +56,9 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 
 void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
 {
-  OrthogPolyApproximation::compute_coefficients(index);
+  PolynomialApproximation::compute_coefficients(index);
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag)
+    return;
 
   // Array sizing can be divided into two parts:
   // > data used in all cases (size in allocate_arrays())

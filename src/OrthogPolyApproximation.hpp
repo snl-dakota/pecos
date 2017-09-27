@@ -74,8 +74,6 @@ protected:
 
   int min_coefficients() const;
 
-  void compute_coefficients(size_t index = _NPOS);
-
   void store_coefficients(size_t index = _NPOS);
   void restore_coefficients(size_t index = _NPOS);
   void swap_coefficients(size_t maximal_index);
@@ -97,10 +95,6 @@ protected:
 
   /// initialize multiIndex, expansionCoeffs, et al.
   void allocate_arrays();
-
-  /// modify origSurrData to create hierarchical surplus response data
-  /// within surrData
-  void response_data_to_surplus_data(size_t index);
 
   /// Performs global sensitivity analysis via variance-based decomposition;
   /// computes component (main and interaction) Sobol' indices
@@ -180,10 +174,6 @@ protected:
   //
   //- Heading: Data
   //
-
-  /// instance of SurrogateData used in current approximation builds,
-  /// potentially reflecting data modifications relative to origSurrData
-  SurrogateData surrData;
 
   /// the coefficients of the expansion
   RealVector expansionCoeffs;

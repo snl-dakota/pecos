@@ -20,6 +20,7 @@
 
 //#define DEBUG
 //#define VBD_DEBUG
+//#define INTERPOLATION_TEST
 
 namespace Pecos {
 
@@ -28,9 +29,9 @@ void NodalInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  size_t num_colloc_pts = origSurrData.points(),
-    num_deriv_vars = origSurrData.num_derivative_variables();
-  if (origSurrData.anchor()) ++num_colloc_pts;
+  size_t num_colloc_pts = surrData.points(),
+    num_deriv_vars = surrData.num_derivative_variables();
+  if (surrData.anchor()) ++num_colloc_pts;
   if (expansionCoeffFlag) {
     if (expansionType1Coeffs.length() != num_colloc_pts)
       expansionType1Coeffs.sizeUninitialized(num_colloc_pts);
@@ -55,35 +56,45 @@ void NodalInterpPolyApproximation::allocate_arrays()
 }
 
 
-void NodalInterpPolyApproximation::compute_expansion_coefficients(size_t index)
+void NodalInterpPolyApproximation::compute_coefficients(size_t index)
 {
+  PolynomialApproximation::compute_coefficients(index);
+  if (!expansionCoeffFlag && !expansionCoeffGradFlag)
+    return;
+
+  allocate_arrays();
+
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  size_t c_index = 0, num_colloc_pts = origSurrData.points(), offset = 0;
-  if (origSurrData.anchor()) {
+  size_t c_index = 0, num_colloc_pts = surrData.points(), offset = 0;
+  if (surrData.anchor()) {
     offset = 1; ++num_colloc_pts;
     if (expansionCoeffFlag) {
-      expansionType1Coeffs[0] = origSurrData.anchor_function();
+      expansionType1Coeffs[0] = surrData.anchor_function();
       if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(origSurrData.anchor_gradient(),0,expansionType2Coeffs);
+	Teuchos::setCol(surrData.anchor_gradient(),0,expansionType2Coeffs);
     }
     if (expansionCoeffGradFlag)
-      Teuchos::setCol(origSurrData.anchor_gradient(), 0,
+      Teuchos::setCol(surrData.anchor_gradient(), 0,
 		      expansionType1CoeffGrads);
   }
 
   for (int i=offset; i<num_colloc_pts; ++i, ++c_index) {
     if (expansionCoeffFlag) {
-      expansionType1Coeffs[i] = origSurrData.response_function(c_index);
+      expansionType1Coeffs[i] = surrData.response_function(c_index);
       // Note: gradients from DAKOTA already scaled in u-space Recast
       if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(origSurrData.response_gradient(c_index), i,
+	Teuchos::setCol(surrData.response_gradient(c_index), i,
 			expansionType2Coeffs);
     }
     if (expansionCoeffGradFlag)
-      Teuchos::setCol(origSurrData.response_gradient(c_index), i,
+      Teuchos::setCol(surrData.response_gradient(c_index), i,
 		      expansionType1CoeffGrads);
   }
+
+#ifdef INTERPOLATION_TEST
+  test_interpolation();
+#endif
 
   computedMean = computedVariance = 0;
 }
@@ -214,17 +225,17 @@ combine_coefficients(short combine_type, size_t maximal_index)
 
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
-  size_t i, v, s, t, offset = 0, num_pts = origSurrData.points(),
+  size_t i, v, s, t, offset = 0, num_pts = surrData.points(),
     num_stored = storedExpType1Coeffs.size();
-  bool anchor_pt = origSurrData.anchor();
+  bool anchor_pt = surrData.anchor();
   if (anchor_pt) { offset = 1; ++num_pts; }
   Real curr_val;
   RealVector stored_vals(num_stored, false);
   //RealVectorArray stored_grads(num_stored);
   for (i=0; i<num_pts; ++i) {
     const RealVector& c_vars = (anchor_pt && i == 0) ?
-      origSurrData.anchor_continuous_variables() :
-      origSurrData.continuous_variables(i-offset);
+      surrData.anchor_continuous_variables() :
+      surrData.continuous_variables(i-offset);
     if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
       curr_val = expansionType1Coeffs[i]; // copy prior to update
       for (s=0; s<num_stored; ++s)
@@ -324,8 +335,8 @@ combine_coefficients(short combine_type, size_t maximal_index)
 void NodalInterpPolyApproximation::push_coefficients()
 {
   size_t index, offset = 0, old_colloc_pts,
-    new_colloc_pts = origSurrData.points();
-  if (origSurrData.anchor())
+    new_colloc_pts = surrData.points();
+  if (surrData.anchor())
     { offset = 1; ++new_colloc_pts; }
 
   if (expansionCoeffFlag) {
@@ -339,9 +350,9 @@ void NodalInterpPolyApproximation::push_coefficients()
     }
     index = old_colloc_pts - offset;
     for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index) {
-      expansionType1Coeffs[i] = origSurrData.response_function(index);
+      expansionType1Coeffs[i] = surrData.response_function(index);
       if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(origSurrData.response_gradient(index), i,
+	Teuchos::setCol(surrData.response_gradient(index), i,
 			expansionType2Coeffs);
     }
   }
@@ -351,7 +362,7 @@ void NodalInterpPolyApproximation::push_coefficients()
     expansionType1CoeffGrads.reshape(num_deriv_vars, new_colloc_pts);
     index = old_colloc_pts - offset;
     for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index)
-      Teuchos::setCol(origSurrData.response_gradient(index), i,
+      Teuchos::setCol(surrData.response_gradient(index), i,
 		      expansionType1CoeffGrads);
   }
 
@@ -3463,8 +3474,8 @@ integrate_expansion_moments(size_t num_moments)
   // of the interpolant (integrates powers of the interpolant using the same
   // collocation rules/orders used to form the interpolant).
   else {
-    size_t i, offset = 0, num_pts = origSurrData.points();
-    bool anchor_pt = origSurrData.anchor();
+    size_t i, offset = 0, num_pts = surrData.points();
+    bool anchor_pt = surrData.anchor();
     if (anchor_pt) { offset = 1; ++num_pts; }
     RealVector t1_exp(num_pts);
     if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native
@@ -3472,8 +3483,8 @@ integrate_expansion_moments(size_t num_moments)
       RealMatrix t2_exp(num_v, num_pts);
       for (i=0; i<num_pts; ++i) {
 	const RealVector& c_vars = (anchor_pt && i == 0) ?
-	  origSurrData.anchor_continuous_variables() :
-	  origSurrData.continuous_variables(i-offset);
+	  surrData.anchor_continuous_variables() :
+	  surrData.continuous_variables(i-offset);
 	t1_exp[i] = value(c_vars);
 	Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
       }
@@ -3484,8 +3495,8 @@ integrate_expansion_moments(size_t num_moments)
     else { // value-based native quadrature
       for (i=0; i<num_pts; ++i)
 	t1_exp[i] = (anchor_pt && i == 0) ? 
-	  value(origSurrData.anchor_continuous_variables()) :
-	  value(origSurrData.continuous_variables(i-offset));
+	  value(surrData.anchor_continuous_variables()) :
+	  value(surrData.continuous_variables(i-offset));
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
 			expansionMoments);
     }
@@ -3594,7 +3605,7 @@ member_integral(const BitArray& member_bits, Real mean)
     num_member_coeffs = member_t1_coeffs.length();
     for (i=0; i<num_member_coeffs; ++i) {
       const RealVector& c_vars
-	= origSurrData.continuous_variables(member_colloc_index[i]);
+	= surrData.continuous_variables(member_colloc_index[i]);
       Real h_t1_coeff_i_mm = data_rep->
 	tensor_product_value(c_vars, member_t1_coeffs, member_t2_coeffs,
 			     lev_index, member_colloc_key, empty_colloc_index,
@@ -3665,7 +3676,7 @@ member_integral(const BitArray& member_bits, Real mean)
 	SizetArray&    m_c_index_i = member_colloc_index[i];
 	for (j=0; j<num_member_coeffs; ++j) {
 	  const RealVector& c_vars
-	    = origSurrData.continuous_variables(m_c_index_i[j]);
+	    = surrData.continuous_variables(m_c_index_i[j]);
 	  // create key for this member coeff; see if val/grad already computed
 	  update_member_key(m_c_key_i[j], member_indices, member_map_key,
 			    num_member_indices);

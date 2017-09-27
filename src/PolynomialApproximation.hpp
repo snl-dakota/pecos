@@ -216,6 +216,8 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void compute_coefficients(size_t index = _NPOS);
+
   /// generic base class function mapped to gradient_basis_variables(x)
   const RealVector& gradient(const RealVector& x);
   /// generic base class function mapped to hessian_basis_variables(x)
@@ -224,6 +226,10 @@ protected:
   //
   //- Heading: Member functions
   //
+
+  /// modify origSurrData to create hierarchical surplus response data
+  /// within surrData
+  void response_data_to_surplus_data(size_t index);
 
   /// compute central moments of response using type1 numerical integration
   void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
@@ -240,11 +246,14 @@ protected:
   //- Heading: Data
   //
 
-  /// instance containing the variables (shared) and response (unique) data
-  /// arrays for constructing a surrogate of a single response function;
-  /// this is the original unmodified data set, prior to any potential
-  /// manipulations by the approximation classes
+  /// SurrogateData instance containing the variables (shared) and response
+  /// (unique) data arrays for constructing a surrogate of a single response
+  /// function; this is the original unmodified data set, prior to any
+  /// potential manipulations by the approximation classes
   SurrogateData origSurrData;
+  /// SurrogateData instance used in current approximation builds, potentially
+  /// reflecting data modifications relative to origSurrData
+  SurrogateData surrData;
 
   /// flag for calculation of expansion coefficients from response values
   bool expansionCoeffFlag;
