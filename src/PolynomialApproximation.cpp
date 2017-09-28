@@ -32,10 +32,15 @@ void PolynomialApproximation::compute_coefficients(size_t index)
     return;
   }
 
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  short discrep_type = data_rep->expConfigOptions.discrepancyType;
+
   // when using a recursive approximation, subtract current PCE prediction
   // from the surrData so that we form a PCE on the surplus
-  if (index == _NPOS || index == 0) surrData = origSurrData; // shared rep
-  else response_data_to_surplus_data(index);
+  if (discrep_type != RECURSIVE_DISCREP || index == _NPOS || index == 0)
+    surrData = origSurrData; // shared rep
+  else
+    response_data_to_surplus_data(index);
 
   // For testing of anchor point logic:
   //size_t last_index = surrData.points() - 1;
@@ -68,34 +73,57 @@ void PolynomialApproximation::response_data_to_surplus_data(size_t index)
   // to combine expansions and then eval once.  Approaches are equivalent for
   // linear addition.
 
-  // TO DO; MULTIPLICATIVE EXPANSION?
-  // > NonDExpansion::multifidelity_expansion() supports it
-  // > HierarchInterpPolyApproximation::compute_expansion_coefficients() doesn't
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
 
   size_t i, j, num_pts = origSurrData.points();
-  for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = origSurrData.continuous_variables(i);
-    if (expansionCoeffFlag) {
-      Real fn_val = origSurrData.response_function(i);
-      //if ( == ADDITIVE_CORRECTION)
-      for (j=0; j<index; ++j)
-	fn_val -= stored_value(c_vars, j);
-      //else if ( == MULTIPLICATIVE_CORRECTION) // TO DO
-      //for (j=0; j<index; ++j)
-      //  fn_val /= stored_value(c_vars, j);
-      surrData.response_function(fn_val, i);
+  switch (data_rep->expConfigOptions.combineType) {
+  case ADD_COMBINE:
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = origSurrData.continuous_variables(i);
+      if (expansionCoeffFlag) {
+	Real fn_val = origSurrData.response_function(i);
+	for (j=0; j<index; ++j)
+	  fn_val -= stored_value(c_vars, j);
+	surrData.response_function(fn_val, i);
+      }
+      if (expansionCoeffGradFlag) {
+	RealVector fn_grad;
+	copy_data(origSurrData.response_gradient(i), fn_grad);
+	for (j=0; j<index; ++j)
+	  fn_grad -= stored_gradient_nonbasis_variables(c_vars, j);
+	surrData.response_gradient(fn_grad, i);
+      }
     }
-    if (expansionCoeffGradFlag) {
-      RealVector fn_grad;
-      copy_data(origSurrData.response_gradient(i), fn_grad);
-      //if ( == ADDITIVE_CORRECTION)
-      for (j=0; j<index; ++j)
-	fn_grad -= stored_gradient_nonbasis_variables(c_vars, j);
-      //else if ( == MULTIPLICATIVE_CORRECTION) // TO DO
-      //for (j=0; j<index; ++j)
-      //  fn_grad /= ; // see DiscrepancyCorrection::compute_multiplicative()
-      surrData.response_gradient(fn_grad, i);
+    break;
+  case MULT_COMBINE: {
+    Real orig_fn_val, fn_val, stored_val, ratio;
+    RealVector fn_grad;
+    size_t k, num_deriv_vars = origSurrData.response_gradient(0).length();
+    for (i=0; i<num_pts; ++i) {
+      const RealVector& c_vars = origSurrData.continuous_variables(i);
+      fn_val = orig_fn_val = origSurrData.response_function(i);
+      if (expansionCoeffGradFlag)
+	copy_data(origSurrData.response_gradient(i), fn_grad);
+      for (j=0; j<index; ++j) {
+	stored_val = stored_value(c_vars, j);
+	if (expansionCoeffFlag)
+	  fn_val /= stored_val;
+	if (expansionCoeffGradFlag) { // recurse using only 2 levels at a time?
+	  const RealVector& stored_grad
+	    = stored_gradient_nonbasis_variables(c_vars, j);
+	  ratio = orig_fn_val / stored_val;
+	  // TO DO: work through this recursion, level by level
+	  for (k=0; k<num_deriv_vars; ++k)
+	    fn_grad[k] = ( fn_grad[k] - stored_grad[k] * ratio ) / stored_val;
+	}
+      }
+      if (expansionCoeffFlag)
+	surrData.response_function(fn_val, i);
+      if (expansionCoeffGradFlag)
+	surrData.response_gradient(fn_grad, i);
     }
+    break;
+  }
   }
 }
 

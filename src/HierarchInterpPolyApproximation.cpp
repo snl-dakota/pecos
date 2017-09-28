@@ -357,8 +357,7 @@ void HierarchInterpPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void HierarchInterpPolyApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+void HierarchInterpPolyApproximation::combine_coefficients(size_t swap_index)
 {
   if (swap_index != _NPOS) {
     swap_coefficients(swap_index);
@@ -370,6 +369,9 @@ combine_coefficients(short combine_type, size_t swap_index)
   size_t i, j, num_pts = surrData.points();
   Real curr_val, stored_val;
   /*
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  short combine_type = data_rep->expConfigOptions.combineType;
   for (i=0; i<num_pts; ++i) {
     const RealVector& c_vars = (anchor_pt && i == 0) ?
       surrData.anchor_continuous_variables() :

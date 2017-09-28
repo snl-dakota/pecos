@@ -206,8 +206,7 @@ void NodalInterpPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void NodalInterpPolyApproximation::
-combine_coefficients(short combine_type, size_t maximal_index)
+void NodalInterpPolyApproximation::combine_coefficients(size_t maximal_index)
 {
 #ifdef DEBUG
   PCout << "Original type1 expansion coefficients prior to combination:\n";
@@ -222,6 +221,7 @@ combine_coefficients(short combine_type, size_t maximal_index)
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  short combine_type = data_rep->expConfigOptions.combineType;
 
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points

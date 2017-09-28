@@ -88,7 +88,7 @@ public:
   virtual void remove_stored_coefficients(size_t index = _NPOS);
 
   /// combine the current coefficients with a previously stored set
-  virtual void combine_coefficients(short combine_type, size_t swap_index);
+  virtual void combine_coefficients(size_t swap_index);
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s, bool normalized);

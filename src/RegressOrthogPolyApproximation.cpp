@@ -583,11 +583,9 @@ void RegressOrthogPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void RegressOrthogPolyApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+void RegressOrthogPolyApproximation::combine_coefficients(size_t swap_index)
 {
-  // based on incoming combine_type, combine the data stored previously
-  // by store_coefficients()
+  // Combine the data stored previously by store_coefficients()
 
   size_t i, num_stored = storedExpCoeffs.size();
   bool stored_sparse_empty = true;
@@ -596,7 +594,7 @@ combine_coefficients(short combine_type, size_t swap_index)
       { stored_sparse_empty = false; break; }
 
   if (sparseIndices.empty() && stored_sparse_empty) {
-    OrthogPolyApproximation::combine_coefficients(combine_type, swap_index);
+    OrthogPolyApproximation::combine_coefficients(swap_index);
     // augment base implementation with clear of storedExpCoeff{s,Grads}
   }
   else {
@@ -617,7 +615,7 @@ combine_coefficients(short combine_type, size_t swap_index)
       if (storedSparseIndices[i].empty())
 	inflate(storedSparseIndices[i], data_rep->storedMultiIndex[i].size());
 
-    switch (combine_type) {
+    switch (data_rep->expConfigOptions.combineType) {
     case ADD_COMBINE: {
       // update sparseIndices and expansionCoeff{s,Grads}
       for (i=0; i<num_stored; ++i)

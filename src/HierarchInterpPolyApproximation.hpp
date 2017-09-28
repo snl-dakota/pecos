@@ -81,7 +81,7 @@ protected:
 
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void combine_coefficients(short combine_type, size_t swap_index);
+  void combine_coefficients(size_t swap_index);
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);

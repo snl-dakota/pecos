@@ -251,7 +251,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
 }
 
 
-size_t SharedInterpPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedInterpPolyApproxData::pre_combine_data()
 {
   // Sufficient for two grids: if not currently the maximal grid, then swap
   // with the stored grid (only one is stored)
@@ -274,7 +274,7 @@ size_t SharedInterpPolyApproxData::pre_combine_data(short combine_type)
 }
 
 
-void SharedInterpPolyApproxData::post_combine_data(short combine_type)
+void SharedInterpPolyApproxData::post_combine_data()
 { driverRep->clear_stored(); }
 
 

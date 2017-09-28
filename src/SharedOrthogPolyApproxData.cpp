@@ -358,10 +358,9 @@ void SharedOrthogPolyApproxData::swap_data(size_t index)
 }
 
 
-size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedOrthogPolyApproxData::pre_combine_data()
 {
-  // based on incoming combine_type, combine the data stored previously
-  // by store_coefficients()
+  // Combine the data stored previously by store_data()
 
   // Sufficient for two grids: if not currently the maximal grid, then swap
   // with the stored grid (only one is stored)
@@ -377,7 +376,7 @@ size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
   //size_t new_index = overlay_maximal_grid();
   //if (current_grid_index() != new_index) swap_data(new_index);
 
-  switch (combine_type) {
+  switch (expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // update multiIndex with any storedMultiIndex terms not yet included.
     // An update in place is sufficient.
@@ -417,7 +416,7 @@ size_t SharedOrthogPolyApproxData::pre_combine_data(short combine_type)
 }
 
 
-void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
+void SharedOrthogPolyApproxData::post_combine_data()
 {
   // storedMultiIndex and storedApproxOrder used downstream in
   // ProjectOrthogPolyApproximation::integrate_response_moments(),
@@ -435,7 +434,7 @@ void SharedOrthogPolyApproxData::post_combine_data(short combine_type)
     storedApproxOrder.clear(); break;
   }
 
-  switch (combine_type) {
+  switch (expConfigOptions.combineType) {
   case MULT_COMBINE:
     std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
     combinedMultiIndex.clear();

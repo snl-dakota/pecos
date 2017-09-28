@@ -95,7 +95,7 @@ protected:
   void swap_coefficients(size_t index);
   void remove_stored_coefficients(size_t index = _NPOS);
 
-  void combine_coefficients(short combine_type, size_t swap_index);
+  void combine_coefficients(size_t swap_index);
 
   void allocate_arrays();
 

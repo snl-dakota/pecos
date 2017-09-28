@@ -630,9 +630,10 @@ integrate_response_moments(size_t num_moments)
 
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  if (data_rep->storedExpCombineType && num_stored) {
+  short combine_type = data_rep->expConfigOptions.combineType;
+  if (combine_type && num_stored) {
     // update data_coeffs using evaluations from stored expansions
-    switch (data_rep->storedExpCombineType) {
+    switch (combine_type) {
     case ADD_COMBINE:
       if (anchor_pt) {
 	const RealVector& a_c_vars = surrData.anchor_continuous_variables();
@@ -691,11 +692,10 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE:
-    if (data_rep->storedExpCombineType) // not guaranteed to use tensor indexing
-      return OrthogPolyApproximation::value(x);
+    if (data_rep->expConfigOptions.combineType) // not guaranteed to use
+      return OrthogPolyApproximation::value(x); // tensor indexing
     else { // Horner's rule approach applicable for tensor indexing
-      // Error check for required data
-      if (!expansionCoeffFlag) {
+      if (!expansionCoeffFlag) { // check for required data
 	PCerr << "Error: expansion coefficients not defined in "
 	      << "ProjectOrthogPolyApproximation::value()" << std::endl;
 	abort_handler(-1);
@@ -712,7 +712,8 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
     // compute_coefficients().  For now, leave store_tp as is and use
     // default approach if tpExpansionCoeffs is empty.  In addition,
     // tp arrays are not currently updated for expansion combinations.
-    if (tpExpansionCoeffs.empty() || data_rep->storedExpCombineType)//most cases
+    if (tpExpansionCoeffs.empty() || data_rep->expConfigOptions.combineType)
+      // most cases
       return OrthogPolyApproximation::value(x);
     else { // generalized sparse grid case
       // Error check for required data

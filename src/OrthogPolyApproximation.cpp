@@ -121,11 +121,9 @@ void OrthogPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void OrthogPolyApproximation::
-combine_coefficients(short combine_type, size_t maximal_index)
+void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
 {
-  // based on incoming combine_type, combine the data stored previously
-  // by store_coefficients()
+  // Combine the data stored previously by store_coefficients()
 
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
@@ -138,7 +136,7 @@ combine_coefficients(short combine_type, size_t maximal_index)
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   size_t i, num_stored = storedExpCoeffs.size();
-  switch (combine_type) {
+  switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
     // case) so that Horner's rule performance opt could be used within

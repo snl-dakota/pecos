@@ -24,11 +24,6 @@ namespace Pecos {
 
 void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 {
-  // no combination by default, even if stored{MultiIndex,ExpCoeffs,
-  // ExpCoeffGrads} are defined.  Redefined by attribute passed in
-  // combine_coefficients(short).
-  storedExpCombineType = NO_COMBINE; // reset to initial state (if needed)
-
   // update_exp_form controls when to update (refinement) and when not to
   // update (subIterator execution) an expansion's multiIndex definition.
   // Simple logic of updating if previous number of points != current number
@@ -221,14 +216,11 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
 }
 
 
-size_t SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
+size_t SharedProjectOrthogPolyApproxData::pre_combine_data()
 {
-  // based on incoming combine_type, combine the data stored previously
-  // by store_coefficients()
+  // Combine the data stored previously by store_data()
 
-  storedExpCombineType = combine_type;
-
-  switch (combine_type) {
+  switch (expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
     // case) so that Horner's rule performance opt could be used within
@@ -239,7 +231,7 @@ size_t SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
     // tensor_product_value() usage for combined coefficient sets.
 
     // base class version is sufficient; no specialization based on exp form
-    return SharedOrthogPolyApproxData::pre_combine_data(combine_type);
+    return SharedOrthogPolyApproxData::pre_combine_data();
     break;
   }
   case MULT_COMBINE: {
@@ -306,14 +298,14 @@ size_t SharedProjectOrthogPolyApproxData::pre_combine_data(short combine_type)
     }
     default:
       // base class version supports product of two total-order expansions
-      return SharedOrthogPolyApproxData::pre_combine_data(combine_type);
+      return SharedOrthogPolyApproxData::pre_combine_data();
       break;
     }
     break;
   }
   case ADD_MULT_COMBINE:
     // base class manages this placeholder
-    return SharedOrthogPolyApproxData::pre_combine_data(combine_type);
+    return SharedOrthogPolyApproxData::pre_combine_data();
     break;
   }
 }

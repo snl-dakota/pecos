@@ -392,11 +392,10 @@ void BasisApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void BasisApproximation::
-combine_coefficients(short combine_type, size_t swap_index)
+void BasisApproximation::combine_coefficients(size_t swap_index)
 {
   if (basisApproxRep)
-    basisApproxRep->combine_coefficients(combine_type, swap_index);
+    basisApproxRep->combine_coefficients(swap_index);
   else {
     PCerr << "Error: combine_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
