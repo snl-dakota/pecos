@@ -37,10 +37,8 @@ void PolynomialApproximation::compute_coefficients(size_t index)
 
   // when using a recursive approximation, subtract current PCE prediction
   // from the surrData so that we form a PCE on the surplus
-  if (discrep_type != RECURSIVE_DISCREP || index == _NPOS || index == 0)
-    surrData = origSurrData; // shared rep
-  else
-    response_data_to_surplus_data(index);
+  if (discrep_type == RECURSIVE_DISCREP) response_data_to_surplus_data(index);
+  else                                   surrData = origSurrData; // shared rep
 
   // For testing of anchor point logic:
   //size_t last_index = surrData.points() - 1;
@@ -65,6 +63,11 @@ void PolynomialApproximation::compute_coefficients(size_t index)
 
 void PolynomialApproximation::response_data_to_surplus_data(size_t index)
 {
+  if (index == 0 || index == _NPOS) {
+    surrData = origSurrData; // shared rep
+    return;
+  }
+
   // We will only modify the response to reflect hierarchical surpluses,
   // so initialize surrData with shared vars and unique resp instances
   surrData = origSurrData.copy(SHALLOW_COPY, DEEP_COPY);
@@ -76,51 +79,58 @@ void PolynomialApproximation::response_data_to_surplus_data(size_t index)
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
 
   size_t i, j, num_pts = origSurrData.points();
+  Real delta_val; RealVector delta_grad;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE:
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = origSurrData.continuous_variables(i);
       if (expansionCoeffFlag) {
-	Real fn_val = origSurrData.response_function(i);
+	delta_val = origSurrData.response_function(i);
 	for (j=0; j<index; ++j)
-	  fn_val -= stored_value(c_vars, j);
-	surrData.response_function(fn_val, i);
+	  delta_val -= stored_value(c_vars, j);
+	surrData.response_function(delta_val, i);
       }
       if (expansionCoeffGradFlag) {
-	RealVector fn_grad;
-	copy_data(origSurrData.response_gradient(i), fn_grad);
+	copy_data(origSurrData.response_gradient(i), delta_grad);
 	for (j=0; j<index; ++j)
-	  fn_grad -= stored_gradient_nonbasis_variables(c_vars, j);
-	surrData.response_gradient(fn_grad, i);
+	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, j);
+	surrData.response_gradient(delta_grad, i);
       }
     }
     break;
   case MULT_COMBINE: {
-    Real orig_fn_val, fn_val, stored_val, ratio;
-    RealVector fn_grad;
+    Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
+    RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
     size_t k, num_deriv_vars = origSurrData.response_gradient(0).length();
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = origSurrData.continuous_variables(i);
-      fn_val = orig_fn_val = origSurrData.response_function(i);
+      delta_val = orig_fn_val = origSurrData.response_function(i);
       if (expansionCoeffGradFlag)
-	copy_data(origSurrData.response_gradient(i), fn_grad);
+	copy_data(origSurrData.response_gradient(i), orig_fn_grad);
       for (j=0; j<index; ++j) {
 	stored_val = stored_value(c_vars, j);
-	if (expansionCoeffFlag)
-	  fn_val /= stored_val;
-	if (expansionCoeffGradFlag) { // recurse using only 2 levels at a time?
+	delta_val /= stored_val;
+	if (expansionCoeffGradFlag) { // recurse using levels j and j-1
 	  const RealVector& stored_grad
 	    = stored_gradient_nonbasis_variables(c_vars, j);
-	  ratio = orig_fn_val / stored_val;
-	  // TO DO: work through this recursion, level by level
-	  for (k=0; k<num_deriv_vars; ++k)
-	    fn_grad[k] = ( fn_grad[k] - stored_grad[k] * ratio ) / stored_val;
+	  if (j == 0)
+	    { fn_val_j = stored_val; fn_grad_j = stored_grad; }
+	  else {
+	    fn_val_j = fn_val_jm1 * stored_val;
+	    for (k=0; k<num_deriv_vars; ++k)
+	      fn_grad_j[k]  = ( fn_grad_jm1[k] * stored_val +
+				fn_val_jm1 * stored_grad[j] );
+	  }
+	  if (j < index - 1)
+	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
+	  else
+	    for (k=0; k<num_deriv_vars; ++k)
+	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
+	                    / fn_val_j;
 	}
       }
-      if (expansionCoeffFlag)
-	surrData.response_function(fn_val, i);
-      if (expansionCoeffGradFlag)
-	surrData.response_gradient(fn_grad, i);
+      if (expansionCoeffFlag)     surrData.response_function(delta_val,  i);
+      if (expansionCoeffGradFlag) surrData.response_gradient(delta_grad, i);
     }
     break;
   }
