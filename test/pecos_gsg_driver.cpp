@@ -448,7 +448,7 @@ int main(int argc, char* argv[])
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     // from Approximation::finalize() called from PecosApproximation::finalize()
     SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-    size_t i, num_restore = sdi.popped_trials(); // # of popped trial sets
+    size_t i, num_restore = sdi.popped_sets(); // # of popped trial sets
     for (i=0; i<num_restore; ++i)
       sdi.push(shared_poly_data->finalization_index(i),false);
     sdi.clear_popped();
