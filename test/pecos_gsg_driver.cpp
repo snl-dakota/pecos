@@ -182,6 +182,8 @@ int main(int argc, char* argv[])
   }
   ExpansionConfigOptions expcfgopt(COMBINED_SPARSE_GRID, // expsolnapp
                                    DEFAULT_BASIS,        // expbassus
+				   NO_COMBINE,           // exp combine type
+				   NO_DISCREP,           // discrepancy type
                                    SILENT_OUTPUT,        // output level
                                    true,                 // vbd flag
                                    2,                    // vbd order
