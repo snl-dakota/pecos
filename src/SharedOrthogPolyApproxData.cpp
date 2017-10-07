@@ -418,27 +418,25 @@ size_t SharedOrthogPolyApproxData::pre_combine_data()
 
 void SharedOrthogPolyApproxData::post_combine_data()
 {
-  // storedMultiIndex and storedApproxOrder used downstream in
-  // ProjectOrthogPolyApproximation::integrate_response_moments(),
-  // which calls ProjectOrthogPolyApproximation::stored_value()
-
-  //storedMultiIndex.clear(); // needed in {OPA,POPA,ROPA}::stored_value()
-  storedMultiIndexMap.clear();
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID:
-    driverRep->clear_stored(); break;
-  case QUADRATURE:
-    //storedApproxOrder.clear(); // needed in ProjectOPA::stored_value()
-    driverRep->clear_stored(); break;
-  default: // total-order expansions
-    storedApproxOrder.clear(); break;
-  }
-
   switch (expConfigOptions.combineType) {
   case MULT_COMBINE:
     std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
     combinedMultiIndex.clear();
     break;
+  }
+}
+
+
+void SharedOrthogPolyApproxData::clear_stored_data()
+{
+  storedMultiIndex.clear(); storedMultiIndexMap.clear();
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID:
+    driverRep->clear_stored(); break;
+  case QUADRATURE:
+    storedApproxOrder.clear(); driverRep->clear_stored(); break;
+  default: // total-order expansions
+    storedApproxOrder.clear(); break;
   }
 }
 

@@ -593,10 +593,8 @@ void RegressOrthogPolyApproximation::combine_coefficients(size_t swap_index)
     if (!storedSparseIndices[i].empty())
       { stored_sparse_empty = false; break; }
 
-  if (sparseIndices.empty() && stored_sparse_empty) {
+  if (sparseIndices.empty() && stored_sparse_empty)
     OrthogPolyApproximation::combine_coefficients(swap_index);
-    // augment base implementation with clear of storedExpCoeff{s,Grads}
-  }
   else {
     if (swap_index != _NPOS) {
       swap_coefficients(swap_index);
@@ -655,9 +653,6 @@ void RegressOrthogPolyApproximation::combine_coefficients(size_t swap_index)
 
     computedMean = computedVariance = 0;
   }
-
-  if (expansionCoeffFlag)     storedExpCoeffs.clear();
-  if (expansionCoeffGradFlag) storedExpCoeffGrads.clear();
 }
 
 

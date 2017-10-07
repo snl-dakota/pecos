@@ -121,6 +121,10 @@ void OrthogPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
+void OrthogPolyApproximation::clear_stored()
+{ storedExpCoeffs.clear(); storedExpCoeffGrads.clear(); }
+
+
 void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
 {
   // Combine the data stored previously by store_coefficients()
@@ -173,11 +177,6 @@ void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
     abort_handler(-1);
     break;
   }
-
-  /* Code moved to ProjectOrthogPolyApproximation::integrate_response_moments()
-  if (expansionCoeffFlag)     storedExpCoeffs.clear();
-  if (expansionCoeffGradFlag) storedExpCoeffGrads.clear();
-  */
 
   computedMean = computedVariance = 0;
 }

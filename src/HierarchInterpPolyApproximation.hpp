@@ -78,6 +78,8 @@ protected:
   /// remove a redundant entry from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   /// prior to combine_coefficients (default is pop_back)
   void remove_stored_coefficients(size_t index = _NPOS);
+  /// clear storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  void clear_stored();
 
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}

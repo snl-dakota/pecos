@@ -289,6 +289,8 @@ public:
   virtual size_t pre_combine_data();
   /// combines current and stored approximation data
   virtual void post_combine_data();
+  /// clear stored approximation data
+  virtual void clear_stored_data();
 
   //
   //- Heading: Member functions

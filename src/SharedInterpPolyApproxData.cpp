@@ -274,10 +274,6 @@ size_t SharedInterpPolyApproxData::pre_combine_data()
 }
 
 
-void SharedInterpPolyApproxData::post_combine_data()
-{ driverRep->clear_stored(); }
-
-
 void SharedInterpPolyApproxData::
 update_tensor_interpolation_basis(const UShortArray& lev_index)
 {

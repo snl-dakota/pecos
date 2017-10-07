@@ -671,9 +671,6 @@ integrate_response_moments(size_t num_moments)
 	}
       break;
     }
-    // stored data may now be cleared
-    if (expansionCoeffFlag)     storedExpCoeffs.clear();
-    if (expansionCoeffGradFlag) storedExpCoeffGrads.clear();
   }
 
   // update numericalMoments based on data_coeffs

@@ -123,13 +123,13 @@ protected:
   //
 
   void allocate_data(size_t index = _NPOS);
+  size_t pre_combine_data();
+  void post_combine_data();
 
   void store_data(size_t index = _NPOS);
   void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
-  
-  size_t pre_combine_data();
-  void post_combine_data();
+  void clear_stored_data();
 
   //
   //- Heading: Member functions

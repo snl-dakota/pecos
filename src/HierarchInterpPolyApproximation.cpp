@@ -417,11 +417,14 @@ void HierarchInterpPolyApproximation::combine_coefficients(size_t swap_index)
   }
   */
 
-  // clear stored data now that it has been combined
+  computedMean = computedVariance = 0;
+}
+
+
+void HierarchInterpPolyApproximation::clear_stored()
+{
   storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
   storedExpType1CoeffGrads.clear();
-
-  computedMean = computedVariance = 0;
 }
 
 

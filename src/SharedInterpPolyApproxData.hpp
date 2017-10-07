@@ -83,10 +83,11 @@ protected:
   void post_push_data();
   void post_finalize_data();
   size_t pre_combine_data();
-  void post_combine_data();
+
   void store_data(size_t index = _NPOS);
   void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
+  void clear_stored_data();
 
   //
   //- Heading: New virtual functions
@@ -441,6 +442,10 @@ inline void SharedInterpPolyApproxData::restore_data(size_t index)
 
 inline void SharedInterpPolyApproxData::remove_stored_data(size_t index)
 { driverRep->remove_stored_grid(index); }
+
+
+inline void SharedInterpPolyApproxData::clear_stored_data()
+{ driverRep->clear_stored(); }
 
 
 inline Real SharedInterpPolyApproxData::

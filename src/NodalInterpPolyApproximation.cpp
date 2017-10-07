@@ -319,16 +319,14 @@ void NodalInterpPolyApproximation::combine_coefficients(size_t maximal_index)
   write_data(PCout, expansionType1Coeffs);
 #endif // DEBUG
 
-  // clear stored data now that it has been combined
-  if (expansionCoeffFlag) {
-    storedExpType1Coeffs.clear();
-    if (data_rep->basisConfigOptions.useDerivs)
-      storedExpType2Coeffs.clear();
-  }
-  if (expansionCoeffGradFlag)
-    storedExpType1CoeffGrads.clear();
-
   computedMean = computedVariance = 0;
+}
+
+
+void NodalInterpPolyApproximation::clear_stored()
+{
+  storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
+  storedExpType1CoeffGrads.clear();
 }
 
 

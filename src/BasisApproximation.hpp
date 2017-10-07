@@ -86,6 +86,8 @@ public:
   /// remove a redundant stored entry prior to combine_coefficients
   /// (default is pop_back)
   virtual void remove_stored_coefficients(size_t index = _NPOS);
+  /// clear stored approximation data
+  virtual void clear_stored();
 
   /// combine the current coefficients with a previously stored set
   virtual void combine_coefficients(size_t swap_index);

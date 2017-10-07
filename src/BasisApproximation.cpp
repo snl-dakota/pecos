@@ -392,6 +392,15 @@ void BasisApproximation::remove_stored_coefficients(size_t index)
 }
 
 
+void BasisApproximation::clear_stored()
+{
+  if (basisApproxRep)
+    basisApproxRep->clear_stored(); 
+  //else
+  //  default: no stored approx data to clear
+}
+
+
 void BasisApproximation::combine_coefficients(size_t swap_index)
 {
   if (basisApproxRep)
