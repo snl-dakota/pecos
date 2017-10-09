@@ -440,6 +440,14 @@ void least_angle_regression( const RealMatrix &Amatrix,
     {
       // where to store solution and metrics in result_0 and result_1 respectively
       int storage_index = (store_history) ? homotopy_iter : 0;
+
+      if ((store_history) && (homotopy_iter>0)){
+	RealVector prev_solution_view(Teuchos::View, result_0[homotopy_iter-1], N);
+	prev_solution=prev_solution_view;
+      }else{
+	for (int i=0; i<N; ++i)
+	  prev_solution[i]=result_0(i,0);
+      }
       
       Real max_abs_correlation = find_max_correlation( correlation,
 						       inactive_indices,
@@ -493,25 +501,13 @@ void least_angle_regression( const RealMatrix &Amatrix,
 				  normalisation_factor,
 				  non_negative);
 
-      if ((store_history) && (homotopy_iter>0)){
-	RealVector prev_solution_view( Teuchos::View, result_0[homotopy_iter-1],
-				       result_0.numRows() );
-	prev_solution=prev_solution_view;
-      }else{
-	for (int i=0; i<N; ++i)
-	  prev_solution[i]=result_0(i,0);
-      }
+      //std::printf( "%1.15e\n",prev_solution.normFrobenius());
       Real gamma_tilde = std::numeric_limits<Real>::max();
       int violating_sparse_index = -1;
       if ( ( ( solver == LASSO_REGRESSION ) || (non_negative) ) && ( homotopy_iter > 0 ) ){
-	//RealVector prev_solution( Teuchos::View, result_0[homotopy_iter-1],
-	//			  result_0.numRows() );
 	find_indices_to_drop( prev_solution, active_indices, w_sparse,
 			      gamma_tilde, violating_sparse_index );
       }
-
-
-      //Real max_abs_correlation = std::abs( correlation(active_indices[0],0 ) );
 
       Real gamma_hat = compute_step_size( max_abs_correlation, inactive_indices,
 					  correlation, angles,
