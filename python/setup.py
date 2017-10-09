@@ -301,7 +301,7 @@ print('Run python setup.py install --prefix=<dir>to install to python dir>')
 string = 'export PYTHONPATH=$PYTHONPATH:%s'%distutils_build_dir
 print('If you choose not to install, then you can temporarily add the build python modules to the PYTHONPATH by running in the terminal')
 print (string)
-print ('To use dakota style sheets for jupyter notebook copy tutorials/pydakota.css to ~/.jupyter/custom/custom.css'. 'You will likely have to create the directory custom/')
+print ('To use dakota style sheets for jupyter notebook copy tutorials/pydakota.css to ~/.jupyter/custom/custom.css. You will likely have to create the directory custom/')
 
 # dont forget to set pythonpath
 #notes:
