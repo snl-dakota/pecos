@@ -1,4 +1,4 @@
-import matplotlib
+import matplotlib, numpy as np
 import matplotlib.pyplot as plt
 def get_meshgrid_function_data(function, plot_limits, num_pts_1d, qoi = 0):
     """
@@ -35,19 +35,20 @@ def get_meshgrid_function_data(function, plot_limits, num_pts_1d, qoi = 0):
     Z : np.ndarray of size (num_pts_1d,num_pts_1d)
         The function values at each sample
     """
-    x = numpy.linspace( plot_limits[0], plot_limits[1], num_pts_1d )
-    y = numpy.linspace( plot_limits[2], plot_limits[3], num_pts_1d )
-    X, Y = pylab.meshgrid( x, y )
-    pts = numpy.vstack( ( X.reshape( ( 1, X.shape[0]*X.shape[1] ) ),
+    x = np.linspace( plot_limits[0], plot_limits[1], num_pts_1d )
+    y = np.linspace( plot_limits[2], plot_limits[3], num_pts_1d )
+    X, Y = np.meshgrid( x, y )
+    pts = np.vstack( ( X.reshape( ( 1, X.shape[0]*X.shape[1] ) ),
                           Y.reshape( ( 1, Y.shape[0]*Y.shape[1]) ) ) )
 
-    Z = f( pts )
+    Z = function( pts )
     if ( Z.ndim == 2 ):
         Z = Z[:,qoi]
-    Z = numpy.reshape( Z, ( X.shape[0], X.shape[1]) )
+    Z = np.reshape( Z, ( X.shape[0], X.shape[1]) )
     return X,Y,Z
 
-def plot_contours(num_contour_levels=10, ax=None, offset=False):
+def plot_contours(X, Y, Z, num_contour_levels=10, ax=None, offset=0, 
+                  cmap=matplotlib.cm.jet, zorder=None):
     """
     Plot the contours of a two-dimensional function using matplotlib.contourf.
 
@@ -56,25 +57,24 @@ def plot_contours(num_contour_levels=10, ax=None, offset=False):
     num_contour_levels : boolean (default=10)
        Plot the contours of the function to plot beneath the 3d surface.
        
-    offset : boolean (default=True)
-       Plot the contours offset from the default value
+    offset : boolean (default=0)
+       Plot the contours offset from z=0 plane
 
-    X,Y,Z: see documentation of Return of function get_mesh_function_data
+    X,Y,Z: see documentation of Return of function get_meshgrid_function_data
     """
     # Plot contours of functions underneath surface
     if num_contour_levels>0:
-        offset=-(Z.max()-Z.min())
         cset = ax.contourf(
             X, Y, Z, zdir='z', offset=offset,
-            levels=numpy.linspace(Z.min(),Z.max(),num_contour_levels),
-            cmap=cmap)
-        ax.set_zlim(Z.min()+offset, Z.max())
+            levels=np.linspace(Z.min(),Z.max(),num_contour_levels),
+            cmap=cmap, zorder=zorder)
 
     return ax
 
 
 def plot_surface(X, Y, Z, ax=None, samples=None, limit_state=None,
-                 num_contour_levels=0, plot_axes=True, cmap=matplotlib.cm.jet):
+                 num_contour_levels=0, plot_axes=True, cmap=matplotlib.cm.jet,
+                 axis_labels=None, angle=None, alpha=1., zorder=None):
     """
     Plot the three-dimensional surface of a two-dimensional function using
     matplotlib.plot_surface
@@ -94,38 +94,45 @@ def plot_surface(X, Y, Z, ax=None, samples=None, limit_state=None,
     plot_axes : boolean (default=True)
        Plot the 3 coordinate axes and ticks
 
-    angle: integer (default=None)
+    angle : integer (default=None)
        The angle at which the plot is viewed. If None matplotlib will
        use its default angle
 
-    X,Y,Z: see documentation of Return of function get_mesh_function_data
+    axis_labels : list of strings size (3)
+       Labels of the x, y, and z axes
+
+    alpha : double
+       Transperancy of plot
+
+    zorder : the priority of the plot on the axes. A zorder=2 places plot
+    above all plots with zorder=1
+
+    X,Y,Z: see documentation of Return of function get_meshgrid_function_data
+
     """
     if ax is None:
-        fig=plt.figure()
+        fig = plt.figure()
         ax = fig.gca(projection='3d')
 
     # Define transperancy of plot
-    alpha = 1.
-    if points is not None:
-        # if plotting points on surface, make plot transparent
-        alpha = 0.5
-        ax.hold(True)
+    if samples is not None:
         ax.scatter3D(samples[0,:], samples[1,:], samples[2,:], marker='o',
                      s=100, color='k')
 
     if limit_state is not None:
-        pts = numpy.vstack((X.reshape((1, X.shape[0]*X.shape[1])),
-                            Y.reshape((1, Y.shape[0]*Y.shape[1]))))
-        vals = vals.flatten()
+        pts = np.vstack((X.reshape((1, X.shape[0]*X.shape[1])),
+                         Y.reshape((1, Y.shape[0]*Y.shape[1]))))
+        vals = Z.flatten()
         I, default_value = limit_state(pts, vals)
         vals[I] = default_value
-        vals = vals.reshape((X.shape[0],X.shape[1]))
+        Z_tmp = vals.reshape((X.shape[0],X.shape[1]))
     else:
         Z_tmp = Z
 
     # Plot surface
     ax.plot_surface(X, Y, Z_tmp, cmap=cmap, antialiased=False,
-                    cstride=2, rstride=2, linewidth=0., alpha=alpha)
+                    cstride=1, rstride=1, linewidth=0., alpha=alpha,
+                    zorder=zorder)
 
     if not plot_axes:
         ax.set_xticks([]) 
@@ -142,9 +149,9 @@ def plot_surface(X, Y, Z, ax=None, samples=None, limit_state=None,
         ax.w_zaxis.line.set_color((1.0, 1.0, 1.0, 0.0))
 
     if ( axis_labels is not None ):
-        ax.set_xlabel( axis_labels[0] )
-        ax.set_ylabel( axis_labels[1] )
-        ax.set_zlabel( axis_labels[2] )
+        ax.set_xlabel(axis_labels[0])
+        ax.set_ylabel(axis_labels[1])
+        ax.set_zlabel(axis_labels[2])
 
     # Set the angle of the plot (how it is viewed)
     if ( angle is not None ):
