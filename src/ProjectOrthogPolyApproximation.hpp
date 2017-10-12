@@ -70,9 +70,9 @@ protected:
   Real stored_value(const RealVector& x, size_t index);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
-  void compute_moments();
+  void compute_moments(bool full_stats = true);
   /// compute expansion moments in all-variables mode to order 2
-  void compute_moments(const RealVector& x);
+  void compute_moments(const RealVector& x, bool full_stats = true);
 
 private:
 
@@ -142,27 +142,32 @@ inline ProjectOrthogPolyApproximation::~ProjectOrthogPolyApproximation()
 { }
 
 
-inline void ProjectOrthogPolyApproximation::compute_moments()
+inline void ProjectOrthogPolyApproximation::compute_moments(bool full_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
   mean(); variance(); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
 
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
+  if (full_stats &&
+      data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
     integrate_response_moments(4);
+  else numericalMoments.resize(0);
 }
 
 
-inline void ProjectOrthogPolyApproximation::compute_moments(const RealVector& x)
+inline void ProjectOrthogPolyApproximation::
+compute_moments(const RealVector& x, bool full_stats)
 {
   // all variables mode only supports first two moments
   mean(x); variance(x); // updates expansionMoments[0] and [1]
   //standardize_moments(expansionMoments);
 
   //SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  //if (data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
+  //if (full_stats &&
+  //    data_rep->expConfigOptions.expCoeffsSolnApproach != SAMPLING)
   //  integrate_response_moments(2, x); // TO DO
+  //else numericalMoments.resize(0);
 }
 
 } // namespace Pecos
