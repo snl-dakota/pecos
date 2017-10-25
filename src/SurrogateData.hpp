@@ -925,6 +925,9 @@ public:
   /// clear stored{Vars,Resp}Data
   void clear_stored();
 
+  /// return sdRep
+  SurrogateDataRep* data_rep() const;
+
 private:
 
   //
@@ -988,14 +991,19 @@ inline SurrogateData::~SurrogateData()
 
 inline SurrogateData& SurrogateData::operator=(const SurrogateData& sd)
 {
-  // Decrement old
-  if (sdRep) // Check for NULL
-    if ( --sdRep->referenceCount == 0 ) 
-      delete sdRep;
-  // Increment new
-  sdRep = sd.sdRep;
-  if (sdRep) // Check for an assignment of NULL
-    ++sdRep->referenceCount;
+  if (sdRep != sd.sdRep) { // prevent re-assignment of same rep
+    // Decrement old
+    if (sdRep) // Check for NULL
+      if ( --sdRep->referenceCount == 0 ) 
+	delete sdRep;
+    // Increment new
+    sdRep = sd.sdRep;
+    if (sdRep) // Check for an assignment of NULL
+      ++sdRep->referenceCount;
+  }
+  // else if assigning same rep, then do nothing
+  // (referenceCount should already be correct)
+
   return *this;
 }
 
@@ -1241,8 +1249,14 @@ inline void SurrogateData::remove_stored(size_t index)
 
 inline void SurrogateData::swap(size_t index)
 {
-  // swap stored and active using shallow copies
+  if (index == _NPOS)
+    return;
+  else if (index >= sdRep->storedVarsData.size()) {
+    PCerr << "Error: index out of range in SurrogateData::swap()" << std::endl;
+    abort_handler(-1);
+  }
 
+  // swap stored and active using shallow copies
   SDVArray tmp_vars_data = sdRep->varsData;
   SDRArray tmp_resp_data = sdRep->respData;
 
@@ -1420,6 +1434,10 @@ inline void SurrogateData::clear_popped()
 
 inline void SurrogateData::clear_stored()
 { sdRep->storedVarsData.clear(); sdRep->storedRespData.clear(); }
+
+
+inline SurrogateDataRep* SurrogateData::data_rep() const
+{ return sdRep; }
 
 
 inline void SurrogateData::failed_anchor_data(short fail_anchor)

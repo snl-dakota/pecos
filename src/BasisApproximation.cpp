@@ -248,30 +248,6 @@ const RealSymMatrix& BasisApproximation::hessian(const RealVector& x)
 }
 
 
-void BasisApproximation::surrogate_data(const SurrogateData& data)
-{
-  if (basisApproxRep)
-    basisApproxRep->surrogate_data(data);
-  else {
-    PCerr << "Error: surrogate_data(SurrogateData&) not available for this "
-	  << "basis approximation type." << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-const SurrogateData& BasisApproximation::surrogate_data() const
-{
-  if (!basisApproxRep) {
-    PCerr << "Error: surrogate_data() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-    
-  return basisApproxRep->surrogate_data();
-}
-
-
 int BasisApproximation::min_coefficients() const
 {
   if (!basisApproxRep) { // no default implementation

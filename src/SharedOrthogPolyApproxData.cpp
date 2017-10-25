@@ -345,7 +345,7 @@ size_t SharedOrthogPolyApproxData::maximal_expansion()
 }
 
 
-void SharedOrthogPolyApproxData::swap_data(size_t index)
+void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
 {
   std::swap(storedMultiIndex[index], multiIndex);
   switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -365,16 +365,16 @@ size_t SharedOrthogPolyApproxData::pre_combine_data()
   // Sufficient for two grids: if not currently the maximal grid, then swap
   // with the stored grid (only one is stored)
   //bool swap = !maximal_expansion();
-  //if (swap) swap_data();
+  //if (swap) swap_shared_data();
   
   // For open-ended number of stored grids: retrieve the most refined from the
   // existing grids (from sequence specification + any subsequent refinement)
   size_t max_index = maximal_expansion();
-  if (max_index != _NPOS) swap_data(max_index);
+  if (max_index != _NPOS) swap_shared_data(max_index);
 
   // Most general: overlay all grid refinement levels to create a new superset
   //size_t new_index = overlay_maximal_grid();
-  //if (current_grid_index() != new_index) swap_data(new_index);
+  //if (current_grid_index() != new_index) swap_shared_data(new_index);
 
   switch (expConfigOptions.combineType) {
   case ADD_COMBINE: {

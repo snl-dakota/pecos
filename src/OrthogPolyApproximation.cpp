@@ -132,13 +132,15 @@ void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
   if (maximal_index != _NPOS) {
+    if (deep_copied_surrogate_data()) // only origSurrData has been swapped
+      surrData.swap(maximal_index);
     swap_coefficients(maximal_index);
     allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
   }
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
   size_t i, num_stored = storedExpCoeffs.size();
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: {

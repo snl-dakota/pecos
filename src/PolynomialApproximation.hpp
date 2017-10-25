@@ -177,8 +177,12 @@ public:
 
   /// set origSurrData (shared representation)
   void surrogate_data(const SurrogateData& data);
-  /// get origSurrData
+  /// get surrData (const)
   const SurrogateData& surrogate_data() const;
+  /// get surrData (non-const)
+  SurrogateData& surrogate_data();
+  /// returns true if surrData is a deep copy of origSurrData
+  bool deep_copied_surrogate_data() const;
 
   /// return expansionMoments
   const RealVector& expansion_moments() const;
@@ -327,11 +331,22 @@ inline PolynomialApproximation::~PolynomialApproximation()
 
 
 inline const SurrogateData& PolynomialApproximation::surrogate_data() const
-{ return origSurrData; }
+{ return surrData; }
+
+
+inline SurrogateData& PolynomialApproximation::surrogate_data()
+{ return surrData; }
 
 
 inline void PolynomialApproximation::surrogate_data(const SurrogateData& data)
-{ origSurrData = data; /* shared representation */ }
+{ surrData = origSurrData = data; /* shared representations */ }
+
+
+inline bool PolynomialApproximation::deep_copied_surrogate_data() const
+{ 
+  //return (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP);
+  return (surrData.data_rep() != origSurrData.data_rep());
+}
 
 
 inline const RealVector& PolynomialApproximation::expansion_moments() const

@@ -32,13 +32,12 @@ void PolynomialApproximation::compute_coefficients(size_t index)
     return;
   }
 
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  short discrep_type = data_rep->expConfigOptions.discrepancyType;
-
   // when using a recursive approximation, subtract current PCE prediction
   // from the surrData so that we form a PCE on the surplus
-  if (discrep_type == RECURSIVE_DISCREP) response_data_to_surplus_data(index);
-  else                                   surrData = origSurrData; // shared rep
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
+    response_data_to_surplus_data(index);
+  else surrData = origSurrData; // shared rep
 
   // For testing of anchor point logic:
   //size_t last_index = surrData.points() - 1;

@@ -239,7 +239,7 @@ size_t SharedProjectOrthogPolyApproxData::pre_combine_data()
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
       size_t max_index = driverRep->maximal_grid();
-      if (max_index != _NPOS) swap_data(max_index);
+      if (max_index != _NPOS) swap_shared_data(max_index);
 
       size_t i, j, num_stored = storedApproxOrder.size();
       for (i=0; i<num_stored; ++i)
@@ -253,7 +253,7 @@ size_t SharedProjectOrthogPolyApproxData::pre_combine_data()
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
       size_t max_index = driverRep->maximal_grid();
-      if (max_index != _NPOS) swap_data(max_index);
+      if (max_index != _NPOS) swap_shared_data(max_index);
 
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
