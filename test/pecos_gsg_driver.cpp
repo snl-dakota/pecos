@@ -257,7 +257,9 @@ int main(int argc, char* argv[])
       sdr.response_function(fev(jCol,iQoI));
       sdi.push_back(sdv,sdr);
     }
-    poly_approx[iQoI].surrogate_data(sdi);
+    PolynomialApproximation* poly_approx_rep =
+      (PolynomialApproximation*)poly_approx[iQoI].approx_rep();
+    poly_approx_rep->surrogate_data(sdi);
   } 
 
   shared_poly_data->allocate_data();    
@@ -333,8 +335,9 @@ int main(int argc, char* argv[])
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	  poly_approx[iQoI].push_coefficients();
           // Also restore the corresponding surrogate data
-	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-	  numPts = sdi.push(idxRestore,true);
+	  PolynomialApproximation* poly_approx_rep
+	    = (PolynomialApproximation*)poly_approx[iQoI].approx_rep();
+	  poly_approx_rep->surrogate_data().push(idxRestore,true);
 	}
 	shared_poly_data->post_push_data();
 
@@ -360,7 +363,9 @@ int main(int argc, char* argv[])
 #endif
 
 	for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	  SurrogateData sdi = poly_approx[iQoI].surrogate_data();
+	  PolynomialApproximation* poly_approx_rep
+	    = (PolynomialApproximation*)poly_approx[iQoI].approx_rep();
+	  SurrogateData& sdi = poly_approx_rep->surrogate_data();
 	  for( int jCol = 0; jCol < numPts; jCol++) {
   	    SurrogateDataVars sdv(nvar,0,0);
 	    SurrogateDataResp sdr(1,nvar); // no gradient or hessian
@@ -381,7 +386,7 @@ int main(int argc, char* argv[])
       RealVector respVarianceNew(nQoI,0.0);  
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
 	PolynomialApproximation* poly_approx_rep =
-	  (PolynomialApproximation *) poly_approx[iQoI].approx_rep();
+	  (PolynomialApproximation*)poly_approx[iQoI].approx_rep();
 	respVarianceNew[iQoI] = poly_approx_rep->variance() ;
       }
       if ( verb > 1 ) {
@@ -407,10 +412,11 @@ int main(int argc, char* argv[])
 
       shared_poly_data->decrement_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
-	poly_approx[iQoI].decrement_coefficients();
+	poly_approx[iQoI].decrement_coefficients(true);
 	// Also restore the corresponding surrogate data
-	SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-	sdi.pop(numPts,true);
+	PolynomialApproximation* poly_approx_rep =
+	  (PolynomialApproximation*)poly_approx[iQoI].approx_rep();
+	poly_approx_rep->surrogate_data().pop(true);
       }
 
     } /* End iteration over proposed sets */
@@ -428,8 +434,9 @@ int main(int argc, char* argv[])
       shared_poly_data->pre_push_data();
       for ( int iQoI=0; iQoI<nQoI; iQoI++) {
         poly_approx[iQoI].push_coefficients();
-        SurrogateData sdi = poly_approx[iQoI].surrogate_data();
-        int numPts = sdi.push(idxRestore,true);
+	PolynomialApproximation* poly_approx_rep =
+	  (PolynomialApproximation*)poly_approx[iQoI].approx_rep();
+	poly_approx_rep->surrogate_data().push(idxRestore,true);
       }
       shared_poly_data->post_push_data();
       csg_driver->update_reference();
@@ -449,7 +456,9 @@ int main(int argc, char* argv[])
   // per-approximation finalize:
   for ( int iQoI=0; iQoI<nQoI; iQoI++) {
     // from Approximation::finalize() called from PecosApproximation::finalize()
-    SurrogateData sdi = poly_approx[iQoI].surrogate_data();
+    PolynomialApproximation* poly_approx_rep
+      = (PolynomialApproximation*)poly_approx[iQoI].approx_rep();
+    SurrogateData& sdi = poly_approx_rep->surrogate_data();
     size_t i, num_restore = sdi.popped_sets(); // # of popped trial sets
     for (i=0; i<num_restore; ++i)
       sdi.push(shared_poly_data->finalization_index(i),false);
