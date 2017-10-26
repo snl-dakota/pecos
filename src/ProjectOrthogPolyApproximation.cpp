@@ -167,9 +167,12 @@ void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
 
 void ProjectOrthogPolyApproximation::increment_coefficients(size_t index)
 {
+  // TO DO: partial sync of new TP data set, e.g. update_surrogate_data() ?
+  synchronize_surrogate_data(index);
+
   // tpMultiIndex{,Map,MapRef} already updated in
   // SharedProjectOrthogPolyApproxData::increment_data()
-  size_t last_index = tpExpansionCoeffs.size();
+  size_t last_tp_index = tpExpansionCoeffs.size(); // before push_back
   RealVector rv; tpExpansionCoeffs.push_back(rv);
   RealMatrix rm; tpExpansionCoeffGrads.push_back(rm);
 
@@ -181,22 +184,27 @@ void ProjectOrthogPolyApproximation::increment_coefficients(size_t index)
 
   // form tp_data_pts, tp_wts using collocKey et al.
   SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
-  integration_data(last_index, tp_data_vars, tp_data_resp, tp_wts);
+  integration_data(last_tp_index, tp_data_vars, tp_data_resp, tp_wts);
   // form trial expansion coeffs/grads
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  integrate_expansion(data_rep->tpMultiIndex[last_index], tp_data_vars,
-		      tp_data_resp, tp_wts, tpExpansionCoeffs[last_index],
-		      tpExpansionCoeffGrads[last_index]);
+  integrate_expansion(data_rep->tpMultiIndex[last_tp_index], tp_data_vars,
+		      tp_data_resp, tp_wts, tpExpansionCoeffs[last_tp_index],
+		      tpExpansionCoeffGrads[last_tp_index]);
   // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-  append_tensor_expansions(last_index);
+  append_tensor_expansions(last_tp_index);
 
   computedMean = computedVariance = 0;
 }
 
 
-void ProjectOrthogPolyApproximation::decrement_coefficients()
+void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
 {
+  // mirror operations already performed on origSurrData for a surrData
+  // that is disconnected/deep copied
+  if (deep_copied_surrogate_data())
+    surrData.pop(save_data);
+
   // reset expansion{Coeffs,CoeffGrads}: (set in append_tensor_expansions())
   expansionCoeffs     = prevExpCoeffs;
   expansionCoeffGrads = prevExpCoeffGrads;
@@ -221,8 +229,13 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
 
+  // mirror operations already performed on origSurrData for a surrData
+  // that is disconnected/deep copied
+  if (deep_copied_surrogate_data())
+    surrData.push(data_rep->retrieval_index());
+
   // move previous expansion data to current expansion
-  size_t last_index = tpExpansionCoeffs.size();
+  size_t last_tp_index = tpExpansionCoeffs.size(); // before push_back
   size_t index_star = data_rep->pushIndex;
 
   std::deque<RealVector>::iterator cit = poppedTPExpCoeffs.begin();
@@ -238,7 +251,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   resize_expansion();
 
   // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-  append_tensor_expansions(last_index);
+  append_tensor_expansions(last_tp_index);
 
   computedMean = computedVariance = 0;
 }
@@ -246,9 +259,20 @@ void ProjectOrthogPolyApproximation::push_coefficients()
 
 void ProjectOrthogPolyApproximation::finalize_coefficients()
 {
-  size_t start_index = tpExpansionCoeffs.size();
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+
+  // mirror operations already performed on origSurrData for a surrData
+  // that is disconnected/deep copied
+  if (deep_copied_surrogate_data()) {
+    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    for (i=0; i<num_popped; ++i)
+      surrData.push(data_rep->finalization_index(i), false);
+    surrData.clear_popped(); // only after process completed
+  }
 
   // don't update Sobol' array sizes for decrement, push, or finalize
+  size_t start_tp_index = tpExpansionCoeffs.size(); // before insertion
   resize_expansion();
   // move previous expansion data to current expansion
   tpExpansionCoeffs.insert(tpExpansionCoeffs.end(), poppedTPExpCoeffs.begin(),
@@ -258,14 +282,14 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 
   poppedTPExpCoeffs.clear();       poppedTPExpCoeffGrads.clear();
   // sum remaining trial expansions into expansionCoeffs/expansionCoeffGrads
-  append_tensor_expansions(start_index);
+  append_tensor_expansions(start_tp_index);
 
   computedMean = computedVariance = 0;
 }
 
 
 void ProjectOrthogPolyApproximation::
-append_tensor_expansions(size_t start_index)
+append_tensor_expansions(size_t start_tp_index)
 {
   // for use in decrement_coefficients()
   prevExpCoeffs = expansionCoeffs; prevExpCoeffGrads = expansionCoeffGrads;
@@ -279,14 +303,14 @@ append_tensor_expansions(size_t start_index)
   const IntArray& sm_coeffs_ref = csg_driver->smolyak_coefficients_reference();
 #ifdef DEBUG
   PCout << "In ProjectOrthogPolyApproximation::append_tensor_expansions() with "
-	<< "start index " << start_index << "\nsm_coeffs:\n" << sm_coeffs
+	<< "start index " << start_tp_index << "\nsm_coeffs:\n" << sm_coeffs
 	<< "sm_coeffs_ref:\n" << sm_coeffs_ref << std::endl;
 #endif // DEBUG
 
   // add trial expansions
   size_t index, num_tensor_grids = sm_coeffs.size();
   int coeff, delta_coeff;
-  for (index=start_index; index<num_tensor_grids; ++index) {
+  for (index=start_tp_index; index<num_tensor_grids; ++index) {
     coeff = sm_coeffs[index];
     if (coeff)
       overlay_expansion(data_rep->tpMultiIndexMap[index],
@@ -299,7 +323,7 @@ append_tensor_expansions(size_t start_index)
 #endif // DEBUG
   }
   // update other expansion contributions with a changed smolyak coefficient
-  for (index=0; index<start_index; ++index) {
+  for (index=0; index<start_tp_index; ++index) {
     // add new, subtract previous
     delta_coeff = sm_coeffs[index] - sm_coeffs_ref[index];
 #ifdef DEBUG

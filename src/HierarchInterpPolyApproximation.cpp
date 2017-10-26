@@ -177,6 +177,9 @@ void HierarchInterpPolyApproximation::compute_coefficients(size_t index)
 
 void HierarchInterpPolyApproximation::increment_coefficients(size_t index)
 {
+  // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
+  synchronize_surrogate_data(index);
+
   increment_current_from_reference();
 
   SharedHierarchInterpPolyApproxData* data_rep
@@ -209,8 +212,12 @@ void HierarchInterpPolyApproximation::increment_coefficients(size_t index)
 // ***************************************************************
 
 
-void HierarchInterpPolyApproximation::decrement_coefficients()
+void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 {
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.pop(save_data);
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& trial_set = data_rep->hsg_driver()->trial_set();
@@ -237,8 +244,16 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
 
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data()) {
+    size_t i, num_popped = surrData.popped_sets(); // # of popped trials
+    for (i=0; i<num_popped; ++i)
+      surrData.push(data_rep->finalization_index(i), false);
+    surrData.clear_popped(); // only after process completed
+  }
+
+  const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
   size_t lev, set, num_sets, num_levels = sm_mi.size(), num_smolyak_sets,
     num_coeff_sets;
   for (lev=0; lev<num_levels; ++lev) {
@@ -258,8 +273,9 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 
 void HierarchInterpPolyApproximation::store_coefficients(size_t index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.store(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS || index == stored_len) { // append
@@ -300,8 +316,9 @@ void HierarchInterpPolyApproximation::store_coefficients(size_t index)
 
 void HierarchInterpPolyApproximation::restore_coefficients(size_t index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.restore(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS) {
@@ -322,24 +339,11 @@ void HierarchInterpPolyApproximation::restore_coefficients(size_t index)
 }
 
 
-void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
-{
-  if (expansionCoeffFlag) {
-    std::swap(expansionType1Coeffs, storedExpType1Coeffs[index]);
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    if (data_rep->basisConfigOptions.useDerivs)
-      std::swap(expansionType2Coeffs, storedExpType2Coeffs[index]);
-  }
-  if (expansionCoeffGradFlag)
-    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads[index]);
-}
-
-
 void HierarchInterpPolyApproximation::remove_stored_coefficients(size_t index)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.remove_stored(index);
 
   size_t stored_len = storedExpType1Coeffs.size();
   if (index == _NPOS || index == stored_len) {
@@ -354,6 +358,35 @@ void HierarchInterpPolyApproximation::remove_stored_coefficients(size_t index)
     mit = storedExpType1CoeffGrads.begin();
     std::advance(mit, index); storedExpType1CoeffGrads.erase(mit);
   }
+}
+
+
+void HierarchInterpPolyApproximation::clear_stored()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.clear_stored();
+
+  storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
+  storedExpType1CoeffGrads.clear();
+}
+
+
+void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
+{
+  // mirror operations to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.swap(index);
+
+  if (expansionCoeffFlag) {
+    std::swap(expansionType1Coeffs, storedExpType1Coeffs[index]);
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    if (data_rep->basisConfigOptions.useDerivs)
+      std::swap(expansionType2Coeffs, storedExpType2Coeffs[index]);
+  }
+  if (expansionCoeffGradFlag)
+    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads[index]);
 }
 
 
@@ -418,13 +451,6 @@ void HierarchInterpPolyApproximation::combine_coefficients(size_t swap_index)
   */
 
   computedMean = computedVariance = 0;
-}
-
-
-void HierarchInterpPolyApproximation::clear_stored()
-{
-  storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
-  storedExpType1CoeffGrads.clear();
 }
 
 

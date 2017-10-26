@@ -223,14 +223,18 @@ inline SurrogateDataVars::~SurrogateDataVars()
 inline SurrogateDataVars& SurrogateDataVars::
 operator=(const SurrogateDataVars& sdv)
 {
-  // Decrement old
-  if (sdvRep) // Check for NULL
-    if ( --sdvRep->referenceCount == 0 ) 
-      delete sdvRep;
-  // Increment new
-  sdvRep = sdv.sdvRep;
-  if (sdvRep) // Check for an assignment of NULL
-    ++sdvRep->referenceCount;
+  if (sdvRep != sdv.sdvRep) { // prevent re-assignment of same rep
+    // Decrement old
+    if (sdvRep) // Check for NULL
+      if ( --sdvRep->referenceCount == 0 ) 
+	delete sdvRep;
+    // Increment new
+    sdvRep = sdv.sdvRep;
+    if (sdvRep) // Check for an assignment of NULL
+      ++sdvRep->referenceCount;
+  }
+  // else if assigning same rep, then leave referenceCount as is
+
   return *this;
 }
 
@@ -550,14 +554,18 @@ inline SurrogateDataResp::~SurrogateDataResp()
 inline SurrogateDataResp& SurrogateDataResp::
 operator=(const SurrogateDataResp& sdr)
 {
-  // Decrement old
-  if (sdrRep) // Check for NULL
-    if ( --sdrRep->referenceCount == 0 ) 
-      delete sdrRep;
-  // Increment new
-  sdrRep = sdr.sdrRep;
-  if (sdrRep) // Check for an assignment of NULL
-    ++sdrRep->referenceCount;
+  if (sdrRep != sdr.sdrRep) { // prevent re-assignment of same rep
+    // Decrement old
+    if (sdrRep) // Check for NULL
+      if ( --sdrRep->referenceCount == 0 ) 
+	delete sdrRep;
+    // Increment new
+    sdrRep = sdr.sdrRep;
+    if (sdrRep) // Check for an assignment of NULL
+      ++sdrRep->referenceCount;
+  }
+  // else if assigning same rep, then leave referenceCount as is
+
   return *this;
 }
 
@@ -757,6 +765,10 @@ private:
   /// in sample_checks() and used for fault tolerance
   SizetShortMap failedRespData;
 
+  /// a stack managing the number of points previously added by calls
+  /// to append() that can be removed by calls to pop()
+  SizetArray popCountStack;
+
   /// number of handle objects sharing sdRep
   int referenceCount;
 };
@@ -871,10 +883,15 @@ public:
   void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
 
   /// remove num_pop_pts entries from ends of {vars,resp}Data
-  void pop(size_t num_pop_pts, bool save_data = true);
+  void pop(bool save_data = true);
   /// return a previously popped data set (identified by index) to the
   /// ends of {vars,resp}Data
-  size_t push(size_t index, bool erase_popped = true);
+  void push(size_t index, bool erase_popped = true);
+
+  /// append count to popCountStack
+  void pop_count(size_t count);
+  /// return popCountStack.back()
+  size_t pop_count() const;
 
   /// move all entries from {vars,resp}Data to stored{Vars,Resp}Data
   /// (default is push_back)
@@ -1001,8 +1018,7 @@ inline SurrogateData& SurrogateData::operator=(const SurrogateData& sd)
     if (sdRep) // Check for an assignment of NULL
       ++sdRep->referenceCount;
   }
-  // else if assigning same rep, then do nothing
-  // (referenceCount should already be correct)
+  // else if assigning same rep, then leave referenceCount as is
 
   return *this;
 }
@@ -1133,8 +1149,13 @@ push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
 { sdRep->varsData.push_back(sdv); sdRep->respData.push_back(sdr); }
 
 
-inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
+inline void SurrogateData::pop(bool save_data)
 {
+  if (sdRep->popCountStack.empty()) {
+    PCerr << "\nError: empty count stack in SurrogateData::pop()." << std::endl;
+    abort_handler(-1);
+  }
+  size_t num_pop_pts = sdRep->popCountStack.back();
   if (num_pop_pts) {
     size_t data_size = points();
     if (data_size < num_pop_pts) {
@@ -1166,10 +1187,11 @@ inline void SurrogateData::pop(size_t num_pop_pts, bool save_data)
     size_t new_size = data_size - num_pop_pts;
     sdRep->varsData.resize(new_size); sdRep->respData.resize(new_size);
   }
+  sdRep->popCountStack.pop_back();
 }
 
 
-inline size_t SurrogateData::push(size_t index, bool erase_popped)
+inline void SurrogateData::push(size_t index, bool erase_popped)
 {
   SDV2DArray::iterator vit = sdRep->poppedVarsTrials.begin();
   SDR2DArray::iterator rit = sdRep->poppedRespTrials.begin();
@@ -1177,10 +1199,20 @@ inline size_t SurrogateData::push(size_t index, bool erase_popped)
   size_t num_pts = std::min(vit->size(), rit->size());
   sdRep->varsData.insert(sdRep->varsData.end(), vit->begin(), vit->end());
   sdRep->respData.insert(sdRep->respData.end(), rit->begin(), rit->end());
+
   if (erase_popped)
     { sdRep->poppedVarsTrials.erase(vit); sdRep->poppedRespTrials.erase(rit); }
-  return num_pts;
+
+  sdRep->popCountStack.push_back(num_pts);
 }
+
+
+inline void SurrogateData::pop_count(size_t count)
+{ sdRep->popCountStack.push_back(count); }
+
+
+inline size_t SurrogateData::pop_count() const
+{ return (sdRep->popCountStack.empty()) ? _NPOS : sdRep->popCountStack.back(); }
 
 
 inline void SurrogateData::store(size_t index)
@@ -1429,7 +1461,10 @@ inline void SurrogateData::clear_data()
 
 
 inline void SurrogateData::clear_popped()
-{ sdRep->poppedVarsTrials.clear(); sdRep->poppedRespTrials.clear(); }
+{
+  sdRep->poppedVarsTrials.clear(); sdRep->poppedRespTrials.clear();
+  sdRep->popCountStack.clear();
+}
 
 
 inline void SurrogateData::clear_stored()

@@ -231,6 +231,8 @@ protected:
   //- Heading: Member functions
   //
 
+  /// update surrData from origSurrData based on deep or shallow copy
+  void synchronize_surrogate_data(size_t index);
   /// modify origSurrData to create hierarchical surplus response data
   /// within surrData
   void response_data_to_surplus_data(size_t index);

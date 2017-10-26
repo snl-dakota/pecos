@@ -64,7 +64,7 @@ public:
   virtual void increment_coefficients(size_t index = _NPOS);
   /// restore the approximation coefficients to the state preceding the last
   /// increment
-  virtual void decrement_coefficients();
+  virtual void decrement_coefficients(bool save_data);
   /// restore the approximation coefficients to a previously incremented state
   /// as identified by the current data increment
   virtual void push_coefficients();

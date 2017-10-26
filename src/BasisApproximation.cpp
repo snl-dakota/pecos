@@ -284,10 +284,10 @@ void BasisApproximation::increment_coefficients(size_t index)
 }
 
 
-void BasisApproximation::decrement_coefficients()
+void BasisApproximation::decrement_coefficients(bool save_data)
 {
   if (basisApproxRep)
-    basisApproxRep->decrement_coefficients(); 
+    basisApproxRep->decrement_coefficients(save_data); 
   else {
     PCerr << "Error: decrement_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;

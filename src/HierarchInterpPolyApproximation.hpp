@@ -59,7 +59,7 @@ protected:
   void increment_coefficients(size_t index = _NPOS);
   /// restore the coefficients to their previous state prior to last increment:
   /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void decrement_coefficients();
+  void decrement_coefficients(bool save_data);
   /// restore the coefficients to a previously incremented state as
   /// identified by the current increment to the Smolyak multi index:
   /// push expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -566,6 +566,11 @@ inline void HierarchInterpPolyApproximation::push_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.push(data_rep->retrieval_index());
+
   push_coefficients(data_rep->hsg_driver()->trial_set());
   increment_current_from_reference();
 }

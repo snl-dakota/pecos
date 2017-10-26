@@ -48,7 +48,7 @@ public:
   void compute_coefficients(size_t index = _NPOS);
   void push_coefficients();
   void increment_coefficients(size_t index = _NPOS);
-  void decrement_coefficients();
+  void decrement_coefficients(bool save_data);
   void finalize_coefficients();
 
   //

@@ -562,13 +562,6 @@ void RegressOrthogPolyApproximation::restore_coefficients(size_t index)
 }
 
 
-void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
-{
-  std::swap(sparseIndices, storedSparseIndices[index]);
-  OrthogPolyApproximation::swap_coefficients(index); // expansion coeff{s,Grads}
-}
-
-
 void RegressOrthogPolyApproximation::remove_stored_coefficients(size_t index)
 {
   size_t stored_len = storedSparseIndices.size();
@@ -580,6 +573,13 @@ void RegressOrthogPolyApproximation::remove_stored_coefficients(size_t index)
   }
 
   OrthogPolyApproximation::remove_stored_coefficients(index);
+}
+
+
+void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
+{
+  std::swap(sparseIndices, storedSparseIndices[index]);
+  OrthogPolyApproximation::swap_coefficients(index); // expansion coeff{s,Grads}
 }
 
 
