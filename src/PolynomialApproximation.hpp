@@ -175,12 +175,6 @@ public:
   //- Heading: Member functions
   //
 
-  /// set origSurrData (shared representation)
-  void surrogate_data(const SurrogateData& data);
-  /// get surrData (const)
-  const SurrogateData& surrogate_data() const;
-  /// get surrData (non-const)
-  SurrogateData& surrogate_data();
   /// returns true if surrData is a deep copy of origSurrData
   bool deep_copied_surrogate_data() const;
 
@@ -219,6 +213,10 @@ protected:
   //
   //- Heading: Virtual function redefinitions
   //
+
+  void surrogate_data(const SurrogateData& data);
+  const SurrogateData& surrogate_data() const;
+  SurrogateData& surrogate_data();
 
   void compute_coefficients(size_t index = _NPOS);
 

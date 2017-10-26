@@ -15,6 +15,7 @@
 namespace Pecos {
 
 class SharedBasisApproxData;
+class SurrogateData;
 
 
 /// Base class for multivariate basis approximations used for
@@ -54,6 +55,13 @@ public:
   virtual const RealVector& gradient(const RealVector& x);
   /// retrieve the approximate function Hessian for a given parameter vector
   virtual const RealSymMatrix& hessian(const RealVector& x);
+
+  /// set PolynomialApproximation::origSurrData
+  virtual void surrogate_data(const SurrogateData& data);
+  /// get PolynomialApproximation::surrData (const)
+  virtual const SurrogateData& surrogate_data() const;
+  /// get PolynomialApproximation::surrData (non-const)
+  virtual SurrogateData& surrogate_data();
 
   /// return the minimum number of samples (unknowns) required to
   /// build the derived class approximation type in numVars dimensions
