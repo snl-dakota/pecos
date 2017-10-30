@@ -112,7 +112,13 @@ def plot_surface(X, Y, Z, ax=None, samples=None, limit_state=None,
     """
     if ax is None:
         fig = plt.figure()
-        ax = fig.gca(projection='3d')
+        try:
+            ax = fig.gca(projection='3d')
+        except ValueError :
+            # Add following import to avoid error Unknown projection '3d'
+            # when using ax = fig.gca(projection='3d')
+            from mpl_toolkits.mplot3d import Axes3D
+            ax = Axes3D(fig)
 
     # Define transperancy of plot
     if samples is not None:
