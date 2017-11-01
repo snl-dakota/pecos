@@ -313,6 +313,15 @@ ULongULongMap PolynomialApproximation::sparse_sobol_index_map() const
 { return ULongULongMap(); } // default is empty map
 
 
+size_t PolynomialApproximation::sparsity() const
+{
+  PCerr << "Error: sparsity() not defined for this polynomial approximation "
+	<< "type." << std::endl;
+  abort_handler(-1);
+  return _NPOS;
+}
+
+
 Real PolynomialApproximation::
 delta_covariance(PolynomialApproximation* poly_approx_2)
 {

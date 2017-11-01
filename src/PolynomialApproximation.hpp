@@ -61,6 +61,8 @@ public:
 
   /// return RegressOrthogPolyApproximation::sparseSobolIndexMap
   virtual ULongULongMap sparse_sobol_index_map() const;
+  /// return the number of non-zero expansion coefficients for this QoI
+  virtual size_t sparsity() const;
 
   /// retrieve the gradient for a response expansion with respect to
   /// all variables included in the polynomial bases using the given

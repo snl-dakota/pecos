@@ -136,6 +136,8 @@ protected:
   /// compute expansion moments in all-variables mode to order 2
   void compute_moments(const RealVector& x, bool full_stats = true);
 
+  size_t sparsity() const;
+
   //
   //- Heading: Member functions
   //
@@ -326,6 +328,10 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
   if (expansionMoments.empty())
     expansionMoments.sizeUninitialized(2);
 }
+
+
+inline size_t OrthogPolyApproximation::sparsity() const
+{ return expansionCoeffs.length(); }
 
 
 inline void OrthogPolyApproximation::size_expansion()

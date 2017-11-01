@@ -126,7 +126,9 @@ protected:
 
   void compute_component_sobol();
   void compute_total_sobol();
+
   ULongULongMap sparse_sobol_index_map() const;
+  size_t sparsity() const;
 
   RealVector approximation_coefficients(bool normalized) const;
   void approximation_coefficients(const RealVector& approx_coeffs,
@@ -389,6 +391,13 @@ inflate(SizetSet& sparse_ind, size_t num_terms)
 inline ULongULongMap RegressOrthogPolyApproximation::
 sparse_sobol_index_map() const
 { return sparseSobolIndexMap; }
+
+
+inline size_t RegressOrthogPolyApproximation::sparsity() const
+{
+  return (sparseIndices.empty()) ?
+    expansionCoeffs.length() : sparseIndices.size();
+}
 
 
 inline size_t RegressOrthogPolyApproximation::expansion_terms() const
