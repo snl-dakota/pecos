@@ -724,34 +724,38 @@ private:
   /// approximation region) for which exact matching is enforced
   /// (e.g., using equality-constrained least squares regression).
   SurrogateDataVars anchorVars;
+  /// a special response sample (often at the center of the
+  /// approximation region) for which exact matching is enforced
+  /// (e.g., using equality-constrained least squares regression).
+  SurrogateDataResp anchorResp;
   /// a set of variables samples used to build the approximation.
   /// These sample points are fit approximately (e.g., using least
   /// squares regression); exact matching is not enforced.
   SDVArray varsData;
+  /// a set of response samples used to build the approximation.  These
+  /// sample points are fit approximately (e.g., using least squares
+  /// regression); exact matching is not enforced.
+  SDRArray respData;
+
   /// sets of variables samples that have been popped off varsData but
   /// which are available for future restoration.  The granularity of
   /// this 2D array corresponds to multiple trial sets, each
   /// contributing an SDVArray.
   SDV2DArray poppedVarsTrials;
-  /// a set of variables samples that have been stored for future
-  /// restoration.  The granularity of this 2D array corresponds to a
-  /// wholesale caching of the current varsData state, where each of
-  /// multiple cachings contributes an SDVArray.
-  SDV2DArray storedVarsData;
-
-  /// a special response sample (often at the center of the
-  /// approximation region) for which exact matching is enforced
-  /// (e.g., using equality-constrained least squares regression).
-  SurrogateDataResp anchorResp;
-  /// a set of response samples used to build the approximation.  These
-  /// sample points are fit approximately (e.g., using least squares
-  /// regression); exact matching is not enforced.
-  SDRArray respData;
   /// sets of response samples that have been popped off respData but
   /// which are available for future restoration.  The granularity of
   /// this 2D array corresponds to multiple trial sets, each
   /// contributing a SDRArray.
   SDR2DArray poppedRespTrials;
+  /// a stack managing the number of points previously appended that
+  /// can be removed by calls to pop()
+  SizetArray popCountStack;
+
+  /// a set of variables samples that have been stored for future
+  /// restoration.  The granularity of this 2D array corresponds to a
+  /// wholesale caching of the current varsData state, where each of
+  /// multiple cachings contributes an SDVArray.
+  SDV2DArray storedVarsData;
   /// a set of response samples that have been stored for future
   /// restoration.  The granularity of this 2D array corresponds to a
   /// wholesale caching of the current respData state, where each of
@@ -764,10 +768,6 @@ private:
   /// map from failed respData indices to failed data bits; defined
   /// in sample_checks() and used for fault tolerance
   SizetShortMap failedRespData;
-
-  /// a stack managing the number of points previously added by calls
-  /// to append() that can be removed by calls to pop()
-  SizetArray popCountStack;
 
   /// number of handle objects sharing sdRep
   int referenceCount;
