@@ -220,7 +220,7 @@ namespace Surrogates {
     gamma_tilde = std::numeric_limits<Real>::max();
     sparse_index_to_drop = -1;
     for ( int n = 0; n < num_covariates; n++ ){
-      Real gamma = -solution(active_indices[n]) / (w_sparse(n,0));
+      Real gamma = -solution[active_indices[n]] / (w_sparse(n,0));
       if ( ( gamma > 0 ) && ( gamma < gamma_tilde ) ){
         sparse_index_to_drop = n;
         gamma_tilde = gamma;
@@ -425,7 +425,9 @@ namespace Surrogates {
           std::cout << "LASSO ( delta = " << delta << " )\n";
         else
           std::cout << "LARS ( delta = " << delta << " )\n";
-        std::printf( "Iter\tAdded\tDropped\t\tSparsity\t\tC\t\tResidual\t\tl1 norm of x\n" );
+        std::printf("%-4s %-5s %-7s %-8s %-21s %-21s %-21s\n",
+                    "Iter","Added","Dropped","Sparsity","Max Correlation",
+                    "Residual Norm","l1 Norm x");
       }
 
     bool done = false;
@@ -474,15 +476,6 @@ namespace Surrogates {
         // will point to wrong location in memory
         int storage_index = (store_history) ? homotopy_iter : 0;
 
-        if ((store_history) && (homotopy_iter>0)){
-          RealVector prev_solution_view(Teuchos::View, result_0[homotopy_iter-1], N);
-          prev_solution=prev_solution_view;
-        }else{
-          for (int i=0; i<N; ++i)
-            prev_solution[i]=result_0(i,0);
-        }
-
-
         if ( !drop_covariate ){
           int colinear = update_cholesky_factor( Amatrix, A_sparse, chol_factor,
                                                  new_indices, verbosity, delta );
@@ -504,6 +497,23 @@ namespace Surrogates {
                                     normalisation_factor,
                                     non_negative);
 
+
+        if ((store_history) && (homotopy_iter>0)){
+          RealVector prev_solution_view(Teuchos::View, result_0[homotopy_iter-1], N);
+          prev_solution=prev_solution_view;
+        }else{
+          // When a covariate is dropped result will be close to zero
+          // set it to zero here. This minimizes numerical errors.
+          // Also if I do not do this results will differ
+          // depending on value of store_history.
+          if (drop_covariate)
+            result_0(index_to_drop,0)=0.;
+
+          for (int i=0; i<N; ++i)
+            prev_solution[i]=result_0(i,0);
+        }
+
+
         Real gamma_tilde = std::numeric_limits<Real>::max();
         int violating_sparse_index = -1;
         if ( ( ( solver == LASSO_REGRESSION ) || (non_negative) ) && ( homotopy_iter > 0 ) ){
@@ -520,16 +530,6 @@ namespace Surrogates {
         Real gamma_min = std::min( gamma_hat, gamma_tilde );
 
         // Update the solution.
-        /*if ( homotopy_iter > 0 ){
-          for ( int n = 0; n < (int)active_indices.size(); n++ ){
-          result_0(active_indices[n],homotopy_iter) =
-          result_0(active_indices[n],homotopy_iter-1)+gamma_min*w_sparse(n,0);
-          }
-          }else{
-          for ( int n = 0; n < (int)active_indices.size(); n++ )
-          result_0(active_indices[n],homotopy_iter) = gamma_min*w_sparse(n,0);
-          }*/
-
         for ( int n = 0; n < (int)active_indices.size(); n++ ){
           result_0(active_indices[n],storage_index) =
             prev_solution[active_indices[n]]+gamma_min*w_sparse(n,0);
@@ -555,16 +555,16 @@ namespace Surrogates {
         if ( verbosity > 1 ){
           RealVector x( Teuchos::View, result_0[storage_index], N );
           if ( !drop_covariate ){
-            std::printf( "%d\t%d\t\t\t%d\t\t", homotopy_iter,
-                         new_indices[0], (int)active_indices.size() );
-            std::printf( "%1.15e\t%1.15e\t %1.5e\n", max_abs_correlation,
-                         residual_norm, x.normOne() );
+            std::printf("%-4d %-13d %-8d ", homotopy_iter,
+                        new_indices[0], (int)active_indices.size());
+            std::printf("%-21.15e %-21.15e %-21.15e\n", max_abs_correlation,
+                   residual_norm, x.normOne());
           }else{
-            std::printf( "%d\t\t%d\t\t%d\t\t", homotopy_iter,
-                         index_to_drop, (int)active_indices.size() );
-            std::printf( "%1.15e\t%1.15e\t %1.5e\n",
-                         std::abs(correlation(index_to_drop,0)),
-                         residual_norm, x.normOne() );
+            std::printf( "%-10d %-7d %-8d ", homotopy_iter,
+                         index_to_drop, (int)active_indices.size());
+            std::printf("%-21.15e %-21.15e %-21.15e\n",
+                        std::abs(correlation(index_to_drop,0)),
+                        residual_norm, x.normOne());
           }
         }
 
@@ -577,7 +577,7 @@ namespace Surrogates {
 
           index_to_drop = active_indices[violating_sparse_index];
           downdate_active_index_set( active_indices, inactive_indices,
-                                     violating_sparse_index, 
+                                     violating_sparse_index,
                                      homotopy_iter, active_indices.size(),
                                      verbosity );
           // Store which variable was removed from active index set
@@ -595,8 +595,7 @@ namespace Surrogates {
             correlation(index_to_drop,0) +=
               Amatrix(m,index_to_drop) * residual[m];
           }
-        }else{
-        }
+        }//else{}
         homotopy_iter++;
       }
 
@@ -605,15 +604,6 @@ namespace Surrogates {
       result_0.reshape( N, homotopy_iter );
       result_1.reshape( result_1.numRows(), homotopy_iter );
     }
-
-    // The current result_0 are the naive elastic net esimates
-    // Rescale to avoid Real shrinkage (12) (Zou 2005)
-    //if ( delta > 0 ){
-    //  for ( int iter = 0; iter < result_0.numCols(); iter++ ){
-    //    for ( int n = 0; n < N; n++ )
-    // 	result_0(n,iter) *= ( 1.0 + delta );
-    // }
-    //}
   };
 
 } // namespase Surrogates
