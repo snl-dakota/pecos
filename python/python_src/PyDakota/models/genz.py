@@ -1,14 +1,24 @@
 import numpy
 from PyDakota.approximation import Function, PyFunction
 class GenzFunction(Function):
-    def __init__( self, func_type, num_vars ):
+    def __init__( self, func_type, num_vars, c=None, w=None, name=None ):
+        """
+        having c and w as arguments are required to enable pickling
+        name allows name to be consistent when pickling
+        because name set here is appended to when set_coefficients is called
+        and that function is not called when pickling
+        """
         Function.__init__( self ) # must call c++ object wrapper init function
 
         self.func_type = func_type
         self.num_vars = num_vars
-
         self.num_qoi = 1
-        self.name = 'genz-' + self.func_type + '-%d' %self.num_vars
+        if name is None:
+            self.name = 'genz-' + self.func_type + '-%d' %self.num_vars
+        else:
+            self.name=name
+        self.c=c
+        self.w=w
 
         self.evaluator=PyFunction(self.value_)
 
@@ -248,3 +258,9 @@ class GenzFunction(Function):
             msg = "GenzModel::recursive_integrate() incorrect f_type_ ";
             msg += "was provided";
             raise Exception, msg
+
+    def __reduce__(self):
+        return (type(self),(self.func_type, self.num_vars, self.c, self.w, self.name))
+
+# add unit test like to test pickling
+#python -c "from PyDakota.models.genz import GenzFunction; g = GenzFunction('oscillatory',2); import pickle; pickle.dump(g,open('function.pkl','wb')); g1 = pickle.load(open('function.pkl','rb'))"

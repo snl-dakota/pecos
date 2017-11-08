@@ -110,7 +110,6 @@ class TestMonomialApproximation(unittest.TestCase):
         var_transform = AffineVariableTransformation()
         var_transform.set_variables(variables)
 
-        # TODO replace this switch with a c++ factory
         from PyDakota.univariate_polynomials import LEGENDRE_ORTHOG
         basis_types = numpy.asarray([LEGENDRE_ORTHOG]*num_vars,dtype=numpy.int32)
         opts = {'poly_type':poly_type,'basis_types':basis_types}

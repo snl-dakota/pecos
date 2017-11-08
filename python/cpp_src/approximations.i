@@ -132,6 +132,13 @@ classes and training methods.
 %include "polynomial_approximation_drivers.hpp"
 %include "PCEFactory.hpp"
 
+%extend Surrogates::Function{
+%pythoncode %{
+def __reduce__(self):
+    return (type(self), (None, ))
+%}
+}
+
 %pythoncode %{
 import numpy
 class PyFunction(Function):
