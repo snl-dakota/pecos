@@ -324,10 +324,6 @@ public:
   /// during finalization
   size_t finalization_index(size_t i);
 
-  // number of data points to remove in a decrement (implemented at this
-  // intermediate level since surrData not defined at base level)
-  //size_t pop_count();
-
   /// set expConfigOptions as a group (instead of per option below)
   void configuration_options(const ExpansionConfigOptions& ec_options);
   /// set basisConfigOptions (instead of per option below)
@@ -443,7 +439,7 @@ protected:
   /// Define the mapping from sobolIndexMap into sobolIndices
   void assign_sobol_index_map_values();
 
-  /// check for the presence of trial_set within poppedLevMultiIndex
+  /// check for the presence of trial_set within poppedLevMultiIndex[activeKey]
   bool push_available(const UShortArray& trial_set);
 
   //
@@ -479,7 +475,12 @@ protected:
   SizetList nonRandomIndices;
 
   /// popped trial sets that were computed but not selected
-  std::deque<UShortArray> poppedLevMultiIndex;
+  std::map<UShortArray, std::deque<UShortArray> > poppedLevMultiIndex;
+
+  /// database key indicating the currently active polynomial expansion.
+  /// the key is a multi-index managing multiple modeling dimensions
+  /// such as model form, doscretization level, etc.
+  UShortArray activeKey;
 
   /// mapping to manage different global sensitivity index options
   /// (e.g. univariate/main effects only vs all effects)
@@ -670,8 +671,9 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 inline bool SharedPolyApproxData::
 push_available(const UShortArray& trial_set)
 {
-  return (std::find(poppedLevMultiIndex.begin(), poppedLevMultiIndex.end(),
-		    trial_set) != poppedLevMultiIndex.end());
+  const UShortArray& popped_lev_mi = poppedLevMultiIndex[activeKey];
+  return (std::find(popped_lev_mi.begin(), popped_lev_mi.end(), trial_set) !=
+	  popped_lev_mi.end());
 }
 
 
@@ -685,7 +687,7 @@ inline bool SharedPolyApproxData::push_available()
 inline size_t SharedPolyApproxData::retrieval_index()
 {
   SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  return find_index(poppedLevMultiIndex, sg_driver->trial_set());
+  return find_index(poppedLevMultiIndex[activeKey], sg_driver->trial_set());
 }
 
 
@@ -699,7 +701,7 @@ inline size_t SharedPolyApproxData::finalization_index(size_t i)
   // appended trial sets appear in poppedLevMultiIndex.
   UShortArraySet::const_iterator cit = trial_sets.begin();
   std::advance(cit, i);
-  return find_index(poppedLevMultiIndex, *cit);
+  return find_index(poppedLevMultiIndex[activeKey], *cit);
 }
 
 

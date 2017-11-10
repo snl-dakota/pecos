@@ -212,7 +212,7 @@ void SharedInterpPolyApproxData::decrement_data()
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    poppedLevMultiIndex.push_back(ssg_driver->trial_set());
+    poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
     break;
   }
   }
@@ -227,11 +227,12 @@ void SharedInterpPolyApproxData::post_push_data()
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
+    UShortArray& popped_lev_mi = poppedLevMultiIndex[activeKey];
     std::deque<UShortArray>::iterator sit
-      = std::find(poppedLevMultiIndex.begin(), poppedLevMultiIndex.end(),
+      = std::find(popped_lev_mi.begin(), popped_lev_mi.end(),
 		  ssg_driver->trial_set());
-    if (sit != poppedLevMultiIndex.end())
-      poppedLevMultiIndex.erase(sit);
+    if (sit != popped_lev_mi.end())
+      popped_lev_mi.erase(sit);
     break;
   }
   }
@@ -245,7 +246,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID:
     // move previous expansion data to current expansion
-    poppedLevMultiIndex.clear();
+    poppedLevMultiIndex[activeKey].clear();
     break;
   }
 }

@@ -370,11 +370,11 @@ protected:
   SizetArray tpMultiIndexMapRef;
 
   /// popped instances of tpMultiIndex that were computed but not selected
-  std::deque<UShort2DArray> poppedTPMultiIndex;
+  std::map<UShortArray, std::deque<UShort2DArray> > poppedTPMultiIndex;
   /// popped instances of tpMultiIndexMap that were computed but not selected
-  std::deque<SizetArray> poppedTPMultiIndexMap;
+  std::map<UShortArray, std::deque<SizetArray> > poppedTPMultiIndexMap;
   /// popped instances of tpMultiIndexMapRef that were computed but not selected
-  std::deque<size_t> poppedTPMultiIndexMapRef;
+  std::map<UShortArray, std::deque<size_t> > poppedTPMultiIndexMapRef;
 
   /// index into popped sets of data to be restored (stored in this
   /// class for used by each ProjectOrthogPolyApproximation)

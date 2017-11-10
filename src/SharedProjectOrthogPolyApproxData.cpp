@@ -211,7 +211,7 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 
 void SharedProjectOrthogPolyApproxData::post_finalize_data()
 {
-  poppedLevMultiIndex.clear();   poppedTPMultiIndex.clear();
+  poppedLevMultiIndex[activeKey].clear();   poppedTPMultiIndex.clear();
   poppedTPMultiIndexMap.clear(); poppedTPMultiIndexMapRef.clear();
 }
 

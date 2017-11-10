@@ -111,8 +111,8 @@ typedef std::vector<RealSymMatrix>     RealSymMatrixArray;
 //typedef std::vector<BasisFunction>  BasisFunctionArray;
 typedef std::vector<SurrogateDataVars> SDVArray;
 typedef std::vector<SurrogateDataResp> SDRArray;
-typedef std::vector<SDVArray>          SDV2DArray;
-typedef std::vector<SDRArray>          SDR2DArray;
+typedef std::deque<SDVArray>           SDVArrayDeque;
+typedef std::deque<SDRArray>           SDRArrayDeque;
 
 typedef std::set<size_t>                  SizetSet;
 typedef std::set<int>                     IntSet;

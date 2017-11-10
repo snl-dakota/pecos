@@ -170,11 +170,11 @@ decrement_trial_set(const UShortArray& trial_set,
   aggregated_mi.resize(num_exp_terms); // truncate previous increment
 
   // reset tensor-product bookkeeping and save restorable data
-  poppedLevMultiIndex.push_back(trial_set);
-  poppedTPMultiIndex.push_back(tpMultiIndex.back());
+  poppedLevMultiIndex[activeKey].push_back(trial_set);
+  poppedTPMultiIndex[activeKey].push_back(tpMultiIndex.back());
   if (save_map) { // always needed if we want to mix and match
-    poppedTPMultiIndexMap.push_back(tpMultiIndexMap.back());
-    poppedTPMultiIndexMapRef.push_back(num_exp_terms);
+    poppedTPMultiIndexMap[activeKey].push_back(tpMultiIndexMap.back());
+    poppedTPMultiIndexMapRef[activeKey].push_back(num_exp_terms);
   }
 
   tpMultiIndex.pop_back();
@@ -187,16 +187,19 @@ void SharedOrthogPolyApproxData::
 pre_push_trial_set(const UShortArray& trial_set,
 		      UShort2DArray& aggregated_mi, bool monotonic)
 {
-  pushIndex = find_index(poppedLevMultiIndex, trial_set);
+  pushIndex = find_index(poppedLevMultiIndex[activeKey], trial_set);
   size_t last_index = tpMultiIndex.size();
 
-  std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
+  std::deque<UShort2DArray>::iterator iit
+    = poppedTPMultiIndex[activeKey].begin();
   std::advance(iit, pushIndex); tpMultiIndex.push_back(*iit);
 
   // update multiIndex
   if (monotonic) { // reuse previous Map,MapRef bookkeeping if possible
-    std::deque<SizetArray>::iterator mit = poppedTPMultiIndexMap.begin();
-    std::deque<size_t>::iterator     rit = poppedTPMultiIndexMapRef.begin();
+    std::deque<SizetArray>::iterator mit
+      = poppedTPMultiIndexMap[activeKey].begin();
+    std::deque<size_t>::iterator rit
+      = poppedTPMultiIndexMapRef[activeKey].begin();
     std::advance(mit, pushIndex);    tpMultiIndexMap.push_back(*mit);
     std::advance(rit, pushIndex);    tpMultiIndexMapRef.push_back(*rit);
     append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
@@ -216,15 +219,23 @@ void SharedOrthogPolyApproxData::
 post_push_trial_set(const UShortArray& trial_set,
 		       UShort2DArray& aggregated_mi, bool save_map)
 {
-  std::deque<UShortArray>::iterator   sit = poppedLevMultiIndex.begin();
-  std::deque<UShort2DArray>::iterator iit = poppedTPMultiIndex.begin();
-  std::advance(sit, pushIndex);       poppedLevMultiIndex.erase(sit);
-  std::advance(iit, pushIndex);       poppedTPMultiIndex.erase(iit);
+  std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
+  std::deque<UShortArray>::iterator sit = popped_lev_mi.begin();
+  std::advance(sit, pushIndex); popped_lev_mi.erase(sit);
+
+  std::deque<UShort2DArray>& popped_tp_mi = poppedTPMultiIndex[activeKey];
+  std::deque<UShort2DArray>::iterator iit = popped_tp_mi.begin();
+  std::advance(iit, pushIndex); popped_tp_mi.erase(iit);
+
   if (save_map) { // always needed if we want to mix and match
-    std::deque<SizetArray>::iterator  mit = poppedTPMultiIndexMap.begin();
-    std::deque<size_t>::iterator      rit = poppedTPMultiIndexMapRef.begin();
-    std::advance(mit, pushIndex);     poppedTPMultiIndexMap.erase(mit);
-    std::advance(rit, pushIndex);     poppedTPMultiIndexMapRef.erase(rit);
+    std::deque<SizetArray>& popped_tp_mi_map = poppedTPMultiIndexMap[activeKey];
+    std::deque<SizetArray>::iterator mit = popped_tp_mi_map.begin();
+    std::advance(mit, pushIndex); popped_tp_mi_map.erase(mit);
+
+    std::deque<size_t>& popped_tp_mi_map_ref
+      = poppedTPMultiIndexMapRef[activeKey];
+    std::deque<size_t>::iterator rit = popped_tp_mi_map_ref.begin();
+    std::advance(rit, pushIndex); popped_tp_mi_map_ref.erase(rit);
   }
 }
 
