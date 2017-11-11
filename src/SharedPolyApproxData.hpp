@@ -279,18 +279,21 @@ public:
   /// finalizes the shared approximation data following a set of increments
   virtual void post_finalize_data();
 
+  /*
   /// stores current approximation data for later combination
   virtual void store_data(size_t index = _NPOS) = 0;
   /// restores previously stored approximation data
   virtual void restore_data(size_t index = _NPOS) = 0;
   /// removes a redundant stored approximation data prior to combination
   virtual void remove_stored_data(size_t index = _NPOS) = 0;
+  /// clear stored approximation data
+  virtual void clear_stored_data();
+  */
+
   /// combines current and stored approximation data
   virtual size_t pre_combine_data();
   /// combines current and stored approximation data
   virtual void post_combine_data();
-  /// clear stored approximation data
-  virtual void clear_stored_data();
 
   //
   //- Heading: Member functions

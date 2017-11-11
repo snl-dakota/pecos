@@ -67,11 +67,11 @@ public:
   /// retrieve size of multiIndex
   size_t expansion_terms() const;
 
-  /// get approxOrder
+  /// get active approxOrder
   const UShortArray& expansion_order() const;
-  /// set approxOrder
+  /// set active approxOrder
   void expansion_order(const UShortArray& order);
-  /// uniformly increment approxOrder
+  /// uniformly increment active approxOrder
   void increment_order();
 
   /// invoke initialize_orthogonal_basis_types_rules(),
@@ -126,10 +126,12 @@ protected:
   size_t pre_combine_data();
   void post_combine_data();
 
+  /*
   void store_data(size_t index = _NPOS);
   void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
   void clear_stored_data();
+  */
 
   //
   //- Heading: Member functions
@@ -335,27 +337,29 @@ protected:
   std::vector<BasisPolynomial> polynomialBasis;
 
   /// order of orthogonal polynomial expansion
-  UShortArray approxOrder;
-  /// previous value of approxOrder; used for detecting when a multiIndex
-  /// update is needed
+  std::map<UShortArray, UShortArray> approxOrder;
+  /// previous value of active approxOrder; used for detecting when a
+  /// multiIndex update is needed
   UShortArray approxOrderPrev;
 
   /// number of exp terms-by-number of vars array for identifying the orders
   /// of the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
-  UShort2DArray multiIndex;
+  std::map<UShortArray, UShort2DArray> multiIndex;
   /// multi-index that is the result of expansion combination
   UShort2DArray combinedMultiIndex;
+  /// mapping of terms when aggregating storedMultiIndex with multiIndex in
+  /// pre_combine_data()
+  Sizet2DArray combinedMultiIndexMap;
 
+  /*
   /// array of stored approxOrder's cached in store_coefficients() for use in
   /// combine_coefficients()
   UShort2DArray storedApproxOrder;
   /// array of stored multiIndex's cached in store_coefficients() for use in
   /// combine_coefficients()
   UShort3DArray storedMultiIndex;
-  /// mapping of terms when aggregating storedMultiIndex with multiIndex in
-  /// pre_combine_data()
-  Sizet2DArray storedMultiIndexMap;
+  */
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials
@@ -399,8 +403,8 @@ private:
 inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
-  SharedPolyApproxData(basis_type, num_vars), approxOrder(approx_order)
-{ }
+  SharedPolyApproxData(basis_type, num_vars)
+{ approxOrder[activeKey] = approx_order; }
 
 
 inline SharedOrthogPolyApproxData::
@@ -408,9 +412,8 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
-  SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options),
-  approxOrder(approx_order)
-{ }
+  SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options)
+{ approxOrder[activeKey] = approx_order; }
 
 
 inline SharedOrthogPolyApproxData::~SharedOrthogPolyApproxData()
@@ -418,27 +421,28 @@ inline SharedOrthogPolyApproxData::~SharedOrthogPolyApproxData()
 
 
 inline const UShort2DArray& SharedOrthogPolyApproxData::multi_index() const
-{ return multiIndex; }
+{ return multiIndex[activeKey]; }
 
 
 inline size_t SharedOrthogPolyApproxData::expansion_terms() const
-{ return multiIndex.size(); }
+{ return multiIndex[activeKey].size(); }
 
 
 inline const UShortArray& SharedOrthogPolyApproxData::expansion_order() const
-{ return approxOrder; }
+{ return approxOrder[activeKey]; }
 
 
 inline void SharedOrthogPolyApproxData::
 expansion_order(const UShortArray& order)
-{ approxOrder = order; } // multiIndex updated in allocate_arrays()
+{ approxOrder[activeKey] = order; } // multiIndex updated in allocate_arrays()
 
 
 inline void SharedOrthogPolyApproxData::increment_order()
 {
   // increment approxOrder (multiIndex updated in allocate_arrays())
+  UShortArray& approx_order = approxOrder[activeKey];
   for (size_t i=0; i<numVars; ++i)
-    ++approxOrder[i];
+    ++approx_order[i];
 }
 
 

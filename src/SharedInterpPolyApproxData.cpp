@@ -227,7 +227,7 @@ void SharedInterpPolyApproxData::post_push_data()
   case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
-    UShortArray& popped_lev_mi = poppedLevMultiIndex[activeKey];
+    std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
     std::deque<UShortArray>::iterator sit
       = std::find(popped_lev_mi.begin(), popped_lev_mi.end(),
 		  ssg_driver->trial_set());
@@ -254,11 +254,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
 
 size_t SharedInterpPolyApproxData::pre_combine_data()
 {
-  // Sufficient for two grids: if not currently the maximal grid, then swap
-  // with the stored grid (only one is stored)
-  //bool swap = !driverRep->maximal_grid();
-  //if (swap) { driverRep->swap_grid(); allocate_component_sobol(); }
-
+  /*
   // For open-ended number of stored grids: retrieve the most refined from the
   // existing grids (from sequence specification + any subsequent refinement).
   // Note: if we assume that multiIndex subsets are enforced across a hierarchy,
@@ -272,6 +268,8 @@ size_t SharedInterpPolyApproxData::pre_combine_data()
   //if (current_grid_index() != new_index) driverRep->swap_grid(new_index);
 
   return max_index;
+  */
+  return driverRep->maximal_grid();
 }
 
 

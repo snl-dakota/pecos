@@ -179,7 +179,7 @@ void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
     resize_expansion();
     // update expansion{Coeffs,CoeffGrads}
     for (i=0; i<num_stored; ++i)
-      overlay_expansion(data_rep->storedMultiIndexMap[i], storedExpCoeffs[i],
+      overlay_expansion(data_rep->combinedMultiIndexMap[i], storedExpCoeffs[i],
 			storedExpCoeffGrads[i], 1);
     break;
   }
@@ -191,7 +191,7 @@ void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
     break;
   }
   case ADD_MULT_COMBINE:
-    //overlay_expansion(data_rep->storedMultiIndexMap[i], storedExpCoeffs[i],
+    //overlay_expansion(data_rep->combinedMultiIndexMap[i], storedExpCoeffs[i],
     //                  storedExpCoeffGrads[i], addCoeffs, addCoeffGrads);
     //multiply_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
     //                   storedExpCoeffGrads[i], multCoeffs, multCoeffGrads);

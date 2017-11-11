@@ -84,10 +84,12 @@ protected:
   void post_finalize_data();
   size_t pre_combine_data();
 
+  /*
   void store_data(size_t index = _NPOS);
   void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
   void clear_stored_data();
+  */
 
   //
   //- Heading: New virtual functions
@@ -432,6 +434,7 @@ resize_polynomial_basis(const UShortArray& lev_index)
 }
 
 
+/*
 inline void SharedInterpPolyApproxData::store_data(size_t index)
 { driverRep->store_grid(index); }
 
@@ -446,6 +449,7 @@ inline void SharedInterpPolyApproxData::remove_stored_data(size_t index)
 
 inline void SharedInterpPolyApproxData::clear_stored_data()
 { driverRep->clear_stored(); }
+*/
 
 
 inline Real SharedInterpPolyApproxData::

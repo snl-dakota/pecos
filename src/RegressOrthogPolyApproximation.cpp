@@ -618,7 +618,7 @@ void RegressOrthogPolyApproximation::combine_coefficients(size_t swap_index)
       // update sparseIndices and expansionCoeff{s,Grads}
       for (i=0; i<num_stored; ++i)
 	overlay_expansion(storedSparseIndices[i],
-			  data_rep->storedMultiIndexMap[i],
+			  data_rep->combinedMultiIndexMap[i],
 			  storedExpCoeffs[i], storedExpCoeffGrads[i], 1);
       // update sparseSobolIndexMap
       update_sparse_sobol(sparseIndices, data_rep->multiIndex,

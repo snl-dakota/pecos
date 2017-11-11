@@ -331,11 +331,11 @@ void SharedPolyApproxData::post_combine_data()
 { } // default implementation is no op
 
 
+/*
 void SharedPolyApproxData::clear_stored_data()
 { } // default implementation is no op
 
 
-/*
 void SharedPolyApproxData::allocate_component_sobol()
 {
   // default implementation is reasonable for tensor expansions, but is
