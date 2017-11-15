@@ -67,7 +67,7 @@ public:
   //const RealMatrix& type2_weight_sets() const;
 
   // return index of the maximal stored grid state (_NPOS if current grid)
-  //size_t maximal_grid() const;
+  //const UShortArray& maximal_grid() const;
 
   /// number of collocation points with duplicates removed
   int grid_size();

@@ -29,7 +29,7 @@ initialize_grid(const ShortArray& u_types,
 		const BasisConfigOptions& bc_options)
 {
   IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
-  quadOrder.resize(numVars); levelIndex.resize(numVars);
+  quadOrder.resize(numVars); levelIndex[activeKey].resize(numVars);
 }
 
 
@@ -37,7 +37,7 @@ void TensorProductDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
-  quadOrder.resize(numVars); levelIndex.resize(numVars);
+  quadOrder.resize(numVars); levelIndex[activeKey].resize(numVars);
 }
 
 
@@ -48,6 +48,7 @@ void TensorProductDriver::precompute_rules()
 }
 
 
+/*
 void TensorProductDriver::store_grid(size_t index)
 {
   size_t stored_len = storedType1WeightSets.size();
@@ -119,17 +120,6 @@ void TensorProductDriver::clear_stored()
 }
 
 
-size_t TensorProductDriver::maximal_grid() const
-{
-  size_t i, num_stored = storedType1WeightSets.size(),
-    max_index = _NPOS, max_wts = type1WeightSets.length();
-  for (i=0; i<num_stored; ++i)
-    if (storedType1WeightSets[i].length() > max_wts)
-      { max_index = i; max_wts = storedType1WeightSets[i].length(); }
-  return max_index;
-}
-
-
 void TensorProductDriver::swap_grid(size_t index)
 {
   std::swap(storedCollocKey[index],  collocKey);
@@ -143,6 +133,21 @@ void TensorProductDriver::swap_grid(size_t index)
   RealMatrix tmp_mat(type2WeightSets);
   type2WeightSets = storedType2WeightSets[index];
   storedType2WeightSets[index] = tmp_mat;
+}
+*/
+
+
+const UShortArray& TensorProductDriver::maximal_grid() const
+{
+  std::map<UShortArray, RealVector>::iterator
+    w_it = type1WeightSets.begin(), max_it = w_it;
+  size_t max_wts = w_it->second.length(); ++w_it;
+  for (; w_it!=type1WeightSets.end(); ++w_it) {
+    num_wts = w_it->second.length();
+    if (num_wts > max_wts)
+      { max_wts = num_wts; max_it = w_it; }
+  }
+  return max_it->first;
 }
 
 

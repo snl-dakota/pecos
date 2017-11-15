@@ -196,13 +196,13 @@ protected:
   bool updateGridSize;
 
   /// old reference index sets for generalized sparse grids
-  UShortArraySet oldMultiIndex; // or UShort2DArray
+  std::map<UShortArray, UShortArraySet> oldMultiIndex; // or UShort2DArray
   /// active index sets under current consideration for inclusion in a
   /// generalized sparse grid
-  UShortArraySet activeMultiIndex; // or UShort2DArray
+  std::map<UShortArray, UShortArraySet> activeMultiIndex; // or UShort2DArray
   /// subset of active set that have been evaluated as trial sets
   /// (incremented in compute_trial_grid() and decremented in update_sets())
-  UShortArraySet computedTrialSets; // or UShort2DArray
+  std::map<UShortArray, UShortArraySet> computedTrialSets; // or UShort2DArray
 
 private:
 

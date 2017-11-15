@@ -69,13 +69,16 @@ public:
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
+  /*
   void store_grid(size_t index = _NPOS);
   void restore_grid(size_t index = _NPOS);
   void remove_stored_grid(size_t index = _NPOS);
   void clear_stored();
 
-  size_t maximal_grid() const;
   void swap_grid(size_t index);
+  */
+
+  size_t maximal_grid() const;
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
@@ -174,6 +177,7 @@ public:
   // return duplicateTol
   //Real duplicate_tolerance() const;
 
+  /*
   /// return storedLevMultiIndex[index]
   const UShort2DArray& stored_smolyak_multi_index(size_t index) const;
   /// return storedLevCoeffs[index]
@@ -182,6 +186,7 @@ public:
   const UShort3DArray& stored_collocation_key(size_t index) const;
   /// return storedCollocIndices[index]
   const Sizet2DArray& stored_collocation_indices(size_t index) const;
+  */
 
   /// return type1WeightSets
   const RealVector& type1_weight_sets() const;
@@ -243,10 +248,10 @@ private:
       are offset from the i indices (1-based) normally used in the Smolyak
       expressions.  The indices correspond to levels, one for each
       anisotropic tensor-product grid within a Smolyak recursion. */
-  UShort2DArray smolyakMultiIndex;
+  std::map<UShortArray, UShort2DArray> smolyakMultiIndex;
   /// array of Smolyak combinatorial coefficients, one for each tensor
   /// product index set; order is synchronized with smolyakMultiIndex
-  IntArray smolyakCoeffs;
+  std::map<UShortArray, IntArray> smolyakCoeffs;
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
   IntArray smolyakCoeffsRef;
@@ -260,16 +265,17 @@ private:
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
-  UShort3DArray collocKey;
+  std::map<UShortArray, UShort3DArray> collocKey;
   /// numSmolyakIndices-by-numTensorProductPts array for linking the set
   /// of tensor products to the unique collocation points evaluated
-  Sizet2DArray collocIndices;
+  std::map<UShortArray, Sizet2DArray> collocIndices;
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
   /// trial evaluation set from push_trial_set()
   UShortArray trialSet;
 
+  /*
   /// stored driver states: copies of smolyakMultiIndex
   UShort3DArray storedLevMultiIndex;
   /// stored driver states: copies of smolyakCoeffs
@@ -279,12 +285,18 @@ private:
   /// stored driver states: copies of collocIndices
   Sizet3DArray storedCollocIndices;
 
+  /// stored driver states: copies of type1WeightSets
+  RealVectorArray storedType1WeightSets;
+  /// stored driver states: copies of type2WeightSets
+  RealMatrixArray storedType2WeightSets;
+  */
+
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
-  RealVector type1WeightSets;
+  std::map<UShortArray, RealVector> type1WeightSets;
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the sparse grid
-  RealMatrix type2WeightSets;
+  std::map<UShortArray, RealMatrix> type2WeightSets;
 
   /// reference values for the type1 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type1WeightSets
@@ -292,11 +304,6 @@ private:
   /// reference values for the type2 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type2WeightSets
   RealMatrix type2WeightSetsRef;
-
-  /// stored driver states: copies of type1WeightSets
-  RealVectorArray storedType1WeightSets;
-  /// stored driver states: copies of type2WeightSets
-  RealMatrixArray storedType2WeightSets;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<CollocFnPtr> compute1DPoints;
@@ -355,11 +362,11 @@ inline CombinedSparseGridDriver::~CombinedSparseGridDriver()
 
 inline const UShort2DArray& CombinedSparseGridDriver::
 smolyak_multi_index() const
-{ return smolyakMultiIndex; }
+{ return smolyakMultiIndex[activeKey]; }
 
 
 inline const IntArray& CombinedSparseGridDriver::smolyak_coefficients() const
-{ return smolyakCoeffs; }
+{ return smolyakCoeffs[activeKey]; }
 
 
 inline void CombinedSparseGridDriver::
@@ -381,11 +388,11 @@ inline bool CombinedSparseGridDriver::track_unique_product_weights() const
 
 
 inline const UShort3DArray& CombinedSparseGridDriver::collocation_key() const
-{ return collocKey; }
+{ return collocKey[activeKey]; }
 
 
 inline const Sizet2DArray& CombinedSparseGridDriver::collocation_indices() const
-{ return collocIndices; }
+{ return collocIndices[activeKey]; }
 
 
 inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
@@ -406,23 +413,31 @@ inline int CombinedSparseGridDriver::unique_trial_points() const
 
 inline void CombinedSparseGridDriver::print_smolyak_multi_index() const
 {
-  size_t i, sm_mi_len = smolyakMultiIndex.size(), cntr = 0;
+  const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
+  const IntArray&  sm_coeffs = smolyakCoeffs[activeKey];
+  size_t i, sm_mi_len = sm_mi.size(), cntr = 0;
   for (i=0; i<sm_mi_len; ++i) {
-    if (smolyakCoeffs[i]) {
+    if (sm_coeffs[i]) {
       PCout << "Smolyak index set " << ++cntr << ':';
-      print_index_set(PCout, smolyakMultiIndex[i]);
+      print_index_set(PCout, sm_mi[i]);
     }
   }
 }
 
 
 inline void CombinedSparseGridDriver::assign_smolyak_arrays()
-{ assign_smolyak_arrays(smolyakMultiIndex, smolyakCoeffs); }
+{
+  assign_smolyak_arrays(smolyakMultiIndex[activeKey],
+			smolyakCoeffs[activeKey]);
+}
 
 
 inline void CombinedSparseGridDriver::
 update_smolyak_coefficients(size_t start_index)
-{ update_smolyak_coefficients(start_index, smolyakMultiIndex, smolyakCoeffs); }
+{
+  update_smolyak_coefficients(start_index, smolyakMultiIndex[activeKey],
+			      smolyakCoeffs[activeKey]);
+}
 
 
 inline void CombinedSparseGridDriver::merge_set()
@@ -431,11 +446,11 @@ inline void CombinedSparseGridDriver::merge_set()
 
 inline void CombinedSparseGridDriver::update_reference()
 {
-  smolyakCoeffsRef = smolyakCoeffs;
+  smolyakCoeffsRef = smolyakCoeffs[activeKey];
   if (trackUniqueProdWeights) {
-    type1WeightSetsRef = type1WeightSets;
+    type1WeightSetsRef = type1WeightSets[activeKey];
     if (computeType2Weights)
-      type2WeightSetsRef = type2WeightSets;
+      type2WeightSetsRef = type2WeightSets[activeKey];
   }
 }
 
@@ -445,6 +460,7 @@ smolyak_coefficients_reference() const
 { return smolyakCoeffsRef; }
 
 
+/*
 inline const UShort2DArray& CombinedSparseGridDriver::
 stored_smolyak_multi_index(size_t index) const
 { return storedLevMultiIndex[index]; }
@@ -463,14 +479,15 @@ stored_collocation_key(size_t index) const
 inline const Sizet2DArray& CombinedSparseGridDriver::
 stored_collocation_indices(size_t index) const
 { return storedCollocIndices[index]; }
+*/
 
 
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const
-{ return type1WeightSets; }
+{ return type1WeightSets[activeKey]; }
 
 
 inline const RealMatrix& CombinedSparseGridDriver::type2_weight_sets() const
-{ return type2WeightSets; }
+{ return type2WeightSets[activeKey]; }
 
 
 inline void CombinedSparseGridDriver::
