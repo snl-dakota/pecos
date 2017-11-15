@@ -5,7 +5,7 @@
 namespace Surrogates {
 
 void CrossValidatedSolver::unnormalize_coefficients(const RealVector &column_norms){
-    throw(std::runtime_error("We never need to do this because this is handled internally by call to the linear solver we are wrapping. Consider refining class hierachy"));
+ throw(std::runtime_error("We never need to do this because this is handled internally by call to the linear solver we are wrapping."));
 }
 
 CrossValidatedSolver::CrossValidatedSolver() : LinearSystemSolver() {}
@@ -18,6 +18,13 @@ set_linear_system_solver(RegressionType regression_type){
   opts.set("regression_type", regression_type);
   cvIterator_ = linear_system_cross_validation_iterator_factory(opts);
 };
+
+void CrossValidatedSolver::
+solve(const RealMatrix &A, const RealMatrix &B, OptionsList & opts ){
+  RealMatrix A_copy(Teuchos::Copy, A, A.numRows(), A.numCols());
+  RealMatrix B_copy(Teuchos::Copy, B, B.numRows(), B.numCols());
+  multi_rhs_solve(A_copy, B_copy, opts);
+}
 
 void CrossValidatedSolver::
 multi_rhs_solve(const RealMatrix &A, const RealMatrix &B,
@@ -43,7 +50,7 @@ multi_rhs_solve(const RealMatrix &A, const RealMatrix &B,
 
   cvIterator_->run(A, B, cv_opts_copy);
   cvIterator_->generate_best_solutions(A, B, solutions_, residualNorms_,
-				       regression_opts);
+                                       regression_opts);
 }
 
 void CrossValidatedSolver::get_best_scores(RealVector &result) const{

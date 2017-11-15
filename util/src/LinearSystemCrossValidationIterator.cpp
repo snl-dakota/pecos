@@ -162,7 +162,7 @@ run(const RealMatrix &A, const RealMatrix &B, OptionsList &opts){
   }
   
   OptionsList regression_opts =  opts.get<OptionsList>("regression-opts");
-  
+ 
   int num_rhs = B.numCols();
   scores_.resize(num_rhs);
   uniqueTols_.resize(num_rhs);
@@ -256,6 +256,7 @@ void LinearSystemCrossValidationIterator::define_unique_tolerances(RealVector &u
     max_num_unique_tols = std::max( max_num_unique_tols, 
 				    num_path_steps );
   }
+
   max_num_unique_tols = std::min( max_num_unique_tols, maxNumUniqueTols_ );
   // There are often thousands of unique parameter values so take 
   // a thinned subset of these. The size of the subset is controlled by
@@ -323,17 +324,19 @@ get_linear_system_solver(){
 
 void LinearSystemCrossValidationIterator::
 generate_best_solutions(const RealMatrix &A, const RealMatrix &B,
-			RealMatrix &best_solutions,
-			RealVector &residuals,
-			OptionsList & opts){
-  RealMatrix best_residual_tolerances;
-  get_adjusted_best_residual_tolerances(best_residual_tolerances);
-  opts.set("residual-tolerances", best_residual_tolerances);
-  //opts.set("store-history", false);
+                        RealMatrix &best_solutions, RealVector &residuals,
+                        OptionsList & opts){
+  if (!opts.isType<RealMatrix>("residual-tolerances")){
+    RealMatrix best_residual_tolerances;
+    get_adjusted_best_residual_tolerances(best_residual_tolerances);
+    opts.set("residual-tolerances", best_residual_tolerances);
+  }
   linearSystemSolver_->multi_rhs_solve(A, B, opts);
   linearSystemSolver_->get_final_solutions(best_solutions);
   linearSystemSolver_->get_final_residuals(residuals);
 }
+
+
 
 void LinearSystemCrossValidationIterator::
 get_adjusted_best_residual_tolerances(RealMatrix &result) const{

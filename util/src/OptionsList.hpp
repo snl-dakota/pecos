@@ -104,6 +104,21 @@ public:
      map_[name]=std::string(item);
   };
 
+  void print_keys() const{
+    this->print_keys(std::cout);
+    std::cout << std::flush;
+  }
+
+  std::ostream& print_keys(std::ostream& os) const{
+    opts_map::const_iterator iter;
+    os << "[";
+    for (iter=map_.begin(); iter!=map_.end(); ++iter){
+      if (iter!=map_.begin()) os << ", ";
+      os << iter->first;
+    }
+    os << "]";
+  }
+
   void print() const{
     this->print(std::cout);
     std::cout << std::flush;

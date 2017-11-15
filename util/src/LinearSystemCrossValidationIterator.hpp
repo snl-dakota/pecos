@@ -139,7 +139,7 @@ public:
    */
   virtual void generate_best_solutions(const RealMatrix &A, const RealMatrix &B,
 				       RealMatrix &best_solutions,
-				       RealVector & resisuals,
+				       RealVector & residuals,
 				       OptionsList & opts)=0;
 };
 
@@ -259,8 +259,8 @@ public:
 
   /**\copydoc LinearSystemCrossValidationIteratorBase::generate_best_solutions()*/
   void generate_best_solutions(const RealMatrix &A, const RealMatrix &B,
-			       RealMatrix &best_solutions,
-			       RealVector &residuals,
+			       RealMatrix &result_0,
+			       RealVector &result_1,
 			       OptionsList & opts);
 
   /** \brief Get the adjusted best residual tolerances which will

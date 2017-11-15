@@ -51,6 +51,24 @@ public:
    */
   void set_linear_system_solver(RegressionType regression_type);
 
+  /**
+   * \brief Find solutions to \f$AX \approx B\f$ 
+   * The solutions are stored internally and not returned.
+   *
+   * \param[in] A matrix (num_rows x num_cols)
+   *     The matrix A
+   * \param[in] B vector (num_cols x num_rhs)
+   *     The rhs B
+   * \param[in] opts  
+   *     List of options
+   *
+   * LinearSystemSolver::solve preconditions normalizes matrix
+   * We do not want to do this here because it will be done by the
+   * linear solver this class contains
+   */
+  void solve(const RealMatrix &A, const RealMatrix &B, OptionsList & opts );
+
+
   /**\brief
    *
    * opts (required parameters)
