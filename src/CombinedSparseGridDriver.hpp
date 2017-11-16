@@ -316,7 +316,7 @@ private:
   std::vector<LevGrwOrdFnPtr> levelGrowthToOrder;
 
   /// output from sgmga_unique_index()
-  IntArray uniqueIndexMapping;
+  std::map<UShortArray, IntArray> uniqueIndexMapping;
   /// duplication tolerance used in sgmga routines
   Real duplicateTol;
 
@@ -396,7 +396,7 @@ inline const Sizet2DArray& CombinedSparseGridDriver::collocation_indices() const
 
 
 inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
-{ return uniqueIndexMapping; }
+{ return uniqueIndexMapping[activeKey]; }
 
 
 inline const UShortArray& CombinedSparseGridDriver::trial_set() const

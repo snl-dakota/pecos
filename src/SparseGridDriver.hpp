@@ -287,11 +287,11 @@ inline short SparseGridDriver::growth_rate() const
 
 
 inline const UShortArraySet& SparseGridDriver::active_multi_index() const
-{ return activeMultiIndex; }
+{ return activeMultiIndex[activeKey]; }
 
 
 inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
-{ return computedTrialSets; }
+{ return computedTrialSets[activeKey]; }
 
 
 inline void SparseGridDriver::update_reference()

@@ -418,7 +418,7 @@ void CombinedSparseGridDriver::assign_collocation_key()
   const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
   const UShort3DArray& colloc_key = collocKey[activeKey];
   size_t i, num_smolyak_indices = sm_mi.size();
-  collocKey.resize(num_smolyak_indices);
+  colloc_key.resize(num_smolyak_indices);
   UShortArray quad_order(numVars); //, collocation_indices(numVars);
   for (i=0; i<num_smolyak_indices; ++i) {
     level_to_order(sm_mi[i], quad_order);
@@ -434,7 +434,7 @@ void CombinedSparseGridDriver::update_collocation_key(size_t start_index)
   const UShort3DArray& colloc_key = collocKey[activeKey];
   UShortArray quad_order(numVars);
   size_t i, num_sm_mi = sm_mi.size();
-  collocKey.resize(num_sm_mi);
+  colloc_key.resize(num_sm_mi);
   for (i=start_index; i<num_sm_mi; ++i) {
     level_to_order(sm_mi[i], quad_order);
     SharedPolyApproxData::tensor_product_multi_index(quad_order, colloc_key[i],
@@ -446,8 +446,9 @@ void CombinedSparseGridDriver::update_collocation_key(size_t start_index)
 void CombinedSparseGridDriver::assign_collocation_indices()
 {
   // define mapping from 1:numCollocPts to set of 1d interpolation indices
-  const UShort3DArray& colloc_key = collocKey[activeKey];
-  const Sizet2DArray&  colloc_ind = collocIndices[activeKey];
+  const UShort3DArray&  colloc_key = collocKey[activeKey];
+  const Sizet2DArray&   colloc_ind = collocIndices[activeKey];
+  const IntArray& unique_index_map = uniqueIndexMapping[activeKey];
   size_t i, j, num_tp_pts, cntr = 0, num_sm_indices = colloc_key.size();
   colloc_ind.resize(num_sm_indices);
   for (i=0; i<num_sm_indices; ++i) {
@@ -455,7 +456,7 @@ void CombinedSparseGridDriver::assign_collocation_indices()
     SizetArray& indices_i = colloc_ind[i];
     indices_i.resize(num_tp_pts);
     for (j=0; j<num_tp_pts; ++j, ++cntr) {
-      indices_i[j] = uniqueIndexMapping[cntr];
+      indices_i[j] = unique_index_map[cntr];
 #ifdef DEBUG
       PCout << "collocKey[" << i << "][" << j << "]:\n" << colloc_key[i][j]
 	    << "collocIndices[" << i << "][" << j << "] = " << indices_i[j]
@@ -564,25 +565,26 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
       if (computeType2Weights)
 	t2_wts.shapeUninitialized(numVars, numCollocPts);
     }
+    IntArray& unique_index_map = uniqueIndexMapping[activeKey];
     int* sparse_order = new int [numCollocPts*numVars];
     int* sparse_index = new int [numCollocPts*numVars];
     sgdInstance = this; // sgdInstance required within compute1D fn pointers
     if (dimIsotropic) {
       int num_total_pts = webbur::sgmg_size_total(numVars, ssgLevel,
 	growthRate, &levelGrowthToOrder[0]);
-      uniqueIndexMapping.resize(num_total_pts);
+      unique_index_map.resize(num_total_pts);
       webbur::sgmg_unique_index(numVars, ssgLevel, &compute1DPoints[0],
 	duplicateTol, numCollocPts, num_total_pts, growthRate,
-	&levelGrowthToOrder[0], &uniqueIndexMapping[0]);
+	&levelGrowthToOrder[0], &unique_index_map[0]);
       webbur::sgmg_index(numVars, ssgLevel, numCollocPts, num_total_pts,
-	&uniqueIndexMapping[0], growthRate, &levelGrowthToOrder[0],
+	&unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	sparse_order, sparse_index);
       webbur::sgmg_point(numVars, ssgLevel, &compute1DPoints[0], numCollocPts,
 	sparse_order, sparse_index, growthRate, &levelGrowthToOrder[0],
 	var_sets.values());
       if (trackUniqueProdWeights) {
 	webbur::sgmg_weight(numVars, ssgLevel, &compute1DType1Weights[0],
-	  numCollocPts, num_total_pts, &uniqueIndexMapping[0], growthRate,
+	  numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
 	  &levelGrowthToOrder[0], t1_wts.values());
 	if (computeType2Weights) {
 	  std::vector<CollocFnPtr> comp_1d_t2_wts = compute1DType1Weights;//copy
@@ -590,7 +592,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	  for (int i=0; i<numVars; ++i) {
 	    comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
 	    webbur::sgmg_weight(numVars, ssgLevel, &comp_1d_t2_wts[0],
-	      numCollocPts, num_total_pts, &uniqueIndexMapping[0], growthRate,
+	      numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
 	      &levelGrowthToOrder[0], t2_wt_set.values());
 	    copy_row(t2_wt_set, t2_wts, i);
 	    comp_1d_t2_wts[i] = basis_type1_collocation_weights; // restore ptr
@@ -601,12 +603,12 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
     else {
       int num_total_pts = webbur::sandia_sgmga_size_total(numVars,
 	anisoLevelWts.values(), ssgLevel, growthRate, &levelGrowthToOrder[0]);
-      uniqueIndexMapping.resize(num_total_pts);
+      unique_index_map.resize(num_total_pts);
       webbur::sandia_sgmga_unique_index(numVars, anisoLevelWts.values(),
 	ssgLevel, &compute1DPoints[0], duplicateTol, numCollocPts,num_total_pts,
-	growthRate, &levelGrowthToOrder[0], &uniqueIndexMapping[0]);
+	growthRate, &levelGrowthToOrder[0], &unique_index_map[0]);
       webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
-        numCollocPts, num_total_pts, &uniqueIndexMapping[0], growthRate,
+        numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
 	&levelGrowthToOrder[0], sparse_order, sparse_index);
       webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
         &compute1DPoints[0], numCollocPts, sparse_order, sparse_index,
@@ -614,7 +616,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
       if (trackUniqueProdWeights) {
 	webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
           &compute1DType1Weights[0], numCollocPts, num_total_pts,
-	  &uniqueIndexMapping[0], growthRate, &levelGrowthToOrder[0],
+	  &unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	  t1_wts.values());
 	if (computeType2Weights) {
 	  std::vector<CollocFnPtr> comp_1d_t2_wts = compute1DType1Weights;//copy
@@ -623,7 +625,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	    comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
 	    webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(),
 	      ssgLevel, &comp_1d_t2_wts[0], numCollocPts, num_total_pts,
-	      &uniqueIndexMapping[0], growthRate, &levelGrowthToOrder[0],
+	      &unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	      t2_wt_set.values());
 	    copy_row(t2_wt_set, t2_wts, i);
 	    comp_1d_t2_wts[i] = basis_type1_collocation_weights; // restore ptr
@@ -643,8 +645,8 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 
 #ifdef DEBUG
   PCout << "CombinedSparseGridDriver::compute_grid() results:\n"
-	<< "uniqueIndexMapping:\n" << uniqueIndexMapping << "\nvar_sets:\n";
-  write_data(PCout, var_sets, false, true, true);
+	<< "uniqueIndexMapping:\n" << uniqueIndexMapping[activeKey];
+  PCout << "\nvar_sets:\n"; write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
     PCout << "\ntype1WeightSets:\n"; write_data(PCout, t1_wts);
     if (computeType2Weights) {
@@ -771,7 +773,7 @@ void CombinedSparseGridDriver::pop_trial_set()
   smolyakCoeffs[activeKey] = smolyakCoeffsRef;
 
   numCollocPts -= numUnique2; // subtract number of trial points
-  uniqueIndexMapping.resize(numCollocPts); // prune trial set from end
+  uniqueIndexMapping[activeKey].resize(numCollocPts); // prune trial from end
 }
 
 
@@ -856,7 +858,7 @@ void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
   PCout << std::endl;
 #endif // DEBUG
 
-  uniqueIndexMapping = uniqueIndex1; // copy
+  uniqueIndexMapping[activeKey] = uniqueIndex1; // copy
   assign_tensor_collocation_indices(0, uniqueIndex1);
   numCollocPts = numUnique1;
   update_sparse_points(0, 0, a1Points, isUnique1, uniqueIndex1, var_sets);
@@ -882,7 +884,7 @@ void CombinedSparseGridDriver::
 increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
 {
   // increment_unique processes the trailing Smolyak index set
-  size_t last_index = smolyakMultiIndex.size() - 1;
+  size_t last_index = smolyakMultiIndex[activeKey].size() - 1;
 
   // define a1 pts/wts
   if (compute_a2) // else already computed (e.g., within compute_trial_grid())
@@ -919,8 +921,9 @@ increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
   PCout << std::endl;
 #endif // DEBUG
 
-  uniqueIndexMapping.insert(uniqueIndexMapping.end(), uniqueIndex2.begin(),
-			    uniqueIndex2.end());
+  IntArray& unique_index_map = uniqueIndexMapping[activeKey];
+  unique_index_map.insert(unique_index_map.end(), uniqueIndex2.begin(),
+			  uniqueIndex2.end());
   assign_tensor_collocation_indices(last_index, uniqueIndex2);
   numCollocPts = numUnique1 + numUnique2;
   if (update_sets) // update unique var_sets
@@ -996,7 +999,7 @@ void CombinedSparseGridDriver::merge_unique()
   copy_data(is_unique3, n1n2, isUnique1);
   delete [] is_unique1; delete [] is_unique2; delete [] is_unique3;
   // update uniqueIndexMapping, collocIndices, numCollocPts
-  uniqueIndexMapping = unique_index3;
+  uniqueIndexMapping[activeLey] = unique_index3;
   //assign_tensor_collocation_indices(0, unique_index3);
   numCollocPts = num_unique3;
 }
@@ -1015,7 +1018,7 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
   // that this condition is possible (or does structure of admissible indices
   // prevent replication in trial sets that is not first detected in old sets).
 
-  size_t i, j, num_sm_mi = smolyakMultiIndex.size();
+  size_t i, j, num_sm_mi = smolyakMultiIndex[activeKey].size();
   int m = numVars, n1, n2, n1n2, n3, num_unique3, all_n2 = 0;
   RealVector all_a2t1_wts, r3_vec; RealMatrix a3_pts, all_a2t2_wts;
   IntArray all_unique_index2, sort_index3, unique_set3, unique_index3;
@@ -1096,8 +1099,9 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
     delete [] is_unique1; delete [] is_unique2;
   }
 
-  uniqueIndexMapping.insert(uniqueIndexMapping.end(), all_unique_index2.begin(),
-			    all_unique_index2.end());
+  IntArray& unique_index_map = uniqueIndexMapping[activeKey];
+  unique_index_map.insert(unique_index_map.end(), all_unique_index2.begin(),
+			  all_unique_index2.end());
   assign_tensor_collocation_indices(start_index, all_unique_index2);
   if (trackUniqueProdWeights) {
     RealVector& t1_wts = type1WeightSets[activeKey];

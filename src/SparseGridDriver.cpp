@@ -51,8 +51,8 @@ void SparseGridDriver::assign_1d_collocation_points_weights()
   for (i=0; i<numVars; i++)
     for (l_index=0; l_index<num_levels; ++l_index) {
       level_to_order(i, l_index, q_order);
-      IntegrationDriver::assign_1d_collocation_points_weights(i, q_order,
-							      l_index);
+      IntegrationDriver::
+	assign_1d_collocation_points_weights(i, q_order, l_index);
     }
 }
 
@@ -220,15 +220,18 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   merge_set();   // reset a1 --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
-  const UShortArray& tr_set = trial_set();
+  const UShortArray&       tr_set = trial_set();
+  UShortArraySet& computed_trials = computedTrialSets[activeKey];
+  UShortArraySet&       active_mi =  activeMultiIndex[activeKey];
+  UShortArraySet&          old_mi =     oldMultiIndex[activeKey];
 
   // update set O by adding the trial set to oldMultiIndex:
-  oldMultiIndex.insert(tr_set);
+  old_mi.insert(tr_set);
   // remove the trial set from set A by erasing from activeMultiIndex:
-  activeMultiIndex.erase(tr_set); // invalidates cit_star -> set_star
+  active_mi.erase(tr_set); // invalidates cit_star -> set_star
   // update subset of A that have been evaluated as trial sets
-  if (!computedTrialSets.empty()) // not tracked for LightweightSparseGridDriver
-    computedTrialSets.erase(tr_set);
+  if (!computed_trials.empty()) // not tracked for LightweightSparseGridDriver
+    computed_trials.erase(tr_set);
 
   // update set A (activeMultiIndex) based on neighbors of trial set
   add_active_neighbors(tr_set, false);//dimIsotropic);
@@ -238,8 +241,8 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 
 #ifdef DEBUG
   PCout << "Sets updated: (Smolyak,Old,Active,Trial) = (" << smolyak_size()
-	<< ',' << oldMultiIndex.size() << ',' << activeMultiIndex.size() << ','
-	<< computedTrialSets.size() << ')' << std::endl;
+	<< ',' << old_mi.size() << ',' << active_mi.size() << ','
+	<< computed_trials.size() << ')' << std::endl;
 #endif // DEBUG
 }
 
@@ -248,6 +251,8 @@ void SparseGridDriver::
 add_active_neighbors(const UShortArray& set, bool frontier)
 {
   UShortArray trial_set = set;
+  UShortArraySet&    old_mi =    oldMultiIndex[activeKey];
+  UShortArraySet& active_mi = activeMultiIndex[activeKey];
   UShortArraySet::const_iterator cit;
   size_t i, j, num_v = set.size();
   for (i=0; i<num_v; ++i) {
@@ -256,21 +261,21 @@ add_active_neighbors(const UShortArray& set, bool frontier)
     unsigned short& trial_set_i = trial_set[i];
     ++trial_set_i;
     // if !frontier, then candidates could exist in oldMultiIndex
-    if (frontier || oldMultiIndex.find(trial_set) == oldMultiIndex.end()) {
+    if (frontier || old_mi.find(trial_set) == old_mi.end()) {
       // test all backwards neighbors for membership in set O (old)
       bool backward_old = true;
       for (j=0; j<num_v; ++j) {
 	unsigned short& trial_set_j = trial_set[j];
 	if (trial_set_j) { // if 0, then admissible by default
 	  --trial_set_j;
-	  cit = oldMultiIndex.find(trial_set);
+	  cit = old_mi.find(trial_set);
 	  ++trial_set_j; // restore
-	  if (cit == oldMultiIndex.end())
+	  if (cit == old_mi.end())
 	    { backward_old = false; break; }
 	}
       }
       if (backward_old) // std::set<> will discard any active duplicates
-	activeMultiIndex.insert(trial_set);
+	active_mi.insert(trial_set);
     }
     --trial_set_i; // restore
   }
