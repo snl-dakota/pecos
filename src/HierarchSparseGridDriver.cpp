@@ -38,6 +38,7 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 }
 
 
+/*
 void HierarchSparseGridDriver::store_grid(size_t index)
 {
   size_t stored_len = storedType1WeightSets.size();
@@ -123,32 +124,6 @@ void HierarchSparseGridDriver::clear_stored()
 }
 
 
-size_t HierarchSparseGridDriver::maximal_grid() const
-{
-  size_t i, j, k, num_stored = storedType1WeightSets.size(), max_index = _NPOS,
-    num_max_wts = 0, num_stored_wts, num_lev = type1WeightSets.size(), num_sets;
-  for (j=0; j<num_lev; ++j) {
-    const RealVectorArray& curr_wts_j = type1WeightSets[j];
-    num_sets = curr_wts_j.size();
-    for (k=0; k<num_sets; ++k)
-      num_max_wts += curr_wts_j[k].length();
-  }
-  for (i=0; i<num_stored; ++i) {
-    const RealVector2DArray& stored_wts = storedType1WeightSets[i];
-    num_lev = stored_wts.size(); num_stored_wts = 0;
-    for (j=0; j<num_lev; ++j) {
-      const RealVectorArray& stored_wts_j = stored_wts[j];
-      num_sets = stored_wts_j.size();
-      for (k=0; k<num_sets; ++k)
-	num_stored_wts += stored_wts_j[k].length();
-    }
-    if (num_stored_wts > num_max_wts)
-      { max_index = i; num_max_wts = num_stored_wts; }
-  }
-  return max_index;
-}
-
-
 void HierarchSparseGridDriver::swap_grid(size_t index)
 {
   std::swap(storedLevMultiIndex[index], smolyakMultiIndex);
@@ -158,15 +133,38 @@ void HierarchSparseGridDriver::swap_grid(size_t index)
   std::swap(storedType1WeightSets[index], type1WeightSets);
   std::swap(storedType2WeightSets[index], type2WeightSets);
 }
+*/
+
+
+const UShortArray& HierarchSparseGridDriver::maximal_grid() const
+{
+  std::map<UShortArray, RealVector2DArray>::iterator
+    w_it = type1WeightSets.begin(), max_it = w_it;
+  size_t num_lev, num_sets, num_wts, max_wts = 0;
+  for (; w_it!=type1WeightSets.end(); ++w_it) {
+    const RealVector2DArray& t1_wts = w_it->second;
+    num_lev = t1_wts.size(); num_wts = 0;
+    for (l=0; l<num_lev; ++l) {
+      const RealVectorArray& t1_wts_l = t1_wts[l];
+      num_sets = t1_wts_l.size();
+      for (s=0; s<num_sets; ++s)
+	num_wts += t1_wts_l[s].length();
+    }
+    if (num_wts > max_wts)
+      { max_wts = num_wts; max_it = w_it; }
+  }
+  return max_it->first;
+}
 
 
 int HierarchSparseGridDriver::grid_size()
 {
   if (updateGridSize) {
     numCollocPts = 0;
-    if (collocKey.size() == ssgLevel+1) { // collocKey already up to date
+    const UShort4DArray& colloc_key = collocKey[activeKey];
+    if (colloc_key.size() == ssgLevel+1) { // collocKey already up to date
       for (unsigned short i=0; i<=ssgLevel; ++i) {
-	const UShort3DArray& key_i = collocKey[i];
+	const UShort3DArray& key_i = colloc_key[i];
 	size_t j, num_sets = key_i.size();
 	for (j=0; j<num_sets; ++j)
 	  numCollocPts += key_i[j].size(); // hierarchical point increments
@@ -177,8 +175,9 @@ int HierarchSparseGridDriver::grid_size()
       // rather than full collocKey update, just sum grid sizes:
       UShortArray delta_sizes(numVars);
       unsigned short lev, set, num_sets;
+      const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
       for (lev=0; lev<=ssgLevel; ++lev) {
-	UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
+	const UShort2DArray& sm_mi_l = sm_mi[lev];
 	num_sets = sm_mi_l.size();
 	for (set=0; set<num_sets; ++set) {
 	  levels_to_delta_sizes(sm_mi_l[set], delta_sizes);
@@ -193,24 +192,13 @@ int HierarchSparseGridDriver::grid_size()
 }
 
 
-/*
-size_t HierarchSparseGridDriver::smolyak_size()
-{
-  size_t num_sm_mi = 0;
-  unsigned short i, num_lev = smolyakMultiIndex.size();
-  for (i=0; i<num_lev; ++i)
-    num_sm_mi += smolyakMultiIndex[i].size();
-  return num_sm_mi;
-}
-*/
-
-
 void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 {
-  if (clear_sm_mi)
-    smolyakMultiIndex.clear();
+  UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
+ 
+  if (clear_sm_mi) sm_mi.clear();
 
-  size_t prev_sm_len = smolyakMultiIndex.size();
+  size_t prev_sm_len = sm_mi.size();
   // anisotropic weight updates always accompanied by a level increment, so
   // we are already up to date for both iso and aniso cases if equal:
   if (prev_sm_len == ssgLevel+1)
@@ -233,11 +221,10 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
   // For anisotropic, a weighted linear index set constraint is used.
 
   size_t lev;
-  smolyakMultiIndex.resize(ssgLevel+1);
+  sm_mi.resize(ssgLevel+1);
   if (dimIsotropic)
     for (lev=prev_sm_len; lev<=ssgLevel; ++lev)
-      SharedPolyApproxData::total_order_multi_index(lev, numVars,
-						    smolyakMultiIndex[lev]);
+      SharedPolyApproxData::total_order_multi_index(lev, numVars, sm_mi[lev]);
   else { // utilize webbur::sandia_sgmga_vcn_ordered
 
     // With scaling alpha_min = 1: q_min < |alpha . j| <= q_max.
@@ -263,7 +250,7 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
       for (size_t i=0; i<numVars; ++i)
 	index_set[i] = (unsigned short)x[i];
       lev = l1_norm(index_set);
-      UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
+      UShort2DArray& sm_mi_l = sm_mi[lev];
       if (from_scratch ||
 	  std::find(sm_mi_l.begin(), sm_mi_l.end(), index_set) == sm_mi_l.end())
 	sm_mi_l.push_back(index_set);
@@ -276,10 +263,10 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
   PCout << "HierarchSparseGridDriver::update_smolyak_multi_index():\n";
   size_t set, num_sets;
   for (lev=0; lev<=ssgLevel; ++lev) {
-    num_sets = smolyakMultiIndex[lev].size();
+    num_sets = sm_mi[lev].size();
     for (set=0; set<num_sets; ++set)
       PCout << "Smolyak multi_index[" << lev << "][" << set << "]:\n"
-	    << smolyakMultiIndex[lev][set];
+	    << sm_mi[lev][set];
   }
 #endif // DEBUG
 }
@@ -287,16 +274,19 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 
 void HierarchSparseGridDriver::assign_collocation_key()
 {
-  if (collocKey.size() == ssgLevel+1)
+  UShort4DArray& colloc_key = collocKey[activeKey];
+
+  if (colloc_key.size() == ssgLevel+1)
     return;
 
-  collocKey.resize(ssgLevel+1);
+  colloc_key.resize(ssgLevel+1);
   if (nestedGrid) {
     size_t lev, set, num_sets;
     UShort2DArray delta_keys(numVars);
+    const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
     for (lev=0; lev<=ssgLevel; ++lev) {
-      const UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
-      UShort3DArray&         key_l = collocKey[lev];
+      const UShort2DArray& sm_mi_l = sm_mi[lev];
+      UShort3DArray&         key_l = colloc_key[lev];
       num_sets = sm_mi_l.size();
       key_l.resize(num_sets);
       for (set=0; set<num_sets; ++set) {
@@ -313,12 +303,12 @@ void HierarchSparseGridDriver::assign_collocation_key()
   PCout << "HierarchSparseGridDriver::assign_collocation_key():\n";
   size_t lev, set, pt, num_sets, num_tp_pts;
   for (lev=0; lev<=ssgLevel; ++lev) {
-    num_sets = collocKey[lev].size();
+    num_sets = colloc_key[lev].size();
     for (set=0; set<num_sets; ++set) {
-      num_tp_pts = collocKey[lev][set].size();
+      num_tp_pts = colloc_key[lev][set].size();
       for (pt=0; pt<num_tp_pts; ++pt)
 	PCout << "Collocation key[" << lev << "][" << set << "][" << pt
-	      << "]:\n" << collocKey[lev][set][pt];
+	      << "]:\n" << colloc_key[lev][set][pt];
     }
   }
 #endif // DEBUG
@@ -327,18 +317,21 @@ void HierarchSparseGridDriver::assign_collocation_key()
 
 void HierarchSparseGridDriver::update_collocation_key()
 {
-  size_t sm_mi_len = smolyakMultiIndex.size();
-  if (collocKey.size() < sm_mi_len)
-    collocKey.resize(sm_mi_len);
+  UShort4DArray&  colloc_key =         collocKey[activeKey];
+  const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
+
+  size_t sm_mi_len = sm_mi.size();
+  if (colloc_key.size() < sm_mi_len)
+    colloc_key.resize(sm_mi_len);
   UShort2DArray delta_keys(numVars), key_ls;
   if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
     levels_to_delta_keys(trial_set(), delta_keys);
 
-    UShort3DArray& key_l = collocKey[trialLevel];
+    UShort3DArray& key_l = colloc_key[trialLevel];
     size_t set = key_l.size();
     key_l.push_back(key_ls); // update in place
-    SharedPolyApproxData::hierarchical_tensor_product_multi_index(delta_keys,
-								  key_l[set]);
+    SharedPolyApproxData::
+      hierarchical_tensor_product_multi_index(delta_keys, key_l[set]);
 
 #ifdef DEBUG
     PCout << "HierarchSparseGridDriver::update_collocation_key():\n";
@@ -353,11 +346,11 @@ void HierarchSparseGridDriver::update_collocation_key()
     size_t lev, set, start_set, num_sets;
     incrementSets.resize(ssgLevel+1);
     for (lev=0; lev<=ssgLevel; ++lev)
-      incrementSets[lev] = collocKey[lev].size();
+      incrementSets[lev] = colloc_key[lev].size();
     // update collocKey to correspond to smolyakMultiIndex
     for (lev=0; lev<=ssgLevel; ++lev) {
-      UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
-      UShort3DArray&   key_l = collocKey[lev];
+      const UShort2DArray& sm_mi_l =      sm_mi[lev];
+      UShort3DArray&         key_l = colloc_key[lev];
       start_set = incrementSets[lev]; num_sets = sm_mi_l.size();
       for (set=start_set; set<num_sets; ++set) {
 	levels_to_delta_keys(sm_mi_l[set], delta_keys);
@@ -371,12 +364,12 @@ void HierarchSparseGridDriver::update_collocation_key()
     PCout << "HierarchSparseGridDriver::update_collocation_key():\n";
     size_t pt, num_tp_pts;
     for (lev=0; lev<=ssgLevel; ++lev) {
-      start_set = incrementSets[lev]; num_sets = collocKey[lev].size();
+      start_set = incrementSets[lev]; num_sets = colloc_key[lev].size();
       for (set=start_set; set<num_sets; ++set) {
-	num_tp_pts = collocKey[lev][set].size();
+	num_tp_pts = colloc_key[lev][set].size();
 	for (pt=0; pt<num_tp_pts; ++pt)
 	  PCout << "Collocation key[" << lev << "][" << set << "][" << pt
-		<< "]:\n" << collocKey[lev][set][pt];
+		<< "]:\n" << colloc_key[lev][set][pt];
       }
     }
 #endif // DEBUG
@@ -386,15 +379,17 @@ void HierarchSparseGridDriver::update_collocation_key()
 
 void HierarchSparseGridDriver::assign_collocation_indices()
 {
-  if (collocIndices.size() == ssgLevel+1)
+  Sizet3DArray& colloc_ind = collocIndices[activeKey];
+  if (colloc_ind.size() == ssgLevel+1)
     return;
 
-  collocIndices.resize(ssgLevel+1);
+  colloc_ind.resize(ssgLevel+1);
   size_t lev, set, pt, cntr = 0, num_sets, num_tp_pts;
+  const UShort4DArray& colloc_key = collocKey[activeKey];
   for (lev=0; lev<=ssgLevel; ++lev) {
-    const UShort3DArray& key_l = collocKey[lev];
+    const UShort3DArray& key_l = colloc_key[lev];
     num_sets = key_l.size();
-    Sizet2DArray& indices_l = collocIndices[lev];
+    Sizet2DArray& indices_l = colloc_ind[lev];
     indices_l.resize(num_sets);
     for (set=0; set<num_sets; ++set) {
       const UShort2DArray& key_ls = key_l[set];
@@ -411,10 +406,10 @@ void HierarchSparseGridDriver::assign_collocation_indices()
   PCout << "HierarchSparseGridDriver::assign_collocation_indices():\n"
 	<< "numCollocPts = " << numCollocPts << '\n';
   for (lev=0; lev<=ssgLevel; ++lev) {
-    num_sets = collocIndices[lev].size();
+    num_sets = colloc_ind[lev].size();
     for (set=0; set<num_sets; ++set)
       PCout << "Collocation indices[" << lev << "][" << set << "]:\n"
-	    << collocIndices[lev][set];
+	    << colloc_ind[lev][set];
   }
 #endif // DEBUG
 }
@@ -422,13 +417,15 @@ void HierarchSparseGridDriver::assign_collocation_indices()
 
 void HierarchSparseGridDriver::update_collocation_indices()
 {
-  size_t cntr = numCollocPts, num_lev = collocKey.size();
-  if (collocIndices.size() < num_lev)
-    collocIndices.resize(num_lev);
+  Sizet3DArray& colloc_ind = collocIndices[activeKey];
+  const UShort4DArray& colloc_key = collocKey[activeKey];
+  size_t cntr = numCollocPts, num_lev = colloc_key.size();
+  if (colloc_ind.size() < num_lev)
+    colloc_ind.resize(num_lev);
 
   if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
-    size_t pt, num_tp_pts = collocKey[trialLevel].back().size();
-    Sizet2DArray& indices_l = collocIndices[trialLevel];
+    size_t pt, num_tp_pts = colloc_key[trialLevel].back().size();
+    Sizet2DArray& indices_l = colloc_ind[trialLevel];
     SizetArray indices; indices_l.push_back(indices); // update in place
     SizetArray& trial_indices = indices_l.back();
     trial_indices.resize(num_tp_pts);
@@ -439,22 +436,23 @@ void HierarchSparseGridDriver::update_collocation_indices()
 #ifdef DEBUG
     PCout << "HierarchSparseGridDriver::update_collocation_indices():\n"
 	  << "numCollocPts = " << numCollocPts << '\n';
-    size_t set = collocIndices[trialLevel].size() - 1;
+    size_t set = colloc_ind[trialLevel].size() - 1;
     PCout << "Collocation indices[" << trialLevel << "][" << set << "]:\n"
 	  << trial_indices;
 #endif // DEBUG
   }
   else { // isotropic and anisotropic grid refinements
     size_t lev, set, start_set, num_sets, pt, num_tp_pts; SizetArray indices;
+    const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
     for (lev=0; lev<num_lev; ++lev) {
-      UShort2DArray&  sm_mi_l = smolyakMultiIndex[lev];
-      UShort3DArray&    key_l = collocKey[lev];
-      Sizet2DArray& indices_l = collocIndices[lev];
+      UShort2DArray&  sm_mi_l = sm_mi[lev];
+      UShort3DArray&    key_l = colloc_key[lev];
+      Sizet2DArray& indices_l = colloc_ind[lev];
       start_set = incrementSets[lev]; num_sets = sm_mi_l.size();
       for (set=start_set; set<num_sets; ++set) {
 	indices_l.push_back(indices); // update in place
 	SizetArray& trial_indices = indices_l.back();
-	num_tp_pts = collocKey[lev][set].size();
+	num_tp_pts = colloc_key[lev][set].size();
 	trial_indices.resize(num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
 	  trial_indices[pt] = cntr;
@@ -466,10 +464,10 @@ void HierarchSparseGridDriver::update_collocation_indices()
     PCout << "HierarchSparseGridDriver::update_collocation_indices():\n"
 	  << "numCollocPts = " << numCollocPts << '\n';
     for (lev=0; lev<=ssgLevel; ++lev) {
-      start_set = incrementSets[lev]; num_sets = collocIndices[lev].size();
+      start_set = incrementSets[lev]; num_sets = colloc_ind[lev].size();
       for (set=start_set; set<num_sets; ++set)
 	PCout << "Collocation indices[" << lev << "][" << set << "]:\n"
-	      << collocIndices[lev][set];
+	      << colloc_ind[lev][set];
     }
 #endif // DEBUG
   }
@@ -608,7 +606,8 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
   // computations are kept completely separate.
 
   if (nestedGrid) {
-    compute_points_weights(var_sets, type1WeightSets, type2WeightSets);
+    compute_points_weights(var_sets, type1WeightSets[activeKey],
+			   type2WeightSets[activeKey]);
     if (trackCollocIndices)
       assign_collocation_indices();
   }
@@ -620,13 +619,15 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
 
 #ifdef DEBUG
     PCout << "HierarchSparseGridDriver::compute_grid() results:\n"
-	  << "uniqueIndexMapping:\n" << uniqueIndexMapping << "\nvar_sets:\n";
+	  << "uniqueIndexMapping:\n" << uniqueIndexMapping[activeKey]
+	  << "\nvar_sets:\n";
     write_data(PCout, var_sets, false, true, true);
     if (trackUniqueProdWeights) {
-      PCout << "\ntype1WeightSets:\n"; write_data(PCout, type1WeightSets);
+      PCout << "\ntype1WeightSets:\n";
+      write_data(PCout, type1WeightSets[activeKey]);
       if (computeType2Weights) {
 	PCout << "\ntype2WeightSets:\n";
-	write_data(PCout, type2WeightSets, false, true, true);
+	write_data(PCout, type2WeightSets[activeKey], false, true, true);
       }
     }
 #endif
@@ -639,18 +640,17 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 {
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
-  computedTrialSets.insert(trial_set());
+  computedTrialSets[activeKey].insert(trial_set());
 
   // update collocKey and compute trial variable/weight sets
   update_collocation_key();
   if (nestedGrid) {
-    if (type1WeightSets.size() <= trialLevel ||
-	type2WeightSets.size() <= trialLevel) {
-      type1WeightSets.resize(trialLevel+1);
-      type2WeightSets.resize(trialLevel+1);
-    }
-    RealVectorArray& t1_wts_l = type1WeightSets[trialLevel];
-    RealMatrixArray& t2_wts_l = type2WeightSets[trialLevel];
+    RealVector2DArray& t1_wts = type1WeightSets[activeKey];
+    RealMatrix2DArray& t2_wts = type2WeightSets[activeKey];
+    if (t1_wts.size() <= trialLevel || t2_wts_wts.size() <= trialLevel)
+      { t1_wts.resize(trialLevel+1); t2_wts.resize(trialLevel+1); }
+    RealVectorArray& t1_wts_l = t1_wts[trialLevel];
+    RealMatrixArray& t2_wts_l = t2_wts[trialLevel];
     size_t set = t1_wts_l.size();
     RealVector t1_wts_ls; t1_wts_l.push_back(t1_wts_ls); // update in place
     RealMatrix t2_wts_ls; t2_wts_l.push_back(t2_wts_ls); // update in place
@@ -681,12 +681,16 @@ void HierarchSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
   update_collocation_key();
   size_t lev, set, num_lev = incrementSets.size(), num_sets;
   if (nestedGrid) {
-    if (type1WeightSets.size() < num_lev || type2WeightSets.size() < num_lev)
-      { type1WeightSets.resize(num_lev); type2WeightSets.resize(num_lev); }
+    RealVector2DArray& t1_wts = type1WeightSets[activeKey];
+    RealMatrix2DArray& t2_wts = type2WeightSets[activeKey];
+    if (t1_wts.size() < num_lev || t2_wts.size() < num_lev)
+      { t1_wts.resize(num_lev); t2_wts.resize(num_lev); }
     // compute total increment evaluations and size var_sets
     size_t num_colloc_pts = 0, start_set, cntr = 0, num_tp_pts;
+    const UShort4DArray& colloc_key = collocKey[activeKey];
+    const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
     for (lev=0; lev<num_lev; ++lev) {
-      const UShort3DArray& key_l = collocKey[lev];
+      const UShort3DArray& key_l = colloc_key[lev];
       start_set = incrementSets[lev]; num_sets = key_l.size();
       for (set=start_set; set<num_sets; ++set)
 	num_colloc_pts += key_l[set].size();
@@ -695,10 +699,10 @@ void HierarchSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
       var_sets.shapeUninitialized(numVars, num_colloc_pts);
     // update type1/2 weights and subset view of points
     for (lev=0; lev<num_lev; ++lev) {
-      const UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
-      const UShort3DArray&   key_l = collocKey[lev];
-      RealVectorArray&    t1_wts_l = type1WeightSets[lev];
-      RealMatrixArray&    t2_wts_l = type2WeightSets[lev];
+      const UShort2DArray& sm_mi_l = sm_mi[lev];
+      const UShort3DArray&   key_l = colloc_key[lev];
+      RealVectorArray&    t1_wts_l = t1_wts[lev];
+      RealMatrixArray&    t2_wts_l = t2_wts[lev];
       start_set = incrementSets[lev]; num_sets = sm_mi_l.size();
       for (set=start_set; set<num_sets; ++set) {
 	RealVector t1_wts_ls; t1_wts_l.push_back(t1_wts_ls); // update in place
@@ -780,8 +784,8 @@ void HierarchSparseGridDriver::
 compute_points_weights(RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts)
 {
   compute_points_weights(pts, t1_wts, t2_wts,
-			 smolyakMultiIndex[trialLevel].back(),
-			 collocKey[trialLevel].back());
+			 smolyakMultiIndex[activeKey][trialLevel].back(),
+			 collocKey[activeKey][trialLevel].back());
 }
 
 
@@ -791,13 +795,15 @@ void HierarchSparseGridDriver::
 compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
 		       RealMatrix2DArray& t2_wts)
 {
+  const UShort4DArray& colloc_key = collocKey[activeKey];
+  const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
   size_t i, j, cntr = 0, num_colloc_pts = 0, num_tp_pts,
-    num_lev = collocKey.size(), num_sets;
+    num_lev = colloc_key.size(), num_sets;
   if (t1_wts.size() != num_lev) t1_wts.resize(num_lev);
   if (t2_wts.size() != num_lev) t2_wts.resize(num_lev);
   // define num_colloc_pts
   for (i=0; i<num_lev; ++i) {
-    const UShort3DArray& key_i = collocKey[i];
+    const UShort3DArray& key_i = colloc_key[i];
     num_sets = key_i.size();
     if (t1_wts[i].size() != num_sets) t1_wts[i].resize(num_sets);
     if (t2_wts[i].size() != num_sets) t2_wts[i].resize(num_sets);
@@ -809,7 +815,7 @@ compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
 
   // define points and type 1/2 weights; weights are products of 1D weights
   for (i=0; i<num_lev; ++i) {
-    const UShort3DArray& key_i = collocKey[i];
+    const UShort3DArray& key_i = colloc_key[i];
     num_sets = key_i.size();
     for (j=0; j<num_sets; ++j) {
       const UShort2DArray& key_ij = key_i[j];
@@ -817,7 +823,7 @@ compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
       // take pts_ij sub-matrix view of full sample matrix pts
       RealMatrix pts_ij(Teuchos::View, pts, numVars, num_tp_pts, 0, cntr);
       compute_points_weights(pts_ij, t1_wts[i][j], t2_wts[i][j],
-			     smolyakMultiIndex[i][j], key_ij);
+			     sm_mi[i][j], key_ij);
       cntr += num_tp_pts;
     }
   }
@@ -827,19 +833,20 @@ compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
 void HierarchSparseGridDriver::initialize_sets()
 {
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
-  //oldMultiIndex = smolyakMultiIndex;
-  oldMultiIndex.clear();
+  const UShort2DArray&   sm_mi = smolyakMultiIndex[activeKey];
+  const UShortArraySet& old_mi = oldMultiIndex[activeKey];
+  //old_mi = sm_mi;
+  old_mi.clear();
   for (unsigned short lev=0; lev<=ssgLevel; ++lev)
-    oldMultiIndex.insert(smolyakMultiIndex[lev].begin(),
-			 smolyakMultiIndex[lev].end());
+    old_mi.insert(sm_mi[lev].begin(), sm_mi[lev].end());
 
   // computedTrialSets no longer cleared in finalize_sets(), so do on init
-  computedTrialSets.clear();
+  computedTrialSets[activeKey].clear();
 
   // compute initial set A (active) by applying add_active_neighbors()
   // to the frontier of smolyakMultiIndex:
   if (dimIsotropic) {
-    const UShort2DArray& sm_mi_l = smolyakMultiIndex[ssgLevel];
+    const UShort2DArray& sm_mi_l = sm_mi[ssgLevel];
     size_t i, num_old_sets = sm_mi_l.size();
     for (i=0; i<num_old_sets; ++i)
       add_active_neighbors(sm_mi_l[i], true); // on frontier
@@ -850,7 +857,7 @@ void HierarchSparseGridDriver::initialize_sets()
 
 #ifdef DEBUG
   PCout << "HierarchSparseGridDriver::initialize_sets():\nold sets:\n"
-	<< oldMultiIndex << "active sets:\n" << activeMultiIndex << std::endl;
+	<< old_mi << "active sets:\n" << activeMultiIndex[activeKey] << std::endl;
 #endif // DEBUG
 }
 
@@ -858,9 +865,10 @@ void HierarchSparseGridDriver::initialize_sets()
 void HierarchSparseGridDriver::push_trial_set(const UShortArray& set)
 {
   trialLevel = l1_norm(set);
-  if (smolyakMultiIndex.size() <= trialLevel)
-    smolyakMultiIndex.resize(trialLevel+1);
-  smolyakMultiIndex[trialLevel].push_back(set);
+  const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
+  if (sm_mi.size() <= trialLevel)
+    sm_mi.resize(trialLevel+1);
+  sm_mi[trialLevel].push_back(set);
 
   // collocKey, collocIndices, and uniqueIndexMapping updated within
   // either restore_set() or compute_trial_grid()
@@ -876,11 +884,13 @@ void HierarchSparseGridDriver::restore_set()
       update_collocation_indices();
     // This approach stores less history than WeightSetsRef approach
     const UShortArray& tr_set = trial_set();
-    type1WeightSets[trialLevel].push_back(poppedT1WtSets[tr_set]);
-    poppedT1WtSets.erase(tr_set);
+    std::map<UShortArray, RealVector>& pop_t1_wts = poppedT1WtSets[activeKey];
+    type1WeightSets[activeKey][trialLevel].push_back(pop_t1_wts[tr_set]);
+    pop_t1_wts.erase(tr_set);
     if (computeType2Weights) {
-      type2WeightSets[trialLevel].push_back(poppedT2WtSets[tr_set]);
-      poppedT2WtSets.erase(tr_set);
+      std::map<UShortArray, RealMatrix>& pop_t2_wts = poppedT2WtSets[activeKey];
+      type2WeightSets[activeKey][trialLevel].push_back(pop_t2_wts[tr_set]);
+      pop_t2_wts.erase(tr_set);
     }
   }
   /*
@@ -896,8 +906,11 @@ void HierarchSparseGridDriver::restore_set()
 
 void HierarchSparseGridDriver::pop_trial_set()
 {
+  UShort4DArray& colloc_key =         collocKey[activeKey];
+  UShort3DArray& sm_mi      = smolyakMultiIndex[activeKey];
+  Sizet3DArray&  colloc_ind =     collocIndices[activeKey];
   if (nestedGrid)
-    numCollocPts -= collocKey[trialLevel].back().size(); // subtract # trial pts
+    numCollocPts -= colloc_key[trialLevel].back().size();// subtract # trial pts
   /*
   else {
     numCollocPts -= numUnique2; // subtract number of trial points
@@ -907,17 +920,19 @@ void HierarchSparseGridDriver::pop_trial_set()
 
   // migrate weights from popped to active status
   const UShortArray& tr_set = trial_set(); // valid prior to smolyakMI pop
-  poppedT1WtSets[tr_set] = type1WeightSets[trialLevel].back();
-  type1WeightSets[trialLevel].pop_back();
+  RealVector2DArray& t1_wts = type1WeightSets[activeKey];
+  poppedT1WtSets[activeKey][tr_set] = t1_wts[trialLevel].back();
+  t1_wts[trialLevel].pop_back();
   if (computeType2Weights) {
-    poppedT2WtSets[tr_set] = type2WeightSets[trialLevel].back();
-    type2WeightSets[trialLevel].pop_back();
+    RealMatrix2DArray& t2_wts = type2WeightSets[activeKey];
+    poppedT2WtSets[activeKey][tr_set] = t2_wts[trialLevel].back();
+    t2_wts[trialLevel].pop_back();
   }
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
-  smolyakMultiIndex[trialLevel].pop_back(); // tr_set no longer valid
-  collocKey[trialLevel].pop_back();
+  sm_mi[trialLevel].pop_back(); // tr_set no longer valid
+  colloc_key[trialLevel].pop_back();
   if (trackCollocIndices)
-    collocIndices[trialLevel].pop_back();
+    colloc_ind[trialLevel].pop_back();
 }
 
 
@@ -936,18 +951,23 @@ void HierarchSparseGridDriver::merge_set()
 void HierarchSparseGridDriver::
 finalize_sets(bool output_sets, bool converged_within_tol)
 {
+  UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
+  std::map<UShortArray, RealVector>& pop_t1_wts = poppedT1WtSets[activeKey];
+  std::map<UShortArray, RealMatrix>::iterator t2_it;
+  if (computeType2Weights) pop2_it = poppedT2WtSets.find(activeKey);
+
   if (output_sets && converged_within_tol) {
-    size_t i, j, num_lev = smolyakMultiIndex.size();
+    size_t i, j, num_lev = sm_mi.size();
     PCout << "Above tolerance index sets:\n";
     for (i=0; i<num_lev; ++i) {
-      const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
+      const UShort2DArray& sm_mi_i = sm_mi[i];
       size_t num_sets = sm_mi_i.size();
       if (i==trialLevel) --num_sets; // omit trial set
       for (j=0; j<num_sets; ++j)
 	print_index_set(PCout, sm_mi_i[j]);
     }
     PCout << "Below tolerance index sets:\n";
-    print_index_set(PCout, smolyakMultiIndex[trialLevel].back());
+    print_index_set(PCout, sm_mi[trialLevel].back());
   }
 
   // For final answer, push all evaluated sets into old and clear active.
@@ -958,17 +978,18 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); use computedTrialSets
   if (nestedGrid) {
+    UShortArraySet& computed_trials = computedTrialSets[activeKey];
     UShortArraySet::iterator it;
-    for (it=computedTrialSets.begin(); it!=computedTrialSets.end(); ++it) {
+    for (it=computed_trials.begin(); it!=computed_trials.end(); ++it) {
       const UShortArray& tr_set = *it;
       trialLevel = l1_norm(tr_set);
-      smolyakMultiIndex[trialLevel].push_back(tr_set);
+      sm_mi[trialLevel].push_back(tr_set);
       update_collocation_key();       // update collocKey
       if (trackCollocIndices)
 	update_collocation_indices(); // update collocIndices and numCollocPts
-      type1WeightSets[trialLevel].push_back(poppedT1WtSets[tr_set]);
+      type1WeightSets[activeKey][trialLevel].push_back(pop_t1_wts[tr_set]);
       if (computeType2Weights)
-	type2WeightSets[trialLevel].push_back(poppedT2WtSets[tr_set]);
+	type2WeightSets[activeKey][trialLevel].push_back(*pop2_it[tr_set]);
       if (output_sets && converged_within_tol) // print trials below tol
 	print_index_set(PCout, tr_set);
     }
@@ -985,18 +1006,19 @@ finalize_sets(bool output_sets, bool converged_within_tol)
 
   if (output_sets && !converged_within_tol) { // print all together in order
     PCout << "Final index sets:\n";
-    size_t i, j, num_lev = smolyakMultiIndex.size();
+    size_t i, j, num_lev = sm_mi.size();
     for (i=0; i<num_lev; ++i) {
-      const UShort2DArray& sm_mi_i = smolyakMultiIndex[i];
+      const UShort2DArray& sm_mi_i = sm_mi[i];
       size_t num_sets = sm_mi_i.size();
       for (j=0; j<num_sets; ++j)
 	print_index_set(PCout, sm_mi_i[j]);
     }
   }
 
-  activeMultiIndex.clear(); poppedT1WtSets.clear(); poppedT2WtSets.clear();
+  activeMultiIndex[activeKey].clear();
+  pop_t1_wts.clear(); if (computeType2Weights) pop2_it->clear();
   // defer since needed for SharedPolyApproxData::finalization_index()
-  //computedTrialSets.clear();
+  //computed_trials.clear();
 }
 
 
@@ -1004,12 +1026,13 @@ void HierarchSparseGridDriver::
 partition_keys(UShort2DArray& reference_set_range,
 	       UShort2DArray& increment_set_range) const
 {
-  size_t lev, num_lev = smolyakMultiIndex.size(), num_sets;
+  const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
+  size_t lev, num_lev = sm_mi.size(), num_sets;
   reference_set_range.resize(num_lev); increment_set_range.resize(num_lev);
   for (lev=0; lev<num_lev; ++lev) {
     UShortArray&  ref_l = reference_set_range[lev];  ref_l.resize(2);
     UShortArray& incr_l = increment_set_range[lev]; incr_l.resize(2);
-    const UShort2DArray& sm_mi_l = smolyakMultiIndex[lev];
+    const UShort2DArray& sm_mi_l = sm_mi[lev];
     num_sets = sm_mi_l.size(); ref_l[0] = 0; incr_l[1] = num_sets;
     if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
       if (lev == trialLevel) ref_l[1] = incr_l[0] = num_sets - 1;
@@ -1032,18 +1055,20 @@ partition_keys(UShort3DArray& reference_pt_range,
     abort_handler(-1);
   }
 
-  size_t lev, num_lev = collocKey.size(), set, num_sets, num_tp_pts;
+  const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
+  const UShort4DArray& colloc_key = collocKey[activeKey];
+  size_t lev, num_lev = colloc_key.size(), set, num_sets, num_tp_pts;
   reference_pt_range.resize(num_lev); increment_pt_range.resize(num_lev);
   for (lev=0; lev<num_lev; ++lev) {
-    num_sets = collocKey[lev].size();
+    num_sets = colloc_key[lev].size();
     reference_pt_range[lev].resize(num_sets);
     increment_pt_range[lev].resize(num_sets);
     for (set=0; set<num_sets; ++set) {
-      const UShortArray& sm_mi_ls = smolyakMultiIndex[lev][set];
+      const UShortArray& sm_mi_ls = sm_mi[lev][set];
       UShortArray&  ref_ls = reference_pt_range[lev][set];
       UShortArray& incr_ls = increment_pt_range[lev][set];
       ref_ls.resize(2); incr_ls.resize(2);
-      num_tp_pts = collocKey[lev][set].size();
+      num_tp_pts = colloc_key[lev][set].size();
       ref_ls[0] = 0; incr_ls[1] = num_tp_pts;
       /*
       if (set == trial_set())
