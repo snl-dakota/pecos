@@ -74,11 +74,13 @@ protected:
 
   int min_coefficients() const;
 
+  /*
   void store_coefficients(size_t index = _NPOS);
   void restore_coefficients(size_t index = _NPOS);
   void swap_coefficients(size_t maximal_index);
   void remove_stored_coefficients(size_t index = _NPOS);
   void clear_stored();
+  */
 
   void combine_coefficients(size_t swap_index);
 
@@ -176,7 +178,10 @@ protected:
   //
 
   /// the coefficients of the expansion
-  RealVector expansionCoeffs;
+  std::map<UShortArray, RealVector> expansionCoeffs;
+  /// iterator pointing to active node in expansionCoeffs
+  std::map<UShortArray, RealVector>::iterator expCoeffsIter;
+
   /// the gradients of the expansion coefficients
   /** may be interpreted as either the gradients of the expansion
       coefficients or the coefficients of expansions for the response
@@ -184,14 +189,18 @@ protected:
       needed with respect to variables that do not appear in the
       expansion (e.g., with respect to design or epistemic variables
       for an expansion only over probabilistic variables). */
-  RealMatrix expansionCoeffGrads;
+  std::map<UShortArray, RealMatrix> expansionCoeffGrads;
+  /// iterator pointing to active node in expansionCoeffGrads
+  std::map<UShortArray, RealMatrix>::iterator expCoeffGradsIter;
 
+  /*
   /// copies of expansionCoeffs stored in store_coefficients() for use
   /// in combine_coefficients()
   RealVectorArray storedExpCoeffs;
   /// copies of expansionCoeffGrads stored in store_coefficients() for
   /// use in combine_coefficients()
   RealMatrixArray storedExpCoeffGrads;
+  */
 
   /// spectral coefficient decay rates estimated by LLS on log of
   /// univariate expansion coefficients
@@ -202,6 +211,9 @@ private:
   //
   //- Heading: Member functions
   //
+
+  /// assign expCoeff{s,Grads}Iter based on activeKey from sharedDataRep
+  void update_active_iterators();
 
   // apply normalization to std_coeffs to create normalized_coeffs
   void normalize(const RealVector& std_coeffs,
@@ -227,6 +239,15 @@ inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
 
 
+inline void OrthogPolyApproximation::update_active_iterators()
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  expCoeffsIter     =     expansionCoeffs.find(data_rep->activeKey);
+  expCoeffGradsIter = expansionCoeffGrads.find(data_rep->activeKey);
+}
+
+
 inline void OrthogPolyApproximation::compute_moments(bool full_stats)
 {
   // standard variables mode supports two expansion and four numerical moments
@@ -250,7 +271,7 @@ inline size_t OrthogPolyApproximation::expansion_terms() const
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  return data_rep->multiIndex.size();
+  return data_rep->expansion_terms();
 }
 
   
@@ -272,7 +293,7 @@ normalize(const RealVector& std_coeffs, RealVector& normalized_coeffs) const
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, num_mi = mi.size();
   if (normalized_coeffs.length() != num_mi)
     normalized_coeffs.sizeUninitialized(num_mi);
@@ -288,7 +309,7 @@ denormalize(const RealVector& normalized_coeffs, RealVector& std_coeffs) const
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, num_mi = mi.size();
   if (std_coeffs.length() != num_mi)
     std_coeffs.sizeUninitialized(num_mi);
@@ -301,22 +322,22 @@ denormalize(const RealVector& normalized_coeffs, RealVector& std_coeffs) const
 inline RealVector OrthogPolyApproximation::
 approximation_coefficients(bool normalized) const
 {
+  RealVector& exp_coeffs = expCoeffsIter->second;
   if (normalized) {
     RealVector normalized_coeffs;
-    normalize(expansionCoeffs, normalized_coeffs);
+    normalize(exp_coeffs, normalized_coeffs);
     return normalized_coeffs;
   }
   else
-    return RealVector(Teuchos::View, expansionCoeffs.values(),
-		      expansionCoeffs.length());
+    return RealVector(Teuchos::View, exp_coeffs.values(), exp_coeffs.length());
 }
 
 
 inline void OrthogPolyApproximation::
 approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 {
-  if (normalized) denormalize(approx_coeffs, expansionCoeffs);
-  else            expansionCoeffs = approx_coeffs;
+  if (normalized) denormalize(approx_coeffs, expCoeffsIter->second);
+  else            expCoeffsIter->second = approx_coeffs;
 
   // allocate arrays in support of external coefficient import (mirrors
   // allocate_arrays() except for redundant size_expansion())
@@ -328,7 +349,7 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 
 
 inline size_t OrthogPolyApproximation::sparsity() const
-{ return expansionCoeffs.length(); }
+{ return expCoeffsIter->second.length(); }
 
 
 inline void OrthogPolyApproximation::size_expansion()
@@ -337,13 +358,19 @@ inline void OrthogPolyApproximation::size_expansion()
 
 inline void OrthogPolyApproximation::size_expansion(size_t num_exp_terms)
 {
-  if (expansionCoeffFlag && expansionCoeffs.length() != num_exp_terms)
-    expansionCoeffs.sizeUninitialized(num_exp_terms);
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  if (expansionCoeffFlag) {
+    RealVector& exp_coeffs = expCoeffsIter->second;
+    if (exp_coeffs.length() != num_exp_terms)
+      exp_coeffs.sizeUninitialized(num_exp_terms);
+  }
   if (expansionCoeffGradFlag) {
     size_t num_deriv_vars = surrData.num_derivative_variables();
-    if (expansionCoeffGrads.numRows() != num_deriv_vars ||
-	expansionCoeffGrads.numCols() != num_exp_terms)
-      expansionCoeffGrads.shapeUninitialized(num_deriv_vars, num_exp_terms);
+    RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
+    if (exp_coeff_grads.numRows() != num_deriv_vars ||
+	exp_coeff_grads.numCols() != num_exp_terms)
+      exp_coeff_grads.shapeUninitialized(num_deriv_vars, num_exp_terms);
   }
 }
 
@@ -354,12 +381,14 @@ inline void OrthogPolyApproximation::resize_expansion()
 
 inline void OrthogPolyApproximation::resize_expansion(size_t num_exp_terms)
 {
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
   if (expansionCoeffFlag)
-    expansionCoeffs.resize(num_exp_terms); // new terms initialized to 0
+    expCoeffsIter->second.resize(num_exp_terms); // new terms initialized to 0
   if (expansionCoeffGradFlag) {
     size_t num_deriv_vars = expansionCoeffGrads.numRows();
-    expansionCoeffGrads.reshape(num_deriv_vars, num_exp_terms);
-    // new terms initialized to 0
+    expCoeffGradsIter->
+      second.reshape(num_deriv_vars, num_exp_terms);    // new terms init to 0
   }
 }
 

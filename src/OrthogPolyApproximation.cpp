@@ -28,6 +28,8 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
+  update_active_iterators();
+
   // expansion formulation has been defined in Shared*OrthogPolyApproxData::
   // allocate_data(), and its results are employed below
 
@@ -43,6 +45,7 @@ void OrthogPolyApproximation::allocate_arrays()
 }
 
 
+/*
 void OrthogPolyApproximation::store_coefficients(size_t index)
 {
   // mirror changes to origSurrData for deep copied surrData
@@ -148,23 +151,24 @@ void OrthogPolyApproximation::swap_coefficients(size_t maximal_index)
     storedExpCoeffGrads[maximal_index] = tmp_mat;
   }
 }
+*/
 
 
-void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
+void OrthogPolyApproximation::
+combine_coefficients(const UShortArray& maximal_key)
 {
   // Combine the data stored previously by store_coefficients()
 
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  if (maximal_index != _NPOS) {
-    swap_coefficients(maximal_index);
-    allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
-  }
+  update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
+  allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  size_t i, num_stored = storedExpCoeffs.size();
+  std::map<UShortArray, RealVector>::iterator ec_it;
+  std::map<UShortArray, RealMatrix>::iterator ecg_it;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
@@ -178,16 +182,29 @@ void OrthogPolyApproximation::combine_coefficients(size_t maximal_index)
     // resize expansion{Coeffs,CoeffGrads} based on updated multiIndex
     resize_expansion();
     // update expansion{Coeffs,CoeffGrads}
-    for (i=0; i<num_stored; ++i)
-      overlay_expansion(data_rep->combinedMultiIndexMap[i], storedExpCoeffs[i],
-			storedExpCoeffGrads[i], 1);
+
+    size_t cntr = 0;
+    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
+    for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
+	 ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
+	 ++ec_it, ++ecg_it)
+      if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter) {
+	overlay_expansion(combined_mi_map[cntr], ec_it->second,
+			  ecg_it->second, 1);
+	++cntr;
+      }
     break;
   }
   case MULT_COMBINE: {
     // perform the multiplication of current and stored expansions
-    for (i=0; i<num_stored; ++i)
-      multiply_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
-			 storedExpCoeffGrads[i], data_rep->combinedMultiIndex);
+    const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
+    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
+    for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
+	 ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
+	 ++ec_it, ++ecg_it, ++mi_cit)
+      if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter)
+	multiply_expansion(mi_cit->second, ec_it->second, ecg_it->second,
+			   data_rep->combinedMultiIndex);
     break;
   }
   case ADD_MULT_COMBINE:
@@ -212,17 +229,19 @@ overlay_expansion(const SizetArray& multi_index_map,
 		  const RealVector& exp_coeffs, const RealMatrix& exp_grads,
 		  int coeff)
 {
+  RealVector& exp_coeffs_sum = *expCoeffsIter;
+  RealMatrix& exp_grads_sum  = *expCoeffGradsIter;
   size_t i, j, index, num_terms = multi_index_map.size(), 
-    num_deriv_vars = expansionCoeffGrads.numRows();
+    num_deriv_vars = exp_grads_sum.numRows();
   for (i=0; i<num_terms; ++i) {
     index = multi_index_map[i];
     if (expansionCoeffFlag)
-      expansionCoeffs[index] += coeff * exp_coeffs[i];
+      exp_coeffs_sum[index] += coeff * exp_coeffs[i];
     if (expansionCoeffGradFlag) {
-      Real*       exp_grad_ndx = expansionCoeffGrads[index];
-      const Real* grad_i       = exp_grads[i];
+      Real* exp_grad_sum_i = exp_grads_sum[index];
+      const Real* grad_i   = exp_grads[i];
       for (j=0; j<num_deriv_vars; ++j)
-	exp_grad_ndx[j] += coeff * grad_i[j];
+	exp_grad_sum_i[j] += coeff * grad_i[j];
     }
   }
 }
@@ -237,11 +256,11 @@ multiply_expansion(const UShort2DArray& multi_index_b,
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
 
-  const UShort2DArray& multi_index_a = data_rep->multiIndex;
-  RealVector exp_coeffs_a = expansionCoeffs; // copy (both expConfigOptions)
+  const UShort2DArray& multi_index_a = data_rep->multi_index();
+  RealVector exp_coeffs_a = *expCoeffsIter; // copy (both expConfigOptions)
   RealMatrix exp_grads_a;
   if (expansionCoeffGradFlag)
-    exp_grads_a = expansionCoeffGrads;       // copy (CoeffGrads only)
+    exp_grads_a = *expCoeffGradsIter;       // copy (CoeffGrads only)
   size_t i, j, k, v, num_v = sharedDataRep->numVars,
     num_a = multi_index_a.size(), num_b = multi_index_b.size(),
     num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
@@ -273,10 +292,10 @@ multiply_expansion(const UShort2DArray& multi_index_b,
   // For c = a * b, compute coefficient of product expansion as:
   // \Sum_k c_k \Psi_k = \Sum_i \Sum_j a_i b_j \Psi_i \Psi_j
   //    c_k <\Psi_k^2> = \Sum_i \Sum_j a_i b_j <\Psi_i \Psi_j \Psi_k>
-  if (expansionCoeffFlag)
-    expansionCoeffs.size(num_c);                      // init to 0
-  if (expansionCoeffGradFlag)
-    expansionCoeffGrads.shape(num_deriv_vars, num_c); // init to 0
+  RealVector& exp_coeffs_c = *expCoeffsIter;
+  RealMatrix& exp_grads_c  = *expCoeffGradsIter;
+  if (expansionCoeffFlag)     exp_coeffs_c.size(num_c);            // init to 0
+  if (expansionCoeffGradFlag) exp_grads_c.shape(num_deriv_vars, num_c); // init
   Real trip_prod, trip_prod_v, norm_sq_k; bool non_zero;
   for (k=0; k<num_c; ++k) {
     for (i=0; i<num_a; ++i) {
@@ -292,20 +311,20 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 	}
 	if (non_zero) {
 	  if (expansionCoeffFlag)
-	    expansionCoeffs[k] += exp_coeffs_a[i] * exp_coeffs_b[j] * trip_prod;
+	    exp_coeffs_c[k] += exp_coeffs_a[i] * exp_coeffs_b[j] * trip_prod;
 	  if (expansionCoeffGradFlag)
 	    for (v=0; v<num_deriv_vars; ++v)
-	      expansionCoeffGrads(v,k) += (exp_coeffs_a[i] * exp_grads_b(v,j)
+	      exp_grads_c(v,k) += (exp_coeffs_a[i] * exp_grads_b(v,j)
 		+ exp_coeffs_b[j] * exp_grads_a(v,i)) * trip_prod;
 	}
       }
     }
     norm_sq_k = data_rep->norm_squared(multi_index_c[k]);
     if (expansionCoeffFlag)
-      expansionCoeffs[k] /= norm_sq_k;
+      exp_coeffs_c[k] /= norm_sq_k;
     if (expansionCoeffGradFlag)
       for (v=0; v<num_deriv_vars; ++v)
-	expansionCoeffGrads(v,k) /= norm_sq_k;
+	exp_grads_c(v,k) /= norm_sq_k;
   }
 }
 
@@ -326,7 +345,7 @@ Real OrthogPolyApproximation::value(const RealVector& x)
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   Real approx_val = 0.;
   size_t i, num_exp_terms = mi.size();
   for (i=0; i<num_exp_terms; ++i)
@@ -337,30 +356,30 @@ Real OrthogPolyApproximation::value(const RealVector& x)
 
 
 void OrthogPolyApproximation::
-basis_value(const RealVector& x, std::vector<BasisPolynomial> &polynomial_basis,
-	    const UShort2DArray &multi_index, RealVector &basis_values)
+basis_value(const RealVector& x, std::vector<BasisPolynomial>& polynomial_basis,
+	    const UShort2DArray& multi_index, RealVector& basis_values)
 {
   size_t i, num_exp_terms = multi_index.size();
   for (i=0; i<num_exp_terms; ++i)
-    basis_values[i] = 
-      SharedOrthogPolyApproxData::multivariate_polynomial(x, multi_index[i],
-							  polynomial_basis);
+    basis_values[i] = SharedOrthogPolyApproxData::
+      multivariate_polynomial(x, multi_index[i], polynomial_basis);
 }
 
 
 void OrthogPolyApproximation::
-basis_matrix(const RealMatrix& x, RealMatrix &basis_values){
+basis_matrix(const RealMatrix& x, RealMatrix &basis_values)
+{
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  basis_matrix(x,data_rep->polynomialBasis,data_rep->multiIndex,
+  basis_matrix(x, data_rep->polynomialBasis, data_rep->multi_index(),
 	       basis_values);
 }
 
 
 void OrthogPolyApproximation::
 basis_matrix(const RealMatrix& x,
-	     std::vector<BasisPolynomial> &polynomial_basis,
-	     const UShort2DArray &multi_index, RealMatrix &basis_values)
+	     std::vector<BasisPolynomial>& polynomial_basis,
+	     const UShort2DArray& multi_index, RealMatrix& basis_values)
 {
   size_t i, j, num_exp_terms = multi_index.size(), num_samples = x.numCols(),
     num_vars = x.numRows();
@@ -368,10 +387,8 @@ basis_matrix(const RealMatrix& x,
   for (j=0; j<num_exp_terms; ++j){
     for (i=0; i<num_samples; ++i){
       RealVector sample( Teuchos::View, const_cast<double*>(x[i]), num_vars);
-      basis_values(i,j) = 
-	SharedOrthogPolyApproxData::multivariate_polynomial(sample, 
-							    multi_index[j],
-							    polynomial_basis);
+      basis_values(i,j) = SharedOrthogPolyApproxData::
+	multivariate_polynomial(sample, multi_index[j], polynomial_basis);
     }
   }
 }
@@ -392,7 +409,7 @@ gradient_basis_variables(const RealVector& x)
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   if (approxGradient.length() != num_v)
     approxGradient.size(num_v); // init to 0
@@ -423,7 +440,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_deriv_vars = dvv.size(), num_exp_terms = mi.size();
   if (approxGradient.length() != num_deriv_vars)
     approxGradient.size(num_deriv_vars); // init to 0
@@ -454,7 +471,7 @@ gradient_nonbasis_variables(const RealVector& x)
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows(),
     num_exp_terms = mi.size();
   if (approxGradient.length() != num_deriv_vars)
@@ -485,7 +502,7 @@ hessian_basis_variables(const RealVector& x)
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, row, col, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   if (approxHessian.numRows() != num_v)
     approxHessian.shape(num_v); // init to 0
@@ -646,7 +663,7 @@ Real OrthogPolyApproximation::mean(const RealVector& x)
     return expansionMoments[0];
 
   Real mean = expansionCoeffs[0];
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, num_exp_terms = mi.size();
   for (i=1; i<num_exp_terms; ++i)
     // expectations are zero for expansion terms with nonzero random indices
@@ -718,7 +735,7 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
        data_rep->match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
     return meanGradient;
 
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, deriv_index, num_deriv_vars = dvv.size(),
     num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
@@ -796,7 +813,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   if (same && std_mode && (computedVariance & 1))
     return expansionMoments[1];
   else {
-    const UShort2DArray& mi = data_rep->multiIndex;
+    const UShort2DArray& mi = data_rep->multi_index();
     size_t i, num_exp_terms = mi.size();
     const RealVector& exp_coeffs_2 = opa_2->expansionCoeffs;
     Real covar = 0.;
@@ -831,7 +848,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     return expansionMoments[1];
 
   const RealVector& exp_coeffs_2 = opa_2->expansionCoeffs;
-  const UShort2DArray&    mi = data_rep->multiIndex;
+  const UShort2DArray&    mi = data_rep->multi_index();
   const SizetList&  rand_ind = data_rep->randomIndices;
   const SizetList& nrand_ind = data_rep->nonRandomIndices;
   size_t i1, i2, num_mi = mi.size();
@@ -888,7 +905,7 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
   if (std_mode && (computedVariance & 2))
     return varianceGradient;
 
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_deriv_vars = expansionCoeffGrads.numRows(),
     num_exp_terms = mi.size();
   if (varianceGradient.length() != num_deriv_vars)
@@ -931,7 +948,7 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
        data_rep->match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
     return varianceGradient;
 
-  const UShort2DArray&   mi = data_rep->multiIndex;
+  const UShort2DArray&   mi = data_rep->multi_index();
   const SizetList& rand_ind = data_rep->randomIndices;
   size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
     num_exp_terms = mi.size(),
@@ -1022,7 +1039,7 @@ void OrthogPolyApproximation::compute_component_sobol()
   // is the desired reference pt for type-agnostic global sensitivity analysis.
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   const BitArrayULongMap& index_map = data_rep->sobolIndexMap;
   size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   Real p_var, sum_p_var = 0.;
@@ -1061,7 +1078,7 @@ void OrthogPolyApproximation::compute_total_sobol()
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   size_t k, num_v = sharedDataRep->numVars;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   if (data_rep->expConfigOptions.vbdOrderLimit) {
     // all component indices may not be available, so compute total indices
     // from scratch by computing and summing variance contributions for each
@@ -1108,7 +1125,7 @@ const RealVector& OrthogPolyApproximation::dimension_decay_rates()
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_exp_terms = mi.size(),
     num_v = sharedDataRep->numVars;
   if (decayRates.empty())
@@ -1220,7 +1237,7 @@ print_coefficients(std::ostream& s, bool normalized)
   // terms and term identifiers
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   char tag[10];
   for (i=0; i<num_exp_terms; ++i) {
@@ -1245,7 +1262,7 @@ coefficient_labels(std::vector<std::string>& coeff_labels) const
   // terms and term identifiers
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multiIndex;
+  const UShort2DArray& mi = data_rep->multi_index();
   size_t i, j, num_exp_terms = mi.size(), num_v = sharedDataRep->numVars;
   coeff_labels.reserve(num_exp_terms);
   char tag[10];

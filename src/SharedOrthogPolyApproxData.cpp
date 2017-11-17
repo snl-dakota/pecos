@@ -395,7 +395,7 @@ const UShortArray& SharedOrthogPolyApproxData::pre_combine_data()
     combinedMultiIndexMap.resize(num_combine);
     UShort2DArray& active_mi = multiIndex[activeKey];
     std::map<UShortArray, UShort2DArray>::iterator mi_it;
-    for (mi_it = multiIndex.begin(); mi_it != multiIndex.begin(); ++mi_it)
+    for (mi_it = multiIndex.begin(); mi_it != multiIndex.end(); ++mi_it)
       if (mi_it->first != activeKey) {
 	append_multi_index(mi_it->second, active_mi,
 			   combinedMultiIndexMap[cntr], combine_mi_map_ref);

@@ -1074,13 +1074,17 @@ inline size_t SurrogateData::assign_anchor_index()
 {
   std::map<UShortArray, size_t>::iterator anchor_it
     = anchorIndex.find(activeKey);
+  size_t index;
   if (anchor_it == anchorIndex.end()) { // no anchor defined
-    size_t index = sdv_array.size();
+    index = sdv_array.size();
     anchorIndex[activeKey] = index;
-    return index;
   }
-  else
-    return anchor_it->second;
+  else {
+    index = anchor_it->second;
+    if (index == _NPOS)
+      anchor_it->second = index = sdv_array.size();
+  }
+  return index;
 }
 
 

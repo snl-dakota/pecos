@@ -36,16 +36,15 @@ void PolynomialApproximation::compute_coefficients(size_t index)
   synchronize_surrogate_data(index);
 
   // For testing of anchor point logic:
-  //surrData.assign_anchor_index(0); // treat 1st SDV,SDR as anchor point
+  //surrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
 
   // anchor point, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
   //   SAMPLING:   treat it as another data point
   //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
   //   LEAST_SQ_REGRESSION: use equality-constrained least squares
-  size_t num_total_pts = surrData.points();
-  if (!num_total_pts) {
-    PCerr << "Error: nonzero number of sample points required in OrthogPoly"
+  if (!surrData.points()) {
+    PCerr << "Error: nonzero number of sample points required in Polynomia"
 	  << "Approximation::compute_coefficients()." << std::endl;
     abort_handler(-1);
   }
