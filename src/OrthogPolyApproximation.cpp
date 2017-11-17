@@ -329,32 +329,6 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 }
 
 
-Real OrthogPolyApproximation::value(const RealVector& x)
-{
-  // Error check for required data
-  if (!expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in "
-	  << "OrthogPolyApproximation::value()" << std::endl;
-    abort_handler(-1);
-  }
-
-  // Implement value caching here:
-  // > sweep over multiIndex to find max orders per dim
-  // > pre-compute for x along each dimension
-  // > loop over num_exp_terms with fast lookups
-
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& mi = data_rep->multi_index();
-  Real approx_val = 0.;
-  size_t i, num_exp_terms = mi.size();
-  for (i=0; i<num_exp_terms; ++i)
-    approx_val += expansionCoeffs[i] *
-      data_rep->multivariate_polynomial(x, mi[i]);
-  return approx_val;
-}
-
-
 void OrthogPolyApproximation::
 basis_value(const RealVector& x, std::vector<BasisPolynomial>& polynomial_basis,
 	    const UShort2DArray& multi_index, RealVector& basis_values)
@@ -394,6 +368,32 @@ basis_matrix(const RealMatrix& x,
 }
 
 
+Real OrthogPolyApproximation::value(const RealVector& x)
+{
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "OrthogPolyApproximation::value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // Implement value caching here:
+  // > sweep over multiIndex to find max orders per dim
+  // > pre-compute for x along each dimension
+  // > loop over num_exp_terms with fast lookups
+
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShort2DArray& mi = data_rep->multi_index();
+  Real approx_val = 0.;
+  size_t i, num_exp_terms = mi.size();
+  RealVector& exp_coeffs = *expCoeffsIter;
+  for (i=0; i<num_exp_terms; ++i)
+    approx_val += exp_coeffs[i] * data_rep->multivariate_polynomial(x, mi[i]);
+  return approx_val;
+}
+
+
 const RealVector& OrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
@@ -417,10 +417,11 @@ gradient_basis_variables(const RealVector& x)
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
+  RealVector& exp_coeffs = *expCoeffsIter;
   for (i=0; i<num_exp_terms; ++i) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[i]);
-    Real& coeff_i = expansionCoeffs[i];
+    Real& coeff_i = exp_coeffs[i];
     for (j=0; j<num_v; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
   }
@@ -448,10 +449,11 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
+  RealVector& exp_coeffs = *expCoeffsIter;
   for (i=0; i<num_exp_terms; ++i) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[i], dvv);
-    Real& coeff_i = expansionCoeffs[i];
+    Real& coeff_i = exp_coeffs[i];
     for (j=0; j<num_deriv_vars; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
   }
@@ -480,11 +482,12 @@ gradient_nonbasis_variables(const RealVector& x)
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
+  RealMatrix& exp_grads = *expCoeffGradsIter;
   for (i=0; i<num_exp_terms; ++i) {
     Real term_i = data_rep->multivariate_polynomial(x, mi[i]);
-    const Real* exp_coeff_grad_i = expansionCoeffGrads[i];
+    const Real* exp_grad_i = exp_grads[i];
     for (j=0; j<num_deriv_vars; ++j)
-      approxGradient[j] += exp_coeff_grad_i[j] * term_i;
+      approxGradient[j] += exp_grad_i[j] * term_i;
   }
   return approxGradient;
 }
@@ -510,10 +513,11 @@ hessian_basis_variables(const RealVector& x)
     approxHessian = 0.;
 
   // sum expansion to get response hessian prediction
+  RealVector& exp_coeffs = *expCoeffsIter;
   for (i=0; i<num_exp_terms; ++i) {
     const RealSymMatrix& term_i_hess
       = data_rep->multivariate_polynomial_hessian_matrix(x, mi[i]);
-    Real& coeff_i = expansionCoeffs[i];
+    Real& coeff_i = exp_coeffs[i];
     for (row=0; row<num_v; ++row)
       for (col=0; col<=row; ++col)
         approxHessian(row,col) += coeff_i * term_i_hess(row,col);
@@ -529,41 +533,40 @@ hessian_basis_variables(const RealVector& x)
 }
 
 
-Real OrthogPolyApproximation::stored_value(const RealVector& x, size_t index)
+Real OrthogPolyApproximation::
+stored_value(const RealVector& x, const UShortArray& key)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
-  const RealVector& stored_coeffs = storedExpCoeffs[index];
+  const UShort2DArray& mi = data_rep->multiIndex[key];
+  const RealVector& exp_coeffs = expansionCoeffs[key];
 
   // Error check for required data
-  size_t i, num_stored_terms = stored_mi.size();
-  if (!num_stored_terms || stored_coeffs.length() != num_stored_terms) {
+  size_t i, num_terms = mi.size();
+  if (!num_terms || exp_coeffs.length() != num_terms) {
     PCerr << "Error: stored expansion coefficients not available in "
 	  << "OrthogPolyApproximation::stored_value()" << std::endl;
     abort_handler(-1);
   }
 
   Real approx_val = 0.;
-  for (size_t i=0; i<num_stored_terms; ++i)
-    approx_val += stored_coeffs[i] *
-      data_rep->multivariate_polynomial(x, stored_mi[i]);
+  for (size_t i=0; i<num_terms; ++i)
+    approx_val += exp_coeffs[i] * data_rep->multivariate_polynomial(x, mi[i]);
   return approx_val;
 }
 
 
 const RealVector& OrthogPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x, size_t index)
+stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
-  const RealVector& stored_coeffs = storedExpCoeffs[index];
+  const UShort2DArray& mi = data_rep->multiIndex[key];
+  const RealVector& exp_coeffs = expansionCoeffs[key];
 
   // Error check for required data
-  size_t i, j, num_stored_terms = stored_mi.size(),
-    num_v = sharedDataRep->numVars;
-  if (!num_stored_terms || stored_coeffs.length() != num_stored_terms) {
+  size_t i, j, num_terms = mi.size(), num_v = sharedDataRep->numVars;
+  if (!num_terms || exp_coeffs.length() != num_terms) {
     PCerr << "Error: stored expansion coefficients not available in OrthogPoly"
 	  << "Approximation::stored_gradient_basis_variables()" << std::endl;
     abort_handler(-1);
@@ -575,10 +578,10 @@ stored_gradient_basis_variables(const RealVector& x, size_t index)
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  for (i=0; i<num_stored_terms; ++i) {
+  for (i=0; i<num_terms; ++i) {
     const RealVector& term_i_grad
-      = data_rep->multivariate_polynomial_gradient_vector(x, stored_mi[i]);
-    Real coeff_i = stored_coeffs[i];
+      = data_rep->multivariate_polynomial_gradient_vector(x, mi[i]);
+    Real coeff_i = exp_coeffs[i];
     for (j=0; j<num_v; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
   }
@@ -587,17 +590,16 @@ stored_gradient_basis_variables(const RealVector& x, size_t index)
 
 
 const RealVector& OrthogPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x, size_t index)
+stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& stored_mi = data_rep->storedMultiIndex[index];
-  const RealMatrix& stored_grads = storedExpCoeffGrads[index];
+  const UShort2DArray& mi = data_rep->multiIndex[key];
+  const RealMatrix& exp_grads = expansionCoeffGrads[key];
 
   // Error check for required data
-  size_t i, j, num_stored_terms = stored_mi.size(),
-    num_deriv_vars = stored_grads.numRows();
-  if (!num_stored_terms || stored_grads.numCols() != num_stored_terms) {
+  size_t i, j, num_terms = mi.size(), num_deriv_vars = exp_grads.numRows();
+  if (!num_terms || exp_grads.numCols() != num_terms) {
     PCerr << "Error: stored expansion coeff grads not available in OrthogPoly"
 	  << "Approximation::stored_gradient_nonbasis_variables()" << std::endl;
     abort_handler(-1);
@@ -609,11 +611,11 @@ stored_gradient_nonbasis_variables(const RealVector& x, size_t index)
     approxGradient = 0.;
 
   // sum expansion to get response gradient prediction
-  for (i=0; i<num_stored_terms; ++i) {
-    Real term_i = data_rep->multivariate_polynomial(x, stored_mi[i]);
-    const Real* stored_grad_i = stored_grads[i];
+  for (i=0; i<num_terms; ++i) {
+    Real term_i = data_rep->multivariate_polynomial(x, mi[i]);
+    const Real* exp_grad_i = exp_grads[i];
     for (j=0; j<num_deriv_vars; ++j)
-      approxGradient[j] += stored_grad_i[j] * term_i;
+      approxGradient[j] += exp_grad_i[j] * term_i;
   }
   return approxGradient;
 }
