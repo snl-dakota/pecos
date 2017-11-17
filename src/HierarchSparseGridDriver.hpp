@@ -204,7 +204,7 @@ private:
   std::map<UShortArray, UShort4DArray> collocKey;
   /// levels-by-index sets-by-numTensorProductPts array for linking the
   /// set of tensor products to the unique collocation points evaluated
-  Sizet3DArray collocIndices;
+  std::map<UShortArray, Sizet3DArray> collocIndices;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid

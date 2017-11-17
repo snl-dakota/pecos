@@ -80,6 +80,9 @@ private:
   //- Heading: Member functions
   //
 
+  /// perform sanity checks prior to numerical integration
+  void integration_checks();
+
   /// initialize multi_index using a sparse grid expansion
   void sparse_grid_multi_index(UShort2DArray& multi_index);
   // initialize tp_multi_index from tpMultiIndexMap

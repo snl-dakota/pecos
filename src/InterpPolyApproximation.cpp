@@ -50,15 +50,14 @@ void InterpPolyApproximation::test_interpolation()
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
-    size_t i, index = 0, offset = (surrData.anchor()) ? 1 : 0,
-      w7 = WRITE_PRECISION+7, num_v = sharedDataRep->numVars,
-      num_colloc_pts = surrData.points() + offset;
+    size_t i, index = 0, num_colloc_pts = surrData.points(),
+      num_v = sharedDataRep->numVars, w7 = WRITE_PRECISION+7;
     Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
       val_rmse = 0., grad_rmse = 0.;
     PCout << std::scientific << std::setprecision(WRITE_PRECISION);
-    for (i=offset; i<num_colloc_pts; ++i, ++index) {
+    for (i=0; i<num_colloc_pts; ++i, ++index) {
       const RealVector& c_vars = surrData.continuous_variables(index);
-      Real      resp_fn = surrData.response_function(index);
+      Real resp_fn = surrData.response_function(index);
       interp_val = value(c_vars);
       err = (std::abs(resp_fn) > DBL_MIN) ? std::abs(1. - interp_val/resp_fn) :
 	                                    std::abs(resp_fn - interp_val);
@@ -84,11 +83,11 @@ void InterpPolyApproximation::test_interpolation()
 	}
       }
     }
-    val_rmse = std::sqrt(val_rmse/(num_colloc_pts-offset));
+    val_rmse = std::sqrt(val_rmse/num_colloc_pts);
     PCout << "\nValue interpolation errors:    " << std::setw(w7) << val_max_err
 	  << " (max) " << std::setw(w7) << val_rmse << " (RMS)\n";
     if (use_derivs) {
-      grad_rmse = std::sqrt(grad_rmse/(num_colloc_pts-offset)/num_v);
+      grad_rmse = std::sqrt(grad_rmse/num_colloc_pts/num_v);
       PCout << "Gradient interpolation errors: " << std::setw(w7)
 	    << grad_max_err << " (max) " << std::setw(w7) << grad_rmse
 	    << " (RMS)\n";

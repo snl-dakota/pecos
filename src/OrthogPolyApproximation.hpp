@@ -167,9 +167,6 @@ protected:
   void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,
 		     bool& add_val, bool& add_grad);
 
-  /// perform sanity checks prior to numerical integration
-  void integration_checks();
-
   /// utility function for solving the least squares estimation of decay rates
   void solve_decay_rates(RealVectorArray& A_vectors, RealVectorArray& b_vectors,
 			 UShortArray& max_orders);

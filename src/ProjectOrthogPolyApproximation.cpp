@@ -54,6 +54,33 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
 }
 
 
+void ProjectOrthogPolyApproximation::integration_checks()
+{
+  if (surrData.anchor()) {
+    PCerr << "Error: anchor point not supported for numerical integration in "
+	  << "ProjectOrthogPolyApproximation." << std::endl;
+    abort_handler(-1);
+  }
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  IntegrationDriver* driver_rep = data_rep->driverRep;
+
+  if (!driver_rep) {
+    PCerr << "Error: pointer to integration driver required in "
+	  << "ProjectOrthogPolyApproximation." << std::endl;
+    abort_handler(-1);
+  }
+  size_t num_data_pts = surrData.points(),
+    num_grid_pts = driver_rep->grid_size();
+  if (num_data_pts != num_grid_pts) {
+    PCerr << "Error: number of current points (" << num_data_pts << ") is "
+	  << "not consistent with\n       number of points/weights ("
+	  << num_grid_pts << ") from integration driver in\n       "
+	  << "ProjectOrthogPolyApproximation." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
 {
   PolynomialApproximation::compute_coefficients(index);
@@ -73,11 +100,10 @@ void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
 
   // calculate polynomial chaos coefficients
   size_t i, num_v = sharedDataRep->numVars,
-    num_total_pts = surrData.points();
-  if (surrData.anchor()) ++num_total_pts;
+    num_data_pts = surrData.points();
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
-    // verify quad_order stencil matches num_total_pts
+    // verify quad_order stencil matches num_data_pts
     TensorProductDriver* tpq_driver = data_rep->tpq_driver();
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
     if (quad_order.size() != num_v) {
@@ -89,8 +115,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients(size_t index)
     size_t num_colloc_pts = 1;
     for (i=0; i<num_v; ++i)
       num_colloc_pts *= quad_order[i];
-    if (num_total_pts != num_colloc_pts) {
-      PCerr << "Error: number of current points (" << num_total_pts
+    if (num_data_pts != num_colloc_pts) {
+      PCerr << "Error: number of current points (" << num_data_pts
 	    << ") is not consistent with\n       quadrature data in Project"
 	    << "OrthogPolyApproximation::compute_coefficients()." << std::endl;
       abort_handler(-1);
@@ -488,8 +514,7 @@ void ProjectOrthogPolyApproximation::expectation()
   size_t i, j, k, num_surr_data_pts = surrData.points(), num_failed_surr_fn = 0,
     num_failed_surr_grad = 0, num_deriv_vars = expansionCoeffGrads.numRows();
   SizetShortMap::const_iterator fit;
-  short                failed_anchor_data = surrData.failed_anchor_data();
-  const SizetShortMap& failed_resp_data   = surrData.failed_response_data();
+  const SizetShortMap& failed_resp_data = surrData.failed_response_data();
   for (fit=failed_resp_data.begin(); fit!=failed_resp_data.end(); ++fit) {
     if (fit->second & 1) ++num_failed_surr_fn;
     if (fit->second & 2) ++num_failed_surr_grad;
@@ -498,35 +523,24 @@ void ProjectOrthogPolyApproximation::expectation()
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   size_t num_data_pts_fn = num_surr_data_pts - num_failed_surr_fn,
     num_data_pts_grad    = num_surr_data_pts - num_failed_surr_grad,
-    num_total_pts_fn = num_data_pts_fn, num_total_pts_grad = num_data_pts_grad,
     num_exp_terms = data_rep->multiIndex.size();
-  bool anchor_fn = false, anchor_grad = false;
-  if (surrData.anchor()) {
-    if (expansionCoeffFlag     && !(failed_anchor_data & 1))
-      { anchor_fn   = true; ++num_total_pts_fn; }
-    if (expansionCoeffGradFlag && !(failed_anchor_data & 2))
-      { anchor_grad = true; ++num_total_pts_grad; }
-  }
   if (expansionCoeffFlag)
     PCout << "Expectations of " << num_exp_terms << " chaos coefficients "
-	  << "using " << num_total_pts_fn << " observations.\n";
+	  << "using " << num_data_pts_fn << " observations.\n";
   if (expansionCoeffGradFlag)
     PCout << "Expectations of gradients of " << num_exp_terms << " chaos "
-	  << "coefficients using " << num_total_pts_grad << " observations.\n";
+	  << "coefficients using " << num_data_pts_grad << " observations.\n";
 
   /*
   // The following implementation evaluates all PCE coefficients
   // using a consistent expectation formulation
   for (i=0; i<num_exp_terms; ++i) {
-    Real& exp_coeff_i = expansionCoeffs[i];
+    Real& exp_coeff_i = expansionCoeffs[i]; exp_coeff_i = 0.;
     const UShortArray& mi_i = data_rep->multiIndex[i];
-    exp_coeff_i = (anchor_fn) ?
-      surrData.anchor_function() * data_rep->multivariate_polynomial(
-        surrData.anchor_continuous_variables(), mi_i) : 0.;
     for (j=0; j<num_data_pts; ++j)
       exp_coeff_i += surrData.response_function(j) * data_rep->
         multivariate_polynomial(surrData.continuous_variables(j), mi_i);
-    exp_coeff_i /= num_total_pts * data_rep->norm_squared(mi_i);
+    exp_coeff_i /= num_data_pts * data_rep->norm_squared(mi_i);
 #ifdef DEBUG
     PCout << "coeff[" << i << "] = " << exp_coeff_i
 	  << " norm squared[" << i <<"] = " << data_rep->norm_squared(mi_i)
@@ -542,15 +556,8 @@ void ProjectOrthogPolyApproximation::expectation()
   Real empty_r;
   Real& mean      = (expansionCoeffFlag)     ? expansionCoeffs[0] : empty_r;
   Real* mean_grad = (expansionCoeffGradFlag) ? expansionCoeffGrads[0] : NULL;
-  if (expansionCoeffFlag) {
-    if (anchor_fn)   mean = surrData.anchor_function();
-    else             expansionCoeffs = 0.;
-  }
-  if (expansionCoeffGradFlag) {
-    if (anchor_grad) copy_data(surrData.anchor_gradient().values(),
-			       num_deriv_vars, mean_grad);
-    else             expansionCoeffGrads = 0.;
-  }
+  if (expansionCoeffFlag)     expansionCoeffs     = 0.;
+  if (expansionCoeffGradFlag) expansionCoeffGrads = 0.;
   for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val = expansionCoeffFlag, add_grad = expansionCoeffGradFlag;
     fail_booleans(fit, k, add_val, add_grad);
@@ -563,36 +570,15 @@ void ProjectOrthogPolyApproximation::expectation()
     }
   }
   if (expansionCoeffFlag)
-    mean /= num_total_pts_fn;
+    mean /= num_data_pts_fn;
   if (expansionCoeffGradFlag)
     for (j=0; j<num_deriv_vars; ++j)
-      mean_grad[j] /= num_total_pts_grad;
+      mean_grad[j] /= num_data_pts_grad;
 
   Real chaos_sample, resp_fn_minus_mean, norm_sq; Real* exp_grad_i;
   RealVector resp_grad_minus_mean;
   if (expansionCoeffGradFlag)
     resp_grad_minus_mean.sizeUninitialized(num_deriv_vars);
-  if (anchor_fn || anchor_grad) {
-    if (anchor_fn)
-      resp_fn_minus_mean = surrData.anchor_function() - mean;
-    if (anchor_grad) {
-      const RealVector& anch_grad = surrData.anchor_gradient();
-      for (j=0; j<num_deriv_vars; ++j)
-	resp_grad_minus_mean[j] = anch_grad[j] - mean_grad[j];
-    }
-    const RealVector& c_vars = surrData.anchor_continuous_variables();
-    for (i=1; i<num_exp_terms; ++i) {
-      chaos_sample
-	= data_rep->multivariate_polynomial(c_vars, data_rep->multiIndex[i]);
-      if (anchor_fn)
-	expansionCoeffs[i] = resp_fn_minus_mean * chaos_sample;
-      if (anchor_grad) {
-	exp_grad_i = expansionCoeffGrads[i];
-	for (j=0; j<num_deriv_vars; ++j)
-	  exp_grad_i[j] = resp_grad_minus_mean[j] * chaos_sample;
-      }
-    }
-  }
   for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val = expansionCoeffFlag, add_grad = expansionCoeffGradFlag;
     fail_booleans(fit, k, add_val, add_grad);
@@ -619,11 +605,11 @@ void ProjectOrthogPolyApproximation::expectation()
   for (i=1; i<num_exp_terms; ++i) {
     norm_sq = data_rep->norm_squared(data_rep->multiIndex[i]);
     if (expansionCoeffFlag)
-      expansionCoeffs[i] /= norm_sq * num_total_pts_fn;
+      expansionCoeffs[i] /= norm_sq * num_data_pts_fn;
     if (expansionCoeffGradFlag) {
       exp_grad_i = expansionCoeffGrads[i];
       for (j=0; j<num_deriv_vars; ++j)
-	exp_grad_i[j] /= norm_sq * num_total_pts_grad;
+	exp_grad_i[j] /= norm_sq * num_data_pts_grad;
     }
 #ifdef DEBUG
     PCout << "coeff[" << i << "] = " << expansionCoeffs[i]
@@ -638,64 +624,33 @@ void ProjectOrthogPolyApproximation::
 integrate_response_moments(size_t num_moments)
 {
   size_t i, s, num_pts = surrData.points(), num_stored = storedExpCoeffs.size();
-  bool anchor_pt = surrData.anchor();
-  if (anchor_pt) ++num_pts;
 
   // define data_coeffs
   RealVector data_coeffs(num_pts);
-  if (anchor_pt) {
-    data_coeffs[0] = surrData.anchor_function();
-    for (i=1; i<num_pts; ++i)
-      data_coeffs[i] = surrData.response_function(i-1);
-  }
-  else
-    for (i=0; i<num_pts; ++i)
-      data_coeffs[i] = surrData.response_function(i);
+  for (i=0; i<num_pts; ++i)
+    data_coeffs[i] = surrData.response_function(i);
 
+  // update data_coeffs using evaluations from stored expansions
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   short combine_type = data_rep->expConfigOptions.combineType;
-  if (combine_type && num_stored) {
-    // update data_coeffs using evaluations from stored expansions
+  if (combine_type && num_stored)
     switch (combine_type) {
     case ADD_COMBINE:
-      if (anchor_pt) {
-	const RealVector& a_c_vars = surrData.anchor_continuous_variables();
+      for (i=0; i<num_pts; ++i) {
+	const RealVector& c_vars = surrData.continuous_variables(i);
 	for (s=0; s<num_stored; ++s)
-	  data_coeffs[0] += stored_value(a_c_vars, s);
-	for (i=1; i<num_pts; ++i) {
-	  const RealVector& c_vars = surrData.continuous_variables(i-1);
-	  for (s=0; s<num_stored; ++s)
-	    data_coeffs[i] += stored_value(c_vars, s);
-	}
+	  data_coeffs[i] += stored_value(c_vars, s);
       }
-      else
-	for (i=0; i<num_pts; ++i) {
-	  const RealVector& c_vars = surrData.continuous_variables(i);
-	  for (s=0; s<num_stored; ++s)
-	    data_coeffs[i] += stored_value(c_vars, s);
-	}
       break;
     case MULT_COMBINE:
-      if (anchor_pt) {
-	const RealVector& a_c_vars = surrData.anchor_continuous_variables();
+      for (i=0; i<num_pts; ++i) {
+	const RealVector& c_vars = surrData.continuous_variables(i);
 	for (s=0; s<num_stored; ++s)
-	  data_coeffs[0] *= stored_value(a_c_vars, s);
-	for (i=1; i<num_pts; ++i) {
-	  const RealVector& c_vars = surrData.continuous_variables(i-1);
-	  for (s=0; s<num_stored; ++s)
-	    data_coeffs[i] *= stored_value(c_vars, s);
-	}
+	  data_coeffs[i] *= stored_value(c_vars, s);
       }
-      else
-	for (i=0; i<num_pts; ++i) {
-	  const RealVector& c_vars = surrData.continuous_variables(i);
-	  for (s=0; s<num_stored; ++s)
-	    data_coeffs[i] *= stored_value(c_vars, s);
-	}
       break;
     }
-  }
 
   // update numericalMoments based on data_coeffs
   if (numericalMoments.length() != num_moments)

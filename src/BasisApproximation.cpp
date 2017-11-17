@@ -356,6 +356,7 @@ void BasisApproximation::finalize_coefficients()
 }
 
 
+/*
 void BasisApproximation::store_coefficients(size_t index)
 {
   if (basisApproxRep)
@@ -374,18 +375,6 @@ void BasisApproximation::restore_coefficients(size_t index)
     basisApproxRep->restore_coefficients(index); 
   else {
     PCerr << "Error: restore_coefficients() not available for this basis "
-	  << "approximation type." << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void BasisApproximation::swap_coefficients(size_t index)
-{
-  if (basisApproxRep)
-    basisApproxRep->swap_coefficients(index);
-  else {
-    PCerr << "Error: swap_coefficients() not available for this basis "
 	  << "approximation type." << std::endl;
     abort_handler(-1);
   }
@@ -411,6 +400,19 @@ void BasisApproximation::clear_stored()
   //else
   //  default: no stored approx data to clear
 }
+
+
+void BasisApproximation::swap_coefficients(size_t index)
+{
+  if (basisApproxRep)
+    basisApproxRep->swap_coefficients(index);
+  else {
+    PCerr << "Error: swap_coefficients() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+*/
 
 
 void BasisApproximation::combine_coefficients(size_t swap_index)

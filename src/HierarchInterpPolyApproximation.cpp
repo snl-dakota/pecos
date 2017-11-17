@@ -90,23 +90,6 @@ void HierarchInterpPolyApproximation::compute_coefficients(size_t index)
 
   allocate_arrays();
 
-  if (surrData.anchor()) {
-    PCerr << "Error: anchor point not supported in HierarchInterpPoly"
-	  << "Approximation::compute_expansion_coefficients" << std::endl;
-    abort_handler(-1);
-    /*
-    if (expansionCoeffFlag) {
-      expansionType1Coeffs[0][0][0] = surrData.anchor_function();
-      if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(surrData.anchor_gradient(), 0,
-			expansionType2Coeffs[0][0]);
-    }
-    if (expansionCoeffGradFlag)
-      Teuchos::setCol(surrData.anchor_gradient(), 0,
-		      expansionType1CoeffGrads[0][0]);
-    */
-  }
-
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
@@ -406,9 +389,7 @@ void HierarchInterpPolyApproximation::combine_coefficients(size_t swap_index)
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   short combine_type = data_rep->expConfigOptions.combineType;
   for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = (anchor_pt && i == 0) ?
-      surrData.anchor_continuous_variables() :
-      surrData.continuous_variables(i);
+    const RealVector& c_vars = surrData.continuous_variables(i);
     if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
       stored_val = stored_value(c_vars);
       curr_val = expansionType1Coeffs[i]; // copy prior to update

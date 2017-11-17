@@ -1545,20 +1545,16 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 
 void RegressOrthogPolyApproximation::set_fault_info()
 {
-  size_t constr_eqns, anchor_fn, anchor_grad, num_data_pts_fn,
+  size_t constr_eqns, num_data_pts_fn,
     num_data_pts_grad, total_eqns, num_surr_data_pts;
-  bool under_determined = false, reuse_solver_data;
+  bool under_determined = false, reuse_solver_data,
+    anchor_fn = false, anchor_grad = false;
 
   // compute order of data contained within surrData
   short data_order = (expansionCoeffFlag) ? 1 : 0;
-  if (surrData.anchor()) {
-    if (!surrData.anchor_gradient().empty())     data_order |= 2;
-    //if (!surrData.anchor_hessian().empty())    data_order |= 4;
-  }
-  else {
-    if (!surrData.response_gradient(0).empty())  data_order |= 2;
-    //if (!surrData.response_hessian(0).empty()) data_order |= 4;
-  }
+  if (!surrData.response_gradient(0).empty())  data_order |= 2;
+  //if (!surrData.response_hessian(0).empty()) data_order |= 4;
+
   // verify support for basisConfigOptions.useDerivs, which indicates usage of
   // derivative data with respect to expansion variables (aleatory or combined)
   // within the expansion coefficient solution process, which must be
@@ -1602,8 +1598,6 @@ void RegressOrthogPolyApproximation::set_fault_info()
   num_surr_data_pts = surrData.points();
   num_data_pts_fn   = num_surr_data_pts - num_failed_surr_fn;
   num_data_pts_grad = num_surr_data_pts - num_failed_surr_grad;
-  anchor_fn = false;
-  anchor_grad = false;
   if (surrData.anchor()) {
     short failed_anchor_data = surrData.failed_anchor_data();
     if ((data_order & 1) && !(failed_anchor_data & 1)) anchor_fn   = true;
@@ -1617,15 +1611,13 @@ void RegressOrthogPolyApproximation::set_fault_info()
   constr_eqns = 0;
   if (expansionCoeffFlag) {
     constr_eqns = num_data_pts_fn;
-    if (anchor_fn)   constr_eqns += 1;
-    if (anchor_grad) constr_eqns += num_v;
     total_eqns = (data_rep->basisConfigOptions.useDerivs) ?
-      constr_eqns + num_data_pts_grad*num_v : constr_eqns;
+      constr_eqns + num_data_pts_grad * num_v : constr_eqns;
     if (total_eqns < data_rep->multiIndex.size()) // candidate expansion size
       under_determined = true;
   }
   if (expansionCoeffGradFlag) {
-    total_eqns = (anchor_grad) ? num_data_pts_grad+1 : num_data_pts_grad;
+    total_eqns = num_data_pts_grad;
     if (total_eqns < data_rep->multiIndex.size()) // candidate expansion size
       under_determined = true;
   }
@@ -2170,8 +2162,7 @@ least_interpolation( RealMatrix &pts, RealMatrix &vals )
   // Note 2: multiIndex size check captures first QoI pass as well as reentrancy
   //         (changes in points sets for OUU and mixed UQ) due to clear() in
   //         SharedRegressOrthogPolyApproxData::allocate_data().
-  bool faults = ( surrData.failed_anchor_data() ||
-		  surrData.failed_response_data().size() ),
+  bool faults = !surrData.failed_response_data().empty(),
     inconsistent_prev = ( data_rep->multiIndex.empty() ||
       surrData.active_response_size() != data_rep->pivotHistory.numRows() );
   if (faults || inconsistent_prev) {

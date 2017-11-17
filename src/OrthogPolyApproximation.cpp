@@ -1003,34 +1003,6 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
 }
 
 
-void OrthogPolyApproximation::integration_checks()
-{
-  if (surrData.anchor()) {
-    PCerr << "Error: anchor point not supported for numerical integration in "
-	  << "SharedOrthogPolyApproxData::integration()." << std::endl;
-    abort_handler(-1);
-  }
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  IntegrationDriver* driver_rep = data_rep->driverRep;
-
-  if (!driver_rep) {
-    PCerr << "Error: pointer to integration driver required in "
-	  << "SharedOrthogPolyApproxData::compute_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-  size_t num_data_pts = surrData.points(),
-    num_grid_pts = driver_rep->grid_size();
-  if (num_data_pts != num_grid_pts) {
-    PCerr << "Error: number of current points (" << num_data_pts << ") is "
-	  << "not consistent with\n       number of points/weights ("
-	  << num_grid_pts << ") from integration driver in\n       "
-	  << "SharedOrthogPolyApproxData::compute_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
 void OrthogPolyApproximation::compute_component_sobol()
 {
   // sobolIndices are indexed via a bit array, one bit per variable.

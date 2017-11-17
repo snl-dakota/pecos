@@ -749,14 +749,6 @@ private:
   std::map<UShortArray, SizetShortMap> failedRespData;
 
   /*
-  /// a special variables sample (often at the center of the
-  /// approximation region) for which exact matching is enforced
-  /// (e.g., using equality-constrained least squares regression).
-  SurrogateDataVars anchorVars;
-  /// a special response sample (often at the center of the
-  /// approximation region) for which exact matching is enforced
-  /// (e.g., using equality-constrained least squares regression).
-  SurrogateDataResp anchorResp;
   /// a set of variables samples used to build the approximation.
   /// These sample points are fit approximately (e.g., using least
   /// squares regression); exact matching is not enforced.
@@ -791,9 +783,6 @@ private:
   /// multiple cachings contributes an SDRArray.
   SDRArrayDeque storedRespData;
 
-  /// failed anchor data bits; defined in sample_checks() and used for
-  /// fault tolerance in regression() and expectation()
-  short failedAnchorData;
   /// map from failed respData indices to failed data bits; defined
   /// in sample_checks() and used for fault tolerance
   SizetShortMap failedRespData;
@@ -804,8 +793,7 @@ private:
 };
 
 
-inline SurrogateDataRep::SurrogateDataRep():
-  failedAnchorData(0), referenceCount(1)
+inline SurrogateDataRep::SurrogateDataRep(): referenceCount(1)
 { }
 
 
@@ -939,6 +927,8 @@ public:
 
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
+  /// assign anchorIndex[activeKey] to incoming index
+  void anchor_index(size_t index)
   /// return size of {vars,resp}Data arrays (neglecting anchor point)
   size_t points() const;
 
@@ -960,15 +950,13 @@ public:
   /// convenience function used by data_checks() for anchorResp and respData
   void response_check(const SurrogateDataResp& sdr, short& failed_data);
   /// screen data sets for samples with Inf/Nan that should be excluded;
-  /// defines failedAnchorData and failedRespData
+  /// defines failedRespData
   void data_checks();
-  // return failedAnchorData
-  //short failed_anchor_data() const;
+  /// return failedRespData corresponding to active anchorIndex
+  short failed_anchor_data() const;
   /// return active failedRespData
   const SizetShortMap& failed_response_data() const;
 
-  // clear anchor{Vars,Resp}
-  //void clear_anchor();
   /// clear {vars,resp}Data
   void clear_data();
   /// clear popped{Vars,Resp}Trials
@@ -985,9 +973,14 @@ private:
   //- Heading: Member functions
   //
 
+  /// define or retrieve anchorIndex[activeKey]
+  size_t assign_anchor_index();
+  /// retrieve anchorIndex[activeKey]
+  size_t SurrogateData::retrieve_anchor_index(bool hard_fail);
+  
   // set failedAnchorData
   //void failed_anchor_data(short fail_anchor);
-  /// set failedRespData
+  /// get failedRespData
   const std::map<UShortArray, SizetShortMap>& failed_response_data_map() const;
   /// set failedRespData
   void failed_response_data_map(
@@ -1073,32 +1066,38 @@ data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
 }
 
 
+inline void SurrogateData::anchor_index(size_t index)
+{ if (index != _NPOS) anchorIndex[activeKey] = index; }
+
+
 inline size_t SurrogateData::assign_anchor_index()
 {
   std::map<UShortArray, size_t>::iterator anchor_it
     = anchorIndex.find(activeKey);
-  size_t index;
-  if (anchor_it == anchorIndex.end()) // no anchor defined
-    anchorIndex[activeKey] = index = sdv_array.size();
+  if (anchor_it == anchorIndex.end()) { // no anchor defined
+    size_t index = sdv_array.size();
+    anchorIndex[activeKey] = index;
+    return index;
+  }
   else
-    index = anchor_it->second;
-  return index;
+    return anchor_it->second;
 }
 
 
-inline size_t SurrogateData::retrieve_anchor_index()
+inline size_t SurrogateData::retrieve_anchor_index(bool hard_fail)
 {
   std::map<UShortArray, size_t>::iterator anchor_it
     = anchorIndex.find(activeKey);
-  size_t index = _NPOS;
   if (anchor_it == anchorIndex.end() || anchor_it->second == _NPOS) {
-    PCerr << "Error: lookup failure in SurrogateData::retrieve_anchor()."
-	  << std::endl;
-    abort_handler(-1);
+    if (hard_fail) {
+      PCerr << "Error: lookup failure in SurrogateData::retrieve_anchor()."
+	    << std::endl;
+      abort_handler(-1);
+    }
+    return _NPOS;
   }
   else
-    index = anchor_it->second;
-  return index;
+    return anchor_it->second;
 }
 
 
@@ -1136,7 +1135,7 @@ inline void SurrogateData::anchor_variables(const SurrogateDataVars& sdv)
 
 inline const SurrogateDataVars& SurrogateData::anchor_variables() const
 {
-  size_t index = retrieve_anchor_index(); // aborts on index error
+  size_t index = retrieve_anchor_index(true); // abort on index error
   return sdRep->varsData[activeKey][index];
 }
 
@@ -1150,7 +1149,7 @@ inline void SurrogateData::anchor_response(const SurrogateDataResp& sdr)
 
 inline const SurrogateDataResp& SurrogateData::anchor_response() const
 {
-  size_t index = retrieve_anchor_index(); // aborts on index error
+  size_t index = retrieve_anchor_index(true); // abort on index error
   return sdRep->respData[activeKey][index];
 }
 
@@ -1553,14 +1552,17 @@ inline void SurrogateData::data_checks()
 }
 
 
-/*
 inline short SurrogateData::failed_anchor_data() const
-{ return sdRep->failedAnchorData; }
+{
+  SizetShortMap& failed_resp_data = sdRep->failedRespData[activeKey];
+  size_t index = retrieve_anchor_index(false); // no hard failure
+  SizetShortMap::iterator it = failed_resp_data.find(index);
+  return (it == failed_resp_data.end()) ? 0 : it->second;    
+}
 
 
-inline void SurrogateData::failed_anchor_data(short fail_anchor)
-{ sdRep->failedAnchorData = fail_anchor; }
-*/
+//inline void SurrogateData::failed_anchor_data(short fail_anchor)
+//{ sdRep->failedAnchorData = fail_anchor; }
 
 
 inline const SizetShortMap& SurrogateData::failed_response_data() const
@@ -1732,13 +1734,11 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
     sd.popped_response_trials(new_popped_resp_map);
   }
   else { // shallow SDR copies based on operator=
-    //if (anchor_pt) sd.anchor_response(sdRep->anchorResp);
     sd.response_data(sdRep->respData);
     //sd.stored_response_data(sdRep->storedRespData);
     sd.popped_response_trials(sdRep->poppedRespTrials);
   }
 
-  //if (anchor_pt) sd.failed_anchor_data(sd.failed_anchor_data());
   sd.failed_response_data_map(sd.failed_response_data_map());
 
   return sd;
@@ -1746,13 +1746,6 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
 
 
 /*
-inline void SurrogateData::clear_anchor()
-{
-  sdRep->anchorVars = SurrogateDataVars();
-  sdRep->anchorResp = SurrogateDataResp();
-}
-
-
 inline void SurrogateData::clear_stored()
 { sdRep->storedVarsData.clear(); sdRep->storedRespData.clear(); }
 */
