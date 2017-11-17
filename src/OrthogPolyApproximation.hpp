@@ -109,15 +109,21 @@ protected:
   Real value(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x,
-					     const SizetArray& dvv);
-  const RealVector& gradient_nonbasis_variables(const RealVector& x);
-  const RealSymMatrix& hessian_basis_variables(const RealVector& x);
+    const SizetArray& dvv);
+  const RealVector& gradient_nonbasis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealMatrix& exp_coeff_grads);
+  const RealSymMatrix& hessian_basis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealVector& exp_coeffs);
 
-  Real stored_value(const RealVector& x, size_t index);
+  Real stored_value(const RealVector& x, const UShortArray& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-						    size_t index);
+    const UShortArray& key);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+    const SizetArray& dvv, const UShortArray& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
-						       size_t index);
+    const UShortArray& key);
+  const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
+    const UShortArray& key);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -152,6 +158,25 @@ protected:
   void resize_expansion();
   /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
   void resize_expansion(size_t num_exp_terms);
+
+  /// compute the expansion value
+  Real value(const RealVector& x, const UShort2DArray& mi,
+    const RealVector& exp_coeffs);
+  /// compute the expansion gradient with respect to the basis variables
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealVector& exp_coeffs);
+  /// compute the expansion gradient with respect to the basis variables for
+  /// gioven DVV components
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const SizetArray& dvv, const UShort2DArray& mi,
+    const RealVector& exp_coeffs);
+  /// compute the expansion gradient with respect to auxilliary
+  /// non-basis variables
+  const RealVector& gradient_nonbasis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealMatrix& exp_coeff_grads);
+  /// compute the expansion Hessian with respect to the basis variables
+  const RealSymMatrix& hessian_basis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealVector& exp_coeffs);
 
   /// overlay the passed expansion with the aggregate
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
@@ -272,6 +297,104 @@ inline size_t OrthogPolyApproximation::expansion_terms() const
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   return data_rep->expansion_terms();
+}
+
+
+inline Real OrthogPolyApproximation::value(const RealVector& x)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return value(x, data_rep->multi_index(), expCoeffsIter->second);
+}
+
+
+inline Real OrthogPolyApproximation::
+stored_value(const RealVector& x, const UShortArray& key)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return value(x, data_rep->multiIndex[key], expansionCoeffs[key]);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+gradient_basis_variables(const RealVector& x)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return gradient_basis_variables(x, data_rep->multi_index(),
+				  expCoeffsIter->second);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return gradient_basis_variables(x, data_rep->multiIndex[key],
+				  expansionCoeffs[key]);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return gradient_basis_variables(x, dvv, data_rep->multi_index(),
+				  expCoeffsIter->second);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
+				const UShortArray& key)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return gradient_basis_variables(x, dvv, data_rep->multiIndex[key],
+				  expansionCoeffs[key]);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+gradient_nonbasis_variables(const RealVector& x)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return gradient_nonbasis_variables(x, data_rep->multi_index(),
+				     expCoeffGradsIter->second);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return gradient_nonbasis_variables(x, data_rep->multiIndex[key],
+				     expansionCoeffGrads[key]);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+hessian_basis_variables(const RealVector& x)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return gradient_basis_variables(x, data_rep->multi_index(),
+				  expCoeffsIter->second);
+}
+
+
+inline const RealVector& OrthogPolyApproximation::
+stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  return hessian_basis_variables(x, data_rep->multiIndex[key],
+				 expansionCoeffs[key]);
 }
 
   
