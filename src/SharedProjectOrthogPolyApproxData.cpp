@@ -137,7 +137,7 @@ void SharedProjectOrthogPolyApproxData::increment_data(size_t index)
   //if (!reEntrantFlag) {
   //  csg_driver->clear_smolyak_arrays();
   //  csg_driver->clear_collocation_arrays();
-  //  tpMultiIndex.clear(); tpMultiIndexMap.clear();
+  //  tpMultiIndex[activeKey].clear(); tpMultiIndexMap[activeKey].clear();
   //}
 }
 
@@ -146,7 +146,7 @@ void SharedProjectOrthogPolyApproxData::increment_component_sobol()
 {
   if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit != 1) {
     reset_sobol_index_map_values();
-    multi_index_to_sobol_index_map(tpMultiIndex.back());
+    multi_index_to_sobol_index_map(tpMultiIndex[activeKey].back());
     assign_sobol_index_map_values();
   }
 }
@@ -205,13 +205,14 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
   for (; iit!=popped_tp_mi.end(); ++iit, ++mit, ++rit)
     append_multi_index(*iit, *mit, *rit, multiIndex);
   // move previous expansion data to current expansion
-  tpMultiIndex.insert(tpMultiIndex.end(), popped_tp_mi.begin(),
-		      popped_tp_mi.end());
-  tpMultiIndexMap.insert(tpMultiIndexMap.end(), popped_tp_mi_map.begin(),
-			 popped_tp_mi_map.end());
-  tpMultiIndexMapRef.insert(tpMultiIndexMapRef.end(),
-			    popped_tp_mi_map_ref.begin(),
-			    popped_tp_mi_map_ref.end());
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
+  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  tp_mi.insert(tp_mi.end(), popped_tp_mi.begin(), popped_tp_mi.end());
+  tp_mi_map.insert(tp_mi_map.end(), popped_tp_mi_map.begin(),
+		   popped_tp_mi_map.end());
+  tp_mi_map_ref.insert(tp_mi_map_ref.end(), popped_tp_mi_map_ref.begin(),
+		       popped_tp_mi_map_ref.end());
 }
 
 
@@ -317,29 +318,30 @@ void SharedProjectOrthogPolyApproxData::
 sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 			UShort2DArray& multi_index)
 {
-  const UShort2DArray& sm_multi_index = csg_driver->smolyak_multi_index();
-  size_t i, num_smolyak_indices = sm_multi_index.size();
+  const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
+  size_t i, num_smolyak_indices = sm_mi.size();
 
   // assemble a complete list of individual polynomial coverage
   // defined from the linear combination of mixed tensor products
   multi_index.clear();
-  tpMultiIndex.resize(num_smolyak_indices);
-  tpMultiIndexMap.resize(num_smolyak_indices);
-  tpMultiIndexMapRef.resize(num_smolyak_indices);
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
+  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  tp_mi.resize(num_smolyak_indices);
+  tp_mi_map.resize(num_smolyak_indices);
+  tp_mi_map_ref.resize(num_smolyak_indices);
   UShortArray exp_order(numVars);
   for (i=0; i<num_smolyak_indices; ++i) {
     // regenerate i-th exp_order as collocKey[i] cannot be used in general case
     // (i.e., for nested rules GP, CC, F2, or GK).  Rather, collocKey[i] is to
     // be used only as the key to the collocation pts.
-    sparse_grid_level_to_expansion_order(csg_driver, sm_multi_index[i],
-					 exp_order);
-    tensor_product_multi_index(exp_order, tpMultiIndex[i]);
-    append_multi_index(tpMultiIndex[i], multi_index, tpMultiIndexMap[i],
-		       tpMultiIndexMapRef[i]);
+    sparse_grid_level_to_expansion_order(csg_driver, sm_mi[i], exp_order);
+    tensor_product_multi_index(exp_order, tp_mi[i]);
+    append_multi_index(tp_mi[i], multi_index, tp_mi_map[i], tp_mi_map_ref[i]);
 #ifdef DEBUG
-    PCout << "level =\n" << sm_multi_index[i] << "expansion_order =\n"
-	  << exp_order << "tp_multi_index =\n" << tpMultiIndex[i]
-	  << "multi_index =\n" << multi_index << '\n';
+    PCout << "level =\n" << sm_mi[i] << "expansion_order =\n" << exp_order
+	  << "tp_multi_index =\n" << tp_mi[i] << "multi_index =\n"
+	  << multi_index << '\n';
 #endif // DEBUG
   }
 
@@ -439,7 +441,7 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
 void SharedProjectOrthogPolyApproxData::
 map_tensor_product_multi_index(UShort2DArray& tp_multi_index, size_t tp_index)
 {
-  const SizetArray& tp_mi_map = tpMultiIndexMap[tp_index];
+  const SizetArray& tp_mi_map = tpMultiIndexMap[activeKey][tp_index];
   size_t i, num_tp_terms = tp_mi_map.size();
   tp_multi_index.resize(num_tp_terms);
   for (i=0; i<num_tp_terms; ++i)

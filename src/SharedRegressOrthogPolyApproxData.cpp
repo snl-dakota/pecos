@@ -20,10 +20,13 @@ namespace Pecos {
 
 void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
 {
+  UShortArray&   approx_order = approxOrder[activeKey];
+  UShort2DArray& multi_index  =  multiIndex[activeKey];
+
   if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
     // clear history from previous expansion; new pts -> new least interpolant
-    approxOrder.clear();   // for update_approx_order() -> exp combination logic
-    multiIndex.clear();    // for reuse check in ROPA::least_interpolation()
+    approx_order.clear();  // for update_approx_order() -> exp combination logic
+    multi_index.clear();   // for reuse check in ROPA::least_interpolation()
     sobolIndexMap.clear(); // for update_component_sobol()
 
     if (expConfigOptions.vbdFlag && expConfigOptions.vbdOrderLimit == 1)
@@ -40,7 +43,7 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
   // Adapted basis selection:
 
   // detect changes since previous construction
-  bool update_exp_form = (approxOrder != approxOrderPrev);
+  bool update_exp_form = (approx_order != approxOrderPrev);
   //bool restore_exp_form = (multiIndex.size() != t*_*_terms(approxOrder));
 
   if (update_exp_form) { //|| restore_exp_form) {
@@ -69,12 +72,13 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
       // define reference multiIndex and tpMultiIndex{,Map,MapRef} from 
       // initial sparse grid level
       //sparse_grid_multi_index(&lsgDriver, multiIndex); // heavyweight mapping
-      multiIndex.clear();
-      tpMultiIndex.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
+      multi_index.clear();
+      tpMultiIndex[activeKey].clear();
+      tpMultiIndexMap[activeKey].clear(); tpMultiIndexMapRef[activeKey].clear();
       const UShort2DArray& sm_mi = lsgDriver.smolyak_multi_index();
       size_t i, num_sm_mi = sm_mi.size();
       for (i=0; i<num_sm_mi; ++i)
-	increment_trial_set(sm_mi[i], multiIndex); // lightweight mapping
+	increment_trial_set(sm_mi[i], multi_index); // lightweight mapping
       break;
     }
     case ADAPTED_BASIS_EXPANDING_FRONT:
@@ -98,8 +102,9 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
 void SharedRegressOrthogPolyApproxData::
 update_approx_order(unsigned short new_order)
 {
-  if (approxOrder.empty() || new_order > approxOrder[0])
-    approxOrder.assign(numVars, new_order);
+  UShortArray& approx_order = approxOrder[activeKey];
+  if (approx_order.empty() || new_order > approx_order[0])
+    approx_order.assign(numVars, new_order);
 }
 
 
@@ -116,16 +121,18 @@ void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
   //         (e.g., see NonDQUESOBayesCalibration::update_model())
 
   // approxOrder updated from NonDPolynomialChaos --> propagate to multiIndex
-  bool update_exp_form = (approxOrder != approxOrderPrev);
+  UShortArray&  approx_order = approxOrder[activeKey];
+  UShort2DArray& multi_index =  multiIndex[activeKey];
+  bool update_exp_form = (approx_order != approxOrderPrev);
   if (update_exp_form) {
     switch (expConfigOptions.expBasisType) {
     case TENSOR_PRODUCT_BASIS:
-      tensor_product_multi_index(approxOrder, multiIndex); break;
+      tensor_product_multi_index(approx_order, multi_index); break;
     default:
-      total_order_multi_index(approxOrder, multiIndex);    break;
+      total_order_multi_index(approx_order, multi_index);    break;
     }
-    allocate_component_sobol(multiIndex);
-    approxOrderPrev = approxOrder;
+    allocate_component_sobol(multi_index);
+    approxOrderPrev = approx_order;
   }
 }
 
@@ -133,11 +140,15 @@ void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
 void SharedRegressOrthogPolyApproxData::
 increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 {
-  size_t i, last_index = tpMultiIndex.size();
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
+  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+
+  size_t i, last_index = tp_mi.size();
   // increment tpMultiIndex{,Map,MapRef} arrays
   UShort2DArray new_us2a; SizetArray new_sa;
-  tpMultiIndex.push_back(new_us2a);
-  tpMultiIndexMap.push_back(new_sa); tpMultiIndexMapRef.push_back(0);
+  tp_mi.push_back(new_us2a);
+  tp_mi_map.push_back(new_sa); tp_mi_map_ref.push_back(0);
   // update tpMultiIndex
   UShortArray exp_order(numVars);
   // linear growth in Gaussian rules would normally result in a factor of 2:
@@ -146,11 +157,10 @@ increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
   unsigned short growth_fact = regressConfigOptions.multiIndexGrowthFactor;
   for (i=0; i<numVars; ++i)
     exp_order[i] = growth_fact * trial_set[i];
-  tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
+  tensor_product_multi_index(exp_order, tp_mi[last_index]);
   // update multiIndex and append bookkeeping
-  append_multi_index(tpMultiIndex[last_index], aggregated_mi,
-		     tpMultiIndexMap[last_index],
-		     tpMultiIndexMapRef[last_index]);
+  append_multi_index(tp_mi[last_index], aggregated_mi,
+		     tp_mi_map[last_index], tp_mi_map_ref[last_index]);
 }
 
 
@@ -161,16 +171,20 @@ set_restriction(UShort2DArray& aggregated_mi, SizetSet& sparse_indices,
   if (sparse_indices.empty()) // dense multi-index: no restriction possible
     return false;
 
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
+  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+
   // determine the TP multi-indices to save
   StSCIter cit;
-  size_t i, num_tp_mi = tpMultiIndexMapRef.size(), last_index = num_tp_mi - 1,
+  size_t i, num_tp_mi = tp_mi_map_ref.size(), last_index = num_tp_mi - 1,
     sparse_ind, save_tp_cntr, new_tp_cntr;
   bool map_ref_find;
   for (cit=sparse_indices.begin(); cit!=sparse_indices.end(); ++cit) {
     sparse_ind = *cit; map_ref_find = false;
     for (i=0; i<last_index; ++i)
       // upper bound for i-th multi-index append defined by MapRef[i+1]
-      if (sparse_ind < tpMultiIndexMapRef[i+1])
+      if (sparse_ind < tp_mi_map_ref[i+1])
 	{ map_ref_find = true; break; }
     if (map_ref_find) save_tp.insert(i); // occurs within i-th appended TP
     else              save_tp.insert(last_index); // must be last TP
@@ -187,15 +201,13 @@ set_restriction(UShort2DArray& aggregated_mi, SizetSet& sparse_indices,
 	 ++cit, ++new_tp_cntr) {
       save_tp_cntr = *cit;
       if (save_tp_cntr != new_tp_cntr) // reuse previous tpMultiIndex entries
-	tpMultiIndex[new_tp_cntr] = tpMultiIndex[save_tp_cntr];
-      append_multi_index(tpMultiIndex[new_tp_cntr], aggregated_mi,
-			 tpMultiIndexMap[new_tp_cntr],
-			 tpMultiIndexMapRef[new_tp_cntr]);
+	tp_mi[new_tp_cntr] = tp_mi[save_tp_cntr];
+      append_multi_index(tp_mi[new_tp_cntr], aggregated_mi,
+			 tp_mi_map[new_tp_cntr], tp_mi_map_ref[new_tp_cntr]);
     }
     // prune old records off the end
-    tpMultiIndex.resize(num_save);
-    tpMultiIndexMap.resize(num_save);
-    tpMultiIndexMapRef.resize(num_save);
+    tp_mi.resize(num_save);
+    tp_mi_map.resize(num_save); tp_mi_map_ref.resize(num_save);
     // update sparse_indices using old_aggregated_mi
     // TO DO: review SharedOrthogPolyApproxData::append_multi_index(SizetSet&)
     //        for more efficient logic?

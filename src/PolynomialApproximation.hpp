@@ -79,7 +79,6 @@ public:
   /// in "all" mode) using the given parameter vector and default DVV
   virtual const RealVector&
     gradient_nonbasis_variables(const RealVector& x) = 0;
-
   /// retrieve the Hessian of the response expansion with respect to all
   /// variables included in the polynomial basis (e.g., probabilistic
   /// variables) for a given parameter vector
@@ -87,17 +86,27 @@ public:
 
   /// retrieve the response value for a stored expansion using the
   /// given parameter vector
-  virtual Real stored_value(const RealVector& x, size_t index) = 0;
+  virtual Real stored_value(const RealVector& x, const UShortArray& key) = 0;
   /// retrieve the response gradient for a stored expansion with
   /// respect to all variables included in the polynomial bases;
   /// evaluate for the given parameter vector.
-  virtual const RealVector&
-    stored_gradient_basis_variables(const RealVector& x, size_t index) = 0;
+  virtual const RealVector& stored_gradient_basis_variables(const RealVector& x,
+    const UShortArray& key) = 0;
+  /// retrieve the gradient for a stored expansion with respect to
+  /// variables included in the polynomial basis for a given parameter
+  /// vector and a given DVV subset
+  virtual const RealVector& stored_gradient_basis_variables(const RealVector& x,
+    const SizetArray& dvv) = 0;
   /// retrieve the response gradient for a stored expansion with
   /// respect to all variables not included in the polynomial bases;
   /// evaluate for the given parameter vector.
-  virtual const RealVector&
-    stored_gradient_nonbasis_variables(const RealVector& x, size_t index) = 0;
+  virtual const RealVector& stored_gradient_nonbasis_variables(
+    const RealVector& x, const UShortArray& key) = 0;
+  /// retrieve the Hessian for a stored expansion with respect to all
+  /// variables included in the polynomial basis (e.g., probabilistic
+  /// variables) for a given parameter vector
+  virtual const RealSymMatrix& stored_hessian_basis_variables(
+    const RealVector& x) = 0;
 
   /// return the mean of the expansion, treating all variables as random
   virtual Real mean() = 0;

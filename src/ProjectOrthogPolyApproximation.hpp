@@ -61,13 +61,12 @@ protected:
   //- Heading: Virtual function redefinitions and member functions
   //
 
-  int  min_coefficients() const;
+  int min_coefficients() const;
 
-  /// initialize polynomialBasis, multiIndex, et al.
   void allocate_arrays();
 
   Real value(const RealVector& x);
-  Real stored_value(const RealVector& x, size_t index);
+  Real stored_value(const RealVector& x, const UShortArray& key);
 
   /// compute numerical moments to order 4 and expansion moments to order 2
   void compute_moments(bool full_stats = true);
@@ -124,14 +123,14 @@ private:
   RealMatrix prevExpCoeffGrads;
 
   /// the set of tensor-product contributions to expansionCoeffs
-  RealVectorArray tpExpansionCoeffs;
+  std::map<UShortArray, RealVectorArray> tpExpansionCoeffs;
   /// the set of tensor-product contributions to expansionCoeffGrads
-  RealMatrixArray tpExpansionCoeffGrads;
+  std::map<UShortArray, RealMatrixArray> tpExpansionCoeffGrads;
 
   /// popped instances of tpExpansionCoeffs that were computed but not selected
-  std::deque<RealVector> poppedTPExpCoeffs;
+  std::map<UShortArray, RealVectorDeque> poppedTPExpCoeffs;
   /// popped tpExpansionCoeffGrads instances that were computed but not selected
-  std::deque<RealMatrix> poppedTPExpCoeffGrads;
+  std::map<UShortArray, RealMatrixDeque> poppedTPExpCoeffGrads;
 };
 
 

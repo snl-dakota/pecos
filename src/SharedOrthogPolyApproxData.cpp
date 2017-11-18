@@ -147,20 +147,22 @@ void SharedOrthogPolyApproxData::
 increment_trial_set(CombinedSparseGridDriver* csg_driver,
 		    UShort2DArray& aggregated_mi)
 {
-  size_t last_index = tpMultiIndex.size();
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
+  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  size_t last_index = tp_mi.size();
   // increment tpMultiIndex{,Map,MapRef} arrays
   UShort2DArray new_us2a; SizetArray new_sa;
-  tpMultiIndex.push_back(new_us2a);
-  tpMultiIndexMap.push_back(new_sa); tpMultiIndexMapRef.push_back(0);
+  tp_mi.push_back(new_us2a);
+  tp_mi_map.push_back(new_sa); tp_mi_map_ref.push_back(0);
   // update tpMultiIndex
   UShortArray exp_order(numVars);
   sparse_grid_level_to_expansion_order(csg_driver, csg_driver->trial_set(),
 				       exp_order);
-  tensor_product_multi_index(exp_order, tpMultiIndex[last_index]);
+  tensor_product_multi_index(exp_order, tp_mi[last_index]);
   // update multiIndex and append bookkeeping
-  append_multi_index(tpMultiIndex[last_index], aggregated_mi,
-		     tpMultiIndexMap[last_index],
-		     tpMultiIndexMapRef[last_index]);
+  append_multi_index(tp_mi[last_index], aggregated_mi,
+		     tp_mi_map[last_index], tp_mi_map_ref[last_index]);
 }
 
 
@@ -168,21 +170,22 @@ void SharedOrthogPolyApproxData::
 decrement_trial_set(const UShortArray& trial_set,
 		    UShort2DArray& aggregated_mi, bool save_map)
 {
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
+  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   // reset the aggregated multi-index
-  size_t num_exp_terms = tpMultiIndexMapRef.back();
+  size_t num_exp_terms = tp_mi_map_ref.back();
   aggregated_mi.resize(num_exp_terms); // truncate previous increment
 
   // reset tensor-product bookkeeping and save restorable data
   poppedLevMultiIndex[activeKey].push_back(trial_set);
-  poppedTPMultiIndex[activeKey].push_back(tpMultiIndex.back());
+  poppedTPMultiIndex[activeKey].push_back(tp_mi.back());
   if (save_map) { // always needed if we want to mix and match
-    poppedTPMultiIndexMap[activeKey].push_back(tpMultiIndexMap.back());
+    poppedTPMultiIndexMap[activeKey].push_back(tp_mi_map.back());
     poppedTPMultiIndexMapRef[activeKey].push_back(num_exp_terms);
   }
 
-  tpMultiIndex.pop_back();
-  tpMultiIndexMap.pop_back();
-  tpMultiIndexMapRef.pop_back();
+  tp_mi.pop_back();  tp_mi_map.pop_back();  tp_mi_map_ref.pop_back();
 }
 
 
@@ -190,12 +193,16 @@ void SharedOrthogPolyApproxData::
 pre_push_trial_set(const UShortArray& trial_set,
 		      UShort2DArray& aggregated_mi, bool monotonic)
 {
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
+  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+
   pushIndex = find_index(poppedLevMultiIndex[activeKey], trial_set);
-  size_t last_index = tpMultiIndex.size();
+  size_t last_index = tp_mi.size();
 
   std::deque<UShort2DArray>::iterator iit
     = poppedTPMultiIndex[activeKey].begin();
-  std::advance(iit, pushIndex); tpMultiIndex.push_back(*iit);
+  std::advance(iit, pushIndex); tp_mi.push_back(*iit);
 
   // update multiIndex
   if (monotonic) { // reuse previous Map,MapRef bookkeeping if possible
@@ -203,17 +210,15 @@ pre_push_trial_set(const UShortArray& trial_set,
       = poppedTPMultiIndexMap[activeKey].begin();
     std::deque<size_t>::iterator rit
       = poppedTPMultiIndexMapRef[activeKey].begin();
-    std::advance(mit, pushIndex);    tpMultiIndexMap.push_back(*mit);
-    std::advance(rit, pushIndex);    tpMultiIndexMapRef.push_back(*rit);
-    append_multi_index(tpMultiIndex[last_index], tpMultiIndexMap[last_index],
-		       tpMultiIndexMapRef[last_index], aggregated_mi);
+    std::advance(mit, pushIndex);    tp_mi_map.push_back(*mit);
+    std::advance(rit, pushIndex);    tp_mi_map_ref.push_back(*rit);
+    append_multi_index(tp_mi[last_index], tp_mi_map[last_index],
+		       tp_mi_map_ref[last_index], aggregated_mi);
   }
   else { // replace previous Map,MapRef bookkeeping with new
-    SizetArray sa; tpMultiIndexMap.push_back(sa);
-    tpMultiIndexMapRef.push_back(0);
-    append_multi_index(tpMultiIndex[last_index], aggregated_mi,
-		       tpMultiIndexMap[last_index],
-		       tpMultiIndexMapRef[last_index]);
+    SizetArray sa; tp_mi_map.push_back(sa); tp_mi_map_ref.push_back(0);
+    append_multi_index(tp_mi[last_index], aggregated_mi,
+		       tp_mi_map[last_index], tp_mi_map_ref[last_index]);
   }
 }
 

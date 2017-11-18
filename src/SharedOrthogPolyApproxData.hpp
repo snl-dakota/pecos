@@ -366,12 +366,12 @@ protected:
   /// contributing to each of the multivariate orthogonal polynomials.
   /** For nested rules (GP, CC, or GK), the integration driver's collocKey
       is insufficient and we must track expansion orders separately. */
-  UShort3DArray tpMultiIndex;
+  std::map<UShortArray, UShort3DArray> tpMultiIndex;
   /// sparse grid bookkeeping: mapping from num tensor-products by 
   /// tensor-product multi-indices into aggregated multiIndex
-  Sizet2DArray tpMultiIndexMap;
+  std::map<UShortArray, Sizet2DArray> tpMultiIndexMap;
   /// sparse grid bookkeeping: reference points for tpMultiIndexMap
-  SizetArray tpMultiIndexMapRef;
+  std::map<UShortArray, SizetArray> tpMultiIndexMapRef;
 
   /// popped instances of tpMultiIndex that were computed but not selected
   std::map<UShortArray, std::deque<UShort2DArray> > poppedTPMultiIndex;

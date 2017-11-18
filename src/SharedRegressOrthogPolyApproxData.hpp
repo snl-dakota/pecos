@@ -278,12 +278,14 @@ inline void SharedRegressOrthogPolyApproxData::clear_adapted()
   switch (expConfigOptions.expBasisType) {
   case ADAPTED_BASIS_GENERALIZED:
     // reset tensor-product bookkeeping and save restorable data
-    poppedLevMultiIndex.clear();   poppedTPMultiIndex.clear();
-    poppedTPMultiIndexMap.clear(); poppedTPMultiIndexMapRef.clear();
+    poppedLevMultiIndex[activeKey].clear();
+    poppedTPMultiIndex[activeKey].clear();
+    poppedTPMultiIndexMap[activeKey].clear();
+    poppedTPMultiIndexMapRef[activeKey].clear();
 
-    tpMultiIndex.clear();       // will be rebuilt each time in allocate_data()
-    tpMultiIndexMap.clear();    // will be rebuilt each time in allocate_data()
-    tpMultiIndexMapRef.clear(); // will be rebuilt each time in allocate_data()
+    tpMultiIndex[activeKey].clear();       // will be rebuilt in allocate_data()
+    tpMultiIndexMap[activeKey].clear();    // will be rebuilt in allocate_data()
+    tpMultiIndexMapRef[activeKey].clear(); // will be rebuilt in allocate_data()
     break;
   }
 }

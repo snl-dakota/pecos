@@ -107,6 +107,8 @@ typedef std::vector<RealMatrix>        RealMatrixArray;
 typedef std::vector<RealMatrixArray>   RealMatrix2DArray;
 typedef std::vector<RealMatrix2DArray> RealMatrix3DArray;
 typedef std::vector<RealSymMatrix>     RealSymMatrixArray;
+typedef std::deque<RealVector>         RealVectorDeque;
+typedef std::deque<RealMatrix>         RealMatrixDeque;
 
 //typedef std::vector<BasisFunction>  BasisFunctionArray;
 typedef std::vector<SurrogateDataVars> SDVArray;
