@@ -45,9 +45,9 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
-  void compute_coefficients(size_t index = _NPOS);
+  void compute_coefficients(const UShortArray& key);
   void push_coefficients();
-  void increment_coefficients(size_t index = _NPOS);
+  void increment_coefficients(const UShortArray& key);
   void decrement_coefficients(bool save_data);
   void finalize_coefficients();
 

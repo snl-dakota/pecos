@@ -22,7 +22,7 @@
 
 namespace Pecos {
 
-void PolynomialApproximation::compute_coefficients(size_t index)
+void PolynomialApproximation::compute_coefficients(const UShortArray& key)
 {
   if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
@@ -33,7 +33,7 @@ void PolynomialApproximation::compute_coefficients(size_t index)
   }
 
   // update surrData from origSurrData
-  synchronize_surrogate_data(index);
+  synchronize_surrogate_data(key);
 
   // For testing of anchor point logic:
   //surrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
@@ -51,20 +51,27 @@ void PolynomialApproximation::compute_coefficients(size_t index)
 }
 
 
-void PolynomialApproximation::synchronize_surrogate_data(size_t index)
+void PolynomialApproximation::synchronize_surrogate_data(const UShortArray& key)
 {
   // when using a recursive approximation, subtract current PCE prediction
   // from the surrData so that we form a PCE on the surplus
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
-    response_data_to_surplus_data(index);
-  else surrData = origSurrData; // shared rep
+    response_data_to_surplus_data(key);
+  else if (surrData.is_null())
+    surrData = origSurrData; // shared rep
 }
 
 
-void PolynomialApproximation::response_data_to_surplus_data(size_t index)
+void PolynomialApproximation::
+response_data_to_surplus_data(const UShortArray& key)
 {
-  if (index == 0 || index == _NPOS) {
+  // No modification for first level or not found
+  const std::map<UShortArray, SDRArray>& resp_data_map
+    = origSurrData.response_data_map();
+  std::map<UShortArray, SDRArray>::const_iterator cit = resp_data_map.find(key);
+  if (cit == resp_data_map.begin() || // first entry -> no offsets
+      cit == resp_data_map.end()) {   // key not found
     surrData = origSurrData; // shared rep
     return;
   }
@@ -72,29 +79,28 @@ void PolynomialApproximation::response_data_to_surplus_data(size_t index)
   // We will only modify the response to reflect hierarchical surpluses,
   // so initialize surrData with shared vars and unique resp instances
   surrData = origSurrData.copy(SHALLOW_COPY, DEEP_COPY);
+  // TO DO: do this more incrementally as data sets evolve across levels
 
   // More efficient to roll up contributions from each level expansion than
   // to combine expansions and then eval once.  Approaches are equivalent for
-  // linear addition.
-
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-
-  size_t i, j, num_pts = origSurrData.points();
+  // additive roll up.
+  size_t i, num_pts = origSurrData.points();
   Real delta_val; RealVector delta_grad;
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE:
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = origSurrData.continuous_variables(i);
       if (expansionCoeffFlag) {
 	delta_val = origSurrData.response_function(i);
-	for (j=0; j<index; ++j)
-	  delta_val -= stored_value(c_vars, j);
+	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
+	  delta_val -= stored_value(c_vars, cit->first);
 	surrData.response_function(delta_val, i);
       }
       if (expansionCoeffGradFlag) {
 	copy_data(origSurrData.response_gradient(i), delta_grad);
-	for (j=0; j<index; ++j)
-	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, j);
+	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
+	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, cit->first);
 	surrData.response_gradient(delta_grad, i);
       }
     }
@@ -103,18 +109,19 @@ void PolynomialApproximation::response_data_to_surplus_data(size_t index)
     Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
     RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
     size_t k, num_deriv_vars = origSurrData.response_gradient(0).length();
+    std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
     for (i=0; i<num_pts; ++i) {
       const RealVector& c_vars = origSurrData.continuous_variables(i);
       delta_val = orig_fn_val = origSurrData.response_function(i);
       if (expansionCoeffGradFlag)
 	copy_data(origSurrData.response_gradient(i), orig_fn_grad);
-      for (j=0; j<index; ++j) {
-	stored_val = stored_value(c_vars, j);
+      for (cit = resp_data_map.begin(); cit->first != key; ++cit) {
+	stored_val = stored_value(c_vars, cit->first);
 	delta_val /= stored_val;
 	if (expansionCoeffGradFlag) { // recurse using levels j and j-1
 	  const RealVector& stored_grad
-	    = stored_gradient_nonbasis_variables(c_vars, j);
-	  if (j == 0)
+	    = stored_gradient_nonbasis_variables(c_vars, cit->first);
+	  if (cit == resp_data_map.begin())
 	    { fn_val_j = stored_val; fn_grad_j = stored_grad; }
 	  else {
 	    fn_val_j = fn_val_jm1 * stored_val;
@@ -122,12 +129,13 @@ void PolynomialApproximation::response_data_to_surplus_data(size_t index)
 	      fn_grad_j[k]  = ( fn_grad_jm1[k] * stored_val +
 				fn_val_jm1 * stored_grad[j] );
 	  }
-	  if (j < index - 1)
-	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
-	  else
+	  look_ahead_cit = cit; ++look_ahead_cit;
+	  if (look_ahead_cit->second == key)
 	    for (k=0; k<num_deriv_vars; ++k)
 	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
 	                    / fn_val_j;
+	  else
+	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
 	}
       }
       if (expansionCoeffFlag)     surrData.response_function(delta_val,  i);

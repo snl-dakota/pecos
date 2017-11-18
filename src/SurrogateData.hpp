@@ -847,14 +847,19 @@ public:
   /// get anchorResp
   const SurrogateDataResp& anchor_response() const;
 
-  /// set varsData
+  /// set varsData[activeKey]
   void variables_data(const SDVArray& sdv_array);
-  /// get varsData
+  /// get varsData[activeKey]
   const SDVArray& variables_data() const;
-  /// set respData
+  /// set respData[activeKey]
   void response_data(const SDRArray& sdr_array);
-  /// get respData
+  /// get respData[activeKey]
   const SDRArray& response_data() const;
+
+  /// get varsData
+  const SDVArray& variables_data_map() const;
+  /// get respData
+  const SDRArray& response_data_map() const;
 
   /*
   /// get anchorVars.continuous_variables()
@@ -1172,6 +1177,16 @@ inline void SurrogateData::response_data(const SDRArray& sdr_array)
 
 inline const SDRArray& SurrogateData::response_data() const
 { return sdRep->respData[activeKey]; }
+
+
+inline const std::map<UShortArray, SDVArray>& SurrogateData::
+variables_data_map() const
+{ return sdRep->varsData; }
+
+
+inline const std::map<UShortArray, SDRArray>& SurrogateData::
+response_data_map() const
+{ return sdRep->respData; }
 
 
 /*

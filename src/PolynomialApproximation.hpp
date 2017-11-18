@@ -229,7 +229,7 @@ protected:
   const SurrogateData& surrogate_data() const;
   SurrogateData& surrogate_data();
 
-  void compute_coefficients(size_t index = _NPOS);
+  void compute_coefficients(const UShortArray& key);
 
   /// generic base class function mapped to gradient_basis_variables(x)
   const RealVector& gradient(const RealVector& x);
@@ -241,10 +241,10 @@ protected:
   //
 
   /// update surrData from origSurrData based on deep or shallow copy
-  void synchronize_surrogate_data(size_t index);
+  void synchronize_surrogate_data(const UShortArray& key);
   /// modify origSurrData to create hierarchical surplus response data
   /// within surrData
-  void response_data_to_surplus_data(size_t index);
+  void response_data_to_surplus_data(const UShortArray& key);
 
   /// compute central moments of response using type1 numerical integration
   void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
