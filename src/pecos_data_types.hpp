@@ -26,6 +26,7 @@
 
 #include <algorithm>  // for std::find
 #include <complex>
+#include <list>
 #include <map>
 #include <set>
 #include <string>
