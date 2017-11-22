@@ -509,9 +509,9 @@ inline void OrthogPolyApproximation::resize_expansion(size_t num_exp_terms)
   if (expansionCoeffFlag)
     expCoeffsIter->second.resize(num_exp_terms); // new terms initialized to 0
   if (expansionCoeffGradFlag) {
-    size_t num_deriv_vars = expansionCoeffGrads.numRows();
-    expCoeffGradsIter->
-      second.reshape(num_deriv_vars, num_exp_terms);    // new terms init to 0
+    RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
+    size_t num_deriv_vars = exp_coeff_grads.numRows();
+    exp_coeff_grads.reshape(num_deriv_vars, num_exp_terms);//new terms init to 0
   }
 }
 
