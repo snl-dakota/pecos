@@ -22,6 +22,22 @@ void test_set(){
   sub_opts.set("a","abc");
   opts.set("subopts",sub_opts);
   BOOST_CHECK( opts.get<OptionsList>("subopts")==sub_opts);
+
+
+  int zero=0;
+  int three=3;
+  std::vector<OptionsList> list_of_opts(3);
+  list_of_opts[0].set("a",zero);
+  list_of_opts[1].set("a",one);
+  list_of_opts[2].set("a",three);
+  opts.set("list_of_opts",list_of_opts);
+  std::vector<OptionsList> result=opts.get< std::vector<OptionsList> >("list_of_opts");
+  BOOST_CHECK( result.size()==list_of_opts.size());
+  for (int i=0; i<result.size(); ++i){
+    BOOST_CHECK(result[i].get<int>("a")==list_of_opts[i].get<int>("a"));
+    std::cout << result[i].get<int>("a") << std::endl;
+  }
+  std::cout << opts << std::endl;
 }
 
 void test_get_missing_option(){
@@ -90,7 +106,6 @@ void test_equality(){
   BOOST_CHECK(opts1!=opts2);  
 }
 
-
 void test_copy(){
   int one=1.;
   double two=2.0;
@@ -128,4 +143,3 @@ BOOST_AUTO_TEST_CASE( test_main ){
   //      GetOption::result_type' (aka 'boost::variant
   // but this works
   // opts_variants s = boost::apply_visitor(GetOption(), v);
-

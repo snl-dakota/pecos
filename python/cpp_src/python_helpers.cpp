@@ -3,6 +3,56 @@
 
 namespace Surrogates{
 
+bool PyListOfOptionsList_check(PyObject* pylist){
+  void * argp;
+  static swig_type_info * swig_TPL_ptr =
+    SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
+  Py_ssize_t len = PyList_Size(pylist);
+  for(Py_ssize_t i=0; i<len; ++i){
+    PyObject *value = PyList_GetItem(pylist, i);
+    if (!SWIG_CheckState(SWIG_Python_ConvertPtr(value,
+					       &argp,
+					       swig_TPL_ptr,
+					       0)) &&
+	(!PyDict_Check(value)))
+      return false;
+  }
+  return true;
+}
+
+  
+void print_PyType(PyObject *value){  
+  if (PyBool_Check(value))
+    std::printf("Is int\n");
+  else if (PyInt_Check(value))
+    std::printf("Is int\n");
+  else if (PyFloat_Check(value))
+    std::printf("Is float\n");
+  else if (PyString_Check(value))
+    std::printf("Is string\n");
+  else if (value == Py_None)
+    std::printf("Is None\n");
+  else if (PyDict_Check(value))
+    std::printf("Is dict\n");
+  else if (PyList_Check(value))
+    std::printf("Is list\n");
+  else if (PyArray_Check(value))
+    std::printf("Is array\n");
+  else if (PyTuple_Check(value))
+    std::printf("Is tuple\n");
+  else if (PySequence_Check(value))
+    std::printf("Is sequence\n");
+  else
+    std::printf("value unknown\n");
+}
+
+void print_pyobject_string_rep(PyObject * value){
+  PyObject* objectsRepresentation = PyObject_Repr(value);
+  const char* s = PyString_AsString(objectsRepresentation);
+  std::printf(s);
+  std::printf("\n");
+}
+
 template<>
 int NumPy_TypeCode<int>(){
   return NPY_INT;
@@ -80,6 +130,8 @@ bool setPythonParameter(OptionsList & opts_list,
 			const std::string      & name,
 			PyObject               * value)
 {
+  print_pyobject_string_rep(value);
+  
   static swig_type_info * swig_TPL_ptr =
     SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
   void * argp;
@@ -154,6 +206,13 @@ bool setPythonParameter(OptionsList & opts_list,
       if (smartarg) opts_list.set(name, *(smartarg->get()));
     }
   }
+  
+  else if (PyList_Check(value) && PyListOfOptionsList_check(value)) {
+     std::vector<OptionsList> list;
+     pyListToNewStdVector(value, list);
+     opts_list.set(name, list);
+   }
+  
   else if (PyArray_Check(value) || PySequence_Check(value)){
     PyObject * pyArray =
       PyArray_CheckFromAny(value,
@@ -460,8 +519,84 @@ PyObject * getPythonParameter(const OptionsList & opts_list,
       }
     catch(boost::bad_any_cast &e) {return NULL;}
   }
+  else if (entry->type()==typeid(std::vector< OptionsList >))
+  {
+    try
+      {
+	std::vector< OptionsList > list =
+	  boost::any_cast< std::vector< OptionsList > >(*entry);
+	return copyStdVectorToPyList(list);
+      }
+    catch(boost::bad_any_cast &e) {return NULL;}
+  }
   // All  other types are unsupported
   return NULL;
 }
 
+void pyListToNewStdVector(PyObject *pylist,
+			  std::vector< OptionsList > &list){
+
+  void * argp;
+  int newmem = 0;
+  static swig_type_info * swig_TPL_ptr =
+    SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
+  std::printf("pyListToNewStdVector\n");
+  print_pyobject_string_rep(pylist);
+  if (PyList_Check(pylist)) {
+    Py_ssize_t len = PyList_Size(pylist);
+    list.reserve(len);
+    for(Py_ssize_t i=0; i<len; ++i){
+      std::cout << "# " <<  i << "," <<  len << std::endl;
+      PyObject *value = PyList_GetItem(pylist, i);
+      std::cout << "here1" << std::endl;
+      print_pyobject_string_rep(value);
+      print_PyType(value);
+      if (SWIG_CheckState(SWIG_Python_ConvertPtrAndOwn(value,
+						       &argp,
+						       swig_TPL_ptr,
+						       0,
+						       &newmem))){
+	if (newmem & SWIG_CAST_NEW_MEMORY){ 
+	  boost::shared_ptr< OptionsList > tempshared =
+	    *reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
+	  delete reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
+	  list.push_back(*(tempshared.get()));
+	}else{
+	  boost::shared_ptr< OptionsList > * smartarg =
+	    reinterpret_cast< boost::shared_ptr< OptionsList > * >(argp);
+	  if (smartarg) list.push_back(*(smartarg->get()));
+	}
+      }else if (PyDict_Check(value)){
+	
+	OptionsList * sublist = pyDictToNewOptionsList(value);
+	std::cout << "here2 " << list.size() << std::endl;
+	std::cout << *sublist << std::endl;
+	list.push_back(*sublist);
+	//delete sublist;
+	std::cout << "here3" << std::endl;
+      }else
+	throw(std::runtime_error("Passed PyObject pointer was not a Python dictionary or a swig wrapped instance of OptionsList"));
+    }
+  }else
+    throw(std::runtime_error("Passed PyObject was not a list"));
+}
+
+PyObject * copyStdVectorToPyList(std::vector<OptionsList> &list){
+  PyObject* pylist = PyList_New(list.size());
+  if (!pylist)
+    goto fail;
+  for (size_t i=0; i<list.size(); ++i){
+    PyObject *item =
+      optionsListToNewPyDict(list[i]);
+    if (!item) {
+     Py_XDECREF(pylist);
+     goto fail;
+    }
+    PyList_SET_ITEM(pylist, i, item);
+  }
+  return pylist;
+ fail:
+  return NULL;
+}
+  
 }//  namespace Surrogates

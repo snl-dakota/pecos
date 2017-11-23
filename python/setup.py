@@ -222,8 +222,9 @@ options_list_interface = Extension(
     define_macros =[('COMPILE_WITH_PYTHON',None)],
     undef_macros = [],
     language='c++',
-    library_dirs = [],
-    libraries = [],
+    library_dirs = [
+        join(pecos_build_dir,'packages','teuchos','packages','teuchos','src')],
+    libraries = ['teuchos'],
     extra_compile_args = ['-std=c++11'],
     swig_opts=swig_opts+['-I%s'%include_dir for include_dir in options_list_interface_include_dirs])
 
@@ -282,12 +283,12 @@ setup(
     ext_package=package_name,
     ext_modules=[
         options_list,
-        math_tools,
-        regression,
-        approximation,
-        univariate_polynomials
+        # math_tools,
+        # regression,
+        # approximation,
+        # univariate_polynomials
         #std_vector_example,
-        #options_list_interface,
+        options_list_interface
         #enum_example,
         #dot#,
     ],

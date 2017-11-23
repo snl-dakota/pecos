@@ -1,5 +1,5 @@
-#from OptionsList import OptionsList
-from options_list_interface import *
+from PyDakota.options_list import OptionsList
+from PyDakota.swig_examples.options_list_interface import *
 def test_options_list_typemap_in():
     """
     Test that a wrapped function that takes an OptionsList as input
@@ -12,13 +12,24 @@ def test_options_list_typemap_in():
     for i,type_str in enumerate(str_types):
         item = items[i]
         name = names[i]
-        set_entry = options_list.__dict__[type_str + "set_entry"]
+        set_entry = PyDakota.swig_examples.options_list_interface.__dict__[type_str + "set_entry"]
         tmp_opts = set_entry({},name,item)
         opts = set_entry(opts,name,item)
         assert tmp_opts=={names[i]:items[i]}
 
     pydict = dict((names[i],items[i]) for i in range(len(items)))
     assert opts == pydict
+
+    opts = OptionsList()
+    list_of_opts = []
+    opts1 = OptionsList(); opts1.set(names[0],items[0])
+    list_of_opts.append(opts1)
+    opts2 = OptionsList(); opts2.set(names[0],items[1])
+    list_of_opts.append(opts2)
+    opts.set(names[3],list_of_opts)
+    tmp_opts = intset_entry(opts,names[2],1)
+    print tmp_opts
+    assert tmp_opts=={names[2]:1,names[3]:[{names[0]:items[0]},{names[1]:items[1]}]}
 
 if __name__ == "__main__":
     test_options_list_typemap_in()

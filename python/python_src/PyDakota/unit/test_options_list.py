@@ -52,6 +52,24 @@ class OptionsListTestCase(unittest.TestCase):
         opts.set("key4",array)
         assert numpy.allclose(opts.get("key4"),array)
 
+        list_of_opts = []
+        opts1 = {"key1":2.}
+        list_of_opts.append(opts1)
+        opts2 = {"key2":3.}
+        list_of_opts.append(opts2)
+        opts.set("key5",list_of_opts)
+
+        list_of_opts = []
+        opts1 = OptionsList(); opts1.set("key1",2.)
+        list_of_opts.append(opts1)
+        opts2 = OptionsList(); opts2.set("key2",2.)
+        list_of_opts.append(opts2)
+        opts.set("key5",list_of_opts)
+
+        print 'a'
+        print opts
+        print opts.get("key5")
+
     def test_len(self):
         opts = OptionsList()
         assert len(opts)==0

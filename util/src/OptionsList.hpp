@@ -14,6 +14,18 @@ typedef std::map<std::string, boost::any> opts_map;
 inline bool equal_any(const boost::any& lhs, const boost::any& rhs);
 inline std::ostream& operator<<(std::ostream& os, const boost::any& item);
 
+template<typename T>
+std::ostream& print_vector(const std::vector<T> &vec, std::ostream& os){
+  os << "[";
+  for (size_t i=0; i<vec.size(); ++i){
+    if (i>0) os << ", ";
+    os << vec[i];
+  }
+  os << "]";
+  return os;
+}
+
+
 class OptionsList {
   
 private:
@@ -101,7 +113,7 @@ public:
   };
 
   void set(const std::string& name, char const * item){
-     map_[name]=std::string(item);
+    map_[name]=std::string(item);
   };
 
   void print_keys() const{
@@ -117,6 +129,7 @@ public:
       os << iter->first;
     }
     os << "]";
+    return os;
   }
 
   void print() const{
@@ -211,6 +224,15 @@ std::ostream& operator<<(std::ostream& os, const boost::any& item){
     os << boost::any_cast< Teuchos::SerialDenseVector<int,int> >(item);
   else if (item.type()==typeid(Teuchos::SerialDenseVector<int,double>))
     os << boost::any_cast< Teuchos::SerialDenseVector<int,double> >(item);
+  else if (item.type()==typeid(Teuchos::SerialDenseMatrix<int,int>))
+    os << boost::any_cast< Teuchos::SerialDenseMatrix<int,int> >(item);
+  else if (item.type()==typeid(Teuchos::SerialDenseMatrix<int,double>))
+    os << boost::any_cast< Teuchos::SerialDenseMatrix<int,double> >(item);
+  else if (item.type()==typeid(std::vector<OptionsList>)){
+    std::vector<OptionsList> vec=
+      boost::any_cast< std::vector<OptionsList> >(item);
+    print_vector(vec,os);
+  }
   else{
     std::string msg = "Print of any not implemented for specified type";
     throw(std::runtime_error(msg));

@@ -55,6 +55,9 @@ PyObject * optionsListToNewPyDict(const OptionsList & opts_list);
 template< typename TYPE >
 int NumPy_TypeCode();
 
+void pyListToNewStdVector(PyObject *pylist, std::vector< OptionsList > &list);
+
+PyObject * copyStdVectorToPyList(std::vector<OptionsList> &list);
 
 } //namespace Surrogates
 #endif // PYTHON_HELPERS_HPP
