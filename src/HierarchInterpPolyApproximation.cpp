@@ -254,6 +254,7 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 }
 
 
+/*
 void HierarchInterpPolyApproximation::store_coefficients(size_t index)
 {
   // mirror changes to origSurrData for deep copied surrData
@@ -371,6 +372,7 @@ void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
   if (expansionCoeffGradFlag)
     std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads[index]);
 }
+*/
 
 
 void HierarchInterpPolyApproximation::combine_coefficients(size_t swap_index)

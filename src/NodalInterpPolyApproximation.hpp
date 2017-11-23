@@ -66,6 +66,7 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
+  /*
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void store_coefficients(size_t index = _NPOS);
   /// restore previous state from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
@@ -78,6 +79,7 @@ protected:
   void remove_stored_coefficients(size_t index = _NPOS);
   /// clear storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void clear_stored();
+  */
 
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index]
@@ -206,9 +208,9 @@ private:
   //
 
   /// the type1 coefficients of the expansion for interpolating values
-  RealVector expansionType1Coeffs;
+  std::map<UShortArray, RealVector> expansionType1Coeffs;
   /// the type2 coefficients of the expansion for interpolating gradients
-  RealMatrix expansionType2Coeffs;
+  std::map<UShortArray, RealMatrix> expansionType2Coeffs;
   /// the gradients of the type1 expansion coefficients
   /** may be interpreted as either the gradients of the expansion
       coefficients or the coefficients of expansions for the response
@@ -216,14 +218,16 @@ private:
       needed with respect to variables that do not appear in the
       expansion (e.g., with respect to design variables for an
       expansion only over the random variables). */
-  RealMatrix expansionType1CoeffGrads;
+  std::map<UShortArray, RealMatrix> expansionType1CoeffGrads;
 
+  /*
   /// copies of expansionType1Coeffs state for subsequent restoration
   RealVectorArray storedExpType1Coeffs;
   /// copies of expansionType2Coeffs state for subsequent restoration
   RealMatrixArray storedExpType2Coeffs;
   /// copies of expansionType1CoeffGrads state for subsequent restoration
   RealMatrixArray storedExpType1CoeffGrads;
+  */
 
   /// the gradient of the mean of a tensor-product interpolant; a
   /// contributor to meanGradient

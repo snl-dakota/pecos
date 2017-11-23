@@ -68,6 +68,7 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
+  /*
   /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void store_coefficients(size_t index = _NPOS);
   /// restore previous state from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
@@ -80,6 +81,7 @@ protected:
   void remove_stored_coefficients(size_t index = _NPOS);
   /// clear storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
   void clear_stored();
+  */
 
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
@@ -363,27 +365,29 @@ private:
   RealVector varianceRefGradient;
 
   /// the type1 coefficients of the expansion for interpolating values
-  RealVector2DArray expansionType1Coeffs;
+  std::map<UShortArray, RealVector2DArray> expansionType1Coeffs;
   /// the type2 coefficients of the expansion for interpolating gradients
-  RealMatrix2DArray expansionType2Coeffs;
+  std::map<UShortArray, RealMatrix2DArray> expansionType2Coeffs;
   /// the gradients of the type1 expansion coefficients
   /** may be interpreted as either the gradients of the expansion coefficients
       or the coefficients of expansions for the response gradients.  This
       array is used when sensitivities of moments are needed with respect to
       variables that do not appear in the expansion (e.g., with respect to
       design variables for an expansion only over the random variables). */
-  RealMatrix2DArray expansionType1CoeffGrads;
+  std::map<UShortArray, RealMatrix2DArray> expansionType1CoeffGrads;
 
   /// type 1 expansion coefficients popped during decrement for later
   /// restoration to expansionType1Coeffs
-  std::map<UShortArray, RealVector> poppedExpT1Coeffs;
+  std::map<UShortArray, std::map<UShortArray, RealVector> > poppedExpT1Coeffs;
   /// type 2 expansion coefficients popped during decrement for later
   /// restoration to expansionType2Coeffs
-  std::map<UShortArray, RealMatrix> poppedExpT2Coeffs;
+  std::map<UShortArray, std::map<UShortArray, RealMatrix> > poppedExpT2Coeffs;
   /// type 1 expansion coefficient gradients popped during decrement
   /// for later restoration to expansionType1CoeffGrads
-  std::map<UShortArray, RealMatrix> poppedExpT1CoeffGrads;
+  std::map<UShortArray, std::map<UShortArray, RealMatrix> >
+    poppedExpT1CoeffGrads;
 
+  /*
   /// storage of expansionType1Coeffs state for subsequent
   /// restoration/combination
   RealVector3DArray storedExpType1Coeffs;
@@ -393,6 +397,7 @@ private:
   /// storage of expansionType1CoeffGrads state for subsequent
   /// restoration/combination
   RealMatrix3DArray storedExpType1CoeffGrads;
+  */
 };
 
 

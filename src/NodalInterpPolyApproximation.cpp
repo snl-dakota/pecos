@@ -87,6 +87,7 @@ void NodalInterpPolyApproximation::compute_coefficients(size_t index)
 }
 
 
+/*
 void NodalInterpPolyApproximation::store_coefficients(size_t index)
 {
   // mirror changes to origSurrData for deep copied surrData
@@ -212,6 +213,7 @@ void NodalInterpPolyApproximation::swap_coefficients(size_t index)
     storedExpType1CoeffGrads[index] = tmp_mat;
   }
 }
+*/
 
 
 void NodalInterpPolyApproximation::combine_coefficients(size_t maximal_index)
