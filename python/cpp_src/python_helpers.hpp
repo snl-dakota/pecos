@@ -59,5 +59,12 @@ void pyListToNewStdVector(PyObject *pylist, std::vector< OptionsList > &list);
 
 PyObject * copyStdVectorToPyList(std::vector<OptionsList> &list);
 
+bool PyListOfOptionsList_check(PyObject* pylist);
+
+  // Functions to help debugging
+void print_pyobject_string_rep(PyObject * value);
+  
+void print_PyType(PyObject *value);
+
 } //namespace Surrogates
 #endif // PYTHON_HELPERS_HPP

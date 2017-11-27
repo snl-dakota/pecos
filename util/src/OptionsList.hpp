@@ -202,9 +202,11 @@ bool equal_any(const boost::any& lhs, const boost::any& rhs){
     return boost::any_cast<OptionsList>(lhs)==boost::any_cast<OptionsList>(rhs);
   else if (lhs.type()==typeid(Teuchos::SerialDenseVector<int,int>))
     return boost::any_cast< Teuchos::SerialDenseVector<int,int> >(lhs)==boost::any_cast< Teuchos::SerialDenseVector<int,int> >(rhs);
-    else if (lhs.type()==typeid(Teuchos::SerialDenseVector<int,double>))
-      return boost::any_cast< Teuchos::SerialDenseVector<int,double> >(lhs)==boost::any_cast< Teuchos::SerialDenseVector<int,double> >(rhs);
-  else{
+  else if (lhs.type()==typeid(Teuchos::SerialDenseVector<int,double>))
+    return boost::any_cast< Teuchos::SerialDenseVector<int,double> >(lhs)==boost::any_cast< Teuchos::SerialDenseVector<int,double> >(rhs);
+  else if (lhs.type()==typeid(std::vector<OptionsList>)){
+    return boost::any_cast< std::vector<OptionsList> >(lhs)==boost::any_cast< std::vector<OptionsList> >(rhs);
+  }else{
     std::string msg = "Comparion of any not implemented for specified type";
     throw(std::runtime_error(msg));
   }

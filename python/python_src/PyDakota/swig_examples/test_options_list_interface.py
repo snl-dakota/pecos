@@ -24,12 +24,13 @@ def test_options_list_typemap_in():
     list_of_opts = []
     opts1 = OptionsList(); opts1.set(names[0],items[0])
     list_of_opts.append(opts1)
-    opts2 = OptionsList(); opts2.set(names[0],items[1])
+    opts2 = OptionsList(); opts2.set(names[1],items[1])
     list_of_opts.append(opts2)
     opts.set(names[3],list_of_opts)
-    tmp_opts = intset_entry(opts,names[2],1)
-    print tmp_opts
-    assert tmp_opts=={names[2]:1,names[3]:[{names[0]:items[0]},{names[1]:items[1]}]}
+    #tmp_opts = intset_entry(opts,names[2],1)
+    #assert tmp_opts=={names[2]:1,names[3]:[{names[0]:items[0]},{names[1]:items[1]}]}
+    print opts,{names[3]:[{names[0]:items[0]},{names[1]:items[1]}]}
+    assert opts=={names[3]:[{names[0]:items[0]},{names[1]:items[1]}]}
 
 if __name__ == "__main__":
     test_options_list_typemap_in()

@@ -2,26 +2,18 @@
 #include "swigpyrun.h"
 
 namespace Surrogates{
-
-bool PyListOfOptionsList_check(PyObject* pylist){
-  void * argp;
-  static swig_type_info * swig_TPL_ptr =
-    SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
-  Py_ssize_t len = PyList_Size(pylist);
-  for(Py_ssize_t i=0; i<len; ++i){
-    PyObject *value = PyList_GetItem(pylist, i);
-    if (!SWIG_CheckState(SWIG_Python_ConvertPtr(value,
-					       &argp,
-					       swig_TPL_ptr,
-					       0)) &&
-	(!PyDict_Check(value)))
-      return false;
-  }
-  return true;
+ 
+void print_pyobject_string_rep(PyObject * value){
+  PyObject* objectsRepresentation = PyObject_Repr(value);
+  const char* s = PyString_AsString(objectsRepresentation);
+  std::printf(s);
+  std::printf("\n");
 }
 
   
-void print_PyType(PyObject *value){  
+void print_PyType(PyObject *value){
+  std::printf("The object: ");
+  print_pyobject_string_rep(value);
   if (PyBool_Check(value))
     std::printf("Is int\n");
   else if (PyInt_Check(value))
@@ -34,6 +26,8 @@ void print_PyType(PyObject *value){
     std::printf("Is None\n");
   else if (PyDict_Check(value))
     std::printf("Is dict\n");
+  else if (PyListOfOptionsList_check(value))
+    std::printf("Is list of options\n");
   else if (PyList_Check(value))
     std::printf("Is list\n");
   else if (PyArray_Check(value))
@@ -46,11 +40,21 @@ void print_PyType(PyObject *value){
     std::printf("value unknown\n");
 }
 
-void print_pyobject_string_rep(PyObject * value){
-  PyObject* objectsRepresentation = PyObject_Repr(value);
-  const char* s = PyString_AsString(objectsRepresentation);
-  std::printf(s);
-  std::printf("\n");
+bool PyListOfOptionsList_check(PyObject* pylist){
+  void * argp;
+  static swig_type_info * swig_TPL_ptr =
+    SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
+  Py_ssize_t len = PyList_Size(pylist);
+  for(Py_ssize_t i=0; i<len; ++i){
+    PyObject *value = PyList_GetItem(pylist, i);
+    if (!SWIG_CheckState(SWIG_Python_ConvertPtr(value,
+						&argp,
+						swig_TPL_ptr,
+						0)) &&
+	(!PyDict_Check(value)))
+      return false;
+  }
+  return true;
 }
 
 template<>
@@ -129,9 +133,7 @@ PyObject * copyTeuchosMatrixToNumPy(Teuchos::SerialDenseMatrix< int,T > &tmat)
 bool setPythonParameter(OptionsList & opts_list,
 			const std::string      & name,
 			PyObject               * value)
-{
-  print_pyobject_string_rep(value);
-  
+{ 
   static swig_type_info * swig_TPL_ptr =
     SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
   void * argp;
@@ -208,9 +210,12 @@ bool setPythonParameter(OptionsList & opts_list,
   }
   
   else if (PyList_Check(value) && PyListOfOptionsList_check(value)) {
-     std::vector<OptionsList> list;
-     pyListToNewStdVector(value, list);
-     opts_list.set(name, list);
+    // only allow lists of optionslist here
+    // list of numerical entries are handled below and converted to
+    // Teuchos matrices and vectors
+    std::vector<OptionsList> list;
+    pyListToNewStdVector(value, list);
+    opts_list.set(name, list);
    }
   
   else if (PyArray_Check(value) || PySequence_Check(value)){
@@ -540,17 +545,14 @@ void pyListToNewStdVector(PyObject *pylist,
   int newmem = 0;
   static swig_type_info * swig_TPL_ptr =
     SWIG_TypeQuery("boost::shared_ptr< OptionsList >*");
-  std::printf("pyListToNewStdVector\n");
-  print_pyobject_string_rep(pylist);
+  //std::printf("pyListToNewStdVector\n");
+  //print_pyobject_string_rep(pylist);
   if (PyList_Check(pylist)) {
     Py_ssize_t len = PyList_Size(pylist);
     list.reserve(len);
     for(Py_ssize_t i=0; i<len; ++i){
-      std::cout << "# " <<  i << "," <<  len << std::endl;
       PyObject *value = PyList_GetItem(pylist, i);
-      std::cout << "here1" << std::endl;
-      print_pyobject_string_rep(value);
-      print_PyType(value);
+      //print_PyType(value);
       if (SWIG_CheckState(SWIG_Python_ConvertPtrAndOwn(value,
 						       &argp,
 						       swig_TPL_ptr,
@@ -569,11 +571,8 @@ void pyListToNewStdVector(PyObject *pylist,
       }else if (PyDict_Check(value)){
 	
 	OptionsList * sublist = pyDictToNewOptionsList(value);
-	std::cout << "here2 " << list.size() << std::endl;
-	std::cout << *sublist << std::endl;
 	list.push_back(*sublist);
 	//delete sublist;
-	std::cout << "here3" << std::endl;
       }else
 	throw(std::runtime_error("Passed PyObject pointer was not a Python dictionary or a swig wrapped instance of OptionsList"));
     }

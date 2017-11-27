@@ -59,17 +59,6 @@ class OptionsListTestCase(unittest.TestCase):
         list_of_opts.append(opts2)
         opts.set("key5",list_of_opts)
 
-        list_of_opts = []
-        opts1 = OptionsList(); opts1.set("key1",2.)
-        list_of_opts.append(opts1)
-        opts2 = OptionsList(); opts2.set("key2",2.)
-        list_of_opts.append(opts2)
-        opts.set("key5",list_of_opts)
-
-        print 'a'
-        print opts
-        print opts.get("key5")
-
     def test_len(self):
         opts = OptionsList()
         assert len(opts)==0
@@ -99,10 +88,32 @@ class OptionsListTestCase(unittest.TestCase):
         opts2.set("key2","a")
         assert opts1 != opts2
 
+        items = [1,2.,'a',OptionsList()]
+        names = ['key%s'%(i+1) for i in range(len(items))]
+        opts = OptionsList()
+        list_of_opts = []
+        opts1 = OptionsList(); opts1.set(names[0],items[0])
+        list_of_opts.append(opts1)
+        opts2 = OptionsList(); opts2.set(names[1],items[1])
+        list_of_opts.append(opts2)
+        opts.set(names[3],list_of_opts)
+        assert opts=={names[3]:[{names[0]:items[0]},{names[1]:items[1]}]}
+
     def test__get_item__(self):
         opts = OptionsList()
         opts.set("key1",2.)
         assert opts["key1"]==2.
+
+        items = [1,2.,'a',OptionsList()]
+        names = ['key%s'%(i+1) for i in range(len(items))]
+        opts = OptionsList()
+        list_of_opts = []
+        opts1 = OptionsList(); opts1.set(names[0],items[0])
+        list_of_opts.append(opts1)
+        opts2 = OptionsList(); opts2.set(names[1],items[1])
+        list_of_opts.append(opts2)
+        opts.set(names[3],list_of_opts)
+        assert opts[names[3]]==[{names[0]:items[0]},{names[1]:items[1]}]
 
     def test__contains__(self):
         opts = OptionsList()
@@ -119,6 +130,17 @@ class OptionsListTestCase(unittest.TestCase):
         opts.set("key1",[1,2,3])
         #print opts
         #print opts.__repr__
+
+        items = [1,2.,'a',OptionsList()]
+        names = ['key%s'%(i+1) for i in range(len(items))]
+        opts = OptionsList()
+        list_of_opts = []
+        opts1 = OptionsList(); opts1.set(names[0],items[0])
+        list_of_opts.append(opts1)
+        opts2 = OptionsList(); opts2.set(names[1],items[1])
+        list_of_opts.append(opts2)
+        opts.set(names[3],list_of_opts)
+        #print opts
 
 
 if __name__ == "__main__":
