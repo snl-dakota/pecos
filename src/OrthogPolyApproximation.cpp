@@ -28,7 +28,7 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
-  update_active_iterators();
+  create_active_iterators();
 
   // expansion formulation has been defined in Shared*OrthogPolyApproxData::
   // allocate_data(), and its results are employed below

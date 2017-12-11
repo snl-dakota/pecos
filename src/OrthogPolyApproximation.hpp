@@ -268,8 +268,23 @@ inline void OrthogPolyApproximation::update_active_iterators()
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  expCoeffsIter     =     expansionCoeffs.find(data_rep->activeKey);
-  expCoeffGradsIter = expansionCoeffGrads.find(data_rep->activeKey);
+  const UShortArray& key = data_rep->activeKey;
+  expCoeffsIter     =     expansionCoeffs.find(key);
+  expCoeffGradsIter = expansionCoeffGrads.find(key);
+}
+
+
+inline void OrthogPolyApproximation::create_active_iterators()
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+  std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
+
+  // returned iterator points to existing instance or new insertion
+  expCoeffsIter     =     expansionCoeffs.insert(rv_pair).first;
+  expCoeffGradsIter = expansionCoeffGrads.insert(rm_pair).first;
 }
 
 

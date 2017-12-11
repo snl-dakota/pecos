@@ -89,10 +89,14 @@ public:
   /// return type2WeightSets
   const RealMatrix& type2_weight_sets() const;
 
-  /// return levelIndex
+  /// return levelIndex[activeKey]
   const UShortArray& level_index() const;
-  /// return collocKey
+  /// return levelIndex[key]
+  const UShortArray& level_index(const UShortArray& key) const;
+  /// return collocKey[activeKey]
   const UShort2DArray& collocation_key() const;
+  /// return collocKey[key]
+  const UShort2DArray& collocation_key(const UShortArray& key) const;
 
   /*
   /// return storedLevelIndex[index]
@@ -239,8 +243,18 @@ inline const UShortArray& TensorProductDriver::level_index() const
 { return levelIndex[activeKey]; }
 
 
+inline const UShortArray& TensorProductDriver::
+level_index(const UShortArray& key) const
+{ return levelIndex[key]; }
+
+
 inline const UShort2DArray& TensorProductDriver::collocation_key() const
 { return collocKey[activeKey]; }
+
+
+inline const UShort2DArray& TensorProductDriver::
+collocation_key(const UShortArray& key) const
+{ return collocKey[key]; }
 
 
 /*

@@ -209,8 +209,14 @@ private:
 
   /// the type1 coefficients of the expansion for interpolating values
   std::map<UShortArray, RealVector> expansionType1Coeffs;
+  /// iterator pointing to active node in expansionCoeffs
+  std::map<UShortArray, RealVector>::iterator expT1CoeffsIter;
+
   /// the type2 coefficients of the expansion for interpolating gradients
   std::map<UShortArray, RealMatrix> expansionType2Coeffs;
+  /// iterator pointing to active node in expansionCoeffGrads
+  std::map<UShortArray, RealMatrix>::iterator expT2CoeffsIter;
+
   /// the gradients of the type1 expansion coefficients
   /** may be interpreted as either the gradients of the expansion
       coefficients or the coefficients of expansions for the response
@@ -219,6 +225,9 @@ private:
       expansion (e.g., with respect to design variables for an
       expansion only over the random variables). */
   std::map<UShortArray, RealMatrix> expansionType1CoeffGrads;
+  /// iterator pointing to active node in expansionCoeffGrads
+  std::map<UShortArray, RealMatrix>::iterator expT1CoeffGradsIter;
+
 
   /*
   /// copies of expansionType1Coeffs state for subsequent restoration
@@ -246,6 +255,32 @@ NodalInterpPolyApproximation(const SharedBasisApproxData& shared_data):
 
 inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 { }
+
+
+inline void NodalInterpPolyApproximation::update_active_iterators()
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  expT1CoeffsIter     =     expansionType1Coeffs.find(key);
+  expT2CoeffsIter     =     expansionType2Coeffs.find(key);
+  expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
+}
+
+
+inline void NodalInterpPolyApproximation::create_active_iterators()
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+  std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
+
+  // returned iterator points to existing instance or new insertion
+  expT1CoeffsIter     =     expansionType1Coeffs.insert(rv_pair).first;
+  expT2CoeffsIter     =     expansionType2Coeffs.insert(rm_pair).first;
+  expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
+}
 
 
 inline RealVector NodalInterpPolyApproximation::

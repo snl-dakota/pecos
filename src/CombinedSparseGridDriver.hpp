@@ -152,10 +152,14 @@ public:
   void assign_tensor_collocation_indices(size_t start_index,
 					 const IntArray& unique_index);
 
-  /// return smolyakMultiIndex
+  /// return smolyakMultiIndex[activeKey]
   const UShort2DArray& smolyak_multi_index() const;
-  /// return smolyakCoeffs
+  /// return smolyakMultiIndex[key]
+  const UShort2DArray& smolyak_multi_index(const UShortArray& key) const;
+  /// return smolyakCoeffs[activeKey]
   const IntArray& smolyak_coefficients() const;
+  /// return smolyakCoeffs[key]
+  const IntArray& smolyak_coefficients(const UShortArray& key) const;
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
 
@@ -168,10 +172,14 @@ public:
   /// get trackUniqueProdWeights
   bool track_unique_product_weights() const;
 
-  /// return collocKey
+  /// return collocKey[activeKey]
   const UShort3DArray& collocation_key() const;
-  /// return collocIndices
+  /// return collocKey[key]
+  const UShort3DArray& collocation_key(const UShortArray& key) const;
+  /// return collocIndices[activeKey]
   const Sizet2DArray& collocation_indices() const;
+  /// return collocIndices[key]
+  const Sizet2DArray& collocation_indices(const UShortArray& key) const;
   /// return uniqueIndexMapping
   const IntArray& unique_index_mapping() const;
   // return duplicateTol
@@ -365,8 +373,18 @@ smolyak_multi_index() const
 { return smolyakMultiIndex[activeKey]; }
 
 
+inline const UShort2DArray& CombinedSparseGridDriver::
+smolyak_multi_index(const UShortArray& key) const
+{ return smolyakMultiIndex[key]; }
+
+
 inline const IntArray& CombinedSparseGridDriver::smolyak_coefficients() const
 { return smolyakCoeffs[activeKey]; }
+
+
+inline const IntArray& CombinedSparseGridDriver::
+smolyak_coefficients(const UShortArray& key) const
+{ return smolyakCoeffs[key]; }
 
 
 inline void CombinedSparseGridDriver::
@@ -391,8 +409,18 @@ inline const UShort3DArray& CombinedSparseGridDriver::collocation_key() const
 { return collocKey[activeKey]; }
 
 
+inline const UShort3DArray& CombinedSparseGridDriver::
+collocation_key(const UShortArray& key) const
+{ return collocKey[key]; }
+
+
 inline const Sizet2DArray& CombinedSparseGridDriver::collocation_indices() const
 { return collocIndices[activeKey]; }
+
+
+inline const Sizet2DArray& CombinedSparseGridDriver::
+collocation_indices(const UShortArray& key) const
+{ return collocIndices[key]; }
 
 
 inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
