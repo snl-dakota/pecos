@@ -257,10 +257,10 @@ multiply_expansion(const UShort2DArray& multi_index_b,
     = (SharedOrthogPolyApproxData*)sharedDataRep;
 
   const UShort2DArray& multi_index_a = data_rep->multi_index();
-  RealVector exp_coeffs_a = expCoeffsIter->second; // copy (both expConfigOptions)
+  RealVector exp_coeffs_a = expCoeffsIter->second;//copy (both expConfigOptions)
   RealMatrix exp_grads_a;
   if (expansionCoeffGradFlag)
-    exp_grads_a = expCoeffGradsIter->second;       // copy (CoeffGrads only)
+    exp_grads_a = expCoeffGradsIter->second;      //copy (CoeffGrads only)
   size_t i, j, k, v, num_v = sharedDataRep->numVars,
     num_a = multi_index_a.size(), num_b = multi_index_b.size(),
     num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
