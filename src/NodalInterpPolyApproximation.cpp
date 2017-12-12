@@ -2947,7 +2947,7 @@ Real NodalInterpPolyApproximation::mean()
   if (std_mode && (computedMean & 1))
     return numericalMoments[0];
 
-  Real mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
+  Real mean = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second);
   if (std_mode)
     { numericalMoments[0] = mean; computedMean |= 1; }
   return mean;
@@ -3023,16 +3023,17 @@ const RealVector& NodalInterpPolyApproximation::mean_gradient()
   if (std_mode && (computedMean & 2))
     return meanGradient;
 
+  const RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
   const RealVector& t1_wts = driver_rep->type1_weight_sets();
   size_t i, j, num_colloc_pts = t1_wts.length(),
-    num_deriv_vars = expansionType1CoeffGrads.numRows();
+    num_deriv_vars = exp_t1_coeff_grads.numRows();
   if (meanGradient.length() != num_deriv_vars)
     meanGradient.sizeUninitialized(num_deriv_vars);
   meanGradient = 0.;
   for (i=0; i<num_colloc_pts; ++i) {
     const Real& t1_wt_i = t1_wts[i];
     for (j=0; j<num_deriv_vars; ++j)
-      meanGradient[j] += expansionType1CoeffGrads(j,i) * t1_wt_i;
+      meanGradient[j] += exp_t1_coeff_grads(j,i) * t1_wt_i;
   }
   if (std_mode) computedMean |=  2; //   activate 2-bit
   else          computedMean &= ~2; // deactivate 2-bit: protect mixed usage
@@ -3148,21 +3149,23 @@ covariance(PolynomialApproximation* poly_approx_2)
   // Note: compute_statistics() in dakota/src/NonDExpansion.C orders calls
   //       to reduce repetition in moment calculations.
   Real mean_1 = mean(), mean_2  = (same) ? mean_1 : nip_approx_2->mean();
-  const RealVector& t1_coeffs_2 = nip_approx_2->expansionType1Coeffs;
+  const RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
+  const RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
+  const RealVector& t1_coeffs_2 = nip_approx_2->expT1CoeffsIter->second;
   const RealVector& t1_wts      = driver_rep->type1_weight_sets();
   Real covar = 0.;
   size_t i, j, num_colloc_pts = t1_wts.length(), num_v = sharedDataRep->numVars;
   if (data_rep->basisConfigOptions.useDerivs) {
-    const RealMatrix& t2_coeffs_2 = nip_approx_2->expansionType2Coeffs;
+    const RealMatrix& t2_coeffs_2 = nip_approx_2->expT2CoeffsIter->second;
     const RealMatrix& t2_wts      = driver_rep->type2_weight_sets();
     for (i=0; i<num_colloc_pts; ++i) {
       // type1 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-      Real coeff1_i_mm1 = expansionType1Coeffs[i] - mean_1,
+      Real coeff1_i_mm1 = exp_t1_coeffs[i] - mean_1,
 	  coeff1_2i_mm2 = t1_coeffs_2[i]          - mean_2;
       covar += coeff1_i_mm1 * coeff1_2i_mm2 * t1_wts[i];
       // type2 interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
       // --> interpolated gradients are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
-      const Real *coeff2_i  = expansionType2Coeffs[i],
+      const Real *coeff2_i  = exp_t2_coeffs[i],
 	         *coeff2_2i = t2_coeffs_2[i], *t2_wt_i = t2_wts[i];
       for (j=0; j<num_v; ++j)
 	covar  += (coeff1_i_mm1 * coeff2_2i[j] + coeff1_2i_mm2 * coeff2_i[j])
@@ -3171,7 +3174,7 @@ covariance(PolynomialApproximation* poly_approx_2)
   }
   else
     for (i=0; i<num_colloc_pts; ++i)
-      covar += (expansionType1Coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
+      covar += (exp_t1_coeffs[i] - mean_1) * (t1_coeffs_2[i] - mean_2)
 	*  t1_wts[i];
 
   if (same && std_mode)
@@ -3371,8 +3374,10 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
     return varianceGradient;
 
   const RealVector& t1_wts = driver_rep->type1_weight_sets();
+  const RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
+  const RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
   size_t i, j, num_colloc_pts = t1_wts.length(),
-    num_deriv_vars = expansionType1CoeffGrads.numRows();
+    num_deriv_vars = exp_t1_coeff_grads.numRows();
   if (varianceGradient.length() != num_deriv_vars)
     varianceGradient.sizeUninitialized(num_deriv_vars);
   varianceGradient = 0.;
@@ -3380,9 +3385,9 @@ const RealVector& NodalInterpPolyApproximation::variance_gradient()
   Real mean_1 = mean();
   // See Eq. 6.23 in Theory Manual: grad of variance incorporates grad of mean
   for (i=0; i<num_colloc_pts; ++i) {
-    Real term_i = 2. * (expansionType1Coeffs[i] - mean_1) * t1_wts[i];
+    Real term_i = 2. * (exp_t1_coeffs[i] - mean_1) * t1_wts[i];
     for (j=0; j<num_deriv_vars; ++j)
-      varianceGradient[j] += term_i * expansionType1CoeffGrads(j,i);
+      varianceGradient[j] += term_i * exp_t1_coeff_grads(j,i);
   }
   if (std_mode) computedVariance |=  2;
   else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
@@ -3553,11 +3558,11 @@ integrate_response_moments(size_t num_moments)
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
   if (data_rep->basisConfigOptions.useDerivs)
-    integrate_moments(expansionType1Coeffs, expansionType2Coeffs,
+    integrate_moments(expT1CoeffsIter->second, expT2CoeffsIter->second,
 		      driver_rep->type1_weight_sets(),
 		      driver_rep->type2_weight_sets(), numericalMoments);
   else
-    integrate_moments(expansionType1Coeffs, driver_rep->type1_weight_sets(),
+    integrate_moments(expT1CoeffsIter->second, driver_rep->type1_weight_sets(),
 		      numericalMoments);
 }
 
@@ -3902,6 +3907,9 @@ member_coefficients_weights(const BitArray& member_bits,
   member_colloc_key.resize(num_member_coeffs);
   member_colloc_index.resize(num_member_coeffs);
 
+  const RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
+  const RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
+
   // Perform inner integral over complementary set u' (non-member vars) to
   // form new weighted expansion coefficients h (stored as member_t1_coeffs)
   size_t num_tp_pts = colloc_key.size(), member_index, c_index, cntr;
@@ -3923,7 +3931,7 @@ member_coefficients_weights(const BitArray& member_bits,
       type1_weight(key_i, lev_index, member_bits, member_wt, nonmember_wt);
     c_index = (colloc_index.empty()) ? i : colloc_index[i];
     member_t1_coeffs[member_index]
-      += nonmember_wt * expansionType1Coeffs[c_index];
+      += nonmember_wt * exp_t1_coeffs[c_index];
     // reduced dimension data updated more times than necessary, but tracking
     // this redundancy would be more expensive/complicated.  Note: non-member
     // key and c_vars data may change, but member data should be consistent.
@@ -3935,7 +3943,7 @@ member_coefficients_weights(const BitArray& member_bits,
     if (data_rep->basisConfigOptions.useDerivs) {
       Real *m_t2_coeffs_i = member_t2_coeffs[member_index],
 	   *m_t2_wts_i    = member_t2_wts[member_index];
-      const Real *t2_coeffs_i = expansionType2Coeffs[c_index];
+      const Real *t2_coeffs_i = exp_t2_coeffs[c_index];
       for (j=0; j<num_v; ++j) {
 	data_rep->type2_weight(j, key_i, lev_index, member_bits,
 			       member_wt, nonmember_wt);
