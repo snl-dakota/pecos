@@ -104,26 +104,33 @@ public:
 
   /// initialize all sparse grid settings except for distribution params
   void initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
-    const ShortArray& u_types, const ExpansionConfigOptions& ec_options,
-    BasisConfigOptions& bc_options,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH,
-    bool track_colloc_indices = true);
+		       const ShortArray& u_types,
+		       const ExpansionConfigOptions& ec_options,
+		       BasisConfigOptions& bc_options,
+		       short growth_rate = MODERATE_RESTRICTED_GROWTH,
+		       bool track_colloc_indices = true);
 
   /// return incrementSets
   const UShortArray& increment_sets() const;
 
-  /// return smolyakMultiIndex
+  /// return smolyakMultiIndex[activeKey]
   const UShort3DArray& smolyak_multi_index() const;
+  /// return smolyakMultiIndex[key]
+  const UShort3DArray& smolyak_multi_index(const UShortArray& key) const;
 
   /// set trackCollocIndices
   void track_collocation_indices(bool track_colloc_indices);
   /// get trackCollocIndices
   bool track_collocation_indices() const;
 
-  /// return collocKey
+  /// return collocKey[activeKey]
   const UShort4DArray& collocation_key() const;
-  /// return collocIndices
+  /// return collocKey[key]
+  const UShort4DArray& collocation_key(const UShortArray& key) const;
+  /// return collocIndices[activeKey]
   const Sizet3DArray& collocation_indices() const;
+  /// return collocIndices[key]
+  const Sizet3DArray& collocation_indices(const UShortArray& key) const;
 
   /*
   /// return storedLevMultiIndex
@@ -291,6 +298,11 @@ smolyak_multi_index() const
 { return smolyakMultiIndex[activeKey]; }
 
 
+inline const UShort3DArray& HierarchSparseGridDriver::
+smolyak_multi_index(const UShortArray& key) const
+{ return smolyakMultiIndex[key]; }
+
+
 inline void HierarchSparseGridDriver::
 track_collocation_indices(bool track_colloc_indices)
 { trackCollocIndices = track_colloc_indices; }
@@ -304,8 +316,18 @@ inline const UShort4DArray& HierarchSparseGridDriver::collocation_key() const
 { return collocKey[activeKey]; }
 
 
+inline const UShort4DArray& HierarchSparseGridDriver::
+collocation_key(const UShortArray& key) const
+{ return collocKey[key]; }
+
+
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
 { return collocIndices[activeKey]; }
+
+
+inline const Sizet3DArray& HierarchSparseGridDriver::
+collocation_indices(const UShortArray& key) const
+{ return collocIndices[key]; }
 
 
 /*

@@ -622,8 +622,8 @@ inline Real HierarchInterpPolyApproximation::value(const RealVector& x)
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
-  return value(x, sm_mi, hsg_driver->collocation_key(), expansionType1Coeffs,
-	       expansionType2Coeffs, max_level);
+  return value(x, sm_mi, hsg_driver->collocation_key(), expT1CoeffsIter->second,
+	       expT2CoeffsIter->second, max_level);
 }
 
 
@@ -636,8 +636,8 @@ gradient_basis_variables(const RealVector& x)
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
-				  expansionType1Coeffs, expansionType2Coeffs,
-				  max_level);
+				  expT1CoeffsIter->second,
+				  expT2CoeffsIter->second, max_level);
 }
 
 
@@ -650,8 +650,8 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
-				  expansionType1Coeffs, expansionType2Coeffs,
-				  dvv, max_level);
+				  expT1CoeffsIter->second,
+				  expT2CoeffsIter->second, dvv, max_level);
 }
 
 
@@ -664,50 +664,47 @@ gradient_nonbasis_variables(const RealVector& x)
   const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_nonbasis_variables(x, sm_mi, hsg_driver->collocation_key(),
-				     expansionType1CoeffGrads, max_level);
+				     expT1CoeffGradsIter->second, max_level);
 }
 
 
 inline Real HierarchInterpPolyApproximation::
-stored_value(const RealVector& x, size_t index)
+stored_value(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index(index);
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
-  return value(x, sm_mi, hsg_driver->stored_collocation_key(index),
-	       storedExpType1Coeffs[index], storedExpType2Coeffs[index],
-	       max_level);
+  return value(x, sm_mi, hsg_driver->collocation_key(key),
+	       expansionType1Coeffs[key], expansionType2Coeffs[key], max_level);
 }
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x, size_t index)
+stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index(index);
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
-  return gradient_basis_variables(x, sm_mi,
-				  hsg_driver->stored_collocation_key(index),
-				  storedExpType1Coeffs[index],
-				  storedExpType2Coeffs[index], max_level);
+  return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(key),
+				  expansionType1Coeffs[key],
+				  expansionType2Coeffs[key], max_level);
 }
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
-stored_gradient_nonbasis_variables(const RealVector& x, size_t index)
+stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray& sm_mi = hsg_driver->stored_smolyak_multi_index(index);
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
   unsigned short   max_level = sm_mi.size() - 1;
-  return gradient_nonbasis_variables(x, sm_mi,
-				     hsg_driver->stored_collocation_key(index),
-				     storedExpType1CoeffGrads[index],max_level);
+  return gradient_nonbasis_variables(x, sm_mi, hsg_driver->collocation_key(key),
+				     expansionType1CoeffGrads[key], max_level);
 }
 
 } // namespace Pecos
