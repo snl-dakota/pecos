@@ -82,7 +82,7 @@ protected:
   void clear_stored();
   */
 
-  void combine_coefficients(size_t swap_index);
+  void combine_coefficients();
 
   void print_coefficients(std::ostream& s, bool normalized);
 

@@ -87,8 +87,8 @@ protected:
 
   int min_coefficients() const;
 
-  void compute_coefficients(const UShortArray& key);
-  void increment_coefficients(const UShortArray& key);
+  void compute_coefficients();
+  void increment_coefficients();
 
   /*
   void store_coefficients(size_t index = _NPOS);
@@ -97,7 +97,7 @@ protected:
   void remove_stored_coefficients(size_t index = _NPOS);
   */
 
-  void combine_coefficients(size_t swap_index);
+  void combine_coefficients();
 
   void allocate_arrays();
 
@@ -111,11 +111,11 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x, size_t index);
+  Real stored_value(const RealVector& x, const UShortArray& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-						    size_t index);
+						    const UShortArray& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
-						       size_t index);
+						       const UShortArray& key);
 
   Real mean(const RealVector& x);
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);

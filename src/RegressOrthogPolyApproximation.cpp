@@ -165,10 +165,9 @@ void RegressOrthogPolyApproximation::allocate_arrays()
 }
 
 
-void RegressOrthogPolyApproximation::
-compute_coefficients(const UShortArray& key)
+void RegressOrthogPolyApproximation::compute_coefficients()
 {
-  PolynomialApproximation::compute_coefficients(key);
+  PolynomialApproximation::compute_coefficients();
   if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
 
@@ -203,9 +202,8 @@ compute_coefficients(const UShortArray& key)
 }
 
 
-void RegressOrthogPolyApproximation::
-increment_coefficients(const UShortArray& key)
-{ compute_coefficients(key); } // sufficient for now
+void RegressOrthogPolyApproximation::increment_coefficients()
+{ compute_coefficients(); } // sufficient for now
 
 
 void RegressOrthogPolyApproximation::run_regression()
@@ -590,12 +588,12 @@ void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
 */
 
 
-void RegressOrthogPolyApproximation::combine_coefficients(size_t swap_index)
+void RegressOrthogPolyApproximation::combine_coefficients()
 {
   // Combine the data stored previously by store_coefficients()
 
   if (sparseIndices.empty())
-    OrthogPolyApproximation::combine_coefficients(swap_index);
+    OrthogPolyApproximation::combine_coefficients();
   else {
     update_active_iterators();// activeKey updated in SharedOrthogPolyApproxData
     allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
@@ -2334,11 +2332,10 @@ least_factorization( RealMatrix &pts, UShort2DArray &basis_indices,
 }
 
 
-void RegressOrthogPolyApproximation::get_least_polynomial_coefficients(
-				       RealVector &v, IntVector &k,
-				       UShort2DArray &basis_indices,
-				       int num_vars, int num_pts,
-				       RealMatrix &H )
+void RegressOrthogPolyApproximation::
+get_least_polynomial_coefficients( RealVector &v, IntVector &k,
+				   UShort2DArray &basis_indices, int num_vars,
+				   int num_pts, RealMatrix &H )
 {
   int num_basis_indices = basis_indices.size();
   H.shape( num_pts, num_basis_indices );

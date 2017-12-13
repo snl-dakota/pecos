@@ -154,8 +154,7 @@ void OrthogPolyApproximation::swap_coefficients(size_t maximal_index)
 */
 
 
-void OrthogPolyApproximation::
-combine_coefficients(const UShortArray& maximal_key)
+void OrthogPolyApproximation::combine_coefficients()
 {
   // Combine the data stored previously by store_coefficients()
 

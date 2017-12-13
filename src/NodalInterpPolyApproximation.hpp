@@ -50,11 +50,11 @@ protected:
   /// size expansionType{1,2}Coeffs and expansionType1CoeffGrads
   void allocate_arrays();
 
-  void compute_coefficients(size_t index = _NPOS);
+  void compute_coefficients();
 
   /// update the coefficients for the expansion of interpolation polynomials:
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
-  void increment_coefficients(size_t index = _NPOS);
+  void increment_coefficients();
   /// restore the coefficients to their previous state prior to last increment:
   /// decrement expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void decrement_coefficients(bool save_data);
@@ -83,7 +83,7 @@ protected:
 
   /// augment current interpolant using
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index]
-  void combine_coefficients(size_t swap_index);
+  void combine_coefficients();
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
@@ -95,11 +95,11 @@ protected:
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
-  Real stored_value(const RealVector& x, size_t index);
+  Real stored_value(const RealVector& x, const UShortArray& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
-						    size_t index);
+						    const UShortArray& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
-						       size_t index);
+						       const UShortArray& key);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -257,17 +257,6 @@ inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 { }
 
 
-inline void NodalInterpPolyApproximation::update_active_iterators()
-{
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  expT1CoeffsIter     =     expansionType1Coeffs.find(key);
-  expT2CoeffsIter     =     expansionType2Coeffs.find(key);
-  expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
-}
-
-
 inline void NodalInterpPolyApproximation::create_active_iterators()
 {
   SharedNodalInterpPolyApproxData* data_rep
@@ -280,6 +269,17 @@ inline void NodalInterpPolyApproximation::create_active_iterators()
   expT1CoeffsIter     =     expansionType1Coeffs.insert(rv_pair).first;
   expT2CoeffsIter     =     expansionType2Coeffs.insert(rm_pair).first;
   expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
+}
+
+
+inline void NodalInterpPolyApproximation::update_active_iterators()
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  expT1CoeffsIter     =     expansionType1Coeffs.find(key);
+  expT2CoeffsIter     =     expansionType2Coeffs.find(key);
+  expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
 }
 
 

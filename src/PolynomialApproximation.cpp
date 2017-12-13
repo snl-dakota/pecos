@@ -22,7 +22,7 @@
 
 namespace Pecos {
 
-void PolynomialApproximation::compute_coefficients(const UShortArray& key)
+void PolynomialApproximation::compute_coefficients()
 {
   if (!expansionCoeffFlag && !expansionCoeffGradFlag) {
     PCerr << "Warning: neither expansion coefficients nor expansion "
@@ -33,7 +33,7 @@ void PolynomialApproximation::compute_coefficients(const UShortArray& key)
   }
 
   // update surrData from origSurrData
-  synchronize_surrogate_data(key);
+  synchronize_surrogate_data();
 
   // For testing of anchor point logic:
   //surrData.anchor_index(0); // treat 1st SDV,SDR as anchor point
@@ -51,25 +51,27 @@ void PolynomialApproximation::compute_coefficients(const UShortArray& key)
 }
 
 
-void PolynomialApproximation::synchronize_surrogate_data(const UShortArray& key)
+void PolynomialApproximation::synchronize_surrogate_data()
 {
   // when using a recursive approximation, subtract current PCE prediction
   // from the surrData so that we form a PCE on the surplus
   SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   if (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP)
-    response_data_to_surplus_data(key);
+    response_data_to_surplus_data();
   else if (surrData.is_null())
     surrData = origSurrData; // shared rep
 }
 
 
-void PolynomialApproximation::
-response_data_to_surplus_data(const UShortArray& key)
+void PolynomialApproximation::response_data_to_surplus_data()
 {
   // No modification for first level or not found
   const std::map<UShortArray, SDRArray>& resp_data_map
     = origSurrData.response_data_map();
-  std::map<UShortArray, SDRArray>::const_iterator cit = resp_data_map.find(key);
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  std::map<UShortArray, SDRArray>::const_iterator cit
+    = resp_data_map.find(key);
   if (cit == resp_data_map.begin() || // first entry -> no offsets
       cit == resp_data_map.end()) {   // key not found
     surrData = origSurrData; // shared rep

@@ -64,9 +64,9 @@ void NodalInterpPolyApproximation::allocate_arrays()
 }
 
 
-void NodalInterpPolyApproximation::compute_coefficients(size_t index)
+void NodalInterpPolyApproximation::compute_coefficients()
 {
-  PolynomialApproximation::compute_coefficients(index);
+  PolynomialApproximation::compute_coefficients();
   if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
 
@@ -229,8 +229,7 @@ void NodalInterpPolyApproximation::swap_coefficients(size_t index)
 */
 
 
-void NodalInterpPolyApproximation::
-combine_coefficients(const UShortArray& maximal_key)
+void NodalInterpPolyApproximation::combine_coefficients()
 {
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
@@ -360,9 +359,9 @@ combine_coefficients(const UShortArray& maximal_key)
 }
 
 
-void NodalInterpPolyApproximation::increment_coefficients(size_t index)
+void NodalInterpPolyApproximation::increment_coefficients()
 {
-  synchronize_surrogate_data(index); // TO DO: update_surrogate_data() ?
+  synchronize_surrogate_data(); // TO DO: update_surrogate_data() ?
   update_expansion_coefficients();
   allocate_component_sobol();
 }

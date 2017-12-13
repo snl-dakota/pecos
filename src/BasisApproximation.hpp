@@ -67,9 +67,9 @@ public:
   /// build the derived class approximation type in numVars dimensions
   virtual int min_coefficients() const;
   /// calculate the approximation coefficients using a set of surrogate data
-  virtual void compute_coefficients(size_t index = _NPOS);
+  virtual void compute_coefficients();
   /// recalculate approximation coefficients following a surrogate data update
-  virtual void increment_coefficients(size_t index = _NPOS);
+  virtual void increment_coefficients();
   /// restore the approximation coefficients to the state preceding the last
   /// increment
   virtual void decrement_coefficients(bool save_data);
@@ -95,7 +95,7 @@ public:
   */
 
   /// combine the current coefficients with a previously stored set
-  virtual void combine_coefficients(size_t swap_index);
+  virtual void combine_coefficients();
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s, bool normalized);

@@ -82,10 +82,9 @@ void ProjectOrthogPolyApproximation::integration_checks()
 }
 
 
-void ProjectOrthogPolyApproximation::
-compute_coefficients(const UShortArray& key)
+void ProjectOrthogPolyApproximation::compute_coefficients()
 {
-  PolynomialApproximation::compute_coefficients(key);
+  PolynomialApproximation::compute_coefficients();
   if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
 
@@ -148,6 +147,7 @@ compute_coefficients(const UShortArray& key)
     if (expansionCoeffGradFlag) expCoeffGradsIter->second = 0.;
     CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
     const IntArray& sm_coeffs = csg_driver->smolyak_coefficients();
+    const UShortArray&   key       = data_rep->activeKey;
     const UShort3DArray& tp_mi     = data_rep->tpMultiIndex[key];
     const UShort3DArray& tp_mi_map = data_rep->tpMultiIndexMap[key];
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
@@ -196,16 +196,16 @@ compute_coefficients(const UShortArray& key)
 }
 
 
-void ProjectOrthogPolyApproximation::
-increment_coefficients(const UShortArray& key)
+void ProjectOrthogPolyApproximation::increment_coefficients()
 {
   // TO DO: partial sync of new TP data set, e.g. update_surrogate_data() ?
-  synchronize_surrogate_data(key);
+  synchronize_surrogate_data();
 
   // tpMultiIndex{,Map,MapRef} already updated in
   // SharedProjectOrthogPolyApproxData::increment_data()
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray&   key   = data_rep->activeKey;
   const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
   RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
   RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];

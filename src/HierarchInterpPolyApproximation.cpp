@@ -26,40 +26,44 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
+  create_active_iterators();
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const ExpansionConfigOptions& ec_options = data_rep->expConfigOptions;
   const UShort4DArray& key = data_rep->hsg_driver()->collocation_key();
   size_t i, j, k, num_levels = key.size(), num_sets, num_tp_pts,
-    num_deriv_vars = surrData.num_derivative_variables();
+    num_v = surrData.num_derivative_variables();
 
-  if (expansionType1Coeffs.size() != num_levels)
-    expansionType1Coeffs.resize(num_levels);
-  if ( expansionType2Coeffs.size() != num_levels)
-    expansionType2Coeffs.resize(num_levels);
-  if (expansionType1CoeffGrads.size() != num_levels)
-    expansionType1CoeffGrads.resize(num_levels);
+  RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
+  RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
+  RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
+  
+  if (exp_t1_coeffs.size() != num_levels)
+    exp_t1_coeffs.resize(num_levels);
+  if (exp_t2_coeffs.size() != num_levels)
+    exp_t2_coeffs.resize(num_levels);
+  if (exp_t1_coeff_grads.size() != num_levels)
+    exp_t1_coeff_grads.resize(num_levels);
   for (i=0; i<num_levels; ++i) {
     const UShort3DArray& key_i = key[i];
     num_sets = key_i.size();
-    if (expansionType1Coeffs[i].size() != num_sets)
-      expansionType1Coeffs[i].resize(num_sets);
-    if (expansionType2Coeffs[i].size() != num_sets)
-      expansionType2Coeffs[i].resize(num_sets);
-    if (expansionType1CoeffGrads[i].size() != num_sets)
-      expansionType1CoeffGrads[i].resize(num_sets);
+    if (exp_t1_coeffs[i].size() != num_sets)
+      exp_t1_coeffs[i].resize(num_sets);
+    if (exp_t2_coeffs[i].size() != num_sets)
+      exp_t2_coeffs[i].resize(num_sets);
+    if (exp_t1_coeff_grads[i].size() != num_sets)
+      exp_t1_coeff_grads[i].resize(num_sets);
     for (j=0; j<num_sets; ++j) {
       num_tp_pts = key_i[j].size();
       for (k=0; k<num_tp_pts; ++k) {
 	if (expansionCoeffFlag) {
-	  expansionType1Coeffs[i][j].sizeUninitialized(num_tp_pts);
+	  exp_t1_coeffs[i][j].sizeUninitialized(num_tp_pts);
 	  if (data_rep->basisConfigOptions.useDerivs)
-	    expansionType2Coeffs[i][j].shapeUninitialized(num_deriv_vars,
-							  num_tp_pts);
+	    exp_t2_coeffs[i][j].shapeUninitialized(num_v, num_tp_pts);
 	}
 	if (expansionCoeffGradFlag)
-	  expansionType1CoeffGrads[i][j].shapeUninitialized(num_deriv_vars,
-							    num_tp_pts);
+	  exp_t1_coeff_grads[i][j].shapeUninitialized(num_v, num_tp_pts);
       }
     }
   }
@@ -68,9 +72,8 @@ void HierarchInterpPolyApproximation::allocate_arrays()
   // anisotropic weights could move points around without changing the total
   //size_t num_points = surrData.points();
   //bool update_exp_form =
-  //  ( (expansionCoeffFlag && expansionType1Coeffs.length() != num_points) ||
-  //    (expansionCoeffGradFlag &&
-  //     expansionType1CoeffGrads.numCols() != num_points ) );
+  //  ( (expansionCoeffFlag     && exp_t1_coeffs.length() != num_points) ||
+  //    (expansionCoeffGradFlag && exp_t1_coeff_grads.numCols() != num_points));
 
   if (ec_options.refinementControl) {
     size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
@@ -82,9 +85,9 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 }
 
 
-void HierarchInterpPolyApproximation::compute_coefficients(size_t index)
+void HierarchInterpPolyApproximation::compute_coefficients()
 {
-  PolynomialApproximation::compute_coefficients(index);
+  PolynomialApproximation::compute_coefficients();
   if (!expansionCoeffFlag && !expansionCoeffGradFlag)
     return;
 
@@ -158,10 +161,10 @@ void HierarchInterpPolyApproximation::compute_coefficients(size_t index)
 }
 
 
-void HierarchInterpPolyApproximation::increment_coefficients(size_t index)
+void HierarchInterpPolyApproximation::increment_coefficients()
 {
   // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
-  synchronize_surrogate_data(index);
+  synchronize_surrogate_data();
 
   increment_current_from_reference();
 
@@ -375,12 +378,10 @@ void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
 */
 
 
-void HierarchInterpPolyApproximation::combine_coefficients(size_t swap_index)
+void HierarchInterpPolyApproximation::combine_coefficients()
 {
-  if (swap_index != _NPOS) {
-    swap_coefficients(swap_index);
-    allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
-  }
+  update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
+  allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
   // multiplying stored expansion evaluated at current collocation points
