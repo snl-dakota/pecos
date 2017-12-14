@@ -265,8 +265,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  UShort2DArray& mi = data_rep->multiIndex[key];
+  UShort2DArray& mi = data_rep->multi_index();
   Real rel_delta_star, abs_conv_tol = DBL_EPSILON, // for now
     rel_conv_tol = data_rep->expConfigOptions.convergenceTol;
   short basis_type = data_rep->expConfigOptions.expBasisType;
@@ -281,6 +280,7 @@ void RegressOrthogPolyApproximation::adapt_regression()
   // stall without good starting points.  Therefore, go ahead and compute the
   // CV err for the reference candidate basis.
   bestAdaptedMultiIndex = mi;
+  const UShortArray& key = data_rep->activeKey;
   SizetSet& sparse_ind = sparseIndices[key]; // create if doesn't yet exist
   cvErrorRef
     = run_cross_validation_solver(bestAdaptedMultiIndex, expCoeffsIter->second,
@@ -1155,7 +1155,7 @@ covariance(PolynomialApproximation* poly_approx_2)
     return expansionMoments[1];
 
   size_t i1, i2, si1, si2; StSCIter cit1, cit2;
-  const UShort2DArray& mi = data_rep->multiIndex[key];
+  const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs   = expCoeffsIter->second;
   const RealVector& exp_coeffs_2 = ropa_2->expCoeffsIter->second;
   const SizetSet&   sparse_ind   = sp_it->second;
@@ -1228,7 +1228,7 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
        data_rep->match_nonrandom_vars(x, xPrevVar) )
     return expansionMoments[1];
 
-  const UShort2DArray& mi = data_rep->multiIndex[key];
+  const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs   = expCoeffsIter->second;
   const RealVector& exp_coeffs_2 = ropa_2->expCoeffsIter->second;
   const SizetSet&   sparse_ind   = sp_it->second;

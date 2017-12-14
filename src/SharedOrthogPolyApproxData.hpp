@@ -432,6 +432,11 @@ inline const UShortArray& SharedOrthogPolyApproxData::expansion_order() const
 { return approxOrder[activeKey]; }
 
 
+inline const UShortArray& SharedOrthogPolyApproxData::
+expansion_order(const UShortArray& key) const
+{ return approxOrder[key]; }
+
+
 inline void SharedOrthogPolyApproxData::
 expansion_order(const UShortArray& order)
 { approxOrder[activeKey] = order; } // multiIndex updated in allocate_arrays()

@@ -359,7 +359,7 @@ inline void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A )
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  build_linear_system( A, data_rep->multiIndex );
+  build_linear_system( A, data_rep->multi_index() );
 }
 
 
@@ -368,7 +368,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B )
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  build_linear_system( A, B, data_rep->multiIndex );
+  build_linear_system( A, B, data_rep->multi_index() );
 }
 
 
@@ -377,7 +377,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points )
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  build_linear_system( A, B, points, data_rep->multiIndex );
+  build_linear_system( A, B, points, data_rep->multi_index() );
 }
 
 
@@ -401,7 +401,7 @@ stored_value(const RealVector& x, const UShortArray& key)
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::value(x) :
-    value(x, data_rep->multiIndex[key], expansionCoeffs[key], sp_it->second);
+    value(x, data_rep->multi_index(key), expansionCoeffs[key], sp_it->second);
 }
 
 
@@ -427,7 +427,7 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_basis_variables(x) :
-    gradient_basis_variables(x, data_rep->multiIndex[key],
+    gradient_basis_variables(x, data_rep->multi_index(key),
 			     expansionCoeffs[key], sp_it->second);
 }
 
@@ -455,7 +455,7 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_basis_variables(x, dvv) :
-    gradient_basis_variables(x, dvv, data_rep->multiIndex[key],
+    gradient_basis_variables(x, dvv, data_rep->multi_index(key),
 			     expansionCoeffs[key], sp_it->second);
 }
 
@@ -482,7 +482,7 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_gradient_nonbasis_variables(x) :
-    gradient_nonbasis_variables(x, data_rep->multiIndex[key],
+    gradient_nonbasis_variables(x, data_rep->multi_index(key),
 				expansionCoeffGrads[key], sp_it->second);
 }
 
@@ -509,7 +509,7 @@ stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
     OrthogPolyApproximation::stored_hessian_basis_variables(x) :
-    hessian_basis_variables(x, data_rep->multiIndex[key],
+    hessian_basis_variables(x, data_rep->multi_index(key),
 			    expansionCoeffs[key], sp_it->second);
 }
 

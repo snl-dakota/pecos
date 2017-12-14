@@ -328,7 +328,7 @@ stored_value(const RealVector& x, const UShortArray& key)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  return value(x, data_rep->multiIndex[key], expansionCoeffs[key]);
+  return value(x, data_rep->multi_index(key), expansionCoeffs[key]);
 }
 
 
@@ -347,7 +347,7 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  return gradient_basis_variables(x, data_rep->multiIndex[key],
+  return gradient_basis_variables(x, data_rep->multi_index(key),
 				  expansionCoeffs[key]);
 }
 
@@ -368,7 +368,7 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  return gradient_basis_variables(x, dvv, data_rep->multiIndex[key],
+  return gradient_basis_variables(x, dvv, data_rep->multi_index(key),
 				  expansionCoeffs[key]);
 }
 
@@ -388,7 +388,7 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  return gradient_nonbasis_variables(x, data_rep->multiIndex[key],
+  return gradient_nonbasis_variables(x, data_rep->multi_index(key),
 				     expansionCoeffGrads[key]);
 }
 
@@ -408,7 +408,7 @@ stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  return hessian_basis_variables(x, data_rep->multiIndex[key],
+  return hessian_basis_variables(x, data_rep->multi_index(key),
 				 expansionCoeffs[key]);
 }
 
