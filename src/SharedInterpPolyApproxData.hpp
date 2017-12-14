@@ -82,7 +82,7 @@ protected:
   void decrement_data();
   void post_push_data();
   void post_finalize_data();
-  size_t pre_combine_data();
+  void pre_combine_data();
 
   /*
   void store_data(size_t index = _NPOS);

@@ -334,7 +334,7 @@ void SharedOrthogPolyApproxData::remove_stored_data(size_t index)
 */
 
 
-const SizetArray& SharedOrthogPolyApproxData::maximal_expansion()
+const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case COMBINED_SPARSE_GRID:
@@ -381,7 +381,7 @@ void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
 */
 
 
-const UShortArray& SharedOrthogPolyApproxData::pre_combine_data()
+void SharedOrthogPolyApproxData::pre_combine_data()
 {
   // Combine the data stored previously by store_data()
 
@@ -434,8 +434,6 @@ const UShortArray& SharedOrthogPolyApproxData::pre_combine_data()
     abort_handler(-1);
     break;
   }
-
-  return activeKey;
 }
 
 

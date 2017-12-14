@@ -401,7 +401,7 @@ void IntegrationDriver::swap_grid(size_t index)
 */
 
 
-size_t IntegrationDriver::maximal_grid() const
+const UShortArray& IntegrationDriver::maximal_grid() const
 {
   if (!driverRep) {
     PCerr << "Error: maximal_grid() not available for this driver type."

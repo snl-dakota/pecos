@@ -225,12 +225,12 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
 }
 
 
-const UShortArray& SharedProjectOrthogPolyApproxData::pre_combine_data()
+void SharedProjectOrthogPolyApproxData::pre_combine_data()
 {
   // Combine the data stored previously by store_data()
 
   switch (expConfigOptions.combineType) {
-  case ADD_COMBINE: {
+  case ADD_COMBINE:
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
     // case) so that Horner's rule performance opt could be used within
     // tensor_product_value()).  However, a tensor result in the overlay
@@ -240,10 +240,8 @@ const UShortArray& SharedProjectOrthogPolyApproxData::pre_combine_data()
     // tensor_product_value() usage for combined coefficient sets.
 
     // base class version is sufficient; no specialization based on exp form
-    return SharedOrthogPolyApproxData::pre_combine_data();
-    break;
-  }
-  case MULT_COMBINE: {
+    SharedOrthogPolyApproxData::pre_combine_data();  break;
+  case MULT_COMBINE:
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
@@ -259,7 +257,7 @@ const UShortArray& SharedProjectOrthogPolyApproxData::pre_combine_data()
 
       tensor_product_multi_index(active_ao, combinedMultiIndex);
       allocate_component_sobol(combinedMultiIndex);
-      return activeKey; break;
+      break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
       activeKey = driverRep->maximal_grid();
@@ -297,19 +295,16 @@ const UShortArray& SharedProjectOrthogPolyApproxData::pre_combine_data()
 	append_multi_index(tp_multi_index_prod, combinedMultiIndex);
       }
       allocate_component_sobol(combinedMultiIndex);
-      return activeKey; break;
+      break;
     }
     default:
       // base class version supports product of two total-order expansions
-      return SharedOrthogPolyApproxData::pre_combine_data();
-      break;
+      SharedOrthogPolyApproxData::pre_combine_data();  break;
     }
     break;
-  }
   case ADD_MULT_COMBINE:
     // base class manages this placeholder
-    return SharedOrthogPolyApproxData::pre_combine_data();
-    break;
+    SharedOrthogPolyApproxData::pre_combine_data();  break;
   }
 }
 

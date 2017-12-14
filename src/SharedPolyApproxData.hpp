@@ -291,7 +291,7 @@ public:
   */
 
   /// combines current and stored approximation data
-  virtual size_t pre_combine_data();
+  virtual void pre_combine_data();
   /// combines current and stored approximation data
   virtual void post_combine_data();
 
@@ -675,7 +675,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 inline bool SharedPolyApproxData::
 push_available(const UShortArray& trial_set)
 {
-  const UShortArray& popped_lev_mi = poppedLevMultiIndex[activeKey];
+  const std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
   return (std::find(popped_lev_mi.begin(), popped_lev_mi.end(), trial_set) !=
 	  popped_lev_mi.end());
 }

@@ -60,8 +60,9 @@ public:
   ~SharedProjectOrthogPolyApproxData();
 
   //
-  //- Cosmin Heading: Virtual function redefinitions
+  //- Heading: Virtual function redefinitions
   //
+
   void allocate_data(size_t index = _NPOS);
   void pre_push_data();
   void post_push_data();
@@ -76,7 +77,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  size_t pre_combine_data();
+  void pre_combine_data();
 
   void increment_component_sobol();
 

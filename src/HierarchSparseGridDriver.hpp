@@ -63,7 +63,7 @@ public:
   void swap_grid(size_t index);
   */
 
-  size_t maximal_grid() const;
+  const UShortArray& maximal_grid() const;
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
@@ -152,6 +152,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// create {smolMI,collocKey,collocInd}Iter
+  void create_active_iterators();
+  /// update {smolMI,collocKey,collocInd}Iter
+  void update_active_iterators();
+  
   void update_smolyak_multi_index(bool clear_sm_mi = false);
   void assign_collocation_key();
   void update_collocation_key();
@@ -184,6 +189,8 @@ private:
       expressions.  The indices correspond to levels, one within each
       anisotropic tensor-product integration of a Smolyak recursion. */
   std::map<UShortArray, UShort3DArray> smolyakMultiIndex;
+  /// iterator for active entry within smolyakMultiIndex
+  std::map<UShortArray, UShort3DArray>::iterator smolMIIter;
 
   /// level of trial evaluation set from push_trial_set(); trial set
   /// corresponds to smolyakMultiIndex[trialLevel].back()
@@ -200,9 +207,14 @@ private:
   /// levels-by-index sets-by-numDeltaPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
   std::map<UShortArray, UShort4DArray> collocKey;
+  /// iterator for active entry within collocKey
+  std::map<UShortArray, UShort4DArray>::iterator collocKeyIter;
+
   /// levels-by-index sets-by-numTensorProductPts array for linking the
   /// set of tensor products to the unique collocation points evaluated
   std::map<UShortArray, Sizet3DArray> collocIndices;
+  /// iterator for active entry within collocIndices
+  std::map<UShortArray, Sizet3DArray>::iterator collocIndIter;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -278,7 +290,14 @@ inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
 
 inline void HierarchSparseGridDriver::print_smolyak_multi_index() const
 {
-  const UShort3DArray& sm_mi = smolyakMultiIndex[activeKey];
+  std::map<UShortArray, UShort3DArray>::const_iterator cit
+    = smolyakMultiIndex.find(activeKey);
+  if (cit == smolyakMultiIndex.end()) {
+    PCerr << "Error: active key lookup failure in HierarchSparseGridDriver::"
+	  << "print_smolyak_multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  const UShort3DArray& sm_mi = cit->second;
   size_t i, j, k, num_lev = sm_mi.size(), cntr = 1;
   for (i=0; i<num_lev; ++i) {
     const UShort2DArray& sm_mi_i = sm_mi[i];
@@ -404,12 +423,30 @@ inline const RealMatrix& HierarchSparseGridDriver::type2_weight_sets() // const
 
 inline const RealVector2DArray& HierarchSparseGridDriver::
 type1_weight_set_arrays() const
-{ return type1WeightSets[activeKey]; }
+{
+  std::map<UShortArray, RealVector2DArray>::const_iterator cit
+    = type1WeightSets.find(activeKey);
+  if (cit == type1WeightSets.end()) {
+    PCerr << "Error: active key not found in HierarchSparseGridDriver::"
+	  << "type1_weight_set_arrays()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const RealMatrix2DArray& HierarchSparseGridDriver::
 type2_weight_set_arrays() const
-{ return type2WeightSets[activeKey]; }
+{
+  std::map<UShortArray, RealMatrix2DArray>::const_iterator cit
+    = type2WeightSets.find(activeKey);
+  if (cit == type2WeightSets.end()) {
+    PCerr << "Error: active key not found in HierarchSparseGridDriver::"
+	  << "type2_weight_set_arrays()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline void HierarchSparseGridDriver::

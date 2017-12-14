@@ -15,6 +15,7 @@
 #define NODAL_INTERP_POLY_APPROXIMATION_HPP
 
 #include "InterpPolyApproximation.hpp"
+#include "SharedNodalInterpPolyApproxData.hpp"
 
 namespace Pecos {
 
@@ -127,6 +128,11 @@ private:
   //
   //- Heading: Convenience functions
   //
+
+  /// create {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter
+  void create_active_iterators();
+  /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter
+  void update_active_iterators();
 
   /// update expansionType{1Coeffs,2Coeffs,1CoeffGrads} following
   /// changes to surrData
@@ -295,9 +301,10 @@ approximation_coefficients(bool normalized) const
 	  << "InterpPolyApproximation for type2 coefficients." << std::endl;
     return abort_handler_t<const RealVector&>(-1);
   }
-  else
-    return RealVector(Teuchos::View, expansionType1Coeffs.values(),
-		      expansionType1Coeffs.length());
+  else {
+    RealVector& exp_t1c = expT1CoeffsIter->second;
+    return RealVector(Teuchos::View, exp_t1c.values(), exp_t1c.length());
+  }
 }
 
 
@@ -314,7 +321,7 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
     abort_handler(-1);
   }
   else {
-    expansionType1Coeffs = approx_coeffs;
+    expT1CoeffsIter->second = approx_coeffs;
 
     allocate_total_sobol();
     allocate_component_sobol();

@@ -123,7 +123,7 @@ protected:
   //
 
   void allocate_data(size_t index = _NPOS);
-  size_t pre_combine_data();
+  void  pre_combine_data();
   void post_combine_data();
 
   /*
@@ -138,7 +138,7 @@ protected:
   //
 
   /// detect whether current expansion settings are the most refined
-  size_t maximal_expansion();
+  const UShortArray& maximal_expansion();
   /// swap current shared data with a stored shared data set, as identified
   /// by stored index
   void swap_shared_data(size_t index);
@@ -351,15 +351,6 @@ protected:
   /// mapping of terms when aggregating storedMultiIndex with multiIndex in
   /// pre_combine_data()
   Sizet2DArray combinedMultiIndexMap;
-
-  /*
-  /// array of stored approxOrder's cached in store_coefficients() for use in
-  /// combine_coefficients()
-  UShort2DArray storedApproxOrder;
-  /// array of stored multiIndex's cached in store_coefficients() for use in
-  /// combine_coefficients()
-  UShort3DArray storedMultiIndex;
-  */
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials

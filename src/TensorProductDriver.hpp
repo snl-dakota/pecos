@@ -56,7 +56,7 @@ public:
   void swap_grid(size_t index);
   */
 
-  size_t maximal_grid() const;
+  const UShortArray& maximal_grid() const;
 
   //
   //- Heading: Member functions
@@ -123,6 +123,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// create {levelInd,collocKey}Iter
+  void create_active_iterators();
+  /// update {levelInd,collocKey}Iter
+  void update_active_iterators();
+  
   /// update levelIndex from quadOrder
   void update_level_index_from_quadrature_order();
   /// update levelIndex[i] from quadOrder[i]

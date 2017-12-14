@@ -78,7 +78,7 @@ public:
   void swap_grid(size_t index);
   */
 
-  size_t maximal_grid() const;
+  const UShortArray& maximal_grid() const;
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);
@@ -196,6 +196,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// create {smolMI,smolCoeffs,collocKey,collocInd}Iter
+  void create_active_iterators();
+  /// update {smolMI,smolCoeffs,collocKey,collocInd}Iter
+  void update_active_iterators();
+  
   /// convenience function for updating sparse points from a set of
   /// aggregated tensor points
   void update_sparse_points(size_t start_index, int new_index_offset,

@@ -252,7 +252,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
 }
 
 
-size_t SharedInterpPolyApproxData::pre_combine_data()
+void SharedInterpPolyApproxData::pre_combine_data()
 {
   /*
   // For open-ended number of stored grids: retrieve the most refined from the
@@ -269,7 +269,9 @@ size_t SharedInterpPolyApproxData::pre_combine_data()
 
   return max_index;
   */
-  return driverRep->maximal_grid();
+
+  activeKey = driverRep->maximal_grid();
+  //update_active_iteratorsa(); // TO DO
 }
 
 
