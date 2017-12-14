@@ -140,9 +140,14 @@ private:
 
   /// quadrature order offset by one for use as 0-based indices
   std::map<UShortArray, UShortArray> levelIndex;
+  /// iterator to ctive entry within levelIndex
+  std::map<UShortArray, UShortArray>::iterator levelIndIter;
+
   /// num points-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
   std::map<UShortArray, UShort2DArray> collocKey;
+  /// iterator to ctive entry within levelIndex
+  std::map<UShortArray, UShort2DArray>::iterator collocKeyIter;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the tensor grid
@@ -162,12 +167,35 @@ private:
   /// stored driver states: copies of type2WeightSets
   RealMatrixArray storedType2WeightSets;
   */
+  
+  /// database key indicating the currently active integration configuration.
+  /// the key is a multi-index managing multiple modeling dimensions such as
+  /// model form, discretization level, etc.
+  UShortArray activeKey;
 };
+
+
+inline void TensorProductDriver::create_active_iterators()
+{
+  std::pair<UShortArray, UShortArray>    ua_pair(activeKey, UShortArray());
+  std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+
+  // returned iterator points to existing instance or new insertion
+  levelIndIter  = levelIndex.insert(ua_pair).first;
+  collocKeyIter =  collocKey.insert(u2a_pair).first;
+}
+
+
+inline void TensorProductDriver::update_active_iterators()
+{
+  levelIndIter  = levelIndex.find(activeKey);
+  collocKeyIter =  collocKey.find(activeKey);
+}
 
 
 inline void TensorProductDriver::update_level_index_from_quadrature_order()
 {
-  UShortArray& lev_index = levelIndex[activeKey];
+  UShortArray& lev_index = levelIndIter->second;
   size_t i, len = quadOrder.size();
   if (levelIndex.size() != len) lev_index.resize(len);
   for (i=0; i<len; ++i)
@@ -177,12 +205,12 @@ inline void TensorProductDriver::update_level_index_from_quadrature_order()
 
 inline void TensorProductDriver::
 update_level_index_from_quadrature_order(size_t i)
-{ levelIndex[activeKey][i] = quadOrder[i] - 1; }
+{ levelIndIter->second[i] = quadOrder[i] - 1; }
 
 
 inline void TensorProductDriver::update_quadrature_order_from_level_index()
 {
-  UShortArray& lev_index = levelIndex[activeKey];
+  const UShortArray& lev_index = levelIndIter->second;
   size_t i, len = lev_index.size();
   if (quadOrder.size() != len) quadOrder.resize(len);
   for (i=0; i<len; ++i)
@@ -232,41 +260,63 @@ nested_quadrature_order(const UShortArray& ref_quad_order)
 
 
 inline const RealVector& TensorProductDriver::type1_weight_sets() const
-{ return type1WeightSets[activeKey]; }
+{
+  std::map<UShortArray, >::const_iterator cit = type1WeightSets.find(activeKey);
+  if (cit == type1WeightSets.end()) {
+    PCerr << "Error: active key not found in TensorProductDriver::"
+	  << "()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const RealMatrix& TensorProductDriver::type2_weight_sets() const
-{ return type2WeightSets[activeKey]; }
+{
+  std::map<UShortArray, >::const_iterator cit = type2WeightSets.find(activeKey);
+  if (cit == type2WeightSets.end()) {
+    PCerr << "Error: key not found in TensorProductDriver::"
+	  << "type2_weight_sets()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const UShortArray& TensorProductDriver::level_index() const
-{ return levelIndex[activeKey]; }
+{ return levelIndIter->second; }
 
 
 inline const UShortArray& TensorProductDriver::
 level_index(const UShortArray& key) const
-{ return levelIndex[key]; }
+{
+  std::map<UShortArray, >::const_iterator cit
+    = levelIndex.find(key);
+  if (cit == levelIndex.end()) {
+    PCerr << "Error: key not found in TensorProductDriver::level_index()."
+	  << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const UShort2DArray& TensorProductDriver::collocation_key() const
-{ return collocKey[activeKey]; }
+{ return collocKeyIter->second; }
 
 
 inline const UShort2DArray& TensorProductDriver::
 collocation_key(const UShortArray& key) const
-{ return collocKey[key]; }
-
-
-/*
-inline const UShortArray& TensorProductDriver::
-stored_level_index(size_t index) const
-{ return storedLevelIndex[index]; }
-
-
-inline const UShort2DArray& TensorProductDriver::
-stored_collocation_key(size_t index) const
-{ return storedCollocKey[index]; }
-*/
+{
+  std::map<UShortArray, >::const_iterator cit
+    = collocKey.find(key);
+  if (cit == collocKey.end()) {
+    PCerr << "Error: key not found in TensorProductDriver::"
+	  << "collocation_key()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline int TensorProductDriver::grid_size()

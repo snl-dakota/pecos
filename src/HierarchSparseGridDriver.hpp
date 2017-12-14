@@ -132,15 +132,6 @@ public:
   /// return collocIndices[key]
   const Sizet3DArray& collocation_indices(const UShortArray& key) const;
 
-  /*
-  /// return storedLevMultiIndex
-  const UShort3DArray& stored_smolyak_multi_index(size_t index) const;
-  /// return storedCollocKey
-  const UShort4DArray& stored_collocation_key(size_t index) const;
-  // return storedCollocIndices
-  //const Sizet3DArray& stored_collocation_indices(size_t index) const;
-  */
-
   /// discriminate portions of the level-set hierarchy that are
   /// reference sets from those in the current increment
   void partition_keys(UShort2DArray& reference_set_range,
@@ -225,20 +216,6 @@ private:
   // concatenation of type2WeightSets RealMatrix2DArray into a RealMatrix
   //RealMatrix concatT2WeightSets;
 
-  /*
-  /// stored driver states: copies of smolyakMultiIndex
-  UShort4DArray storedLevMultiIndex;
-  /// stored driver states: copies of collocKey
-  UShort5DArray storedCollocKey;
-  // stored driver states: copies of collocIndices
-  //Sizet4DArray storedCollocIndices;
-
-  /// stored driver state: copy of type1WeightSets
-  RealVector3DArray storedType1WeightSets;
-  /// stored driver state: copy of type2WeightSets
-  RealMatrix3DArray storedType2WeightSets;
-  */
-
   /// type 1 weight sets popped during decrement for later restoration
   /// to type1WeightSets. First key is level-form multi-index; second key
   /// is the trial set.
@@ -266,12 +243,33 @@ inline HierarchSparseGridDriver::~HierarchSparseGridDriver()
 { }
 
 
+inline void HierarchSparseGridDriver::create_active_iterators()
+{
+  std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
+  std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
+  std::pair<UShortArray, Sizet3DArray>  s3a_pair(activeKey, Sizet3DArray());
+
+  // returned iterator points to existing instance or new insertion
+  smolMIIter    = smolyakMultiIndex.insert(u3a_pair).first;
+  collocKeyIter =         collocKey.insert(u4a_pair).first;
+  collocIndIter =     collocIndices.insert(s3a_pair).first;
+}
+
+
+inline void HierarchSparseGridDriver::update_active_iterators()
+{
+  smolMIIter    = smolyakMultiIndex.find(activeKey);
+  collocKeyIter =         collocKey.find(activeKey);
+  collocIndIter =     collocIndices.find(activeKey);
+}
+
+
 inline const UShortArray& HierarchSparseGridDriver::trial_set() const
-{ return smolyakMultiIndex[activeKey][trialLevel].back(); }
+{ return smolMIIter->second[trialLevel].back(); }
 
 
 inline int HierarchSparseGridDriver::unique_trial_points() const
-{ return collocKey[activeKey][trialLevel].back().size(); }
+{ return collocKeyIter->second[trialLevel].back().size(); }
 
 
 inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
@@ -295,12 +293,21 @@ inline void HierarchSparseGridDriver::print_smolyak_multi_index() const
 
 inline const UShort3DArray& HierarchSparseGridDriver::
 smolyak_multi_index() const
-{ return smolyakMultiIndex[activeKey]; }
+{ return smolMIIter->second; }
 
 
 inline const UShort3DArray& HierarchSparseGridDriver::
 smolyak_multi_index(const UShortArray& key) const
-{ return smolyakMultiIndex[key]; }
+{
+  std::map<UShortArray, UShort3DArray>::const_iterator cit
+    = smolyakMultiIndex.find(key);
+  if (cit == smolyakMultiIndex.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::"
+	  << "smolyak_multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline void HierarchSparseGridDriver::
@@ -313,38 +320,39 @@ inline bool HierarchSparseGridDriver::track_collocation_indices() const
 
 
 inline const UShort4DArray& HierarchSparseGridDriver::collocation_key() const
-{ return collocKey[activeKey]; }
+{ return collocKeyIter->second; }
 
 
 inline const UShort4DArray& HierarchSparseGridDriver::
 collocation_key(const UShortArray& key) const
-{ return collocKey[key]; }
+{
+  std::map<UShortArray, UShort4DArray>::const_iterator cit
+    = collocKey.find(key);
+  if (cit == collocKey.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::"
+	  << "collocation_key()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
-{ return collocIndices[activeKey]; }
+{ return collocIndIter->second; }
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::
 collocation_indices(const UShortArray& key) const
-{ return collocIndices[key]; }
-
-
-/*
-inline const UShort3DArray& HierarchSparseGridDriver::
-stored_smolyak_multi_index(size_t index) const
-{ return storedLevMultiIndex[index]; }
-
-
-inline const UShort4DArray& HierarchSparseGridDriver::
-stored_collocation_key(size_t index) const
-{ return storedCollocKey[index]; }
-
-
-//inline const Sizet3DArray& HierarchSparseGridDriver::
-//stored_collocation_indices(size_t index) const
-//{ return storedCollocIndices[index]; }
-*/
+{
+  std::map<UShortArray, Sizet3DArray>::const_iterator cit
+    = collocIndices.find(key);
+  if (cit == collocIndices.end()) {
+    PCerr << "Error: key not found in HierarchSparseGridDriver::"
+	  << "collocation_indices()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 /*

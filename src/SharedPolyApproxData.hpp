@@ -480,9 +480,9 @@ protected:
   /// popped trial sets that were computed but not selected
   std::map<UShortArray, std::deque<UShortArray> > poppedLevMultiIndex;
 
-  /// database key indicating the currently active polynomial expansion.
-  /// the key is a multi-index managing multiple modeling dimensions
-  /// such as model form, doscretization level, etc.
+  /// database key indicating the currently active polynomial expansion;
+  /// the key is a multi-index managing multiple modeling dimensions such
+  /// as model form, discretization level, etc.
   UShortArray activeKey;
 
   /// mapping to manage different global sensitivity index options
@@ -494,6 +494,7 @@ private:
   //
   //- Heading: Data
   //
+
 };
 
 

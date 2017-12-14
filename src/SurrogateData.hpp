@@ -1797,13 +1797,21 @@ inline void SurrogateData::clear_stored()
 
 
 inline void SurrogateData::clear_data()
-{ sdRep->varsData.clear(); sdRep->respData.clear(); }
+{
+  const UShortArray& key = sdRep->activeKey;
+  sdRep->varsData.erase(key);//sdRep->varsData[key].clear();
+  sdRep->respData.erase(key);//sdRep->respData[key].clear();
+  sdRep->anchorIndex.erase(key);//sdRep->anchorIndex[key] = _NPOS;
+  sdRep->failedRespData.erase(key);//sdRep->failedRespData[key].clear();
+}
 
 
 inline void SurrogateData::clear_popped()
 {
-  sdRep->poppedVarsData.clear(); sdRep->poppedRespData.clear();
-  sdRep->popCountStack.clear();
+  const UShortArray& key = sdRep->activeKey;
+  sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
+  sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
+  sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
 }
 
 

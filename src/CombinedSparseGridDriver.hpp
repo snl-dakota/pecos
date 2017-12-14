@@ -185,17 +185,6 @@ public:
   // return duplicateTol
   //Real duplicate_tolerance() const;
 
-  /*
-  /// return storedLevMultiIndex[index]
-  const UShort2DArray& stored_smolyak_multi_index(size_t index) const;
-  /// return storedLevCoeffs[index]
-  const IntArray& stored_smolyak_coefficients(size_t index) const;
-  /// return storedCollocKey[index]
-  const UShort3DArray& stored_collocation_key(size_t index) const;
-  /// return storedCollocIndices[index]
-  const Sizet2DArray& stored_collocation_indices(size_t index) const;
-  */
-
   /// return type1WeightSets
   const RealVector& type1_weight_sets() const;
   /// return type2WeightSets
@@ -257,9 +246,15 @@ private:
       expressions.  The indices correspond to levels, one for each
       anisotropic tensor-product grid within a Smolyak recursion. */
   std::map<UShortArray, UShort2DArray> smolyakMultiIndex;
+  /// iterator for active entry within smolyakMultiIndex
+  std::map<UShortArray, UShort2DArray>::iterator smolMIIter;
+
   /// array of Smolyak combinatorial coefficients, one for each tensor
   /// product index set; order is synchronized with smolyakMultiIndex
   std::map<UShortArray, IntArray> smolyakCoeffs;
+  /// iterator for active entry within smolyakCoeffs
+  std::map<UShortArray, IntArray>::iterator smolCoeffsIter;
+
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
   IntArray smolyakCoeffsRef;
@@ -274,30 +269,19 @@ private:
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
   std::map<UShortArray, UShort3DArray> collocKey;
-  /// numSmolyakIndices-by-numTensorProductPts array for linking the set
+  /// iterator for active entry within collocKey
+  std::map<UShortArray, UShort3DArray>::iterator collocKeyIter;
+
   /// of tensor products to the unique collocation points evaluated
   std::map<UShortArray, Sizet2DArray> collocIndices;
+  /// iterator for active entry within collocIndices
+  std::map<UShortArray, Sizet2DArray>::iterator collocIndIter;
+
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
   /// trial evaluation set from push_trial_set()
   UShortArray trialSet;
-
-  /*
-  /// stored driver states: copies of smolyakMultiIndex
-  UShort3DArray storedLevMultiIndex;
-  /// stored driver states: copies of smolyakCoeffs
-  Int2DArray storedLevCoeffs;
-  /// stored driver states: copies of collocKey
-  UShort4DArray storedCollocKey;
-  /// stored driver states: copies of collocIndices
-  Sizet3DArray storedCollocIndices;
-
-  /// stored driver states: copies of type1WeightSets
-  RealVectorArray storedType1WeightSets;
-  /// stored driver states: copies of type2WeightSets
-  RealMatrixArray storedType2WeightSets;
-  */
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -368,23 +352,64 @@ inline CombinedSparseGridDriver::~CombinedSparseGridDriver()
 { }
 
 
+inline void CombinedSparseGridDriver::create_active_iterators()
+{
+  std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+  std::pair<UShortArray, IntArray>       ia_pair(activeKey, IntArray());
+  std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
+  std::pair<UShortArray, Sizet2DArray>  s2a_pair(activeKey, Sizet2DArray());
+
+  // returned iterator points to existing instance or new insertion
+  smolMIIter     = smolyakMultiIndex.insert(u2a_pair).first;
+  smolCoeffsIter =     smolyakCoeffs.insert(ia_pair).first;
+  collocKeyIter  =         collocKey.insert(u3a_pair).first;
+  collocIndIter  =     collocIndices.insert(s2a_pair).first;
+}
+
+
+inline void CombinedSparseGridDriver::update_active_iterators()
+{
+  smolMIIter     = smolyakMultiIndex.find(activeKey);
+  smolCoeffsIter =     smolyakCoeffs.find(activeKey);
+  collocKeyIter  =         collocKey.find(activeKey);
+  collocIndIter  =     collocIndices.find(activeKey);
+}
+
+
 inline const UShort2DArray& CombinedSparseGridDriver::
 smolyak_multi_index() const
-{ return smolyakMultiIndex[activeKey]; }
+{ return smolMIIter->second; }
 
 
 inline const UShort2DArray& CombinedSparseGridDriver::
 smolyak_multi_index(const UShortArray& key) const
-{ return smolyakMultiIndex[key]; }
+{
+  std::map<UShortArray, UShort2DArray>::const_iterator cit
+    = smolyakMultiIndex.find(key);
+  if (cit == smolyakMultiIndex.end()) {
+    PCerr << "Error: key not found in CombinedSparseGridDriver::"
+	  << "smolyak_multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const IntArray& CombinedSparseGridDriver::smolyak_coefficients() const
-{ return smolyakCoeffs[activeKey]; }
+{ return smolCoeffsIter->second; }
 
 
 inline const IntArray& CombinedSparseGridDriver::
 smolyak_coefficients(const UShortArray& key) const
-{ return smolyakCoeffs[key]; }
+{
+  std::map<UShortArray, IntArray>::const_iterator cit = smolyakCoeffs.find(key);
+  if (cit == smolyakCoeffs.end()) {
+    PCerr << "Error: key not found in CombinedSparseGridDriver::"
+	  << "smolyak_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline void CombinedSparseGridDriver::
@@ -406,25 +431,52 @@ inline bool CombinedSparseGridDriver::track_unique_product_weights() const
 
 
 inline const UShort3DArray& CombinedSparseGridDriver::collocation_key() const
-{ return collocKey[activeKey]; }
+{ return collocKeyIter->second; }
 
 
 inline const UShort3DArray& CombinedSparseGridDriver::
 collocation_key(const UShortArray& key) const
-{ return collocKey[key]; }
+{
+  std::map<UShortArray, UShort3DArray>::const_iterator cit
+    = collocKey.find(key);
+  if (cit == collocKey.end()) {
+    PCerr << "Error: key not found in CombinedSparseGridDriver::"
+	  << "collocation_key()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const Sizet2DArray& CombinedSparseGridDriver::collocation_indices() const
-{ return collocIndices[activeKey]; }
+{ return collocIndIter->second; }
 
 
 inline const Sizet2DArray& CombinedSparseGridDriver::
 collocation_indices(const UShortArray& key) const
-{ return collocIndices[key]; }
+{
+  std::map<UShortArray, Sizet2DArray>::const_iterator cit
+    = collocIndices.find(key);
+  if (cit == collocIndices.end()) {
+    PCerr << "Error: key not found in CombinedSparseGridDriver::"
+	  << "collocation_indices()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
-{ return uniqueIndexMapping[activeKey]; }
+{
+  std::map<UShortArray, >::const_iterator cit
+    = uniqueIndexMapping.find(activeKey);
+  if (cit == uniqueIndexMapping.end()) {
+    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
+	  << "unique_index_mapping()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const UShortArray& CombinedSparseGridDriver::trial_set() const
@@ -488,34 +540,30 @@ smolyak_coefficients_reference() const
 { return smolyakCoeffsRef; }
 
 
-/*
-inline const UShort2DArray& CombinedSparseGridDriver::
-stored_smolyak_multi_index(size_t index) const
-{ return storedLevMultiIndex[index]; }
-
-
-inline const IntArray& CombinedSparseGridDriver::
-stored_smolyak_coefficients(size_t index) const
-{ return storedLevCoeffs[index]; }
-
-
-inline const UShort3DArray& CombinedSparseGridDriver::
-stored_collocation_key(size_t index) const
-{ return storedCollocKey[index]; }
-
-
-inline const Sizet2DArray& CombinedSparseGridDriver::
-stored_collocation_indices(size_t index) const
-{ return storedCollocIndices[index]; }
-*/
-
-
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const
-{ return type1WeightSets[activeKey]; }
+{
+  std::map<UShortArray, RealVector>::const_iterator cit
+    = type1WeightSets.find(activeKey);
+  if (cit == type1WeightSets.end()) {
+    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
+	  << "type1_weight_sets()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const RealMatrix& CombinedSparseGridDriver::type2_weight_sets() const
-{ return type2WeightSets[activeKey]; }
+{
+  std::map<UShortArray, RealMatrix>::const_iterator cit
+    = type2WeightSets.find(activeKey);
+  if (cit == type2WeightSets.end()) {
+    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
+	  << "type2_weight_sets()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline void CombinedSparseGridDriver::

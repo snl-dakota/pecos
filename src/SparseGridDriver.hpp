@@ -204,6 +204,11 @@ protected:
   /// (incremented in compute_trial_grid() and decremented in update_sets())
   std::map<UShortArray, UShortArraySet> computedTrialSets; // or UShort2DArray
 
+  /// database key indicating the currently active integration configuration.
+  /// the key is a multi-index managing multiple modeling dimensions such as
+  /// model form, discretization level, etc.
+  UShortArray activeKey;
+
 private:
 
   //
@@ -287,11 +292,29 @@ inline short SparseGridDriver::growth_rate() const
 
 
 inline const UShortArraySet& SparseGridDriver::active_multi_index() const
-{ return activeMultiIndex[activeKey]; }
+{
+  std::map<UShortArray, UShortArraySet>::const_iterator cit
+    = activeMultiIndex.find(activeKey);
+  if (cit == activeMultiIndex.end()) {
+    PCerr << "Error: active key not found in SparseGridDriver::"
+	  << "active_multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
-{ return computedTrialSets[activeKey]; }
+{
+  std::map<UShortArray, UShortArraySet>::const_iterator cit
+    = computedTrialSets.find(activeKey);
+  if (cit == computedTrialSets.end()) {
+    PCerr << "Error: active key not found in SparseGridDriver::"
+	  << "computed_trial_sets()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline void SparseGridDriver::update_reference()
