@@ -318,10 +318,10 @@ ULongULongMap PolynomialApproximation::sparse_sobol_index_map() const
 { return ULongULongMap(); } // default is empty map
 
 
-size_t PolynomialApproximation::sparsity() const
+size_t PolynomialApproximation::expansion_terms() const
 {
-  PCerr << "Error: sparsity() not defined for this polynomial approximation "
-	<< "type." << std::endl;
+  PCerr << "Error: expansion_terms() not defined for this polynomial "
+	<< "approximation type." << std::endl;
   abort_handler(-1);
   return _NPOS;
 }

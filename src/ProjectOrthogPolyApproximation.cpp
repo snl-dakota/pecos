@@ -770,7 +770,7 @@ stored_value(const RealVector& x, const UShortArray& key)
     RealVector accumulator(sharedDataRep->numVars); // init to 0.
     return data_rep->
       tensor_product_value(x, expansionCoeffs[key],
-			   data_rep->expansion_order(key),
+			   data_rep->keyed_expansion_order(key),
 			   data_rep->multi_index(key), accumulator);
     break;
   }

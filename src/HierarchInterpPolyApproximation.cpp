@@ -841,7 +841,10 @@ gradient_nonbasis_variables(const RealVector& x, const UShort3DArray& sm_mi,
 
 
 const RealSymMatrix& HierarchInterpPolyApproximation::
-hessian_basis_variables(const RealVector& x)
+hessian_basis_variables(const RealVector& x, const UShort3DArray& sm_mi,
+			const UShort4DArray& colloc_key,
+			const RealVector2DArray& t1_coeffs,
+			unsigned short level)
 {
   PCerr << "Error: HierarchInterpPolyApproximation::hessian_basis_variables() "
 	<< "not yet implemented." << std::endl;

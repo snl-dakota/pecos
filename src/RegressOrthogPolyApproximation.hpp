@@ -114,8 +114,13 @@ protected:
   Real stored_value(const RealVector& x, const UShortArray& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
 						    const UShortArray& key);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+						    const SizetArray& dvv,
+						    const UShortArray& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
 						       const UShortArray& key);
+  const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
+						      const UShortArray& key);
 
   Real mean(const RealVector& x);
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
@@ -130,7 +135,6 @@ protected:
   void compute_total_sobol();
 
   ULongULongMap sparse_sobol_index_map() const;
-  size_t sparsity() const;
 
   RealVector approximation_coefficients(bool normalized) const;
   void approximation_coefficients(const RealVector& approx_coeffs,
@@ -144,6 +148,30 @@ private:
   //
   //- Heading: Member functions
   //
+
+  /// helper function for computing the expansion value using sparse indices
+  Real value(const RealVector& x, const UShort2DArray& mi,
+	     const RealVector& exp_coeffs, const SizetSet& sparse_ind);
+  /// helper function for computing the expansion gradient with
+  /// respect to the basis variables using sparse indices
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealVector& exp_coeffs,
+    const SizetSet& sparse_ind);
+  /// helper function for computing the expansion gradient with
+  /// respect to the basis variables using sparse indices and DVV
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const SizetArray& dvv, const UShort2DArray& mi,
+    const RealVector& exp_coeffs, const SizetSet& sparse_ind);
+  /// helper function for computing the expansion gradient with
+  /// respect to the nonbasis variables using sparse indices
+  const RealVector& gradient_nonbasis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealMatrix& exp_coeff_grads,
+    const SizetSet& sparse_ind);
+  /// helper function for computing the expansion Hessian with
+  /// respect to the basis variables using sparse indices
+  const RealSymMatrix& hessian_basis_variables(const RealVector& x,
+    const UShort2DArray& mi, const RealVector& exp_coeffs,
+    const SizetSet& sparse_ind);
 
   /// set the information needed to ensure fault tolerance
   void set_fault_info();
@@ -400,12 +428,12 @@ stored_value(const RealVector& x, const UShortArray& key)
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
-    OrthogPolyApproximation::value(x) :
+    OrthogPolyApproximation::stored_value(x, key) :
     value(x, data_rep->multi_index(key), expansionCoeffs[key], sp_it->second);
 }
 
 
-inline Real RegressOrthogPolyApproximation::
+inline const RealVector& RegressOrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x)
 {
   SharedRegressOrthogPolyApproxData* data_rep
@@ -419,20 +447,20 @@ gradient_basis_variables(const RealVector& x)
 }
 
 
-inline Real RegressOrthogPolyApproximation::
+inline const RealVector& RegressOrthogPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
-    OrthogPolyApproximation::stored_gradient_basis_variables(x) :
+    OrthogPolyApproximation::stored_gradient_basis_variables(x, key) :
     gradient_basis_variables(x, data_rep->multi_index(key),
 			     expansionCoeffs[key], sp_it->second);
 }
 
 
-inline Real RegressOrthogPolyApproximation::
+inline const RealVector& RegressOrthogPolyApproximation::
 gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 {
   SharedRegressOrthogPolyApproxData* data_rep
@@ -446,7 +474,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
 }
 
 
-inline Real RegressOrthogPolyApproximation::
+inline const RealVector& RegressOrthogPolyApproximation::
 stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
 				const UShortArray& key)
 {
@@ -454,13 +482,13 @@ stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
-    OrthogPolyApproximation::stored_gradient_basis_variables(x, dvv) :
+    OrthogPolyApproximation::stored_gradient_basis_variables(x, dvv, key) :
     gradient_basis_variables(x, dvv, data_rep->multi_index(key),
 			     expansionCoeffs[key], sp_it->second);
 }
 
 
-inline Real RegressOrthogPolyApproximation::
+inline const RealVector& RegressOrthogPolyApproximation::
 gradient_nonbasis_variables(const RealVector& x)
 {
   SharedRegressOrthogPolyApproxData* data_rep
@@ -474,20 +502,20 @@ gradient_nonbasis_variables(const RealVector& x)
 }
 
 
-inline Real RegressOrthogPolyApproximation::
-stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
+inline const RealVector& RegressOrthogPolyApproximation::
+stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
-    OrthogPolyApproximation::stored_gradient_nonbasis_variables(x) :
+    OrthogPolyApproximation::stored_gradient_nonbasis_variables(x, key) :
     gradient_nonbasis_variables(x, data_rep->multi_index(key),
 				expansionCoeffGrads[key], sp_it->second);
 }
 
 
-inline Real RegressOrthogPolyApproximation::
+inline const RealSymMatrix& RegressOrthogPolyApproximation::
 hessian_basis_variables(const RealVector& x)
 {
   SharedRegressOrthogPolyApproxData* data_rep
@@ -501,14 +529,14 @@ hessian_basis_variables(const RealVector& x)
 }
 
 
-inline Real RegressOrthogPolyApproximation::
+inline const RealSymMatrix& RegressOrthogPolyApproximation::
 stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
   return (sp_it == sparseIndices.end() || sp_it->second.empty()) ?
-    OrthogPolyApproximation::stored_hessian_basis_variables(x) :
+    OrthogPolyApproximation::stored_hessian_basis_variables(x, key) :
     hessian_basis_variables(x, data_rep->multi_index(key),
 			    expansionCoeffs[key], sp_it->second);
 }
@@ -528,17 +556,14 @@ sparse_sobol_index_map() const
 { return sparseSobolIndexMap; }
 
 
-inline size_t RegressOrthogPolyApproximation::sparsity() const
-{
-  return (sparseIndices.empty()) ?
-    expansionCoeffs.length() : sparseIndices.size();
-}
-
-
 inline size_t RegressOrthogPolyApproximation::expansion_terms() const
 {
-  return (sparseIndices.empty()) ? OrthogPolyApproximation::expansion_terms()
-                                 : sparseIndices.size();
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  std::map<UShortArray, SizetSet>::const_iterator sp_cit
+    = sparseIndices.find(data_rep->activeKey);
+  return (sp_cit == sparseIndices.end() || sp_cit->second.empty()) ?
+    OrthogPolyApproximation::expansion_terms() : sp_cit->second.size();
 }
 
 } // namespace Pecos

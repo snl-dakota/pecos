@@ -2660,6 +2660,45 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 
 
 const RealVector& NodalInterpPolyApproximation::
+stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
+				const UShortArray& key)
+{
+  // this could define a default_dvv and call gradient_basis_variables(x, dvv),
+  // but we want this fn to be as fast as possible
+
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::stored_gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: {
+    TensorProductDriver* tpq_driver = data_rep->tpq_driver();
+    return gradient_basis_variables(x, expansionType1Coeffs[key],
+				    expansionType2Coeffs[key],
+				    tpq_driver->level_index(key),
+				    tpq_driver->collocation_key(key), dvv);
+    break;
+  }
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
+    return gradient_basis_variables(x, expansionType1Coeffs[key],
+				    expansionType2Coeffs[key],
+				    csg_driver->smolyak_multi_index(key),
+				    csg_driver->smolyak_coefficients(key),
+				    csg_driver->collocation_key(key),
+				    csg_driver->collocation_indices(key), dvv);
+    break;
+  }
+  }
+}
+
+
+const RealVector& NodalInterpPolyApproximation::
 gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 			 const RealMatrix& exp_t2_coeffs,
 			 const UShortArray& lev_index,
@@ -2914,6 +2953,17 @@ hessian_basis_variables(const RealVector& x)
 {
   PCerr << "Error: NodalInterpPolyApproximation::hessian_basis_variables() "
 	<< "not yet implemented." << std::endl;
+  abort_handler(-1);
+
+  return approxHessian;
+}
+
+
+const RealSymMatrix& NodalInterpPolyApproximation::
+stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
+{
+  PCerr << "Error: NodalInterpPolyApproximation::stored_hessian_basis_"
+	<< "variables() not yet implemented." << std::endl;
   abort_handler(-1);
 
   return approxHessian;

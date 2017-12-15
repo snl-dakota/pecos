@@ -62,7 +62,7 @@ public:
   /// return RegressOrthogPolyApproximation::sparseSobolIndexMap
   virtual ULongULongMap sparse_sobol_index_map() const;
   /// return the number of non-zero expansion coefficients for this QoI
-  virtual size_t sparsity() const;
+  virtual size_t expansion_terms() const;
 
   /// retrieve the gradient for a response expansion with respect to
   /// all variables included in the polynomial bases using the given
@@ -96,7 +96,7 @@ public:
   /// variables included in the polynomial basis for a given parameter
   /// vector and a given DVV subset
   virtual const RealVector& stored_gradient_basis_variables(const RealVector& x,
-    const SizetArray& dvv) = 0;
+    const SizetArray& dvv, const UShortArray& key) = 0;
   /// retrieve the response gradient for a stored expansion with
   /// respect to all variables not included in the polynomial bases;
   /// evaluate for the given parameter vector.
@@ -106,7 +106,7 @@ public:
   /// variables included in the polynomial basis (e.g., probabilistic
   /// variables) for a given parameter vector
   virtual const RealSymMatrix& stored_hessian_basis_variables(
-    const RealVector& x) = 0;
+    const RealVector& x, const UShortArray& key) = 0;
 
   /// return the mean of the expansion, treating all variables as random
   virtual Real mean() = 0;

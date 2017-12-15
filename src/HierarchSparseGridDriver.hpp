@@ -290,14 +290,7 @@ inline const UShortArray& HierarchSparseGridDriver::increment_sets() const
 
 inline void HierarchSparseGridDriver::print_smolyak_multi_index() const
 {
-  std::map<UShortArray, UShort3DArray>::const_iterator cit
-    = smolyakMultiIndex.find(activeKey);
-  if (cit == smolyakMultiIndex.end()) {
-    PCerr << "Error: active key lookup failure in HierarchSparseGridDriver::"
-	  << "print_smolyak_multi_index()." << std::endl;
-    abort_handler(-1);
-  }
-  const UShort3DArray& sm_mi = cit->second;
+  const UShort3DArray& sm_mi = smolMIIter->second;
   size_t i, j, k, num_lev = sm_mi.size(), cntr = 1;
   for (i=0; i<num_lev; ++i) {
     const UShort2DArray& sm_mi_i = sm_mi[i];

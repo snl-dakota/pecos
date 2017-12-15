@@ -473,7 +473,7 @@ collocation_indices(const UShortArray& key) const
 
 inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
 {
-  std::map<UShortArray, >::const_iterator cit
+  std::map<UShortArray, IntArray>::const_iterator cit
     = uniqueIndexMapping.find(activeKey);
   if (cit == uniqueIndexMapping.end()) {
     PCerr << "Error: active key not found in CombinedSparseGridDriver::"
@@ -498,8 +498,8 @@ inline int CombinedSparseGridDriver::unique_trial_points() const
 
 inline void CombinedSparseGridDriver::print_smolyak_multi_index() const
 {
-  const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
-  const IntArray&  sm_coeffs = smolyakCoeffs[activeKey];
+  const UShort2DArray& sm_mi = smolMIIter->second;
+  const IntArray&  sm_coeffs = smolCoeffsIter->second;
   size_t i, sm_mi_len = sm_mi.size(), cntr = 0;
   for (i=0; i<sm_mi_len; ++i) {
     if (sm_coeffs[i]) {
@@ -511,17 +511,14 @@ inline void CombinedSparseGridDriver::print_smolyak_multi_index() const
 
 
 inline void CombinedSparseGridDriver::assign_smolyak_arrays()
-{
-  assign_smolyak_arrays(smolyakMultiIndex[activeKey],
-			smolyakCoeffs[activeKey]);
-}
+{ assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
 
 
 inline void CombinedSparseGridDriver::
 update_smolyak_coefficients(size_t start_index)
 {
-  update_smolyak_coefficients(start_index, smolyakMultiIndex[activeKey],
-			      smolyakCoeffs[activeKey]);
+  update_smolyak_coefficients(start_index, smolMIIter->second,
+			      smolCoeffsIter->second);
 }
 
 
@@ -531,7 +528,7 @@ inline void CombinedSparseGridDriver::merge_set()
 
 inline void CombinedSparseGridDriver::update_reference()
 {
-  smolyakCoeffsRef = smolyakCoeffs[activeKey];
+  smolyakCoeffsRef = smolCoeffsIter->second;
   if (trackUniqueProdWeights) {
     type1WeightSetsRef = type1WeightSets[activeKey];
     if (computeType2Weights)

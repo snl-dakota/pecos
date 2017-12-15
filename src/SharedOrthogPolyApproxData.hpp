@@ -61,14 +61,19 @@ public:
   /// alternative form for setting multiIndex (expansion import) and
   /// allocating related arrays
   void allocate_data(const UShort2DArray& mi);
-  /// get multiIndex
+
+  /// get active multiIndex
   const UShort2DArray& multi_index() const;
+  /// get multiIndex[key]
+  const UShort2DArray& multi_index(const UShortArray& key) const;
 
   /// retrieve size of multiIndex
   size_t expansion_terms() const;
 
   /// get active approxOrder
   const UShortArray& expansion_order() const;
+  /// get approxOrder[key]; fn name avoids ambiguity with set fn below
+  const UShortArray& keyed_expansion_order(const UShortArray& key) const;
   /// set active approxOrder
   void expansion_order(const UShortArray& order);
   /// uniformly increment active approxOrder
@@ -136,6 +141,11 @@ protected:
   //
   //- Heading: Member functions
   //
+
+  /// create {multiIndex,approxOrd}Iter
+  void create_active_iterators();
+  /// update {multiIndex,approxOrd}Iter
+  void update_active_iterators();
 
   /// detect whether current expansion settings are the most refined
   const UShortArray& maximal_expansion();
@@ -338,6 +348,9 @@ protected:
 
   /// order of orthogonal polynomial expansion
   std::map<UShortArray, UShortArray> approxOrder;
+  /// iterator pointing to active node in approxOrder
+  std::map<UShortArray, UShortArray>::iterator approxOrdIter;
+
   /// previous value of active approxOrder; used for detecting when a
   /// multiIndex update is needed
   UShortArray approxOrderPrev;
@@ -346,6 +359,9 @@ protected:
   /// of the one-dimensional orthogonal polynomials contributing to each
   /// of the multivariate orthogonal polynomials
   std::map<UShortArray, UShort2DArray> multiIndex;
+  /// iterator pointing to active node in multiIndex
+  std::map<UShortArray, UShort2DArray>::iterator multiIndexIter;
+
   /// multi-index that is the result of expansion combination
   UShort2DArray combinedMultiIndex;
   /// mapping of terms when aggregating storedMultiIndex with multiIndex in
@@ -395,7 +411,10 @@ inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
   SharedPolyApproxData(basis_type, num_vars)
-{ approxOrder[activeKey] = approx_order; }
+{
+  // TO DO: when is activeKey posted?
+  approxOrder[activeKey] = approx_order;
+}
 
 
 inline SharedOrthogPolyApproxData::
@@ -404,39 +423,83 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options)
-{ approxOrder[activeKey] = approx_order; }
+{
+  // TO DO: when is activeKey posted?
+  approxOrder[activeKey] = approx_order;
+}
 
 
 inline SharedOrthogPolyApproxData::~SharedOrthogPolyApproxData()
 { }
 
 
+inline void SharedOrthogPolyApproxData::create_active_iterators()
+{
+  std::pair<UShortArray, UShortArray>    ua_pair(activeKey, UShortArray());
+  std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+
+  // returned iterator points to existing instance or new insertion
+  multiIndexIter = multiIndex.insert(u2a_pair).first;
+  approxOrdIter  = approxOrder.insert(ua_pair).first;
+}
+
+
+inline void SharedOrthogPolyApproxData::update_active_iterators()
+{
+  multiIndexIter =  multiIndex.find(activeKey);
+  approxOrdIter  = approxOrder.find(activeKey);
+}
+
+
 inline const UShort2DArray& SharedOrthogPolyApproxData::multi_index() const
-{ return multiIndex[activeKey]; }
+{ return multiIndexIter->second; }
+
+
+inline const UShort2DArray& SharedOrthogPolyApproxData::
+multi_index(const UShortArray& key) const
+{
+  std::map<UShortArray, UShort2DArray>::const_iterator cit
+    = multiIndex.find(key);
+  if (cit == multiIndex.end()) {
+    PCerr << "Error: key not found in SharedOrthogPolyApproxData::"
+	  << "multi_index()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline size_t SharedOrthogPolyApproxData::expansion_terms() const
-{ return multiIndex[activeKey].size(); }
+{ return multiIndexIter->second.size(); }
 
 
 inline const UShortArray& SharedOrthogPolyApproxData::expansion_order() const
-{ return approxOrder[activeKey]; }
+{ return approxOrdIter->second; }
 
 
 inline const UShortArray& SharedOrthogPolyApproxData::
-expansion_order(const UShortArray& key) const
-{ return approxOrder[key]; }
+keyed_expansion_order(const UShortArray& key) const
+{
+  std::map<UShortArray, UShortArray>::const_iterator cit
+    = approxOrder.find(key);
+  if (cit == approxOrder.end()) {
+    PCerr << "Error: key not found in SharedOrthogPolyApproxData::"
+	  << "keyed_expansion_order()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline void SharedOrthogPolyApproxData::
 expansion_order(const UShortArray& order)
-{ approxOrder[activeKey] = order; } // multiIndex updated in allocate_arrays()
+{ approxOrdIter->second = order; } // multiIndex updated in allocate_arrays()
 
 
 inline void SharedOrthogPolyApproxData::increment_order()
 {
   // increment approxOrder (multiIndex updated in allocate_arrays())
-  UShortArray& approx_order = approxOrder[activeKey];
+  UShortArray& approx_order = approxOrdIter->second;
   for (size_t i=0; i<numVars; ++i)
     ++approx_order[i];
 }
@@ -518,9 +581,8 @@ polynomial_basis(const std::vector<BasisPolynomial>& poly_basis)
 
 
 inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag)
-{
-  coefficients_norms_flag(flag,orthogPolyTypes,polynomialBasis);
-}
+{ coefficients_norms_flag(flag,orthogPolyTypes,polynomialBasis); }
+
 
 inline void SharedOrthogPolyApproxData::coefficients_norms_flag(bool flag,
 		  ShortArray &poly_types,

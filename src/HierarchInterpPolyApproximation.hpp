@@ -91,20 +91,22 @@ protected:
   void integrate_expansion_moments(size_t num_moments);
 
   Real value(const RealVector& x);
-
   const RealVector& gradient_basis_variables(const RealVector& x);
   const RealVector& gradient_basis_variables(const RealVector& x,
 					     const SizetArray& dvv);
-
   const RealVector& gradient_nonbasis_variables(const RealVector& x);
-
   const RealSymMatrix& hessian_basis_variables(const RealVector& x);
 
   Real stored_value(const RealVector& x, const UShortArray& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
 						    const UShortArray& key);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+						    const SizetArray& dvv,
+						    const UShortArray& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
 						       const UShortArray& key);
+  const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
+						      const UShortArray& key);
 
   Real mean();
   Real mean(const RealVector& x);
@@ -145,6 +147,11 @@ private:
   //- Heading: Convenience functions
   //
 
+  /// create {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter
+  void create_active_iterators();
+  /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter
+  void update_active_iterators();
+
   /// compute the value at a point for a particular interpolation level
   Real value(const RealVector& x, const UShort3DArray& sm_mi,
 	     const UShort4DArray& key, const RealVector2DArray& t1_coeffs,
@@ -179,6 +186,11 @@ private:
   const RealVector& gradient_nonbasis_variables(const RealVector& x,
     const UShort3DArray& sm_mi, const UShort4DArray& key,
     const RealMatrix2DArray& t1_coeff_grads, unsigned short level);
+  /// compute the approximate Hessian with respect to the basis variables
+  /// at a particular point for a particular interpolation level
+  const RealSymMatrix& hessian_basis_variables(const RealVector& x,
+    const UShort3DArray& sm_mi,	const UShort4DArray& colloc_key,
+    const RealVector2DArray& t1_coeffs, unsigned short level);
 
   /// update bookkeeping when adding a grid increment relative to the
   /// grid reference
@@ -668,6 +680,19 @@ gradient_nonbasis_variables(const RealVector& x)
 }
 
 
+inline const RealSymMatrix& HierarchInterpPolyApproximation::
+hessian_basis_variables(const RealVector& x)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index();
+  unsigned short   max_level = sm_mi.size() - 1;
+  return hessian_basis_variables(x, sm_mi, hsg_driver->collocation_key(),
+				 expT1CoeffsIter->second, max_level);
+}
+
+
 inline Real HierarchInterpPolyApproximation::
 stored_value(const RealVector& x, const UShortArray& key)
 {
@@ -696,6 +721,21 @@ stored_gradient_basis_variables(const RealVector& x, const UShortArray& key)
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
+stored_gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
+				const UShortArray& key)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
+  unsigned short   max_level = sm_mi.size() - 1;
+  return gradient_basis_variables(x, sm_mi, hsg_driver->collocation_key(key),
+				  expansionType1Coeffs[key],
+				  expansionType2Coeffs[key], dvv, max_level);
+}
+
+
+inline const RealVector& HierarchInterpPolyApproximation::
 stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
 {
   SharedHierarchInterpPolyApproxData* data_rep
@@ -705,6 +745,19 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
   unsigned short   max_level = sm_mi.size() - 1;
   return gradient_nonbasis_variables(x, sm_mi, hsg_driver->collocation_key(key),
 				     expansionType1CoeffGrads[key], max_level);
+}
+
+
+inline const RealSymMatrix& HierarchInterpPolyApproximation::
+stored_hessian_basis_variables(const RealVector& x, const UShortArray& key)
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  const UShort3DArray& sm_mi = hsg_driver->smolyak_multi_index(key);
+  unsigned short   max_level = sm_mi.size() - 1;
+  return hessian_basis_variables(x, sm_mi, hsg_driver->collocation_key(key),
+				 expansionType1Coeffs[key], max_level);
 }
 
 } // namespace Pecos

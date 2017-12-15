@@ -99,8 +99,13 @@ protected:
   Real stored_value(const RealVector& x, const UShortArray& key);
   const RealVector& stored_gradient_basis_variables(const RealVector& x,
 						    const UShortArray& key);
+  const RealVector& stored_gradient_basis_variables(const RealVector& x,
+						    const SizetArray& dvv,
+						    const UShortArray& key);
   const RealVector& stored_gradient_nonbasis_variables(const RealVector& x,
 						       const UShortArray& key);
+  const RealSymMatrix& stored_hessian_basis_variables(const RealVector& x,
+						      const UShortArray& key);
 
   Real mean();
   Real mean(const RealVector& x);
