@@ -148,8 +148,8 @@ increment_trial_set(CombinedSparseGridDriver* csg_driver,
 		    UShort2DArray& aggregated_mi)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
-  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   size_t last_index = tp_mi.size();
   // increment tpMultiIndex{,Map,MapRef} arrays
   UShort2DArray new_us2a; SizetArray new_sa;
@@ -171,8 +171,8 @@ decrement_trial_set(const UShortArray& trial_set,
 		    UShort2DArray& aggregated_mi, bool save_map)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
-  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   // reset the aggregated multi-index
   size_t num_exp_terms = tp_mi_map_ref.back();
   aggregated_mi.resize(num_exp_terms); // truncate previous increment
@@ -194,8 +194,8 @@ pre_push_trial_set(const UShortArray& trial_set,
 		      UShort2DArray& aggregated_mi, bool monotonic)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
-  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
   pushIndex = find_index(poppedLevMultiIndex[activeKey], trial_set);
   size_t last_index = tp_mi.size();
@@ -343,7 +343,7 @@ const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
   default: {
     std::map<UShortArray, UShortArray>::iterator
       ao_it = approxOrder.begin(), max_it = ao_it;
-    size_t len = ao_it->second.size();
+    size_t j, len = ao_it->second.size();
     ++ao_it;
     for (; ao_it!=approxOrder.end(); ++ao_it) {
       // first test for strict =, < , or >; if inconclusive, resort to
@@ -418,7 +418,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     UShortArray& active_ao = approxOrder[activeKey];
     std::map<UShortArray, UShortArray>::iterator ao_it; size_t i;
     for (ao_it=approxOrder.begin(); ao_it!=approxOrder.end(); ++ao_it)
-      if (mi_it->first != activeKey) {
+      if (ao_it->first != activeKey) {
 	const UShortArray& combine_ao = ao_it->second;
 	for (i=0; i<numVars; ++i)
 	  active_ao[i] += combine_ao[i];
@@ -441,7 +441,7 @@ void SharedOrthogPolyApproxData::post_combine_data()
 {
   switch (expConfigOptions.combineType) {
   case MULT_COMBINE:
-    std::swap(multiIndex, combinedMultiIndex); // pointer swap for efficiency
+    std::swap(multiIndex[activeKey], combinedMultiIndex); // pointer swap
     combinedMultiIndex.clear();
     break;
   }

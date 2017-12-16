@@ -38,13 +38,15 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
     if (update_exp_form) {
       UShortArray int_order(numVars);
       quadrature_order_to_integrand_order(driverRep, quad_order, int_order);
-      integrand_order_to_expansion_order(int_order, approxOrder);
-      tensor_product_multi_index(approxOrder, multiIndex); // include upper bnd
+      UShortArray& ao = approxOrdIter->second;
+      integrand_order_to_expansion_order(int_order, ao);
+      UShort2DArray& mi = multiIndexIter->second;
+      tensor_product_multi_index(ao, mi); // include upper bound
 
       // precomputation performed by tpqDriver prior to allocate_data()
-      //precompute_maximal_rules(approxOrder);
+      //precompute_maximal_rules(ao);
 
-      allocate_component_sobol(multiIndex);
+      allocate_component_sobol(mi);
       quadOrderPrev = quad_order;
     }
 
@@ -58,8 +60,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 #endif // DEBUG
 
     PCout << "Orthogonal polynomial approximation order = { ";
-    for (size_t i=0; i<numVars; ++i) PCout << approxOrder[i] << ' ';
-    PCout << "} using tensor-product expansion of " << multiIndex.size()
+    for (size_t i=0; i<numVars; ++i) PCout << approxOrdIter->second[i] << ' ';
+    PCout << "} using tensor-product expansion of " << expansion_terms()
 	  << " terms\n";
     break;
   }
@@ -70,20 +72,21 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 
     //if (update_exp_form) {
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
-      integrand_order_to_expansion_order(integrand_order, approxOrder);
-      total_order_multi_index(approxOrder, multiIndex);
+      UShortArray& ao = approxOrdIter->second;
+      integrand_order_to_expansion_order(integrand_order, ao);
+      UShort2DArray& mi = multiIndexIter->second;
+      total_order_multi_index(ao, mi);
 
       // See special logic in CubatureDriver::compute_grid() for GOLUB_WELSCH
-      //precompute_maximal_rules(approxOrder);
+      //precompute_maximal_rules(ao);
 
-      allocate_component_sobol(multiIndex);
+      allocate_component_sobol(mi);
       //cubIntOrderPrev = cub_int_order; // update reference point
     //}
 
     PCout << "Orthogonal polynomial approximation order = { ";
-    for (size_t i=0; i<numVars; ++i)
-      PCout << approxOrder[i] << ' ';
-    PCout << "} using total-order expansion of " << multiIndex.size()
+    for (size_t i=0; i<numVars; ++i) PCout << ao[i] << ' ';
+    PCout << "} using total-order expansion of " << expansion_terms()
 	  << " terms\n";
     break;
   }
@@ -97,18 +100,19 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 	 DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
+    UShort2DArray& mi = multiIndexIter->second;
     if (update_exp_form) {
-      sparse_grid_multi_index(csg_driver, multiIndex);
+      sparse_grid_multi_index(csg_driver, mi);
 
       // precomputation performed by ssgDriver prior to allocate_data()
       //precompute_maximal_rules(multiIndex);
 
-      allocate_component_sobol(multiIndex);
+      allocate_component_sobol(mi);
       ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
     }
     PCout << "Orthogonal polynomial approximation level = " << ssg_level
 	  << " using tensor integration and tensor sum expansion of "
-	  << multiIndex.size() << " terms\n"; break;
+	  << mi.size() << " terms\n"; break;
     break;
   }
   default: // SAMPLING
@@ -129,7 +133,7 @@ void SharedProjectOrthogPolyApproxData::increment_data(size_t index)
   // increment tpMultiIndex{,Map,MapRef} arrays, update tpMultiIndex,
   // update multiIndex and append bookkeeping
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  increment_trial_set(csg_driver, multiIndex);
+  increment_trial_set(csg_driver, multiIndexIter->second);
   // update Sobol' array sizes to pick up new interaction terms
   increment_component_sobol();
 
@@ -161,7 +165,7 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
   }
 
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  decrement_trial_set(csg_driver->trial_set(), multiIndex);
+  decrement_trial_set(csg_driver->trial_set(), multiIndexIter->second);
 }
 
 
@@ -174,14 +178,14 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
   }
 
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  pre_push_trial_set(csg_driver->trial_set(), multiIndex);
+  pre_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
 }
 
 
 void SharedProjectOrthogPolyApproxData::post_push_data()
 {
   CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  post_push_trial_set(csg_driver->trial_set(), multiIndex);
+  post_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
 }
 
 
@@ -202,12 +206,13 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
   std::deque<UShort2DArray>::iterator iit = popped_tp_mi.begin();
   std::deque<SizetArray>::iterator    mit = popped_tp_mi_map.begin();
   std::deque<size_t>::iterator        rit = popped_tp_mi_map_ref.begin();
+  UShort2DArray& mi = multiIndexIter->second;
   for (; iit!=popped_tp_mi.end(); ++iit, ++mit, ++rit)
-    append_multi_index(*iit, *mit, *rit, multiIndex);
+    append_multi_index(*iit, *mit, *rit, mi);
   // move previous expansion data to current expansion
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
-  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   tp_mi.insert(tp_mi.end(), popped_tp_mi.begin(), popped_tp_mi.end());
   tp_mi_map.insert(tp_mi_map.end(), popped_tp_mi_map.begin(),
 		   popped_tp_mi_map.end());
@@ -249,7 +254,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       UShortArray& active_ao = approxOrder[activeKey];
       std::map<UShortArray, UShortArray>::iterator ao_it; size_t i;
       for (ao_it=approxOrder.begin(); ao_it!=approxOrder.end(); ++ao_it)
-	if (mi_it->first != activeKey) {
+	if (ao_it->first != activeKey) {
 	  const UShortArray& combine_ao = ao_it->second;
 	  for (i=0; i<numVars; ++i)
 	    active_ao[i] += combine_ao[i];
@@ -320,8 +325,8 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
   // defined from the linear combination of mixed tensor products
   multi_index.clear();
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
-  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
   tp_mi.resize(num_smolyak_indices);
   tp_mi_map.resize(num_smolyak_indices);
   tp_mi_map_ref.resize(num_smolyak_indices);

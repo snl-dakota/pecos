@@ -29,7 +29,7 @@ initialize_grid(const ShortArray& u_types,
 		const BasisConfigOptions& bc_options)
 {
   IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
-  quadOrder.resize(numVars); levelIndexIter->second.resize(numVars);
+  quadOrder.resize(numVars); levelIndIter->second.resize(numVars);
 }
 
 
@@ -37,7 +37,7 @@ void TensorProductDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
-  quadOrder.resize(numVars); levelIndexIter->second.resize(numVars);
+  quadOrder.resize(numVars); levelIndIter->second.resize(numVars);
 }
 
 
@@ -139,15 +139,15 @@ void TensorProductDriver::swap_grid(size_t index)
 
 const UShortArray& TensorProductDriver::maximal_grid() const
 {
-  std::map<UShortArray, RealVector>::iterator
-    w_it = type1WeightSets.begin(), max_it = w_it;
-  size_t max_wts = w_it->second.length(); ++w_it;
-  for (; w_it!=type1WeightSets.end(); ++w_it) {
-    num_wts = w_it->second.length();
+  std::map<UShortArray, RealVector>::const_iterator
+    w_cit = type1WeightSets.begin(), max_cit = w_cit;
+  size_t num_wts, max_wts = w_cit->second.length(); ++w_cit;
+  for (; w_cit!=type1WeightSets.end(); ++w_cit) {
+    num_wts = w_cit->second.length();
     if (num_wts > max_wts)
-      { max_wts = num_wts; max_it = w_it; }
+      { max_wts = num_wts; max_cit = w_cit; }
   }
-  return max_it->first;
+  return max_cit->first;
 }
 
 
@@ -272,7 +272,7 @@ void TensorProductDriver::
 reinterpolated_tensor_grid(const UShortArray& lev_index,
 			   const SizetList& reinterp_indices)
 {
-  if (lev_index != levelIndex) {
+  if (lev_index != levelIndIter->second) {
     PCerr << "Error: inconsistent level index in TensorProductDriver::"
 	  << "reinterpolated_tensor_grid()." << std::endl;
     abort_handler(-1);
@@ -326,7 +326,7 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
       }
       else { // not a reinterpolated index --> no change from reference
 	reinterp_quad_order[i] = quadOrder[i];
-	reinterp_lev_index[i]  = levelIndex[i];
+	reinterp_lev_index[i]  = lev_index[i];
       }
     }
 
@@ -337,7 +337,7 @@ reinterpolated_tensor_grid(const UShortArray& lev_index,
 
     // update reiterpMap bookkeeping: only 1 index needs to be tracked for TPQ
     reinterpMap.clear();
-    reinterpMap[levelIndex] = activeReinterpIndex = 0;
+    reinterpMap[lev_index] = activeReinterpIndex = 0;
   }
   else
     activeReinterpIndex = map_it->second;
@@ -357,8 +357,9 @@ void TensorProductDriver::compute_grid(RealMatrix& variable_sets)
   // -------------------------------------------------------------------
   // Get collocation points and integration weights and update 1D arrays
   // -------------------------------------------------------------------
-  compute_tensor_grid(quadOrder, levelIndex, variable_sets, type1WeightSets,
-		      type2WeightSets, collocKey);
+  compute_tensor_grid(quadOrder, levelIndIter->second, variable_sets,
+		      type1WeightSets[activeKey], type2WeightSets[activeKey],
+		      collocKeyIter->second);
 }
 
 } // namespace Pecos

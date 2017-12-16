@@ -20,8 +20,8 @@ namespace Pecos {
 
 void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
 {
-  UShortArray&   approx_order = approxOrder[activeKey];
-  UShort2DArray& multi_index  =  multiIndex[activeKey];
+  UShortArray&   approx_order =  approxOrdIter->second;
+  UShort2DArray& multi_index  = multiIndexIter->second;
 
   if (expConfigOptions.expCoeffsSolnApproach == ORTHOG_LEAST_INTERPOLATION) {
     // clear history from previous expansion; new pts -> new least interpolant
@@ -44,7 +44,7 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
 
   // detect changes since previous construction
   bool update_exp_form = (approx_order != approxOrderPrev);
-  //bool restore_exp_form = (multiIndex.size() != t*_*_terms(approxOrder));
+  //bool restore_exp_form = (multi_index.size() != t*_*_terms(approx_order));
 
   if (update_exp_form) { //|| restore_exp_form) {
     switch (expConfigOptions.expBasisType) {
@@ -69,12 +69,13 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
       // candidate index sets
       lsgDriver.initialize_grid(numVars, regressConfigOptions.initSGLevel);
 
-      // define reference multiIndex and tpMultiIndex{,Map,MapRef} from 
+      // define reference multi_index and tpMultiIndex{,Map,MapRef} from 
       // initial sparse grid level
-      //sparse_grid_multi_index(&lsgDriver, multiIndex); // heavyweight mapping
+      //sparse_grid_multi_index(&lsgDriver, multi_index); // heavyweight mapping
       multi_index.clear();
       tpMultiIndex[activeKey].clear();
-      tpMultiIndexMap[activeKey].clear(); tpMultiIndexMapRef[activeKey].clear();
+      tpMultiIndexMap[activeKey].clear();
+      tpMultiIndexMapRef[activeKey].clear();
       const UShort2DArray& sm_mi = lsgDriver.smolyak_multi_index();
       size_t i, num_sm_mi = sm_mi.size();
       for (i=0; i<num_sm_mi; ++i)
@@ -82,19 +83,19 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
       break;
     }
     case ADAPTED_BASIS_EXPANDING_FRONT:
-      inflate_scalar(approxOrder, numVars); // promote scalar->vector, if needed
-      total_order_multi_index(approxOrder, multiIndex);
+      inflate_scalar(approx_order, numVars);// promote scalar->vector, if needed
+      total_order_multi_index(approx_order, multi_index);
       break;
     }
-    allocate_component_sobol(multiIndex);
+    allocate_component_sobol(multi_index);
     // Note: defer this if update_exp_form is needed downstream
-    approxOrderPrev = approxOrder;
+    approxOrderPrev = approx_order;
   }
 
   // output (candidate) expansion form
   PCout << "Orthogonal polynomial approximation order = { ";
-  for (size_t i=0; i<numVars; ++i) PCout << approxOrder[i] << ' ';
-  PCout << "} using adapted expansion initiated from " << multiIndex.size()
+  for (size_t i=0; i<numVars; ++i) PCout << approx_order[i] << ' ';
+  PCout << "} using adapted expansion initiated from " << multi_index.size()
 	<< " terms\n";
 }
 
@@ -102,7 +103,7 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
 void SharedRegressOrthogPolyApproxData::
 update_approx_order(unsigned short new_order)
 {
-  UShortArray& approx_order = approxOrder[activeKey];
+  UShortArray& approx_order = approxOrdIter->second;
   if (approx_order.empty() || new_order > approx_order[0])
     approx_order.assign(numVars, new_order);
 }
@@ -121,8 +122,8 @@ void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
   //         (e.g., see NonDQUESOBayesCalibration::update_model())
 
   // approxOrder updated from NonDPolynomialChaos --> propagate to multiIndex
-  UShortArray&  approx_order = approxOrder[activeKey];
-  UShort2DArray& multi_index =  multiIndex[activeKey];
+  UShortArray&  approx_order =  approxOrdIter->second;
+  UShort2DArray& multi_index = multiIndexIter->second;
   bool update_exp_form = (approx_order != approxOrderPrev);
   if (update_exp_form) {
     switch (expConfigOptions.expBasisType) {
@@ -141,8 +142,8 @@ void SharedRegressOrthogPolyApproxData::
 increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 {
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
-  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
   size_t i, last_index = tp_mi.size();
   // increment tpMultiIndex{,Map,MapRef} arrays
@@ -172,8 +173,8 @@ set_restriction(UShort2DArray& aggregated_mi, SizetSet& sparse_indices,
     return false;
 
   UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  UShort3DArray& tp_mi_map     = tpMultiIndexMap[activeKey];
-  UShort3DArray& tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
 
   // determine the TP multi-indices to save
   StSCIter cit;
