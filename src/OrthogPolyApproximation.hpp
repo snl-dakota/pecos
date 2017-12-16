@@ -145,6 +145,11 @@ protected:
   //- Heading: Member functions
   //
 
+  /// initialize expCoeff{s,Grads}Iter based on activeKey from sharedDataRep
+  void create_active_iterators();
+  /// update expCoeff{s,Grads}Iter based on activeKey from sharedDataRep
+  void update_active_iterators();
+
   /// size expansion{Coeffs,CoeffGrads} based on multiIndex
   void size_expansion();
   /// size expansion{Coeffs,CoeffGrads} based on multiIndex
@@ -231,11 +236,6 @@ private:
   //
   //- Heading: Member functions
   //
-
-  /// initialize expCoeff{s,Grads}Iter based on activeKey from sharedDataRep
-  void create_active_iterators();
-  /// update expCoeff{s,Grads}Iter based on activeKey from sharedDataRep
-  void update_active_iterators();
 
   // apply normalization to std_coeffs to create normalized_coeffs
   void normalize(const RealVector& std_coeffs,

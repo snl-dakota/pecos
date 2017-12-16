@@ -266,7 +266,8 @@ nested_quadrature_order(const UShortArray& ref_quad_order)
 
 inline const RealVector& TensorProductDriver::type1_weight_sets() const
 {
-  std::map<UShortArray, >::const_iterator cit = type1WeightSets.find(activeKey);
+  std::map<UShortArray, RealVector>::const_iterator cit
+    = type1WeightSets.find(activeKey);
   if (cit == type1WeightSets.end()) {
     PCerr << "Error: active key not found in TensorProductDriver::"
 	  << "()." << std::endl;
@@ -278,7 +279,8 @@ inline const RealVector& TensorProductDriver::type1_weight_sets() const
 
 inline const RealMatrix& TensorProductDriver::type2_weight_sets() const
 {
-  std::map<UShortArray, >::const_iterator cit = type2WeightSets.find(activeKey);
+  std::map<UShortArray, RealMatrix>::const_iterator cit
+    = type2WeightSets.find(activeKey);
   if (cit == type2WeightSets.end()) {
     PCerr << "Error: key not found in TensorProductDriver::"
 	  << "type2_weight_sets()." << std::endl;
@@ -295,8 +297,7 @@ inline const UShortArray& TensorProductDriver::level_index() const
 inline const UShortArray& TensorProductDriver::
 level_index(const UShortArray& key) const
 {
-  std::map<UShortArray, >::const_iterator cit
-    = levelIndex.find(key);
+  std::map<UShortArray, UShortArray>::const_iterator cit = levelIndex.find(key);
   if (cit == levelIndex.end()) {
     PCerr << "Error: key not found in TensorProductDriver::level_index()."
 	  << std::endl;
@@ -313,7 +314,7 @@ inline const UShort2DArray& TensorProductDriver::collocation_key() const
 inline const UShort2DArray& TensorProductDriver::
 collocation_key(const UShortArray& key) const
 {
-  std::map<UShortArray, >::const_iterator cit
+  std::map<UShortArray, UShort2DArray>::const_iterator cit
     = collocKey.find(key);
   if (cit == collocKey.end()) {
     PCerr << "Error: key not found in TensorProductDriver::"

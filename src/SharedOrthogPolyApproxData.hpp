@@ -64,6 +64,8 @@ public:
 
   /// get active multiIndex
   const UShort2DArray& multi_index() const;
+  /// get active multiIndex
+  UShort2DArray& multi_index();
   /// get multiIndex[key]
   const UShort2DArray& multi_index(const UShortArray& key) const;
 
@@ -452,6 +454,10 @@ inline void SharedOrthogPolyApproxData::update_active_iterators()
 
 
 inline const UShort2DArray& SharedOrthogPolyApproxData::multi_index() const
+{ return multiIndexIter->second; }
+
+
+inline UShort2DArray& SharedOrthogPolyApproxData::multi_index()
 { return multiIndexIter->second; }
 
 

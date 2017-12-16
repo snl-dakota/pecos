@@ -176,17 +176,61 @@ private:
     const UShortArray& lev_index, const UShort2DArray& key,
     const SizetArray& colloc_index, const SizetArray& dvv);
 
+  /// compute the value of a tensor-product interpolant
+  Real value(const RealVector& x, const RealVector& exp_t1_coeffs,
+	     const RealMatrix& exp_t2_coeffs, const UShortArray& lev_index,
+	     const UShort2DArray& colloc_key);
+  /// compute the value of a sparse interpolant
+  Real value(const RealVector& x, const RealVector& exp_t1_coeffs,
+	     const RealMatrix& exp_t2_coeffs, const UShort2DArray& sm_mi,
+	     const IntArray& sm_coeffs, const UShort3DArray& colloc_key,
+	     const Sizet2DArray& colloc_index);
   /// compute value of reduced-dimension interpolant
   Real value(const RealVector& x, const RealVectorArray& t1_coeffs,
 	     const RealMatrixArray& t2_coeffs, const UShort3DArray& colloc_key,
 	     const SizetList& subset_indices);
+
+  /// compute the gradient of a tensor-product interpolant with respect
+  /// to basis variables
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& lev_index, const UShort2DArray& colloc_key);
+  /// compute the gradient of a tensor-product interpolant with respect
+  /// to basis variables for given DVV
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShortArray& lev_index, const UShort2DArray& colloc_key,
+    const SizetArray& dvv);
+  /// compute the gradient of a sparse interpolant with respect to
+  /// basis variables
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
+    const UShort3DArray& colloc_key, const Sizet2DArray& colloc_index);
+  /// compute the gradient of a sparse interpolant with respect to
+  /// basis variables for given DVV
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const UShort2DArray& sm_mi, const IntArray& sm_coeffs,
+    const UShort3DArray& colloc_key, const Sizet2DArray& colloc_index,
+    const SizetArray& dvv);
   /// compute gradient of reduced-dimension interpolant with respect
   /// to basis variables
   const RealVector& gradient_basis_variables(const RealVector& x,
-					     const RealVectorArray& t1_coeffs,
-					     const RealMatrixArray& t2_coeffs,
-					     const UShort3DArray& colloc_key,
-					     const SizetList& subset_indices);
+    const RealVectorArray& t1_coeffs, const RealMatrixArray& t2_coeffs,
+    const UShort3DArray& colloc_key, const SizetList& subset_indices);
+
+  /// compute the gradient of a tensor-product interpolant with respect
+  /// to non-basis variables
+  const RealVector& gradient_nonbasis_variables(const RealVector& x,
+    const RealMatrix& exp_t1_coeff_grads, const UShortArray& lev_index,
+    const UShort2DArray& colloc_key);
+  /// compute the gradient of a sparse interpolant with respect to
+  /// non-basis variables
+  const RealVector& gradient_nonbasis_variables(const RealVector& x,
+    const RealMatrix& exp_t1_coeff_grads, const UShort2DArray& sm_mi,
+    const IntArray& sm_coeffs, const UShort3DArray& colloc_key,
+    const Sizet2DArray& colloc_index);
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using weights from the CombinedSparseGridDriver

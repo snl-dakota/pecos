@@ -439,6 +439,7 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
 
   // restrict adaptedMultiIndex and then advance this frontier.  Notes:
   // > candidateBasisExp is an array of sets that store multi-index increments;
@@ -614,6 +615,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 	inflate(sparse_ind, mi_cit->second.size());
     }
 
+    std::map<UShortArray, RealVector>::iterator ec_it;
+    std::map<UShortArray, RealMatrix>::iterator ecg_it;
     switch (data_rep->expConfigOptions.combineType) {
     case ADD_COMBINE: {
       // update sparseIndices and expansionCoeff{s,Grads}
@@ -629,7 +632,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 	  ++cntr;
 	}
       // update sparseSobolIndexMap
-      update_sparse_sobol(sparseIndices[key], mi[key], data_rep->sobolIndexMap);
+      update_sparse_sobol(sparseIndices[key], data_rep->multi_index(),
+			  data_rep->sobolIndexMap);
       break;
     }
     case MULT_COMBINE: {
@@ -742,11 +746,9 @@ multiply_expansion(const SizetSet&      sparse_ind_b,
 
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
 
-  SizetSet& sparse_ind_a = sparseIndices[key];
-  const UShort2DArray& multi_index_a = mi[key];
+  SizetSet& sparse_ind_a = sparseIndices[data_rep->activeKey];
+  const UShort2DArray& multi_index_a = data_rep->multi_index();
   RealVector& curr_exp_coeffs = expCoeffsIter->second;
   RealMatrix& curr_exp_grads  = expCoeffGradsIter->second;
   size_t i, j, k, v, si, sj, num_v = sharedDataRep->numVars, num_deriv_vars,
@@ -855,6 +857,8 @@ value(const RealVector& x, const UShort2DArray& mi,
 
   Real approx_val = 0.;
   size_t i; StSCIter cit;
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit)
     approx_val += exp_coeffs[i]
       * data_rep->multivariate_polynomial(x, mi[*cit]);
@@ -1465,8 +1469,8 @@ void RegressOrthogPolyApproximation::set_fault_info()
 
   // compute order of data contained within surrData
   short data_order = (expansionCoeffFlag) ? 1 : 0;
-  if (!surrData.response_gradient(0).empty())  data_order |= 2;
-  //if (!surrData.response_hessian(0).empty()) data_order |= 4;
+  if (surrData.num_gradient_variables())  data_order |= 2;
+  //if (surrData.num_hessian_variables()) data_order |= 4;
 
   // verify support for basisConfigOptions.useDerivs, which indicates usage of
   // derivative data with respect to expansion variables (aleatory or combined)
@@ -1555,6 +1559,7 @@ build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
     num_data_pts_fn   = num_surr_data_pts, // failed data is removed downstream
     num_data_pts_grad = num_surr_data_pts; // failed data is removed downstream
   bool add_val, add_grad;
+  const SDVArray& sdv_array = surrData.variables_data();
 
   if (expansionCoeffFlag) {
     // matrix/vector sizing
@@ -1573,9 +1578,9 @@ build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
       const UShortArray& mi_i = multi_index[i];
       for (j=0; j<num_surr_data_pts; ++j) {
 	add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
-	data_rep->pack_polynomial_data(surrData.continuous_variables(j), mi_i,
-				       add_val, A_matrix, a_cntr, add_grad,
-				       A_matrix, a_grad_cntr);
+	data_rep->pack_polynomial_data(sdv_array[j].continuous_variables(),
+				       mi_i, add_val, A_matrix, a_cntr,
+				       add_grad, A_matrix, a_grad_cntr);
       }
     }
   }
@@ -1592,7 +1597,7 @@ build_linear_system( RealMatrix &A, const UShort2DArray& multi_index)
 	//add_val = false; add_grad = true;
 	//if (add_grad) {
 	  A_matrix[a_cntr] = data_rep->
-	    multivariate_polynomial(surrData.continuous_variables(j), mi_i);
+	    multivariate_polynomial(sdv_array[j].continuous_variables(), mi_i);
 	  ++a_cntr;
 	//}
       }
@@ -1615,6 +1620,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
     num_data_pts_fn   = num_surr_data_pts, // failed data is removed downstream
     num_data_pts_grad = num_surr_data_pts; // failed data is removed downstream
   bool add_val, add_grad;
+  const SDRArray& sdr_array = surrData.response_data();
 
   // populate A
   build_linear_system(A, multi_index);
@@ -1635,7 +1641,6 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
     // matched in the LS soln.  b_vectors is num_data_pts (rows) x num_rhs
     // (cols), arranged in column-major order.
     b_cntr = 0; b_grad_cntr = num_data_pts_fn;
-    const SDRArray& sdr_array = surrData.response_data();
     for (i=0; i<num_surr_data_pts; ++i) {
       add_val = true; add_grad = data_rep->basisConfigOptions.useDerivs;
       data_rep->pack_response_data(sdr_array[i], add_val, b_vectors, b_cntr,
@@ -1658,7 +1663,7 @@ build_linear_system( RealMatrix &A, RealMatrix &B,
     for (i=0; i<num_surr_data_pts; ++i) {
       //add_val = false; add_grad = true;
       //if (add_grad) {
-	const RealVector& resp_grad = surrData.response_gradient(i);
+	const RealVector& resp_grad = sdr_array[i].response_gradient();
 	for (j=0; j<num_grad_rhs; ++j) // i-th point, j-th grad component
 	  b_vectors[(j+num_coeff_rhs)*num_data_pts_grad+b_cntr] = resp_grad[j];
 	++b_cntr;
@@ -1678,10 +1683,13 @@ build_linear_system( RealMatrix &A, RealMatrix &B, RealMatrix &points,
   // populate points
   size_t i, j, num_surr_data_pts = surrData.points(),
     num_v = sharedDataRep->numVars;
+  const SDVArray& sdv_array = surrData.variables_data();
   points.shapeUninitialized( num_v, num_surr_data_pts );
-  for (i=0; i<num_surr_data_pts; ++i)
+  for (i=0; i<num_surr_data_pts; ++i) {
+    const RealVector& c_vars = sdv_array[i].continuous_variables();
     for (j=0; j<num_v; ++j)
-      points(j,i) = surrData.continuous_variables(i)[j];
+      points(j,i) = c_vars[j];
+  }
   //points.print(std::cout);
 }
 
@@ -2932,15 +2940,16 @@ approximation_coefficients(bool normalized) const
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
-  if (sp_it == sparseIndices.end() || sp_it->second.empty())
+  std::map<UShortArray, SizetSet>::const_iterator sp_cit
+    = sparseIndices.find(key);
+  if (sp_cit == sparseIndices.end() || sp_cit->second.empty())
     return OrthogPolyApproximation::approximation_coefficients(normalized);
 
   // synchronize the expansion coeffs with the length of the shared multi-index
   // approx_coeffs is an inflation of expansionCoeffs
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs = expCoeffsIter->second;
-  const SizetSet& sparse_ind = sp_it->second;
+  const SizetSet& sparse_ind = sp_cit->second;
   RealVector approx_coeffs(mi.size()); // init to 0
   size_t i; StSCIter cit;
   for (i=0, cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++i, ++cit)
@@ -3028,20 +3037,19 @@ coefficient_labels(std::vector<std::string>& coeff_labels) const
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.find(key);
-  if (sp_it == sparseIndices.end() || sp_it->second.empty())
+  std::map<UShortArray, SizetSet>::const_iterator sp_cit
+    = sparseIndices.find(key);
+  if (sp_cit == sparseIndices.end() || sp_cit->second.empty())
     { OrthogPolyApproximation::coefficient_labels(coeff_labels); return; }
 
   size_t i, j, num_v = sharedDataRep->numVars;
   char tag[10];
 
+  const SizetSet& sparse_ind = sp_cit->second;
   coeff_labels.reserve(sparse_ind.size());
 
   // terms and term identifiers
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& mi = data_rep->multi_index();
-  const SizetSet& sparse_ind = sp_it->second;
   for (StSCIter cit=sparse_ind.begin(); cit!=sparse_ind.end(); ++cit) {
     const UShortArray& mi_i = mi[*cit];
     std::string tags;

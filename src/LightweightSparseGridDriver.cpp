@@ -40,14 +40,15 @@ initialize_grid(size_t num_v, unsigned short ssg_level)
 void LightweightSparseGridDriver::initialize_sets()
 {
   // define set O (old) from smolyakMultiIndex
-  oldMultiIndex.clear();
-  oldMultiIndex.insert(smolyakMultiIndex.begin(), smolyakMultiIndex.end());
+  UShortArraySet& old_mi = oldMultiIndex[activeKey];
+  old_mi.clear();
+  old_mi.insert(smolyakMultiIndex.begin(), smolyakMultiIndex.end());
 
   // compute initial set A (active) by applying add_active_neighbors()
   // to the frontier of smolyakMultiIndex:
-  activeMultiIndex.clear();
+  activeMultiIndex[activeKey].clear();
   UShortArraySet::const_iterator cit;
-  for (cit=oldMultiIndex.begin(); cit!=oldMultiIndex.end(); ++cit)
+  for (cit=old_mi.begin(); cit!=old_mi.end(); ++cit)
     if ( /*!dimIsotropic ||*/ l1_norm(*cit) == ssgLevel )
       add_active_neighbors(*cit, true);//dimIsotropic);
 }
@@ -65,14 +66,15 @@ void LightweightSparseGridDriver::prune_sets(const SizetSet& save_tp)
   smolyakMultiIndex.resize(new_index); // prune trailing
 
   // define oldMultiIndex from smolyakMultiIndex
-  oldMultiIndex.clear();
-  oldMultiIndex.insert(smolyakMultiIndex.begin(), smolyakMultiIndex.end());
+  UShortArraySet& old_mi = oldMultiIndex[activeKey];
+  old_mi.clear();
+  old_mi.insert(smolyakMultiIndex.begin(), smolyakMultiIndex.end());
 
   // redefine set A (activeMultiIndex) based on admissible forward
   // neighbors for all oldMultiIndex terms (allow for gaps)
-  activeMultiIndex.clear();
+  activeMultiIndex[activeKey].clear();
   UShortArraySet::const_iterator oit;
-  for (oit=oldMultiIndex.begin(); oit!=oldMultiIndex.end(); ++oit)
+  for (oit=old_mi.begin(); oit!=old_mi.end(); ++oit)
     add_active_neighbors(*oit, false); // not exclusively frontier
 }
 

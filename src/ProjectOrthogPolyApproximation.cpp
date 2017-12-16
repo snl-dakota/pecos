@@ -149,10 +149,10 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     const IntArray& sm_coeffs = csg_driver->smolyak_coefficients();
     const UShortArray&   key       = data_rep->activeKey;
     const UShort3DArray& tp_mi     = data_rep->tpMultiIndex[key];
-    const UShort3DArray& tp_mi_map = data_rep->tpMultiIndexMap[key];
+    const Sizet2DArray&  tp_mi_map = data_rep->tpMultiIndexMap[key];
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
     RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
-    size_t i, num_tensor_grids = data_rep->tp_mi.size(); int coeff;
+    size_t i, num_tensor_grids = tp_mi.size(); int coeff;
     SDVArray tp_data_vars; SDRArray tp_data_resp;
     RealVector tp_wts, tp_coeffs; RealMatrix tp_coeff_grads;
     bool store_tp = (data_rep->expConfigOptions.refinementControl ==
@@ -356,8 +356,8 @@ append_tensor_expansions(size_t start_tp_index)
 	<< "start index " << start_tp_index << "\nsm_coeffs:\n" << sm_coeffs
 	<< "sm_coeffs_ref:\n" << sm_coeffs_ref << std::endl;
 #endif // DEBUG
-  const UShortArray&   key       = data_rep->activeKey;
-  const UShort3DArray& tp_mi_map = data_rep->tpMultiIndexMap[key];
+  const UShortArray&  key       = data_rep->activeKey;
+  const Sizet2DArray& tp_mi_map = data_rep->tpMultiIndexMap[key];
   RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
   RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
 
@@ -538,6 +538,9 @@ void ProjectOrthogPolyApproximation::expectation()
   RealVector& exp_coeffs      = expCoeffsIter->second;
   RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
 
+  const SDVArray& sdv_array   = surrData.variables_data();
+  const SDRArray& sdr_array   = surrData.response_data();
+
   // "lhs" or "random", no weights needed
   size_t i, j, k, num_surr_data_pts = surrData.points(), num_failed_surr_fn = 0,
     num_failed_surr_grad = 0, num_deriv_vars = exp_coeff_grads.numRows();
@@ -567,8 +570,8 @@ void ProjectOrthogPolyApproximation::expectation()
     Real& exp_coeff_i = exp_coeffs[i]; exp_coeff_i = 0.;
     const UShortArray& mi_i = mi[i];
     for (j=0; j<num_data_pts; ++j)
-      exp_coeff_i += surrData.response_function(j) * data_rep->
-        multivariate_polynomial(surrData.continuous_variables(j), mi_i);
+      exp_coeff_i += sdr_array[j].response_function() * data_rep->
+        multivariate_polynomial(sdv_array[j].continuous_variables(), mi_i);
     exp_coeff_i /= num_data_pts * data_rep->norm_squared(mi_i);
 #ifdef DEBUG
     PCout << "coeff[" << i << "] = " << exp_coeff_i << " norm squared[" << i
@@ -589,10 +592,11 @@ void ProjectOrthogPolyApproximation::expectation()
   for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val = expansionCoeffFlag, add_grad = expansionCoeffGradFlag;
     fail_booleans(fit, k, add_val, add_grad);
+    const SurrogateDataResp& sdr = sdr_array[k];
     if (add_val)
-      mean += surrData.response_function(k);
+      mean += sdr.response_function();
     if (add_grad) {
-      const RealVector& curr_pt_grad = surrData.response_gradient(k);
+      const RealVector& curr_pt_grad = sdr.response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	mean_grad[j] += curr_pt_grad[j];
     }
@@ -610,14 +614,15 @@ void ProjectOrthogPolyApproximation::expectation()
   for (k=0, fit=failed_resp_data.begin(); k<num_surr_data_pts; ++k) {
     bool add_val = expansionCoeffFlag, add_grad = expansionCoeffGradFlag;
     fail_booleans(fit, k, add_val, add_grad);
+    const SurrogateDataResp& sdr = sdr_array[k];
     if (add_val)
-      resp_fn_minus_mean = surrData.response_function(k) - mean;
+      resp_fn_minus_mean = sdr.response_function() - mean;
     if (add_grad) {
-      const RealVector& resp_grad = surrData.response_gradient(k);
+      const RealVector& resp_grad = sdr.response_gradient();
       for (j=0; j<num_deriv_vars; ++j)
 	resp_grad_minus_mean[j] = resp_grad[j] - mean_grad[j];
     }
-    const RealVector& c_vars = surrData.continuous_variables(k);
+    const RealVector& c_vars = sdv_array[k].continuous_variables();
     for (i=1; i<num_exp_terms; ++i) {
       chaos_sample = data_rep->multivariate_polynomial(c_vars, mi[i]);
       if (add_val)
@@ -652,33 +657,36 @@ integrate_response_moments(size_t num_moments)
 {
   // define data_coeffs
   size_t i, num_pts = surrData.points();
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
+
   RealVector data_coeffs(num_pts);
   for (i=0; i<num_pts; ++i)
-    data_coeffs[i] = surrData.response_function(i);
+    data_coeffs[i] = sdr_array[i].response_function();
 
   // update data_coeffs using evaluations from stored expansions
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   short combine_type = data_rep->expConfigOptions.combineType;
-  std::map<UShortArray, RealVector>::const_iterator ec_cit;
   const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
   std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-  if (combine_type && num_stored) {
+  if (combine_type) {
+    std::map<UShortArray, RealVector>::const_iterator ec_cit;
     for (ec_cit = expansionCoeffs.begin(); ec_cit != expansionCoeffs.end();
 	 ++ec_cit, ++mi_cit)
-      if (ec_it->first != expCoeffsIter) {
-	const UShortArray& mi_i = mi_cit->second;
-	const RealVector&  ec_i = ec_cit->second;
+      if (ec_cit != expCoeffsIter) {
+	const UShort2DArray& mi_i = mi_cit->second;
+	const RealVector&    ec_i = ec_cit->second;
 	switch (combine_type) {
 	case ADD_COMBINE:
 	  for (i=0; i<num_pts; ++i)
-	    data_coeffs[i] +=
-	      value(surrData.continuous_variables(i), mi_i, ec_i);
+	    data_coeffs[i] += OrthogPolyApproximation::
+	      value(sdv_array[i].continuous_variables(), mi_i, ec_i);
 	  break;
 	case MULT_COMBINE:
 	  for (i=0; i<num_pts; ++i)
-	    data_coeffs[i] *=
-	      value(surrData.continuous_variables(i), mi_i, ec_i);
+	    data_coeffs[i] *= OrthogPolyApproximation::
+	      value(sdv_array[i].continuous_variables(), mi_i, ec_i);
 	  break;
 	}
       }

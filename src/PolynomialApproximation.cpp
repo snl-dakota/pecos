@@ -87,43 +87,45 @@ void PolynomialApproximation::response_data_to_surplus_data()
   // to combine expansions and then eval once.  Approaches are equivalent for
   // additive roll up.
   size_t i, num_pts = origSurrData.points();
+  const SDVArray&      sdv_array =     surrData.variables_data();// shallow copy
+  const SDRArray& orig_sdr_array = origSurrData.response_data();
+  SDRArray&            sdr_array =     surrData.response_data();
   Real delta_val; RealVector delta_grad;
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE:
     for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = origSurrData.continuous_variables(i);
+      const RealVector& c_vars = sdv_array[i].continuous_variables();
       if (expansionCoeffFlag) {
-	delta_val = origSurrData.response_function(i);
+	delta_val = orig_sdr_array[i].response_function();
 	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
 	  delta_val -= stored_value(c_vars, cit->first);
-	surrData.response_function(delta_val, i);
+	sdr_array[i].response_function(delta_val);
       }
       if (expansionCoeffGradFlag) {
-	copy_data(origSurrData.response_gradient(i), delta_grad);
+	copy_data(orig_sdr_array[i].response_gradient(), delta_grad);
 	for (cit = resp_data_map.begin(); cit->first != key; ++cit)
 	  delta_grad -= stored_gradient_nonbasis_variables(c_vars, cit->first);
-	surrData.response_gradient(delta_grad, i);
+	sdr_array[i].response_gradient(delta_grad);
       }
     }
     break;
   case MULT_COMBINE: {
     Real orig_fn_val, stored_val, fn_val_j, fn_val_jm1;
     RealVector orig_fn_grad, fn_grad_j, fn_grad_jm1;
-    size_t k, num_deriv_vars = origSurrData.response_gradient(0).length();
+    size_t j, k, num_deriv_vars = surrData.num_derivative_variables();
     std::map<UShortArray, SDRArray>::const_iterator look_ahead_cit;
     for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = origSurrData.continuous_variables(i);
-      delta_val = orig_fn_val = origSurrData.response_function(i);
+      const RealVector& c_vars = sdv_array[i].continuous_variables();
+      delta_val = orig_fn_val = orig_sdr_array[i].response_function();
       if (expansionCoeffGradFlag)
-	copy_data(origSurrData.response_gradient(i), orig_fn_grad);
-      for (cit = resp_data_map.begin(); cit->first != key; ++cit) {
+	copy_data(orig_sdr_array[i].response_gradient(), orig_fn_grad);
+      for (cit=resp_data_map.begin(), j=0; cit->first != key; ++cit, ++j) {
 	stored_val = stored_value(c_vars, cit->first);
 	delta_val /= stored_val;
 	if (expansionCoeffGradFlag) { // recurse using levels j and j-1
 	  const RealVector& stored_grad
 	    = stored_gradient_nonbasis_variables(c_vars, cit->first);
-	  if (cit == resp_data_map.begin())
+	  if (j == 0)
 	    { fn_val_j = stored_val; fn_grad_j = stored_grad; }
 	  else {
 	    fn_val_j = fn_val_jm1 * stored_val;
@@ -132,7 +134,7 @@ void PolynomialApproximation::response_data_to_surplus_data()
 				fn_val_jm1 * stored_grad[j] );
 	  }
 	  look_ahead_cit = cit; ++look_ahead_cit;
-	  if (look_ahead_cit->second == key)
+	  if (look_ahead_cit->first == key)
 	    for (k=0; k<num_deriv_vars; ++k)
 	      delta_grad[k] = ( orig_fn_grad[k] - fn_grad_j[k] * delta_val )
 	                    / fn_val_j;
@@ -140,8 +142,8 @@ void PolynomialApproximation::response_data_to_surplus_data()
 	    { fn_val_jm1 = fn_val_j; fn_grad_jm1 = fn_grad_j; }
 	}
       }
-      if (expansionCoeffFlag)     surrData.response_function(delta_val,  i);
-      if (expansionCoeffGradFlag) surrData.response_gradient(delta_grad, i);
+      if (expansionCoeffFlag)     sdr_array[i].response_function(delta_val);
+      if (expansionCoeffGradFlag) sdr_array[i].response_gradient(delta_grad);
     }
     break;
   }

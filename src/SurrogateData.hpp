@@ -851,10 +851,15 @@ public:
   void variables_data(const SDVArray& sdv_array);
   /// get varsData[activeKey]
   const SDVArray& variables_data() const;
+  /// get varsData[activeKey]
+  SDVArray& variables_data();
+
   /// set respData[activeKey]
   void response_data(const SDRArray& sdr_array);
   /// get respData[activeKey]
   const SDRArray& response_data() const;
+  /// get respData[activeKey]
+  SDRArray& response_data();
 
   /// get varsData
   const std::map<UShortArray, SDVArray>& variables_data_map() const;
@@ -864,45 +869,6 @@ public:
   const std::map<UShortArray, SDRArray>& response_data_map() const;
   /// set respData
   void response_data_map(const std::map<UShortArray, SDRArray>& resp_map);
-
-  /*
-  /// get anchorVars.continuous_variables()
-  const RealVector& anchor_continuous_variables() const;
-  /// get anchorVars.discrete_int_variables()
-  const IntVector& anchor_discrete_int_variables() const;
-  /// get anchorVars.discrete_real_variables()
-  const RealVector& anchor_discrete_real_variables() const;
-  /// get anchorResp.active_bits()
-  short anchor_active_bits() const;
-  /// get anchorResp.response_function()
-  Real anchor_function() const;
-  /// get anchorResp.response_gradient()
-  const RealVector& anchor_gradient() const;
-  /// get anchorResp.response_hessian()
-  const RealSymMatrix& anchor_hessian() const;
-
-  /// get varsData[i].continuous_variables()
-  const RealVector& continuous_variables(size_t i) const;
-  /// get varsData[i].discrete_int_variables()
-  const IntVector& discrete_int_variables(size_t i) const;
-  /// get varsData[i].discrete_real_variables()
-  const RealVector& discrete_real_variables(size_t i) const;
-  /// get respData[i].active_bits()
-  short response_active_bits(size_t i) const;
-
-  /// set respData[i].response_function()
-  void response_function(Real fn_val, size_t i);
-  /// get respData[i].response_function()
-  Real response_function(size_t i) const;
-  /// set respData[i].response_gradient()
-  void response_gradient(const RealVector& fn_grad, size_t i);
-  /// get respData[i].response_gradient()
-  const RealVector& response_gradient(size_t i) const;
-  /// set respData[i].response_hessian()
-  void response_hessian(const RealSymMatrix& fn_hess, size_t i);
-  /// get respData[i].response_hessian()
-  const RealSymMatrix& response_hessian(size_t i) const;
-  */
 
   /// push sdv onto end of varsData
   void push_back(const SurrogateDataVars& sdv);
@@ -922,18 +888,6 @@ public:
   /// return popCountStack.back()
   size_t pop_count() const;
 
-  /*
-  /// move all entries from {vars,resp}Data to stored{Vars,Resp}Data
-  /// (default is push_back)
-  void store(size_t index = _NPOS);
-  /// return an entry set from stored{Vars,Resp}Data to {vars,resp}Data
-  void restore(size_t index = _NPOS);
-  /// remove an entry from stored{Vars,Resp}Data (default is pop_back)
-  void remove_stored(size_t index = _NPOS);
-  /// swap stored and active data sets (variables and response)
-  void swap(size_t index);
-  */
-
   /// query presence of anchor{Vars,Resp}
   bool anchor() const;
   /// assign anchorIndex[activeKey] to incoming index
@@ -952,6 +906,11 @@ public:
   //size_t stored_sets() const;
   /// return number of 1D arrays within popped{Vars,Resp}Data 2D arrays
   size_t popped_sets() const;
+
+  /// return number of gradient variables from size of gradient arrays
+  size_t num_gradient_variables() const;
+  /// return number of Hessian variables from size of Hessian arrays
+  size_t num_hessian_variables() const;
   /// return number of derivative variables as indicated by size of
   /// gradient/Hessian arrays
   size_t num_derivative_variables() const;
@@ -970,11 +929,12 @@ public:
   void clear_data();
   /// clear popped{Vars,Resp}Data
   void clear_popped();
-  // clear stored{Vars,Resp}Data
-  //void clear_stored();
 
   /// return sdRep
   SurrogateDataRep* data_rep() const;
+
+  /// function to check sdRep (does this handle contain a body)
+  bool is_null() const;
 
 private:
 
@@ -999,17 +959,6 @@ private:
   /// set failedRespData
   void failed_response_data_map(
     const std::map<UShortArray, SizetShortMap>&	fail_resp);
-
-  /*
-  /// get storedVarsData
-  const SDVArrayDeque& stored_variables_data() const;
-  /// set storedVarsData
-  void stored_variables_data(const SDVArrayDeque& stored_vars);
-  /// get storedRespData
-  const SDRArrayDeque& stored_response_data() const;
-  /// set storedRespData
-  void stored_response_data(const SDRArrayDeque& stored_resp);
-  */
 
   /// get poppedVarsData
   const std::map<UShortArray, SDVArrayDeque>& popped_variables_map() const;
@@ -1184,11 +1133,19 @@ inline const SDVArray& SurrogateData::variables_data() const
 { return sdRep->varsData[sdRep->activeKey]; }
 
 
+inline SDVArray& SurrogateData::variables_data()
+{ return sdRep->varsData[sdRep->activeKey]; }
+
+
 inline void SurrogateData::response_data(const SDRArray& sdr_array)
 { sdRep->respData[sdRep->activeKey] = sdr_array; }
 
 
 inline const SDRArray& SurrogateData::response_data() const
+{ return sdRep->respData[sdRep->activeKey]; }
+
+
+inline SDRArray& SurrogateData::response_data()
 { return sdRep->respData[sdRep->activeKey]; }
 
 
@@ -1210,78 +1167,6 @@ response_data_map() const
 inline void SurrogateData::
 response_data_map(const std::map<UShortArray, SDRArray>& resp_map)
 { sdRep->respData = resp_map; }
-
-
-/*
-inline const RealVector& SurrogateData::anchor_continuous_variables() const
-{ return anchor_variables().continuous_variables(); }
-
-
-inline const IntVector& SurrogateData::anchor_discrete_int_variables() const
-{ return anchor_variables().discrete_int_variables(); }
-
-
-inline const RealVector& SurrogateData::anchor_discrete_real_variables() const
-{ return anchor_variables().discrete_real_variables(); }
-
-
-inline const RealVector& SurrogateData::continuous_variables(size_t i) const
-{ return sdRep->varsData[activeKey][i].continuous_variables(); }
-
-
-inline const IntVector& SurrogateData::discrete_int_variables(size_t i) const
-{ return sdRep->varsData[activeKey][i].discrete_int_variables(); }
-
-
-inline const RealVector& SurrogateData::discrete_real_variables(size_t i) const
-{ return sdRep->varsData[activeKey][i].discrete_real_variables(); }
-
-
-inline short SurrogateData::anchor_active_bits() const
-{ return anchor_response().active_bits(); }
-
-
-inline short SurrogateData::response_active_bits(size_t i) const
-{ return sdRep->respData[activeKey][i].active_bits(); }
-
-
-inline Real SurrogateData::anchor_function() const
-{ return anchor_response().response_function(); }
-
-
-inline const RealVector& SurrogateData::anchor_gradient() const
-{ return anchor_response().response_gradient(); }
-
-
-inline const RealSymMatrix& SurrogateData::anchor_hessian() const
-{ return anchor_response().response_hessian(); }
-
-
-inline void SurrogateData::response_function(Real fn_val, size_t i)
-{ sdRep->respData[activeKey][i].response_function(fn_val); }
-
-
-inline Real SurrogateData::response_function(size_t i) const
-{ return sdRep->respData[activeKey][i].response_function(); }
-
-
-inline void SurrogateData::
-response_gradient(const RealVector& fn_grad, size_t i)
-{ sdRep->respData[activeKey][i].response_gradient(fn_grad); }
-
-
-inline const RealVector& SurrogateData::response_gradient(size_t i) const
-{ return sdRep->respData[activeKey][i].response_gradient(); }
-
-
-inline void SurrogateData::
-response_hessian(const RealSymMatrix& fn_hess, size_t i)
-{ sdRep->respData[activeKey][i].response_hessian(fn_hess); }
-
-
-inline const RealSymMatrix& SurrogateData::response_hessian(size_t i) const
-{ return sdRep->respData[activeKey][i].response_hessian(); }
-*/
 
 
 inline void SurrogateData::push_back(const SurrogateDataVars& sdv)
@@ -1382,93 +1267,6 @@ inline size_t SurrogateData::pop_count() const
 }
 
 
-/*
-inline void SurrogateData::store(size_t index)
-{
-  size_t stored_len = std::min(sdRep->storedVarsData.size(),
-			       sdRep->storedRespData.size());
-  if (index == _NPOS || index == stored_len) { // append
-    sdRep->storedVarsData.push_back(sdRep->varsData); // shallow copies
-    sdRep->storedRespData.push_back(sdRep->respData); // shallow copies
-  }
-  else if (index < stored_len) { // replace
-    sdRep->storedVarsData[index] = sdRep->varsData; // shallow copies
-    sdRep->storedRespData[index] = sdRep->respData; // shallow copies
-  }
-  else {
-    PCerr << "Error: bad index (" << index
-	  << ") passed in SurrogateData::store()" << std::endl;
-    abort_handler(-1);
-  }
-  clear_data();
-}
-
-
-inline void SurrogateData::restore(size_t index)
-{
-  size_t stored_len = std::min(sdRep->storedVarsData.size(),
-			       sdRep->storedRespData.size());
-  if (index == _NPOS) {
-    sdRep->varsData = sdRep->storedVarsData.back(); // shallow copies
-    sdRep->respData = sdRep->storedRespData.back(); // shallow copies
-  }
-  else if (index < stored_len) { // replace
-    sdRep->varsData = sdRep->storedVarsData[index]; // shallow copies
-    sdRep->respData = sdRep->storedRespData[index]; // shallow copies
-  }
-  else {
-    PCerr << "Error: bad index (" << index
-	  << ") passed in SurrogateData::store()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-inline void SurrogateData::remove_stored(size_t index)
-{
-  size_t stored_len = std::min(sdRep->storedVarsData.size(),
-			       sdRep->storedRespData.size());
-  if (index == _NPOS || index == stored_len - 1) {
-    sdRep->storedVarsData.pop_back(); // shallow copies
-    sdRep->storedRespData.pop_back(); // shallow copies
-  }
-  else if (index < stored_len) { // replace
-    SDVArrayDeque::iterator vit = sdRep->storedVarsData.begin();
-    std::advance(vit, index);  sdRep->storedVarsData.erase(vit);
-    SDRArrayDeque::iterator rit = sdRep->storedRespData.begin();
-    std::advance(rit, index);  sdRep->storedRespData.erase(rit);
-  }
-  else {
-    PCerr << "Error: bad index (" << index
-	  << ") passed in SurrogateData::remove_stored()" << std::endl;
-    abort_handler(-1);
-  }
-  clear_data();
-}
-
-
-inline void SurrogateData::swap(size_t index)
-{
-  if (index == _NPOS)
-    return;
-  else if (index >= sdRep->storedVarsData.size()) {
-    PCerr << "Error: index out of range in SurrogateData::swap()" << std::endl;
-    abort_handler(-1);
-  }
-
-  // swap stored and active using shallow copies
-  SDVArray tmp_vars_data = sdRep->varsData;
-  SDRArray tmp_resp_data = sdRep->respData;
-
-  sdRep->varsData = sdRep->storedVarsData[index];
-  sdRep->respData = sdRep->storedRespData[index];
-
-  sdRep->storedVarsData[index] = tmp_vars_data;
-  sdRep->storedRespData[index] = tmp_resp_data;
-}
-*/
-
-
 inline bool SurrogateData::anchor() const
 {
   std::map<UShortArray, size_t>::iterator anchor_it
@@ -1534,10 +1332,25 @@ inline size_t SurrogateData::popped_sets() const
 }
 
 
-inline size_t SurrogateData::num_derivative_variables() const
+inline size_t SurrogateData::num_gradient_variables() const
 {
   const SDRArray& sdr_array = sdRep->respData[sdRep->activeKey];
   return (sdr_array.empty()) ? 0 : sdr_array[0].response_gradient().length();
+}
+
+
+inline size_t SurrogateData::num_hessian_variables() const
+{
+  const SDRArray& sdr_array = sdRep->respData[sdRep->activeKey];
+  return (sdr_array.empty()) ? 0 : sdr_array[0].response_hessian().numRows();
+}
+
+
+inline size_t SurrogateData::num_derivative_variables() const
+{
+  size_t num_grad_vars = num_gradient_variables();
+  if (num_grad_vars) return num_grad_vars;           // precedence
+  else               return num_hessian_variables(); // fall-back
 }
 
 
@@ -1622,30 +1435,6 @@ failed_response_data_map() const
 { return sdRep->failedRespData; }
 
 
-/*
-inline size_t SurrogateData::stored_sets() const
-{ return std::min(sdRep->storedVarsData.size(), sdRep->storedRespData.size()); }
-
-
-inline const SDVArrayDeque& SurrogateData::stored_variables_data() const
-{ return sdRep->storedVarsData; }
-
-
-inline void SurrogateData::
-stored_variables_data(const SDVArrayDeque& stored_vars)
-{ sdRep->storedVarsData = stored_vars; }
-
-
-inline const SDRArrayDeque& SurrogateData::stored_response_data() const
-{ return sdRep->storedRespData; }
-
-
-inline void SurrogateData::
-stored_response_data(const SDRArrayDeque& stored_resp)
-{ sdRep->storedRespData = stored_resp; }
-*/
-
-
 inline const std::map<UShortArray, SDVArrayDeque>& SurrogateData::
 popped_variables_map() const
 { return sdRep->poppedVarsData; }
@@ -1687,19 +1476,6 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
       new_vars_map[v_iter->first] = sdv_array;
     }
     sd.variables_data_map(new_vars_map);
-
-    /*
-    size_t j, num_sdva = sdRep->storedVarsData.size();
-    SDVArrayDeque stored_sdv(num_sdva);
-    for (i=0; i<num_sdva; ++i) {
-      const SDVArray& rep_stored_i = sdRep->storedVarsData[i];
-      num_pts = rep_stored_i.size();
-      stored_sdv[i].resize(num_pts);
-      for (j=0; j<num_pts; ++j)
-	stored_sdv[i][j] = rep_stored_i[j].copy();
-    }
-    sd.stored_variables_data(stored_sdv);
-    */
 
     std::map<UShortArray, SDVArrayDeque>& popped_vars_map
       = sdRep->poppedVarsData;
@@ -1745,19 +1521,6 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
     }
     sd.response_data_map(new_resp_map);
 
-    /*
-    size_t j, num_sdra = sdRep->storedRespData.size();
-    SDRArrayDeque stored_sdr(num_sdra);
-    for (i=0; i<num_sdra; ++i) {
-      const SDRArray& rep_stored_i = sdRep->storedRespData[i];
-      num_pts = rep_stored_i.size();
-      stored_sdr[i].resize(num_pts);
-      for (j=0; j<num_pts; ++j)
-	stored_sdr[i][j] = rep_stored_i[j].copy();
-    }
-    sd.stored_response_data(stored_sdr);
-    */
-
     std::map<UShortArray, SDRArrayDeque>& popped_resp_map
       = sdRep->poppedRespData;
     std::map<UShortArray, SDRArrayDeque> new_popped_resp_map;
@@ -1790,12 +1553,6 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
 }
 
 
-/*
-inline void SurrogateData::clear_stored()
-{ sdRep->storedVarsData.clear(); sdRep->storedRespData.clear(); }
-*/
-
-
 inline void SurrogateData::clear_data()
 {
   const UShortArray& key = sdRep->activeKey;
@@ -1817,6 +1574,10 @@ inline void SurrogateData::clear_popped()
 
 inline SurrogateDataRep* SurrogateData::data_rep() const
 { return sdRep; }
+
+
+inline bool SurrogateData::is_null() const
+{ return (sdRep) ? false : true; }
 
 } // namespace Pecos
 

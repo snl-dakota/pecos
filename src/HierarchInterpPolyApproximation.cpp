@@ -33,7 +33,7 @@ void HierarchInterpPolyApproximation::allocate_arrays()
   const ExpansionConfigOptions& ec_options = data_rep->expConfigOptions;
   const UShort4DArray& colloc_key = data_rep->hsg_driver()->collocation_key();
   size_t i, j, k, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    num_v = surrData.num_derivative_variables();
+    num_deriv_v = surrData.num_derivative_variables();
 
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -60,10 +60,10 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 	if (expansionCoeffFlag) {
 	  exp_t1_coeffs[i][j].sizeUninitialized(num_tp_pts);
 	  if (data_rep->basisConfigOptions.useDerivs)
-	    exp_t2_coeffs[i][j].shapeUninitialized(num_v, num_tp_pts);
+	    exp_t2_coeffs[i][j].shapeUninitialized(num_deriv_v, num_tp_pts);
 	}
 	if (expansionCoeffGradFlag)
-	  exp_t1_coeff_grads[i][j].shapeUninitialized(num_v, num_tp_pts);
+	  exp_t1_coeff_grads[i][j].shapeUninitialized(num_deriv_v, num_tp_pts);
       }
     }
   }
@@ -105,18 +105,19 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   // level 0
   c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
+  const SurrogateDataResp& sdr_0 = sdr_array[c_index];
   if (expansionCoeffFlag) {
-    exp_t1_coeffs[0][0][0] = surrData.response_function(c_index);
+    exp_t1_coeffs[0][0][0] = sdr_0.response_function();
     if (data_rep->basisConfigOptions.useDerivs)
-      Teuchos::setCol(surrData.response_gradient(c_index), 0,
-		      exp_t2_coeffs[0][0]);
+      Teuchos::setCol(sdr_0.response_gradient(), 0, exp_t2_coeffs[0][0]);
   }
   if (expansionCoeffGradFlag)
-    Teuchos::setCol(surrData.response_gradient(c_index), 0,
-		    exp_t1_coeff_grads[0][0]);
+    Teuchos::setCol(sdr_0.response_gradient(), 0, exp_t1_coeff_grads[0][0]);
   ++cntr;
   // levels 1 to num_levels
   for (lev=1; lev<num_levels; ++lev) {
@@ -126,14 +127,14 @@ void HierarchInterpPolyApproximation::compute_coefficients()
       num_tp_pts = key_l[set].size();
       for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	const RealVector& c_vars = surrData.continuous_variables(c_index);
+	const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+	const SurrogateDataResp& sdr = sdr_array[c_index];
 	// coefficients are hierarchical surpluses
 	if (expansionCoeffFlag) {
-	  exp_t1_coeffs[lev][set][pt] = surrData.response_function(c_index)
-	    - value(c_vars, sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs,
-		    lev-1);
+	  exp_t1_coeffs[lev][set][pt] = sdr.response_function() -
+	    value(c_vars, sm_mi, colloc_key, exp_t1_coeffs,exp_t2_coeffs,lev-1);
 	  if (data_rep->basisConfigOptions.useDerivs) {
-	    const RealVector& data_grad = surrData.response_gradient(c_index);
+	    const RealVector& data_grad = sdr.response_gradient();
 	    const RealVector& prev_grad = gradient_basis_variables(c_vars,
 	      sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
 	    Real* hier_grad = exp_t2_coeffs[lev][set][pt];
@@ -142,7 +143,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
 	  }
 	}
 	if (expansionCoeffGradFlag) {
-	  const RealVector& data_grad = surrData.response_gradient(c_index);
+	  const RealVector& data_grad = sdr.response_gradient();
 	  const RealVector& prev_grad = gradient_nonbasis_variables(c_vars,
 	    sm_mi, colloc_key, exp_t1_coeff_grads, lev-1);
 	  Real* hier_grad = exp_t1_coeff_grads[lev][set][pt];
@@ -403,8 +404,9 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
+  const SDVArray& sdv_array = surrData.variables_data();
   for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = surrData.continuous_variables(i);
+    const RealVector& c_vars = sdv_array[i].continuous_variables();
     if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
       stored_val = stored_value(c_vars);
       curr_val = exp_t1_coeffs[i]; // copy prior to update
@@ -457,7 +459,9 @@ increment_coefficients(const UShortArray& index_set)
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
   RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-  
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
+
   size_t lev, old_levels = exp_t1_coeffs.size(), set, old_sets,
     pt, old_pts = 0;
   for (lev=0; lev<old_levels; ++lev) {
@@ -502,12 +506,13 @@ increment_coefficients(const UShortArray& index_set)
   }
  
   for (pt=0, index=old_pts; pt<num_trial_pts; ++pt, ++index) {
-    const RealVector& c_vars = surrData.continuous_variables(index);
+    const RealVector& c_vars = sdv_array[index].continuous_variables();
+    const SurrogateDataResp& sdr = sdr_array[index];
     if (expansionCoeffFlag) {
-      t1_coeffs[pt] = surrData.response_function(index)
-	- value(c_vars, sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
+      t1_coeffs[pt] = sdr.response_function() -
+	value(c_vars, sm_mi, colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
       if (data_rep->basisConfigOptions.useDerivs) {
-	const RealVector& data_grad = surrData.response_gradient(index);
+	const RealVector& data_grad = sdr.response_gradient();
 	const RealVector& prev_grad = gradient_basis_variables(c_vars, sm_mi,
 	  colloc_key, exp_t1_coeffs, exp_t2_coeffs, lev-1);
 	Real* hier_grad = t2_coeffs[pt];
@@ -516,7 +521,7 @@ increment_coefficients(const UShortArray& index_set)
       }
     }
     if (expansionCoeffGradFlag) {
-      const RealVector& data_grad = surrData.response_gradient(index);
+      const RealVector& data_grad = sdr.response_gradient();
       const RealVector& prev_grad = gradient_nonbasis_variables(c_vars, sm_mi,
 	colloc_key, exp_t1_coeff_grads, lev-1);
       Real* hier_grad = t1_coeff_grads[pt];
@@ -869,7 +874,7 @@ Real HierarchInterpPolyApproximation::mean()
   if (std_mode && (computedMean & 1))
     return numericalMoments[0];
 
-  Real mean = expectation(expansionType1Coeffs, expansionType2Coeffs);
+  Real mean = expectation(expT1CoeffsIter->second, expT2CoeffsIter->second);
   if (std_mode)
     { numericalMoments[0] = mean; computedMean |= 1; }
   return mean;
@@ -1905,7 +1910,9 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   size_t lev, set, pt, num_levels = expT1CoeffsIter->second.size(),
     num_sets, num_tp_pts, cntr = 0, index;
   bool partial = !reference_key.empty();
-  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array_1 = surrData.response_data();
+  const SDRArray& sdr_array_2 = hip_approx_2->surrData.response_data();
 
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
   r1r2_t1_coeffs.resize(num_levels); r1r2_t1_coeffs[0].resize(1);
@@ -1915,13 +1922,15 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     size_t v, num_v = sharedDataRep->numVars;
     // level 0 (assume this is always contained in a partial reference_key)
     index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    Real data_fn1 = surrData.response_function(index);
-    Real data_fn2 = s_data_2.response_function(index);
+    const SurrogateDataResp& sdr0_1 = sdr_array_1[index];
+    const SurrogateDataResp& sdr0_2 = sdr_array_2[index];
+    Real data_fn1 = sdr0_1.response_function(),
+         data_fn2 = sdr0_2.response_function();
     r1r2_t1_coeffs[0][0][0] = data_fn1 * data_fn2;
     r1r2_t2_coeffs[0][0].shapeUninitialized(num_v, 1);
     Real *r1r2_t2_coeffs_000 = r1r2_t2_coeffs[0][0][0];
-    const RealVector& data_grad1 = surrData.response_gradient(index);
-    const RealVector& data_grad2 = s_data_2.response_gradient(index);
+    const RealVector& data_grad1 = sdr0_1.response_gradient();
+    const RealVector& data_grad2 = sdr0_2.response_gradient();
     for (v=0; v<num_v; ++v)
       r1r2_t2_coeffs_000[v]
 	= data_fn1 * data_grad2[v] + data_fn2 * data_grad1[v];
@@ -1939,18 +1948,20 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	r1r2_t2_coeffs_ls.shapeUninitialized(num_v, num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  const RealVector& c_vars = sdv_array[index].continuous_variables();
+	  const SurrogateDataResp& sdr_1 = sdr_array_1[index];
+	  const SurrogateDataResp& sdr_2 = sdr_array_2[index];
 	  // type1 hierarchical interpolation of R1 R2
-	  data_fn1 = surrData.response_function(index);
-	  data_fn2 = s_data_2.response_function(index);
+	  data_fn1 = sdr_1.response_function();
+	  data_fn2 = sdr_2.response_function();
 	  r1r2_t1_coeffs_ls[pt] = data_fn1 * data_fn2
 	    - value(c_vars, sm_mi, colloc_key, r1r2_t1_coeffs,
 		    r1r2_t2_coeffs, lev-1);
 	  // type2 hierarchical interpolation of R1 R2
 	  // --> interpolated grads are R1 * R2' + R2 * R1'
 	  Real* r1r2_t2_coeffs_lsp = r1r2_t2_coeffs_ls[pt];
-	  const RealVector& data_grad1 = surrData.response_gradient(index);
-	  const RealVector& data_grad2 = s_data_2.response_gradient(index);
+	  const RealVector& data_grad1 = sdr_1.response_gradient();
+	  const RealVector& data_grad2 = sdr_2.response_gradient();
 	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
 	    sm_mi, colloc_key, r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
 	  for (v=0; v<num_v; ++v)
@@ -1963,8 +1974,8 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   else {
     // level 0 (assume this is always contained in a partial reference_key)
     index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    r1r2_t1_coeffs[0][0][0] = surrData.response_function(index)
-                            * s_data_2.response_function(index);
+    r1r2_t1_coeffs[0][0][0] = sdr_array_1[index].response_function()
+                            * sdr_array_2[index].response_function();
     ++cntr;
     // levels 1:w
     for (lev=1; lev<num_levels; ++lev) {
@@ -1978,9 +1989,9 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	// type1 hierarchical interpolation of R1 R2
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  r1r2_t1_coeffs_ls[pt] = surrData.response_function(index)
-	    * s_data_2.response_function(index)
-	    - value(surrData.continuous_variables(index), sm_mi, colloc_key,
+	  r1r2_t1_coeffs_ls[pt] = sdr_array_1[index].response_function()
+	    * sdr_array_2[index].response_function()
+	    - value(sdv_array[index].continuous_variables(), sm_mi, colloc_key,
 		    r1r2_t1_coeffs, r1r2_t2_coeffs, lev-1);
 	}
       }
@@ -2011,7 +2022,9 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   size_t lev, set, pt, num_levels = expT1CoeffsIter->second.size(),
     num_sets, num_tp_pts, cntr = 0, index;
   bool partial = !reference_key.empty();
-  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array_1 = surrData.response_data();
+  const SDRArray& sdr_array_2 = hip_approx_2->surrData.response_data();
 
   cov_t1_coeffs.resize(num_levels); cov_t1_coeffs[0].resize(1);
   cov_t2_coeffs.resize(num_levels); cov_t2_coeffs[0].resize(1);
@@ -2020,13 +2033,15 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     size_t v, num_v = sharedDataRep->numVars;
     // level 0 (assume this is always contained in a partial reference_key)
     index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    Real data_fn1_mm1 = surrData.response_function(index) - mean_1;
-    Real data_fn2_mm2 = s_data_2.response_function(index) - mean_2;
+    const SurrogateDataResp& sdr0_1 = sdr_array_1[index];
+    const SurrogateDataResp& sdr0_2 = sdr_array_2[index];
+    Real data_fn1_mm1 = sdr0_1.response_function() - mean_1,
+         data_fn2_mm2 = sdr0_2.response_function() - mean_2;
     cov_t1_coeffs[0][0][0] = data_fn1_mm1 * data_fn2_mm2;
     cov_t2_coeffs[0][0].shapeUninitialized(num_v, 1);
     Real *cov_t2_coeffs_000 = cov_t2_coeffs[0][0][0];
-    const RealVector& data_grad1 = surrData.response_gradient(index);
-    const RealVector& data_grad2 = s_data_2.response_gradient(index);
+    const RealVector& data_grad1 = sdr0_1.response_gradient();
+    const RealVector& data_grad2 = sdr0_2.response_gradient();
     for (v=0; v<num_v; ++v)
       cov_t2_coeffs_000[v]
 	= data_fn1_mm1 * data_grad2[v] + data_fn2_mm2 * data_grad1[v];
@@ -2043,18 +2058,19 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	cov_t2_coeffs_ls.shapeUninitialized(num_v, num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  const RealVector& c_vars = sdv_array[index].continuous_variables();
+	  const SurrogateDataResp& sdr_1 = sdr_array_1[index];
+	  const SurrogateDataResp& sdr_2 = sdr_array_2[index];
 	  // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	  data_fn1_mm1 = surrData.response_function(index) - mean_1;
-	  data_fn2_mm2 = s_data_2.response_function(index) - mean_2;
-	  cov_t1_coeffs_ls[pt] = data_fn1_mm1 * data_fn2_mm2
-	    - value(c_vars, sm_mi, colloc_key, cov_t1_coeffs,
-		    cov_t2_coeffs, lev-1);
+	  data_fn1_mm1 = sdr_1.response_function() - mean_1;
+	  data_fn2_mm2 = sdr_2.response_function() - mean_2;
+	  cov_t1_coeffs_ls[pt] = data_fn1_mm1 * data_fn2_mm2 -
+	    value(c_vars, sm_mi, colloc_key, cov_t1_coeffs,cov_t2_coeffs,lev-1);
 	  // type2 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
 	  // --> interpolated grads are (R_1-\mu_1) * R_2' + (R_2-\mu_2) * R_1'
 	  Real* cov_t2_coeffs_lsp = cov_t2_coeffs_ls[pt];
-	  const RealVector& data_grad1 = surrData.response_gradient(index);
-	  const RealVector& data_grad2 = s_data_2.response_gradient(index);
+	  const RealVector& data_grad1 = sdr_1.response_gradient();
+	  const RealVector& data_grad2 = sdr_2.response_gradient();
 	  const RealVector& prev_grad  = gradient_basis_variables(c_vars,
 	    sm_mi, colloc_key, cov_t1_coeffs, cov_t2_coeffs, lev-1);
 	  for (v=0; v<num_v; ++v)
@@ -2067,8 +2083,8 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
   else {
     // level 0 (assume this is always contained in a partial reference_key)
     index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-    cov_t1_coeffs[0][0][0] = (surrData.response_function(index) - mean_1) *
-                             (s_data_2.response_function(index) - mean_2);
+    cov_t1_coeffs[0][0][0] = (sdr_array_1[index].response_function() - mean_1) *
+                             (sdr_array_2[index].response_function() - mean_2);
     ++cntr;
     // levels 1:w
     for (lev=1; lev<num_levels; ++lev) {
@@ -2082,9 +2098,9 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
 	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	  index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
 	  cov_t1_coeffs_ls[pt]
-	    = (surrData.response_function(index) - mean_1)
-	    * (s_data_2.response_function(index) - mean_2)
-	    - value(surrData.continuous_variables(index), sm_mi, colloc_key,
+	    = (sdr_array_1[index].response_function() - mean_1)
+	    * (sdr_array_2[index].response_function() - mean_2)
+	    - value(sdv_array[index].continuous_variables(), sm_mi, colloc_key,
 		    cov_t1_coeffs, cov_t2_coeffs, lev-1);
 	}
       }
@@ -2110,17 +2126,21 @@ central_product_gradient_interpolant(
     cntr = 0, index, v,
     num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
   bool partial = !reference_key.empty();
-  const SurrogateData& s_data_2 = hip_approx_2->surrData;
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array_1 = surrData.response_data();
+  const SDRArray& sdr_array_2 = hip_approx_2->surrData.response_data();
 
   // level 0 (assume this is always contained in a partial reference_key)
   cov_t1_coeff_grads.resize(num_levels); cov_t1_coeff_grads[0].resize(1);
   cov_t1_coeff_grads[0][0].shapeUninitialized(num_deriv_vars, 1);
   Real* cov_t1_coeff_grads_000 = cov_t1_coeff_grads[0][0][0];
   index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-  Real r1_mm = surrData.response_function(index) - mean_1,
-       r2_mm = s_data_2.response_function(index) - mean_2;
-  const RealVector& r1_grad = surrData.response_gradient(index);
-  const RealVector& r2_grad = s_data_2.response_gradient(index);
+  const SurrogateDataResp& sdr0_1 = sdr_array_1[index];
+  const SurrogateDataResp& sdr0_2 = sdr_array_2[index];
+  Real r1_mm = sdr0_1.response_function() - mean_1,
+       r2_mm = sdr0_2.response_function() - mean_2;
+  const RealVector& r1_grad = sdr0_1.response_gradient();
+  const RealVector& r2_grad = sdr0_2.response_gradient();
   for (v=0; v<num_deriv_vars; ++v)
     cov_t1_coeff_grads_000[v] = r1_mm * (r2_grad[v] - mean2_grad[v])
                               + r2_mm * (r1_grad[v] - mean1_grad[v]);
@@ -2136,12 +2156,14 @@ central_product_gradient_interpolant(
       // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
       for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	Real r1_mm = surrData.response_function(index) - mean_1,
-             r2_mm = s_data_2.response_function(index) - mean_2;
-	const RealVector& r1_grad = surrData.response_gradient(index);
-	const RealVector& r2_grad = s_data_2.response_gradient(index);
+	const SurrogateDataResp& sdr_1 = sdr_array_1[index];
+	const SurrogateDataResp& sdr_2 = sdr_array_2[index];
+	Real r1_mm = sdr_1.response_function() - mean_1,
+             r2_mm = sdr_2.response_function() - mean_2;
+	const RealVector& r1_grad = sdr_1.response_gradient();
+	const RealVector& r2_grad = sdr_2.response_gradient();
 	const RealVector& prev_grad = gradient_nonbasis_variables(
-	  surrData.continuous_variables(index), sm_mi, colloc_key,
+	  sdv_array[index].continuous_variables(), sm_mi, colloc_key,
 	  cov_t1_coeff_grads, lev-1);
 	Real* cov_t1_coeff_grads_lsp = cov_t1_coeff_grads_ls[pt];
 	for (v=0; v<num_deriv_vars; ++v)
@@ -2172,6 +2194,8 @@ integrate_response_moments(size_t num_moments)
   size_t lev, set, pt, num_levels = colloc_key.size(), num_sets, num_tp_pts,
     cntr, index, num_v = sharedDataRep->numVars;
   int m_index, moment;
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   if (numericalMoments.length() != num_moments)
     numericalMoments.sizeUninitialized(num_moments);
@@ -2199,11 +2223,12 @@ integrate_response_moments(size_t num_moments)
       size_t v;
       // level 0
       index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-      Real data_fn_mm         = surrData.response_function(index) - mean;
+      const SurrogateDataResp& sdr0 = sdr_array[index];
+      Real data_fn_mm         = sdr0.response_function() - mean;
       mom_t1_coeffs[0][0][0]  = std::pow(data_fn_mm, moment);
       Real* mom_t2_coeffs_000 = mom_t2_coeffs[0][0][0];
       Real deriv = moment * std::pow(data_fn_mm, m_index);
-      const RealVector& data_grad = surrData.response_gradient(index);
+      const RealVector& data_grad = sdr0.response_gradient();
       for (v=0; v<num_v; ++v)
 	mom_t2_coeffs_000[v] = deriv * data_grad[v];
       ++cntr;
@@ -2216,9 +2241,10 @@ integrate_response_moments(size_t num_moments)
 	  RealMatrix& mom_t2_coeffs_ls = mom_t2_coeffs[lev][set];
 	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	    index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	    const RealVector& c_vars = surrData.continuous_variables(index);
+	    const RealVector& c_vars = sdv_array[index].continuous_variables();
+	    const SurrogateDataResp& sdr = sdr_array[index];
 	    // type1 hierarchical interpolation of (R - \mu)^moment
-	    data_fn_mm = surrData.response_function(index) - mean;
+	    data_fn_mm = sdr.response_function() - mean;
 	    mom_t1_coeffs_ls[pt] = std::pow(data_fn_mm, moment)
 	      - value(c_vars, sm_mi, colloc_key, mom_t1_coeffs,
 		      mom_t2_coeffs, lev-1);
@@ -2226,7 +2252,7 @@ integrate_response_moments(size_t num_moments)
 	    // --> interpolated grads are moment(R-\mu)^{moment-1} R'
 	    Real* mom_t2_coeffs_lsp = mom_t2_coeffs_ls[pt];
 	    deriv = moment * std::pow(data_fn_mm, m_index);
-	    const RealVector& data_grad = surrData.response_gradient(index);
+	    const RealVector& data_grad = sdr.response_gradient();
 	    const RealVector& prev_grad = gradient_basis_variables(c_vars,
 	      sm_mi, colloc_key, mom_t1_coeffs, mom_t2_coeffs, lev-1);
 	    for (v=0; v<num_v; ++v)
@@ -2239,7 +2265,7 @@ integrate_response_moments(size_t num_moments)
       // level 0
       index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
       mom_t1_coeffs[0][0][0]
-	= std::pow(surrData.response_function(index) - mean, moment);
+	= std::pow(sdr_array[index].response_function() - mean, moment);
       ++cntr;
       // levels 1:w
       for (lev=1; lev<num_levels; ++lev) {
@@ -2251,9 +2277,9 @@ integrate_response_moments(size_t num_moments)
 	  for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
 	    index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
 	    mom_t1_coeffs_ls[pt]
-	      = std::pow(surrData.response_function(index) - mean, moment)
-	      - value(surrData.continuous_variables(index), sm_mi, colloc_key,
-		      mom_t1_coeffs, mom_t2_coeffs, lev-1);
+	      = std::pow(sdr_array[index].response_function() - mean, moment)
+	      - value(sdv_array[index].continuous_variables(), sm_mi,
+		      colloc_key, mom_t1_coeffs, mom_t2_coeffs, lev-1);
 	  }
 	}
       }
@@ -2536,6 +2562,8 @@ central_product_member_coefficients(const BitArray& m_bits,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
+  const SDVArray& sdv_array = surrData.variables_data();
+  const SDRArray& sdr_array = surrData.response_data();
 
   size_t v, num_v = sharedDataRep->numVars, lev, set, pt,
     num_levels = m_t1_coeffs.size(), num_sets, num_tp_pts, index,
@@ -2551,14 +2579,13 @@ central_product_member_coefficients(const BitArray& m_bits,
   // level 0 type1
   cprod_m_t1_coeffs[0][0].sizeUninitialized(1);
   index = m_colloc_index[0][0][0];
-  Real h_val_mm =
-    value(surrData.continuous_variables(index), sm_mi, m_colloc_key,
-	  m_t1_coeffs, m_t2_coeffs, h_level, member_indices) - mean;
+  const RealVector& c_vars0 = sdv_array[index].continuous_variables();
+  Real h_val_mm = value(c_vars0, sm_mi, m_colloc_key, m_t1_coeffs, m_t2_coeffs,
+			h_level, member_indices) - mean;
   cprod_m_t1_coeffs[0][0][0] = h_val_mm * h_val_mm;
   if (data_rep->basisConfigOptions.useDerivs) {
     // level 0 type2
-    const RealVector& h_grad_000 =
-      gradient_basis_variables(surrData.continuous_variables(index), sm_mi,
+    const RealVector& h_grad_000 = gradient_basis_variables(c_vars0, sm_mi,
       m_colloc_key, m_t1_coeffs, m_t2_coeffs, h_level, member_indices);
     cprod_m_t2_coeffs[0][0].shapeUninitialized(num_v, 1);
     Real *cprod_m_t2_coeffs_000 = cprod_m_t2_coeffs[0][0][0];
@@ -2577,7 +2604,7 @@ central_product_member_coefficients(const BitArray& m_bits,
 	cprod_m_t2_coeffs_ls.shapeUninitialized(num_v,num_tp_pts);
 	for (pt=0; pt<num_tp_pts; ++pt) {
 	  index = m_colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  const RealVector& c_vars = sdv_array[index].continuous_variables();
 	  // type1 hierarchical interpolation of h^2
 	  h_val_mm = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs,
 			   m_t2_coeffs, h_level, member_indices) - mean;
@@ -2619,7 +2646,7 @@ central_product_member_coefficients(const BitArray& m_bits,
 	// type1 hierarchical interpolation of (h - mean)^2
 	for (pt=0; pt<num_tp_pts; ++pt) {
 	  index = m_colloc_index[lev][set][pt];
-	  const RealVector& c_vars = surrData.continuous_variables(index);
+	  const RealVector& c_vars = sdv_array[index].continuous_variables();
 	  h_val_mm = value(c_vars, sm_mi, m_colloc_key, m_t1_coeffs,
 			   m_t2_coeffs, h_level, member_indices) - mean;
 	  cprod_m_t1_coeffs_ls[pt] = h_val_mm * h_val_mm -

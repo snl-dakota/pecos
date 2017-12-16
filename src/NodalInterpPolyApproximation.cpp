@@ -72,6 +72,7 @@ void NodalInterpPolyApproximation::compute_coefficients()
 
   allocate_arrays();
 
+  const SDRArray& sdr_array = surrData.response_data();
   size_t c_index, num_colloc_pts = surrData.points(); int i;
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
@@ -80,16 +81,19 @@ void NodalInterpPolyApproximation::compute_coefficients()
       = (SharedNodalInterpPolyApproxData*)sharedDataRep;
     bool derivs = data_rep->basisConfigOptions.useDerivs;
     for (i=0, c_index=0; i<num_colloc_pts; ++i, ++c_index) {
-      exp_t1_coeffs[i] = surrData.response_function(c_index);
+      
+      exp_t1_coeffs[i] = sdr_array[c_index].response_function();
       // Note: gradients from DAKOTA already scaled in u-space Recast
       if (derivs)
-	Teuchos::setCol(surrData.response_gradient(c_index), i,	exp_t2_coeffs);
+	Teuchos::setCol(sdr_array[c_index].response_gradient(), i,
+			exp_t2_coeffs);
     }
   }
   if (expansionCoeffGradFlag) {
     RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
     for (i=0, c_index=0; i<num_colloc_pts; ++i, ++c_index)
-      Teuchos::setCol(surrData.response_gradient(c_index),i,exp_t1_coeff_grads);
+      Teuchos::setCol(sdr_array[c_index].response_gradient(), i,
+		      exp_t1_coeff_grads);
   }
 
 #ifdef INTERPOLATION_TEST
@@ -250,10 +254,11 @@ void NodalInterpPolyApproximation::combine_coefficients()
   RealMatrix& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
   std::map<UShortArray, RealVector>::iterator ecv_it;
   std::map<UShortArray, RealMatrix>::iterator ecm_it;
+  const SDVArray& sdv_array = surrData.variables_data();
   size_t i, v, num_pts = surrData.points(), cntr,
     num_t1v = exp_t1_coeff_grads.numRows(), num_t2v = exp_t2_coeffs.numRows();
   for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = surrData.continuous_variables(i);
+    const RealVector& c_vars = sdv_array[i].continuous_variables();
     switch (data_rep->expConfigOptions.combineType) {
     case ADD_COMBINE: // addition of current and stored expansions
       if (expansionCoeffFlag) {
@@ -290,7 +295,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
       RealVector stored_vals(num_stored, false);  Real curr_val;
       // pre-compute stored vals once for both Coeffs/CoeffGrads
       for (ecv_it =expansionType1Coeffs.begin(), cntr=0;
-	   ecv_it!=expansionType1Coeffs.end(); ++ec_it)
+	   ecv_it!=expansionType1Coeffs.end(); ++ecv_it)
 	if (ecv_it == expT1CoeffsIter)
 	  curr_val = ecv_it->second[i]; // copy prior to update
 	else
@@ -339,7 +344,7 @@ void NodalInterpPolyApproximation::combine_coefficients()
 	    prod = curr_val;
 	    for (s=0; s<num_stored; ++s)
 	      if (s != cntr)
-		prod *= stored_vals[t];
+		prod *= stored_vals[s];
 	    for (v=0; v<num_t1v; ++v)
 	      exp_t1_grad_i[v] += stored_grad[v] * prod;
 	    ++cntr;
@@ -422,6 +427,7 @@ void NodalInterpPolyApproximation::push_coefficients()
 void NodalInterpPolyApproximation::update_expansion_coefficients()
 {
   size_t index, old_colloc_pts, new_colloc_pts = surrData.points();
+  const SDRArray& sdr_array = surrData.response_data();
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
@@ -434,9 +440,10 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
     }
     index = old_colloc_pts;
     for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index) {
-      exp_t1_coeffs[i] = surrData.response_function(index);
+      const SurrogateDataResp& sdr = sdr_array[index];
+      exp_t1_coeffs[i] = sdr.response_function();
       if (data_rep->basisConfigOptions.useDerivs)
-	Teuchos::setCol(surrData.response_gradient(index), i, exp_t2_coeffs);
+	Teuchos::setCol(sdr.response_gradient(), i, exp_t2_coeffs);
     }
   }
   if (expansionCoeffGradFlag) {
@@ -446,7 +453,8 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
     exp_t1_coeff_grads.reshape(num_deriv_vars, new_colloc_pts);
     index = old_colloc_pts;
     for (int i=old_colloc_pts; i<new_colloc_pts; ++i, ++index)
-      Teuchos::setCol(surrData.response_gradient(index), i, exp_t1_coeff_grads);
+      Teuchos::setCol(sdr_array[index].response_gradient(), i,
+		      exp_t1_coeff_grads);
   }
 
   computedMean = computedVariance = 0;
@@ -526,7 +534,7 @@ tensor_product_mean(const RealVector& x, const UShortArray& lev_index,
     for (i=0; i<num_colloc_pts; ++i) {
       const UShortArray& key_i = colloc_key[i]; key_i0 = key_i[0];
       c_index = (colloc_index.empty()) ? i : colloc_index[i];
-      Real* t2_coeffs_i = exp_t2_coeffs[c_index];
+      const Real* t2_coeffs_i = exp_t2_coeffs[c_index];
       if (rand_0) { // integration
 	if (li_0 == 0) {
 	  t1_accumulator[0]  = exp_t1_coeffs[c_index]; // t1 weight is 1
@@ -706,8 +714,8 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
     size_t ei_0 = poly_0.exact_index();
     unsigned short max0 = poly_0.interpolation_size() - 1;
     RealMatrix accumulator(num_deriv_vars, num_v); // init to 0.
-    Real *accum_0 = accumulator[0], *t1_coeff_grad, t1_coeff, t1_wt_00,
-      bc_vf_00, prod;
+    Real *accum_0 = accumulator[0], t1_coeff, t1_wt_00, bc_vf_00, prod;
+    const Real *t1_coeff_grad;
     bool rand_0 = data_rep->randomVarsKey[0];
     for (p=0; p<num_colloc_pts; ++p) {
       const UShortArray& key_p = colloc_key[p]; key_p0 = key_p[0];
@@ -791,8 +799,9 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
     RealMatrixArray t2_accumulators(num_deriv_vars);
     for (v=0; v<num_deriv_vars; ++v)
       t2_accumulators[v].shape(num_v, num_v); // init to 0.
-    Real *t1_accum_0 = t1_accumulator[0], *t2_accum_0, t1_coeff, *t2_coeffs_p,
-      t1_wt_00, t1_val, t2_val, t1_grad, prod1, prod2, x0 = x[0];
+    Real *t1_accum_0 = t1_accumulator[0], *t2_accum_0, t1_coeff, t1_wt_00,
+      t1_val, t2_val, t1_grad, prod1, prod2, x0 = x[0];
+    const Real *t2_coeffs_p;
     bool rand_0 = data_rep->randomVarsKey[0];
     for (p=0; p<num_colloc_pts; ++p) {
       const UShortArray& key_p = colloc_key[p]; key_p0 = key_p[0];
@@ -915,8 +924,8 @@ tensor_product_mean_gradient(const RealVector& x, const UShortArray& lev_index,
     const RealArray&   t1_wts_0  = t1_wts_1d[li_0][0];
     unsigned short max0 = poly_0.interpolation_size() - 1;
     RealMatrix accumulator(num_deriv_vars, num_v); // init to 0.
-    Real *accum_0 = accumulator[0], *t1_coeff_grad, t1_coeff, t1_wt_00,
-      prod, t1_val, x0 = x[0];
+    Real *accum_0 = accumulator[0], t1_coeff, t1_wt_00, prod, t1_val, x0 = x[0];
+    const Real *t1_coeff_grad;
     bool rand_0 = data_rep->randomVarsKey[0];
     for (p=0; p<num_colloc_pts; ++p) {
       const UShortArray& key_p = colloc_key[p]; key_p0 = key_p[0];
@@ -2492,6 +2501,8 @@ value(const RealVector& x, const RealVector& exp_t1_coeffs,
       const RealMatrix& exp_t2_coeffs, const UShortArray& lev_index,
       const UShort2DArray& colloc_key)
 {
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   SizetArray colloc_index; // empty -> default indexing
   return data_rep->
     tensor_product_value(x, exp_t1_coeffs, exp_t2_coeffs, lev_index,
@@ -2506,6 +2517,8 @@ value(const RealVector& x, const RealVector& exp_t1_coeffs,
       const IntArray& sm_coeffs, const UShort3DArray& colloc_key,
       const Sizet2DArray& colloc_index)
 {
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   size_t i, num_smolyak_indices = sm_coeffs.size();
   Real approx_val = 0.;
   for (i=0; i<num_smolyak_indices; ++i)
@@ -2604,7 +2617,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
     return gradient_basis_variables(x, expT1CoeffsIter->second,
 				    expT2CoeffsIter->second,
 				    tpq_driver->level_index(),
-				    tpq_driver->collocation_key()), dvv);
+				    tpq_driver->collocation_key(), dvv);
     break;
   }
   case COMBINED_SPARSE_GRID: {
@@ -2851,17 +2864,16 @@ gradient_nonbasis_variables(const RealVector& x)
     TensorProductDriver* tpq_driver = data_rep->tpq_driver();
     return gradient_nonbasis_variables(x, expT1CoeffGradsIter->second,
 				       tpq_driver->level_index(),
-				       tpq_driver->collocation_key(),
-				       colloc_index);
+				       tpq_driver->collocation_key());
     break;
   }
   case COMBINED_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
-    return gradient_basis_variables(x, expT1CoeffGradsIter->second,
-				    csg_driver->smolyak_multi_index(),
-				    csg_driver->smolyak_coefficients(),
-				    csg_driver->collocation_key(),
-				    csg_driver->collocation_indices());
+    return gradient_nonbasis_variables(x, expT1CoeffGradsIter->second,
+				       csg_driver->smolyak_multi_index(),
+				       csg_driver->smolyak_coefficients(),
+				       csg_driver->collocation_key(),
+				       csg_driver->collocation_indices());
     break;
   }
   }
@@ -2891,11 +2903,11 @@ stored_gradient_nonbasis_variables(const RealVector& x, const UShortArray& key)
   }
   case COMBINED_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
-    return gradient_basis_variables(x, expansionType1CoeffGrads[key],
-				    csg_driver->smolyak_multi_index(key),
-				    csg_driver->smolyak_coefficients(key),
-				    csg_driver->collocation_key(key),
-				    csg_driver->collocation_indices(key));
+    return gradient_nonbasis_variables(x, expansionType1CoeffGrads[key],
+				       csg_driver->smolyak_multi_index(key),
+				       csg_driver->smolyak_coefficients(key),
+				       csg_driver->collocation_key(key),
+				       csg_driver->collocation_indices(key));
     break;
   }
   }
@@ -2933,11 +2945,13 @@ gradient_nonbasis_variables(const RealVector& x,
   approxGradient = 0.;
   // Smolyak recursion of anisotropic tensor products
   size_t i, j, num_smolyak_indices = sm_coeffs.size();
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   for (i=0; i<num_smolyak_indices; ++i) {
     int coeff_i = sm_coeffs[i];
     if (coeff_i) {
       const RealVector& tp_grad = data_rep->
-	tensor_product_gradient_nonbasis_variables(x, exp_t1_coeff_grads
+	tensor_product_gradient_nonbasis_variables(x, exp_t1_coeff_grads,
 						   sm_mi[i], colloc_key[i],
 						   colloc_index[i]);
       for (j=0; j<num_deriv_vars; ++j)
@@ -3683,12 +3697,13 @@ integrate_expansion_moments(size_t num_moments)
   // collocation rules/orders used to form the interpolant).
   else {
     size_t i, num_pts = surrData.points();
+    const SDVArray& sdv_array = surrData.variables_data();
     RealVector t1_exp(num_pts);
     if (data_rep->basisConfigOptions.useDerivs) { // gradient-enhanced native
       size_t num_v = data_rep->numVars;
       RealMatrix t2_exp(num_v, num_pts);
       for (i=0; i<num_pts; ++i) {
-	const RealVector& c_vars = surrData.continuous_variables(i);
+	const RealVector& c_vars = sdv_array[i].continuous_variables();
 	t1_exp[i] = value(c_vars);
 	Teuchos::setCol(gradient_basis_variables(c_vars), (int)i, t2_exp);
       }
@@ -3698,7 +3713,7 @@ integrate_expansion_moments(size_t num_moments)
     }
     else { // value-based native quadrature
       for (i=0; i<num_pts; ++i)
-	t1_exp[i] = value(surrData.continuous_variables(i));
+	t1_exp[i] = value(sdv_array[i].continuous_variables());
       integrate_moments(t1_exp, data_rep->driverRep->type1_weight_sets(),
 			expansionMoments);
     }
@@ -3778,6 +3793,7 @@ member_integral(const BitArray& member_bits, Real mean)
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   //IntegrationDriver* driver_rep = data_rep->driverRep;
+  const SDVArray& sdv_array = surrData.variables_data();
 
   size_t i, j, num_member_coeffs, num_v = sharedDataRep->numVars;
   SizetList member_indices;
@@ -3807,7 +3823,7 @@ member_integral(const BitArray& member_bits, Real mean)
     num_member_coeffs = member_t1_coeffs.length();
     for (i=0; i<num_member_coeffs; ++i) {
       const RealVector& c_vars
-	= surrData.continuous_variables(member_colloc_index[i]);
+	= sdv_array[member_colloc_index[i]].continuous_variables();
       Real h_t1_coeff_i_mm = data_rep->
 	tensor_product_value(c_vars, member_t1_coeffs, member_t2_coeffs,
 			     lev_index, member_colloc_key, empty_colloc_index,
@@ -3878,7 +3894,7 @@ member_integral(const BitArray& member_bits, Real mean)
 	SizetArray&    m_c_index_i = member_colloc_index[i];
 	for (j=0; j<num_member_coeffs; ++j) {
 	  const RealVector& c_vars
-	    = surrData.continuous_variables(m_c_index_i[j]);
+	    = sdv_array[m_c_index_i[j]].continuous_variables();
 	  // create key for this member coeff; see if val/grad already computed
 	  update_member_key(m_c_key_i[j], member_indices, member_map_key,
 			    num_member_indices);

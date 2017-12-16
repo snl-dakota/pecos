@@ -414,7 +414,7 @@ gradient_basis_variables(const RealVector& x, const UShort2DArray& mi,
   for (i=0; i<num_terms; ++i) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[i]);
-    Real& coeff_i = exp_coeffs[i];
+    Real coeff_i = exp_coeffs[i];
     for (j=0; j<num_v; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
   }
@@ -442,7 +442,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv,
   for (i=0; i<num_terms; ++i) {
     const RealVector& term_i_grad
       = data_rep->multivariate_polynomial_gradient_vector(x, mi[i], dvv);
-    Real& coeff_i = exp_coeffs[i];
+    Real coeff_i = exp_coeffs[i];
     for (j=0; j<num_v; ++j)
       approxGradient[j] += coeff_i * term_i_grad[j];
   }
@@ -470,7 +470,7 @@ gradient_nonbasis_variables(const RealVector& x, const UShort2DArray& mi,
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   for (i=0; i<num_terms; ++i) {
     Real term_i = data_rep->multivariate_polynomial(x, mi[i]);
-    const Real* exp_grad_i = exp_grads[i];
+    const Real* exp_grad_i = exp_coeff_grads[i];
     for (j=0; j<num_v; ++j)
       approxGradient[j] += exp_grad_i[j] * term_i;
   }
@@ -498,7 +498,7 @@ hessian_basis_variables(const RealVector& x, const UShort2DArray& mi,
   for (i=0; i<num_terms; ++i) {
     const RealSymMatrix& term_i_hess
       = data_rep->multivariate_polynomial_hessian_matrix(x, mi[i]);
-    Real& coeff_i = exp_coeffs[i];
+    Real coeff_i = exp_coeffs[i];
     for (row=0; row<num_v; ++row)
       for (col=0; col<=row; ++col)
         approxHessian(row,col) += coeff_i * term_i_hess(row,col);

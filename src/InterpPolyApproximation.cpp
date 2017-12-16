@@ -50,14 +50,18 @@ void InterpPolyApproximation::test_interpolation()
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
+    const SDVArray& sdv_array = surrData.variables_data();
+    const SDRArray& sdr_array = surrData.response_data();
+
     size_t i, index = 0, num_colloc_pts = surrData.points(),
       num_v = sharedDataRep->numVars, w7 = WRITE_PRECISION+7;
     Real interp_val, err, val_max_err = 0., grad_max_err = 0.,
       val_rmse = 0., grad_rmse = 0.;
     PCout << std::scientific << std::setprecision(WRITE_PRECISION);
     for (i=0; i<num_colloc_pts; ++i, ++index) {
-      const RealVector& c_vars = surrData.continuous_variables(index);
-      Real resp_fn = surrData.response_function(index);
+      const RealVector& c_vars = sdv_array[index].continuous_variables();
+      const SurrogateDataResp& sdr = sdr_array[index];
+      Real resp_fn = sdr.response_function();
       interp_val = value(c_vars);
       err = (std::abs(resp_fn) > DBL_MIN) ? std::abs(1. - interp_val/resp_fn) :
 	                                    std::abs(resp_fn - interp_val);
@@ -68,7 +72,7 @@ void InterpPolyApproximation::test_interpolation()
       if (err > val_max_err) val_max_err = err;
       val_rmse += err * err;
       if (use_derivs) {
-	const RealVector& resp_grad   = surrData.response_gradient(index);
+	const RealVector& resp_grad   = sdr.response_gradient();
 	const RealVector& interp_grad = gradient_basis_variables(c_vars);
 	for (size_t j=0; j<num_v; ++j) {
 	  err = (std::abs(resp_grad[j]) > DBL_MIN) ?

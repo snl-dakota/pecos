@@ -180,15 +180,15 @@ void CombinedSparseGridDriver::swap_grid(size_t index)
 
 const UShortArray& CombinedSparseGridDriver::maximal_grid() const
 {
-  std::map<UShortArray, RealVector>::iterator
-    w_it = type1WeightSets.begin(), max_it = w_it;
-  size_t max_wts = w_it->second.length(); ++w_it;
-  for (; w_it!=type1WeightSets.end(); ++w_it) {
-    num_wts = w_it->second.length();
+  std::map<UShortArray, RealVector>::const_iterator
+    w_cit = type1WeightSets.begin(), max_cit = w_cit;
+  size_t num_wts, max_wts = w_cit->second.length(); ++w_cit;
+  for (; w_cit!=type1WeightSets.end(); ++w_cit) {
+    num_wts = w_cit->second.length();
     if (num_wts > max_wts)
-      { max_wts = num_wts; max_it = w_it; }
+      { max_wts = num_wts; max_cit = w_cit; }
   }
-  return max_it->first;
+  return max_cit->first;
 }
 
 
@@ -415,8 +415,8 @@ update_smolyak_coefficients(size_t start_index,
 void CombinedSparseGridDriver::assign_collocation_key()
 {
   // define mapping from 1:numCollocPts to set of 1d interpolation indices
-  const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
-  const UShort3DArray& colloc_key = collocKey[activeKey];
+  const UShort2DArray& sm_mi = smolMIIter->second;
+  UShort3DArray& colloc_key = collocKeyIter->second;
   size_t i, num_smolyak_indices = sm_mi.size();
   colloc_key.resize(num_smolyak_indices);
   UShortArray quad_order(numVars); //, collocation_indices(numVars);
@@ -430,8 +430,8 @@ void CombinedSparseGridDriver::assign_collocation_key()
 
 void CombinedSparseGridDriver::update_collocation_key(size_t start_index)
 {
-  const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
-  const UShort3DArray& colloc_key = collocKey[activeKey];
+  const UShort2DArray& sm_mi = smolMIIter->second;
+  UShort3DArray& colloc_key = collocKeyIter->second;
   UShortArray quad_order(numVars);
   size_t i, num_sm_mi = sm_mi.size();
   colloc_key.resize(num_sm_mi);
@@ -446,8 +446,8 @@ void CombinedSparseGridDriver::update_collocation_key(size_t start_index)
 void CombinedSparseGridDriver::assign_collocation_indices()
 {
   // define mapping from 1:numCollocPts to set of 1d interpolation indices
-  const UShort3DArray&  colloc_key = collocKey[activeKey];
-  const Sizet2DArray&   colloc_ind = collocIndices[activeKey];
+  const UShort3DArray& colloc_key = collocKeyIter->second;
+  Sizet2DArray& colloc_ind = collocIndIter->second;
   const IntArray& unique_index_map = uniqueIndexMapping[activeKey];
   size_t i, j, num_tp_pts, cntr = 0, num_sm_indices = colloc_key.size();
   colloc_ind.resize(num_sm_indices);
@@ -664,7 +664,7 @@ void CombinedSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   UShortArray quad_order(numVars);
   level_to_order(trialSet, quad_order);
   UShort2DArray new_key;
-  const UShort3DArray& colloc_key = collocKey[activeKey];
+  UShort3DArray& colloc_key = collocKeyIter->second;
   colloc_key.push_back(new_key); // empty array updated in place
   compute_tensor_grid(quad_order, trialSet, a2Points, a2Type1Weights,
 		      a2Type2Weights, colloc_key.back());
@@ -707,9 +707,9 @@ void CombinedSparseGridDriver::initialize_sets()
   }
 
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
-  const UShort2DArray&   sm_mi = smolyakMultiIndex[activeKey];
-  const UShortArraySet& old_mi = oldMultiIndex[activeKey];
-  const IntArray&    sm_coeffs = smolyakCoeffs[activeKey];
+  const UShort2DArray& sm_mi = smolMIIter->second;
+  const IntArray&  sm_coeffs = smolCoeffsIter->second;
+  UShortArraySet&     old_mi = oldMultiIndex[activeKey];
   //old_mi = sm_mi;
   old_mi.clear(); old_mi.insert(sm_mi.begin(), sm_mi.end());
   update_reference();
@@ -740,7 +740,7 @@ void CombinedSparseGridDriver::initialize_sets()
 void CombinedSparseGridDriver::push_trial_set(const UShortArray& set)
 {
   trialSet = set;
-  const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
+  UShort2DArray& sm_mi = smolMIIter->second;
   size_t last_index = sm_mi.size();
   sm_mi.push_back(set);
 
@@ -756,7 +756,7 @@ void CombinedSparseGridDriver::restore_set()
 {
   // SparseGridDriver currently retains no memory, so updates are recomputed
 
-  size_t last_index = smolyakMultiIndex[activeKey].size() - 1;
+  size_t last_index = smolMIIter->second.size() - 1;
   // update collocKey
   update_collocation_key(last_index);
   // compute a2; update collocIndices & uniqueIndexMapping; don't update pts/wts
@@ -767,10 +767,10 @@ void CombinedSparseGridDriver::restore_set()
 
 void CombinedSparseGridDriver::pop_trial_set()
 {
-  smolyakMultiIndex[activeKey].pop_back();
-  collocKey[activeKey].pop_back();
-  collocIndices[activeKey].pop_back();
-  smolyakCoeffs[activeKey] = smolyakCoeffsRef;
+  smolMIIter->second.pop_back();
+  collocKeyIter->second.pop_back();
+  collocIndIter->second.pop_back();
+  smolCoeffsIter->second = smolyakCoeffsRef;
 
   numCollocPts -= numUnique2; // subtract number of trial points
   uniqueIndexMapping[activeKey].resize(numCollocPts); // prune trial from end
@@ -785,7 +785,7 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
   // occur one at a time without mixing.
 
-  UShort2DArray& sm_mi            = smolyakMultiIndex[activeKey];
+  UShort2DArray& sm_mi            = smolMIIter->second;
   UShortArraySet& computed_trials = computedTrialSets[activeKey];
   UShortArraySet& active_mi       =  activeMultiIndex[activeKey];
   size_t start_index = sm_mi.size();
@@ -828,7 +828,7 @@ finalize_sets(bool output_sets, bool converged_within_tol)
 void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
 {
   // define a1 pts/wts
-  size_t num_sm_mi = smolyakMultiIndex[activeKey].size();
+  size_t num_sm_mi = smolMIIter->second.size();
   compute_tensor_points_weights(0, num_sm_mi, a1Points, a1Type1Weights,
 				a1Type2Weights);
 
@@ -884,7 +884,7 @@ void CombinedSparseGridDriver::
 increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
 {
   // increment_unique processes the trailing Smolyak index set
-  size_t last_index = smolyakMultiIndex[activeKey].size() - 1;
+  size_t last_index = smolMIIter->second.size() - 1;
 
   // define a1 pts/wts
   if (compute_a2) // else already computed (e.g., within compute_trial_grid())
@@ -999,7 +999,7 @@ void CombinedSparseGridDriver::merge_unique()
   copy_data(is_unique3, n1n2, isUnique1);
   delete [] is_unique1; delete [] is_unique2; delete [] is_unique3;
   // update uniqueIndexMapping, collocIndices, numCollocPts
-  uniqueIndexMapping[activeLey] = unique_index3;
+  uniqueIndexMapping[activeKey] = unique_index3;
   //assign_tensor_collocation_indices(0, unique_index3);
   numCollocPts = num_unique3;
 }
@@ -1018,7 +1018,7 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
   // that this condition is possible (or does structure of admissible indices
   // prevent replication in trial sets that is not first detected in old sets).
 
-  size_t i, j, num_sm_mi = smolyakMultiIndex[activeKey].size();
+  size_t i, j, num_sm_mi = smolMIIter->second.size();
   int m = numVars, n1, n2, n1n2, n3, num_unique3, all_n2 = 0;
   RealVector all_a2t1_wts, r3_vec; RealMatrix a3_pts, all_a2t2_wts;
   IntArray all_unique_index2, sort_index3, unique_set3, unique_index3;
@@ -1122,7 +1122,7 @@ update_sparse_points(size_t start_index, int new_index_offset,
 		     const RealMatrix& tensor_pts, const BitArray& is_unique,
 		     const IntArray& unique_index, RealMatrix& new_sparse_pts)
 {
-  size_t i, j, cntr, num_sm_mi = smolyakMultiIndex[activeKey].size(),
+  size_t i, j, cntr, num_sm_mi = smolMIIter->second.size(),
     num_tp_pts, num_pts = is_unique.size(), num_unique_pts = 0;
   for (i=0; i<num_pts; ++i)
     if (is_unique[i])
@@ -1133,7 +1133,7 @@ update_sparse_points(size_t start_index, int new_index_offset,
 
   int index;
   // add contributions for new index sets
-  const UShort3DArray& colloc_key = collocKey[activeKey];
+  const UShort3DArray& colloc_key = collocKeyIter->second;
   for (i=start_index, cntr=0; i<num_sm_mi; ++i) {
     num_tp_pts = colloc_key[i].size();
     for (j=0; j<num_tp_pts; ++j, ++cntr) {
@@ -1152,7 +1152,7 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
 		      const IntArray& unique_index, RealVector& updated_t1_wts,
 		      RealMatrix& updated_t2_wts)
 {
-  size_t i, j, k, cntr, num_sm_mi = smolyakMultiIndex[activeKey].size(),
+  size_t i, j, k, cntr, num_sm_mi = smolMIIter->second.size(),
     num_tp_pts;
 
   // update sizes
@@ -1161,8 +1161,8 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
     updated_t2_wts.reshape(numVars, numCollocPts); // new entries init to 0
 
   int index, delta_coeff, sm_coeff;
-  const UShort3DArray& colloc_key = collocKey[activeKey];
-  const IntArray& sm_coeffs = smolyakCoeffs[activeKey];
+  const UShort3DArray& colloc_key =  collocKeyIter->second;
+  const IntArray&       sm_coeffs = smolCoeffsIter->second;
   // back out changes in Smolyak coeff for existing index sets
   for (i=0, cntr=0; i<start_index; ++i) {
     delta_coeff = sm_coeffs[i] - smolyakCoeffsRef[i];
@@ -1211,8 +1211,8 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
 {
   size_t i, j, k, l, cntr, num_tp_pts, num_colloc_pts = 0,
     end = start_index + num_indices;
-  const UShort3DArray& colloc_key = collocKey[activeKey];
-  const UShort2DArray& sm_mi = smolyakMultiIndex[activeKey];
+  const UShort3DArray& colloc_key = collocKeyIter->second;
+  const UShort2DArray& sm_mi = smolMIIter->second;
   // define num_colloc_pts
   for (i=start_index; i<end; ++i)
     num_colloc_pts += colloc_key[i].size();
@@ -1256,9 +1256,9 @@ assign_tensor_collocation_indices(size_t start_index,
 				  const IntArray& unique_index)
 {
   size_t i, j, cntr, num_tp_pts,
-    num_sm_mi = smolyakMultiIndex[activeKey].size();
-  const UShort3DArray& colloc_key = collocKey[activeKey];
-  const Sizet2DArray&  colloc_ind = collocIndices[activeKey];
+    num_sm_mi = smolMIIter->second.size();
+  const UShort3DArray& colloc_key = collocKeyIter->second;
+  Sizet2DArray&        colloc_ind = collocIndIter->second;
   if (colloc_ind.size() < num_sm_mi)
     colloc_ind.resize(num_sm_mi);
   for (i=start_index, cntr=0; i<num_sm_mi; ++i) {

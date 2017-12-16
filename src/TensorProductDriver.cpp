@@ -29,7 +29,7 @@ initialize_grid(const ShortArray& u_types,
 		const BasisConfigOptions& bc_options)
 {
   IntegrationDriver::initialize_grid(u_types, ec_options, bc_options);
-  quadOrder.resize(numVars); levelIndex[activeKey].resize(numVars);
+  quadOrder.resize(numVars); levelIndexIter->second.resize(numVars);
 }
 
 
@@ -37,7 +37,7 @@ void TensorProductDriver::
 initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 {
   IntegrationDriver::initialize_grid(poly_basis);
-  quadOrder.resize(numVars); levelIndex[activeKey].resize(numVars);
+  quadOrder.resize(numVars); levelIndexIter->second.resize(numVars);
 }
 
 
