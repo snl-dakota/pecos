@@ -833,6 +833,11 @@ public:
   SurrogateData copy(short sdv_mode = DEEP_COPY,
 		     short sdr_mode = DEEP_COPY) const;
 
+  /// create {varsData,respData}Iter
+  void create_active_iterators();
+  /// update {varsData,respData}Iter
+  void update_active_iterators();
+
   /// set anchor{Vars,Resp}
   void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// set {vars,resp}Data
@@ -877,6 +882,12 @@ public:
   /// push {sdv,sdr} onto ends of {vars,resp}Data
   void push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
 
+  /// remove the first entry from {vars,resp}Data, managing anchorIndex
+  /// Note: inefficient for std::vector's, but needed in rare cases.
+  void pop_front();
+  /// remove the last entry from {vars,resp}Data, managing anchorIndex
+  void pop_back();
+
   /// remove num_pop_pts entries from ends of {vars,resp}Data
   void pop(bool save_data = true);
   /// return a previously popped data set (identified by index) to the
@@ -892,6 +903,9 @@ public:
   bool anchor() const;
   /// assign anchorIndex[activeKey] to incoming index
   void anchor_index(size_t index);
+  /// erase anchorIndex[activeKey]
+  void clear_anchor_index();
+
   /// return size of {vars,resp}Data arrays (neglecting anchor point)
   size_t points() const;
 
@@ -945,7 +959,7 @@ private:
   /// define or retrieve anchorIndex[activeKey]
   size_t assign_anchor_index();
   /// retrieve anchorIndex[activeKey]
-  size_t retrieve_anchor_index(bool hard_fail) const;
+  size_t retrieve_anchor_index(bool hard_fail = false) const;
 
   /// assign sdv within varsData[activeKey] at indicated index
   void assign_variables(const SurrogateDataVars& sdv, size_t index);
@@ -974,6 +988,11 @@ private:
   //
   //- Heading: Private data members
   //
+
+  /// iterator to active entry within varsData
+  std::map<UShortArray, SDVArray>::iterator varsDataIter;
+  /// iterator to active entry within respData
+  std::map<UShortArray, SDRArray>::iterator respDataIter;
  
   /// pointer to the body (handle-body idiom)
   SurrogateDataRep* sdRep;
@@ -1021,16 +1040,40 @@ inline SurrogateData& SurrogateData::operator=(const SurrogateData& sd)
 }
 
 
+inline void SurrogateData::create_active_iterators()
+{
+  const UShortArray& key = sdRep->activeKey;
+  std::pair<UShortArray, SDVArray> sdv_pair(key, SDVArray());
+  std::pair<UShortArray, SDRArray> sdr_pair(key, SDRArray());
+
+  // returned iterator points to existing instance or new insertion
+  varsDataIter = sdRep->varsData.insert(sdv_pair).first;
+  respDataIter = sdRep->respData.insert(sdr_pair).first;
+}
+
+
+inline void SurrogateData::update_active_iterators()
+{
+  const UShortArray& key = sdRep->activeKey;
+  varsDataIter = sdRep->varsData.find(key);
+  respDataIter = sdRep->respData.find(key);
+}
+
+
 inline void SurrogateData::
 data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
 {
-  sdRep->varsData[sdRep->activeKey] = sdv_array;
-  sdRep->respData[sdRep->activeKey] = sdr_array;
+  varsDataIter->second = sdv_array;
+  respDataIter->second = sdr_array;
 }
 
 
 inline void SurrogateData::anchor_index(size_t index)
 { if (index != _NPOS) sdRep->anchorIndex[sdRep->activeKey] = index; }
+
+
+inline void SurrogateData::clear_anchor_index()
+{ sdRep->anchorIndex.erase(sdRep->activeKey); }
 
 
 inline size_t SurrogateData::assign_anchor_index()
@@ -1040,13 +1083,13 @@ inline size_t SurrogateData::assign_anchor_index()
   std::map<UShortArray, size_t>::iterator anchor_it = anchor_index.find(key);
   size_t index;
   if (anchor_it == anchor_index.end()) { // no anchor defined
-    index = sdRep->varsData[sdRep->activeKey].size();
+    index = varsDataIter->second.size();
     anchor_index[key] = index;
   }
   else {
     index = anchor_it->second;
     if (index == _NPOS)
-      anchor_it->second = index = sdRep->varsData[sdRep->activeKey].size();
+      anchor_it->second = index = varsDataIter->second.size();
   }
   return index;
 }
@@ -1073,7 +1116,7 @@ inline size_t SurrogateData::retrieve_anchor_index(bool hard_fail) const
 inline void SurrogateData::
 assign_variables(const SurrogateDataVars& sdv, size_t index)
 {
-  SDVArray& sdv_array = sdRep->varsData[sdRep->activeKey];
+  SDVArray& sdv_array = varsDataIter->second;
   if (index == sdv_array.size() || index == _NPOS) sdv_array.push_back(sdv);
   else sdv_array[index] = sdv;
 }
@@ -1082,7 +1125,7 @@ assign_variables(const SurrogateDataVars& sdv, size_t index)
 inline void SurrogateData::
 assign_response(const SurrogateDataResp& sdr, size_t index)
 {
-  SDRArray& sdr_array = sdRep->respData[sdRep->activeKey];
+  SDRArray& sdr_array = respDataIter->second;
   if (index == sdr_array.size() || index == _NPOS) sdr_array.push_back(sdr);
   else sdr_array[index] = sdr;
 }
@@ -1107,7 +1150,7 @@ inline void SurrogateData::anchor_variables(const SurrogateDataVars& sdv)
 inline const SurrogateDataVars& SurrogateData::anchor_variables() const
 {
   size_t index = retrieve_anchor_index(true); // abort on index error
-  return sdRep->varsData[sdRep->activeKey][index];
+  return varsDataIter->second[index];
 }
 
 
@@ -1121,32 +1164,32 @@ inline void SurrogateData::anchor_response(const SurrogateDataResp& sdr)
 inline const SurrogateDataResp& SurrogateData::anchor_response() const
 {
   size_t index = retrieve_anchor_index(true); // abort on index error
-  return sdRep->respData[sdRep->activeKey][index];
+  return respDataIter->second[index];
 }
 
 
 inline void SurrogateData::variables_data(const SDVArray& sdv_array)
-{ sdRep->varsData[sdRep->activeKey] = sdv_array; }
+{ varsDataIter->second = sdv_array; }
 
 
 inline const SDVArray& SurrogateData::variables_data() const
-{ return sdRep->varsData[sdRep->activeKey]; }
+{ return varsDataIter->second; }
 
 
 inline SDVArray& SurrogateData::variables_data()
-{ return sdRep->varsData[sdRep->activeKey]; }
+{ return varsDataIter->second; }
 
 
 inline void SurrogateData::response_data(const SDRArray& sdr_array)
-{ sdRep->respData[sdRep->activeKey] = sdr_array; }
+{ respDataIter->second = sdr_array; }
 
 
 inline const SDRArray& SurrogateData::response_data() const
-{ return sdRep->respData[sdRep->activeKey]; }
+{ return respDataIter->second; }
 
 
 inline SDRArray& SurrogateData::response_data()
-{ return sdRep->respData[sdRep->activeKey]; }
+{ return respDataIter->second; }
 
 
 inline const std::map<UShortArray, SDVArray>& SurrogateData::
@@ -1170,18 +1213,42 @@ response_data_map(const std::map<UShortArray, SDRArray>& resp_map)
 
 
 inline void SurrogateData::push_back(const SurrogateDataVars& sdv)
-{ sdRep->varsData[sdRep->activeKey].push_back(sdv); }
+{ varsDataIter->second.push_back(sdv); }
 
 
 inline void SurrogateData::push_back(const SurrogateDataResp& sdr)
-{ sdRep->respData[sdRep->activeKey].push_back(sdr); }
+{ respDataIter->second.push_back(sdr); }
 
 
 inline void SurrogateData::
 push_back(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr)
 {
-  sdRep->varsData[sdRep->activeKey].push_back(sdv);
-  sdRep->respData[sdRep->activeKey].push_back(sdr);
+  varsDataIter->second.push_back(sdv);
+  respDataIter->second.push_back(sdr);
+}
+
+
+inline void SurrogateData::pop_back()
+{
+  SDVArray& sdv_array = varsDataIter->second;
+  SDRArray& sdr_array = respDataIter->second;
+  if (!sdv_array.empty()) sdv_array.pop_back();
+  if (!sdr_array.empty()) sdr_array.pop_back();
+  if (retrieve_anchor_index() >= points()) // popped point was anchor
+    clear_anchor_index();
+}
+
+
+inline void SurrogateData::pop_front()
+{
+  if (points()) {
+    SDVArray& sdv_array = varsDataIter->second;
+    SDRArray& sdr_array = respDataIter->second;
+    if (!sdv_array.empty()) sdv_array.erase(sdv_array.begin());
+    if (!sdr_array.empty()) sdr_array.erase(sdr_array.begin());
+    if (retrieve_anchor_index() == 0) // popped point was anchor
+      clear_anchor_index();
+  }
 }
 
 
@@ -1201,8 +1268,8 @@ inline void SurrogateData::pop(bool save_data)
 	    << data_size << ") in SurrogateData::pop(size_t)." << std::endl;
       abort_handler(-1);
     }
-    SDVArray& sdv_array_ref = sdRep->varsData[key];
-    SDRArray& sdr_array_ref = sdRep->respData[key];
+    SDVArray& sdv_array_ref = varsDataIter->second;
+    SDRArray& sdr_array_ref = respDataIter->second;
     SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
     SDRArrayDeque& popped_sdr_arrays = sdRep->poppedRespData[key];
     if (save_data) {
@@ -1230,9 +1297,9 @@ inline void SurrogateData::pop(bool save_data)
 
 inline void SurrogateData::push(size_t index, bool erase_popped)
 {
+  SDVArray& sdv_array_ref = varsDataIter->second;
+  SDRArray& sdr_array_ref = respDataIter->second;
   const UShortArray& key = sdRep->activeKey;
-  SDVArray& sdv_array_ref = sdRep->varsData[key];
-  SDRArray& sdr_array_ref = sdRep->respData[key];
   SDVArrayDeque& popped_sdv_arrays = sdRep->poppedVarsData[key];
   SDRArrayDeque& popped_sdr_arrays = sdRep->poppedRespData[key];
 
@@ -1277,15 +1344,12 @@ inline bool SurrogateData::anchor() const
 
 
 inline size_t SurrogateData::points() const
-{
-  return std::min(sdRep->varsData[sdRep->activeKey].size(),
-		  sdRep->respData[sdRep->activeKey].size());
-}
+{ return std::min(varsDataIter->second.size(), respDataIter->second.size()); }
 
 
 inline size_t SurrogateData::response_size() const
 {
-  const SDRArray& sdr_array = sdRep->respData[sdRep->activeKey];
+  const SDRArray& sdr_array = respDataIter->second;
   size_t i, data_size = 0, num_resp = sdr_array.size(), nh;
   short active_bits;
   for (i=0; i<num_resp; ++i) {
@@ -1304,7 +1368,7 @@ inline size_t SurrogateData::response_size() const
 
 inline size_t SurrogateData::failed_response_size() const
 {
-  const SDRArray& sdr_array = sdRep->respData[sdRep->activeKey];
+  const SDRArray& sdr_array = respDataIter->second;
   size_t failed_size = 0, nh; short fail_bits;
   const SizetShortMap& failed_resp = failed_response_data();
   for (StShMCIter cit=failed_resp.begin(); cit!=failed_resp.end(); ++cit) {
@@ -1334,14 +1398,14 @@ inline size_t SurrogateData::popped_sets() const
 
 inline size_t SurrogateData::num_gradient_variables() const
 {
-  const SDRArray& sdr_array = sdRep->respData[sdRep->activeKey];
+  const SDRArray& sdr_array = respDataIter->second;
   return (sdr_array.empty()) ? 0 : sdr_array[0].response_gradient().length();
 }
 
 
 inline size_t SurrogateData::num_hessian_variables() const
 {
-  const SDRArray& sdr_array = sdRep->respData[sdRep->activeKey];
+  const SDRArray& sdr_array = respDataIter->second;
   return (sdr_array.empty()) ? 0 : sdr_array[0].response_hessian().numRows();
 }
 
@@ -1388,7 +1452,7 @@ inline void SurrogateData::data_checks()
 {
   SizetShortMap& failed_resp_data = sdRep->failedRespData[sdRep->activeKey];
   failed_resp_data.clear();
-  const SDRArray& resp_data = sdRep->respData[sdRep->activeKey];
+  const SDRArray& resp_data = respDataIter->second;
   size_t i, num_resp = resp_data.size(); short failed_data;
   for (i=0; i<num_resp; ++i) {
     response_check(resp_data[i], failed_data);
@@ -1411,7 +1475,7 @@ inline void SurrogateData::data_checks()
 inline short SurrogateData::failed_anchor_data() const
 {
   SizetShortMap& failed_resp_data = sdRep->failedRespData[sdRep->activeKey];
-  size_t index = retrieve_anchor_index(false); // no hard failure
+  size_t index = retrieve_anchor_index(); // no hard failure
   SizetShortMap::iterator it = failed_resp_data.find(index);
   return (it == failed_resp_data.end()) ? 0 : it->second;    
 }
