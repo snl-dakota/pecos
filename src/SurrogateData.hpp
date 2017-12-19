@@ -903,6 +903,8 @@ public:
   bool anchor() const;
   /// assign anchorIndex[activeKey] to incoming index
   void anchor_index(size_t index);
+  /// return anchorIndex[activeKey], if defined
+  size_t anchor_index() const;
   /// erase anchorIndex[activeKey]
   void clear_anchor_index();
 
@@ -1070,6 +1072,10 @@ data_points(const SDVArray& sdv_array, const SDRArray& sdr_array)
 
 inline void SurrogateData::anchor_index(size_t index)
 { if (index != _NPOS) sdRep->anchorIndex[sdRep->activeKey] = index; }
+
+
+inline size_t SurrogateData::anchor_index() const
+{ return retrieve_anchor_index(false); }
 
 
 inline void SurrogateData::clear_anchor_index()
