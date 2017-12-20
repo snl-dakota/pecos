@@ -943,6 +943,8 @@ public:
 
   /// clear {vars,resp}Data
   void clear_data();
+  /// clear inactive data within {vars,resp}Data
+  void clear_inactive();
   /// clear popped{Vars,Resp}Data
   void clear_popped();
 
@@ -1630,6 +1632,24 @@ inline void SurrogateData::clear_data()
   sdRep->respData.erase(key);//sdRep->respData[key].clear();
   sdRep->anchorIndex.erase(key);//sdRep->anchorIndex[key] = _NPOS;
   sdRep->failedRespData.erase(key);//sdRep->failedRespData[key].clear();
+}
+
+
+inline void SurrogateData::clear_inactive()
+{
+  std::map<UShortArray, SDVArray>::iterator vd_it = sdRep->varsData.begin();
+  std::map<UShortArray, SDRArray>::iterator rd_it = sdRep->respData.begin();
+  while (vd_it != sdRep->varsData.end())
+    if (vd_it == varsDataIter) // preserve active
+      { ++vd_it; ++rd_it; }
+    else {                     // clear inactive
+      const UShortArray& key = vd_it->first;
+      sdRep->anchorIndex.erase(key);    // if it exists
+      sdRep->failedRespData.erase(key); // if it exists
+      // postfix increments manage iterator invalidations
+      sdRep->varsData.erase(vd_it++);
+      sdRep->respData.erase(rd_it++);
+    }
 }
 
 

@@ -84,13 +84,16 @@ public:
   virtual void restore_grid(size_t index = _NPOS);
   /// remove configuration settings for a stored grid (default is pop_back)
   virtual void remove_stored_grid(size_t index = _NPOS);
-  /// clear stored grid settings following their usage/combination
-  virtual void clear_stored();
-
   /// swap settings between the current grid and the stored grid
   /// identified by index
   virtual void swap_grid(size_t index);
   */
+
+  /// set key identifying active data set
+  virtual void active_key(const UShortArray& key);
+
+  /// clear inactive grid settings following their usage/combination
+  virtual void clear_inactive();
 
   /// return the index of the maximal stored grid state (_NPOS if the
   /// current unstored grid state)

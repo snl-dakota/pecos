@@ -58,10 +58,9 @@ public:
   void store_grid(size_t index = _NPOS);
   void restore_grid(size_t index = _NPOS);
   void remove_stored_grid(size_t index = _NPOS);
-  void clear_stored();
-
   void swap_grid(size_t index);
   */
+  void clear_inactive();
 
   const UShortArray& maximal_grid() const;
 
@@ -127,10 +126,10 @@ public:
   const UShort4DArray& collocation_key() const;
   /// return collocKey[key]
   const UShort4DArray& collocation_key(const UShortArray& key) const;
-  /// return collocIndices[activeKey]
+  /// return collocIndices
   const Sizet3DArray& collocation_indices() const;
-  /// return collocIndices[key]
-  const Sizet3DArray& collocation_indices(const UShortArray& key) const;
+  // return collocIndices[key]
+  //const Sizet3DArray& collocation_indices(const UShortArray& key) const;
 
   /// discriminate portions of the level-set hierarchy that are
   /// reference sets from those in the current increment
@@ -212,9 +211,10 @@ private:
 
   /// levels-by-index sets-by-numTensorProductPts array for linking the
   /// set of tensor products to the unique collocation points evaluated
-  std::map<UShortArray, Sizet3DArray> collocIndices;
-  /// iterator for active entry within collocIndices
-  std::map<UShortArray, Sizet3DArray>::iterator collocIndIter;
+  Sizet3DArray collocIndices;
+  //std::map<UShortArray, Sizet3DArray> collocIndices;
+  // iterator for active entry within collocIndices
+  //std::map<UShortArray, Sizet3DArray>::iterator collocIndIter;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -264,7 +264,7 @@ inline void HierarchSparseGridDriver::create_active_iterators()
   // returned iterator points to existing instance or new insertion
   smolMIIter    = smolyakMultiIndex.insert(u3a_pair).first;
   collocKeyIter =         collocKey.insert(u4a_pair).first;
-  collocIndIter =     collocIndices.insert(s3a_pair).first;
+  //collocIndIter =   collocIndices.insert(s3a_pair).first;
 }
 
 
@@ -272,7 +272,7 @@ inline void HierarchSparseGridDriver::update_active_iterators()
 {
   smolMIIter    = smolyakMultiIndex.find(activeKey);
   collocKeyIter =         collocKey.find(activeKey);
-  collocIndIter =     collocIndices.find(activeKey);
+  //collocIndIter =   collocIndices.find(activeKey);
 }
 
 
@@ -350,9 +350,10 @@ collocation_key(const UShortArray& key) const
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
-{ return collocIndIter->second; }
+{ return collocIndices; /*collocIndIter->second;*/ }
 
 
+/*
 inline const Sizet3DArray& HierarchSparseGridDriver::
 collocation_indices(const UShortArray& key) const
 {
@@ -367,7 +368,6 @@ collocation_indices(const UShortArray& key) const
 }
 
 
-/*
 inline const RealVector& HierarchSparseGridDriver::type1_weight_sets() // const
 {
   if (concatT1WeightSets.length() != numCollocPts) {

@@ -148,16 +148,6 @@ void CombinedSparseGridDriver::remove_stored_grid(size_t index)
 }
 
 
-void CombinedSparseGridDriver::clear_stored()
-{
-  storedLevMultiIndex.clear(); storedLevCoeffs.clear();
-  storedCollocKey.clear();     storedCollocIndices.clear();
-
-  storedType1WeightSets.clear();
-  if (computeType2Weights) storedType2WeightSets.clear();
-}
-
-
 void CombinedSparseGridDriver::swap_grid(size_t index)
 {
   std::swap(storedLevMultiIndex[index], smolyakMultiIndex);
@@ -176,6 +166,26 @@ void CombinedSparseGridDriver::swap_grid(size_t index)
   }
 }
 */
+
+
+void CombinedSparseGridDriver::clear_inactive()
+{
+  std::map<UShortArray, UShort2DArray>::iterator sm_it
+    = smolyakMultiIndex.begin();
+  std::map<UShortArray, IntArray>::iterator      sc_it = smolyakCoeffs.begin();
+  std::map<UShortArray, UShort3DArray>::iterator ck_it = collocKey.begin();
+  std::map<UShortArray, Sizet2DArray>::iterator  ci_it = collocIndices.begin();
+  std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
+  std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  while (sm_it != smolyakMultiIndex.end())
+    if (sm_it == smolMIIter) // preserve active
+      { ++sm_it; ++sc_it; ++ck_it; ++ci_it; ++t1_it; ++t2_it; }
+    else { // clear inactive: postfix increments manage iterator invalidations
+      smolyakMultiIndex.erase(sm_it++); smolyakCoeffs.erase(sc_it++);
+      collocKey.erase(ck_it++);         collocIndices.erase(ci_it++);
+      type1WeightSets.erase(t1_it++);   type2WeightSets.erase(t2_it++);
+    }
+}
 
 
 const UShortArray& CombinedSparseGridDriver::maximal_grid() const

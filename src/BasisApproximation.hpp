@@ -87,8 +87,6 @@ public:
   /// remove a redundant stored entry prior to combine_coefficients
   /// (default is pop_back)
   virtual void remove_stored_coefficients(size_t index = _NPOS);
-  /// clear stored approximation data
-  virtual void clear_stored();
 
   /// swap the current coefficients with a previously stored set
   virtual void swap_coefficients(size_t index);
@@ -96,6 +94,9 @@ public:
 
   /// combine the current coefficients with a previously stored set
   virtual void combine_coefficients();
+
+  /// clear inactive approximation data
+  virtual void clear_inactive();
 
   /// print the coefficient array computed in compute_coefficients()
   virtual void print_coefficients(std::ostream& s, bool normalized);

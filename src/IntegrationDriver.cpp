@@ -384,10 +384,6 @@ void IntegrationDriver::remove_stored_grid(size_t index)
 { } // default is no-op
 
 
-void IntegrationDriver::clear_stored()
-{ } // default is no-op
-
-
 void IntegrationDriver::swap_grid(size_t index)
 {
   if (driverRep)
@@ -399,6 +395,23 @@ void IntegrationDriver::swap_grid(size_t index)
   }
 }
 */
+
+
+void IntegrationDriver::active_key(const UShortArray& key)
+{
+  if (driverRep)
+    driverRep->active_key(key);
+  // default is no-op
+}
+
+
+
+void IntegrationDriver::clear_inactive()
+{
+  if (driverRep)
+    driverRep->clear_inactive();
+  // default is no-op
+}
 
 
 const UShortArray& IntegrationDriver::maximal_grid() const

@@ -77,6 +77,8 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void active_key(const UShortArray& key);
+
   void allocate_data(size_t index = _NPOS);
   void increment_data(size_t index = _NPOS);
   void decrement_data();
@@ -88,8 +90,8 @@ protected:
   void store_data(size_t index = _NPOS);
   void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
-  void clear_stored_data();
   */
+  void clear_inactive_data();
 
   //
   //- Heading: New virtual functions
@@ -445,11 +447,11 @@ inline void SharedInterpPolyApproxData::restore_data(size_t index)
 
 inline void SharedInterpPolyApproxData::remove_stored_data(size_t index)
 { driverRep->remove_stored_grid(index); }
-
-
-inline void SharedInterpPolyApproxData::clear_stored_data()
-{ driverRep->clear_stored(); }
 */
+
+
+inline void SharedInterpPolyApproxData::clear_inactive_data()
+{ driverRep->clear_inactive(); }
 
 
 inline Real SharedInterpPolyApproxData::

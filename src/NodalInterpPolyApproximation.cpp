@@ -195,17 +195,6 @@ void NodalInterpPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void NodalInterpPolyApproximation::clear_stored()
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.clear_stored();
-
-  storedExpType1Coeffs.clear(); storedExpType2Coeffs.clear();
-  storedExpType1CoeffGrads.clear();
-}
-
-
 void NodalInterpPolyApproximation::swap_coefficients(size_t index)
 {
   // mirror operations to origSurrData for deep copied surrData
@@ -231,6 +220,29 @@ void NodalInterpPolyApproximation::swap_coefficients(size_t index)
   }
 }
 */
+
+
+void NodalInterpPolyApproximation::clear_inactive()
+{
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.clear_inactive();
+
+  std::map<UShortArray, RealVector>::iterator e1c_it
+    = expansionType1Coeffs.begin();
+  std::map<UShortArray, RealMatrix>::iterator e2c_it
+    = expansionType2Coeffs.begin();
+  std::map<UShortArray, RealMatrix>::iterator e1g_it
+    = expansionType1CoeffGrads.begin();
+  while (e1c_it != expansionType1Coeffs.end())
+    if (e1c_it == expT1CoeffsIter) // preserve active
+      { ++e1c_it; ++e2c_it; ++e1g_it; }
+    else { // clear inactive: postfix increments manage iterator invalidations
+      expansionType1Coeffs.erase(e1c_it++);
+      expansionType2Coeffs.erase(e2c_it++);
+      expansionType1CoeffGrads.erase(e1g_it++);
+    }
+}
 
 
 void NodalInterpPolyApproximation::combine_coefficients()

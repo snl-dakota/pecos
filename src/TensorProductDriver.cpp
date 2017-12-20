@@ -113,13 +113,6 @@ void TensorProductDriver::remove_stored_grid(size_t index)
 }
 
 
-void TensorProductDriver::clear_stored()
-{
-  storedLevelIndex.clear();      storedCollocKey.clear();
-  storedType1WeightSets.clear(); storedType2WeightSets.clear();
-}
-
-
 void TensorProductDriver::swap_grid(size_t index)
 {
   std::swap(storedCollocKey[index],  collocKey);
@@ -135,6 +128,22 @@ void TensorProductDriver::swap_grid(size_t index)
   storedType2WeightSets[index] = tmp_mat;
 }
 */
+
+
+void TensorProductDriver::clear_inactive()
+{
+  std::map<UShortArray, UShortArray>::iterator li_it = levelIndex.begin();
+  std::map<UShortArray, UShort2DArray>::iterator ck_it = collocKey.begin();
+  std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
+  std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  while (li_it != levelIndex.end())
+    if (li_it == levelIndIter) // preserve active
+      { ++li_it, ++ck_it, ++t1_it, ++t2_it; }
+    else { // clear inactive: postfix increments manage iterator invalidations
+      levelIndex.erase(li_it++);      collocKey.erase(ck_it++);
+      type1WeightSets.erase(t1_it++); type2WeightSets.erase(t2_it++);
+    }
+}
 
 
 const UShortArray& TensorProductDriver::maximal_grid() const

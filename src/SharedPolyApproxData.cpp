@@ -287,6 +287,10 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 }
 
 
+void SharedPolyApproxData::active_key(const UShortArray& key)
+{ activeKey = key; }
+
+
 void SharedPolyApproxData::increment_data(size_t index)
 {
   // Run-time error instead of compile-time (not pure virtual)
@@ -331,11 +335,11 @@ void SharedPolyApproxData::post_combine_data()
 { } // default implementation is no op
 
 
-/*
-void SharedPolyApproxData::clear_stored_data()
+void SharedPolyApproxData::clear_inactive_data()
 { } // default implementation is no op
 
 
+/*
 void SharedPolyApproxData::allocate_component_sobol()
 {
   // default implementation is reasonable for tensor expansions, but is

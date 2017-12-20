@@ -262,6 +262,9 @@ public:
   //- Heading: Virtual member functions
   //
 
+  /// set activeKey
+  virtual void active_key(const UShortArray& key);
+
   /// allocate the shared data prior to building the set of approximations
   virtual void allocate_data(size_t index = _NPOS) = 0;
 
@@ -286,9 +289,9 @@ public:
   virtual void restore_data(size_t index = _NPOS) = 0;
   /// removes a redundant stored approximation data prior to combination
   virtual void remove_stored_data(size_t index = _NPOS) = 0;
-  /// clear stored approximation data
-  virtual void clear_stored_data();
   */
+  /// clear inactive approximation data
+  virtual void clear_inactive_data();
 
   /// combines current and stored approximation data
   virtual void pre_combine_data();

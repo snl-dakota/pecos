@@ -78,8 +78,8 @@ protected:
   void restore_coefficients(size_t index = _NPOS);
   void swap_coefficients(size_t maximal_index);
   void remove_stored_coefficients(size_t index = _NPOS);
-  void clear_stored();
   */
+  void clear_inactive();
 
   void combine_coefficients();
 

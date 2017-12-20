@@ -60,6 +60,17 @@ void SharedOrthogPolyApproxData::allocate_data(size_t index)
 }
 
 
+void SharedOrthogPolyApproxData::active_key(const UShortArray& key)
+{
+  SharedPolyApproxData::active_key(key);
+
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID: case QUADRATURE:
+    driverRep->active_key(key); break;
+  }
+}
+
+
 void SharedOrthogPolyApproxData::allocate_data(const UShort2DArray& multi_index)
 {
   multiIndex[activeKey] = multi_index;
@@ -448,20 +459,44 @@ void SharedOrthogPolyApproxData::post_combine_data()
 }
 
 
-/*
-void SharedOrthogPolyApproxData::clear_stored_data()
+void SharedOrthogPolyApproxData::clear_inactive_data()
 {
-  storedMultiIndex.clear();
+  bool ao = false, tp = false;
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case COMBINED_SPARSE_GRID:
-    driverRep->clear_stored(); break;
+    tp = true; driverRep->clear_inactive(); break;
   case QUADRATURE:
-    storedApproxOrder.clear(); driverRep->clear_stored(); break;
+    ao = true; driverRep->clear_inactive(); break;
   default: // total-order expansions
-    storedApproxOrder.clear(); break;
+    ao = true;
+    if (expConfigOptions.expBasisType == ADAPTED_BASIS_GENERALIZED)
+      tp = true;
+    break;
   }
+
+  std::map<UShortArray, UShort2DArray>::iterator  mi_it = multiIndex.begin();
+  std::map<UShortArray, UShortArray>::iterator    ao_it = approxOrder.begin();
+  std::map<UShortArray, UShort3DArray>::iterator tp1_it = tpMultiIndex.begin();
+  std::map<UShortArray, Sizet2DArray>::iterator  tp2_it
+    = tpMultiIndexMap.begin();
+  std::map<UShortArray, SizetArray>::iterator    tp3_it
+    = tpMultiIndexMapRef.begin();
+  while (mi_it != multiIndex.end())
+    if (mi_it == multiIndexIter) { // preserve active
+      ++mi_it;
+      if (ao) ++ao_it;
+      if (tp) { ++tp1_it; ++tp2_it;  ++tp3_it; }
+    }
+    else { // clear inactive: postfix increments manage iterator invalidations
+      multiIndex.erase(mi_it++);
+      if (ao) approxOrder.erase(ao_it++);
+      if (tp) {
+	tpMultiIndex.erase(tp1_it++);
+	tpMultiIndexMap.erase(tp2_it++);
+	tpMultiIndexMapRef.erase(tp3_it++);
+      }
+    }
 }
-*/
 
 
 /** The optional growth_rate supports the option of forcing the computed

@@ -223,10 +223,10 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 
 void SharedProjectOrthogPolyApproxData::post_finalize_data()
 {
-  poppedLevMultiIndex[activeKey].clear();
-  poppedTPMultiIndex[activeKey].clear();
-  poppedTPMultiIndexMap[activeKey].clear();
-  poppedTPMultiIndexMapRef[activeKey].clear();
+  poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
+  poppedTPMultiIndex[activeKey].clear();//.erase(activeKey);
+  poppedTPMultiIndexMap[activeKey].clear();//.erase(activeKey);
+  poppedTPMultiIndexMapRef[activeKey].clear();//.erase(activeKey);
 }
 
 

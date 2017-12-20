@@ -73,10 +73,9 @@ public:
   void store_grid(size_t index = _NPOS);
   void restore_grid(size_t index = _NPOS);
   void remove_stored_grid(size_t index = _NPOS);
-  void clear_stored();
-
   void swap_grid(size_t index);
   */
+  void clear_inactive();
 
   const UShortArray& maximal_grid() const;
 

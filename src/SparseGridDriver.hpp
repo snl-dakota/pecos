@@ -47,7 +47,7 @@ public:
   ~SparseGridDriver();
 
   //
-  //- Heading: Virtual functions
+  //- Heading: New virtual functions
   //
 
   /// initializes old/active/evaluation sets for use within the 
@@ -84,6 +84,12 @@ public:
 
   /// print smolyakMultiIndex
   virtual void print_smolyak_multi_index() const = 0;
+
+  //
+  //- Heading: virtual function redefinitions
+  //
+
+  void active_key(const UShortArray& key);
 
   //
   //- Heading: Member functions
@@ -250,6 +256,10 @@ SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 
 inline SparseGridDriver::~SparseGridDriver()
 { }
+
+
+inline void SparseGridDriver::active_key(const UShortArray& key)
+{ activeKey = key; }
 
 
 inline unsigned short SparseGridDriver::level() const

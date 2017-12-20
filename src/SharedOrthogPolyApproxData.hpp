@@ -129,6 +129,8 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void active_key(const UShortArray& key);
+
   void allocate_data(size_t index = _NPOS);
   void  pre_combine_data();
   void post_combine_data();
@@ -137,8 +139,8 @@ protected:
   void store_data(size_t index = _NPOS);
   void restore_data(size_t index = _NPOS);
   void remove_stored_data(size_t index = _NPOS);
-  void clear_stored_data();
   */
+  void clear_inactive_data();
 
   //
   //- Heading: Member functions

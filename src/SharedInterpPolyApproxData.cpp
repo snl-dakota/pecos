@@ -95,6 +95,13 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 }
 
 
+void SharedInterpPolyApproxData::active_key(const UShortArray& key)
+{
+  SharedPolyApproxData::active_key(key);
+  driverRep->active_key(key);
+}
+
+
 void SharedInterpPolyApproxData::allocate_data(size_t index)
 {
   // use barycentric formulation for global Lagrange basis polynomials.

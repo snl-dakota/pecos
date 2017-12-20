@@ -122,17 +122,6 @@ void OrthogPolyApproximation::remove_stored_coefficients(size_t index)
 }
 
 
-void OrthogPolyApproximation::clear_stored()
-{
-  // mirror operations already performed on origSurrData for a
-  // disconnected/deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.clear_stored();
-
-  storedExpCoeffs.clear(); storedExpCoeffGrads.clear();
-}
-
-
 void OrthogPolyApproximation::swap_coefficients(size_t maximal_index)
 {
   // mirror operations already performed on origSurrData for a
@@ -152,6 +141,24 @@ void OrthogPolyApproximation::swap_coefficients(size_t maximal_index)
   }
 }
 */
+
+
+void OrthogPolyApproximation::clear_inactive()
+{
+  // mirror operations already performed on origSurrData for a
+  // disconnected/deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.clear_inactive();
+
+  std::map<UShortArray, RealVector>::iterator ec_it = expansionCoeffs.begin();
+  std::map<UShortArray, RealMatrix>::iterator eg_it
+    = expansionCoeffGrads.begin();
+  while (ec_it != expansionCoeffs.end())
+    if (ec_it == expCoeffsIter) // preserve active
+      { ++ec_it, ++eg_it; }
+    else // clear inactive: postfix increments manage iterator invalidations
+      { expansionCoeffs.erase(ec_it++); expansionCoeffGrads.erase(eg_it++); }
+}
 
 
 void OrthogPolyApproximation::combine_coefficients()

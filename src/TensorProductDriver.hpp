@@ -43,6 +43,8 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
+  void active_key(const UShortArray& key);
+
   void compute_grid(RealMatrix& variable_sets);
   int  grid_size();
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
@@ -51,10 +53,9 @@ public:
   void store_grid(size_t index = _NPOS);
   void restore_grid(size_t index = _NPOS);
   void remove_stored_grid(size_t index = _NPOS);
-  void clear_stored();
-
   void swap_grid(size_t index);
   */
+  void clear_inactive();
 
   const UShortArray& maximal_grid() const;
 
@@ -178,6 +179,10 @@ private:
   /// model form, discretization level, etc.
   UShortArray activeKey;
 };
+
+
+inline void TensorProductDriver::active_key(const UShortArray& key)
+{ activeKey = key; }
 
 
 inline void TensorProductDriver::create_active_iterators()
