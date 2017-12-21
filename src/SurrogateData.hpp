@@ -1458,21 +1458,21 @@ response_check(const SurrogateDataResp& sdr, short& failed_data)
 
 inline void SurrogateData::data_checks()
 {
-  SizetShortMap& failed_resp_data = sdRep->failedRespData[sdRep->activeKey];
-  failed_resp_data.clear();
+  SizetShortMap& failed_resp_map = sdRep->failedRespData[sdRep->activeKey];
+  failed_resp_map.clear();
   const SDRArray& resp_data = respDataIter->second;
   size_t i, num_resp = resp_data.size(); short failed_data;
   for (i=0; i<num_resp; ++i) {
     response_check(resp_data[i], failed_data);
     if (failed_data)
-      failed_resp_data[i] = failed_data;
+      failed_resp_map[i] = failed_data;
   }
 
 #ifdef DEBUG
-  if (!failed_resp_data.empty()) {
+  if (!failed_resp_map.empty()) {
     PCout << "failedRespData:\n";
-    for (SizetShortMap::iterator it=failed_resp_data.begin();
-	 it!=failed_resp_data.end(); ++it)
+    for (SizetShortMap::iterator it=failed_resp_map.begin();
+	 it!=failed_resp_map.end(); ++it)
       PCout << "index: " << std::setw(6) << it->first
 	    << " data: " << it->second << '\n';
   }
@@ -1482,10 +1482,14 @@ inline void SurrogateData::data_checks()
 
 inline short SurrogateData::failed_anchor_data() const
 {
-  SizetShortMap& failed_resp_data = sdRep->failedRespData[sdRep->activeKey];
-  size_t index = retrieve_anchor_index(); // no hard failure
-  SizetShortMap::iterator it = failed_resp_data.find(index);
-  return (it == failed_resp_data.end()) ? 0 : it->second;    
+  std::map<UShortArray, SizetShortMap>::const_iterator cit1
+    = sdRep->failedRespData.find(sdRep->activeKey);
+  if (cit1 == sdRep->failedRespData.end()) return 0;
+  else {
+    const SizetShortMap& failed_resp_data = cit1->second;
+    SizetShortMap::const_iterator cit2 = failed_resp_data.find(anchor_index());
+    return (cit2 == failed_resp_data.end()) ? 0 : cit2->second;
+  }
 }
 
 
