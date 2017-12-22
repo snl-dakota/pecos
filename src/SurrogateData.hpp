@@ -964,6 +964,8 @@ public:
   void data_checks();
   /// return failedRespData corresponding to active anchorIndex
   short failed_anchor_data() const;
+  /// set active failedRespData
+  void failed_response_data(const SizetShortMap& fail_data);
   /// return active failedRespData
   const SizetShortMap& failed_response_data() const;
 
@@ -1472,25 +1474,25 @@ response_check(const SurrogateDataResp& sdr, short& failed_data)
 
 inline void SurrogateData::data_checks()
 {
-  SizetShortMap& failed_resp_map = sdRep->failedRespData[sdRep->activeKey];
-  failed_resp_map.clear();
+  SizetShortMap failed_resp;
   const SDRArray& resp_data = sdRep->respDataIter->second;
   size_t i, num_resp = resp_data.size(); short failed_data;
   for (i=0; i<num_resp; ++i) {
     response_check(resp_data[i], failed_data);
     if (failed_data)
-      failed_resp_map[i] = failed_data;
+      failed_resp[i] = failed_data;
   }
 
+  if (!failed_resp.empty()) {
+    failed_response_data(failed_resp);
 #ifdef DEBUG
-  if (!failed_resp_map.empty()) {
     PCout << "failedRespData:\n";
     for (SizetShortMap::iterator it=failed_resp_map.begin();
 	 it!=failed_resp_map.end(); ++it)
       PCout << "index: " << std::setw(6) << it->first
 	    << " data: " << it->second << '\n';
-  }
 #endif // DEBUG
+  }
 }
 
 
@@ -1509,6 +1511,10 @@ inline short SurrogateData::failed_anchor_data() const
 
 //inline void SurrogateData::failed_anchor_data(short fail_anchor)
 //{ sdRep->failedAnchorData = fail_anchor; }
+
+
+inline void SurrogateData::failed_response_data(const SizetShortMap& fail_data)
+{ sdRep->failedRespData[sdRep->activeKey] = fail_data; }
 
 
 inline const SizetShortMap& SurrogateData::failed_response_data() const
@@ -1646,12 +1652,24 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
 
 inline void SurrogateData::clear_data()
 {
+  /*
+  // Too aggressive due to DataFitSurrModel::build_approximation() call to
+  // approxInterface.clear_current();
   const UShortArray& key = sdRep->activeKey;
-  sdRep->varsData.erase(key);//sdRep->varsData[key].clear();
+  sdRep->varsData.erase(key);
   sdRep->varsDataIter = sdRep->varsData.end();
-  sdRep->respData.erase(key);//sdRep->respData[key].clear();
+  sdRep->respData.erase(key);
   sdRep->respDataIter = sdRep->respData.end();
-  sdRep->anchorIndex.erase(key);//sdRep->anchorIndex[key] = _NPOS;
+  sdRep->anchorIndex.erase(key);
+  sdRep->failedRespData.erase(key);
+  */
+
+  // Persist {vars,Resp}DataIter when clearing {vars,resp}Data:
+  sdRep->varsDataIter->second.clear();
+  sdRep->respDataIter->second.clear();
+  // anchorIndex and failedRespData can be pruned:
+  const UShortArray& key = sdRep->activeKey;
+  sdRep->anchorIndex.erase(key);   //sdRep->anchorIndex[key] = _NPOS;
   sdRep->failedRespData.erase(key);//sdRep->failedRespData[key].clear();
 }
 
@@ -1663,13 +1681,16 @@ inline void SurrogateData::clear_inactive()
   while (vd_it != sdRep->varsData.end())
     if (vd_it == sdRep->varsDataIter) // preserve active
       { ++vd_it; ++rd_it; }
-    else {                     // clear inactive
+    else {                            //  clear inactive
       const UShortArray& key = vd_it->first;
+      // anchorIndex and failedRespData can be pruned:
       sdRep->anchorIndex.erase(key);    // if it exists
       sdRep->failedRespData.erase(key); // if it exists
-      // postfix increments manage iterator invalidations
-      sdRep->varsData.erase(vd_it++);
-      sdRep->respData.erase(rd_it++);
+      // Be more conservative with clearing {vars,resp}Data:
+      vd_it->second.clear(); ++vd_it;
+      rd_it->second.clear(); ++rd_it;
+      // Too aggressive. Note: postfix increments manage iterator invalidations
+      //sdRep->varsData.erase(vd_it++); sdRep->respData.erase(rd_it++);
     }
 }
 
@@ -1677,6 +1698,7 @@ inline void SurrogateData::clear_inactive()
 inline void SurrogateData::clear_popped()
 {
   const UShortArray& key = sdRep->activeKey;
+  // Ok to prune as will be recreated in pop() if needed:
   sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
   sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
   sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
