@@ -151,9 +151,7 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// create {smolMI,collocKey,collocInd}Iter
-  void create_active_iterators();
-  /// update {smolMI,collocKey,collocInd}Iter
+  /// update {smolMI,collocKey,collocInd}Iter from activeKey
   void update_active_iterators();
   
   void update_smolyak_multi_index(bool clear_sm_mi = false);
@@ -240,7 +238,7 @@ private:
 
 inline HierarchSparseGridDriver::HierarchSparseGridDriver():
   SparseGridDriver(), nestedGrid(true), trackCollocIndices(true)
-{ }
+{ update_active_iterators(); }
 
 
 inline HierarchSparseGridDriver::
@@ -248,31 +246,32 @@ HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
   nestedGrid(true), trackCollocIndices(true)
-{ }
+{ update_active_iterators(); }
 
 
 inline HierarchSparseGridDriver::~HierarchSparseGridDriver()
 { }
 
 
-inline void HierarchSparseGridDriver::create_active_iterators()
-{
-  std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
-  std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
-  std::pair<UShortArray, Sizet3DArray>  s3a_pair(activeKey, Sizet3DArray());
-
-  // returned iterator points to existing instance or new insertion
-  smolMIIter    = smolyakMultiIndex.insert(u3a_pair).first;
-  collocKeyIter =         collocKey.insert(u4a_pair).first;
-  //collocIndIter =   collocIndices.insert(s3a_pair).first;
-}
-
-
 inline void HierarchSparseGridDriver::update_active_iterators()
 {
-  smolMIIter    = smolyakMultiIndex.find(activeKey);
-  collocKeyIter =         collocKey.find(activeKey);
-  //collocIndIter =   collocIndices.find(activeKey);
+  smolMIIter = smolyakMultiIndex.find(activeKey);
+  if (smolMIIter == smolyakMultiIndex.end()) {
+    std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
+    smolMIIter = smolyakMultiIndex.insert(u3a_pair).first;
+  }
+  collocKeyIter = collocKey.find(activeKey);
+  if (collocKeyIter == collocKey.end()) {
+    std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
+    collocKeyIter = collocKey.insert(u4a_pair).first;
+  }
+  /*
+  collocIndIter = collocIndices.find(activeKey);
+  if (collocIndIter == collocIndices.end()) {
+    std::pair<UShortArray, Sizet3DArray> s3a_pair(activeKey, Sizet3DArray());
+    collocIndIter = collocIndices.insert(s3a_pair).first;
+  }
+  */
 }
 
 

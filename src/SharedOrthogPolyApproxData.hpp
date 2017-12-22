@@ -146,9 +146,7 @@ protected:
   //- Heading: Member functions
   //
 
-  /// create {multiIndex,approxOrd}Iter
-  void create_active_iterators();
-  /// update {multiIndex,approxOrd}Iter
+  /// update {multiIndex,approxOrd}Iter from activeKey
   void update_active_iterators();
 
   /// detect whether current expansion settings are the most refined
@@ -355,6 +353,8 @@ protected:
   /// iterator pointing to active node in approxOrder
   std::map<UShortArray, UShortArray>::iterator approxOrdIter;
 
+  // initial value of approxOrder passed through ctor
+  //UShortArray approxOrderSpec;
   /// previous value of active approxOrder; used for detecting when a
   /// multiIndex update is needed
   UShortArray approxOrderPrev;
@@ -411,13 +411,28 @@ private:
 };
 
 
+inline void SharedOrthogPolyApproxData::update_active_iterators()
+{
+  approxOrdIter = approxOrder.find(activeKey);
+  if (approxOrdIter == approxOrder.end()) {
+    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());//, approxOrderSpec);
+    approxOrdIter = approxOrder.insert(ua_pair).first;
+  }
+  multiIndexIter = multiIndex.find(activeKey);
+  if (multiIndexIter == multiIndex.end()) {
+    std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+    multiIndexIter = multiIndex.insert(u2a_pair).first;
+  }
+}
+
+
 inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
-  SharedPolyApproxData(basis_type, num_vars)
+  SharedPolyApproxData(basis_type, num_vars)//, approxOrderSpec(approx_order)
 {
-  // TO DO: when is activeKey posted?
-  approxOrder[activeKey] = approx_order;
+  update_active_iterators();
+  approxOrdIter->second = approx_order;
 }
 
 
@@ -427,32 +442,15 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
   SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options)
+  //, approxOrderSpec(approx_order)
 {
-  // TO DO: when is activeKey posted?
-  approxOrder[activeKey] = approx_order;
+  update_active_iterators();
+  approxOrdIter->second = approx_order;
 }
 
 
 inline SharedOrthogPolyApproxData::~SharedOrthogPolyApproxData()
 { }
-
-
-inline void SharedOrthogPolyApproxData::create_active_iterators()
-{
-  std::pair<UShortArray, UShortArray>    ua_pair(activeKey, UShortArray());
-  std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
-
-  // returned iterator points to existing instance or new insertion
-  multiIndexIter = multiIndex.insert(u2a_pair).first;
-  approxOrdIter  = approxOrder.insert(ua_pair).first;
-}
-
-
-inline void SharedOrthogPolyApproxData::update_active_iterators()
-{
-  multiIndexIter =  multiIndex.find(activeKey);
-  approxOrdIter  = approxOrder.find(activeKey);
-}
 
 
 inline const UShort2DArray& SharedOrthogPolyApproxData::multi_index() const
@@ -485,6 +483,7 @@ inline const UShortArray& SharedOrthogPolyApproxData::expansion_order() const
 { return approxOrdIter->second; }
 
 
+/** Use alternate naming since UShortArray overload already used. */
 inline const UShortArray& SharedOrthogPolyApproxData::
 keyed_expansion_order(const UShortArray& key) const
 {

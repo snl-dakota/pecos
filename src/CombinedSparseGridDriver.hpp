@@ -58,6 +58,9 @@ public:
   //- Heading: Virtual function redefinitions
   //
 
+  /// update {smolMI,smolCoeffs,collocKey,collocInd}Iter from activeKey
+  void update_active_iterators();
+
   void compute_grid(RealMatrix& variable_sets);
   /// compute (if updateGridSize) and return number of collocation
   /// points with duplicates removed
@@ -194,11 +197,6 @@ private:
   //
   //- Heading: Convenience functions
   //
-
-  /// create {smolMI,smolCoeffs,collocKey,collocInd}Iter
-  void create_active_iterators();
-  /// update {smolMI,smolCoeffs,collocKey,collocInd}Iter
-  void update_active_iterators();
   
   /// convenience function for updating sparse points from a set of
   /// aggregated tensor points
@@ -341,7 +339,7 @@ private:
 inline CombinedSparseGridDriver::CombinedSparseGridDriver():
   SparseGridDriver(), trackCollocDetails(false), trackUniqueProdWeights(false),
   duplicateTol(1.e-15)
-{ }
+{ update_active_iterators(); }
 
 
 inline CombinedSparseGridDriver::
@@ -349,34 +347,35 @@ CombinedSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
   trackCollocDetails(false), trackUniqueProdWeights(false), duplicateTol(1.e-15)
-{ }
+{ update_active_iterators(); }
 
 
 inline CombinedSparseGridDriver::~CombinedSparseGridDriver()
 { }
 
 
-inline void CombinedSparseGridDriver::create_active_iterators()
-{
-  std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
-  std::pair<UShortArray, IntArray>       ia_pair(activeKey, IntArray());
-  std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
-  std::pair<UShortArray, Sizet2DArray>  s2a_pair(activeKey, Sizet2DArray());
-
-  // returned iterator points to existing instance or new insertion
-  smolMIIter     = smolyakMultiIndex.insert(u2a_pair).first;
-  smolCoeffsIter =     smolyakCoeffs.insert(ia_pair).first;
-  collocKeyIter  =         collocKey.insert(u3a_pair).first;
-  collocIndIter  =     collocIndices.insert(s2a_pair).first;
-}
-
-
 inline void CombinedSparseGridDriver::update_active_iterators()
 {
-  smolMIIter     = smolyakMultiIndex.find(activeKey);
-  smolCoeffsIter =     smolyakCoeffs.find(activeKey);
-  collocKeyIter  =         collocKey.find(activeKey);
-  collocIndIter  =     collocIndices.find(activeKey);
+  smolMIIter = smolyakMultiIndex.find(activeKey);
+  if (smolMIIter == smolyakMultiIndex.end()) {
+    std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+    smolMIIter = smolyakMultiIndex.insert(u2a_pair).first;
+  }
+  smolCoeffsIter = smolyakCoeffs.find(activeKey);
+  if (smolCoeffsIter == smolyakCoeffs.end()) {
+    std::pair<UShortArray, IntArray> ia_pair(activeKey, IntArray());
+    smolCoeffsIter = smolyakCoeffs.insert(ia_pair).first;
+  }
+  collocKeyIter = collocKey.find(activeKey);
+  if (collocKeyIter == collocKey.end()) {
+    std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
+    collocKeyIter = collocKey.insert(u3a_pair).first;
+  }
+  collocIndIter = collocIndices.find(activeKey);
+  if (collocIndIter == collocIndices.end()) {
+    std::pair<UShortArray, Sizet2DArray> s2a_pair(activeKey, Sizet2DArray());
+    collocIndIter = collocIndices.insert(s2a_pair).first;
+  }
 }
 
 

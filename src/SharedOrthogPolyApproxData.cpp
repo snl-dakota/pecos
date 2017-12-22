@@ -63,6 +63,7 @@ void SharedOrthogPolyApproxData::allocate_data(size_t index)
 void SharedOrthogPolyApproxData::active_key(const UShortArray& key)
 {
   SharedPolyApproxData::active_key(key);
+  update_active_iterators();
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
   case COMBINED_SPARSE_GRID: case QUADRATURE:

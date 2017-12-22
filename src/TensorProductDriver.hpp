@@ -35,9 +35,14 @@ public:
   //- Heading: Constructors and destructor
   //
 
-  TensorProductDriver();                              ///< default constructor
-  TensorProductDriver(const UShortArray& quad_order); ///< constructor
-  ~TensorProductDriver();                             ///< destructor
+  /// default constructor
+  TensorProductDriver();
+  /// constructor
+  TensorProductDriver(const UShortArray& quad_order);
+  /// constructor
+  TensorProductDriver(const UShortArray& quad_order, const UShortArray& key);
+  /// destructor
+  ~TensorProductDriver();
 
   //
   //- Heading: Virtual function redefinitions
@@ -124,9 +129,7 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// create {levelInd,collocKey}Iter
-  void create_active_iterators();
-  /// update {levelInd,collocKey}Iter
+  /// update {levelInd,collocKey}Iter based on activeKey
   void update_active_iterators();
   
   /// update levelIndex from quadOrder
@@ -181,25 +184,51 @@ private:
 };
 
 
-inline void TensorProductDriver::active_key(const UShortArray& key)
-{ activeKey = key; }
+inline TensorProductDriver::TensorProductDriver():
+  IntegrationDriver(BaseConstructor())
+{ update_active_iterators(); } // default activeKey is empty array
 
 
-inline void TensorProductDriver::create_active_iterators()
+inline TensorProductDriver::TensorProductDriver(const UShortArray& quad_order):
+  IntegrationDriver(BaseConstructor())
 {
-  std::pair<UShortArray, UShortArray>    ua_pair(activeKey, UShortArray());
-  std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+  update_active_iterators(); // default activeKey is empty array
+  quadrature_order(quad_order);
+}
 
-  // returned iterator points to existing instance or new insertion
-  levelIndIter  = levelIndex.insert(ua_pair).first;
-  collocKeyIter =  collocKey.insert(u2a_pair).first;
+
+inline TensorProductDriver::
+TensorProductDriver(const UShortArray& quad_order, const UShortArray& key):
+  IntegrationDriver(BaseConstructor()), activeKey(key)
+{
+  update_active_iterators(); // activeKey set in initializer list
+  quadrature_order(quad_order);
+}
+
+
+inline TensorProductDriver::~TensorProductDriver()
+{ }
+
+
+inline void TensorProductDriver::active_key(const UShortArray& key)
+{
+  activeKey = key;
+  update_active_iterators();
 }
 
 
 inline void TensorProductDriver::update_active_iterators()
 {
-  levelIndIter  = levelIndex.find(activeKey);
-  collocKeyIter =  collocKey.find(activeKey);
+  levelIndIter = levelIndex.find(activeKey);
+  if (levelIndIter == levelIndex.end()) {
+    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());
+    levelIndIter = levelIndex.insert(ua_pair).first;
+  }
+  collocKeyIter = collocKey.find(activeKey);
+  if (collocKeyIter == collocKey.end()) {
+    std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+    collocKeyIter = collocKey.insert(u2a_pair).first;
+  }
 }
 
 
@@ -337,20 +366,6 @@ inline int TensorProductDriver::grid_size()
     size *= quadOrder[i];
   return size;
 }
-
-
-inline TensorProductDriver::TensorProductDriver():
-  IntegrationDriver(BaseConstructor())
-{ }
-
-
-inline TensorProductDriver::TensorProductDriver(const UShortArray& quad_order):
-  IntegrationDriver(BaseConstructor())
-{ quadrature_order(quad_order); }
-
-
-inline TensorProductDriver::~TensorProductDriver()
-{ }
 
 } // namespace Pecos
 

@@ -98,6 +98,7 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 void SharedInterpPolyApproxData::active_key(const UShortArray& key)
 {
   SharedPolyApproxData::active_key(key);
+  //update_active_iterators(); // not currently used in SharedInterp
   driverRep->active_key(key);
 }
 
@@ -277,8 +278,7 @@ void SharedInterpPolyApproxData::pre_combine_data()
   return max_index;
   */
 
-  activeKey = driverRep->maximal_grid();
-  //update_active_iteratorsa(); // TO DO
+  active_key(driverRep->maximal_grid()); // update activeKey + active iterators
 }
 
 

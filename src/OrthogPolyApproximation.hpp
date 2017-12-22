@@ -145,9 +145,7 @@ protected:
   //- Heading: Member functions
   //
 
-  /// initialize expCoeff{s,Grads}Iter based on activeKey from sharedDataRep
-  void create_active_iterators();
-  /// update expCoeff{s,Grads}Iter based on activeKey from sharedDataRep
+  /// update expCoeff{s,Grads}Iter for new activeKey from sharedDataRep
   void update_active_iterators();
 
   /// size expansion{Coeffs,CoeffGrads} based on multiIndex
@@ -261,27 +259,21 @@ inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
 
 
-inline void OrthogPolyApproximation::create_active_iterators()
-{
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
-  std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
-
-  // returned iterator points to existing instance or new insertion
-  expCoeffsIter     =     expansionCoeffs.insert(rv_pair).first;
-  expCoeffGradsIter = expansionCoeffGrads.insert(rm_pair).first;
-}
-
-
 inline void OrthogPolyApproximation::update_active_iterators()
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  expCoeffsIter     =     expansionCoeffs.find(key);
+  expCoeffsIter = expansionCoeffs.find(key);
+  if (expCoeffsIter == expansionCoeffs.end()) {
+    std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
+    expCoeffsIter = expansionCoeffs.insert(rv_pair).first;
+  }
   expCoeffGradsIter = expansionCoeffGrads.find(key);
+  if (expCoeffGradsIter == expansionCoeffGrads.end()) {
+    std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
+    expCoeffGradsIter = expansionCoeffGrads.insert(rm_pair).first;
+  }
 }
 
 

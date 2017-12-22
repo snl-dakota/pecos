@@ -288,7 +288,10 @@ update_basis_distribution_parameters(const ShortArray& u_types,
 
 
 void SharedPolyApproxData::active_key(const UShortArray& key)
-{ activeKey = key; }
+{
+  activeKey = key;
+  //update_active_iterators(); // make virtual if used more broadly w/i Shared*
+}
 
 
 void SharedPolyApproxData::increment_data(size_t index)

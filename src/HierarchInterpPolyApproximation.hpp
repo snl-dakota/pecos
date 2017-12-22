@@ -147,9 +147,8 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// create {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter
-  void create_active_iterators();
-  /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter
+  /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter for new
+  /// activeKey from sharedDataRep
   void update_active_iterators();
 
   /// compute the value at a point for a particular interpolation level
@@ -431,29 +430,26 @@ inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 { }
 
 
-inline void HierarchInterpPolyApproximation::create_active_iterators()
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  std::pair<UShortArray, RealVector2DArray> rv_pair(key, RealVector2DArray());
-  std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
-
-  // returned iterator points to existing instance or new insertion
-  expT1CoeffsIter     =     expansionType1Coeffs.insert(rv_pair).first;
-  expT2CoeffsIter     =     expansionType2Coeffs.insert(rm_pair).first;
-  expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
-}
-
-
 inline void HierarchInterpPolyApproximation::update_active_iterators()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  expT1CoeffsIter     =     expansionType1Coeffs.find(key);
-  expT2CoeffsIter     =     expansionType2Coeffs.find(key);
+  expT1CoeffsIter = expansionType1Coeffs.find(key);
+  if (expT1CoeffsIter == expansionType1Coeffs.end()) {
+    std::pair<UShortArray, RealVector2DArray> rv_pair(key, RealVector2DArray());
+    expT1CoeffsIter = expansionType1Coeffs.insert(rv_pair).first;
+  }
+  expT2CoeffsIter = expansionType2Coeffs.find(key);
+  if (expT2CoeffsIter == expansionType2Coeffs.end()) {
+    std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
+    expT2CoeffsIter = expansionType2Coeffs.insert(rm_pair).first;
+  }
   expT1CoeffGradsIter = expansionType1CoeffGrads.find(key);
+  if (expT1CoeffGradsIter == expansionType1CoeffGrads.end()) {
+    std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
+    expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
+  }
 }
 
 

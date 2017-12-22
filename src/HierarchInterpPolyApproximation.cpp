@@ -26,7 +26,7 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  create_active_iterators();
+  update_active_iterators();
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;

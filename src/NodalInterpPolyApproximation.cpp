@@ -29,7 +29,7 @@ void NodalInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  create_active_iterators();
+  update_active_iterators();
 
   size_t num_colloc_pts = surrData.points(),
     num_deriv_vars = surrData.num_derivative_variables();

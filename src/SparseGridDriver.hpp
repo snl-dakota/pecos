@@ -85,6 +85,9 @@ public:
   /// print smolyakMultiIndex
   virtual void print_smolyak_multi_index() const = 0;
 
+  /// update active iterators based on activeKey
+  virtual void update_active_iterators();
+
   //
   //- Heading: virtual function redefinitions
   //
@@ -259,7 +262,10 @@ inline SparseGridDriver::~SparseGridDriver()
 
 
 inline void SparseGridDriver::active_key(const UShortArray& key)
-{ activeKey = key; }
+{
+  activeKey = key;
+  update_active_iterators();
+}
 
 
 inline unsigned short SparseGridDriver::level() const
@@ -357,6 +363,10 @@ inline void SparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
 
 inline void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
+{ /* default implementation is no-op */ }
+
+
+inline void SparseGridDriver::update_active_iterators()
 { /* default implementation is no-op */ }
 
 
