@@ -66,9 +66,13 @@ if (NOT BUILD_IN_TRILINOS)
   # First probe for system-installed Trilinos, respecting Trilinos_DIR if set
   find_package(Trilinos QUIET)
 
-  if(Trilinos_DIR)
-    message(STATUS
-      "Pecos using previously specified Trilinos in ${Trilinos_DIR}")
+  if(Trilinos_FOUND)
+    if(Trilinos_DIR)
+      message(STATUS
+	"Pecos using previously specified Trilinos in ${Trilinos_DIR}")
+    else()
+      message(STATUS "Pecos using external Trilinos")
+    endif()
   else()
 
     # If no parent project configured Teuchos, do so, using Teuchos_DIR if set
