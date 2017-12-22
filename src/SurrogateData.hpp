@@ -1368,7 +1368,10 @@ inline bool SurrogateData::anchor() const
 
 
 inline size_t SurrogateData::points() const
-{ return std::min(sdRep->varsDataIter->second.size(), sdRep->respDataIter->second.size()); }
+{
+  return std::min(sdRep->varsDataIter->second.size(),
+		  sdRep->respDataIter->second.size());
+}
 
 
 inline size_t SurrogateData::response_size() const
@@ -1415,8 +1418,9 @@ inline size_t SurrogateData::active_response_size() const
 
 inline size_t SurrogateData::popped_sets() const
 {
-  return std::min(sdRep->poppedVarsData.size(),
-		  sdRep->poppedRespData.size());
+  const UShortArray& key = sdRep->activeKey;
+  return std::min(sdRep->poppedVarsData[key].size(),
+		  sdRep->poppedRespData[key].size());
 }
 
 
@@ -1664,7 +1668,7 @@ inline void SurrogateData::clear_data()
   sdRep->failedRespData.erase(key);
   */
 
-  // Persist {vars,Resp}DataIter when clearing {vars,resp}Data:
+  // Retain valid {vars,Resp}DataIter when clearing {vars,resp}Data:
   sdRep->varsDataIter->second.clear();
   sdRep->respDataIter->second.clear();
   // anchorIndex and failedRespData can be pruned:
