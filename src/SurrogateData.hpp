@@ -861,9 +861,6 @@ public:
   SurrogateData copy(short sdv_mode = DEEP_COPY,
 		     short sdr_mode = DEEP_COPY) const;
 
-  /// assign activeKey and update active iterators
-  void active_key(const UShortArray& key);
-
   /// set anchor{Vars,Resp}
   void anchor_point(const SurrogateDataVars& sdv, const SurrogateDataResp& sdr);
   /// set {vars,resp}Data
@@ -969,15 +966,17 @@ public:
   /// return active failedRespData
   const SizetShortMap& failed_response_data() const;
 
+  /// assign activeKey and update active iterators
+  void active_key(const UShortArray& key);
+  /// reset initial state by clearing all model keys (empties all maps)
+  void clear_keys();
+
   /// clear active {vars,resp}Data
   void clear_active();
   /// clear all inactive data within {vars,resp}Data
   void clear_inactive();
   /// clear popped{Vars,Resp}Data
   void clear_popped();
-
-  /// remove all active/inactive keys from maps
-  void remove_all();
 
   /// return sdRep
   SurrogateDataRep* data_rep() const;
@@ -1712,7 +1711,7 @@ inline void SurrogateData::clear_popped()
 }
 
 
-inline void SurrogateData::remove_all()
+inline void SurrogateData::clear_keys()
 {
   sdRep->activeKey.clear();
   sdRep->varsData.clear(); sdRep->varsDataIter = sdRep->varsData.end();
