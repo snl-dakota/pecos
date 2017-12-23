@@ -304,6 +304,9 @@ public:
   //- Heading: Member functions
   //
 
+  /// return activeKey
+  const UShortArray& active_key() const;
+
   /// allocate orthogonal polynomial basis types and integration rules
   /// based on u_types and rule options
   static bool initialize_orthogonal_basis_types_rules(const ShortArray& u_types,
@@ -527,6 +530,10 @@ SharedPolyApproxData(short basis_type, size_t num_vars,
 
 inline SharedPolyApproxData::~SharedPolyApproxData()
 { }
+
+
+inline const UShortArray& SharedPolyApproxData::active_key() const
+{ return activeKey; }
 
 
 inline void SharedPolyApproxData::

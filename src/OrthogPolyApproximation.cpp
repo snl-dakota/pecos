@@ -170,12 +170,8 @@ void OrthogPolyApproximation::combine_coefficients()
 
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  /* TO DO: debug and propagate...
-  // propagate key selection from pre_combine_data()
-  origSurrData.active_key(data_rep->activeKey);
   if (deep_copied_surrogate_data())
     surrData.active_key(data_rep->activeKey);
-  */
 
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
