@@ -354,8 +354,8 @@ protected:
   /// iterator pointing to active node in approxOrder
   std::map<UShortArray, UShortArray>::iterator approxOrdIter;
 
-  // initial value of approxOrder passed through ctor
-  //UShortArray approxOrderSpec;
+  /// initial value of approxOrder passed through ctor
+  UShortArray approxOrderSpec;
   /// previous value of active approxOrder; used for detecting when a
   /// multiIndex update is needed
   UShortArray approxOrderPrev;
@@ -415,7 +415,7 @@ private:
 inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
-  SharedPolyApproxData(basis_type, num_vars)//, approxOrderSpec(approx_order)
+  SharedPolyApproxData(basis_type, num_vars), approxOrderSpec(approx_order)
 {
   update_active_iterators();
   approxOrdIter->second = approx_order;
@@ -427,8 +427,8 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars,
 			   const ExpansionConfigOptions& ec_options,
 			   const BasisConfigOptions&     bc_options):
-  SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options)
-  //, approxOrderSpec(approx_order)
+  SharedPolyApproxData(basis_type, num_vars, ec_options, bc_options),
+  approxOrderSpec(approx_order)
 {
   update_active_iterators();
   approxOrdIter->second = approx_order;
@@ -443,7 +443,7 @@ inline void SharedOrthogPolyApproxData::update_active_iterators()
 {
   approxOrdIter = approxOrder.find(activeKey);
   if (approxOrdIter == approxOrder.end()) {
-    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());//, approxOrderSpec);
+    std::pair<UShortArray, UShortArray> ua_pair(activeKey, approxOrderSpec);//, UShortArray());
     approxOrdIter = approxOrder.insert(ua_pair).first;
   }
   multiIndexIter = multiIndex.find(activeKey);

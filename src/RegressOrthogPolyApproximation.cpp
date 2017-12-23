@@ -147,6 +147,7 @@ void RegressOrthogPolyApproximation::allocate_arrays()
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
   if (sparseSoln) {
+    update_active_iterators();
     allocate_total_sobol(); // no dependencies
 
     // defer allocations until sparsity is known
