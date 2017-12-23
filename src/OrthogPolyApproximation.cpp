@@ -168,10 +168,10 @@ void OrthogPolyApproximation::combine_coefficients()
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  /* TO DO: debug and propagate...
-  // propagate key selection from pre_combine_data()
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
+  /* TO DO: debug and propagate...
+  // propagate key selection from pre_combine_data()
   origSurrData.active_key(data_rep->activeKey);
   if (deep_copied_surrogate_data())
     surrData.active_key(data_rep->activeKey);
