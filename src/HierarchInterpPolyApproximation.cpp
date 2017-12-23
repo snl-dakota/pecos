@@ -402,6 +402,11 @@ void HierarchInterpPolyApproximation::clear_inactive()
 
 void HierarchInterpPolyApproximation::combine_coefficients()
 {
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  if (deep_copied_surrogate_data())
+    surrData.active_key(data_rep->activeKey);
+
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
@@ -410,8 +415,6 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   size_t i, j, num_pts = surrData.points();
   Real curr_val, stored_val;
   /*
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   short combine_type = data_rep->expConfigOptions.combineType;
   RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;

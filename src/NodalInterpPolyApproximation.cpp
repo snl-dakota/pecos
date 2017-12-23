@@ -255,11 +255,14 @@ void NodalInterpPolyApproximation::combine_coefficients()
   write_data(PCout, expansionType1Coeffs);
 #endif // DEBUG
 
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  if (deep_copied_surrogate_data())
+    surrData.active_key(data_rep->activeKey);
+
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   short combine_type = data_rep->expConfigOptions.combineType;
   RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
   RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;

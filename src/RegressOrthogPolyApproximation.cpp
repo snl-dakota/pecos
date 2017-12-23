@@ -596,6 +596,12 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   if (sparseIndices.empty())
     OrthogPolyApproximation::combine_coefficients();
   else {
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    const UShortArray& key = data_rep->activeKey;
+    if (deep_copied_surrogate_data())
+      surrData.active_key(key);
+
     update_active_iterators();// activeKey updated in SharedOrthogPolyApproxData
     allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
@@ -603,10 +609,7 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     // sparse indices arrays (not optimal for performance but a lot less code),
     // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
     // following aggregation.
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
     const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-    const UShortArray& key = data_rep->activeKey;
     std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.begin();
     std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
     for (; sp_it!=sparseIndices.end() && mi_cit!=mi.end(); ++sp_it, ++mi_cit) {
