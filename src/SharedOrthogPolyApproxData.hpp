@@ -130,6 +130,7 @@ protected:
   //
 
   void active_key(const UShortArray& key);
+  void clear_keys();
 
   void allocate_data(size_t index = _NPOS);
   void  pre_combine_data();
@@ -411,21 +412,6 @@ private:
 };
 
 
-inline void SharedOrthogPolyApproxData::update_active_iterators()
-{
-  approxOrdIter = approxOrder.find(activeKey);
-  if (approxOrdIter == approxOrder.end()) {
-    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());//, approxOrderSpec);
-    approxOrdIter = approxOrder.insert(ua_pair).first;
-  }
-  multiIndexIter = multiIndex.find(activeKey);
-  if (multiIndexIter == multiIndex.end()) {
-    std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
-    multiIndexIter = multiIndex.insert(u2a_pair).first;
-  }
-}
-
-
 inline SharedOrthogPolyApproxData::
 SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 			   size_t num_vars):
@@ -451,6 +437,21 @@ SharedOrthogPolyApproxData(short basis_type, const UShortArray& approx_order,
 
 inline SharedOrthogPolyApproxData::~SharedOrthogPolyApproxData()
 { }
+
+
+inline void SharedOrthogPolyApproxData::update_active_iterators()
+{
+  approxOrdIter = approxOrder.find(activeKey);
+  if (approxOrdIter == approxOrder.end()) {
+    std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());//, approxOrderSpec);
+    approxOrdIter = approxOrder.insert(ua_pair).first;
+  }
+  multiIndexIter = multiIndex.find(activeKey);
+  if (multiIndexIter == multiIndex.end()) {
+    std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
+    multiIndexIter = multiIndex.insert(u2a_pair).first;
+  }
+}
 
 
 inline const UShort2DArray& SharedOrthogPolyApproxData::multi_index() const

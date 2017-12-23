@@ -78,6 +78,7 @@ protected:
   //
 
   void active_key(const UShortArray& key);
+  void clear_keys();
 
   void allocate_data(size_t index = _NPOS);
   void increment_data(size_t index = _NPOS);

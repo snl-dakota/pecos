@@ -969,12 +969,15 @@ public:
   /// return active failedRespData
   const SizetShortMap& failed_response_data() const;
 
-  /// clear {vars,resp}Data
-  void clear_data();
-  /// clear inactive data within {vars,resp}Data
+  /// clear active {vars,resp}Data
+  void clear_active();
+  /// clear all inactive data within {vars,resp}Data
   void clear_inactive();
   /// clear popped{Vars,Resp}Data
   void clear_popped();
+
+  /// remove all active/inactive keys from maps
+  void remove_all();
 
   /// return sdRep
   SurrogateDataRep* data_rep() const;
@@ -1654,7 +1657,7 @@ inline SurrogateData SurrogateData::copy(short sdv_mode, short sdr_mode) const
 }
 
 
-inline void SurrogateData::clear_data()
+inline void SurrogateData::clear_active()
 {
   /*
   // Too aggressive due to DataFitSurrModel::build_approximation() call to
@@ -1706,6 +1709,20 @@ inline void SurrogateData::clear_popped()
   sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
   sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
   sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
+}
+
+
+inline void SurrogateData::remove_all()
+{
+  sdRep->activeKey.clear();
+  sdRep->varsData.clear(); sdRep->varsDataIter = sdRep->varsData.end();
+  sdRep->respData.clear(); sdRep->respDataIter = sdRep->respData.end();
+  sdRep->anchorIndex.clear();
+  sdRep->failedRespData.clear();
+
+  sdRep->poppedVarsData.clear();
+  sdRep->poppedRespData.clear();
+  sdRep->popCountStack.clear();
 }
 
 

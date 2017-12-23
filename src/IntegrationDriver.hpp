@@ -91,6 +91,8 @@ public:
 
   /// set key identifying active data set
   virtual void active_key(const UShortArray& key);
+  /// remove all keyed data sets
+  virtual void clear_keys();
 
   /// clear inactive grid settings following their usage/combination
   virtual void clear_inactive();

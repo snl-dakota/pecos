@@ -250,7 +250,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
-      activeKey = driverRep->maximal_grid();
+      active_key(driverRep->maximal_grid());
       UShortArray& active_ao = approxOrder[activeKey];
       std::map<UShortArray, UShortArray>::iterator ao_it; size_t i;
       for (ao_it=approxOrder.begin(); ao_it!=approxOrder.end(); ++ao_it)
@@ -265,7 +265,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
-      activeKey = driverRep->maximal_grid();
+      active_key(driverRep->maximal_grid());
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
       size_t s, i, v, index, num_mi = multiIndex.size();

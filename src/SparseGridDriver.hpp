@@ -93,6 +93,7 @@ public:
   //
 
   void active_key(const UShortArray& key);
+  void clear_keys();
 
   //
   //- Heading: Member functions
@@ -265,6 +266,13 @@ inline void SparseGridDriver::active_key(const UShortArray& key)
 {
   activeKey = key;
   update_active_iterators();
+}
+
+
+inline void SparseGridDriver::clear_keys()
+{
+  activeKey.clear();
+  oldMultiIndex.clear(); activeMultiIndex.clear(); computedTrialSets.clear();
 }
 
 

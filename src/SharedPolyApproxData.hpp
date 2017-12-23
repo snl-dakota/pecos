@@ -264,6 +264,8 @@ public:
 
   /// set activeKey
   virtual void active_key(const UShortArray& key);
+  /// remove all keys
+  virtual void clear_keys();
 
   /// allocate the shared data prior to building the set of approximations
   virtual void allocate_data(size_t index = _NPOS) = 0;

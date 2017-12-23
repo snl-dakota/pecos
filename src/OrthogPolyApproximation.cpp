@@ -168,11 +168,18 @@ void OrthogPolyApproximation::combine_coefficients()
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
+  /* TO DO: debug and propagate...
+  // propagate key selection from pre_combine_data()
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  origSurrData.active_key(data_rep->activeKey);
+  if (deep_copied_surrogate_data())
+    surrData.active_key(data_rep->activeKey);
+  */
+
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
   std::map<UShortArray, RealVector>::iterator ec_it;
   std::map<UShortArray, RealMatrix>::iterator ecg_it;
   switch (data_rep->expConfigOptions.combineType) {

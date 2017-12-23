@@ -103,6 +103,13 @@ void SharedInterpPolyApproxData::active_key(const UShortArray& key)
 }
 
 
+void SharedInterpPolyApproxData::clear_keys()
+{
+  SharedPolyApproxData::clear_keys();
+  driverRep->clear_keys();
+}
+
+
 void SharedInterpPolyApproxData::allocate_data(size_t index)
 {
   // use barycentric formulation for global Lagrange basis polynomials.

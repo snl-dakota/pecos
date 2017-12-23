@@ -61,6 +61,7 @@ public:
   void swap_grid(size_t index);
   */
   void clear_inactive();
+  void clear_keys();
 
   const UShortArray& maximal_grid() const;
 
@@ -272,6 +273,18 @@ inline void HierarchSparseGridDriver::update_active_iterators()
     collocIndIter = collocIndices.insert(s3a_pair).first;
   }
   */
+}
+
+
+inline void HierarchSparseGridDriver::clear_keys()
+{
+  SparseGridDriver::clear_keys();
+
+  smolyakMultiIndex.clear();  smolMIIter = smolyakMultiIndex.end();
+  collocKey.clear();       collocKeyIter = collocKey.end();
+  //collocIndices.clear(); collocIndIter = collocIndices.end();
+  type1WeightSets.clear(); type2WeightSets.clear();
+  poppedT1WtSets.clear();  poppedT2WtSets.clear();
 }
 
 

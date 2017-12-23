@@ -79,6 +79,7 @@ public:
   void swap_grid(size_t index);
   */
   void clear_inactive();
+  void clear_keys();
 
   const UShortArray& maximal_grid() const;
 
@@ -376,6 +377,19 @@ inline void CombinedSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, Sizet2DArray> s2a_pair(activeKey, Sizet2DArray());
     collocIndIter = collocIndices.insert(s2a_pair).first;
   }
+}
+
+
+inline void CombinedSparseGridDriver::clear_keys()
+{
+  SparseGridDriver::clear_keys();
+
+  smolyakMultiIndex.clear();  smolMIIter = smolyakMultiIndex.end();
+  smolyakCoeffs.clear();  smolCoeffsIter = smolyakCoeffs.end();
+  collocKey.clear();       collocKeyIter = collocKey.end();
+  collocIndices.clear();   collocIndIter = collocIndices.end();
+  type1WeightSets.clear(); type2WeightSets.clear();
+  uniqueIndexMapping.clear();
 }
 
 

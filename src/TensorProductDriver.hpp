@@ -49,6 +49,7 @@ public:
   //
 
   void active_key(const UShortArray& key);
+  void clear_keys();
 
   void compute_grid(RealMatrix& variable_sets);
   int  grid_size();
@@ -214,6 +215,15 @@ inline void TensorProductDriver::active_key(const UShortArray& key)
 {
   activeKey = key;
   update_active_iterators();
+}
+
+
+inline void TensorProductDriver::clear_keys()
+{
+  activeKey.clear();
+  levelIndex.clear(); levelIndIter  = levelIndex.end();
+  collocKey.clear();  collocKeyIter = collocKey.end();
+  type1WeightSets.clear(); type2WeightSets.clear();
 }
 
 

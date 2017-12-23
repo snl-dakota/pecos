@@ -72,6 +72,23 @@ void SharedOrthogPolyApproxData::active_key(const UShortArray& key)
 }
 
 
+void SharedOrthogPolyApproxData::clear_keys()
+{
+  SharedPolyApproxData::clear_keys();
+
+  approxOrder.clear(); approxOrdIter = approxOrder.end();
+  multiIndex.clear(); multiIndexIter = multiIndex.end();
+  tpMultiIndex.clear(); tpMultiIndexMap.clear(); tpMultiIndexMapRef.clear();
+  poppedTPMultiIndex.clear(); poppedTPMultiIndexMap.clear();
+  poppedTPMultiIndexMapRef.clear();
+
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case COMBINED_SPARSE_GRID: case QUADRATURE:
+    driverRep->clear_keys(); break;
+  }
+}
+
+
 void SharedOrthogPolyApproxData::allocate_data(const UShort2DArray& multi_index)
 {
   multiIndex[activeKey] = multi_index;
@@ -399,7 +416,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
 
   // For open-ended number of stored grids: retrieve the most refined from the
   // existing grids (from sequence specification + any subsequent refinement)
-  activeKey = maximal_expansion();
+  active_key(maximal_expansion());
 
   // Most general: overlay all grid refinement levels to create a new superset
   //size_t new_index = overlay_maximal_grid();

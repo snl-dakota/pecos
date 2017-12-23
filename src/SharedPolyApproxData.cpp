@@ -294,6 +294,13 @@ void SharedPolyApproxData::active_key(const UShortArray& key)
 }
 
 
+void SharedPolyApproxData::clear_keys()
+{
+  activeKey.clear();
+  poppedLevMultiIndex.clear();
+}
+
+
 void SharedPolyApproxData::increment_data(size_t index)
 {
   // Run-time error instead of compile-time (not pure virtual)

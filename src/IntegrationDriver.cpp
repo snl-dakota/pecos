@@ -405,6 +405,14 @@ void IntegrationDriver::active_key(const UShortArray& key)
 }
 
 
+void IntegrationDriver::clear_keys()
+{
+  if (driverRep)
+    driverRep->clear_keys();
+  // default is no-op
+}
+
+
 
 void IntegrationDriver::clear_inactive()
 {
