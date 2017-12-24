@@ -256,7 +256,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
       active_key(driverRep->maximal_grid());
-      UShortArray& active_ao = approxOrder[activeKey];
+      UShortArray& active_ao = approxOrdIter->second;
       std::map<UShortArray, UShortArray>::iterator ao_it; size_t i;
       for (ao_it=approxOrder.begin(); ao_it!=approxOrder.end(); ++ao_it)
 	if (ao_it->first != activeKey) {

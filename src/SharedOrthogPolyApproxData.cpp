@@ -23,8 +23,8 @@ namespace Pecos {
 
 void SharedOrthogPolyApproxData::allocate_data(size_t index)
 {
-  UShortArray&   approx_order = approxOrder[activeKey];
-  UShort2DArray& multi_index  =  multiIndex[activeKey];
+  UShortArray&   approx_order =  approxOrdIter->second;
+  UShort2DArray& multi_index  = multiIndexIter->second;
 
   // detect changes since previous construction
   // *** TO DO: replace with a flag updated in set functions, once sobol
@@ -95,7 +95,7 @@ void SharedOrthogPolyApproxData::clear_keys()
 
 void SharedOrthogPolyApproxData::allocate_data(const UShort2DArray& multi_index)
 {
-  multiIndex[activeKey] = multi_index;
+  multiIndexIter->second = multi_index;
   allocate_component_sobol(multi_index);
 
   // output form of imported expansion
@@ -432,7 +432,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     // An update in place is sufficient.
     size_t i, num_combine = multiIndex.size() - 1, cntr = 0, combine_mi_map_ref;
     combinedMultiIndexMap.resize(num_combine);
-    UShort2DArray& active_mi = multiIndex[activeKey];
+    UShort2DArray& active_mi = multiIndexIter->second;
     std::map<UShortArray, UShort2DArray>::iterator mi_it;
     for (mi_it = multiIndex.begin(); mi_it != multiIndex.end(); ++mi_it)
       if (mi_it->first != activeKey) {
@@ -449,7 +449,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     // (specialized in SharedProjectOrthogPolyApproxData::pre_combine_data())
 
     // update approxOrder and define combinedMultiIndex
-    UShortArray& active_ao = approxOrder[activeKey];
+    UShortArray& active_ao = approxOrdIter->second;
     std::map<UShortArray, UShortArray>::iterator ao_it; size_t i;
     for (ao_it=approxOrder.begin(); ao_it!=approxOrder.end(); ++ao_it)
       if (ao_it->first != activeKey) {
@@ -475,7 +475,7 @@ void SharedOrthogPolyApproxData::post_combine_data()
 {
   switch (expConfigOptions.combineType) {
   case MULT_COMBINE:
-    std::swap(multiIndex[activeKey], combinedMultiIndex); // pointer swap
+    std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
     combinedMultiIndex.clear();
     break;
   }
