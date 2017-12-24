@@ -356,9 +356,12 @@ protected:
 
   /// initial value of approxOrder passed through ctor
   UShortArray approxOrderSpec;
-  /// previous value of active approxOrder; used for detecting when a
-  /// multiIndex update is needed
+  /// previous value of active approxOrder; used for detecting when an
+  /// expansion update is needed in allocate_arrays()
   UShortArray approxOrderPrev;
+  /// previous value of activeKey; used for detecting when an
+  /// expansion update is needed in allocate_arrays()
+  UShortArray activeKeyPrev;
 
   /// number of exp terms-by-number of vars array for identifying the orders
   /// of the one-dimensional orthogonal polynomials contributing to each
@@ -450,6 +453,7 @@ inline void SharedOrthogPolyApproxData::update_active_iterators()
   if (multiIndexIter == multiIndex.end()) {
     std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
     multiIndexIter = multiIndex.insert(u2a_pair).first;
+    //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
   }
 }
 
@@ -501,7 +505,12 @@ keyed_expansion_order(const UShortArray& key) const
 
 inline void SharedOrthogPolyApproxData::
 expansion_order(const UShortArray& order)
-{ approxOrdIter->second = order; } // multiIndex updated in allocate_arrays()
+{
+  if (approxOrdIter->second != order) {
+    approxOrdIter->second = order;
+    //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
+  }
+}
 
 
 inline void SharedOrthogPolyApproxData::increment_order()
@@ -510,6 +519,7 @@ inline void SharedOrthogPolyApproxData::increment_order()
   UShortArray& approx_order = approxOrdIter->second;
   for (size_t i=0; i<numVars; ++i)
     ++approx_order[i];
+  //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
 }
 
 

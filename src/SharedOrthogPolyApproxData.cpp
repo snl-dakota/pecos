@@ -27,10 +27,13 @@ void SharedOrthogPolyApproxData::allocate_data(size_t index)
   UShort2DArray& multi_index  =  multiIndex[activeKey];
 
   // detect changes since previous construction
-  bool update_exp_form = (approx_order != approxOrderPrev);
+  // *** TO DO: replace with a flag updated in set functions, once sobol
+  // ***        index bookkeeping is more modular.
+  bool update_exp_form
+    = (approx_order != approxOrderPrev || activeKey != activeKeyPrev);
   //bool restore_exp_form = (multiIndex.size() != t*_*_terms(approxOrder));
 
-  if (update_exp_form) { //|| restore_exp_form) {
+  if (/*updateExpForm*/update_exp_form) { //|| restore_exp_form) {
     inflate_scalar(approx_order, numVars); // promote scalar->vector, if needed
     switch (expConfigOptions.expBasisType) {
     case DEFAULT_BASIS: // should not occur (reassigned in NonDPCE ctor)
@@ -43,6 +46,7 @@ void SharedOrthogPolyApproxData::allocate_data(size_t index)
     allocate_component_sobol(multi_index);
     // Note: defer this if update_exp_form is needed downstream
     approxOrderPrev = approx_order;
+    activeKeyPrev   = activeKey;
   }
 
   // output (candidate) expansion form
@@ -121,7 +125,8 @@ allocate_component_sobol(const UShort2DArray& multi_index)
 	  allocate_main_interaction_sobol(num_v); // all n-way interactions
       }
       else {
-	bool update_exp_form = (approxOrder != approxOrderPrev);
+	bool update_exp_form
+	  = (approxOrder != approxOrderPrev || activeKey != activeKeyPrev);
 	if (update_exp_form)
 	  allocate_main_interaction_sobol(max_order);
       }

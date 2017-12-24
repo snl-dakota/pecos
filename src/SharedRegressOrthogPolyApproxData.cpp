@@ -43,7 +43,8 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
   // Adapted basis selection:
 
   // detect changes since previous construction
-  bool update_exp_form = (approx_order != approxOrderPrev);
+  bool update_exp_form
+    = (approx_order != approxOrderPrev || activeKey != activeKeyPrev);
   //bool restore_exp_form = (multi_index.size() != t*_*_terms(approx_order));
 
   if (update_exp_form) { //|| restore_exp_form) {
@@ -90,6 +91,7 @@ void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
     allocate_component_sobol(multi_index);
     // Note: defer this if update_exp_form is needed downstream
     approxOrderPrev = approx_order;
+    activeKeyPrev   = activeKey;
   }
 
   // output (candidate) expansion form
@@ -124,7 +126,8 @@ void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
   // approxOrder updated from NonDPolynomialChaos --> propagate to multiIndex
   UShortArray&  approx_order =  approxOrdIter->second;
   UShort2DArray& multi_index = multiIndexIter->second;
-  bool update_exp_form = (approx_order != approxOrderPrev);
+  bool update_exp_form
+    = (approx_order != approxOrderPrev || activeKey != activeKeyPrev);
   if (update_exp_form) {
     switch (expConfigOptions.expBasisType) {
     case TENSOR_PRODUCT_BASIS:
@@ -134,6 +137,7 @@ void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
     }
     allocate_component_sobol(multi_index);
     approxOrderPrev = approx_order;
+    activeKeyPrev   = activeKey;
   }
 }
 

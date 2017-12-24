@@ -32,7 +32,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)driverRep;
     const UShortArray& quad_order = tpq_driver->quadrature_order();
-    bool update_exp_form = (quad_order != quadOrderPrev);
+    bool update_exp_form
+      = (quad_order != quadOrderPrev || activeKey != activeKeyPrev);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
     if (update_exp_form) {
@@ -48,6 +49,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 
       allocate_component_sobol(mi);
       quadOrderPrev = quad_order;
+      activeKeyPrev = activeKey;
     }
 
 #ifdef DEBUG
@@ -68,7 +70,8 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
   case CUBATURE: {
     CubatureDriver* cub_driver = (CubatureDriver*)driverRep;
     //unsigned short cub_int_order = cub_driver->integrand_order();
-    //bool update_exp_form = (cub_int_order != cubIntOrderPrev);
+    //bool update_exp_form
+    //  = (cub_int_order != cubIntOrderPrev || activeKey != activeKeyPrev);
 
     //if (update_exp_form) {
       UShortArray integrand_order(numVars, cub_driver->integrand_order());
@@ -82,6 +85,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 
       allocate_component_sobol(mi);
       //cubIntOrderPrev = cub_int_order; // update reference point
+      //activeKeyPrev = activeKey;
     //}
 
     PCout << "Orthogonal polynomial approximation order = { ";
@@ -96,7 +100,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
     const RealVector& aniso_wts = csg_driver->anisotropic_weights();
     bool update_exp_form
       = (ssg_level != ssgLevelPrev || aniso_wts != ssgAnisoWtsPrev ||
-	 expConfigOptions.refinementControl ==
+	 activeKey != activeKeyPrev || expConfigOptions.refinementControl ==
 	 DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
     // *** TO DO: capture updates to parameterized/numerical polynomials?
 
@@ -109,6 +113,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 
       allocate_component_sobol(mi);
       ssgLevelPrev = ssg_level; ssgAnisoWtsPrev = aniso_wts;
+      activeKeyPrev = activeKey;
     }
     PCout << "Orthogonal polynomial approximation level = " << ssg_level
 	  << " using tensor integration and tensor sum expansion of "
