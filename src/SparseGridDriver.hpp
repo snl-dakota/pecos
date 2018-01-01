@@ -55,7 +55,7 @@ public:
   virtual void initialize_sets() = 0;
   /// update smolyakMultiIndex with a new trial set for use within the
   /// generalized sparse grid procedure
-  virtual void push_trial_set(const UShortArray& set) = 0;
+  virtual void push_trial_set(const UShortArray& set);
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex
   virtual void restore_set();
@@ -63,7 +63,7 @@ public:
   virtual void compute_trial_grid(RealMatrix& var_sets);
   /// remove the previously pushed trial set from smolyakMultiIndex
   /// during the course of the generalized sparse grid procedure
-  virtual void pop_trial_set() = 0;
+  virtual void pop_trial_set();
   /// merge reference sets with trial set and update reference set
   virtual void merge_set();
   /// accept all remaining trial sets within the generalized sparse
