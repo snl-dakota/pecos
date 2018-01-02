@@ -177,8 +177,9 @@ int HierarchSparseGridDriver::grid_size()
   if (updateGridSize) {
     numCollocPts = 0;
     const UShort4DArray& colloc_key = collocKeyIter->second;
-    if (colloc_key.size() == ssgLevel+1) { // collocKey already up to date
-      for (unsigned short i=0; i<=ssgLevel; ++i) {
+    unsigned short ssg_lev = ssgLevIter->second;
+    if (colloc_key.size() == ssg_lev + 1) { // collocKey already up to date
+      for (unsigned short i=0; i<=ssg_lev; ++i) {
 	const UShort3DArray& key_i = colloc_key[i];
 	size_t j, num_sets = key_i.size();
 	for (j=0; j<num_sets; ++j)
@@ -191,7 +192,7 @@ int HierarchSparseGridDriver::grid_size()
       UShortArray delta_sizes(numVars);
       unsigned short lev, set, num_sets;
       const UShort3DArray& sm_mi = smolMIIter->second;
-      for (lev=0; lev<=ssgLevel; ++lev) {
+      for (lev=0; lev<=ssg_lev; ++lev) {
 	const UShort2DArray& sm_mi_l = sm_mi[lev];
 	num_sets = sm_mi_l.size();
 	for (set=0; set<num_sets; ++set) {
@@ -209,14 +210,15 @@ int HierarchSparseGridDriver::grid_size()
 
 void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 {
-  UShort3DArray& sm_mi = smolMIIter->second;
- 
+  UShort3DArray& sm_mi   = smolMIIter->second;
+  unsigned short ssg_lev = ssgLevIter->second;
+
   if (clear_sm_mi) sm_mi.clear();
 
   size_t prev_sm_len = sm_mi.size();
   // anisotropic weight updates always accompanied by a level increment, so
   // we are already up to date for both iso and aniso cases if equal:
-  if (prev_sm_len == ssgLevel+1)
+  if (prev_sm_len == ssg_lev + 1)
     return;
 
   // this function is for use with isotropic/anisotropic grids, including
@@ -236,15 +238,15 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
   // For anisotropic, a weighted linear index set constraint is used.
 
   size_t lev;
-  sm_mi.resize(ssgLevel+1);
+  sm_mi.resize(ssg_lev + 1);
   if (dimIsotropic)
-    for (lev=prev_sm_len; lev<=ssgLevel; ++lev)
+    for (lev=prev_sm_len; lev<=ssg_lev; ++lev)
       SharedPolyApproxData::total_order_multi_index(lev, numVars, sm_mi[lev]);
   else { // utilize webbur::sandia_sgmga_vcn_ordered
 
     // With scaling alpha_min = 1: q_min < |alpha . j| <= q_max.
-    IntArray x(numVars), x_max(numVars); //x_max = ssgLevel;
-    Real q_min = -1., q_max = ssgLevel; // no lower bound for hierarchical
+    IntArray x(numVars), x_max(numVars); //x_max = ssg_lev;
+    Real q_min = -1., q_max = ssg_lev; // no lower bound for hierarchical
     for (size_t i=0; i<numVars; ++i) {
       const Real& wt_i = anisoLevelWts[i];
       // minimum nonzero weight is scaled to 1, so just catch special case of 0
@@ -277,7 +279,7 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 #ifdef DEBUG
   PCout << "HierarchSparseGridDriver::update_smolyak_multi_index():\n";
   size_t set, num_sets;
-  for (lev=0; lev<=ssgLevel; ++lev) {
+  for (lev=0; lev<=ssg_lev; ++lev) {
     num_sets = sm_mi[lev].size();
     for (set=0; set<num_sets; ++set)
       PCout << "Smolyak multi_index[" << lev << "][" << set << "]:\n"
@@ -290,16 +292,17 @@ void HierarchSparseGridDriver::update_smolyak_multi_index(bool clear_sm_mi)
 void HierarchSparseGridDriver::assign_collocation_key()
 {
   UShort4DArray& colloc_key = collocKeyIter->second;
+  unsigned short ssg_lev    = ssgLevIter->second;
 
-  if (colloc_key.size() == ssgLevel+1)
+  if (colloc_key.size() == ssg_lev+1)
     return;
 
-  colloc_key.resize(ssgLevel+1);
+  colloc_key.resize(ssg_lev+1);
   if (nestedGrid) {
     size_t lev, set, num_sets;
     UShort2DArray delta_keys(numVars);
     const UShort3DArray& sm_mi = smolMIIter->second;
-    for (lev=0; lev<=ssgLevel; ++lev) {
+    for (lev=0; lev<=ssg_lev; ++lev) {
       const UShort2DArray& sm_mi_l = sm_mi[lev];
       UShort3DArray&         key_l = colloc_key[lev];
       num_sets = sm_mi_l.size();
@@ -317,7 +320,7 @@ void HierarchSparseGridDriver::assign_collocation_key()
 #ifdef DEBUG
   PCout << "HierarchSparseGridDriver::assign_collocation_key():\n";
   size_t lev, set, pt, num_sets, num_tp_pts;
-  for (lev=0; lev<=ssgLevel; ++lev) {
+  for (lev=0; lev<=ssg_lev; ++lev) {
     num_sets = colloc_key[lev].size();
     for (set=0; set<num_sets; ++set) {
       num_tp_pts = colloc_key[lev][set].size();
@@ -334,6 +337,7 @@ void HierarchSparseGridDriver::update_collocation_key()
 {
   UShort4DArray&  colloc_key = collocKeyIter->second;
   const UShort3DArray& sm_mi =    smolMIIter->second;
+  unsigned short     ssg_lev =    ssgLevIter->second;
 
   size_t sm_mi_len = sm_mi.size();
   if (colloc_key.size() < sm_mi_len)
@@ -359,11 +363,11 @@ void HierarchSparseGridDriver::update_collocation_key()
   else { // isotropic and anisotropic grid refinements
     // define incrementSets to track iso/aniso grid refinement increment
     size_t lev, set, start_set, num_sets;
-    incrementSets.resize(ssgLevel+1);
-    for (lev=0; lev<=ssgLevel; ++lev)
+    incrementSets.resize(ssg_lev+1);
+    for (lev=0; lev<=ssg_lev; ++lev)
       incrementSets[lev] = colloc_key[lev].size();
     // update collocKey to correspond to smolyakMultiIndex
-    for (lev=0; lev<=ssgLevel; ++lev) {
+    for (lev=0; lev<=ssg_lev; ++lev) {
       const UShort2DArray& sm_mi_l =      sm_mi[lev];
       UShort3DArray&         key_l = colloc_key[lev];
       start_set = incrementSets[lev]; num_sets = sm_mi_l.size();
@@ -378,7 +382,7 @@ void HierarchSparseGridDriver::update_collocation_key()
 #ifdef DEBUG
     PCout << "HierarchSparseGridDriver::update_collocation_key():\n";
     size_t pt, num_tp_pts;
-    for (lev=0; lev<=ssgLevel; ++lev) {
+    for (lev=0; lev<=ssg_lev; ++lev) {
       start_set = incrementSets[lev]; num_sets = colloc_key[lev].size();
       for (set=start_set; set<num_sets; ++set) {
 	num_tp_pts = colloc_key[lev][set].size();
@@ -395,13 +399,14 @@ void HierarchSparseGridDriver::update_collocation_key()
 void HierarchSparseGridDriver::assign_collocation_indices()
 {
   //Sizet3DArray& colloc_ind = collocIndIter->second;
-  if (collocIndices.size() == ssgLevel+1)
+  unsigned short ssg_lev     = ssgLevIter->second;
+  if (collocIndices.size()  == ssg_lev+1)
     return;
 
-  collocIndices.resize(ssgLevel+1);
+  collocIndices.resize(ssg_lev+1);
   size_t lev, set, pt, cntr = 0, num_sets, num_tp_pts;
   const UShort4DArray& colloc_key = collocKeyIter->second;
-  for (lev=0; lev<=ssgLevel; ++lev) {
+  for (lev=0; lev<=ssg_lev; ++lev) {
     const UShort3DArray& key_l = colloc_key[lev];
     num_sets = key_l.size();
     Sizet2DArray& indices_l = collocIndices[lev];
@@ -420,7 +425,7 @@ void HierarchSparseGridDriver::assign_collocation_indices()
 #ifdef DEBUG
   PCout << "HierarchSparseGridDriver::assign_collocation_indices():\n"
 	<< "numCollocPts = " << numCollocPts << '\n';
-  for (lev=0; lev<=ssgLevel; ++lev) {
+  for (lev=0; lev<=ssg_lev; ++lev) {
     num_sets = collocIndices[lev].size();
     for (set=0; set<num_sets; ++set)
       PCout << "Collocation indices[" << lev << "][" << set << "]:\n"
@@ -478,7 +483,7 @@ void HierarchSparseGridDriver::update_collocation_indices()
 #ifdef DEBUG
     PCout << "HierarchSparseGridDriver::update_collocation_indices():\n"
 	  << "numCollocPts = " << numCollocPts << '\n';
-    for (lev=0; lev<=ssgLevel; ++lev) {
+    for (lev=0; lev<=ssgLevIter->second; ++lev) {
       start_set = incrementSets[lev]; num_sets = collocIndices[lev].size();
       for (set=start_set; set<num_sets; ++set)
 	PCout << "Collocation indices[" << lev << "][" << set << "]:\n"
@@ -849,10 +854,11 @@ void HierarchSparseGridDriver::initialize_sets()
 {
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
   const UShort3DArray& sm_mi = smolMIIter->second;
+  unsigned short ssg_lev = ssgLevIter->second;
   UShortArraySet& old_mi = oldMultiIndex[activeKey];
   //old_mi = sm_mi;
   old_mi.clear();
-  for (unsigned short lev=0; lev<=ssgLevel; ++lev)
+  for (unsigned short lev=0; lev<=ssg_lev; ++lev)
     old_mi.insert(sm_mi[lev].begin(), sm_mi[lev].end());
 
   // computedTrialSets no longer cleared in finalize_sets(), so do on init
@@ -861,7 +867,7 @@ void HierarchSparseGridDriver::initialize_sets()
   // compute initial set A (active) by applying add_active_neighbors()
   // to the frontier of smolyakMultiIndex:
   if (dimIsotropic) {
-    const UShort2DArray& sm_mi_l = sm_mi[ssgLevel];
+    const UShort2DArray& sm_mi_l = sm_mi[ssg_lev];
     size_t i, num_old_sets = sm_mi_l.size();
     for (i=0; i<num_old_sets; ++i)
       add_active_neighbors(sm_mi_l[i], true); // on frontier

@@ -357,6 +357,8 @@ inline CombinedSparseGridDriver::~CombinedSparseGridDriver()
 
 inline void CombinedSparseGridDriver::update_active_iterators()
 {
+  SparseGridDriver::update_active_iterators();
+
   smolMIIter = smolyakMultiIndex.find(activeKey);
   if (smolMIIter == smolyakMultiIndex.end()) {
     std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());

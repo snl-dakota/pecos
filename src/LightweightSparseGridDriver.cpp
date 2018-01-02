@@ -25,12 +25,12 @@ namespace Pecos {
 void LightweightSparseGridDriver::
 initialize_grid(size_t num_v, unsigned short ssg_level)
 {
-  numVars  = num_v;
-  ssgLevel = ssg_level;
+  numVars             = num_v;
+  ssgLevel[activeKey] = ssg_level;
   // leave trackUniqueProdWeights as false
   // leave dimIsotropic as true
 
-  UShortArray levels(numVars, ssgLevel);
+  UShortArray levels(numVars, ssg_level);
   SharedPolyApproxData::total_order_multi_index(levels, smolyakMultiIndex);
   // TO DO: verify that a lower_bound_offset should NOT be provided
   // (we want ALL index sets to maximize granularity in restriction)
@@ -48,8 +48,9 @@ void LightweightSparseGridDriver::initialize_sets()
   // to the frontier of smolyakMultiIndex:
   activeMultiIndex[activeKey].clear();
   UShortArraySet::const_iterator cit;
+  unsigned short ssg_lev = ssgLevIter->second;
   for (cit=old_mi.begin(); cit!=old_mi.end(); ++cit)
-    if ( /*!dimIsotropic ||*/ l1_norm(*cit) == ssgLevel )
+    if ( /*!dimIsotropic ||*/ l1_norm(*cit) == ssg_lev )
       add_active_neighbors(*cit, true);//dimIsotropic);
 }
 

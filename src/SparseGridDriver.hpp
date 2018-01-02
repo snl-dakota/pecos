@@ -130,9 +130,9 @@ public:
   /// quadrature orders based on apiIntegrationRules/apiGrowthRules
   void level_to_order(const UShortArray& levels, UShortArray& orders);
 
-  /// set ssgLevel
+  /// set active ssgLevel
   void level(unsigned short ssg_level);
-  /// return ssgLevel
+  /// return active ssgLevel
   unsigned short level() const;
 
   /// set anisoLevelWts
@@ -182,7 +182,9 @@ protected:
   //
 
   /// the Smolyak sparse grid level
-  unsigned short ssgLevel;
+  std::map<UShortArray, unsigned short> ssgLevel;
+  /// the Smolyak sparse grid level
+  std::map<UShortArray, unsigned short>::iterator ssgLevIter;
 
   /// flag indicating a dimension isotropic grid
   bool dimIsotropic;
@@ -236,19 +238,25 @@ private:
 
 
 inline SparseGridDriver::SparseGridDriver():
-  IntegrationDriver(BaseConstructor()), ssgLevel(0), dimIsotropic(true),
+  IntegrationDriver(BaseConstructor()), /* ssgLevel(0), */ dimIsotropic(true),
   growthRate(MODERATE_RESTRICTED_GROWTH), numCollocPts(0), updateGridSize(true),
   refineControl(NO_CONTROL)//refineType(NO_REFINEMENT)
-{ }
+{
+  std::pair<UShortArray, unsigned short> us_pair(activeKey, 0);
+  ssgLevIter = ssgLevel.insert(us_pair).first;
+}
 
 
 inline SparseGridDriver::
 SparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 		 short growth_rate, short refine_control):
-  IntegrationDriver(BaseConstructor()), ssgLevel(ssg_level),
+  IntegrationDriver(BaseConstructor()), /* ssgLevel(ssg_level), */
   growthRate(growth_rate), numCollocPts(0), updateGridSize(true),
   refineControl(refine_control) //refineType(NO_REFINEMENT)
 {
+  std::pair<UShortArray, unsigned short> us_pair(activeKey, ssg_level);
+  ssgLevIter = ssgLevel.insert(us_pair).first;
+
   if (dim_pref.empty())
     dimIsotropic = true;
   else {
@@ -264,26 +272,43 @@ inline SparseGridDriver::~SparseGridDriver()
 
 inline void SparseGridDriver::active_key(const UShortArray& key)
 {
-  activeKey = key;
-  update_active_iterators();
+  if (activeKey != key) {
+    unsigned short prev_lev = ssgLevIter->second;
+    activeKey = key;
+    update_active_iterators();
+    if (ssgLevIter->second != prev_lev)
+      updateGridSize = true;
+  }
+}
+
+
+inline void SparseGridDriver::update_active_iterators()
+{
+  ssgLevIter = ssgLevel.find(activeKey);
+  if (ssgLevIter == ssgLevel.end()) {
+    unsigned short lev = 0;
+    std::pair<UShortArray, unsigned short> us_pair(activeKey, lev);
+    ssgLevIter = ssgLevel.insert(us_pair).first;
+  }
 }
 
 
 inline void SparseGridDriver::clear_keys()
 {
   activeKey.clear();
+  ssgLevel.clear(); ssgLevIter = ssgLevel.end();
   oldMultiIndex.clear(); activeMultiIndex.clear(); computedTrialSets.clear();
 }
 
 
 inline unsigned short SparseGridDriver::level() const
-{ return ssgLevel; }
+{ return ssgLevIter->second; }
 
 
 inline void SparseGridDriver::level(unsigned short ssg_level)
 {
-  if (ssgLevel != ssg_level)
-    { ssgLevel  = ssg_level; updateGridSize = true; }
+  if (ssgLevIter->second != ssg_level)
+    { ssgLevIter->second  = ssg_level; updateGridSize = true; }
 }
 
 
@@ -371,10 +396,6 @@ inline void SparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
 
 inline void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::update_active_iterators()
 { /* default implementation is no-op */ }
 
 

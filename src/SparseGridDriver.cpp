@@ -29,7 +29,8 @@ namespace Pecos {
 void SparseGridDriver::assign_1d_collocation_points_weights()
 {
   // resize arrays
-  size_t i, num_levels = ssgLevel + 1;
+  unsigned short ssg_lev = ssgLevIter->second;
+  size_t i, num_levels = ssg_lev + 1;
   if (num_levels > collocPts1D.size()) {
     collocPts1D.resize(num_levels);
     for (i=0; i<num_levels; ++i)
@@ -123,9 +124,10 @@ void SparseGridDriver::anisotropic_weights(const RealVector& aniso_wts)
       // LB_i = level*wt_min/wt_i --> wt_i = level*wt_min/LB_i and wt_min=1.
       // Catch special case of dim_pref_i = 0 --> wt_i = LB_i = 0.
       if (!axisLowerBounds.empty()) {
+	Real ssg_lev = (Real)(ssgLevIter->second);
 	for (i=0; i<numVars; ++i)
 	  if (axisLowerBounds[i] > 1.e-10) {                 // nonzero LB
-	    Real wt_u_bnd = (Real)ssgLevel/axisLowerBounds[i];
+	    Real wt_u_bnd = ssg_lev / axisLowerBounds[i];
 	    anisoLevelWts[i] = (anisoLevelWts[i] > 1.e-10) ? // nonzero wt
 	      std::min(wt_u_bnd, anisoLevelWts[i]) : wt_u_bnd;
 	  }
@@ -152,12 +154,13 @@ void SparseGridDriver::update_axis_lower_bounds()
   // constraint is level*wt_min-|wt| < j.wt <= level*wt_min, which becomes
   // level-|wt| < j_i w_i <= level for wt_min=1 and all other indices=0.
   // The max feasible j_i is then level/w_i (except for special case w_i=0).
+  Real ssg_lev = (Real)(ssgLevIter->second);
   if (dimIsotropic)
-    axisLowerBounds = (Real)ssgLevel; // all weights = 1
+    axisLowerBounds = ssg_lev; // all weights = 1
   else // min nonzero weight scaled to 1 --> just catch special case w_i=0
     for (size_t i=0; i<numVars; ++i)
       axisLowerBounds[i] = (anisoLevelWts[i] > 1.e-10) ? // nonzero wt
-	(Real)ssgLevel/anisoLevelWts[i] : 0.;
+	ssg_lev / anisoLevelWts[i] : 0.;
 }
 
 
@@ -192,16 +195,16 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 
 void SparseGridDriver::precompute_rules()
 {
-  unsigned short l, m;
+  unsigned short l, m, ssg_lev = ssgLevIter->second;
   if (dimIsotropic)
     for (size_t i=0; i<numVars; ++i) {
-      level_to_order(i, ssgLevel, m); // max order is full level in this dim
+      level_to_order(i, ssg_lev, m); // max order is full level in this dim
       polynomialBasis[i].precompute_rules(m);
     }
   else
     for (size_t i=0; i<numVars; ++i) {
       Real& wt_i = anisoLevelWts[i];
-      l = (wt_i > 0.) ? (unsigned short)((Real)ssgLevel / wt_i) : 0;
+      l = (wt_i > 0.) ? (unsigned short)((Real)ssg_lev / wt_i) : 0;
       level_to_order(i, l, m); // max order is full aniso level[dim]
       polynomialBasis[i].precompute_rules(m);
     }

@@ -323,15 +323,16 @@ assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
   // For anisotropic, a weighted linear index set constraint is used.
 
   size_t i;
+  unsigned short ssg_lev = ssgLevIter->second;
   if (dimIsotropic) { // initialize multi_index
-    UShortArray levels(numVars, ssgLevel);
+    UShortArray levels(numVars, ssg_lev);
     SharedPolyApproxData::total_order_multi_index(levels, multi_index,
 						  numVars-1);
     size_t num_terms = multi_index.size();
     // initialize coeffs
     coeffs.resize(num_terms);
     for (i=0; i<num_terms; i++) {
-      int wpNmi = ssgLevel - l1_norm(multi_index[i]); // w+N-|i| = w-|j|
+      int wpNmi = ssg_lev - l1_norm(multi_index[i]); // w+N-|i| = w-|j|
       coeffs[i] = (int)std::pow(-1., wpNmi)
 	* (int)std::floor(BasisPolynomial::n_choose_k(numVars - 1, wpNmi)+.5);
     }
@@ -344,16 +345,16 @@ assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
     // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
     // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
     // w-N+1 <= |j| <= w.
-    IntArray x(numVars), x_max(numVars); //x_max = ssgLevel;
+    IntArray x(numVars), x_max(numVars); //x_max = ssg_lev;
     UShortArray index_set(numVars);
-    Real wt_sum = 0., q_max = ssgLevel;
+    Real wt_sum = 0., q_max = ssg_lev;
     for (i=0; i<numVars; ++i) {
       const Real& wt_i = anisoLevelWts[i];
       wt_sum += wt_i;
       // minimum nonzero weight is scaled to 1, so just catch special case of 0
       x_max[i] = (wt_i > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
     }
-    Real q_min = ssgLevel - wt_sum;
+    Real q_min = ssg_lev - wt_sum;
 #ifdef DEBUG
     PCout << "q_min = " << q_min << " q_max = " << q_max;
 #endif // DEBUG
@@ -481,10 +482,11 @@ int CombinedSparseGridDriver::grid_size()
 {
   if (updateGridSize) {
     sgdInstance = this; // sgdInstance required within compute1DPoints below
+    unsigned short ssg_lev = ssgLevIter->second;
     numCollocPts = (dimIsotropic) ?
-      webbur::sgmg_size(numVars, ssgLevel, &compute1DPoints[0], duplicateTol,
+      webbur::sgmg_size(numVars, ssg_lev, &compute1DPoints[0], duplicateTol,
 	growthRate, &levelGrowthToOrder[0]) :
-      webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssgLevel,
+      webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssg_lev,
 	&compute1DPoints[0], duplicateTol, growthRate, &levelGrowthToOrder[0]);
     updateGridSize = false;
   }
@@ -579,21 +581,22 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
     int* sparse_order = new int [numCollocPts*numVars];
     int* sparse_index = new int [numCollocPts*numVars];
     sgdInstance = this; // sgdInstance required within compute1D fn pointers
+    unsigned short ssg_lev = ssgLevIter->second;
     if (dimIsotropic) {
-      int num_total_pts = webbur::sgmg_size_total(numVars, ssgLevel,
+      int num_total_pts = webbur::sgmg_size_total(numVars, ssg_lev,
 	growthRate, &levelGrowthToOrder[0]);
       unique_index_map.resize(num_total_pts);
-      webbur::sgmg_unique_index(numVars, ssgLevel, &compute1DPoints[0],
+      webbur::sgmg_unique_index(numVars, ssg_lev, &compute1DPoints[0],
 	duplicateTol, numCollocPts, num_total_pts, growthRate,
 	&levelGrowthToOrder[0], &unique_index_map[0]);
-      webbur::sgmg_index(numVars, ssgLevel, numCollocPts, num_total_pts,
+      webbur::sgmg_index(numVars, ssg_lev, numCollocPts, num_total_pts,
 	&unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	sparse_order, sparse_index);
-      webbur::sgmg_point(numVars, ssgLevel, &compute1DPoints[0], numCollocPts,
+      webbur::sgmg_point(numVars, ssg_lev, &compute1DPoints[0], numCollocPts,
 	sparse_order, sparse_index, growthRate, &levelGrowthToOrder[0],
 	var_sets.values());
       if (trackUniqueProdWeights) {
-	webbur::sgmg_weight(numVars, ssgLevel, &compute1DType1Weights[0],
+	webbur::sgmg_weight(numVars, ssg_lev, &compute1DType1Weights[0],
 	  numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
 	  &levelGrowthToOrder[0], t1_wts.values());
 	if (computeType2Weights) {
@@ -601,7 +604,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	  RealVector t2_wt_set(numCollocPts);
 	  for (int i=0; i<numVars; ++i) {
 	    comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
-	    webbur::sgmg_weight(numVars, ssgLevel, &comp_1d_t2_wts[0],
+	    webbur::sgmg_weight(numVars, ssg_lev, &comp_1d_t2_wts[0],
 	      numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
 	      &levelGrowthToOrder[0], t2_wt_set.values());
 	    copy_row(t2_wt_set, t2_wts, i);
@@ -612,19 +615,19 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
     }
     else {
       int num_total_pts = webbur::sandia_sgmga_size_total(numVars,
-	anisoLevelWts.values(), ssgLevel, growthRate, &levelGrowthToOrder[0]);
+	anisoLevelWts.values(), ssg_lev, growthRate, &levelGrowthToOrder[0]);
       unique_index_map.resize(num_total_pts);
       webbur::sandia_sgmga_unique_index(numVars, anisoLevelWts.values(),
-	ssgLevel, &compute1DPoints[0], duplicateTol, numCollocPts,num_total_pts,
+	ssg_lev, &compute1DPoints[0], duplicateTol, numCollocPts,num_total_pts,
 	growthRate, &levelGrowthToOrder[0], &unique_index_map[0]);
-      webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssgLevel,
+      webbur::sandia_sgmga_index(numVars, anisoLevelWts.values(), ssg_lev,
         numCollocPts, num_total_pts, &unique_index_map[0], growthRate,
 	&levelGrowthToOrder[0], sparse_order, sparse_index);
-      webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssgLevel,
+      webbur::sandia_sgmga_point(numVars, anisoLevelWts.values(), ssg_lev,
         &compute1DPoints[0], numCollocPts, sparse_order, sparse_index,
 	growthRate, &levelGrowthToOrder[0], var_sets.values());
       if (trackUniqueProdWeights) {
-	webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssgLevel,
+	webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(), ssg_lev,
           &compute1DType1Weights[0], numCollocPts, num_total_pts,
 	  &unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	  t1_wts.values());
@@ -634,7 +637,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	  for (int i=0; i<numVars; ++i) {
 	    comp_1d_t2_wts[i] = basis_type2_collocation_weights;//change ith ptr
 	    webbur::sandia_sgmga_weight(numVars, anisoLevelWts.values(),
-	      ssgLevel, &comp_1d_t2_wts[0], numCollocPts, num_total_pts,
+	      ssg_lev, &comp_1d_t2_wts[0], numCollocPts, num_total_pts,
 	      &unique_index_map[0], growthRate, &levelGrowthToOrder[0],
 	      t2_wt_set.values());
 	    copy_row(t2_wt_set, t2_wts, i);
@@ -717,6 +720,7 @@ void CombinedSparseGridDriver::initialize_sets()
   }
 
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
+  unsigned short     ssg_lev = ssgLevIter->second;
   const UShort2DArray& sm_mi = smolMIIter->second;
   const IntArray&  sm_coeffs = smolCoeffsIter->second;
   UShortArraySet&     old_mi = oldMultiIndex[activeKey];
@@ -724,8 +728,8 @@ void CombinedSparseGridDriver::initialize_sets()
   old_mi.clear(); old_mi.insert(sm_mi.begin(), sm_mi.end());
   update_reference();
 
-  // computedTrialSets no longer cleared in finalize_sets(), so do on init
-  computedTrialSets[activeKey].clear();
+  computedTrialSets[activeKey].clear(); // no longer cleared in finalize_sets()
+  activeMultiIndex[activeKey].clear();  // also cleared in finalize_sets()
 
   // compute initial set A (active) by applying add_active_neighbors()
   // to the frontier of smolyakMultiIndex:
@@ -736,13 +740,14 @@ void CombinedSparseGridDriver::initialize_sets()
   // set may differ from the level --> need to compute Pareto set.
   for (i=0; i<num_old_sets; ++i)
     if ( sm_coeffs[i] == 1 && ( !dimIsotropic || // imperfect for aniso
-	 ( dimIsotropic && l1_norm(sm_mi[i]) == ssgLevel ) ) )
+	 ( dimIsotropic && l1_norm(sm_mi[i]) == ssg_lev ) ) )
       add_active_neighbors(sm_mi[i], dimIsotropic);
 
 #ifdef DEBUG
-  PCout << "CombinedSparseGridDriver::initialize_sets():\nold sets:\n"
-	<< old_mi << "active sets:\n" << activeMultiIndex[activeKey]
-	<< std::endl;
+  PCout << "CombinedSparseGridDriver::initialize_sets():\n  active key:\n"
+	<< activeKey << "\n  sm_mi:\n" << sm_mi << "\n  sm_coeffs:\n"
+	<< sm_coeffs << "\n  ssg level = " << ssg_lev << "\n  active sets:\n"
+	<< activeMultiIndex[activeKey] << std::endl;
 #endif // DEBUG
 }
 

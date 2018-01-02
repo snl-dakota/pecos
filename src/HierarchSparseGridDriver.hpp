@@ -256,6 +256,8 @@ inline HierarchSparseGridDriver::~HierarchSparseGridDriver()
 
 inline void HierarchSparseGridDriver::update_active_iterators()
 {
+  SparseGridDriver::update_active_iterators();
+
   smolMIIter = smolyakMultiIndex.find(activeKey);
   if (smolMIIter == smolyakMultiIndex.end()) {
     std::pair<UShortArray, UShort3DArray> u3a_pair(activeKey, UShort3DArray());
