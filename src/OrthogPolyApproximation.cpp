@@ -726,6 +726,20 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
 
 
 Real OrthogPolyApproximation::
+covariance(const UShort2DArray& mi, const RealVector& exp_coeffs,
+	   const RealVector& exp_coeffs_2)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  size_t i, num_exp_terms = mi.size();
+  Real covar = 0.;
+  for (i=1; i<num_exp_terms; ++i)
+    covar += exp_coeffs[i] * exp_coeffs_2[i] * data_rep->norm_squared(mi[i]);
+  return covar;
+}
+
+
+Real OrthogPolyApproximation::
 covariance(PolynomialApproximation* poly_approx_2)
 {
   SharedOrthogPolyApproxData* data_rep
@@ -744,17 +758,81 @@ covariance(PolynomialApproximation* poly_approx_2)
   if (same && std_mode && (computedVariance & 1))
     return expansionMoments[1];
   else {
-    const UShort2DArray& mi = data_rep->multi_index();
-    size_t i, num_exp_terms = mi.size();
-    const RealVector& exp_coeffs   = expCoeffsIter->second;
-    const RealVector& exp_coeffs_2 = opa_2->expCoeffsIter->second;
-    Real covar = 0.;
-    for (i=1; i<num_exp_terms; ++i)
-      covar += exp_coeffs[i] * exp_coeffs_2[i] * data_rep->norm_squared(mi[i]);
+    Real covar = covariance(data_rep->multi_index(), expCoeffsIter->second,
+			    opa_2->expCoeffsIter->second);
     if (same && std_mode)
       { expansionMoments[1] = covar; computedVariance |= 1; }
     return covar;
   }
+}
+
+
+Real OrthogPolyApproximation::
+combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+  bool same = (opa_2 == this), std_mode = data_rep->nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expansionCoeffFlag ||
+       ( !same && !opa_2->expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "OrthogPolyApproximation::combined_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  /*
+  if (same && std_mode && (computedVariance & 1))
+    return expansionMoments[1];
+  else {
+    Real covar = covariance(data_rep->multi_index(), expCoeffsIter->second,
+			    opa_2->expCoeffsIter->second);
+    if (same && std_mode)
+      { expansionMoments[1] = covar; computedVariance |= 1; }
+    return covar;
+  }
+  */
+  return covariance(data_rep->combinedMultiIndex, combinedExpCoeffs,
+		    opa_2->combinedExpCoeffs);
+}
+
+
+Real OrthogPolyApproximation::
+covariance(const RealVector& x, const UShort2DArray& mi,
+	   const RealVector& exp_coeffs, const RealVector& exp_coeffs_2)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  const SizetList&  rand_ind = data_rep->randomIndices;
+  const SizetList& nrand_ind = data_rep->nonRandomIndices;
+  size_t i1, i2, num_mi = mi.size();
+  Real covar = 0.;
+  for (i1=1; i1<num_mi; ++i1) {
+    // For r = random_vars and nr = non_random_vars,
+    // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
+    // -> only include terms from R(r,nr) which don't appear in \mu_R(nr)
+    const UShortArray& mi1 = mi[i1];
+    if (!data_rep->zero_random(mi1)) {
+      Real coeff_norm_poly = exp_coeffs[i1] * 
+	data_rep->norm_squared(mi1, rand_ind) *
+	data_rep->multivariate_polynomial(x, mi1, nrand_ind);
+      for (i2=1; i2<num_mi; ++i2) {
+	// random polynomial part must be identical to contribute to variance
+	// (else orthogonality drops term).  Note that it is not necessary to
+	// collapse terms with the same random basis subset, since cross term
+	// in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
+	// (following eval of non-random portions), the nested loop could be
+	// replaced with a single loop to evaluate (a+b)^2.
+	const UShortArray& mi2 = mi[i2];
+	if (data_rep->match_random_key(mi1, mi2))
+	  covar += coeff_norm_poly * exp_coeffs_2[i2] *
+	    data_rep->multivariate_polynomial(x, mi2, nrand_ind);
+      }
+    }
+  }
+  return covar;
 }
 
 
@@ -778,39 +856,43 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
        data_rep->match_nonrandom_vars(x, xPrevVar) )
     return expansionMoments[1];
 
-  const RealVector& exp_coeffs   = expCoeffsIter->second;
-  const RealVector& exp_coeffs_2 = opa_2->expCoeffsIter->second;
-  const UShort2DArray&    mi = data_rep->multi_index();
-  const SizetList&  rand_ind = data_rep->randomIndices;
-  const SizetList& nrand_ind = data_rep->nonRandomIndices;
-  size_t i1, i2, num_mi = mi.size();
-  Real covar = 0.;
-  for (i1=1; i1<num_mi; ++i1) {
-    // For r = random_vars and nr = non_random_vars,
-    // sigma^2_R(nr) = < (R(r,nr) - \mu_R(nr))^2 >_r
-    // -> only include terms from R(r,nr) which don't appear in \mu_R(nr)
-    const UShortArray& mi1 = mi[i1];
-    if (!data_rep->zero_random(mi1)) {
-      Real coeff_norm_poly = exp_coeffs[i1] * 
-	  data_rep->norm_squared(mi1, rand_ind) *
-	  data_rep->multivariate_polynomial(x, mi1, nrand_ind);
-      for (i2=1; i2<num_mi; ++i2) {
-	// random polynomial part must be identical to contribute to variance
-	// (else orthogonality drops term).  Note that it is not necessary to
-	// collapse terms with the same random basis subset, since cross term
-	// in (a+b)(a+b) = a^2+2ab+b^2 gets included.  If terms were collapsed
-	// (following eval of non-random portions), the nested loop could be
-	// replaced with a single loop to evaluate (a+b)^2.
-	const UShortArray& mi2 = mi[i2];
-	if (data_rep->match_random_key(mi1, mi2))
-	  covar += coeff_norm_poly * exp_coeffs_2[i2] *
-	    data_rep->multivariate_polynomial(x, mi2, nrand_ind);
-      }
-    }
-  }
+  Real covar = covariance(x, data_rep->multi_index(), expCoeffsIter->second,
+			  opa_2->expCoeffsIter->second);
   if (same && all_mode)
     { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
   return covar;
+}
+
+
+Real OrthogPolyApproximation::
+combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  OrthogPolyApproximation* opa_2 = (OrthogPolyApproximation*)poly_approx_2;
+  bool same = (this == opa_2), all_mode = !data_rep->nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expansionCoeffFlag ||
+       ( !same && !opa_2->expansionCoeffFlag )) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "OrthogPolyApproximation::combined_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  /*
+  if ( same && all_mode && (computedVariance & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar) )
+    return expansionMoments[1];
+
+  Real covar = covariance(x, data_rep->multi_index(), expCoeffsIter->second,
+			  opa_2->expCoeffsIter->second);
+  if (same && all_mode)
+    { expansionMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
+  */
+  return covariance(x, data_rep->combinedMultiIndex, combinedExpCoeffs,
+		    opa_2->combinedExpCoeffs);
 }
 
 

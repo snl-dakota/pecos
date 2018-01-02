@@ -136,6 +136,10 @@ protected:
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
+  Real combined_covariance(PolynomialApproximation* poly_approx_2);
+  Real combined_covariance(const RealVector& x,
+			   PolynomialApproximation* poly_approx_2);
+
   /// compute expansion moments to order 2
   void compute_moments(bool full_stats = true);
   /// compute expansion moments in all-variables mode to order 2
@@ -242,6 +246,15 @@ private:
   //
   //- Heading: Member functions
   //
+
+  /// compute covariance between two sets of expansion coefficients
+  /// (standard variables mode)
+  Real covariance(const UShort2DArray& mi, const RealVector& exp_coeffs,
+		  const RealVector& exp_coeffs_2);
+  /// compute covariance between two sets of expansion coefficients
+  /// (combined variables mode)
+  Real covariance(const RealVector& x, const UShort2DArray& mi,
+		  const RealVector& exp_coeffs, const RealVector& exp_coeffs_2);
 
   // apply normalization to std_coeffs to create normalized_coeffs
   void normalize(const RealVector& std_coeffs,

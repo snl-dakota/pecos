@@ -3426,6 +3426,26 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
+Real NodalInterpPolyApproximation::
+combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: NodalInterpPolyApproximation::combined_covariance() not yet "
+	<< "implemented." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real NodalInterpPolyApproximation::
+combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: NodalInterpPolyApproximation::combined_covariance() not yet "
+	<< "implemented." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 /** In this function, all expansion variables are random variables and
     any design/state variables are omitted from the expansion.  The
     mixed derivative case (some design/epistemic variables are

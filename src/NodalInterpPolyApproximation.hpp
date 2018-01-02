@@ -121,6 +121,10 @@ protected:
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
 
+  Real combined_covariance(PolynomialApproximation* poly_approx_2);
+  Real combined_covariance(const RealVector& x,
+			   PolynomialApproximation* poly_approx_2);
+
   void compute_total_sobol_indices();
   void compute_partial_variance(const BitArray& set_value);
 

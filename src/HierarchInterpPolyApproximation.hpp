@@ -125,6 +125,10 @@ protected:
   Real covariance(const RealVector& x,
 		  PolynomialApproximation* poly_approx_2);
 
+  Real combined_covariance(PolynomialApproximation* poly_approx_2);
+  Real combined_covariance(const RealVector& x,
+			   PolynomialApproximation* poly_approx_2);
+
   Real delta_covariance(PolynomialApproximation* poly_approx_2);
   Real delta_covariance(const RealVector& x,
 			PolynomialApproximation* poly_approx_2);
