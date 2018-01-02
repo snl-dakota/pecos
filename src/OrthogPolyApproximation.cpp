@@ -178,6 +178,7 @@ void OrthogPolyApproximation::combine_coefficients()
 
   std::map<UShortArray, RealVector>::iterator ec_it;
   std::map<UShortArray, RealMatrix>::iterator ecg_it;
+  const UShort2DArray& combined_mi = data_rep->combinedMultiIndex;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
@@ -188,10 +189,27 @@ void OrthogPolyApproximation::combine_coefficients()
     // Therefore, stick with the general-purpose expansion overlay and exclude
     // tensor_product_value() usage for combined coefficient sets.
 
+    // resize combinedExp{Coeffs,CoeffGrads} based on combinedMultiIndex
+    resize_expansion(combined_mi.size(), combinedExpCoeffs,
+		     combinedExpCoeffGrads);
+
+    // update combinedExp{Coeffs,CoeffGrads}
+    const Sizet2DArray&  combined_mi_map = data_rep->combinedMultiIndexMap;
+    combinedExpCoeffs     =     expCoeffsIter->second; // copy
+    combinedExpCoeffGrads = expCoeffGradsIter->second; // copy
+    size_t cntr = 0;
+    for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
+	 ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
+	 ++ec_it, ++ecg_it)
+      if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter) {
+	overlay_expansion(combined_mi_map[cntr], ec_it->second, ecg_it->second,
+			  1, combinedExpCoeffs, combinedExpCoeffGrads);
+	++cntr;
+      }
+    /*
     // resize expansion{Coeffs,CoeffGrads} based on updated multiIndex
     resize_expansion();
     // update expansion{Coeffs,CoeffGrads}
-
     size_t cntr = 0;
     const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
     for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
@@ -202,6 +220,7 @@ void OrthogPolyApproximation::combine_coefficients()
 			  ecg_it->second, 1);
 	++cntr;
       }
+    */
     break;
   }
   case MULT_COMBINE: {
@@ -213,7 +232,8 @@ void OrthogPolyApproximation::combine_coefficients()
 	 ++ec_it, ++ecg_it, ++mi_cit)
       if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter)
 	multiply_expansion(mi_cit->second, ec_it->second, ecg_it->second,
-			   data_rep->combinedMultiIndex);
+			   combined_mi);//,combinedExpCoeff{s,Grads}
+        // TO DO: must translate c result to next a, as in current assumptions
     break;
   }
   case ADD_MULT_COMBINE:
@@ -236,10 +256,11 @@ void OrthogPolyApproximation::combine_coefficients()
 void OrthogPolyApproximation::
 overlay_expansion(const SizetArray& multi_index_map,
 		  const RealVector& exp_coeffs, const RealMatrix& exp_grads,
-		  int coeff)
+		  int coeff, RealVector& exp_coeffs_sum,
+		  RealMatrix& exp_grads_sum)
 {
-  RealVector& exp_coeffs_sum = expCoeffsIter->second;
-  RealMatrix& exp_grads_sum  = expCoeffGradsIter->second;
+  //RealVector& exp_coeffs_sum = expCoeffsIter->second;
+  //RealMatrix& exp_grads_sum  = expCoeffGradsIter->second;
   size_t i, j, index, num_terms = multi_index_map.size(), 
     num_deriv_vars = exp_grads_sum.numRows();
   for (i=0; i<num_terms; ++i) {
@@ -256,11 +277,13 @@ overlay_expansion(const SizetArray& multi_index_map,
 }
 
 
+/** Implement c = a * b for expansions a, b, and c. */
 void OrthogPolyApproximation::
 multiply_expansion(const UShort2DArray& multi_index_b,
 		   const RealVector&    exp_coeffs_b,
 		   const RealMatrix&    exp_grads_b,
-		   const UShort2DArray& multi_index_c)
+		   const UShort2DArray& multi_index_c)//,
+                 //RealVector& exp_coeffs_c, RealMatrix& exp_grads_c)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;

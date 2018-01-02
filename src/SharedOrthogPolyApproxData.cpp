@@ -428,20 +428,18 @@ void SharedOrthogPolyApproxData::pre_combine_data()
 
   switch (expConfigOptions.combineType) {
   case ADD_COMBINE: {
-    // update multiIndex with any storedMultiIndex terms not yet included.
-    // An update in place is sufficient.
+    // update active (maximal) multiIndex with any non-active multiIndex terms
+    // not yet included.  An update in place is sufficient.
     size_t i, num_combine = multiIndex.size() - 1, cntr = 0, combine_mi_map_ref;
     combinedMultiIndexMap.resize(num_combine);
-    UShort2DArray& active_mi = multiIndexIter->second;
     std::map<UShortArray, UShort2DArray>::iterator mi_it;
+    combinedMultiIndex = multiIndexIter->second; // copy
     for (mi_it = multiIndex.begin(); mi_it != multiIndex.end(); ++mi_it)
       if (mi_it->first != activeKey) {
-	append_multi_index(mi_it->second, active_mi,
+	append_multi_index(mi_it->second, combinedMultiIndex,
 			   combinedMultiIndexMap[cntr], combine_mi_map_ref);
 	++cntr;
       }
-    // reset sobolIndexMap from aggregated multiIndex
-    allocate_component_sobol(active_mi);
     break;
   }
   case MULT_COMBINE: {
@@ -458,8 +456,6 @@ void SharedOrthogPolyApproxData::pre_combine_data()
 	  active_ao[i] += combine_ao[i];
       }
     total_order_multi_index(active_ao, combinedMultiIndex);
-    // define sobolIndexMap from combinedMultiIndex
-    allocate_component_sobol(combinedMultiIndex);
     break;
   }
   case ADD_MULT_COMBINE:
@@ -468,17 +464,18 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     abort_handler(-1);
     break;
   }
+
+  // reset sobolIndexMap from aggregated multiIndex
+  allocate_component_sobol(combinedMultiIndex);
 }
 
 
 void SharedOrthogPolyApproxData::post_combine_data()
 {
-  switch (expConfigOptions.combineType) {
-  case MULT_COMBINE:
-    std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
-    combinedMultiIndex.clear();
-    break;
-  }
+  // Leave combinedMultiIndex as separate book-keeping to support repeated
+  // combinations within adaptive refinement.
+  //std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
+  //combinedMultiIndex.clear();
 }
 
 

@@ -148,14 +148,16 @@ protected:
   /// update expCoeff{s,Grads}Iter for new activeKey from sharedDataRep
   void update_active_iterators();
 
-  /// size expansion{Coeffs,CoeffGrads} based on multiIndex
+  /// size expansion{Coeffs,CoeffGrads} based on the shared multiIndex
   void size_expansion();
-  /// size expansion{Coeffs,CoeffGrads} based on multiIndex
-  void size_expansion(size_t num_exp_terms);
-  /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
+  /// size exp_coeff{s,_grads} for an updated number of expansion terms
+  void size_expansion(size_t num_exp_terms, RealVector& exp_coeffs,
+		      RealMatrix& exp_coeff_grads);
+  /// resize expansion{Coeffs,CoeffGrads} for an updated multiIndex
   void resize_expansion();
-  /// synchronize expansion{Coeffs,CoeffGrads} with an updated multiIndex
-  void resize_expansion(size_t num_exp_terms);
+  /// resize exp_coeff{s,_grads} for an updated number of expansion terms
+  void resize_expansion(size_t num_exp_terms, RealVector& exp_coeffs,
+			RealMatrix& exp_coeff_grads);
 
   /// compute the expansion value
   Real value(const RealVector& x, const UShort2DArray& mi,
@@ -180,7 +182,8 @@ protected:
   /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
   void overlay_expansion(const SizetArray& multi_index_map,
 			 const RealVector& exp_coeffs,
-			 const RealMatrix& exp_grads, int coeff);
+			 const RealMatrix& exp_grads, int coeff,
+			 RealVector& exp_coeffs_sum, RealMatrix& exp_grads_sum);
   /// multiply current expansion ("a") with incoming expansion ("b")
   /// and store in product expansion ("c")
   void multiply_expansion(const UShort2DArray& multi_index_b,
@@ -224,6 +227,11 @@ protected:
   /// use in combine_coefficients()
   RealMatrixArray storedExpCoeffGrads;
   */
+
+  /// roll up of expansion coefficients across all keys
+  RealVector combinedExpCoeffs;
+  /// roll up of expansion coefficient gradients across all keys
+  RealMatrix combinedExpCoeffGrads;
 
   /// spectral coefficient decay rates estimated by LLS on log of
   /// univariate expansion coefficients
@@ -476,21 +484,24 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 
 
 inline void OrthogPolyApproximation::size_expansion()
-{ size_expansion(expansion_terms()); }
+{
+  size_expansion(expansion_terms(), expCoeffsIter->second,
+		 expCoeffGradsIter->second);
+}
 
 
-inline void OrthogPolyApproximation::size_expansion(size_t num_exp_terms)
+inline void OrthogPolyApproximation::
+size_expansion(size_t num_exp_terms, RealVector& exp_coeffs,
+	       RealMatrix& exp_coeff_grads)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   if (expansionCoeffFlag) {
-    RealVector& exp_coeffs = expCoeffsIter->second;
     if (exp_coeffs.length() != num_exp_terms)
       exp_coeffs.sizeUninitialized(num_exp_terms);
   }
   if (expansionCoeffGradFlag) {
     size_t num_deriv_vars = surrData.num_derivative_variables();
-    RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
     if (exp_coeff_grads.numRows() != num_deriv_vars ||
 	exp_coeff_grads.numCols() != num_exp_terms)
       exp_coeff_grads.shapeUninitialized(num_deriv_vars, num_exp_terms);
@@ -499,17 +510,21 @@ inline void OrthogPolyApproximation::size_expansion(size_t num_exp_terms)
 
 
 inline void OrthogPolyApproximation::resize_expansion()
-{ resize_expansion(expansion_terms()); }
+{
+  resize_expansion(expansion_terms(), expCoeffsIter->second,
+		   expCoeffGradsIter->second);
+}
 
 
-inline void OrthogPolyApproximation::resize_expansion(size_t num_exp_terms)
+inline void OrthogPolyApproximation::
+resize_expansion(size_t num_exp_terms, RealVector& exp_coeffs,
+		 RealMatrix& exp_coeff_grads)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   if (expansionCoeffFlag)
-    expCoeffsIter->second.resize(num_exp_terms); // new terms initialized to 0
+    exp_coeffs.resize(num_exp_terms); // new terms initialized to 0
   if (expansionCoeffGradFlag) {
-    RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
     size_t num_deriv_vars = exp_coeff_grads.numRows();
     exp_coeff_grads.reshape(num_deriv_vars, num_exp_terms);//new terms init to 0
   }

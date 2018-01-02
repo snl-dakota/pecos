@@ -142,9 +142,11 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     break;
   }
   case COMBINED_SPARSE_GRID: {
+    RealVector& exp_coeffs      =     expCoeffsIter->second;
+    RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
     // multiple tensor expansion integrations
-    if (expansionCoeffFlag)     expCoeffsIter->second     = 0.;
-    if (expansionCoeffGradFlag) expCoeffGradsIter->second = 0.;
+    if (expansionCoeffFlag)     exp_coeffs      = 0.;
+    if (expansionCoeffGradFlag) exp_coeff_grads = 0.;
     CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
     const IntArray& sm_coeffs = csg_driver->smolyak_coefficients();
     const UShortArray&   key       = data_rep->activeKey;
@@ -177,7 +179,8 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
       // sum tensor product coeffs/grads into expansion coeffs/grads
       coeff = sm_coeffs[i];
       if (coeff)
-	overlay_expansion(tp_mi_map[i], tp_coeffs_i, tp_grads_i, coeff);
+	overlay_expansion(tp_mi_map[i], tp_coeffs_i, tp_grads_i, coeff,
+			  exp_coeffs, exp_coeff_grads);
     }
     break;
   }
@@ -340,9 +343,12 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 void ProjectOrthogPolyApproximation::
 append_tensor_expansions(size_t start_tp_index)
 {
+  RealVector& exp_coeffs      =     expCoeffsIter->second;
+  RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
+
   // for use in decrement_coefficients()
-  prevExpCoeffs     = expCoeffsIter->second;
-  prevExpCoeffGrads = expCoeffGradsIter->second;
+  prevExpCoeffs     = exp_coeffs;      // copy
+  prevExpCoeffGrads = exp_coeff_grads; // copy
 
   // update expansion{Coeffs,CoeffGrads} using a hierarchical update
   // rather than building from scratch
@@ -368,7 +374,8 @@ append_tensor_expansions(size_t start_tp_index)
     coeff = sm_coeffs[index];
     if (coeff)
       overlay_expansion(tp_mi_map[index], tp_exp_coeffs[index],
-			tp_exp_coeff_grads[index], coeff);
+			tp_exp_coeff_grads[index], coeff, exp_coeffs,
+			exp_coeff_grads);
 #ifdef DEBUG
     PCout << "Trial set sm_coeff = " << coeff << "\ntpExpansionCoeffs:\n";
     write_data(PCout, tp_exp_coeffs[index]);
@@ -386,7 +393,8 @@ append_tensor_expansions(size_t start_tp_index)
 #endif // DEBUG
     if (delta_coeff)
       overlay_expansion(tp_mi_map[index], tp_exp_coeffs[index],
-			tp_exp_coeff_grads[index], delta_coeff);
+			tp_exp_coeff_grads[index], delta_coeff, exp_coeffs,
+			exp_coeff_grads);
   }
 }
 

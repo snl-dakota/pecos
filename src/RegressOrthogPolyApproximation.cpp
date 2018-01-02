@@ -633,6 +633,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 	if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter) {
 	  overlay_expansion(sp_it->second, combined_mi_map[cntr],
 			    ec_it->second, ecg_it->second, 1);
+	                 //, combinedExpCoeffs, combinedExpCoeffGrads);
+	  // TO DO: as with OPA::MULT_COMBINE, current assumptions require translation of combined result to next input
 	  ++cntr;
 	}
       // update sparseSobolIndexMap

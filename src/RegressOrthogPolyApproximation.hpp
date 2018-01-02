@@ -285,6 +285,7 @@ private:
 			 const SizetArray& append_mi_map,
 			 const RealVector& exp_coeffs_2,
 			 const RealMatrix& exp_grads_2, int coeff_2);
+                     //, RealVector& exp_coeffs_sum, RealMatrix& exp_grads_sum);
   /// multiply current expansion ("a") with incoming expansion ("b")
   /// and store in product expansion ("c")
   void multiply_expansion(const SizetSet& sparse_ind_b,
