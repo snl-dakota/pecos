@@ -1097,7 +1097,7 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
   IntArray& uind2 = uniqueIndex2[activeKey];
   IntArray& uset2 =   uniqueSet2[activeKey]; 
   int&     num_u2 =   numUnique2[activeKey];
-  BitArray&  isu2 =    isUnique2[activeKey];
+  //BitArray& isu2 =   isUnique2[activeKey];
 
   size_t i, j, num_sm_mi = smolMIIter->second.size();
   int m = numVars, n1, n2, n1n2, n3, num_u3, all_n2 = 0;
@@ -1122,7 +1122,7 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
     r2v.sizeUninitialized(n2);  sind2.resize(n2);
     uset2.resize(n2);           uind2.resize(n2);
     is_unique1 = new bool[n1];  copy_data(isu1, is_unique1, n1);
-    is_unique2 = new bool[n2];  copy_data(isu2, is_unique2, n2);
+    is_unique2 = new bool[n2];  // bridges inc2 to inc3: isUnique2 not needed
     webbur::point_radial_tol_unique_index_inc2(m, n1, a1_pts.values(), n2,
       a2_pts.values(), duplicateTol, zv.values(), r1v.values(), &sind1[0],
       is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
@@ -1131,9 +1131,9 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
     PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n"
 	  << a2_pts<<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
     for (j=0; j<n2; ++j)
-      std::cout << std::setw(17) << r2v[j]   << std::setw(8) << sind2[j]
-		<< std::setw(8)  << isu2[j]  << std::setw(8) << uset2[j]
-		<< std::setw(8)  << uind2[j] << '\n';
+      std::cout << std::setw(17) << r2v[j]     << std::setw(8) << sind2[j]
+	     /* << std::setw(8)  << isu2[j] */ << std::setw(8) << uset2[j]
+		<< std::setw(8)  << uind2[j]   << '\n';
     PCout << std::endl;
 #endif // DEBUG
 
