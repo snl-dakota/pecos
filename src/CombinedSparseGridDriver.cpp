@@ -177,13 +177,45 @@ void CombinedSparseGridDriver::clear_inactive()
   std::map<UShortArray, Sizet2DArray>::iterator  ci_it = collocIndices.begin();
   std::map<UShortArray, RealVector>::iterator t1_it = type1WeightSets.begin();
   std::map<UShortArray, RealMatrix>::iterator t2_it = type2WeightSets.begin();
+  std::map<UShortArray, int>::iterator nu1_it = numUnique1.begin();
+  std::map<UShortArray, int>::iterator nu2_it = numUnique2.begin();
+  std::map<UShortArray, RealVector>::iterator z_it = zVec.begin();
+  std::map<UShortArray, RealVector>::iterator r1_it = r1Vec.begin();
+  std::map<UShortArray, RealVector>::iterator r2_it = r2Vec.begin();
+  std::map<UShortArray, RealMatrix>::iterator a1p_it = a1Points.begin();
+  std::map<UShortArray, RealVector>::iterator a11w_it = a1Type1Weights.begin();
+  std::map<UShortArray, RealMatrix>::iterator a12w_it = a1Type2Weights.begin();
+  std::map<UShortArray, RealMatrix>::iterator a2p_it = a2Points.begin();
+  std::map<UShortArray, RealVector>::iterator a21w_it = a2Type1Weights.begin();
+  std::map<UShortArray, RealMatrix>::iterator a22w_it = a2Type2Weights.begin();
+  std::map<UShortArray, IntArray>::iterator si1_it = sortIndex1.begin();
+  std::map<UShortArray, IntArray>::iterator si2_it = sortIndex2.begin();
+  std::map<UShortArray, IntArray>::iterator us1_it = uniqueSet1.begin();
+  std::map<UShortArray, IntArray>::iterator us2_it = uniqueSet2.begin();
+  std::map<UShortArray, IntArray>::iterator ui1_it = uniqueIndex1.begin();
+  std::map<UShortArray, IntArray>::iterator ui2_it = uniqueIndex2.begin();
+  std::map<UShortArray, BitArray>::iterator iu1_it = isUnique1.begin();
+  std::map<UShortArray, BitArray>::iterator iu2_it = isUnique2.begin();
   while (sm_it != smolyakMultiIndex.end())
-    if (sm_it == smolMIIter) // preserve active
-      { ++sm_it; ++sc_it; ++ck_it; ++ci_it; ++t1_it; ++t2_it; }
+    if (sm_it == smolMIIter) { // preserve active
+      ++sm_it; ++sc_it; ++ck_it; ++ci_it; ++t1_it; ++t2_it;
+      ++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
+      ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it;
+      ++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it;
+    }
     else { // clear inactive: postfix increments manage iterator invalidations
       smolyakMultiIndex.erase(sm_it++); smolyakCoeffs.erase(sc_it++);
       collocKey.erase(ck_it++);         collocIndices.erase(ci_it++);
       type1WeightSets.erase(t1_it++);   type2WeightSets.erase(t2_it++);
+      numUnique1.erase(nu1_it++);       numUnique2.erase(nu2_it++);
+      zVec.erase(z_it++); r1Vec.erase(r1_it++); r2Vec.erase(r2_it++);
+      a1Points.erase(a1p_it++);         a1Type1Weights.erase(a11w_it++);
+      a1Type2Weights.erase(a12w_it++);  a2Points.erase(a2p_it++);
+      a2Type1Weights.erase(a21w_it++);  a2Type2Weights.erase(a22w_it++);
+      sortIndex1.erase(si1_it++);       sortIndex2.erase(si2_it++);
+      uniqueSet1.erase(us1_it++);       uniqueSet2.erase(us2_it++);
+      uniqueIndex1.erase(ui1_it++);     uniqueIndex2.erase(ui2_it++);
+      isUnique1.erase(iu1_it++);        isUnique2.erase(iu2_it++);
     }
 }
 

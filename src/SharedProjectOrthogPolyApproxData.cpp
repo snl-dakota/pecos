@@ -256,16 +256,15 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
       active_key(driverRep->maximal_grid());
-      UShortArray& active_ao = approxOrdIter->second;
-      std::map<UShortArray, UShortArray>::iterator ao_it; size_t i;
-      for (ao_it=approxOrder.begin(); ao_it!=approxOrder.end(); ++ao_it)
-	if (ao_it->first != activeKey) {
-	  const UShortArray& combine_ao = ao_it->second;
-	  for (i=0; i<numVars; ++i)
-	    active_ao[i] += combine_ao[i];
-	}
-
-      tensor_product_multi_index(active_ao, combinedMultiIndex);
+      // roll up approxOrders to define combinedMultiIndex
+      std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
+      UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
+      for (; ao_it!=approxOrder.end(); ++ao_it) {
+	const UShortArray& ao = ao_it->second;
+	for (size_t i=0; i<numVars; ++i)
+	  combined_ao[i] += ao[i];
+      }
+      tensor_product_multi_index(combined_ao, combinedMultiIndex);
       allocate_component_sobol(combinedMultiIndex);
       break;
     }

@@ -446,16 +446,15 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     // default implementation: product of total-order expansions
     // (specialized in SharedProjectOrthogPolyApproxData::pre_combine_data())
 
-    // update approxOrder and define combinedMultiIndex
-    UShortArray& active_ao = approxOrdIter->second;
-    std::map<UShortArray, UShortArray>::iterator ao_it; size_t i;
-    for (ao_it=approxOrder.begin(); ao_it!=approxOrder.end(); ++ao_it)
-      if (ao_it->first != activeKey) {
-	const UShortArray& combine_ao = ao_it->second;
-	for (i=0; i<numVars; ++i)
-	  active_ao[i] += combine_ao[i];
-      }
-    total_order_multi_index(active_ao, combinedMultiIndex);
+    // roll up approxOrders to define combinedMultiIndex
+    std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
+    UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
+    for (; ao_it!=approxOrder.end(); ++ao_it) {
+      const UShortArray& ao = ao_it->second;
+      for (size_t i=0; i<numVars; ++i)
+	combined_ao[i] += ao[i];
+    }
+    total_order_multi_index(combined_ao, combinedMultiIndex);
     break;
   }
   case ADD_MULT_COMBINE:

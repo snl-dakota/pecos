@@ -352,7 +352,7 @@ private:
   /// key to unique points in set 1 (reference)
   std::map<UShortArray, BitArray> isUnique1;
   /// key to unique points in set 2 (increment)
-  std::map<UShortArray,  BitArray> isUnique2;
+  std::map<UShortArray, BitArray> isUnique2;
 };
 
 
@@ -412,10 +412,10 @@ inline void CombinedSparseGridDriver::clear_keys()
   type1WeightSets.clear(); type2WeightSets.clear();
   uniqueIndexMapping.clear();
 
-  numUnique1.clear(); numUnique2.clear();
-  zVec.clear(); r1Vec.clear(); r2Vec.clear();
-  a1Points.clear(); a1Type1Weights.clear(); a1Type2Weights.clear();
-  a2Points.clear(); a2Type1Weights.clear(); a2Type2Weights.clear();
+  numUnique1.clear();   numUnique2.clear();
+  zVec.clear();         r1Vec.clear();          r2Vec.clear();
+  a1Points.clear();     a1Type1Weights.clear(); a1Type2Weights.clear();
+  a2Points.clear();     a2Type1Weights.clear(); a2Type2Weights.clear();
   sortIndex1.clear();   sortIndex2.clear();
   uniqueSet1.clear();   uniqueSet2.clear();
   uniqueIndex1.clear(); uniqueIndex2.clear();
