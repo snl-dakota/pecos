@@ -679,8 +679,9 @@ void CombinedSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   UShort2DArray new_key;
   UShort3DArray& colloc_key = collocKeyIter->second;
   colloc_key.push_back(new_key); // empty array updated in place
-  compute_tensor_grid(quad_order, trialSet, a2Points, a2Type1Weights,
-		      a2Type2Weights, colloc_key.back());
+  compute_tensor_grid(quad_order, trialSet, a2Points[activeKey],
+		      a2Type1Weights[activeKey], a2Type2Weights[activeKey],
+		      colloc_key.back());
 
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
@@ -787,7 +788,7 @@ void CombinedSparseGridDriver::pop_trial_set()
   collocIndIter->second.pop_back();
   smolCoeffsIter->second = smolyakCoeffsRef;
 
-  numCollocPts -= numUnique2; // subtract number of trial points
+  numCollocPts -= numUnique2[activeKey]; // subtract number of trial points
   uniqueIndexMapping[activeKey].resize(numCollocPts); // prune trial from end
 }
 
@@ -844,45 +845,51 @@ void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
 {
   // define a1 pts/wts
   size_t num_sm_mi = smolMIIter->second.size();
-  compute_tensor_points_weights(0, num_sm_mi, a1Points, a1Type1Weights,
-				a1Type2Weights);
+  RealMatrix& a1_pts    = a1Points[activeKey];
+  RealVector& a1_t1_wts = a1Type1Weights[activeKey];
+  RealMatrix& a1_t2_wts = a1Type2Weights[activeKey];
+  compute_tensor_points_weights(0, num_sm_mi, a1_pts, a1_t1_wts, a1_t2_wts);
 
   // ----
   // INC1
   // ----
-  int m = numVars, n1 = a1Points.numCols(), seed = 1234567;
-  zVec.sizeUninitialized(m);  r1Vec.sizeUninitialized(n1);
-  sortIndex1.resize(n1);      uniqueIndex1.resize(n1);
-  uniqueSet1.resize(n1); // numUnique1 if count_inc1 used
+  int m = numVars, n1 = a1_pts.numCols(), seed = 1234567;
+  RealVector& zv  =         zVec[activeKey];    zv.sizeUninitialized(m);
+  RealVector& r1v =        r1Vec[activeKey];   r1v.sizeUninitialized(n1);
+  IntArray& sind1 =   sortIndex1[activeKey]; sind1.resize(n1);
+  IntArray& uind1 = uniqueIndex1[activeKey]; uind1.resize(n1);
+  IntArray& uset1 = uniqueSet1[activeKey]; 
+  uset1.resize(n1); // numUnique1 if count_inc1 used
+  int& num_u1 = numUnique1[activeKey];
   bool* is_unique1 = new bool[n1];
 
-  webbur::point_radial_tol_unique_index_inc1(m, n1, a1Points.values(),
-    duplicateTol, &seed, zVec.values(), r1Vec.values(), &sortIndex1[0],
-    is_unique1, &numUnique1, &uniqueSet1[0], &uniqueIndex1[0]);
+  webbur::point_radial_tol_unique_index_inc1(m, n1, a1_pts.values(),
+    duplicateTol, &seed, zv.values(), r1v.values(), &sind1[0], is_unique1,
+    &num_u1, &uset1[0], &uind1[0]);
 
-  copy_data(is_unique1, n1, isUnique1);
+  BitArray& isu1 = isUnique1[activeKey];
+  copy_data(is_unique1, n1, isu1);
   delete [] is_unique1;
 
 #ifdef DEBUG
-  PCout << "Reference unique: numUnique1 = " << numUnique1 << "\na1 =\n"
-	<< a1Points << "\n               r1   indx1 unique1   undx1   xdnu1:\n";
+  PCout << "Reference unique: numUnique1 = " << num_u1 << "\na1 =\n"
+	<< a1_pts << "\n               r1   indx1 unique1   undx1   xdnu1:\n";
   for (size_t i=0; i<n1; ++i)
-    std::cout << std::setw(17) << r1Vec[i]     << std::setw(8) << sortIndex1[i]
-	      << std::setw(8)  << isUnique1[i] << std::setw(8) << uniqueSet1[i]
-	      << std::setw(8)  << uniqueIndex1[i] << '\n';
+    std::cout << std::setw(17) << r1v[i]   << std::setw(8) << sind1[i]
+	      << std::setw(8)  << isu1[i]  << std::setw(8) << uset1[i]
+	      << std::setw(8)  << uind1[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
-  uniqueIndexMapping[activeKey] = uniqueIndex1; // copy
-  assign_tensor_collocation_indices(0, uniqueIndex1);
-  numCollocPts = numUnique1;
-  update_sparse_points(0, 0, a1Points, isUnique1, uniqueIndex1, var_sets);
+  uniqueIndexMapping[activeKey] = uind1; // copy
+  assign_tensor_collocation_indices(0, uind1);
+  numCollocPts = num_u1;
+  update_sparse_points(0, 0, a1_pts, isu1, uind1, var_sets);
   RealVector& t1_wts = type1WeightSets[activeKey];
   RealMatrix& t2_wts = type2WeightSets[activeKey];
   if (trackUniqueProdWeights) {
     t1_wts = 0.; if (computeType2Weights) t2_wts = 0.;
-    update_sparse_weights(0, a1Type1Weights, a1Type2Weights, uniqueIndex1,
-			  t1_wts, t2_wts);
+    update_sparse_weights(0, a1_t1_wts, a1_t2_wts, uind1, t1_wts, t2_wts);
 #ifdef DEBUG
     PCout << "\nreference_unique() reference type1WeightSets:\n";
     write_data(PCout, t1_wts);
@@ -898,52 +905,71 @@ void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
 void CombinedSparseGridDriver::
 increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
 {
+  RealMatrix&    a1_pts =       a1Points[activeKey];
+  RealVector& a1_t1_wts = a1Type1Weights[activeKey];
+  RealMatrix& a1_t2_wts = a1Type2Weights[activeKey];
+
+  RealMatrix&    a2_pts =       a2Points[activeKey];
+  RealVector& a2_t1_wts = a2Type1Weights[activeKey];
+  RealMatrix& a2_t2_wts = a2Type2Weights[activeKey];
+
+  RealVector&  zv =         zVec[activeKey];
+
+  RealVector& r1v =        r1Vec[activeKey];
+  IntArray& sind1 =   sortIndex1[activeKey];
+  IntArray& uind1 = uniqueIndex1[activeKey];
+  IntArray& uset1 =   uniqueSet1[activeKey]; 
+  int&     num_u1 =   numUnique1[activeKey];
+  BitArray&  isu1 =    isUnique1[activeKey];
+
+  RealVector& r2v =        r2Vec[activeKey];
+  IntArray& sind2 =   sortIndex2[activeKey];
+  IntArray& uind2 = uniqueIndex2[activeKey];
+  IntArray& uset2 =   uniqueSet2[activeKey]; 
+  int&     num_u2 =   numUnique2[activeKey];
+  BitArray&  isu2 =    isUnique2[activeKey];
+
   // increment_unique processes the trailing Smolyak index set
   size_t last_index = smolMIIter->second.size() - 1;
-
   // define a1 pts/wts
   if (compute_a2) // else already computed (e.g., within compute_trial_grid())
-    compute_tensor_points_weights(last_index, 1, a2Points, a2Type1Weights,
-				  a2Type2Weights);
+    compute_tensor_points_weights(last_index, 1, a2_pts, a2_t1_wts, a2_t2_wts);
 
   // ----
   // INC2
   // ----
-  int m = numVars, n1 = a1Points.numCols(), n2 = a2Points.numCols();
-  r2Vec.sizeUninitialized(n2); sortIndex2.resize(n2);
-  uniqueSet2.resize(n2); // numUnique2 if count_inc2 used
-  uniqueIndex2.resize(n2);
+  int m = numVars, n1 = a1_pts.numCols(), n2 = a2_pts.numCols();
+  r2v.sizeUninitialized(n2); sind2.resize(n2); uind2.resize(n2);
+  uset2.resize(n2); // numUnique2 if count_inc2 used
   bool *is_unique1 = new bool[n1], *is_unique2 = new bool[n2];
-  copy_data(isUnique1, is_unique1, n1);
+  copy_data(isu1, is_unique1, n1);
 
-  webbur::point_radial_tol_unique_index_inc2(m, n1, a1Points.values(),
-    n2, a2Points.values(), duplicateTol, zVec.values(), r1Vec.values(),
-    &sortIndex1[0], is_unique1, numUnique1, &uniqueSet1[0],
-    &uniqueIndex1[0], r2Vec.values(), &sortIndex2[0], is_unique2,
-    &numUnique2, &uniqueSet2[0], &uniqueIndex2[0]);
+  webbur::point_radial_tol_unique_index_inc2(m, n1, a1_pts.values(), n2,
+    a2_pts.values(), duplicateTol, zv.values(), r1v.values(), &sind1[0],
+    is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
+    is_unique2, &num_u2, &uset2[0], &uind2[0]);
 
-  copy_data(is_unique2, n2, isUnique2);
+  copy_data(is_unique2, n2, isu2);
   delete [] is_unique1;
   delete [] is_unique2;
 
 #ifdef DEBUG
-  PCout << "Increment unique: numUnique2 = " << numUnique2 << "\na2 =\n"
-	<< a2Points << "\n               r2   indx2 unique2   undx2   xdnu2:\n";
+  PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n"
+	<< a2_pts << "\n               r2   indx2 unique2   undx2   xdnu2:\n";
   for (size_t i=0; i<n2; ++i)
-    std::cout << std::setw(17) << r2Vec[i]     << std::setw(8) << sortIndex2[i]
-	      << std::setw(8)  << isUnique2[i] << std::setw(8) << uniqueSet2[i]
-	      << std::setw(8)  << uniqueIndex2[i] << '\n';
+    std::cout << std::setw(17) << r2v[i] << std::setw(8) << sind2[i]
+	      << std::setw(8)  << isu2[i]  << std::setw(8) << uset2[i]
+	      << std::setw(8)  << uind2[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
   IntArray& unique_index_map = uniqueIndexMapping[activeKey];
-  unique_index_map.insert(unique_index_map.end(), uniqueIndex2.begin(),
-			  uniqueIndex2.end());
-  assign_tensor_collocation_indices(last_index, uniqueIndex2);
-  numCollocPts = numUnique1 + numUnique2;
+  unique_index_map.insert(unique_index_map.end(), uind2.begin(),
+			  uind2.end());
+  assign_tensor_collocation_indices(last_index, uind2);
+  numCollocPts = num_u1 + num_u2;
   if (update_sets) // update unique var_sets
-    update_sparse_points(last_index, numUnique1, a2Points, isUnique2,
-			 uniqueIndex2, var_sets);
+    update_sparse_points(last_index, num_u1, a2_pts, isu2, uind2, var_sets);
   // update type{1,2}WeightSets
   if (trackUniqueProdWeights) {
     RealVector& t1_wts = type1WeightSets[activeKey];
@@ -951,8 +977,8 @@ increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
     t1_wts = type1WeightSetsRef;// to be augmented by last_index data
     if (computeType2Weights)
       t2_wts = type2WeightSetsRef; // to be augmented
-    update_sparse_weights(last_index, a2Type1Weights, a2Type2Weights,
-			  uniqueIndex2, t1_wts, t2_wts);
+    update_sparse_weights(last_index, a2_t1_wts, a2_t2_wts,
+			  uind2, t1_wts, t2_wts);
 #ifdef DEBUG
     PCout << "\nupdated type1 weight sets:\n" << t1_wts
 	  << "\nupdated type2 weight sets:\n" << t2_wts;
@@ -963,60 +989,76 @@ increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
 
 void CombinedSparseGridDriver::merge_unique()
 {
-  int m = numVars, n1 = a1Points.numCols(), n2 = a2Points.numCols(),
-    n1n2 = n1+n2, n3, num_unique3;
-  RealVector r3_vec(n1n2, false);
+  RealMatrix& a1_pts    = a1Points[activeKey];
+  RealVector& a1_t1_wts = a1Type1Weights[activeKey];
+  RealMatrix& a1_t2_wts = a1Type2Weights[activeKey];
+
+  RealMatrix& a2_pts    = a2Points[activeKey];
+  RealVector& a2_t1_wts = a2Type1Weights[activeKey];
+  RealMatrix& a2_t2_wts = a2Type2Weights[activeKey];
+
+  RealVector& r1v =        r1Vec[activeKey];
+  IntArray& sind1 =   sortIndex1[activeKey];
+  IntArray& uind1 = uniqueIndex1[activeKey];
+  IntArray& uset1 =   uniqueSet1[activeKey]; 
+  int&     num_u1 =   numUnique1[activeKey];
+  BitArray&  isu1 =    isUnique1[activeKey];
+
+  RealVector& r2v =        r2Vec[activeKey];
+  IntArray& sind2 =   sortIndex2[activeKey];
+  IntArray& uind2 = uniqueIndex2[activeKey];
+  IntArray& uset2 =   uniqueSet2[activeKey]; 
+  int&     num_u2 =   numUnique2[activeKey];
+  BitArray&  isu2 =    isUnique2[activeKey];
+
+  int m = numVars, n1 = a1_pts.numCols(), n2 = a2_pts.numCols(),
+    n1n2 = n1+n2, n3, num_u3;
+  RealVector r3v(n1n2, false);
   RealMatrix a3_pts(m, n1n2, false);
-  IntArray sort_index3(n1n2), unique_set3(n1n2), unique_index3(n1n2);
+  IntArray sind3(n1n2), uset3(n1n2), uind3(n1n2);
   bool *is_unique1 = new bool[n1], *is_unique2 = new bool[n2],
        *is_unique3 = new bool[n1n2];
-  copy_data(isUnique1, is_unique1, n1);
-  copy_data(isUnique2, is_unique2, n2);
+  copy_data(isu1, is_unique1, n1);
+  copy_data(isu2, is_unique2, n2);
 
   // ----
   // INC3
   // ----
-  webbur::point_radial_tol_unique_index_inc3(m, n1, a1Points.values(),
-    r1Vec.values(), &sortIndex1[0], is_unique1, numUnique1, &uniqueSet1[0],
-    &uniqueIndex1[0], n2, a2Points.values(), r2Vec.values(), &sortIndex2[0],
-    is_unique2, numUnique2, &uniqueSet2[0], &uniqueIndex2[0], &n3,
-    a3_pts.values(), r3_vec.values(), &sort_index3[0], is_unique3,
-    &num_unique3, &unique_set3[0], &unique_index3[0]);
+  webbur::point_radial_tol_unique_index_inc3(m, n1, a1_pts.values(),
+    r1v.values(), &sind1[0], is_unique1, num_u1, &uset1[0], &uind1[0], n2,
+    a2_pts.values(), r2v.values(), &sind2[0], is_unique2, num_u2, &uset2[0],
+    &uind2[0], &n3, a3_pts.values(), r3v.values(), &sind3[0], is_unique3,
+    &num_u3, &uset3[0], &uind3[0]);
 
 #ifdef DEBUG
-  PCout << "Merge unique: num_unique3 = " << num_unique3 << "\na3 =\n" << a3_pts
+  PCout << "Merge unique: num_unique3 = " << num_u3 << "\na3 =\n" << a3_pts
 	<< "\n               r3   indx3 unique3   undx3   xdnu3:\n";
   for (size_t i=0; i<n1n2; ++i)
-    std::cout << std::setw(17)    << r3_vec[i] << std::setw(8) << sort_index3[i]
-	      << std::setw(8) << is_unique3[i] << std::setw(8) << unique_set3[i]
-	      << std::setw(8) << unique_index3[i] << '\n';
+    std::cout << std::setw(17) << r3v[i]     << std::setw(8) << sind3[i]
+	      << std::setw(8)  << is_unique3[i] << std::setw(8) << uset3[i]
+	      << std::setw(8)  << uind3[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
   // update reference points/weights (originally defined by _inc1)
-  a1Points = a3_pts;
+  a1_pts = a3_pts;
   if (trackUniqueProdWeights) {
-    a1Type1Weights.resize(n1n2);
-    if (computeType2Weights) a1Type2Weights.reshape(numVars, n1n2);
-    size_t i, j;
-    for (i=0; i<n2; ++i) {
-      a1Type1Weights[n1+i] = a2Type1Weights[i];
+    a1_t1_wts.resize(n1n2);
+    if (computeType2Weights) a1_t2_wts.reshape(numVars, n1n2);
+    for (size_t i=0; i<n2; ++i) {
+      a1_t1_wts[n1+i] = a2_t1_wts[i];
       if (computeType2Weights)
-	copy_data(a2Type2Weights[i], numVars, a1Type2Weights[n1+i]);
+	copy_data(a2_t2_wts[i], numVars, a1_t2_wts[n1+i]);
     }
   }
   // update reference indices, counts, radii
-  r1Vec        = r3_vec;
-  sortIndex1   = sort_index3;
-  numUnique1   = num_unique3;
-  uniqueSet1   = unique_set3;
-  uniqueIndex1 = unique_index3;
-  copy_data(is_unique3, n1n2, isUnique1);
+  r1v   = r3v;    sind1  = sind3;  num_u1 = num_u3;
+  uset1 = uset3;  uind1  = uind3;  copy_data(is_unique3, n1n2, isu1);
   delete [] is_unique1; delete [] is_unique2; delete [] is_unique3;
   // update uniqueIndexMapping, collocIndices, numCollocPts
-  uniqueIndexMapping[activeKey] = unique_index3;
-  //assign_tensor_collocation_indices(0, unique_index3);
-  numCollocPts = num_unique3;
+  uniqueIndexMapping[activeKey] = uind3;
+  //assign_tensor_collocation_indices(0, uind3);
+  numCollocPts = num_u3;
 }
 
 
@@ -1033,98 +1075,112 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
   // that this condition is possible (or does structure of admissible indices
   // prevent replication in trial sets that is not first detected in old sets).
 
+  RealMatrix& a1_pts    = a1Points[activeKey];
+  RealVector& a1_t1_wts = a1Type1Weights[activeKey];
+  RealMatrix& a1_t2_wts = a1Type2Weights[activeKey];
+
+  RealMatrix& a2_pts    = a2Points[activeKey];
+  RealVector& a2_t1_wts = a2Type1Weights[activeKey];
+  RealMatrix& a2_t2_wts = a2Type2Weights[activeKey];
+
+  RealVector&  zv =         zVec[activeKey];
+
+  RealVector& r1v =        r1Vec[activeKey];
+  IntArray& sind1 =   sortIndex1[activeKey];
+  IntArray& uind1 = uniqueIndex1[activeKey];
+  IntArray& uset1 =   uniqueSet1[activeKey]; 
+  int&     num_u1 =   numUnique1[activeKey];
+  BitArray&  isu1 =    isUnique1[activeKey];
+
+  RealVector& r2v =        r2Vec[activeKey];
+  IntArray& sind2 =   sortIndex2[activeKey];
+  IntArray& uind2 = uniqueIndex2[activeKey];
+  IntArray& uset2 =   uniqueSet2[activeKey]; 
+  int&     num_u2 =   numUnique2[activeKey];
+  BitArray&  isu2 =    isUnique2[activeKey];
+
   size_t i, j, num_sm_mi = smolMIIter->second.size();
-  int m = numVars, n1, n2, n1n2, n3, num_unique3, all_n2 = 0;
-  RealVector all_a2t1_wts, r3_vec; RealMatrix a3_pts, all_a2t2_wts;
-  IntArray all_unique_index2, sort_index3, unique_set3, unique_index3;
+  int m = numVars, n1, n2, n1n2, n3, num_u3, all_n2 = 0;
+  RealVector all_a2t1_wts, r3v; RealMatrix a3_pts, all_a2t2_wts;
+  IntArray all_uind2, sind3, uset3, uind3;
   bool *is_unique1, *is_unique2, *is_unique3;
 
   for (i=start_index; i<num_sm_mi; ++i) {
 
-    compute_tensor_points_weights(i, 1, a2Points, a2Type1Weights,
-				  a2Type2Weights);
-    n1 = a1Points.numCols(); n2 = a2Points.numCols();
+    compute_tensor_points_weights(i, 1, a2_pts, a2_t1_wts, a2_t2_wts);
+    n1 = a1_pts.numCols(); n2 = a2_pts.numCols();
     all_a2t1_wts.resize(all_n2+n2);
     if (computeType2Weights) all_a2t2_wts.reshape(numVars, all_n2+n2);
     for (j=0; j<n2; ++j) {
-      all_a2t1_wts[all_n2+j] = a2Type1Weights[j];
+      all_a2t1_wts[all_n2+j] = a2_t1_wts[j];
       if (computeType2Weights)
-	copy_data(a2Type2Weights[j], numVars, all_a2t2_wts[all_n2+j]);
+	copy_data(a2_t2_wts[j], numVars, all_a2t2_wts[all_n2+j]);
     }
     all_n2 += n2;
 
     // INC2
-    r2Vec.sizeUninitialized(n2); sortIndex2.resize(n2);
-    uniqueSet2.resize(n2);       uniqueIndex2.resize(n2);
-    is_unique1 = new bool[n1];   is_unique2 = new bool[n2];
-    copy_data(isUnique1, is_unique1, n1);
-    webbur::point_radial_tol_unique_index_inc2(m, n1, a1Points.values(),
-      n2, a2Points.values(), duplicateTol, zVec.values(), r1Vec.values(),
-      &sortIndex1[0], is_unique1, numUnique1, &uniqueSet1[0],
-      &uniqueIndex1[0], r2Vec.values(), &sortIndex2[0], is_unique2,
-      &numUnique2, &uniqueSet2[0], &uniqueIndex2[0]);
+    r2v.sizeUninitialized(n2);  sind2.resize(n2);
+    uset2.resize(n2);           uind2.resize(n2);
+    is_unique1 = new bool[n1];  copy_data(isu1, is_unique1, n1);
+    is_unique2 = new bool[n2];  copy_data(isu2, is_unique2, n2);
+    webbur::point_radial_tol_unique_index_inc2(m, n1, a1_pts.values(), n2,
+      a2_pts.values(), duplicateTol, zv.values(), r1v.values(), &sind1[0],
+      is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
+      is_unique2, &num_u2, &uset2[0], &uind2[0]);
 #ifdef DEBUG
-    PCout << "Finalize unique: numUnique2 = " << numUnique2 << "\na2 =\n"
-	  << a2Points<<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
+    PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n"
+	  << a2_pts<<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
     for (j=0; j<n2; ++j)
-      std::cout << std::setw(17)    << r2Vec[j] << std::setw(8) << sortIndex2[j]
-		<< std::setw(8) << isUnique2[j] << std::setw(8) << uniqueSet2[j]
-		<< std::setw(8) << uniqueIndex2[j] << '\n';
+      std::cout << std::setw(17) << r2v[j]   << std::setw(8) << sind2[j]
+		<< std::setw(8)  << isu2[j]  << std::setw(8) << uset2[j]
+		<< std::setw(8)  << uind2[j] << '\n';
     PCout << std::endl;
 #endif // DEBUG
 
-    all_unique_index2.insert(all_unique_index2.end(), uniqueIndex2.begin(),
-			     uniqueIndex2.end());
-    numCollocPts += numUnique2;
+    all_uind2.insert(all_uind2.end(), uind2.begin(), uind2.end());
+    numCollocPts += num_u2;
 
     if (i < num_sm_mi - 1) {
       // INC3
-      n1n2 = n1+n2;                       r3_vec.sizeUninitialized(n1n2);
-      a3_pts.shapeUninitialized(m, n1n2); sort_index3.resize(n1n2);
-      unique_set3.resize(n1n2);           unique_index3.resize(n1n2);
+      n1n2 = n1+n2;                       r3v.sizeUninitialized(n1n2);
+      a3_pts.shapeUninitialized(m, n1n2); sind3.resize(n1n2);
+      uset3.resize(n1n2);                 uind3.resize(n1n2);
       is_unique3 = new bool[n1n2];
-      webbur::point_radial_tol_unique_index_inc3(m, n1, a1Points.values(),
-        r1Vec.values(), &sortIndex1[0], is_unique1, numUnique1, &uniqueSet1[0],
-        &uniqueIndex1[0], n2, a2Points.values(), r2Vec.values(), &sortIndex2[0],
-        is_unique2, numUnique2, &uniqueSet2[0], &uniqueIndex2[0], &n3,
-        a3_pts.values(), r3_vec.values(), &sort_index3[0], is_unique3,
-        &num_unique3, &unique_set3[0], &unique_index3[0]);
+      webbur::point_radial_tol_unique_index_inc3(m, n1, a1_pts.values(),
+        r1v.values(), &sind1[0], is_unique1, num_u1, &uset1[0], &uind1[0], n2,
+	a2_pts.values(), r2v.values(), &sind2[0], is_unique2, num_u2, &uset2[0],
+	&uind2[0], &n3, a3_pts.values(), r3v.values(), &sind3[0], is_unique3,
+        &num_u3, &uset3[0], &uind3[0]);
 #ifdef DEBUG
-      PCout << "Finalize unique: num_unique3 = " << num_unique3 << "\na3 =\n"
+      PCout << "Finalize unique: num_unique3 = " << num_u3 << "\na3 =\n"
 	    << a3_pts<<"\n               r3   indx3 unique3   undx3   xdnu3:\n";
       for (j=0; j<n1n2; ++j)
-	std::cout << std::setw(17) << r3_vec[j] << std::setw(8)
-		  << sort_index3[j] << std::setw(8) << is_unique3[j]
-		  << std::setw(8) << unique_set3[j] << std::setw(8)
-		  << unique_index3[j] << '\n';
+	std::cout << std::setw(17) << r3v[j]        << std::setw(8) << sind3[j]
+		  << std::setw(8)  << is_unique3[j] << std::setw(8) << uset3[j]
+		  << std::setw(8)  << uind3[j]      << '\n';
       PCout << std::endl;
 #endif // DEBUG
 
       // update reference points, indices, counts, radii
-      a1Points     = a3_pts;
-      r1Vec        = r3_vec;
-      sortIndex1   = sort_index3;
-      numUnique1   = num_unique3;
-      uniqueSet1   = unique_set3;
-      uniqueIndex1 = unique_index3;
-      copy_data(is_unique3, n1n2, isUnique1);
+      a1_pts = a3_pts;  r1v   = r3v;    sind1 = sind3;
+      num_u1 = num_u3;  uset1 = uset3;  uind1 = uind3;
+      copy_data(is_unique3, n1n2, isu1);
       delete [] is_unique3;
     }
 
     delete [] is_unique1; delete [] is_unique2;
   }
 
-  IntArray& unique_index_map = uniqueIndexMapping[activeKey];
-  unique_index_map.insert(unique_index_map.end(), all_unique_index2.begin(),
-			  all_unique_index2.end());
-  assign_tensor_collocation_indices(start_index, all_unique_index2);
+  IntArray& uind_map = uniqueIndexMapping[activeKey];
+  uind_map.insert(uind_map.end(), all_uind2.begin(), all_uind2.end());
+  assign_tensor_collocation_indices(start_index, all_uind2);
   if (trackUniqueProdWeights) {
     RealVector& t1_wts = type1WeightSets[activeKey];
     RealMatrix& t2_wts = type2WeightSets[activeKey];
     t1_wts = type1WeightSetsRef; // to be augmented
     if (computeType2Weights) t2_wts = type2WeightSetsRef; // to be augmented
     update_sparse_weights(start_index, all_a2t1_wts, all_a2t2_wts,
-			  all_unique_index2, t1_wts, t2_wts);
+			  all_uind2, t1_wts, t2_wts);
 #ifdef DEBUG
     PCout << "type1WeightSets =\n"; write_data(PCout, t1_wts);
 #endif // DEBUG
@@ -1175,6 +1231,9 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
   if (computeType2Weights)
     updated_t2_wts.reshape(numVars, numCollocPts); // new entries init to 0
 
+  RealVector& a1_t1_wts = a1Type1Weights[activeKey];
+  RealMatrix& a1_t2_wts = a1Type2Weights[activeKey];
+  IntArray&       uind1 =   uniqueIndex1[activeKey];
   int index, delta_coeff, sm_coeff;
   const UShort3DArray& colloc_key =  collocKeyIter->second;
   const IntArray&       sm_coeffs = smolCoeffsIter->second;
@@ -1184,11 +1243,11 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
     if (delta_coeff) {
       num_tp_pts = colloc_key[i].size();
       for (j=0; j<num_tp_pts; ++j, ++cntr) {
-	index = uniqueIndex1[cntr];
-	updated_t1_wts[index] += delta_coeff * a1Type1Weights[cntr];
+	index = uind1[cntr];
+	updated_t1_wts[index] += delta_coeff * a1_t1_wts[cntr];
 	if (computeType2Weights) {
 	  Real*       up_t2_wts_j = updated_t2_wts[index];
-	  const Real* a1_t2_wts_j = a1Type2Weights[cntr];
+	  const Real* a1_t2_wts_j = a1_t2_wts[cntr];
 	  for (k=0; k<numVars; ++k)
 	    up_t2_wts_j[k] += delta_coeff * a1_t2_wts_j[k];
 	}

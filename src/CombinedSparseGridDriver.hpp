@@ -315,25 +315,44 @@ private:
   /// duplication tolerance used in sgmga routines
   Real duplicateTol;
 
-  int numUnique1;       ///< number of unique points in set 1 (reference)
-  int numUnique2;       ///< number of unique points in set 2 (increment)
-  RealVector zVec;      ///< random vector used within sgmgg for sorting
-  RealVector r1Vec;     ///< distance values for sorting in set 1 (reference)
-  RealVector r2Vec;     ///< distance values for sorting in set 2 (increment)
-  RealMatrix a1Points;  ///< array of collocation points in set 1 (reference)
-  RealMatrix a2Points;  ///< array of collocation points in set 2 (increment)
-  RealVector a1Type1Weights; ///< vector of type1 weights in set 1 (reference)
-  RealMatrix a1Type2Weights; ///< matrix of type2 weights in set 1 (reference)
-  RealVector a2Type1Weights; ///< vector of type1 weights in set 2 (increment)
-  RealMatrix a2Type2Weights; ///< matrix of type2 weights in set 2 (increment)
-  IntArray sortIndex1;  ///< ascending sort index for set 1 (reference)
-  IntArray sortIndex2;  ///< ascending sort index for set 2 (increment)
-  IntArray uniqueSet1;  ///< index within a1 (reference set) of unique points
-  IntArray uniqueSet2;  ///< index within a2 (increment set) of unique points
-  IntArray uniqueIndex1;///< index within uniqueSet1 corresponding to all of a1
-  IntArray uniqueIndex2;///< index within uniqueSet2 corresponding to all of a2
-  BitArray isUnique1;   ///< key to unique points in set 1 (reference)
-  BitArray isUnique2;   ///< key to unique points in set 2 (increment)
+  /// number of unique points in set 1 (reference)
+  std::map<UShortArray, int> numUnique1;
+  /// number of unique points in set 2 (increment)
+  std::map<UShortArray, int> numUnique2;
+  /// random vector used within sgmgg for sorting
+  std::map<UShortArray, RealVector> zVec;
+  /// distance values for sorting in set 1 (reference)
+  std::map<UShortArray, RealVector> r1Vec;
+  /// distance values for sorting in set 2 (increment)
+  std::map<UShortArray, RealVector> r2Vec;
+  /// array of collocation points in set 1 (reference)
+  std::map<UShortArray, RealMatrix> a1Points;
+  /// array of collocation points in set 2 (increment)
+  std::map<UShortArray, RealMatrix> a2Points;
+  /// vector of type1 weights in set 1 (reference)
+  std::map<UShortArray, RealVector> a1Type1Weights;
+  /// matrix of type2 weights in set 1 (reference)
+  std::map<UShortArray, RealMatrix> a1Type2Weights;
+  /// vector of type1 weights in set 2 (increment)
+  std::map<UShortArray, RealVector> a2Type1Weights;
+  /// matrix of type2 weights in set 2 (increment)
+  std::map<UShortArray, RealMatrix> a2Type2Weights;
+  /// ascending sort index for set 1 (reference)
+  std::map<UShortArray, IntArray> sortIndex1;
+  /// ascending sort index for set 2 (increment)
+  std::map<UShortArray, IntArray> sortIndex2;
+  /// index within a1 (reference set) of unique points
+  std::map<UShortArray, IntArray> uniqueSet1;
+  /// index within a2 (increment set) of unique points
+  std::map<UShortArray, IntArray> uniqueSet2;
+  /// index within uniqueSet1 corresponding to all of a1
+  std::map<UShortArray, IntArray> uniqueIndex1;
+  /// index within uniqueSet2 corresponding to all of a2
+  std::map<UShortArray, IntArray> uniqueIndex2;
+  /// key to unique points in set 1 (reference)
+  std::map<UShortArray, BitArray> isUnique1;
+  /// key to unique points in set 2 (increment)
+  std::map<UShortArray,  BitArray> isUnique2;
 };
 
 
@@ -392,6 +411,15 @@ inline void CombinedSparseGridDriver::clear_keys()
   collocIndices.clear();   collocIndIter = collocIndices.end();
   type1WeightSets.clear(); type2WeightSets.clear();
   uniqueIndexMapping.clear();
+
+  numUnique1.clear(); numUnique2.clear();
+  zVec.clear(); r1Vec.clear(); r2Vec.clear();
+  a1Points.clear(); a1Type1Weights.clear(); a1Type2Weights.clear();
+  a2Points.clear(); a2Type1Weights.clear(); a2Type2Weights.clear();
+  sortIndex1.clear();   sortIndex2.clear();
+  uniqueSet1.clear();   uniqueSet2.clear();
+  uniqueIndex1.clear(); uniqueIndex2.clear();
+  isUnique1.clear();    isUnique2.clear();
 }
 
 
@@ -503,7 +531,15 @@ inline const UShortArray& CombinedSparseGridDriver::trial_set() const
 
 
 inline int CombinedSparseGridDriver::unique_trial_points() const
-{ return numUnique2; }
+{
+  std::map<UShortArray, int>::const_iterator cit = numUnique2.find(activeKey);
+  if (cit == numUnique2.end()) {
+    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
+	  << "unique_trial_points()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 //inline Real CombinedSparseGridDriver::duplicate_tolerance() const
