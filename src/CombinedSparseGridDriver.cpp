@@ -196,12 +196,19 @@ void CombinedSparseGridDriver::clear_inactive()
   std::map<UShortArray, IntArray>::iterator ui2_it = uniqueIndex2.begin();
   std::map<UShortArray, BitArray>::iterator iu1_it = isUnique1.begin();
   std::map<UShortArray, BitArray>::iterator iu2_it = isUnique2.begin();
+  std::map<UShortArray, IntArray>::iterator scr_it = smolyakCoeffsRef.begin();
+  std::map<UShortArray, RealVector>::iterator t1r_it
+    = type1WeightSetsRef.begin();
+  std::map<UShortArray, RealMatrix>::iterator t2r_it
+    = type2WeightSetsRef.begin();
+
   while (sm_it != smolyakMultiIndex.end())
     if (sm_it == smolMIIter) { // preserve active
       ++sm_it; ++sc_it; ++ck_it; ++ci_it; ++t1_it; ++t2_it;
       ++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
       ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it;
       ++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it;
+      ++scr_it; ++t1r_it; ++t2r_it;
     }
     else { // clear inactive: postfix increments manage iterator invalidations
       smolyakMultiIndex.erase(sm_it++); smolyakCoeffs.erase(sc_it++);
@@ -216,6 +223,8 @@ void CombinedSparseGridDriver::clear_inactive()
       uniqueSet1.erase(us1_it++);       uniqueSet2.erase(us2_it++);
       uniqueIndex1.erase(ui1_it++);     uniqueIndex2.erase(ui2_it++);
       isUnique1.erase(iu1_it++);        isUnique2.erase(iu2_it++);
+      smolyakCoeffsRef.erase(scr_it++); type1WeightSetsRef.erase(t1r_it++);
+      type2WeightSetsRef.erase(t2r_it++);
     }
 }
 
@@ -818,7 +827,7 @@ void CombinedSparseGridDriver::pop_trial_set()
   smolMIIter->second.pop_back();
   collocKeyIter->second.pop_back();
   collocIndIter->second.pop_back();
-  smolCoeffsIter->second = smolyakCoeffsRef;
+  smolCoeffsIter->second = smolyakCoeffsRef[activeKey];
 
   numCollocPts -= numUnique2[activeKey]; // subtract number of trial points
   uniqueIndexMapping[activeKey].resize(numCollocPts); // prune trial from end
@@ -1006,9 +1015,9 @@ increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
   if (trackUniqueProdWeights) {
     RealVector& t1_wts = type1WeightSets[activeKey];
     RealMatrix& t2_wts = type2WeightSets[activeKey];
-    t1_wts = type1WeightSetsRef;// to be augmented by last_index data
+    t1_wts = type1WeightSetsRef[activeKey];// to be augmented by last_index data
     if (computeType2Weights)
-      t2_wts = type2WeightSetsRef; // to be augmented
+      t2_wts = type2WeightSetsRef[activeKey]; // to be augmented
     update_sparse_weights(last_index, a2_t1_wts, a2_t2_wts,
 			  uind2, t1_wts, t2_wts);
 #ifdef DEBUG
@@ -1209,8 +1218,9 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
   if (trackUniqueProdWeights) {
     RealVector& t1_wts = type1WeightSets[activeKey];
     RealMatrix& t2_wts = type2WeightSets[activeKey];
-    t1_wts = type1WeightSetsRef; // to be augmented
-    if (computeType2Weights) t2_wts = type2WeightSetsRef; // to be augmented
+    t1_wts = type1WeightSetsRef[activeKey]; // to be augmented
+    if (computeType2Weights)
+      t2_wts = type2WeightSetsRef[activeKey]; // to be augmented
     update_sparse_weights(start_index, all_a2t1_wts, all_a2t2_wts,
 			  all_uind2, t1_wts, t2_wts);
 #ifdef DEBUG
@@ -1269,9 +1279,10 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
   int index, delta_coeff, sm_coeff;
   const UShort3DArray& colloc_key =  collocKeyIter->second;
   const IntArray&       sm_coeffs = smolCoeffsIter->second;
+  const IntArray&   sm_coeffs_ref = smolyakCoeffsRef[activeKey];
   // back out changes in Smolyak coeff for existing index sets
   for (i=0, cntr=0; i<start_index; ++i) {
-    delta_coeff = sm_coeffs[i] - smolyakCoeffsRef[i];
+    delta_coeff = sm_coeffs[i] - sm_coeffs_ref[i];
     if (delta_coeff) {
       num_tp_pts = colloc_key[i].size();
       for (j=0; j<num_tp_pts; ++j, ++cntr) {

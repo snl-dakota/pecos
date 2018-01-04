@@ -260,7 +260,7 @@ private:
 
   /// reference values for the Smolyak combinatorial coefficients;
   /// used in incremental approaches that update smolyakCoeffs
-  IntArray smolyakCoeffsRef;
+  std::map<UShortArray, IntArray> smolyakCoeffsRef;
 
   /// flag controls conditional population of collocKey, collocIndices,
   /// collocPts1D and type{1,2}CollocWts1D
@@ -295,10 +295,10 @@ private:
 
   /// reference values for the type1 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type1WeightSets
-  RealVector type1WeightSetsRef;
+  std::map<UShortArray, RealVector> type1WeightSetsRef;
   /// reference values for the type2 weights corresponding to the current
   /// reference grid; used in incremental approaches that update type2WeightSets
-  RealMatrix type2WeightSetsRef;
+  std::map<UShortArray, RealMatrix> type2WeightSetsRef;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<CollocFnPtr> compute1DPoints;
@@ -420,6 +420,9 @@ inline void CombinedSparseGridDriver::clear_keys()
   uniqueSet1.clear();   uniqueSet2.clear();
   uniqueIndex1.clear(); uniqueIndex2.clear();
   isUnique1.clear();    isUnique2.clear();
+
+  smolyakCoeffsRef.clear();
+  type1WeightSetsRef.clear(); type2WeightSetsRef.clear();
 }
 
 
@@ -578,18 +581,27 @@ inline void CombinedSparseGridDriver::merge_set()
 
 inline void CombinedSparseGridDriver::update_reference()
 {
-  smolyakCoeffsRef = smolCoeffsIter->second;
+  smolyakCoeffsRef[activeKey] = smolCoeffsIter->second;
   if (trackUniqueProdWeights) {
-    type1WeightSetsRef = type1WeightSets[activeKey];
+    type1WeightSetsRef[activeKey] = type1WeightSets[activeKey];
     if (computeType2Weights)
-      type2WeightSetsRef = type2WeightSets[activeKey];
+      type2WeightSetsRef[activeKey] = type2WeightSets[activeKey];
   }
 }
 
 
 inline const IntArray& CombinedSparseGridDriver::
 smolyak_coefficients_reference() const
-{ return smolyakCoeffsRef; }
+{
+  std::map<UShortArray, IntArray>::const_iterator cit
+    = smolyakCoeffsRef.find(activeKey);
+  if (cit == smolyakCoeffsRef.end()) {
+    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
+	  << "smolyak_coefficients_reference()." << std::endl;
+    abort_handler(-1);
+  }
+  return cit->second;
+}
 
 
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const
