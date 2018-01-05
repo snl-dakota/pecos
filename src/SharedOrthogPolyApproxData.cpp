@@ -367,7 +367,6 @@ void SharedOrthogPolyApproxData::remove_stored_data(size_t index)
     break;
   }
 }
-*/
 
 
 const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
@@ -402,7 +401,6 @@ const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
 }
 
 
-/*
 void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
 {
   std::swap(storedMultiIndex[index], multiIndex);
@@ -419,19 +417,13 @@ void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
 
 void SharedOrthogPolyApproxData::pre_combine_data()
 {
-  SharedPolyApproxData::pre_combine_data();
-
   // For open-ended number of stored grids: retrieve the most refined from the
   // existing grids (from sequence specification + any subsequent refinement)
-  active_key(maximal_expansion());
-
-  // Most general: overlay all grid refinement levels to create a new superset
-  //size_t new_index = overlay_maximal_grid();
+  //active_key(maximal_expansion());
 
   switch (expConfigOptions.combineType) {
   case ADD_COMBINE: {
-    // update active (maximal) multiIndex with any non-active multiIndex terms
-    // not yet included.  An update in place is sufficient.
+    // combine all multiIndex keys into combinedMultiIndex{,Map}
     size_t i, num_combine = multiIndex.size(), combine_mi_map_ref;
     combinedMultiIndex.clear();  combinedMultiIndexMap.resize(num_combine);
     std::map<UShortArray, UShort2DArray>::iterator mi_it;
@@ -439,6 +431,8 @@ void SharedOrthogPolyApproxData::pre_combine_data()
       append_multi_index(mi_it->second, combinedMultiIndex,
 			 combinedMultiIndexMap[i], combine_mi_map_ref);
     /*
+    // update active (maximal) multiIndex with any non-active multiIndex
+    // terms not yet included.  An update in place is sufficient.
     size_t i, num_combine = multiIndex.size() - 1, cntr = 0, combine_mi_map_ref;
     combinedMultiIndexMap.resize(num_combine);
     std::map<UShortArray, UShort2DArray>::iterator mi_it;
@@ -475,7 +469,7 @@ void SharedOrthogPolyApproxData::pre_combine_data()
   }
 
   // reset sobolIndexMap from aggregated multiIndex
-  allocate_component_sobol(combinedMultiIndex);
+  //allocate_component_sobol(combinedMultiIndex);
 }
 
 
@@ -485,8 +479,6 @@ void SharedOrthogPolyApproxData::post_combine_data()
   // combinations within adaptive refinement.
   //std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
   //combinedMultiIndex.clear();
-
-  SharedPolyApproxData::post_combine_data();
 }
 
 

@@ -492,10 +492,6 @@ protected:
   /// the key is a multi-index managing multiple modeling dimensions such
   /// as model form, discretization level, etc.
   UShortArray activeKey;
-  /// the active key to restore following the expansion combination process
-  /// (this process activates a maximal expansion to facilitate assembly of
-  /// combined multi-indices and coefficients)
-  UShortArray prevActiveKey;
 
   /// mapping to manage different global sensitivity index options
   /// (e.g. univariate/main effects only vs all effects)

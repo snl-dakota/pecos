@@ -349,9 +349,8 @@ private:
       exercised to retain synchronization with expansionCoeff{s,Grads}
       ordering when merging sparse multi-indices. */
   std::map<UShortArray, SizetSet> sparseIndices;
-  // copy of sparseIndices stored in store_coefficients() for use in
-  // combine_coefficients()
-  //SizetSetArray storedSparseIndices;
+  /// set of sparseIndices mapping combinedExpCoeffs to combinedMultiIndex
+  SizetSet combinedSparseIndices;
 
   /// maps shared index from sobolIndexMap values to sparse index into
   /// sparse sobolIndices

@@ -255,8 +255,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
     // compute form of product expansion
     switch (expConfigOptions.expCoeffsSolnApproach) {
     case QUADRATURE: { // product of two tensor-product expansions
-      SharedPolyApproxData::pre_combine_data();
-      active_key(driverRep->maximal_grid());
+      //active_key(driverRep->maximal_grid());
       // roll up approxOrders to define combinedMultiIndex
       std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
       UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
@@ -270,21 +269,21 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
-      SharedPolyApproxData::pre_combine_data();
-      active_key(driverRep->maximal_grid());
+      //active_key(driverRep->maximal_grid());
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion
-      size_t s, i, v, index, num_mi = multiIndex.size();
-      UShort3DArray pareto_mi(num_mi);
       CombinedSparseGridDriver* csg_driver
 	= (CombinedSparseGridDriver*)driverRep;
-      std::map<UShortArray, UShort2DArray>::iterator mi_it;
-      for (s=0, mi_it=multiIndex.begin(); s<num_mi; ++s, ++mi_it)
-	update_pareto_set(csg_driver->smolyak_multi_index(mi_it->first),
-			  pareto_mi[s]);
+      const std::map<UShortArray, UShort2DArray>& sm_mi_map
+	= csg_driver->smolyak_multi_index_map();
+      size_t s, i, v, index, num_mi = sm_mi_map.size();
+      UShort3DArray pareto_mi(num_mi);
+      std::map<UShortArray, UShort2DArray>::const_iterator sm_it;
+      for (s=0, sm_it=sm_mi_map.begin(); s<num_mi; ++s, ++sm_it)
+	update_pareto_set(sm_it->second, pareto_mi[s]);
       // define a combined multi-index that can enumerate each pareto term;
       // since these are indices and not orders, we exclude the upper bound.
-      UShortArray pareto_terms(num_mi); UShort2DArray pareto_indices;
+      UShortArray pareto_terms(num_mi);  UShort2DArray pareto_indices;
       for (s=0; s<num_mi; ++s)
 	pareto_terms[s] = pareto_mi[s].size();
       tensor_product_multi_index(pareto_terms, pareto_indices, false);

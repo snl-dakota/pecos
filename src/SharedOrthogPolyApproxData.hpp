@@ -150,11 +150,13 @@ protected:
   /// update {multiIndex,approxOrd}Iter from activeKey
   void update_active_iterators();
 
+  /*
   /// detect whether current expansion settings are the most refined
   const UShortArray& maximal_expansion();
   /// swap current shared data with a stored shared data set, as identified
   /// by stored index
   void swap_shared_data(size_t index);
+  */
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(

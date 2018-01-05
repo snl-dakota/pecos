@@ -271,7 +271,8 @@ void SharedInterpPolyApproxData::post_finalize_data()
 
 void SharedInterpPolyApproxData::pre_combine_data()
 {
-  SharedPolyApproxData::pre_combine_data();
+  // store active state prior to roll up (which activates the maximal expansion)
+  prevActiveKey = activeKey;
 
   /*
   // For open-ended number of stored grids: retrieve the most refined from the
@@ -290,6 +291,14 @@ void SharedInterpPolyApproxData::pre_combine_data()
   */
 
   active_key(driverRep->maximal_grid()); // update activeKey + active iterators
+}
+
+
+void SharedInterpPolyApproxData::post_combine_data()
+{
+  // now that combined arrays have been updated, restore the active state
+  // that existed prior to roll up
+  active_key(prevActiveKey);
 }
 
 

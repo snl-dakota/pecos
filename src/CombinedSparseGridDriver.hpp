@@ -159,6 +159,9 @@ public:
   const UShort2DArray& smolyak_multi_index() const;
   /// return smolyakMultiIndex[key]
   const UShort2DArray& smolyak_multi_index(const UShortArray& key) const;
+  /// return smolyakMultiIndex[key]
+  const std::map<UShortArray, UShort2DArray>& smolyak_multi_index_map() const;
+
   /// return smolyakCoeffs[activeKey]
   const IntArray& smolyak_coefficients() const;
   /// return smolyakCoeffs[key]
@@ -443,6 +446,11 @@ smolyak_multi_index(const UShortArray& key) const
   }
   return cit->second;
 }
+
+
+inline const std::map<UShortArray, UShort2DArray>& CombinedSparseGridDriver::
+smolyak_multi_index_map() const
+{ return smolyakMultiIndex; }
 
 
 inline const IntArray& CombinedSparseGridDriver::smolyak_coefficients() const
