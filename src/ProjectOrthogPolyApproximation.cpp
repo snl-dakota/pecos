@@ -204,6 +204,9 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // TO DO: partial sync of new TP data set, e.g. update_surrogate_data() ?
   synchronize_surrogate_data();
 
+  // resize component Sobol' array sizes to pick up new interaction terms
+  allocate_component_sobol();
+
   // tpMultiIndex{,Map,MapRef} already updated in
   // SharedProjectOrthogPolyApproxData::increment_data()
   SharedProjectOrthogPolyApproxData* data_rep
@@ -215,12 +218,6 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
   RealVector rv; tp_exp_coeffs.push_back(rv);
   RealMatrix rm; tp_exp_coeff_grads.push_back(rm);
-
-  // resize component Sobol' array sizes to pick up new interaction terms
-  allocate_component_sobol();
-
-  // resize the PCE
-  resize_expansion();
 
   // form tp_data_pts, tp_wts using collocKey et al.
   SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
@@ -242,6 +239,10 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data())
     surrData.pop(save_data);
+
+  // likely overkill, but multilevel roll up after increment modifies and
+  // then restores active key
+  update_active_iterators();
 
   // reset expansion{Coeffs,CoeffGrads}: (set in append_tensor_expansions())
   SharedProjectOrthogPolyApproxData* data_rep
@@ -293,9 +294,6 @@ void ProjectOrthogPolyApproximation::push_coefficients()
 
   // don't update Sobol' array sizes for decrement, push, or finalize
 
-  // resize the PCE
-  resize_expansion();
-
   // sum trial expansion into expansionCoeffs/expansionCoeffGrads
   append_tensor_expansions(last_tp_index);
 
@@ -324,7 +322,6 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 
   // don't update Sobol' array sizes for decrement, push, or finalize
   size_t start_tp_index = tp_exp_coeffs.size(); // before insertion
-  resize_expansion();
   // move previous expansion data to current expansion
   tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_tp_exp_coeffs.begin(),
 		       pop_tp_exp_coeffs.end());
@@ -343,12 +340,18 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 void ProjectOrthogPolyApproximation::
 append_tensor_expansions(size_t start_tp_index)
 {
+  update_active_iterators();
+
   RealVector& exp_coeffs      =     expCoeffsIter->second;
   RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
 
   // for use in decrement_coefficients()
   prevExpCoeffs     = exp_coeffs;      // copy
   prevExpCoeffGrads = exp_coeff_grads; // copy
+
+  // synchonize expansionCoeff{s,Grads} size with updated multiIndex
+  // (following any caching of previous states)
+  resize_expansion();
 
   // update expansion{Coeffs,CoeffGrads} using a hierarchical update
   // rather than building from scratch

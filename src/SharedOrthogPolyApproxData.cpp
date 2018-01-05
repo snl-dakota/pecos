@@ -417,7 +417,7 @@ void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
 
 void SharedOrthogPolyApproxData::pre_combine_data()
 {
-  // Combine the data stored previously by store_data()
+  SharedPolyApproxData::pre_combine_data();
 
   // For open-ended number of stored grids: retrieve the most refined from the
   // existing grids (from sequence specification + any subsequent refinement)
@@ -475,6 +475,8 @@ void SharedOrthogPolyApproxData::post_combine_data()
   // combinations within adaptive refinement.
   //std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
   //combinedMultiIndex.clear();
+
+  SharedPolyApproxData::post_combine_data();
 }
 
 

@@ -338,11 +338,18 @@ void SharedPolyApproxData::post_finalize_data()
 
 
 void SharedPolyApproxData::pre_combine_data()
-{ } // default implementation is no op
+{
+  // store active state prior to roll up (which activates the maximal expansion)
+  prevActiveKey = activeKey;
+}
 
 
 void SharedPolyApproxData::post_combine_data()
-{ } // default implementation is no op
+{
+  // now that combinedMultiIndex{,Map} and combinedExpCoeff{s,Grads} have
+  // been updated, restore the active state that existed prior to roll up
+  active_key(prevActiveKey);
+}
 
 
 void SharedPolyApproxData::clear_inactive_data()

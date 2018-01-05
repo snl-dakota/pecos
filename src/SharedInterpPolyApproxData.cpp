@@ -269,6 +269,8 @@ void SharedInterpPolyApproxData::post_finalize_data()
 
 void SharedInterpPolyApproxData::pre_combine_data()
 {
+  SharedPolyApproxData::pre_combine_data();
+
   /*
   // For open-ended number of stored grids: retrieve the most refined from the
   // existing grids (from sequence specification + any subsequent refinement).
