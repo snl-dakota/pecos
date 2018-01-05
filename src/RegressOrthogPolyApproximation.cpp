@@ -620,23 +620,33 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     }
 
     std::map<UShortArray, RealVector>::iterator ec_it;
-    std::map<UShortArray, RealMatrix>::iterator ecg_it;
+    std::map<UShortArray, RealMatrix>::iterator eg_it;
     switch (data_rep->expConfigOptions.combineType) {
     case ADD_COMBINE: {
       // update sparseIndices and expansionCoeff{s,Grads}
-      size_t cntr = 0;
       const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
+      size_t i = 0;
+      // *** TO DO: complete update to reflect change to combinedMultiIndexMap.
+      // *** TO DO: as with OPA::MULT_COMBINE, current overlay_expansion()
+      //            requires translation of combined result to next input
+      for (sp_it  = sparseIndices.begin(),   ec_it  = expansionCoeffs.begin(),
+	   eg_it  = expansionCoeffGrads.begin();
+	   ec_it != expansionCoeffs.end() && eg_it != expansionCoeffGrads.end();
+	   ++sp_it, ++ec_it, ++eg_it, ++i)
+	overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
+			  eg_it->second, 1); //, combinedExpCoeffs, combinedExpCoeffGrads);
+
+      /*
       for (sp_it=sparseIndices.begin(), ec_it=expansionCoeffs.begin(),
-	   ecg_it=expansionCoeffGrads.begin();
-	   ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
-	   ++sp_it, ++ec_it, ++ecg_it)
-	if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter) {
+	   eg_it=expansionCoeffGrads.begin();
+	   ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
+	   ++sp_it, ++ec_it, ++eg_it)
+	if (ec_it != expCoeffsIter && eg_it != expCoeffGradsIter) {
 	  overlay_expansion(sp_it->second, combined_mi_map[cntr],
-			    ec_it->second, ecg_it->second, 1);
-	                 //, combinedExpCoeffs, combinedExpCoeffGrads);
-	  // TO DO: as with OPA::MULT_COMBINE, current assumptions require translation of combined result to next input
+			    ec_it->second, eg_it->second, 1);
 	  ++cntr;
 	}
+      */
       // update sparseSobolIndexMap
       update_sparse_sobol(sparseIndices[key], data_rep->multi_index(),
 			  data_rep->sobolIndexMap);
@@ -644,13 +654,13 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     }
     case MULT_COMBINE: {
       // perform the multiplication of current and stored expansions
-      for (sp_it=sparseIndices.begin(), ec_it=expansionCoeffs.begin(),
-	   ecg_it=expansionCoeffGrads.begin(), mi_cit=mi.begin();
-	   ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
-	   ++sp_it, ++ec_it, ++ecg_it, ++mi_cit)
-	if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter)
+      for (sp_it = sparseIndices.begin(),   ec_it = expansionCoeffs.begin(),
+	   eg_it = expansionCoeffGrads.begin(), mi_cit = mi.begin();
+	   ec_it!= expansionCoeffs.end() && eg_it!= expansionCoeffGrads.end();
+	   ++sp_it, ++ec_it, ++eg_it, ++mi_cit)
+	if (ec_it != expCoeffsIter && eg_it != expCoeffGradsIter)
 	  multiply_expansion(sp_it->second, mi_cit->second, ec_it->second,
-			     ecg_it->second, data_rep->combinedMultiIndex);
+			     eg_it->second, data_rep->combinedMultiIndex);
       // update sparseSobolIndexMap
       update_sparse_sobol(sparseIndices[key], data_rep->combinedMultiIndex,
 			  data_rep->sobolIndexMap);

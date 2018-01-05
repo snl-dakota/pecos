@@ -204,6 +204,8 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // TO DO: partial sync of new TP data set, e.g. update_surrogate_data() ?
   synchronize_surrogate_data();
 
+  // synchronize expansionCoeff{s,Grads} and approxData
+  update_active_iterators();
   // resize component Sobol' array sizes to pick up new interaction terms
   allocate_component_sobol();
 
@@ -271,17 +273,20 @@ void ProjectOrthogPolyApproximation::push_coefficients()
 {
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key                  = data_rep->activeKey;
-  RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
-  RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
-  RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
 
   // mirror operations already performed on origSurrData for a surrData
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data())
     surrData.push(data_rep->retrieval_index());
 
+  // synchronize expansionCoeff{s,Grads} and approxData
+  update_active_iterators();
+
   // move previous expansion data to current expansion
+  const UShortArray& key                  = data_rep->activeKey;
+  RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
+  RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
+  RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
   size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
   size_t index_star = data_rep->pushIndex;
 
@@ -305,11 +310,6 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 {
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key                  = data_rep->activeKey;
-  RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
-  RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
-  RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
-  RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
 
   // mirror operations already performed on origSurrData for a surrData
   // that is disconnected/deep copied
@@ -320,6 +320,14 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
     surrData.clear_popped(); // only after process completed
   }
 
+  // synchronize expansionCoeff{s,Grads} and approxData
+  update_active_iterators();
+
+  const UShortArray& key                  = data_rep->activeKey;
+  RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
+  RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
+  RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
+  RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
   // don't update Sobol' array sizes for decrement, push, or finalize
   size_t start_tp_index = tp_exp_coeffs.size(); // before insertion
   // move previous expansion data to current expansion
@@ -340,8 +348,6 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 void ProjectOrthogPolyApproximation::
 append_tensor_expansions(size_t start_tp_index)
 {
-  update_active_iterators();
-
   RealVector& exp_coeffs      =     expCoeffsIter->second;
   RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
 

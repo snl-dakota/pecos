@@ -285,6 +285,10 @@ inline void OrthogPolyApproximation::update_active_iterators()
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
+  origSurrData.active_key(key);
+  if (deep_copied_surrogate_data())
+    surrData.active_key(key);
+
   expCoeffsIter = expansionCoeffs.find(key);
   if (expCoeffsIter == expansionCoeffs.end()) {
     std::pair<UShortArray, RealVector> rv_pair(key, RealVector());

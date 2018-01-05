@@ -320,6 +320,10 @@ inline void NodalInterpPolyApproximation::update_active_iterators()
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
+  origSurrData.active_key(key);
+  if (deep_copied_surrogate_data())
+    surrData.active_key(key);
+
   expT1CoeffsIter = expansionType1Coeffs.find(key);
   if (expT1CoeffsIter == expansionType1Coeffs.end()) {
     std::pair<UShortArray, RealVector> rv_pair(key, RealVector());

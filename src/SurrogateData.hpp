@@ -1077,8 +1077,10 @@ inline SurrogateData& SurrogateData::operator=(const SurrogateData& sd)
 
 inline void SurrogateData::active_key(const UShortArray& key)
 {
-  sdRep->activeKey = key;
-  sdRep->update_active_iterators();
+  if (sdRep->activeKey != key) {
+    sdRep->activeKey = key;
+    sdRep->update_active_iterators();
+  }
 }
 
 

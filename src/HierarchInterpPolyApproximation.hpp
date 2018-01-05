@@ -439,6 +439,10 @@ inline void HierarchInterpPolyApproximation::update_active_iterators()
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
+  origSurrData.active_key(key);
+  if (deep_copied_surrogate_data())
+    surrData.active_key(key);
+
   expT1CoeffsIter = expansionType1Coeffs.find(key);
   if (expT1CoeffsIter == expansionType1Coeffs.end()) {
     std::pair<UShortArray, RealVector2DArray> rv_pair(key, RealVector2DArray());

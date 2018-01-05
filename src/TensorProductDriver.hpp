@@ -213,8 +213,10 @@ inline TensorProductDriver::~TensorProductDriver()
 
 inline void TensorProductDriver::active_key(const UShortArray& key)
 {
-  activeKey = key;
-  update_active_iterators();
+  if (activeKey != key) {
+    activeKey = key;
+    update_active_iterators();
+  }
 }
 
 

@@ -168,16 +168,13 @@ void OrthogPolyApproximation::combine_coefficients()
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  if (deep_copied_surrogate_data())
-    surrData.active_key(data_rep->activeKey);
-
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   std::map<UShortArray, RealVector>::iterator ec_it;
   std::map<UShortArray, RealMatrix>::iterator ecg_it;
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
   const UShort2DArray& combined_mi = data_rep->combinedMultiIndex;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: {
@@ -192,20 +189,16 @@ void OrthogPolyApproximation::combine_coefficients()
     // resize combinedExp{Coeffs,CoeffGrads} based on combinedMultiIndex
     resize_expansion(combined_mi.size(), combinedExpCoeffs,
 		     combinedExpCoeffGrads);
+    combinedExpCoeffs = 0.;  combinedExpCoeffGrads = 0.;
 
     // update combinedExp{Coeffs,CoeffGrads}
-    const Sizet2DArray&  combined_mi_map = data_rep->combinedMultiIndexMap;
-    combinedExpCoeffs     =     expCoeffsIter->second; // copy
-    combinedExpCoeffGrads = expCoeffGradsIter->second; // copy
-    size_t cntr = 0;
+    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
+    size_t i = 0;
     for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
 	 ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
-	 ++ec_it, ++ecg_it)
-      if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter) {
-	overlay_expansion(combined_mi_map[cntr], ec_it->second, ecg_it->second,
-			  1, combinedExpCoeffs, combinedExpCoeffGrads);
-	++cntr;
-      }
+	 ++ec_it, ++ecg_it, ++i)
+      overlay_expansion(combined_mi_map[i], ec_it->second, ecg_it->second, 1,
+			combinedExpCoeffs, combinedExpCoeffGrads);
     /*
     // resize expansion{Coeffs,CoeffGrads} based on updated multiIndex
     resize_expansion();

@@ -97,9 +97,11 @@ initialize_polynomial_basis_type(short& poly_type_1d, short& rule)
 
 void SharedInterpPolyApproxData::active_key(const UShortArray& key)
 {
-  SharedPolyApproxData::active_key(key);
-  //update_active_iterators(); // not currently used in SharedInterp
-  driverRep->active_key(key);
+  if (activeKey != key) {
+    activeKey = key; // SharedPolyApproxData::active_key(key);
+    //update_active_iterators(); // not currently used in SharedInterp
+    driverRep->active_key(key);
+  }
 }
 
 
