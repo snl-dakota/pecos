@@ -22,7 +22,7 @@
 
 static const char rcsId[]="@(#) $Id: CombinedSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-//#define DEBUG
+#define DEBUG
 
 namespace Pecos {
 
@@ -207,8 +207,9 @@ void CombinedSparseGridDriver::clear_inactive()
       ++sm_it; ++sc_it; ++ck_it; ++ci_it; ++t1_it; ++t2_it;
       ++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
       ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it;
-      ++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it;
-      ++scr_it; ++t1r_it; ++t2r_it;
+      ++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++scr_it;
+      if (trackUniqueProdWeights)
+	{ ++t1r_it; if (computeType2Weights) ++t2r_it; }
     }
     else { // clear inactive: postfix increments manage iterator invalidations
       smolyakMultiIndex.erase(sm_it++); smolyakCoeffs.erase(sc_it++);
@@ -223,8 +224,11 @@ void CombinedSparseGridDriver::clear_inactive()
       uniqueSet1.erase(us1_it++);       uniqueSet2.erase(us2_it++);
       uniqueIndex1.erase(ui1_it++);     uniqueIndex2.erase(ui2_it++);
       isUnique1.erase(iu1_it++);        isUnique2.erase(iu2_it++);
-      smolyakCoeffsRef.erase(scr_it++); type1WeightSetsRef.erase(t1r_it++);
-      type2WeightSetsRef.erase(t2r_it++);
+      smolyakCoeffsRef.erase(scr_it++);
+      if (trackUniqueProdWeights) {
+	type1WeightSetsRef.erase(t1r_it++);
+	if (computeType2Weights) type2WeightSetsRef.erase(t2r_it++);
+      }
     }
 }
 
@@ -702,10 +706,11 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 	<< "uniqueIndexMapping:\n" << uniqueIndexMapping[activeKey];
   PCout << "\nvar_sets:\n"; write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
-    PCout << "\ntype1WeightSets:\n"; write_data(PCout, t1_wts);
+    PCout << "\ntype1WeightSets:\n";
+    write_data(PCout, type1WeightSets[activeKey]);
     if (computeType2Weights) {
       PCout << "\ntype2WeightSets:\n";
-      write_data(PCout, t2_wts, false, true, true);
+      write_data(PCout, type2WeightSets[activeKey], false, true, true);
     }
   }
 #endif
@@ -1140,6 +1145,8 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
   int&     num_u2 =   numUnique2[activeKey];
   //BitArray& isu2 =   isUnique2[activeKey];
 
+  numCollocPts = num_u1;
+
   size_t i, j, num_sm_mi = smolMIIter->second.size();
   int m = numVars, n1, n2, n1n2, n3, num_u3, all_n2 = 0;
   RealVector all_a2t1_wts, r3v; RealMatrix a3_pts, all_a2t2_wts;
@@ -1172,9 +1179,9 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
     PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n"
 	  << a2_pts<<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
     for (j=0; j<n2; ++j)
-      std::cout << std::setw(17) << r2v[j]     << std::setw(8) << sind2[j]
-	     /* << std::setw(8)  << isu2[j] */ << std::setw(8) << uset2[j]
-		<< std::setw(8)  << uind2[j]   << '\n';
+      std::cout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
+		<< std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
+		<< std::setw(8)  << uind2[j]      << '\n';
     PCout << std::endl;
 #endif // DEBUG
 
@@ -1236,10 +1243,7 @@ update_sparse_points(size_t start_index, int new_index_offset,
 		     const IntArray& unique_index, RealMatrix& new_sparse_pts)
 {
   size_t i, j, cntr, num_sm_mi = smolMIIter->second.size(),
-    num_tp_pts, num_pts = is_unique.size(), num_unique_pts = 0;
-  for (i=0; i<num_pts; ++i)
-    if (is_unique[i])
-      ++num_unique_pts;
+    num_tp_pts, num_pts = is_unique.size(), num_unique_pts = is_unique.count();
 
   // update sizes
   new_sparse_pts.shapeUninitialized(numVars, num_unique_pts);

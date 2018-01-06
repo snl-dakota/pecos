@@ -273,10 +273,10 @@ inline SparseGridDriver::~SparseGridDriver()
 inline void SparseGridDriver::active_key(const UShortArray& key)
 {
   if (activeKey != key) {
-    unsigned short prev_lev = ssgLevIter->second;
+    //unsigned short prev_lev = ssgLevIter->second;
     activeKey = key;
     update_active_iterators();
-    if (ssgLevIter->second != prev_lev)
+    //if (ssgLevIter->second != prev_lev) // insufficient for adapted SSG
       updateGridSize = true;
   }
 }
