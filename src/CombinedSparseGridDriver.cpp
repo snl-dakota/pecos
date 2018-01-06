@@ -22,7 +22,7 @@
 
 static const char rcsId[]="@(#) $Id: CombinedSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-#define DEBUG
+//#define DEBUG
 
 namespace Pecos {
 

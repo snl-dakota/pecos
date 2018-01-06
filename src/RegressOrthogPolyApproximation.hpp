@@ -98,6 +98,7 @@ protected:
   */
 
   void combine_coefficients();
+  void combined_to_active();
 
   void allocate_arrays();
 

@@ -246,6 +246,22 @@ void OrthogPolyApproximation::combine_coefficients()
 }
 
 
+void OrthogPolyApproximation::combined_to_active()
+{
+  update_active_iterators();// activeKey updated in SharedOrthogPolyApproxData
+  allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
+
+  expCoeffsIter->second = combinedExpCoeffs;
+  combinedExpCoeffs.resize(0);
+  if (expansionCoeffGradFlag) {
+    expCoeffGradsIter->second = combinedExpCoeffGrads;
+    combinedExpCoeffGrads.reshape(0, 0);
+  }
+
+  computedMean = computedVariance = 0;
+}
+
+
 void OrthogPolyApproximation::
 overlay_expansion(const SizetArray& multi_index_map,
 		  const RealVector& exp_coeffs, const RealMatrix& exp_grads,

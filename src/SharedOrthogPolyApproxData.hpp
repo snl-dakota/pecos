@@ -133,8 +133,9 @@ protected:
   void clear_keys();
 
   void allocate_data(size_t index = _NPOS);
-  void  pre_combine_data();
-  void post_combine_data();
+  void pre_combine_data();
+  //void post_combine_data();
+  void combined_to_active();
 
   /*
   void store_data(size_t index = _NPOS);
@@ -150,13 +151,10 @@ protected:
   /// update {multiIndex,approxOrd}Iter from activeKey
   void update_active_iterators();
 
-  /*
   /// detect whether current expansion settings are the most refined
   const UShortArray& maximal_expansion();
-  /// swap current shared data with a stored shared data set, as identified
-  /// by stored index
-  void swap_shared_data(size_t index);
-  */
+  // swap current shared data with a stored data set, as identified by index
+  //void swap_shared_data(size_t index);
 
   /// convert a sparse grid index set and a growth setting to an integrand_order
   void sparse_grid_level_to_expansion_order(
@@ -374,8 +372,8 @@ protected:
 
   /// multi-index that is the result of expansion combination
   UShort2DArray combinedMultiIndex;
-  /// mapping of terms when aggregating storedMultiIndex with multiIndex in
-  /// pre_combine_data()
+  /// mapping of terms when aggregating multiIndex into combinedMultiIndex
+  /// in pre_combine_data()
   Sizet2DArray combinedMultiIndexMap;
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for

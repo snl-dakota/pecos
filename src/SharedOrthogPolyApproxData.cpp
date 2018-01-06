@@ -369,6 +369,20 @@ void SharedOrthogPolyApproxData::remove_stored_data(size_t index)
 }
 
 
+void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
+{
+  std::swap(storedMultiIndex[index], multiIndex);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE:
+    std::swap(storedApproxOrder[index], approxOrder);
+    driverRep->swap_grid(index);                             break;
+  case COMBINED_SPARSE_GRID: driverRep->swap_grid(index);    break;
+  default: std::swap(storedApproxOrder[index], approxOrder); break;
+  }
+}
+*/
+
+
 const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
@@ -399,20 +413,6 @@ const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
   }
   }
 }
-
-
-void SharedOrthogPolyApproxData::swap_shared_data(size_t index)
-{
-  std::swap(storedMultiIndex[index], multiIndex);
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE:
-    std::swap(storedApproxOrder[index], approxOrder);
-    driverRep->swap_grid(index);                             break;
-  case COMBINED_SPARSE_GRID: driverRep->swap_grid(index);    break;
-  default: std::swap(storedApproxOrder[index], approxOrder); break;
-  }
-}
-*/
 
 
 void SharedOrthogPolyApproxData::pre_combine_data()
@@ -473,12 +473,29 @@ void SharedOrthogPolyApproxData::pre_combine_data()
 }
 
 
+/*
 void SharedOrthogPolyApproxData::post_combine_data()
 {
   // Leave combinedMultiIndex as separate book-keeping to support repeated
   // combinations within adaptive refinement.
-  //std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
-  //combinedMultiIndex.clear();
+  std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
+  combinedMultiIndex.clear();
+}
+*/
+
+
+void SharedOrthogPolyApproxData::combined_to_active()
+{
+  allocate_component_sobol(combinedMultiIndex);
+
+  // For open-ended number of stored grids: retrieve the most refined from the
+  // existing grids (from sequence specification + any subsequent refinement)
+  active_key(maximal_expansion());
+
+  // Leave combinedMultiIndex as separate book-keeping to support repeated
+  // combinations within adaptive refinement.
+  std::swap(multiIndexIter->second, combinedMultiIndex); // pointer swap
+  combinedMultiIndex.clear(); combinedMultiIndexMap.clear();
 }
 
 

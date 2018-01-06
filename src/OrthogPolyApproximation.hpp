@@ -82,6 +82,7 @@ protected:
   void clear_inactive();
 
   void combine_coefficients();
+  void combined_to_active();
 
   void print_coefficients(std::ostream& s, bool normalized);
 

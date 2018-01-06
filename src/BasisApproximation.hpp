@@ -92,10 +92,12 @@ public:
   virtual void swap_coefficients(size_t index);
   */
 
-  /// combine the current coefficients with a previously stored set
+  /// combine all level coefficients into a multilevel approximation
   virtual void combine_coefficients();
+  /// promote the combined coefficients into the active coefficient set
+  virtual void combined_to_active();
 
-  /// clear inactive approximation data
+  /// clear inactive levels of approximation data
   virtual void clear_inactive();
 
   /// print the coefficient array computed in compute_coefficients()

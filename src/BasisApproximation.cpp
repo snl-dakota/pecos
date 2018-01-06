@@ -427,6 +427,18 @@ void BasisApproximation::combine_coefficients()
 }
 
 
+void BasisApproximation::combined_to_active()
+{
+  if (basisApproxRep)
+    basisApproxRep->combined_to_active();
+  else {
+    PCerr << "Error: combined_to_active() not available for this basis "
+	  << "approximation type." << std::endl;
+    abort_handler(-1);
+  }
+}
+
+
 void BasisApproximation::print_coefficients(std::ostream& s, bool normalized)
 {
   if (basisApproxRep)

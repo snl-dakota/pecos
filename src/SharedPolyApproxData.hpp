@@ -295,10 +295,12 @@ public:
   /// clear inactive approximation data
   virtual void clear_inactive_data();
 
-  /// combines current and stored approximation data
+  /// combines all approximation data levels into multilevel approximation data
   virtual void pre_combine_data();
-  /// combines current and stored approximation data
+  /// cleans up stored approximation data following combination
   virtual void post_combine_data();
+  /// promotes combined approximation data into active data
+  virtual void combined_to_active();
 
   //
   //- Heading: Member functions

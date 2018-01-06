@@ -593,8 +593,14 @@ void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
 void RegressOrthogPolyApproximation::combine_coefficients()
 {
   // Combine the data stored previously by store_coefficients()
+  bool sparse = false;
+  std::map<UShortArray, SizetSet>::iterator sp_it;
+  if (!sparseIndices.empty())
+    for (sp_it=sparseIndices.begin(); sp_it!=sparseIndices.end(); ++sp_it)
+      if (!sp_it->second.empty())
+	{ sparse = true; break; }
 
-  if (sparseIndices.empty())
+  if (!sparse)
     OrthogPolyApproximation::combine_coefficients();
   else {
     //update_active_iterators();  // activeKey updated in SharedOPAData
@@ -608,8 +614,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
       = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
     const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
     std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-    std::map<UShortArray, SizetSet>::iterator sp_it = sparseIndices.begin();
-    for (; sp_it!=sparseIndices.end() && mi_cit!=mi.end(); ++sp_it, ++mi_cit) {
+    for (sp_it =sparseIndices.begin();
+	 sp_it!=sparseIndices.end() && mi_cit!=mi.end(); ++sp_it, ++mi_cit) {
       SizetSet& sparse_ind = sp_it->second;
       if (sparse_ind.empty())
 	inflate(sparse_ind, mi_cit->second.size());
@@ -646,8 +652,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 	}
       */
       // update sparseSobolIndexMap
-      update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
-			  data_rep->sobolIndexMap); // *** TO DO: , combinedSparseSobolIndexMap);
+      //update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
+      //		  data_rep->sobolIndexMap); // *** TO DO: , combinedSparseSobolIndexMap);
       break;
     }
     case MULT_COMBINE: {
@@ -660,8 +666,8 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 	  multiply_expansion(sp_it->second, mi_cit->second, ec_it->second,
 			     eg_it->second, data_rep->combinedMultiIndex);
       // update sparseSobolIndexMap
-      update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
-			  data_rep->sobolIndexMap); // *** TO DO: , combinedSparseSobolIndexMap);
+      //update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
+      //		  data_rep->sobolIndexMap); // *** TO DO: , combinedSparseSobolIndexMap);
       break;
     }
     case ADD_MULT_COMBINE:
@@ -679,6 +685,20 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     }
 
     computedMean = computedVariance = 0;
+  }
+}
+
+
+void RegressOrthogPolyApproximation::combined_to_active()
+{
+  OrthogPolyApproximation::combined_to_active();
+
+  if (!combinedSparseIndices.empty()) {
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    sparseIndices[data_rep->activeKey] = combinedSparseIndices;
+    update_sparse_sobol(combinedSparseIndices, data_rep->multi_index(),
+			data_rep->sobolIndexMap);
   }
 }
 
