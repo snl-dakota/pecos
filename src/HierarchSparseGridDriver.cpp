@@ -854,9 +854,8 @@ void HierarchSparseGridDriver::initialize_sets()
 {
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
   const UShort3DArray& sm_mi = smolMIIter->second;
-  unsigned short ssg_lev = ssgLevIter->second;
-  UShortArraySet& old_mi = oldMultiIndex[activeKey];
-  //old_mi = sm_mi;
+  unsigned short     ssg_lev = ssgLevIter->second;
+  UShortArraySet&     old_mi = oldMultiIndex[activeKey];
   old_mi.clear();
   for (unsigned short lev=0; lev<=ssg_lev; ++lev)
     old_mi.insert(sm_mi[lev].begin(), sm_mi[lev].end());
@@ -877,8 +876,8 @@ void HierarchSparseGridDriver::initialize_sets()
   }
 
 #ifdef DEBUG
-  PCout << "HierarchSparseGridDriver::initialize_sets():\nold sets:\n"
-	<< old_mi << "active sets:\n" << activeMultiIndex[activeKey] << std::endl;
+  PCout << "HierarchSparseGridDriver::initialize_sets():\nold sets:\n" << old_mi
+	<< "active sets:\n" << activeMultiIndex[activeKey] << std::endl;
 #endif // DEBUG
 }
 

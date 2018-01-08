@@ -847,14 +847,13 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   // elsewhere (e.g., Dakota::Approximation), i.e., inc2/inc3 set insertions
   // occur one at a time without mixing.
 
-  UShort2DArray& sm_mi            = smolMIIter->second;
+  UShort2DArray&  sm_mi           = smolMIIter->second;
   UShortArraySet& computed_trials = computedTrialSets[activeKey];
-  UShortArraySet& active_mi       =  activeMultiIndex[activeKey];
   size_t start_index = sm_mi.size();
   // don't insert activeMultiIndex, as this may include sets which have not
   // been evaluated (due to final update_sets() call); use computedTrialSets
   sm_mi.insert(sm_mi.end(), computed_trials.begin(), computed_trials.end());
-  active_mi.clear();
+  activeMultiIndex[activeKey].clear();
   // defer since needed for SharedPolyApproxData::finalization_index()
   //computed_trials.clear();
 
