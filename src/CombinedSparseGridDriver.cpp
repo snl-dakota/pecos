@@ -202,32 +202,42 @@ void CombinedSparseGridDriver::clear_inactive()
   std::map<UShortArray, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
 
+  bool gsg = (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
   while (sm_it != smolyakMultiIndex.end())
     if (sm_it == smolMIIter) { // preserve active
-      ++sm_it; ++sc_it; ++ck_it; ++ci_it; ++t1_it; ++t2_it;
-      ++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
-      ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it;
-      ++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++scr_it;
+      ++sm_it; ++sc_it; ++ck_it; ++ci_it;
       if (trackUniqueProdWeights)
-	{ ++t1r_it; if (computeType2Weights) ++t2r_it; }
+	{ ++t1_it; if (computeType2Weights) ++t2_it; }
+      if (gsg) {
+	++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
+	++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it;
+	++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++scr_it;
+	if (trackUniqueProdWeights)
+	  { ++t1r_it; if (computeType2Weights) ++t2r_it; }
+      }
     }
     else { // clear inactive: postfix increments manage iterator invalidations
-      smolyakMultiIndex.erase(sm_it++); smolyakCoeffs.erase(sc_it++);
-      collocKey.erase(ck_it++);         collocIndices.erase(ci_it++);
-      type1WeightSets.erase(t1_it++);   type2WeightSets.erase(t2_it++);
-      numUnique1.erase(nu1_it++);       numUnique2.erase(nu2_it++);
-      zVec.erase(z_it++); r1Vec.erase(r1_it++); r2Vec.erase(r2_it++);
-      a1Points.erase(a1p_it++);         a1Type1Weights.erase(a11w_it++);
-      a1Type2Weights.erase(a12w_it++);  a2Points.erase(a2p_it++);
-      a2Type1Weights.erase(a21w_it++);  a2Type2Weights.erase(a22w_it++);
-      sortIndex1.erase(si1_it++);       sortIndex2.erase(si2_it++);
-      uniqueSet1.erase(us1_it++);       uniqueSet2.erase(us2_it++);
-      uniqueIndex1.erase(ui1_it++);     uniqueIndex2.erase(ui2_it++);
-      isUnique1.erase(iu1_it++);        isUnique2.erase(iu2_it++);
-      smolyakCoeffsRef.erase(scr_it++);
+      smolyakMultiIndex.erase(sm_it++);   smolyakCoeffs.erase(sc_it++);
+      collocKey.erase(ck_it++);           collocIndices.erase(ci_it++);
       if (trackUniqueProdWeights) {
-	type1WeightSetsRef.erase(t1r_it++);
-	if (computeType2Weights) type2WeightSetsRef.erase(t2r_it++);
+	type1WeightSets.erase(t1_it++);
+	if (computeType2Weights)          type2WeightSets.erase(t2_it++);
+      }
+      if (gsg) {
+	numUnique1.erase(nu1_it++);       numUnique2.erase(nu2_it++);
+	zVec.erase(z_it++); r1Vec.erase(r1_it++); r2Vec.erase(r2_it++);
+	a1Points.erase(a1p_it++);         a1Type1Weights.erase(a11w_it++);
+	a1Type2Weights.erase(a12w_it++);  a2Points.erase(a2p_it++);
+	a2Type1Weights.erase(a21w_it++);  a2Type2Weights.erase(a22w_it++);
+	sortIndex1.erase(si1_it++);       sortIndex2.erase(si2_it++);
+	uniqueSet1.erase(us1_it++);       uniqueSet2.erase(us2_it++);
+	uniqueIndex1.erase(ui1_it++);     uniqueIndex2.erase(ui2_it++);
+	isUnique1.erase(iu1_it++);        isUnique2.erase(iu2_it++);
+	smolyakCoeffsRef.erase(scr_it++);
+	if (trackUniqueProdWeights) {
+	  type1WeightSetsRef.erase(t1r_it++);
+	  if (computeType2Weights) type2WeightSetsRef.erase(t2r_it++);
+	}
       }
     }
 }
