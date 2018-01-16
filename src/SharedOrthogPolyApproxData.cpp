@@ -452,13 +452,17 @@ void SharedOrthogPolyApproxData::pre_combine_data()
 
     // roll up approxOrders to define combinedMultiIndex
     std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
-    UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
-    for (; ao_it!=approxOrder.end(); ++ao_it) {
+    size_t cntr, j, num_seq = approxOrder.size() - 2; // bridge from 1st to last
+    if (num_seq) combinedMultiIndexSeq.resize(num_seq);
+    UShortArray combined_ao = ao_it->second;  ++ao_it; // copy
+    for (cntr=0; ao_it!=approxOrder.end(); ++ao_it, ++cntr) {
       const UShortArray& ao = ao_it->second;
-      for (size_t i=0; i<numVars; ++i)
-	combined_ao[i] += ao[i];
+      for (j=0; j<numVars; ++j)
+	combined_ao[j] += ao[j];
+      UShort2DArray& combined_mi = (cntr < num_seq) ?
+	combinedMultiIndexSeq[cntr] : combinedMultiIndex;
+      total_order_multi_index(combined_ao, combined_mi);
     }
-    total_order_multi_index(combined_ao, combinedMultiIndex);
     break;
   }
   case ADD_MULT_COMBINE:
@@ -482,6 +486,36 @@ void SharedOrthogPolyApproxData::post_combine_data()
   combinedMultiIndex.clear();
 }
 */
+
+
+void SharedOrthogPolyApproxData::
+product_multi_index(const UShort2DArray& multi_index_a,
+		    const UShort2DArray& multi_index_b,
+		    UShort2DArray& multi_index_c)
+{
+  // c = a * b
+
+  // Note: pareto set approach works when there is a conversion from sm_mi
+  // to tensor-product multi-index.  Working only with the multi-indices,
+  // we need to carry lower order (dominated) terms in order to fill in
+  // lower-order product terms.
+
+  size_t i, j, v, num_mi_a = multi_index_a.size(),
+    num_mi_b = multi_index_b.size();
+  UShortArray prod_mi(numVars); UShortArraySet prod_mi_sets;
+  for (i=0; i<num_mi_a; ++i)
+    for (j=0; j<num_mi_b; ++j) {
+      for (v=0; v<numVars; ++v)
+	prod_mi[v] = multi_index_a[i][v] + multi_index_b[j][v];
+      prod_mi_sets.insert(prod_mi); // sorted, unique
+    }
+
+  size_t num_mi_c = prod_mi_sets.size();
+  multi_index_c.resize(num_mi_c);
+  UShortArraySet::iterator mi_it;
+  for (i=0, mi_it=prod_mi_sets.begin(); i<num_mi_c; ++i, ++mi_it)
+    multi_index_c[i] = *mi_it;
+}
 
 
 void SharedOrthogPolyApproxData::combined_to_active()

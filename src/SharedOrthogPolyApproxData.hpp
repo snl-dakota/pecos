@@ -240,6 +240,12 @@ protected:
 			  UShort2DArray& combined_mi, RealVector& exp_coeffs,
 			  RealMatrix& exp_coeff_grads);
 
+  /// define multi_index_c based on products of terms contained within
+  /// multi_index_a and multi_index_b
+  void product_multi_index(const UShort2DArray& multi_index_a,
+			   const UShort2DArray& multi_index_b,
+			   UShort2DArray& multi_index_c);
+
   /// returns the norm-squared of a particular multivariate polynomial,
   /// treating all variables as probabilistic
   Real norm_squared(const UShortArray& indices);
@@ -370,11 +376,17 @@ protected:
   /// iterator pointing to active node in multiIndex
   std::map<UShortArray, UShort2DArray>::iterator multiIndexIter;
 
-  /// multi-index that is the result of expansion combination
+  /// multi-index that is the final result of a sequence of expansion
+  /// combinations
   UShort2DArray combinedMultiIndex;
   /// mapping of terms when aggregating multiIndex into combinedMultiIndex
-  /// in pre_combine_data()
+  /// in pre_combine_data() (case ADD_COMBINE)
   Sizet2DArray combinedMultiIndexMap;
+  /// sequence of multi-index products defined in pre_combine_data() for case
+  /// MULT_COMBINE.  For combinations of more than two levels, this provides
+  /// a bridge between the first multi-index for "a" (multiIndex.begin()) and
+  /// the final multi-index for "c" (combinedMultiIndex) in c = a * b.
+  UShort3DArray combinedMultiIndexSeq;
 
   /// numSmolyakIndices-by-numTensorProductPts-by-numVars array for
   /// identifying the orders of the one-dimensional orthogonal polynomials

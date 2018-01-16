@@ -172,10 +172,9 @@ void OrthogPolyApproximation::combine_coefficients()
   // allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
 
   std::map<UShortArray, RealVector>::iterator ec_it;
-  std::map<UShortArray, RealMatrix>::iterator ecg_it;
+  std::map<UShortArray, RealMatrix>::iterator eg_it;
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShort2DArray& combined_mi = data_rep->combinedMultiIndex;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
@@ -187,17 +186,17 @@ void OrthogPolyApproximation::combine_coefficients()
     // tensor_product_value() usage for combined coefficient sets.
 
     // resize combinedExp{Coeffs,CoeffGrads} based on combinedMultiIndex
-    resize_expansion(combined_mi.size(), combinedExpCoeffs,
+    resize_expansion(data_rep->combinedMultiIndex.size(), combinedExpCoeffs,
 		     combinedExpCoeffGrads);
     combinedExpCoeffs = 0.;  combinedExpCoeffGrads = 0.;
 
     // update combinedExp{Coeffs,CoeffGrads}
     const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
     size_t i = 0;
-    for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
-	 ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
-	 ++ec_it, ++ecg_it, ++i)
-      overlay_expansion(combined_mi_map[i], ec_it->second, ecg_it->second, 1,
+    for (ec_it =expansionCoeffs.begin(), eg_it =expansionCoeffGrads.begin();
+	 ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
+	 ++ec_it, ++eg_it, ++i)
+      overlay_expansion(combined_mi_map[i], ec_it->second, eg_it->second, 1,
 			combinedExpCoeffs, combinedExpCoeffGrads);
     /*
     // resize expansion{Coeffs,CoeffGrads} based on updated multiIndex
@@ -205,28 +204,37 @@ void OrthogPolyApproximation::combine_coefficients()
     // update expansion{Coeffs,CoeffGrads}
     size_t cntr = 0;
     const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
-    for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
-	 ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
-	 ++ec_it, ++ecg_it)
-      if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter) {
+    for (ec_it =expansionCoeffs.begin(), eg_it =expansionCoeffGrads.begin();
+	 ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
+	 ++ec_it, ++eg_it)
+      if (ec_it != expCoeffsIter && eg_it != expCoeffGradsIter) {
 	overlay_expansion(combined_mi_map[cntr], ec_it->second,
-			  ecg_it->second, 1);
+			  eg_it->second, 1);
 	++cntr;
       }
     */
     break;
   }
   case MULT_COMBINE: {
-    // perform the multiplication of current and stored expansions
+    // perform the multiplication of level expansions
+    const UShort3DArray& combined_mi_seq = data_rep->combinedMultiIndexSeq;
+    size_t cntr, num_seq = combined_mi_seq.size();
     const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
     std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-    for (ec_it =expansionCoeffs.begin(), ecg_it =expansionCoeffGrads.begin();
-	 ec_it!=expansionCoeffs.end() && ecg_it!=expansionCoeffGrads.end();
-	 ++ec_it, ++ecg_it, ++mi_cit)
-      if (ec_it != expCoeffsIter && ecg_it != expCoeffGradsIter)
-	multiply_expansion(mi_cit->second, ec_it->second, ecg_it->second,
-			   combined_mi);//,combinedExpCoeff{s,Grads}
-        // TO DO: must translate c result to next a, as in current assumptions
+    ec_it = expansionCoeffs.begin();     combinedExpCoeffs     = ec_it->second;
+    eg_it = expansionCoeffGrads.begin(); combinedExpCoeffGrads = eg_it->second;
+    ++ec_it;  ++eg_it;  ++mi_cit;
+    for (cntr=0; mi_cit!=mi.end(); ++ec_it, ++eg_it, ++mi_cit, ++cntr) {
+      const UShort2DArray& multi_index_a = (cntr) ?
+	combined_mi_seq[cntr-1] : mi.begin()->second;
+      const UShort2DArray& multi_index_c = (cntr < num_seq) ?
+	combined_mi_seq[cntr] : data_rep->combinedMultiIndex;
+      // internal tmp copies allow a and c arrays to be the same memory
+      multiply_expansion(multi_index_a, combinedExpCoeffs,
+			 combinedExpCoeffGrads, mi_cit->second, ec_it->second,
+			 eg_it->second, multi_index_c, combinedExpCoeffs,
+			 combinedExpCoeffGrads);
+    }
     break;
   }
   case ADD_MULT_COMBINE:
@@ -271,7 +279,7 @@ overlay_expansion(const SizetArray& multi_index_map,
   //RealVector& exp_coeffs_sum = expCoeffsIter->second;
   //RealMatrix& exp_grads_sum  = expCoeffGradsIter->second;
   size_t i, j, index, num_terms = multi_index_map.size(), 
-    num_deriv_vars = exp_grads_sum.numRows();
+    num_deriv_v = exp_grads_sum.numRows();
   for (i=0; i<num_terms; ++i) {
     index = multi_index_map[i];
     if (expansionCoeffFlag)
@@ -279,7 +287,7 @@ overlay_expansion(const SizetArray& multi_index_map,
     if (expansionCoeffGradFlag) {
       Real* exp_grad_sum_i = exp_grads_sum[index];
       const Real* grad_i   = exp_grads[i];
-      for (j=0; j<num_deriv_vars; ++j)
+      for (j=0; j<num_deriv_v; ++j)
 	exp_grad_sum_i[j] += coeff * grad_i[j];
     }
   }
@@ -288,23 +296,25 @@ overlay_expansion(const SizetArray& multi_index_map,
 
 /** Implement c = a * b for expansions a, b, and c. */
 void OrthogPolyApproximation::
-multiply_expansion(const UShort2DArray& multi_index_b,
+multiply_expansion(const UShort2DArray& multi_index_a,
+		   const RealVector&    exp_coeffs_a,
+		   const RealMatrix&    exp_grads_a,
+		   const UShort2DArray& multi_index_b,
 		   const RealVector&    exp_coeffs_b,
 		   const RealMatrix&    exp_grads_b,
-		   const UShort2DArray& multi_index_c)//,
-                 //RealVector& exp_coeffs_c, RealMatrix& exp_grads_c)
+		   const UShort2DArray& multi_index_c,
+		   RealVector& exp_coeffs_c, RealMatrix& exp_grads_c)
 {
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
 
-  const UShort2DArray& multi_index_a = data_rep->multi_index();
-  RealVector exp_coeffs_a = expCoeffsIter->second;//copy (both expConfigOptions)
-  RealMatrix exp_grads_a;
-  if (expansionCoeffGradFlag)
-    exp_grads_a = expCoeffGradsIter->second;      //copy (CoeffGrads only)
+  //UShort2DArray multi_index_a = multi_index_c; // copy
+  //RealVector exp_coeffs_a = exp_coeffs_c; // copy
+  //RealMatrix exp_grads_a;
+  //if (expansionCoeffGradFlag) exp_grads_a = exp_grads_c; //copy
   size_t i, j, k, v, num_v = sharedDataRep->numVars,
     num_a = multi_index_a.size(), num_b = multi_index_b.size(),
-    num_c = multi_index_c.size(), num_deriv_vars = exp_grads_a.numRows();
+    num_c = multi_index_c.size(), num_deriv_v = exp_grads_a.numRows();
 
   // precompute 1D basis triple products required
   unsigned short max_a, max_b, max_c; UShortMultiSet max_abc;
@@ -333,10 +343,9 @@ multiply_expansion(const UShort2DArray& multi_index_b,
   // For c = a * b, compute coefficient of product expansion as:
   // \Sum_k c_k \Psi_k = \Sum_i \Sum_j a_i b_j \Psi_i \Psi_j
   //    c_k <\Psi_k^2> = \Sum_i \Sum_j a_i b_j <\Psi_i \Psi_j \Psi_k>
-  RealVector& exp_coeffs_c = expCoeffsIter->second;
-  RealMatrix& exp_grads_c  = expCoeffGradsIter->second;
-  if (expansionCoeffFlag)     exp_coeffs_c.size(num_c);            // init to 0
-  if (expansionCoeffGradFlag) exp_grads_c.shape(num_deriv_vars, num_c); // init
+  RealVector exp_coeffs_tmp_c;  RealMatrix exp_grads_tmp_c;
+  if (expansionCoeffFlag)     exp_coeffs_tmp_c.size(num_c);        // init to 0
+  if (expansionCoeffGradFlag) exp_grads_tmp_c.shape(num_deriv_v, num_c);// to 0
   Real trip_prod, trip_prod_v, norm_sq_k; bool non_zero;
   for (k=0; k<num_c; ++k) {
     for (i=0; i<num_a; ++i) {
@@ -352,21 +361,25 @@ multiply_expansion(const UShort2DArray& multi_index_b,
 	}
 	if (non_zero) {
 	  if (expansionCoeffFlag)
-	    exp_coeffs_c[k] += exp_coeffs_a[i] * exp_coeffs_b[j] * trip_prod;
+	    exp_coeffs_tmp_c[k]
+	      += exp_coeffs_a[i] * exp_coeffs_b[j] * trip_prod;
 	  if (expansionCoeffGradFlag)
-	    for (v=0; v<num_deriv_vars; ++v)
-	      exp_grads_c(v,k) += (exp_coeffs_a[i] * exp_grads_b(v,j)
+	    for (v=0; v<num_deriv_v; ++v)
+	      exp_grads_tmp_c(v,k) += (exp_coeffs_a[i] * exp_grads_b(v,j)
 		+ exp_coeffs_b[j] * exp_grads_a(v,i)) * trip_prod;
 	}
       }
     }
     norm_sq_k = data_rep->norm_squared(multi_index_c[k]);
     if (expansionCoeffFlag)
-      exp_coeffs_c[k] /= norm_sq_k;
+      exp_coeffs_tmp_c[k] /= norm_sq_k;
     if (expansionCoeffGradFlag)
-      for (v=0; v<num_deriv_vars; ++v)
-	exp_grads_c(v,k) /= norm_sq_k;
+      for (v=0; v<num_deriv_v; ++v)
+	exp_grads_tmp_c(v,k) /= norm_sq_k;
   }
+  // tmp arrays allow incoming a and c to be same arrays (for running products)
+  exp_coeffs_c = exp_coeffs_tmp_c;
+  exp_grads_c  = exp_grads_tmp_c;
 }
 
 
@@ -676,12 +689,12 @@ mean_gradient(const RealVector& x, const SizetArray& dvv)
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs      = expCoeffsIter->second;
   const RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
-  size_t i, j, deriv_index, num_deriv_vars = dvv.size(),
+  size_t i, j, deriv_index, num_deriv_v = dvv.size(),
     num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  if (meanGradient.length() != num_deriv_vars)
-    meanGradient.sizeUninitialized(num_deriv_vars);
-  for (i=0; i<num_deriv_vars; ++i) {
+  if (meanGradient.length() != num_deriv_v)
+    meanGradient.sizeUninitialized(num_deriv_v);
+  for (i=0; i<num_deriv_v; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     bool random = data_rep->randomVarsKey[deriv_index];
     Real& grad_i = meanGradient[i];
@@ -931,14 +944,14 @@ const RealVector& OrthogPolyApproximation::variance_gradient()
   const UShort2DArray& mi = data_rep->multi_index();
   const RealVector& exp_coeffs      = expCoeffsIter->second;
   const RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
-  size_t i, j, num_deriv_vars = exp_coeff_grads.numRows(),
+  size_t i, j, num_deriv_v = exp_coeff_grads.numRows(),
     num_exp_terms = mi.size();
-  if (varianceGradient.length() != num_deriv_vars)
-    varianceGradient.sizeUninitialized(num_deriv_vars);
+  if (varianceGradient.length() != num_deriv_v)
+    varianceGradient.sizeUninitialized(num_deriv_v);
   varianceGradient = 0.;
   for (i=1; i<num_exp_terms; ++i) {
     Real term_i = 2. * exp_coeffs[i] * data_rep->norm_squared(mi[i]);
-    for (j=0; j<num_deriv_vars; ++j)
+    for (j=0; j<num_deriv_v; ++j)
       varianceGradient[j] += term_i * exp_coeff_grads[i][j];
   }
   if (std_mode) computedVariance |=  2;
@@ -977,15 +990,15 @@ variance_gradient(const RealVector& x, const SizetArray& dvv)
   const SizetList& rand_ind = data_rep->randomIndices;
   const RealVector& exp_coeffs      = expCoeffsIter->second;
   const RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
-  size_t i, j, k, deriv_index, num_deriv_vars = dvv.size(),
+  size_t i, j, k, deriv_index, num_deriv_v = dvv.size(),
     num_exp_terms = mi.size(),
     cntr = 0; // insertions carried in order within expansionCoeffGrads
-  if (varianceGradient.length() != num_deriv_vars)
-    varianceGradient.sizeUninitialized(num_deriv_vars);
+  if (varianceGradient.length() != num_deriv_v)
+    varianceGradient.sizeUninitialized(num_deriv_v);
   varianceGradient = 0.;
 
   Real norm_sq_j, poly_j, poly_grad_j, norm_poly_j, coeff_j, coeff_grad_j;
-  for (i=0; i<num_deriv_vars; ++i) {
+  for (i=0; i<num_deriv_v; ++i) {
     deriv_index = dvv[i] - 1; // OK since we are in an "All" view
     bool random = data_rep->randomVarsKey[deriv_index];
     if (random && !expansionCoeffGradFlag){

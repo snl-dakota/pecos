@@ -191,10 +191,14 @@ protected:
 			 RealVector& exp_coeffs_sum, RealMatrix& exp_grads_sum);
   /// multiply current expansion ("a") with incoming expansion ("b")
   /// and store in product expansion ("c")
-  void multiply_expansion(const UShort2DArray& multi_index_b,
-			  const RealVector& exp_coeffs_b,
-			  const RealMatrix& exp_grads_b,
-			  const UShort2DArray& multi_index_c);
+  void multiply_expansion(const UShort2DArray& multi_index_a,
+			  const RealVector&    exp_coeffs_a,
+			  const RealMatrix&    exp_grads_a,
+			  const UShort2DArray& multi_index_b,
+			  const RealVector&    exp_coeffs_b,
+			  const RealMatrix&    exp_grads_b,
+			  const UShort2DArray& multi_index_c,
+			  RealVector& exp_coeffs_c, RealMatrix& exp_grads_c);
 
   /// update add_val and add_gradient based on surrData's failure map
   void fail_booleans(SizetShortMap::const_iterator& fit, size_t j,

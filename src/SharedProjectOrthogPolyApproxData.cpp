@@ -276,15 +276,15 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
 	= (CombinedSparseGridDriver*)driverRep;
       const std::map<UShortArray, UShort2DArray>& sm_mi_map
 	= csg_driver->smolyak_multi_index_map();
-      size_t s, i, v, index, num_mi = sm_mi_map.size();
-      UShort3DArray pareto_mi(num_mi);
+      size_t s, i, v, index, num_sm_mi = sm_mi_map.size();
+      UShort3DArray pareto_mi(num_sm_mi);
       std::map<UShortArray, UShort2DArray>::const_iterator sm_it;
-      for (s=0, sm_it=sm_mi_map.begin(); s<num_mi; ++s, ++sm_it)
+      for (s=0, sm_it=sm_mi_map.begin(); s<num_sm_mi; ++s, ++sm_it)
 	update_pareto_set(sm_it->second, pareto_mi[s]);
       // define a combined multi-index that can enumerate each pareto term;
       // since these are indices and not orders, we exclude the upper bound.
-      UShortArray pareto_terms(num_mi);  UShort2DArray pareto_indices;
-      for (s=0; s<num_mi; ++s)
+      UShortArray pareto_terms(num_sm_mi);  UShort2DArray pareto_indices;
+      for (s=0; s<num_sm_mi; ++s)
 	pareto_terms[s] = pareto_mi[s].size();
       tensor_product_multi_index(pareto_terms, pareto_indices, false);
       // now enumerate all combinations of the non-dominated Smolyak index sets
@@ -293,7 +293,7 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       UShort2DArray tp_multi_index_prod;
       for (i=0; i<num_combinations; ++i) {
 	UShortArray& pareto_ind_i = pareto_indices[i];
-	for (s=0; s<num_mi; ++s) {
+	for (s=0; s<num_sm_mi; ++s) {
 	  index = pareto_ind_i[s];
 	  sparse_grid_level_to_expansion_order(csg_driver, pareto_mi[s][index],
 					       exp_order);
