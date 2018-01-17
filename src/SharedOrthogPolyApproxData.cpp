@@ -451,10 +451,10 @@ void SharedOrthogPolyApproxData::pre_combine_data()
     // (specialized in SharedProjectOrthogPolyApproxData::pre_combine_data())
 
     // roll up approxOrders to define combinedMultiIndex
-    std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
     size_t cntr, j, num_seq = approxOrder.size() - 2; // bridge from 1st to last
     if (num_seq) combinedMultiIndexSeq.resize(num_seq);
-    UShortArray combined_ao = ao_it->second;  ++ao_it; // copy
+    std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
+    UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
     for (cntr=0; ao_it!=approxOrder.end(); ++ao_it, ++cntr) {
       const UShortArray& ao = ao_it->second;
       for (j=0; j<numVars; ++j)

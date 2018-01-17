@@ -257,15 +257,19 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
     case QUADRATURE: { // product of two tensor-product expansions
       //active_key(driverRep->maximal_grid());
       // roll up approxOrders to define combinedMultiIndex
+      size_t cntr, j, num_seq = approxOrder.size() - 2; // bridge first to last
+      if (num_seq) combinedMultiIndexSeq.resize(num_seq);
       std::map<UShortArray, UShortArray>::iterator ao_it = approxOrder.begin();
       UShortArray combined_ao = ao_it->second;   ++ao_it; // copy
-      for (; ao_it!=approxOrder.end(); ++ao_it) {
+      for (cntr=0; ao_it!=approxOrder.end(); ++ao_it) {
 	const UShortArray& ao = ao_it->second;
 	for (size_t i=0; i<numVars; ++i)
 	  combined_ao[i] += ao[i];
+	UShort2DArray& combined_mi = (cntr < num_seq) ?
+	  combinedMultiIndexSeq[cntr] : combinedMultiIndex;
+	tensor_product_multi_index(combined_ao, combined_mi);
       }
-      tensor_product_multi_index(combined_ao, combinedMultiIndex);
-      allocate_component_sobol(combinedMultiIndex);
+      //allocate_component_sobol(combinedMultiIndex); // defer
       break;
     }
     case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
@@ -276,35 +280,65 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
 	= (CombinedSparseGridDriver*)driverRep;
       const std::map<UShortArray, UShort2DArray>& sm_mi_map
 	= csg_driver->smolyak_multi_index_map();
-      size_t s, i, v, index, num_sm_mi = sm_mi_map.size();
-      UShort3DArray pareto_mi(num_sm_mi);
       std::map<UShortArray, UShort2DArray>::const_iterator sm_it;
-      for (s=0, sm_it=sm_mi_map.begin(); s<num_sm_mi; ++s, ++sm_it)
-	update_pareto_set(sm_it->second, pareto_mi[s]);
-      // define a combined multi-index that can enumerate each pareto term;
-      // since these are indices and not orders, we exclude the upper bound.
-      UShortArray pareto_terms(num_sm_mi);  UShort2DArray pareto_indices;
-      for (s=0; s<num_sm_mi; ++s)
-	pareto_terms[s] = pareto_mi[s].size();
-      tensor_product_multi_index(pareto_terms, pareto_indices, false);
-      // now enumerate all combinations of the non-dominated Smolyak index sets
-      size_t num_combinations = pareto_indices.size();
-      UShortArray exp_order_prod(numVars, 0), exp_order;
-      UShort2DArray tp_multi_index_prod;
-      for (i=0; i<num_combinations; ++i) {
-	UShortArray& pareto_ind_i = pareto_indices[i];
-	for (s=0; s<num_sm_mi; ++s) {
-	  index = pareto_ind_i[s];
-	  sparse_grid_level_to_expansion_order(csg_driver, pareto_mi[s][index],
-					       exp_order);
-	  for (v=0; v<numVars; ++v)
-	    exp_order_prod[v] += exp_order[v];
-	}
-	// overlay each product expansion from the tensor-product combinations
-	tensor_product_multi_index(exp_order_prod, tp_multi_index_prod);
-	append_multi_index(tp_multi_index_prod, combinedMultiIndex);
+
+      // Define Pareto expansion orders for first level
+      sm_it = sm_mi_map.begin();
+      const UShort2DArray& sm_mi_1 = sm_it->second;
+      size_t i, j, v, num_keys = sm_mi_map.size(), num_sm_mi = sm_mi_1.size();
+      UShortArray exp_order, exp_order_prod(numVars);
+      UShort2DArray pareto_eo_1, pareto_eo_2, pareto_eo_prod, tp_mi;
+      for (i=0; i<num_sm_mi; ++i) {
+	sparse_grid_level_to_expansion_order(csg_driver, sm_mi_1[i], exp_order);
+	update_pareto_set(exp_order, pareto_eo_1);
       }
-      allocate_component_sobol(combinedMultiIndex);
+
+      // Define product multi-index arrays across sequence
+      size_t num_pareto_1, num_pareto_2, num_pareto_prod, s,
+	num_seq = num_keys - 2; // bridge from first to last
+      if (num_seq) combinedMultiIndexSeq.resize(num_seq);
+
+      for (s=0; s<=num_seq; ++s) {
+
+	// define Pareto expansion orders for new level
+	++sm_it;  const UShort2DArray& sm_mi_2 = sm_it->second;
+	num_sm_mi = sm_mi_2.size();  pareto_eo_2.clear();
+	for (i=0; i<num_sm_mi; ++i) {
+	  sparse_grid_level_to_expansion_order(csg_driver,sm_mi_2[i],exp_order);
+	  update_pareto_set(exp_order, pareto_eo_2);
+	}
+
+	// enumerate combinations of Pareto expansion orders
+        num_pareto_1 = pareto_eo_1.size();  num_pareto_2 = pareto_eo_2.size();
+        pareto_eo_prod.clear();
+	for (i=0; i<num_pareto_1; ++i) {
+	  const UShortArray& eo_1 = pareto_eo_1[i];
+	  for (j=0; j<num_pareto_2; ++j) {
+	    const UShortArray& eo_2 = pareto_eo_2[j];
+	    for (v=0; v<numVars; ++v)
+	      exp_order_prod[v] = eo_1[v] + eo_2[v];
+	    // refilter products for Pareto exp_order_prod
+	    update_pareto_set(exp_order_prod, pareto_eo_prod);
+	  }
+	}
+
+	// overlay each product expansion from the tensor-product combinations
+	UShort2DArray& combined_mi = (s < num_seq) ?
+	  combinedMultiIndexSeq[s] : combinedMultiIndex;
+	num_pareto_prod = pareto_eo_prod.size();  combined_mi.clear();
+	for (i=0; i<num_pareto_prod; ++i) {
+	  tensor_product_multi_index(pareto_eo_prod[i], tp_mi);
+	  append_multi_index(tp_mi, combined_mi);
+	}
+
+	// This is a running product -> subsequent multi-index terms must build
+	// on previous results (carry forward Pareto sets of exp_order from
+	// prev level for combination with exp_orders for new level).
+	if (s < num_seq)
+	  pareto_eo_1 = pareto_eo_prod;
+      }
+
+      //allocate_component_sobol(combinedMultiIndex); // defer
       break;
     }
     default:
