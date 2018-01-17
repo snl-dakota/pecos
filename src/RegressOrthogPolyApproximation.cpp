@@ -601,91 +601,76 @@ void RegressOrthogPolyApproximation::combine_coefficients()
 	{ sparse = true; break; }
 
   if (!sparse)
-    OrthogPolyApproximation::combine_coefficients();
-  else {
-    //update_active_iterators();  // activeKey updated in SharedOPAData
-    //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
+    { OrthogPolyApproximation::combine_coefficients(); return; }
 
-    // support mixed case using simple approach of populating the missing
-    // sparse indices arrays (not optimal for performance but a lot less code),
-    // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
-    // following aggregation.
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-    const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-    for (sp_it =sparseIndices.begin();
-	 sp_it!=sparseIndices.end() && mi_cit!=mi.end(); ++sp_it, ++mi_cit) {
-      SizetSet& sparse_ind = sp_it->second;
-      if (sparse_ind.empty())
-	inflate(sparse_ind, mi_cit->second.size());
-    }
+  //update_active_iterators();  // activeKey updated in SharedOPAData
+  //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-    std::map<UShortArray, RealVector>::iterator ec_it;
-    std::map<UShortArray, RealMatrix>::iterator eg_it;
-    switch (data_rep->expConfigOptions.combineType) {
-    case ADD_COMBINE: {
-      // update sparseIndices and expansionCoeff{s,Grads}
-      const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
-      size_t i = 0;
-      // *** TO DO: complete update to reflect change to combinedMultiIndexMap.
-      // *** TO DO: as with OPA::MULT_COMBINE, current overlay_expansion()
-      //            requires translation of combined result to next input
-      // *** TO DO: add combinedSparseIndices, combinedSparseSobolIndexMap.
-      for (sp_it  = sparseIndices.begin(),   ec_it  = expansionCoeffs.begin(),
-	   eg_it  = expansionCoeffGrads.begin();
-	   ec_it != expansionCoeffs.end() && eg_it != expansionCoeffGrads.end();
-	   ++sp_it, ++ec_it, ++eg_it, ++i)
-	overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
-			  eg_it->second, 1);
-        //, combinedExpCoeffs, combinedExpCoeffGrads, combinedSparseIndices);
-
-      /*
-      for (sp_it=sparseIndices.begin(), ec_it=expansionCoeffs.begin(),
-	   eg_it=expansionCoeffGrads.begin();
-	   ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
-	   ++sp_it, ++ec_it, ++eg_it)
-	if (ec_it != expCoeffsIter && eg_it != expCoeffGradsIter) {
-	  overlay_expansion(sp_it->second, combined_mi_map[cntr],
-			    ec_it->second, eg_it->second, 1);
-	  ++cntr;
-	}
-      */
-      // update sparseSobolIndexMap
-      //update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
-      //		  data_rep->sobolIndexMap); // *** TO DO: , combinedSparseSobolIndexMap);
-      break;
-    }
-    case MULT_COMBINE: {
-      // perform the multiplication of current and stored expansions
-      for (sp_it = sparseIndices.begin(),   ec_it = expansionCoeffs.begin(),
-	   eg_it = expansionCoeffGrads.begin(), mi_cit = mi.begin();
-	   ec_it!= expansionCoeffs.end() && eg_it!= expansionCoeffGrads.end();
-	   ++sp_it, ++ec_it, ++eg_it, ++mi_cit)
-	if (ec_it != expCoeffsIter && eg_it != expCoeffGradsIter)
-	  multiply_expansion(sp_it->second, mi_cit->second, ec_it->second,
-			     eg_it->second, data_rep->combinedMultiIndex);
-      // update sparseSobolIndexMap
-      //update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
-      //		  data_rep->sobolIndexMap); // *** TO DO: , combinedSparseSobolIndexMap);
-      break;
-    }
-    case ADD_MULT_COMBINE:
-      //overlay_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
-      //                  storedExpCoeffGrads[i], addCoeffs, addCoeffGrads);
-      //multiply_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
-      //                   storedExpCoeffGrads[i], multCoeffs, multCoeffGrads);
-      //compute_combine_factors(addCoeffs, multCoeffs);
-      //apply_combine_factors();
-      PCerr << "Error : additive+multiplicative combination not yet "
-	    << "implemented in OrthogPolyApproximation::combine_coefficients()"
-	    << std::endl;
-      abort_handler(-1);
-      break;
-    }
-
-    computedMean = computedVariance = 0;
+  // support mixed case using simple approach of populating the missing
+  // sparse indices arrays (not optimal for performance but a lot less code),
+  // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
+  // following aggregation.
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
+  std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
+  for (sp_it =sparseIndices.begin();
+       sp_it!=sparseIndices.end() && mi_cit!=mi.end(); ++sp_it, ++mi_cit) {
+    SizetSet& sparse_ind = sp_it->second;
+    if (sparse_ind.empty())
+      inflate(sparse_ind, mi_cit->second.size());
   }
+
+  std::map<UShortArray, RealVector>::iterator ec_it;
+  std::map<UShortArray, RealMatrix>::iterator eg_it;
+  switch (data_rep->expConfigOptions.combineType) {
+  case ADD_COMBINE: {
+    // update sparseIndices and expansionCoeff{s,Grads}
+    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
+    size_t i = 0;
+    // *** TO DO: complete update to reflect change to combinedMultiIndexMap.
+    // *** TO DO: as with OPA::MULT_COMBINE, current overlay_expansion()
+    //            requires translation of combined result to next input
+    // *** TO DO: add combinedSparseIndices, combinedSparseSobolIndexMap.
+    for (sp_it  = sparseIndices.begin(),   ec_it  = expansionCoeffs.begin(),
+	 eg_it  = expansionCoeffGrads.begin();
+	 ec_it != expansionCoeffs.end() && eg_it != expansionCoeffGrads.end();
+	 ++sp_it, ++ec_it, ++eg_it, ++i)
+      overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
+			eg_it->second, 1);
+      //, combinedExpCoeffs, combinedExpCoeffGrads, combinedSparseIndices);
+    break;
+  }
+  case MULT_COMBINE: {
+    // perform the multiplication of current and stored expansions
+    for (sp_it = sparseIndices.begin(),   ec_it = expansionCoeffs.begin(),
+	 eg_it = expansionCoeffGrads.begin(), mi_cit = mi.begin();
+	 ec_it!= expansionCoeffs.end() && eg_it!= expansionCoeffGrads.end();
+	 ++sp_it, ++ec_it, ++eg_it, ++mi_cit)
+      multiply_expansion(sp_it->second, mi_cit->second, ec_it->second,
+			 eg_it->second, data_rep->combinedMultiIndex);
+      //, combinedExpCoeffs, combinedExpCoeffGrads, combinedSparseIndices);
+    break;
+  }
+  case ADD_MULT_COMBINE:
+    //overlay_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
+    //                  storedExpCoeffGrads[i], addCoeffs, addCoeffGrads);
+    //multiply_expansion(data_rep->storedMultiIndex[i], storedExpCoeffs[i],
+    //                   storedExpCoeffGrads[i], multCoeffs, multCoeffGrads);
+    //compute_combine_factors(addCoeffs, multCoeffs);
+    //apply_combine_factors();
+    PCerr << "Error : additive+multiplicative combination not yet "
+	  << "implemented in OrthogPolyApproximation::combine_coefficients()"
+	  << std::endl;
+    abort_handler(-1);
+    break;
+  }
+
+  // update sparseSobolIndexMap
+  //update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
+  //		  data_rep->sobolIndexMap); // *** TO DO: , combinedSparseSobolIndexMap);
+
+  computedMean = computedVariance = 0;
 }
 
 

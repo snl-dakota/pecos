@@ -198,21 +198,6 @@ void OrthogPolyApproximation::combine_coefficients()
 	 ++ec_it, ++eg_it, ++i)
       overlay_expansion(combined_mi_map[i], ec_it->second, eg_it->second, 1,
 			combinedExpCoeffs, combinedExpCoeffGrads);
-    /*
-    // resize expansion{Coeffs,CoeffGrads} based on updated multiIndex
-    resize_expansion();
-    // update expansion{Coeffs,CoeffGrads}
-    size_t cntr = 0;
-    const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
-    for (ec_it =expansionCoeffs.begin(), eg_it =expansionCoeffGrads.begin();
-	 ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
-	 ++ec_it, ++eg_it)
-      if (ec_it != expCoeffsIter && eg_it != expCoeffGradsIter) {
-	overlay_expansion(combined_mi_map[cntr], ec_it->second,
-			  eg_it->second, 1);
-	++cntr;
-      }
-    */
     break;
   }
   case MULT_COMBINE: {
@@ -308,10 +293,6 @@ multiply_expansion(const UShort2DArray& multi_index_a,
   SharedOrthogPolyApproxData* data_rep
     = (SharedOrthogPolyApproxData*)sharedDataRep;
 
-  //UShort2DArray multi_index_a = multi_index_c; // copy
-  //RealVector exp_coeffs_a = exp_coeffs_c; // copy
-  //RealMatrix exp_grads_a;
-  //if (expansionCoeffGradFlag) exp_grads_a = exp_grads_c; //copy
   size_t i, j, k, v, num_v = sharedDataRep->numVars,
     num_a = multi_index_a.size(), num_b = multi_index_b.size(),
     num_c = multi_index_c.size(), num_deriv_v = exp_grads_a.numRows();
