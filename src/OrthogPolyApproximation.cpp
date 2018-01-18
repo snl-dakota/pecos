@@ -263,8 +263,6 @@ overlay_expansion(const SizetArray& multi_index_map,
 		  int coeff, RealVector& exp_coeffs_sum,
 		  RealMatrix& exp_grads_sum)
 {
-  //RealVector& exp_coeffs_sum = expCoeffsIter->second;
-  //RealMatrix& exp_grads_sum  = expCoeffGradsIter->second;
   size_t i, j, index, num_terms = multi_index_map.size(), 
     num_deriv_v = exp_grads_sum.numRows();
   for (i=0; i<num_terms; ++i) {

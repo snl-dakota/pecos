@@ -280,14 +280,14 @@ private:
   /// define a default definition for sparse_ind: 0 to num_terms-1
   void inflate(SizetSet& sparse_ind, size_t num_terms);
 
-  /// overlay the passed expansion with the aggregate
-  /// expansion{Coeffs,CoeffGrads} as managed by the multi_index_map
-  void overlay_expansion(const SizetSet& sparse_ind_2,
-			 const SizetArray& append_mi_map,
-			 const RealVector& exp_coeffs_2,
-			 const RealMatrix& exp_grads_2, int coeff_2);
-  /// multiply current expansion ("a") with incoming expansion ("b")
-  /// and store in product expansion ("c")
+  /// overlay expansion to update expansion sum
+  void overlay_expansion(const SizetSet& sparse_ind,
+			 const SizetArray& multi_index_map,
+			 const RealVector& exp_coeffs,
+			 const RealMatrix& exp_grads, int coeff,
+			 SizetSet& sparse_ind_sum, RealVector& exp_coeffs_sum,
+			 RealMatrix& exp_grads_sum);
+  /// multiply expansion "a" with expansion "b" and store in expansion "c"
   void multiply_expansion(const UShort2DArray& multi_index_a,
 			  const SizetSet&      sparse_ind_a,
 			  const RealVector&    exp_coeffs_a,
