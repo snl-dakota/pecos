@@ -237,8 +237,6 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
 
 void SharedProjectOrthogPolyApproxData::pre_combine_data()
 {
-  // Combine the data stored previously by store_data()
-
   switch (expConfigOptions.combineType) {
   case ADD_COMBINE:
     // Note: would like to preserve tensor indexing (at least for QUADRATURE

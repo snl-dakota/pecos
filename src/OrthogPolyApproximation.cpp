@@ -45,104 +45,6 @@ void OrthogPolyApproximation::allocate_arrays()
 }
 
 
-/*
-void OrthogPolyApproximation::store_coefficients(size_t index)
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.store(index);
-
-  // Store the aggregated expansion data.  This is used for multifidelity
-  // combination, and is distinct from poppedTP{MultiIndex,Coeffs,CoeffGrads}
-  // used for generalized sparse grids.
-  size_t stored_len = storedExpCoeffs.size();
-  if (index == _NPOS || index == stored_len) { // append
-    if (expansionCoeffFlag) storedExpCoeffs.push_back(expansionCoeffs);
-    else storedExpCoeffs.push_back(RealVector()); // keep indexing consistent
-    if (expansionCoeffGradFlag)
-      storedExpCoeffGrads.push_back(expansionCoeffGrads);
-    else // keep indexing consistent
-      storedExpCoeffGrads.push_back(RealMatrix());
-  }
-  else if (index < stored_len) { // replace
-    if (expansionCoeffFlag) storedExpCoeffs[index] = expansionCoeffs;
-    else storedExpCoeffs[index] = RealVector();
-    if (expansionCoeffGradFlag)
-      storedExpCoeffGrads[index] = expansionCoeffGrads;
-    else storedExpCoeffGrads[index] = RealMatrix();
-  }
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in OrthogPoly"
-	  << "Approximation::store_coefficients()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void OrthogPolyApproximation::restore_coefficients(size_t index)
-{
-  // mirror operations already performed on origSurrData for a
-  // disconnected/deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.restore(index);
-
-  size_t stored_len = storedExpCoeffs.size();
-  if (index == _NPOS) {
-    expansionCoeffs     = storedExpCoeffs.back();
-    expansionCoeffGrads = storedExpCoeffGrads.back();
-  }
-  else if (index < stored_len) {
-    expansionCoeffs     = storedExpCoeffs[index];
-    expansionCoeffGrads = storedExpCoeffGrads[index];
-  }
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in OrthogPoly"
-	  << "Approximation::restore_coefficients()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void OrthogPolyApproximation::remove_stored_coefficients(size_t index)
-{
-  // mirror operations already performed on origSurrData for a
-  // disconnected/deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.remove_stored(index);
-
-  size_t stored_len = storedExpCoeffs.size();
-  if (index == _NPOS || index == stored_len)
-    { storedExpCoeffs.pop_back(); storedExpCoeffGrads.pop_back(); }
-  else if (index < stored_len) {
-    RealVectorArray::iterator vit = storedExpCoeffs.begin();
-    std::advance(vit, index); storedExpCoeffs.erase(vit);
-    RealMatrixArray::iterator mit = storedExpCoeffGrads.begin();
-    std::advance(mit, index); storedExpCoeffGrads.erase(mit);
-  }
-}
-
-
-void OrthogPolyApproximation::swap_coefficients(size_t maximal_index)
-{
-  // mirror operations already performed on origSurrData for a
-  // disconnected/deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.swap(maximal_index);
-
-  if (expansionCoeffFlag) { // don't bother to swap empty RealVector
-    RealVector tmp_vec(expansionCoeffs);
-    expansionCoeffs = storedExpCoeffs[maximal_index];
-    storedExpCoeffs[maximal_index] = tmp_vec;
-  }
-  if (expansionCoeffGradFlag) { // don't bother to swap empty RealMatrix
-    RealMatrix tmp_mat(expansionCoeffGrads);
-    expansionCoeffGrads = storedExpCoeffGrads[maximal_index];
-    storedExpCoeffGrads[maximal_index] = tmp_mat;
-  }
-}
-*/
-
-
 void OrthogPolyApproximation::clear_inactive()
 {
   // mirror operations already performed on origSurrData for a
@@ -237,7 +139,7 @@ void OrthogPolyApproximation::combine_coefficients()
     break;
   }
 
-  computedMean = computedVariance = 0;
+  //computedMean = computedVariance = 0;
 }
 
 

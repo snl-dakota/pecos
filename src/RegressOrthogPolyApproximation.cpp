@@ -534,62 +534,6 @@ Real RegressOrthogPolyApproximation::select_best_basis_expansion()
 }
 
 
-/*
-void RegressOrthogPolyApproximation::store_coefficients(size_t index)
-{
-  size_t stored_len = storedSparseIndices.size();
-  if (index == _NPOS || index == stored_len) // append
-    storedSparseIndices.push_back(sparseIndices);
-  else if (index < stored_len) // replace
-    storedSparseIndices[index] = sparseIndices;
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in RegressOrthogPoly"
-	  << "Approximation::store_coefficients()" << std::endl;
-    abort_handler(-1);
-  }
-
-  OrthogPolyApproximation::store_coefficients(index); // storedExpCoeff{s,Grads}
-}
-
-
-void RegressOrthogPolyApproximation::restore_coefficients(size_t index)
-{
-  if (index == _NPOS)
-    sparseIndices = storedSparseIndices.back();
-  else if (index < storedSparseIndices.size())
-    sparseIndices = storedSparseIndices[index];
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in RegressOrthogPoly"
-	  << "Approximation::restore_coefficients()" << std::endl;
-    abort_handler(-1);
-  }
-
-  OrthogPolyApproximation::restore_coefficients(index);
-}
-
-
-void RegressOrthogPolyApproximation::remove_stored_coefficients(size_t index)
-{
-  size_t stored_len = storedSparseIndices.size();
-  if (index == _NPOS || index == stored_len)
-    storedSparseIndices.pop_back();
-  else if (index < stored_len) {
-    SizetSetArray::iterator vit = storedSparseIndices.begin();
-    std::advance(vit, index); storedSparseIndices.erase(vit);
-  }
-
-  OrthogPolyApproximation::remove_stored_coefficients(index);
-}
-
-
-void RegressOrthogPolyApproximation::swap_coefficients(size_t index)
-{
-  std::swap(sparseIndices, storedSparseIndices[index]);
-  OrthogPolyApproximation::swap_coefficients(index); // expansion coeff{s,Grads}
-}
-*/
-
-
 void RegressOrthogPolyApproximation::combine_coefficients()
 {
   // Combine the data stored previously by store_coefficients()
@@ -628,9 +572,13 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     // perform the overlay/addition of level expansions
     const Sizet2DArray& combined_mi_map = data_rep->combinedMultiIndexMap;
     size_t i, num_combine = combined_mi_map.size();
-    combinedSparseIndices.clear();    sp_it = sparseIndices.begin();
+    sp_it = sparseIndices.begin();
     ec_it = expansionCoeffs.begin();  eg_it = expansionCoeffGrads.begin();
-    for (i=0; i<num_combine; ++i, ++sp_it, ++ec_it, ++eg_it)
+    // avoid overhead of unnecessary reindexing on first overlay
+    combinedSparseIndices = sp_it->second; combinedExpCoeffs = ec_it->second;
+    combinedExpCoeffGrads = eg_it->second; ++sp_it; ++ec_it; ++eg_it;
+    // overlay with reindexing of sparse indices
+    for (i=1; i<num_combine; ++i, ++sp_it, ++ec_it, ++eg_it)
       overlay_expansion(sp_it->second, combined_mi_map[i], ec_it->second,
 			eg_it->second, 1,  combinedSparseIndices,
 			combinedExpCoeffs, combinedExpCoeffGrads);
@@ -639,7 +587,30 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   case MULT_COMBINE: {
     // perform the multiplication of level expansions
     const UShort3DArray& combined_mi_seq = data_rep->combinedMultiIndexSeq;
-    size_t cntr, num_seq = combined_mi_seq.size();
+    size_t cntr = 0, num_seq = combined_mi_seq.size();
+    /*
+    ec_it = expansionCoeffs.begin();  eg_it = expansionCoeffGrads.begin();
+    sp_it = sparseIndices.begin();   mi_cit = mi.begin();
+    const UShort2DArray& multi_index_a = mi_cit->second; ++mi_cit;
+    const RealVector&    exp_coeffs_a  =  ec_it->second; ++ec_it;
+    const RealMatrix&    exp_grads_a   =  eg_it->second; ++eg_it;
+    const SizetSet&      sparse_ind_a  =  sp_it->second; ++sp_it;
+    const UShort2DArray& multi_index_c = (num_seq) ?
+      combined_mi_seq[cntr] : data_rep->combinedMultiIndex;
+    multiply_expansion(multi_index_a, sparse_ind_a, exp_coeffs_a, exp_grads_a,
+		       mi_cit->second, sp_it->second, ec_it->second,
+		       eg_it->second, multi_index_c, combinedSparseIndices,
+		       combinedExpCoeffs, combinedExpCoeffGrads);
+    for (cntr=1; cntr<=num_seq; ++cntr, ++sp_it, ++ec_it, ++eg_it, ++mi_cit) {
+      const UShort2DArray& multi_index_c = (cntr < num_seq) ?
+	combined_mi_seq[cntr] : data_rep->combinedMultiIndex;
+      multiply_expansion(combined_mi_seq[cntr-1], combinedSparseIndices,
+			 combinedExpCoeffs, combinedExpCoeffGrads,
+			 mi_cit->second, sp_it->second, ec_it->second,
+			 eg_it->second, multi_index_c, combinedSparseIndices,
+			 combinedExpCoeffs, combinedExpCoeffGrads);
+    }
+    */
     ec_it = ++expansionCoeffs.begin();  eg_it = ++expansionCoeffGrads.begin();
     sp_it = ++sparseIndices.begin();   mi_cit = ++mi.begin();
     for (cntr=0; cntr<=num_seq; ++cntr, ++sp_it, ++ec_it, ++eg_it, ++mi_cit) {
@@ -674,25 +645,30 @@ void RegressOrthogPolyApproximation::combine_coefficients()
     break;
   }
 
-  // update sparseSobolIndexMap
-  //update_sparse_sobol(combinedSparseIndices, data_rep->combinedMultiIndex,
-  //		  data_rep->sobolIndexMap);
-  // *** TO DO: , combinedSparseSobolIndexMap);
-
-  computedMean = computedVariance = 0;
+  //computedMean = computedVariance = 0;
 }
 
 
 void RegressOrthogPolyApproximation::combined_to_active()
 {
+  // swap coefficients, reset keys and computed flags
   OrthogPolyApproximation::combined_to_active();
 
+  // update sparseIndices and sparseSobolIndexMap
   if (!combinedSparseIndices.empty()) {
     SharedRegressOrthogPolyApproxData* data_rep
       = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
     sparseIndices[data_rep->activeKey] = combinedSparseIndices;
+    // update sparseSobolIndexMap
+    // Note 1: if sobol indices used in future combined roll-ups (e.g., for
+    //   anisotropic sparse grid adaptation with total Sobol' indices), then
+    //   will need to track combinedSparseSobolIndexMap and promote here.
+    //   For now, regenerate sparseSobolIndexMap after roll ups are complete. 
+    // Note 2: combinedMultiIndex has been promoted to active in
+    //   SharedOrthogPolyApproxData::combined_to_active()
     update_sparse_sobol(combinedSparseIndices, data_rep->multi_index(),
 			data_rep->sobolIndexMap);
+    combinedSparseIndices.clear();
   }
 }
 
