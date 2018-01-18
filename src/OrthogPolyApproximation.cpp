@@ -205,19 +205,21 @@ void OrthogPolyApproximation::combine_coefficients()
     const UShort3DArray& combined_mi_seq = data_rep->combinedMultiIndexSeq;
     size_t cntr, num_seq = combined_mi_seq.size();
     const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
-    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
-    ec_it = expansionCoeffs.begin();     combinedExpCoeffs     = ec_it->second;
-    eg_it = expansionCoeffGrads.begin(); combinedExpCoeffGrads = eg_it->second;
-    ++ec_it;  ++eg_it;  ++mi_cit;
-    for (cntr=0; mi_cit!=mi.end(); ++ec_it, ++eg_it, ++mi_cit, ++cntr) {
+    std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = ++mi.begin();
+    ec_it = ++expansionCoeffs.begin();  eg_it = ++expansionCoeffGrads.begin();
+    for (cntr=0; cntr<=num_seq; ++cntr, ++ec_it, ++eg_it, ++mi_cit) {
       const UShort2DArray& multi_index_a = (cntr) ?
 	combined_mi_seq[cntr-1] : mi.begin()->second;
+      const RealVector&    exp_coeffs_a  = (cntr) ?
+	combinedExpCoeffs       : expansionCoeffs.begin()->second;
+      const RealMatrix&    exp_grads_a   = (cntr) ?
+	combinedExpCoeffGrads   : expansionCoeffGrads.begin()->second;
       const UShort2DArray& multi_index_c = (cntr < num_seq) ?
-	combined_mi_seq[cntr] : data_rep->combinedMultiIndex;
+	combined_mi_seq[cntr]   : data_rep->combinedMultiIndex;
       // internal tmp copies allow a and c arrays to be the same memory
-      multiply_expansion(multi_index_a, combinedExpCoeffs,
-			 combinedExpCoeffGrads, mi_cit->second, ec_it->second,
-			 eg_it->second, multi_index_c, combinedExpCoeffs,
+      multiply_expansion(multi_index_a, exp_coeffs_a, exp_grads_a,
+			 mi_cit->second, ec_it->second, eg_it->second,
+			 multi_index_c, combinedExpCoeffs,
 			 combinedExpCoeffGrads);
     }
     break;

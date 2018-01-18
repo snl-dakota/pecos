@@ -286,14 +286,19 @@ private:
 			 const SizetArray& append_mi_map,
 			 const RealVector& exp_coeffs_2,
 			 const RealMatrix& exp_grads_2, int coeff_2);
-                     //, RealVector& exp_coeffs_sum, RealMatrix& exp_grads_sum);
   /// multiply current expansion ("a") with incoming expansion ("b")
   /// and store in product expansion ("c")
-  void multiply_expansion(const SizetSet& sparse_ind_b,
+  void multiply_expansion(const UShort2DArray& multi_index_a,
+			  const SizetSet&      sparse_ind_a,
+			  const RealVector&    exp_coeffs_a,
+			  const RealMatrix&    exp_grads_a,
 			  const UShort2DArray& multi_index_b,
-			  const RealVector& exp_coeffs_b,
-			  const RealMatrix& exp_grads_b,
-			  const UShort2DArray& multi_index_c);
+			  const SizetSet&      sparse_ind_b,
+			  const RealVector&    exp_coeffs_b,
+			  const RealMatrix&    exp_grads_b,
+			  const UShort2DArray& multi_index_c,
+			  SizetSet& sparse_ind_c, RealVector& exp_coeffs_c,
+			  RealMatrix& exp_grads_c);
 
   /**
    * \brief Define the set of options used in the cross validation grid search
