@@ -664,8 +664,8 @@ void RegressOrthogPolyApproximation::combined_to_active()
     //   anisotropic sparse grid adaptation with total Sobol' indices), then
     //   will need to track combinedSparseSobolIndexMap and promote here.
     //   For now, regenerate sparseSobolIndexMap after roll ups are complete. 
-    // Note 2: combinedMultiIndex has been promoted to active in
-    //   SharedOrthogPolyApproxData::combined_to_active()
+    // Note 2: SharedOrthogPolyApproxData::combined_to_active() has promoted
+    //   combinedMultiIndex to active amd updated sobolIndexMap.
     update_sparse_sobol(combinedSparseIndices, data_rep->multi_index(),
 			data_rep->sobolIndexMap);
     combinedSparseIndices.clear();
