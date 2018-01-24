@@ -149,12 +149,12 @@ void CompressedSensingTool::set_linear_solver( CompressedSensingOptions &opts )
 	LinearSolver_ptr lasso_solver( new LARSSolver() );
 	linearSolver_ = lasso_solver;
 	linearSolver_->set_normalise_inputs( standardize );
-	boost::static_pointer_cast<LARSSolver>(linearSolver_)->set_sub_solver( LASSO_REGRESSION );
+	std::static_pointer_cast<LARSSolver>(linearSolver_)->set_sub_solver( LASSO_REGRESSION );
 	linearSolver_->set_residual_tolerance( opts.epsilon );
 	linearSolver_->set_solver_tolerance( solver_tolerance );
 	linearSolver_->set_verbosity( opts.verbosity+1 );
 	linearSolver_->set_max_iters( opts.maxNumIterations );
-	boost::static_pointer_cast<LARSSolver>(linearSolver_)->set_delta( opts.delta );
+	std::static_pointer_cast<LARSSolver>(linearSolver_)->set_delta( opts.delta );
 	break;
       }
     case LEAST_ANGLE_REGRESSION:
@@ -162,12 +162,12 @@ void CompressedSensingTool::set_linear_solver( CompressedSensingOptions &opts )
 	LinearSolver_ptr lars_solver( new LARSSolver() );
 	linearSolver_ = lars_solver;
 	linearSolver_->set_normalise_inputs( standardize );
-	boost::static_pointer_cast<LARSSolver>(linearSolver_)->set_sub_solver( LEAST_ANGLE_REGRESSION );
+	std::static_pointer_cast<LARSSolver>(linearSolver_)->set_sub_solver( LEAST_ANGLE_REGRESSION );
 	linearSolver_->set_residual_tolerance( opts.epsilon );
 	linearSolver_->set_solver_tolerance( solver_tolerance );
 	linearSolver_->set_verbosity( opts.verbosity+1 );
 	linearSolver_->set_max_iters( opts.maxNumIterations );
-	boost::static_pointer_cast<LARSSolver>(linearSolver_)->set_delta( opts.delta );
+	std::static_pointer_cast<LARSSolver>(linearSolver_)->set_delta( opts.delta );
 	break;
       }
     case EQ_CON_LEAST_SQ_REGRESSION:

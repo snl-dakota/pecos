@@ -161,13 +161,13 @@ public:
   void copy_solver( LinearSolver_ptr solver );
 
   /// Copy only the solver of the cross validation iterator;
-  virtual boost::shared_ptr<LinearModelCrossValidationIterator> copy() = 0;
+  virtual std::shared_ptr<LinearModelCrossValidationIterator> copy() = 0;
 
   virtual void compute_fold_score( RealMatrix &fold_diffs, RealVector &result );
 
 };
 
-typedef boost::shared_ptr<LinearModelCrossValidationIterator>  LinearModelCVIterator_ptr;
+typedef std::shared_ptr<LinearModelCrossValidationIterator>  LinearModelCVIterator_ptr;
 
 class MultipleSolutionLinearModelCrossValidationIterator : public LinearModelCrossValidationIterator
 {
@@ -198,7 +198,7 @@ public:
   void get_coefficient_stats(RealMatrix &coeff_stats);
 
    /// Copy only the solver of the cross validation iterator;
-  boost::shared_ptr<LinearModelCrossValidationIterator> copy();
+  std::shared_ptr<LinearModelCrossValidationIterator> copy();
 };
 
 }  // namespace Pecos
