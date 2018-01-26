@@ -17,6 +17,7 @@
 
 #include "SharedBasisApproxData.hpp"
 #include "SparseGridDriver.hpp"
+#include <deque>
 
 namespace Pecos {
 
