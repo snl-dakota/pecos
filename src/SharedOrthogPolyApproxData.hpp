@@ -78,8 +78,11 @@ public:
   const UShortArray& keyed_expansion_order(const UShortArray& key) const;
   /// set active approxOrder
   void expansion_order(const UShortArray& order);
+
   /// uniformly increment active approxOrder
   void increment_order();
+  /// uniformly decrement active approxOrder
+  void decrement_order();
 
   /// invoke initialize_orthogonal_basis_types_rules(),
   /// initialize_polynomial_basis(), and, if needed,
@@ -531,6 +534,16 @@ inline void SharedOrthogPolyApproxData::increment_order()
   UShortArray& approx_order = approxOrdIter->second;
   for (size_t i=0; i<numVars; ++i)
     ++approx_order[i];
+  //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
+}
+
+
+inline void SharedOrthogPolyApproxData::decrement_order()
+{
+  // decrement approxOrder (multiIndex updated in allocate_arrays())
+  UShortArray& approx_order = approxOrdIter->second;
+  for (size_t i=0; i<numVars; ++i)
+    --approx_order[i];
   //updateExpForm = true; // multiIndex to be updated in allocate_arrays()
 }
 
