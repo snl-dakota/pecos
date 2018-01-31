@@ -89,6 +89,8 @@ protected:
 
   void compute_coefficients();
   void increment_coefficients();
+  void decrement_coefficients(bool save_data);
+  void push_coefficients();
 
   /*
   void store_coefficients(size_t index = _NPOS);
@@ -376,6 +378,11 @@ private:
   /// the cross validation error reference point for adapting a CS
   /// candidate basis; it's state is reset for each response QoI
   Real cvErrorRef;
+
+  /// previous expansion coefficients
+  std::map<UShortArray, RealVector> prevExpCoeffs;
+  /// previous expansion coefficient gradients
+  std::map<UShortArray, RealMatrix> prevExpCoeffGrads;
 };
 
 

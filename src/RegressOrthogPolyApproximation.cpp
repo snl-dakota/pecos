@@ -204,7 +204,61 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 
 
 void RegressOrthogPolyApproximation::increment_coefficients()
-{ compute_coefficients(); } // sufficient for now
+{
+  // for use in decrement_coefficients()
+  update_active_iterators();// redundant but needed for prevExp prior to compute
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  prevExpCoeffs[key]/*Iter->second*/     = expCoeffsIter->second;     // copy
+  prevExpCoeffGrads[key]/*Iter->second*/ = expCoeffGradsIter->second; // copy
+
+  compute_coefficients(); // from scratch for regression
+}
+
+
+void RegressOrthogPolyApproximation::decrement_coefficients(bool save_data)
+{
+  // mirror operations already performed on origSurrData for a surrData
+  // that is disconnected/deep copied
+  if (deep_copied_surrogate_data())
+    surrData.pop(save_data);
+
+  // likely overkill, but multilevel roll up after increment modifies and
+  // then restores active key
+  update_active_iterators();
+
+  // reset expansion{Coeffs,CoeffGrads}
+  RealVector& exp_coeffs = expCoeffsIter->second;
+  RealMatrix& exp_grads  = expCoeffGradsIter->second;
+  //poppedExpCoeffs[key].push_back(exp_coeffs);    // ***
+  //poppedExpCoeffGrads[key].push_back(exp_grads); // ***
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  exp_coeffs = prevExpCoeffs[key];//Iter->second;
+  exp_grads  = prevExpCoeffGrads[key];//Iter->second;
+}
+
+
+void RegressOrthogPolyApproximation::push_coefficients()
+{
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+
+  // mirror operations already performed on origSurrData for a surrData
+  // that is disconnected/deep copied
+  if (deep_copied_surrogate_data())
+    surrData.push(data_rep->retrieval_index());
+
+  // synchronize expansionCoeff{s,Grads} and approxData
+  update_active_iterators();
+
+  // restore expansion{Coeffs,CoeffGrads}
+  const UShortArray& key = data_rep->activeKey;
+  //expCoeffsIter->second     = poppedExpCoeffs[key][index];   // ***
+  //expCoeffGradsIter->second = prevExpCoeffGrads[key][index]; // ***
+}
 
 
 void RegressOrthogPolyApproximation::run_regression()

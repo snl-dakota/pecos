@@ -209,27 +209,42 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // resize component Sobol' array sizes to pick up new interaction terms
   allocate_component_sobol();
 
-  // tpMultiIndex{,Map,MapRef} already updated in
-  // SharedProjectOrthogPolyApproxData::increment_data()
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray&   key   = data_rep->activeKey;
-  const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
-  RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
-  RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
-  size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
-  RealVector rv; tp_exp_coeffs.push_back(rv);
-  RealMatrix rm; tp_exp_coeff_grads.push_back(rm);
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    // tpMultiIndex{,Map,MapRef} already updated in
+    // SharedProjectOrthogPolyApproxData::increment_data()
+    const UShortArray&   key   = data_rep->activeKey;
+    const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
+    RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
+    size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
+    RealVector rv; tp_exp_coeffs.push_back(rv);
+    RealMatrix rm; tp_exp_coeff_grads.push_back(rm);
 
-  // form tp_data_pts, tp_wts using collocKey et al.
-  SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
-  integration_data(last_tp_index, tp_data_vars, tp_data_resp, tp_wts);
-  // form trial expansion coeffs/grads
-  integrate_expansion(tp_mi[last_tp_index], tp_data_vars, tp_data_resp, tp_wts,
-		      tp_exp_coeffs[last_tp_index],
-		      tp_exp_coeff_grads[last_tp_index]);
-  // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-  append_tensor_expansions(last_tp_index);
+    // form tp_data_pts, tp_wts using collocKey et al.
+    SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
+    integration_data(last_tp_index, tp_data_vars, tp_data_resp, tp_wts);
+    // form trial expansion coeffs/grads
+    integrate_expansion(tp_mi[last_tp_index], tp_data_vars, tp_data_resp,
+			tp_wts, tp_exp_coeffs[last_tp_index],
+			tp_exp_coeff_grads[last_tp_index]);
+
+    // for use in decrement_coefficients()
+    prevExpCoeffs     = expCoeffsIter->second;     // copy
+    prevExpCoeffGrads = expCoeffGradsIter->second; // copy
+
+    // sum trial expansion into expansionCoeffs/expansionCoeffGrads
+    append_tensor_expansions(last_tp_index);
+    break;
+  }
+  default:
+    PCerr << "Error: ProjectOrthogPolyApproximation::increment_coefficients() "
+	  << "not implemented for solution approach "
+	  << data_rep->expConfigOptions.expCoeffsSolnApproach << std::endl;
+    abort_handler(-1);
+  }
 
   computedMean = computedVariance = 0;
 }
@@ -246,24 +261,26 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
   // then restores active key
   update_active_iterators();
 
-  // reset expansion{Coeffs,CoeffGrads}: (set in append_tensor_expansions())
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key    = data_rep->activeKey;
+  // reset expansion{Coeffs,CoeffGrads}
   expCoeffsIter->second     = prevExpCoeffs;
   expCoeffGradsIter->second = prevExpCoeffGrads;
   // don't update Sobol' array sizes for decrement, push, or finalize
 
-  // expansion resize not necessary since (1) already updated from prevExp
-  // and (2) not updating expansion on decrement (next increment updates).
-  //resize_expansion();
-
-  // reset tensor-product bookkeeping and save restorable data
-  RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
-  RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
-  poppedTPExpCoeffs[key].push_back(tp_exp_coeffs.back());
-  poppedTPExpCoeffGrads[key].push_back(tp_exp_coeff_grads.back());
-  tp_exp_coeffs.pop_back();  tp_exp_coeff_grads.pop_back();
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    // reset tensor-product bookkeeping and save restorable data
+    const UShortArray& key              = data_rep->activeKey;
+    RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
+    poppedTPExpCoeffs[key].push_back(tp_exp_coeffs.back());
+    poppedTPExpCoeffGrads[key].push_back(tp_exp_coeff_grads.back());
+    tp_exp_coeffs.pop_back();  tp_exp_coeff_grads.pop_back();
+    break;
+  //default: nothing additional necessary
+  }
+  }
 
   computedMean = computedVariance = 0;
 }
@@ -282,25 +299,41 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators();
 
-  // move previous expansion data to current expansion
-  const UShortArray& key                  = data_rep->activeKey;
-  RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
-  RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
-  RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
-  size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
-  size_t index_star = data_rep->pushIndex;
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    // move previous expansion data to current expansion
+    const UShortArray& key                  = data_rep->activeKey;
+    RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
+    RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
+    RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
+    size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
+    size_t index_star = data_rep->pushIndex;
 
-  RealVectorDeque::iterator cit = pop_tp_exp_coeffs.begin();
-  RealMatrixDeque::iterator git = pop_tp_exp_coeff_grads.begin();
-  std::advance(cit, index_star); std::advance(git, index_star);
+    RealVectorDeque::iterator cit = pop_tp_exp_coeffs.begin();
+    RealMatrixDeque::iterator git = pop_tp_exp_coeff_grads.begin();
+    std::advance(cit, index_star); std::advance(git, index_star);
 
-  tp_exp_coeffs.push_back(*cit);              pop_tp_exp_coeffs.erase(cit);
-  tpExpansionCoeffGrads[key].push_back(*git); pop_tp_exp_coeff_grads.erase(git);
+    tp_exp_coeffs.push_back(*cit);
+    tpExpansionCoeffGrads[key].push_back(*git);
+    pop_tp_exp_coeffs.erase(cit); pop_tp_exp_coeff_grads.erase(git);
 
-  // don't update Sobol' array sizes for decrement, push, or finalize
+    // don't update Sobol' array sizes for decrement, push, or finalize
 
-  // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-  append_tensor_expansions(last_tp_index);
+    // for use in decrement_coefficients(); both pushes and new increments
+    // can be popped
+    prevExpCoeffs     = expCoeffsIter->second;     // copy
+    prevExpCoeffGrads = expCoeffGradsIter->second; // copy
+
+    // sum trial expansion into expansionCoeffs/expansionCoeffGrads
+    append_tensor_expansions(last_tp_index);
+    break;
+  }
+  default:
+    PCerr << "Error: ProjectOrthogPolyApproximation::push_coefficients() "
+	  << "not yet implemented for solution approach "
+	  << data_rep->expConfigOptions.expCoeffsSolnApproach << std::endl;
+    abort_handler(-1);
+  }
 
   computedMean = computedVariance = 0;
 }
@@ -323,23 +356,34 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators();
 
-  const UShortArray& key                  = data_rep->activeKey;
-  RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
-  RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
-  RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
-  RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
-  // don't update Sobol' array sizes for decrement, push, or finalize
-  size_t start_tp_index = tp_exp_coeffs.size(); // before insertion
-  // move previous expansion data to current expansion
-  tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_tp_exp_coeffs.begin(),
-		       pop_tp_exp_coeffs.end());
-  tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),
-			    pop_tp_exp_coeff_grads.begin(),
-			    pop_tp_exp_coeff_grads.end());
+  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    const UShortArray& key                  = data_rep->activeKey;
+    RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
+    RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
+    RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
+    // don't update Sobol' array sizes for decrement, push, or finalize
+    size_t start_tp_index = tp_exp_coeffs.size(); // before insertion
+    // move previous expansion data to current expansion
+    tp_exp_coeffs.insert(tp_exp_coeffs.end(), pop_tp_exp_coeffs.begin(),
+			 pop_tp_exp_coeffs.end());
+    tp_exp_coeff_grads.insert(tp_exp_coeff_grads.end(),
+			      pop_tp_exp_coeff_grads.begin(),
+			      pop_tp_exp_coeff_grads.end());
+    pop_tp_exp_coeffs.clear();  pop_tp_exp_coeff_grads.clear();
 
-  pop_tp_exp_coeffs.clear();  pop_tp_exp_coeff_grads.clear();
-  // sum remaining trial expansions into expansionCoeffs/expansionCoeffGrads
-  append_tensor_expansions(start_tp_index);
+    // sum remaining trial expansions into expansionCoeff{s,Grads}.
+    // For finalize, don't need to cache prevExpCoeff{s,Grads} prior to append.
+    append_tensor_expansions(start_tp_index);
+    break;
+  }
+  default:
+    PCerr << "Error: ProjectOrthogPolyApproximation::finalize_coefficients() "
+	  << "not implemented for solution approach "
+	  << data_rep->expConfigOptions.expCoeffsSolnApproach << std::endl;
+    abort_handler(-1);
+  }
 
   computedMean = computedVariance = 0;
 }
@@ -348,13 +392,6 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 void ProjectOrthogPolyApproximation::
 append_tensor_expansions(size_t start_tp_index)
 {
-  RealVector& exp_coeffs      =     expCoeffsIter->second;
-  RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
-
-  // for use in decrement_coefficients()
-  prevExpCoeffs     = exp_coeffs;      // copy
-  prevExpCoeffGrads = exp_coeff_grads; // copy
-
   // synchonize expansionCoeff{s,Grads} size with updated multiIndex
   // (following any caching of previous states)
   resize_expansion();
@@ -379,6 +416,8 @@ append_tensor_expansions(size_t start_tp_index)
   // add trial expansions
   size_t index, num_tensor_grids = sm_coeffs.size();
   int coeff, delta_coeff;
+  RealVector& exp_coeffs      =     expCoeffsIter->second;
+  RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
   for (index=start_tp_index; index<num_tensor_grids; ++index) {
     coeff = sm_coeffs[index];
     if (coeff)
