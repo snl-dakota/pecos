@@ -698,29 +698,56 @@ push_available(const UShortArray& trial_set)
 
 inline bool SharedPolyApproxData::push_available()
 {
-  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  return push_available(sg_driver->trial_set());
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return push_available(sg_driver->trial_set());
+    break;
+  }
+  default:
+    PCerr << "Error: SharedPolyApproxData::push_available() not implemented "
+	  << "for this refinement type." << std::endl;
+    abort_handler(-1);
+    return false;
+  }
 }
 
 
 inline size_t SharedPolyApproxData::retrieval_index()
 {
-  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  return find_index(poppedLevMultiIndex[activeKey], sg_driver->trial_set());
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return find_index(poppedLevMultiIndex[activeKey], sg_driver->trial_set());
+    break;
+  }
+  default: // other refinement types support a single candidate with index 0
+    return 0;
+  }
 }
 
 
 inline size_t SharedPolyApproxData::finalization_index(size_t i)
 {
-  SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-  const UShortArraySet& trial_sets = sg_driver->computed_trial_sets();
-  // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid data
-  // with remaining computed trial sets (in sorted order from SparseGridDriver::
-  // computedTrialSets).  Below, we determine the order with which these
-  // appended trial sets appear in poppedLevMultiIndex.
-  UShortArraySet::const_iterator cit = trial_sets.begin();
-  std::advance(cit, i);
-  return find_index(poppedLevMultiIndex[activeKey], *cit);
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    const UShortArraySet& trial_sets = sg_driver->computed_trial_sets();
+    // {Combined,Hierarch}SparseGridDriver::finalize_sets() updates the grid
+    // data with remaining computed trial sets (in sorted order from
+    // SparseGridDriver::computedTrialSets).  Below, we determine the order
+    // with which these appended trial sets appear in poppedLevMultiIndex.
+    UShortArraySet::const_iterator cit = trial_sets.begin();
+    std::advance(cit, i);
+    return find_index(poppedLevMultiIndex[activeKey], *cit);
+    break;
+  }
+  default:
+    PCerr << "Error: SharedPolyApproxData::finalization_index() not "
+	  << "implemented for this refinement type." << std::endl;
+    abort_handler(-1);
+    return 0;
+  }
 }
 
 

@@ -210,8 +210,8 @@ void RegressOrthogPolyApproximation::increment_coefficients()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  prevExpCoeffs[key]/*Iter->second*/     = expCoeffsIter->second;     // copy
-  prevExpCoeffGrads[key]/*Iter->second*/ = expCoeffGradsIter->second; // copy
+  prevExpCoeffs     = expCoeffsIter->second;     // copy
+  prevExpCoeffGrads = expCoeffGradsIter->second; // copy
 
   compute_coefficients(); // from scratch for regression
 }
@@ -228,16 +228,20 @@ void RegressOrthogPolyApproximation::decrement_coefficients(bool save_data)
   // then restores active key
   update_active_iterators();
 
-  // reset expansion{Coeffs,CoeffGrads}
   RealVector& exp_coeffs = expCoeffsIter->second;
   RealMatrix& exp_grads  = expCoeffGradsIter->second;
-  //poppedExpCoeffs[key].push_back(exp_coeffs);    // ***
-  //poppedExpCoeffGrads[key].push_back(exp_grads); // ***
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  exp_coeffs = prevExpCoeffs[key];//Iter->second;
-  exp_grads  = prevExpCoeffGrads[key];//Iter->second;
+
+  // store the incremented coeff state for possible push'
+  if (save_data) {
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    const UShortArray& key = data_rep->activeKey;
+    poppedExpCoeffs[key].push_back(exp_coeffs);
+    poppedExpCoeffGrads[key].push_back(exp_grads);
+  }
+
+  // reset expansion{Coeffs,CoeffGrads}
+  exp_coeffs = prevExpCoeffs;  exp_grads = prevExpCoeffGrads;
 }
 
 
@@ -246,18 +250,37 @@ void RegressOrthogPolyApproximation::push_coefficients()
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
 
+  // SharedPolyApproxData::retrieval_index() currently returns 0 for
+  // all cases other than generalized sparse grids
+  size_t pop_index = data_rep->retrieval_index();
+
   // mirror operations already performed on origSurrData for a surrData
   // that is disconnected/deep copied
   if (deep_copied_surrogate_data())
-    surrData.push(data_rep->retrieval_index());
+    surrData.push(pop_index);
 
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators();
 
-  // restore expansion{Coeffs,CoeffGrads}
+  // store current state for use in decrement_coefficients()
+  prevExpCoeffs     = expCoeffsIter->second;     // copy
+  prevExpCoeffGrads = expCoeffGradsIter->second; // copy
+
+  // retrieve a previously popped state
   const UShortArray& key = data_rep->activeKey;
-  //expCoeffsIter->second     = poppedExpCoeffs[key][index];   // ***
-  //expCoeffGradsIter->second = prevExpCoeffGrads[key][index]; // ***
+  std::map<UShortArray, RealVectorDeque>::iterator prv_it
+    = poppedExpCoeffs.find(key);
+  std::map<UShortArray, RealMatrixDeque>::iterator prm_it
+    = poppedExpCoeffGrads.find(key);
+  RealVectorDeque::iterator rv_it;  RealMatrixDeque::iterator rm_it;
+  if (prv_it != poppedExpCoeffs.end()) {
+    rv_it = prv_it->second.begin();     std::advance(rv_it, pop_index);
+    expCoeffsIter->second = *rv_it;     poppedExpCoeffs[key].erase(rv_it);
+  }
+  if (prm_it != poppedExpCoeffGrads.end()) {
+    rm_it = prm_it->second.begin();     std::advance(rm_it, pop_index);
+    expCoeffGradsIter->second = *rm_it; poppedExpCoeffGrads[key].erase(rm_it);
+  }
 }
 
 

@@ -211,7 +211,7 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
 
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  switch (data_rep->expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     // tpMultiIndex{,Map,MapRef} already updated in
     // SharedProjectOrthogPolyApproxData::increment_data()
@@ -241,8 +241,8 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   }
   default:
     PCerr << "Error: ProjectOrthogPolyApproximation::increment_coefficients() "
-	  << "not implemented for solution approach "
-	  << data_rep->expConfigOptions.expCoeffsSolnApproach << std::endl;
+	  << "not implemented for refinement control "
+	  << data_rep->expConfigOptions.refinementControl << std::endl;
     abort_handler(-1);
   }
 
@@ -266,9 +266,13 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
   expCoeffGradsIter->second = prevExpCoeffGrads;
   // don't update Sobol' array sizes for decrement, push, or finalize
 
+  computedMean = computedVariance = 0;
+
+  if (!save_data) return;
+
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  switch (data_rep->expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     // reset tensor-product bookkeeping and save restorable data
     const UShortArray& key              = data_rep->activeKey;
@@ -278,11 +282,13 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
     poppedTPExpCoeffGrads[key].push_back(tp_exp_coeff_grads.back());
     tp_exp_coeffs.pop_back();  tp_exp_coeff_grads.pop_back();
     break;
-  //default: nothing additional necessary
-  }
   }
 
-  computedMean = computedVariance = 0;
+  // TO DO: multiple index sets from uniform/anisotropic sparse grid refinement
+
+  default: // nothing additional necessary for TPQ, Cubature
+    break;
+  }
 }
 
 
@@ -299,7 +305,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators();
 
-  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  switch (data_rep->expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     // move previous expansion data to current expansion
     const UShortArray& key                  = data_rep->activeKey;
@@ -330,8 +336,8 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   }
   default:
     PCerr << "Error: ProjectOrthogPolyApproximation::push_coefficients() "
-	  << "not yet implemented for solution approach "
-	  << data_rep->expConfigOptions.expCoeffsSolnApproach << std::endl;
+	  << "not yet implemented for refinement control "
+	  << data_rep->expConfigOptions.refinementControl << std::endl;
     abort_handler(-1);
   }
 
@@ -356,7 +362,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   // synchronize expansionCoeff{s,Grads} and approxData
   update_active_iterators();
 
-  switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+  switch (data_rep->expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     const UShortArray& key                  = data_rep->activeKey;
     RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
@@ -380,8 +386,8 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   }
   default:
     PCerr << "Error: ProjectOrthogPolyApproximation::finalize_coefficients() "
-	  << "not implemented for solution approach "
-	  << data_rep->expConfigOptions.expCoeffsSolnApproach << std::endl;
+	  << "not implemented for refinement control "
+	  << data_rep->expConfigOptions.refinementControl << std::endl;
     abort_handler(-1);
   }
 

@@ -379,10 +379,17 @@ private:
   /// candidate basis; it's state is reset for each response QoI
   Real cvErrorRef;
 
-  /// previous expansion coefficients
-  std::map<UShortArray, RealVector> prevExpCoeffs;
-  /// previous expansion coefficient gradients
-  std::map<UShortArray, RealMatrix> prevExpCoeffGrads;
+  /// previous expansionCoeffs (aggregated total) prior to increment/push
+  /// that allow efficient return/pop in decrement_coefficients()
+  RealVector prevExpCoeffs;
+  /// previous expansionCoeffGrads (aggregated total) prior to increment/push
+  /// that allow efficient return/pop in decrement_coefficients()
+  RealMatrix prevExpCoeffGrads;
+
+  /// popped instances of expansionCoeffs (computed but not yet selected)
+  std::map<UShortArray, RealVectorDeque> poppedExpCoeffs;
+  /// popped instances of expansionCoeffGrads (computed but not yet selected)
+  std::map<UShortArray, RealMatrixDeque> poppedExpCoeffGrads;
 };
 
 
