@@ -80,19 +80,14 @@ protected:
   void active_key(const UShortArray& key);
   void clear_keys();
 
-  void allocate_data(size_t index = _NPOS);
-  void increment_data(size_t index = _NPOS);
+  void allocate_data();
+  void increment_data();
   void decrement_data();
   void post_push_data();
   void post_finalize_data();
   void pre_combine_data();
   void post_combine_data();
 
-  /*
-  void store_data(size_t index = _NPOS);
-  void restore_data(size_t index = _NPOS);
-  void remove_stored_data(size_t index = _NPOS);
-  */
   void clear_inactive_data();
 
   //

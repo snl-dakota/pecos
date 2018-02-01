@@ -269,30 +269,24 @@ public:
   virtual void clear_keys();
 
   /// allocate the shared data prior to building the set of approximations
-  virtual void allocate_data(size_t index = _NPOS) = 0;
+  virtual void allocate_data() = 0;
 
   /// update the shared data prior to rebuilding the set of approximations
-  virtual void increment_data(size_t index = _NPOS);
+  virtual void increment_data();
   /// decrement the previous increment and store its shared data for
   /// later retrieval
   virtual void decrement_data();
+
   /// restores previously popped approximation data
   virtual void pre_push_data();
   /// restores previously popped approximation data
   virtual void post_push_data();
+
   /// finalizes the shared approximation data following a set of increments
   virtual void pre_finalize_data();
   /// finalizes the shared approximation data following a set of increments
   virtual void post_finalize_data();
 
-  /*
-  /// stores current approximation data for later combination
-  virtual void store_data(size_t index = _NPOS) = 0;
-  /// restores previously stored approximation data
-  virtual void restore_data(size_t index = _NPOS) = 0;
-  /// removes a redundant stored approximation data prior to combination
-  virtual void remove_stored_data(size_t index = _NPOS) = 0;
-  */
   /// clear inactive approximation data
   virtual void clear_inactive_data();
 

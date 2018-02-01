@@ -22,7 +22,7 @@
 namespace Pecos {
 
 
-void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
+void SharedProjectOrthogPolyApproxData::allocate_data()
 {
   // update_exp_form controls when to update (refinement) and when not to
   // update (subIterator execution) an expansion's multiIndex definition.
@@ -127,7 +127,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data(size_t index)
 }
 
 
-void SharedProjectOrthogPolyApproxData::increment_data(size_t index)
+void SharedProjectOrthogPolyApproxData::increment_data()
 {
   if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
     PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"

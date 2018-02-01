@@ -301,7 +301,7 @@ void SharedPolyApproxData::clear_keys()
 }
 
 
-void SharedPolyApproxData::increment_data(size_t index)
+void SharedPolyApproxData::increment_data()
 {
   // Run-time error instead of compile-time (not pure virtual)
 

@@ -18,7 +18,7 @@
 
 namespace Pecos {
 
-void SharedRegressOrthogPolyApproxData::allocate_data(size_t index)
+void SharedRegressOrthogPolyApproxData::allocate_data()
 {
   UShortArray&   approx_order =  approxOrdIter->second;
   UShort2DArray& multi_index  = multiIndexIter->second;
@@ -111,7 +111,7 @@ update_approx_order(unsigned short new_order)
 }
 
 
-void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
+void SharedRegressOrthogPolyApproxData::increment_data()
 {
   // To automatically update approxOrder, would need to either infer a
   // collocation ratio (based on initial data size + initial approxOrder)
@@ -123,22 +123,37 @@ void SharedRegressOrthogPolyApproxData::increment_data(size_t index)
   // Better: manage increments from NonDPCE using ratio_samples_to_order()
   //         (e.g., see NonDQUESOBayesCalibration::update_model())
 
-  // approxOrder updated from NonDPolynomialChaos --> propagate to multiIndex
+  // approxOrder incremented from NonDPCE --> propagate to multiIndex
   UShortArray&  approx_order =  approxOrdIter->second;
   UShort2DArray& multi_index = multiIndexIter->second;
-  bool update_exp_form
-    = (approx_order != approxOrderPrev || activeKey != activeKeyPrev);
-  if (update_exp_form) {
-    switch (expConfigOptions.expBasisType) {
-    case TENSOR_PRODUCT_BASIS:
-      tensor_product_multi_index(approx_order, multi_index); break;
-    default:
-      total_order_multi_index(approx_order, multi_index);    break;
-    }
-    allocate_component_sobol(multi_index);
-    approxOrderPrev = approx_order;
-    activeKeyPrev   = activeKey;
+
+  switch (expConfigOptions.expBasisType) {
+  case TENSOR_PRODUCT_BASIS:
+    tensor_product_multi_index(approx_order, multi_index); break;
+  default:
+    total_order_multi_index(approx_order, multi_index);    break;
   }
+  allocate_component_sobol(multi_index);
+  //approxOrderPrev = approx_order;
+  //activeKeyPrev   = activeKey;
+}
+
+
+void SharedRegressOrthogPolyApproxData::decrement_data()
+{
+  // approxOrder decremented from NonDPCE --> propagate to multiIndex
+  UShortArray&  approx_order =  approxOrdIter->second;
+  UShort2DArray& multi_index = multiIndexIter->second;
+
+  switch (expConfigOptions.expBasisType) {
+  case TENSOR_PRODUCT_BASIS:
+    tensor_product_multi_index(approx_order, multi_index); break;
+  default:
+    total_order_multi_index(approx_order, multi_index);    break;
+  }
+  //allocate_component_sobol(multi_index);
+  //approxOrderPrev = approx_order;
+  //activeKeyPrev   = activeKey;
 }
 
 

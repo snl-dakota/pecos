@@ -193,11 +193,13 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void allocate_data(size_t index = _NPOS);
-  void increment_data(size_t index = _NPOS);
-  //void decrement_data();
-  //void push_data();
-  //void finalize_data();
+  void allocate_data();
+  void increment_data();
+  void decrement_data();
+  //void pre_push_data();
+  //void post_push_data();
+  //void pre_finalize_data();
+  //void post_finalize_data();
 
 private:
 

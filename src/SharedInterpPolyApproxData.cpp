@@ -112,7 +112,7 @@ void SharedInterpPolyApproxData::clear_keys()
 }
 
 
-void SharedInterpPolyApproxData::allocate_data(size_t index)
+void SharedInterpPolyApproxData::allocate_data()
 {
   // use barycentric formulation for global Lagrange basis polynomials.
   // Note: flag needed below in update_{tensor,sparse}_interpolation_basis().
@@ -166,7 +166,7 @@ void SharedInterpPolyApproxData::allocate_data(size_t index)
 }
 
 
-void SharedInterpPolyApproxData::increment_data(size_t index)
+void SharedInterpPolyApproxData::increment_data()
 {
   unsigned short max_set_index = 0;
   switch (expConfigOptions.expCoeffsSolnApproach) {

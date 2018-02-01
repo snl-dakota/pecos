@@ -21,7 +21,7 @@
 namespace Pecos {
 
 
-void SharedOrthogPolyApproxData::allocate_data(size_t index)
+void SharedOrthogPolyApproxData::allocate_data()
 {
   UShortArray&   approx_order =  approxOrdIter->second;
   UShort2DArray& multi_index  = multiIndexIter->second;
