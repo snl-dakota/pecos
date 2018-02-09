@@ -85,6 +85,8 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
+  void update_active_iterators();
+
   int min_coefficients() const;
 
   void compute_coefficients();
@@ -128,8 +130,21 @@ protected:
   Real mean(const RealVector& x);
   const RealVector& mean_gradient(const RealVector& x, const SizetArray& dvv);
 
+  Real variance(const UShort2DArray& mi, const RealVector& exp_coeffs,
+		const SizetSet& sparse_ind);
+  Real covariance(const UShort2DArray& mi,    const RealVector& exp_coeffs,
+		  const SizetSet& sparse_ind, const RealVector& exp_coeffs_2,
+		  const SizetSet& sparse_ind_2);
   Real covariance(PolynomialApproximation* poly_approx_2);
+  Real combined_covariance(PolynomialApproximation* poly_approx_2);
+
+  Real covariance(const RealVector& x, const UShort2DArray& mi,
+		  const RealVector& exp_coeffs,   const SizetSet& sparse_ind,
+		  const RealVector& exp_coeffs_2, const SizetSet& sparse_ind_2);
   Real covariance(const RealVector& x, PolynomialApproximation* poly_approx_2);
+  Real combined_covariance(const RealVector& x,
+			   PolynomialApproximation* poly_approx_2);
+
   const RealVector& variance_gradient();
   const RealVector& variance_gradient(const RealVector& x,
 				      const SizetArray& dvv);
@@ -357,6 +372,9 @@ private:
       exercised to retain synchronization with expansionCoeff{s,Grads}
       ordering when merging sparse multi-indices. */
   std::map<UShortArray, SizetSet> sparseIndices;
+  /// iterator pointing to active node in sparseIndices
+  std::map<UShortArray, SizetSet>::iterator sparseIndIter;
+
   /// set of sparseIndices mapping combinedExpCoeffs to combinedMultiIndex
   SizetSet combinedSparseIndices;
 
@@ -385,11 +403,16 @@ private:
   /// previous expansionCoeffGrads (aggregated total) prior to increment/push
   /// that allow efficient return/pop in decrement_coefficients()
   RealMatrix prevExpCoeffGrads;
+  /// previous sparseIndices prior to increment/push that allow efficient
+  /// return/pop in decrement_coefficients()
+  SizetSet prevSparseIndices;
 
   /// popped instances of expansionCoeffs (computed but not yet selected)
   std::map<UShortArray, RealVectorDeque> poppedExpCoeffs;
   /// popped instances of expansionCoeffGrads (computed but not yet selected)
   std::map<UShortArray, RealMatrixDeque> poppedExpCoeffGrads;
+  /// popped instances of sparseIndices (computed but not yet selected)
+  std::map<UShortArray, SizetSetDeque> poppedSparseInd;
 };
 
 
@@ -401,6 +424,21 @@ RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
 
 inline RegressOrthogPolyApproximation::~RegressOrthogPolyApproximation()
 { }
+
+
+inline void RegressOrthogPolyApproximation::update_active_iterators()
+{
+  OrthogPolyApproximation::update_active_iterators();
+
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  sparseIndIter = sparseIndices.find(key);
+  if (sparseIndIter == sparseIndices.end()) {
+    std::pair<UShortArray, SizetSet> ss_pair(key, SizetSet());
+    sparseIndIter = sparseIndices.insert(ss_pair).first;
+  }
+}
 
 
 inline void RegressOrthogPolyApproximation::build_linear_system( RealMatrix &A )

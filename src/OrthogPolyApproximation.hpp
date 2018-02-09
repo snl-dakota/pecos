@@ -151,7 +151,7 @@ protected:
   //
 
   /// update expCoeff{s,Grads}Iter for new activeKey from sharedDataRep
-  void update_active_iterators();
+  virtual void update_active_iterators();
 
   /// size expansion{Coeffs,CoeffGrads} based on the shared multiIndex
   void size_expansion();
