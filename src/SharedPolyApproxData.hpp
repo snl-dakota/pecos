@@ -277,6 +277,10 @@ public:
   /// later retrieval
   virtual void decrement_data();
 
+  /// test for whether current trial set requires a new approximation
+  /// increment or can be restored from a previous trial
+  virtual bool push_available();
+
   /// restores previously popped approximation data
   virtual void pre_push_data();
   /// restores previously popped approximation data
@@ -321,9 +325,6 @@ public:
   static void update_basis_distribution_parameters(const ShortArray& u_types,
     const AleatoryDistParams& dp, std::vector<BasisPolynomial>& poly_basis);
 
-  /// test for whether current trial set requires a new approximation
-  /// increment or can be restored from a previous trial
-  bool push_available();
   /// returns index of the data set to be restored from within popped
   /// bookkeeping (e.g., PolynomialApproximation::poppedLevMultiIndex)
   size_t retrieval_index();
@@ -448,7 +449,7 @@ protected:
   void assign_sobol_index_map_values();
 
   /// check for the presence of trial_set within poppedLevMultiIndex[activeKey]
-  bool push_available(const UShortArray& trial_set);
+  bool push_trial_available(const UShortArray& trial_set);
 
   //
   //- Heading: Data
@@ -682,7 +683,7 @@ increment_terms(UShortArray& terms, size_t& last_index, size_t& prev_index,
 
 
 inline bool SharedPolyApproxData::
-push_available(const UShortArray& trial_set)
+push_trial_available(const UShortArray& trial_set)
 {
   const std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
   return (std::find(popped_lev_mi.begin(), popped_lev_mi.end(), trial_set) !=
@@ -695,9 +696,12 @@ inline bool SharedPolyApproxData::push_available()
   switch (expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
     SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
-    return push_available(sg_driver->trial_set());
+    return push_trial_available(sg_driver->trial_set());
     break;
   }
+  // Implemented by SharedRegressOrthogPolyApproxData::push_available()
+  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
+  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
   default:
     PCerr << "Error: SharedPolyApproxData::push_available() not implemented "
 	  << "for this refinement type." << std::endl;

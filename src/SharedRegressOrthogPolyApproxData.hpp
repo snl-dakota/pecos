@@ -196,10 +196,14 @@ protected:
   void allocate_data();
   void increment_data();
   void decrement_data();
+
   void pre_push_data();
   //void post_push_data();
+
   //void pre_finalize_data();
   //void post_finalize_data();
+
+  bool push_available();
 
 private:
 
@@ -227,6 +231,12 @@ private:
 
   /// container for regression configuration options
   RegressionConfigOptions regressConfigOptions;
+
+  /// previous value of active multiIndex for restoration in decrement_data()
+  UShort2DArray prevMultiIndex;
+  /// previously incremented version of active multiIndex for restoration in
+  /// pre_push_data()
+  std::map<UShortArray, std::deque<UShort2DArray> > poppedMultiIndex;
 
   /// Wrapper class that is used to solve regression problems
   CompressedSensingTool CSTool;

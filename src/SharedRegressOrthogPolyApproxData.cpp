@@ -126,6 +126,22 @@ void SharedRegressOrthogPolyApproxData::approx_order_to_multi_index()
 }
 
 
+inline bool SharedRegressOrthogPolyApproxData::push_available()
+{
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    return push_trial_available(sg_driver->trial_set());
+    break;
+  }
+  //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
+  //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
+  default:
+    return !poppedMultiIndex[activeKey].empty(); break;
+  }
+}
+
+
 void SharedRegressOrthogPolyApproxData::increment_data()
 {
   // To automatically update approxOrder, would need to either infer a
@@ -134,6 +150,9 @@ void SharedRegressOrthogPolyApproxData::increment_data()
   // effects with discrete sample counts and access to settings for the 
   // general case (useDerivs, termsOrder).  Then increment_order() would be
   // justified by incremented data size.
+
+  // for decrement
+  prevMultiIndex = multiIndexIter->second;
 
   // Better: manage increments from NonDPCE using ratio_samples_to_order()
   //         (e.g., see NonDQUESOBayesCalibration::update_model())
@@ -146,7 +165,11 @@ void SharedRegressOrthogPolyApproxData::increment_data()
 
 void SharedRegressOrthogPolyApproxData::decrement_data()
 {
-  approx_order_to_multi_index();
+  poppedMultiIndex[activeKey].push_back(multiIndexIter->second);
+
+  //approx_order_to_multi_index();
+  multiIndexIter->second = prevMultiIndex;
+
   //allocate_component_sobol(multiIndexIter->second);
   //approxOrderPrev = approx_order;
   //activeKeyPrev   = activeKey;
@@ -155,7 +178,21 @@ void SharedRegressOrthogPolyApproxData::decrement_data()
 
 void SharedRegressOrthogPolyApproxData::pre_push_data()
 {
-  approx_order_to_multi_index();
+  // SharedPolyApproxData::retrieval_index() currently returns 0 for
+  // all cases other than generalized sparse grids
+  size_t pop_index = retrieval_index();
+
+  // for decrement
+  prevMultiIndex = multiIndexIter->second;
+
+  std::map<UShortArray, std::deque<UShort2DArray> >::iterator pu2a_it
+    = poppedMultiIndex.find(activeKey);
+  std::deque<UShort2DArray>::iterator u2a_it;
+  if (pu2a_it != poppedMultiIndex.end()) {
+    u2a_it = pu2a_it->second.begin();  std::advance(u2a_it, pop_index);
+    multiIndexIter->second = *u2a_it;  pu2a_it->second.erase(u2a_it);
+  }
+  //approx_order_to_multi_index();
   allocate_component_sobol(multiIndexIter->second);
   //approxOrderPrev = approx_order;
   //activeKeyPrev   = activeKey;

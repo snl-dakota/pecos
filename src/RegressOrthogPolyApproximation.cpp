@@ -280,15 +280,15 @@ void RegressOrthogPolyApproximation::push_coefficients()
   SizetSetDeque::iterator   ss_it;
   if (prv_it != poppedExpCoeffs.end()) {
     rv_it = prv_it->second.begin();     std::advance(rv_it, pop_index);
-    expCoeffsIter->second = *rv_it;     poppedExpCoeffs[key].erase(rv_it);
+    expCoeffsIter->second = *rv_it;     prv_it->second.erase(rv_it);
   }
   if (prm_it != poppedExpCoeffGrads.end()) {
     rm_it = prm_it->second.begin();     std::advance(rm_it, pop_index);
-    expCoeffGradsIter->second = *rm_it; poppedExpCoeffGrads[key].erase(rm_it);
+    expCoeffGradsIter->second = *rm_it; prm_it->second.erase(rm_it);
   }
   if (pss_it != poppedSparseInd.end()) {
     ss_it = pss_it->second.begin();     std::advance(ss_it, pop_index);
-    sparseIndIter->second = *ss_it;     poppedSparseInd[key].erase(ss_it);
+    sparseIndIter->second = *ss_it;     pss_it->second.erase(ss_it);
   }
 }
 
@@ -454,7 +454,7 @@ Real RegressOrthogPolyApproximation::select_best_active_multi_index()
     //lsg_driver->push_trial_set(trial_set);
 
     // trial index set -> tpMultiIndex -> append to (local) adaptedMultiIndex
-    if (data_rep->push_available(trial_set))
+    if (data_rep->push_trial_available(trial_set))
       // cannot assume monotonicity in bookkeeping due to restriction above
       data_rep->push_trial_set(trial_set, adaptedMultiIndex, false);
     else
