@@ -243,7 +243,7 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
     size_t i, num_popped = surrData.popped_sets(); // # of popped trials
     for (i=0; i<num_popped; ++i)
       surrData.push(data_rep->finalization_index(i), false);
-    surrData.clear_popped(); // only after process completed
+    surrData.clear_active_popped(); // only after process completed
   }
 
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();

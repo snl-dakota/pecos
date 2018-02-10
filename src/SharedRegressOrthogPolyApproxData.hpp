@@ -196,7 +196,7 @@ protected:
   void allocate_data();
   void increment_data();
   void decrement_data();
-  //void pre_push_data();
+  void pre_push_data();
   //void post_push_data();
   //void pre_finalize_data();
   //void post_finalize_data();
@@ -209,6 +209,8 @@ private:
 
   /// update shared approxOrder based on settings computed for one of the QoI
   void update_approx_order(unsigned short new_order);
+  /// convert active approxOrder to active multiIndex according to basis type
+  void approx_order_to_multi_index();
 
   /// pack polynomial contributions to Psi matrix for regression
   void pack_polynomial_data(const RealVector& c_vars, const UShortArray& mi,

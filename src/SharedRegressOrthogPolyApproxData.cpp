@@ -111,6 +111,21 @@ update_approx_order(unsigned short new_order)
 }
 
 
+void SharedRegressOrthogPolyApproxData::approx_order_to_multi_index()
+{
+  // approxOrder updated from NonDPCE --> propagate to multiIndex
+  UShortArray&  approx_order =  approxOrdIter->second;
+  UShort2DArray& multi_index = multiIndexIter->second;
+
+  switch (expConfigOptions.expBasisType) {
+  case TENSOR_PRODUCT_BASIS:
+    tensor_product_multi_index(approx_order, multi_index); break;
+  default:
+    total_order_multi_index(approx_order, multi_index);    break;
+  }
+}
+
+
 void SharedRegressOrthogPolyApproxData::increment_data()
 {
   // To automatically update approxOrder, would need to either infer a
@@ -122,18 +137,8 @@ void SharedRegressOrthogPolyApproxData::increment_data()
 
   // Better: manage increments from NonDPCE using ratio_samples_to_order()
   //         (e.g., see NonDQUESOBayesCalibration::update_model())
-
-  // approxOrder incremented from NonDPCE --> propagate to multiIndex
-  UShortArray&  approx_order =  approxOrdIter->second;
-  UShort2DArray& multi_index = multiIndexIter->second;
-
-  switch (expConfigOptions.expBasisType) {
-  case TENSOR_PRODUCT_BASIS:
-    tensor_product_multi_index(approx_order, multi_index); break;
-  default:
-    total_order_multi_index(approx_order, multi_index);    break;
-  }
-  allocate_component_sobol(multi_index);
+  approx_order_to_multi_index();
+  allocate_component_sobol(multiIndexIter->second);
   //approxOrderPrev = approx_order;
   //activeKeyPrev   = activeKey;
 }
@@ -141,17 +146,17 @@ void SharedRegressOrthogPolyApproxData::increment_data()
 
 void SharedRegressOrthogPolyApproxData::decrement_data()
 {
-  // approxOrder decremented from NonDPCE --> propagate to multiIndex
-  UShortArray&  approx_order =  approxOrdIter->second;
-  UShort2DArray& multi_index = multiIndexIter->second;
+  approx_order_to_multi_index();
+  //allocate_component_sobol(multiIndexIter->second);
+  //approxOrderPrev = approx_order;
+  //activeKeyPrev   = activeKey;
+}
 
-  switch (expConfigOptions.expBasisType) {
-  case TENSOR_PRODUCT_BASIS:
-    tensor_product_multi_index(approx_order, multi_index); break;
-  default:
-    total_order_multi_index(approx_order, multi_index);    break;
-  }
-  //allocate_component_sobol(multi_index);
+
+void SharedRegressOrthogPolyApproxData::pre_push_data()
+{
+  approx_order_to_multi_index();
+  allocate_component_sobol(multiIndexIter->second);
   //approxOrderPrev = approx_order;
   //activeKeyPrev   = activeKey;
 }

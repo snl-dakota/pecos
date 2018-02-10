@@ -356,7 +356,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
     size_t i, num_popped = surrData.popped_sets(); // # of popped trials
     for (i=0; i<num_popped; ++i)
       surrData.push(data_rep->finalization_index(i), false);
-    surrData.clear_popped(); // only after process completed
+    surrData.clear_active_popped(); // only after process completed
   }
 
   // synchronize expansionCoeff{s,Grads} and approxData

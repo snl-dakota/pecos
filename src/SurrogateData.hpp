@@ -971,10 +971,12 @@ public:
   /// reset initial state by clearing all model keys (empties all maps)
   void clear_keys();
 
-  /// clear active {vars,resp}Data
+  /// clear active key within {vars,resp}Data
   void clear_active();
   /// clear all inactive data within {vars,resp}Data
   void clear_inactive();
+  /// clear active key within popped{Vars,Resp}Data
+  void clear_active_popped();
   /// clear popped{Vars,Resp}Data
   void clear_popped();
 
@@ -1703,13 +1705,21 @@ inline void SurrogateData::clear_inactive()
 }
 
 
-inline void SurrogateData::clear_popped()
+inline void SurrogateData::clear_active_popped()
 {
   const UShortArray& key = sdRep->activeKey;
   // Ok to prune as will be recreated in pop() if needed:
   sdRep->poppedVarsData.erase(key);//sdRep->poppedVarsData[key].clear();
   sdRep->poppedRespData.erase(key);//sdRep->poppedRespData[key].clear();
   sdRep->popCountStack.erase(key); //sdRep->popCountStack[key].clear();
+}
+
+
+inline void SurrogateData::clear_popped()
+{
+  sdRep->poppedVarsData.clear();
+  sdRep->poppedRespData.clear();
+  sdRep->popCountStack.clear();
 }
 
 
@@ -1721,9 +1731,7 @@ inline void SurrogateData::clear_keys()
   sdRep->anchorIndex.clear();
   sdRep->failedRespData.clear();
 
-  sdRep->poppedVarsData.clear();
-  sdRep->poppedRespData.clear();
-  sdRep->popCountStack.clear();
+  clear_popped();
 }
 
 

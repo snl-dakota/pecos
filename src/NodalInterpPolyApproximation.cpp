@@ -420,7 +420,7 @@ void NodalInterpPolyApproximation::finalize_coefficients()
     SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     for (i=0; i<num_popped; ++i)
       surrData.push(data_rep->finalization_index(i), false);
-    surrData.clear_popped(); // only after process completed
+    surrData.clear_active_popped(); // only after process completed
   }
 
   update_expansion_coefficients();
