@@ -703,9 +703,6 @@ inline bool SharedPolyApproxData::push_available()
   //case UNIFORM_CONTROL:  case DIMENSION_ADAPTIVE_CONTROL_SOBOL:
   //case DIMENSION_ADAPTIVE_CONTROL_DECAY:
   default:
-    PCerr << "Error: SharedPolyApproxData::push_available() not implemented "
-	  << "for this refinement type." << std::endl;
-    abort_handler(-1);
     return false;
   }
 }
