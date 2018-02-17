@@ -129,25 +129,29 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 
 void SharedProjectOrthogPolyApproxData::increment_data()
 {
-  if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
-    PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
-	  << "ApproxData::increment_data()" << std::endl;
-    abort_handler(-1);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case CUBATURE: {
+    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
+    // *** TO DO ***
+    break;
   }
-
-  // increment tpMultiIndex{,Map,MapRef} arrays, update tpMultiIndex,
-  // update multiIndex and append bookkeeping
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  increment_trial_set(csg_driver, multiIndexIter->second);
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      // increment tpMultiIndex{,Map,MapRef} arrays, update tpMultiIndex,
+      // update multiIndex and append bookkeeping
+      increment_trial_set(csg_driver, multiIndexIter->second);
+      break;
+    case UNIFORM_CONTROL:
+      increment_sparse_grid_multi_index(csg_driver, multiIndexIter->second);
+      break;
+    }
+    break;
+  }
+  }
   // update Sobol' array sizes to pick up new interaction terms
   increment_component_sobol();
-
-  // cleanup
-  //if (!reEntrantFlag) {
-  //  csg_driver->clear_smolyak_arrays();
-  //  csg_driver->clear_collocation_arrays();
-  //  tpMultiIndex[activeKey].clear(); tpMultiIndexMap[activeKey].clear();
-  //}
 }
 
 
@@ -163,75 +167,137 @@ void SharedProjectOrthogPolyApproxData::increment_component_sobol()
 
 void SharedProjectOrthogPolyApproxData::decrement_data()
 {
-  if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
-    PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
-	  << "ApproxData::decrement_data()" << std::endl;
-    abort_handler(-1);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case CUBATURE: {
+    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
+    // *** TO DO ***
+    break;
   }
-
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  decrement_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      decrement_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+      break;
+    case UNIFORM_CONTROL:
+      decrement_sparse_grid_multi_index(csg_driver, multiIndexIter->second);
+      break;
+    }
+  }
+  }
 }
 
 
 void SharedProjectOrthogPolyApproxData::pre_push_data()
 {
-  if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
-    PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
-	  << "ApproxData::pre_push_data()" << std::endl;
-    abort_handler(-1);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case CUBATURE: {
+    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
+    // *** TO DO ***
+    break;
   }
-
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  pre_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      pre_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+      break;
+    case UNIFORM_CONTROL:
+      push_sparse_grid_multi_index(csg_driver, multiIndexIter->second);
+      break;
+    }
+  }
+  }
 }
 
 
 void SharedProjectOrthogPolyApproxData::post_push_data()
 {
-  CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-  post_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case CUBATURE: {
+    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
+    // *** TO DO ***
+    break;
+  }
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      post_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+      break;
+    }
+    //case UNIFORM_CONTROL: // no-op
+  }
+  }
 }
 
 
 void SharedProjectOrthogPolyApproxData::pre_finalize_data()
 {
-  if (expConfigOptions.expCoeffsSolnApproach != COMBINED_SPARSE_GRID) {
-    PCerr << "Error: unsupported grid definition in SharedProjectOrthogPoly"
-	  << "ApproxData::finalize_data()" << std::endl;
-    abort_handler(-1);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case CUBATURE: {
+    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
+    // *** TO DO ***
+    break;
   }
+  case COMBINED_SPARSE_GRID: {
+    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
+      // update multiIndex
+      std::deque<UShort2DArray>& popped_tp_mi  = poppedTPMultiIndex[activeKey];
+      std::deque<SizetArray>& popped_tp_mi_map
+	= poppedTPMultiIndexMap[activeKey];
+      std::deque<size_t>& popped_tp_mi_map_ref
+	= poppedTPMultiIndexMapRef[activeKey];
 
-  // update multiIndex
-  std::deque<UShort2DArray>& popped_tp_mi  = poppedTPMultiIndex[activeKey];
-  std::deque<SizetArray>& popped_tp_mi_map = poppedTPMultiIndexMap[activeKey];
-  std::deque<size_t>& popped_tp_mi_map_ref
-    = poppedTPMultiIndexMapRef[activeKey];
-
-  std::deque<UShort2DArray>::iterator iit = popped_tp_mi.begin();
-  std::deque<SizetArray>::iterator    mit = popped_tp_mi_map.begin();
-  std::deque<size_t>::iterator        rit = popped_tp_mi_map_ref.begin();
-  UShort2DArray& mi = multiIndexIter->second;
-  for (; iit!=popped_tp_mi.end(); ++iit, ++mit, ++rit)
-    append_multi_index(*iit, *mit, *rit, mi);
-  // move previous expansion data to current expansion
-  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
-  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
-  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
-  tp_mi.insert(tp_mi.end(), popped_tp_mi.begin(), popped_tp_mi.end());
-  tp_mi_map.insert(tp_mi_map.end(), popped_tp_mi_map.begin(),
-		   popped_tp_mi_map.end());
-  tp_mi_map_ref.insert(tp_mi_map_ref.end(), popped_tp_mi_map_ref.begin(),
-		       popped_tp_mi_map_ref.end());
+      std::deque<UShort2DArray>::iterator iit = popped_tp_mi.begin();
+      std::deque<SizetArray>::iterator    mit = popped_tp_mi_map.begin();
+      std::deque<size_t>::iterator        rit = popped_tp_mi_map_ref.begin();
+      UShort2DArray& mi = multiIndexIter->second;
+      for (; iit!=popped_tp_mi.end(); ++iit, ++mit, ++rit)
+	append_multi_index(*iit, *mit, *rit, mi);
+      // move previous expansion data to current expansion
+      UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+      Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+      SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+      tp_mi.insert(tp_mi.end(), popped_tp_mi.begin(), popped_tp_mi.end());
+      tp_mi_map.insert(tp_mi_map.end(), popped_tp_mi_map.begin(),
+		       popped_tp_mi_map.end());
+      tp_mi_map_ref.insert(tp_mi_map_ref.end(), popped_tp_mi_map_ref.begin(),
+			   popped_tp_mi_map_ref.end());
+      break;
+    }
+    case UNIFORM_CONTROL:
+      // *** TO DO ***
+      break;
+    }
+    }
+  }
 }
 
 
 void SharedProjectOrthogPolyApproxData::post_finalize_data()
 {
-  poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
-  poppedTPMultiIndex[activeKey].clear();//.erase(activeKey);
-  poppedTPMultiIndexMap[activeKey].clear();//.erase(activeKey);
-  poppedTPMultiIndexMapRef[activeKey].clear();//.erase(activeKey);
+  switch (expConfigOptions.expCoeffsSolnApproach) {
+  case QUADRATURE: case CUBATURE: {
+    // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
+    // *** TO DO ***
+    break;
+  }
+  case COMBINED_SPARSE_GRID:
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
+      poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
+      poppedTPMultiIndex[activeKey].clear();//.erase(activeKey);
+      poppedTPMultiIndexMap[activeKey].clear();//.erase(activeKey);
+      poppedTPMultiIndexMapRef[activeKey].clear();//.erase(activeKey);
+      break;
+    case UNIFORM_CONTROL:
+      // *** TO DO ***
+      break;
+    }
+  }
 }
 
 
@@ -468,6 +534,87 @@ sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
     break;
   }
   */
+}
+
+
+void SharedProjectOrthogPolyApproxData::
+increment_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+				  UShort2DArray& multi_index)
+{
+  // assemble a complete list of individual polynomial coverage
+  // defined from the linear combination of mixed tensor products
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  size_t num_tp_mi = tp_mi.size();
+
+  const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
+  size_t i, num_smolyak_indices = sm_mi.size();
+
+  tp_mi.resize(num_smolyak_indices);
+  tp_mi_map.resize(num_smolyak_indices);
+  tp_mi_map_ref.resize(num_smolyak_indices);
+  UShortArray exp_order(numVars);
+  for (i=num_tp_mi; i<num_smolyak_indices; ++i) {
+    // regenerate i-th exp_order as collocKey[i] cannot be used in general case
+    // (i.e., for nested rules GP, CC, F2, or GK).  Rather, collocKey[i] is to
+    // be used only as the key to the collocation pts.
+    sparse_grid_level_to_expansion_order(csg_driver, sm_mi[i], exp_order);
+    tensor_product_multi_index(exp_order, tp_mi[i]);
+    append_multi_index(tp_mi[i], multi_index, tp_mi_map[i], tp_mi_map_ref[i]);
+  }
+}
+
+
+void SharedProjectOrthogPolyApproxData::
+decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+				  UShort2DArray& multi_index)
+{
+  // assemble a complete list of individual polynomial coverage
+  // defined from the linear combination of mixed tensor products
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+  size_t num_tp_mi = tp_mi.size();
+
+  const UShort2DArray& sm_mi = csg_driver->smolyak_multi_index();
+  size_t i, num_smolyak_indices = sm_mi.size();
+  std::deque<UShort2DArray>&  pop_tp_mi = poppedTPMultiIndex[activeKey];
+  std::deque<SizetArray>& pop_tp_mi_map = poppedTPMultiIndexMap[activeKey];
+  std::deque<size_t>& pop_tp_mi_map_ref = poppedTPMultiIndexMapRef[activeKey];
+  for (i=num_tp_mi; i<num_smolyak_indices; ++i) {
+    pop_tp_mi.push_back(tp_mi[i]);
+    pop_tp_mi_map.push_back(tp_mi_map[i]);
+    pop_tp_mi_map_ref.push_back(tp_mi_map_ref[i]);
+  }
+
+  tp_mi.resize(num_smolyak_indices);         // prune
+  tp_mi_map.resize(num_smolyak_indices);     // prune
+  tp_mi_map_ref.resize(num_smolyak_indices); // prune
+}
+
+
+void SharedProjectOrthogPolyApproxData::
+push_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
+			     UShort2DArray& multi_index)
+{
+  // assemble a complete list of individual polynomial coverage
+  // defined from the linear combination of mixed tensor products
+  UShort3DArray& tp_mi         = tpMultiIndex[activeKey];
+  Sizet2DArray&  tp_mi_map     = tpMultiIndexMap[activeKey];
+  SizetArray&    tp_mi_map_ref = tpMultiIndexMapRef[activeKey];
+
+  std::deque<UShort2DArray>&  pop_tp_mi = poppedTPMultiIndex[activeKey];
+  std::deque<SizetArray>& pop_tp_mi_map = poppedTPMultiIndexMap[activeKey];
+  std::deque<size_t>& pop_tp_mi_map_ref = poppedTPMultiIndexMapRef[activeKey];
+  size_t i, num_pop = pop_tp_mi.size();
+  for (i=0; i<num_pop; ++i) {
+    tp_mi.push_back(pop_tp_mi[i]);
+    tp_mi_map.push_back(pop_tp_mi_map[i]);
+    tp_mi_map_ref.push_back(pop_tp_mi_map_ref[i]);
+  }
+
+  pop_tp_mi.clear();  pop_tp_mi_map.clear();  pop_tp_mi_map_ref.clear();
 }
 
 

@@ -144,6 +144,8 @@ inline bool SharedRegressOrthogPolyApproxData::push_available()
 
 void SharedRegressOrthogPolyApproxData::increment_data()
 {
+  // TO DO: ADAPTED_BASIS_GENERALIZED case ???
+
   // To automatically update approxOrder, would need to either infer a
   // collocation ratio (based on initial data size + initial approxOrder)
   // or have it set from NonDPCE.  Inferring is problematic due to rounding 
@@ -165,6 +167,8 @@ void SharedRegressOrthogPolyApproxData::increment_data()
 
 void SharedRegressOrthogPolyApproxData::decrement_data()
 {
+  // TO DO: ADAPTED_BASIS_GENERALIZED case ???
+
   poppedMultiIndex[activeKey].push_back(multiIndexIter->second);
 
   //approx_order_to_multi_index();
@@ -178,6 +182,8 @@ void SharedRegressOrthogPolyApproxData::decrement_data()
 
 void SharedRegressOrthogPolyApproxData::pre_push_data()
 {
+  // TO DO: ADAPTED_BASIS_GENERALIZED case ???
+
   // SharedPolyApproxData::retrieval_index() currently returns 0 for
   // all cases other than generalized sparse grids
   size_t pop_index = retrieval_index();
