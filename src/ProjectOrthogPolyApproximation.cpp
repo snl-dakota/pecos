@@ -157,8 +157,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     size_t i, num_tensor_grids = tp_mi.size(); int coeff;
     SDVArray tp_data_vars; SDRArray tp_data_resp;
     RealVector tp_wts, tp_coeffs; RealMatrix tp_coeff_grads;
-    bool store_tp = (data_rep->expConfigOptions.refinementControl ==
-		     DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
+    bool store_tp = (data_rep->expConfigOptions.refinementControl);
     // loop over tensor-products, forming sub-expansions, and sum them up
     // Note: SharedOrthogPolyApproxData::allocate_data() uses
     // sparse_grid_multi_index() to build multiIndex with append_multi_index()
@@ -217,41 +216,55 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID:
+  case COMBINED_SPARSE_GRID: {
+    const UShortArray&   key   = data_rep->activeKey;
+    // tpMultiIndex{,Map,MapRef} already updated in
+    // SharedProjectOrthogPolyApproxData::increment_data()
+    const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
+    RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
+    size_t last_tp_index = tp_exp_coeffs.size(); // before append(s)
+    SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
+
     switch (data_rep->expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-      // tpMultiIndex{,Map,MapRef} already updated in
-      // SharedProjectOrthogPolyApproxData::increment_data()
-      const UShortArray&   key   = data_rep->activeKey;
-      const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
-      RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
-      RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
-      size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
       RealVector rv; tp_exp_coeffs.push_back(rv);
       RealMatrix rm; tp_exp_coeff_grads.push_back(rm);
 
       // form tp_data_pts, tp_wts using collocKey et al.
-      SDVArray tp_data_vars; SDRArray tp_data_resp; RealVector tp_wts;
       integration_data(last_tp_index, tp_data_vars, tp_data_resp, tp_wts);
       // form trial expansion coeffs/grads
       integrate_expansion(tp_mi[last_tp_index], tp_data_vars, tp_data_resp,
 			  tp_wts, tp_exp_coeffs[last_tp_index],
 			  tp_exp_coeff_grads[last_tp_index]);
-
-      // for use in decrement_coefficients()
-      prevExpCoeffs     = expCoeffsIter->second;     // copy
-      prevExpCoeffGrads = expCoeffGradsIter->second; // copy
-
-      // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-      append_tensor_expansions(last_tp_index);
       break;
     }
+
     // *** TO DO ***: multiple index sets from aniso sparse grid refinement
-    case UNIFORM_CONTROL:
-      // *** TO DO ***: multiple index sets from uniform sparse grid refinement
+
+    case UNIFORM_CONTROL: {
+      size_t i, num_tp_mi = tp_mi.size();
+      tp_exp_coeffs.resize(num_tp_mi);  tp_exp_coeff_grads.resize(num_tp_mi);
+      // loop over tensor-products, forming sub-expansions, and sum them up
+      for (i=last_tp_index; i<num_tp_mi; ++i) {
+	// form tp_data_vars, tp_data_resp, tp_wts using collocKey et al.
+	integration_data(i, tp_data_vars, tp_data_resp, tp_wts);
+	// form tp expansion coeffs
+	integrate_expansion(tp_mi[i], tp_data_vars, tp_data_resp, tp_wts,
+			    tp_exp_coeffs[i], tp_exp_coeff_grads[i]);
+      }
       break;
     }
+    }
+
+    // for use in decrement_coefficients()
+    prevExpCoeffs     = expCoeffsIter->second;     // copy
+    prevExpCoeffGrads = expCoeffGradsIter->second; // copy
+
+    // sum trial expansion into expansionCoeffs/expansionCoeffGrads
+    append_tensor_expansions(last_tp_index);
     break;
+  }
   }
 
   computedMean = computedVariance = 0;
@@ -286,24 +299,37 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID:
+  case COMBINED_SPARSE_GRID: {
+    const UShortArray& key              = data_rep->activeKey;
+    RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
+
     switch (data_rep->expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // reset tensor-product bookkeeping and save restorable data
-      const UShortArray& key              = data_rep->activeKey;
-      RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
-      RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
       poppedTPExpCoeffs[key].push_back(tp_exp_coeffs.back());
       poppedTPExpCoeffGrads[key].push_back(tp_exp_coeff_grads.back());
       tp_exp_coeffs.pop_back();  tp_exp_coeff_grads.pop_back();
       break;
     }
+
     // *** TO DO ***: multiple index sets from aniso sparse grid refinement
-    case UNIFORM_CONTROL:
-      // *** TO DO ***: multiple index sets from uniform sparse grid refinement
+
+    case UNIFORM_CONTROL: {
+      const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
+      RealVectorDeque& pop_tp_coeffs      = poppedTPExpCoeffs[key];
+      RealMatrixDeque& pop_tp_coeff_grads = poppedTPExpCoeffGrads[key];
+      size_t i, num_tp_mi = tp_mi.size(), num_tp_exp = tp_exp_coeffs.size();
+      for (i=num_tp_mi; i<num_tp_exp; ++i) {
+	pop_tp_coeffs.push_back(tp_exp_coeffs[i]);
+	pop_tp_coeff_grads.push_back(tp_exp_coeff_grads[i]);
+      }
+      tp_exp_coeffs.resize(num_tp_mi);  tp_exp_coeff_grads.resize(num_tp_mi);
       break;
     }
+    }
     break;
+  }
   }
 }
 
@@ -327,15 +353,17 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID:
+  case COMBINED_SPARSE_GRID: {
+    const UShortArray& key                  = data_rep->activeKey;
+    RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
+    RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
+    RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
+    RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
+    size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
+
     switch (data_rep->expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // move previous expansion data to current expansion
-      const UShortArray& key                  = data_rep->activeKey;
-      RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
-      RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
-      RealMatrixDeque& pop_tp_exp_coeff_grads = poppedTPExpCoeffGrads[key];
-      size_t last_tp_index = tp_exp_coeffs.size(); // before push_back
       size_t index_star = data_rep->pushIndex;
 
       RealVectorDeque::iterator cit = pop_tp_exp_coeffs.begin();
@@ -343,26 +371,35 @@ void ProjectOrthogPolyApproximation::push_coefficients()
       std::advance(cit, index_star); std::advance(git, index_star);
 
       tp_exp_coeffs.push_back(*cit);
-      tpExpansionCoeffGrads[key].push_back(*git);
+      tp_exp_coeff_grads.push_back(*git);
       pop_tp_exp_coeffs.erase(cit); pop_tp_exp_coeff_grads.erase(git);
-
-      // don't update Sobol' array sizes for decrement, push, or finalize
-
-      // for use in decrement_coefficients(); both pushes and new increments
-      // can be popped
-      prevExpCoeffs     = expCoeffsIter->second;     // copy
-      prevExpCoeffGrads = expCoeffGradsIter->second; // copy
-
-      // sum trial expansion into expansionCoeffs/expansionCoeffGrads
-      append_tensor_expansions(last_tp_index);
       break;
     }
+
     // *** TO DO ***: multiple index sets from aniso sparse grid refinement
-    case UNIFORM_CONTROL:
-      // *** TO DO ***: multiple index sets from uniform sparse grid refinement
+
+    case UNIFORM_CONTROL: {
+      size_t i, num_pop = pop_tp_exp_coeffs.size();
+      for (i=0; i<num_pop; ++i) {
+	tp_exp_coeffs.push_back(pop_tp_exp_coeffs[i]);
+	tp_exp_coeff_grads.push_back(pop_tp_exp_coeff_grads[i]);
+      }
+      pop_tp_exp_coeffs.clear();  pop_tp_exp_coeff_grads.clear();
       break;
     }
+    }
+
+    // don't update Sobol' array sizes for decrement, push, or finalize
+
+    // for use in decrement_coefficients(); both pushes and new increments
+    // can be popped
+    prevExpCoeffs     = expCoeffsIter->second;     // copy
+    prevExpCoeffGrads = expCoeffGradsIter->second; // copy
+
+    // sum trial expansion into expansionCoeffs/expansionCoeffGrads
+    append_tensor_expansions(last_tp_index);
     break;
+  }
   }
 
   computedMean = computedVariance = 0;
@@ -415,7 +452,9 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
       append_tensor_expansions(start_tp_index);
       break;
     }
+
     // *** TO DO ***: multiple index sets from aniso sparse grid refinement
+
     case UNIFORM_CONTROL:
       // *** TO DO ***: multiple index sets from uniform sparse grid refinement
       break;
