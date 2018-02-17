@@ -582,7 +582,7 @@ decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
   std::deque<UShort2DArray>&  pop_tp_mi = poppedTPMultiIndex[activeKey];
   std::deque<SizetArray>& pop_tp_mi_map = poppedTPMultiIndexMap[activeKey];
   std::deque<size_t>& pop_tp_mi_map_ref = poppedTPMultiIndexMapRef[activeKey];
-  for (i=num_tp_mi; i<num_smolyak_indices; ++i) {
+  for (i=num_smolyak_indices; i<num_tp_mi; ++i) {
     pop_tp_mi.push_back(tp_mi[i]);
     pop_tp_mi_map.push_back(tp_mi_map[i]);
     pop_tp_mi_map_ref.push_back(tp_mi_map_ref[i]);
