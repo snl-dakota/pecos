@@ -197,13 +197,13 @@ protected:
   void increment_data();
   void decrement_data();
 
+  bool push_available();
+
   void pre_push_data();
   //void post_push_data();
 
   //void pre_finalize_data();
   //void post_finalize_data();
-
-  bool push_available();
 
 private:
 
