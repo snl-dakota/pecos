@@ -72,12 +72,6 @@ public:
   /// set within poly_basis)
   void initialize_grid(const std::vector<BasisPolynomial>& poly_basis);
 
-  /*
-  void store_grid(size_t index = _NPOS);
-  void restore_grid(size_t index = _NPOS);
-  void remove_stored_grid(size_t index = _NPOS);
-  void swap_grid(size_t index);
-  */
   void clear_inactive();
   void clear_keys();
 

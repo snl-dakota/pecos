@@ -42,8 +42,7 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case COMBINED_SPARSE_GRID:
-    if (data_rep->expConfigOptions.refinementControl ==
-	DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
+    if (data_rep->expConfigOptions.refinementControl) {
       CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
       size_t num_smolyak_indices = csg_driver->smolyak_multi_index().size();
       const UShortArray& key = data_rep->activeKey;
