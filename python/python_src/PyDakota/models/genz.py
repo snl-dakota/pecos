@@ -28,6 +28,7 @@ class GenzFunction(Function):
             (self.func_type == "discontinuous" or self.func_type == "continuous") ):
             msg =  "gradients cannot be computed for %s Genz function"%self.func_type
             raise Exception, msg
+        assert x.min()>=0 and x.max()<=1.
         vals = self.evaluator.value(x)
         if eval_type=='value':
             return vals[:,:1]
