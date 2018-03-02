@@ -87,6 +87,10 @@ void OrthogPolyApproximation::combine_coefficients()
     // Therefore, stick with the general-purpose expansion overlay and exclude
     // tensor_product_value() usage for combined coefficient sets.
 
+#ifdef DEBUG
+    PCout << "\ncombinedMultiIndex:\n" << data_rep->combinedMultiIndex;
+#endif // DEBUG
+
     // resize combinedExp{Coeffs,CoeffGrads} based on combinedMultiIndex
     resize_expansion(data_rep->combinedMultiIndex.size(), combinedExpCoeffs,
 		     combinedExpCoeffGrads);
@@ -97,9 +101,15 @@ void OrthogPolyApproximation::combine_coefficients()
     size_t i = 0;
     for (ec_it =expansionCoeffs.begin(), eg_it =expansionCoeffGrads.begin();
 	 ec_it!=expansionCoeffs.end() && eg_it!=expansionCoeffGrads.end();
-	 ++ec_it, ++eg_it, ++i)
+	 ++ec_it, ++eg_it, ++i) {
+#ifdef DEBUG
+      PCout << "\ni = " << i << " combinedMultiIndexMap:\n"
+	    << combined_mi_map[i] << "coeffs array:\n";
+      write_data(PCout, ec_it->second);
+#endif // DEBUG
       overlay_expansion(combined_mi_map[i], ec_it->second, eg_it->second, 1,
 			combinedExpCoeffs, combinedExpCoeffGrads);
+    }
     break;
   }
   case MULT_COMBINE: {
@@ -165,6 +175,10 @@ overlay_expansion(const SizetArray& multi_index_map,
 		  int coeff, RealVector& exp_coeffs_sum,
 		  RealMatrix& exp_grads_sum)
 {
+#ifdef DEBUG
+  PCout << "\nmulti_index_map = " << multi_index_map << " Coeff = " << coeff
+	<< " Sizes: " << exp_coeffs.length() << ' ' << exp_coeffs_sum.length();
+#endif // DEBUG
   size_t i, j, index, num_terms = multi_index_map.size(), 
     num_deriv_v = exp_grads_sum.numRows();
   for (i=0; i<num_terms; ++i) {
