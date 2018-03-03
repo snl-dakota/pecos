@@ -82,6 +82,8 @@ public:
   /// refinement
   virtual void compute_grid_increment(RealMatrix& var_sets);
 
+  /// update smolyakMultiIndex
+  virtual void update_smolyak_arrays();
   /// print smolyakMultiIndex
   virtual void print_smolyak_multi_index() const = 0;
 

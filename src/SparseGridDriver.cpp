@@ -211,6 +211,14 @@ void SparseGridDriver::precompute_rules()
 }
 
 
+void SparseGridDriver::update_smolyak_arrays()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "update_smolyak_arrays()." << std::endl;
+  abort_handler(-1);
+}
+
+
 void SparseGridDriver::update_sets(const UShortArray& set_star)
 {
   // set_star is passed as *cit_star from the best entry in activeMultiIndex.

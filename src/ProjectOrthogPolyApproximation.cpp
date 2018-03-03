@@ -259,10 +259,6 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
     // for use in decrement_coefficients()
     prevExpCoeffs     = expCoeffsIter->second;     // copy
     prevExpCoeffGrads = expCoeffGradsIter->second; // copy
-#ifdef DEBUG
-    PCout << "\nIncrement: storing prevExpCoeffs:\n";
-    write_data(PCout, prevExpCoeffs);
-#endif // DEBUG
 
     // sum trial expansion into expansionCoeffs/expansionCoeffGrads
     append_tensor_expansions(last_tp_index);
@@ -285,10 +281,6 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
   // then restores active key
   update_active_iterators();
 
-#ifdef DEBUG
-    PCout << "\nDecrement: assigning prevExpCoeffs:\n";
-    write_data(PCout, prevExpCoeffs);
-#endif // DEBUG
   // reset expansion{Coeffs,CoeffGrads}
   expCoeffsIter->second     = prevExpCoeffs;
   expCoeffGradsIter->second = prevExpCoeffGrads;
@@ -402,10 +394,6 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     // can be popped
     prevExpCoeffs     = expCoeffsIter->second;     // copy
     prevExpCoeffGrads = expCoeffGradsIter->second; // copy
-#ifdef DEBUG
-    PCout << "\nPush: storing prevExpCoeffs:\n";
-    write_data(PCout, prevExpCoeffs);
-#endif // DEBUG
 
     // sum trial expansion into expansionCoeffs/expansionCoeffGrads
     append_tensor_expansions(last_tp_index);

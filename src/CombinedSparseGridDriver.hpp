@@ -111,6 +111,9 @@ public:
 
   /// overloaded form initializes smolyakMultiIndex and smolyakCoeffs
   void assign_smolyak_arrays();
+  /// update smolyakMultiIndex and smolyakCoeffs
+  void update_smolyak_arrays();
+
   /// initialize Smolyak multi-index (index sets defining the set of tensor
   /// products) and Smolyak combinatorial coefficients using an isotropic or
   /// anisotropic index set constraint.  For anisotropic, webbur::sgmga_vcn_*
@@ -566,6 +569,11 @@ inline void CombinedSparseGridDriver::print_smolyak_multi_index() const
 
 
 inline void CombinedSparseGridDriver::assign_smolyak_arrays()
+{ assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
+
+
+/** Start from scratch rather than incur incremental coefficient update. */
+inline void CombinedSparseGridDriver::update_smolyak_arrays()
 { assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
 
 
