@@ -99,13 +99,12 @@ void CombinedSparseGridDriver::clear_inactive()
   std::map<UShortArray, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
 
-  bool gsg = (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED);
   while (sm_it != smolyakMultiIndex.end())
     if (sm_it == smolMIIter) { // preserve active
       ++sm_it; ++sc_it; ++ck_it; ++ci_it;
       if (trackUniqueProdWeights)
 	{ ++t1_it; if (computeType2Weights) ++t2_it; }
-      if (gsg) {
+      if (refineControl) {
 	++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
 	++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it;
 	++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++scr_it;
@@ -120,7 +119,7 @@ void CombinedSparseGridDriver::clear_inactive()
 	type1WeightSets.erase(t1_it++);
 	if (computeType2Weights)          type2WeightSets.erase(t2_it++);
       }
-      if (gsg) {
+      if (refineControl) {
 	numUnique1.erase(nu1_it++);       numUnique2.erase(nu2_it++);
 	zVec.erase(z_it++); r1Vec.erase(r1_it++); r2Vec.erase(r2_it++);
 	a1Points.erase(a1p_it++);         a1Type1Weights.erase(a11w_it++);
@@ -200,7 +199,7 @@ void CombinedSparseGridDriver::initialize_rule_pointers()
   for (i=0; i<numVars; ++i)
     compute1DPoints[i] = basis_collocation_points;
   // compute1D{Type1,Type2}Weights only needed for sgmg/sgmga
-  if (refineControl != DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
+  if (!refineControl) {
     compute1DType1Weights.resize(numVars);
     for (i=0; i<numVars; i++)
       compute1DType1Weights[i] = basis_type1_collocation_weights;
@@ -506,7 +505,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
   // different point orderings than sgmg/sgmga.  Therefore, the
   // reference grid computations are kept completely separate.
 
-  if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
+  if (refineControl) {
     // compute reference grid only
     assign_collocation_key();               // compute collocKey
     assign_1d_collocation_points_weights(); // define 1-D point/weight sets
