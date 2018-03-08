@@ -86,7 +86,7 @@ public:
   void finalize_sets(bool output_sets, bool converged_within_tol);
 
   /// update smolyakCoeffsRef and type{1,2}WeightSetsRef for use within the
-  /// generalized sparse grid procedure
+  /// adaptive grid refinement procedures
   void update_reference();
 
   /// return trialSet

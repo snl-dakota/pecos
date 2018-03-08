@@ -150,13 +150,13 @@ private:
 
   /// quadrature order offset by one for use as 0-based indices
   std::map<UShortArray, UShortArray> levelIndex;
-  /// iterator to ctive entry within levelIndex
+  /// iterator to active entry within levelIndex
   std::map<UShortArray, UShortArray>::iterator levelIndIter;
 
   /// num points-by-numVars array for identifying the 1-D point
   /// indices for sets of tensor-product collocation points
   std::map<UShortArray, UShort2DArray> collocKey;
-  /// iterator to ctive entry within levelIndex
+  /// iterator to active entry within levelIndex
   std::map<UShortArray, UShort2DArray>::iterator collocKeyIter;
 
   /// the set of type1 weights (for integration of value interpolants)
@@ -236,6 +236,8 @@ inline void TensorProductDriver::update_active_iterators()
     std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());
     levelIndIter = levelIndex.insert(ua_pair).first;
   }
+  update_quadrature_order_from_level_index(); // empty for new levelIndex
+
   collocKeyIter = collocKey.find(activeKey);
   if (collocKeyIter == collocKey.end()) {
     std::pair<UShortArray, UShort2DArray> u2a_pair(activeKey, UShort2DArray());
