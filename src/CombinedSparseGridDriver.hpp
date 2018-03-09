@@ -138,8 +138,8 @@ public:
   /// define a1{Points,Type1Weights,Type2Weights} based on the reference grid
   void reference_unique(RealMatrix& var_sets);
   /// define a2Points and update collocIndices and uniqueIndexMapping
-  /// for the trailing index set within smolyakMultiIndex
-  void increment_unique(bool update_1d_pts_wts = true);
+  /// for trailing index sets within smolyakMultiIndex
+  void increment_unique(size_t start_index, bool update_1d_pts_wts = true);
   /// update a1Points by merging with unique a2Points
   void merge_unique();
   /// apply all remaining trial sets

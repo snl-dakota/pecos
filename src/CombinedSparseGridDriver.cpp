@@ -642,7 +642,7 @@ void CombinedSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   size_t last_index = collocKeyIter->second.size();
   update_collocation_key(); // needed for compute_tensor_points_weights()
   // compute a2 pts/wts; update collocIndices, uniqueIndexMapping
-  increment_unique();//(last_index); // *** TO DO ***
+  increment_unique(last_index);
   // update unique var_sets
   update_sparse_points(last_index, numUnique1[activeKey], a2Points[activeKey],
 		       isUnique2[activeKey], uniqueIndex2[activeKey], var_sets);
@@ -665,9 +665,9 @@ void CombinedSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
   // update var_sets for multiple trial sets
-  increment_unique();//(start_index, var_sets); // *** TO DO ***
-  // update unique var_sets
-  //update_sparse_points(last_index, numUnique1[activeKey], a2Points[activeKey],
+  increment_unique(start_index);
+  // update unique var_sets (*** TO DO ***: a2 only contains last point set!)
+  //update_sparse_points(start_index, numUnique1[activeKey], a2Points[activeKey],
   //		       isUnique2[activeKey], uniqueIndex2[activeKey], var_sets);
 }
 
@@ -741,7 +741,7 @@ void CombinedSparseGridDriver::restore_set()
   update_collocation_key();
   // compute a2; update collocIndices, uniqueIndexMapping
   // no new var_sets and 1D updates have already been performed
-  increment_unique(false); // don't update 1D pts/wts
+  increment_unique(smolMIIter->second.size()-1, false); // no 1D pts/wts update
 }
 
 
@@ -781,8 +781,7 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   update_collocation_key();
   // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
   finalize_unique(start_index);// assure no mixing of discrete a2's
-  //merge_unique(); // a1 reference update not needed, no addtnl increments
-  //update_reference();
+  //update_reference(); // not needed, no addtnl increments
 
   if (output_sets) {
     size_t i, j, num_sm_mi = sm_mi.size();
@@ -867,7 +866,8 @@ void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
 }
 
 
-void CombinedSparseGridDriver::increment_unique(bool update_1d_pts_wts)
+void CombinedSparseGridDriver::
+increment_unique(size_t start_index, bool update_1d_pts_wts)
 {
   RealMatrix&    a1_pts =       a1Points[activeKey];
   RealVector& a1_t1_wts = a1Type1Weights[activeKey];
@@ -893,57 +893,74 @@ void CombinedSparseGridDriver::increment_unique(bool update_1d_pts_wts)
   int&     num_u2 =   numUnique2[activeKey];
   BitArray&  isu2 =    isUnique2[activeKey];
 
-  // increment_unique processes the trailing Smolyak index set
-  size_t last_index = smolMIIter->second.size() - 1;
-  // define a2 pts/wts
-  compute_tensor_points_weights(last_index, 1, update_1d_pts_wts,
-				a2_pts, a2_t1_wts, a2_t2_wts);
+  size_t i, j, num_sm_mi = smolMIIter->second.size();
+  int m = numVars, n1, n2, n1n2, all_n2 = 0;
+  RealVector all_a2t1_wts; RealMatrix all_a2t2_wts;
+  IntArray all_uind2;  bool *is_unique1, *is_unique2;
+  numCollocPts = num_u1;
 
-  // ----
-  // INC2
-  // ----
-  int m = numVars, n1 = a1_pts.numCols(), n2 = a2_pts.numCols();
-  r2v.sizeUninitialized(n2); sind2.resize(n2); uind2.resize(n2);
-  uset2.resize(n2); // numUnique2 if count_inc2 used
-  bool *is_unique1 = new bool[n1], *is_unique2 = new bool[n2];
-  copy_data(isu1, is_unique1, n1);
+  // Increment one TP grid at a time since we know there are no internal
+  // duplicates and INC2 can manage duplicates with latest reference grid
+  // (multiple TP grids in a2 would have internal duplicates that would
+  // not be managed properly, since routines are focused on a1 duplication).
 
-  webbur::point_radial_tol_unique_index_inc2(m, n1, a1_pts.values(), n2,
-    a2_pts.values(), duplicateTol, zv.values(), r1v.values(), &sind1[0],
-    is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
-    is_unique2, &num_u2, &uset2[0], &uind2[0]);
+  for (i=start_index; i<num_sm_mi; ++i) {
 
-  copy_data(is_unique2, n2, isu2);
-  delete [] is_unique1;
-  delete [] is_unique2;
+    compute_tensor_points_weights(i, 1, update_1d_pts_wts, a2_pts,
+				  a2_t1_wts, a2_t2_wts);
+    n1 = a1_pts.numCols(); n2 = a2_pts.numCols();
+    all_a2t1_wts.resize(all_n2+n2);
+    if (computeType2Weights) all_a2t2_wts.reshape(numVars, all_n2+n2);
+    for (j=0; j<n2; ++j) {
+      all_a2t1_wts[all_n2+j] = a2_t1_wts[j];
+      if (computeType2Weights)
+	copy_data(a2_t2_wts[j], numVars, all_a2t2_wts[all_n2+j]);
+    }
+    all_n2 += n2;
 
+    // ----
+    // INC2
+    // ----
+    r2v.sizeUninitialized(n2);  sind2.resize(n2);
+    uset2.resize(n2);           uind2.resize(n2);
+    is_unique1 = new bool[n1];  copy_data(isu1, is_unique1, n1);
+    is_unique2 = new bool[n2];  // bridges inc2 to inc3: isUnique2 not needed
+    webbur::point_radial_tol_unique_index_inc2(m, n1, a1_pts.values(), n2,
+      a2_pts.values(), duplicateTol, zv.values(), r1v.values(), &sind1[0],
+      is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
+      is_unique2, &num_u2, &uset2[0], &uind2[0]);
+    copy_data(is_unique2, n2, isu2);
 #ifdef DEBUG
-  PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n"
-	<< a2_pts << "\n               r2   indx2 unique2   undx2   xdnu2:\n";
-  for (size_t i=0; i<n2; ++i)
-    std::cout << std::setw(17) << r2v[i] << std::setw(8) << sind2[i]
-	      << std::setw(8)  << isu2[i]  << std::setw(8) << uset2[i]
-	      << std::setw(8)  << uind2[i] << '\n';
-  PCout << std::endl;
+    PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n"
+	  << a2_pts <<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
+    for (j=0; j<n2; ++j)
+      std::cout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
+		<< std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
+		<< std::setw(8)  << uind2[j]      << '\n';
+    PCout << std::endl;
 #endif // DEBUG
 
-  IntArray& unique_index_map = uniqueIndexMapping[activeKey];
-  unique_index_map.insert(unique_index_map.end(), uind2.begin(),
-			  uind2.end());
-  assign_tensor_collocation_indices(last_index, uind2);
-  numCollocPts = num_u1 + num_u2;
-  // update type{1,2}WeightSets
-  if (trackUniqueProdWeights) {
+    all_uind2.insert(all_uind2.end(), uind2.begin(), uind2.end());
+    numCollocPts += num_u2;
+
+    delete [] is_unique1; delete [] is_unique2;
+  }
+
+  IntArray& uind_map = uniqueIndexMapping[activeKey];
+  uind_map.insert(uind_map.end(), all_uind2.begin(), all_uind2.end());
+  assign_tensor_collocation_indices(start_index, all_uind2);
+  if (trackUniqueProdWeights) {  // update type{1,2}WeightSets
     RealVector& t1_wts = type1WeightSets[activeKey];
     RealMatrix& t2_wts = type2WeightSets[activeKey];
-    t1_wts = type1WeightSetsRef[activeKey];// to be augmented by last_index data
+    t1_wts = type1WeightSetsRef[activeKey]; // to be augmented
     if (computeType2Weights)
       t2_wts = type2WeightSetsRef[activeKey]; // to be augmented
-    update_sparse_weights(last_index, a2_t1_wts, a2_t2_wts,
-			  uind2, t1_wts, t2_wts);
+    update_sparse_weights(start_index, all_a2t1_wts, all_a2t2_wts,
+			  all_uind2, t1_wts, t2_wts);
 #ifdef DEBUG
-    PCout << "\nupdated type1 weight sets:\n" << t1_wts
-	  << "\nupdated type2 weight sets:\n" << t2_wts;
+    PCout << "type1WeightSets =\n"; write_data(PCout, t1_wts);
+    if (computeType2Weights)
+      { PCout << "type2WeightSets =\n"; write_data(PCout, t2_wts); }
 #endif // DEBUG
   }
 }
@@ -1069,6 +1086,11 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
   IntArray all_uind2, sind3, uset3, uind3;
   bool *is_unique1, *is_unique2, *is_unique3;
 
+  // Increment one TP grid at a time since we know there are no internal
+  // duplicates and INC2 can manage duplicates with latest reference grid
+  // (multiple TP grids in a2 would have internal duplicates that would
+  // not be managed properly, since routines are focused on a1 duplication).
+
   for (i=start_index; i<num_sm_mi; ++i) {
 
     compute_tensor_points_weights(i, 1, false, a2_pts, a2_t1_wts, a2_t2_wts);
@@ -1093,7 +1115,7 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
       is_unique2, &num_u2, &uset2[0], &uind2[0]);
 #ifdef DEBUG
     PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n"
-	  << a2_pts<<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
+	  << a2_pts <<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
     for (j=0; j<n2; ++j)
       std::cout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
 		<< std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]

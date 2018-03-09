@@ -231,7 +231,7 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
   // update evaluation set smolyakMultiIndex (permanently, will not be popped)
   push_trial_set(set_star);
   restore_set(); // calls increment_unique() --> INC2
-  merge_set();   // reset a1 --> INC3
+  merge_set();   // calls merge_unique()     --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
   const UShortArray&       tr_set = trial_set();
