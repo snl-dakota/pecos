@@ -131,7 +131,7 @@ public:
   /// initialize collocKey from smolyakMultiIndex
   void assign_collocation_key();
   /// update collocKey for the trailing index sets within smolyakMultiIndex
-  void update_collocation_key(size_t start_index);
+  void update_collocation_key();
   /// initialize collocIndices from collocKey and uniqueIndexMapping
   void assign_collocation_indices();
 
@@ -139,16 +139,15 @@ public:
   void reference_unique(RealMatrix& var_sets);
   /// define a2Points and update collocIndices and uniqueIndexMapping
   /// for the trailing index set within smolyakMultiIndex
-  void increment_unique(bool compute_a2, bool update_sets,
-			RealMatrix& var_sets);
+  void increment_unique(bool update_1d_pts_wts = true);
   /// update a1Points by merging with unique a2Points
   void merge_unique();
   /// apply all remaining trial sets
   void finalize_unique(size_t start_index);
 
-  void compute_tensor_points_weights(size_t start_index,
-    size_t num_indices, RealMatrix& pts, RealVector& t1_wts,
-    RealMatrix& t2_wts);
+  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
+				     bool update_1d_pts_wts, RealMatrix& pts,
+				     RealVector& t1_wts, RealMatrix& t2_wts);
   void assign_tensor_collocation_indices(size_t start_index,
 					 const IntArray& unique_index);
 

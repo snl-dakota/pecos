@@ -390,12 +390,12 @@ void CombinedSparseGridDriver::assign_collocation_key()
 }
 
 
-void CombinedSparseGridDriver::update_collocation_key(size_t start_index)
+void CombinedSparseGridDriver::update_collocation_key()
 {
   const UShort2DArray& sm_mi = smolMIIter->second;
   UShort3DArray& colloc_key = collocKeyIter->second;
   UShortArray quad_order(numVars);
-  size_t i, num_sm_mi = sm_mi.size();
+  size_t i, start_index = colloc_key.size(), num_sm_mi = sm_mi.size();
   colloc_key.resize(num_sm_mi);
   for (i=start_index; i<num_sm_mi; ++i) {
     level_to_order(sm_mi[i], quad_order);
@@ -625,6 +625,8 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
 
 void CombinedSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 {
+  /* Old approach now embedded within increment_unique():
+
   // compute trial variable/weight sets and update collocKey
   UShortArray quad_order(numVars);
   level_to_order(trialSet, quad_order);
@@ -634,28 +636,39 @@ void CombinedSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   compute_tensor_grid(quad_order, trialSet, a2Points[activeKey],
 		      a2Type1Weights[activeKey], a2Type2Weights[activeKey],
 		      colloc_key.back());
+  */
+
+  // trialSet already appended, update collocation key
+  size_t last_index = collocKeyIter->second.size();
+  update_collocation_key(); // needed for compute_tensor_points_weights()
+  // compute a2 pts/wts; update collocIndices, uniqueIndexMapping
+  increment_unique();//(last_index); // *** TO DO ***
+  // update unique var_sets
+  update_sparse_points(last_index, numUnique1[activeKey], a2Points[activeKey],
+		       isUnique2[activeKey], uniqueIndex2[activeKey], var_sets);
+
+#ifdef DEBUG
+  PCout << "compute_trial_grid():\nunique variable sets:\n" << var_sets;
+#endif // DEBUG
 
   // track trial sets that have been evaluated (do here since
   // push_trial_set() used for both new trials and restorations)
   computedTrialSets[activeKey].insert(trialSet);
-
-  // update collocIndices, uniqueIndexMapping, and var_sets,
-  // but don't recompute a2 data
-  increment_unique(false, true, var_sets);
-
-#ifdef DEBUG
-  PCout << "compute_trial_grid() increment:\nunique variable sets:\n"
-	<< var_sets;
-#endif // DEBUG
 }
 
 
 void CombinedSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
 {
-  // TO DO: employ increment_unique for each set in incrementSets
+  // assumes smolyak{MultiIndex,Coeffs} have been incremented already
 
-  // build from scratch for now
-  compute_grid(var_sets);
+  size_t start_index = collocKeyIter->second.size();
+  // synchronize collocKey with smolyakMultiIndex
+  update_collocation_key();
+  // update var_sets for multiple trial sets
+  increment_unique();//(start_index, var_sets); // *** TO DO ***
+  // update unique var_sets
+  //update_sparse_points(last_index, numUnique1[activeKey], a2Points[activeKey],
+  //		       isUnique2[activeKey], uniqueIndex2[activeKey], var_sets);
 }
 
 
@@ -724,12 +737,11 @@ void CombinedSparseGridDriver::restore_set()
 {
   // SparseGridDriver currently retains no memory, so updates are recomputed
 
-  size_t last_index = smolMIIter->second.size() - 1;
-  // update collocKey
-  update_collocation_key(last_index);
-  // compute a2; update collocIndices & uniqueIndexMapping; don't update pts/wts
-  RealMatrix dummy_set;
-  increment_unique(true, false, dummy_set);
+  // synchronize collocKey with smolyakMultiIndex
+  update_collocation_key();
+  // compute a2; update collocIndices, uniqueIndexMapping
+  // no new var_sets and 1D updates have already been performed
+  increment_unique(false); // don't update 1D pts/wts
 }
 
 
@@ -765,8 +777,8 @@ finalize_sets(bool output_sets, bool converged_within_tol)
 
   // update smolyakCoeffs from smolyakMultiIndex
   update_smolyak_coefficients(start_index);
-  // update collocKey
-  update_collocation_key(start_index);
+  // synchronize collocKey with smolyakMultiIndex
+  update_collocation_key();
   // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
   finalize_unique(start_index);// assure no mixing of discrete a2's
   //merge_unique(); // a1 reference update not needed, no addtnl increments
@@ -799,7 +811,9 @@ void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
   RealMatrix& a1_pts    = a1Points[activeKey];
   RealVector& a1_t1_wts = a1Type1Weights[activeKey];
   RealMatrix& a1_t2_wts = a1Type2Weights[activeKey];
-  compute_tensor_points_weights(0, num_sm_mi, a1_pts, a1_t1_wts, a1_t2_wts);
+  compute_tensor_points_weights(0, num_sm_mi,
+				false, // 1d pts/wts already computed
+				a1_pts, a1_t1_wts, a1_t2_wts);
 
   // ----
   // INC1
@@ -853,8 +867,7 @@ void CombinedSparseGridDriver::reference_unique(RealMatrix& var_sets)
 }
 
 
-void CombinedSparseGridDriver::
-increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
+void CombinedSparseGridDriver::increment_unique(bool update_1d_pts_wts)
 {
   RealMatrix&    a1_pts =       a1Points[activeKey];
   RealVector& a1_t1_wts = a1Type1Weights[activeKey];
@@ -882,9 +895,9 @@ increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
 
   // increment_unique processes the trailing Smolyak index set
   size_t last_index = smolMIIter->second.size() - 1;
-  // define a1 pts/wts
-  if (compute_a2) // else already computed (e.g., within compute_trial_grid())
-    compute_tensor_points_weights(last_index, 1, a2_pts, a2_t1_wts, a2_t2_wts);
+  // define a2 pts/wts
+  compute_tensor_points_weights(last_index, 1, update_1d_pts_wts,
+				a2_pts, a2_t1_wts, a2_t2_wts);
 
   // ----
   // INC2
@@ -919,8 +932,6 @@ increment_unique(bool compute_a2, bool update_sets, RealMatrix& var_sets)
 			  uind2.end());
   assign_tensor_collocation_indices(last_index, uind2);
   numCollocPts = num_u1 + num_u2;
-  if (update_sets) // update unique var_sets
-    update_sparse_points(last_index, num_u1, a2_pts, isu2, uind2, var_sets);
   // update type{1,2}WeightSets
   if (trackUniqueProdWeights) {
     RealVector& t1_wts = type1WeightSets[activeKey];
@@ -1060,7 +1071,7 @@ void CombinedSparseGridDriver::finalize_unique(size_t start_index)
 
   for (i=start_index; i<num_sm_mi; ++i) {
 
-    compute_tensor_points_weights(i, 1, a2_pts, a2_t1_wts, a2_t2_wts);
+    compute_tensor_points_weights(i, 1, false, a2_pts, a2_t1_wts, a2_t2_wts);
     n1 = a1_pts.numCols(); n2 = a2_pts.numCols();
     all_a2t1_wts.resize(all_n2+n2);
     if (computeType2Weights) all_a2t2_wts.reshape(numVars, all_n2+n2);
@@ -1232,9 +1243,13 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
 
 void CombinedSparseGridDriver::
 compute_tensor_points_weights(size_t start_index, size_t num_indices,
-			      RealMatrix& pts, RealVector& t1_wts,
-			      RealMatrix& t2_wts)
+			      bool update_1d_pts_wts, RealMatrix& pts,
+			      RealVector& t1_wts, RealMatrix& t2_wts)
 {
+  // Requirements: updated smolMIIter->second, collocKeyIter->second
+  //               for [start_index,start_index+num_indices]
+  // 1D Pts/Wts will be updated as indicated by update_1d_pts_wts
+
   size_t i, j, k, l, cntr, num_tp_pts, num_colloc_pts = 0,
     end = start_index + num_indices;
   const UShort3DArray& colloc_key = collocKeyIter->second;
@@ -1250,6 +1265,11 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
     t2_wts.shapeUninitialized(numVars, num_colloc_pts);
   for (i=start_index, cntr=0; i<end; ++i) {
     const UShortArray& sm_index = sm_mi[i];
+    if (update_1d_pts_wts) { // update collocPts1D, {type1,type2}CollocWts1D
+      UShortArray quad_order(numVars);
+      level_to_order(sm_index, quad_order);
+      update_1d_collocation_points_weights(quad_order, sm_index);
+    }
     num_tp_pts = colloc_key[i].size();
     for (j=0; j<num_tp_pts; ++j, ++cntr) {
       const UShortArray& key_ij = colloc_key[i][j];

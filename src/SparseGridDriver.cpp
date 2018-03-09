@@ -30,20 +30,23 @@ void SparseGridDriver::assign_1d_collocation_points_weights()
 {
   // resize arrays
   unsigned short ssg_lev = ssgLevIter->second;
-  size_t i, num_levels = ssg_lev + 1;
-  if (num_levels > collocPts1D.size()) {
+  size_t i, num_levels = ssg_lev + 1, curr_lev;
+  curr_lev = collocPts1D.size();
+  if (num_levels > curr_lev) {
     collocPts1D.resize(num_levels);
-    for (i=0; i<num_levels; ++i)
+    for (i=curr_lev; i<num_levels; ++i)
       collocPts1D[i].resize(numVars);
   }
-  if (num_levels > type1CollocWts1D.size()) {
+  curr_lev = type1CollocWts1D.size();
+  if (num_levels > curr_lev) {
     type1CollocWts1D.resize(num_levels);
-    for (i=0; i<num_levels; ++i)
+    for (i=curr_lev; i<num_levels; ++i)
       type1CollocWts1D[i].resize(numVars);
   }
-  if (computeType2Weights && num_levels > type2CollocWts1D.size()) {
+  curr_lev = type2CollocWts1D.size();
+  if (computeType2Weights && num_levels > curr_lev) {
     type2CollocWts1D.resize(num_levels);
-    for (i=0; i<num_levels; ++i)
+    for (i=curr_lev; i<num_levels; ++i)
       type2CollocWts1D[i].resize(numVars);
   }
   // assign values
