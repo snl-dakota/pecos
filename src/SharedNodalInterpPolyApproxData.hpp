@@ -79,10 +79,8 @@ protected:
   //- Heading: Member functions
   //
 
-  /// return driverRep cast to requested derived type
-  TensorProductDriver*      tpq_driver();
-  /// return driverRep cast to requested derived type
-  CombinedSparseGridDriver* csg_driver();
+  /// return driverRep
+  IntegrationDriver* driver();
 
 private:
 
@@ -289,12 +287,8 @@ barycentric_exact_index(const UShortArray& basis_index,
 }
 
 
-inline TensorProductDriver* SharedNodalInterpPolyApproxData::tpq_driver()
-{ return (TensorProductDriver*)driverRep; }
-
-
-inline CombinedSparseGridDriver* SharedNodalInterpPolyApproxData::csg_driver()
-{ return (CombinedSparseGridDriver*)driverRep; }
+inline IntegrationDriver* SharedNodalInterpPolyApproxData::driver()
+{ return driverRep; }
 
 } // namespace Pecos
 

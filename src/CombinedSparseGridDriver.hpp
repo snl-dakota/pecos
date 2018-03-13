@@ -77,25 +77,6 @@ public:
 
   const UShortArray& maximal_grid() const;
 
-  void initialize_sets();
-  void push_trial_set(const UShortArray& set);
-  void restore_set();
-  void compute_trial_grid(RealMatrix& var_sets);
-  void pop_trial_set();
-  void merge_set();
-  void finalize_sets(bool output_sets, bool converged_within_tol);
-
-  /// update smolyakCoeffsRef and type{1,2}WeightSetsRef for use within the
-  /// adaptive grid refinement procedures
-  void update_reference();
-
-  /// return trialSet
-  const UShortArray& trial_set() const;
-  /// return num_unique2
-  int unique_trial_points() const;
-
-  void compute_grid_increment(RealMatrix& var_sets);
-
   void print_smolyak_multi_index() const;
 
   //
@@ -111,8 +92,10 @@ public:
 
   /// overloaded form initializes smolyakMultiIndex and smolyakCoeffs
   void assign_smolyak_arrays();
-  /// update smolyakMultiIndex and smolyakCoeffs
-  void update_smolyak_arrays();
+  /// initialize collocKey from smolyakMultiIndex
+  void assign_collocation_key();
+  /// initialize collocIndices from collocKey and uniqueIndexMapping
+  void assign_collocation_indices();
 
   /// initialize Smolyak multi-index (index sets defining the set of tensor
   /// products) and Smolyak combinatorial coefficients using an isotropic or
@@ -120,36 +103,10 @@ public:
   /// functions are used to compute index sets satisfying the anisotropic
   /// index set constraint, along with their corresponding coefficients.
   void assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
-  /// overloaded form updates smolyakCoeffs from smolyakMultiIndex
-  void update_smolyak_coefficients(size_t start_index);
-  /// update the coeffs array based on new trailing index sets within
-  /// multi_index for incrementally generated generalized sparse grids
-  void update_smolyak_coefficients(size_t start_index,
-				   const UShort2DArray& multi_index,
-				   IntArray& coeffs);
 
-  /// initialize collocKey from smolyakMultiIndex
-  void assign_collocation_key();
-  /// update collocKey for the trailing index sets within smolyakMultiIndex
-  void update_collocation_key();
-  /// initialize collocIndices from collocKey and uniqueIndexMapping
-  void assign_collocation_indices();
-
-  /// define a1{Points,Type1Weights,Type2Weights} based on the reference grid
-  void reference_unique(RealMatrix& var_sets);
-  /// define a2Points and update collocIndices and uniqueIndexMapping
-  /// for trailing index sets within smolyakMultiIndex
-  void increment_unique(size_t start_index, bool update_1d_pts_wts = true);
-  /// update a1Points by merging with unique a2Points
-  void merge_unique();
-  /// apply all remaining trial sets
-  void finalize_unique(size_t start_index);
-
-  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
-				     bool update_1d_pts_wts, RealMatrix& pts,
-				     RealVector& t1_wts, RealMatrix& t2_wts);
-  void assign_tensor_collocation_indices(size_t start_index,
-					 const IntArray& unique_index);
+  /// set duplicateTol based on the content of collocRules: table lookups will
+  /// generally be more precise/repeatable than numerically-generated rules
+  void initialize_duplicate_tolerance();
 
   /// return smolyakMultiIndex[activeKey]
   const UShort2DArray& smolyak_multi_index() const;
@@ -162,8 +119,6 @@ public:
   const IntArray& smolyak_coefficients() const;
   /// return smolyakCoeffs[key]
   const IntArray& smolyak_coefficients(const UShortArray& key) const;
-  /// return smolyakCoeffsRef
-  const IntArray& smolyak_coefficients_reference() const;
 
   /// set trackCollocDetails
   void track_collocation_details(bool track_colloc);
@@ -192,54 +147,7 @@ public:
   /// return type2WeightSets
   const RealMatrix& type2_weight_sets() const;
 
-private:
-
-  //
-  //- Heading: Convenience functions
-  //
-  
-  /// convenience function for updating sparse points from a set of
-  /// aggregated tensor points
-  void update_sparse_points(size_t start_index, int new_index_offset,
-			    const RealMatrix& tensor_pts,
-			    const BitArray& is_unique,
-			    const IntArray& unique_index,
-			    RealMatrix& new_sparse_pts);
-  /// convenience function for updating sparse weights from a set of
-  /// aggregated tensor weights
-  void update_sparse_weights(size_t start_index,
-			     const RealVector& tensor_t1_wts,
-			     const RealMatrix& tensor_t2_wts,
-			     const IntArray& unique_index,
-			     RealVector& updated_t1_wts,
-			     RealMatrix& updated_t2_wts);
-
-  /// function passed by pointer for computing collocation points for
-  /// polynomialBasis[index]
-  static void basis_collocation_points(int order, int index, double* data);
-  /// function passed by pointer for computing type 1 collocation
-  /// weights for polynomialBasis[index]
-  static void basis_type1_collocation_weights(int order,int index,double* data);
-  /// function passed by pointer for computing type 2 collocation
-  /// weights for polynomialBasis[index]
-  static void basis_type2_collocation_weights(int order,int index,double* data);
-
-  /// set duplicateTol based on the content of collocRules: table lookups will
-  /// generally be more precise/repeatable than numerically-generated rules
-  void initialize_duplicate_tolerance();
-  /// initialize compute1D{Points,Type1Weights,Type2Weights} function pointer
-  /// arrays for use within webbur::sgmg() and webbur::sgmga() routines
-  void initialize_rule_pointers();
-  /// initialize levelGrowthToOrder function pointer arrays for use within
-  /// webbur::sgmg() and webbur::sgmga() routines
-  void initialize_growth_pointers();
-
-  //
-  //- Heading: Data
-  //
-
-  /// pointer to instance of this class for use in static member functions
-  static CombinedSparseGridDriver* sgdInstance;
+protected:
 
   /// numSmolyakIndices-by-numVars array for identifying the index to use
   /// within the polynomialBasis for a particular variable
@@ -256,10 +164,6 @@ private:
   std::map<UShortArray, IntArray> smolyakCoeffs;
   /// iterator for active entry within smolyakCoeffs
   std::map<UShortArray, IntArray>::iterator smolCoeffsIter;
-
-  /// reference values for the Smolyak combinatorial coefficients;
-  /// used in incremental approaches that update smolyakCoeffs
-  std::map<UShortArray, IntArray> smolyakCoeffsRef;
 
   /// flag controls conditional population of collocKey, collocIndices,
   /// collocPts1D and type{1,2}CollocWts1D
@@ -282,9 +186,6 @@ private:
   // maps indices and bases from sgmga_index() to collocation point index
   //IntArraySizetMap ssgIndexMap;
 
-  /// trial evaluation set from push_trial_set()
-  UShortArray trialSet;
-
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
   std::map<UShortArray, RealVector> type1WeightSets;
@@ -292,12 +193,40 @@ private:
   /// for each derivative component and for each point in the sparse grid
   std::map<UShortArray, RealMatrix> type2WeightSets;
 
-  /// reference values for the type1 weights corresponding to the current
-  /// reference grid; used in incremental approaches that update type1WeightSets
-  std::map<UShortArray, RealVector> type1WeightSetsRef;
-  /// reference values for the type2 weights corresponding to the current
-  /// reference grid; used in incremental approaches that update type2WeightSets
-  std::map<UShortArray, RealMatrix> type2WeightSetsRef;
+  /// output from sgmga_unique_index()
+  std::map<UShortArray, IntArray> uniqueIndexMapping;
+  /// duplication tolerance used in sgmga routines
+  Real duplicateTol;
+
+private:
+
+  //
+  //- Heading: Convenience functions
+  //
+  
+  /// function passed by pointer for computing collocation points for
+  /// polynomialBasis[index]
+  static void basis_collocation_points(int order, int index, double* data);
+  /// function passed by pointer for computing type 1 collocation
+  /// weights for polynomialBasis[index]
+  static void basis_type1_collocation_weights(int order,int index,double* data);
+  /// function passed by pointer for computing type 2 collocation
+  /// weights for polynomialBasis[index]
+  static void basis_type2_collocation_weights(int order,int index,double* data);
+
+  /// initialize compute1D{Points,Type1Weights,Type2Weights} function pointer
+  /// arrays for use within webbur::sgmg() and webbur::sgmga() routines
+  void initialize_rule_pointers();
+  /// initialize levelGrowthToOrder function pointer arrays for use within
+  /// webbur::sgmg() and webbur::sgmga() routines
+  void initialize_growth_pointers();
+
+  //
+  //- Heading: Data
+  //
+
+  /// pointer to instance of this class for use in static member functions
+  static CombinedSparseGridDriver* sgdInstance;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<CollocFnPtr> compute1DPoints;
@@ -308,50 +237,6 @@ private:
 
   /// array of pointers to webbur::level_to_growth functions
   std::vector<LevGrwOrdFnPtr> levelGrowthToOrder;
-
-  /// output from sgmga_unique_index()
-  std::map<UShortArray, IntArray> uniqueIndexMapping;
-  /// duplication tolerance used in sgmga routines
-  Real duplicateTol;
-
-  /// number of unique points in set 1 (reference)
-  std::map<UShortArray, int> numUnique1;
-  /// number of unique points in set 2 (increment)
-  std::map<UShortArray, int> numUnique2;
-  /// random vector used within sgmgg for sorting
-  std::map<UShortArray, RealVector> zVec;
-  /// distance values for sorting in set 1 (reference)
-  std::map<UShortArray, RealVector> r1Vec;
-  /// distance values for sorting in set 2 (increment)
-  std::map<UShortArray, RealVector> r2Vec;
-  /// array of collocation points in set 1 (reference)
-  std::map<UShortArray, RealMatrix> a1Points;
-  /// array of collocation points in set 2 (increment)
-  std::map<UShortArray, RealMatrix> a2Points;
-  /// vector of type1 weights in set 1 (reference)
-  std::map<UShortArray, RealVector> a1Type1Weights;
-  /// matrix of type2 weights in set 1 (reference)
-  std::map<UShortArray, RealMatrix> a1Type2Weights;
-  /// vector of type1 weights in set 2 (increment)
-  std::map<UShortArray, RealVector> a2Type1Weights;
-  /// matrix of type2 weights in set 2 (increment)
-  std::map<UShortArray, RealMatrix> a2Type2Weights;
-  /// ascending sort index for set 1 (reference)
-  std::map<UShortArray, IntArray> sortIndex1;
-  /// ascending sort index for set 2 (increment)
-  std::map<UShortArray, IntArray> sortIndex2;
-  /// index within a1 (reference set) of unique points
-  std::map<UShortArray, IntArray> uniqueSet1;
-  /// index within a2 (increment set) of unique points
-  std::map<UShortArray, IntArray> uniqueSet2;
-  /// index within uniqueSet1 corresponding to all of a1
-  std::map<UShortArray, IntArray> uniqueIndex1;
-  /// index within uniqueSet2 corresponding to all of a2
-  std::map<UShortArray, IntArray> uniqueIndex2;
-  /// key to unique points in set 1 (reference)
-  std::map<UShortArray, BitArray> isUnique1;
-  /// key to unique points in set 2 (increment)
-  std::map<UShortArray, BitArray> isUnique2;
 };
 
 
@@ -406,22 +291,13 @@ inline void CombinedSparseGridDriver::clear_keys()
 
   smolyakMultiIndex.clear();  smolMIIter = smolyakMultiIndex.end();
   smolyakCoeffs.clear();  smolCoeffsIter = smolyakCoeffs.end();
+
   collocKey.clear();       collocKeyIter = collocKey.end();
   collocIndices.clear();   collocIndIter = collocIndices.end();
-  type1WeightSets.clear(); type2WeightSets.clear();
+
+  type1WeightSets.clear();    type2WeightSets.clear();
+
   uniqueIndexMapping.clear();
-
-  numUnique1.clear();   numUnique2.clear();
-  zVec.clear();         r1Vec.clear();          r2Vec.clear();
-  a1Points.clear();     a1Type1Weights.clear(); a1Type2Weights.clear();
-  a2Points.clear();     a2Type1Weights.clear(); a2Type2Weights.clear();
-  sortIndex1.clear();   sortIndex2.clear();
-  uniqueSet1.clear();   uniqueSet2.clear();
-  uniqueIndex1.clear(); uniqueIndex2.clear();
-  isUnique1.clear();    isUnique2.clear();
-
-  smolyakCoeffsRef.clear();
-  type1WeightSetsRef.clear(); type2WeightSetsRef.clear();
 }
 
 
@@ -533,22 +409,6 @@ inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
 }
 
 
-inline const UShortArray& CombinedSparseGridDriver::trial_set() const
-{ return trialSet; }
-
-
-inline int CombinedSparseGridDriver::unique_trial_points() const
-{
-  std::map<UShortArray, int>::const_iterator cit = numUnique2.find(activeKey);
-  if (cit == numUnique2.end()) {
-    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
-	  << "unique_trial_points()." << std::endl;
-    abort_handler(-1);
-  }
-  return cit->second;
-}
-
-
 //inline Real CombinedSparseGridDriver::duplicate_tolerance() const
 //{ return duplicateTol; }
 
@@ -569,48 +429,6 @@ inline void CombinedSparseGridDriver::print_smolyak_multi_index() const
 
 inline void CombinedSparseGridDriver::assign_smolyak_arrays()
 { assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
-
-
-/** Start from scratch rather than incur incremental coefficient update. */
-inline void CombinedSparseGridDriver::update_smolyak_arrays()
-{ assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
-
-
-inline void CombinedSparseGridDriver::
-update_smolyak_coefficients(size_t start_index)
-{
-  update_smolyak_coefficients(start_index, smolMIIter->second,
-			      smolCoeffsIter->second);
-}
-
-
-inline void CombinedSparseGridDriver::merge_set()
-{ merge_unique(); }
-
-
-inline void CombinedSparseGridDriver::update_reference()
-{
-  smolyakCoeffsRef[activeKey] = smolCoeffsIter->second;
-  if (trackUniqueProdWeights) {
-    type1WeightSetsRef[activeKey] = type1WeightSets[activeKey];
-    if (computeType2Weights)
-      type2WeightSetsRef[activeKey] = type2WeightSets[activeKey];
-  }
-}
-
-
-inline const IntArray& CombinedSparseGridDriver::
-smolyak_coefficients_reference() const
-{
-  std::map<UShortArray, IntArray>::const_iterator cit
-    = smolyakCoeffsRef.find(activeKey);
-  if (cit == smolyakCoeffsRef.end()) {
-    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
-	  << "smolyak_coefficients_reference()." << std::endl;
-    abort_handler(-1);
-  }
-  return cit->second;
-}
 
 
 inline const RealVector& CombinedSparseGridDriver::type1_weight_sets() const

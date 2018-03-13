@@ -137,7 +137,7 @@ void SharedNodalInterpPolyApproxData::allocate_component_sobol()
 	multi_index_to_sobol_index_map(tpq_driver->collocation_key());
 	break;
       }
-      case COMBINED_SPARSE_GRID: {
+      case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
 	CombinedSparseGridDriver* csg_driver
 	  = (CombinedSparseGridDriver*)driverRep;
 	const IntArray&      sm_coeffs  = csg_driver->smolyak_coefficients();

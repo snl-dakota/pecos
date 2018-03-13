@@ -143,7 +143,8 @@ void SharedInterpPolyApproxData::allocate_data()
     }
     break;
   }
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+  case HIERARCHICAL_SPARSE_GRID: {
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     unsigned short    ssg_level  = ssg_driver->level();
     const RealVector& aniso_wts  = ssg_driver->anisotropic_weights();
@@ -170,7 +171,7 @@ void SharedInterpPolyApproxData::increment_data()
 {
   unsigned short max_set_index = 0;
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: {
+  case INCREMENTAL_SPARSE_GRID: {
     // As for allocate_arrays(), increments are performed in coarser steps
     // than may be strictly necessary: all increments are filled in for all
     // vars for a step in level (ignoring anisotropy or generalized indices).
@@ -226,7 +227,7 @@ void SharedInterpPolyApproxData::decrement_data()
   // leave polynomialBasis as is
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
+  case INCREMENTAL_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
@@ -241,7 +242,7 @@ void SharedInterpPolyApproxData::post_push_data()
   // leave polynomialBasis as is (a previous increment is being restored)
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
+  case INCREMENTAL_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
@@ -261,7 +262,7 @@ void SharedInterpPolyApproxData::post_finalize_data()
   // leave polynomialBasis as is (all previous increments are being restored)
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID:
+  case INCREMENTAL_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID:
     // move previous expansion data to current expansion
     poppedLevMultiIndex[activeKey].clear();
     break;

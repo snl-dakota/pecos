@@ -52,15 +52,13 @@ public:
 
   /// initializes old/active/evaluation sets for use within the 
   /// generalized sparse grid procedure
-  virtual void initialize_sets() = 0;
+  virtual void initialize_sets();
   /// update smolyakMultiIndex with a new trial set for use within the
   /// generalized sparse grid procedure
   virtual void push_trial_set(const UShortArray& set);
   /// update collocKey, collocIndices, and uniqueIndexMapping based on
   /// restoration of previous trial to smolyakMultiIndex
   virtual void restore_set();
-  /// computes the tensor grid for the index set from push_trial_set()
-  virtual void compute_trial_grid(RealMatrix& var_sets);
   /// remove the previously pushed trial set from smolyakMultiIndex
   /// during the course of the generalized sparse grid procedure
   virtual void pop_trial_set();
@@ -70,17 +68,18 @@ public:
   /// grid procedure
   virtual void finalize_sets(bool output_sets, bool converged_within_tol);
 
+  /// computes the tensor grid for the index set from push_trial_set()
+  virtual void compute_trial_grid(RealMatrix& var_sets);
+  /// computes tensor grids due to an {iso,aniso}tropic refinement
+  virtual void compute_grid_increment(RealMatrix& var_sets);
+
   /// update derived reference data, if required
   virtual void update_reference();
 
   /// return the trial index set from push_trial_set()
-  virtual const UShortArray& trial_set() const = 0;
+  virtual const UShortArray& trial_set() const;
   /// return the number of unique collocation points in the trial index set
   virtual int unique_trial_points() const;
-
-  /// computes tensor grids for new index sets due to an isotropic/anisotropic
-  /// refinement
-  virtual void compute_grid_increment(RealMatrix& var_sets);
 
   /// update smolyakMultiIndex
   virtual void update_smolyak_arrays();
@@ -366,43 +365,6 @@ inline const UShortArraySet& SparseGridDriver::computed_trial_sets() const
   }
   return cit->second;
 }
-
-
-inline void SparseGridDriver::update_reference()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::push_trial_set(const UShortArray& set)
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::restore_set()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::pop_trial_set()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::merge_set()
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::
-finalize_sets(bool output_sets, bool converged_within_tol)
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
-{ /* default implementation is no-op */ }
-
-
-inline void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
-{ /* default implementation is no-op */ }
-
-
-inline int SparseGridDriver::unique_trial_points() const
-{ return 0; /* default implementation */ }
 
 
 inline void SparseGridDriver::

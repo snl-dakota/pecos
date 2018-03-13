@@ -89,12 +89,8 @@ protected:
   //- Heading: Member functions
   //
 
-  /// return driverRep cast to requested derived type
-  TensorProductDriver*      tpq_driver();
-  /// return driverRep cast to requested derived type
-  CombinedSparseGridDriver* csg_driver();
-  /// return driverRep cast to requested derived type
-  CubatureDriver*           cub_driver();
+  /// return driverRep
+  IntegrationDriver* driver();
 
 private:
 
@@ -155,16 +151,8 @@ inline SharedProjectOrthogPolyApproxData::~SharedProjectOrthogPolyApproxData()
 { }
 
 
-inline TensorProductDriver* SharedProjectOrthogPolyApproxData::tpq_driver()
-{ return (TensorProductDriver*)driverRep; }
-
-
-inline CombinedSparseGridDriver* SharedProjectOrthogPolyApproxData::csg_driver()
-{ return (CombinedSparseGridDriver*)driverRep; }
-
-
-inline CubatureDriver* SharedProjectOrthogPolyApproxData::cub_driver()
-{ return (CubatureDriver*)driverRep; }
+inline IntegrationDriver* SharedProjectOrthogPolyApproxData::driver()
+{ return driverRep; }
 
 } // namespace Pecos
 

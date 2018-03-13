@@ -214,6 +214,97 @@ void SparseGridDriver::precompute_rules()
 }
 
 
+void SparseGridDriver::initialize_sets()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "initialize_sets()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::push_trial_set(const UShortArray& set)
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "push_trial_set()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::restore_set()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::pop_trial_set()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "pop_trial_set()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::merge_set()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::merge_set()."
+	<< std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::
+finalize_sets(bool output_sets, bool converged_within_tol)
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "finalize_sets()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::update_reference()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "update_reference()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "compute_trial_grid()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "compute_grid_increment()." << std::endl;
+  abort_handler(-1);
+}
+
+
+const UShortArray& SparseGridDriver::trial_set() const
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::trial_set()."
+	<< std::endl;
+  abort_handler(-1);
+  return activeKey; // dummy UShortArray
+}
+
+
+int SparseGridDriver::unique_trial_points() const
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "unique_trial_points()." << std::endl;
+  abort_handler(-1);
+  return 0;
+}
+
+
 void SparseGridDriver::update_smolyak_arrays()
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"

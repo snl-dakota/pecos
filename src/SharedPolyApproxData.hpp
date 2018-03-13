@@ -56,8 +56,7 @@ public:
 //private:
 
   /// identifies the approach taken in compute_coefficients(): QUADRATURE,
-  /// CUBATURE, COMBINED_SPARSE_GRID, HIERARCHICAL_SPARSE_GRID, REGRESSION,
-  /// or SAMPLING
+  /// CUBATURE, *_SPARSE_GRID, *_REGRESSION, or SAMPLING
   short expCoeffsSolnApproach;
 
   /// identifies the type of basis for the expansion: DEFAULT_BASIS or

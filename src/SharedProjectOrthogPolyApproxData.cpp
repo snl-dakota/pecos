@@ -13,7 +13,7 @@
 
 #include "SharedProjectOrthogPolyApproxData.hpp"
 #include "TensorProductDriver.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "pecos_global_defs.hpp"
 
@@ -94,7 +94,7 @@ void SharedProjectOrthogPolyApproxData::allocate_data()
 	  << " terms\n";
     break;
   }
-  case COMBINED_SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
     unsigned short    ssg_level = csg_driver->level();
     const RealVector& aniso_wts = csg_driver->anisotropic_weights();
@@ -135,16 +135,17 @@ void SharedProjectOrthogPolyApproxData::increment_data()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+   case INCREMENTAL_SPARSE_GRID: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       // increment tpMultiIndex{,Map,MapRef} arrays, update tpMultiIndex,
       // update multiIndex and append bookkeeping
-      increment_trial_set(csg_driver, multiIndexIter->second);
+      increment_trial_set(isg_driver, multiIndexIter->second);
       break;
     case UNIFORM_CONTROL:
-      increment_sparse_grid_multi_index(csg_driver, multiIndexIter->second);
+      increment_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
       break;
     }
     break;
@@ -173,14 +174,15 @@ void SharedProjectOrthogPolyApproxData::decrement_data()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  case INCREMENTAL_SPARSE_GRID: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
-      decrement_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+      decrement_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
     case UNIFORM_CONTROL:
-      decrement_sparse_grid_multi_index(csg_driver, multiIndexIter->second);
+      decrement_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
       break;
     }
   }
@@ -212,14 +214,15 @@ void SharedProjectOrthogPolyApproxData::pre_push_data()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  case INCREMENTAL_SPARSE_GRID: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
-      pre_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+      pre_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
     case UNIFORM_CONTROL:
-      push_sparse_grid_multi_index(csg_driver, multiIndexIter->second);
+      push_sparse_grid_multi_index(isg_driver, multiIndexIter->second);
       break;
     }
   }
@@ -235,11 +238,12 @@ void SharedProjectOrthogPolyApproxData::post_push_data()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  case INCREMENTAL_SPARSE_GRID: {
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
-      post_push_trial_set(csg_driver->trial_set(), multiIndexIter->second);
+      post_push_trial_set(isg_driver->trial_set(), multiIndexIter->second);
       break;
     }
     //case UNIFORM_CONTROL: // no-op
@@ -256,12 +260,11 @@ void SharedProjectOrthogPolyApproxData::pre_finalize_data()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
+  case INCREMENTAL_SPARSE_GRID: {
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       // update multiIndex
-      std::deque<UShort2DArray>& popped_tp_mi  = poppedTPMultiIndex[activeKey];
+      std::deque<UShort2DArray>& popped_tp_mi = poppedTPMultiIndex[activeKey];
       std::deque<SizetArray>& popped_tp_mi_map
 	= poppedTPMultiIndexMap[activeKey];
       std::deque<size_t>& popped_tp_mi_map_ref
@@ -301,7 +304,7 @@ void SharedProjectOrthogPolyApproxData::post_finalize_data()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID:
+  case INCREMENTAL_SPARSE_GRID:
     switch (expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED:
       poppedLevMultiIndex[activeKey].clear();//.erase(activeKey);
@@ -352,7 +355,9 @@ void SharedProjectOrthogPolyApproxData::pre_combine_data()
       //allocate_component_sobol(combinedMultiIndex); // defer
       break;
     }
-    case COMBINED_SPARSE_GRID: { // product of two sums of tensor-product exp.
+    case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
+      // product of two sums of tensor-product expansions
+
       //active_key(driverRep->maximal_grid());
       // filter out dominated Smolyak multi-indices that don't contribute
       // to the definition of the product expansion

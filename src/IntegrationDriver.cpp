@@ -16,7 +16,7 @@
 #include "CubatureDriver.hpp"
 #include "TensorProductDriver.hpp"
 #include "LightweightSparseGridDriver.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "HierarchSparseGridDriver.hpp"
 #include "SharedInterpPolyApproxData.hpp"
 #include "SharedOrthogPolyApproxData.hpp"
@@ -120,6 +120,7 @@ IntegrationDriver* IntegrationDriver::get_driver(short driver_type)
   case CUBATURE:                return new CubatureDriver();              break;
   case LIGHTWEIGHT_SPARSE_GRID: return new LightweightSparseGridDriver(); break;
   case COMBINED_SPARSE_GRID:    return new CombinedSparseGridDriver();    break;
+  case INCREMENTAL_SPARSE_GRID: return new IncrementalSparseGridDriver(); break;
   case HIERARCHICAL_SPARSE_GRID: return new HierarchSparseGridDriver();   break;
   default:
     PCerr << "Error: IntegrationDriver type " << driver_type

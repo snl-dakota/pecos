@@ -14,7 +14,7 @@
 #include "ProjectOrthogPolyApproximation.hpp"
 #include "SharedProjectOrthogPolyApproxData.hpp"
 #include "TensorProductDriver.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "CubatureDriver.hpp"
 #include "pecos_global_defs.hpp"
 
@@ -41,14 +41,15 @@ void ProjectOrthogPolyApproximation::allocate_arrays()
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID:
-    if (data_rep->expConfigOptions.refinementControl) {
-      CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
-      size_t num_smolyak_indices = csg_driver->smolyak_multi_index().size();
+  case INCREMENTAL_SPARSE_GRID:
+    //if (data_rep->expConfigOptions.refinementControl) {
+      IncrementalSparseGridDriver* isg_driver
+	= (IncrementalSparseGridDriver*)data_rep->driver();
+      size_t num_smolyak_indices = isg_driver->smolyak_multi_index().size();
       const UShortArray& key = data_rep->activeKey;
       tpExpansionCoeffs[key].resize(num_smolyak_indices);
       tpExpansionCoeffGrads[key].resize(num_smolyak_indices);
-    }
+    //}
     break;
   }
 }
@@ -104,7 +105,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     // verify quad_order stencil matches num_data_pts
-    TensorProductDriver* tpq_driver = data_rep->tpq_driver();
+    TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
     const UShortArray&   quad_order = tpq_driver->quadrature_order();
     if (quad_order.size() != num_v) {
       PCerr << "Error: quadrature order array is not consistent with number of "
@@ -133,20 +134,21 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
   case CUBATURE: {
     // single expansion integration
     integration_checks();
-    CubatureDriver* cub_driver = data_rep->cub_driver();
+    CubatureDriver* cub_driver = (CubatureDriver*)data_rep->driver();
     integrate_expansion(data_rep->multi_index(), surrData.variables_data(),
 			surrData.response_data(),
 			cub_driver->type1_weight_sets(),
 			expCoeffsIter->second, expCoeffGradsIter->second);
     break;
   }
-  case COMBINED_SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     RealVector& exp_coeffs      =     expCoeffsIter->second;
     RealMatrix& exp_coeff_grads = expCoeffGradsIter->second;
     // multiple tensor expansion integrations
     if (expansionCoeffFlag)     exp_coeffs      = 0.;
     if (expansionCoeffGradFlag) exp_coeff_grads = 0.;
-    CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
+    CombinedSparseGridDriver* csg_driver
+      = (CombinedSparseGridDriver*)data_rep->driver();
     const IntArray& sm_coeffs = csg_driver->smolyak_coefficients();
     const UShortArray&   key       = data_rep->activeKey;
     const UShort3DArray& tp_mi     = data_rep->tpMultiIndex[key];
@@ -215,7 +217,7 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
+  case INCREMENTAL_SPARSE_GRID: {
     const UShortArray&   key   = data_rep->activeKey;
     // tpMultiIndex{,Map,MapRef} already updated in
     // SharedProjectOrthogPolyApproxData::increment_data()
@@ -298,7 +300,7 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
+  case INCREMENTAL_SPARSE_GRID: {
     const UShortArray& key              = data_rep->activeKey;
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
     RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
@@ -352,7 +354,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID: {
+  case INCREMENTAL_SPARSE_GRID: {
     const UShortArray& key                  = data_rep->activeKey;
     RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
     RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
@@ -428,7 +430,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
     // *** TO DO ***
     break;
   }
-  case COMBINED_SPARSE_GRID:
+  case INCREMENTAL_SPARSE_GRID:
     switch (data_rep->expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
       const UShortArray& key                  = data_rep->activeKey;
@@ -476,9 +478,10 @@ append_tensor_expansions(size_t start_tp_index)
   // rather than building from scratch
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
-  const IntArray&     sm_coeffs = csg_driver->smolyak_coefficients();
-  const IntArray& sm_coeffs_ref = csg_driver->smolyak_coefficients_reference();
+  IncrementalSparseGridDriver* isg_driver
+    = (IncrementalSparseGridDriver*)data_rep->driver();
+  const IntArray&     sm_coeffs = isg_driver->smolyak_coefficients();
+  const IntArray& sm_coeffs_ref = isg_driver->smolyak_coefficients_reference();
 #ifdef DEBUG
   PCout << "In ProjectOrthogPolyApproximation::append_tensor_expansions() with "
 	<< "start index " << start_tp_index << "\nsm_coeffs:\n" << sm_coeffs
@@ -530,7 +533,8 @@ integration_data(size_t tp_index, SDVArray& tp_data_vars,
   // extract tensor vars/resp from surrData and tensor wts from type1CollocWts1D
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
-  CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
+  CombinedSparseGridDriver* csg_driver
+    = (CombinedSparseGridDriver*)data_rep->driver();
   const UShortArray&    sm_index = csg_driver->smolyak_multi_index()[tp_index];
   const UShort2DArray&       key = csg_driver->collocation_key()[tp_index];
   const SizetArray&  colloc_index = csg_driver->collocation_indices()[tp_index];
@@ -848,7 +852,6 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 	      << "ProjectOrthogPolyApproximation::value()" << std::endl;
 	abort_handler(-1);
       }
-      TensorProductDriver* tpq_driver = data_rep->tpq_driver();
       RealVector accumulator(sharedDataRep->numVars); // init to 0.
       return data_rep->
 	tensor_product_value(x, expansionCoeffs[data_rep->activeKey],
@@ -857,7 +860,7 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
     }
     break;
   /*
-  case COMBINED_SPARSE_GRID: {
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     // Horner's rule approach requires storage of tpExpansionCoeffs in
     // compute_coefficients().  For now, leave store_tp as is and use
     // default approach if tpExpansionCoeffs is empty.  In addition,
@@ -872,7 +875,8 @@ Real ProjectOrthogPolyApproximation::value(const RealVector& x)
 	      << "ProjectOrthogPolyApproximation::value()" << std::endl;
 	abort_handler(-1);
       }
-      CombinedSparseGridDriver* csg_driver = data_rep->csg_driver();
+      CombinedSparseGridDriver* csg_driver
+        = (CombinedSparseGridDriver*)data_rep->driver();
       const UShort2DArray& sm_mi     = csg_driver->smolyak_multi_index();
       const IntArray&      sm_coeffs = csg_driver->smolyak_coefficients();
       RealVector accumulator(sharedDataRep->numVars); // init to 0.
@@ -915,7 +919,7 @@ stored_value(const RealVector& x, const UShortArray& key)
     break;
   }
   // Horner's rule approach would require storage of tensor product components
-  //case COMBINED_SPARSE_GRID:
+  //case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     //break;
   default: // other cases are total-order expansions
     return OrthogPolyApproximation::stored_value(x, key);

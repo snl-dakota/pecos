@@ -41,7 +41,7 @@ void PolynomialApproximation::compute_coefficients()
   // anchor point, if present, is handled differently for different
   // expCoeffsSolnApproach settings:
   //   SAMPLING:   treat it as another data point
-  //   QUADRATURE/CUBATURE/COMBINED_SPARSE_GRID: error
+  //   QUADRATURE/CUBATURE/*_SPARSE_GRID: error
   //   LEAST_SQ_REGRESSION: use equality-constrained least squares
   if (!surrData.points()) {
     PCerr << "Error: nonzero number of sample points required in Polynomia"

@@ -71,7 +71,7 @@ void SharedOrthogPolyApproxData::active_key(const UShortArray& key)
     update_active_iterators();
 
     switch (expConfigOptions.expCoeffsSolnApproach) {
-    case COMBINED_SPARSE_GRID: case QUADRATURE:
+    case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
       driverRep->active_key(key); break;
     }
   }
@@ -89,7 +89,7 @@ void SharedOrthogPolyApproxData::clear_keys()
   poppedTPMultiIndexMapRef.clear();
 
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID: case QUADRATURE:
+  case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     driverRep->clear_keys(); break;
   }
 }
@@ -298,7 +298,7 @@ update_component_sobol(const UShort2DArray& multi_index)
 const UShortArray& SharedOrthogPolyApproxData::maximal_expansion()
 {
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case QUADRATURE: case COMBINED_SPARSE_GRID:
+  case QUADRATURE: case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     return driverRep->maximal_grid(); break;
   //case : Not supported: different expansionSamples with same exp order
   default: {
@@ -450,7 +450,7 @@ void SharedOrthogPolyApproxData::clear_inactive_data()
 {
   bool ao = false, tp = false;
   switch (expConfigOptions.expCoeffsSolnApproach) {
-  case COMBINED_SPARSE_GRID:
+  case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
     tp = true; driverRep->clear_inactive(); break;
   case QUADRATURE:
     ao = true; driverRep->clear_inactive(); break;
