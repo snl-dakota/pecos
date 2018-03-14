@@ -175,9 +175,10 @@ int IncrementalSparseGridDriver::grid_size()
   if (updateGridSize) {
     UShort2DArray& sm_mi = smolMIIter->second;
     assign_smolyak_multi_index(sm_mi);
+    update_collocation_key();
 
     RealMatrix a1_pts, a1_t2_wts;  RealVector a1_t1_wts;
-    compute_tensor_points_weights(0, sm_mi.size(), false, a1_pts,
+    compute_tensor_points_weights(0, sm_mi.size(), true, a1_pts,
 				  a1_t1_wts, a1_t2_wts);
 
     int m = numVars, n1 = a1_pts.numCols(), seed = 1234567;
@@ -205,8 +206,8 @@ void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
   // reference grid computations are kept completely separate.
 
   // compute reference grid only
-  assign_collocation_key();               // compute collocKey
-  assign_1d_collocation_points_weights(); // define 1-D point/weight sets
+  update_collocation_key();               // compute collocKey
+  //assign_1d_collocation_points_weights(); // define 1-D point/weight sets
   reference_unique(var_sets);             // define reference grid
 
 #ifdef DEBUG

@@ -793,9 +793,7 @@ integrate_response_moments(size_t num_moments)
 {
   // define data_coeffs
   size_t i, num_pts = surrData.points();
-  const SDVArray& sdv_array = surrData.variables_data();
   const SDRArray& sdr_array = surrData.response_data();
-
   RealVector data_coeffs(num_pts);
   for (i=0; i<num_pts; ++i)
     data_coeffs[i] = sdr_array[i].response_function();
@@ -807,6 +805,7 @@ integrate_response_moments(size_t num_moments)
   const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
   std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
   if (combine_type) {
+    const SDVArray& sdv_array = surrData.variables_data();
     std::map<UShortArray, RealVector>::const_iterator ec_cit;
     for (ec_cit = expansionCoeffs.begin(); ec_cit != expansionCoeffs.end();
 	 ++ec_cit, ++mi_cit)

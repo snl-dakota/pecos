@@ -177,6 +177,11 @@ integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
     abort_handler(-1);
   }
 
+#ifdef DEBUG
+  PCout <<  "Coeffs in integrate_moments():\n"; write_data(PCout, coeffs);
+  PCout << "Weights in integrate_moments():\n"; write_data(PCout, t1_wts);
+#endif
+
   // estimate 1st raw moment (mean)
   moments = 0.;
   Real& mean = moments[0];
