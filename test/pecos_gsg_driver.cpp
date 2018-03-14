@@ -14,7 +14,7 @@
 #include <sstream>
 #include <vector>
 
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "SharedProjectOrthogPolyApproxData.hpp"
 #include "ProjectOrthogPolyApproximation.hpp"
 #include "TensorProductDriver.hpp"
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
   }
 
   if ( verb>2) {
-    PCout << "Instantiating CombinedSparseGridDriver:\n";
+    PCout << "Instantiating IncrementalSparseGridDriver:\n";
   }
   RealVector dimension_pref;        // empty -> isotropic
   short growth_rate = UNRESTRICTED_GROWTH;
@@ -156,8 +156,8 @@ int main(int argc, char* argv[])
   // use IntegrationDriver() and then assign letter.
   IntegrationDriver int_driver; // empty envelope
   // assign letter using assign_rep()
-  CombinedSparseGridDriver* csg_driver
-    = new CombinedSparseGridDriver(strtlev, dimension_pref, growth_rate,
+  IncrementalSparseGridDriver* csg_driver
+    = new IncrementalSparseGridDriver(strtlev, dimension_pref, growth_rate,
 				   refine_cntl);
   int_driver.assign_rep(csg_driver, false); // don't increment ref count
 
