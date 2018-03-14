@@ -30,11 +30,10 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 		const ShortArray& u_types,
 		const ExpansionConfigOptions& ec_options,
 		BasisConfigOptions& bc_options, short growth_rate,
-		bool track_colloc, bool track_uniq_prod_wts)
+		bool track_uniq_prod_wts)
 {
   SparseGridDriver::initialize_grid(ssg_level, dim_pref, u_types, ec_options,
 				    bc_options, growth_rate);
-  trackCollocDetails     = track_colloc;
   trackUniqueProdWeights = track_uniq_prod_wts;
 
   // set a rule-dependent duplicateTol
@@ -170,15 +169,27 @@ void IncrementalSparseGridDriver::update_collocation_key()
 
 int IncrementalSparseGridDriver::grid_size()
 {
+  // Note: additional efficiency could be gained by defining a1Points and
+  // detecting up-to-date status in compute_grid() / reference_unique().
+
   if (updateGridSize) {
-    /* *** TO DO ***
-    unsigned short ssg_lev = ssgLevIter->second;
-    numCollocPts = (dimIsotropic) ?
-      webbur::sgmg_size(numVars, ssg_lev, &compute1DPoints[0], duplicateTol,
-	growthRate, &levelGrowthToOrder[0]) :
-      webbur::sandia_sgmga_size(numVars, anisoLevelWts.values(), ssg_lev,
-	&compute1DPoints[0], duplicateTol, growthRate, &levelGrowthToOrder[0]);
-    */
+    UShort2DArray& sm_mi = smolMIIter->second;
+    assign_smolyak_multi_index(sm_mi);
+
+    RealMatrix a1_pts, a1_t2_wts;  RealVector a1_t1_wts;
+    compute_tensor_points_weights(0, sm_mi.size(), false, a1_pts,
+				  a1_t1_wts, a1_t2_wts);
+
+    int m = numVars, n1 = a1_pts.numCols(), seed = 1234567;
+    RealVector zv(m, false), r1v(n1, false);
+    IntArray sind1(n1), uind1(n1), uset1(n1);
+    bool* is_unique1 = new bool[n1];
+
+    webbur::point_radial_tol_unique_index_inc1(m, n1, a1_pts.values(),
+      duplicateTol, &seed, zv.values(), r1v.values(), &sind1[0], is_unique1,
+      &numCollocPts, &uset1[0], &uind1[0]);
+    delete [] is_unique1;
+
     updateGridSize = false;
   }
   return numCollocPts;

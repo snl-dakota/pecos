@@ -103,6 +103,10 @@ public:
   /// functions are used to compute index sets satisfying the anisotropic
   /// index set constraint, along with their corresponding coefficients.
   void assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
+  /// initialize Smolyak multi-index (index sets defining the set of tensor
+  /// products).  For anisotropic, webbur::sgmga_vcn_* functions are used to
+  /// compute index sets satisfying the anisotropic index set constraint.
+  void assign_smolyak_multi_index(UShort2DArray& multi_index);
 
   /// set duplicateTol based on the content of collocRules: table lookups will
   /// generally be more precise/repeatable than numerically-generated rules
@@ -165,9 +169,6 @@ protected:
   /// iterator for active entry within smolyakCoeffs
   std::map<UShortArray, IntArray>::iterator smolCoeffsIter;
 
-  /// flag controls conditional population of collocKey, collocIndices,
-  /// collocPts1D and type{1,2}CollocWts1D
-  bool trackCollocDetails;
   /// flag indicating need to track {type1,type2}WeightSets (product weights for
   /// each unique grid point) as opposed to relying on collections of 1D weights
   bool trackUniqueProdWeights;
@@ -227,6 +228,10 @@ private:
 
   /// pointer to instance of this class for use in static member functions
   static CombinedSparseGridDriver* sgdInstance;
+
+  /// flag controls conditional population of collocKey, collocIndices,
+  /// collocPts1D and type{1,2}CollocWts1D
+  bool trackCollocDetails;
 
   /// array of pointers to collocation point evaluation functions
   std::vector<CollocFnPtr> compute1DPoints;

@@ -219,6 +219,51 @@ void CombinedSparseGridDriver::initialize_growth_pointers()
 
 
 void CombinedSparseGridDriver::
+assign_smolyak_multi_index(UShort2DArray& multi_index)
+{
+  if (dimIsotropic) { // initialize multi_index
+    UShortArray levels(numVars, ssgLevIter->second);
+    SharedPolyApproxData::total_order_multi_index(levels, multi_index,
+						  numVars-1);
+  }
+  else { // utilize webbur::sgmga_vcn_{ordered,coef}
+    multi_index.clear();
+    // Utilize webbur::sandia_sgmga_vcn_{ordered,coef} for 0-based index sets
+    // (w*alpha_min-|alpha| < |alpha . j| <= w*alpha_min).
+    // With scaling alpha_min = 1: w-|alpha| < |alpha . j| <= w.
+    // In the isotropic case, reduces to w-N < |j| <= w, which is the same as
+    // w-N+1 <= |j| <= w.
+    IntArray x(numVars), x_max(numVars);
+    UShortArray index_set(numVars);
+    Real wt_sum = 0., q_max = ssgLevIter->second; size_t i;
+    for (i=0; i<numVars; ++i) {
+      const Real& wt_i = anisoLevelWts[i];
+      wt_sum += wt_i;
+      // minimum nonzero weight is scaled to 1, so just catch special case of 0
+      x_max[i] = (wt_i > 1.e-10) ? (int)std::ceil(q_max/wt_i) : 0;
+    }
+    Real q_min = q_max - wt_sum;
+
+    bool more = false;
+    Real *aniso_wts = anisoLevelWts.values();
+    int  *x0 = &x[0], *xm0 = &x_max[0], coeff;
+    webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wts, xm0, x0,
+				     q_min, q_max, &more);
+    while (more) {
+      coeff = (int)webbur::sandia_sgmga_vcn_coef(numVars, aniso_wts, x0, q_max);
+      if (coeff) {
+	for (i=0; i<numVars; ++i)
+	  index_set[i] = (unsigned short)x[i];
+	multi_index.push_back(index_set);
+      }
+      webbur::sandia_sgmga_vcn_ordered(numVars, aniso_wts, xm0, x0,
+				       q_min, q_max, &more);
+    }
+  }
+}
+
+
+void CombinedSparseGridDriver::
 assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs)
 {
   // Populate smolyakMultiIndex and smolyakCoeffs.  Identifies

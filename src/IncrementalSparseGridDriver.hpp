@@ -97,7 +97,7 @@ public:
   void initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
     const ShortArray& u_types, const ExpansionConfigOptions& ec_options,
     BasisConfigOptions& bc_options,
-    short growth_rate = MODERATE_RESTRICTED_GROWTH, bool track_colloc = false,
+    short growth_rate = MODERATE_RESTRICTED_GROWTH,
     bool track_uniq_prod_wts = true);
 
   /// update smolyakMultiIndex and smolyakCoeffs
