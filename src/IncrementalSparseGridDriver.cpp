@@ -169,9 +169,6 @@ void IncrementalSparseGridDriver::update_collocation_key()
 
 int IncrementalSparseGridDriver::grid_size()
 {
-  // Note: additional efficiency could be gained by defining a1Points and
-  // detecting up-to-date status in compute_grid() / reference_unique().
-
   if (updateGridSize) {
     UShort2DArray& sm_mi = smolMIIter->second;
     assign_smolyak_multi_index(sm_mi);
@@ -182,13 +179,12 @@ int IncrementalSparseGridDriver::grid_size()
 				  a1_t1_wts, a1_t2_wts);
 
     int m = numVars, n1 = a1_pts.numCols(), seed = 1234567;
-    RealVector zv(m, false), r1v(n1, false);
-    IntArray sind1(n1), uind1(n1), uset1(n1);
+    RealVector zv(m, false), r1v(n1, false);  IntArray sind1(n1);
     bool* is_unique1 = new bool[n1];
-
-    webbur::point_radial_tol_unique_index_inc1(m, n1, a1_pts.values(),
+    // Use _count_inc1 whereas reference_unique uses _index_inc1
+    webbur::point_radial_tol_unique_count_inc1(m, n1, a1_pts.values(),
       duplicateTol, &seed, zv.values(), r1v.values(), &sind1[0], is_unique1,
-      &numCollocPts, &uset1[0], &uind1[0]);
+      &numCollocPts);
     delete [] is_unique1;
 
     updateGridSize = false;
@@ -556,8 +552,10 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
 			  t1_wts, t2_wts);
 #ifdef DEBUG
     PCout << "type1WeightSets =\n"; write_data(PCout, t1_wts);
-    if (computeType2Weights)
-      { PCout << "type2WeightSets =\n"; write_data(PCout, t2_wts); }
+    if (computeType2Weights) {
+      PCout << "type2WeightSets =\n";
+      write_data(PCout, t2_wts, false, true, true);
+    }
 #endif // DEBUG
   }
 }
@@ -640,12 +638,28 @@ void IncrementalSparseGridDriver::merge_unique()
 
 void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
 {
+  /*
+  // ---------------------------------------------------------------------------
+  // Unfortunately, this unified approach reorders the aggregate finalization
+  // sets in a manner inconsistent with Shared*Data::{pre,post}_finalize_data()
+  // and *PolyApproximation::finalize_coefficients(), manifesting within
+  // PolynomialApproximation::integrate_moments() as t1_wts reordering from
+  // update_sparse_weights(..., uind2, t1_wts, t2_wts).  All other push/pop
+  // machinery relies on tensor-product increments, so something in an aggregate
+  // inc2 operation unexpectedly violates the TP boundaries (DEBUG outputs of
+  // uind arrays display ordering differences).
   increment_unique(start_index, false);
   merge_unique();
+  // ---------------------------------------------------------------------------
+  // *** TO DO ***: Even though {increment,merge}_unique are self-consistent for
+  // multiple index set updates (e.g., uniform refinement), they are likely
+  // inconsistent with multiple index set increments elsewhere in Shared*Data
+  // and *PolyApproximation, for the reasons above.
+  // ---------------------------------------------------------------------------
+  */
 
-  /*
-  // This fn supports multiple indices and ensures no order mixing among sets
-  // by using inc2/inc3 in careful succession.
+  // This approach loops over multiple indices and ensures no order mixing
+  // among sets by using inc2/inc3 in careful succession.
 
   // *** TO DO ***: This doesn't address issue of potential point replication
   // changes between initial trial set status and finalization.  Need an
@@ -729,7 +743,7 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
     all_uind2.insert(all_uind2.end(), uind2.begin(), uind2.end());
     numCollocPts += num_u2;
 
-    if (i < num_sm_mi - 1) { // *** TO DO ***: WHY?
+    //if (i < num_sm_mi - 1) { // a3 data only used to update a1 for next pass
       // ----
       // INC3
       // ----
@@ -757,7 +771,7 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
       num_u1 = num_u3;  uset1 = uset3;  uind1 = uind3;
       copy_data(is_unique3, n1n2, isu1);
       delete [] is_unique3;
-    }
+    //}
 
     delete [] is_unique1; delete [] is_unique2;
   }
@@ -777,7 +791,6 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
     PCout << "type1WeightSets =\n"; write_data(PCout, t1_wts);
 #endif // DEBUG
   }
-  */
 }
 
 
