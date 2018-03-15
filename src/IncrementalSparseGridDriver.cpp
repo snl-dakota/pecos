@@ -259,7 +259,7 @@ void IncrementalSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
 {
   // assumes smolyak{MultiIndex,Coeffs} have been incremented already
 
-  size_t start_index = collocKeyIter->second.size();
+  size_t start_index = smolyakCoeffsRef[activeKey].size();
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
   // update var_sets for multiple trial sets
@@ -511,7 +511,7 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
     }
     n2 += tp_n2;
   }
-  
+
   // ----
   // INC2
   // ----
