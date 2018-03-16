@@ -74,6 +74,10 @@ public:
   void merge_set();
   void finalize_sets(bool output_sets, bool converged_within_tol);
 
+  void compute_grid_increment(RealMatrix& var_sets);
+  void push_grid_increment();
+  void merge_grid_increment();
+  
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
   /// update smolyakCoeffsRef and type{1,2}WeightSetsRef for use within the
@@ -84,8 +88,6 @@ public:
   const UShortArray& trial_set() const;
   /// return num_unique2
   int unique_trial_points() const;
-
-  void compute_grid_increment(RealMatrix& var_sets);
 
   //
   //- Heading: Member functions
@@ -387,6 +389,10 @@ update_smolyak_coefficients(size_t start_index)
 
 inline void IncrementalSparseGridDriver::merge_set()
 { merge_unique(); }
+
+
+inline void IncrementalSparseGridDriver::merge_grid_increment()
+{ merge_unique(); } // form a3 and promote to new a1
 
 } // namespace Pecos
 

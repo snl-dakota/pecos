@@ -70,8 +70,13 @@ public:
 
   /// computes the tensor grid for the index set from push_trial_set()
   virtual void compute_trial_grid(RealMatrix& var_sets);
-  /// computes tensor grids due to an {iso,aniso}tropic refinement
+
+  /// computes a grid increment and evaluates the new parameter sets
   virtual void compute_grid_increment(RealMatrix& var_sets);
+  /// restores a previously computed grid increment (no new evaluations)
+  virtual void push_grid_increment();
+  /// merges a grid increment into the reference grid
+  virtual void merge_grid_increment();
 
   /// update derived reference data, if required
   virtual void update_reference();

@@ -287,6 +287,22 @@ void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
 }
 
 
+void SparseGridDriver::push_grid_increment()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "push_grid_increment()." << std::endl;
+  abort_handler(-1);
+}
+
+
+void SparseGridDriver::merge_grid_increment()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "merge_grid_increment()." << std::endl;
+  abort_handler(-1);
+}
+
+
 const UShortArray& SparseGridDriver::trial_set() const
 {
   PCerr << "Error: no default implementation for SparseGridDriver::trial_set()."

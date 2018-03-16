@@ -264,9 +264,21 @@ void IncrementalSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
   update_collocation_key();
   // update var_sets for multiple trial sets
   increment_unique(start_index);
-  // update unique var_sets
+  // update a2 and unique var_sets
   update_sparse_points(start_index, numUniq1Iter->second, a2PIter->second,
 		       isUniq2Iter->second, uniqInd2Iter->second, var_sets);
+}
+
+
+void IncrementalSparseGridDriver::push_grid_increment()
+{
+  // assumes smolyak{MultiIndex,Coeffs} have been incremented already
+
+  size_t start_index = smolyakCoeffsRef[activeKey].size();
+  // synchronize collocKey with smolyakMultiIndex
+  update_collocation_key();
+  // update a2 for multiple trial sets
+  increment_unique(start_index);
 }
 
 
@@ -437,9 +449,9 @@ void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
   PCout << "Reference unique: numUnique1 = " << num_u1 << "\na1 =\n"
 	<< a1_pts << "\n               r1   indx1 unique1   undx1   xdnu1:\n";
   for (size_t i=0; i<n1; ++i)
-    std::cout << std::setw(17) << r1v[i]   << std::setw(8) << sind1[i]
-	      << std::setw(8)  << isu1[i]  << std::setw(8) << uset1[i]
-	      << std::setw(8)  << uind1[i] << '\n';
+    PCout << std::setw(17) << r1v[i]   << std::setw(8) << sind1[i]
+	  << std::setw(8)  << isu1[i]  << std::setw(8) << uset1[i]
+	  << std::setw(8)  << uind1[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
@@ -530,9 +542,9 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
   PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n"
 	<< a2_pts <<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
   for (j=0; j<n2; ++j)
-    std::cout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
-	      << std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
-	      << std::setw(8)  << uind2[j]      << '\n';
+    PCout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
+	  << std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
+	  << std::setw(8)  << uind2[j]      << '\n';
   PCout << std::endl;
 #endif // DEBUG
   copy_data(is_unique2, n2, isu2);
@@ -608,18 +620,22 @@ void IncrementalSparseGridDriver::merge_unique()
   PCout << "Merge unique: num_unique3 = " << num_u3 << "\na3 =\n" << a3_pts
 	<< "\n               r3   indx3 unique3   undx3   xdnu3:\n";
   for (size_t i=0; i<n1n2; ++i)
-    std::cout << std::setw(17) << r3v[i]     << std::setw(8) << sind3[i]
-	      << std::setw(8)  << is_unique3[i] << std::setw(8) << uset3[i]
-	      << std::setw(8)  << uind3[i] << '\n';
+    PCout << std::setw(17) << r3v[i]     << std::setw(8) << sind3[i]
+	  << std::setw(8)  << is_unique3[i] << std::setw(8) << uset3[i]
+	  << std::setw(8)  << uind3[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
   // update reference points/weights (originally defined by _inc1)
+  size_t i;
   a1_pts = a3_pts;
+  //a1_pts.resize(n1n2);
+  //for (i=0; i<n2; ++i)
+  //  copy_data(a2_pts[i], numVars, a1_wts[n1+i]);
   if (trackUniqueProdWeights) {
     a1_t1_wts.resize(n1n2);
     if (computeType2Weights) a1_t2_wts.reshape(numVars, n1n2);
-    for (size_t i=0; i<n2; ++i) {
+    for (i=0; i<n2; ++i) {
       a1_t1_wts[n1+i] = a2_t1_wts[i];
       if (computeType2Weights)
 	copy_data(a2_t2_wts[i], numVars, a1_t2_wts[n1+i]);
@@ -734,9 +750,9 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
     PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n"
 	  << a2_pts <<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
     for (j=0; j<n2; ++j)
-      std::cout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
-		<< std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
-		<< std::setw(8)  << uind2[j]      << '\n';
+      PCout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
+	    << std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
+	    << std::setw(8)  << uind2[j]      << '\n';
     PCout << std::endl;
 #endif // DEBUG
 
@@ -760,9 +776,9 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
       PCout << "Finalize unique: num_unique3 = " << num_u3 << "\na3 =\n"
 	    << a3_pts<<"\n               r3   indx3 unique3   undx3   xdnu3:\n";
       for (j=0; j<n1n2; ++j)
-	std::cout << std::setw(17) << r3v[j]        << std::setw(8) << sind3[j]
-		  << std::setw(8)  << is_unique3[j] << std::setw(8) << uset3[j]
-		  << std::setw(8)  << uind3[j]      << '\n';
+	PCout << std::setw(17) << r3v[j]        << std::setw(8) << sind3[j]
+	      << std::setw(8)  << is_unique3[j] << std::setw(8) << uset3[j]
+	      << std::setw(8)  << uind3[j]      << '\n';
       PCout << std::endl;
 #endif // DEBUG
 
