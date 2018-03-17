@@ -20,7 +20,7 @@
 
 static const char rcsId[]="@(#) $Id: IncrementalSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-//#define DEBUG
+#define DEBUG
 
 namespace Pecos {
 
@@ -446,8 +446,9 @@ void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
   delete [] is_unique1;
 
 #ifdef DEBUG
-  PCout << "Reference unique: numUnique1 = " << num_u1 << "\na1 =\n"
-	<< a1_pts << "\n               r1   indx1 unique1   undx1   xdnu1:\n";
+  PCout << "Reference unique: numUnique1 = " << num_u1 << "\na1 =\n";
+  write_data(PCout, a1_pts, false, true, true);
+  PCout << "               r1   indx1 unique1   undx1   xdnu1:\n";
   for (size_t i=0; i<n1; ++i)
     PCout << std::setw(17) << r1v[i]   << std::setw(8) << sind1[i]
 	  << std::setw(8)  << isu1[i]  << std::setw(8) << uset1[i]
@@ -539,8 +540,9 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
     is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
     is_unique2, &num_u2, &uset2[0], &uind2[0]);
 #ifdef DEBUG
-  PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n"
-	<< a2_pts <<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
+  PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n";
+  write_data(PCout, a2_pts, false, true, true);
+  PCout << "               r2   indx2 unique2   undx2   xdnu2:\n";
   for (j=0; j<n2; ++j)
     PCout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
 	  << std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
@@ -617,8 +619,9 @@ void IncrementalSparseGridDriver::merge_unique()
     &num_u3, &uset3[0], &uind3[0]);
 
 #ifdef DEBUG
-  PCout << "Merge unique: num_unique3 = " << num_u3 << "\na3 =\n" << a3_pts
-	<< "\n               r3   indx3 unique3   undx3   xdnu3:\n";
+  PCout << "Merge unique: num_unique3 = " << num_u3 << "\na3 =\n";
+  write_data(PCout, a3_pts, false, true, true);
+  PCout << "               r3   indx3 unique3   undx3   xdnu3:\n";
   for (size_t i=0; i<n1n2; ++i)
     PCout << std::setw(17) << r3v[i]     << std::setw(8) << sind3[i]
 	  << std::setw(8)  << is_unique3[i] << std::setw(8) << uset3[i]
@@ -747,8 +750,9 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
       is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
       is_unique2, &num_u2, &uset2[0], &uind2[0]);
 #ifdef DEBUG
-    PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n"
-	  << a2_pts <<"\n               r2   indx2 unique2   undx2   xdnu2:\n";
+    PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n";
+    write_data(PCout, a2_pts, false, true, true);
+    PCout << "               r2   indx2 unique2   undx2   xdnu2:\n";
     for (j=0; j<n2; ++j)
       PCout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
 	    << std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
@@ -773,8 +777,9 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
 	&uind2[0], &n3, a3_pts.values(), r3v.values(), &sind3[0], is_unique3,
         &num_u3, &uset3[0], &uind3[0]);
 #ifdef DEBUG
-      PCout << "Finalize unique: num_unique3 = " << num_u3 << "\na3 =\n"
-	    << a3_pts<<"\n               r3   indx3 unique3   undx3   xdnu3:\n";
+      PCout << "Finalize unique: num_unique3 = " << num_u3 << "\na3 =\n";
+      write_data(PCout, a3_pts, false, true, true);
+      PCout << "               r3   indx3 unique3   undx3   xdnu3:\n";
       for (j=0; j<n1n2; ++j)
 	PCout << std::setw(17) << r3v[j]        << std::setw(8) << sind3[j]
 	      << std::setw(8)  << is_unique3[j] << std::setw(8) << uset3[j]
@@ -949,7 +954,8 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
   }
 #ifdef DEBUG
     PCout << "Tensor product weights =\ntype1:\n"; write_data(PCout, t1_wts);
-    PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true);
+    if (computeType2Weights)
+      { PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true); }
 #endif // DEBUG
 }
 
