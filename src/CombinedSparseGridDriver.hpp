@@ -94,8 +94,9 @@ public:
   void assign_smolyak_arrays();
   /// initialize collocKey from smolyakMultiIndex
   void assign_collocation_key();
-  /// initialize collocIndices from collocKey and uniqueIndexMapping
-  void assign_collocation_indices();
+  /// initialize collocIndices from collocKey and unique_index_map
+  void assign_collocation_indices(const IntArray& unique_index_map,
+				  size_t start_index = 0);
 
   /// initialize Smolyak multi-index (index sets defining the set of tensor
   /// products) and Smolyak combinatorial coefficients using an isotropic or
@@ -141,8 +142,8 @@ public:
   const Sizet2DArray& collocation_indices() const;
   /// return collocIndices[key]
   const Sizet2DArray& collocation_indices(const UShortArray& key) const;
-  /// return uniqueIndexMapping
-  const IntArray& unique_index_mapping() const;
+  // return uniqueIndexMapping
+  //const IntArray& unique_index_mapping() const;
   // return duplicateTol
   //Real duplicate_tolerance() const;
 
@@ -188,14 +189,14 @@ protected:
   //IntArraySizetMap ssgIndexMap;
 
   /// the set of type1 weights (for integration of value interpolants)
-  /// associated with each point in the sparse grid
+  /// associated with each unique point in the sparse grid
   std::map<UShortArray, RealVector> type1WeightSets;
-  /// the set of type2 weights (for integration of gradient interpolants)
-  /// for each derivative component and for each point in the sparse grid
+  /// the set of type2 weights (for integration of gradient interpolants) for
+  /// each derivative component and for each unique point in the sparse grid
   std::map<UShortArray, RealMatrix> type2WeightSets;
 
-  /// output from sgmga_unique_index()
-  std::map<UShortArray, IntArray> uniqueIndexMapping;
+  // output from sgmga_unique_index()
+  //std::map<UShortArray, IntArray> uniqueIndexMapping;
   /// duplication tolerance used in sgmga routines
   Real duplicateTol;
 
@@ -302,7 +303,7 @@ inline void CombinedSparseGridDriver::clear_keys()
 
   type1WeightSets.clear();    type2WeightSets.clear();
 
-  uniqueIndexMapping.clear();
+  //uniqueIndexMapping.clear();
 }
 
 
@@ -401,6 +402,7 @@ collocation_indices(const UShortArray& key) const
 }
 
 
+/*
 inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
 {
   std::map<UShortArray, IntArray>::const_iterator cit
@@ -414,8 +416,9 @@ inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
 }
 
 
-//inline Real CombinedSparseGridDriver::duplicate_tolerance() const
-//{ return duplicateTol; }
+inline Real CombinedSparseGridDriver::duplicate_tolerance() const
+{ return duplicateTol; }
+*/
 
 
 inline void CombinedSparseGridDriver::print_smolyak_multi_index() const

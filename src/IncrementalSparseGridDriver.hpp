@@ -130,28 +130,28 @@ private:
   
   /// convenience function for updating sparse points from a set of
   /// aggregated tensor points
-  void update_sparse_points(size_t start_index, int new_index_offset,
-			    const RealMatrix& tensor_pts,
-			    const BitArray& is_unique,
-			    const IntArray& unique_index,
-			    RealMatrix& new_sparse_pts);
+  void update_sparse_points(size_t start_index, const BitArray& is_unique,
+			    int index_offset, const RealMatrix& tensor_pts,
+			    RealMatrix& unique_pts);
   /// convenience function for updating sparse weights from a set of
   /// aggregated tensor weights
   void update_sparse_weights(size_t start_index,
 			     const RealVector& tensor_t1_wts,
 			     const RealMatrix& tensor_t2_wts,
-			     const IntArray& unique_index,
 			     RealVector& updated_t1_wts,
 			     RealMatrix& updated_t2_wts);
+
+  /// define the reference collocation indices
+  void assign_collocation_indices();
+  /// define an increment to the collocation indices
+  void update_collocation_indices(size_t start_index);
 
   /// aggregate point and weight sets across one or more tensor products
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,
 				     bool update_1d_pts_wts, RealMatrix& pts,
 				     RealVector& t1_wts, RealMatrix& t2_wts);
-  /// define collocation indices based on unique indices
-  void assign_tensor_collocation_indices(size_t start_index,
-					 const IntArray& unique_index);
 
+  //
   //- Heading: Data
   //
 
@@ -214,10 +214,15 @@ private:
   std::map<UShortArray, IntArray> sortIndex1;
   /// ascending sort index for set 2 (increment)
   std::map<UShortArray, IntArray> sortIndex2;
+
   /// index within a1 (reference set) of unique points
   std::map<UShortArray, IntArray> uniqueSet1;
+  /// active entry within uniqueSet1
+  std::map<UShortArray, IntArray>::iterator uniqSet1Iter;
   /// index within a2 (increment set) of unique points
   std::map<UShortArray, IntArray> uniqueSet2;
+  /// active entry within uniqueSet2
+  std::map<UShortArray, IntArray>::iterator uniqSet2Iter;
 
   /// index within uniqueSet1 corresponding to all of a1
   std::map<UShortArray, IntArray> uniqueIndex1;
@@ -299,6 +304,16 @@ inline void IncrementalSparseGridDriver::update_active_iterators()
   if (a2T2WIter == a2Type2Weights.end()) {
     std::pair<UShortArray, RealMatrix> ua_pair(activeKey, RealMatrix());
     a2T2WIter = a2Type2Weights.insert(ua_pair).first;
+  }
+  uniqSet1Iter = uniqueSet1.find(activeKey);
+  if (uniqSet1Iter == uniqueSet1.end()) {
+    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
+    uniqSet1Iter = uniqueSet1.insert(ua_pair).first;
+  }
+  uniqSet2Iter = uniqueSet2.find(activeKey);
+  if (uniqSet2Iter == uniqueSet2.end()) {
+    std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
+    uniqSet2Iter = uniqueSet2.insert(ua_pair).first;
   }
   uniqInd1Iter = uniqueIndex1.find(activeKey);
   if (uniqInd1Iter == uniqueIndex1.end()) {

@@ -354,15 +354,18 @@ void CombinedSparseGridDriver::assign_collocation_key()
 }
 
 
-void CombinedSparseGridDriver::assign_collocation_indices()
+void CombinedSparseGridDriver::
+assign_collocation_indices(const IntArray& unique_index_map, size_t start_index)
 {
   // define mapping from 1:numCollocPts to set of 1d interpolation indices
   const UShort3DArray& colloc_key = collocKeyIter->second;
-  Sizet2DArray& colloc_ind = collocIndIter->second;
-  const IntArray& unique_index_map = uniqueIndexMapping[activeKey];
+  Sizet2DArray&        colloc_ind = collocIndIter->second;
   size_t i, j, num_tp_pts, cntr = 0, num_sm_indices = colloc_key.size();
   colloc_ind.resize(num_sm_indices);
-  for (i=0; i<num_sm_indices; ++i) {
+  // assume unique_index_map only covers the increment from start_index
+  //for (i=0; i<start_index; ++i)
+  //  cntr += colloc_key[i].size();
+  for (i=start_index; i<num_sm_indices; ++i) {
     num_tp_pts = colloc_key[i].size();
     SizetArray& indices_i = colloc_ind[i];
     indices_i.resize(num_tp_pts);
@@ -470,7 +473,7 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
     if (computeType2Weights)
       t2_wts.shapeUninitialized(numVars, numCollocPts);
   }
-  IntArray& unique_index_map = uniqueIndexMapping[activeKey];
+  IntArray unique_index_map;
   int* sparse_order = new int [numCollocPts*numVars];
   int* sparse_index = new int [numCollocPts*numVars];
   sgdInstance = this; // sgdInstance required within compute1D fn pointers
@@ -543,15 +546,15 @@ void CombinedSparseGridDriver::compute_grid(RealMatrix& var_sets)
   delete [] sparse_index;
 
   if (trackCollocDetails) {
-    assign_collocation_key();               // compute collocKey
-    assign_collocation_indices();           // compute collocIndices
+    assign_collocation_key();                     // define collocKey
+    assign_collocation_indices(unique_index_map); // define collocIndices
     assign_1d_collocation_points_weights(); // define 1-D point/weight sets
   }
 
 #ifdef DEBUG
   PCout << "CombinedSparseGridDriver::compute_grid() results:\n"
-	<< "uniqueIndexMapping:\n" << uniqueIndexMapping[activeKey];
-  PCout << "\nvar_sets:\n"; write_data(PCout, var_sets, false, true, true);
+	<< "unique index mapping:\n" << unique_index_map << "\nvar_sets:\n";
+  write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
     PCout << "\ntype1WeightSets:\n";
     write_data(PCout, type1WeightSets[activeKey]);
