@@ -20,7 +20,7 @@
 
 static const char rcsId[]="@(#) $Id: IncrementalSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-//#define DEBUG
+#define DEBUG
 
 namespace Pecos {
 
@@ -59,6 +59,63 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
+void IncrementalSparseGridDriver::
+compute_tensor_points_weights(size_t start_index, size_t num_indices,
+			      bool update_1d_pts_wts, RealMatrix& pts,
+			      RealVector& t1_wts, RealMatrix& t2_wts)
+{
+  // Requirements: updated smolMIIter->second, collocKeyIter->second
+  //               for [start_index,start_index+num_indices]
+  // 1D Pts/Wts will be updated as indicated by update_1d_pts_wts
+
+  size_t i, j, k, l, cntr, num_tp_pts, num_colloc_pts = 0,
+    end = start_index + num_indices;
+  const UShort3DArray& colloc_key = collocKeyIter->second;
+   const UShort2DArray& sm_mi = smolMIIter->second;
+  // define num_colloc_pts
+  for (i=start_index; i<end; ++i)
+    num_colloc_pts += colloc_key[i].size();
+  // define pts/wts: wts are raw product weights; Smolyak combinatorial
+  // coefficient applied in compute_grid()/compute_trial_grid()
+  pts.shapeUninitialized(numVars, num_colloc_pts);
+  t1_wts.sizeUninitialized(num_colloc_pts);
+  if (computeType2Weights)
+    t2_wts.shapeUninitialized(numVars, num_colloc_pts);
+  for (i=start_index, cntr=0; i<end; ++i) {
+    const UShortArray& sm_index = sm_mi[i];
+    if (update_1d_pts_wts) { // update collocPts1D, {type1,type2}CollocWts1D
+      UShortArray quad_order(numVars);
+      level_to_order(sm_index, quad_order);
+      update_1d_collocation_points_weights(quad_order, sm_index);
+    }
+    num_tp_pts = colloc_key[i].size();
+    for (j=0; j<num_tp_pts; ++j, ++cntr) {
+      const UShortArray& key_ij = colloc_key[i][j];
+      Real* pt    =    pts[cntr]; // column vector
+      Real& t1_wt = t1_wts[cntr]; t1_wt = 1.;
+      for (k=0; k<numVars; ++k) {
+	pt[k]  =      collocPts1D[sm_index[k]][k][key_ij[k]];
+	t1_wt *= type1CollocWts1D[sm_index[k]][k][key_ij[k]];
+      }
+      if (computeType2Weights) {
+	Real* t2_wt = t2_wts[cntr]; // column vector
+	for (k=0; k<numVars; ++k) {
+	  Real& t2_wt_k = t2_wt[k]; t2_wt_k = 1.;
+	  for (l=0; l<numVars; ++l)
+	    t2_wt_k *= (l==k) ? type2CollocWts1D[sm_index[l]][l][key_ij[l]] :
+	                        type1CollocWts1D[sm_index[l]][l][key_ij[l]];
+	}
+      }
+    }
+  }
+#ifdef DEBUG
+    PCout << "Tensor product weights =\ntype1:\n"; write_data(PCout, t1_wts);
+    if (computeType2Weights)
+      { PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true); }
+#endif // DEBUG
+}
+
+
 void IncrementalSparseGridDriver::clear_inactive()
 {
   CombinedSparseGridDriver::clear_inactive();
@@ -82,6 +139,7 @@ void IncrementalSparseGridDriver::clear_inactive()
   std::map<UShortArray, IntArray>::iterator ui2_it = uniqueIndex2.begin();
   std::map<UShortArray, BitArray>::iterator iu1_it = isUnique1.begin();
   std::map<UShortArray, BitArray>::iterator iu2_it = isUnique2.begin();
+  std::map<UShortArray, IntArray>::iterator uim_it = uniqueIndexMapping.begin();
 
   std::map<UShortArray, IntArray>::iterator scr_it = smolyakCoeffsRef.begin();
   std::map<UShortArray, RealVector>::iterator t1r_it
@@ -89,25 +147,25 @@ void IncrementalSparseGridDriver::clear_inactive()
   std::map<UShortArray, RealMatrix>::iterator t2r_it
     = type2WeightSetsRef.begin();
 
-  while (a2p_it != a2Points.end())
-    if (a2p_it == a2PIter) { // preserve active
+  while (a1p_it != a1Points.end())
+    if (a1p_it == a1PIter) { // preserve active
       ++nu1_it; ++nu2_it; ++z_it; ++r1_it; ++r2_it; ++a1p_it; ++a11w_it;
-      ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it;
-      ++us1_it; ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++scr_it;
+      ++a12w_it; ++a2p_it; ++a21w_it; ++a22w_it; ++si1_it; ++si2_it; ++us1_it;
+      ++us2_it; ++ui1_it; ++ui2_it; ++iu1_it; ++iu2_it; ++uim_it; ++scr_it;
       if (trackUniqueProdWeights)
 	{ ++t1r_it; if (computeType2Weights) ++t2r_it; }
     }
     else { // clear inactive: postfix increments manage iterator invalidations
-      numUnique1.erase(nu1_it++);       numUnique2.erase(nu2_it++);
+      numUnique1.erase(nu1_it++);         numUnique2.erase(nu2_it++);
       zVec.erase(z_it++); r1Vec.erase(r1_it++); r2Vec.erase(r2_it++);
-      a1Points.erase(a1p_it++);         a1Type1Weights.erase(a11w_it++);
-      a1Type2Weights.erase(a12w_it++);  a2Points.erase(a2p_it++);
-      a2Type1Weights.erase(a21w_it++);  a2Type2Weights.erase(a22w_it++);
-      sortIndex1.erase(si1_it++);       sortIndex2.erase(si2_it++);
-      uniqueSet1.erase(us1_it++);       uniqueSet2.erase(us2_it++);
-      uniqueIndex1.erase(ui1_it++);     uniqueIndex2.erase(ui2_it++);
-      isUnique1.erase(iu1_it++);        isUnique2.erase(iu2_it++);
-      smolyakCoeffsRef.erase(scr_it++);
+      a1Points.erase(a1p_it++);           a1Type1Weights.erase(a11w_it++);
+      a1Type2Weights.erase(a12w_it++);    a2Points.erase(a2p_it++);
+      a2Type1Weights.erase(a21w_it++);    a2Type2Weights.erase(a22w_it++);
+      sortIndex1.erase(si1_it++);         sortIndex2.erase(si2_it++);
+      uniqueSet1.erase(us1_it++);         uniqueSet2.erase(us2_it++);
+      uniqueIndex1.erase(ui1_it++);       uniqueIndex2.erase(ui2_it++);
+      isUnique1.erase(iu1_it++);          isUnique2.erase(iu2_it++);
+      uniqueIndexMapping.erase(uim_it++); smolyakCoeffsRef.erase(scr_it++);
       if (trackUniqueProdWeights) {
 	type1WeightSetsRef.erase(t1r_it++);
 	if (computeType2Weights) type2WeightSetsRef.erase(t2r_it++);
@@ -161,8 +219,8 @@ void IncrementalSparseGridDriver::update_collocation_key()
   colloc_key.resize(num_sm_mi);
   for (i=start_index; i<num_sm_mi; ++i) {
     level_to_order(sm_mi[i], quad_order);
-    SharedPolyApproxData::tensor_product_multi_index(quad_order, colloc_key[i],
-						     false);
+    SharedPolyApproxData::
+      tensor_product_multi_index(quad_order, colloc_key[i], false);
   }
 }
 
@@ -204,9 +262,9 @@ void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
   reference_unique(var_sets);             // define reference grid
 
 #ifdef DEBUG
-  PCout << "IncrementalSparseGridDriver::compute_grid() results:\n";
-      //<< "uniqueIndexMapping:\n" << uniqueIndexMapping[activeKey];
-  PCout << "\nvar_sets:\n"; write_data(PCout, var_sets, false, true, true);
+  PCout << "IncrementalSparseGridDriver::compute_grid() results:\n"
+	<< "uniqueIndexMapping:\n" << uniqIndMapIter->second << "\nvar_sets:\n";
+  write_data(PCout, var_sets, false, true, true);
   if (trackUniqueProdWeights) {
     PCout << "\ntype1WeightSets:\n";
     write_data(PCout, type1WeightSets[activeKey]);
@@ -259,9 +317,9 @@ void IncrementalSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
   size_t start_index = smolyakCoeffsRef[activeKey].size();
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
-  // update var_sets for multiple trial sets
+  // update a2 for multiple trial sets
   increment_unique(start_index);
-  // update a2 and unique var_sets
+  // update unique var_sets from a2
   update_sparse_points(start_index, isUniq2Iter->second, numUniq1Iter->second,
 		       a2PIter->second, var_sets);
 }
@@ -335,8 +393,8 @@ void IncrementalSparseGridDriver::push_trial_set(const UShortArray& set)
   // update smolyakCoeffs from smolyakMultiIndex
   update_smolyak_coefficients(last_index);
 
-  // collocKey, collocIndices, and uniqueIndexMapping updated within
-  // either restore_set() or compute_trial_grid()
+  // collocKey, collocIndices, and uniqueIndexMapping updated within either
+  // restore_set() or compute_trial_grid()
 }
 
 
@@ -360,7 +418,7 @@ void IncrementalSparseGridDriver::pop_trial_set()
   smolCoeffsIter->second = smolyakCoeffsRef[activeKey];
 
   numCollocPts -= numUniq2Iter->second; // subtract number of trial points
-  //uniqueIndexMapping[activeKey].resize(numCollocPts); // prune trial from end
+  //uniqIndMapIter->second.resize(numCollocPts); // prune trial from end
 }
 
 
@@ -386,8 +444,8 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   update_smolyak_coefficients(start_index);
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
-  // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
-  finalize_unique(start_index);// assure no mixing of discrete a2's
+  // generate final ref grid, uniqueIndexMapping, collocIndices, numCollocPts
+  finalize_unique(start_index);
   //update_reference(); // not needed, no addtnl increments
 
   if (output_sets) {
@@ -479,29 +537,17 @@ void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
 void IncrementalSparseGridDriver::
 increment_unique(size_t start_index, bool update_1d_pts_wts)
 {
-  RealMatrix&    a1_pts =   a1PIter->second;
-  RealVector& a1_t1_wts = a1T1WIter->second;
-  RealMatrix& a1_t2_wts = a1T2WIter->second;
+  RealMatrix    &a1_pts =   a1PIter->second,    &a2_pts =   a2PIter->second;
+  RealVector &a1_t1_wts = a1T1WIter->second, &a2_t1_wts = a2T1WIter->second;
+  RealMatrix &a1_t2_wts = a1T2WIter->second, &a2_t2_wts = a2T2WIter->second;
 
-  RealMatrix&    a2_pts =   a2PIter->second;
-  RealVector& a2_t1_wts = a2T1WIter->second;
-  RealMatrix& a2_t2_wts = a2T2WIter->second;
+  IntArray       &uind1 = uniqInd1Iter->second,  &uind2 = uniqInd2Iter->second;
+  IntArray       &uset1 = uniqSet1Iter->second,  &uset2 = uniqSet2Iter->second; 
+  int           &num_u1 = numUniq1Iter->second, &num_u2 = numUniq2Iter->second;
+  BitArray        &isu1 =  isUniq1Iter->second,   &isu2 =  isUniq2Iter->second;
 
-  RealVector&  zv =       zVec[activeKey];
-
-  RealVector& r1v =      r1Vec[activeKey];
-  IntArray& sind1 = sortIndex1[activeKey];
-  IntArray& uind1 = uniqInd1Iter->second;
-  IntArray& uset1 = uniqSet1Iter->second; 
-  int&     num_u1 = numUniq1Iter->second;
-  BitArray&  isu1 =  isUniq1Iter->second;
-
-  RealVector& r2v =      r2Vec[activeKey];
-  IntArray& sind2 = sortIndex2[activeKey];
-  IntArray& uind2 = uniqInd2Iter->second;
-  IntArray& uset2 = uniqSet2Iter->second; 
-  int&     num_u2 = numUniq2Iter->second;
-  BitArray&  isu2 =  isUniq2Iter->second;
+  RealVector       &r1v = r1Vec[activeKey],        &r2v =      r2Vec[activeKey];
+  IntArray       &sind1 = sortIndex1[activeKey], &sind2 = sortIndex2[activeKey];
 
   size_t i, j, num_sm_mi = smolMIIter->second.size();
   int m = numVars, n1 = a1_pts.numCols(), tp_n2, n2 = 0;
@@ -535,9 +581,9 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
   is_unique1 = new bool[n1];  copy_data(isu1, is_unique1, n1);
   is_unique2 = new bool[n2];  // bridges inc2 to inc3: isUnique2 not needed
   webbur::point_radial_tol_unique_index_inc2(m, n1, a1_pts.values(), n2,
-    a2_pts.values(), duplicateTol, zv.values(), r1v.values(), &sind1[0],
-    is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
-    is_unique2, &num_u2, &uset2[0], &uind2[0]);
+    a2_pts.values(), duplicateTol, zVec[activeKey].values(), r1v.values(),
+    &sind1[0], is_unique1, num_u1, &uset1[0], &uind1[0], r2v.values(),
+    &sind2[0], is_unique2, &num_u2, &uset2[0], &uind2[0]);
 #ifdef DEBUG
   PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n";
   write_data(PCout, a2_pts, false, true, true);
@@ -576,27 +622,16 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
 
 void IncrementalSparseGridDriver::merge_unique()
 {
-  RealMatrix& a1_pts    = a1PIter->second;
-  RealVector& a1_t1_wts = a1T1WIter->second;
-  RealMatrix& a1_t2_wts = a1T2WIter->second;
+  RealMatrix    &a1_pts =   a1PIter->second,    &a2_pts =   a2PIter->second;
+  RealVector &a1_t1_wts = a1T1WIter->second, &a2_t1_wts = a2T1WIter->second;
+  RealMatrix &a1_t2_wts = a1T2WIter->second, &a2_t2_wts = a2T2WIter->second;
 
-  RealMatrix& a2_pts    = a2PIter->second;
-  RealVector& a2_t1_wts = a2T1WIter->second;
-  RealMatrix& a2_t2_wts = a2T2WIter->second;
-
-  RealVector& r1v =      r1Vec[activeKey];
-  IntArray& sind1 = sortIndex1[activeKey];
-  IntArray& uind1 = uniqInd1Iter->second;
-  IntArray& uset1 = uniqSet1Iter->second; 
-  int&     num_u1 = numUniq1Iter->second;
-  BitArray&  isu1 =  isUniq1Iter->second;
-
-  RealVector& r2v =      r2Vec[activeKey];
-  IntArray& sind2 = sortIndex2[activeKey];
-  IntArray& uind2 = uniqInd2Iter->second;
-  IntArray& uset2 = uniqSet2Iter->second; 
-  int&     num_u2 = numUniq2Iter->second;
-  BitArray&  isu2 =  isUniq2Iter->second;
+  IntArray       &uind1 = uniqInd1Iter->second,  &uind2 = uniqInd2Iter->second;
+  IntArray       &uset1 = uniqSet1Iter->second,  &uset2 = uniqSet2Iter->second; 
+  int           &num_u1 = numUniq1Iter->second, &num_u2 = numUniq2Iter->second;
+  BitArray        &isu1 =  isUniq1Iter->second,   &isu2 =  isUniq2Iter->second;
+  IntArray       &sind1 = sortIndex1[activeKey], &sind2 = sortIndex2[activeKey];
+  RealVector       &r1v = r1Vec[activeKey];
 
   int m = numVars, n1 = a1_pts.numCols(), n2 = a2_pts.numCols(),
     n1n2 = n1+n2, n3, num_u3;
@@ -613,9 +648,9 @@ void IncrementalSparseGridDriver::merge_unique()
   // ----
   webbur::point_radial_tol_unique_index_inc3(m, n1, a1_pts.values(),
     r1v.values(), &sind1[0], is_unique1, num_u1, &uset1[0], &uind1[0], n2,
-    a2_pts.values(), r2v.values(), &sind2[0], is_unique2, num_u2, &uset2[0],
-    &uind2[0], &n3, a3_pts.values(), r3v.values(), &sind3[0], is_unique3,
-    &num_u3, &uset3[0], &uind3[0]);
+    a2_pts.values(), r2Vec[activeKey].values(), &sind2[0], is_unique2, num_u2,
+    &uset2[0], &uind2[0], &n3, a3_pts.values(), r3v.values(), &sind3[0],
+    is_unique3, &num_u3, &uset3[0], &uind3[0]);
 
 #ifdef DEBUG
   PCout << "Merge unique: num_unique3 = " << num_u3 << "\na3 =\n";
@@ -631,12 +666,13 @@ void IncrementalSparseGridDriver::merge_unique()
   PCout << std::endl;
 #endif // DEBUG
 
-  // update reference points/weights (originally defined by _inc1)
+  // update reference points
   size_t i;
-  a1_pts = a3_pts;
-  //a1_pts.resize(n1n2);
-  //for (i=0; i<n2; ++i)
-  //  copy_data(a2_pts[i], numVars, a1_wts[n1+i]);
+  //a1_pts = a3_pts; // equivalent, but potentially more copy overhead
+  a1_pts.reshape(numVars, n1n2);
+  for (i=n1; i<n1n2; ++i)
+    copy_data(a3_pts[i], numVars, a1_pts[i]);
+  // update reference weights
   if (trackUniqueProdWeights) {
     a1_t1_wts.resize(n1n2);
     if (computeType2Weights) a1_t2_wts.reshape(numVars, n1n2);
@@ -647,34 +683,18 @@ void IncrementalSparseGridDriver::merge_unique()
     }
   }
   // update reference indices, counts, radii
-  r1v   = r3v;    sind1  = sind3;  num_u1 = num_u3;
-  uset1 = uset3;  uind1  = uind3;  copy_data(is_unique3, n1n2, isu1);
+  numCollocPts = num_u1 = num_u3;
+  r1v = r3v;  sind1 = sind3;  uset1 = uset3;  uind1 = uind3;
+  copy_data(is_unique3, n1n2, isu1);
   delete [] is_unique1; delete [] is_unique2; delete [] is_unique3;
-  // update uniqueIndexMapping, collocIndices, numCollocPts
-  //assign_collocation_indices();
-  numCollocPts = num_u3;
+  // uniqueIndexMapping, collocIndices already updated in increment_unique()
 }
 
 
 void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
 {
-  // ---------------------------------------------------------------------------
-  // Unfortunately, this unified approach reorders the aggregate finalization
-  // sets in a manner inconsistent with Shared*Data::{pre,post}_finalize_data()
-  // and *PolyApproximation::finalize_coefficients(), manifesting within
-  // PolynomialApproximation::integrate_moments() as t1_wts reordering from
-  // update_sparse_weights(..., t1_wts, t2_wts).  All other push/pop machinery
-  // relies on tensor-product increments, so something in an aggregate inc2
-  // operation unexpectedly violates the TP boundaries (DEBUG outputs of uind
-  // arrays display ordering differences).
   increment_unique(start_index, false);
   merge_unique();
-  // ---------------------------------------------------------------------------
-  // *** TO DO ***: Even though {increment,merge}_unique are self-consistent for
-  // multiple index set updates (e.g., uniform refinement), they are likely
-  // inconsistent with multiple index set increments elsewhere in Shared*Data
-  // and *PolyApproximation, for the reasons above.
-  // ---------------------------------------------------------------------------
 
   /*
   // This approach loops over multiple indices and ensures no order mixing
@@ -688,29 +708,18 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
   // that this condition is possible (or does structure of admissible indices
   // prevent replication in trial sets that is not first detected in old sets).
 
-  RealMatrix& a1_pts    = a1PIter->second;
-  RealVector& a1_t1_wts = a1T1WIter->second;
-  RealMatrix& a1_t2_wts = a1T2WIter->second;
+  RealMatrix    &a1_pts =   a1PIter->second,    &a2_pts =   a2PIter->second;
+  RealVector &a1_t1_wts = a1T1WIter->second, &a2_t1_wts = a2T1WIter->second;
+  RealMatrix &a1_t2_wts = a1T2WIter->second, &a2_t2_wts = a2T2WIter->second;
 
-  RealMatrix& a2_pts    = a2PIter->second;
-  RealVector& a2_t1_wts = a2T1WIter->second;
-  RealMatrix& a2_t2_wts = a2T2WIter->second;
+  IntArray       &uind1 = uniqInd1Iter->second,  &uind2 = uniqInd2Iter->second;
+  IntArray       &uset1 = uniqSet1Iter->second,  &uset2 = uniqSet2Iter->second; 
+  int           &num_u1 = numUniq1Iter->second, &num_u2 = numUniq2Iter->second;
+  BitArray        &isu1 =  isUniq1Iter->second; //&isu2 =  isUniq2Iter->second;
+  IntArray       &sind1 = sortIndex1[activeKey], &sind2 = sortIndex2[activeKey];
 
-  RealVector&  zv =         zVec[activeKey];
-
-  RealVector& r1v =      r1Vec[activeKey];
-  IntArray& sind1 = sortIndex1[activeKey];
-  IntArray& uind1 = uniqInd1Iter->second;
-  IntArray& uset1 = uniqSet1Iter->second; 
-  int&     num_u1 = numUniq1Iter->second;
-  BitArray&  isu1 =  isUniq1Iter->second;
-
-  RealVector& r2v =      r2Vec[activeKey];
-  IntArray& sind2 = sortIndex2[activeKey];
-  IntArray& uind2 = uniqInd2Iter->second;
-  IntArray& uset2 = uniqSet2Iter->second; 
-  int&     num_u2 = numUniq2Iter->second;
-  //BitArray&  isu2 =  isUniq2Iter->second;
+  RealVector &zv =  zVec[activeKey], &r1v = r1Vec[activeKey],
+            &r2v = r2Vec[activeKey];
 
   numCollocPts = num_u1;
 
@@ -974,63 +983,6 @@ void IncrementalSparseGridDriver::update_collocation_indices(size_t start_index)
 #endif // DEBUG
   CombinedSparseGridDriver::
     assign_collocation_indices(increment_map, start_index);
-}
-
-
-void IncrementalSparseGridDriver::
-compute_tensor_points_weights(size_t start_index, size_t num_indices,
-			      bool update_1d_pts_wts, RealMatrix& pts,
-			      RealVector& t1_wts, RealMatrix& t2_wts)
-{
-  // Requirements: updated smolMIIter->second, collocKeyIter->second
-  //               for [start_index,start_index+num_indices]
-  // 1D Pts/Wts will be updated as indicated by update_1d_pts_wts
-
-  size_t i, j, k, l, cntr, num_tp_pts, num_colloc_pts = 0,
-    end = start_index + num_indices;
-  const UShort3DArray& colloc_key = collocKeyIter->second;
-   const UShort2DArray& sm_mi = smolMIIter->second;
-  // define num_colloc_pts
-  for (i=start_index; i<end; ++i)
-    num_colloc_pts += colloc_key[i].size();
-  // define pts/wts: wts are raw product weights; Smolyak combinatorial
-  // coefficient applied in compute_grid()/compute_trial_grid()
-  pts.shapeUninitialized(numVars, num_colloc_pts);
-  t1_wts.sizeUninitialized(num_colloc_pts);
-  if (computeType2Weights)
-    t2_wts.shapeUninitialized(numVars, num_colloc_pts);
-  for (i=start_index, cntr=0; i<end; ++i) {
-    const UShortArray& sm_index = sm_mi[i];
-    if (update_1d_pts_wts) { // update collocPts1D, {type1,type2}CollocWts1D
-      UShortArray quad_order(numVars);
-      level_to_order(sm_index, quad_order);
-      update_1d_collocation_points_weights(quad_order, sm_index);
-    }
-    num_tp_pts = colloc_key[i].size();
-    for (j=0; j<num_tp_pts; ++j, ++cntr) {
-      const UShortArray& key_ij = colloc_key[i][j];
-      Real* pt    =    pts[cntr]; // column vector
-      Real& t1_wt = t1_wts[cntr]; t1_wt = 1.;
-      for (k=0; k<numVars; ++k) {
-	pt[k]  =      collocPts1D[sm_index[k]][k][key_ij[k]];
-	t1_wt *= type1CollocWts1D[sm_index[k]][k][key_ij[k]];
-      }
-      if (computeType2Weights) {
-	Real* t2_wt = t2_wts[cntr]; // column vector
-	for (k=0; k<numVars; ++k) {
-	  Real& t2_wt_k = t2_wt[k]; t2_wt_k = 1.;
-	  for (l=0; l<numVars; ++l)
-	    t2_wt_k *= (l==k) ? type2CollocWts1D[sm_index[l]][l][key_ij[l]] :
-	                        type1CollocWts1D[sm_index[l]][l][key_ij[l]];
-	}
-      }
-    }
-  }
-#ifdef DEBUG
-    PCout << "Tensor product weights =\ntype1:\n"; write_data(PCout, t1_wts);
-    if (computeType2Weights)
-      { PCout << "type2:\n"; write_data(PCout, t2_wts, false, true, true); }
-#endif // DEBUG
 }
 
 } // namespace Pecos

@@ -355,16 +355,25 @@ inline void IncrementalSparseGridDriver::clear_keys()
   smolyakCoeffsRef.clear();
   type1WeightSetsRef.clear(); type2WeightSetsRef.clear();
 
-  numUnique1.clear();   numUnique2.clear();
-  zVec.clear();         r1Vec.clear();          r2Vec.clear();
-  a1Points.clear();     a1Type1Weights.clear(); a1Type2Weights.clear();
-  a2Points.clear();     a2Type1Weights.clear(); a2Type2Weights.clear();
-  sortIndex1.clear();   sortIndex2.clear();
-  uniqueSet1.clear();   uniqueSet2.clear();
-  uniqueIndex1.clear(); uniqueIndex2.clear();
-  isUnique1.clear();    isUnique2.clear();
+  zVec.clear();            r1Vec.clear();          r2Vec.clear();
+  sortIndex1.clear();      sortIndex2.clear();
 
-  uniqueIndexMapping.clear();
+  numUnique1.clear();      numUniq1Iter = numUnique1.end();
+  numUnique2.clear();      numUniq2Iter = numUnique2.end();
+  a1Points.clear();        a1PIter      = a1Points.end();
+  a1Type1Weights.clear();  a1T1WIter    = a1Type1Weights.end();
+  a1Type2Weights.clear();  a1T2WIter    = a1Type2Weights.end();
+  a2Points.clear();        a2PIter      = a2Points.end();
+  a2Type1Weights.clear();  a2T1WIter    = a2Type1Weights.end();
+  a2Type2Weights.clear();  a2T2WIter    = a2Type2Weights.end();
+  uniqueSet1.clear();      uniqSet1Iter = uniqueSet1.end();
+  uniqueSet2.clear();      uniqSet2Iter = uniqueSet2.end();
+  uniqueIndex1.clear();    uniqInd1Iter = uniqueIndex1.end();
+  uniqueIndex2.clear();    uniqInd2Iter = uniqueIndex2.end();
+  isUnique1.clear();       isUniq1Iter  = isUnique1.end();
+  isUnique2.clear();       isUniq2Iter  = isUnique2.end();
+
+  uniqueIndexMapping.clear();  uniqIndMapIter = uniqueIndexMapping.end();
 }
 
 
