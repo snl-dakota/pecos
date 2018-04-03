@@ -412,13 +412,15 @@ void IncrementalSparseGridDriver::restore_set()
 
 void IncrementalSparseGridDriver::pop_trial_set()
 {
+  // restore reference grid state
   smolMIIter->second.pop_back();
   collocKeyIter->second.pop_back();
   collocIndIter->second.pop_back();
   smolCoeffsIter->second = smolyakCoeffsRef[activeKey];
-
-  numCollocPts = numUniq1Iter->second; // restore number of reference points
-  //uniqIndMapIter->second.resize(numCollocPts); // prune trial indices from end
+  numCollocPts = numUniq1Iter->second;                      // unique ref points
+  // pruning of uniqueIndexMapping is not currently necessary (it is
+  // updated on demand prior to use in updating collocation indices):
+  //uniqIndMapIter->second.resize(a1PIter->second.numCols()); //  all ref points
 }
 
 
@@ -444,8 +446,9 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   update_smolyak_coefficients(start_index);
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
-  // generate final ref grid, uniqueIndexMapping, collocIndices, numCollocPts
-  finalize_unique(start_index);
+  // generate final grid, uniqueIndexMapping, collocIndices, numCollocPts
+  increment_unique(start_index, false);
+  merge_unique();
   //update_reference(); // not needed, no addtnl increments
 
   if (output_sets) {
@@ -691,14 +694,11 @@ void IncrementalSparseGridDriver::merge_unique()
 }
 
 
+/*
 void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
 {
   increment_unique(start_index, false);
   merge_unique();
-
-  /*
-  // This approach loops over multiple indices and ensures no order mixing
-  // among sets by using inc2/inc3 in careful succession.
 
   // *** TO DO ***: This doesn't address issue of potential point replication
   // changes between initial trial set status and finalization.  Need an
@@ -707,120 +707,8 @@ void IncrementalSparseGridDriver::finalize_unique(size_t start_index)
   // Approximation level.  Perhaps run some performance tests first to verify
   // that this condition is possible (or does structure of admissible indices
   // prevent replication in trial sets that is not first detected in old sets).
-
-  RealMatrix    &a1_pts =   a1PIter->second,    &a2_pts =   a2PIter->second;
-  RealVector &a1_t1_wts = a1T1WIter->second, &a2_t1_wts = a2T1WIter->second;
-  RealMatrix &a1_t2_wts = a1T2WIter->second, &a2_t2_wts = a2T2WIter->second;
-
-  IntArray       &uind1 = uniqInd1Iter->second,  &uind2 = uniqInd2Iter->second;
-  IntArray       &uset1 = uniqSet1Iter->second,  &uset2 = uniqSet2Iter->second; 
-  int           &num_u1 = numUniq1Iter->second, &num_u2 = numUniq2Iter->second;
-  BitArray        &isu1 =  isUniq1Iter->second; //&isu2 =  isUniq2Iter->second;
-  IntArray       &sind1 = sortIndex1[activeKey], &sind2 = sortIndex2[activeKey];
-
-  RealVector &zv =  zVec[activeKey], &r1v = r1Vec[activeKey],
-            &r2v = r2Vec[activeKey];
-
-  numCollocPts = num_u1;
-
-  size_t i, j, num_sm_mi = smolMIIter->second.size();
-  int m = numVars, n1, n2, n1n2, n3, num_u3, all_n2 = 0;
-  RealVector all_a2t1_wts, r3v; RealMatrix a3_pts, all_a2t2_wts;
-  IntArray all_uind2, sind3, uset3, uind3;
-  bool *is_unique1, *is_unique2, *is_unique3;
-
-  // Increment one TP grid at a time since we know there are no internal
-  // duplicates and INC2 can manage duplicates with latest reference grid
-  // (multiple TP grids in a2 would have internal duplicates that would
-  // not be managed properly, since routines are focused on a1 duplication).
-
-  for (i=start_index; i<num_sm_mi; ++i) {
-
-    compute_tensor_points_weights(i, 1, false, a2_pts, a2_t1_wts, a2_t2_wts);
-    n1 = a1_pts.numCols(); n2 = a2_pts.numCols();
-    all_a2t1_wts.resize(all_n2+n2);
-    if (computeType2Weights) all_a2t2_wts.reshape(numVars, all_n2+n2);
-    for (j=0; j<n2; ++j) {
-      all_a2t1_wts[all_n2+j] = a2_t1_wts[j];
-      if (computeType2Weights)
-	copy_data(a2_t2_wts[j], numVars, all_a2t2_wts[all_n2+j]);
-    }
-    all_n2 += n2;
-
-    // ----
-    // INC2
-    // ----
-    r2v.sizeUninitialized(n2);  sind2.resize(n2);
-    uset2.resize(n2);           uind2.resize(n2);
-    is_unique1 = new bool[n1];  copy_data(isu1, is_unique1, n1);
-    is_unique2 = new bool[n2];  // bridges inc2 to inc3: isUnique2 not needed
-    webbur::point_radial_tol_unique_index_inc2(m, n1, a1_pts.values(), n2,
-      a2_pts.values(), duplicateTol, zv.values(), r1v.values(), &sind1[0],
-      is_unique1,  num_u1, &uset1[0], &uind1[0],  r2v.values(), &sind2[0],
-      is_unique2, &num_u2, &uset2[0], &uind2[0]);
-#ifdef DEBUG
-    PCout << "Finalize unique: numUnique2 = " << num_u2 << "\na2 =\n";
-    write_data(PCout, a2_pts, false, true, true);
-    PCout << "               r2   indx2 unique2   undx2   xdnu2:\n";
-    for (j=0; j<n2; ++j)
-      PCout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
-	    << std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
-	    << std::setw(8)  << uind2[j]      << '\n';
-    PCout << std::endl;
-#endif // DEBUG
-
-    all_uind2.insert(all_uind2.end(), uind2.begin(), uind2.end());
-    numCollocPts += num_u2;
-
-    //if (i < num_sm_mi - 1) { // a3 data only used to update a1 for next pass
-      // ----
-      // INC3
-      // ----
-      n1n2 = n1+n2;                       r3v.sizeUninitialized(n1n2);
-      a3_pts.shapeUninitialized(m, n1n2); sind3.resize(n1n2);
-      uset3.resize(n1n2);                 uind3.resize(n1n2);
-      is_unique3 = new bool[n1n2];
-      webbur::point_radial_tol_unique_index_inc3(m, n1, a1_pts.values(),
-        r1v.values(), &sind1[0], is_unique1, num_u1, &uset1[0], &uind1[0], n2,
-	a2_pts.values(), r2v.values(), &sind2[0], is_unique2, num_u2, &uset2[0],
-	&uind2[0], &n3, a3_pts.values(), r3v.values(), &sind3[0], is_unique3,
-        &num_u3, &uset3[0], &uind3[0]);
-#ifdef DEBUG
-      PCout << "Finalize unique: num_unique3 = " << num_u3 << "\na3 =\n";
-      write_data(PCout, a3_pts, false, true, true);
-      PCout << "               r3   indx3 unique3   undx3   xdnu3:\n";
-      for (j=0; j<n1n2; ++j)
-	PCout << std::setw(17) << r3v[j]        << std::setw(8) << sind3[j]
-	      << std::setw(8)  << is_unique3[j] << std::setw(8) << uset3[j]
-	      << std::setw(8)  << uind3[j]      << '\n';
-      PCout << std::endl;
-#endif // DEBUG
-
-      // update reference points, indices, counts, radii
-      a1_pts = a3_pts;  r1v   = r3v;    sind1 = sind3;
-      num_u1 = num_u3;  uset1 = uset3;  uind1 = uind3;
-      copy_data(is_unique3, n1n2, isu1);
-      delete [] is_unique3;
-    //}
-
-    delete [] is_unique1; delete [] is_unique2;
-  }
-
-  update_collocation_indices(start_index);
-  if (trackUniqueProdWeights) {
-    RealVector& t1_wts = type1WeightSets[activeKey];
-    RealMatrix& t2_wts = type2WeightSets[activeKey];
-    t1_wts = type1WeightSetsRef[activeKey]; // to be augmented
-    if (computeType2Weights)
-      t2_wts = type2WeightSetsRef[activeKey]; // to be augmented
-    update_sparse_weights(start_index, all_a2t1_wts, all_a2t2_wts,
-			  t1_wts, t2_wts);
-#ifdef DEBUG
-    PCout << "type1WeightSets =\n"; write_data(PCout, t1_wts);
-#endif // DEBUG
-  }
-  */
 }
+*/
 
 
 void IncrementalSparseGridDriver::
@@ -954,10 +842,6 @@ void IncrementalSparseGridDriver::update_collocation_indices(size_t start_index)
   IntArray& increment_map = uniqIndMapIter->second;
   size_t i, n1 = xdnu1.size(), n2 = xdnu2.size();
   increment_map.resize(n1+n2);
-
-  // TO DO: rather than all this indirection, could try defining collocIndices
-  // directly --> No, aggregation of multiple index sets simplifies bookeeping.
-  // --> go from unrolled to tensor-by-tensor at end.
 
   for (i=0; i<n2; ++i) {
     // XDNU2[N2] in point_radial_tol_unique_index_inc2() [sandia_rules.cpp]:

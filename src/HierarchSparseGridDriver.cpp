@@ -1018,9 +1018,9 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   /*
   else {
     // ...
-    // update a2 data, uniqueIndexMapping, collocIndices, numCollocPts
-    finalize_unique(start_index);// assure no mixing of discrete a2's
-    //merge_unique(); // a1 reference update not needed, no addtnl increments
+    // generate final grid, uniqueIndexMapping, collocIndices, numCollocPts
+    increment_unique(start_index, false);
+    merge_unique();
     //update_reference();
   }
   */

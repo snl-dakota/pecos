@@ -119,8 +119,8 @@ public:
   void increment_unique(size_t start_index, bool update_1d_pts_wts = true);
   /// update a1Points by merging with unique a2Points
   void merge_unique();
-  /// apply all remaining trial sets
-  void finalize_unique(size_t start_index);
+  // apply all remaining trial sets
+  //void finalize_unique(size_t start_index);
 
 private:
 
