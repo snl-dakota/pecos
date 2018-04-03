@@ -142,8 +142,7 @@ public:
   const Sizet2DArray& collocation_indices() const;
   /// return collocIndices[key]
   const Sizet2DArray& collocation_indices(const UShortArray& key) const;
-  // return uniqueIndexMapping
-  //const IntArray& unique_index_mapping() const;
+
   // return duplicateTol
   //Real duplicate_tolerance() const;
 
@@ -195,8 +194,6 @@ protected:
   /// each derivative component and for each unique point in the sparse grid
   std::map<UShortArray, RealMatrix> type2WeightSets;
 
-  // output from sgmga_unique_index()
-  //std::map<UShortArray, IntArray> uniqueIndexMapping;
   /// duplication tolerance used in sgmga routines
   Real duplicateTol;
 
@@ -302,8 +299,6 @@ inline void CombinedSparseGridDriver::clear_keys()
   collocIndices.clear();   collocIndIter = collocIndices.end();
 
   type1WeightSets.clear();    type2WeightSets.clear();
-
-  //uniqueIndexMapping.clear();
 }
 
 
@@ -402,23 +397,8 @@ collocation_indices(const UShortArray& key) const
 }
 
 
-/*
-inline const IntArray& CombinedSparseGridDriver::unique_index_mapping() const
-{
-  std::map<UShortArray, IntArray>::const_iterator cit
-    = uniqueIndexMapping.find(activeKey);
-  if (cit == uniqueIndexMapping.end()) {
-    PCerr << "Error: active key not found in CombinedSparseGridDriver::"
-	  << "unique_index_mapping()." << std::endl;
-    abort_handler(-1);
-  }
-  return cit->second;
-}
-
-
-inline Real CombinedSparseGridDriver::duplicate_tolerance() const
-{ return duplicateTol; }
-*/
+//inline Real CombinedSparseGridDriver::duplicate_tolerance() const
+//{ return duplicateTol; }
 
 
 inline void CombinedSparseGridDriver::print_smolyak_multi_index() const

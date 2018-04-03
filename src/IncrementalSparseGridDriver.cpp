@@ -20,7 +20,7 @@
 
 static const char rcsId[]="@(#) $Id: IncrementalSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-#define DEBUG
+//#define DEBUG
 
 namespace Pecos {
 
@@ -446,10 +446,13 @@ void IncrementalSparseGridDriver::reference_unique(RealMatrix& var_sets)
   PCout << "Reference unique: numUnique1 = " << num_u1 << "\na1 =\n";
   write_data(PCout, a1_pts, false, true, true);
   PCout << "               r1   indx1 unique1   undx1   xdnu1:\n";
-  for (size_t i=0; i<n1; ++i)
+  for (size_t i=0; i<num_u1; ++i)
     PCout << std::setw(17) << r1v[i]   << std::setw(8) << sind1[i]
 	  << std::setw(8)  << isu1[i]  << std::setw(8) << uset1[i]
 	  << std::setw(8)  << uind1[i] << '\n';
+  for (size_t i=num_u1; i<n1; ++i)
+    PCout << std::setw(17) << r1v[i]  << std::setw(8)  << sind1[i]
+	  << std::setw(8)  << isu1[i] << std::setw(16) << uind1[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
@@ -539,10 +542,13 @@ increment_unique(size_t start_index, bool update_1d_pts_wts)
   PCout << "Increment unique: numUnique2 = " << num_u2 << "\na2 =\n";
   write_data(PCout, a2_pts, false, true, true);
   PCout << "               r2   indx2 unique2   undx2   xdnu2:\n";
-  for (j=0; j<n2; ++j)
+  for (j=0; j<num_u2; ++j)
     PCout << std::setw(17) << r2v[j]        << std::setw(8) << sind2[j]
 	  << std::setw(8)  << is_unique2[j] << std::setw(8) << uset2[j]
 	  << std::setw(8)  << uind2[j]      << '\n';
+  for (j=num_u2; j<n2; ++j)
+    PCout << std::setw(17) << r2v[j]       << std::setw(8)  << sind2[j]
+	  << std::setw(8) << is_unique2[j] << std::setw(16) << uind2[j] << '\n';
   PCout << std::endl;
 #endif // DEBUG
   copy_data(is_unique2, n2, isu2);
@@ -615,10 +621,13 @@ void IncrementalSparseGridDriver::merge_unique()
   PCout << "Merge unique: num_unique3 = " << num_u3 << "\na3 =\n";
   write_data(PCout, a3_pts, false, true, true);
   PCout << "               r3   indx3 unique3   undx3   xdnu3:\n";
-  for (size_t i=0; i<n1n2; ++i)
-    PCout << std::setw(17) << r3v[i]     << std::setw(8) << sind3[i]
+  for (size_t i=0; i<num_u3; ++i)
+    PCout << std::setw(17) << r3v[i]        << std::setw(8) << sind3[i]
 	  << std::setw(8)  << is_unique3[i] << std::setw(8) << uset3[i]
 	  << std::setw(8)  << uind3[i] << '\n';
+  for (size_t i=num_u3; i<n1n2; ++i)
+    PCout << std::setw(17) << r3v[i]       << std::setw(8)  << sind3[i]
+	  << std::setw(8) << is_unique3[i] << std::setw(16) << uind3[i] << '\n';
   PCout << std::endl;
 #endif // DEBUG
 
@@ -896,34 +905,52 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
 
 void IncrementalSparseGridDriver::assign_collocation_indices()
 {
-  IntArray &undx1 = uniqSet1Iter->second, &xdnu1 = uniqInd1Iter->second;
-  size_t i, num_pts = xdnu1.size();  int xdnu_j;
-  IntArray reference_map(num_pts);
-  for (i=0; i<num_pts; ++i) {
+  const IntArray& undx1 = uniqSet1Iter->second;
+  const IntArray& xdnu1 = uniqInd1Iter->second;
+  const BitArray& isu1  = isUniq1Iter->second;
+  size_t i, n1 = xdnu1.size();
+  int xdnu_j, a1_index, new_cntr = 0;
+
+  IntArray& reference_map = uniqIndMapIter->second;
+  reference_map.resize(n1);
+
+  for (i=0; i<n1; ++i) {
     // XDNU1[N1] in point_radial_tol_unique_index_inc1() [sandia_rules.cpp]:
     //   the index, in UNDX1, of the tolerably unique point that
     //   "represents" this point.
     xdnu_j = xdnu1[i];
     // UNDX1[UNIQUE_NUM1] in point_radial_tol_unique_index_inc1():
     //   the index, in A1, of the tolerably unique points.
-    reference_map[i] = undx1[xdnu_j];
+    a1_index = undx1[xdnu_j]; // appears to reproduce i
+    reference_map[i] = (isu1[i]) ? new_cntr++ : reference_map[a1_index];
   }
 
+#ifdef DEBUG
   PCout << "Reference map:\n" << reference_map;
-
+#endif // DEBUG
   CombinedSparseGridDriver::assign_collocation_indices(reference_map);
 }
 
 
 void IncrementalSparseGridDriver::update_collocation_indices(size_t start_index)
 {
-  IntArray &undx1 = uniqSet1Iter->second, &xdnu1 = uniqInd1Iter->second,
-           &undx2 = uniqSet2Iter->second, &xdnu2 = uniqInd2Iter->second;
-  int xdnu_j, num_uniq1 = numUniq1Iter->second;
-  size_t i, num_pts = xdnu2.size();
-  IntArray increment_map(num_pts);
+  const BitArray& isu2  = isUniq2Iter->second;
+  const IntArray& xdnu1 = uniqInd1Iter->second;
+  const IntArray& xdnu2 = uniqInd2Iter->second;
+  const IntArray& undx1 = uniqSet1Iter->second;
+  const IntArray& undx2 = uniqSet2Iter->second;
+  int xdnu_j, num_uniq1 = numUniq1Iter->second, a1_a2_index, a1_index,
+    new_cntr = num_uniq1;
 
-  for (i=0; i<num_pts; ++i) {
+  IntArray& increment_map = uniqIndMapIter->second;
+  size_t i, n1 = xdnu1.size(), n2 = xdnu2.size();
+  increment_map.resize(n1+n2);
+
+  // TO DO: rather than all this indirection, could try defining collocIndices
+  // directly --> No, aggregation of multiple index sets simplifies bookeeping.
+  // --> go from unrolled to tensor-by-tensor at end.
+
+  for (i=0; i<n2; ++i) {
     // XDNU2[N2] in point_radial_tol_unique_index_inc2() [sandia_rules.cpp]:
     //   If the value represents an index in UNDX2, this can be inferred by
     //   the fact that its value is >= UNIQUE_NUM1.  To reference UNDX2, the
@@ -931,13 +958,20 @@ void IncrementalSparseGridDriver::update_collocation_indices(size_t start_index)
     xdnu_j = xdnu2[i];
     // UNDX2[UNIQUE_NUM2] in point_radial_tol_unique_index_inc2():
     //   The index in A2 of the tolerably unique points, incremented by N1
-    // Note: using unique_set + set_index recovers original point order.
-    increment_map[i] = (xdnu_j >= num_uniq1) ?
-      undx2[xdnu_j - num_uniq1] /* - num_uniq1 */ : undx1[xdnu_j];
+    // Note: xdnu --> undx --> recovers original point ordering
+    if (xdnu_j >= num_uniq1) {
+      a1_a2_index = undx2[xdnu_j - num_uniq1]; // - n1 for a2_index
+      increment_map[n1+i] = (isu2[i]) ? new_cntr++ : increment_map[a1_a2_index];
+    }
+    else {
+      a1_index = undx1[xdnu_j];
+      increment_map[n1+i] = increment_map[a1_index];
+    }
   }
 
-  PCout << "Increment map:\n" << increment_map;
-
+#ifdef DEBUG
+  PCout << "Incremented map:\n" << increment_map;
+#endif // DEBUG
   CombinedSparseGridDriver::
     assign_collocation_indices(increment_map, start_index);
 }
@@ -955,7 +989,7 @@ compute_tensor_points_weights(size_t start_index, size_t num_indices,
   size_t i, j, k, l, cntr, num_tp_pts, num_colloc_pts = 0,
     end = start_index + num_indices;
   const UShort3DArray& colloc_key = collocKeyIter->second;
-  const UShort2DArray& sm_mi = smolMIIter->second;
+   const UShort2DArray& sm_mi = smolMIIter->second;
   // define num_colloc_pts
   for (i=start_index; i<end; ++i)
     num_colloc_pts += colloc_key[i].size();

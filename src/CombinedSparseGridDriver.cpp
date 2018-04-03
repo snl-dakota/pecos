@@ -362,9 +362,9 @@ assign_collocation_indices(const IntArray& unique_index_map, size_t start_index)
   Sizet2DArray&        colloc_ind = collocIndIter->second;
   size_t i, j, num_tp_pts, cntr = 0, num_sm_indices = colloc_key.size();
   colloc_ind.resize(num_sm_indices);
-  // assume unique_index_map only covers the increment from start_index
-  //for (i=0; i<start_index; ++i)
-  //  cntr += colloc_key[i].size();
+  // unique_index_map covers both reference and increment from start_index
+  for (i=0; i<start_index; ++i)
+    cntr += colloc_key[i].size();
   for (i=start_index; i<num_sm_indices; ++i) {
     num_tp_pts = colloc_key[i].size();
     SizetArray& indices_i = colloc_ind[i];
