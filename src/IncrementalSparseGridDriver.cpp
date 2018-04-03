@@ -20,7 +20,7 @@
 
 static const char rcsId[]="@(#) $Id: IncrementalSparseGridDriver.C,v 1.57 2004/06/21 19:57:32 mseldre Exp $";
 
-#define DEBUG
+//#define DEBUG
 
 namespace Pecos {
 
@@ -417,8 +417,8 @@ void IncrementalSparseGridDriver::pop_trial_set()
   collocIndIter->second.pop_back();
   smolCoeffsIter->second = smolyakCoeffsRef[activeKey];
 
-  numCollocPts -= numUniq2Iter->second; // subtract number of trial points
-  //uniqIndMapIter->second.resize(numCollocPts); // prune trial from end
+  numCollocPts = numUniq1Iter->second; // restore number of reference points
+  //uniqIndMapIter->second.resize(numCollocPts); // prune trial indices from end
 }
 
 
