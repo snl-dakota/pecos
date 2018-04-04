@@ -259,7 +259,8 @@ void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
   assign_smolyak_arrays();  // smolyak{MultiIndex,Coeffs}
   update_collocation_key(); // collocKey
   //assign_1d_collocation_points_weights(); // define 1-D point/weight sets
-  reference_unique(var_sets);             // define reference grid
+  reference_unique(var_sets); // compute the reference grid
+  update_reference();         // update reference arrays
 
 #ifdef DEBUG
   PCout << "IncrementalSparseGridDriver::compute_grid() results:\n"
@@ -310,7 +311,7 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 }
 
 
-void IncrementalSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
+void IncrementalSparseGridDriver::compute_increment(RealMatrix& var_sets)
 {
   // assumes smolyak{MultiIndex,Coeffs} have been incremented already
 
@@ -325,7 +326,7 @@ void IncrementalSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
 }
 
 
-void IncrementalSparseGridDriver::push_grid_increment()
+void IncrementalSparseGridDriver::push_increment()
 {
   // assumes smolyak{MultiIndex,Coeffs} have been incremented already
 
@@ -333,23 +334,12 @@ void IncrementalSparseGridDriver::push_grid_increment()
   // synchronize collocKey with smolyakMultiIndex
   update_collocation_key();
   // update a2 for multiple trial sets
-  increment_unique(start_index);
+  increment_unique(start_index, false);
 }
 
 
 void IncrementalSparseGridDriver::initialize_sets()
 {
-  // provide a helpful error message in the case where refineControl is not
-  // set for generalized adaptation
-  // > this traps the error where the reference grid was computed
-  //   inconsistently (see logic in compute_grid())
-  if (refineControl != DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
-    PCerr << "Error: IncrementalSparseGridDriver::initialize_sets() called for "
-	  << "inconsistent refinement control setting (" << refineControl
-	  << ")." << std::endl;
-    abort_handler(-1);
-  }
-
   // define set O (old) from smolyakMultiIndex and smolyakCoeffs:
   unsigned short     ssg_lev = ssgLevIter->second;
   const UShort2DArray& sm_mi = smolMIIter->second;
@@ -357,7 +347,6 @@ void IncrementalSparseGridDriver::initialize_sets()
   UShortArraySet&     old_mi = oldMultiIndex[activeKey];
   //old_mi = sm_mi;
   old_mi.clear(); old_mi.insert(sm_mi.begin(), sm_mi.end());
-  update_reference();
 
   computedTrialSets[activeKey].clear(); // no longer cleared in finalize_sets()
   activeMultiIndex[activeKey].clear();  // also cleared in finalize_sets()
@@ -449,7 +438,6 @@ finalize_sets(bool output_sets, bool converged_within_tol)
   // generate final grid, uniqueIndexMapping, collocIndices, numCollocPts
   increment_unique(start_index, false);
   merge_unique();
-  //update_reference(); // not needed, no addtnl increments
 
   if (output_sets) {
     size_t i, j, num_sm_mi = sm_mi.size();

@@ -70,13 +70,14 @@ public:
   void restore_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_trial_set();
-  //void merge_set();
   void finalize_sets(bool output_sets, bool converged_within_tol);
 
   const UShortArray& trial_set() const;
   int unique_trial_points() const;
 
-  void compute_grid_increment(RealMatrix& var_sets);
+  void compute_increment(RealMatrix& var_sets);
+  //void push_increment();
+  //void merge_increment();
 
   void print_smolyak_multi_index() const;
 

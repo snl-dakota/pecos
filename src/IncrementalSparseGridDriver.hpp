@@ -71,12 +71,11 @@ public:
   void restore_set();
   void compute_trial_grid(RealMatrix& var_sets);
   void pop_trial_set();
-  void merge_set();
   void finalize_sets(bool output_sets, bool converged_within_tol);
 
-  void compute_grid_increment(RealMatrix& var_sets);
-  void push_grid_increment();
-  void merge_grid_increment();
+  void compute_increment(RealMatrix& var_sets);
+  void push_increment();
+  void merge_increment();
   
   /// return smolyakCoeffsRef
   const IntArray& smolyak_coefficients_reference() const;
@@ -423,11 +422,7 @@ update_smolyak_coefficients(size_t start_index)
 }
 
 
-inline void IncrementalSparseGridDriver::merge_set()
-{ merge_unique(); }
-
-
-inline void IncrementalSparseGridDriver::merge_grid_increment()
+inline void IncrementalSparseGridDriver::merge_increment()
 { merge_unique(); } // form a3 and promote to new a1
 
 } // namespace Pecos

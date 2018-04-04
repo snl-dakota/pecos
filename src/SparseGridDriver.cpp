@@ -246,14 +246,6 @@ void SparseGridDriver::pop_trial_set()
 }
 
 
-void SparseGridDriver::merge_set()
-{
-  PCerr << "Error: no default implementation for SparseGridDriver::merge_set()."
-	<< std::endl;
-  abort_handler(-1);
-}
-
-
 void SparseGridDriver::
 finalize_sets(bool output_sets, bool converged_within_tol)
 {
@@ -279,26 +271,26 @@ void SparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 }
 
 
-void SparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
+void SparseGridDriver::compute_increment(RealMatrix& var_sets)
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"
-	<< "compute_grid_increment()." << std::endl;
+	<< "compute_increment()." << std::endl;
   abort_handler(-1);
 }
 
 
-void SparseGridDriver::push_grid_increment()
+void SparseGridDriver::push_increment()
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"
-	<< "push_grid_increment()." << std::endl;
+	<< "push_increment()." << std::endl;
   abort_handler(-1);
 }
 
 
-void SparseGridDriver::merge_grid_increment()
+void SparseGridDriver::merge_increment()
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"
-	<< "merge_grid_increment()." << std::endl;
+	<< "merge_increment()." << std::endl;
   abort_handler(-1);
 }
 
@@ -337,8 +329,8 @@ void SparseGridDriver::update_sets(const UShortArray& set_star)
 
   // update evaluation set smolyakMultiIndex (permanently, will not be popped)
   push_trial_set(set_star);
-  restore_set(); // calls increment_unique() --> INC2
-  merge_set();   // calls merge_unique()     --> INC3
+  restore_set();     // calls increment_unique() --> INC2
+  merge_increment(); // calls merge_unique()     --> INC3
 
   // use trial set rather than incoming set_star due to iterator invalidation
   const UShortArray&       tr_set = trial_set();

@@ -62,8 +62,6 @@ public:
   /// remove the previously pushed trial set from smolyakMultiIndex
   /// during the course of the generalized sparse grid procedure
   virtual void pop_trial_set();
-  /// merge reference sets with trial set and update reference set
-  virtual void merge_set();
   /// accept all remaining trial sets within the generalized sparse
   /// grid procedure
   virtual void finalize_sets(bool output_sets, bool converged_within_tol);
@@ -72,11 +70,11 @@ public:
   virtual void compute_trial_grid(RealMatrix& var_sets);
 
   /// computes a grid increment and evaluates the new parameter sets
-  virtual void compute_grid_increment(RealMatrix& var_sets);
+  virtual void compute_increment(RealMatrix& var_sets);
   /// restores a previously computed grid increment (no new evaluations)
-  virtual void push_grid_increment();
+  virtual void push_increment();
   /// merges a grid increment into the reference grid
-  virtual void merge_grid_increment();
+  virtual void merge_increment();
 
   /// update derived reference data, if required
   virtual void update_reference();

@@ -653,6 +653,8 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
 #endif
   }
   */
+
+  //update_reference(); // not currently implemented for HSGD
 }
 
 
@@ -694,7 +696,7 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 }
 
 
-void HierarchSparseGridDriver::compute_grid_increment(RealMatrix& var_sets)
+void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
 {
   // update collocKey and compute trial variable/weight sets
   update_smolyak_multi_index();
@@ -957,7 +959,7 @@ void HierarchSparseGridDriver::pop_trial_set()
 
 
 /*
-void HierarchSparseGridDriver::merge_set()
+void HierarchSparseGridDriver::merge_increment()
 {
   if (nestedGrid) {
     // no-op
@@ -1021,7 +1023,6 @@ finalize_sets(bool output_sets, bool converged_within_tol)
     // generate final grid, uniqueIndexMapping, collocIndices, numCollocPts
     increment_unique(start_index, false);
     merge_unique();
-    //update_reference();
   }
   */
 
