@@ -230,7 +230,7 @@ int IncrementalSparseGridDriver::grid_size()
   if (updateGridSize) {
     UShort2DArray& sm_mi = smolMIIter->second;
     assign_smolyak_multi_index(sm_mi);
-    update_collocation_key();
+    assign_collocation_key(); // no update because trailing levs can be removed
 
     RealMatrix a1_pts, a1_t2_wts;  RealVector a1_t1_wts;
     compute_tensor_points_weights(0, sm_mi.size(), true, a1_pts,
@@ -257,7 +257,7 @@ void IncrementalSparseGridDriver::compute_grid(RealMatrix& var_sets)
   // orderings --> reference grid computations are kept completely separate.
 
   assign_smolyak_arrays();  // smolyak{MultiIndex,Coeffs}
-  update_collocation_key(); // collocKey
+  assign_collocation_key(); // collocKey
   //assign_1d_collocation_points_weights(); // define 1-D point/weight sets
   reference_unique(var_sets); // compute the reference grid
   update_reference();         // update reference arrays
@@ -754,10 +754,10 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
 	// assign tensor weights to unique weights
 	unique_t1_wts[uniq_index] += delta_coeff * a1_t1_wts[cntr];
 	if (computeType2Weights) {
-	  Real*       up_t2_wts_j = unique_t2_wts[uniq_index];
+	  Real*       un_t2_wts_j = unique_t2_wts[uniq_index];
 	  const Real* a1_t2_wts_j = a1_t2_wts[cntr];
 	  for (k=0; k<numVars; ++k)
-	    up_t2_wts_j[k] += delta_coeff * a1_t2_wts_j[k];
+	    un_t2_wts_j[k] += delta_coeff * a1_t2_wts_j[k];
 	}
       }
     }
@@ -775,10 +775,10 @@ update_sparse_weights(size_t start_index, const RealVector& tensor_t1_wts,
 	// assign tensor weights to unique weights
 	unique_t1_wts[uniq_index] += sm_coeff * tensor_t1_wts[cntr];
 	if (computeType2Weights) {
-	  Real*       up_t2_wts_j = unique_t2_wts[uniq_index];
+	  Real*       un_t2_wts_j = unique_t2_wts[uniq_index];
 	  const Real* te_t2_wts_j = tensor_t2_wts[cntr];
 	  for (k=0; k<numVars; ++k)
-	    up_t2_wts_j[k] += sm_coeff * te_t2_wts_j[k];
+	    un_t2_wts_j[k] += sm_coeff * te_t2_wts_j[k];
 	}
       }
     }
@@ -799,16 +799,23 @@ void IncrementalSparseGridDriver::assign_collocation_indices()
   IntArray& reference_map = uniqIndMapIter->second;
   reference_map.resize(n1);
 
-  for (i=0; i<n1; ++i) {
-    // XDNU1[N1] in point_radial_tol_unique_index_inc1() [sandia_rules.cpp]:
-    //   the index, in UNDX1, of the tolerably unique point that
-    //   "represents" this point.
-    xdnu_j = xdnu1[i];
-    // UNDX1[UNIQUE_NUM1] in point_radial_tol_unique_index_inc1():
-    //   the index, in A1, of the tolerably unique points.
-    a1_index = undx1[xdnu_j]; // appears to reproduce i
-    reference_map[i] = (isu1[i]) ? new_cntr++ : reference_map[a1_index];
-  }
+  // first pass assigns unique indices
+  for (i=0; i<n1; ++i)
+    if (isu1[i])
+      reference_map[i] = new_cntr++;
+  // second pass refers back to unique indices and can be a forward reference
+  // (dictating two passes)
+  for (i=0; i<n1; ++i)
+    if (!isu1[i]) {
+      // XDNU1[N1] in point_radial_tol_unique_index_inc1() [sandia_rules.cpp]:
+      //   the index, in UNDX1, of the tolerably unique point that
+      //   "represents" this point.
+      xdnu_j = xdnu1[i];
+      // UNDX1[UNIQUE_NUM1] in point_radial_tol_unique_index_inc1():
+      //   the index, in A1, of the tolerably unique points.
+      a1_index = undx1[xdnu_j]; // appears to reproduce i
+      reference_map[i] = reference_map[a1_index];
+    }
 
 #ifdef DEBUG
   PCout << "Reference map:\n" << reference_map;
@@ -831,24 +838,31 @@ void IncrementalSparseGridDriver::update_collocation_indices(size_t start_index)
   size_t i, n1 = xdnu1.size(), n2 = xdnu2.size();
   increment_map.resize(n1+n2);
 
-  for (i=0; i<n2; ++i) {
-    // XDNU2[N2] in point_radial_tol_unique_index_inc2() [sandia_rules.cpp]:
-    //   If the value represents an index in UNDX2, this can be inferred by
-    //   the fact that its value is >= UNIQUE_NUM1.  To reference UNDX2, the
-    //   value should then be decremented by UNIQUE_NUM1.
-    xdnu_j = xdnu2[i];
-    // UNDX2[UNIQUE_NUM2] in point_radial_tol_unique_index_inc2():
-    //   The index in A2 of the tolerably unique points, incremented by N1
-    // Note: xdnu --> undx --> recovers original point ordering
-    if (xdnu_j >= num_uniq1) {
-      a1_a2_index = undx2[xdnu_j - num_uniq1]; // - n1 for a2_index
-      increment_map[n1+i] = (isu2[i]) ? new_cntr++ : increment_map[a1_a2_index];
+  // first pass assigns unique indices
+  for (i=0; i<n2; ++i)
+    if (isu2[i])
+      increment_map[n1+i] = new_cntr++;
+  // second pass refers back to unique indices and can be a forward reference
+  // (dictating two passes)
+  for (i=0; i<n2; ++i)
+    if (!isu2[i]) {
+      // XDNU2[N2] in point_radial_tol_unique_index_inc2() [sandia_rules.cpp]:
+      //   If the value represents an index in UNDX2, this can be inferred by
+      //   the fact that its value is >= UNIQUE_NUM1.  To reference UNDX2, the
+      //   value should then be decremented by UNIQUE_NUM1.
+      xdnu_j = xdnu2[i];
+      // UNDX2[UNIQUE_NUM2] in point_radial_tol_unique_index_inc2():
+      //   The index in A2 of the tolerably unique points, incremented by N1
+      // Note: xdnu --> undx --> recovers original point ordering
+      if (xdnu_j >= num_uniq1) {
+	a1_a2_index = undx2[xdnu_j - num_uniq1]; // - n1 for a2_index
+	increment_map[n1+i] = increment_map[a1_a2_index];
+      }
+      else {
+	a1_index = undx1[xdnu_j];
+	increment_map[n1+i] = increment_map[a1_index];
+      }
     }
-    else {
-      a1_index = undx1[xdnu_j];
-      increment_map[n1+i] = increment_map[a1_index];
-    }
-  }
 
 #ifdef DEBUG
   PCout << "Incremented map:\n" << increment_map;
