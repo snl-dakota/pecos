@@ -101,13 +101,15 @@ public:
 
   /// update smolyakMultiIndex and smolyakCoeffs
   void update_smolyak_arrays();
+  /// overloaded form updates sm_mi from sm_coeffs
+  void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
   /// overloaded form updates smolyakCoeffs from smolyakMultiIndex
   void update_smolyak_coefficients(size_t start_index);
   /// update the coeffs array based on new trailing index sets within
   /// multi_index for incrementally generated generalized sparse grids
   void update_smolyak_coefficients(size_t start_index,
-				   const UShort2DArray& multi_index,
-				   IntArray& coeffs);
+				   const UShort2DArray& sm_mi,
+				   IntArray& sm_coeffs);
   /// update collocKey for the trailing index sets within smolyakMultiIndex
   void update_collocation_key();
 
@@ -126,7 +128,12 @@ private:
   //
   //- Heading: Convenience functions
   //
-  
+
+  /// aggregate point and weight sets across one or more tensor products
+  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
+				     bool update_1d_pts_wts, RealMatrix& pts,
+				     RealVector& t1_wts, RealMatrix& t2_wts);
+
   /// convenience function for updating sparse points from a set of
   /// aggregated tensor points
   void update_sparse_points(size_t start_index, const BitArray& is_unique,
@@ -144,11 +151,6 @@ private:
   void assign_collocation_indices();
   /// define an increment to the collocation indices
   void update_collocation_indices(size_t start_index);
-
-  /// aggregate point and weight sets across one or more tensor products
-  void compute_tensor_points_weights(size_t start_index, size_t num_indices,
-				     bool update_1d_pts_wts, RealMatrix& pts,
-				     RealVector& t1_wts, RealMatrix& t2_wts);
 
   //
   //- Heading: Data
@@ -411,7 +413,7 @@ inline int IncrementalSparseGridDriver::unique_trial_points() const
 
 /** Start from scratch rather than incur incremental coefficient update. */
 inline void IncrementalSparseGridDriver::update_smolyak_arrays()
-{ assign_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
+{ update_smolyak_arrays(smolMIIter->second, smolCoeffsIter->second); }
 
 
 inline void IncrementalSparseGridDriver::

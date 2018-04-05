@@ -98,17 +98,6 @@ public:
   void assign_collocation_indices(const IntArray& unique_index_map,
 				  size_t start_index = 0);
 
-  /// initialize Smolyak multi-index (index sets defining the set of tensor
-  /// products) and Smolyak combinatorial coefficients using an isotropic or
-  /// anisotropic index set constraint.  For anisotropic, webbur::sgmga_vcn_*
-  /// functions are used to compute index sets satisfying the anisotropic
-  /// index set constraint, along with their corresponding coefficients.
-  void assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
-  /// initialize Smolyak multi-index (index sets defining the set of tensor
-  /// products).  For anisotropic, webbur::sgmga_vcn_* functions are used to
-  /// compute index sets satisfying the anisotropic index set constraint.
-  void assign_smolyak_multi_index(UShort2DArray& multi_index);
-
   /// set duplicateTol based on the content of collocRules: table lookups will
   /// generally be more precise/repeatable than numerically-generated rules
   void initialize_duplicate_tolerance();
@@ -152,6 +141,21 @@ public:
   const RealMatrix& type2_weight_sets() const;
 
 protected:
+
+  //
+  //- Heading: Member functions
+  //
+
+  /// initialize Smolyak multi-index (index sets defining the set of tensor
+  /// products) and Smolyak combinatorial coefficients using an isotropic or
+  /// anisotropic index set constraint.  For anisotropic, webbur::sgmga_vcn_*
+  /// functions are used to compute index sets satisfying the anisotropic
+  /// index set constraint, along with their corresponding coefficients.
+  void assign_smolyak_arrays(UShort2DArray& multi_index, IntArray& coeffs);
+
+  //
+  //- Heading: Data
+  //
 
   /// numSmolyakIndices-by-numVars array for identifying the index to use
   /// within the polynomialBasis for a particular variable
@@ -202,7 +206,7 @@ private:
   //
   //- Heading: Convenience functions
   //
-  
+
   /// function passed by pointer for computing collocation points for
   /// polynomialBasis[index]
   static void basis_collocation_points(int order, int index, double* data);
