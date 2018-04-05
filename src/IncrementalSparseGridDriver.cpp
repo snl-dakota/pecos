@@ -65,35 +65,51 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   UShort2DArray new_sm_mi; IntArray new_sm_coeffs;
   assign_smolyak_arrays(new_sm_mi, new_sm_coeffs);
 
+  /*
+  // Simple / robust but expensive (repeated linear-time look-ups)
+  //
   // Old smolyak indices must be preserved but coeffs may be zeroed out.
   // New smolyak indices must be appended, irregardless of level ordering,
   // so that delta_coeff calculations are synched.
   size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size(), old_index;
-  sm_coeffs.assign(num_old, 0); // zero out old prior to updates of new active
+  sm_coeffs.assign(num_old, 0); // zero out old prior to updates from new active
   for (i=0; i<num_new; ++i) {
     UShortArray& new_sm_mi_i = new_sm_mi[i];
     old_index = find_index(sm_mi, new_sm_mi_i);
-    if (old_index == _NPOS) { // not found: augment sm_mi and assign new coeff
+    if (old_index == _NPOS) { // not found: augment sm_mi and sm_coeffs
       sm_mi.push_back(new_sm_mi_i);
       sm_coeffs.push_back(new_sm_coeffs[i]);
     }
     else // found: retain and update coeff
-      sm_coeffs[old_index] = new_sm_coeffs[i];      
+      sm_coeffs[old_index] = new_sm_coeffs[i];
   }
-
-  /*
-  // Assume consistent ordering to avoid repeated linear searches
-  UShort2DArray::iterator sm_it, new_sm_it = new_sm_mi.begin();
-  // Check for old missing in new (preserve continuity needed downstream)
-  for (i=0; i<num_old; ++i) {
-    if (sm_mi[i] == *new_sm_it)
-      break;
-    else
-      sm_coeffs[i] = 0; // no longer present in new multi-index
-  }
-  // Scan for new_sm_mi to append to sm_mi
-  //
   */
+
+  // Assumptions to accelerate process:
+  // > consistent ordering for index sets present in old & new
+  // > leading sm_mi index sets that are unmatched at front of new_sm_mi
+  //   were truncated from new due to numVars-1 lower bound
+  //   --> retain and set coeff to zero.
+  // > unmatched internal/trailing indices from new_sm_mi are augmentations
+  //   (see bounds enforcement in anisotropic adaptation)
+  UShort2DArray::iterator sm_it = sm_mi.begin(), new_sm_it = new_sm_mi.begin();
+  size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size(), old_index = 0;
+  sm_coeffs.assign(num_old, 0); // zero out old prior to updates from new active
+  // Check for old truncated from beginning of new (preserve in updated)
+  while (sm_it != sm_mi.end() && *sm_it != *new_sm_it)
+    { /*sm_coeffs[old_index] = 0;*/ ++sm_it; ++old_index; }
+  // Scan new_sm_mi to update and append sm_{mi,coeffs}
+  for (i=0; i<num_new; ++i) {
+    UShortArray& new_sm_mi_i = new_sm_mi[i];
+    if (old_index < num_old && sm_mi[old_index] == new_sm_mi_i) {
+      sm_coeffs[old_index] = new_sm_coeffs[i];
+      ++old_index;
+    }
+    else { // assumption: sm_mi lacks new_sm_mi index set, not visa versa
+      sm_mi.push_back(new_sm_mi_i);
+      sm_coeffs.push_back(new_sm_coeffs[i]);
+    }
+  }
 
   /*
   unsigned short ssg_lev = ssgLevIter->second;
@@ -104,7 +120,7 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
     ;
 
   SharedPolyApproxData::
-    total_order_multi_index(levels, new_sm_mi, ssg_lev-1); // *** TO DO
+    total_order_multi_index(levels, new_sm_mi, ssg_lev-1);// don't know prev lev
   sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
   */
 }
