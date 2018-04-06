@@ -84,7 +84,7 @@ public:
   /// return the number of unique collocation points in the trial index set
   virtual int unique_trial_points() const;
 
-  /// update smolyakMultiIndex
+  /// update smolyakMultiIndex and smolyakCoeffs while adapting grid
   virtual void update_smolyak_arrays();
   /// print smolyakMultiIndex
   virtual void print_smolyak_multi_index() const = 0;

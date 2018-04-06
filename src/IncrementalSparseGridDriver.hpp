@@ -101,15 +101,8 @@ public:
 
   /// update smolyakMultiIndex and smolyakCoeffs
   void update_smolyak_arrays();
-  /// overloaded form updates sm_mi from sm_coeffs
-  void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
   /// overloaded form updates smolyakCoeffs from smolyakMultiIndex
   void update_smolyak_coefficients(size_t start_index);
-  /// update the coeffs array based on new trailing index sets within
-  /// multi_index for incrementally generated generalized sparse grids
-  void update_smolyak_coefficients(size_t start_index,
-				   const UShort2DArray& sm_mi,
-				   IntArray& sm_coeffs);
   /// update collocKey for the trailing index sets within smolyakMultiIndex
   void update_collocation_key();
 
@@ -128,6 +121,22 @@ private:
   //
   //- Heading: Convenience functions
   //
+
+  /// overloaded form updates sm_mi from sm_coeffs
+  void update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs);
+  /// increment sm_{mi,coeffs} to sync with new_sm_{mi,coeffs}
+  void increment_smolyak_arrays(const UShort2DArray& new_sm_mi,
+				const IntArray& new_sm_coeffs,
+				UShort2DArray& sm_mi, IntArray& sm_coeffs);
+  /// decrement sm_{mi,coeffs} to sync with new_sm_{mi,coeffs}
+  void decrement_smolyak_arrays(const UShort2DArray& new_sm_mi,
+				const IntArray& new_sm_coeffs,
+				UShort2DArray& sm_mi, IntArray& sm_coeffs);
+  /// update the coeffs array based on new trailing index sets within
+  /// multi_index for incrementally generated generalized sparse grids
+  void update_smolyak_coefficients(size_t start_index,
+				   const UShort2DArray& sm_mi,
+				   IntArray& sm_coeffs);
 
   /// aggregate point and weight sets across one or more tensor products
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,

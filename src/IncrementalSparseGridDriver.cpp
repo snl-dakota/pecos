@@ -62,11 +62,21 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 void IncrementalSparseGridDriver::
 update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 {
+  if (!updateGridSize)
+    return; // Smolyak arrays already updated in grid_size()
+
+  // compute new Smolyak multi-index and coefficients, but don't overwrite old
   UShort2DArray new_sm_mi; IntArray new_sm_coeffs;
   assign_smolyak_arrays(new_sm_mi, new_sm_coeffs);
 
-  /*
-  // Simple / robust but expensive (repeated linear-time look-ups)
+  // Strong(est) assumption case below is valid for both increment & decrement
+  //if (new_sm_mi.size() >= sm_mi.size())
+  // increment_smolyak_arrays(new_sm_mi, new_sm_coeffs, sm_mi, sm_coeffs);
+  //else
+  // decrement_smolyak_arrays(new_sm_mi, new_sm_coeffs, sm_mi, sm_coeffs);
+
+  
+  /* Simple / robust increment but expensive (repeated linear-time look-ups)
   //
   // Old smolyak indices must be preserved but coeffs may be zeroed out.
   // New smolyak indices must be appended, irregardless of level ordering,
@@ -85,19 +95,22 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
   }
   */
 
-  // Assumptions to accelerate process:
+
+  /* Some assumptions to accelerate increment:
+  //
   // > consistent ordering for index sets present in old & new
   // > leading sm_mi index sets that are unmatched at front of new_sm_mi
   //   were truncated from new due to numVars-1 lower bound
   //   --> retain and set coeff to zero.
   // > unmatched internal/trailing indices from new_sm_mi are augmentations
   //   (see bounds enforcement in anisotropic adaptation)
-  UShort2DArray::iterator sm_it = sm_mi.begin(), new_sm_it = new_sm_mi.begin();
+  UShort2DArray::iterator            sm_it =     sm_mi.begin();
+  UShort2DArray::const_iterator new_sm_cit = new_sm_mi.begin();
   size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size(), old_index = 0;
   sm_coeffs.assign(num_old, 0); // zero out old prior to updates from new active
   // Check for old truncated from beginning of new (preserve in updated)
-  while (sm_it != sm_mi.end() && *sm_it != *new_sm_it)
-    { /*sm_coeffs[old_index] = 0;*/ ++sm_it; ++old_index; }
+  while (sm_it != sm_mi.end() && *sm_it != *new_sm_cit)
+    { ++sm_it; ++old_index; } //sm_coeffs[old_index] = 0;
   // Scan new_sm_mi to update and append sm_{mi,coeffs}
   for (i=0; i<num_new; ++i) {
     UShortArray& new_sm_mi_i = new_sm_mi[i];
@@ -110,17 +123,35 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
       sm_coeffs.push_back(new_sm_coeffs[i]);
     }
   }
+  */
 
-  /*
+
+  // Strong(est) assumptions to further accelerate:
+  //
+  // > no interior differences (due to anisotropic refinement)
+  //   --> only need to manage differences at front and end
+  UShort2DArray::iterator sm_it = sm_mi.begin();  size_t old_index = 0;
+  const UShortArray& first_new = new_sm_mi[0];
+  // Check for old truncated from beginning of new (preserve in updated)
+  while (sm_it != sm_mi.end() && *sm_it != first_new)
+    { ++sm_it; ++old_index; }
+  // truncate to unmatched leading sets
+  sm_mi.resize(old_index);  sm_coeffs.resize(old_index);
+  sm_coeffs.assign(old_index, 0); // zero out prior to append of new active
+  // augment with active new
+  sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
+  sm_coeffs.insert(sm_coeffs.end(), new_sm_coeffs.begin(), new_sm_coeffs.end());
+
+
+  /* Another efficient option: unroll and tailor assign_smolyak_arrays():
   unsigned short ssg_lev = ssgLevIter->second;
   UShortArray levels;
   if (dimIsotropic)
     levels.assign(numVars, ssg_lev);
   else
     ;
-
   SharedPolyApproxData::
-    total_order_multi_index(levels, new_sm_mi, ssg_lev-1);// don't know prev lev
+    total_order_multi_index(levels, new_sm_mi, ssg_lev-1);//don't know prev lev!
   sm_mi.insert(sm_mi.end(), new_sm_mi.begin(), new_sm_mi.end());
   */
 }
