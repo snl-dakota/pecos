@@ -75,6 +75,7 @@ public:
 
   void compute_increment(RealMatrix& var_sets);
   void push_increment();
+  void pop_increment();
   void merge_increment();
   
   /// return smolyakCoeffsRef

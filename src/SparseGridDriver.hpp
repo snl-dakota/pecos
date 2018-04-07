@@ -73,6 +73,8 @@ public:
   virtual void compute_increment(RealMatrix& var_sets);
   /// restores a previously computed grid increment (no new evaluations)
   virtual void push_increment();
+  /// removes a previously computed grid increment
+  virtual void pop_increment();
   /// merges a grid increment into the reference grid
   virtual void merge_increment();
 

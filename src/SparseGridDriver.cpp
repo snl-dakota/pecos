@@ -287,6 +287,14 @@ void SparseGridDriver::push_increment()
 }
 
 
+void SparseGridDriver::pop_increment()
+{
+  PCerr << "Error: no default implementation for SparseGridDriver::"
+	<< "pop_increment()." << std::endl;
+  abort_handler(-1);
+}
+
+
 void SparseGridDriver::merge_increment()
 {
   PCerr << "Error: no default implementation for SparseGridDriver::"

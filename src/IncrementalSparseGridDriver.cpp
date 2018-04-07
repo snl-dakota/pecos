@@ -294,12 +294,10 @@ void IncrementalSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
 
 void IncrementalSparseGridDriver::compute_increment(RealMatrix& var_sets)
 {
-  // assumes smolyak{MultiIndex,Coeffs} have been incremented already
-
-  size_t start_index = smolyakCoeffsRef[activeKey].size();
-  // synchronize collocKey with smolyakMultiIndex
-  update_collocation_key();
+  update_smolyak_arrays();  // update smolyak{MultiIndex,Coeffs}
+  update_collocation_key(); // synchronize collocKey
   // update a2 for multiple trial sets
+  size_t start_index = smolyakCoeffsRef[activeKey].size();
   increment_unique(start_index);
   // update unique var_sets from a2
   update_sparse_points(start_index, isUniq2Iter->second, numUniq1Iter->second,
@@ -309,13 +307,32 @@ void IncrementalSparseGridDriver::compute_increment(RealMatrix& var_sets)
 
 void IncrementalSparseGridDriver::push_increment()
 {
-  // assumes smolyak{MultiIndex,Coeffs} have been incremented already
-
-  size_t start_index = smolyakCoeffsRef[activeKey].size();
-  // synchronize collocKey with smolyakMultiIndex
-  update_collocation_key();
+  update_smolyak_arrays();  // update smolyak{MultiIndex,Coeffs}
+  update_collocation_key(); // synchronize collocKey
   // update a2 for multiple trial sets
+  size_t start_index = smolyakCoeffsRef[activeKey].size();
   increment_unique(start_index, false);
+}
+
+
+void IncrementalSparseGridDriver::pop_increment()
+{
+  IntArray& sm_coeffs_ref = smolyakCoeffsRef[activeKey];
+  size_t ref_size = sm_coeffs_ref.size();
+  smolMIIter->second.resize(ref_size);
+  smolCoeffsIter->second = sm_coeffs_ref;
+  collocKeyIter->second.resize(ref_size);
+  collocIndIter->second.resize(ref_size);
+  numCollocPts = numUniq1Iter->second;                   // unique ref points
+  // pruning of uniqueIndexMapping is not strictly required (it is updated on
+  // demand prior to updating collocation indices), but good for completeness
+  uniqIndMapIter->second.resize(a1PIter->second.numCols()); // all ref points
+
+  if (trackUniqueProdWeights) {  // update type{1,2}WeightSets
+    type1WeightSets[activeKey] = type1WeightSetsRef[activeKey];
+    if (computeType2Weights)
+      type2WeightSets[activeKey] = type2WeightSetsRef[activeKey];
+  }
 }
 
 
@@ -387,10 +404,10 @@ void IncrementalSparseGridDriver::pop_trial_set()
   collocKeyIter->second.pop_back();
   collocIndIter->second.pop_back();
   smolCoeffsIter->second = smolyakCoeffsRef[activeKey];
-  numCollocPts = numUniq1Iter->second;                      // unique ref points
-  // pruning of uniqueIndexMapping is not currently necessary (it is
-  // updated on demand prior to use in updating collocation indices):
-  //uniqIndMapIter->second.resize(a1PIter->second.numCols()); //  all ref points
+  numCollocPts = numUniq1Iter->second;                   // unique ref points
+  // pruning of uniqueIndexMapping is not strictly required (it is updated on
+  // demand prior to updating collocation indices), but good for completeness
+  uniqIndMapIter->second.resize(a1PIter->second.numCols()); // all ref points
 }
 
 
@@ -638,13 +655,13 @@ void IncrementalSparseGridDriver::merge_unique()
   PCout << std::endl;
 #endif // DEBUG
 
-  // update reference points
+  // update a1 reference points
   size_t i;
   //a1_pts = a3_pts; // equivalent, but potentially more copy overhead
   a1_pts.reshape(numVars, n1n2);
   for (i=n1; i<n1n2; ++i)
     copy_data(a3_pts[i], numVars, a1_pts[i]);
-  // update reference weights
+  // update a1 reference weights
   if (trackUniqueProdWeights) {
     a1_t1_wts.resize(n1n2);
     if (computeType2Weights) a1_t2_wts.reshape(numVars, n1n2);
