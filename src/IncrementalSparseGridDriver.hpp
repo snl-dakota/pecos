@@ -139,6 +139,16 @@ private:
 				   const UShort2DArray& sm_mi,
 				   IntArray& sm_coeffs);
 
+  /// define the reference collocation indices
+  void assign_collocation_indices();
+  /// define an increment to the collocation indices
+  void update_collocation_indices(size_t start_index);
+
+  /// define the reference type{1,2}WeightSets
+  void assign_sparse_weights();
+  /// update type{1,2}WeightSets based on a grid increment
+  void update_sparse_weights(size_t start_index);
+
   /// aggregate point and weight sets across one or more tensor products
   void compute_tensor_points_weights(size_t start_index, size_t num_indices,
 				     bool update_1d_pts_wts, RealMatrix& pts,
@@ -156,11 +166,6 @@ private:
 			     const RealMatrix& tensor_t2_wts,
 			     RealVector& updated_t1_wts,
 			     RealMatrix& updated_t2_wts);
-
-  /// define the reference collocation indices
-  void assign_collocation_indices();
-  /// define an increment to the collocation indices
-  void update_collocation_indices(size_t start_index);
 
   //
   //- Heading: Data
