@@ -609,11 +609,12 @@ decrement_sparse_grid_multi_index(CombinedSparseGridDriver* csg_driver,
     pop_tp_mi_map_ref.push_back(tp_mi_map_ref[i]);
   }
 
+  size_t num_pruned_mi = tp_mi_map_ref[num_smolyak_indices];
   tp_mi.resize(num_smolyak_indices);         // prune
   tp_mi_map.resize(num_smolyak_indices);     // prune
   tp_mi_map_ref.resize(num_smolyak_indices); // prune
 
-  multi_index.resize(tp_mi_map_ref.back());
+  multi_index.resize(num_pruned_mi);
 }
 
 
