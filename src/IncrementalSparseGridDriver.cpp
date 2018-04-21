@@ -66,32 +66,35 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
     return; // Smolyak arrays already updated in grid_size()
 
   // compute new Smolyak multi-index and coefficients, but don't overwrite old
+  // (must avoid shifts due to index lower bound)
+  // TO DO: remove lower bound in assign_smolyak_arrays()?  --> still requires
+  // care since initial grid could be truncated and want to preserve this.
   UShort2DArray new_sm_mi; IntArray new_sm_coeffs;
   assign_smolyak_arrays(new_sm_mi, new_sm_coeffs);
 
-  // Strong(est) assumption case below is valid for both increment & decrement
-  //if (new_sm_mi.size() >= sm_mi.size())
-  // increment_smolyak_arrays(new_sm_mi, new_sm_coeffs, sm_mi, sm_coeffs);
-  //else
-  // decrement_smolyak_arrays(new_sm_mi, new_sm_coeffs, sm_mi, sm_coeffs);
 
-  
-  /* Simple / robust increment but expensive (repeated linear-time look-ups)
+  /*
+  // Simple / robust increment but expensive (repeated linear-time look-ups)
   //
   // Old smolyak indices must be preserved but coeffs may be zeroed out.
   // New smolyak indices must be appended, irregardless of level ordering,
   // so that delta_coeff calculations are synched.
-  size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size(), old_index;
-  sm_coeffs.assign(num_old, 0); // zero out old prior to updates from new active
-  for (i=0; i<num_new; ++i) {
-    UShortArray& new_sm_mi_i = new_sm_mi[i];
-    old_index = find_index(sm_mi, new_sm_mi_i);
-    if (old_index == _NPOS) { // not found: augment sm_mi and sm_coeffs
-      sm_mi.push_back(new_sm_mi_i);
-      sm_coeffs.push_back(new_sm_coeffs[i]);
+  if (new_sm_mi.size() >= sm_mi.size()) {
+    size_t i, num_old = sm_mi.size(), num_new = new_sm_mi.size(), old_index;
+    sm_coeffs.assign(num_old, 0); // zero out prior to updates from new active
+    for (i=0; i<num_new; ++i) {
+      UShortArray& new_sm_mi_i = new_sm_mi[i];
+      old_index = find_index(sm_mi, new_sm_mi_i);
+      if (old_index == _NPOS) { // not found: augment sm_mi and sm_coeffs
+	sm_mi.push_back(new_sm_mi_i);
+	sm_coeffs.push_back(new_sm_coeffs[i]);
+      }
+      else // found: retain and update coeff
+	sm_coeffs[old_index] = new_sm_coeffs[i];
     }
-    else // found: retain and update coeff
-      sm_coeffs[old_index] = new_sm_coeffs[i];
+  }
+  else {
+    // ...
   }
   */
 
@@ -127,6 +130,8 @@ update_smolyak_arrays(UShort2DArray& sm_mi, IntArray& sm_coeffs)
 
 
   // Strong(est) assumptions to further accelerate:
+  // valid for both increment & decrement
+
   //
   // > no interior differences (due to anisotropic refinement)
   //   --> only need to manage differences at front and end

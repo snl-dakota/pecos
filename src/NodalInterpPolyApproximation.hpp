@@ -286,6 +286,12 @@ private:
   /// iterator pointing to active node in expansionCoeffGrads
   std::map<UShortArray, RealMatrix>::iterator expT1CoeffGradsIter;
 
+  /// roll up of expansion type 1 coefficients across all keys
+  RealVector combinedExpT1Coeffs;
+  /// roll up of expansion type 2 coefficient gradients across all keys
+  RealMatrix combinedExpT2Coeffs;
+  /// roll up of expansion type 1 coefficient gradients across all keys
+  RealMatrix combinedExpT1CoeffGrads;
 
   /*
   /// copies of expansionType1Coeffs state for subsequent restoration
