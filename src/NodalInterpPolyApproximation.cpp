@@ -259,121 +259,107 @@ void NodalInterpPolyApproximation::combine_coefficients()
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   short combine_type = data_rep->expConfigOptions.combineType;
-  std::map<UShortArray, RealVector>::iterator ec1_it
-    = expansionType1Coeffs.begin();
+  std::map<UShortArray, RealVector>::iterator ec1_it;
   std::map<UShortArray, RealMatrix>::iterator ec2_it
     = expansionType2Coeffs.begin(), eg1_it = expansionType1CoeffGrads.begin();
   const SDVArray& sdv_array = surrData.variables_data();
-  size_t i, v, num_pts = surrData.points(), cntr,
+  size_t p, v, num_pts = surrData.points(),
     num_t2v = ec2_it->second.numRows(), num_t1v = eg1_it->second.numRows();
   if (combinedExpT1Coeffs.length() != num_pts)
-    combinedExpT1Coeffs.sizeUninitialized(num_pts);
+    combinedExpT1Coeffs.size(num_pts);
+  else combinedExpT1Coeffs = 0.;
   if (combinedExpT2Coeffs.numRows() != num_pts ||
       combinedExpT2Coeffs.numCols() != num_t2v)
-    combinedExpT2Coeffs.shapeUninitialized(num_t2v, num_pts);
+    combinedExpT2Coeffs.shape(num_t2v, num_pts);
+  else combinedExpT2Coeffs = 0.;
   if (combinedExpT1CoeffGrads.numRows() != num_pts ||
       combinedExpT1CoeffGrads.numCols() != num_t1v)
-    combinedExpT1CoeffGrads.shapeUninitialized(num_t1v, num_pts);
+    combinedExpT1CoeffGrads.shape(num_t1v, num_pts);
+  else combinedExpT1CoeffGrads = 0.;
 
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: // addition of current and stored expansions
-    combinedExpT1Coeffs = 0.;  combinedExpT2Coeffs = 0.;
-    combinedExpT1CoeffGrads = 0.;
-    for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = sdv_array[i].continuous_variables();
+    for (p=0; p<num_pts; ++p) {
+      const RealVector& c_vars = sdv_array[p].continuous_variables();
       if (expansionCoeffFlag) {
 	for (ec1_it  = expansionType1Coeffs.begin();
 	     ec1_it != expansionType1Coeffs.end(); ++ec1_it)
-	  combinedExpT1Coeffs[i] += stored_value(c_vars, ec1_it->first);
+	  combinedExpT1Coeffs[p] += (ec1_it == expT1CoeffsIter) ?
+	    value(c_vars) : stored_value(c_vars, ec1_it->first);
 	if (data_rep->basisConfigOptions.useDerivs) {
-	  Real* exp_t2_coeffs_i = combinedExpT2Coeffs[i];
+	  Real* combined_t2c_p = combinedExpT2Coeffs[p];
 	  for (ec2_it  = expansionType2Coeffs.begin();
 	       ec2_it != expansionType2Coeffs.end(); ++ec2_it) {
-	    const RealVector& stored_grad
-	      = stored_gradient_basis_variables(c_vars, ec2_it->first);
+	    const RealVector& basis_grad = (ec2_it == expT2CoeffsIter) ?
+	      gradient_basis_variables(c_vars) :
+	      stored_gradient_basis_variables(c_vars, ec2_it->first);
 	    for (v=0; v<num_t2v; ++v)
-	      exp_t2_coeffs_i[v] += stored_grad[v];
+	      combined_t2c_p[v] += basis_grad[v];
 	  }
 	}
       }
       if (expansionCoeffGradFlag) {
-	Real* exp_t1_grad_i = combinedExpT1CoeffGrads[i];
+	Real* combined_t1g_p = combinedExpT1CoeffGrads[p];
 	for (eg1_it  = expansionType1CoeffGrads.begin();
 	     eg1_it != expansionType1CoeffGrads.end(); ++eg1_it) {
-	  const RealVector& stored_grad
-	    = stored_gradient_nonbasis_variables(c_vars, eg1_it->first);
+	  const RealVector& nonbasis_grad = (eg1_it == expT1CoeffGradsIter) ?
+	    gradient_nonbasis_variables(c_vars) :
+	    stored_gradient_nonbasis_variables(c_vars, ec2_it->first);
 	  for (v=0; v<num_t1v; ++v)
-	    exp_t1_grad_i[v] += stored_grad[v];
+	    combined_t1g_p[v] += nonbasis_grad[v];
 	}
       }
     }
     break;
   case MULT_COMBINE: { // multiplication of current and stored expansions
-    size_t s, num_stored = expansionType1Coeffs.size() - 1;
-    RealVector stored_vals(num_stored, false);  Real curr_val;
-    combinedExpT1Coeffs = 1.;  combinedExpT2Coeffs = 1;
-    combinedExpT1CoeffGrads = 1.;
-    for (i=0; i<num_pts; ++i) {
-      const RealVector& c_vars = sdv_array[i].continuous_variables();
-
-      // *** TO DO ***
-
+    size_t l, ll, num_lev = expansionType1Coeffs.size();
+    RealVector t1c_vals(num_lev, false);  Real t1c_prod;
+    for (p=0; p<num_pts; ++p) {
+      const RealVector& c_vars = sdv_array[p].continuous_variables();
       // pre-compute stored vals once for both Coeffs/CoeffGrads
-      for (ec1_it =expansionType1Coeffs.begin(), cntr=0;
-	   ec1_it!=expansionType1Coeffs.end(); ++ec1_it)
-	if (ec1_it == expT1CoeffsIter)
-	  curr_val = ec1_it->second[i]; // copy prior to update
-	else
-	  { stored_vals[cntr] = stored_value(c_vars, ec1_it->first); ++cntr; }
+      for (ec1_it =expansionType1Coeffs.begin(), l=0;
+	   ec1_it!=expansionType1Coeffs.end(); ++ec1_it, ++l)
+	t1c_vals[l] = (ec1_it == expT1CoeffsIter) ? value(c_vars) :
+	  stored_value(c_vars, ec1_it->first);
 
       if (expansionCoeffFlag) {
 	// split up type1/type2 contribs so increments are performed properly
-	for (s=0; s<num_stored; ++s)
-	  combinedExpT1Coeffs[i] *= stored_vals[s];
+	Real& combined_t1c_p = combinedExpT1Coeffs[p];
+	combined_t1c_p = t1c_vals[0];
+	for (l=1; l<num_lev; ++l)
+	  combined_t1c_p *= t1c_vals[l];
 	if (data_rep->basisConfigOptions.useDerivs) {
-	  Real* exp_t2_coeffs_i = combinedExpT2Coeffs[i];
+	  Real* combined_t2c_p = combinedExpT2Coeffs[p];
 	  // hf = curr*stored --> dhf/dx = dcurr/dx*stored + curr*dstored/dx
-	  Real prod = 1.;
-	  // first term: dcurr/dx * st * ... * st
-	  for (s=0; s<num_stored; ++s) prod *= stored_vals[s];
-	  for (v=0; v<num_t2v;    ++v) exp_t2_coeffs_i[v] *= prod;
-	  // second term: curr * st * ... * st * dstored/dx * st * ... * st
-	  for (ec2_it =expansionType2Coeffs.begin(), cntr=0;
-	       ec2_it!=expansionType2Coeffs.end(); ++ec2_it)
-	    if (ec2_it != expT2CoeffsIter) {
-	      const RealVector& stored_grad
-		= stored_gradient_basis_variables(c_vars, ec2_it->first);
-	      prod = curr_val;
-	      for (s=0; s<num_stored; ++s)
-		if (s != cntr)
-		  prod *= stored_vals[s];
-	      for (v=0; v<num_t2v; ++v)
-		exp_t2_coeffs_i[v] += stored_grad[v] * prod;
-	      ++cntr;
-	    }
+	  for (ec2_it =expansionType2Coeffs.begin(), l=0;
+	       ec2_it!=expansionType2Coeffs.end(); ++ec2_it, ++l) {
+	    const RealVector& basis_grad = (ec2_it == expT2CoeffsIter) ?
+	      gradient_basis_variables(c_vars) :
+	      stored_gradient_basis_variables(c_vars, ec2_it->first);
+	    t1c_prod = 1.;
+	    for (ll=0; ll<num_lev; ++ll)
+	      if (ll != l)
+		t1c_prod *= t1c_vals[l];
+	    for (v=0; v<num_t2v; ++v)
+	      combined_t2c_p[v] += basis_grad[v] * t1c_prod;
+	  }
 	}
       }
       if (expansionCoeffGradFlag) {
-	Real* exp_t1_grad_i = combinedExpT1CoeffGrads[i];
+	Real* combined_t1g_p = combinedExpT1CoeffGrads[p];
 	// hf = curr*stored --> dhf/dx = dcurr/dx*stored + curr*dstored/dx
-	Real prod = 1.;
-	// first term: dcurr/dx * st * ... * st
-	for (s=0; s<num_stored; ++s) prod *= stored_vals[s];
-	for (v=0; v<num_t1v;    ++v) exp_t1_grad_i[v] *= prod;
-	// second term: curr * st * ... * st * dstored/dx * st * ... * st
-	for (eg1_it =expansionType1CoeffGrads.begin(), cntr=0;
-	     eg1_it!=expansionType1CoeffGrads.end(); ++eg1_it)
-	  if (eg1_it != expT2CoeffsIter) {
-	    const RealVector& stored_grad
-	      = stored_gradient_nonbasis_variables(c_vars, eg1_it->first);
-	    prod = curr_val;
-	    for (s=0; s<num_stored; ++s)
-	      if (s != cntr)
-		prod *= stored_vals[s];
-	    for (v=0; v<num_t1v; ++v)
-	      exp_t1_grad_i[v] += stored_grad[v] * prod;
-	    ++cntr;
-	  }
+	for (eg1_it =expansionType1CoeffGrads.begin(), l=0;
+	     eg1_it!=expansionType1CoeffGrads.end(); ++eg1_it, ++l) {
+	  const RealVector& nonbasis_grad = (eg1_it == expT1CoeffGradsIter) ?
+	    gradient_nonbasis_variables(c_vars) :
+	    stored_gradient_nonbasis_variables(c_vars, ec2_it->first);
+	  t1c_prod = 1.;
+	  for (ll=0; ll<num_lev; ++ll)
+	    if (ll != l)
+	      t1c_prod *= t1c_vals[l];
+	  for (v=0; v<num_t1v; ++v)
+	    combined_t1g_p[v] += nonbasis_grad[v] * t1c_prod;
+	}
       }
     }
     break;
