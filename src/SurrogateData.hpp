@@ -1276,8 +1276,11 @@ inline void SurrogateData::pop_front()
     SDRArray& sdr_array = sdRep->respDataIter->second;
     if (!sdv_array.empty()) sdv_array.erase(sdv_array.begin());
     if (!sdr_array.empty()) sdr_array.erase(sdr_array.begin());
-    if (retrieve_anchor_index() == 0) // popped point was anchor
+    size_t index = retrieve_anchor_index();
+    if (index == 0) // popped point was anchor
       clear_anchor_index();
+    else if (index != _NPOS) // anchor (still) exists, decrement its index
+      anchor_index(index - 1);
   }
 }
 
