@@ -67,18 +67,6 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
-  /*
-  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void store_coefficients(size_t index = _NPOS);
-  /// restore previous state from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void restore_coefficients(size_t index = _NPOS);
-  /// swap storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index] with active
-  /// current data
-  void swap_coefficients(size_t index);
-  /// remove a redundant entry from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  /// prior to combine_coefficients (default is pop_back)
-  void remove_stored_coefficients(size_t index = _NPOS);
-  */
   /// clear inactive data from expansionType{1Coeffs,2Coeffs,1CoeffGrads}
   void clear_inactive();
 
@@ -292,15 +280,6 @@ private:
   RealMatrix combinedExpT2Coeffs;
   /// roll up of expansion type 1 coefficient gradients across all keys
   RealMatrix combinedExpT1CoeffGrads;
-
-  /*
-  /// copies of expansionType1Coeffs state for subsequent restoration
-  RealVectorArray storedExpType1Coeffs;
-  /// copies of expansionType2Coeffs state for subsequent restoration
-  RealMatrixArray storedExpType2Coeffs;
-  /// copies of expansionType1CoeffGrads state for subsequent restoration
-  RealMatrixArray storedExpType1CoeffGrads;
-  */
 
   /// the gradient of the mean of a tensor-product interpolant; a
   /// contributor to meanGradient

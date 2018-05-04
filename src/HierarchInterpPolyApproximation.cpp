@@ -267,116 +267,6 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
 }
 
 
-/*
-void HierarchInterpPolyApproximation::store_coefficients(size_t index)
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.store(index);
-
-  size_t stored_len = storedExpType1Coeffs.size();
-  if (index == _NPOS || index == stored_len) { // append
-    if (expansionCoeffFlag) {
-      storedExpType1Coeffs.push_back(expansionType1Coeffs);
-      storedExpType2Coeffs.push_back(expansionType2Coeffs);
-    }
-    else { // keep indexing consistent
-      storedExpType1Coeffs.push_back(RealVector2DArray());
-      storedExpType2Coeffs.push_back(RealMatrix2DArray());
-    }
-    if (expansionCoeffGradFlag)
-      storedExpType1CoeffGrads.push_back(expansionType1CoeffGrads);
-    else // keep indexing consistent
-      storedExpType1CoeffGrads.push_back(RealMatrix2DArray());
-  }
-  else if (index < stored_len) { // replace
-    if (expansionCoeffFlag) {
-      storedExpType1Coeffs[index] = expansionType1Coeffs;
-      storedExpType2Coeffs[index] = expansionType2Coeffs;
-    }
-    else { // keep indexing consistent
-      storedExpType1Coeffs[index] = RealVector2DArray();
-      storedExpType2Coeffs[index] = RealMatrix2DArray();
-    }
-    if (expansionCoeffGradFlag)
-      storedExpType1CoeffGrads[index] = expansionType1CoeffGrads;
-    else // keep indexing consistent
-      storedExpType1CoeffGrads[index] = RealMatrix2DArray();
-  }
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in HierarchInterpPoly"
-	  << "Approximation::store_coefficients()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void HierarchInterpPolyApproximation::restore_coefficients(size_t index)
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.restore(index);
-
-  size_t stored_len = storedExpType1Coeffs.size();
-  if (index == _NPOS) {
-    expansionType1Coeffs = storedExpType1Coeffs.back();
-    expansionType2Coeffs = storedExpType2Coeffs.back();
-    expansionType1CoeffGrads = storedExpType1CoeffGrads.back();
-  }
-  else if (index < stored_len) {
-    expansionType1Coeffs = storedExpType1Coeffs[index];
-    expansionType2Coeffs = storedExpType2Coeffs[index];
-    expansionType1CoeffGrads = storedExpType1CoeffGrads[index];
-  }
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in HierarchInterpPoly"
-	  << "Approximation::restore_coefficients()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void HierarchInterpPolyApproximation::remove_stored_coefficients(size_t index)
-{
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.remove_stored(index);
-
-  size_t stored_len = storedExpType1Coeffs.size();
-  if (index == _NPOS || index == stored_len) {
-    storedExpType1Coeffs.pop_back(); storedExpType2Coeffs.pop_back();
-    storedExpType1CoeffGrads.pop_back();
-  }
-  else if (index < stored_len) {
-    RealVector3DArray::iterator vit = storedExpType1Coeffs.begin();
-    std::advance(vit, index); storedExpType1Coeffs.erase(vit);
-    RealMatrix3DArray::iterator mit = storedExpType2Coeffs.begin();
-    std::advance(mit, index); storedExpType2Coeffs.erase(mit);
-    mit = storedExpType1CoeffGrads.begin();
-    std::advance(mit, index); storedExpType1CoeffGrads.erase(mit);
-  }
-}
-
-
-void HierarchInterpPolyApproximation::swap_coefficients(size_t index)
-{
-  // mirror operations to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.swap(index);
-
-  if (expansionCoeffFlag) {
-    std::swap(expansionType1Coeffs, storedExpType1Coeffs[index]);
-    SharedHierarchInterpPolyApproxData* data_rep
-      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-    if (data_rep->basisConfigOptions.useDerivs)
-      std::swap(expansionType2Coeffs, storedExpType2Coeffs[index]);
-  }
-  if (expansionCoeffGradFlag)
-    std::swap(expansionType1CoeffGrads, storedExpType1CoeffGrads[index]);
-}
-*/
-
-
 void HierarchInterpPolyApproximation::clear_inactive()
 {
   // mirror changes to origSurrData for deep copied surrData
@@ -410,55 +300,160 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-  // update expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads} by adding or
-  // multiplying stored expansion evaluated at current collocation points
-  size_t i, j, num_pts = surrData.points();
-  Real curr_val, stored_val;
-  /*
-  short combine_type = data_rep->expConfigOptions.combineType;
-  RealVector2DArray& exp_t1_coeffs = expT1CoeffsIter->second;
-  RealMatrix2DArray& exp_t2_coeffs = expT2CoeffsIter->second;
-  RealMatrix2DArray& exp_t1_coeff_grads = expT1CoeffGradsIter->second;
-  const SDVArray& sdv_array = surrData.variables_data();
-  for (i=0; i<num_pts; ++i) {
-    const RealVector& c_vars = sdv_array[i].continuous_variables();
-    if (combine_type == MULT_COMBINE) { // eval once for both Coeffs/CoeffGrads
-      stored_val = stored_value(c_vars);
-      curr_val = exp_t1_coeffs[i]; // copy prior to update
+  // Don't mix additive approach for hierarchical interpolation with
+  // multiplicative/combined across multilevel-multifidelity
+  if (data_rep->expConfigOptions.combineType != ADD_COMBINE) {
+    PCerr << "Error: only additive combinations supported in HierarchInterp"
+	  << "PolyApproximation::combine_coefficients()." << std::endl;
+    abort_handler(-1);
+  }
+
+  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
+  const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
+  size_t lev, set, pt, v, num_lev = colloc_key.size(), num_sets, num_tp_pts,
+    cntr = 0, c_index, num_v = surrData.num_derivative_variables();
+  bool use_derivs = data_rep->basisConfigOptions.useDerivs;
+
+  // Note: STL resize() is no-op if already correct size, but Teuchos
+  // resize()/reshape() is not; therefore protect the latter.
+  combinedExpT1Coeffs.resize(num_lev); combinedExpT2Coeffs.resize(num_lev);
+  combinedExpT1CoeffGrads.resize(num_lev);
+  for (lev=0; lev<num_lev; ++lev) {
+    const UShort3DArray& key_l = colloc_key[lev];
+    num_sets = key_l.size();
+    RealVectorArray& comb_t1c_l = combinedExpT1Coeffs[lev];
+    RealMatrixArray& comb_t2c_l = combinedExpT2Coeffs[lev];
+    RealMatrixArray& comb_t1g_l = combinedExpT1CoeffGrads[lev];
+    comb_t1c_l.resize(num_sets);  comb_t2c_l.resize(num_sets);
+    comb_t1g_l.resize(num_sets);
+    for (set=0; set<num_sets; ++set) {
+      num_tp_pts = key_l[set].size();
+      RealVector& comb_t1c_ls = comb_t1c_l[set];
+      RealMatrix& comb_t2c_ls = comb_t2c_l[set];
+      RealMatrix& comb_t1g_ls = comb_t1g_l[set];
+      if (comb_t1c_ls.length() != num_tp_pts)
+	comb_t1c_ls.size(num_tp_pts);          // init to 0
+      else comb_t1c_ls = 0.;
+      if (comb_t2c_ls.numRows() != num_v || comb_t2c_ls.numCols() != num_tp_pts)
+	comb_t2c_ls.shape(num_v, num_tp_pts);  // init to 0
+      else comb_t2c_ls = 0.;
+      if (comb_t1g_ls.numRows() != num_v || comb_t1g_ls.numCols() != num_tp_pts)
+	comb_t1g_ls.shape(num_v, num_tp_pts); // init to 0
+      else comb_t1g_ls = 0.;
     }
-    if (expansionCoeffFlag) {
-      // split up type1/type2 contribs so increments are performed properly
-      if (combine_type == ADD_COMBINE)
-	exp_t1_coeffs[i] += stored_value(c_vars);
-      else if (combine_type == MULT_COMBINE)
-	exp_t1_coeffs[i] *= stored_val;
-      if (data_rep->basisConfigOptions.useDerivs) {
-	const RealVector& stored_grad
-	  = stored_gradient_basis_variables(c_vars);
-	Real* exp_t2_coeffs_i = exp_t2_coeffs[i];
-	size_t num_deriv_vars = stored_grad.length();
-	if (combine_type == ADD_COMBINE)
-	  for (j=0; j<num_deriv_vars; ++j)
-	    exp_t2_coeffs_i[j] += stored_grad[j];
-	else if (combine_type == MULT_COMBINE)
-	  // hf = curr*stored --> dhf/dx = dcurr/dx*stored + curr*dstored/dx
-	  for (j=0; j<num_deriv_vars; ++j)
-	    exp_t2_coeffs_i[j] = exp_t2_coeffs_i[j] * stored_val
-	                       + stored_grad[j]     * curr_val;
+  }
+
+  // Roll up hierarchical surplus increments for each level-set-point
+  if (expansionCoeffFlag) {
+    std::map<UShortArray, RealVector2DArray>::iterator ec1_it;
+    std::map<UShortArray, RealMatrix2DArray>::iterator ec2_it;
+    for (ec1_it  = expansionType1Coeffs.begin(),
+	 ec2_it  = expansionType2Coeffs.begin();
+	 ec1_it != expansionType1Coeffs.end() &&
+	 ec2_it != expansionType2Coeffs.end(); ++ec1_it, ++ec2_it) {
+      const RealVector2DArray& t1c = ec1_it->second;
+      const RealMatrix2DArray& t2c = ec2_it->second;
+      num_lev = t1c.size();
+      for (lev=0; lev<num_lev; ++lev) {
+	const RealVectorArray& t1c_l = t1c[lev];
+	const RealMatrixArray& t2c_l = t2c[lev];
+	RealVectorArray&  comb_t1c_l = combinedExpT1Coeffs[lev];
+	RealMatrixArray&  comb_t2c_l = combinedExpT2Coeffs[lev];
+	num_sets = t1c_l.size();
+	for (set=0; set<num_sets; ++set) {
+	  // map from multiIndex to corresponding set in combinedMultiIndex
+	  size_t comb_set = set; // TO DO
+	  comb_t1c_l[comb_set]                 += t1c_l[set];
+	  if (use_derivs) comb_t2c_l[comb_set] += t2c_l[set];
+	}
       }
     }
-    if (expansionCoeffGradFlag) {
-      Real* exp_t1_grad_i = exp_t1_coeff_grads[i];
-      const RealVector& stored_grad
-	= stored_gradient_nonbasis_variables(c_vars);
-      size_t num_deriv_vars = stored_grad.length();
-      if (combine_type == ADD_COMBINE)
-	for (j=0; j<num_deriv_vars; ++j)
-	  exp_t1_grad_i[j] += stored_grad[j];
-      else if (combine_type == MULT_COMBINE)
-	for (j=0; j<num_deriv_vars; ++j)
-	  exp_t1_grad_i[j] = exp_t1_grad_i[j] * stored_val
-	                   + stored_grad[j]   * curr_val;
+  }
+  if (expansionCoeffGradFlag) { // sum up expansionType1CoeffGrads
+    std::map<UShortArray, RealMatrix2DArray>::iterator eg1_it;
+    for (eg1_it  = expansionType1CoeffGrads.begin();
+	 eg1_it != expansionType1CoeffGrads.end(); ++eg1_it) {
+      const RealMatrix2DArray& t1g = eg1_it->second;
+      num_lev = t1g.size();
+      for (lev=0; lev<num_lev; ++lev) {
+	const RealMatrixArray& t1g_l = t1g[lev];
+	RealMatrixArray&  comb_t1g_l = combinedExpT1CoeffGrads[lev];
+	num_sets = t1g_l.size();
+	for (set=0; set<num_sets; ++set) {
+	  // map from multiIndex to corresponding set in combinedMultiIndex
+	  size_t comb_set = set; // TO DO
+	  comb_t1g_l[comb_set] += t1g_l[set];
+	}
+      }
+    }
+  }
+  
+  /*
+  for (lev=0; lev<num_lev; ++lev) {
+    const UShort3DArray& key_l = colloc_key[lev];
+    num_sets = key_l.size();
+    for (set=0; set<num_sets; ++set) {
+      num_tp_pts = key_l[set].size();
+      for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
+	const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+	// Step 1: sum up expansionType{1,2}Coeffs: combining ML-MF value
+	// estimates provides a prediction of the combined QoI at the
+	// current interpolation level
+	if (expansionCoeffFlag) {
+	  // coefficients are hierarchical surpluses
+	  Real& comb_t1c_lsp = comb_t1c_ls[pt];
+	  Real* comb_t2c_lsp = (use_derivs) ? comb_t2c_ls[pt] : NULL;
+	  for (ec1_it  = expansionType1Coeffs.begin(),
+	       ec2_it  = expansionType2Coeffs.begin();
+	       ec1_it != expansionType1Coeffs.end() &&
+	       ec2_it != expansionType2Coeffs.end(); ++ec1_it, ++ec2_it) {
+	    comb_t1c_lsp += (ec1_it == expT1CoeffsIter) ?
+	      value(c_vars, sm_mi, colloc_key, ec1_it->second,
+		    ec2_it->second, lev) :
+	      stored_value(c_vars, ec1_it->first, ec1_it->second,
+			   ec2_it->second, lev);
+	    if (use_derivs) {
+	      const RealVector& basis_grad = (ec2_it == expT2CoeffsIter) ?
+		gradient_basis_variables(c_vars, ..., lev) :
+		stored_gradient_basis_variables(c_vars, ec2_it->first, ...,lev);
+	      for (v=0; v<num_v; ++v)
+		comb_t2c_lsp[v] += basis_grad[v];
+	    }
+	  }
+	}
+	if (expansionCoeffGradFlag) {
+	  Real* comb_t1g_lsp = comb_t1g_ls[pt];
+	  // sum up expansionType1CoeffGrads
+	  for (eg1_it  = expansionType1CoeffGrads.begin();
+	       eg1_it != expansionType1CoeffGrads.end(); ++eg1_it) {
+	    const RealVector& nonbasis_grad = (eg1_it == expT1CoeffGradsIter) ?
+	      gradient_nonbasis_variables(c_vars, sm_mi, colloc_key,
+					  eg1_it->second, lev-1) :
+	      stored_gradient_nonbasis_variables(c_vars, eg1_it->first,
+						 eg1_it->second, lev-1);
+	    for (v=0; v<num_v; ++v)
+	      comb_t1g_lsp[v] += nonbasis_grad[v];
+	  }
+	}
+
+	// Step 2: subtract off the combined QoI for the previous interp lev
+	// in order to interpolate the combined result hierarchically
+	if (lev) { // subtract surpluses from lev-1
+	  comb_t1c_lsp -=
+	    value(c_vars, sm_mi, colloc_key, combinedExpT1Coeffs,
+		  combinedExpT2Coeffs, lev-1);
+	  if (use_derivs)
+	    comb_t2c_lsp -=
+	      gradient_basis_variables(c_vars, sm_mi, colloc_key,
+				       combinedExpT1Coeffs,
+				       combinedExpT2Coeffs, lev-1);
+	  if (expansionCoeffGradFlag)
+	    comb_t1g_lsp -=
+	      gradient_nonbasis_variables(c_vars, sm_mi, colloc_key,
+					  combinedExpT1CoeffGrads, lev-1);
+	}
+      }
     }
   }
   */

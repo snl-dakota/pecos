@@ -68,18 +68,6 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
-  /*
-  /// store current state within storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void store_coefficients(size_t index = _NPOS);
-  /// restore previous state from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  void restore_coefficients(size_t index = _NPOS);
-  /// swap storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index] with active
-  /// current data
-  void swap_coefficients(size_t index);
-  /// remove a redundant entry from storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
-  /// prior to combine_coefficients (default is pop_back)
-  void remove_stored_coefficients(size_t index = _NPOS);
-  */
   /// clear inactive data from expansionType{1Coeffs,2Coeffs,1CoeffGrads}
   void clear_inactive();
 
@@ -410,17 +398,12 @@ private:
   std::map<UShortArray, std::map<UShortArray, RealMatrix> >
     poppedExpT1CoeffGrads;
 
-  /*
-  /// storage of expansionType1Coeffs state for subsequent
-  /// restoration/combination
-  RealVector3DArray storedExpType1Coeffs;
-  /// storage of expansionType2Coeffs state for subsequent
-  /// restoration/combination
-  RealMatrix3DArray storedExpType2Coeffs;
-  /// storage of expansionType1CoeffGrads state for subsequent
-  /// restoration/combination
-  RealMatrix3DArray storedExpType1CoeffGrads;
-  */
+  /// roll up of expansion type 1 coefficients across all keys
+  RealVector2DArray combinedExpT1Coeffs;
+  /// roll up of expansion type 2 coefficient gradients across all keys
+  RealMatrix2DArray combinedExpT2Coeffs;
+  /// roll up of expansion type 1 coefficient gradients across all keys
+  RealMatrix2DArray combinedExpT1CoeffGrads;
 };
 
 
