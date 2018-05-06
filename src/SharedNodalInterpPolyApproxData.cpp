@@ -175,6 +175,39 @@ void SharedNodalInterpPolyApproxData::increment_component_sobol()
 }
 
 
+void SharedNodalInterpPolyApproxData::pre_combine_data()
+{
+  // store active state prior to roll up (which activates the maximal expansion)
+  prevActiveKey = activeKey;
+
+  /*
+  // For open-ended number of stored grids: retrieve the most refined from the
+  // existing grids (from sequence specification + any subsequent refinement).
+  // Note: if we assume that multiIndex subsets are enforced across a hierarchy,
+  // then the maximal grid is sufficient to allow reinterpolation of all data.
+  size_t max_index = driverRep->maximal_grid();
+  if (max_index != _NPOS)
+    { driverRep->swap_grid(max_index); allocate_component_sobol(); }
+
+  // Most general: overlay all grid refinement levels to create a new superset:
+  //size_t new_index = driverRep->overlay_maximal_grid();
+  //if (current_grid_index() != new_index) driverRep->swap_grid(new_index);
+
+  return max_index;
+  */
+
+  active_key(driverRep->maximal_grid()); // update activeKey + active iterators
+}
+
+
+void SharedNodalInterpPolyApproxData::post_combine_data()
+{
+  // now that combined arrays have been updated, restore the active state
+  // that existed prior to roll up
+  active_key(prevActiveKey);
+}
+
+
 void SharedNodalInterpPolyApproxData::
 accumulate_barycentric(RealVector& t1_accumulator, const UShortArray& lev_index,
 		       const UShortArray& key_p)

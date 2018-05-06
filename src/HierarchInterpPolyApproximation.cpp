@@ -300,18 +300,13 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-  // Don't mix additive approach for hierarchical interpolation with
-  // multiplicative/combined across multilevel-multifidelity
-  if (data_rep->expConfigOptions.combineType != ADD_COMBINE) {
-    PCerr << "Error: only additive combinations supported in HierarchInterp"
-	  << "PolyApproximation::combine_coefficients()." << std::endl;
-    abort_handler(-1);
-  }
-
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
-  const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
-  size_t lev, set, pt, v, num_lev = colloc_key.size(), num_sets, num_tp_pts,
-    cntr = 0, c_index, num_v = surrData.num_derivative_variables();
+  //HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  //const std::map<UShortArray, UShort3DArray>& sm_mi_map
+  //  = hsg_driver->smolyak_multi_index_map();
+  const UShort4DArray&   comb_key = data_rep->combinedCollocKey;
+  const Sizet3DArray& comb_sm_map = data_rep->combinedSmolyakMultiIndexMap;
+  size_t i, lev, set, pt, num_lev = comb_key.size(), num_sets, num_tp_pts,
+    num_v = surrData.num_derivative_variables();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
   // Note: STL resize() is no-op if already correct size, but Teuchos
@@ -319,15 +314,15 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   combinedExpT1Coeffs.resize(num_lev); combinedExpT2Coeffs.resize(num_lev);
   combinedExpT1CoeffGrads.resize(num_lev);
   for (lev=0; lev<num_lev; ++lev) {
-    const UShort3DArray& key_l = colloc_key[lev];
-    num_sets = key_l.size();
+    const UShort3DArray& comb_key_l = comb_key[lev];
+    num_sets = comb_key_l.size();
     RealVectorArray& comb_t1c_l = combinedExpT1Coeffs[lev];
     RealMatrixArray& comb_t2c_l = combinedExpT2Coeffs[lev];
     RealMatrixArray& comb_t1g_l = combinedExpT1CoeffGrads[lev];
     comb_t1c_l.resize(num_sets);  comb_t2c_l.resize(num_sets);
     comb_t1g_l.resize(num_sets);
     for (set=0; set<num_sets; ++set) {
-      num_tp_pts = key_l[set].size();
+      num_tp_pts = comb_key_l[set].size();
       RealVector& comb_t1c_ls = comb_t1c_l[set];
       RealMatrix& comb_t2c_ls = comb_t2c_l[set];
       RealMatrix& comb_t1g_ls = comb_t1g_l[set];
@@ -348,9 +343,9 @@ void HierarchInterpPolyApproximation::combine_coefficients()
     std::map<UShortArray, RealVector2DArray>::iterator ec1_it;
     std::map<UShortArray, RealMatrix2DArray>::iterator ec2_it;
     for (ec1_it  = expansionType1Coeffs.begin(),
-	 ec2_it  = expansionType2Coeffs.begin();
+	 ec2_it  = expansionType2Coeffs.begin(), i=0;
 	 ec1_it != expansionType1Coeffs.end() &&
-	 ec2_it != expansionType2Coeffs.end(); ++ec1_it, ++ec2_it) {
+	 ec2_it != expansionType2Coeffs.end(); ++ec1_it, ++ec2_it, ++i) {
       const RealVector2DArray& t1c = ec1_it->second;
       const RealMatrix2DArray& t2c = ec2_it->second;
       num_lev = t1c.size();
@@ -359,10 +354,11 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 	const RealMatrixArray& t2c_l = t2c[lev];
 	RealVectorArray&  comb_t1c_l = combinedExpT1Coeffs[lev];
 	RealMatrixArray&  comb_t2c_l = combinedExpT2Coeffs[lev];
+	const SizetArray& comb_sm_map_il = comb_sm_map[i][lev];
 	num_sets = t1c_l.size();
 	for (set=0; set<num_sets; ++set) {
 	  // map from multiIndex to corresponding set in combinedMultiIndex
-	  size_t comb_set = set; // TO DO
+	  size_t comb_set = comb_sm_map_il[set];
 	  comb_t1c_l[comb_set]                 += t1c_l[set];
 	  if (use_derivs) comb_t2c_l[comb_set] += t2c_l[set];
 	}
@@ -371,92 +367,23 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   }
   if (expansionCoeffGradFlag) { // sum up expansionType1CoeffGrads
     std::map<UShortArray, RealMatrix2DArray>::iterator eg1_it;
-    for (eg1_it  = expansionType1CoeffGrads.begin();
-	 eg1_it != expansionType1CoeffGrads.end(); ++eg1_it) {
+    for (eg1_it  = expansionType1CoeffGrads.begin(), i=0;
+	 eg1_it != expansionType1CoeffGrads.end(); ++eg1_it, ++i) {
       const RealMatrix2DArray& t1g = eg1_it->second;
       num_lev = t1g.size();
       for (lev=0; lev<num_lev; ++lev) {
 	const RealMatrixArray& t1g_l = t1g[lev];
 	RealMatrixArray&  comb_t1g_l = combinedExpT1CoeffGrads[lev];
+	const SizetArray& comb_sm_map_il = comb_sm_map[i][lev];
 	num_sets = t1g_l.size();
 	for (set=0; set<num_sets; ++set) {
 	  // map from multiIndex to corresponding set in combinedMultiIndex
-	  size_t comb_set = set; // TO DO
+	  size_t comb_set = comb_sm_map_il[set];
 	  comb_t1g_l[comb_set] += t1g_l[set];
 	}
       }
     }
   }
-  
-  /*
-  for (lev=0; lev<num_lev; ++lev) {
-    const UShort3DArray& key_l = colloc_key[lev];
-    num_sets = key_l.size();
-    for (set=0; set<num_sets; ++set) {
-      num_tp_pts = key_l[set].size();
-      for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	const RealVector& c_vars = sdv_array[c_index].continuous_variables();
-	// Step 1: sum up expansionType{1,2}Coeffs: combining ML-MF value
-	// estimates provides a prediction of the combined QoI at the
-	// current interpolation level
-	if (expansionCoeffFlag) {
-	  // coefficients are hierarchical surpluses
-	  Real& comb_t1c_lsp = comb_t1c_ls[pt];
-	  Real* comb_t2c_lsp = (use_derivs) ? comb_t2c_ls[pt] : NULL;
-	  for (ec1_it  = expansionType1Coeffs.begin(),
-	       ec2_it  = expansionType2Coeffs.begin();
-	       ec1_it != expansionType1Coeffs.end() &&
-	       ec2_it != expansionType2Coeffs.end(); ++ec1_it, ++ec2_it) {
-	    comb_t1c_lsp += (ec1_it == expT1CoeffsIter) ?
-	      value(c_vars, sm_mi, colloc_key, ec1_it->second,
-		    ec2_it->second, lev) :
-	      stored_value(c_vars, ec1_it->first, ec1_it->second,
-			   ec2_it->second, lev);
-	    if (use_derivs) {
-	      const RealVector& basis_grad = (ec2_it == expT2CoeffsIter) ?
-		gradient_basis_variables(c_vars, ..., lev) :
-		stored_gradient_basis_variables(c_vars, ec2_it->first, ...,lev);
-	      for (v=0; v<num_v; ++v)
-		comb_t2c_lsp[v] += basis_grad[v];
-	    }
-	  }
-	}
-	if (expansionCoeffGradFlag) {
-	  Real* comb_t1g_lsp = comb_t1g_ls[pt];
-	  // sum up expansionType1CoeffGrads
-	  for (eg1_it  = expansionType1CoeffGrads.begin();
-	       eg1_it != expansionType1CoeffGrads.end(); ++eg1_it) {
-	    const RealVector& nonbasis_grad = (eg1_it == expT1CoeffGradsIter) ?
-	      gradient_nonbasis_variables(c_vars, sm_mi, colloc_key,
-					  eg1_it->second, lev-1) :
-	      stored_gradient_nonbasis_variables(c_vars, eg1_it->first,
-						 eg1_it->second, lev-1);
-	    for (v=0; v<num_v; ++v)
-	      comb_t1g_lsp[v] += nonbasis_grad[v];
-	  }
-	}
-
-	// Step 2: subtract off the combined QoI for the previous interp lev
-	// in order to interpolate the combined result hierarchically
-	if (lev) { // subtract surpluses from lev-1
-	  comb_t1c_lsp -=
-	    value(c_vars, sm_mi, colloc_key, combinedExpT1Coeffs,
-		  combinedExpT2Coeffs, lev-1);
-	  if (use_derivs)
-	    comb_t2c_lsp -=
-	      gradient_basis_variables(c_vars, sm_mi, colloc_key,
-				       combinedExpT1Coeffs,
-				       combinedExpT2Coeffs, lev-1);
-	  if (expansionCoeffGradFlag)
-	    comb_t1g_lsp -=
-	      gradient_nonbasis_variables(c_vars, sm_mi, colloc_key,
-					  combinedExpT1CoeffGrads, lev-1);
-	}
-      }
-    }
-  }
-  */
 
   computedMean = computedVariance = 0;
 }

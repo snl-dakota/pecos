@@ -205,6 +205,25 @@ protected:
   //void pre_finalize_data();
   //void post_finalize_data();
 
+  //
+  //- Heading: Member functions
+  //
+
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi (consistent ordering assumed); define append_mi_map
+  /// and append_mi_map_ref
+  void append_leading_multi_index(const UShort2DArray& append_mi,
+				  UShort2DArray& combined_mi,
+				  SizetSet& append_mi_map,
+				  size_t& append_mi_map_ref);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi, updating sparse_indices, exp_coeffs, and exp_coeff_grads
+  void append_sparse_multi_index(SizetSet& sparse_indices,
+				 const UShort2DArray& append_mi,
+				 UShort2DArray& combined_mi,
+				 RealVector& exp_coeffs,
+				 RealMatrix& exp_coeff_grads);
+
 private:
 
   //

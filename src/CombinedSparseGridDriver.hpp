@@ -106,7 +106,7 @@ public:
   const UShort2DArray& smolyak_multi_index() const;
   /// return smolyakMultiIndex[key]
   const UShort2DArray& smolyak_multi_index(const UShortArray& key) const;
-  /// return smolyakMultiIndex[key]
+  /// return smolyakMultiIndex
   const std::map<UShortArray, UShort2DArray>& smolyak_multi_index_map() const;
 
   /// return smolyakCoeffs[activeKey]
@@ -183,7 +183,8 @@ protected:
   /// iterator for active entry within collocKey
   std::map<UShortArray, UShort3DArray>::iterator collocKeyIter;
 
-  /// of tensor products to the unique collocation points evaluated
+  /// numSmolyakIndices-by-numTensorProductPts array for linking the set of
+  /// tensor products to the unique collocation points evaluated
   std::map<UShortArray, Sizet2DArray> collocIndices;
   /// iterator for active entry within collocIndices
   std::map<UShortArray, Sizet2DArray>::iterator collocIndIter;

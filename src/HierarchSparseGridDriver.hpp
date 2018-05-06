@@ -111,6 +111,21 @@ public:
 		       short growth_rate = MODERATE_RESTRICTED_GROWTH,
 		       bool track_colloc_indices = true);
 
+  void assign_collocation_key();
+  void assign_collocation_key(const UShort3DArray& sm_mi,
+			      UShort4DArray& colloc_key, bool ordered = true);
+  void update_collocation_key();
+  void update_collocation_key(const UShort3DArray& sm_mi,
+			      UShort4DArray& colloc_key);
+
+  void assign_collocation_indices();
+  void assign_collocation_indices(const UShort4DArray& colloc_key,
+				  Sizet3DArray& colloc_indices,
+				  bool ordered = true);
+  void update_collocation_indices();
+  void update_collocation_indices(const UShort4DArray& colloc_key,
+				  Sizet3DArray& colloc_indices);
+
   /// return incrementSets
   const UShortArray& increment_sets() const;
 
@@ -118,6 +133,8 @@ public:
   const UShort3DArray& smolyak_multi_index() const;
   /// return smolyakMultiIndex[key]
   const UShort3DArray& smolyak_multi_index(const UShortArray& key) const;
+  /// return smolyakMultiIndex
+  const std::map<UShortArray, UShort3DArray>& smolyak_multi_index_map() const;
 
   /// set trackCollocIndices
   void track_collocation_indices(bool track_colloc_indices);
@@ -157,10 +174,6 @@ private:
   void update_active_iterators();
   
   void update_smolyak_multi_index(bool clear_sm_mi = false);
-  void assign_collocation_key();
-  void update_collocation_key();
-  void assign_collocation_indices();
-  void update_collocation_indices();
 
   /// kernel routine used for trial set and full sparse grid computations
   void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
@@ -279,6 +292,22 @@ inline void HierarchSparseGridDriver::update_active_iterators()
 }
 
 
+inline void HierarchSparseGridDriver::assign_collocation_key()
+{ assign_collocation_key(smolMIIter->second, collocKeyIter->second); }
+
+
+inline void HierarchSparseGridDriver::update_collocation_key()
+{ update_collocation_key(smolMIIter->second, collocKeyIter->second); }
+
+
+inline void HierarchSparseGridDriver::assign_collocation_indices()
+{ assign_collocation_indices(collocKeyIter->second, collocIndices); }
+
+
+inline void HierarchSparseGridDriver::update_collocation_indices()
+{ update_collocation_indices(collocKeyIter->second, collocIndices); }
+
+
 inline void HierarchSparseGridDriver::clear_keys()
 {
   SparseGridDriver::clear_keys();
@@ -335,6 +364,11 @@ smolyak_multi_index(const UShortArray& key) const
   }
   return cit->second;
 }
+
+
+inline const std::map<UShortArray, UShort3DArray>& HierarchSparseGridDriver::
+smolyak_multi_index_map() const
+{ return smolyakMultiIndex; }
 
 
 inline void HierarchSparseGridDriver::

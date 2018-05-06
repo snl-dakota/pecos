@@ -415,8 +415,9 @@ void RegressOrthogPolyApproximation::adapt_regression()
   // update sparseIndices (which corresponds to bestAdaptedMultiIndex) to
   // point into shared multiIndex, reorder expansionCoeff{s,Grads} as needed,
   // and clear bestAdaptedMultiIndex
-  data_rep->append_multi_index(sparse_ind, bestAdaptedMultiIndex, mi,
-			       expCoeffsIter->second,expCoeffGradsIter->second);
+  data_rep->
+    append_sparse_multi_index(sparse_ind, bestAdaptedMultiIndex, mi,
+			      expCoeffsIter->second, expCoeffGradsIter->second);
   bestAdaptedMultiIndex.clear();
 
   // now update sobolIndexMap and sparseSobolIndexMap

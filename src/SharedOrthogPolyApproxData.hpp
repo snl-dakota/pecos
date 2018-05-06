@@ -200,44 +200,6 @@ protected:
   /// overlay or a new QoI in orthogonal least interpolation)
   void update_component_sobol(const UShort2DArray& multi_index);
 
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi
-  void append_multi_index(const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi
-  void append_multi_index(const UShortArraySet& append_mi,
-			  UShort2DArray& combined_mi);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi; define append_mi_map and append_mi_map_ref
-  void append_multi_index(const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi, SizetArray& append_mi_map,
-			  size_t& append_mi_map_ref);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi; define append_mi_map and append_mi_map_ref
-  void append_multi_index(const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi, SizetSet& append_mi_map,
-			  size_t& append_mi_map_ref);
-  /// append multi-indices from append_mi that do not already appear in
-  /// combined_mi (consistent ordering assumed); define append_mi_map
-  /// and append_mi_map_ref
-  void append_leading_multi_index(const UShort2DArray& append_mi,
-				  UShort2DArray& combined_mi,
-				  SizetSet& append_mi_map,
-				  size_t& append_mi_map_ref);
-  /// append multi-indices from append_mi that do not already appear
-  /// in combined_mi, using previously defined append_mi_map and
-  /// append_mi_map_ref for mapping
-  void append_multi_index(const UShort2DArray& append_mi,
-			  SizetArray& append_mi_map, size_t& append_mi_map_ref,
-			  UShort2DArray& combined_mi);
-  /// append multi-indices from append_mi that do not already appear in
-  /// combined_mi, updating sparse_indices, exp_coeffs, and exp_coeff_grads
-  void append_multi_index(SizetSet& sparse_indices,
-			  const UShort2DArray& append_mi,
-			  UShort2DArray& combined_mi, RealVector& exp_coeffs,
-			  RealMatrix& exp_coeff_grads);
-
   /// define multi_index_c based on products of terms contained within
   /// multi_index_a and multi_index_b
   void product_multi_index(const UShort2DArray& multi_index_a,

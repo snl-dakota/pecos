@@ -95,6 +95,60 @@ void SharedHierarchInterpPolyApproxData::increment_component_sobol()
 }
 
 
+void SharedHierarchInterpPolyApproxData::pre_combine_data()
+{
+  // Don't mix additive approach for hierarchical interpolation with
+  // multiplicative/combined across multilevel-multifidelity
+  if (expConfigOptions.combineType != ADD_COMBINE) {
+    PCerr << "Error: only additive combinations supported in SharedHierarch"
+	  << "InterpPolyApproxData::pre_combine_data()." << std::endl;
+    abort_handler(-1);
+  }
+
+  // combine all multiIndex keys into combinedMultiIndex{,Map}
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+  const std::map<UShortArray, UShort3DArray>& sm_mi_map
+    = hsg_driver->smolyak_multi_index_map();
+  size_t i, num_combine = sm_mi_map.size(), lev, num_lev, combine_sm_map_ref;
+  combinedSmolyakMultiIndex.clear();
+  combinedSmolyakMultiIndexMap.resize(num_combine);
+  std::map<UShortArray, UShort3DArray>::const_iterator sm_cit;
+  for (sm_cit=sm_mi_map.begin(), i=0; sm_cit!=sm_mi_map.end(); ++sm_cit, ++i) {
+    const UShort3DArray& sm_mi = sm_cit->second;
+    num_lev = sm_mi.size();
+    if (num_lev > combinedSmolyakMultiIndex.size())
+      combinedSmolyakMultiIndex.resize(num_lev);
+    Sizet2DArray& comb_sm_map_i = combinedSmolyakMultiIndexMap[i];
+    for (lev=0; lev<num_lev; ++lev)
+      append_multi_index(sm_mi[lev], combinedSmolyakMultiIndex[lev],
+			 comb_sm_map_i[lev], combine_sm_map_ref);
+  }
+
+  /*
+  // Flag indicates unstructured set ordering (can't assume a no-op return if
+  // level/set counts are consistent)
+  hsg_driver->
+    assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey, false);
+
+  const std::map<UShortArray, UShort4DArray>& key_map
+    = hsg_driver->collocation_key_map();
+  size_t i, num_combine = key_map.size(), combine_key_map_ref;
+  combinedCollocKey.clear();  combinedCollocKeyMap.resize(num_combine);
+  std::map<UShortArray, UShort4DArray>::iterator key_it;
+  for (key_it=key_map.begin(), i=0; key_it!=key_map.end(); ++key_it, ++i) {
+    append_multi_index(key_it->second, combinedCollocKey,
+		       combinedCollocKeyMap[i], combine_key_map_ref);
+  }
+  */
+}
+
+
+/*
+void SharedHierarchInterpPolyApproxData::post_combine_data()
+{ }
+*/
+
+
 size_t SharedHierarchInterpPolyApproxData::
 barycentric_exact_index(const UShortArray& basis_index)
 {

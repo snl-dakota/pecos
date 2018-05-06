@@ -66,6 +66,9 @@ protected:
   void allocate_component_sobol();
   void increment_component_sobol();
 
+  void pre_combine_data();
+  void post_combine_data();
+
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
@@ -153,6 +156,11 @@ private:
   /// expansion moments using sufficiently high-order Gaussian quadrature
   /// rules on the interpolant
   IntegrationDriver expMomentIntDriver;
+
+  /// the active key to restore following the expansion combination process
+  /// (this process activates a maximal expansion to facilitate assembly of
+  /// combined multi-indices and coefficients)
+  UShortArray prevActiveKey;
 
   /// map from random index to unique nonZerosMapArray
   SizetArray nonZerosMapIndices;

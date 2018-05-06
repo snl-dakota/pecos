@@ -61,6 +61,9 @@ protected:
   void allocate_component_sobol();
   void increment_component_sobol();
 
+  void pre_combine_data();
+  //void post_combine_data();
+
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
@@ -101,6 +104,16 @@ private:
   /// used for precomputation of the maximum hierarchical key index
   /// for a particular basis_index
   UShortArray tpMaxKeys;
+
+  /// multi-index that is the final result of a sequence of expansion
+  /// combinations (from HierarchSparseGridDriver::collocKey)
+  UShort3DArray combinedSmolyakMultiIndex;
+  /// mapping of terms when aggregating HierarchSparseGridDriver::collocKey
+  /// into combinedCollocKey in pre_combine_data() (case ADD_COMBINE)
+  Sizet3DArray combinedSmolyakMultiIndexMap;
+  /// multi-index that is the final result of a sequence of expansion
+  /// combinations (from HierarchSparseGridDriver::collocKey)
+  UShort4DArray combinedCollocKey;
 };
 
 

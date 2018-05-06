@@ -423,6 +423,31 @@ protected:
   //- Heading: Member functions
   //
 
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi
+  void append_multi_index(const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi
+  void append_multi_index(const UShortArraySet& append_mi,
+			  UShort2DArray& combined_mi);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi; define append_mi_map and append_mi_map_ref
+  void append_multi_index(const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi, SizetArray& append_mi_map,
+			  size_t& append_mi_map_ref);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi; define append_mi_map and append_mi_map_ref
+  void append_multi_index(const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi, SizetSet& append_mi_map,
+			  size_t& append_mi_map_ref);
+  /// append multi-indices from append_mi that do not already appear in
+  /// combined_mi, using previously defined append_mi_map and append_mi_map_ref
+  /// for mapping
+  void append_multi_index(const UShort2DArray& append_mi,
+			  SizetArray& append_mi_map, size_t& append_mi_map_ref,
+			  UShort2DArray& combined_mi);
+
   /// return true if matching key values within random variable subset
   bool match_random_key(const UShortArray& key_1, 
 			const UShortArray& key_2) const;

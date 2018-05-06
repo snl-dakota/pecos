@@ -210,6 +210,104 @@ void SharedRegressOrthogPolyApproxData::pre_push_data()
 }
 
 
+/** Append append_mi to combined_mi, and update append_mi_map (SizetSet)
+    and append_mi_map_ref to facilitate related aggregations without
+    repeated searching.  This case is used when append_mi and
+    combined_mi follow a consistent order without gaps. */
+void SharedRegressOrthogPolyApproxData::
+append_leading_multi_index(const UShort2DArray& append_mi,
+			   UShort2DArray& combined_mi,
+			   SizetSet& append_mi_map, size_t& append_mi_map_ref)
+{
+  size_t i, num_app_mi = append_mi.size();
+  append_mi_map.clear();
+  if (combined_mi.empty()) {
+    combined_mi = append_mi;
+    append_mi_map_ref = 0;
+    for (i=0; i<num_app_mi; ++i)
+      append_mi_map.insert(i);
+  }
+  else {
+    append_mi_map_ref = combined_mi.size();
+    for (i=0; i<num_app_mi; ++i) {
+      append_mi_map.insert(i);
+      if (i < append_mi_map_ref) {
+	// verify that append_mi is a leading subset with consistent ordering
+	if (append_mi[i] != combined_mi[i]) {
+	  PCerr << "Error: leading subset assumption violated in SharedRegress"
+		<< "OrthogPolyApproxData::append_leading_multi_index()."
+		<< std::endl;
+	  abort_handler(-1);
+	}
+      }
+      else
+	combined_mi.push_back(append_mi[i]);
+    }
+  }
+}
+
+
+/** Append to combined_mi based on append_mi and previously defined
+    append_mi_map and append_mi_map_ref.  If necessary, update
+    append_mi_map and append_mi_map_ref. */
+void SharedRegressOrthogPolyApproxData::
+append_sparse_multi_index(SizetSet& sparse_indices,
+			  const UShort2DArray& append_mi,
+			  UShort2DArray& combined_mi,
+			  RealVector& exp_coeffs, RealMatrix& exp_coeff_grads)
+{
+  if (combined_mi.empty())
+    combined_mi = append_mi; // sparse indices & exp coeffs are up to date
+  else { // merge multi-indices; update sparse_indices and exp coeffs
+
+    bool sparse_append = !sparse_indices.empty(); // empty if over-determined LS
+    bool coeff_flag = !exp_coeffs.empty(), grad_flag = !exp_coeff_grads.empty();
+    RealVector old_exp_coeffs; RealMatrix old_exp_coeff_grads;
+    if (coeff_flag) old_exp_coeffs      = exp_coeffs;
+    if (grad_flag)  old_exp_coeff_grads = exp_coeff_grads;
+ 
+    size_t i, combined_index, coeff_index, num_app_mi = append_mi.size(),
+      num_coeff = (sparse_append) ? sparse_indices.size() : num_app_mi;
+    SizetArray append_mi_map(num_app_mi);
+    for (i=0; i<num_app_mi; ++i) {
+      const UShortArray& search_mi = append_mi[i];
+      combined_index = find_index(combined_mi, search_mi);
+      if (combined_index == _NPOS) { // search_mi does not exist in combined_mi
+	combined_index = combined_mi.size();
+	combined_mi.push_back(search_mi);
+      }
+      append_mi_map[i] = combined_index;
+      if (!sparse_append)
+	sparse_indices.insert(combined_index); // becomes resorted
+    }
+
+    SizetSet old_sparse_indices; SizetSet::iterator it;
+    if (sparse_append) {
+      old_sparse_indices = sparse_indices;
+      sparse_indices.clear();
+      for (it=old_sparse_indices.begin(); it!=old_sparse_indices.end(); ++it)
+	sparse_indices.insert(append_mi_map[*it]); // becomes resorted
+      it = old_sparse_indices.begin(); // reset for loop to follow
+    }
+
+    // now that resorting is completed, reorder exp_coeff{s,_grads} to match
+    for (i=0; i<num_coeff; ++i) {
+      if (sparse_append) { combined_index = append_mi_map[*it]; ++it; }
+      else                 combined_index = append_mi_map[i];
+      coeff_index = std::distance(sparse_indices.begin(),
+				  sparse_indices.find(combined_index));
+      if (coeff_flag) exp_coeffs[coeff_index] = old_exp_coeffs[i];
+      if (grad_flag) {
+	Real *exp_coeff_grad     = exp_coeff_grads[coeff_index],
+	     *old_exp_coeff_grad = old_exp_coeff_grads[i];
+	for (size_t j=0; j<numVars; ++j)
+	  exp_coeff_grad[j] = old_exp_coeff_grad[j];
+      }
+    }
+  }
+}
+
+
 void SharedRegressOrthogPolyApproxData::
 increment_trial_set(const UShortArray& trial_set, UShort2DArray& aggregated_mi)
 {
@@ -282,7 +380,7 @@ set_restriction(UShort2DArray& aggregated_mi, SizetSet& sparse_indices,
     tp_mi.resize(num_save);
     tp_mi_map.resize(num_save); tp_mi_map_ref.resize(num_save);
     // update sparse_indices using old_aggregated_mi
-    // TO DO: review SharedOrthogPolyApproxData::append_multi_index(SizetSet&)
+    // TO DO: review SharedPolyApproxData::append_multi_index(SizetSet&)
     //        for more efficient logic?
     for (cit=old_sparse_indices.begin(); cit!=old_sparse_indices.end(); ++cit)
       sparse_indices.insert(find_index(aggregated_mi, old_aggregated_mi[*cit]));

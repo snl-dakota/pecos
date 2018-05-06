@@ -85,8 +85,6 @@ protected:
   void decrement_data();
   void post_push_data();
   void post_finalize_data();
-  void pre_combine_data();
-  void post_combine_data();
 
   void clear_inactive_data();
 
@@ -370,11 +368,6 @@ private:
   //
   //- Heading: Data
   //
-
-  /// the active key to restore following the expansion combination process
-  /// (this process activates a maximal expansion to facilitate assembly of
-  /// combined multi-indices and coefficients)
-  UShortArray prevActiveKey;
 
   /// the gradient of a tensor-product interpolant; a contributor to
   /// approxGradient
