@@ -54,12 +54,6 @@ public:
   void compute_grid(RealMatrix& var_sets);
   int grid_size();
 
-  /*
-  void store_grid(size_t index = _NPOS);
-  void restore_grid(size_t index = _NPOS);
-  void remove_stored_grid(size_t index = _NPOS);
-  void swap_grid(size_t index);
-  */
   void clear_inactive();
   void clear_keys();
 
@@ -145,10 +139,10 @@ public:
   const UShort4DArray& collocation_key() const;
   /// return collocKey[key]
   const UShort4DArray& collocation_key(const UShortArray& key) const;
-  /// return collocIndices
+  /// return collocIndices[activeKey]
   const Sizet3DArray& collocation_indices() const;
-  // return collocIndices[key]
-  //const Sizet3DArray& collocation_indices(const UShortArray& key) const;
+  /// return collocIndices[key]
+  const Sizet3DArray& collocation_indices(const UShortArray& key) const;
 
   /// discriminate portions of the level-set hierarchy that are
   /// reference sets from those in the current increment
@@ -224,10 +218,9 @@ private:
 
   /// levels-by-index sets-by-numTensorProductPts array for linking the
   /// set of tensor products to the unique collocation points evaluated
-  Sizet3DArray collocIndices;
-  //std::map<UShortArray, Sizet3DArray> collocIndices;
-  // iterator for active entry within collocIndices
-  //std::map<UShortArray, Sizet3DArray>::iterator collocIndIter;
+  std::map<UShortArray, Sizet3DArray> collocIndices;
+  /// iterator for active entry within collocIndices
+  std::map<UShortArray, Sizet3DArray>::iterator collocIndIter;
 
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
@@ -282,13 +275,11 @@ inline void HierarchSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, UShort4DArray> u4a_pair(activeKey, UShort4DArray());
     collocKeyIter = collocKey.insert(u4a_pair).first;
   }
-  /*
   collocIndIter = collocIndices.find(activeKey);
   if (collocIndIter == collocIndices.end()) {
     std::pair<UShortArray, Sizet3DArray> s3a_pair(activeKey, Sizet3DArray());
     collocIndIter = collocIndices.insert(s3a_pair).first;
   }
-  */
 }
 
 
@@ -301,22 +292,22 @@ inline void HierarchSparseGridDriver::update_collocation_key()
 
 
 inline void HierarchSparseGridDriver::assign_collocation_indices()
-{ assign_collocation_indices(collocKeyIter->second, collocIndices); }
+{ assign_collocation_indices(collocKeyIter->second, collocIndIter->second); }
 
 
 inline void HierarchSparseGridDriver::update_collocation_indices()
-{ update_collocation_indices(collocKeyIter->second, collocIndices); }
+{ update_collocation_indices(collocKeyIter->second, collocIndIter->second); }
 
 
 inline void HierarchSparseGridDriver::clear_keys()
 {
   SparseGridDriver::clear_keys();
 
-  smolyakMultiIndex.clear();  smolMIIter = smolyakMultiIndex.end();
-  collocKey.clear();       collocKeyIter = collocKey.end();
-  //collocIndices.clear(); collocIndIter = collocIndices.end();
-  type1WeightSets.clear(); type2WeightSets.clear();
-  poppedT1WtSets.clear();  poppedT2WtSets.clear();
+  smolyakMultiIndex.clear();  smolMIIter    = smolyakMultiIndex.end();
+  collocKey.clear();          collocKeyIter = collocKey.end();
+  collocIndices.clear();      collocIndIter = collocIndices.end();
+  type1WeightSets.clear();    type2WeightSets.clear();
+  poppedT1WtSets.clear();     poppedT2WtSets.clear();
 }
 
 
@@ -399,10 +390,9 @@ collocation_key(const UShortArray& key) const
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
-{ return collocIndices; /*collocIndIter->second;*/ }
+{ return collocIndIter->second; }
 
 
-/*
 inline const Sizet3DArray& HierarchSparseGridDriver::
 collocation_indices(const UShortArray& key) const
 {
@@ -417,6 +407,7 @@ collocation_indices(const UShortArray& key) const
 }
 
 
+/*
 inline const RealVector& HierarchSparseGridDriver::type1_weight_sets() // const
 {
   if (concatT1WeightSets.length() != numCollocPts) {

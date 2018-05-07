@@ -124,12 +124,12 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
 			 comb_sm_map_i[lev], combine_sm_map_ref);
   }
 
-  /*
   // Flag indicates unstructured set ordering (can't assume a no-op return if
   // level/set counts are consistent)
   hsg_driver->
     assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey, false);
 
+  /*
   const std::map<UShortArray, UShort4DArray>& key_map
     = hsg_driver->collocation_key_map();
   size_t i, num_combine = key_map.size(), combine_key_map_ref;
@@ -141,12 +141,6 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
   }
   */
 }
-
-
-/*
-void SharedHierarchInterpPolyApproxData::post_combine_data()
-{ }
-*/
 
 
 size_t SharedHierarchInterpPolyApproxData::

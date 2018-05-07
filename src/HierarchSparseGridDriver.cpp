@@ -38,94 +38,6 @@ initialize_grid(unsigned short ssg_level, const RealVector& dim_pref,
 }
 
 
-/*
-void HierarchSparseGridDriver::store_grid(size_t index)
-{
-  size_t stored_len = storedType1WeightSets.size();
-  if (index == _NPOS || index == stored_len) { // append
-    storedLevMultiIndex.push_back(smolyakMultiIndex);
-    storedCollocKey.push_back(collocKey);
-    //storedCollocIndices.push_back(collocIndices);
-    storedType1WeightSets.push_back(type1WeightSets);
-    storedType2WeightSets.push_back(type2WeightSets);
-  }
-  else if (index < stored_len) { // replace
-    storedLevMultiIndex[index]   = smolyakMultiIndex;
-    storedCollocKey[index]       = collocKey;
-    //storedCollocIndices[index] = collocIndices;
-    storedType1WeightSets[index] = type1WeightSets;
-    storedType2WeightSets[index] = type2WeightSets;
-  }
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in "
-	  << "HierarchSparseGridDriver::store_grid()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void HierarchSparseGridDriver::restore_grid(size_t index)
-{
-  size_t stored_len = storedType1WeightSets.size();
-  if (index == _NPOS) {
-    smolyakMultiIndex = storedLevMultiIndex.back();
-    collocKey       = storedCollocKey.back();
-    //collocIndices = storedCollocIndices.back();
-    type1WeightSets = storedType1WeightSets.back();
-    type2WeightSets = storedType2WeightSets.back();
-  }
-  else if (index < stored_len) {
-    smolyakMultiIndex = storedLevMultiIndex[index];
-    collocKey       = storedCollocKey[index];
-    //collocIndices = storedCollocIndices[index];
-    type1WeightSets = storedType1WeightSets[index];
-    type2WeightSets = storedType2WeightSets[index];
-  }
-  else {
-    PCerr << "Error: bad index (" << index << ") passed in "
-	  << "HierarchSparseGridDriver::restore_grid()" << std::endl;
-    abort_handler(-1);
-  }
-}
-
-
-void HierarchSparseGridDriver::remove_stored_grid(size_t index)
-{
-  size_t stored_len = storedType1WeightSets.size();
-  if (index == _NPOS || index == stored_len) {
-    storedLevMultiIndex.pop_back();
-    storedCollocKey.pop_back();
-    //storedCollocIndices.pop_back();
-    storedType1WeightSets.pop_back();
-    storedType2WeightSets.pop_back();
-  }
-  else if (index < stored_len) {
-    UShort4DArray::iterator u4it = storedLevMultiIndex.begin();
-    std::advance(u4it, index); storedLevMultiIndex.erase(u4it);
-    UShort5DArray::iterator u5it = storedCollocKey.begin();
-    std::advance(u5it, index); storedCollocKey.erase(u5it);
-    //Sizet4DArray::iterator s4it = storedCollocIndices.begin();
-    //std::advance(s4it, index); storedCollocIndices.erase(s4it);
-    RealVector3DArray::iterator vit = storedType1WeightSets.begin();
-    std::advance(vit, index); storedType1WeightSets.erase(vit);
-    RealMatrix3DArray::iterator mit = storedType2WeightSets.begin();
-    std::advance(mit, index); storedType2WeightSets.erase(mit);
-  }
-}
-
-
-void HierarchSparseGridDriver::swap_grid(size_t index)
-{
-  std::swap(storedLevMultiIndex[index], smolyakMultiIndex);
-  std::swap(storedCollocKey[index],     collocKey);
-  //std::swap(storedCollocIndices[index], collocIndices);
-
-  std::swap(storedType1WeightSets[index], type1WeightSets);
-  std::swap(storedType2WeightSets[index], type2WeightSets);
-}
-*/
-
-
 void HierarchSparseGridDriver::clear_inactive()
 {
   // list erase could be done in two passes...
@@ -135,17 +47,17 @@ void HierarchSparseGridDriver::clear_inactive()
   std::map<UShortArray, UShort3DArray>::iterator sm_it
     = smolyakMultiIndex.begin();
   std::map<UShortArray, UShort4DArray>::iterator ck_it = collocKey.begin();
-  //std::map<UShortArray, Sizet3DArray>::iterator ci_it = collocIndices.begin();
+  std::map<UShortArray, Sizet3DArray>::iterator  ci_it = collocIndices.begin();
   std::map<UShortArray, RealVector2DArray>::iterator t1_it
     = type1WeightSets.begin();
   std::map<UShortArray, RealMatrix2DArray>::iterator t2_it
     = type2WeightSets.begin();
   while (sm_it != smolyakMultiIndex.end())
     if (sm_it == smolMIIter) // preserve active
-      { ++sm_it; ++ck_it; /*++ci_it;*/ ++t1_it; ++t2_it; }
+      { ++sm_it; ++ck_it; ++ci_it; ++t1_it; ++t2_it; }
     else { // clear inactive: postfix increments manage iterator invalidations
       smolyakMultiIndex.erase(sm_it++);
-      collocKey.erase(ck_it++); //collocIndices.erase(ci_it++);
+      collocKey.erase(ck_it++);       collocIndices.erase(ci_it++);
       type1WeightSets.erase(t1_it++); type2WeightSets.erase(t2_it++);
     }
 }
@@ -933,7 +845,7 @@ void HierarchSparseGridDriver::restore_set()
 void HierarchSparseGridDriver::pop_trial_set()
 {
   UShort4DArray& colloc_key = collocKeyIter->second;
-  //Sizet3DArray&  colloc_ind = collocIndIter->second;
+  Sizet3DArray&  colloc_ind = collocIndIter->second;
   UShort3DArray&      sm_mi =    smolMIIter->second;
   if (nestedGrid)
     numCollocPts -= colloc_key[trialLevel].back().size();// subtract # trial pts
@@ -958,7 +870,7 @@ void HierarchSparseGridDriver::pop_trial_set()
   sm_mi[trialLevel].pop_back(); // tr_set no longer valid
   colloc_key[trialLevel].pop_back();
   if (trackCollocIndices)
-    collocIndices[trialLevel].pop_back();
+    colloc_ind[trialLevel].pop_back();
 }
 
 
