@@ -57,7 +57,7 @@ public:
   void clear_inactive();
   void clear_keys();
 
-  const UShortArray& maximal_grid() const;
+  //const UShortArray& maximal_grid() const;
 
   void initialize_sets();
   void push_trial_set(const UShortArray& set);

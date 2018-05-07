@@ -63,6 +63,7 @@ void HierarchSparseGridDriver::clear_inactive()
 }
 
 
+/*
 const UShortArray& HierarchSparseGridDriver::maximal_grid() const
 {
   std::map<UShortArray, RealVector2DArray>::const_iterator
@@ -82,6 +83,7 @@ const UShortArray& HierarchSparseGridDriver::maximal_grid() const
   }
   return max_cit->first;
 }
+*/
 
 
 int HierarchSparseGridDriver::grid_size()

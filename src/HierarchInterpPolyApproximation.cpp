@@ -300,15 +300,13 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
-  //HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  //const std::map<UShortArray, UShort3DArray>& sm_mi_map
-  //  = hsg_driver->smolyak_multi_index_map();
   const UShort4DArray&   comb_key = data_rep->combinedCollocKey;
   const Sizet3DArray& comb_sm_map = data_rep->combinedSmolyakMultiIndexMap;
   size_t i, lev, set, pt, num_lev = comb_key.size(), num_sets, num_tp_pts,
     num_v = surrData.num_derivative_variables();
   bool use_derivs = data_rep->basisConfigOptions.useDerivs;
 
+  // Resize combined expansion arrays and initialize to zero.
   // Note: STL resize() is no-op if already correct size, but Teuchos
   // resize()/reshape() is not; therefore protect the latter.
   combinedExpT1Coeffs.resize(num_lev); combinedExpT2Coeffs.resize(num_lev);
@@ -326,15 +324,19 @@ void HierarchInterpPolyApproximation::combine_coefficients()
       RealVector& comb_t1c_ls = comb_t1c_l[set];
       RealMatrix& comb_t2c_ls = comb_t2c_l[set];
       RealMatrix& comb_t1g_ls = comb_t1g_l[set];
-      if (comb_t1c_ls.length() != num_tp_pts)
-	comb_t1c_ls.size(num_tp_pts);          // init to 0
-      else comb_t1c_ls = 0.;
-      if (comb_t2c_ls.numRows() != num_v || comb_t2c_ls.numCols() != num_tp_pts)
-	comb_t2c_ls.shape(num_v, num_tp_pts);  // init to 0
-      else comb_t2c_ls = 0.;
-      if (comb_t1g_ls.numRows() != num_v || comb_t1g_ls.numCols() != num_tp_pts)
-	comb_t1g_ls.shape(num_v, num_tp_pts); // init to 0
-      else comb_t1g_ls = 0.;
+      if (expansionCoeffFlag) {
+	if (comb_t1c_ls.length() != num_tp_pts)
+	  comb_t1c_ls.size(num_tp_pts);         // init to 0
+	else comb_t1c_ls = 0.;
+	if (comb_t2c_ls.numRows()!=num_v || comb_t2c_ls.numCols()!=num_tp_pts)
+	  comb_t2c_ls.shape(num_v, num_tp_pts); // init to 0
+	else comb_t2c_ls = 0.;
+      }
+      if (expansionCoeffGradFlag) {
+	if (comb_t1g_ls.numRows()!=num_v || comb_t1g_ls.numCols()!=num_tp_pts)
+	  comb_t1g_ls.shape(num_v, num_tp_pts); // init to 0
+	else comb_t1g_ls = 0.;
+      }
     }
   }
 
@@ -357,8 +359,9 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 	const SizetArray& comb_sm_map_il = comb_sm_map[i][lev];
 	num_sets = t1c_l.size();
 	for (set=0; set<num_sets; ++set) {
-	  // map from multiIndex to corresponding set in combinedMultiIndex
-	  size_t comb_set = comb_sm_map_il[set];
+	  // map from smolyakMultiIndex for this model to corresponding set
+	  // in combinedSmolyakMultiIndex
+	  size_t comb_set = comb_sm_map_il[set];//***
 	  comb_t1c_l[comb_set]                 += t1c_l[set];
 	  if (use_derivs) comb_t2c_l[comb_set] += t2c_l[set];
 	}
@@ -377,7 +380,6 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 	const SizetArray& comb_sm_map_il = comb_sm_map[i][lev];
 	num_sets = t1g_l.size();
 	for (set=0; set<num_sets; ++set) {
-	  // map from multiIndex to corresponding set in combinedMultiIndex
 	  size_t comb_set = comb_sm_map_il[set];
 	  comb_t1g_l[comb_set] += t1g_l[set];
 	}

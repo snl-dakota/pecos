@@ -106,13 +106,13 @@ private:
   UShortArray tpMaxKeys;
 
   /// multi-index that is the final result of a sequence of expansion
-  /// combinations (from HierarchSparseGridDriver::collocKey)
+  /// combinations (defined from HierarchSparseGridDriver::collocKey)
   UShort3DArray combinedSmolyakMultiIndex;
   /// mapping of terms when aggregating HierarchSparseGridDriver::collocKey
   /// into combinedCollocKey in pre_combine_data() (case ADD_COMBINE)
   Sizet3DArray combinedSmolyakMultiIndexMap;
   /// multi-index that is the final result of a sequence of expansion
-  /// combinations (from HierarchSparseGridDriver::collocKey)
+  /// combinations (defined from combinedSmolyakMultiIndex)
   UShort4DArray combinedCollocKey;
 };
 
