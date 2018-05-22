@@ -134,39 +134,96 @@ private:
   /// changes to surrData
   void update_expansion_coefficients();
 
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using weights from the CombinedSparseGridDriver
+  Real mean(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs);
+  /// helper function to evaluate mean(x) for passed coefficients
+  Real mean(const RealVector& x, const RealVector& exp_t1_coeffs, 
+	    const RealMatrix& exp_t2_coeffs);
+  /// helper function to evaluate mean_gradient() for passed coefficient grads
+  const RealVector& mean_gradient(const RealMatrix& exp_t1_coeff_grads);
+  /// helper function to evaluate mean_gradient(x) for passed coefficients
+  const RealVector& mean_gradient(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const RealMatrix& exp_t1_coeff_grads, const SizetArray& dvv);
+  /// helper function to evaluate covariance() for passed coefficients
+  Real covariance(Real mean_1, Real mean_2,    const RealVector& exp_t1c_1,
+		  const RealMatrix& exp_t2c_1, const RealVector& exp_t1c_2,
+		  const RealMatrix& exp_t2c_2);
+  /// helper function to evaluate covariance(x) for passed coefficients
+  Real covariance(const RealVector& x, Real mean_1, Real mean_2,
+		  const RealVector& exp_t1c_1, const RealMatrix& exp_t2c_1,
+		  const RealVector& exp_t1c_2, const RealMatrix& exp_t2c_2);
+  /// helper function to evaluate variance_gradient() for passed coefficients
+  const RealVector& variance_gradient(Real mean,
+				      const RealVector& exp_t1_coeffs,
+				      const RealMatrix& exp_t1_coeff_grads);
+  /// helper function to evaluate variance_gradient(x) for passed coefficients
+  const RealVector& variance_gradient(const RealVector& x, Real mean,
+    const RealVector& mean_grad,      const RealVector& exp_t1_coeffs,
+    const RealMatrix& exp_t2_coeffs,  const RealMatrix& exp_t1_coeff_grads,
+    const SizetArray& dvv);
+  
   /// compute the mean of a tensor interpolant on a tensor grid;
   /// contributes to mean(x)
-  Real tensor_product_mean(const RealVector& x, const UShortArray& lev_index,
+  Real tensor_product_mean(const RealVector& x, const RealVector& exp_t1_coeffs,
+    const RealMatrix& exp_t2_coeffs, const UShortArray& lev_index,
     const UShort2DArray& key, const SizetArray& colloc_index);
 
   /// compute the gradient of the mean of a tensor interpolant on a
   /// tensor grid; contributes to mean_gradient(x)
   const RealVector& tensor_product_mean_gradient(const RealVector& x,
-    const UShortArray& lev_index,   const UShort2DArray& key,
-    const SizetArray& colloc_index, const SizetArray& dvv);
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const RealMatrix& exp_t1_coeff_grads, const UShortArray& lev_index,
+    const UShort2DArray& key, const SizetArray& colloc_index,
+    const SizetArray& dvv);
 
   /// compute the covariance of two tensor interpolants on the same
   /// tensor grid using an interpolation of products or product of
   /// interpolants approach; contributes to covariance(x, poly_approx_2)
-  Real tensor_product_covariance(const RealVector& x,
-    const UShortArray& lev_index,   const UShort2DArray& key,
-    const SizetArray& colloc_index, NodalInterpPolyApproximation* nip_approx_2);
-  /// compute the covariance of two tensor interpolants on different
-  /// tensor grids using a product of interpolants approach;
+  Real tensor_product_covariance(const RealVector& x, Real mean_1, Real mean_2,
+    const RealVector& exp_t1c_1, const RealMatrix& exp_t2c_1,
+    const RealVector& exp_t1c_2, const RealMatrix& exp_t2c_2,
+    const UShortArray& lev_index, const UShort2DArray& key,
+    const SizetArray& colloc_index);
+
+  /// compute the covariance of two tensor interpolants on the same grid;
   /// contributes to covariance(x, poly_approx_2)
-  Real tensor_product_covariance(const RealVector& x,
-    const UShortArray& lev_index_1, const UShort2DArray& key_1,
-    const SizetArray& colloc_index_1, const UShortArray& lev_index_2,
-    const UShort2DArray& key_2, const SizetArray& colloc_index_2,
-    NodalInterpPolyApproximation* nip_approx_2);
+  Real product_of_interpolants(const RealVector& x, Real mean_1, Real mean_2,
+			       const RealVector& exp_t1c_1,
+			       const RealMatrix& exp_t2c_1,
+			       const RealVector& exp_t1c_2,
+			       const RealMatrix& exp_t2c_2,
+			       const UShortArray& lev_index,
+			       const UShort2DArray& colloc_key,
+			       const SizetArray& colloc_index);
+  /// compute the covariance of two tensor interpolants on different tensor
+  /// grids using a PRODUCT_OF_INTERPOLANTS_FULL approach; contributes to
+  /// covariance(x, poly_approx_2)
+  Real product_of_interpolants(const RealVector& x, Real mean_1, Real mean_2,
+			       const RealVector& exp_t1c_1,
+			       const RealMatrix& exp_t2c_1,
+			       const RealVector& exp_t1c_2,
+			       const RealMatrix& exp_t2c_2,
+			       const UShortArray& lev_index_1,
+			       const UShort2DArray& colloc_key_1,
+			       const SizetArray& colloc_index_1,
+			       const UShortArray& lev_index_2,
+			       const UShort2DArray& colloc_key_2,
+			       const SizetArray& colloc_index_2);
 
   /// compute the gradient of the variance of a tensor interpolant on
   /// a tensor grid using an interpolation of products or product of
   /// interpolants approach; contributes to variance_gradient(x)
   const RealVector& tensor_product_variance_gradient(const RealVector& x,
-    const UShortArray& lev_index, const UShort2DArray& key,
-    const SizetArray& colloc_index, const SizetArray& dvv);
+    Real mean, const RealVector& mean_grad, const RealVector& exp_t1_coeffs,
+    const RealMatrix& exp_t2_coeffs, const RealMatrix& exp_t1_coeff_grads,
+    const UShortArray& lev_index,    const UShort2DArray& key,
+    const SizetArray& colloc_index,  const SizetArray& dvv);
 
+  /// compute the value of an expansion
+  Real value(const RealVector& x, const RealVector& exp_t1_coeffs,
+	     const RealMatrix& exp_t2_coeffs);
   /// compute the value of a tensor-product interpolant
   Real value(const RealVector& x, const RealVector& exp_t1_coeffs,
 	     const RealMatrix& exp_t2_coeffs, const UShortArray& lev_index,
@@ -181,6 +238,9 @@ private:
 	     const RealMatrixArray& t2_coeffs, const UShort3DArray& colloc_key,
 	     const SizetList& subset_indices);
 
+  /// compute the gradient of an expansion with respect to basis variables
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs);
   /// compute the gradient of a tensor-product interpolant with respect
   /// to basis variables
   const RealVector& gradient_basis_variables(const RealVector& x,
@@ -211,6 +271,9 @@ private:
     const RealVectorArray& t1_coeffs, const RealMatrixArray& t2_coeffs,
     const UShort3DArray& colloc_key, const SizetList& subset_indices);
 
+  /// compute the gradient of an expansion with respect to non-basis variables
+  const RealVector& gradient_nonbasis_variables(const RealVector& x,
+    const RealMatrix& exp_t1_coeff_grads);
   /// compute the gradient of a tensor-product interpolant with respect
   /// to non-basis variables
   const RealVector& gradient_nonbasis_variables(const RealVector& x,
@@ -223,9 +286,6 @@ private:
     const IntArray& sm_coeffs, const UShort3DArray& colloc_key,
     const Sizet2DArray& colloc_index);
 
-  /// compute the expected value of the interpolant given by t{1,2}_coeffs
-  /// using weights from the CombinedSparseGridDriver
-  Real expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs);
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using t{1,2}_wts
   Real expectation(const RealVector& t1_coeffs, const RealVector& t1_wts,
@@ -373,6 +433,102 @@ approximation_coefficients(const RealVector& approx_coeffs, bool normalized)
 }
 
 
+inline Real NodalInterpPolyApproximation::mean()
+{
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::mean()" << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  //IntegrationDriver* driver_rep = data_rep->driverRep;
+  //if (!driver_rep->track_unique_product_weights()) {
+  //  PCerr << "Error: unique product weights required in "
+  //	  << "NodalInterpPolyApproximation::mean()" << std::endl;
+  //  abort_handler(-1);
+  //}
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedMean & 1))
+    return numericalMoments[0];
+
+  Real mu = mean(expT1CoeffsIter->second, expT2CoeffsIter->second);
+  if (std_mode)
+    { numericalMoments[0] = mu; computedMean |= 1; }
+  return mu;
+}
+
+
+inline Real NodalInterpPolyApproximation::mean(const RealVector& x)
+{
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::mean()" << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if (all_mode && (computedMean & 1) &&
+      data_rep->match_nonrandom_vars(x, xPrevMean))
+    return numericalMoments[0];
+
+  Real mu = mean(x, expT1CoeffsIter->second, expT2CoeffsIter->second);
+  if (all_mode)
+    { numericalMoments[0] = mu; computedMean |= 1; xPrevMean = x; }
+  return mu;
+}
+
+
+inline const RealVector& NodalInterpPolyApproximation::mean_gradient()
+{
+  // Error check for required data
+  if (!expansionCoeffGradFlag) {
+    PCerr << "Error: expansion coefficient gradients not defined in Nodal"
+	  << "InterpPolyApproximation::mean_gradient()." << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedMean & 2))
+    return meanGradient;
+
+  if (std_mode) computedMean |=  2; //   activate 2-bit
+  else          computedMean &= ~2; // deactivate 2-bit: protect mixed usage
+  return mean_gradient(expT1CoeffGradsIter->second);
+}
+
+
+inline const RealVector& NodalInterpPolyApproximation::
+mean_gradient(const RealVector& x, const SizetArray& dvv)
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  // if already computed, return previous result
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if ( all_mode && (computedMean & 2) &&
+       data_rep->match_nonrandom_vars(x, xPrevMeanGrad) ) // && dvv == dvvPrev)
+    switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE:
+      return tpMeanGrad;   break;
+    case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+      return meanGradient; break;
+    }
+
+  // compute the gradient of the mean
+  if (all_mode) { computedMean |=  2; xPrevMeanGrad = x; }
+  else            computedMean &= ~2; // deactivate 2-bit: protect mixed usage
+  return mean_gradient(x, expT1CoeffsIter->second, expT2CoeffsIter->second,
+		       expT1CoeffGradsIter->second, dvv);
+}
+
+
 /** In this case, all expansion variables are random variables and the
     variance of the expansion uses an interpolation of response products. */
 inline Real NodalInterpPolyApproximation::variance()
@@ -386,14 +542,210 @@ inline Real NodalInterpPolyApproximation::variance(const RealVector& x)
 { return covariance(x, this); }
 
 
-inline Real NodalInterpPolyApproximation::
-expectation(const RealVector& t1_coeffs, const RealMatrix& t2_coeffs)
+inline const RealVector& NodalInterpPolyApproximation::variance_gradient()
 {
-  // This version defaults to type1/2 weights from CombinedSparseGridDriver
-  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
-  IntegrationDriver* int_driver = data_rep->driverRep;
-  return expectation(t1_coeffs, int_driver->type1_weight_sets(),
-		     t2_coeffs, int_driver->type2_weight_sets());
+  // Error check for required data
+  if (!expansionCoeffFlag || !expansionCoeffGradFlag) {
+    PCerr << "Error: insufficient expansion coefficient data in NodalInterp"
+	  << "PolyApproximation::variance_gradient()." << std::endl;
+    abort_handler(-1);
+  }
+
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  IntegrationDriver* driver_rep = data_rep->driverRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+  if (std_mode && (computedVariance & 2))
+    return varianceGradient;
+
+  if (std_mode) computedVariance |=  2;
+  else          computedVariance &= ~2; // deactivate 2-bit: protect mixed usage
+  return variance_gradient(mean(), expT1CoeffsIter->second,
+			   expT1CoeffGradsIter->second);
+}
+
+
+inline const RealVector& NodalInterpPolyApproximation::
+variance_gradient(const RealVector& x, const SizetArray& dvv)
+{
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  // if already computed, return previous result
+  bool all_mode = !data_rep->nonRandomIndices.empty();
+  if ( all_mode && (computedVariance & 2) &&
+       data_rep->match_nonrandom_vars(x, xPrevVarGrad) ) // && dvv == dvvPrev)
+    switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
+    case QUADRATURE:
+      return tpVarianceGrad;   break;
+    case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID:
+      return varianceGradient; break;
+    }
+
+  if (all_mode) { computedVariance |=  2; xPrevVarGrad = x; }
+  else            computedVariance &= ~2;//deactivate 2-bit: protect mixed usage
+  // don't compute expansion mean/mean_grad for case where tensor
+  // means/mean_grads will be used
+  return (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST) ?
+    variance_gradient(x, 0., meanGradient, // dummy values (not used)
+		      expT1CoeffsIter->second, expT2CoeffsIter->second,
+		      expT1CoeffGradsIter->second, dvv) :
+    variance_gradient(x, mean(x), mean_gradient(x, dvv),
+		      expT1CoeffsIter->second, expT2CoeffsIter->second,
+		      expT1CoeffGradsIter->second,dvv);
+}
+
+
+inline Real NodalInterpPolyApproximation::
+covariance(PolynomialApproximation* poly_approx_2)
+{
+  NodalInterpPolyApproximation* nip_approx_2
+    = (NodalInterpPolyApproximation*)poly_approx_2;
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  IntegrationDriver* driver_rep = data_rep->driverRep;
+  bool same  = (this == nip_approx_2),
+    std_mode = data_rep->nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expansionCoeffFlag || ( !same && !nip_approx_2->expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  // TO DO:
+  //if (!driver_rep->track_unique_product_weights()) {
+  //  PCerr << "Error: unique product weights required in "
+  //	    << "NodalInterpPolyApproximation::covariance()" << std::endl;
+  //  abort_handler(-1);
+  //}
+
+  if (same && std_mode && (computedVariance & 1))
+    return numericalMoments[1];
+
+  Real mean_1 = mean(), mean_2 = (same) ? mean_1 : nip_approx_2->mean(),
+    covar = covariance(mean_1, mean_2, expT1CoeffsIter->second,
+		       expT2CoeffsIter->second,
+		       nip_approx_2->expT1CoeffsIter->second,
+		       nip_approx_2->expT2CoeffsIter->second);
+  if (same && std_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; }
+  return covar;
+}
+
+
+inline Real NodalInterpPolyApproximation::
+covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  NodalInterpPolyApproximation* nip_approx_2
+    = (NodalInterpPolyApproximation*)poly_approx_2;
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  bool same = (this == nip_approx_2),
+    all_mode = !data_rep->nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expansionCoeffFlag || ( !same && !nip_approx_2->expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if ( same && all_mode && (computedVariance & 1) &&
+       data_rep->match_nonrandom_vars(x, xPrevVar) )
+    return numericalMoments[1];
+
+  Real mean_1, mean_2;
+  if (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST)
+    mean_1 = mean_2 = 0.; // don't compute exp mean since tensor means used
+  else {
+    mean_1 = mean(x);
+    mean_2 = (same) ? mean_1 : nip_approx_2->mean(x);
+  }
+  Real covar = covariance(x, mean_1, mean_2, expT1CoeffsIter->second,
+			  expT2CoeffsIter->second,
+			  nip_approx_2->expT1CoeffsIter->second,
+			  nip_approx_2->expT2CoeffsIter->second);
+  if (same && all_mode)
+    { numericalMoments[1] = covar; computedVariance |= 1; xPrevVar = x; }
+  return covar;
+}
+
+
+inline Real NodalInterpPolyApproximation::
+combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  NodalInterpPolyApproximation* nip_approx_2
+    = (NodalInterpPolyApproximation*)poly_approx_2;
+  const RealVector& comb_t1c_2 = nip_approx_2->combinedExpT1Coeffs;
+  const RealMatrix& comb_t2c_2 = nip_approx_2->combinedExpT2Coeffs;
+  Real mean_1 = mean(combinedExpT1Coeffs, combinedExpT2Coeffs),
+    mean_2 = (this == nip_approx_2) ? mean_1 : mean(comb_t1c_2, comb_t2c_2);
+  return covariance(mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
+		    comb_t1c_2, comb_t2c_2);
+}
+
+
+inline Real NodalInterpPolyApproximation::
+combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  NodalInterpPolyApproximation* nip_approx_2
+    = (NodalInterpPolyApproximation*)poly_approx_2;
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  const RealVector& comb_t1c_2 = nip_approx_2->combinedExpT1Coeffs;
+  const RealMatrix& comb_t2c_2 = nip_approx_2->combinedExpT2Coeffs;
+  Real mean_1, mean_2;
+  if (data_rep->momentInterpType == PRODUCT_OF_INTERPOLANTS_FAST)
+    mean_1 = mean_2 = 0.; // don't compute exp mean since tensor means used
+  else {
+    mean_1 = mean(x, combinedExpT1Coeffs, combinedExpT2Coeffs);
+    mean_2 = (this == nip_approx_2) ? mean_1 : mean(x, comb_t1c_2, comb_t2c_2);
+  }
+  return covariance(x, mean_1, mean_2, combinedExpT1Coeffs, combinedExpT2Coeffs,
+		    comb_t1c_2, comb_t2c_2);
+}
+
+
+inline Real NodalInterpPolyApproximation::value(const RealVector& x)
+{
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "NodalInterpPolyApproximation::value()" << std::endl;
+    abort_handler(-1);
+  }
+
+  return value(x, expT1CoeffsIter->second, expT2CoeffsIter->second);
+}
+
+
+inline const RealVector& NodalInterpPolyApproximation::
+gradient_basis_variables(const RealVector& x)
+{
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  return gradient_basis_variables(x, expT1CoeffsIter->second,
+				  expT2CoeffsIter->second);
+}
+
+
+inline const RealVector& NodalInterpPolyApproximation::
+gradient_nonbasis_variables(const RealVector& x)
+{
+  // Error check for required data
+  if (!expansionCoeffGradFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::gradient_nonbasis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  return gradient_nonbasis_variables(x, expT1CoeffGradsIter->second);
 }
 
 

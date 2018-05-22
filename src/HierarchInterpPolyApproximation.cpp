@@ -1022,10 +1022,40 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
-  PCerr << "Error: HierarchInterpPolyApproximation::combined_covariance() not "
-	<< "yet implemented." << std::endl;
-  abort_handler(-1);
-  return 0.;
+  HierarchInterpPolyApproximation* hip_approx_2 = 
+    (HierarchInterpPolyApproximation*)poly_approx_2;
+  bool same = (this == hip_approx_2);
+  /*
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  bool std_mode = data_rep->nonRandomIndices.empty();
+
+  // Error check for required data
+  if ( !expansionCoeffFlag ||
+       ( !same && !hip_approx_2->expansionCoeffFlag ) ) {
+    PCerr << "Error: expansion coefficients not defined in "
+	  << "HierarchInterpPolyApproximation::covariance()" << std::endl;
+    abort_handler(-1);
+  }
+
+  if (same && std_mode && (computedVariance & 1))
+    return numericalMoments[1];
+  */
+  RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
+  Real mean_1 = mean(), mean_2 = (same) ? mean_1 : hip_approx_2->mean();
+  central_product_interpolant(hip_approx_2, mean_1, mean_2,
+			      cov_t1_coeffs, cov_t2_coeffs);
+
+  // evaluate expectation of these t1/t2 coefficients
+  Real covar = expectation(cov_t1_coeffs, cov_t2_coeffs);
+  // Note: separation of reference and increment using cov_t{1,2}_coeffs
+  // with {ref,incr}_key would provide an increment of a central moment
+  // around an invariant center.  For hierarchical covariance, one must
+  // also account for the change in mean as in delta_covariance().
+
+  //if (same && std_mode)
+  //  { numericalMoments[1] = covar; computedVariance |= 1; }
+  return covar;
 }
 
 

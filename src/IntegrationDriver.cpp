@@ -372,32 +372,6 @@ initialize_grid(const std::vector<BasisPolynomial>& poly_basis)
 }
 
 
-/*
-void IntegrationDriver::store_grid(size_t index)
-{ } // default is no-op
-
-
-void IntegrationDriver::restore_grid(size_t index)
-{ } // default is no-op
-
-
-void IntegrationDriver::remove_stored_grid(size_t index)
-{ } // default is no-op
-
-
-void IntegrationDriver::swap_grid(size_t index)
-{
-  if (driverRep)
-    driverRep->swap_grid(index);
-  else {
-    PCerr << "Error: swap_grid() not available for this driver type."
-	  << std::endl;
-    abort_handler(-1);
-  }
-}
-*/
-
-
 void IntegrationDriver::active_key(const UShortArray& key)
 {
   if (driverRep)
