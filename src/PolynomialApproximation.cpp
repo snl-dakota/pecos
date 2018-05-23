@@ -354,6 +354,47 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 }
 
 
+Real PolynomialApproximation::
+combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: combined_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: combined_covariance() not available for this polynomial "
+	<< "approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_covariance(PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_combined_covariance() not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
+Real PolynomialApproximation::
+delta_combined_covariance(const RealVector& x,
+			  PolynomialApproximation* poly_approx_2)
+{
+  PCerr << "Error: delta_combined_covariance() not available for this "
+	<< "polynomial approximation type." << std::endl;
+  abort_handler(-1);
+  return 0.;
+}
+
+
 Real PolynomialApproximation::delta_mean()
 {
   PCerr << "Error: delta_mean() not available for this polynomial "

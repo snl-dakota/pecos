@@ -141,15 +141,6 @@ public:
   /// parameter vector, treating a subset of the variables as random
   virtual Real covariance(const RealVector& x,
 			  PolynomialApproximation* poly_approx_2) = 0;
-
-  /// return the covariance between two combined response expansions,
-  /// treating all variables as random
-  virtual Real combined_covariance(PolynomialApproximation* poly_approx_2) = 0;
-  /// return the covariance between two combined response expansions for a
-  /// given parameter vector, treating a subset of the variables as random
-  virtual Real combined_covariance(const RealVector& x,
-				   PolynomialApproximation* poly_approx_2) = 0;
-
   /// return the change in covariance between two response expansions,
   /// treating all variables as random
   virtual Real delta_covariance(PolynomialApproximation* poly_approx_2);
@@ -157,6 +148,23 @@ public:
   /// given parameter vector, treating a subset of the variables as random
   virtual Real delta_covariance(const RealVector& x,
 				PolynomialApproximation* poly_approx_2);
+
+  /// return the covariance between two combined response expansions,
+  /// treating all variables as random
+  virtual Real combined_covariance(PolynomialApproximation* poly_approx_2);
+  /// return the covariance between two combined response expansions for a
+  /// given parameter vector, treating a subset of the variables as random
+  virtual Real combined_covariance(const RealVector& x,
+				   PolynomialApproximation* poly_approx_2);
+  /// return the change in covariance between two combined response expansions,
+  /// treating all variables as random
+  virtual Real
+    delta_combined_covariance(PolynomialApproximation* poly_approx_2);
+  /// return the change in covariance between two combined response expansions
+  /// for given parameter vector, treating a subset of the variables as random
+  virtual Real
+    delta_combined_covariance(const RealVector& x,
+			      PolynomialApproximation* poly_approx_2);
 
   /// return the change in mean between two response expansions,
   /// treating all variables as random
