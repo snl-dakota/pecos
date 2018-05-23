@@ -2468,22 +2468,15 @@ gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
 
 
 const RealVector& NodalInterpPolyApproximation::
-gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
+gradient_basis_variables(const RealVector& x, const RealVector& exp_t1_coeffs,
+			 const RealMatrix& exp_t2_coeffs, const SizetArray& dvv)
 {
-  // Error check for required data
-  if (!expansionCoeffFlag) {
-    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
-	  << "Approximation::gradient_basis_variables()" << std::endl;
-    abort_handler(-1);
-  }
-
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: {
     TensorProductDriver* tpq_driver = (TensorProductDriver*)data_rep->driver();
-    return gradient_basis_variables(x, expT1CoeffsIter->second,
-				    expT2CoeffsIter->second,
+    return gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
 				    tpq_driver->level_index(),
 				    tpq_driver->collocation_key(), dvv);
     break;
@@ -2491,8 +2484,7 @@ gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
   case COMBINED_SPARSE_GRID: case INCREMENTAL_SPARSE_GRID: {
     CombinedSparseGridDriver* csg_driver
       = (CombinedSparseGridDriver*)data_rep->driver();
-    return gradient_basis_variables(x, expT1CoeffsIter->second,
-				    expT2CoeffsIter->second,
+    return gradient_basis_variables(x, exp_t1_coeffs, exp_t2_coeffs,
 				    csg_driver->smolyak_multi_index(),
 				    csg_driver->smolyak_coefficients(),
 				    csg_driver->collocation_key(),

@@ -119,6 +119,7 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
     if (num_lev > combinedSmolyakMultiIndex.size())
       combinedSmolyakMultiIndex.resize(num_lev);
     Sizet2DArray& comb_sm_map_i = combinedSmolyakMultiIndexMap[i];
+    comb_sm_map_i.resize(num_lev);
     for (lev=0; lev<num_lev; ++lev)
       append_multi_index(sm_mi[lev], combinedSmolyakMultiIndex[lev],
 			 comb_sm_map_i[lev], combine_sm_map_ref);

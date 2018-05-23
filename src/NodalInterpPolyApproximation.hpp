@@ -241,6 +241,11 @@ private:
   /// compute the gradient of an expansion with respect to basis variables
   const RealVector& gradient_basis_variables(const RealVector& x,
     const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs);
+  /// compute the gradient of an expansion with respect to basis variables
+  /// for given DVV
+  const RealVector& gradient_basis_variables(const RealVector& x,
+    const RealVector& exp_t1_coeffs, const RealMatrix& exp_t2_coeffs,
+    const SizetArray& dvv);
   /// compute the gradient of a tensor-product interpolant with respect
   /// to basis variables
   const RealVector& gradient_basis_variables(const RealVector& x,
@@ -732,6 +737,21 @@ gradient_basis_variables(const RealVector& x)
 
   return gradient_basis_variables(x, expT1CoeffsIter->second,
 				  expT2CoeffsIter->second);
+}
+
+
+inline const RealVector& NodalInterpPolyApproximation::
+gradient_basis_variables(const RealVector& x, const SizetArray& dvv)
+{
+  // Error check for required data
+  if (!expansionCoeffFlag) {
+    PCerr << "Error: expansion coefficients not defined in NodalInterpPoly"
+	  << "Approximation::gradient_basis_variables()" << std::endl;
+    abort_handler(-1);
+  }
+
+  return gradient_basis_variables(x, expT1CoeffsIter->second,
+				  expT2CoeffsIter->second, dvv);
 }
 
 

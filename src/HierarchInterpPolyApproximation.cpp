@@ -359,9 +359,9 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 	const SizetArray& comb_sm_map_il = comb_sm_map[i][lev];
 	num_sets = t1c_l.size();
 	for (set=0; set<num_sets; ++set) {
-	  // map from smolyakMultiIndex for this model to corresponding set
+	  // map from smolyakMultiIndex for this key to corresponding set
 	  // in combinedSmolyakMultiIndex
-	  size_t comb_set = comb_sm_map_il[set];//***
+	  size_t comb_set = comb_sm_map_il[set];
 	  comb_t1c_l[comb_set]                 += t1c_l[set];
 	  if (use_derivs) comb_t2c_l[comb_set] += t2c_l[set];
 	}
@@ -380,6 +380,8 @@ void HierarchInterpPolyApproximation::combine_coefficients()
 	const SizetArray& comb_sm_map_il = comb_sm_map[i][lev];
 	num_sets = t1g_l.size();
 	for (set=0; set<num_sets; ++set) {
+	  // map from smolyakMultiIndex for this key to corresponding set
+	  // in combinedSmolyakMultiIndex
 	  size_t comb_set = comb_sm_map_il[set];
 	  comb_t1g_l[comb_set] += t1g_l[set];
 	}
