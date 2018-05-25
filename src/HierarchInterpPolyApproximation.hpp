@@ -112,14 +112,16 @@ protected:
   Real covariance(PolynomialApproximation* poly_approx_2);
   Real covariance(const RealVector& x,
 		  PolynomialApproximation* poly_approx_2);
-
-  //Real combined_covariance(PolynomialApproximation* poly_approx_2);
-  //Real combined_covariance(const RealVector& x,
-  // 			     PolynomialApproximation* poly_approx_2);
+  Real combined_covariance(PolynomialApproximation* poly_approx_2);
+  Real combined_covariance(const RealVector& x,
+			   PolynomialApproximation* poly_approx_2);
 
   Real delta_covariance(PolynomialApproximation* poly_approx_2);
   Real delta_covariance(const RealVector& x,
 			PolynomialApproximation* poly_approx_2);
+  Real delta_combined_covariance(PolynomialApproximation* poly_approx_2);
+  Real delta_combined_covariance(const RealVector& x,
+				 PolynomialApproximation* poly_approx_2);
 
   Real delta_mean();
   Real delta_mean(const RealVector& x);
@@ -204,12 +206,22 @@ private:
   Real reference_variance(const RealVector& x, const UShort2DArray& ref_key);
 
   /// compute the covariance increment due to the current grid increment
-  Real delta_covariance(PolynomialApproximation* poly_approx_2,
+  Real delta_covariance(const RealVector2DArray& r1_t1_coeffs,
+			const RealMatrix2DArray& r1_t2_coeffs,
+			const RealVector2DArray& r2_t1_coeffs,
+			const RealMatrix2DArray& r2_t2_coeffs, bool same,
+			const RealVector2DArray& r1r2_t1_coeffs,
+			const RealMatrix2DArray& r1r2_t2_coeffs,
 			const UShort2DArray& ref_key,
 			const UShort2DArray& incr_key);
-  /// compute the covariance increment due to the current grid increment
+  /// compute the covariance increment at x due to the current grid increment
   Real delta_covariance(const RealVector& x,
-			PolynomialApproximation* poly_approx_2,
+			const RealVector2DArray& r1_t1_coeffs,
+			const RealMatrix2DArray& r1_t2_coeffs,
+			const RealVector2DArray& r2_t1_coeffs,
+			const RealMatrix2DArray& r2_t2_coeffs, bool same,
+			const RealVector2DArray& r1r2_t1_coeffs,
+			const RealMatrix2DArray& r1r2_t2_coeffs,
 			const UShort2DArray& ref_key,
 			const UShort2DArray& incr_key);
 
@@ -249,9 +261,23 @@ private:
   void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
     const UShort2DArray& reference_key = UShort2DArray());
+  /// form type 1/2 coefficients for interpolation of R_1 R_2
+  void product_interpolant(const RealVector2DArray& r1_t1_coeffs,
+    const RealMatrix2DArray& r1_t2_coeffs,
+    const RealVector2DArray& r2_t1_coeffs,
+    const RealMatrix2DArray& r2_t2_coeffs, bool same,
+    RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
+    const UShort2DArray& reference_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(
     HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
+    RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
+    const UShort2DArray& reference_key = UShort2DArray());
+  /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
+  void central_product_interpolant(const RealVector2DArray& r1_t1_coeffs,
+    const RealMatrix2DArray& r1_t2_coeffs,
+    const RealVector2DArray& r2_t1_coeffs,
+    const RealMatrix2DArray& r2_t2_coeffs, bool same, Real mean_1, Real mean_2,
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
     const UShort2DArray& reference_key = UShort2DArray());
 
@@ -450,30 +476,6 @@ inline Real HierarchInterpPolyApproximation::variance()
 
 inline Real HierarchInterpPolyApproximation::variance(const RealVector& x)
 { return covariance(x, this); }
-
-
-inline Real HierarchInterpPolyApproximation::
-delta_covariance(PolynomialApproximation* poly_approx_2)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
-
-  return delta_covariance(poly_approx_2, ref_key, incr_key);
-}
-
-
-inline Real HierarchInterpPolyApproximation::
-delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
-
-  return delta_covariance(x, poly_approx_2, ref_key, incr_key);
-}
 
 
 inline Real HierarchInterpPolyApproximation::delta_mean()
