@@ -434,8 +434,8 @@ void SharedOrthogPolyApproxData::combined_to_active()
 {
   allocate_component_sobol(combinedMultiIndex);
 
-  // For open-ended number of stored grids: retrieve the most refined from the
-  // existing grids (from sequence specification + any subsequent refinement)
+  // retrieve the most refined from the existing grids (from sequence
+  // specification + any subsequent refinement)
   active_key(maximal_expansion());
 
   // Leave combinedMultiIndex as separate book-keeping to support repeated

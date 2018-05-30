@@ -68,12 +68,14 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
-  /// clear inactive data from expansionType{1Coeffs,2Coeffs,1CoeffGrads}
+  /// clear inactive expansions from expansionType{1Coeffs,2Coeffs,1CoeffGrads}
   void clear_inactive();
 
-  /// augment current interpolant using
-  /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}
+  /// update combinedExpT{1Coeffs,2Coeffs,1CoeffGrads}
   void combine_coefficients();
+
+  /// replace active expansions with combinedExpT{1Coeffs,2Coeffs,1CoeffGrads}
+  void combined_to_active();
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);

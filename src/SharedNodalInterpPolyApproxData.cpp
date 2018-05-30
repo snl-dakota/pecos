@@ -181,8 +181,8 @@ void SharedNodalInterpPolyApproxData::pre_combine_data()
   prevActiveKey = activeKey;
 
   /*
-  // For open-ended number of stored grids: retrieve the most refined from the
-  // existing grids (from sequence specification + any subsequent refinement).
+  // retrieve the most refined from the existing grids (from sequence
+  // specification + any subsequent refinement).
   // Note: if we assume that multiIndex subsets are enforced across a hierarchy,
   // then the maximal grid is sufficient to allow reinterpolation of all data.
   size_t max_index = driverRep->maximal_grid();
@@ -205,6 +205,15 @@ void SharedNodalInterpPolyApproxData::post_combine_data()
   // now that combined arrays have been updated, restore the active state
   // that existed prior to roll up
   active_key(prevActiveKey);
+}
+
+
+void SharedNodalInterpPolyApproxData::combined_to_active()
+{
+  // Activate the most refined grid corresponding to the combined exp coeffs
+  active_key(driverRep->maximal_grid());
+
+  // *** TO DO: update driverRep ?
 }
 
 

@@ -123,8 +123,10 @@ public:
   /// return incrementSets
   const UShortArray& increment_sets() const;
 
-  /// return smolyakMultiIndex[activeKey]
+  /// return active entry in smolyakMultiIndex
   const UShort3DArray& smolyak_multi_index() const;
+  /// set active entry in smolyakMultiIndex
+  void smolyak_multi_index(const UShort3DArray& sm_mi);
   /// return smolyakMultiIndex[key]
   const UShort3DArray& smolyak_multi_index(const UShortArray& key) const;
   /// return smolyakMultiIndex
@@ -135,12 +137,17 @@ public:
   /// get trackCollocIndices
   bool track_collocation_indices() const;
 
-  /// return collocKey[activeKey]
+  /// return active entry in collocKey
   const UShort4DArray& collocation_key() const;
+  /// set active entry in collocKey
+  void collocation_key(const UShort4DArray& key);
   /// return collocKey[key]
   const UShort4DArray& collocation_key(const UShortArray& key) const;
-  /// return collocIndices[activeKey]
+
+  /// return active entry in collocIndices
   const Sizet3DArray& collocation_indices() const;
+  /// set active entry in collocIndices
+  void collocation_indices(const Sizet3DArray& indices);
   /// return collocIndices[key]
   const Sizet3DArray& collocation_indices(const UShortArray& key) const;
 
@@ -343,6 +350,11 @@ smolyak_multi_index() const
 { return smolMIIter->second; }
 
 
+inline void HierarchSparseGridDriver::
+smolyak_multi_index(const UShort3DArray& sm_mi)
+{ smolMIIter->second = sm_mi; }
+
+
 inline const UShort3DArray& HierarchSparseGridDriver::
 smolyak_multi_index(const UShortArray& key) const
 {
@@ -375,6 +387,10 @@ inline const UShort4DArray& HierarchSparseGridDriver::collocation_key() const
 { return collocKeyIter->second; }
 
 
+inline void HierarchSparseGridDriver::collocation_key(const UShort4DArray& key)
+{ collocKeyIter->second = key; }
+
+
 inline const UShort4DArray& HierarchSparseGridDriver::
 collocation_key(const UShortArray& key) const
 {
@@ -391,6 +407,11 @@ collocation_key(const UShortArray& key) const
 
 inline const Sizet3DArray& HierarchSparseGridDriver::collocation_indices() const
 { return collocIndIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+collocation_indices(const Sizet3DArray& indices)
+{ collocIndIter->second = indices; }
 
 
 inline const Sizet3DArray& HierarchSparseGridDriver::

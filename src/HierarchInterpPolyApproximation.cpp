@@ -389,6 +389,31 @@ void HierarchInterpPolyApproximation::combine_coefficients()
     }
   }
 
+  //computedMean = computedVariance = 0;
+}
+
+
+void HierarchInterpPolyApproximation::combined_to_active()
+{
+  // replace active expansions with combined expansion arrays
+  // Note: clear_inactive() takes care of the auxilliary inactive expansions
+  //       that are now assimilated within each new active expansion
+
+  if (expansionCoeffFlag) {
+    std::swap(expT1CoeffsIter->second, combinedExpT1Coeffs);
+    combinedExpT1Coeffs.clear();
+    SharedHierarchInterpPolyApproxData* data_rep
+      = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+    if (data_rep->basisConfigOptions.useDerivs) {
+      std::swap(expT2CoeffsIter->second, combinedExpT2Coeffs);
+      combinedExpT2Coeffs.clear();
+    }
+  }
+  if (expansionCoeffGradFlag) {
+    std::swap(expT1CoeffGradsIter->second, combinedExpT1CoeffGrads);
+    combinedExpT1CoeffGrads.clear();
+  }
+
   computedMean = computedVariance = 0;
 }
 

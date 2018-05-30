@@ -74,6 +74,8 @@ protected:
   /// storedExpType{1Coeffs,2Coeffs,1CoeffGrads}[index]
   void combine_coefficients();
 
+  void combined_to_active();
+
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
 

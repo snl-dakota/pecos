@@ -63,6 +63,7 @@ protected:
 
   void pre_combine_data();
   //void post_combine_data();
+  void combined_to_active();
 
   void set_new_point(const RealVector& x, const UShortArray& basis_index,
 		     short order);

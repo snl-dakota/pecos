@@ -144,6 +144,22 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
 }
 
 
+void SharedHierarchInterpPolyApproxData::combined_to_active()
+{
+  HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
+
+  hsg_driver->smolyak_multi_index(combinedSmolyakMultiIndex);
+  combinedSmolyakMultiIndex.clear();
+
+  combinedSmolyakMultiIndexMap.clear(); // not used by hsg_driver
+
+  hsg_driver->collocation_key(combinedCollocKey);
+  combinedCollocKey.clear();
+
+  // *** TO DO: update weights within driverRep ...
+}
+
+
 size_t SharedHierarchInterpPolyApproxData::
 barycentric_exact_index(const UShortArray& basis_index)
 {

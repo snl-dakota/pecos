@@ -158,8 +158,10 @@ void OrthogPolyApproximation::combined_to_active()
   update_active_iterators();// activeKey updated in SharedOrthogPolyApproxData
   allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
 
-  expCoeffsIter->second = combinedExpCoeffs;
-  combinedExpCoeffs.resize(0);
+  if (expansionCoeffFlag) {
+    expCoeffsIter->second = combinedExpCoeffs;
+    combinedExpCoeffs.resize(0);
+  }
   if (expansionCoeffGradFlag) {
     expCoeffGradsIter->second = combinedExpCoeffGrads;
     combinedExpCoeffGrads.reshape(0, 0);

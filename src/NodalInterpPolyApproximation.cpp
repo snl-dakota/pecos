@@ -261,6 +261,31 @@ void NodalInterpPolyApproximation::combine_coefficients()
   }
 #endif // DEBUG
 
+  //computedMean = computedVariance = 0;
+}
+
+
+void NodalInterpPolyApproximation::combined_to_active()
+{
+  // replace active expansions with combined expansion arrays
+  // Note: clear_inactive() takes care of the auxilliary inactive expansions
+  //       that are now assimilated within each new active expansion
+
+  if (expansionCoeffFlag) {
+    expT1CoeffsIter->second = combinedExpT1Coeffs;
+    combinedExpT1Coeffs.resize(0);
+    SharedNodalInterpPolyApproxData* data_rep
+      = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+    if (data_rep->basisConfigOptions.useDerivs) {
+      expT2CoeffsIter->second = combinedExpT2Coeffs;
+      combinedExpT2Coeffs.reshape(0, 0);
+    }
+  }
+  if (expansionCoeffGradFlag) {
+    expT1CoeffGradsIter->second = combinedExpT1CoeffGrads;
+    combinedExpT1CoeffGrads.reshape(0, 0);
+  }
+
   computedMean = computedVariance = 0;
 }
 
