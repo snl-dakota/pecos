@@ -199,7 +199,7 @@ void SharedNodalInterpPolyApproxData::pre_combine_data()
   active_key(driverRep->maximal_grid()); // update activeKey + active iterators
 
   // defer until combined_to_active()
-  // (Sobol indices not currently computed from combined expansion):
+  // (Sobol indices not currently computed for a combined expansion):
   //allocate_component_sobol();
 }
 

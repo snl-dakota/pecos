@@ -170,22 +170,23 @@ void SharedInterpPolyApproxData::allocate_data()
 void SharedInterpPolyApproxData::increment_data()
 {
   unsigned short max_set_index = 0;
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case INCREMENTAL_SPARSE_GRID: {
-    // As for allocate_arrays(), increments are performed in coarser steps
-    // than may be strictly necessary: all increments are filled in for all
-    // vars for a step in level (ignoring anisotropy or generalized indices).
-    IncrementalSparseGridDriver* isg_driver
-      = (IncrementalSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
-    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-      const UShortArray& trial_set = isg_driver->trial_set();
-      for (size_t i=0; i<numVars; ++i)
-	if (trial_set[i] > max_set_index)
-	  max_set_index = trial_set[i];
-      break;
-    }
-    default: { // isotropic/anisotropic refinement
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+    SparseGridDriver* sg_driver = (SparseGridDriver*)driverRep;
+    const UShortArray& trial_set = sg_driver->trial_set();
+    for (size_t i=0; i<numVars; ++i)
+      if (trial_set[i] > max_set_index)
+	max_set_index = trial_set[i];
+    break;
+  }
+  default: // uniform/anisotropic refinement
+    switch (expConfigOptions.expCoeffsSolnApproach) {
+    case INCREMENTAL_SPARSE_GRID: {
+      // As for allocate_arrays(), increments are performed in coarser steps
+      // than may be strictly necessary: all increments are filled in for all
+      // vars for a step in level (ignoring anisotropy or generalized indices).
+      IncrementalSparseGridDriver* isg_driver
+	= (IncrementalSparseGridDriver*)driverRep;
       size_t start_index = isg_driver->smolyak_coefficients_reference().size();
       const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
       size_t i, v, num_sm_mi = sm_mi.size();
@@ -197,20 +198,9 @@ void SharedInterpPolyApproxData::increment_data()
       }
       break;
     }
-    }
-    break;
-  }
-  case HIERARCHICAL_SPARSE_GRID: {
-    HierarchSparseGridDriver* hsg_driver = (HierarchSparseGridDriver*)driverRep;
-    switch (expConfigOptions.refinementControl) {
-    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
-      const UShortArray& trial_set = hsg_driver->trial_set();
-      for (size_t i=0; i<numVars; ++i)
-	if (trial_set[i] > max_set_index)
-	  max_set_index = trial_set[i];
-      break;
-    }
-    default: { // isotropic/anisotropic refinement
+    case HIERARCHICAL_SPARSE_GRID: {
+      HierarchSparseGridDriver* hsg_driver
+	= (HierarchSparseGridDriver*)driverRep;
       const UShort3DArray&   sm_mi = hsg_driver->smolyak_multi_index();
       const UShortArray& incr_sets = hsg_driver->increment_sets();
       size_t lev, num_lev = sm_mi.size(), set, start_set, num_sets, v;
@@ -225,13 +215,12 @@ void SharedInterpPolyApproxData::increment_data()
       }
       break;
     }
+    default:
+      PCerr << "Error: unsupported grid definition in SharedInterpPoly"
+	    << "ApproxData::increment_data()" << std::endl;
+      abort_handler(-1);
+      break;
     }
-    break;
-  }
-  default:
-    PCerr << "Error: unsupported grid definition in SharedInterpPolyApproxData"
-	  << "::increment_data()" << std::endl;
-    abort_handler(-1);
     break;
   }
 
@@ -244,8 +233,8 @@ void SharedInterpPolyApproxData::decrement_data()
 {
   // leave polynomialBasis as is
 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case INCREMENTAL_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
@@ -259,8 +248,8 @@ void SharedInterpPolyApproxData::post_push_data()
 {
   // leave polynomialBasis as is (a previous increment is being restored)
 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case INCREMENTAL_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID: {
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
     // move previous expansion data to current expansion
     SparseGridDriver* ssg_driver = (SparseGridDriver*)driverRep;
     std::deque<UShortArray>& popped_lev_mi = poppedLevMultiIndex[activeKey];
@@ -279,8 +268,8 @@ void SharedInterpPolyApproxData::post_finalize_data()
 {
   // leave polynomialBasis as is (all previous increments are being restored)
 
-  switch (expConfigOptions.expCoeffsSolnApproach) {
-  case INCREMENTAL_SPARSE_GRID: case HIERARCHICAL_SPARSE_GRID:
+  switch (expConfigOptions.refinementControl) {
+  case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
     // move previous expansion data to current expansion
     poppedLevMultiIndex[activeKey].clear();
     break;
