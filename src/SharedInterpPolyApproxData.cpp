@@ -240,6 +240,11 @@ void SharedInterpPolyApproxData::decrement_data()
     poppedLevMultiIndex[activeKey].push_back(ssg_driver->trial_set());
     break;
   }
+  default:
+    PCerr << "Error: unsupported refinement control in SharedInterpPolyApprox"
+	  << "Data::decrement_data()" << std::endl;
+    abort_handler(-1);
+    break;
   }
 }
 
@@ -260,6 +265,11 @@ void SharedInterpPolyApproxData::post_push_data()
       popped_lev_mi.erase(sit);
     break;
   }
+  default:
+    PCerr << "Error: unsupported refinement control in SharedInterpPolyApprox"
+	  << "Data::post_push_data()" << std::endl;
+    abort_handler(-1);
+    break;
   }
 }
 
@@ -272,6 +282,11 @@ void SharedInterpPolyApproxData::post_finalize_data()
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
     // move previous expansion data to current expansion
     poppedLevMultiIndex[activeKey].clear();
+    break;
+  default:
+    PCerr << "Error: unsupported refinement control in SharedInterpPolyApprox"
+	  << "Data::post_finalize_data()" << std::endl;
+    abort_handler(-1);
     break;
   }
 }

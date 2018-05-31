@@ -250,7 +250,7 @@ inline void TensorProductDriver::update_level_index_from_quadrature_order()
 {
   UShortArray& lev_index = levelIndIter->second;
   size_t i, len = quadOrder.size();
-  if (levelIndex.size() != len) lev_index.resize(len);
+  if (lev_index.size() != len) lev_index.resize(len);
   for (i=0; i<len; ++i)
     lev_index[i] = quadOrder[i] - 1;
 }
@@ -291,23 +291,19 @@ inline unsigned short TensorProductDriver::quadrature_order(size_t i) const
 inline void TensorProductDriver::
 nested_quadrature_order(const UShortArray& ref_quad_order)
 {
+  size_t i, len = ref_quad_order.size();
+  if (quadOrder.size()            != len)            quadOrder.resize(len);
+  if (levelIndIter->second.size() != len) levelIndIter->second.resize(len);
   unsigned short nested_order;
-  switch (driverMode) {
-  case INTERPOLATION_MODE: // synchronize on number of points
-                           // (Lagrange interpolant order = #pts - 1)
-    for (size_t i=0; i<numVars; ++i) {
+  for (i=0; i<len; ++i) {
+    // synchronize on number of points: Lagrange poly order = #pts - 1
+    if (driverMode == INTERPOLATION_MODE)
       quadrature_goal_to_nested_quadrature_order(i, ref_quad_order[i],
 						 nested_order);
-      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
-    }
-    break;
-  default: // {INTEGRATION,DEFAULT}_MODE: synchronize on integrand prec 2m-1
-    for (size_t i=0; i<numVars; ++i) {
+    else // {INTEGRATION,DEFAULT}_MODE: synchronize on integrand prec 2m-1
       integrand_goal_to_nested_quadrature_order(i, 2 * ref_quad_order[i] - 1,
 						nested_order);
-      quadrature_order(nested_order, i); // sets quadOrder and levelIndex
-    }
-    break;
+    quadrature_order(nested_order, i); // sets quadOrder and levelIndex
   }
 }
 
