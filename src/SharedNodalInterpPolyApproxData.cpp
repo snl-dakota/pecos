@@ -197,6 +197,10 @@ void SharedNodalInterpPolyApproxData::pre_combine_data()
   */
 
   active_key(driverRep->maximal_grid()); // update activeKey + active iterators
+
+  // defer until combined_to_active()
+  // (Sobol indices not currently computed from combined expansion):
+  //allocate_component_sobol();
 }
 
 
@@ -211,9 +215,11 @@ void SharedNodalInterpPolyApproxData::post_combine_data()
 void SharedNodalInterpPolyApproxData::combined_to_active()
 {
   // Activate the most refined grid corresponding to the combined exp coeffs
+  // Note: SharedInterpPolyApproxData::active_key() updates driverRep's key
   active_key(driverRep->maximal_grid());
 
-  // *** TO DO: update driverRep ?
+  // allocate Sobol interactions corresponding to maximal interpolant
+  allocate_component_sobol();
 }
 
 

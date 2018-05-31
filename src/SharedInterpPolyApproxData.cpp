@@ -14,7 +14,7 @@
 #include "SharedInterpPolyApproxData.hpp"
 #include "Teuchos_SerialDenseHelpers.hpp"
 #include "TensorProductDriver.hpp"
-#include "CombinedSparseGridDriver.hpp"
+#include "IncrementalSparseGridDriver.hpp"
 #include "HierarchSparseGridDriver.hpp"
 
 namespace Pecos {
@@ -175,11 +175,29 @@ void SharedInterpPolyApproxData::increment_data()
     // As for allocate_arrays(), increments are performed in coarser steps
     // than may be strictly necessary: all increments are filled in for all
     // vars for a step in level (ignoring anisotropy or generalized indices).
-    CombinedSparseGridDriver* csg_driver = (CombinedSparseGridDriver*)driverRep;
-    const UShortArray& trial_set = csg_driver->trial_set();
-    for (size_t i=0; i<numVars; ++i)
-      if (trial_set[i] > max_set_index)
-	max_set_index = trial_set[i];
+    IncrementalSparseGridDriver* isg_driver
+      = (IncrementalSparseGridDriver*)driverRep;
+    switch (expConfigOptions.refinementControl) {
+    case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: { // generalized sparse grids
+      const UShortArray& trial_set = isg_driver->trial_set();
+      for (size_t i=0; i<numVars; ++i)
+	if (trial_set[i] > max_set_index)
+	  max_set_index = trial_set[i];
+      break;
+    }
+    default: { // isotropic/anisotropic refinement
+      size_t start_index = isg_driver->smolyak_coefficients_reference().size();
+      const UShort2DArray& sm_mi = isg_driver->smolyak_multi_index();
+      size_t i, v, num_sm_mi = sm_mi.size();
+      for (i=start_index; i<num_sm_mi; ++i) {
+	const UShortArray& sm_mi_i = sm_mi[i];
+	for (v=0; v<numVars; ++v)
+	  if (sm_mi_i[v] > max_set_index)
+	    max_set_index = sm_mi_i[v];
+      }
+      break;
+    }
+    }
     break;
   }
   case HIERARCHICAL_SPARSE_GRID: {
@@ -211,8 +229,8 @@ void SharedInterpPolyApproxData::increment_data()
     break;
   }
   default:
-    PCerr << "Error: unsupported grid definition in InterpPolyApproximation::"
-	  << "increment_coefficients()" << std::endl;
+    PCerr << "Error: unsupported grid definition in SharedInterpPolyApproxData"
+	  << "::increment_data()" << std::endl;
     abort_handler(-1);
     break;
   }

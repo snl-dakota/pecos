@@ -286,6 +286,9 @@ void NodalInterpPolyApproximation::combined_to_active()
     combinedExpT1CoeffGrads.reshape(0, 0);
   }
 
+  // resize sobolIndices to sync with resize of sobolIndexMap
+  allocate_component_sobol();
+
   computedMean = computedVariance = 0;
 }
 
@@ -3545,11 +3548,22 @@ integrate_expansion_moments(size_t num_moments)
 void NodalInterpPolyApproximation::
 compute_partial_variance(const BitArray& set_value)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
   // Perform inner integral over complementary set u' to form new weighted
   // coefficients h; then perform outer integral of h^2 over set u
-  Real& variance = partialVariance[data_rep->sobolIndexMap[set_value]];
+  SharedNodalInterpPolyApproxData* data_rep
+    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  const BitArrayULongMap& sobol_index_map = data_rep->sobolIndexMap;
+
+  unsigned long pv_index;
+  BitArrayULongMap::const_iterator cit = sobol_index_map.find(set_value);
+  if (cit == sobol_index_map.end()) {
+    PCerr << "Error in compute_partial_variance(): key not found in "
+	  << "sobolIndexMap." << std::endl;
+    abort_handler(-1);
+  }
+  else pv_index = cit->second;
+
+  Real& variance = partialVariance[pv_index];
   variance = member_integral(set_value, 0.);// center = 0
 #ifdef VBD_DEBUG
   PCout << "Partial variance = " << variance;
