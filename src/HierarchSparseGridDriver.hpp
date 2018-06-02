@@ -160,6 +160,9 @@ public:
   void partition_keys(UShort3DArray& reference_pt_range,
 		      UShort3DArray& increment_pt_range) const;
 
+  /// overlay all type{1,2}WeightSets and store in active key
+  void combine_weight_sets(const Sizet3DArray& combined_sm_mi_map);
+
   /// return type1WeightSets for use in hierarchical integration functions
   const RealVector2DArray& type1_weight_set_arrays() const;
   /// return type2WeightSets for use in hierarchical integration functions

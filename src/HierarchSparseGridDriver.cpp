@@ -510,7 +510,7 @@ level_to_delta_pair(size_t i, unsigned short level)
     case GENZ_KEISTER: // open nested table lookup
       // switch on num_delta i/o level due to possibility of growth restriction
       switch (num_delta) {
-      case  6: max_key =  8; break; // 9 pt rule
+      case  6: max_key =  8; break; //  9 pt rule
       case 10: max_key = 18; break; // 19 pt rule
       case 16: max_key = 34; break; // 35 pt rule
       //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
@@ -673,6 +673,55 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
   PCout << "compute_trial_grid() increment:\nunique variable sets:\n"
 	<< var_sets;
 #endif // DEBUG
+}
+
+
+void HierarchSparseGridDriver::
+combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
+{
+  size_t i, lev, num_lev, set, num_sets, max_lev = 0, min_size,
+    num_map = combined_sm_mi_map.size();
+  for (i=0; i<num_map; ++i)
+    if (combined_sm_mi_map[i].size() > max_lev)
+      max_lev = combined_sm_mi_map[i].size();
+  RealVector2DArray comb_t1_wts(max_lev);
+  RealMatrix2DArray comb_t2_wts(max_lev);
+
+  std::map<UShortArray, RealVector2DArray>::iterator t1w_it;
+  std::map<UShortArray, RealMatrix2DArray>::iterator t2w_it;
+  for (t1w_it =type1WeightSets.begin(), t2w_it =type2WeightSets.begin(), i=0;
+       t1w_it!=type1WeightSets.end() && t2w_it!=type2WeightSets.end();
+       ++t1w_it, ++t2w_it, ++i) {
+    const RealVector2DArray& t1w = t1w_it->second;
+    const RealMatrix2DArray& t2w = t2w_it->second;
+    num_lev = t1w.size();
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1w_l = t1w[lev];  num_sets = t1w_l.size();
+      const RealMatrixArray& t2w_l = t2w[lev];
+      RealVectorArray&  comb_t1w_l = comb_t1_wts[lev];
+      RealMatrixArray&  comb_t2w_l = comb_t2_wts[lev];
+      const SizetArray& comb_sm_map_il = combined_sm_mi_map[i][lev];
+      min_size = (comb_sm_map_il.empty()) ? 0 : find_max(comb_sm_map_il) + 1;
+      if (comb_t1w_l.size() < min_size)
+	comb_t1w_l.resize(min_size);
+      if (computeType2Weights && comb_t2w_l.size() < min_size)
+	comb_t2w_l.resize(min_size);
+      for (set=0; set<num_sets; ++set) {
+	// map from weight sets for this key to corresponding sets
+	// in combined t{1,2} weight sets
+	size_t comb_set = comb_sm_map_il[set];
+	// overlay but don't overwrite
+	if (comb_t1w_l[comb_set].empty()) comb_t1w_l[comb_set] = t1w_l[set];
+	if (computeType2Weights && comb_t2w_l[comb_set].empty())
+	  comb_t2w_l[comb_set] = t2w_l[set];
+      }
+    }
+  }
+
+  // Inactive weight sets to be removed by clear_inactive()
+  std::swap(comb_t1_wts, type1WeightSets[activeKey]);
+  if (computeType2Weights)
+    std::swap(comb_t2_wts, type2WeightSets[activeKey]);
 }
 
 

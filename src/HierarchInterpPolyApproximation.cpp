@@ -405,7 +405,7 @@ void HierarchInterpPolyApproximation::combined_to_active()
 {
   // replace active expansions with combined expansion arrays
   // Note: clear_inactive() takes care of the auxilliary inactive expansions
-  //       that are now assimilated within each new active expansion
+  //       that are now assimilated within the active expansion
 
   if (expansionCoeffFlag) {
     std::swap(expT1CoeffsIter->second, combinedExpT1Coeffs);

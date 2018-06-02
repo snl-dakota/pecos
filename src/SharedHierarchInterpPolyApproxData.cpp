@@ -151,12 +151,11 @@ void SharedHierarchInterpPolyApproxData::combined_to_active()
   hsg_driver->smolyak_multi_index(combinedSmolyakMultiIndex);
   combinedSmolyakMultiIndex.clear();
 
-  combinedSmolyakMultiIndexMap.clear(); // not used by hsg_driver
-
   hsg_driver->collocation_key(combinedCollocKey);
   combinedCollocKey.clear();
 
-  // *** TO DO: update weights within driverRep ...
+  hsg_driver->combine_weight_sets(combinedSmolyakMultiIndexMap);
+  combinedSmolyakMultiIndexMap.clear(); // not used by hsg_driver
 }
 
 
