@@ -679,38 +679,46 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
 void HierarchSparseGridDriver::
 combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
 {
-  size_t i, lev, num_lev, set, num_sets, max_lev = 0, min_size,
+  // size consolidated weights according to greatest interpolation depth
+  size_t i, lev, num_lev, set, num_sets, max_lev = 0, max_sets_il,
     num_map = combined_sm_mi_map.size();
-  for (i=0; i<num_map; ++i)
-    if (combined_sm_mi_map[i].size() > max_lev)
-      max_lev = combined_sm_mi_map[i].size();
+  SizetArray max_sets;
+  for (i=0; i<num_map; ++i) {
+    const Sizet2DArray& comb_sm_map_i = combined_sm_mi_map[i];
+    num_lev = comb_sm_map_i.size();
+    if (num_lev > max_lev)                  max_lev = num_lev;
+    for (lev=0; lev<num_lev; ++lev) {
+      max_sets_il = find_max(comb_sm_map_i[lev]);
+      if (max_sets.size() <= lev)           max_sets.push_back(max_sets_il);
+      else if (max_sets[lev] < max_sets_il) max_sets[lev] = max_sets_il;
+    }
+  }
   RealVector2DArray comb_t1_wts(max_lev);
   RealMatrix2DArray comb_t2_wts(max_lev);
+  for (lev=0; lev<max_lev; ++lev) {
+    comb_t1_wts[lev].resize(max_sets[lev]);
+    // be consistent with compute_points_weights(): size for num_{lev,sets}
+    // but leave RealMatrix empty if type2 weights are inactive.
+    /*if (computeType2Weights)*/ comb_t2_wts.resize(max_sets[lev]);
+  }
 
   std::map<UShortArray, RealVector2DArray>::iterator t1w_it;
   std::map<UShortArray, RealMatrix2DArray>::iterator t2w_it;
   for (t1w_it =type1WeightSets.begin(), t2w_it =type2WeightSets.begin(), i=0;
        t1w_it!=type1WeightSets.end() && t2w_it!=type2WeightSets.end();
        ++t1w_it, ++t2w_it, ++i) {
-    const RealVector2DArray& t1w = t1w_it->second;
-    const RealMatrix2DArray& t2w = t2w_it->second;
-    num_lev = t1w.size();
+    const RealVector2DArray& t1w = t1w_it->second;  num_lev  = t1w.size();
     for (lev=0; lev<num_lev; ++lev) {
-      const RealVectorArray& t1w_l = t1w[lev];  num_sets = t1w_l.size();
-      const RealMatrixArray& t2w_l = t2w[lev];
+      const RealVectorArray& t1w_l = t1w[lev];      num_sets = t1w_l.size();
+      const RealMatrixArray& t2w_l = t2w_it->second[lev];
       RealVectorArray&  comb_t1w_l = comb_t1_wts[lev];
       RealMatrixArray&  comb_t2w_l = comb_t2_wts[lev];
       const SizetArray& comb_sm_map_il = combined_sm_mi_map[i][lev];
-      min_size = (comb_sm_map_il.empty()) ? 0 : find_max(comb_sm_map_il) + 1;
-      if (comb_t1w_l.size() < min_size)
-	comb_t1w_l.resize(min_size);
-      if (computeType2Weights && comb_t2w_l.size() < min_size)
-	comb_t2w_l.resize(min_size);
       for (set=0; set<num_sets; ++set) {
-	// map from weight sets for this key to corresponding sets
-	// in combined t{1,2} weight sets
+	// map from weight sets for this key to corresponding sets in
+	// combined t{1,2} weight sets
 	size_t comb_set = comb_sm_map_il[set];
-	// overlay but don't overwrite
+	// overlay but no need to accumulate or repeatedly overwrite
 	if (comb_t1w_l[comb_set].empty()) comb_t1w_l[comb_set] = t1w_l[set];
 	if (computeType2Weights && comb_t2w_l[comb_set].empty())
 	  comb_t2w_l[comb_set] = t2w_l[set];
@@ -718,10 +726,11 @@ combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
     }
   }
 
-  // Inactive weight sets to be removed by clear_inactive()
+  // Replace active weights with combined weights.
+  // Note: inactive weight sets to be removed by clear_inactive()
   std::swap(comb_t1_wts, type1WeightSets[activeKey]);
-  if (computeType2Weights)
-    std::swap(comb_t2_wts, type2WeightSets[activeKey]);
+  // Update type2 wts even if inactive, so that 2D array sizes are correct
+  std::swap(comb_t2_wts, type2WeightSets[activeKey]);
 }
 
 
