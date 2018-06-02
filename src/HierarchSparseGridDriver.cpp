@@ -433,6 +433,8 @@ level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
 {
   unsigned short num_delta = level_to_delta_size(i, lev_i);
   delta_key_i.resize(num_delta);
+  if (!num_delta) return; // possible due to growth restrictions
+
   switch(collocRules[i]) {
   case GAUSS_PATTERSON: // open nested
     for (size_t j=0; j<num_delta; ++j)
@@ -440,7 +442,7 @@ level_to_delta_key(size_t i, unsigned short lev_i, UShortArray& delta_key_i)
     break;
   case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
     switch (lev_i) { // growth restriction should not occur for lev_i = 0 or 1
-    case 0: delta_key_i[0] = 0;                      break; // center of 1 pt
+    case 0: delta_key_i[0] = 0;                     break; // center of 1 pt
     case 1: delta_key_i[0] = 0; delta_key_i[1] = 2; break; // ends of 3 pt
     default:
       for (size_t j=0; j<num_delta; ++j)

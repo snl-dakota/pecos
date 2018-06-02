@@ -326,17 +326,25 @@ void HierarchInterpPolyApproximation::combine_coefficients()
       RealMatrix& comb_t1g_ls = comb_t1g_l[set];
       if (expansionCoeffFlag) {
 	if (comb_t1c_ls.length() != num_tp_pts)
-	  comb_t1c_ls.size(num_tp_pts);         // init to 0
+	  comb_t1c_ls.size(num_tp_pts);           // init to 0
 	else comb_t1c_ls = 0.;
+      }
+      else if (!comb_t1c_ls.empty())
+	comb_t1c_ls.size(0);
+      if (use_derivs && expansionCoeffFlag) {
 	if (comb_t2c_ls.numRows()!=num_v || comb_t2c_ls.numCols()!=num_tp_pts)
 	  comb_t2c_ls.shape(num_v, num_tp_pts); // init to 0
 	else comb_t2c_ls = 0.;
       }
+      else if (!comb_t2c_ls.empty())
+	comb_t2c_ls.shape(0, 0);
       if (expansionCoeffGradFlag) {
 	if (comb_t1g_ls.numRows()!=num_v || comb_t1g_ls.numCols()!=num_tp_pts)
-	  comb_t1g_ls.shape(num_v, num_tp_pts); // init to 0
+	  comb_t1g_ls.shape(num_v, num_tp_pts);   // init to 0
 	else comb_t1g_ls = 0.;
       }
+      else if (!comb_t1g_ls.empty())
+	comb_t1g_ls.shape(0, 0);
     }
   }
 
