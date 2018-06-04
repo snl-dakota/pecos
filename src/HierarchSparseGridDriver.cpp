@@ -677,7 +677,9 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
 
 
 void HierarchSparseGridDriver::
-combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
+combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
+		    RealVector2DArray& comb_t1_wts,
+		    RealMatrix2DArray& comb_t2_wts)
 {
   // size consolidated weights according to greatest interpolation depth
   size_t i, lev, num_lev, set, num_sets, max_lev = 0, max_sets_il,
@@ -693,8 +695,8 @@ combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
       else if (max_sets[lev] < max_sets_il) max_sets[lev] = max_sets_il;
     }
   }
-  RealVector2DArray comb_t1_wts(max_lev);
-  RealMatrix2DArray comb_t2_wts(max_lev);
+  comb_t1_wts.resize(max_lev);
+  comb_t2_wts.resize(max_lev);
   for (lev=0; lev<max_lev; ++lev) {
     comb_t1_wts[lev].resize(max_sets[lev]);
     // be consistent with compute_points_weights(): size for num_{lev,sets}
@@ -725,12 +727,6 @@ combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
       }
     }
   }
-
-  // Replace active weights with combined weights.
-  // Note: inactive weight sets to be removed by clear_inactive()
-  std::swap(comb_t1_wts, type1WeightSets[activeKey]);
-  // Update type2 wts even if inactive, so that 2D array sizes are correct
-  std::swap(comb_t2_wts, type2WeightSets[activeKey]);
 }
 
 

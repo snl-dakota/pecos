@@ -1057,6 +1057,8 @@ covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 combined_covariance(PolynomialApproximation* poly_approx_2)
 {
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
@@ -1067,9 +1069,11 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
        mean_2 = (same) ? mean_1 : expectation(comb_t1c_2, comb_t2c_2);
 
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(combinedExpT1Coeffs, combinedExpT2Coeffs,
-			      comb_t1c_2, comb_t2c_2, same, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
+  central_product_interpolant(data_rep->hsg_driver()->combined_variable_sets(),
+			      data_rep->combinedSmolyakMultiIndex,
+			      data_rep->combinedCollocKey, combinedExpT1Coeffs,
+			      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
+			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
   return expectation(cov_t1_coeffs, cov_t2_coeffs);
@@ -1079,10 +1083,10 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 Real HierarchInterpPolyApproximation::
 combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
- HierarchInterpPolyApproximation* hip_approx_2 = 
-    (HierarchInterpPolyApproximation*)poly_approx_2;
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+ HierarchInterpPolyApproximation* hip_approx_2 = 
+    (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
 
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
@@ -1091,9 +1095,11 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
        mean_2 = (same) ? mean_1 : expectation(x, comb_t1c_2, comb_t2c_2);
 
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(combinedExpT1Coeffs, combinedExpT2Coeffs,
-			      comb_t1c_2, comb_t2c_2, same, mean_1, mean_2,
-			      cov_t1_coeffs, cov_t2_coeffs);
+  central_product_interpolant(data_rep->hsg_driver()->combined_variable_sets(),
+			      data_rep->combinedSmolyakMultiIndex,
+			      data_rep->combinedCollocKey, combinedExpT1Coeffs,
+			      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
+			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
   return expectation(x, cov_t1_coeffs, cov_t2_coeffs);
@@ -1607,8 +1613,9 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  hsg_driver->partition_keys(ref_key, incr_key);
 
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
@@ -1619,8 +1626,11 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(combinedExpT1Coeffs, combinedExpT2Coeffs, comb_t1c_2,
-		      comb_t2c_2, same, r1r2_t1_coeffs, r1r2_t2_coeffs);
+  product_interpolant(hsg_driver->combined_variable_sets(),
+		      data_rep->combinedSmolyakMultiIndex,
+		      data_rep->combinedCollocKey, combinedExpT1Coeffs,
+		      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
+		      r1r2_t1_coeffs, r1r2_t2_coeffs);
 
   return delta_covariance(combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  comb_t1c_2, comb_t2c_2, same, r1r2_t1_coeffs,
@@ -1634,8 +1644,9 @@ delta_combined_covariance(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  hsg_driver->partition_keys(ref_key, incr_key);
 
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
@@ -1646,8 +1657,11 @@ delta_combined_covariance(const RealVector& x,
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(combinedExpT1Coeffs, combinedExpT2Coeffs, comb_t1c_2,
-		      comb_t2c_2, same, r1r2_t1_coeffs, r1r2_t2_coeffs);
+  product_interpolant(hsg_driver->combined_variable_sets(),
+		      data_rep->combinedSmolyakMultiIndex,
+		      data_rep->combinedCollocKey, combinedExpT1Coeffs,
+		      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
+		      r1r2_t1_coeffs, r1r2_t2_coeffs);
 
   return delta_covariance(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  comb_t1c_2, comb_t2c_2, same, r1r2_t1_coeffs,
@@ -2129,7 +2143,10 @@ product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     forming hierarchical interpolant coefficients support only a reference
     key (starting point must be set 0; end point can be controlled). */
 void HierarchInterpPolyApproximation::
-product_interpolant(const RealVector2DArray& r1_t1_coeffs,
+product_interpolant(const RealMatrix2DArray& var_sets,
+		    const UShort3DArray&     sm_mi,
+		    const UShort4DArray&     colloc_key,
+		    const RealVector2DArray& r1_t1_coeffs,
 		    const RealMatrix2DArray& r1_t2_coeffs,
 		    const RealVector2DArray& r2_t1_coeffs,
 		    const RealMatrix2DArray& r2_t2_coeffs, bool same,
@@ -2139,14 +2156,9 @@ product_interpolant(const RealVector2DArray& r1_t1_coeffs,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
-  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, num_levels = r1_t1_coeffs.size(), num_sets, num_tp_pts,
-    cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
+    v, num_v = sharedDataRep->numVars;
   bool partial = !reference_key.empty();
-  const SDVArray& sdv_array = surrData.variables_data();
 
   // form hierarchical t1/t2 coeffs for raw moment R1 R2
   r1r2_t1_coeffs.resize(num_levels); r1r2_t1_coeffs[0].resize(1);
@@ -2154,8 +2166,8 @@ product_interpolant(const RealVector2DArray& r1_t1_coeffs,
   r1r2_t1_coeffs[0][0].sizeUninitialized(1);
 
   // level 0 (assume this is always contained in a partial reference_key)
-  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+  RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),
+		    (int)num_v);
   // type1 hierarchical interpolation of R1 R2
   Real r1_val = value(c_vars, sm_mi, colloc_key, r1_t1_coeffs, r1_t2_coeffs, 0),
        r2_val = (same) ? r1_val :
@@ -2172,7 +2184,6 @@ product_interpolant(const RealVector2DArray& r1_t1_coeffs,
     for (v=0; v<num_v; ++v)
       r1r2_t2_coeffs_000[v] = r1_val * r2_grad[v] + r2_val * r1_grad[v];
   }
-  ++cntr;
 
   // levels 1:w
   if (data_rep->basisConfigOptions.useDerivs) {
@@ -2186,9 +2197,9 @@ product_interpolant(const RealVector2DArray& r1_t1_coeffs,
 	num_tp_pts = colloc_key[lev][set].size();
 	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	r1r2_t2_coeffs_ls.shapeUninitialized(num_v, num_tp_pts);
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  RealVector c_vars(Teuchos::View,
+	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  // type1 hierarchical interpolation of R1 R2
 	  r1_val =
 	    value(c_vars, sm_mi, colloc_key, r1_t1_coeffs, r1_t2_coeffs, lev);
@@ -2223,9 +2234,9 @@ product_interpolant(const RealVector2DArray& r1_t1_coeffs,
 	RealVector& r1r2_t1_coeffs_ls = r1r2_t1_coeffs[lev][set];
 	r1r2_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	// type1 hierarchical interpolation of R1 R2
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  RealVector c_vars(Teuchos::View,
+	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  // type1 hierarchical interpolation of R1 R2
 	  r1_val =
 	    value(c_vars, sm_mi, colloc_key, r1_t1_coeffs, r1_t2_coeffs, lev);
@@ -2354,7 +2365,10 @@ central_product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     forming hierarchical interpolant coefficients support only a reference
     key (starting point must be set 0; end point can be controlled). */
 void HierarchInterpPolyApproximation::
-central_product_interpolant(const RealVector2DArray& r1_t1_coeffs,
+central_product_interpolant(const RealMatrix2DArray& var_sets,
+			    const UShort3DArray&     sm_mi,
+			    const UShort4DArray&     colloc_key,
+			    const RealVector2DArray& r1_t1_coeffs,
 			    const RealMatrix2DArray& r1_t2_coeffs,
 			    const RealVector2DArray& r2_t1_coeffs,
 			    const RealMatrix2DArray& r2_t2_coeffs,
@@ -2366,22 +2380,17 @@ central_product_interpolant(const RealVector2DArray& r1_t1_coeffs,
   // form hierarchical t1/t2 coeffs for (R_1 - \mu_1) (R_2 - \mu_2)
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver   = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi        = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key   = hsg_driver->collocation_key();
-  const Sizet3DArray&       colloc_index = hsg_driver->collocation_indices();
-  size_t lev, set, pt, num_levels = r1_t1_coeffs.size(),
-    num_sets, num_tp_pts, cntr = 0, c_index, v, num_v = sharedDataRep->numVars;
+  size_t lev, set, pt, num_levels = r1_t1_coeffs.size(), num_sets, num_tp_pts,
+    v, num_v = sharedDataRep->numVars;
   bool partial = !reference_key.empty();
-  const SDVArray& sdv_array = surrData.variables_data();
 
   cov_t1_coeffs.resize(num_levels); cov_t1_coeffs[0].resize(1);
   cov_t2_coeffs.resize(num_levels); cov_t2_coeffs[0].resize(1);
   cov_t1_coeffs[0][0].sizeUninitialized(1);
 
   // level 0 (assume this is always contained in a partial reference_key)
-  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+  RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),
+		    (int)num_v);
   Real r1_val_mm1 =
     value(c_vars, sm_mi, colloc_key, r1_t1_coeffs, r1_t2_coeffs, 0) - mean_r1,
        r2_val_mm2 = (same) ? r1_val_mm1 :
@@ -2397,7 +2406,6 @@ central_product_interpolant(const RealVector2DArray& r1_t1_coeffs,
     for (v=0; v<num_v; ++v)
       cov_t2_coeffs_000[v] = r1_val_mm1 * r2_grad[v] + r2_val_mm2 * r1_grad[v];
   }
-  ++cntr;
 
   // levels 1:w
   if (data_rep->basisConfigOptions.useDerivs) {
@@ -2410,9 +2418,9 @@ central_product_interpolant(const RealVector2DArray& r1_t1_coeffs,
 	num_tp_pts = colloc_key[lev][set].size();
 	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	cov_t2_coeffs_ls.shapeUninitialized(num_v, num_tp_pts);
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  RealVector c_vars(Teuchos::View,
+	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
 	  r1_val_mm1 = value(c_vars, sm_mi, colloc_key, r1_t1_coeffs,
 	    r1_t2_coeffs, lev) - mean_r1;
@@ -2446,9 +2454,9 @@ central_product_interpolant(const RealVector2DArray& r1_t1_coeffs,
 	RealVector& cov_t1_coeffs_ls = cov_t1_coeffs[lev][set];
 	cov_t1_coeffs_ls.sizeUninitialized(num_tp_pts);
 	// type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+	for (pt=0; pt<num_tp_pts; ++pt) {
+	  RealVector c_vars(Teuchos::View,
+	    const_cast<Real*>(var_sets[lev][set][pt]), (int)num_v);
 	  r1_val_mm1 = value(c_vars, sm_mi, colloc_key, r1_t1_coeffs,
 	    r1_t2_coeffs, lev) - mean_r1;
 	  r2_val_mm2 = (same) ? r1_val_mm1 : value(c_vars, sm_mi, colloc_key,
@@ -2529,7 +2537,10 @@ central_product_gradient_interpolant(
 
 
 void HierarchInterpPolyApproximation::
-central_product_gradient_interpolant(const RealVector2DArray& r1_t1_coeffs,
+central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
+				     const UShort3DArray&     sm_mi,
+				     const UShort4DArray&     colloc_key,
+				     const RealVector2DArray& r1_t1_coeffs,
 				     const RealMatrix2DArray& r1_t2_coeffs,
 				     const RealMatrix2DArray& r1_t1_coeff_grads,
 				     const RealVector2DArray& r2_t1_coeffs,
@@ -2544,22 +2555,16 @@ central_product_gradient_interpolant(const RealVector2DArray& r1_t1_coeffs,
   // form hierarchical t1 coeff grads for (R_1 - \mu_1) (R_2 - \mu_2)
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray&           sm_mi = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
-  const Sizet3DArray&     colloc_index = hsg_driver->collocation_indices();
   size_t lev, set, pt, num_levels = colloc_key.size(), num_sets, num_tp_pts,
-    cntr = 0, c_index, v,
-    num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
+    v, num_deriv_vars = expT1CoeffGradsIter->second[0][0].numRows();
   bool partial = !reference_key.empty();
-  const SDVArray& sdv_array = surrData.variables_data();
 
   // level 0 (assume this is always contained in a partial reference_key)
   cov_t1_coeff_grads.resize(num_levels); cov_t1_coeff_grads[0].resize(1);
   cov_t1_coeff_grads[0][0].shapeUninitialized(num_deriv_vars, 1);
   Real* cov_t1_coeff_grads_000 = cov_t1_coeff_grads[0][0][0];
-  c_index = (colloc_index.empty()) ? cntr : colloc_index[0][0][0];
-  const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+  RealVector c_vars(Teuchos::View, const_cast<Real*>(var_sets[0][0][0]),
+		    (int)num_deriv_vars);
   Real r1_mm =
     value(c_vars, sm_mi, colloc_key, r1_t1_coeffs, r1_t2_coeffs, 0) - mean_r1,
        r2_mm = (same) ? r1_mm :
@@ -2571,7 +2576,6 @@ central_product_gradient_interpolant(const RealVector2DArray& r1_t1_coeffs,
   for (v=0; v<num_deriv_vars; ++v)
     cov_t1_coeff_grads_000[v] = r1_mm * (r2_grad[v] - mean2_grad[v])
                               + r2_mm * (r1_grad[v] - mean1_grad[v]);
-  ++cntr;
   // levels 1:w
   for (lev=1; lev<num_levels; ++lev) {
     num_sets = (partial) ? reference_key[lev][1] : colloc_key[lev].size();
@@ -2581,9 +2585,9 @@ central_product_gradient_interpolant(const RealVector2DArray& r1_t1_coeffs,
       RealMatrix& cov_t1_coeff_grads_ls = cov_t1_coeff_grads[lev][set];
       cov_t1_coeff_grads_ls.shapeUninitialized(num_deriv_vars, num_tp_pts);
       // type1 hierarchical interpolation of (R_1 - \mu_1) (R_2 - \mu_2)
-      for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	c_index = (colloc_index.empty()) ? cntr : colloc_index[lev][set][pt];
-	const RealVector& c_vars = sdv_array[c_index].continuous_variables();
+      for (pt=0; pt<num_tp_pts; ++pt) {
+	RealVector c_vars(Teuchos::View,
+	  const_cast<Real*>(var_sets[lev][set][pt]), (int)num_deriv_vars);
 	Real r1_mm = value(c_vars, sm_mi, colloc_key, r1_t1_coeffs,
 	       r1_t2_coeffs, lev) - mean_r1,
              r2_mm = (same) ? r1_mm : value(c_vars, sm_mi, colloc_key,

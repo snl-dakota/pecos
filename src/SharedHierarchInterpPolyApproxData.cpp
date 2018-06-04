@@ -130,6 +130,8 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
   hsg_driver->
     assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey, false);
 
+  // *** TO DO: need a replacement for collocation indices in {,delta_}combined_covariance()
+  
   /*
   const std::map<UShortArray, UShort4DArray>& key_map
     = hsg_driver->collocation_key_map();

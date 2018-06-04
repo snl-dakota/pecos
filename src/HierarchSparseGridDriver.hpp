@@ -162,6 +162,12 @@ public:
 
   /// overlay all type{1,2}WeightSets and store in active key
   void combine_weight_sets(const Sizet3DArray& combined_sm_mi_map);
+  /// overlay all type{1,2}WeightSets and store in active key
+  void combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
+			   RealVector2DArray& comb_t1_wts,
+			   RealMatrix2DArray& comb_t2_wts);
+  /// overlay all type{1,2}WeightSets and store in active key
+  const RealMatrix2DArray& combined_variable_sets() const;
 
   /// return type1WeightSets for use in hierarchical integration functions
   const RealVector2DArray& type1_weight_set_arrays() const;
@@ -238,6 +244,17 @@ private:
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the sparse grid
   std::map<UShortArray, RealMatrix2DArray> type2WeightSets;
+
+  /// combination of grid point sets
+  /** Could also be managed within SurrogateData, but would require data
+      sharing per HierarchInterpPolyApproximation instance. */
+  RealMatrix2DArray combinedVarSets;
+  /// combination of type1WeightSets, consistent with a
+  /// multilevel-multifidelity expansion combination
+  RealVector2DArray combinedT1WeightSets;
+  /// combination of type2WeightSets, consistent with a
+  /// multilevel-multifidelity expansion combination
+  RealMatrix2DArray combinedT2WeightSets;
 
   // concatenation of type1WeightSets RealVector2DArray into a RealVector
   //RealVector concatT1WeightSets;
@@ -429,6 +446,25 @@ collocation_indices(const UShortArray& key) const
   }
   return cit->second;
 }
+
+
+inline void HierarchSparseGridDriver::
+combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
+{
+  RealVector2DArray comb_t1_wts;  RealMatrix2DArray comb_t2_wts;
+  combine_weight_sets(combined_sm_mi_map, comb_t1_wts, comb_t2_wts);
+
+  // Replace active weights with combined weights.
+  // Note: inactive weight sets to be removed by clear_inactive()
+  std::swap(comb_t1_wts, type1WeightSets[activeKey]);
+  // Update type2 wts even if inactive, so that 2D array sizes are correct
+  std::swap(comb_t2_wts, type2WeightSets[activeKey]);
+}
+
+
+inline const RealMatrix2DArray& HierarchSparseGridDriver::
+combined_variable_sets() const
+{ return combinedVarSets; }
 
 
 /*
