@@ -290,6 +290,18 @@ private:
     const RealVector& mean1_grad, const RealVector& mean2_grad, 
     RealMatrix2DArray& cov_t1_coeff_grads,
     const UShort2DArray& reference_key = UShort2DArray());
+  /// form type1 coefficient gradients for interpolation of 
+  /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
+  void central_product_gradient_interpolant(
+    const RealVector2DArray& r1_t1_coeffs,
+    const RealMatrix2DArray& r1_t2_coeffs,
+    const RealMatrix2DArray& r1_t1_coeff_grads,
+    const RealVector2DArray& r2_t1_coeffs,
+    const RealMatrix2DArray& r2_t2_coeffs,
+    const RealMatrix2DArray& r2_t1_coeff_grads, bool same, Real mean_1,
+    Real mean_2, const RealVector& mean1_grad, const RealVector& mean2_grad, 
+    RealMatrix2DArray& cov_t1_coeff_grads,
+    const UShort2DArray& reference_key = UShort2DArray());
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using weights from the HierarchSparseGridDriver
