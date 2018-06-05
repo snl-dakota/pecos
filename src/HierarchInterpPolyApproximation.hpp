@@ -214,6 +214,8 @@ private:
 			const RealMatrix2DArray& r2_t2_coeffs, bool same,
 			const RealVector2DArray& r1r2_t1_coeffs,
 			const RealMatrix2DArray& r1r2_t2_coeffs,
+			const RealVector2DArray& t1_wts,
+			const RealMatrix2DArray& t2_wts,
 			const UShort2DArray& ref_key,
 			const UShort2DArray& incr_key);
   /// compute the covariance increment at x due to the current grid increment
@@ -224,6 +226,8 @@ private:
 			const RealMatrix2DArray& r2_t2_coeffs, bool same,
 			const RealVector2DArray& r1r2_t1_coeffs,
 			const RealMatrix2DArray& r1r2_t2_coeffs,
+			const UShort3DArray& sm_mi,
+			const UShort4DArray& colloc_key,
 			const UShort2DArray& ref_key,
 			const UShort2DArray& incr_key);
 
@@ -310,7 +314,7 @@ private:
     const UShort2DArray& reference_key = UShort2DArray());
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
-  /// using weights from the HierarchSparseGridDriver
+  /// using active weights from the HierarchSparseGridDriver
   Real expectation(const RealVector2DArray& t1_coeffs,
 		   const RealMatrix2DArray& t2_coeffs,
 		   const UShort2DArray& set_partition = UShort2DArray());
@@ -327,9 +331,15 @@ private:
   //		   const UShort3DArray& pt_partition);
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
-  /// using weights from the HierarchSparseGridDriver
+  /// using active weights from the HierarchSparseGridDriver
   Real expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
 		   const RealMatrix2DArray& t2_coeffs,
+		   const UShort2DArray& set_partition = UShort2DArray());
+  /// compute the expected value of the interpolant given by t{1,2}_coeffs
+  /// using partial weights determined from sm_mi and colloc_key
+  Real expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
+		   const RealMatrix2DArray& t2_coeffs,
+		   const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
 		   const UShort2DArray& set_partition = UShort2DArray());
 
   /// compute the expected value of the gradient interpolant given by
@@ -345,11 +355,25 @@ private:
   Real expectation_gradient(const RealVector& x,
 			    const RealMatrix2DArray& t1_coeff_grads,
 			    size_t t1cg_index);
+  /// compute the expectation of t1_coeff_grads for index t1cg_index
+  Real expectation_gradient(const RealVector& x,
+			    const RealMatrix2DArray& t1_coeff_grads,
+			    const UShort3DArray& sm_mi,
+			    const UShort4DArray& colloc_key, size_t t1cg_index);
+
   /// compute the expectation of the gradient of {t1,t2}_coeffs for
   /// index deriv_index
   Real expectation_gradient(const RealVector& x,
 			    const RealVector2DArray& t1_coeffs,
 			    const RealMatrix2DArray& t2_coeffs,
+			    size_t deriv_index);
+  /// compute the expectation of the gradient of {t1,t2}_coeffs for
+  /// index deriv_index
+  Real expectation_gradient(const RealVector& x,
+			    const RealVector2DArray& t1_coeffs,
+			    const RealMatrix2DArray& t2_coeffs,
+			    const UShort3DArray& sm_mi,
+			    const UShort4DArray& colloc_key,
 			    size_t deriv_index);
 
   /// increment expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
@@ -602,23 +626,66 @@ expectation(const RealVector2DArray& t1_coeffs,
 	    const RealMatrix2DArray& t2_coeffs,
 	    const UShort2DArray& set_partition)
 {
-  // This version defaults to type1/2 weights from HierarchSparseGridDriver
+  // This version defaults to active type1/2 wts from HierarchSparseGridDriver
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  return expectation(t1_coeffs, hsg_driver->type1_weight_set_arrays(),
-		     t2_coeffs, hsg_driver->type2_weight_set_arrays(),
+  return expectation(t1_coeffs, hsg_driver->type1_hierarchical_weight_sets(),
+		     t2_coeffs, hsg_driver->type2_hierarchical_weight_sets(),
 		     set_partition);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
+	    const RealMatrix2DArray& t2_coeffs,
+	    const UShort2DArray& set_partition)
+{
+  // This version defaults to active sm_mi/key from HierarchSparseGridDriver
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  return expectation(x, t1_coeffs, t2_coeffs, hsg_driver->smolyak_multi_index(),
+		     hsg_driver->collocation_key(), set_partition);
 }
 
 
 inline const RealVector& HierarchInterpPolyApproximation::
 expectation_gradient(const RealMatrix2DArray& t1_coeff_grads)
 {
+  // This version defaults to active type1 wts from HierarchSparseGridDriver
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   return expectation_gradient(t1_coeff_grads,
-    data_rep->hsg_driver()->type1_weight_set_arrays());
+    data_rep->hsg_driver()->type1_hierarchical_weight_sets());
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+expectation_gradient(const RealVector& x,
+		     const RealMatrix2DArray& t1_coeff_grads, size_t t1cg_index)
+{
+  // This version defaults to active sm_mi/key from HierarchSparseGridDriver
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  return expectation_gradient(x, t1_coeff_grads,
+			      hsg_driver->smolyak_multi_index(),
+			      hsg_driver->collocation_key(), t1cg_index);
+}
+
+
+inline Real HierarchInterpPolyApproximation::
+expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
+		     const RealMatrix2DArray& t2_coeffs, size_t deriv_index)
+{
+  // This version defaults to active sm_mi/key from HierarchSparseGridDriver
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  return expectation_gradient(x, t1_coeffs, t2_coeffs,
+			      hsg_driver->smolyak_multi_index(),
+			      hsg_driver->collocation_key(), deriv_index);
 }
 
 

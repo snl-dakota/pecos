@@ -160,19 +160,34 @@ public:
   void partition_keys(UShort3DArray& reference_pt_range,
 		      UShort3DArray& increment_pt_range) const;
 
-  /// overlay all type{1,2}WeightSets and store in active key
-  void combine_weight_sets(const Sizet3DArray& combined_sm_mi_map);
-  /// overlay all type{1,2}WeightSets and store in active key
-  void combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
-			   RealVector2DArray& comb_t1_wts,
-			   RealMatrix2DArray& comb_t2_wts);
-  /// overlay all type{1,2}WeightSets and store in active key
-  const RealMatrix2DArray& combined_variable_sets() const;
+  /// compute points and weights for all levels and sets of the hierarchical
+  /// sparse grid indicated by Smolyak multi-index and collocation key
+  void compute_points_weights(const UShort3DArray& sm_mi,
+			      const UShort4DArray& colloc_key,
+			      RealMatrix2DArray& pts, RealVector2DArray& t1_wts,
+			      RealMatrix2DArray& t2_wts);
+  /// compute points and weights for a trial set
+  void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
+			      RealMatrix& t2_wts);
+  /// compute points and weights for all levels of the active sparse grid;
+  /// in this case the points array is condensed to a single matrix but the
+  /// weights remain organized by hierarchical levels and sets
+  void compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
+			      RealMatrix2DArray& t2_wts);
+
+  // overlay all type{1,2}WeightSets and store in active key
+  //void combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
+  //			     RealVector2DArray& comb_t1_wts,
+  //			     RealMatrix2DArray& comb_t2_wts);
 
   /// return type1WeightSets for use in hierarchical integration functions
-  const RealVector2DArray& type1_weight_set_arrays() const;
+  const RealVector2DArray& type1_hierarchical_weight_sets() const;
+  /// set type1WeightSets for use in hierarchical integration functions
+  void type1_hierarchical_weight_sets(const RealVector2DArray& t1_wts);
   /// return type2WeightSets for use in hierarchical integration functions
-  const RealMatrix2DArray& type2_weight_set_arrays() const;
+  const RealMatrix2DArray& type2_hierarchical_weight_sets() const;
+  /// set type2WeightSets for use in hierarchical integration functions
+  void type2_hierarchical_weight_sets(const RealMatrix2DArray& t2_wts);
 
 private:
 
@@ -185,16 +200,11 @@ private:
   
   void update_smolyak_multi_index(bool clear_sm_mi = false);
 
-  /// kernel routine used for trial set and full sparse grid computations
-  void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
-			      RealMatrix& t2_wts, const UShortArray& sm_index,
-			      const UShort2DArray& colloc_key);
-  /// compute points and weights for a trial set
-  void compute_points_weights(RealMatrix& pts, RealVector& t1_wts,
-			      RealMatrix& t2_wts);
-  /// compute points and weights for all levels of the (initial) sparse grid
-  void compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
-			      RealMatrix2DArray& t2_wts);
+  /// kernel routine used for computing points and weights for a tensor grid
+  /// corresponding to a single index set
+  void compute_points_weights(const UShortArray& sm_index,
+			      const UShort2DArray& colloc_key, RealMatrix& pts,
+			      RealVector& t1_wts, RealMatrix& t2_wts);
 
   //
   //- Heading: Data
@@ -241,20 +251,13 @@ private:
   /// the set of type1 weights (for integration of value interpolants)
   /// associated with each point in the sparse grid
   std::map<UShortArray, RealVector2DArray> type1WeightSets;
+  /// iterator for active entry within type1WeightSets
+  std::map<UShortArray, RealVector2DArray>::iterator t1WtIter;
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the sparse grid
   std::map<UShortArray, RealMatrix2DArray> type2WeightSets;
-
-  /// combination of grid point sets
-  /** Could also be managed within SurrogateData, but would require data
-      sharing per HierarchInterpPolyApproximation instance. */
-  RealMatrix2DArray combinedVarSets;
-  /// combination of type1WeightSets, consistent with a
-  /// multilevel-multifidelity expansion combination
-  RealVector2DArray combinedT1WeightSets;
-  /// combination of type2WeightSets, consistent with a
-  /// multilevel-multifidelity expansion combination
-  RealMatrix2DArray combinedT2WeightSets;
+  /// iterator for active entry within type2WeightSets
+  std::map<UShortArray, RealMatrix2DArray>::iterator t2WtIter;
 
   // concatenation of type1WeightSets RealVector2DArray into a RealVector
   //RealVector concatT1WeightSets;
@@ -307,6 +310,18 @@ inline void HierarchSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, Sizet3DArray> s3a_pair(activeKey, Sizet3DArray());
     collocIndIter = collocIndices.insert(s3a_pair).first;
   }
+  t1WtIter = type1WeightSets.find(activeKey);
+  if (t1WtIter == type1WeightSets.end()) {
+    std::pair<UShortArray, RealVector2DArray>
+      rv2_pair(activeKey, RealVector2DArray());
+    t1WtIter = type1WeightSets.insert(rv2_pair).first;
+  }
+  t2WtIter = type2WeightSets.find(activeKey);
+  if (t2WtIter == type2WeightSets.end()) {
+    std::pair<UShortArray, RealMatrix2DArray>
+      rm2_pair(activeKey, RealMatrix2DArray());
+    t2WtIter = type2WeightSets.insert(rm2_pair).first;
+  }
 }
 
 
@@ -333,7 +348,8 @@ inline void HierarchSparseGridDriver::clear_keys()
   smolyakMultiIndex.clear();  smolMIIter    = smolyakMultiIndex.end();
   collocKey.clear();          collocKeyIter = collocKey.end();
   collocIndices.clear();      collocIndIter = collocIndices.end();
-  type1WeightSets.clear();    type2WeightSets.clear();
+  type1WeightSets.clear();    t1WtIter      = type1WeightSets.end();
+  type2WeightSets.clear();    t2WtIter      = type2WeightSets.end();
   poppedT1WtSets.clear();     poppedT2WtSets.clear();
 }
 
@@ -448,98 +464,24 @@ collocation_indices(const UShortArray& key) const
 }
 
 
-inline void HierarchSparseGridDriver::
-combine_weight_sets(const Sizet3DArray& combined_sm_mi_map)
-{
-  RealVector2DArray comb_t1_wts;  RealMatrix2DArray comb_t2_wts;
-  combine_weight_sets(combined_sm_mi_map, comb_t1_wts, comb_t2_wts);
-
-  // Replace active weights with combined weights.
-  // Note: inactive weight sets to be removed by clear_inactive()
-  std::swap(comb_t1_wts, type1WeightSets[activeKey]);
-  // Update type2 wts even if inactive, so that 2D array sizes are correct
-  std::swap(comb_t2_wts, type2WeightSets[activeKey]);
-}
-
-
-inline const RealMatrix2DArray& HierarchSparseGridDriver::
-combined_variable_sets() const
-{ return combinedVarSets; }
-
-
-/*
-inline const RealVector& HierarchSparseGridDriver::type1_weight_sets() // const
-{
-  if (concatT1WeightSets.length() != numCollocPts) {
-    concatT1WeightSets.sizeUninitialized(numCollocPts);
-    size_t lev, set, pt, cntr = 0, num_levels = type1WeightSets.size(),
-      num_sets, num_tp_pts;
-    for (lev=0; lev<num_levels; ++lev) {
-      num_sets = type1WeightSets[lev].size();
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = type1WeightSets[lev][set].length();
-	const SizetArray& colloc_index = collocIndices[lev][set];
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
-	  concatT1WeightSets[colloc_index[cntr]]
-	    = type1WeightSets[lev][set][pt];
-      }
-    }
-  }
-  return concatT1WeightSets;
-}
-
-
-inline const RealMatrix& HierarchSparseGridDriver::type2_weight_sets() // const
-{
-  if (concatT2WeightSets.numCols() != numCollocPts) {
-    concatT2WeightSets.shapeUninitialized(numVars, numCollocPts);
-    size_t lev, set, pt, v, cntr = 0, num_levels = type2WeightSets.size(),
-      num_sets, num_tp_pts;
-    for (lev=0; lev<num_levels; ++lev) {
-      num_sets = type2WeightSets[lev].size();
-      for (set=0; set<num_sets; ++set) {
-	num_tp_pts = type2WeightSets[lev][set].numCols();
-	const SizetArray& colloc_index = collocIndices[lev][set];
-	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
-	  Real* concat_t2_wts = concatT2WeightSets[colloc_index[cntr]];
-	  const Real*  t2_wts = type2WeightSets[lev][set][pt];
-	  for (v=0; v<numVars; ++v)
-	    concat_t2_wts[v] = t2_wts[v];
-	}
-      }
-    }
-  }
-  return concatT2WeightSets;
-}
-*/
-
-
 inline const RealVector2DArray& HierarchSparseGridDriver::
-type1_weight_set_arrays() const
-{
-  std::map<UShortArray, RealVector2DArray>::const_iterator cit
-    = type1WeightSets.find(activeKey);
-  if (cit == type1WeightSets.end()) {
-    PCerr << "Error: active key not found in HierarchSparseGridDriver::"
-	  << "type1_weight_set_arrays()." << std::endl;
-    abort_handler(-1);
-  }
-  return cit->second;
-}
+type1_hierarchical_weight_sets() const
+{ return t1WtIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+type1_hierarchical_weight_sets(const RealVector2DArray& rv2)
+{ t1WtIter->second = rv2; }
 
 
 inline const RealMatrix2DArray& HierarchSparseGridDriver::
-type2_weight_set_arrays() const
-{
-  std::map<UShortArray, RealMatrix2DArray>::const_iterator cit
-    = type2WeightSets.find(activeKey);
-  if (cit == type2WeightSets.end()) {
-    PCerr << "Error: active key not found in HierarchSparseGridDriver::"
-	  << "type2_weight_set_arrays()." << std::endl;
-    abort_handler(-1);
-  }
-  return cit->second;
-}
+type2_hierarchical_weight_sets() const
+{ return t2WtIter->second; }
+
+
+inline void HierarchSparseGridDriver::
+type2_hierarchical_weight_sets(const RealMatrix2DArray& rm2)
+{ t2WtIter->second = rm2; }
 
 
 inline void HierarchSparseGridDriver::

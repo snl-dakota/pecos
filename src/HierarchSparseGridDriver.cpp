@@ -546,8 +546,7 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
   // computations are kept completely separate.
 
   if (nestedGrid) {
-    compute_points_weights(var_sets, type1WeightSets[activeKey],
-			   type2WeightSets[activeKey]);
+    compute_points_weights(var_sets, t1WtIter->second, t2WtIter->second);
     if (trackCollocIndices)
       assign_collocation_indices();
   }
@@ -564,10 +563,10 @@ void HierarchSparseGridDriver::compute_grid(RealMatrix& var_sets)
     write_data(PCout, var_sets, false, true, true);
     if (trackUniqueProdWeights) {
       PCout << "\ntype1WeightSets:\n";
-      write_data(PCout, type1WeightSets[activeKey]);
+      write_data(PCout, t1WtIter->second);
       if (computeType2Weights) {
 	PCout << "\ntype2WeightSets:\n";
-	write_data(PCout, type2WeightSets[activeKey], false, true, true);
+	write_data(PCout, t2WtIter->second, false, true, true);
       }
     }
 #endif
@@ -587,8 +586,8 @@ void HierarchSparseGridDriver::compute_trial_grid(RealMatrix& var_sets)
   // update collocKey and compute trial variable/weight sets
   update_collocation_key();
   if (nestedGrid) {
-    RealVector2DArray& t1_wts = type1WeightSets[activeKey];
-    RealMatrix2DArray& t2_wts = type2WeightSets[activeKey];
+    RealVector2DArray& t1_wts = t1WtIter->second;
+    RealMatrix2DArray& t2_wts = t2WtIter->second;
     if (t1_wts.size() <= trialLevel || t2_wts.size() <= trialLevel)
       { t1_wts.resize(trialLevel+1); t2_wts.resize(trialLevel+1); }
     RealVectorArray& t1_wts_l = t1_wts[trialLevel];
@@ -623,8 +622,8 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
   update_collocation_key();
   size_t lev, set, num_lev = incrementSets.size(), num_sets;
   if (nestedGrid) {
-    RealVector2DArray& t1_wts = type1WeightSets[activeKey];
-    RealMatrix2DArray& t2_wts = type2WeightSets[activeKey];
+    RealVector2DArray& t1_wts = t1WtIter->second;
+    RealMatrix2DArray& t2_wts = t2WtIter->second;
     if (t1_wts.size() < num_lev || t2_wts.size() < num_lev)
       { t1_wts.resize(num_lev); t2_wts.resize(num_lev); }
     // compute total increment evaluations and size var_sets
@@ -652,8 +651,8 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
 	const UShort2DArray& key_ls = key_l[set];
 	num_tp_pts = key_ls.size();
 	RealMatrix pts_ls(Teuchos::View, var_sets, numVars, num_tp_pts, 0,cntr);
-	compute_points_weights(pts_ls, t1_wts_l[set], t2_wts_l[set],
-			       sm_mi_l[set], key_ls);
+	compute_points_weights(sm_mi_l[set], key_ls, pts_ls, t1_wts_l[set],
+			       t2_wts_l[set]);
 	cntr += num_tp_pts;
       }
     }
@@ -677,63 +676,9 @@ void HierarchSparseGridDriver::compute_increment(RealMatrix& var_sets)
 
 
 void HierarchSparseGridDriver::
-combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
-		    RealVector2DArray& comb_t1_wts,
-		    RealMatrix2DArray& comb_t2_wts)
-{
-  // size consolidated weights according to greatest interpolation depth
-  size_t i, lev, num_lev, set, num_sets, max_lev = 0, max_sets_il,
-    num_map = combined_sm_mi_map.size();
-  SizetArray max_sets;
-  for (i=0; i<num_map; ++i) {
-    const Sizet2DArray& comb_sm_map_i = combined_sm_mi_map[i];
-    num_lev = comb_sm_map_i.size();
-    if (num_lev > max_lev)                  max_lev = num_lev;
-    for (lev=0; lev<num_lev; ++lev) {
-      max_sets_il = find_max(comb_sm_map_i[lev]);
-      if (max_sets.size() <= lev)           max_sets.push_back(max_sets_il);
-      else if (max_sets[lev] < max_sets_il) max_sets[lev] = max_sets_il;
-    }
-  }
-  comb_t1_wts.resize(max_lev);
-  comb_t2_wts.resize(max_lev);
-  for (lev=0; lev<max_lev; ++lev) {
-    comb_t1_wts[lev].resize(max_sets[lev]);
-    // be consistent with compute_points_weights(): size for num_{lev,sets}
-    // but leave RealMatrix empty if type2 weights are inactive.
-    /*if (computeType2Weights)*/ comb_t2_wts.resize(max_sets[lev]);
-  }
-
-  std::map<UShortArray, RealVector2DArray>::iterator t1w_it;
-  std::map<UShortArray, RealMatrix2DArray>::iterator t2w_it;
-  for (t1w_it =type1WeightSets.begin(), t2w_it =type2WeightSets.begin(), i=0;
-       t1w_it!=type1WeightSets.end() && t2w_it!=type2WeightSets.end();
-       ++t1w_it, ++t2w_it, ++i) {
-    const RealVector2DArray& t1w = t1w_it->second;  num_lev  = t1w.size();
-    for (lev=0; lev<num_lev; ++lev) {
-      const RealVectorArray& t1w_l = t1w[lev];      num_sets = t1w_l.size();
-      const RealMatrixArray& t2w_l = t2w_it->second[lev];
-      RealVectorArray&  comb_t1w_l = comb_t1_wts[lev];
-      RealMatrixArray&  comb_t2w_l = comb_t2_wts[lev];
-      const SizetArray& comb_sm_map_il = combined_sm_mi_map[i][lev];
-      for (set=0; set<num_sets; ++set) {
-	// map from weight sets for this key to corresponding sets in
-	// combined t{1,2} weight sets
-	size_t comb_set = comb_sm_map_il[set];
-	// overlay but no need to accumulate or repeatedly overwrite
-	if (comb_t1w_l[comb_set].empty()) comb_t1w_l[comb_set] = t1w_l[set];
-	if (computeType2Weights && comb_t2w_l[comb_set].empty())
-	  comb_t2w_l[comb_set] = t2w_l[set];
-      }
-    }
-  }
-}
-
-
-void HierarchSparseGridDriver::
-compute_points_weights(RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts,
-		       const UShortArray& sm_index,
-		       const UShort2DArray& colloc_key)
+compute_points_weights(const UShortArray& sm_index,
+		       const UShort2DArray& colloc_key, RealMatrix& pts,
+		       RealVector& t1_wts, RealMatrix& t2_wts)
 {
   size_t k, l, m, num_tp_pts = colloc_key.size();
   if (pts.numCols() != num_tp_pts)
@@ -779,9 +724,29 @@ compute_points_weights(RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts,
 void HierarchSparseGridDriver::
 compute_points_weights(RealMatrix& pts, RealVector& t1_wts, RealMatrix& t2_wts)
 {
-  compute_points_weights(pts, t1_wts, t2_wts,
-			 smolMIIter->second[trialLevel].back(),
-			 collocKeyIter->second[trialLevel].back());
+  compute_points_weights(smolMIIter->second[trialLevel].back(),
+			 collocKeyIter->second[trialLevel].back(),
+			 pts, t1_wts, t2_wts);
+}
+
+
+void HierarchSparseGridDriver::
+compute_points_weights(const UShort3DArray& sm_mi,
+		       const UShort4DArray& colloc_key, RealMatrix2DArray& pts,
+		       RealVector2DArray& t1_wts, RealMatrix2DArray& t2_wts)
+{
+  // size consolidated weights according to greatest interpolation depth
+  size_t lev, num_lev = sm_mi.size(), set, num_sets;
+  for (lev=0; lev<num_lev; ++lev) {
+    const UShort3DArray&   key_l = colloc_key[lev];
+    const UShort2DArray& sm_mi_l =  sm_mi[lev];   num_sets = sm_mi_l.size();
+    RealMatrixArray&       pts_l =    pts[lev];      pts_l.resize(num_sets);
+    RealVectorArray&    t1_wts_l = t1_wts[lev];   t1_wts_l.resize(num_sets);
+    RealMatrixArray&    t2_wts_l = t2_wts[lev];   t2_wts_l.resize(num_sets);
+    for (set=0; set<num_sets; ++set)
+      compute_points_weights(sm_mi_l[set], key_l[set], pts_l[set],
+			     t1_wts_l[set], t2_wts_l[set]);
+  }
 }
 
 
@@ -818,8 +783,8 @@ compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
       num_tp_pts = key_ij.size();
       // take pts_ij sub-matrix view of full sample matrix pts
       RealMatrix pts_ij(Teuchos::View, pts, numVars, num_tp_pts, 0, cntr);
-      compute_points_weights(pts_ij, t1_wts[i][j], t2_wts[i][j],
-			     sm_mi[i][j], key_ij);
+      compute_points_weights(sm_mi[i][j], key_ij, pts_ij,
+			     t1_wts[i][j], t2_wts[i][j]);
       cntr += num_tp_pts;
     }
   }
@@ -881,11 +846,11 @@ void HierarchSparseGridDriver::restore_set()
     // This approach stores less history than WeightSetsRef approach
     const UShortArray& tr_set = trial_set();
     std::map<UShortArray, RealVector>& pop_t1_wts = poppedT1WtSets[activeKey];
-    type1WeightSets[activeKey][trialLevel].push_back(pop_t1_wts[tr_set]);
+    t1WtIter->second[trialLevel].push_back(pop_t1_wts[tr_set]);
     pop_t1_wts.erase(tr_set);
     if (computeType2Weights) {
       std::map<UShortArray, RealMatrix>& pop_t2_wts = poppedT2WtSets[activeKey];
-      type2WeightSets[activeKey][trialLevel].push_back(pop_t2_wts[tr_set]);
+      t2WtIter->second[trialLevel].push_back(pop_t2_wts[tr_set]);
       pop_t2_wts.erase(tr_set);
     }
   }
@@ -916,13 +881,13 @@ void HierarchSparseGridDriver::pop_trial_set()
 
   // migrate weights from popped to active status
   const UShortArray& tr_set = trial_set(); // valid prior to smolyakMI pop
-  RealVector2DArray& t1_wts = type1WeightSets[activeKey];
-  poppedT1WtSets[activeKey][tr_set] = t1_wts[trialLevel].back();
-  t1_wts[trialLevel].pop_back();
+  RealVectorArray& t1_wts_l = t1WtIter->second[trialLevel];
+  poppedT1WtSets[activeKey][tr_set] = t1_wts_l.back();
+  t1_wts_l.pop_back();
   if (computeType2Weights) {
-    RealMatrix2DArray& t2_wts = type2WeightSets[activeKey];
-    poppedT2WtSets[activeKey][tr_set] = t2_wts[trialLevel].back();
-    t2_wts[trialLevel].pop_back();
+    RealMatrixArray& t2_wts_l = t2WtIter->second[trialLevel];
+    poppedT2WtSets[activeKey][tr_set] = t2_wts_l.back();
+    t2_wts_l.pop_back();
   }
   // pop trailing set from smolyakMultiIndex, collocKey, collocIndices
   sm_mi[trialLevel].pop_back(); // tr_set no longer valid
@@ -983,10 +948,9 @@ finalize_sets(bool output_sets, bool converged_within_tol)
       update_collocation_key();       // update collocKey
       if (trackCollocIndices)
 	update_collocation_indices(); // update collocIndices and numCollocPts
-      type1WeightSets[activeKey][trialLevel].push_back(pop_t1_wts[tr_set]);
+      t1WtIter->second[trialLevel].push_back(pop_t1_wts[tr_set]);
       if (computeType2Weights)
-	type2WeightSets[activeKey][trialLevel].push_back(pop2_it->
-							 second[tr_set]);
+	t2WtIter->second[trialLevel].push_back(pop2_it->second[tr_set]);
       if (output_sets && converged_within_tol) // print trials below tol
 	print_index_set(PCout, tr_set);
     }
@@ -1076,5 +1040,108 @@ partition_keys(UShort3DArray& reference_pt_range,
     }
   }
 }
+
+
+/*
+void HierarchSparseGridDriver::
+combine_weight_sets(const Sizet3DArray& combined_sm_mi_map,
+		    RealVector2DArray& comb_t1_wts,
+		    RealMatrix2DArray& comb_t2_wts)
+{
+  // size consolidated weights according to greatest interpolation depth
+  size_t i, lev, num_lev, set, num_sets, max_lev = 0, max_sets_il,
+    num_map = combined_sm_mi_map.size();
+  SizetArray max_sets;
+  for (i=0; i<num_map; ++i) {
+    const Sizet2DArray& comb_sm_map_i = combined_sm_mi_map[i];
+    num_lev = comb_sm_map_i.size();
+    if (num_lev > max_lev)                  max_lev = num_lev;
+    for (lev=0; lev<num_lev; ++lev) {
+      max_sets_il = find_max(comb_sm_map_i[lev]);
+      if (max_sets.size() <= lev)           max_sets.push_back(max_sets_il);
+      else if (max_sets[lev] < max_sets_il) max_sets[lev] = max_sets_il;
+    }
+  }
+  comb_t1_wts.resize(max_lev);
+  comb_t2_wts.resize(max_lev);
+  for (lev=0; lev<max_lev; ++lev) {
+    comb_t1_wts[lev].resize(max_sets[lev]);
+    // be consistent with compute_points_weights(): size for num_{lev,sets}
+    // but leave RealMatrix empty if type2 weights are inactive.
+    comb_t2_wts.resize(max_sets[lev]);
+  }
+
+  std::map<UShortArray, RealVector2DArray>::iterator t1w_it;
+  std::map<UShortArray, RealMatrix2DArray>::iterator t2w_it;
+  for (t1w_it =type1WeightSets.begin(), t2w_it =type2WeightSets.begin(), i=0;
+       t1w_it!=type1WeightSets.end() && t2w_it!=type2WeightSets.end();
+       ++t1w_it, ++t2w_it, ++i) {
+    const RealVector2DArray& t1w = t1w_it->second;  num_lev  = t1w.size();
+    for (lev=0; lev<num_lev; ++lev) {
+      const RealVectorArray& t1w_l = t1w[lev];      num_sets = t1w_l.size();
+      const RealMatrixArray& t2w_l = t2w_it->second[lev];
+      RealVectorArray&  comb_t1w_l = comb_t1_wts[lev];
+      RealMatrixArray&  comb_t2w_l = comb_t2_wts[lev];
+      const SizetArray& comb_sm_map_il = combined_sm_mi_map[i][lev];
+      for (set=0; set<num_sets; ++set) {
+	// map from weight sets for this key to corresponding sets in
+	// combined t{1,2} weight sets
+	size_t comb_set = comb_sm_map_il[set];
+	// overlay but no need to accumulate or repeatedly overwrite
+	if (comb_t1w_l[comb_set].empty()) comb_t1w_l[comb_set] = t1w_l[set];
+	if (computeType2Weights && comb_t2w_l[comb_set].empty())
+	  comb_t2w_l[comb_set] = t2w_l[set];
+      }
+    }
+  }
+}
+*/
+
+
+/*
+const RealVector& HierarchSparseGridDriver::type1_weight_sets() // const
+{
+  if (concatT1WeightSets.length() != numCollocPts) {
+    concatT1WeightSets.sizeUninitialized(numCollocPts);
+    size_t lev, set, pt, cntr = 0, num_levels = type1WeightSets.size(),
+      num_sets, num_tp_pts;
+    for (lev=0; lev<num_levels; ++lev) {
+      num_sets = type1WeightSets[lev].size();
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = type1WeightSets[lev][set].length();
+	const SizetArray& colloc_index = collocIndices[lev][set];
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr)
+	  concatT1WeightSets[colloc_index[cntr]]
+	    = type1WeightSets[lev][set][pt];
+      }
+    }
+  }
+  return concatT1WeightSets;
+}
+
+
+const RealMatrix& HierarchSparseGridDriver::type2_weight_sets() // const
+{
+  if (concatT2WeightSets.numCols() != numCollocPts) {
+    concatT2WeightSets.shapeUninitialized(numVars, numCollocPts);
+    size_t lev, set, pt, v, cntr = 0, num_levels = type2WeightSets.size(),
+      num_sets, num_tp_pts;
+    for (lev=0; lev<num_levels; ++lev) {
+      num_sets = type2WeightSets[lev].size();
+      for (set=0; set<num_sets; ++set) {
+	num_tp_pts = type2WeightSets[lev][set].numCols();
+	const SizetArray& colloc_index = collocIndices[lev][set];
+	for (pt=0; pt<num_tp_pts; ++pt, ++cntr) {
+	  Real* concat_t2_wts = concatT2WeightSets[colloc_index[cntr]];
+	  const Real*  t2_wts = type2WeightSets[lev][set][pt];
+	  for (v=0; v<numVars; ++v)
+	    concat_t2_wts[v] = t2_wts[v];
+	}
+      }
+    }
+  }
+  return concatT2WeightSets;
+}
+*/
 
 } // namespace Pecos

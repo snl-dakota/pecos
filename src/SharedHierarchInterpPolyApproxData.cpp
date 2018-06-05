@@ -126,23 +126,16 @@ void SharedHierarchInterpPolyApproxData::pre_combine_data()
   }
 
   // Flag indicates unstructured set ordering (can't assume a no-op return if
-  // level/set counts are consistent)
+  // level/set counts are consistent).  Recompute combinedCollocKey from
+  // combinedSmolyakMultiIndex, rather than overlay collocKey.
   hsg_driver->
     assign_collocation_key(combinedSmolyakMultiIndex, combinedCollocKey, false);
-
-  // *** TO DO: need a replacement for collocation indices in {,delta_}combined_covariance()
-  
-  /*
-  const std::map<UShortArray, UShort4DArray>& key_map
-    = hsg_driver->collocation_key_map();
-  size_t i, num_combine = key_map.size(), combine_key_map_ref;
-  combinedCollocKey.clear();  combinedCollocKeyMap.resize(num_combine);
-  std::map<UShortArray, UShort4DArray>::iterator key_it;
-  for (key_it=key_map.begin(), i=0; key_it!=key_map.end(); ++key_it, ++i) {
-    append_multi_index(key_it->second, combinedCollocKey,
-		       combinedCollocKeyMap[i], combine_key_map_ref);
-  }
-  */
+  // Can't use collocation indices for combined expansions without adding
+  // additional tracking of model indices (no thanks), so create combined
+  // points and weights to support expectation() calls.
+  hsg_driver->compute_points_weights(combinedSmolyakMultiIndex,
+    combinedCollocKey, combinedVarSets, combinedT1WeightSets,
+    combinedT2WeightSets);
 }
 
 
@@ -156,7 +149,15 @@ void SharedHierarchInterpPolyApproxData::combined_to_active()
   hsg_driver->collocation_key(combinedCollocKey);
   combinedCollocKey.clear();
 
-  hsg_driver->combine_weight_sets(combinedSmolyakMultiIndexMap);
+  //hsg_driver->combine_weight_sets(combinedSmolyakMultiIndexMap);
+  //hsg_driver->combined_to_active();
+  // Replace active weights with combined weights.
+  // Update type2 wts even if inactive, so that 2D array sizes are correct
+  // Note: inactive weight sets to be removed by clear_inactive()
+  hsg_driver->type1_hierarchical_weight_sets(combinedT1WeightSets);
+  hsg_driver->type2_hierarchical_weight_sets(combinedT2WeightSets);
+  combinedT1WeightSets.clear();  combinedT2WeightSets.clear();
+
   combinedSmolyakMultiIndexMap.clear(); // not used by hsg_driver
 }
 

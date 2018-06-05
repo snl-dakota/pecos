@@ -865,6 +865,7 @@ Real HierarchInterpPolyApproximation::mean(const RealVector& x)
       data_rep->match_nonrandom_vars(x, xPrevMean))
     return numericalMoments[0];
 
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real mean = expectation(x, expT1CoeffsIter->second, expT2CoeffsIter->second);
   if (all_mode)
     { numericalMoments[0] = mean; computedMean |= 1; xPrevMean = x; }
@@ -1065,18 +1066,22 @@ combined_covariance(PolynomialApproximation* poly_approx_2)
 
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
-  Real mean_1 = expectation(combinedExpT1Coeffs, combinedExpT2Coeffs),
-       mean_2 = (same) ? mean_1 : expectation(comb_t1c_2, comb_t2c_2);
+  const RealVector2DArray& comb_t1w   = data_rep->combinedT1WeightSets;
+  const RealMatrix2DArray& comb_t2w   = data_rep->combinedT2WeightSets;
+  Real mean_1 = expectation(combinedExpT1Coeffs, comb_t1w,
+			    combinedExpT2Coeffs, comb_t2w),
+       mean_2 = (same) ? mean_1 : expectation(comb_t1c_2, comb_t1w,
+					      comb_t2c_2, comb_t2w);
 
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(data_rep->hsg_driver()->combined_variable_sets(),
+  central_product_interpolant(data_rep->combinedVarSets,
 			      data_rep->combinedSmolyakMultiIndex,
 			      data_rep->combinedCollocKey, combinedExpT1Coeffs,
 			      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
 			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
-  return expectation(cov_t1_coeffs, cov_t2_coeffs);
+  return expectation(cov_t1_coeffs, comb_t1w, cov_t2_coeffs, comb_t2w);
 }
 
 
@@ -1085,24 +1090,29 @@ combined_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
- HierarchInterpPolyApproximation* hip_approx_2 = 
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+  HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
   bool same = (this == hip_approx_2);
 
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
-  Real mean_1 = expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs),
-       mean_2 = (same) ? mean_1 : expectation(x, comb_t1c_2, comb_t2c_2);
+  const UShort3DArray&     sm_mi      = hsg_driver->smolyak_multi_index();
+  const UShort4DArray&     colloc_key = hsg_driver->collocation_key();
+  Real mean_1 =
+    expectation(x, combinedExpT1Coeffs, combinedExpT2Coeffs, sm_mi, colloc_key),
+       mean_2 = (same) ? mean_1 :
+    expectation(x, comb_t1c_2, comb_t2c_2, sm_mi, colloc_key);
 
   RealVector2DArray cov_t1_coeffs; RealMatrix2DArray cov_t2_coeffs;
-  central_product_interpolant(data_rep->hsg_driver()->combined_variable_sets(),
+  central_product_interpolant(data_rep->combinedVarSets,
 			      data_rep->combinedSmolyakMultiIndex,
 			      data_rep->combinedCollocKey, combinedExpT1Coeffs,
 			      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
 			      mean_1, mean_2, cov_t1_coeffs, cov_t2_coeffs);
 
   // evaluate expectation of these t1/t2 coefficients
-  return expectation(x, cov_t1_coeffs, cov_t2_coeffs);
+  return expectation(x, cov_t1_coeffs, cov_t2_coeffs, sm_mi, colloc_key);
 }
 
 
@@ -1357,10 +1367,14 @@ delta_variance(const UShort2DArray& ref_key, const UShort2DArray& incr_key)
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(this, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_var =
     delta_covariance(expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     expT1CoeffsIter->second, expT2CoeffsIter->second, true,
-		     r1r2_t1_coeffs, r1r2_t2_coeffs, ref_key, incr_key);
+		     r1r2_t1_coeffs, r1r2_t2_coeffs,
+		     hsg_driver->type1_hierarchical_weight_sets(),
+		     hsg_driver->type2_hierarchical_weight_sets(),
+		     ref_key, incr_key);
   if (std_mode)
     { deltaMoments[1] = delta_var; computedDeltaVariance |= 1; }
   return delta_var;
@@ -1382,10 +1396,13 @@ delta_variance(const RealVector& x, const UShort2DArray& ref_key,
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
   product_interpolant(this, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   Real delta_var =
     delta_covariance(x, expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     expT1CoeffsIter->second, expT2CoeffsIter->second, true,
-		     r1r2_t1_coeffs, r1r2_t2_coeffs, ref_key, incr_key);
+		     r1r2_t1_coeffs, r1r2_t2_coeffs,
+		     hsg_driver->smolyak_multi_index(),
+		     hsg_driver->collocation_key(), ref_key, incr_key);
   if (all_mode) {
     deltaMoments[1] = delta_var;
     computedDeltaVariance |= 1; xPrevDeltaVar = x;
@@ -1537,8 +1554,9 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  hsg_driver->partition_keys(ref_key, incr_key);
 
   // Supports multiple grid increments in discerning nominal from delta based
   // on isotropic/anisotropic/generalized index set increments.  In current
@@ -1564,7 +1582,10 @@ delta_covariance(PolynomialApproximation* poly_approx_2)
     delta_covariance(expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     hip_approx_2->expT1CoeffsIter->second,
 		     hip_approx_2->expT2CoeffsIter->second, same,
-		     r1r2_t1_coeffs, r1r2_t2_coeffs, ref_key, incr_key);
+		     r1r2_t1_coeffs, r1r2_t2_coeffs,
+		     hsg_driver->type1_hierarchical_weight_sets(),
+		     hsg_driver->type2_hierarchical_weight_sets(),
+		     ref_key, incr_key);
   if (same && data_rep->nonRandomIndices.empty()) // std mode
     { deltaMoments[1] = delta_covar; computedDeltaVariance |= 1; }
   return delta_covar;
@@ -1576,8 +1597,9 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
-  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
+  hsg_driver->partition_keys(ref_key, incr_key);
 
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
@@ -1599,7 +1621,9 @@ delta_covariance(const RealVector& x, PolynomialApproximation* poly_approx_2)
     delta_covariance(x, expT1CoeffsIter->second, expT2CoeffsIter->second,
 		     hip_approx_2->expT1CoeffsIter->second,
 		     hip_approx_2->expT2CoeffsIter->second, same,
-		     r1r2_t1_coeffs, r1r2_t2_coeffs, ref_key, incr_key);
+		     r1r2_t1_coeffs, r1r2_t2_coeffs,
+		     hsg_driver->smolyak_multi_index(),
+		     hsg_driver->collocation_key(), ref_key, incr_key);
   if (same && !data_rep->nonRandomIndices.empty()) { // all vars mode
     deltaMoments[1] = delta_covar;
     computedDeltaVariance |= 1; xPrevDeltaVar = x;
@@ -1613,9 +1637,8 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
@@ -1626,7 +1649,7 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(hsg_driver->combined_variable_sets(),
+  product_interpolant(data_rep->combinedVarSets,
 		      data_rep->combinedSmolyakMultiIndex,
 		      data_rep->combinedCollocKey, combinedExpT1Coeffs,
 		      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
@@ -1634,7 +1657,8 @@ delta_combined_covariance(PolynomialApproximation* poly_approx_2)
 
   return delta_covariance(combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  comb_t1c_2, comb_t2c_2, same, r1r2_t1_coeffs,
-			  r1r2_t2_coeffs, ref_key, incr_key);
+			  r1r2_t2_coeffs, data_rep->combinedT1WeightSets,
+			  data_rep->combinedT2WeightSets, ref_key, incr_key);
 }
 
 
@@ -1644,9 +1668,8 @@ delta_combined_covariance(const RealVector& x,
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
   UShort2DArray ref_key, incr_key;
-  hsg_driver->partition_keys(ref_key, incr_key);
+  data_rep->hsg_driver()->partition_keys(ref_key, incr_key);
 
   HierarchInterpPolyApproximation* hip_approx_2 = 
     (HierarchInterpPolyApproximation*)poly_approx_2;
@@ -1656,16 +1679,17 @@ delta_combined_covariance(const RealVector& x,
   // form interpolants for r1 and r2 using the combined coefficients:
   const RealVector2DArray& comb_t1c_2 = hip_approx_2->combinedExpT1Coeffs;
   const RealMatrix2DArray& comb_t2c_2 = hip_approx_2->combinedExpT2Coeffs;
+  const UShort3DArray& comb_sm_mi = data_rep->combinedSmolyakMultiIndex;
+  const UShort4DArray& comb_key   = data_rep->combinedCollocKey;
   RealVector2DArray r1r2_t1_coeffs; RealMatrix2DArray r1r2_t2_coeffs;
-  product_interpolant(hsg_driver->combined_variable_sets(),
-		      data_rep->combinedSmolyakMultiIndex,
-		      data_rep->combinedCollocKey, combinedExpT1Coeffs,
-		      combinedExpT2Coeffs, comb_t1c_2, comb_t2c_2, same,
-		      r1r2_t1_coeffs, r1r2_t2_coeffs);
+  product_interpolant(data_rep->combinedVarSets, comb_sm_mi, comb_key,
+		      combinedExpT1Coeffs, combinedExpT2Coeffs, comb_t1c_2,
+		      comb_t2c_2, same, r1r2_t1_coeffs, r1r2_t2_coeffs);
 
   return delta_covariance(x, combinedExpT1Coeffs, combinedExpT2Coeffs,
 			  comb_t1c_2, comb_t2c_2, same, r1r2_t1_coeffs,
-			  r1r2_t2_coeffs, ref_key, incr_key);
+			  r1r2_t2_coeffs, comb_sm_mi, comb_key,
+			  ref_key, incr_key);
 }
 
 
@@ -1676,16 +1700,21 @@ delta_covariance(const RealVector2DArray& r1_t1_coeffs,
 		 const RealMatrix2DArray& r2_t2_coeffs, bool same,
 		 const RealVector2DArray& r1r2_t1_coeffs,
 		 const RealMatrix2DArray& r1r2_t2_coeffs,
-		 const UShort2DArray& ref_key, const UShort2DArray& incr_key)
+		 const RealVector2DArray& t1_wts,
+		 const RealMatrix2DArray& t2_wts, const UShort2DArray& ref_key,
+		 const UShort2DArray& incr_key)
 {
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
-  Real  ref_mean_r1 = expectation(r1_t1_coeffs, r1_t2_coeffs, ref_key),
-      delta_mean_r1 = expectation(r1_t1_coeffs, r1_t2_coeffs, incr_key),
+  Real  ref_mean_r1 =
+    expectation(r1_t1_coeffs, t1_wts, r1_t2_coeffs, t2_wts, ref_key),
+      delta_mean_r1 =
+    expectation(r1_t1_coeffs, t1_wts, r1_t2_coeffs, t2_wts, incr_key),
         ref_mean_r2 = (same) ? ref_mean_r1 :
-          expectation(r2_t1_coeffs, r2_t2_coeffs, ref_key),
+    expectation(r2_t1_coeffs, t1_wts, r2_t2_coeffs, t2_wts, ref_key),
       delta_mean_r2 = (same) ? delta_mean_r1 :
-          expectation(r2_t1_coeffs, r2_t2_coeffs, incr_key),
-    delta_mean_r1r2 = expectation(r1r2_t1_coeffs, r1r2_t2_coeffs, incr_key);
+    expectation(r2_t1_coeffs, t1_wts, r2_t2_coeffs, t2_wts, incr_key),
+    delta_mean_r1r2 =
+    expectation(r1r2_t1_coeffs, t1_wts, r1r2_t2_coeffs, t2_wts, incr_key);
 
   // Hierarchical increment to covariance:
   // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
@@ -1707,16 +1736,20 @@ delta_covariance(const RealVector& x, const RealVector2DArray& r1_t1_coeffs,
 		 const RealMatrix2DArray& r2_t2_coeffs, bool same,
 		 const RealVector2DArray& r1r2_t1_coeffs,
 		 const RealMatrix2DArray& r1r2_t2_coeffs,
+		 const UShort3DArray& sm_mi,   const UShort4DArray& colloc_key,
 		 const UShort2DArray& ref_key, const UShort2DArray& incr_key)
 {
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
-  Real  ref_mean_r1 = expectation(x, r1_t1_coeffs, r1_t2_coeffs, ref_key),
-      delta_mean_r1 = expectation(x, r1_t1_coeffs, r1_t2_coeffs, incr_key),
+  Real  ref_mean_r1 =
+    expectation(x, r1_t1_coeffs, r1_t2_coeffs, sm_mi, colloc_key, ref_key),
+      delta_mean_r1 =
+    expectation(x, r1_t1_coeffs, r1_t2_coeffs, sm_mi, colloc_key, incr_key),
         ref_mean_r2 = (same) ? ref_mean_r1 :
-          expectation(x, r2_t1_coeffs, r2_t2_coeffs, ref_key),
+    expectation(x, r2_t1_coeffs, r2_t2_coeffs, sm_mi, colloc_key, ref_key),
       delta_mean_r2 = (same) ? delta_mean_r1 :
-          expectation(x, r2_t1_coeffs, r2_t2_coeffs, incr_key),
-    delta_mean_r1r2 = expectation(x, r1r2_t1_coeffs, r1r2_t2_coeffs, incr_key);
+    expectation(x, r2_t1_coeffs, r2_t2_coeffs, sm_mi, colloc_key, incr_key),
+    delta_mean_r1r2 =
+    expectation(x, r1r2_t1_coeffs, r1r2_t2_coeffs, sm_mi, colloc_key, incr_key);
 
   // same expression as standard expansion mode case above
   return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2 -
@@ -1789,7 +1822,8 @@ expectation(const RealVector2DArray& t1_coeffs,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const RealVector2DArray& t1_wts = hsg_driver->type1_weight_set_arrays();
+  const RealVector2DArray& t1_wts
+    = hsg_driver->type1_hierarchical_weight_sets();
   size_t lev, set, pt, num_levels = t1_coeffs.size(), num_sets,
     tp_pt_start = 0, tp_pt_end;
   bool partial = !pt_partition.empty();
@@ -1813,7 +1847,8 @@ expectation(const RealVector2DArray& t1_coeffs,
     }
     break;
   case true: {
-    const RealMatrix2DArray& t2_wts = hsg_driver->type2_weight_set_arrays();
+    const RealMatrix2DArray& t2_wts
+      = hsg_driver->type2_hierarchical_weight_sets();
     size_t v, num_v = sharedDataRep->numVars;
     for (lev=0; lev<num_levels; ++lev) {
       const RealVectorArray& t1_coeffs_l = t1_coeffs[lev];
@@ -1849,15 +1884,11 @@ expectation(const RealVector2DArray& t1_coeffs,
 
 Real HierarchInterpPolyApproximation::
 expectation(const RealVector& x, const RealVector2DArray& t1_coeffs,
-	    const RealMatrix2DArray& t2_coeffs,
-	    const UShort2DArray& set_partition)
+	    const RealMatrix2DArray& t2_coeffs, const UShort3DArray& sm_mi,
+	    const UShort4DArray& colloc_key, const UShort2DArray& set_partition)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
-
   Real integral = 0.;
   size_t lev, set, pt, num_levels = t1_coeffs.size(), set_start = 0, set_end,
     num_tp_pts;
@@ -1952,14 +1983,12 @@ expectation_gradient(const RealMatrix2DArray& t1_coeff_grads,
 /** For inserted design/epistemic variables in all_variables mode. */
 Real HierarchInterpPolyApproximation::
 expectation_gradient(const RealVector& x,
-		     const RealMatrix2DArray& t1_coeff_grads, size_t t1cg_index)
+		     const RealMatrix2DArray& t1_coeff_grads,
+		     const UShort3DArray& sm_mi,
+		     const UShort4DArray& colloc_key, size_t t1cg_index)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
-
   size_t lev, num_levels = t1_coeff_grads.size(), set, num_sets, pt, num_tp_pts;
 
   Real grad = 0.;
@@ -1986,14 +2015,12 @@ expectation_gradient(const RealVector& x,
 /** For augmented design/epistemic variables in all_variables mode. */
 Real HierarchInterpPolyApproximation::
 expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
-		     const RealMatrix2DArray& t2_coeffs, size_t deriv_index)
+		     const RealMatrix2DArray& t2_coeffs,
+		     const UShort3DArray& sm_mi,
+		     const UShort4DArray& colloc_key, size_t deriv_index)
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  const UShort3DArray&      sm_mi      = hsg_driver->smolyak_multi_index();
-  const UShort4DArray&      colloc_key = hsg_driver->collocation_key();
-
   size_t lev, num_levels = t1_coeffs.size(), set, num_sets, pt, num_tp_pts, v,
     num_v = sharedDataRep->numVars;
 
@@ -2734,11 +2761,13 @@ integrate_response_moments(size_t num_moments)
     numericalMoments.size(num_moments);
   if (data_rep->basisConfigOptions.useDerivs)
     integrate_moments(expT1CoeffsIter->second, expT2CoeffsIter->second,
-		      hsg_driver->type1_weight_set_arrays(),
-		      hsg_driver->type2_weight_set_arrays(), numericalMoments);
+		      hsg_driver->type1_hierarchical_weight_sets(),
+		      hsg_driver->type2_hierarchical_weight_sets(),
+		      numericalMoments);
   else
     integrate_moments(expT1CoeffsIter->second,
-                      hsg_driver->type1_weight_set_arrays(), numericalMoments);
+                      hsg_driver->type1_hierarchical_weight_sets(),
+		      numericalMoments);
   */
 }
 
