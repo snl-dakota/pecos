@@ -737,6 +737,7 @@ compute_points_weights(const UShort3DArray& sm_mi,
 {
   // size consolidated weights according to greatest interpolation depth
   size_t lev, num_lev = sm_mi.size(), set, num_sets;
+  pts.resize(num_lev);  t1_wts.resize(num_lev);  t2_wts.resize(num_lev);
   for (lev=0; lev<num_lev; ++lev) {
     const UShort3DArray&   key_l = colloc_key[lev];
     const UShort2DArray& sm_mi_l =  sm_mi[lev];   num_sets = sm_mi_l.size();
@@ -760,14 +761,12 @@ compute_points_weights(RealMatrix& pts, RealVector2DArray& t1_wts,
   const UShort3DArray&      sm_mi =    smolMIIter->second;
   size_t i, j, cntr = 0, num_colloc_pts = 0, num_tp_pts,
     num_lev = colloc_key.size(), num_sets;
-  if (t1_wts.size() != num_lev) t1_wts.resize(num_lev);
-  if (t2_wts.size() != num_lev) t2_wts.resize(num_lev);
+  t1_wts.resize(num_lev);  t2_wts.resize(num_lev);
   // define num_colloc_pts
   for (i=0; i<num_lev; ++i) {
     const UShort3DArray& key_i = colloc_key[i];
     num_sets = key_i.size();
-    if (t1_wts[i].size() != num_sets) t1_wts[i].resize(num_sets);
-    if (t2_wts[i].size() != num_sets) t2_wts[i].resize(num_sets);
+    t1_wts[i].resize(num_sets);  t2_wts[i].resize(num_sets);
     for (j=0; j<num_sets; ++j)
       num_colloc_pts += key_i[j].size();
   }
