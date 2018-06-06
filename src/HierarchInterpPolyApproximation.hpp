@@ -385,6 +385,25 @@ private:
   /// expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void push_coefficients(const UShortArray& push_set);
 
+  /// helper function for common case where coefficients and surrData
+  /// are synchronized
+  void integrate_response_moments(size_t num_moments,
+				  const UShort3DArray& sm_mi,
+				  const UShort4DArray& colloc_key,
+				  const Sizet3DArray&  colloc_index,
+				  const SDVArray& sdv_array,
+				  const SDRArray& sdr_array);
+  /// helper function for expansion combination case surrData does not span
+  /// the aggregate set of combined terms
+  void integrate_response_moments(size_t num_moments,
+				  const RealMatrix2DArray& var_sets,
+				  const UShort3DArray&     sm_mi,
+				  const UShort4DArray&     colloc_key,
+				  const RealVector2DArray& t1_coeffs,
+				  const RealMatrix2DArray& t2_coeffs,
+				  const RealVector2DArray& t1_wts,
+				  const RealMatrix2DArray& t2_wts);
+
   /// compute member expansion for Sobol' index integration
   void member_coefficients_weights(const BitArray&    member_bits,
     RealVector2DArray& member_t1_coeffs, RealVector2DArray& member_t1_wts,
@@ -511,6 +530,49 @@ inline void HierarchInterpPolyApproximation::update_active_iterators()
     std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
+}
+
+
+inline void HierarchInterpPolyApproximation::
+integrate_response_moments(size_t num_moments)
+{
+  // standard variables mode supports four moments using the collocation rules
+  // as integration rules
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+
+  // if expansions have been combined, there is no consolidated colloc_index
+  // --> surrData access is replaced with value()/gradient_bases_variables()
+  // combined_to_active() should precede this call -> can use active coeffs/wts,
+  // but rely on combinedVarSets instead of surrData variables
+  if (data_rep->expConfigOptions.combineType &&
+      !data_rep->combinedVarSets.empty())
+    integrate_response_moments(num_moments,
+      data_rep->combinedVarSets, // not cleared in combined_to_active()
+      hsg_driver->smolyak_multi_index(), hsg_driver->collocation_key(),
+      expT1CoeffsIter->second, expT2CoeffsIter->second,
+      hsg_driver->type1_hierarchical_weight_sets(),
+      hsg_driver->type2_hierarchical_weight_sets());
+  else // colloc_index is valid -> can pull from surrData variables/responses
+    integrate_response_moments(num_moments, hsg_driver->smolyak_multi_index(),
+      hsg_driver->collocation_key(), hsg_driver->collocation_indices(),
+      surrData.variables_data(), surrData.response_data());
+}
+
+
+inline void HierarchInterpPolyApproximation::
+integrate_expansion_moments(size_t num_moments)
+{
+  // for now: nested interpolation is exact
+  expansionMoments = numericalMoments;
+
+  // a couple different ways to go with this in the future:
+  // (1) evaluate hierarchical value(lev) - value(lev-1) with HSGDriver wts
+  // (2) evaluate value() with CSGDriver wts
+  //  > promote Nodal implementation of this function to base class
+  //  > redefine HierarchSparseGridDriver::type1_weight_sets() to generate
+  //    from 1D weights array in CSG-style approach (not simple concatenation)
 }
 
 
