@@ -502,31 +502,36 @@ level_to_delta_pair(size_t i, unsigned short level)
     return UShortUShortPair(2,2); break;
   default: {
     unsigned short max_key, num_delta = level_to_delta_size(i, level);
-    switch(collocRules[i]) {
-    case GAUSS_PATTERSON:                    // open nested
-      max_key = 2 * num_delta - 2; break; // new exterior
-    case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
-      max_key = 2 * num_delta - 1; break; // new interior
-    case GENZ_KEISTER: // open nested table lookup
-      // switch on num_delta i/o level due to possibility of growth restriction
-      switch (num_delta) {
-      case  6: max_key =  8; break; //  9 pt rule
-      case 10: max_key = 18; break; // 19 pt rule
-      case 16: max_key = 34; break; // 35 pt rule
-      //case 5:  // 43 pt rule augments 19 pt rule, not 35 pt rule
-      //  break; // disallow for hierarchical interpolation
+    if (num_delta)
+      switch (collocRules[i]) {
+      case GAUSS_PATTERSON:                    // open nested
+	max_key = 2 * num_delta - 2; break; // new exterior
+      case NEWTON_COTES: case CLENSHAW_CURTIS: // closed nested
+	max_key = 2 * num_delta - 1; break; // new interior
+      case GENZ_KEISTER: // open nested table lookup
+	// switch on num_delta due to possibility of growth restriction
+	switch (num_delta) {
+	case  6: max_key =  8; break; //  9 pt rule
+	case 10: max_key = 18; break; // 19 pt rule
+	case 16: max_key = 34; break; // 35 pt rule
+	//case 5: // 43 pt rule augments 19 pt rule, not 35 pt rule --> disallow
+	default:
+	  PCerr << "Error: num_delta (" << num_delta << ") out of range for "
+		<< "hierarchical Genz-Keister rules in\n       HierarchSparse"
+		<< "GridDriver::level_to_delta_pair()" << std::endl;
+	  abort_handler(-1);
+	  break;
+	}
+	break;
       default:
-	PCerr << "Error: out of range for hierarchical Genz-Keister rules in "
-	      << "HierarchSparseGridDriver::level_to_delta_pair()" << std::endl;
+	PCerr << "Error: bad collocation rule type in HierarchSparseGridDriver"
+	      << "::level_to_delta_pair()" << std::endl;
 	abort_handler(-1);
 	break;
       }
-      break;
-    default:
-      PCerr << "Error: bad rule type in level_to_delta_pair()" << std::endl;
-      abort_handler(-1);
-      break;
-    }
+    else // num_delta == 0 can occur due to growth restriction
+      max_key = std::numeric_limits<unsigned short>::max(); // like _NPOS
+    
     return UShortUShortPair(num_delta, max_key);
     break;
   }

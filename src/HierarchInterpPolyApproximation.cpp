@@ -2811,6 +2811,7 @@ integrate_response_moments(size_t num_moments,
     for (set=0; set<num_sets; ++set) {
       num_tp_pts = colloc_key[lev][set].size();
       mom_t1_coeffs[lev][set].sizeUninitialized(num_tp_pts);
+      r_vals[lev][set].sizeUninitialized(num_tp_pts);
       if (use_derivs) {
 	mom_t2_coeffs[lev][set].shapeUninitialized(num_v, num_tp_pts);
 	r_grads[lev][set].shapeUninitialized(num_v, num_tp_pts);
