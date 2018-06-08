@@ -69,7 +69,7 @@ protected:
 
   void combine_coefficients();
 
-  bool update_active_iterators();
+  bool update_active_iterators(const UShortArray& key);
   void combined_to_active();
   void clear_inactive();
 
@@ -361,25 +361,19 @@ inline NodalInterpPolyApproximation::~NodalInterpPolyApproximation()
 { }
 
 
-inline bool NodalInterpPolyApproximation::update_active_iterators()
+inline bool NodalInterpPolyApproximation::
+update_active_iterators(const UShortArray& key)
 {
-  SharedNodalInterpPolyApproxData* data_rep
-    = (SharedNodalInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-
   // Test for change
-  std::map<UShortArray, RealVector>::iterator t1c_it
-    = expansionType1Coeffs.find(key);
-  if (expT1CoeffsIter == t1c_it &&
-      expT1CoeffsIter != expansionType1Coeffs.end()) // exclude initial state
+  if (expT1CoeffsIter != expansionType1Coeffs.end() &&
+      expT1CoeffsIter->first == key)
     return false;
   
-  if (t1c_it == expansionType1Coeffs.end()) {
+  expT1CoeffsIter = expansionType1Coeffs.find(key);
+  if (expT1CoeffsIter == expansionType1Coeffs.end()) {
     std::pair<UShortArray, RealVector> rv_pair(key, RealVector());
     expT1CoeffsIter = expansionType1Coeffs.insert(rv_pair).first;
   }
-  else
-    expT1CoeffsIter = t1c_it;
   expT2CoeffsIter = expansionType2Coeffs.find(key);
   if (expT2CoeffsIter == expansionType2Coeffs.end()) {
     std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
@@ -391,7 +385,8 @@ inline bool NodalInterpPolyApproximation::update_active_iterators()
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
 
-  return InterpPolyApproximation::update_active_iterators();
+  InterpPolyApproximation::update_active_iterators(key);
+  return true;
 }
 
 

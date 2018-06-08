@@ -85,7 +85,7 @@ protected:
   //- Heading: Virtual function redefinitions
   //
 
-  void update_active_iterators();
+  void update_active_iterators(const UShortArray& key);
 
   int min_coefficients() const;
 
@@ -418,7 +418,8 @@ private:
 
 inline RegressOrthogPolyApproximation::
 RegressOrthogPolyApproximation(const SharedBasisApproxData& shared_data):
-  OrthogPolyApproximation(shared_data), sparseSoln(false)
+  OrthogPolyApproximation(shared_data), sparseSoln(false),
+  sparseIndIter(sparseIndices.end())
 { }
 
 
@@ -426,18 +427,20 @@ inline RegressOrthogPolyApproximation::~RegressOrthogPolyApproximation()
 { }
 
 
-inline void RegressOrthogPolyApproximation::update_active_iterators()
+inline void RegressOrthogPolyApproximation::
+update_active_iterators(const UShortArray& key)
 {
-  OrthogPolyApproximation::update_active_iterators();
+  // Test for change
+  if (sparseIndIter != sparseIndices.end() && sparseIndIter->first == key)
+    return;
 
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
   sparseIndIter = sparseIndices.find(key);
   if (sparseIndIter == sparseIndices.end()) {
     std::pair<UShortArray, SizetSet> ss_pair(key, SizetSet());
     sparseIndIter = sparseIndices.insert(ss_pair).first;
   }
+
+  OrthogPolyApproximation::update_active_iterators(key);
 }
 
 

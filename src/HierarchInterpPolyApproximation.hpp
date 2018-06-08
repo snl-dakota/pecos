@@ -71,7 +71,7 @@ protected:
   /// update combinedExpT{1Coeffs,2Coeffs,1CoeffGrads}
   void combine_coefficients();
 
-  bool update_active_iterators();
+  bool update_active_iterators(const UShortArray& key);
   void combined_to_active();
   void clear_inactive();
 
@@ -508,25 +508,19 @@ inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 { }
 
 
-inline bool HierarchInterpPolyApproximation::update_active_iterators()
+inline bool HierarchInterpPolyApproximation::
+update_active_iterators(const UShortArray& key)
 {
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-
   // Test for change
-  std::map<UShortArray, RealVector2DArray>::iterator t1c_it
-    = expansionType1Coeffs.find(key);
-  if (expT1CoeffsIter == t1c_it &&
-      expT1CoeffsIter != expansionType1Coeffs.end()) // exclude initial state
+  if (expT1CoeffsIter != expansionType1Coeffs.end() &&
+      expT1CoeffsIter->first == key)
     return false;
   
-  if (t1c_it == expansionType1Coeffs.end()) {
+  expT1CoeffsIter = expansionType1Coeffs.find(key);
+  if (expT1CoeffsIter == expansionType1Coeffs.end()) {
     std::pair<UShortArray, RealVector2DArray> rv_pair(key, RealVector2DArray());
     expT1CoeffsIter = expansionType1Coeffs.insert(rv_pair).first;
   }
-  else
-    expT1CoeffsIter = t1c_it;
   expT2CoeffsIter = expansionType2Coeffs.find(key);
   if (expT2CoeffsIter == expansionType2Coeffs.end()) {
     std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
@@ -538,7 +532,8 @@ inline bool HierarchInterpPolyApproximation::update_active_iterators()
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
 
-  return InterpPolyApproximation::update_active_iterators();
+  InterpPolyApproximation::update_active_iterators(key);
+  return true;
 }
 
 
@@ -806,23 +801,6 @@ expectation_gradient(const RealVector& x, const RealVector2DArray& t1_coeffs,
   return expectation_gradient(x, t1_coeffs, t2_coeffs,
 			      hsg_driver->smolyak_multi_index(),
 			      hsg_driver->collocation_key(), deriv_index);
-}
-
-
-inline void HierarchInterpPolyApproximation::push_coefficients()
-{
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
-
-  // mirror changes to origSurrData for deep copied surrData
-  if (deep_copied_surrogate_data())
-    surrData.push(data_rep->retrieval_index());
-
-  bool updated = update_active_iterators();
-  if (updated) clear_all_computed_bits();
-  else         increment_current_from_reference();
-
-  push_coefficients(data_rep->hsg_driver()->trial_set());
 }
 
 

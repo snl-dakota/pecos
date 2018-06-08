@@ -151,7 +151,7 @@ protected:
   //
 
   /// update expCoeff{s,Grads}Iter for new activeKey from sharedDataRep
-  virtual void update_active_iterators();
+  virtual void update_active_iterators(const UShortArray& key);
 
   //
   //- Heading: Member functions
@@ -281,7 +281,7 @@ private:
 
 inline OrthogPolyApproximation::
 OrthogPolyApproximation(const SharedBasisApproxData& shared_data):
-  PolynomialApproximation(shared_data)
+  PolynomialApproximation(shared_data), expCoeffsIter(expansionCoeffs.end())
 { }
 
 
@@ -289,14 +289,12 @@ inline OrthogPolyApproximation::~OrthogPolyApproximation()
 { }
 
 
-inline void OrthogPolyApproximation::update_active_iterators()
+inline void OrthogPolyApproximation::
+update_active_iterators(const UShortArray& key)
 {
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
-  origSurrData.active_key(key);
-  if (deep_copied_surrogate_data())
-    surrData.active_key(key);
+  // Test for change
+  if (expCoeffsIter != expansionCoeffs.end() && expCoeffsIter->first == key)
+    return;
 
   expCoeffsIter = expansionCoeffs.find(key);
   if (expCoeffsIter == expansionCoeffs.end()) {
@@ -308,6 +306,10 @@ inline void OrthogPolyApproximation::update_active_iterators()
     std::pair<UShortArray, RealMatrix> rm_pair(key, RealMatrix());
     expCoeffGradsIter = expansionCoeffGrads.insert(rm_pair).first;
   }
+
+  origSurrData.active_key(key);
+  if (deep_copied_surrogate_data())
+    surrData.active_key(key);
 }
 
 

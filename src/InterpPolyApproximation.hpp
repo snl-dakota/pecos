@@ -75,7 +75,7 @@ protected:
 
   /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter for new
   /// activeKey from sharedDataRep
-  virtual bool update_active_iterators();
+  virtual bool update_active_iterators(const UShortArray& key);
 
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;
@@ -125,11 +125,9 @@ inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
 
 
-inline bool InterpPolyApproximation::update_active_iterators()
+inline bool InterpPolyApproximation::
+update_active_iterators(const UShortArray& key)
 {
-  SharedInterpPolyApproxData* data_rep
-    = (SharedInterpPolyApproxData*)sharedDataRep;
-  const UShortArray& key = data_rep->activeKey;
   origSurrData.active_key(key);
   if (deep_copied_surrogate_data())
     surrData.active_key(key);

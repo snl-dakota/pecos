@@ -29,14 +29,14 @@ int InterpPolyApproximation::min_coefficients() const
 
 void InterpPolyApproximation::allocate_arrays()
 {
-  update_active_iterators();
+  SharedInterpPolyApproxData* data_rep
+    = (SharedInterpPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
 
   allocate_total_sobol();
   allocate_component_sobol();
 
   if (numericalMoments.empty()) {
-    SharedInterpPolyApproxData* data_rep
-      = (SharedInterpPolyApproxData*)sharedDataRep;
     size_t num_moments = (data_rep->nonRandomIndices.empty()) ? 4 : 2;
     numericalMoments.sizeUninitialized(num_moments);
   }

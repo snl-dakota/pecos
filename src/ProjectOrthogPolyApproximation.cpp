@@ -204,13 +204,15 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   // TO DO: partial sync of new TP data set, e.g. update_surrogate_data() ?
   synchronize_surrogate_data();
 
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+
   // synchronize expansionCoeff{s,Grads} and approxData
-  update_active_iterators();
+  update_active_iterators(key);
   // resize component Sobol' array sizes to pick up new interaction terms
   allocate_component_sobol();
 
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: {
     // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
@@ -218,7 +220,6 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
     break;
   }
   case INCREMENTAL_SPARSE_GRID: {
-    const UShortArray&   key   = data_rep->activeKey;
     // tpMultiIndex{,Map,MapRef} already updated in
     // SharedProjectOrthogPolyApproxData::increment_data()
     const UShort3DArray& tp_mi = data_rep->tpMultiIndex[key];
@@ -279,9 +280,13 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
   if (deep_copied_surrogate_data())
     surrData.pop(save_data);
 
+  SharedProjectOrthogPolyApproxData* data_rep
+    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+
   // likely overkill, but multilevel roll up after increment modifies and
   // then restores active key
-  update_active_iterators();
+  update_active_iterators(key);
 
   // reset expansion{Coeffs,CoeffGrads}
   expCoeffsIter->second     = prevExpCoeffs;
@@ -292,8 +297,6 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
 
   if (!save_data) return;
 
-  SharedProjectOrthogPolyApproxData* data_rep
-    = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: {
     // Use same approach as SharedRegressOrthogPolyApproxData --> elevate?
@@ -301,7 +304,6 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
     break;
   }
   case INCREMENTAL_SPARSE_GRID: {
-    const UShortArray& key              = data_rep->activeKey;
     RealVectorArray& tp_exp_coeffs      = tpExpansionCoeffs[key];
     RealMatrixArray& tp_exp_coeff_grads = tpExpansionCoeffGrads[key];
 
@@ -339,6 +341,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
 {
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
 
   // mirror operations already performed on origSurrData for a surrData
   // that is disconnected/deep copied
@@ -346,7 +349,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     surrData.push(data_rep->retrieval_index());
 
   // synchronize expansionCoeff{s,Grads} and approxData
-  update_active_iterators();
+  update_active_iterators(key);
 
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: {
@@ -355,7 +358,6 @@ void ProjectOrthogPolyApproximation::push_coefficients()
     break;
   }
   case INCREMENTAL_SPARSE_GRID: {
-    const UShortArray& key                  = data_rep->activeKey;
     RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
     RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
     RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];
@@ -411,6 +413,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
 {
   SharedProjectOrthogPolyApproxData* data_rep
     = (SharedProjectOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
 
   // mirror operations already performed on origSurrData for a surrData
   // that is disconnected/deep copied
@@ -422,7 +425,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   }
 
   // synchronize expansionCoeff{s,Grads} and approxData
-  update_active_iterators();
+  update_active_iterators(key);
 
   switch (data_rep->expConfigOptions.expCoeffsSolnApproach) {
   case QUADRATURE: case CUBATURE: {
@@ -433,7 +436,6 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
   case INCREMENTAL_SPARSE_GRID:
     switch (data_rep->expConfigOptions.refinementControl) {
     case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: {
-      const UShortArray& key                  = data_rep->activeKey;
       RealVectorArray& tp_exp_coeffs          = tpExpansionCoeffs[key];
       RealMatrixArray& tp_exp_coeff_grads     = tpExpansionCoeffGrads[key];
       RealVectorDeque& pop_tp_exp_coeffs      = poppedTPExpCoeffs[key];

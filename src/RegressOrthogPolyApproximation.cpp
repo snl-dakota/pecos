@@ -144,12 +144,12 @@ void RegressOrthogPolyApproximation::select_solver(bool cv_active)
 void RegressOrthogPolyApproximation::allocate_arrays()
 {
   if (sparseSoln) {
-    update_active_iterators();
+    SharedRegressOrthogPolyApproxData* data_rep
+      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+    update_active_iterators(data_rep->activeKey);
     allocate_total_sobol(); // no dependencies
 
     // defer allocations until sparsity is known
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
     if (data_rep->expConfigOptions.vbdFlag && 
 	data_rep->expConfigOptions.vbdOrderLimit == 1)
       allocate_component_sobol(); // no dependence on multiIndex for order 1
@@ -204,9 +204,12 @@ void RegressOrthogPolyApproximation::compute_coefficients()
 
 void RegressOrthogPolyApproximation::increment_coefficients()
 {
-  // for use in decrement_coefficients()
-  update_active_iterators();// redundant but needed for prevExp prior to compute
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey); // redundant but needed for
+                                                // prevExp prior to compute
 
+  // for use in decrement_coefficients()
   prevExpCoeffs     = expCoeffsIter->second;     // copy
   prevExpCoeffGrads = expCoeffGradsIter->second; // copy
   prevSparseIndices = sparseIndIter->second;     // copy
@@ -222,9 +225,13 @@ void RegressOrthogPolyApproximation::decrement_coefficients(bool save_data)
   if (deep_copied_surrogate_data())
     surrData.pop(save_data);
 
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+
   // likely overkill, but multilevel roll up after increment modifies and
   // then restores active key
-  update_active_iterators();
+  update_active_iterators(key);
 
   RealVector& exp_coeffs = expCoeffsIter->second;
   RealMatrix& exp_grads  = expCoeffGradsIter->second;
@@ -232,9 +239,6 @@ void RegressOrthogPolyApproximation::decrement_coefficients(bool save_data)
 
   // store the incremented coeff state for possible push'
   if (save_data) {
-    SharedRegressOrthogPolyApproxData* data_rep
-      = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
-    const UShortArray& key = data_rep->activeKey;
     poppedExpCoeffs[key].push_back(exp_coeffs);
     poppedExpCoeffGrads[key].push_back(exp_grads);
     poppedSparseInd[key].push_back(sparse_ind);
@@ -252,6 +256,7 @@ void RegressOrthogPolyApproximation::push_coefficients()
 {
   SharedRegressOrthogPolyApproxData* data_rep
     = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
 
   // SharedPolyApproxData::retrieval_index() currently returns 0 for
   // all cases other than generalized sparse grids
@@ -263,7 +268,7 @@ void RegressOrthogPolyApproximation::push_coefficients()
     surrData.push(pop_index);
 
   // synchronize expansionCoeff{s,Grads} and approxData
-  update_active_iterators();
+  update_active_iterators(key);
 
   // store current state for use in decrement_coefficients()
   prevExpCoeffs     = expCoeffsIter->second;     // copy
@@ -271,7 +276,6 @@ void RegressOrthogPolyApproximation::push_coefficients()
   prevSparseIndices = sparseIndIter->second;     // copy
 
   // retrieve a previously popped state
-  const UShortArray& key = data_rep->activeKey;
   std::map<UShortArray, RealVectorDeque>::iterator prv_it
     = poppedExpCoeffs.find(key);
   std::map<UShortArray, RealMatrixDeque>::iterator prm_it
@@ -310,8 +314,10 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   if (!sparse)
     { OrthogPolyApproximation::combine_coefficients(); return; }
 
+  SharedRegressOrthogPolyApproxData* data_rep
+    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   // Coefficient combination is not dependent on active state
-  //update_active_iterators();
+  //update_active_iterators(data_rep->activeKey);
 
   //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
@@ -319,8 +325,6 @@ void RegressOrthogPolyApproximation::combine_coefficients()
   // sparse indices arrays (not optimal for performance but a lot less code),
   // prior to expansion aggregation.  Note: sparseSobolIndexMap is updated
   // following aggregation.
-  SharedRegressOrthogPolyApproxData* data_rep
-    = (SharedRegressOrthogPolyApproxData*)sharedDataRep;
   const std::map<UShortArray, UShort2DArray>& mi = data_rep->multiIndex;
   std::map<UShortArray, UShort2DArray>::const_iterator mi_cit = mi.begin();
   for (sp_it =sparseIndices.begin();

@@ -28,7 +28,9 @@ int OrthogPolyApproximation::min_coefficients() const
 
 void OrthogPolyApproximation::allocate_arrays()
 {
-  update_active_iterators();
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
 
   // expansion formulation has been defined in Shared*OrthogPolyApproxData::
   // allocate_data(), and its results are employed below
@@ -70,16 +72,16 @@ void OrthogPolyApproximation::combine_coefficients()
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
   // Coefficient combination is not dependent on active state
-  //update_active_iterators();// key updated in SharedOrthogPolyApproxData
+  //update_active_iterators(data_rep->activeKey);
   //clear_computed_bits(); // combined stats are managed separately
 
   //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   std::map<UShortArray, RealVector>::iterator ec_it;
   std::map<UShortArray, RealMatrix>::iterator eg_it;
-  SharedOrthogPolyApproxData* data_rep
-    = (SharedOrthogPolyApproxData*)sharedDataRep;
   switch (data_rep->expConfigOptions.combineType) {
   case ADD_COMBINE: {
     // Note: would like to preserve tensor indexing (at least for QUADRATURE
@@ -156,7 +158,9 @@ void OrthogPolyApproximation::combine_coefficients()
 
 void OrthogPolyApproximation::combined_to_active()
 {
-  update_active_iterators();// activeKey updated in SharedOrthogPolyApproxData
+  SharedOrthogPolyApproxData* data_rep
+    = (SharedOrthogPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
   allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
 
   if (expansionCoeffFlag) {

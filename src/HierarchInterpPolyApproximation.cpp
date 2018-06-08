@@ -165,13 +165,14 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
   synchronize_surrogate_data();
 
-  bool updated = update_active_iterators();
-  if (updated) clear_all_computed_bits();
-  else         increment_current_from_reference();
-
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
+
+  bool updated = update_active_iterators(data_rep->activeKey);
+  if (updated) clear_all_computed_bits();
+  else         increment_current_from_reference();
+
   switch (data_rep->expConfigOptions.refinementControl) {
   case DIMENSION_ADAPTIVE_CONTROL_GENERALIZED: // generalized sparse grids
     increment_coefficients(hsg_driver->trial_set());
@@ -205,16 +206,17 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
   if (deep_copied_surrogate_data())
     surrData.pop(save_data);
 
-  bool updated = update_active_iterators();
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+
+  bool updated = update_active_iterators(key);
   if (updated) clear_all_computed_bits();
   else         decrement_current_to_reference();
 
-  SharedHierarchInterpPolyApproxData* data_rep
-    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& trial_set = data_rep->hsg_driver()->trial_set();
   size_t lev = l1_norm(trial_set);
 
-  const UShortArray& key = data_rep->activeKey;
   if (expansionCoeffFlag) {
     RealVector2DArray& exp_t1c = expT1CoeffsIter->second;
     poppedExpT1Coeffs[key][trial_set] = exp_t1c[lev].back();
@@ -233,10 +235,28 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
 }
 
 
+void HierarchInterpPolyApproximation::push_coefficients()
+{
+  SharedHierarchInterpPolyApproxData* data_rep
+    = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+
+  // mirror changes to origSurrData for deep copied surrData
+  if (deep_copied_surrogate_data())
+    surrData.push(data_rep->retrieval_index());
+
+  bool updated = update_active_iterators(data_rep->activeKey);
+  if (updated) clear_all_computed_bits();
+  else         increment_current_from_reference();
+
+  push_coefficients(data_rep->hsg_driver()->trial_set());
+}
+
+
 void HierarchInterpPolyApproximation::finalize_coefficients()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
 
   // mirror changes to origSurrData for deep copied surrData
   if (deep_copied_surrogate_data()) {
@@ -247,7 +267,7 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
   }
 
   // synchronize expansionCoeff{s,Grads} and approxData
-  bool updated = update_active_iterators();
+  bool updated = update_active_iterators(key);
   if (updated) clear_all_computed_bits();
   else         clear_computed_bits(); //clear_delta_computed_bits();
 
@@ -264,7 +284,6 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
     for (set=num_coeff_sets; set<num_smolyak_sets; ++set)
       push_coefficients(sm_mi_l[set]);
   }
-  const UShortArray& key = data_rep->activeKey;
   poppedExpT1Coeffs[key].clear(); poppedExpT2Coeffs[key].clear();
   poppedExpT1CoeffGrads[key].clear();
 }
@@ -301,7 +320,7 @@ void HierarchInterpPolyApproximation::combine_coefficients()
     surrData.active_key(data_rep->activeKey);
 
   // Coefficient combination is not dependent on active state
-  //bool updated = update_active_iterators(); // key updated in Shared Data
+  //bool updated = update_active_iterators(data_rep->activeKey);
   //if (updated) clear_all_computed_bits();
   //else (combined stats managed separately)
 

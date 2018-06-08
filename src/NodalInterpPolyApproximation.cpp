@@ -132,12 +132,13 @@ void NodalInterpPolyApproximation::combine_coefficients()
 
   SharedNodalInterpPolyApproxData* data_rep
     = (SharedNodalInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
   if (deep_copied_surrogate_data())
-    surrData.active_key(data_rep->activeKey);
+    surrData.active_key(key);
 
   // Coefficient combination is not dependent on active state, but active
   // iterators used below to avoid additional key lookups in stored_*()
-  bool updated = update_active_iterators();
+  bool updated = update_active_iterators(key);
   if (updated) clear_computed_bits();
   //else don't clear (combined stats are managed separately)
 
@@ -310,13 +311,13 @@ void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
   if (deep_copied_surrogate_data())
     surrData.pop(save_data);
 
-  update_active_iterators();
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
 
   size_t new_colloc_pts = surrData.points();
   if (expansionCoeffFlag) {
     RealVector& exp_t1_coeffs = expT1CoeffsIter->second;
     exp_t1_coeffs.resize(new_colloc_pts);
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
       RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
       size_t num_deriv_vars = exp_t2_coeffs.numRows();
@@ -362,7 +363,8 @@ void NodalInterpPolyApproximation::push_coefficients()
 
 void NodalInterpPolyApproximation::update_expansion_coefficients()
 {
-  update_active_iterators();
+  SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
+  update_active_iterators(data_rep->activeKey);
 
   size_t index, old_colloc_pts, new_colloc_pts = surrData.points();
   const SDRArray& sdr_array = surrData.response_data();
@@ -371,7 +373,6 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
     RealMatrix& exp_t2_coeffs = expT2CoeffsIter->second;
     old_colloc_pts = exp_t1_coeffs.length();
     exp_t1_coeffs.resize(new_colloc_pts);
-    SharedPolyApproxData* data_rep = (SharedPolyApproxData*)sharedDataRep;
     if (data_rep->basisConfigOptions.useDerivs) {
       size_t num_deriv_vars = exp_t2_coeffs.numRows();
       exp_t2_coeffs.reshape(num_deriv_vars, new_colloc_pts);
