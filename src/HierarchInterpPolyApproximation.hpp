@@ -151,42 +151,50 @@ private:
   /// compute the value at a point for a particular interpolation level
   Real value(const RealVector& x, const UShort3DArray& sm_mi,
 	     const UShort4DArray& key, const RealVector2DArray& t1_coeffs,
-	     const RealMatrix2DArray& t2_coeffs, unsigned short level);
+	     const RealMatrix2DArray& t2_coeffs, unsigned short level,
+	     const UShort2DArray& set_partition = UShort2DArray());
   /// compute the value at a point for a particular interpolation
   /// level and for a specified subset of the variables
   Real value(const RealVector& x, const UShort3DArray& sm_mi,
 	     const UShort4DArray& key, const RealVector2DArray& t1_coeffs,
 	     const RealMatrix2DArray& t2_coeffs, unsigned short level,
-	     const SizetList& subset_indices);
+	     const SizetList& subset_indices,
+	     const UShort2DArray& set_partition = UShort2DArray());
 
   /// compute the approximate gradient with respect to the basis variables
   /// at a particular point for a particular interpolation level
   const RealVector& gradient_basis_variables(const RealVector& x,
     const UShort3DArray& sm_mi, const UShort4DArray& key,
     const RealVector2DArray& t1_coeffs, const RealMatrix2DArray& t2_coeffs,
-    unsigned short level);
+    unsigned short level, const UShort2DArray& set_partition = UShort2DArray());
   /// compute the approximate gradient with respect to the basis variables
   /// at a particular point for a particular interpolation level
   const RealVector& gradient_basis_variables(const RealVector& x,
     const UShort3DArray& sm_mi, const UShort4DArray& key,
     const RealVector2DArray& t1_coeffs, const RealMatrix2DArray& t2_coeffs,
-    unsigned short level, const SizetList& subset_indices);
+    unsigned short level, const SizetList& subset_indices,
+    const UShort2DArray& set_partition = UShort2DArray());
   /// compute the approximate gradient with respect to the basis variables
   /// for a particular point, interpolation level, and DVV
   const RealVector& gradient_basis_variables(const RealVector& x,
     const UShort3DArray& sm_mi, const UShort4DArray& key,
     const RealVector2DArray& t1_coeffs, const RealMatrix2DArray& t2_coeffs,
-    const SizetArray& dvv, unsigned short level);
+    const SizetArray& dvv, unsigned short level,
+    const UShort2DArray& set_partition = UShort2DArray());
+
   /// compute the approximate gradient with respect to the nonbasis
   /// variables at a particular point for a particular interpolation level
   const RealVector& gradient_nonbasis_variables(const RealVector& x,
     const UShort3DArray& sm_mi, const UShort4DArray& key,
-    const RealMatrix2DArray& t1_coeff_grads, unsigned short level);
+    const RealMatrix2DArray& t1_coeff_grads, unsigned short level,
+    const UShort2DArray& set_partition = UShort2DArray());
+
   /// compute the approximate Hessian with respect to the basis variables
   /// at a particular point for a particular interpolation level
   const RealSymMatrix& hessian_basis_variables(const RealVector& x,
     const UShort3DArray& sm_mi,	const UShort4DArray& colloc_key,
-    const RealVector2DArray& t1_coeffs, unsigned short level);
+    const RealVector2DArray& t1_coeffs, unsigned short level,
+    const UShort2DArray& set_partition = UShort2DArray());
 
   /// update bookkeeping when adding a grid increment relative to the
   /// grid reference
@@ -267,7 +275,7 @@ private:
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShort2DArray& reference_key = UShort2DArray());
+    const UShort2DArray& ref_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
@@ -276,13 +284,13 @@ private:
     const RealVector2DArray& r2_t1_coeffs,
     const RealMatrix2DArray& r2_t2_coeffs, bool same,
     RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
-    const UShort2DArray& reference_key = UShort2DArray());
+    const UShort2DArray& ref_key = UShort2DArray());
 
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(
     HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
-    const UShort2DArray& reference_key = UShort2DArray());
+    const UShort2DArray& ref_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(const RealMatrix2DArray& var_sets,
     const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
@@ -291,7 +299,7 @@ private:
     const RealVector2DArray& r2_t1_coeffs,
     const RealMatrix2DArray& r2_t2_coeffs, bool same, Real mean_1, Real mean_2,
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
-    const UShort2DArray& reference_key = UShort2DArray());
+    const UShort2DArray& ref_key = UShort2DArray());
 
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
@@ -299,7 +307,7 @@ private:
     HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
     const RealVector& mean1_grad, const RealVector& mean2_grad, 
     RealMatrix2DArray& cov_t1_coeff_grads,
-    const UShort2DArray& reference_key = UShort2DArray());
+    const UShort2DArray& ref_key = UShort2DArray());
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
   void central_product_gradient_interpolant(const RealMatrix2DArray& var_sets,
@@ -312,7 +320,7 @@ private:
     const RealMatrix2DArray& r2_t1_coeff_grads, bool same, Real mean_1,
     Real mean_2, const RealVector& mean1_grad, const RealVector& mean2_grad, 
     RealMatrix2DArray& cov_t1_coeff_grads,
-    const UShort2DArray& reference_key = UShort2DArray());
+    const UShort2DArray& ref_key = UShort2DArray());
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
