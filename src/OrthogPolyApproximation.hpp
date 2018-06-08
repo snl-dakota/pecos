@@ -147,11 +147,15 @@ protected:
   void compute_moments(const RealVector& x, bool full_stats = true);
 
   //
-  //- Heading: Member functions
+  //- Heading: New virtual functions
   //
 
   /// update expCoeff{s,Grads}Iter for new activeKey from sharedDataRep
   virtual void update_active_iterators();
+
+  //
+  //- Heading: Member functions
+  //
 
   /// size expansion{Coeffs,CoeffGrads} based on the shared multiIndex
   void size_expansion();

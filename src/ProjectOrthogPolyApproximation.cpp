@@ -195,7 +195,7 @@ void ProjectOrthogPolyApproximation::compute_coefficients()
     break;
   }
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 
@@ -268,7 +268,7 @@ void ProjectOrthogPolyApproximation::increment_coefficients()
   }
   }
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 
@@ -288,7 +288,7 @@ void ProjectOrthogPolyApproximation::decrement_coefficients(bool save_data)
   expCoeffGradsIter->second = prevExpCoeffGrads;
   // don't update Sobol' array sizes for decrement, push, or finalize
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 
   if (!save_data) return;
 
@@ -403,7 +403,7 @@ void ProjectOrthogPolyApproximation::push_coefficients()
   }
   }
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 
@@ -463,7 +463,7 @@ void ProjectOrthogPolyApproximation::finalize_coefficients()
     break;
   }
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 

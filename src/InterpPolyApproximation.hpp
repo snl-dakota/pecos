@@ -16,6 +16,7 @@
 
 #include "PolynomialApproximation.hpp"
 #include "BasisPolynomial.hpp"
+#include "SharedInterpPolyApproxData.hpp"
 
 namespace Pecos {
 
@@ -72,6 +73,10 @@ protected:
   //- Heading: New virtual functions
   //
 
+  /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter for new
+  /// activeKey from sharedDataRep
+  virtual bool update_active_iterators();
+
   /// compute moments of response using numerical integration
   virtual void integrate_response_moments(size_t num_moments) = 0;
   /// compute moments of expansion using numerical integration
@@ -118,6 +123,18 @@ InterpPolyApproximation(const SharedBasisApproxData& shared_data):
 
 inline InterpPolyApproximation::~InterpPolyApproximation()
 { }
+
+
+inline bool InterpPolyApproximation::update_active_iterators()
+{
+  SharedInterpPolyApproxData* data_rep
+    = (SharedInterpPolyApproxData*)sharedDataRep;
+  const UShortArray& key = data_rep->activeKey;
+  origSurrData.active_key(key);
+  if (deep_copied_surrogate_data())
+    surrData.active_key(key);
+  return true;
+}
 
 
 inline void InterpPolyApproximation::compute_moments(bool full_stats)

@@ -68,14 +68,12 @@ protected:
   /// finalize expansion{Type1Coeffs,Type2Coeffs,Type1CoeffGrads}
   void finalize_coefficients();
 
-  /// clear inactive expansions from expansionType{1Coeffs,2Coeffs,1CoeffGrads}
-  void clear_inactive();
-
   /// update combinedExpT{1Coeffs,2Coeffs,1CoeffGrads}
   void combine_coefficients();
 
-  /// replace active expansions with combinedExpT{1Coeffs,2Coeffs,1CoeffGrads}
+  bool update_active_iterators();
   void combined_to_active();
+  void clear_inactive();
 
   void integrate_response_moments(size_t num_moments);
   void integrate_expansion_moments(size_t num_moments);
@@ -143,9 +141,12 @@ private:
   //- Heading: Convenience functions
   //
 
-  /// update {expT1Coeffs,expT2Coeffs,expT1CoeffGrads}Iter for new
-  /// activeKey from sharedDataRep
-  void update_active_iterators();
+  /// reset computedRef* to zero
+  void clear_reference_computed_bits();
+  /// reset computedDelta* to zero
+  void clear_delta_computed_bits();
+  /// reset all computed bit states to zero
+  void clear_all_computed_bits();
 
   /// compute the value at a point for a particular interpolation level
   Real value(const RealVector& x, const UShort3DArray& sm_mi,
@@ -498,7 +499,8 @@ private:
 
 inline HierarchInterpPolyApproximation::
 HierarchInterpPolyApproximation(const SharedBasisApproxData& shared_data):
-  InterpPolyApproximation(shared_data)
+  InterpPolyApproximation(shared_data),
+  expT1CoeffsIter(expansionType1Coeffs.end())
 { }
 
 
@@ -506,20 +508,25 @@ inline HierarchInterpPolyApproximation::~HierarchInterpPolyApproximation()
 { }
 
 
-inline void HierarchInterpPolyApproximation::update_active_iterators()
+inline bool HierarchInterpPolyApproximation::update_active_iterators()
 {
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& key = data_rep->activeKey;
-  origSurrData.active_key(key);
-  if (deep_copied_surrogate_data())
-    surrData.active_key(key);
 
-  expT1CoeffsIter = expansionType1Coeffs.find(key);
-  if (expT1CoeffsIter == expansionType1Coeffs.end()) {
+  // Test for change
+  std::map<UShortArray, RealVector2DArray>::iterator t1c_it
+    = expansionType1Coeffs.find(key);
+  if (expT1CoeffsIter == t1c_it &&
+      expT1CoeffsIter != expansionType1Coeffs.end()) // exclude initial state
+    return false;
+  
+  if (t1c_it == expansionType1Coeffs.end()) {
     std::pair<UShortArray, RealVector2DArray> rv_pair(key, RealVector2DArray());
     expT1CoeffsIter = expansionType1Coeffs.insert(rv_pair).first;
   }
+  else
+    expT1CoeffsIter = t1c_it;
   expT2CoeffsIter = expansionType2Coeffs.find(key);
   if (expT2CoeffsIter == expansionType2Coeffs.end()) {
     std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
@@ -530,6 +537,56 @@ inline void HierarchInterpPolyApproximation::update_active_iterators()
     std::pair<UShortArray, RealMatrix2DArray> rm_pair(key, RealMatrix2DArray());
     expT1CoeffGradsIter = expansionType1CoeffGrads.insert(rm_pair).first;
   }
+
+  return InterpPolyApproximation::update_active_iterators();
+}
+
+
+inline void HierarchInterpPolyApproximation::clear_reference_computed_bits()
+{ computedRefMean = computedRefVariance = 0; } // clear reference bits
+
+
+inline void HierarchInterpPolyApproximation::clear_delta_computed_bits()
+{ computedDeltaMean = computedDeltaVariance = 0; } // clear delta current bits
+
+
+inline void HierarchInterpPolyApproximation::clear_all_computed_bits()
+{
+  clear_computed_bits();
+  clear_reference_computed_bits();
+  clear_delta_computed_bits();
+}
+
+
+inline void HierarchInterpPolyApproximation::increment_current_from_reference()
+{
+  computedRefMean     = computedMean;
+  computedRefVariance = computedVariance;
+
+  if ( (computedMean & 1) || (computedVariance & 1) )
+    referenceMoments = numericalMoments;
+  if (computedMean & 2)
+    meanRefGradient = meanGradient;
+  if (computedVariance & 2)
+    varianceRefGradient = varianceGradient;
+
+  clear_computed_bits(); clear_delta_computed_bits(); // clear current and delta
+}
+
+
+inline void HierarchInterpPolyApproximation::decrement_current_to_reference()
+{
+  computedMean     = computedRefMean;
+  computedVariance = computedRefVariance;
+
+  if ( (computedRefMean & 1) || (computedRefVariance & 1) )
+    numericalMoments = referenceMoments;
+  if (computedRefMean & 2)
+    meanGradient = meanRefGradient;
+  if (computedRefVariance & 2)
+    varianceGradient = varianceRefGradient;
+
+  clear_delta_computed_bits(); // clear delta bits, but retain reference
 }
 
 
@@ -546,6 +603,7 @@ integrate_response_moments(size_t num_moments)
   // --> surrData access is replaced with value()/gradient_bases_variables()
   // combined_to_active() should precede this call -> can use active coeffs/wts,
   // but rely on combinedVarSets instead of surrData variables
+  // *** TO DO: cleaner logic, unification, etc.
   if (data_rep->expConfigOptions.combineType &&
       !data_rep->combinedVarSets.empty())
     integrate_response_moments(num_moments,
@@ -760,8 +818,11 @@ inline void HierarchInterpPolyApproximation::push_coefficients()
   if (deep_copied_surrogate_data())
     surrData.push(data_rep->retrieval_index());
 
+  bool updated = update_active_iterators();
+  if (updated) clear_all_computed_bits();
+  else         increment_current_from_reference();
+
   push_coefficients(data_rep->hsg_driver()->trial_set());
-  increment_current_from_reference();
 }
 
 

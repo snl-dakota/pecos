@@ -29,6 +29,8 @@ int InterpPolyApproximation::min_coefficients() const
 
 void InterpPolyApproximation::allocate_arrays()
 {
+  update_active_iterators();
+
   allocate_total_sobol();
   allocate_component_sobol();
 

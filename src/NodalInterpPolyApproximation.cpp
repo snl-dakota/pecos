@@ -29,8 +29,6 @@ void NodalInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  update_active_iterators();
-
   size_t num_colloc_pts = surrData.points(),
     num_deriv_vars = surrData.num_derivative_variables();
   if (expansionCoeffFlag) { // else coeff arrays not entered into maps
@@ -100,7 +98,7 @@ void NodalInterpPolyApproximation::compute_coefficients()
   test_interpolation();
 #endif
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 
@@ -137,7 +135,12 @@ void NodalInterpPolyApproximation::combine_coefficients()
   if (deep_copied_surrogate_data())
     surrData.active_key(data_rep->activeKey);
 
-  update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
+  // Coefficient combination is not dependent on active state, but active
+  // iterators used below to avoid additional key lookups in stored_*()
+  bool updated = update_active_iterators();
+  if (updated) clear_computed_bits();
+  //else don't clear (combined stats are managed separately)
+
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   short combine_type = data_rep->expConfigOptions.combineType;
@@ -260,8 +263,6 @@ void NodalInterpPolyApproximation::combine_coefficients()
     write_data(PCout, combinedExpT1CoeffGrads, false, true, true);
   }
 #endif // DEBUG
-
-  //computedMean = computedVariance = 0;
 }
 
 
@@ -289,14 +290,16 @@ void NodalInterpPolyApproximation::combined_to_active()
   // resize sobolIndices to sync with resize of sobolIndexMap
   allocate_component_sobol();
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 
 void NodalInterpPolyApproximation::increment_coefficients()
 {
   synchronize_surrogate_data(); // TO DO: update_surrogate_data() ?
-  update_expansion_coefficients();
+
+  update_expansion_coefficients(); // updates iterators, clears computed bits
+
   allocate_component_sobol();
 }
 
@@ -306,6 +309,8 @@ void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
   // mirror changes to origSurrData for deep copied surrData
   if (deep_copied_surrogate_data())
     surrData.pop(save_data);
+
+  update_active_iterators();
 
   size_t new_colloc_pts = surrData.points();
   if (expansionCoeffFlag) {
@@ -323,6 +328,8 @@ void NodalInterpPolyApproximation::decrement_coefficients(bool save_data)
     size_t num_deriv_vars = exp_t1_coeff_grads.numRows();
     exp_t1_coeff_grads.reshape(num_deriv_vars, new_colloc_pts);// prune trailing
   }
+
+  clear_computed_bits();
 }
 
 
@@ -337,7 +344,7 @@ void NodalInterpPolyApproximation::finalize_coefficients()
     surrData.clear_active_popped(); // only after process completed
   }
 
-  update_expansion_coefficients();
+  update_expansion_coefficients(); // updates iterators, clears computed bits
 }
 
 
@@ -349,12 +356,14 @@ void NodalInterpPolyApproximation::push_coefficients()
     surrData.push(data_rep->retrieval_index());
   }
 
-  update_expansion_coefficients();
+  update_expansion_coefficients(); // updates iterators, clears computed bits
 }
 
 
 void NodalInterpPolyApproximation::update_expansion_coefficients()
 {
+  update_active_iterators();
+
   size_t index, old_colloc_pts, new_colloc_pts = surrData.points();
   const SDRArray& sdr_array = surrData.response_data();
   if (expansionCoeffFlag) {
@@ -386,7 +395,7 @@ void NodalInterpPolyApproximation::update_expansion_coefficients()
 		      exp_t1_coeff_grads);
   }
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 

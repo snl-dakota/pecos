@@ -262,6 +262,9 @@ protected:
   /// within surrData
   void response_data_to_surplus_data();
 
+  /// clear bits for current moments (updated from reference)
+  void clear_computed_bits();
+
   /// compute central moments of response using type1 numerical integration
   void integrate_moments(const RealVector& coeffs, const RealVector& t1_wts,
 			 RealVector& moments);
@@ -374,6 +377,10 @@ inline bool PolynomialApproximation::deep_copied_surrogate_data() const
   //return (data_rep->expConfigOptions.discrepancyType == RECURSIVE_DISCREP);
   return (surrData.data_rep() != origSurrData.data_rep());
 }
+
+
+inline void PolynomialApproximation::clear_computed_bits()
+{ computedMean = computedVariance = 0; }
 
 
 inline const RealVector& PolynomialApproximation::expansion_moments() const

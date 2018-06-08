@@ -26,8 +26,6 @@ void HierarchInterpPolyApproximation::allocate_arrays()
 {
   InterpPolyApproximation::allocate_arrays();
 
-  update_active_iterators();
-
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const ExpansionConfigOptions& ec_options = data_rep->expConfigOptions;
@@ -158,9 +156,7 @@ void HierarchInterpPolyApproximation::compute_coefficients()
   test_interpolation();
 #endif
 
-  computedMean = computedVariance
-    = computedRefMean = computedDeltaMean
-    = computedRefVariance = computedDeltaVariance = 0;
+  clear_all_computed_bits();
 }
 
 
@@ -169,7 +165,9 @@ void HierarchInterpPolyApproximation::increment_coefficients()
   // TO DO: partial sync for new TP data set, e.g. update_surrogate_data() ?
   synchronize_surrogate_data();
 
-  increment_current_from_reference();
+  bool updated = update_active_iterators();
+  if (updated) clear_all_computed_bits();
+  else         increment_current_from_reference();
 
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
@@ -207,6 +205,10 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
   if (deep_copied_surrogate_data())
     surrData.pop(save_data);
 
+  bool updated = update_active_iterators();
+  if (updated) clear_all_computed_bits();
+  else         decrement_current_to_reference();
+
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   const UShortArray& trial_set = data_rep->hsg_driver()->trial_set();
@@ -228,8 +230,6 @@ void HierarchInterpPolyApproximation::decrement_coefficients(bool save_data)
     poppedExpT1CoeffGrads[key][trial_set] = exp_t1cg[lev].back();
     exp_t1cg[lev].pop_back();
   }
-
-  decrement_current_to_reference();
 }
 
 
@@ -245,6 +245,11 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
       surrData.push(data_rep->finalization_index(i), false);
     surrData.clear_active_popped(); // only after process completed
   }
+
+  // synchronize expansionCoeff{s,Grads} and approxData
+  bool updated = update_active_iterators();
+  if (updated) clear_all_computed_bits();
+  else         clear_computed_bits(); //clear_delta_computed_bits();
 
   const UShort3DArray& sm_mi = data_rep->hsg_driver()->smolyak_multi_index();
   size_t lev, set, num_sets, num_levels = sm_mi.size(), num_smolyak_sets,
@@ -262,8 +267,6 @@ void HierarchInterpPolyApproximation::finalize_coefficients()
   const UShortArray& key = data_rep->activeKey;
   poppedExpT1Coeffs[key].clear(); poppedExpT2Coeffs[key].clear();
   poppedExpT1CoeffGrads[key].clear();
-
-  computedMean = computedVariance = 0;
 }
 
 
@@ -297,7 +300,11 @@ void HierarchInterpPolyApproximation::combine_coefficients()
   if (deep_copied_surrogate_data())
     surrData.active_key(data_rep->activeKey);
 
-  update_active_iterators(); // activeKey updated in SharedOrthogPolyApproxData
+  // Coefficient combination is not dependent on active state
+  //bool updated = update_active_iterators(); // key updated in Shared Data
+  //if (updated) clear_all_computed_bits();
+  //else (combined stats managed separately)
+
   allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   const UShort4DArray&   comb_key = data_rep->combinedCollocKey;
@@ -396,8 +403,6 @@ void HierarchInterpPolyApproximation::combine_coefficients()
       }
     }
   }
-
-  //computedMean = computedVariance = 0;
 }
 
 
@@ -422,7 +427,7 @@ void HierarchInterpPolyApproximation::combined_to_active()
     combinedExpT1CoeffGrads.clear();
   }
 
-  computedMean = computedVariance = 0;
+  clear_all_computed_bits();
 }
 
 
@@ -534,41 +539,6 @@ push_coefficients(const UShortArray& push_set)
     expT1CoeffGradsIter->second[lev].push_back(itm->second);
     pop_t1cg.erase(itm);
   }
-}
-
-
-void HierarchInterpPolyApproximation::increment_current_from_reference()
-{
-  computedRefMean     = computedMean;
-  computedRefVariance = computedVariance;
-
-  if ( (computedMean & 1) || (computedVariance & 1) )
-    referenceMoments = numericalMoments;
-  if (computedMean & 2)
-    meanRefGradient = meanGradient;
-  if (computedVariance & 2)
-    varianceRefGradient = varianceGradient;
-
-  // clear current and delta
-  computedMean = computedVariance =
-    computedDeltaMean = computedDeltaVariance = 0;
-}
-
-
-void HierarchInterpPolyApproximation::decrement_current_to_reference()
-{
-  computedMean     = computedRefMean;
-  computedVariance = computedRefVariance;
-
-  if ( (computedRefMean & 1) || (computedRefVariance & 1) )
-    numericalMoments = referenceMoments;
-  if (computedRefMean & 2)
-    meanGradient = meanRefGradient;
-  if (computedRefVariance & 2)
-    varianceGradient = varianceRefGradient;
-
-  // leave reference settings, but clear delta settings
-  computedDeltaMean = computedDeltaVariance = 0;
 }
 
 

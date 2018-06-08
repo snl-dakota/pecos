@@ -70,8 +70,11 @@ void OrthogPolyApproximation::combine_coefficients()
   // SharedOrthogPolyApproxData::pre_combine_data() appends multi-indices
   // SharedOrthogPolyApproxData::post_combine_data() finalizes multiIndex
 
-  //update_active_iterators();// activeKey updated in SharedOrthogPolyApproxData
-  // allocate_component_sobol();  // size sobolIndices from shared sobolIndexMap
+  // Coefficient combination is not dependent on active state
+  //update_active_iterators();// key updated in SharedOrthogPolyApproxData
+  //clear_computed_bits(); // combined stats are managed separately
+
+  //allocate_component_sobol(); // size sobolIndices from shared sobolIndexMap
 
   std::map<UShortArray, RealVector>::iterator ec_it;
   std::map<UShortArray, RealMatrix>::iterator eg_it;
@@ -148,8 +151,6 @@ void OrthogPolyApproximation::combine_coefficients()
     abort_handler(-1);
     break;
   }
-
-  //computedMean = computedVariance = 0;
 }
 
 
@@ -167,7 +168,7 @@ void OrthogPolyApproximation::combined_to_active()
     combinedExpCoeffGrads.reshape(0, 0);
   }
 
-  computedMean = computedVariance = 0;
+  clear_computed_bits();
 }
 
 
