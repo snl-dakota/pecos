@@ -266,7 +266,7 @@ private:
 
 
 inline IncrementalSparseGridDriver::IncrementalSparseGridDriver():
-  CombinedSparseGridDriver()
+  CombinedSparseGridDriver(), a1PIter(a1Points.end())
 { update_active_iterators(); }
 
 
@@ -274,7 +274,8 @@ inline IncrementalSparseGridDriver::
 IncrementalSparseGridDriver(unsigned short ssg_level,
 			    const RealVector& dim_pref, short growth_rate,
 			    short refine_control):
-  CombinedSparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control)
+  CombinedSparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
+  a1PIter(a1Points.end())
 { update_active_iterators(); }
 
 
@@ -284,18 +285,10 @@ inline IncrementalSparseGridDriver::~IncrementalSparseGridDriver()
 
 inline void IncrementalSparseGridDriver::update_active_iterators()
 {
-  CombinedSparseGridDriver::update_active_iterators();
+  // Test for change
+  if (a1PIter != a1Points.end() && a1PIter->first == activeKey)
+    return;
 
-  numUniq1Iter = numUnique1.find(activeKey);
-  if (numUniq1Iter == numUnique1.end()) {
-    std::pair<UShortArray, int> ua_pair(activeKey, 0);
-    numUniq1Iter = numUnique1.insert(ua_pair).first;
-  }
-  numUniq2Iter = numUnique2.find(activeKey);
-  if (numUniq2Iter == numUnique2.end()) {
-    std::pair<UShortArray, int> ua_pair(activeKey, 0);
-    numUniq2Iter = numUnique2.insert(ua_pair).first;
-  }
   a1PIter = a1Points.find(activeKey);
   if (a1PIter == a1Points.end()) {
     std::pair<UShortArray, RealMatrix> ua_pair(activeKey, RealMatrix());
@@ -325,6 +318,16 @@ inline void IncrementalSparseGridDriver::update_active_iterators()
   if (a2T2WIter == a2Type2Weights.end()) {
     std::pair<UShortArray, RealMatrix> ua_pair(activeKey, RealMatrix());
     a2T2WIter = a2Type2Weights.insert(ua_pair).first;
+  }
+  numUniq1Iter = numUnique1.find(activeKey);
+  if (numUniq1Iter == numUnique1.end()) {
+    std::pair<UShortArray, int> ua_pair(activeKey, 0);
+    numUniq1Iter = numUnique1.insert(ua_pair).first;
+  }
+  numUniq2Iter = numUnique2.find(activeKey);
+  if (numUniq2Iter == numUnique2.end()) {
+    std::pair<UShortArray, int> ua_pair(activeKey, 0);
+    numUniq2Iter = numUnique2.insert(ua_pair).first;
   }
   uniqSet1Iter = uniqueSet1.find(activeKey);
   if (uniqSet1Iter == uniqueSet1.end()) {
@@ -361,6 +364,8 @@ inline void IncrementalSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, IntArray> ua_pair(activeKey, IntArray());
     uniqIndMapIter = uniqueIndexMapping.insert(ua_pair).first;
   }
+
+  CombinedSparseGridDriver::update_active_iterators();
 }
 
 

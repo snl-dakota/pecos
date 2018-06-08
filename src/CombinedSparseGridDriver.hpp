@@ -249,8 +249,8 @@ private:
 
 
 inline CombinedSparseGridDriver::CombinedSparseGridDriver():
-  SparseGridDriver(), trackCollocDetails(false), trackUniqueProdWeights(false),
-  duplicateTol(1.e-15)
+  SparseGridDriver(), smolMIIter(smolyakMultiIndex.end()),
+  trackCollocDetails(false), trackUniqueProdWeights(false), duplicateTol(1.e-15)
 { update_active_iterators(); }
 
 
@@ -258,7 +258,8 @@ inline CombinedSparseGridDriver::
 CombinedSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
-  trackCollocDetails(false), trackUniqueProdWeights(false), duplicateTol(1.e-15)
+  smolMIIter(smolyakMultiIndex.end()), trackCollocDetails(false),
+  trackUniqueProdWeights(false), duplicateTol(1.e-15)
 { update_active_iterators(); }
 
 
@@ -268,7 +269,9 @@ inline CombinedSparseGridDriver::~CombinedSparseGridDriver()
 
 inline void CombinedSparseGridDriver::update_active_iterators()
 {
-  SparseGridDriver::update_active_iterators();
+  // Test for change
+  if (smolMIIter != smolyakMultiIndex.end() && smolMIIter->first == activeKey)
+    return;
 
   smolMIIter = smolyakMultiIndex.find(activeKey);
   if (smolMIIter == smolyakMultiIndex.end()) {
@@ -290,6 +293,8 @@ inline void CombinedSparseGridDriver::update_active_iterators()
     std::pair<UShortArray, Sizet2DArray> s2a_pair(activeKey, Sizet2DArray());
     collocIndIter = collocIndices.insert(s2a_pair).first;
   }
+
+  SparseGridDriver::update_active_iterators();
 }
 
 

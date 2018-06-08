@@ -50,19 +50,12 @@ public:
 
   void active_key(const UShortArray& key);
   void clear_keys();
+  void clear_inactive();
 
   void compute_grid(RealMatrix& variable_sets);
   int  grid_size();
   void reinterpolated_tensor_grid(const UShortArray& lev_index,
 				  const SizetList& reinterp_indices);
-  /*
-  void store_grid(size_t index = _NPOS);
-  void restore_grid(size_t index = _NPOS);
-  void remove_stored_grid(size_t index = _NPOS);
-  void swap_grid(size_t index);
-  */
-  void clear_inactive();
-
   const UShortArray& maximal_grid() const;
 
   //
@@ -104,13 +97,6 @@ public:
   const UShort2DArray& collocation_key() const;
   /// return collocKey[key]
   const UShort2DArray& collocation_key(const UShortArray& key) const;
-
-  /*
-  /// return storedLevelIndex[index]
-  const UShortArray& stored_level_index(size_t index) const;
-  /// return storedCollocKey[index]
-  const UShort2DArray& stored_collocation_key(size_t index) const;
-  */
 
   /// stand-alone initializer of tensor grid settings (except for
   /// distribution params)
@@ -165,18 +151,6 @@ private:
   /// the set of type2 weights (for integration of gradient interpolants)
   /// for each derivative component and for each point in the tensor grid
   std::map<UShortArray, RealMatrix> type2WeightSets;
-
-  /*
-  /// stored driver states: copies of levelIndex
-  UShort2DArray storedLevelIndex;
-  /// stored driver states: copies of collocKey
-  UShort3DArray storedCollocKey;
-
-  /// stored driver states: copies of type1WeightSets
-  RealVectorArray storedType1WeightSets;
-  /// stored driver states: copies of type2WeightSets
-  RealMatrixArray storedType2WeightSets;
-  */
   
   /// database key indicating the currently active integration configuration.
   /// the key is a multi-index managing multiple modeling dimensions such as
@@ -186,12 +160,12 @@ private:
 
 
 inline TensorProductDriver::TensorProductDriver():
-  IntegrationDriver(BaseConstructor())
+  IntegrationDriver(BaseConstructor()), levelIndIter(levelIndex.end())
 { update_active_iterators(); } // default activeKey is empty array
 
 
 inline TensorProductDriver::TensorProductDriver(const UShortArray& quad_order):
-  IntegrationDriver(BaseConstructor())
+  IntegrationDriver(BaseConstructor()), levelIndIter(levelIndex.end())
 {
   update_active_iterators(); // default activeKey is empty array
   quadrature_order(quad_order);
@@ -200,7 +174,8 @@ inline TensorProductDriver::TensorProductDriver(const UShortArray& quad_order):
 
 inline TensorProductDriver::
 TensorProductDriver(const UShortArray& quad_order, const UShortArray& key):
-  IntegrationDriver(BaseConstructor()), activeKey(key)
+  IntegrationDriver(BaseConstructor()), levelIndIter(levelIndex.end()),
+  activeKey(key)
 {
   update_active_iterators(); // activeKey set in initializer list
   quadrature_order(quad_order);
@@ -231,6 +206,10 @@ inline void TensorProductDriver::clear_keys()
 
 inline void TensorProductDriver::update_active_iterators()
 {
+  // Test for change
+  if (levelIndIter != levelIndex.end() && levelIndIter->first == activeKey)
+    return;
+
   levelIndIter = levelIndex.find(activeKey);
   if (levelIndIter == levelIndex.end()) {
     std::pair<UShortArray, UShortArray> ua_pair(activeKey, UShortArray());

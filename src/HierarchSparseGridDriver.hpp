@@ -214,6 +214,11 @@ private:
   /// collocation point increments
   bool nestedGrid;
 
+  /// due to the hierarchical structure, collocation indices only need
+  /// to be defined in special cases (e.g., generalized sparse grids
+  /// for which index sets can appear in different orders).
+  bool trackCollocIndices;
+
   /// interpolation depth by index set by numVars array for identifying
   /// the index to use within the polynomialBasis for a particular variable
   /** The index sets correspond to j (0-based) for use as indices, which
@@ -230,11 +235,6 @@ private:
   /// identifies the trailing index set increments within smolyakMultiIndex
   /// due to an isotropic/anistropic grid refinement
   UShortArray incrementSets;
-
-  /// due to the hierarchical structure, collocation indices only need
-  /// to be defined in special cases (e.g., generalized sparse grids
-  /// for which index sets can appear in different orders).
-  bool trackCollocIndices;
 
   /// levels-by-index sets-by-numDeltaPts-by-numVars array for identifying
   /// the 1-D point indices for sets of tensor-product collocation points
@@ -275,7 +275,8 @@ private:
 
 
 inline HierarchSparseGridDriver::HierarchSparseGridDriver():
-  SparseGridDriver(), nestedGrid(true), trackCollocIndices(true)
+  SparseGridDriver(), nestedGrid(true), trackCollocIndices(true),
+  smolMIIter(smolyakMultiIndex.end())
 { update_active_iterators(); }
 
 
@@ -283,7 +284,8 @@ inline HierarchSparseGridDriver::
 HierarchSparseGridDriver(unsigned short ssg_level, const RealVector& dim_pref,
 			 short growth_rate, short refine_control):
   SparseGridDriver(ssg_level, dim_pref, growth_rate, refine_control),
-  nestedGrid(true), trackCollocIndices(true)
+  nestedGrid(true), trackCollocIndices(true),
+  smolMIIter(smolyakMultiIndex.end())
 { update_active_iterators(); }
 
 
@@ -293,7 +295,9 @@ inline HierarchSparseGridDriver::~HierarchSparseGridDriver()
 
 inline void HierarchSparseGridDriver::update_active_iterators()
 {
-  SparseGridDriver::update_active_iterators();
+  // Test for change
+  if (smolMIIter != smolyakMultiIndex.end() && smolMIIter->first == activeKey)
+    return;
 
   smolMIIter = smolyakMultiIndex.find(activeKey);
   if (smolMIIter == smolyakMultiIndex.end()) {
@@ -322,6 +326,8 @@ inline void HierarchSparseGridDriver::update_active_iterators()
       rm2_pair(activeKey, RealMatrix2DArray());
     t2WtIter = type2WeightSets.insert(rm2_pair).first;
   }
+
+  SparseGridDriver::update_active_iterators();
 }
 
 
