@@ -257,9 +257,13 @@ finalize_sets(bool output_sets, bool converged_within_tol)
 
 void SparseGridDriver::update_reference()
 {
+  // Not needed for HierarchSparseGridDriver, so use no-op as default
+
+  /*
   PCerr << "Error: no default implementation for SparseGridDriver::"
 	<< "update_reference()." << std::endl;
   abort_handler(-1);
+  */
 }
 
 
@@ -297,9 +301,13 @@ void SparseGridDriver::pop_increment()
 
 void SparseGridDriver::merge_increment()
 {
+  // Not needed for HierarchSparseGridDriver, so use no-op as default
+
+  /*
   PCerr << "Error: no default implementation for SparseGridDriver::"
 	<< "merge_increment()." << std::endl;
   abort_handler(-1);
+  */
 }
 
 
