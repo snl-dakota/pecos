@@ -1751,6 +1751,54 @@ delta_covariance(const RealVector2DArray& r1_t1_coeffs,
 }
 
 
+/*
+Real HierarchInterpPolyApproximation::
+delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
+		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
+		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
+		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
+		 bool same, const RealVector2DArray& r1r2_t1_coeffs,
+		 const RealMatrix2DArray& r1r2_t2_coeffs,
+		 const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
+		 const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
+		 const UShortArray& active_key,
+		 const std::map<UShortArray, UShort2DArray>& ref_key_map,
+		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
+{
+  // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
+  const RealVector2DArray& active_t1_wts   =   t1_wts_map[active_key];
+  const RealMatrix2DArray& active_t2_wts   =   t2_wts_map[active_key];
+  const UShortArray&       active_incr_key = incr_key_map[active_key];
+  Real  ref_mean_r1 =
+    expectation(r1_t1c_map, t1_wts_map, r1_t2c_map, t2_wts_map, ref_key_map),
+      delta_mean_r1 =
+  //expectation(r1_t1c_map, t1_wts_map, r1_t2c_map, t2_wts_map, incr_key_map),
+    expectation(r1_t1c_map[active_key], active_t1_wts, r1_t2c_map[active_key],
+		active_t2_wts, active_incr_key),
+        ref_mean_r2 = (same) ? ref_mean_r1 :
+    expectation(r2_t1c_map, t1_wts_map, r2_t2c_map, t2_wts_map, ref_key_map),
+      delta_mean_r2 = (same) ? delta_mean_r1 :
+  //expectation(r2_t1c_map, t1_wts_map, r2_t2c_map, t2_wts_map, incr_key_map),
+    expectation(r2_t1c_map[active_key], active_t1_wts, r2_t2c_map[active_key],
+		active_t2_wts, active_incr_key),
+    // Think I have to break this down...
+    delta_mean_r1r2 =
+    expectation(r1r2_t1_coeffs, t1_wts, r1r2_t2_coeffs, t2_wts, incr_key_map);
+
+  // Hierarchical increment to covariance:
+  // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
+  //   = ( E[Ri Rj]^1 - E[Ri]^1 E[Rj]^1 ) - ( E[Ri Rj]^0 - E[Ri]^0 E[Rj]^0 )
+  //   = E[Ri Rj]^0 + \DeltaE[Ri Rj]
+  //     - (E[Ri]^0 + \DeltaE[Ri]) (E[Rj]^0 + \DeltaE[Rj])
+  //     - E[Ri Rj]^0 + E[Ri]^0 E[Rj]^0
+  //   = \DeltaE[Ri Rj] - \DeltaE[Ri] E[Rj]^0 - E[Ri]^0 \DeltaE[Rj]
+  //     - \DeltaE[Ri] \DeltaE[Rj]
+  return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2 -
+    ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
+}
+*/
+
+
 Real HierarchInterpPolyApproximation::
 delta_covariance(const RealVector& x, const RealVector2DArray& r1_t1_coeffs,
 		 const RealMatrix2DArray& r1_t2_coeffs,

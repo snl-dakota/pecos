@@ -1010,6 +1010,38 @@ partition_keys(UShort2DArray& reference_set_range,
 
 
 void HierarchSparseGridDriver::
+partition_keys(std::map<UShortArray, UShort2DArray>& reference_range_map,
+	       std::map<UShortArray, UShort2DArray>& increment_range_map) const
+{
+  std::map<UShortArray, UShort3DArray>::const_iterator cit;
+  size_t lev, num_lev, num_sets;
+  UShort2DArray reference_set_range, increment_set_range;
+  for (cit=smolyakMultiIndex.begin(); cit!=smolyakMultiIndex.end(); ++cit) {
+    const UShort3DArray& sm_mi_i = cit->second;
+    num_lev = sm_mi_i.size();
+    reference_set_range.resize(num_lev); increment_set_range.resize(num_lev);
+    for (lev=0; lev<num_lev; ++lev) {
+      UShortArray&  ref_l = reference_set_range[lev];  ref_l.resize(2);
+      UShortArray& incr_l = increment_set_range[lev]; incr_l.resize(2);
+      const UShort2DArray& sm_mi_il = sm_mi_i[lev];
+      num_sets = sm_mi_il.size(); ref_l[0] = 0; incr_l[1] = num_sets;
+      if (cit != smolMIIter) // not the active key (no increment)
+	ref_l[1] = incr_l[0] = num_sets;
+      else if (refineControl == DIMENSION_ADAPTIVE_CONTROL_GENERALIZED) {
+	if (lev == trialLevel) ref_l[1] = incr_l[0] = num_sets - 1;
+	else                   ref_l[1] = incr_l[0] = num_sets;
+      }
+      else
+	ref_l[1] = incr_l[0] = incrementSets[lev];
+    }
+    const UShortArray& key = cit->first;
+    reference_range_map[key] = reference_set_range;
+    increment_range_map[key] = increment_set_range;
+  }
+}
+
+
+void HierarchSparseGridDriver::
 partition_keys(UShort3DArray& reference_pt_range,
 	       UShort3DArray& increment_pt_range) const
 {

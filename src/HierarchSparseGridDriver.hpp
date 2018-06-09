@@ -151,11 +151,15 @@ public:
   /// return collocIndices[key]
   const Sizet3DArray& collocation_indices(const UShortArray& key) const;
 
-  /// discriminate portions of the level-set hierarchy that are
+  /// discriminate portions of the active level-set hierarchy that are
   /// reference sets from those in the current increment
   void partition_keys(UShort2DArray& reference_set_range,
 		      UShort2DArray& increment_set_range) const;
-  /// discriminate portions of the level-set-point hierarchy that are
+  /// discriminate portions of the level-set hierarchy that are
+  /// reference sets from those in the current increment
+  void partition_keys(std::map<UShortArray, UShort2DArray>& reference_range_map,
+    std::map<UShortArray, UShort2DArray>& increment_range_map) const;
+  /// discriminate portions of the active level-set-point hierarchy that are
   /// in the reference grid from those in the current increment
   void partition_keys(UShort3DArray& reference_pt_range,
 		      UShort3DArray& increment_pt_range) const;
