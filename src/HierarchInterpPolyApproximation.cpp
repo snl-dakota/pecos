@@ -1751,14 +1751,14 @@ delta_covariance(const RealVector2DArray& r1_t1_coeffs,
 }
 
 
-/*
 Real HierarchInterpPolyApproximation::
 delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
 		 const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map,
-		 bool same, const RealVector2DArray& r1r2_t1_coeffs,
-		 const RealMatrix2DArray& r1r2_t2_coeffs,
+		 bool same,
+		 const std::map<UShortArray, RealVector2DArray>& r1r2_t1c_map,
+		 const std::map<UShortArray, RealMatrix2DArray>& r1r2_t2c_map,
 		 const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
 		 const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
 		 const UShortArray& active_key,
@@ -1766,24 +1766,47 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
 		 const std::map<UShortArray, UShort2DArray>& incr_key_map)
 {
   // Compute surplus for r1, r2, and r1r2 and retrieve reference mean values
-  const RealVector2DArray& active_t1_wts   =   t1_wts_map[active_key];
-  const RealMatrix2DArray& active_t2_wts   =   t2_wts_map[active_key];
-  const UShortArray&       active_incr_key = incr_key_map[active_key];
+  std::map<UShortArray, RealVector2DArray>::const_iterator r1t1_cit
+    = r1_t1c_map.find(active_key), t1w_cit = t1_wts_map.find(active_key);
+  std::map<UShortArray, RealMatrix2DArray>::const_iterator r1t2_cit
+    = r1_t2c_map.find(active_key), t2w_cit = t2_wts_map.find(active_key);
+  std::map<UShortArray, UShort2DArray>::const_iterator incr_cit
+    = incr_key_map.find(active_key);
+  if (r1t1_cit == r1_t1c_map.end() || t1w_cit == t1_wts_map.end() ||
+      r1t2_cit == r1_t2c_map.end() || t2w_cit == t2_wts_map.end() ||
+      incr_cit == incr_key_map.end()) {
+    PCerr << "Error: failure in key lookup in HierarchInterpPolyApproximation"
+	  << "::delta_covariance()" << std::endl;
+    abort_handler(-1);
+  }
+  const RealVector2DArray& active_t1_wts =  t1w_cit->second;
+  const RealMatrix2DArray& active_t2_wts =  t2w_cit->second;
+  const UShort2DArray&   active_incr_key = incr_cit->second;
+
   Real  ref_mean_r1 =
     expectation(r1_t1c_map, r1_t2c_map, t1_wts_map, t2_wts_map, ref_key_map),
       delta_mean_r1 =
   //expectation(r1_t1c_map, r1_t2c_map, t1_wts_map, t2_wts_map, incr_key_map),
-    expectation(r1_t1c_map[active_key], r1_t2c_map[active_key], active_t1_wts,
-		active_t2_wts, active_incr_key),
-        ref_mean_r2 = (same) ? ref_mean_r1 :
-    expectation(r2_t1c_map, r2_t2c_map, t1_wts_map, t2_wts_map, ref_key_map),
-      delta_mean_r2 = (same) ? delta_mean_r1 :
-  //expectation(r2_t1c_map, r2_t2c_map, t1_wts_map, t2_wts_map, incr_key_map),
-    expectation(r2_t1c_map[active_key], r2_t2c_map[active_key], active_t1_wts,
-		active_t2_wts, active_incr_key),
-    // Think I have to break this down...
-    delta_mean_r1r2 =
-    expectation(r1r2_t1_coeffs, r1r2_t2_coeffs, t1_wts, t2_wts, incr_key_map);
+    expectation(r1t1_cit->second, r1t2_cit->second, active_t1_wts,
+		active_t2_wts, active_incr_key);
+  Real ref_mean_r2, delta_mean_r2;
+  if (same)
+    { ref_mean_r2 = ref_mean_r1; delta_mean_r2 = delta_mean_r1; }
+  else {
+    std::map<UShortArray, RealVector2DArray>::const_iterator r2t1_cit
+      = r2_t1c_map.find(active_key);
+    std::map<UShortArray, RealMatrix2DArray>::const_iterator r2t2_cit
+      = r2_t2c_map.find(active_key);
+    ref_mean_r2 =
+      expectation(r2_t1c_map, r2_t2c_map, t1_wts_map, t2_wts_map, ref_key_map);
+    delta_mean_r2 =
+    //expectation(r2_t1c_map, r2_t2c_map, t1_wts_map, t2_wts_map, incr_key_map),
+      expectation(r2t1_cit->second, r2t2_cit->second, active_t1_wts,
+		  active_t2_wts, active_incr_key);
+  }
+  Real delta_mean_r1r2 =
+    expectation(r1r2_t1c_map, r1r2_t2c_map, t1_wts_map, t2_wts_map,
+		incr_key_map);
 
   // Hierarchical increment to covariance:
   // \Delta\Sigma_ij = \Sigma^1_ij - \Sigma^0_ij
@@ -1796,7 +1819,6 @@ delta_covariance(const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
   return delta_mean_r1r2 - ref_mean_r1 * delta_mean_r2 -
     ref_mean_r2 * delta_mean_r1 - delta_mean_r1 * delta_mean_r2;
 }
-*/
 
 
 Real HierarchInterpPolyApproximation::

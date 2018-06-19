@@ -217,28 +217,36 @@ private:
   Real reference_variance(const RealVector& x, const UShort2DArray& ref_key);
 
   /// compute the covariance increment due to the current grid increment
+  /// using the active coefficients and weights
   Real delta_covariance(const RealVector2DArray& r1_t1_coeffs,
-			const RealMatrix2DArray& r1_t2_coeffs,
-			const RealVector2DArray& r2_t1_coeffs,
-			const RealMatrix2DArray& r2_t2_coeffs, bool same,
-			const RealVector2DArray& r1r2_t1_coeffs,
-			const RealMatrix2DArray& r1r2_t2_coeffs,
-			const RealVector2DArray& t1_wts,
-			const RealMatrix2DArray& t2_wts,
-			const UShort2DArray& ref_key,
-			const UShort2DArray& incr_key);
+    const RealMatrix2DArray& r1_t2_coeffs,const RealVector2DArray& r2_t1_coeffs,
+    const RealMatrix2DArray& r2_t2_coeffs, bool same,
+    const RealVector2DArray& r1r2_t1_coeffs,
+    const RealMatrix2DArray& r1r2_t2_coeffs, const RealVector2DArray& t1_wts,
+    const RealMatrix2DArray& t2_wts, const UShort2DArray& ref_key,
+    const UShort2DArray& incr_key);
+  /// compute the covariance increment due to the current grid increment
+  /// using all of the coefficients and weights
+  Real delta_covariance(
+    const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
+    const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
+    const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
+    const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map, bool same,
+    const std::map<UShortArray, RealVector2DArray>& r1r2_t1c_map,
+    const std::map<UShortArray, RealMatrix2DArray>& r1r2_t2c_map,
+    const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
+    const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
+    const UShortArray& active_key,
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
   /// compute the covariance increment at x due to the current grid increment
   Real delta_covariance(const RealVector& x,
-			const RealVector2DArray& r1_t1_coeffs,
-			const RealMatrix2DArray& r1_t2_coeffs,
-			const RealVector2DArray& r2_t1_coeffs,
-			const RealMatrix2DArray& r2_t2_coeffs, bool same,
-			const RealVector2DArray& r1r2_t1_coeffs,
-			const RealMatrix2DArray& r1r2_t2_coeffs,
-			const UShort3DArray& sm_mi,
-			const UShort4DArray& colloc_key,
-			const UShort2DArray& ref_key,
-			const UShort2DArray& incr_key);
+    const RealVector2DArray& r1_t1_coeffs,const RealMatrix2DArray& r1_t2_coeffs,
+    const RealVector2DArray& r2_t1_coeffs,const RealMatrix2DArray& r2_t2_coeffs,
+    bool same, const RealVector2DArray& r1r2_t1_coeffs,
+    const RealMatrix2DArray& r1r2_t2_coeffs, const UShort3DArray& sm_mi,
+    const UShort4DArray& colloc_key, const UShort2DArray& ref_key,
+    const UShort2DArray& incr_key);
 
   /// compute the mean increment due to the current grid increment
   Real delta_mean(const UShort2DArray& incr_key);
