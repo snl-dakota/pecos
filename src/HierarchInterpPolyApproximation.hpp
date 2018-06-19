@@ -330,14 +330,22 @@ private:
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using t{1,2}_wts
   Real expectation(const RealVector2DArray& t1_coeffs,
-		   const RealVector2DArray& t1_wts,
 		   const RealMatrix2DArray& t2_coeffs,
+		   const RealVector2DArray& t1_wts,
 		   const RealMatrix2DArray& t2_wts,
 		   const UShort2DArray& set_partition = UShort2DArray());
   // compute the expected value of the interpolant given by t{1,2}_coeffs
   //Real expectation(const RealVector2DArray& t1_coeffs,
   //		   const RealMatrix2DArray& t2_coeffs,
   //		   const UShort3DArray& pt_partition);
+  /// compute the expected value of the interpolant given by maps of t{1,2}
+  /// coefficients and weights
+  Real expectation(const std::map<UShortArray, RealVector2DArray>& t1c_map,
+		   const std::map<UShortArray, RealMatrix2DArray>& t2c_map,
+		   const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
+		   const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
+		   const std::map<UShortArray, UShort2DArray>&
+		     set_partition_map);
 
   /// compute the expected value of the interpolant given by t{1,2}_coeffs
   /// using active weights from the HierarchSparseGridDriver
@@ -350,6 +358,16 @@ private:
 		   const RealMatrix2DArray& t2_coeffs,
 		   const UShort3DArray& sm_mi, const UShort4DArray& colloc_key,
 		   const UShort2DArray& set_partition = UShort2DArray());
+  /// compute the expected value of the interpolant given by maps of t{1,2}
+  /// coefficients using partial weights determined from Smolyak multi-index
+  /// and collocation key maps
+  Real expectation(const RealVector& x,
+		   const std::map<UShortArray, RealVector2DArray>& t1c_map,
+		   const std::map<UShortArray, RealMatrix2DArray>& t2c_map,
+		   const std::map<UShortArray, UShort3DArray>& sm_mi_map,
+		   const std::map<UShortArray, UShort4DArray>& colloc_key_map,
+		   const std::map<UShortArray, UShort2DArray>&
+		     set_partition_map);
 
   /// compute the expected value of the gradient interpolant given by
   /// t1_coeff_grads using weights from the HierarchSparseGridDriver
@@ -753,8 +771,9 @@ expectation(const RealVector2DArray& t1_coeffs,
   SharedHierarchInterpPolyApproxData* data_rep
     = (SharedHierarchInterpPolyApproxData*)sharedDataRep;
   HierarchSparseGridDriver* hsg_driver = data_rep->hsg_driver();
-  return expectation(t1_coeffs, hsg_driver->type1_hierarchical_weight_sets(),
-		     t2_coeffs, hsg_driver->type2_hierarchical_weight_sets(),
+  return expectation(t1_coeffs, t2_coeffs,
+		     hsg_driver->type1_hierarchical_weight_sets(),
+		     hsg_driver->type2_hierarchical_weight_sets(),
 		     set_partition);
 }
 
