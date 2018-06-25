@@ -232,8 +232,7 @@ private:
     const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
     const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
     const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map, bool same,
-    const std::map<UShortArray, RealVector2DArray>& r1r2_t1c_map,
-    const std::map<UShortArray, RealMatrix2DArray>& r1r2_t2c_map,
+    const RealVector2DArray& r1r2_t1c, const RealMatrix2DArray& r1r2_t2c,
     const std::map<UShortArray, RealVector2DArray>& t1_wts_map,
     const std::map<UShortArray, RealMatrix2DArray>& t2_wts_map,
     const UShortArray& active_key,
@@ -247,6 +246,19 @@ private:
     const RealMatrix2DArray& r1r2_t2_coeffs, const UShort3DArray& sm_mi,
     const UShort4DArray& colloc_key, const UShort2DArray& ref_key,
     const UShort2DArray& incr_key);
+  /// compute the covariance increment due to the current grid increment
+  /// using all of the coefficients and weights
+  Real delta_covariance(const RealVector& x,
+    const std::map<UShortArray, RealVector2DArray>& r1_t1c_map,
+    const std::map<UShortArray, RealMatrix2DArray>& r1_t2c_map,
+    const std::map<UShortArray, RealVector2DArray>& r2_t1c_map,
+    const std::map<UShortArray, RealMatrix2DArray>& r2_t2c_map, bool same,
+    const RealVector2DArray& r1r2_t1c, const RealMatrix2DArray& r1r2_t2c,
+    const std::map<UShortArray, UShort3DArray>& sm_mi_map,
+    const std::map<UShortArray, UShort4DArray>& colloc_key_map,
+    const UShortArray& active_key,
+    const std::map<UShortArray, UShort2DArray>& ref_key_map,
+    const std::map<UShortArray, UShort2DArray>& incr_key_map);
 
   /// compute the mean increment due to the current grid increment
   Real delta_mean(const UShort2DArray& incr_key);
@@ -282,7 +294,8 @@ private:
 
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(HierarchInterpPolyApproximation* hip_approx_2,
-    RealVector2DArray& r1r2_t1_coeffs, RealMatrix2DArray& r1r2_t2_coeffs,
+    bool mod_surr_data, RealVector2DArray& r1r2_t1_coeffs,
+    RealMatrix2DArray& r1r2_t2_coeffs,
     const UShort2DArray& ref_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of R_1 R_2
   void product_interpolant(const RealMatrix2DArray& var_sets,
@@ -296,8 +309,9 @@ private:
 
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(
-    HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
-    RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
+    HierarchInterpPolyApproximation* hip_approx_2, bool mod_surr_data,
+    Real mean_1, Real mean_2, RealVector2DArray& cov_t1_coeffs,
+    RealMatrix2DArray& cov_t2_coeffs,
     const UShort2DArray& ref_key = UShort2DArray());
   /// form type 1/2 coefficients for interpolation of (R_1 - mu_1)(R_2 - mu_2)
   void central_product_interpolant(const RealMatrix2DArray& var_sets,
@@ -305,16 +319,16 @@ private:
     const RealVector2DArray& r1_t1_coeffs,
     const RealMatrix2DArray& r1_t2_coeffs,
     const RealVector2DArray& r2_t1_coeffs,
-    const RealMatrix2DArray& r2_t2_coeffs, bool same, Real mean_1, Real mean_2,
+    const RealMatrix2DArray& r2_t2_coeffs, bool same, Real mean_1,Real mean_2,
     RealVector2DArray& cov_t1_coeffs, RealMatrix2DArray& cov_t2_coeffs,
     const UShort2DArray& ref_key = UShort2DArray());
 
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]
   void central_product_gradient_interpolant(
-    HierarchInterpPolyApproximation* hip_approx_2, Real mean_1, Real mean_2,
-    const RealVector& mean1_grad, const RealVector& mean2_grad, 
-    RealMatrix2DArray& cov_t1_coeff_grads,
+    HierarchInterpPolyApproximation* hip_approx_2, bool mod_surr_data,
+    Real mean_1, Real mean_2, const RealVector& mean1_grad,
+    const RealVector& mean2_grad, RealMatrix2DArray& cov_t1_coeff_grads,
     const UShort2DArray& ref_key = UShort2DArray());
   /// form type1 coefficient gradients for interpolation of 
   /// d/ds [(R_1 - mu_1)(R_2 - mu_2)]

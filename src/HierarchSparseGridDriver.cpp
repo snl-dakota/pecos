@@ -1013,6 +1013,7 @@ void HierarchSparseGridDriver::
 partition_keys(std::map<UShortArray, UShort2DArray>& reference_range_map,
 	       std::map<UShortArray, UShort2DArray>& increment_range_map) const
 {
+  reference_range_map.clear(); increment_range_map.clear();
   std::map<UShortArray, UShort3DArray>::const_iterator cit;
   size_t lev, num_lev, num_sets;
   UShort2DArray reference_set_range, increment_set_range;

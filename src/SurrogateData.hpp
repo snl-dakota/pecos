@@ -383,7 +383,6 @@ private:
   RealVector    responseGrad; ///< truth response function gradient
   RealSymMatrix responseHess; ///< truth response function Hessian
   int         referenceCount; ///< number of handle objects sharing sdrRep
-
 };
 
 

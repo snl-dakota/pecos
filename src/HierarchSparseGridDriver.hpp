@@ -184,14 +184,19 @@ public:
   //			     RealVector2DArray& comb_t1_wts,
   //			     RealMatrix2DArray& comb_t2_wts);
 
-  /// return type1WeightSets for use in hierarchical integration functions
+  /// return active type1WeightSets for use in hierarchical integration
   const RealVector2DArray& type1_hierarchical_weight_sets() const;
-  /// set type1WeightSets for use in hierarchical integration functions
+  /// set active type1WeightSets for use in hierarchical integration
   void type1_hierarchical_weight_sets(const RealVector2DArray& t1_wts);
-  /// return type2WeightSets for use in hierarchical integration functions
+  /// return active type2WeightSets for use in hierarchical integration
   const RealMatrix2DArray& type2_hierarchical_weight_sets() const;
-  /// set type2WeightSets for use in hierarchical integration functions
+  /// set active type2WeightSets for use in hierarchical integration
   void type2_hierarchical_weight_sets(const RealMatrix2DArray& t2_wts);
+
+  /// return type1WeightSets for use in hierarchical integration
+  const std::map<UShortArray, RealVector2DArray>& type1_weight_sets_map() const;
+  /// return type2WeightSets for use in hierarchical integration
+  const std::map<UShortArray, RealMatrix2DArray>& type2_weight_sets_map() const;
 
 private:
 
@@ -492,6 +497,16 @@ type2_hierarchical_weight_sets() const
 inline void HierarchSparseGridDriver::
 type2_hierarchical_weight_sets(const RealMatrix2DArray& rm2)
 { t2WtIter->second = rm2; }
+
+
+inline const std::map<UShortArray, RealVector2DArray>&
+HierarchSparseGridDriver::type1_weight_sets_map() const
+{ return type1WeightSets; }
+
+
+inline const std::map<UShortArray, RealMatrix2DArray>&
+HierarchSparseGridDriver::type2_weight_sets_map() const
+{ return type2WeightSets; }
 
 
 inline void HierarchSparseGridDriver::
